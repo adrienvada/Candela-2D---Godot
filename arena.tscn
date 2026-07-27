@@ -1,0 +1,97 @@
+[gd_scene format=3 uid="uid://dw2n6wu737u1l"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_WallH"]
+size = Vector2(700, 40)
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_Top"]
+polygon = PackedVector2Array(0, -40, 700, -40, 700, 0, 0, 0)
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_Bottom"]
+polygon = PackedVector2Array(0, 700, 700, 700, 700, 740, 0, 740)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_WallV"]
+size = Vector2(40, 780)
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_Left"]
+polygon = PackedVector2Array(-40, -40, 0, -40, 0, 740, -40, 740)
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_Right"]
+polygon = PackedVector2Array(700, -40, 740, -40, 740, 740, 700, 740)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_Obs"]
+size = Vector2(120, 120)
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_Obs"]
+polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
+[node name="Arena" type="Node2D" unique_id=968305852]
+
+[node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=1809998748]
+color = Color(0, 0, 0, 1)
+
+[node name="Ground" type="TextureRect" parent="." unique_id=788516604]
+offset_right = 700.0
+offset_bottom = 700.0
+stretch_mode = 1
+
+[node name="StaticGeometry" type="Node2D" parent="." unique_id=1082275660]
+
+[node name="WallTop" type="StaticBody2D" parent="StaticGeometry" unique_id=1759298004]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/WallTop" unique_id=724740981]
+position = Vector2(350, -20)
+shape = SubResource("RectangleShape2D_WallH")
+
+[node name="LightOccluder2D" type="LightOccluder2D" parent="StaticGeometry/WallTop" unique_id=1414932652]
+occluder = SubResource("OccluderPolygon2D_Top")
+
+[node name="WallBottom" type="StaticBody2D" parent="StaticGeometry" unique_id=1207747472]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/WallBottom" unique_id=376548305]
+position = Vector2(350, 720)
+shape = SubResource("RectangleShape2D_WallH")
+
+[node name="LightOccluder2D" type="LightOccluder2D" parent="StaticGeometry/WallBottom" unique_id=1687921981]
+occluder = SubResource("OccluderPolygon2D_Bottom")
+
+[node name="WallLeft" type="StaticBody2D" parent="StaticGeometry" unique_id=1688070112]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/WallLeft" unique_id=1793291580]
+position = Vector2(-20, 350)
+shape = SubResource("RectangleShape2D_WallV")
+
+[node name="LightOccluder2D" type="LightOccluder2D" parent="StaticGeometry/WallLeft" unique_id=951410056]
+occluder = SubResource("OccluderPolygon2D_Left")
+
+[node name="WallRight" type="StaticBody2D" parent="StaticGeometry" unique_id=1391448018]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/WallRight" unique_id=1196321798]
+position = Vector2(720, 350)
+shape = SubResource("RectangleShape2D_WallV")
+
+[node name="LightOccluder2D" type="LightOccluder2D" parent="StaticGeometry/WallRight" unique_id=1650880543]
+occluder = SubResource("OccluderPolygon2D_Right")
+
+[node name="Obstacle1" type="StaticBody2D" parent="StaticGeometry" unique_id=850516437]
+position = Vector2(350, 350)
+
+[node name="ColorRect" type="ColorRect" parent="StaticGeometry/Obstacle1" unique_id=209272148]
+offset_left = -60.0
+offset_top = -60.0
+offset_right = 60.0
+offset_bottom = 60.0
+color = Color(0.1, 0.1, 0.1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/Obstacle1" unique_id=456010153]
+shape = SubResource("RectangleShape2D_Obs")
+
+[node name="LightOccluder2D" type="LightOccluder2D" parent="StaticGeometry/Obstacle1" unique_id=1906810930]
+occluder = SubResource("OccluderPolygon2D_Obs")
+
+[node name="SpawnPoints" type="Node2D" parent="." unique_id=1364181404]
+
+[node name="P1Spawn" type="Marker2D" parent="SpawnPoints" unique_id=2052478058]
+position = Vector2(100, 100)
+
+[node name="P2Spawn" type="Marker2D" parent="SpawnPoints" unique_id=456443467]
+position = Vector2(600, 600)

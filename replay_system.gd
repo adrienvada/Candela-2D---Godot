@@ -1,0 +1,213 @@
+extends Node
+
+signal replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData)
+
+var recording: bool = false
+var playing_back: bool = false
+var playback_index: float = 0.0
+var freeze_time_remaining: float = 0.0
+var snapshots: Array = []
+var max_snapshots: int = 450 # 7.5 seconds at 60fps
+var impact_frame: int = -1
+var slow_mo_start_frame: int = -1
+var bullet_events: Array = []
+var last_played_frame: int = -1
+var time_since_impact_real: float = 0.0
+
+class Snapshot:
+	var p1_pos: Vector2
+	var p1_rot: float
+	var p1_hp: float
+	var p1_visible: bool
+	var p1_light: bool
+	var p1_flash: float
+	var p2_pos: Vector2
+	var p2_rot: float
+	var p2_hp: float
+	var p2_visible: bool
+	var p2_light: bool
+	var p2_flash: float
+	
+	var p1_weapon: WeaponData
+	var p2_weapon: WeaponData
+
+func start_recording():
+	snapshots.clear()
+	bullet_events.clear()
+	recording = true
+	playing_back = false
+	
+	impact_frame = -1
+	slow_mo_start_frame = -1
+	last_played_frame = -1
+	time_since_impact_real = 0.0
+	playback_index = 0.0
+
+func stop_recording():
+	recording = false
+
+func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D):
+	if not recording: return
+	
+	var snap = Snapshot.new()
+	if p1:
+		snap.p1_pos = p1.global_position
+		snap.p1_rot = p1.rotation
+		snap.p1_hp = p1.hp
+		
+		# Detect impact
+		if p1.hp <= 0 and impact_frame == -1:
+			impact_frame = snapshots.size()
+			slow_mo_start_frame = impact_frame - 15 # default fallback
+			for i in range(bullet_events.size() - 1, -1, -1):
+				if bullet_events[i].shooter == 1: # P2 is the killer
+					slow_mo_start_frame = max(0, bullet_events[i].frame - 1)
+					break
+			print("[REPLAY] P1 died. impact_frame=", impact_frame, " slow_mo_start_frame=", slow_mo_start_frame)
+			
+		snap.p1_visible = p1.visual.visible
+		snap.p1_light = p1.flashlight_on
+		snap.p1_flash = p1.get_node("MuzzleFlash").energy if p1.get_node("MuzzleFlash").enabled else 0.0
+		snap.p1_weapon = p1.current_weapon
+	
+	if p2:
+		snap.p2_pos = p2.global_position
+		snap.p2_rot = p2.rotation
+		snap.p2_hp = p2.hp
+		
+		# Detect impact
+		if p2.hp <= 0 and impact_frame == -1:
+			impact_frame = snapshots.size()
+			slow_mo_start_frame = impact_frame - 15 # default fallback
+			for i in range(bullet_events.size() - 1, -1, -1):
+				if bullet_events[i].shooter == 0: # P1 is the killer
+					slow_mo_start_frame = max(0, bullet_events[i].frame - 1)
+					break
+			print("[REPLAY] P2 died. impact_frame=", impact_frame, " slow_mo_start_frame=", slow_mo_start_frame)
+			
+		snap.p2_visible = p2.visual.visible
+		snap.p2_light = p2.flashlight_on
+		snap.p2_flash = p2.get_node("MuzzleFlash").energy if p2.get_node("MuzzleFlash").enabled else 0.0
+		snap.p2_weapon = p2.current_weapon
+		
+	snapshots.append(snap)
+	if snapshots.size() > max_snapshots:
+		snapshots.pop_front()
+		if impact_frame > -1:
+			impact_frame -= 1
+		if slow_mo_start_frame > -1:
+			slow_mo_start_frame -= 1
+		for ev in bullet_events:
+			ev.frame -= 1
+		var new_events = []
+		for ev in bullet_events:
+			if ev.frame >= 0:
+				new_events.append(ev)
+		bullet_events = new_events
+
+func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
+	if recording:
+		bullet_events.append({
+			"frame": snapshots.size(),
+			"shooter": shooter_id,
+			"pos": pos,
+			"rot": rot,
+			"weapon": weapon
+		})
+
+func start_playback():
+	if snapshots.is_empty(): return
+	recording = false
+	playing_back = true
+	# Start slightly earlier to give context
+	playback_index = max(0.0, snapshots.size() - 240.0)
+	last_played_frame = floori(playback_index) - 1
+	freeze_time_remaining = 2.0
+	time_since_impact_real = 0.0
+
+func get_next_frame(delta: float):
+	if not playing_back or snapshots.is_empty(): return null
+	
+	var idx1 = floori(playback_index)
+	var idx2 = mini(idx1 + 1, snapshots.size() - 1)
+	var t = playback_index - idx1
+	
+	var unscaled_delta = delta / Engine.time_scale if Engine.time_scale > 0 else delta
+	
+	if idx1 >= snapshots.size() - 1:
+		idx1 = snapshots.size() - 1
+		idx2 = idx1
+		t = 0.0
+		# Only fallback to freeze_time if we haven't stopped via impact timer
+		if freeze_time_remaining > 0:
+			freeze_time_remaining -= unscaled_delta
+		else:
+			playing_back = false
+			Engine.time_scale = 1.0 # Ensure it's reset
+			return null
+		
+	# Determine playback speed
+	var target_time_scale = 1.0
+	
+	if impact_frame != -1 and slow_mo_start_frame != -1:
+		if idx1 >= slow_mo_start_frame and idx1 < impact_frame:
+			# Calculate how many frames the bullet is in the air
+			var travel_frames = max(1, impact_frame - slow_mo_start_frame)
+			var frames_elapsed = (idx1 - slow_mo_start_frame) + t
+			
+			if frames_elapsed < travel_frames / 2.0:
+				# First half of trajectory: extremely slow! 
+				# (calculated as if the whole trip took 5.0 seconds to keep the same scale)
+				target_time_scale = clamp(float(travel_frames) / (5.0 * 60.0), 0.005, 1.0) 
+			else:
+				# Second half of trajectory: real speed!
+				target_time_scale = 1.0
+		elif idx1 >= impact_frame:
+			time_since_impact_real += unscaled_delta
+			if time_since_impact_real < 0.6:
+				# Extremely slow for the first 0.6 seconds after impact
+				target_time_scale = 0.03
+			elif time_since_impact_real < 1.0:
+				# Sudden rapid acceleration over 0.4 seconds
+				var t_accel = (time_since_impact_real - 0.6) / 0.4
+				# Cubic ease in for sudden burst of speed
+				t_accel = t_accel * t_accel * t_accel
+				target_time_scale = lerp(0.03, 6.0, t_accel)
+			else:
+				# Stop playback exactly 1.0 second after the bullet hits
+				playing_back = false
+				Engine.time_scale = 1.0
+				return null
+			
+	Engine.time_scale = target_time_scale
+	
+	# delta is already scaled by Engine.time_scale!
+	# So we just advance by delta * 60.0, which naturally advances playback slowly.
+	playback_index += delta * 60.0
+	
+	var current_frame = floori(playback_index)
+	for ev in bullet_events:
+		if ev.frame > last_played_frame and ev.frame <= current_frame:
+			replay_spawn_bullet.emit(ev.shooter, ev.pos, ev.rot, ev.weapon)
+	last_played_frame = current_frame
+	
+	# INTERPOLATE SNAPSHOTS for perfectly smooth slow motion
+	var s1 = snapshots[idx1]
+	var s2 = snapshots[idx2]
+	var interp = Snapshot.new()
+	
+	interp.p1_pos = s1.p1_pos.lerp(s2.p1_pos, t)
+	interp.p1_rot = lerp_angle(s1.p1_rot, s2.p1_rot, t)
+	interp.p1_hp = s1.p1_hp
+	interp.p1_visible = s1.p1_visible
+	interp.p1_light = s1.p1_light
+	interp.p1_flash = lerp(s1.p1_flash, s2.p1_flash, t)
+	
+	interp.p2_pos = s1.p2_pos.lerp(s2.p2_pos, t)
+	interp.p2_rot = lerp_angle(s1.p2_rot, s2.p2_rot, t)
+	interp.p2_hp = s1.p2_hp
+	interp.p2_visible = s1.p2_visible
+	interp.p2_light = s1.p2_light
+	interp.p2_flash = lerp(s1.p2_flash, s2.p2_flash, t)
+	
+	return interp

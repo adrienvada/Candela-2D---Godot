@@ -1,0 +1,54 @@
+[gd_scene load_steps=4 format=3 uid="uid://cqfglh3oylrwl"]
+
+[ext_resource type="Script" path="res://game_state.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://dw2n6wu737u1l" path="res://arena.tscn" id="2_arena"]
+[ext_resource type="PackedScene" uid="uid://b0powd7ps2v4w" path="res://ui.tscn" id="3_ui"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_ig7tw")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="SplitScreen" type="HBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 5
+
+[node name="ViewportContainer1" type="SubViewportContainer" parent="SplitScreen"]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport1" type="SubViewport" parent="SplitScreen/ViewportContainer1"]
+handle_input_locally = false
+size = Vector2(957, 1080)
+render_target_update_mode = 4
+canvas_cull_mask = 3
+
+[node name="Arena" parent="SplitScreen/ViewportContainer1/SubViewport1" instance=ExtResource("2_arena")]
+
+[node name="Players" type="Node2D" parent="SplitScreen/ViewportContainer1/SubViewport1"]
+
+[node name="Bullets" type="Node2D" parent="SplitScreen/ViewportContainer1/SubViewport1"]
+
+[node name="ViewportContainer2" type="SubViewportContainer" parent="SplitScreen"]
+layout_mode = 2
+size_flags_horizontal = 3
+stretch = true
+
+[node name="SubViewport2" type="SubViewport" parent="SplitScreen/ViewportContainer2"]
+handle_input_locally = false
+size = Vector2(957, 1080)
+render_target_update_mode = 4
+canvas_cull_mask = 5
+
+[node name="UI" parent="." instance=ExtResource("3_ui")]

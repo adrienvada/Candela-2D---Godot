@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CANDELA 2D - v0.2</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="shortcut icon" href="favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <meta name="apple-mobile-web-app-title" content="Candela">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app-container">
+        <!-- Canvas principal pour le rendu du jeu (Ecran Séparé Vertical) -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Dynamic Scanline Visual Overlay -->
+        <div class="screen-overlay"></div>
+
+
+
+        <!-- Start / Audio Overlay -->
+        <div id="start-overlay" class="modal-overlay">
+            <div class="modal-card">
+                <h1>CANDELA 2D</h1>
+                <p class="subtitle">TACTICAL 2D MULTIPLAYER</p>
+
+                <!-- Notice Expérience Optimale -->
+                <div id="gamepad-notice" class="gamepad-notice"
+                    style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 10px; padding: 10px 16px; color: #e2e8f0; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px;">
+                    <span style="font-size: 18px;">🎮</span>
+                    <span>Veuillez brancher des manettes pour une expérience de jeu optimale.</span>
+                </div>
+
+                <!-- Schéma de la Manette -->
+                <div class="controls-diagram-wrapper"
+                    style="width: 100%; display: flex; justify-content: center; padding: 10px 0;">
+                    <svg viewBox="0 -20 580 275" class="gamepad-diagram"
+                        style="width: 100%; max-width: 600px; margin: 0; overflow: visible;">
+                        <defs>
+                            <linearGradient id="controllerBody" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#2d3748" />
+                                <stop offset="100%" stop-color="#1a202c" />
+                            </linearGradient>
+                            <linearGradient id="stickGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#4a5568" />
+                                <stop offset="100%" stop-color="#2d3748" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- CONTROLLER BODY SHAPE -->
+                        <g transform="translate(0, 0)">
+                            <!-- Handles / Grips & Base -->
+                            <path
+                                d="M 190,55 C 220,55 240,75 290,75 C 340,75 360,55 390,55 C 430,55 460,80 460,130 C 460,185 425,215 395,215 C 375,215 355,185 340,175 C 310,165 270,165 240,175 C 225,185 205,215 185,215 C 155,215 120,185 120,130 C 120,80 150,55 190,55 Z"
+                                fill="url(#controllerBody)" stroke="#4a5568" stroke-width="3"
+                                filter="drop-shadow(0px 8px 16px rgba(0,0,0,0.6))" />
+
+                            <!-- Triggers / Bumpers Top -->
+                            <!-- L2 Trigger (Torche - Jaune #ffea00) -->
+                            <path d="M 160,55 C 160,35 185,30 205,35 L 210,55 Z" fill="#3a4a5e" stroke="#ffea00"
+                                stroke-width="2" />
+                            <!-- R2 Trigger (Tir - Rouge #ff4757) -->
+                            <path d="M 420,55 C 420,35 395,30 375,35 L 370,55 Z" fill="#3a4a5e" stroke="#ff4757"
+                                stroke-width="2" />
+
+                            <!-- D-PAD (Left Side) -->
+                            <g transform="translate(170, 90)">
+                                <path
+                                    d="M 12,-12 H 4 V -20 H -4 V -12 H -12 V -4 H -20 V 4 H -12 V 12 H -4 V 20 H 4 V 12 H 12 V 4 H 20 V -4 H 12 Z"
+                                    fill="#1a202c" stroke="#4a5568" stroke-width="2" />
+                            </g>
+
+                            <!-- ACTION BUTTONS (Courir - Vert #2ed573) -->
+                            <g transform="translate(410, 90)">
+                                <circle cx="0" cy="-14" r="6" fill="#1a202c" stroke="#2ed573" stroke-width="2" />
+                                <circle cx="14" cy="0" r="6" fill="#1a202c" stroke="#2ed573" stroke-width="2" />
+                                <circle cx="0" cy="14" r="6" fill="#1a202c" stroke="#2ed573" stroke-width="2" />
+                                <circle cx="-14" cy="0" r="6" fill="#1a202c" stroke="#2ed573" stroke-width="2" />
+                            </g>
+
+                            <!-- LEFT THUMBSTICK (Déplacement - Bleu #00f0ff) -->
+                            <g transform="translate(225, 140)">
+                                <circle cx="0" cy="0" r="20" fill="#1a202c" stroke="#4a5568" stroke-width="2" />
+                                <circle cx="0" cy="0" r="14" fill="url(#stickGrad)" stroke="#00f0ff" stroke-width="2" />
+                                <line x1="-8" y1="0" x2="8" y2="0" stroke="#00f0ff" stroke-width="1.5" opacity="0.7" />
+                                <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f0ff" stroke-width="1.5" opacity="0.7" />
+                            </g>
+
+                            <!-- RIGHT THUMBSTICK (Visée - Violet #a855f7) -->
+                            <g transform="translate(355, 140)">
+                                <circle cx="0" cy="0" r="20" fill="#1a202c" stroke="#4a5568" stroke-width="2" />
+                                <circle cx="0" cy="0" r="14" fill="url(#stickGrad)" stroke="#a855f7" stroke-width="2" />
+                                <line x1="-8" y1="0" x2="8" y2="0" stroke="#a855f7" stroke-width="1.5" opacity="0.7" />
+                                <line x1="0" y1="-8" x2="0" y2="8" stroke="#a855f7" stroke-width="1.5" opacity="0.7" />
+                            </g>
+
+                            <!-- Center Details -->
+                            <circle cx="290" cy="100" r="10" fill="#1a202c" stroke="#718096" stroke-width="2" />
+                        </g>
+
+                        <!-- ANNOTATIONS (Icônes x2 agrandies) -->
+
+                        <!-- 1. TORCHE (Jaune #ffea00 - 🔦) -->
+                        <g>
+                            <polyline points="185,35 120,25 76,25" fill="none" stroke="#ffea00" stroke-width="2"
+                                stroke-dasharray="5,3" />
+                            <circle cx="185" cy="35" r="5" fill="#ffea00" />
+                            <circle cx="50" cy="25" r="26" fill="#1a202c" stroke="#ffea00" stroke-width="3"
+                                filter="drop-shadow(0 0 8px rgba(255,234,0,0.4))" />
+                            <text x="50" y="27" font-size="30" text-anchor="middle"
+                                dominant-baseline="central">🔦</text>
+                        </g>
+
+                        <!-- 2. TIR (Rouge #ff4757 - Explosion / Tir 💥) -->
+                        <g>
+                            <polyline points="395,35 460,25 504,25" fill="none" stroke="#ff4757" stroke-width="2"
+                                stroke-dasharray="5,3" />
+                            <circle cx="395" cy="35" r="5" fill="#ff4757" />
+                            <circle cx="530" cy="25" r="26" fill="#1a202c" stroke="#ff4757" stroke-width="3"
+                                filter="drop-shadow(0 0 8px rgba(255,71,87,0.4))" />
+                            <text x="530" y="27" font-size="30" text-anchor="middle"
+                                dominant-baseline="central">💥</text>
+                        </g>
+
+                        <!-- 3. COURIR (Vert #2ed573 - Course rapide 🏃) -->
+                        <g>
+                            <polyline points="410,90 504,90" fill="none" stroke="#2ed573" stroke-width="2"
+                                stroke-dasharray="5,3" />
+                            <circle cx="410" cy="90" r="5" fill="#2ed573" />
+                            <circle cx="530" cy="90" r="26" fill="#1a202c" stroke="#2ed573" stroke-width="3"
+                                filter="drop-shadow(0 0 8px rgba(46,213,115,0.4))" />
+                            <text x="530" y="92" font-size="30" text-anchor="middle"
+                                dominant-baseline="central">🏃</text>
+                        </g>
+
+                        <!-- 4. DÉPLACEMENT (Bleu #00f0ff - Marche 🚶) -->
+                        <g>
+                            <polyline points="225,140 140,205 76,205" fill="none" stroke="#00f0ff" stroke-width="2"
+                                stroke-dasharray="5,3" />
+                            <circle cx="225" cy="140" r="5" fill="#00f0ff" />
+                            <circle cx="50" cy="205" r="26" fill="#1a202c" stroke="#00f0ff" stroke-width="3"
+                                filter="drop-shadow(0 0 8px rgba(0,240,255,0.4))" />
+                            <text x="50" y="207" font-size="30" text-anchor="middle"
+                                dominant-baseline="central">🚶</text>
+                        </g>
+
+                        <!-- 5. VISÉE (Violet #a855f7 - 🎯) -->
+                        <g>
+                            <polyline points="355,140 440,205 504,205" fill="none" stroke="#a855f7" stroke-width="2"
+                                stroke-dasharray="5,3" />
+                            <circle cx="355" cy="140" r="5" fill="#a855f7" />
+                            <circle cx="530" cy="205" r="26" fill="#1a202c" stroke="#a855f7" stroke-width="3"
+                                filter="drop-shadow(0 0 8px rgba(168,85,247,0.4))" />
+                            <text x="530" y="207" font-size="30" text-anchor="middle"
+                                dominant-baseline="central">🎯</text>
+                        </g>
+                    </svg>
+                </div>
+                <!-- Dual Controller Ready Badges & Gamepad Status for Start Menu -->
+                <div class="ready-status-box"
+                    style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%;">
+                    <div class="player-start-col" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div id="start-p1-ready-badge" class="ready-badge waiting">
+                            <div id="start-p1-ready-bar" class="ready-progress-bar" style="width: 0%;"></div>
+                            <span class="rb-icon">🎮</span> <span class="rb-text">P1: MAINTENEZ UN BOUTON</span>
+                        </div>
+                        <div id="start-gp1-status" class="gp-badge disconnected start-gp-status">
+                            <span class="gp-dot"></span>
+                            <span class="gp-name">MANETTE 1: RECHERCHE...</span>
+                        </div>
+                    </div>
+
+                    <div class="player-start-col" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div id="start-p2-ready-badge" class="ready-badge waiting">
+                            <div id="start-p2-ready-bar" class="ready-progress-bar" style="width: 0%;"></div>
+                            <span class="rb-icon">🎮</span> <span class="rb-text">P2: MAINTENEZ UN BOUTON</span>
+                        </div>
+                        <div id="start-gp2-status" class="gp-badge disconnected start-gp-status">
+                            <span class="gp-dot"></span>
+                            <span class="gp-name">MANETTE 2: RECHERCHE...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HUD Interface Globale -->
+        <div id="hud-layer">
+            <!-- P1 HUD (Gauche) -->
+            <div id="p1-hud" class="player-hud left">
+                <div class="hud-header">
+                    <span class="player-title p1-text">JOUEUR 1</span>
+                    <span id="p1-score" class="score-display">0</span>
+                </div>
+                <div class="bar-container health-bar-wrap">
+                    <div class="bar-label">SANTÉ</div>
+                    <div class="bar-bg">
+                        <div id="p1-hp-ghost" class="bar-fill hp-ghost" style="width: 100%;"></div>
+                        <div id="p1-hp" class="bar-fill hp-fill p1-bg" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="status-row">
+                    <div class="cooldown-widget">
+                        <div class="cd-ring-wrap">
+                            <svg class="cd-ring" viewBox="0 0 36 36">
+                                <path class="circle-bg"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="p1-cd-path" class="circle-fill p1-stroke" stroke-dasharray="100, 100"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span id="p1-cd-text" class="cd-text">PRÊT</span>
+                        </div>
+                        <span class="widget-label">ARME</span>
+                    </div>
+                    <div id="p1-light-indicator" class="indicator-box light-off">
+                        <span class="indicator-icon">🔦</span>
+                        <span class="indicator-text">TORCHE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Divider Stats & Match Info -->
+            <div id="center-hud">
+                <div class="brand-badge">CANDELA 2D</div>
+                <div id="round-timer" class="timer-display">02:00</div>
+                <div id="round-counter" class="round-display">ROUND 1</div>
+            </div>
+
+            <!-- Kill Feed -->
+            <div id="kill-feed" class="kill-feed"></div>
+
+            <!-- P2 HUD (Droite) -->
+            <div id="p2-hud" class="player-hud right">
+                <div class="hud-header">
+                    <span id="p2-score" class="score-display">0</span>
+                    <span class="player-title p2-text">JOUEUR 2</span>
+                </div>
+                <div class="bar-container health-bar-wrap">
+                    <div class="bar-label">SANTÉ</div>
+                    <div class="bar-bg">
+                        <div id="p2-hp-ghost" class="bar-fill hp-ghost" style="width: 100%;"></div>
+                        <div id="p2-hp" class="bar-fill hp-fill p2-bg" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="status-row">
+                    <div id="p2-light-indicator" class="indicator-box light-off">
+                        <span class="indicator-icon">🔦</span>
+                        <span class="indicator-text">TORCHE</span>
+                    </div>
+                    <div class="cooldown-widget">
+                        <div class="cd-ring-wrap">
+                            <svg class="cd-ring" viewBox="0 0 36 36">
+                                <path class="circle-bg"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="p2-cd-path" class="circle-fill p2-stroke" stroke-dasharray="100, 100"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <span id="p2-cd-text" class="cd-text">PRÊT</span>
+                        </div>
+                        <span class="widget-label">ARME</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controller Connection Bar (Footer) -->
+            <div id="gamepad-bar">
+                <div id="gp1-status" class="gp-badge disconnected">
+                    <span class="gp-dot"></span>
+                    <span class="gp-name">MANETTE 1: CLAVIER / RECHERCHE...</span>
+                </div>
+                <div class="gp-hint">Branchez 2 manettes ou utilisez Clavier/Souris</div>
+                <div id="gp2-status" class="gp-badge disconnected">
+                    <span class="gp-dot"></span>
+                    <span class="gp-name">MANETTE 2: CLAVIER / RECHERCHE...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Round Victory Modal Overlay -->
+        <div id="victory-modal" class="modal-overlay hidden">
+            <div class="modal-card victory-card">
+                <div id="victory-banner" class="glow-tag">VICTOIRE !</div>
+                <h2 id="victory-title">LE JOUEUR 1 REMPORTE LA MANCHE</h2>
+                <p id="victory-desc">Attaque mortelle dans l'obscurité.</p>
+                <div class="score-board">
+                    <div class="score-box p1-score-box">
+                        <span class="sb-label">P1 (BLEU)</span>
+                        <span id="modal-p1-score" class="sb-val">1</span>
+                    </div>
+                    <div class="sb-vs">VS</div>
+                    <div class="score-box p2-score-box">
+                        <span class="sb-label">P2 (ROUGE)</span>
+                        <span id="modal-p2-score" class="sb-val">0</span>
+                    </div>
+                </div>
+
+                <!-- Map Choice Buttons -->
+                <div class="map-choice-container">
+                    <button id="btn-keep-map" class="btn-map active">
+                        <span class="map-icon">📌</span> GARDER LA MÊME MAP
+                    </button>
+                    <button id="btn-new-map" class="btn-map">
+                        <span class="map-icon">🎲</span> CHANGER DE MAP (ALÉATOIRE)
+                    </button>
+                </div>
+
+                <!-- Dual Controller Ready Status Badges -->
+                <div class="ready-status-box">
+                    <div id="p1-ready-badge" class="ready-badge waiting">
+                        <div id="p1-ready-bar" class="ready-progress-bar" style="width: 0%;"></div>
+                        <span class="rb-icon">🎮</span> <span class="rb-text">P1: MAINTENEZ N'IMPORTE QUELLE
+                            TOUCHE</span>
+                    </div>
+                    <div id="p2-ready-badge" class="ready-badge waiting">
+                        <div id="p2-ready-bar" class="ready-progress-bar" style="width: 0%;"></div>
+                        <span class="rb-icon">🎮</span> <span class="rb-text">P2: MAINTENEZ N'IMPORTE QUELLE
+                            TOUCHE</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Script principal du jeu -->
+    <script src="game.js"></script>
+</body>
+
+</html>
