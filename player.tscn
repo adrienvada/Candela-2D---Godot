@@ -10,6 +10,8 @@ polygon = PackedVector2Array(28, 0, 18, 1, 16.63, 6.89, 12.73, 12.73, 6.89, 16.6
 
 [node name="Player" type="CharacterBody2D" unique_id=126758391]
 script = ExtResource("1_4flbx")
+player_id = null
+speed = null
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="." unique_id=1699084956]
 polygon = PackedVector2Array(28, 0, 18, 1, 16.63, 6.89, 12.73, 12.73, 6.89, 16.63, 0, 18, -6.89, 16.63, -12.73, 12.73, -16.63, 6.89, -18, 0, -16.63, -6.89, -12.73, -12.73, -6.89, -16.63, 0, -18, 6.89, -16.63, 12.73, -12.73, 16.63, -6.89, 18, -1)

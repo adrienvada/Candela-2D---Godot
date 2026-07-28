@@ -36,7 +36,6 @@ var visual_enemy_ptr: Polygon2D
 var visual_reveal_enemy: Polygon2D
 var visual_reveal_enemy_ptr: Polygon2D
 @onready var flashlight = $Flashlight
-var flashlight_ghost: PointLight2D
 var ambient_light: PointLight2D
 @onready var body_light = $BodyLight
 @onready var muzzle_flash = $MuzzleFlash
@@ -46,6 +45,8 @@ var aim_cast: RayCast2D
 var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
 @onready var hit_sound = $HitSound
+var step_distance_accumulated: float = 0.0
+
 
 # Input actions
 var action_up = ""
@@ -61,6 +62,7 @@ var action_torch = ""
 var action_sprint = ""
 
 func _ready():
+	z_index = 10
 	scale = Vector2(1.0, 1.0)
 	add_to_group("players")
 	_setup_inputs()
@@ -117,14 +119,26 @@ func _ready():
 	visual_reveal_enemy.material = unshaded_mat
 	visual_reveal_enemy_ptr.material = unshaded_mat
 	
-	visual.light_mask = 3
-	visual_ptr.light_mask = 3
+	# =========================================================================
+	# ARCHITECTURE DES COUCHES DE LUMIÈRE & DE VISIBILITÉ (GODOT 2D)
+	# -------------------------------------------------------------------------
+	# - VISIBILITY_LAYER : Détermine sur quel Viewport le sprite est dessiné.
+	#     * Viewport 1 (Joueur 1) lit la couche 2.
+	#     * Viewport 2 (Joueur 2) lit la couche 4.
+	#
+	# - LIGHT_MASK : Détermine quelle couche de lumière affecte ce sprite.
+	#     * Layer 1 (1) : Décor / Environnement (Murs, Sol).
+	#     * Layer 2 (2) : Sprites Ennemis (`visual_enemy`, gris).
+	#     * Layer 3 (4) : Sprites Joueurs Locaux (`visual`, cyan/magenta).
+	# =========================================================================
+	visual.light_mask = 4          # Layer 3 : Joueur local (Rétrodiffusion & Torche)
+	visual_ptr.light_mask = 4      # Layer 3 : Joueur local
 	visual_dim.light_mask = 1
 	visual_dim_ptr.light_mask = 1
 	visual_reveal.light_mask = 1
 	visual_reveal_ptr.light_mask = 1
-	visual_enemy.light_mask = 3
-	visual_enemy_ptr.light_mask = 3
+	visual_enemy.light_mask = 2    # Layer 2 : Sprite Ennemi (Rétrodiffusion, Torche, Sparks, Balles)
+	visual_enemy_ptr.light_mask = 2# Layer 2 : Sprite Ennemi
 	visual_reveal_enemy.light_mask = 1
 	visual_reveal_enemy_ptr.light_mask = 1
 	
@@ -178,17 +192,37 @@ void light() {
 	float d = distance(UV, vec2(0.5));
 	// Rim is strictly confined to the extreme outer edge
 	float rim = smoothstep(0.42, 0.48, d);
-	// Center is almost black (0.05), edge is brightly illuminated (4.0). This creates a hollow ring effect!
-	float boost = mix(0.05, 4.0, rim);
+	// Center is dark (0.4), edge is brightly illuminated (4.0). This creates a solid 3D effect instead of a hollow ring!
+	float boost = mix(0.4, 4.0, rim);
 	LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb * boost, LIGHT_COLOR.a);
 }
 """
 	var light_boost_mat = ShaderMaterial.new()
 	light_boost_mat.shader = light_boost_shader
+
+	# Smooth shader for the enemy: renders capped base gray color when illuminated, pitch black in shadow.
+	var enemy_shader = Shader.new()
+	enemy_shader.code = """
+shader_type canvas_item;
+void light() {
+	float light_val = max(max(LIGHT_COLOR.r, LIGHT_COLOR.g), LIGHT_COLOR.b);
+	if (light_val > 0.001) {
+		// Boost incoming light slightly so the enemy is uniformly gray anywhere in the torch cone,
+		// but clamp to COLOR.rgb so it NEVER overexposes to white!
+		vec3 lit = COLOR.rgb * (light_val * 4.0);
+		LIGHT = vec4(min(lit, COLOR.rgb), LIGHT_COLOR.a);
+	} else {
+		LIGHT = vec4(0.0); // Pitch black in shadow / unlit
+	}
+}
+"""
+	var enemy_mat = ShaderMaterial.new()
+	enemy_mat.shader = enemy_shader
+	visual_enemy.material = enemy_mat
+	visual_enemy_ptr.material = enemy_mat
+	
 	visual.material = light_boost_mat
 	visual_ptr.material = light_boost_mat
-	visual_enemy.material = light_boost_mat
-	visual_enemy_ptr.material = light_boost_mat
 		
 	# Setup Camera Shake Noise
 	noise = FastNoiseLite.new()
@@ -226,13 +260,22 @@ void fragment() {
 	ui_layer.add_child(vignette_rect)
 	
 	
-	# Light setup
+	# Configuration de la Lampe Torche Principale (Faisceau Avant)
 	flashlight.enabled = false
 	flashlight.shadow_enabled = true
 	flashlight.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	flashlight.shadow_item_cull_mask = 1 | 2 # Les murs (1) projettent des ombres sur les ennemis (2) sans auto-ombrage (4)
+	flashlight.range_item_cull_mask = 1 | 2 | 4 # Éclaire les murs (1), les ennemis (2) et le joueur local (4)
+	flashlight.energy = 2.5
+	flashlight.offset = Vector2.ZERO
+	flashlight.position = Vector2(30, 0)
 	
+	# Configuration de la Rétrodiffusion de Lentille (Halo autour du corps quand la torche est active)
 	body_light.enabled = false
-	body_light.shadow_enabled = false
+	body_light.shadow_enabled = true # Activé pour que les murs bloquent le rétroéclairage !
+	body_light.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	body_light.shadow_item_cull_mask = 1 | 2 # Les murs (1) bloquent la rétrodiffusion vers les ennemis (2)
+	body_light.range_item_cull_mask = 2 | 4  # Éclaire le joueur local (4) ET l'écran ennemi (2) quand en ligne de vue
 	
 	var b_grad = Gradient.new()
 	b_grad.set_color(0, Color(1, 0.95, 0.8, 1.0))
@@ -248,22 +291,10 @@ void fragment() {
 	body_light.energy = 0.6
 	body_light.position = Vector2(18, 0)
 	
-	flashlight.energy = 2.5
-	flashlight.offset = Vector2.ZERO
-	flashlight.position = Vector2(30, 0)
-	
-	flashlight_ghost = PointLight2D.new()
-	flashlight_ghost.energy = 0.4
-	flashlight_ghost.offset = Vector2.ZERO
-	flashlight_ghost.position = Vector2(30, 0)
-	
 	if current_weapon:
 		equip_weapon(current_weapon)
 	else:
 		equip_weapon(WeaponData.new())
-	flashlight_ghost.shadow_enabled = false
-	flashlight_ghost.range_item_cull_mask = 2 # Only players
-	add_child(flashlight_ghost)
 	
 	ambient_light = PointLight2D.new()
 	var a_grad = Gradient.new()
@@ -287,19 +318,19 @@ void fragment() {
 		ambient_light.range_item_cull_mask = 32
 	add_child(ambient_light)
 	
-	# Add a custom occluder for the player that only blocks muzzle flash and bullets
-	var occ = LightOccluder2D.new()
-	var poly = OccluderPolygon2D.new()
+	# The main occluder is configured as a perfect circle on layer 3 (value 4).
+	# This ensures it blocks the main flashlight (mask 1|4) and bullets.
 	var pts = PackedVector2Array()
 	for i in range(16):
 		var ang = (i / 16.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 20.0) # slightly smaller than player radius
-	poly.polygon = pts
-	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
-	occ.occluder = poly
-	occ.occluder_light_mask = 4 # Only cast shadows on layer 3 (value 4)
-	add_child(occ)
-	
+		pts.append(Vector2(cos(ang), sin(ang)) * 18.0) # 18.0 is exactly the player radius
+		
+	if has_node("LightOccluder2D"):
+		var main_occ = get_node("LightOccluder2D")
+		main_occ.occluder.polygon = pts
+		main_occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+		main_occ.occluder_light_mask = 4 # Put player occluder on layer 3 (value 4)
+		
 	muzzle_flash.enabled = false
 	muzzle_flash.shadow_enabled = true
 	muzzle_flash.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
@@ -354,9 +385,6 @@ func equip_weapon(weapon: WeaponData):
 	var tex = weapon.get_torch_texture()
 	flashlight.texture = tex
 	flashlight.texture_scale = weapon.torch_scale
-	if flashlight_ghost:
-		flashlight_ghost.texture = tex
-		flashlight_ghost.texture_scale = weapon.torch_scale
 
 func _setup_inputs():
 	var prefix = "p1_" if player_id == 0 else "p2_"
@@ -410,7 +438,6 @@ func _physics_process(delta):
 		move_and_slide()
 		flashlight_on = false
 		flashlight.enabled = false
-		if flashlight_ghost: flashlight_ghost.enabled = false
 		body_light.enabled = false
 		return
 		
@@ -424,6 +451,14 @@ func _physics_process(delta):
 		
 	velocity = input_dir * current_speed
 	move_and_slide()
+	
+	if velocity.length() > 20.0:
+		step_distance_accumulated += velocity.length() * delta
+		var step_dist := 30.0 if is_sprinting else 45.0
+		if step_distance_accumulated >= step_dist:
+			step_distance_accumulated = 0.0
+			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.92, 1.08)
+
 	
 	# Aiming (smooth lerp with dazzle penalty)
 	var aim_dir = Input.get_vector(action_aim_left, action_aim_right, action_aim_up, action_aim_down)
@@ -445,7 +480,6 @@ func _physics_process(delta):
 		flashlight_on = Input.is_action_pressed(action_torch)
 		
 	flashlight.enabled = flashlight_on
-	if flashlight_ghost: flashlight_ghost.enabled = flashlight_on
 	body_light.enabled = flashlight_on
 	
 	if flashlight_on:
@@ -455,7 +489,6 @@ func _physics_process(delta):
 			flashlight.energy = lerp(flashlight.energy, 2.5, 8.0 * delta)
 			
 		body_light.energy = (flashlight.energy / 2.5) * 0.6
-		if flashlight_ghost: flashlight_ghost.energy = (flashlight.energy / 2.5) * 0.4
 	
 	# Update aim line
 	if aim_cast and aim_line:
@@ -503,11 +536,16 @@ func shoot():
 	# Emit signal to GameState to spawn bullet
 	# Using groups for loose coupling
 	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
+	
+	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
 
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return
 	hp -= amount
 	hit_sound.play()
+	AudioManager.play_sfx_2d_random_pitch("flesh_impact", global_position, 0.92, 1.08)
+	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
+
 	
 	# Violent camera shake on hit
 	add_camera_shake(35.0, 8.0)
@@ -536,7 +574,8 @@ func take_damage(amount: float, source_player: Node2D):
 	hit_light.shadow_enabled = true
 	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
 	hit_light.shadow_item_cull_mask = 1
-	hit_light.range_item_cull_mask = 1 | 2 | 4
+	# Main blood light affects walls (1) and other stuff (4), but NOT players (2)
+	hit_light.range_item_cull_mask = 1 | 4
 	add_child(hit_light)
 	
 	var tw_l = create_tween()
@@ -550,6 +589,8 @@ func take_damage(amount: float, source_player: Node2D):
 
 func die(killer: Node2D):
 	dead = true
+	AudioManager.update_low_health(player_id, false)
+
 	visual.visible = false
 	visual_ptr.visible = false
 	visual_dim.visible = false
@@ -564,6 +605,68 @@ func die(killer: Node2D):
 		get_node("VisualRevealEnemyPtr").visible = false
 	flashlight.enabled = false
 	body_light.enabled = false
+	
+	# Satisfying Death Effect (Screen Flash + Chromatic Aberration)
+	var ui_layer = CanvasLayer.new()
+	ui_layer.layer = 100
+	add_child(ui_layer)
+	
+	var flash_rect = ColorRect.new()
+	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	
+	var shader = Shader.new()
+	shader.code = """
+shader_type canvas_item;
+uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
+uniform float flash_intensity : hint_range(0.0, 1.0) = 1.0;
+uniform float aberration_amount = 0.05;
+
+void fragment() {
+	float offset = aberration_amount * flash_intensity;
+	float r = texture(screen_texture, SCREEN_UV + vec2(offset, 0.0)).r;
+	float g = texture(screen_texture, SCREEN_UV).g;
+	float b = texture(screen_texture, SCREEN_UV - vec2(offset, 0.0)).b;
+	vec3 color = mix(vec3(r, g, b), vec3(1.0), flash_intensity);
+	COLOR = vec4(color, 1.0);
+}
+"""
+	var mat = ShaderMaterial.new()
+	mat.shader = shader
+	mat.set_shader_parameter("flash_intensity", 1.0)
+	flash_rect.material = mat
+	ui_layer.add_child(flash_rect)
+	
+	var tw = create_tween()
+	tw.tween_method(func(val): mat.set_shader_parameter("flash_intensity", val), 1.0, 0.0, 0.6).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(ui_layer.queue_free)
+	
+	# Floating FATAL Text
+	var lbl = Label.new()
+	lbl.text = "FATAL"
+	var settings = LabelSettings.new()
+	settings.font_size = 72
+	settings.font_color = Color(1.0, 0.0, 0.0)
+	settings.outline_size = 12
+	settings.outline_color = Color.BLACK
+	lbl.label_settings = settings
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position = global_position - Vector2(100, 100)
+	lbl.z_index = 200
+	
+	var lbl_mat = CanvasItemMaterial.new()
+	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	lbl.material = lbl_mat
+	
+	get_parent().add_child(lbl)
+	
+	var txt_tw = create_tween().set_parallel(true)
+	lbl.scale = Vector2.ZERO
+	lbl.pivot_offset = Vector2(100, 50)
+	txt_tw.tween_property(lbl, "scale", Vector2(1.5, 1.5), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	txt_tw.tween_property(lbl, "position", lbl.position + Vector2(0, -100), 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
+	txt_tw.chain().tween_callback(lbl.queue_free)
+	
 	get_tree().call_group("game_state", "player_died", player_id, killer.player_id if killer else -1)
 
 func add_camera_shake(intensity: float, decay: float = 5.0):

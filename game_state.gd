@@ -8,6 +8,9 @@ var round_active: bool = false
 var game_over: bool = false
 var _first_replay_frame: bool = false
 
+var p1_kills: int = 0
+var p2_kills: int = 0
+
 var p1: Player
 var p2: Player
 
@@ -34,8 +37,13 @@ var cam1: Camera2D
 var cam2: Camera2D
 var current_snap
 
+var cam1_shake_time: float = 0.0
+var cam2_shake_time: float = 0.0
+
 func _ready():
 	add_to_group("game_state")
+	AudioManager.play_music("music_menu")
+
 	
 	weapon_pistolet = WeaponData.new()
 	
@@ -79,6 +87,22 @@ func _ready():
 	_setup_ambient_visuals()
 	_setup_players()
 	_setup_ghosts()
+	
+	# Setup Killcam Overlay to sit between background and players/bullets
+	var killcam_bb = BackBufferCopy.new()
+	killcam_bb.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	killcam_bb.z_index = 2
+	killcam_bb.name = "KillcamBB"
+	killcam_bb.hide()
+	arena.add_child(killcam_bb)
+	
+	ui.killcam_overlay.z_index = 2
+	ui.killcam_overlay.name = "KillcamOverlay"
+	ui.killcam_overlay.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	ui.killcam_overlay.size = Vector2(20000, 20000)
+	ui.killcam_overlay.position = Vector2(-10000, -10000)
+	arena.add_child(ui.killcam_overlay)
+	
 	ui.show_main_menu()
 
 func _on_debug_light_toggled(toggled_on: bool):
@@ -120,8 +144,6 @@ func _setup_ambient_visuals():
 					line.points = pts
 					line.width = 4.0
 					line.default_color = Color.WHITE
-					# Must be illuminated by flashlights (1) and both ambient lights (16, 32)
-					line.light_mask = 1 | 16 | 32 
 					child.add_child(line)
 		
 	var visuals = []
@@ -131,19 +153,19 @@ func _setup_ambient_visuals():
 		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 		
 		var v1 = v.duplicate()
-		v1.visibility_layer = 2 # P1
-		v1.light_mask = 16 # Layer 5
+		v1.visibility_layer = 2 # P1 Viewport
+		v1.light_mask = 1 | 16 # Torch (1) + P1 Ambient (16)
 		v1.material = mat
 		v.get_parent().add_child(v1)
 		
 		var v2 = v.duplicate()
-		v2.visibility_layer = 4 # P2
-		v2.light_mask = 32 # Layer 6
+		v2.visibility_layer = 4 # P2 Viewport
+		v2.light_mask = 1 | 32 # Torch (1) + P2 Ambient (32)
 		v2.material = mat
 		v.get_parent().add_child(v2)
 
 func _find_visuals(node: Node, list: Array):
-	if (node is ColorRect or node is Sprite2D or node is Polygon2D or node is TextureRect) and not node.is_in_group("players"):
+	if (node is ColorRect or node is Sprite2D or node is Polygon2D or node is TextureRect or node is Line2D) and not node.is_in_group("players"):
 		list.append(node)
 	for c in node.get_children():
 		_find_visuals(c, list)
@@ -186,6 +208,7 @@ void fragment() {
 	unshaded_mat.shader = unshaded_shader
 	
 	ghost_p1 = Node2D.new()
+	ghost_p1.z_index = 10
 	var g1_vis = p1.get_node("VisualColored").duplicate()
 	g1_vis.material = unshaded_mat
 	g1_vis.color.a = 0.5
@@ -201,6 +224,7 @@ void fragment() {
 	ghost_p1.hide()
 	
 	ghost_p2 = Node2D.new()
+	ghost_p2.z_index = 10
 	var g2_vis = p2.get_node("VisualColored").duplicate()
 	g2_vis.material = unshaded_mat
 	g2_vis.color.a = 0.5
@@ -216,9 +240,13 @@ void fragment() {
 	ghost_p2.hide()
 
 func _start_round():
+	AudioManager.reset_low_health()
+	AudioManager.play_music("music_match")
+	AudioManager.play_speaker("spk_fight")
 	
 	p1.show_all_visuals()
 	p2.show_all_visuals()
+
 	p1.hp = 100.0
 	p2.hp = 100.0
 	p1.dead = false
@@ -256,8 +284,9 @@ func _start_round():
 	ghost_p2.hide()
 	for c in bullet_container.get_children():
 		c.queue_free()
-	
 	ReplaySystem.start_recording()
+	
+	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
 
 func _process(delta):
 	if round_active:
@@ -271,6 +300,18 @@ func _process(delta):
 		# Cameras track live players
 		cam1.global_position = p1.global_position
 		cam2.global_position = p2.global_position
+		
+	if cam1_shake_time > 0:
+		cam1_shake_time -= delta
+		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+	else:
+		cam1.offset = Vector2.ZERO
+		
+	if cam2_shake_time > 0:
+		cam2_shake_time -= delta
+		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+	else:
+		cam2.offset = Vector2.ZERO
 		
 	if ReplaySystem.recording:
 		ReplaySystem.record_frame(p1, p2, bullet_container)
@@ -319,19 +360,38 @@ func _process(delta):
 			var dx = max(abs(ghost_p1.global_position.x - ghost_p2.global_position.x), 200.0)
 			var dy = max(abs(ghost_p1.global_position.y - ghost_p2.global_position.y), 200.0)
 			
-			var zoom_x = viewport_size.x / (dx + margin * 2)
-			var zoom_y = viewport_size.y / (dy + margin * 2)
-			var target_zoom_val = clamp(min(zoom_x, zoom_y), 0.8, 2.2)
+			# Only apply extreme cinematic zoom during bullet time!
+			var target_zoom_val = 1.0
+			var target_pos = midpoint
+			
+			if Engine.time_scale < 0.9:
+				# We are in bullet time! Zoom in hard.
+				var zoom_x = viewport_size.x / (dx + margin * 2)
+				var zoom_y = viewport_size.y / (dy + margin * 2)
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 1.2, 2.8) # Push zoom further
+			else:
+				# Normal playback: stay zoomed out to see the action
+				var zoom_x = viewport_size.x / (dx + margin * 2.5)
+				var zoom_y = viewport_size.y / (dy + margin * 2.5)
+				target_zoom_val = clamp(min(zoom_x, zoom_y), 0.7, 1.3)
+				
 			var target_zoom = Vector2(target_zoom_val, target_zoom_val)
 			
 			if _first_replay_frame:
-				cam1.global_position = midpoint
+				cam1.global_position = target_pos
 				cam1.zoom = target_zoom
 				_first_replay_frame = false
 			else:
-				# Very gentle lerp for a hyper-fluid cinematic drift
-				cam1.global_position = cam1.global_position.lerp(midpoint, 3.0 * unscaled_delta)
-				cam1.zoom = cam1.zoom.lerp(target_zoom, 3.0 * unscaled_delta)
+				# Exponential smoothing prevents overshoot and jumping when delta scales wildly in bullet time
+				var lerp_speed = 3.0 if Engine.time_scale >= 0.9 else 6.0
+				var weight = 1.0 - exp(-lerp_speed * unscaled_delta)
+				cam1.global_position = cam1.global_position.lerp(target_pos, weight)
+				cam1.zoom = cam1.zoom.lerp(target_zoom, weight)
+			
+		# Allow skipping killcam
+		if Input.is_action_just_pressed("p1_skip_killcam") or Input.is_action_just_pressed("p2_skip_killcam"):
+			ReplaySystem.playing_back = false
+			Engine.time_scale = 1.0
 			
 	ui.update_hud(p1, p2, time_left)
 
@@ -376,6 +436,11 @@ func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData)
 		
 		if ReplaySystem.recording:
 			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon)
+			
+	if shooter == p1:
+		cam1_shake_time = 0.1
+	elif shooter == p2:
+		cam2_shake_time = 0.1
 
 func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
 	var b = bullet_scene.instantiate()
@@ -393,12 +458,22 @@ func player_died(dead_id: int, _killer_id: int):
 	if not round_active: return
 	
 	if dead_id == 0:
+		p2_kills += 1
 		_end_round(1)
 	elif dead_id == 1:
+		p1_kills += 1
 		_end_round(0)
 
 func _end_round(winner_id: int):
 	round_active = false
+	AudioManager.play_music("music_victory")
+	if winner_id == 0:
+		AudioManager.play_speaker("spk_p1_wins")
+	elif winner_id == 1:
+		AudioManager.play_speaker("spk_p2_wins")
+	else:
+		AudioManager.play_speaker("spk_draw")
+
 	
 	if winner_id != -1:
 		# Wait 1.5 seconds to capture blood physics and reaction!
@@ -419,31 +494,36 @@ func _end_round(winner_id: int):
 		_first_replay_frame = true
 		ReplaySystem.start_playback()
 		
-		# Wait for replay to finish
+		# Wait for replay to finish or be skipped
 		while ReplaySystem.playing_back:
 			await get_tree().process_frame
 			
-		# Restore Split Screen
-		vp2.get_parent().show()
-		ui.center_line.show()
+		# Hide killcam UI but KEEP the freeze frame
 		ui.hide_killcam()
 		
-		# Reset cameras
-		cam1.zoom = Vector2(1.0, 1.0)
-		cam2.zoom = Vector2(1.0, 1.0)
-		cam1.global_position = p1.global_position
-		cam2.global_position = p2.global_position
-		
-		mod = arena.get_node_or_null("CanvasModulate")
-		if mod:
-			mod.color = Color(0.3, 0.3, 0.3) if ui.btn_debug_light.button_pressed else Color(0, 0, 0)
+		# DO NOT restore split screen or reset cameras here!
+		# It freezes the screen perfectly on the death frame behind the menu.
 		
 	game_over = true
 	ui.show_game_over(winner_id)
+	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
 
 func _on_replay_requested():
 	game_over = false
 	ui.hide_game_over()
+	
+	# NOW we restore split screen and reset cameras for the new round
+	vp2.get_parent().show()
+	ui.center_line.show()
+	cam1.zoom = Vector2(1.0, 1.0)
+	cam2.zoom = Vector2(1.0, 1.0)
+	cam1.global_position = p1.global_position
+	cam2.global_position = p2.global_position
+	
+	var mod = arena.get_node_or_null("CanvasModulate")
+	if mod:
+		mod.color = Color(0.3, 0.3, 0.3) if ui.btn_debug_light.button_pressed else Color(0, 0, 0)
+	
 	_start_round()
 
 func _on_quit_requested():

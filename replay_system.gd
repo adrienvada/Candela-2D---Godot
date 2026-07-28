@@ -152,16 +152,27 @@ func get_next_frame(delta: float):
 	if impact_frame != -1 and slow_mo_start_frame != -1:
 		if idx1 >= slow_mo_start_frame and idx1 < impact_frame:
 			# Calculate how many frames the bullet is in the air
-			var travel_frames = max(1, impact_frame - slow_mo_start_frame)
-			var frames_elapsed = (idx1 - slow_mo_start_frame) + t
+			var travel_frames = max(1.0, float(impact_frame - slow_mo_start_frame))
+			var frames_elapsed = (float(idx1 - slow_mo_start_frame) + t)
 			
-			if frames_elapsed < travel_frames / 2.0:
-				# First half of trajectory: extremely slow! 
-				# (calculated as if the whole trip took 5.0 seconds to keep the same scale)
-				target_time_scale = clamp(float(travel_frames) / (5.0 * 60.0), 0.005, 1.0) 
+			var progress = clamp(frames_elapsed / travel_frames, 0.0, 1.0)
+			
+			# We want it to be very slow at the start, and smoothly accelerate to 1.0 right before impact
+			# Using a smooth bezier-like curve for the acceleration
+			var slow_scale = clamp(travel_frames / (5.0 * 60.0), 0.005, 1.0)
+			
+			# Smoothstep (Hermite interpolation) for a fluid bezier feel
+			var ease_progress = progress * progress * (3.0 - 2.0 * progress)
+			
+			# Extreme slow mo at start (ease_progress ~ 0), normal speed at impact (ease_progress ~ 1)
+			# We keep it slow for the first 60% of the travel, then accelerate
+			if progress < 0.6:
+				target_time_scale = slow_scale
 			else:
-				# Second half of trajectory: real speed!
-				target_time_scale = 1.0
+				var accel_progress = (progress - 0.6) / 0.4
+				accel_progress = accel_progress * accel_progress * (3.0 - 2.0 * accel_progress)
+				target_time_scale = lerp(slow_scale, 1.0, accel_progress)
+				
 		elif idx1 >= impact_frame:
 			time_since_impact_real += unscaled_delta
 			if time_since_impact_real < 0.6:
@@ -169,9 +180,9 @@ func get_next_frame(delta: float):
 				target_time_scale = 0.03
 			elif time_since_impact_real < 1.0:
 				# Sudden rapid acceleration over 0.4 seconds
-				var t_accel = (time_since_impact_real - 0.6) / 0.4
-				# Cubic ease in for sudden burst of speed
-				t_accel = t_accel * t_accel * t_accel
+				var t_accel = clamp((time_since_impact_real - 0.6) / 0.4, 0.0, 1.0)
+				# Very smooth ease-in-out using Hermite/Bezier-like curve
+				t_accel = t_accel * t_accel * (3.0 - 2.0 * t_accel)
 				target_time_scale = lerp(0.03, 6.0, t_accel)
 			else:
 				# Stop playback exactly 1.0 second after the bullet hits

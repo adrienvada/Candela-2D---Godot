@@ -57,3 +57,46 @@ func get_torch_texture() -> ImageTexture:
 	
 	_torch_texture = ImageTexture.create_from_image(img)
 	return _torch_texture
+
+var _torch_texture_flat: ImageTexture
+
+func get_torch_texture_flat() -> ImageTexture:
+	if _torch_texture_flat != null:
+		return _torch_texture_flat
+		
+	var tex_size = 512
+	var img = Image.create_empty(tex_size, tex_size, false, Image.FORMAT_RGBA8)
+	var center = Vector2(tex_size / 2.0, tex_size / 2.0)
+	var max_dist = tex_size / 2.0
+	var cone_angle = deg_to_rad(torch_angle_deg)
+	
+	for y in range(tex_size):
+		for x in range(tex_size):
+			var pos = Vector2(x, y)
+			var dist = pos.distance_to(center)
+			if dist >= max_dist:
+				continue
+				
+			var dir = center.direction_to(pos)
+			var angle = abs(dir.angle())
+			var intensity = 0.0
+			
+			if angle <= cone_angle:
+				# Solid light, but with a slight diffuse edge to prevent harsh pixelated steps
+				var angle_fade = clamp((cone_angle - angle) * 16.0, 0.0, 1.0)
+				var dist_fade = clamp((max_dist - dist) / 25.0, 0.0, 1.0)
+				intensity = angle_fade * dist_fade
+				
+			var halo_angle = deg_to_rad(80.0)
+			if angle <= halo_angle:
+				var halo_dist = max_dist * 0.2
+				if dist < halo_dist:
+					var halo_angle_fade = clamp((halo_angle - angle) * 8.0, 0.0, 1.0)
+					var halo_dist_fade = clamp((halo_dist - dist) / 15.0, 0.0, 1.0)
+					intensity = max(intensity, halo_angle_fade * halo_dist_fade)
+				
+			if intensity > 0:
+				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity))
+	
+	_torch_texture_flat = ImageTexture.create_from_image(img)
+	return _torch_texture_flat

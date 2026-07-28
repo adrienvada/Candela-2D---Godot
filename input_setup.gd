@@ -8,16 +8,28 @@ func _setup_all_inputs():
 	var actions = [
 		"p1_move_up", "p1_move_down", "p1_move_left", "p1_move_right",
 		"p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
-		"p1_shoot", "p1_torch", "p1_sprint",
+		"p1_shoot", "p1_torch", "p1_sprint", "p1_skip_killcam",
+		"p1_weapon_prev", "p1_weapon_next", "p1_menu_select",
+		"p1_menu_up", "p1_menu_down", "p1_menu_left", "p1_menu_right",
+		"p1_menu_prev_tab", "p1_menu_next_tab",
 		"p2_move_up", "p2_move_down", "p2_move_left", "p2_move_right",
 		"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right",
-		"p2_shoot", "p2_torch", "p2_sprint"
+		"p2_shoot", "p2_torch", "p2_sprint", "p2_skip_killcam",
+		"p2_weapon_prev", "p2_weapon_next", "p2_menu_select",
+		"p2_menu_up", "p2_menu_down", "p2_menu_left", "p2_menu_right",
+		"p2_menu_prev_tab", "p2_menu_next_tab",
+		"sys_pause"
 	]
 	
 	for a in actions:
 		if not InputMap.has_action(a):
 			InputMap.add_action(a)
 			InputMap.action_set_deadzone(a, 0.2)
+			
+	# Keyboard Escape for pause
+	var esc = InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	InputMap.action_add_event("sys_pause", esc)
 	
 	# Helper for joy axis
 	var add_joy_axis = func(action: String, device: int, axis: int, val: float):
@@ -57,19 +69,37 @@ func _setup_all_inputs():
 	add_joy_axis.call("p1_aim_up", p1_device, JOY_AXIS_RIGHT_Y, -1.0)
 	add_joy_axis.call("p1_aim_down", p1_device, JOY_AXIS_RIGHT_Y, 1.0)
 	
-	add_joy_axis.call("p1_shoot", p1_device, JOY_AXIS_TRIGGER_RIGHT, 1.0) # RT
-	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # RB
+	# L2 = Torche, R1 = Tir
+	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	add_joy_axis.call("p1_torch", p1_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	add_joy_axis.call("p1_torch", p1_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # LT
-	add_joy_btn.call("p1_torch", p1_device, JOY_BUTTON_LEFT_SHOULDER) # LB
+	# Carré = Courir
+	add_joy_btn.call("p1_sprint", p1_device, JOY_BUTTON_X) # Carré
 	
-	add_joy_btn.call("p1_move_up", p1_device, JOY_BUTTON_DPAD_UP)
-	add_joy_btn.call("p1_move_down", p1_device, JOY_BUTTON_DPAD_DOWN)
-	add_joy_btn.call("p1_move_left", p1_device, JOY_BUTTON_DPAD_LEFT)
-	add_joy_btn.call("p1_move_right", p1_device, JOY_BUTTON_DPAD_RIGHT)
-	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_A) # Croix
+	# Croix = Sélectionner menu
+	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
 	
-	add_joy_btn.call("p1_sprint", p1_device, JOY_BUTTON_LEFT_STICK) # L3
+	# L1 / R1 = Changer d'onglet
+	add_joy_btn.call("p1_menu_prev_tab", p1_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	add_joy_btn.call("p1_menu_next_tab", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	
+	# Rond = Passer killcam
+	add_joy_btn.call("p1_skip_killcam", p1_device, JOY_BUTTON_B) # Rond
+	
+	# D-pad Gauche/Droite = Changer d'arme (Debug mode only, checked in game_state)
+	add_joy_btn.call("p1_weapon_prev", p1_device, JOY_BUTTON_DPAD_LEFT)
+	add_joy_btn.call("p1_weapon_next", p1_device, JOY_BUTTON_DPAD_RIGHT)
+	
+	# Menu Navigation
+	add_joy_btn.call("p1_menu_up", p1_device, JOY_BUTTON_DPAD_UP)
+	add_joy_btn.call("p1_menu_down", p1_device, JOY_BUTTON_DPAD_DOWN)
+	add_joy_btn.call("p1_menu_left", p1_device, JOY_BUTTON_DPAD_LEFT)
+	add_joy_btn.call("p1_menu_right", p1_device, JOY_BUTTON_DPAD_RIGHT)
+	
+	add_joy_axis.call("p1_menu_up", p1_device, JOY_AXIS_LEFT_Y, -1.0)
+	add_joy_axis.call("p1_menu_down", p1_device, JOY_AXIS_LEFT_Y, 1.0)
+	add_joy_axis.call("p1_menu_left", p1_device, JOY_AXIS_LEFT_X, -1.0)
+	add_joy_axis.call("p1_menu_right", p1_device, JOY_AXIS_LEFT_X, 1.0)
 	
 	# P2
 	add_joy_axis.call("p2_move_left", p2_device, JOY_AXIS_LEFT_X, -1.0)
@@ -82,16 +112,40 @@ func _setup_all_inputs():
 	add_joy_axis.call("p2_aim_up", p2_device, JOY_AXIS_RIGHT_Y, -1.0)
 	add_joy_axis.call("p2_aim_down", p2_device, JOY_AXIS_RIGHT_Y, 1.0)
 	
-	add_joy_axis.call("p2_shoot", p2_device, JOY_AXIS_TRIGGER_RIGHT, 1.0) # RT
-	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # RB
+	# L2 = Torche, R1 = Tir
+	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	add_joy_axis.call("p2_torch", p2_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	add_joy_axis.call("p2_torch", p2_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # LT
-	add_joy_btn.call("p2_torch", p2_device, JOY_BUTTON_LEFT_SHOULDER) # LB
+	# Carré = Courir
+	add_joy_btn.call("p2_sprint", p2_device, JOY_BUTTON_X) # Carré
 	
-	add_joy_btn.call("p2_move_up", p2_device, JOY_BUTTON_DPAD_UP)
-	add_joy_btn.call("p2_move_down", p2_device, JOY_BUTTON_DPAD_DOWN)
-	add_joy_btn.call("p2_move_left", p2_device, JOY_BUTTON_DPAD_LEFT)
-	add_joy_btn.call("p2_move_right", p2_device, JOY_BUTTON_DPAD_RIGHT)
-	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_A) # Croix
+	# Croix = Sélectionner menu
+	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix
 	
-	add_joy_btn.call("p2_sprint", p2_device, JOY_BUTTON_LEFT_STICK) # L3
+	# L1 / R1 = Changer d'onglet
+	add_joy_btn.call("p2_menu_prev_tab", p2_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	add_joy_btn.call("p2_menu_next_tab", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	
+	# Rond = Passer killcam
+	add_joy_btn.call("p2_skip_killcam", p2_device, JOY_BUTTON_B) # Rond
+	
+	# D-pad Gauche/Droite = Changer d'arme
+	add_joy_btn.call("p2_weapon_prev", p2_device, JOY_BUTTON_DPAD_LEFT)
+	add_joy_btn.call("p2_weapon_next", p2_device, JOY_BUTTON_DPAD_RIGHT)
+
+	# Menu Navigation
+	add_joy_btn.call("p2_menu_up", p2_device, JOY_BUTTON_DPAD_UP)
+	add_joy_btn.call("p2_menu_down", p2_device, JOY_BUTTON_DPAD_DOWN)
+	add_joy_btn.call("p2_menu_left", p2_device, JOY_BUTTON_DPAD_LEFT)
+	add_joy_btn.call("p2_menu_right", p2_device, JOY_BUTTON_DPAD_RIGHT)
+	
+	add_joy_axis.call("p2_menu_up", p2_device, JOY_AXIS_LEFT_Y, -1.0)
+	add_joy_axis.call("p2_menu_down", p2_device, JOY_AXIS_LEFT_Y, 1.0)
+	add_joy_axis.call("p2_menu_left", p2_device, JOY_AXIS_LEFT_X, -1.0)
+	add_joy_axis.call("p2_menu_right", p2_device, JOY_AXIS_LEFT_X, 1.0)
+	
+	# Start / Menu button for pause
+	add_joy_btn.call("sys_pause", p1_device, JOY_BUTTON_START)
+	add_joy_btn.call("sys_pause", p2_device, JOY_BUTTON_START)
+
+

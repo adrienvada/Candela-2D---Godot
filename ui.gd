@@ -67,6 +67,24 @@ var btn_debug_light: CheckButton
 var p1_nav: Dictionary = {}
 var p2_nav: Dictionary = {}
 
+var btn_controls: Button
+var controls_panel: PanelContainer
+
+var _is_rebinding: bool = false
+var _action_to_rebind: String = ""
+var _button_to_update: Button = null
+
+var debug_panel: PanelContainer
+var fps_label: Label
+var debug_mode_active: bool = false
+var _f3_was_pressed: bool = false
+
+var killcam_overlay: ColorRect
+var killcam_container: Control
+var killcam_label_shadow1: Label
+var killcam_label_shadow2: Label
+var killcam_timecode: Label
+var _killcam_glitch_timer: float = 0.0
 var killcam_label: Label
 
 var p1_shake_time: float = 0.0
@@ -78,8 +96,33 @@ var p2_target_hp: float = 100.0
 var p1_bg_hp: float = 100.0
 var p2_bg_hp: float = 100.0
 
+var btn_tab_game: Button
+var btn_tab_controls: Button
+var tab_game_container: VBoxContainer
+var tab_controls_container: VBoxContainer
+var btn_resume: Button
+var _controls_grid_buttons: Array = []
+var _is_main_menu: bool = true
+
 func _ready():
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_disable_ui_joystick()
 	_build_ui()
+	_connect_buttons_audio(self)
+
+func _connect_buttons_audio(node: Node):
+	if node is Button:
+		node.pressed.connect(func(): AudioManager.play_button_click())
+	for child in node.get_children():
+		_connect_buttons_audio(child)
+
+
+func _disable_ui_joystick():
+	for action in ["ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"]:
+		if InputMap.has_action(action):
+			for event in InputMap.action_get_events(action):
+				if event is InputEventJoypadMotion:
+					InputMap.action_erase_event(action, event)
 
 func _process(delta):
 	if game_over_panel:
@@ -121,6 +164,45 @@ func _process(delta):
 		p2_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity
 	else:
 		p2_panel.position = Vector2.ZERO
+		
+	var f3_pressed = Input.is_physical_key_pressed(KEY_F3)
+	if f3_pressed and not _f3_was_pressed:
+		debug_mode_active = !debug_mode_active
+		debug_panel.visible = debug_mode_active
+	_f3_was_pressed = f3_pressed
+	
+	if debug_mode_active:
+		fps_label.text = "DEBUG MODE | FPS: %d" % Engine.get_frames_per_second()
+		
+	if killcam_container and killcam_container.visible:
+		var ms = Time.get_ticks_msec()
+		var sec = (ms / 1000) % 60
+		var mins = (ms / 60000) % 60
+		var frames = Engine.get_frames_drawn() % 60
+		
+		if (ms / 500) % 2 == 0:
+			killcam_timecode.text = "REC •\n%02d:%02d:%02d" % [mins, sec, frames]
+			killcam_timecode.add_theme_color_override("font_color", Color(1, 0, 0, 0.8))
+		else:
+			killcam_timecode.text = "REC  \n%02d:%02d:%02d" % [mins, sec, frames]
+			killcam_timecode.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
+		
+		if killcam_overlay.material:
+			killcam_overlay.material.set_shader_parameter("time", ms / 1000.0)
+			
+		_killcam_glitch_timer -= delta
+		if _killcam_glitch_timer <= 0:
+			if randf() > 0.8:
+				killcam_label_shadow1.position = Vector2(randf_range(-10, 10), randf_range(-5, 5))
+				killcam_label_shadow2.position = Vector2(randf_range(-10, 10), randf_range(-5, 5))
+				killcam_label.position = Vector2(randf_range(-3, 3), 0)
+				_killcam_glitch_timer = randf_range(0.05, 0.1)
+			else:
+				killcam_label_shadow1.position = Vector2(-3, 0)
+				killcam_label_shadow2.position = Vector2(3, 0)
+				killcam_label.position = Vector2.ZERO
+				_killcam_glitch_timer = randf_range(0.1, 0.3)
+			killcam_label.modulate.a = 0.8 + 0.2 * sin(ms * 0.01)
 
 func _create_glow_panel(color: Color) -> PanelContainer:
 	var p = PanelContainer.new()
@@ -296,22 +378,56 @@ func _create_cursor(color: Color) -> Panel:
 	return p
 
 func _build_nav():
-	p1_nav = {
-		p1_btn1: {"right": p1_btn2, "down": btn_replay},
-		p1_btn2: {"left": p1_btn1, "right": p1_btn3, "down": btn_quit},
-		p1_btn3: {"left": p1_btn2, "down": btn_quit},
-		btn_replay: {"up": p1_btn1, "right": btn_quit, "down": btn_debug_light},
-		btn_quit: {"up": p1_btn2, "left": btn_replay, "down": btn_debug_light},
-		btn_debug_light: {"up": btn_replay}
-	}
-	p2_nav = {
-		p2_btn1: {"right": p2_btn2, "down": btn_replay},
-		p2_btn2: {"left": p2_btn1, "right": p2_btn3, "down": btn_quit},
-		p2_btn3: {"left": p2_btn2, "down": btn_quit},
-		btn_replay: {"up": p2_btn1, "right": btn_quit, "down": btn_debug_light},
-		btn_quit: {"up": p2_btn2, "left": btn_replay, "down": btn_debug_light},
-		btn_debug_light: {"up": btn_quit}
-	}
+	p1_nav = {}
+	p2_nav = {}
+	
+	var game_active = tab_game_container.visible
+	var p1_down_tabs = p1_btn1 if game_active else (_controls_grid_buttons[0]["p1"] if _controls_grid_buttons.size() > 0 else null)
+	var p2_down_tabs = p2_btn1 if game_active else (_controls_grid_buttons[0]["p2"] if _controls_grid_buttons.size() > 0 else null)
+	
+	# Game Tab
+	p1_nav[p1_btn1] = {"up": btn_resume if btn_resume.visible else btn_replay, "right": p1_btn2, "down": btn_resume if btn_resume.visible else btn_replay}
+	p1_nav[p1_btn2] = {"up": btn_quit, "left": p1_btn1, "right": p1_btn3, "down": btn_quit}
+	p1_nav[p1_btn3] = {"up": btn_debug_light, "left": p1_btn2, "down": btn_debug_light}
+	
+	p2_nav[p2_btn1] = {"up": btn_resume if btn_resume.visible else btn_replay, "right": p2_btn2, "down": btn_resume if btn_resume.visible else btn_replay}
+	p2_nav[p2_btn2] = {"up": btn_quit, "left": p2_btn1, "right": p2_btn3, "down": btn_quit}
+	p2_nav[p2_btn3] = {"up": btn_debug_light, "left": p2_btn2, "down": btn_debug_light}
+	
+	# Bottom Buttons (Dynamic based on tab)
+	var p1_up_resume = p1_btn1 if game_active else (_controls_grid_buttons.back()["p1"] if _controls_grid_buttons.size() > 0 else btn_tab_controls)
+	var p1_up_quit = p1_btn2 if game_active else (_controls_grid_buttons.back()["p1"] if _controls_grid_buttons.size() > 0 else btn_tab_controls)
+	var right_resume = btn_replay if btn_replay.visible else btn_quit
+	var left_quit = btn_replay if btn_replay.visible else (btn_resume if btn_resume.visible else null)
+	
+	p1_nav[btn_resume] = {"up": p1_up_resume, "right": right_resume, "down": btn_debug_light}
+	p1_nav[btn_replay] = {"up": p1_up_resume, "left": btn_resume if btn_resume.visible else null, "right": btn_quit, "down": btn_debug_light}
+	p1_nav[btn_quit] = {"up": p1_up_quit, "left": left_quit, "down": btn_debug_light}
+	p1_nav[btn_debug_light] = {"up": btn_quit}
+	
+	var p2_up_resume = p2_btn1 if game_active else (_controls_grid_buttons.back()["p2"] if _controls_grid_buttons.size() > 0 else btn_tab_controls)
+	var p2_up_quit = p2_btn2 if game_active else (_controls_grid_buttons.back()["p2"] if _controls_grid_buttons.size() > 0 else btn_tab_controls)
+	
+	p2_nav[btn_resume] = {"up": p2_up_resume, "right": right_resume, "down": btn_debug_light}
+	p2_nav[btn_replay] = {"up": p2_up_resume, "left": btn_resume if btn_resume.visible else null, "right": btn_quit, "down": btn_debug_light}
+	p2_nav[btn_quit] = {"up": p2_up_quit, "left": left_quit, "down": btn_debug_light}
+	p2_nav[btn_debug_light] = {"up": btn_quit}
+	
+	# Controls Tab
+	var rows = _controls_grid_buttons.size()
+	for i in range(rows):
+		var p1_btn = _controls_grid_buttons[i]["p1"]
+		var p2_btn = _controls_grid_buttons[i]["p2"]
+		
+		var p1_up = _controls_grid_buttons[rows-1]["p1"] if i == 0 else _controls_grid_buttons[i-1]["p1"]
+		var p1_down = _controls_grid_buttons[i+1]["p1"] if i < rows - 1 else (btn_resume if btn_resume.visible else btn_replay)
+		
+		var p2_up = _controls_grid_buttons[rows-1]["p2"] if i == 0 else _controls_grid_buttons[i-1]["p2"]
+		var p2_down = _controls_grid_buttons[i+1]["p2"] if i < rows - 1 else (btn_resume if btn_resume.visible else btn_replay)
+		
+		p1_nav[p1_btn] = {"up": p1_up, "down": p1_down}
+		p2_nav[p2_btn] = {"up": p2_up, "down": p2_down}
+
 
 func _create_weapon_btn(text: String, group: ButtonGroup, player_color: Color) -> Button:
 	var btn = Button.new()
@@ -320,38 +436,92 @@ func _create_weapon_btn(text: String, group: ButtonGroup, player_color: Color) -
 	btn.button_group = group
 	btn.custom_minimum_size = Vector2(140, 80)
 	btn.add_theme_font_size_override("font_size", 20)
+	btn.pivot_offset = btn.custom_minimum_size / 2.0
 	
-	# Initial style
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.1, 0.9)
+	style.bg_color = Color(0, 0, 0, 0.9)
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+	btn.add_theme_stylebox_override("normal", style)
+	
+	var hover_style = style.duplicate()
+	hover_style.border_color = player_color.lerp(Color.WHITE, 0.5)
+	btn.add_theme_stylebox_override("hover", hover_style)
+	
+	var pressed_style = style.duplicate()
+	pressed_style.bg_color = player_color
+	pressed_style.border_color = Color.WHITE
+	pressed_style.border_width_left = 4
+	pressed_style.border_width_right = 4
+	pressed_style.border_width_top = 4
+	pressed_style.border_width_bottom = 4
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+	
+	var focus_style = style.duplicate()
+	focus_style.border_color = player_color
+	btn.add_theme_stylebox_override("focus", focus_style)
+	
+	btn.toggled.connect(_on_weapon_toggled.bind(btn, player_color))
+	return btn
+
+func _on_weapon_toggled(toggled_on: bool, btn: Button, player_color: Color):
+	if toggled_on:
+		btn.add_theme_color_override("font_color", Color.BLACK)
+		btn.add_theme_color_override("font_hover_pressed_color", Color.BLACK)
+		btn.add_theme_color_override("font_focus_color", Color.BLACK)
+		btn.add_theme_color_override("font_pressed_color", Color.BLACK)
+		var tween = create_tween()
+		tween.tween_property(btn, "scale", Vector2(1.0, 1.0), 0.1)
+	else:
+		btn.remove_theme_color_override("font_color")
+		btn.remove_theme_color_override("font_hover_pressed_color")
+		btn.remove_theme_color_override("font_focus_color")
+		btn.remove_theme_color_override("font_pressed_color")
+		var tween = create_tween()
+		tween.tween_property(btn, "scale", Vector2(1.0, 1.0), 0.1)
+
+func _style_tab_btn(btn: Button):
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.9)
 	style.border_width_left = 2
 	style.border_width_right = 2
 	style.border_width_top = 2
 	style.border_width_bottom = 2
-	style.border_color = Color(0.2, 0.2, 0.2, 1.0)
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_left = 6
-	style.corner_radius_bottom_right = 6
+	style.border_color = Color(0.3, 0.3, 0.3, 1.0)
 	btn.add_theme_stylebox_override("normal", style)
 	
-	var pressed_style = style.duplicate()
-	pressed_style.border_color = player_color
-	pressed_style.shadow_color = player_color
-	pressed_style.shadow_size = 5
-	btn.add_theme_stylebox_override("pressed", pressed_style)
-	btn.add_theme_stylebox_override("focus", pressed_style)
+	var hover = style.duplicate()
+	hover.border_color = Color.WHITE
+	btn.add_theme_stylebox_override("hover", hover)
 	
-	btn.toggled.connect(_on_weapon_toggled.bind(btn, text, player_color))
-	return btn
-
-func _on_weapon_toggled(toggled_on: bool, btn: Button, default_text: String, player_color: Color):
-	if toggled_on:
-		btn.text = default_text + "\n[ ✓ ]"
-		btn.add_theme_color_override("font_color", player_color)
-	else:
-		btn.text = default_text
-		btn.remove_theme_color_override("font_color")
+	var pressed = style.duplicate()
+	pressed.bg_color = Color.WHITE
+	pressed.border_color = Color.WHITE
+	pressed.border_width_left = 4
+	pressed.border_width_right = 4
+	pressed.border_width_top = 4
+	pressed.border_width_bottom = 4
+	btn.add_theme_stylebox_override("pressed", pressed)
+	
+	var focus = style.duplicate()
+	focus.border_color = Color(1.0, 0.8, 0.0) # Yellow focus
+	btn.add_theme_stylebox_override("focus", focus)
+	
+	btn.toggled.connect(func(toggled_on):
+		if toggled_on:
+			btn.add_theme_color_override("font_color", Color.BLACK)
+			btn.add_theme_color_override("font_hover_pressed_color", Color.BLACK)
+			btn.add_theme_color_override("font_focus_color", Color.BLACK)
+			btn.add_theme_color_override("font_pressed_color", Color.BLACK)
+		else:
+			btn.remove_theme_color_override("font_color")
+			btn.remove_theme_color_override("font_hover_pressed_color")
+			btn.remove_theme_color_override("font_focus_color")
+			btn.remove_theme_color_override("font_pressed_color")
+	)
 
 func _build_ui():
 	# Scanline Overlay
@@ -571,45 +741,159 @@ func _build_ui():
 	add_child(res_btn)
 	
 	# Killcam Overlay
+	killcam_overlay = ColorRect.new()
+	killcam_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	killcam_overlay.hide()
+	var killcam_shader = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = """
+shader_type canvas_item;
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform float time = 0.0;
+void fragment() {
+	vec2 uv = SCREEN_UV;
+	float scanline = sin(uv.y * 800.0) * 0.04;
+	float noise = fract(sin(dot(uv + time, vec2(12.9898, 78.233))) * 43758.5453);
+	float r = texture(screen_texture, uv + vec2(0.003, 0.0)).r;
+	float g = texture(screen_texture, uv).g;
+	float b = texture(screen_texture, uv - vec2(0.003, 0.0)).b;
+	vec3 col = vec3(r, g, b) + noise * 0.05 - scanline;
+	col *= smoothstep(0.8, 0.2, distance(uv, vec2(0.5)) * 1.2);
+	COLOR = vec4(col, 1.0);
+}
+"""
+	killcam_shader.shader = shader
+	killcam_overlay.material = killcam_shader
+	# We DO NOT add killcam_overlay to ui here. GameState will take it and put it in the arena.
+	
+	killcam_container = Control.new()
+	killcam_container.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	killcam_container.offset_top = 100
+	killcam_container.hide()
+	add_child(killcam_container)
+	
+	killcam_label_shadow1 = Label.new()
+	killcam_label_shadow1.text = "KILLCAM"
+	killcam_label_shadow1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	killcam_label_shadow1.add_theme_font_size_override("font_size", 48)
+	killcam_label_shadow1.add_theme_color_override("font_color", Color(0, 1, 1, 0.5))
+	killcam_label_shadow1.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_container.add_child(killcam_label_shadow1)
+	
+	killcam_label_shadow2 = Label.new()
+	killcam_label_shadow2.text = "KILLCAM"
+	killcam_label_shadow2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	killcam_label_shadow2.add_theme_font_size_override("font_size", 48)
+	killcam_label_shadow2.add_theme_color_override("font_color", Color(1, 1, 0, 0.5))
+	killcam_label_shadow2.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_container.add_child(killcam_label_shadow2)
+
 	killcam_label = Label.new()
 	killcam_label.text = "KILLCAM"
 	killcam_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	killcam_label.add_theme_font_size_override("font_size", 48)
 	killcam_label.add_theme_color_override("font_color", Color(1, 0, 0))
-	killcam_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	killcam_label.offset_top = 100
-	killcam_label.hide()
-	add_child(killcam_label)
+	killcam_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	killcam_container.add_child(killcam_label)
+
+	killcam_timecode = Label.new()
+	killcam_timecode.add_theme_font_size_override("font_size", 24)
+	killcam_timecode.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
+	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	killcam_timecode.offset_right = -40
+	killcam_timecode.offset_top = 40
+	killcam_timecode.hide()
+	add_child(killcam_timecode)
 	
-	# Game Over Panel
+	# Main Menu / Game Over Panel
 	game_over_panel = PanelContainer.new()
 	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game_over_panel.hide()
 	add_child(game_over_panel)
 	
 	var go_bg = ColorRect.new()
-	go_bg.color = Color(0, 0, 0, 0.8)
+	go_bg.color = Color(0, 0, 0, 0.95)
 	game_over_panel.add_child(go_bg)
 	
-	var go_center = CenterContainer.new()
-	game_over_panel.add_child(go_center)
+	var menu_vbox = VBoxContainer.new()
+	menu_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	menu_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	game_over_panel.add_child(menu_vbox)
 	
-	var go_vbox = VBoxContainer.new()
-	go_vbox.add_theme_constant_override("separation", 20)
-	go_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	go_center.add_child(go_vbox)
+	# Top Tabs
+	var tabs_margin = MarginContainer.new()
+	tabs_margin.add_theme_constant_override("margin_top", 40)
+	tabs_margin.add_theme_constant_override("margin_bottom", 20)
+	menu_vbox.add_child(tabs_margin)
+	
+	var tabs_hbox = HBoxContainer.new()
+	tabs_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	tabs_hbox.add_theme_constant_override("separation", 20)
+	tabs_margin.add_child(tabs_hbox)
+	
+	var tab_group = ButtonGroup.new()
+	
+	var l1_icon = TextureRect.new()
+	if ResourceLoader.exists("res://assets/ui/prompts/l1.svg"):
+		l1_icon.texture = load("res://assets/ui/prompts/l1.svg")
+	l1_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+	l1_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	l1_icon.custom_minimum_size = Vector2(26, 26)
+	tabs_hbox.add_child(l1_icon)
+	
+	btn_tab_game = Button.new()
+	btn_tab_game.text = "JEU"
+	btn_tab_game.toggle_mode = true
+	btn_tab_game.focus_mode = Control.FOCUS_NONE
+	btn_tab_game.button_group = tab_group
+	btn_tab_game.custom_minimum_size = Vector2(200, 50)
+	btn_tab_game.add_theme_font_size_override("font_size", 24)
+	_style_tab_btn(btn_tab_game)
+	btn_tab_game.toggled.connect(func(pressed): if pressed: _switch_tab("JEU"))
+	tabs_hbox.add_child(btn_tab_game)
+	
+	btn_tab_controls = Button.new()
+	btn_tab_controls.text = "CONTRÔLES"
+	btn_tab_controls.toggle_mode = true
+	btn_tab_controls.focus_mode = Control.FOCUS_NONE
+	btn_tab_controls.button_group = tab_group
+	btn_tab_controls.custom_minimum_size = Vector2(200, 50)
+	btn_tab_controls.add_theme_font_size_override("font_size", 24)
+	_style_tab_btn(btn_tab_controls)
+	btn_tab_controls.toggled.connect(func(pressed): if pressed: _switch_tab("CONTROLES"))
+	tabs_hbox.add_child(btn_tab_controls)
+	
+	var r1_icon = TextureRect.new()
+	if ResourceLoader.exists("res://assets/ui/prompts/r1.svg"):
+		r1_icon.texture = load("res://assets/ui/prompts/r1.svg")
+	r1_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+	r1_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r1_icon.custom_minimum_size = Vector2(26, 26)
+	tabs_hbox.add_child(r1_icon)
+	
+	# Container creation continues below...
+	var content_margin = MarginContainer.new()
+	content_margin.custom_minimum_size = Vector2(0, 350)
+	menu_vbox.add_child(content_margin)
+	
+	# GAME TAB CONTENT
+	tab_game_container = VBoxContainer.new()
+	tab_game_container.add_theme_constant_override("separation", 20)
+	tab_game_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	content_margin.add_child(tab_game_container)
 	
 	game_over_title = Label.new()
 	game_over_title.text = "MATCH TERMINÉ"
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game_over_title.add_theme_font_size_override("font_size", 64)
-	go_vbox.add_child(game_over_title)
+	tab_game_container.add_child(game_over_title)
 	
 	game_over_score = Label.new()
 	game_over_score.text = "SCORE: 0 - 0"
 	game_over_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game_over_score.add_theme_font_size_override("font_size", 32)
-	go_vbox.add_child(game_over_score)
+	tab_game_container.add_child(game_over_score)
 	
 	var weapon_hbox = HBoxContainer.new()
 	weapon_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -657,74 +941,315 @@ func _build_ui():
 	p2_vbox.add_child(p2_hbox)
 	weapon_hbox.add_child(p2_vbox)
 	
-	go_vbox.add_child(weapon_hbox)
+	tab_game_container.add_child(weapon_hbox)
 	
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(0, 30)
-	go_vbox.add_child(spacer)
+	menu_vbox.add_child(spacer)
 	
 	var btn_hbox = HBoxContainer.new()
 	btn_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	btn_hbox.add_theme_constant_override("separation", 30)
-	go_vbox.add_child(btn_hbox)
+	menu_vbox.add_child(btn_hbox)
+	
+	btn_resume = Button.new()
+	btn_resume.text = "REPRENDRE"
+	btn_resume.custom_minimum_size = Vector2(200, 60)
+	btn_resume.add_theme_font_size_override("font_size", 24)
+	btn_resume.pressed.connect(_resume_game)
+	btn_hbox.add_child(btn_resume)
 	
 	btn_replay = Button.new()
 	btn_replay.text = "REJOUER"
 	btn_replay.custom_minimum_size = Vector2(200, 60)
 	btn_replay.add_theme_font_size_override("font_size", 24)
-	btn_replay.pressed.connect(func(): replay_requested.emit())
+	btn_replay.pressed.connect(func(): get_tree().paused = false; replay_requested.emit())
 	btn_hbox.add_child(btn_replay)
 	
 	btn_quit = Button.new()
 	btn_quit.text = "QUITTER"
 	btn_quit.custom_minimum_size = Vector2(200, 60)
 	btn_quit.add_theme_font_size_override("font_size", 24)
-	btn_quit.pressed.connect(func(): quit_requested.emit())
+	btn_quit.pressed.connect(func(): get_tree().paused = false; quit_requested.emit())
 	btn_hbox.add_child(btn_quit)
 	
 	var debug_hbox = HBoxContainer.new()
 	debug_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	go_vbox.add_child(debug_hbox)
+	menu_vbox.add_child(debug_hbox)
 	
 	btn_debug_light = CheckButton.new()
 	btn_debug_light.text = "Lumière Ambiante (Debug)"
 	debug_hbox.add_child(btn_debug_light)
+	
+	# CONTROLS TAB CONTENT
+	tab_controls_container = VBoxContainer.new()
+	tab_controls_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	tab_controls_container.add_theme_constant_override("separation", 20)
+	tab_controls_container.hide()
+	content_margin.add_child(tab_controls_container)
+	
+	var cp_title = Label.new()
+	cp_title.text = "MAPPING MANETTE"
+	cp_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cp_title.add_theme_font_size_override("font_size", 32)
+	cp_title.add_theme_color_override("font_color", Color(1, 0.8, 0))
+	tab_controls_container.add_child(cp_title)
+	
+	var grid = GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 30)
+	grid.add_theme_constant_override("v_separation", 10)
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tab_controls_container.add_child(grid)
+	
+	var bindable_actions = {
+		"Tirer": ["p1_shoot", "p2_shoot"],
+		"Torche": ["p1_torch", "p2_torch"],
+		"Courir": ["p1_sprint", "p2_sprint"]
+	}
+	
+	var hl = Label.new()
+	hl.text = "ACTION"
+	hl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	grid.add_child(hl)
+	var hl1 = Label.new()
+	hl1.text = "JOUEUR 1"
+	hl1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hl1.add_theme_color_override("font_color", Color(0, 0.94, 1.0))
+	grid.add_child(hl1)
+	var hl2 = Label.new()
+	hl2.text = "JOUEUR 2"
+	hl2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hl2.add_theme_color_override("font_color", Color(1.0, 0, 0.33))
+	grid.add_child(hl2)
+	
+	# Build grid dynamically to easily reference them in navigation
+	_controls_grid_buttons = []
+	for action_name in bindable_actions.keys():
+		var label = Label.new()
+		label.text = action_name
+		grid.add_child(label)
+		
+		var p1_action = bindable_actions[action_name][0]
+		var p1_btn = Button.new()
+		_apply_btn_info(p1_btn, _get_action_btn_info(p1_action))
+		p1_btn.custom_minimum_size = Vector2(60, 60)
+		
+		var p1_container = CenterContainer.new()
+		p1_container.add_child(p1_btn)
+		p1_btn.pressed.connect(_on_rebind_btn_pressed.bind(p1_btn, p1_action))
+		grid.add_child(p1_container)
+		
+		var p2_action = bindable_actions[action_name][1]
+		var p2_btn = Button.new()
+		_apply_btn_info(p2_btn, _get_action_btn_info(p2_action))
+		p2_btn.custom_minimum_size = Vector2(60, 60)
+		
+		var p2_container = CenterContainer.new()
+		p2_container.add_child(p2_btn)
+		p2_btn.pressed.connect(_on_rebind_btn_pressed.bind(p2_btn, p2_action))
+		grid.add_child(p2_container)
+		
+		_controls_grid_buttons.append({"p1": p1_btn, "p2": p2_btn})
 	
 	p1_cursor = _create_cursor(Color(0, 0.94, 1.0))
 	add_child(p1_cursor)
 	p2_cursor = _create_cursor(Color(1.0, 0, 0.33))
 	add_child(p2_cursor)
 	
+	# Set initial tab and trigger visual update
+	# This automatically calls _build_nav() and sets up focus inside _switch_tab()
+	btn_tab_game.button_pressed = true
+	_switch_tab("JEU")
+
+func _switch_tab(tab_name: String):
+	if tab_name == "JEU":
+		btn_tab_game.button_pressed = true
+		tab_game_container.show()
+		tab_controls_container.hide()
+		# Synchronize both players to the new tab
+		if not p1_nav.has(p1_focus) or p1_focus == null or p1_focus.get_parent() != tab_game_container and p1_focus.get_parent().get_parent() != tab_game_container and p1_focus.get_parent().get_parent().get_parent() != tab_game_container:
+			p1_focus = p1_btn1
+		if not p2_nav.has(p2_focus) or p2_focus == null or p2_focus.get_parent() != tab_game_container and p2_focus.get_parent().get_parent() != tab_game_container and p2_focus.get_parent().get_parent().get_parent() != tab_game_container:
+			p2_focus = p2_btn1
+	else:
+		btn_tab_controls.button_pressed = true
+		tab_game_container.hide()
+		tab_controls_container.show()
+		# Synchronize both players to the new tab
+		if _controls_grid_buttons.size() > 0:
+			p1_focus = _controls_grid_buttons[0]["p1"]
+			p2_focus = _controls_grid_buttons[0]["p2"]
+			
 	_build_nav()
-	p1_focus = p1_btn1
-	p2_focus = p2_btn1
+
+func _resume_game():
+	get_tree().paused = false
+	game_over_panel.hide()
+
+func _get_joypad_btn_info(btn_index: int) -> Dictionary:
+	match btn_index:
+		JOY_BUTTON_A: return {"text": "Croix (X)", "icon": "cross.svg"}
+		JOY_BUTTON_B: return {"text": "Rond (O)", "icon": "circle.svg"}
+		JOY_BUTTON_X: return {"text": "Carré", "icon": "square.svg"}
+		JOY_BUTTON_Y: return {"text": "Triangle", "icon": "triangle.svg"}
+		JOY_BUTTON_BACK: return {"text": "Share", "icon": "share.svg"}
+		JOY_BUTTON_GUIDE: return {"text": "PS", "icon": "ps.svg"}
+		JOY_BUTTON_START: return {"text": "Options", "icon": "options.svg"}
+		JOY_BUTTON_LEFT_STICK: return {"text": "L3", "icon": "l3.svg"}
+		JOY_BUTTON_RIGHT_STICK: return {"text": "R3", "icon": "r3.svg"}
+		JOY_BUTTON_LEFT_SHOULDER: return {"text": "L1", "icon": "l1.svg"}
+		JOY_BUTTON_RIGHT_SHOULDER: return {"text": "R1", "icon": "r1.svg"}
+		JOY_BUTTON_DPAD_UP: return {"text": "Flèche Haut", "icon": "dpad_up.svg"}
+		JOY_BUTTON_DPAD_DOWN: return {"text": "Flèche Bas", "icon": "dpad_down.svg"}
+		JOY_BUTTON_DPAD_LEFT: return {"text": "Flèche Gauche", "icon": "dpad_left.svg"}
+		JOY_BUTTON_DPAD_RIGHT: return {"text": "Flèche Droite", "icon": "dpad_right.svg"}
+		JOY_BUTTON_MISC1: return {"text": "Touchpad", "icon": ""}
+		_: return {"text": "Bouton " + str(btn_index), "icon": ""}
+
+func _apply_btn_info(btn: Button, info: Dictionary):
+	if info.get("icon", "") != "":
+		var path_svg = "res://assets/ui/prompts/" + info["icon"]
+		
+		if ResourceLoader.exists(path_svg):
+			var tex = load(path_svg)
+			btn.icon = tex
+			btn.text = ""
+			btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			btn.expand_icon = true
+			return
+	btn.icon = null
+	btn.text = info.get("text", "")
+
+func _get_action_btn_info(action: String) -> Dictionary:
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventJoypadButton:
+			return _get_joypad_btn_info(ev.button_index)
+		elif ev is InputEventJoypadMotion:
+			if ev.axis == JOY_AXIS_TRIGGER_LEFT:
+				return {"text": "Gâchette L2", "icon": "l2.svg"}
+			elif ev.axis == JOY_AXIS_TRIGGER_RIGHT:
+				return {"text": "Gâchette R2", "icon": "r2.svg"}
+			else:
+				return {"text": "Axe " + str(ev.axis), "icon": ""}
+	return {"text": "Non assigné", "icon": ""}
+
+func _on_rebind_btn_pressed(btn: Button, action: String):
+	if _is_rebinding: return
+	_is_rebinding = true
+	_action_to_rebind = action
+	_button_to_update = btn
+	btn.text = "Appuyez..."
+	btn.icon = null
+	btn.add_theme_color_override("font_color", Color(1, 1, 0))
 
 func _input(event):
+	if _is_rebinding:
+		var valid_event = false
+		var new_ev = null
+		var display_info = {}
+		
+		if event is InputEventJoypadButton and event.is_pressed():
+			valid_event = true
+			new_ev = InputEventJoypadButton.new()
+			new_ev.button_index = event.button_index
+			display_info = _get_joypad_btn_info(event.button_index)
+			
+		elif event is InputEventJoypadMotion and event.axis_value > 0.5:
+			if event.axis == JOY_AXIS_TRIGGER_LEFT or event.axis == JOY_AXIS_TRIGGER_RIGHT:
+				valid_event = true
+				new_ev = InputEventJoypadMotion.new()
+				new_ev.axis = event.axis
+				new_ev.axis_value = 1.0
+				display_info = {"text": "Gâchette L2", "icon": "l2.svg"} if event.axis == JOY_AXIS_TRIGGER_LEFT else {"text": "Gâchette R2", "icon": "r2.svg"}
+		
+		if valid_event:
+			var old_events = InputMap.action_get_events(_action_to_rebind)
+			for ev in old_events:
+				if ev is InputEventJoypadButton or (ev is InputEventJoypadMotion and (ev.axis == JOY_AXIS_TRIGGER_LEFT or ev.axis == JOY_AXIS_TRIGGER_RIGHT)):
+					InputMap.action_erase_event(_action_to_rebind, ev)
+			
+			var target_device = 0
+			if old_events.size() > 0:
+				target_device = old_events[0].device
+			new_ev.device = target_device
+			InputMap.action_add_event(_action_to_rebind, new_ev)
+			
+			_apply_btn_info(_button_to_update, display_info)
+			_button_to_update.remove_theme_color_override("font_color")
+			_is_rebinding = false
+			get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("sys_pause"):
+		if not _is_main_menu and not game_over_panel.visible:
+			# Pause game
+			get_tree().paused = true
+			btn_resume.show()
+			btn_replay.hide()
+			game_over_title.text = "PAUSE"
+			game_over_title.add_theme_color_override("font_color", Color(1, 1, 1))
+			game_over_score.text = ""
+			game_over_panel.show()
+			_switch_tab("JEU")
+			_build_nav()
+			get_viewport().set_input_as_handled()
+			return
+		elif game_over_panel.visible and btn_resume.visible:
+			# Unpause game
+			_resume_game()
+			get_viewport().set_input_as_handled()
+			return
+
 	if not game_over_panel.visible: return
 	
-	if event.is_action_pressed("p1_move_right") and p1_nav.has(p1_focus) and p1_nav[p1_focus].has("right"):
-		p1_focus = p1_nav[p1_focus]["right"]
-	elif event.is_action_pressed("p1_move_left") and p1_nav.has(p1_focus) and p1_nav[p1_focus].has("left"):
-		p1_focus = p1_nav[p1_focus]["left"]
-	elif event.is_action_pressed("p1_move_up") and p1_nav.has(p1_focus) and p1_nav[p1_focus].has("up"):
-		p1_focus = p1_nav[p1_focus]["up"]
-	elif event.is_action_pressed("p1_move_down") and p1_nav.has(p1_focus) and p1_nav[p1_focus].has("down"):
-		p1_focus = p1_nav[p1_focus]["down"]
-	elif event.is_action_pressed("p1_shoot"):
-		p1_focus.pressed.emit()
-		if p1_focus.toggle_mode: p1_focus.button_pressed = true
+	# Tab switching
+	if event.is_action_pressed("p1_menu_prev_tab") or event.is_action_pressed("p2_menu_prev_tab"):
+		if tab_controls_container.visible:
+			_switch_tab("JEU")
+		get_viewport().set_input_as_handled()
+		return
+	elif event.is_action_pressed("p1_menu_next_tab") or event.is_action_pressed("p2_menu_next_tab"):
+		if tab_game_container.visible:
+			_switch_tab("CONTROLES")
+		get_viewport().set_input_as_handled()
+		return
+	
+	if p1_nav.has(p1_focus):
+		if event.is_action_pressed("p1_menu_right") and p1_nav[p1_focus].has("right") and p1_nav[p1_focus]["right"] != null:
+			p1_focus = p1_nav[p1_focus]["right"]
+		elif event.is_action_pressed("p1_menu_left") and p1_nav[p1_focus].has("left") and p1_nav[p1_focus]["left"] != null:
+			p1_focus = p1_nav[p1_focus]["left"]
+		elif event.is_action_pressed("p1_menu_up") and p1_nav[p1_focus].has("up") and p1_nav[p1_focus]["up"] != null:
+			p1_focus = p1_nav[p1_focus]["up"]
+		elif event.is_action_pressed("p1_menu_down") and p1_nav[p1_focus].has("down") and p1_nav[p1_focus]["down"] != null:
+			p1_focus = p1_nav[p1_focus]["down"]
+		elif event.is_action_pressed("p1_menu_select"):
+			p1_focus.pressed.emit()
+			if p1_focus.toggle_mode:
+				if p1_focus.button_group != null:
+					p1_focus.button_pressed = true
+				else:
+					p1_focus.button_pressed = not p1_focus.button_pressed
+				p1_focus.toggled.emit(p1_focus.button_pressed)
 		
-	if event.is_action_pressed("p2_move_right") and p2_nav.has(p2_focus) and p2_nav[p2_focus].has("right"):
-		p2_focus = p2_nav[p2_focus]["right"]
-	elif event.is_action_pressed("p2_move_left") and p2_nav.has(p2_focus) and p2_nav[p2_focus].has("left"):
-		p2_focus = p2_nav[p2_focus]["left"]
-	elif event.is_action_pressed("p2_move_up") and p2_nav.has(p2_focus) and p2_nav[p2_focus].has("up"):
-		p2_focus = p2_nav[p2_focus]["up"]
-	elif event.is_action_pressed("p2_move_down") and p2_nav.has(p2_focus) and p2_nav[p2_focus].has("down"):
-		p2_focus = p2_nav[p2_focus]["down"]
-	elif event.is_action_pressed("p2_shoot"):
-		p2_focus.pressed.emit()
-		if p2_focus.toggle_mode: p2_focus.button_pressed = true
+	if p2_nav.has(p2_focus):
+		if event.is_action_pressed("p2_menu_right") and p2_nav[p2_focus].has("right") and p2_nav[p2_focus]["right"] != null:
+			p2_focus = p2_nav[p2_focus]["right"]
+		elif event.is_action_pressed("p2_menu_left") and p2_nav[p2_focus].has("left") and p2_nav[p2_focus]["left"] != null:
+			p2_focus = p2_nav[p2_focus]["left"]
+		elif event.is_action_pressed("p2_menu_up") and p2_nav[p2_focus].has("up") and p2_nav[p2_focus]["up"] != null:
+			p2_focus = p2_nav[p2_focus]["up"]
+		elif event.is_action_pressed("p2_menu_down") and p2_nav[p2_focus].has("down") and p2_nav[p2_focus]["down"] != null:
+			p2_focus = p2_nav[p2_focus]["down"]
+		elif event.is_action_pressed("p2_menu_select"):
+			p2_focus.pressed.emit()
+			if p2_focus.toggle_mode:
+				if p2_focus.button_group != null:
+					p2_focus.button_pressed = true
+				else:
+					p2_focus.button_pressed = not p2_focus.button_pressed
+				p2_focus.toggled.emit(p2_focus.button_pressed)
 
 func update_hud(p1, p2, time_left: float):
 	if p1:
@@ -766,13 +1291,22 @@ func update_hud(p1, p2, time_left: float):
 	time_label.text = "%02d:%02d" % [m, s]
 
 func show_main_menu():
+	_is_main_menu = true
+	btn_resume.hide()
+	btn_replay.show()
+	_switch_tab("JEU")
 	game_over_panel.show()
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.add_theme_color_override("font_color", Color(1, 0.8, 0))
 	game_over_score.text = "PRÊT À JOUER ?"
 	btn_replay.text = "JOUER"
+	_build_nav()
 
 func show_game_over(winner_id: int):
+	_is_main_menu = false
+	btn_resume.hide()
+	btn_replay.show()
+	_switch_tab("JEU")
 	game_over_panel.show()
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
@@ -785,15 +1319,25 @@ func show_game_over(winner_id: int):
 	else:
 		game_over_title.text = "ÉGALITÉ"
 		game_over_title.add_theme_color_override("font_color", Color.WHITE)
+	_build_nav()
 
 func hide_game_over():
+	_is_main_menu = false
 	game_over_panel.hide()
 
 func show_killcam():
-	killcam_label.show()
+	killcam_overlay.show()
+	killcam_container.show()
+	killcam_timecode.show()
+	if get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB"):
+		get_node("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB").show()
 	
 func hide_killcam():
-	killcam_label.hide()
+	killcam_overlay.hide()
+	killcam_container.hide()
+	killcam_timecode.hide()
+	if get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB"):
+		get_node("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB").hide()
 
 func set_split_screen_visible(is_visible: bool):
 	center_line.visible = is_visible

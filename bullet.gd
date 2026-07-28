@@ -15,6 +15,7 @@ var light: PointLight2D
 var spawn_pos: Vector2
 
 func _ready():
+	z_index = 10
 	# Add a dynamic point light to the bullet itself
 	light = PointLight2D.new()
 	light.name = "TrailLight"
@@ -33,6 +34,7 @@ func _ready():
 	light.texture = grad_tex
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
+	light.range_item_cull_mask = 1 | 2 | 4 # Trail light illuminates players (2)
 	add_child(light)
 	
 	var core = Line2D.new()
@@ -45,6 +47,15 @@ func _ready():
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	core.material = mat
 	add_child(core)
+	
+	# Add a glowing aura Sprite2D so the glow is visible even over the darkened killcam overlay
+	var aura = Sprite2D.new()
+	aura.name = "Aura"
+	aura.texture = grad_tex # Reuse the gradient texture from the light
+	aura.modulate = Color(1.0, 0.9, 0.5, 0.6) # Match bullet color, slightly transparent
+	aura.material = mat # Reuse the unshaded, additive material (mat is already BLEND_MODE_ADD)
+	aura.scale = Vector2(1.5, 1.5) # Reduced scale to make it less thick
+	add_child(aura)
 	
 	# ShapeCast for accurate collision
 	shape_cast = ShapeCast2D.new()
@@ -73,7 +84,7 @@ func _physics_process(delta):
 	
 	distance_traveled += travel_step
 	if distance_traveled >= weapon.bullet_max_distance:
-		queue_free()
+		_fade_and_destroy(global_position)
 		return
 		
 	# Update shape cast for this frame's movement. target_position is in local space!
@@ -154,38 +165,42 @@ func _fade_and_destroy(hit_point: Vector2):
 	tween.tween_property(light, "energy", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	if has_node("Core"):
 		tween.tween_property(get_node("Core"), "modulate:a", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if has_node("Aura"):
+		tween.tween_property(get_node("Aura"), "modulate:a", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_callback(queue_free)
 
-func _spawn_physical_particles(pos: Vector2, color: Color, amount: int, speed_min: float, speed_max: float, base_dir: Vector2, spread_deg: float):
+func _spawn_blood_particles(pos: Vector2, color: Color, amount: int, speed_min: float, speed_max: float, base_dir: Vector2, spread_deg: float):
 	for i in range(amount):
 		var rb = RigidBody2D.new()
+		rb.z_index = 10
 		# Only collide with walls (Layer 1)
 		rb.collision_layer = 0
 		rb.collision_mask = 1
 		rb.gravity_scale = 0.0 # Top-down
 		
-		# Turbulence: random friction and high spin
-		rb.linear_damp = randf_range(1.0, 6.0)
-		rb.angular_velocity = randf_range(-30.0, 30.0)
+		# Turbulence: heavy friction for meat chunks
+		rb.linear_damp = randf_range(8.0, 15.0)
+		rb.angular_velocity = randf_range(-40.0, 40.0)
 		
 		var phys_mat = PhysicsMaterial.new()
-		phys_mat.bounce = 0.5
+		phys_mat.bounce = 0.2
 		rb.physics_material_override = phys_mat
 		
 		# Tiny physical collision
 		var shape = CollisionShape2D.new()
 		var circle = CircleShape2D.new()
-		circle.radius = 1.5
+		circle.radius = 2.0
 		shape.shape = circle
 		rb.add_child(shape)
 		
-		# Visual core
+		# Visual core (Meat chunk sizes)
 		var poly = Polygon2D.new()
-		poly.polygon = PackedVector2Array([Vector2(-2,0), Vector2(0,-2), Vector2(2,0), Vector2(0,2)])
+		var s = randf_range(0.8, 3.5)
+		poly.polygon = PackedVector2Array([Vector2(-2*s,0), Vector2(0,-2*s), Vector2(2*s,0), Vector2(0,2*s)])
 		poly.color = color
 		var mat = CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX # Mix prevents it from bleaching to white/pink when overlapping
-		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED # Keeps the color pure and visible in the dark
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX
+		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 		poly.material = mat
 		rb.add_child(poly)
 		
@@ -205,8 +220,8 @@ func _spawn_physical_particles(pos: Vector2, color: Color, amount: int, speed_mi
 		grad.height = 64
 		light.texture = grad
 		light.energy = 1.0
-		light.shadow_enabled = false # Very fast rendering
-		light.range_item_cull_mask = 1 | 2 | 4
+		light.shadow_enabled = false
+		light.range_item_cull_mask = 1 | 4
 		rb.add_child(light)
 		
 		# Velocity and trajectory
@@ -219,31 +234,106 @@ func _spawn_physical_particles(pos: Vector2, color: Color, amount: int, speed_mi
 		get_parent().add_child(rb)
 		
 		# Fade out and self-destruct
-		var lifetime = randf_range(0.8, 1.5)
+		var lifetime = randf_range(1.5, 3.0)
+		var tw = rb.create_tween()
+		tw.tween_property(poly, "scale", Vector2.ZERO, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.parallel().tween_property(light, "energy", 0.0, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_callback(rb.queue_free)
+
+func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: float, speed_max: float, base_dir: Vector2, spread_deg: float):
+	for i in range(amount):
+		var rb = RigidBody2D.new()
+		rb.z_index = 10
+		# Only collide with walls (Layer 1)
+		rb.collision_layer = 0
+		rb.collision_mask = 1
+		rb.gravity_scale = 0.0 # Top-down
+		
+		# Volatile sparks: low friction, high bounce
+		rb.linear_damp = randf_range(1.0, 4.0)
+		rb.angular_velocity = randf_range(-20.0, 20.0)
+		
+		var phys_mat = PhysicsMaterial.new()
+		phys_mat.bounce = 0.6
+		rb.physics_material_override = phys_mat
+		
+		# Tiny physical collision
+		var shape = CollisionShape2D.new()
+		var circle = CircleShape2D.new()
+		circle.radius = 1.0
+		shape.shape = circle
+		rb.add_child(shape)
+		
+		# Visual core (Small sparks)
+		var poly = Polygon2D.new()
+		poly.polygon = PackedVector2Array([Vector2(-1,0), Vector2(0,-1), Vector2(1,0), Vector2(0,1)])
+		poly.color = color
+		var mat = CanvasItemMaterial.new()
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		poly.material = mat
+		rb.add_child(poly)
+		
+		# Emissive light!
+		var light = PointLight2D.new()
+		var grad = GradientTexture2D.new()
+		grad.fill = GradientTexture2D.FILL_RADIAL
+		grad.fill_from = Vector2(0.5, 0.5)
+		grad.fill_to = Vector2(1, 0.5)
+		var g = Gradient.new()
+		g.set_color(0, color)
+		var c_end = color
+		c_end.a = 0.0
+		g.set_color(1, c_end)
+		grad.gradient = g
+		grad.width = 32
+		grad.height = 32
+		light.texture = grad
+		light.energy = 1.5
+		light.shadow_enabled = true
+		light.shadow_item_cull_mask = 1
+		light.range_item_cull_mask = 1 | 2 | 4 # Sparks illuminate players (2)
+		rb.add_child(light)
+		
+		# Velocity and trajectory
+		rb.position = pos
+		var spread_rad = deg_to_rad(spread_deg)
+		var spray_angle = base_dir.angle() + randf_range(-spread_rad/2.0, spread_rad/2.0)
+		var speed = randf_range(speed_min, speed_max)
+		rb.linear_velocity = Vector2(cos(spray_angle), sin(spray_angle)) * speed
+		
+		get_parent().add_child(rb)
+		
+		# Fade out and self-destruct (shorter lifetime for sparks)
+		var lifetime = randf_range(0.3, 0.8)
 		var tw = rb.create_tween()
 		tw.tween_property(poly, "scale", Vector2.ZERO, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.parallel().tween_property(light, "energy", 0.0, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_callback(rb.queue_free)
 
 func _spawn_hit_effects(pos: Vector2):
+	AudioManager.play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
 	# Pure blood red
 	var blood_color = Color(0.9, 0.0, 0.0)
 	# Exit wound: large splatter forward
-	_spawn_physical_particles(pos, blood_color, 15, 200.0, 800.0, direction, 60.0)
+	_spawn_blood_particles(pos, blood_color, 15, 200.0, 800.0, direction, 60.0)
 	# Entry wound: smaller splatter backward (bouncing off the shooter or walls behind)
-	_spawn_physical_particles(pos, blood_color, 10, 100.0, 400.0, -direction, 90.0)
+	_spawn_blood_particles(pos, blood_color, 10, 100.0, 400.0, -direction, 90.0)
 	
 	# Permanent floor stain
-	var arena = get_tree().get_root().find_child("Arena", true, false)
-	if arena:
+	var gs = get_tree().get_first_node_in_group("game_state")
+	if gs and gs.arena:
+		var arena = gs.arena
 		var stain = Node2D.new()
 		stain.set_script(preload("res://blood_stain.gd"))
 		arena.add_child(stain)
 		stain.setup(pos, direction)
 
 func _spawn_wall_effects(pos: Vector2):
+	AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
 	# Sparks bounce BACKWARDS from the wall
-	_spawn_physical_particles(pos, Color(1.0, 0.8, 0.2), 12, 100.0, 450.0, -direction, 120.0)
+	_spawn_spark_particles(pos, Color(1.0, 0.8, 0.2), 12, 100.0, 450.0, -direction, 120.0)
+
 
 func _spawn_damage_number(pos: Vector2, amount: int):
 	var lbl = Label.new()
