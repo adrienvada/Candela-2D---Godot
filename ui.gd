@@ -145,6 +145,13 @@ var time_label: Label
 var waiting_label: Label
 var center_line: Panel
 var network_status_label: Label
+var ping_label: Label
+var countdown_label: Label
+
+# Dernier chiffre affiché par le décompte : sert à ne rejouer l'animation qu'au
+# changement de seconde.
+var _countdown_shown: int = -1
+var _local_ip_cache: String = ""
 
 var p1_shake_time: float = 0.0
 var p2_shake_time: float = 0.0
@@ -210,6 +217,8 @@ var btn_mode_host: Button
 var btn_mode_join: Button
 var online_hbox: HBoxContainer
 var lobby_status_label: Label
+var host_ip_row: HBoxContainer
+var host_ip_label: Label
 var ip_input: LineEdit
 
 var pause_info_container: VBoxContainer
@@ -271,6 +280,7 @@ func _ready() -> void:
 	_build_menu()
 	_build_dialog()
 	_build_status_bar()
+	_build_countdown()
 	_build_debug_panel()
 
 	p1_cursor = NeonFocusRing.new(COLOR_P1)
@@ -333,6 +343,30 @@ func _process(delta: float) -> void:
 	_update_killcam(delta)
 
 func _update_network_status() -> void:
+	var connected := false
+	var connecting := false
+	if multiplayer.has_multiplayer_peer():
+		var status := multiplayer.multiplayer_peer.get_connection_status()
+		connected = status == MultiplayerPeer.CONNECTION_CONNECTED
+		connecting = status == MultiplayerPeer.CONNECTION_CONNECTING
+
+	var tint := Color.RED
+	if connected:
+		tint = Color.GREEN
+	elif connecting:
+		tint = Color.YELLOW
+	network_status_label.add_theme_color_override("font_color", tint)
+
+	# Le format technique n'est plus lisible que par un développeur : il reste
+	# accessible en mode debug (F3), le joueur voit des états compréhensibles.
+	if debug_mode_active:
+		network_status_label.text = _technical_network_status(connected, connecting)
+	else:
+		network_status_label.text = _human_network_status(connected, connecting)
+
+	_update_ping_label()
+
+func _technical_network_status(connected: bool, connecting: bool) -> String:
 	var mode_str := "[LOCAL]"
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		mode_str = "[ONLINE_HOST]"
@@ -340,15 +374,10 @@ func _update_network_status() -> void:
 		mode_str = "[ONLINE_CLIENT]"
 
 	var conn_str := "Déconnecté"
-	network_status_label.add_theme_color_override("font_color", Color.RED)
-	if multiplayer.has_multiplayer_peer():
-		var status := multiplayer.multiplayer_peer.get_connection_status()
-		if status == MultiplayerPeer.CONNECTION_CONNECTED:
-			conn_str = "Connecté (Peers: %d)" % multiplayer.get_peers().size()
-			network_status_label.add_theme_color_override("font_color", Color.GREEN)
-		elif status == MultiplayerPeer.CONNECTION_CONNECTING:
-			conn_str = "En attente (Connexion...)"
-			network_status_label.add_theme_color_override("font_color", Color.YELLOW)
+	if connected:
+		conn_str = "Connecté (Peers: %d)" % multiplayer.get_peers().size()
+	elif connecting:
+		conn_str = "En attente (Connexion...)"
 
 	var gs := get_tree().get_first_node_in_group("game_state")
 	var situation := "Menu"
@@ -362,7 +391,52 @@ func _update_network_status() -> void:
 		elif ReplaySystem.playing_back:
 			situation = "Killcam"
 
-	network_status_label.text = "%s | %s | %s" % [mode_str, conn_str, situation]
+	return "%s | %s | %s" % [mode_str, conn_str, situation]
+
+## Statut destiné au joueur : ce qu'il doit faire ou attendre, rien d'autre.
+## Vide en local, où il n'y a rien à signaler.
+func _human_network_status(connected: bool, connecting: bool) -> String:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	var in_round: bool = gs != null and gs.round_active
+
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		if not connected or multiplayer.get_peers().is_empty():
+			return "Salon créé — en attente d'un adversaire  ·  IP : %s" % local_ipv4()
+		if in_round:
+			return "En jeu"
+		if ReplaySystem.playing_back:
+			return "Killcam"
+		return "Adversaire trouvé !"
+
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		if connecting:
+			return "Connexion au salon…"
+		if not connected:
+			return "Salon quitté"
+		if in_round:
+			return "En jeu"
+		if ReplaySystem.playing_back:
+			return "Killcam"
+		return "Salon rejoint — en attente du lancement"
+
+	return ""
+
+## Pastille de latence : verte sous 60 ms, jaune sous 120, rouge au-delà.
+func _update_ping_label() -> void:
+	if not NetworkManager.has_rtt:
+		ping_label.hide()
+		return
+
+	var rtt := int(round(NetworkManager.rtt_ms))
+	var tint := Color(0.3, 1.0, 0.45)
+	if rtt >= 120:
+		tint = Color(1.0, 0.35, 0.35)
+	elif rtt >= 60:
+		tint = Color(1.0, 0.82, 0.2)
+
+	ping_label.text = "● %d ms" % rtt
+	ping_label.add_theme_color_override("font_color", tint)
+	ping_label.show()
 
 ## Place les deux liserés de focus. Un curseur dont la cible a disparu est
 ## réamorcé plutôt que masqué : le joueur n'est jamais bloqué.
@@ -986,12 +1060,86 @@ func _build_status_bar() -> void:
 	network_status_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	network_status_label.add_theme_constant_override("outline_size", 4)
 
+	ping_label = Label.new()
+	ping_label.add_theme_font_size_override("font_size", 14)
+	ping_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	ping_label.add_theme_constant_override("outline_size", 4)
+	ping_label.hide()
+
+	var status_row := HBoxContainer.new()
+	status_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	status_row.add_theme_constant_override("separation", GAP_S)
+	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_row.add_child(network_status_label)
+	status_row.add_child(ping_label)
+
 	var status_margin := MarginContainer.new()
 	status_margin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	status_margin.add_theme_constant_override("margin_bottom", 10)
 	status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_margin.add_child(network_status_label)
+	status_margin.add_child(status_row)
 	add_child(status_margin)
+
+## Décompte de départ, plein écran : il doit rester lisible par-dessus le HUD
+## comme par-dessus l'arène.
+func _build_countdown() -> void:
+	countdown_label = Label.new()
+	countdown_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	countdown_label.add_theme_font_size_override("font_size", 140)
+	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
+	countdown_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	countdown_label.add_theme_constant_override("outline_size", 16)
+	countdown_label.z_index = 120
+	countdown_label.hide()
+	add_child(countdown_label)
+
+## Piloté par GameState, qui tient le décompte partagé.
+func set_countdown(value: float) -> void:
+	if countdown_label == null:
+		return
+	if value <= 0.0:
+		if _countdown_shown != -1:
+			_countdown_shown = -1
+			countdown_label.hide()
+		return
+
+	countdown_label.show()
+	var n := ceili(value)
+	if n == _countdown_shown:
+		return
+	_countdown_shown = n
+	countdown_label.text = str(n)
+	countdown_label.pivot_offset = countdown_label.size / 2.0
+	countdown_label.scale = Vector2(1.7, 1.7)
+	var tween := create_tween()
+	tween.tween_property(countdown_label, "scale", Vector2.ONE, 0.35) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## L'attente d'un adversaire est le moment où l'hôte a besoin de son adresse.
+func show_waiting_for_opponent() -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		waiting_label.text = "EN ATTENTE DU JOUEUR 2…\nVotre IP : %s" % local_ipv4()
+	else:
+		waiting_label.text = "EN ATTENTE DU JOUEUR 2…"
+	waiting_label.show()
+
+## Première IPv4 non-loopback : l'adresse à communiquer sur un réseau local.
+## Les adresses d'auto-configuration (169.254) sont écartées, elles ne servent
+## à rien pour un adversaire.
+func local_ipv4() -> String:
+	if _local_ip_cache != "":
+		return _local_ip_cache
+	_local_ip_cache = "127.0.0.1"
+	for addr in IP.get_local_addresses():
+		var a := String(addr)
+		if a.count(".") != 3 or a.begins_with("127.") or a.begins_with("169.254."):
+			continue
+		_local_ip_cache = a
+		break
+	return _local_ip_cache
 
 func _build_debug_panel() -> void:
 	debug_panel = PanelContainer.new()
@@ -1499,6 +1647,26 @@ func _build_mode_block() -> Control:
 	lobby_status_label.hide()
 	mode_vbox.add_child(lobby_status_label)
 
+	# Sans son adresse sous les yeux, l'hôte n'a rien à transmettre à l'autre
+	# joueur : elle est affichée dès que « CRÉER SALON » est sélectionné.
+	host_ip_row = HBoxContainer.new()
+	host_ip_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	host_ip_row.add_theme_constant_override("separation", GAP_XS)
+
+	host_ip_label = Label.new()
+	host_ip_label.add_theme_font_size_override("font_size", 15)
+	host_ip_row.add_child(host_ip_label)
+
+	var btn_copy_ip := _make_button("COPIER", COLOR_GOLD)
+	btn_copy_ip.add_theme_font_size_override("font_size", 13)
+	btn_copy_ip.pressed.connect(func() -> void:
+		DisplayServer.clipboard_set(local_ipv4())
+		host_ip_label.text = "IP copiée : %s" % local_ipv4()
+	)
+	host_ip_row.add_child(btn_copy_ip)
+	host_ip_row.hide()
+	mode_vbox.add_child(host_ip_row)
+
 	ip_input = LineEdit.new()
 	ip_input.placeholder_text = "127.0.0.1"
 	ip_input.text = "127.0.0.1"
@@ -1516,6 +1684,7 @@ func _build_mode_block() -> Control:
 		ip_input.hide()
 		online_hbox.hide()
 		lobby_status_label.hide()
+		host_ip_row.hide()
 		_update_weapon_panels_visibility()
 		btn_replay.text = "LANCER LE MATCH"
 	)
@@ -1536,7 +1705,9 @@ func _build_mode_block() -> Control:
 			return
 		ip_input.hide()
 		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 | Statut : 1/2 Joueurs (En attente...)"
+		lobby_status_label.text = "Salon 1V1 — communiquez votre IP à votre adversaire"
+		host_ip_label.text = "Votre IP : %s" % local_ipv4()
+		host_ip_row.show()
 		btn_replay.text = "LANCER LE MATCH"
 		_update_weapon_panels_visibility()
 	)
@@ -1546,7 +1717,8 @@ func _build_mode_block() -> Control:
 			return
 		ip_input.show()
 		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 | Entrez l'IP de l'Hôte"
+		lobby_status_label.text = "Salon 1V1 — entrez l'IP de l'hôte"
+		host_ip_row.hide()
 		btn_replay.text = "REJOINDRE LE SALON"
 		_update_weapon_panels_visibility()
 	)

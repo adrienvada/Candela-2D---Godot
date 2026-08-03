@@ -10,6 +10,13 @@ var direction: Vector2 = Vector2.ZERO
 var distance_traveled: float = 0.0
 var radius: float = 4.0
 
+# Compensation de latence : quand `lag_target` est renseigné (tirs du client,
+# arbitrés par l'hôte), ce joueur est testé contre `lag_center` — la position
+# que le tireur voyait — et retiré du ShapeCast, qui ne connaît que le présent.
+const PLAYER_BODY_RADIUS := 18.0
+var lag_target: Player
+var lag_center: Vector2 = Vector2.ZERO
+
 var shape_cast: ShapeCast2D
 var light: PointLight2D
 var spawn_pos: Vector2
@@ -81,7 +88,9 @@ func _ready():
 	add_child(shape_cast)
 	if source_player:
 		shape_cast.add_exception(source_player)
-	
+	if lag_target:
+		shape_cast.add_exception(lag_target)
+
 	set_as_top_level(true)
 	spawn_pos = global_position
 
@@ -101,28 +110,25 @@ func _physics_process(delta):
 	# Update shape cast for this frame's movement. target_position is in local space!
 	shape_cast.target_position = Vector2(travel_step, 0)
 	shape_cast.force_shapecast_update()
-	
+
+	# Cible compensée : test manuel segment/cercle, le ShapeCast ne la voit plus.
+	# Un mur touché plus tôt sur le pas l'emporte toujours.
+	if lag_target and is_instance_valid(lag_target) and (lag_target.hp > 0 or is_replay):
+		var lag_dist := _circle_entry_distance(global_position, direction, travel_step,
+			lag_center, PLAYER_BODY_RADIUS + radius)
+		if lag_dist >= 0.0:
+			var wall_first := shape_cast.is_colliding() \
+				and global_position.distance_to(shape_cast.get_collision_point(0)) < lag_dist
+			if not wall_first:
+				_hit_player(lag_target, lag_center, global_position + direction * lag_dist)
+				return
+
 	if shape_cast.is_colliding():
 		var collider = shape_cast.get_collider(0)
 		var hit_point = shape_cast.get_collision_point(0)
-		
+
 		if collider is Player and (collider.hp > 0 or is_replay):
-			# Damage falloff based on the perpendicular distance from the bullet's path to the player's center
-			var player_radius = 15.0 # 15.0 * 1.0 (scale)
-			var to_player = collider.global_position - global_position
-			var dist_to_axis = abs(to_player.cross(direction))
-			var normalized_dist = clamp(dist_to_axis / player_radius, 0.0, 1.0)
-			
-			# Linear falloff based on weapon damage
-			var opp_hit_damage = floor(lerp(weapon.damage_center, weapon.damage_edge, normalized_dist))
-			
-			if not is_replay and collider.has_method("take_damage"):
-				collider.take_damage(opp_hit_damage, source_player)
-					
-			_spawn_hit_effects(hit_point)
-			if not is_replay:
-				_spawn_damage_number(hit_point, opp_hit_damage)
-			_fade_and_destroy(hit_point)
+			_hit_player(collider, collider.global_position, hit_point)
 			return
 		else:
 			_spawn_wall_effects(hit_point)
@@ -138,6 +144,9 @@ func _physics_process(delta):
 				# Allow damaging the shooter after a bounce
 				if weapon.damages_shooter:
 					shape_cast.clear_exceptions()
+					# La cible compensée reste testée à la main, rebond compris.
+					if lag_target:
+						shape_cast.add_exception(lag_target)
 					
 				return
 			else:
@@ -155,6 +164,49 @@ func _physics_process(delta):
 	
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
+
+## Impact joueur. `center` est le point de référence pour l'atténuation : la
+## position réelle du joueur, ou celle remontée dans le temps quand le tir est
+## compensé.
+func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
+	# Damage falloff based on the perpendicular distance from the bullet's path to the player's center
+	var player_radius := 15.0 # 15.0 * 1.0 (scale)
+	var to_player := center - global_position
+	var dist_to_axis: float = abs(to_player.cross(direction))
+	var normalized_dist := clampf(dist_to_axis / player_radius, 0.0, 1.0)
+
+	# Linear falloff based on weapon damage
+	var opp_hit_damage := floorf(lerpf(weapon.damage_center, weapon.damage_edge, normalized_dist))
+
+	if not is_replay:
+		target.take_damage(opp_hit_damage, source_player)
+
+	_spawn_hit_effects(hit_point)
+	if not is_replay:
+		_spawn_damage_number(hit_point, int(opp_hit_damage))
+	_fade_and_destroy(hit_point)
+
+## Distance parcourue le long du pas avant d'entrer dans le cercle, -1 s'il
+## n'est pas atteint pendant ce pas.
+static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
+		center: Vector2, r: float) -> float:
+	var to_center := center - origin
+	var proj := to_center.dot(dir)
+	var perp_sq := to_center.length_squared() - proj * proj
+	var r_sq := r * r
+	if perp_sq > r_sq:
+		return -1.0
+	var half := sqrt(r_sq - perp_sq)
+	var entry := proj - half
+	if entry < 0.0:
+		# Déjà dans le cercle au départ du pas : impact immédiat, sauf si le
+		# cercle est entièrement derrière.
+		if proj + half < 0.0:
+			return -1.0
+		entry = 0.0
+	if entry > length:
+		return -1.0
+	return entry
 
 func _fade_and_destroy(hit_point: Vector2):
 	set_physics_process(false)

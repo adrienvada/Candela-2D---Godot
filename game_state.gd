@@ -22,6 +22,29 @@ var p2: Player
 # c'est donc cet id qui sert de garde pour tout ce qui vient du client.
 var client_peer_id: int = 0
 
+# Décompte de départ, joué à l'identique des deux côtés : il donne au client le
+# temps de recevoir la manche et évite les départs décalés.
+const COUNTDOWN_DURATION := 3.0
+var countdown_left: float = 0.0
+
+# [Client] Tirs rendus localement avant l'accord de l'hôte, horodatés pour être
+# dédupliqués à l'arrivée de la balle officielle.
+const PREDICTED_SHOT_TTL_MS := 1000
+var _predicted_shots: Array[int] = []
+
+# [Hôte] Historique des positions pour la compensation de latence. La fenêtre
+# couvre le recul maximal avec de la marge, sans conserver davantage.
+const POS_HISTORY_WINDOW := 0.4
+const LAG_COMP_MAX := 0.2
+var _pos_history: Array[Dictionary] = []
+
+# Recalage du chronomètre : le client décrémente localement entre deux envois.
+const TIME_SYNC_INTERVAL := 5.0
+var _time_sync_accum: float = 0.0
+
+# Échéance de connexion du client, à neutraliser dès que l'issue est connue.
+var _join_deadline_active: bool = false
+
 var weapon_pistolet: WeaponData
 var weapon_fusil: WeaponData
 var weapon_pompe: WeaponData
@@ -167,7 +190,7 @@ func _on_peer_disconnected(id: int):
 		p2.hide()
 		p2.set_collision_layer_value(1, false)
 		p2.set_collision_mask_value(1, false)
-		ui.waiting_label.show()
+		ui.show_waiting_for_opponent()
 		ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
 		if game_over:
 			ui.hide_game_over()
@@ -432,7 +455,7 @@ func _start_round():
 			round_active = false
 			sandbox_mode = true
 			ui.time_label.text = "02:00"
-			ui.waiting_label.show()
+			ui.show_waiting_for_opponent()
 			ui.hide_game_over()
 			p2.hide()
 			p2.set_collision_layer_value(1, false)
@@ -481,7 +504,6 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	AudioManager.set_in_match(true)
 	AudioManager.reset_low_health()
 	AudioManager.play_music("music_match")
-	AudioManager.play_speaker("spk_fight")
 
 	p1.show_all_visuals()
 	p2.show_all_visuals()
@@ -512,6 +534,12 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	round_active = true
 	game_over = false
 	Engine.time_scale = 1.0
+	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
+	countdown_left = COUNTDOWN_DURATION
+	ui.set_countdown(countdown_left)
+	_time_sync_accum = 0.0
+	_predicted_shots.clear()
+	_pos_history.clear()
 	ghost_p1.hide()
 	ghost_p2.hide()
 	for c in bullet_container.get_children():
@@ -521,16 +549,35 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
 
 func _process(delta):
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		_record_position_history()
+
 	if round_active:
-		time_left -= delta
-		if time_left <= 0:
-			time_left = 0
+		if countdown_left > 0.0:
+			countdown_left = maxf(0.0, countdown_left - delta)
+			ui.set_countdown(countdown_left)
+			if countdown_left <= 0.0:
+				AudioManager.play_speaker("spk_fight")
+				# Le décompte du client a démarré un demi aller-retour plus tard :
+				# on recale son chronomètre dès le départ plutôt que d'attendre
+				# le prochain envoi périodique.
+				if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+					rpc_sync_time.rpc(time_left)
+		else:
+			time_left -= delta
 			if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-				rpc_end_round.rpc(-1)
-			elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-				pass
-			else:
-				_do_end_round(-1)
+				_time_sync_accum += delta
+				if _time_sync_accum >= TIME_SYNC_INTERVAL:
+					_time_sync_accum = 0.0
+					rpc_sync_time.rpc(time_left)
+			if time_left <= 0:
+				time_left = 0
+				if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+					rpc_end_round.rpc(-1)
+				elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+					pass
+				else:
+					_do_end_round(-1)
 
 		_check_dazzle(delta)
 		
@@ -678,14 +725,21 @@ func _get_weapon_idx(w: WeaponData) -> int:
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
 	var shooter = p1 if shooter_id == 0 else p2
 	var weapon = weapon_arbalete if weapon_idx == 3 else (weapon_pompe if weapon_idx == 2 else (weapon_fusil if weapon_idx == 1 else weapon_pistolet))
-	_do_spawn_bullet(shooter, pos, rot, weapon)
+	# Tir déjà rendu par la prédiction locale : seul l'enregistrement killcam
+	# reste à faire, sur la trajectoire arbitrée par l'hôte.
+	var already_shown := shooter_id == 1 and _consume_predicted_shot()
+	_do_spawn_bullet(shooter, pos, rot, weapon, not already_shown)
 
 func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData):
 	if not round_active and not sandbox_mode: return
-	
-	# Le client ne tire plus lui-même : son tir est simulé par l'hôte à partir
-	# de ses inputs, qui seul décide de la cadence.
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT: return
+
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Le client rend son propre tir sans attendre l'hôte, qui reste seul
+		# juge des dégâts et de la cadence réelle.
+		if shooter == p2:
+			_predicted_shots.append(Time.get_ticks_msec())
+			_do_spawn_bullet(shooter, pos, rot, weapon, true, false)
+		return
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		var w_idx = _get_weapon_idx(weapon)
@@ -693,34 +747,101 @@ func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData)
 	else:
 		_do_spawn_bullet(shooter, pos, rot, weapon)
 
-func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData):
+## `spawn_nodes` à faux : la balle a déjà été rendue par la prédiction client,
+## on ne garde que l'enregistrement. `record` à faux : balle prédite, elle sera
+## enregistrée quand le tir officiel arrivera.
+func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData,
+		spawn_nodes: bool = true, record: bool = true):
 	if not round_active and not sandbox_mode: return
 	var count = weapon.projectile_count if weapon else 1
 	var angles = weapon.spread_angles_deg if weapon else [0.0]
-	
+
+	# Les tirs du client sont arbitrés sur ce qu'il voyait : son adversaire est
+	# testé à sa position d'alors. Calculé une fois pour toute la volée, le vol
+	# d'une balle durant quelques dizaines de millisecondes.
+	var lag_center := Vector2.ZERO
+	var lag_compensated := spawn_nodes \
+		and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST \
+		and shooter == p2
+	if lag_compensated:
+		lag_center = _rewound_position(p1, _lag_comp_delay())
+
 	for i in range(count):
 		var ang_offset = deg_to_rad(angles[i]) if i < angles.size() else 0.0
 		var final_rot = rot + ang_offset
-		
-		var b = bullet_scene.instantiate()
-		b.global_position = pos
-		b.rotation = final_rot
-		b.direction = Vector2(cos(final_rot), sin(final_rot))
-		b.source_player = shooter
-		if weapon:
-			b.weapon = weapon
-		bullet_container.add_child(b)
-		
-		if ReplaySystem.recording:
+
+		if spawn_nodes:
+			var b = bullet_scene.instantiate()
+			b.global_position = pos
+			b.rotation = final_rot
+			b.direction = Vector2(cos(final_rot), sin(final_rot))
+			b.source_player = shooter
+			if weapon:
+				b.weapon = weapon
+			if lag_compensated:
+				b.lag_target = p1
+				b.lag_center = lag_center
+			bullet_container.add_child(b)
+
+		if record and ReplaySystem.recording:
 			ReplaySystem.record_bullet_fired(shooter.player_id, pos, final_rot, weapon)
-			
+
+	if not spawn_nodes: return
+
 	if shooter == p1:
 		cam1_shake_time = 0.1
 	elif shooter == p2:
 		cam2_shake_time = 0.1
-	
+
 	if shooter.has_method("trigger_shoot_visuals"):
 		shooter.trigger_shoot_visuals()
+
+## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
+## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)
+## expirent d'elles-mêmes pour ne pas décaler la file.
+func _consume_predicted_shot() -> bool:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT: return false
+	var now := Time.get_ticks_msec()
+	while not _predicted_shots.is_empty() and now - _predicted_shots[0] > PREDICTED_SHOT_TTL_MS:
+		_predicted_shots.remove_at(0)
+	if _predicted_shots.is_empty(): return false
+	_predicted_shots.remove_at(0)
+	return true
+
+## [Hôte] Archive la position des deux joueurs pour la compensation de latence.
+func _record_position_history() -> void:
+	if not is_instance_valid(p1) or not is_instance_valid(p2): return
+	var now := Time.get_ticks_msec() / 1000.0
+	_pos_history.append({"t": now, "p1": p1.global_position, "p2": p2.global_position})
+	while _pos_history.size() > 1 and now - _pos_history[0]["t"] > POS_HISTORY_WINDOW:
+		_pos_history.remove_at(0)
+
+## [Hôte] Position d'un joueur telle qu'elle était il y a `back` secondes.
+func _rewound_position(player: Player, back: float) -> Vector2:
+	if _pos_history.is_empty(): return player.global_position
+	var key := "p1" if player == p1 else "p2"
+	var t := Time.get_ticks_msec() / 1000.0 - back
+	if t >= float(_pos_history[-1]["t"]): return player.global_position
+	if t <= float(_pos_history[0]["t"]): return _pos_history[0][key]
+	for i in range(_pos_history.size() - 1):
+		var a: Dictionary = _pos_history[i]
+		var b: Dictionary = _pos_history[i + 1]
+		if t <= float(b["t"]):
+			var span: float = float(b["t"]) - float(a["t"])
+			var w: float = 0.0 if span <= 0.0001 else (t - float(a["t"])) / span
+			return (a[key] as Vector2).lerp(b[key], w)
+	return player.global_position
+
+## Recul appliqué aux tirs du client : ce qu'il voyait était en retard d'un
+## demi aller-retour, plus le retard d'interpolation de son adversaire.
+func _lag_comp_delay() -> float:
+	return clampf(NetworkManager.rtt_ms / 2000.0 + Player.INTERP_DELAY, 0.0, LAG_COMP_MAX)
+
+## L'hôte est la seule horloge de manche : sans recalage les deux chronomètres
+## dérivent (hoquets de rendu, pause) et la manche ne finit pas ensemble.
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_time(value: float) -> void:
+	time_left = value
 
 func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
 	var b = bullet_scene.instantiate()
@@ -762,6 +883,9 @@ func _do_end_round(winner_id: int):
 	elif winner_id == 0:
 		p1_kills += 1
 	round_active = false
+	countdown_left = 0.0
+	ui.set_countdown(0.0)
+	_predicted_shots.clear()
 	AudioManager.set_in_match(false)
 	AudioManager.play_music("music_victory")
 
@@ -822,11 +946,16 @@ func _on_replay_requested():
 			_start_round()
 		elif ui.btn_mode_join.button_pressed:
 			NetworkManager.join_game(ui.ip_input.text)
-			ui.network_status_label.text = "[ONLINE_CLIENT] | Connexion au serveur en cours..."
-			ui.btn_replay.text = "Connexion au serveur en cours..."
-			
+			ui.btn_replay.text = "Connexion au salon…"
+
+			# L'échéance doit être neutralisée dès que l'issue est connue :
+			# sinon elle renvoie au menu une partie déjà commencée.
+			_join_deadline_active = true
 			var timer = get_tree().create_timer(5.0)
 			timer.timeout.connect(func():
+				if not _join_deadline_active:
+					return
+				_join_deadline_active = false
 				if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and multiplayer.get_peers().size() == 0:
 					_on_connection_failed()
 			)
@@ -909,6 +1038,11 @@ func _on_main_menu_requested():
 	NetworkManager.disconnect_from_game()
 
 	client_peer_id = 0
+	_join_deadline_active = false
+	countdown_left = 0.0
+	ui.set_countdown(0.0)
+	_predicted_shots.clear()
+	_pos_history.clear()
 	round_active = false
 	sandbox_mode = false
 	game_over = true
@@ -959,11 +1093,13 @@ func _on_host_disconnected():
 
 ## [Client Uniquement] Intercepte un échec de connexion (timeout ou serveur plein).
 func _on_connection_failed():
-	ui.show_dialog_message("Erreur", "Impossible de se connecter au serveur (Timeout/IP invalide ou Serveur Plein).")
+	_join_deadline_active = false
+	ui.show_dialog_message("Erreur", "Impossible de rejoindre le salon (adresse injoignable ou salon complet).")
 	_on_main_menu_requested()
 
 ## [Client Uniquement] Appelé quand la connexion au serveur réussit.
 func _on_connection_success():
+	_join_deadline_active = false
 	_apply_network_mode()
 	game_over = false
 	ui.hide_game_over()

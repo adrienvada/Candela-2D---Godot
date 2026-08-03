@@ -641,6 +641,18 @@ func _physics_process(delta):
 	elif role == NetRole.INTERPOLATED:
 		_apply_remote_interpolation()
 
+	# Décompte de départ : plus personne ne bouge, ne vise ni ne tire. Placé
+	# après l'interpolation pour que l'adversaire soit tout de même rendu à sa
+	# position d'apparition et non sur un instantané périmé.
+	if state and state.countdown_left > 0.0:
+		velocity = Vector2.ZERO
+		is_sprinting = false
+		flashlight_on = false
+		flashlight.enabled = false
+		body_light.enabled = false
+		_update_aim_line()
+		return
+
 	var can_move = role != NetRole.INTERPOLATED
 	if role == NetRole.SIMULATED and NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
 		can_move = is_multiplayer_authority()
@@ -713,16 +725,19 @@ func _physics_process(delta):
 		else:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6
 	
-	if aim_cast and aim_line:
-		var end_pos = Vector2(2000, 0)
-		if aim_cast.is_colliding():
-			end_pos = to_local(aim_cast.get_collision_point())
-		aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
-	
+	_update_aim_line()
+
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	if can_move and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
+
+func _update_aim_line() -> void:
+	if aim_cast == null or aim_line == null: return
+	var end_pos = Vector2(2000, 0)
+	if aim_cast.is_colliding():
+		end_pos = to_local(aim_cast.get_collision_point())
+	aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
