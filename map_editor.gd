@@ -38,6 +38,8 @@ const STEP_COLOURS: Array[Color] = [
 	Color(1.00, 0.20, 0.42),   # J2 — rouge (couleur du joueur 2)
 ]
 
+## Pas de redimensionnement de la grille, en cases par appui.
+const GRID_STEP := 2
 ## Taille des cartes créées depuis l'éditeur.
 const NEW_MAP_GRID := Vector2i(32, 32)
 ## Répétition du curseur à la manette : premier délai, puis cadence variable.
@@ -801,9 +803,23 @@ func _on_action_requested(action: StringName) -> void:
 		MapEditorHUD.ACTION_AUTO_WALLS:
 			_auto_walls()
 		MapEditorHUD.ACTION_MIRROR_H:
-			_mirror(true)
+			_mirror(MapEditorTools.Symmetry.HORIZONTAL)
 		MapEditorHUD.ACTION_MIRROR_V:
-			_mirror(false)
+			_mirror(MapEditorTools.Symmetry.VERTICAL)
+		MapEditorHUD.ACTION_MIRROR_D:
+			_mirror(MapEditorTools.Symmetry.DIAGONAL)
+		MapEditorHUD.ACTION_MIRROR_AD:
+			_mirror(MapEditorTools.Symmetry.ANTI_DIAGONAL)
+		MapEditorHUD.ACTION_ROTATE_180:
+			_mirror(MapEditorTools.Symmetry.ROTATE_180)
+		MapEditorHUD.ACTION_GRID_WIDER:
+			_resize_grid(Vector2i(GRID_STEP, 0))
+		MapEditorHUD.ACTION_GRID_NARROWER:
+			_resize_grid(Vector2i(-GRID_STEP, 0))
+		MapEditorHUD.ACTION_GRID_TALLER:
+			_resize_grid(Vector2i(0, GRID_STEP))
+		MapEditorHUD.ACTION_GRID_SHORTER:
+			_resize_grid(Vector2i(0, -GRID_STEP))
 		MapEditorHUD.ACTION_LIGHT:
 			_toggle_light_preview()
 		MapEditorHUD.ACTION_FRAME:
@@ -849,12 +865,59 @@ func _auto_walls() -> void:
 		MapEditorHUD.Toast.SUCCESS,
 		"Dessinez du sol avant de le ceinturer")
 
-func _mirror(horizontal: bool) -> void:
-	tools.begin("Miroir horizontal" if horizontal else "Miroir vertical")
-	var added := tools.mirror(horizontal)
-	_close_transaction("Symétrie appliquée (%d carreaux)" % added,
+const SYMMETRY_LABELS := {
+	MapEditorTools.Symmetry.HORIZONTAL: "Miroir horizontal",
+	MapEditorTools.Symmetry.VERTICAL: "Miroir vertical",
+	MapEditorTools.Symmetry.DIAGONAL: "Symétrie diagonale ↘",
+	MapEditorTools.Symmetry.ANTI_DIAGONAL: "Symétrie diagonale ↗",
+	MapEditorTools.Symmetry.ROTATE_180: "Rotation 180°",
+}
+
+func _mirror(axis: MapEditorTools.Symmetry) -> void:
+	if not tools.supports_symmetry(axis):
+		hud.show_toast("Grille carrée requise pour une symétrie diagonale",
+			MapEditorHUD.Toast.WARN)
+		return
+
+	var label: String = SYMMETRY_LABELS.get(axis, "Symétrie")
+	tools.begin(label)
+	var added := tools.mirror(axis)
+	_close_transaction("%s appliquée (%d carreaux)" % [label, added],
 		MapEditorHUD.Toast.SUCCESS,
-		"La carte est déjà symétrique")
+		"La carte est déjà symétrique sur cet axe")
+
+## Agrandit ou rétrécit la grille de GRID_STEP cases sur un axe.
+func _resize_grid(delta: Vector2i) -> void:
+	var target := grid_size + delta
+	if target.x < MapCodec.MIN_GRID or target.y < MapCodec.MIN_GRID:
+		hud.show_toast("Taille minimale atteinte (%d)" % MapCodec.MIN_GRID,
+			MapEditorHUD.Toast.WARN)
+		return
+	if target.x > MapCodec.MAX_GRID or target.y > MapCodec.MAX_GRID:
+		hud.show_toast("Taille maximale atteinte (%d)" % MapCodec.MAX_GRID,
+			MapEditorHUD.Toast.WARN)
+		return
+
+	tools.begin("Redimensionnement %d×%d" % [target.x, target.y])
+	var removed := tools.resize_grid(target)
+	grid_size = target
+	_map_meta["grid_size"] = {"x": target.x, "y": target.y}
+
+	# Les limites suivent la nouvelle étendue, mais le cadrage reste où il est :
+	# agrandir la carte ne doit pas arracher la vue de la zone en cours d'édition.
+	camera.update_bounds(grid_size, CandelaTileSet.TILE_SIZE)
+	grid_pos = Vector2i(
+		clampi(grid_pos.x, 0, grid_size.x - 1),
+		clampi(grid_pos.y, 0, grid_size.y - 1))
+	grid_backdrop.queue_redraw()
+	hud.set_grid_state(grid_size)
+
+	var message := "Grille %d×%d" % [target.x, target.y]
+	if removed > 0:
+		message += " — %d carreaux hors limites effacés" % removed
+	_close_transaction(message,
+		MapEditorHUD.Toast.WARN if removed > 0 else MapEditorHUD.Toast.SUCCESS,
+		message)
 
 func _clear_all() -> void:
 	tools.begin("Tout vider")
@@ -888,6 +951,7 @@ func _load_map(data: Dictionary) -> void:
 
 	grid_pos = Vector2i(grid_size.x / 2, grid_size.y / 2)
 	camera.configure(grid_size, CandelaTileSet.TILE_SIZE)
+	hud.set_grid_state(grid_size)
 	_update_cursor()
 
 	_dirty = false

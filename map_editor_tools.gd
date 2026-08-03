@@ -139,6 +139,60 @@ func get_spawn(index: int) -> Vector2i:
 func is_inside(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < grid_size.x and cell.y < grid_size.y
 
+## Redimensionne la grille de travail.
+##
+## En agrandissant, rien n'est perdu : les nouvelles cases sont simplement du
+## vide (donc des fosses en jeu). En rétrécissant, tout ce qui déborde est
+## effacé — l'opération reste dans la transaction courante, donc annulable.
+##
+## Retourne le nombre de carreaux supprimés par le débordement.
+func resize_grid(new_size: Vector2i) -> int:
+	var target := Vector2i(
+		clampi(new_size.x, MapCodec.MIN_GRID, MapCodec.MAX_GRID),
+		clampi(new_size.y, MapCodec.MIN_GRID, MapCodec.MAX_GRID))
+	if target == grid_size:
+		return 0
+
+	var previous := grid_size
+	var removed := 0
+
+	# Rétrécissement : on purge ce qui tombe hors de la nouvelle grille AVANT
+	# de la rétrécir. apply_cell() refuse les cases hors grille : réduire
+	# d'abord rendrait précisément intouchables les carreaux à effacer.
+	if target.x < previous.x or target.y < previous.y:
+		var dropped_floor: Array[Vector2i] = []
+		var dropped_walls: Array[Vector2i] = []
+		for pair in [[LAYER_FLOOR, _floor_layer], [LAYER_WALLS, _walls_layer]]:
+			var layer: StringName = pair[0]
+			var node: TileMapLayer = pair[1]
+			if node == null:
+				continue
+			for cell in node.get_used_cells():
+				if cell.x < target.x and cell.y < target.y:
+					continue
+				if apply_cell(layer, cell, EMPTY_ATLAS):
+					removed += 1
+					if layer == LAYER_FLOOR:
+						dropped_floor.append(cell)
+					else:
+						dropped_walls.append(cell)
+
+		if not dropped_floor.is_empty():
+			cells_touched.emit(dropped_floor, LAYER_FLOOR, false)
+		if not dropped_walls.is_empty():
+			cells_touched.emit(dropped_walls, LAYER_WALLS, false)
+
+	grid_size = target
+
+	# Une apparition hors grille repasse à « non posée » plutôt que de rester
+	# à une coordonnée devenue inatteignable.
+	for i in 2:
+		if _spawns[i] != NO_CELL and not is_inside(_spawns[i]):
+			set_spawn(i, NO_CELL)
+
+	map_changed.emit()
+	return removed
+
 # ---------------------------------------------------------------------------
 # TRANSACTIONS
 # ---------------------------------------------------------------------------
@@ -410,9 +464,25 @@ func auto_walls() -> int:
 ## Miroir : réunit la carte et son reflet. Une moitié dessinée devient une
 ## arène de duel parfaitement symétrique.
 ## Les apparitions se répondent : J2 est placée au reflet de J1.
-func mirror(horizontal: bool) -> int:
-	var touched_floor := _mirror_layer(LAYER_FLOOR, _floor_layer, horizontal)
-	var touched_walls := _mirror_layer(LAYER_WALLS, _walls_layer, horizontal)
+## Axes de symétrie disponibles.
+##
+## Les deux diagonales et la rotation à 180° donnent des cartes de duel plus
+## équitables que les miroirs orthogonaux : les deux joueurs abordent la
+## géométrie sous le même angle, et non l'un l'image de l'autre.
+enum Symmetry { HORIZONTAL, VERTICAL, DIAGONAL, ANTI_DIAGONAL, ROTATE_180 }
+
+## Vrai si l'axe demandé est applicable à la grille courante. Les diagonales
+## échangent x et y : elles exigent une grille carrée.
+func supports_symmetry(axis: Symmetry) -> bool:
+	if axis == Symmetry.DIAGONAL or axis == Symmetry.ANTI_DIAGONAL:
+		return grid_size.x == grid_size.y
+	return true
+
+## Rend la carte symétrique en recopiant chaque cellule sur son image.
+## Retourne le nombre de carreaux ajoutés.
+func mirror(axis: Symmetry) -> int:
+	var touched_floor := _mirror_layer(LAYER_FLOOR, _floor_layer, axis)
+	var touched_walls := _mirror_layer(LAYER_WALLS, _walls_layer, axis)
 
 	if not touched_floor.is_empty():
 		cells_touched.emit(touched_floor, LAYER_FLOOR, true)
@@ -422,29 +492,42 @@ func mirror(horizontal: bool) -> int:
 	# Symétrie des apparitions : le duel doit rester équitable.
 	var p1 := _spawns[0]
 	if p1 != NO_CELL:
-		var reflected_spawn := _reflect(p1, horizontal)
+		var reflected_spawn := reflect(p1, axis)
 		if is_inside(reflected_spawn) and reflected_spawn != p1:
 			set_spawn(1, reflected_spawn)
 
 	return touched_floor.size() + touched_walls.size()
 
 ## Recopie un calque sur son reflet. Retourne les cellules réellement ajoutées.
-func _mirror_layer(layer: StringName, node: TileMapLayer, horizontal: bool) -> Array[Vector2i]:
+func _mirror_layer(layer: StringName, node: TileMapLayer, axis: Symmetry) -> Array[Vector2i]:
 	var touched: Array[Vector2i] = []
 	if node == null:
 		return touched
 	for cell in node.get_used_cells():
-		var reflected := _reflect(cell, horizontal)
+		var reflected := reflect(cell, axis)
 		if reflected == cell or not is_inside(reflected):
 			continue
 		if apply_cell(layer, reflected, atlas_for(layer, reflected)):
 			touched.append(reflected)
 	return touched
 
-func _reflect(cell: Vector2i, horizontal: bool) -> Vector2i:
-	if horizontal:
-		return Vector2i(grid_size.x - 1 - cell.x, cell.y)
-	return Vector2i(cell.x, grid_size.y - 1 - cell.y)
+## Image d'une cellule par l'axe demandé.
+func reflect(cell: Vector2i, axis: Symmetry) -> Vector2i:
+	match axis:
+		Symmetry.HORIZONTAL:
+			return Vector2i(grid_size.x - 1 - cell.x, cell.y)
+		Symmetry.VERTICAL:
+			return Vector2i(cell.x, grid_size.y - 1 - cell.y)
+		Symmetry.DIAGONAL:
+			# Transposition autour de la diagonale ↘ (haut-gauche → bas-droite).
+			return Vector2i(cell.y, cell.x)
+		Symmetry.ANTI_DIAGONAL:
+			# Diagonale ↗ (bas-gauche → haut-droite).
+			return Vector2i(grid_size.y - 1 - cell.y, grid_size.x - 1 - cell.x)
+		_:
+			# Rotation d'un demi-tour : la symétrie de référence des cartes de
+			# duel, valable même sur une grille rectangulaire.
+			return Vector2i(grid_size.x - 1 - cell.x, grid_size.y - 1 - cell.y)
 
 ## Déplace un point d'apparition. Retourne true si la position a changé.
 func set_spawn(index: int, cell: Vector2i) -> bool:

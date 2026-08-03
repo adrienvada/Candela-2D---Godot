@@ -25,6 +25,15 @@ var flashlight_on: bool = false
 var is_sprinting: bool = false
 var dead: bool = false
 
+# Numérotation des paquets d'input client→hôte. Le canal est unreliable :
+# sans compteur, un paquet en retard réécraserait un état plus récent.
+var _input_seq: int = 0
+var _last_input_seq: int = -1
+
+# La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
+# changement ici pour que le son suive dans tous les modes.
+var _torch_audio_state: bool = false
+
 @onready var visual_dim = $VisualDim
 @onready var visual_dim_ptr = $VisualDim/DirPointerDim
 @onready var visual_reveal = $VisualReveal
@@ -72,6 +81,9 @@ func _ready():
 	rep_config.add_property(NodePath(".:global_position"))
 	rep_config.add_property(NodePath(".:rotation"))
 	rep_config.add_property(NodePath(".:flashlight_on"))
+	# L'hôte est autorité sur les deux joueurs : la réplication va toujours
+	# hôte→client, y compris pour les HP.
+	rep_config.add_property(NodePath(".:hp"))
 	sync.replication_config = rep_config
 	add_child(sync)
 	
@@ -395,11 +407,14 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture_scale = weapon.torch_scale
 
 func _process(delta):
+	# Hors du bloc de simulation : côté client la torche est répliquée, et les
+	# sorties anticipées de _physics_process ne doivent pas laisser le son bloqué.
+	if flashlight_on != _torch_audio_state:
+		_torch_audio_state = flashlight_on
+		AudioManager.set_player_torch(player_id, flashlight_on)
+
 	if dead: return
-	
-	if hp <= 0 and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		die(null)
-	
+
 	if shoot_cooldown > 0:
 		shoot_cooldown -= delta
 		if shoot_cooldown <= 0:
@@ -422,11 +437,33 @@ func _process(delta):
 				else:
 					c.offset = Vector2.ZERO
 
+## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
+## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(mov: Vector2, aim: Vector2, shoot: bool, torch: bool, sprint: bool):
-	if multiplayer.get_remote_sender_id() != 1 and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		if input_provider.has_method("update_input_state"):
-			input_provider.update_input_state(mov, aim, shoot, torch, sprint)
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, sprint: bool) -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
+	if player_id != 1: return
+	var state = get_tree().get_first_node_in_group("game_state")
+	if state == null or multiplayer.get_remote_sender_id() != state.client_peer_id: return
+	# Paquet arrivé après un plus récent : on le jette plutôt que de reculer.
+	if seq <= _last_input_seq: return
+	_last_input_seq = seq
+	input_provider.update_input_state(mov, aim, shoot, torch, sprint)
+
+## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
+## la dernière commande reçue (course en cours, torche allumée…).
+func reset_network_input() -> void:
+	_last_input_seq = -1
+	if input_provider and input_provider.has_method("reset_input_state"):
+		input_provider.reset_input_state()
+
+func _send_inputs_to_host() -> void:
+	var mov := input_provider.get_movement_vector()
+	var aim := input_provider.get_aim_direction(global_position)
+	var sprint := input_provider.is_sprint_pressed() and mov.length() > 0.1
+	_input_seq += 1
+	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
+		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(), sprint)
 
 ## [Serveur / Client] Gère la physique (Sandbox autorisé).
 func _physics_process(delta):
@@ -438,18 +475,10 @@ func _physics_process(delta):
 		flashlight_on = false
 		return
 		
-	var is_local = true
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		is_local = (player_id == 1)
-	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		is_local = (player_id == 0)
-
-	if is_local and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		var mov = input_provider.get_movement_vector()
-		var aim = input_provider.get_aim_direction(global_position)
-		var sprint = input_provider.is_sprint_pressed() and mov.length() > 0.1
-		var torch = input_provider.is_flashlight_pressed()
-		rpc_id(1, "rpc_send_inputs", mov, aim, false, torch, sprint)
+	# En ligne, le client ne simule plus rien : il émet ses commandes et affiche
+	# l'état que l'hôte lui réplique (mouvement donc soumis à la latence).
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and player_id == 1:
+		_send_inputs_to_host()
 
 	var can_move = true
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
@@ -495,15 +524,11 @@ func _physics_process(delta):
 			var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
 			rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
 			
-		var prev_torch := flashlight_on
 		if is_sprinting:
 			flashlight_on = false
 		else:
 			flashlight_on = input_provider.is_flashlight_pressed()
-			
-		if flashlight_on != prev_torch:
-			AudioManager.set_player_torch(player_id, flashlight_on)
-			
+
 	# Visuals update for all clients
 	flashlight.enabled = flashlight_on
 	body_light.enabled = flashlight_on
@@ -525,7 +550,9 @@ func _physics_process(delta):
 			end_pos = to_local(aim_cast.get_collision_point())
 		aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
 	
-	if is_local and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
+	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
+	# pour les deux joueurs, cooldown compris.
+	if can_move and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
 
 func shoot():

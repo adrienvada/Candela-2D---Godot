@@ -53,14 +53,25 @@ func _process(_delta: float) -> void:
 
 ## Cale la caméra sur une grille. À rappeler à chaque changement de carte.
 func configure(grid_size: Vector2i, tile_size: Vector2i) -> void:
-	var padding := float(maxi(tile_size.x, tile_size.y)) * BOUNDS_PADDING_TILES
-	var world := Rect2(Vector2.ZERO, Vector2(grid_size * tile_size))
-	_bounds = world.grow(padding)
+	var world := _compute_bounds(grid_size, tile_size)
 
 	set_zoom_level(fit_zoom())
 	_target = world.get_center()
 	position = _target
 	reset_smoothing()
+
+## Recalcule les limites sans toucher au cadrage courant.
+## Utilisé pendant un redimensionnement de grille : agrandir la carte ne doit
+## pas arracher la vue de l'endroit où l'on était en train de travailler.
+func update_bounds(grid_size: Vector2i, tile_size: Vector2i) -> void:
+	_compute_bounds(grid_size, tile_size)
+	_apply_limits()
+
+func _compute_bounds(grid_size: Vector2i, tile_size: Vector2i) -> Rect2:
+	var padding := float(maxi(tile_size.x, tile_size.y)) * BOUNDS_PADDING_TILES
+	var world := Rect2(Vector2.ZERO, Vector2(grid_size * tile_size))
+	_bounds = world.grow(padding)
+	return world
 
 ## Zoom qui fait tenir toute la grille à l'écran, dans les bornes autorisées.
 func fit_zoom() -> float:

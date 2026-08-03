@@ -28,6 +28,13 @@ const ACTION_REDO: StringName = &"redo"
 const ACTION_AUTO_WALLS: StringName = &"auto_walls"
 const ACTION_MIRROR_H: StringName = &"mirror_h"
 const ACTION_MIRROR_V: StringName = &"mirror_v"
+const ACTION_MIRROR_D: StringName = &"mirror_d"
+const ACTION_MIRROR_AD: StringName = &"mirror_ad"
+const ACTION_ROTATE_180: StringName = &"rotate_180"
+const ACTION_GRID_WIDER: StringName = &"grid_wider"
+const ACTION_GRID_NARROWER: StringName = &"grid_narrower"
+const ACTION_GRID_TALLER: StringName = &"grid_taller"
+const ACTION_GRID_SHORTER: StringName = &"grid_shorter"
 const ACTION_LIGHT: StringName = &"light"
 const ACTION_FRAME: StringName = &"frame"
 const ACTION_CLEAR: StringName = &"clear"
@@ -168,18 +175,34 @@ func build_steps(labels: PackedStringArray, colours: Array[Color]) -> void:
 	_step_colours = colours
 
 func _build_side_panel() -> void:
+	# Le panneau est borné en bas et défilant : ajouter un outil ne doit jamais
+	# pousser « SAUVEGARDER » sous la barre d'aide.
+	var outer := VBoxContainer.new()
+	outer.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	outer.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	outer.offset_left = -PANEL_WIDTH - 28.0
+	outer.offset_right = -28.0
+	outer.offset_top = 24.0
+	outer.offset_bottom = -96.0
+	outer.add_theme_constant_override("separation", 12)
+	root.add_child(outer)
+
+	# Validation et outils défilent ; les actions primaires restent ancrées.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	outer.add_child(scroll)
+
 	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	column.offset_left = -PANEL_WIDTH - 28.0
-	column.offset_right = -28.0
-	column.offset_top = 24.0
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 12)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(column)
+	scroll.add_child(column)
 
 	column.add_child(_build_validation_panel())
 	column.add_child(_build_tools_panel())
+
+	outer.add_child(_build_actions_panel())
 
 func _build_validation_panel() -> PanelContainer:
 	var panel := _make_panel()
@@ -206,6 +229,9 @@ func _build_validation_panel() -> PanelContainer:
 	return panel
 
 var _btn_brush: Button
+var _btn_mirror_d: Button
+var _btn_mirror_ad: Button
+var _grid_label: Label
 
 func _build_tools_panel() -> PanelContainer:
 	var panel := _make_panel()
@@ -229,11 +255,43 @@ func _build_tools_panel() -> PanelContainer:
 	_style_button(auto_walls, COL_ACCENT, true)
 	box.add_child(auto_walls)
 
+	box.add_child(_make_label("SYMÉTRIE", 13, COL_DIM))
+
 	var mirrors := HBoxContainer.new()
 	mirrors.add_theme_constant_override("separation", 8)
 	box.add_child(mirrors)
-	mirrors.add_child(_make_button("⇔  MIROIR H", ACTION_MIRROR_H, 17, true))
-	mirrors.add_child(_make_button("⇕  MIROIR V", ACTION_MIRROR_V, 17, true))
+	mirrors.add_child(_make_button("⇔  H", ACTION_MIRROR_H, 16, true))
+	mirrors.add_child(_make_button("⇕  V", ACTION_MIRROR_V, 16, true))
+	mirrors.add_child(_make_button("⟳  180°", ACTION_ROTATE_180, 16, true))
+
+	# Les diagonales exigent une grille carrée : on les désactive sinon, avec
+	# une infobulle qui dit pourquoi plutôt que de laisser un bouton muet.
+	var diagonals := HBoxContainer.new()
+	diagonals.add_theme_constant_override("separation", 8)
+	box.add_child(diagonals)
+	_btn_mirror_d = _make_button("⤡  DIAGONALE ↘", ACTION_MIRROR_D, 16, true)
+	_btn_mirror_ad = _make_button("⤢  DIAGONALE ↗", ACTION_MIRROR_AD, 16, true)
+	diagonals.add_child(_btn_mirror_d)
+	diagonals.add_child(_btn_mirror_ad)
+
+	box.add_child(_make_separator())
+
+	_grid_label = _make_label("TAILLE DE LA GRILLE", 13, COL_DIM)
+	box.add_child(_grid_label)
+
+	var width_row := HBoxContainer.new()
+	width_row.add_theme_constant_override("separation", 8)
+	box.add_child(width_row)
+	width_row.add_child(_make_button("−  LARGEUR", ACTION_GRID_NARROWER, 16, true))
+	width_row.add_child(_make_button("+  LARGEUR", ACTION_GRID_WIDER, 16, true))
+
+	var height_row := HBoxContainer.new()
+	height_row.add_theme_constant_override("separation", 8)
+	box.add_child(height_row)
+	height_row.add_child(_make_button("−  HAUTEUR", ACTION_GRID_SHORTER, 16, true))
+	height_row.add_child(_make_button("+  HAUTEUR", ACTION_GRID_TALLER, 16, true))
+
+	box.add_child(_make_separator())
 
 	var history := HBoxContainer.new()
 	history.add_theme_constant_override("separation", 8)
@@ -251,7 +309,7 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(view)
 	_btn_light = _make_button("◎  APERÇU LUMIÈRE", ACTION_LIGHT, 16, true)
 	view.add_child(_btn_light)
-	view.add_child(_make_button("⤢  RECADRER", ACTION_FRAME, 16, true))
+	view.add_child(_make_button("⤢  VOIR TOUTE LA CARTE", ACTION_FRAME, 16, true))
 
 	box.add_child(_make_separator())
 
@@ -267,7 +325,17 @@ func _build_tools_panel() -> PanelContainer:
 	reset.add_child(_make_button("✦  NOUVELLE", ACTION_NEW, 16, true))
 	reset.add_child(_make_button("⌫  TOUT VIDER", ACTION_CLEAR, 16, true))
 
-	box.add_child(_make_separator())
+	return panel
+
+## Actions primaires, hors de la zone défilante : sauvegarder, tester et
+## revenir doivent rester atteignables quel que soit le nombre d'outils.
+func _build_actions_panel() -> PanelContainer:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
 
 	_btn_save = _make_button("💾  SAUVEGARDER", ACTION_SAVE, 20)
 	_btn_save.custom_minimum_size = Vector2(0, 52)
@@ -598,6 +666,18 @@ func set_brush(label: String, highlight: bool) -> void:
 	if is_instance_valid(_btn_brush):
 		_btn_brush.text = label
 		_style_button(_btn_brush, COL_ACCENT if highlight else COL_BORDER, highlight)
+
+## Affiche la taille de grille et verrouille les diagonales hors grille carrée.
+func set_grid_state(size: Vector2i) -> void:
+	var square := size.x == size.y
+	if is_instance_valid(_grid_label):
+		_grid_label.text = "TAILLE DE LA GRILLE   %d×%d" % [size.x, size.y]
+	for button in [_btn_mirror_d, _btn_mirror_ad]:
+		if not is_instance_valid(button):
+			continue
+		button.disabled = not square
+		button.tooltip_text = "" if square \
+			else "Les diagonales échangent largeur et hauteur : grille carrée requise."
 
 func set_light_preview(active: bool) -> void:
 	_btn_light.text = "◉  LUMIÈRE ACTIVE" if active else "◎  APERÇU LUMIÈRE"

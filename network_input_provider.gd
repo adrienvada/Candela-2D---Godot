@@ -23,10 +23,19 @@ func is_flashlight_pressed() -> bool:
 func is_sprint_pressed() -> bool:
 	return sprint_pressed
 
-# Méthode pour recevoir les updates (préparation pour la Phase 2)
+## Alimenté par les paquets d'input du client, consommé par la simulation hôte.
 func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, sprint: bool) -> void:
 	current_movement = movement
 	current_aim = aim
 	shoot_pressed = shoot
 	flashlight_pressed = flashlight
 	sprint_pressed = sprint
+
+## Remet les commandes au neutre : le dernier paquet reçu ne doit pas survivre
+## à la déconnexion de son émetteur.
+func reset_input_state() -> void:
+	current_movement = Vector2.ZERO
+	current_aim = Vector2.ZERO
+	shoot_pressed = false
+	flashlight_pressed = false
+	sprint_pressed = false

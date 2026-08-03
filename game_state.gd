@@ -18,6 +18,10 @@ var p2_kills: int = 0
 var p1: Player
 var p2: Player
 
+# Peer de l'unique client (0 si aucun). L'autorité réseau de P2 reste l'hôte,
+# c'est donc cet id qui sert de garde pour tout ce qui vient du client.
+var client_peer_id: int = 0
+
 var weapon_pistolet: WeaponData
 var weapon_fusil: WeaponData
 var weapon_pompe: WeaponData
@@ -138,13 +142,22 @@ func _ready():
 
 func _on_peer_connected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		p2.set_multiplayer_authority(id)
+		client_peer_id = id
+		p2.reset_network_input()
 		# P2 vient d'arriver et n'a pas encore choisi : arme par défaut jusqu'au
 		# prochain rematch, où son choix sera transmis.
 		rpc_start_round.rpc(_hosted_weapon_1_idx, 0, _host_map_code())
 
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		if id == client_peer_id:
+			client_peer_id = 0
+		# L'hôte simule P2 : sans purge il continuerait à courir sur la dernière
+		# commande reçue.
+		p2.reset_network_input()
+		p2.velocity = Vector2.ZERO
+		p2.is_sprinting = false
+		p2.flashlight_on = false
 		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
 		round_active = false
 		sandbox_mode = true
@@ -301,20 +314,24 @@ func _apply_network_mode():
 		_set_player_input_provider(p2, LocalInputProvider.new(), 1)
 		
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		# L'hôte simule les deux joueurs : il garde l'autorité sur P1 ET P2, et
+		# ne fait que consommer les inputs du client pour P2.
 		p1.set_multiplayer_authority(1)
-		
+		p2.set_multiplayer_authority(1)
+
 		_set_player_input_provider(p1, LocalInputProvider.new(), 0)
 		_set_player_input_provider(p2, NetworkInputProvider.new(), 1)
-		
-		# If a client is already connected, assign them.
+
 		var peers = multiplayer.get_peers()
-		if peers.size() > 0:
-			p2.set_multiplayer_authority(peers[0])
-		
+		client_peer_id = peers[0] if peers.size() > 0 else 0
+
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Tout est répliqué depuis l'hôte ; le provider local de P2 ne sert plus
+		# qu'à échantillonner les commandes envoyées via rpc_send_inputs.
 		p1.set_multiplayer_authority(1)
-		p2.set_multiplayer_authority(multiplayer.get_unique_id())
-		
+		p2.set_multiplayer_authority(1)
+		client_peer_id = 0
+
 		_set_player_input_provider(p1, NetworkInputProvider.new(), 0)
 		_set_player_input_provider(p2, LocalInputProvider.new(), 0)
 
@@ -657,16 +674,6 @@ func _get_weapon_idx(w: WeaponData) -> int:
 	if w == weapon_fusil: return 1
 	return 0
 
-@rpc("any_peer", "reliable")
-func rpc_request_shoot(shooter_id: int, pos: Vector2, rot: float):
-	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
-	var sender = multiplayer.get_remote_sender_id()
-	
-	if shooter_id == 1 and sender == p2.get_multiplayer_authority():
-		if p2.shoot_cooldown <= 0:
-			var w_idx = _get_weapon_idx(p2.current_weapon)
-			rpc_spawn_bullet.rpc(shooter_id, pos, rot, w_idx)
-
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
 	var shooter = p1 if shooter_id == 0 else p2
@@ -676,10 +683,10 @@ func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int
 func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData):
 	if not round_active and not sandbox_mode: return
 	
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		rpc_id(1, "rpc_request_shoot", shooter.player_id, pos, rot)
-		return
-		
+	# Le client ne tire plus lui-même : son tir est simulé par l'hôte à partir
+	# de ses inputs, qui seul décide de la cadence.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT: return
+
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		var w_idx = _get_weapon_idx(weapon)
 		rpc_spawn_bullet.rpc(shooter.player_id, pos, rot, w_idx)
@@ -860,7 +867,7 @@ func _on_replay_requested():
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready(w2_idx: int):
-	if multiplayer.get_remote_sender_id() == p2.get_multiplayer_authority():
+	if client_peer_id != 0 and multiplayer.get_remote_sender_id() == client_peer_id:
 		p2_ready_for_rematch = true
 		ui.p2_weapon_group.get_buttons()[w2_idx].button_pressed = true
 		_check_rematch_start()
@@ -900,7 +907,8 @@ func _restore_viewports():
 
 func _on_main_menu_requested():
 	NetworkManager.disconnect_from_game()
-	
+
+	client_peer_id = 0
 	round_active = false
 	sandbox_mode = false
 	game_over = true
@@ -964,6 +972,6 @@ func _on_connection_success():
 
 @rpc("any_peer", "reliable")
 func rpc_client_unready():
-	if multiplayer.get_remote_sender_id() == p2.get_multiplayer_authority():
+	if client_peer_id != 0 and multiplayer.get_remote_sender_id() == client_peer_id:
 		p2_ready_for_rematch = false
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
