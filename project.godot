@@ -17,15 +17,17 @@ config/icon="res://icon.svg"
 
 [audio]
 
+buses/default_bus_layout="uid://c66ft6i7qo6dq"
 bus_layout="res://default_bus_layout.tres"
 
 [autoload]
 
-_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 ReplaySystem="*res://replay_system.gd"
 InputSetup="*res://input_setup.gd"
 AudioManager="*res://audio_manager.gd"
-
+MapData="*res://map_data.gd"
+NetworkManager="*res://network_manager.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 

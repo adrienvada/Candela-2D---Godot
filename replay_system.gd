@@ -221,4 +221,7 @@ func get_next_frame(delta: float):
 	interp.p2_light = s1.p2_light
 	interp.p2_flash = lerp(s1.p2_flash, s2.p2_flash, t)
 	
+	interp.p1_weapon = s1.p1_weapon
+	interp.p2_weapon = s1.p2_weapon
+	
 	return interp

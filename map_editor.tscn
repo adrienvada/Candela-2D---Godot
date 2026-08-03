@@ -1,0 +1,72 @@
+[gd_scene load_steps=4 format=3 uid="uid://map_editor"]
+
+[ext_resource type="Script" path="res://map_editor.gd" id="1_editor"]
+[ext_resource type="Script" path="res://map_editor_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://map_editor_hud.gd" id="3_hud"]
+
+[node name="MapEditor" type="Node2D"]
+script = ExtResource("1_editor")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.02, 0.03, 1)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(560, 560)
+script = ExtResource("2_camera")
+
+[node name="GridBackdrop" type="Node2D" parent="."]
+z_index = -2
+
+[node name="TileMap" type="Node2D" parent="."]
+
+[node name="FloorLayer" type="TileMapLayer" parent="TileMap"]
+z_index = -1
+
+[node name="WallsLayer" type="TileMapLayer" parent="TileMap"]
+
+[node name="PreviewLayer" type="Node2D" parent="."]
+z_index = 5
+
+[node name="EffectsLayer" type="Node2D" parent="."]
+z_index = 6
+
+[node name="SpawnPoints" type="Node2D" parent="."]
+
+[node name="P1Spawn" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(-1000, -1000)
+
+[node name="Visuel" type="ColorRect" parent="SpawnPoints/P1Spawn"]
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+color = Color(0, 0.94, 1, 1)
+
+[node name="P2Spawn" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(-1000, -1000)
+
+[node name="Visuel" type="ColorRect" parent="SpawnPoints/P2Spawn"]
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+color = Color(1, 0.2, 0.42, 1)
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(1, 1, 1, 1)
+
+[node name="GridCursor" type="Node2D" parent="."]
+z_index = 10
+
+[node name="CursorLight" type="PointLight2D" parent="."]
+enabled = false
+shadow_enabled = true
+
+[node name="SandboxLayer" type="Node2D" parent="."]
+visible = false
+
+[node name="EditorHUD" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")

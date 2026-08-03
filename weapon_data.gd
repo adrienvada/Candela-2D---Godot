@@ -11,10 +11,24 @@ class_name WeaponData
 @export var damages_shooter: bool = false
 @export var projectile_count: int = 1
 @export var spread_angles_deg: Array[float] = [0.0]
+@export var emits_light: bool = true
 
 @export_group("Flashlight")
-@export var torch_angle_deg: float = 45.0
+@export var torch_angle_deg: float = 30.0
 @export var torch_scale: float = 2.3
+@export var torch_brightness: float = 1.0
+
+@export_group("Visibility & Mobility")
+@export var muzzle_flash_intensity: float = 1.0
+@export var muzzle_flash_duration: float = 0.1
+@export var backlight_multiplier: float = 1.0
+@export var movement_speed_while_reloading: float = 1.0
+@export var can_run_while_reloading: bool = true
+
+@export_group("Projectile Visuals")
+@export var bullet_color: Color = Color(2.5, 2.0, 0.5, 1.0)
+@export var bullet_light_energy: float = 50.0
+@export var bullet_width: float = 5.0
 
 var _torch_texture: ImageTexture
 
@@ -53,7 +67,7 @@ func get_torch_texture() -> ImageTexture:
 					intensity = max(intensity, halo_intensity * angle_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity))
+				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity * torch_brightness))
 	
 	_torch_texture = ImageTexture.create_from_image(img)
 	return _torch_texture
@@ -96,7 +110,7 @@ func get_torch_texture_flat() -> ImageTexture:
 					intensity = max(intensity, halo_angle_fade * halo_dist_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity))
+				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity * torch_brightness))
 	
 	_torch_texture_flat = ImageTexture.create_from_image(img)
 	return _torch_texture_flat

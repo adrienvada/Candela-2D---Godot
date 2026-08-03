@@ -57,6 +57,20 @@ func _ready():
 	aura.scale = Vector2(1.5, 1.5) # Reduced scale to make it less thick
 	add_child(aura)
 	
+	if weapon:
+		bounces_left = weapon.max_bounces
+		
+		# Apply custom visual parameters
+		core.default_color = weapon.bullet_color
+		core.width = weapon.bullet_width
+		
+		if not weapon.emits_light:
+			light.enabled = false
+			aura.visible = false
+			core.material = null # Use default shaded material
+		else:
+			light.energy = weapon.bullet_light_energy
+	
 	# ShapeCast for accurate collision
 	shape_cast = ShapeCast2D.new()
 	var circle = CircleShape2D.new()
@@ -70,9 +84,6 @@ func _ready():
 	
 	set_as_top_level(true)
 	spawn_pos = global_position
-	
-	if weapon:
-		bounces_left = weapon.max_bounces
 
 func _physics_process(delta):
 	if not weapon:

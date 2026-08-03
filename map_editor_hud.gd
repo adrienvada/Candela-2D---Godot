@@ -1,0 +1,795 @@
+## MapEditorHUD — Interface de l'éditeur de cartes.
+##
+## Toute l'interface est construite par code : l'éditeur reste une scène nue,
+## et l'habillage suit l'identité néon du jeu (blanc et cyan sur noir profond).
+##
+## Le HUD ne décide de rien. Il expose des signaux, affiche ce qu'on lui donne,
+## et laisse `map_editor.gd` arbitrer. Seule exception assumée : il grise
+## lui-même les boutons Sauvegarder et Tester tant que la carte est injouable,
+## à partir du résultat de `MapCodec.check_playable()` qu'on lui transmet.
+
+class_name MapEditorHUD
+extends CanvasLayer
+
+## Un bouton d'action a été actionné. Voir les constantes ACTION_*.
+signal action_requested(action: StringName)
+## L'utilisateur a validé le nom de sauvegarde.
+signal save_confirmed(map_name: String)
+## L'utilisateur a validé un code de partage à importer.
+signal import_confirmed(code: String)
+## Une étape a été choisie directement dans la barre du haut.
+signal step_selected(index: int)
+## Une fenêtre modale s'est ouverte ou fermée : l'édition doit se figer.
+signal modal_state_changed(open: bool)
+
+const ACTION_UNDO: StringName = &"undo"
+const ACTION_REDO: StringName = &"redo"
+const ACTION_AUTO_WALLS: StringName = &"auto_walls"
+const ACTION_MIRROR_H: StringName = &"mirror_h"
+const ACTION_MIRROR_V: StringName = &"mirror_v"
+const ACTION_LIGHT: StringName = &"light"
+const ACTION_FRAME: StringName = &"frame"
+const ACTION_CLEAR: StringName = &"clear"
+const ACTION_NEW: StringName = &"new"
+const ACTION_SHARE: StringName = &"share"
+const ACTION_IMPORT: StringName = &"import"
+const ACTION_SAVE: StringName = &"save"
+const ACTION_TEST: StringName = &"test"
+const ACTION_BACK: StringName = &"back"
+
+enum Toast { INFO, SUCCESS, WARN, ERROR }
+
+# --- Palette néon -----------------------------------------------------------
+const COL_PANEL := Color(0.035, 0.04, 0.055, 0.93)
+const COL_PANEL_SOFT := Color(0.07, 0.08, 0.10, 0.95)
+const COL_BORDER := Color(0.30, 0.80, 1.00, 0.28)
+const COL_TEXT := Color(0.90, 0.94, 1.00)
+const COL_DIM := Color(0.52, 0.57, 0.66)
+const COL_OK := Color(0.25, 1.00, 0.60)
+const COL_WARN := Color(1.00, 0.70, 0.18)
+const COL_ERROR := Color(1.00, 0.26, 0.42)
+const COL_ACCENT := Color(0.00, 0.94, 1.00)
+
+const PANEL_WIDTH := 380.0
+const TOAST_LIFETIME := 2.6
+
+# --- Nœuds ------------------------------------------------------------------
+var root: Control = null
+var _title_label: Label = null
+var _subtitle_label: Label = null
+var _step_bar: HBoxContainer = null
+var _step_buttons: Array[Button] = []
+var _step_colours: Array[Color] = []
+var _tool_label: Label = null
+var _verdict_label: Label = null
+var _checks_box: VBoxContainer = null
+var _reason_label: Label = null
+var _history_label: Label = null
+var _toast_box: VBoxContainer = null
+var _prompt_pad: Label = null
+var _prompt_key: Label = null
+var _sandbox_banner: PanelContainer = null
+
+var _btn_save: Button = null
+var _btn_test: Button = null
+var _btn_undo: Button = null
+var _btn_redo: Button = null
+var _btn_light: Button = null
+
+# --- Modales ----------------------------------------------------------------
+var _modal_root: Control = null
+var _save_panel: PanelContainer = null
+var _import_panel: PanelContainer = null
+var _name_edit: LineEdit = null
+var _code_edit: LineEdit = null
+var _map_list: ItemList = null
+var _collision_label: Label = null
+var _dialog_error: Label = null
+var _save_button: Button = null
+
+var _map_names: PackedStringArray = []
+var _builtin_names: PackedStringArray = []
+var _checks_signature: String = ""
+var _playable: bool = false
+var _sandbox: bool = false
+
+# ---------------------------------------------------------------------------
+# CONSTRUCTION
+# ---------------------------------------------------------------------------
+
+func _ready() -> void:
+	layer = 10
+
+	root = Control.new()
+	root.name = "Root"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(root)
+
+	_build_header()
+	_build_step_bar()
+	_build_side_panel()
+	_build_prompt_bar()
+	_build_toast_box()
+	_build_sandbox_banner()
+	_build_modals()
+
+func _build_header() -> void:
+	var panel := _make_panel()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	panel.offset_left = 28.0
+	panel.offset_top = 24.0
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	panel.add_child(box)
+
+	_title_label = _make_label("ÉDITEUR DE CARTE", 24, COL_TEXT)
+	box.add_child(_title_label)
+
+	_subtitle_label = _make_label("grille 32×32", 15, COL_DIM)
+	box.add_child(_subtitle_label)
+
+	_tool_label = _make_label("Pinceau", 16, COL_ACCENT)
+	box.add_child(_tool_label)
+
+func _build_step_bar() -> void:
+	var wrapper := _make_panel()
+	wrapper.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	wrapper.offset_top = 24.0
+	wrapper.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	root.add_child(wrapper)
+
+	_step_bar = HBoxContainer.new()
+	_step_bar.add_theme_constant_override("separation", 10)
+	wrapper.add_child(_step_bar)
+
+## Crée les pastilles d'étape. L'éditeur possède les libellés et les couleurs.
+func build_steps(labels: PackedStringArray, colours: Array[Color]) -> void:
+	for child in _step_bar.get_children():
+		_step_bar.remove_child(child)
+		child.queue_free()
+	_step_buttons.clear()
+
+	for i in labels.size():
+		var button := Button.new()
+		button.text = labels[i]
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override("font_size", 18)
+		button.custom_minimum_size = Vector2(150, 42)
+		var index := i
+		button.pressed.connect(func() -> void: step_selected.emit(index))
+		_step_bar.add_child(button)
+		_step_buttons.append(button)
+		_style_step_button(button, colours[i] if i < colours.size() else COL_ACCENT, false)
+
+	_step_colours = colours
+
+func _build_side_panel() -> void:
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	column.offset_left = -PANEL_WIDTH - 28.0
+	column.offset_right = -28.0
+	column.offset_top = 24.0
+	column.add_theme_constant_override("separation", 12)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(column)
+
+	column.add_child(_build_validation_panel())
+	column.add_child(_build_tools_panel())
+
+func _build_validation_panel() -> PanelContainer:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	panel.add_child(box)
+
+	box.add_child(_make_label("VALIDATION", 15, COL_DIM))
+
+	_verdict_label = _make_label("—", 21, COL_WARN)
+	box.add_child(_verdict_label)
+
+	_checks_box = VBoxContainer.new()
+	_checks_box.add_theme_constant_override("separation", 3)
+	box.add_child(_checks_box)
+
+	_reason_label = _make_label("", 14, COL_ERROR)
+	_reason_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_reason_label.custom_minimum_size = Vector2(PANEL_WIDTH - 34.0, 0)
+	box.add_child(_reason_label)
+
+	return panel
+
+func _build_tools_panel() -> PanelContainer:
+	var panel := _make_panel()
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
+
+	box.add_child(_make_label("OUTILS", 15, COL_DIM))
+
+	# Auto-mur : le gain de temps le plus spectaculaire de l'éditeur, donc
+	# pleine largeur et couleur d'accentuation.
+	var auto_walls := _make_button("⌗  AUTO-MUR   (ceinture le sol)", ACTION_AUTO_WALLS, 19)
+	auto_walls.custom_minimum_size = Vector2(0, 52)
+	_style_button(auto_walls, COL_ACCENT, true)
+	box.add_child(auto_walls)
+
+	var mirrors := HBoxContainer.new()
+	mirrors.add_theme_constant_override("separation", 8)
+	box.add_child(mirrors)
+	mirrors.add_child(_make_button("⇔  MIROIR H", ACTION_MIRROR_H, 17, true))
+	mirrors.add_child(_make_button("⇕  MIROIR V", ACTION_MIRROR_V, 17, true))
+
+	var history := HBoxContainer.new()
+	history.add_theme_constant_override("separation", 8)
+	box.add_child(history)
+	_btn_undo = _make_button("↶  ANNULER", ACTION_UNDO, 17, true)
+	_btn_redo = _make_button("↷  RÉTABLIR", ACTION_REDO, 17, true)
+	history.add_child(_btn_undo)
+	history.add_child(_btn_redo)
+
+	_history_label = _make_label("Historique vide", 13, COL_DIM)
+	box.add_child(_history_label)
+
+	var view := HBoxContainer.new()
+	view.add_theme_constant_override("separation", 8)
+	box.add_child(view)
+	_btn_light = _make_button("◎  APERÇU LUMIÈRE", ACTION_LIGHT, 16, true)
+	view.add_child(_btn_light)
+	view.add_child(_make_button("⤢  RECADRER", ACTION_FRAME, 16, true))
+
+	box.add_child(_make_separator())
+
+	var share := HBoxContainer.new()
+	share.add_theme_constant_override("separation", 8)
+	box.add_child(share)
+	share.add_child(_make_button("⧉  PARTAGER", ACTION_SHARE, 16, true))
+	share.add_child(_make_button("⤓  IMPORTER", ACTION_IMPORT, 16, true))
+
+	var reset := HBoxContainer.new()
+	reset.add_theme_constant_override("separation", 8)
+	box.add_child(reset)
+	reset.add_child(_make_button("✦  NOUVELLE", ACTION_NEW, 16, true))
+	reset.add_child(_make_button("⌫  TOUT VIDER", ACTION_CLEAR, 16, true))
+
+	box.add_child(_make_separator())
+
+	_btn_save = _make_button("💾  SAUVEGARDER", ACTION_SAVE, 20)
+	_btn_save.custom_minimum_size = Vector2(0, 52)
+	_style_button(_btn_save, COL_OK, true)
+	box.add_child(_btn_save)
+
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 8)
+	box.add_child(bottom)
+	_btn_test = _make_button("▶  TESTER", ACTION_TEST, 18, true)
+	bottom.add_child(_btn_test)
+	bottom.add_child(_make_button("✕  RETOUR", ACTION_BACK, 18, true))
+
+	return panel
+
+func _build_prompt_bar() -> void:
+	var panel := _make_panel()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	panel.offset_bottom = -20.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	panel.add_child(box)
+
+	_prompt_pad = _make_label(
+		"MANETTE   ✕ peindre (maintenu) · ☐ effacer · L2+✕ rectangle · R2+✕ pot"
+		+ " · L1/R1 étape · stick droit caméra · Select annuler · Start sauver",
+		15, COL_DIM)
+	_prompt_pad.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_prompt_pad)
+
+	_prompt_key = _make_label(
+		"SOURIS   clic gauche peindre · clic droit effacer · Maj+glisser rectangle"
+		+ " · Ctrl+clic pot · molette zoom · clic molette ou Espace caméra"
+		+ " · Ctrl+Z annuler · Tab étape · Ctrl+S sauver",
+		15, COL_DIM)
+	_prompt_key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_prompt_key)
+
+func _build_toast_box() -> void:
+	# Bas droite : jamais au centre, où les messages masqueraient le dessin.
+	_toast_box = VBoxContainer.new()
+	_toast_box.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_toast_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_toast_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_toast_box.offset_right = -28.0
+	_toast_box.offset_bottom = -120.0
+	_toast_box.alignment = BoxContainer.ALIGNMENT_END
+	_toast_box.add_theme_constant_override("separation", 8)
+	_toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_toast_box)
+
+func _build_sandbox_banner() -> void:
+	_sandbox_banner = _make_panel(Color(0.35, 0.05, 0.08, 0.92))
+	_sandbox_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_sandbox_banner.offset_top = 24.0
+	_sandbox_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_sandbox_banner.hide()
+	root.add_child(_sandbox_banner)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	_sandbox_banner.add_child(box)
+
+	var title := _make_label("●  MODE TEST", 30, Color(1.0, 0.45, 0.45))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+
+	var hint := _make_label(
+		"Rond ou Échap pour revenir à l'édition — votre carte est conservée",
+		16, COL_TEXT)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(hint)
+
+# ---------------------------------------------------------------------------
+# MODALES
+# ---------------------------------------------------------------------------
+
+func _build_modals() -> void:
+	_modal_root = Control.new()
+	_modal_root.name = "Modales"
+	_modal_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_modal_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_modal_root.hide()
+	root.add_child(_modal_root)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	_modal_root.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_modal_root.add_child(center)
+
+	_save_panel = _build_save_panel()
+	center.add_child(_save_panel)
+
+	_import_panel = _build_import_panel()
+	center.add_child(_import_panel)
+
+func _build_save_panel() -> PanelContainer:
+	var panel := _make_panel(COL_PANEL_SOFT)
+	panel.custom_minimum_size = Vector2(720, 0)
+	panel.hide()
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+
+	box.add_child(_make_label("SAUVEGARDER LA CARTE", 26, COL_TEXT))
+	box.add_child(_make_label("Nom de la carte", 15, COL_DIM))
+
+	_name_edit = LineEdit.new()
+	_name_edit.add_theme_font_size_override("font_size", 22)
+	_name_edit.custom_minimum_size = Vector2(0, 48)
+	_name_edit.text_changed.connect(_on_name_changed)
+	_name_edit.text_submitted.connect(func(_t: String) -> void: _emit_save())
+	box.add_child(_name_edit)
+
+	_collision_label = _make_label("", 15, COL_WARN)
+	box.add_child(_collision_label)
+
+	box.add_child(_make_separator())
+	box.add_child(_make_label("Cartes existantes — cliquez pour reprendre un nom", 15, COL_DIM))
+
+	_map_list = ItemList.new()
+	_map_list.custom_minimum_size = Vector2(0, 230)
+	_map_list.add_theme_font_size_override("font_size", 17)
+	_map_list.item_selected.connect(_on_map_list_selected)
+	box.add_child(_map_list)
+
+	_dialog_error = _make_label("", 16, COL_ERROR)
+	_dialog_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dialog_error.custom_minimum_size = Vector2(680, 0)
+	box.add_child(_dialog_error)
+
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	box.add_child(buttons)
+
+	var cancel := _make_dialog_button("ANNULER", COL_DIM)
+	cancel.pressed.connect(close_dialog)
+	buttons.add_child(cancel)
+
+	_save_button = _make_dialog_button("SAUVEGARDER", COL_OK)
+	_save_button.pressed.connect(_emit_save)
+	buttons.add_child(_save_button)
+
+	return panel
+
+func _build_import_panel() -> PanelContainer:
+	var panel := _make_panel(COL_PANEL_SOFT)
+	panel.custom_minimum_size = Vector2(720, 0)
+	panel.hide()
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+
+	box.add_child(_make_label("IMPORTER UNE CARTE", 26, COL_TEXT))
+	box.add_child(_make_label("Collez un code commençant par CANDELA-", 15, COL_DIM))
+
+	_code_edit = LineEdit.new()
+	_code_edit.add_theme_font_size_override("font_size", 18)
+	_code_edit.custom_minimum_size = Vector2(680, 48)
+	_code_edit.placeholder_text = "CANDELA-…"
+	_code_edit.text_submitted.connect(func(_t: String) -> void: _emit_import())
+	box.add_child(_code_edit)
+
+	var paste := _make_dialog_button("COLLER DEPUIS LE PRESSE-PAPIER", COL_ACCENT)
+	paste.pressed.connect(func() -> void:
+		_code_edit.text = DisplayServer.clipboard_get().strip_edges()
+	)
+	box.add_child(paste)
+
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	box.add_child(buttons)
+
+	var cancel := _make_dialog_button("ANNULER", COL_DIM)
+	cancel.pressed.connect(close_dialog)
+	buttons.add_child(cancel)
+
+	var confirm := _make_dialog_button("IMPORTER", COL_OK)
+	confirm.pressed.connect(_emit_import)
+	buttons.add_child(confirm)
+
+	return panel
+
+## Ouvre le dialogue de sauvegarde. `maps` provient de MapData.list_maps().
+func open_save_dialog(suggested: String, maps: Array[Dictionary]) -> void:
+	_map_names.clear()
+	_builtin_names.clear()
+	_map_list.clear()
+
+	for entry in maps:
+		var map_name := String(entry.get("name", ""))
+		var builtin := String(entry.get("source", "")) == "builtin"
+		var size: Vector2i = entry.get("grid_size", Vector2i(20, 20))
+		_map_names.append(map_name)
+		if builtin:
+			_builtin_names.append(map_name)
+		var suffix := "  ·  livrée (nom réservé)" if builtin else "  ·  %d tuiles" % int(entry.get("floor_count", 0))
+		_map_list.add_item("%s   [%d×%d]%s" % [map_name, size.x, size.y, suffix])
+		if builtin:
+			_map_list.set_item_custom_fg_color(_map_list.item_count - 1, COL_DIM)
+
+	_dialog_error.text = ""
+	_name_edit.text = suggested
+	_on_name_changed(suggested)
+
+	_import_panel.hide()
+	_save_panel.show()
+	_open_modal()
+	_name_edit.grab_focus()
+	_name_edit.select_all()
+
+func open_import_dialog() -> void:
+	_code_edit.text = ""
+	_save_panel.hide()
+	_import_panel.show()
+	_open_modal()
+	_code_edit.grab_focus()
+
+func close_dialog() -> void:
+	if not _modal_root.visible:
+		return
+	_modal_root.hide()
+	_save_panel.hide()
+	_import_panel.hide()
+	modal_state_changed.emit(false)
+
+func is_modal_open() -> bool:
+	return _modal_root != null and _modal_root.visible
+
+## Affiche une erreur dans la modale ouverte sans la refermer.
+func show_dialog_error(message: String) -> void:
+	_dialog_error.text = "✗  " + message
+
+func _open_modal() -> void:
+	_modal_root.show()
+	modal_state_changed.emit(true)
+
+func _emit_save() -> void:
+	save_confirmed.emit(_name_edit.text.strip_edges())
+
+func _emit_import() -> void:
+	import_confirmed.emit(_code_edit.text.strip_edges())
+
+func _on_map_list_selected(index: int) -> void:
+	if index < 0 or index >= _map_names.size():
+		return
+	_name_edit.text = _map_names[index]
+	_on_name_changed(_name_edit.text)
+
+func _on_name_changed(new_text: String) -> void:
+	var clean := new_text.strip_edges()
+	_dialog_error.text = ""
+
+	if clean.is_empty():
+		_collision_label.text = "Donnez un nom à votre carte."
+		_collision_label.add_theme_color_override("font_color", COL_DIM)
+		_save_button.disabled = true
+		_save_button.text = "SAUVEGARDER"
+		return
+
+	_save_button.disabled = false
+
+	for reserved in _builtin_names:
+		if reserved.to_lower() == clean.to_lower():
+			_collision_label.text = "« %s » est un nom réservé au jeu." % clean
+			_collision_label.add_theme_color_override("font_color", COL_ERROR)
+			_save_button.disabled = true
+			return
+
+	for existing in _map_names:
+		if existing.to_lower() == clean.to_lower():
+			_collision_label.text = "Une carte « %s » existe déjà." % existing
+			_collision_label.add_theme_color_override("font_color", COL_WARN)
+			_save_button.text = "ÉCRASER « %s » ?" % existing
+			return
+
+	_collision_label.text = "Nom disponible."
+	_collision_label.add_theme_color_override("font_color", COL_OK)
+	_save_button.text = "SAUVEGARDER"
+
+# ---------------------------------------------------------------------------
+# MISES À JOUR
+# ---------------------------------------------------------------------------
+
+func set_map_name(map_name: String) -> void:
+	_title_label.text = map_name.to_upper()
+
+func set_grid_info(grid_size: Vector2i, floor_count: int, wall_count: int) -> void:
+	_subtitle_label.text = "grille %d×%d  ·  %d sol  ·  %d murs" % [
+		grid_size.x, grid_size.y, floor_count, wall_count,
+	]
+
+func set_step(index: int, colour: Color) -> void:
+	for i in _step_buttons.size():
+		_style_step_button(_step_buttons[i],
+			_step_colours[i] if i < _step_colours.size() else COL_ACCENT, i == index)
+	_tool_label.add_theme_color_override("font_color", colour)
+
+## Ligne d'état sous le titre : outil courant et modificateur actif.
+func set_tool_hint(text: String) -> void:
+	_tool_label.text = text
+
+func set_history(can_undo: bool, can_redo: bool, undo_label: String) -> void:
+	_btn_undo.disabled = not can_undo
+	_btn_redo.disabled = not can_redo
+	if can_undo:
+		_history_label.text = "Annulable : %s" % undo_label
+		_history_label.add_theme_color_override("font_color", COL_DIM)
+	else:
+		_history_label.text = "Historique vide"
+		_history_label.add_theme_color_override("font_color", COL_DIM)
+
+func set_light_preview(active: bool) -> void:
+	_btn_light.text = "◉  LUMIÈRE ACTIVE" if active else "◎  APERÇU LUMIÈRE"
+	_style_button(_btn_light, COL_ACCENT if active else COL_BORDER, active)
+
+## Affiche le résultat de MapCodec.check_playable() et verrouille en
+## conséquence la sauvegarde et le test.
+func set_validation(result: Dictionary) -> void:
+	var ok := bool(result.get("ok", false))
+	var checks: Array = result.get("checks", [])
+	_playable = ok
+
+	var signature := "%s|" % ok
+	for check in checks:
+		signature += "%s%s;" % [check.get("label", ""), check.get("passed", false)]
+	if signature != _checks_signature:
+		_checks_signature = signature
+		_rebuild_checks(checks)
+
+	if ok:
+		_verdict_label.text = "✓  CARTE JOUABLE"
+		_verdict_label.add_theme_color_override("font_color", COL_OK)
+		_reason_label.text = ""
+	else:
+		_verdict_label.text = "✗  CARTE INJOUABLE"
+		_verdict_label.add_theme_color_override("font_color", COL_ERROR)
+		_reason_label.text = "Sauvegarde et test bloqués : %s" % _first_blocking_reason(checks)
+
+	_refresh_locks()
+
+## Motif du blocage, en clair, pour l'afficher là où l'utilisateur regarde.
+func first_blocking_reason(result: Dictionary) -> String:
+	return _first_blocking_reason(result.get("checks", []))
+
+func _first_blocking_reason(checks: Array) -> String:
+	for check in checks:
+		if bool(check.get("blocking", false)) and not bool(check.get("passed", false)):
+			return String(check.get("label", "carte incomplète")).to_lower()
+	return "carte incomplète"
+
+func _rebuild_checks(checks: Array) -> void:
+	for child in _checks_box.get_children():
+		child.queue_free()
+
+	for check in checks:
+		var passed := bool(check.get("passed", false))
+		var blocking := bool(check.get("blocking", true))
+
+		var symbol := "✓"
+		var colour := COL_OK
+		if not passed:
+			symbol = "✗" if blocking else "⚠"
+			colour = COL_ERROR if blocking else COL_WARN
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+
+		var mark := _make_label(symbol, 17, colour)
+		mark.custom_minimum_size = Vector2(24, 0)
+		row.add_child(mark)
+
+		var text := _make_label(String(check.get("label", "")), 16,
+			COL_TEXT if passed else colour)
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.custom_minimum_size = Vector2(PANEL_WIDTH - 70.0, 0)
+		row.add_child(text)
+
+		_checks_box.add_child(row)
+
+func _refresh_locks() -> void:
+	# Une carte cassée ne doit jamais pouvoir être enregistrée ni lancée.
+	_btn_save.disabled = not _playable or _sandbox
+	_btn_test.disabled = not _playable
+	_style_button(_btn_save, COL_OK if _playable else COL_DIM, _playable)
+
+func is_playable() -> bool:
+	return _playable
+
+func set_sandbox_mode(active: bool) -> void:
+	_sandbox = active
+	_sandbox_banner.visible = active
+	_step_bar.get_parent().visible = not active
+	_prompt_pad.get_parent().get_parent().visible = not active
+	_btn_test.text = "■  QUITTER LE TEST" if active else "▶  TESTER"
+	_refresh_locks()
+
+# ---------------------------------------------------------------------------
+# TOASTS
+# ---------------------------------------------------------------------------
+
+func show_toast(message: String, kind: Toast = Toast.INFO) -> void:
+	var colour := COL_TEXT
+	var prefix := ""
+	match kind:
+		Toast.SUCCESS:
+			colour = COL_OK
+			prefix = "✓  "
+		Toast.WARN:
+			colour = COL_WARN
+			prefix = "⚠  "
+		Toast.ERROR:
+			colour = COL_ERROR
+			prefix = "✗  "
+		_:
+			colour = COL_ACCENT
+
+	var panel := _make_panel(Color(0.05, 0.06, 0.08, 0.94))
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.modulate.a = 0.0
+
+	var label := _make_label(prefix + message, 19, colour)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(label)
+	_toast_box.add_child(panel)
+
+	# Au-delà de quatre, les plus anciens disparaissent immédiatement.
+	while _toast_box.get_child_count() > 4:
+		_toast_box.get_child(0).queue_free()
+
+	var tween := panel.create_tween()
+	tween.tween_property(panel, "modulate:a", 1.0, 0.14)
+	tween.tween_interval(TOAST_LIFETIME)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.45)
+	tween.tween_callback(panel.queue_free)
+
+# ---------------------------------------------------------------------------
+# FABRIQUES DE STYLE
+# ---------------------------------------------------------------------------
+
+func _make_panel(background: Color = COL_PANEL) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.border_color = COL_BORDER
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(14)
+	panel.add_theme_stylebox_override("panel", style)
+	return panel
+
+func _make_label(text: String, size: int, colour: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", colour)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("outline_size", 3)
+	return label
+
+func _make_separator() -> HSeparator:
+	var separator := HSeparator.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = COL_BORDER
+	style.content_margin_top = 1
+	separator.add_theme_stylebox_override("separator", style)
+	return separator
+
+func _make_button(text: String, action: StringName, size: int,
+		expand: bool = false) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", size)
+	button.custom_minimum_size = Vector2(0, 40)
+	if expand:
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(func() -> void: action_requested.emit(action))
+	_style_button(button, COL_BORDER, false)
+	return button
+
+func _make_dialog_button(text: String, colour: Color) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_size_override("font_size", 20)
+	button.custom_minimum_size = Vector2(220, 52)
+	_style_button(button, colour, true)
+	return button
+
+func _style_button(button: Button, tint: Color, strong: bool) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(tint.r, tint.g, tint.b, 0.16 if strong else 0.06)
+	normal.border_color = Color(tint.r, tint.g, tint.b, 0.85 if strong else 0.40)
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(5)
+	normal.set_content_margin_all(8)
+
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(tint.r, tint.g, tint.b, 0.30)
+
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(tint.r, tint.g, tint.b, 0.46)
+
+	var disabled := normal.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color(0.10, 0.10, 0.12, 0.55)
+	disabled.border_color = Color(0.30, 0.32, 0.36, 0.45)
+
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("disabled", disabled)
+	button.add_theme_stylebox_override("focus", hover)
+	button.add_theme_color_override("font_color", COL_TEXT)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", COL_DIM)
+
+func _style_step_button(button: Button, tint: Color, active: bool) -> void:
+	_style_button(button, tint, active)
+	button.add_theme_color_override("font_color", tint if active else COL_DIM)

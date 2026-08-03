@@ -148,4 +148,53 @@ func _setup_all_inputs():
 	add_joy_btn.call("sys_pause", p1_device, JOY_BUTTON_START)
 	add_joy_btn.call("sys_pause", p2_device, JOY_BUTTON_START)
 
-
+func _setup_editor_inputs(device: int):
+	var actions = [
+		"editor_move_up", "editor_move_down", "editor_move_left", "editor_move_right",
+		"editor_draw", "editor_clear", "editor_back",
+		"editor_step_prev", "editor_step_next",
+		"editor_export", "editor_import", "editor_test"
+	]
+	
+	for a in actions:
+		if not InputMap.has_action(a):
+			InputMap.add_action(a)
+			InputMap.action_set_deadzone(a, 0.2)
+			
+	var add_joy_axis = func(action: String, dev: int, axis: int, val: float):
+		var ev = InputEventJoypadMotion.new()
+		ev.device = dev
+		ev.axis = axis
+		ev.axis_value = val
+		InputMap.action_add_event(action, ev)
+		
+	var add_joy_btn = func(action: String, dev: int, btn: int):
+		var ev = InputEventJoypadButton.new()
+		ev.device = dev
+		ev.button_index = btn
+		InputMap.action_add_event(action, ev)
+		
+	# Move (Stick + D-Pad)
+	add_joy_axis.call("editor_move_up", device, JOY_AXIS_LEFT_Y, -1.0)
+	add_joy_axis.call("editor_move_down", device, JOY_AXIS_LEFT_Y, 1.0)
+	add_joy_axis.call("editor_move_left", device, JOY_AXIS_LEFT_X, -1.0)
+	add_joy_axis.call("editor_move_right", device, JOY_AXIS_LEFT_X, 1.0)
+	add_joy_btn.call("editor_move_up", device, JOY_BUTTON_DPAD_UP)
+	add_joy_btn.call("editor_move_down", device, JOY_BUTTON_DPAD_DOWN)
+	add_joy_btn.call("editor_move_left", device, JOY_BUTTON_DPAD_LEFT)
+	add_joy_btn.call("editor_move_right", device, JOY_BUTTON_DPAD_RIGHT)
+	
+	# Actions
+	add_joy_btn.call("editor_draw", device, JOY_BUTTON_A)        # Croix PS / A Xbox = Peindre
+	add_joy_btn.call("editor_clear", device, JOY_BUTTON_X)       # Carré PS / X Xbox = Effacer
+	add_joy_btn.call("editor_back", device, JOY_BUTTON_B)        # Rond / B = Retour menu
+	add_joy_btn.call("editor_step_prev", device, JOY_BUTTON_LEFT_SHOULDER)
+	add_joy_btn.call("editor_step_next", device, JOY_BUTTON_RIGHT_SHOULDER)
+	add_joy_btn.call("editor_export", device, JOY_BUTTON_START)
+	add_joy_btn.call("editor_import", device, JOY_BUTTON_BACK)
+	add_joy_btn.call("editor_test", device, JOY_BUTTON_Y)
+	
+	# Keyboard fallback for back
+	var esc = InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	InputMap.action_add_event("editor_back", esc)

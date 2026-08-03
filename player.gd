@@ -3,6 +3,7 @@ class_name Player
 
 @export var player_id: int = 0
 @export var speed: float = 260.0
+@export var input_provider: InputProvider
 
 var current_weapon: WeaponData
 
@@ -48,24 +49,26 @@ var aim_line: Line2D
 var step_distance_accumulated: float = 0.0
 
 
-# Input actions
-var action_up = ""
-var action_down = ""
-var action_left = ""
-var action_right = ""
-var action_aim_up = ""
-var action_aim_down = ""
-var action_aim_left = ""
-var action_aim_right = ""
-var action_shoot = ""
-var action_torch = ""
-var action_sprint = ""
-
 func _ready():
 	z_index = 10
 	scale = Vector2(1.0, 1.0)
 	add_to_group("players")
-	_setup_inputs()
+	
+	if not input_provider:
+		var default_provider = LocalInputProvider.new()
+		default_provider.device_id = player_id
+		add_child(default_provider)
+		input_provider = default_provider
+		
+	# Multiplayer Synchronizer
+	var sync = MultiplayerSynchronizer.new()
+	sync.name = "MultiplayerSynchronizer"
+	var rep_config = SceneReplicationConfig.new()
+	rep_config.add_property(NodePath(".:global_position"))
+	rep_config.add_property(NodePath(".:rotation"))
+	rep_config.add_property(NodePath(".:flashlight_on"))
+	sync.replication_config = rep_config
+	add_child(sync)
 	
 	var p_color = Color(0, 0.94, 1.0) if player_id == 0 else Color(1.0, 0, 0.33)
 	visual.color = p_color
@@ -386,26 +389,11 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture = tex
 	flashlight.texture_scale = weapon.torch_scale
 
-func _setup_inputs():
-	var prefix = "p1_" if player_id == 0 else "p2_"
-	action_up = prefix + "move_up"
-	action_down = prefix + "move_down"
-	action_left = prefix + "move_left"
-	action_right = prefix + "move_right"
-	
-	action_aim_up = prefix + "aim_up"
-	action_aim_down = prefix + "aim_down"
-	action_aim_left = prefix + "aim_left"
-	action_aim_right = prefix + "aim_right"
-	
-	action_shoot = prefix + "shoot"
-	action_torch = prefix + "torch"
-	action_sprint = prefix + "sprint"
-
-
-
 func _process(delta):
 	if dead: return
+	
+	if hp <= 0 and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		die(null)
 	
 	if shoot_cooldown > 0:
 		shoot_cooldown -= delta
@@ -429,94 +417,125 @@ func _process(delta):
 				else:
 					c.offset = Vector2.ZERO
 
+@rpc("any_peer", "unreliable")
+func rpc_send_inputs(mov: Vector2, aim: Vector2, shoot: bool, torch: bool, sprint: bool):
+	if multiplayer.get_remote_sender_id() != 1 and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		if input_provider.has_method("update_input_state"):
+			input_provider.update_input_state(mov, aim, shoot, torch, sprint)
+
+## [Serveur / Client] Gère la physique (Sandbox autorisé).
 func _physics_process(delta):
 	if dead: return
 	
 	var state = get_tree().get_first_node_in_group("game_state")
-	if state and not state.round_active:
-		velocity = velocity.move_toward(Vector2.ZERO, 1500.0 * delta)
-		move_and_slide()
+	if state and state.ui._is_main_menu and not state.sandbox_mode:
+		velocity = Vector2.ZERO
 		flashlight_on = false
-		flashlight.enabled = false
-		body_light.enabled = false
 		return
 		
-	var input_dir = Input.get_vector(action_left, action_right, action_up, action_down)
-	is_sprinting = Input.is_action_pressed(action_sprint) and input_dir.length() > 0.1
-	
-	var current_speed = speed * (2.0 if is_sprinting else 1.0)
-	# Apply dazzle penalty
-	if dazzle_amount > 0:
-		current_speed *= lerp(1.0, 0.4, dazzle_amount)
-		
-	velocity = input_dir * current_speed
-	move_and_slide()
-	
-	if velocity.length() > 20.0:
-		step_distance_accumulated += velocity.length() * delta
-		var step_dist := 30.0 if is_sprinting else 45.0
-		if step_distance_accumulated >= step_dist:
-			step_distance_accumulated = 0.0
-			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.92, 1.08)
+	var is_local = true
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		is_local = (player_id == 1)
+	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		is_local = (player_id == 0)
 
-	
-	# Aiming (smooth lerp with dazzle penalty)
-	var aim_dir = Input.get_vector(action_aim_left, action_aim_right, action_aim_up, action_aim_down)
-	
-	# Fallback to mouse aiming for P1 if no gamepad stick input is detected
-	if aim_dir.length() < 0.1 and player_id == 0:
-		var m_pos = get_global_mouse_position()
-		aim_dir = global_position.direction_to(m_pos)
-	
-	if aim_dir.length() > 0.1:
-		var target_angle = aim_dir.angle()
-		var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
-		rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
+	if is_local and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		var mov = input_provider.get_movement_vector()
+		var aim = input_provider.get_aim_direction(global_position)
+		var sprint = input_provider.is_sprint_pressed() and mov.length() > 0.1
+		var torch = input_provider.is_flashlight_pressed()
+		rpc_id(1, "rpc_send_inputs", mov, aim, false, torch, sprint)
+
+	var can_move = true
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
+		can_move = is_multiplayer_authority()
+
+	if state and not (state.round_active or state.sandbox_mode):
+		if can_move:
+			velocity = velocity.move_toward(Vector2.ZERO, 1500.0 * delta)
+			move_and_slide()
+			flashlight_on = false
+			flashlight.enabled = false
+			body_light.enabled = false
+		return
 		
-	# Torch
-	if is_sprinting:
-		flashlight_on = false
-	else:
-		flashlight_on = Input.is_action_pressed(action_torch)
+	if can_move:
+		var input_dir = input_provider.get_movement_vector()
+		is_sprinting = input_provider.is_sprint_pressed() and input_dir.length() > 0.1
+		if shoot_cooldown > 0 and current_weapon and not current_weapon.can_run_while_reloading:
+			is_sprinting = false
+			
+		var current_speed = speed * (2.0 if is_sprinting else 1.0)
+		if shoot_cooldown > 0 and current_weapon:
+			current_speed *= current_weapon.movement_speed_while_reloading
+		if dazzle_amount > 0:
+			current_speed *= lerp(1.0, 0.4, dazzle_amount)
+			
+		velocity = input_dir * current_speed
+		move_and_slide()
 		
+		if velocity.length() > 20.0:
+			step_distance_accumulated += velocity.length() * delta
+			var step_dist := 60.0 if is_sprinting else 45.0
+			if step_distance_accumulated >= step_dist:
+				step_distance_accumulated = 0.0
+				var pitch_mult := 1.122 if is_sprinting else 1.0
+				AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
+	
+		var aim_dir = input_provider.get_aim_direction(global_position)
+		if aim_dir.length() > 0.1:
+			var target_angle = aim_dir.angle()
+			var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
+			rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
+			
+		var prev_torch := flashlight_on
+		if is_sprinting:
+			flashlight_on = false
+		else:
+			flashlight_on = input_provider.is_flashlight_pressed()
+			
+		if flashlight_on != prev_torch:
+			AudioManager.set_player_torch(player_id, flashlight_on)
+			
+	# Visuals update for all clients
 	flashlight.enabled = flashlight_on
 	body_light.enabled = flashlight_on
-	
+
 	if flashlight_on:
 		if shoot_cooldown > 0:
 			flashlight.energy = randf_range(1.5, 2.0)
 		else:
 			flashlight.energy = lerp(flashlight.energy, 2.5, 8.0 * delta)
 			
-		body_light.energy = (flashlight.energy / 2.5) * 0.6
+		if current_weapon:
+			body_light.energy = (flashlight.energy / 2.5) * 0.6 * current_weapon.backlight_multiplier
+		else:
+			body_light.energy = (flashlight.energy / 2.5) * 0.6
 	
-	# Update aim line
 	if aim_cast and aim_line:
 		var end_pos = Vector2(2000, 0)
 		if aim_cast.is_colliding():
 			end_pos = to_local(aim_cast.get_collision_point())
 		aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
 	
-	# Shooting
-	if Input.is_action_pressed(action_shoot) and shoot_cooldown <= 0 and not is_sprinting:
+	if is_local and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
-	
-	# Crisp camera shake for shooting impact (much stronger)
+	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
+
+func trigger_shoot_visuals():
 	add_camera_shake(15.0, 15.0)
-	
-	# Visual Muzzle Flash
 	muzzle_flash.enabled = true
 	var tw = create_tween()
-	tw.tween_property(muzzle_flash, "energy", 0.0, 0.1).from(1.0)
+	var flash_intensity = current_weapon.muzzle_flash_intensity if current_weapon else 1.0
+	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
+	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
 	tw.tween_callback(func(): muzzle_flash.enabled = false)
 	
-	# Reveal silhouette to all players for 2 seconds
 	visual_reveal.color.a = 1.0
 	visual_reveal_ptr.color.a = 1.0
-	
 	if tw_reveal and tw_reveal.is_valid():
 		tw_reveal.kill()
 		
@@ -527,21 +546,24 @@ func shoot():
 	if has_node("VisualRevealEnemy"):
 		var vre = get_node("VisualRevealEnemy")
 		var vrep = get_node("VisualRevealEnemyPtr")
-		# Flash brightly in white so it's super visible in the dark!
 		vre.color = Color(1.0, 1.0, 1.0, 1.0) 
 		vrep.color = Color(1.0, 1.0, 1.0, 1.0)
 		tw_reveal.tween_property(vre, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		tw_reveal.tween_property(vrep, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	
-	# Emit signal to GameState to spawn bullet
-	# Using groups for loose coupling
-	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
-	
 	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
 
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return
-	hp -= amount
+	
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		var new_hp = max(0.0, hp - amount)
+		var sid = source_player.player_id if source_player else -1
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+			rpc_update_hp.rpc(new_hp, sid)
+		else:
+			rpc_update_hp(new_hp, sid)
+			
 	hit_sound.play()
 	AudioManager.play_sfx_2d_random_pitch("flesh_impact", global_position, 0.92, 1.08)
 	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
@@ -555,7 +577,17 @@ func take_damage(amount: float, source_player: Node2D):
 		vignette_mat.set_shader_parameter("intensity", 1.5)
 		var tw = create_tween()
 		tw.tween_method(func(val): vignette_mat.set_shader_parameter("intensity", val), 1.5, 0.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		
+
+@rpc("authority", "call_local", "reliable")
+func rpc_update_hp(new_hp: float, source_id: int):
+	hp = new_hp
+	if hp <= 0 and not dead:
+		hp = 0
+		var state = get_tree().get_first_node_in_group("game_state")
+		var killer = null
+		if state:
+			killer = state.p1 if source_id == 0 else state.p2
+		die(killer)
 	# Dynamic red light illuminating the scene to sell the impact
 	var hit_light = PointLight2D.new()
 	var grad = GradientTexture2D.new()
@@ -582,12 +614,9 @@ func take_damage(amount: float, source_player: Node2D):
 	# Perfectly smooth, lingering fade out
 	tw_l.tween_property(hit_light, "energy", 0.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw_l.tween_callback(hit_light.queue_free)
-	
-	if hp <= 0:
-		hp = 0
-		die(source_player)
 
 func die(killer: Node2D):
+	if dead: return
 	dead = true
 	AudioManager.update_low_health(player_id, false)
 

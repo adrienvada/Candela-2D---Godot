@@ -60,4 +60,3 @@ func _create_p2_duplicate():
 		stain_p2.visibility_layer = 4 # P2 Viewport
 		stain_p2.light_mask = 1 | 32  # Torch (1) + P2 Ambient (32)
 		get_parent().add_child(stain_p2)
-
