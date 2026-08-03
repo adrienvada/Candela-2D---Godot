@@ -2048,6 +2048,7 @@ func _cycle_tab(step: int) -> void:
 
 func _resume_game() -> void:
 	get_tree().paused = false
+	pause_info_container.hide()
 	game_over_panel.hide()
 
 func _update_weapon_panels_visibility() -> void:
@@ -2206,10 +2207,22 @@ func _handle_rebind_input(event: InputEvent) -> void:
 	_is_rebinding = false
 	get_viewport().set_input_as_handled()
 
+## Le gel de l'arbre n'a de sens qu'en local : en ligne il figerait la
+## simulation des deux joueurs (hôte) ou désynchroniserait le client d'un monde
+## qui continue. En ligne le menu se superpose au jeu, qui poursuit sa course.
+func _pause_freezes_world() -> bool:
+	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN
+
+## Le menu pause est-il ouvert ? En ligne il ne gèle rien : le joueur local doit
+## quand même cesser d'agir pendant qu'il navigue.
+func is_pause_menu_open() -> bool:
+	return game_over_panel.visible and pause_info_container.visible
+
 ## Retourne true si l'événement de pause a été consommé.
 func _handle_pause_input() -> bool:
 	if not _is_main_menu and not game_over_panel.visible:
-		get_tree().paused = true
+		if _pause_freezes_world():
+			get_tree().paused = true
 		btn_resume.show()
 		btn_replay.hide()
 		btn_main_menu.show()
@@ -2333,8 +2346,10 @@ func show_game_over(winner_id: int) -> void:
 		mode_vbox.hide()
 	if pause_info_container:
 		pause_info_container.hide()
+	# La carte de la manche suivante est celle de l'hôte : laisser le client en
+	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
 	if is_instance_valid(btn_tab_map):
-		btn_tab_map.show()
+		btn_tab_map.visible = NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT
 
 	_switch_tab(TAB_PLAY, false)
 	game_over_panel.show()
@@ -2400,12 +2415,16 @@ func _on_dialog_closed() -> void:
 	_previous_focus = null
 
 ## [UI] Force la fermeture du menu pause s'il est ouvert, pour ne pas gêner la Killcam.
+## Le panneau lui-même doit disparaître : le laisser visible masquait la killcam
+## derrière un menu « PAUSE » que plus rien ne fermait.
 func force_close_pause() -> void:
 	if pause_info_container.visible:
 		pause_info_container.hide()
 		weapon_hbox.hide()
-		if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
-			get_tree().paused = false
+		game_over_panel.hide()
+	# Sans condition de mode : une pause locale ouverte au moment où l'on bascule
+	# en ligne laisserait l'arbre gelé.
+	get_tree().paused = false
 
 func _on_res_selected(index: int) -> void:
 	match index:

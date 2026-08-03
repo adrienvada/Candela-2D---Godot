@@ -45,6 +45,19 @@ var _time_sync_accum: float = 0.0
 # Échéance de connexion du client, à neutraliser dès que l'issue est connue.
 var _join_deadline_active: bool = false
 
+# Séquence de fin de manche : _do_end_round est une coroutine longue (attente du
+# sang, killcam, arrêt sur image). Tout ce qui survient entretemps — nouvelle
+# manche, déconnexion, retour au menu — incrémente le jeton, ce qui fait
+# abandonner la coroutine en vol au lieu de la laisser écraser l'état neuf.
+var _round_token: int = 0
+var _end_sequence_active: bool = false
+
+# [Hôte] Effets différés jusqu'à la fin de la séquence : la killcam de chaque
+# machine a sa propre durée, le client peut donc être prêt — ou arriver — alors
+# que l'hôte est encore au ralenti.
+var _pending_client_start: bool = false
+var _pending_p2_weapon_idx: int = -1
+
 var weapon_pistolet: WeaponData
 var weapon_fusil: WeaponData
 var weapon_pompe: WeaponData
@@ -167,6 +180,11 @@ func _on_peer_connected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		client_peer_id = id
 		p2.reset_network_input()
+		# Arrivée pendant une killcam ou l'écran de fin : lancer la manche ici
+		# couperait la séquence en cours des deux côtés.
+		if _end_sequence_active:
+			_pending_client_start = true
+			return
 		# P2 vient d'arriver et n'a pas encore choisi : arme par défaut jusqu'au
 		# prochain rematch, où son choix sera transmis.
 		rpc_start_round.rpc(_hosted_weapon_1_idx, 0, _host_map_code())
@@ -175,6 +193,19 @@ func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if id == client_peer_id:
 			client_peer_id = 0
+		# Toute séquence de fin en vol devient caduque : sans ce jeton elle
+		# reviendrait afficher un écran de victoire par-dessus l'attente.
+		_round_token += 1
+		_end_sequence_active = false
+		_pending_client_start = false
+		_pending_p2_weapon_idx = -1
+		# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
+		# l'hôte immobile pour toujours dans son bac à sable.
+		countdown_left = 0.0
+		ui.set_countdown(0.0)
+		ui.force_close_pause()
+		_abort_killcam()
+		_restore_viewports()
 		# L'hôte simule P2 : sans purge il continuerait à courir sur la dernière
 		# commande reçue.
 		p2.reset_network_input()
@@ -185,6 +216,10 @@ func _on_peer_disconnected(id: int):
 		round_active = false
 		sandbox_mode = true
 		p2_ready_for_rematch = false
+		# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
+		p1_ready_for_rematch = false
+		ui.btn_replay.text = "REJOUER"
+		ui.btn_replay.remove_theme_color_override("font_color")
 		p1_kills = 0
 		p2_kills = 0
 		p2.hide()
@@ -487,6 +522,14 @@ func _host_map_code() -> String:
 	return ""
 
 func _do_start_round(w1_idx: int, w2_idx: int):
+	# Toute séquence de fin encore en vol doit lâcher la main ici.
+	_round_token += 1
+	_end_sequence_active = false
+	_pending_client_start = false
+	_pending_p2_weapon_idx = -1
+	_abort_killcam()
+	ui.force_close_pause()
+
 	# Reconstruit l'arène à chaque manche : c'est ce qui rend effectif un
 	# changement de carte depuis le menu, sans redémarrer le jeu.
 	rebuild_arena()
@@ -878,6 +921,13 @@ func rpc_end_round(winner_id: int):
 	_do_end_round(winner_id)
 
 func _do_end_round(winner_id: int):
+	# Une seconde fin arrivée pendant la première (mort simultanée, RPC en
+	# double) recompterait le kill et relancerait la killcam.
+	if _end_sequence_active: return
+	_round_token += 1
+	var token := _round_token
+	_end_sequence_active = true
+
 	if winner_id == 1:
 		p2_kills += 1
 	elif winner_id == 0:
@@ -885,6 +935,9 @@ func _do_end_round(winner_id: int):
 	round_active = false
 	countdown_left = 0.0
 	ui.set_countdown(0.0)
+	# Le menu pause ne gèle plus rien en ligne : il resterait affiché par-dessus
+	# la killcam, y compris sur une égalité.
+	ui.force_close_pause()
 	_predicted_shots.clear()
 	AudioManager.set_in_match(false)
 	AudioManager.play_music("music_victory")
@@ -898,12 +951,12 @@ func _do_end_round(winner_id: int):
 
 	
 	if winner_id != -1:
-		ui.force_close_pause() # Ferme la pause s'il est ouvert pour afficher la Killcam
 		# Wait 1.5 seconds to capture blood physics and reaction!
 		await get_tree().create_timer(1.5).timeout
-		
+		if token != _round_token: return
+
 	ReplaySystem.stop_recording()
-	
+
 	if winner_id != -1:
 		# Enter Fullscreen Killcam mode
 		var mod = arena.get_node_or_null("CanvasModulate")
@@ -921,19 +974,56 @@ func _do_end_round(winner_id: int):
 		# Wait for replay to finish or be skipped
 		while ReplaySystem.playing_back:
 			await get_tree().process_frame
-			
+			if token != _round_token: return
+
+		# Le ralenti est global : quelle que soit la façon dont la lecture s'est
+		# arrêtée, la vitesse normale doit être rétablie ici.
+		Engine.time_scale = 1.0
+
 		# Hide killcam UI but KEEP the freeze frame
 		ui.hide_killcam()
-		
+
 		# Attendre 2 secondes supplémentaires sur l'arrêt sur image avant d'afficher le menu de fin
 		await get_tree().create_timer(2.0).timeout
-		
+		if token != _round_token: return
+
 		# DO NOT restore split screen or reset cameras here!
 		# It freezes the screen perfectly on the death frame behind the menu.
-		
+
+	_end_sequence_active = false
 	game_over = true
 	ui.show_game_over(winner_id)
 	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
+	_apply_deferred_rematch()
+
+## Sortie inconditionnelle de la killcam. Le ralenti est un réglage global du
+## moteur : l'oublier sur un chemin de sortie laisse tout le jeu à 3 % de sa
+## vitesse, menus compris.
+func _abort_killcam() -> void:
+	ReplaySystem.playing_back = false
+	Engine.time_scale = 1.0
+	ui.hide_killcam()
+
+## [Hôte] Rejoue ce qui a été reçu pendant la séquence de fin, une fois l'écran
+## de fin affiché et l'état redevenu stable.
+func _apply_deferred_rematch() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
+	if _pending_p2_weapon_idx >= 0:
+		_set_p2_weapon_button(_pending_p2_weapon_idx)
+		_pending_p2_weapon_idx = -1
+	if _pending_client_start:
+		_pending_client_start = false
+		if client_peer_id != 0:
+			rpc_start_round.rpc(_hosted_weapon_1_idx, 0, _host_map_code())
+			return
+	if p2_ready_for_rematch:
+		_check_rematch_start()
+
+## Un index hors bornes ferait tomber l'hôte sur un paquet client malformé.
+func _set_p2_weapon_button(idx: int) -> void:
+	var buttons: Array = ui.p2_weapon_group.get_buttons()
+	if idx < 0 or idx >= buttons.size(): return
+	buttons[idx].button_pressed = true
 
 func _on_replay_requested():
 	if ui._is_main_menu:
@@ -996,12 +1086,19 @@ func _on_replay_requested():
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready(w2_idx: int):
-	if client_peer_id != 0 and multiplayer.get_remote_sender_id() == client_peer_id:
-		p2_ready_for_rematch = true
-		ui.p2_weapon_group.get_buttons()[w2_idx].button_pressed = true
-		_check_rematch_start()
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id: return
+	p2_ready_for_rematch = true
+	# Le client a fini sa killcam avant l'hôte : on retient son intention, on
+	# n'écrit ni son arme ni le libellé du chrono au milieu du ralenti.
+	if _end_sequence_active:
+		_pending_p2_weapon_idx = w2_idx
+		return
+	_set_p2_weapon_button(w2_idx)
+	_check_rematch_start()
 
 func _check_rematch_start():
+	# Un départ pendant la séquence de fin couperait la killcam de l'hôte.
+	if _end_sequence_active: return
 	if p1_ready_for_rematch and p2_ready_for_rematch:
 		p1_ready_for_rematch = false
 		p2_ready_for_rematch = false
@@ -1041,6 +1138,14 @@ func _on_main_menu_requested():
 	_join_deadline_active = false
 	countdown_left = 0.0
 	ui.set_countdown(0.0)
+	# Retour au menu depuis une killcam : sans ça le menu tourne au ralenti et
+	# une séquence de fin en vol reviendrait afficher un écran de victoire.
+	_round_token += 1
+	_end_sequence_active = false
+	_pending_client_start = false
+	_pending_p2_weapon_idx = -1
+	_abort_killcam()
+	ui.force_close_pause()
 	_predicted_shots.clear()
 	_pos_history.clear()
 	round_active = false
@@ -1084,6 +1189,9 @@ func _on_main_menu_requested():
 	AudioManager.play_music("music_menu")
 
 func _on_quit_requested():
+	# quit() ne prend effet qu'en fin de frame : sortir depuis une killcam
+	# étirerait ces dernières frames au ralenti.
+	Engine.time_scale = 1.0
 	get_tree().quit()
 
 ## [Client Uniquement] Appelé quand l'hôte ferme le serveur ou plante.
@@ -1108,6 +1216,8 @@ func _on_connection_success():
 
 @rpc("any_peer", "reliable")
 func rpc_client_unready():
-	if client_peer_id != 0 and multiplayer.get_remote_sender_id() == client_peer_id:
-		p2_ready_for_rematch = false
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id: return
+	p2_ready_for_rematch = false
+	_pending_p2_weapon_idx = -1
+	if not _end_sequence_active:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."

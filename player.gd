@@ -506,13 +506,30 @@ func reset_network_input() -> void:
 	if input_provider and input_provider.has_method("reset_input_state"):
 		input_provider.reset_input_state()
 
-func _send_inputs_to_host() -> void:
+## `neutral` : commandes vidées plutôt que tues. Cesser d'émettre laisserait
+## l'hôte rejouer la dernière commande reçue, donc courir sans personne aux
+## commandes.
+func _send_inputs_to_host(neutral: bool = false) -> void:
+	if neutral:
+		_input_seq += 1
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
+		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	var sprint := input_provider.is_sprint_pressed() and mov.length() > 0.1
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(), sprint)
+
+## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
+## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
+func _is_locally_piloted() -> bool:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST:
+			return player_id == 0
+		NetworkManager.GameMode.ONLINE_CLIENT:
+			return player_id == 1
+	return false
 
 func _net_role() -> NetRole:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
@@ -636,8 +653,12 @@ func _physics_process(delta):
 	# Le client émet ses commandes puis simule quand même : l'état hôte ne sert
 	# qu'à corriger. L'adversaire, lui, n'est jamais simulé ici.
 	var role := _net_role()
+	# Menu pause en ligne : l'arbre n'est pas gelé, le joueur reste donc une
+	# cible — mais les touches servent à naviguer, elles ne doivent plus piloter
+	# le personnage.
+	var menu_open: bool = state != null and _is_locally_piloted() and state.ui.is_pause_menu_open()
 	if role == NetRole.PREDICTED:
-		_send_inputs_to_host()
+		_send_inputs_to_host(menu_open)
 	elif role == NetRole.INTERPOLATED:
 		_apply_remote_interpolation()
 
@@ -656,6 +677,10 @@ func _physics_process(delta):
 	var can_move = role != NetRole.INTERPOLATED
 	if role == NetRole.SIMULATED and NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
 		can_move = is_multiplayer_authority()
+	if menu_open:
+		velocity = Vector2.ZERO
+		is_sprinting = false
+		can_move = false
 
 	if state and not (state.round_active or state.sandbox_mode):
 		if can_move:
