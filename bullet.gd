@@ -10,9 +10,26 @@ var direction: Vector2 = Vector2.ZERO
 var distance_traveled: float = 0.0
 var radius: float = 4.0
 
+# Compensation de latence : quand `lag_target` est renseigné (tirs du client,
+# arbitrés par l'hôte), ce joueur est testé contre `lag_center` — la position
+# que le tireur voyait — et retiré du ShapeCast, qui ne connaît que le présent.
+const PLAYER_BODY_RADIUS := 18.0
+var lag_target: Player
+var lag_center: Vector2 = Vector2.ZERO
+
 var shape_cast: ShapeCast2D
 var light: PointLight2D
 var spawn_pos: Vector2
+
+# Matériau additif non éclairé, identique pour toutes les balles.
+static var _shared_additive: CanvasItemMaterial
+
+static func _additive_material() -> CanvasItemMaterial:
+	if _shared_additive == null:
+		_shared_additive = CanvasItemMaterial.new()
+		_shared_additive.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		_shared_additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return _shared_additive
 
 func _ready():
 	z_index = 10
@@ -21,16 +38,9 @@ func _ready():
 	light.name = "TrailLight"
 	light.color = Color(1.0, 0.9, 0.5)
 	light.energy = 50.0
-	var grad = Gradient.new()
-	grad.set_color(0, Color(1,1,1,1))
-	grad.set_color(1, Color(0,0,0,1))
-	var grad_tex = GradientTexture2D.new()
-	grad_tex.gradient = grad
-	grad_tex.fill = GradientTexture2D.FILL_RADIAL
-	grad_tex.fill_from = Vector2(0.5, 0.5)
-	grad_tex.fill_to = Vector2(0.5, 0.0)
-	grad_tex.width = 128
-	grad_tex.height = 128
+	# Texture partagée : chaque balle en allouait une identique de 128×128, soit
+	# cinq par volée de pompe.
+	var grad_tex := LightTextures.radial_tight(128)
 	light.texture = grad_tex
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
@@ -41,10 +51,8 @@ func _ready():
 	core.name = "Core"
 	core.width = 5.0
 	# Bright molten metal yellow, HDR values for intense glow
-	core.default_color = Color(2.5, 2.0, 0.5, 1.0) 
-	var mat = CanvasItemMaterial.new()
-	mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	core.default_color = Color(2.5, 2.0, 0.5, 1.0)
+	var mat := _additive_material()
 	core.material = mat
 	add_child(core)
 	
@@ -81,7 +89,9 @@ func _ready():
 	add_child(shape_cast)
 	if source_player:
 		shape_cast.add_exception(source_player)
-	
+	if lag_target:
+		shape_cast.add_exception(lag_target)
+
 	set_as_top_level(true)
 	spawn_pos = global_position
 
@@ -101,28 +111,28 @@ func _physics_process(delta):
 	# Update shape cast for this frame's movement. target_position is in local space!
 	shape_cast.target_position = Vector2(travel_step, 0)
 	shape_cast.force_shapecast_update()
-	
+
+	# Cible compensée : test manuel segment/cercle, le ShapeCast ne la voit plus.
+	# Un mur touché plus tôt sur le pas l'emporte toujours.
+	if lag_target and is_instance_valid(lag_target) and (lag_target.hp > 0 or is_replay):
+		var lag_dist := _circle_entry_distance(global_position, direction, travel_step,
+			lag_center, PLAYER_BODY_RADIUS + radius)
+		if lag_dist >= 0.0:
+			var wall_first := shape_cast.is_colliding() \
+				and global_position.distance_to(shape_cast.get_collision_point(0)) < lag_dist
+			if not wall_first:
+				_hit_player(lag_target, lag_center, global_position + direction * lag_dist)
+				return
+
 	if shape_cast.is_colliding():
 		var collider = shape_cast.get_collider(0)
 		var hit_point = shape_cast.get_collision_point(0)
-		
+
 		if collider is Player and (collider.hp > 0 or is_replay):
-			# Damage falloff based on the perpendicular distance from the bullet's path to the player's center
-			var player_radius = 15.0 # 15.0 * 1.0 (scale)
-			var to_player = collider.global_position - global_position
-			var dist_to_axis = abs(to_player.cross(direction))
-			var normalized_dist = clamp(dist_to_axis / player_radius, 0.0, 1.0)
-			
-			# Linear falloff based on weapon damage
-			var opp_hit_damage = floor(lerp(weapon.damage_center, weapon.damage_edge, normalized_dist))
-			
-			if not is_replay and collider.has_method("take_damage"):
-				collider.take_damage(opp_hit_damage, source_player)
-					
-			_spawn_hit_effects(hit_point)
-			if not is_replay:
-				_spawn_damage_number(hit_point, opp_hit_damage)
-			_fade_and_destroy(hit_point)
+			_hit_player(collider, collider.global_position, hit_point)
+			return
+		elif collider is TrainingTarget:
+			_hit_training_target(collider, hit_point)
 			return
 		else:
 			_spawn_wall_effects(hit_point)
@@ -138,6 +148,9 @@ func _physics_process(delta):
 				# Allow damaging the shooter after a bounce
 				if weapon.damages_shooter:
 					shape_cast.clear_exceptions()
+					# La cible compensée reste testée à la main, rebond compris.
+					if lag_target:
+						shape_cast.add_exception(lag_target)
 					
 				return
 			else:
@@ -155,6 +168,64 @@ func _physics_process(delta):
 	
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
+
+## Impact joueur. `center` est le point de référence pour l'atténuation : la
+## position réelle du joueur, ou celle remontée dans le temps quand le tir est
+## compensé.
+func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
+	# Damage falloff based on the perpendicular distance from the bullet's path to the player's center
+	var player_radius := 15.0 # 15.0 * 1.0 (scale)
+	var to_player := center - global_position
+	var dist_to_axis: float = abs(to_player.cross(direction))
+	var normalized_dist := clampf(dist_to_axis / player_radius, 0.0, 1.0)
+
+	# Linear falloff based on weapon damage
+	var opp_hit_damage := floorf(lerpf(weapon.damage_center, weapon.damage_edge, normalized_dist))
+
+	if not is_replay:
+		target.take_damage(opp_hit_damage, source_player)
+
+	_spawn_hit_effects(hit_point)
+	if not is_replay:
+		_spawn_damage_number(hit_point, int(opp_hit_damage))
+	_fade_and_destroy(hit_point)
+
+## Impact sur la cible d'échauffement : mêmes effets qu'un mur, plus le chiffre
+## de dégâts, calculé comme sur un joueur pour que l'entraînement soit lisible.
+func _hit_training_target(target: TrainingTarget, hit_point: Vector2) -> void:
+	var to_target := target.global_position - global_position
+	var dist_to_axis: float = abs(to_target.cross(direction))
+	var normalized_dist := clampf(dist_to_axis / TrainingTarget.RADIUS, 0.0, 1.0)
+	var dmg := int(floorf(lerpf(weapon.damage_center, weapon.damage_edge, normalized_dist)))
+
+	if not is_replay:
+		target.register_training_hit(dmg)
+	_spawn_wall_effects(hit_point)
+	if not is_replay:
+		_spawn_damage_number(hit_point, dmg)
+	_fade_and_destroy(hit_point)
+
+## Distance parcourue le long du pas avant d'entrer dans le cercle, -1 s'il
+## n'est pas atteint pendant ce pas.
+static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
+		center: Vector2, r: float) -> float:
+	var to_center := center - origin
+	var proj := to_center.dot(dir)
+	var perp_sq := to_center.length_squared() - proj * proj
+	var r_sq := r * r
+	if perp_sq > r_sq:
+		return -1.0
+	var half := sqrt(r_sq - perp_sq)
+	var entry := proj - half
+	if entry < 0.0:
+		# Déjà dans le cercle au départ du pas : impact immédiat, sauf si le
+		# cercle est entièrement derrière.
+		if proj + half < 0.0:
+			return -1.0
+		entry = 0.0
+	if entry > length:
+		return -1.0
+	return entry
 
 func _fade_and_destroy(hit_point: Vector2):
 	set_physics_process(false)
@@ -180,147 +251,20 @@ func _fade_and_destroy(hit_point: Vector2):
 		tween.tween_property(get_node("Aura"), "modulate:a", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_callback(queue_free)
 
+## Le pool est créé par GameState ; sans lui (tests headless isolés) les impacts
+## restent silencieux plutôt que de retomber sur l'ancien chemin allouant.
+func _particle_pool() -> ParticlePool:
+	return get_tree().get_first_node_in_group("particle_pool") as ParticlePool
+
 func _spawn_blood_particles(pos: Vector2, color: Color, amount: int, speed_min: float, speed_max: float, base_dir: Vector2, spread_deg: float):
-	for i in range(amount):
-		var rb = RigidBody2D.new()
-		rb.z_index = 10
-		# Only collide with walls (Layer 1)
-		rb.collision_layer = 0
-		rb.collision_mask = 1
-		rb.gravity_scale = 0.0 # Top-down
-		
-		# Turbulence: heavy friction for meat chunks
-		rb.linear_damp = randf_range(8.0, 15.0)
-		rb.angular_velocity = randf_range(-40.0, 40.0)
-		
-		var phys_mat = PhysicsMaterial.new()
-		phys_mat.bounce = 0.2
-		rb.physics_material_override = phys_mat
-		
-		# Tiny physical collision
-		var shape = CollisionShape2D.new()
-		var circle = CircleShape2D.new()
-		circle.radius = 2.0
-		shape.shape = circle
-		rb.add_child(shape)
-		
-		# Visual core (Meat chunk sizes)
-		var poly = Polygon2D.new()
-		var s = randf_range(0.8, 3.5)
-		poly.polygon = PackedVector2Array([Vector2(-2*s,0), Vector2(0,-2*s), Vector2(2*s,0), Vector2(0,2*s)])
-		poly.color = color
-		var mat = CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX
-		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-		poly.material = mat
-		rb.add_child(poly)
-		
-		# Emissive light!
-		var light = PointLight2D.new()
-		var grad = GradientTexture2D.new()
-		grad.fill = GradientTexture2D.FILL_RADIAL
-		grad.fill_from = Vector2(0.5, 0.5)
-		grad.fill_to = Vector2(1, 0.5)
-		var g = Gradient.new()
-		g.set_color(0, color)
-		var c_end = color
-		c_end.a = 0.0
-		g.set_color(1, c_end)
-		grad.gradient = g
-		grad.width = 64
-		grad.height = 64
-		light.texture = grad
-		light.energy = 1.0
-		light.shadow_enabled = false
-		light.range_item_cull_mask = 1 | 4
-		rb.add_child(light)
-		
-		# Velocity and trajectory
-		rb.position = pos
-		var spread_rad = deg_to_rad(spread_deg)
-		var spray_angle = base_dir.angle() + randf_range(-spread_rad/2.0, spread_rad/2.0)
-		var speed = randf_range(speed_min, speed_max)
-		rb.linear_velocity = Vector2(cos(spray_angle), sin(spray_angle)) * speed
-		
-		get_parent().add_child(rb)
-		
-		# Fade out and self-destruct
-		var lifetime = randf_range(1.5, 3.0)
-		var tw = rb.create_tween()
-		tw.tween_property(poly, "scale", Vector2.ZERO, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.parallel().tween_property(light, "energy", 0.0, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.tween_callback(rb.queue_free)
+	var pool := _particle_pool()
+	if pool == null: return
+	pool.emit(ParticlePool.Kind.BLOOD, pos, color, amount, speed_min, speed_max, base_dir, spread_deg)
 
 func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: float, speed_max: float, base_dir: Vector2, spread_deg: float):
-	for i in range(amount):
-		var rb = RigidBody2D.new()
-		rb.z_index = 10
-		# Only collide with walls (Layer 1)
-		rb.collision_layer = 0
-		rb.collision_mask = 1
-		rb.gravity_scale = 0.0 # Top-down
-		
-		# Volatile sparks: low friction, high bounce
-		rb.linear_damp = randf_range(1.0, 4.0)
-		rb.angular_velocity = randf_range(-20.0, 20.0)
-		
-		var phys_mat = PhysicsMaterial.new()
-		phys_mat.bounce = 0.6
-		rb.physics_material_override = phys_mat
-		
-		# Tiny physical collision
-		var shape = CollisionShape2D.new()
-		var circle = CircleShape2D.new()
-		circle.radius = 1.0
-		shape.shape = circle
-		rb.add_child(shape)
-		
-		# Visual core (Small sparks)
-		var poly = Polygon2D.new()
-		poly.polygon = PackedVector2Array([Vector2(-1,0), Vector2(0,-1), Vector2(1,0), Vector2(0,1)])
-		poly.color = color
-		var mat = CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-		poly.material = mat
-		rb.add_child(poly)
-		
-		# Emissive light!
-		var light = PointLight2D.new()
-		var grad = GradientTexture2D.new()
-		grad.fill = GradientTexture2D.FILL_RADIAL
-		grad.fill_from = Vector2(0.5, 0.5)
-		grad.fill_to = Vector2(1, 0.5)
-		var g = Gradient.new()
-		g.set_color(0, color)
-		var c_end = color
-		c_end.a = 0.0
-		g.set_color(1, c_end)
-		grad.gradient = g
-		grad.width = 32
-		grad.height = 32
-		light.texture = grad
-		light.energy = 1.5
-		light.shadow_enabled = true
-		light.shadow_item_cull_mask = 1
-		light.range_item_cull_mask = 1 | 2 | 4 # Sparks illuminate players (2)
-		rb.add_child(light)
-		
-		# Velocity and trajectory
-		rb.position = pos
-		var spread_rad = deg_to_rad(spread_deg)
-		var spray_angle = base_dir.angle() + randf_range(-spread_rad/2.0, spread_rad/2.0)
-		var speed = randf_range(speed_min, speed_max)
-		rb.linear_velocity = Vector2(cos(spray_angle), sin(spray_angle)) * speed
-		
-		get_parent().add_child(rb)
-		
-		# Fade out and self-destruct (shorter lifetime for sparks)
-		var lifetime = randf_range(0.3, 0.8)
-		var tw = rb.create_tween()
-		tw.tween_property(poly, "scale", Vector2.ZERO, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.parallel().tween_property(light, "energy", 0.0, lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.tween_callback(rb.queue_free)
+	var pool := _particle_pool()
+	if pool == null: return
+	pool.emit(ParticlePool.Kind.SPARK, pos, color, amount, speed_min, speed_max, base_dir, spread_deg)
 
 func _spawn_hit_effects(pos: Vector2):
 	AudioManager.play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)

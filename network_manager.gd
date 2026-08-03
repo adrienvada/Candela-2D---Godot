@@ -9,6 +9,16 @@ const MAX_CLIENTS  := 1 # Only 1v1 (1 Host + 1 Client)
 
 var peer: ENetMultiplayerPeer
 
+# Écho applicatif plutôt que le RTT interne d'ENet : c'est le délai réellement
+# subi par la boucle de jeu (files d'attente, cadence de traitement) qui sert
+# à compenser les tirs, et lui seul est comparable des deux côtés.
+const PING_INTERVAL := 1.0
+const RTT_SMOOTHING := 0.3
+
+var rtt_ms: float = 0.0
+var has_rtt: bool = false
+var _ping_accum: float = 0.0
+
 signal player_connected(id: int)
 signal player_disconnected(id: int)
 signal connection_failed
@@ -44,6 +54,42 @@ func disconnect_from_game() -> void:
 		peer.close()
 	multiplayer.multiplayer_peer = null
 	current_mode = GameMode.LOCAL_SPLITSCREEN
+	_reset_rtt()
+
+func _process(delta: float) -> void:
+	var target := _remote_peer()
+	if target == 0:
+		_reset_rtt()
+		return
+	_ping_accum += delta
+	if _ping_accum < PING_INTERVAL:
+		return
+	_ping_accum = 0.0
+	rpc_id(target, "rpc_ping", Time.get_ticks_msec())
+
+## Unique interlocuteur (1v1) : l'hôte pour le client, le client pour l'hôte.
+func _remote_peer() -> int:
+	if current_mode == GameMode.LOCAL_SPLITSCREEN or not multiplayer.has_multiplayer_peer():
+		return 0
+	var peers := multiplayer.get_peers()
+	return peers[0] if peers.size() > 0 else 0
+
+func _reset_rtt() -> void:
+	rtt_ms = 0.0
+	has_rtt = false
+	_ping_accum = 0.0
+
+## L'horodatage repart tel quel : seul l'émetteur l'interprète, aucune horloge
+## commune n'est nécessaire.
+@rpc("any_peer", "unreliable")
+func rpc_ping(stamp: int) -> void:
+	rpc_id(multiplayer.get_remote_sender_id(), "rpc_pong", stamp)
+
+@rpc("any_peer", "unreliable")
+func rpc_pong(stamp: int) -> void:
+	var sample := float(Time.get_ticks_msec() - stamp)
+	rtt_ms = sample if not has_rtt else lerpf(rtt_ms, sample, RTT_SMOOTHING)
+	has_rtt = true
 
 func _connect_signals() -> void:
 	# Avoid connecting multiple times

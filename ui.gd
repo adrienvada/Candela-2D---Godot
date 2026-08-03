@@ -12,6 +12,8 @@
 extends CanvasLayer
 class_name UI
 
+const SHADER_KILLCAM := preload("res://killcam_overlay.gdshader")
+
 signal replay_requested
 signal quit_requested
 signal main_menu_requested
@@ -145,6 +147,13 @@ var time_label: Label
 var waiting_label: Label
 var center_line: Panel
 var network_status_label: Label
+var ping_label: Label
+var countdown_label: Label
+
+# Dernier chiffre affiché par le décompte : sert à ne rejouer l'animation qu'au
+# changement de seconde.
+var _countdown_shown: int = -1
+var _local_ip_cache: String = ""
 
 var p1_shake_time: float = 0.0
 var p2_shake_time: float = 0.0
@@ -210,6 +219,8 @@ var btn_mode_host: Button
 var btn_mode_join: Button
 var online_hbox: HBoxContainer
 var lobby_status_label: Label
+var host_ip_row: HBoxContainer
+var host_ip_label: Label
 var ip_input: LineEdit
 
 var pause_info_container: VBoxContainer
@@ -231,6 +242,11 @@ var debug_panel: PanelContainer
 var fps_label: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
+
+const DEBUG_SCAN_INTERVAL := 0.25
+var _debug_scan_accum: float = 0.0
+var _debug_light_count: int = 0
+var _debug_arena_nodes: int = 0
 
 var _is_main_menu: bool = true
 
@@ -271,6 +287,7 @@ func _ready() -> void:
 	_build_menu()
 	_build_dialog()
 	_build_status_bar()
+	_build_countdown()
 	_build_debug_panel()
 
 	p1_cursor = NeonFocusRing.new(COLOR_P1)
@@ -333,6 +350,30 @@ func _process(delta: float) -> void:
 	_update_killcam(delta)
 
 func _update_network_status() -> void:
+	var connected := false
+	var connecting := false
+	if multiplayer.has_multiplayer_peer():
+		var status := multiplayer.multiplayer_peer.get_connection_status()
+		connected = status == MultiplayerPeer.CONNECTION_CONNECTED
+		connecting = status == MultiplayerPeer.CONNECTION_CONNECTING
+
+	var tint := Color.RED
+	if connected:
+		tint = Color.GREEN
+	elif connecting:
+		tint = Color.YELLOW
+	network_status_label.add_theme_color_override("font_color", tint)
+
+	# Le format technique n'est plus lisible que par un développeur : il reste
+	# accessible en mode debug (F3), le joueur voit des états compréhensibles.
+	if debug_mode_active:
+		network_status_label.text = _technical_network_status(connected, connecting)
+	else:
+		network_status_label.text = _human_network_status(connected, connecting)
+
+	_update_ping_label()
+
+func _technical_network_status(connected: bool, connecting: bool) -> String:
 	var mode_str := "[LOCAL]"
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		mode_str = "[ONLINE_HOST]"
@@ -340,15 +381,10 @@ func _update_network_status() -> void:
 		mode_str = "[ONLINE_CLIENT]"
 
 	var conn_str := "Déconnecté"
-	network_status_label.add_theme_color_override("font_color", Color.RED)
-	if multiplayer.has_multiplayer_peer():
-		var status := multiplayer.multiplayer_peer.get_connection_status()
-		if status == MultiplayerPeer.CONNECTION_CONNECTED:
-			conn_str = "Connecté (Peers: %d)" % multiplayer.get_peers().size()
-			network_status_label.add_theme_color_override("font_color", Color.GREEN)
-		elif status == MultiplayerPeer.CONNECTION_CONNECTING:
-			conn_str = "En attente (Connexion...)"
-			network_status_label.add_theme_color_override("font_color", Color.YELLOW)
+	if connected:
+		conn_str = "Connecté (Peers: %d)" % multiplayer.get_peers().size()
+	elif connecting:
+		conn_str = "En attente (Connexion...)"
 
 	var gs := get_tree().get_first_node_in_group("game_state")
 	var situation := "Menu"
@@ -362,7 +398,52 @@ func _update_network_status() -> void:
 		elif ReplaySystem.playing_back:
 			situation = "Killcam"
 
-	network_status_label.text = "%s | %s | %s" % [mode_str, conn_str, situation]
+	return "%s | %s | %s" % [mode_str, conn_str, situation]
+
+## Statut destiné au joueur : ce qu'il doit faire ou attendre, rien d'autre.
+## Vide en local, où il n'y a rien à signaler.
+func _human_network_status(connected: bool, connecting: bool) -> String:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	var in_round: bool = gs != null and gs.round_active
+
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		if not connected or multiplayer.get_peers().is_empty():
+			return "Salon créé — en attente d'un adversaire  ·  IP : %s" % local_ipv4()
+		if in_round:
+			return "En jeu"
+		if ReplaySystem.playing_back:
+			return "Killcam"
+		return "Adversaire trouvé !"
+
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		if connecting:
+			return "Connexion au salon…"
+		if not connected:
+			return "Salon quitté"
+		if in_round:
+			return "En jeu"
+		if ReplaySystem.playing_back:
+			return "Killcam"
+		return "Salon rejoint — en attente du lancement"
+
+	return ""
+
+## Pastille de latence : verte sous 60 ms, jaune sous 120, rouge au-delà.
+func _update_ping_label() -> void:
+	if not NetworkManager.has_rtt:
+		ping_label.hide()
+		return
+
+	var rtt := int(round(NetworkManager.rtt_ms))
+	var tint := Color(0.3, 1.0, 0.45)
+	if rtt >= 120:
+		tint = Color(1.0, 0.35, 0.35)
+	elif rtt >= 60:
+		tint = Color(1.0, 0.82, 0.2)
+
+	ping_label.text = "● %d ms" % rtt
+	ping_label.add_theme_color_override("font_color", tint)
+	ping_label.show()
 
 ## Place les deux liserés de focus. Un curseur dont la cible a disparu est
 ## réamorcé plutôt que masqué : le joueur n'est jamais bloqué.
@@ -449,10 +530,51 @@ func _update_debug(_delta: float) -> void:
 		debug_panel.visible = debug_mode_active
 	_f3_was_pressed = f3_pressed
 
-	if debug_mode_active:
-		fps_label.text = "DEBUG | FPS %d | Cartes %d" % [
-			Engine.get_frames_per_second(), MapData.list_maps().size(),
-		]
+	if not debug_mode_active:
+		return
+
+	# Le comptage des nœuds parcourt l'arbre : à 4 Hz il est indolore, à chaque
+	# frame il fausserait la mesure qu'il sert à faire.
+	_debug_scan_accum += _delta
+	if _debug_scan_accum >= DEBUG_SCAN_INTERVAL:
+		_debug_scan_accum = 0.0
+		_rescan_debug_counts()
+
+	var gs := get_parent()
+	var particles := 0
+	var cap := 0
+	if gs is GameState and is_instance_valid(gs.particle_pool):
+		particles = gs.particle_pool.active_count()
+		cap = ParticlePool.MAX_ACTIVE
+
+	var ping := "—"
+	if NetworkManager.has_rtt:
+		ping = "%d ms" % int(round(NetworkManager.rtt_ms))
+
+	fps_label.text = "DEBUG | FPS %d | Ping %s | Lumières %d | Particules %d/%d | Nœuds arène %d | Cartes %d" % [
+		Engine.get_frames_per_second(), ping, _debug_light_count,
+		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
+	]
+
+## Recompte les PointLight2D actives et les nœuds de l'arène.
+func _rescan_debug_counts() -> void:
+	_debug_light_count = 0
+	_debug_arena_nodes = 0
+	var gs := get_parent()
+	if not (gs is GameState) or not is_instance_valid(gs.arena):
+		return
+	var world: Node = (gs.arena as Node).get_parent()
+	if world == null:
+		return
+	var stack: Array[Node] = [world]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		_debug_arena_nodes += 1
+		if node is PointLight2D and (node as PointLight2D).is_visible_in_tree() \
+				and (node as PointLight2D).enabled:
+			_debug_light_count += 1
+		for child in node.get_children():
+			stack.append(child)
 
 func _update_killcam(delta: float) -> void:
 	if killcam_container == null or not killcam_container.visible:
@@ -824,7 +946,7 @@ func _build_center_hud() -> Control:
 	vbox.add_child(title)
 
 	time_label = Label.new()
-	time_label.text = "02:00"
+	time_label.text = "05:00"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	time_label.add_theme_font_size_override("font_size", 36)
 	vbox.add_child(time_label)
@@ -986,12 +1108,86 @@ func _build_status_bar() -> void:
 	network_status_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	network_status_label.add_theme_constant_override("outline_size", 4)
 
+	ping_label = Label.new()
+	ping_label.add_theme_font_size_override("font_size", 14)
+	ping_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	ping_label.add_theme_constant_override("outline_size", 4)
+	ping_label.hide()
+
+	var status_row := HBoxContainer.new()
+	status_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	status_row.add_theme_constant_override("separation", GAP_S)
+	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_row.add_child(network_status_label)
+	status_row.add_child(ping_label)
+
 	var status_margin := MarginContainer.new()
 	status_margin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	status_margin.add_theme_constant_override("margin_bottom", 10)
 	status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_margin.add_child(network_status_label)
+	status_margin.add_child(status_row)
 	add_child(status_margin)
+
+## Décompte de départ, plein écran : il doit rester lisible par-dessus le HUD
+## comme par-dessus l'arène.
+func _build_countdown() -> void:
+	countdown_label = Label.new()
+	countdown_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	countdown_label.add_theme_font_size_override("font_size", 140)
+	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
+	countdown_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	countdown_label.add_theme_constant_override("outline_size", 16)
+	countdown_label.z_index = 120
+	countdown_label.hide()
+	add_child(countdown_label)
+
+## Piloté par GameState, qui tient le décompte partagé.
+func set_countdown(value: float) -> void:
+	if countdown_label == null:
+		return
+	if value <= 0.0:
+		if _countdown_shown != -1:
+			_countdown_shown = -1
+			countdown_label.hide()
+		return
+
+	countdown_label.show()
+	var n := ceili(value)
+	if n == _countdown_shown:
+		return
+	_countdown_shown = n
+	countdown_label.text = str(n)
+	countdown_label.pivot_offset = countdown_label.size / 2.0
+	countdown_label.scale = Vector2(1.7, 1.7)
+	var tween := create_tween()
+	tween.tween_property(countdown_label, "scale", Vector2.ONE, 0.35) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## L'attente d'un adversaire est le moment où l'hôte a besoin de son adresse.
+func show_waiting_for_opponent() -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		waiting_label.text = "EN ATTENTE DU JOUEUR 2…\nVotre IP : %s" % local_ipv4()
+	else:
+		waiting_label.text = "EN ATTENTE DU JOUEUR 2…"
+	waiting_label.show()
+
+## Première IPv4 non-loopback : l'adresse à communiquer sur un réseau local.
+## Les adresses d'auto-configuration (169.254) sont écartées, elles ne servent
+## à rien pour un adversaire.
+func local_ipv4() -> String:
+	if _local_ip_cache != "":
+		return _local_ip_cache
+	_local_ip_cache = "127.0.0.1"
+	for addr in IP.get_local_addresses():
+		var a := String(addr)
+		if a.count(".") != 3 or a.begins_with("127.") or a.begins_with("169.254."):
+			continue
+		_local_ip_cache = a
+		break
+	return _local_ip_cache
 
 func _build_debug_panel() -> void:
 	debug_panel = PanelContainer.new()
@@ -1066,24 +1262,7 @@ func _build_killcam() -> void:
 	killcam_overlay.hide()
 
 	var material := ShaderMaterial.new()
-	var shader := Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
-uniform float time = 0.0;
-void fragment() {
-	vec2 uv = SCREEN_UV;
-	float scanline = sin(uv.y * 800.0) * 0.04;
-	float noise = fract(sin(dot(uv + time, vec2(12.9898, 78.233))) * 43758.5453);
-	float r = texture(screen_texture, uv + vec2(0.003, 0.0)).r;
-	float g = texture(screen_texture, uv).g;
-	float b = texture(screen_texture, uv - vec2(0.003, 0.0)).b;
-	vec3 col = vec3(r, g, b) + noise * 0.05 - scanline;
-	col *= smoothstep(0.8, 0.2, distance(uv, vec2(0.5)) * 1.2);
-	COLOR = vec4(col, 1.0);
-}
-"""
-	material.shader = shader
+	material.shader = SHADER_KILLCAM
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -1499,6 +1678,26 @@ func _build_mode_block() -> Control:
 	lobby_status_label.hide()
 	mode_vbox.add_child(lobby_status_label)
 
+	# Sans son adresse sous les yeux, l'hôte n'a rien à transmettre à l'autre
+	# joueur : elle est affichée dès que « CRÉER SALON » est sélectionné.
+	host_ip_row = HBoxContainer.new()
+	host_ip_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	host_ip_row.add_theme_constant_override("separation", GAP_XS)
+
+	host_ip_label = Label.new()
+	host_ip_label.add_theme_font_size_override("font_size", 15)
+	host_ip_row.add_child(host_ip_label)
+
+	var btn_copy_ip := _make_button("COPIER", COLOR_GOLD)
+	btn_copy_ip.add_theme_font_size_override("font_size", 13)
+	btn_copy_ip.pressed.connect(func() -> void:
+		DisplayServer.clipboard_set(local_ipv4())
+		host_ip_label.text = "IP copiée : %s" % local_ipv4()
+	)
+	host_ip_row.add_child(btn_copy_ip)
+	host_ip_row.hide()
+	mode_vbox.add_child(host_ip_row)
+
 	ip_input = LineEdit.new()
 	ip_input.placeholder_text = "127.0.0.1"
 	ip_input.text = "127.0.0.1"
@@ -1516,6 +1715,7 @@ func _build_mode_block() -> Control:
 		ip_input.hide()
 		online_hbox.hide()
 		lobby_status_label.hide()
+		host_ip_row.hide()
 		_update_weapon_panels_visibility()
 		btn_replay.text = "LANCER LE MATCH"
 	)
@@ -1536,7 +1736,9 @@ func _build_mode_block() -> Control:
 			return
 		ip_input.hide()
 		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 | Statut : 1/2 Joueurs (En attente...)"
+		lobby_status_label.text = "Salon 1V1 — communiquez votre IP à votre adversaire"
+		host_ip_label.text = "Votre IP : %s" % local_ipv4()
+		host_ip_row.show()
 		btn_replay.text = "LANCER LE MATCH"
 		_update_weapon_panels_visibility()
 	)
@@ -1546,7 +1748,8 @@ func _build_mode_block() -> Control:
 			return
 		ip_input.show()
 		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 | Entrez l'IP de l'Hôte"
+		lobby_status_label.text = "Salon 1V1 — entrez l'IP de l'hôte"
+		host_ip_row.hide()
 		btn_replay.text = "REJOINDRE LE SALON"
 		_update_weapon_panels_visibility()
 	)
@@ -1620,7 +1823,7 @@ func _build_pause_block() -> Control:
 	pause_info_container.hide()
 
 	pause_score_label = Label.new()
-	pause_score_label.text = "SCORE: 0 - 0"
+	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_score_label.add_theme_font_size_override("font_size", 40)
 	pause_info_container.add_child(pause_score_label)
@@ -1876,6 +2079,7 @@ func _cycle_tab(step: int) -> void:
 
 func _resume_game() -> void:
 	get_tree().paused = false
+	pause_info_container.hide()
 	game_over_panel.hide()
 
 func _update_weapon_panels_visibility() -> void:
@@ -2034,10 +2238,22 @@ func _handle_rebind_input(event: InputEvent) -> void:
 	_is_rebinding = false
 	get_viewport().set_input_as_handled()
 
+## Le gel de l'arbre n'a de sens qu'en local : en ligne il figerait la
+## simulation des deux joueurs (hôte) ou désynchroniserait le client d'un monde
+## qui continue. En ligne le menu se superpose au jeu, qui poursuit sa course.
+func _pause_freezes_world() -> bool:
+	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN
+
+## Le menu pause est-il ouvert ? En ligne il ne gèle rien : le joueur local doit
+## quand même cesser d'agir pendant qu'il navigue.
+func is_pause_menu_open() -> bool:
+	return game_over_panel.visible and pause_info_container.visible
+
 ## Retourne true si l'événement de pause a été consommé.
 func _handle_pause_input() -> bool:
 	if not _is_main_menu and not game_over_panel.visible:
-		get_tree().paused = true
+		if _pause_freezes_world():
+			get_tree().paused = true
 		btn_resume.show()
 		btn_replay.hide()
 		btn_main_menu.show()
@@ -2054,7 +2270,7 @@ func _handle_pause_input() -> bool:
 
 		var gs := get_parent()
 		if gs and gs is GameState:
-			pause_score_label.text = "SCORE : %d - %d" % [gs.p1_kills, gs.p2_kills]
+			pause_score_label.text = "SESSION : %d - %d" % [gs.p1_kills, gs.p2_kills]
 			var m := floori(gs.time_left) / 60
 			var s := floori(gs.time_left) % 60
 			pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]
@@ -2108,9 +2324,7 @@ func update_hud(p1, p2, time_left: float) -> void:
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
 		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
 
-	var m := floori(time_left) / 60
-	var s := floori(time_left) % 60
-	time_label.text = "%02d:%02d" % [m, s]
+	time_label.text = MatchRecord.format_clock(time_left)
 
 func show_main_menu() -> void:
 	_is_main_menu = true
@@ -2161,23 +2375,37 @@ func show_game_over(winner_id: int) -> void:
 		mode_vbox.hide()
 	if pause_info_container:
 		pause_info_container.hide()
+	# La carte de la manche suivante est celle de l'hôte : laisser le client en
+	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
 	if is_instance_valid(btn_tab_map):
-		btn_tab_map.show()
+		btn_tab_map.visible = NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT
 
 	_switch_tab(TAB_PLAY, false)
 	game_over_panel.show()
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
 
-	if winner_id == 0:
-		game_over_title.text = "JOUEUR 1 GAGNE LE MATCH"
-		game_over_title.add_theme_color_override("font_color", COLOR_P1)
-	elif winner_id == 1:
-		game_over_title.text = "JOUEUR 2 GAGNE LE MATCH"
-		game_over_title.add_theme_color_override("font_color", COLOR_P2)
-	else:
+	# Fin de MATCH (format BO1). En ligne chaque machine annonce l'issue du point
+	# de vue de son joueur ; en écran partagé les deux joueurs partagent l'écran,
+	# il n'y a pas de « toi » à désigner.
+	var local_idx := -1
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: local_idx = 0
+		NetworkManager.GameMode.ONLINE_CLIENT: local_idx = 1
+
+	if winner_id == -1:
 		game_over_title.text = "ÉGALITÉ"
 		game_over_title.add_theme_color_override("font_color", Color.WHITE)
+	elif local_idx == -1:
+		game_over_title.text = "JOUEUR 1 GAGNE" if winner_id == 0 else "JOUEUR 2 GAGNE"
+		game_over_title.add_theme_color_override("font_color",
+			COLOR_P1 if winner_id == 0 else COLOR_P2)
+	elif winner_id == local_idx:
+		game_over_title.text = "VICTOIRE"
+		game_over_title.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
+	else:
+		game_over_title.text = "DÉFAITE"
+		game_over_title.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 
 	_refresh_map_card()
 
@@ -2228,12 +2456,16 @@ func _on_dialog_closed() -> void:
 	_previous_focus = null
 
 ## [UI] Force la fermeture du menu pause s'il est ouvert, pour ne pas gêner la Killcam.
+## Le panneau lui-même doit disparaître : le laisser visible masquait la killcam
+## derrière un menu « PAUSE » que plus rien ne fermait.
 func force_close_pause() -> void:
 	if pause_info_container.visible:
 		pause_info_container.hide()
 		weapon_hbox.hide()
-		if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
-			get_tree().paused = false
+		game_over_panel.hide()
+	# Sans condition de mode : une pause locale ouverte au moment où l'on bascule
+	# en ligne laisserait l'arbre gelé.
+	get_tree().paused = false
 
 func _on_res_selected(index: int) -> void:
 	match index:

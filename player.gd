@@ -1,6 +1,14 @@
 extends CharacterBody2D
 class_name Player
 
+# Shaders partagés. Préchargés en ressource plutôt que compilés à la volée :
+# un Shader.new() dans die() faisait compiler le programme au moment exact du
+# premier mort, donc un hoquet visible pile sur l'action décisive.
+const SHADER_RIM_LIGHT := preload("res://player_rim_light.gdshader")
+const SHADER_ENEMY_LIGHT := preload("res://player_enemy_light.gdshader")
+const SHADER_VIGNETTE := preload("res://damage_vignette.gdshader")
+const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
+
 @export var player_id: int = 0
 @export var speed: float = 260.0
 @export var input_provider: InputProvider
@@ -29,6 +37,42 @@ var dead: bool = false
 # sans compteur, un paquet en retard réécraserait un état plus récent.
 var _input_seq: int = 0
 var _last_input_seq: int = -1
+
+# Rôle de simulation du nœud sur CETTE machine. Le client prédit son propre
+# joueur et se contente d'afficher l'autre ; partout ailleurs on simule.
+enum NetRole { SIMULATED, PREDICTED, INTERPOLATED }
+
+# Retard d'affichage du joueur distant : il doit couvrir un intervalle de
+# réplication (1/30 s) plus la gigue, sinon le tampon se vide et on extrapole.
+const INTERP_DELAY := 0.1
+const EXTRAPOLATION_MAX := 0.05
+const SNAPSHOT_BUFFER_MAX := 32
+# Au-delà, l'écart entre deux instantanés ne peut pas être un déplacement :
+# c'est une réapparition, qu'il ne faut surtout pas interpoler en glissade.
+const TELEPORT_THRESHOLD := 300.0
+
+# Correction de prédiction : sous la zone morte l'écart est invisible, au-delà
+# du seuil de resynchronisation la convergence douce serait trop lente.
+const PREDICT_DEADZONE := 4.0
+const PREDICT_SNAP := 100.0
+const PREDICT_CORRECTION_RATE := 12.0
+const PREDICT_ROT_SNAP := 1.0
+const PREDICT_HISTORY_MAX := 120
+
+# État répliqué hôte→client. Il n'écrit jamais le nœud directement : chaque
+# machine décide comment le consommer selon son rôle.
+var net_position: Vector2 = Vector2.ZERO
+var net_rotation: float = 0.0
+var net_flashlight_on: bool = false
+# Dernier input client appliqué par l'hôte. Sans lui, le client comparerait sa
+# position prédite — en avance d'un aller-retour — à un état plus ancien, et
+# se corrigerait en permanence vers le passé.
+var net_ack_seq: int = -1
+
+var _net_snapshots: Array[Dictionary] = []
+var _predict_history: Dictionary = {}
+var _predict_error: Vector2 = Vector2.ZERO
+var _last_corrected_seq: int = -1
 
 # La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
 # changement ici pour que le son suive dans tous les modes.
@@ -78,13 +122,18 @@ func _ready():
 	var sync = MultiplayerSynchronizer.new()
 	sync.name = "MultiplayerSynchronizer"
 	var rep_config = SceneReplicationConfig.new()
-	rep_config.add_property(NodePath(".:global_position"))
-	rep_config.add_property(NodePath(".:rotation"))
-	rep_config.add_property(NodePath(".:flashlight_on"))
+	rep_config.add_property(NodePath(".:net_position"))
+	rep_config.add_property(NodePath(".:net_rotation"))
+	rep_config.add_property(NodePath(".:net_flashlight_on"))
+	rep_config.add_property(NodePath(".:net_ack_seq"))
 	# L'hôte est autorité sur les deux joueurs : la réplication va toujours
 	# hôte→client, y compris pour les HP.
 	rep_config.add_property(NodePath(".:hp"))
 	sync.replication_config = rep_config
+	# Cadence explicite : c'est l'interpolation qui doit rendre les 30 Hz
+	# invisibles, pas le débit réseau.
+	sync.replication_interval = 1.0 / 30.0
+	sync.synchronized.connect(_on_net_synchronized)
 	add_child(sync)
 	
 	var p_color = Color(0, 0.94, 1.0) if player_id == 0 else Color(1.0, 0, 0.33)
@@ -204,40 +253,12 @@ func _ready():
 	_calculate_uvs(visual_enemy_ptr)
 		
 	# Shader to boost lighting on the player's edges so they look like they have volume
-	var light_boost_shader = Shader.new()
-	light_boost_shader.code = """
-shader_type canvas_item;
-void light() {
-	// UV center is (0.5, 0.5). We calculate distance to center.
-	float d = distance(UV, vec2(0.5));
-	// Rim is strictly confined to the extreme outer edge
-	float rim = smoothstep(0.42, 0.48, d);
-	// Center is dark (0.4), edge is brightly illuminated (4.0). This creates a solid 3D effect instead of a hollow ring!
-	float boost = mix(0.4, 4.0, rim);
-	LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb * boost, LIGHT_COLOR.a);
-}
-"""
 	var light_boost_mat = ShaderMaterial.new()
-	light_boost_mat.shader = light_boost_shader
+	light_boost_mat.shader = SHADER_RIM_LIGHT
 
 	# Smooth shader for the enemy: renders capped base gray color when illuminated, pitch black in shadow.
-	var enemy_shader = Shader.new()
-	enemy_shader.code = """
-shader_type canvas_item;
-void light() {
-	float light_val = max(max(LIGHT_COLOR.r, LIGHT_COLOR.g), LIGHT_COLOR.b);
-	if (light_val > 0.001) {
-		// Boost incoming light slightly so the enemy is uniformly gray anywhere in the torch cone,
-		// but clamp to COLOR.rgb so it NEVER overexposes to white!
-		vec3 lit = COLOR.rgb * (light_val * 4.0);
-		LIGHT = vec4(min(lit, COLOR.rgb), LIGHT_COLOR.a);
-	} else {
-		LIGHT = vec4(0.0); // Pitch black in shadow / unlit
-	}
-}
-"""
 	var enemy_mat = ShaderMaterial.new()
-	enemy_mat.shader = enemy_shader
+	enemy_mat.shader = SHADER_ENEMY_LIGHT
 	visual_enemy.material = enemy_mat
 	visual_enemy_ptr.material = enemy_mat
 	
@@ -259,23 +280,8 @@ void light() {
 	# Use the correct visibility layer so it only shows on the player's own viewport
 	vignette_rect.visibility_layer = 2 if player_id == 0 else 4
 	
-	var shader = Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform vec4 vignette_color : source_color = vec4(1.0, 0.0, 0.0, 1.0);
-uniform float intensity = 0.0;
-uniform float smoothness = 0.8;
-
-void fragment() {
-	vec2 uv = UV;
-	float d = distance(uv, vec2(0.5));
-	float v = smoothstep(0.5 - smoothness * 0.5, 0.5 + smoothness * 0.5, d);
-	COLOR = vignette_color;
-	COLOR.a = v * intensity;
-}
-	"""
 	vignette_mat = ShaderMaterial.new()
-	vignette_mat.shader = shader
+	vignette_mat.shader = SHADER_VIGNETTE
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 	
@@ -407,6 +413,14 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture_scale = weapon.torch_scale
 
 func _process(delta):
+	# Publié ici et non dans _physics_process : les sorties anticipées (mort,
+	# menu, round inactif) y laisseraient l'état répliqué figé sur du passé.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		net_position = global_position
+		net_rotation = rotation
+		net_flashlight_on = flashlight_on
+		net_ack_seq = _last_input_seq
+
 	# Hors du bloc de simulation : côté client la torche est répliquée, et les
 	# sorties anticipées de _physics_process ne doivent pas laisser le son bloqué.
 	if flashlight_on != _torch_audio_state:
@@ -457,13 +471,139 @@ func reset_network_input() -> void:
 	if input_provider and input_provider.has_method("reset_input_state"):
 		input_provider.reset_input_state()
 
-func _send_inputs_to_host() -> void:
+## `neutral` : commandes vidées plutôt que tues. Cesser d'émettre laisserait
+## l'hôte rejouer la dernière commande reçue, donc courir sans personne aux
+## commandes.
+func _send_inputs_to_host(neutral: bool = false) -> void:
+	if neutral:
+		_input_seq += 1
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
+		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	var sprint := input_provider.is_sprint_pressed() and mov.length() > 0.1
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(), sprint)
+
+## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
+## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
+func _is_locally_piloted() -> bool:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST:
+			return player_id == 0
+		NetworkManager.GameMode.ONLINE_CLIENT:
+			return player_id == 1
+	return false
+
+func _net_role() -> NetRole:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return NetRole.SIMULATED
+	# Le client ne pilote que P2 ; P1 lui est purement répliqué.
+	return NetRole.PREDICTED if player_id == 1 else NetRole.INTERPOLATED
+
+## [Client] Un paquet d'état vient d'être appliqué sur les variables tampon.
+func _on_net_synchronized() -> void:
+	match _net_role():
+		NetRole.INTERPOLATED:
+			if not _net_snapshots.is_empty() \
+					and _net_snapshots[-1]["pos"].distance_to(net_position) > TELEPORT_THRESHOLD:
+				_net_snapshots.clear()
+			_net_snapshots.append({
+				"t": Time.get_ticks_msec() / 1000.0,
+				"pos": net_position,
+				"rot": net_rotation,
+				"torch": net_flashlight_on,
+			})
+			if _net_snapshots.size() > SNAPSHOT_BUFFER_MAX:
+				_net_snapshots.remove_at(0)
+		NetRole.PREDICTED:
+			_ingest_prediction_correction()
+
+## [Client] Compare l'état hôte à la position qu'on avait prédite pour l'input
+## que l'hôte dit avoir appliqué. Un ack déjà traité veut dire que l'hôte a
+## rejoué le même input faute de paquet neuf : le recomparer inventerait un
+## écart égal au déplacement entretemps.
+func _ingest_prediction_correction() -> void:
+	if net_ack_seq <= _last_corrected_seq: return
+	_last_corrected_seq = net_ack_seq
+
+	var past = _predict_history.get(net_ack_seq)
+	for seq in _predict_history.keys():
+		if seq <= net_ack_seq:
+			_predict_history.erase(seq)
+	if past == null: return
+
+	var err: Vector2 = net_position - past["pos"]
+	var dist := err.length()
+	if dist > PREDICT_SNAP:
+		# Désynchronisation franche : l'historique n'est plus fiable, on repart
+		# de la vérité hôte quitte à perdre un aller-retour de prédiction.
+		global_position = net_position
+		rotation = net_rotation
+		_predict_error = Vector2.ZERO
+		_predict_history.clear()
+	elif dist > PREDICT_DEADZONE:
+		_predict_error = err
+	else:
+		_predict_error = Vector2.ZERO
+
+	if absf(angle_difference(net_rotation, past["rot"])) > PREDICT_ROT_SNAP:
+		rotation = net_rotation
+
+## [Client] Consomme progressivement l'écart mesuré : appliqué d'un coup, il
+## serait perçu comme un à-coup à chaque paquet.
+func _consume_prediction_error(delta: float) -> void:
+	if _predict_error == Vector2.ZERO: return
+	var step := _predict_error * (1.0 - exp(-PREDICT_CORRECTION_RATE * delta))
+	global_position += step
+	_predict_error -= step
+	if _predict_error.length() < 0.5:
+		_predict_error = Vector2.ZERO
+
+## [Client] Rend le joueur distant INTERP_DELAY en arrière : on dispose alors
+## presque toujours de deux instantanés encadrants, malgré les 30 Hz.
+func _apply_remote_interpolation() -> void:
+	if _net_snapshots.is_empty(): return
+
+	var render_t := Time.get_ticks_msec() / 1000.0 - INTERP_DELAY
+	var first: Dictionary = _net_snapshots[0]
+	var last: Dictionary = _net_snapshots[-1]
+
+	if _net_snapshots.size() == 1 or render_t <= first["t"]:
+		global_position = first["pos"]
+		rotation = first["rot"]
+		flashlight_on = first["torch"]
+		return
+
+	if render_t >= last["t"]:
+		# Tampon épuisé : on prolonge brièvement la dernière vitesse connue
+		# plutôt que de figer l'adversaire sur un paquet manquant.
+		var prev: Dictionary = _net_snapshots[-2]
+		var gap: float = last["t"] - prev["t"]
+		var ahead := minf(render_t - last["t"], EXTRAPOLATION_MAX)
+		if gap > 0.0001:
+			global_position = last["pos"] + (last["pos"] - prev["pos"]) / gap * ahead
+			rotation = last["rot"] + angle_difference(prev["rot"], last["rot"]) / gap * ahead
+		else:
+			global_position = last["pos"]
+			rotation = last["rot"]
+		flashlight_on = last["torch"]
+		return
+
+	for i in range(_net_snapshots.size() - 1):
+		var a: Dictionary = _net_snapshots[i]
+		var b: Dictionary = _net_snapshots[i + 1]
+		if render_t <= b["t"]:
+			var span: float = b["t"] - a["t"]
+			var w: float = 0.0 if span <= 0.0001 else (render_t - a["t"]) / span
+			global_position = a["pos"].lerp(b["pos"], w)
+			rotation = lerp_angle(a["rot"], b["rot"], w)
+			flashlight_on = a["torch"]
+			# Les instantanés antérieurs ne resserviront plus.
+			if i > 0:
+				_net_snapshots = _net_snapshots.slice(i)
+			return
 
 ## [Serveur / Client] Gère la physique (Sandbox autorisé).
 func _physics_process(delta):
@@ -475,14 +615,37 @@ func _physics_process(delta):
 		flashlight_on = false
 		return
 		
-	# En ligne, le client ne simule plus rien : il émet ses commandes et affiche
-	# l'état que l'hôte lui réplique (mouvement donc soumis à la latence).
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and player_id == 1:
-		_send_inputs_to_host()
+	# Le client émet ses commandes puis simule quand même : l'état hôte ne sert
+	# qu'à corriger. L'adversaire, lui, n'est jamais simulé ici.
+	var role := _net_role()
+	# Menu pause en ligne : l'arbre n'est pas gelé, le joueur reste donc une
+	# cible — mais les touches servent à naviguer, elles ne doivent plus piloter
+	# le personnage.
+	var menu_open: bool = state != null and _is_locally_piloted() and state.ui.is_pause_menu_open()
+	if role == NetRole.PREDICTED:
+		_send_inputs_to_host(menu_open)
+	elif role == NetRole.INTERPOLATED:
+		_apply_remote_interpolation()
 
-	var can_move = true
-	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
+	# Décompte de départ : plus personne ne bouge, ne vise ni ne tire. Placé
+	# après l'interpolation pour que l'adversaire soit tout de même rendu à sa
+	# position d'apparition et non sur un instantané périmé.
+	if state and state.countdown_left > 0.0:
+		velocity = Vector2.ZERO
+		is_sprinting = false
+		flashlight_on = false
+		flashlight.enabled = false
+		body_light.enabled = false
+		_update_aim_line()
+		return
+
+	var can_move = role != NetRole.INTERPOLATED
+	if role == NetRole.SIMULATED and NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
 		can_move = is_multiplayer_authority()
+	if menu_open:
+		velocity = Vector2.ZERO
+		is_sprinting = false
+		can_move = false
 
 	if state and not (state.round_active or state.sandbox_mode):
 		if can_move:
@@ -529,6 +692,14 @@ func _physics_process(delta):
 		else:
 			flashlight_on = input_provider.is_flashlight_pressed()
 
+		if role == NetRole.PREDICTED:
+			# Correction appliquée AVANT l'archivage : l'historique doit décrire
+			# la position réellement affichée, sinon l'écart serait recompté.
+			_consume_prediction_error(delta)
+			_predict_history[_input_seq] = {"pos": global_position, "rot": rotation}
+			if _predict_history.size() > PREDICT_HISTORY_MAX:
+				_predict_history.erase(_predict_history.keys()[0])
+
 	# Visuals update for all clients
 	flashlight.enabled = flashlight_on
 	body_light.enabled = flashlight_on
@@ -544,16 +715,19 @@ func _physics_process(delta):
 		else:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6
 	
-	if aim_cast and aim_line:
-		var end_pos = Vector2(2000, 0)
-		if aim_cast.is_colliding():
-			end_pos = to_local(aim_cast.get_collision_point())
-		aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
-	
+	_update_aim_line()
+
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	if can_move and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
+
+func _update_aim_line() -> void:
+	if aim_cast == null or aim_line == null: return
+	var end_pos = Vector2(2000, 0)
+	if aim_cast.is_colliding():
+		end_pos = to_local(aim_cast.get_collision_point())
+	aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
@@ -624,18 +798,11 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		die(killer)
 	# Dynamic red light illuminating the scene to sell the impact
 	var hit_light = PointLight2D.new()
-	var grad = GradientTexture2D.new()
-	grad.fill = GradientTexture2D.FILL_RADIAL
-	grad.fill_from = Vector2(0.5, 0.5)
-	grad.fill_to = Vector2(1, 0.5)
-	var g = Gradient.new()
+	# Texture blanche partagée, teintée par `color` : une 400×400 était allouée
+	# à chaque impact reçu.
+	hit_light.texture = LightTextures.radial(400)
 	# Pure blood red light, not pink/magenta
-	g.set_color(0, Color(0.9, 0.0, 0.0, 1.0))
-	g.set_color(1, Color(0.9, 0.0, 0.0, 0.0))
-	grad.gradient = g
-	grad.width = 400
-	grad.height = 400
-	hit_light.texture = grad
+	hit_light.color = Color(0.9, 0.0, 0.0)
 	hit_light.energy = 2.0
 	hit_light.shadow_enabled = true
 	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
@@ -677,24 +844,8 @@ func die(killer: Node2D):
 	var flash_rect = ColorRect.new()
 	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	
-	var shader = Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
-uniform float flash_intensity : hint_range(0.0, 1.0) = 1.0;
-uniform float aberration_amount = 0.05;
-
-void fragment() {
-	float offset = aberration_amount * flash_intensity;
-	float r = texture(screen_texture, SCREEN_UV + vec2(offset, 0.0)).r;
-	float g = texture(screen_texture, SCREEN_UV).g;
-	float b = texture(screen_texture, SCREEN_UV - vec2(offset, 0.0)).b;
-	vec3 color = mix(vec3(r, g, b), vec3(1.0), flash_intensity);
-	COLOR = vec4(color, 1.0);
-}
-"""
 	var mat = ShaderMaterial.new()
-	mat.shader = shader
+	mat.shader = SHADER_DEATH_FLASH
 	mat.set_shader_parameter("flash_intensity", 1.0)
 	flash_rect.material = mat
 	ui_layer.add_child(flash_rect)
