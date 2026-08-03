@@ -626,20 +626,26 @@ func _process(delta):
 
 func _check_dazzle(delta: float):
 	var space = p1.get_world_2d().direct_space_state
-	
+	# Le rayon suit la lumière, pas le déplacement : il ne teste donc que les
+	# murs et les joueurs (couche 1). Une fosse laisse passer le faisceau, on
+	# peut éblouir son adversaire par-dessus un gouffre.
+	var light_mask := MapGeometry.WALL_LAYER
+
 	if p1.flashlight_on:
 		var p1_to_p2 = p1.global_position.direction_to(p2.global_position)
 		if p1.global_transform.x.dot(p1_to_p2) > 0.866:
-			var q = PhysicsRayQueryParameters2D.create(p1.global_position, p2.global_position)
+			var q = PhysicsRayQueryParameters2D.create(
+				p1.global_position, p2.global_position, light_mask)
 			q.exclude = [p1.get_rid()]
 			var res = space.intersect_ray(q)
 			if res and res.collider == p2:
 				p2.apply_dazzle(0.5 * delta)
-				
+
 	if p2.flashlight_on:
 		var p2_to_p1 = p2.global_position.direction_to(p1.global_position)
 		if p2.global_transform.x.dot(p2_to_p1) > 0.866:
-			var q = PhysicsRayQueryParameters2D.create(p2.global_position, p1.global_position)
+			var q = PhysicsRayQueryParameters2D.create(
+				p2.global_position, p1.global_position, light_mask)
 			q.exclude = [p2.get_rid()]
 			var res = space.intersect_ray(q)
 			if res and res.collider == p1:

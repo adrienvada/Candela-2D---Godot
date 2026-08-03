@@ -21,8 +21,15 @@
 class_name MapGeometry
 extends RefCounted
 
-## Nom du corps unique produit par build_collisions().
+## Nom du conteneur produit par build_collisions().
 const BODY_NAME := "MapCollisions"
+## Couche physique des murs pleins : joueurs ET balles s'y arrêtent.
+const WALL_LAYER := 1
+## Couche physique des fosses : seuls les joueurs s'y arrêtent. Les balles ne
+## testent que la couche 1 (voir bullet.gd), elles survolent donc le vide.
+const PIT_LAYER := 2
+## Masque à donner aux joueurs pour qu'ils soient arrêtés par les deux.
+const PLAYER_MASK := WALL_LAYER | PIT_LAYER
 ## Retrait, en pixels, de l'occluder par rapport à la forme de collision.
 ## Laisse la face éclairée du mur capter la lumière — sans lui, le mur est
 ## dans sa propre ombre et reste invisible. La collision, elle, couvre
@@ -36,12 +43,22 @@ const BORDER := 1
 # GRILLE DE SOLIDITÉ
 # ---------------------------------------------------------------------------
 
-## Grille booléenne de solidité. solid[x][y] == true si la case bloque.
+## Deux natures d'obstacle, à ne surtout pas confondre :
+##   MURS   — pleins. Ils arrêtent le joueur, les balles ET la lumière.
+##   FOSSES — le vide, l'absence de sol. Elles arrêtent le joueur, mais la
+##            lumière et les balles les traversent. On doit pouvoir se tirer
+##            dessus d'une rive à l'autre d'un gouffre.
+enum Kind { WALLS, PITS }
+
+## Grille booléenne d'un seul type d'obstacle.
 ##
 ## Dimensions : (grid_size + 2 × BORDER) sur chaque axe. Le décalage BORDER
 ## sépare les indices de grille des coordonnées de cellule de la carte :
 ##   cellule = indice - BORDER
-static func build_solid_grid(data: Dictionary) -> Array:
+##
+## La ceinture de bordure est une FOSSE et non un mur : sortir de la carte est
+## impossible, mais rien n'empêche la lumière de filer au-delà du sol.
+static func build_grid(data: Dictionary, kind: Kind) -> Array:
 	var grid := MapCodec.get_grid_size(data)
 	var cells_w: int = clampi(grid.x, 1, MapCodec.MAX_GRID)
 	var cells_h: int = clampi(grid.y, 1, MapCodec.MAX_GRID)
@@ -61,18 +78,38 @@ static func build_solid_grid(data: Dictionary) -> Array:
 	var width: int = cells_w + BORDER * 2
 	var height: int = cells_h + BORDER * 2
 
-	var solid: Array = []
-	solid.resize(width)
+	var out: Array = []
+	out.resize(width)
 	for ix in width:
 		var column: Array[bool] = []
 		column.resize(height)
 		for iy in height:
 			var cell := Vector2i(ix - BORDER, iy - BORDER)
-			# Un mur bloque ; l'absence de sol bloque tout autant.
-			column[iy] = wall_set.has(cell) or not floor_set.has(cell)
-		solid[ix] = column
+			if kind == Kind.WALLS:
+				column[iy] = wall_set.has(cell)
+			else:
+				# Fosse : pas de sol, et pas déjà occupée par un mur.
+				column[iy] = not floor_set.has(cell) and not wall_set.has(cell)
+		out[ix] = column
 
-	return solid
+	return out
+
+## Union des murs et des fosses — tout ce qui arrête le joueur.
+## Sert à la validation et aux tests de couverture, pas à la construction.
+static func build_solid_grid(data: Dictionary) -> Array:
+	var walls := build_grid(data, Kind.WALLS)
+	var pits := build_grid(data, Kind.PITS)
+
+	var out: Array = []
+	out.resize(walls.size())
+	for ix in walls.size():
+		var column: Array[bool] = []
+		column.resize((walls[ix] as Array).size())
+		for iy in column.size():
+			column[iy] = walls[ix][iy] or pits[ix][iy]
+		out[ix] = column
+
+	return out
 
 # ---------------------------------------------------------------------------
 # FUSION GLOUTONNE
@@ -152,24 +189,47 @@ static func merge_rects(solid: Array) -> Array[Rect2i]:
 ## raccord selon l'angle. Les contours tracés suppriment ces coutures — la
 ## bascule se fera après validation visuelle, la géométrie est déjà prête.
 static func build_collisions(data: Dictionary, parent: Node,
-		tile_size: Vector2i = CandelaTileSet.TILE_SIZE) -> StaticBody2D:
+		tile_size: Vector2i = CandelaTileSet.TILE_SIZE) -> Node2D:
 	# Un rematch reconstruit la carte : on évacue la génération précédente.
 	var previous := parent.get_node_or_null(BODY_NAME)
 	if previous != null:
 		# Retrait immédiat de l'arbre : queue_free() seul ne rendrait le nom
-		# disponible qu'en fin de frame, et le nouveau corps hériterait d'un
-		# nom suffixé que personne ne saurait retrouver.
+		# disponible qu'en fin de frame, et le nouveau conteneur hériterait
+		# d'un nom suffixé que personne ne saurait retrouver.
 		parent.remove_child(previous)
 		previous.queue_free()
 
-	var body := StaticBody2D.new()
-	body.name = BODY_NAME
-	# Couche 1 = géométrie statique. bullet.gd et les particules testent ce
-	# masque : toute autre valeur rendrait les murs traversables.
-	body.collision_layer = 1
-	body.collision_mask = 1
+	var root := Node2D.new()
+	root.name = BODY_NAME
 
-	var rects := merge_rects(build_solid_grid(data))
+	# --- Murs : arrêtent le joueur, les balles, et projettent une ombre ---
+	var walls := StaticBody2D.new()
+	walls.name = "Murs"
+	# Couche 1 = géométrie opaque. bullet.gd teste ce masque : toute autre
+	# valeur rendrait les murs traversables par les projectiles.
+	walls.collision_layer = WALL_LAYER
+	walls.collision_mask = 0
+	_fill_body(walls, merge_rects(build_grid(data, Kind.WALLS)), tile_size, true)
+	root.add_child(walls)
+
+	# --- Fosses : arrêtent le joueur, et lui seul ---
+	var pits := StaticBody2D.new()
+	pits.name = "Fosses"
+	# Couche dédiée, absente du masque des balles : un projectile survole le
+	# gouffre, la lumière aussi (aucun occluder n'est produit ici).
+	pits.collision_layer = PIT_LAYER
+	pits.collision_mask = 0
+	_fill_body(pits, merge_rects(build_grid(data, Kind.PITS)), tile_size, false)
+	root.add_child(pits)
+
+	parent.add_child(root)
+	return root
+
+## Peuple un corps avec les rectangles fusionnés. `occluding` décide de la
+## génération des LightOccluder2D — c'est la seule différence entre un mur,
+## qui arrête la lumière, et une fosse, qui la laisse passer.
+static func _fill_body(body: StaticBody2D, rects: Array[Rect2i],
+		tile_size: Vector2i, occluding: bool) -> void:
 	var cell_size := Vector2(tile_size)
 
 	for i in rects.size():
@@ -187,6 +247,9 @@ static func build_collisions(data: Dictionary, parent: Node,
 		shape.position = center
 		body.add_child(shape)
 
+		if not occluding:
+			continue
+
 		var occluder := LightOccluder2D.new()
 		occluder.name = "Occluder%d" % i
 		occluder.position = center
@@ -195,9 +258,6 @@ static func build_collisions(data: Dictionary, parent: Node,
 		# et les étincelles moulinent toutes shadow_item_cull_mask & 1.
 		occluder.occluder = _build_rect_occluder(size)
 		body.add_child(occluder)
-
-	parent.add_child(body)
-	return body
 
 ## Polygone d'occlusion d'un rectangle centré sur l'origine du nœud.
 ## Sommets en coordonnées locales, sens horaire à l'écran (y vers le bas),

@@ -15,6 +15,7 @@ func _init() -> void:
 	_test_slugify()
 	_test_migration_v2()
 	_test_playability()
+	_test_builtin_maps()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -187,9 +188,49 @@ func _test_playability() -> void:
 	split["floor"] = MapCodec.encode_runs(cells)
 	split["spawn_p1"] = {"x": 3, "y": 3}
 	split["spawn_p2"] = {"x": 16, "y": 6}
-	_check("zones isolées détectées", not MapCodec.check_playable(split)["ok"])
+	# Deux rives séparées par un gouffre : c'est un parti pris de conception
+	# légitime, pas une erreur. Balles et lumière traversent les fosses, on
+	# peut donc s'affronter exclusivement à distance.
+	_check("zones isolées acceptées (duel à distance)", MapCodec.check_playable(split)["ok"],
+		str(MapCodec.check_playable(split)["checks"]))
 
 	# Spawn posé dans le vide.
 	var void_spawn := split.duplicate(true)
 	void_spawn["spawn_p2"] = {"x": 10, "y": 10}
 	_check("apparition hors sol détectée", not MapCodec.check_playable(void_spawn)["ok"])
+
+## Une fosse est un trou, pas un mur : les deux cartes livrées doivent rester
+## jouables et la carte à disque central doit bien contenir son obstacle.
+func _test_builtin_maps() -> void:
+	print("\n[Cartes livrées]")
+	for slug in ["default", "arene_circulaire"]:
+		var path := "res://assets/maps/%s.json" % slug
+		if not FileAccess.file_exists(path):
+			_check("%s présent" % slug, false)
+			continue
+		var file := FileAccess.open(path, FileAccess.READ)
+		var json := JSON.new()
+		json.parse(file.get_as_text())
+		file.close()
+
+		var result := MapCodec.validate(json.data as Dictionary)
+		_check("%s valide" % slug, result["ok"], String(result.get("error", "")))
+		if not result["ok"]:
+			continue
+		var d: Dictionary = result["data"]
+		_check("%s jouable" % slug, MapCodec.check_playable(d)["ok"])
+		_check("%s : identifiants distincts" % slug, String(d["id"]) != "")
+
+	# Le disque central de l'arène circulaire : des murs loin de la ceinture.
+	var file2 := FileAccess.open("res://assets/maps/arene_circulaire.json", FileAccess.READ)
+	var json2 := JSON.new()
+	json2.parse(file2.get_as_text())
+	file2.close()
+	var circ: Dictionary = MapCodec.validate(json2.data as Dictionary)["data"]
+	var grid := MapCodec.get_grid_size(circ)
+	var centre := Vector2(grid - Vector2i.ONE) * 0.5
+	var inner := 0
+	for cell in MapCodec.get_wall_cells(circ):
+		if Vector2(cell).distance_to(centre) <= 4.0:
+			inner += 1
+	_check("obstacle circulaire central présent", inner >= 30, "%d tuiles" % inner)

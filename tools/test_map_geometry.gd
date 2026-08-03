@@ -244,20 +244,30 @@ func _test_build_collisions() -> void:
 		return
 
 	var parent := Node2D.new()
-	var body := MapGeometry.build_collisions(map, parent)
+	var root := MapGeometry.build_collisions(map, parent)
 
-	_check("corps retourné", body != null)
-	if body == null:
+	_check("conteneur retourné", root != null)
+	if root == null:
 		parent.free()
 		return
 
-	_check("nom du corps = MapCollisions", body.name == MapGeometry.BODY_NAME, str(body.name))
-	_check("enfant du parent fourni", body.get_parent() == parent)
-	_check("collision_layer = 1 (bullet.gd teste ce masque)", body.collision_layer == 1,
-		str(body.collision_layer))
-	_check("collision_mask = 1", body.collision_mask == 1, str(body.collision_mask))
-	_check("un seul StaticBody2D produit", parent.get_child_count() == 1,
-		"%d enfants" % parent.get_child_count())
+	_check("nom du conteneur = MapCollisions", root.name == MapGeometry.BODY_NAME, str(root.name))
+	_check("enfant du parent fourni", root.get_parent() == parent)
+
+	var body := root.get_node_or_null("Murs") as StaticBody2D
+	var pit_body := root.get_node_or_null("Fosses") as StaticBody2D
+	_check("corps des murs présent", body != null)
+	_check("corps des fosses présent", pit_body != null)
+	if body == null or pit_body == null:
+		parent.free()
+		return
+
+	_check("murs sur la couche 1 (bullet.gd teste ce masque)",
+		body.collision_layer == MapGeometry.WALL_LAYER, str(body.collision_layer))
+	_check("fosses sur une couche distincte des murs",
+		pit_body.collision_layer == MapGeometry.PIT_LAYER
+			and pit_body.collision_layer != MapGeometry.WALL_LAYER,
+		str(pit_body.collision_layer))
 
 	var shapes: Array[CollisionShape2D] = []
 	var occluders: Array[LightOccluder2D] = []
@@ -267,12 +277,25 @@ func _test_build_collisions() -> void:
 		elif child is LightOccluder2D:
 			occluders.append(child)
 
-	var expected := MapGeometry.merge_rects(MapGeometry.build_solid_grid(map)).size()
-	_check("autant de formes que de rectangles", shapes.size() == expected,
+	var expected := MapGeometry.merge_rects(
+		MapGeometry.build_grid(map, MapGeometry.Kind.WALLS)).size()
+	_check("autant de formes que de rectangles de mur", shapes.size() == expected,
 		"%d vs %d" % [shapes.size(), expected])
 	_check("autant d'occluders que de formes", occluders.size() == shapes.size(),
 		"%d occluders vs %d formes" % [occluders.size(), shapes.size()])
 	_check("aucun autre enfant parasite", body.get_child_count() == shapes.size() + occluders.size())
+
+	# LE point de la règle « une fosse est un trou, pas un mur ».
+	var pit_shapes := 0
+	var pit_occluders := 0
+	for child in pit_body.get_children():
+		if child is CollisionShape2D:
+			pit_shapes += 1
+		elif child is LightOccluder2D:
+			pit_occluders += 1
+	_check("les fosses ont des collisions", pit_shapes > 0, "%d formes" % pit_shapes)
+	_check("les fosses ne projettent AUCUNE ombre", pit_occluders == 0,
+		"%d occluders de trop" % pit_occluders)
 
 	var geometry_ok := true
 	var mask_ok := true
@@ -322,21 +345,29 @@ func _test_build_collisions() -> void:
 	var spawn := MapCodec.get_spawn(map, 0)
 	var spawn_center := (Vector2(spawn) + Vector2(0.5, 0.5)) * cell_size
 	var spawn_blocked := false
-	var outside_blocked := false
 	var outside_point := Vector2(-0.5, -0.5) * cell_size
 	for shape in shapes:
 		var box := shape.shape as RectangleShape2D
 		var rect := Rect2(shape.position - box.size * 0.5, box.size)
 		if rect.has_point(spawn_center):
 			spawn_blocked = true
-		if rect.has_point(outside_point):
-			outside_blocked = true
 	_check("apparition J1 laissée libre", not spawn_blocked)
-	_check("extérieur de la grille muré", outside_blocked)
+
+	# L'extérieur de la grille est une fosse, pas un mur : on ne peut pas y
+	# aller, mais la lumière file au-delà sans être arrêtée.
+	var outside_blocked := false
+	for child in pit_body.get_children():
+		if child is CollisionShape2D:
+			var pit_box := (child as CollisionShape2D).shape as RectangleShape2D
+			var pit_rect := Rect2((child as CollisionShape2D).position - pit_box.size * 0.5,
+				pit_box.size)
+			if pit_rect.has_point(outside_point):
+				outside_blocked = true
+	_check("extérieur de la grille infranchissable (fosse)", outside_blocked)
 
 	# Reconstruction (rematch) : le corps précédent doit céder sa place.
 	var rebuilt := MapGeometry.build_collisions(map, parent)
-	_check("reconstruction : le nom reste sur le nouveau corps",
+	_check("reconstruction : le nom reste sur le nouveau conteneur",
 		parent.get_node_or_null(MapGeometry.BODY_NAME) == rebuilt)
 	_check("reconstruction : pas d'empilement de corps", parent.get_child_count() == 1,
 		"%d enfants" % parent.get_child_count())
@@ -463,8 +494,9 @@ func _test_occluder_inset_keeps_collision_intact() -> void:
 	print("\n[Retrait d'occlusion]")
 	var data := _default_map()
 	var arena := Node2D.new()
-	var body := MapGeometry.build_collisions(data, arena)
-	var solid_cells := _count_solid(MapGeometry.build_solid_grid(data))
+	var root := MapGeometry.build_collisions(data, arena)
+	var body := root.get_node("Murs") as StaticBody2D
+	var wall_cells := _count_solid(MapGeometry.build_grid(data, MapGeometry.Kind.WALLS))
 
 	var collision_area := 0.0
 	var occluder_area := 0.0
@@ -480,7 +512,7 @@ func _test_occluder_inset_keeps_collision_intact() -> void:
 			occluder_area += w * h
 
 	_check("la collision couvre la tuile entière (aire inchangée)",
-		is_equal_approx(collision_area, float(solid_cells) * 35.0 * 35.0),
+		is_equal_approx(collision_area, float(wall_cells) * 35.0 * 35.0),
 		"%.0f px²" % collision_area)
 	_check("l'occlusion est strictement plus petite que la collision",
 		occluder_area < collision_area, "%.0f vs %.0f" % [occluder_area, collision_area])
@@ -497,7 +529,7 @@ func _test_occluder_inset_keeps_collision_intact() -> void:
 	tiny["spawn_p2"] = {"x": 6, "y": 6}
 
 	var arena2 := Node2D.new()
-	var body2 := MapGeometry.build_collisions(tiny, arena2)
+	var body2 := (MapGeometry.build_collisions(tiny, arena2)).get_node("Murs")
 	var min_side := INF
 	for child in body2.get_children():
 		if child is LightOccluder2D:

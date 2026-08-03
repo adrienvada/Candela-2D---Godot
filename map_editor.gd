@@ -65,6 +65,7 @@ const EDITOR_ACTIONS: Array[String] = [
 	"editor_draw", "editor_erase", "editor_mod_rect", "editor_mod_fill",
 	"editor_step_prev", "editor_step_next", "editor_undo",
 	"editor_save", "editor_test", "editor_back", "editor_light", "editor_frame",
+	"editor_brush",
 ]
 
 # ---------------------------------------------------------------------------
@@ -112,6 +113,9 @@ var _pulse: float = 0.0
 
 var _stroke_active: bool = false
 var _stroke_painting: bool = true
+## Pinceau choisi de façon persistante. Le rectangle est le défaut : tracer
+## une salle en deux points évite de peindre le sol case par case.
+var _brush_mode: Brush = Brush.RECT
 var _stroke_brush: Brush = Brush.FREE
 var _stroke_anchor := Vector2i.ZERO
 var _stroke_last := Vector2i.ZERO
@@ -257,6 +261,9 @@ func _setup_inputs() -> void:
 	add_key.call("editor_move_right", KEY_D)
 	add_key.call("editor_move_up", KEY_W)
 	add_key.call("editor_move_down", KEY_S)
+
+	# --- Changement de pinceau (rectangle / libre / pot) ---
+	add_key.call("editor_brush", KEY_B)
 
 	# --- Caméra : stick droit ---
 	add_axis.call("editor_pan_left", JOY_AXIS_RIGHT_X, -1.0)
@@ -501,6 +508,8 @@ func _process_commands() -> void:
 		_toggle_light_preview()
 	if Input.is_action_just_pressed("editor_frame"):
 		camera.frame_all()
+	if Input.is_action_just_pressed("editor_brush"):
+		_cycle_brush()
 
 func _process_sandbox(_delta: float) -> void:
 	if Input.is_action_just_pressed("editor_back") \
@@ -522,12 +531,42 @@ func _is_fill_modifier() -> bool:
 	return Input.is_action_pressed("editor_mod_fill") \
 		or Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META)
 
+## Pinceau effectif : le mode choisi de façon persistante, qu'un modificateur
+## maintenu peut ponctuellement remplacer.
+##
+## Le rectangle est le mode par défaut sur le sol et les murs : délimiter une
+## salle en deux points est bien moins laborieux que de peindre case par case.
+## Le maintien reste disponible pour basculer sans changer de mode.
 func _current_brush() -> Brush:
 	if _is_fill_modifier():
 		return Brush.FILL
 	if _is_rect_modifier():
-		return Brush.RECT
-	return Brush.FREE
+		return Brush.RECT if _brush_mode != Brush.RECT else Brush.FREE
+	return _brush_mode
+
+## Passe au pinceau suivant (rectangle → libre → pot → rectangle).
+func _cycle_brush() -> void:
+	match _brush_mode:
+		Brush.RECT: _brush_mode = Brush.FREE
+		Brush.FREE: _brush_mode = Brush.FILL
+		_: _brush_mode = Brush.RECT
+	hud.show_toast(_brush_label(_brush_mode), MapEditorHUD.Toast.INFO)
+	hud.set_brush(_brush_button_label(), _brush_mode == Brush.RECT)
+	_refresh_tool_hint(true)
+	cursor.queue_redraw()
+
+## Libellé compact pour le bouton du panneau d'outils.
+func _brush_button_label() -> String:
+	match _brush_mode:
+		Brush.RECT: return "▭  PINCEAU : RECTANGLE"
+		Brush.FILL: return "◆  PINCEAU : POT"
+		_: return "✎  PINCEAU : LIBRE"
+
+func _brush_label(brush: Brush) -> String:
+	match brush:
+		Brush.RECT: return "Pinceau : RECTANGLE"
+		Brush.FILL: return "Pinceau : POT DE PEINTURE"
+		_: return "Pinceau : LIBRE"
 
 # ---------------------------------------------------------------------------
 # GESTES DE DESSIN
@@ -753,6 +792,8 @@ func _spawn_tile_pop(cell: Vector2i, colour: Color) -> void:
 
 func _on_action_requested(action: StringName) -> void:
 	match action:
+		MapEditorHUD.ACTION_BRUSH:
+			_cycle_brush()
 		MapEditorHUD.ACTION_UNDO:
 			_do_undo()
 		MapEditorHUD.ACTION_REDO:

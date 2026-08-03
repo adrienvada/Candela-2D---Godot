@@ -309,14 +309,9 @@ static func check_playable(data: Dictionary) -> Dictionary:
 		"blocking": true,
 	})
 
-	var reachable := spawn1.x >= 0 and spawn2.x >= 0 \
-		and walkable.has(spawn1) and walkable.has(spawn2) \
-		and _flood_reaches(walkable, spawn1, spawn2)
-	checks.append({
-		"label": "Les deux joueurs peuvent se rejoindre",
-		"passed": reachable,
-		"blocking": true,
-	})
+	# Volontairement pas de contrôle de connexité : une carte peut légitimement
+	# séparer les deux joueurs par un gouffre infranchissable, où l'on ne
+	# s'affronte qu'à distance. Les balles et la lumière traversent les fosses.
 
 	var far_enough := spawn1.x >= 0 and spawn2.x >= 0 \
 		and Vector2(spawn1).distance_to(Vector2(spawn2)) >= MIN_SPAWN_DISTANCE
@@ -333,29 +328,6 @@ static func check_playable(data: Dictionary) -> Dictionary:
 			break
 
 	return {"ok": ok, "checks": checks}
-
-## Remplissage par diffusion 4-directions : `to` est-il atteignable depuis `from` ?
-static func _flood_reaches(walkable: Dictionary, from: Vector2i, to: Vector2i) -> bool:
-	if from == to:
-		return true
-
-	var seen := {from: true}
-	var queue: Array[Vector2i] = [from]
-	const NEIGHBOURS: Array[Vector2i] = [
-		Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
-	]
-
-	while not queue.is_empty():
-		var cell: Vector2i = queue.pop_back()
-		for offset in NEIGHBOURS:
-			var next := cell + offset
-			if next == to:
-				return true
-			if walkable.has(next) and not seen.has(next):
-				seen[next] = true
-				queue.append(next)
-
-	return false
 
 ## Cases praticables réellement atteignables depuis l'apparition J1.
 ## Sert à mettre en évidence les zones orphelines dans l'éditeur.

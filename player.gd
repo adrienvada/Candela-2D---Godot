@@ -53,7 +53,12 @@ func _ready():
 	z_index = 10
 	scale = Vector2(1.0, 1.0)
 	add_to_group("players")
-	
+
+	# Le joueur est arrêté par les murs (couche 1) ET par les fosses (couche 2).
+	# Les balles, elles, ne testent que la couche 1 : on peut donc se tirer
+	# dessus d'une rive à l'autre d'un gouffre.
+	collision_mask = MapGeometry.PLAYER_MASK
+
 	if not input_provider:
 		var default_provider = LocalInputProvider.new()
 		default_provider.device_id = player_id
@@ -453,7 +458,8 @@ func _physics_process(delta):
 	if state and not (state.round_active or state.sandbox_mode):
 		if can_move:
 			velocity = velocity.move_toward(Vector2.ZERO, 1500.0 * delta)
-			move_and_slide()
+			if velocity != Vector2.ZERO:
+				move_and_slide()
 			flashlight_on = false
 			flashlight.enabled = false
 			body_light.enabled = false
@@ -472,7 +478,8 @@ func _physics_process(delta):
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
 			
 		velocity = input_dir * current_speed
-		move_and_slide()
+		if velocity != Vector2.ZERO:
+			move_and_slide()
 		
 		if velocity.length() > 20.0:
 			step_distance_accumulated += velocity.length() * delta

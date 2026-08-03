@@ -118,8 +118,11 @@ func _test_collisions_and_occluders() -> void:
 	var data := _load_default()
 	var arena := Node2D.new()
 
-	var body := MapGeometry.build_collisions(data, arena)
-	_check("corps de collision créé", body != null)
+	var root := MapGeometry.build_collisions(data, arena)
+	_check("conteneur de collision créé", root != null)
+
+	var body := root.get_node("Murs") as StaticBody2D
+	var pits := root.get_node("Fosses") as StaticBody2D
 
 	var shapes := 0
 	var occluders := 0
@@ -132,11 +135,20 @@ func _test_collisions_and_occluders() -> void:
 	_check("au moins une forme de collision", shapes > 0, "%d formes" % shapes)
 	_check("autant d'occluders que de formes", shapes == occluders,
 		"%d formes / %d occluders" % [shapes, occluders])
-	_check("masque de collision = 1 (testé par bullet.gd)",
-		body.collision_layer == 1 and body.collision_mask == 1)
+	_check("murs sur la couche testée par bullet.gd",
+		body.collision_layer == MapGeometry.WALL_LAYER)
+	_check("fosses sur une couche que les balles ignorent",
+		pits.collision_layer == MapGeometry.PIT_LAYER)
 
 	# Le point qui répare la mécanique centrale : sans occluder, la torche
 	# traverse les murs et le jeu perd son sujet.
+	var pit_occluders := 0
+	for child in pits.get_children():
+		if child is LightOccluder2D:
+			pit_occluders += 1
+	_check("une fosse est un trou, pas un mur : aucune ombre projetée",
+		pit_occluders == 0, "%d occluders de trop" % pit_occluders)
+
 	var all_have_polygons := true
 	for child in body.get_children():
 		if child is LightOccluder2D:
@@ -163,11 +175,11 @@ func _test_rebuild_is_idempotent() -> void:
 	_check("aucun empilement de corps après 3 reconstructions",
 		after_first == after_third, "%d puis %d enfants" % [after_first, after_third])
 
-	var bodies := 0
+	var roots := 0
 	for child in arena.get_children():
-		if child is StaticBody2D:
-			bodies += 1
-	_check("un seul StaticBody2D vivant", bodies == 1, "%d corps" % bodies)
+		if child.name == MapGeometry.BODY_NAME:
+			roots += 1
+	_check("un seul conteneur de collisions vivant", roots == 1, "%d conteneurs" % roots)
 
 	arena.free()
 

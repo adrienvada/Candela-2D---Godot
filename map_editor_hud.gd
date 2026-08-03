@@ -22,6 +22,7 @@ signal step_selected(index: int)
 ## Une fenêtre modale s'est ouverte ou fermée : l'édition doit se figer.
 signal modal_state_changed(open: bool)
 
+const ACTION_BRUSH: StringName = &"brush"
 const ACTION_UNDO: StringName = &"undo"
 const ACTION_REDO: StringName = &"redo"
 const ACTION_AUTO_WALLS: StringName = &"auto_walls"
@@ -204,6 +205,8 @@ func _build_validation_panel() -> PanelContainer:
 
 	return panel
 
+var _btn_brush: Button
+
 func _build_tools_panel() -> PanelContainer:
 	var panel := _make_panel()
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
@@ -213,6 +216,11 @@ func _build_tools_panel() -> PanelContainer:
 	panel.add_child(box)
 
 	box.add_child(_make_label("OUTILS", 15, COL_DIM))
+
+	# Le pinceau est le réglage le plus structurant : en tête de panneau.
+	_btn_brush = _make_button("▭  PINCEAU : RECTANGLE", ACTION_BRUSH, 18)
+	_btn_brush.custom_minimum_size = Vector2(0, 46)
+	box.add_child(_btn_brush)
 
 	# Auto-mur : le gain de temps le plus spectaculaire de l'éditeur, donc
 	# pleine largeur et couleur d'accentuation.
@@ -288,15 +296,15 @@ func _build_prompt_bar() -> void:
 	panel.add_child(box)
 
 	_prompt_pad = _make_label(
-		"MANETTE   ✕ peindre (maintenu) · ☐ effacer · L2+✕ rectangle · R2+✕ pot"
-		+ " · L1/R1 étape · stick droit caméra · Select annuler · Start sauver",
+		"MANETTE   ✕ tracer (2 coins) · ☐ effacer · L2 bascule libre/rectangle"
+		+ " · R2 pot · L1/R1 étape · stick droit caméra · Select annuler · Start sauver",
 		15, COL_DIM)
 	_prompt_pad.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_prompt_pad)
 
 	_prompt_key = _make_label(
-		"SOURIS   clic gauche peindre · clic droit effacer · Maj+glisser rectangle"
-		+ " · Ctrl+clic pot · molette zoom · clic molette ou Espace caméra"
+		"SOURIS   glisser pour tracer un rectangle · clic droit effacer · B change de pinceau"
+		+ " · Maj bascule libre · Ctrl+clic pot · molette zoom · clic molette ou Espace caméra"
 		+ " · Ctrl+Z annuler · Tab étape · Ctrl+S sauver",
 		15, COL_DIM)
 	_prompt_key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -584,6 +592,12 @@ func set_history(can_undo: bool, can_redo: bool, undo_label: String) -> void:
 	else:
 		_history_label.text = "Historique vide"
 		_history_label.add_theme_color_override("font_color", COL_DIM)
+
+## Reflète le pinceau persistant dans le panneau d'outils.
+func set_brush(label: String, highlight: bool) -> void:
+	if is_instance_valid(_btn_brush):
+		_btn_brush.text = label
+		_style_button(_btn_brush, COL_ACCENT if highlight else COL_BORDER, highlight)
 
 func set_light_preview(active: bool) -> void:
 	_btn_light.text = "◉  LUMIÈRE ACTIVE" if active else "◎  APERÇU LUMIÈRE"
