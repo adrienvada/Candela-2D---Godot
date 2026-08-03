@@ -30,6 +30,42 @@ var dead: bool = false
 var _input_seq: int = 0
 var _last_input_seq: int = -1
 
+# Rôle de simulation du nœud sur CETTE machine. Le client prédit son propre
+# joueur et se contente d'afficher l'autre ; partout ailleurs on simule.
+enum NetRole { SIMULATED, PREDICTED, INTERPOLATED }
+
+# Retard d'affichage du joueur distant : il doit couvrir un intervalle de
+# réplication (1/30 s) plus la gigue, sinon le tampon se vide et on extrapole.
+const INTERP_DELAY := 0.1
+const EXTRAPOLATION_MAX := 0.05
+const SNAPSHOT_BUFFER_MAX := 32
+# Au-delà, l'écart entre deux instantanés ne peut pas être un déplacement :
+# c'est une réapparition, qu'il ne faut surtout pas interpoler en glissade.
+const TELEPORT_THRESHOLD := 300.0
+
+# Correction de prédiction : sous la zone morte l'écart est invisible, au-delà
+# du seuil de resynchronisation la convergence douce serait trop lente.
+const PREDICT_DEADZONE := 4.0
+const PREDICT_SNAP := 100.0
+const PREDICT_CORRECTION_RATE := 12.0
+const PREDICT_ROT_SNAP := 1.0
+const PREDICT_HISTORY_MAX := 120
+
+# État répliqué hôte→client. Il n'écrit jamais le nœud directement : chaque
+# machine décide comment le consommer selon son rôle.
+var net_position: Vector2 = Vector2.ZERO
+var net_rotation: float = 0.0
+var net_flashlight_on: bool = false
+# Dernier input client appliqué par l'hôte. Sans lui, le client comparerait sa
+# position prédite — en avance d'un aller-retour — à un état plus ancien, et
+# se corrigerait en permanence vers le passé.
+var net_ack_seq: int = -1
+
+var _net_snapshots: Array[Dictionary] = []
+var _predict_history: Dictionary = {}
+var _predict_error: Vector2 = Vector2.ZERO
+var _last_corrected_seq: int = -1
+
 # La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
 # changement ici pour que le son suive dans tous les modes.
 var _torch_audio_state: bool = false
@@ -78,13 +114,18 @@ func _ready():
 	var sync = MultiplayerSynchronizer.new()
 	sync.name = "MultiplayerSynchronizer"
 	var rep_config = SceneReplicationConfig.new()
-	rep_config.add_property(NodePath(".:global_position"))
-	rep_config.add_property(NodePath(".:rotation"))
-	rep_config.add_property(NodePath(".:flashlight_on"))
+	rep_config.add_property(NodePath(".:net_position"))
+	rep_config.add_property(NodePath(".:net_rotation"))
+	rep_config.add_property(NodePath(".:net_flashlight_on"))
+	rep_config.add_property(NodePath(".:net_ack_seq"))
 	# L'hôte est autorité sur les deux joueurs : la réplication va toujours
 	# hôte→client, y compris pour les HP.
 	rep_config.add_property(NodePath(".:hp"))
 	sync.replication_config = rep_config
+	# Cadence explicite : c'est l'interpolation qui doit rendre les 30 Hz
+	# invisibles, pas le débit réseau.
+	sync.replication_interval = 1.0 / 30.0
+	sync.synchronized.connect(_on_net_synchronized)
 	add_child(sync)
 	
 	var p_color = Color(0, 0.94, 1.0) if player_id == 0 else Color(1.0, 0, 0.33)
@@ -407,6 +448,14 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture_scale = weapon.torch_scale
 
 func _process(delta):
+	# Publié ici et non dans _physics_process : les sorties anticipées (mort,
+	# menu, round inactif) y laisseraient l'état répliqué figé sur du passé.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		net_position = global_position
+		net_rotation = rotation
+		net_flashlight_on = flashlight_on
+		net_ack_seq = _last_input_seq
+
 	# Hors du bloc de simulation : côté client la torche est répliquée, et les
 	# sorties anticipées de _physics_process ne doivent pas laisser le son bloqué.
 	if flashlight_on != _torch_audio_state:
@@ -465,6 +514,115 @@ func _send_inputs_to_host() -> void:
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(), sprint)
 
+func _net_role() -> NetRole:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return NetRole.SIMULATED
+	# Le client ne pilote que P2 ; P1 lui est purement répliqué.
+	return NetRole.PREDICTED if player_id == 1 else NetRole.INTERPOLATED
+
+## [Client] Un paquet d'état vient d'être appliqué sur les variables tampon.
+func _on_net_synchronized() -> void:
+	match _net_role():
+		NetRole.INTERPOLATED:
+			if not _net_snapshots.is_empty() \
+					and _net_snapshots[-1]["pos"].distance_to(net_position) > TELEPORT_THRESHOLD:
+				_net_snapshots.clear()
+			_net_snapshots.append({
+				"t": Time.get_ticks_msec() / 1000.0,
+				"pos": net_position,
+				"rot": net_rotation,
+				"torch": net_flashlight_on,
+			})
+			if _net_snapshots.size() > SNAPSHOT_BUFFER_MAX:
+				_net_snapshots.remove_at(0)
+		NetRole.PREDICTED:
+			_ingest_prediction_correction()
+
+## [Client] Compare l'état hôte à la position qu'on avait prédite pour l'input
+## que l'hôte dit avoir appliqué. Un ack déjà traité veut dire que l'hôte a
+## rejoué le même input faute de paquet neuf : le recomparer inventerait un
+## écart égal au déplacement entretemps.
+func _ingest_prediction_correction() -> void:
+	if net_ack_seq <= _last_corrected_seq: return
+	_last_corrected_seq = net_ack_seq
+
+	var past = _predict_history.get(net_ack_seq)
+	for seq in _predict_history.keys():
+		if seq <= net_ack_seq:
+			_predict_history.erase(seq)
+	if past == null: return
+
+	var err: Vector2 = net_position - past["pos"]
+	var dist := err.length()
+	if dist > PREDICT_SNAP:
+		# Désynchronisation franche : l'historique n'est plus fiable, on repart
+		# de la vérité hôte quitte à perdre un aller-retour de prédiction.
+		global_position = net_position
+		rotation = net_rotation
+		_predict_error = Vector2.ZERO
+		_predict_history.clear()
+	elif dist > PREDICT_DEADZONE:
+		_predict_error = err
+	else:
+		_predict_error = Vector2.ZERO
+
+	if absf(angle_difference(net_rotation, past["rot"])) > PREDICT_ROT_SNAP:
+		rotation = net_rotation
+
+## [Client] Consomme progressivement l'écart mesuré : appliqué d'un coup, il
+## serait perçu comme un à-coup à chaque paquet.
+func _consume_prediction_error(delta: float) -> void:
+	if _predict_error == Vector2.ZERO: return
+	var step := _predict_error * (1.0 - exp(-PREDICT_CORRECTION_RATE * delta))
+	global_position += step
+	_predict_error -= step
+	if _predict_error.length() < 0.5:
+		_predict_error = Vector2.ZERO
+
+## [Client] Rend le joueur distant INTERP_DELAY en arrière : on dispose alors
+## presque toujours de deux instantanés encadrants, malgré les 30 Hz.
+func _apply_remote_interpolation() -> void:
+	if _net_snapshots.is_empty(): return
+
+	var render_t := Time.get_ticks_msec() / 1000.0 - INTERP_DELAY
+	var first: Dictionary = _net_snapshots[0]
+	var last: Dictionary = _net_snapshots[-1]
+
+	if _net_snapshots.size() == 1 or render_t <= first["t"]:
+		global_position = first["pos"]
+		rotation = first["rot"]
+		flashlight_on = first["torch"]
+		return
+
+	if render_t >= last["t"]:
+		# Tampon épuisé : on prolonge brièvement la dernière vitesse connue
+		# plutôt que de figer l'adversaire sur un paquet manquant.
+		var prev: Dictionary = _net_snapshots[-2]
+		var gap: float = last["t"] - prev["t"]
+		var ahead := minf(render_t - last["t"], EXTRAPOLATION_MAX)
+		if gap > 0.0001:
+			global_position = last["pos"] + (last["pos"] - prev["pos"]) / gap * ahead
+			rotation = last["rot"] + angle_difference(prev["rot"], last["rot"]) / gap * ahead
+		else:
+			global_position = last["pos"]
+			rotation = last["rot"]
+		flashlight_on = last["torch"]
+		return
+
+	for i in range(_net_snapshots.size() - 1):
+		var a: Dictionary = _net_snapshots[i]
+		var b: Dictionary = _net_snapshots[i + 1]
+		if render_t <= b["t"]:
+			var span: float = b["t"] - a["t"]
+			var w: float = 0.0 if span <= 0.0001 else (render_t - a["t"]) / span
+			global_position = a["pos"].lerp(b["pos"], w)
+			rotation = lerp_angle(a["rot"], b["rot"], w)
+			flashlight_on = a["torch"]
+			# Les instantanés antérieurs ne resserviront plus.
+			if i > 0:
+				_net_snapshots = _net_snapshots.slice(i)
+			return
+
 ## [Serveur / Client] Gère la physique (Sandbox autorisé).
 func _physics_process(delta):
 	if dead: return
@@ -475,13 +633,16 @@ func _physics_process(delta):
 		flashlight_on = false
 		return
 		
-	# En ligne, le client ne simule plus rien : il émet ses commandes et affiche
-	# l'état que l'hôte lui réplique (mouvement donc soumis à la latence).
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and player_id == 1:
+	# Le client émet ses commandes puis simule quand même : l'état hôte ne sert
+	# qu'à corriger. L'adversaire, lui, n'est jamais simulé ici.
+	var role := _net_role()
+	if role == NetRole.PREDICTED:
 		_send_inputs_to_host()
+	elif role == NetRole.INTERPOLATED:
+		_apply_remote_interpolation()
 
-	var can_move = true
-	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
+	var can_move = role != NetRole.INTERPOLATED
+	if role == NetRole.SIMULATED and NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN and multiplayer.has_multiplayer_peer():
 		can_move = is_multiplayer_authority()
 
 	if state and not (state.round_active or state.sandbox_mode):
@@ -528,6 +689,14 @@ func _physics_process(delta):
 			flashlight_on = false
 		else:
 			flashlight_on = input_provider.is_flashlight_pressed()
+
+		if role == NetRole.PREDICTED:
+			# Correction appliquée AVANT l'archivage : l'historique doit décrire
+			# la position réellement affichée, sinon l'écart serait recompté.
+			_consume_prediction_error(delta)
+			_predict_history[_input_seq] = {"pos": global_position, "rot": rotation}
+			if _predict_history.size() > PREDICT_HISTORY_MAX:
+				_predict_history.erase(_predict_history.keys()[0])
 
 	# Visuals update for all clients
 	flashlight.enabled = flashlight_on
