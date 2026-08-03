@@ -1,6 +1,14 @@
 extends CharacterBody2D
 class_name Player
 
+# Shaders partagés. Préchargés en ressource plutôt que compilés à la volée :
+# un Shader.new() dans die() faisait compiler le programme au moment exact du
+# premier mort, donc un hoquet visible pile sur l'action décisive.
+const SHADER_RIM_LIGHT := preload("res://player_rim_light.gdshader")
+const SHADER_ENEMY_LIGHT := preload("res://player_enemy_light.gdshader")
+const SHADER_VIGNETTE := preload("res://damage_vignette.gdshader")
+const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
+
 @export var player_id: int = 0
 @export var speed: float = 260.0
 @export var input_provider: InputProvider
@@ -245,40 +253,12 @@ func _ready():
 	_calculate_uvs(visual_enemy_ptr)
 		
 	# Shader to boost lighting on the player's edges so they look like they have volume
-	var light_boost_shader = Shader.new()
-	light_boost_shader.code = """
-shader_type canvas_item;
-void light() {
-	// UV center is (0.5, 0.5). We calculate distance to center.
-	float d = distance(UV, vec2(0.5));
-	// Rim is strictly confined to the extreme outer edge
-	float rim = smoothstep(0.42, 0.48, d);
-	// Center is dark (0.4), edge is brightly illuminated (4.0). This creates a solid 3D effect instead of a hollow ring!
-	float boost = mix(0.4, 4.0, rim);
-	LIGHT = vec4(LIGHT_COLOR.rgb * COLOR.rgb * boost, LIGHT_COLOR.a);
-}
-"""
 	var light_boost_mat = ShaderMaterial.new()
-	light_boost_mat.shader = light_boost_shader
+	light_boost_mat.shader = SHADER_RIM_LIGHT
 
 	# Smooth shader for the enemy: renders capped base gray color when illuminated, pitch black in shadow.
-	var enemy_shader = Shader.new()
-	enemy_shader.code = """
-shader_type canvas_item;
-void light() {
-	float light_val = max(max(LIGHT_COLOR.r, LIGHT_COLOR.g), LIGHT_COLOR.b);
-	if (light_val > 0.001) {
-		// Boost incoming light slightly so the enemy is uniformly gray anywhere in the torch cone,
-		// but clamp to COLOR.rgb so it NEVER overexposes to white!
-		vec3 lit = COLOR.rgb * (light_val * 4.0);
-		LIGHT = vec4(min(lit, COLOR.rgb), LIGHT_COLOR.a);
-	} else {
-		LIGHT = vec4(0.0); // Pitch black in shadow / unlit
-	}
-}
-"""
 	var enemy_mat = ShaderMaterial.new()
-	enemy_mat.shader = enemy_shader
+	enemy_mat.shader = SHADER_ENEMY_LIGHT
 	visual_enemy.material = enemy_mat
 	visual_enemy_ptr.material = enemy_mat
 	
@@ -300,23 +280,8 @@ void light() {
 	# Use the correct visibility layer so it only shows on the player's own viewport
 	vignette_rect.visibility_layer = 2 if player_id == 0 else 4
 	
-	var shader = Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform vec4 vignette_color : source_color = vec4(1.0, 0.0, 0.0, 1.0);
-uniform float intensity = 0.0;
-uniform float smoothness = 0.8;
-
-void fragment() {
-	vec2 uv = UV;
-	float d = distance(uv, vec2(0.5));
-	float v = smoothstep(0.5 - smoothness * 0.5, 0.5 + smoothness * 0.5, d);
-	COLOR = vignette_color;
-	COLOR.a = v * intensity;
-}
-	"""
 	vignette_mat = ShaderMaterial.new()
-	vignette_mat.shader = shader
+	vignette_mat.shader = SHADER_VIGNETTE
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 	
@@ -833,18 +798,11 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		die(killer)
 	# Dynamic red light illuminating the scene to sell the impact
 	var hit_light = PointLight2D.new()
-	var grad = GradientTexture2D.new()
-	grad.fill = GradientTexture2D.FILL_RADIAL
-	grad.fill_from = Vector2(0.5, 0.5)
-	grad.fill_to = Vector2(1, 0.5)
-	var g = Gradient.new()
+	# Texture blanche partagée, teintée par `color` : une 400×400 était allouée
+	# à chaque impact reçu.
+	hit_light.texture = LightTextures.radial(400)
 	# Pure blood red light, not pink/magenta
-	g.set_color(0, Color(0.9, 0.0, 0.0, 1.0))
-	g.set_color(1, Color(0.9, 0.0, 0.0, 0.0))
-	grad.gradient = g
-	grad.width = 400
-	grad.height = 400
-	hit_light.texture = grad
+	hit_light.color = Color(0.9, 0.0, 0.0)
 	hit_light.energy = 2.0
 	hit_light.shadow_enabled = true
 	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
@@ -886,24 +844,8 @@ func die(killer: Node2D):
 	var flash_rect = ColorRect.new()
 	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	
-	var shader = Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform sampler2D screen_texture : hint_screen_texture, filter_nearest;
-uniform float flash_intensity : hint_range(0.0, 1.0) = 1.0;
-uniform float aberration_amount = 0.05;
-
-void fragment() {
-	float offset = aberration_amount * flash_intensity;
-	float r = texture(screen_texture, SCREEN_UV + vec2(offset, 0.0)).r;
-	float g = texture(screen_texture, SCREEN_UV).g;
-	float b = texture(screen_texture, SCREEN_UV - vec2(offset, 0.0)).b;
-	vec3 color = mix(vec3(r, g, b), vec3(1.0), flash_intensity);
-	COLOR = vec4(color, 1.0);
-}
-"""
 	var mat = ShaderMaterial.new()
-	mat.shader = shader
+	mat.shader = SHADER_DEATH_FLASH
 	mat.set_shader_parameter("flash_intensity", 1.0)
 	flash_rect.material = mat
 	ui_layer.add_child(flash_rect)

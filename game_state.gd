@@ -1,9 +1,16 @@
 extends Node
 class_name GameState
 
-@export var round_time: float = 120.0
+const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
 
-var time_left: float = 120.0
+## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
+## transite par MatchRecord.Format pour qu'un BO3/BO5 puisse s'ajouter sans
+## refonte. Seul le BO1 est implémenté.
+const MATCH_FORMAT := MatchRecord.Format.BO1
+
+@export var round_time: float = MatchRecord.ROUND_DURATION
+
+var time_left: float = MatchRecord.ROUND_DURATION
 var round_active: bool = false
 var sandbox_mode: bool = false
 var game_over: bool = false
@@ -12,8 +19,21 @@ var p1_ready_for_rematch: bool = false
 var p2_ready_for_rematch: bool = false
 var _hosted_weapon_1_idx: int = 0
 
+# Score de session : nombre de matchs gagnés depuis le lancement de la série.
+# Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_kills: int = 0
 var p2_kills: int = 0
+
+# Manches gagnées dans le match en cours. En BO1 elles retombent à zéro à
+# chaque fin de match ; elles existent pour que les formats longs s'ajoutent
+# sans toucher à la fin de manche.
+var p1_round_wins: int = 0
+var p2_round_wins: int = 0
+
+# Réserve de particules d'impact, partagée par toutes les balles.
+var particle_pool: ParticlePool
+# Cible d'échauffement, visible en bac à sable uniquement.
+var training_target: TrainingTarget
 
 var p1: Player
 var p2: Player
@@ -158,6 +178,8 @@ func _ready():
 	rebuild_arena()
 	_setup_players()
 	_setup_ghosts()
+	_setup_particle_pool()
+	_setup_training_target()
 	
 	# Setup Killcam Overlay to sit between background and players/bullets
 	var killcam_bb = BackBufferCopy.new()
@@ -222,9 +244,12 @@ func _on_peer_disconnected(id: int):
 		ui.btn_replay.remove_theme_color_override("font_color")
 		p1_kills = 0
 		p2_kills = 0
+		p1_round_wins = 0
+		p2_round_wins = 0
 		p2.hide()
 		p2.set_collision_layer_value(1, false)
 		p2.set_collision_mask_value(1, false)
+		_set_training_target_active(true)
 		ui.show_waiting_for_opponent()
 		ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
 		if game_over:
@@ -394,19 +419,8 @@ func _apply_network_mode():
 		_set_player_input_provider(p2, LocalInputProvider.new(), 0)
 
 func _setup_ghosts():
-	var unshaded_shader = Shader.new()
-	unshaded_shader.code = """
-shader_type canvas_item;
-render_mode unshaded;
-void fragment() {
-	float d = distance(UV, vec2(0.5));
-	float rim = smoothstep(0.42, 0.48, d);
-	float boost = mix(0.1, 4.0, rim); // Slightly brighter center so they are visible
-	COLOR = vec4(COLOR.rgb * boost, COLOR.a);
-}
-"""
 	var unshaded_mat = ShaderMaterial.new()
-	unshaded_mat.shader = unshaded_shader
+	unshaded_mat.shader = SHADER_GHOST
 	
 	ghost_p1 = Node2D.new()
 	ghost_p1.z_index = 10
@@ -441,6 +455,52 @@ void fragment() {
 	ghost_p2.hide()
 
 
+
+## Réserve de particules. Placée hors de l'arène et hors du conteneur de
+## balles : ces deux nœuds sont purgés à chaque manche et au retour au menu.
+func _setup_particle_pool() -> void:
+	particle_pool = ParticlePool.new()
+	particle_pool.name = "ParticlePool"
+	arena.get_parent().add_child(particle_pool)
+
+func _setup_training_target() -> void:
+	training_target = TrainingTarget.new()
+	training_target.name = "TrainingTarget"
+	arena.get_parent().add_child(training_target)
+	training_target.hide()
+	training_target.process_mode = Node.PROCESS_MODE_DISABLED
+
+## Affiche ou masque la cible d'échauffement. Elle n'existe qu'en bac à sable —
+## en manche, elle bloquerait les balles.
+func _set_training_target_active(active: bool) -> void:
+	if not is_instance_valid(training_target): return
+	training_target.visible = active
+	training_target.process_mode = Node.PROCESS_MODE_INHERIT if active else Node.PROCESS_MODE_DISABLED
+	training_target.set_collision_layer_value(1, active)
+	training_target.reset_damage()
+	if active:
+		training_target.global_position = _training_target_position()
+
+## Place la cible sur du sol libre devant l'apparition de J1. Chercher une case
+## valide plutôt que d'appliquer un décalage fixe : sur une carte custom, le
+## décalage tomberait dans un mur ou dans une fosse.
+func _training_target_position() -> Vector2:
+	var origin := _get_spawn_position(0)
+	var floor_layer := arena.get_node_or_null("CustomFloor") as TileMapLayer
+	var walls_layer := arena.get_node_or_null("CustomWalls") as TileMapLayer
+	if floor_layer == null or walls_layer == null:
+		return origin + Vector2(160, 0)
+
+	for radius in [4, 3, 5, 6, 2]:
+		for i in 12:
+			var ang := (i / 12.0) * TAU
+			var offset := Vector2(cos(ang), sin(ang)) * float(radius) * float(CandelaTileSet.TILE_SIZE.x)
+			var cell := floor_layer.local_to_map(floor_layer.to_local(origin + offset))
+			if floor_layer.get_cell_source_id(cell) == -1: continue
+			if walls_layer.get_cell_source_id(cell) != -1: continue
+			return floor_layer.to_global(floor_layer.map_to_local(cell))
+
+	return origin + Vector2(140, 0)
 
 func _get_spawn_position(player_id: int) -> Vector2:
 	var spawn_node_name := "P1Spawn" if player_id == 0 else "P2Spawn"
@@ -489,7 +549,8 @@ func _start_round():
 		if multiplayer.get_peers().size() == 0:
 			round_active = false
 			sandbox_mode = true
-			ui.time_label.text = "02:00"
+			ui.time_label.text = MatchRecord.format_clock(round_time)
+			_set_training_target_active(true)
 			ui.show_waiting_for_opponent()
 			ui.hide_game_over()
 			p2.hide()
@@ -534,6 +595,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# changement de carte depuis le menu, sans redémarrer le jeu.
 	rebuild_arena()
 	sandbox_mode = false
+	_set_training_target_active(false)
+	if is_instance_valid(particle_pool):
+		particle_pool.clear_all()
 	p2.show()
 	p2.set_collision_layer_value(1, true)
 	p2.set_collision_mask_value(1, true)
@@ -589,7 +653,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 		c.queue_free()
 	ReplaySystem.start_recording()
 	
-	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
+	ui.game_over_score.text = "SESSION : %d - %d" % [p1_kills, p2_kills]
 
 func _process(delta):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
@@ -928,10 +992,26 @@ func _do_end_round(winner_id: int):
 	var token := _round_token
 	_end_sequence_active = true
 
-	if winner_id == 1:
-		p2_kills += 1
-	elif winner_id == 0:
-		p1_kills += 1
+	# Manches gagnées dans le match en cours. En BO1 une seule suffit, mais le
+	# décompte passe par le format : un BO3 n'aurait rien à changer ici.
+	if winner_id == 0:
+		p1_round_wins += 1
+	elif winner_id == 1:
+		p2_round_wins += 1
+
+	var match_over := winner_id == -1 \
+		or MatchRecord.is_match_over(MATCH_FORMAT, p1_round_wins, p2_round_wins)
+	if match_over:
+		# Le score cumulé est un score de SESSION (série de matchs), pas un score
+		# de manches : il ne bouge qu'à la fin d'un match.
+		if winner_id == 0:
+			p1_kills += 1
+		elif winner_id == 1:
+			p2_kills += 1
+		_archive_match_result(winner_id)
+		p1_round_wins = 0
+		p2_round_wins = 0
+
 	round_active = false
 	countdown_left = 0.0
 	ui.set_countdown(0.0)
@@ -993,8 +1073,28 @@ func _do_end_round(winner_id: int):
 	_end_sequence_active = false
 	game_over = true
 	ui.show_game_over(winner_id)
-	ui.game_over_score.text = "KILLS : %d - %d" % [p1_kills, p2_kills]
+	ui.game_over_score.text = "SESSION : %d - %d" % [p1_kills, p2_kills]
 	_apply_deferred_rematch()
+
+## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
+## chaque machine journalise le match qu'elle vient de jouer, y compris le
+## client — il n'y a aucun échange réseau ici.
+func _archive_match_result(winner_id: int) -> void:
+	var record := MatchRecord.build(
+		winner_id,
+		round_time - time_left,
+		p1.current_weapon.name if p1 and p1.current_weapon else "",
+		p2.current_weapon.name if p2 and p2.current_weapon else "",
+		MapData.selected_map_id,
+		_mode_label(),
+		MATCH_FORMAT)
+	MatchRecord.append_to_history(record)
+
+func _mode_label() -> String:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: return "en_ligne_hote"
+		NetworkManager.GameMode.ONLINE_CLIENT: return "en_ligne_client"
+		_: return "local"
 
 ## Sortie inconditionnelle de la killcam. Le ralenti est un réglage global du
 ## moteur : l'oublier sur un chemin de sortie laisse tout le jeu à 3 % de sa
@@ -1170,9 +1270,16 @@ func _on_main_menu_requested():
 		p2.dead = false
 		p2.global_position = _get_spawn_position(1)
 		
+	# Le score de session ne survit pas au retour au menu : une nouvelle série
+	# repart de 0 - 0.
 	p1_kills = 0
 	p2_kills = 0
-	
+	p1_round_wins = 0
+	p2_round_wins = 0
+	_set_training_target_active(false)
+	if is_instance_valid(particle_pool):
+		particle_pool.clear_all()
+
 	# Purge les traces de sang et autres entités dynamiques de l'arène.
 	# NB : "SpawnPoints" doit figurer ici — l'ancienne liste testait "SpawnP1"
 	# et "SpawnP2", des noms qui n'existent pas, si bien qu'un retour au menu

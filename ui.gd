@@ -12,6 +12,8 @@
 extends CanvasLayer
 class_name UI
 
+const SHADER_KILLCAM := preload("res://killcam_overlay.gdshader")
+
 signal replay_requested
 signal quit_requested
 signal main_menu_requested
@@ -240,6 +242,11 @@ var debug_panel: PanelContainer
 var fps_label: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
+
+const DEBUG_SCAN_INTERVAL := 0.25
+var _debug_scan_accum: float = 0.0
+var _debug_light_count: int = 0
+var _debug_arena_nodes: int = 0
 
 var _is_main_menu: bool = true
 
@@ -523,10 +530,51 @@ func _update_debug(_delta: float) -> void:
 		debug_panel.visible = debug_mode_active
 	_f3_was_pressed = f3_pressed
 
-	if debug_mode_active:
-		fps_label.text = "DEBUG | FPS %d | Cartes %d" % [
-			Engine.get_frames_per_second(), MapData.list_maps().size(),
-		]
+	if not debug_mode_active:
+		return
+
+	# Le comptage des nœuds parcourt l'arbre : à 4 Hz il est indolore, à chaque
+	# frame il fausserait la mesure qu'il sert à faire.
+	_debug_scan_accum += _delta
+	if _debug_scan_accum >= DEBUG_SCAN_INTERVAL:
+		_debug_scan_accum = 0.0
+		_rescan_debug_counts()
+
+	var gs := get_parent()
+	var particles := 0
+	var cap := 0
+	if gs is GameState and is_instance_valid(gs.particle_pool):
+		particles = gs.particle_pool.active_count()
+		cap = ParticlePool.MAX_ACTIVE
+
+	var ping := "—"
+	if NetworkManager.has_rtt:
+		ping = "%d ms" % int(round(NetworkManager.rtt_ms))
+
+	fps_label.text = "DEBUG | FPS %d | Ping %s | Lumières %d | Particules %d/%d | Nœuds arène %d | Cartes %d" % [
+		Engine.get_frames_per_second(), ping, _debug_light_count,
+		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
+	]
+
+## Recompte les PointLight2D actives et les nœuds de l'arène.
+func _rescan_debug_counts() -> void:
+	_debug_light_count = 0
+	_debug_arena_nodes = 0
+	var gs := get_parent()
+	if not (gs is GameState) or not is_instance_valid(gs.arena):
+		return
+	var world: Node = (gs.arena as Node).get_parent()
+	if world == null:
+		return
+	var stack: Array[Node] = [world]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		_debug_arena_nodes += 1
+		if node is PointLight2D and (node as PointLight2D).is_visible_in_tree() \
+				and (node as PointLight2D).enabled:
+			_debug_light_count += 1
+		for child in node.get_children():
+			stack.append(child)
 
 func _update_killcam(delta: float) -> void:
 	if killcam_container == null or not killcam_container.visible:
@@ -898,7 +946,7 @@ func _build_center_hud() -> Control:
 	vbox.add_child(title)
 
 	time_label = Label.new()
-	time_label.text = "02:00"
+	time_label.text = "05:00"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	time_label.add_theme_font_size_override("font_size", 36)
 	vbox.add_child(time_label)
@@ -1214,24 +1262,7 @@ func _build_killcam() -> void:
 	killcam_overlay.hide()
 
 	var material := ShaderMaterial.new()
-	var shader := Shader.new()
-	shader.code = """
-shader_type canvas_item;
-uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
-uniform float time = 0.0;
-void fragment() {
-	vec2 uv = SCREEN_UV;
-	float scanline = sin(uv.y * 800.0) * 0.04;
-	float noise = fract(sin(dot(uv + time, vec2(12.9898, 78.233))) * 43758.5453);
-	float r = texture(screen_texture, uv + vec2(0.003, 0.0)).r;
-	float g = texture(screen_texture, uv).g;
-	float b = texture(screen_texture, uv - vec2(0.003, 0.0)).b;
-	vec3 col = vec3(r, g, b) + noise * 0.05 - scanline;
-	col *= smoothstep(0.8, 0.2, distance(uv, vec2(0.5)) * 1.2);
-	COLOR = vec4(col, 1.0);
-}
-"""
-	material.shader = shader
+	material.shader = SHADER_KILLCAM
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -1792,7 +1823,7 @@ func _build_pause_block() -> Control:
 	pause_info_container.hide()
 
 	pause_score_label = Label.new()
-	pause_score_label.text = "SCORE: 0 - 0"
+	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_score_label.add_theme_font_size_override("font_size", 40)
 	pause_info_container.add_child(pause_score_label)
@@ -2239,7 +2270,7 @@ func _handle_pause_input() -> bool:
 
 		var gs := get_parent()
 		if gs and gs is GameState:
-			pause_score_label.text = "SCORE : %d - %d" % [gs.p1_kills, gs.p2_kills]
+			pause_score_label.text = "SESSION : %d - %d" % [gs.p1_kills, gs.p2_kills]
 			var m := floori(gs.time_left) / 60
 			var s := floori(gs.time_left) % 60
 			pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]
@@ -2293,9 +2324,7 @@ func update_hud(p1, p2, time_left: float) -> void:
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
 		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
 
-	var m := floori(time_left) / 60
-	var s := floori(time_left) % 60
-	time_label.text = "%02d:%02d" % [m, s]
+	time_label.text = MatchRecord.format_clock(time_left)
 
 func show_main_menu() -> void:
 	_is_main_menu = true
@@ -2356,15 +2385,27 @@ func show_game_over(winner_id: int) -> void:
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
 
-	if winner_id == 0:
-		game_over_title.text = "JOUEUR 1 GAGNE LE MATCH"
-		game_over_title.add_theme_color_override("font_color", COLOR_P1)
-	elif winner_id == 1:
-		game_over_title.text = "JOUEUR 2 GAGNE LE MATCH"
-		game_over_title.add_theme_color_override("font_color", COLOR_P2)
-	else:
+	# Fin de MATCH (format BO1). En ligne chaque machine annonce l'issue du point
+	# de vue de son joueur ; en écran partagé les deux joueurs partagent l'écran,
+	# il n'y a pas de « toi » à désigner.
+	var local_idx := -1
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: local_idx = 0
+		NetworkManager.GameMode.ONLINE_CLIENT: local_idx = 1
+
+	if winner_id == -1:
 		game_over_title.text = "ÉGALITÉ"
 		game_over_title.add_theme_color_override("font_color", Color.WHITE)
+	elif local_idx == -1:
+		game_over_title.text = "JOUEUR 1 GAGNE" if winner_id == 0 else "JOUEUR 2 GAGNE"
+		game_over_title.add_theme_color_override("font_color",
+			COLOR_P1 if winner_id == 0 else COLOR_P2)
+	elif winner_id == local_idx:
+		game_over_title.text = "VICTOIRE"
+		game_over_title.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
+	else:
+		game_over_title.text = "DÉFAITE"
+		game_over_title.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 
 	_refresh_map_card()
 
