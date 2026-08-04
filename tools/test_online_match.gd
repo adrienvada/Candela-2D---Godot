@@ -18,6 +18,7 @@ var _args: PackedStringArray
 var _main: Node
 var _ui: Node
 var _lan := false
+var _rejected_at := -1
 
 
 func _ready() -> void:
@@ -98,6 +99,9 @@ func _run_host() -> void:
 		return
 	print("ADVERSAIRE: connecté (id %d)" % multiplayer.get_peers()[0])
 	await _verify_round()
+	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
+	# première ne doit pas partir pendant que l'autre teste encore son rematch.
+	await get_tree().create_timer(10.0).timeout
 	_quit(0)
 
 
@@ -107,13 +111,26 @@ func _run_client() -> void:
 	print("MENU: mode client, saisie « %s »" % _ui.join_input.text)
 	_check("la saisie survit à la validation d'alphabet",
 		_lan or LobbyCode.is_valid(_ui.join_input.text), _ui.join_input.text)
+	# Un code refusé doit se dire tout de suite : on mesure le délai que le
+	# joueur subit réellement entre son clic et le message d'erreur.
+	# `_rejected_at` est un champ et non une locale : une lambda GDScript capture
+	# les locales par valeur, l'affectation n'en ressortirait jamais.
+	_rejected_at = -1
+	var pressed_at := Time.get_ticks_msec()
+	NetworkManager.connection_failed.connect(func(): _rejected_at = Time.get_ticks_msec())
 	_press_play()
 
-	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
-		_fail("connexion au salon impossible (%s)" % NetworkManager.last_error)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty() or _rejected_at > 0, PEER_TIMEOUT):
+		_fail("aucune réponse du salon en %ds" % PEER_TIMEOUT)
+		return
+	if _rejected_at > 0:
+		_fail("salon refusé après %d ms : %s" % [_rejected_at - pressed_at, NetworkManager.last_error])
 		return
 	print("HOTE: connecté")
 	await _verify_round()
+	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
+	# première ne doit pas partir pendant que l'autre teste encore son rematch.
+	await get_tree().create_timer(10.0).timeout
 	_quit(0)
 
 
@@ -130,8 +147,12 @@ func _verify_round() -> void:
 		is_instance_valid(_main.p1) and is_instance_valid(_main.p2))
 	_check("le chrono de match tourne", _main.time_left > 0.0)
 	# Quelques secondes de jeu réel : synchro, ping applicatif, réplication.
+	# Les deux instances ne démarrent pas ensemble : l'hôte peut avoir déjà porté
+	# son coup pendant cette fenêtre. On vérifie que le match avance, pas qu'il
+	# est resté à un instant précis.
 	await get_tree().create_timer(4.0).timeout
-	_check("la manche tient dans la durée", _main.round_active)
+	_check("le match avance sans se couper",
+		_main.round_active or _main._end_sequence_active or _main.game_over)
 	_check("le ping applicatif remonte", NetworkManager.has_rtt, "%.1f ms" % NetworkManager.rtt_ms)
 	print("PING_MS: %.1f" % NetworkManager.rtt_ms)
 	print("HP: p1=%.0f p2=%.0f" % [_main.p1.hp, _main.p2.hp])

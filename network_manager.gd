@@ -38,10 +38,11 @@ const ENET_JOIN_TIMEOUT := 5.0
 ## Trois tirages suffisent : sur 32^6 combinaisons, une collision est déjà une
 ## curiosité, deux d'affilée un accident statistique.
 const EOS_CODE_ATTEMPTS := 3
-## Reprises de la recherche avant de déclarer le code introuvable, et délai
-## entre deux. Reste bien en deçà de EOS_JOIN_TIMEOUT.
-const EOS_SEARCH_ATTEMPTS := 4
-const EOS_SEARCH_RETRY_DELAY := 1.0
+## Sondages de l'index d'Epic, côté hôte, avant d'annoncer le code au joueur.
+## Une recherche qui ne trouve rien coûte ~3,1 s : c'est trop cher pour la
+## répéter côté client, où elle allongerait d'autant l'annonce d'un code mal
+## tapé. L'attente est donc supportée par l'hôte, qui patiente déjà.
+const EOS_CODE_VISIBLE_ATTEMPTS := 4
 
 var eos_puid: String = ""
 var lobby_code: String = ""
@@ -64,6 +65,8 @@ var _eos_platform_created: bool = false
 ## les deux chemins (API et signaux du pair) se déclenchent tous les deux.
 var _connection_success_emitted: bool = false
 var _host_disconnected_emitted: bool = false
+## Pairs fermés mais pas encore relâchés — voir _retire_peer.
+var _retired_peers: Array[MultiplayerPeer] = []
 
 # Écho applicatif plutôt que le RTT interne d'ENet : c'est le délai réellement
 # subi par la boucle de jeu (files d'attente, cadence de traitement) qui sert
@@ -135,8 +138,7 @@ func disconnect_from_game() -> void:
 	# libération et toute interface qu'on lui redemanderait est déjà nulle.
 	if _eos_shutting_down:
 		return
-	if peer:
-		peer.close()
+	_retire_peer(peer)
 	peer = null
 	_eos_peer = null
 	multiplayer.multiplayer_peer = null
@@ -223,24 +225,14 @@ func _join_eos(raw_code: String) -> bool:
 	_join_eos_async(code)
 	return true
 
+## Une seule recherche, sans reprise : l'hôte ne publie son code qu'une fois
+## celui-ci réellement trouvable (voir _publish_lobby_async), donc un code qui
+## ne répond pas ici est un code faux, et le joueur doit l'apprendre tout de
+## suite plutôt qu'au bout de trois interrogations à 3 s.
 func _join_eos_async(code: String) -> void:
-	# L'index de recherche d'Epic n'est pas immédiatement cohérent : un salon
-	# tout juste créé peut ne pas répondre au premier appel. Constaté en test,
-	# et indiscernable d'un code faux si l'on abandonne tout de suite.
-	var results = null
-	for attempt in EOS_SEARCH_ATTEMPTS:
-		results = await HLobbies.search_by_attribute_async([
-			{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
-			{ key = EOS_CODE_ATTRIBUTE, value = code, comparison = EOS.ComparisonOp.Equal },
-		])
-		if current_mode != GameMode.ONLINE_CLIENT:
-			return # annulé pendant la recherche (retour au menu)
-		if results != null and not results.is_empty():
-			break
-		if attempt < EOS_SEARCH_ATTEMPTS - 1:
-			await get_tree().create_timer(EOS_SEARCH_RETRY_DELAY).timeout
-			if current_mode != GameMode.ONLINE_CLIENT:
-				return
+	var results = await _search_code(code)
+	if current_mode != GameMode.ONLINE_CLIENT:
+		return # annulé pendant la recherche (retour au menu)
 
 	if results == null:
 		_fail_join("Recherche impossible : Epic ne répond pas.")
@@ -270,6 +262,23 @@ func _join_eos_async(code: String) -> void:
 	multiplayer.multiplayer_peer = p
 	_connect_signals()
 	print("NetworkManager: joining (EOS) code %s, host puid %s" % [code, host_puid])
+
+## Ferme un pair sans le détruire tout de suite.
+##
+## Le SDK d'Epic continue de rappeler ses callbacks sur le pair après sa
+## fermeture. Or c'est justement l'un d'eux (connexion distante fermée) qui fait
+## revenir le jeu au menu, donc appeler disconnect_from_game — et libérer le
+## pair depuis l'intérieur du callback qui s'exécute dessus. Le SDK écrivait
+## alors dans un objet détruit : segfault côté client dès que l'hôte quittait.
+## Garder une référence le temps que le tick en cours se termine suffit.
+func _retire_peer(p: MultiplayerPeer) -> void:
+	if p == null:
+		return
+	p.close()
+	_retired_peers.append(p)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_retired_peers.erase(p)
 
 func _fail_join(message: String) -> void:
 	last_error = message
@@ -304,21 +313,51 @@ func _publish_lobby_async() -> void:
 	var code := ""
 	for attempt in EOS_CODE_ATTEMPTS:
 		code = LobbyCode.generate()
-		var taken = await HLobbies.search_by_attribute_async([
-			{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
-			{ key = EOS_CODE_ATTRIBUTE, value = code, comparison = EOS.ComparisonOp.Equal },
-		])
-		if taken == null or taken.is_empty():
+		lobby.add_attribute(EOS_CODE_ATTRIBUTE, code)
+		await lobby.update_async()
+		if current_mode != GameMode.ONLINE_HOST:
+			lobby.destroy_async()
+			return
+		var owner := await _await_code_owner(code, lobby.lobby_id)
+		if current_mode != GameMode.ONLINE_HOST:
+			lobby.destroy_async()
+			return
+		if owner != CodeOwner.OTHER:
+			# Trouvable et à nous, ou index muet : dans les deux cas on ne
+			# retirera pas un meilleur numéro au tirage suivant.
+			if owner == CodeOwner.UNKNOWN:
+				push_warning("NetworkManager: code %s publié sans confirmation de l'index Epic" % code)
 			break
 
-	lobby.add_attribute(EOS_CODE_ATTRIBUTE, code)
-	await lobby.update_async()
-	if current_mode != GameMode.ONLINE_HOST:
-		lobby.destroy_async()
-		return
 	lobby_code = code
 	print("NetworkManager: lobby code %s" % code)
 	lobby_code_ready.emit(code)
+
+enum CodeOwner { MINE, OTHER, UNKNOWN }
+
+## Interroge l'index d'Epic jusqu'à ce qu'il rende NOTRE salon pour ce code.
+##
+## Deux choses se règlent d'un coup : la collision (l'index rend le salon de
+## quelqu'un d'autre → il faut retirer un code) et la latence de propagation
+## (l'index ne rend rien pendant quelques secondes → annoncer le code tout de
+## suite ferait échouer un client trop rapide sur un code pourtant valide).
+func _await_code_owner(code: String, my_lobby_id: String) -> CodeOwner:
+	for attempt in EOS_CODE_VISIBLE_ATTEMPTS:
+		var found = await _search_code(code)
+		if current_mode != GameMode.ONLINE_HOST:
+			return CodeOwner.UNKNOWN
+		if found != null and not found.is_empty():
+			for entry in found:
+				if entry.lobby_id == my_lobby_id:
+					return CodeOwner.MINE
+			return CodeOwner.OTHER
+	return CodeOwner.UNKNOWN
+
+func _search_code(code: String):
+	return await HLobbies.search_by_attribute_async([
+		{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
+		{ key = EOS_CODE_ATTRIBUTE, value = code, comparison = EOS.ComparisonOp.Equal },
+	])
 
 func _leave_lobby_async() -> void:
 	var lobby = _eos_lobby
@@ -500,9 +539,12 @@ func _shutdown_eos_and_quit(exit_code: int) -> void:
 		get_tree().quit(exit_code)
 		return
 	# Le pair part en premier : sa fermeture pendant le release ferait remonter
-	# des déconnexions dans le jeu, qui redemanderait EOS au pire moment.
+	# des déconnexions dans le jeu, qui redemanderait EOS au pire moment. Il
+	# reste référencé jusqu'à la fin du processus : le SDK peut encore le
+	# rappeler pendant qu'on relâche la plateforme.
 	if peer:
 		peer.close()
+		_retired_peers.append(peer)
 	peer = null
 	_eos_peer = null
 	_eos_lobby = null
