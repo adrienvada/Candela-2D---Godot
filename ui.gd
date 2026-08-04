@@ -218,10 +218,17 @@ var btn_mode_online: Button
 var btn_mode_host: Button
 var btn_mode_join: Button
 var online_hbox: HBoxContainer
+var transport_hbox: HBoxContainer
+var btn_transport_eos: Button
+var btn_transport_lan: Button
 var lobby_status_label: Label
 var host_ip_row: HBoxContainer
 var host_ip_label: Label
-var ip_input: LineEdit
+var lobby_code_row: HBoxContainer
+var lobby_code_label: Label
+var btn_copy_code: Button
+var join_input: LineEdit
+var ephemeral_banner: Label
 
 var pause_info_container: VBoxContainer
 var pause_score_label: Label
@@ -240,6 +247,7 @@ var _button_to_update: Button = null
 
 var debug_panel: PanelContainer
 var fps_label: Label
+var net_debug_label: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
 
@@ -408,7 +416,12 @@ func _human_network_status(connected: bool, connecting: bool) -> String:
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if not connected or multiplayer.get_peers().is_empty():
-			return "Salon créé — en attente d'un adversaire  ·  IP : %s" % local_ipv4()
+			if NetworkManager.transport == NetworkManager.Transport.ENET:
+				return "Salon créé — en attente d'un adversaire  ·  IP : %s" % local_ipv4()
+			var code: String = NetworkManager.lobby_code
+			if code.is_empty():
+				return "Création du salon…"
+			return "Salon créé — en attente d'un adversaire  ·  code : %s" % code
 		if in_round:
 			return "En jeu"
 		if ReplaySystem.playing_back:
@@ -462,12 +475,13 @@ func _update_focus_rings() -> void:
 	if not _is_focus_usable(p2_focus):
 		_seed_focus(1)
 
-	# En ligne, chaque machine ne pilote que son propre curseur.
+	# En ligne, chaque machine ne pilote qu'un joueur, et toujours avec les
+	# commandes de J1 — le client compris, dont le P2 lit le périphérique 0.
+	# C'est donc le curseur 0 qui reste visible des deux côtés ; la rangée qu'il
+	# peut atteindre est fixée par _assign_weapon_nav_owner.
 	var show_p1 := true
 	var show_p2 := true
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		show_p1 = false
-	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		show_p2 = false
 	elif _is_main_menu and btn_mode_local != null and not btn_mode_local.button_pressed:
 		show_p2 = false
@@ -555,6 +569,41 @@ func _update_debug(_delta: float) -> void:
 		Engine.get_frames_per_second(), ping, _debug_light_count,
 		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
 	]
+	net_debug_label.text = _network_debug_line()
+
+## Ligne réseau du panneau F3 : de quoi diagnostiquer une session en ligne sans
+## sortir du jeu — par où passe le lien, à travers quel NAT, sous quelle identité.
+func _network_debug_line() -> String:
+	if NetworkManager.transport == NetworkManager.Transport.ENET:
+		return "RÉSEAU | Transport ENet (LAN) | Pairs %d" % multiplayer.get_peers().size()
+
+	var parts: Array[String] = ["RÉSEAU | Transport EOS"]
+	parts.append(NetworkManager.eos_state_label())
+	if not NetworkManager.lobby_code.is_empty():
+		parts.append("Salon %s" % NetworkManager.lobby_code)
+	parts.append("Lien %s" % _eos_network_type_label())
+	parts.append("NAT %s" % _eos_nat_label())
+	var puid: String = NetworkManager.eos_puid
+	if not puid.is_empty():
+		parts.append("PUID %s…%s" % [puid.substr(0, 6), puid.right(4)])
+	if NetworkManager.is_ephemeral_identity():
+		parts.append("ÉPHÉMÈRE")
+	return " | ".join(parts)
+
+## Direct ou relayé : la différence se paie en latence, et seul le SDK la connaît.
+func _eos_network_type_label() -> String:
+	match NetworkManager.eos_network_type:
+		EOS.P2P.NetworkType.DirectConnection: return "DIRECT"
+		EOS.P2P.NetworkType.RelayedConnection: return "RELAYÉ"
+		EOS.P2P.NetworkType.NoConnection: return "AUCUN"
+	return "—"
+
+func _eos_nat_label() -> String:
+	match NetworkManager.eos_nat_type:
+		EOS.P2P.NATType.Open: return "ouvert"
+		EOS.P2P.NATType.Moderate: return "modéré"
+		EOS.P2P.NATType.Strict: return "strict"
+	return "inconnu"
 
 ## Recompte les PointLight2D actives et les nœuds de l'arène.
 func _rescan_debug_counts() -> void:
@@ -1166,12 +1215,16 @@ func set_countdown(value: float) -> void:
 	tween.tween_property(countdown_label, "scale", Vector2.ONE, 0.35) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-## L'attente d'un adversaire est le moment où l'hôte a besoin de son adresse.
+## L'attente d'un adversaire est le moment où l'hôte a besoin de quoi l'inviter :
+## son code de salon sur Internet, son adresse IP en réseau local.
 func show_waiting_for_opponent() -> void:
+	waiting_label.text = "EN ATTENTE DU JOUEUR 2…"
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		waiting_label.text = "EN ATTENTE DU JOUEUR 2…\nVotre IP : %s" % local_ipv4()
-	else:
-		waiting_label.text = "EN ATTENTE DU JOUEUR 2…"
+		if NetworkManager.transport == NetworkManager.Transport.EOS:
+			var code: String = NetworkManager.lobby_code
+			waiting_label.text += "\nCODE DU SALON : %s" % (code if not code.is_empty() else "…")
+		else:
+			waiting_label.text += "\nVotre IP : %s" % local_ipv4()
 	waiting_label.show()
 
 ## Première IPv4 non-loopback : l'adresse à communiquer sur un réseau local.
@@ -1188,6 +1241,11 @@ func local_ipv4() -> String:
 		_local_ip_cache = a
 		break
 	return _local_ip_cache
+
+## Ce que le joueur a saisi pour rejoindre. Le champ est unique, son sens
+## dépend du transport : un code de salon sur Internet, une adresse IP en LAN.
+func lobby_join_text() -> String:
+	return join_input.text
 
 func _build_debug_panel() -> void:
 	debug_panel = PanelContainer.new()
@@ -1208,13 +1266,35 @@ func _build_debug_panel() -> void:
 	style.content_margin_bottom = 6
 	debug_panel.add_theme_stylebox_override("panel", style)
 
+	var debug_vbox := VBoxContainer.new()
+	debug_vbox.add_theme_constant_override("separation", 2)
+
 	fps_label = Label.new()
 	fps_label.text = "DEBUG"
 	fps_label.add_theme_font_size_override("font_size", 13)
 	fps_label.add_theme_color_override("font_color", COLOR_GOLD)
-	debug_panel.add_child(fps_label)
+	debug_vbox.add_child(fps_label)
 
+	net_debug_label = Label.new()
+	net_debug_label.add_theme_font_size_override("font_size", 13)
+	net_debug_label.add_theme_color_override("font_color", COLOR_GOLD)
+	debug_vbox.add_child(net_debug_label)
+
+	debug_panel.add_child(debug_vbox)
 	add_child(debug_panel)
+
+	# Mission C : l'identité jetable ne peut s'armer qu'en build debug, mais tant
+	# qu'elle est active elle doit se voir sans avoir à ouvrir un log.
+	ephemeral_banner = Label.new()
+	ephemeral_banner.text = "⚠ IDENTITÉ EPIC ÉPHÉMÈRE (test) — profil non persistant"
+	ephemeral_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	ephemeral_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	ephemeral_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ephemeral_banner.add_theme_font_size_override("font_size", 14)
+	ephemeral_banner.add_theme_color_override("font_color", Color(1.0, 0.45, 0.2))
+	ephemeral_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ephemeral_banner.visible = NetworkManager.is_ephemeral_identity()
+	add_child(ephemeral_banner)
 
 func _build_dialog() -> void:
 	dialog_panel = PanelContainer.new()
@@ -1670,6 +1750,21 @@ func _build_mode_block() -> Control:
 	online_hbox.add_child(btn_mode_join)
 	mode_vbox.add_child(online_hbox)
 
+	# Le réseau local reste accessible : c'est le seul mode qui permette de jouer
+	# (et de déboguer) quand Epic est injoignable.
+	var transport_group := ButtonGroup.new()
+	transport_hbox = HBoxContainer.new()
+	transport_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	transport_hbox.add_theme_constant_override("separation", GAP_S)
+	btn_transport_eos = _make_choice_button("INTERNET", COLOR_P1, transport_group)
+	btn_transport_eos.button_pressed = NetworkManager.transport == NetworkManager.Transport.EOS
+	btn_transport_lan = _make_choice_button("RÉSEAU LOCAL", COLOR_P1, transport_group)
+	btn_transport_lan.button_pressed = not btn_transport_eos.button_pressed
+	transport_hbox.add_child(btn_transport_eos)
+	transport_hbox.add_child(btn_transport_lan)
+	transport_hbox.hide()
+	mode_vbox.add_child(transport_hbox)
+
 	lobby_status_label = Label.new()
 	lobby_status_label.text = "Salon 1V1 | Statut : 1/2 Joueurs (En attente...)"
 	lobby_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1678,7 +1773,25 @@ func _build_mode_block() -> Control:
 	lobby_status_label.hide()
 	mode_vbox.add_child(lobby_status_label)
 
-	# Sans son adresse sous les yeux, l'hôte n'a rien à transmettre à l'autre
+	# Le code n'existe qu'une fois le salon ouvert, c'est-à-dire au lancement du
+	# match : d'ici là cette ligne annonce ce qui va se passer.
+	lobby_code_row = HBoxContainer.new()
+	lobby_code_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	lobby_code_row.add_theme_constant_override("separation", GAP_XS)
+
+	lobby_code_label = Label.new()
+	lobby_code_label.add_theme_font_size_override("font_size", 30)
+	lobby_code_label.add_theme_color_override("font_color", COLOR_GOLD)
+	lobby_code_row.add_child(lobby_code_label)
+
+	btn_copy_code = _make_button("COPIER", COLOR_GOLD)
+	btn_copy_code.add_theme_font_size_override("font_size", 13)
+	btn_copy_code.pressed.connect(_copy_lobby_code)
+	lobby_code_row.add_child(btn_copy_code)
+	lobby_code_row.hide()
+	mode_vbox.add_child(lobby_code_row)
+
+	# Sans son adresse sous les yeux, l'hôte LAN n'a rien à transmettre à l'autre
 	# joueur : elle est affichée dès que « CRÉER SALON » est sélectionné.
 	host_ip_row = HBoxContainer.new()
 	host_ip_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1698,63 +1811,145 @@ func _build_mode_block() -> Control:
 	host_ip_row.hide()
 	mode_vbox.add_child(host_ip_row)
 
-	ip_input = LineEdit.new()
-	ip_input.placeholder_text = "127.0.0.1"
-	ip_input.text = "127.0.0.1"
-	ip_input.custom_minimum_size = Vector2(216, 40)
-	ip_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ip_input.hide()
+	join_input = LineEdit.new()
+	join_input.custom_minimum_size = Vector2(216, 40)
+	join_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_input.hide()
+	# Le champ n'accepte que ce qu'un code peut contenir : le joueur ne peut pas
+	# taper une saisie invalide, il n'y a donc rien à lui refuser après coup.
+	join_input.text_changed.connect(func(text: String) -> void:
+		if NetworkManager.transport != NetworkManager.Transport.EOS:
+			return
+		var clean := LobbyCode.sanitize(text)
+		if clean == text:
+			return
+		var caret := join_input.caret_column - (text.length() - clean.length())
+		join_input.text = clean
+		join_input.caret_column = maxi(caret, 0)
+	)
 
-	var ip_center := CenterContainer.new()
-	ip_center.add_child(ip_input)
-	mode_vbox.add_child(ip_center)
+	var join_center := CenterContainer.new()
+	join_center.add_child(join_input)
+	mode_vbox.add_child(join_center)
 
 	btn_mode_local.toggled.connect(func(pressed: bool) -> void:
 		if not pressed:
 			return
-		ip_input.hide()
-		online_hbox.hide()
-		lobby_status_label.hide()
-		host_ip_row.hide()
+		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
-		btn_replay.text = "LANCER LE MATCH"
 	)
 
 	btn_mode_online.toggled.connect(func(pressed: bool) -> void:
 		if not pressed:
 			return
-		online_hbox.show()
 		# Aucun sous-mode coché : on propose l'hébergement par défaut.
 		if not btn_mode_host.button_pressed and not btn_mode_join.button_pressed:
 			btn_mode_host.button_pressed = true
-		else:
+		_refresh_lobby_block()
+		_update_weapon_panels_visibility()
+	)
+
+	for btn in [btn_mode_host, btn_mode_join]:
+		btn.toggled.connect(func(pressed: bool) -> void:
+			if not pressed or not btn_mode_online.button_pressed:
+				return
+			_refresh_lobby_block()
 			_update_weapon_panels_visibility()
+		)
+
+	btn_transport_eos.toggled.connect(func(pressed: bool) -> void:
+		if not pressed:
+			return
+		NetworkManager.transport = NetworkManager.Transport.EOS
+		join_input.text = LobbyCode.sanitize(join_input.text)
+		_refresh_lobby_block()
+	)
+	btn_transport_lan.toggled.connect(func(pressed: bool) -> void:
+		if not pressed:
+			return
+		NetworkManager.transport = NetworkManager.Transport.ENET
+		_refresh_lobby_block()
 	)
 
-	btn_mode_host.toggled.connect(func(pressed: bool) -> void:
-		if not pressed or not btn_mode_online.button_pressed:
-			return
-		ip_input.hide()
-		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 — communiquez votre IP à votre adversaire"
-		host_ip_label.text = "Votre IP : %s" % local_ipv4()
-		host_ip_row.show()
-		btn_replay.text = "LANCER LE MATCH"
-		_update_weapon_panels_visibility()
-	)
-
-	btn_mode_join.toggled.connect(func(pressed: bool) -> void:
-		if not pressed or not btn_mode_online.button_pressed:
-			return
-		ip_input.show()
-		lobby_status_label.show()
-		lobby_status_label.text = "Salon 1V1 — entrez l'IP de l'hôte"
-		host_ip_row.hide()
-		btn_replay.text = "REJOINDRE LE SALON"
-		_update_weapon_panels_visibility()
-	)
+	NetworkManager.lobby_code_ready.connect(_on_lobby_code_ready)
+	NetworkManager.eos_state_changed.connect(func(_state) -> void: _refresh_lobby_block())
+	_refresh_lobby_block()
 
 	return mode_vbox
+
+## Applique l'état du bloc lobby en un seul endroit : quatre combinaisons
+## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
+## indépendantes n'arrivaient plus à tenir cohérentes.
+func _refresh_lobby_block() -> void:
+	if mode_vbox == null or btn_mode_online == null:
+		return
+	var mode := selected_network_mode()
+	var is_eos := NetworkManager.transport == NetworkManager.Transport.EOS
+	# La barre d'actions est construite après ce bloc : au premier passage le
+	# bouton n'existe pas encore, show_main_menu le rattrapera.
+	if btn_replay != null:
+		btn_replay.text = "REJOINDRE LE SALON" if mode == NetworkManager.GameMode.ONLINE_CLIENT \
+			else "LANCER LE MATCH"
+
+	if mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		online_hbox.hide()
+		transport_hbox.hide()
+		lobby_status_label.hide()
+		lobby_code_row.hide()
+		host_ip_row.hide()
+		join_input.hide()
+		return
+
+	online_hbox.show()
+	transport_hbox.show()
+	lobby_status_label.show()
+
+	if mode == NetworkManager.GameMode.ONLINE_HOST:
+		join_input.hide()
+		host_ip_row.visible = not is_eos
+		lobby_code_row.visible = is_eos
+		if is_eos:
+			_update_lobby_code_label()
+			lobby_status_label.text = "%s  ·  le code du salon s'affiche au lancement" \
+				% NetworkManager.eos_state_label()
+		else:
+			host_ip_label.text = "Votre IP : %s" % local_ipv4()
+			lobby_status_label.text = "Réseau local — communiquez votre IP à votre adversaire"
+		return
+
+	# Client
+	host_ip_row.hide()
+	lobby_code_row.hide()
+	join_input.show()
+	if is_eos:
+		join_input.placeholder_text = "CODE À %d CARACTÈRES" % LobbyCode.LENGTH
+		join_input.max_length = LobbyCode.LENGTH
+		join_input.text = LobbyCode.sanitize(join_input.text)
+		lobby_status_label.text = "%s  ·  entrez le code communiqué par l'hôte" \
+			% NetworkManager.eos_state_label()
+	else:
+		join_input.placeholder_text = "127.0.0.1"
+		join_input.max_length = 0
+		lobby_status_label.text = "Réseau local — entrez l'IP de l'hôte"
+
+func _on_lobby_code_ready(_code: String) -> void:
+	_update_lobby_code_label()
+	# L'hôte est déjà dans l'arène quand le code arrive : c'est l'écran d'attente
+	# qui doit le porter, pas le menu qu'il vient de quitter.
+	if waiting_label.visible:
+		show_waiting_for_opponent()
+
+func _update_lobby_code_label() -> void:
+	var code: String = NetworkManager.lobby_code
+	var known := not code.is_empty()
+	lobby_code_label.text = code if known else "— — — — — —"
+	btn_copy_code.disabled = not known
+
+func _copy_lobby_code() -> void:
+	if NetworkManager.lobby_code.is_empty():
+		return
+	DisplayServer.clipboard_set(NetworkManager.lobby_code)
+	lobby_code_label.text = NetworkManager.lobby_code + "  ✓"
 
 func _build_weapon_block() -> Control:
 	weapon_hbox = HBoxContainer.new()
@@ -2082,17 +2277,55 @@ func _resume_game() -> void:
 	pause_info_container.hide()
 	game_over_panel.hide()
 
+## Mode que le menu lancera au prochain « JOUER ».
+##
+## « CRÉER SALON » et « REJOINDRE » forment un groupe de boutons distinct de
+## « 1V1 LOCAL / 1V1 EN LIGNE » : repasser en local ne les décoche pas. Le sous-
+## mode en ligne ne compte donc que si « 1V1 EN LIGNE » est bien sélectionné —
+## c'est cette lecture, et elle seule, qui fait foi.
+func selected_network_mode() -> NetworkManager.GameMode:
+	if btn_mode_online == null or not btn_mode_online.button_pressed:
+		return NetworkManager.GameMode.LOCAL_SPLITSCREEN
+	if btn_mode_join != null and btn_mode_join.button_pressed:
+		return NetworkManager.GameMode.ONLINE_CLIENT
+	return NetworkManager.GameMode.ONLINE_HOST
+
+## Panneau d'arme du joueur que CETTE machine incarne.
+##
+## Dans le menu, le peer n'existe pas encore : `NetworkManager.current_mode`
+## vaut toujours LOCAL, et s'y fier montrait au client le panneau « JOUEUR 1 ».
+## Son choix atterrissait alors dans `p1_weapon_group`, que personne ne lit pour
+## P2 — d'où un client condamné au pistolet. C'est le mode *choisi* qui fait foi.
 func _update_weapon_panels_visibility() -> void:
-	if btn_mode_local.button_pressed:
+	var mode := selected_network_mode() if _is_main_menu else NetworkManager.current_mode
+	var local_is_p2 := mode == NetworkManager.GameMode.ONLINE_CLIENT
+	_assign_weapon_nav_owner(local_is_p2)
+
+	if mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		p1_vbox.show()
 		p2_vbox.show()
+	elif local_is_p2:
+		p1_vbox.hide()
+		p2_vbox.show()
 	else:
-		if not _is_main_menu and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-			p1_vbox.hide()
-			p2_vbox.show()
-		else:
-			p1_vbox.show()
-			p2_vbox.hide()
+		p1_vbox.show()
+		p2_vbox.hide()
+
+## Réserve la rangée d'armes au curseur qui peut réellement l'atteindre.
+##
+## En ligne, la machine ne pilote qu'un joueur et toujours avec les commandes de
+## J1 (côté client, P2 lit le périphérique 0). La rangée « JOUEUR 2 » doit donc
+## appartenir au curseur 0 chez le client, sans quoi elle serait affichée mais
+## inatteignable à la manette.
+func _assign_weapon_nav_owner(local_is_p2: bool) -> void:
+	var p1_owner := 1 if local_is_p2 else 0
+	var p2_owner := 0 if local_is_p2 else 1
+	for btn in [p1_btn1, p1_btn2, p1_btn3, p1_btn4]:
+		btn.set_meta(META_NAV_OWNER, p1_owner)
+	for btn in [p2_btn1, p2_btn2, p2_btn3, p2_btn4]:
+		btn.set_meta(META_NAV_OWNER, p2_owner)
+	p1_btn1.set_meta(META_NAV_SEED, p1_owner)
+	p2_btn1.set_meta(META_NAV_SEED, p2_owner)
 
 # ===========================================================================
 # REMAPPAGE DES TOUCHES
@@ -2337,6 +2570,9 @@ func show_main_menu() -> void:
 
 	weapon_hbox.show()
 	map_card.show()
+	# Le retour au menu ne rejoue pas les bascules de mode : sans ce rappel, le
+	# panneau resterait celui de la partie précédente.
+	_update_weapon_panels_visibility()
 	if mode_vbox:
 		mode_vbox.show()
 	if pause_info_container:
@@ -2350,12 +2586,11 @@ func show_main_menu() -> void:
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	game_over_score.text = "PRÊT À JOUER ?"
 
-	if btn_mode_local.button_pressed:
+	# Rétablit d'un coup libellé du bouton, champ de saisie et ligne de statut :
+	# le retour au menu ne rejoue pas les bascules de mode.
+	_refresh_lobby_block()
+	if selected_network_mode() == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		btn_replay.text = "JOUER"
-	elif btn_mode_host.button_pressed:
-		btn_replay.text = "LANCER LE MATCH"
-	elif btn_mode_join.button_pressed:
-		btn_replay.text = "REJOINDRE LE SALON"
 	btn_replay.remove_theme_color_override("font_color")
 
 	_refresh_map_card()

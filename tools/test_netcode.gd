@@ -18,6 +18,7 @@ func _ready() -> void:
 	_test_rewound_position()
 	_test_predicted_shots()
 	_test_lag_comp_delay()
+	_test_lobby_code()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -237,3 +238,52 @@ func _test_lag_comp_delay() -> void:
 
 	NetworkManager.rtt_ms = previous_rtt
 	state.free()
+
+# ---------------------------------------------------------------------------
+# CODE DE SALON (lobby_code.gd)
+# ---------------------------------------------------------------------------
+func _test_lobby_code() -> void:
+	print("\n-- Code de salon --")
+
+	# Un code tiré au sort doit toujours être acceptable par le champ de saisie
+	# d'en face : c'est le contrat entre generate() et is_valid().
+	var all_valid := true
+	var seen := {}
+	for i in 500:
+		var code := LobbyCode.generate()
+		if not LobbyCode.is_valid(code):
+			all_valid = false
+			break
+		seen[code] = true
+	_check("500 tirages, tous valides", all_valid)
+	_check("500 tirages, quasiment aucun doublon", seen.size() >= 495, "%d distincts" % seen.size())
+	_check("longueur fixe", LobbyCode.generate().length() == LobbyCode.LENGTH)
+
+	# Les quatre caractères ambigus n'entrent jamais dans un code produit.
+	var forbidden_seen := false
+	for i in 500:
+		for c in LobbyCode.generate():
+			if c in ["I", "O", "0", "1"]:
+				forbidden_seen = true
+	_check("jamais de I, O, 0 ni 1", not forbidden_seen)
+
+	_check("is_valid refuse trop court", not LobbyCode.is_valid("ABC"))
+	_check("is_valid refuse trop long", not LobbyCode.is_valid("ABCDEFG"))
+	_check("is_valid refuse le vide", not LobbyCode.is_valid(""))
+	_check("is_valid refuse les minuscules", not LobbyCode.is_valid("abcdef"))
+	_check("is_valid refuse un caractère hors alphabet", not LobbyCode.is_valid("ABCDE1"))
+	_check("is_valid accepte un code canonique", LobbyCode.is_valid("HNELWR"))
+
+	# sanitize() rattrape ce que le joueur tape ou colle réellement.
+	_check("sanitize met en majuscules", LobbyCode.sanitize("hnelwr") == "HNELWR")
+	_check("sanitize retire les espaces", LobbyCode.sanitize(" HNE LWR ") == "HNELWR")
+	_check("sanitize retire les tirets", LobbyCode.sanitize("HNE-LWR") == "HNELWR")
+	_check("sanitize plafonne la longueur", LobbyCode.sanitize("HNELWRXYZ") == "HNELWR")
+	_check("sanitize écarte les caractères interdits",
+		LobbyCode.sanitize("H0N1ELWR") == "HNELWR", LobbyCode.sanitize("H0N1ELWR"))
+	_check("sanitize d'un code propre est l'identité", LobbyCode.sanitize("HNELWR") == "HNELWR")
+
+	# Ce que sanitize accepte, is_valid doit l'accepter : sans quoi l'UI
+	# afficherait un code impossible à envoyer.
+	_check("sanitize produit toujours un préfixe valide d'alphabet",
+		LobbyCode.is_valid(LobbyCode.sanitize("h n e l w r")))

@@ -207,9 +207,9 @@ func _on_peer_connected(id: int):
 		if _end_sequence_active:
 			_pending_client_start = true
 			return
-		# P2 vient d'arriver et n'a pas encore choisi : arme par défaut jusqu'au
-		# prochain rematch, où son choix sera transmis.
-		rpc_start_round.rpc(_hosted_weapon_1_idx, 0, _host_map_code())
+		# La manche n'est PAS lancée ici : elle attend rpc_client_weapon. Partir
+		# avant l'arrivée de ce paquet imposait le pistolet à P2 pour tout le
+		# match — en BO1 aucun rematch ne vient rattraper le choix.
 
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
@@ -1114,10 +1114,31 @@ func _apply_deferred_rematch() -> void:
 	if _pending_client_start:
 		_pending_client_start = false
 		if client_peer_id != 0:
-			rpc_start_round.rpc(_hosted_weapon_1_idx, 0, _host_map_code())
+			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code())
 			return
 	if p2_ready_for_rematch:
 		_check_rematch_start()
+
+## [Hôte] Arme choisie par le client, envoyée dès la connexion établie. C'est
+## ce paquet, et non `peer_connected`, qui déclenche la première manche : il est
+## le seul moment où l'hôte connaît le choix de P2.
+@rpc("any_peer", "reliable")
+func rpc_client_weapon(idx: int):
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id: return
+	_set_p2_weapon_button(idx)
+	# Reçu en pleine killcam : on retient le choix, _apply_deferred_rematch
+	# lancera la manche une fois l'écran de fin stable.
+	if _end_sequence_active:
+		_pending_p2_weapon_idx = idx
+		_pending_client_start = true
+		return
+	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code())
+
+## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
+func _local_p2_weapon_idx() -> int:
+	var pressed: BaseButton = ui.p2_weapon_group.get_pressed_button()
+	return pressed.get_index() if pressed else 0
 
 ## Un index hors bornes ferait tomber l'hôte sur un paquet client malformé.
 func _set_p2_weapon_button(idx: int) -> void:
@@ -1127,21 +1148,31 @@ func _set_p2_weapon_button(idx: int) -> void:
 
 func _on_replay_requested():
 	if ui._is_main_menu:
-		if ui.btn_mode_host.button_pressed:
-			NetworkManager.host_game()
+		# Le mode lancé est celui qu'affiche le menu. Tester directement
+		# « CRÉER SALON » ne suffit pas : ce bouton appartient à un autre groupe
+		# que « 1V1 LOCAL / EN LIGNE » et reste coché après une partie en ligne,
+		# si bien qu'un 1v1 local relançait un salon.
+		var mode: NetworkManager.GameMode = ui.selected_network_mode()
+		if mode == NetworkManager.GameMode.ONLINE_HOST:
+			# Un hébergement refusé (Epic injoignable, port déjà pris) a déjà
+			# ramené au menu : enchaîner sur la manche lancerait une partie
+			# solo par-dessus l'écran d'erreur.
+			if not NetworkManager.host_game():
+				return
 			_apply_network_mode()
 			game_over = false
 			ui.hide_game_over()
 			_restore_viewports()
 			_start_round()
-		elif ui.btn_mode_join.button_pressed:
-			NetworkManager.join_game(ui.ip_input.text)
+		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
+			if not NetworkManager.join_game(ui.lobby_join_text()):
+				return
 			ui.btn_replay.text = "Connexion au salon…"
 
 			# L'échéance doit être neutralisée dès que l'issue est connue :
 			# sinon elle renvoie au menu une partie déjà commencée.
 			_join_deadline_active = true
-			var timer = get_tree().create_timer(5.0)
+			var timer = get_tree().create_timer(NetworkManager.join_timeout())
 			timer.timeout.connect(func():
 				if not _join_deadline_active:
 					return
@@ -1299,7 +1330,9 @@ func _on_quit_requested():
 	# quit() ne prend effet qu'en fin de frame : sortir depuis une killcam
 	# étirerait ces dernières frames au ralenti.
 	Engine.time_scale = 1.0
-	get_tree().quit()
+	# Passe par NetworkManager : la plateforme EOS doit être relâchée avant que
+	# l'arbre se termine, sous peine de segfault à la fermeture.
+	NetworkManager.quit_game()
 
 ## [Client Uniquement] Appelé quand l'hôte ferme le serveur ou plante.
 func _on_host_disconnected():
@@ -1309,17 +1342,27 @@ func _on_host_disconnected():
 ## [Client Uniquement] Intercepte un échec de connexion (timeout ou serveur plein).
 func _on_connection_failed():
 	_join_deadline_active = false
-	ui.show_dialog_message("Erreur", "Impossible de rejoindre le salon (adresse injoignable ou salon complet).")
+	# Le transport sait pourquoi ça a échoué (code introuvable, Epic injoignable,
+	# adresse morte) ; ce message générique ne sert que s'il n'a rien dit.
+	var reason: String = NetworkManager.last_error
+	if reason.is_empty():
+		reason = "Impossible de rejoindre le salon (adresse injoignable ou salon complet)."
+	ui.show_dialog_message("Erreur", reason)
 	_on_main_menu_requested()
 
 ## [Client Uniquement] Appelé quand la connexion au serveur réussit.
 func _on_connection_success():
 	_join_deadline_active = false
+	# Lu avant que l'écran de fin ne se referme, tant que le panneau du lobby
+	# reflète encore le choix du joueur.
+	var w2_idx := _local_p2_weapon_idx()
 	_apply_network_mode()
 	game_over = false
 	ui.hide_game_over()
 	_restore_viewports()
 	_start_round()
+	# L'hôte attend ce paquet pour lancer la manche avec la bonne arme.
+	rpc_id(1, "rpc_client_weapon", w2_idx)
 
 @rpc("any_peer", "reliable")
 func rpc_client_unready():
