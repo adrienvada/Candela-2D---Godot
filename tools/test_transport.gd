@@ -38,8 +38,11 @@ func _ready() -> void:
 	# EOSGRuntime tick une fois par frame : le nombre d'images par seconde EST la
 	# cadence à laquelle EOS pompe le réseau. Le brider permet de vérifier si le
 	# plancher de RTT vient de là ou du SDK lui-même.
-	if _has("--max-fps"):
-		Engine.max_fps = int(_value("--max-fps", "0"))
+	#
+	# Toujours affecté, jamais seulement quand l'argument est présent : sinon le
+	# banc hériterait du plafond enregistré dans les préférences du joueur et
+	# deux exécutions ne seraient plus comparables.
+	Engine.max_fps = int(_value("--max-fps", "0"))
 	if _has("--extra-tick"):
 		_extra_ticker = preload("res://tools/eos_extra_ticker.gd").new()
 		add_child(_extra_ticker)

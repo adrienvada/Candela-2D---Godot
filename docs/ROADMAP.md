@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-15 (soir)
+> Dernière mise à jour : 2026-08-15 (nuit)
 
 ---
 
@@ -99,11 +99,31 @@ code, sans configuration, sans redirection de port.
   | APP_RTT_MS | 48,8 | 23,9–24,2 |
 
   Confirme la décision actée plus bas : le plancher de RTT EOS suit la cadence
-  d'image, pas le SDK. **Non vérifié : le maintien de 120 fps en
-  `gl_compatibility` pendant un échange chargé (particules + lumières,
-  étape 9).** Nécessite un rendu réel fenêtré ; l'outillage MCP disponible pour
-  cette session ne permet que du headless sans rendu. À confirmer avant de
-  considérer ce point clos.
+  d'image, pas le SDK. Mesure indépendante sur le même banc, autre session :
+  59,0 ms de moyenne à 60 fps contre 21,2 ms déplafonné (145 fps en headless).
+
+- **120 fps tenus en `gl_compatibility`** — vérifié sur un rendu réel fenêtré
+  avec `tools/bench_framerate.tscn` : écran partagé (les deux vues rendent),
+  pompe contre pompe à bout portant, torches allumées, HP maintenus pleins pour
+  que l'échange ne s'arrête jamais. Pic de 123-125 particules sur 200 et 12
+  balles simultanées, donc la charge est réelle et non supposée.
+
+  | Exécution | FPS médian | 1 % bas | Minimum |
+  |---|---|---|---|
+  | 1 | 156 | 123 | 116 |
+  | 2 | 160 | 137 | 137 |
+  | 3 | 145 | 144 | 144 |
+
+  **Verdict : tenu.** Le 1 % bas — ce que le joueur ressent comme saccade —
+  reste au-dessus de 120 sur les trois exécutions. À dire honnêtement : le
+  minimum absolu est descendu une fois à 116, et la dispersion entre exécutions
+  (145 à 160 de médiane) vient de la fenêtre elle-même, que macOS bride quand
+  elle n'est pas au premier plan. Mesuré sur **Apple M3**, fenêtre 1280×720 :
+  une machine plus modeste demandera sa propre mesure.
+
+  Au passage, sans rapport avec la cadence : `anti_aliasing/quality/msaa_2d=2`
+  est inopérant sous `gl_compatibility` (« 2D MSAA is not yet supported for
+  GLES3 » à chaque démarrage). Réglage mort, à retirer ou à assumer.
 
 ### Non validé — le seul vrai inconnu
 
@@ -191,9 +211,12 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Confirmer 120 fps tenus en `gl_compatibility`** pendant un échange chargé
-   (F3, particules + lumières) — nécessite un rendu réel fenêtré, pas fait par
-   cette session.
-2. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3.
-3. Fusion de `eos-transport` dans `main` une fois H1 vert.
-4. Ouverture de la Phase 4.
+1. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3, et
+   c'est désormais le seul point ouvert du chantier EOS.
+2. Fusion de `eos-transport` dans `main` une fois H1 vert.
+3. Ouverture de la Phase 4.
+
+Hors chantier, repéré en passant et laissé tel quel : `msaa_2d=2` est un
+réglage mort sous `gl_compatibility` (voir Phase 3), et ni la résolution ni le
+remappage des touches ne sont persistés alors que `settings_manager.gd` sait
+désormais le faire.
