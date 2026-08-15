@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-15
+> Dernière mise à jour : 2026-08-15 (soir)
 
 ---
 
@@ -86,11 +86,24 @@ code, sans configuration, sans redirection de port.
 - Bancs d'essai : `tools/test_transport.tscn`, `tools/test_online_match.tscn`,
   `tools/test_quit_path.tscn`. Protocole :
   [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
+- **Réglage vsync / plafond d'images par seconde** — menu Options (onglet
+  Contrôles), persisté dans `user://settings.cfg` via `GameSettings`
+  (`settings_manager.gd`, nouvel autoload). Défaut : vsync désactivé, aucun
+  plafond. Mesure avant/après sur `tools/test_transport.tscn` (deux instances
+  locales, `CONNECTION_TYPE: DIRECT`) :
 
-### En cours
+  | | 60 fps plafonné | Déplafonné |
+  |---|---|---|
+  | RTT_MIN_MS | 46,0 | 13,3 |
+  | RTT_AVG_MS | 49,7–50,3 | 22,3 |
+  | APP_RTT_MS | 48,8 | 23,9–24,2 |
 
-- **Réglage vsync / images par seconde déplafonnées** (décision de netcode, voir
-  plus bas).
+  Confirme la décision actée plus bas : le plancher de RTT EOS suit la cadence
+  d'image, pas le SDK. **Non vérifié : le maintien de 120 fps en
+  `gl_compatibility` pendant un échange chargé (particules + lumières,
+  étape 9).** Nécessite un rendu réel fenêtré ; l'outillage MCP disponible pour
+  cette session ne permet que du headless sans rendu. À confirmer avant de
+  considérer ce point clos.
 
 ### Non validé — le seul vrai inconnu
 
@@ -178,7 +191,9 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Réglage vsync/fps déplafonné** — agent, en cours.
+1. **Confirmer 120 fps tenus en `gl_compatibility`** pendant un échange chargé
+   (F3, particules + lumières) — nécessite un rendu réel fenêtré, pas fait par
+   cette session.
 2. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3.
 3. Fusion de `eos-transport` dans `main` une fois H1 vert.
 4. Ouverture de la Phase 4.

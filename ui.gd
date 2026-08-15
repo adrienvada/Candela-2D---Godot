@@ -2090,6 +2090,7 @@ func _fill_controls_tab() -> void:
 		_controls_grid_buttons.append(row)
 
 	tab_controls_container.add_child(_build_display_block())
+	tab_controls_container.add_child(_build_video_block())
 
 func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	var label := Label.new()
@@ -2128,6 +2129,44 @@ func _build_display_block() -> Control:
 		row.add_child(btn)
 
 	block.add_child(row)
+	return block
+
+## Vsync et plafond d'images par seconde — décision de netcode (voir
+## docs/ROADMAP.md) : EOS coûte davantage de latence à cadence basse, donc le
+## réglage par défaut est déplafonné, vsync désactivé.
+func _build_video_block() -> Control:
+	var block := VBoxContainer.new()
+	block.add_theme_constant_override("separation", GAP_XS)
+	block.add_child(_make_section_label("IMAGES PAR SECONDE", COLOR_GOLD))
+
+	var vsync_row := HBoxContainer.new()
+	vsync_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vsync_row.add_theme_constant_override("separation", GAP_S)
+	var vsync_group := ButtonGroup.new()
+	var btn_vsync_off := _make_choice_button("VSYNC DÉSACTIVÉ", COLOR_GOLD, vsync_group)
+	var btn_vsync_on := _make_choice_button("VSYNC ACTIVÉ", COLOR_GOLD, vsync_group)
+	btn_vsync_off.button_pressed = not GameSettings.vsync_enabled
+	btn_vsync_on.button_pressed = GameSettings.vsync_enabled
+	btn_vsync_off.pressed.connect(func() -> void: GameSettings.set_vsync(false))
+	btn_vsync_on.pressed.connect(func() -> void: GameSettings.set_vsync(true))
+	vsync_row.add_child(btn_vsync_off)
+	vsync_row.add_child(btn_vsync_on)
+	block.add_child(vsync_row)
+
+	var fps_row := HBoxContainer.new()
+	fps_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	fps_row.add_theme_constant_override("separation", GAP_S)
+	var fps_group := ButtonGroup.new()
+	for cap in GameSettings.FPS_CAPS:
+		var label := "DÉPLAFONNÉ" if cap == 0 else str(cap)
+		var btn := _make_choice_button(label, COLOR_GOLD, fps_group)
+		btn.custom_minimum_size = Vector2(120, 44)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.button_pressed = (cap == GameSettings.fps_cap)
+		btn.pressed.connect(func() -> void: GameSettings.set_fps_cap(cap))
+		fps_row.add_child(btn)
+	block.add_child(fps_row)
+
 	return block
 
 # ---------------------------------------------------------------------------
