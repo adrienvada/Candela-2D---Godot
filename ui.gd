@@ -2126,6 +2126,9 @@ func _build_display_block() -> Control:
 		btn.custom_minimum_size = Vector2(184, 44)
 		btn.add_theme_font_size_override("font_size", 14)
 		btn.pressed.connect(_on_res_selected.bind(i))
+		# Cocher le choix enregistré. `button_pressed` n'émet que `toggled` :
+		# régler l'état ici ne redéclenche donc pas `_on_res_selected`.
+		btn.button_pressed = i == GameSettings.resolution_index
 		row.add_child(btn)
 
 	block.add_child(row)
@@ -2504,6 +2507,8 @@ func _handle_rebind_input(event: InputEvent) -> void:
 
 	new_event.device = old_events[0].device if old_events.size() > 0 else 0
 	InputMap.action_add_event(_action_to_rebind, new_event)
+	# Sans ça, le joueur retrouvait les touches par défaut au lancement suivant.
+	GameSettings.set_binding(_action_to_rebind, new_event)
 
 	_apply_btn_info(_button_to_update, display_info)
 	_button_to_update.remove_theme_color_override("font_color")
@@ -2741,22 +2746,7 @@ func force_close_pause() -> void:
 	# en ligne laisserait l'arbre gelé.
 	get_tree().paused = false
 
+## L'application vit dans GameSettings, qui doit rejouer le même choix au
+## prochain lancement : deux implémentations divergeraient.
 func _on_res_selected(index: int) -> void:
-	match index:
-		0:
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			DisplayServer.window_set_size(Vector2i(1280, 720))
-			_center_window()
-		1:
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			DisplayServer.window_set_size(Vector2i(1920, 1080))
-			_center_window()
-		2:
-			# N'active le plein écran que sur le jeu final exporté.
-			if not OS.is_debug_build():
-				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-
-func _center_window() -> void:
-	var screen_size := DisplayServer.screen_get_size()
-	var win_size := DisplayServer.window_get_size()
-	DisplayServer.window_set_position((screen_size - win_size) / 2)
+	GameSettings.set_resolution(index)

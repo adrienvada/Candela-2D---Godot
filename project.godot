@@ -154,5 +154,4 @@ p2_torch={
 
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
-anti_aliasing/quality/msaa_2d=2
 textures/vram_compression/import_etc2_astc=true

@@ -121,9 +121,16 @@ code, sans configuration, sans redirection de port.
   elle n'est pas au premier plan. Mesuré sur **Apple M3**, fenêtre 1280×720 :
   une machine plus modeste demandera sa propre mesure.
 
-  Au passage, sans rapport avec la cadence : `anti_aliasing/quality/msaa_2d=2`
-  est inopérant sous `gl_compatibility` (« 2D MSAA is not yet supported for
-  GLES3 » à chaque démarrage). Réglage mort, à retirer ou à assumer.
+- **Préférences persistées** — vsync, plafond d'images par seconde, résolution
+  et remappage des touches vivent dans `user://settings.cfg`, sectionné
+  (`video` / `display` / `input`), appliqué au démarrage par l'autoload
+  `GameSettings`. Celui-ci est déclaré **après** `InputSetup` dans
+  `project.godot` : c'est ce qui permet aux liaisons enregistrées de recouvrir
+  les liaisons par défaut, et non l'inverse. Le remappage ne retire que les
+  événements de manette, jamais le clavier ni la souris.
+  Au passage, `anti_aliasing/quality/msaa_2d=2` a été retiré : inopérant sous
+  `gl_compatibility` (« 2D MSAA is not yet supported for GLES3 » à chaque
+  démarrage), c'était un réglage mort.
 
 ### Non validé — le seul vrai inconnu
 
@@ -216,7 +223,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 2. Fusion de `eos-transport` dans `main` une fois H1 vert.
 3. Ouverture de la Phase 4.
 
-Hors chantier, repéré en passant et laissé tel quel : `msaa_2d=2` est un
-réglage mort sous `gl_compatibility` (voir Phase 3), et ni la résolution ni le
-remappage des touches ne sont persistés alors que `settings_manager.gd` sait
-désormais le faire.
+Les deux verrues signalées ici — le réglage mort `msaa_2d=2` et l'absence de
+persistance de la résolution et du remappage — sont traitées. Toutes les
+préférences vivent désormais dans `user://settings.cfg`, sectionné
+(`video` / `display` / `input`).
