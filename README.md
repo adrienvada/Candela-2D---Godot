@@ -13,6 +13,12 @@ Godot 4.7 · GDScript · écran partagé local et 1v1 en ligne hôte-autoritaire
 **[docs/ROADMAP.md](docs/ROADMAP.md) est le document de référence du projet.**
 Il dit où en est le jeu, ce qui est décidé, ce qui est validé, et ce qui reste.
 
+**État des branches** — `main` porte les Phases 1 et 2 (écran partagé local et
+1v1 en ligne hôte-autoritaire). Le travail EOS de la Phase 3 vit sur
+`eos-transport` jusqu'à sa fusion : quelques fichiers cités plus bas
+(`docs/PROTOCOLE_TEST_EOS.md`, `eos_credentials.example.gd`, les bancs d'essai
+réseau) n'existent que sur cette branche.
+
 ---
 
 ## Protocole de travail (humains et agents)
