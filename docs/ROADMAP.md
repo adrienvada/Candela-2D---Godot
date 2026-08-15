@@ -1,0 +1,184 @@
+# Candela 2D — Feuille de route
+
+> **Document de référence du projet.** Toute session de travail le lit avant
+> d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
+> [README.md](../README.md).
+>
+> Dernière mise à jour : 2026-08-15
+
+---
+
+## Le jeu
+
+Duel 1v1 en vue de dessus. Deux joueurs s'affrontent dans le noir absolu ; la
+seule source d'information est la lumière — sa propre torche, qui révèle mais
+trahit, le flash d'un tir, la rétrodiffusion sur un mur. **Être vu, c'est être
+mort.** Chaque manche est un BO1 de 5 minutes.
+
+Contrainte transversale : le jeu doit rester **immédiat, intuitif, addictif**
+d'un côté, et **fonctionnel, léger, honnête en compétition** de l'autre. Toute
+décision se juge à cette double aune.
+
+---
+
+## État des phases
+
+| Phase | Objet | État |
+|---|---|---|
+| 1 | Local écran partagé | ✅ Terminée |
+| 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
+| 3 | **EOS — connectivité** | 🟡 **En cours** — branche `eos-transport` |
+| 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
+
+---
+
+## Phase 2 — P2P hôte-autoritaire ✅
+
+Neuf étapes numérotées, toutes terminées et fusionnées dans `main`.
+
+1. **Autorité hôte intégrale** (`a73128c`) — l'hôte simule les deux joueurs, le
+   client n'envoie que ses commandes numérotées.
+2. **Prédiction & interpolation** (`d448fcd`) — le client prédit son propre
+   joueur et corrige sur l'input acquitté ; l'adversaire est interpolé depuis un
+   tampon horodaté (100 ms de retard, extrapolation ≤ 50 ms).
+3. **Tir client immédiat** (`33d537c`) — balle prédite localement, dédupliquée à
+   l'arrivée du tir officiel.
+4. **Équité réseau** (`33d537c`) — ping par écho applicatif, compensation de
+   latence (historique 400 ms, recul RTT/2 + retard d'interpolation, plafonné à
+   200 ms), chronomètre recalé par l'hôte.
+5. **Lobby lisible** (`33d537c`) — décompte 3-2-1 partagé, statuts en langage
+   joueur, IP copiable.
+6. **et 7. Durcissement des transitions** (`399d736`) — jeton de séquence sur la
+   fin de manche, pause sans gel d'arbre en ligne, événements différés pendant
+   la killcam, `time_scale` rétabli sur toutes les sorties.
+8. **Format de match BO1** (`42f6c87`) — 5 minutes, écran VICTOIRE/DÉFAITE,
+   score de session, archivage dans `user://match_history.json`, cible
+   d'échauffement.
+9. **Passe de performance** (`42f6c87`) — réserve de particules (coût
+   d'émission −44 %), shaders préchargés en `.gdshader`, panneau F3 enrichi.
+
+**Reste dû sur la Phase 2 :** la checklist manuelle
+[CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) n'a jamais été
+déroulée à deux instances, et la validation à 120 ms de latence simulée non
+plus. Sera absorbé par le test à deux machines de la Phase 3.
+
+---
+
+## Phase 3 — EOS (connectivité) 🟡
+
+**Objectif :** que deux joueurs quelconques sur Internet se rejoignent par un
+code, sans configuration, sans redirection de port.
+
+### Fait
+
+- **Plugin EOSG validé** (Godot 4.7.1, EOSG 2.3.0, SDK EOS 1.19.1.2, binaires
+  macOS universal). Init, login Device ID, lobby, P2P : tous fonctionnels.
+- **Transport interchangeable** — `network_manager.gd` expose `Transport.EOS`
+  (défaut en ligne) et `Transport.ENET` (LAN/debug, intact). Aucun autre fichier
+  ne connaît le transport, hors bloc lobby de `ui.gd`.
+- **Lobby par code** — 6 caractères, alphabet sans I/O/0/1, publié en attribut
+  de lobby, jointure par recherche filtrée `bucket_id ET code`.
+- **Identité éphémère de test** (`--eos-ephemeral`) — le Device ID Epic étant
+  lié à la machine, deux instances locales partageraient sinon le même PUID.
+  Neutralisée hors build debug, bandeau d'avertissement à l'écran.
+- **Export macOS non signé validé** — `.dylib` embarqué, EOS opérationnel dans
+  le `.app`, sortie 0.
+- Bancs d'essai : `tools/test_transport.tscn`, `tools/test_online_match.tscn`,
+  `tools/test_quit_path.tscn`. Protocole :
+  [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
+
+### En cours
+
+- **Réglage vsync / images par seconde déplafonnées** (décision de netcode, voir
+  plus bas).
+
+### Non validé — le seul vrai inconnu
+
+- **Traversée de NAT réelle.** Toutes les mesures à ce jour proviennent de deux
+  instances sur la même machine (`CONNECTION_TYPE: DIRECT` systématique). Rien
+  ne prouve encore que le punchthrough et le relais Epic fonctionnent.
+  **Nécessite une intervention humaine** (voir « Jalons humains »).
+
+---
+
+## Phase 4 — Supabase (compétitif / ELO) ⬜
+
+Non commencée. Périmètre pressenti :
+
+- Calcul d'ELO dans une Edge Function (jamais côté client — les stats EOS sont
+  alimentées par le client, donc trichables pour un classement sérieux).
+- Résultat de match **signé par les deux pairs** avant validation : en P2P
+  l'hôte est juge et partie, c'est la seule parade.
+- Historique, saisons, liste de salons (reportée depuis la Phase 3).
+- Le PUID Epic sert de clé d'identité. **Limite connue :** le Device ID est lié
+  à la machine — un joueur qui change d'ordinateur perd son classement. Prévoir
+  un mécanisme de récupération ou une liaison de compte.
+- Fondation déjà en place : `match_record.gd` archive chaque match dans
+  `user://match_history.json` (vainqueur, durée, armes, carte, mode, format).
+
+---
+
+## Décisions actées
+
+| Décision | Raison |
+|---|---|
+| **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
+| **EOS conservé** pour la connectivité | NAT traversal + relais gratuits, sans serveur à maintenir. |
+| **Code de salon**, pas de liste de salons | Geste le plus immédiat pour « je joue avec un ami ». La liste n'a de sens qu'avec du matchmaking → Phase 4. |
+| **Images par seconde déplafonnées** | EOS coûte ~31 ms de latence de plus qu'ENet à 60 fps (54 ms contre 23 ms). Le levier est la cadence d'image, pas le nombre de ticks (+2 ms seulement en tickant deux fois par frame). Norme du jeu compétitif. |
+| **Pas d'adhésion Apple Developer** avant une sortie publique macOS | 99 $/an. Jusque-là : builds non signés + « Ouvrir quand même » dans Réglages Système. La signature/notarisation reste entièrement à valider le jour venu. |
+| **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
+| **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
+
+---
+
+## Pièges connus — ne pas les redécouvrir
+
+**EOS**
+- Ne JAMAIS appeler `delete_device_id()` ni `HAuth.login_anonymous_async()` : il
+  détruit et recrée l'identité à chaque appel, donc un PUID différent à chaque
+  lancement.
+- **Arrêt propre obligatoire** : `EOSGRuntime.set_process(false)` → `await
+  get_tree().process_frame` → `release()` → `shutdown()` → `quit()`. Sans
+  l'attente d'une frame, on ré-entre dans `EOS_Platform_Tick()` depuis sa propre
+  pile → segfault.
+- ID de socket P2P : alphanumérique uniquement, ≤ 32 caractères.
+- Une recherche de salon **infructueuse** coûte ~3,1 s (une recherche qui trouve
+  répond en ~200 ms).
+- `LOBBY_MEMBERS` peut être incomplet juste après `join_async` : attendre le
+  signal `lobby_updated`.
+- Le `MultiplayerSynchronizer` n'est **pas** promu en `reliable` (mesuré
+  390/390 en `UNRELIABLE`). Le plugin ne promeut que `unreliable_ordered`, que
+  Godot n'utilise pas ici. Sujet clos.
+
+**Export macOS**
+- `textures/vram_compression/import_etc2_astc=true` est obligatoire dans
+  `project.godot`, sinon l'export refuse de démarrer.
+- Ne pas utiliser `custom_template` : installer les modèles d'exportation depuis
+  le gestionnaire intégré de Godot (un téléchargement manuel corrompu avait fait
+  croire à un bug de l'éditeur).
+- Les entitlements réseau ne servent que sous App Sandbox (Mac App Store). En
+  distribution directe, EOS ouvre ses sockets sans entitlement.
+
+---
+
+## Jalons humains — ce qui ne peut pas être automatisé
+
+Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
+
+| # | Jalon | Pourquoi humain | Quand |
+|---|---|---|---|
+| H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le seul scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés), qui force le relais Epic. | **Prochain jalon bloquant** |
+| H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
+| H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
+| H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
+| H5 | Création du projet Supabase, clés | Compte à créer, décisions de coût. | Début Phase 4 |
+
+---
+
+## Prochaines étapes
+
+1. **Réglage vsync/fps déplafonné** — agent, en cours.
+2. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3.
+3. Fusion de `eos-transport` dans `main` une fois H1 vert.
+4. Ouverture de la Phase 4.
