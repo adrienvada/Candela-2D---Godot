@@ -29,6 +29,13 @@ décision se juge à cette double aune.
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
+| 5 | **Les menus** | 🔵 **Structure à choisir** — trois propositions soumises à Adrien le 2026-08-16 |
+| 6 | Rangs (catégories et divisions) | 🔵 À faire — dépend de la Phase 5 |
+| 7 | Déblocage d'armes par rang | 🔵 À faire — dépend de la Phase 6 |
+
+Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
+verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
+travail deux fois.
 
 ---
 
@@ -527,6 +534,157 @@ optimisation — avec ce rejeu comme référence pour la vérifier.
 
 ---
 
+## Phase 5 — Les menus 🔵 STRUCTURE À CHOISIR
+
+**Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
+ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
+sache montrer un verrou, et les deux d'un endroit où vivre. Les greffer sur
+l'onglet JOUER actuel — qui porte déjà le mode, la carte et les deux râteliers
+d'armes — puis restructurer ensuite reviendrait à faire le travail deux fois.
+L'ordre n'est pas une préférence : c'est la seule séquence qui ne se paie pas
+double.
+
+**Rien de ce qui suit ne touche au réseau.** Le menu ne fait que *choisir* un
+mode ; `NetworkManager` et `game_state.gd` reçoivent les mêmes appels quelle que
+soit la structure retenue. La seule règle à ne pas enfreindre est celle de
+l'architecture : hors de `network_manager.gd`, seul le bloc lobby de `ui.gd` a le
+droit de connaître le transport.
+
+### Ce qui manque — relevé du 2026-08-16 sur `ui.gd`
+
+L'UI est construite **entièrement en code** : `ui.tscn` fait six lignes, et
+`_build_menu()` fabrique tout. Il n'y a donc aucune scène à réagencer, ce qui
+rend la refonte moins risquée qu'il n'y paraît — mais aussi entièrement à écrire.
+
+| Manque | Constat |
+|---|---|
+| **Aucun réglage audio** | `settings_manager.gd` ne connaît que `video`, `display`, `input`. Les bus `Master` / `Music` / `SFX` / `Speaker` existent et personne ne peut les régler. C'est le manque le plus visible pour un joueur. |
+| **Aucun écran de classement** | L'Edge Function `standing` renvoie déjà un `top` de dix ; l'UI n'affiche que la ligne du joueur. Le travail serveur est fait, l'écran manque. |
+| **Aucun mode entraînement** | `TrainingTarget` existe mais ne s'active qu'en attendant un adversaire en ligne (`game_state.gd:279`). Un joueur seul ne peut pas s'exercer. |
+| **Aucune calibration de luminosité** | Dans un jeu dont l'unique canal d'information est la lumière, un écran mal réglé — ou trop bien réglé — est un avantage. C'est un problème d'honnêteté en compétition, pas de confort. |
+| **L'onglet « CONTRÔLES » est un menu Options déguisé** | Il contient l'affichage et les images par seconde. Le nom ment sur le contenu. |
+| **La pause est le menu complet** | Un seul `game_over_panel` sert de menu principal, de pause et d'écran de fin ; les différences se règlent en masquages à la volée (`show_main_menu`, `show_game_over`). Chaque nouvel écran ajoutera une règle de masquage de plus. |
+| Pas d'historique, pas d'édition du pseudo | `nickname` existe côté base et `match_history.json` côté disque ; ni l'un ni l'autre n'a d'écran. |
+
+### Étape 1 — choisir la structure (décision d'Adrien, en attente)
+
+Trois structures proposées le 2026-08-16, prototypées et navigables. Le chiffre
+qui les départage honnêtement est le **coût en clics du geste le plus fréquent** :
+relancer un match.
+
+| | A — Onglets consolidés | B — Hub et destinations | C — Rail latéral |
+|---|---|---|---|
+| Principe | On garde la barre d'onglets, on range ce qui est mal rangé | Un accueil de grandes destinations, chacune un écran entier | Rail permanent à gauche, lancement toujours visible |
+| Clics — match local | 1 | 3 | 1 |
+| Clics — salon en ligne | 2 | 4 | 2 |
+| Profondeur | 2 niveaux | 3 niveaux | 2 niveaux |
+| Coût d'écriture | Le plus faible — la barre d'onglets et l'animation de bascule sont conservées | Le plus élevé — tout est à écrire | Moyen |
+| Encaisse la croissance ? | Mal : l'onglet JOUER est déjà chargé | Bien : un écran, un sujet | Jusqu'à cinq entrées ; au-delà le rail défile, ce qui est mauvais à la manette |
+
+**Aucune n'est recommandée d'office** : B est la plus lisible et la seule qui
+absorbe sans broncher les rangs, le déblocage d'armes et les saisons ; elle coûte
+deux clics de plus **à chaque partie**. A et C préservent l'immédiateté, qui est
+l'un des deux critères transversaux du projet.
+
+### Étape 2 — séparer la pause du menu principal
+
+Indépendante de la structure choisie, et à faire en premier quoi qu'il arrive :
+tant que les trois rôles partagent un panneau, chaque écran ajouté coûte une
+règle de masquage. La pause doit redevenir ce qu'elle est partout ailleurs — un
+panneau court : reprendre, options, menu principal, abandonner.
+
+Attention : l'abandon en ligne vaut forfait et il est archivé (`_archive_forfeit`,
+quatre chemins convergents). Ce comportement ne doit pas se perdre dans la
+réécriture.
+
+### Étape 3 — Options : audio et calibration
+
+Le bloc audio est à créer de bout en bout, `settings_manager.gd` compris (section
+`audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste).
+La calibration de luminosité est un écran de réglage guidé — « ajustez jusqu'à
+distinguer tout juste cette silhouette » — et non un curseur nu.
+
+### Étape 4 — les écrans manquants
+
+Classement (le serveur est prêt), entraînement (`TrainingTarget` est prêt),
+historique des matchs (`match_history.json` est prêt). Les trois sont surtout un
+travail d'affichage.
+
+---
+
+## Phase 6 — Rangs 🔵 À FAIRE
+
+Une dizaine de catégories, chacune subdivisée en divisions, à la manière de
+Rocket League. Proposition du 2026-08-16, **à confirmer par Adrien**.
+
+### L'échelle
+
+Une progression de l'obscurité vers la lumière, qui se termine sur le nom du jeu
+— *candela* étant l'unité d'intensité lumineuse.
+
+| # | Catégorie | # | Catégorie |
+|---|---|---|---|
+| 1 | Aveugle | 6 | Brasier |
+| 2 | Braise | 7 | Phare |
+| 3 | Bougie | 8 | Aurore |
+| 4 | Lanterne | 9 | Zénith |
+| 5 | Torche | 10 | Candela |
+
+### La contrainte d'architecture : le rang est dérivé, comme le classement
+
+Le rang doit être une **fonction pure du classement**, calculée à l'affichage et
+jamais stockée. C'est la même décision que celle qui gouverne déjà la Phase 4 :
+la table `ratings` est reconstruite en entier par un rejeu. Si le rang était
+écrit en base, changer une borne d'échelle exigerait une migration de données ;
+dérivé, cela ne coûte qu'un redéploiement.
+
+Concrètement : `rankOf(rating)` dans `elo.ts`, testée hors ligne comme le reste,
+et rien de nouveau dans le schéma.
+
+---
+
+## Phase 7 — Déblocage d'armes 🔵 À FAIRE
+
+Chaque catégorie débloque une arme. Les quatre armes actuelles occupent les
+quatre premières catégories ; **les catégories 5 à 10 ne débloquent donc encore
+rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
+
+| Catégorie | Arme |
+|---|---|
+| 1 — Aveugle | Pistolet |
+| 2 — Braise | Fusil |
+| 3 — Bougie | Pompe |
+| 4 — Lanterne | Arbalète |
+
+**En local, toutes les armes sont accessibles** (décision d'Adrien du
+2026-08-16) : l'écran partagé n'est pas classé, rien n'y justifie un verrou.
+
+### Le point qui demande une décision : l'asymétrie en match classé
+
+Verrouiller des armes derrière le rang donne au mieux classé des options que
+l'autre n'a pas — dans un duel 1v1 où l'équilibre est tout. Le cas le plus net
+est l'**Arbalète** : 80 de dégâts, `emits_light = false`, flash quasi nul. C'est
+l'arme furtive, et elle est réservée à la quatrième catégorie.
+
+Trois issues possibles, à trancher avant d'écrire quoi que ce soit :
+
+1. **Assumer l'asymétrie.** Le déblocage est une récompense, elle se mérite. Le
+   plus lisible pour le joueur, le plus discutable en compétition.
+2. **Règle du miroir** : en match classé, les deux joueurs jouent sur
+   l'intersection de ce qu'ils ont débloqué — c'est-à-dire l'arsenal du moins
+   bien classé. Préserve la symétrie et garde la progression. Coût : l'arsenal
+   d'un joueur change selon l'adversaire, ce qu'il faut montrer clairement avant
+   le match sous peine d'être vécu comme un bug.
+3. **Découpler** : toutes les armes disponibles en classé, le déblocage ne
+   concerne que le local, l'entraînement et l'apparence. Aucun risque
+   d'équilibrage, mais la progression perd son enjeu.
+
+La règle du miroir est celle qui respecte le mieux les deux critères du projet à
+la fois — reste qu'elle demande un écran honnête, et c'est un choix de jeu, pas
+un choix technique.
+
+---
+
 ## Décisions actées
 
 | Décision | Raison |
@@ -680,25 +838,28 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 ## Prochaines étapes
 
 > **Cap donné par Adrien le 2026-08-16 :** le jeu est amusant (H3 tranché), le
-> classement va au bout, et les ajouts de fonctionnalités et de gameplay
-> viennent après.
+> classement est en place, et la suite est le contenu — les menus d'abord, puis
+> les rangs, puis le déblocage d'armes (Phases 5 à 7).
 
-1. **Les ajouts de fonctionnalités et de gameplay**, cap donné par Adrien une
-   fois le classement en place. La Phase 4 est close ; la suite n'est plus une
-   étape numérotée mais un choix de contenu.
-2. **Rejouer le journal local** pour les rapports que le réseau a perdus.
+1. **Choisir la structure de menu** (Phase 5, étape 1) — trois propositions
+   navigables soumises le 2026-08-16. Rien ne s'écrit avant ce choix : les rangs
+   et le déblocage d'armes attendent des écrans où vivre.
+2. **Trancher l'asymétrie du déblocage d'armes** (Phase 7) — assumer, miroir, ou
+   découpler. C'est un choix de jeu, pas un choix technique.
+3. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
-3. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
+4. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
    échoué sans qu'on puisse conclure : les frappes synthétiques passent dans un
    champ de texte (chemin unicode) mais pas sur une action d'`InputMap` (chemin
    `keycode`). Rien n'indique un défaut, rien ne l'exclut — trente secondes à la
-   main lèveraient le doute.
-4. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+   main lèveraient le doute. **À lever avant la Phase 5** : une refonte des menus
+   se valide à la main, et Échap en est le geste de sortie.
+5. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-5. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+6. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
-6. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
+7. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
    ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
 
 ## Journal des tests à deux machines
