@@ -4,9 +4,10 @@
 > Ce document dit ce qu'il y a à déployer et comment. Le pourquoi est dans
 > [ROADMAP.md](ROADMAP.md).
 
-Tout le code est écrit et versionné. Il reste à le **pousser vers le projet
-Supabase**, ce qui exige une authentification : c'est le seul geste qu'un agent
-ne peut pas faire à la place d'Adrien.
+**Déployé et vérifié en production le 2026-08-16.** Ce document reste la marche
+à suivre : pour une seconde machine, pour un projet neuf, ou pour redéployer
+après une modification. Les commandes marquées ✅ ont déjà été passées sur le
+projet ci-dessous.
 
 | | |
 |---|---|
@@ -22,7 +23,8 @@ ne peut pas faire à la place d'Adrien.
 supabase/
 ├── config.toml                        les deux fonctions, sans jeton Supabase
 ├── migrations/
-│   └── 20260816160000_players_identity.sql
+│   ├── 20260816160000_players_identity.sql
+│   └── 20260816183000_functions_return_setof.sql
 └── functions/
     ├── _shared/
     │   ├── epic.ts                    vérification du jeton signé par Epic
@@ -77,7 +79,7 @@ travail à `supabase-go`. N'extraire que le premier laisse une CLI qui répond �
 
 Sur une machine Intel, remplacer `darwin_arm64` par `darwin_amd64`.
 
-### 2. S'authentifier
+### 2. S'authentifier — ✅ fait
 
 Ouvre un navigateur.
 
@@ -85,15 +87,17 @@ Ouvre un navigateur.
 supabase login
 ```
 
-### 3. Rattacher le dépôt au projet
+### 3. Rattacher le dépôt au projet — ✅ fait
 
-Demande le mot de passe de la base (celui choisi à la création du projet).
+Demande le mot de passe de la base (celui choisi à la création du projet). Il est
+retenu ensuite : `db push` ne le redemande pas. L'état local du lien vit dans
+`supabase/.temp/`, ignoré par git — il est propre à une machine.
 
 ```bash
 supabase link --project-ref obnlcnwlkuojmplksxtu
 ```
 
-### 4. Pousser le schéma
+### 4. Pousser le schéma — ✅ fait
 
 Crée la table, ferme la Row Level Security, installe les deux fonctions SQL.
 
@@ -101,7 +105,7 @@ Crée la table, ferme la Row Level Security, installe les deux fonctions SQL.
 supabase db push
 ```
 
-### 5. Donner à Epic ses identifiants
+### 5. Donner à Epic ses identifiants — ✅ fait
 
 `EPIC_CLIENT_ID` est ce que le jeton doit annoncer en `aud` ; `EPIC_DEPLOYMENT_ID`
 sépare la production du bac à sable. **Sans `EPIC_CLIENT_ID`, les fonctions
@@ -121,7 +125,7 @@ jamais les valeurs) :
 supabase secrets list
 ```
 
-### 6. Déployer les deux fonctions
+### 6. Déployer les deux fonctions — ✅ fait
 
 ```bash
 supabase functions deploy identify --no-verify-jwt
@@ -171,8 +175,12 @@ Avec la clé publiable — celle qui est dans le jeu :
 curl -s "https://obnlcnwlkuojmplksxtu.supabase.co/rest/v1/players?select=*" -H "apikey: $(sed -n 's/^const PUBLISHABLE_KEY := "\(.*\)"/\1/p' supabase_config.gd)"
 ```
 
-Attendu : `[]` — jamais une ligne. C'est la RLS qui répond, pas la chance : la
-table est vide pour tout le monde sauf la clé secrète.
+Attendu : `{"code":"42501",…,"message":"permission denied for table players"}`.
+
+Mieux qu'un `[]` : la table n'est pas seulement vide pour cette clé, elle lui est
+**inaccessible**. Les révocations de droits répondent avant même que la RLS n'ait
+à trancher. Un `[]` conviendrait aussi — il signifierait que la RLS filtre — mais
+le refus de privilège est plus franc.
 
 ### Le chemin nominal, depuis le jeu
 
@@ -191,6 +199,12 @@ table est vide pour tout le monde sauf la clé secrète.
 Chaque lancement en `--eos-ephemeral` crée un PUID neuf, donc un profil de plus :
 c'est le prix du test à deux instances sur une seule machine, et c'est visible
 dans le tableau de bord. Les lignes se suppriment à la main quand elles gênent.
+
+Ce parcours a été validé le 2026-08-16 **hors interface**, en pilotant
+directement l'autoload : deux identités éphémères ont bien obtenu deux profils
+distincts, et une troisième a repris le profil de la première sur présentation
+de son code. Reste à le refaire **à la souris**, dans l'onglet PROFIL — c'est la
+seule partie que ces essais n'ont pas touchée.
 
 ---
 
@@ -231,6 +245,29 @@ clé, d'une charge utile modifiée après signature, d'un jeton expiré, et d'un
 jeton destiné à un autre jeu.
 
 ---
+
+## Vérifié en production le 2026-08-16
+
+| Contrôle | Résultat |
+|---|---|
+| Migrations appliquées (`db push`) | ✅ les deux |
+| Table inaccessible à la clé publiable | ✅ `42501 permission denied`, en lecture comme en écriture |
+| PUID posté sans jeton | ✅ `401 jeton_absent` |
+| Jeton inventé / `alg: none` | ✅ `401 jeton_malforme` / `401 algorithme_refuse` |
+| Vrai jeton Epic → profil créé | ✅ code rendu et lisible |
+| Deux identités distinctes → deux profils | ✅ |
+| Code valide → rattachement | ✅ le profil suit la nouvelle machine |
+| Code inconnu → refus | ✅ `404 code_inconnu` (après correctif, voir plus bas) |
+
+Les profils créés par ces essais ont été supprimés : la table est repartie vide.
+
+**Un défaut trouvé et corrigé au passage.** La première version des fonctions SQL
+rendait `public.players` et signalait « code inconnu » par un `NULL`. Vu du
+client, ce `NULL` n'existe pas : PostgREST sérialise un composite NULL en **objet
+de champs nuls** — `{"id":null,…}` — et non en `null`. L'Edge Function y voyait un
+profil valide et répondait `200`. Un code inventé était donc accepté. Les
+fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté
+possible. Migration `20260816183000_functions_return_setof.sql`.
 
 ## Ce qui n'est pas fait
 

@@ -232,7 +232,10 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray,
 		return
 
 	var profile: Variant = payload.get("profile", null)
-	if not profile is Dictionary:
+	# Un profil sans identifiant utilisable n'en est pas un. Le contrôle a servi :
+	# une réponse d'objet vide, prise pour un profil valide, faisait afficher un
+	# rattachement réussi là où le code était inconnu.
+	if not profile is Dictionary or String((profile as Dictionary).get("id", "")).is_empty():
 		_report(endpoint, false, "Réponse du classement illisible.")
 		return
 

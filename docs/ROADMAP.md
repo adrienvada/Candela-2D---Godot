@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) écrite et testée (`673c0e9`), en attente du déploiement H6 |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) **déployée et vérifiée en production** le 2026-08-16 |
 
 ---
 
@@ -283,14 +283,15 @@ ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
 La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
 reçoivent la leur par variable d'environnement.
 
-### Étape 1 — identité vérifiée (`673c0e9`) 🟡 écrite, testée, pas encore déployée
+### Étape 1 — identité vérifiée (`673c0e9`) ✅ déployée et vérifiée en production
 
 **Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
 infalsifiable. C'est austère, mais tout le reste s'écroule sans elle : un
 classement dont on peut usurper les profils ne vaut rien.
 
-Le déploiement passe par la CLI Supabase, qui exige une authentification — voir
-le jalon H6 et [SUPABASE.md](SUPABASE.md), qui porte les commandes exactes.
+Déployée le 2026-08-16 sur le projet `obnlcnwlkuojmplksxtu` : les deux migrations
+appliquées, les deux Edge Functions en ligne, les secrets Epic posés. Marche à
+suivre et relevé des contrôles : [SUPABASE.md](SUPABASE.md).
 
 **Schéma** (`supabase/migrations/20260816160000_players_identity.sql`) — une
 table `players` : `id` (uuid), `puid` (PUID Epic **courant**, unique), `code`
@@ -345,8 +346,27 @@ et chaque exécution créerait un profil de plus dans la vraie base.
 **Vérifié** : sans `supabase_config.gd`, le jeu démarre, EOS fonctionne, le
 classement reste « non configuré », aucune erreur.
 
-**Reste dû** : le déploiement (H6), puis les critères qui en dépendent — deux
-instances locales avec deux profils distincts, et un rattachement par code.
+**Les cinq critères de sortie sont tenus**, vérifiés contre les fonctions
+réellement déployées :
+
+| Critère | Vérification |
+|---|---|
+| Deux instances locales, deux profils distincts | Deux identités éphémères → deux profils, deux codes lisibles |
+| Un PUID posté sans jeton valide est refusé | `401` sur PUID seul, jeton inventé, `alg: none`, corps vide |
+| Un code valide rattache une nouvelle identité | Une troisième identité reprend le profil de la première |
+| Sans configuration Supabase, le jeu démarre | Vérifié : classement « non configuré », rien d'autre ne change |
+| Les 6 suites passent | ✅ |
+
+**Reste dû** : refaire le parcours **à la souris** dans l'onglet PROFIL. Les
+essais ont piloté l'autoload directement ; l'interface elle-même n'a pas été
+exercée.
+
+**Un défaut trouvé et corrigé en production** (`20260816183000`) : les fonctions
+SQL signalaient « code de récupération inconnu » par un `NULL`, que PostgREST
+sérialise en **objet de champs nuls** et non en `null`. L'Edge Function y voyait
+un profil valide et répondait `200` — **un code inventé était accepté**. Les
+fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté.
+Le client Godot refuse en outre tout profil sans identifiant.
 
 ### Périmètre
 
@@ -443,6 +463,11 @@ instances locales avec deux profils distincts, et un rattachement par code.
   puis attrapé par son propre test le 2026-08-16 ; il n'était pas exploitable
   (la signature est vérifiée avant), mais le même raisonnement appliqué ailleurs
   le serait.
+- **Un composite `NULL` rendu par une fonction SQL n'arrive pas en `null`.**
+  PostgREST le sérialise en OBJET DE CHAMPS NULS — `{"id":null,…}` — qu'un
+  appelant prend pour une ligne valide. C'est ce qui a fait accepter un code de
+  récupération inventé, en production, le 2026-08-16. Une fonction qui doit
+  pouvoir ne rien rendre se déclare `returns setof` : zéro ligne devient `[]`.
 - Ne pas se fier à l'en-tête `Accept: application/vnd.pgrst.object+json` pour
   distinguer « aucune ligne » : selon la version, PostgREST rend l'objet seul ou
   un tableau d'une entrée, et répond 406 sur zéro ligne. Le code accepte les
@@ -473,18 +498,18 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
-| H6 | **Déploiement du schéma et des Edge Functions** | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base : aucun agent ne peut s'authentifier à la place d'Adrien. Tout le reste est écrit et testé ; commandes exactes dans [SUPABASE.md](SUPABASE.md). | **Prochain jalon bloquant** |
+| H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
+| H7 | **Parcours du profil à la souris** | Les critères ont été vérifiés en pilotant l'autoload ; l'onglet PROFIL lui-même — affichage du code, bouton COPIER, champ de rattachement — n'a jamais été touché par un humain. | **Prochain jalon** |
 
 ---
 
 ## Prochaines étapes
 
-1. **H6 : déployer le schéma et les deux Edge Functions** — Adrien. Six
-   commandes, dans [SUPABASE.md](SUPABASE.md). Sans elles, l'étape 1 reste du
-   code qui ne tourne nulle part, et les critères de sortie qui en dépendent
-   (deux profils distincts, rattachement par code) restent invérifiés.
-2. Étape 2 de la Phase 4 : le calcul d'ELO lui-même, et la table des matchs qui
-   portera à son tour le champ `arbitration`.
+1. **H7 : dérouler le parcours PROFIL à la souris** — Adrien. Deux instances en
+   `--eos-ephemeral`, onglet PROFIL, copier-coller d'un code. Une quinzaine de
+   minutes ; c'est la seule partie de l'étape 1 qu'aucun essai n'a touchée.
+2. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
+   qui portera à son tour le champ `arbitration`.
 3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
 4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la

@@ -85,6 +85,12 @@ export async function callFunction(
  * version et la forme de la fonction appelée. Les deux mènent au même profil ;
  * l'absence de ligne, elle, doit rester distinguable — c'est le « code inconnu »
  * de `link_profile`.
+ *
+ * Le dernier contrôle n'est pas décoratif : une fonction SQL qui rendait un
+ * composite NULL se présentait ici en OBJET DE CHAMPS NULS, pas en `null`, et
+ * passait donc pour un profil valide. Les fonctions rendent désormais un
+ * `setof`, ce qui lève l'ambiguïté à la source ; ce garde-fou reste pour qu'une
+ * régression du même genre échoue bruyamment au lieu d'inventer un profil.
  */
 function firstRow(text: string): PlayerProfile | null {
   if (text === "" || text === "null") {
@@ -94,8 +100,11 @@ function firstRow(text: string): PlayerProfile | null {
   if (parsed === null) {
     return null;
   }
-  if (Array.isArray(parsed)) {
-    return parsed.length > 0 ? parsed[0] as PlayerProfile : null;
+  const row = Array.isArray(parsed)
+    ? (parsed.length > 0 ? parsed[0] : null)
+    : parsed;
+  if (row === null || typeof row !== "object" || typeof row.id !== "string") {
+    return null;
   }
-  return parsed as PlayerProfile;
+  return row as PlayerProfile;
 }
