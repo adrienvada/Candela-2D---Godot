@@ -875,6 +875,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V2.3 Jingle de kill** — 2 notes dans la tonalité du thème, variante si le
   match gagne la session. — *assets : 1-2 stingers accordés.*
 - **V2.4 Onde de choc lumineuse** — cercle plein écran depuis l'impact, 400 ms.
+  **✅ Fait** — `kill_shockwave.gd`, double anneau additif dessiné (aucune
+  PointLight2D : une grande lumière recalculerait toutes les ombres),
+  traverse les murs par design — ponctuation, pas information.
 - **V2.5 « FATAL — ARBALÈTE »** — le label FATAL s'enrichit du nom de l'arme.
   **✅ Fait.**
 - **V2.6 Trait sur-exposé** — la balle fatale laisse son trait HDR 1 frame.
@@ -1000,6 +1003,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   lumière : le noir garde une mémoire courte, la traque devient pistage. Info
   nouvelle mais symétrique — la plus forte idée « mécanique » de la liste. —
   *assets : 2-3 sprites (ou procédural).* **→ Activé, en procédural.**
+  **✅ Fait** — `footprint.gd`, semelle sombre éclairée (jamais unshaded :
+  seule une lumière la révèle), duplicata par viewport comme le sang, TTL
+  2 s dont la fraîcheur se lit à l'alpha. Au passage, le PAS lui-même (son +
+  empreinte) est passé sur la distance réellement parcourue, hors du bloc de
+  simulation : l'ancien code rendait les pas de l'adversaire inaudibles côté
+  client — asymétrie d'information préexistante, corrigée.
 - **D2 Bourdon d'aveuglement** — la nappe monte quand on n'a pas VU
   l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
   **→ Acté sur le principe ; attend les stems réels (V1.1).**

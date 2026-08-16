@@ -111,6 +111,11 @@ var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
 @onready var hit_sound = $HitSound
 var step_distance_accumulated: float = 0.0
+## D1 — alternance pied gauche/droit des empreintes : +1/-1, inversé à chaque
+## pas. État PAR JOUEUR, tenu ici et non dans Footprint.
+var _foot_side := 1
+## Dernière position vue par le détecteur de pas (voir _physics_process).
+var _last_step_pos := Vector2.ZERO
 
 
 func _ready():
@@ -718,14 +723,6 @@ func _physics_process(delta):
 		if velocity != Vector2.ZERO:
 			move_and_slide()
 		
-		if velocity.length() > 20.0:
-			step_distance_accumulated += velocity.length() * delta
-			var step_dist := 60.0 if is_sprinting else 45.0
-			if step_distance_accumulated >= step_dist:
-				step_distance_accumulated = 0.0
-				var pitch_mult := 1.122 if is_sprinting else 1.0
-				AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
-	
 		var aim_dir = input_provider.get_aim_direction(global_position)
 		if aim_dir.length() > 0.1:
 			var target_angle = aim_dir.angle()
@@ -744,6 +741,30 @@ func _physics_process(delta):
 			_predict_history[_input_seq] = {"pos": global_position, "rot": rotation}
 			if _predict_history.size() > PREDICT_HISTORY_MAX:
 				_predict_history.erase(_predict_history.keys()[0])
+
+	# Pas — son ET empreinte (D1), déclenchés sur la distance RÉELLEMENT
+	# parcourue et non sur la vitesse simulée. Hors du bloc can_move exprès :
+	# l'adversaire interpolé doit produire les mêmes traces que le joueur
+	# simulé, sinon l'information devient asymétrique — l'hôte entendrait et
+	# pisterait le client, jamais l'inverse. (Corrige au passage l'asymétrie
+	# préexistante du SFX de pas, inaudible côté client pour l'adversaire.)
+	var step_moved := global_position.distance_to(_last_step_pos)
+	_last_step_pos = global_position
+	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
+	if step_moved > 0.5 and step_moved < 100.0:
+		step_distance_accumulated += step_moved
+		# L'état de sprint n'est pas répliqué : l'adversaire interpolé retombe
+		# sur le pas de 45 px — un poil plus bavard, jamais moins.
+		var step_dist := 60.0 if is_sprinting else 45.0
+		if step_distance_accumulated >= step_dist:
+			step_distance_accumulated = 0.0
+			var pitch_mult := 1.122 if is_sprinting else 1.0
+			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
+			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
+			# trace racontent le même événement, sandbox compris.
+			_foot_side = -_foot_side
+			if state and state.arena:
+				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
 
 	# Visuals update for all clients
 	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau

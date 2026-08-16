@@ -1152,6 +1152,14 @@ func _do_end_round(winner_id: int):
 					winner.flashlight.enabled = false
 					winner.body_light.enabled = false)
 
+		# V2.4 — l'onde de choc du kill traverse l'arène depuis le corps, dans
+		# le noir fraîchement gagné. Autonome : elle s'anime et se libère seule.
+		var victim: Player = p2 if winner_id == 0 else p1
+		if is_instance_valid(victim):
+			var shock := KillShockwave.new()
+			shock.global_position = victim.global_position
+			arena.add_child(shock)
+
 	if winner_id != -1:
 		# Wait 1.5 seconds to capture blood physics and reaction!
 		await get_tree().create_timer(1.5).timeout
