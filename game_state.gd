@@ -17,12 +17,16 @@ var game_over: bool = false
 var _first_replay_frame: bool = false
 var p1_ready_for_rematch: bool = false
 var p2_ready_for_rematch: bool = false
+# Bascule locale « prêt à rejouer ». État canonique : le libellé du bouton
+# REJOUER n'en est qu'un reflet — l'ancienne logique comparait le texte du
+# bouton, que la moindre reformulation aurait cassée en silence.
+var local_ready_for_rematch: bool = false
 var _hosted_weapon_1_idx: int = 0
 
 # Score de session : nombre de matchs gagnés depuis le lancement de la série.
 # Remis à zéro au retour au menu, pas entre deux matchs.
-var p1_kills: int = 0
-var p2_kills: int = 0
+var p1_session_wins: int = 0
+var p2_session_wins: int = 0
 
 # Manches gagnées dans le match en cours. En BO1 elles retombent à zéro à
 # chaque fin de match ; elles existent pour que les formats longs s'ajoutent
@@ -245,10 +249,11 @@ func _on_peer_disconnected(id: int):
 		p2_ready_for_rematch = false
 		# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
 		p1_ready_for_rematch = false
+		local_ready_for_rematch = false
 		ui.btn_replay.text = "REJOUER"
 		ui.btn_replay.remove_theme_color_override("font_color")
-		p1_kills = 0
-		p2_kills = 0
+		p1_session_wins = 0
+		p2_session_wins = 0
 		p1_round_wins = 0
 		p2_round_wins = 0
 		p2.hide()
@@ -627,6 +632,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.set_collision_mask_value(1, true)
 	ui.waiting_label.hide()
 	ui.hide_game_over()
+	local_ready_for_rematch = false
 	ui.btn_replay.text = "REJOUER"
 	ui.btn_replay.remove_theme_color_override("font_color")
 	game_over = false
@@ -677,7 +683,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 		c.queue_free()
 	ReplaySystem.start_recording()
 	
-	ui.game_over_score.text = "SESSION : %d - %d" % [p1_kills, p2_kills]
+	ui.game_over_score.text = "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
 
 func _process(delta):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
@@ -1031,9 +1037,9 @@ func _do_end_round(winner_id: int):
 		# Le score cumulé est un score de SESSION (série de matchs), pas un score
 		# de manches : il ne bouge qu'à la fin d'un match.
 		if winner_id == 0:
-			p1_kills += 1
+			p1_session_wins += 1
 		elif winner_id == 1:
-			p2_kills += 1
+			p2_session_wins += 1
 		_archive_match_result(winner_id)
 		p1_round_wins = 0
 		p2_round_wins = 0
@@ -1098,8 +1104,10 @@ func _do_end_round(winner_id: int):
 
 	_end_sequence_active = false
 	game_over = true
+	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
+	local_ready_for_rematch = false
 	ui.show_game_over(winner_id)
-	ui.game_over_score.text = "SESSION : %d - %d" % [p1_kills, p2_kills]
+	ui.game_over_score.text = "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
 	_apply_deferred_rematch()
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
@@ -1152,6 +1160,10 @@ func _apply_deferred_rematch() -> void:
 func rpc_client_weapon(idx: int):
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id: return
+	# Le client n'émet ce paquet qu'à la connexion : le recevoir pendant une
+	# manche (ou son décompte) ne peut être qu'une ré-émission illégitime —
+	# l'accepter réinitialiserait le duel en cours.
+	if round_active or countdown_left > 0.0: return
 	_set_p2_weapon_button(idx)
 	# Reçu en pleine killcam : on retient le choix, _apply_deferred_rematch
 	# lancera la manche une fois l'écran de fin stable.
@@ -1214,7 +1226,8 @@ func _on_replay_requested():
 			_restore_viewports()
 			_start_round()
 	else:
-		if ui.btn_replay.text == "✓ PRÊT":
+		if local_ready_for_rematch:
+			local_ready_for_rematch = false
 			ui.btn_replay.text = "REJOUER"
 			ui.btn_replay.remove_theme_color_override("font_color")
 			if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -1223,11 +1236,12 @@ func _on_replay_requested():
 				p1_ready_for_rematch = false
 				ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 			return
-			
+
 		var w2_idx = 0
 		if ui.p2_weapon_group.get_pressed_button():
 			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
-			
+
+		local_ready_for_rematch = true
 		ui.btn_replay.text = "✓ PRÊT"
 		ui.btn_replay.add_theme_color_override("font_color", Color.GREEN)
 		
@@ -1310,6 +1324,7 @@ func _on_main_menu_requested():
 	game_over = true
 	p1_ready_for_rematch = false
 	p2_ready_for_rematch = false
+	local_ready_for_rematch = false
 	
 	if ReplaySystem:
 		ReplaySystem.stop_recording()
@@ -1329,8 +1344,8 @@ func _on_main_menu_requested():
 		
 	# Le score de session ne survit pas au retour au menu : une nouvelle série
 	# repart de 0 - 0.
-	p1_kills = 0
-	p2_kills = 0
+	p1_session_wins = 0
+	p2_session_wins = 0
 	p1_round_wins = 0
 	p2_round_wins = 0
 	_set_training_target_active(false)

@@ -1,0 +1,59 @@
+# Suites de tests headless — les mêmes que la boucle « avant tout commit » du
+# README, exécutées sur chaque poussée. Validé avec Godot 4.7.1 Linux : les six
+# suites passent telles quelles, sans identifiants EOS (le jeu se dégrade
+# proprement en « EOS non configuré »). Les bancs réseau à deux instances
+# (test_transport, test_online_match --host/--join) restent hors CI : ils
+# exigent des identifiants Epic et deux processus appariés.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+env:
+  GODOT_VERSION: 4.7.1-stable
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache du binaire Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Téléchargement de Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o ~/godot-bin/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -o -q ~/godot-bin/godot.zip -d ~/godot-bin
+          chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
+
+      # Premier passage obligatoire : sans import, les suites lancées en
+      # --script ne résolvent ni les uid ni les ressources.
+      - name: Import des ressources
+        run: ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
+
+      - name: Suites headless
+        run: |
+          set -e
+          for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format; do
+            echo "=== $t ==="
+            ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --script "res://tools/$t.gd"
+          done
+          echo "=== test_netcode ==="
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . res://tools/test_netcode.tscn
+
+      # Charge le jeu complet (main.tscn, UI, joueurs, manche locale) : attrape
+      # les erreurs de script que les suites unitaires ne compilent pas.
+      - name: Fumée écran partagé (jeu complet)
+        run: |
+          timeout 120 ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . \
+            res://tools/test_online_match.tscn -- --local --transport enet

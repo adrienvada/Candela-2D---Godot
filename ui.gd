@@ -2590,7 +2590,7 @@ func _handle_pause_input() -> bool:
 
 		var gs := get_parent()
 		if gs and gs is GameState:
-			pause_score_label.text = "SESSION : %d - %d" % [gs.p1_kills, gs.p2_kills]
+			pause_score_label.text = "SESSION : %d - %d" % [gs.p1_session_wins, gs.p2_session_wins]
 			var m := floori(gs.time_left) / 60
 			var s := floori(gs.time_left) % 60
 			pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]

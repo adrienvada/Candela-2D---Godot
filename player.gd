@@ -473,6 +473,13 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	if seq <= _last_input_seq:
 		inputs_rejected += 1
 		return
+	# L'hôte borne tout ce qu'il applique : un vecteur non fini ou démesuré
+	# venu d'un client modifié deviendrait un téléporteur ou un speed hack.
+	if not (mov.is_finite() and aim.is_finite()):
+		inputs_rejected += 1
+		return
+	mov = mov.limit_length(1.0)
+	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
 	input_provider.update_input_state(mov, aim, shoot, torch, sprint)

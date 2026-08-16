@@ -222,7 +222,7 @@ func _verify_kill_to_rematch() -> void:
 		replayed[0] > 0 or ReplaySystem.bullet_events.is_empty(),
 		"%d rejouée(s)" % replayed[0])
 	_check("le score du match est enregistré",
-		_main.p1_kills + _main.p2_kills == 1, "%d / %d" % [_main.p1_kills, _main.p2_kills])
+		_main.p1_session_wins + _main.p2_session_wins == 1, "%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
 	_check("le lien tient après la killcam", not multiplayer.get_peers().is_empty())
 
 	# Rematch : les deux camps se déclarent prêts, la manche doit repartir.

@@ -272,8 +272,19 @@ Non commencée. Périmètre pressenti :
 - Le PUID Epic sert de clé d'identité. **Limite connue :** le Device ID est lié
   à la machine — un joueur qui change d'ordinateur perd son classement. Prévoir
   un mécanisme de récupération ou une liaison de compte.
+- **Surface de triche à inventorier avant tout classement.** La signature à
+  deux pairs (ci-dessus) ne suffit pas : le RTT applicatif est déclaratif et
+  nourrit la compensation de tir, et la cadence de tir du client n'est bornée
+  que par la simulation de l'hôte. Les inputs, eux, sont bornés côté hôte
+  depuis le 2026-08-16 (vecteurs finis, longueur ≤ 1) et l'écho de ping n'est
+  plus accepté que du pair attendu, avec RTT borné à [0, 10 s] — un début, pas
+  une parade complète.
 - Fondation déjà en place : `match_record.gd` archive chaque match dans
   `user://match_history.json` (vainqueur, durée, armes, carte, mode, format).
+  Durci le 2026-08-16 pour pouvoir servir de source ELO : champ `version` dans
+  chaque enregistrement (le futur envoi saura quelle forme il relit) et
+  écriture atomique du journal (temporaire puis renommage — un arrêt brutal ne
+  peut plus corrompre l'historique déjà archivé).
 
 ---
 
@@ -321,6 +332,49 @@ Non commencée. Périmètre pressenti :
 
 ---
 
+## Chantiers de robustesse — étude du 2026-08-16
+
+Une relecture exhaustive du code (huit sous-systèmes) a relevé une série de
+points de vigilance. Les correctifs sûrs et localisés ont été appliqués le jour
+même : garde anti-ré-émission sur `rpc_client_weapon` (un client pouvait
+réinitialiser une manche en cours), état canonique `local_ready_for_rematch`
+(la logique prêt/pas-prêt comparait le **texte** du bouton REJOUER, qu'une
+reformulation aurait cassée en silence), bornage des inputs et du ping reçus
+(voir Phase 4), écriture atomique et versionnée du journal de matchs,
+renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
+session**, pas des éliminations — le nom aurait piégé les stats de la
+Phase 4), et une CI GitHub Actions qui déroule les six suites headless plus un
+test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
+
+Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
+
+**Netcode**
+
+- **Déduplication des tirs prédits en FIFO aveugle** (`_consume_predicted_shot`
+  n'apparie ni position ni angle). Si l'hôte refuse un tir (désaccord de
+  cadence), le tir officiel suivant consomme la mauvaise prédiction ; avec un
+  RTT > 1 s, le TTL expire et le client voit sa balle en double. Piste :
+  apparier par angle approximatif et caler le TTL sur le RTT mesuré.
+- **Mort simultanée = victoire du premier RPC arrivé** (`_end_sequence_active`
+  ignore la seconde mort). Décision de design à prendre : un double kill
+  vaut-il égalité ? Aujourd'hui l'égalité n'existe que par chrono écoulé.
+
+**Tests**
+
+- La mécanique centrale du jeu — voir et être vu dans le noir — n'a **aucun
+  test automatique** : portée et cône de torche, révélation au tir, occlusion
+  effective. Les suites s'arrêtent à la géométrie des occluders, très en amont
+  du gameplay.
+- Les transitions d'état en ligne (les 8 familles de la
+  [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md)) ne sont
+  couvertes que manuellement — c'est la zone la plus régressive d'un jeu
+  réseau. Le banc à deux instances est automatisable en ENet (cible 127.0.0.1,
+  appariement scriptable), sans identifiants Epic.
+- `ReplaySystem` (fenêtre de rejeu, `impact_frame`, ralenti) n'a pas de test
+  unitaire ; seule `test_online_match` compte des balles rejouées.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -344,6 +398,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
+4. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
+   ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
 
 ## Journal des tests à deux machines
 

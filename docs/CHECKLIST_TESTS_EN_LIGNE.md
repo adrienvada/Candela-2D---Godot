@@ -64,7 +64,7 @@ proche de 120 ms une fois la partie lancée.)
 | 2.1 | Un joueur meurt ; pendant la killcam de A, B (qui a fini la sienne plus tôt ou la saute) appuie sur `REJOUER` | Aucun effet visible sur l'écran de A tant que le ralenti dure : ni changement d'arme de P2, ni bascule du libellé du chrono |
 | 2.2 | Fin de la killcam de A | L'écran de fin s'affiche, **et seulement là** l'arme choisie par B apparaît sélectionnée et le libellé passe à « EN ATTENTE D'UN ADVERSAIRE… » |
 | 2.3 | Pendant la killcam de A, B fait prêt / pas prêt / prêt plusieurs fois | À l'arrivée sur l'écran de fin, l'état affiché correspond au **dernier** choix de B ; aucune manche ne démarre toute seule |
-| 2.4 | Pendant la killcam, laisser passer un recalage de chrono (5 s) | Aucun affichage aberrant ; au lancement de la manche suivante le chrono repart à 02:00 des deux côtés |
+| 2.4 | Pendant la killcam, laisser passer un recalage de chrono (5 s) | Aucun affichage aberrant ; au lancement de la manche suivante le chrono repart à 05:00 des deux côtés |
 | 2.5 | B saute sa killcam (touche de saut), A laisse la sienne finir | Chacun retrouve la vitesse normale de son côté ; les deux arrivent sur l'écran de fin avec le même score |
 
 ## 3. Déconnexion pendant le décompte
