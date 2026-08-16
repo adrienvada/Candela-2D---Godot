@@ -285,6 +285,10 @@ const DEBUG_SCAN_INTERVAL := 0.25
 var _debug_scan_accum: float = 0.0
 var _debug_light_count: int = 0
 var _debug_arena_nodes: int = 0
+## Inventaire des ressources absentes, rafraîchi au même rythme que les comptages
+## de nœuds : la détection des bouche-trous ouvre des fichiers pour en lire la
+## taille, ce qui ne doit pas arriver à chaque frame.
+var _assets_summary: String = ""
 
 var _is_main_menu: bool = true
 
@@ -586,6 +590,7 @@ func _update_debug(_delta: float) -> void:
 	if _debug_scan_accum >= DEBUG_SCAN_INTERVAL:
 		_debug_scan_accum = 0.0
 		_rescan_debug_counts()
+		_assets_summary = AssetManifest.summary()
 
 	var gs := get_parent()
 	var particles := 0
@@ -606,6 +611,14 @@ func _update_debug(_delta: float) -> void:
 	var p2_path := _p2_path_label()
 	if p2_path != "":
 		net_debug_label.text += "\n" + p2_path
+
+	# Ressources manquantes. Le code qui joue ces sons est écrit et reste
+	# silencieux quand le fichier n'est pas là : sans cette ligne, un son absent
+	# serait indiscernable d'un son qu'on a choisi de ne pas jouer.
+	# Recalculé à 4 Hz comme le reste — la détection des bouche-trous ouvre les
+	# fichiers pour en lire la taille, ce qui n'a rien à faire dans une frame.
+	if _assets_summary != "":
+		net_debug_label.text += "\n" + _assets_summary
 
 ## Ligne réseau du panneau F3 : de quoi diagnostiquer une session en ligne sans
 ## sortir du jeu — par où passe le lien, à travers quel NAT, sous quelle identité.

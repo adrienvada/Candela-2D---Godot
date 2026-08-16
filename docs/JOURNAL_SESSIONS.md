@@ -23,7 +23,7 @@ par sujet impraticable.
 
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
-| **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `supabase/**`, tout nouveau script de menu | Session « menus » |
+| **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `supabase/**`, tout nouveau script de menu | Session « menus » |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
 ### `game_state.gd` — le seul fichier disputé
@@ -56,11 +56,34 @@ le domaine « menus ».** Elle est livrée par la Phase 5, étape 4. La session
 « game feel » ne l'implémente pas : elle attend, ou densifie le mixage en
 sachant qu'il n'est pas encore réglable.
 
+## Assets manquants — la règle, décidée le 2026-08-17
+
+**On câble, on reste silencieux, on diagnostique.** Le code qui joue un son
+absent s'écrit normalement ; il ne trouve pas le fichier et ne joue rien, sans
+erreur. Aucune session ne fabrique de bouche-trou sonore : un placeholder qui
+traîne finit par être pris pour une intention.
+
+`asset_manifest.gd` (domaine « menus ») porte la liste des 76 fichiers attendus
+et sait répondre à deux questions différentes :
+
+- **absent** — le fichier n'existe pas ;
+- **bouche-trou** — le fichier existe et ne contient rien. `music_menu.ogg`,
+  `music_match.ogg` et `music_victory.ogg` pèsent exactement 160 032 octets :
+  trois copies du même flux vide produit par `generate_music_streams.gd`. Un
+  contrôle de présence les déclarerait bons. La détection se fait donc à la
+  taille, ce qui a l'avantage de se corriger tout seul le jour où le vrai
+  fichier arrive.
+
+Le panneau **F3** affiche l'état en jeu. La liste complète — noms exacts, durées
+sur la grille à 170 BPM, intentions — vit dans l'onglet ASSETS du suivi de
+projet, et c'est elle qu'Adrien utilise pour commander.
+
+Une session qui a besoin d'un son doit **ajouter son entrée au manifeste** plutôt
+que d'inventer un chemin dans son coin. Le manifeste étant dans le domaine
+« menus », l'ajout se demande ici.
+
 ## Ce qui est bloqué et ne doit pas être commencé
 
-- **Tout item marqué *assets*** dans la section game feel : les fichiers audio
-  n'existent pas dans le dépôt. Aucune session ne doit inventer de bouche-trou
-  sonore — un placeholder qui traîne finit par être pris pour un choix.
 - **Les items D1 à D7** : ils attendent un arbitrage d'Adrien parce qu'ils
   changent l'information disponible en jeu ou coûtent des images par seconde.
 
