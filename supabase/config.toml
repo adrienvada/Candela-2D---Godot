@@ -21,3 +21,9 @@ verify_jwt = false
 
 [functions.link]
 verify_jwt = false
+
+[functions.report]
+verify_jwt = false
+
+[functions.standing]
+verify_jwt = false

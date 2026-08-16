@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étapes 1 (identité) et 2a (matchs en base) **closes**, déployées et vérifiées le 2026-08-16 |
+| 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
 
 ---
 
@@ -433,6 +433,44 @@ disant.
 **Reste dû** : l'ELO lui-même (étape 2b), et le rejeu du journal local pour les
 rapports qui n'ont pas pu partir.
 
+### Étape 2b — le classement ✅ CLOSE
+
+**Le classement est une valeur DÉRIVÉE, jamais écrite une fois pour toutes.** La
+table `ratings` est reconstruite en entier par un rejeu de tout l'historique
+concordant, après chaque match réglé. Conséquence voulue : un mauvais facteur K,
+un mauvais classement de départ, une mauvaise pondération du forfait cessent
+d'être fatals — on change la constante et on rejoue.
+
+Le calcul vit dans `supabase/functions/_shared/elo.ts`, **pas en SQL**, pour une
+raison : en SQL il serait intestable hors ligne. Or le classement est la partie
+du système où une erreur est la plus difficile à voir après coup — un classement
+faux reste plausible. 20 tests couvrent les propriétés plutôt que des valeurs :
+symétrie des espérances, conservation du total, non-commutativité assumée,
+indépendance à l'ordre des deux joueurs dans une ligne, convergence.
+
+Réglages, tous nommés et isolés : départ à **1000**, facteur **K = 32** constant
+(pas de phase provisoire — un raffinement légitime, mais chacun est une règle
+inventée de plus, et il ne coûtera qu'un recalcul le jour où le besoin sera
+démontré), forfait à **poids plein**, conséquence directe de la décision de ne
+pas rendre l'abandon gratuit.
+
+Le rejeu est **intégral** et non incrémental. Plus coûteux, et délibéré : il
+n'existe alors aucun chemin par lequel la table pourrait diverger de
+l'historique. Le jour où l'échelle l'exigera, l'incrémental deviendra une
+optimisation — avec ce rejeu comme référence pour la vérifier.
+
+**Vérifié en production le 2026-08-16**, deux instances et trois matchs :
+
+| Contrôle | Résultat |
+|---|---|
+| Match nul entre égaux | ✅ 1000 partout, aucun déplacement |
+| Une victoire déplace le classement | ✅ 1015 contre 985 |
+| Le total se conserve | ✅ 2000 exactement |
+| Rang calculé à la lecture | ✅ 1er et 2e |
+| Affichage en jeu | ✅ « 1015 points · 1e · 3 matchs (1V 0D 2N) » dans l'onglet PROFIL |
+| `ratings` et `leaderboard` à la clé publiable | ✅ fermés |
+| 6 suites Godot · 64 tests Deno | ✅ |
+
 ### Périmètre
 
 > Les trois points marqués ✅ ci-dessous sont **faits** par l'étape 1 ; le reste
@@ -645,11 +683,9 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 > classement va au bout, et les ajouts de fonctionnalités et de gameplay
 > viennent après.
 
-1. **Étape 2b : le calcul d'ELO**, dérivé de la vue `matches`. Tout est en
-   place — les matchs concordants sont en base, le forfait est distingué, et
-   l'arbitrage est stampé sur chaque ligne. Le classement doit rester une valeur
-   **recalculable** : un mauvais facteur K ou une mauvaise pondération du forfait
-   se corrige alors en rejouant l'historique, au lieu de se subir.
+1. **Les ajouts de fonctionnalités et de gameplay**, cap donné par Adrien une
+   fois le classement en place. La Phase 4 est close ; la suite n'est plus une
+   étape numérotée mais un choix de contenu.
 2. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
 3. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont

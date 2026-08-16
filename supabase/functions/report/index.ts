@@ -14,6 +14,7 @@
 import { authenticate, fail, ok, readBody } from "../_shared/http.ts";
 import { callFunction, Row } from "../_shared/db.ts";
 import { parseReport } from "../_shared/match_report.ts";
+import { recomputeRatings } from "../_shared/ranking.ts";
 
 Deno.serve(async (request: Request): Promise<Response> => {
   if (request.method !== "POST") {
@@ -54,8 +55,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
       // jamais identifié, ou un troisième larron sur un match déjà complet.
       return fail(409, "rapport_refuse", "Rapport de match refusé.");
     }
+    // Le second rapport vient peut-être de régler le match : on recalcule.
+    // L'échec du recalcul ne doit PAS faire échouer le rapport — celui-ci est
+    // déjà écrit, et c'est lui qui fait foi. Un classement en retard se rattrape
+    // au match suivant ; un rapport perdu, jamais.
+    let ranked = false;
+    try {
+      await recomputeRatings();
+      ranked = true;
+    } catch (error) {
+      console.error(`report: recalcul du classement — ${error}`);
+    }
+
     return ok({
       report: { id: saved.id, match_id: report.matchId, outcome: report.outcome },
+      ranked,
     });
   } catch (error) {
     console.error(`report: ${error}`);

@@ -85,6 +85,62 @@ export async function callFunction<T extends Row = PlayerProfile>(
 }
 
 /**
+ * Lit une table ou une vue. `query` est la chaîne PostgREST brute — filtres,
+ * tri, limite — parce que ces trois besoins ne justifient pas de bâtir un
+ * constructeur de requêtes de plus.
+ */
+export async function select<T>(
+  from: string,
+  columns: string,
+  query = "",
+): Promise<T[]> {
+  const { url, key } = environment();
+  const suffix = query === "" ? "" : `&${query}`;
+  const response = await fetch(
+    `${url}/rest/v1/${from}?select=${encodeURIComponent(columns)}${suffix}`,
+    {
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${key}`,
+        accept: "application/json",
+      },
+    },
+  );
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PostgrestError(String(response.status), text);
+  }
+  const parsed = JSON.parse(text);
+  return Array.isArray(parsed) ? parsed as T[] : [];
+}
+
+/**
+ * Appelle une fonction SQL dont le retour n'est pas une ligne — un compte, un
+ * booléen. `callFunction` exige un identifiant ; celle-ci ne présume rien.
+ */
+export async function callRaw(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
+  const { url, key } = environment();
+  const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      accept: "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PostgrestError(String(response.status), text);
+  }
+  return text === "" ? null : JSON.parse(text);
+}
+
+/**
  * PostgREST rend tantôt l'objet seul, tantôt un tableau d'une entrée, selon la
  * version et la forme de la fonction appelée. Les deux mènent au même profil ;
  * l'absence de ligne, elle, doit rester distinguable — c'est le « code inconnu »

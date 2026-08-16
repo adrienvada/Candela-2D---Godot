@@ -21,6 +21,7 @@ const FUNCTIONS_PATH := "/functions/v1/"
 const ENDPOINT_IDENTIFY := "identify"
 const ENDPOINT_LINK := "link"
 const ENDPOINT_REPORT := "report"
+const ENDPOINT_STANDING := "standing"
 
 ## Reprises d'un rapport de match. Le classement ne vaut pas de faire attendre
 ## le joueur, mais un résultat perdu sur un hoquet de réseau est un match
@@ -54,7 +55,19 @@ var recovery_code: String = ""
 ## Dernier échec en clair, à afficher par l'UI. Vidé à chaque nouvelle tentative.
 var last_error: String = ""
 
+## Classement du joueur, tel que le serveur le rend. Vide tant qu'aucun match
+## concordant ne le concerne : s'identifier ne suffit pas, il faut avoir joué.
+var rating: int = 0
+var rank: int = 0
+var matches_played: int = 0
+var wins: int = 0
+var losses: int = 0
+var draws: int = 0
+var is_ranked: bool = false
+
 signal state_changed(state: State)
+## Émis quand le classement du joueur a été relu.
+signal standing_changed
 ## Issue d'un rattachement demandé par le joueur, avec le message à lui montrer.
 signal link_completed(success: bool, message: String)
 
@@ -189,6 +202,19 @@ func report_match(match_id: String, outcome: String, data: Dictionary) -> void:
 	_report_queue.append(payload)
 	_drain_reports()
 
+## Relit le classement du joueur. Sans effet si rien n'est prêt ; l'issue arrive
+## par `standing_changed`.
+##
+## Appelé après l'identification et après chaque rapport de match : ce sont les
+## deux seuls moments où il peut avoir bougé.
+func refresh_standing() -> void:
+	if state != State.READY or _pending != "":
+		return
+	var token := _copy_id_token()
+	if token.is_empty():
+		return
+	_post(ENDPOINT_STANDING, {"id_token": token})
+
 ## Envoie le rapport en tête de file, s'il y en a un et que la voie est libre.
 func _drain_reports() -> void:
 	if _pending != "" or _report_queue.is_empty():
@@ -274,6 +300,10 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray,
 		_on_report_completed(result, code, _parse(body))
 		return
 
+	if endpoint == ENDPOINT_STANDING:
+		_on_standing_completed(result, code, _parse(body))
+		return
+
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_report(endpoint, false, "Serveur du classement injoignable.")
 		return
@@ -311,6 +341,10 @@ func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
 		_report_queue.pop_front()
 		_report_attempts = 0
 		_drain_reports()
+		# Le match vient peut-être de régler le classement : on le relit, mais
+		# seulement une fois la file vidée, pour ne pas se couper la parole.
+		if _report_queue.is_empty():
+			refresh_standing()
 		return
 
 	# 4xx : le serveur a compris et refuse. Réessayer ne changera rien — un
@@ -325,6 +359,38 @@ func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
 
 	_retry_or_drop("code %d" % code if result == HTTPRequest.RESULT_SUCCESS
 		else "transport %d" % result)
+
+## Issue d'une relecture du classement. Un échec est silencieux : le classement
+## est un ornement du menu, pas une condition pour jouer.
+func _on_standing_completed(result: int, code: int, payload: Dictionary) -> void:
+	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+		push_warning("RankedIdentity: classement illisible (code %d)" % code)
+		return
+	var mine: Variant = payload.get("standing", null)
+	if not mine is Dictionary:
+		# Profil connu mais jamais classé : aucun match concordant à son nom.
+		is_ranked = false
+		standing_changed.emit()
+		return
+	var d: Dictionary = mine
+	rating = int(d.get("rating", 0))
+	rank = int(d.get("rank", 0))
+	matches_played = int(d.get("matches", 0))
+	wins = int(d.get("wins", 0))
+	losses = int(d.get("losses", 0))
+	draws = int(d.get("draws", 0))
+	is_ranked = true
+	standing_changed.emit()
+
+## Résumé du classement, pour le menu.
+func standing_label() -> String:
+	if state != State.READY:
+		return ""
+	if not is_ranked:
+		return "Pas encore classé — jouez un match en ligne"
+	return "%d points · %de · %d match%s (%dV %dD %dN)" % [
+		rating, rank, matches_played, "s" if matches_played > 1 else "",
+		wins, losses, draws]
 
 func _adopt(profile: Dictionary) -> void:
 	profile_id = String(profile.get("id", ""))
@@ -344,6 +410,7 @@ func _report(endpoint: String, success: bool, message: String) -> void:
 		return
 	if success:
 		print("RankedIdentity: profil %s prêt" % nickname)
+		refresh_standing()
 	else:
 		_fail(message)
 

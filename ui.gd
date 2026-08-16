@@ -197,6 +197,7 @@ var content_host: Control
 
 # --- Onglet PROFIL ---
 var profile_status_label: Label
+var profile_standing_label: Label
 var profile_code_label: Label
 var btn_copy_recovery: Button
 var link_input: LineEdit
@@ -2254,6 +2255,15 @@ func _fill_profile_tab() -> void:
 	profile_status_label.add_theme_color_override("font_color", COLOR_DIM)
 	tab_profile_container.add_child(profile_status_label)
 
+	# Le classement lui-même. Vide tant que le joueur n'a pas disputé de match en
+	# ligne : afficher « 1000 points » à quelqu'un qui n'a jamais joué serait un
+	# chiffre inventé.
+	profile_standing_label = Label.new()
+	profile_standing_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_standing_label.add_theme_font_size_override("font_size", 20)
+	profile_standing_label.add_theme_color_override("font_color", COLOR_P1)
+	tab_profile_container.add_child(profile_standing_label)
+
 	tab_profile_container.add_child(
 		_make_section_label("CODE DE RÉCUPÉRATION — À NOTER", COLOR_GOLD))
 
@@ -2315,6 +2325,7 @@ func _fill_profile_tab() -> void:
 	tab_profile_container.add_child(link_feedback_label)
 
 	RankedIdentity.state_changed.connect(func(_state) -> void: _refresh_profile_tab())
+	RankedIdentity.standing_changed.connect(_refresh_profile_tab)
 	RankedIdentity.link_completed.connect(_on_profile_link_completed)
 	_refresh_profile_tab()
 
@@ -2328,6 +2339,12 @@ func _refresh_profile_tab() -> void:
 		else RankedIdentity.state_label()
 	profile_status_label.add_theme_color_override("font_color",
 		COLOR_WARN if failed else COLOR_DIM)
+
+	var standing := RankedIdentity.standing_label()
+	profile_standing_label.text = standing
+	profile_standing_label.visible = not standing.is_empty()
+	profile_standing_label.add_theme_color_override("font_color",
+		COLOR_P1 if RankedIdentity.is_ranked else COLOR_DIM)
 
 	var known: bool = RankedIdentity.is_ready() and not RankedIdentity.recovery_code.is_empty()
 	profile_code_label.text = RecoveryCode.format(RankedIdentity.recovery_code) if known \
