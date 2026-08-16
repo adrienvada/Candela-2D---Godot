@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) **déployée et vérifiée en production** le 2026-08-16 |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) **close** : déployée et vérifiée de bout en bout le 2026-08-16 |
 
 ---
 
@@ -283,7 +283,7 @@ ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
 La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
 reçoivent la leur par variable d'environnement.
 
-### Étape 1 — identité vérifiée (`673c0e9`) ✅ déployée et vérifiée en production
+### Étape 1 — identité vérifiée (`673c0e9`) ✅ CLOSE
 
 **Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
 infalsifiable. C'est austère, mais tout le reste s'écroule sans elle : un
@@ -365,10 +365,25 @@ quatre, COPIER s'active au bon moment, le champ nettoie `abcd-efgh-jklm` en
 bascule le statut et le code affichés vers le profil repris, et un code inconnu
 laisse le profil courant intact.
 
-**Reste dû** : ce que seul un œil peut juger — la mise en page à l'écran (rien
-de coupé, rien d'illisible) et le presse-papiers réel. Le pilote d'affichage
-headless n'a pas de presse-papiers : `DisplayServer.clipboard_get()` y rend
-toujours une chaîne vide, donc COPIER n'est vérifié que jusqu'au libellé.
+**Parcours à la souris — fait le 2026-08-16 (jalon H7) ✅.** Deux instances
+fenêtrées, pilotées à l'écran : la mise en page tient (rien de coupé, code
+lisible en grand), COPIER remplit réellement le presse-papiers système avec la
+forme groupée `46YD-33UE-SJXA`, le collage dans le champ en retire les tirets,
+RATTACHER bascule statut et code affichés vers le profil repris, et un code
+inventé répond en orange sans toucher au profil courant. Une partie locale a été
+lancée ensuite : écran partagé, HUD, chronomètre — rien du jeu n'a bougé.
+
+Deux confirmations en prime : **le profil orphelin est bien effacé** — après le
+rattachement, une seule ligne subsiste en base, celle du profil repris, portant
+le PUID de la seconde machine — et **la fermeture par le bouton de fenêtre sort
+en code 0**, donc l'arrêt propre d'EOS tient sur ce chemin-là aussi.
+
+**L'étape 1 est close.**
+
+Deux réserves de méthode, pour qui relira : les fenêtres étaient pilotées par
+frappes synthétiques, et le focus clavier reste sur la dernière fenêtre touchée
+— Échap et F3 semblaient sans effet sur l'autre. Rien n'indique un défaut du
+jeu, mais rien ne l'exclut non plus : ces deux touches n'ont pas été vérifiées.
 
 **Un défaut trouvé et corrigé en production** (`20260816183000`) : les fonctions
 SQL signalaient « code de récupération inconnu » par un `NULL`, que PostgREST
@@ -508,17 +523,15 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
-| H7 | **Coup d'œil sur l'onglet PROFIL** | Le câblage de l'onglet est vérifié par instanciation du menu en headless ; restent la mise en page à l'écran et le presse-papiers réel, que le pilote headless ne peut pas rendre. | **Prochain jalon** — quelques minutes |
+| H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 
 ---
 
 ## Prochaines étapes
 
-1. **H7 : un coup d'œil sur l'onglet PROFIL** — Adrien. Une instance en
-   `--eos-ephemeral` suffit pour juger la mise en page ; deux si l'on veut voir
-   le presse-papiers voyager. Le comportement, lui, est déjà vérifié.
-2. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
-   qui portera à son tour le champ `arbitration`.
+1. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
+   qui portera à son tour le champ `arbitration`. L'étape 1 étant close, plus
+   rien ne la bloque.
 3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
 4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
