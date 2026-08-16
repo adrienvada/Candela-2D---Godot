@@ -864,19 +864,31 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 - **V2.1 Gel d'exécution** — 150 ms de gel du rendu au moment fatal, puis
   chute dans le bullet-time existant. Pas de `time_scale` (piège connu).
+  **✅ Fait** — gel du rendu seul (`render_target_update_mode` des deux
+  viewports), 150 ms temps réel, une frame de délai pour figer le trait V2.6 ;
+  restauration avant tout test de jeton + ceinture dans `_abort_killcam`.
 - **V2.2 Le noir gagne** — à la mort, les lumières s'éteignent une à une en
   400 ms, la torche du tueur en dernier, puis le death flash existant.
+  **✅ Fait** — rétrodiffusion (0,15 s) puis faisceau (0,25 s) du vainqueur,
+  la victime étant déjà éteinte par `die()` ; les énergies remontent seules
+  à la manche suivante.
 - **V2.3 Jingle de kill** — 2 notes dans la tonalité du thème, variante si le
   match gagne la session. — *assets : 1-2 stingers accordés.*
 - **V2.4 Onde de choc lumineuse** — cercle plein écran depuis l'impact, 400 ms.
 - **V2.5 « FATAL — ARBALÈTE »** — le label FATAL s'enrichit du nom de l'arme.
+  **✅ Fait.**
 - **V2.6 Trait sur-exposé** — la balle fatale laisse son trait HDR 1 frame.
+  **✅ Fait** — largeur et énergie triplées sur kill jugé localement, fondu
+  ralenti à 0,35 s pour que le gel V2.1 fige l'image incandescente.
 - **V2.7 Tampon final** — stamp « KILL — 04:12 » sur l'arrêt sur image de 2 s.
+  **✅ Fait** — CanvasLayer propre à GameState (ui.gd est à l'autre session),
+  nettoyé par `_abort_killcam` sur tous les chemins de sortie.
 - **V2.8 Acouphène de mort** — sifflement + monde étouffé 1 s côté perdant. —
   *assets : 1 sample.*
 - **V2.9 « Effleuré : 13 px »** — afficher au perdant la distance
   perpendiculaire du tir fatal (la formule de dégâts la connaît). Le « j'y
-  étais presque » est le moteur du rematch.
+  étais presque » est le moteur du rematch. **✅ Fait** — écrit par la balle
+  fatale simulée localement, consommé par `die()`, jamais réutilisé.
 
 ### Vague 3 — Le rematch et le rythme (là où « encore une » se décide)
 

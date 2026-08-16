@@ -56,6 +56,16 @@ const KILLCAM_TORCH_ENERGY := 1.25
 const COUNTDOWN_DURATION := 3.0
 var countdown_left: float = 0.0
 
+## V2.1 — L'instant fatal : image figée ~150 ms. Seul le RENDU est suspendu
+## (render_target_update_mode des deux viewports) — jamais time_scale ni
+## l'arbre : un gel d'arbre en ligne est un piège connu, et la simulation doit
+## continuer à capturer le sang derrière l'image figée.
+const KILL_FREEZE_DURATION := 0.15
+## V2.2 — Puis le noir gagne : rétrodiffusion du vainqueur d'abord, faisceau
+## ensuite — sa torche est la dernière lumière à mourir.
+const KILL_DARKNESS_BODY := 0.15
+const KILL_DARKNESS_TORCH := 0.25
+
 # [Client] Tirs rendus localement avant l'accord de l'hôte, horodatés pour être
 # dédupliqués à l'arrivée de la balle officielle.
 const PREDICTED_SHOT_TTL_MS := 1000
@@ -1112,7 +1122,36 @@ func _do_end_round(winner_id: int):
 	else:
 		AudioManager.play_speaker("spk_draw")
 
-	
+	if winner_id != -1:
+		# V2.1 — une frame de délai pour laisser le trait sur-exposé du tir
+		# fatal (V2.6) se dessiner, puis gel du rendu sur cette image.
+		await get_tree().process_frame
+		if token != _round_token: return
+		vp1.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		vp2.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		# Temps réel : le gel ne dépend pas d'un éventuel time_scale résiduel.
+		await get_tree().create_timer(KILL_FREEZE_DURATION, true, false, true).timeout
+		# Rétablir AVANT le test de jeton : une manche relancée pendant le gel
+		# ne doit jamais hériter d'un viewport éteint.
+		vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		if token != _round_token: return
+
+		# V2.2 — le noir gagne. La victime est déjà éteinte par die() ; la
+		# lumière du vainqueur meurt en deux temps — rétrodiffusion, puis
+		# faisceau — et l'arène retombe dans le noir total avant la killcam.
+		# Les énergies remontent seules à la manche suivante : la boucle
+		# physique du joueur les fait converger vers leur valeur de jeu.
+		var winner: Player = p1 if winner_id == 0 else p2
+		if is_instance_valid(winner):
+			var tw_dark := create_tween()
+			tw_dark.tween_property(winner.body_light, "energy", 0.0, KILL_DARKNESS_BODY)
+			tw_dark.tween_property(winner.flashlight, "energy", 0.0, KILL_DARKNESS_TORCH)
+			tw_dark.tween_callback(func():
+				if is_instance_valid(winner):
+					winner.flashlight.enabled = false
+					winner.body_light.enabled = false)
+
 	if winner_id != -1:
 		# Wait 1.5 seconds to capture blood physics and reaction!
 		await get_tree().create_timer(1.5).timeout
@@ -1145,6 +1184,9 @@ func _do_end_round(winner_id: int):
 
 		# Hide killcam UI but KEEP the freeze frame
 		ui.hide_killcam()
+
+		# V2.7 — le tampon du kill claque sur l'arrêt sur image.
+		_spawn_kill_stamp(round_time - time_left)
 
 		# Attendre 2 secondes supplémentaires sur l'arrêt sur image avant d'afficher le menu de fin
 		await get_tree().create_timer(2.0).timeout
@@ -1234,12 +1276,58 @@ func _mode_label() -> String:
 		NetworkManager.GameMode.ONLINE_CLIENT: return "en_ligne_client"
 		_: return "local"
 
+## V2.7 — Tampon « KILL — mm:ss » qui claque sur l'arrêt sur image de fin de
+## killcam. CanvasLayer à part : ui.gd appartient à l'autre session, et ce
+## tampon vit exactement le temps de l'arrêt sur image.
+var _kill_stamp: CanvasLayer
+
+func _spawn_kill_stamp(elapsed: float) -> void:
+	_clear_kill_stamp()
+	_kill_stamp = CanvasLayer.new()
+	_kill_stamp.layer = 95
+	add_child(_kill_stamp)
+
+	var lbl := Label.new()
+	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
+	var settings := LabelSettings.new()
+	settings.font_size = 64
+	settings.font_color = Color(1.0, 0.1, 0.25)
+	settings.outline_size = 10
+	settings.outline_color = Color.BLACK
+	lbl.label_settings = settings
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.pivot_offset = get_viewport().get_visible_rect().size / 2.0
+	lbl.rotation = -0.06
+	_kill_stamp.add_child(lbl)
+
+	# Le claquement : gros, puis en place — l'inertie d'un tampon encreur.
+	lbl.scale = Vector2(2.6, 2.6)
+	lbl.modulate.a = 0.0
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
+	tw.parallel().tween_property(lbl, "scale", Vector2.ONE, 0.12) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(1.7)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
+	tw.tween_callback(_clear_kill_stamp)
+
+func _clear_kill_stamp() -> void:
+	if is_instance_valid(_kill_stamp):
+		_kill_stamp.queue_free()
+	_kill_stamp = null
+
 ## Sortie inconditionnelle de la killcam. Le ralenti est un réglage global du
 ## moteur : l'oublier sur un chemin de sortie laisse tout le jeu à 3 % de sa
 ## vitesse, menus compris.
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
 	Engine.time_scale = 1.0
+	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé.
+	vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_clear_kill_stamp()
 	ui.hide_killcam()
 
 ## [Hôte] Rejoue ce qui a été reçu pendant la séquence de fin, une fois l'écran

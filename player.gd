@@ -22,6 +22,11 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+## V2.9 — Distance à l'axe du dernier tir jugé fatal, écrite par la balle qui
+## l'a simulé ici, consommée (et remise à -1) par die(). Cosmétique : chez le
+## client c'est la simulation locale qui parle, pas l'arbitrage de l'hôte.
+var last_fatal_perp: float = -1.0
+
 var shake_intensity: float = 0.0
 var shake_decay: float = 5.0
 var noise: FastNoiseLite
@@ -688,9 +693,13 @@ func _physics_process(delta):
 			velocity = velocity.move_toward(Vector2.ZERO, 1500.0 * delta)
 			if velocity != Vector2.ZERO:
 				move_and_slide()
-			flashlight_on = false
-			flashlight.enabled = false
-			body_light.enabled = false
+			# V2.2 — pendant la séquence de fin, GameState éteint lui-même les
+			# lumières du vainqueur : le noir doit gagner en 400 ms, pas en une
+			# frame de coupure sèche.
+			if not state._end_sequence_active:
+				flashlight_on = false
+				flashlight.enabled = false
+				body_light.enabled = false
 		return
 		
 	if can_move:
@@ -928,7 +937,10 @@ func die(killer: Node2D):
 	
 	# Floating FATAL Text
 	var lbl = Label.new()
+	# V2.5 — l'arme du tueur signe le kill.
 	lbl.text = "FATAL"
+	if killer and killer != self and killer.current_weapon:
+		lbl.text = "FATAL — %s" % killer.current_weapon.name.to_upper()
 	var settings = LabelSettings.new()
 	settings.font_size = 72
 	settings.font_color = Color(1.0, 0.0, 0.0)
@@ -952,7 +964,34 @@ func die(killer: Node2D):
 	txt_tw.tween_property(lbl, "position", lbl.position + Vector2(0, -100), 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
 	txt_tw.chain().tween_callback(lbl.queue_free)
-	
+
+	# V2.9 — « à N px du centre » : le tir fatal raconté au perdant. Le « j'y
+	# étais presque » est le moteur du rematch. Connue seulement si la balle
+	# fatale a été simulée sur cette machine ; consommée pour ne jamais resservir.
+	if last_fatal_perp >= 0.0:
+		var sub = Label.new()
+		sub.text = "à %d px du centre" % int(roundf(last_fatal_perp))
+		var sub_settings = LabelSettings.new()
+		sub_settings.font_size = 28
+		sub_settings.font_color = Color(1.0, 0.85, 0.85)
+		sub_settings.outline_size = 8
+		sub_settings.outline_color = Color.BLACK
+		sub.label_settings = sub_settings
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.position = global_position + Vector2(-100, -20)
+		sub.custom_minimum_size = Vector2(200, 0)
+		sub.z_index = 200
+		sub.material = lbl_mat
+		get_parent().add_child(sub)
+		var sub_tw = create_tween().set_parallel(true)
+		sub.modulate.a = 0.0
+		sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
+		sub_tw.tween_property(sub, "position", sub.position + Vector2(0, -60), 1.5) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
+		sub_tw.chain().tween_callback(sub.queue_free)
+	last_fatal_perp = -1.0
+
 	# V1.5 — le vainqueur sent le kill : double coup dans SA manette.
 	if killer and killer != self and killer.has_method("rumble_kill"):
 		killer.rumble_kill()
