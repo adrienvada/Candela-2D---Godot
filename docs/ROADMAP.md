@@ -554,7 +554,7 @@ rend la refonte moins risquée qu'il n'y paraît — mais aussi entièrement à 
 
 | Manque | Constat |
 |---|---|
-| **Aucun réglage audio** | `settings_manager.gd` ne connaît que `video`, `display`, `input`. Les bus `Master` / `Music` / `SFX` / `Speaker` existent et personne ne peut les régler. C'est le manque le plus visible pour un joueur. |
+| ~~Aucun réglage audio~~ **persistance faite, écran à faire** | `settings_manager.gd` porte désormais une section `audio` : quatre volumes en amplitude linéaire, convertis en décibels seulement à l'application. Reste à construire l'écran qui les expose. |
 | **Aucun écran de classement** | L'Edge Function `standing` renvoie déjà un `top` de dix ; l'UI n'affiche que la ligne du joueur. Le travail serveur est fait, l'écran manque. |
 | **Aucun mode entraînement** | `TrainingTarget` existe mais ne s'active qu'en attendant un adversaire en ligne (`game_state.gd:279`). Un joueur seul ne peut pas s'exercer. |
 | **Aucune calibration de luminosité** | Dans un jeu dont l'unique canal d'information est la lumière, un écran mal réglé — ou trop bien réglé — est un avantage. C'est un problème d'honnêteté en compétition, pas de confort. |
@@ -810,6 +810,19 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 ## Pièges connus — ne pas les redécouvrir
 
 **Tests headless**
+- **Un worktree neuf n'a pas la disposition audio du projet.** Sans un
+  `--headless --import` préalable, l'uid de `default_bus_layout.tres` ne résout
+  pas : seul le bus `Master` existe, `Music`, `SFX` et `Speaker` sont
+  introuvables. Toute suite touchant à l'audio échoue alors pour cette seule
+  raison, et le message ne le dit pas.
+- **`AudioServer` est un état global qui survit d'une fonction de test à
+  l'autre.** Un contrôle « régler la musique ne touche pas aux effets » qui
+  compare à une valeur absolue passe ou échoue selon ce qu'un test antérieur a
+  laissé. Comparer un avant/après, jamais une constante.
+- **Les suites headless partagent le `user://` du jeu installé.** Un test qui
+  appelle un setter réécrit les vraies préférences du joueur. Prévoir un point de
+  dérivation du chemin (`var _settings_path := SETTINGS_PATH` plutôt que la
+  constante en dur) et vérifier en fin de parcours que le fichier réel est intact.
 - **Un test qui instancie une scène ne peut pas charger celle-ci depuis `_init`.**
   Les autoloads ne sont pas encore enregistrés à ce moment : `ui.gd`, qui
   référence `MapData`, échoue à la compilation. Godot rend alors un nœud **nu**,
@@ -904,7 +917,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les huit suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les neuf suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :

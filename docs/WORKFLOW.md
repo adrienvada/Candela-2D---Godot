@@ -38,6 +38,12 @@ Il laisse ses modifications dans l'arbre. La session principale relit, valide
 contre les suites, et commite — c'est le seul endroit où la cohérence de
 l'ensemble est vérifiable.
 
+**Conséquence sur l'intégration, qui n'est pas évidente :** puisque l'agent ne
+commite pas, sa branche de worktree est vide et `git merge` répond « Already up
+to date ». L'intégration se fait en **copiant les fichiers** depuis
+`.claude/worktrees/agent-<id>/`, après avoir lu son `git status` pour savoir
+lesquels. Fusionner la branche ne récupère rien.
+
 ### 3. Un agent reçoit une liste de fichiers, pas un sujet
 
 En clair : ce qu'il peut écrire, et ce qu'il lui est **interdit** de toucher même
