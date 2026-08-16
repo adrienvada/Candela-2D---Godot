@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) écrite et testée, en attente du déploiement H6 |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) écrite et testée (`673c0e9`), en attente du déploiement H6 |
 
 ---
 
@@ -283,7 +283,7 @@ ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
 La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
 reçoivent la leur par variable d'environnement.
 
-### Étape 1 — identité vérifiée 🟡 écrite, testée, pas encore déployée
+### Étape 1 — identité vérifiée (`673c0e9`) 🟡 écrite, testée, pas encore déployée
 
 **Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
 infalsifiable. C'est austère, mais tout le reste s'écroule sans elle : un
