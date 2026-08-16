@@ -8,9 +8,15 @@
 
 import { assert, assertAlmostEquals, assertEquals } from "jsr:@std/assert@1";
 import {
+  DIVISION_SPAN,
+  DIVISIONS,
   expectedScore,
   K_FACTOR,
   nextRating,
+  RANK_CEILING,
+  RANK_FLOOR,
+  RANK_TIERS,
+  rankOf,
   replay,
   type SettledMatch,
   START_RATING,
@@ -163,4 +169,168 @@ Deno.test("gagner tous ses matchs finit par payer, sans exploser", () => {
 Deno.test("un joueur qui n'a jamais joué n'apparaît pas", () => {
   const r = replay([match(A)]);
   assertEquals(r.has(C), false);
+});
+
+// --- rangs ------------------------------------------------------------------
+//
+// Les bornes de l'échelle sont provisoires : les tester par des valeurs écrites
+// en dur reviendrait à figer ce qu'on a justement prévu de déplacer. Ce qui doit
+// tenir quelles que soient les bornes, ce sont les propriétés — monotonie,
+// couverture, totalité — et c'est cela seul qu'on vérifie ici.
+
+/**
+ * L'échelle reconstruite indépendamment de `rankOf`, du bas vers le haut.
+ *
+ * Ce n'est pas une redite du code testé : c'est l'autre bout de la chaîne. Si
+ * `rankOf` produit un libellé absent d'ici, ou les produit dans le désordre, la
+ * position dans cette liste le dira.
+ */
+const ECHELLE: string[] = [
+  ...RANK_TIERS.slice(0, -1).flatMap((tier) => DIVISIONS.map((d) => `${tier} ${d}`)),
+  RANK_TIERS[RANK_TIERS.length - 1],
+];
+
+/** Position d'un classement sur l'échelle, 0 tout en bas. */
+function position(rating: number): number {
+  const rang = rankOf(rating);
+  const i = ECHELLE.indexOf(rang.label);
+  assert(i >= 0, `libellé hors échelle : « ${rang.label} » pour ${rating}`);
+  return i;
+}
+
+Deno.test("les dix catégories sont celles qui ont été validées", () => {
+  // Décision d'Adrien du 2026-08-17. Le test existe pour qu'un changement
+  // d'ordre ou de nom soit délibéré, jamais collatéral.
+  assertEquals(RANK_TIERS.length, 10);
+  assertEquals(RANK_TIERS[0], "Aveugle");
+  assertEquals(RANK_TIERS[RANK_TIERS.length - 1], "Candela");
+});
+
+Deno.test("un meilleur classement ne rend jamais un rang inférieur", () => {
+  let precedent = -1;
+  for (let r = -5000; r <= 12000; r += 7) {
+    const ici = position(r);
+    assert(ici >= precedent, `${r} redescend à ${ECHELLE[ici]}`);
+    precedent = ici;
+  }
+});
+
+Deno.test("l'échelle ne laisse ni trou ni chevauchement", () => {
+  // Un pas de 1 sur toute la fenêtre utile : la position ne peut que rester la
+  // même ou avancer d'un cran. Un saut de deux serait un rang inatteignable,
+  // un recul un chevauchement de bornes.
+  let precedent = 0;
+  const vus = new Set<number>([0]);
+  for (let r = RANK_FLOOR - 300; r <= RANK_CEILING + 300; r++) {
+    const ici = position(r);
+    assert(
+      ici === precedent || ici === precedent + 1,
+      `saut de ${ECHELLE[precedent]} à ${ECHELLE[ici]} au classement ${r}`,
+    );
+    vus.add(ici);
+    precedent = ici;
+  }
+  // Et chaque rang doit être atteignable, sans quoi il ne sert à rien.
+  assertEquals(vus.size, ECHELLE.length);
+});
+
+Deno.test("aucun classement, si extrême soit-il, ne sort de l'échelle", () => {
+  // La fonction est totale : c'est la seule garantie qui compte côté affichage,
+  // où un `undefined` deviendrait un rang vide sans la moindre erreur.
+  const extremes = [
+    0,
+    -1,
+    -1e9,
+    1e9,
+    Number.MAX_SAFE_INTEGER,
+    Number.MIN_SAFE_INTEGER,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
+  for (const r of extremes) {
+    const rang = rankOf(r);
+    assert(ECHELLE.includes(rang.label), `${r} rend « ${rang.label} »`);
+    assert(RANK_TIERS.includes(rang.tier), `${r} rend la catégorie ${rang.tier}`);
+    assert(rang.tierIndex >= 1 && rang.tierIndex <= RANK_TIERS.length, String(r));
+    assert(rang.division === null || (rang.division >= 1 && rang.division <= 3), String(r));
+  }
+  // Les extrémités se rabattent, elles ne débordent pas.
+  assertEquals(rankOf(-1e9).label, ECHELLE[0]);
+  assertEquals(rankOf(1e9).label, ECHELLE[ECHELLE.length - 1]);
+  // NaN n'est ni haut ni bas : il tombe au plancher, faute de mieux.
+  assertEquals(rankOf(Number.NaN).label, ECHELLE[0]);
+});
+
+Deno.test("le sommet est le seul rang sans division", () => {
+  const sommet = rankOf(RANK_CEILING);
+  assertEquals(sommet.tier, "Candela");
+  assertEquals(sommet.division, null);
+  assertEquals(sommet.label, "Candela");
+  assertEquals(sommet.nextLabel, null);
+  assertEquals(sommet.pointsToNext, null);
+
+  // Et réciproquement : partout ailleurs, la division est renseignée.
+  for (let r = RANK_FLOOR - 200; r < RANK_CEILING; r += 3) {
+    const rang = rankOf(r);
+    assert(rang.division !== null, `${r} (${rang.label}) n'a pas de division`);
+    assert(rang.tier !== "Candela", `${r} est Candela sous le seuil`);
+  }
+});
+
+Deno.test("la distance au rang suivant tombe pile sur la borne", () => {
+  for (let r = RANK_FLOOR - 200; r < RANK_CEILING; r++) {
+    const rang = rankOf(r);
+    const reste = rang.pointsToNext;
+    assert(reste !== null && rang.nextLabel !== null, `${r} n'a pas de suite`);
+    assert(reste > 0, `${r} annonce ${reste} points restants`);
+    // Les points annoncés amènent exactement au rang annoncé, et pas un de moins.
+    assertEquals(rankOf(r + reste).label, rang.nextLabel, `${r} + ${reste}`);
+    assertEquals(rankOf(r + reste - 1).label, rang.label, `${r} + ${reste} - 1`);
+  }
+});
+
+Deno.test("dans l'échelle, il ne reste jamais plus d'une division à franchir", () => {
+  // Sous le plancher, en revanche, la distance dit la vraie remontée : c'est
+  // voulu, une valeur rassurante y serait un mensonge.
+  for (let r = RANK_FLOOR; r < RANK_CEILING; r += 3) {
+    const reste = rankOf(r).pointsToNext!;
+    assert(reste <= DIVISION_SPAN, `${r} annonce ${reste} points`);
+  }
+  assert(rankOf(RANK_FLOOR - 500).pointsToNext! > DIVISION_SPAN);
+});
+
+Deno.test("un débutant est dans la partie basse, sans être collé au plancher", () => {
+  const depart = rankOf(START_RATING);
+  assert(depart.tierIndex > 1, `un débutant démarre ${depart.label} : rien à perdre`);
+  assert(
+    depart.tierIndex <= RANK_TIERS.length / 2,
+    `un débutant démarre ${depart.label} : trop haut`,
+  );
+});
+
+Deno.test("le premier match d'un débutant ne change pas son rang", () => {
+  // Un rang qui saute au tout premier match ne veut rien dire — et c'est
+  // justement ce match-là qu'un nouveau joueur regarde. Si ce test tombe, le
+  // classement de départ n'est plus centré dans sa division.
+  const depart = rankOf(START_RATING).label;
+  assertEquals(rankOf(nextRating(START_RATING, START_RATING, 1)).label, depart);
+  assertEquals(rankOf(nextRating(START_RATING, START_RATING, 0)).label, depart);
+});
+
+Deno.test("dominer cinquante fois le même adversaire ne mène pas au sommet", () => {
+  // L'échelle doit laisser de la marge au-dessus d'un joueur qui écrase un seul
+  // adversaire : Elo converge, et Candela ne doit pas s'obtenir en s'acharnant.
+  const r = replay(Array.from({ length: 50 }, () => match(A)));
+  const rang = rankOf(r.get(A)!.rating);
+  assert(rang.tier !== "Candela", `cinquante victoires suffisent à finir ${rang.label}`);
+  assert(rang.tierIndex > rankOf(START_RATING).tierIndex, `resté ${rang.label}`);
+});
+
+Deno.test("le rang est une fonction pure du classement", () => {
+  // Aucun état, aucune mémoire : c'est ce qui permet de déplacer une borne sans
+  // migrer quoi que ce soit.
+  for (const r of [0, RANK_FLOOR, START_RATING, RANK_CEILING, 3000]) {
+    assertEquals(rankOf(r), rankOf(r));
+  }
 });

@@ -151,3 +151,139 @@ export function replay(matches: readonly SettledMatch[]): Map<string, Standing> 
   }
   return tally;
 }
+
+// --- l'échelle des rangs -----------------------------------------------------
+//
+// Même architecture que le classement, et pour la même raison : le rang est une
+// **fonction pure du classement**, calculée à l'affichage et jamais écrite en
+// base. La table `ratings` est déjà reconstruite par rejeu ; si le rang, lui,
+// était stocké, déplacer une borne d'échelle exigerait une migration de
+// données. Dérivé, cela ne coûte qu'un redéploiement — et c'est précisément ce
+// qui autorise à poser des bornes provisoires sans se lier les mains.
+
+/**
+ * Les dix catégories, de l'obscurité vers la lumière, jusqu'au nom du jeu.
+ *
+ * Ordre validé par Adrien le 2026-08-17 : il ne se réarrange pas au fil de
+ * l'eau. La progression n'est pas décorative — elle raconte la seule chose que
+ * le jeu donne au joueur, la lumière.
+ */
+export const RANK_TIERS = [
+  "Aveugle",
+  "Braise",
+  "Bougie",
+  "Lanterne",
+  "Torche",
+  "Brasier",
+  "Phare",
+  "Aurore",
+  "Zénith",
+  "Candela",
+] as const;
+
+export type RankTier = (typeof RANK_TIERS)[number];
+
+/**
+ * Les trois divisions d'une catégorie, de la plus basse à la plus haute.
+ *
+ * Convention Rocket League, que la ROADMAP donne explicitement pour modèle :
+ * la division **I est la plus basse**, la III la plus haute. C'est l'inverse de
+ * League of Legends, d'où ce rappel — interverties, les divisions produisent
+ * une échelle qui reste parfaitement plausible à l'œil, et l'erreur ne se voit
+ * qu'au moment où un joueur se plaint de descendre en gagnant.
+ *
+ * La dixième catégorie, Candela, n'en a aucune : c'est le sommet, il ne se
+ * subdivise pas.
+ */
+export const DIVISIONS = ["I", "II", "III"] as const;
+
+/** Largeur d'une division, en points de classement. */
+export const DIVISION_SPAN = 40;
+
+/**
+ * Plancher de l'échelle : en dessous, tout le monde est Aveugle I.
+ *
+ * 700 et 40 ne valent pas pour eux-mêmes, mais pour l'endroit où ils placent
+ * `START_RATING` : **au centre exact de Bougie II**, troisième catégorie sur
+ * dix. Un débutant est donc dans la partie basse sans être collé au plancher —
+ * il lui reste six catégories et demie devant lui, et deux derrière, ce qui
+ * laisse la place de descendre : une échelle dont personne ne peut chuter ne
+ * récompense rien.
+ *
+ * Le détail qui a décidé du centrage : un premier match entre égaux déplace
+ * K/2 = 16 points, et la marge de part et d'autre du départ est de 20. Ni la
+ * première victoire ni la première défaite ne change donc le rang affiché. Un
+ * rang qui saute au premier match ne veut rien dire, et c'est le tout premier
+ * match qu'un nouveau joueur regarde.
+ *
+ * **Ces bornes sont provisoires.** Elles n'ont de sens qu'avec une population
+ * réelle, qui n'existe pas encore : les fixer maintenant donne quelque chose à
+ * afficher, cela ne prétend pas connaître la distribution. Les déplacer le jour
+ * où elle sera connue ne coûtera qu'un redéploiement.
+ */
+export const RANK_FLOOR = 700;
+
+/** Neuf catégories de trois divisions ; la dixième est indivisible. */
+const TOTAL_DIVISIONS = (RANK_TIERS.length - 1) * DIVISIONS.length;
+
+/** Classement à partir duquel on est Candela — le sommet, sans division. */
+export const RANK_CEILING = RANK_FLOOR + TOTAL_DIVISIONS * DIVISION_SPAN;
+
+export interface Rank {
+  tier: RankTier;
+  /** 1 à 10, la numérotation de la ROADMAP (et celle de la Phase 7). */
+  tierIndex: number;
+  /** 1 (I, la plus basse) à 3 (III) ; `null` pour Candela, qui n'en a pas. */
+  division: number | null;
+  /** Libellé court, prêt à afficher : « Bougie II », ou « Candela » au sommet. */
+  label: string;
+  /** Le rang juste au-dessus, ou `null` au sommet. */
+  nextLabel: string | null;
+  /** Points qui séparent du rang suivant, ou `null` au sommet. */
+  pointsToNext: number | null;
+}
+
+/** Libellé d'une division par son rang absolu sur l'échelle (0 = Aveugle I). */
+function labelAt(index: number): string {
+  if (index >= TOTAL_DIVISIONS) {
+    return RANK_TIERS[RANK_TIERS.length - 1];
+  }
+  const tier = RANK_TIERS[Math.floor(index / DIVISIONS.length)];
+  return `${tier} ${DIVISIONS[index % DIVISIONS.length]}`;
+}
+
+/**
+ * Le rang correspondant à un classement.
+ *
+ * Fonction totale : tout nombre rend un rang. Les classements extrêmes se
+ * rabattent sur les extrémités de l'échelle plutôt que de sortir du tableau,
+ * parce que le seul appelant est un affichage et qu'un `undefined` y devient un
+ * rang vide sans la moindre erreur pour le signaler.
+ */
+export function rankOf(rating: number): Rank {
+  // NaN et ±Infinity n'ont pas de « points restants » qui veuille dire quelque
+  // chose : on les épingle aux bornes de l'échelle. `NaN > 0` étant faux, un
+  // classement illisible tombe au plancher — le seul choix qui ne flatte
+  // personne.
+  const value = Number.isFinite(rating) ? rating : (rating > 0 ? RANK_CEILING : RANK_FLOOR);
+
+  // L'index est borné des deux côtés : c'est là, et nulle part ailleurs, que se
+  // joue la robustesse aux classements extrêmes.
+  const step = Math.floor((value - RANK_FLOOR) / DIVISION_SPAN);
+  const index = Math.min(Math.max(step, 0), TOTAL_DIVISIONS);
+
+  const top = index >= TOTAL_DIVISIONS;
+  const tierIndex = top ? RANK_TIERS.length : Math.floor(index / DIVISIONS.length) + 1;
+
+  return {
+    tier: RANK_TIERS[tierIndex - 1],
+    tierIndex,
+    division: top ? null : (index % DIVISIONS.length) + 1,
+    label: labelAt(index),
+    nextLabel: top ? null : labelAt(index + 1),
+    // Distance mesurée depuis le classement réel, pas depuis le bas de la
+    // division : un joueur très en dessous du plancher doit lire la vraie
+    // remontée qui lui reste, pas une valeur rassurante.
+    pointsToNext: top ? null : RANK_FLOOR + (index + 1) * DIVISION_SPAN - value,
+  };
+}
