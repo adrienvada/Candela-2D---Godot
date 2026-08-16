@@ -44,11 +44,38 @@ functions deploy` ne remonte que ce que `index.ts` importe réellement.
 
 Toutes se lancent depuis la racine du dépôt.
 
-### 1. Installer la CLI
+### 1. Installer la CLI — ✅ fait le 2026-08-16
+
+Installée en **binaire autonome** dans `~/.local/bin`, déjà présent dans le
+`PATH`. Version 2.114.0, vérifiée : `supabase --version`.
+
+**Pourquoi pas Homebrew.** `brew install supabase/tap/supabase` échoue sur cette
+machine : Homebrew 6 sur macOS 26 exige des Command Line Tools 26.3, celles
+installées sont en 16.4. Les remettre à niveau coûte ~2 Go et un mot de passe
+administrateur, pour un outil qui n'a besoin ni de l'un ni de l'autre.
+
+Pour refaire l'opération ailleurs (ou après une purge) :
 
 ```bash
-brew install supabase/tap/supabase
+curl -fsSL -o /tmp/supabase.tar.gz https://github.com/supabase/cli/releases/download/v2.114.0/supabase_darwin_arm64.tar.gz && curl -fsSL -o /tmp/checksums.txt https://github.com/supabase/cli/releases/download/v2.114.0/checksums.txt
 ```
+
+Vérifier l'empreinte **avant** d'extraire — l'archive fait 39 Mo et s'installe
+dans un dossier du `PATH` :
+
+```bash
+grep _darwin_arm64.tar.gz /tmp/checksums.txt | sed 's/supabase_2\.114\.0_darwin_arm64\.tar\.gz/supabase.tar.gz/' > /tmp/verif.sha256 && (cd /tmp && shasum -a 256 -c verif.sha256)
+```
+
+```bash
+mkdir -p ~/.local/bin && tar -xzf /tmp/supabase.tar.gz -C ~/.local/bin supabase supabase-go && chmod +x ~/.local/bin/supabase ~/.local/bin/supabase-go
+```
+
+L'archive contient **deux** binaires : `supabase` délègue une partie de son
+travail à `supabase-go`. N'extraire que le premier laisse une CLI qui répond à
+`--version` mais peut échouer plus loin.
+
+Sur une machine Intel, remplacer `darwin_arm64` par `darwin_amd64`.
 
 ### 2. S'authentifier
 

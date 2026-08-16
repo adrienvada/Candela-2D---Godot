@@ -427,6 +427,14 @@ instances locales avec deux profils distincts, et un rattachement par code.
   390/390 en `UNRELIABLE`). Le plugin ne promeut que `unreliable_ordered`, que
   Godot n'utilise pas ici. Sujet clos.
 
+**Outillage**
+- **Homebrew est inutilisable sur cette machine.** `brew install` échoue sur
+  « Your Command Line Tools are too outdated » : Homebrew 6 sur macOS 26 exige
+  des CLT 26.3, celles installées sont en 16.4. Les remettre à niveau coûte
+  ~2 Go et un mot de passe administrateur. Quand un outil existe en binaire
+  autonome, le prendre directement plutôt que de payer ce détour — c'est ce qui
+  a été fait pour la CLI Supabase (voir [SUPABASE.md](SUPABASE.md)).
+
 **Supabase / vérification de jeton**
 - **`startsWith` ne valide pas un émetteur.** Le contrôle « l'émetteur commence
   par `https://api.epicgames.dev` », écrit littéralement, accepte
