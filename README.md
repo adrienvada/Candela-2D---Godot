@@ -53,13 +53,22 @@ quoi. Rester factuel : une chose non testée est écrite comme non testée.
 
 ### Sessions parallèles
 
-Plusieurs sessions peuvent travailler en même temps sur ce dépôt.
+Plusieurs sessions peuvent travailler en même temps sur ce dépôt, sans pouvoir
+se parler. **Le canal est [docs/JOURNAL_SESSIONS.md](docs/JOURNAL_SESSIONS.md)**,
+à lire avant d'écrire une seule ligne : il dit quels fichiers sont réservés à
+quelle session.
 
+- **Le partage se fait par fichier, pas par sujet.** Deux agents sur « des
+  sujets différents » dans le même fichier produisent un conflit à chaque
+  poussée ; sur des fichiers disjoints, aucun.
 - **Ne jamais changer de branche** (`git checkout`) sans avoir vérifié qu'aucune
   autre session ne travaille sur l'arbre : cela modifie les fichiers sous ses
   pieds. Utiliser un worktree si un travail sur une autre branche est nécessaire.
-- Une seule session est propriétaire d'un chantier donné. Avant d'entamer un
-  sujet, vérifier dans la roadmap qu'il n'est pas déjà « en cours ».
+- Dans `docs/ROADMAP.md`, n'écrire que dans ses propres sections, et **ne jamais
+  reformater celle d'une autre session** — une correction de forme sur un
+  paragraphe voisin transforme un diff d'une ligne en conflit de section entière.
+- Récupérer `main` **avant** chaque poussée, et pousser souvent : plus une
+  branche vit longtemps, plus sa fusion coûte cher.
 - Ne jamais pousser sur GitHub sans demande explicite d'Adrien.
 
 ---
