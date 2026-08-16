@@ -1,0 +1,29 @@
+# Configuration de la CLI Supabase.
+#
+# Volontairement minimale : tout ce qui n'est pas ici garde la valeur par défaut
+# de la CLI. Le projet distant est référencé par `supabase link --project-ref`
+# (voir docs/SUPABASE.md), pas par ce fichier.
+
+# Identifiant LOCAL du projet — sert au nommage des conteneurs de `supabase
+# start`. Ce n'est pas la référence du projet distant (obnlcnwlkuojmplksxtu).
+project_id = "candela-2d"
+
+# --- Edge Functions --------------------------------------------------------
+# `verify_jwt = false` : ces deux fonctions ne sont pas protégées par un jeton
+# Supabase, et c'est délibéré. Leur seule authentification est le jeton signé
+# par Epic, qu'elles vérifient elles-mêmes contre les clés publiques d'Epic.
+# Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est
+# embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du
+# format des clés, qui a justement changé (publiable / secrète).
+
+[functions.identify]
+verify_jwt = false
+
+[functions.link]
+verify_jwt = false
+
+[functions.report]
+verify_jwt = false
+
+[functions.standing]
+verify_jwt = false

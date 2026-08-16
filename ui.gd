@@ -26,6 +26,8 @@ const COLOR_P1 := Color(0.0, 0.94, 1.0)
 const COLOR_P2 := Color(1.0, 0.0, 0.33)
 const COLOR_GOLD := Color(1.0, 0.8, 0.0)
 const COLOR_DIM := Color(0.52, 0.55, 0.63)
+## Orange d'avertissement, déjà celui du bandeau d'identité éphémère.
+const COLOR_WARN := Color(1.0, 0.45, 0.2)
 const COLOR_LINE := Color(0.19, 0.2, 0.25)
 const COLOR_SURFACE := Color(0.05, 0.055, 0.075, 0.92)
 
@@ -46,6 +48,7 @@ const META_NAV_SEED := "nav_seed"
 const TAB_PLAY := "JEU"
 const TAB_MAPS := "CARTES"
 const TAB_CONTROLS := "CONTROLES"
+const TAB_PROFILE := "PROFIL"
 
 # ---------------------------------------------------------------------------
 # CLASSES INTERNES
@@ -185,10 +188,21 @@ var game_over_score: Label
 var btn_tab_game: Button
 var btn_tab_map: Button
 var btn_tab_controls: Button
+var btn_tab_profile: Button
 var tab_game_container: VBoxContainer
 var tab_map_container: VBoxContainer
 var tab_controls_container: VBoxContainer
+var tab_profile_container: VBoxContainer
 var content_host: Control
+
+# --- Onglet PROFIL ---
+var profile_status_label: Label
+var profile_standing_label: Label
+var profile_code_label: Label
+var btn_copy_recovery: Button
+var link_input: LineEdit
+var btn_link: Button
+var link_feedback_label: Label
 
 var map_gallery: MapGallery
 var map_card: Button
@@ -1469,6 +1483,10 @@ func _build_menu() -> void:
 	content_host.add_child(tab_controls_container)
 	_fill_controls_tab()
 
+	tab_profile_container = _make_tab_page()
+	content_host.add_child(tab_profile_container)
+	_fill_profile_tab()
+
 	root.add_child(_build_actions_bar())
 
 func _make_tab_page() -> VBoxContainer:
@@ -1512,6 +1530,8 @@ func _build_tab_bar() -> Control:
 	bar.add_child(btn_tab_map)
 	btn_tab_controls = _make_tab_button("CONTRÔLES", TAB_CONTROLS)
 	bar.add_child(btn_tab_controls)
+	btn_tab_profile = _make_tab_button("PROFIL", TAB_PROFILE)
+	bar.add_child(btn_tab_profile)
 
 	bar.add_child(_make_shoulder_icon("r1.svg"))
 	return bar
@@ -2216,6 +2236,150 @@ func _build_video_block() -> Control:
 	return block
 
 # ---------------------------------------------------------------------------
+# ONGLET PROFIL
+# ---------------------------------------------------------------------------
+
+## Profil classé : état de l'identification, code de récupération, rattachement
+## d'une seconde machine.
+##
+## Le code de récupération est la seule chose que le joueur ait à conserver. Le
+## Device ID Epic étant lié à la MACHINE, c'est lui — et rien d'autre — qui rend
+## son classement à quelqu'un qui change d'ordinateur. D'où l'affichage en grand,
+## copiable, et non enfoui dans un sous-menu.
+func _fill_profile_tab() -> void:
+	tab_profile_container.add_child(_make_section_label("PROFIL CLASSÉ", COLOR_GOLD))
+
+	profile_status_label = Label.new()
+	profile_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_status_label.add_theme_font_size_override("font_size", 15)
+	profile_status_label.add_theme_color_override("font_color", COLOR_DIM)
+	tab_profile_container.add_child(profile_status_label)
+
+	# Le classement lui-même. Vide tant que le joueur n'a pas disputé de match en
+	# ligne : afficher « 1000 points » à quelqu'un qui n'a jamais joué serait un
+	# chiffre inventé.
+	profile_standing_label = Label.new()
+	profile_standing_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_standing_label.add_theme_font_size_override("font_size", 20)
+	profile_standing_label.add_theme_color_override("font_color", COLOR_P1)
+	tab_profile_container.add_child(profile_standing_label)
+
+	tab_profile_container.add_child(
+		_make_section_label("CODE DE RÉCUPÉRATION — À NOTER", COLOR_GOLD))
+
+	var code_row := HBoxContainer.new()
+	code_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	code_row.add_theme_constant_override("separation", GAP_S)
+
+	profile_code_label = Label.new()
+	profile_code_label.add_theme_font_size_override("font_size", 30)
+	profile_code_label.add_theme_color_override("font_color", COLOR_GOLD)
+	code_row.add_child(profile_code_label)
+
+	btn_copy_recovery = _make_button("COPIER", COLOR_GOLD)
+	btn_copy_recovery.add_theme_font_size_override("font_size", 13)
+	btn_copy_recovery.pressed.connect(_copy_recovery_code)
+	code_row.add_child(btn_copy_recovery)
+	tab_profile_container.add_child(code_row)
+
+	var hint := Label.new()
+	hint.text = "Sans ce code, un changement d'ordinateur repart d'un profil vierge."
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.add_theme_color_override("font_color", COLOR_DIM)
+	tab_profile_container.add_child(hint)
+
+	tab_profile_container.add_child(
+		_make_section_label("REPRENDRE UN PROFIL SUR CETTE MACHINE", COLOR_P1))
+
+	var link_row := HBoxContainer.new()
+	link_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	link_row.add_theme_constant_override("separation", GAP_S)
+
+	link_input = LineEdit.new()
+	link_input.custom_minimum_size = Vector2(280, 40)
+	link_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	link_input.placeholder_text = "CODE À %d CARACTÈRES" % RecoveryCode.LENGTH
+	# Le champ n'accepte que ce qu'un code peut contenir, tirets de lecture
+	# compris : le joueur peut coller « ABCD-EFGH-JKLM » tel qu'il l'a reçu.
+	link_input.text_changed.connect(func(text: String) -> void:
+		var clean := RecoveryCode.sanitize(text)
+		if clean == text:
+			return
+		var caret := link_input.caret_column - (text.length() - clean.length())
+		link_input.text = clean
+		link_input.caret_column = maxi(caret, 0)
+	)
+	link_row.add_child(link_input)
+
+	btn_link = _make_button("RATTACHER", COLOR_P1)
+	btn_link.add_theme_font_size_override("font_size", 14)
+	btn_link.pressed.connect(_request_profile_link)
+	link_row.add_child(btn_link)
+	tab_profile_container.add_child(link_row)
+
+	link_feedback_label = Label.new()
+	link_feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	link_feedback_label.add_theme_font_size_override("font_size", 13)
+	link_feedback_label.add_theme_color_override("font_color", COLOR_DIM)
+	tab_profile_container.add_child(link_feedback_label)
+
+	RankedIdentity.state_changed.connect(func(_state) -> void: _refresh_profile_tab())
+	RankedIdentity.standing_changed.connect(_refresh_profile_tab)
+	RankedIdentity.link_completed.connect(_on_profile_link_completed)
+	_refresh_profile_tab()
+
+func _refresh_profile_tab() -> void:
+	if profile_status_label == null:
+		return
+
+	var failed: bool = RankedIdentity.state == RankedIdentity.State.FAILED
+	var detailed: bool = failed and not RankedIdentity.last_error.is_empty()
+	profile_status_label.text = RankedIdentity.last_error if detailed \
+		else RankedIdentity.state_label()
+	profile_status_label.add_theme_color_override("font_color",
+		COLOR_WARN if failed else COLOR_DIM)
+
+	var standing := RankedIdentity.standing_label()
+	profile_standing_label.text = standing
+	profile_standing_label.visible = not standing.is_empty()
+	profile_standing_label.add_theme_color_override("font_color",
+		COLOR_P1 if RankedIdentity.is_ranked else COLOR_DIM)
+
+	var known: bool = RankedIdentity.is_ready() and not RankedIdentity.recovery_code.is_empty()
+	profile_code_label.text = RecoveryCode.format(RankedIdentity.recovery_code) if known \
+		else "————  ————  ————"
+	btn_copy_recovery.disabled = not known
+
+	# Le rattachement reste offert même quand l'identification a échoué : c'est
+	# précisément la situation d'un joueur qui débarque sur une machine neuve.
+	var configured: bool = RankedIdentity.state != RankedIdentity.State.UNCONFIGURED
+	link_input.editable = configured
+	btn_link.disabled = not configured
+
+func _copy_recovery_code() -> void:
+	if RankedIdentity.recovery_code.is_empty():
+		return
+	# La forme groupée : c'est celle qu'on recopie ou qu'on colle dans un message,
+	# et le champ d'en face la ramène tout seul à sa forme canonique.
+	var readable := RecoveryCode.format(RankedIdentity.recovery_code)
+	DisplayServer.clipboard_set(readable)
+	profile_code_label.text = readable + "  ✓"
+
+func _request_profile_link() -> void:
+	link_feedback_label.add_theme_color_override("font_color", COLOR_DIM)
+	link_feedback_label.text = "Rattachement en cours…"
+	RankedIdentity.link(link_input.text)
+
+func _on_profile_link_completed(success: bool, message: String) -> void:
+	link_feedback_label.text = message
+	link_feedback_label.add_theme_color_override("font_color",
+		COLOR_GOLD if success else COLOR_WARN)
+	if success:
+		link_input.text = ""
+	_refresh_profile_tab()
+
+# ---------------------------------------------------------------------------
 # BARRE D'ACTIONS
 # ---------------------------------------------------------------------------
 
@@ -2265,6 +2429,7 @@ func _tab_pages() -> Dictionary:
 		TAB_PLAY: tab_game_container,
 		TAB_MAPS: tab_map_container,
 		TAB_CONTROLS: tab_controls_container,
+		TAB_PROFILE: tab_profile_container,
 	}
 
 func _tab_buttons() -> Dictionary:
@@ -2272,13 +2437,14 @@ func _tab_buttons() -> Dictionary:
 		TAB_PLAY: btn_tab_game,
 		TAB_MAPS: btn_tab_map,
 		TAB_CONTROLS: btn_tab_controls,
+		TAB_PROFILE: btn_tab_profile,
 	}
 
 ## Onglets réellement accessibles : CARTES disparaît pendant une pause en match.
 func _visible_tabs() -> Array[String]:
 	var out: Array[String] = []
 	var buttons := _tab_buttons()
-	for tab_name in [TAB_PLAY, TAB_MAPS, TAB_CONTROLS]:
+	for tab_name in [TAB_PLAY, TAB_MAPS, TAB_CONTROLS, TAB_PROFILE]:
 		var btn: Button = buttons[tab_name]
 		if btn != null and btn.visible:
 			out.append(String(tab_name))

@@ -81,6 +81,20 @@ var _join_deadline_active: bool = false
 var _round_token: int = 0
 var _end_sequence_active: bool = false
 
+# Vrai entre le début d'un match EN LIGNE et son archivage. Décision actée :
+# quitter un match en cours vaut forfait — le joueur resté gagne, celui qui part
+# perd. Ce jeton dit qu'il reste un résultat à écrire, et il n'y en a qu'un :
+# l'abandon emprunte plusieurs chemins de retour au menu, qui se croisent.
+var _forfeit_pending: bool = false
+
+# Identifiant du match en cours, tiré par l'hôte et transmis au client. Il ne
+# sert qu'à apparier les deux rapports côté classement : les deux machines
+# envoient chacune le sien, sans se reparler. Ni secret, ni autorité.
+#
+# Tiré par manche, ce qui coïncide avec le match en BO1 — le seul format
+# implémenté. Un BO3 devra le tirer à l'ouverture du MATCH, pas de la manche.
+var _match_id: String = ""
+
 # [Hôte] Effets différés jusqu'à la fin de la séquence : la killcam de chaque
 # machine a sa propre durée, le client peut donc être prêt — ou arriver — alors
 # que l'hôte est encore au ralenti.
@@ -222,6 +236,9 @@ func _on_peer_connected(id: int):
 
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		# Avant toute remise à zéro : l'enregistrement lit les armes, le chrono et
+		# le mode, que la suite de cette fonction efface.
+		_archive_forfeit(0)
 		if id == client_peer_id:
 			client_peer_id = 0
 		# Toute séquence de fin en vol devient caduque : sans ce jeton elle
@@ -588,14 +605,15 @@ func _start_round():
 			_hosted_weapon_1_idx = w1_idx
 			return
 		else:
-			rpc_start_round.rpc(w1_idx, w2_idx, _host_map_code())
+			rpc_start_round.rpc(w1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return # Client ne démarre pas la logique locale
 	else:
 		_do_start_round(w1_idx, w2_idx)
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = ""):
+func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = "", match_id: String = ""):
+	_match_id = match_id
 	# Le client adopte la carte de l'hôte : sans ça les deux joueurs
 	# s'affronteraient sur des géométries différentes.
 	if map_code != "" and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -603,6 +621,15 @@ func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = ""):
 		if err != "":
 			ui.show_dialog_message("Carte", "Carte de l'hôte illisible : " + err)
 	_do_start_round(w1_idx, w2_idx)
+
+## [Hôte] Tire l'identifiant du match qui commence.
+##
+## 16 octets d'un générateur cryptographique, en hexadécimal. Pas parce qu'il
+## faudrait un secret — il transite en clair — mais parce qu'un compteur ou une
+## horloge se devinerait, et qu'un tiers pourrait alors déposer son propre récit
+## sur le match de deux inconnus.
+func _new_match_id() -> String:
+	return Crypto.new().generate_random_bytes(16).hex_encode()
 
 ## Code compact de la carte active, à joindre au démarrage de manche.
 ## Vide hors mode hôte : personne d'autre n'a autorité sur la carte.
@@ -624,6 +651,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# changement de carte depuis le menu, sans redémarrer le jeu.
 	rebuild_arena()
 	sandbox_mode = false
+	# Un vrai match en ligne commence ici, et ici seulement : l'hôte resté seul
+	# n'atteint jamais ce point, il repart en bac à sable plus haut. À partir de
+	# maintenant, partir coûte le match.
+	_forfeit_pending = NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	_set_training_target_active(false)
 	if is_instance_valid(particle_pool):
 		particle_pool.clear_all()
@@ -1113,7 +1144,9 @@ func _do_end_round(winner_id: int):
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
 ## chaque machine journalise le match qu'elle vient de jouer, y compris le
 ## client — il n'y a aucun échange réseau ici.
-func _archive_match_result(winner_id: int) -> void:
+func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
+	# Le match est résolu : plus rien à forfaire dessus.
+	_forfeit_pending = false
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -1121,8 +1154,59 @@ func _archive_match_result(winner_id: int) -> void:
 		p2.current_weapon.name if p2 and p2.current_weapon else "",
 		MapData.selected_map_id,
 		_mode_label(),
-		MATCH_FORMAT)
+		MATCH_FORMAT,
+		forfeit)
 	MatchRecord.append_to_history(record)
+	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
+	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
+	_report_to_ranking(winner_id, forfeit)
+
+## Dépose le résultat auprès du classement, du point de vue de CETTE machine.
+##
+## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
+## rapports par leur identifiant de match et confronte les récits. Rien n'est
+## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
+func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
+	var local_idx := _local_player_index()
+	if local_idx < 0 or _match_id.is_empty():
+		return
+
+	var outcome := "draw"
+	if winner_id >= 0:
+		outcome = "win" if winner_id == local_idx else "loss"
+
+	var mine: Player = p1 if local_idx == 0 else p2
+	var theirs: Player = p2 if local_idx == 0 else p1
+	RankedIdentity.report_match(_match_id, outcome, {
+		"forfeit": forfeit,
+		"duration": round_time - time_left,
+		"map": MapData.selected_map_id,
+		"weapon_self": mine.current_weapon.name if mine and mine.current_weapon else "",
+		"weapon_opponent": theirs.current_weapon.name if theirs and theirs.current_weapon else "",
+		"format": MatchRecord.FORMAT_NAMES.get(MATCH_FORMAT, "BO1"),
+	})
+
+## Archive un match gagné par abandon de l'adversaire.
+##
+## Le jeton `_forfeit_pending` est ce qui rend l'opération sûre : abandonner
+## emprunte plusieurs chemins de retour au menu, qui se croisent — signal du
+## transport, dialogue de déconnexion, bouton MENU PRINCIPAL — et sans lui le
+## même match serait archivé deux ou trois fois.
+##
+## À appeler AVANT `NetworkManager.disconnect_from_game()` : celui-ci remet le
+## mode en local, et l'enregistrement ne saurait plus dire s'il vient d'un hôte
+## ou d'un client.
+func _archive_forfeit(winner_id: int) -> void:
+	if not _forfeit_pending:
+		return
+	_archive_match_result(winner_id, true)
+
+## Indice du joueur incarné par CETTE machine, -1 hors ligne.
+func _local_player_index() -> int:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: return 0
+		NetworkManager.GameMode.ONLINE_CLIENT: return 1
+		_: return -1
 
 func _mode_label() -> String:
 	match NetworkManager.current_mode:
@@ -1148,7 +1232,8 @@ func _apply_deferred_rematch() -> void:
 	if _pending_client_start:
 		_pending_client_start = false
 		if client_peer_id != 0:
-			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code())
+			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code(),
+				_new_match_id())
 			return
 	if p2_ready_for_rematch:
 		_check_rematch_start()
@@ -1171,7 +1256,7 @@ func rpc_client_weapon(idx: int):
 		_pending_p2_weapon_idx = idx
 		_pending_client_start = true
 		return
-	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code())
+	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code(), _new_match_id())
 
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
@@ -1276,7 +1361,7 @@ func _check_rematch_start():
 		var w2_idx = 0
 		if ui.p2_weapon_group.get_pressed_button():
 			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
-		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code())
+		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif not p1_ready_for_rematch:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 
@@ -1303,6 +1388,15 @@ func _restore_viewports():
 
 
 func _on_main_menu_requested():
+	# Départ volontaire en plein match : c'est un abandon, et il se paie. Le
+	# vainqueur est l'adversaire — celui qui reste. Archivé AVANT la déconnexion,
+	# qui repasse le mode en local et rendrait l'enregistrement muet sur son
+	# origine. Si un signal du transport est déjà passé par là, le jeton a été
+	# consommé et cet appel ne fait rien.
+	var local_idx := _local_player_index()
+	if local_idx >= 0:
+		_archive_forfeit(1 - local_idx)
+
 	NetworkManager.disconnect_from_game()
 
 	client_peer_id = 0
@@ -1368,6 +1462,11 @@ func _on_main_menu_requested():
 	AudioManager.play_music("music_menu")
 
 func _on_quit_requested():
+	# Quitter le jeu en plein match est un abandon comme un autre : il se paie.
+	var local_idx := _local_player_index()
+	if local_idx >= 0:
+		_archive_forfeit(1 - local_idx)
+
 	# quit() ne prend effet qu'en fin de frame : sortir depuis une killcam
 	# étirerait ces dernières frames au ralenti.
 	Engine.time_scale = 1.0
@@ -1377,6 +1476,8 @@ func _on_quit_requested():
 
 ## [Client Uniquement] Appelé quand l'hôte ferme le serveur ou plante.
 func _on_host_disconnected():
+	# L'hôte est parti en cours de match : le client encaisse la victoire.
+	_archive_forfeit(1)
 	ui.show_dialog_message("Déconnexion", "L'hôte a fermé la partie. Retour au menu principal.")
 	_on_main_menu_requested()
 

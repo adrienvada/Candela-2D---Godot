@@ -13,6 +13,7 @@ func _init() -> void:
 
 	_test_format_constants()
 	_test_record_structure()
+	_test_forfeit_record()
 	_test_history_roundtrip()
 	_test_history_cap()
 	_test_pool_capacity()
@@ -66,8 +67,8 @@ func _test_record_structure() -> void:
 	print("\n[Résultat de match]")
 	var rec := MatchRecord.build(0, 187.25, "Pompe", "Fusil", "default", "en_ligne_hote")
 
-	for key in ["version", "vainqueur", "egalite", "duree", "arme_j1", "arme_j2",
-			"carte", "horodatage", "mode", "format"]:
+	for key in ["version", "forfait", "vainqueur", "egalite", "duree", "arme_j1",
+			"arme_j2", "carte", "horodatage", "mode", "format"]:
 		_check("clé « %s » présente" % key, rec.has(key))
 
 	_check("version du schéma", rec["version"] == MatchRecord.SCHEMA_VERSION,
@@ -90,6 +91,53 @@ func _test_record_structure() -> void:
 
 	# Sérialisable tel quel : c'est ce que l'envoi ELA/ELO consommera plus tard.
 	_check("sérialisable en JSON", JSON.stringify(rec) != "")
+
+# ---------------------------------------------------------------------------
+# FORFAIT
+# ---------------------------------------------------------------------------
+#
+# Décision actée : quitter un match en ligne en cours vaut forfait. Le drapeau
+# est ce qui permettra au classement de distinguer une victoire gagnée d'une
+# victoire encaissée — et de la pondérer autrement un jour, sans rejouer
+# l'histoire.
+func _test_forfeit_record() -> void:
+	print("\n[Forfait]")
+
+	var normal := MatchRecord.build(0, 120.0, "Pompe", "Fusil", "default", "en_ligne_hote")
+	_check("un match joué n'est pas un forfait", normal["forfait"] == false)
+
+	# L'hôte reste, le client part : J1 gagne par forfait.
+	var host_wins := MatchRecord.build(0, 42.0, "Pompe", "Fusil", "default",
+		"en_ligne_hote", MatchRecord.Format.BO1, true)
+	_check("forfait marqué", host_wins["forfait"] == true)
+	_check("le joueur resté est vainqueur", host_wins["vainqueur"] == 0)
+	_check("un forfait n'est pas une égalité", host_wins["egalite"] == false)
+
+	# Le client reste, l'hôte part : J2 gagne par forfait. Vu du client, c'est le
+	# même enregistrement avec l'autre vainqueur — les deux machines écrivent
+	# chacune le leur, sans échange réseau.
+	var client_wins := MatchRecord.build(1, 42.0, "Pompe", "Fusil", "default",
+		"en_ligne_client", MatchRecord.Format.BO1, true)
+	_check("vu du client, J2 est vainqueur", client_wins["vainqueur"] == 1)
+	_check("mode conservé", client_wins["mode"] == "en_ligne_client")
+
+	# Un abandon très précoce reste un abandon : la durée peut être nulle sans
+	# que l'enregistrement cesse d'être valide.
+	var early := MatchRecord.build(0, 0.0, "", "", "default", "en_ligne_hote",
+		MatchRecord.Format.BO1, true)
+	_check("durée nulle acceptée", float(early["duree"]) == 0.0)
+	_check("forfait précoce marqué", early["forfait"] == true)
+
+	# Le champ doit survivre à l'aller-retour JSON : c'est sous cette forme que
+	# le classement le relira.
+	var relu: Variant = JSON.parse_string(JSON.stringify(host_wins))
+	_check("forfait survit au JSON",
+		relu is Dictionary and (relu as Dictionary)["forfait"] == true)
+
+	# Le schéma a changé en ajoutant ce champ : la version doit l'avoir suivi,
+	# sinon un lecteur croira relire un enregistrement d'avant.
+	_check("version du schéma incrémentée", MatchRecord.SCHEMA_VERSION >= 2,
+		str(MatchRecord.SCHEMA_VERSION))
 
 # ---------------------------------------------------------------------------
 # JOURNAL LOCAL

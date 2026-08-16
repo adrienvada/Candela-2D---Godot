@@ -13,11 +13,11 @@ Godot 4.7 · GDScript · écran partagé local et 1v1 en ligne hôte-autoritaire
 **[docs/ROADMAP.md](docs/ROADMAP.md) est le document de référence du projet.**
 Il dit où en est le jeu, ce qui est décidé, ce qui est validé, et ce qui reste.
 
-**État des branches** — `main` porte les Phases 1 et 2 (écran partagé local et
-1v1 en ligne hôte-autoritaire). Le travail EOS de la Phase 3 vit sur
-`eos-transport` jusqu'à sa fusion : quelques fichiers cités plus bas
-(`docs/PROTOCOLE_TEST_EOS.md`, `eos_credentials.example.gd`, les bancs d'essai
-réseau) n'existent que sur cette branche.
+**État des branches** — `main` porte tout ce qui est terminé : Phases 1 à 4
+incluses (identité classée, matchs en base, classement ELO). Le travail en cours
+vit sur une branche dédiée jusqu'à sa clôture, puis y est fusionné — c'est ce qui
+s'est fait pour `eos-transport` puis `supabase-elo`. `main` et `supabase-elo`
+sont à jour sur GitHub depuis le 2026-08-16.
 
 ---
 
@@ -79,6 +79,11 @@ done
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . res://tools/test_netcode.tscn
 ```
 
+```bash
+# Classement : vérification du jeton Epic et code de récupération (Deno)
+deno test --allow-net=jsr.io supabase/functions/_shared/
+```
+
 Ces suites tournent aussi en CI (GitHub Actions,
 [.github/workflows/tests.yml](.github/workflows/tests.yml)) sur chaque poussée,
 avec Godot 4.7.1 Linux headless — plus un test de fumée qui charge le jeu
@@ -109,6 +114,24 @@ les transmettre par un canal public.
 
 ---
 
+## Configuration Supabase
+
+Le classement passe par Supabase. Recopier `supabase_config.example.gd` en
+`res://supabase_config.gd` (ignoré par git) et y coller l'URL du projet et la
+**clé publiable**.
+
+**Sans ce fichier, le jeu démarre et se joue normalement** : le classement reste
+« non configuré », et rien d'autre ne change.
+
+La clé publiable est faite pour vivre dans le client — ce qui protège les
+tables, c'est la Row Level Security, pas le secret de cette clé. La clé
+**secrète**, elle, n'entre jamais dans le jeu : les Edge Functions la reçoivent
+par variable d'environnement.
+
+Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
+
+---
+
 ## Repères de code
 
 | Fichier | Rôle |
@@ -119,4 +142,7 @@ les transmettre par un canal public.
 | `ui.gd` | HUD, menus, lobby, killcam, navigation à deux curseurs |
 | `bullet.gd` | Balles : trajectoire, rebonds, compensation de latence |
 | `match_record.gd` | Format de match et archivage des résultats |
+| `ranked_identity.gd` | Profil classé : identification vérifiée auprès d'Epic, code de récupération |
+| `recovery_code.gd` · `lobby_code.gd` | Codes lus à voix haute : nettoyage, validation, mise en forme |
+| `supabase/` | Schéma SQL, Row Level Security et Edge Functions du classement |
 | `map_data.gd` · `map_codec.gd` · `map_geometry.gd` | Cartes : stockage, partage, géométrie |

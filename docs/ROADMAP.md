@@ -28,7 +28,14 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — en attente du jalon humain H5 (création du projet Supabase) |
+| 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
+| 5 | **Les menus** | 🔵 **Structure à choisir** — trois propositions soumises à Adrien le 2026-08-16 |
+| 6 | Rangs (catégories et divisions) | 🔵 À faire — dépend de la Phase 5 |
+| 7 | Déblocage d'armes par rang | 🔵 À faire — dépend de la Phase 6 |
+
+Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
+verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
+travail deux fois.
 
 ---
 
@@ -260,10 +267,221 @@ reste intacte.
 
 ---
 
-## Phase 4 — Supabase (compétitif / ELO) 🟡
+## Phase 4 — Supabase (compétitif / ELO) ✅
 
-En cours — en attente du jalon humain H5 (création du projet Supabase).
-Périmètre pressenti :
+### Projet Supabase — créé le 2026-08-16 (jalon H5) ✅
+
+| | |
+|---|---|
+| Projet | `Candela 2D - Godot` |
+| Référence | `obnlcnwlkuojmplksxtu` |
+| Région | AWS `eu-west-1` (Irlande) |
+| Plan | Gratuit |
+
+Le projet utilise le **nouveau système de clés** Supabase (publiable / secrète),
+et non l'ancien couple `anon` / `service_role`. Configuration dans
+`supabase_config.gd`, ignoré par git, avec `supabase_config.example.gd` comme
+modèle versionné.
+
+**La clé publiable n'est sûre qu'une fois la Row Level Security écrite** : sans
+politique RLS, elle donne accès aux tables exposées. Elle reste donc hors de
+git jusqu'à ce que l'étape 1 soit faite ; elle pourra rejoindre le dépôt
+ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
+La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
+reçoivent la leur par variable d'environnement.
+
+### Étape 1 — identité vérifiée (`673c0e9`) ✅ CLOSE
+
+**Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
+infalsifiable. C'est austère, mais tout le reste s'écroule sans elle : un
+classement dont on peut usurper les profils ne vaut rien.
+
+Déployée le 2026-08-16 sur le projet `obnlcnwlkuojmplksxtu` : les deux migrations
+appliquées, les deux Edge Functions en ligne, les secrets Epic posés. Marche à
+suivre et relevé des contrôles : [SUPABASE.md](SUPABASE.md).
+
+**Schéma** (`supabase/migrations/20260816160000_players_identity.sql`) — une
+table `players` : `id` (uuid), `puid` (PUID Epic **courant**, unique), `code`
+(récupération), `nickname`, `arbitration`, `created_at`, `seen_at`.
+
+L'identité durable du profil est `id`, **jamais le PUID** : celui-ci change au
+rattachement d'une nouvelle machine, et tout ce qui sera classé pointera sur
+`id`. C'est ce qui permettra à un historique de survivre à un changement
+d'ordinateur.
+
+Le champ **`arbitration`** (`peer` / `server`) est celui que cette section
+réclamait plus bas. Sa place définitive est sur la ligne de résultat, quand la
+table des matchs existera ; il est porté sur `players` dès maintenant pour que
+le type soit versionné avec le schéma et que la première ligne écrite dise déjà
+qui l'a arbitrée.
+
+**RLS** — activée, **sans aucune politique**. L'absence de politique est ici le
+contenu, pas un oubli : RLS sans politique refuse tout. Les droits par défaut
+accordés par Supabase aux rôles anonyme et authentifié sont retirés en plus. Le
+jeu n'écrit donc jamais en direct ; les deux Edge Functions écrivent avec la clé
+secrète, via deux fonctions SQL `security definer` (`identify_player`,
+`link_profile`) dont l'exécution est refusée à tout autre rôle.
+
+**Vérification du jeton Epic** (`supabase/functions/_shared/epic.ts`) — le
+client joint le jeton rendu par `EOS.Connect.ConnectInterface.copy_id_token`.
+La fonction le vérifie contre le JWKS d'Epic
+(`https://api.epicgames.dev/auth/v1/oauth/jwks`), refuse tout `alg` autre que
+RS256, contrôle `iss`, `exp`, `iat`, `aud` = CLIENT_ID et `pfdid` = DEPLOYMENT_ID,
+puis n'extrait le PUID que du `sub`. **Un PUID posté dans le corps de la requête
+n'est jamais lu.** Sans `EPIC_CLIENT_ID` en environnement, la fonction refuse
+tout : une configuration incomplète ne dégrade jamais en « on laisse passer ».
+
+Vérifié le 2026-08-16 avec un **vrai jeton Epic contre le vrai JWKS d'Epic** :
+accepté ; la même charge utile modifiée après signature est refusée.
+Revendications observées : `act, aud, exp, iat, iss, pfdid, pfpid, pfsid, sub,
+tokenType`, `iss = https://api.epicgames.dev/auth/v1/oauth`, durée de vie 3600 s.
+
+**Code de récupération** — tiré au serveur par `crypto.getRandomValues`, jamais
+par le client : c'est ce qui empêche un joueur de se choisir le code d'un autre.
+Alphabet de `LobbyCode` (ni I, ni O, ni 0, ni 1), mais **12 caractères** et non
+6 — voir la décision actée plus bas.
+
+**Côté Godot** — `recovery_code.gd` (logique pure : nettoyer, valider, mettre en
+forme) et l'autoload `RankedIdentity` (`ranked_identity.gd`), qui s'identifie en
+tâche de fond et expose les mêmes états qu'EOS : non configuré / en cours /
+prêt / échec. Un onglet **PROFIL** affiche le code en grand, copiable, et offre
+le rattachement d'une seconde machine.
+
+`RankedIdentity` ne s'identifie pas en headless : les suites de tests y tournent,
+et chaque exécution créerait un profil de plus dans la vraie base.
+
+**Vérifié** : sans `supabase_config.gd`, le jeu démarre, EOS fonctionne, le
+classement reste « non configuré », aucune erreur.
+
+**Les cinq critères de sortie sont tenus**, vérifiés contre les fonctions
+réellement déployées :
+
+| Critère | Vérification |
+|---|---|
+| Deux instances locales, deux profils distincts | Deux identités éphémères → deux profils, deux codes lisibles |
+| Un PUID posté sans jeton valide est refusé | `401` sur PUID seul, jeton inventé, `alg: none`, corps vide |
+| Un code valide rattache une nouvelle identité | Une troisième identité reprend le profil de la première |
+| Sans configuration Supabase, le jeu démarre | Vérifié : classement « non configuré », rien d'autre ne change |
+| Les 6 suites passent | ✅ |
+
+**L'onglet PROFIL a été exercé lui aussi**, en instanciant le vrai menu en
+headless et en actionnant ses boutons par code : l'onglet est présent et
+atteignable à la manette pour les deux joueurs, le code s'affiche groupé par
+quatre, COPIER s'active au bon moment, le champ nettoie `abcd-efgh-jklm` en
+`ABCDEFGHJKLM`, un code trop court est refusé sans appel réseau, un code valide
+bascule le statut et le code affichés vers le profil repris, et un code inconnu
+laisse le profil courant intact.
+
+**Parcours à la souris — fait le 2026-08-16 (jalon H7) ✅.** Deux instances
+fenêtrées, pilotées à l'écran : la mise en page tient (rien de coupé, code
+lisible en grand), COPIER remplit réellement le presse-papiers système avec la
+forme groupée `46YD-33UE-SJXA`, le collage dans le champ en retire les tirets,
+RATTACHER bascule statut et code affichés vers le profil repris, et un code
+inventé répond en orange sans toucher au profil courant. Une partie locale a été
+lancée ensuite : écran partagé, HUD, chronomètre — rien du jeu n'a bougé.
+
+Deux confirmations en prime : **le profil orphelin est bien effacé** — après le
+rattachement, une seule ligne subsiste en base, celle du profil repris, portant
+le PUID de la seconde machine — et **la fermeture par le bouton de fenêtre sort
+en code 0**, donc l'arrêt propre d'EOS tient sur ce chemin-là aussi.
+
+**L'étape 1 est close.**
+
+Deux réserves de méthode, pour qui relira : les fenêtres étaient pilotées par
+frappes synthétiques, et le focus clavier reste sur la dernière fenêtre touchée
+— Échap et F3 semblaient sans effet sur l'autre. Rien n'indique un défaut du
+jeu, mais rien ne l'exclut non plus : ces deux touches n'ont pas été vérifiées.
+
+**Un défaut trouvé et corrigé en production** (`20260816183000`) : les fonctions
+SQL signalaient « code de récupération inconnu » par un `NULL`, que PostgREST
+sérialise en **objet de champs nuls** et non en `null`. L'Edge Function y voyait
+un profil valide et répondait `200` — **un code inventé était accepté**. Les
+fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté.
+Le client Godot refuse en outre tout profil sans identifiant.
+
+### Étape 2a — les matchs arrivent en base (`3837853`) ✅ CLOSE
+
+**Toujours aucun ELO.** Cette étape archive fidèlement, sans interpréter.
+
+Deux principes gouvernent le schéma. **On stocke les rapports, on dérive le
+reste** : `match_reports` est immuable et brute ; la concordance, le vainqueur —
+et demain le classement — sont des VUES par-dessus. Une règle d'interprétation
+qui se révèle mauvaise se change alors sans migration et sans rien perdre.
+**Chaque pair ne parle que de lui** : il déclare « j'ai gagné », jamais « untel a
+perdu ». Il n'a donc pas besoin du PUID de son adversaire — le serveur apprend
+les deux identités des deux jetons Epic, chacun vérifié. C'est aussi ce qui fait
+fonctionner le rapport en LAN, où aucun PUID ne circule.
+
+L'appariement passe par un **identifiant de match** tiré par l'hôte
+(16 octets cryptographiques) et transmis au client dans `rpc_start_round`. Ni
+secret ni autorité : juste de quoi rapprocher deux récits venus de deux machines
+qui ne se parlent plus. Tiré par manche, ce qui coïncide avec le match en BO1 ;
+**un BO3 devra le tirer à l'ouverture du match, pas de la manche.**
+
+Le journal local `match_history.json` est écrit **avant** l'envoi et reste le
+registre durable : ce qui n'atteint pas le serveur n'est pas perdu, et une étape
+ultérieure pourra le rejouer. L'envoi réessaie trois fois puis renonce en le
+disant.
+
+**Vérifié en production le 2026-08-16** — deux instances, deux identités
+éphémères distinctes, un vrai match en ENet mené jusqu'au chrono :
+
+| Contrôle | Résultat |
+|---|---|
+| Les deux pairs rapportent le même match | ✅ deux lignes, même `match_id`, 4 s d'écart |
+| La vue apparie et juge concordant | ✅ `concordant: true`, `winner: null` (égalité) |
+| Rejouer un rapport ne le réécrit pas | ✅ l'original est rendu intact malgré un envoi contradictoire |
+| Un PUID jamais identifié | ✅ refusé |
+| Un tiers sur un match déjà complet | ✅ refusé — mais accepté sur un match neuf |
+| Rapport sans jeton / jeton inventé | ✅ `401` |
+| `match_reports` et la vue à la clé publiable | ✅ `42501 permission denied` |
+| 6 suites Godot · 44 tests Deno | ✅ |
+
+**Reste dû** : l'ELO lui-même (étape 2b), et le rejeu du journal local pour les
+rapports qui n'ont pas pu partir.
+
+### Étape 2b — le classement ✅ CLOSE
+
+**Le classement est une valeur DÉRIVÉE, jamais écrite une fois pour toutes.** La
+table `ratings` est reconstruite en entier par un rejeu de tout l'historique
+concordant, après chaque match réglé. Conséquence voulue : un mauvais facteur K,
+un mauvais classement de départ, une mauvaise pondération du forfait cessent
+d'être fatals — on change la constante et on rejoue.
+
+Le calcul vit dans `supabase/functions/_shared/elo.ts`, **pas en SQL**, pour une
+raison : en SQL il serait intestable hors ligne. Or le classement est la partie
+du système où une erreur est la plus difficile à voir après coup — un classement
+faux reste plausible. 20 tests couvrent les propriétés plutôt que des valeurs :
+symétrie des espérances, conservation du total, non-commutativité assumée,
+indépendance à l'ordre des deux joueurs dans une ligne, convergence.
+
+Réglages, tous nommés et isolés : départ à **1000**, facteur **K = 32** constant
+(pas de phase provisoire — un raffinement légitime, mais chacun est une règle
+inventée de plus, et il ne coûtera qu'un recalcul le jour où le besoin sera
+démontré), forfait à **poids plein**, conséquence directe de la décision de ne
+pas rendre l'abandon gratuit.
+
+Le rejeu est **intégral** et non incrémental. Plus coûteux, et délibéré : il
+n'existe alors aucun chemin par lequel la table pourrait diverger de
+l'historique. Le jour où l'échelle l'exigera, l'incrémental deviendra une
+optimisation — avec ce rejeu comme référence pour la vérifier.
+
+**Vérifié en production le 2026-08-16**, deux instances et trois matchs :
+
+| Contrôle | Résultat |
+|---|---|
+| Match nul entre égaux | ✅ 1000 partout, aucun déplacement |
+| Une victoire déplace le classement | ✅ 1015 contre 985 |
+| Le total se conserve | ✅ 2000 exactement |
+| Rang calculé à la lecture | ✅ 1er et 2e |
+| Affichage en jeu | ✅ « 1015 points · 1e · 3 matchs (1V 0D 2N) » dans l'onglet PROFIL |
+| `ratings` et `leaderboard` à la clé publiable | ✅ fermés |
+| 6 suites Godot · 64 tests Deno | ✅ |
+
+### Périmètre
+
+> Les trois points marqués ✅ ci-dessous sont **faits** par l'étape 1 ; le reste
+> appartient aux étapes suivantes.
 
 - Calcul d'ELO dans une Edge Function (jamais côté client — les stats EOS sont
   alimentées par le client, donc trichables pour un classement sérieux).
@@ -273,16 +491,29 @@ Périmètre pressenti :
   match, puisque c'est lui qui simule tout. C'est la seule parade disponible en
   P2P, pas une protection équivalente à un serveur — voir la décision
   « P2P conservé » plus bas.
-- **Authenticité de l'identité** : le PUID seul ne prouve rien, n'importe qui
+- ✅ **Authenticité de l'identité** : le PUID seul ne prouve rien, n'importe qui
   pourrait en poster un. Chaque pair doit joindre son jeton d'identité Epic,
   que l'Edge Function vérifie auprès d'Epic avant d'écrire quoi que ce soit.
-- Prévoir dès le schéma un champ d'**origine de l'arbitrage** (pair / serveur) :
+- ✅ Prévoir dès le schéma un champ d'**origine de l'arbitrage** (pair / serveur) :
   c'est ce qui permettra d'introduire un serveur dédié plus tard sans invalider
   l'historique déjà accumulé.
 - Historique, saisons, liste de salons (reportée depuis la Phase 3).
-- Le PUID Epic sert de clé d'identité. **Limite connue :** le Device ID est lié
-  à la machine — un joueur qui change d'ordinateur perd son classement. Prévoir
-  un mécanisme de récupération ou une liaison de compte.
+- Le PUID Epic sert de clé d'identité, **après vérification** : le client joint
+  son jeton signé par Epic (`EOS.Connect.ConnectInterface.copy_id_token`,
+  disponible dans le plugin — vérifié le 2026-08-16), que l'Edge Function
+  valide contre les clés publiques d'Epic avant d'en extraire le PUID. Sans
+  cette étape, n'importe qui pourrait poster n'importe quel PUID.
+- ✅ **Récupération d'identité : code de récupération** (décision du 2026-08-16).
+  Le Device ID Epic étant lié à la machine, un joueur qui change d'ordinateur
+  perdrait son classement. Le jeu lui affiche donc un code à conserver, qui
+  rattache une nouvelle machine au profil existant. Les comptes en bonne et due
+  forme (e-mail, Supabase Auth) viendront plus tard ; ce mécanisme se retire
+  sans douleur le jour venu. Réutiliser l'alphabet sans ambiguïté de
+  `LobbyCode` (ni I, ni O, ni 0, ni 1) : ce code se lit à voix haute et se
+  recopie à la main.
+  **Compromis assumé :** un code de récupération est un secret au porteur —
+  qui l'obtient prend le profil. Proportionné pour un classement de jeu, à
+  revoir si les enjeux montent.
 - **Surface de triche à inventorier avant tout classement.** La signature à
   deux pairs (ci-dessus) ne suffit pas : le RTT applicatif est déclaratif et
   nourrit la compensation de tir, et la cadence de tir du client n'est bornée
@@ -296,6 +527,161 @@ Périmètre pressenti :
   chaque enregistrement (le futur envoi saura quelle forme il relit) et
   écriture atomique du journal (temporaire puis renommage — un arrêt brutal ne
   peut plus corrompre l'historique déjà archivé).
+  Durci le 2026-08-16 pour pouvoir servir de source ELO : champ `version` dans
+  chaque enregistrement (le futur envoi saura quelle forme il relit) et
+  écriture atomique du journal (temporaire puis renommage — un arrêt brutal ne
+  peut plus corrompre l'historique déjà archivé).
+
+---
+
+## Phase 5 — Les menus 🔵 STRUCTURE À CHOISIR
+
+**Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
+ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
+sache montrer un verrou, et les deux d'un endroit où vivre. Les greffer sur
+l'onglet JOUER actuel — qui porte déjà le mode, la carte et les deux râteliers
+d'armes — puis restructurer ensuite reviendrait à faire le travail deux fois.
+L'ordre n'est pas une préférence : c'est la seule séquence qui ne se paie pas
+double.
+
+**Rien de ce qui suit ne touche au réseau.** Le menu ne fait que *choisir* un
+mode ; `NetworkManager` et `game_state.gd` reçoivent les mêmes appels quelle que
+soit la structure retenue. La seule règle à ne pas enfreindre est celle de
+l'architecture : hors de `network_manager.gd`, seul le bloc lobby de `ui.gd` a le
+droit de connaître le transport.
+
+### Ce qui manque — relevé du 2026-08-16 sur `ui.gd`
+
+L'UI est construite **entièrement en code** : `ui.tscn` fait six lignes, et
+`_build_menu()` fabrique tout. Il n'y a donc aucune scène à réagencer, ce qui
+rend la refonte moins risquée qu'il n'y paraît — mais aussi entièrement à écrire.
+
+| Manque | Constat |
+|---|---|
+| **Aucun réglage audio** | `settings_manager.gd` ne connaît que `video`, `display`, `input`. Les bus `Master` / `Music` / `SFX` / `Speaker` existent et personne ne peut les régler. C'est le manque le plus visible pour un joueur. |
+| **Aucun écran de classement** | L'Edge Function `standing` renvoie déjà un `top` de dix ; l'UI n'affiche que la ligne du joueur. Le travail serveur est fait, l'écran manque. |
+| **Aucun mode entraînement** | `TrainingTarget` existe mais ne s'active qu'en attendant un adversaire en ligne (`game_state.gd:279`). Un joueur seul ne peut pas s'exercer. |
+| **Aucune calibration de luminosité** | Dans un jeu dont l'unique canal d'information est la lumière, un écran mal réglé — ou trop bien réglé — est un avantage. C'est un problème d'honnêteté en compétition, pas de confort. |
+| **L'onglet « CONTRÔLES » est un menu Options déguisé** | Il contient l'affichage et les images par seconde. Le nom ment sur le contenu. |
+| **La pause est le menu complet** | Un seul `game_over_panel` sert de menu principal, de pause et d'écran de fin ; les différences se règlent en masquages à la volée (`show_main_menu`, `show_game_over`). Chaque nouvel écran ajoutera une règle de masquage de plus. |
+| Pas d'historique, pas d'édition du pseudo | `nickname` existe côté base et `match_history.json` côté disque ; ni l'un ni l'autre n'a d'écran. |
+
+### Étape 1 — choisir la structure (décision d'Adrien, en attente)
+
+Trois structures proposées le 2026-08-16, prototypées et navigables. Le chiffre
+qui les départage honnêtement est le **coût en clics du geste le plus fréquent** :
+relancer un match.
+
+| | A — Onglets consolidés | B — Hub et destinations | C — Rail latéral |
+|---|---|---|---|
+| Principe | On garde la barre d'onglets, on range ce qui est mal rangé | Un accueil de grandes destinations, chacune un écran entier | Rail permanent à gauche, lancement toujours visible |
+| Clics — match local | 1 | 3 | 1 |
+| Clics — salon en ligne | 2 | 4 | 2 |
+| Profondeur | 2 niveaux | 3 niveaux | 2 niveaux |
+| Coût d'écriture | Le plus faible — la barre d'onglets et l'animation de bascule sont conservées | Le plus élevé — tout est à écrire | Moyen |
+| Encaisse la croissance ? | Mal : l'onglet JOUER est déjà chargé | Bien : un écran, un sujet | Jusqu'à cinq entrées ; au-delà le rail défile, ce qui est mauvais à la manette |
+
+**Aucune n'est recommandée d'office** : B est la plus lisible et la seule qui
+absorbe sans broncher les rangs, le déblocage d'armes et les saisons ; elle coûte
+deux clics de plus **à chaque partie**. A et C préservent l'immédiateté, qui est
+l'un des deux critères transversaux du projet.
+
+### Étape 2 — séparer la pause du menu principal
+
+Indépendante de la structure choisie, et à faire en premier quoi qu'il arrive :
+tant que les trois rôles partagent un panneau, chaque écran ajouté coûte une
+règle de masquage. La pause doit redevenir ce qu'elle est partout ailleurs — un
+panneau court : reprendre, options, menu principal, abandonner.
+
+Attention : l'abandon en ligne vaut forfait et il est archivé (`_archive_forfeit`,
+quatre chemins convergents). Ce comportement ne doit pas se perdre dans la
+réécriture.
+
+### Étape 3 — Options : audio et calibration
+
+Le bloc audio est à créer de bout en bout, `settings_manager.gd` compris (section
+`audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste).
+La calibration de luminosité est un écran de réglage guidé — « ajustez jusqu'à
+distinguer tout juste cette silhouette » — et non un curseur nu.
+
+### Étape 4 — les écrans manquants
+
+Classement (le serveur est prêt), entraînement (`TrainingTarget` est prêt),
+historique des matchs (`match_history.json` est prêt). Les trois sont surtout un
+travail d'affichage.
+
+---
+
+## Phase 6 — Rangs 🔵 À FAIRE
+
+Une dizaine de catégories, chacune subdivisée en divisions, à la manière de
+Rocket League. Proposition du 2026-08-16, **à confirmer par Adrien**.
+
+### L'échelle
+
+Une progression de l'obscurité vers la lumière, qui se termine sur le nom du jeu
+— *candela* étant l'unité d'intensité lumineuse.
+
+| # | Catégorie | # | Catégorie |
+|---|---|---|---|
+| 1 | Aveugle | 6 | Brasier |
+| 2 | Braise | 7 | Phare |
+| 3 | Bougie | 8 | Aurore |
+| 4 | Lanterne | 9 | Zénith |
+| 5 | Torche | 10 | Candela |
+
+### La contrainte d'architecture : le rang est dérivé, comme le classement
+
+Le rang doit être une **fonction pure du classement**, calculée à l'affichage et
+jamais stockée. C'est la même décision que celle qui gouverne déjà la Phase 4 :
+la table `ratings` est reconstruite en entier par un rejeu. Si le rang était
+écrit en base, changer une borne d'échelle exigerait une migration de données ;
+dérivé, cela ne coûte qu'un redéploiement.
+
+Concrètement : `rankOf(rating)` dans `elo.ts`, testée hors ligne comme le reste,
+et rien de nouveau dans le schéma.
+
+---
+
+## Phase 7 — Déblocage d'armes 🔵 À FAIRE
+
+Chaque catégorie débloque une arme. Les quatre armes actuelles occupent les
+quatre premières catégories ; **les catégories 5 à 10 ne débloquent donc encore
+rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
+
+| Catégorie | Arme |
+|---|---|
+| 1 — Aveugle | Pistolet |
+| 2 — Braise | Fusil |
+| 3 — Bougie | Pompe |
+| 4 — Lanterne | Arbalète |
+
+**En local, toutes les armes sont accessibles** (décision d'Adrien du
+2026-08-16) : l'écran partagé n'est pas classé, rien n'y justifie un verrou.
+
+### Le point qui demande une décision : l'asymétrie en match classé
+
+Verrouiller des armes derrière le rang donne au mieux classé des options que
+l'autre n'a pas — dans un duel 1v1 où l'équilibre est tout. Le cas le plus net
+est l'**Arbalète** : 80 de dégâts, `emits_light = false`, flash quasi nul. C'est
+l'arme furtive, et elle est réservée à la quatrième catégorie.
+
+Trois issues possibles, à trancher avant d'écrire quoi que ce soit :
+
+1. **Assumer l'asymétrie.** Le déblocage est une récompense, elle se mérite. Le
+   plus lisible pour le joueur, le plus discutable en compétition.
+2. **Règle du miroir** : en match classé, les deux joueurs jouent sur
+   l'intersection de ce qu'ils ont débloqué — c'est-à-dire l'arsenal du moins
+   bien classé. Préserve la symétrie et garde la progression. Coût : l'arsenal
+   d'un joueur change selon l'adversaire, ce qu'il faut montrer clairement avant
+   le match sous peine d'être vécu comme un bug.
+3. **Découpler** : toutes les armes disponibles en classé, le déblocage ne
+   concerne que le local, l'entraînement et l'apparence. Aucun risque
+   d'équilibrage, mais la progression perd son enjeu.
+
+La règle du miroir est celle qui respecte le mieux les deux critères du projet à
+la fois — reste qu'elle demande un écran honnête, et c'est un choix de jeu, pas
+un choix technique.
 
 ---
 
@@ -311,6 +697,11 @@ Périmètre pressenti :
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
+| **Un abandon vaut forfait** | Décision du 2026-08-16. Quitter un match en ligne en cours donne la victoire à celui qui reste : c'est archivé, drapeau `forfait` à l'appui. **La faille est connue et acceptée** : il suffit de couper la connexion de l'adversaire pour lui voler un forfait, ou d'invoquer sa propre coupure. Les deux autres règles envisagées ne valent pas mieux — jeter le match récompense celui qui débranche en train de perdre. Aucune n'est bonne ; celle-ci a au moins le mérite de ne pas rendre l'abandon gratuit. À revoir quand il y aura assez de joueurs pour que ça se pratique. |
+| **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
+| **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
+| **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
+| **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
 
 ---
 
@@ -332,6 +723,47 @@ Périmètre pressenti :
 - Le `MultiplayerSynchronizer` n'est **pas** promu en `reliable` (mesuré
   390/390 en `UNRELIABLE`). Le plugin ne promeut que `unreliable_ordered`, que
   Godot n'utilise pas ici. Sujet clos.
+
+**Outillage**
+- **Homebrew est inutilisable sur cette machine.** `brew install` échoue sur
+  « Your Command Line Tools are too outdated » : Homebrew 6 sur macOS 26 exige
+  des CLT 26.3, celles installées sont en 16.4. Les remettre à niveau coûte
+  ~2 Go et un mot de passe administrateur. Quand un outil existe en binaire
+  autonome, le prendre directement plutôt que de payer ce détour — c'est ce qui
+  a été fait pour la CLI Supabase (voir [SUPABASE.md](SUPABASE.md)).
+
+**Tests à deux instances locales**
+- **Deux instances `--eos-ephemeral` lancées coup sur coup se marchent dessus.**
+  La seconde échoue sur `create_device_id — DuplicateNotAllowed` et repart sans
+  identité Epic. Les espacer, ou basculer sur le transport ENet (`RÉSEAU LOCAL`,
+  IP `127.0.0.1`), qui teste les mêmes chemins sans dépendre d'Epic.
+- **Les deux instances partagent le même `user://`**, donc le même
+  `match_history.json`. Sans conséquence entre deux machines, mais en local les
+  deux journaux n'en font qu'un : ne pas y lire un « chaque camp a bien archivé
+  le sien ».
+- Le focus clavier reste sur la dernière fenêtre touchée. Un test piloté qui
+  envoie Échap ou F3 les adresse à cette fenêtre-là, pas à celle qu'on regarde.
+
+**Supabase / vérification de jeton**
+- **`startsWith` ne valide pas un émetteur.** Le contrôle « l'émetteur commence
+  par `https://api.epicgames.dev` », écrit littéralement, accepte
+  `https://api.epicgames.dev.attaquant.test` — un tout autre domaine. Il faut
+  exiger la base exacte OU une barre oblique juste après. Le défaut a été écrit
+  puis attrapé par son propre test le 2026-08-16 ; il n'était pas exploitable
+  (la signature est vérifiée avant), mais le même raisonnement appliqué ailleurs
+  le serait.
+- **Un composite `NULL` rendu par une fonction SQL n'arrive pas en `null`.**
+  PostgREST le sérialise en OBJET DE CHAMPS NULS — `{"id":null,…}` — qu'un
+  appelant prend pour une ligne valide. C'est ce qui a fait accepter un code de
+  récupération inventé, en production, le 2026-08-16. Une fonction qui doit
+  pouvoir ne rien rendre se déclare `returns setof` : zéro ligne devient `[]`.
+- Ne pas se fier à l'en-tête `Accept: application/vnd.pgrst.object+json` pour
+  distinguer « aucune ligne » : selon la version, PostgREST rend l'objet seul ou
+  un tableau d'une entrée, et répond 406 sur zéro ligne. Le code accepte les
+  trois formes.
+- Le plugin EOS rend le jeton dans un sous-dictionnaire :
+  `{result_code, id_token: {product_user_id, json_web_token}}`. Vérifié en
+  exécution le 2026-08-16, jeton de 943 caractères.
 
 **Export macOS**
 - `textures/vram_compression/import_etc2_astc=true` est obligatoire dans
@@ -584,26 +1016,45 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 |---|---|---|---|
 | H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés). | ✅ Fait le 2026-08-16 — **contre-vérification à refaire** depuis les correctifs |
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
-| H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
+| H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | ✅ **Tranché le 2026-08-16 par Adrien : « le jeu est amusant »** — le classement a donc quelqu'un à classer |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
-| H5 | **Création du projet Supabase et de ses clés** | Compte à créer, région à choisir, décisions de coût. | **Prochain jalon bloquant** |
+| H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
+| H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
+| H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 
 ---
 
 ## Prochaines étapes
 
-1. **H5 : créer le projet Supabase** — Adrien. Rien ne peut commencer sans ses
-   clés. Étapes numérotées de la Phase 4 détaillées dans sa section.
-2. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+> **Cap donné par Adrien le 2026-08-16 :** le jeu est amusant (H3 tranché), le
+> classement est en place, et la suite est le contenu — les menus d'abord, puis
+> les rangs, puis le déblocage d'armes (Phases 5 à 7).
+
+1. **Choisir la structure de menu** (Phase 5, étape 1) — trois propositions
+   navigables soumises le 2026-08-16. Rien ne s'écrit avant ce choix : les rangs
+   et le déblocage d'armes attendent des écrans où vivre.
+2. **Trancher l'asymétrie du déblocage d'armes** (Phase 7) — assumer, miroir, ou
+   découpler. C'est un choix de jeu, pas un choix technique.
+3. **Rejouer le journal local** pour les rapports que le réseau a perdus.
+   `match_history.json` les a tous ; rien ne les remonte encore.
+4. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
+   échoué sans qu'on puisse conclure : les frappes synthétiques passent dans un
+   champ de texte (chemin unicode) mais pas sur une action d'`InputMap` (chemin
+   `keycode`). Rien n'indique un défaut, rien ne l'exclut — trente secondes à la
+   main lèveraient le doute. **À lever avant la Phase 5** : une refonte des menus
+   se valide à la main, et Échap en est le geste de sortie.
+5. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+6. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
-4. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
+7. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
    ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
-5. Pendant que H5 bloque la Phase 4 : la **Vague 1 du game feel** (section
-   dédiée) est le meilleur ratio du projet — et la commande des assets V1.1
-   (stems) et V1.3 (voix) gagne à partir tôt, leur délai est long.
+8. Le **game feel** (section dédiée, six vagues priorisées) accompagne les
+   phases de contenu sans les bloquer : la Vague 1 réveille des systèmes déjà
+   câblés (meilleur ratio du projet), et la commande des assets V1.1 (stems)
+   et V1.3 (voix annonceur) gagne à partir maintenant — leur délai de
+   production est le plus long de toute la liste.
 
 ## Journal des tests à deux machines
 
