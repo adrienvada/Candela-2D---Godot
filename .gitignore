@@ -14,3 +14,9 @@
 
 # Exports locaux : lourds, reconstructibles, jamais versionnés.
 /build/
+
+# Configuration Supabase : la clé publiable n'est sûre qu'une fois la Row Level
+# Security en place. Elle reste hors de git jusque-là.
+# Le modèle à recopier est supabase_config.example.gd.
+/supabase_config.gd
+/supabase_config.gd.uid

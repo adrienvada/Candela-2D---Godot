@@ -260,9 +260,30 @@ reste intacte.
 
 ---
 
-## Phase 4 — Supabase (compétitif / ELO) ⬜
+## Phase 4 — Supabase (compétitif / ELO) 🟡
 
-Non commencée. Périmètre pressenti :
+### Projet Supabase — créé le 2026-08-16 (jalon H5) ✅
+
+| | |
+|---|---|
+| Projet | `Candela 2D - Godot` |
+| Référence | `obnlcnwlkuojmplksxtu` |
+| Région | AWS `eu-west-1` (Irlande) |
+| Plan | Gratuit |
+
+Le projet utilise le **nouveau système de clés** Supabase (publiable / secrète),
+et non l'ancien couple `anon` / `service_role`. Configuration dans
+`supabase_config.gd`, ignoré par git, avec `supabase_config.example.gd` comme
+modèle versionné.
+
+**La clé publiable n'est sûre qu'une fois la Row Level Security écrite** : sans
+politique RLS, elle donne accès aux tables exposées. Elle reste donc hors de
+git jusqu'à ce que l'étape 1 soit faite ; elle pourra rejoindre le dépôt
+ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
+La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
+reçoivent la leur par variable d'environnement.
+
+### Périmètre
 
 - Calcul d'ELO dans une Edge Function (jamais côté client — les stats EOS sont
   alimentées par le client, donc trichables pour un classement sérieux).
