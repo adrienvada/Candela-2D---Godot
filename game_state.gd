@@ -724,7 +724,7 @@ func _process(delta):
 		cam2.offset = Vector2.ZERO
 		
 	if ReplaySystem.recording:
-		ReplaySystem.record_frame(p1, p2, bullet_container)
+		ReplaySystem.record_frame(p1, p2, bullet_container, delta)
 			
 	if ReplaySystem.playing_back:
 		current_snap = ReplaySystem.get_next_frame(delta)

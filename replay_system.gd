@@ -7,7 +7,23 @@ var playing_back: bool = false
 var playback_index: float = 0.0
 var freeze_time_remaining: float = 0.0
 var snapshots: Array = []
-var max_snapshots: int = 450 # 7.5 seconds at 60fps
+
+## Cadence d'enregistrement, volontairement découplée de la cadence d'image.
+##
+## Le tampon est dimensionné en NOMBRE d'instantanés : enregistrer une image
+## sur deux ou toutes les images change donc la DURÉE couverte. Depuis le
+## déplafonnement des fps, une machine à 490 images/s ne gardait plus que
+## 0,9 seconde de partie là où une machine à 60 en gardait 7,5 — le tir fatal
+## était purgé avant même la fin de la manche, et la killcam ne montrait plus
+## que des déplacements. Pire : la fenêtre différait d'une machine à l'autre.
+##
+## Enregistrer à cadence fixe rend la killcam identique partout, et laisse
+## intacte toute la logique de relecture, qui raisonne en images de 1/60 s.
+const RECORD_HZ := 60.0
+const RECORD_PERIOD := 1.0 / RECORD_HZ
+var _record_accum: float = 0.0
+
+var max_snapshots: int = 450 # 7,5 s à la cadence d'enregistrement ci-dessus
 var impact_frame: int = -1
 var slow_mo_start_frame: int = -1
 var bullet_events: Array = []
@@ -36,6 +52,7 @@ func start_recording():
 	bullet_events.clear()
 	recording = true
 	playing_back = false
+	_record_accum = 0.0
 	
 	impact_frame = -1
 	slow_mo_start_frame = -1
@@ -46,9 +63,18 @@ func start_recording():
 func stop_recording():
 	recording = false
 
-func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D):
+## `delta` pilote la cadence d'enregistrement. Le laisser à zéro enregistre à
+## chaque appel — comportement d'avant, réservé aux tests.
+func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0.0):
 	if not recording: return
-	
+	if delta > 0.0:
+		_record_accum += delta
+		if _record_accum < RECORD_PERIOD:
+			return
+		# Soustraire la période plutôt que remettre à zéro : une machine rapide
+		# ne doit pas dériver sous la cadence visée.
+		_record_accum -= RECORD_PERIOD
+
 	var snap = Snapshot.new()
 	if p1:
 		snap.p1_pos = p1.global_position

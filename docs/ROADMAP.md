@@ -215,6 +215,28 @@ explicitement tout ce qu'ils ajoutent (`Player1`, `Player2`, `Camera1`,
 partagent la même bibliothèque de cartes, donc les mêmes noms auto-générés. Le
 défaut n'apparaît qu'entre deux machines aux bibliothèques différentes.
 
+### ~~Killcam tronquée à cadence libre~~ — **Corrigé**
+
+Relevé au troisième test à deux machines : chez le client (492 fps) la killcam
+ne montrait que des déplacements, jamais les tirs ; chez l'hôte (106 fps) elle
+fonctionnait « une fois sur deux ».
+
+**La cause : le tampon de rejeu était dimensionné en nombre d'images, pas en
+durée.** `max_snapshots = 450`, commenté « 7.5 seconds at 60fps » — une valeur
+juste tant que le jeu tournait à 60 fps. À 492 fps, ces 450 instantanés ne
+couvrent plus que **0,9 seconde** : le tir fatal était purgé du tampon avant
+même la fin de la manche. Pire, la fenêtre différait d'une machine à l'autre.
+
+**C'est le déplafonnement de la cadence d'image, décidé plus haut pour gagner
+30 ms de latence, qui a fait s'effondrer cette fenêtre.** Le gain reste acquis ;
+seule l'hypothèse cachée « une image de rendu = une image de rejeu » était
+fautive.
+
+L'enregistrement se fait désormais à **cadence fixe (60 Hz)**, découplée du
+rendu. La killcam couvre 7,5 s partout, identiquement, quelle que soit la
+machine — et toute la logique de relecture, qui raisonne en images de 1/60 s,
+reste intacte.
+
 ### Observations mineures relevées au passage
 
 - **La reconstruction du salon ne conserve pas le code.** Vérifiée en séance
@@ -317,3 +339,4 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 |---|---|---|
 | 2026-08-16 (matin) | Même Wi-Fi ; un poste en 4G ; les deux en 4G, opérateurs différents | `Lien DIRECT` partout, ping 58 ms. Trois défauts relevés : jointure incertaine, message trompeur, killcam muette. Tous corrigés depuis. |
 | 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
+| 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
