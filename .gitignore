@@ -1,3 +1,16 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Identifiants Epic Online Services : jamais versionnés.
+# Le modèle à recopier est eos_credentials.example.gd.
+/eos_credentials.gd
+/eos_credentials.gd.uid
+
+# Binaires mobiles du plugin EOS : 246 Mo pour des plateformes que le jeu ne
+# vise pas. Les retirer d'ici suffira à les versionner le jour d'un portage.
+/addons/epic-online-services-godot/bin/ios/
+/addons/epic-online-services-godot/bin/android/
+
+# Exports locaux : lourds, reconstructibles, jamais versionnés.
+/build/

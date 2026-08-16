@@ -37,6 +37,12 @@ var dead: bool = false
 # sans compteur, un paquet en retard réécraserait un état plus récent.
 var _input_seq: int = 0
 var _last_input_seq: int = -1
+## Diagnostic de la remontée des commandes, lu par le panneau F3 de l'hôte.
+var inputs_accepted: int = 0
+var inputs_rejected: int = 0
+## Côté client : commandes émises, et identifiant visé.
+var inputs_sent: int = 0
+var inputs_target: int = 0
 
 # Rôle de simulation du nœud sur CETTE machine. Le client prédit son propre
 # joueur et se contente d'afficher l'autre ; partout ailleurs on simule.
@@ -458,10 +464,17 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
-	if state == null or multiplayer.get_remote_sender_id() != state.client_peer_id: return
+	if state == null or multiplayer.get_remote_sender_id() != state.client_peer_id:
+		# Comptabilisé plutôt que tu : un rejet silencieux ici fige l'adversaire
+		# sur son apparition, sans que rien d'autre ne trahisse le problème.
+		inputs_rejected += 1
+		return
 	# Paquet arrivé après un plus récent : on le jette plutôt que de reculer.
-	if seq <= _last_input_seq: return
+	if seq <= _last_input_seq:
+		inputs_rejected += 1
+		return
 	_last_input_seq = seq
+	inputs_accepted += 1
 	input_provider.update_input_state(mov, aim, shoot, torch, sprint)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
@@ -475,6 +488,9 @@ func reset_network_input() -> void:
 ## l'hôte rejouer la dernière commande reçue, donc courir sans personne aux
 ## commandes.
 func _send_inputs_to_host(neutral: bool = false) -> void:
+	inputs_sent += 1
+	var peers := multiplayer.get_peers()
+	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
 		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)

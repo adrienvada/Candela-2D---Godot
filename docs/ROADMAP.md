@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-15
+> Dernière mise à jour : 2026-08-16
 
 ---
 
@@ -27,7 +27,7 @@ décision se juge à cette double aune.
 |---|---|---|
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
-| 3 | **EOS — connectivité** | 🟡 **En cours** — branche `eos-transport` |
+| 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
 
 ---
@@ -64,7 +64,7 @@ plus. Sera absorbé par le test à deux machines de la Phase 3.
 
 ---
 
-## Phase 3 — EOS (connectivité) 🟡
+## Phase 3 — EOS (connectivité) ✅
 
 **Objectif :** que deux joueurs quelconques sur Internet se rejoignent par un
 code, sans configuration, sans redirection de port.
@@ -82,22 +82,181 @@ code, sans configuration, sans redirection de port.
   lié à la machine, deux instances locales partageraient sinon le même PUID.
   Neutralisée hors build debug, bandeau d'avertissement à l'écran.
 - **Export macOS non signé validé** — `.dylib` embarqué, EOS opérationnel dans
-  le `.app`, sortie 0.
+  le `.app` (PUID obtenu), sortie 0. Préréglage versionné dans
+  `export_presets.cfg`.
+
+  **Piège de diagnostic, à ne pas retomber dedans :** dans un build release, la
+  sortie `print()` est tamponnée et n'est vidée qu'à la **fermeture propre** de
+  l'application. Tuer le processus (`pkill`, Ctrl-C) jette tout ce qui suit le
+  dernier message d'erreur — ce qui a fait conclure à tort, le 2026-08-16, à un
+  EOS qui ne démarrait pas dans l'export. Pour lire le journal d'un build :
+  `open build/Candela.app`, puis `osascript -e 'quit app "Candela 2D"'`, et lire
+  `~/Library/Application Support/Godot/app_userdata/Candela 2D/logs/godot.log`.
 - Bancs d'essai : `tools/test_transport.tscn`, `tools/test_online_match.tscn`,
   `tools/test_quit_path.tscn`. Protocole :
   [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
+- **Réglage vsync / plafond d'images par seconde** — menu Options (onglet
+  Contrôles), persisté dans `user://settings.cfg` via `GameSettings`
+  (`settings_manager.gd`, nouvel autoload). Défaut : vsync désactivé, aucun
+  plafond. Mesure avant/après sur `tools/test_transport.tscn` (deux instances
+  locales, `CONNECTION_TYPE: DIRECT`) :
 
-### En cours
+  | | 60 fps plafonné | Déplafonné |
+  |---|---|---|
+  | RTT_MIN_MS | 46,0 | 13,3 |
+  | RTT_AVG_MS | 49,7–50,3 | 22,3 |
+  | APP_RTT_MS | 48,8 | 23,9–24,2 |
 
-- **Réglage vsync / images par seconde déplafonnées** (décision de netcode, voir
-  plus bas).
+  Confirme la décision actée plus bas : le plancher de RTT EOS suit la cadence
+  d'image, pas le SDK. Mesure indépendante sur le même banc, autre session :
+  59,0 ms de moyenne à 60 fps contre 21,2 ms déplafonné (145 fps en headless).
 
-### Non validé — le seul vrai inconnu
+- **120 fps tenus en `gl_compatibility`** — vérifié sur un rendu réel fenêtré
+  avec `tools/bench_framerate.tscn` : écran partagé (les deux vues rendent),
+  pompe contre pompe à bout portant, torches allumées, HP maintenus pleins pour
+  que l'échange ne s'arrête jamais. Pic de 123-125 particules sur 200 et 12
+  balles simultanées, donc la charge est réelle et non supposée.
 
-- **Traversée de NAT réelle.** Toutes les mesures à ce jour proviennent de deux
-  instances sur la même machine (`CONNECTION_TYPE: DIRECT` systématique). Rien
-  ne prouve encore que le punchthrough et le relais Epic fonctionnent.
-  **Nécessite une intervention humaine** (voir « Jalons humains »).
+  | Exécution | FPS médian | 1 % bas | Minimum |
+  |---|---|---|---|
+  | 1 | 156 | 123 | 116 |
+  | 2 | 160 | 137 | 137 |
+  | 3 | 145 | 144 | 144 |
+
+  **Verdict : tenu.** Le 1 % bas — ce que le joueur ressent comme saccade —
+  reste au-dessus de 120 sur les trois exécutions. À dire honnêtement : le
+  minimum absolu est descendu une fois à 116, et la dispersion entre exécutions
+  (145 à 160 de médiane) vient de la fenêtre elle-même, que macOS bride quand
+  elle n'est pas au premier plan. Mesuré sur **Apple M3**, fenêtre 1280×720 :
+  une machine plus modeste demandera sa propre mesure.
+
+- **Préférences persistées** — vsync, plafond d'images par seconde, résolution
+  et remappage des touches vivent dans `user://settings.cfg`, sectionné
+  (`video` / `display` / `input`), appliqué au démarrage par l'autoload
+  `GameSettings`. Celui-ci est déclaré **après** `InputSetup` dans
+  `project.godot` : c'est ce qui permet aux liaisons enregistrées de recouvrir
+  les liaisons par défaut, et non l'inverse. Le remappage ne retire que les
+  événements de manette, jamais le clavier ni la souris.
+  Au passage, `anti_aliasing/quality/msaa_2d=2` a été retiré : inopérant sous
+  `gl_compatibility` (« 2D MSAA is not yet supported for GLES3 » à chaque
+  démarrage), c'était un réglage mort.
+
+### Validation finale — 2026-08-16 ✅
+
+Quatrième session à deux machines : commandes, déplacements, tirs, dégâts et
+killcam fonctionnent des deux côtés. **La Phase 3 est close.**
+
+Réglage de confort passé au même moment : la torche des fantômes est plafonnée
+à la moitié de son intensité de jeu pendant la killcam
+(`KILLCAM_TORCH_ENERGY`). À pleine puissance le halo passait par-dessus la
+balle, qui est pourtant le sujet de la séquence.
+
+### Traversée de NAT — validée le 2026-08-16 (jalon H1) ✅
+
+Test à deux Mac, trois configurations : même Wi-Fi ; un poste en partage de
+connexion ; **les deux postes en partage de connexion, sur deux opérateurs
+différents**. Dans les trois cas, `Lien DIRECT`, NAT modéré, ping 58 ms,
+160 fps. Le punchthrough d'EOS passe donc même dans le scénario réputé le plus
+dur, sans redirection de port ni configuration.
+
+Nuance à garder : **le relais Epic n'a jamais été exercé**, la connexion
+directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
+
+### Défauts relevés pendant H1 — tous corrigés
+
+- ~~**Salon fantôme.**~~ **Corrigé** (`313e33e`). L'appartenance à un salon EOS
+  survit à la rupture du lien P2P : l'invité parti restait compté, le salon
+  demeurait à 2/2 et refusait réellement la jointure suivante, pendant que
+  l'hôte affichait « en attente du joueur 2 ». `_on_peer_disconnected` ne
+  réarmait que l'acceptation des demandes P2P. Le plugin n'exposant aucune
+  expulsion, l'hôte **reconstruit** son salon au départ d'un pair, en conservant
+  le code déjà communiqué. Au passage, le message « introuvable ou déjà
+  complet » couvrait deux causes opposées : un salon vraiment plein annonce
+  désormais son occupation chiffrée, un refus d'Epic le dit et invite à
+  réessayer.
+- ~~**Killcam muette.**~~ **Corrigé.** L'enregistrement n'était pas en cause
+  (3 évènements relevés des deux côtés) : la fenêtre de rejeu démarrait à
+  `snapshots.size() - 240`, donc calée sur la **fin de l'enregistrement** — or
+  celui-ci continue après la mort, le temps de capter le sang. Le tir fatal
+  tombait avant le début de la fenêtre et n'était jamais rejoué. La fenêtre se
+  cale désormais sur l'impact, et recule au besoin pour englober le tir fatal.
+  Le défaut touchait les deux camps, pas seulement l'invité.
+- ~~**Jointure : recherche unique.**~~ **Corrigée.** L'hôte renonce parfois à
+  confirmer la visibilité de son code et l'annonce quand même (« publié sans
+  confirmation de l'index Epic ») ; la recherche unique côté client échouait
+  alors sur un code pourtant valide. Trois tentatives espacées désormais.
+
+### ~~Ouvert~~ **Corrigé** — les commandes du client n'atteignaient pas l'hôte
+
+Constaté au second test à deux machines (2026-08-16), corrigé le jour même.
+
+**Symptôme.** Chez l'hôte, J2 restait figé sur son point d'apparition et ses
+tirs n'infligeaient rien. Chez le client tout paraissait normal : il se voyait
+bouger, voyait l'hôte, tirait et voyait ses impacts — tout cela étant prédit
+localement.
+
+**Ce que la mesure a établi**, en trois manches d'instrumentation :
+
+| Relevé | Verdict |
+|---|---|
+| `Lien DIRECT`, ping 26–47 ms des deux côtés | Le transport fonctionne, dans les deux sens |
+| Hôte : `reçues=0 rejetées=0` | La fonction n'est **jamais exécutée** — rien n'est filtré |
+| Client : `envoyées=3411 visé=1` | Le client émet bien, vers le bon destinataire |
+| `moi=1437910812` = `pair=1437910812` | Les identités de pairs concordent |
+| `CHEMIN J2` : `@CharacterBody2D@269` chez l'hôte, `@263` chez le client | **La cause** |
+
+**La cause.** Les nœuds Joueur étaient ajoutés à l'arbre **sans nom explicite**.
+Godot en fabrique alors un depuis un compteur global d'objets créés
+(`@CharacterBody2D@269`), dont la valeur dépend de tout ce qui a été instancié
+avant — jusqu'au **nombre de cartes** dans la bibliothèque, la galerie
+construisant un panneau par carte. L'hôte avait 3 cartes, le client 2 : deux
+noms différents pour le même joueur.
+
+Or un RPC de scène ne se route **que** par le chemin du nœud. Les commandes du
+client désignaient chez l'hôte un nœud inexistant et étaient jetées sans le
+moindre message — console à zéro erreur. Le ping, lui, passait : il vit sur
+`NetworkManager`, un autoload au chemin fixe par construction.
+
+**Le correctif.** `_setup_players()` et `_setup_ghosts()` nomment désormais
+explicitement tout ce qu'ils ajoutent (`Player1`, `Player2`, `Camera1`,
+`Camera2`, `GhostP1`, `GhostP2`).
+
+**Pourquoi aucun test ne l'avait vu.** Deux instances sur la même machine
+partagent la même bibliothèque de cartes, donc les mêmes noms auto-générés. Le
+défaut n'apparaît qu'entre deux machines aux bibliothèques différentes.
+
+### ~~Killcam tronquée à cadence libre~~ — **Corrigé**
+
+Relevé au troisième test à deux machines : chez le client (492 fps) la killcam
+ne montrait que des déplacements, jamais les tirs ; chez l'hôte (106 fps) elle
+fonctionnait « une fois sur deux ».
+
+**La cause : le tampon de rejeu était dimensionné en nombre d'images, pas en
+durée.** `max_snapshots = 450`, commenté « 7.5 seconds at 60fps » — une valeur
+juste tant que le jeu tournait à 60 fps. À 492 fps, ces 450 instantanés ne
+couvrent plus que **0,9 seconde** : le tir fatal était purgé du tampon avant
+même la fin de la manche. Pire, la fenêtre différait d'une machine à l'autre.
+
+**C'est le déplafonnement de la cadence d'image, décidé plus haut pour gagner
+30 ms de latence, qui a fait s'effondrer cette fenêtre.** Le gain reste acquis ;
+seule l'hypothèse cachée « une image de rendu = une image de rejeu » était
+fautive.
+
+L'enregistrement se fait désormais à **cadence fixe (60 Hz)**, découplée du
+rendu. La killcam couvre 7,5 s partout, identiquement, quelle que soit la
+machine — et toute la logique de relecture, qui raisonne en images de 1/60 s,
+reste intacte.
+
+### Observations mineures relevées au passage
+
+- **La reconstruction du salon ne conserve pas le code.** Vérifiée en séance
+  (le code passe de `29MG4Q` à `S7EYHX` après le départ de l'invité), la
+  reconstruction fonctionne, mais l'ancien salon traîne encore dans l'index
+  d'Epic au moment du nouveau tirage : le code souhaité est vu comme pris. Sans
+  conséquence fonctionnelle, l'hôte affichant le nouveau code.
+- **Détection de déconnexion lente.** Wi-Fi coupé côté invité : l'hôte affiche
+  encore `Lien DIRECT` (ping monté à 64 ms) et les deux camps se croient
+  connectés un bon moment avant le message de rupture. Délai EOS à resserrer.
 
 ---
 
@@ -168,7 +327,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 | # | Jalon | Pourquoi humain | Quand |
 |---|---|---|---|
-| H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le seul scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés), qui force le relais Epic. | **Prochain jalon bloquant** |
+| H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés). | ✅ Fait le 2026-08-16 — **contre-vérification à refaire** depuis les correctifs |
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
 | H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
@@ -178,7 +337,19 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Réglage vsync/fps déplafonné** — agent, en cours.
-2. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3.
-3. Fusion de `eos-transport` dans `main` une fois H1 vert.
-4. Ouverture de la Phase 4.
+1. **Ouverture de la Phase 4** — Supabase et ELO. Premier jalon humain : la
+   création du projet Supabase et de ses clés (H5).
+2. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+   `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
+3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+   connexion directe a toujours abouti), et la détection de déconnexion est
+   lente des deux côtés.
+
+## Journal des tests à deux machines
+
+| Date | Configurations | Résultat |
+|---|---|---|
+| 2026-08-16 (matin) | Même Wi-Fi ; un poste en 4G ; les deux en 4G, opérateurs différents | `Lien DIRECT` partout, ping 58 ms. Trois défauts relevés : jointure incertaine, message trompeur, killcam muette. Tous corrigés depuis. |
+| 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
+| 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
+| 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |

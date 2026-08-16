@@ -27,7 +27,18 @@ InputSetup="*res://input_setup.gd"
 AudioManager="*res://audio_manager.gd"
 MapData="*res://map_data.gd"
 NetworkManager="*res://network_manager.gd"
+GameSettings="*res://settings_manager.gd"
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+EOSGRuntime="*uid://7saywdx0ipep"
+HPlatform="*uid://yl2muvqrdiud"
+HAuth="*uid://786t1jiowvvg"
+HAchievements="*uid://bis404dty5u5c"
+HFriends="*uid://uumqbey8ji5t"
+HStats="*uid://dbckdip83oone"
+HLeaderboards="*uid://b06khhf20mplm"
+HLobbies="*uid://6iqvm33q0tb1"
+HP2P="*uid://u6ae5fpm6l8q"
+HSessions="*uid://bieh2rxxahuu2"
 
 [display]
 
@@ -40,7 +51,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+enabled=PackedStringArray("res://addons/epic-online-services-godot/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
 
 [input]
 
@@ -143,4 +154,4 @@ p2_torch={
 
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
-anti_aliasing/quality/msaa_2d=2
+textures/vram_compression/import_etc2_astc=true
