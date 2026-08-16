@@ -793,6 +793,7 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 | **Images par seconde déplafonnées** | EOS coûte ~31 ms de latence de plus qu'ENet à 60 fps (54 ms contre 23 ms). Le levier est la cadence d'image, pas le nombre de ticks (+2 ms seulement en tickant deux fois par frame). Norme du jeu compétitif. |
 | **Pas d'adhésion Apple Developer** avant une sortie publique macOS | 99 $/an. Jusque-là : builds non signés + « Ouvrir quand même » dans Réglages Système. La signature/notarisation reste entièrement à valider le jour venu. |
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
+| **Arbitrage D1-D7 et autonomie de la session game feel** | Décision d'Adrien du 2026-08-17. D1 (empreintes), D3 (extinction traînée) et D7 (sang persistant, plafond d'abord) sont **activés** ; D5 s'implémente **derrière un drapeau debug** jusqu'à mesure sur le Mac d'Adrien ; D2 et D4 sont **actés sur le principe** mais attendent leurs assets ; D6 est **acté**, à implémenter par la session « menus » dans le hub. La session game feel pousse à chaque commit vert, fusionne dans `main` en fin de vague verte, et tranche elle-même les micro-réglages (durées, intensités) en les documentant ici. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
 | **Menus : structure B, le hub** (2026-08-17) | Un accueil de grandes destinations, chacune un écran entier. Coûte deux clics de plus par partie que les deux autres propositions ; rapporte un écran par sujet, seule forme qui absorbe les rangs, le déblocage d'armes et les saisons sans surcharger l'onglet JOUER, déjà plein. |
@@ -972,6 +973,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   3 stems .ogg bouclés à 170 BPM (commande à passer en premier, délai long).*
 - **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
   par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
+  **✅ Fait** — piloté par `GameState._update_music_intensity` chaque frame
+  (idempotent côté AudioManager), remis à 0 par `set_in_match`. Inaudible tant
+  que les stems (V1.1) sont vides, mais la mécanique est en place.
 - **V1.3 Fichiers annonceur manquants** — `spk_fight`/`spk_p1_wins`/
   `spk_p2_wins`/`spk_draw` sont câblés dans `SOUNDS` mais absents du dépôt
   (`assets/audio/speaker/` n'existe pas). — *assets : 4 lignes voix, 8 avec
@@ -980,7 +984,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   Précondition de tout le reste : on ne densifie pas un mixage non réglable.
 - **V1.5 Vibrations manette** — `start_joy_vibration` absent du code : tir
   (forte courte), impact reçu (moyenne), pouls faible sous 30 HP, double coup
-  au kill.
+  au kill. **✅ Fait** — constantes `RUMBLE_*` dans `player.gd`. Ne vibre que le
+  pad du joueur localement aux commandes (device du `LocalInputProvider`,
+  seulement s'il est branché). Impact branché sur `rpc_update_hp`
+  (autoritaire), pas sur la balle prédite ; pouls à mi-temps de 170 BPM.
+  Le réglage on/off attendra les Options de la Phase 5.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -1104,25 +1112,29 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
 
-### À trancher par Adrien avant d'implémenter (info de gameplay ou perf)
+### Items D — arbitrés par Adrien le 2026-08-17
 
 - **D1 Empreintes éphémères** — traces de pas ~2 s visibles seulement sous une
   lumière : le noir garde une mémoire courte, la traque devient pistage. Info
   nouvelle mais symétrique — la plus forte idée « mécanique » de la liste. —
-  *assets : 2-3 sprites (ou procédural).*
+  *assets : 2-3 sprites (ou procédural).* **→ Activé, en procédural.**
 - **D2 Bourdon d'aveuglement** — la nappe monte quand on n'a pas VU
   l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
+  **→ Acté sur le principe ; attend les stems réels (V1.1).**
 - **D3 Extinction traînée** — la torche s'éteint en ~80 ms au lieu d'un coupé
-  sec : ~80 ms d'info en plus pour l'adversaire.
+  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.**
 - **D4 Grésillement positionnel de torche** — audible à très courte portée par
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
-  *assets : 1 boucle.*
+  *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**
 - **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
-  `bench_framerate` avant d'acter (1 % bas ≥ 120).
+  `bench_framerate` avant d'acter (1 % bas ≥ 120). **→ À implémenter derrière
+  un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
 - **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
-  auto-start.
+  auto-start. **→ Acté ; vit dans le hub, donc à implémenter par la session
+  « menus » (Phase 5).**
 - **D7 Sang persistant entre matchs d'une session** — l'arène raconte la
   soirée (exige le plafond de taches déjà relevé comme fragilité).
+  **→ Activé : plafond de taches d'abord, persistance ensuite.**
 
 ### Ressources à fournir (liste de courses consolidée)
 

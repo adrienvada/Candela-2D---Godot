@@ -23,7 +23,7 @@ par sujet impraticable.
 
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
-| **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `supabase/**`, tout nouveau script de menu | Session « menus » |
+| **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
 ### `game_state.gd` — le seul fichier disputé
@@ -82,6 +82,11 @@ Une session qui a besoin d'un son doit **ajouter son entrée au manifeste** plut
 que d'inventer un chemin dans son coin. Le manifeste étant dans le domaine
 « menus », l'ajout se demande ici.
 
+> **Changement du 2026-08-17, à l'attention de la session « game feel ».** Ce
+> journal disait jusqu'ici de NE PAS commencer les items marqués *assets*. Ce
+> n'est plus la règle : Adrien a tranché pour « câbler, taire, diagnostiquer ».
+> Les items à assets se font donc, avec le silence pour comportement par défaut.
+
 ## Ce qui est bloqué et ne doit pas être commencé
 
 - **Les items D1 à D7** : ils attendent un arbitrage d'Adrien parce qu'ils
@@ -89,13 +94,34 @@ que d'inventer un chemin dans son coin. Le manifeste étant dans le domaine
 
 ## État — le plus récent en haut
 
+### 2026-08-17 — session « game feel »
+
+Branche `game-feel` ouverte depuis `main` (`478507f`). En cours : V1.2, V1.5,
+puis la Vague 2 procédurale (le kill). Adrien a arbitré D1-D7 (ligne dans
+« Décisions actées ») et accordé l'autonomie : poussée à chaque commit vert,
+fusion dans `main` par la session en fin de vague verte, micro-réglages
+tranchés et documentés. `game_state.gd` est tenu par cette session, comme
+convenu.
+
 ### 2026-08-17 — session « menus »
 
-Phase 5 étape 1 close (`67b4d1e`) : la pause est sortie du menu à onglets et
-vit dans son propre panneau. Septième suite headless ajoutée,
-`tools/test_pause_menu.gd`, qui instancie le vrai `ui.gd`.
+Étapes 1 et 2 de la Phase 5 closes. La pause a quitté le menu à onglets
+(`67b4d1e`) ; l'ossature du hub existe et est testée seule, sans contenu
+(`d39f326`). Réglages de volume persistés dans `settings_manager.gd` (`4782f83`)
+— **V1.4 est donc levée** : la précondition du travail audio est en place, le
+mixage peut être densifié en sachant qu'il est désormais réglable.
 
-En cours : Phase 5 étape 2, l'ossature du hub. `ui.gd` est donc pris.
+Trois documents nouveaux qui concernent les deux sessions :
+`docs/WORKFLOW.md` (comment paralléliser sans conflit), `docs/BOUCLE.md` (quand
+s'arrêter et à quelles conditions proposer du neuf), et `tools/audit_reste.gd`
+qui répond mécaniquement à « reste-t-il quelque chose ». L'audit détecte au
+passage les suites de tests présentes dans `tools/` mais absentes de la CI —
+utile aux deux domaines.
+
+Réservé en plus : `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, et tous les
+`screen_*.gd` à venir. `ui.gd` reste pris pour l'étape 3.
+
+En cours : Phase 5 étape 3, migration de l'existant sous le hub.
 
 ### 2026-08-16 — session « game feel »
 

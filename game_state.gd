@@ -748,7 +748,8 @@ func _process(delta):
 					_do_end_round(-1)
 
 		_check_dazzle(delta)
-		
+		_update_music_intensity()
+
 		# Cameras track live players
 		cam1.global_position = p1.global_position
 		cam2.global_position = p2.global_position
@@ -890,6 +891,25 @@ func _get_weapon_idx(w: WeaponData) -> int:
 	if w == weapon_pompe: return 2
 	if w == weapon_fusil: return 1
 	return 0
+
+## V1.2 — Intensité musicale verticale. Les stems montent avec la tension :
+## la dernière minute ajoute la batterie, le double danger de mort ajoute
+## l'arpège. Idempotent côté AudioManager : appel chaque frame sans coût.
+## Chaque machine évalue localement (les HP des deux joueurs y sont connus),
+## c'est cosmétique — aucune autorité en jeu.
+const MUSIC_LAST_MINUTE := 60.0
+## Aligné sur le seuil du stem « battement de cœur » (update_low_health).
+const MUSIC_CLIMAX_HP := 30.0
+
+func _update_music_intensity() -> void:
+	var level := 0
+	if countdown_left <= 0.0:
+		if p1.hp <= MUSIC_CLIMAX_HP and p2.hp <= MUSIC_CLIMAX_HP \
+				and not p1.dead and not p2.dead:
+			level = 2
+		elif time_left <= MUSIC_LAST_MINUTE:
+			level = 1
+	AudioManager.set_music_intensity(level)
 
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
