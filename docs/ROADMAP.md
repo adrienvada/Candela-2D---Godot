@@ -260,7 +260,7 @@ reste intacte.
 
 ---
 
-## Phase 4 — Supabase (compétitif / ELO) 🟡
+## Phase 4 — Supabase (compétitif / ELO) ✅
 
 ### Projet Supabase — créé le 2026-08-16 (jalon H5) ✅
 

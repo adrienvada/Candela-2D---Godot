@@ -13,10 +13,11 @@ Godot 4.7 · GDScript · écran partagé local et 1v1 en ligne hôte-autoritaire
 **[docs/ROADMAP.md](docs/ROADMAP.md) est le document de référence du projet.**
 Il dit où en est le jeu, ce qui est décidé, ce qui est validé, et ce qui reste.
 
-**État des branches** — `main` porte tout ce qui est terminé : Phases 1 à 3, et
-les étapes 1 et 2a de la Phase 4 (identité classée, matchs en base). Le travail
-en cours vit sur une branche dédiée jusqu'à sa clôture, puis y est fusionné —
-c'est ce qui s'est fait pour `eos-transport` puis `supabase-elo`.
+**État des branches** — `main` porte tout ce qui est terminé : Phases 1 à 4
+incluses (identité classée, matchs en base, classement ELO). Le travail en cours
+vit sur une branche dédiée jusqu'à sa clôture, puis y est fusionné — c'est ce qui
+s'est fait pour `eos-transport` puis `supabase-elo`. `main` et `supabase-elo`
+sont à jour sur GitHub depuis le 2026-08-16.
 
 ---
 
