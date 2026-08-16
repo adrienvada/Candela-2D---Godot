@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-16
+> Dernière mise à jour : 2026-08-17
 
 ---
 
@@ -29,9 +29,9 @@ décision se juge à cette double aune.
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
-| 5 | **Les menus** | 🔵 **Structure à choisir** — trois propositions soumises à Adrien le 2026-08-16 |
-| 6 | Rangs (catégories et divisions) | 🔵 À faire — dépend de la Phase 5 |
-| 7 | Déblocage d'armes par rang | 🔵 À faire — dépend de la Phase 6 |
+| 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
+| 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
+| 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -527,14 +527,10 @@ optimisation — avec ce rejeu comme référence pour la vérifier.
   chaque enregistrement (le futur envoi saura quelle forme il relit) et
   écriture atomique du journal (temporaire puis renommage — un arrêt brutal ne
   peut plus corrompre l'historique déjà archivé).
-  Durci le 2026-08-16 pour pouvoir servir de source ELO : champ `version` dans
-  chaque enregistrement (le futur envoi saura quelle forme il relit) et
-  écriture atomique du journal (temporaire puis renommage — un arrêt brutal ne
-  peut plus corrompre l'historique déjà archivé).
 
 ---
 
-## Phase 5 — Les menus 🔵 STRUCTURE À CHOISIR
+## Phase 5 — Les menus 🟡 EN COURS — structure B retenue
 
 **Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
 ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
@@ -566,58 +562,103 @@ rend la refonte moins risquée qu'il n'y paraît — mais aussi entièrement à 
 | **La pause est le menu complet** | Un seul `game_over_panel` sert de menu principal, de pause et d'écran de fin ; les différences se règlent en masquages à la volée (`show_main_menu`, `show_game_over`). Chaque nouvel écran ajoutera une règle de masquage de plus. |
 | Pas d'historique, pas d'édition du pseudo | `nickname` existe côté base et `match_history.json` côté disque ; ni l'un ni l'autre n'a d'écran. |
 
-### Étape 1 — choisir la structure (décision d'Adrien, en attente)
+### Structure retenue — B, le hub (décision d'Adrien, 2026-08-17)
 
-Trois structures proposées le 2026-08-16, prototypées et navigables. Le chiffre
-qui les départage honnêtement est le **coût en clics du geste le plus fréquent** :
-relancer un match.
+Trois structures avaient été prototypées et navigables. **B est retenue** : un
+accueil de grandes destinations, chacune un écran entier avec son retour.
 
-| | A — Onglets consolidés | B — Hub et destinations | C — Rail latéral |
-|---|---|---|---|
-| Principe | On garde la barre d'onglets, on range ce qui est mal rangé | Un accueil de grandes destinations, chacune un écran entier | Rail permanent à gauche, lancement toujours visible |
-| Clics — match local | 1 | 3 | 1 |
-| Clics — salon en ligne | 2 | 4 | 2 |
-| Profondeur | 2 niveaux | 3 niveaux | 2 niveaux |
-| Coût d'écriture | Le plus faible — la barre d'onglets et l'animation de bascule sont conservées | Le plus élevé — tout est à écrire | Moyen |
-| Encaisse la croissance ? | Mal : l'onglet JOUER est déjà chargé | Bien : un écran, un sujet | Jusqu'à cinq entrées ; au-delà le rail défile, ce qui est mauvais à la manette |
+Ce qu'elle coûte, et qui a été accepté en connaissance de cause : **trois clics
+pour lancer un match local au lieu d'un**, quatre pour un salon en ligne au lieu
+de deux. Ce prix se paie à chaque relance. Ce qu'elle rapporte : un écran, un
+sujet — les rangs, le déblocage d'armes et les saisons s'y ajoutent sans
+surcharger quoi que ce soit, là où l'onglet JOUER actuel est déjà plein.
 
-**Aucune n'est recommandée d'office** : B est la plus lisible et la seule qui
-absorbe sans broncher les rangs, le déblocage d'armes et les saisons ; elle coûte
-deux clics de plus **à chaque partie**. A et C préservent l'immédiateté, qui est
-l'un des deux critères transversaux du projet.
+**Conséquence à surveiller pendant l'écriture** : le critère « immédiat » du
+projet est celui qui encaisse le coup. Si la relance après un match devient
+pénible à l'usage, le correctif n'est pas de revenir en arrière mais d'ajouter un
+raccourci de relance depuis l'écran de fin — à évaluer une fois le hub jouable,
+pas avant.
 
-### Étape 2 — séparer la pause du menu principal
+#### L'arborescence cible
 
-Indépendante de la structure choisie, et à faire en premier quoi qu'il arrive :
-tant que les trois rôles partagent un panneau, chaque écran ajouté coûte une
-règle de masquage. La pause doit redevenir ce qu'elle est partout ailleurs — un
-panneau court : reprendre, options, menu principal, abandonner.
+```
+Accueil
+├── Jouer
+│   ├── 1v1 local ......... préparation (carte · arme J1 · arme J2) → Lancer
+│   └── 1v1 en ligne ...... créer / rejoindre → Salon (code · statut ·
+│                           carte · arme) → Lancer
+├── S'entraîner ........... cible · carte · arme → Lancer
+├── Classement ............ top 10 · mon rang
+├── Profil ................ identité · code de récupération · pseudo ·
+│                           historique
+├── Options
+│   ├── Contrôles ......... manette et clavier
+│   ├── Affichage ......... fenêtre · vsync · images par seconde
+│   ├── Audio ............. général · musique · effets
+│   └── Calibration ....... luminosité · gamma · daltonisme
+└── Quitter
 
-Attention : l'abandon en ligne vaut forfait et il est archivé (`_archive_forfeit`,
-quatre chemins convergents). Ce comportement ne doit pas se perdre dans la
-réécriture.
+Pause (en match, panneau court et séparé)
+└── Reprendre · Options · Menu principal · Abandonner
+```
 
-### Étape 3 — Options : audio et calibration
+La galerie de cartes et l'éditeur restent atteignables depuis les écrans de
+préparation, par la carte sélectionnée — ils ne sont pas une destination du hub :
+on ne choisit pas une carte sans être en train de préparer un match.
 
+### Les étapes, dans l'ordre
+
+Chaque étape laisse le jeu jouable à la fin. C'est la contrainte qui gouverne le
+découpage : aucune ne doit exiger la suivante pour que le menu fonctionne.
+
+**Étape 1 — séparer la pause du menu principal.**
+À faire en premier, et elle l'aurait été quelle que soit la structure retenue.
+Tant qu'un seul `game_over_panel` sert de menu, de pause et d'écran de fin, tout
+écran ajouté coûte une règle de masquage à la volée de plus (`show_main_menu`,
+`show_game_over`). La pause redevient un panneau court : reprendre, options, menu
+principal, abandonner.
+*Piège à ne pas réintroduire* : l'abandon en ligne vaut forfait et il est archivé
+(`_archive_forfeit`, quatre chemins convergents). Ce comportement doit survivre à
+la réécriture — c'est un test à écrire avant de toucher au code.
+
+**Étape 2 — l'ossature du hub.**
+Écran d'accueil, navigation vers un écran-enfant, retour, et la pile qui va avec.
+Rien d'autre : les écrans-enfants sont d'abord des pages vides. C'est l'étape qui
+porte tout le risque de navigation (curseurs à deux joueurs, manette, focus), et
+elle doit être exercée seule.
+
+**Étape 3 — déplacer l'existant sous le hub, sans rien ajouter.**
+Jouer / préparation locale / en ligne / salon, cartes, profil, options
+(contrôles + affichage). À la fin de cette étape le jeu fait *exactement* ce
+qu'il faisait avant, avec la nouvelle arborescence. Aucune fonctionnalité
+nouvelle : c'est ce qui permet de savoir que ce qui casse vient du déplacement.
+
+**Étape 4 — Options : audio et calibration.**
 Le bloc audio est à créer de bout en bout, `settings_manager.gd` compris (section
-`audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste).
-La calibration de luminosité est un écran de réglage guidé — « ajustez jusqu'à
-distinguer tout juste cette silhouette » — et non un curseur nu.
+`audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste, en
+respectant l'ordre des autoloads). La calibration de luminosité est un écran de
+réglage guidé — « ajustez jusqu'à distinguer tout juste cette silhouette » — et
+non un curseur nu : c'est une question d'honnêteté en compétition, pas de
+confort.
 
-### Étape 4 — les écrans manquants
+**Étape 5 — les écrans manquants.**
+Classement (l'Edge Function `standing` renvoie déjà le top 10), entraînement
+(`TrainingTarget` existe déjà), historique des matchs (`match_history.json`
+existe déjà). Les trois sont surtout un travail d'affichage : le travail de fond
+est fait dans chaque cas.
 
-Classement (le serveur est prêt), entraînement (`TrainingTarget` est prêt),
-historique des matchs (`match_history.json` est prêt). Les trois sont surtout un
-travail d'affichage.
+**Étape 6 — édition du pseudo.**
+`nickname` existe côté base et n'a aucune interface. Petite étape, mais elle
+touche à une écriture serveur : elle vient après le reste.
 
 ---
 
-## Phase 6 — Rangs 🔵 À FAIRE
+## Phase 6 — Rangs 🔵 À FAIRE — échelle validée
 
 Une dizaine de catégories, chacune subdivisée en divisions, à la manière de
-Rocket League. Proposition du 2026-08-16, **à confirmer par Adrien**.
+Rocket League.
 
-### L'échelle
+### L'échelle — validée par Adrien le 2026-08-17
 
 Une progression de l'obscurité vers la lumière, qui se termine sur le nom du jeu
 — *candela* étant l'unité d'intensité lumineuse.
@@ -629,6 +670,10 @@ Une progression de l'obscurité vers la lumière, qui se termine sur le nom du j
 | 3 | Bougie | 8 | Aurore |
 | 4 | Lanterne | 9 | Zénith |
 | 5 | Torche | 10 | Candela |
+
+Les bornes de classement de chaque catégorie ne sont pas encore fixées : elles
+n'ont de sens qu'avec une population réelle, et elles se changent sans migration
+puisque le rang est dérivé (voir ci-dessous).
 
 ### La contrainte d'architecture : le rang est dérivé, comme le classement
 
@@ -659,29 +704,36 @@ rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
 **En local, toutes les armes sont accessibles** (décision d'Adrien du
 2026-08-16) : l'écran partagé n'est pas classé, rien n'y justifie un verrou.
 
-### Le point qui demande une décision : l'asymétrie en match classé
+### L'asymétrie en match classé — tranchée : règle du miroir
 
-Verrouiller des armes derrière le rang donne au mieux classé des options que
-l'autre n'a pas — dans un duel 1v1 où l'équilibre est tout. Le cas le plus net
-est l'**Arbalète** : 80 de dégâts, `emits_light = false`, flash quasi nul. C'est
-l'arme furtive, et elle est réservée à la quatrième catégorie.
+**Décision d'Adrien, 2026-08-17 : les deux joueurs ont toujours le même arsenal
+en match classé, et cet arsenal est celui du moins bien classé des deux.**
 
-Trois issues possibles, à trancher avant d'écrire quoi que ce soit :
+Le problème qu'elle résout : verrouiller des armes derrière le rang donnerait au
+mieux classé des options que l'autre n'a pas, dans un duel 1v1 où l'équilibre est
+tout. Le cas le plus net est l'**Arbalète** — 80 de dégâts, `emits_light = false`,
+flash quasi nul : l'arme furtive, et la quatrième débloquée. Sans cette règle, un
+joueur Lanterne aborderait un joueur Braise avec un outil que celui-ci ne peut pas
+avoir.
 
-1. **Assumer l'asymétrie.** Le déblocage est une récompense, elle se mérite. Le
-   plus lisible pour le joueur, le plus discutable en compétition.
-2. **Règle du miroir** : en match classé, les deux joueurs jouent sur
-   l'intersection de ce qu'ils ont débloqué — c'est-à-dire l'arsenal du moins
-   bien classé. Préserve la symétrie et garde la progression. Coût : l'arsenal
-   d'un joueur change selon l'adversaire, ce qu'il faut montrer clairement avant
-   le match sous peine d'être vécu comme un bug.
-3. **Découpler** : toutes les armes disponibles en classé, le déblocage ne
-   concerne que le local, l'entraînement et l'apparence. Aucun risque
-   d'équilibrage, mais la progression perd son enjeu.
+Ce que la règle coûte, et qu'il faut assumer dans l'interface : **l'arsenal d'un
+joueur change selon l'adversaire.** Un joueur Candela qui affronte un Aveugle se
+retrouve au Pistolet. Si l'écran ne l'explique pas au moment où ça arrive, ce sera
+vécu comme un bug — c'est le principal risque de cette décision, et il est
+d'affichage, pas de logique.
 
-La règle du miroir est celle qui respecte le mieux les deux critères du projet à
-la fois — reste qu'elle demande un écran honnête, et c'est un choix de jeu, pas
-un choix technique.
+Trois conséquences concrètes :
+
+- Le salon doit annoncer l'arsenal commun **avant** le lancement, avec sa raison
+  (« arsenal aligné sur *pseudo*, rang Braise »), et non le découvrir au moment
+  de choisir.
+- Les armes non retenues restent **visibles et grisées**, jamais masquées : un
+  joueur doit voir ce qu'il possède même quand il ne peut pas l'utiliser.
+- Le calcul de l'intersection appartient à l'hôte, comme tout le reste de
+  l'autorité — le client l'affiche, il ne le décide pas.
+
+En **local**, rien de tout cela ne s'applique : toutes les armes sont accessibles
+(décision du 2026-08-16), l'écran partagé n'étant pas classé.
 
 ---
 
@@ -697,6 +749,9 @@ un choix technique.
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
+| **Menus : structure B, le hub** (2026-08-17) | Un accueil de grandes destinations, chacune un écran entier. Coûte deux clics de plus par partie que les deux autres propositions ; rapporte un écran par sujet, seule forme qui absorbe les rangs, le déblocage d'armes et les saisons sans surcharger l'onglet JOUER, déjà plein. |
+| **Rangs dérivés du classement, jamais stockés** (2026-08-17) | Même raison que la table `ratings`, déjà reconstruite par rejeu : changer une borne d'échelle ne doit pas coûter une migration de données. `rankOf(rating)` vit dans `elo.ts`, testable hors ligne. |
+| **Armes : règle du miroir en classé** (2026-08-17) | Les deux joueurs partagent l'arsenal du moins bien classé. Sans elle, le mieux classé arriverait avec des options que l'autre ne peut pas avoir — l'Arbalète étant à la fois l'arme furtive et la quatrième débloquée. Coût assumé : l'arsenal varie selon l'adversaire, ce que l'interface doit expliquer au moment où ça arrive. |
 | **Un abandon vaut forfait** | Décision du 2026-08-16. Quitter un match en ligne en cours donne la victoire à celui qui reste : c'est archivé, drapeau `forfait` à l'appui. **La faille est connue et acceptée** : il suffit de couper la connexion de l'adversaire pour lui voler un forfait, ou d'invoquer sa propre coupure. Les deux autres règles envisagées ne valent pas mieux — jeter le match récompense celui qui débranche en train de perdre. Aucune n'est bonne ; celle-ci a au moins le mérite de ne pas rendre l'abandon gratuit. À revoir quand il y aura assez de joueurs pour que ça se pratique. |
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
@@ -841,11 +896,12 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 > classement est en place, et la suite est le contenu — les menus d'abord, puis
 > les rangs, puis le déblocage d'armes (Phases 5 à 7).
 
-1. **Choisir la structure de menu** (Phase 5, étape 1) — trois propositions
-   navigables soumises le 2026-08-16. Rien ne s'écrit avant ce choix : les rangs
-   et le déblocage d'armes attendent des écrans où vivre.
-2. **Trancher l'asymétrie du déblocage d'armes** (Phase 7) — assumer, miroir, ou
-   découpler. C'est un choix de jeu, pas un choix technique.
+1. **Phase 5, étape 1 — séparer la pause du menu principal.** Point de départ de
+   la refonte : tant que les trois rôles partagent un panneau, chaque écran
+   ajouté coûte une règle de masquage de plus. Le forfait sur abandon doit y
+   survivre, test à l'appui.
+2. **Phase 5, étapes 2 et 3 — l'ossature du hub, puis le déplacement de
+   l'existant sous elle**, sans rien ajouter au passage.
 3. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
 4. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
