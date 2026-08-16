@@ -601,11 +601,19 @@ func _network_input_health() -> String:
 	var gs := get_parent()
 	if not (gs is GameState) or not is_instance_valid(gs.p2):
 		return ""
-	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
-		return ""
-	return "CMD J2 pair=%d reçues=%d rejetées=%d" % [
-		gs.client_peer_id, gs.p2.inputs_accepted, gs.p2.inputs_rejected,
-	]
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST:
+			return "CMD J2 pair=%d reçues=%d rejetées=%d" % [
+				gs.client_peer_id, gs.p2.inputs_accepted, gs.p2.inputs_rejected,
+			]
+		NetworkManager.GameMode.ONLINE_CLIENT:
+			# `visé` est l'identifiant réel de l'hôte vu d'ici. Les commandes
+			# partent, elles, vers l'identifiant 1 codé en dur : si les deux
+			# diffèrent, elles s'adressent à un pair qui n'existe pas.
+			return "CMD envoyées=%d visé=%d moi=%d" % [
+				gs.p2.inputs_sent, gs.p2.inputs_target, multiplayer.get_unique_id(),
+			]
+	return ""
 
 func _input_relay_label() -> String:
 	var health := _network_input_health()

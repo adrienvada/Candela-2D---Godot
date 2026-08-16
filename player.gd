@@ -40,6 +40,9 @@ var _last_input_seq: int = -1
 ## Diagnostic de la remontée des commandes, lu par le panneau F3 de l'hôte.
 var inputs_accepted: int = 0
 var inputs_rejected: int = 0
+## Côté client : commandes émises, et identifiant visé.
+var inputs_sent: int = 0
+var inputs_target: int = 0
 
 # Rôle de simulation du nœud sur CETTE machine. Le client prédit son propre
 # joueur et se contente d'afficher l'autre ; partout ailleurs on simule.
@@ -485,6 +488,9 @@ func reset_network_input() -> void:
 ## l'hôte rejouer la dernière commande reçue, donc courir sans personne aux
 ## commandes.
 func _send_inputs_to_host(neutral: bool = false) -> void:
+	inputs_sent += 1
+	var peers := multiplayer.get_peers()
+	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
 		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
