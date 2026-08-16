@@ -843,6 +843,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   3 stems .ogg bouclés à 170 BPM (commande à passer en premier, délai long).*
 - **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
   par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
+  **✅ Fait** — piloté par `GameState._update_music_intensity` chaque frame
+  (idempotent côté AudioManager), remis à 0 par `set_in_match`. Inaudible tant
+  que les stems (V1.1) sont vides, mais la mécanique est en place.
 - **V1.3 Fichiers annonceur manquants** — `spk_fight`/`spk_p1_wins`/
   `spk_p2_wins`/`spk_draw` sont câblés dans `SOUNDS` mais absents du dépôt
   (`assets/audio/speaker/` n'existe pas). — *assets : 4 lignes voix, 8 avec
@@ -851,7 +854,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   Précondition de tout le reste : on ne densifie pas un mixage non réglable.
 - **V1.5 Vibrations manette** — `start_joy_vibration` absent du code : tir
   (forte courte), impact reçu (moyenne), pouls faible sous 30 HP, double coup
-  au kill.
+  au kill. **✅ Fait** — constantes `RUMBLE_*` dans `player.gd`. Ne vibre que le
+  pad du joueur localement aux commandes (device du `LocalInputProvider`,
+  seulement s'il est branché). Impact branché sur `rpc_update_hp`
+  (autoritaire), pas sur la balle prédite ; pouls à mi-temps de 170 BPM.
+  Le réglage on/off attendra les Options de la Phase 5.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 

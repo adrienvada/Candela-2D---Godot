@@ -435,6 +435,19 @@ func _process(delta):
 
 	if dead: return
 
+	# V1.5 — pouls haptique sous le seuil de santé basse, calé sur le ressenti
+	# du stem « battement de cœur » (mi-temps de 170 BPM : un battement lourd
+	# plutôt qu'un bourdonnement continu).
+	if hp <= 30.0 and _is_locally_piloted():
+		var state = get_tree().get_first_node_in_group("game_state")
+		if state and state.round_active and state.countdown_left <= 0.0:
+			_low_hp_pulse_accum += delta
+			if _low_hp_pulse_accum >= RUMBLE_PULSE_PERIOD:
+				_low_hp_pulse_accum = 0.0
+				_rumble(RUMBLE_PULSE_WEAK, 0.0, 0.08)
+	else:
+		_low_hp_pulse_accum = 0.0
+
 	if shoot_cooldown > 0:
 		shoot_cooldown -= delta
 		if shoot_cooldown <= 0:
@@ -754,7 +767,39 @@ func _update_aim_line() -> void:
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
+	# V1.5 — coup ferme et bref dans la manette du tireur.
+	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
 	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
+
+# ---------------------------------------------------------------------------
+# V1.5 — Retour haptique. Quatre signaux : tir (fort, bref), impact reçu
+# (moyen), pouls sous 30 HP, double coup du vainqueur au kill. Ne vibre que la
+# manette du joueur assis devant CE personnage : le device_id de son
+# LocalInputProvider, et seulement si ce pad est réellement branché — un
+# joueur clavier a souvent un pad posé sur le bureau, il ne doit pas bourdonner
+# pour l'adversaire.
+# ---------------------------------------------------------------------------
+const RUMBLE_SHOOT_STRONG := 0.7
+const RUMBLE_HIT_WEAK := 0.5
+const RUMBLE_HIT_STRONG := 0.3
+const RUMBLE_PULSE_WEAK := 0.25
+## Mi-temps de 170 BPM : 60 / 85 ≈ 0,71 s entre deux battements.
+const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
+var _low_hp_pulse_accum: float = 0.0
+
+func _rumble(weak: float, strong: float, duration: float) -> void:
+	if not _is_locally_piloted(): return
+	var lp := input_provider as LocalInputProvider
+	if lp == null: return
+	if not Input.get_connected_joypads().has(lp.device_id): return
+	Input.start_joy_vibration(lp.device_id, weak, strong, duration)
+
+## Double coup du kill, ressenti par le vainqueur seulement.
+func rumble_kill() -> void:
+	_rumble(0.2, 0.9, 0.1)
+	await get_tree().create_timer(0.14).timeout
+	if is_instance_valid(self):
+		_rumble(0.2, 0.9, 0.1)
 
 func trigger_shoot_visuals():
 	add_camera_shake(15.0, 15.0)
@@ -811,6 +856,10 @@ func take_damage(amount: float, source_player: Node2D):
 
 @rpc("authority", "call_local", "reliable")
 func rpc_update_hp(new_hp: float, source_id: int):
+	# V1.5 — l'impact se prend au ventre : vibration moyenne sur toute perte de
+	# PV, branchée ici (valeur autoritaire) et non sur la balle prédite.
+	if new_hp < hp:
+		_rumble(RUMBLE_HIT_WEAK, RUMBLE_HIT_STRONG, 0.25)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0
@@ -904,6 +953,10 @@ func die(killer: Node2D):
 	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
 	txt_tw.chain().tween_callback(lbl.queue_free)
 	
+	# V1.5 — le vainqueur sent le kill : double coup dans SA manette.
+	if killer and killer != self and killer.has_method("rumble_kill"):
+		killer.rumble_kill()
+
 	get_tree().call_group("game_state", "player_died", player_id, killer.player_id if killer else -1)
 
 func add_camera_shake(intensity: float, decay: float = 5.0):

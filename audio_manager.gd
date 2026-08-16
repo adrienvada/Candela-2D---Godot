@@ -222,11 +222,17 @@ func switch_music_clip(clip_name: String) -> void:
 # --- LOGIQUE VERTICALE (INTENSITE DE MATCH) ---
 var match_sync_stream: AudioStreamSynchronized = null
 var music_intensity_tweens: Dictionary = {}
+## Niveau courant : permet à GameState d'appeler set_music_intensity chaque
+## frame sans relancer les tweens — seul un vrai changement déclenche le fondu.
+var music_intensity: int = 0
 
 func set_music_intensity(level: int) -> void:
 	# level 0 : Base uniquement (-60db sur le reste)
 	# level 1 : Base + Batterie (Stems 0 et 1)
 	# level 2 : Base + Batterie + Arpège (Stems 0, 1, et 2)
+	if level == music_intensity:
+		return
+	music_intensity = level
 	if not match_sync_stream:
 		return
 		
@@ -255,6 +261,8 @@ func set_music_intensity(level: int) -> void:
 func set_in_match(in_match: bool) -> void:
 	is_in_match = in_match
 	player_torches.clear()
+	# Chaque match repart au calme : l'intensité gagnée ne survit pas à la manche.
+	set_music_intensity(0)
 	if is_in_match:
 		update_torch_cutoff()
 	else:
