@@ -1021,12 +1021,21 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
   `bench_framerate` avant d'acter (1 % bas ≥ 120). **→ À implémenter derrière
   un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
+  **✅ Implémenté** (`pump_shockwave.gd` + `.gdshader`, drapeau
+  `--fx-shockwave`). À mesurer : 1 % bas en duel pompe contre pompe, drapeau
+  actif vs inactif — la recopie plein viewport ×2 est le coût dominant ; repli
+  identifié si la mesure échoue (COPY_MODE_RECT borné au quad, ÷15 de volume
+  copié).
 - **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
   auto-start. **→ Acté ; vit dans le hub, donc à implémenter par la session
   « menus » (Phase 5).**
 - **D7 Sang persistant entre matchs d'une session** — l'arène raconte la
   soirée (exige le plafond de taches déjà relevé comme fragilité).
   **→ Activé : plafond de taches d'abord, persistance ensuite.**
+  **✅ Fait** — l'enquête a montré que la persistance existait déjà (seul le
+  retour menu purge l'arène) : seul le plafond manquait. `MAX_STAINS = 120`,
+  éviction de la doyenne avant tout dépôt, robuste aux volées de pompe
+  (retrait de groupe immédiat, `queue_free` différé).
 
 ### Ressources à fournir (liste de courses consolidée)
 

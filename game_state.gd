@@ -988,6 +988,15 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 
 	if not spawn_nodes: return
 
+	# D5 (drapeau --fx-shockwave) : onde de distorsion d'air du pompe. UNE par
+	# VOLÉE — la boucle des plombs est déjà déroulée — et `count > 1` est la
+	# signature même du pompe (projectile_count = 5, seule arme à volée). Placé
+	# après le garde spawn_nodes : chez le client, la volée officielle déjà
+	# rendue par la prédiction ne rejoue pas l'onde. La killcam passe par
+	# _on_replay_spawn_bullet, jamais ici. Hors drapeau, l'appel ne fait rien.
+	if count > 1:
+		PumpShockwave.spawn_if_enabled(arena, pos)
+
 	if shooter == p1:
 		cam1_shake_time = 0.1
 	elif shooter == p2:
