@@ -357,9 +357,18 @@ réellement déployées :
 | Sans configuration Supabase, le jeu démarre | Vérifié : classement « non configuré », rien d'autre ne change |
 | Les 6 suites passent | ✅ |
 
-**Reste dû** : refaire le parcours **à la souris** dans l'onglet PROFIL. Les
-essais ont piloté l'autoload directement ; l'interface elle-même n'a pas été
-exercée.
+**L'onglet PROFIL a été exercé lui aussi**, en instanciant le vrai menu en
+headless et en actionnant ses boutons par code : l'onglet est présent et
+atteignable à la manette pour les deux joueurs, le code s'affiche groupé par
+quatre, COPIER s'active au bon moment, le champ nettoie `abcd-efgh-jklm` en
+`ABCDEFGHJKLM`, un code trop court est refusé sans appel réseau, un code valide
+bascule le statut et le code affichés vers le profil repris, et un code inconnu
+laisse le profil courant intact.
+
+**Reste dû** : ce que seul un œil peut juger — la mise en page à l'écran (rien
+de coupé, rien d'illisible) et le presse-papiers réel. Le pilote d'affichage
+headless n'a pas de presse-papiers : `DisplayServer.clipboard_get()` y rend
+toujours une chaîne vide, donc COPIER n'est vérifié que jusqu'au libellé.
 
 **Un défaut trouvé et corrigé en production** (`20260816183000`) : les fonctions
 SQL signalaient « code de récupération inconnu » par un `NULL`, que PostgREST
@@ -499,15 +508,15 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
-| H7 | **Parcours du profil à la souris** | Les critères ont été vérifiés en pilotant l'autoload ; l'onglet PROFIL lui-même — affichage du code, bouton COPIER, champ de rattachement — n'a jamais été touché par un humain. | **Prochain jalon** |
+| H7 | **Coup d'œil sur l'onglet PROFIL** | Le câblage de l'onglet est vérifié par instanciation du menu en headless ; restent la mise en page à l'écran et le presse-papiers réel, que le pilote headless ne peut pas rendre. | **Prochain jalon** — quelques minutes |
 
 ---
 
 ## Prochaines étapes
 
-1. **H7 : dérouler le parcours PROFIL à la souris** — Adrien. Deux instances en
-   `--eos-ephemeral`, onglet PROFIL, copier-coller d'un code. Une quinzaine de
-   minutes ; c'est la seule partie de l'étape 1 qu'aucun essai n'a touchée.
+1. **H7 : un coup d'œil sur l'onglet PROFIL** — Adrien. Une instance en
+   `--eos-ephemeral` suffit pour juger la mise en page ; deux si l'on veut voir
+   le presse-papiers voyager. Le comportement, lui, est déjà vérifié.
 2. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
    qui portera à son tour le champ `arbitration`.
 3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
