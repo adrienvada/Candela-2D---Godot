@@ -79,6 +79,11 @@ done
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . res://tools/test_netcode.tscn
 ```
 
+```bash
+# Classement : vérification du jeton Epic et code de récupération (Deno)
+deno test --allow-net=jsr.io supabase/functions/_shared/
+```
+
 Bancs d'essai réseau (EOS/ENet) : voir
 [docs/PROTOCOLE_TEST_EOS.md](docs/PROTOCOLE_TEST_EOS.md).
 Tests manuels du mode en ligne : voir
@@ -103,6 +108,24 @@ les transmettre par un canal public.
 
 ---
 
+## Configuration Supabase
+
+Le classement passe par Supabase. Recopier `supabase_config.example.gd` en
+`res://supabase_config.gd` (ignoré par git) et y coller l'URL du projet et la
+**clé publiable**.
+
+**Sans ce fichier, le jeu démarre et se joue normalement** : le classement reste
+« non configuré », et rien d'autre ne change.
+
+La clé publiable est faite pour vivre dans le client — ce qui protège les
+tables, c'est la Row Level Security, pas le secret de cette clé. La clé
+**secrète**, elle, n'entre jamais dans le jeu : les Edge Functions la reçoivent
+par variable d'environnement.
+
+Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
+
+---
+
 ## Repères de code
 
 | Fichier | Rôle |
@@ -113,4 +136,7 @@ les transmettre par un canal public.
 | `ui.gd` | HUD, menus, lobby, killcam, navigation à deux curseurs |
 | `bullet.gd` | Balles : trajectoire, rebonds, compensation de latence |
 | `match_record.gd` | Format de match et archivage des résultats |
+| `ranked_identity.gd` | Profil classé : identification vérifiée auprès d'Epic, code de récupération |
+| `recovery_code.gd` · `lobby_code.gd` | Codes lus à voix haute : nettoyage, validation, mise en forme |
+| `supabase/` | Schéma SQL, Row Level Security et Edge Functions du classement |
 | `map_data.gd` · `map_codec.gd` · `map_geometry.gd` | Cartes : stockage, partage, géométrie |

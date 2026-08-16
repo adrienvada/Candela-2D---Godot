@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — en attente du jalon humain H5 (création du projet Supabase) |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) écrite et testée, en attente du déploiement H6 |
 
 ---
 
@@ -283,7 +283,75 @@ ensuite, ce qui évitera un transfert manuel de plus vers une seconde machine.
 La clé **secrète** ne doit jamais entrer dans le jeu : les Edge Functions
 reçoivent la leur par variable d'environnement.
 
+### Étape 1 — identité vérifiée 🟡 écrite, testée, pas encore déployée
+
+**Aucun ELO n'est calculé à cette étape.** Elle établit qui est qui, de façon
+infalsifiable. C'est austère, mais tout le reste s'écroule sans elle : un
+classement dont on peut usurper les profils ne vaut rien.
+
+Le déploiement passe par la CLI Supabase, qui exige une authentification — voir
+le jalon H6 et [SUPABASE.md](SUPABASE.md), qui porte les commandes exactes.
+
+**Schéma** (`supabase/migrations/20260816160000_players_identity.sql`) — une
+table `players` : `id` (uuid), `puid` (PUID Epic **courant**, unique), `code`
+(récupération), `nickname`, `arbitration`, `created_at`, `seen_at`.
+
+L'identité durable du profil est `id`, **jamais le PUID** : celui-ci change au
+rattachement d'une nouvelle machine, et tout ce qui sera classé pointera sur
+`id`. C'est ce qui permettra à un historique de survivre à un changement
+d'ordinateur.
+
+Le champ **`arbitration`** (`peer` / `server`) est celui que cette section
+réclamait plus bas. Sa place définitive est sur la ligne de résultat, quand la
+table des matchs existera ; il est porté sur `players` dès maintenant pour que
+le type soit versionné avec le schéma et que la première ligne écrite dise déjà
+qui l'a arbitrée.
+
+**RLS** — activée, **sans aucune politique**. L'absence de politique est ici le
+contenu, pas un oubli : RLS sans politique refuse tout. Les droits par défaut
+accordés par Supabase aux rôles anonyme et authentifié sont retirés en plus. Le
+jeu n'écrit donc jamais en direct ; les deux Edge Functions écrivent avec la clé
+secrète, via deux fonctions SQL `security definer` (`identify_player`,
+`link_profile`) dont l'exécution est refusée à tout autre rôle.
+
+**Vérification du jeton Epic** (`supabase/functions/_shared/epic.ts`) — le
+client joint le jeton rendu par `EOS.Connect.ConnectInterface.copy_id_token`.
+La fonction le vérifie contre le JWKS d'Epic
+(`https://api.epicgames.dev/auth/v1/oauth/jwks`), refuse tout `alg` autre que
+RS256, contrôle `iss`, `exp`, `iat`, `aud` = CLIENT_ID et `pfdid` = DEPLOYMENT_ID,
+puis n'extrait le PUID que du `sub`. **Un PUID posté dans le corps de la requête
+n'est jamais lu.** Sans `EPIC_CLIENT_ID` en environnement, la fonction refuse
+tout : une configuration incomplète ne dégrade jamais en « on laisse passer ».
+
+Vérifié le 2026-08-16 avec un **vrai jeton Epic contre le vrai JWKS d'Epic** :
+accepté ; la même charge utile modifiée après signature est refusée.
+Revendications observées : `act, aud, exp, iat, iss, pfdid, pfpid, pfsid, sub,
+tokenType`, `iss = https://api.epicgames.dev/auth/v1/oauth`, durée de vie 3600 s.
+
+**Code de récupération** — tiré au serveur par `crypto.getRandomValues`, jamais
+par le client : c'est ce qui empêche un joueur de se choisir le code d'un autre.
+Alphabet de `LobbyCode` (ni I, ni O, ni 0, ni 1), mais **12 caractères** et non
+6 — voir la décision actée plus bas.
+
+**Côté Godot** — `recovery_code.gd` (logique pure : nettoyer, valider, mettre en
+forme) et l'autoload `RankedIdentity` (`ranked_identity.gd`), qui s'identifie en
+tâche de fond et expose les mêmes états qu'EOS : non configuré / en cours /
+prêt / échec. Un onglet **PROFIL** affiche le code en grand, copiable, et offre
+le rattachement d'une seconde machine.
+
+`RankedIdentity` ne s'identifie pas en headless : les suites de tests y tournent,
+et chaque exécution créerait un profil de plus dans la vraie base.
+
+**Vérifié** : sans `supabase_config.gd`, le jeu démarre, EOS fonctionne, le
+classement reste « non configuré », aucune erreur.
+
+**Reste dû** : le déploiement (H6), puis les critères qui en dépendent — deux
+instances locales avec deux profils distincts, et un rattachement par code.
+
 ### Périmètre
+
+> Les trois points marqués ✅ ci-dessous sont **faits** par l'étape 1 ; le reste
+> appartient aux étapes suivantes.
 
 - Calcul d'ELO dans une Edge Function (jamais côté client — les stats EOS sont
   alimentées par le client, donc trichables pour un classement sérieux).
@@ -293,10 +361,10 @@ reçoivent la leur par variable d'environnement.
   match, puisque c'est lui qui simule tout. C'est la seule parade disponible en
   P2P, pas une protection équivalente à un serveur — voir la décision
   « P2P conservé » plus bas.
-- **Authenticité de l'identité** : le PUID seul ne prouve rien, n'importe qui
+- ✅ **Authenticité de l'identité** : le PUID seul ne prouve rien, n'importe qui
   pourrait en poster un. Chaque pair doit joindre son jeton d'identité Epic,
   que l'Edge Function vérifie auprès d'Epic avant d'écrire quoi que ce soit.
-- Prévoir dès le schéma un champ d'**origine de l'arbitrage** (pair / serveur) :
+- ✅ Prévoir dès le schéma un champ d'**origine de l'arbitrage** (pair / serveur) :
   c'est ce qui permettra d'introduire un serveur dédié plus tard sans invalider
   l'historique déjà accumulé.
 - Historique, saisons, liste de salons (reportée depuis la Phase 3).
@@ -305,7 +373,7 @@ reçoivent la leur par variable d'environnement.
   disponible dans le plugin — vérifié le 2026-08-16), que l'Edge Function
   valide contre les clés publiques d'Epic avant d'en extraire le PUID. Sans
   cette étape, n'importe qui pourrait poster n'importe quel PUID.
-- **Récupération d'identité : code de récupération** (décision du 2026-08-16).
+- ✅ **Récupération d'identité : code de récupération** (décision du 2026-08-16).
   Le Device ID Epic étant lié à la machine, un joueur qui change d'ordinateur
   perdrait son classement. Le jeu lui affiche donc un code à conserver, qui
   rattache une nouvelle machine au profil existant. Les comptes en bonne et due
@@ -333,6 +401,10 @@ reçoivent la leur par variable d'environnement.
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
+| **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
+| **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
+| **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
+| **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
 
 ---
 
@@ -355,6 +427,22 @@ reçoivent la leur par variable d'environnement.
   390/390 en `UNRELIABLE`). Le plugin ne promeut que `unreliable_ordered`, que
   Godot n'utilise pas ici. Sujet clos.
 
+**Supabase / vérification de jeton**
+- **`startsWith` ne valide pas un émetteur.** Le contrôle « l'émetteur commence
+  par `https://api.epicgames.dev` », écrit littéralement, accepte
+  `https://api.epicgames.dev.attaquant.test` — un tout autre domaine. Il faut
+  exiger la base exacte OU une barre oblique juste après. Le défaut a été écrit
+  puis attrapé par son propre test le 2026-08-16 ; il n'était pas exploitable
+  (la signature est vérifiée avant), mais le même raisonnement appliqué ailleurs
+  le serait.
+- Ne pas se fier à l'en-tête `Accept: application/vnd.pgrst.object+json` pour
+  distinguer « aucune ligne » : selon la version, PostgREST rend l'objet seul ou
+  un tableau d'une entrée, et répond 406 sur zéro ligne. Le code accepte les
+  trois formes.
+- Le plugin EOS rend le jeton dans un sous-dictionnaire :
+  `{result_code, id_token: {product_user_id, json_web_token}}`. Vérifié en
+  exécution le 2026-08-16, jeton de 943 caractères.
+
 **Export macOS**
 - `textures/vram_compression/import_etc2_astc=true` est obligatoire dans
   `project.godot`, sinon l'export refuse de démarrer.
@@ -376,17 +464,22 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
 | H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
-| H5 | **Création du projet Supabase et de ses clés** | Compte à créer, région à choisir, décisions de coût. | **Prochain jalon bloquant** |
+| H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
+| H6 | **Déploiement du schéma et des Edge Functions** | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base : aucun agent ne peut s'authentifier à la place d'Adrien. Tout le reste est écrit et testé ; commandes exactes dans [SUPABASE.md](SUPABASE.md). | **Prochain jalon bloquant** |
 
 ---
 
 ## Prochaines étapes
 
-1. **H5 : créer le projet Supabase** — Adrien. Rien ne peut commencer sans ses
-   clés. Étapes numérotées de la Phase 4 détaillées dans sa section.
-2. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+1. **H6 : déployer le schéma et les deux Edge Functions** — Adrien. Six
+   commandes, dans [SUPABASE.md](SUPABASE.md). Sans elles, l'étape 1 reste du
+   code qui ne tourne nulle part, et les critères de sortie qui en dépendent
+   (deux profils distincts, rattachement par code) restent invérifiés.
+2. Étape 2 de la Phase 4 : le calcul d'ELO lui-même, et la table des matchs qui
+   portera à son tour le champ `arbitration`.
+3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
 

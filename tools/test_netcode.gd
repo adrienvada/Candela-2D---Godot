@@ -19,6 +19,7 @@ func _ready() -> void:
 	_test_predicted_shots()
 	_test_lag_comp_delay()
 	_test_lobby_code()
+	_test_recovery_code()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -287,3 +288,84 @@ func _test_lobby_code() -> void:
 	# afficherait un code impossible à envoyer.
 	_check("sanitize produit toujours un préfixe valide d'alphabet",
 		LobbyCode.is_valid(LobbyCode.sanitize("h n e l w r")))
+
+# ---------------------------------------------------------------------------
+# CODE DE RÉCUPÉRATION (recovery_code.gd)
+# ---------------------------------------------------------------------------
+#
+# Le TIRAGE vit côté serveur (supabase/functions/_shared/recovery_code.ts) et y
+# est testé : c'est ce qui empêche un joueur de se choisir le code d'un autre.
+# Ici on couvre la moitié cliente — nettoyer, valider, mettre en forme — et
+# surtout le contrat qui lie les deux : ce que le serveur tire, le client doit
+# l'accepter, et l'accepter sous la forme où le joueur le recopie.
+func _test_recovery_code() -> void:
+	print("\n-- Code de récupération --")
+
+	_check("même alphabet que les codes de salon",
+		RecoveryCode.ALPHABET == LobbyCode.ALPHABET)
+	_check("aucun caractère ambigu dans l'alphabet",
+		not ("I" in RecoveryCode.ALPHABET or "O" in RecoveryCode.ALPHABET
+			or "0" in RecoveryCode.ALPHABET or "1" in RecoveryCode.ALPHABET))
+
+	# 12 caractères sur 32, soit 60 bits. Un code de salon en fait 6 : assez pour
+	# désigner un salon qui vit dix minutes, dérisoire pour un secret au porteur
+	# qui ouvre un profil classé à vie.
+	_check("deux fois plus long qu'un code de salon",
+		RecoveryCode.LENGTH == 2 * LobbyCode.LENGTH, str(RecoveryCode.LENGTH))
+
+	var canonical := "ABCDEFGHJKLM"
+	_check("is_valid accepte un code canonique", RecoveryCode.is_valid(canonical))
+	_check("is_valid refuse trop court", not RecoveryCode.is_valid("ABCDEFGH"))
+	_check("is_valid refuse trop long", not RecoveryCode.is_valid("ABCDEFGHJKLMN"))
+	_check("is_valid refuse le vide", not RecoveryCode.is_valid(""))
+	_check("is_valid refuse les minuscules", not RecoveryCode.is_valid("abcdefghjklm"))
+	_check("is_valid refuse un caractère ambigu", not RecoveryCode.is_valid("ABCDEFGHJKL1"))
+	# La forme affichée n'est pas la forme canonique : elle porte ses tirets.
+	_check("is_valid refuse la forme affichée",
+		not RecoveryCode.is_valid("ABCD-EFGH-JKLM"))
+	# Un code de salon ne doit jamais passer pour un code de récupération : ils
+	# partagent l'alphabet, pas la longueur.
+	_check("is_valid refuse un code de salon", not RecoveryCode.is_valid("HNELWR"))
+
+	_check("sanitize met en majuscules",
+		RecoveryCode.sanitize("abcdefghjklm") == canonical)
+	_check("sanitize retire les tirets de lecture",
+		RecoveryCode.sanitize("ABCD-EFGH-JKLM") == canonical,
+		RecoveryCode.sanitize("ABCD-EFGH-JKLM"))
+	_check("sanitize retire les espaces",
+		RecoveryCode.sanitize(" ABCD EFGH JKLM ") == canonical)
+	_check("sanitize plafonne la longueur",
+		RecoveryCode.sanitize("ABCDEFGHJKLMNPQR") == canonical)
+	_check("sanitize d'un code propre est l'identité",
+		RecoveryCode.sanitize(canonical) == canonical)
+	# Aucune substitution : un « I » disparaît, il ne devient pas « J ».
+	# Deviner à la place du joueur rattacherait le profil de quelqu'un d'autre.
+	_check("sanitize écarte les caractères ambigus sans les remplacer",
+		RecoveryCode.sanitize("IABCDEFGHJKLM") == canonical,
+		RecoveryCode.sanitize("IABCDEFGHJKLM"))
+	_check("sanitize d'un code entièrement ambigu ne rend rien",
+		RecoveryCode.sanitize("0O1I") == "")
+
+	_check("format groupe par quatre",
+		RecoveryCode.format(canonical) == "ABCD-EFGH-JKLM",
+		RecoveryCode.format(canonical))
+	_check("format d'un code vide reste vide", RecoveryCode.format("") == "")
+	_check("format d'une saisie partielle ne perd rien",
+		RecoveryCode.format("ABCDEF") == "ABCD-EF")
+
+	# Le contrat qui compte : le champ de saisie affiche la forme groupée, et ce
+	# qu'on y colle doit revenir à la forme que la fonction distante attend.
+	_check("format puis sanitize est l'identité",
+		RecoveryCode.sanitize(RecoveryCode.format(canonical)) == canonical)
+
+	# Contrat avec le tirage serveur : tout code de LENGTH caractères pris dans
+	# l'alphabet doit passer. On rejoue ici la forme de ce que le serveur produit.
+	var all_valid := true
+	for i in 200:
+		var drawn := ""
+		for j in RecoveryCode.LENGTH:
+			drawn += RecoveryCode.ALPHABET[randi() % RecoveryCode.ALPHABET.length()]
+		if not RecoveryCode.is_valid(drawn) or RecoveryCode.sanitize(drawn) != drawn:
+			all_valid = false
+			break
+	_check("200 codes de la forme serveur, tous acceptés", all_valid)
