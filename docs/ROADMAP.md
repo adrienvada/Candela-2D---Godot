@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — en attente du jalon humain H5 (création du projet Supabase) |
 
 ---
 
@@ -266,8 +266,18 @@ Non commencée. Périmètre pressenti :
 
 - Calcul d'ELO dans une Edge Function (jamais côté client — les stats EOS sont
   alimentées par le client, donc trichables pour un classement sérieux).
-- Résultat de match **signé par les deux pairs** avant validation : en P2P
-  l'hôte est juge et partie, c'est la seule parade.
+- Résultat de match **rapporté par les deux pairs** et validé seulement s'ils
+  concordent. À ne pas surestimer : cela empêche l'un des deux de déclarer un
+  faux résultat, mais **pas** un hôte au client modifié de tricher *pendant* le
+  match, puisque c'est lui qui simule tout. C'est la seule parade disponible en
+  P2P, pas une protection équivalente à un serveur — voir la décision
+  « P2P conservé » plus bas.
+- **Authenticité de l'identité** : le PUID seul ne prouve rien, n'importe qui
+  pourrait en poster un. Chaque pair doit joindre son jeton d'identité Epic,
+  que l'Edge Function vérifie auprès d'Epic avant d'écrire quoi que ce soit.
+- Prévoir dès le schéma un champ d'**origine de l'arbitrage** (pair / serveur) :
+  c'est ce qui permettra d'introduire un serveur dédié plus tard sans invalider
+  l'historique déjà accumulé.
 - Historique, saisons, liste de salons (reportée depuis la Phase 3).
 - Le PUID Epic sert de clé d'identité. **Limite connue :** le Device ID est lié
   à la machine — un joueur qui change d'ordinateur perd son classement. Prévoir
@@ -287,6 +297,7 @@ Non commencée. Périmètre pressenti :
 | **Images par seconde déplafonnées** | EOS coûte ~31 ms de latence de plus qu'ENet à 60 fps (54 ms contre 23 ms). Le levier est la cadence d'image, pas le nombre de ticks (+2 ms seulement en tickant deux fois par frame). Norme du jeu compétitif. |
 | **Pas d'adhésion Apple Developer** avant une sortie publique macOS | 99 $/an. Jusque-là : builds non signés + « Ouvrir quand même » dans Réglages Système. La signature/notarisation reste entièrement à valider le jour venu. |
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
+| **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
 
 ---
@@ -331,14 +342,14 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
 | H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
-| H5 | Création du projet Supabase, clés | Compte à créer, décisions de coût. | Début Phase 4 |
+| H5 | **Création du projet Supabase et de ses clés** | Compte à créer, région à choisir, décisions de coût. | **Prochain jalon bloquant** |
 
 ---
 
 ## Prochaines étapes
 
-1. **Ouverture de la Phase 4** — Supabase et ELO. Premier jalon humain : la
-   création du projet Supabase et de ses clés (H5).
+1. **H5 : créer le projet Supabase** — Adrien. Rien ne peut commencer sans ses
+   clés. Étapes numérotées de la Phase 4 détaillées dans sa section.
 2. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
 3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
