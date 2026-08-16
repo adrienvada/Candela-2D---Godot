@@ -611,15 +611,39 @@ on ne choisit pas une carte sans être en train de préparer un match.
 Chaque étape laisse le jeu jouable à la fin. C'est la contrainte qui gouverne le
 découpage : aucune ne doit exiger la suivante pour que le menu fonctionne.
 
-**Étape 1 — séparer la pause du menu principal.**
+**Étape 1 — séparer la pause du menu principal. ✅ CLOSE**
 À faire en premier, et elle l'aurait été quelle que soit la structure retenue.
-Tant qu'un seul `game_over_panel` sert de menu, de pause et d'écran de fin, tout
-écran ajouté coûte une règle de masquage à la volée de plus (`show_main_menu`,
-`show_game_over`). La pause redevient un panneau court : reprendre, options, menu
-principal, abandonner.
-*Piège à ne pas réintroduire* : l'abandon en ligne vaut forfait et il est archivé
-(`_archive_forfeit`, quatre chemins convergents). Ce comportement doit survivre à
-la réécriture — c'est un test à écrire avant de toucher au code.
+Tant qu'un seul `game_over_panel` servait de menu, de pause et d'écran de fin,
+tout écran ajouté coûtait une règle de masquage à la volée de plus.
+
+`pause_panel` est désormais un panneau à part, construit par `_build_pause_menu()`
+et monté directement sur le `CanvasLayer` : titre, score de session, temps
+restant, et quatre issues en colonne — reprendre, options, menu principal,
+quitter. Il ne connaît ni les onglets ni la préparation de match.
+
+Trois points qui ne sautent pas aux yeux :
+
+- **La pause est modale pour la navigation.** `_nav_candidates` rend la main dès
+  que le panneau est visible : sans ce retour anticipé, le curseur filait dans
+  les onglets du menu, cachés mais toujours dans l'arbre.
+- **Les réglages en cours de match empruntent l'onglet CONTRÔLES**, seul onglet
+  montré dans ce cas (`_options_from_pause`). C'est un détour assumé, pas une
+  fin : il disparaît à l'étape 4, quand les options auront leur écran. Sans lui,
+  la refonte aurait retiré au joueur un accès qu'il avait.
+- **`REPRENDRE` a quitté la barre d'actions du menu.** Le menu à onglets ne
+  s'affiche plus jamais par-dessus un match en cours, sauf pour cette parenthèse,
+  qui a son propre `RETOUR`.
+
+*Piège tenu* : l'abandon en ligne vaut forfait, archivé par `game_state.gd` en
+réponse à `main_menu_requested` et `quit_requested`. Un bouton qui cesserait de
+les émettre ferait disparaître le forfait **sans le moindre message d'erreur** —
+d'où une septième suite headless, `tools/test_pause_menu.gd`, qui instancie le
+vrai `ui.gd` et vérifie les deux signaux, la navigation captive, la parenthèse
+des options et la fermeture forcée (celle qui a déjà laissé une killcam derrière
+un panneau que plus rien ne fermait).
+
+*Piège payé en l'écrivant, consigné plus bas* : ce test a d'abord annoncé « tous
+les tests passent » sans rien exécuter.
 
 **Étape 2 — l'ossature du hub.**
 Écran d'accueil, navigation vers un écran-enfant, retour, et la pile qui va avec.
@@ -762,6 +786,21 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 
 ## Pièges connus — ne pas les redécouvrir
 
+**Tests headless**
+- **Un test qui instancie une scène ne peut pas charger celle-ci depuis `_init`.**
+  Les autoloads ne sont pas encore enregistrés à ce moment : `ui.gd`, qui
+  référence `MapData`, échoue à la compilation. Godot rend alors un nœud **nu**,
+  sans script — et chaque appel part en `SCRIPT ERROR` sans jamais incrémenter le
+  compteur d'échecs. Le premier jet de `test_pause_menu.gd` a ainsi annoncé
+  « ✓ Tous les tests passent » en n'ayant rien exécuté du tout. Deux parades, les
+  deux nécessaires : charger la scène après `await process_frame`, et **vérifier
+  que le script est bien attaché** (`has_method(...)`) avant le premier contrôle.
+  Corollaire général : une erreur de script n'échoue pas un test — seul un
+  `_check` le fait. Un harnais doit donc contrôler ses propres hypothèses.
+- Dans un script `extends SceneTree`, `paused` appartient à l'arbre lui-même, pas
+  à `root` — qui est la `Window`. `root.paused` échoue silencieusement de la même
+  façon.
+
 **EOS**
 - Ne JAMAIS appeler `delete_device_id()` ni `HAuth.login_anonymous_async()` : il
   détruit et recrée l'identité à chaque appel, donc un PUID différent à chaque
@@ -842,7 +881,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les six suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les sept suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :

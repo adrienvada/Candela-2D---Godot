@@ -244,12 +244,28 @@ var btn_copy_code: Button
 var join_input: LineEdit
 var ephemeral_banner: Label
 
-var pause_info_container: VBoxContainer
+## Panneau de pause — distinct du menu à onglets depuis la Phase 5.
+##
+## Trois rôles partageaient `game_over_panel` : menu principal, pause et écran de
+## fin. Chaque différence se réglait en masquages à la volée, et tout écran ajouté
+## en coûtait un de plus. La pause vit désormais dans son propre panneau, court,
+## qui ne connaît ni les onglets ni la préparation de match.
+var pause_panel: PanelContainer
+var pause_title: Label
 var pause_score_label: Label
 var pause_time_label: Label
+var btn_pause_resume: Button
+var btn_pause_options: Button
+var btn_pause_menu: Button
+var btn_pause_quit: Button
+
+## Les réglages restent joignables en cours de match : la pause emprunte l'onglet
+## CONTRÔLES du menu, seul onglet montré dans ce cas. Ce détour disparaît à
+## l'étape 4 de la Phase 5, quand les options auront leur propre écran.
+var _options_from_pause: bool = false
 
 var btn_actions: HBoxContainer
-var btn_resume: Button
+var btn_back: Button
 var btn_replay: Button
 var btn_main_menu: Button
 var btn_quit: Button
@@ -307,6 +323,7 @@ func _ready() -> void:
 	_build_hud()
 	_build_killcam()
 	_build_menu()
+	_build_pause_menu()
 	_build_dialog()
 	_build_status_bar()
 	_build_countdown()
@@ -478,7 +495,9 @@ func _update_focus_rings() -> void:
 	if game_over_panel == null or p1_cursor == null or p2_cursor == null:
 		return
 
-	var menu_open := game_over_panel.visible or (dialog_panel != null and dialog_panel.visible)
+	var menu_open := game_over_panel.visible \
+		or (pause_panel != null and pause_panel.visible) \
+		or (dialog_panel != null and dialog_panel.visible)
 	if not menu_open:
 		p1_cursor.hide()
 		p2_cursor.hide()
@@ -734,6 +753,12 @@ func _nav_candidates(player: int) -> Array[Control]:
 	if dialog_panel != null and dialog_panel.visible:
 		if dialog_btn != null:
 			out.append(dialog_btn)
+		return out
+	# La pause est modale : tant qu'elle est ouverte, elle est le seul terrain de
+	# navigation. Sans ce retour anticipé, le curseur filerait dans les onglets du
+	# menu, cachés mais toujours dans l'arbre.
+	if pause_panel != null and pause_panel.visible:
+		_collect_focusables(pause_panel, player, out)
 		return out
 	if _active_tab != null:
 		_collect_focusables(_active_tab, player, out)
@@ -1687,7 +1712,6 @@ func _fill_play_tab() -> void:
 
 	tab_game_container.add_child(_build_mode_block())
 	tab_game_container.add_child(_build_weapon_block())
-	tab_game_container.add_child(_build_pause_block())
 
 ## Carte sélectionnée, visible depuis l'onglet JOUER : on sait toujours sur quoi
 ## on s'apprête à jouer, et un appui mène droit à la galerie.
@@ -2074,25 +2098,141 @@ func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color, owner_id:
 	btn.set_meta(META_NAV_OWNER, owner_id)
 	return btn
 
-func _build_pause_block() -> Control:
-	pause_info_container = VBoxContainer.new()
-	pause_info_container.add_theme_constant_override("separation", GAP_S)
-	pause_info_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	pause_info_container.hide()
+# ---------------------------------------------------------------------------
+# PANNEAU DE PAUSE
+# ---------------------------------------------------------------------------
+
+## Panneau court, sans onglet et sans préparation de match : on est déjà en jeu.
+##
+## Le fond est volontairement moins opaque que celui du menu (0,88 contre 0,96) :
+## en ligne la simulation continue derrière, et masquer complètement un monde qui
+## bouge encore ment sur ce qui se passe.
+func _build_pause_menu() -> void:
+	pause_panel = PanelContainer.new()
+	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_panel.hide()
+	add_child(pause_panel)
+
+	var backdrop := ColorRect.new()
+	backdrop.color = Color(0.01, 0.012, 0.02, 0.88)
+	pause_panel.add_child(backdrop)
+
+	var center := CenterContainer.new()
+	pause_panel.add_child(center)
+
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", GAP_S)
+	center.add_child(column)
+
+	pause_title = Label.new()
+	pause_title.text = "PAUSE"
+	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_title.add_theme_font_size_override("font_size", 56)
+	column.add_child(pause_title)
 
 	pause_score_label = Label.new()
 	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_score_label.add_theme_font_size_override("font_size", 40)
-	pause_info_container.add_child(pause_score_label)
+	pause_score_label.add_theme_font_size_override("font_size", 26)
+	pause_score_label.add_theme_color_override("font_color", COLOR_DIM)
+	column.add_child(pause_score_label)
 
 	pause_time_label = Label.new()
-	pause_time_label.text = "TEMPS: 00:00"
+	pause_time_label.text = "TEMPS RESTANT : 00:00"
 	pause_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_time_label.add_theme_font_size_override("font_size", 40)
-	pause_info_container.add_child(pause_time_label)
+	pause_time_label.add_theme_font_size_override("font_size", 26)
+	pause_time_label.add_theme_color_override("font_color", COLOR_DIM)
+	column.add_child(pause_time_label)
 
-	return pause_info_container
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, GAP_M)
+	column.add_child(spacer)
+
+	# Colonne plutôt que rangée : c'est la forme qui se parcourt le plus
+	# naturellement au curseur, et la pause n'a que quatre issues.
+	btn_pause_resume = _make_pause_button("REPRENDRE", COLOR_P1, true)
+	btn_pause_resume.pressed.connect(_resume_game)
+	column.add_child(btn_pause_resume)
+
+	btn_pause_options = _make_pause_button("OPTIONS", COLOR_GOLD)
+	btn_pause_options.pressed.connect(_open_pause_options)
+	column.add_child(btn_pause_options)
+
+	btn_pause_menu = _make_pause_button("MENU PRINCIPAL", COLOR_DIM)
+	btn_pause_menu.pressed.connect(func() -> void:
+		get_tree().paused = false
+		main_menu_requested.emit()
+	)
+	column.add_child(btn_pause_menu)
+
+	btn_pause_quit = _make_pause_button("QUITTER", COLOR_P2)
+	btn_pause_quit.pressed.connect(func() -> void:
+		get_tree().paused = false
+		quit_requested.emit()
+	)
+	column.add_child(btn_pause_quit)
+
+func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
+	var btn := _make_button(label, accent, primary)
+	btn.custom_minimum_size = Vector2(320, 56)
+	btn.add_theme_font_size_override("font_size", 20)
+	return btn
+
+## Ouvre la pause. `_pause_freezes_world` décide du gel : en ligne il figerait la
+## simulation des deux joueurs, ce panneau se superpose donc à un monde qui court.
+func _open_pause() -> void:
+	if _pause_freezes_world():
+		get_tree().paused = true
+
+	var gs := get_parent()
+	if gs and gs is GameState:
+		pause_score_label.text = "SESSION : %d - %d" % [gs.p1_session_wins, gs.p2_session_wins]
+		var m := floori(gs.time_left) / 60
+		var s := floori(gs.time_left) % 60
+		pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]
+
+	pause_panel.show()
+	_seed_focus(0)
+	_seed_focus(1)
+
+## Les réglages en cours de match, empruntés au menu à onglets faute d'écran
+## propre — voir `_options_from_pause`. Seul CONTRÔLES est montré : la pause
+## n'ouvre pas le menu, elle ouvre les options.
+func _open_pause_options() -> void:
+	_options_from_pause = true
+	pause_panel.hide()
+
+	btn_tab_game.hide()
+	btn_tab_map.hide()
+	btn_tab_profile.hide()
+	btn_tab_controls.show()
+
+	btn_replay.hide()
+	btn_main_menu.hide()
+	btn_quit.hide()
+	btn_back.show()
+
+	game_over_title.text = "OPTIONS"
+	game_over_title.add_theme_color_override("font_color", Color.WHITE)
+	game_over_score.text = ""
+
+	_switch_tab(TAB_CONTROLS, false)
+	game_over_panel.show()
+
+func _close_pause_options() -> void:
+	_options_from_pause = false
+	btn_back.hide()
+	game_over_panel.hide()
+	_restore_all_tabs()
+	_open_pause()
+
+## Rend les quatre onglets à la navigation. Le menu et l'écran de fin les veulent
+## tous ; seule la parenthèse « options depuis la pause » en masque trois.
+func _restore_all_tabs() -> void:
+	for btn in [btn_tab_game, btn_tab_map, btn_tab_controls, btn_tab_profile]:
+		if is_instance_valid(btn):
+			btn.show()
 
 # ---------------------------------------------------------------------------
 # ONGLET CARTES
@@ -2388,10 +2528,14 @@ func _build_actions_bar() -> Control:
 	btn_actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	btn_actions.add_theme_constant_override("separation", GAP_S)
 
-	btn_resume = _make_button("REPRENDRE", COLOR_P1)
-	btn_resume.custom_minimum_size = Vector2(208, 56)
-	btn_resume.pressed.connect(_resume_game)
-	btn_actions.add_child(btn_resume)
+	# « REPRENDRE » a quitté cette barre avec la séparation de la pause : le menu à
+	# onglets ne s'affiche plus jamais par-dessus un match en cours, sauf pour la
+	# parenthèse des options, qui a son propre retour.
+	btn_back = _make_button("RETOUR", COLOR_P1)
+	btn_back.custom_minimum_size = Vector2(208, 56)
+	btn_back.pressed.connect(_close_pause_options)
+	btn_back.hide()
+	btn_actions.add_child(btn_back)
 
 	btn_replay = _make_button("REJOUER", COLOR_P1, true)
 	btn_replay.custom_minimum_size = Vector2(264, 56)
@@ -2525,7 +2669,10 @@ func _cycle_tab(step: int) -> void:
 
 func _resume_game() -> void:
 	get_tree().paused = false
-	pause_info_container.hide()
+	_options_from_pause = false
+	btn_back.hide()
+	_restore_all_tabs()
+	pause_panel.hide()
 	game_over_panel.hide()
 
 ## Mode que le menu lancera au prochain « JOUER ».
@@ -2658,17 +2805,21 @@ func _input(event: InputEvent) -> void:
 		if _handle_pause_input():
 			return
 
-	if not game_over_panel.visible:
+	var pause_open: bool = pause_panel != null and pause_panel.visible
+	if not game_over_panel.visible and not pause_open:
 		return
 
-	if event.is_action_pressed("p1_menu_prev_tab") or event.is_action_pressed("p2_menu_prev_tab"):
-		_cycle_tab(-1)
-		get_viewport().set_input_as_handled()
-		return
-	if event.is_action_pressed("p1_menu_next_tab") or event.is_action_pressed("p2_menu_next_tab"):
-		_cycle_tab(1)
-		get_viewport().set_input_as_handled()
-		return
+	# La pause n'a pas d'onglets : les gâchettes n'y font rien plutôt que de
+	# feuilleter un menu invisible.
+	if not pause_open:
+		if event.is_action_pressed("p1_menu_prev_tab") or event.is_action_pressed("p2_menu_prev_tab"):
+			_cycle_tab(-1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("p1_menu_next_tab") or event.is_action_pressed("p2_menu_next_tab"):
+			_cycle_tab(1)
+			get_viewport().set_input_as_handled()
+			return
 
 	for player in 2:
 		var prefix := "p1_menu_" if player == 0 else "p2_menu_"
@@ -2731,43 +2882,29 @@ func _pause_freezes_world() -> bool:
 	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN
 
 ## Le menu pause est-il ouvert ? En ligne il ne gèle rien : le joueur local doit
-## quand même cesser d'agir pendant qu'il navigue.
+## quand même cesser d'agir pendant qu'il navigue — y compris dans la parenthèse
+## des options, qui reste une pause du point de vue du joueur.
 func is_pause_menu_open() -> bool:
-	return game_over_panel.visible and pause_info_container.visible
+	return pause_panel.visible or _options_from_pause
 
 ## Retourne true si l'événement de pause a été consommé.
+##
+## Trois cas, dans cet ordre : les options ouvertes depuis la pause s'y referment,
+## une pause ouverte se lève, et sinon on ouvre la pause — à condition d'être bien
+## en match, c'est-à-dire ni dans le menu principal ni sur l'écran de fin.
 func _handle_pause_input() -> bool:
-	if not _is_main_menu and not game_over_panel.visible:
-		if _pause_freezes_world():
-			get_tree().paused = true
-		btn_resume.show()
-		btn_replay.hide()
-		btn_main_menu.show()
-		game_over_title.text = "PAUSE"
-		game_over_title.add_theme_color_override("font_color", Color.WHITE)
-		game_over_score.text = ""
-
-		weapon_hbox.hide()
-		map_card.hide()
-		mode_vbox.hide()
-		pause_info_container.show()
-		if is_instance_valid(btn_tab_map):
-			btn_tab_map.hide()
-
-		var gs := get_parent()
-		if gs and gs is GameState:
-			pause_score_label.text = "SESSION : %d - %d" % [gs.p1_session_wins, gs.p2_session_wins]
-			var m := floori(gs.time_left) / 60
-			var s := floori(gs.time_left) % 60
-			pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]
-
-		game_over_panel.show()
-		_switch_tab(TAB_PLAY, false)
+	if _options_from_pause:
+		_close_pause_options()
 		get_viewport().set_input_as_handled()
 		return true
 
-	if game_over_panel.visible and btn_resume.visible:
+	if pause_panel.visible:
 		_resume_game()
+		get_viewport().set_input_as_handled()
+		return true
+
+	if not _is_main_menu and not game_over_panel.visible:
+		_open_pause()
 		get_viewport().set_input_as_handled()
 		return true
 
@@ -2816,7 +2953,10 @@ func show_main_menu() -> void:
 	_is_main_menu = true
 	if is_instance_valid(match_hud):
 		match_hud.hide()
-	btn_resume.hide()
+	_options_from_pause = false
+	btn_back.hide()
+	if pause_panel != null:
+		pause_panel.hide()
 	btn_replay.show()
 	btn_main_menu.hide()
 	btn_quit.show()
@@ -2828,10 +2968,7 @@ func show_main_menu() -> void:
 	_update_weapon_panels_visibility()
 	if mode_vbox:
 		mode_vbox.show()
-	if pause_info_container:
-		pause_info_container.hide()
-	if is_instance_valid(btn_tab_map):
-		btn_tab_map.show()
+	_restore_all_tabs()
 
 	_switch_tab(TAB_PLAY, false)
 	game_over_panel.show()
@@ -2852,17 +2989,20 @@ func show_game_over(winner_id: int) -> void:
 	_is_main_menu = false
 	if is_instance_valid(match_hud):
 		match_hud.hide()
-	btn_resume.hide()
+	_options_from_pause = false
+	btn_back.hide()
+	if pause_panel != null:
+		pause_panel.hide()
 	btn_replay.show()
 	btn_main_menu.show()
+	btn_quit.show()
 	weapon_hbox.show()
 	map_card.show()
 
 	_update_weapon_panels_visibility()
 	if mode_vbox:
 		mode_vbox.hide()
-	if pause_info_container:
-		pause_info_container.hide()
+	_restore_all_tabs()
 	# La carte de la manche suivante est celle de l'hôte : laisser le client en
 	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
 	if is_instance_valid(btn_tab_map):
@@ -2947,9 +3087,14 @@ func _on_dialog_closed() -> void:
 ## Le panneau lui-même doit disparaître : le laisser visible masquait la killcam
 ## derrière un menu « PAUSE » que plus rien ne fermait.
 func force_close_pause() -> void:
-	if pause_info_container.visible:
-		pause_info_container.hide()
-		weapon_hbox.hide()
+	if pause_panel != null and pause_panel.visible:
+		pause_panel.hide()
+	# La parenthèse des options emprunte le menu à onglets : il faut la refermer
+	# elle aussi, sans quoi la killcam resterait derrière un panneau « OPTIONS ».
+	if _options_from_pause:
+		_options_from_pause = false
+		btn_back.hide()
+		_restore_all_tabs()
 		game_over_panel.hide()
 	# Sans condition de mode : une pause locale ouverte au moment où l'on bascule
 	# en ligne laisserait l'arbre gelé.

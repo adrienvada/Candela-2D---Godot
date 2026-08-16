@@ -73,7 +73,7 @@ Plusieurs sessions peuvent travailler en même temps sur ce dépôt.
 
 ```bash
 # Suites de tests headless — toutes doivent passer avant tout commit
-for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format; do
+for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu; do
   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/$t.gd
 done
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . res://tools/test_netcode.tscn
