@@ -28,7 +28,7 @@ décision se juge à cette double aune.
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
-| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étape 1 (identité) **close** : déployée et vérifiée de bout en bout le 2026-08-16 |
+| 4 | **Supabase — compétitif / ELO** | 🟡 **En cours** — étapes 1 (identité) et 2a (matchs en base) **closes**, déployées et vérifiées le 2026-08-16 |
 
 ---
 
@@ -392,6 +392,47 @@ un profil valide et répondait `200` — **un code inventé était accepté**. L
 fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté.
 Le client Godot refuse en outre tout profil sans identifiant.
 
+### Étape 2a — les matchs arrivent en base ✅ CLOSE
+
+**Toujours aucun ELO.** Cette étape archive fidèlement, sans interpréter.
+
+Deux principes gouvernent le schéma. **On stocke les rapports, on dérive le
+reste** : `match_reports` est immuable et brute ; la concordance, le vainqueur —
+et demain le classement — sont des VUES par-dessus. Une règle d'interprétation
+qui se révèle mauvaise se change alors sans migration et sans rien perdre.
+**Chaque pair ne parle que de lui** : il déclare « j'ai gagné », jamais « untel a
+perdu ». Il n'a donc pas besoin du PUID de son adversaire — le serveur apprend
+les deux identités des deux jetons Epic, chacun vérifié. C'est aussi ce qui fait
+fonctionner le rapport en LAN, où aucun PUID ne circule.
+
+L'appariement passe par un **identifiant de match** tiré par l'hôte
+(16 octets cryptographiques) et transmis au client dans `rpc_start_round`. Ni
+secret ni autorité : juste de quoi rapprocher deux récits venus de deux machines
+qui ne se parlent plus. Tiré par manche, ce qui coïncide avec le match en BO1 ;
+**un BO3 devra le tirer à l'ouverture du match, pas de la manche.**
+
+Le journal local `match_history.json` est écrit **avant** l'envoi et reste le
+registre durable : ce qui n'atteint pas le serveur n'est pas perdu, et une étape
+ultérieure pourra le rejouer. L'envoi réessaie trois fois puis renonce en le
+disant.
+
+**Vérifié en production le 2026-08-16** — deux instances, deux identités
+éphémères distinctes, un vrai match en ENet mené jusqu'au chrono :
+
+| Contrôle | Résultat |
+|---|---|
+| Les deux pairs rapportent le même match | ✅ deux lignes, même `match_id`, 4 s d'écart |
+| La vue apparie et juge concordant | ✅ `concordant: true`, `winner: null` (égalité) |
+| Rejouer un rapport ne le réécrit pas | ✅ l'original est rendu intact malgré un envoi contradictoire |
+| Un PUID jamais identifié | ✅ refusé |
+| Un tiers sur un match déjà complet | ✅ refusé — mais accepté sur un match neuf |
+| Rapport sans jeton / jeton inventé | ✅ `401` |
+| `match_reports` et la vue à la clé publiable | ✅ `42501 permission denied` |
+| 6 suites Godot · 44 tests Deno | ✅ |
+
+**Reste dû** : l'ELO lui-même (étape 2b), et le rejeu du journal local pour les
+rapports qui n'ont pas pu partir.
+
 ### Périmètre
 
 > Les trois points marqués ✅ ci-dessous sont **faits** par l'étape 1 ; le reste
@@ -600,16 +641,13 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
-   qui portera à son tour le champ `arbitration`. L'étape 1 étant close, plus
-   rien ne la bloque. La règle d'abandon est tranchée et implémentée — c'était
-   le préalable qui commandait le schéma.
-
-   Recommandation d'architecture pour cette étape : **stocker les matchs,
-   dériver le classement**. La table des matchs fait foi et reste immuable ; le
-   classement en est une valeur recalculable. Un mauvais facteur K ou une
-   mauvaise pondération du forfait cesse alors d'être fatal — on rejoue
-   l'historique au lieu de vivre avec.
+1. **Étape 2b : le calcul d'ELO**, dérivé de la vue `matches`. Tout est en
+   place — les matchs concordants sont en base, le forfait est distingué, et
+   l'arbitrage est stampé sur chaque ligne. Le classement doit rester une valeur
+   **recalculable** : un mauvais facteur K ou une mauvaise pondération du forfait
+   se corrige alors en rejouant l'historique, au lieu de se subir.
+2. **Rejouer le journal local** pour les rapports que le réseau a perdus.
+   `match_history.json` les a tous ; rien ne les remonte encore.
 3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
 4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la

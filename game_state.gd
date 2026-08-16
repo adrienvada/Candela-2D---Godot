@@ -87,6 +87,14 @@ var _end_sequence_active: bool = false
 # l'abandon emprunte plusieurs chemins de retour au menu, qui se croisent.
 var _forfeit_pending: bool = false
 
+# Identifiant du match en cours, tiré par l'hôte et transmis au client. Il ne
+# sert qu'à apparier les deux rapports côté classement : les deux machines
+# envoient chacune le sien, sans se reparler. Ni secret, ni autorité.
+#
+# Tiré par manche, ce qui coïncide avec le match en BO1 — le seul format
+# implémenté. Un BO3 devra le tirer à l'ouverture du MATCH, pas de la manche.
+var _match_id: String = ""
+
 # [Hôte] Effets différés jusqu'à la fin de la séquence : la killcam de chaque
 # machine a sa propre durée, le client peut donc être prêt — ou arriver — alors
 # que l'hôte est encore au ralenti.
@@ -597,14 +605,15 @@ func _start_round():
 			_hosted_weapon_1_idx = w1_idx
 			return
 		else:
-			rpc_start_round.rpc(w1_idx, w2_idx, _host_map_code())
+			rpc_start_round.rpc(w1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return # Client ne démarre pas la logique locale
 	else:
 		_do_start_round(w1_idx, w2_idx)
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = ""):
+func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = "", match_id: String = ""):
+	_match_id = match_id
 	# Le client adopte la carte de l'hôte : sans ça les deux joueurs
 	# s'affronteraient sur des géométries différentes.
 	if map_code != "" and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -612,6 +621,15 @@ func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = ""):
 		if err != "":
 			ui.show_dialog_message("Carte", "Carte de l'hôte illisible : " + err)
 	_do_start_round(w1_idx, w2_idx)
+
+## [Hôte] Tire l'identifiant du match qui commence.
+##
+## 16 octets d'un générateur cryptographique, en hexadécimal. Pas parce qu'il
+## faudrait un secret — il transite en clair — mais parce qu'un compteur ou une
+## horloge se devinerait, et qu'un tiers pourrait alors déposer son propre récit
+## sur le match de deux inconnus.
+func _new_match_id() -> String:
+	return Crypto.new().generate_random_bytes(16).hex_encode()
 
 ## Code compact de la carte active, à joindre au démarrage de manche.
 ## Vide hors mode hôte : personne d'autre n'a autorité sur la carte.
@@ -1139,6 +1157,34 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		MATCH_FORMAT,
 		forfeit)
 	MatchRecord.append_to_history(record)
+	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
+	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
+	_report_to_ranking(winner_id, forfeit)
+
+## Dépose le résultat auprès du classement, du point de vue de CETTE machine.
+##
+## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
+## rapports par leur identifiant de match et confronte les récits. Rien n'est
+## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
+func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
+	var local_idx := _local_player_index()
+	if local_idx < 0 or _match_id.is_empty():
+		return
+
+	var outcome := "draw"
+	if winner_id >= 0:
+		outcome = "win" if winner_id == local_idx else "loss"
+
+	var mine: Player = p1 if local_idx == 0 else p2
+	var theirs: Player = p2 if local_idx == 0 else p1
+	RankedIdentity.report_match(_match_id, outcome, {
+		"forfeit": forfeit,
+		"duration": round_time - time_left,
+		"map": MapData.selected_map_id,
+		"weapon_self": mine.current_weapon.name if mine and mine.current_weapon else "",
+		"weapon_opponent": theirs.current_weapon.name if theirs and theirs.current_weapon else "",
+		"format": MatchRecord.FORMAT_NAMES.get(MATCH_FORMAT, "BO1"),
+	})
 
 ## Archive un match gagné par abandon de l'adversaire.
 ##
@@ -1186,7 +1232,8 @@ func _apply_deferred_rematch() -> void:
 	if _pending_client_start:
 		_pending_client_start = false
 		if client_peer_id != 0:
-			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code())
+			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code(),
+				_new_match_id())
 			return
 	if p2_ready_for_rematch:
 		_check_rematch_start()
@@ -1209,7 +1256,7 @@ func rpc_client_weapon(idx: int):
 		_pending_p2_weapon_idx = idx
 		_pending_client_start = true
 		return
-	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code())
+	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code(), _new_match_id())
 
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
@@ -1314,7 +1361,7 @@ func _check_rematch_start():
 		var w2_idx = 0
 		if ui.p2_weapon_group.get_pressed_button():
 			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
-		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code())
+		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif not p1_ready_for_rematch:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 

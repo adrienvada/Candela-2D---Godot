@@ -10,9 +10,13 @@
 
 export class DatabaseError extends Error {}
 
-/** Profil tel que le rendent les deux fonctions SQL. */
-export interface PlayerProfile {
+/** Toute ligne rendue par une fonction SQL porte au moins son identifiant. */
+export interface Row {
   id: string;
+}
+
+/** Profil tel que le rendent identify_player et link_profile. */
+export interface PlayerProfile extends Row {
   puid: string;
   code: string;
   nickname: string;
@@ -47,10 +51,10 @@ function environment(): { url: string; key: string } {
  * Appelle une fonction SQL. Rend `null` quand la fonction rend NULL — c'est le
  * signal d'échec de `link_profile`.
  */
-export async function callFunction(
+export async function callFunction<T extends Row = PlayerProfile>(
   name: string,
   args: Record<string, unknown>,
-): Promise<PlayerProfile | null> {
+): Promise<T | null> {
   const { url, key } = environment();
   const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: "POST",
@@ -77,7 +81,7 @@ export async function callFunction(
     throw new PostgrestError(code, detail);
   }
 
-  return firstRow(text);
+  return firstRow<T>(text);
 }
 
 /**
@@ -92,7 +96,7 @@ export async function callFunction(
  * `setof`, ce qui lève l'ambiguïté à la source ; ce garde-fou reste pour qu'une
  * régression du même genre échoue bruyamment au lieu d'inventer un profil.
  */
-function firstRow(text: string): PlayerProfile | null {
+function firstRow<T extends Row>(text: string): T | null {
   if (text === "" || text === "null") {
     return null;
   }
@@ -106,5 +110,5 @@ function firstRow(text: string): PlayerProfile | null {
   if (row === null || typeof row !== "object" || typeof row.id !== "string") {
     return null;
   }
-  return row as PlayerProfile;
+  return row as T;
 }

@@ -20,6 +20,17 @@ const FUNCTIONS_PATH := "/functions/v1/"
 
 const ENDPOINT_IDENTIFY := "identify"
 const ENDPOINT_LINK := "link"
+const ENDPOINT_REPORT := "report"
+
+## Reprises d'un rapport de match. Le classement ne vaut pas de faire attendre
+## le joueur, mais un résultat perdu sur un hoquet de réseau est un match
+## effacé : trois tentatives espacées valent mieux qu'une.
+##
+## Le filet de sécurité reste `user://match_history.json`, écrit avant tout
+## envoi : ce qui n'atteint pas le serveur n'est pas perdu pour autant, et une
+## étape ultérieure pourra rejouer le journal.
+const REPORT_ATTEMPTS := 3
+const REPORT_RETRY_DELAY := 4.0
 
 ## Une Edge Function froide met quelques secondes à démarrer ; au-delà, c'est
 ## qu'elle ne répondra pas.
@@ -54,6 +65,10 @@ var _http: HTTPRequest
 ## ne se croisent pas, l'UI n'ouvrant le rattachement qu'une fois l'état connu.
 var _pending: String = ""
 var _waiting_for_eos: bool = false
+## Rapports de match à envoyer, dans l'ordre. Un seul part à la fois : le
+## transport n'accepte qu'une requête, et rien ici ne presse.
+var _report_queue: Array[Dictionary] = []
+var _report_attempts: int = 0
 
 # ===========================================================================
 # CYCLE DE VIE
@@ -159,6 +174,49 @@ func link(raw_code: String) -> bool:
 		return false
 	return true
 
+## Dépose le résultat d'un match. Ne bloque jamais, n'échoue jamais bruyamment :
+## le journal local a déjà été écrit, et c'est lui qui fait foi.
+##
+## `outcome` ne parle que du joueur local — « win », « loss » ou « draw ». Le
+## sort de l'adversaire ne se déclare pas : le serveur l'apprendra de son propre
+## rapport, et confrontera les deux.
+func report_match(match_id: String, outcome: String, data: Dictionary) -> void:
+	if state != State.READY or match_id.is_empty():
+		return
+	var payload := data.duplicate()
+	payload["match_id"] = match_id
+	payload["outcome"] = outcome
+	_report_queue.append(payload)
+	_drain_reports()
+
+## Envoie le rapport en tête de file, s'il y en a un et que la voie est libre.
+func _drain_reports() -> void:
+	if _pending != "" or _report_queue.is_empty():
+		return
+	var token := _copy_id_token()
+	if token.is_empty():
+		# Sans jeton, rien ne partira : inutile d'user les tentatives.
+		push_warning("RankedIdentity: rapport de match abandonné, jeton Epic indisponible")
+		_report_queue.clear()
+		_report_attempts = 0
+		return
+	var payload: Dictionary = _report_queue[0].duplicate()
+	payload["id_token"] = token
+	if not _post(ENDPOINT_REPORT, payload):
+		_retry_or_drop("requête impossible")
+
+## Un envoi a échoué : on réessaie, puis on renonce en le disant.
+func _retry_or_drop(reason: String) -> void:
+	_report_attempts += 1
+	if _report_attempts < REPORT_ATTEMPTS:
+		get_tree().create_timer(REPORT_RETRY_DELAY).timeout.connect(_drain_reports)
+		return
+	push_warning("RankedIdentity: rapport de match perdu après %d tentatives — %s"
+		% [REPORT_ATTEMPTS, reason])
+	_report_queue.pop_front()
+	_report_attempts = 0
+	_drain_reports()
+
 ## Jeton d'identité signé par Epic, à joindre à chaque appel.
 ##
 ## Il est redemandé à chaque fois plutôt que gardé : il expire, et le coût de
@@ -212,6 +270,10 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray,
 	if endpoint.is_empty():
 		return
 
+	if endpoint == ENDPOINT_REPORT:
+		_on_report_completed(result, code, _parse(body))
+		return
+
 	if result != HTTPRequest.RESULT_SUCCESS:
 		_report(endpoint, false, "Serveur du classement injoignable.")
 		return
@@ -241,6 +303,28 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray,
 
 	_adopt(profile as Dictionary)
 	_report(endpoint, true, "Profil %s rattaché à cette machine." % nickname)
+
+## Issue d'un rapport de match. Rien n'est montré au joueur : le classement se
+## tient à jour tout seul, et le journal local a déjà enregistré le match.
+func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
+	if result == HTTPRequest.RESULT_SUCCESS and code == 200:
+		_report_queue.pop_front()
+		_report_attempts = 0
+		_drain_reports()
+		return
+
+	# 4xx : le serveur a compris et refuse. Réessayer ne changera rien — un
+	# rapport malformé le restera, et un match déjà complet aussi.
+	if result == HTTPRequest.RESULT_SUCCESS and code >= 400 and code < 500:
+		push_warning("RankedIdentity: rapport de match refusé (%d) — %s"
+			% [code, String(payload.get("raison", "sans raison"))])
+		_report_queue.pop_front()
+		_report_attempts = 0
+		_drain_reports()
+		return
+
+	_retry_or_drop("code %d" % code if result == HTTPRequest.RESULT_SUCCESS
+		else "transport %d" % result)
 
 func _adopt(profile: Dictionary) -> void:
 	profile_id = String(profile.get("id", ""))
