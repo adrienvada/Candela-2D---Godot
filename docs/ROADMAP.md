@@ -1004,7 +1004,8 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
   **→ Acté sur le principe ; attend les stems réels (V1.1).**
 - **D3 Extinction traînée** — la torche s'éteint en ~80 ms au lieu d'un coupé
-  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.**
+  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.** **✅ Fait** —
+  `TORCH_FADE_OUT` dans player.gd, symétrique sur la torche répliquée.
 - **D4 Grésillement positionnel de torche** — audible à très courte portée par
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
   *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**

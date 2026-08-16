@@ -746,19 +746,28 @@ func _physics_process(delta):
 				_predict_history.erase(_predict_history.keys()[0])
 
 	# Visuals update for all clients
-	flashlight.enabled = flashlight_on
-	body_light.enabled = flashlight_on
-
+	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau
+	# en ~80 ms au lieu d'une coupure sèche. Coût assumé : l'adversaire gagne
+	# ces 80 ms d'information à l'extinction. Symétrique : l'effet joue aussi
+	# sur la torche répliquée de l'adversaire.
 	if flashlight_on:
+		flashlight.enabled = true
+		body_light.enabled = true
 		if shoot_cooldown > 0:
 			flashlight.energy = randf_range(1.5, 2.0)
 		else:
 			flashlight.energy = lerp(flashlight.energy, 2.5, 8.0 * delta)
-			
+
 		if current_weapon:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6 * current_weapon.backlight_multiplier
 		else:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6
+	elif flashlight.enabled:
+		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
+		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))
+		if flashlight.energy <= 0.01:
+			flashlight.enabled = false
+			body_light.enabled = false
 	
 	_update_aim_line()
 
@@ -794,6 +803,8 @@ const RUMBLE_HIT_STRONG := 0.3
 const RUMBLE_PULSE_WEAK := 0.25
 ## Mi-temps de 170 BPM : 60 / 85 ≈ 0,71 s entre deux battements.
 const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
+## D3 — durée d'avalement du faisceau à l'extinction de la torche.
+const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
 
 func _rumble(weak: float, strong: float, duration: float) -> void:
