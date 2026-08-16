@@ -588,7 +588,28 @@ func _network_debug_line() -> String:
 		parts.append("PUID %s…%s" % [puid.substr(0, 6), puid.right(4)])
 	if NetworkManager.is_ephemeral_identity():
 		parts.append("ÉPHÉMÈRE")
+	parts.append(_input_relay_label())
 	return " | ".join(parts)
+
+## Santé de la remontée des commandes du client, côté hôte.
+##
+## Deux gardes peuvent rejeter ces paquets sans le dire — un identifiant de pair
+## qui ne correspond pas, un numéro de séquence qui ne progresse pas — et le
+## symptôme est le même dans les deux cas : l'adversaire figé sur son point
+## d'apparition, alors que le lien et le ping restent parfaitement sains.
+func _network_input_health() -> String:
+	var gs := get_parent()
+	if not (gs is GameState) or not is_instance_valid(gs.p2):
+		return ""
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return ""
+	return "CMD J2 pair=%d reçues=%d rejetées=%d" % [
+		gs.client_peer_id, gs.p2.inputs_accepted, gs.p2.inputs_rejected,
+	]
+
+func _input_relay_label() -> String:
+	var health := _network_input_health()
+	return health if health != "" else "—"
 
 ## Direct ou relayé : la différence se paie en latence, et seul le SDK la connaît.
 func _eos_network_type_label() -> String:
