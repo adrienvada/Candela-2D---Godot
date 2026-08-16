@@ -11,3 +11,6 @@
 # vise pas. Les retirer d'ici suffira à les versionner le jour d'un portage.
 /addons/epic-online-services-godot/bin/ios/
 /addons/epic-online-services-godot/bin/android/
+
+# Exports locaux : lourds, reconstructibles, jamais versionnés.
+/build/
