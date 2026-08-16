@@ -695,6 +695,7 @@ un choix technique.
 | **Images par seconde déplafonnées** | EOS coûte ~31 ms de latence de plus qu'ENet à 60 fps (54 ms contre 23 ms). Le levier est la cadence d'image, pas le nombre de ticks (+2 ms seulement en tickant deux fois par frame). Norme du jeu compétitif. |
 | **Pas d'adhésion Apple Developer** avant une sortie publique macOS | 99 $/an. Jusque-là : builds non signés + « Ouvrir quand même » dans Réglages Système. La signature/notarisation reste entièrement à valider le jour venu. |
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
+| **Arbitrage D1-D7 et autonomie de la session game feel** | Décision d'Adrien du 2026-08-17. D1 (empreintes), D3 (extinction traînée) et D7 (sang persistant, plafond d'abord) sont **activés** ; D5 s'implémente **derrière un drapeau debug** jusqu'à mesure sur le Mac d'Adrien ; D2 et D4 sont **actés sur le principe** mais attendent leurs assets ; D6 est **acté**, à implémenter par la session « menus » dans le hub. La session game feel pousse à chaque commit vert, fusionne dans `main` en fin de vague verte, et tranche elle-même les micro-réglages (durées, intensités) en les documentant ici. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
 | **Un abandon vaut forfait** | Décision du 2026-08-16. Quitter un match en ligne en cours donne la victoire à celui qui reste : c'est archivé, drapeau `forfait` à l'appui. **La faille est connue et acceptée** : il suffit de couper la connexion de l'adversaire pour lui voler un forfait, ou d'invoquer sa propre coupure. Les deux autres règles envisagées ne valent pas mieux — jeter le match récompense celui qui débranche en train de perdre. Aucune n'est bonne ; celle-ci a au moins le mérite de ne pas rendre l'abandon gratuit. À revoir quand il y aura assez de joueurs pour que ça se pratique. |
@@ -974,25 +975,29 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
 
-### À trancher par Adrien avant d'implémenter (info de gameplay ou perf)
+### Items D — arbitrés par Adrien le 2026-08-17
 
 - **D1 Empreintes éphémères** — traces de pas ~2 s visibles seulement sous une
   lumière : le noir garde une mémoire courte, la traque devient pistage. Info
   nouvelle mais symétrique — la plus forte idée « mécanique » de la liste. —
-  *assets : 2-3 sprites (ou procédural).*
+  *assets : 2-3 sprites (ou procédural).* **→ Activé, en procédural.**
 - **D2 Bourdon d'aveuglement** — la nappe monte quand on n'a pas VU
   l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
+  **→ Acté sur le principe ; attend les stems réels (V1.1).**
 - **D3 Extinction traînée** — la torche s'éteint en ~80 ms au lieu d'un coupé
-  sec : ~80 ms d'info en plus pour l'adversaire.
+  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.**
 - **D4 Grésillement positionnel de torche** — audible à très courte portée par
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
-  *assets : 1 boucle.*
+  *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**
 - **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
-  `bench_framerate` avant d'acter (1 % bas ≥ 120).
+  `bench_framerate` avant d'acter (1 % bas ≥ 120). **→ À implémenter derrière
+  un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
 - **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
-  auto-start.
+  auto-start. **→ Acté ; vit dans le hub, donc à implémenter par la session
+  « menus » (Phase 5).**
 - **D7 Sang persistant entre matchs d'une session** — l'arène raconte la
   soirée (exige le plafond de taches déjà relevé comme fragilité).
+  **→ Activé : plafond de taches d'abord, persistance ensuite.**
 
 ### Ressources à fournir (liste de courses consolidée)
 
