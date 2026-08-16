@@ -24,3 +24,6 @@
 # État local de la CLI Supabase : référence du projet lié, versions du serveur
 # distant. Propre à une machine, recréé par `supabase link`.
 /supabase/.temp/
+
+# Worktrees des sous-agents : arbres de travail temporaires, jamais versionnés.
+/.claude/worktrees/

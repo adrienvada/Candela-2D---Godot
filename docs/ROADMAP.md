@@ -645,11 +645,33 @@ un panneau que plus rien ne fermait).
 *Piège payé en l'écrivant, consigné plus bas* : ce test a d'abord annoncé « tous
 les tests passent » sans rien exécuter.
 
-**Étape 2 — l'ossature du hub.**
+**Étape 2 — l'ossature du hub. ✅ CLOSE**
 Écran d'accueil, navigation vers un écran-enfant, retour, et la pile qui va avec.
-Rien d'autre : les écrans-enfants sont d'abord des pages vides. C'est l'étape qui
-porte tout le risque de navigation (curseurs à deux joueurs, manette, focus), et
-elle doit être exercée seule.
+Rien d'autre : les écrans-enfants sont des pages vides à ce stade. C'est l'étape
+qui porte tout le risque de navigation, elle a donc été exercée seule, avant
+qu'un seul écran ne soit rempli.
+
+`menu_hub.gd` (`class_name MenuHub`) sait déclarer des écrans, empiler, revenir,
+et n'afficher que le courant. Il ne connaît **aucun** contenu : l'étape 3 remplit
+les corps sans le modifier.
+
+**Pourquoi une pile et non un parent déclaré.** Un écran s'atteint par plusieurs
+chemins — la galerie de cartes s'ouvre depuis la préparation locale comme depuis
+le salon en ligne. Un parent fixe renverrait le joueur au mauvais endroit, défaut
+qu'on ne voit qu'en jeu et qu'on met longtemps à croire parce qu'il ressemble à
+une erreur de manipulation. La pile renvoie toujours d'où l'on vient, et
+`tools/test_menu_hub.gd` l'exerce explicitement par les deux chemins.
+
+Trois garanties tenues par l'ossature, chacune testée : l'accueil est le fond de
+pile et ne peut pas en être retiré (dix retours d'affilée ne la vident pas) ; un
+seul corps est visible à la fois, donc hors d'atteinte du curseur ; empiler
+l'écran courant ne fait rien — sans quoi un double appui obligerait à deux
+retours pour un seul aller, et le bouton passerait pour cassé.
+
+`menu_theme.gd` extrait la palette et le rythme avant que le second consommateur
+n'existe : deux copies d'une palette divergent toujours. `ui.gd` garde ses
+constantes jusqu'à l'étape 3 — les changer maintenant toucherait des centaines de
+lignes hors périmètre.
 
 **Étape 3 — déplacer l'existant sous le hub, sans rien ajouter.**
 Jouer / préparation locale / en ligne / salon, cartes, profil, options
@@ -882,7 +904,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les sept suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les huit suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :

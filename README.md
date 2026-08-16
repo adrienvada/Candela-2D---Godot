@@ -82,7 +82,7 @@ quelle session.
 
 ```bash
 # Suites de tests headless — toutes doivent passer avant tout commit
-for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu; do
+for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub; do
   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/$t.gd
 done
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . res://tools/test_netcode.tscn
@@ -149,6 +149,8 @@ Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
 | `player.gd` | Joueur : simulation, prédiction, interpolation, lumières |
 | `network_manager.gd` | Transport interchangeable EOS/ENet, identité, ping |
 | `ui.gd` | HUD, menus, lobby, killcam, navigation à deux curseurs |
+| `menu_hub.gd` · `menu_theme.gd` | Ossature de navigation du menu (pile d'écrans) et palette partagée |
+| `asset_manifest.gd` | Les 76 ressources attendues : ce qui manque, et ce qui est là mais vide |
 | `bullet.gd` | Balles : trajectoire, rebonds, compensation de latence |
 | `match_record.gd` | Format de match et archivage des résultats |
 | `ranked_identity.gd` | Profil classé : identification vérifiée auprès d'Epic, code de récupération |
