@@ -241,11 +241,20 @@ func _join_eos_async(code: String) -> void:
 		_fail_join("Aucun salon au code %s." % code)
 		return
 
-	var lobby = await HLobbies.join_async(results[0])
+	var candidate = results[0]
+	var lobby = await HLobbies.join_async(candidate)
 	if current_mode != GameMode.ONLINE_CLIENT:
 		return
 	if not lobby:
-		_fail_join("Salon %s introuvable ou déjà complet." % code)
+		# Le message unique d'avant — « introuvable ou déjà complet » — couvrait
+		# deux causes opposées et faisait croire à un salon plein alors que
+		# l'hôte attendait. Les compter rend le défaut instruisible.
+		var seen: int = candidate.members.size()
+		var capacity: int = candidate.max_members
+		if capacity > 0 and seen >= capacity:
+			_fail_join("Le salon %s est complet (%d/%d)." % [code, seen, capacity])
+		else:
+			_fail_join("Epic a refusé l'entrée dans le salon %s. Réessaie dans quelques secondes." % code)
 		return
 	_eos_lobby = lobby
 	lobby_code = code
@@ -288,7 +297,10 @@ func _fail_join(message: String) -> void:
 
 ## Publie le code en attribut de salon. Un code déjà pris rendrait la recherche
 ## ambiguë des deux côtés : on retire au lieu de le garder.
-func _publish_lobby_async() -> void:
+## `preferred_code` sert à la reconstruction d'un salon : le code a déjà été
+## communiqué à l'adversaire, le changer pour rien lui ferait perdre sa partie.
+## Il n'est qu'une préférence — s'il est entretemps occupé, on en tire un autre.
+func _publish_lobby_async(preferred_code := "") -> void:
 	var opts := EOS.Lobby.CreateLobbyOptions.new()
 	opts.bucket_id = EOS_BUCKET_ID
 	# Le 1v1 se ferme aussi ici : un troisième joueur n'atteint même pas le
@@ -312,7 +324,8 @@ func _publish_lobby_async() -> void:
 
 	var code := ""
 	for attempt in EOS_CODE_ATTEMPTS:
-		code = LobbyCode.generate()
+		code = preferred_code if attempt == 0 and not preferred_code.is_empty() \
+			else LobbyCode.generate()
 		lobby.add_attribute(EOS_CODE_ATTRIBUTE, code)
 		await lobby.update_async()
 		if current_mode != GameMode.ONLINE_HOST:
@@ -358,6 +371,27 @@ func _search_code(code: String):
 		{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
 		{ key = EOS_CODE_ATTRIBUTE, value = code, comparison = EOS.ComparisonOp.Equal },
 	])
+
+## [Hôte] Reconstruit le salon après le départ d'un invité.
+##
+## L'adhésion à un salon EOS survit à la rupture du lien P2P : l'invité parti
+## reste compté, le salon demeure à 2/2 et refuse pour de bon la jointure
+## suivante — pendant que le jeu, lui, affiche « en attente du joueur 2 ».
+## Le plugin n'expose aucune expulsion, on reconstruit donc, en gardant le code
+## déjà communiqué pour que l'adversaire puisse revenir avec.
+func _republish_lobby_async() -> void:
+	if current_mode != GameMode.ONLINE_HOST or _eos_shutting_down:
+		return
+	var previous_code := lobby_code
+	var lobby = _eos_lobby
+	_eos_lobby = null
+	if lobby != null:
+		await lobby.destroy_async()
+	# Le départ peut avoir été suivi d'un retour au menu : ne pas ressusciter
+	# un salon que plus personne n'attend.
+	if current_mode != GameMode.ONLINE_HOST or _eos_shutting_down:
+		return
+	await _publish_lobby_async(previous_code)
 
 func _leave_lobby_async() -> void:
 	var lobby = _eos_lobby
@@ -641,6 +675,7 @@ func _on_peer_disconnected(id: int) -> void:
 	print("NetworkManager: peer disconnected — id %d" % id)
 	if _eos_peer != null and current_mode == GameMode.ONLINE_HOST:
 		_eos_peer.set_auto_accept_connection_requests(true)
+		_republish_lobby_async()
 	if current_mode == GameMode.ONLINE_CLIENT and id == 1:
 		_emit_host_disconnected()
 	player_disconnected.emit(id)
