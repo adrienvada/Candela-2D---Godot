@@ -97,7 +97,7 @@ Sur les deux machines :
    ```bash
    git clone https://github.com/adrienvada/Candela-2D---Godot.git
    cd Candela-2D---Godot
-   git checkout eos-transport
+   git checkout main
    git pull
    ```
    ⚠️ Les deux machines doivent être **au même commit**. Le code de salon est

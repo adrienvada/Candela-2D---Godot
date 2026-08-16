@@ -66,10 +66,12 @@ func _test_record_structure() -> void:
 	print("\n[Résultat de match]")
 	var rec := MatchRecord.build(0, 187.25, "Pompe", "Fusil", "default", "en_ligne_hote")
 
-	for key in ["vainqueur", "egalite", "duree", "arme_j1", "arme_j2", "carte",
-			"horodatage", "mode", "format"]:
+	for key in ["version", "vainqueur", "egalite", "duree", "arme_j1", "arme_j2",
+			"carte", "horodatage", "mode", "format"]:
 		_check("clé « %s » présente" % key, rec.has(key))
 
+	_check("version du schéma", rec["version"] == MatchRecord.SCHEMA_VERSION,
+		str(rec.get("version")))
 	_check("vainqueur J1", rec["vainqueur"] == 0)
 	_check("pas une égalité", rec["egalite"] == false)
 	_check("durée conservée", is_equal_approx(rec["duree"], 187.25), str(rec["duree"]))
@@ -108,6 +110,9 @@ func _test_history_roundtrip() -> void:
 	_check("contenu relu intact",
 		loaded.size() == 2 and loaded[0]["arme_j1"] == "Arbalète",
 		str(loaded))
+	# L'écriture passe par un temporaire renommé : rien ne doit traîner après.
+	_check("pas de fichier temporaire résiduel",
+		not FileAccess.file_exists(TMP_HISTORY + ".tmp"))
 
 	# Un fichier illisible ne doit pas faire échouer une fin de match.
 	var f := FileAccess.open(TMP_HISTORY, FileAccess.WRITE)
@@ -133,8 +138,9 @@ func _test_history_cap() -> void:
 		MatchRecord.cap([{"n": 1}], MatchRecord.HISTORY_MAX).size() == 1)
 
 func _wipe_history() -> void:
-	if FileAccess.file_exists(TMP_HISTORY):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(TMP_HISTORY))
+	for path in [TMP_HISTORY, TMP_HISTORY + ".tmp"]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 # ---------------------------------------------------------------------------
 # RÉSERVE DE PARTICULES

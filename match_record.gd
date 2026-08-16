@@ -9,6 +9,11 @@ class_name MatchRecord
 
 const HISTORY_PATH := "user://match_history.json"
 
+## Version du schéma d'un enregistrement. À incrémenter à chaque changement de
+## clé : le futur envoi ELO relira des journaux écrits par des versions
+## différentes du jeu et devra savoir quelle forme il a sous les yeux.
+const SCHEMA_VERSION := 1
+
 ## L'historique est plafonné : c'est un journal local, pas une base. Au-delà,
 ## les entrées les plus anciennes sont oubliées.
 const HISTORY_MAX := 200
@@ -46,6 +51,7 @@ static func is_match_over(format: int, p1_rounds: int, p2_rounds: int) -> bool:
 static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: String,
 		map_id: String, mode: String, format: int = Format.BO1) -> Dictionary:
 	return {
+		"version": SCHEMA_VERSION,
 		"vainqueur": winner_id,
 		"egalite": winner_id == -1,
 		"duree": snappedf(maxf(duration, 0.0), 0.01),
@@ -64,12 +70,22 @@ static func append_to_history(record: Dictionary, path: String = HISTORY_PATH) -
 	history.append(record)
 	history = cap(history, HISTORY_MAX)
 
-	var file := FileAccess.open(path, FileAccess.WRITE)
+	# Écriture atomique : fichier temporaire puis renommage. Un arrêt brutal en
+	# pleine écriture ne peut corrompre que le temporaire, jamais le journal
+	# déjà archivé — indispensable le jour où il servira de source ELO.
+	var tmp_path := path + ".tmp"
+	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
-		push_warning("MatchRecord: écriture de l'historique impossible (%s)" % path)
+		push_warning("MatchRecord: écriture de l'historique impossible (%s)" % tmp_path)
 		return []
 	file.store_string(JSON.stringify(history, "\t"))
 	file.close()
+	var err := DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(tmp_path),
+		ProjectSettings.globalize_path(path))
+	if err != OK:
+		push_warning("MatchRecord: renommage de l'historique impossible (%s → %s)" % [tmp_path, path])
+		return []
 	return history
 
 ## Relit le journal. Un fichier absent ou corrompu repart d'un journal vide

@@ -84,6 +84,12 @@ done
 deno test --allow-net=jsr.io supabase/functions/_shared/
 ```
 
+Ces suites tournent aussi en CI (GitHub Actions,
+[.github/workflows/tests.yml](.github/workflows/tests.yml)) sur chaque poussée,
+avec Godot 4.7.1 Linux headless — plus un test de fumée qui charge le jeu
+complet en écran partagé. La CI ne remplace pas la boucle locale : elle rattrape
+ce qui lui aurait échappé.
+
 Bancs d'essai réseau (EOS/ENet) : voir
 [docs/PROTOCOLE_TEST_EOS.md](docs/PROTOCOLE_TEST_EOS.md).
 Tests manuels du mode en ligne : voir

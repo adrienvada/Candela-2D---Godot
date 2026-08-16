@@ -648,11 +648,16 @@ func _reset_rtt() -> void:
 ## commune n'est nécessaire.
 @rpc("any_peer", "unreliable")
 func rpc_ping(stamp: int) -> void:
+	if multiplayer.get_remote_sender_id() != _remote_peer(): return
 	rpc_id(multiplayer.get_remote_sender_id(), "rpc_pong", stamp)
 
+## Le RTT nourrit la compensation de tir : seul l'écho de notre unique
+## interlocuteur fait foi, et un horodatage forgé ne doit produire ni RTT
+## négatif ni valeur aberrante.
 @rpc("any_peer", "unreliable")
 func rpc_pong(stamp: int) -> void:
-	var sample := float(Time.get_ticks_msec() - stamp)
+	if multiplayer.get_remote_sender_id() != _remote_peer(): return
+	var sample := clampf(float(Time.get_ticks_msec() - stamp), 0.0, 10_000.0)
 	rtt_ms = sample if not has_rtt else lerpf(rtt_ms, sample, RTT_SMOOTHING)
 	has_rtt = true
 

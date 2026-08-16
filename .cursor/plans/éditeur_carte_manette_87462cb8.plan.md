@@ -1,6 +1,6 @@
 ---
 name: Éditeur carte manette
-overview: Créer un éditeur de carte 2D top-down entièrement pilotable à la manette, basé sur TileMapLayer (Godot 4.3+), avec export/import JSON via presse-papier et un mode Test sandbox (déplacement + collisions) sans lancer le duel complet.
+overview: "OBSOLÈTE (2026-08-16) — plan historique, ne pas suivre. L'éditeur est livré et a dépassé ce plan : format v3 (et non v1), grille redimensionnable 8-128 (et non 20×20 figée), et les fichiers map_editor_gamepad.gd / map_editor_test_player.gd cités ici n'existent plus (voir map_editor*.gd et docs/PLAN_EDITEUR_CARTES.md). Plan d'origine : créer un éditeur de carte 2D top-down entièrement pilotable à la manette, basé sur TileMapLayer (Godot 4.3+), avec export/import JSON via presse-papier et un mode Test sandbox (déplacement + collisions) sans lancer le duel complet."
 todos:
   - id: tileset-factory
     content: "Créer candela_tileset.gd : TileSet procédural 35px, damier + mur avec collision layer 1"
