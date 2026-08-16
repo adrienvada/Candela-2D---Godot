@@ -570,6 +570,9 @@ func _update_debug(_delta: float) -> void:
 		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
 	]
 	net_debug_label.text = _network_debug_line()
+	var p2_path := _p2_path_label()
+	if p2_path != "":
+		net_debug_label.text += "\n" + p2_path
 
 ## Ligne réseau du panneau F3 : de quoi diagnostiquer une session en ligne sans
 ## sortir du jeu — par où passe le lien, à travers quel NAT, sous quelle identité.
@@ -614,6 +617,17 @@ func _network_input_health() -> String:
 				gs.p2.inputs_sent, gs.p2.inputs_target, multiplayer.get_unique_id(),
 			]
 	return ""
+
+## Chemin du nœud J2 dans l'arbre. Un RPC de scène ne se route que par ce
+## chemin : s'il diffère d'une machine à l'autre, le message est jeté à
+## l'arrivée sans jamais atteindre la fonction visée.
+func _p2_path_label() -> String:
+	var gs := get_parent()
+	if not (gs is GameState) or not is_instance_valid(gs.p2):
+		return ""
+	if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		return ""
+	return "CHEMIN J2 %s" % String(gs.p2.get_path())
 
 func _input_relay_label() -> String:
 	var health := _network_input_health()
