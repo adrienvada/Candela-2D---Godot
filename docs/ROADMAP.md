@@ -132,12 +132,37 @@ code, sans configuration, sans redirection de port.
   `gl_compatibility` (« 2D MSAA is not yet supported for GLES3 » à chaque
   démarrage), c'était un réglage mort.
 
-### Non validé — le seul vrai inconnu
+### Traversée de NAT — validée le 2026-08-16 (jalon H1) ✅
 
-- **Traversée de NAT réelle.** Toutes les mesures à ce jour proviennent de deux
-  instances sur la même machine (`CONNECTION_TYPE: DIRECT` systématique). Rien
-  ne prouve encore que le punchthrough et le relais Epic fonctionnent.
-  **Nécessite une intervention humaine** (voir « Jalons humains »).
+Test à deux Mac, trois configurations : même Wi-Fi ; un poste en partage de
+connexion ; **les deux postes en partage de connexion, sur deux opérateurs
+différents**. Dans les trois cas, `Lien DIRECT`, NAT modéré, ping 58 ms,
+160 fps. Le punchthrough d'EOS passe donc même dans le scénario réputé le plus
+dur, sans redirection de port ni configuration.
+
+Nuance à garder : **le relais Epic n'a jamais été exercé**, la connexion
+directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
+
+### Défauts relevés pendant H1 — à corriger
+
+- **Jointure peu fiable, et message trompeur.** `network_manager.gd:248` affiche
+  « introuvable ou déjà complet » quand `join_async` échoue *après* une
+  recherche réussie : l'invité voyait « salon plein » alors que l'hôte
+  attendait. Cause identifiée : l'appartenance au salon et le lien P2P
+  divergent. `max_lobby_members = 2`, et **rien ne retire du salon un joueur
+  parti** — `_on_peer_disconnected` ne réarme que l'acceptation des demandes
+  P2P. Un invité qui quitte laisse son adhésion derrière lui, le salon reste à
+  2/2, et la jointure suivante est réellement refusée. Côté invité,
+  `_leave_lobby_async()` est appelé sans `await` depuis `disconnect_from_game()`
+  et peut être interrompu. À traiter : réconcilier le salon au départ d'un pair
+  (expulser le membre ou détruire/recréer le salon), garantir le départ côté
+  invité, distinguer « salon complet » des autres échecs, et réessayer la
+  recherche plutôt que d'abandonner au premier échec.
+- **Killcam muette chez l'invité.** Les fantômes rejouent (la lumière suit),
+  mais ni les tirs ni les impacts n'apparaissent : `bullet_events` semble vide
+  côté client. Le chemin d'enregistrement paraît pourtant correct sur le papier,
+  pour ses propres tirs (enregistrés à l'arrivée du tir officiel) comme pour
+  ceux de l'hôte. À instrumenter avant de corriger.
 
 ---
 
