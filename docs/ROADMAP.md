@@ -158,11 +158,17 @@ directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
   (expulser le membre ou détruire/recréer le salon), garantir le départ côté
   invité, distinguer « salon complet » des autres échecs, et réessayer la
   recherche plutôt que d'abandonner au premier échec.
-- **Killcam muette chez l'invité.** Les fantômes rejouent (la lumière suit),
-  mais ni les tirs ni les impacts n'apparaissent : `bullet_events` semble vide
-  côté client. Le chemin d'enregistrement paraît pourtant correct sur le papier,
-  pour ses propres tirs (enregistrés à l'arrivée du tir officiel) comme pour
-  ceux de l'hôte. À instrumenter avant de corriger.
+- ~~**Killcam muette.**~~ **Corrigé.** L'enregistrement n'était pas en cause
+  (3 évènements relevés des deux côtés) : la fenêtre de rejeu démarrait à
+  `snapshots.size() - 240`, donc calée sur la **fin de l'enregistrement** — or
+  celui-ci continue après la mort, le temps de capter le sang. Le tir fatal
+  tombait avant le début de la fenêtre et n'était jamais rejoué. La fenêtre se
+  cale désormais sur l'impact, et recule au besoin pour englober le tir fatal.
+  Le défaut touchait les deux camps, pas seulement l'invité.
+- ~~**Jointure : recherche unique.**~~ **Corrigée.** L'hôte renonce parfois à
+  confirmer la visibilité de son code et l'annonce quand même (« publié sans
+  confirmation de l'index Epic ») ; la recherche unique côté client échouait
+  alors sur un code pourtant valide. Trois tentatives espacées désormais.
 
 ---
 

@@ -115,12 +115,29 @@ func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: Weap
 			"weapon": weapon
 		})
 
+## Nombre d'images montrées avant l'impact — trois secondes de contexte.
+const PRE_IMPACT_FRAMES := 180.0
+## Marge devant le tir fatal, pour qu'on voie partir la balle et non la voir
+## déjà en vol.
+const PRE_SHOT_MARGIN := 30.0
+
 func start_playback():
 	if snapshots.is_empty(): return
 	recording = false
 	playing_back = true
-	# Start slightly earlier to give context
-	playback_index = max(0.0, snapshots.size() - 240.0)
+
+	# La fenêtre se cale sur l'impact, jamais sur la fin de l'enregistrement :
+	# celui-ci continue après la mort, le temps de capter le sang et la
+	# réaction. Calée sur la fin, elle laissait le tir fatal hors champ — la
+	# killcam montrait la mort sans la balle qui l'avait causée.
+	var anchor := float(impact_frame) if impact_frame != -1 else float(snapshots.size())
+	var start_frame := anchor - PRE_IMPACT_FRAMES
+	if slow_mo_start_frame != -1:
+		# Un tir parti d'encore plus loin (arbalète lente, longue trajectoire)
+		# doit rester visible : c'est lui le sujet de la séquence.
+		start_frame = minf(start_frame, float(slow_mo_start_frame) - PRE_SHOT_MARGIN)
+
+	playback_index = maxf(0.0, start_frame)
 	last_played_frame = floori(playback_index) - 1
 	freeze_time_remaining = 2.0
 	time_since_impact_real = 0.0

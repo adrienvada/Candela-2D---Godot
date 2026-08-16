@@ -44,6 +44,12 @@ const EOS_CODE_ATTEMPTS := 3
 ## tapé. L'attente est donc supportée par l'hôte, qui patiente déjà.
 const EOS_CODE_VISIBLE_ATTEMPTS := 4
 
+## Reprises côté client. Une recherche infructueuse coûte déjà ~3 s : trois
+## tentatives espacées tiennent dans l'échéance de 20 s tout en couvrant la
+## latence de publication de l'index Epic.
+const EOS_JOIN_SEARCH_ATTEMPTS := 3
+const EOS_JOIN_SEARCH_DELAY := 1.5
+
 var eos_puid: String = ""
 var lobby_code: String = ""
 ## Dernier échec en clair, à afficher par l'UI. Vidé à chaque nouvelle tentative.
@@ -225,14 +231,24 @@ func _join_eos(raw_code: String) -> bool:
 	_join_eos_async(code)
 	return true
 
-## Une seule recherche, sans reprise : l'hôte ne publie son code qu'une fois
-## celui-ci réellement trouvable (voir _publish_lobby_async), donc un code qui
-## ne répond pas ici est un code faux, et le joueur doit l'apprendre tout de
-## suite plutôt qu'au bout de trois interrogations à 3 s.
+## L'hôte cherche à ne publier qu'un code déjà trouvable, mais il y renonce
+## après quelques tentatives et l'annonce quand même (« publié sans
+## confirmation de l'index Epic »). Cette prémisse tombant, une recherche
+## unique condamnait le client à échouer sur un code pourtant valide : on
+## réessaie, l'index d'Epic mettant parfois plusieurs secondes à publier un
+## salon tout juste créé.
 func _join_eos_async(code: String) -> void:
-	var results = await _search_code(code)
-	if current_mode != GameMode.ONLINE_CLIENT:
-		return # annulé pendant la recherche (retour au menu)
+	var results = null
+	for attempt in EOS_JOIN_SEARCH_ATTEMPTS:
+		results = await _search_code(code)
+		if current_mode != GameMode.ONLINE_CLIENT:
+			return # annulé pendant la recherche (retour au menu)
+		if results != null and not results.is_empty():
+			break
+		if attempt < EOS_JOIN_SEARCH_ATTEMPTS - 1:
+			await get_tree().create_timer(EOS_JOIN_SEARCH_DELAY).timeout
+			if current_mode != GameMode.ONLINE_CLIENT:
+				return
 
 	if results == null:
 		_fail_join("Recherche impossible : Epic ne répond pas.")

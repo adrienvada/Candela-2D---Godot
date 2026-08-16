@@ -165,6 +165,27 @@ func _verify_round() -> void:
 ## le même point d'entrée qu'une balle — seule la visée est court-circuitée.
 func _verify_kill_to_rematch() -> void:
 	var is_host := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
+
+	# La killcam de l'invité ne montrait ni tirs ni impacts. take_damage seul ne
+	# reproduit rien : il faut de vraies balles dans la fenêtre de rejeu.
+	var replayed := [0]
+	ReplaySystem.replay_spawn_bullet.connect(func(_s, _p, _r, _w): replayed[0] += 1)
+
+	if is_host:
+		print("TIRS: l'hôte tire trois fois")
+		for i in 3:
+			_main.p1.shoot()
+			await get_tree().create_timer(0.35).timeout
+	else:
+		await get_tree().create_timer(1.05).timeout
+
+	print("ENREG: instantanés=%d évènements=%d recording=%s" % [
+		ReplaySystem.snapshots.size(), ReplaySystem.bullet_events.size(),
+		ReplaySystem.recording])
+	_check("les tirs sont enregistrés pour la killcam",
+		ReplaySystem.bullet_events.size() > 0,
+		"%d évènement(s)" % ReplaySystem.bullet_events.size())
+
 	if is_host:
 		print("KILL: l'hôte abat le joueur 2")
 		_main.p2.take_damage(1000.0, _main.p1)
@@ -178,6 +199,14 @@ func _verify_kill_to_rematch() -> void:
 	_check("l'écran de fin de match s'affiche",
 		await _await(func(): return _main.game_over and not _main._end_sequence_active, 25.0))
 	print("FIN: %s" % _ui.game_over_title.text)
+	# Le point décisif : la killcam a-t-elle REJOUÉ les balles enregistrées ?
+	# Enregistrement et relecture peuvent échouer indépendamment.
+	print("REJEU: impact=%d ralenti=%d balles rejouées=%d / %d enregistrées" % [
+		ReplaySystem.impact_frame, ReplaySystem.slow_mo_start_frame,
+		replayed[0], ReplaySystem.bullet_events.size()])
+	_check("la killcam rejoue les balles enregistrées",
+		replayed[0] > 0 or ReplaySystem.bullet_events.is_empty(),
+		"%d rejouée(s)" % replayed[0])
 	_check("le score du match est enregistré",
 		_main.p1_kills + _main.p2_kills == 1, "%d / %d" % [_main.p1_kills, _main.p2_kills])
 	_check("le lien tient après la killcam", not multiplayer.get_peers().is_empty())
