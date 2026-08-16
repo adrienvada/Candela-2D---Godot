@@ -358,21 +358,38 @@ func _ensure_spawn_marker(spawns: Node2D, marker_name: String) -> void:
 		spawns.add_child(marker)
 
 
+## Les nœuds ajoutés ici portent des noms EXPLICITES, et c'est une contrainte
+## réseau, pas une coquetterie.
+##
+## Sans nom, Godot en fabrique un depuis un compteur global d'objets créés
+## (« @CharacterBody2D@269 »), dont la valeur dépend de tout ce qui a été
+## instancié avant — jusqu'au nombre de cartes dans la bibliothèque, la galerie
+## construisant un panneau par carte. Deux machines aux bibliothèques
+## différentes donnaient donc deux noms différents au même joueur.
+##
+## Or un RPC de scène ne se route que par le chemin du nœud : les commandes du
+## client désignaient chez l'hôte un nœud inexistant et étaient jetées sans le
+## moindre message — l'adversaire restait figé sur son apparition alors que le
+## lien, le ping et les identifiants de pairs étaient tous parfaitement sains.
 func _setup_players():
 	p1 = player_scene.instantiate()
+	p1.name = "Player1"
 	p1.player_id = 0
 	players_node.add_child(p1)
-	
+
 	p2 = player_scene.instantiate()
+	p2.name = "Player2"
 	p2.player_id = 1
 	players_node.add_child(p2)
-	
+
 	# Cameras (Top Level so they can follow ghosts during replay)
 	cam1 = Camera2D.new()
+	cam1.name = "Camera1"
 	cam1.custom_viewport = vp1
 	players_node.add_child(cam1)
-	
+
 	cam2 = Camera2D.new()
+	cam2.name = "Camera2"
 	cam2.custom_viewport = vp2
 	players_node.add_child(cam2)
 	
@@ -423,6 +440,7 @@ func _setup_ghosts():
 	unshaded_mat.shader = SHADER_GHOST
 	
 	ghost_p1 = Node2D.new()
+	ghost_p1.name = "GhostP1"
 	ghost_p1.z_index = 10
 	var g1_vis = p1.get_node("VisualColored").duplicate()
 	g1_vis.material = unshaded_mat
@@ -439,6 +457,7 @@ func _setup_ghosts():
 	ghost_p1.hide()
 	
 	ghost_p2 = Node2D.new()
+	ghost_p2.name = "GhostP2"
 	ghost_p2.z_index = 10
 	var g2_vis = p2.get_node("VisualColored").duplicate()
 	g2_vis.material = unshaded_mat

@@ -27,7 +27,7 @@ décision se juge à cette double aune.
 |---|---|---|
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
-| 3 | **EOS — connectivité** | 🔴 **Un défaut ouvert** — les commandes du client sont rejetées par l'hôte. Branche `eos-transport` |
+| 3 | **EOS — connectivité** | 🟡 Aucun point technique ouvert — branche `eos-transport`, contre-vérification à deux machines à refaire |
 | 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
 
 ---
@@ -176,35 +176,44 @@ directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
   confirmation de l'index Epic ») ; la recherche unique côté client échouait
   alors sur un code pourtant valide. Trois tentatives espacées désormais.
 
-### 🔴 Ouvert — les commandes du client sont rejetées par l'hôte
+### ~~Ouvert~~ **Corrigé** — les commandes du client n'atteignaient pas l'hôte
 
-Constaté au second test à deux machines (2026-08-16, même réseau).
+Constaté au second test à deux machines (2026-08-16), corrigé le jour même.
 
-**Symptôme.** Chez l'hôte, J2 reste figé sur son point d'apparition et ses tirs
-n'infligent rien. Chez le client, tout paraît normal : il se voit bouger, voit
-l'hôte, tire et voit ses impacts — tout cela étant prédit localement.
+**Symptôme.** Chez l'hôte, J2 restait figé sur son point d'apparition et ses
+tirs n'infligeaient rien. Chez le client tout paraissait normal : il se voyait
+bouger, voyait l'hôte, tirait et voyait ses impacts — tout cela étant prédit
+localement.
 
-**Ce qui est établi.** Le transport n'est pas en cause : F3 affiche
-`Lien DIRECT`, NAT modéré, et surtout **ping 26 ms** — or le ping est un
-aller-retour applicatif, donc le client répond bien à l'hôte. La réplication
-hôte→client fonctionne (le client voit l'hôte). Seule la remontée
-client→hôte est perdue, et elle l'est **silencieusement**.
+**Ce que la mesure a établi**, en trois manches d'instrumentation :
 
-**Où ça se joue.** `Player.rpc_send_inputs` comporte deux gardes qui rejettent
-sans rien dire : l'identifiant du pair (`get_remote_sender_id()` comparé à
-`GameState.client_peer_id`) et le numéro de séquence (`seq <= _last_input_seq`).
-Le symptôme est identique dans les deux cas.
+| Relevé | Verdict |
+|---|---|
+| `Lien DIRECT`, ping 26–47 ms des deux côtés | Le transport fonctionne, dans les deux sens |
+| Hôte : `reçues=0 rejetées=0` | La fonction n'est **jamais exécutée** — rien n'est filtré |
+| Client : `envoyées=3411 visé=1` | Le client émet bien, vers le bon destinataire |
+| `moi=1437910812` = `pair=1437910812` | Les identités de pairs concordent |
+| `CHEMIN J2` : `@CharacterBody2D@269` chez l'hôte, `@263` chez le client | **La cause** |
 
-**Instrumentation en place** (`57b7e77`) : F3 affiche côté hôte
-`CMD J2 pair=<id> reçues=<n> rejetées=<n>`. `pair=0` désigne la garde du pair ;
-des rejets qui montent pendant que les acceptations stagnent désignent la garde
-de séquence ; des acceptations qui montent avec un J2 figé déplaceraient le
-problème vers la simulation. **En attente d'une capture F3 côté hôte pendant
-que le client bouge.**
+**La cause.** Les nœuds Joueur étaient ajoutés à l'arbre **sans nom explicite**.
+Godot en fabrique alors un depuis un compteur global d'objets créés
+(`@CharacterBody2D@269`), dont la valeur dépend de tout ce qui a été instancié
+avant — jusqu'au **nombre de cartes** dans la bibliothèque, la galerie
+construisant un panneau par carte. L'hôte avait 3 cartes, le client 2 : deux
+noms différents pour le même joueur.
 
-Non reproductible à deux instances locales : le banc
-`tools/test_online_match.tscn` mesure 59,5 px de déplacement du client, valeur
-identique des deux côtés.
+Or un RPC de scène ne se route **que** par le chemin du nœud. Les commandes du
+client désignaient chez l'hôte un nœud inexistant et étaient jetées sans le
+moindre message — console à zéro erreur. Le ping, lui, passait : il vit sur
+`NetworkManager`, un autoload au chemin fixe par construction.
+
+**Le correctif.** `_setup_players()` et `_setup_ghosts()` nomment désormais
+explicitement tout ce qu'ils ajoutent (`Player1`, `Player2`, `Camera1`,
+`Camera2`, `GhostP1`, `GhostP2`).
+
+**Pourquoi aucun test ne l'avait vu.** Deux instances sur la même machine
+partagent la même bibliothèque de cartes, donc les mêmes noms auto-générés. Le
+défaut n'apparaît qu'entre deux machines aux bibliothèques différentes.
 
 ### Observations mineures relevées au passage
 
@@ -296,16 +305,15 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Capture F3 côté hôte pendant que le client bouge** — Adrien. La ligne
-   `CMD J2 pair=… reçues=… rejetées=…` désignera laquelle des deux gardes
-   rejette les commandes. C'est le seul point bloquant.
-2. Correction du rejet, puis contre-vérification complète à deux machines.
-3. Fusion de `eos-transport` dans `main`.
-4. Ouverture de la Phase 4.
+1. **Contre-vérification à deux machines** — Adrien. Le rejet des commandes est
+   corrigé ; F3 doit maintenant afficher le **même chemin `CHEMIN J2`** des deux
+   côtés, et les commandes reçues doivent monter chez l'hôte.
+2. Fusion de `eos-transport` dans `main`.
+3. Ouverture de la Phase 4.
 
 ## Journal des tests à deux machines
 
 | Date | Configurations | Résultat |
 |---|---|---|
 | 2026-08-16 (matin) | Même Wi-Fi ; un poste en 4G ; les deux en 4G, opérateurs différents | `Lien DIRECT` partout, ping 58 ms. Trois défauts relevés : jointure incertaine, message trompeur, killcam muette. Tous corrigés depuis. |
-| 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontent pas**. Compteurs F3 ajoutés pour trancher. |
+| 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
