@@ -82,7 +82,16 @@ code, sans configuration, sans redirection de port.
   lié à la machine, deux instances locales partageraient sinon le même PUID.
   Neutralisée hors build debug, bandeau d'avertissement à l'écran.
 - **Export macOS non signé validé** — `.dylib` embarqué, EOS opérationnel dans
-  le `.app`, sortie 0.
+  le `.app` (PUID obtenu), sortie 0. Préréglage versionné dans
+  `export_presets.cfg`.
+
+  **Piège de diagnostic, à ne pas retomber dedans :** dans un build release, la
+  sortie `print()` est tamponnée et n'est vidée qu'à la **fermeture propre** de
+  l'application. Tuer le processus (`pkill`, Ctrl-C) jette tout ce qui suit le
+  dernier message d'erreur — ce qui a fait conclure à tort, le 2026-08-16, à un
+  EOS qui ne démarrait pas dans l'export. Pour lire le journal d'un build :
+  `open build/Candela.app`, puis `osascript -e 'quit app "Candela 2D"'`, et lire
+  `~/Library/Application Support/Godot/app_userdata/Candela 2D/logs/godot.log`.
 - Bancs d'essai : `tools/test_transport.tscn`, `tools/test_online_match.tscn`,
   `tools/test_quit_path.tscn`. Protocole :
   [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
