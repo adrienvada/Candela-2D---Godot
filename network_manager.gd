@@ -456,6 +456,11 @@ func _init_eos_async() -> void:
 	# autoloads : attendre une frame garantit que leur _ready est passé.
 	await get_tree().process_frame
 
+	# Trace conservée : un build exporté n'a pas de console, et c'est
+	# précisément là que ce chemin a déjà échoué en silence.
+	print("NetworkManager: init EOS — lecture de %s (exists=%s)" % [
+		EOS_CREDENTIALS_PATH, ResourceLoader.exists(EOS_CREDENTIALS_PATH)])
+
 	var creds := _load_credentials()
 	if creds == null:
 		_set_eos_state(EosState.UNCONFIGURED)
