@@ -146,11 +146,25 @@ func _verify_round() -> void:
 	_check("les deux joueurs sont dans l'arène",
 		is_instance_valid(_main.p1) and is_instance_valid(_main.p2))
 	_check("le chrono de match tourne", _main.time_left > 0.0)
+	# Le client pousse une commande de déplacement constante : c'est l'hôte qui
+	# doit simuler J2 à partir d'elle. Sans ce test, rien ne vérifiait que la
+	# remontée des commandes fonctionne — seulement que la partie tenait debout.
+	var start_p2: Vector2 = _main.p2.global_position
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		var stub := NetworkInputProvider.new()
+		stub.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false, false)
+		_main._set_player_input_provider(_main.p2, stub, 0)
+		print("DEPLACEMENT: le client pousse une commande vers la droite")
+
 	# Quelques secondes de jeu réel : synchro, ping applicatif, réplication.
 	# Les deux instances ne démarrent pas ensemble : l'hôte peut avoir déjà porté
 	# son coup pendant cette fenêtre. On vérifie que le match avance, pas qu'il
 	# est resté à un instant précis.
 	await get_tree().create_timer(4.0).timeout
+
+	var moved: float = _main.p2.global_position.distance_to(start_p2)
+	print("DEPLACEMENT: J2 a parcouru %.1f px vu d'ici" % moved)
+	_check("le déplacement du client est visible ici", moved > 20.0, "%.1f px" % moved)
 	_check("le match avance sans se couper",
 		_main.round_active or _main._end_sequence_active or _main.game_over)
 	_check("le ping applicatif remonte", NetworkManager.has_rtt, "%.1f ms" % NetworkManager.rtt_ms)
