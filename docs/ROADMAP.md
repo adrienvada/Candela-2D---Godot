@@ -913,6 +913,195 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
 
 ---
 
+## Game feel — propositions priorisées (étude des animations, 2026-08-16)
+
+Soixante-dix propositions issues d'une étude des animations, effets et sons du
+jeu, pour amplifier l'aspect addictif de la boucle. Triées en six vagues par
+**ratio effet/effort** (les systèmes déjà câblés mais endormis d'abord), par
+**position dans la boucle** (le kill et le rematch avant le polish de manche),
+et par **dépendances** (les commandes d'assets tôt, leur délai est long).
+
+Cadre de jugement, valable pour chaque item : pendant la manche, aucun effet ne
+doit créer d'information asymétrique ni coûter du 1 % bas ; le kill, la
+killcam, les écrans de fin et le menu sont des **zones franches** (la manche
+est finie, budget libre). Tout shader neuf se précharge en `const`, toute
+particule passe par le pool, jamais d'ombres sur les lumières de particules.
+Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fournir.
+
+### Vague 1 — Réveiller ce qui dort (systèmes câblés, jamais alimentés)
+
+- **V1.1 Stems musicaux réels** — l'AudioStreamInteractive 4 couches à 170 BPM
+  est câblé mais `generate_music_streams.gd` produit des flux vides (seul le
+  heartbeat est réel). Le meilleur ratio du projet. — *assets : 3 clips +
+  3 stems .ogg bouclés à 170 BPM (commande à passer en premier, délai long).*
+- **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
+  par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
+- **V1.3 Fichiers annonceur manquants** — `spk_fight`/`spk_p1_wins`/
+  `spk_p2_wins`/`spk_draw` sont câblés dans `SOUNDS` mais absents du dépôt
+  (`assets/audio/speaker/` n'existe pas). — *assets : 4 lignes voix, 8 avec
+  « PARFAIT » (kill sans dégât reçu) et « DE JUSTESSE » (< 10 HP restants).*
+- **V1.4 Volumes utilisateur** — Master/Musique/Effets/Annonceur dans Options.
+  Précondition de tout le reste : on ne densifie pas un mixage non réglable.
+- **V1.5 Vibrations manette** — `start_joy_vibration` absent du code : tir
+  (forte courte), impact reçu (moyenne), pouls faible sous 30 HP, double coup
+  au kill.
+
+### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
+
+- **V2.1 Gel d'exécution** — 150 ms de gel du rendu au moment fatal, puis
+  chute dans le bullet-time existant. Pas de `time_scale` (piège connu).
+- **V2.2 Le noir gagne** — à la mort, les lumières s'éteignent une à une en
+  400 ms, la torche du tueur en dernier, puis le death flash existant.
+- **V2.3 Jingle de kill** — 2 notes dans la tonalité du thème, variante si le
+  match gagne la session. — *assets : 1-2 stingers accordés.*
+- **V2.4 Onde de choc lumineuse** — cercle plein écran depuis l'impact, 400 ms.
+- **V2.5 « FATAL — ARBALÈTE »** — le label FATAL s'enrichit du nom de l'arme.
+- **V2.6 Trait sur-exposé** — la balle fatale laisse son trait HDR 1 frame.
+- **V2.7 Tampon final** — stamp « KILL — 04:12 » sur l'arrêt sur image de 2 s.
+- **V2.8 Acouphène de mort** — sifflement + monde étouffé 1 s côté perdant. —
+  *assets : 1 sample.*
+- **V2.9 « Effleuré : 13 px »** — afficher au perdant la distance
+  perpendiculaire du tir fatal (la formule de dégâts la connaît). Le « j'y
+  étais presque » est le moteur du rematch.
+
+### Vague 3 — Le rematch et le rythme (là où « encore une » se décide)
+
+- **V3.1 REJOUER respire** — scale 1,00→1,03 au BPM, curseur aimanté dessus
+  (`nav_seed`).
+- **V3.2 La pression du prêt** — quand l'adversaire passe « ✓ PRÊT » (RPC déjà
+  reçu), ping sonore + pulse du libellé. — *assets : 1 sample.*
+- **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par
+  chiffre ; le CanvasModulate remonte du noir absolu au noir de jeu sur le
+  « 1 » : la lumière naît au début de manche. — *assets : 3 notes courtes.*
+- **V3.4 Dernière minute** — chrono or, stem batterie (V1.2), tic-tac sous
+  10 s. — *assets : 1 tic-tac.*
+- **V3.5 VICTOIRE qui claque** — lettres qui tombent une à une, fond pulsé au
+  BPM. — *assets : 1 impact typographique.*
+- **V3.6 Score qui se remplit** — la nouvelle unité de « SESSION : 3 - 2 »
+  glisse avec un son de pion. — *assets : 1 sample.*
+- **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
+  menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*
+- **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
+  détente. — *assets : 1 sample.*
+- **V3.9 Série de session** — « SÉRIE : 3 » à l'écran de fin, brisée avec un
+  bruit de verre. — *assets : 1 sample.*
+- **V3.10 Stingers accordés** — kill/victoire/défaite/égalité dans la tonalité
+  du thème : le jeu devient un seul instrument. — *assets : couvert par V2.3,
+  V3.7, V3.8.*
+
+### Vague 4 — L'identité du tir et de l'impact
+
+- **V4.1 Un son PAR arme** — les 4 armes partagent `weapon_shoot.wav`. Corps +
+  queue distincts : le fusil claque, le pompe tonne, l'arbalète chuinte. —
+  *assets : 4×2 samples.*
+- **V4.2 Hitmarker centre/bord** — « thock » à pleins dégâts, « tick » en
+  effleurement, branché sur `rpc_update_hp` (autoritaire), pas sur la balle
+  prédite. — *assets : 2 samples.*
+- **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
+  le geste le plus stylé du jeu. — *assets : 3 samples.*
+- **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
+  presse pendant le rechargement. — *assets : 1 sample.*
+- **V4.5 Chiffres de dégâts avec poids** — pop TRANS_BACK, taille ∝ dégâts,
+  or si ≥ 50.
+- **V4.6 Zoom-kick à l'encaisse** — 2 % de dézoom 100 ms côté blessé.
+- **V4.7 Vignette battante** — la vignette rouge pulse à 170 BPM sous 30 HP,
+  synchrone du stem heartbeat.
+- **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
+  *assets : 3-4 samples.*
+- **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact. —
+  *assets : 4-6 samples.*
+- **V4.10 Vol de l'arbalète** — chuintement doppler discret du carreau sans
+  lumière. — *assets : 1 boucle courte.*
+- **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
+  (déjà sans ombre) : toucher, c'est voir.
+- **V4.12 Recul de caméra directionnel** — kick 4-6 px opposé au tir.
+- **V4.13 Fumée de bouche** — 2-3 particules additives dérivant 1 s.
+- **V4.14 Le sol répond** — décal lumineux 1 frame sous le tireur.
+- **V4.15 Duck des pas sous le tir** — −6 dB pendant 300 ms après un coup de
+  feu.
+- **V4.16 Priorités du pool SFX** — protéger les sons « récit » (kill, hit
+  autoritaire) du vol de voix par les pas.
+
+### Vague 5 — Le noir qui respire (la traque, budget discret)
+
+- **V5.1 Claquement de torche iconique** — le son entendu 500 fois par
+  soirée, avec 2 frames de sur-intensité à l'amorçage. — *assets : 2 samples
+  soignés.*
+- **V5.2 Allumer = entendre** — amplifier le passe-bas piloté par les torches
+  (déjà câblé) + sweep audible à l'allumage.
+- **V5.3 L'éblouissement se sent** — bloom pulsé + acouphène doux suivant
+  `dazzle_amount` côté ébloui. — *assets : 1 boucle.*
+- **V5.4 Respiration de la torche** — Perlin lent ±3 % sur l'énergie.
+- **V5.5 Poussière dans le faisceau** — particules additives ténues (pool).
+- **V5.6 Rétrodiffusion pulsée au pas** — le BodyLight respire en marchant.
+- **V5.7 Pas par matériau** — 2 jeux de pas pour les 2 sols du damier. —
+  *assets : 2×4 samples.*
+- **V5.8 Shimmer du liseré néon** — les bordures des murs scintillent sous une
+  lumière directe.
+- **V5.9 Streaks de sprint** — vignette resserrée + traits de vitesse côté
+  sprinteur.
+- **V5.10 Présence de la salle** — sons ponctuels pannés très espacés. —
+  *assets : 5-8 samples d'ambiance.*
+- **V5.11 Frôlement de mur** — tissu + poussière à < 10 px d'un mur. —
+  *assets : 3 samples.*
+- **V5.12 Réverb par carte** — room size dérivée de `grid_size` à l'entrée de
+  manche.
+
+### Vague 6 — Killcam, menu, méta (confort et rétention)
+
+- **V6.1 Grain VHS dynamique** — l'overlay killcam monte pendant le
+  bullet-time, se stabilise à l'impact (un uniform à animer).
+- **V6.2 Trajectoire au trait** — la balle fatale dessine sa ligne complète en
+  pointillé pendant le rejeu : la killcam devient professeur.
+- **V6.3 Sidechain du ralenti** — heartbeat + souffle seuls pendant le
+  bullet-time, tout relâcher à l'impact.
+- **V6.4 Rembobinage VHS** — son de bande + timecode à rebours 300 ms au
+  lancement. — *assets : 1 sample.*
+- **V6.5 Négatif à l'impact** — 2 frames d'inversion vidéo au moment fatal.
+- **V6.6 Le menu vit dans le noir** — torche fantôme balayant le fond du menu.
+- **V6.7 Six slots néon** — le code de salon (6 caractères fixes) en 6 cases
+  qui s'allument, clic par caractère. — *assets : 1-2 samples de frappe.*
+- **V6.8 Power-on de connexion** — les deux moitiés d'écran s'allument à la
+  connexion. — *assets : 1 sample.*
+- **V6.9 Écran HISTORIQUE** — lire `match_history.json` (armes, cartes,
+  durées) dans un onglet : contempler ses matchs, c'est revenir.
+- **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
+  « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
+
+### À trancher par Adrien avant d'implémenter (info de gameplay ou perf)
+
+- **D1 Empreintes éphémères** — traces de pas ~2 s visibles seulement sous une
+  lumière : le noir garde une mémoire courte, la traque devient pistage. Info
+  nouvelle mais symétrique — la plus forte idée « mécanique » de la liste. —
+  *assets : 2-3 sprites (ou procédural).*
+- **D2 Bourdon d'aveuglement** — la nappe monte quand on n'a pas VU
+  l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
+- **D3 Extinction traînée** — la torche s'éteint en ~80 ms au lieu d'un coupé
+  sec : ~80 ms d'info en plus pour l'adversaire.
+- **D4 Grésillement positionnel de torche** — audible à très courte portée par
+  l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
+  *assets : 1 boucle.*
+- **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
+  `bench_framerate` avant d'acter (1 % bas ≥ 120).
+- **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
+  auto-start.
+- **D7 Sang persistant entre matchs d'une session** — l'arène raconte la
+  soirée (exige le plafond de taches déjà relevé comme fragilité).
+
+### Ressources à fournir (liste de courses consolidée)
+
+| Type | Contenu | Volume |
+|---|---|---|
+| Musique (V1.1, stingers) | 3 clips + 3 stems 170 BPM, 4 stingers accordés | ~10 .ogg |
+| Voix annonceur (V1.3) | fight, victoires, égalité + parfait, de justesse | 4-8 .wav |
+| Sons d'armes (V4.1) | corps + queue par arme | 8 samples |
+| Foley | pas ×2, douilles, ricochets, frôlements, ambiances, torche | ~25 samples |
+| UI / récit | frappes, ping prêt, pion, impacts typo, tic-tac, verre, rewind | ~10 samples |
+| Corps | souffles blessé, acouphènes | ~8 samples |
+| Visuel | quasi rien (procédural) — éventuellement 1-2 fontes, sprites D1, logo | 0-6 fichiers |
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -956,6 +1145,11 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
    lente des deux côtés.
 7. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
    ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
+8. Le **game feel** (section dédiée, six vagues priorisées) accompagne les
+   phases de contenu sans les bloquer : la Vague 1 réveille des systèmes déjà
+   câblés (meilleur ratio du projet), et la commande des assets V1.1 (stems)
+   et V1.3 (voix annonceur) gagne à partir maintenant — leur délai de
+   production est le plus long de toute la liste.
 
 ## Journal des tests à deux machines
 
