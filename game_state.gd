@@ -81,6 +81,12 @@ var _join_deadline_active: bool = false
 var _round_token: int = 0
 var _end_sequence_active: bool = false
 
+# Vrai entre le début d'un match EN LIGNE et son archivage. Décision actée :
+# quitter un match en cours vaut forfait — le joueur resté gagne, celui qui part
+# perd. Ce jeton dit qu'il reste un résultat à écrire, et il n'y en a qu'un :
+# l'abandon emprunte plusieurs chemins de retour au menu, qui se croisent.
+var _forfeit_pending: bool = false
+
 # [Hôte] Effets différés jusqu'à la fin de la séquence : la killcam de chaque
 # machine a sa propre durée, le client peut donc être prêt — ou arriver — alors
 # que l'hôte est encore au ralenti.
@@ -222,6 +228,9 @@ func _on_peer_connected(id: int):
 
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		# Avant toute remise à zéro : l'enregistrement lit les armes, le chrono et
+		# le mode, que la suite de cette fonction efface.
+		_archive_forfeit(0)
 		if id == client_peer_id:
 			client_peer_id = 0
 		# Toute séquence de fin en vol devient caduque : sans ce jeton elle
@@ -624,6 +633,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# changement de carte depuis le menu, sans redémarrer le jeu.
 	rebuild_arena()
 	sandbox_mode = false
+	# Un vrai match en ligne commence ici, et ici seulement : l'hôte resté seul
+	# n'atteint jamais ce point, il repart en bac à sable plus haut. À partir de
+	# maintenant, partir coûte le match.
+	_forfeit_pending = NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	_set_training_target_active(false)
 	if is_instance_valid(particle_pool):
 		particle_pool.clear_all()
@@ -1113,7 +1126,9 @@ func _do_end_round(winner_id: int):
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
 ## chaque machine journalise le match qu'elle vient de jouer, y compris le
 ## client — il n'y a aucun échange réseau ici.
-func _archive_match_result(winner_id: int) -> void:
+func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
+	# Le match est résolu : plus rien à forfaire dessus.
+	_forfeit_pending = false
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -1121,8 +1136,31 @@ func _archive_match_result(winner_id: int) -> void:
 		p2.current_weapon.name if p2 and p2.current_weapon else "",
 		MapData.selected_map_id,
 		_mode_label(),
-		MATCH_FORMAT)
+		MATCH_FORMAT,
+		forfeit)
 	MatchRecord.append_to_history(record)
+
+## Archive un match gagné par abandon de l'adversaire.
+##
+## Le jeton `_forfeit_pending` est ce qui rend l'opération sûre : abandonner
+## emprunte plusieurs chemins de retour au menu, qui se croisent — signal du
+## transport, dialogue de déconnexion, bouton MENU PRINCIPAL — et sans lui le
+## même match serait archivé deux ou trois fois.
+##
+## À appeler AVANT `NetworkManager.disconnect_from_game()` : celui-ci remet le
+## mode en local, et l'enregistrement ne saurait plus dire s'il vient d'un hôte
+## ou d'un client.
+func _archive_forfeit(winner_id: int) -> void:
+	if not _forfeit_pending:
+		return
+	_archive_match_result(winner_id, true)
+
+## Indice du joueur incarné par CETTE machine, -1 hors ligne.
+func _local_player_index() -> int:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: return 0
+		NetworkManager.GameMode.ONLINE_CLIENT: return 1
+		_: return -1
 
 func _mode_label() -> String:
 	match NetworkManager.current_mode:
@@ -1303,6 +1341,15 @@ func _restore_viewports():
 
 
 func _on_main_menu_requested():
+	# Départ volontaire en plein match : c'est un abandon, et il se paie. Le
+	# vainqueur est l'adversaire — celui qui reste. Archivé AVANT la déconnexion,
+	# qui repasse le mode en local et rendrait l'enregistrement muet sur son
+	# origine. Si un signal du transport est déjà passé par là, le jeton a été
+	# consommé et cet appel ne fait rien.
+	var local_idx := _local_player_index()
+	if local_idx >= 0:
+		_archive_forfeit(1 - local_idx)
+
 	NetworkManager.disconnect_from_game()
 
 	client_peer_id = 0
@@ -1368,6 +1415,11 @@ func _on_main_menu_requested():
 	AudioManager.play_music("music_menu")
 
 func _on_quit_requested():
+	# Quitter le jeu en plein match est un abandon comme un autre : il se paie.
+	var local_idx := _local_player_index()
+	if local_idx >= 0:
+		_archive_forfeit(1 - local_idx)
+
 	# quit() ne prend effet qu'en fin de frame : sortir depuis une killcam
 	# étirerait ces dernières frames au ralenti.
 	Engine.time_scale = 1.0
@@ -1377,6 +1429,8 @@ func _on_quit_requested():
 
 ## [Client Uniquement] Appelé quand l'hôte ferme le serveur ou plante.
 func _on_host_disconnected():
+	# L'hôte est parti en cours de match : le client encaisse la victoire.
+	_archive_forfeit(1)
 	ui.show_dialog_message("Déconnexion", "L'hôte a fermé la partie. Retour au menu principal.")
 	_on_main_menu_requested()
 

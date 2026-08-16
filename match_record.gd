@@ -12,7 +12,9 @@ const HISTORY_PATH := "user://match_history.json"
 ## Version du schéma d'un enregistrement. À incrémenter à chaque changement de
 ## clé : le futur envoi ELO relira des journaux écrits par des versions
 ## différentes du jeu et devra savoir quelle forme il a sous les yeux.
-const SCHEMA_VERSION := 1
+##
+## 2 — ajout de `forfait`.
+const SCHEMA_VERSION := 2
 
 ## L'historique est plafonné : c'est un journal local, pas une base. Au-delà,
 ## les entrées les plus anciennes sont oubliées.
@@ -48,10 +50,18 @@ static func is_match_over(format: int, p1_rounds: int, p2_rounds: int) -> bool:
 ##
 ## `winner_id` suit la convention du jeu : 0 = J1, 1 = J2, -1 = égalité (temps
 ## écoulé). `duration` est la durée effective, décompte de départ exclu.
+##
+## `forfeit` distingue une victoire gagnée d'une victoire encaissée parce que
+## l'adversaire est parti. Sans ce drapeau, le classement ne pourrait pas faire
+## la différence — or elle est capitale : un abandon compte, mais il ne dit rien
+## du niveau des deux joueurs, et le jour où il faudra le pondérer autrement,
+## c'est ce champ qui permettra de recalculer sans rejouer l'histoire.
 static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: String,
-		map_id: String, mode: String, format: int = Format.BO1) -> Dictionary:
+		map_id: String, mode: String, format: int = Format.BO1,
+		forfeit: bool = false) -> Dictionary:
 	return {
 		"version": SCHEMA_VERSION,
+		"forfait": forfeit,
 		"vainqueur": winner_id,
 		"egalite": winner_id == -1,
 		"duree": snappedf(maxf(duration, 0.0), 0.01),

@@ -460,6 +460,7 @@ Le client Godot refuse en outre tout profil sans identifiant.
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
+| **Un abandon vaut forfait** | Décision du 2026-08-16. Quitter un match en ligne en cours donne la victoire à celui qui reste : c'est archivé, drapeau `forfait` à l'appui. **La faille est connue et acceptée** : il suffit de couper la connexion de l'adversaire pour lui voler un forfait, ou d'invoquer sa propre coupure. Les deux autres règles envisagées ne valent pas mieux — jeter le match récompense celui qui débranche en train de perdre. Aucune n'est bonne ; celle-ci a au moins le mérite de ne pas rendre l'abandon gratuit. À revoir quand il y aura assez de joueurs pour que ça se pratique. |
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
@@ -493,6 +494,18 @@ Le client Godot refuse en outre tout profil sans identifiant.
   ~2 Go et un mot de passe administrateur. Quand un outil existe en binaire
   autonome, le prendre directement plutôt que de payer ce détour — c'est ce qui
   a été fait pour la CLI Supabase (voir [SUPABASE.md](SUPABASE.md)).
+
+**Tests à deux instances locales**
+- **Deux instances `--eos-ephemeral` lancées coup sur coup se marchent dessus.**
+  La seconde échoue sur `create_device_id — DuplicateNotAllowed` et repart sans
+  identité Epic. Les espacer, ou basculer sur le transport ENet (`RÉSEAU LOCAL`,
+  IP `127.0.0.1`), qui teste les mêmes chemins sans dépendre d'Epic.
+- **Les deux instances partagent le même `user://`**, donc le même
+  `match_history.json`. Sans conséquence entre deux machines, mais en local les
+  deux journaux n'en font qu'un : ne pas y lire un « chaque camp a bien archivé
+  le sien ».
+- Le focus clavier reste sur la dernière fenêtre touchée. Un test piloté qui
+  envoie Échap ou F3 les adresse à cette fenêtre-là, pas à celle qu'on regarde.
 
 **Supabase / vérification de jeton**
 - **`startsWith` ne valide pas un émetteur.** Le contrôle « l'émetteur commence
@@ -589,7 +602,14 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 1. **Étape 2 de la Phase 4 : le calcul d'ELO lui-même**, et la table des matchs
    qui portera à son tour le champ `arbitration`. L'étape 1 étant close, plus
-   rien ne la bloque.
+   rien ne la bloque. La règle d'abandon est tranchée et implémentée — c'était
+   le préalable qui commandait le schéma.
+
+   Recommandation d'architecture pour cette étape : **stocker les matchs,
+   dériver le classement**. La table des matchs fait foi et reste immuable ; le
+   classement en est une valeur recalculable. Un mauvais facteur K ou une
+   mauvaise pondération du forfait cesse alors d'être fatal — on rejoue
+   l'historique au lieu de vivre avec.
 3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
 4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
