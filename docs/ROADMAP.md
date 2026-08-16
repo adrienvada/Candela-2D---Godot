@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-15 (nuit)
+> Dernière mise à jour : 2026-08-16
 
 ---
 
@@ -27,7 +27,7 @@ décision se juge à cette double aune.
 |---|---|---|
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
-| 3 | **EOS — connectivité** | 🟡 **En cours** — branche `eos-transport` |
+| 3 | **EOS — connectivité** | 🟡 Aucun point technique ouvert — branche `eos-transport`, en attente d'une contre-vérification à deux machines |
 | 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
 
 ---
@@ -152,21 +152,18 @@ dur, sans redirection de port ni configuration.
 Nuance à garder : **le relais Epic n'a jamais été exercé**, la connexion
 directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
 
-### Défauts relevés pendant H1 — à corriger
+### Défauts relevés pendant H1 — tous corrigés
 
-- **Jointure peu fiable, et message trompeur.** `network_manager.gd:248` affiche
-  « introuvable ou déjà complet » quand `join_async` échoue *après* une
-  recherche réussie : l'invité voyait « salon plein » alors que l'hôte
-  attendait. Cause identifiée : l'appartenance au salon et le lien P2P
-  divergent. `max_lobby_members = 2`, et **rien ne retire du salon un joueur
-  parti** — `_on_peer_disconnected` ne réarme que l'acceptation des demandes
-  P2P. Un invité qui quitte laisse son adhésion derrière lui, le salon reste à
-  2/2, et la jointure suivante est réellement refusée. Côté invité,
-  `_leave_lobby_async()` est appelé sans `await` depuis `disconnect_from_game()`
-  et peut être interrompu. À traiter : réconcilier le salon au départ d'un pair
-  (expulser le membre ou détruire/recréer le salon), garantir le départ côté
-  invité, distinguer « salon complet » des autres échecs, et réessayer la
-  recherche plutôt que d'abandonner au premier échec.
+- ~~**Salon fantôme.**~~ **Corrigé** (`313e33e`). L'appartenance à un salon EOS
+  survit à la rupture du lien P2P : l'invité parti restait compté, le salon
+  demeurait à 2/2 et refusait réellement la jointure suivante, pendant que
+  l'hôte affichait « en attente du joueur 2 ». `_on_peer_disconnected` ne
+  réarmait que l'acceptation des demandes P2P. Le plugin n'exposant aucune
+  expulsion, l'hôte **reconstruit** son salon au départ d'un pair, en conservant
+  le code déjà communiqué. Au passage, le message « introuvable ou déjà
+  complet » couvrait deux causes opposées : un salon vraiment plein annonce
+  désormais son occupation chiffrée, un refus d'Epic le dit et invite à
+  réessayer.
 - ~~**Killcam muette.**~~ **Corrigé.** L'enregistrement n'était pas en cause
   (3 évènements relevés des deux côtés) : la fenêtre de rejeu démarrait à
   `snapshots.size() - 240`, donc calée sur la **fin de l'enregistrement** — or
@@ -248,7 +245,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 | # | Jalon | Pourquoi humain | Quand |
 |---|---|---|---|
-| H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le seul scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés), qui force le relais Epic. | **Prochain jalon bloquant** |
+| H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés). | ✅ Fait le 2026-08-16 — **contre-vérification à refaire** depuis les correctifs |
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
 | H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
@@ -258,12 +255,11 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **H1 : test à deux machines** — Adrien. Débloque la fin de la Phase 3, et
-   c'est désormais le seul point ouvert du chantier EOS.
-2. Fusion de `eos-transport` dans `main` une fois H1 vert.
+1. **Contre-vérification à deux machines** — Adrien. Les trois défauts relevés
+   au premier test sont corrigés ; il reste à confirmer en conditions réelles.
+   Les messages d'échec étant désormais explicites, tout nouveau problème sera
+   directement lisible à l'écran.
+2. Fusion de `eos-transport` dans `main` une fois la contre-vérification verte.
 3. Ouverture de la Phase 4.
 
-Les deux verrues signalées ici — le réglage mort `msaa_2d=2` et l'absence de
-persistance de la résolution et du remappage — sont traitées. Toutes les
-préférences vivent désormais dans `user://settings.cfg`, sectionné
-(`video` / `display` / `input`).
+Aucun point technique n'est ouvert sur le chantier EOS.
