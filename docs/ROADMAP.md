@@ -27,7 +27,7 @@ décision se juge à cette double aune.
 |---|---|---|
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
-| 3 | **EOS — connectivité** | 🟡 Aucun point technique ouvert — branche `eos-transport`, contre-vérification à deux machines à refaire |
+| 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
 
 ---
@@ -64,7 +64,7 @@ plus. Sera absorbé par le test à deux machines de la Phase 3.
 
 ---
 
-## Phase 3 — EOS (connectivité) 🟡
+## Phase 3 — EOS (connectivité) ✅
 
 **Objectif :** que deux joueurs quelconques sur Internet se rejoignent par un
 code, sans configuration, sans redirection de port.
@@ -140,6 +140,16 @@ code, sans configuration, sans redirection de port.
   Au passage, `anti_aliasing/quality/msaa_2d=2` a été retiré : inopérant sous
   `gl_compatibility` (« 2D MSAA is not yet supported for GLES3 » à chaque
   démarrage), c'était un réglage mort.
+
+### Validation finale — 2026-08-16 ✅
+
+Quatrième session à deux machines : commandes, déplacements, tirs, dégâts et
+killcam fonctionnent des deux côtés. **La Phase 3 est close.**
+
+Réglage de confort passé au même moment : la torche des fantômes est plafonnée
+à la moitié de son intensité de jeu pendant la killcam
+(`KILLCAM_TORCH_ENERGY`). À pleine puissance le halo passait par-dessus la
+balle, qui est pourtant le sujet de la séquence.
 
 ### Traversée de NAT — validée le 2026-08-16 (jalon H1) ✅
 
@@ -327,11 +337,13 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Contre-vérification à deux machines** — Adrien. Le rejet des commandes est
-   corrigé ; F3 doit maintenant afficher le **même chemin `CHEMIN J2`** des deux
-   côtés, et les commandes reçues doivent monter chez l'hôte.
-2. Fusion de `eos-transport` dans `main`.
-3. Ouverture de la Phase 4.
+1. **Ouverture de la Phase 4** — Supabase et ELO. Premier jalon humain : la
+   création du projet Supabase et de ses clés (H5).
+2. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+   `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
+3. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+   connexion directe a toujours abouti), et la détection de déconnexion est
+   lente des deux côtés.
 
 ## Journal des tests à deux machines
 
@@ -340,3 +352,4 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | 2026-08-16 (matin) | Même Wi-Fi ; un poste en 4G ; les deux en 4G, opérateurs différents | `Lien DIRECT` partout, ping 58 ms. Trois défauts relevés : jointure incertaine, message trompeur, killcam muette. Tous corrigés depuis. |
 | 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
 | 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
+| 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |

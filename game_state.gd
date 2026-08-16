@@ -44,6 +44,11 @@ var client_peer_id: int = 0
 
 # Décompte de départ, joué à l'identique des deux côtés : il donne au client le
 # temps de recevoir la manche et évite les départs décalés.
+## Torche des fantômes pendant la killcam : moitié de l'intensité de jeu
+## (2,5). À pleine puissance le halo passait par-dessus la balle, qui est le
+## sujet même de la séquence — on regarde le tir, pas l'éclairage.
+const KILLCAM_TORCH_ENERGY := 1.25
+
 const COUNTDOWN_DURATION := 3.0
 var countdown_left: float = 0.0
 
@@ -738,6 +743,7 @@ func _process(delta):
 			ghost_p1.rotation = current_snap.p1_rot
 			ghost_p1.visible = current_snap.p1_visible
 			ghost_p1.get_node("Light").enabled = current_snap.p1_light
+			ghost_p1.get_node("Light").energy = KILLCAM_TORCH_ENERGY
 			ghost_p1.get_node("Flash").enabled = current_snap.p1_flash > 0.0
 			ghost_p1.get_node("Flash").energy = current_snap.p1_flash
 			if current_snap.p1_weapon:
@@ -748,6 +754,7 @@ func _process(delta):
 			ghost_p2.rotation = current_snap.p2_rot
 			ghost_p2.visible = current_snap.p2_visible
 			ghost_p2.get_node("Light").enabled = current_snap.p2_light
+			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY
 			ghost_p2.get_node("Flash").enabled = current_snap.p2_flash > 0.0
 			ghost_p2.get_node("Flash").energy = current_snap.p2_flash
 			if current_snap.p2_weapon:
