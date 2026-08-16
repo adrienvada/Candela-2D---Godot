@@ -300,9 +300,22 @@ reçoivent la leur par variable d'environnement.
   c'est ce qui permettra d'introduire un serveur dédié plus tard sans invalider
   l'historique déjà accumulé.
 - Historique, saisons, liste de salons (reportée depuis la Phase 3).
-- Le PUID Epic sert de clé d'identité. **Limite connue :** le Device ID est lié
-  à la machine — un joueur qui change d'ordinateur perd son classement. Prévoir
-  un mécanisme de récupération ou une liaison de compte.
+- Le PUID Epic sert de clé d'identité, **après vérification** : le client joint
+  son jeton signé par Epic (`EOS.Connect.ConnectInterface.copy_id_token`,
+  disponible dans le plugin — vérifié le 2026-08-16), que l'Edge Function
+  valide contre les clés publiques d'Epic avant d'en extraire le PUID. Sans
+  cette étape, n'importe qui pourrait poster n'importe quel PUID.
+- **Récupération d'identité : code de récupération** (décision du 2026-08-16).
+  Le Device ID Epic étant lié à la machine, un joueur qui change d'ordinateur
+  perdrait son classement. Le jeu lui affiche donc un code à conserver, qui
+  rattache une nouvelle machine au profil existant. Les comptes en bonne et due
+  forme (e-mail, Supabase Auth) viendront plus tard ; ce mécanisme se retire
+  sans douleur le jour venu. Réutiliser l'alphabet sans ambiguïté de
+  `LobbyCode` (ni I, ni O, ni 0, ni 1) : ce code se lit à voix haute et se
+  recopie à la main.
+  **Compromis assumé :** un code de récupération est un secret au porteur —
+  qui l'obtient prend le profil. Proportionné pour un classement de jeu, à
+  revoir si les enjeux montent.
 - Fondation déjà en place : `match_record.gd` archive chaque match dans
   `user://match_history.json` (vainqueur, durée, armes, carte, mode, format).
 
