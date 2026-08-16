@@ -392,7 +392,7 @@ un profil valide et répondait `200` — **un code inventé était accepté**. L
 fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté.
 Le client Godot refuse en outre tout profil sans identifiant.
 
-### Étape 2a — les matchs arrivent en base ✅ CLOSE
+### Étape 2a — les matchs arrivent en base (`3837853`) ✅ CLOSE
 
 **Toujours aucun ELO.** Cette étape archive fidèlement, sans interpréter.
 
@@ -631,7 +631,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 |---|---|---|---|
 | H1 | **Test à deux machines sur deux réseaux Internet distincts** | Exige un second poste et une seconde connexion. Le scénario qui compte : les deux postes en partage de connexion mobile (CGNAT des deux côtés). | ✅ Fait le 2026-08-16 — **contre-vérification à refaire** depuis les correctifs |
 | H2 | Transfert manuel de `eos_credentials.gd` vers la seconde machine | Le fichier est ignoré par git : il ne voyage pas avec le clone. Clé USB ou AirDrop, jamais par mail. | Avec H1 |
-| H3 | Playtest de ressenti (game feel) | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. | Après H1 |
+| H3 | **Playtest de ressenti (game feel)** | Aucun agent ne peut juger si le jeu est amusant, lisible, tendu. Toujours pas fait, alors que le classement se construit par-dessus. | **Le manque le plus voyant** |
 | H4 | Adhésion Apple Developer + notarisation | Décision d'achat (99 $/an), puis validation sur machine vierge. | Avant une sortie publique macOS |
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
@@ -641,19 +641,36 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Étape 2b : le calcul d'ELO**, dérivé de la vue `matches`. Tout est en
+> **État de la branche `supabase-elo` au 2026-08-16 :** 13 commits d'avance sur
+> `origin/supabase-elo`, aucun retard sur `main`. Étapes 1 et 2a closes. Rien
+> n'est poussé — le protocole du dépôt l'interdit sans demande explicite.
+
+1. **Fusionner `supabase-elo` dans `main`.** Deux étapes closes et vérifiées en
+   production dorment sur une branche. Les Phases 2 et 3 ont été fusionnées dès
+   leur clôture ; il n'y a pas de raison de faire autrement ici, et laisser
+   diverger coûtera plus cher plus tard. Demande une décision d'Adrien.
+2. **H3 : le playtest de ressenti.** Jamais fait, et c'est désormais le manque le
+   plus voyant. Le classement se construit pour des joueurs qu'on n'a pas encore,
+   sur un jeu dont personne n'a jugé s'il est amusant trente minutes durant.
+   Aucun agent ne peut y répondre.
+3. **Étape 2b : le calcul d'ELO**, dérivé de la vue `matches`. Tout est en
    place — les matchs concordants sont en base, le forfait est distingué, et
    l'arbitrage est stampé sur chaque ligne. Le classement doit rester une valeur
    **recalculable** : un mauvais facteur K ou une mauvaise pondération du forfait
    se corrige alors en rejouant l'historique, au lieu de se subir.
-2. **Rejouer le journal local** pour les rapports que le réseau a perdus.
+4. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
-3. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+5. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
+   échoué sans qu'on puisse conclure : les frappes synthétiques passent dans un
+   champ de texte (chemin unicode) mais pas sur une action d'`InputMap` (chemin
+   `keycode`). Rien n'indique un défaut, rien ne l'exclut — trente secondes à la
+   main lèveraient le doute.
+6. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-4. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+7. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
-4. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
+8. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
    ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
 
 ## Journal des tests à deux machines
