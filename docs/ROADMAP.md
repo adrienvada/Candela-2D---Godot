@@ -27,7 +27,7 @@ décision se juge à cette double aune.
 |---|---|---|
 | 1 | Local écran partagé | ✅ Terminée |
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
-| 3 | **EOS — connectivité** | 🟡 Aucun point technique ouvert — branche `eos-transport`, en attente d'une contre-vérification à deux machines |
+| 3 | **EOS — connectivité** | 🔴 **Un défaut ouvert** — les commandes du client sont rejetées par l'hôte. Branche `eos-transport` |
 | 4 | Supabase — compétitif / ELO | ⬜ Non commencée |
 
 ---
@@ -176,6 +176,47 @@ directe ayant toujours abouti. Ce chemin de repli reste donc non testé.
   confirmation de l'index Epic ») ; la recherche unique côté client échouait
   alors sur un code pourtant valide. Trois tentatives espacées désormais.
 
+### 🔴 Ouvert — les commandes du client sont rejetées par l'hôte
+
+Constaté au second test à deux machines (2026-08-16, même réseau).
+
+**Symptôme.** Chez l'hôte, J2 reste figé sur son point d'apparition et ses tirs
+n'infligent rien. Chez le client, tout paraît normal : il se voit bouger, voit
+l'hôte, tire et voit ses impacts — tout cela étant prédit localement.
+
+**Ce qui est établi.** Le transport n'est pas en cause : F3 affiche
+`Lien DIRECT`, NAT modéré, et surtout **ping 26 ms** — or le ping est un
+aller-retour applicatif, donc le client répond bien à l'hôte. La réplication
+hôte→client fonctionne (le client voit l'hôte). Seule la remontée
+client→hôte est perdue, et elle l'est **silencieusement**.
+
+**Où ça se joue.** `Player.rpc_send_inputs` comporte deux gardes qui rejettent
+sans rien dire : l'identifiant du pair (`get_remote_sender_id()` comparé à
+`GameState.client_peer_id`) et le numéro de séquence (`seq <= _last_input_seq`).
+Le symptôme est identique dans les deux cas.
+
+**Instrumentation en place** (`57b7e77`) : F3 affiche côté hôte
+`CMD J2 pair=<id> reçues=<n> rejetées=<n>`. `pair=0` désigne la garde du pair ;
+des rejets qui montent pendant que les acceptations stagnent désignent la garde
+de séquence ; des acceptations qui montent avec un J2 figé déplaceraient le
+problème vers la simulation. **En attente d'une capture F3 côté hôte pendant
+que le client bouge.**
+
+Non reproductible à deux instances locales : le banc
+`tools/test_online_match.tscn` mesure 59,5 px de déplacement du client, valeur
+identique des deux côtés.
+
+### Observations mineures relevées au passage
+
+- **La reconstruction du salon ne conserve pas le code.** Vérifiée en séance
+  (le code passe de `29MG4Q` à `S7EYHX` après le départ de l'invité), la
+  reconstruction fonctionne, mais l'ancien salon traîne encore dans l'index
+  d'Epic au moment du nouveau tirage : le code souhaité est vu comme pris. Sans
+  conséquence fonctionnelle, l'hôte affichant le nouveau code.
+- **Détection de déconnexion lente.** Wi-Fi coupé côté invité : l'hôte affiche
+  encore `Lien DIRECT` (ping monté à 64 ms) et les deux camps se croient
+  connectés un bon moment avant le message de rupture. Délai EOS à resserrer.
+
 ---
 
 ## Phase 4 — Supabase (compétitif / ELO) ⬜
@@ -255,11 +296,16 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ## Prochaines étapes
 
-1. **Contre-vérification à deux machines** — Adrien. Les trois défauts relevés
-   au premier test sont corrigés ; il reste à confirmer en conditions réelles.
-   Les messages d'échec étant désormais explicites, tout nouveau problème sera
-   directement lisible à l'écran.
-2. Fusion de `eos-transport` dans `main` une fois la contre-vérification verte.
-3. Ouverture de la Phase 4.
+1. **Capture F3 côté hôte pendant que le client bouge** — Adrien. La ligne
+   `CMD J2 pair=… reçues=… rejetées=…` désignera laquelle des deux gardes
+   rejette les commandes. C'est le seul point bloquant.
+2. Correction du rejet, puis contre-vérification complète à deux machines.
+3. Fusion de `eos-transport` dans `main`.
+4. Ouverture de la Phase 4.
 
-Aucun point technique n'est ouvert sur le chantier EOS.
+## Journal des tests à deux machines
+
+| Date | Configurations | Résultat |
+|---|---|---|
+| 2026-08-16 (matin) | Même Wi-Fi ; un poste en 4G ; les deux en 4G, opérateurs différents | `Lien DIRECT` partout, ping 58 ms. Trois défauts relevés : jointure incertaine, message trompeur, killcam muette. Tous corrigés depuis. |
+| 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontent pas**. Compteurs F3 ajoutés pour trancher. |
