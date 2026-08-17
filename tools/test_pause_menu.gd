@@ -184,8 +184,8 @@ func _test_parenthese_options() -> void:
 
 	_check("le menu s'ouvre", _ui.game_over_panel.visible)
 	_check("la pause s'efface derrière", not _ui.pause_panel.visible)
-	_check("le hub s'ouvre sur les options, et sur rien d'autre",
-		_ui.hub.current_id() == _ui.SCREEN_OPTIONS, _ui.hub.current_id())
+	_check("le hub s'ouvre sur la personnalisation, et sur rien d'autre",
+		_ui.hub.current_id() == _ui.SCREEN_CUSTOM, _ui.hub.current_id())
 	_check("le RETOUR est offert", _ui.btn_back.visible)
 	_check("aucune relance n'est proposée en plein match", not _ui.btn_replay.visible)
 	# Du point de vue du joueur, il est toujours en pause : il ne doit pas agir.

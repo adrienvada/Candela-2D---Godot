@@ -50,14 +50,25 @@ const META_NAV_SEED := "nav_seed"
 ## Les anciens `TAB_*` ont disparu avec la barre d'onglets. Ces identifiants ne
 ## sont pas des libellés : ils servent de clés de navigation et ne s'affichent
 ## jamais — le titre lisible est donné à `add_screen`.
-const SCREEN_PLAY := "jouer"
-const SCREEN_MAPS := "cartes"
-const SCREEN_OPTIONS := "options"
-const SCREEN_CONTROLS := "options_controles"
-const SCREEN_DISPLAY := "options_affichage"
-const SCREEN_EFFECTS := "options_effets"
-const SCREEN_LEADERBOARD := "classement"
+const SCREEN_LOCAL := "salon_local"
+const SCREEN_FRIENDLY := "en_ligne_amical"
+const SCREEN_HOST := "salon_hote"
+const SCREEN_JOIN := "salon_invite"
+const SCREEN_RANKED := "en_ligne_competitif"
+const SCREEN_TRAINING := "entrainement"
 const SCREEN_PROFILE := "profil"
+const SCREEN_CUSTOM := "personnalisation"
+const SCREEN_MAPS := "cartes"
+const SCREEN_CONTROLS := "controles"
+const SCREEN_DISPLAY := "affichage"
+const SCREEN_AUDIO := "audio"
+const SCREEN_EFFECTS := "effets"
+const SCREEN_CALIBRATION := "calibration"
+
+## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
+## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
+## et une entrée retirée du parcours du curseur fait douter du bouton d'à côté.
+const NOT_YET := "Pas encore implémenté. L'entrée est là pour dire où ça ira."
 
 # ---------------------------------------------------------------------------
 # CLASSES INTERNES
@@ -199,6 +210,10 @@ var game_over_score: Label
 var hub: MenuHub
 ## Écrans autonomes (`HubScreen`) par identifiant. Ils ne se connaissent pas.
 var _screens: Dictionary = {}
+## Affichages riches du panneau de droite, par écran.
+var _asides: Dictionary = {}
+## Le classement vit hors de l'arborescence : il se lit dans le panneau de droite.
+var _leaderboard: ScreenLeaderboard
 
 # --- Onglet PROFIL ---
 
@@ -1517,55 +1532,234 @@ func _build_menu() -> void:
 ## qui casse vient du déplacement, et de rien d'autre.
 func _build_hub_screens() -> void:
 	var accueil := hub.add_screen(MenuHub.ROOT, "Candela 2D")
-	var jouer := hub.add_screen(SCREEN_PLAY, "Jouer")
+	var local := hub.add_screen(SCREEN_LOCAL, "Salon local")
+	var amical := hub.add_screen(SCREEN_FRIENDLY, "1v1 en ligne amical")
+	var hote := hub.add_screen(SCREEN_HOST, "Salon — hôte")
+	var invite := hub.add_screen(SCREEN_JOIN, "Salon — rejoindre")
+	var classe := hub.add_screen(SCREEN_RANKED, "En ligne compétitif")
+	var entrainement := hub.add_screen(SCREEN_TRAINING, "S'entraîner")
+	var custom := hub.add_screen(SCREEN_CUSTOM, "Personnalisation")
 	var cartes := hub.add_screen(SCREEN_MAPS, "Cartes")
-	var options := hub.add_screen(SCREEN_OPTIONS, "Options")
-	var controles := hub.add_screen(SCREEN_CONTROLS, "Options — contrôles")
-	var affichage := hub.add_screen(SCREEN_DISPLAY, "Options — affichage")
+	var controles := hub.add_screen(SCREEN_CONTROLS, "Contrôles")
+	var affichage := hub.add_screen(SCREEN_DISPLAY, "Affichage")
 
-	# --- Accueil : les destinations, dans l'ordre de fréquence d'usage ---------
-	accueil.add_child(hub.make_entry("JOUER", "1v1 local ou en ligne", SCREEN_PLAY))
-	accueil.add_child(hub.make_entry("CLASSEMENT", "Le haut du tableau et votre rang",
-		SCREEN_LEADERBOARD, COLOR_GOLD))
-	accueil.add_child(hub.make_entry("PROFIL", "Identité, code de récupération",
-		SCREEN_PROFILE, COLOR_GOLD))
-	accueil.add_child(hub.make_entry("OPTIONS", "Contrôles, affichage, effets",
-		SCREEN_OPTIONS, COLOR_DIM))
+	# --- Accueil --------------------------------------------------------------
+	# Les deux façons de jouer sont proposées **dès l'accueil**, au-dessus de tout
+	# le reste : c'est le geste pour lequel on lance le jeu. Les enfouir sous un
+	# « Jouer » intermédiaire coûtait un clic à chaque partie sans rien apprendre.
+	accueil.add_child(hub.make_entry("1V1 LOCAL",
+		"Écran partagé, deux joueurs sur ce poste. Toutes les armes sont accessibles : "
+		+ "rien n'est en jeu, donc rien n'est verrouillé.", SCREEN_LOCAL))
+	accueil.add_child(hub.make_entry("1V1 EN LIGNE AMICAL",
+		"Contre quelqu'un que vous invitez, par un code de salon. Le résultat n'entre "
+		+ "pas au classement.", SCREEN_FRIENDLY))
+	accueil.add_child(hub.make_entry("EN LIGNE COMPÉTITIF",
+		"Match classé. Le résultat compte, et l'arsenal des deux joueurs s'aligne sur "
+		+ "celui du moins bien classé.", SCREEN_RANKED, COLOR_GOLD))
+	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
+		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
+		SCREEN_TRAINING))
+	accueil.add_child(hub.make_entry("PROFIL",
+		"Votre identité, le code qui vous rend votre classement sur une autre machine, "
+		+ "et l'historique de vos matchs.", SCREEN_PROFILE, COLOR_GOLD))
+	accueil.add_child(hub.make_entry("PERSONNALISATION",
+		"Éditeur de cartes, contrôles, affichage, audio, calibration.",
+		SCREEN_CUSTOM, COLOR_DIM))
+	accueil.add_child(hub.make_entry("QUITTER", "Ferme le jeu proprement.",
+		"", COLOR_P2, "quitter"))
+	hub.set_aside(MenuHub.ROOT, "Candela 2D",
+		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
+		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur un "
+		+ "mur.\n\n[b]Être vu, c'est être mort.[/b]")
 
-	# --- Jouer : le contenu de l'ancien onglet, intact ------------------------
-	# `mode_vbox` porte les bascules local / en ligne, et `selected_network_mode()`
-	# LIT leur état — c'est ce que le netcode interroge au lancement. Les éclater
-	# en écrans distincts est un changement de comportement, pas un déplacement :
-	# il attend l'étape suivante.
-	var center := CenterContainer.new()
-	center.add_child(_build_map_card())
-	jouer.add_child(center)
-	jouer.add_child(_build_mode_block())
-	jouer.add_child(_build_weapon_block())
+	# --- 1v1 local : le salon local -------------------------------------------
+	# `mode_vbox` porte les bascules de mode, et `selected_network_mode()` LIT leur
+	# état — c'est ce que le netcode interroge au lancement. Elles restent donc
+	# dans l'arbre, masquées, et l'entrée dans un écran les positionne. Le
+	# découplage propre est l'étape 3b.
+	local.add_child(hub.make_entry("CARTE", "Choisir l'arène.", SCREEN_MAPS))
+	local.add_child(hub.make_entry("LANCER", "Démarre la manche.", "", COLOR_P1, "lancer"))
+	hub.add_back_entry(SCREEN_LOCAL)
+	_install_aside(SCREEN_LOCAL, _build_local_aside())
 
-	# --- Cartes ---------------------------------------------------------------
+	# --- 1v1 en ligne amical --------------------------------------------------
+	amical.add_child(hub.make_entry("CHERCHER UN MATCH",
+		"Appariement automatique, cartes tirées au hasard.", "", COLOR_P1, "",
+		NOT_YET + " Il faudra un service d'appariement côté serveur."))
+	amical.add_child(hub.make_entry("CRÉER UN SALON",
+		"Vous hébergez. Un code à six caractères est produit, à transmettre à votre "
+		+ "adversaire.", SCREEN_HOST))
+	amical.add_child(hub.make_entry("REJOINDRE UN SALON",
+		"Vous entrez le code de quelqu'un. C'est l'hôte qui choisit la carte.",
+		SCREEN_JOIN))
+	hub.add_back_entry(SCREEN_FRIENDLY)
+
+	# --- Salon hôte -----------------------------------------------------------
+	hote.add_child(hub.make_entry("CARTE", "L'hôte choisit l'arène des deux joueurs.",
+		SCREEN_MAPS))
+	hote.add_child(hub.make_entry("PRÊT", "Lance le match dès que l'adversaire est là.",
+		"", COLOR_P1, "lancer"))
+	hub.add_back_entry(SCREEN_HOST)
+	_install_aside(SCREEN_HOST, _build_host_aside())
+
+	# --- Salon invité ---------------------------------------------------------
+	invite.add_child(hub.make_entry("PRÊT", "Rejoint le salon dont vous avez saisi le code.",
+		"", COLOR_P1, "lancer"))
+	hub.add_back_entry(SCREEN_JOIN)
+	_install_aside(SCREEN_JOIN, _build_join_aside())
+
+	# --- En ligne compétitif --------------------------------------------------
+	classe.add_child(hub.make_entry("CHERCHER UN MATCH",
+		"Appariement classé.", "", COLOR_GOLD, "",
+		NOT_YET + " Le classement existe et fonctionne ; c'est l'appariement qui manque."))
+	hub.add_back_entry(SCREEN_RANKED)
+	hub.set_aside(SCREEN_RANKED, "En ligne compétitif",
+		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO se "
+		+ "recalcule, les rangs existent. Ce qui manque est l'appariement — de quoi "
+		+ "trouver un adversaire de niveau proche sans échanger un code.\n\n"
+		+ "En attendant, un match amical vous fait jouer ; il ne compte simplement pas.")
+
+	# --- S'entraîner ----------------------------------------------------------
+	entrainement.add_child(hub.make_entry("CARTE", "Choisir l'arène.", SCREEN_MAPS))
+	entrainement.add_child(hub.make_entry("LANCER", "Démarre la séance.", "", COLOR_P1,
+		"entrainement", NOT_YET + " La cible existe déjà dans le code : elle ne "
+		+ "s'active pour l'instant qu'en attendant un adversaire en ligne."))
+	entrainement.add_child(hub.make_entry("MON RANG",
+		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
+		"mon_rang"))
+	entrainement.add_child(hub.make_entry("TOP 10",
+		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
+		COLOR_GOLD, "top10"))
+	hub.add_back_entry(SCREEN_TRAINING)
+
+	# --- Profil : l'écran autonome, plus les vues à droite ---------------------
+	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
+	hub.add_back_entry(SCREEN_PROFILE)
+
+	# --- Personnalisation -----------------------------------------------------
+	custom.add_child(hub.make_entry("ÉDITEUR DE CARTES",
+		"Dessiner une arène, la partager par un code.", SCREEN_MAPS))
+	custom.add_child(hub.make_entry("CONTRÔLES", "Manette et clavier.", SCREEN_CONTROLS))
+	custom.add_child(hub.make_entry("AFFICHAGE", "Fenêtre, vsync, images par seconde.",
+		SCREEN_DISPLAY))
+	custom.add_child(hub.make_entry("AUDIO", "Général, musique, effets, annonceur.",
+		SCREEN_AUDIO, COLOR_P1, "",
+		NOT_YET + " Les quatre volumes sont déjà persistés ; c'est l'écran qui manque."))
+	custom.add_child(hub.make_entry("EFFETS",
+		"Ce qui se règle librement, et ce qui garde un plancher en classé.",
+		SCREEN_EFFECTS, COLOR_GOLD))
+	custom.add_child(hub.make_entry("CALIBRATION", "Luminosité, gamma, daltonisme.",
+		SCREEN_CALIBRATION, COLOR_P1, "",
+		NOT_YET + " Dans un jeu dont l'unique canal est la lumière, un écran mal réglé "
+		+ "est un avantage : il faut une cible perceptive, pas un curseur nu."))
+	hub.add_back_entry(SCREEN_CUSTOM)
+
+	# --- Cartes, contrôles, affichage, effets ---------------------------------
 	map_gallery = MapGallery.new()
 	map_gallery.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	map_gallery.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_gallery.map_chosen.connect(_on_map_chosen)
 	cartes.add_child(map_gallery)
-
-	# --- Options et ses sous-écrans -------------------------------------------
-	options.add_child(hub.make_entry("CONTRÔLES", "Manette et clavier", SCREEN_CONTROLS))
-	options.add_child(hub.make_entry("AFFICHAGE", "Fenêtre, vsync, images par seconde",
-		SCREEN_DISPLAY))
-	options.add_child(hub.make_entry("EFFETS", "Ce qui se règle, et ce qui a un plancher",
-		SCREEN_EFFECTS, COLOR_GOLD))
+	hub.add_back_entry(SCREEN_MAPS)
 
 	_fill_controls_screen(controles)
+	hub.add_back_entry(SCREEN_CONTROLS)
+
 	affichage.add_child(_build_display_block())
 	affichage.add_child(_build_video_block())
+	hub.add_back_entry(SCREEN_DISPLAY)
 
-	_attach_screen(SCREEN_LEADERBOARD, "Classement", ScreenLeaderboard.new())
-	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
-	_attach_screen(SCREEN_EFFECTS, "Options — effets", ScreenEffects.new())
+	_attach_screen(SCREEN_EFFECTS, "Effets", ScreenEffects.new())
+	hub.add_back_entry(SCREEN_EFFECTS)
 
+	# Le classement n'est plus une destination : il se lit dans le panneau de
+	# droite depuis l'écran d'entraînement. L'écran reste construit — c'est lui qui
+	# sait tenir les six états du service — mais hors de l'arborescence.
+	_leaderboard = ScreenLeaderboard.new()
+	_leaderboard.hide()
+	add_child(_leaderboard)
+
+	hub.action_requested.connect(_on_hub_action)
+	hub.back_at_root.connect(func() -> void: pass)
 	hub.reset()
+
+## Panneau de droite du salon local : les deux râteliers d'armes.
+func _build_local_aside() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", GAP_S)
+	box.add_child(_build_map_card())
+	box.add_child(_build_weapon_block())
+	# Les bascules de mode vivent ici, masquées : `selected_network_mode()` lit
+	# leur état, et le netcode l'interroge au lancement.
+	var modes := _build_mode_block()
+	modes.hide()
+	box.add_child(modes)
+	return box
+
+func _build_host_aside() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", GAP_S)
+	box.add_child(_make_section_label("SALON", COLOR_GOLD))
+	box.add_child(lobby_code_row)
+	box.add_child(lobby_status_label)
+	box.add_child(host_ip_row)
+	return box
+
+func _build_join_aside() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", GAP_S)
+	box.add_child(_make_section_label("CODE DU SALON", COLOR_GOLD))
+	var center := CenterContainer.new()
+	center.add_child(join_input)
+	box.add_child(center)
+	return box
+
+## Installe un affichage riche à droite d'un écran, montré tant qu'aucune entrée
+## n'a pris la parole.
+func _install_aside(id: String, content: Control) -> void:
+	_asides[id] = content
+	content.hide()
+	hub.detail_host().add_child(content)
+
+func _on_hub_action(action: String) -> void:
+	match action:
+		"lancer":
+			get_tree().paused = false
+			replay_requested.emit()
+		"quitter":
+			get_tree().paused = false
+			quit_requested.emit()
+		"mon_rang":
+			hub.show_detail("Mon rang", _my_rank_text())
+		"top10":
+			hub.show_detail("Top 10", _top_ten_text())
+
+## Le classement, en texte, pour le panneau de droite. Aucun chiffre inventé : un
+## joueur sans ligne au classement n'a pas de rang, et on le dit.
+func _my_rank_text() -> String:
+	if not is_instance_valid(RankedIdentity):
+		return "Classement non configuré sur cette installation."
+	var label := RankedIdentity.standing_label()
+	return label if label != "" else "Classement indisponible pour l'instant."
+
+func _top_ten_text() -> String:
+	var snap: Dictionary = RankedIdentity.standing_snapshot() \
+		if RankedIdentity.has_method("standing_snapshot") else {}
+	if not bool(snap.get("loaded", false)):
+		var err := String(snap.get("error", ""))
+		return err if err != "" else "Lecture du classement en cours…"
+	var top: Array = snap.get("top", [])
+	if top.is_empty():
+		return "Personne n'a encore joué de match classé."
+	var out := PackedStringArray()
+	for row in top:
+		if not row is Dictionary:
+			continue
+		var d: Dictionary = row
+		out.append("[b]%d.[/b]  %s  —  %d pts  ·  %s" % [
+			int(d.get("rank", 0)), String(d.get("nickname", "—")),
+			int(d.get("rating", 0)), String(d.get("rank_label", ""))])
+	return "\n".join(out)
 
 ## Installe un `HubScreen` autonome dans un écran du hub.
 ##
@@ -1587,8 +1781,15 @@ func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
 		screen.refresh()
-	if id == SCREEN_PLAY:
+	for key in _asides.keys():
+		var content: Control = _asides[key]
+		if content != null:
+			content.visible = key == id
+	if id == SCREEN_LOCAL or id == SCREEN_HOST:
 		_refresh_map_card()
+		_refresh_lobby_block()
+	if id == SCREEN_TRAINING and _leaderboard != null:
+		_leaderboard.refresh()
 	_seed_focus(0)
 	_seed_focus(1)
 
@@ -2199,7 +2400,7 @@ func _open_pause_options() -> void:
 	game_over_score.text = ""
 
 	hub.reset()
-	hub.push(SCREEN_OPTIONS)
+	hub.push(SCREEN_CUSTOM)
 	game_over_panel.show()
 
 func _close_pause_options() -> void:
@@ -2631,6 +2832,14 @@ func _handle_pause_input() -> bool:
 		get_viewport().set_input_as_handled()
 		return true
 
+	# Dans le menu, Échap remonte d'un cran. L'étiquette « ÉCHAP · RETOUR » a
+	# longtemps annoncé un geste que rien n'implémentait : elle est devenue une
+	# entrée cliquable, et la touche la double enfin pour de vrai.
+	if _is_main_menu and hub != null and hub.depth() > 0:
+		hub.back()
+		get_viewport().set_input_as_handled()
+		return true
+
 	return false
 
 # ===========================================================================
@@ -2728,9 +2937,11 @@ func show_game_over(winner_id: int) -> void:
 	_restore_all_tabs()
 	# La carte de la manche suivante est celle de l'hôte : laisser le client en
 	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
-	# Après un match, on repart de l'écran JOUER : c'est là que « rejouer » vit.
+	# Après un match, on repart du salon correspondant au mode joué : c'est là que
+	# « rejouer » a un sens.
 	hub.reset()
-	hub.push(SCREEN_PLAY)
+	hub.push(SCREEN_LOCAL if NetworkManager.current_mode \
+		== NetworkManager.GameMode.LOCAL_SPLITSCREEN else SCREEN_HOST)
 	game_over_panel.show()
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"

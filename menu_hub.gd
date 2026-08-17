@@ -1,47 +1,57 @@
 class_name MenuHub
 extends Control
 
-## Ossature de navigation du menu — Phase 5, structure B.
+## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
-## Un accueil de grandes destinations, chacune un écran entier avec son retour.
-## Cette classe ne connaît **aucun** contenu : elle sait empiler des écrans,
-## revenir, et n'afficher que le courant. Ce que chaque écran raconte est rempli
-## par l'appelant, à l'étape 3.
+## À gauche la liste des entrées, à droite ce que l'entrée sous le curseur
+## raconte. Ce n'est pas une décoration : cela permet à une entrée de **montrer
+## une information sans faire descendre d'un cran**. « Top 10 » n'ouvre pas un
+## sous-menu, il remplit le panneau de droite. Un menu qui obligerait à entrer
+## puis à ressortir pour lire trois lignes ferait payer un aller-retour pour une
+## consultation.
 ##
-## ## Pourquoi une pile et non un parent déclaré
+## Trois natures d'entrée, et la différence se voit à l'œil :
 ##
-## Un écran peut s'atteindre par deux chemins — la galerie de cartes s'ouvre
-## depuis la préparation locale comme depuis le salon en ligne. Un parent fixe
-## renverrait alors le joueur au mauvais endroit, ce qui est le genre de défaut
-## qu'on ne voit qu'en jeu et qu'on met longtemps à croire. La pile renvoie
-## toujours d'où l'on vient.
+## - **destination** — porte un chevron, descend d'un cran ;
+## - **information** — pas de chevron, remplit le panneau de droite ;
+## - **action** — pas de chevron, émet un signal (lancer, quitter).
 ##
-## ## Ce que l'ossature garantit
+## Une entrée peut être **indisponible** : elle reste visible, grisée, et le
+## panneau de droite dit pourquoi. La masquer laisserait croire qu'elle n'existe
+## pas ; la retirer du parcours du curseur ferait douter du bouton d'à côté.
 ##
-## - L'accueil est le fond de pile et ne peut pas en être retiré.
-## - Un seul corps d'écran est visible à la fois ; les autres sont cachés, donc
-##   hors d'atteinte du curseur (voir `_collect_focusables` côté `ui.gd`).
-## - Empiler l'écran courant ne fait rien : sans cela, un double appui sur une
-##   entrée obligerait à deux retours pour un seul aller.
+## ## Le retour est un bouton, pas un rappel de touche
+##
+## La version précédente affichait « ÉCHAP · RETOUR » sans que rien ne soit
+## cliquable — et sans que la touche fasse quoi que ce soit. Un libellé qui
+## annonce une commande inexistante est pire qu'une absence de libellé. Le retour
+## est donc une entrée comme les autres, en bas de chaque liste, atteignable au
+## curseur et à la souris ; la touche le double, elle ne le remplace pas.
 
-## Émis après chaque changement d'écran, y compris les retours.
+## Émis après chaque changement d'écran, retours compris.
 signal screen_changed(id: String)
-## Émis quand on tente de revenir depuis l'accueil. À l'appelant de décider ce
-## que ça veut dire — quitter le jeu, ou rien.
+## Tentative de retour depuis l'accueil. À l'appelant d'en décider.
 signal back_at_root()
+## Une entrée d'action a été activée.
+signal action_requested(action: String)
 
 const ROOT := "accueil"
 
-## Corps de chaque écran, par identifiant.
-var _bodies: Dictionary = {}
-## Titre de chaque écran, par identifiant.
+## Racine de chaque écran : c'est elle qu'on montre et qu'on cache.
+var _roots: Dictionary = {}
+## Colonne de gauche de chaque écran, à remplir par l'appelant.
+var _lists: Dictionary = {}
+## Panneau de droite par défaut de chaque écran.
+var _asides: Dictionary = {}
 var _titles: Dictionary = {}
-## Chemin courant. `[ROOT]` au minimum, jamais vide.
+
+## Chemin courant. Jamais vide : `ROOT` en est le fond.
 var _stack: PackedStringArray = PackedStringArray([ROOT])
 
 var _title_label: Label
-var _back_hint: Label
-var _content: Control
+var _detail_host: VBoxContainer
+var _detail_title: Label
+var _detail_text: RichTextLabel
 var _tween: Tween
 
 func _init() -> void:
@@ -49,84 +59,107 @@ func _init() -> void:
 	_build()
 
 func _build() -> void:
-	var backdrop := ColorRect.new()
-	backdrop.color = MenuTheme.BACKDROP
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(backdrop)
+	var columns := HBoxContainer.new()
+	columns.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	columns.add_theme_constant_override("separation", MenuTheme.GAP_L)
+	add_child(columns)
 
-	var outer := MarginContainer.new()
-	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	outer.add_theme_constant_override("margin_top", MenuTheme.GAP_L)
-	outer.add_theme_constant_override("margin_bottom", MenuTheme.GAP_L)
-	outer.add_theme_constant_override("margin_left", MenuTheme.GAP_L + MenuTheme.GAP_S)
-	outer.add_theme_constant_override("margin_right", MenuTheme.GAP_L + MenuTheme.GAP_S)
-	add_child(outer)
-
-	var root_box := VBoxContainer.new()
-	root_box.add_theme_constant_override("separation", MenuTheme.GAP_M)
-	outer.add_child(root_box)
-
-	root_box.add_child(_build_header())
-
-	# Les corps sont ancrés en plein cadre pour pouvoir glisser latéralement sans
-	# perturber la mise en page — même procédé que les onglets qu'ils remplacent.
-	_content = Control.new()
-	_content.custom_minimum_size = Vector2(0, 440)
-	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_content.clip_contents = true
-	root_box.add_child(_content)
-
-func _build_header() -> Control:
-	var header := VBoxContainer.new()
-	header.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+	# --- Colonne de gauche : le titre et les écrans empilés -------------------
+	var left := VBoxContainer.new()
+	left.custom_minimum_size = Vector2(430, 0)
+	left.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	left.add_theme_constant_override("separation", MenuTheme.GAP_S)
+	columns.add_child(left)
 
 	_title_label = Label.new()
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 46)
+	_title_label.add_theme_font_size_override("font_size", 30)
 	_title_label.add_theme_color_override("font_color", MenuTheme.GOLD)
-	header.add_child(_title_label)
+	left.add_child(_title_label)
 
-	# Le retour n'est pas un bouton : c'est un rappel de touche. Un bouton
-	# « Retour » à parcourir au curseur coûterait un déplacement à chaque écran,
-	# alors que le geste existe déjà sous le pouce.
-	_back_hint = Label.new()
-	_back_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_back_hint.add_theme_font_size_override("font_size", 14)
-	_back_hint.add_theme_color_override("font_color", MenuTheme.DIM)
-	_back_hint.hide()
-	header.add_child(_back_hint)
+	# Les racines d'écran sont ancrées en plein cadre pour pouvoir glisser
+	# latéralement sans perturber la mise en page.
+	var host := Control.new()
+	host.custom_minimum_size = Vector2(0, 420)
+	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	host.clip_contents = true
+	left.add_child(host)
+	_host = host
 
-	return header
+	# --- Colonne de droite : ce que l'entrée sous le curseur raconte ----------
+	var right := PanelContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := StyleBoxFlat.new()
+	style.bg_color = MenuTheme.SURFACE
+	style.set_border_width_all(1)
+	style.border_color = MenuTheme.LINE
+	style.set_corner_radius_all(12)
+	style.content_margin_left = MenuTheme.GAP_M
+	style.content_margin_right = MenuTheme.GAP_M
+	style.content_margin_top = MenuTheme.GAP_M
+	style.content_margin_bottom = MenuTheme.GAP_M
+	right.add_theme_stylebox_override("panel", style)
+	columns.add_child(right)
+
+	_detail_host = VBoxContainer.new()
+	_detail_host.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+	right.add_child(_detail_host)
+
+	_detail_title = Label.new()
+	_detail_title.add_theme_font_size_override("font_size", 20)
+	_detail_title.add_theme_color_override("font_color", MenuTheme.P1)
+	_detail_host.add_child(_detail_title)
+
+	_detail_text = RichTextLabel.new()
+	_detail_text.bbcode_enabled = true
+	_detail_text.fit_content = true
+	_detail_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_detail_text.add_theme_font_size_override("normal_font_size", 15)
+	_detail_text.add_theme_color_override("default_color", MenuTheme.DIM)
+	_detail_host.add_child(_detail_text)
+
+var _host: Control
 
 # ---------------------------------------------------------------------------
-# DÉCLARATION DES ÉCRANS
+# DÉCLARATION
 # ---------------------------------------------------------------------------
 
-## Déclare un écran et rend son corps, à remplir par l'appelant.
+## Déclare un écran et rend sa colonne de gauche, à remplir par l'appelant.
 ##
-## Redéclarer un identifiant existant rend le corps déjà créé plutôt que d'en
-## empiler un second : c'est ce qui permet à l'étape 3 de remplir les écrans en
-## plusieurs passes sans les dupliquer.
+## Attention : `body_of()` rend la **racine** de l'écran — celle qu'on montre et
+## qu'on cache — et non cette colonne. Les deux sont distinctes depuis le passage
+## en deux panneaux.
 func add_screen(id: String, title: String) -> VBoxContainer:
 	_titles[id] = title
-	if _bodies.has(id):
-		return _bodies[id]
+	if _lists.has(id):
+		return _lists[id]
 
-	var body := VBoxContainer.new()
-	body.name = "Screen_" + id
-	body.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	body.alignment = BoxContainer.ALIGNMENT_CENTER
-	body.add_theme_constant_override("separation", MenuTheme.GAP_M)
-	body.hide()
-	_content.add_child(body)
-	_bodies[id] = body
-	return body
+	var root := HBoxContainer.new()
+	root.name = "Screen_" + id
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.hide()
+	_host.add_child(root)
+
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+	root.add_child(list)
+
+	_roots[id] = root
+	_lists[id] = list
+	return list
+
+## Panneau de droite montré quand aucune entrée n'a de contenu propre.
+func set_aside(id: String, title: String, text: String) -> void:
+	_asides[id] = {"titre": title, "texte": text}
 
 func has_screen(id: String) -> bool:
-	return _bodies.has(id)
+	return _lists.has(id)
 
-func body_of(id: String) -> VBoxContainer:
-	return _bodies.get(id, null)
+func body_of(id: String) -> Control:
+	return _roots.get(id, null)
+
+func list_of(id: String) -> VBoxContainer:
+	return _lists.get(id, null)
 
 # ---------------------------------------------------------------------------
 # NAVIGATION
@@ -135,20 +168,16 @@ func body_of(id: String) -> VBoxContainer:
 func current_id() -> String:
 	return _stack[_stack.size() - 1]
 
-## Profondeur courante : 0 à l'accueil.
 func depth() -> int:
 	return _stack.size() - 1
 
-## Descend d'un cran. Sans effet si l'écran n'existe pas ou si on y est déjà.
 func push(id: String) -> bool:
-	if not _bodies.has(id) or id == current_id():
+	if not _lists.has(id) or id == current_id():
 		return false
 	_stack.append(id)
 	_apply(1.0)
 	return true
 
-## Remonte d'un cran. Rend false à l'accueil, où il n'y a rien au-dessus —
-## `back_at_root` est alors émis pour que l'appelant en décide.
 func back() -> bool:
 	if _stack.size() <= 1:
 		back_at_root.emit()
@@ -157,31 +186,24 @@ func back() -> bool:
 	_apply(-1.0)
 	return true
 
-## Retour direct à l'accueil, sans repasser par les écrans intermédiaires.
-## Utilisé à l'ouverture du menu : on ne rouvre jamais un menu là où on l'avait
-## laissé trois écrans plus bas.
 func reset() -> void:
 	_stack = PackedStringArray([ROOT])
 	_apply(0.0)
 
 func _apply(direction: float) -> void:
 	var id := current_id()
-	for key in _bodies.keys():
-		var body: Control = _bodies[key]
-		if body != null and key != id:
-			body.hide()
+	for key in _roots.keys():
+		var root: Control = _roots[key]
+		if root != null and key != id:
+			root.hide()
 
-	var target: Control = _bodies.get(id, null)
+	var target: Control = _roots.get(id, null)
 	if target == null:
 		return
 	target.show()
 
 	_title_label.text = String(_titles.get(id, id)).to_upper()
-	if depth() > 0:
-		_back_hint.text = "ÉCHAP  ·  RETOUR"
-		_back_hint.show()
-	else:
-		_back_hint.hide()
+	_show_aside(id)
 
 	if direction != 0.0:
 		_slide(target, direction)
@@ -190,9 +212,6 @@ func _apply(direction: float) -> void:
 
 	screen_changed.emit(id)
 
-## Fondu court plus glissement dans le sens du déplacement : descendre pousse
-## vers la gauche, remonter ramène depuis la gauche. Le sens fait sentir la
-## profondeur sans qu'on ait à l'écrire à l'écran.
 func _slide(body: Control, direction: float) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
@@ -218,33 +237,61 @@ func _reset_transform(body: Control) -> void:
 	body.offset_right = 0.0
 
 # ---------------------------------------------------------------------------
+# PANNEAU DE DROITE
+# ---------------------------------------------------------------------------
+
+## Contenu par défaut de l'écran courant : ce qu'on lit quand rien n'est survolé.
+func _show_aside(id: String) -> void:
+	var a: Variant = _asides.get(id, null)
+	if a is Dictionary:
+		show_detail(String((a as Dictionary)["titre"]), String((a as Dictionary)["texte"]))
+	else:
+		show_detail(String(_titles.get(id, "")), "")
+
+## Remplit le panneau de droite. Les entrées d'information passent par ici.
+func show_detail(title: String, text: String) -> void:
+	_detail_title.text = title
+	_detail_text.text = text
+	_detail_text.visible = text != ""
+
+## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
+## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
+## toujours, et un panneau qui se reconstruit à chaque déplacement du curseur
+## scintille.
+func detail_host() -> VBoxContainer:
+	return _detail_host
+
+# ---------------------------------------------------------------------------
 # ENTRÉES
 # ---------------------------------------------------------------------------
 
-## Grande entrée de destination : un titre, une ligne d'explication, un chevron.
+## Une entrée de la colonne de gauche.
 ##
-## `target` vide produit une entrée d'action, que l'appelant branche lui-même sur
-## `pressed`. C'est la différence entre « aller quelque part » et « faire quelque
-## chose », et elle se voit : seules les destinations portent un chevron.
-func make_entry(label: String, subtitle: String, target: String = "",
-		accent: Color = MenuTheme.P1) -> Button:
+## `target` non vide en fait une destination ; sinon `action` en fait une action ;
+## sinon c'est une entrée d'information, qui ne fait que remplir la droite.
+## `reason` non vide la rend indisponible : visible, grisée, et le panneau de
+## droite dit pourquoi.
+func make_entry(label: String, detail: String, target: String = "",
+		accent: Color = MenuTheme.P1, action: String = "",
+		reason: String = "") -> Button:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(460, 72)
+	btn.custom_minimum_size = Vector2(0, 54)
 	btn.focus_mode = Control.FOCUS_ALL
-	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.disabled = reason != ""
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(2)
+	normal.set_border_width_all(1)
 	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(12)
+	normal.set_corner_radius_all(10)
 	normal.content_margin_left = MenuTheme.GAP_S
 	normal.content_margin_right = MenuTheme.GAP_S
 	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("disabled", normal)
 
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.border_color = accent
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.08)
+	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.09)
 	btn.add_theme_stylebox_override("hover", hover)
 	btn.add_theme_stylebox_override("focus", hover)
 	btn.add_theme_stylebox_override("pressed", hover)
@@ -252,40 +299,67 @@ func make_entry(label: String, subtitle: String, target: String = "",
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT,
 		Control.PRESET_MODE_MINSIZE, MenuTheme.GAP_S)
-	row.add_theme_constant_override("separation", MenuTheme.GAP_S)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(row)
 
-	var texts := VBoxContainer.new()
-	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	texts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	texts.add_theme_constant_override("separation", 2)
-	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(texts)
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_color_override("font_color",
+		MenuTheme.DIM if btn.disabled else Color.WHITE)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lbl)
 
-	var title := Label.new()
-	title.text = label
-	title.add_theme_font_size_override("font_size", 22)
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	texts.add_child(title)
-
-	if subtitle != "":
-		var sub := Label.new()
-		sub.text = subtitle
-		sub.add_theme_font_size_override("font_size", 13)
-		sub.add_theme_color_override("font_color", MenuTheme.DIM)
-		sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		texts.add_child(sub)
-
-	if target != "":
+	# Le chevron distingue « on descend » de « ça s'affiche à droite ». Sans lui,
+	# le joueur ne sait pas si activer l'entrée va le déplacer.
+	if target != "" and not btn.disabled:
 		var chevron := Label.new()
 		chevron.text = "›"
 		chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		chevron.add_theme_font_size_override("font_size", 26)
+		chevron.add_theme_font_size_override("font_size", 24)
 		chevron.add_theme_color_override("font_color", accent)
 		chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(chevron)
+	elif btn.disabled:
+		var lock := Label.new()
+		lock.text = "—"
+		lock.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lock.add_theme_font_size_override("font_size", 16)
+		lock.add_theme_color_override("font_color", MenuTheme.DIM)
+		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(lock)
 
+	# Le panneau de droite suit le curseur ET la souris : c'est le même geste de
+	# « je regarde ceci », quel que soit le périphérique.
+	var texte := reason if btn.disabled else detail
+	var titre := label
+	btn.focus_entered.connect(func() -> void: show_detail(titre, texte))
+	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte))
+
+	if btn.disabled:
+		return btn
+	if target != "":
 		btn.pressed.connect(func() -> void: push(target))
-
+	elif action != "":
+		btn.pressed.connect(func() -> void: action_requested.emit(action))
+	else:
+		# Entrée d'information : activer ne déplace rien, cela remet simplement le
+		# panneau de droite sur son contenu.
+		btn.pressed.connect(func() -> void: show_detail(titre, texte))
 	return btn
+
+## Ajoute le retour en bas d'une liste. À appeler pour **chaque** écran non
+## racine : c'est la seule sortie garantie, souris comprise.
+func add_back_entry(id: String) -> void:
+	var list := list_of(id)
+	if list == null:
+		return
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, MenuTheme.GAP_XS)
+	list.add_child(spacer)
+	var btn := make_entry("‹  RETOUR", "Remonte d'un cran. La touche Échap fait la même chose.",
+		"", MenuTheme.DIM)
+	btn.pressed.connect(back)
+	list.add_child(btn)

@@ -579,32 +579,54 @@ pénible à l'usage, le correctif n'est pas de revenir en arrière mais d'ajoute
 raccourci de relance depuis l'écran de fin — à évaluer une fois le hub jouable,
 pas avant.
 
-#### L'arborescence cible
+#### L'arborescence — arrêtée par Adrien le 2026-08-17
+
+**Les deux façons de jouer sont proposées dès l'accueil**, au-dessus de tout le
+reste : c'est le geste pour lequel on lance le jeu. Les enfouir sous un « Jouer »
+intermédiaire coûtait un clic à chaque partie sans rien apprendre au joueur.
 
 ```
 Accueil
-├── Jouer
-│   ├── 1v1 local ......... préparation (carte · arme J1 · arme J2) → Lancer
-│   └── 1v1 en ligne ...... créer / rejoindre → Salon (code · statut ·
-│                           carte · arme) → Lancer
-├── S'entraîner ........... cible · carte · arme → Lancer
-├── Classement ............ top 10 · mon rang
-├── Profil ................ identité · code de récupération · pseudo ·
-│                           historique
-├── Options
-│   ├── Contrôles ......... manette et clavier
-│   ├── Affichage ......... fenêtre · vsync · images par seconde
-│   ├── Audio ............. général · musique · effets
-│   └── Calibration ....... luminosité · gamma · daltonisme
+├── 1v1 local ............. → Salon local (armes J1 · J2 à droite)
+│   ├── Carte · Lancer · Retour
+├── 1v1 en ligne amical
+│   ├── Chercher un match . (cartes aléatoires) — grisé
+│   ├── Créer ............. → Salon hôte (code · statut · arme · joueurs)
+│   │   ├── Carte · Prêt · Retour
+│   └── Rejoindre ......... → Salon invité (code à saisir · carte de l'hôte)
+│       ├── Prêt (grisé sans salon) · Retour
+├── En ligne compétitif
+│   ├── Chercher un match . — grisé
+├── S'entraîner ........... cible · arme
+│   ├── Carte · Lancer · Mon rang · Top 10 · Retour
+├── Profil ................ identité · code · pseudo · historique
+├── Personnalisation ...... éditeur de cartes · contrôles · affichage ·
+│                           audio · calibration
 └── Quitter
-
-Pause (en match, panneau court et séparé)
-└── Reprendre · Options · Menu principal · Abandonner
 ```
 
-La galerie de cartes et l'éditeur restent atteignables depuis les écrans de
-préparation, par la carte sélectionnée — ils ne sont pas une destination du hub :
-on ne choisit pas une carte sans être en train de préparer un match.
+**Deux panneaux, et ce n'est pas décoratif.** La liste à gauche, à droite ce que
+l'entrée sous le curseur raconte. Cela permet à une entrée de **montrer une
+information sans faire descendre d'un cran** : « Top 10 » et « Mon rang »
+remplissent le panneau de droite au lieu d'ouvrir un sous-écran. Un menu qui
+obligerait à entrer puis à ressortir pour lire trois lignes ferait payer un
+aller-retour pour une consultation.
+
+**Le retour est une entrée cliquable en bas de chaque liste**, pas un rappel de
+touche. La première version affichait « ÉCHAP · RETOUR » sans que rien ne soit
+cliquable — *et sans que la touche fasse quoi que ce soit*. Un libellé qui
+annonce une commande inexistante est pire qu'une absence de libellé. La touche
+double désormais le bouton ; elle ne le remplace pas.
+
+**Ce qui n'existe pas est grisé, jamais masqué**, et le panneau de droite dit
+pourquoi. Masquer laisserait croire que la fonction n'existera pas ; retirer
+l'entrée du parcours du curseur ferait douter du bouton d'à côté. Sont grisés
+aujourd'hui : les deux « chercher un match » (il manque l'appariement), le
+lancement de l'entraînement, l'écran audio et la calibration.
+
+Le classement n'est plus une destination : il se lit depuis l'écran
+d'entraînement, dans le panneau de droite. L'écran autonome reste construit — il
+sait tenir les six états du service — mais hors de l'arborescence.
 
 ### Les étapes, dans l'ordre
 
