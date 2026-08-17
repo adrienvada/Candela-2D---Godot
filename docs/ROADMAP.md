@@ -721,6 +721,29 @@ Les bornes de classement de chaque catégorie ne sont pas encore fixées : elles
 n'ont de sens qu'avec une population réelle, et elles se changent sans migration
 puisque le rang est dérivé (voir ci-dessous).
 
+### Exposition côté serveur — faite le 2026-08-17
+
+`standing` rend désormais une catégorie pour chaque ligne, la sienne comme celles
+du haut du tableau.
+
+**Deux « rangs » cohabitent, et les confondre produirait un affichage faux sans
+jamais lever d'erreur.** `rank` vient de la base : c'est la **position** au
+classement général, calculée par un `rank() over` dans la vue `leaderboard`.
+`tier` vient de `rankOf` : c'est la **catégorie** de l'échelle. Le premier dépend
+de tous les autres joueurs, le second de personne — gagner peut changer la
+catégorie sans changer la position, et l'inverse. D'où deux clés distinctes.
+
+La catégorie est calculée **côté serveur** et non dans le jeu : deux
+implémentations de la même échelle divergeraient, et c'est le classement affiché
+qui aurait tort.
+
+Un joueur sans ligne au classement n'a **pas** de catégorie. Afficher « Aveugle I »
+à quelqu'un qui n'a jamais joué serait un rang inventé, au même titre que les
+« 1000 points » déjà écartés à l'étape 2b.
+
+Déployée et vérifiée en ligne : 401 sans jeton, 401 sur un jeton contrefait.
+La vérification de bout en bout avec deux identités éphémères reste à faire.
+
 ### La contrainte d'architecture : le rang est dérivé, comme le classement
 
 Le rang doit être une **fonction pure du classement**, calculée à l'affichage et
