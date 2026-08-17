@@ -145,7 +145,17 @@ static func validate(data: Dictionary) -> Dictionary:
 		normalized = migrate_v2_to_v3(normalized)
 
 	# Grille : bornes strictes pour éviter une allocation absurde à la construction.
-	var grid: Dictionary = normalized.get("grid_size", {})
+	#
+	# Le type est vérifié avant d'être lu, et ce n'est pas une précaution de style :
+	# `validate()` est la porte d'entrée de tout code reçu d'ailleurs — d'un
+	# adversaire, d'un copier-coller. Une variable typée `Dictionary` recevant un
+	# JSON qui met autre chose sous `grid_size` **jette une erreur de script** au
+	# lieu de rendre le refus propre que toute la fonction s'applique à produire :
+	# l'appelant reçoit `null`, et lit `["ok"]` dessus.
+	var brut: Variant = normalized.get("grid_size", {})
+	if typeof(brut) != TYPE_DICTIONARY:
+		return _fail("Taille de grille illisible")
+	var grid: Dictionary = brut
 	var gx := int(grid.get("x", 0))
 	var gy := int(grid.get("y", 0))
 	if gx < MIN_GRID or gx > MAX_GRID or gy < MIN_GRID or gy > MAX_GRID:
@@ -247,8 +257,13 @@ static func slugify(map_name: String) -> String:
 # ACCÈS TYPÉ
 # ---------------------------------------------------------------------------
 
+## Même vigilance qu'en validation : ce lecteur sert aussi au balayage du
+## catalogue, où un fichier abîmé à la main ferait tomber tout le scan.
 static func get_grid_size(data: Dictionary) -> Vector2i:
-	var g: Dictionary = data.get("grid_size", {})
+	var brut: Variant = data.get("grid_size", {})
+	if typeof(brut) != TYPE_DICTIONARY:
+		return Vector2i(20, 20)
+	var g: Dictionary = brut
 	return Vector2i(int(g.get("x", 20)), int(g.get("y", 20)))
 
 static func get_floor_cells(data: Dictionary) -> Array[Vector2i]:
