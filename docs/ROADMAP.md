@@ -32,6 +32,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🔵 À faire — un défaut de correction à traiter d'abord : rien ne distingue un match amical d'un match classé |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -851,6 +852,155 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 (décision du 2026-08-16), l'écran partagé n'étant pas classé.
 
 ---
+
+---
+
+## Phase 8 — Appariement : amical, classé, recherche automatique 🔵 À FAIRE
+
+Les deux entrées « Chercher un match » sont grisées dans le hub depuis le
+2026-08-17. Cette phase les allume.
+
+### Ce qui existe déjà, et qu'il ne faut pas réécrire
+
+Beaucoup, et c'est ce qui rend la phase abordable : **identité vérifiée** auprès
+d'Epic, **classement déployé** et recalculable, **rangs dérivés**, **salons EOS**
+avec traversée de NAT et recherche filtrée (`bucket_id ET code`), **double
+rapport** de match avec détection de concordance, et le **forfait** sur abandon.
+
+Ce qui manque tient en trois choses : une file d'attente, une règle de
+désignation de l'hôte, et une distinction entre match amical et match classé.
+
+### ⚠️ Le défaut à corriger AVANT tout le reste
+
+**Rien ne distingue aujourd'hui un match amical d'un match classé.**
+`report_match` n'a pas de paramètre pour cela, et `recomputeRatings()` relit
+« tous les matchs concordants » sans filtre. Vérifié le 2026-08-17 dans
+`20260816210000_match_reports.sql` et `ranking.ts`.
+
+Conséquence : le jour où un match amical devient jouable, **il alimentera l'ELO
+en silence**. Personne ne s'en apercevra avant de voir un classement absurde, et
+il faudra alors deviner quels matchs étaient amicaux — information qui n'aura pas
+été écrite. C'est un défaut de correction, pas une fonctionnalité manquante, et
+il se corrige pour presque rien tant qu'aucun match amical n'existe.
+
+### Étape 8.1 — séparer amical et classé dans le rapport
+
+Un champ sur `match_reports`, joint par les deux pairs, et un filtre dans le
+rejeu. Trois précautions qui ne vont pas de soi :
+
+- **Le classé doit être le cas explicite, l'amical le défaut.** Si le champ
+  manque ou vaut `null`, le match ne compte pas. Un bogue de client ne doit pas
+  pouvoir *ajouter* des matchs au classement — l'inverse se rattrape par un
+  rejeu, pas celui-là.
+- **Les deux pairs doivent être d'accord sur la nature du match**, comme ils le
+  sont déjà sur l'issue. Un match où l'un déclare « classé » et l'autre
+  « amical » est discordant : il ne compte pour rien, exactement comme deux
+  récits qui se contredisent.
+- **La migration doit décider du passé.** Les matchs déjà en base ont été joués
+  avant que l'amical existe : ils sont classés. À écrire dans la migration plutôt
+  qu'à supposer.
+
+### Étape 8.2 — où vit la file d'attente
+
+**Deux mécanismes possibles, et le choix n'est pas neutre.**
+
+**A — Les salons EOS, par recherche filtrée.** Un joueur en attente publie un
+salon portant sa fourchette de classement en attribut ; le chercheur filtre
+dessus. C'est le mécanisme *déjà en place* pour le code à six caractères : la
+jointure par recherche filtrée existe et fonctionne. Aucun service nouveau, aucun
+coût d'hébergement, et la traversée de NAT est déjà résolue.
+Sa limite est réelle : EOS filtre sur des attributs, il ne sait pas « le plus
+proche ». On cherche donc par **fourchettes discrètes** qu'on élargit avec
+l'attente, ce qui apparie moins finement qu'un vrai matcheur.
+
+**B — Supabase comme file.** Une table de file, une fonction qui apparie, un
+élargissement continu. Apparie mieux, et coûte cher : il faut détecter la
+**présence** (un joueur qui ferme le jeu doit quitter la file — sans quoi on
+apparie des fantômes), gérer la **double réservation** (deux joueurs appariés au
+même troisième), et faire tourner le matcheur quelque part, les Edge Functions
+étant liées à une requête.
+
+**Recommandation : A d'abord.** La fourchette discrète est un défaut visible et
+mesurable ; l'appariement fantôme est un défaut invisible qui use la confiance.
+Avec une population faible — la situation réelle du jeu — **la finesse
+d'appariement ne sert à rien : il n'y a personne à départager.** B se justifiera
+quand la file sera assez peuplée pour que le choix entre deux adversaires ait un
+sens, et rien de A n'est à jeter ce jour-là : le salon reste le lieu du match, le
+matcheur ne fait que désigner qui rejoint qui.
+
+### Étape 8.3 — qui devient l'hôte, et pourquoi c'est un sujet d'équité
+
+**En P2P, l'hôte simule tout et joue à 0 ms.** C'est déjà écrit dans « Décisions
+actées » comme le prix assumé de l'absence de serveur dédié. En match amical par
+code, la question ne se pose pas : celui qui crée le salon est l'hôte, et les
+deux joueurs le savent.
+
+**En classé, la désignation silencieuse de l'hôte devient un avantage
+distribué par le système.** Trois issues :
+
+1. **Le chercheur rejoint l'hébergeur.** Simple, et injuste de façon systématique
+   : qui attend le plus héberge le plus.
+2. **Tirage au sort après appariement.** Équitable en espérance. Demande que le
+   tirage ne soit pas fait par l'un des deux — donc côté serveur, ou dérivé d'une
+   valeur qu'aucun des deux ne contrôle (l'identifiant de match, déjà tiré en
+   16 octets cryptographiques).
+3. **Alternance en cas de revanche.** Le meilleur des trois si les revanches
+   s'enchaînent, et il ne coûte presque rien puisque le salon persiste.
+
+**À trancher par Adrien.** Ma recommandation : 2 pour le premier match, 3 pour
+les revanches. Et l'afficher — le joueur doit savoir qui héberge, sinon
+l'asymétrie devient une rumeur.
+
+### Étape 8.4 — la poignée de main à deux
+
+Appariés n'est pas connectés. Il faut : les deux **acceptent** dans un délai
+borné, l'un **refuse ou expire** → l'autre retourne en file **sans perdre son
+tour**, et une **annulation** possible pendant l'attente.
+
+Le piège classique, à écrire avant de coder : un joueur qui accepte puis ferme le
+jeu doit être traité comme un refus, pas comme une acceptation qui ne se conclut
+jamais. C'est-à-dire qu'il faut un **délai d'expiration côté chercheur**, jamais
+une attente indéfinie d'un signal qui ne viendra pas.
+
+### Étape 8.5 — élargir la fourchette avec l'attente
+
+Une seule règle, et elle doit être annoncée à l'écran : la fourchette s'élargit
+par paliers, et le joueur voit **quelle fourchette est cherchée en ce moment**.
+Une recherche qui tourne sans dire ce qu'elle cherche donne l'impression d'être
+cassée au bout de vingt secondes.
+
+À décider : y a-t-il un plafond au-delà duquel on refuse d'apparier ? Un Candela
+contre un Aveugle est un match perdu pour les deux — la règle du miroir des armes
+en fait un match jouable, pas un match intéressant.
+
+### Étape 8.6 — côté jeu
+
+Les écrans existent déjà, grisés. Il faut : un état de **recherche** (temps
+écoulé, fourchette courante, annulation atteignable au curseur), l'écran de
+**match trouvé** avec les deux identités et qui héberge, et le **retour en file**
+sur refus adverse.
+
+Contrainte d'architecture inchangée : hors de `network_manager.gd` et du bloc
+lobby, **aucun fichier ne connaît le transport**. L'appariement est une affaire de
+`network_manager.gd` ; le hub ne fait que demander et afficher.
+
+### Étape 8.7 — abandon en file, et l'abus
+
+Le forfait sur abandon **existe déjà** et fonctionne (`_archive_forfeit`, quatre
+chemins convergents). Reste ce que l'appariement crée de neuf :
+
+- **Esquive de file** — quitter avant que le match ne compte. Le forfait couvre le
+  match commencé ; il ne couvre pas le refus répété d'appariement.
+- **Échange de victoires** entre deux comptes complices. La concordance à deux
+  rapports **ne protège pas de ça** : les deux mentent de concert et sont
+  d'accord. C'est la limite structurelle du P2P, déjà notée, et l'appariement
+  automatique la réduit sans l'annuler — on ne choisit plus son adversaire.
+- **Comptes secondaires.** Le code de récupération est un secret au porteur : rien
+  n'empêche d'avoir plusieurs profils. Proportionné pour un jeu à cette échelle,
+  à revoir si les enjeux montent.
+
+Aucun de ces trois points ne se résout par de la technique seule ; les écrire
+évite de croire qu'un système d'appariement les règle.
 
 ## Décisions actées
 
