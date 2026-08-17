@@ -682,6 +682,9 @@ func _physics_process(delta):
 		flashlight_on = false
 		flashlight.enabled = false
 		body_light.enabled = false
+		# Le détecteur de pas ne doit jamais voir le saut de téléportation du
+		# spawn : on le recale tant que le décompte fige tout le monde.
+		_last_step_pos = global_position
 		_update_aim_line()
 		return
 
@@ -834,6 +837,15 @@ func _rumble(weak: float, strong: float, duration: float) -> void:
 	if lp == null: return
 	if not Input.get_connected_joypads().has(lp.device_id): return
 	Input.start_joy_vibration(lp.device_id, weak, strong, duration)
+
+## Remise à zéro du détecteur de pas, à appeler APRÈS toute téléportation
+## (spawn de manche, bac à sable). Sans elle, le delta de position entre la
+## fin de manche et le spawn passe sous le garde des 100 px et fabrique un
+## pas fantôme — son + empreinte — pile au « FIGHT ! » (constat de revue).
+func reset_step_tracker() -> void:
+	_last_step_pos = global_position
+	step_distance_accumulated = 0.0
+	last_fatal_perp = -1.0
 
 ## Double coup du kill, ressenti par le vainqueur seulement.
 func rumble_kill() -> void:

@@ -600,6 +600,8 @@ func _start_round():
 	p2.get_node("VisualReveal").show()
 	cam1.global_position = p1.global_position
 	cam2.global_position = p2.global_position
+	p1.reset_step_tracker()
+	p2.reset_step_tracker()
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if multiplayer.get_peers().size() == 0:
@@ -708,6 +710,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.global_position = _get_spawn_position(1)
 	p1.rotation = 0
 	p2.rotation = PI
+	# Après la téléportation au spawn : le détecteur de pas et la distance du
+	# tir fatal repartent de zéro (pas fantôme et « à N px » périmé sinon).
+	p1.reset_step_tracker()
+	p2.reset_step_tracker()
 	time_left = round_time
 	round_active = true
 	game_over = false
@@ -1132,9 +1138,12 @@ func _do_end_round(winner_id: int):
 		AudioManager.play_speaker("spk_draw")
 
 	if winner_id != -1:
-		# V2.1 — une frame de délai pour laisser le trait sur-exposé du tir
-		# fatal (V2.6) se dessiner, puis gel du rendu sur cette image.
-		await get_tree().process_frame
+		# V2.1 — attendre que la frame de l'impact soit DESSINÉE avant de geler.
+		# Piège vérifié en revue : `process_frame` est émis en début de phase
+		# process, AVANT le rendu — geler là fige la frame d'avant l'impact
+		# (balle en vol, victime debout). `frame_post_draw` reprend juste après
+		# le draw de la frame qui contient le trait sur-exposé (V2.6).
+		await RenderingServer.frame_post_draw
 		if token != _round_token: return
 		vp1.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		vp2.render_target_update_mode = SubViewport.UPDATE_DISABLED

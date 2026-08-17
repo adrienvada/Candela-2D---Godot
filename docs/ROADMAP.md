@@ -769,6 +769,11 @@ un choix technique.
 **Export macOS**
 - `textures/vram_compression/import_etc2_astc=true` est obligatoire dans
   `project.godot`, sinon l'export refuse de démarrer.
+- `await get_tree().process_frame` reprend AVANT le rendu de la frame
+  courante (le signal part en début de phase process) : pour figer ou capturer
+  une image qui doit CONTENIR ce que la frame dessine, attendre
+  `RenderingServer.frame_post_draw`. Payé une fois sur le gel du kill (V2.1),
+  qui figeait la frame d'avant l'impact.
 - Ne pas utiliser `custom_template` : installer les modèles d'exportation depuis
   le gestionnaire intégré de Godot (un téléchargement manuel corrompu avait fait
   croire à un bug de l'éditeur).

@@ -185,10 +185,13 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 	# Kill probable, jugé sur les HP visibles localement : exact chez l'hôte,
 	# prédictif chez le client — purement cosmétique dans les deux cas.
 	var lethal := not is_replay and (target.hp - opp_hit_damage) <= 0.0
-	if lethal:
-		# V2.9 — la distance à l'axe du tir fatal, consommée par die() pour le
-		# « à N px du centre » du perdant.
+	if not is_replay:
+		# V2.9 — distance à l'axe du DERNIER impact simulé ici : c'est celui
+		# qui tue dans le cas courant, et chaque nouvel impact écrase le
+		# précédent — un kill prédit puis démenti par l'hôte ne peut pas
+		# laisser traîner une valeur périmée (constat de revue).
 		target.last_fatal_perp = dist_to_axis
+	if lethal:
 		_flare_trail()
 
 	if not is_replay:
