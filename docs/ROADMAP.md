@@ -843,6 +843,23 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
   Trouvé le 2026-08-17 sur le flash de mort, qui éblouissait le survivant
   600 ms après son propre kill.
 
+**Signaux**
+- **`_set_state` n'émet rien quand l'état ne change pas — et c'est un piège dès
+  qu'autre chose change avec lui.** Un rattachement réussi passe par
+  `_adopt()`, qui appelle `_set_state(READY)` sur une identité **déjà** READY :
+  aucun `state_changed`, alors que le pseudo ET le code de récupération viennent
+  d'être remplacés. Un écran branché sur ce seul signal affiche indéfiniment le
+  code d'un profil que la machine a abandonné — le code étant précisément la
+  seule chose que le joueur doive conserver. D'où `profile_changed`, émis
+  inconditionnellement. Règle générale : un signal d'état ne remplace pas un
+  signal de contenu.
+
+**Godot — réflexion**
+- **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**
+  Un contrôle préalable qui vérifie une API sur le script annonce donc des
+  méthodes manquantes qui existent toutes. Les méthodes d'instance se cherchent
+  sur une instance.
+
 **Tests headless**
 - **Tout nombre relu d'un JSON revient en flottant.** Un `vainqueur` écrit `0`
   vaut `0.0` à la relecture. Un contrôle `typeof(x) == TYPE_INT` écarte donc
@@ -962,7 +979,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les onze suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les treize suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
