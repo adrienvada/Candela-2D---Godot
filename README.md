@@ -36,6 +36,30 @@ sont à jour sur GitHub depuis le 2026-08-16.
 
 ### Après avoir agi — obligatoire
 
+**Deux documents, systématiquement, et ils ne sont pas interchangeables :**
+
+| | Quoi | Pour qui |
+|---|---|---|
+| 1 | `docs/ROADMAP.md` | Les agents et les sessions futures. Le *pourquoi*, les décisions, les pièges. |
+| 2 | **Le suivi de projet** — [https://claude.ai/code/artifact/ba2ce690-309e-4d87-b72b-3ace1a1b681e](https://claude.ai/code/artifact/ba2ce690-309e-4d87-b72b-3ace1a1b681e) | Adrien. Ce qu'il reste, ce qui le bloque, ce qu'il doit fournir. |
+
+La feuille de route est versionnée, le suivi ne l'est pas : **une session qui ne
+met à jour que la première laisse Adrien devant un tableau périmé**, sans qu'aucun
+outil ne le signale. C'est le seul document du projet dont la péremption est
+invisible.
+
+#### Republier le suivi
+
+Il se met à jour avec l'outil `Artifact`, **en passant son URL** (ci-dessus) :
+sans elle, la publication crée un *second* artefact au lieu de mettre le premier à
+jour, et Adrien se retrouve avec deux tableaux qui se contredisent.
+
+Une session qui n'a pas cet outil (un sous-agent, par exemple) ne peut pas
+republier : elle **le dit dans son rapport**, avec ce qu'il aurait fallu changer.
+Ne pas le signaler revient à laisser le tableau mentir.
+
+#### Ce que chaque geste implique
+
 Mettre à jour `docs/ROADMAP.md` **dans le même commit que le travail décrit**,
 jamais dans un commit séparé « mise à jour de la doc ». Concrètement :
 
@@ -47,6 +71,7 @@ jamais dans un commit séparé « mise à jour de la doc ». Concrètement :
 | Identifié un besoin d'intervention humaine | Une ligne dans **Jalons humains** |
 | Changé l'ordre des priorités | La section **Prochaines étapes** |
 | Rien de tout cela | La date de dernière mise à jour uniquement |
+| **N'importe lequel de ces cas** | **Le suivi de projet, en plus** — il vit hors du dépôt, donc rien ne rattrape son oubli |
 
 Règles de rédaction : expliquer **pourquoi**, pas **quoi** — le code dit déjà le
 quoi. Rester factuel : une chose non testée est écrite comme non testée.

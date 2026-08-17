@@ -15,6 +15,13 @@ humains/agents est dans [README.md](README.md). Règles non négociables :
 - Mettre à jour `docs/ROADMAP.md` **dans le même commit** que le travail décrit
   (état de phase, décision actée, piège découvert, ou à défaut la seule date de
   mise à jour). Expliquer le *pourquoi*, pas le *quoi*.
+- **Et republier le suivi de projet**, destiné à Adrien :
+  https://claude.ai/code/artifact/ba2ce690-309e-4d87-b72b-3ace1a1b681e
+  Il se met à jour avec l'outil `Artifact` **en passant cette URL** — sans elle on
+  crée un second artefact au lieu de mettre le premier à jour. La feuille de route
+  est versionnée, le suivi ne l'est pas : **rien ne signale qu'il est périmé.**
+  Une session sans cet outil le dit dans son rapport, avec ce qu'il aurait fallu
+  changer.
 - Plusieurs sessions peuvent travailler en parallèle : jamais de `git checkout`
   sans vérifier qu'aucune autre session n'utilise l'arbre (préférer un
   worktree). Ne jamais pousser sur GitHub sans demande explicite d'Adrien.

@@ -56,6 +56,29 @@ le domaine « menus ».** Elle est livrée par la Phase 5, étape 4. La session
 « game feel » ne l'implémente pas : elle attend, ou densifie le mixage en
 sachant qu'il n'est pas encore réglable.
 
+## Les deux documents à tenir — règle du 2026-08-17
+
+Toute session met à jour **les deux**, quel que soit son domaine :
+
+1. `docs/ROADMAP.md` — versionné, pour les agents. Le *pourquoi*.
+2. **Le suivi de projet**, pour Adrien :
+   https://claude.ai/code/artifact/ba2ce690-309e-4d87-b72b-3ace1a1b681e
+
+Le second se republie avec l'outil `Artifact` **en passant cette URL**. Sans elle,
+la publication crée un artefact *distinct*, et Adrien se retrouve devant deux
+tableaux qui se contredisent sans savoir lequel croire.
+
+**Pourquoi cette règle existe, et pourquoi elle est plus fragile que les autres :**
+la feuille de route vit dans le dépôt, donc un oubli finit par se voir en la
+relisant. Le suivi vit dehors — **aucun outil, aucune suite, aucun audit ne
+signale qu'il est périmé.** C'est le seul document du projet dont la péremption
+est totalement silencieuse.
+
+Une session qui n'a pas l'outil `Artifact` — un sous-agent, typiquement — ne peut
+pas republier. Elle **le dit dans son rapport**, avec ce qu'il aurait fallu
+changer, pour que la session principale le fasse. Se taire équivaut à laisser le
+tableau mentir.
+
 ## Assets manquants — la règle, décidée le 2026-08-17
 
 **On câble, on reste silencieux, on diagnostique.** Le code qui joue un son

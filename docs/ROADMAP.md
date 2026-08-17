@@ -1105,6 +1105,17 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   inconditionnellement. Règle générale : un signal d'état ne remplace pas un
   signal de contenu.
 
+**Artefacts et documents hors dépôt**
+- **Deux sessions peuvent publier le même artefact et se marcher dessus.** Arrivé
+  le 2026-08-17 : la publication a rendu un conflit parce qu'une autre session
+  avait republié entre-temps. **Ne jamais forcer** — `force: true` jette
+  purement et simplement le travail de l'autre. La marche à suivre est de relire
+  la version en ligne, d'y fusionner ses propres modifications, et de republier.
+  Le conflit est une chance : sans lui, l'écrasement serait silencieux.
+- **Republier sans passer l'URL crée un artefact distinct.** Adrien se retrouve
+  alors avec deux tableaux qui se contredisent sans savoir lequel croire. L'URL
+  est inscrite dans le README, `CLAUDE.md` et le journal des sessions.
+
 **Godot — réflexion**
 - **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**
   Un contrôle préalable qui vérifie une API sur le script annonce donc des
