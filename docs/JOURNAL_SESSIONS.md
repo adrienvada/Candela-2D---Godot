@@ -125,12 +125,15 @@ changer dans la table.
 
 ### 2026-08-17 — session « game feel »
 
-Branche `game-feel` ouverte depuis `main` (`478507f`). En cours : V1.2, V1.5,
-puis la Vague 2 procédurale (le kill). Adrien a arbitré D1-D7 (ligne dans
-« Décisions actées ») et accordé l'autonomie : poussée à chaque commit vert,
-fusion dans `main` par la session en fin de vague verte, micro-réglages
-tranchés et documentés. `game_state.gd` est tenu par cette session, comme
-convenu.
+Livré et fusionné dans `main` : V1.2, V1.5, la Vague 2 procédurale complète
+(gel du kill, noir qui gagne, onde de choc, tampon, récit du tir), D1
+(empreintes), D3 (extinction traînée), D7 (plafond de sang), D5 (onde du
+pompe sous `--fx-shockwave`, mesure à faire sur le Mac d'Adrien). Passe de
+revue adverse effectuée avant fusion : trois défauts confirmés, corrigés
+(dont le gel qui figeait la frame d'avant l'impact — piège ajouté à la
+ROADMAP). Boucle perpétuelle armée : prochains items V4/V5 procéduraux, puis
+idéation V7+. `game_state.gd` reste tenu par cette session. Adrien a arbitré
+D1-D7 (« Décisions actées ») et accordé poussée/fusion autonomes.
 
 ### 2026-08-17 — session « menus »
 
