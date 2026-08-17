@@ -54,9 +54,21 @@ invisible.
 
 #### Republier le suivi
 
-Il se met à jour avec l'outil `Artifact`, **en passant son URL** (ci-dessus) :
-sans elle, la publication crée un *second* artefact au lieu de mettre le premier à
-jour, et Adrien se retrouve avec deux tableaux qui se contredisent.
+**La republication est centralisée** (décidé le 2026-08-18, avec Adrien) : une
+seule session s'en charge à la fois. Les autres ne republient pas elles-mêmes —
+elles lui transmettent leur delta (ce qui a changé, en quelques lignes) par
+message inter-session (`ListAgents` pour la trouver, `SendMessage` pour la
+prévenir), et c'est elle qui répercute dans l'artefact. Raison : plusieurs
+sessions qui republient le même artefact dans la même journée se croisent — deux
+conflits de version essuyés le 2026-08-18 avant que cette règle existe.
+
+Une session qui ouvre et ne trouve **aucune session déjà chargée de la
+republication** en devient responsable pour la suite, et le dit aux autres.
+
+S'il fallait republier soi-même : l'outil `Artifact` **en passant l'URL du
+suivi** (ci-dessus) — sans elle, la publication crée un *second* artefact au lieu
+de mettre le premier à jour, et Adrien se retrouve avec deux tableaux qui se
+contredisent.
 
 Une session qui n'a pas cet outil (un sous-agent, par exemple) ne peut pas
 republier : elle **le dit dans son rapport**, avec ce qu'il aurait fallu changer.
