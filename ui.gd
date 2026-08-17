@@ -366,7 +366,8 @@ func _disable_ui_joystick() -> void:
 				if event is InputEventJoypadMotion:
 					InputMap.action_erase_event(action, event)
 
-## Branche le son et l'à-coup d'échelle sur tous les boutons du menu.
+## Branche le son et l'à-coup d'échelle sur tous les boutons du menu, ainsi que
+## le survol souris qui déplace la sélection principale (J1).
 ## La galerie est exclue : elle gère ses propres retours, y compris sur les
 ## tuiles créées dynamiquement après ce parcours.
 func _wire_buttons(node: Node) -> void:
@@ -375,12 +376,24 @@ func _wire_buttons(node: Node) -> void:
 	var btn := node as BaseButton
 	if btn != null:
 		btn.pressed.connect(_on_any_button_pressed.bind(btn))
+		btn.mouse_entered.connect(_on_button_hovered.bind(btn))
 	for child in node.get_children():
 		_wire_buttons(child)
 
 func _on_any_button_pressed(btn: BaseButton) -> void:
 	AudioManager.play_button_click()
 	_pulse_press(btn)
+
+## La souris pilote toujours la sélection principale (J1), jamais celle de J2 —
+## sans quoi un simple passage de curseur volerait un bouton réservé à J2 (le
+## râtelier d'armes en 1v1 local écran partagé).
+func _on_button_hovered(btn: BaseButton) -> void:
+	if not _is_focus_usable(btn):
+		return
+	var owner_id := int(btn.get_meta(META_NAV_OWNER, -1))
+	if owner_id >= 0 and owner_id != 0:
+		return
+	_set_focus(0, btn)
 
 ## Petit à-coup d'échelle : retour visuel immédiat sur chaque appui.
 func _pulse_press(control: Control) -> void:
@@ -533,6 +546,10 @@ func _update_focus_rings() -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		show_p2 = false
 	elif _is_main_menu and _intended_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		show_p2 = false
+	# Le curseur J2 n'existe que pour choisir son arme : ailleurs (carte,
+	# lancer, retour…), la sélection de J1 suffit et reste seule visible.
+	if show_p2 and not (p2_focus in [p2_btn1, p2_btn2, p2_btn3, p2_btn4]):
 		show_p2 = false
 
 	if show_p1 and _is_focus_usable(p1_focus):
@@ -1666,9 +1683,9 @@ func _build_hub_screens() -> void:
 	custom.add_child(hub.make_entry("EFFETS",
 		"Ce qui se règle librement, et ce qui garde un plancher en classé.",
 		SCREEN_EFFECTS, COLOR_GOLD))
-	custom.add_child(hub.make_entry("AUDIO", "Général, musique, effets, annonceur.",
-		SCREEN_AUDIO, COLOR_P1, "",
-		NOT_YET + " Les quatre volumes sont déjà persistés ; c'est l'écran qui manque."))
+	custom.add_child(hub.make_entry("AUDIO",
+		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
+		SCREEN_AUDIO, COLOR_P1))
 	hub.add_back_entry(SCREEN_CUSTOM)
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
@@ -1685,13 +1702,19 @@ func _build_hub_screens() -> void:
 	affichage.add_child(_build_display_block())
 	affichage.add_child(_build_video_block())
 	affichage.add_child(hub.make_entry("CALIBRATION",
-		"Luminosité, gamma, daltonisme.", "", COLOR_P1, "",
-		NOT_YET + " Dans un jeu dont l'unique canal est la lumière, un écran mal "
-		+ "réglé est un avantage : il faut une cible perceptive, pas un curseur nu."))
+		"Régler la luminosité sur une cible perceptive : ce que le jeu veut montrer "
+		+ "doit tout juste apparaître, ce qu'il veut cacher doit rester invisible.",
+		SCREEN_CALIBRATION))
 	hub.add_back_entry(SCREEN_DISPLAY)
 
 	_attach_screen(SCREEN_EFFECTS, "Effets", ScreenEffects.new())
 	hub.add_back_entry(SCREEN_EFFECTS)
+
+	_attach_screen(SCREEN_AUDIO, "Audio", ScreenAudio.new())
+	hub.add_back_entry(SCREEN_AUDIO)
+
+	_attach_screen(SCREEN_CALIBRATION, "Calibration", ScreenCalibration.new())
+	hub.add_back_entry(SCREEN_CALIBRATION)
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
 	hub.add_back_entry(SCREEN_PROFILE)
