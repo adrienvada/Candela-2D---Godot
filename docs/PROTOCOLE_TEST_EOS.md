@@ -68,6 +68,157 @@ se termine. Sans cette séquence, le processus meurt sur un segfault.
 godot --headless --path . res://tools/test_quit_path.tscn -- --eos-ephemeral
 ```
 
+## File d'appariement (`tools/test_queue.tscn`)
+
+Interroge la file de la Phase 8 contre le **vrai** service : publication d'un
+ticket, puis recherche filtrée sur l'attribut de classement. Il répond à la
+question dont dépend tout l'élargissement par fourchettes — EOS accepte-t-il un
+filtre **entier** avec `GreaterThanOrEqual` / `LessThanOrEqual` ?
+
+```bash
+godot --headless --path . res://tools/test_queue.tscn -- --eos-ephemeral
+```
+
+⚠️ **`--path .` désigne le dossier du terminal, pas le projet.** Le chemin du
+dépôt contient deux espaces (`Projets jeux`, `Candela - Godot`) : un `cd` sans
+guillemets échoue silencieusement et la commande se lance alors depuis le
+dossier maison, où il n'y a aucun projet Godot — d'où un « il ne se passe
+rien ». La forme qui marche depuis n'importe où :
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d" res://tools/test_queue.tscn -- --eos-ephemeral
+```
+
+### Deux instances — la découverte croisée
+
+Une instance seule ne prouve que l'acceptation de la requête : son propre ticket
+ne lui est pas rendu, et zéro candidat est le résultat **attendu**. Pour savoir
+si une identité voit le ticket d'une autre, il faut deux instances qui se
+chevauchent. Le ticket ne vit qu'environ quatre secondes entre sa publication et
+son retrait : **décaler les lancements de 2 secondes**, pas davantage.
+
+```bash
+PROJ="/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d"
+G="/Applications/Godot.app/Contents/MacOS/Godot"
+"$G" --headless --path "$PROJ" res://tools/test_queue.tscn -- --eos-ephemeral > /tmp/A.log 2>&1 &
+sleep 2
+"$G" --headless --path "$PROJ" res://tools/test_queue.tscn -- --eos-ephemeral > /tmp/B.log 2>&1 &
+wait
+grep -E "puid|en file|candidat" /tmp/A.log /tmp/B.log
+```
+
+**Relevé du 2026-08-18** — deux PUID distincts (`0002…6377`, `0002…ae35`), deux
+tickets, et **1 candidat vu de chaque côté** dans la fourchette [940, 1060]. La
+découverte croisée fonctionne donc contre le vrai service, à travers le filtre
+entier borné des deux côtés.
+
+Deux choses apprises en le faisant, qui ne se devinent pas :
+
+- **2 secondes d'écart suffisent** entre deux lancements éphémères. La règle
+  « les espacer » ne disait pas combien ; aucune collision de Device ID à ce
+  rythme.
+- **Un ticket fermé traîne ~1 minute dans l'index d'Epic.** Mesuré sans le
+  chercher : un troisième lancement solo, juste après, a trouvé 1 candidat —
+  un fantôme — puis 0 deux minutes plus tard. La recherche proposera donc
+  parfois un adversaire mort ; la jointure échoue, et le délai de garde de 45 s
+  l'écarte. C'est prévu par la conception, pas un défaut.
+
+---
+
+# Appariement automatique — test à deux fenêtres
+
+Dernière inconnue de la Phase 8. La **découverte** est prouvée par le banc
+ci-dessus ; ne le sont pas la jointure, la poignée de main par
+engagement-révélation, l'accord des deux camps sur qui héberge, et la connexion.
+Ces quatre-là ne s'exercent que par le jeu.
+
+## ⚠️ Prérequis bloquant — à vérifier avant de sortir deux fenêtres
+
+**Les deux entrées « CHERCHER UN MATCH EN LIGNE » doivent être ouvertes.** Au
+2026-08-18 elles sont encore grisées dans `ui.gd` : `SCREEN_MATCHMAKING` est
+déclaré et attaché au hub, mais **aucun `push` ne mène à l'écran**, et les deux
+entrées portent un motif `NOT_YET`. L'écran de recherche est donc inatteignable,
+et la séance ne peut pas avoir lieu.
+
+Le raccordement demande que les deux entrées visent `SCREEN_MATCHMAKING` et que
+le mode soit posé au passage — une seule instance d'écran sert les deux files,
+et `ScreenMatchmaking.set_ranked_queue(bool)` existe pour ça.
+
+Vérification en trente secondes avant de préparer quoi que ce soit : lancer le
+jeu, `1V1 AMICAL`, et regarder si l'entrée est cliquable.
+
+## Déroulé
+
+### Étape 1 — la première fenêtre
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --path "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d" --resolution 720x405 --position 0,120 -- --eos-ephemeral
+```
+
+**Attendre `NetworkManager: EOS prêt (puid …)` dans sa console** avant de lancer
+la seconde. Deux identités éphémères démarrées ensemble se marchent dessus et la
+seconde repart sans identité Epic.
+
+### Étape 2 — la seconde fenêtre
+
+Même commande, `--position 760,120`.
+
+### Étape 3 — comparer les deux PUID
+
+**S'ils sont identiques, on s'arrête là.** L'éphémère n'a pas pris, chaque
+fenêtre prendrait le ticket de l'autre pour le sien, et rien de ce qui suit
+n'aurait de sens.
+
+### Étape 4 — lancer les deux recherches
+
+Dans chaque fenêtre : `Accueil` → `1V1 AMICAL` → `CHERCHER UN MATCH EN LIGNE`,
+puis le bouton `CHERCHER UN MATCH`.
+
+**Commencer par l'amical.** La file classée filtre sur une fourchette : une
+variable de plus pour rien tant que le reste n'est pas établi.
+
+Première passe immédiate, puis une toutes les 2 s. Une recherche infructueuse
+coûte ~3 s chez Epic : raisonner en pas de 5 secondes, pas en instantané.
+
+### Étape 5 — le contrôle qui compte
+
+À « Adversaire trouvé », **lire qui héberge dans les deux fenêtres**. Elles
+doivent nommer **le même hôte**. Si elles se contredisent, c'est un vrai défaut :
+chaque machine calcule la désignation avec elle-même en premier, et personne
+n'ouvrirait la connexion.
+
+### Étape 6 — confirmer des deux côtés, en moins de 15 s
+
+Au-delà, l'échéance traite l'absence de réponse comme un refus — par conception,
+pour ne jamais attendre un signal qui ne viendra pas.
+
+### Étape 7 — le match
+
+À partir de là c'est le duel ordinaire, déjà validé en Phase 3 : déplacements,
+torche, tirs, dégâts des deux côtés.
+
+## Ce que cette séance ne prouvera pas
+
+**L'élargissement par paliers.** Deux identités éphémères n'ont aucun
+classement : les deux files partent alors sans filtre de fourchette. Les paliers
+±60 / ±120 / ±240 / ±480 demandent des profils classés — c'est une autre séance.
+
+## Si ça ne marche pas
+
+| Symptôme | Piste |
+| --- | --- |
+| « Appariement automatique indisponible » | EOS pas prêt, ou transport ENet. F3 doit dire `Epic : prêt` |
+| Les deux PUID sont identiques | Fenêtres lancées trop près l'une de l'autre ; recommencer en attendant `EOS prêt` |
+| Les deux cherchent sans se trouver | Le banc à deux instances ci-dessus isole le problème sans interface |
+| « Adversaire trouvé » puis plus rien | Probablement un **ticket fantôme** : attendre le délai de garde de 45 s avant de conclure |
+| Une seule fenêtre trouve l'autre | Normal un instant : dans un couple, un seul des deux a le droit de rejoindre |
+| Les deux nomment un hôte différent | **Le vrai défaut à documenter** — relever les deux PUID et les deux journaux |
+
+Le focus clavier reste sur la dernière fenêtre cliquée : cliquer dans une fenêtre
+avant d'y appuyer sur quoi que ce soit. Et les deux instances partagent le même
+`user://`, donc le même `match_history.json` — n'y lire aucun « chaque camp a
+bien archivé le sien ».
+
 ---
 
 # H1 — Test à deux machines, deux réseaux

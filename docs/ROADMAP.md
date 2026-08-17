@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-17 (clôture)
+> Dernière mise à jour : 2026-08-18
 >
 > **Plus aucune session parallèle.** Une seule branche, `main`, un seul arbre de
 > travail. Les dix worktrees d'agents et les six branches périmées ont été
@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur et l'écran **raccordés et vivants**. Reste à l'exercer contre EOS : rien n'a encore tourné contre le vrai service |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur écrit, l'écran construit. **Découverte croisée prouvée contre le vrai EOS le 2026-08-18.** Bloqué en aval : les deux entrées du hub sont **encore grisées**, l'écran est inatteignable |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -1118,10 +1118,30 @@ L'élargissement par fourchettes fines tient donc tel qu'il est écrit. Le repli
 prévu — publier des paliers nommés en chaîne et filtrer par égalité — n'est pas
 nécessaire.
 
-Ce que le banc **ne** prouve pas, et qui reste dû : qu'on trouve réellement
-quelqu'un. Le ticket publié s'auto-exclut, donc zéro candidat est le résultat
-attendu et non une déception. Trouver, s'accepter et se connecter demande deux
-fenêtres, donc Adrien.
+### ⚑ Découverte croisée prouvée le 2026-08-18 — deux identités se voient
+
+Le banc à une instance ne prouvait que l'acceptation de la requête. **Deux
+instances décalées de 2 secondes** lèvent le doute suivant : deux PUID distincts
+(`0002…6377`, `0002…ae35`), deux tickets publiés, et **1 candidat vu de chaque
+côté** dans la fourchette [940, 1060]. Une identité voit donc bien le ticket
+d'une autre, à travers le filtre entier borné des deux côtés, contre le vrai
+service. Marche à suivre reproductible :
+[PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
+
+Deux mesures obtenues en passant, qui ne se devinaient pas :
+
+- **2 secondes d'écart suffisent** entre deux lancements éphémères. Le piège
+  connu disait « les espacer » sans dire combien.
+- **Un ticket fermé traîne ~1 minute dans l'index d'Epic.** Relevé sans le
+  chercher : un troisième lancement solo a trouvé 1 candidat — un fantôme — puis
+  0 deux minutes plus tard. La recherche proposera donc parfois un adversaire
+  mort ; la jointure échoue et le délai de garde de 45 s l'écarte. La conception
+  l'absorbe déjà, mais il fallait le savoir avant de le prendre pour un défaut.
+
+Ce que ces bancs **ne** prouvent toujours pas, et qui reste dû : la **jointure**,
+la poignée de main par engagement-révélation, l'**accord des deux camps sur qui
+héberge**, et la connexion. Ces quatre-là ne s'exercent que par le jeu — donc
+derrière les deux entrées encore grisées, puis avec deux fenêtres, donc Adrien.
 
 Le banc est une **scène** et non un script : un `--script` compile
 `network_manager.gd` avant l'enregistrement des autoloads du plugin EOS.
@@ -1457,6 +1477,29 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   ne fait donc *rien*, sans erreur ni message. Relevé le 2026-08-17 par l'écran de
   recherche, qui verrouille son identifiant par un test contre la constante de
   `ui.gd` plutôt que de le recopier.
+- **Un écran attaché n'est pas un écran atteignable.** `_attach_screen()` le
+  déclare au hub et `add_back_entry()` lui donne sa sortie : rien de tout cela ne
+  crée le chemin qui y mène. Un écran peut donc être complet, testé, et
+  inaccessible — c'est l'état de l'écran de recherche depuis le 2026-08-17, sans
+  qu'aucune erreur ne le signale. Chercher le `push`, pas l'attache.
+- **`_install_aside()` crie cinq fois à chaque construction du menu.** Un seul
+  nœud `salon` est installé pour six écrans (voulu, étape 3b), mais la fonction
+  appelle `add_child()` à chaque fois alors que `detail_host()` rend un hôte
+  unique : le premier appel parente, les cinq suivants lèvent « already has a
+  parent ». **Sans conséquence fonctionnelle** — le nœud finit parenté une fois,
+  ce qui est l'état voulu, et `_on_hub_screen_changed()` gère le panneau partagé.
+  Le 2026-08-18, deux sessions se sont mutuellement attribué ce bruit avant de
+  vérifier qu'il était dans `main` depuis le début. Une garde
+  `if content.get_parent() == null` le ferait taire.
+
+**Documents et messages de commit**
+- **Un message de commit peut affirmer un travail qui n'a pas été fait, et la
+  feuille de route le recopie ensuite.** `05b72c7` annonce « les deux entrées
+  ne sont plus grisées » ; il n'a jamais touché ces entrées. L'affirmation a
+  vécu une journée dans les deux documents, et elle aurait coûté une séance de
+  test à deux fenêtres préparée pour rien. **Vérifier le code, pas le récit** —
+  `git log -S "<la chaîne concernée>"` dit en une seconde quel commit a
+  réellement touché quoi.
 
 **Godot — réflexion**
 - **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**
@@ -1952,13 +1995,26 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 
 > **Le verrou est levé.** Les deux suites passent par `NetworkManager.quit_game()`,
 > l'unique porte de sortie du jeu : elle coupe le tick, laisse une frame s'écouler,
-> relâche puis ferme la plateforme. **Quinze suites tournent**, l'autoload
-> `Matchmaker` est déclaré, et les deux entrées « chercher un match » sont ouvertes.
+> relâche puis ferme la plateforme. L'autoload `Matchmaker` est déclaré, et le
+> lanceur compte désormais **dix-sept suites**, toutes vertes au 2026-08-18
+> (les écrans audio et calibration ont apporté les deux dernières).
 >
 > Un second défaut est tombé avec le premier, et il aurait cassé en production :
 > le cœur émet `state_changed(state)` avec un argument, l'écran connectait une
 > méthode qui n'en prend aucun. Godot refuse la connexion — le rafraîchissement
 > automatique n'aurait jamais eu lieu. Corrigé par `unbind(1)`.
+>
+> **⚠️ Correction du 2026-08-18 : les deux entrées « chercher un match » ne sont
+> PAS ouvertes.** Le commit `05b72c7` l'affirme, et ce document le répétait ici
+> depuis. Vérifié dans le code : ce commit n'a ajouté que 7 lignes à `ui.gd` — la
+> constante `SCREEN_MATCHMAKING`, `_attach_screen` et l'entrée de retour. Les deux
+> entrées ([ui.gd:1609](../ui.gd) et [ui.gd:1652](../ui.gd)) portent toujours un
+> motif `NOT_YET`, donc `disabled = true`, et **aucun `push` ne mène à l'écran** :
+> il est construit, attaché, et inatteignable.
+>
+> Ce qui manque : les deux entrées doivent viser `SCREEN_MATCHMAKING`, et comme
+> une seule instance d'écran sert les deux files, le mode se pose au passage —
+> `ScreenMatchmaking.set_ranked_queue(bool)` existe déjà pour ça.
 
 1. ~~Donner la séquence d'extinction d'EOS aux deux suites d'appariement.~~ **FAIT.**
    `test_matchmaking` et `test_screen_matchmaking` passent toutes leurs
@@ -1967,23 +2023,20 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
    `EOS_Platform_Tick()`. C'est **le verrou de la Phase 8** — l'autoload
    `Matchmaker` ne peut pas être déclaré avant, sous peine de propager le
    segfault à toutes les suites.
-2. ~~Déclarer l'autoload, raccorder l'écran, ouvrir les deux entrées grisées.~~
-   **FAIT.**
-   Une fois le point 1 levé, c'est mécanique : le contrat entre le cœur et
-   l'écran est écrit et la traduction d'instantané est en place.
-3. **Écrire un banc d'essai de file, en SCÈNE et non en script.** C'est le
-   prérequis qu'on découvre en essayant : `--script` ne voit pas les autoloads du
-   plugin EOS. Modèle : `tools/test_transport.tscn`. Ce banc doit répondre en
-   premier à **une seule question** — EOS accepte-t-il un filtre entier avec
-   `GreaterThanOrEqual` sur l'attribut de classement ? Si non, la stratégie de
-   file change : il faudrait publier la fourchette en attribut de chaîne et
-   filtrer par égalité sur des paliers nommés.
-4. **Puis essayer l'appariement à deux fenêtres** avec
-   `--eos-ephemeral` (deux instances locales partagent un Device ID, donc un
-   PUID : chacune verrait le ticket de l'autre comme le sien). Le premier point à
-   vérifier est que `set_parameter` accepte des entiers avec
-   `GreaterThanOrEqual` sur l'attribut de classement — **tout le filtre de
-   fourchette repose là-dessus.**
+2. **Déclarer l'autoload et raccorder l'écran :** ~~autoload~~ **FAIT**,
+   ~~écran attaché~~ **FAIT**, **ouvrir les deux entrées grisées : PAS FAIT.**
+   Corrigé ici le 2026-08-18 : c'est aujourd'hui **le seul blocage** de la
+   Phase 8, et il tient en quelques lignes de `ui.gd` (voir l'encadré ci-dessus).
+3. ~~**Écrire un banc d'essai de file, en SCÈNE et non en script.**~~ **FAIT**
+   (`tools/test_queue.tscn`, `6df61db`) — et exercé deux fois : EOS accepte le
+   filtre entier, puis **deux identités distinctes se découvrent** (2026-08-18).
+   La conception de la file tient de bout en bout jusqu'à la découverte.
+4. **Puis essayer l'appariement à deux fenêtres** avec `--eos-ephemeral` (deux
+   instances locales partagent un Device ID, donc un PUID : chacune verrait le
+   ticket de l'autre comme le sien). **Attend le point 2** — l'écran est
+   inatteignable tant que les entrées sont grisées. Restent alors à prouver la
+   jointure, la poignée de main, l'accord sur qui héberge, et la connexion.
+   Protocole complet : [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
 4. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
 5. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
