@@ -1802,6 +1802,40 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 
 ---
 
+## Qui peut faire quoi — répartition du 2026-08-17
+
+Deux colonnes, parce qu'elles ne s'attendent pas l'une l'autre : **une session
+peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
+
+### Faisable sans Adrien — dans cet ordre
+
+| # | Chantier | Pourquoi c'est autonome |
+|---|---|---|
+| 1 | **Banc de file en scène** (Phase 8) | Un `.tscn` headless voit les autoloads du plugin EOS. Une seule instance suffit à répondre à la question qui bloque : EOS accepte-t-il un filtre entier avec `GreaterThanOrEqual` ? On ne cherche pas à trouver quelqu'un, on cherche à savoir si la **requête** est acceptée. |
+| 2 | **Écran audio** (Phase 5, étape 4) | Les quatre volumes sont déjà persistés et testés. Il ne manque que l'écran, et c'est de l'interface pure. |
+| 3 | **Écran de calibration** (Phase 5, étape 4) | Le seul travail commandé le 2026-08-17 qui n'existe pas — son agent a été tué par une limite de session. Rien ne l'empêche d'être repris. |
+| 4 | **Écran historique** (Phase 5, étape 5) | `match_history_view.gd` lit déjà le journal et rend des lignes prêtes à afficher, avec 122 assertions. Travail d'affichage. |
+| 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. |
+| 6 | **Édition du pseudo** (Phase 5, étape 6) | Demande une Edge Function nouvelle — écrite, testée hors ligne et déployée sans intervention, comme les quatre précédentes. |
+| 7 | **Rejouer le journal local** | `match_history.json` garde tout ce que le réseau a perdu ; rien ne le remonte encore. |
+| 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. `game_state.gd` est libre : plus aucune session parallèle. |
+| 9 | **Vagues de game feel procédurales** (V3, V5, V6) | Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. |
+
+### Exige Adrien — rien ne remplace sa présence
+
+| Quoi | Pourquoi |
+|---|---|
+| **Les 76 assets** | Aucun agent ne produit un son. Voir l'onglet ASSETS du suivi : noms exacts, durées sur la grille à 170 BPM, intentions. **Commencer par les cinq fichiers de musique** — délai le plus long, et ils réveillent un système entier déjà câblé. |
+| **Rejouer (jalon H3)** | Le seul juge du ressenti. À reprendre après chaque vague de game feel : une boucle qui ne redemande jamais dérive, elle optimise ce qu'elle sait mesurer. |
+| **Appariement à deux fenêtres** | Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. Ne peut pas se faire à l'aveugle. |
+| **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. |
+| **Échap et F3 en jeu** | Trente secondes. Trois tentatives pilotées ont échoué sans conclure. |
+| **Sens des divisions de rang** | I la plus basse (Rocket League) ou la plus haute (LoL) ? **Les tests passent dans les deux cas** — c'est précisément pour ça que ça ne peut pas se déduire. |
+| **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
+| **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
+
+---
+
 ## Prochaines étapes
 
 > **Cap donné par Adrien le 2026-08-16 :** le jeu est amusant (H3 tranché), le
