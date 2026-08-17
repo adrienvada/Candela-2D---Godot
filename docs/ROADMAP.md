@@ -811,9 +811,28 @@ pilotait le menu en écrivant `btn_mode_local.button_pressed = true` — exactem
 la dépendance qu'on retirait. Il exprime maintenant le geste (`hub.push`) plutôt
 que l'état, ce qui est aussi ce que fait un joueur.
 
-**Étape 4 — Options : audio et calibration.** *(persistance faite)*
-Les quatre volumes sont persistés et l'écran des effets est en place ; restent
-l'écran audio lui-même et la calibration de luminosité.
+**Étape 4 — Options : audio et calibration. ✅ CLOSE**
+
+**Audio.** Un réglage qu'on ne peut pas entendre ne se règle pas : chaque
+changement joue un son sur le bus concerné — le tir pour les effets, parce que
+c'est le son de référence du duel. La musique du menu tourne déjà et *est* son
+propre témoin : y superposer un bip la salirait sans rien apprendre.
+
+**Calibration.** La cible porte **deux marques et non une** : un repère qui doit
+tout juste apparaître, et le cran juste en dessous qui doit rester invisible.
+« Montez jusqu'à voir ceci » ne pose qu'un plancher, or **l'avantage se trouve
+au-dessus** — l'encadrement des deux côtés est ce qui sépare une cible perceptive
+d'un curseur guidé.
+
+Une silhouette et non une pastille : reconnaître une *forme* demande plus de
+contraste que détecter une plage uniforme, et calibrer sur la tache réglerait le
+jeu trop bas. Le champ est peint sur le **noir du match** et non sur le fond des
+menus, volontairement moins noir — mesurer sur un noir relevé décalerait tous les
+joueurs du même côté, invisiblement.
+
+La fenêtre honnête est **montrée et nommée, jamais imposée** : l'écrêter ne ferait
+pas disparaître le réglage, il migrerait vers le bouton du moniteur, là où le jeu
+ne voit rien.
 Le bloc audio est à créer de bout en bout, `settings_manager.gd` compris (section
 `audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste, en
 respectant l'ordre des autoloads). La calibration de luminosité est un écran de
@@ -1832,9 +1851,8 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 
 | # | Chantier | Pourquoi c'est autonome |
 |---|---|---|
-| 1 | **Banc de file en scène** (Phase 8) | Un `.tscn` headless voit les autoloads du plugin EOS. Une seule instance suffit à répondre à la question qui bloque : EOS accepte-t-il un filtre entier avec `GreaterThanOrEqual` ? On ne cherche pas à trouver quelqu'un, on cherche à savoir si la **requête** est acceptée. |
-| 2 | **Écran audio** (Phase 5, étape 4) | Les quatre volumes sont déjà persistés et testés. Il ne manque que l'écran, et c'est de l'interface pure. |
-| 3 | **Écran de calibration** (Phase 5, étape 4) | Le seul travail commandé le 2026-08-17 qui n'existe pas — son agent a été tué par une limite de session. Rien ne l'empêche d'être repris. |
+| ~~1~~ | ~~**Banc de file en scène**~~ | **FAIT** — EOS accepte le filtre entier, la conception tient. Un `.tscn` headless voit les autoloads du plugin EOS. Une seule instance suffit à répondre à la question qui bloque : EOS accepte-t-il un filtre entier avec `GreaterThanOrEqual` ? On ne cherche pas à trouver quelqu'un, on cherche à savoir si la **requête** est acceptée. |
+| ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
 | 4 | **Écran historique** (Phase 5, étape 5) | `match_history_view.gd` lit déjà le journal et rend des lignes prêtes à afficher, avec 122 assertions. Travail d'affichage. |
 | 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. |
 | 6 | **Édition du pseudo** (Phase 5, étape 6) | Demande une Edge Function nouvelle — écrite, testée hors ligne et déployée sans intervention, comme les quatre précédentes. |
