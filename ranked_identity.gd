@@ -239,6 +239,19 @@ func report_match(match_id: String, outcome: String, data: Dictionary) -> void:
 func set_ranked_context(ranked: bool) -> void:
 	_ranked_context = ranked
 
+## La nature du match qu'on s'apprête à jouer — pour l'archiver avec lui.
+##
+## Lue par `game_state.gd` au moment de bâtir l'enregistrement, afin que le
+## journal local sache **plus tard** si ce match avait sa place au classement.
+## Sans elle, un rejeu devrait deviner, et un match amical rejoué vers le
+## classement serait impossible à démêler après coup.
+##
+## Elle décrit le match **courant**, jamais un match rejoué : `pending_reports()`
+## lit la nature dans l'enregistrement, qui est la seule source fiable une fois le
+## match passé.
+func is_ranked_context() -> bool:
+	return _ranked_context
+
 ## Relit le classement du joueur. Sans effet si rien n'est prêt ; l'issue arrive
 ## par `standing_changed`.
 ##
