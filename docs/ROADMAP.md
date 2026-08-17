@@ -483,6 +483,64 @@ optimisation — avec ce rejeu comme référence pour la vérifier.
 | `ratings` et `leaderboard` à la clé publiable | ✅ fermés |
 | 6 suites Godot · 64 tests Deno | ✅ |
 
+### Étape 2c — le rejeu du journal local ✅ CLOSE (2026-08-18)
+
+**Le classement avait des trous que personne ne pouvait voir.** Trois chemins
+perdaient un rapport de match définitivement, tous silencieux :
+
+1. `report_match()` sort sans rien faire si l'identité n'est pas encore `READY` —
+   or elle ne l'est pas au premier match d'une session lancée hors ligne ;
+2. `_drain_reports()` **vide la file entière** quand le jeton Epic est
+   indisponible ;
+3. `_retry_or_drop()` renonce après trois tentatives réseau.
+
+Dans les trois cas le match était bien archivé dans `user://match_history.json`.
+Le commentaire de `game_state.gd` promettait d'ailleurs qu'« une étape ultérieure
+pourra rejouer ce qui manque ».
+
+**Elle ne le pouvait pas.** L'enregistrement ne portait ni `match_id`, ni la
+nature classée, ni l'issue vue par cette machine — c'est-à-dire exactement les
+trois champs que le serveur exige. Le journal était un souvenir lisible par un
+humain, pas une source de rejeu. La promesse était sincère et intenable, et rien
+ne le signalait : c'est le même motif que les quatre écarts relevés la veille,
+sous une forme plus retorse — non pas une décision jamais posée, mais une
+**capacité affirmée que le format interdisait**.
+
+Schéma porté en **v3** : `match_id`, `classe`, `issue`, `remonte`.
+`MatchRecord.pending_reports()` sélectionne, `mark_reported()` clôt,
+`RankedIdentity.replay_local_journal()` renvoie à l'instant où l'identité devient
+utilisable.
+
+#### Les deux décisions qui portent tout le reste
+
+**Le rejeu est sûr parce que le serveur est idempotent par construction.** Un
+match déjà complet est refusé en 4xx, et un 4xx clôt l'enregistrement. Un rapport
+de trop ne coûte donc qu'un aller-retour, là où un rapport manquant fausse un
+classement pour toujours. Les deux sens d'erreur ne se valent pas, et c'est ce qui
+autorise à rejouer sans hésiter.
+
+**La dissymétrie entre « le serveur a répondu » et « le réseau a échoué. »** Un
+accusé de réception *et* un refus définitif closent l'enregistrement — il n'y a
+plus rien à en attendre. Un échec de transport, lui, le laisse **ouvert** : le
+serveur ne sait rien de ce match. Clore là perdrait très exactement ce que
+l'étape cherche à sauver, et c'est la seule ligne de tout le dispositif qu'il ne
+faut pas « simplifier ».
+
+Les enregistrements d'avant la v3 n'ont pas d'identifiant : ils sont
+définitivement irrejouables, et le filtre les écarte plutôt que d'envoyer des
+récits que le serveur ne saurait apparier.
+
+**Vingt assertions** (`tools/test_rejeu_journal.gd`). Ce qu'elles protègent est
+invisible à l'usage : un classement à trous ressemble en tout point à un
+classement juste — personne ne peut voir le match qui manque.
+
+**Reste un fil, et il n'est pas chez moi :** `MatchRecord.build()` accepte
+désormais `match_id`, `ranked` et `outcome`, mais **son unique appelant
+(`game_state.gd:_archive_match_result`) ne les passe pas encore** — le fichier
+appartenait à une autre session au moment de la livraison. Tant que ce n'est pas
+fait, les nouveaux enregistrements sortent avec un `match_id` vide et le rejeu ne
+reprend rien. La machinerie est prête et testée ; il manque une ligne d'appel.
+
 ### Périmètre
 
 > Les trois points marqués ✅ ci-dessous sont **faits** par l'étape 1 ; le reste
@@ -1730,6 +1788,28 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   sauter l'adoption en silence : le client entrait dans la manche sur sa carte
   précédente, sans même le message d'erreur. Un champ vide voulait dire « je ne
   sais pas sur quoi je joue ».
+
+**Fin de match en ligne**
+- **`tools/test_online_match.tscn` n'est dans aucun lanceur**, et c'est le seul
+  banc qui joue une fin de match à deux instances. Les vingt suites headless n'en
+  jouent aucune. **À lancer à la main avant de toucher au cycle de fin de match**
+  — il demande deux processus coordonnés, ce que `run_suites.sh` ne sait pas
+  faire ; l'inscrire demanderait de lui apprendre.
+- **Une commodité non demandée a coûté une régression visible à chaque fin de
+  match.** `_close_lobby_if_left()` fermait le salon en quittant l'écran : je
+  l'avais ajoutée de moi-même, elle n'était pas au périmètre. `show_game_over()`
+  appelle `hub.reset()`, qui émet `screen_changed("accueil")` **avant** le
+  `push()` — l'hôte coupait donc sa propre connexion, et les deux joueurs se
+  voyaient mutuellement déconnectés. Livrée avec dix-neuf suites vertes, sur le
+  chemin exact qu'Adrien testait. Corrigée le 2026-08-18 (`ec2eac1`). Deux leçons :
+  **ce qui n'est pas demandé se signale au lieu de s'écrire**, et une suite verte
+  ne dit rien d'un chemin qu'aucune suite ne parcourt.
+- **La killcam se rejoue en boucle en headless** — `impact_frame` collée au
+  plafond du tampon, donc `_end_sequence_active` ne retombe jamais et l'écran de
+  fin ne se pose pas. C'est ce qui garde `test_online_match` au rouge sur ses deux
+  derniers contrôles. **En jeu fenêtré l'écran de fin s'affiche normalement**
+  (vérifié par Adrien) : cela ressemble à un artefact de headless, ce n'est pas
+  établi. Relevé le 2026-08-18, non corrigé.
 
 **Tests headless**
 - **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
