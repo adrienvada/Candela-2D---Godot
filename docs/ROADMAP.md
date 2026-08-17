@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur et l'écran écrits et testés. **Non raccordé** : deux suites sortent en segfault à cause de l'extinction d'EOS, et l'autoload attend cette correction |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur et l'écran **raccordés et vivants**. Reste à l'exercer contre EOS : rien n'a encore tourné contre le vrai service |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -1811,14 +1811,25 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 > raison ci-dessous ; et trois bancs d'essai réseau qui ne sont pas des suites
 > (`test_transport`, `test_online_match`, `test_quit_path`).
 
-1. **Donner la séquence d'extinction d'EOS aux deux suites d'appariement.**
+> **Le verrou est levé.** Les deux suites passent par `NetworkManager.quit_game()`,
+> l'unique porte de sortie du jeu : elle coupe le tick, laisse une frame s'écouler,
+> relâche puis ferme la plateforme. **Quinze suites tournent**, l'autoload
+> `Matchmaker` est déclaré, et les deux entrées « chercher un match » sont ouvertes.
+>
+> Un second défaut est tombé avec le premier, et il aurait cassé en production :
+> le cœur émet `state_changed(state)` avec un argument, l'écran connectait une
+> méthode qui n'en prend aucun. Godot refuse la connexion — le rafraîchissement
+> automatique n'aurait jamais eu lieu. Corrigé par `unbind(1)`.
+
+1. ~~Donner la séquence d'extinction d'EOS aux deux suites d'appariement.~~ **FAIT.**
    `test_matchmaking` et `test_screen_matchmaking` passent toutes leurs
    assertions et sortent en **139** dès que `eos_credentials.gd` est présent :
    elles touchent `NetworkManager`, EOS démarre, et l'extinction croise
    `EOS_Platform_Tick()`. C'est **le verrou de la Phase 8** — l'autoload
    `Matchmaker` ne peut pas être déclaré avant, sous peine de propager le
    segfault à toutes les suites.
-2. **Déclarer l'autoload, raccorder l'écran, ouvrir les deux entrées grisées.**
+2. ~~Déclarer l'autoload, raccorder l'écran, ouvrir les deux entrées grisées.~~
+   **FAIT.**
    Une fois le point 1 levé, c'est mécanique : le contrat entre le cœur et
    l'écran est écrit et la traduction d'instantané est en place.
 3. **Essayer l'appariement contre EOS**, à deux fenêtres avec

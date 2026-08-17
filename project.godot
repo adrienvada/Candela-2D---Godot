@@ -40,6 +40,7 @@ HLobbies="*uid://6iqvm33q0tb1"
 HP2P="*uid://u6ae5fpm6l8q"
 HSessions="*uid://bieh2rxxahuu2"
 RankedIdentity="*res://ranked_identity.gd"
+Matchmaker="*res://matchmaking.gd"
 
 [display]
 

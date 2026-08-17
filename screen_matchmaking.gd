@@ -458,7 +458,10 @@ func _wire() -> void:
 	if mm == null:
 		return
 	if mm.has_signal(CHANGED_SIGNAL):
-		mm.connect(CHANGED_SIGNAL, _redisplay)
+		# Le cœur émet `state_changed(state)` avec un argument ; `_redisplay` n'en
+		# prend aucun, et Godot refuse la connexion telle quelle. `unbind(1)` jette
+		# l'argument — l'écran ne s'en sert pas, il relit l'instantané complet.
+		mm.connect(CHANGED_SIGNAL, Callable(self, "_redisplay").unbind(1))
 	_wired = true
 
 func _redisplay() -> void:

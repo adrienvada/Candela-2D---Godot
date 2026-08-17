@@ -67,7 +67,8 @@ class Partiel extends Node:
 ## inconnue, et non mises à zéro : c'est toute la différence que l'écran doit
 ## savoir lire.
 class Complet extends Node:
-	signal state_changed
+	# Même signature que le vrai cœur : un argument d'état, que l'écran ignore.
+	signal state_changed(state)
 
 	var configured: bool = true
 	var phase: String = "idle"
@@ -132,7 +133,7 @@ func _run() -> void:
 
 	if not _preflight():
 		printerr("\n✗ Aucun test exécuté : l'écran de recherche est absent ou incomplet")
-		quit(1)
+		_quit_clean(1)
 		return
 
 	_test_contrat()
@@ -163,7 +164,7 @@ func _run() -> void:
 		print("\n✓ Tous les tests passent")
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
-	quit(1 if _failures > 0 else 0)
+	_quit_clean(1 if _failures > 0 else 0)
 
 func _check(label: String, condition: bool, detail: String = "") -> void:
 	if condition:
@@ -1300,3 +1301,21 @@ func _test_signal() -> void:
 		mm.get_signal_connection_list("state_changed").size() == 1,
 		str(mm.get_signal_connection_list("state_changed").size()))
 	_dispose(screen, mm)
+
+## Sortie propre, obligatoire dès que la plateforme EOS a démarré.
+##
+## `quit()` seul suffisait tant que ce fichier vivait dans un worktree — un
+## worktree neuf n'a pas `eos_credentials.gd`, ignoré par git, donc EOS n'y
+## démarrait jamais. Dans l'arbre principal il démarre, et l'extinction croise
+## `EOS_Platform_Tick()` : la suite passait toutes ses assertions et sortait en
+## **139**. Le défaut n'était donc visible que sur un poste configuré.
+##
+## `NetworkManager.quit_game()` est l'unique porte de sortie du jeu : elle coupe
+## le tick, laisse une frame s'écouler, relâche puis ferme la plateforme. Elle
+## retombe sur un `quit()` ordinaire si aucune plateforme n'a été créée.
+func _quit_clean(code: int) -> void:
+	var nm := root.get_node_or_null("NetworkManager")
+	if nm != null and nm.has_method("quit_game"):
+		nm.quit_game(code)
+		return
+	quit(code)

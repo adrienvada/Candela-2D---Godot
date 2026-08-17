@@ -59,6 +59,7 @@ const SCREEN_JOIN := "salon_invite"
 const SCREEN_LOCAL_HOST := "local_hote"
 const SCREEN_LOCAL_JOIN := "local_invite"
 const SCREEN_RANKED := "en_ligne_competitif"
+const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
 const SCREEN_PROFILE := "profil"
 const SCREEN_CUSTOM := "personnalisation"
@@ -1694,6 +1695,12 @@ func _build_hub_screens() -> void:
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
 	hub.add_back_entry(SCREEN_PROFILE)
+
+	# L'écran de recherche sert les deux files : le mode a été posé par l'écran
+	# d'où l'on vient, `set_ranked_context` compris.
+	_attach_screen(SCREEN_MATCHMAKING, "Recherche d'un adversaire",
+		ScreenMatchmaking.new())
+	hub.add_back_entry(SCREEN_MATCHMAKING)
 
 	# Le même panneau sert les cinq écrans de préparation : ce qui s'y voit dépend
 	# du mode et du transport retenus, pas de l'écran.
