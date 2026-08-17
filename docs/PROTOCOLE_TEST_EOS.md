@@ -1,3 +1,34 @@
+# Avant tout — rendre `godot` disponible
+
+Les commandes de ce document commencent par `godot`. **Ce raccourci n'existe pas
+par défaut sur le poste d'Adrien** : le binaire vit dans le bundle de
+l'application, et un copier-coller répond `command not found: godot`. À poser une
+fois pour toutes, dans zsh :
+
+```bash
+echo 'alias godot="/Applications/Godot.app/Contents/MacOS/Godot"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Contrôle : `godot --version` doit répondre `4.7.1.stable.official`.
+
+Sans cet alias, remplacer `godot` par le chemin complet dans chaque commande :
+`/Applications/Godot.app/Contents/MacOS/Godot`.
+
+**Second piège, indépendant du premier :** `--path .` désigne le dossier où se
+trouve le terminal, pas le projet — et le chemin du dépôt contient deux espaces
+(`Projets jeux`, `Candela - Godot`). Un `cd` sans guillemets échoue sans rien
+dire, et la commande part alors du dossier maison, où il n'y a aucun projet
+Godot : symptôme « il ne se passe rien ». Se placer dans le projet une fois,
+guillemets compris :
+
+```bash
+cd "/Users/vada/Desktop/Projets jeux/Candela - Godot/candela-2d"
+```
+
+Toutes les commandes qui suivent supposent ces deux points réglés.
+
+---
+
 # Tests EOS — deux instances sur une seule machine
 
 Le Device ID d'Epic est lié à la **machine**, pas au processus : deux instances
