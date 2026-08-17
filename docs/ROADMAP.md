@@ -913,7 +913,47 @@ il faudra alors deviner quels matchs étaient amicaux — information qui n'aura
 été écrite. C'est un défaut de correction, pas une fonctionnalité manquante, et
 il se corrige pour presque rien tant qu'aucun match amical n'existe.
 
-### Étape 8.1 — séparer amical et classé dans le rapport
+### Étape 8.1 — séparer amical et classé ✅ CLOSE, déployée le 2026-08-17
+
+Type `public.match_kind` (`friendly` / `ranked`), colonne `kind` sur
+`match_reports` avec **défaut `friendly`** — le défaut *est* la règle : un insert
+qui oublie la nature écrit un amical, jamais un classé.
+
+**`concordant` change de sens sans changer de nom** : il exige désormais aussi que
+les deux pairs aient déclaré la même nature. Tout lecteur qui filtrait déjà sur
+`concordant` hérite de la protection sans l'avoir demandée — et le rejeu du
+classement en faisait partie.
+
+La vue rend `kind` à **`null`** quand les deux se contredisent, et non
+`'friendly'` : « ils ne sont pas d'accord » n'est pas « ils ont déclaré amical »,
+et un filtre sur `ranked` écarte les deux cas. `kind_a` et `kind_b` sont exposées
+brutes pour qu'un litige soit diagnosticable au lieu d'être seulement écarté.
+
+**Le passé est décidé, pas deviné :** tout ce qui était en base a été joué avant
+que l'amical existe, donc `update … set kind = 'ranked'` sans clause. Les tables
+étant vides depuis la purge des essais de la Phase 4, l'ordre n'a touché aucune
+ligne — mais il devait être écrit pour la prochaine fois.
+
+Trois précautions de déploiement qui ne vont pas de soi :
+
+- **`p_kind` est le dernier paramètre, avec un défaut**, parce que le déploiement
+  n'est pas atomique : entre la migration et la fonction, l'ancien code appelle
+  encore sans nature. Le défaut lui évite d'échouer, et `null` valant amical,
+  l'intervalle peut au pire faire *manquer* des matchs — jamais en inventer.
+- **`drop function` puis `create`, et non `create or replace`** : une liste de
+  paramètres différente crée une **surcharge**. L'ancienne fonction sans nature
+  serait restée appelable, PostgREST choisissant d'après les clés du corps.
+- Le corps refuse volontairement le cast `p_kind::public.match_kind` : sur un mot
+  inconnu il lèverait `22P02` et **ferait perdre le rapport**, alors que c'est le
+  rapport qui fait foi.
+
+Déployées et vérifiées en ligne : 401 sans jeton sur `/report` comme sur
+`/standing`. **Ce qui reste invérifiable sans base locale** — aucun Postgres ni
+Docker sur ce poste : la résolution des types à l'exécution, les droits, et le
+comportement réel de PostgREST sur `kind=eq.ranked`. La vérification de bout en
+bout avec deux identités éphémères reste due, et elle couvrira ces trois points.
+
+#### Le détail des trois règles
 
 Un champ sur `match_reports`, joint par les deux pairs, et un filtre dans le
 rejeu. Trois précautions qui ne vont pas de soi :
@@ -1115,6 +1155,21 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 - **Republier sans passer l'URL crée un artefact distinct.** Adrien se retrouve
   alors avec deux tableaux qui se contredisent sans savoir lequel croire. L'URL
   est inscrite dans le README, `CLAUDE.md` et le journal des sessions.
+
+**Postgres et PostgREST**
+- **Changer la liste de paramètres d'une fonction crée une SURCHARGE, pas un
+  remplacement.** `create or replace` ne remplace que la fonction de *même*
+  signature : l'ancienne reste appelable, et PostgREST choisit d'après les clés du
+  corps de requête. Il faut `drop function` puis `create`.
+- **Un `pgsql-parser` valide la syntaxe SQL, pas les corps plpgsql.** Démontré le
+  2026-08-17 : un `end if;` retiré passe pour valide chez `pgsql-parser` et n'est
+  rejeté que par `parsePlPgSQL`. Les deux, donc, tant qu'il n'y a pas de base
+  locale.
+- **Un déploiement Supabase n'est pas atomique** : entre `db push` et
+  `functions deploy`, l'ancien code appelle la nouvelle base. Tout paramètre
+  ajouté à une fonction doit donc venir **en dernier, avec un défaut**, et ce
+  défaut doit être le choix sûr — celui qui fait au pire manquer une donnée
+  plutôt qu'en inventer une.
 
 **Godot — réflexion**
 - **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**

@@ -8,10 +8,13 @@
 
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
+  FRIENDLY,
+  MATCH_KINDS,
   MAX_DURATION_S,
   MAX_MAP_ID,
   MAX_WEAPON,
   parseReport,
+  RANKED,
 } from "./match_report.ts";
 
 const VALIDE = {
@@ -122,4 +125,52 @@ Deno.test("le forfait n'est vrai que s'il est vrai", () => {
 
 Deno.test("un corps vide est refusé sur le premier contrôle", () => {
   assertEquals(refus({}), "match_id_invalide");
+});
+
+// --- la nature du match -----------------------------------------------------
+//
+// Le classé est le cas EXPLICITE, l'amical le défaut. Ce sens-là est la moitié du
+// correctif : un bogue de client peut faire PERDRE un match au classement — le
+// rejeu étant intégral, il le rattrape dès que la donnée est juste — mais jamais
+// en AJOUTER un, ce qui demanderait de retrouver après coup une information que
+// personne n'a écrite.
+
+Deno.test("le vocabulaire de la nature est celui du type SQL", () => {
+  // Ces deux mots sont ceux du type `public.match_kind`, posé en
+  // 20260817150000_match_kind.sql. En changer un seul côté ferait taire le
+  // classement sans lever la moindre erreur : le rejeu ne trouverait plus aucun
+  // match classé, et un classement vide n'a rien d'anormal en soi.
+  assertEquals([...MATCH_KINDS], ["friendly", "ranked"]);
+  assertEquals(RANKED, "ranked");
+  assertEquals(FRIENDLY, "friendly");
+});
+
+Deno.test("seul un « ranked » franc classe un match", () => {
+  assertEquals(accepte({ ...VALIDE, ranked: true }).kind, "ranked");
+  assertEquals(accepte({ ...VALIDE, ranked: false }).kind, "friendly");
+});
+
+Deno.test("champ absent, null ou valeur inconnue valent amical", () => {
+  // Le champ absent est le cas le plus probable de tous : un client d'une version
+  // antérieure, qui ne sait pas encore que la nature existe. VALIDE n'en porte
+  // pas, c'est donc exactement ce qu'on lit ici.
+  assertEquals(accepte({ ...VALIDE }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: undefined }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: null }).kind, "friendly");
+  // Et tout ce qui ressemble à un oui sans en être un, comme pour le forfait.
+  assertEquals(accepte({ ...VALIDE, ranked: "true" }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: "ranked" }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: 1 }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: [true] }).kind, "friendly");
+  assertEquals(accepte({ ...VALIDE, ranked: {} }).kind, "friendly");
+});
+
+Deno.test("une nature illisible ne fait jamais perdre le rapport", () => {
+  // Refuser serait la mauvaise réaction : le match a été joué et c'est le rapport
+  // qui fait foi. On le range en amical, et on l'écrit — même arbitrage que le
+  // format inconnu ramené à BO1.
+  const r = accepte({ ...VALIDE, ranked: "peut-être" });
+  assertEquals(r.kind, "friendly");
+  assertEquals(r.outcome, "win");
+  assertEquals(r.matchId, VALIDE.match_id);
 });

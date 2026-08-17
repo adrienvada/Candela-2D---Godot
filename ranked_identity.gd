@@ -75,6 +75,10 @@ var _standing_top: Array = []
 var _standing_loaded: bool = false
 var _standing_error: String = ""
 
+## Nature du prochain match rapporté. **Amical par défaut** : un oubli de
+## déclaration ne doit jamais ajouter un match au classement.
+var _ranked_context: bool = false
+
 signal state_changed(state: State)
 ## Émis quand le classement du joueur a été relu.
 signal standing_changed
@@ -214,8 +218,26 @@ func report_match(match_id: String, outcome: String, data: Dictionary) -> void:
 	var payload := data.duplicate()
 	payload["match_id"] = match_id
 	payload["outcome"] = outcome
+	# La nature du match voyage avec le rapport, et le serveur ne compte que ce qui
+	# est déclaré classé — un match amical qui alimenterait le classement serait
+	# impossible à démêler après coup, faute d'avoir été écrit.
+	payload["ranked"] = _ranked_context
 	_report_queue.append(payload)
 	_drain_reports()
+
+## Déclare la nature du prochain match rapporté : classé ou amical.
+##
+## **Le menu décide, pas le jeu.** C'est en entrant dans « en ligne compétitif »
+## ou dans un salon amical que la nature est choisie ; `game_state.gd` ne fait que
+## rapporter une issue et n'a pas à connaître cette distinction. Poser l'intention
+## ici évite aussi de faire dépendre le rapport d'un état d'interface — la même
+## erreur que celle corrigée à l'étape 3b sur le mode réseau.
+##
+## Le défaut est **amical**, et ce sens-là n'est pas arbitraire : un oubli de
+## déclaration ne doit jamais *ajouter* un match au classement. L'inverse se
+## rattrape par un rejeu de l'historique, celui-là non.
+func set_ranked_context(ranked: bool) -> void:
+	_ranked_context = ranked
 
 ## Relit le classement du joueur. Sans effet si rien n'est prêt ; l'issue arrive
 ## par `standing_changed`.

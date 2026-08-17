@@ -13,6 +13,22 @@ export type Outcome = typeof OUTCOMES[number];
 
 export const FORMATS = ["BO1", "BO3", "BO5"] as const;
 
+/**
+ * Nature du match, dans les mots du type `public.match_kind`. C'est ce qui
+ * s'écrit en base et ce que le rejeu relit : un seul vocabulaire des deux côtés.
+ */
+export const MATCH_KINDS = ["friendly", "ranked"] as const;
+export type MatchKind = typeof MATCH_KINDS[number];
+
+/**
+ * Le seul mot qui autorise un match à déplacer un classement, et le seul endroit
+ * où il est écrit : `ranking.ts` l'importe d'ici plutôt que de le réécrire, sans
+ * quoi les deux moitiés du correctif pourraient diverger sans que rien ne casse
+ * visiblement.
+ */
+export const RANKED: MatchKind = "ranked";
+export const FRIENDLY: MatchKind = "friendly";
+
 /** 16 octets tirés par l'hôte, rendus en hexadécimal. */
 export const MATCH_ID_PATTERN = /^[0-9a-f]{32}$/;
 
@@ -31,6 +47,7 @@ export interface MatchReport {
   weaponSelf: string;
   weaponOpponent: string;
   format: string;
+  kind: MatchKind;
 }
 
 /**
@@ -81,6 +98,24 @@ export function parseReport(body: Record<string, unknown>): ParseResult {
     ? body.format
     : "BO1";
 
+  // Le classé est le cas EXPLICITE, l'amical le défaut. Seul un `true` franc
+  // compte, exactement comme pour `forfeit` : champ absent, `null`, chaîne
+  // « true », 1, mot inconnu — tout cela est amical.
+  //
+  // Le sens de ce défaut est la moitié du correctif. Un bogue de client peut
+  // ainsi faire PERDRE un match au classement, ce qu'un rejeu rattrape dès que
+  // la donnée est juste ; il ne peut pas en AJOUTER, ce qui demanderait de
+  // retrouver après coup une information que personne n'a écrite.
+  //
+  // Une nature illisible ne fait donc pas échouer le rapport : le match a été
+  // joué, et c'est le rapport qui fait foi — même arbitrage que le format
+  // inconnu ramené à BO1.
+  //
+  // Le champ s'appelle `ranked` sur le fil et `kind` en base. C'est le jeu qui
+  // pose le mot du fil (`report_match()` dans `ranked_identity.gd`), et la
+  // traduction se fait ici, en un seul endroit, sous test.
+  const kind: MatchKind = body.ranked === true ? RANKED : FRIENDLY;
+
   return {
     ok: true,
     report: {
@@ -93,6 +128,7 @@ export function parseReport(body: Record<string, unknown>): ParseResult {
       weaponSelf: text(body.weapon_self, MAX_WEAPON),
       weaponOpponent: text(body.weapon_opponent, MAX_WEAPON),
       format,
+      kind,
     },
   };
 }

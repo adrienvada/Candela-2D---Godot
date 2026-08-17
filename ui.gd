@@ -1788,6 +1788,16 @@ func _on_hub_screen_changed(id: String) -> void:
 		SCREEN_LOCAL: _intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 		SCREEN_HOST: _intended_mode = NetworkManager.GameMode.ONLINE_HOST
 		SCREEN_JOIN: _intended_mode = NetworkManager.GameMode.ONLINE_CLIENT
+
+	# La nature du match se décide au menu, pas en jeu : entrer dans « en ligne
+	# compétitif » est la seule façon de jouer classé. Tout le reste — écran
+	# partagé, salon amical, entraînement — ne compte pas, et le déclarer
+	# explicitement vaut mieux que de laisser le serveur le deviner.
+	if is_instance_valid(RankedIdentity) and RankedIdentity.has_method("set_ranked_context"):
+		match id:
+			SCREEN_RANKED: RankedIdentity.set_ranked_context(true)
+			SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
+				RankedIdentity.set_ranked_context(false)
 	if id == SCREEN_LOCAL or id == SCREEN_HOST or id == SCREEN_JOIN:
 		_refresh_map_card()
 		_refresh_lobby_block()

@@ -7,9 +7,12 @@
 // Corps attendu :
 //   { "id_token": "<jwt Epic>", "match_id": "<32 hex>", "outcome": "win|loss|draw",
 //     "forfeit": false, "duration": 187.25, "map": "default",
-//     "weapon_self": "Pompe", "weapon_opponent": "Fusil", "format": "BO1" }
+//     "weapon_self": "Pompe", "weapon_opponent": "Fusil", "format": "BO1",
+//     "ranked": true }
 //
-// Aucun ELO n'est calculé ici. On archive, c'est tout.
+// `ranked` doit valoir exactement `true` pour que le match compte au classement :
+// l'amical est le défaut, et un champ absent ou illisible ne peut donc que faire
+// manquer un match au classement, jamais en ajouter un (voir `match_report.ts`).
 
 import { authenticate, fail, ok, readBody } from "../_shared/http.ts";
 import { callFunction, Row } from "../_shared/db.ts";
@@ -48,6 +51,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       p_weapon_self: report.weaponSelf,
       p_weapon_opponent: report.weaponOpponent,
       p_format: report.format,
+      p_kind: report.kind,
     });
 
     if (saved === null) {
@@ -68,7 +72,18 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     return ok({
-      report: { id: saved.id, match_id: report.matchId, outcome: report.outcome },
+      // La nature est renvoyée telle que le serveur l'a COMPRISE, et pas telle
+      // qu'elle a été déclarée : un client qui perd le champ en route voit son
+      // match rangé en amical au lieu de ne rien voir du tout. Le défaut qu'on
+      // corrige ici était précisément un silence.
+      report: {
+        id: saved.id,
+        match_id: report.matchId,
+        outcome: report.outcome,
+        kind: report.kind,
+      },
+      // Attention au mot : ce `ranked` dit que le RECALCUL a abouti, pas que le
+      // match était classé. Ce dernier se lit dans `report.kind`.
       ranked,
     });
   } catch (error) {
