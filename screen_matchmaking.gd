@@ -98,14 +98,22 @@ extends HubScreen
 # s'afficher en désaccord.
 
 ## Le seul nom d'autoload que cet écran connaisse.
-const MATCHMAKER_PATH := ^"/root/Matchmaking"
+# L'autoload ne peut pas s'appeler `Matchmaking` : ce nom est déjà celui de la
+# classe (`class_name Matchmaking`), et Godot refuse qu'un singleton masque une
+# classe globale. D'où `Matchmaker` pour l'instance, `Matchmaking` pour le type.
+const MATCHMAKER_PATH := ^"/root/Matchmaker"
 
-const SNAPSHOT_METHOD := "matchmaking_snapshot"
+# Noms réels de `matchmaking.gd`. Cet écran a été écrit AVANT ce fichier, contre
+# une API supposée ; les noms ont divergé, et c'est précisément ce que ce bloc
+# isolé prévoyait. La réconciliation tient ici et dans `_snapshot()`.
+const SNAPSHOT_METHOD := "search_snapshot"
 const START_METHOD := "start_search"
-const CANCEL_METHOD := "cancel_search"
-const ACCEPT_METHOD := "accept_match"
-const DECLINE_METHOD := "decline_match"
-const CHANGED_SIGNAL := "matchmaking_changed"
+const CANCEL_METHOD := "cancel"
+const ACCEPT_METHOD := "accept"
+const DECLINE_METHOD := "refuse"
+## Le cœur émet un signal par transition ; l'écran n'a besoin que de savoir que
+## quelque chose a bougé. Il les écoute tous et se réaffiche.
+const CHANGED_SIGNAL := "state_changed"
 
 ## Le point de contact est pris tel quel ou pas du tout.
 ##
@@ -796,7 +804,14 @@ func _on_engage() -> void:
 			navigate_requested.emit(FRIENDLY_SCREEN)
 			return
 		"start":
-			_command(START_METHOD, [_ranked])
+			# Le cœur attend un mode et un classement, pas un booléen : il filtre
+			# la fourchette d'après le classement réel, et un joueur non classé
+			# n'est pas placé du tout plutôt qu'estimé.
+			var mode := 1 if _ranked else 0
+			var note := -1
+			if is_instance_valid(RankedIdentity) and RankedIdentity.is_ranked:
+				note = RankedIdentity.rating
+			_command(START_METHOD, [mode, note])
 		"accept":
 			_command(ACCEPT_METHOD, [])
 	_redisplay()
@@ -846,7 +861,77 @@ func _snapshot() -> Dictionary:
 	if mm == null:
 		return {}
 	var value: Variant = mm.call(SNAPSHOT_METHOD)
-	return (value as Dictionary) if value is Dictionary else {}
+	if not value is Dictionary:
+		return {}
+	return _adapt(mm, value as Dictionary)
+
+## Traduit l'instantané du cœur dans le vocabulaire de cet écran.
+##
+## Deux vocabulaires plutôt qu'un seul partagé, et c'est délibéré : le cœur pense
+## en machine à états (`State.AWAITING_ACCEPT`), l'écran pense en ce que le joueur
+## regarde (« il doit confirmer »). Les faire coïncider de force aurait obligé
+## l'un des deux à porter le vocabulaire de l'autre. La traduction est ici, en un
+## seul endroit, et **toute clé qu'on ne sait pas remplir est omise** — l'écran
+## n'affiche alors rien plutôt que d'inventer.
+func _adapt(mm: Node, raw: Dictionary) -> Dictionary:
+	# Un instantané déjà rédigé dans le vocabulaire de cet écran n'a rien à
+	# traduire. Le cas ne se produit qu'avec une doublure de test : le cœur réel
+	# rend `supported`/`state`, jamais `phase`. La traduction est donc idempotente
+	# sans masquer de dérive — si le cœur se mettait un jour à parler cette langue,
+	# c'est qu'il aurait été réécrit pour cela.
+	if raw.has("phase"):
+		return raw
+
+	var out := {}
+	out["configured"] = bool(raw.get("supported", false))
+
+	var etat := int(raw.get("state", 0))
+	var perdus := int(raw.get("handshakes_lost", 0))
+	# Un refus adverse ramène le cœur en recherche, le tour préservé. C'est bien
+	# « en file » du point de vue de la mécanique, mais le joueur doit d'abord
+	# apprendre qu'on l'a refusé — sans quoi le compteur repart sans explication.
+	if etat == 1 and perdus > 0:
+		out["phase"] = PHASE_DECLINED
+	else:
+		match etat:
+			0: out["phase"] = PHASE_IDLE
+			1: out["phase"] = PHASE_SEARCHING
+			2: out["phase"] = PHASE_FOUND
+			3: out["phase"] = PHASE_AWAITING
+			_: out["phase"] = PHASE_UNAVAILABLE
+
+	var erreur := String(raw.get("last_error", ""))
+	if erreur != "":
+		out["reason"] = erreur
+	if raw.has("elapsed"):
+		out["elapsed"] = float(raw["elapsed"])
+	if raw.has("handshake_remaining"):
+		out["remaining"] = float(raw["handshake_remaining"])
+
+	# La fourchette n'est une fourchette qu'avec ses deux bornes. Ouverte, elle
+	# n'en est pas une : l'écran dira « toutes catégories » par son propre libellé.
+	if not bool(raw.get("range_open", true)) and raw.has("range_low") and raw.has("range_high"):
+		out["bracket"] = [int(raw["range_low"]), int(raw["range_high"])]
+
+	if is_instance_valid(RankedIdentity) and RankedIdentity.is_ready():
+		var moi := {"nickname": RankedIdentity.nickname}
+		if RankedIdentity.is_ranked:
+			moi["rating"] = RankedIdentity.rating
+		out["me"] = moi
+
+	var paire: Variant = mm.call("pairing_snapshot") if mm.has_method("pairing_snapshot") else {}
+	if paire is Dictionary and not (paire as Dictionary).is_empty():
+		var p: Dictionary = paire
+		var adv := {}
+		# Le cœur ne connaît que des clés d'identité, pas des pseudos : les
+		# afficher serait montrer un PUID à un joueur. Faute de pseudo, on n'en
+		# invente pas — l'écran écrira « adversaire ».
+		if p.has("opponent_rating") and int(p["opponent_rating"]) >= 0:
+			adv["rating"] = int(p["opponent_rating"])
+		out["opponent"] = adv
+		if p.has("local_hosts"):
+			out["host_is_me"] = bool(p["local_hosts"])
+	return out
 
 func _command(method: String, args: Array) -> void:
 	var mm := _usable()

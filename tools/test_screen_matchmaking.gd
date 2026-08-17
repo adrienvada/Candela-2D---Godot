@@ -59,7 +59,7 @@ var _consts: Dictionary = {}
 ## Instantané lisible, aucune commande. Reproduit une divergence de version entre
 ## le jeu et l'appariement.
 class Partiel extends Node:
-	func matchmaking_snapshot() -> Dictionary:
+	func search_snapshot() -> Dictionary:
 		return {"configured": true, "phase": "searching", "elapsed": 30.0,
 			"bracket": [950, 1120]}
 
@@ -67,7 +67,7 @@ class Partiel extends Node:
 ## inconnue, et non mises à zéro : c'est toute la différence que l'écran doit
 ## savoir lire.
 class Complet extends Node:
-	signal matchmaking_changed
+	signal state_changed
 
 	var configured: bool = true
 	var phase: String = "idle"
@@ -91,7 +91,7 @@ class Complet extends Node:
 	var accepts: int = 0
 	var declines: int = 0
 
-	func matchmaking_snapshot() -> Dictionary:
+	func search_snapshot() -> Dictionary:
 		var snap: Dictionary = {
 			"configured": configured, "phase": phase, "reason": reason,
 			"notice": notice, "me": me, "opponent": opponent,
@@ -106,16 +106,16 @@ class Complet extends Node:
 			snap["host_is_me"] = host_is_me
 		return snap
 
-	func start_search(ranked: bool) -> void:
-		starts.append(ranked)
+	func start_search(mode: int, _rating: int = -1, _resume: bool = false) -> void:
+		starts.append(mode == 1)
 
-	func cancel_search() -> void:
+	func cancel() -> void:
 		cancels += 1
 
-	func accept_match() -> void:
+	func accept() -> void:
 		accepts += 1
 
-	func decline_match() -> void:
+	func refuse() -> void:
 		declines += 1
 
 	func commands() -> int:
@@ -1279,7 +1279,7 @@ func _test_signal() -> void:
 	mm.opponent = {"nickname": "Ombre", "rating": 1248}
 	mm.host_set = true
 	mm.host_is_me = false
-	mm.matchmaking_changed.emit()
+	mm.state_changed.emit(0)
 
 	_check("un appariement trouvé rafraîchit l'écran tout seul",
 		_imprint(screen) != avant)
@@ -1297,6 +1297,6 @@ func _test_signal() -> void:
 	screen.refresh()
 	screen.refresh()
 	_check("le signal n'est branché qu'une fois",
-		mm.get_signal_connection_list("matchmaking_changed").size() == 1,
-		str(mm.get_signal_connection_list("matchmaking_changed").size()))
+		mm.get_signal_connection_list("state_changed").size() == 1,
+		str(mm.get_signal_connection_list("state_changed").size()))
 	_dispose(screen, mm)

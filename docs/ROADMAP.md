@@ -1043,6 +1043,66 @@ cassée au bout de vingt secondes.
 contre un Aveugle est un match perdu pour les deux — la règle du miroir des armes
 en fait un match jouable, pas un match intéressant.
 
+### Étapes 8.2 à 8.5 — le cœur de l'appariement 🟡 écrit, non raccordé
+
+`matchmaking.gd` porte la file, la désignation de l'hôte, la poignée de main et
+l'élargissement. Cinq états, une doublure de transport pour les tests, et **aucun
+`if transport == …`** — la primitive de file vit dans `network_manager.gd`.
+
+**L'identifiant de match est tiré par engagement-révélation**, et c'est ce qui rend
+« aucun des deux ne contrôle le tirage » littéralement vrai au lieu d'être affirmé.
+L'hébergeur publie `sha256(nonce)` dans son ticket **avant qu'aucun adversaire
+n'existe** ; le joueur déclare son propre nonce en étant aveugle à cette valeur ;
+l'hébergeur révèle alors, et le joueur vérifie la révélation contre l'engagement
+publié — divergence, refus. L'hébergeur ne peut pas moudre, il est lié par son
+engagement ; le joueur non plus, il est aveugle.
+
+**La désignation est pure et prouvée sans biais.** `designate_host` ordonne les
+deux clés canoniquement puis lit un bit de `sha256("match_id|bas|haut")`. Hacher
+plutôt que lire les bits de l'identifiant compte : un appelant passant un compteur
+obtiendrait sinon un tirage systématiquement biaisé. Vérifié sur 20 000 tirages par
+famille d'identifiants (séquentiels, chaînés, cryptographiques, et « est-ce la plus
+petite identité ? »), puis 400 000 hors suite pour confirmer que les écarts de
+0,6 point étaient du bruit d'échantillonnage. Alternance en revanche.
+
+Le test attrape explicitement **la régression classique** : une désignation qui
+rendrait « la plus petite identité » passe le déterminisme *et* la symétrie, et
+n'est prise que par les contrôles de biais. La symétrie elle-même est testée parce
+que chaque machine appelle avec elle-même en premier — sans elle, les deux
+désigneraient des hôtes différents et personne n'ouvrirait la connexion.
+
+**Paliers d'élargissement** : ±60, ±120, ±240, ±480, puis sans filtre, à 0 / 15 /
+35 / 60 / 90 s. Adossés à l'échelle réelle d'`elo.ts` — une division vaut 40
+points, une catégorie 120 : ±60 est une demi-catégorie, ±480 en vaut quatre,
+déséquilibré mais jouable sous la règle du miroir. Le plafond que l'étape 8.5
+laissait à Adrien est **ouvert par défaut** : avec cette population, ne pas jouer
+est un plus mauvais appariement que jouer contre plus fort. Une valeur à changer
+dans la table.
+
+#### ⚠️ Ce qui reste avant que l'appariement fonctionne
+
+1. **Deux suites hors du lanceur, et l'audit les signale.** `test_matchmaking` et
+   `test_screen_matchmaking` passent toutes leurs assertions mais **sortent en 139**
+   sur un poste qui possède `eos_credentials.gd` : elles touchent
+   `NetworkManager`, EOS démarre, et l'extinction croise `EOS_Platform_Tick()` sans
+   la séquence d'arrêt propre qu'impose le README. Le worktree où elles ont été
+   écrites n'avait pas les identifiants — le défaut n'y apparaissait donc pas, et
+   c'est un piège de plus pour tout travail en worktree. À lever en donnant à ces
+   suites l'extinction d'EOS.
+2. **Aucun autoload déclaré.** `matchmaking.gd` n'est pas dans l'arbre : l'écran
+   cherche `/root/Matchmaker`, ne trouve rien, et affiche « appariement
+   indisponible » — un état honnête et testé, mais l'appariement ne tourne pas.
+   La déclaration attend le point 1, sans quoi elle propage le segfault à toutes
+   les suites. Noter que l'autoload **ne peut pas** s'appeler `Matchmaking` :
+   Godot refuse qu'un singleton masque une classe globale du même nom.
+3. **Les deux entrées « chercher un match » restent grisées** dans le hub.
+4. **Rien n'a été exercé contre EOS.** En particulier, que `set_parameter` accepte
+   des entiers avec `GreaterThanOrEqual` sur l'attribut de classement — **tout le
+   filtre de fourchette repose là-dessus**, et c'est la première chose à essayer.
+   Deux instances locales partagent un Device ID donc un PUID : chacune verrait le
+   ticket de l'autre comme le sien. Les essais à deux fenêtres exigent
+   `--eos-ephemeral`.
+
 ### Étape 8.6 — l'écran de recherche 🟡 écrit, en attente de raccordement
 
 `screen_matchmaking.gd` tient sept états, dont ceux qui font tout le travail : la

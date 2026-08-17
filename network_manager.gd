@@ -38,6 +38,19 @@ const ENET_JOIN_TIMEOUT := 5.0
 ## Trois tirages suffisent : sur 32^6 combinaisons, une collision est déjà une
 ## curiosité, deux d'affilée un accident statistique.
 const EOS_CODE_ATTEMPTS := 3
+## Attributs du ticket d'attente (appariement automatique, Phase 8). Ils ne sont
+## posés que sur les salons de file : un salon à code n'en porte aucun, et ne
+## répond donc jamais à une recherche d'appariement.
+const EOS_QUEUE_ATTRIBUTE := "MMQUEUE"
+const EOS_QUEUE_RATING_ATTRIBUTE := "MMELO"
+const EOS_QUEUE_COMMIT_ATTRIBUTE := "MMCOMMIT"
+## Attributs de MEMBRE : ils portent la poignée de main, et se propagent par
+## notification de salon — pas par l'index de recherche, dont la latence se
+## compte en secondes.
+const EOS_MEMBER_NONCE_ATTRIBUTE := "MMNONCE"
+const EOS_MEMBER_RATING_ATTRIBUTE := "MMMELO"
+const EOS_MEMBER_ACCEPT_ATTRIBUTE := "MMACCEPT"
+
 ## Sondages de l'index d'Epic, côté hôte, avant d'annoncer le code au joueur.
 ## Une recherche qui ne trouve rien coûte ~3,1 s : c'est trop cher pour la
 ## répéter côté client, où elle allongerait d'autant l'annonce d'un code mal
@@ -59,6 +72,13 @@ var eos_network_type: int = -1
 var eos_nat_type: int = -1
 
 var _eos_lobby = null              # HLobby, ou null
+## Salon de rendez-vous de l'appariement : le ticket qu'on publie, ou celui qu'on
+## a rejoint. Volontairement distinct de `_eos_lobby` — le cycle de vie du salon
+## à code ne doit pas emporter la file d'attente, ni l'inverse.
+var _queue_lobby = null            # HLobby, ou null
+## Résultats de la dernière recherche de file, par identifiant. L'appelant ne
+## manipule que des chaînes opaques : c'est ce qui lui évite de connaître EOS.
+var _queue_found: Dictionary = {}
 var _eos_peer: EOSGMultiplayerPeer = null
 var _eos_ephemeral: bool = false
 var _eos_shutting_down: bool = false
@@ -94,6 +114,12 @@ signal host_disconnected
 signal eos_state_changed(state: EosState)
 ## Émis côté hôte quand le code du salon est publié et donc communicable.
 signal lobby_code_ready(code: String)
+
+## État déclaré par l'autre occupant du rendez-vous d'appariement. Dictionnaire
+## vide quand il n'y a plus personne — un départ vaut un refus.
+signal queue_peer_state_changed(state: Dictionary)
+## Le rendez-vous n'existe plus (salon détruit, expulsion).
+signal queue_ticket_lost
 
 # ===========================================================================
 # CYCLE DE VIE
@@ -196,7 +222,10 @@ func _join_enet(address: String, port: int) -> bool:
 ## retour de l'appel, exactement comme en ENet, et la suite du jeu démarre la
 ## manche sans savoir qu'un salon se crée en tâche de fond. Seul le code de
 ## salon arrive plus tard, par `lobby_code_ready`.
-func _host_eos() -> bool:
+## `publish` à faux quand le rendez-vous a déjà eu lieu (appariement automatique) :
+## le socket suffit, et un salon à code de plus n'ajouterait que du bruit dans
+## l'index d'Epic.
+func _host_eos(publish: bool = true) -> bool:
 	if not _require_eos_ready():
 		return false
 	var p := EOSGMultiplayerPeer.new()
@@ -214,7 +243,8 @@ func _host_eos() -> bool:
 	current_mode = GameMode.ONLINE_HOST
 	_connect_signals()
 	print("NetworkManager: hosting (EOS), socket %s" % EOS_SOCKET_ID)
-	_publish_lobby_async()
+	if publish:
+		_publish_lobby_async()
 	return true
 
 func _join_eos(raw_code: String) -> bool:
@@ -388,6 +418,216 @@ func _search_code(code: String):
 		{ key = EOS_CODE_ATTRIBUTE, value = code, comparison = EOS.ComparisonOp.Equal },
 	])
 
+# ===========================================================================
+# FILE D'ATTENTE — primitives de l'appariement automatique
+# ===========================================================================
+#
+# La file vit dans les salons EOS : un joueur en attente publie un ticket, le
+# chercheur filtre dessus (étape 8.2). Tout ce qui suit est la SEULE partie de
+# l'appariement qui connaisse Epic ; `matchmaking.gd` n'appelle que ces
+# fonctions, dans le vocabulaire du jeu.
+
+## Vrai quand le transport courant sait apparier. ENet ne le sait pas — il n'a
+## ni index de salons ni traversée de NAT — et sans identifiants Epic la session
+## n'est jamais prête : dans les deux cas l'appariement se déclare indisponible
+## au lieu d'échouer plus tard.
+func matchmaking_supported() -> bool:
+	return transport == Transport.EOS and eos_state == EosState.READY
+
+## Identité stable du joueur, telle que l'autre camp la verra. C'est elle qui
+## sert à s'exclure de sa propre recherche et à désigner l'hôte.
+func local_identity_key() -> String:
+	return eos_puid
+
+## Publie le ticket d'attente. `commitment` est l'engagement de tirage : il est
+## public AVANT que le moindre adversaire soit connu, et c'est ce qui empêche son
+## auteur de choisir qui hébergera.
+func queue_publish_async(mode_tag: String, rating: int, commitment: String) -> bool:
+	if not matchmaking_supported() or _eos_shutting_down:
+		return false
+	if _queue_lobby != null:
+		await queue_close_async()
+
+	var opts := EOS.Lobby.CreateLobbyOptions.new()
+	opts.bucket_id = EOS_BUCKET_ID
+	# Deux places : une fois le rendez-vous occupé, Epic refuse lui-même le
+	# troisième arrivant, et la négociation ne peut pas se dédoubler.
+	opts.max_lobby_members = 2
+	opts.presence_enabled = false
+	opts.permission_level = EOS.Lobby.LobbyPermissionLevel.PublicAdvertised
+	opts.allow_invites = false
+
+	var lobby = await HLobbies.create_lobby_async(opts)
+	if lobby == null:
+		last_error = "Entrée en file refusée par Epic."
+		push_warning("NetworkManager: EOS create_lobby (file) failed")
+		return false
+	lobby.add_attribute(EOS_QUEUE_ATTRIBUTE, mode_tag)
+	lobby.add_attribute(EOS_QUEUE_RATING_ATTRIBUTE, rating)
+	lobby.add_attribute(EOS_QUEUE_COMMIT_ATTRIBUTE, commitment)
+	if not await lobby.update_async():
+		last_error = "Publication du ticket d'attente refusée par Epic."
+		lobby.destroy_async()
+		return false
+	_queue_lobby = lobby
+	_watch_queue_lobby(lobby)
+	print("NetworkManager: en file (%s), ticket %s" % [mode_tag, lobby.lobby_id])
+	return true
+
+## Cherche les tickets compatibles. Une borne négative signifie « sans borne ».
+##
+## EOS ne combine ses filtres qu'en ET et ne sait pas trier par proximité : une
+## fourchette s'écrit donc par ses deux bornes, et le choix du meilleur candidat
+## revient à l'appelant. C'est la limite acceptée de l'étape 8.2.
+func queue_search_async(mode_tag: String, min_rating: int, max_rating: int) -> Array:
+	_queue_found.clear()
+	if not matchmaking_supported() or _eos_shutting_down:
+		return []
+
+	var filters := [
+		{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
+		{ key = EOS_QUEUE_ATTRIBUTE, value = mode_tag, comparison = EOS.ComparisonOp.Equal },
+	]
+	if min_rating >= 0:
+		filters.append({ key = EOS_QUEUE_RATING_ATTRIBUTE, value = min_rating,
+			comparison = EOS.ComparisonOp.GreaterThanOrEqual })
+	if max_rating >= 0:
+		filters.append({ key = EOS_QUEUE_RATING_ATTRIBUTE, value = max_rating,
+			comparison = EOS.ComparisonOp.LessThanOrEqual })
+
+	var results = await HLobbies.search_by_attribute_async(filters)
+	if results == null:
+		return []
+
+	var out: Array = []
+	for lobby in results:
+		if not lobby.is_valid():
+			continue
+		# Un ticket déjà occupé refuserait la jointure : le compter ferait perdre
+		# une passe de recherche entière, soit plusieurs secondes d'attente.
+		if lobby.max_members > 0 and lobby.members.size() >= lobby.max_members:
+			continue
+		_queue_found[lobby.lobby_id] = lobby
+		out.append({
+			id = lobby.lobby_id,
+			key = lobby.owner_product_user_id,
+			rating = int(_lobby_attribute(lobby, EOS_QUEUE_RATING_ATTRIBUTE, 0)),
+			commitment = String(_lobby_attribute(lobby, EOS_QUEUE_COMMIT_ATTRIBUTE, "")),
+		})
+	return out
+
+## Rejoint un ticket rendu par la dernière recherche.
+func queue_join_async(id: String) -> bool:
+	var target = _queue_found.get(id)
+	if target == null or _eos_shutting_down:
+		return false
+	# Notre propre ticket part AVANT qu'on s'asseye chez l'autre : sinon un
+	# troisième joueur s'y installe pendant qu'on négocie ici, et il attend une
+	# poignée de main qui ne viendra jamais.
+	await queue_close_async()
+	var joined = await HLobbies.join_async(target)
+	if joined == null:
+		push_warning("NetworkManager: jointure du ticket %s refusée" % id)
+		return false
+	_queue_lobby = joined
+	_watch_queue_lobby(joined)
+	return true
+
+## Écrit son propre état de poignée de main sur le rendez-vous. En attributs de
+## MEMBRE : l'annonceur comme le rejoignant peuvent les poser, alors que les
+## attributs de salon n'appartiennent qu'au propriétaire.
+func queue_declare_async(state: Dictionary) -> bool:
+	var lobby = _queue_lobby
+	if lobby == null or _eos_shutting_down:
+		return false
+	lobby.add_current_member_attribute(EOS_MEMBER_NONCE_ATTRIBUTE, String(state.get("nonce", "")))
+	lobby.add_current_member_attribute(EOS_MEMBER_RATING_ATTRIBUTE, int(state.get("rating", 0)))
+	lobby.add_current_member_attribute(EOS_MEMBER_ACCEPT_ATTRIBUTE,
+		1 if bool(state.get("accepted", false)) else 0)
+	return await lobby.update_async()
+
+func queue_close_async() -> void:
+	var lobby = _queue_lobby
+	_queue_lobby = null
+	_queue_found.clear()
+	if lobby == null or _eos_shutting_down:
+		return
+	if lobby.is_owner():
+		await lobby.destroy_async()
+	else:
+		await lobby.leave_async()
+
+## [Appariement] Héberge sans publier de salon à code.
+func host_matched_game() -> bool:
+	last_error = ""
+	if transport != Transport.EOS:
+		last_error = "L'appariement automatique demande le transport Epic."
+		connection_failed.emit()
+		return false
+	return _host_eos(false)
+
+## [Appariement] Rejoint l'hôte désigné. Son identité est déjà connue par le
+## rendez-vous : ni code à saisir, ni recherche dans l'index.
+func join_matched_game(host_key: String) -> bool:
+	last_error = ""
+	if not _require_eos_ready():
+		return false
+	if host_key.is_empty():
+		_fail_join("Adversaire introuvable.")
+		return false
+	current_mode = GameMode.ONLINE_CLIENT
+	var p := EOSGMultiplayerPeer.new()
+	_watch_eos_peer(p)
+	var err = p.create_client(EOS_SOCKET_ID, host_key)
+	if err != OK:
+		_fail_join("Connexion à l'adversaire refusée.")
+		return false
+	_eos_peer = p
+	peer = p
+	multiplayer.multiplayer_peer = p
+	_connect_signals()
+	print("NetworkManager: joining matched host %s (EOS)" % host_key)
+	return true
+
+func _watch_queue_lobby(lobby) -> void:
+	if not lobby.lobby_updated.is_connected(_on_queue_lobby_updated):
+		lobby.lobby_updated.connect(_on_queue_lobby_updated)
+	if not lobby.kicked_from_lobby.is_connected(_on_queue_lobby_lost):
+		lobby.kicked_from_lobby.connect(_on_queue_lobby_lost)
+
+func _on_queue_lobby_updated() -> void:
+	var lobby = _queue_lobby
+	if lobby == null or _eos_shutting_down:
+		return
+	var state := {}
+	for mem in lobby.members:
+		if mem.product_user_id == eos_puid:
+			continue
+		state = {
+			key = mem.product_user_id,
+			nonce = String(_member_attribute(mem, EOS_MEMBER_NONCE_ATTRIBUTE, "")),
+			rating = int(_member_attribute(mem, EOS_MEMBER_RATING_ATTRIBUTE, 0)),
+			accepted = int(_member_attribute(mem, EOS_MEMBER_ACCEPT_ATTRIBUTE, 0)) == 1,
+		}
+		break
+	queue_peer_state_changed.emit(state)
+
+func _on_queue_lobby_lost() -> void:
+	_queue_lobby = null
+	if _eos_shutting_down:
+		return
+	queue_ticket_lost.emit()
+
+func _lobby_attribute(lobby, key: String, fallback: Variant) -> Variant:
+	var attr: Dictionary = lobby.get_attribute(key)
+	return attr.get("value", fallback) if not attr.is_empty() else fallback
+
+func _member_attribute(member, key: String, fallback: Variant) -> Variant:
+	for attr in member.attributes:
+		if attr.key == key:
+			return attr.value
+	return fallback
+
 ## [Hôte] Reconstruit le salon après le départ d'un invité.
 ##
 ## L'adhésion à un salon EOS survit à la rupture du lien P2P : l'invité parti
@@ -397,6 +637,12 @@ func _search_code(code: String):
 ## déjà communiqué pour que l'adversaire puisse revenir avec.
 func _republish_lobby_async() -> void:
 	if current_mode != GameMode.ONLINE_HOST or _eos_shutting_down:
+		return
+	# Rien à reconstruire quand rien n'a été publié : un match issu de
+	# l'appariement automatique n'a pas de salon à code, et en fabriquer un au
+	# départ de l'adversaire mettrait en vitrine une partie que personne
+	# n'attend.
+	if _eos_lobby == null:
 		return
 	var previous_code := lobby_code
 	var lobby = _eos_lobby
@@ -603,6 +849,10 @@ func _shutdown_eos_and_quit(exit_code: int) -> void:
 	peer = null
 	_eos_peer = null
 	_eos_lobby = null
+	# Le ticket d'attente aussi : plus aucune référence à un salon ne doit
+	# survivre à la libération de la plateforme.
+	_queue_lobby = null
+	_queue_found.clear()
 	multiplayer.multiplayer_peer = null
 	# EOSGRuntime._process appelle IEOS.tick(), qui exécute EOS_Platform_Tick().
 	# Les `await` sur les callbacks EOS reprennent SYNCHRONEMENT depuis
