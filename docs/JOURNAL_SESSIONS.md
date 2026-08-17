@@ -92,7 +92,7 @@ que d'inventer un chemin dans son coin. Le manifeste étant dans le domaine
 - **Les items D1 à D7** : ils attendent un arbitrage d'Adrien parce qu'ils
   changent l'information disponible en jeu ou coûtent des images par seconde.
 
-## Signalé à la session « game feel » — un défaut dans `player.gd`
+## ~~Signalé à la session « game feel »~~ — **corrigé le 2026-08-17**
 
 **Le flash de mort blanchit aussi l'écran du survivant.** Relevé le 2026-08-17
 par la session « menus », qui ne touche pas à ce fichier : c'est à vous.
@@ -116,10 +116,16 @@ Le correctif tient en une ligne sur le `ColorRect`. Le label « FATAL » du mêm
 bloc est un cas différent : il vit en espace-monde, à l'endroit de la mort, et
 que les deux joueurs le voient se défend.
 
-Tant que ce point n'est pas tranché, `flash_mort` est classé **CONFORT** dans
-`effect_policy.gd` — réglable jusqu'à zéro. S'il s'avère qu'il touche les deux
-écrans, il devient un effet **MONDE** et prend un plancher : une seule ligne à
-changer dans la table.
+**Corrigé** par la session « game feel » (`3efb0d2`) :
+`flash_rect.visibility_layer = 2 if player_id == 0 else 4`, exactement la ligne
+attendue. Le doute est donc levé — le flash ne touche plus que l'écran du
+mourant, et `flash_mort` reste légitimement classé **CONFORT** dans
+`effect_policy.gd`, réglable jusqu'à zéro.
+
+Le canal a fonctionné dans les deux sens : un défaut relevé par une session qui
+ne pouvait pas le corriger, corrigé par celle qui possédait le fichier, sans
+qu'aucune ne touche au domaine de l'autre. C'est le seul mode de coordination
+disponible entre sessions, et il tient.
 
 ## État — le plus récent en haut
 
