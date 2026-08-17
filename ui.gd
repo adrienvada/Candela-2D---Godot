@@ -1898,8 +1898,43 @@ func _open_lobby() -> void:
 func _close_lobby_if_left(id: String) -> void:
 	if _lobby_screen == "" or id == _lobby_screen:
 		return
+	# Un pair connecté veut dire qu'une partie est en cours, ou vient de finir.
+	#
+	# Sans ce contrôle, chaque fin de match en ligne faisait s'annoncer les deux
+	# joueurs mutuellement déconnectés, et le coupable était l'HÔTE :
+	#
+	#   show_game_over() → hub.reset() → screen_changed.emit("accueil")
+	#                    → ici, "accueil" != SCREEN_HOST → disconnect_from_game()
+	#
+	# `reset()` émet **avant** le `push()` qui suit : c'est la remise à zéro de la
+	# pile qui coupe, pas la destination. Le client, lui, n'arme jamais
+	# `_lobby_screen` — `_open_lobby()` n'est atteignable que par un bouton réservé
+	# à l'hôte — et ne fait donc que constater le départ.
+	#
+	# **Ne pas simplifier en ne testant que l'écran d'arrivée du `push`** : la
+	# destination est bonne depuis `_screen_for_current_mode()`, ce qui rend le
+	# raccourci tentant et ferait revenir le défaut sans le moindre bruit.
+	#
+	# Le salon suit l'écran plutôt que de se fermer : quitter *ensuite* vers autre
+	# chose le refermera normalement, une fois le pair réellement parti.
+	if multiplayer != null and not multiplayer.get_peers().is_empty():
+		_lobby_screen = id
+		return
 	_lobby_screen = ""
 	NetworkManager.disconnect_from_game()
+
+## L'écran de salon qui correspond au rôle réellement joué. Renvoyer tout le monde
+## sur `SCREEN_HOST` après un match envoyait le client sur l'écran de l'hôte — et
+## comme ce n'était pas l'écran qui avait ouvert son salon, il s'y déconnectait.
+func _screen_for_current_mode() -> String:
+	var lan := NetworkManager.transport == NetworkManager.Transport.ENET
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST:
+			return SCREEN_LOCAL_HOST if lan else SCREEN_HOST
+		NetworkManager.GameMode.ONLINE_CLIENT:
+			return SCREEN_LOCAL_JOIN if lan else SCREEN_JOIN
+		_:
+			return SCREEN_LOCAL
 
 ## Reflète la présence des deux joueurs et l'état du bouton d'ouverture.
 func _refresh_player_list() -> void:
@@ -3285,8 +3320,7 @@ func show_game_over(winner_id: int) -> void:
 	# Après un match, on repart du salon correspondant au mode joué : c'est là que
 	# « rejouer » a un sens.
 	hub.reset()
-	hub.push(SCREEN_LOCAL if NetworkManager.current_mode \
-		== NetworkManager.GameMode.LOCAL_SPLITSCREEN else SCREEN_HOST)
+	hub.push(_screen_for_current_mode())
 	game_over_panel.show()
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
