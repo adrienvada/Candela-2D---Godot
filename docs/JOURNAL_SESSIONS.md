@@ -150,6 +150,10 @@ ne pouvait pas le corriger, corrigé par celle qui possédait le fichier, sans
 qu'aucune ne touche au domaine de l'autre. C'est le seul mode de coordination
 disponible entre sessions, et il tient.
 
+> **Clôture du 2026-08-17 : plus aucune session parallèle.** Une seule branche,
+> `main`, un seul arbre. Ce journal redevient une archive — il reprendra son rôle
+> de canal le jour où plusieurs sessions travailleront de nouveau ensemble.
+
 ## À l'attention de la session « artefact » — ce qu'il faut y porter
 
 **Je n'ai pas republié le suivi**, sciemment : une refonte est en cours et

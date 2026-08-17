@@ -4,7 +4,11 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-17 (soir)
+> Dernière mise à jour : 2026-08-17 (clôture)
+>
+> **Plus aucune session parallèle.** Une seule branche, `main`, un seul arbre de
+> travail. Les dix worktrees d'agents et les six branches périmées ont été
+> retirés : tous les livrables étaient déjà versionnés dans `main`.
 
 ---
 
@@ -1796,6 +1800,16 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 > **Cap donné par Adrien le 2026-08-16 :** le jeu est amusant (H3 tranché), le
 > classement est en place, et la suite est le contenu — les menus d'abord, puis
 > les rangs, puis le déblocage d'armes (Phases 5 à 7).
+
+> **Bilan du 2026-08-17.** Onze agents lancés, dix ont livré. Le onzième —
+> l'écran de **calibration de luminosité** — a été tué par une limite de session
+> et **n'a jamais été relancé** : c'est le seul travail commandé qui n'existe pas.
+> Il reste décrit à l'étape 4 de la Phase 5.
+>
+> Dix-huit fichiers `tools/test_*.gd` existent, **treize tournent**. Les cinq
+> autres : `test_matchmaking` et `test_screen_matchmaking`, écartées pour la
+> raison ci-dessous ; et trois bancs d'essai réseau qui ne sont pas des suites
+> (`test_transport`, `test_online_match`, `test_quit_path`).
 
 1. **Donner la séquence d'extinction d'EOS aux deux suites d'appariement.**
    `test_matchmaking` et `test_screen_matchmaking` passent toutes leurs
