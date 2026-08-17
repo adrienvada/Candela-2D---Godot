@@ -647,6 +647,23 @@ l'entrée du parcours du curseur ferait douter du bouton d'à côté. Sont gris�
 aujourd'hui : les deux « chercher un match » (appariement manquant), le lancement
 de l'entraînement, la configuration de la cible et l'écran audio.
 
+**Ce que cette révision a révélé, et qui n'était pas dans l'énoncé.**
+« Match privé **en ligne** » contre « **en local** » n'est pas une nuance de
+vocabulaire : **c'est le choix de transport**, transformé en navigation. Entrer
+dans « en local » pose `Transport.ENET`, entrer dans « en ligne » pose
+`Transport.EOS`. La bascule INTERNET / RÉSEAU LOCAL disparaît donc de l'écran.
+
+C'est le raisonnement de l'étape 3b appliqué une seconde fois, et il valait d'être
+reconnu comme tel : **un état d'interface ne doit pas tenir lieu de décision.** Le
+widget reste dans l'arbre, masqué, parce que `_refresh_lobby_block()` lit encore
+son état — le retirer demanderait de réécrire cette fonction, hors périmètre.
+
+D'où **quatre salons au lieu de deux**, un par croisement mode × transport.
+
+« Quitter » a quitté l'accueil : le bouton de la barre d'actions est toujours
+visible, et une entrée de plus dans une liste de cinq destinations coûtait un
+déplacement de curseur pour rien.
+
 **Différences par rapport à l'arborescence du matin (2026-08-17) :**
 
 - **1V1 Amical** : les deux modes (en ligne et local) sont séparés dans deux
