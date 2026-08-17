@@ -651,6 +651,34 @@ l'entrée du parcours du curseur ferait douter du bouton d'à côté. Sont gris�
 aujourd'hui : les deux « chercher un match » (appariement manquant), le lancement
 de l'entraînement, la configuration de la cible et l'écran audio.
 
+#### Mise en page — révision du 2026-08-17 (soir)
+
+**La barre de boutons du bas a disparu du menu.** « Jouer », « Prêt » et
+« Chercher un match » lancent déjà le bon type de match depuis leur propre écran ;
+une barre qui doublait tout ça obligeait à deviner lequel des deux gestes comptait.
+« Quitter » devient une entrée de l'accueil, sous Personnalisation, au rouge.
+**L'écran de fin garde sa barre** — REJOUER et MENU PRINCIPAL n'ont pas
+d'équivalent dans le hub, et on n'y est plus dans le menu.
+
+**Les entrées qui lancent un match portent le style plein.** Le geste qui engage
+une partie doit se distinguer de tout ce qui n'engage rien.
+
+**La description a quitté le panneau de droite** pour se poser sous le titre du
+jeu, à la place d'un « PRÊT À JOUER ? » qui ne disait rien. Lire l'explication
+d'une entrée ne devrait pas demander de traverser l'écran du regard ; le panneau
+de droite est libéré pour ce qui mérite d'y être.
+
+**Tout est aligné en haut**, des deux côtés. Un contenu centré verticalement saute
+d'un écran à l'autre selon sa hauteur, et le regard doit le rattraper à chaque fois.
+
+#### Ce qui reste de cette révision, et qui n'est pas cosmétique
+
+La restructuration des salons demandée en même temps **n'est pas faite** : créer
+le code EOS au moment d'un bouton « CRÉER SALON » plutôt qu'au lancement du match,
+et afficher la liste des joueurs présents. Ce n'est pas de la mise en page — c'est
+déplacer le moment où le salon est ouvert, donc du réseau. À traiter comme une
+étape à part entière.
+
 **Ce que cette révision a révélé, et qui n'était pas dans l'énoncé.**
 « Match privé **en ligne** » contre « **en local** » n'est pas une nuance de
 vocabulaire : **c'est le choix de transport**, transformé en navigation. Entrer
