@@ -150,6 +150,63 @@ ne pouvait pas le corriger, corrigé par celle qui possédait le fichier, sans
 qu'aucune ne touche au domaine de l'autre. C'est le seul mode de coordination
 disponible entre sessions, et il tient.
 
+## À l'attention de la session « artefact » — ce qu'il faut y porter
+
+**Je n'ai pas republié le suivi**, sciemment : une refonte est en cours et
+republier l'écraserait. Voici ce qu'il manque, à intégrer par qui tient le
+fichier.
+
+### État réel au 2026-08-17, fin de journée
+
+| Phase | État |
+|---|---|
+| 1 à 4 | closes |
+| 5 — les menus | 🟡 étapes 1, 2, 3 et 3b closes ; restent l'écran audio, la calibration, l'historique et l'entraînement |
+| 6 — rangs | échelle validée, `rankOf` déployée, **affichage en jeu à faire** |
+| 7 — armes | à faire, règle du miroir actée |
+| 8 — appariement | 🟡 **en cours** — 8.1 déployée, cœur et écran écrits et testés, **non raccordés** |
+
+**Quinze suites existent, treize tournent.** Le lanceur est
+`./tools/run_suites.sh`, qui échoue aussi sur toute erreur de script.
+
+### Le verrou de la Phase 8, à mettre en tête
+
+`test_matchmaking` et `test_screen_matchmaking` passent toutes leurs assertions
+mais **sortent en 139** dès que `eos_credentials.gd` est présent : elles touchent
+`NetworkManager`, EOS démarre, et l'extinction croise `EOS_Platform_Tick()` sans la
+séquence d'arrêt propre. Le worktree où elles ont été écrites n'avait pas les
+identifiants — le défaut n'y apparaissait donc pas.
+
+Tant que ce point n'est pas levé, **l'autoload `Matchmaker` ne peut pas être
+déclaré** sous peine de propager le segfault à toutes les suites. Donc :
+l'appariement ne tourne pas, et les deux entrées « chercher un match » restent
+grisées. C'est la première priorité, avant tout le reste.
+
+### Trois choses qui méritent d'être racontées, pas seulement listées
+
+- **L'identifiant de match est tiré par engagement-révélation.** L'hébergeur
+  publie l'empreinte de son nonce avant qu'aucun adversaire n'existe ; le joueur
+  déclare le sien à l'aveugle ; la révélation est vérifiée contre l'engagement.
+  L'un est lié, l'autre est aveugle : « aucun des deux ne contrôle le tirage »
+  devient vrai au lieu d'être affirmé. La désignation de l'hôte en découle, et elle
+  est prouvée sans biais sur 20 000 tirages par famille d'identifiants.
+- **Un match amical ne peut plus alimenter le classement en silence** (8.1,
+  déployée). Le défaut de la colonne *est* la règle : un oubli écrit un amical,
+  jamais un classé. Et `concordant` exige désormais que les deux pairs s'accordent
+  aussi sur la nature du match — tout lecteur qui filtrait déjà dessus hérite de la
+  protection.
+- **Le hub est en deux panneaux**, et le retour est une entrée cliquable. La
+  version précédente affichait « ÉCHAP · RETOUR » sans que rien ne soit cliquable
+  et sans que la touche fasse quoi que ce soit.
+
+### Ce qui n'avance pas sans Adrien
+
+Les **76 assets** (voir l'onglet dédié), le **sens des divisions** de rangs
+(I la plus basse comme Rocket League, ou la plus haute comme LoL — les tests
+passeraient dans les deux cas), le **frottement du déblocage d'armes** (un débutant
+démarre en Bougie et aurait trois armes d'emblée), **rejouer** après chaque vague de
+game feel, et **Échap / F3** à vérifier à la main.
+
 ## État — le plus récent en haut
 
 ### 2026-08-17 (pause) — session « game feel »

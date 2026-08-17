@@ -1219,6 +1219,7 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 | **Anti-camping reporté** | Une autre mécanique sera choisie. Ne pas réintroduire mort subite / arène qui rétrécit sans arbitrage. |
 | **Arbitrage D1-D7 et autonomie de la session game feel** | Décision d'Adrien du 2026-08-17. D1 (empreintes), D3 (extinction traînée) et D7 (sang persistant, plafond d'abord) sont **activés** ; D5 s'implémente **derrière un drapeau debug** jusqu'à mesure sur le Mac d'Adrien ; D2 et D4 sont **actés sur le principe** mais attendent leurs assets ; D6 est **acté**, à implémenter par la session « menus » dans le hub. La session game feel pousse à chaque commit vert, fusionne dans `main` en fin de vague verte, et tranche elle-même les micro-réglages (durées, intensités) en les documentant ici. |
 | **P2P conservé, pas de serveur dédié** | Décision du 2026-08-16. Un serveur supprimerait l'avantage de l'hôte et la triche par l'hôte, mais **dégraderait la latence des deux joueurs** — aujourd'hui l'un des deux joue à 0 ms — et coûterait un hébergement à vie. Il se justifiera quand le classement aura assez d'enjeu pour qu'on triche dessus, donc quand il y aura des joueurs. La bascule resterait peu coûteuse : le netcode étant déjà hôte-autoritaire, un serveur dédié n'est qu'un hôte headless sans joueur local. Il faudrait ajouter un mode « hôte sans joueur » et une orchestration ; rien ne serait à jeter. |
+| **Tout sur `main`, plus de branche par chantier** (2026-08-17) | Avec plusieurs sessions qui poussent dans la journée, une branche qui vieillit coûte plus cher à fusionner qu'elle ne protège — et le protocole obligeait de toute façon à récupérer `main` avant chaque poussée. L'isolement se prend en **worktree**, jamais en `checkout` : `main` ne peut être déployé que dans un seul arbre. |
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
 | **Menus : structure B, le hub** (2026-08-17) | Un accueil de grandes destinations, chacune un écran entier. Coûte deux clics de plus par partie que les deux autres propositions ; rapporte un écran par sujet, seule forme qui absorbe les rangs, le déblocage d'armes et les saisons sans surcharger l'onglet JOUER, déjà plein. |
 | **Rangs dérivés du classement, jamais stockés** (2026-08-17) | Même raison que la table `ratings`, déjà reconstruite par rejeu : changer une borne d'échelle ne doit pas coûter une migration de données. `rankOf(rating)` vit dans `elo.ts`, testable hors ligne. |
@@ -1254,6 +1255,19 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   seule chose que le joueur doive conserver. D'où `profile_changed`, émis
   inconditionnellement. Règle générale : un signal d'état ne remplace pas un
   signal de contenu.
+
+**Arbres de travail**
+- **`main` ne peut être déployé que dans un seul arbre à la fois**, et un arbre
+  oublié bloque toute avance rapide de la branche : `git branch -f main` répond
+  `cannot force update the branch 'main' checked out at …`. C'est arrivé le
+  2026-08-17 avec un arbre d'échafaudage laissé par une session antérieure. Le
+  contournement est de fusionner **depuis l'arbre où la branche est déployée** ;
+  la vraie correction est de retirer l'arbre inutile. Un `git worktree list` avant
+  de s'étonner fait gagner un quart d'heure.
+- **Un worktree neuf n'a pas les fichiers ignorés par git** — `eos_credentials.gd`
+  et `supabase_config.gd` en particulier. Une suite qui passe en worktree peut donc
+  échouer dans l'arbre principal, et l'inverse : EOS y démarre. C'est exactement ce
+  qui a caché le segfault d'extinction des deux suites d'appariement.
 
 **Artefacts et documents hors dépôt**
 - **Deux sessions peuvent publier le même artefact et se marcher dessus.** Arrivé

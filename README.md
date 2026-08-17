@@ -13,11 +13,15 @@ Godot 4.7 · GDScript · écran partagé local et 1v1 en ligne hôte-autoritaire
 **[docs/ROADMAP.md](docs/ROADMAP.md) est le document de référence du projet.**
 Il dit où en est le jeu, ce qui est décidé, ce qui est validé, et ce qui reste.
 
-**État des branches** — `main` porte tout ce qui est terminé : Phases 1 à 4
-incluses (identité classée, matchs en base, classement ELO). Le travail en cours
-vit sur une branche dédiée jusqu'à sa clôture, puis y est fusionné — c'est ce qui
-s'est fait pour `eos-transport` puis `supabase-elo`. `main` et `supabase-elo`
-sont à jour sur GitHub depuis le 2026-08-16.
+**État des branches** — **tout se fait sur `main`**, poussé à chaque commit vert.
+Le modèle « une branche dédiée par chantier » a été abandonné le 2026-08-17 : avec
+plusieurs sessions qui poussent dans la journée, une branche qui vieillit coûte
+plus cher à fusionner qu'elle ne protège. `eos-transport` et `supabase-elo` ont
+servi à cela et n'ont plus d'objet.
+
+Une session qui a besoin d'isolement prend un **worktree**, jamais un `checkout` —
+`main` ne peut être déployé que dans un seul arbre à la fois, et un arbre oublié
+bloque toute avance rapide de la branche.
 
 ---
 
