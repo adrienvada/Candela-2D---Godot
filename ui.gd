@@ -1538,6 +1538,9 @@ func _build_menu() -> void:
 	hub = MenuHub.new()
 	hub.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	hub.screen_changed.connect(_on_hub_screen_changed)
+	# La description de l'entrée survolée s'affiche sous le titre du jeu — là où le
+	# regard passe déjà — au lieu d'attendre dans le panneau de droite.
+	hub.detail_changed.connect(_on_hub_detail_changed)
 	root.add_child(hub)
 
 	_build_hub_screens()
@@ -1585,7 +1588,10 @@ func _build_hub_screens() -> void:
 		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
 		SCREEN_TRAINING))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
-		"Contrôles, affichage, effets, audio.", SCREEN_CUSTOM, COLOR_DIM))
+		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
+	accueil.add_child(hub.make_entry("QUITTER",
+		"Ferme le jeu proprement — la plateforme Epic est relâchée avant la sortie.",
+		"", COLOR_P2, "quitter", "", true))
 	hub.set_aside(MenuHub.ROOT, "Candela 2D",
 		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "
@@ -1595,7 +1601,7 @@ func _build_hub_screens() -> void:
 	# --- 1v1 écrans scindés ---------------------------------------------------
 	scinde.add_child(hub.make_entry("JOUER",
 		"Chaque joueur choisit son arme à droite, puis la manche démarre.",
-		"", COLOR_P1, "lancer"))
+		"", COLOR_P1, "lancer", "", true))
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.", SCREEN_MAPS))
 	hub.add_back_entry(SCREEN_LOCAL)
 
@@ -1633,12 +1639,12 @@ func _build_hub_screens() -> void:
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
 		h.add_child(hub.make_entry("PRÊT",
-			"Lance le match dès que l'adversaire est là.", "", COLOR_P1, "lancer"))
+			"Lance le match dès que l'adversaire est là.", "", COLOR_P1, "lancer", "", true))
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs.", SCREEN_MAPS))
 	for j in [invite, invite_lan]:
 		j.add_child(hub.make_entry("PRÊT",
-			"Rejoint le salon. La carte est celle de l'hôte.", "", COLOR_P1, "lancer"))
+			"Rejoint le salon. La carte est celle de l'hôte.", "", COLOR_P1, "lancer", "", true))
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
 		hub.add_back_entry(id)
 
@@ -1831,6 +1837,17 @@ func _attach_screen(id: String, title: String, screen: HubScreen) -> void:
 ## Chaque écran se remet en accord avec l'état du jeu au moment où il s'affiche,
 ## et jamais avant : rafraîchir un écran caché coûte des requêtes réseau que
 ## personne ne regarde.
+## La description de l'entrée sous le curseur, affichée sous le titre du jeu.
+##
+## Le texte arrive en BBCode — le panneau de droite savait le rendre, une `Label`
+## non. On le nettoie plutôt que d'imposer un `RichTextLabel` à l'en-tête, qui
+## sert aussi à annoncer VICTOIRE et DÉFAITE.
+func _on_hub_detail_changed(_title: String, text: String) -> void:
+	if not _is_main_menu or game_over_score == null:
+		return
+	var propre := text.replace("[b]", "").replace("[/b]", "").replace("\n\n", "  ")
+	game_over_score.text = propre
+
 func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
@@ -1881,7 +1898,9 @@ func _build_menu_header() -> Control:
 	header.add_child(game_over_title)
 
 	game_over_score = Label.new()
-	game_over_score.text = "PRÊT À JOUER ?"
+	game_over_score.text = ""
+	game_over_score.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	game_over_score.custom_minimum_size = Vector2(0, 48)
 	game_over_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game_over_score.add_theme_font_size_override("font_size", 22)
 	game_over_score.add_theme_color_override("font_color", COLOR_DIM)
@@ -2900,9 +2919,11 @@ func show_main_menu() -> void:
 	btn_back.hide()
 	if pause_panel != null:
 		pause_panel.hide()
-	btn_replay.show()
-	btn_main_menu.hide()
-	btn_quit.show()
+	# Plus aucun bouton en bas du menu : « Jouer », « Prêt » et « Chercher un
+	# match » lancent déjà le bon type de match depuis leur propre écran, et
+	# « Quitter » est une entrée de l'accueil. Une barre qui doublait tout ça
+	# obligeait à deviner lequel des deux gestes comptait.
+	btn_actions.hide()
 
 	weapon_hbox.show()
 	map_card.show()
@@ -2934,6 +2955,9 @@ func show_game_over(winner_id: int) -> void:
 	btn_back.hide()
 	if pause_panel != null:
 		pause_panel.hide()
+	# L'écran de fin garde sa barre : REJOUER et MENU PRINCIPAL n'ont pas d'entrée
+	# de hub équivalente — on n'est plus dans le menu à ce moment-là.
+	btn_actions.show()
 	btn_replay.show()
 	btn_main_menu.show()
 	btn_quit.show()

@@ -34,6 +34,9 @@ signal screen_changed(id: String)
 signal back_at_root()
 ## Une entrée d'action a été activée.
 signal action_requested(action: String)
+## Ce que l'entrée sous le curseur raconte. L'en-tête du jeu l'affiche : c'est le
+## seul endroit où le regard passe déjà.
+signal detail_changed(title: String, text: String)
 
 const ROOT := "accueil"
 
@@ -100,21 +103,30 @@ func _build() -> void:
 	right.add_theme_stylebox_override("panel", style)
 	columns.add_child(right)
 
+	# Aligné en haut : un contenu centré verticalement saute d'un écran à l'autre
+	# selon sa hauteur, et le regard doit le rattraper à chaque fois.
 	_detail_host = VBoxContainer.new()
-	_detail_host.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+	_detail_host.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_detail_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_detail_host.add_theme_constant_override("separation", MenuTheme.GAP_S)
 	right.add_child(_detail_host)
 
+	# Le panneau de droite ne porte plus la description : elle est montée dans
+	# l'en-tête du jeu, sous le titre, à la place d'un « PRÊT À JOUER ? » qui ne
+	# disait rien. Lire l'explication d'une entrée ne devrait pas demander de
+	# traverser l'écran du regard.
 	_detail_title = Label.new()
 	_detail_title.add_theme_font_size_override("font_size", 20)
 	_detail_title.add_theme_color_override("font_color", MenuTheme.P1)
+	_detail_title.hide()
 	_detail_host.add_child(_detail_title)
 
 	_detail_text = RichTextLabel.new()
 	_detail_text.bbcode_enabled = true
 	_detail_text.fit_content = true
-	_detail_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_detail_text.add_theme_font_size_override("normal_font_size", 15)
 	_detail_text.add_theme_color_override("default_color", MenuTheme.DIM)
+	_detail_text.hide()
 	_detail_host.add_child(_detail_text)
 
 var _host: Control
@@ -140,6 +152,8 @@ func add_screen(id: String, title: String) -> VBoxContainer:
 	_host.add_child(root)
 
 	var list := VBoxContainer.new()
+	list.alignment = BoxContainer.ALIGNMENT_BEGIN
+	list.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list.add_theme_constant_override("separation", MenuTheme.GAP_XS)
 	root.add_child(list)
@@ -252,7 +266,7 @@ func _show_aside(id: String) -> void:
 func show_detail(title: String, text: String) -> void:
 	_detail_title.text = title
 	_detail_text.text = text
-	_detail_text.visible = text != ""
+	detail_changed.emit(title, text)
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
@@ -271,18 +285,20 @@ func detail_host() -> VBoxContainer:
 ## sinon c'est une entrée d'information, qui ne fait que remplir la droite.
 ## `reason` non vide la rend indisponible : visible, grisée, et le panneau de
 ## droite dit pourquoi.
+## `launcher` donne le style plein du bouton de lancement : c'est le geste qui
+## engage une partie, et il doit se distinguer de tout ce qui n'engage rien.
 func make_entry(label: String, detail: String, target: String = "",
 		accent: Color = MenuTheme.P1, action: String = "",
-		reason: String = "") -> Button:
+		reason: String = "", launcher: bool = false) -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(0, 54)
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.disabled = reason != ""
 
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(1)
-	normal.border_color = MenuTheme.LINE
+	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.18) if launcher else MenuTheme.SURFACE
+	normal.set_border_width_all(2 if launcher else 1)
+	normal.border_color = accent if launcher else MenuTheme.LINE
 	normal.set_corner_radius_all(10)
 	normal.content_margin_left = MenuTheme.GAP_S
 	normal.content_margin_right = MenuTheme.GAP_S
