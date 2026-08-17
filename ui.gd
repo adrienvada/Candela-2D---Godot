@@ -45,10 +45,19 @@ const TAB_SLIDE := 32.0
 const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
 
-const TAB_PLAY := "JEU"
-const TAB_MAPS := "CARTES"
-const TAB_CONTROLS := "CONTROLES"
-const TAB_PROFILE := "PROFIL"
+## Identifiants des écrans du hub (Phase 5, structure B).
+##
+## Les anciens `TAB_*` ont disparu avec la barre d'onglets. Ces identifiants ne
+## sont pas des libellés : ils servent de clés de navigation et ne s'affichent
+## jamais — le titre lisible est donné à `add_screen`.
+const SCREEN_PLAY := "jouer"
+const SCREEN_MAPS := "cartes"
+const SCREEN_OPTIONS := "options"
+const SCREEN_CONTROLS := "options_controles"
+const SCREEN_DISPLAY := "options_affichage"
+const SCREEN_EFFECTS := "options_effets"
+const SCREEN_LEADERBOARD := "classement"
+const SCREEN_PROFILE := "profil"
 
 # ---------------------------------------------------------------------------
 # CLASSES INTERNES
@@ -185,24 +194,13 @@ var game_over_panel: PanelContainer
 var game_over_title: Label
 var game_over_score: Label
 
-var btn_tab_game: Button
-var btn_tab_map: Button
-var btn_tab_controls: Button
-var btn_tab_profile: Button
-var tab_game_container: VBoxContainer
-var tab_map_container: VBoxContainer
-var tab_controls_container: VBoxContainer
-var tab_profile_container: VBoxContainer
-var content_host: Control
+## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
+## un écran, un sujet.
+var hub: MenuHub
+## Écrans autonomes (`HubScreen`) par identifiant. Ils ne se connaissent pas.
+var _screens: Dictionary = {}
 
 # --- Onglet PROFIL ---
-var profile_status_label: Label
-var profile_standing_label: Label
-var profile_code_label: Label
-var btn_copy_recovery: Button
-var link_input: LineEdit
-var btn_link: Button
-var link_feedback_label: Label
 
 var map_gallery: MapGallery
 var map_card: Button
@@ -313,9 +311,6 @@ var p2_focus: Control
 var p1_cursor: NeonFocusRing
 var p2_cursor: NeonFocusRing
 
-var _current_tab: String = TAB_PLAY
-var _active_tab: Control
-var _tab_tween: Tween
 
 # ===========================================================================
 # CYCLE DE VIE
@@ -343,7 +338,6 @@ func _ready() -> void:
 	_refresh_map_card()
 
 	_wire_buttons(self)
-	_switch_tab(TAB_PLAY, false)
 
 ## Le stick gauche pilote les curseurs joueurs : il ne doit pas déplacer en plus
 ## le focus natif de Godot, sous peine de double déplacement.
@@ -773,8 +767,11 @@ func _nav_candidates(player: int) -> Array[Control]:
 	if pause_panel != null and pause_panel.visible:
 		_collect_focusables(pause_panel, player, out)
 		return out
-	if _active_tab != null:
-		_collect_focusables(_active_tab, player, out)
+	# Le terrain de navigation est le corps de l'écran courant. Les autres sont
+	# cachés, donc hors d'atteinte : c'est l'ossature du hub qui le garantit.
+	var body := hub.body_of(hub.current_id()) if hub != null else null
+	if body != null:
+		_collect_focusables(body, player, out)
 	if btn_actions != null:
 		_collect_focusables(btn_actions, player, out)
 	return out
@@ -892,7 +889,7 @@ func _seed_focus(player: int) -> void:
 			_set_focus(player, candidate, true)
 			return
 
-	if _active_tab == tab_map_container and map_gallery != null:
+	if hub != null and hub.current_id() == SCREEN_MAPS and map_gallery != null:
 		var tile := map_gallery.selected_tile()
 		if tile != null and candidates.has(tile):
 			_set_focus(player, tile, true)
@@ -1499,41 +1496,101 @@ func _build_menu() -> void:
 	outer.add_child(root)
 
 	root.add_child(_build_menu_header())
-	root.add_child(_build_tab_bar())
 
-	# Hôte des onglets : chaque page est ancrée en plein cadre, ce qui permet de
-	# les faire glisser latéralement sans perturber la mise en page.
-	content_host = Control.new()
-	content_host.custom_minimum_size = Vector2(0, 440)
-	content_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_host.clip_contents = true
-	root.add_child(content_host)
+	# Le hub remplace la barre d'onglets (Phase 5, structure B). Son propre titre
+	# est masqué : l'en-tête ci-dessus le porte déjà, et deux titres empilés
+	# mangeraient la hauteur utile de l'écran.
+	hub = MenuHub.new()
+	hub.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	hub.screen_changed.connect(_on_hub_screen_changed)
+	root.add_child(hub)
 
-	tab_game_container = _make_tab_page()
-	content_host.add_child(tab_game_container)
-	_fill_play_tab()
-
-	tab_map_container = _make_tab_page()
-	content_host.add_child(tab_map_container)
-	_fill_maps_tab()
-
-	tab_controls_container = _make_tab_page()
-	content_host.add_child(tab_controls_container)
-	_fill_controls_tab()
-
-	tab_profile_container = _make_tab_page()
-	content_host.add_child(tab_profile_container)
-	_fill_profile_tab()
+	_build_hub_screens()
 
 	root.add_child(_build_actions_bar())
 
-func _make_tab_page() -> VBoxContainer:
-	var page := VBoxContainer.new()
-	page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	page.alignment = BoxContainer.ALIGNMENT_CENTER
-	page.add_theme_constant_override("separation", GAP_M)
-	page.hide()
-	return page
+## Déclare l'arborescence et y installe le contenu.
+##
+## Les blocs existants sont **réemployés tels quels** : `_build_mode_block()`,
+## `_build_weapon_block()` et la galerie rendent déjà des `Control`. L'étape ne
+## déplace donc que leur point d'accrochage — c'est ce qui permet de savoir que ce
+## qui casse vient du déplacement, et de rien d'autre.
+func _build_hub_screens() -> void:
+	var accueil := hub.add_screen(MenuHub.ROOT, "Candela 2D")
+	var jouer := hub.add_screen(SCREEN_PLAY, "Jouer")
+	var cartes := hub.add_screen(SCREEN_MAPS, "Cartes")
+	var options := hub.add_screen(SCREEN_OPTIONS, "Options")
+	var controles := hub.add_screen(SCREEN_CONTROLS, "Options — contrôles")
+	var affichage := hub.add_screen(SCREEN_DISPLAY, "Options — affichage")
+
+	# --- Accueil : les destinations, dans l'ordre de fréquence d'usage ---------
+	accueil.add_child(hub.make_entry("JOUER", "1v1 local ou en ligne", SCREEN_PLAY))
+	accueil.add_child(hub.make_entry("CLASSEMENT", "Le haut du tableau et votre rang",
+		SCREEN_LEADERBOARD, COLOR_GOLD))
+	accueil.add_child(hub.make_entry("PROFIL", "Identité, code de récupération",
+		SCREEN_PROFILE, COLOR_GOLD))
+	accueil.add_child(hub.make_entry("OPTIONS", "Contrôles, affichage, effets",
+		SCREEN_OPTIONS, COLOR_DIM))
+
+	# --- Jouer : le contenu de l'ancien onglet, intact ------------------------
+	# `mode_vbox` porte les bascules local / en ligne, et `selected_network_mode()`
+	# LIT leur état — c'est ce que le netcode interroge au lancement. Les éclater
+	# en écrans distincts est un changement de comportement, pas un déplacement :
+	# il attend l'étape suivante.
+	var center := CenterContainer.new()
+	center.add_child(_build_map_card())
+	jouer.add_child(center)
+	jouer.add_child(_build_mode_block())
+	jouer.add_child(_build_weapon_block())
+
+	# --- Cartes ---------------------------------------------------------------
+	map_gallery = MapGallery.new()
+	map_gallery.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_gallery.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_gallery.map_chosen.connect(_on_map_chosen)
+	cartes.add_child(map_gallery)
+
+	# --- Options et ses sous-écrans -------------------------------------------
+	options.add_child(hub.make_entry("CONTRÔLES", "Manette et clavier", SCREEN_CONTROLS))
+	options.add_child(hub.make_entry("AFFICHAGE", "Fenêtre, vsync, images par seconde",
+		SCREEN_DISPLAY))
+	options.add_child(hub.make_entry("EFFETS", "Ce qui se règle, et ce qui a un plancher",
+		SCREEN_EFFECTS, COLOR_GOLD))
+
+	_fill_controls_screen(controles)
+	affichage.add_child(_build_display_block())
+	affichage.add_child(_build_video_block())
+
+	_attach_screen(SCREEN_LEADERBOARD, "Classement", ScreenLeaderboard.new())
+	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
+	_attach_screen(SCREEN_EFFECTS, "Options — effets", ScreenEffects.new())
+
+	hub.reset()
+
+## Installe un `HubScreen` autonome dans un écran du hub.
+##
+## L'écran ne connaît ni le hub ni `ui.gd` : il demande la navigation par signal,
+## et c'est ici — le seul endroit qui connaisse l'arborescence — qu'on décide si
+## la demande est honorée.
+func _attach_screen(id: String, title: String, screen: HubScreen) -> void:
+	var body := hub.add_screen(id, title)
+	screen.name = "Screen" + id.capitalize()
+	body.add_child(screen)
+	screen.build(body)
+	screen.navigate_requested.connect(func(target: String) -> void: hub.push(target))
+	_screens[id] = screen
+
+## Chaque écran se remet en accord avec l'état du jeu au moment où il s'affiche,
+## et jamais avant : rafraîchir un écran caché coûte des requêtes réseau que
+## personne ne regarde.
+func _on_hub_screen_changed(id: String) -> void:
+	if _screens.has(id):
+		var screen: HubScreen = _screens[id]
+		screen.refresh()
+	if id == SCREEN_PLAY:
+		_refresh_map_card()
+	_seed_focus(0)
+	_seed_focus(1)
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
@@ -1554,78 +1611,6 @@ func _build_menu_header() -> Control:
 	header.add_child(game_over_score)
 
 	return header
-
-func _build_tab_bar() -> Control:
-	var bar := HBoxContainer.new()
-	bar.alignment = BoxContainer.ALIGNMENT_CENTER
-	bar.add_theme_constant_override("separation", GAP_XS)
-
-	bar.add_child(_make_shoulder_icon("l1.svg"))
-
-	btn_tab_game = _make_tab_button("JOUER", TAB_PLAY)
-	bar.add_child(btn_tab_game)
-	btn_tab_map = _make_tab_button("CARTES", TAB_MAPS)
-	bar.add_child(btn_tab_map)
-	btn_tab_controls = _make_tab_button("CONTRÔLES", TAB_CONTROLS)
-	bar.add_child(btn_tab_controls)
-	btn_tab_profile = _make_tab_button("PROFIL", TAB_PROFILE)
-	bar.add_child(btn_tab_profile)
-
-	bar.add_child(_make_shoulder_icon("r1.svg"))
-	return bar
-
-func _make_shoulder_icon(file_name: String) -> TextureRect:
-	var icon := TextureRect.new()
-	var path := "res://assets/ui/prompts/" + file_name
-	if ResourceLoader.exists(path):
-		icon.texture = load(path)
-	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.custom_minimum_size = Vector2(26, 26)
-	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	return icon
-
-## Onglet façon « soulignement » : pas de pavé plein, juste un trait néon sous
-## le libellé actif. Aucun ButtonGroup — l'état est piloté par _switch_tab.
-func _make_tab_button(label: String, tab_name: String) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.toggle_mode = true
-	btn.focus_mode = Control.FOCUS_NONE
-	btn.custom_minimum_size = Vector2(184, 48)
-	btn.add_theme_font_size_override("font_size", 20)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0, 0, 0, 0)
-	normal.border_width_bottom = 2
-	normal.border_color = COLOR_LINE
-	normal.content_margin_left = GAP_M
-	normal.content_margin_right = GAP_M
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(0.7, 0.72, 0.8)
-	hover.bg_color = Color(1, 1, 1, 0.04)
-	btn.add_theme_stylebox_override("hover", hover)
-
-	var active := normal.duplicate() as StyleBoxFlat
-	active.border_width_bottom = 3
-	active.border_color = COLOR_P1
-	active.bg_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.07)
-	active.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.35)
-	active.shadow_size = 6
-	btn.add_theme_stylebox_override("pressed", active)
-	btn.add_theme_stylebox_override("hover_pressed", active)
-
-	btn.add_theme_color_override("font_color", COLOR_DIM)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	btn.add_theme_color_override("font_pressed_color", Color.WHITE)
-	btn.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
-
-	btn.pressed.connect(func() -> void: _switch_tab(tab_name))
-	return btn
 
 ## Bouton générique du menu. `primary` remplit le fond avec la teinte donnée.
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
@@ -1714,18 +1699,6 @@ func _make_section_label(text: String, tint: Color) -> Label:
 	label.add_theme_color_override("font_color", tint)
 	return label
 
-# ---------------------------------------------------------------------------
-# ONGLET JOUER
-# ---------------------------------------------------------------------------
-
-func _fill_play_tab() -> void:
-	var center := CenterContainer.new()
-	center.add_child(_build_map_card())
-	tab_game_container.add_child(center)
-
-	tab_game_container.add_child(_build_mode_block())
-	tab_game_container.add_child(_build_weapon_block())
-
 ## Carte sélectionnée, visible depuis l'onglet JOUER : on sait toujours sur quoi
 ## on s'apprête à jouer, et un appui mène droit à la galerie.
 func _build_map_card() -> Control:
@@ -1798,7 +1771,7 @@ func _build_map_card() -> Control:
 	chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(chevron)
 
-	map_card.pressed.connect(func() -> void: _switch_tab(TAB_MAPS))
+	map_card.pressed.connect(func() -> void: hub.push(SCREEN_MAPS))
 	return map_card
 
 func _refresh_map_card() -> void:
@@ -2216,11 +2189,6 @@ func _open_pause_options() -> void:
 	_options_from_pause = true
 	pause_panel.hide()
 
-	btn_tab_game.hide()
-	btn_tab_map.hide()
-	btn_tab_profile.hide()
-	btn_tab_controls.show()
-
 	btn_replay.hide()
 	btn_main_menu.hide()
 	btn_quit.hide()
@@ -2230,7 +2198,8 @@ func _open_pause_options() -> void:
 	game_over_title.add_theme_color_override("font_color", Color.WHITE)
 	game_over_score.text = ""
 
-	_switch_tab(TAB_CONTROLS, false)
+	hub.reset()
+	hub.push(SCREEN_OPTIONS)
 	game_over_panel.show()
 
 func _close_pause_options() -> void:
@@ -2243,20 +2212,8 @@ func _close_pause_options() -> void:
 ## Rend les quatre onglets à la navigation. Le menu et l'écran de fin les veulent
 ## tous ; seule la parenthèse « options depuis la pause » en masque trois.
 func _restore_all_tabs() -> void:
-	for btn in [btn_tab_game, btn_tab_map, btn_tab_controls, btn_tab_profile]:
-		if is_instance_valid(btn):
-			btn.show()
-
-# ---------------------------------------------------------------------------
-# ONGLET CARTES
-# ---------------------------------------------------------------------------
-
-func _fill_maps_tab() -> void:
-	map_gallery = MapGallery.new()
-	map_gallery.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	map_gallery.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_gallery.map_chosen.connect(_on_map_chosen)
-	tab_map_container.add_child(map_gallery)
+	if hub != null:
+		hub.reset()
 
 func _on_map_chosen(_map_id: String) -> void:
 	_refresh_map_card()
@@ -2265,15 +2222,15 @@ func _on_map_chosen(_map_id: String) -> void:
 # ONGLET CONTRÔLES
 # ---------------------------------------------------------------------------
 
-func _fill_controls_tab() -> void:
-	tab_controls_container.add_child(_make_section_label("MAPPING MANETTE", COLOR_GOLD))
+func _fill_controls_screen(body: VBoxContainer) -> void:
+	body.add_child(_make_section_label("MAPPING MANETTE", COLOR_GOLD))
 
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", GAP_L)
 	grid.add_theme_constant_override("v_separation", GAP_XS)
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	tab_controls_container.add_child(grid)
+	body.add_child(grid)
 
 	grid.add_child(_make_grid_header("ACTION", COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
 	grid.add_child(_make_grid_header("JOUEUR 1", COLOR_P1, HORIZONTAL_ALIGNMENT_CENTER))
@@ -2305,8 +2262,8 @@ func _fill_controls_tab() -> void:
 			row["p1" if player == 0 else "p2"] = btn
 		_controls_grid_buttons.append(row)
 
-	tab_controls_container.add_child(_build_display_block())
-	tab_controls_container.add_child(_build_video_block())
+	body.add_child(_build_display_block())
+	body.add_child(_build_video_block())
 
 func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	var label := Label.new()
@@ -2389,150 +2346,6 @@ func _build_video_block() -> Control:
 	return block
 
 # ---------------------------------------------------------------------------
-# ONGLET PROFIL
-# ---------------------------------------------------------------------------
-
-## Profil classé : état de l'identification, code de récupération, rattachement
-## d'une seconde machine.
-##
-## Le code de récupération est la seule chose que le joueur ait à conserver. Le
-## Device ID Epic étant lié à la MACHINE, c'est lui — et rien d'autre — qui rend
-## son classement à quelqu'un qui change d'ordinateur. D'où l'affichage en grand,
-## copiable, et non enfoui dans un sous-menu.
-func _fill_profile_tab() -> void:
-	tab_profile_container.add_child(_make_section_label("PROFIL CLASSÉ", COLOR_GOLD))
-
-	profile_status_label = Label.new()
-	profile_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	profile_status_label.add_theme_font_size_override("font_size", 15)
-	profile_status_label.add_theme_color_override("font_color", COLOR_DIM)
-	tab_profile_container.add_child(profile_status_label)
-
-	# Le classement lui-même. Vide tant que le joueur n'a pas disputé de match en
-	# ligne : afficher « 1000 points » à quelqu'un qui n'a jamais joué serait un
-	# chiffre inventé.
-	profile_standing_label = Label.new()
-	profile_standing_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	profile_standing_label.add_theme_font_size_override("font_size", 20)
-	profile_standing_label.add_theme_color_override("font_color", COLOR_P1)
-	tab_profile_container.add_child(profile_standing_label)
-
-	tab_profile_container.add_child(
-		_make_section_label("CODE DE RÉCUPÉRATION — À NOTER", COLOR_GOLD))
-
-	var code_row := HBoxContainer.new()
-	code_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	code_row.add_theme_constant_override("separation", GAP_S)
-
-	profile_code_label = Label.new()
-	profile_code_label.add_theme_font_size_override("font_size", 30)
-	profile_code_label.add_theme_color_override("font_color", COLOR_GOLD)
-	code_row.add_child(profile_code_label)
-
-	btn_copy_recovery = _make_button("COPIER", COLOR_GOLD)
-	btn_copy_recovery.add_theme_font_size_override("font_size", 13)
-	btn_copy_recovery.pressed.connect(_copy_recovery_code)
-	code_row.add_child(btn_copy_recovery)
-	tab_profile_container.add_child(code_row)
-
-	var hint := Label.new()
-	hint.text = "Sans ce code, un changement d'ordinateur repart d'un profil vierge."
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", COLOR_DIM)
-	tab_profile_container.add_child(hint)
-
-	tab_profile_container.add_child(
-		_make_section_label("REPRENDRE UN PROFIL SUR CETTE MACHINE", COLOR_P1))
-
-	var link_row := HBoxContainer.new()
-	link_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	link_row.add_theme_constant_override("separation", GAP_S)
-
-	link_input = LineEdit.new()
-	link_input.custom_minimum_size = Vector2(280, 40)
-	link_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	link_input.placeholder_text = "CODE À %d CARACTÈRES" % RecoveryCode.LENGTH
-	# Le champ n'accepte que ce qu'un code peut contenir, tirets de lecture
-	# compris : le joueur peut coller « ABCD-EFGH-JKLM » tel qu'il l'a reçu.
-	link_input.text_changed.connect(func(text: String) -> void:
-		var clean := RecoveryCode.sanitize(text)
-		if clean == text:
-			return
-		var caret := link_input.caret_column - (text.length() - clean.length())
-		link_input.text = clean
-		link_input.caret_column = maxi(caret, 0)
-	)
-	link_row.add_child(link_input)
-
-	btn_link = _make_button("RATTACHER", COLOR_P1)
-	btn_link.add_theme_font_size_override("font_size", 14)
-	btn_link.pressed.connect(_request_profile_link)
-	link_row.add_child(btn_link)
-	tab_profile_container.add_child(link_row)
-
-	link_feedback_label = Label.new()
-	link_feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	link_feedback_label.add_theme_font_size_override("font_size", 13)
-	link_feedback_label.add_theme_color_override("font_color", COLOR_DIM)
-	tab_profile_container.add_child(link_feedback_label)
-
-	RankedIdentity.state_changed.connect(func(_state) -> void: _refresh_profile_tab())
-	RankedIdentity.standing_changed.connect(_refresh_profile_tab)
-	RankedIdentity.link_completed.connect(_on_profile_link_completed)
-	_refresh_profile_tab()
-
-func _refresh_profile_tab() -> void:
-	if profile_status_label == null:
-		return
-
-	var failed: bool = RankedIdentity.state == RankedIdentity.State.FAILED
-	var detailed: bool = failed and not RankedIdentity.last_error.is_empty()
-	profile_status_label.text = RankedIdentity.last_error if detailed \
-		else RankedIdentity.state_label()
-	profile_status_label.add_theme_color_override("font_color",
-		COLOR_WARN if failed else COLOR_DIM)
-
-	var standing := RankedIdentity.standing_label()
-	profile_standing_label.text = standing
-	profile_standing_label.visible = not standing.is_empty()
-	profile_standing_label.add_theme_color_override("font_color",
-		COLOR_P1 if RankedIdentity.is_ranked else COLOR_DIM)
-
-	var known: bool = RankedIdentity.is_ready() and not RankedIdentity.recovery_code.is_empty()
-	profile_code_label.text = RecoveryCode.format(RankedIdentity.recovery_code) if known \
-		else "————  ————  ————"
-	btn_copy_recovery.disabled = not known
-
-	# Le rattachement reste offert même quand l'identification a échoué : c'est
-	# précisément la situation d'un joueur qui débarque sur une machine neuve.
-	var configured: bool = RankedIdentity.state != RankedIdentity.State.UNCONFIGURED
-	link_input.editable = configured
-	btn_link.disabled = not configured
-
-func _copy_recovery_code() -> void:
-	if RankedIdentity.recovery_code.is_empty():
-		return
-	# La forme groupée : c'est celle qu'on recopie ou qu'on colle dans un message,
-	# et le champ d'en face la ramène tout seul à sa forme canonique.
-	var readable := RecoveryCode.format(RankedIdentity.recovery_code)
-	DisplayServer.clipboard_set(readable)
-	profile_code_label.text = readable + "  ✓"
-
-func _request_profile_link() -> void:
-	link_feedback_label.add_theme_color_override("font_color", COLOR_DIM)
-	link_feedback_label.text = "Rattachement en cours…"
-	RankedIdentity.link(link_input.text)
-
-func _on_profile_link_completed(success: bool, message: String) -> void:
-	link_feedback_label.text = message
-	link_feedback_label.add_theme_color_override("font_color",
-		COLOR_GOLD if success else COLOR_WARN)
-	if success:
-		link_input.text = ""
-	_refresh_profile_tab()
-
-# ---------------------------------------------------------------------------
 # BARRE D'ACTIONS
 # ---------------------------------------------------------------------------
 
@@ -2576,109 +2389,6 @@ func _build_actions_bar() -> Control:
 	btn_actions.add_child(btn_quit)
 
 	return btn_actions
-
-# ===========================================================================
-# ONGLETS
-# ===========================================================================
-
-func _tab_pages() -> Dictionary:
-	return {
-		TAB_PLAY: tab_game_container,
-		TAB_MAPS: tab_map_container,
-		TAB_CONTROLS: tab_controls_container,
-		TAB_PROFILE: tab_profile_container,
-	}
-
-func _tab_buttons() -> Dictionary:
-	return {
-		TAB_PLAY: btn_tab_game,
-		TAB_MAPS: btn_tab_map,
-		TAB_CONTROLS: btn_tab_controls,
-		TAB_PROFILE: btn_tab_profile,
-	}
-
-## Onglets réellement accessibles : CARTES disparaît pendant une pause en match.
-func _visible_tabs() -> Array[String]:
-	var out: Array[String] = []
-	var buttons := _tab_buttons()
-	for tab_name in [TAB_PLAY, TAB_MAPS, TAB_CONTROLS, TAB_PROFILE]:
-		var btn: Button = buttons[tab_name]
-		if btn != null and btn.visible:
-			out.append(String(tab_name))
-	return out
-
-func _switch_tab(tab_name: String, animate: bool = true) -> void:
-	var available := _visible_tabs()
-	if not available.has(tab_name):
-		tab_name = TAB_PLAY
-
-	var pages := _tab_pages()
-	var target: VBoxContainer = pages[tab_name]
-	if target == null:
-		return
-
-	var previous_index := available.find(_current_tab)
-	var next_index := available.find(tab_name)
-	var same_page := _active_tab == target and target.visible
-
-	_current_tab = tab_name
-	_active_tab = target
-
-	var buttons := _tab_buttons()
-	for key in buttons.keys():
-		var btn: Button = buttons[key]
-		if btn != null:
-			btn.set_pressed_no_signal(key == tab_name)
-
-	for key in pages.keys():
-		var page: VBoxContainer = pages[key]
-		if page != null and page != target:
-			page.hide()
-	target.show()
-
-	if animate and not same_page:
-		var direction := 1.0
-		if previous_index >= 0 and next_index >= 0 and next_index < previous_index:
-			direction = -1.0
-		_play_tab_transition(target, direction)
-	else:
-		_reset_page_transform(target)
-
-	_seed_focus(0)
-	_seed_focus(1)
-
-## Fondu + léger glissement latéral, dans le sens du déplacement entre onglets.
-func _play_tab_transition(page: Control, direction: float) -> void:
-	if _tab_tween != null and _tab_tween.is_valid():
-		_tab_tween.kill()
-
-	var offset := TAB_SLIDE * direction
-	page.modulate.a = 0.0
-	page.offset_left = offset
-	page.offset_right = offset
-
-	_tab_tween = create_tween()
-	_tab_tween.set_parallel(true)
-	_tab_tween.tween_property(page, "modulate:a", 1.0, TAB_FADE)
-	_tab_tween.tween_property(page, "offset_left", 0.0, TAB_FADE) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_tab_tween.tween_property(page, "offset_right", 0.0, TAB_FADE) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
-func _reset_page_transform(page: Control) -> void:
-	page.modulate.a = 1.0
-	page.offset_left = 0.0
-	page.offset_right = 0.0
-
-func _cycle_tab(step: int) -> void:
-	var available := _visible_tabs()
-	if available.is_empty():
-		return
-	var index := available.find(_current_tab)
-	if index < 0:
-		index = 0
-	var next := wrapi(index + step, 0, available.size())
-	_switch_tab(available[next])
 
 func _resume_game() -> void:
 	get_tree().paused = false
@@ -2826,11 +2536,11 @@ func _input(event: InputEvent) -> void:
 	# feuilleter un menu invisible.
 	if not pause_open:
 		if event.is_action_pressed("p1_menu_prev_tab") or event.is_action_pressed("p2_menu_prev_tab"):
-			_cycle_tab(-1)
+			hub.back()
 			get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("p1_menu_next_tab") or event.is_action_pressed("p2_menu_next_tab"):
-			_cycle_tab(1)
+			hub.back()
 			get_viewport().set_input_as_handled()
 			return
 
@@ -2983,7 +2693,7 @@ func show_main_menu() -> void:
 		mode_vbox.show()
 	_restore_all_tabs()
 
-	_switch_tab(TAB_PLAY, false)
+	hub.reset()
 	game_over_panel.show()
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
@@ -3018,10 +2728,9 @@ func show_game_over(winner_id: int) -> void:
 	_restore_all_tabs()
 	# La carte de la manche suivante est celle de l'hôte : laisser le client en
 	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
-	if is_instance_valid(btn_tab_map):
-		btn_tab_map.visible = NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT
-
-	_switch_tab(TAB_PLAY, false)
+	# Après un match, on repart de l'écran JOUER : c'est là que « rejouer » vit.
+	hub.reset()
+	hub.push(SCREEN_PLAY)
 	game_over_panel.show()
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"

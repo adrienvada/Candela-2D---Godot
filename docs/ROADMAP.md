@@ -530,7 +530,7 @@ optimisation — avec ce rejeu comme référence pour la vérifier.
 
 ---
 
-## Phase 5 — Les menus 🟡 EN COURS — structure B retenue
+## Phase 5 — Les menus 🟡 EN COURS — le hub est en place
 
 **Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
 ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
@@ -673,13 +673,37 @@ n'existe : deux copies d'une palette divergent toujours. `ui.gd` garde ses
 constantes jusqu'à l'étape 3 — les changer maintenant toucherait des centaines de
 lignes hors périmètre.
 
-**Étape 3 — déplacer l'existant sous le hub, sans rien ajouter.**
-Jouer / préparation locale / en ligne / salon, cartes, profil, options
-(contrôles + affichage). À la fin de cette étape le jeu fait *exactement* ce
-qu'il faisait avant, avec la nouvelle arborescence. Aucune fonctionnalité
-nouvelle : c'est ce qui permet de savoir que ce qui casse vient du déplacement.
+**Étape 3 — déplacer l'existant sous le hub. ✅ CLOSE**
+La barre d'onglets a disparu : dix-huit fonctions et 350 lignes retirées de
+`ui.gd`. Les blocs existants sont réemployés tels quels — seul leur point
+d'accrochage change, ce qui permet de savoir que ce qui casse vient du
+déplacement et de rien d'autre.
 
-**Étape 4 — Options : audio et calibration.**
+Arborescence livrée : accueil → JOUER · CLASSEMENT · PROFIL · OPTIONS, et
+OPTIONS → contrôles · affichage · effets. La galerie de cartes s'atteint depuis
+la carte sélectionnée de l'écran JOUER. Les écrans du classement, du profil et
+des effets sont les `HubScreen` autonomes de la vague 2.
+
+Les gâchettes L1/R1 ne feuillettent plus d'onglets : elles remontent d'un cran.
+La parenthèse « options depuis la pause » de l'étape 1 disparaît du même coup —
+la pause ouvre l'écran des options, il n'y a plus de masquage d'onglets.
+
+**Ce qui n'est PAS fait, et pourquoi.** La structure B prévoit que « 1v1 en
+ligne » et le salon soient des écrans distincts. Ils restent sur l'écran JOUER,
+bascules de mode intactes, parce que **`selected_network_mode()` lit l'état de
+ces boutons** et que le netcode l'interroge au lancement. Les éclater exige de
+découpler le choix du mode de l'état des boutons : c'est un changement de
+comportement, pas un déplacement, et l'étape 3 avait pour règle de ne rien
+changer. → étape 3b.
+
+**Étape 3b — découpler le mode de ses boutons, puis éclater le salon.**
+`selected_network_mode()` doit lire une intention explicite plutôt que
+`btn_mode_online.button_pressed`. Cela fait, « en ligne » et « salon » deviennent
+des écrans à part entière, comme la structure B le prévoit.
+
+**Étape 4 — Options : audio et calibration.** *(persistance faite)*
+Les quatre volumes sont persistés et l'écran des effets est en place ; restent
+l'écran audio lui-même et la calibration de luminosité.
 Le bloc audio est à créer de bout en bout, `settings_manager.gd` compris (section
 `audio` dans `user://settings.cfg`, appliquée au démarrage comme le reste, en
 respectant l'ordre des autoloads). La calibration de luminosité est un écran de
@@ -861,6 +885,15 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
   sur une instance.
 
 **Tests headless**
+- **Une `SCRIPT ERROR` n'échoue PAS une suite — et ça s'est produit deux fois.**
+  Seul un `_check` incrémente le compteur : une suite qui appelle une fonction
+  supprimée continue d'annoncer « tous les tests passent » avec le code 0. Le
+  2026-08-17, `test_pause_menu` a passé au vert en appelant `_visible_tabs()`,
+  disparue avec la barre d'onglets — trois erreurs de script au journal, sortie 0.
+  **Le garde-fou est `tools/run_suites.sh`**, qui grepe la sortie et échoue sur
+  toute erreur de script : c'est le seul contrôle qui ne dépende pas de la
+  vigilance de l'auteur du test. En second rideau, une suite vérifie en préalable
+  que chaque symbole qu'elle touchera existe.
 - **Tout nombre relu d'un JSON revient en flottant.** Un `vainqueur` écrit `0`
   vaut `0.0` à la relecture. Un contrôle `typeof(x) == TYPE_INT` écarte donc
   **tous** les enregistrements venus du disque, tout en passant sur ceux

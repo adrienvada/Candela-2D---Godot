@@ -33,10 +33,21 @@ func _run() -> void:
 	root.add_child(_ui)
 	await process_frame
 
-	if not _ui.has_method("_handle_pause_input"):
-		printerr("\n✗ ui.gd n'est pas attaché à l'instance : le test ne prouverait rien.")
-		quit(1)
-		return
+	# Contrôle préalable ÉLARGI, et il a été payé : la suite a un jour annoncé
+	# « tous les tests passent » en appelant `_visible_tabs()`, supprimée avec la
+	# barre d'onglets. Une erreur de script n'échoue pas un test — seul un `_check`
+	# le fait. Le harnais doit donc vérifier son propre contrat avant de conclure.
+	for m in ["_handle_pause_input", "_resume_game", "force_close_pause",
+			"is_pause_menu_open", "_open_pause_options", "_nav_candidates"]:
+		if not _ui.has_method(m):
+			printerr("\n✗ ui.gd n'expose pas %s : le test ne prouverait rien." % m)
+			quit(1)
+			return
+	for prop in ["hub", "pause_panel", "btn_back", "game_over_panel"]:
+		if _ui.get(prop) == null:
+			printerr("\n✗ ui.gd n'a pas %s : le test ne prouverait rien." % prop)
+			quit(1)
+			return
 
 	_test_construction()
 	_test_ouverture_fermeture()
@@ -173,8 +184,8 @@ func _test_parenthese_options() -> void:
 
 	_check("le menu s'ouvre", _ui.game_over_panel.visible)
 	_check("la pause s'efface derrière", not _ui.pause_panel.visible)
-	_check("l'onglet CONTRÔLES est le seul montré",
-		_ui._visible_tabs() == [_ui.TAB_CONTROLS], str(_ui._visible_tabs()))
+	_check("le hub s'ouvre sur les options, et sur rien d'autre",
+		_ui.hub.current_id() == _ui.SCREEN_OPTIONS, _ui.hub.current_id())
 	_check("le RETOUR est offert", _ui.btn_back.visible)
 	_check("aucune relance n'est proposée en plein match", not _ui.btn_replay.visible)
 	# Du point de vue du joueur, il est toujours en pause : il ne doit pas agir.
@@ -183,8 +194,8 @@ func _test_parenthese_options() -> void:
 	_ui._handle_pause_input()
 	_check("l'événement système ramène à la pause", _ui.pause_panel.visible)
 	_check("et referme le menu", not _ui.game_over_panel.visible)
-	_check("les quatre onglets sont rendus", _ui._visible_tabs().size() == 4,
-		str(_ui._visible_tabs()))
+	_check("le hub est ramené à l'accueil", _ui.hub.current_id() == MenuHub.ROOT,
+		_ui.hub.current_id())
 
 	_ui.btn_pause_options.pressed.emit()
 	_ui.btn_back.pressed.emit()
@@ -208,7 +219,7 @@ func _test_fermeture_forcee() -> void:
 	_ui.force_close_pause()
 	_check("les options cèdent la place aussi", not _ui.game_over_panel.visible)
 	_check("l'état interne est remis à plat", not _ui.is_pause_menu_open())
-	_check("les onglets sont rendus", _ui._visible_tabs().size() == 4)
+	_check("le hub est ramené à l'accueil", _ui.hub.current_id() == MenuHub.ROOT)
 
 func _test_retour_menu_principal() -> void:
 	print("\n[Retour au menu principal]")
@@ -222,6 +233,6 @@ func _test_retour_menu_principal() -> void:
 	_check("le menu principal s'affiche", _ui.game_over_panel.visible)
 	_check("la pause est refermée", not _ui.pause_panel.visible)
 	_check("le RETOUR est rangé", not _ui.btn_back.visible)
-	_check("les quatre onglets sont là", _ui._visible_tabs().size() == 4,
-		str(_ui._visible_tabs()))
+	_check("le hub est à l'accueil", _ui.hub.current_id() == MenuHub.ROOT,
+		_ui.hub.current_id())
 	_check("la préparation de match est de retour", _ui.weapon_hbox.visible)

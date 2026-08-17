@@ -27,7 +27,7 @@
 extends SceneTree
 
 const ROADMAP := "res://docs/ROADMAP.md"
-const README := "res://README.md"
+const RUNNER := "res://tools/run_suites.sh"
 const WORKFLOW_CI := "res://.github/workflows/tests.yml"
 const TOOLS_DIR := "res://tools/"
 
@@ -86,8 +86,9 @@ func _audit_suites() -> void:
 		print("  ! dossier tools/ illisible")
 		return
 
-	var readme := _read(README)
-	var ci := _read(WORKFLOW_CI)
+	# Les noms de suites vivent désormais dans le lanceur, que le README et la CI
+	# appellent tous deux. Un seul endroit à tenir à jour, donc un seul à auditer.
+	var runner := _read(RUNNER)
 	var orphelines: Array[String] = []
 
 	for file_name in dir.get_files():
@@ -98,17 +99,14 @@ func _audit_suites() -> void:
 			continue
 		# Une suite avec sa propre scène se lance autrement : on la reconnaît à
 		# sa présence dans la CI, quelle que soit la forme de l'appel.
-		var dans_readme := readme.contains(suite)
-		var dans_ci := ci.contains(suite)
-		if not dans_readme or not dans_ci:
-			orphelines.append("%s (README: %s, CI: %s)" % [
-				suite, "oui" if dans_readme else "NON", "oui" if dans_ci else "NON"])
+		if not runner.contains(suite):
+			orphelines.append(suite)
 
 	if orphelines.is_empty():
-		print("  ✓ toutes les suites sont dans la boucle du README et dans la CI")
+		print("  ✓ toutes les suites sont dans tools/run_suites.sh")
 	else:
 		for o in orphelines:
-			print("  ! non enregistrée : ", o)
+			print("  ! absente du lanceur : ", o)
 			_restant += 1
 
 ## Compte les phases et étapes encore ouvertes. On lit les marqueurs, pas la

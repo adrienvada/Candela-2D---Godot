@@ -42,14 +42,7 @@ jobs:
         run: ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
 
       - name: Suites headless
-        run: |
-          set -e
-          for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view test_effect_policy test_screen_leaderboard test_screen_profile; do
-            echo "=== $t ==="
-            ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --script "res://tools/$t.gd"
-          done
-          echo "=== test_netcode ==="
-          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . res://tools/test_netcode.tscn
+        run: GODOT="$HOME/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" ./tools/run_suites.sh
 
       # Charge le jeu complet (main.tscn, UI, joueurs, manche locale) : attrape
       # les erreurs de script que les suites unitaires ne compilent pas.

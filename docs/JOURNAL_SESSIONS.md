@@ -150,7 +150,20 @@ utile aux deux domaines.
 Réservé en plus : `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, et tous les
 `screen_*.gd` à venir. `ui.gd` reste pris pour l'étape 3.
 
-En cours : Phase 5 étape 3, migration de l'existant sous le hub.
+**Le hub est en place** (étape 3 close) : la barre d'onglets a disparu, dix-huit
+fonctions et 350 lignes retirées de `ui.gd`. Écrans du classement, du profil et
+des effets branchés.
+
+**Nouveau garde-fou qui concerne les deux sessions : `tools/run_suites.sh`.**
+Le README, `CLAUDE.md` et la CI l'appellent désormais au lieu d'une boucle
+recopiée. Il échoue sur toute `SCRIPT ERROR`, même quand la suite sort en 0 —
+parce qu'une erreur de script n'échoue PAS un test GDScript, et que
+`test_pause_menu` est passé au vert en appelant une fonction supprimée. Ajouter
+une suite = une ligne dans ce fichier, et l'audit vérifie qu'aucune ne manque.
+
+`ui.gd` est libre. Reste pris : `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`,
+les `screen_*.gd`, `effect_policy.gd`, `asset_manifest.gd`, `ranked_identity.gd`,
+`settings_manager.gd`, `match_history_view.gd`, `supabase/**`.
 
 ### 2026-08-16 — session « game feel »
 
