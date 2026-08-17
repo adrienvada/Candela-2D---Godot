@@ -82,7 +82,7 @@ quelle session.
 
 ```bash
 # Suites de tests headless — toutes doivent passer avant tout commit
-for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view; do
+for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view test_effect_policy; do
   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script res://tools/$t.gd
 done
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . res://tools/test_netcode.tscn

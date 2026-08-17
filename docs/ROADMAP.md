@@ -810,6 +810,16 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 
 ## Pièges connus — ne pas les redécouvrir
 
+**Rendu à deux vues**
+- **Le défaut par défaut : `visibility_layer` vaut 1, et les deux vues le
+  laissent passer.** `main.tscn` donne `canvas_cull_mask = 3` à la première vue
+  et `= 5` à la seconde ; toutes deux incluent le bit 1. Un `CanvasItem` créé
+  dynamiquement sans `visibility_layer` explicite s'affiche donc **sur les deux
+  écrans**, en local comme en ligne. Les visuels du joueur posent bien 2 ou 4
+  (`player.gd:221-231`) — tout ce qui est ajouté à la volée doit le faire aussi.
+  Trouvé le 2026-08-17 sur le flash de mort, qui éblouissait le survivant
+  600 ms après son propre kill.
+
 **Tests headless**
 - **Tout nombre relu d'un JSON revient en flottant.** Un `vainqueur` écrit `0`
   vaut `0.0` à la relecture. Un contrôle `typeof(x) == TYPE_INT` écarte donc
@@ -929,7 +939,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les dix suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les onze suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :

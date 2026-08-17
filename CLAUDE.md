@@ -31,7 +31,7 @@ Le binaire Godot (4.7) sur le poste d'Adrien :
 godot --path .
 
 # Suites de tests headless — TOUTES doivent passer avant tout commit
-for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view; do
+for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view test_effect_policy; do
   godot --headless --path . --script res://tools/$t.gd
 done
 godot --headless --path . res://tools/test_netcode.tscn

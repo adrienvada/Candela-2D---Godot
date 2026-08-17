@@ -92,6 +92,35 @@ que d'inventer un chemin dans son coin. Le manifeste étant dans le domaine
 - **Les items D1 à D7** : ils attendent un arbitrage d'Adrien parce qu'ils
   changent l'information disponible en jeu ou coûtent des images par seconde.
 
+## Signalé à la session « game feel » — un défaut dans `player.gd`
+
+**Le flash de mort blanchit aussi l'écran du survivant.** Relevé le 2026-08-17
+par la session « menus », qui ne touche pas à ce fichier : c'est à vous.
+
+Dans `die()`, le flash crée un `CanvasLayer` (layer 100) portant un `ColorRect`
+plein cadre, et **ne pose aucun `visibility_layer`** — contrairement aux visuels
+du joueur, qui posent explicitement 2 (sa vue) ou 4 (la vue adverse) aux lignes
+221-231.
+
+Ce qui rend le défaut certain plutôt que probable : `main.tscn` donne
+`canvas_cull_mask = 3` à la première vue et `= 5` à la seconde. **Les deux
+incluent le bit 1**, qui est la valeur par défaut de `visibility_layer`. Un
+`CanvasItem` laissé au défaut rend donc dans les deux vues, en local comme en
+ligne — l'écran partagé est permanent.
+
+Conséquence de jeu : celui qui vient de tuer se prend 600 ms de blanc et
+d'aberration chromatique dans les yeux, dans un jeu où l'information est le seul
+enjeu. Ce n'est pas un défaut visuel, c'est un défaut d'équité.
+
+Le correctif tient en une ligne sur le `ColorRect`. Le label « FATAL » du même
+bloc est un cas différent : il vit en espace-monde, à l'endroit de la mort, et
+que les deux joueurs le voient se défend.
+
+Tant que ce point n'est pas tranché, `flash_mort` est classé **CONFORT** dans
+`effect_policy.gd` — réglable jusqu'à zéro. S'il s'avère qu'il touche les deux
+écrans, il devient un effet **MONDE** et prend un plancher : une seule ligne à
+changer dans la table.
+
 ## État — le plus récent en haut
 
 ### 2026-08-17 — session « game feel »

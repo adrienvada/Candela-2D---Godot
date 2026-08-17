@@ -1,5 +1,5 @@
 # Suites de tests headless — les mêmes que la boucle « avant tout commit » du
-# README, exécutées sur chaque poussée. Validé avec Godot 4.7.1 Linux : les dix
+# README, exécutées sur chaque poussée. Validé avec Godot 4.7.1 Linux : les onze
 # suites passent telles quelles, sans identifiants EOS (le jeu se dégrade
 # proprement en « EOS non configuré »). Les bancs réseau à deux instances
 # (test_transport, test_online_match --host/--join) restent hors CI : ils
@@ -44,7 +44,7 @@ jobs:
       - name: Suites headless
         run: |
           set -e
-          for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view; do
+          for t in test_map_codec test_map_geometry test_arena_build test_editor_tools test_match_format test_pause_menu test_menu_hub test_audio_settings test_match_history_view test_effect_policy; do
             echo "=== $t ==="
             ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --script "res://tools/$t.gd"
           done
