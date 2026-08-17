@@ -811,6 +811,17 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 ## Pièges connus — ne pas les redécouvrir
 
 **Tests headless**
+- **Tout nombre relu d'un JSON revient en flottant.** Un `vainqueur` écrit `0`
+  vaut `0.0` à la relecture. Un contrôle `typeof(x) == TYPE_INT` écarte donc
+  **tous** les enregistrements venus du disque, tout en passant sur ceux
+  fraîchement construits en mémoire — le test qui l'attrape est celui qui passe
+  vraiment par `JSON.stringify` puis `parse_string`, jamais celui qui construit
+  son dictionnaire à la main.
+- **Un worktree neuf n'a pas de `.godot/`** : `ProjectSettings.get_global_class_list()`
+  y rend zéro entrée et aucun `class_name` ne résout. `--headless --import` est
+  obligatoire avant la première suite. Dans la suite elle-même,
+  `preload("res://…")` est plus sûr que le `class_name`, puisqu'il ne dépend pas
+  du cache.
 - **Un worktree neuf n'a pas la disposition audio du projet.** Sans un
   `--headless --import` préalable, l'uid de `default_bus_layout.tres` ne résout
   pas : seul le bus `Master` existe, `Music`, `SFX` et `Speaker` sont
@@ -918,7 +929,7 @@ reformulation aurait cassée en silence), bornage des inputs et du ping reçus
 (voir Phase 4), écriture atomique et versionnée du journal de matchs,
 renommage `p1_kills` → `p1_session_wins` (le compteur compte des **matchs de
 session**, pas des éliminations — le nom aurait piégé les stats de la
-Phase 4), et une CI GitHub Actions qui déroule les neuf suites headless plus un
+Phase 4), et une CI GitHub Actions qui déroule les dix suites headless plus un
 test de fumée du jeu complet à chaque poussée (validée sur Godot 4.7.1 Linux).
 
 Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
