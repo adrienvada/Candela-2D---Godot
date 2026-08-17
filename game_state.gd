@@ -253,6 +253,15 @@ func _on_peer_connected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		client_peer_id = id
 		p2.reset_network_input()
+		# Le salon s'ouvre désormais depuis le menu, pour que le code s'affiche
+		# avant le match. L'hôte peut donc être encore devant sa liste de joueurs
+		# quand l'adversaire arrive — sans être passé par le chemin qui prépare la
+		# partie. Or le client, lui, démarre sa manche à la connexion et envoie
+		# aussitôt `rpc_client_weapon`, qui lance la manche ici : sans cette
+		# préparation, P2 resterait piloté par le clavier de l'hôte au lieu des
+		# commandes reçues, et l'hôte jouerait derrière son propre menu.
+		if ui._is_main_menu:
+			_enter_hosted_game()
 		# Arrivée pendant une killcam ou l'écran de fin : lancer la manche ici
 		# couperait la séquence en cours des deux côtés.
 		if _end_sequence_active:
@@ -1427,6 +1436,16 @@ func _set_p2_weapon_button(idx: int) -> void:
 	if idx < 0 or idx >= buttons.size(): return
 	buttons[idx].button_pressed = true
 
+## Quitte le menu pour la partie hébergée : autorités, fournisseurs d'entrées,
+## vues. Deux chemins y mènent — l'hôte qui appuie sur PRÊT, et l'adversaire qui
+## arrive dans un salon ouvert depuis le menu. Ils doivent préparer exactement la
+## même chose, sous peine d'une partie où l'un des deux joueurs est mal branché.
+func _enter_hosted_game() -> void:
+	_apply_network_mode()
+	game_over = false
+	ui.hide_game_over()
+	_restore_viewports()
+
 func _on_replay_requested():
 	if ui._is_main_menu:
 		# Le mode lancé est celui qu'affiche le menu. Tester directement
@@ -1435,15 +1454,16 @@ func _on_replay_requested():
 		# si bien qu'un 1v1 local relançait un salon.
 		var mode: NetworkManager.GameMode = ui.selected_network_mode()
 		if mode == NetworkManager.GameMode.ONLINE_HOST:
-			# Un hébergement refusé (Epic injoignable, port déjà pris) a déjà
-			# ramené au menu : enchaîner sur la manche lancerait une partie
-			# solo par-dessus l'écran d'erreur.
-			if not NetworkManager.host_game():
-				return
-			_apply_network_mode()
-			game_over = false
-			ui.hide_game_over()
-			_restore_viewports()
+			# Le salon est peut-être déjà ouvert : « CRÉER LE SALON » l'ouvre depuis
+			# le menu. Réhéberger remplacerait le pair vivant, donc la connexion
+			# déjà établie avec l'adversaire qui attend dans la liste.
+			if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+				# Un hébergement refusé (Epic injoignable, port déjà pris) a déjà
+				# ramené au menu : enchaîner sur la manche lancerait une partie
+				# solo par-dessus l'écran d'erreur.
+				if not NetworkManager.host_game():
+					return
+			_enter_hosted_game()
 			_start_round()
 		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
 			if not NetworkManager.join_game(ui.lobby_join_text()):

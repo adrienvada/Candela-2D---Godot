@@ -63,17 +63,30 @@ const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
 const SCREEN_PROFILE := "profil"
 const SCREEN_CUSTOM := "personnalisation"
-const SCREEN_MAPS := "cartes"
 const SCREEN_CONTROLS := "controles"
 const SCREEN_DISPLAY := "affichage"
 const SCREEN_AUDIO := "audio"
 const SCREEN_EFFECTS := "effets"
 const SCREEN_CALIBRATION := "calibration"
 
+## Clés des affichages riches du panneau de droite. Ce ne sont pas des écrans : on
+## ne s'y déplace pas, ils se montrent à droite de la liste sous le curseur.
+##
+## « Cartes » en était un écran, et c'était un aller-retour de trop : choisir
+## l'arène demandait de descendre d'un cran, choisir, puis ressortir — alors que la
+## place de droite était vide et attendait exactement ça.
+const PANEL_SALON := "salon"
+const PANEL_MAPS := "cartes"
+const PANEL_RESOLUTION := "resolution"
+const PANEL_VSYNC := "vsync"
+const PANEL_FPS := "fps"
+## Un panneau par action à réassigner : `p1_shoot` → les deux touches de « Tirer ».
+const PANEL_BIND_PREFIX := "bind_"
+
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
 ## et une entrée retirée du parcours du curseur fait douter du bouton d'à côté.
-const NOT_YET := "Pas encore implémenté. L'entrée est là pour dire où ça ira."
+const NOT_YET := "Pas encore disponible."
 
 # ---------------------------------------------------------------------------
 # CLASSES INTERNES
@@ -215,15 +228,13 @@ var game_over_score: Label
 var hub: MenuHub
 ## Écrans autonomes (`HubScreen`) par identifiant. Ils ne se connaissent pas.
 var _screens: Dictionary = {}
-## Affichages riches du panneau de droite, par écran.
-var _asides: Dictionary = {}
 ## Le classement vit hors de l'arborescence : il se lit dans le panneau de droite.
 var _leaderboard: ScreenLeaderboard
 
 # --- Onglet PROFIL ---
 
 var map_gallery: MapGallery
-var map_card: Button
+var map_card: PanelContainer
 var map_card_thumb: TextureRect
 var map_card_name: Label
 var map_card_meta: Label
@@ -260,6 +271,13 @@ var btn_copy_code: Button
 var join_input: LineEdit
 var ephemeral_banner: Label
 
+var lobby_players_box: VBoxContainer
+var lobby_player_host: Label
+var lobby_player_guest: Label
+var btn_open_lobby: Button
+## Écran qui a ouvert le salon, pour savoir quand on le quitte. Vide = fermé.
+var _lobby_screen: String = ""
+
 ## Panneau de pause — distinct du menu à onglets depuis la Phase 5.
 ##
 ## Trois rôles partageaient `game_over_panel` : menu principal, pause et écran de
@@ -286,7 +304,6 @@ var btn_replay: Button
 var btn_main_menu: Button
 var btn_quit: Button
 
-var _controls_grid_buttons: Array = []
 var _is_rebinding: bool = false
 var _action_to_rebind: String = ""
 var _button_to_update: Button = null
@@ -807,6 +824,13 @@ func _nav_candidates(player: int) -> Array[Control]:
 	var body := hub.body_of(hub.current_id()) if hub != null else null
 	if body != null:
 		_collect_focusables(body, player, out)
+	# ET le panneau de droite, qui n'est pas dans le corps de l'écran mais dans
+	# l'autre colonne. Il en était absent : tout ce qui y vivait — le choix d'arme,
+	# le champ où l'on tape le code du salon — se cliquait à la souris et restait
+	# hors d'atteinte des deux curseurs. Seuls les panneaux visibles remontent,
+	# `_collect_focusables` s'arrêtant sur un contrôle caché.
+	if hub != null and hub.detail_host() != null:
+		_collect_focusables(hub.detail_host(), player, out)
 	if btn_actions != null:
 		_collect_focusables(btn_actions, player, out)
 	return out
@@ -894,6 +918,13 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 		if p2_cursor != null:
 			p2_cursor.aim(control.get_global_rect(), snap)
 
+	# Les deux curseurs sont maison : ils n'appellent pas `grab_focus()`, donc
+	# `focus_entered` ne part jamais pour eux. Sans ce relais, le panneau de droite
+	# et la description sous le titre ne suivraient que la souris — et la galerie
+	# de cartes serait hors d'atteinte de qui joue à la manette.
+	if hub != null and player == 0:
+		hub.reveal_entry(control)
+
 	if map_gallery != null and map_gallery.is_ancestor_of(control):
 		map_gallery.reveal(control)
 
@@ -924,7 +955,9 @@ func _seed_focus(player: int) -> void:
 			_set_focus(player, candidate, true)
 			return
 
-	if hub != null and hub.current_id() == SCREEN_MAPS and map_gallery != null:
+	# La galerie n'est plus un écran mais un panneau : c'est sa visibilité, et non
+	# l'écran courant, qui dit si l'on est en train de choisir une arène.
+	if map_gallery != null and map_gallery.is_visible_in_tree():
 		var tile := map_gallery.selected_tile()
 		if tile != null and candidates.has(tile):
 			_set_focus(player, tile, true)
@@ -1558,7 +1591,7 @@ func _build_hub_screens() -> void:
 	# les rangent, et rien ne les crée deux fois.
 	_build_lobby_widgets()
 
-	var accueil := hub.add_screen(MenuHub.ROOT, "Candela 2D")
+	var accueil := hub.add_screen(MenuHub.ROOT, "Menu principal")
 	var scinde := hub.add_screen(SCREEN_LOCAL, "1v1 écrans scindés")
 	var amical := hub.add_screen(SCREEN_FRIENDLY, "1v1 amical")
 	var prive_ligne := hub.add_screen(SCREEN_FRIENDLY_ONLINE, "Match privé en ligne")
@@ -1570,20 +1603,19 @@ func _build_hub_screens() -> void:
 	var classe := hub.add_screen(SCREEN_RANKED, "1v1 compétitif")
 	var entrainement := hub.add_screen(SCREEN_TRAINING, "S'entraîner")
 	var custom := hub.add_screen(SCREEN_CUSTOM, "Personnalisation")
-	var cartes := hub.add_screen(SCREEN_MAPS, "Cartes")
 	var controles := hub.add_screen(SCREEN_CONTROLS, "Contrôles")
 	var affichage := hub.add_screen(SCREEN_DISPLAY, "Affichage")
 
 	# --- Accueil --------------------------------------------------------------
 	accueil.add_child(hub.make_entry("1V1 ÉCRANS SCINDÉS",
-		"Deux joueurs sur ce poste, l'écran partagé en deux. Toutes les armes sont "
-		+ "accessibles : rien n'est en jeu, donc rien n'est verrouillé.", SCREEN_LOCAL))
+		"Deux joueurs sur ce poste, écran partagé. Rien n'est en jeu : toutes les "
+		+ "armes sont accessibles.", SCREEN_LOCAL))
 	accueil.add_child(hub.make_entry("1V1 AMICAL",
-		"Contre quelqu'un d'autre, par Internet ou par le réseau local. Le résultat "
-		+ "n'entre pas au classement.", SCREEN_FRIENDLY))
+		"Contre quelqu'un d'autre, en ligne ou en local. Le résultat ne compte pas "
+		+ "au classement.", SCREEN_FRIENDLY))
 	accueil.add_child(hub.make_entry("1V1 COMPÉTITIF",
-		"Match classé. Le résultat compte, et l'arsenal des deux joueurs s'aligne "
-		+ "sur celui du moins bien classé.", SCREEN_RANKED, COLOR_GOLD))
+		"Match classé : le résultat compte, et l'arsenal s'aligne sur le moins bien "
+		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD))
 	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
 		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
 		SCREEN_TRAINING))
@@ -1602,20 +1634,21 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("JOUER",
 		"Chaque joueur choisit son arme à droite, puis la manche démarre.",
 		"", COLOR_P1, "lancer", "", true))
-	scinde.add_child(hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.", SCREEN_MAPS))
+	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
+		"Les arènes s'affichent à droite : choisissez-y directement.",
+		"", COLOR_P1, "", "", false, PANEL_MAPS))
 	hub.add_back_entry(SCREEN_LOCAL)
 
 	# --- 1v1 amical -----------------------------------------------------------
 	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
 		"Appariement automatique, cartes tirées au hasard.", "", COLOR_P1, "",
-		NOT_YET + " Le cœur de l'appariement est écrit et testé ; il attend une "
-		+ "correction de l'extinction d'EOS dans ses suites."))
+		NOT_YET + " Le moteur est prêt ; reste à le relier à l'écran."))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
 		SCREEN_FRIENDLY_ONLINE))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
-		"Par le réseau local, avec l'adresse IP de l'hôte. Le seul mode qui marche "
-		+ "quand Epic est injoignable.", SCREEN_FRIENDLY_LOCAL))
+		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
+		SCREEN_FRIENDLY_LOCAL))
 	hub.add_back_entry(SCREEN_FRIENDLY)
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
@@ -1638,22 +1671,25 @@ func _build_hub_screens() -> void:
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
-		h.add_child(hub.make_entry("PRÊT",
-			"Lance le match dès que l'adversaire est là.", "", COLOR_P1, "lancer", "", true))
+		h.add_child(hub.make_entry("LANCER LE MATCH",
+			"Ouvrez d'abord le salon à droite et transmettez ce qu'il affiche. Le "
+			+ "match part dès que l'adversaire est là — ou tout de suite, en bac à "
+			+ "sable, s'il se fait attendre.", "", COLOR_P1, "lancer", "", true))
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
-			"L'hôte choisit l'arène des deux joueurs.", SCREEN_MAPS))
+			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
+			"", COLOR_P1, "", "", false, PANEL_MAPS))
 	for j in [invite, invite_lan]:
-		j.add_child(hub.make_entry("PRÊT",
-			"Rejoint le salon. La carte est celle de l'hôte.", "", COLOR_P1, "lancer", "", true))
+		j.add_child(hub.make_entry("REJOINDRE LE SALON",
+			"Saisissez à droite ce que l'hôte vous a transmis. La carte est la "
+			+ "sienne.", "", COLOR_P1, "lancer", "", true))
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
 		hub.add_back_entry(id)
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Appariement classé, sur une fourchette de classement qui s'élargit avec "
-		+ "l'attente.", "", COLOR_GOLD, "",
-		NOT_YET + " Le classement fonctionne et le cœur de l'appariement est écrit ; "
-		+ "c'est son raccordement qui manque."))
+		"Appariement classé, sur une fourchette qui s'élargit avec l'attente.",
+		"", COLOR_GOLD, "",
+		NOT_YET + " Le classement fonctionne ; l'appariement reste à raccorder."))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
 		"mon_rang"))
@@ -1672,14 +1708,14 @@ func _build_hub_screens() -> void:
 	# --- S'entraîner ----------------------------------------------------------
 	entrainement.add_child(hub.make_entry("LANCER L'ENTRAÎNEMENT",
 		"Seul, contre une cible.", "", COLOR_P1, "entrainement",
-		NOT_YET + " La cible existe déjà dans le code : elle ne s'active pour "
-		+ "l'instant qu'en attendant un adversaire en ligne."))
+		NOT_YET + " La cible existe déjà, mais ne s'active qu'en attendant un "
+		+ "adversaire."))
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
-		NOT_YET + " La cible n'a pas encore de réglages : ni position, ni taille, "
-		+ "ni mouvement."))
-	entrainement.add_child(hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.",
-		SCREEN_MAPS))
+		NOT_YET + " Aucun réglage encore : ni position, ni taille, ni mouvement."))
+	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
+		"Les arènes s'affichent à droite : choisissez-y directement.",
+		"", COLOR_P1, "", "", false, PANEL_MAPS))
 	hub.add_back_entry(SCREEN_TRAINING)
 
 	# --- Personnalisation -----------------------------------------------------
@@ -1695,22 +1731,21 @@ func _build_hub_screens() -> void:
 	hub.add_back_entry(SCREEN_CUSTOM)
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
+	# La galerie n'est plus un écran : elle est le panneau de droite d'une entrée
+	# d'information, partagée par les quatre listes qui laissent choisir l'arène.
 	map_gallery = MapGallery.new()
 	map_gallery.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	map_gallery.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Dans une colonne alignée en haut, un enfant qui s'étire n'obtient que sa
+	# taille minimale : sans ce plancher la galerie se réduirait à sa barre d'outils.
+	map_gallery.custom_minimum_size = Vector2(0, 470)
 	map_gallery.map_chosen.connect(_on_map_chosen)
-	cartes.add_child(map_gallery)
-	hub.add_back_entry(SCREEN_MAPS)
+	hub.register_panel(PANEL_MAPS, map_gallery)
 
 	_fill_controls_screen(controles)
 	hub.add_back_entry(SCREEN_CONTROLS)
 
-	affichage.add_child(_build_display_block())
-	affichage.add_child(_build_video_block())
-	affichage.add_child(hub.make_entry("CALIBRATION",
-		"Régler la luminosité sur une cible perceptive : ce que le jeu veut montrer "
-		+ "doit tout juste apparaître, ce qu'il veut cacher doit rester invisible.",
-		SCREEN_CALIBRATION))
+	_fill_display_screen(affichage)
 	hub.add_back_entry(SCREEN_DISPLAY)
 
 	_attach_screen(SCREEN_EFFECTS, "Effets", ScreenEffects.new())
@@ -1733,10 +1768,10 @@ func _build_hub_screens() -> void:
 
 	# Le même panneau sert les cinq écrans de préparation : ce qui s'y voit dépend
 	# du mode et du transport retenus, pas de l'écran.
-	var salon := _build_salon_aside()
+	hub.register_panel(PANEL_SALON, _build_salon_aside())
 	for id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
 			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
-		_install_aside(id, salon)
+		hub.set_screen_panel(id, PANEL_SALON)
 
 	# Le classement vit hors de l'arborescence : il se lit dans le panneau de droite
 	# depuis l'écran compétitif.
@@ -1770,21 +1805,100 @@ func _build_salon_aside() -> Control:
 	cachette.hide()
 	cachette.add_child(transport_hbox)
 	box.add_child(cachette)
+	box.add_child(_build_weapon_block())
+	# Le bloc du salon ferme le panneau, dans l'ordre où on s'en sert : qui est
+	# là, par quoi on les fait venir, et le geste qui ouvre la porte.
+	box.add_child(_build_player_list())
 	box.add_child(lobby_code_row)
 	box.add_child(host_ip_row)
 	var center := CenterContainer.new()
 	center.add_child(join_input)
 	box.add_child(center)
 	box.add_child(lobby_status_label)
-	box.add_child(_build_weapon_block())
+	box.add_child(_build_open_lobby_row())
 	return box
 
-## Installe un affichage riche à droite d'un écran, montré tant qu'aucune entrée
-## n'a pris la parole.
-func _install_aside(id: String, content: Control) -> void:
-	_asides[id] = content
-	content.hide()
-	hub.detail_host().add_child(content)
+## Qui est dans le salon. L'hôte s'y voit lui-même : une liste où l'on ne figure
+## pas laisse douter d'être bien connecté à quoi que ce soit.
+func _build_player_list() -> Control:
+	lobby_players_box = VBoxContainer.new()
+	lobby_players_box.add_theme_constant_override("separation", 2)
+
+	var titre := Label.new()
+	titre.text = "JOUEURS"
+	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	titre.add_theme_font_size_override("font_size", 12)
+	titre.add_theme_color_override("font_color", COLOR_DIM)
+	lobby_players_box.add_child(titre)
+
+	lobby_player_host = Label.new()
+	lobby_player_host.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_player_host.add_theme_font_size_override("font_size", 15)
+	lobby_player_host.add_theme_color_override("font_color", COLOR_P1)
+	lobby_players_box.add_child(lobby_player_host)
+
+	lobby_player_guest = Label.new()
+	lobby_player_guest.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_player_guest.add_theme_font_size_override("font_size", 15)
+	lobby_players_box.add_child(lobby_player_guest)
+
+	return lobby_players_box
+
+## Le geste qui ouvre le salon. Il n'existait pas : le salon s'ouvrait au
+## lancement du match, si bien que le code à transmettre n'apparaissait qu'une
+## fois l'hôte seul dans l'arène — il fallait le lire par-dessus l'écran
+## d'attente, puis espérer que l'adversaire arrive avant de s'ennuyer.
+func _build_open_lobby_row() -> Control:
+	btn_open_lobby = _make_button("CRÉER LE SALON", COLOR_P1, true)
+	btn_open_lobby.custom_minimum_size = Vector2(280, 52)
+	btn_open_lobby.pressed.connect(_open_lobby)
+	var center := CenterContainer.new()
+	center.add_child(btn_open_lobby)
+	return center
+
+## Ouvre le salon depuis le menu, sans lancer la manche.
+##
+## En EOS le code arrive plus tard, par `lobby_code_ready` ; en réseau local il
+## n'y a rien à publier, l'IP était déjà affichée — mais le port, lui, doit être
+## ouvert pour que l'adversaire puisse se présenter avant le début du match.
+func _open_lobby() -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		return
+	if not NetworkManager.host_game():
+		lobby_status_label.text = NetworkManager.last_error if NetworkManager.last_error != "" \
+			else "Impossible d'ouvrir le salon."
+		return
+	_lobby_screen = hub.current_id()
+	_refresh_lobby_block()
+
+## Referme le salon quand on quitte l'écran qui l'a ouvert. Un code publié
+## derrière soi ferait attendre un adversaire devant une porte que plus personne
+## ne garde — et rejoindre un salon en étant soi-même hôte n'a aucun sens.
+func _close_lobby_if_left(id: String) -> void:
+	if _lobby_screen == "" or id == _lobby_screen:
+		return
+	_lobby_screen = ""
+	NetworkManager.disconnect_from_game()
+
+## Reflète la présence des deux joueurs et l'état du bouton d'ouverture.
+func _refresh_player_list() -> void:
+	if lobby_players_box == null:
+		return
+	var mode := selected_network_mode()
+	var ouvert := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
+	lobby_player_host.text = "Vous — hôte" if mode == NetworkManager.GameMode.ONLINE_HOST \
+		else "L'hôte"
+	var adversaire := not multiplayer.get_peers().is_empty() if multiplayer != null else false
+	if adversaire:
+		lobby_player_guest.text = "Adversaire — connecté"
+		lobby_player_guest.add_theme_color_override("font_color", COLOR_P2)
+	else:
+		lobby_player_guest.text = "En attente d'un adversaire…" if ouvert else "—"
+		lobby_player_guest.add_theme_color_override("font_color", COLOR_DIM)
+
+	btn_open_lobby.visible = mode == NetworkManager.GameMode.ONLINE_HOST
+	btn_open_lobby.disabled = ouvert
+	btn_open_lobby.text = "SALON OUVERT" if ouvert else "CRÉER LE SALON"
 
 func _on_hub_action(action: String) -> void:
 	match action:
@@ -1857,13 +1971,12 @@ func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
 		screen.refresh()
-	# Un même panneau sert plusieurs écrans (les trois salons). Comparer clé par
-	# clé le masquerait, la dernière itération l'emportant : on désigne d'abord le
-	# panneau attendu, puis on compare les contrôles entre eux.
-	var attendu: Control = _asides.get(id, null)
-	for content in _asides.values():
-		if content != null:
-			content.visible = content == attendu
+	# Avant toute chose : quitter l'écran qui a ouvert un salon le referme. Cela
+	# doit précéder la décision de mode ci-dessous, qui va justement changer.
+	_close_lobby_if_left(id)
+	# La visibilité des panneaux de droite appartient désormais au hub : elle suit
+	# l'entrée sous le curseur, pas seulement l'écran. Ce qui se décidait ici se
+	# décide dans `MenuHub._apply_panel()`.
 	# Entrer dans un salon EST la décision de mode. Une seule affectation, à un
 	# seul endroit — là où six bascules se contredisaient.
 	match id:
@@ -1905,11 +2018,23 @@ func _build_menu_header() -> Control:
 	game_over_score = Label.new()
 	game_over_score.text = ""
 	game_over_score.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	game_over_score.custom_minimum_size = Vector2(0, 48)
 	game_over_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game_over_score.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	game_over_score.add_theme_font_size_override("font_size", 22)
 	game_over_score.add_theme_color_override("font_color", COLOR_DIM)
-	header.add_child(game_over_score)
+	game_over_score.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	# La description de l'écran courant tient sur une ou deux lignes selon
+	# l'entrée survolée. Sans ce conteneur, le `Label` grandit avec son texte —
+	# un `custom_minimum_size` n'est qu'un plancher — et tout ce qui suit dans
+	# le menu saute d'un cran à chaque survol plus long. Le conteneur, lui, est
+	# un `Control` nu (pas un `Container`) : sa taille ne suit pas celle de son
+	# enfant, elle reste fixée à deux lignes, texte plus long ou non.
+	var desc_box := Control.new()
+	desc_box.custom_minimum_size = Vector2(0, 60)
+	desc_box.clip_contents = true
+	desc_box.add_child(game_over_score)
+	header.add_child(desc_box)
 
 	return header
 
@@ -2000,29 +2125,30 @@ func _make_section_label(text: String, tint: Color) -> Label:
 	label.add_theme_color_override("font_color", tint)
 	return label
 
-## Carte sélectionnée, visible depuis l'onglet JOUER : on sait toujours sur quoi
-## on s'apprête à jouer, et un appui mène droit à la galerie.
+## Carte sélectionnée, affichée dans le panneau du salon : on sait toujours sur
+## quoi on s'apprête à jouer.
+##
+## Ce n'était plus une carte mais un bouton, qui poussait vers l'écran des cartes.
+## Il ouvrait un second chemin vers la galerie, à côté de l'entrée « CHANGER DE
+## CARTE » de la liste — et deux gestes pour une décision, c'est un de trop : la
+## galerie s'affiche maintenant à droite, exactement là où ce bouton se trouvait.
+## Il redevient donc ce qu'il annonce, un état, et sort du parcours du curseur.
 func _build_map_card() -> Control:
-	map_card = Button.new()
+	map_card = PanelContainer.new()
 	map_card.custom_minimum_size = Vector2(400, 104)
-	map_card.tooltip_text = "Changer de carte"
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = COLOR_SURFACE
 	normal.set_border_width_all(2)
 	normal.border_color = COLOR_LINE
 	normal.set_corner_radius_all(12)
-	map_card.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = COLOR_P1
-	hover.bg_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.08)
-	map_card.add_theme_stylebox_override("hover", hover)
-	map_card.add_theme_stylebox_override("focus", hover)
-	map_card.add_theme_stylebox_override("pressed", hover)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 12
+	normal.content_margin_bottom = 12
+	map_card.add_theme_stylebox_override("panel", normal)
 
 	var row := HBoxContainer.new()
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
 	row.add_theme_constant_override("separation", GAP_S)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_card.add_child(row)
@@ -2064,15 +2190,6 @@ func _build_map_card() -> Control:
 	map_card_meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(map_card_meta)
 
-	var chevron := Label.new()
-	chevron.text = "CHANGER  ›"
-	chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	chevron.add_theme_font_size_override("font_size", 13)
-	chevron.add_theme_color_override("font_color", COLOR_P1)
-	chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(chevron)
-
-	map_card.pressed.connect(func() -> void: hub.push(SCREEN_MAPS))
 	return map_card
 
 func _refresh_map_card() -> void:
@@ -2191,6 +2308,10 @@ func _build_lobby_widgets() -> void:
 
 	NetworkManager.lobby_code_ready.connect(_on_lobby_code_ready)
 	NetworkManager.eos_state_changed.connect(func(_state) -> void: _refresh_lobby_block())
+	# La liste des joueurs se tient à jour d'elle-même : l'hôte qui attend dans son
+	# salon doit voir l'adversaire arriver sans avoir à toucher à quoi que ce soit.
+	NetworkManager.player_connected.connect(func(_id: int) -> void: _refresh_player_list())
+	NetworkManager.player_disconnected.connect(func(_id: int) -> void: _refresh_player_list())
 
 ## Applique l'état du bloc lobby en un seul endroit : quatre combinaisons
 ## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
@@ -2212,7 +2333,12 @@ func _refresh_lobby_block() -> void:
 		lobby_code_row.hide()
 		host_ip_row.hide()
 		join_input.hide()
+		lobby_players_box.hide()
+		btn_open_lobby.hide()
 		return
+
+	lobby_players_box.show()
+	_refresh_player_list()
 
 	# La bascule de transport ne se remontre JAMAIS : entrer par « en ligne » ou par
 	# « en local » EST le choix, et le reproposer ici remettrait en question une
@@ -2225,19 +2351,23 @@ func _refresh_lobby_block() -> void:
 		join_input.hide()
 		host_ip_row.visible = not is_eos
 		lobby_code_row.visible = is_eos
+		var ouvert := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
 		if is_eos:
 			_update_lobby_code_label()
-			lobby_status_label.text = "%s  ·  le code du salon s'affiche au lancement" \
-				% NetworkManager.eos_state_label()
+			lobby_status_label.text = "%s  ·  %s" % [NetworkManager.eos_state_label(),
+				"transmettez ce code à votre adversaire" if ouvert
+				else "créez le salon pour obtenir un code"]
 		else:
 			host_ip_label.text = "Votre IP : %s" % local_ipv4()
-			lobby_status_label.text = "Réseau local — communiquez votre IP à votre adversaire"
+			lobby_status_label.text = "Réseau local — communiquez votre IP à votre adversaire" \
+				if ouvert else "Réseau local — créez le salon, puis communiquez votre IP"
 		return
 
-	# Client
+	# Client — il n'y a pas de salon à ouvrir de ce côté, seulement un à rejoindre.
 	host_ip_row.hide()
 	lobby_code_row.hide()
 	join_input.show()
+	btn_open_lobby.hide()
 	if is_eos:
 		join_input.placeholder_text = "CODE À %d CARACTÈRES" % LobbyCode.LENGTH
 		join_input.max_length = LobbyCode.LENGTH
@@ -2251,9 +2381,13 @@ func _refresh_lobby_block() -> void:
 
 func _on_lobby_code_ready(_code: String) -> void:
 	_update_lobby_code_label()
-	# L'hôte est déjà dans l'arène quand le code arrive : c'est l'écran d'attente
-	# qui doit le porter, pas le menu qu'il vient de quitter.
-	if waiting_label.visible:
+	# Le code peut arriver alors qu'on est encore au menu — c'est même désormais
+	# le cas ordinaire, « CRÉER LE SALON » ouvrant le salon sans lancer la manche.
+	if _is_main_menu:
+		_refresh_lobby_block()
+	# Sinon l'hôte est déjà dans l'arène : c'est l'écran d'attente qui porte le
+	# code, pas le menu qu'il vient de quitter.
+	elif waiting_label.visible:
 		show_waiting_for_opponent()
 
 func _update_lobby_code_label() -> void:
@@ -2463,51 +2597,136 @@ func _on_map_chosen(_map_id: String) -> void:
 	_refresh_map_card()
 
 # ---------------------------------------------------------------------------
-# ONGLET CONTRÔLES
+# CONTRÔLES
 # ---------------------------------------------------------------------------
 
+## Une action réassignable par entrée, ses deux touches à droite.
+##
+## L'écran déversait auparavant une grille de neuf cases dans la colonne de
+## gauche — plus une copie des réglages d'affichage, qui vivent déjà dans leur
+## propre écran. Deux jeux de boutons radio prétendaient chacun dire la
+## résolution en cours : changer l'une laissait l'autre mentir.
+const BINDABLE := [
+	["Tirer", "shoot", "Le tir. Un flash qui révèle votre position à tout le monde."],
+	["Torche", "torch", "L'allumage de la torche : elle montre, et elle trahit."],
+	["Courir", "sprint", "Le sprint. Rapide, bruyant, et la torche décroche."],
+]
+
 func _fill_controls_screen(body: VBoxContainer) -> void:
-	body.add_child(_make_section_label("MAPPING MANETTE", COLOR_GOLD))
+	for spec in BINDABLE:
+		var libelle := String(spec[0])
+		var suffixe := String(spec[1])
+		hub.register_panel(PANEL_BIND_PREFIX + suffixe, _build_bind_panel(suffixe))
+		body.add_child(hub.make_entry(libelle.to_upper(), String(spec[2]),
+			"", COLOR_GOLD, "", "", false, PANEL_BIND_PREFIX + suffixe))
+
+## Les deux touches d'une même action, côte à côte. Chaque bouton est réservé à
+## son joueur par `META_NAV_OWNER` : le curseur de P1 ne peut pas réassigner la
+## manette de P2.
+func _build_bind_panel(suffixe: String) -> Control:
+	var block := VBoxContainer.new()
+	block.add_theme_constant_override("separation", GAP_S)
 
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", GAP_L)
 	grid.add_theme_constant_override("v_separation", GAP_XS)
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	body.add_child(grid)
+	block.add_child(grid)
 
-	grid.add_child(_make_grid_header("ACTION", COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
 	grid.add_child(_make_grid_header("JOUEUR 1", COLOR_P1, HORIZONTAL_ALIGNMENT_CENTER))
 	grid.add_child(_make_grid_header("JOUEUR 2", COLOR_P2, HORIZONTAL_ALIGNMENT_CENTER))
 
-	var bindable_actions := {
-		"Tirer": ["p1_shoot", "p2_shoot"],
-		"Torche": ["p1_torch", "p2_torch"],
-		"Courir": ["p1_sprint", "p2_sprint"],
-	}
+	for player in 2:
+		var btn := _make_rebind_button("p%d_%s" % [player + 1, suffixe], player)
+		btn.set_meta(META_NAV_SEED, player)
+		var holder := CenterContainer.new()
+		holder.add_child(btn)
+		grid.add_child(holder)
 
-	_controls_grid_buttons = []
-	for action_name in bindable_actions.keys():
-		var label := Label.new()
-		label.text = String(action_name)
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override("font_size", 15)
-		grid.add_child(label)
+	var hint := Label.new()
+	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", COLOR_DIM)
+	block.add_child(hint)
 
-		var actions: Array = bindable_actions[action_name]
-		var row := {}
-		for player in 2:
-			var btn := _make_rebind_button(String(actions[player]), player)
-			if _controls_grid_buttons.is_empty():
-				btn.set_meta(META_NAV_SEED, player)
-			var holder := CenterContainer.new()
-			holder.add_child(btn)
-			grid.add_child(holder)
-			row["p1" if player == 0 else "p2"] = btn
-		_controls_grid_buttons.append(row)
+	return block
 
-	body.add_child(_build_display_block())
-	body.add_child(_build_video_block())
+# ---------------------------------------------------------------------------
+# AFFICHAGE
+# ---------------------------------------------------------------------------
+
+## Trois réglages, trois entrées, chacune montrant ses choix à droite. Les
+## bascules restent des boutons plutôt qu'un `OptionButton`, dont le popup est
+## impraticable à la manette.
+func _fill_display_screen(body: VBoxContainer) -> void:
+	hub.register_panel(PANEL_RESOLUTION, _build_resolution_panel())
+	hub.register_panel(PANEL_VSYNC, _build_vsync_panel())
+	hub.register_panel(PANEL_FPS, _build_fps_panel())
+
+	body.add_child(hub.make_entry("RÉSOLUTION",
+		"Fenêtré ou plein écran.", "", COLOR_GOLD, "", "", false, PANEL_RESOLUTION))
+	body.add_child(hub.make_entry("VSYNC",
+		"Désactivé par défaut : la synchronisation verticale ajoute une image de "
+		+ "retard, et le jeu se joue sur la lumière d'une fraction de seconde.",
+		"", COLOR_GOLD, "", "", false, PANEL_VSYNC))
+	body.add_child(hub.make_entry("IMAGES PAR SECONDE",
+		"Déplafonné par défaut : EOS coûte d'autant plus de latence que la cadence "
+		+ "est basse.", "", COLOR_GOLD, "", "", false, PANEL_FPS))
+	body.add_child(hub.make_entry("CALIBRATION",
+		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
+		+ "invisible.", SCREEN_CALIBRATION))
+
+func _build_resolution_panel() -> Control:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", GAP_XS)
+
+	var group := ButtonGroup.new()
+	var labels: Array[String] = ["FENÊTRÉ 1280", "FENÊTRÉ 1920", "PLEIN ÉCRAN"]
+	for i in labels.size():
+		var btn := _make_choice_button(labels[i], COLOR_GOLD, group)
+		btn.custom_minimum_size = Vector2(220, 44)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.pressed.connect(_on_res_selected.bind(i))
+		# Cocher le choix enregistré. `button_pressed` n'émet que `toggled` :
+		# régler l'état ici ne redéclenche donc pas `_on_res_selected`.
+		btn.button_pressed = i == GameSettings.resolution_index
+		row.add_child(btn)
+
+	return row
+
+func _build_vsync_panel() -> Control:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", GAP_XS)
+	var group := ButtonGroup.new()
+	var btn_off := _make_choice_button("VSYNC DÉSACTIVÉ", COLOR_GOLD, group)
+	var btn_on := _make_choice_button("VSYNC ACTIVÉ", COLOR_GOLD, group)
+	for btn in [btn_off, btn_on]:
+		btn.custom_minimum_size = Vector2(220, 44)
+		btn.add_theme_font_size_override("font_size", 14)
+	btn_off.button_pressed = not GameSettings.vsync_enabled
+	btn_on.button_pressed = GameSettings.vsync_enabled
+	btn_off.pressed.connect(func() -> void: GameSettings.set_vsync(false))
+	btn_on.pressed.connect(func() -> void: GameSettings.set_vsync(true))
+	row.add_child(btn_off)
+	row.add_child(btn_on)
+	return row
+
+func _build_fps_panel() -> Control:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", GAP_XS)
+	var group := ButtonGroup.new()
+	for cap in GameSettings.FPS_CAPS:
+		var label := "DÉPLAFONNÉ" if cap == 0 else str(cap)
+		var btn := _make_choice_button(label, COLOR_GOLD, group)
+		btn.custom_minimum_size = Vector2(220, 44)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.button_pressed = (cap == GameSettings.fps_cap)
+		btn.pressed.connect(func() -> void: GameSettings.set_fps_cap(cap))
+		row.add_child(btn)
+	return row
 
 func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	var label := Label.new()
@@ -2524,70 +2743,6 @@ func _make_rebind_button(action: String, player: int) -> Button:
 	_apply_btn_info(btn, _get_action_btn_info(action))
 	btn.pressed.connect(_on_rebind_btn_pressed.bind(btn, action))
 	return btn
-
-## Réglages d'affichage : trois bascules plutôt qu'un OptionButton, dont le
-## popup est impraticable à la manette.
-func _build_display_block() -> Control:
-	var block := VBoxContainer.new()
-	block.add_theme_constant_override("separation", GAP_XS)
-	block.add_child(_make_section_label("AFFICHAGE", COLOR_GOLD))
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", GAP_S)
-
-	var group := ButtonGroup.new()
-	var labels: Array[String] = ["FENÊTRÉ 1280", "FENÊTRÉ 1920", "PLEIN ÉCRAN"]
-	for i in labels.size():
-		var btn := _make_choice_button(labels[i], COLOR_GOLD, group)
-		btn.custom_minimum_size = Vector2(184, 44)
-		btn.add_theme_font_size_override("font_size", 14)
-		btn.pressed.connect(_on_res_selected.bind(i))
-		# Cocher le choix enregistré. `button_pressed` n'émet que `toggled` :
-		# régler l'état ici ne redéclenche donc pas `_on_res_selected`.
-		btn.button_pressed = i == GameSettings.resolution_index
-		row.add_child(btn)
-
-	block.add_child(row)
-	return block
-
-## Vsync et plafond d'images par seconde — décision de netcode (voir
-## docs/ROADMAP.md) : EOS coûte davantage de latence à cadence basse, donc le
-## réglage par défaut est déplafonné, vsync désactivé.
-func _build_video_block() -> Control:
-	var block := VBoxContainer.new()
-	block.add_theme_constant_override("separation", GAP_XS)
-	block.add_child(_make_section_label("IMAGES PAR SECONDE", COLOR_GOLD))
-
-	var vsync_row := HBoxContainer.new()
-	vsync_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	vsync_row.add_theme_constant_override("separation", GAP_S)
-	var vsync_group := ButtonGroup.new()
-	var btn_vsync_off := _make_choice_button("VSYNC DÉSACTIVÉ", COLOR_GOLD, vsync_group)
-	var btn_vsync_on := _make_choice_button("VSYNC ACTIVÉ", COLOR_GOLD, vsync_group)
-	btn_vsync_off.button_pressed = not GameSettings.vsync_enabled
-	btn_vsync_on.button_pressed = GameSettings.vsync_enabled
-	btn_vsync_off.pressed.connect(func() -> void: GameSettings.set_vsync(false))
-	btn_vsync_on.pressed.connect(func() -> void: GameSettings.set_vsync(true))
-	vsync_row.add_child(btn_vsync_off)
-	vsync_row.add_child(btn_vsync_on)
-	block.add_child(vsync_row)
-
-	var fps_row := HBoxContainer.new()
-	fps_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	fps_row.add_theme_constant_override("separation", GAP_S)
-	var fps_group := ButtonGroup.new()
-	for cap in GameSettings.FPS_CAPS:
-		var label := "DÉPLAFONNÉ" if cap == 0 else str(cap)
-		var btn := _make_choice_button(label, COLOR_GOLD, fps_group)
-		btn.custom_minimum_size = Vector2(120, 44)
-		btn.add_theme_font_size_override("font_size", 14)
-		btn.button_pressed = (cap == GameSettings.fps_cap)
-		btn.pressed.connect(func() -> void: GameSettings.set_fps_cap(cap))
-		fps_row.add_child(btn)
-	block.add_child(fps_row)
-
-	return block
 
 # ---------------------------------------------------------------------------
 # BARRE D'ACTIONS

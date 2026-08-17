@@ -33,7 +33,7 @@ décision se juge à cette double aune.
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
-| 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
+| 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
 | 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur écrit, l'écran construit. **Découverte croisée prouvée contre le vrai EOS le 2026-08-18.** Bloqué en aval : les deux entrées du hub sont **encore grisées**, l'écran est inatteignable |
@@ -684,31 +684,71 @@ reste dans l'arbre, dans un conteneur caché, parce que `_refresh_lobby_block()`
 lit encore son état — la retirer vraiment demanderait de réécrire les quatre
 combinaisons de mode et de transport.
 
-#### Ce qui reste à faire sur les menus — demandé, pas encore livré
+#### Les trois chantiers de menu — livrés le 2026-08-18 ✅
 
-Trois choses, dans l'ordre de gêne :
+Les trois demandes restées ouvertes la veille sont faites. Elles tenaient toutes
+au même manque, et c'est ce qui rend le lot cohérent : **le hub savait attacher un
+affichage riche à un écran, pas à une entrée.**
 
-1. **La galerie de cartes ne doit pas être un écran.** Survoler « Changer de
-   carte » devrait remplir le panneau de droite avec les vignettes, et c'est là
-   qu'on choisirait — avec un raccourci vers l'éditeur en bas. Aujourd'hui elle
-   descend d'un cran, ce qui fait payer un aller-retour pour un choix qui devrait
-   se voir. Demande une entrée d'information portant un contenu riche, ce que le
-   hub ne sait pas encore faire par entrée (seulement par écran).
-2. **Contrôles et Affichage ne sont pas des listes.** Ils affichent leurs blocs
-   dans la colonne de gauche au lieu de présenter une liste d'entrées dont chacune
-   remplit la droite. Ils sont les deux derniers écrans à ne pas suivre la
-   grammaire du hub.
-3. **La restructuration des salons** — créer le code EOS sur un bouton plutôt
-   qu'au lancement, et afficher la liste des joueurs présents. Ce n'est pas de la
-   mise en page : c'est déplacer le moment où le salon s'ouvre, donc du réseau.
+**1. La galerie de cartes n'est plus un écran.** Survoler « CHANGER DE CARTE »
+remplit le panneau de droite avec les vignettes, et c'est là qu'on choisit ;
+l'éditeur est un raccourci en bas du panneau. `SCREEN_MAPS` a disparu de
+l'arborescence. La carte affichée dans le salon **cesse d'être un bouton** : elle
+menait à la galerie, en doublon de l'entrée de la liste, et deux gestes pour une
+décision, c'est un de trop.
+
+**2. Contrôles et Affichage sont des listes.** Contrôles : une entrée par action
+réassignable (Tirer, Torche, Courir), ses deux touches à droite. Affichage :
+Résolution, Vsync, Images par seconde, Calibration. Au passage, une **duplication
+réelle** disparaît : `_fill_controls_screen()` ajoutait aussi les blocs
+d'affichage et de vidéo, déjà présents dans leur propre écran. Deux jeux de
+boutons radio prétendaient chacun dire la résolution en cours — changer l'une
+laissait l'autre mentir.
+
+**3. Le salon s'ouvre depuis le menu.** Bouton « CRÉER LE SALON » dans le panneau
+de droite, liste des joueurs au-dessus, code EOS (ou IP) affiché dès l'ouverture
+et non plus au lancement du match. Quitter l'écran referme le salon.
+
+##### Deux défauts trouvés en chemin, et corrigés parce qu'ils bloquaient
+
+Ce sont eux le vrai gain de ce lot, et ni l'un ni l'autre n'était dans l'énoncé.
+
+**Le panneau de droite était hors du champ de navigation.** `_nav_candidates()`
+ne ramassait que `hub.body_of(...)`, c'est-à-dire la colonne de gauche. Tout ce
+qui vivait à droite était **inatteignable aux deux curseurs** : le choix d'arme et
+le champ de saisie du code de salon compris. À la souris tout marchait, ce qui
+explique que personne ne l'ait vu.
+
+**Les curseurs maison ne déclenchent pas `focus_entered`.** Ils dessinent un
+liseré, ils n'appellent jamais `grab_focus()`. Le panneau de droite et la
+description sous le titre ne suivaient donc que la **souris**. Sans correctif, la
+galerie de cartes serait restée invisible à la manette — c'est-à-dire au
+périphérique avec lequel ce jeu se joue. `MenuHub.reveal_entry()` est le relais :
+`_set_focus()` l'appelle, et le hub retrouve ce que l'entrée raconte.
+
+##### Ce que le netcode a dû accepter
+
+Ouvrir le salon depuis le menu déplace un moment, et un seul : l'hôte peut
+désormais être **encore dans ses menus quand l'adversaire se connecte**. Or le
+client, lui, démarre sa manche à la connexion et envoie aussitôt
+`rpc_client_weapon`, qui lance la manche chez l'hôte. Sans préparation, P2 serait
+resté piloté par le clavier de l'hôte au lieu des commandes reçues, et l'hôte
+aurait joué derrière son propre menu.
+
+D'où `_enter_hosted_game()` dans `game_state.gd` : autorités, fournisseurs
+d'entrées, vues. **Deux chemins y mènent** — l'hôte qui appuie sur « LANCER LE
+MATCH », et l'adversaire qui arrive dans un salon déjà ouvert — et ils doivent
+préparer exactement la même chose. Et `_on_replay_requested()` ne réhéberge plus
+si le salon est ouvert : cela remplacerait le pair vivant, donc la connexion déjà
+établie avec l'adversaire qui attend dans la liste.
+
+**Non vérifié :** tout ceci n'a jamais tourné entre deux machines. Le parcours a
+été validé en headless (structure, navigation au curseur, panneaux) et par les
+dix-sept suites, mais l'ouverture d'un salon EOS depuis le menu, l'arrivée d'un
+client pendant que l'hôte attend, et la fermeture du salon en quittant l'écran
+demandent deux fenêtres. **À joindre au protocole H1/H3 d'Adrien.**
 
 #### Ce qui reste de cette révision, et qui n'est pas cosmétique
-
-La restructuration des salons demandée en même temps **n'est pas faite** : créer
-le code EOS au moment d'un bouton « CRÉER SALON » plutôt qu'au lancement du match,
-et afficher la liste des joueurs présents. Ce n'est pas de la mise en page — c'est
-déplacer le moment où le salon est ouvert, donc du réseau. À traiter comme une
-étape à part entière.
 
 **Ce que cette révision a révélé, et qui n'était pas dans l'énoncé.**
 « Match privé **en ligne** » contre « **en local** » n'est pas une nuance de
@@ -1482,15 +1522,28 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   crée le chemin qui y mène. Un écran peut donc être complet, testé, et
   inaccessible — c'est l'état de l'écran de recherche depuis le 2026-08-17, sans
   qu'aucune erreur ne le signale. Chercher le `push`, pas l'attache.
-- **`_install_aside()` crie cinq fois à chaque construction du menu.** Un seul
-  nœud `salon` est installé pour six écrans (voulu, étape 3b), mais la fonction
-  appelle `add_child()` à chaque fois alors que `detail_host()` rend un hôte
-  unique : le premier appel parente, les cinq suivants lèvent « already has a
-  parent ». **Sans conséquence fonctionnelle** — le nœud finit parenté une fois,
-  ce qui est l'état voulu, et `_on_hub_screen_changed()` gère le panneau partagé.
-  Le 2026-08-18, deux sessions se sont mutuellement attribué ce bruit avant de
-  vérifier qu'il était dans `main` depuis le début. Une garde
-  `if content.get_parent() == null` le ferait taire.
+- **~~`_install_aside()` crie cinq fois à chaque construction du menu~~ — corrigé
+  le 2026-08-18.** Un seul nœud `salon` était installé pour six écrans (voulu,
+  étape 3b), mais la fonction appelait `add_child()` à chaque fois sur un hôte
+  unique : premier appel parente, cinq suivants « already has a parent ». Sans
+  conséquence fonctionnelle. Disparu avec `register_panel()`, gardé par clé —
+  un panneau, un enregistrement, N écrans qui le désignent. **Ce qu'il faut en
+  retenir** : le 2026-08-18, deux sessions se sont mutuellement attribué ce bruit
+  avant que l'une vérifie qu'il était dans `main` depuis le début. Comparer avec
+  `git show HEAD:<fichier>` coûte dix secondes et évite de corriger le travail
+  d'un autre.
+- **Le panneau de droite n'était pas dans le champ de navigation.** Relevé le
+  2026-08-18 : `_nav_candidates()` ne ramassait que `hub.body_of(...)`, la colonne
+  de gauche. Tout ce qui vivait à droite — **le choix d'arme, le champ où l'on
+  tape le code du salon** — se cliquait à la souris et restait hors d'atteinte des
+  deux curseurs. Le hub est en deux colonnes ; le champ de navigation doit l'être
+  aussi.
+- **Les deux curseurs ne déclenchent pas `focus_entered`.** Ils sont maison : ils
+  dessinent un liseré et n'appellent jamais `grab_focus()`. Tout ce qui est branché
+  sur `focus_entered` ne réagit donc **qu'à la souris** — c'était le cas du panneau
+  de droite et de la description sous le titre. Le piège est silencieux et ne se
+  voit pas en développant, où l'on a une souris sous la main. Passer par
+  `MenuHub.reveal_entry()`, appelé depuis `_set_focus()`.
 
 **Documents et messages de commit**
 - **Un message de commit peut affirmer un travail qui n'a pas été fait, et la

@@ -42,6 +42,7 @@ var _tile_group: ButtonGroup
 var _btn_import: Button
 var _btn_share: Button
 var _btn_delete: Button
+var _btn_editor: Button
 var _import_row: HBoxContainer
 var _import_field: LineEdit
 var _btn_import_ok: Button
@@ -116,25 +117,17 @@ func _build() -> void:
 	root.add_child(_build_actions())
 	root.add_child(_build_toast())
 
+## La galerie vit dans le panneau de droite du hub, en face de l'entrée « CHANGER
+## DE CARTE » qui la fait apparaître. Le grand titre « C A R T E S » qu'elle
+## portait redisait ce que l'entrée sous le curseur annonce déjà, et il coûtait
+## une rangée de vignettes en hauteur.
 func _build_header() -> Control:
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 16)
-
-	var title := Label.new()
-	title.text = "C A R T E S"
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color.WHITE)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title)
-
 	var hint := Label.new()
 	hint.text = "La carte choisie reste active toute la session"
-	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
-	header.add_child(hint)
-
-	return header
+	return hint
 
 func _build_import_row() -> Control:
 	_import_row = HBoxContainer.new()
@@ -174,6 +167,13 @@ func _build_actions() -> Control:
 	_btn_delete = _make_action_button("SUPPRIMER", COLOR_P2)
 	_btn_delete.pressed.connect(_delete_selected)
 	actions.add_child(_btn_delete)
+
+	# Raccourci vers l'éditeur, en bas du panneau. La tuile « créer » de la grille
+	# y mène aussi, mais elle se cache en fin de liste dès qu'il y a des cartes :
+	# il faut faire défiler pour trouver la seule façon d'en dessiner une.
+	_btn_editor = _make_action_button("ÉDITEUR  ›", COLOR_OK)
+	_btn_editor.pressed.connect(_open_editor)
+	actions.add_child(_btn_editor)
 
 	return actions
 

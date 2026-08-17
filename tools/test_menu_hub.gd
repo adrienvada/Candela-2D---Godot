@@ -41,6 +41,9 @@ func _run() -> void:
 	_test_reset()
 	_test_ecran_inconnu()
 	_test_signal()
+	_test_panneaux()
+	_test_panneau_entree()
+	_test_panneau_indisponible()
 
 	root.remove_child(_hub)
 	_hub.free()
@@ -180,3 +183,101 @@ func _test_signal() -> void:
 
 	_check("chaque changement est annoncé, retours compris",
 		vus == ["options", "audio", "options"], str(vus))
+
+# ---------------------------------------------------------------------------
+# PANNEAUX DU PANNEAU DE DROITE
+# ---------------------------------------------------------------------------
+
+## Un panneau et un seul. La règle est visuelle avant d'être technique : deux
+## affichages riches superposés ne se lisent ni l'un ni l'autre.
+func _test_panneaux() -> void:
+	print("\n[Panneaux — un seul à la fois]")
+	var salon := Control.new()
+	var galerie := Control.new()
+	_hub.register_panel("p_salon", salon)
+	_hub.register_panel("p_cartes", galerie)
+	_hub.set_screen_panel("salon", "p_salon")
+
+	_check("un panneau enregistré est parenté au panneau de droite",
+		salon.get_parent() == _hub.detail_host())
+	_check("et il commence caché", not salon.visible)
+
+	# Le nœud est unique par construction : le salon sert cinq écrans, et un
+	# second `register_panel` sous la même clé le reparenterait — c'est-à-dire le
+	# retirerait du premier endroit.
+	var intrus := Control.new()
+	_hub.register_panel("p_salon", intrus)
+	_check("réenregistrer une clé n'écrase rien",
+		_hub.detail_host().get_children().has(salon))
+	_check("et l'intrus reste hors de l'arbre", intrus.get_parent() == null)
+	intrus.free()
+
+	_hub.reset()
+	_hub.push("salon")
+	_check("entrer dans l'écran montre son panneau", salon.visible)
+	_check("et lui seul", not galerie.visible)
+
+	_hub.show_panel("p_cartes")
+	_check("montrer la galerie cache le salon", galerie.visible and not salon.visible)
+
+func _test_panneau_entree() -> void:
+	print("\n[Panneaux — portés par une entrée]")
+	_hub.reset()
+	_hub.push("salon")
+
+	var pret := _hub.make_entry("PRÊT", "Lance le match.", "", Color.WHITE, "lancer")
+	var cartes := _hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.",
+		"", Color.WHITE, "", "", false, "p_cartes")
+	_hub.list_of("salon").add_child(pret)
+	_hub.list_of("salon").add_child(cartes)
+
+	var salon: Control = _hub.detail_host().get_children()[2]
+
+	# Le geste que la refonte devait rendre possible : montrer les vignettes sans
+	# descendre d'un cran.
+	cartes.mouse_entered.emit()
+	_check("survoler l'entrée montre son panneau",
+		_hub.detail_host().get_children()[3].visible)
+	_check("sans changer d'écran", _hub.current_id() == "salon", _hub.current_id())
+
+	# Et le repli, qui est la moitié du travail : une entrée sans panneau ne vide
+	# pas la droite, elle rend l'écran à son panneau par défaut. Sans cela le
+	# salon disparaîtrait dès que le curseur se pose sur « PRÊT ».
+	pret.mouse_entered.emit()
+	_check("une entrée sans panneau rend l'écran à son défaut", salon.visible)
+	_check("et la galerie se retire",
+		not _hub.detail_host().get_children()[3].visible)
+
+## Une entrée grisée n'emmène nulle part, panneau compris : afficher la galerie
+## sous une entrée indisponible laisserait croire qu'elle est utilisable.
+func _test_panneau_indisponible() -> void:
+	print("\n[Panneaux — entrée indisponible]")
+	_hub.reset()
+	_hub.push("salon")
+	var salon: Control = _hub.detail_host().get_children()[2]
+	var galerie: Control = _hub.detail_host().get_children()[3]
+
+	var grise := _hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.",
+		"", Color.WHITE, "", "Pas encore disponible.", false, "p_cartes")
+	_hub.list_of("salon").add_child(grise)
+
+	grise.mouse_entered.emit()
+	_check("le panneau d'une entrée grisée ne s'ouvre pas", not galerie.visible)
+	_check("et l'écran garde le sien", salon.visible)
+
+	# Le relais des curseurs maison. Il ne double pas la souris par confort : les
+	# deux curseurs du jeu dessinent un liseré sans appeler `grab_focus()`, donc
+	# `focus_entered` ne part jamais à la manette. Sans lui, tout ce chapitre ne
+	# marcherait qu'à la souris.
+	var cartes := _hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.",
+		"", Color.WHITE, "", "", false, "p_cartes")
+	_hub.list_of("salon").add_child(cartes)
+	_check("le relais reconnaît une entrée du hub", _hub.reveal_entry(cartes))
+	_check("et ouvre son panneau sans souris ni focus", galerie.visible)
+
+	# Une vignette de carte, un bouton d'arme : on est en train de s'en servir,
+	# le panneau de droite ne doit surtout pas changer sous les doigts.
+	var etranger := Button.new()
+	_check("un contrôle étranger au hub est ignoré", not _hub.reveal_entry(etranger))
+	_check("et le panneau ne bouge pas", galerie.visible)
+	etranger.free()

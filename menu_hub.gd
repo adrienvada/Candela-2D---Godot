@@ -16,6 +16,13 @@ extends Control
 ## - **information** — pas de chevron, remplit le panneau de droite ;
 ## - **action** — pas de chevron, émet un signal (lancer, quitter).
 ##
+## Une entrée d'information peut porter du **texte** ou un **panneau** — une
+## galerie de vignettes, une grille de touches, un salon. C'est la même nature :
+## « ceci se regarde à droite, sans descendre d'un cran ». Le hub a longtemps su
+## attacher un panneau à un écran seulement ; « CHANGER DE CARTE » ouvrait donc un
+## sous-menu pour montrer des vignettes, c'est-à-dire faisait payer un aller-retour
+## pour ce que la place de droite pouvait afficher tout de suite.
+##
 ## Une entrée peut être **indisponible** : elle reste visible, grisée, et le
 ## panneau de droite dit pourquoi. La masquer laisserait croire qu'elle n'existe
 ## pas ; la retirer du parcours du curseur ferait douter du bouton d'à côté.
@@ -44,9 +51,29 @@ const ROOT := "accueil"
 var _roots: Dictionary = {}
 ## Colonne de gauche de chaque écran, à remplir par l'appelant.
 var _lists: Dictionary = {}
-## Panneau de droite par défaut de chaque écran.
+## Texte de droite par défaut de chaque écran.
 var _asides: Dictionary = {}
 var _titles: Dictionary = {}
+
+## Panneaux riches du panneau de droite, par clé. Tous vivent dans `_detail_host`,
+## tous cachés sauf au plus un.
+var _panels: Dictionary = {}
+## Clé du panneau montré quand aucune entrée n'en réclame un autre, par écran.
+var _screen_panels: Dictionary = {}
+## Ce qui est montré en ce moment. Sans cette mémoire, chaque déplacement du
+## curseur rejouerait `visible = …` sur tous les panneaux : une galerie de
+## vignettes qui se cache et se remontre à chaque cran scintille.
+var _shown_panel: String = ""
+
+## Ce que chaque entrée raconte, retenu à sa création : bouton → titre, texte,
+## panneau.
+##
+## Les deux curseurs du jeu sont maison — ils dessinent un liseré, ils
+## n'appellent pas `grab_focus()`. `focus_entered` ne se déclenche donc **jamais**
+## à la manette ni au clavier, et sans ce registre le panneau de droite ne
+## suivrait que la souris : la galerie de cartes resterait invisible à qui joue
+## au pad, c'est-à-dire à peu près tout le monde.
+var _entry_details: Dictionary = {}
 
 ## Chemin courant. Jamais vide : `ROOT` en est le fond.
 var _stack: PackedStringArray = PackedStringArray([ROOT])
@@ -162,9 +189,31 @@ func add_screen(id: String, title: String) -> VBoxContainer:
 	_lists[id] = list
 	return list
 
-## Panneau de droite montré quand aucune entrée n'a de contenu propre.
+## Texte de droite montré quand aucune entrée n'a de contenu propre.
 func set_aside(id: String, title: String, text: String) -> void:
 	_asides[id] = {"titre": title, "texte": text}
+
+## Confie un affichage riche au panneau de droite, sous une clé. Le hub en devient
+## le seul propriétaire : il l'ajoute, le cache, et décide quand il se montre.
+##
+## Un même panneau peut servir plusieurs écrans et plusieurs entrées — le salon
+## sert les cinq écrans de préparation. C'est même la raison de la clé : un nœud
+## n'a qu'un parent, donc « le même panneau à deux endroits » ne peut être qu'un
+## seul nœud désigné deux fois.
+func register_panel(key: String, content: Control) -> void:
+	if key == "" or content == null or _panels.has(key):
+		return
+	content.hide()
+	_panels[key] = content
+	_detail_host.add_child(content)
+
+## Panneau montré à l'entrée dans un écran, tant qu'aucune entrée ne parle.
+func set_screen_panel(id: String, key: String) -> void:
+	_screen_panels[id] = key
+
+## Montre un panneau sans passer par le survol d'une entrée.
+func show_panel(key: String) -> void:
+	_apply_panel(key)
 
 func has_screen(id: String) -> bool:
 	return _lists.has(id)
@@ -263,10 +312,25 @@ func _show_aside(id: String) -> void:
 		show_detail(String(_titles.get(id, "")), "")
 
 ## Remplit le panneau de droite. Les entrées d'information passent par ici.
-func show_detail(title: String, text: String) -> void:
+func show_detail(title: String, text: String, panel: String = "") -> void:
 	_detail_title.text = title
 	_detail_text.text = text
+	_apply_panel(panel)
 	detail_changed.emit(title, text)
+
+## Montre un panneau et un seul. Une clé vide ne veut pas dire « rien » mais
+## « ce que l'écran montre par défaut » : sans ce repli, survoler une entrée sans
+## panneau viderait la droite, et le salon disparaîtrait dès que le curseur se
+## pose sur « PRÊT ».
+func _apply_panel(key: String) -> void:
+	var wanted := key if key != "" else String(_screen_panels.get(current_id(), ""))
+	if wanted == _shown_panel:
+		return
+	_shown_panel = wanted
+	for k in _panels.keys():
+		var content: Control = _panels[k]
+		if content != null:
+			content.visible = k == wanted
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
@@ -287,9 +351,12 @@ func detail_host() -> VBoxContainer:
 ## droite dit pourquoi.
 ## `launcher` donne le style plein du bouton de lancement : c'est le geste qui
 ## engage une partie, et il doit se distinguer de tout ce qui n'engage rien.
+## `panel` désigne un affichage riche confié à `register_panel()` : l'entrée le
+## fait apparaître à droite au lieu de descendre d'un cran.
 func make_entry(label: String, detail: String, target: String = "",
 		accent: Color = MenuTheme.P1, action: String = "",
-		reason: String = "", launcher: bool = false) -> Button:
+		reason: String = "", launcher: bool = false,
+		panel: String = "") -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(0, 54)
 	btn.focus_mode = Control.FOCUS_ALL
@@ -351,8 +418,12 @@ func make_entry(label: String, detail: String, target: String = "",
 	# « je regarde ceci », quel que soit le périphérique.
 	var texte := reason if btn.disabled else detail
 	var titre := label
-	btn.focus_entered.connect(func() -> void: show_detail(titre, texte))
-	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte))
+	# Une entrée indisponible n'emmène nulle part, panneau compris : montrer la
+	# galerie sous une entrée grisée laisserait croire qu'elle est utilisable.
+	var vitrine := "" if btn.disabled else panel
+	_entry_details[btn] = {"titre": titre, "texte": texte, "panneau": vitrine}
+	btn.focus_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
+	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
 
 	if btn.disabled:
 		return btn
@@ -363,8 +434,22 @@ func make_entry(label: String, detail: String, target: String = "",
 	else:
 		# Entrée d'information : activer ne déplace rien, cela remet simplement le
 		# panneau de droite sur son contenu.
-		btn.pressed.connect(func() -> void: show_detail(titre, texte))
+		btn.pressed.connect(func() -> void: show_detail(titre, texte, vitrine))
 	return btn
+
+## Fait raconter à l'entrée ce qu'elle raconte, sans passer par le focus de
+## Godot. C'est le relais qu'appelle un curseur maison quand il se pose sur elle.
+##
+## Faux si le contrôle n'est pas une entrée du hub — une vignette de carte, un
+## bouton d'arme : le panneau de droite ne doit alors pas bouger, on est en train
+## de s'en servir.
+func reveal_entry(control: Control) -> bool:
+	var d: Variant = _entry_details.get(control, null)
+	if not d is Dictionary:
+		return false
+	var e: Dictionary = d
+	show_detail(String(e["titre"]), String(e["texte"]), String(e["panneau"]))
+	return true
 
 ## Ajoute le retour en bas d'une liste. À appeler pour **chaque** écran non
 ## racine : c'est la seule sortie garantie, souris comprise.
