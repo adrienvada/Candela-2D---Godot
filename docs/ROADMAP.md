@@ -1043,7 +1043,57 @@ cassée au bout de vingt secondes.
 contre un Aveugle est un match perdu pour les deux — la règle du miroir des armes
 en fait un match jouable, pas un match intéressant.
 
-### Étape 8.6 — côté jeu
+### Étape 8.6 — l'écran de recherche 🟡 écrit, en attente de raccordement
+
+`screen_matchmaking.gd` tient sept états, dont ceux qui font tout le travail : la
+recherche en cours **avec la fourchette cherchée en ce moment**, le match trouvé
+avec les deux identités et **qui héberge**, le refus adverse, et l'indisponibilité.
+
+**Le contrat supposé pour `matchmaking.gd`**, écrit avant que ce fichier n'existe
+et à honorer au raccordement :
+
+```gdscript
+signal matchmaking_changed                    # sans argument
+func matchmaking_snapshot() -> Dictionary
+func start_search(ranked: bool) -> void
+func cancel_search() -> void
+func accept_match() -> void
+func decline_match() -> void
+```
+
+Instantané : seules `configured` et `phase` sont obligatoires. **Une clé absente
+veut dire « je ne sais pas »**, et l'écran n'affiche alors rien plutôt que de
+deviner.
+
+Quatre décisions qui méritent d'être lues avant de toucher à cet écran :
+
+- **`phase` circule en chaîne, pas en énumération.** Deux raisons cumulées : un
+  `preload()` sur un chemin absent échoue à l'analyse et emporterait l'écran
+  entier ; et un miroir d'énumération recopié lirait « match trouvé » là où l'autre
+  moitié dit « en recherche », **sans la moindre erreur**. Une chaîne inconnue se
+  détecte, un entier faux se confond avec zéro.
+- **Tout ou rien sur l'API.** Si l'une des cinq méthodes manque, l'écran passe en
+  « indisponible » — même s'il pourrait lire l'instantané. Un instantané lisible
+  sans `accept_match()` donnerait un bouton CONFIRMER qui ne fait rien, et un
+  bouton mort ne se distingue pas d'un jeu cassé.
+- **Deux emplacements fixes, rangés par intention et non par importance** :
+  engagement en haut, retrait en bas. Un unique bouton passant d'ANNULER à
+  CONFIRMER quand l'adversaire arrive confirmerait un match à quelqu'un qui
+  appuyait pour **sortir** de la file. Un test vérifie que l'emplacement d'abandon
+  reste le même objet à travers la transition.
+- **`host_is_me` absent ⇒ « hôte pas encore désigné »**, jamais une déduction.
+  Deviner d'après qui cherchait serait juste une fois sur deux.
+
+L'explication de l'hébergement est **la même des deux côtés** — « sans serveur
+dédié, c'est l'hôte qui simule le match : il joue sans latence, son adversaire
+non ». L'asymétrie est une propriété du P2P, pas un reproche.
+
+#### Ce qui reste de l'étape 8.6
+
+Le raccordement à `matchmaking.gd` quand il existera, et l'ouverture des deux
+entrées « chercher un match » aujourd'hui grisées.
+
+### ~~Étape 8.6 — côté jeu~~ (périmètre d'origine)
 
 Les écrans existent déjà, grisés. Il faut : un état de **recherche** (temps
 écoulé, fourchette courante, annulation atteignable au curseur), l'écran de
@@ -1170,6 +1220,13 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   ajouté à une fonction doit donc venir **en dernier, avec un défaut**, et ce
   défaut doit être le choix sûr — celui qui fait au pire manquer une donnée
   plutôt qu'en inventer une.
+
+**Navigation du hub**
+- **`MenuHub.push()` refuse un identifiant inconnu en silence** — il rend `false`
+  et personne ne le regarde. Une entrée qui pointe vers un écran mal orthographié
+  ne fait donc *rien*, sans erreur ni message. Relevé le 2026-08-17 par l'écran de
+  recherche, qui verrouille son identifiant par un test contre la constante de
+  `ui.gd` plutôt que de le recopier.
 
 **Godot — réflexion**
 - **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**
