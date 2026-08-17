@@ -1756,6 +1756,13 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   qu'ils étaient réglés. **Écrire une décision et l'implémenter sont deux gestes**,
   et ce document ne distingue pas les deux à la lecture. Un futur lot gagnerait à
   marquer explicitement ce qui est *décidé* et ce qui est *fait*.
+- **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
+  commit qui suit part avec son message complet et son contenu amputé. Arrivé le
+  2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
+  fichier de test, le `.uid` listé n'ayant pas encore été régénéré par Godot. La
+  parade est mécanique et coûte deux secondes — **`git show --stat` avant de
+  pousser.** Le message n'est pas une preuve de ce qui est dedans, et c'est la
+  variante *involontaire* du piège ci-dessus.
 - **Le protocole de test suppose un alias `godot` qui n'existe pas sur le poste
   d'Adrien.** Toutes les commandes de `docs/PROTOCOLE_TEST_EOS.md` commençaient
   par `godot` ; il a eu `command not found` en copiant-collant. L'alias est
