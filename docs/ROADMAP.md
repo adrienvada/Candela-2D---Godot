@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-17 (fin de journée)
+> Dernière mise à jour : 2026-08-17 (soir)
 
 ---
 
@@ -580,30 +580,52 @@ pénible à l'usage, le correctif n'est pas de revenir en arrière mais d'ajoute
 raccourci de relance depuis l'écran de fin — à évaluer une fois le hub jouable,
 pas avant.
 
-#### L'arborescence — arrêtée par Adrien le 2026-08-17
-
-**Les deux façons de jouer sont proposées dès l'accueil**, au-dessus de tout le
-reste : c'est le geste pour lequel on lance le jeu. Les enfouir sous un « Jouer »
-intermédiaire coûtait un clic à chaque partie sans rien apprendre au joueur.
+#### L'arborescence — revisée par Adrien le 2026-08-17 (soir)
 
 ```
 Accueil
-├── 1v1 local ............. → Salon local (armes J1 · J2 à droite)
-│   ├── Carte · Lancer · Retour
-├── 1v1 en ligne amical
-│   ├── Chercher un match . (cartes aléatoires) — grisé
-│   ├── Créer ............. → Salon hôte (code · statut · arme · joueurs)
-│   │   ├── Carte · Prêt · Retour
-│   └── Rejoindre ......... → Salon invité (code à saisir · carte de l'hôte)
-│       ├── Prêt (grisé sans salon) · Retour
-├── En ligne compétitif
-│   ├── Chercher un match . — grisé
-├── S'entraîner ........... cible · arme
-│   ├── Carte · Lancer · Mon rang · Top 10 · Retour
-├── Profil ................ identité · code · pseudo · historique
-├── Personnalisation ...... éditeur de cartes · contrôles · affichage ·
-│                           audio · calibration
-└── Quitter
+├── 1V1 ÉCRANS SCINDÉS
+│   ├── Jouer ............ action "lancer"
+│   ├── Changer de carte . → Cartes
+│   └── ‹ Retour
+│
+├── 1V1 AMICAL
+│   ├── Chercher un match en ligne . (appariement) — grisé
+│   ├── Match privé en ligne → écran intermédiaire
+│   │   ├── Créer → Salon en ligne — hôte (code · statut · armes)
+│   │   │   ├── Prêt · Changer de carte · Retour
+│   │   ├── Rejoindre → Salon en ligne — invité (code à saisir)
+│   │   │   ├── Prêt · Retour
+│   │   └── ‹ Retour
+│   ├── Match privé en local → écran intermédiaire
+│   │   ├── Créer → Salon local — hôte (adresse IP · armes)
+│   │   │   ├── Prêt · Changer de carte · Retour
+│   │   ├── Rejoindre → Salon local — invité (saisie d'adresse IP)
+│   │   │   ├── Prêt · Retour
+│   │   └── ‹ Retour
+│   └── ‹ Retour
+│
+├── 1V1 COMPÉTITIF
+│   ├── Chercher un match en ligne . — grisé
+│   ├── Mon rang ........... panneau de droite
+│   ├── Top 10 ............. panneau de droite
+│   ├── Informations profil  → Profil
+│   └── ‹ Retour
+│
+├── S'ENTRAÎNER
+│   ├── Lancer l'entraînement . — grisé
+│   ├── Cible ................ — grisé
+│   ├── Changer de carte ..... → Cartes
+│   └── ‹ Retour
+│
+├── PROFIL .............. identité · code · pseudo · historique
+├── PERSONNALISATION
+│   ├── Contrôles → Contrôles (rebind J1 · J2)
+│   ├── Affichage → Affichage (résolution · fenêttré · VSync · FPS · calibration)
+│   ├── Effets → Effets
+│   ├── Audio → Audio — grisé
+│   └── ‹ Retour
+└── QUITTER
 ```
 
 **Deux panneaux, et ce n'est pas décoratif.** La liste à gauche, à droite ce que
@@ -622,12 +644,26 @@ double désormais le bouton ; elle ne le remplace pas.
 **Ce qui n'existe pas est grisé, jamais masqué**, et le panneau de droite dit
 pourquoi. Masquer laisserait croire que la fonction n'existera pas ; retirer
 l'entrée du parcours du curseur ferait douter du bouton d'à côté. Sont grisés
-aujourd'hui : les deux « chercher un match » (il manque l'appariement), le
-lancement de l'entraînement, l'écran audio et la calibration.
+aujourd'hui : les deux « chercher un match » (appariement manquant), le lancement
+de l'entraînement, la configuration de la cible et l'écran audio.
 
-Le classement n'est plus une destination : il se lit depuis l'écran
-d'entraînement, dans le panneau de droite. L'écran autonome reste construit — il
-sait tenir les six états du service — mais hors de l'arborescence.
+**Différences par rapport à l'arborescence du matin (2026-08-17) :**
+
+- **1V1 Amical** : les deux modes (en ligne et local) sont séparés dans deux
+  écrans intermédiaires. Dans la version du matin, Créer/Rejoindre s'atteignaient
+  directement. Chaque salon (hôte ou invité, en ligne ou local) a désormais son
+  propre écran.
+- **Salon local / Rejoindre** : saisie d'adresse IP (et non de code de salon).
+- **1V1 Compétitif** : Mon rang · Top 10 · Informations profil ajoutés (dans la
+  version du matin, seul « Chercher un match » était là).
+- **S'entraîner** : Mon rang et Top 10 ont migré vers Compétitif ; Cible et
+  Changer de carte les remplacent.
+- **Personnalisation** : l'Éditeur de cartes et Calibration ont été retirés ;
+  Audio monte d'un rang (désactivé mais visible).
+
+Le classement n'est plus une destination depuis l'écran d'entraînement : il se
+lit depuis 1V1 Compétitif, dans le panneau de droite. L'écran autonome reste
+construit — il sait tenir les six états du service — mais hors de l'arborescence.
 
 ### Les étapes, dans l'ordre
 
