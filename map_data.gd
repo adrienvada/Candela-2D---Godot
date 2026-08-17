@@ -141,6 +141,26 @@ func select_map(map_id: String) -> bool:
 	map_selected.emit(selected_map_id)
 	return true
 
+## Tire une arène au hasard et la rend active. Rend l'identifiant retenu, ou une
+## chaîne vide si le catalogue est vide.
+##
+## Réservé à l'appariement automatique : personne n'y a choisi de carte, et
+## laisser jouer celle du dernier match donnerait l'arène du joueur qui a cherché
+## en dernier — c'est-à-dire un avantage à qui connaît sa carte par cœur. Seul
+## l'hôte tire ; le client adopte la sienne par `rpc_start_round`, comme dans un
+## salon à code.
+##
+## Le tirage porte sur tout le catalogue, cartes joueur comprises. C'est voulu :
+## une carte importée est une carte, et la restreindre aux cartes livrées
+## demanderait de trancher ce qu'est une carte « légitime » — question qui n'a pas
+## à se poser tant qu'on joue entre gens qui se sont trouvés par une file.
+func select_random_map() -> String:
+	if _catalog.is_empty():
+		return ""
+	var entry: Dictionary = _catalog[randi() % _catalog.size()]
+	var id := String(entry["id"])
+	return id if select_map(id) else ""
+
 ## Données de la carte active, prêtes à être appliquées.
 func get_selected() -> Dictionary:
 	if current_map_data.is_empty():

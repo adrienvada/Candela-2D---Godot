@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur écrit, l'écran construit. **Découverte croisée prouvée contre le vrai EOS le 2026-08-18.** Bloqué en aval : les deux entrées du hub sont **encore grisées**, l'écran est inatteignable |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste le seul essai que le code ne peut pas faire seul : deux fenêtres |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -757,11 +757,23 @@ dans « en local » pose `Transport.ENET`, entrer dans « en ligne » pose
 `Transport.EOS`. La bascule INTERNET / RÉSEAU LOCAL disparaît donc de l'écran.
 
 C'est le raisonnement de l'étape 3b appliqué une seconde fois, et il valait d'être
-reconnu comme tel : **un état d'interface ne doit pas tenir lieu de décision.** Le
-widget reste dans l'arbre, masqué, parce que `_refresh_lobby_block()` lit encore
-son état — le retirer demanderait de réécrire cette fonction, hors périmètre.
+reconnu comme tel : **un état d'interface ne doit pas tenir lieu de décision.**
 
 D'où **quatre salons au lieu de deux**, un par croisement mode × transport.
+
+⚠️ **Ce paragraphe a décrit pendant une journée quelque chose qui n'existait pas.**
+La navigation ne posait **ni le mode ni le transport** des salons locaux : les deux
+écrans « en local » se déclaraient *écran partagé*, masquaient tout le bloc réseau
+— pas de bouton « créer le salon », pas d'adresse IP, pas de liste de joueurs — et
+« lancer le match » y démarrait un écran partagé au lieu d'héberger. Les quatre
+salons étaient deux salons et deux doublons. Relevé par Adrien à l'usage le
+2026-08-18, corrigé le jour même (`_apply_lobby_intent()`), et c'est la **troisième
+fois de la semaine** qu'un document affirme au passé une intention jamais posée
+dans le code — après les entrées « chercher un match » et l'autoload d'appariement.
+
+Les deux bascules INTERNET / RÉSEAU LOCAL restent dans l'arbre, hors de vue, tenues
+en miroir de la décision : le banc `tools/test_online_match.tscn` les pilote encore
+pour choisir son transport. Les retirer demande de reprendre ce banc d'abord.
 
 « Quitter » a quitté l'accueil : le bouton de la barre d'actions est toujours
 visible, et une entrée de plus dans une liste de cinq destinations coûtait un
@@ -1295,31 +1307,79 @@ laissait à Adrien est **ouvert par défaut** : avec cette population, ne pas jo
 est un plus mauvais appariement que jouer contre plus fort. Une valeur à changer
 dans la table.
 
-#### ⚠️ Ce qui reste avant que l'appariement fonctionne
+#### ✅ Raccordé le 2026-08-18 — ce qui manquait, et ce qui manque encore
 
-1. **Deux suites hors du lanceur, et l'audit les signale.** `test_matchmaking` et
-   `test_screen_matchmaking` passent toutes leurs assertions mais **sortent en 139**
-   sur un poste qui possède `eos_credentials.gd` : elles touchent
-   `NetworkManager`, EOS démarre, et l'extinction croise `EOS_Platform_Tick()` sans
-   la séquence d'arrêt propre qu'impose le README. Le worktree où elles ont été
-   écrites n'avait pas les identifiants — le défaut n'y apparaissait donc pas, et
-   c'est un piège de plus pour tout travail en worktree. À lever en donnant à ces
-   suites l'extinction d'EOS.
-2. **Aucun autoload déclaré.** `matchmaking.gd` n'est pas dans l'arbre : l'écran
-   cherche `/root/Matchmaker`, ne trouve rien, et affiche « appariement
-   indisponible » — un état honnête et testé, mais l'appariement ne tourne pas.
-   La déclaration attend le point 1, sans quoi elle propage le segfault à toutes
-   les suites. Noter que l'autoload **ne peut pas** s'appeler `Matchmaking` :
-   Godot refuse qu'un singleton masque une classe globale du même nom.
-3. **Les deux entrées « chercher un match » restent grisées** dans le hub.
-4. **Rien n'a été exercé contre EOS.** En particulier, que `set_parameter` accepte
-   des entiers avec `GreaterThanOrEqual` sur l'attribut de classement — **tout le
-   filtre de fourchette repose là-dessus**, et c'est la première chose à essayer.
-   Deux instances locales partagent un Device ID donc un PUID : chacune verrait le
-   ticket de l'autre comme le sien. Les essais à deux fenêtres exigent
-   `--eos-ephemeral`.
+Les quatre points listés ici la veille : **deux étaient déjà faits sans que le
+document le sache.** Les suites d'appariement ne sortent plus en 139 et
+l'autoload `Matchmaker` est déclaré depuis `05b72c7`. Vérifier avant de croire un
+document est décidément la leçon de la semaine.
 
-### Étape 8.6 — l'écran de recherche 🟡 écrit, en attente de raccordement
+**Ce qui manquait vraiment, et qu'aucune relecture n'avait vu :** personne
+n'écoutait `match_ready`. Le cœur établissait le lien — `host_matched_game()` /
+`join_matched_game()` — puis émettait dans le vide. Les deux machines se
+connectaient et **restaient chacune dans leurs menus**, l'appariement
+« fonctionnant » sans qu'aucune manche ne démarre. C'est le genre de manque qu'un
+test unitaire ne trouve pas : chaque pièce faisait son travail.
+
+Sont donc posés :
+
+- `game_state.gd` écoute `match_ready`. L'hôte tire une carte au sort, prépare la
+  partie et lance ; le client entre par `connection_success`, qui faisait déjà
+  tout — le faire entrer deux fois relancerait sa manche par-dessus elle-même.
+- **`MapData.select_random_map()`**, qui n'existait pas. « Cartes tirées au
+  hasard » était une intention écrite dans l'arborescence du hub, jamais du code.
+  Seul l'hôte tire ; le client adopte par `rpc_start_round`, comme dans un salon.
+- **Le choix d'arme avant la file**, et la question qu'il pose : on choisit son
+  arme **sans savoir de quel côté on tombera**, la désignation de l'hôte n'ayant
+  lieu qu'une fois l'adversaire trouvé. L'hôte lit le râtelier de J1, l'invité
+  celui de J2. D'où un seul râtelier montré, reporté sur l'autre au moment de
+  partir (`UI.mirror_weapon_choice()`). Sans cela, **un joueur sur deux partait au
+  pistolet** — et en BO1, aucun rematch ne rattrape le choix.
+
+**Ce qui reste, et ce n'est plus du code :** l'essai à deux fenêtres. La
+découverte est prouvée ; la jointure, la poignée de main, l'accord sur qui héberge
+et la connexion ne s'exercent que par le jeu. Protocole dans
+`docs/PROTOCOLE_TEST_EOS.md`.
+
+### Étape 8.6 — la recherche se fait en arrière-plan ✅ CLOSE
+
+**Décision d'Adrien, 2026-08-18 : chercher un match n'ouvre pas d'écran.** L'appui
+lance la file et rend la main ; la recherche continue pendant qu'on parcourt les
+menus, qu'on change d'arme, qu'on lit son classement. Un bandeau collé au bord
+haut, centré au-dessus du titre du jeu, dit en permanence où elle en est et porte
+les seuls gestes qui comptent : annuler, confirmer, refuser.
+
+C'est la seule disposition qui ne mente pas sur la nature de l'attente. Un écran
+dédié immobilise le joueur devant un compte à rebours qu'il ne peut pas
+accélérer — il transforme une opération de fond en salle d'attente.
+
+`match_banner.gd` porte tout cela, avec sa suite (33 assertions). Deux invariants
+y sont verrouillés, et ce sont ceux qui se paient au classement :
+
+- **Une sortie, toujours.** Dans chacun des quatre états non inertes, il existe un
+  contrôle visible, non désactivé et atteignable au curseur pour quitter la file.
+  Sans lui la seule issue serait de fermer le jeu.
+- **Deux emplacements fixes, rangés par intention.** Ce qui engage à gauche, ce
+  qui retire à droite, et jamais l'inverse. Un bouton unique passant d'ANNULER à
+  CONFIRMER quand l'adversaire arrive confirmerait un match à un doigt qui partait
+  pour **sortir** de la file. La suite vérifie que l'emplacement de sortie reste
+  le même objet à travers la transition.
+
+**Refuser n'est pas annuler**, et le bandeau appelle bien deux méthodes
+différentes : refuser un match trouvé remet en file **sans perdre le temps déjà
+attendu** ; annuler quitte. Les confondre ferait perdre sa place à qui vient de
+dire vouloir continuer.
+
+#### `screen_matchmaking.gd` n'est plus utilisé
+
+Les 972 lignes de l'écran plein et ses ~1 000 lignes de suite **restent au
+dépôt** : ils sont justes, testés, et rien ne prouve encore que le bandeau
+suffise à l'usage. Le fichier n'est plus dans l'arborescence du hub et sa suite
+teste donc un écran que personne n'atteint. **À trancher par Adrien après le
+premier essai à deux fenêtres** : soit le bandeau tient et les deux fichiers
+partent, soit un écran de détail revient et il est déjà écrit.
+
+### ~~Étape 8.6 — l'écran de recherche~~ (conception d'origine, remplacée)
 
 `screen_matchmaking.gd` tient sept états, dont ceux qui font tout le travail : la
 recherche en cours **avec la fourchette cherchée en ce moment**, le match trouvé
@@ -1545,6 +1605,15 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   voit pas en développant, où l'on a une souris sous la main. Passer par
   `MenuHub.reveal_entry()`, appelé depuis `_set_focus()`.
 
+**Tests headless**
+- **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
+  ni en vert, ni en rouge.** Le 2026-08-18, `test_pause_menu` est sortie en échec
+  (code 1) parce qu'elle a attrapé `ui.gd` en cours d'écriture ; relancée seule
+  dans la foulée, 44 assertions et code 0. **Rien dans la sortie ne dit que la
+  cause est extérieure au test.** Devant un rouge sur une suite qui touche un
+  fichier qu'une autre session édite : la relancer seule avant de chercher la
+  cause dans son propre code.
+
 **Documents et messages de commit**
 - **Un message de commit peut affirmer un travail qui n'a pas été fait, et la
   feuille de route le recopie ensuite.** `05b72c7` annonce « les deux entrées
@@ -1553,6 +1622,19 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   test à deux fenêtres préparée pour rien. **Vérifier le code, pas le récit** —
   `git log -S "<la chaîne concernée>"` dit en une seconde quel commit a
   réellement touché quoi.
+- **Le même écart s'est produit quatre fois en deux jours**, toujours dans le
+  même sens : une intention rédigée au passé, jamais posée dans le code. Les
+  entrées « chercher un match » annoncées ouvertes ; le transport annoncé posé par
+  la navigation ; les « cartes tirées au hasard » de l'arborescence, qu'aucune
+  fonction ne savait tirer ; et deux points de blocage listés comme restants alors
+  qu'ils étaient réglés. **Écrire une décision et l'implémenter sont deux gestes**,
+  et ce document ne distingue pas les deux à la lecture. Un futur lot gagnerait à
+  marquer explicitement ce qui est *décidé* et ce qui est *fait*.
+- **Le protocole de test suppose un alias `godot` qui n'existe pas sur le poste
+  d'Adrien.** Toutes les commandes de `docs/PROTOCOLE_TEST_EOS.md` commençaient
+  par `godot` ; il a eu `command not found` en copiant-collant. L'alias est
+  désormais posé en tête du document, avec le piège du chemin du dépôt — il
+  contient deux espaces, et un `cd` sans guillemets échoue en silence.
 
 **Godot — réflexion**
 - **`has_method()` posé sur un `GDScript` ne rend que les méthodes STATIQUES.**

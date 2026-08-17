@@ -233,6 +233,9 @@ var _leaderboard: ScreenLeaderboard
 
 # --- Onglet PROFIL ---
 
+## Bandeau de recherche d'adversaire, au bord haut de l'écran. Hors du menu :
+## la recherche continue quel que soit l'écran regardé.
+var match_banner: MatchBanner
 var map_gallery: MapGallery
 var map_card: PanelContainer
 var map_card_thumb: TextureRect
@@ -833,6 +836,11 @@ func _nav_candidates(player: int) -> Array[Control]:
 		_collect_focusables(hub.detail_host(), player, out)
 	if btn_actions != null:
 		_collect_focusables(btn_actions, player, out)
+	# Le bandeau de recherche vit hors du menu, collé au bord haut : il n'est dans
+	# aucun des deux terrains ci-dessus. Sans cette ligne, annuler une recherche ne
+	# serait possible qu'à la souris.
+	if match_banner != null and player == 0:
+		out.append_array(match_banner.focusables())
 	return out
 
 func _collect_focusables(node: Node, player: int, out: Array[Control]) -> void:
@@ -1580,6 +1588,12 @@ func _build_menu() -> void:
 
 	root.add_child(_build_actions_bar())
 
+	# Ajouté APRÈS le panneau du menu, et non dedans : il doit se coller au bord
+	# haut de l'écran, au-dessus du titre, alors que le panneau garde une marge.
+	# Un enfant de plus dans le panneau aurait été poussé sous cette marge.
+	match_banner = MatchBanner.new()
+	add_child(match_banner)
+
 ## Déclare l'arborescence et y installe le contenu.
 ##
 ## Les blocs existants sont **réemployés tels quels** : `_build_mode_block()`,
@@ -1641,8 +1655,10 @@ func _build_hub_screens() -> void:
 
 	# --- 1v1 amical -----------------------------------------------------------
 	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Appariement automatique, cartes tirées au hasard.", "", COLOR_P1, "",
-		NOT_YET + " Le moteur est prêt ; reste à le relier à l'écran."))
+		"Lance la recherche et vous rend la main : elle continue pendant que vous "
+		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
+		+ "tirée au hasard, résultat hors classement.",
+		"", COLOR_P1, "chercher", "", true))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
 		SCREEN_FRIENDLY_ONLINE))
@@ -1687,9 +1703,10 @@ func _build_hub_screens() -> void:
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Appariement classé, sur une fourchette qui s'élargit avec l'attente.",
-		"", COLOR_GOLD, "",
-		NOT_YET + " Le classement fonctionne ; l'appariement reste à raccorder."))
+		"Lance la recherche et vous rend la main. La fourchette de classement "
+		+ "s'élargit avec l'attente ; le bandeau du haut montre celle qui est "
+		+ "cherchée. Le résultat compte.",
+		"", COLOR_GOLD, "chercher", "", true))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
 		"mon_rang"))
@@ -1760,17 +1777,21 @@ func _build_hub_screens() -> void:
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
 	hub.add_back_entry(SCREEN_PROFILE)
 
-	# L'écran de recherche sert les deux files : le mode a été posé par l'écran
-	# d'où l'on vient, `set_ranked_context` compris.
-	_attach_screen(SCREEN_MATCHMAKING, "Recherche d'un adversaire",
-		ScreenMatchmaking.new())
-	hub.add_back_entry(SCREEN_MATCHMAKING)
+	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
+	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à
+	# rebours qu'il ne peut pas accélérer. La recherche part en arrière-plan et
+	# `match_banner.gd` la montre en haut de l'écran, quel que soit le menu où l'on
+	# se trouve. `screen_matchmaking.gd` reste au dépôt, inutilisé — voir ROADMAP.
 
 	# Le même panneau sert les cinq écrans de préparation : ce qui s'y voit dépend
 	# du mode et du transport retenus, pas de l'écran.
 	hub.register_panel(PANEL_SALON, _build_salon_aside())
+	# Les deux écrans qui lancent une recherche l'utilisent aussi, mais n'en gardent
+	# que le râtelier : ni carte à choisir (elle est tirée au sort), ni code à
+	# transmettre (c'est la file qui trouve l'adversaire). Le choix d'arme, lui,
+	# doit être fait AVANT d'appuyer — après, le match part tout seul.
 	for id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
+			SCREEN_LOCAL_JOIN, SCREEN_TRAINING, SCREEN_FRIENDLY, SCREEN_RANKED]:
 		hub.set_screen_panel(id, PANEL_SALON)
 
 	# Le classement vit hors de l'arborescence : il se lit dans le panneau de droite
@@ -1908,10 +1929,41 @@ func _on_hub_action(action: String) -> void:
 		"quitter":
 			get_tree().paused = false
 			quit_requested.emit()
+		"chercher":
+			_start_search()
 		"mon_rang":
 			hub.show_detail("Mon rang", _my_rank_text())
 		"top10":
 			hub.show_detail("Top 10", _top_ten_text())
+
+## Lance la recherche d'adversaire et rend la main.
+##
+## L'écran d'où l'on appuie décide de la file : « 1v1 amical » et « 1v1
+## compétitif » portent la même entrée, et c'est le seul endroit où la différence
+## se lit sans ambiguïté. Aucun état intermédiaire à tenir d'accord — le chemin
+## emprunté EST la décision, comme pour le mode réseau et le transport.
+##
+## Un refus se dit. Sans Epic configuré, l'appariement est simplement impossible,
+## et une entrée qui n'aurait rien fait passerait pour un bouton cassé.
+func _start_search() -> void:
+	var classe := hub.current_id() == SCREEN_RANKED
+	_apply_queue_kind(classe)
+
+	var core := get_node_or_null(^"/root/Matchmaker")
+	if core == null or not core.has_method("start_search"):
+		show_dialog_message("Appariement",
+			"L'appariement automatique n'est pas disponible sur cette installation.")
+		return
+
+	# Un joueur non classé n'est pas estimé : le cœur ne le bride sur aucune
+	# fourchette plutôt que de lui inventer un niveau.
+	var note := -1
+	if is_instance_valid(RankedIdentity) and RankedIdentity.is_ranked:
+		note = RankedIdentity.rating
+	if not core.start_search(1 if classe else 0, note):
+		var raison := String(core.last_error) if core.get("last_error") != null else ""
+		show_dialog_message("Appariement",
+			raison if raison != "" else "La recherche n'a pas pu démarrer.")
 
 ## Le classement, en texte, pour le panneau de droite. Aucun chiffre inventé : un
 ## joueur sans ligne au classement n'a pas de rang, et on le dit.
@@ -1980,22 +2032,35 @@ func _on_hub_screen_changed(id: String) -> void:
 	# Entrer dans un salon EST la décision de mode. Une seule affectation, à un
 	# seul endroit — là où six bascules se contredisaient.
 	match id:
-		SCREEN_LOCAL:      _intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
-		SCREEN_LOCAL_HOST: _intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
-		SCREEN_LOCAL_JOIN: _intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
-		SCREEN_HOST:       _intended_mode = NetworkManager.GameMode.ONLINE_HOST
-		SCREEN_JOIN:       _intended_mode = NetworkManager.GameMode.ONLINE_CLIENT
+		SCREEN_LOCAL:
+			_intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
+		SCREEN_LOCAL_HOST:
+			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_HOST,
+				NetworkManager.Transport.ENET)
+		SCREEN_LOCAL_JOIN:
+			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_CLIENT,
+				NetworkManager.Transport.ENET)
+		SCREEN_HOST:
+			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_HOST,
+				NetworkManager.Transport.EOS)
+		SCREEN_JOIN:
+			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_CLIENT,
+				NetworkManager.Transport.EOS)
 
 	# La nature du match se décide au menu, pas en jeu : entrer dans « 1V1
 	# compétitif » est la seule façon de jouer classé. Tout le reste — écran
 	# partagé, salon amical, entraînement — ne compte pas.
-	if is_instance_valid(RankedIdentity) and RankedIdentity.has_method("set_ranked_context"):
-		match id:
-			SCREEN_RANKED: RankedIdentity.set_ranked_context(true)
-			SCREEN_LOCAL, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN, \
-			SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
-				RankedIdentity.set_ranked_context(false)
-	if id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
+	#
+	# `SCREEN_FRIENDLY` est dans cette liste et il a fallu l'y mettre : sans lui,
+	# passer par « compétitif » puis revenir chercher un match amical laissait le
+	# contexte à « classé », et un match sans enjeu serait remonté au classement.
+	match id:
+		SCREEN_RANKED: _apply_queue_kind(true)
+		SCREEN_FRIENDLY, SCREEN_LOCAL, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN, \
+		SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
+			_apply_queue_kind(false)
+	if id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
+			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED]:
 		_refresh_map_card()
 		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
@@ -2003,6 +2068,44 @@ func _on_hub_screen_changed(id: String) -> void:
 		_leaderboard.refresh()
 	_seed_focus(0)
 	_seed_focus(1)
+
+## Pose le mode ET le transport d'un salon, en un seul geste.
+##
+## Les deux écrans de salon local se déclaraient **écran partagé**. Tout le bloc
+## réseau se masquait donc — pas de bouton « créer le salon », pas d'adresse IP,
+## pas de liste de joueurs — et « lancer le match » y démarrait un écran partagé
+## au lieu d'héberger : les deux écrans étaient des doublons de « 1v1 écrans
+## scindés » sous d'autres libellés.
+##
+## Et le transport n'était posé par personne. La feuille de route affirmait depuis
+## le 17 août qu'entrer par « en local » posait `Transport.ENET` ; c'était une
+## intention écrite au passé, jamais implémentée. Elle l'est ici, au seul endroit
+## qui connaisse l'arborescence.
+func _apply_lobby_intent(mode: NetworkManager.GameMode,
+		transport: NetworkManager.Transport) -> void:
+	_intended_mode = mode
+	NetworkManager.transport = transport
+	# Les deux bascules retirées de la vue restent le miroir de la décision : le
+	# banc `test_online_match.tscn` les pilote encore pour choisir son transport.
+	# Sans signal, sous peine de rappeler `_refresh_lobby_block()` en pleine
+	# reconstruction.
+	if btn_transport_eos != null:
+		btn_transport_eos.set_pressed_no_signal(transport == NetworkManager.Transport.EOS)
+		btn_transport_lan.set_pressed_no_signal(transport != NetworkManager.Transport.EOS)
+
+## Pose la nature du match — classé ou non — aux deux endroits qui doivent
+## s'accorder : l'archivage, qui décide si le résultat remonte au classement, et
+## l'écran de recherche, qui décide dans quelle file publier son ticket.
+##
+## Les deux en un seul geste, parce qu'un désaccord entre eux serait silencieux et
+## coûteux : chercher dans la file classée et archiver en amical (ou l'inverse)
+## ne lève aucune erreur, cela fausse simplement le classement.
+func _apply_queue_kind(ranked: bool) -> void:
+	if is_instance_valid(RankedIdentity) and RankedIdentity.has_method("set_ranked_context"):
+		RankedIdentity.set_ranked_context(ranked)
+	var recherche = _screens.get(SCREEN_MATCHMAKING, null)
+	if recherche != null and recherche.has_method("set_ranked_queue"):
+		recherche.set_ranked_queue(ranked)
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
@@ -2319,6 +2422,26 @@ func _build_lobby_widgets() -> void:
 func _refresh_lobby_block() -> void:
 	if lobby_status_label == null:
 		return
+
+	# La carte se remontre à chaque passage : la branche de l'appariement la cache,
+	# et sans cette remise à zéro elle resterait cachée dans tous les salons visités
+	# ensuite — un défaut qui ne se voit qu'après un détour par la file.
+	map_card.show()
+
+	# L'appariement n'a ni carte à choisir ni code à transmettre. Le seul choix qui
+	# reste au joueur est son arme, et c'est tout ce que le panneau garde.
+	if hub != null and hub.current_id() in [SCREEN_FRIENDLY, SCREEN_RANKED]:
+		map_card.hide()
+		transport_hbox.hide()
+		lobby_players_box.hide()
+		lobby_code_row.hide()
+		host_ip_row.hide()
+		join_input.hide()
+		btn_open_lobby.hide()
+		lobby_status_label.show()
+		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
+		return
+
 	var mode := selected_network_mode()
 	var is_eos := NetworkManager.transport == NetworkManager.Transport.EOS
 	# La barre d'actions est construite après ce bloc : au premier passage le
@@ -2813,6 +2936,17 @@ func selected_network_mode() -> NetworkManager.GameMode:
 ## Son choix atterrissait alors dans `p1_weapon_group`, que personne ne lit pour
 ## P2 — d'où un client condamné au pistolet. C'est le mode *choisi* qui fait foi.
 func _update_weapon_panels_visibility() -> void:
+	# En file, le rôle n'est pas encore décidé : la désignation de l'hôte n'a lieu
+	# qu'une fois l'adversaire trouvé. Montrer les deux râteliers laisserait croire
+	# qu'on choisit pour deux ; en montrer un seul et le reporter sur l'autre au
+	# moment de partir (`mirror_weapon_choice`) dit la vérité — un joueur, une arme,
+	# quel que soit le côté où il tombe.
+	if _is_main_menu and hub != null and hub.current_id() in [SCREEN_FRIENDLY, SCREEN_RANKED]:
+		_assign_weapon_nav_owner(false)
+		p1_vbox.show()
+		p2_vbox.hide()
+		return
+
 	var mode := selected_network_mode() if _is_main_menu else NetworkManager.current_mode
 	var local_is_p2 := mode == NetworkManager.GameMode.ONLINE_CLIENT
 	_assign_weapon_nav_owner(local_is_p2)
@@ -2826,6 +2960,22 @@ func _update_weapon_panels_visibility() -> void:
 	else:
 		p1_vbox.show()
 		p2_vbox.hide()
+
+## Reporte le choix d'arme du râtelier de J1 sur celui de J2.
+##
+## L'appariement automatique fait choisir son arme **avant** de savoir de quel
+## côté on tombera : l'hôte lit le râtelier de J1, l'invité celui de J2, et la
+## désignation n'a lieu qu'une fois l'adversaire trouvé. Sans ce report, un joueur
+## sur deux partait au pistolet — en BO1, aucun rematch ne vient rattraper le
+## choix.
+func mirror_weapon_choice() -> void:
+	var choisi: BaseButton = p1_weapon_group.get_pressed_button()
+	if choisi == null:
+		return
+	var cible: Array = p2_weapon_group.get_buttons()
+	var index := choisi.get_index()
+	if index >= 0 and index < cible.size():
+		cible[index].button_pressed = true
 
 ## Réserve la rangée d'armes au curseur qui peut réellement l'atteindre.
 ##

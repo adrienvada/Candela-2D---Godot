@@ -225,7 +225,14 @@ func _ready():
 	NetworkManager.host_disconnected.connect(_on_host_disconnected)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.connection_success.connect(_on_connection_success)
-	
+
+	# L'appariement établit le lien lui-même, puis annonce. Sans cet abonnement il
+	# n'annonçait à personne : les deux machines se connectaient et restaient dans
+	# leurs menus, l'appariement « marchant » sans qu'aucune manche ne démarre.
+	var appariement := get_node_or_null(^"/root/Matchmaker")
+	if appariement != null and appariement.has_signal("match_ready"):
+		appariement.match_ready.connect(_on_match_ready)
+
 	rebuild_arena()
 	_setup_players()
 	_setup_ghosts()
@@ -1436,10 +1443,33 @@ func _set_p2_weapon_button(idx: int) -> void:
 	if idx < 0 or idx >= buttons.size(): return
 	buttons[idx].button_pressed = true
 
+## [Appariement] Les deux joueurs se sont trouvés et le lien est ouvert.
+##
+## Seul l'hôte a quelque chose à faire ici : le client entre par
+## `connection_success`, qui fait déjà tout — et le faire entrer deux fois
+## relancerait sa manche par-dessus elle-même.
+##
+## La carte est tirée au sort **avant** `_start_round()`, parce que c'est cet
+## appel qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
+## départ du client. Tirer après donnerait deux arènes différentes aux deux
+## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
+## voyant un monde cohérent.
+func _on_match_ready(_pairing: Dictionary) -> void:
+	# Le joueur a choisi son arme sans savoir s'il hébergerait : la désignation
+	# vient tout juste d'avoir lieu. Le choix est donc reporté sur les deux
+	# râteliers, l'hôte lisant celui de J1 et l'invité celui de J2.
+	ui.mirror_weapon_choice()
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	MapData.select_random_map()
+	_enter_hosted_game()
+	_start_round()
+
 ## Quitte le menu pour la partie hébergée : autorités, fournisseurs d'entrées,
-## vues. Deux chemins y mènent — l'hôte qui appuie sur PRÊT, et l'adversaire qui
-## arrive dans un salon ouvert depuis le menu. Ils doivent préparer exactement la
-## même chose, sous peine d'une partie où l'un des deux joueurs est mal branché.
+## vues. Trois chemins y mènent — l'hôte qui appuie sur PRÊT, l'adversaire qui
+## arrive dans un salon ouvert depuis le menu, et l'appariement qui vient
+## d'établir le lien. Ils doivent préparer exactement la même chose, sous peine
+## d'une partie où l'un des deux joueurs est mal branché.
 func _enter_hosted_game() -> void:
 	_apply_network_mode()
 	game_over = false

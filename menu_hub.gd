@@ -234,6 +234,15 @@ func current_id() -> String:
 func depth() -> int:
 	return _stack.size() - 1
 
+## Écran d'où l'on vient. Vide à l'accueil.
+##
+## Un écran atteint par deux chemins n'est pas le même selon le chemin — c'est
+## exactement le cas de la recherche d'adversaire, qui sert la file amicale et la
+## file classée. La pile porte déjà la réponse ; la recopier dans une variable
+## d'état créerait une seconde vérité à tenir d'accord avec la première.
+func parent_id() -> String:
+	return _stack[_stack.size() - 2] if _stack.size() >= 2 else ""
+
 func push(id: String) -> bool:
 	if not _lists.has(id) or id == current_id():
 		return false
