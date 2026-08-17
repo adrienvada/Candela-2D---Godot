@@ -65,9 +65,24 @@ var losses: int = 0
 var draws: int = 0
 var is_ranked: bool = false
 
+## Ce que la dernière lecture du classement a rendu au-delà de ma propre ligne.
+##
+## `_standing_loaded` n'est pas redondant avec un tableau vide : sans lui,
+## « personne n'a encore joué » et « la lecture n'a jamais abouti » sont
+## indistinguables, et un écran resterait sur « Lecture… » pour toujours après un
+## échec. C'est le genre de défaut qui ne se voit qu'avec un réseau coupé.
+var _standing_top: Array = []
+var _standing_loaded: bool = false
+var _standing_error: String = ""
+
 signal state_changed(state: State)
 ## Émis quand le classement du joueur a été relu.
 signal standing_changed
+
+## Le profil lui-même a changé : pseudo, code de récupération, identifiant.
+## Distinct de `state_changed`, qui ne dit que le passage d'un état à l'autre —
+## un rattachement réussi change tout le profil sans changer l'état.
+signal profile_changed
 ## Issue d'un rattachement demandé par le joueur, avec le message à lui montrer.
 signal link_completed(success: bool, message: String)
 
@@ -365,7 +380,18 @@ func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
 func _on_standing_completed(result: int, code: int, payload: Dictionary) -> void:
 	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
 		push_warning("RankedIdentity: classement illisible (code %d)" % code)
+		# L'échec doit être annoncé, pas seulement journalisé : sans ce signal, un
+		# écran branché ici reste sur « Lecture… » indéfiniment. Le classement
+		# reste un ornement du menu — l'échec n'empêche pas de jouer, il doit
+		# seulement cesser de se faire attendre.
+		_standing_error = "classement illisible (code %d)" % code
+		standing_changed.emit()
 		return
+
+	_standing_error = ""
+	_standing_loaded = true
+	_standing_top = _flatten_tiers(payload.get("top", []))
+
 	var mine: Variant = payload.get("standing", null)
 	if not mine is Dictionary:
 		# Profil connu mais jamais classé : aucun match concordant à son nom.
@@ -382,6 +408,38 @@ func _on_standing_completed(result: int, code: int, payload: Dictionary) -> void
 	is_ranked = true
 	standing_changed.emit()
 
+## Aplatit la catégorie que le serveur rend sous forme d'objet.
+##
+## Le serveur expose `tier` (catégorie, division, libellé, points au rang
+## suivant) parce que ces informations serviront ; l'affichage n'a besoin que du
+## libellé. L'aplatissement se fait **ici** et nulle part ailleurs : c'est la
+## couche qui adapte le serveur à l'interface, et la faire dans chaque écran
+## garantirait qu'un écran finisse par lire une clé qui n'existe plus.
+func _flatten_tiers(rows: Variant) -> Array:
+	var out: Array = []
+	if not rows is Array:
+		return out
+	for row in rows:
+		if not row is Dictionary:
+			continue
+		var d: Dictionary = (row as Dictionary).duplicate()
+		var tier: Variant = d.get("tier", null)
+		if tier is Dictionary:
+			d["rank_label"] = String((tier as Dictionary).get("label", ""))
+		out.append(d)
+	return out
+
+## Ce que la dernière lecture du classement a rendu au-delà de ma propre ligne.
+##
+## Une méthode plutôt que trois propriétés : un seul point à sonder pour un écran,
+## un seul à simuler dans un test.
+func standing_snapshot() -> Dictionary:
+	return {
+		"loaded": _standing_loaded,
+		"error": _standing_error,
+		"top": _standing_top.duplicate(true),
+	}
+
 ## Résumé du classement, pour le menu.
 func standing_label() -> String:
 	if state != State.READY:
@@ -392,12 +450,22 @@ func standing_label() -> String:
 		rating, rank, matches_played, "s" if matches_played > 1 else "",
 		wins, losses, draws]
 
+## Adopte un profil : identification initiale, ou rattachement d'une machine.
+##
+## `profile_changed` est émis **inconditionnellement**, et c'est le point à ne pas
+## simplifier. Un rattachement réussi appelle `_set_state(READY)` sur une identité
+## déjà READY ; `_set_state` sort alors sans rien émettre, puisque l'état n'a pas
+## bougé. Or le pseudo et le code, eux, viennent de changer. Un écran branché sur
+## le seul `state_changed` continuerait d'afficher le code d'un profil que la
+## machine vient d'abandonner — un code périmé, présenté comme la seule chose que
+## le joueur ait à conserver.
 func _adopt(profile: Dictionary) -> void:
 	profile_id = String(profile.get("id", ""))
 	nickname = String(profile.get("nickname", ""))
 	recovery_code = String(profile.get("recovery_code", ""))
 	last_error = ""
 	_set_state(State.READY)
+	profile_changed.emit()
 
 func _report(endpoint: String, success: bool, message: String) -> void:
 	if endpoint == ENDPOINT_LINK:
