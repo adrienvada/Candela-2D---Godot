@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste le seul essai que le code ne peut pas faire seul : deux fenêtres |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres, et **l'étape 8.8** (carte illisible = divergence silencieuse) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -1458,6 +1458,88 @@ chemins convergents). Reste ce que l'appariement crée de neuf :
 Aucun de ces trois points ne se résout par de la technique seule ; les écrire
 évite de croire qu'un système d'appariement les règle.
 
+### Étape 8.8 — la carte que l'autre n'a pas 🔴 À FAIRE — divergence silencieuse
+
+**Le cas est déjà résolu par construction, et personne ne l'avait écrit.** La carte
+ne voyage pas par identifiant, elle voyage **par valeur** : `_host_map_code()`
+produit le code de partage complet (`CANDELA-<base64(gzip(json))>`),
+`rpc_start_round` le transporte, et le client appelle `adopt_shared_map()`, qui
+reconstruit la géométrie **sans rien écrire sur le disque**. Une carte dessinée
+cinq minutes plus tôt dans l'éditeur de l'hôte fonctionne donc chez l'invité qui ne
+l'a jamais vue. Identique en EOS et en ENet — `rpc_start_round` ignore le
+transport. En écran partagé la question ne se pose pas : une seule machine.
+
+Trois propriétés en découlent, toutes voulues :
+
+- le catalogue de l'invité n'entre jamais en jeu ;
+- l'invité **ne conserve pas** la carte de l'hôte : `selected_map_id` passe à
+  `"distante"` faute d'identifiant, et `user://maps/` n'est pas touché. Installer
+  silencieusement le fichier d'un inconnu serait pire que de ne pas le garder ;
+- seul l'invité adopte (`current_mode == ONLINE_CLIENT`) : l'hôte est déjà chez lui.
+
+#### ⚠️ Ce qui est mal géré, et c'est grave
+
+**L'échec de décodage ne fait qu'afficher un message, puis la manche démarre
+quand même.**
+
+```gdscript
+var err := MapData.adopt_shared_map(map_code)
+if err != "":
+    ui.show_dialog_message("Carte", "Carte de l'hôte illisible : " + err)
+_do_start_round(w1_idx, w2_idx)     # ← on continue
+```
+
+Les deux joueurs jouent alors sur **deux géométries différentes**, chacun sur la
+sienne. Les balles de l'autre traversent des murs qui n'existent pas chez lui, la
+torche éclaire une arène qui n'est pas là, et **les deux machines restent
+parfaitement cohérentes avec elles-mêmes** : aucun plantage, aucune erreur, deux
+joueurs convaincus que l'autre triche. C'est exactement la famille de défaut déjà
+payée une fois avec l'appariement collision/occulteur.
+
+Le décodage peut échouer pour quatre raisons, dont une **certaine** d'arriver :
+
+1. **Version de codec différente** (`MapCodec.VERSION`). L'hôte tourne un build
+   plus récent. C'est le cas courant en développement, et il se reproduira à chaque
+   mise à jour publiée tant qu'il n'y a pas de mise à jour forcée.
+2. Grille hors de `MIN_GRID`–`MAX_GRID` (8–128).
+3. Code tronqué ou corrompu.
+4. Garde-fou anti-bombe de 8 Mo.
+
+**Et un cinquième cas, entièrement muet :** `map_code` vide. La garde
+`if map_code != ""` fait alors *sauter l'adoption sans le moindre message*, et
+l'invité joue sur sa carte précédente. Même divergence, sans même la boîte de
+dialogue.
+
+#### Ce qu'il faut faire
+
+- **Refuser de commencer plutôt que commencer divergé.** Un invité qui ne sait pas
+  lire la carte ne doit pas entrer dans la manche : il quitte et dit pourquoi.
+  C'est la seule règle qui compte, les autres n'en sont que la mise en œuvre.
+- **Le prévenir à l'hôte.** Sans retour, l'hôte reste seul dans son arène à
+  attendre un adversaire qui a été éjecté — et lui archiverait un forfait.
+- **Comparer les versions à la connexion, pas au lancement de la manche.** Un
+  échange de `MapCodec.VERSION` à la poignée de main transforme une divergence
+  découverte en plein match en un refus propre à la porte : « vos versions
+  diffèrent ». C'est le seul moment où l'information est encore actionnable.
+- **Traiter `map_code` vide comme un échec**, pas comme « rien à faire ».
+- Une suite headless qui joue les cinq cas : version future, grille hors bornes,
+  code tronqué, code vide, code valide. Aucun ne demande de réseau — `adopt_shared_map`
+  est une fonction pure sur une chaîne.
+
+#### La question d'équité que le tirage au sort vient d'ouvrir
+
+`select_random_map()` (livrée le 2026-08-18) tire dans **tout le catalogue de
+l'hôte, cartes importées comprises**. En match classé, on peut donc être envoyé sur
+une arène que l'adversaire a dessinée et que l'on découvre en jouant — pendant que
+lui la connaît par cœur. Ce n'est pas un défaut technique, c'est un arbitrage :
+
+- restreindre le tirage classé aux **cartes livrées** (slugs réservés de
+  `res://assets/maps/`), ou
+- l'ouvrir et considérer que la connaissance d'une arène fait partie du jeu.
+
+**À trancher par Adrien.** Le tirage est aujourd'hui ouvert par défaut, et la
+restriction tient en une ligne de filtre sur `source == "builtin"`.
+
 ### Deux manques vérifiés indépendamment le 2026-08-17
 
 Une relecture séparée de `network_manager.gd`, `ui.gd`, `map_data.gd` et
@@ -1604,6 +1686,17 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   de droite et de la description sous le titre. Le piège est silencieux et ne se
   voit pas en développant, où l'on a une souris sous la main. Passer par
   `MenuHub.reveal_entry()`, appelé depuis `_set_focus()`.
+
+**Cartes et géométrie**
+- **Un échec d'adoption de la carte de l'hôte n'empêche pas la manche de
+  démarrer.** `rpc_start_round` affiche un message puis appelle `_do_start_round`
+  quoi qu'il arrive : les deux joueurs jouent sur des géométries différentes,
+  chaque machine restant cohérente avec elle-même. Aucun plantage, aucune erreur,
+  et deux joueurs persuadés que l'autre triche. Le cas **certain** d'arriver est
+  la différence de `MapCodec.VERSION` entre deux builds. Voir l'étape 8.8.
+- **Un `map_code` vide ne déclenche même pas le message** : la garde
+  `if map_code != ""` fait sauter l'adoption en silence. Une absence traitée comme
+  « rien à faire » alors que c'est « je ne sais pas sur quoi je joue ».
 
 **Tests headless**
 - **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
