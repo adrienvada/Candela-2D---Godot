@@ -1380,6 +1380,13 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   continue de bloquer l'autre sans se faire pousser lui-même.
 
 **Tests headless**
+- **Un script lancé avec `--script` ne peut pas toucher à EOS.** Les autoloads du
+  plugin EOSG (`HLobbies`, `HP2P`, `HAuth`…) ne sont pas encore enregistrés quand
+  `network_manager.gd` se compile : `Identifier not found: HLobbies`, et tout ce
+  qui en dépend s'effondre. Toute vérification contre le vrai service doit passer
+  par une **scène** — c'est pourquoi `test_transport`, `test_online_match` et
+  `test_quit_path` sont des `.tscn` et non des scripts. Relevé le 2026-08-17 en
+  essayant de sonder le filtre de fourchette.
 - **Une `SCRIPT ERROR` n'échoue PAS une suite — et ça s'est produit deux fois.**
   Seul un `_check` incrémente le compteur : une suite qui appelle une fonction
   supprimée continue d'annoncer « tous les tests passent » avec le code 0. Le
@@ -1832,7 +1839,14 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
    **FAIT.**
    Une fois le point 1 levé, c'est mécanique : le contrat entre le cœur et
    l'écran est écrit et la traduction d'instantané est en place.
-3. **Essayer l'appariement contre EOS**, à deux fenêtres avec
+3. **Écrire un banc d'essai de file, en SCÈNE et non en script.** C'est le
+   prérequis qu'on découvre en essayant : `--script` ne voit pas les autoloads du
+   plugin EOS. Modèle : `tools/test_transport.tscn`. Ce banc doit répondre en
+   premier à **une seule question** — EOS accepte-t-il un filtre entier avec
+   `GreaterThanOrEqual` sur l'attribut de classement ? Si non, la stratégie de
+   file change : il faudrait publier la fourchette en attribut de chaîne et
+   filtrer par égalité sur des paliers nommés.
+4. **Puis essayer l'appariement à deux fenêtres** avec
    `--eos-ephemeral` (deux instances locales partagent un Device ID, donc un
    PUID : chacune verrait le ticket de l'autre comme le sien). Le premier point à
    vérifier est que `set_parameter` accepte des entiers avec
