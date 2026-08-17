@@ -1027,6 +1027,27 @@ rejeu. Trois précautions qui ne vont pas de soi :
   avant que l'amical existe : ils sont classés. À écrire dans la migration plutôt
   qu'à supposer.
 
+### ⚑ Vérifié contre le vrai EOS le 2026-08-17 — le filtre entier fonctionne
+
+**La question qui pouvait invalider toute la Phase 8 est tranchée : oui.** EOS
+accepte un filtre entier avec `GreaterThanOrEqual` et `LessThanOrEqual` sur
+l'attribut de classement. `tools/test_queue.tscn` l'établit contre le service
+réel, avec une identité éphémère : ticket publié à 1000, puis quatre requêtes
+acceptées — fourchette bornée des deux côtés, borne basse seule, borne haute
+seule, et sans borne. Les deux files (`RANKED` / `CASUAL`) répondent séparément.
+
+L'élargissement par fourchettes fines tient donc tel qu'il est écrit. Le repli
+prévu — publier des paliers nommés en chaîne et filtrer par égalité — n'est pas
+nécessaire.
+
+Ce que le banc **ne** prouve pas, et qui reste dû : qu'on trouve réellement
+quelqu'un. Le ticket publié s'auto-exclut, donc zéro candidat est le résultat
+attendu et non une déception. Trouver, s'accepter et se connecter demande deux
+fenêtres, donc Adrien.
+
+Le banc est une **scène** et non un script : un `--script` compile
+`network_manager.gd` avant l'enregistrement des autoloads du plugin EOS.
+
 ### Étape 8.2 — où vit la file d'attente
 
 **Deux mécanismes possibles, et le choix n'est pas neutre.**
