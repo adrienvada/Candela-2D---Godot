@@ -60,8 +60,13 @@ func _ready() -> void:
 ## L'écran partagé ne doit rien devoir au réseau : le bloc lobby disparaît, les
 ## deux vues restent, et rien n'est envoyé nulle part.
 func _run_local() -> void:
-	_ui.btn_mode_local.button_pressed = true
-	_check("le bloc en ligne est masqué en local", not _ui.online_hbox.visible)
+	# L'intention de mode ne se pose plus en cochant un bouton : elle se pose en
+	# entrant dans le salon. Ce test le disait par l'état de l'interface ; il le
+	# dit maintenant par le geste, ce qui est aussi ce que fait un joueur.
+	_ui.hub.push(_ui.SCREEN_LOCAL)
+	_check("l'écran est bien le salon local", _ui.hub.current_id() == _ui.SCREEN_LOCAL)
+	_check("le mode retenu est l'écran partagé",
+		_ui.selected_network_mode() == NetworkManager.GameMode.LOCAL_SPLITSCREEN)
 	_check("le choix de transport est masqué en local", not _ui.transport_hbox.visible)
 	_check("le champ de saisie est masqué en local", not _ui.join_input.visible)
 	_check("le code de salon est masqué en local", not _ui.lobby_code_row.visible)
@@ -233,16 +238,14 @@ func _verify_kill_to_rematch() -> void:
 
 # ---------------------------------------------------------------------------
 
+## Le transport reste un choix de bouton — Internet ou réseau local est une vraie
+## alternative. Le mode, lui, se pose en entrant dans le salon correspondant.
 func _select_mode(is_host: bool) -> void:
 	if _lan:
 		_ui.btn_transport_lan.button_pressed = true
 	else:
 		_ui.btn_transport_eos.button_pressed = true
-	_ui.btn_mode_online.button_pressed = true
-	if is_host:
-		_ui.btn_mode_host.button_pressed = true
-	else:
-		_ui.btn_mode_join.button_pressed = true
+	_ui.hub.push(_ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN)
 
 ## Équivalent d'un clic sur le bouton principal du menu.
 func _press_play() -> void:

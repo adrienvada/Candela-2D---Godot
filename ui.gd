@@ -238,13 +238,11 @@ var p2_btn2: Button
 var p2_btn3: Button
 var p2_btn4: Button
 
-var mode_vbox: VBoxContainer
 var mode_group: ButtonGroup
-var btn_mode_local: Button
-var btn_mode_online: Button
-var btn_mode_host: Button
-var btn_mode_join: Button
-var online_hbox: HBoxContainer
+## Intention de mode, posée par la navigation. Elle a remplacé la lecture de
+## `button_pressed` sur des bascules : un état d'interface tenait lieu de
+## décision, et six connexions de boutons n'arrivaient plus à le garder cohérent.
+var _intended_mode: NetworkManager.GameMode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 var transport_hbox: HBoxContainer
 var btn_transport_eos: Button
 var btn_transport_lan: Button
@@ -529,7 +527,7 @@ func _update_focus_rings() -> void:
 	var show_p2 := true
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		show_p2 = false
-	elif _is_main_menu and btn_mode_local != null and not btn_mode_local.button_pressed:
+	elif _is_main_menu and _intended_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		show_p2 = false
 
 	if show_p1 and _is_focus_usable(p1_focus):
@@ -1531,6 +1529,10 @@ func _build_menu() -> void:
 ## déplace donc que leur point d'accrochage — c'est ce qui permet de savoir que ce
 ## qui casse vient du déplacement, et de rien d'autre.
 func _build_hub_screens() -> void:
+	# Les pièces du salon sont créées d'abord, orphelines : le panneau qui suit les
+	# range, et rien ne les crée deux fois.
+	_build_lobby_widgets()
+
 	var accueil := hub.add_screen(MenuHub.ROOT, "Candela 2D")
 	var local := hub.add_screen(SCREEN_LOCAL, "Salon local")
 	var amical := hub.add_screen(SCREEN_FRIENDLY, "1v1 en ligne amical")
@@ -1573,14 +1575,9 @@ func _build_hub_screens() -> void:
 		+ "mur.\n\n[b]Être vu, c'est être mort.[/b]")
 
 	# --- 1v1 local : le salon local -------------------------------------------
-	# `mode_vbox` porte les bascules de mode, et `selected_network_mode()` LIT leur
-	# état — c'est ce que le netcode interroge au lancement. Elles restent donc
-	# dans l'arbre, masquées, et l'entrée dans un écran les positionne. Le
-	# découplage propre est l'étape 3b.
 	local.add_child(hub.make_entry("CARTE", "Choisir l'arène.", SCREEN_MAPS))
 	local.add_child(hub.make_entry("LANCER", "Démarre la manche.", "", COLOR_P1, "lancer"))
 	hub.add_back_entry(SCREEN_LOCAL)
-	_install_aside(SCREEN_LOCAL, _build_local_aside())
 
 	# --- 1v1 en ligne amical --------------------------------------------------
 	amical.add_child(hub.make_entry("CHERCHER UN MATCH",
@@ -1600,13 +1597,16 @@ func _build_hub_screens() -> void:
 	hote.add_child(hub.make_entry("PRÊT", "Lance le match dès que l'adversaire est là.",
 		"", COLOR_P1, "lancer"))
 	hub.add_back_entry(SCREEN_HOST)
-	_install_aside(SCREEN_HOST, _build_host_aside())
 
 	# --- Salon invité ---------------------------------------------------------
 	invite.add_child(hub.make_entry("PRÊT", "Rejoint le salon dont vous avez saisi le code.",
 		"", COLOR_P1, "lancer"))
 	hub.add_back_entry(SCREEN_JOIN)
-	_install_aside(SCREEN_JOIN, _build_join_aside())
+	# Le même panneau sert les trois salons.
+	var salon := _build_salon_aside()
+	_install_aside(SCREEN_LOCAL, salon)
+	_install_aside(SCREEN_HOST, salon)
+	_install_aside(SCREEN_JOIN, salon)
 
 	# --- En ligne compétitif --------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH",
@@ -1683,35 +1683,29 @@ func _build_hub_screens() -> void:
 	hub.back_at_root.connect(func() -> void: pass)
 	hub.reset()
 
-## Panneau de droite du salon local : les deux râteliers d'armes.
-func _build_local_aside() -> Control:
+## Panneau de droite des trois salons — local, hôte, invité — et il n'y en a
+## qu'un seul.
+##
+## Un nœud n'a qu'un parent : donner `transport_hbox` à trois panneaux le
+## déplacerait simplement dans le dernier. Et `_build_weapon_block()` réassigne
+## `weapon_hbox` à chaque appel — trois appels laisseraient deux râteliers
+## orphelins dans l'arbre, la sélection d'arme ne lisant plus que le dernier.
+##
+## Le panneau est donc unique, et `_refresh_lobby_block()` décide de ce qui s'y
+## voit selon `_intended_mode` : c'est ce qu'il faisait déjà pour les quatre
+## combinaisons de mode et de transport.
+func _build_salon_aside() -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", GAP_S)
 	box.add_child(_build_map_card())
-	box.add_child(_build_weapon_block())
-	# Les bascules de mode vivent ici, masquées : `selected_network_mode()` lit
-	# leur état, et le netcode l'interroge au lancement.
-	var modes := _build_mode_block()
-	modes.hide()
-	box.add_child(modes)
-	return box
-
-func _build_host_aside() -> Control:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", GAP_S)
-	box.add_child(_make_section_label("SALON", COLOR_GOLD))
+	box.add_child(transport_hbox)
 	box.add_child(lobby_code_row)
-	box.add_child(lobby_status_label)
 	box.add_child(host_ip_row)
-	return box
-
-func _build_join_aside() -> Control:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", GAP_S)
-	box.add_child(_make_section_label("CODE DU SALON", COLOR_GOLD))
 	var center := CenterContainer.new()
 	center.add_child(join_input)
 	box.add_child(center)
+	box.add_child(lobby_status_label)
+	box.add_child(_build_weapon_block())
 	return box
 
 ## Installe un affichage riche à droite d'un écran, montré tant qu'aucune entrée
@@ -1781,13 +1775,23 @@ func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
 		screen.refresh()
-	for key in _asides.keys():
-		var content: Control = _asides[key]
+	# Un même panneau sert plusieurs écrans (les trois salons). Comparer clé par
+	# clé le masquerait, la dernière itération l'emportant : on désigne d'abord le
+	# panneau attendu, puis on compare les contrôles entre eux.
+	var attendu: Control = _asides.get(id, null)
+	for content in _asides.values():
 		if content != null:
-			content.visible = key == id
-	if id == SCREEN_LOCAL or id == SCREEN_HOST:
+			content.visible = content == attendu
+	# Entrer dans un salon EST la décision de mode. Une seule affectation, à un
+	# seul endroit — là où six bascules se contredisaient.
+	match id:
+		SCREEN_LOCAL: _intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
+		SCREEN_HOST: _intended_mode = NetworkManager.GameMode.ONLINE_HOST
+		SCREEN_JOIN: _intended_mode = NetworkManager.GameMode.ONLINE_CLIENT
+	if id == SCREEN_LOCAL or id == SCREEN_HOST or id == SCREEN_JOIN:
 		_refresh_map_card()
 		_refresh_lobby_block()
+		_update_weapon_panels_visibility()
 	if id == SCREEN_TRAINING and _leaderboard != null:
 		_leaderboard.refresh()
 	_seed_focus(0)
@@ -1993,37 +1997,19 @@ func _refresh_map_card() -> void:
 	]
 	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 80)
 
-func _build_mode_block() -> Control:
-	mode_vbox = VBoxContainer.new()
-	mode_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	mode_vbox.add_theme_constant_override("separation", GAP_XS)
-
-	mode_group = ButtonGroup.new()
-	var online_group := ButtonGroup.new()
-
-	var mode_hbox := HBoxContainer.new()
-	mode_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	mode_hbox.add_theme_constant_override("separation", GAP_S)
-
-	btn_mode_local = _make_choice_button("1V1 LOCAL", COLOR_P1, mode_group)
-	btn_mode_local.button_pressed = true
-	mode_hbox.add_child(btn_mode_local)
-
-	btn_mode_online = _make_choice_button("1V1 EN LIGNE", COLOR_P1, mode_group)
-	mode_hbox.add_child(btn_mode_online)
-	mode_vbox.add_child(mode_hbox)
-
-	online_hbox = HBoxContainer.new()
-	online_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	online_hbox.add_theme_constant_override("separation", GAP_S)
-	online_hbox.hide()
-
-	btn_mode_host = _make_choice_button("CRÉER SALON", COLOR_GOLD, online_group)
-	online_hbox.add_child(btn_mode_host)
-	btn_mode_join = _make_choice_button("REJOINDRE", COLOR_GOLD, online_group)
-	online_hbox.add_child(btn_mode_join)
-	mode_vbox.add_child(online_hbox)
-
+## Construit les pièces du salon, sans les rattacher : ce sont les écrans du hub
+## qui décident où elles s'affichent.
+##
+## Les bascules « 1V1 LOCAL / EN LIGNE » et « CRÉER / REJOINDRE » ont disparu.
+## Elles portaient l'intention de mode, que `selected_network_mode()` lisait dans
+## leur `button_pressed` — un état d'interface tenant lieu de décision, que six
+## connexions de boutons n'arrivaient plus à garder cohérent. L'intention vit
+## désormais dans `_intended_mode`, posée par la navigation : entrer dans le salon
+## local, c'est vouloir jouer en local, et ça se dit une fois.
+##
+## Le choix du transport reste un bouton, lui : Internet ou réseau local est une
+## vraie alternative offerte au joueur, pas une conséquence de sa navigation.
+func _build_lobby_widgets() -> void:
 	# Le réseau local reste accessible : c'est le seul mode qui permette de jouer
 	# (et de déboguer) quand Epic est injoignable.
 	var transport_group := ButtonGroup.new()
@@ -2036,16 +2022,12 @@ func _build_mode_block() -> Control:
 	btn_transport_lan.button_pressed = not btn_transport_eos.button_pressed
 	transport_hbox.add_child(btn_transport_eos)
 	transport_hbox.add_child(btn_transport_lan)
-	transport_hbox.hide()
-	mode_vbox.add_child(transport_hbox)
 
 	lobby_status_label = Label.new()
-	lobby_status_label.text = "Salon 1V1 | Statut : 1/2 Joueurs (En attente...)"
 	lobby_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_status_label.add_theme_font_size_override("font_size", 13)
 	lobby_status_label.add_theme_color_override("font_color", COLOR_GOLD)
-	lobby_status_label.hide()
-	mode_vbox.add_child(lobby_status_label)
+	lobby_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	# Le code n'existe qu'une fois le salon ouvert, c'est-à-dire au lancement du
 	# match : d'ici là cette ligne annonce ce qui va se passer.
@@ -2062,11 +2044,9 @@ func _build_mode_block() -> Control:
 	btn_copy_code.add_theme_font_size_override("font_size", 13)
 	btn_copy_code.pressed.connect(_copy_lobby_code)
 	lobby_code_row.add_child(btn_copy_code)
-	lobby_code_row.hide()
-	mode_vbox.add_child(lobby_code_row)
 
 	# Sans son adresse sous les yeux, l'hôte LAN n'a rien à transmettre à l'autre
-	# joueur : elle est affichée dès que « CRÉER SALON » est sélectionné.
+	# joueur : elle est affichée dès l'entrée dans le salon.
 	host_ip_row = HBoxContainer.new()
 	host_ip_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	host_ip_row.add_theme_constant_override("separation", GAP_XS)
@@ -2082,13 +2062,10 @@ func _build_mode_block() -> Control:
 		host_ip_label.text = "IP copiée : %s" % local_ipv4()
 	)
 	host_ip_row.add_child(btn_copy_ip)
-	host_ip_row.hide()
-	mode_vbox.add_child(host_ip_row)
 
 	join_input = LineEdit.new()
 	join_input.custom_minimum_size = Vector2(216, 40)
 	join_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	join_input.hide()
 	# Le champ n'accepte que ce qu'un code peut contenir : le joueur ne peut pas
 	# taper une saisie invalide, il n'y a donc rien à lui refuser après coup.
 	join_input.text_changed.connect(func(text: String) -> void:
@@ -2101,35 +2078,6 @@ func _build_mode_block() -> Control:
 		join_input.text = clean
 		join_input.caret_column = maxi(caret, 0)
 	)
-
-	var join_center := CenterContainer.new()
-	join_center.add_child(join_input)
-	mode_vbox.add_child(join_center)
-
-	btn_mode_local.toggled.connect(func(pressed: bool) -> void:
-		if not pressed:
-			return
-		_refresh_lobby_block()
-		_update_weapon_panels_visibility()
-	)
-
-	btn_mode_online.toggled.connect(func(pressed: bool) -> void:
-		if not pressed:
-			return
-		# Aucun sous-mode coché : on propose l'hébergement par défaut.
-		if not btn_mode_host.button_pressed and not btn_mode_join.button_pressed:
-			btn_mode_host.button_pressed = true
-		_refresh_lobby_block()
-		_update_weapon_panels_visibility()
-	)
-
-	for btn in [btn_mode_host, btn_mode_join]:
-		btn.toggled.connect(func(pressed: bool) -> void:
-			if not pressed or not btn_mode_online.button_pressed:
-				return
-			_refresh_lobby_block()
-			_update_weapon_panels_visibility()
-		)
 
 	btn_transport_eos.toggled.connect(func(pressed: bool) -> void:
 		if not pressed:
@@ -2147,15 +2095,12 @@ func _build_mode_block() -> Control:
 
 	NetworkManager.lobby_code_ready.connect(_on_lobby_code_ready)
 	NetworkManager.eos_state_changed.connect(func(_state) -> void: _refresh_lobby_block())
-	_refresh_lobby_block()
-
-	return mode_vbox
 
 ## Applique l'état du bloc lobby en un seul endroit : quatre combinaisons
 ## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
 ## indépendantes n'arrivaient plus à tenir cohérentes.
 func _refresh_lobby_block() -> void:
-	if mode_vbox == null or btn_mode_online == null:
+	if lobby_status_label == null:
 		return
 	var mode := selected_network_mode()
 	var is_eos := NetworkManager.transport == NetworkManager.Transport.EOS
@@ -2166,7 +2111,6 @@ func _refresh_lobby_block() -> void:
 			else "LANCER LE MATCH"
 
 	if mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
-		online_hbox.hide()
 		transport_hbox.hide()
 		lobby_status_label.hide()
 		lobby_code_row.hide()
@@ -2174,7 +2118,6 @@ func _refresh_lobby_block() -> void:
 		join_input.hide()
 		return
 
-	online_hbox.show()
 	transport_hbox.show()
 	lobby_status_label.show()
 
@@ -2606,11 +2549,7 @@ func _resume_game() -> void:
 ## mode en ligne ne compte donc que si « 1V1 EN LIGNE » est bien sélectionné —
 ## c'est cette lecture, et elle seule, qui fait foi.
 func selected_network_mode() -> NetworkManager.GameMode:
-	if btn_mode_online == null or not btn_mode_online.button_pressed:
-		return NetworkManager.GameMode.LOCAL_SPLITSCREEN
-	if btn_mode_join != null and btn_mode_join.button_pressed:
-		return NetworkManager.GameMode.ONLINE_CLIENT
-	return NetworkManager.GameMode.ONLINE_HOST
+	return _intended_mode
 
 ## Panneau d'arme du joueur que CETTE machine incarne.
 ##
@@ -2898,8 +2837,6 @@ func show_main_menu() -> void:
 	# Le retour au menu ne rejoue pas les bascules de mode : sans ce rappel, le
 	# panneau resterait celui de la partie précédente.
 	_update_weapon_panels_visibility()
-	if mode_vbox:
-		mode_vbox.show()
 	_restore_all_tabs()
 
 	hub.reset()
@@ -2932,8 +2869,6 @@ func show_game_over(winner_id: int) -> void:
 	map_card.show()
 
 	_update_weapon_panels_visibility()
-	if mode_vbox:
-		mode_vbox.hide()
 	_restore_all_tabs()
 	# La carte de la manche suivante est celle de l'hôte : laisser le client en
 	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.

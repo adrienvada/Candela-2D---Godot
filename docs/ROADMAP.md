@@ -719,10 +719,40 @@ découpler le choix du mode de l'état des boutons : c'est un changement de
 comportement, pas un déplacement, et l'étape 3 avait pour règle de ne rien
 changer. → étape 3b.
 
-**Étape 3b — découpler le mode de ses boutons, puis éclater le salon.**
-`selected_network_mode()` doit lire une intention explicite plutôt que
-`btn_mode_online.button_pressed`. Cela fait, « en ligne » et « salon » deviennent
-des écrans à part entière, comme la structure B le prévoit.
+**Étape 3b — découpler le mode de ses boutons. ✅ CLOSE**
+
+`selected_network_mode()` rend désormais `_intended_mode`, une intention posée
+**par la navigation** : entrer dans le salon local, c'est vouloir jouer en local,
+et ça se dit une fois. Les quatre bascules — 1V1 LOCAL / EN LIGNE, CRÉER /
+REJOINDRE — ont disparu avec leurs six connexions.
+
+Ce qu'elles avaient de mauvais n'était pas d'être des boutons : c'était qu'un
+**état d'interface tenait lieu de décision**. Le mode se déduisait de
+`button_pressed` sur deux groupes distincts, et repasser en local ne décochait pas
+le sous-mode en ligne — d'où une lecture à trois branches dont le commentaire
+avouait que « six connexions n'arrivaient plus à tenir cohérentes ».
+
+Le transport reste un bouton, lui : Internet ou réseau local est une vraie
+alternative offerte au joueur, pas une conséquence de sa navigation.
+
+**Deux bogues que j'ai écrits puis corrigés avant de commiter**, tous deux dus à
+la même illusion — croire qu'un nœud peut servir à plusieurs endroits :
+`transport_hbox` donné à trois panneaux se serait simplement déplacé dans le
+dernier, et `_build_weapon_block()` réassignant `weapon_hbox` à chaque appel
+aurait laissé deux râteliers orphelins dans l'arbre, la sélection d'arme ne lisant
+plus que le dernier. Le panneau des salons est donc **unique**, et
+`_refresh_lobby_block()` décide de ce qui s'y voit — ce qu'il faisait déjà pour
+les quatre combinaisons de mode et de transport.
+
+Corollaire du même piège : la boucle qui montre le panneau du bon écran comparait
+clé par clé, ce qui masquait un panneau partagé entre trois écrans, la dernière
+itération l'emportant. Elle désigne maintenant le panneau attendu, puis compare
+les contrôles entre eux.
+
+**Le test de fumée a validé le découplage en cassant.** `test_online_match`
+pilotait le menu en écrivant `btn_mode_local.button_pressed = true` — exactement
+la dépendance qu'on retirait. Il exprime maintenant le geste (`hub.push`) plutôt
+que l'état, ce qui est aussi ce que fait un joueur.
 
 **Étape 4 — Options : audio et calibration.** *(persistance faite)*
 Les quatre volumes sont persistés et l'écran des effets est en place ; restent
@@ -1002,6 +1032,31 @@ chemins convergents). Reste ce que l'appariement crée de neuf :
 Aucun de ces trois points ne se résout par de la technique seule ; les écrire
 évite de croire qu'un système d'appariement les règle.
 
+### Deux manques vérifiés indépendamment le 2026-08-17
+
+Une relecture séparée de `network_manager.gd`, `ui.gd`, `map_data.gd` et
+`game_state.gd`, cherchant spécifiquement ce qu'il faudrait pour l'appariement
+automatique, confirme tout ce qui précède et ajoute deux manques que les
+étapes ci-dessus ne nomment pas encore :
+
+- **Aucun tirage de carte au hasard n'existe nulle part.** `map_data.gd`
+  n'expose que `select_map(map_id)`, toujours manuel ; la mention « cartes
+  aléatoires » de l'arborescence du hub (Phase 5) décrit une intention, pas du
+  code. En ligne, c'est toujours l'hôte qui choisit et le client adopte sa
+  carte par `rpc_start_round` (`game_state.gd:638-650`) — un tirage aléatoire
+  s'insérerait au même point, côté hôte, avant l'appel.
+- **Le panneau de choix d'arme n'existe que sur l'écran local.**
+  `_build_weapon_block()` (`ui.gd:2228`) n'est rattaché qu'à l'aside de
+  `SCREEN_LOCAL` (`ui.gd:1691`) ; les asides `SCREEN_HOST`/`SCREEN_JOIN` ne
+  l'incluent pas. Un écran de recherche de match aura besoin de son propre
+  point d'accroche pour ce panneau — ou de le rendre accessible globalement,
+  ce qu'aucun verrou de `MenuHub` n'empêche par ailleurs (bonne nouvelle :
+  rien dans `menu_hub.gd` ne bloque la navigation pendant une opération réseau
+  asynchrone, donc le principe « recherche en arrière-plan pendant qu'on
+  parcourt les menus » de l'étape 8.6 est déjà praticable sans changement
+  d'architecture — il manque juste l'état persistant à afficher, pas la
+  liberté de naviguer).
+
 ## Décisions actées
 
 | Décision | Raison |
@@ -1055,6 +1110,20 @@ Aucun de ces trois points ne se résout par de la technique seule ; les écrire
   Un contrôle préalable qui vérifie une API sur le script annonce donc des
   méthodes manquantes qui existent toutes. Les méthodes d'instance se cherchent
   sur une instance.
+
+**Godot — physique**
+- **`move_and_slide()` repousse hors d'un chevauchement même à vélocité
+  nulle — c'est ce qui faisait « traîner » P2 quand P1 restait collé contre
+  lui.** Godot exécute une passe de récupération de pénétration au tout début
+  de `move_and_slide()`, y compris quand la vélocité demandée est nulle. Deux
+  `CharacterBody2D` sur le même layer qui se frôlent en continu (P1 poussant
+  contre P2 immobile) voient donc P2 repoussé hors du chevauchement à chaque
+  frame, sans qu'aucun code de jeu ne le déplace — c'est cette passe de
+  récupération, appelée par P2 lui-même, qui bouge P2. Correctif :
+  `player.gd` n'appelle plus `move_and_slide()` quand la vélocité est nulle
+  (lignes 453-456 et 474-476). La forme de collision reste active dans
+  l'espace physique indépendamment de l'appel, donc un joueur immobile
+  continue de bloquer l'autre sans se faire pousser lui-même.
 
 **Tests headless**
 - **Une `SCRIPT ERROR` n'échoue PAS une suite — et ça s'est produit deux fois.**
