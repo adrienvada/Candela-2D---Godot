@@ -123,14 +123,32 @@ changer dans la table.
 
 ## État — le plus récent en haut
 
+### 2026-08-17 (pause) — session « game feel »
+
+Boucle perpétuelle DÉSACTIVÉE à la demande d'Adrien, arrêt sur version stable.
+Le défaut signalé par la session « menus » (flash de mort visible des deux
+écrans) est corrigé : `visibility_layer` posé sur l'écran du mort seulement —
+`flash_mort` peut être reclassé MONDE→CONFORT comme prévu dans effect_policy.
+Règle « câbler, taire, diagnostiquer » bien reçue, appliquée à la reprise.
+Livré en plus dans `main` : le cœur « impact ressenti » de la Vague 4 — V4.5
+(chiffres avec poids), V4.6 (zoom-kick), V4.7 (vignette battante au cœur
+haptique), V4.12 (recul directionnel), V4.14 (le sol répond). Restent de la
+Vague 4, non commencés (fichiers intacts) : V4.11/V4.13 (particle_pool.gd) et
+V4.15/V4.16 (audio_manager.gd) — deux agents ont échoué sur la limite de
+session, à reprendre inline ou par agents à la reprise. Ensuite : V5.x
+procéduraux, V6.1/V6.2/V6.3/V6.5, puis idéation V7+.
+
 ### 2026-08-17 — session « game feel »
 
-Branche `game-feel` ouverte depuis `main` (`478507f`). En cours : V1.2, V1.5,
-puis la Vague 2 procédurale (le kill). Adrien a arbitré D1-D7 (ligne dans
-« Décisions actées ») et accordé l'autonomie : poussée à chaque commit vert,
-fusion dans `main` par la session en fin de vague verte, micro-réglages
-tranchés et documentés. `game_state.gd` est tenu par cette session, comme
-convenu.
+Livré et fusionné dans `main` : V1.2, V1.5, la Vague 2 procédurale complète
+(gel du kill, noir qui gagne, onde de choc, tampon, récit du tir), D1
+(empreintes), D3 (extinction traînée), D7 (plafond de sang), D5 (onde du
+pompe sous `--fx-shockwave`, mesure à faire sur le Mac d'Adrien). Passe de
+revue adverse effectuée avant fusion : trois défauts confirmés, corrigés
+(dont le gel qui figeait la frame d'avant l'impact — piège ajouté à la
+ROADMAP). Boucle perpétuelle armée : prochains items V4/V5 procéduraux, puis
+idéation V7+. `game_state.gd` reste tenu par cette session. Adrien a arbitré
+D1-D7 (« Décisions actées ») et accordé poussée/fusion autonomes.
 
 ### 2026-08-17 — session « menus »
 

@@ -182,6 +182,18 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 	# Linear falloff based on weapon damage
 	var opp_hit_damage := floorf(lerpf(weapon.damage_center, weapon.damage_edge, normalized_dist))
 
+	# Kill probable, jugé sur les HP visibles localement : exact chez l'hôte,
+	# prédictif chez le client — purement cosmétique dans les deux cas.
+	var lethal := not is_replay and (target.hp - opp_hit_damage) <= 0.0
+	if not is_replay:
+		# V2.9 — distance à l'axe du DERNIER impact simulé ici : c'est celui
+		# qui tue dans le cas courant, et chaque nouvel impact écrase le
+		# précédent — un kill prédit puis démenti par l'hôte ne peut pas
+		# laisser traîner une valeur périmée (constat de revue).
+		target.last_fatal_perp = dist_to_axis
+	if lethal:
+		_flare_trail()
+
 	if not is_replay:
 		target.take_damage(opp_hit_damage, source_player)
 
@@ -227,6 +239,22 @@ static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		return -1.0
 	return entry
 
+## V2.6 — Le trait du tir fatal sur-expose : largeur et énergie triplées,
+## fondu ralenti pour que le gel de l'instant fatal (V2.1) fige une image
+## incandescente. L'arbalète, sans lumière par design, ne gagne que la largeur.
+const LETHAL_FADE_DURATION := 0.35
+var _fade_duration := 0.08
+
+func _flare_trail() -> void:
+	_fade_duration = LETHAL_FADE_DURATION
+	if light.enabled:
+		light.energy *= 3.0
+	if has_node("Core"):
+		var core: Line2D = get_node("Core")
+		core.width *= 3.0
+	if has_node("Aura") and get_node("Aura").visible:
+		get_node("Aura").modulate.a = 1.0
+
 func _fade_and_destroy(hit_point: Vector2):
 	set_physics_process(false)
 	var final_step = hit_point - global_position
@@ -244,11 +272,11 @@ func _fade_and_destroy(hit_point: Vector2):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
 	
 	var tween = create_tween().set_parallel(true)
-	tween.tween_property(light, "energy", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(light, "energy", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	if has_node("Core"):
-		tween.tween_property(get_node("Core"), "modulate:a", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(get_node("Core"), "modulate:a", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	if has_node("Aura"):
-		tween.tween_property(get_node("Aura"), "modulate:a", 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(get_node("Aura"), "modulate:a", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.chain().tween_callback(queue_free)
 
 ## Le pool est créé par GameState ; sans lui (tests headless isolés) les impacts
@@ -295,8 +323,16 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 	lbl.text = str(amount)
 	
 	var settings = LabelSettings.new()
-	settings.font_size = 36 if amount >= 40 else 24
-	settings.font_color = Color(1.0, 0.2, 0.2) if amount >= 40 else Color(1.0, 0.7, 0.2)
+	# V4.5 — le poids du chiffre EST l'information : taille proportionnelle aux
+	# dégâts (20 px pour un effleurement, 44 px pour un carreau d'arbalète), or
+	# au seuil des gros coups — 50, un demi-joueur.
+	settings.font_size = int(lerpf(20.0, 44.0, clampf(amount / 80.0, 0.0, 1.0)))
+	if amount >= 50:
+		settings.font_color = Color(1.0, 0.85, 0.2)
+	elif amount >= 40:
+		settings.font_color = Color(1.0, 0.2, 0.2)
+	else:
+		settings.font_color = Color(1.0, 0.7, 0.2)
 	settings.outline_size = 8
 	settings.outline_color = Color.BLACK
 	settings.shadow_size = 4

@@ -22,6 +22,11 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+## V2.9 — Distance à l'axe du dernier tir jugé fatal, écrite par la balle qui
+## l'a simulé ici, consommée (et remise à -1) par die(). Cosmétique : chez le
+## client c'est la simulation locale qui parle, pas l'arbitrage de l'hôte.
+var last_fatal_perp: float = -1.0
+
 var shake_intensity: float = 0.0
 var shake_decay: float = 5.0
 var noise: FastNoiseLite
@@ -106,6 +111,11 @@ var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
 @onready var hit_sound = $HitSound
 var step_distance_accumulated: float = 0.0
+## D1 — alternance pied gauche/droit des empreintes : +1/-1, inversé à chaque
+## pas. État PAR JOUEUR, tenu ici et non dans Footprint.
+var _foot_side := 1
+## Dernière position vue par le détecteur de pas (voir _physics_process).
+var _last_step_pos := Vector2.ZERO
 
 
 func _ready():
@@ -445,6 +455,13 @@ func _process(delta):
 			if _low_hp_pulse_accum >= RUMBLE_PULSE_PERIOD:
 				_low_hp_pulse_accum = 0.0
 				_rumble(RUMBLE_PULSE_WEAK, 0.0, 0.08)
+				# V4.7 — la vignette bat au même cœur que la manette : un seul
+				# battement pilote l'image, la main — et le stem heartbeat.
+				if vignette_mat:
+					vignette_mat.set_shader_parameter("intensity", 0.55)
+					var tw_v = create_tween()
+					tw_v.tween_method(func(v): vignette_mat.set_shader_parameter("intensity", v),
+						0.55, 0.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	else:
 		_low_hp_pulse_accum = 0.0
 
@@ -672,6 +689,9 @@ func _physics_process(delta):
 		flashlight_on = false
 		flashlight.enabled = false
 		body_light.enabled = false
+		# Le détecteur de pas ne doit jamais voir le saut de téléportation du
+		# spawn : on le recale tant que le décompte fige tout le monde.
+		_last_step_pos = global_position
 		_update_aim_line()
 		return
 
@@ -688,9 +708,13 @@ func _physics_process(delta):
 			velocity = velocity.move_toward(Vector2.ZERO, 1500.0 * delta)
 			if velocity != Vector2.ZERO:
 				move_and_slide()
-			flashlight_on = false
-			flashlight.enabled = false
-			body_light.enabled = false
+			# V2.2 — pendant la séquence de fin, GameState éteint lui-même les
+			# lumières du vainqueur : le noir doit gagner en 400 ms, pas en une
+			# frame de coupure sèche.
+			if not state._end_sequence_active:
+				flashlight_on = false
+				flashlight.enabled = false
+				body_light.enabled = false
 		return
 		
 	if can_move:
@@ -709,14 +733,6 @@ func _physics_process(delta):
 		if velocity != Vector2.ZERO:
 			move_and_slide()
 		
-		if velocity.length() > 20.0:
-			step_distance_accumulated += velocity.length() * delta
-			var step_dist := 60.0 if is_sprinting else 45.0
-			if step_distance_accumulated >= step_dist:
-				step_distance_accumulated = 0.0
-				var pitch_mult := 1.122 if is_sprinting else 1.0
-				AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
-	
 		var aim_dir = input_provider.get_aim_direction(global_position)
 		if aim_dir.length() > 0.1:
 			var target_angle = aim_dir.angle()
@@ -736,20 +752,53 @@ func _physics_process(delta):
 			if _predict_history.size() > PREDICT_HISTORY_MAX:
 				_predict_history.erase(_predict_history.keys()[0])
 
-	# Visuals update for all clients
-	flashlight.enabled = flashlight_on
-	body_light.enabled = flashlight_on
+	# Pas — son ET empreinte (D1), déclenchés sur la distance RÉELLEMENT
+	# parcourue et non sur la vitesse simulée. Hors du bloc can_move exprès :
+	# l'adversaire interpolé doit produire les mêmes traces que le joueur
+	# simulé, sinon l'information devient asymétrique — l'hôte entendrait et
+	# pisterait le client, jamais l'inverse. (Corrige au passage l'asymétrie
+	# préexistante du SFX de pas, inaudible côté client pour l'adversaire.)
+	var step_moved := global_position.distance_to(_last_step_pos)
+	_last_step_pos = global_position
+	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
+	if step_moved > 0.5 and step_moved < 100.0:
+		step_distance_accumulated += step_moved
+		# L'état de sprint n'est pas répliqué : l'adversaire interpolé retombe
+		# sur le pas de 45 px — un poil plus bavard, jamais moins.
+		var step_dist := 60.0 if is_sprinting else 45.0
+		if step_distance_accumulated >= step_dist:
+			step_distance_accumulated = 0.0
+			var pitch_mult := 1.122 if is_sprinting else 1.0
+			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
+			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
+			# trace racontent le même événement, sandbox compris.
+			_foot_side = -_foot_side
+			if state and state.arena:
+				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
 
+	# Visuals update for all clients
+	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau
+	# en ~80 ms au lieu d'une coupure sèche. Coût assumé : l'adversaire gagne
+	# ces 80 ms d'information à l'extinction. Symétrique : l'effet joue aussi
+	# sur la torche répliquée de l'adversaire.
 	if flashlight_on:
+		flashlight.enabled = true
+		body_light.enabled = true
 		if shoot_cooldown > 0:
 			flashlight.energy = randf_range(1.5, 2.0)
 		else:
 			flashlight.energy = lerp(flashlight.energy, 2.5, 8.0 * delta)
-			
+
 		if current_weapon:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6 * current_weapon.backlight_multiplier
 		else:
 			body_light.energy = (flashlight.energy / 2.5) * 0.6
+	elif flashlight.enabled:
+		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
+		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))
+		if flashlight.energy <= 0.01:
+			flashlight.enabled = false
+			body_light.enabled = false
 	
 	_update_aim_line()
 
@@ -785,6 +834,8 @@ const RUMBLE_HIT_STRONG := 0.3
 const RUMBLE_PULSE_WEAK := 0.25
 ## Mi-temps de 170 BPM : 60 / 85 ≈ 0,71 s entre deux battements.
 const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
+## D3 — durée d'avalement du faisceau à l'extinction de la torche.
+const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
 
 func _rumble(weak: float, strong: float, duration: float) -> void:
@@ -793,6 +844,15 @@ func _rumble(weak: float, strong: float, duration: float) -> void:
 	if lp == null: return
 	if not Input.get_connected_joypads().has(lp.device_id): return
 	Input.start_joy_vibration(lp.device_id, weak, strong, duration)
+
+## Remise à zéro du détecteur de pas, à appeler APRÈS toute téléportation
+## (spawn de manche, bac à sable). Sans elle, le delta de position entre la
+## fin de manche et le spawn passe sous le garde des 100 px et fabrique un
+## pas fantôme — son + empreinte — pile au « FIGHT ! » (constat de revue).
+func reset_step_tracker() -> void:
+	_last_step_pos = global_position
+	step_distance_accumulated = 0.0
+	last_fatal_perp = -1.0
 
 ## Double coup du kill, ressenti par le vainqueur seulement.
 func rumble_kill() -> void:
@@ -829,6 +889,20 @@ func trigger_shoot_visuals():
 	
 	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
 
+	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
+	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
+	# rôle, ceci n'est que son écho au sol.
+	var ground_flash := PointLight2D.new()
+	ground_flash.texture = LightTextures.radial(200)
+	ground_flash.color = Color(1.0, 0.85, 0.5)
+	ground_flash.energy = 1.2
+	ground_flash.shadow_enabled = false
+	ground_flash.range_item_cull_mask = 1
+	add_child(ground_flash)
+	var tw_g := create_tween()
+	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
+	tw_g.tween_callback(ground_flash.queue_free)
+
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return
 	
@@ -858,8 +932,12 @@ func take_damage(amount: float, source_player: Node2D):
 func rpc_update_hp(new_hp: float, source_id: int):
 	# V1.5 — l'impact se prend au ventre : vibration moyenne sur toute perte de
 	# PV, branchée ici (valeur autoritaire) et non sur la balle prédite.
+	# V4.6 — et la caméra du blessé encaisse un bref dézoom, même source.
 	if new_hp < hp:
 		_rumble(RUMBLE_HIT_WEAK, RUMBLE_HIT_STRONG, 0.25)
+		var gs = get_tree().get_first_node_in_group("game_state")
+		if gs and gs.has_method("camera_hit_kick"):
+			gs.camera_hit_kick(player_id)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0
@@ -915,6 +993,10 @@ func die(killer: Node2D):
 	
 	var flash_rect = ColorRect.new()
 	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Équité (signalé par la session « menus ») : sans visibility_layer, le
+	# bit 1 par défaut rend dans les DEUX vues — le tueur se prenait 600 ms de
+	# blanc dans les yeux. Le flash n'appartient qu'à l'écran du mort.
+	flash_rect.visibility_layer = 2 if player_id == 0 else 4
 	
 	var mat = ShaderMaterial.new()
 	mat.shader = SHADER_DEATH_FLASH
@@ -928,7 +1010,10 @@ func die(killer: Node2D):
 	
 	# Floating FATAL Text
 	var lbl = Label.new()
+	# V2.5 — l'arme du tueur signe le kill.
 	lbl.text = "FATAL"
+	if killer and killer != self and killer.current_weapon:
+		lbl.text = "FATAL — %s" % killer.current_weapon.name.to_upper()
 	var settings = LabelSettings.new()
 	settings.font_size = 72
 	settings.font_color = Color(1.0, 0.0, 0.0)
@@ -952,7 +1037,34 @@ func die(killer: Node2D):
 	txt_tw.tween_property(lbl, "position", lbl.position + Vector2(0, -100), 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
 	txt_tw.chain().tween_callback(lbl.queue_free)
-	
+
+	# V2.9 — « à N px du centre » : le tir fatal raconté au perdant. Le « j'y
+	# étais presque » est le moteur du rematch. Connue seulement si la balle
+	# fatale a été simulée sur cette machine ; consommée pour ne jamais resservir.
+	if last_fatal_perp >= 0.0:
+		var sub = Label.new()
+		sub.text = "à %d px du centre" % int(roundf(last_fatal_perp))
+		var sub_settings = LabelSettings.new()
+		sub_settings.font_size = 28
+		sub_settings.font_color = Color(1.0, 0.85, 0.85)
+		sub_settings.outline_size = 8
+		sub_settings.outline_color = Color.BLACK
+		sub.label_settings = sub_settings
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.position = global_position + Vector2(-100, -20)
+		sub.custom_minimum_size = Vector2(200, 0)
+		sub.z_index = 200
+		sub.material = lbl_mat
+		get_parent().add_child(sub)
+		var sub_tw = create_tween().set_parallel(true)
+		sub.modulate.a = 0.0
+		sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
+		sub_tw.tween_property(sub, "position", sub.position + Vector2(0, -60), 1.5) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
+		sub_tw.chain().tween_callback(sub.queue_free)
+	last_fatal_perp = -1.0
+
 	# V1.5 — le vainqueur sent le kill : double coup dans SA manette.
 	if killer and killer != self and killer.has_method("rumble_kill"):
 		killer.rumble_kill()

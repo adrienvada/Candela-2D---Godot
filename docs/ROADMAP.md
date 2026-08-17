@@ -993,6 +993,11 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 **Export macOS**
 - `textures/vram_compression/import_etc2_astc=true` est obligatoire dans
   `project.godot`, sinon l'export refuse de démarrer.
+- `await get_tree().process_frame` reprend AVANT le rendu de la frame
+  courante (le signal part en début de phase process) : pour figer ou capturer
+  une image qui doit CONTENIR ce que la frame dessine, attendre
+  `RenderingServer.frame_post_draw`. Payé une fois sur le gel du kill (V2.1),
+  qui figeait la frame d'avant l'impact.
 - Ne pas utiliser `custom_template` : installer les modèles d'exportation depuis
   le gestionnaire intégré de Godot (un téléchargement manuel corrompu avait fait
   croire à un bug de l'éditeur).
@@ -1088,19 +1093,34 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 - **V2.1 Gel d'exécution** — 150 ms de gel du rendu au moment fatal, puis
   chute dans le bullet-time existant. Pas de `time_scale` (piège connu).
+  **✅ Fait** — gel du rendu seul (`render_target_update_mode` des deux
+  viewports), 150 ms temps réel, une frame de délai pour figer le trait V2.6 ;
+  restauration avant tout test de jeton + ceinture dans `_abort_killcam`.
 - **V2.2 Le noir gagne** — à la mort, les lumières s'éteignent une à une en
   400 ms, la torche du tueur en dernier, puis le death flash existant.
+  **✅ Fait** — rétrodiffusion (0,15 s) puis faisceau (0,25 s) du vainqueur,
+  la victime étant déjà éteinte par `die()` ; les énergies remontent seules
+  à la manche suivante.
 - **V2.3 Jingle de kill** — 2 notes dans la tonalité du thème, variante si le
   match gagne la session. — *assets : 1-2 stingers accordés.*
 - **V2.4 Onde de choc lumineuse** — cercle plein écran depuis l'impact, 400 ms.
+  **✅ Fait** — `kill_shockwave.gd`, double anneau additif dessiné (aucune
+  PointLight2D : une grande lumière recalculerait toutes les ombres),
+  traverse les murs par design — ponctuation, pas information.
 - **V2.5 « FATAL — ARBALÈTE »** — le label FATAL s'enrichit du nom de l'arme.
+  **✅ Fait.**
 - **V2.6 Trait sur-exposé** — la balle fatale laisse son trait HDR 1 frame.
+  **✅ Fait** — largeur et énergie triplées sur kill jugé localement, fondu
+  ralenti à 0,35 s pour que le gel V2.1 fige l'image incandescente.
 - **V2.7 Tampon final** — stamp « KILL — 04:12 » sur l'arrêt sur image de 2 s.
+  **✅ Fait** — CanvasLayer propre à GameState (ui.gd est à l'autre session),
+  nettoyé par `_abort_killcam` sur tous les chemins de sortie.
 - **V2.8 Acouphène de mort** — sifflement + monde étouffé 1 s côté perdant. —
   *assets : 1 sample.*
 - **V2.9 « Effleuré : 13 px »** — afficher au perdant la distance
   perpendiculaire du tir fatal (la formule de dégâts la connaît). Le « j'y
-  étais presque » est le moteur du rematch.
+  étais presque » est le moteur du rematch. **✅ Fait** — écrit par la balle
+  fatale simulée localement, consommé par `die()`, jamais réutilisé.
 
 ### Vague 3 — Le rematch et le rythme (là où « encore une » se décide)
 
@@ -1140,10 +1160,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
   presse pendant le rechargement. — *assets : 1 sample.*
 - **V4.5 Chiffres de dégâts avec poids** — pop TRANS_BACK, taille ∝ dégâts,
-  or si ≥ 50.
+  or si ≥ 50. **✅ Fait** — 20→44 px proportionnels, or au seuil de 50.
 - **V4.6 Zoom-kick à l'encaisse** — 2 % de dézoom 100 ms côté blessé.
+  **✅ Fait** — sur la perte de PV autoritaire, jamais prédite.
 - **V4.7 Vignette battante** — la vignette rouge pulse à 170 BPM sous 30 HP,
-  synchrone du stem heartbeat.
+  synchrone du stem heartbeat. **✅ Fait** — même battement que le pouls
+  haptique V1.5 : un seul cœur pilote l'image, la main et le stem.
 - **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
   *assets : 3-4 samples.*
 - **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact. —
@@ -1153,8 +1175,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
   (déjà sans ombre) : toucher, c'est voir.
 - **V4.12 Recul de caméra directionnel** — kick 4-6 px opposé au tir.
+  **✅ Fait** — 6 px résorbés en ~100 ms, additionnés au shake existant.
 - **V4.13 Fumée de bouche** — 2-3 particules additives dérivant 1 s.
 - **V4.14 Le sol répond** — décal lumineux 1 frame sous le tireur.
+  **✅ Fait** — écho lumineux au sol, décor seulement, sans ombre.
 - **V4.15 Duck des pas sous le tir** — −6 dB pendant 300 ms après un coup de
   feu.
 - **V4.16 Priorités du pool SFX** — protéger les sons « récit » (kill, hit
@@ -1212,23 +1236,39 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   lumière : le noir garde une mémoire courte, la traque devient pistage. Info
   nouvelle mais symétrique — la plus forte idée « mécanique » de la liste. —
   *assets : 2-3 sprites (ou procédural).* **→ Activé, en procédural.**
+  **✅ Fait** — `footprint.gd`, semelle sombre éclairée (jamais unshaded :
+  seule une lumière la révèle), duplicata par viewport comme le sang, TTL
+  2 s dont la fraîcheur se lit à l'alpha. Au passage, le PAS lui-même (son +
+  empreinte) est passé sur la distance réellement parcourue, hors du bloc de
+  simulation : l'ancien code rendait les pas de l'adversaire inaudibles côté
+  client — asymétrie d'information préexistante, corrigée.
 - **D2 Bourdon d'aveuglement** — la nappe monte quand on n'a pas VU
   l'adversaire depuis X s (aucune info : c'est sa propre ignorance qui sonne).
   **→ Acté sur le principe ; attend les stems réels (V1.1).**
 - **D3 Extinction traînée** — la torche s'éteint en ~80 ms au lieu d'un coupé
-  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.**
+  sec : ~80 ms d'info en plus pour l'adversaire. **→ Activé.** **✅ Fait** —
+  `TORCH_FADE_OUT` dans player.gd, symétrique sur la torche répliquée.
 - **D4 Grésillement positionnel de torche** — audible à très courte portée par
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
   *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**
 - **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
   `bench_framerate` avant d'acter (1 % bas ≥ 120). **→ À implémenter derrière
   un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
+  **✅ Implémenté** (`pump_shockwave.gd` + `.gdshader`, drapeau
+  `--fx-shockwave`). À mesurer : 1 % bas en duel pompe contre pompe, drapeau
+  actif vs inactif — la recopie plein viewport ×2 est le coût dominant ; repli
+  identifié si la mesure échoue (COPY_MODE_RECT borné au quad, ÷15 de volume
+  copié).
 - **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
   auto-start. **→ Acté ; vit dans le hub, donc à implémenter par la session
   « menus » (Phase 5).**
 - **D7 Sang persistant entre matchs d'une session** — l'arène raconte la
   soirée (exige le plafond de taches déjà relevé comme fragilité).
   **→ Activé : plafond de taches d'abord, persistance ensuite.**
+  **✅ Fait** — l'enquête a montré que la persistance existait déjà (seul le
+  retour menu purge l'arène) : seul le plafond manquait. `MAX_STAINS = 120`,
+  éviction de la doyenne avant tout dépôt, robuste aux volées de pompe
+  (retrait de groupe immédiat, `queue_free` différé).
 
 ### Ressources à fournir (liste de courses consolidée)
 

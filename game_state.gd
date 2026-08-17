@@ -56,6 +56,16 @@ const KILLCAM_TORCH_ENERGY := 1.25
 const COUNTDOWN_DURATION := 3.0
 var countdown_left: float = 0.0
 
+## V2.1 — L'instant fatal : image figée ~150 ms. Seul le RENDU est suspendu
+## (render_target_update_mode des deux viewports) — jamais time_scale ni
+## l'arbre : un gel d'arbre en ligne est un piège connu, et la simulation doit
+## continuer à capturer le sang derrière l'image figée.
+const KILL_FREEZE_DURATION := 0.15
+## V2.2 — Puis le noir gagne : rétrodiffusion du vainqueur d'abord, faisceau
+## ensuite — sa torche est la dernière lumière à mourir.
+const KILL_DARKNESS_BODY := 0.15
+const KILL_DARKNESS_TORCH := 0.25
+
 # [Client] Tirs rendus localement avant l'accord de l'hôte, horodatés pour être
 # dédupliqués à l'arrivée de la balle officielle.
 const PREDICTED_SHOT_TTL_MS := 1000
@@ -125,6 +135,24 @@ var current_snap
 
 var cam1_shake_time: float = 0.0
 var cam2_shake_time: float = 0.0
+
+## V4.12 — Recul directionnel : la caméra du tireur encaisse quelques pixels
+## dans le dos du tir, résorbés en ~100 ms. S'additionne au shake aléatoire.
+var _cam_kick: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
+
+func camera_shot_kick(pid: int, dir: Vector2) -> void:
+	if pid < 0 or pid > 1: return
+	_cam_kick[pid] = -dir * 6.0
+
+## V4.6 — Encaisser se sent au ventre : bref dézoom de la caméra du blessé,
+## déclenché par la perte de PV autoritaire (rpc_update_hp), jamais prédite.
+func camera_hit_kick(pid: int) -> void:
+	if not round_active: return
+	var cam: Camera2D = cam1 if pid == 0 else cam2
+	if cam == null: return
+	var tw := create_tween()
+	tw.tween_property(cam, "zoom", Vector2(0.98, 0.98), 0.04)
+	tw.tween_property(cam, "zoom", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 func _ready():
 	add_to_group("game_state")
@@ -590,6 +618,8 @@ func _start_round():
 	p2.get_node("VisualReveal").show()
 	cam1.global_position = p1.global_position
 	cam2.global_position = p2.global_position
+	p1.reset_step_tracker()
+	p2.reset_step_tracker()
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if multiplayer.get_peers().size() == 0:
@@ -698,6 +728,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.global_position = _get_spawn_position(1)
 	p1.rotation = 0
 	p2.rotation = PI
+	# Après la téléportation au spawn : le détecteur de pas et la distance du
+	# tir fatal repartent de zéro (pas fantôme et « à N px » périmé sinon).
+	p1.reset_step_tracker()
+	p2.reset_step_tracker()
 	time_left = round_time
 	round_active = true
 	game_over = false
@@ -754,17 +788,21 @@ func _process(delta):
 		cam1.global_position = p1.global_position
 		cam2.global_position = p2.global_position
 		
+	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
+	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
+	_cam_kick[1] = _cam_kick[1].move_toward(Vector2.ZERO, delta * 60.0)
+
 	if cam1_shake_time > 0:
 		cam1_shake_time -= delta
-		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[0]
 	else:
-		cam1.offset = Vector2.ZERO
-		
+		cam1.offset = _cam_kick[0]
+
 	if cam2_shake_time > 0:
 		cam2_shake_time -= delta
-		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[1]
 	else:
-		cam2.offset = Vector2.ZERO
+		cam2.offset = _cam_kick[1]
 		
 	if ReplaySystem.recording:
 		ReplaySystem.record_frame(p1, p2, bullet_container, delta)
@@ -978,10 +1016,21 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 
 	if not spawn_nodes: return
 
+	# D5 (drapeau --fx-shockwave) : onde de distorsion d'air du pompe. UNE par
+	# VOLÉE — la boucle des plombs est déjà déroulée — et `count > 1` est la
+	# signature même du pompe (projectile_count = 5, seule arme à volée). Placé
+	# après le garde spawn_nodes : chez le client, la volée officielle déjà
+	# rendue par la prédiction ne rejoue pas l'onde. La killcam passe par
+	# _on_replay_spawn_bullet, jamais ici. Hors drapeau, l'appel ne fait rien.
+	if count > 1:
+		PumpShockwave.spawn_if_enabled(arena, pos)
+
 	if shooter == p1:
 		cam1_shake_time = 0.1
+		camera_shot_kick(0, Vector2(cos(rot), sin(rot)))
 	elif shooter == p2:
 		cam2_shake_time = 0.1
+		camera_shot_kick(1, Vector2(cos(rot), sin(rot)))
 
 	if shooter.has_method("trigger_shoot_visuals"):
 		shooter.trigger_shoot_visuals()
@@ -1112,7 +1161,47 @@ func _do_end_round(winner_id: int):
 	else:
 		AudioManager.play_speaker("spk_draw")
 
-	
+	if winner_id != -1:
+		# V2.1 — attendre que la frame de l'impact soit DESSINÉE avant de geler.
+		# Piège vérifié en revue : `process_frame` est émis en début de phase
+		# process, AVANT le rendu — geler là fige la frame d'avant l'impact
+		# (balle en vol, victime debout). `frame_post_draw` reprend juste après
+		# le draw de la frame qui contient le trait sur-exposé (V2.6).
+		await RenderingServer.frame_post_draw
+		if token != _round_token: return
+		vp1.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		vp2.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		# Temps réel : le gel ne dépend pas d'un éventuel time_scale résiduel.
+		await get_tree().create_timer(KILL_FREEZE_DURATION, true, false, true).timeout
+		# Rétablir AVANT le test de jeton : une manche relancée pendant le gel
+		# ne doit jamais hériter d'un viewport éteint.
+		vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		if token != _round_token: return
+
+		# V2.2 — le noir gagne. La victime est déjà éteinte par die() ; la
+		# lumière du vainqueur meurt en deux temps — rétrodiffusion, puis
+		# faisceau — et l'arène retombe dans le noir total avant la killcam.
+		# Les énergies remontent seules à la manche suivante : la boucle
+		# physique du joueur les fait converger vers leur valeur de jeu.
+		var winner: Player = p1 if winner_id == 0 else p2
+		if is_instance_valid(winner):
+			var tw_dark := create_tween()
+			tw_dark.tween_property(winner.body_light, "energy", 0.0, KILL_DARKNESS_BODY)
+			tw_dark.tween_property(winner.flashlight, "energy", 0.0, KILL_DARKNESS_TORCH)
+			tw_dark.tween_callback(func():
+				if is_instance_valid(winner):
+					winner.flashlight.enabled = false
+					winner.body_light.enabled = false)
+
+		# V2.4 — l'onde de choc du kill traverse l'arène depuis le corps, dans
+		# le noir fraîchement gagné. Autonome : elle s'anime et se libère seule.
+		var victim: Player = p2 if winner_id == 0 else p1
+		if is_instance_valid(victim):
+			var shock := KillShockwave.new()
+			shock.global_position = victim.global_position
+			arena.add_child(shock)
+
 	if winner_id != -1:
 		# Wait 1.5 seconds to capture blood physics and reaction!
 		await get_tree().create_timer(1.5).timeout
@@ -1145,6 +1234,9 @@ func _do_end_round(winner_id: int):
 
 		# Hide killcam UI but KEEP the freeze frame
 		ui.hide_killcam()
+
+		# V2.7 — le tampon du kill claque sur l'arrêt sur image.
+		_spawn_kill_stamp(round_time - time_left)
 
 		# Attendre 2 secondes supplémentaires sur l'arrêt sur image avant d'afficher le menu de fin
 		await get_tree().create_timer(2.0).timeout
@@ -1234,12 +1326,58 @@ func _mode_label() -> String:
 		NetworkManager.GameMode.ONLINE_CLIENT: return "en_ligne_client"
 		_: return "local"
 
+## V2.7 — Tampon « KILL — mm:ss » qui claque sur l'arrêt sur image de fin de
+## killcam. CanvasLayer à part : ui.gd appartient à l'autre session, et ce
+## tampon vit exactement le temps de l'arrêt sur image.
+var _kill_stamp: CanvasLayer
+
+func _spawn_kill_stamp(elapsed: float) -> void:
+	_clear_kill_stamp()
+	_kill_stamp = CanvasLayer.new()
+	_kill_stamp.layer = 95
+	add_child(_kill_stamp)
+
+	var lbl := Label.new()
+	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
+	var settings := LabelSettings.new()
+	settings.font_size = 64
+	settings.font_color = Color(1.0, 0.1, 0.25)
+	settings.outline_size = 10
+	settings.outline_color = Color.BLACK
+	lbl.label_settings = settings
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.pivot_offset = get_viewport().get_visible_rect().size / 2.0
+	lbl.rotation = -0.06
+	_kill_stamp.add_child(lbl)
+
+	# Le claquement : gros, puis en place — l'inertie d'un tampon encreur.
+	lbl.scale = Vector2(2.6, 2.6)
+	lbl.modulate.a = 0.0
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
+	tw.parallel().tween_property(lbl, "scale", Vector2.ONE, 0.12) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(1.7)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
+	tw.tween_callback(_clear_kill_stamp)
+
+func _clear_kill_stamp() -> void:
+	if is_instance_valid(_kill_stamp):
+		_kill_stamp.queue_free()
+	_kill_stamp = null
+
 ## Sortie inconditionnelle de la killcam. Le ralenti est un réglage global du
 ## moteur : l'oublier sur un chemin de sortie laisse tout le jeu à 3 % de sa
 ## vitesse, menus compris.
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
 	Engine.time_scale = 1.0
+	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé.
+	vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_clear_kill_stamp()
 	ui.hide_killcam()
 
 ## [Hôte] Rejoue ce qui a été reçu pendant la séquence de fin, une fois l'écran
