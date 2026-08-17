@@ -671,6 +671,37 @@ de droite est libéré pour ce qui mérite d'y être.
 **Tout est aligné en haut**, des deux côtés. Un contenu centré verticalement saute
 d'un écran à l'autre selon sa hauteur, et le regard doit le rattraper à chaque fois.
 
+#### Corrections du 2026-08-17 (nuit)
+
+**« Quitter » reprend le style ordinaire.** Il portait le style plein des
+lanceurs de match : il criait plus fort que ce qui démarre une partie, alors
+qu'il ne fait que fermer le jeu.
+
+**La bascule INTERNET / RÉSEAU LOCAL ne s'affiche plus du tout.** Entrer par
+« match privé en ligne » ou par « en local » *est* le choix de transport ; la
+reproposer dans le panneau remettait en question une décision déjà prise. Elle
+reste dans l'arbre, dans un conteneur caché, parce que `_refresh_lobby_block()`
+lit encore son état — la retirer vraiment demanderait de réécrire les quatre
+combinaisons de mode et de transport.
+
+#### Ce qui reste à faire sur les menus — demandé, pas encore livré
+
+Trois choses, dans l'ordre de gêne :
+
+1. **La galerie de cartes ne doit pas être un écran.** Survoler « Changer de
+   carte » devrait remplir le panneau de droite avec les vignettes, et c'est là
+   qu'on choisirait — avec un raccourci vers l'éditeur en bas. Aujourd'hui elle
+   descend d'un cran, ce qui fait payer un aller-retour pour un choix qui devrait
+   se voir. Demande une entrée d'information portant un contenu riche, ce que le
+   hub ne sait pas encore faire par entrée (seulement par écran).
+2. **Contrôles et Affichage ne sont pas des listes.** Ils affichent leurs blocs
+   dans la colonne de gauche au lieu de présenter une liste d'entrées dont chacune
+   remplit la droite. Ils sont les deux derniers écrans à ne pas suivre la
+   grammaire du hub.
+3. **La restructuration des salons** — créer le code EOS sur un bouton plutôt
+   qu'au lancement, et afficher la liste des joueurs présents. Ce n'est pas de la
+   mise en page : c'est déplacer le moment où le salon s'ouvre, donc du réseau.
+
 #### Ce qui reste de cette révision, et qui n'est pas cosmétique
 
 La restructuration des salons demandée en même temps **n'est pas faite** : créer

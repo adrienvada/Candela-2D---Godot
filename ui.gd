@@ -1764,7 +1764,12 @@ func _build_salon_aside() -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", GAP_S)
 	box.add_child(_build_map_card())
-	box.add_child(transport_hbox)
+	# Rangée hors de vue dans un conteneur caché : elle doit rester dans l'arbre
+	# pour que son état soit lisible, sans être proposée au joueur.
+	var cachette := Control.new()
+	cachette.hide()
+	cachette.add_child(transport_hbox)
+	box.add_child(cachette)
 	box.add_child(lobby_code_row)
 	box.add_child(host_ip_row)
 	var center := CenterContainer.new()
@@ -2209,7 +2214,11 @@ func _refresh_lobby_block() -> void:
 		join_input.hide()
 		return
 
-	transport_hbox.show()
+	# La bascule de transport ne se remontre JAMAIS : entrer par « en ligne » ou par
+	# « en local » EST le choix, et le reproposer ici remettrait en question une
+	# décision déjà prise. Elle reste dans l'arbre, cachée, parce que cette fonction
+	# lit encore son état — le retirer demanderait de réécrire les quatre
+	# combinaisons de mode et de transport.
 	lobby_status_label.show()
 
 	if mode == NetworkManager.GameMode.ONLINE_HOST:
