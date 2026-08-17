@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-17
+> Dernière mise à jour : 2026-08-17 (fin de journée)
 
 ---
 
@@ -32,7 +32,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17 |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🔵 À faire — un défaut de correction à traiter d'abord : rien ne distingue un match amical d'un match classé |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **En cours** — 8.1 déployée, le cœur et l'écran écrits et testés. **Non raccordé** : deux suites sortent en segfault à cause de l'extinction d'EOS, et l'autoload attend cette correction |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -885,7 +885,7 @@ En **local**, rien de tout cela ne s'applique : toutes les armes sont accessible
 
 ---
 
-## Phase 8 — Appariement : amical, classé, recherche automatique 🔵 À FAIRE
+## Phase 8 — Appariement : amical, classé, recherche automatique 🟡 EN COURS
 
 Les deux entrées « Chercher un match » sont grisées dans le hub depuis le
 2026-08-17. Cette phase les allume.
@@ -1730,26 +1730,36 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 > classement est en place, et la suite est le contenu — les menus d'abord, puis
 > les rangs, puis le déblocage d'armes (Phases 5 à 7).
 
-1. **Phase 5, étape 1 — séparer la pause du menu principal.** Point de départ de
-   la refonte : tant que les trois rôles partagent un panneau, chaque écran
-   ajouté coûte une règle de masquage de plus. Le forfait sur abandon doit y
-   survivre, test à l'appui.
-2. **Phase 5, étapes 2 et 3 — l'ossature du hub, puis le déplacement de
-   l'existant sous elle**, sans rien ajouter au passage.
-3. **Rejouer le journal local** pour les rapports que le réseau a perdus.
+1. **Donner la séquence d'extinction d'EOS aux deux suites d'appariement.**
+   `test_matchmaking` et `test_screen_matchmaking` passent toutes leurs
+   assertions et sortent en **139** dès que `eos_credentials.gd` est présent :
+   elles touchent `NetworkManager`, EOS démarre, et l'extinction croise
+   `EOS_Platform_Tick()`. C'est **le verrou de la Phase 8** — l'autoload
+   `Matchmaker` ne peut pas être déclaré avant, sous peine de propager le
+   segfault à toutes les suites.
+2. **Déclarer l'autoload, raccorder l'écran, ouvrir les deux entrées grisées.**
+   Une fois le point 1 levé, c'est mécanique : le contrat entre le cœur et
+   l'écran est écrit et la traduction d'instantané est en place.
+3. **Essayer l'appariement contre EOS**, à deux fenêtres avec
+   `--eos-ephemeral` (deux instances locales partagent un Device ID, donc un
+   PUID : chacune verrait le ticket de l'autre comme le sien). Le premier point à
+   vérifier est que `set_parameter` accepte des entiers avec
+   `GreaterThanOrEqual` sur l'attribut de classement — **tout le filtre de
+   fourchette repose là-dessus.**
+4. **Rejouer le journal local** pour les rapports que le réseau a perdus.
    `match_history.json` les a tous ; rien ne les remonte encore.
-4. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
+5. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
    échoué sans qu'on puisse conclure : les frappes synthétiques passent dans un
    champ de texte (chemin unicode) mais pas sur une action d'`InputMap` (chemin
    `keycode`). Rien n'indique un défaut, rien ne l'exclut — trente secondes à la
    main lèveraient le doute. **À lever avant la Phase 5** : une refonte des menus
    se valide à la main, et Échap en est le geste de sortie.
-5. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+6. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-6. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
+7. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
    connexion directe a toujours abouti), et la détection de déconnexion est
    lente des deux côtés.
-7. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
+8. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
    ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
 8. Le **game feel** (section dédiée, six vagues priorisées) accompagne les
    phases de contenu sans les bloquer : la Vague 1 réveille des systèmes déjà
