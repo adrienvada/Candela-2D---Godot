@@ -136,6 +136,24 @@ var current_snap
 var cam1_shake_time: float = 0.0
 var cam2_shake_time: float = 0.0
 
+## V4.12 — Recul directionnel : la caméra du tireur encaisse quelques pixels
+## dans le dos du tir, résorbés en ~100 ms. S'additionne au shake aléatoire.
+var _cam_kick: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
+
+func camera_shot_kick(pid: int, dir: Vector2) -> void:
+	if pid < 0 or pid > 1: return
+	_cam_kick[pid] = -dir * 6.0
+
+## V4.6 — Encaisser se sent au ventre : bref dézoom de la caméra du blessé,
+## déclenché par la perte de PV autoritaire (rpc_update_hp), jamais prédite.
+func camera_hit_kick(pid: int) -> void:
+	if not round_active: return
+	var cam: Camera2D = cam1 if pid == 0 else cam2
+	if cam == null: return
+	var tw := create_tween()
+	tw.tween_property(cam, "zoom", Vector2(0.98, 0.98), 0.04)
+	tw.tween_property(cam, "zoom", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
 func _ready():
 	add_to_group("game_state")
 	AudioManager.play_music("music_menu")
@@ -770,17 +788,21 @@ func _process(delta):
 		cam1.global_position = p1.global_position
 		cam2.global_position = p2.global_position
 		
+	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
+	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
+	_cam_kick[1] = _cam_kick[1].move_toward(Vector2.ZERO, delta * 60.0)
+
 	if cam1_shake_time > 0:
 		cam1_shake_time -= delta
-		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[0]
 	else:
-		cam1.offset = Vector2.ZERO
-		
+		cam1.offset = _cam_kick[0]
+
 	if cam2_shake_time > 0:
 		cam2_shake_time -= delta
-		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0
+		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[1]
 	else:
-		cam2.offset = Vector2.ZERO
+		cam2.offset = _cam_kick[1]
 		
 	if ReplaySystem.recording:
 		ReplaySystem.record_frame(p1, p2, bullet_container, delta)
@@ -1005,8 +1027,10 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 
 	if shooter == p1:
 		cam1_shake_time = 0.1
+		camera_shot_kick(0, Vector2(cos(rot), sin(rot)))
 	elif shooter == p2:
 		cam2_shake_time = 0.1
+		camera_shot_kick(1, Vector2(cos(rot), sin(rot)))
 
 	if shooter.has_method("trigger_shoot_visuals"):
 		shooter.trigger_shoot_visuals()

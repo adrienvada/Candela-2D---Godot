@@ -455,6 +455,13 @@ func _process(delta):
 			if _low_hp_pulse_accum >= RUMBLE_PULSE_PERIOD:
 				_low_hp_pulse_accum = 0.0
 				_rumble(RUMBLE_PULSE_WEAK, 0.0, 0.08)
+				# V4.7 — la vignette bat au même cœur que la manette : un seul
+				# battement pilote l'image, la main — et le stem heartbeat.
+				if vignette_mat:
+					vignette_mat.set_shader_parameter("intensity", 0.55)
+					var tw_v = create_tween()
+					tw_v.tween_method(func(v): vignette_mat.set_shader_parameter("intensity", v),
+						0.55, 0.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	else:
 		_low_hp_pulse_accum = 0.0
 
@@ -882,6 +889,20 @@ func trigger_shoot_visuals():
 	
 	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
 
+	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
+	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
+	# rôle, ceci n'est que son écho au sol.
+	var ground_flash := PointLight2D.new()
+	ground_flash.texture = LightTextures.radial(200)
+	ground_flash.color = Color(1.0, 0.85, 0.5)
+	ground_flash.energy = 1.2
+	ground_flash.shadow_enabled = false
+	ground_flash.range_item_cull_mask = 1
+	add_child(ground_flash)
+	var tw_g := create_tween()
+	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
+	tw_g.tween_callback(ground_flash.queue_free)
+
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return
 	
@@ -911,8 +932,12 @@ func take_damage(amount: float, source_player: Node2D):
 func rpc_update_hp(new_hp: float, source_id: int):
 	# V1.5 — l'impact se prend au ventre : vibration moyenne sur toute perte de
 	# PV, branchée ici (valeur autoritaire) et non sur la balle prédite.
+	# V4.6 — et la caméra du blessé encaisse un bref dézoom, même source.
 	if new_hp < hp:
 		_rumble(RUMBLE_HIT_WEAK, RUMBLE_HIT_STRONG, 0.25)
+		var gs = get_tree().get_first_node_in_group("game_state")
+		if gs and gs.has_method("camera_hit_kick"):
+			gs.camera_hit_kick(player_id)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0
@@ -968,6 +993,10 @@ func die(killer: Node2D):
 	
 	var flash_rect = ColorRect.new()
 	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Équité (signalé par la session « menus ») : sans visibility_layer, le
+	# bit 1 par défaut rend dans les DEUX vues — le tueur se prenait 600 ms de
+	# blanc dans les yeux. Le flash n'appartient qu'à l'écran du mort.
+	flash_rect.visibility_layer = 2 if player_id == 0 else 4
 	
 	var mat = ShaderMaterial.new()
 	mat.shader = SHADER_DEATH_FLASH

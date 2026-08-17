@@ -323,8 +323,16 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 	lbl.text = str(amount)
 	
 	var settings = LabelSettings.new()
-	settings.font_size = 36 if amount >= 40 else 24
-	settings.font_color = Color(1.0, 0.2, 0.2) if amount >= 40 else Color(1.0, 0.7, 0.2)
+	# V4.5 — le poids du chiffre EST l'information : taille proportionnelle aux
+	# dégâts (20 px pour un effleurement, 44 px pour un carreau d'arbalète), or
+	# au seuil des gros coups — 50, un demi-joueur.
+	settings.font_size = int(lerpf(20.0, 44.0, clampf(amount / 80.0, 0.0, 1.0)))
+	if amount >= 50:
+		settings.font_color = Color(1.0, 0.85, 0.2)
+	elif amount >= 40:
+		settings.font_color = Color(1.0, 0.2, 0.2)
+	else:
+		settings.font_color = Color(1.0, 0.7, 0.2)
 	settings.outline_size = 8
 	settings.outline_color = Color.BLACK
 	settings.shadow_size = 4

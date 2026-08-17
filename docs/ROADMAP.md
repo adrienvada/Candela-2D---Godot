@@ -1127,10 +1127,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
   presse pendant le rechargement. — *assets : 1 sample.*
 - **V4.5 Chiffres de dégâts avec poids** — pop TRANS_BACK, taille ∝ dégâts,
-  or si ≥ 50.
+  or si ≥ 50. **✅ Fait** — 20→44 px proportionnels, or au seuil de 50.
 - **V4.6 Zoom-kick à l'encaisse** — 2 % de dézoom 100 ms côté blessé.
+  **✅ Fait** — sur la perte de PV autoritaire, jamais prédite.
 - **V4.7 Vignette battante** — la vignette rouge pulse à 170 BPM sous 30 HP,
-  synchrone du stem heartbeat.
+  synchrone du stem heartbeat. **✅ Fait** — même battement que le pouls
+  haptique V1.5 : un seul cœur pilote l'image, la main et le stem.
 - **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
   *assets : 3-4 samples.*
 - **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact. —
@@ -1140,8 +1142,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
   (déjà sans ombre) : toucher, c'est voir.
 - **V4.12 Recul de caméra directionnel** — kick 4-6 px opposé au tir.
+  **✅ Fait** — 6 px résorbés en ~100 ms, additionnés au shake existant.
 - **V4.13 Fumée de bouche** — 2-3 particules additives dérivant 1 s.
 - **V4.14 Le sol répond** — décal lumineux 1 frame sous le tireur.
+  **✅ Fait** — écho lumineux au sol, décor seulement, sans ombre.
 - **V4.15 Duck des pas sous le tir** — −6 dB pendant 300 ms après un coup de
   feu.
 - **V4.16 Priorités du pool SFX** — protéger les sons « récit » (kill, hit
