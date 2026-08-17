@@ -156,6 +156,78 @@ Deux choses apprises en le faisant, qui ne se devinent pas :
 
 ---
 
+# Salon ouvert depuis le menu — test à deux fenêtres
+
+Depuis `0e16a27`, le salon s'ouvre **avant** le match : un bouton dans le panneau
+de droite, la liste des joueurs au-dessus, et le code affiché pendant qu'on est
+encore dans le menu.
+
+**Ce que ce test cherche.** L'hôte peut désormais être devant sa liste de joueurs
+quand l'adversaire arrive — sans être passé par le chemin qui prépare la partie.
+Le client, lui, démarre sa manche dès la connexion. Si la préparation côté hôte
+manque, **P2 reste piloté par le clavier de l'hôte au lieu des commandes reçues,
+et l'hôte joue derrière son propre menu.** C'est le scénario à provoquer.
+
+## Commencer par le réseau local
+
+Même logique de salon sans Epic dans les pattes : ni identité éphémère, ni code à
+recopier, ni délai de recherche. Si ça casse là, ce n'est pas le réseau.
+
+Deux fenêtres, sans drapeau :
+
+```bash
+godot --path . --resolution 720x405 --position 0,120
+```
+
+```bash
+godot --path . --resolution 720x405 --position 760,120
+```
+
+**A (hôte)** — `1V1 AMICAL` → `MATCH PRIVÉ EN LOCAL` → `CRÉER`, puis
+**CRÉER LE SALON** dans le panneau de droite. Le bouton passe à `SALON OUVERT` et
+se grise, la liste affiche « Vous — hôte » et « En attente d'un adversaire… », et
+l'adresse IP s'affiche. **Aucune partie n'a démarré** — c'est tout l'objet du
+changement.
+
+**B (invité)** — `1V1 AMICAL` → `MATCH PRIVÉ EN LOCAL` → `REJOINDRE`, saisir
+`127.0.0.1` à droite, puis `REJOINDRE LE SALON`.
+
+**Revenir sur A sans y toucher** : la ligne doit passer à
+**« Adversaire — connecté »** pendant que l'hôte est encore dans son menu. C'est
+le contrôle central — la liste de joueurs vit en dehors de la partie.
+
+Puis `LANCER LE MATCH` sur A.
+
+## Les quatre contrôles
+
+1. **P2 répond-il au bon clavier ?** Faire bouger le joueur de la fenêtre B : il
+   doit bouger chez A aussi. S'il ne répond qu'au clavier de A, c'est le défaut
+   décrit en tête.
+2. **L'hôte est-il sorti de son menu ?** Aucun reste de menu par-dessus la partie.
+3. **Le salon ne se réouvre pas par-dessus le pair.** `CRÉER LE SALON` puis
+   `LANCER LE MATCH` : si le lancement réhébergeait, il remplacerait le pair vivant
+   et B serait éjecté au démarrage.
+4. **Quitter l'écran referme le salon.** Recommencer, et faire `‹ RETOUR` chez A
+   **avant** que B ne rejoigne : B doit alors échouer à se connecter. Un code
+   publié derrière soi ferait attendre un adversaire devant une porte que plus
+   personne ne garde.
+
+## Puis la variante Internet
+
+Mêmes gestes par `MATCH PRIVÉ EN LIGNE`, avec `-- --eos-ephemeral` sur les deux
+fenêtres, la seconde lancée seulement après `EOS prêt` dans la console de la
+première (voir l'étape 1 de la section suivante). Le code à six caractères
+apparaît un instant **après** l'ouverture du salon : il arrive par
+`lobby_code_ready`, ce n'est pas un blocage.
+
+*Piège levé le 2026-08-18, à ne pas rechercher :* les deux écrans du salon local
+se déclaraient auparavant « écran partagé ». Tout le bloc lobby était masqué — ni
+bouton, ni adresse, ni liste — et `LANCER LE MATCH` y démarrait une partie en
+écran partagé. Corrigé par `_apply_lobby_intent()`, qui pose enfin mode **et**
+transport depuis la navigation.
+
+---
+
 # Appariement automatique — test à deux fenêtres
 
 Dernière inconnue de la Phase 8. La **découverte** est prouvée par le banc
@@ -163,20 +235,19 @@ ci-dessus ; ne le sont pas la jointure, la poignée de main par
 engagement-révélation, l'accord des deux camps sur qui héberge, et la connexion.
 Ces quatre-là ne s'exercent que par le jeu.
 
-## ⚠️ Prérequis bloquant — à vérifier avant de sortir deux fenêtres
+## La recherche n'ouvre pas d'écran — elle rend la main
 
-**Les deux entrées « CHERCHER UN MATCH EN LIGNE » doivent être ouvertes.** Au
-2026-08-18 elles sont encore grisées dans `ui.gd` : `SCREEN_MATCHMAKING` est
-déclaré et attaché au hub, mais **aucun `push` ne mène à l'écran**, et les deux
-entrées portent un motif `NOT_YET`. L'écran de recherche est donc inatteignable,
-et la séance ne peut pas avoir lieu.
+**Depuis `c7b0940`, chercher un match n'est plus une destination.** L'appui sur
+l'entrée lance la file et rend aussitôt la main : la recherche continue pendant
+qu'on parcourt les menus, et c'est un **bandeau en haut de l'écran**
+(`match_banner.gd`) qui dit où elle en est. `screen_matchmaking.gd` existe encore
+au dépôt mais n'est plus atteint par le hub.
 
-Le raccordement demande que les deux entrées visent `SCREEN_MATCHMAKING` et que
-le mode soit posé au passage — une seule instance d'écran sert les deux files,
-et `ScreenMatchmaking.set_ranked_queue(bool)` existe pour ça.
-
-Vérification en trente secondes avant de préparer quoi que ce soit : lancer le
-jeu, `1V1 AMICAL`, et regarder si l'entrée est cliquable.
+Conséquence pour cette séance : **tout se lit dans le bandeau**, jamais dans un
+écran dédié. Ses deux boutons gardent des places fixes — l'engagement d'un côté,
+le retrait de l'autre — pour qu'un bouton n'échange jamais son sens sous le
+doigt : `ANNULER` pendant la recherche, puis `CONFIRMER` / `REFUSER` quand un
+adversaire est trouvé.
 
 ## Déroulé
 
@@ -202,8 +273,9 @@ n'aurait de sens.
 
 ### Étape 4 — lancer les deux recherches
 
-Dans chaque fenêtre : `Accueil` → `1V1 AMICAL` → `CHERCHER UN MATCH EN LIGNE`,
-puis le bouton `CHERCHER UN MATCH`.
+Dans chaque fenêtre : `Accueil` → `1V1 AMICAL` → `CHERCHER UN MATCH EN LIGNE`.
+**L'appui suffit** — il n'y a pas d'écran à ouvrir ensuite. Le bandeau apparaît
+en haut et le menu reste utilisable.
 
 **Commencer par l'amical.** La file classée filtre sur une fourchette : une
 variable de plus pour rien tant que le reste n'est pas établi.
@@ -211,22 +283,35 @@ variable de plus pour rien tant que le reste n'est pas établi.
 Première passe immédiate, puis une toutes les 2 s. Une recherche infructueuse
 coûte ~3 s chez Epic : raisonner en pas de 5 secondes, pas en instantané.
 
+**À vérifier au passage, puisque c'est la raison d'être du bandeau :** naviguer
+dans les menus pendant que la recherche tourne. Elle ne doit ni s'arrêter ni
+disparaître de l'écran.
+
 ### Étape 5 — le contrôle qui compte
 
-À « Adversaire trouvé », **lire qui héberge dans les deux fenêtres**. Elles
-doivent nommer **le même hôte**. Si elles se contredisent, c'est un vrai défaut :
-chaque machine calcule la désignation avec elle-même en premier, et personne
-n'ouvrirait la connexion.
+À « Adversaire trouvé », **lire qui héberge dans les deux bandeaux**. Ils doivent
+nommer **le même hôte**. S'ils se contredisent, c'est un vrai défaut : chaque
+machine calcule la désignation avec elle-même en premier, et personne n'ouvrirait
+la connexion.
 
 ### Étape 6 — confirmer des deux côtés, en moins de 15 s
 
-Au-delà, l'échéance traite l'absence de réponse comme un refus — par conception,
-pour ne jamais attendre un signal qui ne viendra pas.
+`CONFIRMER` dans les deux bandeaux. Au-delà de l'échéance, l'absence de réponse
+est traitée comme un refus — par conception, pour ne jamais attendre un signal
+qui ne viendra pas.
 
-### Étape 7 — le match
+### Étape 7 — le match part tout seul
 
-À partir de là c'est le duel ordinaire, déjà validé en Phase 3 : déplacements,
-torche, tirs, dégâts des deux côtés.
+**Personne n'appuie sur « lancer ».** `game_state.gd` écoute `match_ready` et
+bascule les deux machines dans la partie. La carte est **tirée au hasard**
+(`MapData.select_random_map()`), elle ne sera donc pas celle du menu — c'est
+voulu.
+
+Le contrôle décisif est le même que pour les salons : **faire bouger le joueur
+d'une fenêtre et vérifier qu'il bouge dans l'autre.** Si l'un des deux ne répond
+qu'au clavier de sa propre fenêtre, les commandes ne circulent pas.
+
+Ensuite, duel ordinaire : torche, tirs, dégâts, killcam des deux côtés.
 
 ## Ce que cette séance ne prouvera pas
 
@@ -238,12 +323,15 @@ classement : les deux files partent alors sans filtre de fourchette. Les paliers
 
 | Symptôme | Piste |
 | --- | --- |
-| « Appariement automatique indisponible » | EOS pas prêt, ou transport ENet. F3 doit dire `Epic : prêt` |
+| « Appariement indisponible » dans le bandeau | EOS pas prêt, ou transport ENet. F3 doit dire `Epic : prêt` |
+| Aucun bandeau après l'appui | L'autoload `Matchmaker` ou le bandeau ne sont pas dans l'arbre |
 | Les deux PUID sont identiques | Fenêtres lancées trop près l'une de l'autre ; recommencer en attendant `EOS prêt` |
 | Les deux cherchent sans se trouver | Le banc à deux instances ci-dessus isole le problème sans interface |
 | « Adversaire trouvé » puis plus rien | Probablement un **ticket fantôme** : attendre le délai de garde de 45 s avant de conclure |
 | Une seule fenêtre trouve l'autre | Normal un instant : dans un couple, un seul des deux a le droit de rejoindre |
 | Les deux nomment un hôte différent | **Le vrai défaut à documenter** — relever les deux PUID et les deux journaux |
+| Les deux confirment, rien ne démarre | Le lien s'établit mais personne ne quitte le menu : regarder l'écoute de `match_ready` dans `game_state.gd` |
+| Un joueur ne répond qu'à son propre clavier | Les commandes ne circulent pas — même défaut que pour les salons |
 
 Le focus clavier reste sur la dernière fenêtre cliquée : cliquer dans une fenêtre
 avant d'y appuyer sur quoi que ce soit. Et les deux instances partagent le même
