@@ -1168,6 +1168,24 @@ Trois conséquences concrètes :
 En **local**, rien de tout cela ne s'applique : toutes les armes sont accessibles
 (décision du 2026-08-16), l'écran partagé n'étant pas classé.
 
+#### ⚠️ Le match amical en ligne n'est tranché ni dans un sens ni dans l'autre
+
+Question soulevée par Adrien le 2026-08-18, **en attente de sa décision**. L'amical
+en ligne n'est ni le classé ni le local : deux identités, deux rangs, aucun enjeu.
+Deux questions distinctes s'y posent, et elles se répondent séparément :
+
+1. **Les verrous de rang s'y appliquent-ils ?** Si non, l'amical devient la porte
+   de service — n'importe qui joue à l'Arbalète en choisissant « amical », et le
+   déblocage ne veut plus rien dire.
+2. **La règle du miroir s'y applique-t-elle ?** Sa justification est explicitement
+   compétitive. L'appliquer en amical priverait le mieux classé de ce qu'il a
+   gagné dans un match qui ne compte pas ; ne pas l'appliquer autorise un duel
+   déséquilibré entre amis.
+
+**Rien n'est écrit en code**, ce qui laisse le choix entier. À trancher avant
+d'implémenter la table arme ↔ rang, sous peine d'y figer une réponse par défaut
+que personne n'a choisie.
+
 ---
 
 ---
@@ -2044,10 +2062,25 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   chrono à l'arrêt, et un bouton PRÊT resté derrière lui.
   **Un contrôle doit interroger ce que le joueur perçoit**, pas l'état interne le
   plus proche. Ici : `ui._is_main_menu`, et non `round_active`.
-- **`PRÊT` n'est pas grisé quand l'hôte est seul, sur le chemin LAN.** Reproduit
-  le 2026-08-18 par A/B sur `test_online_match --host --transport enet` : identique
-  avant et après le correctif du jour, donc **préexistant**. Le banc à deux
-  instances tourne en EOS par défaut et ne le voit pas. Non corrigé.
+- **~~`PRÊT` n'est pas grisé quand l'hôte est seul sur le chemin LAN~~ — c'était
+  le banc, pas le jeu.** Corrigé le 2026-08-18 (`90dc148`). L'interface était
+  juste : les entrées étaient bien grisées, mais **invisibles**, le hub étant
+  resté à l'accueil. Deux défauts de banc derrière : son aide de test rendait
+  `false` faute de trouver l'entrée — ce qui se lit exactement comme « le bouton
+  est cliquable » — et le pilotage partait d'un écran que `show_main_menu()` avait
+  entre-temps remis à l'accueil.
+  **Ce que mon A/B pouvait établir et ce qu'il ne pouvait pas.** Lancer la même
+  commande avant et après un changement prouve « le code que je viens d'écrire
+  n'en est pas la cause ». Il **ne distingue pas** « défaut du jeu » de « défaut du
+  banc » — les deux sont également préexistants. J'en ai pourtant conclu à un
+  défaut du jeu, et je l'ai écrit ici. **Un contrôle qui échoue en accusant un code
+  qui n'a pas changé doit d'abord être suspecté lui-même.**
+- **Une attente asynchrone dans un banc masque les défauts de synchronisation de
+  ce qu'elle attend.** C'est ce qui explique que seul le LAN voyait le défaut
+  ci-dessus : l'attente de session EOS — jusqu'à trente secondes — laissait le
+  temps à la remise à zéro du menu de passer avant les contrôles, là où le LAN
+  n'attend rien. **Le chemin le plus rapide est le plus révélateur, et c'est en
+  général celui qu'on teste le moins.**
 
 **Fin de match en ligne**
 - **`await RenderingServer.frame_post_draw` n'est JAMAIS émis en `--headless`.**
