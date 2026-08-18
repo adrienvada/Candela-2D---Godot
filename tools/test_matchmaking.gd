@@ -104,7 +104,13 @@ class FauxBackend extends Node:
 	func local_identity_key() -> String:
 		return key
 
-	func queue_publish_async(mode_tag: String, rating: int, commitment: String) -> bool:
+	## La catégorie est le quatrième argument : le miroir en a besoin des deux
+	## camps, et le jeu ne sait pas la dériver d'un classement — elle est calculée
+	## par le serveur et seulement transportée.
+	var tiers_publies: Array[int] = []
+
+	func queue_publish_async(mode_tag: String, rating: int, commitment: String,
+			tier: int = 0) -> bool:
 		if slow_publish:
 			await debloque
 		if not publish_ok:
@@ -112,6 +118,7 @@ class FauxBackend extends Node:
 			return false
 		published += 1
 		commitments.append(commitment)
+		tiers_publies.append(tier)
 		journal.append("publish:%s:%d" % [mode_tag, rating])
 		return true
 
@@ -175,6 +182,7 @@ func _run() -> void:
 	_test_tirage_sans_biais()
 	_test_revanche()
 	await _test_annonceur()
+	await _test_categorie_transportee()
 	await _test_rejoignant()
 	await _test_fourchette_annoncee()
 	await _test_choix_du_candidat()
@@ -308,6 +316,48 @@ func _contract_methods() -> Array:
 
 ## L'appariement est monté avec son faux backend et l'horloge coupée : sans quoi
 ## un test d'expiration de quinze secondes durerait quinze secondes.
+## La catégorie de rang traverse-t-elle réellement l'appariement ?
+##
+## C'est ce qui rend la règle du miroir applicable : le ticket portait déjà le
+## classement, mais le jeu **ne sait pas** le convertir en catégorie — `rankOf`
+## vit côté serveur, et l'y dupliquer était exclu par décision. On transporte donc
+## le verdict, dans le ticket ET dans l'état de membre : celui qui trouve le
+## ticket lit le premier, l'annonceur — qui n'a jamais lu le ticket de celui qui
+## s'assied — lit le second.
+func _test_categorie_transportee() -> void:
+	print("\n[La catégorie voyage]")
+	var pair := _make("TIER")
+	var mm: Node = pair[0]
+	var faux: FauxBackend = pair[1]
+
+	mm.start_search(RANKED, 1180, false, 4)
+	await _settle()
+	_check("la catégorie part avec le ticket",
+		faux.tiers_publies.size() == 1 and faux.tiers_publies[0] == 4,
+		str(faux.tiers_publies))
+
+	# Celui qui s'assied dans notre ticket déclare la sienne par l'état de
+	# membre : sans ça l'annonceur ignorerait la catégorie de son adversaire, et
+	# le miroir ne tiendrait que d'un seul côté.
+	faux.queue_peer_state_changed.emit({
+		key = "AUTRE", nonce = "", rating = 900, tier = 2, accepted = false,
+	})
+	await _settle()
+	var snap: Dictionary = mm.pairing_snapshot()
+	if snap.is_empty():
+		snap = {"local_tier": mm._tier, "opponent_tier": mm._peer_tier}
+	_check("la mienne est retenue", int(snap.get("local_tier", -1)) == 4,
+		str(snap.get("local_tier")))
+	_check("celle de l'adversaire aussi", int(snap.get("opponent_tier", -1)) == 2,
+		str(snap.get("opponent_tier")))
+
+	# Et le miroir s'applique dessus : l'arsenal est celui du MOINS bien classé.
+	var loadout: GDScript = load("res://rank_loadout.gd")
+	_check("le miroir retient l'arsenal du moins bien classé",
+		loadout.mirrored(4, 2) == loadout.for_tier(2),
+		str(loadout.mirrored(4, 2)))
+	mm.queue_free()
+
 func _make(local_key: String = "ZZZZ") -> Array:
 	_seq += 1
 	var faux := FauxBackend.new()

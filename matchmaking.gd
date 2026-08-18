@@ -15,7 +15,8 @@
 ## Contrat du backend, dans le vocabulaire du jeu et non celui d'Epic :
 ##   matchmaking_supported() -> bool
 ##   local_identity_key() -> String
-##   queue_publish_async(mode_tag: String, rating: int, commitment: String) -> bool
+##   queue_publish_async(mode_tag: String, rating: int, commitment: String,
+##                        tier: int) -> bool
 ##   queue_search_async(mode_tag: String, min_rating: int, max_rating: int) -> Array
 ##   queue_join_async(id: String) -> bool
 ##   queue_declare_async(state: Dictionary) -> bool
@@ -152,6 +153,11 @@ var backend: Object = null
 var _mode: Mode = Mode.CASUAL
 var _rating: int = UNRATED_PRIOR
 var _rating_known: bool = false
+## Ma catégorie de rang, telle que le SERVEUR l'a rendue. Elle voyage dans le
+## ticket et dans l'état de membre : la règle du miroir a besoin de celle des DEUX
+## camps, et le jeu ne sait pas la dériver d'un classement — `rankOf` vit dans
+## `elo.ts`, par une décision actée pour que l'échelle n'ait qu'un propriétaire.
+var _tier: int = 0
 var _elapsed: float = 0.0
 var _step: int = -1
 var _sweep_accum: float = 0.0
@@ -171,6 +177,7 @@ var _as_joiner: bool = false
 var _deadline: float = 0.0
 var _peer_key: String = ""
 var _peer_rating: int = 0
+var _peer_tier: int = 0
 var _peer_commitment: String = ""
 var _peer_nonce: String = ""
 var _peer_accepted: bool = false
@@ -249,7 +256,8 @@ func is_supported() -> bool:
 ## fourchette, faute de savoir où placer le joueur.
 ## `resume` conserve le temps déjà attendu — c'est ce qui permet de repartir en
 ## file sans perdre son tour après un échec de lien.
-func start_search(p_mode: Mode, rating: int = -1, resume: bool = false) -> bool:
+func start_search(p_mode: Mode, rating: int = -1, resume: bool = false,
+		tier: int = 0) -> bool:
 	if state == State.SEARCHING or state == State.FOUND or state == State.AWAITING_ACCEPT:
 		last_error = "Une recherche est déjà en cours."
 		return false
@@ -260,6 +268,7 @@ func start_search(p_mode: Mode, rating: int = -1, resume: bool = false) -> bool:
 	_mode = p_mode
 	_rating_known = rating >= 0
 	_rating = rating if _rating_known else UNRATED_PRIOR
+	_tier = maxi(tier, 0)
 	if not resume:
 		_elapsed = 0.0
 		_handshakes_lost = 0
@@ -378,6 +387,11 @@ func pairing_snapshot() -> Dictionary:
 		local_key = _local_key,
 		opponent_key = _peer_key,
 		opponent_rating = _peer_rating,
+		# Les DEUX catégories : le miroir a besoin des deux pour désigner le moins
+		# bien classé, et l'écran de la sienne pour dire pourquoi l'arsenal a
+		# rétréci.
+		local_tier = _tier,
+		opponent_tier = _peer_tier,
 		ranked = _mode == Mode.RANKED,
 		local_hosts = _local_hosts,
 		local_accepted = _local_accepted,
@@ -445,7 +459,7 @@ func _half_width() -> int:
 func _publish_async() -> void:
 	_local_nonce = new_nonce()
 	var ok: bool = await backend.queue_publish_async(
-		QUEUE_TAGS[_mode], _rating, commit(_local_nonce))
+		QUEUE_TAGS[_mode], _rating, commit(_local_nonce), _tier)
 	if state != State.SEARCHING:
 		# Annulé pendant la publication — elle dure le temps d'un aller-retour
 		# chez Epic. Un ticket abandonné là resterait annoncé et apparierait
@@ -473,7 +487,8 @@ func _sweep_async() -> void:
 			if await backend.queue_join_async(String(pick.get("id", ""))):
 				if state == State.SEARCHING:
 					_engage(String(pick.get("key", "")), int(pick.get("rating", 0)),
-						true, String(pick.get("commitment", "")))
+						true, String(pick.get("commitment", "")),
+						int(pick.get("tier", 0)))
 				else:
 					# Annulé pendant la jointure : on occupe le rendez-vous de
 					# quelqu'un qui attend une poignée de main. Se lever tout de
@@ -535,11 +550,12 @@ func _in_range(rating: int) -> bool:
 # ===========================================================================
 
 func _engage(peer_key: String, peer_rating: int, as_joiner: bool,
-		peer_commitment: String) -> void:
+		peer_commitment: String, peer_tier: int = 0) -> void:
 	_engaged = true
 	_as_joiner = as_joiner
 	_peer_key = peer_key
 	_peer_rating = peer_rating
+	_peer_tier = peer_tier
 	_peer_commitment = peer_commitment
 	_peer_nonce = ""
 	_peer_accepted = false
@@ -565,11 +581,15 @@ func _on_peer_state_changed(peer: Dictionary) -> void:
 	var key := String(peer.get("key", ""))
 	if not _engaged:
 		# Quelqu'un s'est assis dans notre ticket : nous sommes l'annonceur.
-		_engage(key, int(peer.get("rating", 0)), false, "")
+		# L'annonceur n'a jamais lu le ticket de celui qui s'assied : sa catégorie
+		# arrive par l'état de MEMBRE, pas par l'attribut de salon.
+		_engage(key, int(peer.get("rating", 0)), false, "",
+			int(peer.get("tier", 0)))
 	elif key != _peer_key:
 		return
 
 	_peer_rating = int(peer.get("rating", _peer_rating))
+	_peer_tier = int(peer.get("tier", _peer_tier))
 	_peer_accepted = bool(peer.get("accepted", false))
 	# Le PREMIER nonce déclaré fait foi. Sans cette règle, l'autre camp pourrait
 	# en redéclarer un après avoir vu le nôtre, et choisir qui héberge.
@@ -600,6 +620,11 @@ func _declare_async() -> void:
 	await backend.queue_declare_async({
 		nonce = reveal,
 		rating = _rating,
+		# Sans elle, l'annonceur ignore la catégorie de celui qui vient de
+		# s'asseoir : il n'a jamais lu son ticket. La règle du miroir ne tiendrait
+		# alors que d'un côté — et le camp qui la calcule mal est celui qui
+		# afficherait un arsenal faux.
+		tier = _tier,
 		accepted = _local_accepted,
 	})
 	_declaring = false
@@ -687,6 +712,7 @@ func _clear_engagement() -> void:
 	_deadline = 0.0
 	_peer_key = ""
 	_peer_rating = 0
+	_peer_tier = 0
 	_peer_commitment = ""
 	_peer_nonce = ""
 	_peer_accepted = false

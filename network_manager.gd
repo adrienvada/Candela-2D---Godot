@@ -58,12 +58,27 @@ const EOS_CODE_ATTEMPTS := 3
 const EOS_QUEUE_ATTRIBUTE := "MMQUEUE"
 const EOS_QUEUE_RATING_ATTRIBUTE := "MMELO"
 const EOS_QUEUE_COMMIT_ATTRIBUTE := "MMCOMMIT"
+## La CATÉGORIE de rang, transportée telle que le serveur l'a calculée.
+##
+## Le ticket portait déjà le classement, qui sert à filtrer les fourchettes — mais
+## la règle du miroir a besoin de la catégorie, et le jeu **ne sait pas** convertir
+## l'un en l'autre : `rankOf` vit dans `elo.ts`, par une décision actée pour que
+## l'échelle n'ait qu'un seul propriétaire. On transporte donc le verdict du
+## serveur plutôt que de le recalculer — c'est la seule façon d'appliquer le
+## miroir sans dupliquer l'échelle.
+const EOS_QUEUE_TIER_ATTRIBUTE := "MMTIER"
 ## Attributs de MEMBRE : ils portent la poignée de main, et se propagent par
 ## notification de salon — pas par l'index de recherche, dont la latence se
 ## compte en secondes.
 const EOS_MEMBER_NONCE_ATTRIBUTE := "MMNONCE"
 const EOS_MEMBER_RATING_ATTRIBUTE := "MMMELO"
 const EOS_MEMBER_ACCEPT_ATTRIBUTE := "MMACCEPT"
+## La catégorie, déclarée aussi en attribut de MEMBRE. L'attribut de salon ne
+## renseigne que celui qui a trouvé le ticket ; l'annonceur, lui, voit arriver
+## quelqu'un dont il n'a jamais lu le ticket — sans cette déclaration il ignore
+## la catégorie de son adversaire, et la règle du miroir ne tiendrait que d'un
+## seul côté.
+const EOS_MEMBER_TIER_ATTRIBUTE := "MMMTIER"
 
 ## Sondages de l'index d'Epic, côté hôte, avant d'annoncer le code au joueur.
 ## Une recherche qui ne trouve rien coûte ~3,1 s : c'est trop cher pour la
@@ -471,7 +486,8 @@ func local_identity_key() -> String:
 ## Publie le ticket d'attente. `commitment` est l'engagement de tirage : il est
 ## public AVANT que le moindre adversaire soit connu, et c'est ce qui empêche son
 ## auteur de choisir qui hébergera.
-func queue_publish_async(mode_tag: String, rating: int, commitment: String) -> bool:
+func queue_publish_async(mode_tag: String, rating: int, commitment: String,
+		tier: int = 0) -> bool:
 	if not matchmaking_supported() or _eos_shutting_down:
 		return false
 	if _queue_lobby != null:
@@ -495,6 +511,9 @@ func queue_publish_async(mode_tag: String, rating: int, commitment: String) -> b
 	lobby.add_attribute(EOS_PROTOCOL_ATTRIBUTE, Protocol.VERSION)
 	lobby.add_attribute(EOS_QUEUE_RATING_ATTRIBUTE, rating)
 	lobby.add_attribute(EOS_QUEUE_COMMIT_ATTRIBUTE, commitment)
+	# Zéro pour un joueur sans catégorie : `RankLoadout` le traite comme la
+	# première, et un joueur jamais classé n'a effectivement rien mérité.
+	lobby.add_attribute(EOS_QUEUE_TIER_ATTRIBUTE, tier)
 	if not await lobby.update_async():
 		last_error = "Publication du ticket d'attente refusée par Epic."
 		lobby.destroy_async()
@@ -550,6 +569,7 @@ func queue_search_async(mode_tag: String, min_rating: int, max_rating: int) -> A
 			key = lobby.owner_product_user_id,
 			rating = int(_lobby_attribute(lobby, EOS_QUEUE_RATING_ATTRIBUTE, 0)),
 			commitment = String(_lobby_attribute(lobby, EOS_QUEUE_COMMIT_ATTRIBUTE, "")),
+			tier = int(_lobby_attribute(lobby, EOS_QUEUE_TIER_ATTRIBUTE, 0)),
 		})
 	return out
 
@@ -579,6 +599,7 @@ func queue_declare_async(state: Dictionary) -> bool:
 		return false
 	lobby.add_current_member_attribute(EOS_MEMBER_NONCE_ATTRIBUTE, String(state.get("nonce", "")))
 	lobby.add_current_member_attribute(EOS_MEMBER_RATING_ATTRIBUTE, int(state.get("rating", 0)))
+	lobby.add_current_member_attribute(EOS_MEMBER_TIER_ATTRIBUTE, int(state.get("tier", 0)))
 	lobby.add_current_member_attribute(EOS_MEMBER_ACCEPT_ATTRIBUTE,
 		1 if bool(state.get("accepted", false)) else 0)
 	return await lobby.update_async()
@@ -644,6 +665,7 @@ func _on_queue_lobby_updated() -> void:
 			key = mem.product_user_id,
 			nonce = String(_member_attribute(mem, EOS_MEMBER_NONCE_ATTRIBUTE, "")),
 			rating = int(_member_attribute(mem, EOS_MEMBER_RATING_ATTRIBUTE, 0)),
+			tier = int(_member_attribute(mem, EOS_MEMBER_TIER_ATTRIBUTE, 0)),
 			accepted = int(_member_attribute(mem, EOS_MEMBER_ACCEPT_ATTRIBUTE, 0)) == 1,
 		}
 		break
