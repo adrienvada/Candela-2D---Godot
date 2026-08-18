@@ -3244,7 +3244,20 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       construction.
     - Trois contrôles : `time_scale` rendu à 1,0, rejeu arrêté, et **aucune vue
       laissée figée** — la ceinture de V2.1 passe par le même chemin.
-  - Restent manuelles : les 4 autres familles (et le reste de la 5) de la
+  - **Famille 7.2 verrouillée le 2026-08-18**, dans `test_audit_menus` : **la
+    carte appartient à l'hôte.** L'invité ne se voit pas proposer d'en changer —
+    non par avarice, mais parce que son choix serait **écrasé au lancement**. Un
+    bouton qui laisse choisir puis n'en tient pas compte est pire qu'un bouton
+    absent : il fait croire à une décision qui n'existe pas.
+    - Vérifié comme **propriété de structure du menu**, sans réseau ni
+      adversaire : les deux écrans hôte offrent le panneau des cartes, les deux
+      écrans invité non, et l'écran partagé le garde — les deux joueurs y sont du
+      même côté.
+    - Encore un contrôle placé là où il est déterministe plutôt que là où le
+      sujet semble vivre. Le reste de la famille 7 (la carte suivante est bien
+      jouée des deux côtés, carte personnalisée absente du disque de l'invité)
+      demande deux instances et n'est pas couvert.
+  - Restent manuelles : les 3 autres familles (et le reste des 5 et 7) de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par
