@@ -1899,11 +1899,35 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   sais pas sur quoi je joue ».
 
 **Fin de match en ligne**
+- **`await RenderingServer.frame_post_draw` n'est JAMAIS émis en `--headless`.**
+  Ce signal suit le *dessin* d'une image ; sans rendu, la coroutine reste
+  suspendue pour toujours. Trouvé le 2026-08-18 sur la première attente de la
+  séquence de fin, et **tout en découlait** : `_end_sequence_active` collé à vrai,
+  `game_over` jamais posé, `stop_recording()` jamais atteint, l'enregistrement qui
+  continue sans fin, l'impact qui glisse jusqu'en tête de tampon, la killcam qui
+  se rejoue en boucle. Le correctif `_impact_seen` traitait donc l'aval d'un
+  symptôme.
+  **Ce qui rend le piège coûteux : le défaut est invisible en jeu** — une fenêtre
+  dessine — et ne se voit que dans un banc headless. Règle : une attente de
+  rendu (`frame_post_draw`, `frame_pre_draw`) n'a de sens que là où il y a un
+  rendu ; ailleurs, `process_frame`. L'attente d'origine reste bonne en jeu :
+  `process_frame` précède le rendu, et geler là fige l'image *d'avant* l'impact —
+  balle en vol, victime debout.
+- **Cacher un conteneur ne rend pas ses enfants `visible == false`.** Seul
+  `is_visible_in_tree()` le dit. Un contrôle écrit sur `enfant.visible` continue
+  donc de passer — ou d'échouer — pour une raison qui n'a rien à voir avec ce
+  qu'il prétend vérifier. Relevé le 2026-08-18 : `join_input` enveloppé dans un
+  `join_box` a rendu rouge une assertion du banc alors que le champ était bel et
+  bien invisible.
 - **`tools/test_online_match.tscn` n'est dans aucun lanceur**, et c'est le seul
-  banc qui joue une fin de match à deux instances. Les vingt suites headless n'en
-  jouent aucune. **À lancer à la main avant de toucher au cycle de fin de match**
-  — il demande deux processus coordonnés, ce que `run_suites.sh` ne sait pas
-  faire ; l'inscrire demanderait de lui apprendre.
+  banc qui joue une fin de match. Les vingt-et-une suites headless n'en jouent
+  aucune. **À lancer à la main avant de toucher au cycle de fin de match.**
+  Son mode `--host`/`--join` demande deux processus coordonnés, ce que
+  `run_suites.sh` ne sait pas faire. Son mode **`--local` tourne en un seul
+  processus et sans EOS** : il pourrait entrer au lanceur, mais **il s'arrête au
+  démarrage de la manche** et n'exerce pas le cycle de fin — il n'aurait donc pas
+  attrapé le défaut ci-dessus. L'étendre jusqu'à `game_over` est le geste qui
+  fermerait vraiment ce trou de couverture.
 - **Une commodité non demandée a coûté une régression visible à chaque fin de
   match.** `_close_lobby_if_left()` fermait le salon en quittant l'écran : je
   l'avais ajoutée de moi-même, elle n'était pas au périmètre. `show_game_over()`
@@ -1919,6 +1943,17 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   derniers contrôles. **En jeu fenêtré l'écran de fin s'affiche normalement**
   (vérifié par Adrien) : cela ressemble à un artefact de headless, ce n'est pas
   établi. Relevé le 2026-08-18, non corrigé.
+
+**Outils et instrumentation**
+- **Un remplacement de sous-chaîne qui mange un niveau d'indentation rend un
+  script non compilable — et Godot désigne alors le mauvais fichier.** Relevé le
+  2026-08-18 : `game_state.gd` corrompu par une substitution sur
+  `"\t_round_token += 1"` a fait rendre par Godot un `ui` **sans script** — nœud
+  nu, `CanvasLayer` de base — et l'erreur affichée parlait d'une méthode manquante
+  sur `ui`, pas d'une erreur de syntaxe dans `game_state.gd`. **Le message désigne
+  le fichier qui appelle, pas celui qui ne compile pas.** Devant un « méthode
+  inexistante » sur un nœud qui devrait en avoir une, chercher d'abord un script
+  qui n'a pas compilé.
 
 **GDScript — chaînes**
 - **`\u0000` dans un littéral GDScript ne donne pas un NUL** : l'analyseur le
