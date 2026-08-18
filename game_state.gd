@@ -54,6 +54,8 @@ var serie_longueur: int = 0
 ## où l'état avance et celui où l'écran de fin s'affiche. Sans ce report, il
 ## faudrait comparer l'avant et l'après une fois l'avant déjà écrasé.
 var _mot_de_serie: String = ""
+## V6.2 — la ligne du tir fatal pendant la killcam, effacée avec le tampon.
+var _trace_fatale: Node2D = null
 ## La comptabilité de la série vit dans son propre fichier : elle ne dépend ni du
 ## réseau ni de l'audio, et doit rester testable sans eux.
 const SerieDeSession := preload("res://serie_de_session.gd")
@@ -1463,6 +1465,7 @@ func _do_end_round(winner_id: int):
 			vp2.get_parent().hide()
 		ui.center_line.hide()
 		ui.show_killcam()
+		_tracer_trajectoire_fatale()
 		
 		_first_replay_frame = true
 		ReplaySystem.start_playback()
@@ -1634,7 +1637,37 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
 	tw.tween_callback(_clear_kill_stamp)
 
+## V6.2 — la ligne du tir fatal, posée dans l'arène pour la durée du rejeu.
+##
+## Nommée explicitement, comme tout nœud ajouté dynamiquement : un nom
+## auto-généré diverge entre machines et casse le routage des RPC de scène.
+## Celui-ci est purement local, mais la règle ne souffre pas d'exception — c'est
+## ce qui la rend applicable sans avoir à juger chaque cas.
+func _tracer_trajectoire_fatale() -> void:
+	_effacer_trajectoire()
+	var points := ReplaySystem.trajectoire_fatale()
+	if points.size() < 2:
+		return
+	var trace := preload("res://killcam_trace.gd").new()
+	trace.name = "TraceFatale"
+	trace.depart = points[0]
+	trace.arrivee = points[1]
+	# Au-dessus du sol et des taches, sous les joueurs : la trace commente la
+	# scène, elle ne la recouvre pas.
+	trace.z_index = 2
+	# Les deux viewports la voient : chacun rejoue sa propre killcam, et la
+	# masquer d'un côté priverait un joueur de la leçon.
+	trace.visibility_layer = 2 | 4
+	arena.add_child(trace)
+	_trace_fatale = trace
+
+func _effacer_trajectoire() -> void:
+	if is_instance_valid(_trace_fatale):
+		_trace_fatale.queue_free()
+	_trace_fatale = null
+
 func _clear_kill_stamp() -> void:
+	_effacer_trajectoire()
 	if is_instance_valid(_kill_stamp):
 		_kill_stamp.queue_free()
 	_kill_stamp = null

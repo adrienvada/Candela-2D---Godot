@@ -3472,7 +3472,28 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     machine donnée. Bornée des deux côtés — un `time_scale` accéléré ou négatif
     ne doit pas détruire l'image.
 - **V6.2 Trajectoire au trait** — la balle fatale dessine sa ligne complète en
-  pointillé pendant le rejeu : la killcam devient professeur.
+  pointillé pendant le rejeu : la killcam devient professeur. **✅ Fait.**
+  La killcam montrait la mort **sans l'expliquer** : on voyait tomber, pas d'où
+  le coup venait. Dans un jeu où l'on meurt de ce qu'on n'a pas vu, c'est
+  exactement l'information qui manque pour progresser — la ligne répond à la
+  seule question que se pose la victime, *il était où ?*
+  - **Aucune fuite** : la manche est finie, chacun rejoue **son propre**
+    enregistrement, et la trajectoire est celle de la balle qui l'a tué — un fait
+    déjà consommé.
+  - **En pointillé, et tracé progressivement.** Un trait plein se lirait comme
+    une balle encore en vol ; le pointillé dit « ceci s'est passé ». Le tracé
+    avance en **temps réel**, pas en temps de scène : c'est un commentaire sur la
+    scène, pas un élément de la scène — sinon il ramperait pendant le ralenti.
+  - **Vide plutôt qu'approximatif** quand l'enregistrement ne permet pas de
+    conclure (mort par chrono, tir sorti de la fenêtre) : **une trajectoire
+    fausse enseignerait une leçon fausse**, ce qui est pire que de ne rien
+    enseigner.
+  - Le tir fatal se désigne par **la même règle que le départ du ralenti** — le
+    dernier tir du **tueur** avant l'impact. Deux façons de le désigner finiraient
+    par en désigner deux différents. La suite vérifie qu'un tir de la **victime**
+    juste avant sa mort n'est pas confondu avec le coup fatal : un simple
+    « dernier tir enregistré » ferait partir la ligne de la position du mort, et
+    enseignerait un emplacement qui n'a jamais existé.
 - **V6.3 Sidechain du ralenti** — heartbeat + souffle seuls pendant le
   bullet-time, tout relâcher à l'impact.
 - **V6.4 Rembobinage VHS** — son de bande + timecode à rebours 300 ms au
