@@ -18,6 +18,20 @@ const DUEL_DISTANCE := 150.0
 
 var _main: Node
 var _ui: Node
+## **Temps d'image, en secondes — pas des fps.**
+##
+## Le banc échantillonnait `Engine.get_frames_per_second()` à chaque frame. Or ce
+## compteur n'est mis à jour qu'**une fois par seconde** : quinze secondes de
+## mesure donnaient quinze valeurs distinctes, recopiées cent quarante fois
+## chacune. Le tableau paraissait riche — 2082 échantillons au relevé du
+## 2026-08-18 — et ne contenait que quinze mesures.
+##
+## Conséquence directe sur le seul chiffre qui compte : le « 1 % bas » est censé
+## dire ce que le joueur ressent comme saccade, c'est-à-dire le comportement des
+## images les plus lentes. Calculé sur des moyennes d'une seconde, **il ne peut
+## rien en dire** : une seconde à 150 fps contenant une image à 20 ms se lit
+## comme une seconde à 150 fps. Le relevé rendait `1 % bas == minimum`, ce qui
+## est la signature du défaut — un percentile sur des doublons est un minimum.
 var _samples: Array[float] = []
 var _seconds := 15.0
 var _peak_particles := 0
@@ -51,7 +65,7 @@ func _ready() -> void:
 		for m in manquants:
 			printerr("    · ", m)
 		printerr("  Voir tools/test_banc.gd, qui vérifie ces appuis en headless.")
-		get_tree().quit(1)
+		_sortir(1)
 		return
 
 	# Écran partagé : les DEUX vues rendent, chacune avec son jeu de lumières et
@@ -67,7 +81,7 @@ func _ready() -> void:
 
 	if not await _await(func(): return _main.round_active, 15.0):
 		printerr("✗ la manche n'a pas démarré")
-		get_tree().quit(1)
+		_sortir(1)
 		return
 
 	print("Manche lancée — armes : %s / %s" % [
@@ -78,7 +92,22 @@ func _ready() -> void:
 	print("Mesure sur %.0f s…" % _seconds)
 	await _stress(_seconds, true)
 	_report()
-	get_tree().quit(0)
+	_sortir(0)
+
+
+## Sortir par la porte du jeu, et non par `get_tree().quit()`.
+##
+## Le banc instancie `main.tscn`, donc les autoloads EOS : quitter sec ré-entre
+## dans `EOS_Platform_Tick()` et le processus meurt en **signal 11** (relevé du
+## 2026-08-18, code 134). Les chiffres sortaient avant le crash, donc la mesure
+## restait valide — mais c'est le piège d'arrêt propre déjà consigné dans la
+## ROADMAP, et en build release la fin du journal serait perdue avec.
+func _sortir(code: int) -> void:
+	var reseau := get_node_or_null(^"/root/NetworkManager")
+	if reseau != null and reseau.has_method("quit_game"):
+		reseau.quit_game(code)
+		return
+	get_tree().quit(code)
 
 
 ## Les deux joueurs se tirent dessus au pompe, torches allumées, HP maintenus
@@ -104,7 +133,12 @@ func _stress(duration: float, sampling: bool) -> void:
 		_main.p2.rotation = (_main.p1.global_position - _main.p2.global_position).angle()
 
 		if sampling:
-			_samples.append(Engine.get_frames_per_second())
+			# Le temps de CETTE image. La première après l'échauffement peut
+			# porter le coût d'un changement d'état ; elle compte quand même,
+			# c'est une saccade que le joueur verrait.
+			var dt := get_process_delta_time()
+			if dt > 0.0:
+				_samples.append(dt)
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le
 			# banc prétendrait mesurer une charge qu'il n'aurait pas prouvée.
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
@@ -115,21 +149,33 @@ func _report() -> void:
 	if _samples.is_empty():
 		printerr("✗ aucun échantillon")
 		return
+	# Trié du plus RAPIDE au plus lent : ce sont des durées, pas des cadences.
 	var sorted := _samples.duplicate()
 	sorted.sort()
 	var total := 0.0
 	for v in sorted:
 		total += v
-	var avg := total / sorted.size()
-	# Le 1 % bas dit ce que le joueur ressent comme saccade, la moyenne le cache.
-	var low1: float = sorted[maxi(0, int(sorted.size() * 0.01))]
+	# Moyenne des cadences = images / temps total, et non moyenne des 1/dt : la
+	# seconde donne un poids démesuré aux images rapides et flatte le résultat.
+	var avg := float(sorted.size()) / total
+
+	# **1 % bas au sens habituel** : la cadence moyenne du centième d'images le
+	# plus LENT. Une moyenne sur cette tranche, et non sa borne — un seul pic
+	# isolé ne doit pas décider seul du verdict, mais vingt saccades doivent.
+	var lents := maxi(1, int(round(sorted.size() * 0.01)))
+	var somme_lentes := 0.0
+	for i in range(sorted.size() - lents, sorted.size()):
+		somme_lentes += sorted[i]
+	var low1 := float(lents) / somme_lentes
 
 	print("\n=== RÉSULTAT ===")
-	print("  Échantillons     : %d" % sorted.size())
+	print("  Images mesurées  : %d en %.1f s" % [sorted.size(), total])
 	print("  FPS moyen        : %.0f" % avg)
-	print("  FPS médian       : %.0f" % sorted[sorted.size() / 2])
-	print("  FPS 1 %% bas      : %.0f" % low1)
-	print("  FPS minimum      : %.0f" % sorted[0])
+	print("  FPS médian       : %.0f" % (1.0 / sorted[sorted.size() / 2]))
+	print("  FPS 1 %% bas      : %.0f  (moyenne des %d images les plus lentes)"
+		% [low1, lents])
+	print("  Image la plus lente : %.1f ms  (soit %.0f fps)"
+		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	print("  Verdict 120 fps  : %s" % ("TENU" if low1 >= 120.0 else "NON TENU (1 %% bas à %.0f)" % low1))

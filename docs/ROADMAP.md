@@ -2206,6 +2206,31 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### `get_frames_per_second()` ne bouge qu'une fois par seconde (2026-08-18)
+
+Le banc l'échantillonnait à chaque image. Quinze secondes de mesure donnaient
+donc **quinze valeurs distinctes recopiées ~139 fois** : 2082 échantillons
+affichés, quinze mesures réelles.
+
+Fatal pour le seul chiffre qui compte. Le « 1 % bas » est censé capter ce que le
+joueur ressent comme saccade — le comportement des images les plus lentes.
+Calculé sur des moyennes d'une seconde, **il ne peut rien en dire** : une seconde
+à 150 fps contenant une image à 20 ms se lit comme une seconde à 150 fps.
+
+**La signature du défaut est `1 % bas == minimum`** — un percentile sur des
+doublons est un minimum. Le relevé du 2026-08-18 rendait 109 pour les deux, et
+son verdict « 120 fps NON TENU » ne prouvait rien.
+
+Remède : échantillonner `get_process_delta_time()` **par image**, et rendre le
+1 % bas comme la cadence moyenne du centième d'images le plus lent — une moyenne
+sur la tranche, pas sa borne, pour qu'un pic isolé ne décide pas seul quand vingt
+saccades le doivent.
+
+**Ce qui se généralise :** avant de conclure d'un agrégat, vérifier combien de
+mesures indépendantes il contient. Un tableau long n'est pas un échantillon
+large.
+
+
 ### Un outil de mesure hors couverture se périme en silence (2026-08-18)
 
 `tools/bench_framerate.gd` pilotait `_ui.btn_mode_local`, disparu à la Phase 5
