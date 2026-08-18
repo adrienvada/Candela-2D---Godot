@@ -1887,7 +1887,10 @@ func _build_join_row() -> Control:
 	var centre := CenterContainer.new()
 	btn_join_lobby = _make_button("REJOINDRE LE SALON", COLOR_P1, true)
 	btn_join_lobby.custom_minimum_size = Vector2(280, 44)
-	btn_join_lobby.pressed.connect(func() -> void: join_requested.emit())
+	btn_join_lobby.pressed.connect(func() -> void:
+		_abandon_search("salon rejoint")
+		join_requested.emit()
+	)
 	centre.add_child(btn_join_lobby)
 	join_box.add_child(centre)
 	return join_box
@@ -1948,6 +1951,7 @@ func _build_open_lobby_row() -> Control:
 func _open_lobby() -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		return
+	_abandon_search("salon ouvert")
 	if not NetworkManager.host_game():
 		lobby_status_label.text = NetworkManager.last_error if NetworkManager.last_error != "" \
 			else "Impossible d'ouvrir le salon."
@@ -2117,6 +2121,30 @@ func _on_hub_action(action: String) -> void:
 			hub.show_detail("Mon rang", _my_rank_text())
 		"top10":
 			hub.show_detail("Top 10", _top_ten_text())
+
+## Ouvrir ou rejoindre un salon met fin à la recherche automatique.
+##
+## Les deux gestes disent la même chose : « j'ai trouvé mon adversaire ». Laisser
+## la file tourner derrière donnerait un joueur apparié pendant qu'il joue déjà —
+## et son ticket resterait annoncé, à proposer un adversaire injoignable à tous
+## les autres.
+##
+## Le geste de sortie est explicite plutôt que déduit d'un état : la recherche
+## vit **hors** des écrans, elle continue pendant qu'on parcourt les menus. C'est
+## précisément ce qui fait qu'elle ne s'arrêterait pas toute seule.
+func _abandon_search(raison: String) -> void:
+	var core := get_node_or_null(^"/root/Matchmaker")
+	if core == null or not core.has_method("cancel"):
+		return
+	# `cancel()` est sans effet au repos ; on ne l'annonce que si une recherche
+	# tournait vraiment, sous peine d'une ligne de journal à chaque clic.
+	var tournait := false
+	if core.has_method("search_snapshot"):
+		var snap: Variant = core.call("search_snapshot")
+		tournait = snap is Dictionary and int((snap as Dictionary).get("state", 0)) != 0
+	core.cancel()
+	if tournait:
+		print("UI: recherche d'adversaire interrompue — %s" % raison)
 
 ## Lance la recherche d'adversaire et rend la main.
 ##

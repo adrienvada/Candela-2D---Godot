@@ -182,9 +182,16 @@ func refresh() -> void:
 		return
 
 	show()
-	_titre.text = String(snap.get("state_label", "")).to_upper()
+	# **La file est nommée, pas seulement teintée.** Les deux recherches n'ont ni
+	# les mêmes adversaires ni les mêmes règles — l'une apparie sur le classement,
+	# l'autre prend n'importe qui — et la couleur seule ne le dit qu'à celui qui
+	# connaît déjà le code. Un joueur qui attend doit pouvoir lire dans quelle file
+	# il attend.
+	var classe := bool(snap.get("ranked", false))
+	_titre.text = "%s  —  %s" % [String(snap.get("state_label", "")).to_upper(),
+		"CLASSÉ" if classe else "AMICAL"]
 	_titre.add_theme_color_override("font_color",
-		MenuTheme.GOLD if bool(snap.get("ranked", false)) else Color.WHITE)
+		MenuTheme.GOLD if classe else Color.WHITE)
 	_detail.text = _detail_text(etat, snap)
 	_apply_buttons(etat)
 	if etat != _dernier_etat:

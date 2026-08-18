@@ -38,14 +38,57 @@ si l'on touche à ce qu'ils couvrent.
 |---|---|
 | Banc transport | ✅ fait |
 | File d'appariement, découverte croisée | ✅ fait — deux identités se voient à travers le filtre |
-| **Match complet à deux fenêtres** (code de salon) | ✅ **fait le 2026-08-18** — vert des deux côtés, code 0 : porte PRÊT, manche, killcam, écran de fin, rematch |
-| **Appariement automatique à deux fenêtres** | 🔴 **à faire — c'est le prochain** |
-| **H1 — deux machines, deux réseaux** | 🔴 à faire, contre-vérification due depuis les correctifs |
+| **Match complet à deux fenêtres** (code de salon, EOS) | ✅ **fait le 2026-08-18** — vert des deux côtés, code 0 |
+| **Salon LAN à deux fenêtres** | ✅ **fait le 2026-08-18 par Adrien** — salon, PRÊT, match, killcam, rejeu |
 | Sortie propre | ✅ fait |
+| **Appariement automatique à deux fenêtres** | 🔴 **à faire — c'est le prochain, et le dernier inconnu de la Phase 8** |
+| **H1 — deux machines, deux réseaux** | 🔴 à faire, contre-vérification due depuis les correctifs |
+| **Cohérence des menus à deux écrans** | 🔴 à faire — six chemins jamais parcourus, voir ci-dessous |
+
+## Les six chemins de menu jamais parcourus à deux
+
+Le salon par code et le salon LAN sont couverts, jointure et départ compris. Ce
+qui suit ne l'est par **aucun** banc, parce qu'aucun banc ne se promène dans les
+menus.
+
+1. **L'appariement automatique de bout en bout** — presser « chercher un match »,
+   voir le bandeau des deux côtés, **annuler** depuis le bandeau, **refuser** un
+   adversaire trouvé, **confirmer** des deux côtés en moins de 15 s. Le bandeau
+   n'a jamais été manipulé par un humain, et c'est la **seule** surface par
+   laquelle on sort d'une file.
+2. **La file s'arrête quand on ouvre ou rejoint un salon.** Ajouté le 2026-08-18 :
+   lancer une recherche, puis créer un salon — le bandeau doit disparaître. Idem
+   en rejoignant. Sans cela le ticket resterait annoncé pendant qu'on joue.
+3. **Quitter un salon ouvert.** L'hôte crée puis fait RETOUR : le salon se
+   referme-t-il vraiment ? Peut-on en rouvrir un ? Et le client déjà connecté qui
+   fait RETOUR — l'hôte revient-il à « En attente d'un adversaire… » ?
+4. **Changer de carte pendant que l'adversaire attend.** L'hôte change l'arène
+   dans le salon, client connecté : celui-ci doit la recevoir au départ.
+5. **La liste des joueurs, vue des deux côtés.** Chacun doit s'y voir soi-même et
+   voir l'autre — corrigé le 2026-08-18, jamais vérifié à deux.
+6. **Le refus de version.** Testable sans attendre : changer `Protocol.VERSION`
+   dans une copie du projet et lancer les deux. Attendu — un refus à la porte avec
+   un message clair, **pas** un « salon introuvable ».
 
 **Et hors de ce document, trente secondes :** vérifier **Échap** et **F3** en jeu.
 Trois tentatives pilotées ont échoué sans conclure — c'est le dernier contrôle
 qu'aucun agent ne sait faire.
+
+## Ce que le bandeau doit annoncer
+
+Depuis le 2026-08-18, le bandeau **nomme la file** en plus de la teinter :
+
+```
+RECHERCHE D'UN ADVERSAIRE  —  CLASSÉ      (doré)
+RECHERCHE D'UN ADVERSAIRE  —  AMICAL      (blanc)
+```
+
+Les deux files sont **étanches** : leur étiquette entre dans le filtre de
+recherche, un ticket amical n'est jamais rendu à une recherche classée. Et elles
+n'ont pas les mêmes règles — la classée borne la fourchette de classement et
+l'élargit avec l'attente, l'**amicale ne filtre rien** et prend n'importe qui.
+C'est lisible sous le titre : « sans filtre de classement » d'un côté, une
+fourchette chiffrée de l'autre.
 
 ## Ce qu'on lit désormais dans une trace
 
