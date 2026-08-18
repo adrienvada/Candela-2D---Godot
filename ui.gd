@@ -300,7 +300,12 @@ var btn_transport_eos: Button
 var btn_transport_lan: Button
 var lobby_status_label: Label
 var host_ip_row: HBoxContainer
-var host_ip_label: Label
+## M7 aussi — l'adresse IP se grave comme le code de salon. C'est le même objet
+## social : celui qu'on transmet à quelqu'un pour qu'il vienne jouer. En **mesure
+## libre** : la longueur d'une IPv4 n'est pas connue d'avance, et un point dans
+## une case de chiffre laisserait un trou.
+var host_ip_engraver: MenuEngraver
+var host_ip_prefix: Label
 var lobby_code_row: HBoxContainer
 ## M7 — le code de salon se frappe caractère par caractère. Ce n'est plus un
 ## Label : six cases de largeur fixe, plus la coche de copie.
@@ -2206,9 +2211,11 @@ func _apply_menu_effects() -> void:
 		menu_tracer.set_intensite(GameSettings.effective_effect("depart_au_tir", false))
 	if hub != null and hub.ink() != null:
 		hub.ink().set_intensite(GameSettings.effective_effect("encre_coulee", false))
+	var gravure := GameSettings.effective_effect("gravure_code", false)
 	if lobby_code_engraver != null:
-		lobby_code_engraver.set_intensite(
-			GameSettings.effective_effect("gravure_code", false))
+		lobby_code_engraver.set_intensite(gravure)
+	if host_ip_engraver != null:
+		host_ip_engraver.set_intensite(gravure)
 	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
 	# panneaux, et son intensité est donc une simple valeur retenue ici.
 	_m10 = GameSettings.effective_effect("extinction_menu", false)
@@ -2977,15 +2984,23 @@ func _build_lobby_widgets() -> void:
 	host_ip_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	host_ip_row.add_theme_constant_override("separation", GAP_XS)
 
-	host_ip_label = Label.new()
-	host_ip_label.add_theme_font_size_override("font_size", 15)
-	host_ip_row.add_child(host_ip_label)
+	# Le libellé reste un libellé : graver « VOTRE IP » caractère par caractère
+	# serait long et n'a rien d'un objet qu'on transmet. Seule l'adresse se grave.
+	host_ip_prefix = Label.new()
+	host_ip_prefix.text = "VOTRE IP"
+	host_ip_prefix.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	host_ip_prefix.add_theme_font_size_override("font_size", 13)
+	host_ip_prefix.add_theme_color_override("font_color", COLOR_DIM)
+	host_ip_row.add_child(host_ip_prefix)
+
+	host_ip_engraver = MenuEngraver.new(0, 20, COLOR_GOLD)
+	host_ip_row.add_child(host_ip_engraver)
 
 	var btn_copy_ip := _make_button("COPIER", COLOR_GOLD)
 	btn_copy_ip.add_theme_font_size_override("font_size", 13)
 	btn_copy_ip.pressed.connect(func() -> void:
 		DisplayServer.clipboard_set(local_ipv4())
-		host_ip_label.text = "IP copiée : %s" % local_ipv4()
+		host_ip_engraver.marquer_copie()
 	)
 	host_ip_row.add_child(btn_copy_ip)
 
@@ -3097,7 +3112,7 @@ func _refresh_lobby_block() -> void:
 				"transmettez ce code à votre adversaire" if ouvert
 				else "créez le salon pour obtenir un code"]
 		else:
-			host_ip_label.text = "Votre IP : %s" % local_ipv4()
+			host_ip_engraver.set_code(local_ipv4())
 			lobby_status_label.text = "Réseau local — communiquez votre IP à votre adversaire" \
 				if ouvert else "Réseau local — créez le salon, puis communiquez votre IP"
 		return

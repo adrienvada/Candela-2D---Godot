@@ -263,12 +263,42 @@ func _test_gravure() -> void:
 				largeurs_fixes = false
 		_check("chacune a une largeur imposée", largeurs_fixes)
 
+	# La mesure remontée au parent. Sans elle, un `Control` nu rend une taille
+	# minimale nulle et le bouton COPIER se pose PAR-DESSUS le code — c'est le
+	# défaut qu'Adrien a vu à l'écran le 2026-08-18, sur les deux rangées.
+	g.set_code("AB3D9F")
+	_check("le bloc réserve sa place dans la rangée",
+		g.get_combined_minimum_size().x > 0.0 and g.get_combined_minimum_size().y > 0.0,
+		str(g.get_combined_minimum_size()))
+
 	g.set_intensite(0.0)
 	g.set_code("ZZZZZZ")
 	_check("à intensité nulle le code est posé sans cérémonie",
 		g.code() == "ZZZZZZ" and not g.is_processing(), g.code())
 
 	g.free()
+
+	# Mesure libre : l'adresse IP n'a pas de longueur connue d'avance, et un point
+	# d'IPv4 dans une case de chiffre laisserait un trou visible.
+	var ip := MenuEngraver.new(0, 20, Color.WHITE)
+	root.add_child(ip)
+	ip.set_intensite(1.0)
+	ip.set_code("10.193.192.235")
+	_check("l'adresse est gravée telle quelle", ip.code() == "10.193.192.235",
+		ip.code())
+	var cases_ip: Node = ip.get_node_or_null(^"Cases")
+	# Quatorze caractères, plus la coche de copie.
+	_check("une case par caractère, ni plus ni moins",
+		cases_ip != null and cases_ip.get_child_count() == 15,
+		str(cases_ip.get_child_count()) if cases_ip != null else "pas de boîte")
+	_check("et elle réserve sa place elle aussi",
+		ip.get_combined_minimum_size().x > 0.0)
+	# Une adresse plus courte doit RENDRE les cases en trop : sinon le bloc
+	# garderait à jamais la largeur de la plus longue jamais affichée.
+	ip.set_code("10.0.0.7")
+	_check("une adresse plus courte rend ses cases",
+		cases_ip.get_child_count() == 9, str(cases_ip.get_child_count()))
+	ip.free()
 
 ## M10 — l'extinction des feux.
 ##

@@ -2003,6 +2003,17 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+**Mise en page**
+- **Un `Control` nu rend une taille minimale NULLE, même plein d'enfants.** Un
+  composant écrit comme `extends Control` avec un conteneur à l'intérieur ne
+  remonte rien à son parent : dans une rangée horizontale, le voisin s'installe
+  **par-dessus**. Vu à l'écran le 2026-08-18 — le bouton COPIER posé sur le code
+  de salon qu'il devait accompagner, et sur les deux rangées à la fois. La
+  parade est `_get_minimum_size()`, qui rend la mesure combinée du conteneur
+  intérieur, plus `update_minimum_size()` quand le contenu change. Aucun test
+  headless ne l'aurait montré tant qu'on ne mesurait pas : `test_vitrine_menus`
+  vérifie désormais que le bloc réserve sa place.
+
 **Rendu à deux vues**
 - **Le défaut par défaut : `visibility_layer` vaut 1, et les deux vues le
   laissent passer.** `main.tscn` donne `canvas_cull_mask = 3` à la première vue
@@ -2847,6 +2858,15 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > bascules internes — la pause qui ouvre ses options, les options qui rendent la
 > pause — restent sèches, et `force_close_pause()` aussi : la killcam ne peut pas
 > attendre derrière un panneau qui s'efface.
+>
+> **M7 s'étend à l'adresse IP** (demandé par Adrien le 2026-08-18, en voyant le
+> code gravé). C'est le même objet social : celui qu'on transmet à quelqu'un pour
+> qu'il vienne jouer. Le graveur a donc deux mesures — **gabarit fixe** pour le
+> code de salon, où six cases figées empêchent le bouton COPIER de se déplacer
+> sous le doigt qui le vise ; **mesure libre** pour l'IP, dont la longueur n'est
+> pas connue d'avance et dont un point logé dans une case de chiffre laisserait
+> un trou. Seule l'adresse se grave : « VOTRE IP » reste un libellé, parce que
+> ce n'est pas ce qu'on transmet.
 >
 > **Deux écarts assumés par rapport aux fiches ci-dessous**, notés parce qu'un
 > lecteur de la fiche seule les prendrait pour des oublis :
