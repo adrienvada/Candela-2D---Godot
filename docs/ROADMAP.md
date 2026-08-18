@@ -6,9 +6,21 @@
 >
 > Dernière mise à jour : 2026-08-18
 >
-> **Plus aucune session parallèle.** Une seule branche, `main`, un seul arbre de
-> travail. Les dix worktrees d'agents et les six branches périmées ont été
-> retirés : tous les livrables étaient déjà versionnés dans `main`.
+> ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
+> ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
+> **quatre sessions y travaillent**, dont une qui **pousse sur `origin`** et ne
+> reçoit aucun message : son seul canal est le dépôt, comme le prévoit
+> [docs/JOURNAL_SESSIONS.md](JOURNAL_SESSIONS.md).
+>
+> **Lire ce journal AVANT d'écrire dans un fichier.** Il porte une table de
+> domaines — qui tient quel fichier — et les intentions annoncées par chaque
+> session. Cette ligne-ci le faisait passer pour une archive ; il ne l'est pas.
+>
+> Ce que l'oubli a produit le 2026-08-18 : **V6.2 implémentée deux fois**, de
+> deux façons correctes, dans deux fichiers différents — le journal l'attribuait
+> pourtant explicitement, et laissait V6.1 à l'autre session. Et plusieurs
+> fichiers du domaine « game feel » (`player.gd`, `audio_manager.gd`,
+> `game_state.gd`) modifiés par une session qui ne les tenait pas.
 
 ---
 

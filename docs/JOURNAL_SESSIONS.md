@@ -213,6 +213,45 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 (soir) — session « fin de match », entrée tardive et fautive
+
+**Cette session a travaillé toute la journée sans lire ce journal.** Elle l'a
+découvert en constatant que `origin/main` avait divergé. Ce qu'il en coûte, dit
+franchement, pour que la prochaine ne recommence pas :
+
+- **V6.2 (trajectoire en killcam) est implémentée deux fois.** Le journal
+  l'attribuait à la session « game feel », qui l'a faite dans `bullet.gd`, et me
+  laissait explicitement V6.1, V6.5, V3.4 et V5.12. J'ai fait V6.1 **et** V6.2,
+  dans `killcam_trace.gd` + `game_state.gd` + `replay_system.gd`. Les deux
+  fonctionnent ; après fusion la ligne serait tracée deux fois. **Une seule doit
+  survivre, et la leur est antérieure.**
+- **J'ai écrit dans des fichiers du domaine « game feel »** : `audio_manager.gd`
+  (arbitrage du pool de voix, duck des pas, V5.2, silence sec de l'égalité),
+  `player.gd` (V4.4 tir à sec, filtre `_percu_ici`), `game_state.gd`,
+  `replay_system.gd`. Rien n'y a été cassé — les suites passent — mais ce n'était
+  pas à moi de le faire, et c'est ce qui rend la fusion pénible.
+
+**La cause n'est pas la négligence d'une session, c'est une contradiction entre
+deux documents.** L'en-tête de `docs/ROADMAP.md` — celui que `CLAUDE.md` fait
+lire en premier — affirmait « plus aucune session parallèle », ce qui faisait
+passer ce journal pour une archive. Corrigé dans le même commit.
+
+Mais l'excuse s'arrête là : **dès la première heure, cette session échangeait des
+messages avec deux autres.** L'affirmation de la roadmap était donc visiblement
+fausse sous ses yeux, et rien ne l'a poussée à retourner voir le journal. **Un
+document qui se contredit avec ce qu'on observe doit envoyer vérifier, pas
+rassurer.**
+
+**Fichiers tenus par cette session** (à libérer dès que la fusion est faite) :
+`tools/bench_framerate.gd`, `tools/run_decomposition.sh`, `tools/run_duo.sh`,
+`tools/test_*.gd` qu'elle a créés, `vision.gd`, `serie_de_session.gd`,
+`prediction_tir.gd`, `killcam_trace.gd`.
+
+**Ce qui attend Adrien avant toute fusion :** trois effets de `4c110b2` (V4.11,
+V4.13, V5.5) rendent visible ce qui ne l'était pas — ils relèvent du critère
+posé le même jour, qu'il n'a pas encore tranché.
+
+
 ### 2026-08-18 — session distante « couleurs des boutons »
 
 Session isolée (branche `claude/game-button-colors-jgztrn`, aucun autre agent
