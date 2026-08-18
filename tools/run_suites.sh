@@ -58,6 +58,12 @@ run test_fin_de_match res://tools/test_online_match.tscn -- --local
 # personne ne saurait plus corriger.
 run test_entrainement res://tools/test_online_match.tscn -- --training
 
+# La fenêtre de choix d'un match apparié — dix secondes, arsenal aligné par la
+# règle du miroir. Exercée en écran partagé : la mécanique est locale à
+# `game_state`, et la faire dépendre de deux processus et d'Epic l'aurait rendue
+# intestable en pratique, donc jamais testée.
+run test_fenetre_de_choix res://tools/test_online_match.tscn -- --fenetre
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

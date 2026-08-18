@@ -37,7 +37,8 @@ func _ready() -> void:
 	# L'écran partagé et le LAN n'ont rien à attendre d'Epic.
 	# L'entraînement est solitaire : il n'a pas plus besoin d'Epic que l'écran
 	# partagé, et l'attendre ferait pendre le banc trente secondes pour rien.
-	var needs_eos := not _lan and not _has("--local") and not _has("--training")
+	var needs_eos := not _lan and not _has("--local") and not _has("--training") \
+		and not _has("--fenetre")
 	if needs_eos:
 		if not await _await(func(): return NetworkManager.eos_state == NetworkManager.EosState.READY \
 				or NetworkManager.eos_state == NetworkManager.EosState.FAILED, EOS_READY_TIMEOUT):
@@ -56,10 +57,89 @@ func _ready() -> void:
 		await _run_local()
 	elif _has("--training"):
 		await _run_training()
+	elif _has("--fenetre"):
+		await _run_fenetre()
 	else:
 		print("Usage: --host | --join <CODE|IP> | --local | --training")
 		_quit(2)
 
+
+## La fenêtre de choix d'un match apparié — dix secondes pendant lesquelles on
+## choisit son arme dans l'arsenal que la règle du miroir a laissé.
+##
+## Exercée **en écran partagé**, sans réseau ni appariement : la mécanique est
+## locale à `game_state`, et la faire dépendre de deux processus et d'Epic la
+## rendrait intestable en pratique — donc jamais testée. On pose les catégories à
+## la main, ce que l'appariement ferait.
+##
+## Ce que ce mode protège, dans l'ordre d'importance :
+##
+##   • **on ne peut pas prendre une arme que le miroir a retirée** — c'est la
+##     seule propriété qui protège de quelque chose, et elle vaut aussi contre un
+##     client modifié, l'hôte refaisant le contrôle à la réception ;
+##   • la fenêtre dure bien dix secondes, contre trois pour un match ordinaire :
+##     c'est ce qui distingue « l'arme n'est pas encore choisie » de « elle l'est
+##     depuis le menu » ;
+##   • les deux prêts l'abrègent, un seul ne suffit pas ;
+##   • hors de la fenêtre, plus rien ne change l'arme.
+func _run_fenetre() -> void:
+	_ui.hub.push(_ui.SCREEN_LOCAL)
+	_press_play()
+	_check("la manche démarre", await _await(func(): return _main.round_active, ROUND_TIMEOUT))
+	_check("un match ordinaire compte trois secondes",
+		_main.countdown_left <= _main.COUNTDOWN_DURATION + 0.01,
+		"%.1f" % _main.countdown_left)
+
+	# On rejoue ce que l'appariement pose : match apparié, deux catégories.
+	# Lanterne (4) contre Braise (2) — le miroir doit retenir l'arsenal de Braise.
+	_main._matchmade_round = true
+	_main._mirror_local_tier = 4
+	_main._mirror_opponent_tier = 2
+	_main._start_round()
+	await get_tree().process_frame
+
+	_check("la fenêtre de choix dure dix secondes",
+		_main.countdown_left > _main.COUNTDOWN_DURATION + 1.0,
+		"%.1f" % _main.countdown_left)
+
+	var arsenal: Array = _main.matchmade_arsenal()
+	print("ARSENAL: %s (local=4 adverse=2)" % str(arsenal))
+	_check("l'arsenal est celui du moins bien classé",
+		arsenal == RankLoadout.for_tier(2), str(arsenal))
+	_check("et la raison le dit",
+		_main.matchmade_arsenal_reason() != "", _main.matchmade_arsenal_reason())
+
+	# LE contrôle : une arme hors arsenal est refusée, même demandée de l'intérieur.
+	var avant: String = _main.p1.current_weapon.name
+	_main.pick_countdown_weapon(RankLoadout.ARBALETE)
+	_check("une arme hors arsenal est refusée",
+		_main.p1.current_weapon.name == avant,
+		"%s → %s" % [avant, _main.p1.current_weapon.name])
+
+	_main.pick_countdown_weapon(arsenal[0])
+	_check("une arme de l'arsenal est acceptée",
+		_main.p1.current_weapon == _main.weapon_for_index(arsenal[0]),
+		_main.p1.current_weapon.name)
+
+	# Un seul prêt ne suffit pas : l'autre choisit peut-être encore.
+	var reste: float = _main.countdown_left
+	_main._countdown_ready_peer = false
+	_main._countdown_ready_local = true
+	await get_tree().create_timer(0.3).timeout
+	_check("un seul prêt n'abrège rien", _main.countdown_left > reste - 1.5,
+		"%.1f → %.1f" % [reste, _main.countdown_left])
+
+	_main._countdown_ready_peer = true
+	_check("les deux prêts lancent la manche",
+		await _await(func(): return _main.countdown_left <= 0.0, 3.0),
+		"%.1f" % _main.countdown_left)
+
+	# Fenêtre close : l'arme est celle avec laquelle on joue.
+	var tenue: String = _main.p1.current_weapon.name
+	_main.pick_countdown_weapon(RankLoadout.PISTOLET)
+	_check("hors de la fenêtre, l'arme ne change plus",
+		_main.p1.current_weapon.name == tenue, _main.p1.current_weapon.name)
+	_quit(0)
 
 ## L'entraînement solitaire. Ce que ce mode protège, dans l'ordre :
 ##
