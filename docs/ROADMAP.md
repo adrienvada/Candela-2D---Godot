@@ -3300,6 +3300,34 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   du thème : le jeu devient un seul instrument. — *assets : couvert par V2.3,
   V3.7, V3.8.*
 
+> **⚠️ Avant de piocher dans les vagues 4 et 5 : beaucoup de ces items ne sont pas
+> de la finition, ce sont des décisions de conception déguisées.** Le gel lié aux
+> fps est levé (Adrien, 2026-08-18) ; ce tri-ci est indépendant et il reste.
+>
+> Dans ce jeu, **la lumière EST l'information**. Un effet visuel en manche n'est
+> donc jamais neutre : il ajoute une chose que quelqu'un peut voir. Trois exemples
+> dans la liste ci-dessous, tous rédigés comme des propositions esthétiques :
+>
+> - **V4.11 « les gouttes brillent 200 ms de leur propre lumière — toucher, c'est
+>   voir »** : un sang auto-éclairé **révèle la position de la victime** au moment
+>   du coup au but, dans le noir. C'est peut-être exactement ce qu'on veut ; ce
+>   n'est pas une décision qu'un agent prend en implémentant.
+> - **V4.13 fumée de bouche, 1 s** : prolonge d'une seconde la trace d'un tir,
+>   donc la fenêtre pendant laquelle on sait où l'autre a tiré.
+> - **V5.5 poussière dans le faisceau** : rend le faisceau visible **de côté**,
+>   donc trahit un porteur de torche qu'on ne voyait pas jusque-là.
+>
+> **La leçon du 2026-08-18 s'applique mot pour mot :** ces phrases viennent de
+> l'étude d'animations du 2026-08-16, pas d'Adrien. Les traiter comme des
+> décisions prises, c'est refaire ce qui a été fait avec « l'écran partagé
+> permanent est une décision de conception » — **transformer une description en
+> intention**. Elles se **posent** à Adrien, elles ne s'implémentent pas d'office.
+>
+> Reste implémentable sans arbitrage : ce qui ne change **rien à ce qui est
+> visible en manche** — l'audio, les menus, la killcam (zone franche, la manche
+> est finie), et les effets purement locaux à celui qui agit déjà (recul de
+> caméra, vibration).
+
 ### Vague 4 — L'identité du tir et de l'impact
 
 - **V4.1 Un son PAR arme** — les 4 armes partagent `weapon_shoot.wav`. Corps +
