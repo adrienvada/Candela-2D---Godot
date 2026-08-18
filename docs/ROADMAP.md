@@ -2265,6 +2265,467 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
 
+### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
+
+Demandés par Adrien : « ultra-moderniser » les menus sans toucher à leur
+structure — uniquement du visuel, pour un vanilla extrême. Produits par la
+session « game feel » (cartographie du hub réel, trois angles de génération,
+jury unique pour la cohérence d'ensemble), à IMPLÉMENTER PAR LA SESSION «
+MENUS » : tout vit dans ui.gd et les screen_*.gd, son domaine. Classées du
+rang 1 = le plus singulier et inédit au rang 15 = le plus classe et moderne —
+un dégradé de singularité vers l'élégance, pas un ordre de qualité ni
+d'implémentation. Contraintes communes : structure et navigation intactes, 100
+% procédural, gl_compatibility, chaque effet enregistré dans effect_policy
+(classe CONFORT, plancher 0.0 sauf mention), le noir reste noir.
+
+- **M1 Le cadran de titre** —
+  Derrière CANDELA 2D, une ombre portée du mot lui-même : copie noire
+  cisaillée et écrasée, projetée par une flamme dorée hors champ dont un très
+  léger dégradé chaud borde le flanc opposé du titre. L'angle de projection
+  avance d'environ 6° par minute passée au menu — imperceptible en direct,
+  flagrant au retour d'un match : le titre est un gnomon, le menu un cadran
+  solaire. À l'écran de fin, VICTOIRE / DÉFAITE / ÉGALITÉ projette la sienne,
+  telle quelle, dans ses couleurs propres.
+  Pourquoi : L'idée la plus inédite du lot : personne n'a jamais fait d'un
+  titre de menu une horloge d'ombre. Le temps devient une lumière qui tourne —
+  récompense pure de l'attention (« tiens, l'ombre a bougé ») — et installe
+  l'idée qu'un monde éclaire le menu depuis quelque part. Fonde aussi la
+  fiction lumineuse commune : la flamme imaginaire qui projette cette ombre
+  est celle qui fait rougeoyer le Titre incandescent (rang 11).
+  Voie : Un Control nommé (OmbreTitre) inséré derrière le Label du titre dans
+  _build_menu_header() (ui.gd:2110), redessiné à 1 Hz par un Timer — aucun
+  _process : draw_set_transform (cisaillement + écrasement Y) puis draw_string
+  du même texte, police par défaut, noir alpha ~0,5 ; angle = fonction du
+  temps cumulé au menu. Hors flux : aucune incidence sur la mise en page (le
+  clip à 60 px du sous-titre est intouché, l'ombre vit derrière). Dégradé «
+  source » coupé sur l'écran calibration par prudence (rien de chaud près du
+  champ noir). Intensité → alpha de l'ombre et du dégradé (0 = en-tête
+  actuel). Ligne EffectPolicy `cadran_titre`, CONFORT, plancher 0.0 + phrase
+  joueur — ScreenEffects et la persistance suivent seuls. Coût : un draw par
+  seconde.
+  Ressources : aucune (police par défaut, tout dessiné en code)
+- **M2 La rémanence rétinienne** —
+  Quand le liseré saute d'une entrée à l'autre, l'ancienne position garde son
+  image rémanente : le même contour arrondi, mais dans la couleur
+  complémentaire — le curseur cyan laisse un fantôme braise, le rouge de J2 un
+  fantôme d'eau verte — qui s'élargit de 2-3 px en s'éteignant sur ~0,35 s.
+  Exactement ce qu'une lumière vive imprime sur la rétine dans le noir : le
+  négatif, pas la traînée. Curseur immobile = strictement rien à l'écran.
+  Pourquoi : Chaque geste de navigation devient une trace physiologique : le
+  joueur « sent » ses propres yeux travailler dans l'obscurité. Ce n'est pas
+  un trail de particules (vu partout) : l'après-image négative n'a jamais été
+  exploitée en menu et elle naît directement du thème. Donne envie de
+  parcourir la liste juste pour voir le noir se souvenir. Fusion : préférée à
+  la « rémanence de phosphore » (écho même-couleur = trail classique) ; la
+  version négative est l'inédit.
+  Voie : Un Control top-level nommé CoucheRemanence (même famille que
+  NeonFocusRing, ui.gd:115), MOUSE_FILTER_IGNORE, tampon circulaire de 8
+  entrées (rect, t0, couleur). _set_focus / _update_focus_rings (déjà en
+  _process, ui.gd:543) y poussent l'ancienne position au changement de cible ;
+  queue_redraw() uniquement tant que le tampon est non vide ; _draw() =
+  draw_style_box bord-seul à alpha décroissant, complémentaire = Color(1-r,
+  1-g, 1-b). Coût nul à l'arrêt, aucun nœud par entrée, aucun contact avec le
+  résolveur (positions écran passées, jamais un contrôle vivant). Coupe-
+  circuit sur l'écran calibration. Intensité → alpha crête et durée (0 =
+  rien). Ligne `remanence_curseur`, CONFORT, plancher 0.0.
+  Ressources : aucune
+- **M3 Le regard du noir** —
+  Après ~25 s sans aucun mouvement de curseur, quelque part dans les marges
+  libres du backdrop — jamais sur un panneau, jamais près du champ de
+  calibration — deux reflets minuscules apparaissent côte à côte : deux yeux
+  qui accrochent une lumière lointaine. Montée en 0,4 s à peine au-dessus du
+  seuil de perception, teinte P2 délavée, un clignement (60 ms d'extinction
+  synchrone des deux points), puis disparition. Jamais deux fois au même
+  endroit ; le moindre input les efface instantanément.
+  Pourquoi : « L'obscurité qui regarde », littéralement : le menu au repos a
+  un pouls, et l'adversaire existe déjà avant le match. Effet « je l'ai vu ou
+  j'ai rêvé ? » qui rend le simple fait de laisser le menu ouvert légèrement
+  électrique — on revient vérifier, on le montre à un ami. Purement visuel :
+  honnête avec les sons UI encore absents, il n'attend aucun asset. Avec
+  Quelqu'un derrière la vitre (rang 4), il peuple le noir sans jamais
+  l'éclaircir.
+  Voie : Timer d'inactivité réarmé par _set_focus et les inputs (déjà
+  centralisés dans ui.gd) + un Control de dessin plein cadre nommé,
+  MOUSE_FILTER_IGNORE : deux disques flous de 3 px (trois draw_circle
+  concentriques en dégradé), alpha piloté par tween, queue_redraw uniquement
+  pendant les ~2,5 s de vie, position tirée hors des rects connus des panneaux
+  et du champ de calibration. Coût strictement nul le reste du temps — aucun
+  _process ajouté. Intensité → alpha crête et fréquence (0 = jamais). Ligne
+  `regard_du_noir`, CONFORT, plancher 0.0 garanti : confort pur, n'apprend
+  rien, n'existe pas en match.
+  Ressources : aucune
+- **M4 Quelqu'un derrière la vitre** —
+  Toutes les 25 à 45 s (aléatoire, jamais métronomique), une lueur floue et
+  lente traverse l'écran DERRIÈRE les panneaux translucides (SURFACE à 0,92)
+  et devant le backdrop — une torche portée par quelqu'un qui marche de
+  l'autre côté d'un verre dépoli. Teinte à peine rougie (P2 à 6-8 % d'alpha),
+  trajet oblique de 3-4 s, parallaxe naturel : étouffée sous les panneaux,
+  révélée dans les gouttières entre colonnes. Rarement — une fois sur trois
+  environ — un éclat bref accompagne le passage : montée de 90 ms, mort en 200
+  ms, un coup de feu étouffé vu à travers le mur. Jamais deux fois le même
+  trajet, jamais pendant la calibration.
+  Pourquoi : Matérialise l'adversaire avant même le match : le noir du menu
+  est habité. C'est le détail qu'on guette sans le vouloir. Donne enfin un
+  sens visible à la translucidité de SURFACE, décision de thème jusqu'ici
+  invisible — et le Verre fumé (rang 14) lui fournit sa vitre. Fusion : le «
+  duel permanent » derrière la vitre est écarté (deux lueurs en mouvement
+  continu concurrençaient la brume et la sobriété) ; son éclat de tir rare, le
+  meilleur de l'idée, est conservé ici en événement.
+  Voie : Un Control nommé inséré entre le backdrop et le MarginContainer
+  (game_over_panel.add_child + move_child(…, 1) — ordre des enfants vérifié à
+  ui.gd:1560-1568, structure intacte), MOUSE_FILTER_IGNORE. Il dessine UNE
+  tache radiale (draw_texture d'une GradientTexture2D générée une fois en
+  code), position pilotée par tween, queue_redraw seulement pendant le
+  passage, Timer aléatoire le reste du temps : coût strictement nul au repos.
+  L'éclat = seconde tache + court segment dans le même _draw, mêmes tweens.
+  Pas besoin de Light2D : les panneaux translucides laissent transparaître
+  d'eux-mêmes. Intensité → alpha crête et fréquence (0 = jamais). Ligne
+  `passant_vitre`, CONFORT, plancher 0.0, phrase type « Une lueur peut parfois
+  passer derrière les panneaux du menu ».
+  Ressources : aucune (tache générée en code)
+- **M5 Le bruit de l'œil** —
+  À la frontière exacte entre halo et noir — l'anneau de pénombre autour de la
+  torche du curseur et le long des bords éclairés des panneaux — une
+  granulation animée quasi subliminale fourmille, comme le bruit rétinien d'un
+  œil qui force dans l'obscurité. Nulle part ailleurs : ni dans la lumière
+  pleine, ni dans le noir profond. Amplitude 2-3 % de luminance, scintillement
+  quantifié à ~12 Hz (pas à chaque frame rendue) pour rester organique et
+  jamais « vidéo ». Aucune scanline, aucune bande : vocabulaire volontairement
+  distinct du grain VHS de la killcam.
+  Pourquoi : Fait exister le noir comme matière — le noir « travaille » — sans
+  jamais gêner la lecture. En duo avec la torche du curseur (rang 9), le
+  joueur croit voir son propre œil s'adapter : sensation physiologique inédite
+  en menu. Complémentaire du Voile d'objectif (rang 15) sans doublon : le
+  voile est un grain de pellicule global et statique, le bruit de l'œil est
+  localisé et vit uniquement à la lisière de la lumière.
+  Voie : UN canvas_item shader nouveau à la racine, préchargé en const (règle
+  absolue du dépôt), posé sur le ColorRect backdrop existant (ui.gd:1560) :
+  hash noise procédural masqué par deux smoothstep en anneau autour d'uniforms
+  centre/rayon poussés par _update_focus_rings (déjà en _process), temps
+  quantifié dans le shader, uniform d'intensité lu de current_effect. Fragment
+  trivial (une hash, deux smoothstep) : négligeable pour la cible 1 % bas ≥
+  120 fps, gl_compatibility sans réserve. Peut partager son quad et ses
+  uniforms avec la Brume d'abysse (rang 12) — un seul shader de backdrop pour
+  les deux. À 0, rend le backdrop actuel à l'identique ; coupé net sur l'écran
+  calibration. Ligne `bruit_de_l_oeil`, CONFORT, plancher 0.0.
+  Ressources : aucune (un .gdshader nouveau à la racine — du code, pas
+  d'asset)
+- **M6 L'encre coulée** —
+  Au push, le nouvel écran ne fait pas qu'arriver : il s'imprime. Depuis la
+  hauteur exacte de l'entrée que vous venez d'activer, un ménisque lumineux —
+  trait horizontal de 2 px, cœur blanc, franges à l'accent de l'écran — balaie
+  la colonne entrante en 0,22 s ; devant lui les entrées sont encore éteintes
+  (modulate.a 0), à son passage chacune s'allume avec ~60 ms de surbrillance
+  avant de retomber à sa valeur, le chevron accent s'embrasant un souffle
+  après sa rangée. Au back(), le trait part de l'entrée RETOUR et remonte.
+  Cascade totale terminée avant que le pouce puisse agir. La lumière de votre
+  geste coule littéralement dans l'écran suivant.
+  Pourquoi : Rien n'« apparaît » : tout s'écrit, comme si la lumière était
+  l'encre du menu. La continuité geste → écran rend la navigation charnelle,
+  et l'œil lit la liste dans l'ordre où le jeu l'éclaire. C'est le stagger AAA
+  raconté par le thème, pas un générique. Fusion des trois idées d'apparition
+  des entrées : le trait directionnel de l'encre + l'allumage échelonné de la
+  cascade ; le scale TRANS_BACK écarté (l'allumage doit rester de la lumière,
+  pas du mouvement).
+  Voie : Se greffe sur MenuHub._slide (menu_hub.gd:287) sans le remplacer : le
+  même tween parallèle (même garde de kill) anime (a) un Control overlay
+  nommé, clippé dans _host, MOUSE_FILTER_IGNORE, qui dessine le trait en
+  _draw() (queue_redraw piloté par la progression du tween), (b) les
+  modulate.a des enfants directs de la racine entrante, échelonnés selon leur
+  position.y par rapport au front. modulate uniquement — jamais
+  visible/disabled : les contrôles restent dans le parcours du résolveur dès
+  la première frame, le curseur est de toute façon ressemé au changement
+  d'écran. Point de départ = position du dernier bouton activé, connue de
+  _set_focus. reset() reste sec. Actif 0,22 s puis inerte, aucun nœud par
+  entrée. Intensité → longueur du trait et amplitude de surbrillance (0 =
+  slide actuel inchangé). Ligne `encre_coulee`, CONFORT, plancher 0.0.
+  Ressources : aucune
+- **M7 Le code gravé par impacts** —
+  Le code de salon à 6 caractères ne s'imprime pas : il se frappe. Chaque
+  caractère apparaît en blanc incandescent puis refroidit vers l'or en 0,5 s,
+  décalé de 70 ms (séquence totale < 1 s), avec une secousse d'1 px vers le
+  bas et 2-3 étincelles minuscules qui chutent et meurent en 0,3 s au point
+  d'impact — six balles qui gravent le code dans le mur. Même traitement pour
+  le code de récupération du profil (GOLD 34).
+  Pourquoi : Le code de salon est l'objet social du jeu — celui qu'on lit à
+  voix haute à un ami — et il apparaît aujourd'hui sans cérémonie
+  (ui.gd:2519). Le graver par impacts en fait un petit événement mémorable à
+  chaque création de salon, dans le langage exact du monde (l'impact qui
+  marque la matière, le métal qui refroidit), et le refroidissement blanc → or
+  atterrit précisément sur la sémantique « or = à lire » du thème.
+  Voie : lobby_code_label (ui.gd:2354, mis à jour ligne 2516) devient un HBox
+  de 6 Labels nommés CodeChar0..5 à custom_minimum_size fixe — le gabarit
+  occupe exactement la place du code (y compris l'état « — — — — — — »),
+  stabilité de mise en page préservée, bouton copier inchangé. Animation
+  déclenchée seulement quand la chaîne change (dernière valeur mémorisée :
+  refresh idempotent, aucun rejeu au repeint). Étincelles via un Control _draw
+  poolé, one-shot tween ; ni shader ni _process. Labels FOCUS_NONE, hors
+  parcours curseur, jamais de liseré. Ligne `gravure_code`, CONFORT, plancher
+  0.0 (0 = affichage instantané).
+  Ressources : aucune
+- **M8 Le départ au tir** —
+  Presser une entrée launcher (style plein — le geste qui engage une partie)
+  tire réellement : étoile de bouche blanche de 2 frames au chevron, puis une
+  balle traçante — cœur blanc 1 px sur un fût large basse-alpha teinté accent,
+  faux HDR — file dans le sens exact du _slide entrant (±32 px) et s'éteint en
+  0,15 s. L'écran suivant semble tracté par la balle. Les push ordinaires
+  gardent leur seul _pulse_press : l'effet est réservé au geste qui engage.
+  Pourquoi : Réservé au launcher, l'effet sacralise l'instant décisif : JOUER
+  n'est pas un clic, c'est un coup de feu — le vocabulaire du duel (flash de
+  bouche, traçante) réutilisé tel quel là où le joueur s'engage. Le lien
+  visuel balle → glissement d'écran donne à la navigation une causalité
+  physique addictive : chaque partie lancée commence par la sensation du tir.
+  Se marie naturellement avec L'encre coulée (rang 6) : la traçante devient
+  l'encre du prochain écran.
+  Voie : Un Control top-level poolé nommé MenuTracer avec _draw (ou deux
+  Line2D préconstruits), réutilisé à chaque tir — zéro allocation, zéro coût
+  au repos, one-shot tween. Câblage au même point que _pulse_press
+  (_wire_buttons, ui.gd:393-405) filtré par une métadonnée launcher (le style
+  plein la distingue déjà) ; le sens vient du push en cours du hub. Aucune
+  modification de _slide, de la pile ou du résolveur. Le faux HDR par
+  superposition de traits est la technique déjà imposée au laser du jeu,
+  gl_compatibility garanti. Ligne `depart_au_tir`, CONFORT, plancher 0.0.
+  Ressources : aucune
+- **M9 La torche du curseur** —
+  Le liseré J1 cesse d'être un simple cadre : il porte une flaque de lumière
+  cyan (~250 px, dégradé radial doux, additif, alpha crête ~0,05) qui suit le
+  curseur avec le lerp exponentiel déjà en place, en traînant de quelques
+  pixels — une lampe portée à la main. Le backdrop et les filets reposent dans
+  une pénombre légère — jamais sous ~45 % de luminance : tout reste lisible,
+  le noir reste noir ; l'entrée focalisée est pleinement éclairée, ses
+  voisines reçoivent une retombée décroissante, le bord du panneau droit
+  accroche une lumière rasante. À chaque activation, la lueur palpite une fois
+  (+60 % d'intensité, retombée en 0,18 s). Micro-vacillement de flamme
+  optionnel (±3 %, bruit lent). Le ring P2 porte la même torche rouge sur son
+  râtelier en écran partagé ; là où les deux halos se croisent, l'additif
+  blanchit naturellement.
+  Pourquoi : C'est LE geste diégétique fondateur et la clé de voûte du système
+  : dans un jeu où la lumière est la seule information, le curseur devient une
+  torche — regarder le menu, c'est déjà jouer. La retombée sur les voisines
+  donne gratuitement une hiérarchie magnétique, et la palpitation d'appui
+  donne à chaque geste une conséquence lumineuse — précieux tant que les sons
+  UI manquent. Le Bruit de l'œil (rang 5) et la Rémanence (rang 2)
+  s'accrochent à sa géométrie. Fusion des trois variantes curseur-lampe :
+  concept de la torche, implémentation shader de la lueur.
+  Voie : Un ColorRect « CursorGlow » plein cadre, MOUSE_FILTER_IGNORE, dernier
+  enfant de game_over_panel et de pause_panel, shader canvas_item préchargé en
+  const avec uniforms p1_pos/p1_strength/p2_pos/p2_strength + profondeur de
+  pénombre — surtout PAS de Light2D + occluders + CanvasModulate sur des
+  Controls (version écartée : occluders à resynchroniser sur un layout
+  redimensionnable, fragile, pour un rendu équivalent). Alimenté depuis
+  _update_focus_rings (ui.gd:543, les rects des rings y sont déjà calculés :
+  centre = global_position + size/2) — aucun _process nouveau ; palpitation :
+  _pulse_press pousse l'uniform à 1, le shader le fait décroître. Garde-fou :
+  uniforms forcés à 0 sur l'écran calibration via _on_hub_screen_changed —
+  rien de clair ne borde le champ noir de mesure. À 0 = menu actuel pixel pour
+  pixel. Un quad, dégradés en ALU : coût nul. Ligne `torche_menu`, CONFORT,
+  plancher 0.0.
+  Ressources : aucune
+- **M10 L'extinction des feux** —
+  Le menu et la pause ne s'affichent plus : le monde s'éteint, puis le menu se
+  rallume. Ouverture : la vue du jeu s'éteint, un battement d'obscurité vraie
+  de 0,05 s, puis le rideau de nuit tombe (backdrop alpha 0 → 0,96 en 0,12 s)
+  pendant que les panneaux, d'abord pures silhouettes noires (modulate noir),
+  se rallument en cascade haut → bas sur 0,18 s, le titre or reprenant vie en
+  dernier avec une frame de blanc. Fermeture : l'inverse en 0,10 s — les
+  surfaces se noient dans le noir PUIS le rideau se lève sur l'arène. Aucun
+  mouvement, aucune échelle : uniquement de la lumière qui meurt et qui
+  renaît. La pause prend la variante courte dans les deux sens.
+  Pourquoi : Ouvrir le menu est le geste le plus répété du jeu, et c'est
+  aujourd'hui un show/hide sec (terrain libre documenté). Entrer au menu =
+  éteindre sa torche, en sortir = la rallumer : le battement de noir absolu
+  entre deux mondes rappelle le contrat à chaque traversée, sans un pixel de
+  déplacement (zéro vertige, zéro gêne manette). Fusion des trois variantes de
+  transition : le battement de noir de l'iris conservé, l'iris radial et la
+  ligne balayante écartés au profit du tout-tween, plus sûr et plus « lumière
+  pure ».
+  Voie : Pur tween dans les chemins show/hide de game_over_panel et
+  pause_panel : une fonction unique anime le color.a du backdrop (ui.gd:1560 /
+  2604) et le modulate des enfants de Color(0,0,0) vers WHITE, TRANS_CUBIC,
+  échelonné par position Y ; hide() réel différé à la fin du tween de
+  fermeture (0,10 s, sous le seuil d'agacement) EN DÉ-PAUSANT L'ARBRE
+  IMMÉDIATEMENT : seul le visuel s'éteint, la reprise du gameplay ne perd
+  jamais un battement. Idempotent : kill du tween précédent (patron _slide
+  déjà en place). Aucun nœud nouveau, aucun shader ; les contrôles gardent
+  taille, position et visibilité (seule la couleur anime : rien ne disparaît
+  sous le curseur), curseurs ressemés après comme aujourd'hui. À 0 : show/hide
+  secs actuels. Ligne `extinction_menu`, CONFORT, plancher 0.0.
+  Ressources : aucune
+- **M11 Le titre incandescent** —
+  CANDELA 2D cesse d'être un aplat or. En continu, une onde de luminance
+  traverse les lettres de gauche à droite (période ~5 s, ±8 % autour de GOLD,
+  légèrement plus chaud à la crête) — des braises sous un courant d'air ;
+  aucun glyphe ne bouge, luminance seule. À l'ouverture du menu, le titre
+  s'embrase : d'un ambre presque noir au plein or en 0,35 s, la vague partant
+  du C et atteignant « 2D » en dernier, avec un halo en dépassement (alpha
+  0,25 retombant en 0,4 s). À l'écran de fin, le même shader porte la
+  température du verdict : la victoire flambe une fois vers le blanc-vert, la
+  défaite voit son onde mourir en braise basse (amplitude divisée par deux).
+  Pourquoi : Le titre est le premier pixel lu à chaque session et après chaque
+  match ; la typographie cinétique le rend vivant et premium en racontant le
+  jeu : une lumière qui brûle tant que ça joue. La température du verdict
+  signe l'écran de fin sans toucher un layout. Cohérent avec le Cadran (rang
+  1) : la même flamme imaginaire fait rougeoyer les lettres devant et projette
+  l'ombre derrière. Fusion : l'embrasement d'ouverture remplace le vacillement
+  du néon, écarté (clignotements irréguliers = risque photosensibilité, et
+  métaphore « tube » concurrente de la braise).
+  Voie : Un ShaderMaterial préchargé en const posé sur le Label du titre dans
+  _build_menu_header() (ui.gd:2110). Subtilité exacte : sur un Label, UV
+  couvre chaque glyphe dans l'atlas, pas le bloc — la phase horizontale se
+  prend sur VERTEX.x (espace local, en pixels) normalisé par un uniform de
+  largeur posé au resize. 100 % ALU, pas de screen_texture, gl_compatibility
+  garanti. Le halo d'embrasement : un second Label fantôme derrière, même
+  texte, modulate tweené — l'idiome des ombres chromatiques du titre killcam,
+  déjà au dépôt. Luminance seule : la boîte clippée à 60 px sous le titre est
+  respectée. Coût : un label et quelques ALU. Ligne `titre_vivant`, CONFORT,
+  plancher 0.0.
+  Ressources : aucune
+- **M12 La brume d'abysse** —
+  Derrière le hub, l'aplat BACKDROP devient une pénombre vivante : deux nappes
+  de brouillard procédural (value noise, 2 octaves) dérivant en sens opposés à
+  ~0,008 et 0,013 UV/s, luminance tenue entre 0,010 et 0,035 — jamais plus :
+  le noir reste noir. Un halo radial décentré vers le haut respire sur ~9 s
+  (±2 %) — une torche lointaine derrière un verre dépoli ; un biais cyan quasi
+  subliminal à gauche, rouge à droite (alpha ~0,02) : les territoires P1/P2.
+  L'ensemble glisse de 3-4 px à l'opposé du curseur J1, amorti sur ~1,5 s : la
+  plaque du menu flotte devant un monde profond — parallaxe au stick, donc
+  manette d'abord.
+  Pourquoi : La première seconde du menu enseigne déjà la grammaire du jeu :
+  le noir est habité, la lumière est une présence. L'intention actée du
+  BACKDROP (« sentir un monde derrière ») devient littérale, et la parallaxe
+  fait répondre tout l'écran au moindre geste — la réponse tactile permanente
+  qui rend un menu magnétique. Sous 4 % de luminance, le contraste du texte
+  est intact. C'est le sol du système : le décor dans lequel marche le passant
+  (rang 4) et que floute le verre (rang 14).
+  Voie : Un ShaderMaterial préchargé en const posé sur le ColorRect backdrop
+  existant (ui.gd:1560, copie pause à 2604). Shader canvas_item 100 % ALU
+  (hash noise, zéro fetch texture), animé par TIME : un quad plein écran, coût
+  négligeable ; panneau caché = non dessiné = zéro coût en match. La parallaxe
+  est un uniform vec2 alimenté depuis _update_focus_rings() (déjà en _process
+  permanent) : aucun nouveau _process, aucun repeint GDScript. Peut fusionner
+  dans le même shader que le Bruit de l'œil (rang 5) — un seul matériau de
+  backdrop pour les deux. Forcé neutre sur l'écran calibration. Structure et
+  navigation intactes. Ligne `brume_menu`, CONFORT, plancher 0.0 (l'intensité
+  module brume + respiration + parallaxe ; 0 = l'aplat statique actuel).
+  Ressources : aucune
+- **M13 Les squelettes de lumière** —
+  Pendant que le classement, le rang du profil ou la fourchette du matchmaking
+  attendent le réseau : pas de texte figé ni de spinner. Les dix lignes pré-
+  construites montrent des barres fantômes sombres (teinte LINE, coins 3 px) à
+  l'emplacement exact du rang, du pseudo et de l'ELO, et une bande de lumière
+  douce (~120 px, alpha 0,06, inclinée à 20°) balaie toutes les lignes en
+  phase, un passage toutes les 1,1 s — une torche qui fouille des étagères
+  dans le noir. À l'arrivée des données, chaque barre se fond dans son texte
+  en 0,12 s, première ligne d'abord, 30 ms d'écart ; ma ligne s'allume en P1
+  en dernier — la petite récompense. En échec : le balayage s'arrête, les
+  barres se posent en DIM statique — l'absence n'est pas une panne.
+  Pourquoi : L'attente réseau est l'endroit où les menus bon marché meurent
+  (texte gelé) et où se joue la rétention des écrans classés. Le skeleton
+  shimmer, signe lu « premium et vivant », est ici diégétique — chercher un
+  adversaire ou un classement, c'est promener une lumière dans le noir — et il
+  respecte à la lettre la sémantique DIM du dépôt (« non configuré » ne
+  ressemble pas à une panne).
+  Voie : Le terrain est prêt : screen_leaderboard.gd crée ses lignes une fois
+  et les remplit (_rows:124, _fill_row:553, refresh:342 idempotent).
+  Squelettes = ColorRects pré-créés dans chaque ligne, montrés/cachés par
+  refresh() — aucune reconstruction, le motif signature d'état du dépôt.
+  Balayage : UN ShaderMaterial partagé préchargé en const, phase par TIME +
+  uniform de rangée — tout côté GPU, zéro repeint GDScript par seconde. Fondus
+  : tweens modulate courts. Même matériau réutilisable dans le panneau `salon`
+  et le MatchBanner pour la fourchette en attente. Curseur : squelettes
+  MOUSE_FILTER_IGNORE / FOCUS_NONE, jamais dans le parcours ; les vraies
+  lignes ne disparaissent jamais sous le liseré. Dégradé ALU, gl_compatibility
+  OK. Ligne `balayage_attente`, CONFORT, plancher 0.0 (0 = barres statiques).
+  Ressources : aucune
+- **M14 Le verre fumé** —
+  Le panneau de droite et les rangées de réglage passent de l'aplat peint au
+  verre fumé : un filet lumineux interne de 1 px le long du bord haut (blanc
+  alpha 0,05), une luisance verticale (+3 % de luminance en haut, éteinte à 30
+  % de hauteur), et une strie spéculaire diagonale à 12°, alpha 0,02, qui
+  dérive de 20 px sur ~12 s. Au focus d'une rangée, le bord P1 existant gagne
+  une lueur interne de 6 px (alpha 0,10) : l'arête du verre qui accroche la
+  torche du curseur. En option de luxe : derrière le seul panneau de droite,
+  la brume d'abysse apparaît FLOUE (gaussien 9 taps via screen_texture),
+  densifiée — le panneau flotte visiblement DANS le brouillard.
+  Pourquoi : Le glassmorphism sombre est LE langage matière 2025-2026, et il
+  est ici diégétique : les surfaces deviennent des vitres que le noir traverse
+  — c'est aussi lui qui donne sa vitre au passant du rang 4. Le menu se met à
+  « coûter cher » à l'œil parce que la matière a changé, pas la décoration :
+  de la profondeur sans surcharge, le noir intact.
+  Voie : Deux étages. Étage sûr (défaut) : impossible en StyleBox, donc un
+  ShaderMaterial préchargé sur le PanelContainer de droite et sur les
+  PanelContainer de rangée (_row_style de ScreenEffects/ScreenAudio) — le
+  matériau d'un Control s'applique à son propre dessin (la stylebox) et ne
+  s'hérite pas aux enfants : le texte reste net. Sheen + filet + strie en ALU
+  pur : coût nul, gl_compatibility OK. Étage flou réel : hint_screen_texture
+  est éprouvé au dépôt sous gl_compatibility (killcam_overlay.gdshader:3) ;
+  une copie d'écran + 9 taps sur ~500×600 px, réservé au SEUL panneau de
+  droite, à valider au bench_framerate (cible 1 % bas ≥ 120 fps) avant d'être
+  gardé. Styles et nœuds existants, structure intacte. Ligne `verre_panneaux`,
+  CONFORT, plancher 0.0 (0 = aplats actuels).
+  Ressources : aucune
+- **M15 Le voile d'objectif** —
+  Une unique passe de finition plein écran, menus seulement : (a) grain de
+  film monochrome fin, 1 px, 1,5-2 % de luminance, retiré à chaque frame — la
+  recette du killcam mais trois fois plus fin, sans scanlines ni glitch : du
+  cinéma, pas de la VHS ; (b) frange chromatique confinée aux 12 % extérieurs
+  du cadre — R et B s'écartent jusqu'à 1,5 px pile dans les coins, zéro au
+  centre : un bel objectif, pas une panne ; (c) vignette optique douce, −6 %
+  de luminance dans les angles, respirant de ±1 % sur 7 s. Ensemble : le menu
+  semble filmé en basse lumière par une très bonne optique.
+  Pourquoi : C'est le 10 % invisible qui sépare l'UI plate propre de l'image
+  AAA : le cadre gagne une texture photographique, le noir devient un noir de
+  film et non un #000 vide. Bonus concret : le grain dissout le banding des
+  dégradés sombres (artefact réel du 8 bits sous gl_compatibility, que la
+  brume du rang 12 révélerait) — du polish qui est aussi un correctif.
+  Vocabulaire optique statique, distinct du glitch killcam et du bruit
+  localisé du rang 5 : c'est la couche de finition qui scelle tout le système.
+  Voie : Un ColorRect « MenuVeil » plein cadre, dernier enfant côté menu et
+  pause, MOUSE_FILTER_IGNORE, shader préchargé en const. Frange : 3 lectures
+  hint_screen_texture pondérées par la distance au centre — l'idiome exact du
+  killcam, prouvé sous gl_compatibility ; grain et vignette en ALU. Un quad, 3
+  taps : très en deçà du budget 1 % bas ≥ 120 fps. Garde-fou impératif : le
+  voile s'éteint sur l'écran calibration via screen_changed — du bruit de
+  luminance sur le champ noir fausserait la mesure de tous les joueurs du même
+  côté. Caché en match : zéro coût. Structure intacte. Ligne `voile_menu`,
+  CONFORT, plancher 0.0 (l'intensité module grain, frange et vignette
+  ensemble).
+  Ressources : aucune (un .gdshader nouveau à la racine)
+
+Écartées par le jury (raison en une ligne) :
+
+- La torche du regard — fusionnée dans La torche du curseur (rang 9) : ses
+  vraies ombres portées (Light2D + LightOccluder2D + CanvasModulate) exigent
+  de resynchroniser des occluders sur un layout de Controls redimensionnable —
+  fragile et sur-ingénieré pour un rendu équivalent au shader.
+- La lueur du curseur — doublon du concept curseur-lampe ; c'est son
+  implémentation (shader + uniforms poussés par _update_focus_rings, la voie
+  la plus sûre) et sa palpitation d'appui qui sont reprises dans la fiche
+  fusionnée du rang 9.
+- Rémanence de phosphore — doublon de trace de curseur : l'écho même-couleur
+  est un trail déjà vu partout ; l'après-image négative complémentaire (rang
+  2) est la version réellement inédite.
+- Balayage d'allumage — doublon d'apparition des entrées au changement
+  d'écran, absorbé par L'encre coulée (rang 6) qui y ajoute le point de départ
+  au geste et la direction push/back.
+- Allumage en cascade — troisième variante du même stagger ; son échelonnement
+  de modulate survit dans L'encre coulée, son scale TRANS_BACK est écarté
+  (l'allumage doit rester de la lumière, jamais du mouvement).
+- Extinction de torche — fusionnée dans L'extinction des feux (rang 10) : son
+  battement de noir absolu est conservé, son iris radial (shader de masque +
+  hide différé) cède au tout-tween d'alpha/modulate, plus sûr et sans shader.
+- Rideau de lumière — troisième variante d'ouverture/fermeture ; sa ligne
+  balayante additive mordait sur le vocabulaire du trait de L'encre coulée, et
+  le fondu de luminance de la fiche retenue rend le même service.
+- Le duel derrière la vitre — deux lueurs en mouvement permanent derrière le
+  backdrop concurrençaient la brume d'abysse et la sobriété du noir ; son
+  meilleur moment — l'éclat de tir rare et étouffé — est conservé dans
+  Quelqu'un derrière la vitre (rang 4).
+- Amorçage du néon — le vacillement irrégulier à l'ouverture cumule un risque
+  de photosensibilité et une métaphore « tube électrique » concurrente de la
+  braise ; sa fonction (un titre qui s'allume) est reprise par l'embrasement
+  du Titre incandescent (rang 11).
+
 ### Items D — arbitrés par Adrien le 2026-08-17
 
 - **D1 Empreintes éphémères** — traces de pas ~2 s visibles seulement sous une

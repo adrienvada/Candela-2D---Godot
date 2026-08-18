@@ -213,6 +213,17 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 — session « game feel »
+
+À la demande d'Adrien : **Vague M** inscrite à la ROADMAP — 15 effets visuels
+de menus (« la vitrine »), classés du plus inédit au plus moderne, 100 %
+procéduraux, structure des écrans intacte, chacun avec sa ligne effect_policy.
+**À implémenter par la session « menus »** : tout vit dans ui.gd/screen_*.gd,
+son domaine — cette session n'y a pas touché. La session « artefact de suivi »
+est notifiée pour répercuter la vague dans le suivi de projet. La boucle
+perpétuelle reste désactivée ; le reste dû de la Vague 4 (V4.11/13/15/16) est
+inchangé.
+
 ### 2026-08-17 (pause) — session « game feel »
 
 Boucle perpétuelle DÉSACTIVÉE à la demande d'Adrien, arrêt sur version stable.
