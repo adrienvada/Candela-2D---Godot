@@ -4250,6 +4250,39 @@ manquerait à la mesure.
 traversée d'écran. Si quelqu'un cherche un jour un à-coup au changement d'écran,
 c'est ici qu'il commence.
 
+### Le second étage de M14, mesuré — 2026-08-18
+
+Sa fiche l'interdisait sans mesure : « à valider au `bench_framerate` avant
+d'être gardé ». Trois relevés `--menus`, machine calme, 15 s chacun :
+
+| | moyen | médian | 1 % bas | pire image |
+|---|---|---|---|---|
+| sans flou | 207 | **200** | 163 | 14,5 ms |
+| avec flou (1) | 200 | **200** | 169 | 12,6 ms |
+| avec flou (2) | 200 | **199** | 139 | 16,2 ms |
+
+**Décision : le flou est gardé.** Il coûte ~3 % de la cadence moyenne (207 → 200,
+mesuré deux fois) et **rien de détectable sur la médiane** (200 → 200 / 199),
+dans un mode qui a 66 % de marge au-dessus de la cible. Neuf lectures d'écran en
+croix plutôt qu'en carré — quatre-vingt-une prises pour un résultat que l'œil ne
+distingue pas à ce rayon — et **réservé au seul cadre de droite** : c'est une
+copie d'écran par image, la donner aux vingt rangées coûterait vingt fois pour un
+effet qu'on ne verrait que sur la plus grande.
+
+> **Et un constat de méthode qui vaut pour les relevés suivants : le 1 % bas des
+> MENUS n'est pas une statistique fiable sur 15 s.** Il vaut 163, 169 puis 139
+> sur trois exécutions du même code — ±30 fps — pendant que la médiane ne bouge
+> pas d'une image. La raison est structurelle : en menu la charge est *ponctuée*
+> (traversées d'écran, compilations de shader) et non continue comme dans le
+> duel. Une trentaine d'images seulement tombent dans le centième le plus lent,
+> et deux transitions y suffisent à tout déplacer.
+>
+> **Conséquence pratique : dans le mode menus, c'est la MÉDIANE qui tranche**, et
+> le 1 % bas ne sert qu'à repérer une saccade franche. Dans le duel, où la charge
+> est continue, c'est l'inverse. Attribuer une différence de 1 % bas à un
+> changement de code, ici, serait exactement l'erreur qu'on a passé la journée à
+> traquer — un chiffre à qui l'on fait dire ce qu'il ne mesure pas.
+
 **Décision qui revient à Adrien** : 97 est-il acceptable ? La cible de 120 venait
 de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute ~10 ms au
 temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de **1,7 ms** —

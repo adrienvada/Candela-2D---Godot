@@ -1793,7 +1793,10 @@ func _build_menu() -> void:
 	# un arbre vide.
 	menu_glass = MenuGlass.new()
 	add_child(menu_glass)
-	menu_glass.vitrer(hub.right_panel())
+	# Le second étage — la brume défocalisée — n'est donné qu'au cadre de droite :
+	# c'est une copie d'écran par image, et c'est la seule surface assez grande
+	# pour qu'on voie la profondeur qu'elle achète.
+	menu_glass.vitrer(hub.right_panel(), COLOR_P1, true)
 	menu_glass.vitrer_rangees(hub)
 
 	# M15 — le voile passe APRÈS tout ce qu'il filme, donc en dernier dans le
@@ -2847,10 +2850,14 @@ func _apply_lobby_intent(mode: NetworkManager.GameMode,
 		transport: NetworkManager.Transport) -> void:
 	_intended_mode = mode
 	NetworkManager.transport = transport
-	# Les deux bascules retirées de la vue restent le miroir de la décision : le
-	# banc `test_online_match.tscn` les pilote encore pour choisir son transport.
-	# Sans signal, sous peine de rappeler `_refresh_lobby_block()` en pleine
-	# reconstruction.
+	# Les deux bascules retirées de la vue ne sont plus qu'un MIROIR : plus rien
+	# ne les lit pour décider. Le banc `test_online_match.tscn` les pilotait
+	# encore pour choisir son transport ; depuis qu'il passe par les écrans, c'est
+	# l'entrée dans le salon qui écrit le transport, et la bascule arrivait une
+	# image trop tard — le chemin LAN repartait sur EOS (trouvé par le duo ENet,
+	# 2026-08-18). On les tient à jour parce qu'elles s'affichent, pas parce
+	# qu'elles décident. Sans signal, sous peine de rappeler
+	# `_refresh_lobby_block()` en pleine reconstruction.
 	if btn_transport_eos != null:
 		btn_transport_eos.set_pressed_no_signal(transport == NetworkManager.Transport.EOS)
 		btn_transport_lan.set_pressed_no_signal(transport != NetworkManager.Transport.EOS)

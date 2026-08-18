@@ -49,7 +49,13 @@ func set_intensite(valeur: float) -> void:
 			mat.set_shader_parameter("intensite", _intensite)
 
 ## Vitre une surface, et garde sa taille à jour.
-func vitrer(panneau: Control, teinte: Color = MenuTheme.P1) -> void:
+##
+## `flou` réserve le **second étage** — la brume relue et défocalisée derrière la
+## vitre — à une seule surface. C'est une copie d'écran par image : la donner à
+## vingt rangées coûterait vingt fois pour un effet qu'on ne verrait que sur la
+## plus grande.
+func vitrer(panneau: Control, teinte: Color = MenuTheme.P1,
+		flou: bool = false) -> void:
 	if panneau == null or not is_instance_valid(panneau):
 		return
 	for v in _vitres:
@@ -64,6 +70,7 @@ func vitrer(panneau: Control, teinte: Color = MenuTheme.P1) -> void:
 	# jamais assigné se relit `null`, et une surface au repos doit pouvoir dire
 	# qu'elle est au repos.
 	mat.set_shader_parameter("focus", 0.0)
+	mat.set_shader_parameter("flou", 1.0 if flou else 0.0)
 	panneau.material = mat
 	var vitre := {"panneau": panneau, "materiau": mat}
 	_vitres.append(vitre)

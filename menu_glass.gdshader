@@ -31,6 +31,10 @@ uniform vec2 taille = vec2(400.0, 200.0);
 // 1 quand la rangée porte le focus. La lueur interne ne vit que là.
 uniform float focus : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 teinte_focus : source_color = vec4(0.0, 0.94, 1.0, 1.0);
+// Second étage : la brume qu'on voit à travers la vitre est DÉFOCALISÉE. À zéro,
+// le verre est un simple aplat teinté et rien n'est relu à l'écran.
+uniform float flou : hint_range(0.0, 1.0) = 0.0;
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear;
 
 // Filet du bord haut : un pixel de lumière, comme l'arête d'une vitre.
 const float FILET = 1.5;
@@ -47,11 +51,32 @@ const float DERIVE_PERIODE = 12.0;
 // Lueur interne au focus : six pixels depuis l'arête.
 const float LUEUR = 6.0;
 const float LUEUR_ALPHA = 0.10;
+// Rayon du flou, en fraction d'écran. Volontairement petit : on défocalise une
+// brume, pas une image — un rayon large la transformerait en aplat gris.
+const float FLOU_RAYON = 0.006;
+// Part de la couleur du panneau remplacée par la brume défocalisée.
+const float FLOU_PART = 0.45;
 
 varying vec2 pos;
 
 void vertex() {
 	pos = VERTEX;
+}
+
+// Gaussienne à neuf prises, séparée en croix plutôt qu'en carré : neuf lectures
+// au lieu de quatre-vingt-une pour un résultat que l'œil ne distingue pas à ce
+// rayon. C'est ce qui garde l'étage payable — mesuré, pas supposé.
+vec3 brume_defocalisee(vec2 uv) {
+	vec3 acc = texture(screen_texture, uv).rgb * 0.24;
+	acc += texture(screen_texture, uv + vec2(FLOU_RAYON, 0.0)).rgb * 0.15;
+	acc += texture(screen_texture, uv - vec2(FLOU_RAYON, 0.0)).rgb * 0.15;
+	acc += texture(screen_texture, uv + vec2(0.0, FLOU_RAYON)).rgb * 0.15;
+	acc += texture(screen_texture, uv - vec2(0.0, FLOU_RAYON)).rgb * 0.15;
+	acc += texture(screen_texture, uv + vec2(FLOU_RAYON, FLOU_RAYON) * 0.7).rgb * 0.04;
+	acc += texture(screen_texture, uv - vec2(FLOU_RAYON, FLOU_RAYON) * 0.7).rgb * 0.04;
+	acc += texture(screen_texture, uv + vec2(FLOU_RAYON, -FLOU_RAYON) * 0.7).rgb * 0.04;
+	acc += texture(screen_texture, uv - vec2(FLOU_RAYON, -FLOU_RAYON) * 0.7).rgb * 0.04;
+	return acc;
 }
 
 void fragment() {
@@ -70,6 +95,15 @@ void fragment() {
 		float centre = dim.x * 0.35 + DERIVE * sin(TIME * (6.2831853 / DERIVE_PERIODE));
 		float strie = max(0.0, 1.0 - abs(axe - centre) / STRIE_LARGEUR);
 		strie = strie * strie * STRIE_ALPHA;
+
+		// La brume défocalisée passe SOUS le filet et la luisance : c'est ce qu'on
+		// voit à travers la vitre, pas ce qui brille dessus. Densifiée plutôt que
+		// simplement floutée — un panneau qui flotte DANS le brouillard, et non
+		// devant lui.
+		if (flou > 0.0) {
+			vec3 fond = brume_defocalisee(SCREEN_UV) * 1.6;
+			COLOR.rgb = mix(COLOR.rgb, fond, FLOU_PART * flou * intensite);
+		}
 
 		COLOR.rgb += vec3(filet + luisance + strie) * intensite;
 
