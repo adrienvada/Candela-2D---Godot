@@ -2987,11 +2987,12 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 |---|---|---|
 | ~~1~~ | ~~**Banc de file en scène**~~ | **FAIT** — EOS accepte le filtre entier, la conception tient. Un `.tscn` headless voit les autoloads du plugin EOS. Une seule instance suffit à répondre à la question qui bloque : EOS accepte-t-il un filtre entier avec `GreaterThanOrEqual` ? On ne cherche pas à trouver quelqu'un, on cherche à savoir si la **requête** est acceptée. |
 | ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
-| 4 | **Écran historique** (Phase 5, étape 5) | `match_history_view.gd` lit déjà le journal et rend des lignes prêtes à afficher, avec 122 assertions. Travail d'affichage. |
-| 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. |
+| 4 | **Écran historique** (Phase 5, étape 5) | 🟡 **En cours** au 2026-08-18 (nuit) — `screen_history.gd` et sa suite apparaissent dans l'arbre. `match_history_view.gd` lit déjà le journal, avec 122 assertions. |
+| 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. **Passe par `ui.gd`** — vérifier qu'aucune session ne le tient. |
 | 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
-| 7 | **Rejouer le journal local** | `match_history.json` garde tout ce que le réseau a perdu ; rien ne le remonte encore. |
-| 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. `game_state.gd` est libre : plus aucune session parallèle. |
+| ~~7~~ | ~~**Rejouer le journal local**~~ | ✅ **FAIT le 2026-08-18** — schéma v3, `pending_reports()` / `mark_reported()`, `replay_local_journal()`, vingt assertions. Le raccordement de `MatchRecord.build()` est fait aussi (`c064e6c`). |
+| 7bis | **La poignée de main de l'étape 8.9** | Le carnet (`protocol.gd`) existe et le rappel fonctionne ; il reste à **échanger** le numéro : attribut de salon EOS, `protocol` dans le filtre de la file, `rpc_hello` à signature figée pour ENet. Touche `network_manager.gd` et `matchmaking.gd`, que personne ne tient. |
+| 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. **Dépend de l'affichage du rang**, et passe par `ui.gd`. |
 | 9 | **Vagues de game feel procédurales** (V3, V5, V6) | Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. |
 
 ### Exige Adrien — rien ne remplace sa présence
@@ -3006,6 +3007,8 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | **Sens des divisions de rang** | I la plus basse (Rocket League) ou la plus haute (LoL) ? **Les tests passent dans les deux cas** — c'est précisément pour ça que ça ne peut pas se déduire. |
 | **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
+| **Déployer la fonction `rename`** | `supabase db push` puis `supabase functions deploy rename`. Écrite et testée depuis le 2026-08-18 ; l'écran du profil attend ce déploiement pour être câblé. |
+| **Numérotation de `Protocol.VERSION`** | Tranchée (« carnet + rappel »), mais **le numéro lui-même reste à monter à la main** à chaque changement du fil. C'est le seul jugement que la mécanique ne peut pas rendre. |
 
 ---
 
@@ -3019,6 +3022,9 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 > l'écran de **calibration de luminosité** — a été tué par une limite de session
 > et **n'a jamais été relancé** : c'est le seul travail commandé qui n'existe pas.
 > Il reste décrit à l'étape 4 de la Phase 5.
+>
+> *(Bilan du 2026-08-17 — au 2026-08-18, `run_suites.sh` en lance **vingt-trois**,
+> dont `test_fin_de_match` qui couvre le cycle de fin de match.)*
 >
 > Dix-huit fichiers `tools/test_*.gd` existent, **treize tournent**. Les cinq
 > autres : `test_matchmaking` et `test_screen_matchmaking`, écartées pour la
