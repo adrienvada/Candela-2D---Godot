@@ -106,6 +106,7 @@ l'élargit avec l'attente, l'**amicale ne filtre rien** et prend n'importe qui.
 C'est lisible sous le titre : « sans filtre de classement » d'un côté, une
 fourchette chiffrée de l'autre.
 
+
 ## Ce qu'on lit désormais dans une trace
 
 Depuis l'étape 8.9, la poignée de main écrit une ligne **quand elle réussit**,

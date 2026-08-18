@@ -383,18 +383,31 @@ func _verify_round() -> void:
 		_main._set_player_input_provider(_main.p2, stub, 0)
 		print("DEPLACEMENT: le client pousse une commande vers la droite")
 
-	# Quelques secondes de jeu réel : synchro, ping applicatif, réplication.
-	# Les deux instances ne démarrent pas ensemble : l'hôte peut avoir déjà porté
-	# son coup pendant cette fenêtre. On vérifie que le match avance, pas qu'il
-	# est resté à un instant précis.
-	await get_tree().create_timer(4.0).timeout
-
+	# On attend ce qu'on va vérifier, pas une durée.
+	#
+	# Ces contrôles dormaient quatre secondes puis regardaient. Sur une machine
+	# chargée — plusieurs instances Godot en vol — quatre secondes de mur ne font
+	# pas quatre secondes de jeu : le 2026-08-18, deux passages consécutifs ont
+	# échoué différemment, d'abord sur le ping à zéro puis sur l'écran de fin, avec
+	# un ping applicatif à 155 ms contre 26 habituels. Aucun défaut de logique
+	# derrière — une famine de temporisateurs.
+	#
+	# Un banc qui n'est vrai qu'au calme est une couverture conditionnelle. Celui-ci
+	# attend maintenant la CONDITION, avec un plafond large : il reste rapide quand
+	# la machine l'est, et cesse de mentir quand elle ne l'est pas.
+	var deplace := func() -> bool:
+		return _main.p2.global_position.distance_to(start_p2) > 20.0
+	var bouge := await _await(deplace, 20.0)
 	var moved: float = _main.p2.global_position.distance_to(start_p2)
 	print("DEPLACEMENT: J2 a parcouru %.1f px vu d'ici" % moved)
-	_check("le déplacement du client est visible ici", moved > 20.0, "%.1f px" % moved)
+	_check("le déplacement du client est visible ici", bouge, "%.1f px" % moved)
 	_check("le match avance sans se couper",
 		_main.round_active or _main._end_sequence_active or _main.game_over)
-	_check("le ping applicatif remonte", NetworkManager.has_rtt, "%.1f ms" % NetworkManager.rtt_ms)
+	# Le ping part toutes les secondes ; c'est le premier aller-retour qu'on
+	# attend, pas un délai arbitraire.
+	_check("le ping applicatif remonte",
+		await _await(func(): return NetworkManager.has_rtt, 20.0),
+		"%.1f ms" % NetworkManager.rtt_ms)
 	print("PING_MS: %.1f" % NetworkManager.rtt_ms)
 	print("HP: p1=%.0f p2=%.0f" % [_main.p1.hp, _main.p2.hp])
 
