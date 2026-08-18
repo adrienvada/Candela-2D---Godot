@@ -29,6 +29,40 @@ Toutes les commandes qui suivent supposent ces deux points réglés.
 
 ---
 
+# Ce qu'il reste à essayer — état au 2026-08-18
+
+Ce document décrit **six** essais. Trois sont faits ; inutile de les refaire sauf
+si l'on touche à ce qu'ils couvrent.
+
+| Essai | État |
+|---|---|
+| Banc transport | ✅ fait |
+| File d'appariement, découverte croisée | ✅ fait — deux identités se voient à travers le filtre |
+| **Match complet à deux fenêtres** (code de salon) | ✅ **fait le 2026-08-18** — vert des deux côtés, code 0 : porte PRÊT, manche, killcam, écran de fin, rematch |
+| **Appariement automatique à deux fenêtres** | 🔴 **à faire — c'est le prochain** |
+| **H1 — deux machines, deux réseaux** | 🔴 à faire, contre-vérification due depuis les correctifs |
+| Sortie propre | ✅ fait |
+
+**Et hors de ce document, trente secondes :** vérifier **Échap** et **F3** en jeu.
+Trois tentatives pilotées ont échoué sans conclure — c'est le dernier contrôle
+qu'aucun agent ne sait faire.
+
+## Ce qu'on lit désormais dans une trace
+
+Depuis l'étape 8.9, la poignée de main écrit une ligne **quand elle réussit**,
+une par connexion :
+
+```
+NetworkManager: poignée de main — protocole 2 accepté
+```
+
+Son absence dans un essai à deux instances est un signal : soit les deux copies
+ne sont pas à jour, soit le paquet n'est pas passé. Un échec, lui, coupe le lien
+avec un message rédigé pour le joueur — et le **silence** du pair est traité
+comme un refus au bout de 8 secondes.
+
+---
+
 # Tests EOS — deux instances sur une seule machine
 
 Le Device ID d'Epic est lié à la **machine**, pas au processus : deux instances
@@ -77,10 +111,22 @@ Le mouchard `--spy` ne peut s'intercaler qu'**avant** toute connexion :
 réaffecter `multiplayer_peer` purge la liste des pairs de la MultiplayerAPI.
 C'est pourquoi il n'est branché que côté hôte en EOS.
 
-## Match complet (`tools/test_online_match.tscn`)
+## Match complet (`tools/test_online_match.tscn`) ✅ validé le 2026-08-18
 
 Lance le jeu entier (`main.tscn`) et le pilote par les vrais boutons du menu :
 sélection du mode, code de salon, décompte, manche, kill, écran de fin, rematch.
+
+**Résultat obtenu :** vert des deux côtés, `EXIT_CODE: 0`, ping applicatif 26 ms.
+Ce qui est désormais prouvé contre le vrai service, et n'a pas à être re-prouvé :
+le code se crée et se transmet, `PRÊT` reste grisé tant que l'hôte est seul et
+s'ouvre à l'arrivée de l'adversaire, **aucune manche ne démarre à la connexion**,
+la killcam rejoue 3/3 balles, le lien tient après elle, et le rematch relance une
+manche.
+
+Deux erreurs subsistent dans la trace et ne sont pas des défauts :
+`packet_sequence.is_null()` et `states[…].playback.is_null()` viennent de l'audio
+câblé sur des fichiers qui n'existent pas encore. Elles disparaîtront avec les
+assets.
 
 ```bash
 godot --headless --path . res://tools/test_online_match.tscn -- --host --eos-ephemeral

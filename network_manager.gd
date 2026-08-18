@@ -978,6 +978,11 @@ func rpc_hello(payload: String) -> void:
 	# pair d'avant cette étape.
 	var pair_version := int(dit.get("protocol", 0))
 	if Protocol.accepts(pair_version):
+		# Une ligne quand ça marche, et pas seulement quand ça casse. Un garde-fou
+		# muet en cas de succès ne se distingue pas d'un garde-fou absent : la
+		# trace du premier essai à deux fenêtres ne permettait pas de dire s'il
+		# avait tourné. Une ligne par connexion, c'est le bon prix.
+		print("NetworkManager: poignée de main — protocole %d accepté" % pair_version)
 		return
 
 	var message := Protocol.mismatch_message(pair_version)

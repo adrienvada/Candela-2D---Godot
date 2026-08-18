@@ -1264,6 +1264,28 @@ L'élargissement par fourchettes fines tient donc tel qu'il est écrit. Le repli
 prévu — publier des paliers nommés en chaîne et filtrer par égalité — n'est pas
 nécessaire.
 
+### ⚑ Match complet à deux fenêtres — validé le 2026-08-18 par Adrien
+
+Premier parcours de bout en bout entre **deux identités Epic distinctes**, par le
+chemin du salon à code. Vert des deux côtés, `EXIT_CODE: 0`, ping applicatif
+26 ms.
+
+Ce qui cesse d'être une supposition : le code se crée, s'affiche, se transmet et
+se saisit ; **`PRÊT` reste grisé tant que l'hôte est seul** et s'ouvre à l'arrivée
+de l'adversaire ; **aucune manche ne démarre à la connexion** (la porte de l'autre
+session tient contre le vrai réseau) ; la manche se joue, la killcam rejoue 3/3
+balles, l'écran de fin se pose, **le lien tient après la killcam**, et le rematch
+relance une manche.
+
+**Ce que cet essai ne prouve pas**, et qu'il ne faut pas lui faire dire :
+l'appariement automatique n'y figure pas — c'est le chemin du code de salon. Et
+les deux instances tournant sur la même machine et le même réseau, **ni la
+traversée de NAT ni la latence réelle ne sont exercées** : H1 reste dû.
+
+Deux erreurs dans la trace ne sont pas des défauts (`packet_sequence.is_null()`,
+`states[…].playback.is_null()`) : l'audio est câblé sur des fichiers absents.
+Une troisième l'était — `No multiplayer peer is assigned`, corrigée le jour même.
+
 ### ⚑ Découverte croisée prouvée le 2026-08-18 — deux identités se voient
 
 Le banc à une instance ne prouvait que l'acceptation de la requête. **Deux
@@ -3071,8 +3093,8 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 |---|---|
 | **Les 76 assets** | Aucun agent ne produit un son. Voir l'onglet ASSETS du suivi : noms exacts, durées sur la grille à 170 BPM, intentions. **Commencer par les cinq fichiers de musique** — délai le plus long, et ils réveillent un système entier déjà câblé. |
 | **Rejouer (jalon H3)** | Le seul juge du ressenti. À reprendre après chaque vague de game feel : une boucle qui ne redemande jamais dérive, elle optimise ce qu'elle sait mesurer. |
-| **Appariement à deux fenêtres** | Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. Ne peut pas se faire à l'aveugle. |
-| **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. |
+| **Appariement automatique à deux fenêtres** | **Le prochain, et le dernier inconnu de la Phase 8.** Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. La découverte est prouvée ; la jointure, la poignée de main, l'accord sur qui héberge et la connexion ne le sont pas. Protocole détaillé, sept étapes. |
+| **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. Le test à deux fenêtres du 2026-08-18 ne le remplace pas : même machine, même réseau, donc **ni traversée de NAT ni latence réelle**. |
 | **Échap et F3 en jeu** | Trente secondes. Trois tentatives pilotées ont échoué sans conclure. |
 | ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
 | **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
