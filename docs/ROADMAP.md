@@ -2195,6 +2195,7 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 | Décision | Raison |
 |---|---|
+| **L'écran partagé n'existe que dans « 1v1 écrans scindés »** (2026-08-18, Adrien) | Ce document affirmait que l'écran partagé permanent était « une décision de conception du jeu, présente même en ligne ». **C'était faux, et personne ne l'avait décidé** — une description d'architecture (`CLAUDE.md`) transformée en intention par la session qui rédigeait. Adrien l'a relevée : « je ne crois pas que le deuxième écran permanent soit l'identité du jeu ». La règle est maintenant explicite : **une seule vue partout ailleurs**, en ligne comme à l'entraînement. Le comportement d'affichage l'appliquait déjà ; ce qui manquait, c'est que le **rendu** le suive — la vue cachée dessinait encore, pour 1,5 ms mesurées. |
 | **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
 | **Un débutant part d'Aveugle I** (2026-08-18) | Le classement de départ (1000) tombait dans **Bougie**, troisième catégorie sur dix : un débutant serait arrivé avec trois des quatre armes et n'en aurait débloqué qu'une. C'est `RANK_FLOOR` qui a été déplacé, **pas `START_RATING`** — la table des classements est reconstruite par rejeu intégral de l'historique, donc abaisser le départ aurait recalculé tous les matchs déjà joués et déplacé tous les joueurs. Déplacer le plancher ne change que la **lecture** de l'échelle. **Prix assumé :** un débutant ne peut plus chuter, ce que le calibrage d'origine cherchait précisément à éviter. ⚠️ **Non déployé** — tant que la fonction en ligne porte l'ancien plancher, l'écran affiche Bougie pour un débutant. |
 | **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
@@ -4289,6 +4290,16 @@ réelle, y compris à la sortie du gel du kill — qui rallumait les deux d'offi
 faisait revenir le coût à la première mort, sans rien pour le dire. **Le gain
 reste à mesurer en ligne** : la décomposition a été prise en écran partagé, où
 les deux vues sont légitimes.
+
+**Signalé, pas corrigé — le champ de vision diffère entre les modes.** Les deux
+`SubViewportContainer` sont en `EXPAND | FILL` dans un `HBoxContainer` : cacher
+l'un fait occuper toute la largeur à l'autre, ce qui est le comportement voulu.
+Mais le zoom de caméra reste 1,0 dans les deux cas — donc **en ligne on voit
+environ deux fois plus large qu'en écran partagé**. C'est symétrique entre les
+deux joueurs d'un même match, donc ce n'est pas un avantage ; c'est en revanche
+une **différence entre modes** dans un jeu où l'information est tout le sujet, et
+une carte apprise en écran partagé ne se joue pas pareil en ligne. À trancher par
+Adrien, pas par le code.
 
 **Deux réserves, et la seconde corrige ce qu'on croyait acquis.**
 
