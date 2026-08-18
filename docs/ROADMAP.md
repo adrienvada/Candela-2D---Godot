@@ -2221,6 +2221,33 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un percentile ne se mesure pas en un passage (2026-08-18)
+
+Le 1 % bas varie d'un relevé à l'autre **sur la même configuration** : 163, 169
+puis 139 dans les menus ; 97 puis 81 dans le duel. La médiane, elle, ne bouge pas
+d'une image.
+
+Une explication structurelle avait été inventée pour le rendre acceptable — « la
+charge des menus est ponctuée, celle du duel est continue » — et elle a tenu une
+demi-journée avant que le duel donne 81. **Attribuer à la charge ce qui appartient
+à l'instrument produit une règle qu'on va appliquer** ; c'est la forme d'erreur la
+plus coûteuse, plus qu'un chiffre faux.
+
+**La règle : la médiane tranche partout, le 1 % bas nulle part sans répétition.**
+Un 1 % bas ne s'énonce qu'avec sa dispersion, sur plusieurs relevés.
+
+### Lire le premier nombre d'une ligne dont le libellé en contient un (2026-08-18)
+
+`grep -oE '[0-9]+' | head -1` sur « `FPS 1 % bas : 97` » rend **1**, le chiffre du
+libellé. La première version de `run_decomposition.sh` a rapporté « 1 % bas = 1 »
+pour ses sept relevés.
+
+**On a été sauvés par l'absurdité du résultat.** La même erreur sur un libellé
+sans chiffre — ou décalée d'un cran — aurait rendu **97** : plausible, faux, et
+indétectable. Extraire **après le séparateur** (`sed -n 's/.*: *\([0-9]*\).*/\1/p'`),
+jamais le premier nombre de la ligne.
+
+
 ### Une suite qui pend bloque tout le lanceur (2026-08-18)
 
 `run_suites.sh` n'avait **aucun plafond de temps**. Un appelant cassé a empêché
@@ -4246,6 +4273,25 @@ du jeu, présente même en ligne, pas un réglage.
    des deux côtés** : la traîne varie d'un relevé à l'autre partout. Seule la
    **médiane** est reproductible. Toute décision prise sur un 1 % bas unique,
    duel compris, est prise sur un chiffre qu'un second relevé déplacerait.
+
+**Ce que la cible devient, dit précisément.** Elle est écrite « **1 % bas** ≥ 120
+fps », donc sur la métrique dont on vient d'établir qu'elle **ne se mesure pas en
+un passage**. Sur la médiane — la seule reproductible — le duel tient **7,41 ms
+contre 8,33 ms de budget**, et toutes les configurations mesurées sont au-dessus
+de 120.
+
+Il serait tentant d'en conclure « le jeu a toujours tenu les 120 fps ». **Ce
+serait refaire l'erreur du jour** : changer de métrique pour obtenir le verdict
+qui arrange, exactement comme le banc d'origine changeait d'échantillon sans le
+dire. Ce qui est vrai est plus étroit et plus utile :
+
+- **la cible telle qu'elle est écrite n'est pas vérifiable en un relevé** ;
+- **sur la métrique qui l'est, le jeu passe** ;
+- donc soit on **réécrit la cible sur la médiane** — et elle est tenue — soit on
+  la garde sur le 1 % bas et **il faut alors répéter les relevés**, en donnant la
+  dispersion et non un nombre.
+
+Le choix appartient à Adrien ; ce document ne le prend pas à sa place.
 
 **Pourquoi ce chantier.** Ce document attribuait les 7,6 ms du duel à « deux
 `SubViewport` qui rendent chacun leur jeu de lumières et d'ombres portées ».
