@@ -232,6 +232,32 @@ func _run_training() -> void:
 		_main.bullet_container.get_child_count() > balles_avant,
 		"%d → %d" % [balles_avant, _main.bullet_container.get_child_count()])
 
+	# **La caméra regarde-t-elle le joueur ?**
+	#
+	# Personne ne posait la question. Adrien a joué l'entraînement le 2026-08-19
+	# et s'est vu **en bas de l'écran**, immobile dans le cadre pendant qu'il
+	# marchait : le suivi vivait dans `if round_active:` — « une manche COMPTÉE
+	# est en cours » — et l'entraînement désarme cette manche exprès.
+	#
+	# Quarante-deux suites et six scénarios à deux instances vérifiaient des
+	# états, des comptes et des transitions. **Aucun ne regardait où était la
+	# caméra.** On mesurait ce qui s'écrit, pas ce qui se voit.
+	#
+	# Deux contrôles, parce que les deux moitiés ont échoué séparément : la
+	# caméra doit être POSÉE sur le joueur à l'entrée, et le SUIVRE ensuite.
+	_check("la caméra est posée sur le joueur à l'entrée",
+		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
+		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+
+	var depart: Vector2 = _main.p1.global_position
+	_main.p1.global_position = depart + Vector2(300, 200)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("et elle le suit quand il se déplace",
+		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
+		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+	_main.p1.global_position = depart
+
 	await get_tree().create_timer(1.0).timeout
 	_check("le journal local n'a pas bougé",
 		_history_size() == journal_avant,

@@ -235,6 +235,44 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-19 — deux propriétés du dispositif, apprises en le pratiquant
+
+**1. Dans un arbre partagé, le hasard de qui commite en premier décide de qui
+signe le travail de l'autre.** C'est arrivé **deux fois dans la même journée, une
+fois dans chaque sens** : la suppression de `killcam_trace.gd` (session « fin de
+match ») est partie dans un commit de la session « effets » ; le changement de
+`disposer_hud` (session « effets ») est parti dans un commit de la session « fin
+de match ».
+
+Ce n'est pas une négligence : `git commit` prend **tout l'index**, et l'index est
+commun. Le seul remède connu — lire `git diff --cached --stat` avant de commiter
+— **ne marche que si l'on s'arrête sur ce qu'on lit** : une des deux sessions l'a
+lu, a vu les deux lignes de suppression, et a commité quand même.
+
+**Rien n'a été perdu ni cassé les deux fois.** Le coût est l'attribution, et il
+se répare par une ligne ici plutôt que par une réécriture d'historique sous une
+session active.
+
+**2. On mesure ce qui s'écrit, pas ce qui se voit.** Deux fois en deux jours :
+
+- deux effets de menu validés **au banc de cadence** — trois relevés, un verdict,
+  une décision de les garder — **sans que personne ait jamais regardé l'écran**.
+  Adrien a vu le cadre de droite entièrement noir ;
+- le **suivi de caméra** en entraînement : quarante-deux suites et six scénarios à
+  deux instances vérifiaient des états, des comptes, des transitions. **Aucun ne
+  regardait où était la caméra.** Adrien s'est vu en bas de l'écran.
+
+Deux fois, ça cesse d'être une coïncidence. **Un contrôle automatique porte
+naturellement sur ce qui a un nom dans le code** — un booléen, un compteur, une
+transition. Ce qui est purement visuel n'en a pas, donc personne ne l'écrit.
+
+**Premier remède posé** (`tools/test_online_match.gd --training`) : deux contrôles
+qui demandent si **la caméra regarde le joueur** — posée sur lui à l'entrée, et le
+suivant quand il bouge. Les deux moitiés avaient échoué séparément. C'est peu, et
+c'est le premier contrôle du dépôt qui porte sur ce qu'on voit plutôt que sur ce
+qu'on compte.
+
+
 ### 2026-08-19 — fusion `origin/main` dans `main`, et les décisions d'Adrien
 
 **Les cinq questions ouvertes ont été tranchées, et la fusion est faite.**
