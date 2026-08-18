@@ -2976,14 +2976,15 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 11 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : 13 sur 15 livrés** — M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
 > M5 le bruit de l'œil, M6 l'encre coulée, M7 le code gravé, M8 le départ au
-> tir, M9 la torche du curseur, M10 l'extinction des feux, M12 la brume
-> d'abysse. Chacun dans son fichier (`menu_gnomon.gd`, `menu_after_image.gd`,
-> `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`,
-> `menu_engraver.gd`, `menu_tracer.gd`, `menu_backdrop.gd` +
-> `menu_backdrop.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
+> tir, M9 la torche du curseur, M10 l'extinction des feux, M11 le titre
+> incandescent, M12 la brume d'abysse, M15 le voile d'objectif. Chacun dans son
+> fichier (`menu_gnomon.gd`, `menu_after_image.gd`, `menu_torch.gd`,
+> `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`, `menu_engraver.gd`,
+> `menu_tracer.gd`, `menu_backdrop.gd`, `menu_title.gd`, `menu_veil.gd`, avec
+> leurs trois `.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
 > **sauf M10, qui n'a pas de nœud à lui** : il vit dans les chemins show/hide des
 > deux panneaux, et c'est le seul endroit où il puisse vivre. Chacun avec sa
 > ligne d'`effect_policy` **lue dans les deux sens** :
@@ -2991,8 +2992,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
 > ressemble trait pour trait à un réglage qui marche.
 >
-> Les quatre autres : M11 le titre incandescent, M13 les squelettes de lumière,
-> M14 le verre fumé, M15 le voile d'objectif. Aucun ne demande d'asset.
+> Restent **M13 les squelettes de lumière** (entièrement dans les écrans en
+> attente réseau — `screen_leaderboard.gd` et ses voisins) et **M14 le verre
+> fumé** (les `PanelContainer` du hub et des rangées de réglage). Aucun ne
+> demande d'asset.
 >
 > **M5 et M12 sont fusionnés dans un seul matériau**, comme leurs fiches le
 > prévoyaient : ils vivent sur le même quad — l'aplat de fond — et un second
@@ -3027,6 +3030,25 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > surtout des **retours à l'état sain** : arrêt en pleine coulée, extinction en
 > pleine coulée, seconde coulée qui en chevauche une première. Trois chemins,
 > trois façons de laisser une entrée dans le noir.
+>
+> **M11 a repris à M10 l'embrasement du titre**, et c'est la même leçon qu'au
+> paragraphe précédent appliquée une fois de plus. M10 posait un éclat de blanc
+> sur le titre pour qu'il « reprenne vie en dernier » ; M11 fait mieux, en
+> balayant les lettres de la braise au plein or de gauche à droite. Deux effets
+> qui rallument le même objet ne se composent pas. M10 se contente donc de rendre
+> sa lumière au bloc d'en-tête, et le titre appartient à M11.
+>
+> Ce qui rend la cohabitation possible : **le shader du titre est entièrement
+> multiplicatif**. Il ne pose jamais une couleur absolue, il multiplie celle qui
+> lui arrive — `modulate` compris. M10 peut donc éteindre le titre pendant que
+> M11 l'embrase, et les deux se composent au lieu de se disputer.
+>
+> **Le piège du `Label` que la fiche de M11 avait vu, et qui est réel** : sur un
+> `Label`, chaque glyphe est un quad découpé dans un atlas, donc `UV` couvre **la
+> lettre**, pas le bloc. Une onde calculée en `UV` repartirait de zéro à chaque
+> caractère — un scintillement par lettre, pas une vague. La phase se prend sur
+> `VERTEX.x`, continu d'un bout à l'autre du mot, normalisé par une largeur que
+> le shader ne peut pas connaître et qu'on lui pousse au redimensionnement.
 >
 > **Le garde-fou de la calibration, arrivé avec M5 et rétroactif sur tous les
 > autres.** C'est le seul point de la vitrine qui ne soit pas une question de

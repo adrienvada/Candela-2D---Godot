@@ -128,6 +128,18 @@ const EFFECTS := {
 		"nom": "Le bruit de l'œil",
 		"phrase": "Une granulation fourmille à la lisière de la lumière du curseur, comme un œil qui force dans le noir.",
 	},
+	"titre_vivant": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le titre incandescent",
+		"phrase": "Le titre respire comme une braise et prend feu à l'ouverture du menu. Le texte ne change pas.",
+	},
+	"voile_menu": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le voile d'objectif",
+		"phrase": "Les menus semblent filmés : un grain fin, une vignette douce, une frange colorée dans les coins.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

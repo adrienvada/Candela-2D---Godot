@@ -257,6 +257,9 @@ var menu_watcher: MenuWatcher
 var menu_passerby: MenuPasserby
 var menu_tracer: MenuTracer
 var menu_backdrop: MenuBackdrop
+var menu_title: MenuTitle
+var menu_veil: MenuVeil
+var pause_veil: MenuVeil
 
 ## Vrai tant que l'écran de calibration est affiché.
 ##
@@ -1754,6 +1757,14 @@ func _build_menu() -> void:
 	add_child(menu_backdrop)
 	menu_backdrop.adopter(backdrop)
 
+	# M15 — le voile passe APRÈS tout ce qu'il filme, donc en dernier dans le
+	# panneau. Il y reste, plutôt que de monter au niveau des curseurs : un liseré
+	# de sélection grainé serait moins net, et la netteté du curseur est de
+	# l'information, pas de la décoration.
+	menu_veil = MenuVeil.new()
+	game_over_panel.add_child(menu_veil)
+	game_over_panel.move_child(menu_veil, -1)
+
 	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
 	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
@@ -1762,7 +1773,7 @@ func _build_menu() -> void:
 		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
 				"regard_du_noir", "passant_vitre", "encre_coulee",
 				"gravure_code", "depart_au_tir", "extinction_menu",
-				"brume_menu", "bruit_de_l_oeil"]:
+				"brume_menu", "bruit_de_l_oeil", "titre_vivant", "voile_menu"]:
 			_apply_menu_effects()
 	)
 	_apply_menu_effects()
@@ -2267,6 +2278,13 @@ func _apply_menu_effects() -> void:
 		lobby_code_engraver.set_intensite(gravure)
 	if host_ip_engraver != null:
 		host_ip_engraver.set_intensite(gravure)
+	if menu_title != null:
+		menu_title.set_intensite(_intensite_vitrine("titre_vivant"))
+	var voile := _intensite_vitrine("voile_menu")
+	if menu_veil != null:
+		menu_veil.set_intensite(voile)
+	if pause_veil != null:
+		pause_veil.set_intensite(voile)
 	if menu_backdrop != null:
 		menu_backdrop.set_brume(_intensite_vitrine("brume_menu"))
 		menu_backdrop.set_bruit(_intensite_vitrine("bruit_de_l_oeil"))
@@ -2442,15 +2460,15 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 		tw.tween_property(surfaces[i], "modulate", Color.WHITE, t_surface) \
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT) \
 			.set_delay(ancre + etalement * part)
-	# Le titre or reprend vie avec la dernière surface, pas après elle : une
-	# braise qui s'allumerait seule, une fois le menu déjà lisible, se lirait
-	# comme un second événement — donc comme un raté.
-	if panneau == game_over_panel and game_over_title != null:
-		var apres := ancre + etalement
-		tw.tween_property(game_over_title, "modulate", Color(1.7, 1.7, 1.7), 0.05) \
-			.set_delay(apres)
-		tw.tween_property(game_over_title, "modulate", Color.WHITE, t_surface) \
-			.set_delay(apres + 0.05)
+	# Le titre reprend vie en dernier — mais c'est M11 qui s'en charge, pas M10.
+	#
+	# Il portait ici un éclat de blanc, qui faisait double emploi dès que le titre
+	# incandescent est arrivé : deux effets qui rallument le même objet ne se
+	# composent pas, ils se disputent (leçon du 2026-08-18). M10 se contente donc
+	# de rendre sa lumière au bloc d'en-tête ; l'embrasement de gauche à droite,
+	# qui est ce qui fait vraiment revenir le titre EN DERNIER, appartient à M11.
+	if panneau == game_over_panel and menu_title != null:
+		menu_title.embraser()
 	_tweens_lumiere[panneau] = tw
 
 ## Les surfaces se noient dans le noir, PUIS le rideau se lève sur l'arène.
@@ -2840,6 +2858,13 @@ func _build_menu_header() -> Control:
 	menu_gnomon = MenuGnomon.new(game_over_title)
 	header.add_child(menu_gnomon)
 	header.move_child(menu_gnomon, 0)
+
+	# M11 — le titre lui-même devient une braise. Le matériau vit sur le `Label` ;
+	# ce nœud ne porte que ce que le shader ne peut pas savoir : la largeur du
+	# bloc, le moment de l'embrasement, et l'issue du match.
+	menu_title = MenuTitle.new()
+	header.add_child(menu_title)
+	menu_title.adopter(game_over_title)
 
 	game_over_score = Label.new()
 	game_over_score.text = ""
@@ -3347,6 +3372,8 @@ func _build_pause_menu() -> void:
 	# ensemble et couvrent le même cadre.
 	if menu_backdrop != null:
 		menu_backdrop.adopter(backdrop)
+	pause_veil = MenuVeil.new()
+	pause_panel.add_child(pause_veil)
 
 	var center := CenterContainer.new()
 	pause_panel.add_child(center)
@@ -4185,6 +4212,13 @@ func show_game_over(winner_id: int) -> void:
 	else:
 		game_over_title.text = "DÉFAITE"
 		game_over_title.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+
+	# M11 — le même shader porte la température de l'issue : la victoire flambe
+	# une fois, la défaite voit son onde tomber de moitié. L'écran de fin est
+	# signé sans qu'un seul contrôle bouge. Une égalité ou un match observé de
+	# l'extérieur n'a pas de vainqueur local : on ne flambe pour personne.
+	if menu_title != null:
+		menu_title.verdict(local_idx >= 0 and winner_id == local_idx)
 
 	_refresh_map_card()
 

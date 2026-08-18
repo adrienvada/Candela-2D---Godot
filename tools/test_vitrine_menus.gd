@@ -27,6 +27,8 @@ func _run() -> void:
 	_test_tracante()
 	_test_gravure()
 	_test_fond()
+	_test_titre()
+	_test_voile()
 	await _test_extinction()
 	await _test_extinction_lisible()
 	await _test_calibration()
@@ -303,6 +305,98 @@ func _test_gravure() -> void:
 		cases_ip.get_child_count() == 9, str(cases_ip.get_child_count()))
 	ip.free()
 
+## M11 — le titre incandescent.
+func _test_titre() -> void:
+	print("\n[Le titre incandescent]")
+	var t := MenuTitle.new()
+	root.add_child(t)
+	var lbl := Label.new()
+	lbl.text = "CANDELA 2D"
+	lbl.size = Vector2(420, 70)
+	root.add_child(lbl)
+
+	t.adopter(lbl)
+	_check("le titre reçoit le matériau", lbl.material is ShaderMaterial)
+	var mat: ShaderMaterial = lbl.material
+	_check("et c'est bien le shader du titre", mat.shader == MenuTitle.SHADER)
+	# La largeur est ce que le shader ne peut pas connaître : sans elle, l'onde se
+	# replierait au milieu du mot.
+	_check("la largeur du bloc lui est donnée",
+		is_equal_approx(float(mat.get_shader_parameter("largeur")), 420.0),
+		str(mat.get_shader_parameter("largeur")))
+	lbl.size = Vector2(700, 70)
+	t._mesurer()
+	_check("et elle suit le redimensionnement",
+		is_equal_approx(float(mat.get_shader_parameter("largeur")), 700.0))
+
+	t.set_intensite(1.0)
+	t.embraser()
+	_check("l'embrasement part de la braise",
+		float(mat.get_shader_parameter("embrasement")) < 0.05,
+		str(mat.get_shader_parameter("embrasement")))
+	_check("avec son dépassement",
+		float(mat.get_shader_parameter("depassement")) > 0.0)
+
+	# Le verdict : la victoire flambe, la défaite tombe de moitié. C'est le même
+	# shader qui signe l'écran de fin, sans qu'un contrôle bouge.
+	t.verdict(false)
+	_check("une défaite divise l'onde par deux",
+		is_equal_approx(float(mat.get_shader_parameter("amplitude")),
+			MenuTitle.AMPLITUDE_DEFAITE),
+		str(mat.get_shader_parameter("amplitude")))
+	_check("et ne flambe pour personne",
+		is_zero_approx(float(mat.get_shader_parameter("flambee"))))
+	t.verdict(true)
+	_check("une victoire rend son amplitude pleine",
+		is_equal_approx(float(mat.get_shader_parameter("amplitude")), 1.0))
+
+	# Un verdict ne doit pas colorer l'ouverture suivante : on rouvre le menu
+	# après un match perdu, et le titre repart neuf.
+	t.verdict(false)
+	t.embraser()
+	_check("rouvrir le menu efface le verdict précédent",
+		is_equal_approx(float(mat.get_shader_parameter("amplitude")), 1.0)
+		and is_zero_approx(float(mat.get_shader_parameter("flambee"))))
+
+	t.set_intensite(0.0)
+	_check("à zéro, le titre est rendu tel quel",
+		is_zero_approx(float(mat.get_shader_parameter("intensite")))
+		and is_equal_approx(float(mat.get_shader_parameter("embrasement")), 1.0))
+
+	lbl.free()
+	t.free()
+
+## M15 — le voile d'objectif.
+func _test_voile() -> void:
+	print("\n[Le voile d'objectif]")
+	# Le voile s'ancre en plein cadre : sa taille lui vient de son parent, jamais
+	# d'une valeur posée à la main. On lui en donne donc un.
+	var cadre := Control.new()
+	cadre.size = Vector2(1600, 900)
+	root.add_child(cadre)
+	var v := MenuVeil.new()
+	cadre.add_child(v)
+	var mat: ShaderMaterial = v.material
+	_check("le voile porte son shader",
+		mat != null and mat.shader == MenuVeil.SHADER)
+	v._mesurer()
+	# La frange se mesure en PIXELS : sans la taille réelle, elle vaudrait un
+	# pixel et demi d'une image imaginaire, donc rien de constant à l'écran.
+	_check("il connaît la taille réelle du cadre",
+		(mat.get_shader_parameter("taille") as Vector2) == v.size,
+		"%s contre %s" % [mat.get_shader_parameter("taille"), v.size])
+	_check("et cette taille est bien celle du parent",
+		v.size == cadre.size, "%s contre %s" % [v.size, cadre.size])
+
+	v.set_intensite(1.0)
+	_check("allumé, il est dessiné", v.visible)
+	# À zéro il relirait l'écran pour le rendre identique : une copie d'écran et
+	# trois lectures pour rien. On le retire du dessin.
+	v.set_intensite(0.0)
+	_check("éteint, il n'est plus dessiné du tout", not v.visible)
+
+	cadre.free()
+
 ## Les deux instants où M10 passait pour un défaut d'affichage.
 ##
 ## Relevé par Adrien à l'usage : « on pourrait croire à des bugs d'affichage ».
@@ -448,7 +542,8 @@ func _test_calibration() -> void:
 
 	var effets := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
-		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil"]
+		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil",
+		"titre_vivant", "voile_menu"]
 
 	var hors_mesure := true
 	for cle in effets:
