@@ -252,6 +252,7 @@ func _ready():
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
 	ui.training_requested.connect(_on_training_requested)
+	ui.pick_window_cancelled.connect(_on_pick_window_cancelled)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
 	
@@ -909,6 +910,13 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
 	_countdown_ready_local = false
 	_countdown_ready_peer = false
+	# La fenêtre de choix s'ouvre avec le décompte, et seulement pour un match
+	# apparié : ailleurs l'arme est déjà choisie, un panneau modal ne ferait
+	# qu'arrêter le joueur devant une question déjà répondue.
+	if _matchmade_round:
+		ui.show_pick_window(matchmade_arsenal(), matchmade_arsenal_reason())
+	else:
+		ui.hide_pick_window()
 	ui.set_countdown(countdown_left)
 	_time_sync_accum = 0.0
 	_predicted_shots.clear()
@@ -936,6 +944,9 @@ func _process(delta):
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
 			if countdown_left <= 0.0:
+				# Le décompte fini, l'arme est celle avec laquelle on joue : la
+				# fenêtre se referme d'elle-même, sans rien demander.
+				ui.hide_pick_window()
 				AudioManager.play_speaker("spk_fight")
 				# Le décompte du client a démarré un demi aller-retour plus tard :
 				# on recale son chronomètre dès le départ plutôt que d'attendre
@@ -1646,6 +1657,17 @@ func _set_p2_weapon_button(idx: int) -> void:
 ## départ du client. Tirer après donnerait deux arènes différentes aux deux
 ## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
 ## voyant un monde cohérent.
+## Le joueur quitte la fenêtre de choix. Renoncer à choisir son arme, c'est
+## renoncer au match : on annule l'appariement et la recherche, et on rentre au
+## menu. Le pair, lui, verra une déconnexion ordinaire — il n'y a pas de « l'autre
+## a renoncé » à lui montrer que le retour au menu ne dise déjà.
+func _on_pick_window_cancelled() -> void:
+	var appariement := get_node_or_null(^"/root/Matchmaker")
+	if appariement != null and appariement.has_method("cancel"):
+		appariement.cancel()
+	_matchmade_round = false
+	_on_main_menu_requested()
+
 ## L'arme correspondant à un index de râtelier. Une seule table de résolution :
 ## la dupliquer ferait diverger le démarrage de manche et le changement d'arme
 ## pendant le décompte, et la divergence porterait sur ce que le joueur tient.

@@ -22,6 +22,9 @@ signal main_menu_requested
 signal join_requested
 ## Entraînement solitaire demandé. Le hub ne sait pas ce que c'est ; il demande.
 signal training_requested
+## Le joueur quitte la fenêtre de choix : cela annule l'appariement ET la
+## recherche. Renoncer à choisir son arme, c'est renoncer au match.
+signal pick_window_cancelled
 
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
@@ -328,6 +331,14 @@ var _ready_entries: Array[Button] = []
 ## La file visée par l'écran courant. Le grisage des armes en dépend : hors
 ## compétitif le socle entier est offert, en compétitif la sélection du rang.
 var _weapon_context_ranked: bool = false
+
+## La fenêtre de choix d'un match apparié : panneau centré, modal, par-dessus ce
+## que le joueur avait sous les yeux.
+var pick_panel: PanelContainer
+var _pick_row: HBoxContainer
+var _pick_reason: Label
+var _pick_ready: Button
+var _pick_buttons: Array[Button] = []
 ## Écran qui a ouvert le salon, pour savoir quand on le quitte. Vide = fermé.
 var _lobby_screen: String = ""
 
@@ -411,6 +422,7 @@ func _ready() -> void:
 	_build_killcam()
 	_build_menu()
 	_build_pause_menu()
+	_build_pick_panel()
 	_build_dialog()
 	_build_status_bar()
 	_build_countdown()
@@ -883,6 +895,12 @@ func _nav_candidates(player: int) -> Array[Control]:
 	# La pause est modale : tant qu'elle est ouverte, elle est le seul terrain de
 	# navigation. Sans ce retour anticipé, le curseur filerait dans les onglets du
 	# menu, cachés mais toujours dans l'arbre.
+	# La fenêtre de choix prend le pas sur TOUT, pause comprise : elle vit sur un
+	# décompte de dix secondes, et laisser le curseur ailleurs pendant ce temps
+	# reviendrait à choisir son arme à l'aveugle.
+	if pick_panel != null and pick_panel.visible:
+		_collect_focusables(pick_panel, player, out)
+		return out
 	if _panneau_ouvert(pause_panel):
 		_collect_focusables(pause_panel, player, out)
 		return out
@@ -1764,9 +1782,16 @@ func _build_hub_screens() -> void:
 		SCREEN_TRAINING))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
-	accueil.add_child(hub.make_entry("QUITTER",
+	# Style plein, parce que c'est une issue franche — mais M8 ne tire PAS ici.
+	# La traçante sacralise le geste qui engage une partie ; la tirer sur la sortie
+	# du jeu la viderait de son sens, et personne n'en verrait la fin de toute
+	# façon. On retire la marque plutôt que d'ajouter une exception dans l'effet :
+	# c'est bien cette entrée-là qui est particulière, pas la règle.
+	var quitter := hub.make_entry("QUITTER",
 		"Ferme le jeu proprement — la plateforme Epic est relâchée avant la sortie.",
-		"", COLOR_P2, "quitter", "", true))
+		"", COLOR_P2, "quitter", "", true)
+	quitter.remove_meta(MenuHub.META_LAUNCHER)
+	accueil.add_child(quitter)
 	hub.set_aside(MenuHub.ROOT, "Candela 2D",
 		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "
@@ -3800,7 +3825,127 @@ func is_pause_menu_open() -> bool:
 ## Trois cas, dans cet ordre : les options ouvertes depuis la pause s'y referment,
 ## une pause ouverte se lève, et sinon on ouvre la pause — à condition d'être bien
 ## en match, c'est-à-dire ni dans le menu principal ni sur l'écran de fin.
+## Le panneau de choix, centré et par-dessus tout le reste.
+##
+## Volontairement pauvre : les armes en haut, « PRÊT » juste dessous, rien
+## d'autre. Dix secondes ne laissent pas le temps de lire, et un panneau qui
+## expliquerait longuement se lirait après le départ du match.
+func _build_pick_panel() -> void:
+	pick_panel = PanelContainer.new()
+	pick_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	pick_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pick_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var fond := StyleBoxFlat.new()
+	fond.bg_color = COLOR_SURFACE
+	fond.set_border_width_all(2)
+	fond.border_color = COLOR_P1
+	fond.set_corner_radius_all(12)
+	fond.set_content_margin_all(GAP_M)
+	pick_panel.add_theme_stylebox_override("panel", fond)
+	pick_panel.hide()
+	add_child(pick_panel)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", GAP_S)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	pick_panel.add_child(col)
+
+	var titre := _make_section_label("VOTRE ARME", COLOR_P1)
+	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(titre)
+
+	_pick_row = HBoxContainer.new()
+	_pick_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_pick_row.add_theme_constant_override("separation", GAP_XS)
+	col.add_child(_pick_row)
+
+	_pick_reason = Label.new()
+	_pick_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pick_reason.add_theme_font_size_override("font_size", 13)
+	_pick_reason.add_theme_color_override("font_color", COLOR_GOLD)
+	_pick_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pick_reason.custom_minimum_size = Vector2(420, 0)
+	col.add_child(_pick_reason)
+
+	var centre := CenterContainer.new()
+	_pick_ready = _make_button("PRÊT", COLOR_P1, true)
+	_pick_ready.custom_minimum_size = Vector2(240, 48)
+	_pick_ready.pressed.connect(_on_pick_ready)
+	centre.add_child(_pick_ready)
+	col.add_child(centre)
+
+## Ouvre la fenêtre sur l'arsenal commun. Une seule arme s'affiche quand même :
+## le joueur doit voir ce avec quoi il part, et un panneau qui n'apparaîtrait pas
+## laisserait croire à un oubli.
+func show_pick_window(arsenal: Array, reason: String) -> void:
+	if pick_panel == null:
+		return
+	for b in _pick_buttons:
+		if is_instance_valid(b):
+			b.queue_free()
+	_pick_buttons.clear()
+
+	var groupe := ButtonGroup.new()
+	for idx in arsenal:
+		var i := int(idx)
+		var btn := _make_choice_button(_weapon_label(i), COLOR_P1, groupe)
+		btn.custom_minimum_size = Vector2(150, 84)
+		btn.pressed.connect(func() -> void: _on_pick_weapon(i))
+		_pick_row.add_child(btn)
+		_pick_buttons.append(btn)
+	if not _pick_buttons.is_empty():
+		_pick_buttons[0].button_pressed = true
+
+	_pick_reason.text = reason
+	_pick_reason.visible = reason != ""
+	_pick_ready.text = "PRÊT"
+	_pick_ready.disabled = false
+	pick_panel.show()
+	# Le curseur se pose sur l'arme, pas sur « PRÊT » : c'est le choix qui est
+	# demandé, et démarrer sur le bouton de sortie inviterait à ne pas choisir.
+	# La graine est portée par le bouton lui-même — `_seed_focus` la cherche —
+	# plutôt que posée de force, pour que les deux curseurs y arrivent chacun.
+	if not _pick_buttons.is_empty():
+		for j in [0, 1]:
+			_pick_buttons[0].set_meta(META_NAV_SEED, j)
+	_seed_focus(0)
+	_seed_focus(1)
+
+func hide_pick_window() -> void:
+	if pick_panel != null:
+		pick_panel.hide()
+
+func _weapon_label(idx: int) -> String:
+	match idx:
+		RankLoadout.ARBALETE: return "🏹 Arbalète"
+		RankLoadout.POMPE: return "☄️ Pompe"
+		RankLoadout.FUSIL: return "💥 Fusil"
+		_: return "🔫 Pistolet"
+
+func _on_pick_weapon(idx: int) -> void:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs != null and gs.has_method("pick_countdown_weapon"):
+		gs.pick_countdown_weapon(idx)
+
+## « PRÊT » ne referme pas la fenêtre : le match ne part que si l'autre l'est
+## aussi, et refermer laisserait croire que c'est parti.
+func _on_pick_ready() -> void:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs != null and gs.has_method("declare_countdown_ready"):
+		gs.declare_countdown_ready()
+	_pick_ready.text = "✓ PRÊT — en attente"
+	_pick_ready.disabled = true
+
 func _handle_pause_input() -> bool:
+	# Renoncer à choisir, c'est renoncer au match : la fenêtre se ferme, et
+	# l'appariement comme la recherche sont annulés. Traité AVANT la pause, dont
+	# elle prend le pas.
+	if pick_panel != null and pick_panel.visible:
+		hide_pick_window()
+		pick_window_cancelled.emit()
+		get_viewport().set_input_as_handled()
+		return true
+
 	if _options_from_pause:
 		_close_pause_options()
 		get_viewport().set_input_as_handled()
