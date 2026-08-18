@@ -15,7 +15,7 @@ SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_matchmaking test_screen_matchmaking test_screen_audio
-        test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo)
+        test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole)
 
 fail=0
 run() {
@@ -38,6 +38,18 @@ run() {
 
 for t in "${SUITES[@]}"; do run "$t" --script "res://tools/$t.gd"; done
 run test_netcode res://tools/test_netcode.tscn
+
+# Le cycle de fin de match, en une seule instance et sans réseau.
+#
+# Ce chemin n'était couvert par AUCUNE suite, et c'est ce qui a laissé passer
+# deux défauts en deux jours — dont `await RenderingServer.frame_post_draw`, qui
+# n'est jamais émis en headless et suspendait la séquence de fin pour toujours.
+# Invisible en jeu, puisqu'une fenêtre dessine ; visible seulement ici.
+#
+# Les modes `--host` / `--join` du même banc restent hors du lanceur : ils
+# demandent deux processus coordonnés et une session Epic. À lancer à la main,
+# protocole dans docs/PROTOCOLE_TEST_EOS.md.
+run test_fin_de_match res://tools/test_online_match.tscn -- --local
 
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1

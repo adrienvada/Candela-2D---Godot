@@ -1656,7 +1656,7 @@ lui la connaît par cœur. Ce n'est pas un défaut technique, c'est un arbitrage
 **À trancher par Adrien.** Le tirage est aujourd'hui ouvert par défaut, et la
 restriction tient en une ligne de filtre sur `source == "builtin"`.
 
-### Étape 8.9 — se reconnaître avant de jouer 🔵 CONÇUE, à écrire
+### Étape 8.9 — se reconnaître avant de jouer 🟡 le carnet est posé, la poignée de main reste
 
 Reste de l'étape 8.8. Le refus d'une arène illisible est propre mais **tardif** :
 il arrive après la poignée de main, une fois les deux joueurs engagés. La
@@ -1721,13 +1721,46 @@ build ancien ne peut pas savoir ce que le nouveau a changé, donc sa tolérance
 serait une supposition. Refuser symétriquement est la seule règle que les deux
 côtés peuvent appliquer avec la même information.
 
-#### Ce qui reste à trancher
+#### La numérotation — tranchée par Adrien le 2026-08-18 : « carnet + rappel »
 
-La numérotation elle-même : `PROTOCOL_VERSION` doit-il s'incrémenter à la main —
-donc s'oublier — ou se dériver de ce qu'il couvre ? Une somme de contrôle sur les
-signatures de RPC serait automatique mais changerait sur un renommage sans
-conséquence, et interdirait toute compatibilité voulue. **À trancher avant
-d'écrire**, parce que ce choix ne se reprend pas.
+`Protocol.VERSION` est tenu **à la main**. Lui seul peut porter le jugement
+« ce changement casse la compatibilité », qui n'est pas un calcul. Une empreinte
+purement automatique changerait sur un renommage sans conséquence et interdirait
+à jamais de dire « celui-ci passe, laissez-les jouer ».
+
+Sa faiblesse est l'oubli. Elle est donc **mécanisée** : `Protocol.WIRE_WITNESS`
+retient à quoi ressemblait le fil quand le numéro a été fixé, et
+`tools/test_protocole.gd` le recalcule à chaque exécution. Si le fil a bougé sans
+que le numéro bouge, la suite passe au rouge et affiche l'empreinte à recopier —
+**après** avoir tranché la question du numéro, jamais avant. La décision reste
+humaine ; seul l'oubli est automatisé.
+
+L'empreinte couvre trois choses et pas une de plus : les **signatures de RPC**
+(annotation comprise — changer le mode d'appel casse autant que changer l'arité),
+la **version du codec de carte**, et les **noms d'attributs de salon EOS**.
+
+Deux garde-fous du garde-fou, parce qu'un témoin qu'on peut contourner par
+inadvertance ne vaut rien :
+
+- la suite **refuse tout `@rpc` hors des fichiers déclarés** dans `RPC_SOURCES` —
+  un RPC ajouté ailleurs échapperait au témoin, et c'est le seul mode de
+  défaillance qui rende le dispositif inutile ;
+- l'alarme a été **vérifiée en la déclenchant** : un paramètre ajouté en douce à
+  `rpc_send_inputs` rend la suite rouge avec la marche à suivre, et la
+  restauration la rend verte. Un garde-fou qu'on n'a jamais vu échouer n'est pas
+  un garde-fou.
+
+Le refus est **symétrique** — ni « le plus récent tolère le plus ancien », ni
+l'inverse : le build ancien ne peut pas savoir ce que le nouveau a changé, donc
+sa tolérance serait une supposition.
+
+#### Ce qui reste
+
+La poignée de main elle-même : publier `Protocol.VERSION` dans les attributs du
+salon EOS et dans le ticket de file (où il entre **dans le filtre de recherche**,
+ce qui fait disparaître le problème au lieu de le traiter), et `rpc_hello` à
+signature figée pour le seul chemin ENet. Le carnet existe, il n'est pas encore
+échangé.
 
 ### Deux manques vérifiés indépendamment le 2026-08-17
 
@@ -1919,15 +1952,14 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   qu'il prétend vérifier. Relevé le 2026-08-18 : `join_input` enveloppé dans un
   `join_box` a rendu rouge une assertion du banc alors que le champ était bel et
   bien invisible.
-- **`tools/test_online_match.tscn` n'est dans aucun lanceur**, et c'est le seul
-  banc qui joue une fin de match. Les vingt-et-une suites headless n'en jouent
-  aucune. **À lancer à la main avant de toucher au cycle de fin de match.**
-  Son mode `--host`/`--join` demande deux processus coordonnés, ce que
-  `run_suites.sh` ne sait pas faire. Son mode **`--local` tourne en un seul
-  processus et sans EOS** : il pourrait entrer au lanceur, mais **il s'arrête au
-  démarrage de la manche** et n'exerce pas le cycle de fin — il n'aurait donc pas
-  attrapé le défaut ci-dessus. L'étendre jusqu'à `game_over` est le geste qui
-  fermerait vraiment ce trou de couverture.
+- **~~Le cycle de fin de match n'est couvert par aucune suite~~ — fermé le
+  2026-08-18.** C'est ce trou qui a laissé passer deux défauts en deux jours. Le
+  mode `--local` de `test_online_match` va désormais jusqu'à `game_over` et entre
+  au lanceur sous le nom `test_fin_de_match` : une seule instance, aucun réseau,
+  aucune session Epic. Les modes `--host`/`--join` du même banc restent dehors —
+  deux processus coordonnés, ce que `run_suites.sh` ne sait pas faire ; **à lancer
+  à la main** avant de toucher au réseau, protocole dans
+  `docs/PROTOCOLE_TEST_EOS.md`.
 - **Une commodité non demandée a coûté une régression visible à chaque fin de
   match.** `_close_lobby_if_left()` fermait le salon en quittant l'écran : je
   l'avais ajoutée de moi-même, elle n'était pas au périmètre. `show_game_over()`
