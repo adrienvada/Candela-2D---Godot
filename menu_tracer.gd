@@ -30,7 +30,12 @@ extends Control
 ## invisible. C'est l'écran qui glisse de 32 px ; la balle, elle, s'en va.
 
 ## Durée de vie de la traçante.
-const VOL := 0.15
+##
+## Portée de 0,15 à 0,20 s le 2026-08-18 : Adrien n'était pas sûr de l'avoir vue.
+## Quinze centièmes, c'est neuf images à 60 fps — assez pour que l'œil enregistre
+## un mouvement, pas assez pour qu'il enregistre QUOI. Le reste du réglage suit
+## la même correction : un fût plus dense et une bouche plus large.
+const VOL := 0.20
 ## Durée de l'étoile de bouche. Deux images à 120 fps : on ne la voit pas, on la
 ## reçoit.
 const BOUCHE := 0.035
@@ -40,7 +45,7 @@ const PORTEE := 210.0
 const FUT := 70.0
 ## Rayons de l'étoile de bouche.
 const BRANCHES := 6
-const RAYON_BOUCHE := 26.0
+const RAYON_BOUCHE := 34.0
 
 var _intensite: float = 1.0
 var _t: float = -1.0
@@ -105,9 +110,9 @@ func _draw() -> void:
 	for i in 4:
 		var part := float(i) / 4.0
 		var c := _teinte
-		c.a = 0.22 * (1.0 - part) * mort * _intensite
+		c.a = 0.34 * (1.0 - part) * mort * _intensite
 		draw_line(queue, tete, c, 1.0 + 7.0 * part)
-	draw_line(queue, tete, Color(1.0, 1.0, 1.0, 0.9 * mort * _intensite), 1.0)
+	draw_line(queue, tete, Color(1.0, 1.0, 1.0, 0.95 * mort * _intensite), 2.0)
 
 	# L'étoile de bouche reste au départ : c'est la marque du coup, pas la balle.
 	if _t <= BOUCHE:
