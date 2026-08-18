@@ -37,6 +37,7 @@ func _init() -> void:
 func _run() -> void:
 	print("=== VOIR ET ÊTRE VU ===")
 	_test_cone()
+	_test_intensite()
 	await _test_occlusion()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -85,6 +86,55 @@ func _test_cone() -> void:
 		Vision.dans_le_cone(avant, origine, origine))
 
 # ---------------------------------------------------------------------------
+# L'INTENSITÉ REÇUE — le faisceau n'est pas un interrupteur
+# ---------------------------------------------------------------------------
+
+## Ce que la torche verse VRAIMENT dans les yeux d'en face, entre 0 et 1.
+##
+## `dans_le_cone` seul ne suffisait pas, et c'est ce qui rendait
+## l'éblouissement faux même une fois son arithmétique réparée : le cône était
+## écrit en dur à 30° pour les quatre armes, et rien ne bornait la distance.
+func _test_intensite() -> void:
+	print("\n[L'intensité reçue]")
+	var avant := Vector2.RIGHT
+	var o := Vector2.ZERO
+	const PORTEE := 500.0
+
+	_check("dans l'axe et tout près, presque tout passe",
+		Vision.intensite_recue(avant, o, Vector2(10, 0), PORTEE) > 0.9)
+	_check("plus loin, moins",
+		Vision.intensite_recue(avant, o, Vector2(400, 0), PORTEE)
+		< Vision.intensite_recue(avant, o, Vector2(100, 0), PORTEE))
+	_check("au bout de la portée, plus rien",
+		is_zero_approx(Vision.intensite_recue(avant, o, Vector2(PORTEE, 0), PORTEE)))
+	# LE contre-test de la portée : sans lui, on éblouissait d'un bout à l'autre
+	# de la carte, très au-delà du dernier photon du faisceau.
+	_check("et rien non plus bien au-delà",
+		is_zero_approx(Vision.intensite_recue(avant, o, Vector2(4000, 0), PORTEE)))
+	_check("hors du cône, rien",
+		is_zero_approx(Vision.intensite_recue(avant, o, Vector2(0, 300), PORTEE)))
+	_check("derrière, rien",
+		is_zero_approx(Vision.intensite_recue(avant, o, Vector2(-100, 0), PORTEE)))
+
+	# Le cône vient de l'ARME. Le pompe éclaire à 60° de demi-angle, l'arbalète
+	# à 5° : une cible à 40° de l'axe est en plein dans le faisceau du premier
+	# et hors de celui du second. Avec la constante de 30° écrite en dur, le
+	# pompe n'éblouissait que dans la moitié de sa flaque et l'arbalète
+	# éblouissait vingt-cinq degrés au-delà de son trait de lumière.
+	var cible := Vector2(cos(deg_to_rad(40.0)), sin(deg_to_rad(40.0))) * 200.0
+	_check("le faisceau large du pompe éblouit à 40° de son axe",
+		Vision.intensite_recue(avant, o, cible, PORTEE, cos(deg_to_rad(60.0))) > 0.0)
+	_check("le trait de l'arbalète, non",
+		is_zero_approx(Vision.intensite_recue(avant, o, cible, PORTEE, cos(deg_to_rad(5.0)))))
+
+	# Superposés : plein feu, même raison que dans `dans_le_cone` — un faux
+	# silencieux sur une entrée dégénérée ne se remarque jamais.
+	_check("deux corps superposés : plein feu",
+		is_equal_approx(Vision.intensite_recue(avant, o, o, PORTEE), 1.0))
+	_check("une portée nulle n'éblouit personne",
+		is_zero_approx(Vision.intensite_recue(avant, o, Vector2(10, 0), 0.0)))
+
+# ---------------------------------------------------------------------------
 # L'OCCLUSION — dans un vrai monde physique
 # ---------------------------------------------------------------------------
 
@@ -122,7 +172,7 @@ func _centre_de(cellule: Vector2i) -> Vector2:
 	var t := CandelaTileSet.TILE_SIZE
 	return Vector2((cellule.x + 0.5) * t.x, (cellule.y + 0.5) * t.y)
 
-## Le rayon de `_check_dazzle` : couche des murs seulement.
+## Le rayon de `game_state._ligne_de_vue` : couche des murs seulement.
 func _faisceau_passe(espace: PhysicsDirectSpaceState2D, de: Vector2,
 		vers: Vector2) -> bool:
 	var q := PhysicsRayQueryParameters2D.create(de, vers, MapGeometry.WALL_LAYER)
@@ -152,7 +202,7 @@ func _test_occlusion() -> void:
 	monde.queue_free()
 
 	# La fosse, elle, laisse passer — décision de conception écrite dans
-	# `_check_dazzle` : « on peut éblouir son adversaire par-dessus un gouffre ».
+	# `_ligne_de_vue` : « on peut éblouir son adversaire par-dessus un gouffre ».
 	# Elle tient à ce que la fosse soit sur une AUTRE couche et ne produise aucun
 	# occluder ; c'est ce que ce contrôle protège.
 	var monde2 := Node2D.new()

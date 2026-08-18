@@ -213,6 +213,28 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 — session « éblouissement » (branche `claude/joueur-enouillissement-effet-xq3143`)
+
+Demande d'Adrien : « l'effet d'éblouissement ne fonctionne pas quand je joue ».
+Il ne fonctionnait pas, et il n'avait jamais fonctionné — montée `+0,5/s` d'un
+côté, descente `−2,0/s` **inconditionnelle** de l'autre, dans deux `_process`
+qui ne se sont jamais additionnés. Détail complet dans les pièges de la ROADMAP,
+avec les trois défauts voisins (cône en dur à 30° pour des armes qui vont de 5°
+à 60°, aucune portée, flash de tir sans effet).
+
+**Fichiers touchés — et ils appartiennent à d'autres domaines de ce journal :**
+`game_state.gd` et `player.gd` (session « game feel »), `ui.gd` (session
+« menus »), plus `vision.gd`, `weapon_data.gd` et deux fichiers neufs
+(`eblouissement.gd`, `tools/test_eblouissement.gd`). Le travail est sur une
+branche, pas sur `main` : rien n'est poussé sans demande explicite d'Adrien. À
+qui reprendra ces fichiers : les zones sont étroites (le bloc éblouissement de
+`_process`, `apply_dazzle`, deux lignes de `update_hud`), mais elles existent.
+
+**Laissé exprès à la session qui tient `player.gd`** : le semis de poussière de
+V5.5 divise `torch_angle_deg` par deux alors que c'est déjà un demi-angle.
+Signalé dans la ROADMAP, non corrigé — hors périmètre, et `WeaponData.cos_demi_cone()`
+existe maintenant pour le raccorder proprement.
+
 ### 2026-08-18 — session « game feel » (lot V3/V5/V6)
 
 Reprise sur demande d'Adrien (« v3, v5, v6 »), lot taillé pour tenir dans mes

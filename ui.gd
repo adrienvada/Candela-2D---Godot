@@ -1198,6 +1198,14 @@ func _build_hud() -> void:
 	dazzle_hbox.add_theme_constant_override("separation", 0)
 	add_child(dazzle_hbox)
 
+	# Le voile d'éblouissement, une moitié d'écran chacun. Blanc plat et pas
+	# pulsé : décision du 2026-08-18 (V5.3) — sous `gl_compatibility` il n'y a
+	# pas de bloom, et faire battre l'alpha brouillerait la lecture du NIVEAU
+	# d'éblouissement, qui est une information de duel, pas une décoration.
+	# Son opacité passe par le curseur « Éblouissement » de l'écran des effets
+	# (famille Monde, plancher 0,8 en classé) ; la pénalité de vitesse et de
+	# visée, elle, n'est pas réglable — un curseur qui l'allégerait serait un
+	# avantage compétitif déguisé en confort.
 	p1_dazzle = ColorRect.new()
 	p1_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p1_dazzle.color = Color(1, 1, 1, 0)
@@ -4254,6 +4262,9 @@ const CHRONO_URGENT_S := 10.0
 var _chrono_etat: int = -1
 
 func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
+	# Lu une fois pour les deux moitiés d'écran : `current_effect` dérive
+	# lui-même le contexte classé, on ne le lui souffle pas.
+	var voile := GameSettings.current_effect("eblouissement")
 	if p1:
 		if p1.hp < p1_target_hp:
 			p1_shake_time = 0.2
@@ -4268,7 +4279,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
 
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		p1_dazzle.color = Color(1, 1, 1, p1.dazzle_amount * 0.8)
+		p1_dazzle.color = Color(1, 1, 1, p1.dazzle_amount * 0.8 * voile)
 
 	if p2:
 		if p2.hp < p2_target_hp:
@@ -4284,7 +4295,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
 
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
+		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8 * voile)
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé

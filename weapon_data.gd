@@ -30,6 +30,27 @@ class_name WeaponData
 @export var bullet_light_energy: float = 50.0
 @export var bullet_width: float = 5.0
 
+## Côté de la texture de torche, en pixels. La lumière l'étale ensuite par
+## `torch_scale` (`player.gd`), d'où la portée réelle ci-dessous.
+const TAILLE_TEXTURE_TORCHE := 512
+
+## Portée réelle du faisceau, en pixels — jusqu'où la torche pose encore de la
+## lumière. Dérivée de la texture plutôt que recopiée : le jour où sa taille
+## change, un seul endroit peut mentir. Lue par l'éblouissement, qui doit
+## s'arrêter là où le faisceau s'arrête.
+func portee_torche() -> float:
+	return TAILLE_TEXTURE_TORCHE * 0.5 * torch_scale
+
+## Cosinus du DEMI-angle du faisceau, prêt pour un produit scalaire.
+##
+## `torch_angle_deg` est bien un **demi**-angle : `get_torch_texture` allume les
+## pixels dont l'écart à l'axe lui est inférieur. Le pompe (60) éclaire donc à
+## 120° au total, l'arbalète (5) à 10°. La confusion coûte un facteur deux et ne
+## se voit pas — elle est déjà dans le semis de poussière de V5.5, qui divise
+## encore par deux (signalé, hors périmètre de cette étape).
+func cos_demi_cone() -> float:
+	return cos(deg_to_rad(torch_angle_deg))
+
 var _torch_texture: ImageTexture
 
 func get_torch_texture() -> ImageTexture:

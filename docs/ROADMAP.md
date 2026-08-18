@@ -2195,6 +2195,10 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 | Décision | Raison |
 |---|---|
+| **Le flash de tir éblouit** (2026-08-18, Adrien) | Le geste le plus lumineux du jeu ne coûtait rien à celui qui le déclenche. Pic instantané de 0,6 à bout portant, éteint au-delà de 600 px, pondéré par `muzzle_flash_intensity` — l'arbalète (0,1) reste l'arme discrète, par le réglage qui servait déjà au rendu. Pas de cône (un canon crache dans toutes les directions), mais une ligne de vue : un mur arrête un flash comme il arrête un faisceau. Conséquence de jeu assumée : **le premier tir manqué à bout portant devient une ouverture pour l'adversaire**, alors qu'il était jusqu'ici sans conséquence. |
+| **On est éblouissable de dos** (2026-08-18, Adrien) | L'orientation de la victime n'entre pas dans le calcul : une torche braquée sur sa nuque éblouit. C'est une **décision**, pas un oubli — dans un jeu où la lumière est la seule information, être pris dans un faisceau doit coûter quelque chose quelle que soit la direction du regard, et la règle inverse rendrait le duel dos-à-dos illisible. À rouvrir si le jeu s'en trouve confus. |
+| **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard, sur un effet qui dure une seconde et demie. |
+| **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
 | **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
 | **Un débutant part d'Aveugle I** (2026-08-18) | Le classement de départ (1000) tombait dans **Bougie**, troisième catégorie sur dix : un débutant serait arrivé avec trois des quatre armes et n'en aurait débloqué qu'une. C'est `RANK_FLOOR` qui a été déplacé, **pas `START_RATING`** — la table des classements est reconstruite par rejeu intégral de l'historique, donc abaisser le départ aurait recalculé tous les matchs déjà joués et déplacé tous les joueurs. Déplacer le plancher ne change que la **lecture** de l'échelle. **Prix assumé :** un débutant ne peut plus chuter, ce que le calibrage d'origine cherchait précisément à éviter. ⚠️ **Non déployé** — tant que la fonction en ligne porte l'ancien plancher, l'écran affiche Bougie pour un débutant. |
 | **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
@@ -2220,6 +2224,55 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### L'éblouissement n'a jamais fonctionné, et trente suites étaient vertes (2026-08-18)
+
+Adrien : « j'ai l'impression que l'effet d'éblouissement ne fonctionne pas ».
+Il ne fonctionnait pas. Il n'avait **jamais** fonctionné.
+
+Deux lignes, dans deux fichiers, qui ne se sont jamais regardées : la montée
+valait `+0,5/s` dans `game_state._check_dazzle`, la descente `−2,0/s` dans
+`player._process` — **sans aucune condition**, donc y compris pendant qu'on
+prenait le faisceau en pleine face. Bilan net sous une torche braquée : `−1,5/s`.
+La valeur ne pouvait pas dépasser ce qu'une seule image avait le temps d'ajouter
+avant d'être rabotée : **0,008 à 60 fps, 0,001 à 500 fps** — voile blanc à 0,6 %
+d'opacité, pénalité de vitesse à 0,5 %. Trois effets branchés dessus, tous
+morts.
+
+**La leçon générale : une valeur intégrée dans le temps n'appartient qu'à un
+seul `_process`.** Montée ici, descente ailleurs, et plus personne n'additionne.
+Aucune des deux lignes n'est fausse isolément ; c'est leur somme qui l'est, et
+la somme n'était écrite nulle part. L'intégration vit désormais dans
+`game_state._maj_eblouissement`, pour les deux joueurs, en un seul endroit.
+
+**Pourquoi les tests n'ont rien dit, et c'est le pire de l'affaire.**
+`test_vision` couvrait le cône et l'occlusion — exactement les deux seules
+parties qui **fonctionnaient**. La suite était verte, la mécanique était morte,
+et la fiche de la ROADMAP annonçait la mécanique centrale comme « couverte
+depuis le 2026-08-18 ». Un test qui couvre la moitié qui marche fabrique une
+confiance pire que l'absence de test. D'où le premier contrôle de
+`test_eblouissement`, qui a l'air trop bête pour être écrit : **sous une
+lumière, la valeur monte.**
+
+**Trois autres défauts sortaient du même trou**, tous invisibles pour la même
+raison — rien ne comparait le mécanisme à ce que l'écran montre :
+
+- **Le cône était écrit en dur à 30°** pour les quatre armes, alors que
+  `torch_angle_deg` va de **5° (arbalète) à 60° (pompe)**. Le pompe n'éblouissait
+  que dans la moitié de sa flaque ; l'arbalète éblouissait 25° au-delà de son
+  trait de lumière.
+- **Aucune portée.** Le rayon était infini : on éblouissait d'un bout à l'autre
+  de la carte, très au-delà du dernier photon (une torche porte de 256 à 896 px
+  selon `torch_scale`).
+- **Le flash de tir n'éblouissait pas du tout** : la chose la plus lumineuse du
+  jeu ne coûtait rien à celui qui la déclenche.
+
+**Corollaire de rangement.** `torch_angle_deg` est un **demi**-angle
+(`get_torch_texture` allume les pixels dont l'écart à l'axe lui est inférieur).
+Le semis de poussière de V5.5 le prend pour un angle plein et le redivise par
+deux : la poussière danse dans un cône deux fois trop étroit. **Signalé, non
+corrigé** — hors du périmètre de cette étape, et c'est de la décoration, pas du
+jeu. Une ligne dans `player.gd`, à faire par la session qui tient ce fichier.
 
 ### Une suite qui pend bloque tout le lanceur (2026-08-18)
 
@@ -3028,9 +3081,28 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   - Le **contre-test** compte autant que le test : sans « sans mur entre eux, le
     faisceau passe », un masque de collision erroné bloquerait tout, y compris
     le vide, et le premier contrôle passerait quand même.
-  - Reste non couvert : la **portée** de la torche et la révélation au tir — ce
-    sont des propriétés du rendu (Light2D, énergie, texture), pas de la
-    géométrie, et le headless n'en dit rien.
+  - ⚠️ **Cette fiche a menti pendant deux jours.** La suite couvrait le cône et
+    l'occlusion, c'est-à-dire les deux seules parties de la mécanique qui
+    **fonctionnaient** ; l'éblouissement lui-même, lui, n'a jamais rien fait
+    (voir les pièges). Annoncer « la mécanique centrale est couverte » sur cette
+    base valait moins que rien. Complétée le 2026-08-18 par
+    `tools/test_eblouissement.gd` (le modèle temporel : montée, plafond,
+    descente, indépendance à la cadence, flash de tir) et par les contrôles
+    d'`intensite_recue` dans `test_vision` (**portée** et **cône réel de
+    l'arme**, qui manquaient tous les deux).
+  - **Et par un troisième, qui est le seul à couvrir ce qui était cassé** :
+    `test_online_match.tscn -- --eblouissement`, dans le lanceur. Le défaut ne
+    vivait ni dans le modèle ni dans la géométrie mais **entre les deux** — une
+    mécanique dont chaque moitié est verte peut être morte. Il braque une vraie
+    torche dans un vrai match en écran partagé et regarde la valeur monter,
+    redescendre, rester nulle dans le dos du faisceau, et sauter d'un coup au
+    tir. J2 y est replacé **chaque image** devant J1 : en headless la visée de
+    J1 retombe sur la souris, qui pointe le coin de l'écran — on suit sa
+    direction au lieu de la combattre, et le test ne dépend alors ni de la carte
+    ni du hasard du curseur.
+  - Reste non couvert : la révélation au tir et l'énergie des lumières — ce sont
+    des propriétés du rendu (Light2D, texture), pas de la géométrie, et le
+    headless n'en dit rien.
 - ~~Les transitions d'état en ligne ne sont couvertes que manuellement.~~
   **Automatisé le 2026-08-18** par `tools/run_duo.sh`, dans le lanceur. Deux
   processus headless en ENet sur 127.0.0.1 : aucun identifiant Epic, aucun code
@@ -3365,6 +3437,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   `gl_compatibility`, et l'overlay blanc existant porte déjà la sensation —
   en pulser l'alpha brouillerait la lecture du niveau d'éblouissement, qui
   est une information de duel, pas une décoration.
+  **✅ Complété le 2026-08-18 (session « éblouissement ») :** l'acouphène et le
+  voile étaient branchés sur une valeur qui ne montait jamais — le câblage
+  audio de ce jour-là était correct et parfaitement inaudible. La mécanique
+  répare, l'item tient enfin ce qu'il annonce. Le voile reste blanc et plat,
+  comme décidé ci-dessus ; ce qui a changé, c'est qu'il a maintenant quelque
+  chose à montrer.
 - **V5.4 Respiration de la torche** — Perlin lent ±3 % sur l'énergie.
   **✅ Fait** — le bruit module la **cible** du lerp d'énergie existant, pas
   l'énergie elle-même : la respiration traverse les fondus d'allumage et
@@ -3377,6 +3455,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   cadence fixe dans le cône réel de l'arme (`torch_angle_deg`, portée
   courante) tant que la torche est allumée. Côté budget, la poussière passe
   par le pool plafonné : elle recycle, elle n'alloue pas.
+  ⚠️ **Signalé le 2026-08-18, non corrigé** (hors périmètre) : le semis prend
+  `torch_angle_deg` pour un angle plein et le redivise par deux, alors que
+  c'est déjà un **demi**-angle. La poussière danse dans un cône deux fois trop
+  étroit — décoratif, mais c'est le même faux ami qui a faussé
+  l'éblouissement. `WeaponData.cos_demi_cone()` dit maintenant la vérité en un
+  seul endroit ; une ligne de `player.gd` à y raccorder.
 - **V5.6 Rétrodiffusion pulsée au pas** — le BodyLight respire en marchant.
   **✅ Fait** — chaque pas détecté (le détecteur V1.x existant, déjà gardé
   contre les téléportations) arme une impulsion qui se résorbe en ~140 ms sur

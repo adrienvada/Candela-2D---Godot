@@ -9,6 +9,8 @@ const SHADER_ENEMY_LIGHT := preload("res://player_enemy_light.gdshader")
 const SHADER_VIGNETTE := preload("res://damage_vignette.gdshader")
 const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
 const SHADER_SPRINT_STREAKS := preload("res://sprint_streaks.gdshader")
+## Le modèle d'éblouissement, sans dépendance — voir `eblouissement.gd`.
+const Eblouissement := preload("res://eblouissement.gd")
 
 @export var player_id: int = 0
 @export var speed: float = 260.0
@@ -90,6 +92,9 @@ const PREDICT_HISTORY_MAX := 120
 var net_position: Vector2 = Vector2.ZERO
 var net_rotation: float = 0.0
 var net_flashlight_on: bool = false
+## Éblouissement arbitré par l'hôte. Répliqué parce que le client ne le calcule
+## pas : voir `game_state._maj_eblouissement`.
+var net_dazzle: float = 0.0
 # Dernier input client appliqué par l'hôte. Sans lui, le client comparerait sa
 # position prédite — en avance d'un aller-retour — à un état plus ancien, et
 # se corrigerait en permanence vers le passé.
@@ -156,6 +161,7 @@ func _ready():
 	rep_config.add_property(NodePath(".:net_position"))
 	rep_config.add_property(NodePath(".:net_rotation"))
 	rep_config.add_property(NodePath(".:net_flashlight_on"))
+	rep_config.add_property(NodePath(".:net_dazzle"))
 	rep_config.add_property(NodePath(".:net_ack_seq"))
 	# L'hôte est autorité sur les deux joueurs : la réplication va toujours
 	# hôte→client, y compris pour les HP.
@@ -461,6 +467,7 @@ func _process(delta):
 		net_position = global_position
 		net_rotation = rotation
 		net_flashlight_on = flashlight_on
+		net_dazzle = dazzle_amount
 		net_ack_seq = _last_input_seq
 
 	# Hors du bloc de simulation : côté client la torche est répliquée, et les
@@ -501,8 +508,13 @@ func _process(delta):
 			shoot_cooldown = 0
 			# Play ready sound here if desired
 	
-	if dazzle_amount > 0:
-		dazzle_amount = max(0, dazzle_amount - delta * 2.0)
+	# L'éblouissement n'est PAS intégré ici. `game_state` s'en charge, pour les
+	# deux joueurs et en un seul endroit — c'est cette ligne-ci qui, jusqu'au
+	# 2026-08-18, rabotait sans condition (−2,0/s) ce que `_check_dazzle`
+	# ajoutait quatre fois plus lentement, sans que rien ne les additionne
+	# jamais. Le client, lui, ne calcule rien : il porte ce que l'hôte a arbitré.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		dazzle_amount = net_dazzle
 
 	# V5.3 — l'acouphène suit l'éblouissement du joueur local. Chaque machine
 	# n'écoute que ses propres yeux ; l'appel est idempotent côté AudioManager.
@@ -1162,8 +1174,19 @@ func add_camera_shake(intensity: float, decay: float = 5.0):
 		shake_intensity = intensity
 	shake_decay = decay
 
+## Pic instantané — le flash de tir. Peut dépasser le plafond de la torche : le
+## modèle le résorbe ensuite, c'est voulu.
 func apply_dazzle(amount: float):
 	dazzle_amount = min(1.0, dazzle_amount + amount)
+
+## Une image d'éblouissement, appelée par `game_state` et JAMAIS d'ici.
+##
+## `plafond` est la lumière reçue à cet instant (0 = rien, 1 = faisceau saturant
+## dans les yeux). Deux `_process` qui se partagent la même valeur sans se voir,
+## c'est précisément le défaut qui vient d'être payé : la montée était dans
+## l'un, la descente dans l'autre.
+func integrer_eblouissement(plafond: float, delta: float) -> void:
+	dazzle_amount = Eblouissement.integrer(dazzle_amount, plafond, delta)
 
 func _calculate_uvs(poly: Polygon2D):
 	if poly.polygon.size() == 0: return
