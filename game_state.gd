@@ -1045,10 +1045,19 @@ func _process(delta):
 		_check_dazzle(delta)
 		_update_music_intensity()
 
-		# Cameras track live players
-		cam1.global_position = p1.global_position
-		cam2.global_position = p2.global_position
 		
+	# **Le regard suit le joueur, pas le score.** Ce suivi vivait dans
+	# `if round_active:` — c'est-à-dire « une manche COMPTÉE est en cours ». Or
+	# l'entraînement désarme volontairement cette manche : la caméra n'était donc
+	# jamais mise à jour de toute la session, et le joueur sortait du cadre.
+	# Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au
+	# classement ; c'est l'entraînement, le seul mode qui sépare les deux, qui a
+	# révélé la confusion.
+	if p1 != null:
+		cam1.global_position = p1.global_position
+	if p2 != null:
+		cam2.global_position = p2.global_position
+
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
 	_cam_kick[1] = _cam_kick[1].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1156,7 +1165,16 @@ func _process(delta):
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
 			
-	ui.update_hud(p1, p2, time_left, not training_mode)
+	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
+	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
+	# Décision d'Adrien (2026-08-19) — « le client devient bleu, c'est l'adversaire
+	# qui doit apparaître rouge pour lui ». La couleur suit donc le RÔLE, pas le
+	# numéro ; le numéro garde ce qui lui appartient vraiment, le point
+	# d'apparition.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		ui.update_hud(p2, p1, time_left, not training_mode)
+	else:
+		ui.update_hud(p1, p2, time_left, not training_mode)
 
 func _check_dazzle(delta: float):
 	var space = p1.get_world_2d().direct_space_state
@@ -2092,6 +2110,13 @@ func _restore_viewports():
 		vp2.get_parent().hide()
 		ui.center_line.hide()
 		_accorder_rendu_aux_vues()
+		# Cette branche sort en `return` AVANT la fin de la fonction : tout ce qui
+		# s'y ajoute doit donc être répété ici. Deux défauts en ont découlé et
+		# Adrien les a vus le 2026-08-19 — les deux panneaux de HUD affichés pour
+		# un seul joueur, et le joueur en bas de l'écran parce que la caméra
+		# n'avait jamais été placée.
+		ui.disposer_hud(true)
+		cam1.global_position = p1.global_position
 		cam1.zoom = Vector2(1.0, 1.0)
 		cam2.zoom = Vector2(1.0, 1.0)
 		return

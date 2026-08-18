@@ -4173,8 +4173,8 @@ func disposer_hud(entrainement: bool = false) -> void:
 	if hud_panneau_p1 == null or hud_panneau_p2 == null or hud_rangee == null:
 		return
 	var mode := NetworkManager.current_mode
-	var local_est_p2 := mode == NetworkManager.GameMode.ONLINE_CLIENT
-	var en_ligne := mode == NetworkManager.GameMode.ONLINE_HOST or local_est_p2
+	var en_ligne := mode == NetworkManager.GameMode.ONLINE_HOST \
+		or mode == NetworkManager.GameMode.ONLINE_CLIENT
 
 	# L'entraînement est du LOCAL_SPLITSCREEN pour le transport — aucun pair,
 	# aucune autorité distante — mais **il n'a qu'un joueur**, et J2 est retiré de
@@ -4189,22 +4189,21 @@ func disposer_hud(entrainement: bool = false) -> void:
 			hud_rangee.move_child(hud_panneau_p1, 0)
 		return
 
-	hud_panneau_p1.visible = not local_est_p2
-	hud_panneau_p2.visible = not en_ligne or local_est_p2
-
-	# Le panneau visible se place à gauche. `move_child` sur un conteneur suffit :
-	# l'HBox réordonne, aucun ancrage à refaire.
-	var local: Control = hud_panneau_p2 if local_est_p2 else hud_panneau_p1
-	if en_ligne and hud_rangee.get_child(0) != local:
-		hud_rangee.move_child(local, 0)
-	elif not en_ligne and hud_rangee.get_child(0) != hud_panneau_p1:
-		# Retour en écran partagé : J1 reprend sa place de gauche.
+	# **Les deux panneaux ne sont pas « J1 » et « J2 » : ce sont « moi » et
+	# « l'autre ».** Le premier est bleu et à gauche, le second rouge et à droite —
+	# et `GameState` alimente le premier avec le joueur LOCAL, quel que soit son
+	# numéro. Décision d'Adrien du 2026-08-19 : « le client devient bleu, c'est
+	# l'adversaire qui doit apparaître rouge pour lui ». La couleur suit le rôle ;
+	# le numéro garde ce qui lui appartient vraiment, le point d'apparition.
+	#
+	# Conséquence heureuse : en ligne il n'y a plus rien à déplacer. On cache le
+	# second panneau, et le premier est déjà au bon endroit avec la bonne teinte.
+	hud_panneau_p1.visible = true
+	hud_panneau_p2.visible = not en_ligne
+	if hud_rangee.get_child(0) != hud_panneau_p1:
 		hud_rangee.move_child(hud_panneau_p1, 0)
-	# Le panneau local s'aligne à gauche, quel que soit son numéro : sans ça, le
-	# panneau de J2 garderait son ancrage à droite et flotterait au milieu.
-	local.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	if not en_ligne:
-		hud_panneau_p2.size_flags_horizontal = Control.SIZE_SHRINK_END
+	hud_panneau_p1.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	hud_panneau_p2.size_flags_horizontal = Control.SIZE_SHRINK_END
 
 func _pause_freezes_world() -> bool:
 	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN

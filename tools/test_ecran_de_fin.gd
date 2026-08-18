@@ -342,19 +342,29 @@ func _test_disposition_hud() -> void:
 
 	reseau.current_mode = reseau.GameMode.ONLINE_CLIENT
 	_ui.disposer_hud()
-	_check("client : le panneau adverse disparaît", not _ui.hud_panneau_p1.visible)
-	_check("client : le sien reste visible", _ui.hud_panneau_p2.visible)
-	# LE point de la décision : le client est disposé comme l'hôte.
-	_check("client : son panneau passe à GAUCHE",
-		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p2)
-	_check("client : et il s'aligne à gauche, pas au milieu",
-		_ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_BEGIN)
+	# **Le client voit le panneau BLEU, à gauche, comme l'hôte.** Ce n'est pas
+	# « son » panneau qu'on déplace : les deux panneaux sont « moi » et « l'autre »,
+	# et `GameState` alimente le premier avec le joueur local quel que soit son
+	# numéro. Une première version déplaçait le panneau de J2 vers la gauche en le
+	# gardant rouge — Adrien a corrigé : « le client devient bleu, c'est
+	# l'adversaire qui doit apparaître rouge pour lui ».
+	_check("client : le panneau adverse disparaît", not _ui.hud_panneau_p2.visible)
+	_check("client : le panneau local reste le premier, donc bleu",
+		_ui.hud_panneau_p1.visible
+		and _ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
 
-	# Retour en écran partagé : rien ne doit rester déplacé.
+	# L'entraînement n'a qu'un joueur : le second panneau annoncerait la santé de
+	# quelqu'un qui n'est pas dans la scène.
 	reseau.current_mode = reseau.GameMode.LOCAL_SPLITSCREEN
+	_ui.disposer_hud(true)
+	_check("entraînement : un seul panneau", _ui.hud_panneau_p1.visible
+		and not _ui.hud_panneau_p2.visible)
+
+	# Retour en écran partagé : rien ne doit rester caché ni déplacé.
 	_ui.disposer_hud()
-	_check("retour en écran partagé : J1 retrouve la gauche",
-		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
-	_check("retour en écran partagé : J2 retrouve la droite",
-		_ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_END)
+	_check("retour en écran partagé : les deux reviennent",
+		_ui.hud_panneau_p1.visible and _ui.hud_panneau_p2.visible)
+	_check("retour en écran partagé : J1 à gauche, J2 à droite",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1
+		and _ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_END)
 	reseau.current_mode = mode_avant
