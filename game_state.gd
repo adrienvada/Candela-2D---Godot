@@ -25,6 +25,9 @@ var training_mode: bool = false
 var game_over: bool = false
 var _first_replay_frame: bool = false
 var p1_ready_for_rematch: bool = false
+## Côté CLIENT seulement : ce que l'hôte a annoncé de lui-même. Voir
+## `rpc_host_ready`.
+var _hote_pret: bool = false
 var p2_ready_for_rematch: bool = false
 # Bascule locale « prêt à rejouer ». État canonique : le libellé du bouton
 # REJOUER n'en est qu'un reflet — l'ancienne logique comparait le texte du
@@ -323,6 +326,9 @@ func _on_peer_connected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		client_peer_id = id
 		p2.reset_network_input()
+		# Celui qui arrive a manqué l'annonce : on la lui refait. Sans ça, un
+		# client qui rejoint un hôte déjà prêt attendrait sans jamais l'apprendre.
+		_annoncer_etat_hote()
 		# **L'hôte reste dans son salon.** Il y voit « Adversaire — connecté »
 		# apparaître dans la liste, et le match attend que les deux appuient sur
 		# PRÊT.
@@ -381,6 +387,7 @@ func _on_peer_disconnected(id: int):
 		p2_ready_for_rematch = false
 		# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
 		p1_ready_for_rematch = false
+		_hote_pret = false
 		local_ready_for_rematch = false
 		ui.btn_replay.text = "REJOUER"
 		ui.btn_replay.remove_theme_color_override("font_color")
@@ -1835,6 +1842,7 @@ func _on_replay_requested():
 			p1_ready_for_rematch = true
 			if ui.p1_weapon_group.get_pressed_button():
 				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_annoncer_etat_hote()
 			_check_rematch_start()
 		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
 			# Le client est déjà dans le salon : « PRÊT » ne fait que le déclarer.
@@ -1855,6 +1863,7 @@ func _on_replay_requested():
 				rpc_id(1, "rpc_client_unready")
 			elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 				p1_ready_for_rematch = false
+				_annoncer_etat_hote()
 				ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 			return
 
@@ -1872,6 +1881,7 @@ func _on_replay_requested():
 			p1_ready_for_rematch = true
 			if ui.p1_weapon_group.get_pressed_button():
 				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_annoncer_etat_hote()
 			_check_rematch_start()
 		else:
 			_start_round()
@@ -1920,6 +1930,54 @@ func rpc_countdown_ready() -> void:
 	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
 		return
 	_countdown_ready_peer = true
+
+## L'hôte annonce au client s'il est prêt, ou s'il ne l'est plus.
+##
+## **Il n'existait aucun chemin pour cette information.** Le client pressait
+## PRÊT, voyait « ✓ PRÊT », et attendait ensuite sans savoir s'il attendait
+## l'hôte ou le réseau — deux situations qu'on ne vit pas de la même façon. Le
+## sens inverse était câblé depuis toujours (`rpc_client_ready`) : le salon
+## n'était renseigné que d'un côté.
+##
+## `call_remote` et non `call_local` : l'hôte connaît déjà son propre état, et
+## `_check_rematch_start()` écrit son écran à lui. Se le rejouer ferait passer
+## deux fois sur le même libellé.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_ready(pret: bool) -> void:
+	# Seul l'hôte parle ici, et seulement à un client. Un pair qui n'est ni l'un
+	# ni l'autre n'a pas d'état d'hôte à annoncer.
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	_appliquer_hote_pret(pret)
+
+## Ce que le client fait de l'état de l'hôte. Symétrique de ce que
+## `_check_rematch_start()` écrit chez l'hôte, et pour la même raison : un salon
+## qui ne dit pas qui attend qui fait attendre les deux.
+func _appliquer_hote_pret(pret: bool) -> void:
+	var monte := pret and not _hote_pret
+	_hote_pret = pret
+	if ui == null:
+		return
+	if pret and local_ready_for_rematch:
+		# Les deux sont prêts : la manche part, `rpc_start_round` est en route.
+		# Annoncer une attente ici la ferait clignoter avant le départ.
+		return
+	ui.time_label.text = "L'ADVERSAIRE EST PRÊT" if pret \
+		else "EN ATTENTE D'UN ADVERSAIRE..."
+	if monte:
+		ui.signaler_adversaire_pret()
+
+## Dit au client où en est l'hôte. Appelé à chaque changement, et à l'arrivée du
+## client : sans ce rappel, quelqu'un qui rejoint un hôte déjà prêt ne
+## l'apprendrait jamais — l'événement a eu lieu avant lui.
+func _annoncer_etat_hote() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	if client_peer_id == 0:
+		return
+	rpc_id(client_peer_id, "rpc_host_ready", p1_ready_for_rematch)
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready(w2_idx: int):
@@ -2018,6 +2076,9 @@ func _on_main_menu_requested():
 	game_over = true
 	p1_ready_for_rematch = false
 	p2_ready_for_rematch = false
+	# Sans ça, un client verrait « L'ADVERSAIRE EST PRÊT » au début du salon
+	# suivant sur la foi d'une annonce du match précédent.
+	_hote_pret = false
 	local_ready_for_rematch = false
 	
 	if ReplaySystem:

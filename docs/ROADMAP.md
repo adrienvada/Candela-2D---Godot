@@ -2270,6 +2270,24 @@ trouvée, jamais une valeur choisie d'avance.** Capturer à l'entrée, restituer
 la sortie. Un effet qui a besoin d'un canal à lui doit d'abord vérifier lesquels
 sont pris — les trois cités le sont.
 
+### Le banc de framerate est cassé depuis la refonte des menus (2026-08-18)
+
+`tools/bench_framerate.gd:45` lit `_ui.btn_mode_local`, **qui n'existe plus** :
+les boutons de mode sont devenus des entrées du hub à la Phase 5. Le banc
+s'ouvre, instancie `main.tscn`, puis lève une erreur de script et **n'entre
+jamais dans le duel** — il reste ouvert sans rien mesurer. Constaté en le
+lançant pour la première fois depuis la refonte.
+
+Ce que ça dit du banc lui-même : **il n'est dans aucune suite** (il ouvre une
+fenêtre, il ne peut pas y être), donc rien ne signale qu'il a cessé de
+fonctionner. Un outil de mesure hors couverture se périme en silence, et on ne
+s'en aperçoit qu'au moment où l'on a besoin de la mesure — c'est-à-dire au pire
+moment. À réparer avant tout relevé.
+
+Vu au passage dans la même sortie : `play_music` lève trois erreurs Vorbis
+(`packet_sequence.is_null()`), les fichiers de musique n'étant pas encore
+fournis. Sans rapport, et attendu.
+
 ### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
 
 En headless la cadence n'est pas plafonnée : quarante `process_frame` valent une
