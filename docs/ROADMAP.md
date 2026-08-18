@@ -4513,8 +4513,26 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 >
 > Ce qui reste vrai et qui servira le jour où la question se rouvrira : **la
 > médiane est la seule métrique reproductible**, le jeu la tient (7,41 ms contre
-> 8,33 de budget), et le seul coût identifié est **la seconde vue** — c'est-à-dire
-> l'écran partagé permanent, une décision de conception et non un réglage.
+> 8,33 de budget), et le seul coût identifié est **la seconde vue**.
+>
+> ⚠️ **Ce paragraphe disait « l'écran partagé permanent, une décision de
+> conception et non un réglage ». C'est la formule qu'Adrien venait de rejeter**
+> (« je ne crois pas que le deuxième écran permanent soit l'identité du jeu »),
+> corrigée deux commits plus tôt, et **revenue à un autre endroit du même
+> document** — écrite de bonne foi par une session qui reprenait la synthèse
+> d'avant la correction.
+>
+> **Une erreur corrigée revient par la synthèse.** Le correctif était posé là où
+> l'erreur était née ; la reformulation, elle, est allée la rechercher dans le
+> souvenir de ce qu'on croyait établi. C'est le pendant du piège du README —
+> écrire la leçon là où le suivant lira ne suffit pas si l'ancienne version reste
+> lisible ailleurs. **Corriger un document, c'est aussi chercher où la phrase a
+> déjà essaimé.**
+>
+> Ce qui est exact : la seconde vue est le seul coût identifié ; **l'écran partagé
+> n'existe désormais que dans « 1v1 écrans scindés »** (décision d'Adrien, table
+> des décisions actées), et en ligne comme à l'entraînement la vue cachée ne rend
+> plus — elle rendait encore la veille de cette ligne.
 >
 > Ce qui reste à trancher, un jour : garder la cible sur le 1 % bas en exigeant
 > des relevés répétés et une dispersion, ou la réécrire sur la médiane. Les deux
