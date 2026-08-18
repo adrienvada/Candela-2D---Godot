@@ -69,6 +69,20 @@ Concrètement : une leçon tirée d'un cas particulier va dans la section
 fichier qui l'a révélée. Le commentaire local dit ce que CE code fait ; le piège
 consigné dit ce que le PROCHAIN doit savoir.
 
+**Et son pendant, appris le même jour dans l'autre sens : corriger un document,
+c'est aussi chercher où la phrase a déjà essaimé.**
+
+Une formulation rejetée par Adrien a été corrigée à l'endroit où elle était née,
+puis **réintroduite deux commits plus tard, ailleurs dans le même document**, par
+une session qui rédigeait une synthèse de bonne foi. Le mécanisme est simple et
+il se reproduira : le correctif se pose là où l'erreur a été trouvée ; la
+reformulation, elle, va rechercher la phrase dans le souvenir de ce qu'on croyait
+établi. Écrire la leçon là où le suivant lira ne sert à rien si l'ancienne
+version reste lisible à côté.
+
+Concrètement : après avoir corrigé une phrase qui portait une décision ou un
+fait, `grep` sa formulation dans `docs/` et `README.md` avant de refermer.
+
 #### Republier le suivi
 
 **La republication est centralisée** (décidé le 2026-08-18, avec Adrien) : une
