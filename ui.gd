@@ -1808,16 +1808,17 @@ func _build_hub_screens() -> void:
 		SCREEN_TRAINING))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
-	# Style plein, parce que c'est une issue franche — mais M8 ne tire PAS ici.
-	# La traçante sacralise le geste qui engage une partie ; la tirer sur la sortie
-	# du jeu la viderait de son sens, et personne n'en verrait la fin de toute
-	# façon. On retire la marque plutôt que d'ajouter une exception dans l'effet :
-	# c'est bien cette entrée-là qui est particulière, pas la règle.
-	var quitter := hub.make_entry("QUITTER",
+	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
+	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
+	# à l'arrivée dans le hub et rétablie ici.
+	#
+	# Conséquence utile, découverte des deux côtés le même jour : sans la marque
+	# de lanceur, M8 ne tire pas non plus sur QUITTER. La traçante sacralise le
+	# geste qui engage une partie ; la tirer pour fermer le jeu la viderait de son
+	# sens — et personne n'en verrait la fin.
+	accueil.add_child(hub.make_entry("QUITTER",
 		"Ferme le jeu proprement — la plateforme Epic est relâchée avant la sortie.",
-		"", COLOR_P2, "quitter", "", true)
-	quitter.remove_meta(MenuHub.META_LAUNCHER)
-	accueil.add_child(quitter)
+		"", COLOR_P2, "quitter"))
 	hub.set_aside(MenuHub.ROOT, "Candela 2D",
 		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "

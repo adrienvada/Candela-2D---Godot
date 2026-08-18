@@ -213,6 +213,22 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 — session distante « couleurs des boutons »
+
+Session isolée (branche `claude/game-button-colors-jgztrn`, aucun autre agent
+joignable via `ListAgents` au moment d'écrire), répondant à une demande ponctuelle
+d'Adrien : JOUER, PRÊT, CHERCHER UN MATCH, LANCER L'ENTRAÎNEMENT et QUITTER se
+confondaient parfois avec le liseré de sélection, les deux portant la couleur d'un
+curseur (`MenuTheme.P1`/`.P2`). Corrigé dans `MenuHub.make_entry()` : les entrées
+« lanceur » ne teintent plus leur fond ni leur cadre au repos, seul leur libellé
+passe en gras ; `QUITTER` perd `launcher` et redevient une entrée ordinaire (décision
+du 2026-08-17 déjà actée, mais perdue de vue à son arrivée dans le hub). Détail
+dans `docs/ROADMAP.md`, section Phase 5. Fichiers touchés, tous dans le domaine
+« menus » de la table ci-dessus : `menu_hub.gd`, `ui.gd` (un seul appel), et
+`docs/ROADMAP.md`. **Non vérifié à l'écran** : pas de binaire Godot dans cet
+environnement distant, `tools/run_suites.sh` n'a pas pu tourner. À rejouer par la
+session « menus » ou par Adrien avant fusion.
+
 ### 2026-08-18 (nuit) — session « menus »
 
 **Rien à corriger sur le trunk rouge signalé : il était déjà vert.** La commande

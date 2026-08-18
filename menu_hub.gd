@@ -47,9 +47,14 @@ signal detail_changed(title: String, text: String)
 
 const ROOT := "accueil"
 
-## Marque les entrées « lanceur » — le geste qui engage une partie. Le style
-## plein les distingue à l'œil ; cette marque les distingue au code, pour que M8
-## ne tire que là.
+## Marque les entrées « lanceur » — le geste qui engage une partie.
+##
+## Depuis le 2026-08-18, le lanceur n'a **plus de style plein** : sa couleur se
+## confondait avec le liseré des curseurs, qui est peint des mêmes teintes. Il se
+## reconnaît maintenant à son libellé en gras. Cette marque est donc le SEUL
+## moyen de le retrouver au code — c'est par elle que M8 sait où tirer, et
+## l'oublier sur une nouvelle entrée la rendrait muette sans rien casser de
+## visible.
 const META_LAUNCHER := "menu_launcher"
 
 ## Racine de chaque écran : c'est elle qu'on montre et qu'on cache.
@@ -395,8 +400,14 @@ func detail_host() -> VBoxContainer:
 ## sinon c'est une entrée d'information, qui ne fait que remplir la droite.
 ## `reason` non vide la rend indisponible : visible, grisée, et le panneau de
 ## droite dit pourquoi.
-## `launcher` donne le style plein du bouton de lancement : c'est le geste qui
-## engage une partie, et il doit se distinguer de tout ce qui n'engage rien.
+## `launcher` marque le geste qui engage une partie — lancer, chercher, se
+## déclarer prêt ; **pas** quitter, qui n'engage aucune partie :
+## le libellé passe en gras. Il ne teinte plus le fond ni le cadre au repos —
+## `accent` y est aussi la couleur d'un des deux curseurs (`MenuTheme.P1` /
+## `MenuTheme.P2`), et un bouton déjà bordé de cette teinte se confondait avec
+## le liseré de sélection qui l'entoure quand un joueur s'y arrête vraiment.
+## Le chevron reste la seule marque de couleur qui compte : il dit « ceci ouvre
+## un écran », son absence dit « ceci s'active sur place ».
 ## `panel` désigne un affichage riche confié à `register_panel()` : l'entrée le
 ## fait apparaître à droite au lieu de descendre d'un cran.
 func make_entry(label: String, detail: String, target: String = "",
@@ -409,9 +420,9 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.disabled = reason != ""
 
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.18) if launcher else MenuTheme.SURFACE
-	normal.set_border_width_all(2 if launcher else 1)
-	normal.border_color = accent if launcher else MenuTheme.LINE
+	normal.bg_color = MenuTheme.SURFACE
+	normal.set_border_width_all(1)
+	normal.border_color = MenuTheme.LINE
 	normal.set_corner_radius_all(10)
 	normal.content_margin_left = MenuTheme.GAP_S
 	normal.content_margin_right = MenuTheme.GAP_S
@@ -439,6 +450,13 @@ func make_entry(label: String, detail: String, target: String = "",
 	lbl.add_theme_color_override("font_color",
 		MenuTheme.DIM if btn.disabled else Color.WHITE)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Le gras remplace la couleur pour marquer un geste qui engage : la couleur
+	# est réservée aux deux curseurs, un accent posé ici s'y confondrait au repos.
+	if launcher and not btn.disabled:
+		var bold_font := FontVariation.new()
+		bold_font.base_font = ThemeDB.fallback_font
+		bold_font.variation_embolden = 1.2
+		lbl.add_theme_font_override("font", bold_font)
 	row.add_child(lbl)
 
 	# Le chevron distingue « on descend » de « ça s'affiche à droite ». Sans lui,
@@ -472,7 +490,8 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
 
 	# M8 lit cette marque pour ne tirer que sur le geste qui engage une partie.
-	# Le style plein la porte déjà à l'œil ; l'écrire la rend lisible au code.
+	# Le gras la porte à l'œil, la marque la porte au code : les deux naissent
+	# du même paramètre, et rien ne peut les désaccorder.
 	if launcher:
 		btn.set_meta(META_LAUNCHER, true)
 
