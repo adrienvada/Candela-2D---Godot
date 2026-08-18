@@ -3006,6 +3006,38 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > au douzième. Il manquait à M9 depuis sa livraison, alors que sa fiche le
 > demandait : c'est en écrivant M5 qu'on l'a vu.
 >
+> **Ce qui faisait passer M10 pour un défaut d'affichage, et les deux invariants
+> qui en sont sortis** (relevé par Adrien à l'usage le 2026-08-18 : « on pourrait
+> croire à des bugs d'affichage »). Ce n'était pas une impression. Trois causes,
+> dont une qui n'était pas un réglage :
+>
+> 1. **Des blocs noirs sur une partie en cours.** Les surfaces partent en
+>    silhouettes noires, mais le rideau tombait *en même temps* : pendant un
+>    instant, on voyait des rectangles noirs posés sur l'arène en train de se
+>    jouer, ce qui ne ressemble à rien d'autre qu'à un panneau qui a raté son
+>    dessin. La nuit tombe désormais d'abord (`M10_ANCRAGE`), le menu se rallume
+>    dedans.
+> 2. **Trois blocs, pas une cascade.** Le hub ne compte que trois surfaces —
+>    en-tête, liste, barre du bas — et un étalement large n'y fait pas une vague,
+>    il y fait trois apparitions successives dont une porte presque tout l'écran.
+>    L'étalement est passé sous la durée de rallumage d'une surface : les trois se
+>    chevauchent, et l'œil lit une vague.
+> 3. **M6 et M10 se marchaient dessus** — et c'est la vraie leçon. Ouvrir le menu
+>    appelle une navigation de hub, donc l'encre coulée, qui met les entrées à
+>    alpha 0 pour les rallumer ; pendant que M10 fait exactement la même chose sur
+>    le conteneur qui les porte. **Deux effets qui animent des `modulate`
+>    imbriqués sur les mêmes pixels ne se composent pas.** Chacun a désormais son
+>    domaine : M10 la traversée arène ↔ menu, M6 la navigation à l'intérieur du
+>    menu. L'encre ne coule que sur un **geste connu** — un `push()` appelé par du
+>    code n'en produit pas. Corollaire utile : Échap et les gâchettes sont bien
+>    des gestes, et l'interface leur donne un point de départ via
+>    `MenuHub.noter_geste()`.
+>
+> Les deux premiers sont tenus par `test_vitrine_menus` comme des invariants et
+> non comme des durées : « rien ne s'allume tant que l'arène se voit » et « aucune
+> image d'écran entièrement noir ». Les durées pourront être retouchées sans
+> rougir le banc ; ce qui faisait croire à un défaut ne peut plus revenir.
+>
 > **Le contrat que M10 a fallu inventer, et qu'aucune fiche n'avait vu.** Le
 > panneau ne disparaît plus d'un coup : il se noie dans le noir avant que le
 > rideau se lève, donc `visible` reste vrai six centièmes de seconde de plus. Or

@@ -325,11 +325,17 @@ func _slide(body: Control, direction: float) -> void:
 
 	# L'encre est un second animateur, pas un remplaçant : le glissement reste ce
 	# qu'il était, l'encre ne touche qu'aux alphas des entrées et à son ménisque.
-	if _ink != null:
+	#
+	# **Et elle ne coule QUE sur un geste connu.** Sans doigt posé, il n'y a pas
+	# de lumière à faire couler — mais surtout, une navigation appelée par du code
+	# accompagne presque toujours l'ouverture du menu, et M10 est alors en train
+	# d'allumer le panneau qui contient cette colonne. Deux effets qui animent des
+	# `modulate` imbriqués sur les mêmes pixels ne se composent pas : ils se
+	# marchent dessus, et ça se voit comme un défaut d'affichage. Ils ont chacun
+	# leur domaine — M10 la traversée arène ↔ menu, M6 la navigation à l'intérieur.
+	if _ink != null and _geste_y >= 0.0:
 		_host.move_child(_ink, -1)
 		_ink.couler(list_of(current_id()), _geste_y, MenuTheme.P1)
-	# Le geste est consommé : un `push()` appelé par du code, sans bouton, doit
-	# repartir du haut plutôt que d'hériter du dernier doigt posé.
 	_geste_y = -1.0
 
 func _reset_transform(body: Control) -> void:
@@ -383,7 +389,12 @@ func ink() -> MenuInk:
 
 ## Retient d'où part la prochaine coulée : le centre du bouton qu'on vient
 ## d'activer, en coordonnées globales.
-func _noter_geste(btn: Control) -> void:
+##
+## Public, parce que toutes les navigations ne passent pas par un bouton : Échap
+## et les gâchettes remontent d'un cran sans qu'on ait rien pressé. Ce sont bien
+## des gestes du joueur, et l'encre doit couler pour eux aussi — l'interface leur
+## dit d'où, puisqu'elle seule sait où le curseur se trouvait.
+func noter_geste(btn: Control) -> void:
 	if btn != null and is_instance_valid(btn):
 		_geste_y = btn.get_global_rect().get_center().y
 
@@ -499,7 +510,7 @@ func make_entry(label: String, detail: String, target: String = "",
 		return btn
 	if target != "":
 		btn.pressed.connect(func() -> void:
-			_noter_geste(btn)
+			noter_geste(btn)
 			push(target))
 	elif action != "":
 		btn.pressed.connect(func() -> void: action_requested.emit(action))
@@ -555,7 +566,7 @@ func add_back_entry(id: String, detail: String = "") -> Button:
 		detail if detail != "" else "Remonte d'un cran. La touche Échap fait la même chose.",
 		"", MenuTheme.DIM)
 	btn.pressed.connect(func() -> void:
-		_noter_geste(btn)
+		noter_geste(btn)
 		back())
 	list.add_child(btn)
 	return btn

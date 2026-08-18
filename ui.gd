@@ -2310,11 +2310,27 @@ func _intensite_vitrine(cle: String) -> float:
 ## Battement de noir vrai entre les deux mondes.
 const M10_BATTEMENT := 0.05
 ## Chute du rideau de nuit.
-const M10_RIDEAU := 0.12
-## Rallumage des surfaces, haut → bas.
-const M10_CASCADE := 0.18
+const M10_RIDEAU := 0.10
+## Écart entre la première surface rallumée et la dernière.
+##
+## Le hub ne compte que TROIS blocs — en-tête, liste, barre du bas. Un étalement
+## large n'y fait pas une cascade, il y fait trois apparitions successives, dont
+## une porte à elle seule presque tout l'écran. Neuf centièmes : les trois
+## chevauchent, et l'œil lit une vague au lieu de trois pas.
+const M10_ETALEMENT := 0.09
+## Rallumage d'une surface. Plus long que l'étalement, exprès : c'est ce
+## chevauchement qui fait la vague.
+const M10_SURFACE := 0.16
+## Part du rideau posée avant qu'une surface commence à se rallumer.
+##
+## **Le réglage qui faisait passer l'effet pour un défaut.** Les surfaces sont des
+## silhouettes noires ; tant que le rideau n'est pas tombé, ce sont des blocs
+## noirs posés sur l'arène en train de se jouer — et ça ne ressemble à rien
+## d'autre qu'à un panneau qui a raté son dessin. La nuit tombe d'abord ; le
+## menu se rallume dedans.
+const M10_ANCRAGE := 0.7
 ## Fermeture. Sous le seuil d'agacement : au-delà, on attend son jeu.
-const M10_FERMETURE := 0.10
+const M10_FERMETURE := 0.14
 ## Ce que la pause retranche aux durées, dans les deux sens.
 const M10_COURT := 0.6
 
@@ -2408,7 +2424,10 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 
 	var battement := M10_BATTEMENT * facteur
 	var t_rideau := M10_RIDEAU * facteur
-	var t_cascade := M10_CASCADE * facteur
+	var etalement := M10_ETALEMENT * facteur
+	var t_surface := M10_SURFACE * facteur
+	# Voir M10_ANCRAGE : rien ne se rallume avant que la nuit soit là.
+	var ancre := battement + t_rideau * M10_ANCRAGE
 
 	var tw := create_tween()
 	tw.set_parallel(true)
@@ -2416,18 +2435,22 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 		tw.tween_property(rideau, "color:a", nuit, t_rideau).set_delay(battement)
 	var n := surfaces.size()
 	for i in n:
-		var retard := battement + t_cascade * (float(i) / float(maxi(n, 1)))
-		tw.tween_property(surfaces[i], "modulate", Color.WHITE, t_cascade * 0.6) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_delay(retard)
-	# Le titre or reprend vie en dernier, avec une image de blanc : c'est la
-	# dernière braise à se rallumer, et elle appelle le regard là où le menu
-	# commence.
+		# Réparti sur n-1 intervalles, pas sur n : la dernière surface part
+		# exactement à la fin de l'étalement, au lieu d'un cran avant — sans quoi
+		# la durée réelle dépendrait du nombre de blocs de l'écran.
+		var part := float(i) / float(maxi(n - 1, 1))
+		tw.tween_property(surfaces[i], "modulate", Color.WHITE, t_surface) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT) \
+			.set_delay(ancre + etalement * part)
+	# Le titre or reprend vie avec la dernière surface, pas après elle : une
+	# braise qui s'allumerait seule, une fois le menu déjà lisible, se lirait
+	# comme un second événement — donc comme un raté.
 	if panneau == game_over_panel and game_over_title != null:
-		var apres := battement + t_cascade
-		tw.tween_property(game_over_title, "modulate", Color(2.0, 2.0, 2.0), 0.02) \
+		var apres := ancre + etalement
+		tw.tween_property(game_over_title, "modulate", Color(1.7, 1.7, 1.7), 0.05) \
 			.set_delay(apres)
-		tw.tween_property(game_over_title, "modulate", Color.WHITE, 0.12) \
-			.set_delay(apres + 0.02)
+		tw.tween_property(game_over_title, "modulate", Color.WHITE, t_surface) \
+			.set_delay(apres + 0.05)
 	_tweens_lumiere[panneau] = tw
 
 ## Les surfaces se noient dans le noir, PUIS le rideau se lève sur l'arène.
@@ -2450,9 +2473,12 @@ func _eteindre(panneau: Control, court: bool = false) -> void:
 	var tw := create_tween()
 	tw.set_parallel(true)
 	for s in _surfaces_de(panneau):
-		tw.tween_property(s, "modulate", Color(0.0, 0.0, 0.0, 1.0), duree * 0.55)
+		tw.tween_property(s, "modulate", Color(0.0, 0.0, 0.0, 1.0), duree * 0.7)
 	if rideau != null:
-		tw.tween_property(rideau, "color:a", 0.0, duree * 0.45).set_delay(duree * 0.55)
+		# Le rideau commence à se lever AVANT que les surfaces aient fini de se
+		# noyer : bout à bout, il resterait un écran entièrement noir entre les
+		# deux, et ce trou-là se lit comme une image perdue.
+		tw.tween_property(rideau, "color:a", 0.0, duree * 0.55).set_delay(duree * 0.45)
 	tw.chain().tween_callback(func() -> void: _fermer_sec(panneau))
 	_tweens_lumiere[panneau] = tw
 
@@ -3803,6 +3829,9 @@ func _input(event: InputEvent) -> void:
 	# feuilleter un menu invisible.
 	if not pause_open:
 		if event.is_action_pressed("p1_menu_prev_tab") or event.is_action_pressed("p2_menu_prev_tab"):
+			# M6 coule depuis le geste : ici il n'y a pas de bouton pressé, mais il
+			# y a bien un joueur qui agit et un curseur quelque part.
+			hub.noter_geste(p1_focus)
 			hub.back()
 			get_viewport().set_input_as_handled()
 			return
@@ -4022,6 +4051,7 @@ func _handle_pause_input() -> bool:
 	# longtemps annoncé un geste que rien n'implémentait : elle est devenue une
 	# entrée cliquable, et la touche la double enfin pour de vrai.
 	if _is_main_menu and hub != null and hub.depth() > 0:
+		hub.noter_geste(p1_focus)
 		hub.back()
 		get_viewport().set_input_as_handled()
 		return true

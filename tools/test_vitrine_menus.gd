@@ -28,6 +28,7 @@ func _run() -> void:
 	_test_gravure()
 	_test_fond()
 	await _test_extinction()
+	await _test_extinction_lisible()
 	await _test_calibration()
 	_test_lignes_de_politique()
 
@@ -301,6 +302,71 @@ func _test_gravure() -> void:
 	_check("une adresse plus courte rend ses cases",
 		cases_ip.get_child_count() == 9, str(cases_ip.get_child_count()))
 	ip.free()
+
+## Les deux instants où M10 passait pour un défaut d'affichage.
+##
+## Relevé par Adrien à l'usage : « on pourrait croire à des bugs d'affichage ».
+## Ce n'était pas une impression, c'étaient deux trous de calibrage, et ils se
+## disent tous les deux comme un invariant :
+##
+## 1. **Aucune surface éclairée tant que l'arène se voit encore.** Les surfaces
+##    partent en silhouettes noires ; tant que le rideau n'est pas tombé, ce sont
+##    des blocs noirs posés sur une partie en cours — ça ne ressemble à rien
+##    d'autre qu'à un panneau qui a raté son dessin.
+## 2. **Jamais un écran entièrement noir à la fermeture.** Si les surfaces
+##    finissaient de se noyer avant que le rideau commence à se lever, il
+##    resterait un trou noir entre les deux mondes, et ce trou se lit comme une
+##    image perdue.
+func _test_extinction_lisible() -> void:
+	print("\n[Ce qui faisait croire à un défaut]")
+	var ui: Node = (load("res://ui.tscn") as PackedScene).instantiate()
+	ui.name = "UI3"
+	root.add_child(ui)
+	await process_frame
+
+	var menu: Control = ui.game_over_panel
+	var rideau: ColorRect = ui._rideau_de(menu)
+	var surfaces: Array = ui._surfaces_de(menu)
+	if rideau == null or surfaces.is_empty():
+		_check("le harnais tient le panneau", false)
+		ui.queue_free()
+		return
+	var nuit := float(rideau.get_meta("alpha_nuit"))
+
+	ui._allumer(menu)
+	var trahison := 0.0
+	for _i in 40:
+		var couverture := rideau.color.a / nuit
+		var vive := 0.0
+		for s in surfaces:
+			vive = maxf(vive, (s as Control).modulate.r)
+		# L'arène se voit encore tant que le rideau n'est pas majoritairement là.
+		if couverture < 0.6:
+			trahison = maxf(trahison, vive)
+		await process_frame
+	_check("rien ne s'allume tant que l'arène se voit", is_zero_approx(trahison),
+		"%.3f de luminance en trop" % trahison)
+	var toutes := true
+	for s in surfaces:
+		if (s as Control).modulate.r < 0.99:
+			toutes = false
+	_check("et à la fin tout est rallumé", toutes)
+
+	ui._eteindre(menu)
+	var noir := 0
+	for _i in 30:
+		var couverture := rideau.color.a / nuit
+		var vive := 0.0
+		for s in surfaces:
+			vive = maxf(vive, (s as Control).modulate.r)
+		if menu.visible and couverture > 0.9 and vive < 0.02:
+			noir += 1
+		await process_frame
+	_check("aucune image d'écran entièrement noir", noir == 0, "%d images" % noir)
+	_check("et le panneau a fini par disparaître", not menu.visible)
+
+	ui.queue_free()
+	await process_frame
 
 ## M12 + M5 — la brume d'abysse et le bruit de l'œil, dans un seul matériau.
 func _test_fond() -> void:
