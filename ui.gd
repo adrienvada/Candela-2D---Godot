@@ -51,6 +51,9 @@ const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
 ## Libellé d'origine d'une entrée de lancement, à restaurer hors écran de fin.
 const META_LAUNCH_BASE := "launch_base"
+## M10 — opacité de nuit d'un rideau, et colonne que la cascade rallume.
+const META_ALPHA_NUIT := "alpha_nuit"
+const META_CASCADE := "cascade"
 
 ## Identifiants des écrans du hub (Phase 5, structure B).
 ##
@@ -250,6 +253,18 @@ var menu_torch: MenuTorch
 var menu_watcher: MenuWatcher
 var menu_passerby: MenuPasserby
 var menu_tracer: MenuTracer
+
+## M10 — panneaux en cours d'extinction, et le tween qui les éteint.
+##
+## Un panneau qui s'éteint est **déjà fermé** pour tout ce qui décide quelque
+## chose : le joueur a repris la main à l'instant où il a appuyé, et les dix
+## centièmes de fondu ne sont plus qu'une image. Sans cette distinction,
+## `is_pause_menu_open()` resterait vrai pendant le fondu et le joueur ne
+## pourrait pas agir pendant un dixième de seconde après avoir repris — en
+## ligne, où le monde n'a jamais cessé de tourner, c'est une mort.
+var _extinction: Array[Control] = []
+var _tweens_lumiere: Dictionary = {}
+var _m10: float = 1.0
 
 ## Bandeau de recherche d'adversaire, au bord haut de l'écran. Hors du menu :
 ## la recherche continue quel que soit l'écran regardé.
@@ -588,8 +603,8 @@ func _update_focus_rings() -> void:
 	if game_over_panel == null or p1_cursor == null or p2_cursor == null:
 		return
 
-	var menu_open := game_over_panel.visible \
-		or (pause_panel != null and pause_panel.visible) \
+	var menu_open := _panneau_ouvert(game_over_panel) \
+		or _panneau_ouvert(pause_panel) \
 		or (dialog_panel != null and dialog_panel.visible)
 	if not menu_open:
 		p1_cursor.hide()
@@ -863,7 +878,7 @@ func _nav_candidates(player: int) -> Array[Control]:
 	# La pause est modale : tant qu'elle est ouverte, elle est le seul terrain de
 	# navigation. Sans ce retour anticipé, le curseur filerait dans les onglets du
 	# menu, cachés mais toujours dans l'arbre.
-	if pause_panel != null and pause_panel.visible:
+	if _panneau_ouvert(pause_panel):
 		_collect_focusables(pause_panel, player, out)
 		return out
 	# Le terrain de navigation est le corps de l'écran courant. Les autres sont
@@ -1618,7 +1633,12 @@ func _build_menu() -> void:
 	add_child(game_over_panel)
 
 	var backdrop := ColorRect.new()
+	backdrop.name = "Rideau"
 	backdrop.color = Color(0.01, 0.012, 0.02, 0.96)
+	# M10 lit ici l'opacité de nuit du panneau : elle est la valeur d'arrivée du
+	# rideau, et la relire dans le code de l'effet en ferait une seconde vérité
+	# qui finirait par diverger de celle-ci.
+	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	game_over_panel.add_child(backdrop)
 
 	var outer := MarginContainer.new()
@@ -1631,6 +1651,10 @@ func _build_menu() -> void:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", GAP_M)
 	outer.add_child(root)
+	# M10 rallume CES enfants-là, en cascade. Le désigner ici plutôt que de le
+	# deviner évite un effet qui se tairait le jour où l'on glisse un conteneur
+	# de plus entre le panneau et sa colonne.
+	game_over_panel.set_meta(META_CASCADE, root)
 
 	root.add_child(_build_menu_header())
 
@@ -1689,7 +1713,7 @@ func _build_menu() -> void:
 	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
 		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
 				"regard_du_noir", "passant_vitre", "encre_coulee",
-				"gravure_code", "depart_au_tir"]:
+				"gravure_code", "depart_au_tir", "extinction_menu"]:
 			_apply_menu_effects()
 	)
 	_apply_menu_effects()
@@ -2185,6 +2209,173 @@ func _apply_menu_effects() -> void:
 	if lobby_code_engraver != null:
 		lobby_code_engraver.set_intensite(
 			GameSettings.effective_effect("gravure_code", false))
+	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
+	# panneaux, et son intensité est donc une simple valeur retenue ici.
+	_m10 = GameSettings.effective_effect("extinction_menu", false)
+
+# ===========================================================================
+# M10 — L'EXTINCTION DES FEUX
+# ===========================================================================
+#
+# Le menu et la pause ne s'affichent plus : le monde s'éteint, puis le menu se
+# rallume. Ouvrir un menu est le geste le plus répété du jeu, et c'était un
+# show/hide sec. Entrer au menu = éteindre sa torche, en sortir = la rallumer :
+# le battement de noir absolu entre deux mondes rappelle le contrat à chaque
+# traversée, sans un pixel de déplacement — zéro vertige, zéro gêne manette.
+#
+# **Seules les quatre traversées arène ↔ menu s'animent.** Les bascules internes
+# — la pause qui ouvre ses options, les options qui rendent la pause — restent
+# sèches : ce ne sont pas des traversées, et les fondre reviendrait à éteindre la
+# lampe pour la rallumer sans avoir bougé.
+
+## Battement de noir vrai entre les deux mondes.
+const M10_BATTEMENT := 0.05
+## Chute du rideau de nuit.
+const M10_RIDEAU := 0.12
+## Rallumage des surfaces, haut → bas.
+const M10_CASCADE := 0.18
+## Fermeture. Sous le seuil d'agacement : au-delà, on attend son jeu.
+const M10_FERMETURE := 0.10
+## Ce que la pause retranche aux durées, dans les deux sens.
+const M10_COURT := 0.6
+
+## Un panneau compte-t-il comme ouvert ? Voir `_extinction` : pendant le fondu de
+## fermeture, la réponse est non, alors que `visible` est encore vrai.
+func _panneau_ouvert(panneau: Control) -> bool:
+	return panneau != null and panneau.visible and not _extinction.has(panneau)
+
+func _rideau_de(panneau: Control) -> ColorRect:
+	return panneau.get_node_or_null(^"Rideau") as ColorRect if panneau != null else null
+
+func _surfaces_de(panneau: Control) -> Array[Control]:
+	var out: Array[Control] = []
+	if panneau == null:
+		return out
+	var hote := panneau.get_meta(META_CASCADE, null) as Control
+	if hote == null or not is_instance_valid(hote):
+		return out
+	for enfant in hote.get_children():
+		var c := enfant as Control
+		if c != null:
+			out.append(c)
+	return out
+
+## Remet le panneau à sa lumière pleine, sans animation.
+##
+## Appelé à chaque bout de chemin — allumage, extinction, fermeture sèche. C'est
+## la même discipline que l'encre coulée : un panneau dont les surfaces
+## resteraient à `modulate` noir serait un menu invisible mais navigable, et le
+## joueur n'aurait aucun moyen de comprendre ce qui se passe.
+func _m10_remettre(panneau: Control) -> void:
+	var rideau := _rideau_de(panneau)
+	if rideau != null:
+		rideau.color.a = float(rideau.get_meta(META_ALPHA_NUIT, rideau.color.a))
+	for s in _surfaces_de(panneau):
+		s.modulate = Color.WHITE
+
+func _m10_tuer(panneau: Control) -> void:
+	var t: Variant = _tweens_lumiere.get(panneau, null)
+	if t is Tween and (t as Tween).is_valid():
+		(t as Tween).kill()
+	_tweens_lumiere.erase(panneau)
+
+## Ferme un panneau sur-le-champ, sans fondu.
+##
+## Pour tout ce qui n'est pas une traversée : la construction, les bascules
+## internes, et surtout `force_close_pause()` — la killcam ne peut pas attendre
+## un dixième de seconde derrière un panneau qui s'efface.
+func _fermer_sec(panneau: Control) -> void:
+	if panneau == null:
+		return
+	_m10_tuer(panneau)
+	_extinction.erase(panneau)
+	_m10_remettre(panneau)
+	panneau.hide()
+
+## Ouvre un panneau sur-le-champ, sans fondu. Même rôle que `_fermer_sec` : les
+## bascules internes passent par ici, et l'état d'extinction reste cohérent.
+func _ouvrir_sec(panneau: Control) -> void:
+	if panneau == null:
+		return
+	_m10_tuer(panneau)
+	_extinction.erase(panneau)
+	_m10_remettre(panneau)
+	panneau.show()
+
+## Le monde s'éteint, puis le menu se rallume.
+func _allumer(panneau: Control, court: bool = false) -> void:
+	if panneau == null:
+		return
+	_m10_tuer(panneau)
+	_extinction.erase(panneau)
+	panneau.show()
+	if _m10 <= 0.0:
+		# À zéro : le show sec d'avant l'effet, pixel pour pixel.
+		_m10_remettre(panneau)
+		return
+
+	var facteur := M10_COURT if court else 1.0
+	var rideau := _rideau_de(panneau)
+	var surfaces := _surfaces_de(panneau)
+	var nuit := 0.96
+	if rideau != null:
+		nuit = float(rideau.get_meta(META_ALPHA_NUIT, rideau.color.a))
+		rideau.color.a = 0.0
+	# Silhouettes noires : les contrôles gardent taille, position et visibilité.
+	# Rien ne disparaît sous le curseur, et le résolveur de navigation les trouve
+	# dès la première image.
+	for s in surfaces:
+		s.modulate = Color(0.0, 0.0, 0.0, 1.0)
+
+	var battement := M10_BATTEMENT * facteur
+	var t_rideau := M10_RIDEAU * facteur
+	var t_cascade := M10_CASCADE * facteur
+
+	var tw := create_tween()
+	tw.set_parallel(true)
+	if rideau != null:
+		tw.tween_property(rideau, "color:a", nuit, t_rideau).set_delay(battement)
+	var n := surfaces.size()
+	for i in n:
+		var retard := battement + t_cascade * (float(i) / float(maxi(n, 1)))
+		tw.tween_property(surfaces[i], "modulate", Color.WHITE, t_cascade * 0.6) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).set_delay(retard)
+	# Le titre or reprend vie en dernier, avec une image de blanc : c'est la
+	# dernière braise à se rallumer, et elle appelle le regard là où le menu
+	# commence.
+	if panneau == game_over_panel and game_over_title != null:
+		var apres := battement + t_cascade
+		tw.tween_property(game_over_title, "modulate", Color(2.0, 2.0, 2.0), 0.02) \
+			.set_delay(apres)
+		tw.tween_property(game_over_title, "modulate", Color.WHITE, 0.12) \
+			.set_delay(apres + 0.02)
+	_tweens_lumiere[panneau] = tw
+
+## Les surfaces se noient dans le noir, PUIS le rideau se lève sur l'arène.
+##
+## Cet ordre est l'effet lui-même : lever le rideau d'abord ferait apparaître
+## l'arène derrière un menu encore lisible, ce qui est exactement le basculement
+## sec qu'on remplace.
+func _eteindre(panneau: Control, court: bool = false) -> void:
+	if panneau == null:
+		return
+	_m10_tuer(panneau)
+	if not panneau.visible or _m10 <= 0.0:
+		_fermer_sec(panneau)
+		return
+	if not _extinction.has(panneau):
+		_extinction.append(panneau)
+
+	var duree := M10_FERMETURE * (M10_COURT if court else 1.0)
+	var rideau := _rideau_de(panneau)
+	var tw := create_tween()
+	tw.set_parallel(true)
+	for s in _surfaces_de(panneau):
+		tw.tween_property(s, "modulate", Color(0.0, 0.0, 0.0, 1.0), duree * 0.55)
+	if rideau != null:
+		tw.tween_property(rideau, "color:a", 0.0, duree * 0.45).set_delay(duree * 0.55)
+	tw.chain().tween_callback(func() -> void: _fermer_sec(panneau))
+	_tweens_lumiere[panneau] = tw
 
 func _wire_salon_back(btn: Button) -> void:
 	if btn == null:
@@ -3023,7 +3214,9 @@ func _build_pause_menu() -> void:
 	add_child(pause_panel)
 
 	var backdrop := ColorRect.new()
+	backdrop.name = "Rideau"
 	backdrop.color = Color(0.01, 0.012, 0.02, 0.88)
+	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	pause_panel.add_child(backdrop)
 
 	var center := CenterContainer.new()
@@ -3033,6 +3226,7 @@ func _build_pause_menu() -> void:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", GAP_S)
 	center.add_child(column)
+	pause_panel.set_meta(META_CASCADE, column)
 
 	pause_title = Label.new()
 	pause_title.text = "PAUSE"
@@ -3101,7 +3295,7 @@ func _open_pause() -> void:
 		var s := floori(gs.time_left) % 60
 		pause_time_label.text = "TEMPS RESTANT : %02d:%02d" % [m, s]
 
-	pause_panel.show()
+	_allumer(pause_panel, true)
 	_seed_focus(0)
 	_seed_focus(1)
 
@@ -3110,7 +3304,7 @@ func _open_pause() -> void:
 ## n'ouvre pas le menu, elle ouvre les options.
 func _open_pause_options() -> void:
 	_options_from_pause = true
-	pause_panel.hide()
+	_fermer_sec(pause_panel)
 
 	btn_replay.hide()
 	btn_main_menu.hide()
@@ -3123,12 +3317,12 @@ func _open_pause_options() -> void:
 
 	hub.reset()
 	hub.push(SCREEN_CUSTOM)
-	game_over_panel.show()
+	_ouvrir_sec(game_over_panel)
 
 func _close_pause_options() -> void:
 	_options_from_pause = false
 	btn_back.hide()
-	game_over_panel.hide()
+	_fermer_sec(game_over_panel)
 	_restore_all_tabs()
 	_open_pause()
 
@@ -3339,8 +3533,11 @@ func _resume_game() -> void:
 	_options_from_pause = false
 	btn_back.hide()
 	_restore_all_tabs()
-	pause_panel.hide()
-	game_over_panel.hide()
+	# La reprise ne perd JAMAIS un battement : l'arbre est dé-pausé au-dessus, et
+	# seul le visuel s'éteint encore. Voir `_extinction` — pour tout ce qui décide,
+	# les deux panneaux sont déjà fermés.
+	_eteindre(pause_panel, true)
+	_eteindre(game_over_panel, true)
 
 ## Mode que le menu lancera au prochain « JOUER ».
 ##
@@ -3495,8 +3692,8 @@ func _input(event: InputEvent) -> void:
 		if _handle_pause_input():
 			return
 
-	var pause_open: bool = pause_panel != null and pause_panel.visible
-	if not game_over_panel.visible and not pause_open:
+	var pause_open: bool = _panneau_ouvert(pause_panel)
+	if not _panneau_ouvert(game_over_panel) and not pause_open:
 		return
 
 	# La pause n'a pas d'onglets : les gâchettes n'y font rien plutôt que de
@@ -3575,7 +3772,7 @@ func _pause_freezes_world() -> bool:
 ## quand même cesser d'agir pendant qu'il navigue — y compris dans la parenthèse
 ## des options, qui reste une pause du point de vue du joueur.
 func is_pause_menu_open() -> bool:
-	return pause_panel.visible or _options_from_pause
+	return _panneau_ouvert(pause_panel) or _options_from_pause
 
 ## Retourne true si l'événement de pause a été consommé.
 ##
@@ -3588,12 +3785,12 @@ func _handle_pause_input() -> bool:
 		get_viewport().set_input_as_handled()
 		return true
 
-	if pause_panel.visible:
+	if _panneau_ouvert(pause_panel):
 		_resume_game()
 		get_viewport().set_input_as_handled()
 		return true
 
-	if not _is_main_menu and not game_over_panel.visible:
+	if not _is_main_menu and not _panneau_ouvert(game_over_panel):
 		_open_pause()
 		get_viewport().set_input_as_handled()
 		return true
@@ -3654,7 +3851,7 @@ func show_main_menu() -> void:
 	_options_from_pause = false
 	btn_back.hide()
 	if pause_panel != null:
-		pause_panel.hide()
+		_fermer_sec(pause_panel)
 	# Plus aucun bouton en bas du menu : « Jouer », « Prêt » et « Chercher un
 	# match » lancent déjà le bon type de match depuis leur propre écran, et
 	# « Quitter » est une entrée de l'accueil. Une barre qui doublait tout ça
@@ -3669,7 +3866,7 @@ func show_main_menu() -> void:
 	_restore_all_tabs()
 
 	hub.reset()
-	game_over_panel.show()
+	_allumer(game_over_panel)
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	# Vide, et non « PRÊT À JOUER ? » : cette ligne porte la description de l'entrée
@@ -3692,7 +3889,7 @@ func show_game_over(winner_id: int) -> void:
 	_options_from_pause = false
 	btn_back.hide()
 	if pause_panel != null:
-		pause_panel.hide()
+		_fermer_sec(pause_panel)
 	# **Plus de barre du bas, même ici.** REJOUER a désormais son entrée dans la
 	# liste, à la place exacte de PRÊT — même geste, même endroit. MENU PRINCIPAL
 	# et QUITTER disparaissent : le retour de la liste ferme le salon, et quitter
@@ -3710,7 +3907,7 @@ func show_game_over(winner_id: int) -> void:
 	# « rejouer » a un sens.
 	hub.reset()
 	hub.push(_screen_for_current_mode())
-	game_over_panel.show()
+	_allumer(game_over_panel)
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
 
@@ -3740,7 +3937,7 @@ func show_game_over(winner_id: int) -> void:
 
 func hide_game_over() -> void:
 	_is_main_menu = false
-	game_over_panel.hide()
+	_eteindre(game_over_panel)
 	# Retour au jeu : le HUD de match reprend sa place.
 	if is_instance_valid(match_hud):
 		match_hud.show()
@@ -3789,14 +3986,14 @@ func _on_dialog_closed() -> void:
 ## derrière un menu « PAUSE » que plus rien ne fermait.
 func force_close_pause() -> void:
 	if pause_panel != null and pause_panel.visible:
-		pause_panel.hide()
+		_fermer_sec(pause_panel)
 	# La parenthèse des options emprunte le menu à onglets : il faut la refermer
 	# elle aussi, sans quoi la killcam resterait derrière un panneau « OPTIONS ».
 	if _options_from_pause:
 		_options_from_pause = false
 		btn_back.hide()
 		_restore_all_tabs()
-		game_over_panel.hide()
+		_fermer_sec(game_over_panel)
 	# Sans condition de mode : une pause locale ouverte au moment où l'on bascule
 	# en ligne laisserait l'arbre gelé.
 	get_tree().paused = false

@@ -50,7 +50,7 @@ func _run() -> void:
 			return
 
 	_test_construction()
-	_test_ouverture_fermeture()
+	await _test_ouverture_fermeture()
 	_test_isolement_du_menu()
 	_test_navigation_captive()
 	_test_signaux_de_sortie()
@@ -99,6 +99,18 @@ func _test_construction() -> void:
 	_check("la barre d'actions du menu offre un RETOUR, caché par défaut",
 		_ui.btn_back != null and not _ui.btn_back.visible)
 
+## Attend que le fondu d'extinction (M10) ait fini de jouer.
+##
+## Budget large et sortie dès que c'est fait : on veut prouver que le panneau
+## finit vraiment par disparaître, pas mesurer une durée. Un test qui dormirait
+## un temps fixe deviendrait rouge le jour où la durée du fondu change d'un
+## centième.
+func _attendre_extinction(panneau: Control) -> void:
+	var tours := 0
+	while panneau.visible and tours < 240:
+		await process_frame
+		tours += 1
+
 func _test_ouverture_fermeture() -> void:
 	print("\n[Ouverture et fermeture]")
 	_en_match()
@@ -109,8 +121,21 @@ func _test_ouverture_fermeture() -> void:
 	_check("is_pause_menu_open le confirme", _ui.is_pause_menu_open())
 
 	_check("un second appui la referme", _ui._handle_pause_input())
-	_check("le panneau est caché", not _ui.pause_panel.visible)
+	# ÉLARGI le 2026-08-18 avec M10, l'extinction des feux. Le panneau ne
+	# disparaît plus d'un coup : il se noie dans le noir avant que le rideau se
+	# lève. `visible` reste donc vrai six centièmes de seconde de plus.
+	#
+	# Ce qui protège le joueur n'est pas `visible`, c'est **la décision** : à
+	# l'instant de l'appui, la pause est levée et le joueur a repris la main. En
+	# ligne, où le monde n'a jamais cessé de tourner, un dixième de seconde
+	# d'inaction imposée après avoir repris est une mort qu'on ne comprend pas.
+	# C'est cette garantie-là qu'on vérifie d'abord, et immédiatement.
+	_check("la pause est levée SUR-LE-CHAMP", not _ui.is_pause_menu_open())
 	_check("l'arbre n'est plus gelé", not paused)
+	# Et le panneau finit bien par disparaître pour de bon : un fondu qui ne se
+	# terminerait pas laisserait un menu noir par-dessus l'arène, à jamais.
+	await _attendre_extinction(_ui.pause_panel)
+	_check("le panneau finit caché", not _ui.pause_panel.visible)
 
 	# Depuis le menu principal, la pause n'a rien à ouvrir.
 	_ui._is_main_menu = true

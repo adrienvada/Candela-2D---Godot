@@ -2789,20 +2789,23 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 8 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : 9 sur 15 livrés** — M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
 > M6 l'encre coulée, M7 le code gravé, M8 le départ au tir, M9 la torche du
-> curseur. Chacun dans son fichier (`menu_gnomon.gd`, `menu_after_image.gd`,
-> `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`,
-> `menu_engraver.gd`, `menu_tracer.gd`) plutôt que dans un `ui.gd` de trois mille
-> lignes, chacun avec sa ligne d'`effect_policy` **lue dans les deux sens** :
+> curseur, M10 l'extinction des feux. Chacun dans son fichier (`menu_gnomon.gd`,
+> `menu_after_image.gd`, `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`,
+> `menu_ink.gd`, `menu_engraver.gd`, `menu_tracer.gd`) plutôt que dans un `ui.gd`
+> de trois mille lignes — **sauf M10, qui n'a pas de nœud à lui** : il vit dans
+> les chemins show/hide des deux panneaux, et c'est le seul endroit où il puisse
+> vivre. Chacun avec sa ligne d'`effect_policy` **lue dans les deux sens** :
 > l'intensité mémorisée s'applique à la construction et à chaque changement. Une
 > ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
 > ressemble trait pour trait à un réglage qui marche.
 >
-> Les sept autres suivent par lots. Aucun ne demande d'asset. Cinq d'entre eux
-> (M5, M11, M12, M14, M15) demandent un shader : ils seront groupés, c'est le
-> sous-ensemble qui demande le plus de précaution sous `gl_compatibility`.
+> Les six autres suivent par lots. Aucun ne demande d'asset. **Cinq des six
+> (M5, M11, M12, M14, M15) demandent un shader** : ils seront groupés, c'est le
+> sous-ensemble qui demande le plus de précaution sous `gl_compatibility`. Reste
+> M13, les squelettes de lumière, seul effet restant sans shader.
 >
 > **Les livrés partagent une fiction et c'est voulu** : une flamme éclaire ce
 > menu depuis quelque part. Elle projette l'ombre du titre (M1), on la porte à la
@@ -2810,8 +2813,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > le noir qu'elle laisse a des yeux (M3). La rémanence (M2) est ce que tout cela
 > imprime sur une rétine. Le second lot ajoute ce que cette lumière **écrit** :
 > elle coule dans l'écran suivant (M6), elle grave le code dans le mur (M7), et
-> elle part en balle quand on engage une partie (M8). Ce n'est pas une collection
-> d'effets, c'est un même monde vu par huit fenêtres.
+> elle part en balle quand on engage une partie (M8). M10 ferme la boucle en
+> disant d'où l'on vient : entrer au menu, c'est éteindre sa torche ; en sortir,
+> c'est la rallumer. Ce n'est pas une collection d'effets, c'est un même monde vu
+> par neuf fenêtres.
 >
 > **Règle commune tenue par tous : coût nul au repos.** Chacun coupe son
 > `_process` dès qu'il n'a plus rien à changer — y compris la torche, qui s'arrête
@@ -2827,6 +2832,21 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > surtout des **retours à l'état sain** : arrêt en pleine coulée, extinction en
 > pleine coulée, seconde coulée qui en chevauche une première. Trois chemins,
 > trois façons de laisser une entrée dans le noir.
+>
+> **Le contrat que M10 a fallu inventer, et qu'aucune fiche n'avait vu.** Le
+> panneau ne disparaît plus d'un coup : il se noie dans le noir avant que le
+> rideau se lève, donc `visible` reste vrai six centièmes de seconde de plus. Or
+> `is_pause_menu_open()` est lu par le jeu **pour empêcher le joueur d'agir**.
+> Tel quel, l'effet aurait imposé un dixième de seconde d'inaction après chaque
+> reprise — et en ligne, où le monde n'a jamais cessé de tourner, c'est une mort
+> qu'on ne comprend pas. D'où `_extinction` : **un panneau qui s'éteint est déjà
+> fermé pour tout ce qui décide quelque chose**, et `visible` n'est plus qu'une
+> image. Tous les prédicats passent désormais par `_panneau_ouvert()`.
+>
+> Corollaire : **seules les quatre traversées arène ↔ menu s'animent.** Les
+> bascules internes — la pause qui ouvre ses options, les options qui rendent la
+> pause — restent sèches, et `force_close_pause()` aussi : la killcam ne peut pas
+> attendre derrière un panneau qui s'efface.
 >
 > **Deux écarts assumés par rapport aux fiches ci-dessous**, notés parce qu'un
 > lecteur de la fiche seule les prendrait pour des oublis :

@@ -104,6 +104,12 @@ const EFFECTS := {
 		"nom": "Le code gravé",
 		"phrase": "Le code de salon se frappe caractère par caractère au lieu de s'afficher. Le code reste le même.",
 	},
+	"extinction_menu": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "L'extinction des feux",
+		"phrase": "Ouvrir et fermer un menu passe par un battement de noir au lieu d'un basculement sec.",
+	},
 	"depart_au_tir": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

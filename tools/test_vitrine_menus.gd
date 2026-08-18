@@ -26,6 +26,7 @@ func _run() -> void:
 	_test_encre_depart()
 	_test_tracante()
 	_test_gravure()
+	await _test_extinction()
 	_test_lignes_de_politique()
 
 	if _failures == 0:
@@ -269,6 +270,92 @@ func _test_gravure() -> void:
 
 	g.free()
 
+## M10 — l'extinction des feux.
+##
+## Le test qui compte est **le contrat de la reprise** : pendant le fondu de
+## fermeture, `visible` est encore vrai mais le panneau doit compter comme fermé.
+## Sans ça, `is_pause_menu_open()` resterait vrai un dixième de seconde après que
+## le joueur a repris — en ligne, où le monde n'a jamais cessé de tourner, c'est
+## une mort qu'on ne comprend pas.
+func _test_extinction() -> void:
+	print("\n[L'extinction des feux]")
+	# `ui.gd` nomme des autoloads : le charger depuis `_init` ne compilerait pas,
+	# et la suite pendrait au lieu d'échouer. D'où l'attente d'une image avant le
+	# `load`, comme dans `test_pause_menu.gd`.
+	var ui: Node = (load("res://ui.tscn") as PackedScene).instantiate()
+	ui.name = "UI"
+	root.add_child(ui)
+	await process_frame
+
+	# Le harnais vérifie son propre contrat avant de conclure : une erreur de
+	# script n'échoue pas un test, seul un `_check` le fait.
+	for m in ["_allumer", "_eteindre", "_fermer_sec", "_ouvrir_sec",
+			"_panneau_ouvert", "_rideau_de", "_surfaces_de", "is_pause_menu_open"]:
+		if not ui.has_method(m):
+			_check("le harnais atteint %s()" % m, false)
+			ui.queue_free()
+			return
+
+	var pause: Control = ui.pause_panel
+	var menu: Control = ui.game_over_panel
+	_check("les deux panneaux existent", pause != null and menu != null)
+	if pause == null or menu == null:
+		ui.queue_free()
+		return
+
+	# Le rideau et la colonne de cascade sont désignés à la construction : les
+	# deviner casserait le jour où un conteneur s'intercale.
+	_check("le menu a son rideau nommé", ui._rideau_de(menu) != null)
+	_check("la pause a son rideau nommé", ui._rideau_de(pause) != null)
+	_check("le menu a une colonne à rallumer", not ui._surfaces_de(menu).is_empty())
+	_check("la pause a une colonne à rallumer", not ui._surfaces_de(pause).is_empty())
+
+	ui._m10 = 1.0
+	ui._allumer(pause, true)
+	_check("allumer montre le panneau tout de suite", pause.visible)
+	_check("et il compte comme ouvert", ui._panneau_ouvert(pause))
+
+	ui._eteindre(pause, true)
+	# LE contrat. `visible` ment pendant le fondu ; `_panneau_ouvert` dit vrai.
+	_check("pendant le fondu, le panneau est encore visible", pause.visible)
+	_check("mais il ne compte PLUS comme ouvert", not ui._panneau_ouvert(pause))
+	_check("et la pause est donc déjà levée pour le jeu",
+		not ui.is_pause_menu_open())
+
+	# Rouvrir pendant le fondu doit reprendre la main proprement, sans laisser le
+	# panneau dans les limbes.
+	ui._allumer(pause, true)
+	_check("rouvrir pendant le fondu rend le panneau ouvert",
+		ui._panneau_ouvert(pause) and pause.visible)
+
+	# Quoi qu'il arrive, tout se rallume : même discipline que l'encre.
+	ui._eteindre(pause, true)
+	ui._fermer_sec(pause)
+	_check("une fermeture sèche referme vraiment", not pause.visible)
+	_check("et vide l'état d'extinction", not ui._panneau_ouvert(pause))
+	var rideau: ColorRect = ui._rideau_de(pause)
+	_check("le rideau est rendu à son opacité de nuit",
+		is_equal_approx(rideau.color.a, float(rideau.get_meta("alpha_nuit"))),
+		"%.3f" % rideau.color.a)
+	var noir := false
+	var surfaces: Array = ui._surfaces_de(pause)
+	for s2 in surfaces:
+		if (s2 as Control).modulate != Color.WHITE:
+			noir = true
+	_check("et aucune surface ne reste dans le noir", not noir)
+
+	# À zéro, le show/hide sec d'avant l'effet — pixel pour pixel.
+	ui._m10 = 0.0
+	ui._allumer(menu)
+	_check("intensité nulle : le menu s'ouvre sec", menu.visible
+		and ui._panneau_ouvert(menu))
+	ui._eteindre(menu)
+	_check("et se ferme sec, sans fondu ni délai",
+		not menu.visible and not ui._panneau_ouvert(menu))
+
+	ui.queue_free()
+	await process_frame
+
 ## Une ligne d'`effect_policy` manquante donnerait un effet qu'on ne peut pas
 ## couper ; une ligne présente sans lecture donnerait un curseur qui ne pilote
 ## rien. Le second cas est le plus vicieux : il ressemble trait pour trait à un
@@ -277,7 +364,7 @@ func _test_lignes_de_politique() -> void:
 	print("\n[Les réglages de la vitrine]")
 	var attendues := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
-		"depart_au_tir"]
+		"depart_au_tir", "extinction_menu"]
 	for cle in attendues:
 		var ligne: Variant = EffectPolicy.EFFECTS.get(cle, null)
 		if not ligne is Dictionary:
