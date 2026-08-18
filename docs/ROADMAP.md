@@ -1823,6 +1823,7 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 | Décision | Raison |
 |---|---|
+| **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
 | **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
 | **EOS conservé** pour la connectivité | NAT traversal + relais gratuits, sans serveur à maintenir. |
 | **Code de salon**, pas de liste de salons | Geste le plus immédiat pour « je joue avec un ami ». La liste n'a de sens qu'avec du matchmaking → Phase 4. |
@@ -2018,6 +2019,12 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   `--headless --quit` ne suffit pas, il faut `--headless --editor --quit-after N`.
   Corollaire pour un clone neuf : **passer l'éditeur une fois avant
   `run_suites.sh`**, sans quoi tout ce qui porte un `class_name` semble absent.
+- **`--check-only --script` ment sur les fichiers qui référencent un autoload.**
+  Vérifier `ranked_identity.gd` ainsi rend « Identifier not found: NetworkManager »
+  alors que le fichier est bon : en mode `--script`, les autoloads ne sont pas
+  dans la portée. Même famille que ci-dessus — **le contrôle rapide échoue
+  précisément sur les fichiers qui comptent le plus**, ceux qui touchent au
+  réseau et à l'identité. Passer par une suite qui instancie ce qu'il faut.
 - **Un remplacement de sous-chaîne qui mange un niveau d'indentation rend un
   script non compilable — et Godot désigne alors le mauvais fichier.** Relevé le
   2026-08-18 : `game_state.gd` corrompu par une substitution sur
@@ -2057,6 +2064,10 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   cause est extérieure au test.** Devant un rouge sur une suite qui touche un
   fichier qu'une autre session édite : la relancer seule avant de chercher la
   cause dans son propre code.
+  **`test_protocole` y est particulièrement exposé** : il lit le fil dans des
+  fichiers qu'une autre session peut être en train d'écrire, et rougit alors sur
+  du travail en cours plutôt que sur un vrai changement de protocole. Devant son
+  rouge : le relancer seul avant de toucher à `Protocol.VERSION`.
 
 **Documents et messages de commit**
 - **La CI accuse le commit qu'elle a testé, pas celui qui a cassé.** Quand
@@ -3053,7 +3064,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | **Appariement à deux fenêtres** | Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. Ne peut pas se faire à l'aveugle. |
 | **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. |
 | **Échap et F3 en jeu** | Trente secondes. Trois tentatives pilotées ont échoué sans conclure. |
-| **Sens des divisions de rang** | I la plus basse (Rocket League) ou la plus haute (LoL) ? **Les tests passent dans les deux cas** — c'est précisément pour ça que ça ne peut pas se déduire. |
+| ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
 | **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
 | **Déployer la fonction `rename`** | `supabase db push` puis `supabase functions deploy rename`. Écrite et testée depuis le 2026-08-18 ; l'écran du profil attend ce déploiement pour être câblé. |
