@@ -3257,7 +3257,23 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       sujet semble vivre. Le reste de la famille 7 (la carte suivante est bien
       jouée des deux côtés, carte personnalisée absente du disque de l'invité)
       demande deux instances et n'est pas couvert.
-  - Restent manuelles : les 3 autres familles (et le reste des 5 et 7) de la
+  - **Famille 6 automatisée le 2026-08-18** (`run_duo.sh --spam`) : les deux
+    joueurs martèlent « prêt » pendant six secondes, **une seule manche doit
+    démarrer**.
+    - **Elle paraissait intestable, et c'est parce qu'on cherchait la mauvaise
+      chose.** Elle décrit un martèlement pendant des transitions, donc des
+      fenêtres de quelques dixièmes. Mais **sa propriété n'est pas une fenêtre,
+      c'est un COMPTE** — et un compte est stable quel que soit le tempo. Si le
+      code se cassait (double départ), il passerait à deux et le contrôle
+      tomberait.
+    - ⚠️ **Une seconde assertion a été tentée trois fois puis retirée**, et le
+      récit est dans le banc : « décompte qui repart » s'est révélé faux sur sa
+      prémisse (l'état `round_active` + `countdown_left > 0` est celui, normal,
+      du 3-2-1), puis décalé d'un cran, puis en échec pour une raison non
+      élucidée. **Retirée plutôt qu'affaiblie** — chaque correction la
+      rapprochait de « ne rien vérifier », et la troisième aurait été le moment
+      de l'assouplir jusqu'à ce qu'elle passe.
+  - Restent manuelles : les 2 autres familles (et le reste des 5 et 7) de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

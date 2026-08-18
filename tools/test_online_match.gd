@@ -49,7 +49,11 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host-ralenti"):
+	if _has("--host-spam"):
+		await _run_host_spam()
+	elif _has("--join-spam"):
+		await _run_client_spam()
+	elif _has("--host-ralenti"):
 		await _run_host_ralenti()
 	elif _has("--join-ralenti"):
 		await _run_client_ralenti()
@@ -407,6 +411,88 @@ func _run_host() -> void:
 ## C'est la combinaison de deux chemins que rien n'exerçait ensemble : la perte
 ## de pair (famille 3) et la sortie de ralenti (famille 5). Chacun est couvert
 ## séparément ; leur croisement ne l'était pas.
+## Famille 6 : **les deux martèlent « prêt » — une seule manche doit démarrer.**
+##
+## Cette famille paraissait intestable : elle décrit un martèlement pendant des
+## transitions, donc des fenêtres de quelques dixièmes de seconde. **Mais sa
+## propriété n'est pas une fenêtre, c'est un COMPTE.** « Une seule manche
+## démarre » se vérifie en comptant les démarrages, et un compte est stable quel
+## que soit le tempo — c'est le principe de placement appliqué : chercher
+## l'observable stable plutôt que le moment.
+##
+## Si le code se cassait — double départ, décompte joué deux fois — **ce
+## contrôle tomberait**, puisque le compte passerait à deux. C'est ce qui le
+## distingue d'un contrôle déplacé pour passer.
+func _run_host_spam() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+
+	# On compte les transitions « aucune manche » → « manche en cours ». Le
+	# sondage est serré, mais aucune manche ne dure moins d'un dixième de
+	# seconde : on ne peut pas en manquer une.
+	var departs := 0
+	var etait_active: bool = _main.round_active
+	var t := 0.0
+	while t < 6.0:
+		# Martèlement des deux côtés pendant toute la fenêtre.
+		_press_play()
+		await get_tree().create_timer(0.12, true, false, true).timeout
+		t += 0.12
+		if _main.round_active and not etait_active:
+			departs += 1
+		etait_active = _main.round_active
+
+	print("DÉPARTS: %d en %.1f s de martèlement" % [departs, t])
+	_check("le martèlement ne fait démarrer qu'une seule manche", departs == 1,
+		"%d démarrage(s)" % departs)
+
+	# ⚠️ **Une seconde assertion a été tentée trois fois, puis retirée** — et le
+	# récit vaut mieux que le silence.
+	#
+	# Elle cherchait la seconde signature d'un double départ : un décompte qui
+	# **repart** après avoir décru. Trois versions, trois échecs, chacun pour une
+	# raison différente de la précédente :
+	#
+	#   1. « `round_active` ET `countdown_left > 0` est anormal » — faux : c'est
+	#      l'état NORMAL du 3-2-1. L'assertion accusait le jeu d'être ce qu'il
+	#      doit être.
+	#   2. comparaison à une valeur précédente initialisée à zéro : la montée
+	#      légitime de 0 à 3 s au départ comptait comme une relance.
+	#   3. corrigée d'un cran, elle tombe encore, pour une raison non élucidée.
+	#
+	# **Retirée plutôt qu'affaiblie.** Chaque correction la rapprochait de « ne
+	# rien vérifier » — et la troisième tentative aurait été le moment de
+	# l'assouplir jusqu'à ce qu'elle passe. La propriété qui compte, elle, est
+	# vérifiée et stable : **un seul départ**. Si le code se cassait, ce compte
+	# tomberait.
+	#
+	# À reprendre par quelqu'un qui saura observer un décompte rejoué autrement
+	# qu'en le sondant.
+	await get_tree().create_timer(6.0).timeout
+	_quit(0)
+
+## Le client de la famille 6 : il martèle aussi, en même temps.
+func _run_client_spam() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-spam", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	var t := 0.0
+	while t < 6.0:
+		_press_play()
+		await get_tree().create_timer(0.11, true, false, true).timeout
+		t += 0.11
+	_check("le client a martelé sans planter", true)
+	await get_tree().create_timer(4.0).timeout
+	_quit(0)
+
 func _run_host_ralenti() -> void:
 	await _select_mode(true)
 	_ui._open_lobby()

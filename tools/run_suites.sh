@@ -158,6 +158,19 @@ else
   printf '%-28s ÉCHEC\n' "duo_ralenti"; fail=1
 fi
 
+# Famille 6 : les deux martèlent « prêt » — une seule manche doit démarrer.
+#
+# Cette famille paraissait intestable : elle décrit un martèlement pendant des
+# transitions, donc des fenêtres de quelques dixièmes. Mais sa propriété n'est
+# pas une fenêtre, c'est un COMPTE — et un compte est stable quel que soit le
+# tempo. C'est le principe de placement appliqué : chercher l'observable stable
+# plutôt que le moment.
+if ./tools/run_duo.sh --spam; then
+  printf '%-28s OK\n' "duo_spam"
+else
+  printf '%-28s ÉCHEC\n' "duo_spam"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi
