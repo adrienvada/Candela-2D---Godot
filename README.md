@@ -184,6 +184,39 @@ deux.
 Règles de rédaction : expliquer **pourquoi**, pas **quoi** — le code dit déjà le
 quoi. Rester factuel : une chose non testée est écrite comme non testée.
 
+### Où placer un contrôle — et la dérive de cette règle
+
+**Le bon banc n'est pas celui qui ressemble au scénario, c'est celui où
+l'assertion est stable.** Un contrôle juste au mauvais endroit devient un
+contrôle qui vacille, et **un contrôle qui vacille finit ignoré** — puis rend
+suspects tous les autres du même lanceur.
+
+Deux exemples payés le 2026-08-18 :
+
+- « la vitesse est rendue après la killcam » a sa place apparente dans le banc à
+  deux instances ; il y échantillonnerait une fenêtre de quelques dixièmes de
+  seconde. Il vit dans le banc à **une** instance, où la séquence de fin est allée
+  à son terme et où l'état est stable.
+- « l'invité ne peut pas changer la carte » ressemble à un scénario de match ;
+  c'est une propriété de **structure du menu**, vérifiable sans réseau ni
+  adversaire.
+
+**⚠️ Cette règle porte une dérive, et elle est présentable :** « placer le
+contrôle là où l'assertion est stable » glisse en « placer le contrôle là où il
+passe ». Vu de l'extérieur c'est le même geste. C'est la tentation de relâcher
+une tolérance, sous une forme plus respectable — au lieu d'assouplir
+l'assertion, on la déplace.
+
+**Ce qui sépare les deux, et le test qui tranche :** le contrôle doit toujours
+exercer le **vrai chemin de code**, seulement observé à un endroit stable.
+Demandez-vous **« si le code se cassait, ce contrôle tomberait-il encore ? »**
+Si oui, le déplacement est un gain. Si non, on a fabriqué un contrôle stable qui
+ne vérifie plus rien — **la forme la plus présentable de l'assertion creuse**.
+
+Corollaire : **six familles couvertes par des assertions stables valent mieux que
+huit dont trois qu'on apprendra à ne plus lire.** Une absence documentée n'est pas
+un trou.
+
 ### Sessions parallèles
 
 Plusieurs sessions peuvent travailler en même temps sur ce dépôt, sans pouvoir
