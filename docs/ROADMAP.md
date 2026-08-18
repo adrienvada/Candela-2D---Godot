@@ -2096,6 +2096,16 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   cause est extérieure au test.** Devant un rouge sur une suite qui touche un
   fichier qu'une autre session édite : la relancer seule avant de chercher la
   cause dans son propre code.
+  **Pire que « peu fiable » : éditer `run_suites.sh` pendant qu'il tourne le
+  corrompt en vol.** Bash relit le script depuis le disque au fil de l'exécution ;
+  décaler les octets le fait reprendre au milieu d'un mot. Relevé le 2026-08-18 —
+  un lot a rendu `line 53: _match.tscn: command not found`, morceau de
+  `res://tools/test_online_match.tscn` coupé en deux, alors que la ligne était
+  parfaite. **L'erreur nomme un fichier de test qui n'a aucun rapport** : encore
+  la même famille que le reste de ces deux jours, le message qui désigne à côté.
+  Ne pas modifier le lanceur pendant qu'il s'exécute — et devant un
+  « command not found » qui ressemble à un bout de chemin, soupçonner cela avant
+  de chercher une faute de frappe.
   **`test_protocole` y est particulièrement exposé** : il lit le fil dans des
   fichiers qu'une autre session peut être en train d'écrire, et rougit alors sur
   du travail en cours plutôt que sur un vrai changement de protocole. Devant son
