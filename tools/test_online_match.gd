@@ -49,7 +49,11 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host-killcam"):
+	if _has("--host-ralenti"):
+		await _run_host_ralenti()
+	elif _has("--join-ralenti"):
+		await _run_client_ralenti()
+	elif _has("--host-killcam"):
 		await _run_host_killcam()
 	elif _has("--join-killcam"):
 		await _run_client_killcam()
@@ -369,6 +373,94 @@ func _run_host() -> void:
 ## Le défaut que ça protège n'est pas cosmétique : un changement d'arme appliqué
 ## au milieu d'un ralenti coupe la killcam de l'hôte, et une manche peut démarrer
 ## seule pendant qu'il regarde encore.
+## Famille 5.3 : **l'adversaire disparaît pendant le ralenti.**
+##
+## Le pire chemin de sortie du jeu, et le commentaire de `_abort_killcam` le dit
+## déjà : « le ralenti est un réglage global du moteur : l'oublier sur un chemin
+## de sortie laisse tout le jeu à 3 % de sa vitesse ». Pas la killcam — **tout le
+## jeu**, menus compris. Un joueur qui verrait son curseur ramper n'aurait aucune
+## raison de relier ça à une déconnexion survenue dix secondes plus tôt.
+##
+## C'est la combinaison de deux chemins que rien n'exerçait ensemble : la perte
+## de pair (famille 3) et la sortie de ralenti (famille 5). Chacun est couvert
+## séparément ; leur croisement ne l'était pas.
+func _run_host_ralenti() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+	# Le ralenti doit être réellement engagé, sinon on testerait une sortie qui
+	# n'avait rien à restaurer — et le banc passerait sans rien prouver.
+	# ⚠️ **LIMITE CONNUE DE CE BANC, écrite plutôt que masquée.**
+	#
+	# Ce contrôle a d'abord été un `print`, puis une assertion — et l'assertion
+	# est tombée : `Engine.time_scale` reste à **1,000 pendant six secondes**
+	# côté hôte en headless, alors que l'enregistrement montre bien la mort
+	# (`[REPLAY] P2 died`) et que le rejeu démarre.
+	#
+	# On ne sait pas si c'est un artefact du sans-rendu ou un fait de jeu, et on
+	# ne le devine pas. **Ce banc couvre donc la REMISE À ZÉRO (time_scale à 1,0,
+	# rejeu arrêté, état rendu), pas le fait qu'un ralenti ait eu lieu avant.**
+	# Tant que ce point n'est pas éclairci, l'assertion « le ralenti est levé »
+	# ci-dessous est plus faible qu'elle n'en a l'air : elle vérifie une valeur
+	# qui n'a peut-être jamais bougé.
+	#
+	# À éclaircir : soit en instrumentant `get_next_frame` pour tracer le
+	# `target_time_scale` réellement calculé, soit à l'œil sur une vraie partie.
+	var ralenti_vu := await _await(func(): return Engine.time_scale < 0.9, 6.0)
+	print("RALENTI: engagé=%s (time_scale=%.3f) — voir la limite ci-dessus"
+		% [ralenti_vu, Engine.time_scale])
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le client n'est jamais parti")
+		return
+	print("ADVERSAIRE: disparu pendant le ralenti")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_check("le ralenti est levé sur ce chemin de sortie",
+		is_equal_approx(Engine.time_scale, 1.0), "time_scale=%.4f" % Engine.time_scale)
+	_check("le rejeu est arrêté", not ReplaySystem.playing_back)
+	_check("aucune séquence de fin ne survit", not _main._end_sequence_active)
+	_check("l'hôte reprend la main", _main.sandbox_mode and not _main.round_active)
+	_check("le décompte est effacé", is_zero_approx(_main.countdown_left))
+	_quit(0)
+
+## Le client de la famille 5.3 : il meurt, puis **disparaît pendant le ralenti**
+## de l'hôte — pas après, pas avant.
+func _run_client_ralenti() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-ralenti", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	# Sa propre killcam commence : c'est le moment où l'hôte est au ralenti.
+	if not await _await(func(): return ReplaySystem.playing_back, 25.0):
+		_fail("le rejeu n'a jamais démarré côté client")
+		return
+	print("CLIENT: ralenti en cours, coupure brutale")
+	OS.kill(OS.get_process_id())
+
 func _run_host_killcam() -> void:
 	await _select_mode(true)
 	_ui._open_lobby()

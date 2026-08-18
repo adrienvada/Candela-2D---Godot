@@ -3175,7 +3175,23 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       libellé du salon à chaque appui, et cette ligne a été lue comme la preuve
       qu'un chemin de menu avait été emprunté. Elle ne prouvait rien — c'était un
       `print`. Une trace de diagnostic n'est pas un résultat.
-  - Restent manuelles : les 5 autres familles de la
+  - **Famille 5.3 automatisée le 2026-08-18** (`run_duo.sh --ralenti`) :
+    l'adversaire disparaît **pendant le ralenti**. C'est le croisement de deux
+    chemins que rien n'exerçait ensemble — la perte de pair et la sortie de
+    ralenti. Un `time_scale` oublié ne ralentit pas la killcam, il ralentit
+    **tout le jeu, menus compris**, et personne ne relierait un curseur qui rampe
+    à une déconnexion d'il y a dix secondes.
+    - ⚠️ **Limite écrite plutôt que masquée : `Engine.time_scale` reste à 1,000
+      pendant six secondes côté hôte en headless**, alors que l'enregistrement
+      montre la mort et que le rejeu démarre. Le contrôle a d'abord été un
+      `print`, puis une assertion — **et l'assertion est tombée**. On ne sait pas
+      si c'est un artefact du sans-rendu ou un fait de jeu. **Ce banc couvre donc
+      la remise à zéro, pas le fait qu'un ralenti ait eu lieu avant** : son
+      « le ralenti est levé » vérifie une valeur qui n'a peut-être jamais bougé.
+    - À éclaircir en instrumentant le `target_time_scale` réellement calculé, ou
+      à l'œil sur une vraie partie. **Écrit ici pour que personne ne prenne cette
+      suite pour une garantie qu'elle ne donne pas.**
+  - Restent manuelles : les 4 autres familles (et la fin de la 5) de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

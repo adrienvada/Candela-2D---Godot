@@ -142,6 +142,22 @@ else
   printf '%-28s ÉCHEC\n' "duo_killcam"; fail=1
 fi
 
+# Famille 5.3 : l'adversaire disparaît PENDANT le ralenti.
+#
+# Le croisement de deux chemins que rien n'exerçait ensemble — la perte de pair
+# et la sortie de ralenti. Un `time_scale` oublié ne ralentit pas la killcam,
+# il ralentit TOUT LE JEU, menus compris, et le joueur n'a aucune raison de
+# relier son curseur qui rampe à une déconnexion d'il y a dix secondes.
+#
+# ⚠️ Ce banc couvre la remise à zéro, PAS le fait qu'un ralenti ait eu lieu
+# avant : `Engine.time_scale` reste à 1,0 en headless, limite écrite dans le
+# banc lui-même.
+if ./tools/run_duo.sh --ralenti; then
+  printf '%-28s OK\n' "duo_ralenti"
+else
+  printf '%-28s ÉCHEC\n' "duo_ralenti"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

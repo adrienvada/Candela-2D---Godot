@@ -52,6 +52,10 @@ if [ "${1:-}" = "--coupure" ]; then
   MODE_HOTE="--host-coupure"
   MODE_CLIENT="--join-coupure"
   TITRE="Coupure de l'adversaire pendant le décompte (famille 3)"
+elif [ "${1:-}" = "--ralenti" ]; then
+  MODE_HOTE="--host-ralenti"
+  MODE_CLIENT="--join-ralenti"
+  TITRE="Coupure pendant le ralenti (famille 5.3)"
 elif [ "${1:-}" = "--killcam" ]; then
   MODE_HOTE="--host-killcam"
   MODE_CLIENT="--join-killcam"
@@ -126,7 +130,7 @@ for cote in hote client; do
   erreurs="$(grep -c 'SCRIPT ERROR' "$log" || true)"
   # Le client de la coupure se tue lui-même : sortir en 0 signifierait qu'il
   # est parti proprement, donc que le test n'a PAS exercé la perte de pair.
-  if [ "$cote" = "client" ] && [ "${1:-}" = "--coupure" ]; then
+  if [ "$cote" = "client" ] && { [ "${1:-}" = "--coupure" ] || [ "${1:-}" = "--ralenti" ]; }; then
     if [ "$code" -eq 0 ]; then
       printf '%-8s ÉCHEC — sorti proprement, la coupure n'"'"'a pas eu lieu\n' "$nom"
       echec=1
