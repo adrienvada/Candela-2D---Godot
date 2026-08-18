@@ -52,6 +52,23 @@ met à jour que la première laisse Adrien devant un tableau périmé**, sans qu
 outil ne le signale. C'est le seul document du projet dont la péremption est
 invisible.
 
+**Et une règle sur la façon d'y écrire, apprise plusieurs fois le 2026-08-18 :
+une règle vraie ne se propage pas toute seule aux cas suivants. Il faut l'écrire
+là où le SUIVANT la lira, pas seulement là où on vient de l'apprendre.**
+
+Ce n'est pas un conseil de rédaction, c'est un constat répété. Le même jour, deux
+sessions ont enfreint chacune une règle qu'elles venaient d'écrire elles-mêmes :
+l'une avait borné un effet pour qu'il ne survive pas à la fermeture de son écran,
+puis a écrit le suivant sans cette borne ; l'autre avait exigé qu'un effet rende
+la valeur qu'il avait empruntée, puis en a écrit un qui rendait 1,0. Dans les
+deux cas la règle était consignée — **dans le commentaire de l'effet précédent**,
+c'est-à-dire à l'endroit où personne n'allait la chercher.
+
+Concrètement : une leçon tirée d'un cas particulier va dans la section
+« Pièges connus » de la feuille de route ou dans ce README, pas seulement dans le
+fichier qui l'a révélée. Le commentaire local dit ce que CE code fait ; le piège
+consigné dit ce que le PROCHAIN doit savoir.
+
 #### Republier le suivi
 
 **La republication est centralisée** (décidé le 2026-08-18, avec Adrien) : une
