@@ -241,6 +241,12 @@ var _leaderboard: ScreenLeaderboard
 
 # --- Onglet PROFIL ---
 
+## Vague M — la vitrine. Deux effets de menu, chacun dans son fichier : ils
+## n'ont rien à faire dans un `ui.gd` de trois mille lignes, et chacun se coupe
+## seul par sa ligne d'`effect_policy`.
+var menu_gnomon: MenuGnomon
+var menu_after_image: MenuAfterImage
+
 ## Bandeau de recherche d'adversaire, au bord haut de l'écran. Hors du menu :
 ## la recherche continue quel que soit l'écran regardé.
 var match_banner: MatchBanner
@@ -932,6 +938,7 @@ func _navigate(player: int, dir: Vector2) -> void:
 func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 	if control == null:
 		return
+	var precedent: Control = p1_focus if player == 0 else p2_focus
 	if player == 0:
 		p1_focus = control
 		if p1_cursor != null:
@@ -940,6 +947,14 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 		p2_focus = control
 		if p2_cursor != null:
 			p2_cursor.aim(control.get_global_rect(), snap)
+
+	# M2 — la rémanence. La position **quittée** est confiée à la couche avant que
+	# le curseur ne bouge, avec sa seule géométrie : le contrôle, lui, peut
+	# disparaître pendant que son fantôme s'éteint.
+	if menu_after_image != null and precedent != null and precedent != control \
+			and is_instance_valid(precedent) and precedent.is_visible_in_tree():
+		menu_after_image.laisser(precedent.get_global_rect(),
+			COLOR_P1 if player == 0 else COLOR_P2)
 
 	# Les deux curseurs sont maison : ils n'appellent pas `grab_focus()`, donc
 	# `focus_entered` ne part jamais pour eux. Sans ce relais, le panneau de droite
@@ -1609,6 +1624,21 @@ func _build_menu() -> void:
 	match_banner = MatchBanner.new()
 	add_child(match_banner)
 
+	# M2 — la couche de rémanence est `top_level` et couvre l'écran : elle vit donc
+	# au même niveau que les curseurs qu'elle prolonge, pas dans le menu.
+	menu_after_image = MenuAfterImage.new()
+	add_child(menu_after_image)
+
+	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
+	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
+	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
+	# maintenant, et à chaque fois que le joueur la change.
+	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
+		if id in ["cadran_titre", "remanence_curseur"]:
+			_apply_menu_effects()
+	)
+	_apply_menu_effects()
+
 ## Déclare l'arborescence et y installe le contenu.
 ##
 ## Les blocs existants sont **réemployés tels quels** : `_build_mode_block()`,
@@ -2077,6 +2107,17 @@ func _refresh_player_list() -> void:
 ## Le démontage passe par `main_menu_requested`, donc par `game_state`, qui sait
 ## seul archiver un abandon s'il y a lieu, relâcher le salon EOS et remettre le
 ## menu à plat. Le dupliquer ici en ferait une seconde vérité.
+## Applique aux effets de menu ce que le joueur a réglé.
+##
+## Les menus ne sont jamais « classés » : le plancher de la politique n'a donc
+## rien à imposer ici, et `false` est la bonne réponse — pas une simplification.
+func _apply_menu_effects() -> void:
+	if menu_gnomon != null:
+		menu_gnomon.set_intensite(GameSettings.effective_effect("cadran_titre", false))
+	if menu_after_image != null:
+		menu_after_image.set_intensite(
+			GameSettings.effective_effect("remanence_curseur", false))
+
 func _wire_salon_back(btn: Button) -> void:
 	if btn == null:
 		return
@@ -2350,6 +2391,13 @@ func _build_menu_header() -> Control:
 	game_over_title.add_theme_font_size_override("font_size", 60)
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	header.add_child(game_over_title)
+
+	# M1 — le cadran. Derrière le titre, hors du flux : ancré en plein cadre sur
+	# l'en-tête, il ne pousse rien et ne rétrécit rien. `move_child` le place sous
+	# le `Label`, sinon l'ombre couvrirait le mot qu'elle projette.
+	menu_gnomon = MenuGnomon.new(game_over_title)
+	header.add_child(menu_gnomon)
+	header.move_child(menu_gnomon, 0)
 
 	game_over_score = Label.new()
 	game_over_score.text = ""

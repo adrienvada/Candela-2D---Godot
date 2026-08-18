@@ -59,6 +59,21 @@ const DEFAULT := 1.0
 ## pour un défaut, et se signale comme tel.
 const EFFECTS := {
 	# --- Confort : votre écran, vos affaires -------------------------------
+	# Vague M — la vitrine des menus. Plancher 0.0 sans discussion : ces effets
+	# n'apprennent rien, ne se voient jamais en match, et n'existent que pour le
+	# plaisir de qui les garde.
+	"cadran_titre": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Cadran de titre",
+		"phrase": "Le titre porte une ombre qui tourne avec le temps passé au menu. Purement décoratif.",
+	},
+	"remanence_curseur": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Rémanence du curseur",
+		"phrase": "Le curseur laisse une après-image là où il était, comme une lumière vive sur la rétine.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

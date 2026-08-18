@@ -1032,7 +1032,11 @@ Classement (l'Edge Function `standing` renvoie déjà le top 10), entraînement
 existe déjà). Les trois sont surtout un travail d'affichage : le travail de fond
 est fait dans chaque cas.
 
-**Étape 6 — édition du pseudo.** 🟡 Écrite et testée, **non déployée**.
+**Étape 6 — édition du pseudo.** 🟡 **Déployée le 2026-08-18** par Adrien —
+`rename_profile` en base, fonction `rename` en ligne, porte vérifiée (`401` sans
+jeton). Le nouveau plancher de rang est effectif en production dans la foulée :
+un débutant s'affiche **Aveugle I**. **Reste à câbler le champ dans l'écran du
+profil** — la raison d'attendre est levée.
 
 Le pseudo est la **seule** chose qu'un joueur peut changer de son profil : ni son
 identifiant, ni son code de récupération, ni son classement — tout le reste est
@@ -2763,6 +2767,16 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
+
+> **État au 2026-08-18 : 2 sur 15 livrés** — M1 le cadran de titre, M2 la
+> rémanence rétinienne. Chacun dans son fichier (`menu_gnomon.gd`,
+> `menu_after_image.gd`) plutôt que dans un `ui.gd` de trois mille lignes, chacun
+> avec sa ligne d'`effect_policy` **lue dans les deux sens** : l'intensité
+> mémorisée s'applique à la construction et à chaque changement. Une ligne de
+> politique sans lecture donnerait un curseur qui ne pilote rien, ce qui ressemble
+> trait pour trait à un réglage qui marche.
+>
+> Les treize autres suivent par lots. Aucun ne demande d'asset.
 
 Demandés par Adrien : « ultra-moderniser » les menus sans toucher à leur
 structure — uniquement du visuel, pour un vanilla extrême. Produits par la
