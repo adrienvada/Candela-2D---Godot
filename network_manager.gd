@@ -29,6 +29,20 @@ const EOS_CREDENTIALS_PATH := "res://eos_credentials.gd"
 ## (ou une version incompatible de celui-ci) répondrait à notre recherche.
 const EOS_BUCKET_ID := "candela2d-1v1-v1"
 const EOS_CODE_ATTRIBUTE := "CODE"
+## Version de protocole annoncée par le salon — étape 8.9.
+##
+## Pourquoi un attribut et non le `bucket_id`. Y glisser le numéro serait plus
+## simple : deux versions chercheraient dans deux index et ne se verraient
+## littéralement pas. Mais le joueur qui tape un code valide obtiendrait « aucun
+## salon à ce code » pendant que son ami l'attend — le silence exact que ce
+## projet passe son temps à traquer. L'attribut coûte une lecture et permet de
+## dire la vraie raison.
+const EOS_PROTOCOL_ATTRIBUTE := "PROTO"
+
+## Délai laissé au pair pour se présenter. Large à dessein : le lien est déjà
+## établi et le RPC est fiable, donc ce qu'on attend n'est pas de la lenteur mais
+## une réponse qui ne viendra jamais.
+const HELLO_TIMEOUT := 8.0
 ## Contrainte du SDK : alphanumérique strict, 32 caractères maximum.
 const EOS_SOCKET_ID := "candela2d"
 ## Le temps qu'EOS cherche le salon, ouvre le socket puis perce le NAT — parfois
@@ -82,6 +96,8 @@ var _queue_found: Dictionary = {}
 var _eos_peer: EOSGMultiplayerPeer = null
 var _eos_ephemeral: bool = false
 var _eos_shutting_down: bool = false
+## Le pair s'est-il présenté depuis l'ouverture du lien ? Voir `_check_hello_arrived`.
+var _hello_seen: bool = false
 ## Vrai dès que la plateforme EOS existe — et donc qu'il faut la relâcher avant
 ## de quitter. Un échec d'initialisation laisse ce drapeau faux : appeler
 ## release() sur une plateforme jamais créée planterait à la fermeture.
@@ -108,6 +124,9 @@ signal player_connected(id: int)
 signal player_disconnected(id: int)
 signal connection_failed
 signal connection_success
+## Les deux jeux ne parlent pas la même langue. Le message est déjà rédigé pour le
+## joueur ; `last_error` le porte aussi, pour les chemins qui le lisent déjà.
+signal protocol_mismatch(message: String)
 signal host_disconnected
 
 ## Émis quand l'état de la session Epic change (menu, panneau F3).
@@ -288,6 +307,15 @@ func _join_eos_async(code: String) -> void:
 		return
 
 	var candidate = results[0]
+
+	# Avant de rejoindre, et c'est tout l'intérêt : le refus arrive à la porte,
+	# pas au milieu d'une manche déjà commencée. Un salon sans l'attribut vient
+	# d'un jeu antérieur à l'étape 8.9 — `0` le fait refuser comme il se doit.
+	var pair_version := int(_lobby_attribute(candidate, EOS_PROTOCOL_ATTRIBUTE, 0))
+	if not Protocol.accepts(pair_version):
+		_fail_join(Protocol.mismatch_message(pair_version))
+		return
+
 	var lobby = await HLobbies.join_async(candidate)
 	if current_mode != GameMode.ONLINE_CLIENT:
 		return
@@ -373,6 +401,7 @@ func _publish_lobby_async(preferred_code := "") -> void:
 		code = preferred_code if attempt == 0 and not preferred_code.is_empty() \
 			else LobbyCode.generate()
 		lobby.add_attribute(EOS_CODE_ATTRIBUTE, code)
+		lobby.add_attribute(EOS_PROTOCOL_ATTRIBUTE, Protocol.VERSION)
 		await lobby.update_async()
 		if current_mode != GameMode.ONLINE_HOST:
 			lobby.destroy_async()
@@ -463,6 +492,7 @@ func queue_publish_async(mode_tag: String, rating: int, commitment: String) -> b
 		push_warning("NetworkManager: EOS create_lobby (file) failed")
 		return false
 	lobby.add_attribute(EOS_QUEUE_ATTRIBUTE, mode_tag)
+	lobby.add_attribute(EOS_PROTOCOL_ATTRIBUTE, Protocol.VERSION)
 	lobby.add_attribute(EOS_QUEUE_RATING_ATTRIBUTE, rating)
 	lobby.add_attribute(EOS_QUEUE_COMMIT_ATTRIBUTE, commitment)
 	if not await lobby.update_async():
@@ -484,9 +514,16 @@ func queue_search_async(mode_tag: String, min_rating: int, max_rating: int) -> A
 	if not matchmaking_supported() or _eos_shutting_down:
 		return []
 
+	# Ici le numéro entre dans le FILTRE, alors que le salon à code se contente de
+	# l'annoncer. La différence tient à ce qu'on peut dire au joueur : devant un
+	# code saisi à la main, il faut expliquer « vos versions diffèrent » ; en file,
+	# personne n'attend d'explication sur un adversaire qu'on n'a jamais vu. Filtrer
+	# fait mieux que refuser — on n'est jamais apparié avec un build incompatible,
+	# donc le problème n'a pas lieu plutôt que d'être traité.
 	var filters := [
 		{ key = EOS.Lobby.SEARCH_BUCKET_ID, value = EOS_BUCKET_ID, comparison = EOS.ComparisonOp.Equal },
 		{ key = EOS_QUEUE_ATTRIBUTE, value = mode_tag, comparison = EOS.ComparisonOp.Equal },
+		{ key = EOS_PROTOCOL_ATTRIBUTE, value = Protocol.VERSION, comparison = EOS.ComparisonOp.Equal },
 	]
 	if min_rating >= 0:
 		filters.append({ key = EOS_QUEUE_RATING_ATTRIBUTE, value = min_rating,
@@ -912,6 +949,85 @@ func rpc_pong(stamp: int) -> void:
 	has_rtt = true
 
 # ===========================================================================
+# POIGNÉE DE MAIN — étape 8.9
+# ===========================================================================
+
+## Le seul RPC du jeu dont la signature soit **figée pour toujours**.
+##
+## Godot route les RPC par nom ET par arité : deux builds dont les signatures
+## diffèrent se jettent mutuellement les paquets **sans aucune erreur console**.
+## Un contrôle de version posé dans un RPC ordinaire serait donc muet exactement
+## dans le cas qu'il devait détecter — le silence ne se distinguant pas d'un
+## réseau lent.
+##
+## D'où la forme : **un seul paramètre, une chaîne**, et tout voyage dedans en
+## JSON. La forme ne bougeant plus jamais, l'arité ne peut plus diverger ; les
+## champs, eux, s'ajoutent librement — un champ inconnu s'ignore, un champ absent
+## vaut « ne sait pas ».
+##
+## **Ne jamais changer cette signature.** Y ajouter un paramètre reviendrait à
+## désactiver le garde-fou pour toutes les versions déjà publiées.
+@rpc("any_peer", "reliable")
+func rpc_hello(payload: String) -> void:
+	if multiplayer.get_remote_sender_id() != _remote_peer():
+		return
+	_hello_seen = true
+	var parsed: Variant = JSON.parse_string(payload)
+	var dit: Dictionary = parsed as Dictionary if parsed is Dictionary else {}
+	# Absent vaut zéro, donc refus : un pair qui ne sait pas se présenter est un
+	# pair d'avant cette étape.
+	var pair_version := int(dit.get("protocol", 0))
+	if Protocol.accepts(pair_version):
+		return
+
+	var message := Protocol.mismatch_message(pair_version)
+	push_warning("NetworkManager: %s (pair=%d, nous=%d)" % [message, pair_version, Protocol.VERSION])
+	last_error = message
+	protocol_mismatch.emit(message)
+	# Le client emprunte `connection_failed`, déjà relié à une boîte de dialogue :
+	# il obtient le vrai message sans qu'aucun autre fichier ne change. L'hôte n'a
+	# personne à prévenir de plus — il coupe, et son écran d'attente reste.
+	if current_mode == GameMode.ONLINE_CLIENT:
+		connection_failed.emit()
+	disconnect_from_game.call_deferred()
+
+## Se présenter dès que le lien est ouvert, quel que soit le transport.
+##
+## En EOS le salon a déjà été filtré ou vérifié avant la jointure ; ce paquet est
+## alors une seconde ligne, et il ne coûte rien. En ENet il n'y a **aucun
+## rendez-vous** — ni index, ni attribut à lire — et c'est le seul contrôle
+## possible.
+func _say_hello() -> void:
+	if not multiplayer.has_multiplayer_peer():
+		return
+	_hello_seen = false
+	rpc("rpc_hello", JSON.stringify({"protocol": Protocol.VERSION}))
+	get_tree().create_timer(HELLO_TIMEOUT).timeout.connect(_check_hello_arrived)
+
+## Le silence est un refus, et c'est le cas qui compte le plus.
+##
+## Un build antérieur à cette étape **n'a pas** `rpc_hello` : il ne répondra
+## jamais, et Godot jette le paquet sans rien dire. Sans cette échéance, le
+## garde-fou n'attraperait que les versions qui savent déjà se présenter —
+## c'est-à-dire pas celle contre laquelle il a été écrit.
+##
+## L'échéance est large : le RPC est fiable et le lien est déjà établi quand on
+## la pose. Ce qu'on attend n'est pas un aller-retour réseau lent, c'est une
+## réponse qui ne viendra pas.
+func _check_hello_arrived() -> void:
+	if _hello_seen or _eos_shutting_down:
+		return
+	if not multiplayer.has_multiplayer_peer() or _remote_peer() == 0:
+		return  # déjà parti pour une autre raison
+	var message := Protocol.mismatch_message(0)
+	push_warning("NetworkManager: pair muet après %.0f s — %s" % [HELLO_TIMEOUT, message])
+	last_error = message
+	protocol_mismatch.emit(message)
+	if current_mode == GameMode.ONLINE_CLIENT:
+		connection_failed.emit()
+	disconnect_from_game.call_deferred()
+
+# ===========================================================================
 # SIGNAUX MULTIPLAYERAPI
 # ===========================================================================
 
@@ -940,6 +1056,9 @@ func _on_peer_connected(id: int) -> void:
 	# seul évènement dont le pair EOS garantisse l'émission.
 	if current_mode == GameMode.ONLINE_CLIENT and id == 1:
 		_emit_connection_success()
+	# Chacun se présente à l'autre : les deux camps doivent pouvoir refuser, et
+	# l'ancien build ne saurait pas interroger le nouveau.
+	_say_hello.call_deferred()
 	player_connected.emit(id)
 
 ## Fermer le jeu fait tomber le lien P2P, donc remonter ce signal jusqu'au jeu,

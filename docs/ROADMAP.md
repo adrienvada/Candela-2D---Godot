@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres. **8.8 close** : une carte illisible refuse la manche au lieu de la commencer divergée |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres. **8.8 et 8.9 closes** : une carte illisible refuse la manche, et deux versions différentes refusent de jouer |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -1656,7 +1656,7 @@ lui la connaît par cœur. Ce n'est pas un défaut technique, c'est un arbitrage
 **À trancher par Adrien.** Le tirage est aujourd'hui ouvert par défaut, et la
 restriction tient en une ligne de filtre sur `source == "builtin"`.
 
-### Étape 8.9 — se reconnaître avant de jouer 🟡 le carnet est posé, la poignée de main reste
+### Étape 8.9 — se reconnaître avant de jouer ✅ CLOSE (2026-08-18)
 
 Reste de l'étape 8.8. Le refus d'une arène illisible est propre mais **tardif** :
 il arrive après la poignée de main, une fois les deux joueurs engagés. La
@@ -1754,13 +1754,45 @@ Le refus est **symétrique** — ni « le plus récent tolère le plus ancien »
 l'inverse : le build ancien ne peut pas savoir ce que le nouveau a changé, donc
 sa tolérance serait une supposition.
 
-#### Ce qui reste
+#### La poignée de main — livrée
 
-La poignée de main elle-même : publier `Protocol.VERSION` dans les attributs du
-salon EOS et dans le ticket de file (où il entre **dans le filtre de recherche**,
-ce qui fait disparaître le problème au lieu de le traiter), et `rpc_hello` à
-signature figée pour le seul chemin ENet. Le carnet existe, il n'est pas encore
-échangé.
+Trois raccords, et **chacun refuse à un moment différent** parce que ce qu'on peut
+dire au joueur diffère à chaque fois :
+
+- **Salon à code** — l'hôte publie l'attribut `PROTO` ; l'invité le lit **pendant
+  la recherche, avant de rejoindre**, et refuse avec « vos versions diffèrent ».
+  Pourquoi un attribut plutôt que le `bucket_id` : y glisser le numéro serait plus
+  simple, deux versions chercheraient dans deux index et ne se verraient
+  littéralement pas — mais le joueur qui tape un code valide obtiendrait « aucun
+  salon à ce code » pendant que son ami l'attend. Le silence exact que ce projet
+  passe son temps à traquer.
+- **File d'appariement** — le numéro entre **dans le filtre**. Personne n'attend
+  d'explication sur un adversaire qu'on n'a jamais vu : filtrer fait mieux que
+  refuser, on n'est jamais apparié avec un build incompatible. Le problème n'a
+  pas lieu plutôt que d'être traité.
+- **ENet** — aucun rendez-vous, donc `rpc_hello(payload: String)`, **le seul RPC
+  du jeu dont la signature soit figée pour toujours**. Tout voyage dedans en JSON.
+  Y ajouter un paramètre désactiverait le garde-fou pour toutes les versions déjà
+  publiées.
+
+**Le silence est un refus**, et c'est le cas qui compte le plus : un build
+antérieur n'a pas `rpc_hello`, ne répondra jamais, et Godot jette le paquet sans
+rien dire. Sans `_check_hello_arrived` (8 s), le garde-fou n'attraperait que les
+versions sachant déjà se présenter — c'est-à-dire pas celle contre laquelle il a
+été écrit.
+
+Côté client, le refus emprunte `connection_failed`, déjà relié à une boîte de
+dialogue : le joueur obtient le vrai message **sans qu'aucun fichier tenu par une
+autre session ne change**. Le signal `protocol_mismatch` est là pour qui voudra
+faire mieux.
+
+#### Le rappel a servi le jour même
+
+Ajouter `rpc_hello` a fait passer `test_protocole` au rouge, avec la question
+attendue : « le fil a changé, décidez d'abord si `VERSION` doit monter ». Il le
+devait — nouveau RPC, nouvel attribut. **`Protocol.VERSION` est passé à 2**, et le
+témoin a été renouvelé après la décision, pas avant. Le dispositif s'est exercé
+sur son premier vrai changement.
 
 ### Deux manques vérifiés indépendamment le 2026-08-17
 
@@ -3008,7 +3040,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. **Passe par `ui.gd`** — vérifier qu'aucune session ne le tient. |
 | 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
 | ~~7~~ | ~~**Rejouer le journal local**~~ | ✅ **FAIT le 2026-08-18** — schéma v3, `pending_reports()` / `mark_reported()`, `replay_local_journal()`, vingt assertions. Le raccordement de `MatchRecord.build()` est fait aussi (`c064e6c`). |
-| 7bis | **La poignée de main de l'étape 8.9** | Le carnet (`protocol.gd`) existe et le rappel fonctionne ; il reste à **échanger** le numéro : attribut de salon EOS, `protocol` dans le filtre de la file, `rpc_hello` à signature figée pour ENet. Touche `network_manager.gd` et `matchmaking.gd`, que personne ne tient. |
+| ~~7bis~~ | ~~**La poignée de main de l'étape 8.9**~~ | ✅ **FAITE le 2026-08-18** — attribut `PROTO` sur le salon à code (lu avant la jointure), numéro dans le **filtre** de la file, `rpc_hello` à signature figée pour ENet, et le silence traité comme un refus. `Protocol.VERSION` est à **2**. |
 | 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. **Dépend de l'affichage du rang**, et passe par `ui.gd`. |
 | 9 | **Vagues de game feel procédurales** (V3, V5, V6) | Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. |
 
