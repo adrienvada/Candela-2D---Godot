@@ -1209,7 +1209,18 @@ davantage.
 
 **Absent de l'amical**, quel que soit le rang des joueurs.
 
-#### Ce que cette mécanique entraîne, et qui n'est pas tranché
+#### Périmètre immédiat — arrêté par Adrien le 2026-08-18
+
+**On reste aux quatre armes actuelles sur les quatre premiers rangs**, dans
+l'ordre de la table ci-dessus. Les armes des rangs supérieurs et le rang qui
+ouvre le changement en cours de match **se décideront bien plus tard** : ce ne
+sont pas des questions ouvertes qui bloquent, ce sont des décisions ajournées.
+
+Ce qui se construit maintenant doit donc simplement **ne pas les rendre plus
+difficiles à ajouter** — en particulier ne pas supposer « une arme par joueur »
+là où il y aura une sélection.
+
+#### Ce que cette mécanique entraînera, à sa mise en chantier
 
 - **À quel rang s'ouvre-t-elle**, et combien d'armes compte la sélection ?
 - **La règle du miroir porte alors sur la sélection**, pas sur une arme unique —
@@ -1219,8 +1230,8 @@ davantage.
   latence côté hôte rejoue l'historique : elle devra savoir quelle arme le joueur
   tenait à l'instant du tir, pas seulement laquelle il tient maintenant.
 - **Quelles armes composent le socle**, et lesquelles sont réservées au classé ?
-  Les quatre actuelles occupent les quatre premières catégories ; la frontière
-  reste à poser.
+  Les quatre actuelles occupent les quatre premières catégories ; la frontière se
+  posera avec les armes qui n'existent pas encore.
 
 ---
 
@@ -2087,6 +2098,14 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   La leçon exacte est donc : **un banc qui couvre un chemin ne protège que s'il
   tourne à chaque changement de ce chemin.** Un banc manuel est une couverture
   conditionnelle, pas une couverture.
+
+**Menus à deux écrans**
+- **La liste des joueurs est écrite du point de vue de l'hôte.** Chez le client
+  elle affiche « L'hôte » puis « Adversaire — connecté » — deux lignes pour la
+  même personne, le seul pair étant l'hôte — et **le client n'y figure jamais**.
+  Relevé le 2026-08-18, non corrigé. Une liste de joueurs où l'on ne se voit pas
+  laisse douter d'être connecté à quoi que ce soit, ce que cette liste était
+  précisément censée lever.
 
 **Ce que le banc affirme et ce que l'humain voit**
 - **Un banc vert et un joueur bloqué peuvent décrire le même code.** Le
