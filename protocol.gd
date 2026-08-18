@@ -41,7 +41,7 @@ class_name Protocol
 ## 2 — la poignée de main elle-même : `rpc_hello` et l'attribut de salon `PROTO`.
 ##     Un build v1 n'a pas `rpc_hello` ; il ne répond donc jamais, et c'est
 ##     `_check_hello_arrived` qui le refuse — le silence est un refus.
-const VERSION := 2
+const VERSION := 3
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -49,7 +49,7 @@ const VERSION := 2
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "0ec08722bd5acd91"
+const WIRE_WITNESS := "2a3497cc8e3ef35a"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

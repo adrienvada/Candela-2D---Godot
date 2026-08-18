@@ -63,6 +63,30 @@ var client_peer_id: int = 0
 const KILLCAM_TORCH_ENERGY := 1.25
 
 const COUNTDOWN_DURATION := 3.0
+
+## Décompte d'un match issu de l'appariement automatique — dix secondes au lieu
+## de trois (décision d'Adrien, 2026-08-18).
+##
+## **Ce n'est pas un décompte plus long, c'est une fenêtre de choix.** L'arsenal
+## commun n'est connu qu'une fois l'adversaire trouvé : la règle du miroir
+## l'aligne sur le moins bien classé des deux, et personne ne peut donc choisir
+## son arme avant. Le décompte cesse d'être du temps mort et devient le moment où
+## l'on choisit.
+##
+## Les autres matchs gardent trois secondes : en salon comme en écran partagé,
+## l'arme est déjà choisie au menu, et allonger l'attente ne donnerait rien à
+## faire de plus.
+const COUNTDOWN_MATCHMADE := 10.0
+
+## Les deux camps peuvent abréger cette fenêtre en se déclarant prêts — c'est ce
+## qui évite d'imposer dix secondes à qui a déjà choisi. Un seul « prêt » ne
+## suffit pas : l'autre choisit peut-être encore.
+var _countdown_ready_local: bool = false
+var _countdown_ready_peer: bool = false
+## Ce match vient-il de l'appariement automatique ? C'est la seule question qui
+## décide de la durée : elle distingue « l'arme n'est pas encore choisie » de
+## « elle l'est depuis le menu ».
+var _matchmade_round: bool = false
 var countdown_left: float = 0.0
 
 ## V2.1 — L'instant fatal : image figée ~150 ms. Seul le RENDU est suspendu
@@ -371,6 +395,7 @@ func _on_training_requested() -> void:
 		NetworkManager.disconnect_from_game()
 	_apply_network_mode()
 	MapData.select_map(MapData.DEFAULT_MAP_ID)
+	_matchmade_round = false
 
 	game_over = false
 	ui.hide_game_over()
@@ -878,7 +903,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	game_over = false
 	Engine.time_scale = 1.0
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
-	countdown_left = COUNTDOWN_DURATION
+	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
+	_countdown_ready_local = false
+	_countdown_ready_peer = false
 	ui.set_countdown(countdown_left)
 	_time_sync_accum = 0.0
 	_predicted_shots.clear()
@@ -897,6 +924,12 @@ func _process(delta):
 
 	if round_active:
 		if countdown_left > 0.0:
+			# Les deux prêts abrègent la fenêtre. L'hôte tranche seul : il porte le
+			# chronomètre, et laisser chaque camp décider produirait deux départs
+			# décalés d'un aller-retour.
+			if _matchmade_round and _countdown_ready_local and _countdown_ready_peer \
+					and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+				countdown_left = 0.0
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
 			if countdown_left <= 0.0:
@@ -1611,6 +1644,12 @@ func _set_p2_weapon_button(idx: int) -> void:
 ## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
 ## voyant un monde cohérent.
 func _on_match_ready(_pairing: Dictionary) -> void:
+	# Ce match ouvre une fenêtre de choix : l'arsenal commun n'est connu que
+	# maintenant, la règle du miroir l'alignant sur le moins bien classé. Posé des
+	# DEUX côtés — le client ne passe pas par `_start_round()`, il reçoit
+	# `rpc_start_round`, et sans ce drapeau son décompte durerait trois secondes
+	# pendant que l'hôte en compte dix.
+	_matchmade_round = true
 	# Le joueur a choisi son arme sans savoir s'il hébergerait : la désignation
 	# vient tout juste d'avoir lieu. Le choix est donc reporté sur les deux
 	# râteliers, l'hôte lisant celui de J1 et l'invité celui de J2.
@@ -1634,6 +1673,11 @@ func _enter_hosted_game() -> void:
 
 func _on_replay_requested():
 	if ui._is_main_menu:
+		# Un match lancé depuis le menu n'ouvre pas de fenêtre de choix : l'arme y
+		# est déjà choisie. Sans cette remise à zéro, un salon ouvert après un
+		# match apparié hériterait de ses dix secondes — et le décompte durerait
+		# trois fois trop longtemps sans que rien ne l'explique.
+		_matchmade_round = false
 		# Le mode lancé est celui qu'affiche le menu. Tester directement
 		# « CRÉER SALON » ne suffit pas : ce bouton appartient à un autre groupe
 		# que « 1V1 LOCAL / EN LIGNE » et reste coché après une partie en ligne,
@@ -1723,6 +1767,31 @@ func _on_join_requested() -> void:
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and multiplayer.get_peers().size() == 0:
 			_on_connection_failed()
 	)
+
+## Le joueur local a fini de choisir pendant le décompte.
+##
+## Appelé par l'interface. Chez le client, l'intention part à l'hôte : lui seul
+## porte le chronomètre, et laisser chaque camp abréger de son côté produirait
+## deux départs décalés d'un aller-retour.
+func declare_countdown_ready() -> void:
+	if not _matchmade_round or countdown_left <= 0.0:
+		return
+	_countdown_ready_local = true
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		rpc_id(1, "rpc_countdown_ready")
+	else:
+		# En écran partagé il n'y a personne en face : se déclarer prêt suffit.
+		if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+			_countdown_ready_peer = true
+
+## L'adversaire a fini de choisir. Reçu par l'hôte seul.
+@rpc("any_peer", "reliable")
+func rpc_countdown_ready() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
+		return
+	_countdown_ready_peer = true
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready(w2_idx: int):
