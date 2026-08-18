@@ -620,15 +620,20 @@ func _test_calibration() -> void:
 			hors_mesure = false
 	_check("hors calibration, les onze effets vivent", hors_mesure)
 
-	# Le déclencheur a changé le 2026-08-18 : la calibration est devenue un
-	# PANNEAU du cadre de droite, elle n'ouvre plus d'écran. Un garde-fou branché
-	# sur l'écran courant ne se serait donc plus levé du tout — le champ de mesure
-	# se serait retrouvé grainé, embrumé et vignetté sans que rien paraisse
-	# anormal, en décalant le réglage de tous ceux qui calibrent de la même façon.
+	# Le déclencheur a changé deux fois le 2026-08-18, et la seconde fois explique
+	# pourquoi il est branché là. La calibration est d'abord devenue un PANNEAU du
+	# cadre de droite ; un garde-fou branché sur l'écran courant ne se serait alors
+	# plus levé du tout. Puis les quatre réglages d'affichage ont fusionné dans un
+	# seul panneau, et le champ de mesure a cessé d'avoir une clé à lui.
 	#
-	# Le contrôle suit la cause réelle : **le champ est-il à l'écran**, et non
-	# « un écran nommé calibration est-il ouvert ».
-	ui.hub.show_detail("Calibration", "", ui.PANEL_CALIBRATION)
+	# Le contrôle suit la cause réelle — **le champ de mesure est-il à l'écran** —
+	# et non le nom de l'endroit où il se trouvait ce jour-là. C'est la seule
+	# formulation qui ait survécu aux deux déplacements sans être réécrite.
+	#
+	# Ce qu'il protège ne se signale jamais quand il tombe : le champ resterait
+	# grainé, embrumé et vignetté sans que rien paraisse anormal, et la mesure
+	# serait fausse pour tous ceux qui calibrent de la même façon.
+	ui.hub.show_detail("Affichage", "", ui.PANEL_DISPLAY)
 	var eteints := true
 	for cle in effets:
 		if float(ui._intensite_vitrine(cle)) != 0.0:

@@ -44,6 +44,10 @@ const GAP_XS := 8
 const GAP_S := 16
 const GAP_M := 24
 const GAP_L := 40
+## Largeur d'un bouton de choix dans le cadre de droite. La colonne y est plus
+## étroite qu'un écran plein : à 220 px, les cinq paliers d'images par seconde se
+## repliaient sur trois lignes en fenêtré.
+const BOUTON_CHOIX_L := 168
 
 ## Transitions d'onglet : court, juste assez pour lier deux écrans.
 const TAB_FADE := 0.15
@@ -77,15 +81,17 @@ const SCREEN_TRAINING := "entrainement"
 const SCREEN_PROFILE := "profil"
 const SCREEN_HISTORY := "historique"
 const SCREEN_CUSTOM := "personnalisation"
-const SCREEN_CONTROLS := "controles"
-const SCREEN_DISPLAY := "affichage"
-const SCREEN_AUDIO := "audio"
-const SCREEN_EFFECTS := "effets"
+## Personnalisation n'a plus AUCUN écran sous elle.
+##
+## Ses quatre rubriques — contrôles, affichage, effets, audio — étaient quatre
+## écrans à pousser, chacun redistribuant ses réglages en une nouvelle liste à
+## gauche. Réassigner une touche coûtait deux descentes et deux remontées, et le
+## cadre de droite — la moitié de l'écran — ne servait qu'à commenter le niveau
+## du dessus. **Un réglage n'est pas une destination** : il se déplie sur place.
+##
+## `SCREEN_CALIBRATION` survit comme nom de la chose mesurée et non comme écran :
+## le garde-fou des effets s'en sert pour retrouver le champ à rafraîchir.
 const SCREEN_CALIBRATION := "calibration"
-## La calibration n'ouvre plus d'écran : elle s'affiche dans le cadre de droite,
-## comme les autres réglages. L'identifiant d'écran survit parce que le garde-fou
-## des effets s'en sert encore comme nom de la chose mesurée.
-const PANEL_CALIBRATION := "panneau_calibration"
 
 ## Clés des affichages riches du panneau de droite. Ce ne sont pas des écrans : on
 ## ne s'y déplace pas, ils se montrent à droite de la liste sous le curseur.
@@ -95,11 +101,14 @@ const PANEL_CALIBRATION := "panneau_calibration"
 ## place de droite était vide et attendait exactement ça.
 const PANEL_SALON := "salon"
 const PANEL_MAPS := "cartes"
-const PANEL_RESOLUTION := "resolution"
-const PANEL_VSYNC := "vsync"
-const PANEL_FPS := "fps"
-## Un panneau par action à réassigner : `p1_shoot` → les deux touches de « Tirer ».
-const PANEL_BIND_PREFIX := "bind_"
+## Une rubrique de réglages = un panneau, entier. Ce qui était réparti sur
+## plusieurs entrées (résolution, vsync, images par seconde, calibration) tient
+## désormais dans un seul cadre : on lit sa configuration d'un regard au lieu de
+## la parcourir ligne à ligne.
+const PANEL_CONTROLS := "panneau_controles"
+const PANEL_DISPLAY := "panneau_affichage"
+const PANEL_EFFECTS := "panneau_effets"
+const PANEL_AUDIO := "panneau_audio"
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -1805,8 +1814,6 @@ func _build_hub_screens() -> void:
 	var classe := hub.add_screen(SCREEN_RANKED, "1v1 compétitif")
 	var entrainement := hub.add_screen(SCREEN_TRAINING, "S'entraîner")
 	var custom := hub.add_screen(SCREEN_CUSTOM, "Personnalisation")
-	var controles := hub.add_screen(SCREEN_CONTROLS, "Contrôles")
-	var affichage := hub.add_screen(SCREEN_DISPLAY, "Affichage")
 
 	# --- Accueil --------------------------------------------------------------
 	accueil.add_child(hub.make_entry("1V1 ÉCRANS SCINDÉS",
@@ -1943,15 +1950,21 @@ func _build_hub_screens() -> void:
 	hub.add_back_entry(SCREEN_TRAINING)
 
 	# --- Personnalisation -----------------------------------------------------
-	custom.add_child(hub.make_entry("CONTRÔLES", "Manette et clavier.", SCREEN_CONTROLS))
+	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
+	# descente. Chacune déplie sa page complète à droite, au survol comme à la
+	# sélection — et la sélection la fige, pour qu'on puisse y amener le curseur.
+	custom.add_child(hub.make_entry("CONTRÔLES",
+		"Les trois actions réassignables, pour les deux joueurs à la fois.",
+		"", COLOR_GOLD, "", "", false, PANEL_CONTROLS))
 	custom.add_child(hub.make_entry("AFFICHAGE",
-		"Fenêtre, vsync, images par seconde, calibration.", SCREEN_DISPLAY))
+		"Fenêtre, vsync, images par seconde, calibration.",
+		"", COLOR_GOLD, "", "", false, PANEL_DISPLAY))
 	custom.add_child(hub.make_entry("EFFETS",
 		"Ce qui se règle librement, et ce qui garde un plancher en classé.",
-		SCREEN_EFFECTS, COLOR_GOLD))
+		"", COLOR_GOLD, "", "", false, PANEL_EFFECTS))
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
-		SCREEN_AUDIO, COLOR_P1))
+		"", COLOR_P1, "", "", false, PANEL_AUDIO))
 	hub.add_back_entry(SCREEN_CUSTOM)
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
@@ -1966,20 +1979,14 @@ func _build_hub_screens() -> void:
 	map_gallery.map_chosen.connect(_on_map_chosen)
 	hub.register_panel(PANEL_MAPS, map_gallery)
 
-	_fill_controls_screen(controles)
-	hub.add_back_entry(SCREEN_CONTROLS)
-
-	_fill_display_screen(affichage)
-	hub.add_back_entry(SCREEN_DISPLAY)
-
-	_attach_screen(SCREEN_EFFECTS, "Effets", ScreenEffects.new())
-	hub.add_back_entry(SCREEN_EFFECTS)
-
-	_attach_screen(SCREEN_AUDIO, "Audio", ScreenAudio.new())
-	hub.add_back_entry(SCREEN_AUDIO)
-
-	hub.register_panel(PANEL_CALIBRATION, _build_calibration_panel())
-	# Le garde-fou suit désormais le PANNEAU, pas l'écran courant.
+	hub.register_panel(PANEL_CONTROLS, _build_controls_panel())
+	hub.register_panel(PANEL_DISPLAY, _build_display_panel())
+	# Effets et audio n'ont pas eu à être réécrits pour descendre d'un étage : le
+	# contrat `HubScreen` interdit à un écran de connaître sa place dans
+	# l'arborescence, et c'est exactement la liberté qu'on encaisse ici.
+	_attach_panel(PANEL_EFFECTS, ScreenEffects.new())
+	_attach_panel(PANEL_AUDIO, ScreenAudio.new())
+	# Le garde-fou suit le PANNEAU, pas l'écran courant.
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
@@ -2672,6 +2679,22 @@ func _attach_screen(id: String, title: String, screen: HubScreen) -> void:
 	screen.navigate_requested.connect(func(target: String) -> void: hub.push(target))
 	_screens[id] = screen
 
+## Un écran autonome monté en PANNEAU de droite, et non en écran à part.
+##
+## Rien à réécrire chez lui : le contrat `HubScreen` interdit à un écran de
+## connaître sa position dans l'arborescence, précisément pour qu'on puisse l'y
+## déplacer. On l'enveloppe dans un conteneur qui MESURE — un `Control` nu rend
+## une taille minimale nulle même plein d'enfants.
+func _attach_panel(key: String, screen: HubScreen) -> void:
+	var boite := VBoxContainer.new()
+	boite.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	screen.name = "Panneau" + key.capitalize()
+	boite.add_child(screen)
+	screen.build(boite)
+	screen.navigate_requested.connect(func(target: String) -> void: hub.push(target))
+	_screens[key] = screen
+	hub.register_panel(key, boite)
+
 ## La calibration, en panneau de droite.
 ##
 ## L'écran autonome savait déjà tout faire ; seul son point d'accrochage change.
@@ -2699,7 +2722,7 @@ func _build_calibration_panel() -> Control:
 ## Ce n'est pas un réglage de confort mais un contrat : trois centièmes de
 ## luminance parasite sur un champ mesuré faussent la mesure.
 func _refresh_calibration_guard() -> void:
-	var mesure := hub != null and hub.shown_panel() == PANEL_CALIBRATION
+	var mesure := hub != null and hub.shown_panel() == PANEL_DISPLAY
 	if mesure == _calibration:
 		return
 	_calibration = mesure
@@ -3541,37 +3564,47 @@ const BINDABLE := [
 	["Courir", "sprint", "Le sprint. Rapide, bruyant, et la torche décroche."],
 ]
 
-func _fill_controls_screen(body: VBoxContainer) -> void:
-	for spec in BINDABLE:
-		var libelle := String(spec[0])
-		var suffixe := String(spec[1])
-		hub.register_panel(PANEL_BIND_PREFIX + suffixe, _build_bind_panel(suffixe))
-		body.add_child(hub.make_entry(libelle.to_upper(), String(spec[2]),
-			"", COLOR_GOLD, "", "", false, PANEL_BIND_PREFIX + suffixe))
-
-## Les deux touches d'une même action, côte à côte. Chaque bouton est réservé à
-## son joueur par `META_NAV_OWNER` : le curseur de P1 ne peut pas réassigner la
-## manette de P2.
-func _build_bind_panel(suffixe: String) -> Control:
+## Les trois actions et leurs deux colonnes de joueurs, d'un seul bloc.
+##
+## Chaque action avait son entrée et son panneau : la configuration complète
+## n'était jamais visible d'un coup, et un doublon entre deux actions — la même
+## touche pour tirer et pour sprinter — ne se repérait qu'en faisant l'aller-retour
+## de mémoire. Une grille de trois lignes le montre.
+##
+## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
+## P1 ne peut pas réassigner la manette de P2.
+func _build_controls_panel() -> Control:
 	var block := VBoxContainer.new()
 	block.add_theme_constant_override("separation", GAP_S)
 
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", GAP_L)
 	grid.add_theme_constant_override("v_separation", GAP_XS)
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	block.add_child(grid)
 
+	grid.add_child(_make_grid_header("", COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
 	grid.add_child(_make_grid_header("JOUEUR 1", COLOR_P1, HORIZONTAL_ALIGNMENT_CENTER))
 	grid.add_child(_make_grid_header("JOUEUR 2", COLOR_P2, HORIZONTAL_ALIGNMENT_CENTER))
 
-	for player in 2:
-		var btn := _make_rebind_button("p%d_%s" % [player + 1, suffixe], player)
-		btn.set_meta(META_NAV_SEED, player)
-		var holder := CenterContainer.new()
-		holder.add_child(btn)
-		grid.add_child(holder)
+	for rang in BINDABLE.size():
+		var spec: Array = BINDABLE[rang]
+		var nom := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
+			HORIZONTAL_ALIGNMENT_RIGHT)
+		nom.add_theme_font_size_override("font_size", 14)
+		nom.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		grid.add_child(nom)
+		for player in 2:
+			var btn := _make_rebind_button("p%d_%s" % [player + 1, String(spec[1])], player)
+			# La graine ne se pose que sur la PREMIÈRE ligne : elle dit où le
+			# curseur d'un joueur atterrit en entrant dans le cadre, et trois
+			# réponses valides pour une question en font une réponse au hasard.
+			if rang == 0:
+				btn.set_meta(META_NAV_SEED, player)
+			var holder := CenterContainer.new()
+			holder.add_child(btn)
+			grid.add_child(holder)
 
 	var hint := Label.new()
 	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
@@ -3590,36 +3623,68 @@ func _build_bind_panel(suffixe: String) -> Control:
 ## Trois réglages, trois entrées, chacune montrant ses choix à droite. Les
 ## bascules restent des boutons plutôt qu'un `OptionButton`, dont le popup est
 ## impraticable à la manette.
-func _fill_display_screen(body: VBoxContainer) -> void:
-	hub.register_panel(PANEL_RESOLUTION, _build_resolution_panel())
-	hub.register_panel(PANEL_VSYNC, _build_vsync_panel())
-	hub.register_panel(PANEL_FPS, _build_fps_panel())
+## Les quatre réglages d'affichage, empilés dans un seul cadre.
+##
+## Le tout défile : la calibration porte un champ de mesure haut, et une fenêtre
+## en 720 n'a pas la place des quatre rubriques. `follow_focus` fait suivre le
+## curseur — sans lui, un réglage hors du champ serait atteignable sans être
+## visible, ce qui est pire que de ne pas l'atteindre.
+func _build_display_panel() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
 
-	body.add_child(hub.make_entry("RÉSOLUTION",
-		"Fenêtré ou plein écran.", "", COLOR_GOLD, "", "", false, PANEL_RESOLUTION))
-	body.add_child(hub.make_entry("VSYNC",
+	var block := VBoxContainer.new()
+	block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	block.add_theme_constant_override("separation", GAP_S)
+	scroll.add_child(block)
+
+	block.add_child(_make_reglage_titre("RÉSOLUTION", "Fenêtré ou plein écran."))
+	block.add_child(_build_resolution_panel())
+	block.add_child(_make_reglage_titre("VSYNC",
 		"Désactivé par défaut : la synchronisation verticale ajoute une image de "
-		+ "retard, et le jeu se joue sur la lumière d'une fraction de seconde.",
-		"", COLOR_GOLD, "", "", false, PANEL_VSYNC))
-	body.add_child(hub.make_entry("IMAGES PAR SECONDE",
+		+ "retard, et le jeu se joue sur la lumière d'une fraction de seconde."))
+	block.add_child(_build_vsync_panel())
+	block.add_child(_make_reglage_titre("IMAGES PAR SECONDE",
 		"Déplafonné par défaut : EOS coûte d'autant plus de latence que la cadence "
-		+ "est basse.", "", COLOR_GOLD, "", "", false, PANEL_FPS))
-	# La calibration se règle **dans le cadre**, comme la résolution ou le vsync :
-	# descendre d'un cran pour un réglage de plus rompait la grammaire de l'écran
-	# sans rien apporter.
-	body.add_child(hub.make_entry("CALIBRATION",
+		+ "est basse."))
+	block.add_child(_build_fps_panel())
+	block.add_child(_make_reglage_titre("CALIBRATION",
 		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
-		+ "invisible.", "", COLOR_GOLD, "", "", false, PANEL_CALIBRATION))
+		+ "invisible."))
+	block.add_child(_build_calibration_panel())
+	return scroll
+
+## Le nom d'un réglage et ce qu'il coûte, au-dessus de ses boutons.
+##
+## La phrase explicative vivait dans le détail de l'entrée, à droite ; le cadre
+## de droite étant devenu le réglage lui-même, elle n'avait plus où se poser.
+func _make_reglage_titre(titre: String, explication: String) -> Control:
+	var bloc := VBoxContainer.new()
+	bloc.add_theme_constant_override("separation", 2)
+	var t := Label.new()
+	t.text = titre
+	t.add_theme_font_size_override("font_size", 15)
+	t.add_theme_color_override("font_color", COLOR_GOLD)
+	bloc.add_child(t)
+	var x := Label.new()
+	x.text = explication
+	x.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	x.add_theme_font_size_override("font_size", 12)
+	x.add_theme_color_override("font_color", COLOR_DIM)
+	bloc.add_child(x)
+	return bloc
 
 func _build_resolution_panel() -> Control:
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", GAP_XS)
+	var row := _make_rangee_de_choix()
 
 	var group := ButtonGroup.new()
 	var labels: Array[String] = ["FENÊTRÉ 1280", "FENÊTRÉ 1920", "PLEIN ÉCRAN"]
 	for i in labels.size():
 		var btn := _make_choice_button(labels[i], COLOR_GOLD, group)
-		btn.custom_minimum_size = Vector2(220, 44)
+		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
 		btn.add_theme_font_size_override("font_size", 14)
 		btn.pressed.connect(_on_res_selected.bind(i))
 		# Cocher le choix enregistré. `button_pressed` n'émet que `toggled` :
@@ -3630,13 +3695,12 @@ func _build_resolution_panel() -> Control:
 	return row
 
 func _build_vsync_panel() -> Control:
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", GAP_XS)
+	var row := _make_rangee_de_choix()
 	var group := ButtonGroup.new()
 	var btn_off := _make_choice_button("VSYNC DÉSACTIVÉ", COLOR_GOLD, group)
 	var btn_on := _make_choice_button("VSYNC ACTIVÉ", COLOR_GOLD, group)
 	for btn in [btn_off, btn_on]:
-		btn.custom_minimum_size = Vector2(220, 44)
+		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
 		btn.add_theme_font_size_override("font_size", 14)
 	btn_off.button_pressed = not GameSettings.vsync_enabled
 	btn_on.button_pressed = GameSettings.vsync_enabled
@@ -3647,17 +3711,27 @@ func _build_vsync_panel() -> Control:
 	return row
 
 func _build_fps_panel() -> Control:
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", GAP_XS)
+	var row := _make_rangee_de_choix()
 	var group := ButtonGroup.new()
 	for cap in GameSettings.FPS_CAPS:
 		var label := "DÉPLAFONNÉ" if cap == 0 else str(cap)
 		var btn := _make_choice_button(label, COLOR_GOLD, group)
-		btn.custom_minimum_size = Vector2(220, 44)
+		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
 		btn.add_theme_font_size_override("font_size", 14)
 		btn.button_pressed = (cap == GameSettings.fps_cap)
 		btn.pressed.connect(func() -> void: GameSettings.set_fps_cap(cap))
 		row.add_child(btn)
+	return row
+
+## Les choix d'un réglage, côte à côte et repliés si la largeur manque.
+##
+## Empilés verticalement, les cinq paliers d'images par seconde à eux seuls
+## dépassaient la hauteur du cadre. Un `HFlowContainer` ne fige aucune largeur :
+## il tient en fenêtré comme en plein écran, quel que soit le nombre de choix.
+func _make_rangee_de_choix() -> HFlowContainer:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", GAP_XS)
+	row.add_theme_constant_override("v_separation", GAP_XS)
 	return row
 
 func _make_grid_header(text: String, tint: Color, align: int) -> Label:

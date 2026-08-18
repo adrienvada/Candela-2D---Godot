@@ -694,11 +694,11 @@ Accueil
 │   └── ‹ Retour
 │
 ├── PROFIL .............. identité · code · pseudo · historique
-├── PERSONNALISATION
-│   ├── Contrôles → Contrôles (rebind J1 · J2)
-│   ├── Affichage → Affichage (résolution · fenêttré · VSync · FPS · calibration)
-│   ├── Effets → Effets
-│   ├── Audio → Audio — grisé
+├── PERSONNALISATION      *aucun sous-écran : tout se règle à droite*
+│   ├── Contrôles .......... panneau (rebind J1 · J2, les 3 actions d'un bloc)
+│   ├── Affichage .......... panneau (résolution · VSync · FPS · calibration)
+│   ├── Effets ............. panneau
+│   ├── Audio .............. panneau
 │   └── ‹ Retour
 └── QUITTER
 ```
@@ -709,6 +709,33 @@ information sans faire descendre d'un cran** : « Top 10 » et « Mon rang »
 remplissent le panneau de droite au lieu d'ouvrir un sous-écran. Un menu qui
 obligerait à entrer puis à ressortir pour lire trois lignes ferait payer un
 aller-retour pour une consultation.
+
+#### Un réglage n'est pas une destination (2026-08-18)
+
+**Personnalisation n'a plus aucun écran sous elle.** Ses quatre rubriques étaient
+quatre écrans à pousser, chacun redistribuant ses réglages en une nouvelle liste
+à gauche : réassigner une touche coûtait deux descentes et deux remontées, et le
+cadre de droite — la moitié de l'écran — ne servait qu'à commenter le niveau du
+dessus. Chaque rubrique déplie désormais sa page entière à droite, au survol
+comme à la sélection.
+
+Le gain n'est pas seulement le nombre de gestes. La configuration des touches
+n'était **jamais visible d'un coup** : une action par entrée, un panneau par
+action. Un doublon entre deux actions — la même touche pour tirer et pour
+sprinter — ne se repérait qu'en faisant l'aller-retour de mémoire. La grille de
+trois lignes le montre.
+
+Cela a coûté un déplacement du garde-fou de la calibration, deux fois dans la
+même journée : d'abord quand la calibration est devenue un panneau, puis quand
+les quatre réglages d'affichage ont fusionné et qu'elle a cessé d'avoir une clé
+à elle. La formulation qui a survécu aux deux sans être réécrite est celle qui
+teste la **cause réelle** — le champ de mesure est-il à l'écran — et non le nom
+de l'endroit où il se trouvait ce jour-là.
+
+Conséquence assumée : survoler « Affichage » éteint les effets de menu, puisque
+le champ de mesure est dans le cadre. C'est visible, et c'est le bon sens de
+l'échange — une mesure faussée par trois centièmes de luminance parasite ne se
+signale, elle, jamais.
 
 **Le retour est une entrée cliquable en bas de chaque liste**, pas un rappel de
 touche. La première version affichait « ÉCHAP · RETOUR » sans que rien ne soit
@@ -2178,6 +2205,15 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Le libellé d'une entrée de menu n'est pas dans `Button.text` (2026-08-18)
+
+`MenuHub.make_entry()` pose le libellé dans un `Label` **enfant**, à côté du
+chevron ; `Button.text` reste vide sur toutes les entrées du hub. Un audit qui
+nomme les entrées fautives par `btn.text` échoue correctement mais ne dit sur
+quoi : le message liste des chaînes vides. Passer par
+`_entry_details[btn]["titre"]`, qui porte le libellé réel.
+
 
 **Mise en page**
 - **Un `Control` nu rend une taille minimale NULLE, même plein d'enfants.** Un
