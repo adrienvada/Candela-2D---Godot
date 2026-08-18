@@ -1084,6 +1084,37 @@ fichier — et `tools/test_pseudo.gd`, qui rejoue cas par cas les assertions de
 Le câbler avant le déploiement donnerait un bouton qui échoue, ce qui ne se
 distingue pas d'un jeu cassé.
 
+### Couleur des entrées « lanceur » confondue avec le liseré de sélection — corrigé (2026-08-18)
+
+Relevé par Adrien à l'usage : JOUER, PRÊT, CHERCHER UN MATCH, LANCER
+L'ENTRAÎNEMENT et QUITTER se voyaient parfois pour l'entrée réellement visée par
+un curseur, alors qu'elles ne l'étaient pas. **La cause** : `MenuHub.make_entry()`
+peignait ces boutons au repos avec `accent` — `MenuTheme.P1` ou `.P2` — en fond et
+en cadre 2 px. Or ces deux teintes sont aussi, au mot près du commentaire de
+`menu_theme.gd`, « la couleur du curseur qui parcourt les menus » : un bouton
+« lanceur » portait donc en permanence la couleur que le liseré de sélection ne
+devrait porter qu'en le visant.
+
+Le fond et le cadre au repos sont désormais identiques à toutes les entrées
+(`MenuTheme.SURFACE` / `MenuTheme.LINE`), lanceur ou non — c'est ce qu'Adrien
+demandait : la même couleur que le reste. Ce qui distinguait déjà « ouvre un
+écran » de « s'active sur place » — le chevron — n'a pas changé. Un lanceur se
+reconnaît maintenant à son libellé en gras (`FontVariation.variation_embolden`
+sur `ThemeDB.fallback_font`, le projet n'a pas de police à poids multiples) plutôt
+qu'à une couleur.
+
+**QUITTER** en profite pour redevenir tout à fait ordinaire (`launcher` retiré de
+son appel) : la décision du 2026-08-17 soir — « il ne doit pas crier plus fort que
+ce qui engage une partie » — s'était perdue quand l'entrée avait déménagé de la
+barre d'actions vers l'accueil du hub, sans que personne ne le remarque parce que
+la couleur produisait toujours la bonne intuition (rouge = destructeur), même sans
+le style plein.
+
+**Non vérifié** : le rendu réel n'a pas pu être capturé dans cette session (pas de
+binaire Godot dans l'environnement d'exécution) ; `tools/test_menu_hub.gd` ne teste
+que la navigation, jamais le style, et ne peut donc pas garantir ce correctif à lui
+seul. À confirmer à l'écran par Adrien.
+
 ---
 
 ## Phase 6 — Rangs 🔵 À FAIRE — échelle validée

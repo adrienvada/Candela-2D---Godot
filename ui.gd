@@ -1713,9 +1713,11 @@ func _build_hub_screens() -> void:
 		SCREEN_TRAINING))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
+	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
+	# crier plus fort que ce qui engage une partie.
 	accueil.add_child(hub.make_entry("QUITTER",
 		"Ferme le jeu proprement — la plateforme Epic est relâchée avant la sortie.",
-		"", COLOR_P2, "quitter", "", true))
+		"", COLOR_P2, "quitter"))
 	hub.set_aside(MenuHub.ROOT, "Candela 2D",
 		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "
