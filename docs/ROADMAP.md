@@ -1125,7 +1125,9 @@ et rien de nouveau dans le schéma.
 
 Chaque catégorie débloque une arme. Les quatre armes actuelles occupent les
 quatre premières catégories ; **les catégories 5 à 10 ne débloquent donc encore
-rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
+rien**, et c'est un trou à combler avec du contenu, pas avec une règle — les armes
+réservées au compétitif et la mécanique de changement en cours de match (voir plus
+bas) sont deux façons de le combler.
 
 | Catégorie | Arme |
 |---|---|
@@ -1134,8 +1136,11 @@ rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
 | 3 — Bougie | Pompe |
 | 4 — Lanterne | Arbalète |
 
-**En local, toutes les armes sont accessibles** (décision d'Adrien du
-2026-08-16) : l'écran partagé n'est pas classé, rien n'y justifie un verrou.
+~~**En local, toutes les armes sont accessibles** (décision du 2026-08-16)~~ —
+**superseded le 2026-08-18** par la décision ci-dessous. La raison d'origine
+(« l'écran partagé n'est pas classé, rien n'y justifie un verrou ») reste vraie
+pour le socle commun ; elle ne l'est plus pour les armes réservées au classé, qui
+ne se donnent pas gratuitement parce qu'on joue seul.
 
 ### L'asymétrie en match classé — tranchée : règle du miroir
 
@@ -1168,23 +1173,54 @@ Trois conséquences concrètes :
 En **local**, rien de tout cela ne s'applique : toutes les armes sont accessibles
 (décision du 2026-08-16), l'écran partagé n'étant pas classé.
 
-#### ⚠️ Le match amical en ligne n'est tranché ni dans un sens ni dans l'autre
+### Trois régimes d'arsenal — tranchés par Adrien le 2026-08-18
 
-Question soulevée par Adrien le 2026-08-18, **en attente de sa décision**. L'amical
-en ligne n'est ni le classé ni le local : deux identités, deux rangs, aucun enjeu.
-Deux questions distinctes s'y posent, et elles se répondent séparément :
+Ce n'est plus « classé contre local ». **L'arsenal se lit sur deux axes
+indépendants** : quelles armes existent dans ce mode, et qui décide de celle qu'on
+prend.
 
-1. **Les verrous de rang s'y appliquent-ils ?** Si non, l'amical devient la porte
-   de service — n'importe qui joue à l'Arbalète en choisissant « amical », et le
-   déblocage ne veut plus rien dire.
-2. **La règle du miroir s'y applique-t-elle ?** Sa justification est explicitement
-   compétitive. L'appliquer en amical priverait le mieux classé de ce qu'il a
-   gagné dans un match qui ne compte pas ; ne pas l'appliquer autorise un duel
-   déséquilibré entre amis.
+| Mode | Armes disponibles | Choix |
+|---|---|---|
+| **Amical** (en ligne *et* local) | Un **socle** débloqué pour tous | **Asymétrique** — chacun prend ce qu'il veut |
+| **Compétitif** | Le socle **plus** les armes réservées au classé, selon le rang | **Symétrique** — règle du miroir |
+| **Local hors debug** | Le socle seulement | Asymétrique |
+| **Local en debug** | Tout, armes réservées comprises | Asymétrique |
 
-**Rien n'est écrit en code**, ce qui laisse le choix entier. À trancher avant
-d'implémenter la table arme ↔ rang, sous peine d'y figer une réponse par défaut
-que personne n'a choisie.
+**Ce qui change par rapport au 2026-08-16 :** le local n'ouvre plus tout. Les
+armes réservées au compétitif n'y sont accessibles qu'en **mode debug** — donc
+pour le développement, pas pour le joueur. Une arme gagnée en classé ne se
+récupère pas en jouant seul.
+
+**Ce qui change par rapport à la règle du miroir :** elle ne vaut **qu'en
+compétitif**. En amical, deux amis peuvent s'affronter au Pistolet contre
+l'Arbalète si ça leur chante — l'équilibre est une exigence de classement, pas
+une exigence de jeu.
+
+### Le changement d'arme en cours de match — mécanique de rang
+
+**Décision d'Adrien, 2026-08-18.** À partir de certains rangs, en compétitif, on
+ne choisit plus **une** arme mais une **sélection** au début du match, et on en
+change **pendant** la manche.
+
+C'est la première mécanique du jeu dont la *règle* dépend du rang, et non
+seulement le contenu : **la difficulté monte avec l'échelle.** Un joueur haut
+classé ne joue pas au même jeu qu'un débutant — il en joue une version qui demande
+davantage.
+
+**Absent de l'amical**, quel que soit le rang des joueurs.
+
+#### Ce que cette mécanique entraîne, et qui n'est pas tranché
+
+- **À quel rang s'ouvre-t-elle**, et combien d'armes compte la sélection ?
+- **La règle du miroir porte alors sur la sélection**, pas sur une arme unique —
+  aligner deux sélections est un problème différent d'aligner deux armes.
+- **C'est du netcode, pas seulement de l'interface.** Changer d'arme en cours de
+  manche est une action de joueur de plus à répliquer, et la compensation de
+  latence côté hôte rejoue l'historique : elle devra savoir quelle arme le joueur
+  tenait à l'instant du tir, pas seulement laquelle il tient maintenant.
+- **Quelles armes composent le socle**, et lesquelles sont réservées au classé ?
+  Les quatre actuelles occupent les quatre premières catégories ; la frontière
+  reste à poser.
 
 ---
 
