@@ -4177,9 +4177,16 @@ Verdict 120 fps     : NON TENU
   n'est donc pas dans les particules**, et l'ajouter de nouvelles (vague 5) ne
   sera pas ce qui fait basculer le verdict.
 - La cible de 120 fps demande 8,33 ms par image. La **médiane est à 7,6 ms** : le
-  jeu tient de justesse en régime courant et perd sur la traîne. Ce n'est pas une
-  régression identifiée, c'est le coût de sa conception — deux `SubViewport` qui
-  rendent chacun leur jeu de lumières et d'ombres portées.
+  jeu tient de justesse en régime courant et perd sur la traîne.
+- **Ce n'est PAS une régression** — et c'est le point le plus important. Le
+  « verdict : tenu » du 2026-08-16 reposait sur le **même compteur creux** : le
+  banc d'origine échantillonnait déjà `get_frames_per_second()`. Sa signature
+  était publiée depuis trois jours (médiane 145, 1 % bas 144, minimum 144 — trois
+  valeurs quasi identiques, ce qu'un vrai percentile ne produit jamais) et
+  personne ne l'a lue. **Les 120 fps n'ont jamais été vérifiés comme atteints** :
+  ce 97 est la première mesure honnête du projet, pas une dégradation. Le coût
+  vient de la conception — deux `SubViewport` rendant chacun leur jeu de lumières
+  et d'ombres portées.
 
 **Écarté explicitement, faute de mécanisme :** l'arbitrage du pool de voix
 (`choisir_voix`) construit un tableau de 16 booléens **par son joué**, soit
