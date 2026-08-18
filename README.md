@@ -187,7 +187,12 @@ quoi. Rester factuel : une chose non testée est écrite comme non testée.
 ### Où placer un contrôle — et la dérive de cette règle
 
 **Le bon banc n'est pas celui qui ressemble au scénario, c'est celui où
-l'assertion est stable.** Un contrôle juste au mauvais endroit devient un
+l'assertion est stable.** Et la recherche porte moins sur l'**endroit** que sur
+l'**observable** : un compte, un total, un « combien de fois » ne dépendent pas
+du tempo, donc une fenêtre de quelques dixièmes cesse d'être un problème. La
+famille 6 de la checklist en ligne paraissait intestable — « les deux martèlent
+prêt pendant les transitions » — jusqu'à ce qu'on cesse de guetter un instant
+pour **compter les démarrages**. Un contrôle juste au mauvais endroit devient un
 contrôle qui vacille, et **un contrôle qui vacille finit ignoré** — puis rend
 suspects tous les autres du même lanceur.
 
@@ -216,6 +221,37 @@ ne vérifie plus rien — **la forme la plus présentable de l'assertion creuse*
 Corollaire : **six familles couvertes par des assertions stables valent mieux que
 huit dont trois qu'on apprendra à ne plus lire.** Une absence documentée n'est pas
 un trou.
+
+### Les trois déguisements de « j'assouplis jusqu'à ce que ça passe »
+
+**La même tentation s'est présentée trois fois le 2026-08-18, chaque fois mieux
+déguisée.** Les trois récits vivent dans trois fichiers différents ; c'est la
+**série** qui enseigne, parce que le déguisement s'améliore — le prochain sera
+plus présentable que ces trois-là.
+
+1. **Tolérance élargie, forme nue.** Une assertion sur une teinte lisait la
+   valeur une frame trop tard, quand le fondu avait commencé. Tentation :
+   accepter « à peu près la bonne couleur ». Ç'aurait donné un test vert
+   mesurant le fondu — et **dépendant de la charge de la machine**.
+2. **Tolérance élargie, forme raisonnable.** Une tension attendue à 1,0 valait
+   0,995. Tentation : élargir la marge. Ici l'attente était réellement fausse
+   (l'échelle la plus forte du jeu vaut 0,005, jamais zéro) — **mais on ne le
+   sait qu'en allant voir, et « élargir un peu » aurait marché aussi.**
+3. **Correction technique répétée.** Une assertion « le décompte a été rejoué »
+   a été corrigée trois fois : prémisse fausse, puis erreur d'un cran, puis
+   échec inexpliqué. **On croit débuguer, on est en train de renoncer** — c'est
+   le déguisement le plus difficile à reconnaître, parce que chaque itération a
+   l'air d'un progrès.
+
+**Le critère qui tranche les trois :** une correction est légitime quand elle
+**rapproche** l'assertion de ce qu'on voulait vérifier ; c'est un renoncement
+quand elle l'en **éloigne**. Dans le cas 3, chaque version s'éloignait — et
+c'est ce qui a été vu à la troisième, pas avant.
+
+**Et le geste, quand on ne sait pas trancher : retirer plutôt qu'affaiblir**, en
+écrivant pourquoi. Une assertion absente et documentée est honnête ; une
+assertion présente qui ne vérifie plus rien ment à tout le monde, y compris à
+celui qui l'a écrite.
 
 ### Sessions parallèles
 
