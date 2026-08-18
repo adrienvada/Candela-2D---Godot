@@ -2089,6 +2089,14 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   `recovery_code_test.ts` ; `\u0001` passe par la même branche et s'écrit, lui.
 
 **Tests headless**
+- **Un banc dont la réussite consiste à disparaître doit le dire avant de
+  disparaître.** `test_quit_path` réussit en se faisant arrêter par le code qu'il
+  vérifie : il n'imprimait donc aucun verdict, et une réussite ressemblait trait
+  pour trait à un banc qui n'aurait rien exécuté. Adrien l'a lancé le 2026-08-18
+  sans pouvoir conclure. Corrigé par un `_exit_tree()` — le dernier endroit où
+  l'on parle encore. **Règle générale : un garde-fou muet en cas de succès ne se
+  distingue pas d'un garde-fou absent**, et c'est vrai des bancs comme des
+  contrôles en jeu (voir la ligne de la poignée de main, même journée).
 - **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
   ni en vert, ni en rouge.** Le 2026-08-18, `test_pause_menu` est sortie en échec
   (code 1) parce qu'elle a attrapé `ui.gd` en cours d'écriture ; relancée seule

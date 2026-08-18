@@ -136,7 +136,21 @@ godot --headless --path . res://tools/test_online_match.tscn -- --join XXXXXX --
 Variantes : `--local` (écran partagé, aucun réseau) et
 `--host|--join <IP> --transport enet --no-eos` (réseau local).
 
-## Sortie propre (`tools/test_quit_path.tscn`)
+## Sortie propre (`tools/test_quit_path.tscn`) ✅ validé le 2026-08-18
+
+Sa réussite consiste à **disparaître** : NetworkManager reprend la notification de
+fermeture, relâche la plateforme et appelle `quit()`. Jusqu'au 2026-08-18 il ne
+disait donc rien en cas de succès, et le silence était indiscernable d'un banc
+qui n'aurait rien exécuté. Il annonce désormais :
+
+```
+  ✓ la fermeture a été prise en charge, la plateforme relâchée avant l'arbre
+✓ Tous les tests passent
+EXIT_CODE: 0
+```
+
+Les trois erreurs `packet_sequence.is_null()` en tête de sortie sont les fichiers
+de musique absents, pas un défaut du banc.
 
 Vérifie que fermer la fenêtre relâche bien la plateforme EOS avant que l'arbre
 se termine. Sans cette séquence, le processus meurt sur un segfault.
