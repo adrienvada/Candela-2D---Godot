@@ -222,6 +222,29 @@ Corollaire : **six familles couvertes par des assertions stables valent mieux qu
 huit dont trois qu'on apprendra à ne plus lire.** Une absence documentée n'est pas
 un trou.
 
+### Vérifier les craintes, pas seulement les affirmations
+
+**Une inquiétude corrigée vaut une correction : elle peut avoir empêché quelque
+chose de légitime.**
+
+Le 2026-08-18, une session versionnait ses `.uid` en écrivant que « chaque
+machine en aurait inventé un différent ». Vérification faite : les UID produits
+par deux imports indépendants du même fichier sont **identiques** — la génération
+est déterministe pour un chemin donné. Le geste restait bon, mais **la raison
+était fausse**, et cette raison-là pouvait dissuader de partager un fichier.
+
+**L'asymétrie qui rend ces cas dangereux :** une affirmation fausse **autorise**
+ce qu'il ne fallait pas, et ça finit par se voir — un banc creux rend un chiffre
+absurde, un test qui pend bloque le lanceur. **Une crainte fausse INTERDIT, et
+son coût est invisible** : on ne voit jamais ce qu'elle a empêché. Un banc rouge
+se remarque ; un fichier qu'on n'a pas partagé, un chantier qu'on n'a pas ouvert,
+une mesure qu'on n'a pas prise — non.
+
+**Le geste :** quand une décision repose sur un risque énoncé mais jamais
+observé, **mesurer le risque avant de réorganiser autour de lui.** Et si le geste
+reste bon pour une autre raison, écrire la vraie raison — sinon la fausse se
+transmet et coûte ailleurs.
+
 ### Les trois déguisements de « j'assouplis jusqu'à ce que ça passe »
 
 **La même tentation s'est présentée trois fois le 2026-08-18, chaque fois mieux
