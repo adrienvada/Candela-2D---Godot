@@ -2191,6 +2191,37 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   d'architecture — il manque juste l'état persistant à afficher, pas la
   liberté de naviguer).
 
+## À trancher — le HUD montre l'adversaire en ligne
+
+**Découvert le 2026-08-18 en cherchant si un tremblement de cercle de recharge
+pouvait fuiter. Il y a beaucoup plus gros au même endroit.**
+
+`_build_player_hud(0)` et `_build_player_hud(1)` sont tous deux ajoutés au HUD de
+match, et **rien ne masque celui de l'adversaire en ligne**. Chaque joueur voit
+donc, en temps réel et sans rien éclairer :
+
+- **les points de vie de l'autre** (`p2_hp.value = p2.hp`, valeur autoritaire) ;
+- **son cercle de recharge**, donc l'instant exact où son arme redevient prête ;
+- l'état de sa torche et son éblouissement.
+
+**C'est légitime en écran partagé** — deux joueurs côte à côte, chacun voit
+l'écran de l'autre de toute façon. **En ligne, c'est une autre affaire :** le jeu
+tient dans la phrase « la seule information est la lumière », et savoir que
+l'adversaire est à 20 PV ou que son pompe redevient prêt dans 0,3 s est une
+information qu'aucune torche n'a payée.
+
+**Ce document ne tranche pas.** Cela peut être un choix assumé — beaucoup de jeux
+de duel montrent les deux barres, et cela rend la fin de match lisible. Mais rien
+n'indique que quiconque l'ait décidé pour CE jeu, et c'est exactement le motif du
+2026-08-18 : une **description d'implémentation** qui se transmet comme une
+intention.
+
+**Si c'est à corriger, c'est petit** : masquer le panneau adverse quand
+`NetworkManager.current_mode` n'est pas `LOCAL_SPLITSCREEN`, comme
+`_restore_viewports()` le fait déjà pour les vues.
+
+---
+
 ## Décisions actées
 
 | Décision | Raison |
@@ -3339,7 +3370,19 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
   le geste le plus stylé du jeu. — *assets : 3 samples.*
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
-  presse pendant le rechargement. — *assets : 1 sample.*
+  presse pendant le rechargement. — *assets : 1 sample.* **✅ Fait côté image.**
+  Presser la détente pendant le rechargement ne produisait **rien** : ni son, ni
+  image, ni vibration. Le joueur ne pouvait pas distinguer « j'ai appuyé trop
+  tôt » de « ma touche n'a pas répondu » — le seul geste du jeu qui échouait en
+  silence.
+  - **Front montant seulement** : détente maintenue une seconde, le refus se dit
+    une fois. Un tremblement continu ressemblerait à une panne d'affichage.
+  - **Dessiné, pas déplacé** : le widget vit dans un conteneur, qui lui
+    réimposerait sa position à la frame suivante.
+  - **Uniquement pour celui qui a pressé.** En ligne l'hôte simule aussi
+    l'adversaire : sans filtre, son HUD tremblerait quand le client tire à sec,
+    lui apprenant que l'autre vient d'essayer de tirer — donc qu'il est à portée
+    et à découvert. Même règle que pour le passe-bas des torches.
 - **V4.5 Chiffres de dégâts avec poids** — pop TRANS_BACK, taille ∝ dégâts,
   or si ≥ 50. **✅ Fait** — 20→44 px proportionnels, or au seuil de 50.
 - **V4.6 Zoom-kick à l'encaisse** — 2 % de dézoom 100 ms côté blessé.

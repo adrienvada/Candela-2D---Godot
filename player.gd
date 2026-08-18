@@ -818,8 +818,33 @@ func _physics_process(delta):
 
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
-	if can_move and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
+	var presse := input_provider.is_shoot_pressed()
+	if can_move and presse and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
+	elif can_move and presse and not _detente_pressee and _percu_ici():
+		# Front montant seulement : détente maintenue pendant une seconde de
+		# rechargement, le tremblement doit dire « trop tôt » une fois, pas vibrer
+		# en continu comme une panne.
+		tir_a_sec = 0.22
+	_detente_pressee = presse
+	if tir_a_sec > 0.0:
+		tir_a_sec = maxf(0.0, tir_a_sec - delta)
+
+## V4.4 — presser la détente pendant le rechargement ne produisait RIEN.
+##
+## Ni son, ni image, ni vibration : le joueur ne pouvait pas distinguer « j'ai
+## appuyé trop tôt » de « ma touche n'a pas répondu ». C'est le seul geste du jeu
+## qui échouait en silence.
+##
+## **Uniquement pour le joueur qui a pressé, et sur SON écran.** En ligne, l'hôte
+## simule aussi l'adversaire : sans ce filtre, le HUD de l'hôte tremblerait quand
+## le client tire à sec — lui apprenant que l'autre vient d'essayer de tirer, donc
+## qu'il est à portée et à découvert. Même règle que pour le passe-bas des
+## torches : ce qui réagit à l'état d'un joueur doit se demander de qui il tient
+## cet état.
+func _percu_ici() -> bool:
+	var local := _index_joueur_local()
+	return local < 0 or player_id == local
 
 func _update_aim_line() -> void:
 	if aim_cast == null or aim_line == null: return
@@ -827,6 +852,11 @@ func _update_aim_line() -> void:
 	if aim_cast.is_colliding():
 		end_pos = to_local(aim_cast.get_collision_point())
 	aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
+
+## V4.4 — temps restant du tremblement de refus, lu par le HUD.
+var tir_a_sec: float = 0.0
+## État précédent de la détente, pour ne réagir qu'au front montant.
+var _detente_pressee: bool = false
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown

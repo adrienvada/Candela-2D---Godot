@@ -127,9 +127,23 @@ const NOT_YET := "Pas encore disponible."
 class CircularCooldown extends Control:
 	var progress: float = 1.0
 	var color: Color = Color.WHITE
+	## V4.4 — secousse du tir à sec, en secondes restantes. Le tremblement est
+	## dessiné et non appliqué à `position` : ce widget vit dans un conteneur, qui
+	## lui réimposerait sa place à la frame suivante.
+	var secousse: float = 0.0
+
+	func _process(delta: float) -> void:
+		if secousse > 0.0:
+			secousse = maxf(0.0, secousse - delta)
+			queue_redraw()
 
 	func _draw() -> void:
 		var center := size / 2.0
+		if secousse > 0.0:
+			# Amplitude décroissante : un tremblement constant ressemblerait à un
+			# défaut d'affichage, pas à un refus.
+			var a := secousse * 9.0
+			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
 		draw_arc(center, radius, 0, TAU, 32, Color(0.2, 0.2, 0.2), 4.0, true)
 		if progress > 0.0:
@@ -4271,6 +4285,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		else:
 			p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
 
+		if p1_cd.secousse < float(p1.get("tir_a_sec")):
+			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
 		p1_dazzle.color = Color(1, 1, 1, p1.dazzle_amount * 0.8)
 
@@ -4287,6 +4303,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		else:
 			p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
 
+		if p2_cd.secousse < float(p2.get("tir_a_sec")):
+			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
 		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
 
