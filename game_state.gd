@@ -445,6 +445,7 @@ func _on_training_requested() -> void:
 	time_left = round_time
 	ui.set_countdown(0.0)
 	countdown_left = 0.0
+	ui.reinitialiser_chrono()
 	ui.time_label.text = "ENTRAÎNEMENT"
 
 	# J2 quitte la scène sans être détruit : il reprendra sa place au prochain
@@ -926,6 +927,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	time_left = round_time
 	round_active = true
 	game_over = false
+	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
+	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
+	# seuil — soit pendant ses quatre premières minutes.
+	ui.reinitialiser_chrono()
 	Engine.time_scale = 1.0
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
 	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
@@ -1104,7 +1109,7 @@ func _process(delta):
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
 			
-	ui.update_hud(p1, p2, time_left)
+	ui.update_hud(p1, p2, time_left, not training_mode)
 
 func _check_dazzle(delta: float):
 	var space = p1.get_world_2d().direct_space_state

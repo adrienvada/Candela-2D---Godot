@@ -4237,7 +4237,16 @@ func _handle_pause_input() -> bool:
 # API PUBLIQUE — consommée par game_state.gd
 # ===========================================================================
 
-func update_hud(p1, p2, time_left: float) -> void:
+## V3.4 — les deux seuils de la dernière minute, et l'état courant du chrono.
+##
+## `-1` = pas encore calculé, pour qu'un premier passage pose la couleur même
+## quand le match commence déjà sous un seuil (une manche reprise, un chrono
+## resynchronisé).
+const CHRONO_OR_S := 60.0
+const CHRONO_URGENT_S := 10.0
+var _chrono_etat: int = -1
+
+func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 	if p1:
 		if p1.hp < p1_target_hp:
 			p1_shake_time = 0.2
@@ -4270,7 +4279,51 @@ func update_hud(p1, p2, time_left: float) -> void:
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
 		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
 
+	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
+	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé
+	# à la frame suivante** : la ligne existait, ne servait à rien, et rien ne le
+	# signalait — un HUD qui écrase inconditionnellement gagne toujours contre
+	# celui qui écrit une fois.
+	if not horloge:
+		return
 	time_label.text = MatchRecord.format_clock(time_left)
+	_teindre_chrono(time_left)
+	# Sous dix secondes, le chrono bat à la seconde. Le battement naît du temps
+	# lui-même et non d'un tween : un tween redémarré à chaque frame ne bat pas,
+	# il tremble, et un chrono resynchronisé par le réseau saute d'une fraction
+	# de seconde sans casser la pulsation.
+	if time_left <= CHRONO_URGENT_S and time_left > 0.0:
+		var depuis_tic := 1.0 - fmod(time_left, 1.0)
+		var coup := 1.0 + 0.16 * exp(-7.0 * depuis_tic)
+		time_label.pivot_offset = time_label.size / 2.0
+		time_label.scale = Vector2(coup, coup)
+	elif time_label.scale != Vector2.ONE:
+		time_label.scale = Vector2.ONE
+
+## La couleur du chrono suit le temps qui reste, et ne s'écrit qu'aux passages
+## de seuil : poser un override de thème à chaque frame coûte pour rien.
+func _teindre_chrono(time_left: float) -> void:
+	var etat := 0
+	if time_left <= CHRONO_URGENT_S:
+		etat = 2
+	elif time_left <= CHRONO_OR_S:
+		etat = 1
+	if etat == _chrono_etat:
+		return
+	_chrono_etat = etat
+	match etat:
+		2: time_label.add_theme_color_override("font_color", COLOR_P2)
+		1: time_label.add_theme_color_override("font_color", COLOR_GOLD)
+		_: time_label.remove_theme_color_override("font_color")
+
+## Remet le chrono à neuf entre deux manches — sans quoi une manche qui commence
+## hériterait de l'or ou du rouge de la précédente jusqu'au premier passage de
+## seuil, c'est-à-dire pendant les quatre premières minutes.
+func reinitialiser_chrono() -> void:
+	_chrono_etat = -1
+	if time_label != null:
+		time_label.scale = Vector2.ONE
+		time_label.remove_theme_color_override("font_color")
 
 func show_main_menu() -> void:
 	_is_main_menu = true

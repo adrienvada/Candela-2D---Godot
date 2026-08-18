@@ -3030,9 +3030,32 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     `Protocol.VERSION`, ce qui dépasse un item de game feel.
 - **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par
   chiffre ; le CanvasModulate remonte du noir absolu au noir de jeu sur le
-  « 1 » : la lumière naît au début de manche. — *assets : 3 notes courtes.*
+  « 1 ». — *assets : 3 notes courtes.* **Le pop est fait** (`ui.set_countdown`,
+  TRANS_BACK depuis 1,7). Les notes attendent leurs samples. ⚠️ **La clause du
+  CanvasModulate n'a pas de cible :** celui de l'arène est déjà `Color(0,0,0)`,
+  et la calibration règle un **gamma**, pas cette couleur — il n'existe donc
+  aucun « noir de jeu » au-dessus du noir absolu vers lequel remonter. Rendre
+  l'intention (« la lumière naît au début de manche ») demanderait de toucher
+  aux lumières des joueurs pendant le décompte, donc à ce qui est visible au
+  départ d'une manche : c'est une décision de jeu, pas de finition.
 - **V3.4 Dernière minute** — chrono or, stem batterie (V1.2), tic-tac sous
-  10 s. — *assets : 1 tic-tac.*
+  10 s. — *assets : 1 tic-tac.* **✅ Fait côté image** : or sous 60 s, rouge
+  d'alerte sous 10 s, et le chrono **bat à la seconde** sous ce dernier seuil.
+  - Le battement naît du **temps lui-même** (`fmod(time_left, 1.0)`), pas d'un
+    tween. Un tween relancé à chaque frame ne bat pas, il tremble — et un chrono
+    resynchronisé par le réseau saute d'une fraction de seconde sans casser la
+    pulsation.
+  - La couleur ne s'écrit qu'aux **passages de seuil**, et se remet à neuf au
+    début de chaque manche : sans ça, une manche qui suit une fin de match
+    hériterait du rouge pendant ses quatre premières minutes.
+  - **Défaut trouvé au passage et corrigé :** `update_hud` réécrivait le chrono
+    **inconditionnellement**, donc `ui.time_label.text = "ENTRAÎNEMENT"` était
+    effacé à la frame suivante et ne s'est jamais affiché. Une ligne qui existait
+    et ne servait à rien, sans que rien le signale — un HUD qui écrase à chaque
+    frame gagne toujours contre celui qui écrit une fois.
+  - **Signalé, pas corrigé :** l'entraînement tourne sur le **même chrono de
+    5 minutes** et se termine par une égalité. Défendable comme limite de
+    séance, mais ce n'est écrit nulle part et personne ne l'a décidé.
 - **V3.5 VICTOIRE qui claque** — lettres qui tombent une à une, fond pulsé au
   BPM. — *assets : 1 impact typographique.* ⚠️ **Sa prémisse a expiré, à
   rediscuter avant d'y toucher.** `game_over_title` **est** le titre du menu

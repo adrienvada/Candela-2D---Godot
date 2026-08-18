@@ -40,6 +40,7 @@ func _run() -> void:
 	await _test_ouverture_fermeture()
 	_test_graine()
 	await _test_pression_du_pret()
+	_test_chrono()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -166,3 +167,44 @@ func _test_pression_du_pret() -> void:
 			restants += 1
 	_check("l'éclat ne survit pas à la fermeture", restants == 0,
 		"%d entrée(s) encore allumée(s)" % restants)
+
+## V3.4 — la dernière minute se voit, et l'entraînement n'a pas d'horloge.
+func _test_chrono() -> void:
+	print("\n[Le chrono de la dernière minute]")
+	_ui.reinitialiser_chrono()
+	_ui.update_hud(null, null, 120.0)
+	_check("au-delà d'une minute, le chrono reste neutre",
+		not _ui.time_label.has_theme_color_override("font_color"))
+
+	_ui.update_hud(null, null, 45.0)
+	_check("sous une minute, il passe à l'or",
+		_ui.time_label.get_theme_color("font_color") == _ui.COLOR_GOLD)
+
+	_ui.update_hud(null, null, 7.4)
+	_check("sous dix secondes, il vire à l'alerte",
+		_ui.time_label.get_theme_color("font_color") == _ui.COLOR_P2)
+	_check("et il bat", _ui.time_label.scale.x > 1.0,
+		"échelle %.3f" % _ui.time_label.scale.x)
+	# Le battement naît du temps lui-même : juste avant une seconde pleine il est
+	# retombé, juste après il frappe. Un tween redémarré chaque frame tremblerait.
+	_ui.update_hud(null, null, 7.02)
+	var creux: float = _ui.time_label.scale.x
+	_ui.update_hud(null, null, 6.99)
+	var pic: float = _ui.time_label.scale.x
+	_check("le coup tombe sur la seconde", pic > creux,
+		"%.3f avant, %.3f après" % [creux, pic])
+
+	# Une manche qui repart derrière une fin de match hériterait sinon du rouge
+	# pendant ses quatre premières minutes.
+	_ui.reinitialiser_chrono()
+	_ui.update_hud(null, null, 300.0)
+	_check("une nouvelle manche repart en blanc",
+		not _ui.time_label.has_theme_color_override("font_color")
+		and is_equal_approx(_ui.time_label.scale.x, 1.0))
+
+	# L'entraînement écrivait « ENTRAÎNEMENT » et le voyait effacé à la frame
+	# suivante : la ligne existait et ne servait à rien.
+	_ui.time_label.text = "ENTRAÎNEMENT"
+	_ui.update_hud(null, null, 42.0, false)
+	_check("sans horloge, le HUD n'écrase pas le libellé",
+		_ui.time_label.text == "ENTRAÎNEMENT", _ui.time_label.text)
