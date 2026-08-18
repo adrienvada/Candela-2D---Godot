@@ -1637,9 +1637,41 @@ distribué par le système.** Trois issues :
 3. **Alternance en cas de revanche.** Le meilleur des trois si les revanches
    s'enchaînent, et il ne coûte presque rien puisque le salon persiste.
 
-**À trancher par Adrien.** Ma recommandation : 2 pour le premier match, 3 pour
-les revanches. Et l'afficher — le joueur doit savoir qui héberge, sinon
-l'asymétrie devient une rumeur.
+### ✅ Tranchée, et implémentée : 2 pour le premier match, 3 pour les revanches
+
+**La recommandation a été suivie, et le code la dépasse sur un point.** Ni Adrien
+ni personne n'a eu à arbitrer entre les trois : la solution 2 était la seule qui
+ne distribue pas un avantage, et la 3 s'y ajoute sans rien coûter.
+
+`designate_host(match_id, key_a, key_b)` ordonne les deux identités
+canoniquement, puis lit **un bit de `sha256("match_id|bas|haut")`**. Le hachage
+n'est pas une précaution de style : lire directement les bits de l'identifiant
+donnerait un tirage systématiquement biaisé le jour où un appelant y mettrait un
+compteur au lieu de 16 octets cryptographiques. L'ordonnancement canonique, lui,
+est ce qui fait que **les deux machines désignent le même hôte** — chacune appelle
+avec elle-même en premier, et sans lui elles se désigneraient l'une l'autre.
+
+`host_for_series()` alterne ensuite à chaque revanche : le tirage n'a lieu qu'une
+fois, pour le premier match de la série.
+
+**Et l'identifiant de match lui-même est tiré par engagement-révélation**, ce qui
+rend « aucun des deux ne contrôle le tirage » littéralement vrai au lieu d'être
+affirmé. L'hébergeur publie `sha256(nonce)` dans son ticket **avant qu'aucun
+adversaire n'existe** ; le joueur déclare son propre nonce en étant aveugle à
+cette valeur ; l'hébergeur révèle, et le joueur vérifie la révélation contre
+l'engagement publié. L'hébergeur ne peut pas moudre — il est lié par son
+engagement — et le joueur non plus, il est aveugle.
+
+Vérifié sur 20 000 tirages par famille d'identifiants (séquentiels, chaînés,
+cryptographiques), puis 400 000 hors suite pour confirmer que des écarts de
+0,6 point étaient du bruit d'échantillonnage. Le test attrape explicitement la
+régression classique : une désignation qui rendrait « la plus petite identité »
+passe le déterminisme **et** la symétrie, et n'est prise que par les contrôles de
+biais.
+
+**Et c'est affiché** : le bandeau dit « vous hébergez » ou « il héberge » dès que
+la désignation est connue. En P2P l'hôte joue sans latence et l'autre non — une
+asymétrie qu'on n'affiche pas devient une rumeur.
 
 ### Étape 8.4 — la poignée de main à deux
 
