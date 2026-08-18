@@ -4127,6 +4127,58 @@ et un seul est du travail de session.
    directe a toujours abouti), et la détection de déconnexion est lente des deux
    côtés.
 
+## Journal des relevés de cadence — 2026-08-18
+
+Trois relevés le même jour, **dont deux ne mesuraient rien.** L'histoire compte
+autant que le chiffre : elle dit pourquoi il ne faut pas refaire confiance à un
+banc sans le relancer.
+
+| # | Résultat | Ce qu'il valait |
+|---|---|---|
+| 1 | *aucun* | Le banc pilotait `_ui.btn_mode_local`, disparu à la Phase 5. Ouvert, erreur de script, jamais entré dans le duel, **resté ouvert sans mesurer**. Tué à la main. |
+| 2 | 1 % bas **109**, minimum 109 | Mesure creuse : `get_frames_per_second()` ne bouge qu'une fois par seconde, donc 15 mesures recopiées 139 fois. `1 % bas == minimum` en est la signature. Sorti en **signal 11** (arrêt EOS non propre). |
+| 3 | **1 % bas 97** | Le seul honnête. Temps d'image relevés par image, sortie par `quit_game()`, code 0. |
+
+**Relevé n° 3 — conditions propres** (éditeur Godot fermé, aucune autre session,
+aucun autre Godot), écran partagé, torches allumées, échange au pompe :
+
+```
+Images mesurées     : 2035 en 15,0 s
+FPS moyen           : 136        FPS médian : 132  (7,6 ms)
+FPS 1 % bas         : 97         (moyenne des 20 images les plus lentes)
+Image la plus lente : 12,6 ms → 79 fps
+Particules (pic)    : 122 / 200
+Verdict 120 fps     : NON TENU
+```
+
+**Ce que le chiffre dit — et il dit autre chose que ce qu'on cherchait.**
+
+- **Il n'y a pas de saccade.** Cinq millisecondes séparent la médiane (7,6 ms) de
+  la pire image (12,6 ms). Ce n'est pas un pic qui tire le 1 % bas vers le bas,
+  c'est une **charge constante un peu trop lourde**. Cela écarte d'emblée tous
+  les suspects « allocation ponctuelle ».
+- **Le budget de particules n'est pas saturé** : 122 sur 200, valeur identique
+  aux relevés 2 et 3. C'est le seul chiffre qui ait survécu aux trois. **La marge
+  n'est donc pas dans les particules**, et l'ajouter de nouvelles (vague 5) ne
+  sera pas ce qui fait basculer le verdict.
+- La cible de 120 fps demande 8,33 ms par image. La **médiane est à 7,6 ms** : le
+  jeu tient de justesse en régime courant et perd sur la traîne. Ce n'est pas une
+  régression identifiée, c'est le coût de sa conception — deux `SubViewport` qui
+  rendent chacun leur jeu de lumières et d'ombres portées.
+
+**Écarté explicitement, faute de mécanisme :** l'arbitrage du pool de voix
+(`choisir_voix`) construit un tableau de 16 booléens **par son joué**, soit
+quelques allocations par seconde — il ne peut pas produire un plancher aussi
+régulier. Il restait le premier suspect tant qu'on croyait à des pics ; le relevé
+honnête l'écarte.
+
+**Décision qui revient à Adrien** : 97 est-il acceptable ? La cible de 120 venait
+de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute ~10 ms au
+temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de **1,7 ms** —
+à comparer aux 54 ms de plancher RTT mesurés sur EOS.
+
+---
+
 ## Journal des tests à deux machines
 
 | Date | Configurations | Résultat |
