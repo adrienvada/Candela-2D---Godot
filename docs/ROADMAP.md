@@ -135,8 +135,23 @@ code, sans configuration, sans redirection de port.
   | 2 | 160 | 137 | 137 |
   | 3 | 145 | 144 | 144 |
 
-  **Verdict : tenu.** Le 1 % bas — ce que le joueur ressent comme saccade —
-  reste au-dessus de 120 sur les trois exécutions. À dire honnêtement : le
+  > **⚠️ CE TABLEAU NE MESURE RIEN, constaté le 2026-08-18.** Le banc de
+  > `9d69f09` échantillonnait `Engine.get_frames_per_second()`, **mis à jour une
+  > fois par seconde** : ces « 1 % bas » sont des moyennes secondes, pas des
+  > images lentes. La signature est dans les chiffres eux-mêmes — exécution 3 :
+  > médiane 145, 1 % bas 144, minimum 144, trois valeurs quasi identiques, ce
+  > qu'un vrai percentile ne produit jamais.
+  >
+  > **Conséquence : la cible de 120 fps n'a JAMAIS été vérifiée comme atteinte.**
+  > Ce n'est pas « le jeu tenait et ne tient plus » — c'est « on ne savait pas ».
+  > La première mesure honnête, le 2026-08-18 sur le banc corrigé, donne un
+  > 1 % bas de **97** (journal en fin de document). Le verdict ci-dessous est
+  > conservé tel qu'il a été écrit, parce qu'un document qui efface ses erreurs
+  > n'apprend rien à celui qui le lit ensuite.
+
+  **Verdict (2026-08-16, sur mesure creuse) : tenu.** Le 1 % bas — ce que le
+  joueur ressent comme saccade — reste au-dessus de 120 sur les trois
+  exécutions. À dire honnêtement : le
   minimum absolu est descendu une fois à 116, et la dispersion entre exécutions
   (145 à 160 de médiane) vient de la fenêtre elle-même, que macOS bride quand
   elle n'est pas au premier plan. Mesuré sur **Apple M3**, fenêtre 1280×720 :
