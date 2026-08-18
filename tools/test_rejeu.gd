@@ -64,6 +64,7 @@ func _run() -> void:
 	_test_sentinelle()
 	_test_ancrage()
 	_test_trajectoire()
+	_test_ancre_dans_le_tampon()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -248,3 +249,37 @@ func _test_trajectoire() -> void:
 	_check("le dernier tir de la victime n'est pas le tir fatal",
 		t2.size() == 2 and t2[0] == Vector2(10, 10), str(t2))
 	_liberer(c)
+
+## L'ancre d'impact désigne-t-elle une image qui existe encore ?
+##
+## Hypothèse à écarter ou confirmer, née de l'instrumentation du 2026-08-18 : le
+## rejeu s'arrêtait à l'index ~185 alors que `impact_frame` valait 203. La borne
+## de `get_next_frame` est `idx1 >= snapshots.size() - 1` — donc un tampon plus
+## COURT que l'ancre expliquerait tout : la lecture s'arrêterait à la fin du
+## tampon, avant d'atteindre l'impact, sans la moindre erreur.
+func _test_ancre_dans_le_tampon() -> void:
+	print("\n[L'ancre d'impact tombe-t-elle dans le tampon ?]")
+	var b := _banc()
+	var r: Node = b[0]
+	var p1: FauxJoueur = b[1]
+	for i in 200:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	p1.hp = 0.0
+	r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	# L'enregistrement CONTINUE après la mort — le sang, la réaction — puis
+	# s'arrête. C'est ce qui doit donner au rejeu de quoi atteindre l'impact.
+	p1.hp = 100.0
+	for i in 40:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	r.stop_recording()
+
+	_check("l'ancre est dans le tampon",
+		r.impact_frame < r.snapshots.size(),
+		"impact=%d, tampon=%d" % [r.impact_frame, r.snapshots.size()])
+	# Et il doit rester des images APRÈS l'impact : la borne d'arrêt étant
+	# `size - 1`, une ancre posée sur la dernière image ferait cesser la lecture
+	# au moment précis où elle devrait montrer la mort.
+	_check("il reste des images après l'impact",
+		r.snapshots.size() - 1 > r.impact_frame,
+		"impact=%d, dernière=%d" % [r.impact_frame, r.snapshots.size() - 1])
+	_liberer(b)
