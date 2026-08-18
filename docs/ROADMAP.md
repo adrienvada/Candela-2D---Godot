@@ -2789,27 +2789,55 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 5 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : 8 sur 15 livrés** — M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
-> M9 la torche du curseur. Chacun dans son fichier (`menu_gnomon.gd`,
-> `menu_after_image.gd`) plutôt que dans un `ui.gd` de trois mille lignes, chacun
-> avec sa ligne d'`effect_policy` **lue dans les deux sens** : l'intensité
-> mémorisée s'applique à la construction et à chaque changement. Une ligne de
-> politique sans lecture donnerait un curseur qui ne pilote rien, ce qui ressemble
-> trait pour trait à un réglage qui marche.
+> M6 l'encre coulée, M7 le code gravé, M8 le départ au tir, M9 la torche du
+> curseur. Chacun dans son fichier (`menu_gnomon.gd`, `menu_after_image.gd`,
+> `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`,
+> `menu_engraver.gd`, `menu_tracer.gd`) plutôt que dans un `ui.gd` de trois mille
+> lignes, chacun avec sa ligne d'`effect_policy` **lue dans les deux sens** :
+> l'intensité mémorisée s'applique à la construction et à chaque changement. Une
+> ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
+> ressemble trait pour trait à un réglage qui marche.
 >
-> Les dix autres suivent par lots. Aucun ne demande d'asset.
+> Les sept autres suivent par lots. Aucun ne demande d'asset. Cinq d'entre eux
+> (M5, M11, M12, M14, M15) demandent un shader : ils seront groupés, c'est le
+> sous-ensemble qui demande le plus de précaution sous `gl_compatibility`.
 >
-> **Les cinq livrés partagent une fiction et c'est voulu** : une flamme éclaire ce
+> **Les livrés partagent une fiction et c'est voulu** : une flamme éclaire ce
 > menu depuis quelque part. Elle projette l'ombre du titre (M1), on la porte à la
 > main sous le curseur (M9), quelqu'un la promène derrière les panneaux (M4), et
 > le noir qu'elle laisse a des yeux (M3). La rémanence (M2) est ce que tout cela
-> imprime sur une rétine. Ce n'est pas une collection d'effets, c'est un même
-> monde vu par cinq fenêtres.
+> imprime sur une rétine. Le second lot ajoute ce que cette lumière **écrit** :
+> elle coule dans l'écran suivant (M6), elle grave le code dans le mur (M7), et
+> elle part en balle quand on engage une partie (M8). Ce n'est pas une collection
+> d'effets, c'est un même monde vu par huit fenêtres.
 >
 > **Règle commune tenue par tous : coût nul au repos.** Chacun coupe son
 > `_process` dès qu'il n'a plus rien à changer — y compris la torche, qui s'arrête
 > une fois la lampe posée et la flamme retombée.
+>
+> **Ce que le banc `tools/test_vitrine_menus.gd` protège, et pourquoi il existe.**
+> Ces effets sont décoratifs, mais **ils éteignent des contrôles pour les
+> rallumer**. Une coulée interrompue par une navigation rapide, ou une intensité
+> passée à zéro au milieu, et une entrée reste à alpha 0 : le joueur voit un menu
+> à trous sans aucun moyen de comprendre pourquoi, et l'entrée reste dans le
+> parcours du curseur — donc sélectionnable et invisible. Un effet de confort qui
+> casse la navigation est pire que pas d'effet du tout. Le banc vérifie donc
+> surtout des **retours à l'état sain** : arrêt en pleine coulée, extinction en
+> pleine coulée, seconde coulée qui en chevauche une première. Trois chemins,
+> trois façons de laisser une entrée dans le noir.
+>
+> **Deux écarts assumés par rapport aux fiches ci-dessous**, notés parce qu'un
+> lecteur de la fiche seule les prendrait pour des oublis :
+> — M9 est dessiné en anneaux concentriques (`_draw`) et non par le shader décrit
+> dans sa « Voie ». Dix cercles empilés à alpha décroissant donnent le même
+> dégradé pour cinq centièmes d'alpha, sans uniforms à tenir d'accord avec la
+> mise en page.
+> — M8 : la fiche dit « ±32 px », qui est l'amplitude du **glissement** ; la
+> traçante n'en prend que le **signe**. Sa course à elle est de 210 px, parce
+> qu'une traînée de 32 px vivant 15 centièmes de seconde est invisible. C'est
+> l'écran qui glisse de 32 px ; la balle, elle, s'en va.
 
 Demandés par Adrien : « ultra-moderniser » les menus sans toucher à leur
 structure — uniquement du visuel, pour un vanilla extrême. Produits par la

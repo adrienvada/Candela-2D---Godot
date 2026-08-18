@@ -47,6 +47,11 @@ signal detail_changed(title: String, text: String)
 
 const ROOT := "accueil"
 
+## Marque les entrées « lanceur » — le geste qui engage une partie. Le style
+## plein les distingue à l'œil ; cette marque les distingue au code, pour que M8
+## ne tire que là.
+const META_LAUNCHER := "menu_launcher"
+
 ## Racine de chaque écran : c'est elle qu'on montre et qu'on cache.
 var _roots: Dictionary = {}
 ## Colonne de gauche de chaque écran, à remplir par l'appelant.
@@ -115,6 +120,11 @@ func _build() -> void:
 	left.add_child(host)
 	_host = host
 
+	# Dernier enfant de `_host`, donc dessinée par-dessus les colonnes : un
+	# ménisque passant sous les entrées qu'il allume ne s'expliquerait pas.
+	_ink = MenuInk.new()
+	host.add_child(_ink)
+
 	# --- Colonne de droite : ce que l'entrée sous le curseur raconte ----------
 	var right := PanelContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -157,6 +167,13 @@ func _build() -> void:
 	_detail_host.add_child(_detail_text)
 
 var _host: Control
+
+## M6 — l'encre qui écrit l'écran entrant. Vit dans `_host`, donc clippée comme
+## les colonnes qu'elle balaie.
+var _ink: MenuInk
+## Hauteur globale du dernier geste d'entrée, d'où part l'encre. Négatif = « on
+## ne sait pas d'où », ce qui arrive au premier affichage et après `reset()`.
+var _geste_y: float = -1.0
 
 # ---------------------------------------------------------------------------
 # DÉCLARATION
@@ -301,6 +318,15 @@ func _slide(body: Control, direction: float) -> void:
 	_tween.tween_property(body, "offset_right", 0.0, MenuTheme.FADE) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
+	# L'encre est un second animateur, pas un remplaçant : le glissement reste ce
+	# qu'il était, l'encre ne touche qu'aux alphas des entrées et à son ménisque.
+	if _ink != null:
+		_host.move_child(_ink, -1)
+		_ink.couler(list_of(current_id()), _geste_y, MenuTheme.P1)
+	# Le geste est consommé : un `push()` appelé par du code, sans bouton, doit
+	# repartir du haut plutôt que d'hériter du dernier doigt posé.
+	_geste_y = -1.0
+
 func _reset_transform(body: Control) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
@@ -345,6 +371,17 @@ func _apply_panel(key: String) -> void:
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
 ## toujours, et un panneau qui se reconstruit à chaque déplacement du curseur
 ## scintille.
+## L'encre coulée, pour que l'interface lui passe l'intensité réglée par le
+## joueur. Le hub en est propriétaire : elle est née avec ses colonnes.
+func ink() -> MenuInk:
+	return _ink
+
+## Retient d'où part la prochaine coulée : le centre du bouton qu'on vient
+## d'activer, en coordonnées globales.
+func _noter_geste(btn: Control) -> void:
+	if btn != null and is_instance_valid(btn):
+		_geste_y = btn.get_global_rect().get_center().y
+
 func detail_host() -> VBoxContainer:
 	return _detail_host
 
@@ -434,10 +471,17 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.focus_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
 	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
 
+	# M8 lit cette marque pour ne tirer que sur le geste qui engage une partie.
+	# Le style plein la porte déjà à l'œil ; l'écrire la rend lisible au code.
+	if launcher:
+		btn.set_meta(META_LAUNCHER, true)
+
 	if btn.disabled:
 		return btn
 	if target != "":
-		btn.pressed.connect(func() -> void: push(target))
+		btn.pressed.connect(func() -> void:
+			_noter_geste(btn)
+			push(target))
 	elif action != "":
 		btn.pressed.connect(func() -> void: action_requested.emit(action))
 	else:
@@ -491,6 +535,8 @@ func add_back_entry(id: String, detail: String = "") -> Button:
 	var btn := make_entry("‹  RETOUR",
 		detail if detail != "" else "Remonte d'un cran. La touche Échap fait la même chose.",
 		"", MenuTheme.DIM)
-	btn.pressed.connect(back)
+	btn.pressed.connect(func() -> void:
+		_noter_geste(btn)
+		back())
 	list.add_child(btn)
 	return btn

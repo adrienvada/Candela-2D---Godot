@@ -214,9 +214,9 @@ func _run_host() -> void:
 		print("CODE: %s" % NetworkManager.lobby_code)
 		# Le code se lit dans le panneau du salon, où l'hôte attend — il n'y a plus
 		# d'écran d'attente en jeu, le départ ayant lieu depuis le menu.
-		print("PANNEAU: %s" % _ui.lobby_code_label.text)
+		print("PANNEAU: %s" % _ui.lobby_code_engraver.code())
 		_check("le panneau du salon affiche le code",
-			_ui.lobby_code_label.text.contains(NetworkManager.lobby_code))
+			_ui.lobby_code_engraver.code() == NetworkManager.lobby_code)
 
 	_check("PRÊT est grisé tant que l'hôte est seul", _ready_entry_disabled())
 

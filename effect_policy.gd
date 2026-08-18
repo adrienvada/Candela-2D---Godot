@@ -92,6 +92,24 @@ const EFFECTS := {
 		"nom": "Quelqu'un derrière la vitre",
 		"phrase": "Une lueur passe parfois derrière les panneaux du menu, comme une torche de l'autre côté d'un verre.",
 	},
+	"encre_coulee": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "L'encre coulée",
+		"phrase": "Un écran de menu s'écrit ligne à ligne au lieu d'apparaître d'un bloc. Purement décoratif.",
+	},
+	"gravure_code": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le code gravé",
+		"phrase": "Le code de salon se frappe caractère par caractère au lieu de s'afficher. Le code reste le même.",
+	},
+	"depart_au_tir": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le départ au tir",
+		"phrase": "Lancer une partie tire une traçante dans le menu. N'apparaît que sur le bouton qui engage.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

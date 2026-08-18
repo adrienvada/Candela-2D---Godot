@@ -249,6 +249,7 @@ var menu_after_image: MenuAfterImage
 var menu_torch: MenuTorch
 var menu_watcher: MenuWatcher
 var menu_passerby: MenuPasserby
+var menu_tracer: MenuTracer
 
 ## Bandeau de recherche d'adversaire, au bord haut de l'écran. Hors du menu :
 ## la recherche continue quel que soit l'écran regardé.
@@ -286,7 +287,9 @@ var lobby_status_label: Label
 var host_ip_row: HBoxContainer
 var host_ip_label: Label
 var lobby_code_row: HBoxContainer
-var lobby_code_label: Label
+## M7 — le code de salon se frappe caractère par caractère. Ce n'est plus un
+## Label : six cases de largeur fixe, plus la coche de copie.
+var lobby_code_engraver: MenuEngraver
 var btn_copy_code: Button
 var join_input: LineEdit
 var ephemeral_banner: Label
@@ -432,6 +435,15 @@ func _on_any_button_pressed(btn: BaseButton) -> void:
 	# manquent, c'est la seule conséquence sensible d'un geste.
 	if menu_torch != null:
 		menu_torch.palpiter()
+	# M8 — seul le geste qui engage une partie tire. Si tout tirait, plus rien ne
+	# serait décisif : c'est la marque posée par `make_entry`, pas le hasard du
+	# bouton, qui décide.
+	if menu_tracer != null and bool(btn.get_meta(MenuHub.META_LAUNCHER, false)):
+		var zone := (btn as Control).get_global_rect()
+		# Au bord droit, là où les entrées de destination portent leur chevron :
+		# le lanceur n'en a pas, mais c'est de là que part le mouvement.
+		menu_tracer.tirer(Vector2(zone.end.x - GAP_S, zone.get_center().y),
+			1.0, COLOR_P1)
 	AudioManager.play_button_click()
 	_pulse_press(btn)
 
@@ -1665,13 +1677,19 @@ func _build_menu() -> void:
 	game_over_panel.add_child(menu_passerby)
 	game_over_panel.move_child(menu_passerby, 1)
 
+	# M8 — la traçante passe PAR-DESSUS tout, curseurs compris : une balle qui
+	# disparaîtrait derrière un panneau ne serait plus une balle.
+	menu_tracer = MenuTracer.new()
+	add_child(menu_tracer)
+
 	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
 	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
 	# maintenant, et à chaque fois que le joueur la change.
 	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
 		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
-				"regard_du_noir", "passant_vitre"]:
+				"regard_du_noir", "passant_vitre", "encre_coulee",
+				"gravure_code", "depart_au_tir"]:
 			_apply_menu_effects()
 	)
 	_apply_menu_effects()
@@ -2160,6 +2178,13 @@ func _apply_menu_effects() -> void:
 		menu_watcher.set_intensite(GameSettings.effective_effect("regard_du_noir", false))
 	if menu_passerby != null:
 		menu_passerby.set_intensite(GameSettings.effective_effect("passant_vitre", false))
+	if menu_tracer != null:
+		menu_tracer.set_intensite(GameSettings.effective_effect("depart_au_tir", false))
+	if hub != null and hub.ink() != null:
+		hub.ink().set_intensite(GameSettings.effective_effect("encre_coulee", false))
+	if lobby_code_engraver != null:
+		lobby_code_engraver.set_intensite(
+			GameSettings.effective_effect("gravure_code", false))
 
 func _wire_salon_back(btn: Button) -> void:
 	if btn == null:
@@ -2741,10 +2766,8 @@ func _build_lobby_widgets() -> void:
 	lobby_code_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	lobby_code_row.add_theme_constant_override("separation", GAP_XS)
 
-	lobby_code_label = Label.new()
-	lobby_code_label.add_theme_font_size_override("font_size", 30)
-	lobby_code_label.add_theme_color_override("font_color", COLOR_GOLD)
-	lobby_code_row.add_child(lobby_code_label)
+	lobby_code_engraver = MenuEngraver.new()
+	lobby_code_row.add_child(lobby_code_engraver)
 
 	btn_copy_code = _make_button("COPIER", COLOR_GOLD)
 	btn_copy_code.add_theme_font_size_override("font_size", 13)
@@ -2912,14 +2935,17 @@ func _on_lobby_code_ready(_code: String) -> void:
 func _update_lobby_code_label() -> void:
 	var code: String = NetworkManager.lobby_code
 	var known := not code.is_empty()
-	lobby_code_label.text = code if known else "— — — — — —"
+	# Chaîne vide = pas de salon : les six cases gardent leur tiret, et rien ne se
+	# grave. `set_code` est idempotent, donc les rafraîchissements du bloc salon —
+	# nombreux et sans rapport — ne rejouent pas la gravure.
+	lobby_code_engraver.set_code(code if known else "")
 	btn_copy_code.disabled = not known
 
 func _copy_lobby_code() -> void:
 	if NetworkManager.lobby_code.is_empty():
 		return
 	DisplayServer.clipboard_set(NetworkManager.lobby_code)
-	lobby_code_label.text = NetworkManager.lobby_code + "  ✓"
+	lobby_code_engraver.marquer_copie()
 
 func _build_weapon_block() -> Control:
 	weapon_hbox = HBoxContainer.new()
