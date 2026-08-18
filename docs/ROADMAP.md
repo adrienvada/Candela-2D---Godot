@@ -1996,6 +1996,23 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   précédente, sans même le message d'erreur. Un champ vide voulait dire « je ne
   sais pas sur quoi je joue ».
 
+**Croisement de deux changements justes**
+- **Deux corrections valides peuvent se combiner en un défaut, et le commentaire
+  du code est alors le seul témoin.** Le 2026-08-18 : `_on_peer_connected` faisait
+  quitter le menu à l'hôte dès l'arrivée du client, parce qu'à l'écriture
+  `rpc_client_weapon` lançait la manche dans la foulée — le commentaire le disait
+  explicitement. La porte PRÊT, écrite ensuite et à juste titre, a retiré ce
+  lancement. **Résultat : l'hôte se retrouvait dans l'arène sans manche démarrée**,
+  et comme il simule les deux joueurs et porte le chrono, **les deux fenêtres se
+  figeaient** — clavier et souris morts, aucun message d'erreur.
+  Ni l'un ni l'autre changement n'était fautif seul. **Ce qui aurait dû alerter :
+  la seconde correction invalidait une hypothèse écrite noir sur blanc dans le
+  commentaire de la première.** Devant une fonction dont le commentaire dit
+  « X s'en charge juste après », vérifier que X s'en charge toujours.
+  Trouvé par Adrien en jeu, invisible aux vingt-quatre suites : **les bancs
+  pressent PRÊT**, donc empruntent le chemin qui prépare la partie, jamais celui
+  où le client arrive pendant que l'hôte attend dans son salon.
+
 **Fin de match en ligne**
 - **`await RenderingServer.frame_post_draw` n'est JAMAIS émis en `--headless`.**
   Ce signal suit le *dessin* d'une image ; sans rendu, la coroutine reste

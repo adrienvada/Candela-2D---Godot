@@ -212,6 +212,7 @@ func _ready():
 	ReplaySystem.replay_spawn_bullet.connect(_on_replay_spawn_bullet)
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
+	ui.training_requested.connect(_on_training_requested)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
 	
@@ -261,15 +262,23 @@ func _on_peer_connected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		client_peer_id = id
 		p2.reset_network_input()
-		# Le salon s'ouvre désormais depuis le menu, pour que le code s'affiche
-		# avant le match. L'hôte peut donc être encore devant sa liste de joueurs
-		# quand l'adversaire arrive — sans être passé par le chemin qui prépare la
-		# partie. Or le client, lui, démarre sa manche à la connexion et envoie
-		# aussitôt `rpc_client_weapon`, qui lance la manche ici : sans cette
-		# préparation, P2 resterait piloté par le clavier de l'hôte au lieu des
-		# commandes reçues, et l'hôte jouerait derrière son propre menu.
-		if ui._is_main_menu:
-			_enter_hosted_game()
+		# **L'hôte reste dans son salon.** Il y voit « Adversaire — connecté »
+		# apparaître dans la liste, et le match attend que les deux appuient sur
+		# PRÊT.
+		#
+		# Ce n'était pas le cas avant : cette fonction faisait quitter le menu, dans
+		# un temps où `rpc_client_weapon` lançait la manche dans la foulée. La porte
+		# PRÊT a retiré ce lancement — à juste titre — et les deux changements
+		# combinés laissaient l'hôte **dans l'arène sans manche démarrée**. Comme il
+		# simule les deux joueurs et porte le chrono, les DEUX fenêtres se figeaient.
+		# Aucun des deux changements n'était fautif seul ; c'est leur rencontre qui
+		# l'était, et le commentaire d'ici énonçait l'hypothèse que l'autre venait
+		# d'invalider.
+		#
+		# Rien à préparer ici, donc : `_apply_network_mode()` est appelé par
+		# `_enter_hosted_game()` au moment du départ, et lui seul sait quand il a
+		# vraiment lieu.
+
 		# Arrivée pendant une killcam ou l'écran de fin : lancer la manche ici
 		# couperait la séquence en cours des deux côtés.
 		if _end_sequence_active:
@@ -329,6 +338,55 @@ func _on_peer_disconnected(id: int):
 			game_over = false
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		_on_main_menu_requested()
+
+## Entraînement solitaire : une arène, une cible, aucun adversaire.
+##
+## Trois propriétés que rien ne doit venir contredire :
+##
+## **Rien n'est archivé ni rapporté.** Un entraînement n'est pas un match : il
+## n'entre ni dans le journal local, ni dans le classement. C'est la seule
+## propriété non négociable ici — le reste n'est que confort.
+##
+## **Le lien réseau tombe d'abord.** Sans cela, un hôte qui s'entraîne ferait
+## apparaître une cible chez un adversaire qui n'a rien demandé, et le forfait de
+## départ s'appliquerait à un match qui n'a jamais commencé.
+##
+## **La carte est celle par défaut** (décision d'Adrien) : on s'entraîne sur le
+## terrain de référence, pas sur la dernière carte custom essayée.
+func _on_training_requested() -> void:
+	get_tree().paused = false
+	# Avant toute chose : un match en cours doit se solder normalement, forfait
+	# compris, plutôt que de se dissoudre dans un entraînement.
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		_archive_forfeit(0)
+		NetworkManager.disconnect_from_game()
+	_apply_network_mode()
+	MapData.select_map(MapData.DEFAULT_MAP_ID)
+
+	game_over = false
+	ui.hide_game_over()
+	_restore_viewports()
+	# On passe par le démarrage ordinaire : arène, joueurs, armes, vues et
+	# caméras sont posés par le chemin que le jeu emprunte déjà, plutôt que par
+	# un second qui finirait par en diverger. La manche est désarmée juste après.
+	_do_start_round(_hosted_weapon_1_idx, 0)
+
+	round_active = false
+	sandbox_mode = true
+	# Aucun forfait ne peut naître d'un entraînement : il n'y a personne en face.
+	_forfeit_pending = false
+	_match_id = ""
+	time_left = round_time
+	ui.set_countdown(0.0)
+	countdown_left = 0.0
+	ui.time_label.text = "ENTRAÎNEMENT"
+
+	# J2 quitte la scène sans être détruit : il reprendra sa place au prochain
+	# vrai match, et le détruire demanderait de le reconstruire.
+	p2.hide()
+	p2.set_collision_layer_value(1, false)
+	p2.set_collision_mask_value(1, false)
+	_set_training_target_active(true)
 
 func _on_debug_light_toggled(toggled_on: bool):
 	var mod = arena.get_node_or_null("CanvasModulate")
@@ -572,26 +630,23 @@ func _set_training_target_active(active: bool) -> void:
 	if active:
 		training_target.global_position = _training_target_position()
 
-## Place la cible sur du sol libre devant l'apparition de J1. Chercher une case
-## valide plutôt que d'appliquer un décalage fixe : sur une carte custom, le
-## décalage tomberait dans un mur ou dans une fosse.
+## La cible se tient exactement là où l'adversaire se tiendrait — au point
+## d'apparition de J2.
+##
+## C'est ce qui rend l'entraînement transférable : la distance, l'angle et la
+## ligne de vue qu'on y travaille sont ceux du premier échange d'un vrai duel. Un
+## décalage devant J1, ou une recherche de sol libre au plus proche, donnerait un
+## placement plausible mais qui n'existe dans aucun match.
+##
+## La cible mouvante viendra plus tard, avec ses réglages (décision d'Adrien) ;
+## jusque-là elle est fixe, et fixe à cet endroit-là.
 func _training_target_position() -> Vector2:
-	var origin := _get_spawn_position(0)
-	var floor_layer := arena.get_node_or_null("CustomFloor") as TileMapLayer
-	var walls_layer := arena.get_node_or_null("CustomWalls") as TileMapLayer
-	if floor_layer == null or walls_layer == null:
-		return origin + Vector2(160, 0)
-
-	for radius in [4, 3, 5, 6, 2]:
-		for i in 12:
-			var ang := (i / 12.0) * TAU
-			var offset := Vector2(cos(ang), sin(ang)) * float(radius) * float(CandelaTileSet.TILE_SIZE.x)
-			var cell := floor_layer.local_to_map(floor_layer.to_local(origin + offset))
-			if floor_layer.get_cell_source_id(cell) == -1: continue
-			if walls_layer.get_cell_source_id(cell) != -1: continue
-			return floor_layer.to_global(floor_layer.map_to_local(cell))
-
-	return origin + Vector2(140, 0)
+	# Exactement le point d'apparition, sans recherche de sol libre : c'est une
+	# case où un joueur apparaît, donc praticable par construction. Chercher « au
+	# plus proche » déplacerait la cible de quelques dizaines de pixels et
+	# ruinerait la seule propriété qu'on lui demande — se tenir là où l'adversaire
+	# se tiendra.
+	return _get_spawn_position(1)
 
 func _get_spawn_position(player_id: int) -> Vector2:
 	var spawn_node_name := "P1Spawn" if player_id == 0 else "P2Spawn"
