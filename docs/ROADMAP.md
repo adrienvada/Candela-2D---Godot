@@ -3273,7 +3273,15 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       élucidée. **Retirée plutôt qu'affaiblie** — chaque correction la
       rapprochait de « ne rien vérifier », et la troisième aurait été le moment
       de l'assouplir jusqu'à ce qu'elle passe.
-  - Restent manuelles : les 2 autres familles (et le reste des 5 et 7) de la
+  - ⚠️ **La famille 4 n'est pas automatisable en l'état, et pas pour une raison
+    technique : son attendu est contredit par le code.** La checklist demande que
+    A « termine sa killcam en entier » quand le pair disparaît ; `_on_peer_disconnected`
+    appelle `_abort_killcam()` et la coupe. **Les deux se défendent** — terminer
+    respecte le joueur qui regarde, couper reconnaît que le match est fini et rend
+    la main plus vite. Écrire un test contre l'un ou l'autre reviendrait à
+    **trancher une question de jeu à la place d'Adrien**. Signalé dans la
+    checklist ; son absence est un choix, pas un oubli.
+  - Restent manuelles : la famille 4 (bloquée ci-dessus) et le reste des 5 et 7 de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

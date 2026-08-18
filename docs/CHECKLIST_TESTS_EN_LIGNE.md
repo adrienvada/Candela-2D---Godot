@@ -80,6 +80,25 @@ proche de 120 ms une fois la partie lancée.)
 
 ## 4. Connexion pendant une killcam ou une fin de manche
 
+> ⚠️ **L'attendu de 4.1 est contredit par le code, et personne n'a tranché.**
+> Relevé le 2026-08-18 en cherchant comment automatiser cette famille.
+>
+> La ligne 4.1 attend que A **termine sa killcam en entier**. Or
+> `game_state.gd:381` — dans `_on_peer_disconnected` — appelle `_abort_killcam()`
+> dès que le pair disparaît : la killcam de A est **coupée**, la vitesse rendue,
+> et le dialogue de déconnexion s'affiche.
+>
+> **Les deux comportements se défendent** et c'est bien le problème. Terminer la
+> killcam respecte le joueur qui regarde ; la couper reconnaît que le match est
+> fini de toute façon et rend la main plus vite. **Écrire un test contre l'un ou
+> l'autre reviendrait à trancher une question de jeu à la place d'Adrien** —
+> exactement ce que le 2026-08-18 a passé sa journée à démonter ailleurs.
+>
+> **Tant que ce n'est pas tranché, la famille 4 n'est pas automatisée**, et son
+> absence est un choix, pas un oubli. Les familles 1, 2 (moitié), 3, 5.2, 5.3, 6
+> et 7.2 le sont — voir `tools/run_duo.sh`.
+
+
 | # | Action | Attendu |
 |---|--------|---------|
 | 4.1 | Manche en cours à deux, B meurt ; pendant la killcam de A, tuer le processus de B, le relancer et rejoindre immédiatement | A termine **sa killcam en entier** (ni coupée, ni accélérée, ni recouverte par un écran d'attente), puis la manche démarre pour les deux |
