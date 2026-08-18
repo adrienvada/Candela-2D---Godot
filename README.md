@@ -163,6 +163,24 @@ oublié, un fichier de code oublié, et — le plus coûteux — **un fichier d'
 autre session emporté par mégarde**. `git add` avec un chemin inexistant
 n'indexe rien du tout, sans le dire ; c'est la même sortie qui l'attrape.
 
+**Et le piège jumeau, qui frappe la vérification elle-même : un tuyau avale le
+code de sortie.**
+
+```bash
+./tools/run_suites.sh | tail -3 && git commit …   # ← FAUX
+```
+
+Le code lu par `&&` est celui de `tail`, qui réussit toujours. **Le commit part
+alors sur un lanceur rouge**, sans que rien ne le dise. C'est arrivé le
+2026-08-18.
+
+Il n'y a pas de rustine élégante : soit on lance le lanceur **seul** et on lit sa
+dernière ligne de ses propres yeux avant de commiter dans une seconde commande,
+soit on capture explicitement son code (`set -o pipefail`, ou pas de tuyau du
+tout). **La forme la plus sûre reste deux commandes séparées** — celle qui
+vérifie, puis celle qui commite, avec un humain ou un agent qui a lu entre les
+deux.
+
 Règles de rédaction : expliquer **pourquoi**, pas **quoi** — le code dit déjà le
 quoi. Rester factuel : une chose non testée est écrite comme non testée.
 
