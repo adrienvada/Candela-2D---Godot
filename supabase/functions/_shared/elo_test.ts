@@ -300,13 +300,22 @@ Deno.test("dans l'échelle, il ne reste jamais plus d'une division à franchir",
   assert(rankOf(RANK_FLOOR - 500).pointsToNext! > DIVISION_SPAN);
 });
 
-Deno.test("un débutant est dans la partie basse, sans être collé au plancher", () => {
+Deno.test("un débutant démarre à l'échelon le plus bas", () => {
+  // Décision d'Adrien, 2026-08-18 : tout le monde part d'Aveugle I. Le
+  // calibrage précédent plaçait `START_RATING` au centre de Bougie II —
+  // troisième catégorie sur dix — pour qu'un débutant ait de quoi chuter. Le
+  // déblocage d'armes de la Phase 7 a tranché autrement : arriver en possession
+  // de trois armes sur quatre viderait la progression de son contenu.
+  //
+  // Le prix, assumé : un débutant ne peut pas descendre. Ses premières défaites
+  // ne changent pas son rang, puisqu'il est déjà au plancher.
   const depart = rankOf(START_RATING);
-  assert(depart.tierIndex > 1, `un débutant démarre ${depart.label} : rien à perdre`);
-  assert(
-    depart.tierIndex <= RANK_TIERS.length / 2,
-    `un débutant démarre ${depart.label} : trop haut`,
-  );
+  assertEquals(depart.tierIndex, 1, `un débutant démarre ${depart.label}`);
+  assertEquals(depart.division, 1, `un débutant démarre ${depart.label}`);
+  assertEquals(depart.label, `${RANK_TIERS[0]} I`);
+  // Et il reste toute l'échelle devant lui : un départ au sommet n'aurait pas
+  // plus de sens qu'un départ au milieu.
+  assert(depart.pointsToNext !== null && depart.pointsToNext > 0);
 });
 
 Deno.test("le premier match d'un débutant ne change pas son rang", () => {

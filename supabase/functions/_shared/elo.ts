@@ -203,25 +203,33 @@ export const DIVISION_SPAN = 40;
 /**
  * Plancher de l'échelle : en dessous, tout le monde est Aveugle I.
  *
- * 700 et 40 ne valent pas pour eux-mêmes, mais pour l'endroit où ils placent
- * `START_RATING` : **au centre exact de Bougie II**, troisième catégorie sur
- * dix. Un débutant est donc dans la partie basse sans être collé au plancher —
- * il lui reste six catégories et demie devant lui, et deux derrière, ce qui
- * laisse la place de descendre : une échelle dont personne ne peut chuter ne
- * récompense rien.
+ * **Il coïncide avec `START_RATING`** (décision d'Adrien, 2026-08-18) : un
+ * nouveau joueur apparaît donc à l'échelon le plus bas de l'échelle, Aveugle I,
+ * et non au milieu.
  *
- * Le détail qui a décidé du centrage : un premier match entre égaux déplace
- * K/2 = 16 points, et la marge de part et d'autre du départ est de 20. Ni la
- * première victoire ni la première défaite ne change donc le rang affiché. Un
- * rang qui saute au premier match ne veut rien dire, et c'est le tout premier
- * match qu'un nouveau joueur regarde.
+ * Ce que cela change par rapport au centrage d'origine, et qui a été accepté :
+ * **un débutant ne peut pas chuter.** Ses premières défaites ne le font pas
+ * descendre, puisqu'il est déjà au plancher. C'est le prix d'une progression qui
+ * part vraiment de zéro — et le déblocage d'armes de la Phase 7 en dépend :
+ * arriver en possession de trois armes sur quatre viderait la progression de son
+ * contenu.
  *
- * **Ces bornes sont provisoires.** Elles n'ont de sens qu'avec une population
- * réelle, qui n'existe pas encore : les fixer maintenant donne quelque chose à
- * afficher, cela ne prétend pas connaître la distribution. Les déplacer le jour
- * où elle sera connue ne coûtera qu'un redéploiement.
+ * Pourquoi déplacer le plancher plutôt que le départ : les classements
+ * eux-mêmes ne bougent pas. `ratings` est reconstruite par rejeu intégral, si
+ * bien qu'abaisser `START_RATING` recalculerait tout l'historique et déplacerait
+ * chaque joueur ; déplacer le plancher ne change que la lecture de l'échelle.
+ *
+ * Le détail conservé du calibrage d'origine : un premier match entre égaux
+ * déplace K/2 = 16 points, moins que les 40 d'une division. Ni la première
+ * victoire ni la première défaite ne change donc le rang affiché — et c'est le
+ * tout premier match qu'un nouveau joueur regarde.
+ *
+ * **Ces bornes restent provisoires.** Elles n'ont de sens qu'avec une population
+ * réelle, qui n'existe pas encore : les fixer donne quelque chose à afficher,
+ * cela ne prétend pas connaître la distribution. Les déplacer ne coûtera qu'un
+ * redéploiement.
  */
-export const RANK_FLOOR = 700;
+export const RANK_FLOOR = START_RATING;
 
 /** Neuf catégories de trois divisions ; la dixième est indivisible. */
 const TOTAL_DIVISIONS = (RANK_TIERS.length - 1) * DIVISIONS.length;
