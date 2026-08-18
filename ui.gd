@@ -2468,9 +2468,15 @@ func _start_search() -> void:
 	# Un joueur non classé n'est pas estimé : le cœur ne le bride sur aucune
 	# fourchette plutôt que de lui inventer un niveau.
 	var note := -1
+	# La CATÉGORIE part avec le ticket, à côté du classement. Le jeu ne sait pas
+	# la dériver — `rankOf` vit côté serveur — et la règle du miroir en a besoin
+	# des deux camps : sans cette ligne le transport existe mais publie zéro, et
+	# l'arsenal commun serait toujours celui d'un joueur sans rang.
+	var categorie := 0
 	if is_instance_valid(RankedIdentity) and RankedIdentity.is_ranked:
 		note = RankedIdentity.rating
-	if not core.start_search(1 if classe else 0, note):
+		categorie = int(RankedIdentity.rank_tier_index)
+	if not core.start_search(1 if classe else 0, note, false, categorie):
 		var raison := String(core.last_error) if core.get("last_error") != null else ""
 		show_dialog_message("Appariement",
 			raison if raison != "" else "La recherche n'a pas pu démarrer.")

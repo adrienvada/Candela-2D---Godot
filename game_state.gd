@@ -87,6 +87,12 @@ var _countdown_ready_peer: bool = false
 ## décide de la durée : elle distingue « l'arme n'est pas encore choisie » de
 ## « elle l'est depuis le menu ».
 var _matchmade_round: bool = false
+## Les deux catégories du match apparié, retenues à l'appariement. La règle du
+## miroir s'applique dessus, et l'écran les relit pour dire pourquoi l'arsenal a
+## rétréci. Retenues ICI plutôt que relues chez l'appariement : celui-ci retombe
+## au repos dès le lien ouvert, et son instantané n'est plus garanti.
+var _mirror_local_tier: int = 0
+var _mirror_opponent_tier: int = 0
 var countdown_left: float = 0.0
 
 ## V2.1 — L'instant fatal : image figée ~150 ms. Seul le RENDU est suspendu
@@ -877,11 +883,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p1.dead = false
 	p2.dead = false
 	
-	var w1 = weapon_arbalete if w1_idx == 3 else (weapon_pompe if w1_idx == 2 else (weapon_fusil if w1_idx == 1 else weapon_pistolet))
-	var w2 = weapon_arbalete if w2_idx == 3 else (weapon_pompe if w2_idx == 2 else (weapon_fusil if w2_idx == 1 else weapon_pistolet))
-	
-	p1.equip_weapon(w1)
-	p2.equip_weapon(w2)
+	p1.equip_weapon(weapon_for_index(w1_idx))
+	p2.equip_weapon(weapon_for_index(w2_idx))
 	
 	p1.get_node("VisualColored").show()
 	p1.get_node("VisualDim").show()
@@ -1643,6 +1646,62 @@ func _set_p2_weapon_button(idx: int) -> void:
 ## départ du client. Tirer après donnerait deux arènes différentes aux deux
 ## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
 ## voyant un monde cohérent.
+## L'arme correspondant à un index de râtelier. Une seule table de résolution :
+## la dupliquer ferait diverger le démarrage de manche et le changement d'arme
+## pendant le décompte, et la divergence porterait sur ce que le joueur tient.
+func weapon_for_index(idx: int) -> WeaponData:
+	match idx:
+		3: return weapon_arbalete
+		2: return weapon_pompe
+		1: return weapon_fusil
+		_: return weapon_pistolet
+
+## L'arsenal commun de ce match, règle du miroir appliquée. Vide hors match
+## apparié : ailleurs, l'arme est choisie au menu et rien n'est à aligner.
+func matchmade_arsenal() -> Array[int]:
+	if not _matchmade_round:
+		return []
+	return RankLoadout.mirrored(_mirror_local_tier, _mirror_opponent_tier)
+
+## Pourquoi l'arsenal est celui-là, en langage joueur — vide s'il n'a pas rétréci.
+## L'écran ne reconstruit pas le raisonnement : il affiche ce que la table rend.
+func matchmade_arsenal_reason() -> String:
+	if not _matchmade_round or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
+		return ""
+	return RankLoadout.reason_for(RankLoadout.ARBALETE, true,
+		_mirror_local_tier, _mirror_opponent_tier)
+
+## Le joueur local change d'arme pendant la fenêtre de choix.
+##
+## Refusé hors de cette fenêtre et hors de l'arsenal commun : l'hôte est
+## l'autorité, et un client au jeu modifié ne doit pas pouvoir s'équiper de ce
+## que la règle du miroir lui a retiré.
+func pick_countdown_weapon(idx: int) -> void:
+	if not _matchmade_round or countdown_left <= 0.0:
+		return
+	if not idx in matchmade_arsenal():
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		p2.equip_weapon(weapon_for_index(idx))
+		rpc_id(1, "rpc_countdown_weapon", idx)
+		return
+	p1.equip_weapon(weapon_for_index(idx))
+	_hosted_weapon_1_idx = idx
+
+## L'adversaire a changé d'arme pendant la fenêtre. Reçu par l'hôte seul, qui
+## refait le même contrôle : un index reçu n'est pas un droit.
+@rpc("any_peer", "reliable")
+func rpc_countdown_weapon(idx: int) -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
+		return
+	if not _matchmade_round or countdown_left <= 0.0:
+		return
+	if not idx in matchmade_arsenal():
+		return
+	p2.equip_weapon(weapon_for_index(idx))
+
 func _on_match_ready(_pairing: Dictionary) -> void:
 	# Ce match ouvre une fenêtre de choix : l'arsenal commun n'est connu que
 	# maintenant, la règle du miroir l'alignant sur le moins bien classé. Posé des
@@ -1650,6 +1709,8 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 	# `rpc_start_round`, et sans ce drapeau son décompte durerait trois secondes
 	# pendant que l'hôte en compte dix.
 	_matchmade_round = true
+	_mirror_local_tier = int(_pairing.get("local_tier", 0))
+	_mirror_opponent_tier = int(_pairing.get("opponent_tier", 0))
 	# Le joueur a choisi son arme sans savoir s'il hébergerait : la désignation
 	# vient tout juste d'avoir lieu. Le choix est donc reporté sur les deux
 	# râteliers, l'hôte lisant celui de J1 et l'invité celui de J2.
