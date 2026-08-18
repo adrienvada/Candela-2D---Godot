@@ -44,6 +44,7 @@ func _run() -> void:
 	await _test_verdict()
 	_test_tension_killcam()
 	_test_negatif_killcam()
+	_test_disposition_hud()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -302,3 +303,58 @@ func _test_negatif_killcam() -> void:
 	_check("la tension repart de zéro", is_zero_approx(_ui._killcam_tension))
 	_check("aucun négatif en attente", _ui._killcam_negatif == 0)
 	_ui.hide_killcam()
+
+## Décision d'Adrien du 2026-08-19 : **en ligne, on ne voit plus le HUD de
+## l'adversaire**, et le panneau du joueur local passe à gauche.
+##
+## Ce que ça retirait : ses points de vie, et surtout **son cercle de recharge** —
+## l'instant exact où son arme redevient prête. Dans un jeu dont la règle est
+## « la seule information est la lumière », c'était un renseignement gratuit.
+##
+## Les trois propriétés se vérifient ensemble parce qu'elles peuvent se contredire :
+## cacher le bon panneau **et** le mettre à gauche **et** garder les deux en écran
+## partagé. Vérifier l'une sans les autres laisserait passer un panneau caché du
+## mauvais côté, ou un écran partagé amputé de moitié.
+func _test_disposition_hud() -> void:
+	print("\n[Qui voit quel HUD, et de quel côté]")
+	# `NetworkManager` par le NŒUD et non par son nom : en mode `--script` le nom
+	# d'autoload ne résout pas à la compilation, et le fichier entier cesse de se
+	# charger. Piège consigné, rencontré une fois de plus ici.
+	var reseau: Node = root.get_node_or_null(^"/root/NetworkManager")
+	if reseau == null:
+		_check("NetworkManager est joignable", false)
+		return
+	var mode_avant = reseau.current_mode
+
+	reseau.current_mode = reseau.GameMode.LOCAL_SPLITSCREEN
+	_ui.disposer_hud()
+	_check("écran partagé : les deux panneaux restent",
+		_ui.hud_panneau_p1.visible and _ui.hud_panneau_p2.visible)
+	_check("écran partagé : J1 reste à gauche",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+
+	reseau.current_mode = reseau.GameMode.ONLINE_HOST
+	_ui.disposer_hud()
+	_check("hôte : le panneau adverse disparaît", not _ui.hud_panneau_p2.visible)
+	_check("hôte : le sien reste visible", _ui.hud_panneau_p1.visible)
+	_check("hôte : et il est à gauche",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+
+	reseau.current_mode = reseau.GameMode.ONLINE_CLIENT
+	_ui.disposer_hud()
+	_check("client : le panneau adverse disparaît", not _ui.hud_panneau_p1.visible)
+	_check("client : le sien reste visible", _ui.hud_panneau_p2.visible)
+	# LE point de la décision : le client est disposé comme l'hôte.
+	_check("client : son panneau passe à GAUCHE",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p2)
+	_check("client : et il s'aligne à gauche, pas au milieu",
+		_ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_BEGIN)
+
+	# Retour en écran partagé : rien ne doit rester déplacé.
+	reseau.current_mode = reseau.GameMode.LOCAL_SPLITSCREEN
+	_ui.disposer_hud()
+	_check("retour en écran partagé : J1 retrouve la gauche",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+	_check("retour en écran partagé : J2 retrouve la droite",
+		_ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_END)
+	reseau.current_mode = mode_avant

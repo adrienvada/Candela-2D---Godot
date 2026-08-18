@@ -2108,6 +2108,7 @@ func _restore_viewports():
 		vp2.get_parent().show()
 		ui.center_line.hide()
 	_accorder_rendu_aux_vues()
+	ui.disposer_hud()
 	cam1.zoom = Vector2(1.0, 1.0)
 	cam2.zoom = Vector2(1.0, 1.0)
 	cam1.global_position = p1.global_position

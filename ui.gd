@@ -213,6 +213,11 @@ class NeonFocusRing extends Panel:
 ## Masqué hors match : sans ça les panneaux joueurs restent visibles
 ## derrière le menu, dans les coins que la fenêtre de menu ne couvre pas.
 var match_hud: MarginContainer
+## Les deux panneaux de HUD et leur rangée, pour pouvoir n'en montrer qu'un et le
+## déplacer. Voir `disposer_hud()`.
+var hud_panneau_p1: Control
+var hud_panneau_p2: Control
+var hud_rangee: HBoxContainer
 var p1_panel: PanelContainer
 var p2_panel: PanelContainer
 
@@ -1251,9 +1256,12 @@ func _build_hud() -> void:
 	var hbox := HBoxContainer.new()
 	margin.add_child(hbox)
 
-	hbox.add_child(_build_player_hud(0))
+	hud_panneau_p1 = _build_player_hud(0)
+	hud_panneau_p2 = _build_player_hud(1)
+	hbox.add_child(hud_panneau_p1)
 	hbox.add_child(_build_center_hud())
-	hbox.add_child(_build_player_hud(1))
+	hbox.add_child(hud_panneau_p2)
+	hud_rangee = hbox
 
 	var dazzle_hbox := HBoxContainer.new()
 	dazzle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -4144,6 +4152,60 @@ func _handle_rebind_input(event: InputEvent) -> void:
 ## Le gel de l'arbre n'a de sens qu'en local : en ligne il figerait la
 ## simulation des deux joueurs (hôte) ou désynchroniserait le client d'un monde
 ## qui continue. En ligne le menu se superpose au jeu, qui poursuit sa course.
+## Qui voit quel panneau de HUD, et de quel côté.
+##
+## **Décision d'Adrien (2026-08-19) : en ligne, on ne voit plus le HUD de
+## l'adversaire.** Il montrait ses points de vie — donc s'il est à 20 ou à 100 —
+## et surtout **son cercle de recharge**, c'est-à-dire l'instant exact où son arme
+## redevient prête. Dans un jeu dont la règle est « la seule information est la
+## lumière », c'était un renseignement que personne n'avait payé en s'éclairant.
+## Le cercle est le plus cher des deux : sans lui, on doit **compter** après avoir
+## entendu un tir ; avec lui, on **lit**.
+##
+## En écran partagé, les deux restent : les joueurs voient l'écran l'un de l'autre
+## de toute façon, et se cacher mutuellement une barre serait arbitraire.
+##
+## **Le panneau du joueur local va toujours à GAUCHE**, hôte comme client. Sa
+## place ne dépend donc plus de son numéro. Ce qui reste attaché au numéro :
+## **sa couleur** — le client demeure rouge, la teinte identifie le joueur et non
+## la place — et **son point d'apparition**, qui reste celui de J2.
+func disposer_hud(entrainement: bool = false) -> void:
+	if hud_panneau_p1 == null or hud_panneau_p2 == null or hud_rangee == null:
+		return
+	var mode := NetworkManager.current_mode
+	var local_est_p2 := mode == NetworkManager.GameMode.ONLINE_CLIENT
+	var en_ligne := mode == NetworkManager.GameMode.ONLINE_HOST or local_est_p2
+
+	# L'entraînement est du LOCAL_SPLITSCREEN pour le transport — aucun pair,
+	# aucune autorité distante — mais **il n'a qu'un joueur**, et J2 est retiré de
+	# la scène. Son panneau annonçait donc la santé et la torche de quelqu'un qui
+	# n'est pas là, avec une barre de vie pleine et immobile. Le mode réseau ne
+	# peut pas le savoir : c'est l'appelant qui sait qu'on s'entraîne.
+	if entrainement:
+		hud_panneau_p1.visible = true
+		hud_panneau_p2.visible = false
+		hud_panneau_p1.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		if hud_rangee.get_child(0) != hud_panneau_p1:
+			hud_rangee.move_child(hud_panneau_p1, 0)
+		return
+
+	hud_panneau_p1.visible = not local_est_p2
+	hud_panneau_p2.visible = not en_ligne or local_est_p2
+
+	# Le panneau visible se place à gauche. `move_child` sur un conteneur suffit :
+	# l'HBox réordonne, aucun ancrage à refaire.
+	var local: Control = hud_panneau_p2 if local_est_p2 else hud_panneau_p1
+	if en_ligne and hud_rangee.get_child(0) != local:
+		hud_rangee.move_child(local, 0)
+	elif not en_ligne and hud_rangee.get_child(0) != hud_panneau_p1:
+		# Retour en écran partagé : J1 reprend sa place de gauche.
+		hud_rangee.move_child(hud_panneau_p1, 0)
+	# Le panneau local s'aligne à gauche, quel que soit son numéro : sans ça, le
+	# panneau de J2 garderait son ancrage à droite et flotterait au milieu.
+	local.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if not en_ligne:
+		hud_panneau_p2.size_flags_horizontal = Control.SIZE_SHRINK_END
+
 func _pause_freezes_world() -> bool:
 	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN
 
