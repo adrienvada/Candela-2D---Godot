@@ -93,6 +93,9 @@ var heartbeat_tween: Tween
 ## Nombre de torches comptées au dernier calcul, pour distinguer un allumage
 ## d'une extinction : seul le premier mérite un balayage.
 var _torches_allumees: int = 0
+## Un silence sec en cours : deux appels superposés rendraient le premier état
+## capturé après le second, et la musique resterait coupée pour de bon.
+var _silence_en_cours: bool = false
 var low_health_players: Dictionary = {}
 var player_torches: Dictionary = {}
 var is_in_match: bool = false
@@ -395,6 +398,31 @@ func set_music_intensity(level: int) -> void:
 		)
 
 # --- GESTION DU FILTRE PASS-BAS ADDITIF (LAMPES & MATCH) ---
+## V3.8 — un silence sec, puis la musique revient.
+##
+## Une égalité n'est pas une défaite au ralenti : c'est un arrêt. Couper le son
+## une seconde le dit mieux que n'importe quel mot, et le mot arrive dans ce
+## silence au lieu de se poser sur une musique qui continue comme si de rien
+## n'était.
+##
+## **On restitue l'état trouvé, pas un état choisi.** Le bus est déjà coupé quand
+## le joueur a mis la musique à zéro : le rallumer d'office lui rendrait un son
+## qu'il a explicitement retiré. C'est la même règle que pour toute propriété
+## partagée — capturer à l'entrée, restituer à la sortie.
+func silence_sec(duree: float = 1.0) -> void:
+	var idx := AudioServer.get_bus_index("Music")
+	if idx == -1:
+		return
+	if _silence_en_cours:
+		return
+	_silence_en_cours = true
+	var etait_coupe := AudioServer.is_bus_mute(idx)
+	AudioServer.set_bus_mute(idx, true)
+	var minuterie := get_tree().create_timer(duree, true, false, true)
+	minuterie.timeout.connect(func() -> void:
+		AudioServer.set_bus_mute(idx, etait_coupe)
+		_silence_en_cours = false)
+
 func set_in_match(in_match: bool) -> void:
 	is_in_match = in_match
 	player_torches.clear()

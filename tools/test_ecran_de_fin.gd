@@ -41,6 +41,7 @@ func _run() -> void:
 	_test_graine()
 	await _test_pression_du_pret()
 	_test_chrono()
+	await _test_verdict()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -208,3 +209,54 @@ func _test_chrono() -> void:
 	_ui.update_hud(null, null, 42.0, false)
 	_check("sans horloge, le HUD n'écrase pas le libellé",
 		_ui.time_label.text == "ENTRAÎNEMENT", _ui.time_label.text)
+
+## V3.6 et V3.8 — l'écran de fin dit ce qui vient de se passer.
+func _test_verdict() -> void:
+	print("\n[Le verdict et le score]")
+	# V3.8 : l'égalité en gris, pas en blanc. Le blanc est la couleur de ce qui
+	# s'affirme ; une égalité n'affirme rien.
+	_ui.show_game_over(-1)
+	await process_frame
+	_check("une égalité s'écrit en gris",
+		_ui.game_over_title.get_theme_color("font_color") == _ui.COLOR_DIM,
+		str(_ui.game_over_title.get_theme_color("font_color")))
+	# Et le silence sec n'a pas laissé la musique coupée derrière lui.
+	var audio: Node = root.get_node_or_null(^"/root/AudioManager")
+	if audio != null:
+		_check("le silence sec se déclare terminé un jour",
+			audio.has_method("silence_sec"))
+	_ui.hide_game_over()
+	await process_frame
+
+	# V3.6 : le score prend la couleur de qui vient de marquer, puis revient.
+	#
+	# Lu SANS laisser passer de frame : la teinte est une valeur de départ, et le
+	# fondu vers le blanc commence dès la frame suivante. Attendre ici mesurerait
+	# le fondu, pas l'annonce — et l'assertion dépendrait de la charge de la
+	# machine, défaut consigné le même jour.
+	_ui.show_game_over(0)
+	_check("le score s'annonce dans la couleur du gagnant",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P1),
+		str(_ui.game_over_score.modulate))
+	_ui.hide_game_over()
+
+	_ui.show_game_over(1)
+	_check("et dans celle de l'autre joueur quand c'est lui",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P2),
+		str(_ui.game_over_score.modulate))
+	# Une égalité ne teinte personne : il n'y a personne à teinter.
+	_ui.hide_game_over()
+	_ui.show_game_over(-1)
+	_check("une égalité ne colore le score pour personne",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_DIM),
+		str(_ui.game_over_score.modulate))
+
+	# Et ce qui compte le plus : refermer l'écran rend au libellé sa teinte de
+	# repos. Sans ça l'annonce survit, se bat avec la suivante, et le score reste
+	# aux couleurs du vainqueur précédent — trouvé par cette suite, pas à la
+	# lecture.
+	_ui.hide_game_over()
+	await process_frame
+	_check("refermer rend au score sa teinte de repos",
+		_ui.game_over_score.modulate.is_equal_approx(Color.WHITE),
+		str(_ui.game_over_score.modulate))

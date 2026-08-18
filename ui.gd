@@ -369,6 +369,10 @@ var _ready_entries: Array[Button] = []
 var _relance_entries: Array[Button] = []
 ## La respiration V3.1, vivante seulement sur l'écran de fin.
 var _souffle_relance: Tween = null
+## L'annonce du score V3.6. Retenue pour la même raison que la respiration : une
+## animation qui survit à son écran se bat avec la suivante, et c'est la première
+## qui gagne — le score restait teinté du vainqueur précédent.
+var _annonce_score: Tween = null
 
 ## La file visée par l'écran courant. Le grisage des armes en dépend : hors
 ## compétitif le socle entier est offert, en compétitif la sélection du rang.
@@ -4403,6 +4407,11 @@ func show_game_over(winner_id: int) -> void:
 	_respirer_relance(true)
 	_seed_focus(0)
 	_seed_focus(1)
+	# V3.6 — le score ne se contente pas d'être juste, il dit qu'il vient de
+	# changer. Il monte de dix pixels en prenant la couleur de celui qui a gagné,
+	# puis retombe à sa teinte de repos. `game_state` écrit son texte juste après
+	# cet appel : l'animation porte donc bien la ligne définitive.
+	_annoncer_score(winner_id)
 
 	# Fin de MATCH (format BO1). En ligne chaque machine annonce l'issue du point
 	# de vue de son joueur ; en écran partagé les deux joueurs partagent l'écran,
@@ -4413,8 +4422,15 @@ func show_game_over(winner_id: int) -> void:
 		NetworkManager.GameMode.ONLINE_CLIENT: local_idx = 1
 
 	if winner_id == -1:
+		# V3.8 — l'égalité pèse. Gris et non blanc : le blanc est la couleur de ce
+		# qui s'affirme, et une égalité n'affirme rien. Le silence sec qui
+		# l'accompagne fait le reste — le mot arrive dans un vide, au lieu de se
+		# poser sur une musique qui continue comme si de rien n'était.
 		game_over_title.text = "ÉGALITÉ"
-		game_over_title.add_theme_color_override("font_color", Color.WHITE)
+		game_over_title.add_theme_color_override("font_color", COLOR_DIM)
+		var audio := get_node_or_null(^"/root/AudioManager")
+		if audio != null and audio.has_method("silence_sec"):
+			audio.silence_sec(1.0)
 	elif local_idx == -1:
 		game_over_title.text = "JOUEUR 1 GAGNE" if winner_id == 0 else "JOUEUR 2 GAGNE"
 		game_over_title.add_theme_color_override("font_color",
@@ -4512,9 +4528,47 @@ func signaler_adversaire_pret() -> void:
 		tw.tween_property(btn, "self_modulate", Color.WHITE, 0.55) \
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
+## V3.6 — le score de session se remplit au lieu d'apparaître.
+##
+## Une ligne de texte qui change sans bouger ne se lit pas : l'œil est encore sur
+## le verdict. Dix pixels et une teinte suffisent à la faire remarquer — et la
+## teinte dit **qui** vient de marquer, ce que « 3 - 2 » ne dit pas tout seul.
+##
+## Sur `position` et `modulate` du seul libellé de score : aucune des trois
+## propriétés déjà prises sur les entrées de relance n'est touchée.
+func _annoncer_score(winner_id: int) -> void:
+	if game_over_score == null:
+		return
+	# Tuer la précédente AVANT de poser la nouvelle valeur : sans ça, l'ancienne
+	# continue de tirer `modulate` vers le blanc et écrase la teinte qu'on vient
+	# d'écrire. Défaut trouvé par la suite, pas à la lecture.
+	_arreter_annonce_score()
+	var teinte := COLOR_DIM
+	if winner_id == 0:
+		teinte = COLOR_P1
+	elif winner_id == 1:
+		teinte = COLOR_P2
+	var repos := game_over_score.position
+	game_over_score.position = repos + Vector2(0, 10)
+	game_over_score.modulate = teinte
+	_annonce_score = create_tween().set_parallel()
+	_annonce_score.tween_property(game_over_score, "position", repos, 0.45) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_annonce_score.tween_property(game_over_score, "modulate", Color.WHITE, 0.9) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+## Coupe l'annonce en cours et rend au libellé sa teinte de repos.
+func _arreter_annonce_score() -> void:
+	if _annonce_score != null and _annonce_score.is_valid():
+		_annonce_score.kill()
+	_annonce_score = null
+	if game_over_score != null:
+		game_over_score.modulate = Color.WHITE
+
 func hide_game_over() -> void:
 	_is_main_menu = false
 	_respirer_relance(false)
+	_arreter_annonce_score()
 	_eteindre(game_over_panel)
 	# Retour au jeu : le HUD de match reprend sa place.
 	if is_instance_valid(match_hud):

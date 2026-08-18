@@ -3237,11 +3237,20 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   qui est dessiné. Mais l'écran de fin est déjà signé, et en rajouter demande
   d'abord de décider si le verdict manque de quelque chose.
 - **V3.6 Score qui se remplit** — la nouvelle unité de « SESSION : 3 - 2 »
-  glisse avec un son de pion. — *assets : 1 sample.*
+  glisse avec un son de pion. — *assets : 1 sample.* **✅ Fait côté image.** La
+  ligne monte de dix pixels **en prenant la couleur de celui qui vient de
+  marquer**, puis retombe au repos. Le libellé restant un seul `Label`, on ne
+  peut pas teinter un chiffre isolément — et teinter la ligne entière dit
+  mieux la même chose : « 3 - 2 » ne révèle pas **qui** vient de gagner.
 - **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
   menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*
 - **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
-  détente. — *assets : 1 sample.*
+  détente. — *assets : 1 sample.* **✅ Fait** (le soupir attend le sien). Gris et
+  non blanc : le blanc est la couleur de ce qui s'affirme, une égalité n'affirme
+  rien. Le silence sec **coupe le bus musical** plutôt que d'en baisser le
+  volume, et **restitue l'état trouvé** — le bus est déjà coupé quand le joueur a
+  mis la musique à zéro, le rallumer d'office lui rendrait un son qu'il a
+  retiré. Même règle que pour toute propriété partagée.
 - **V3.9 Série de session** — « SÉRIE : 3 » à l'écran de fin, brisée avec un
   bruit de verre. **✅ Fait côté image** (le bruit de verre attend son sample).
   Ce qu'elle apporte que le score n'apportait pas : « 3 - 2 » ne dit pas dans
