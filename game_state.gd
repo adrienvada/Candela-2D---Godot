@@ -1418,8 +1418,9 @@ func _do_end_round(winner_id: int):
 		await get_tree().create_timer(KILL_FREEZE_DURATION, true, false, true).timeout
 		# Rétablir AVANT le test de jeton : une manche relancée pendant le gel
 		# ne doit jamais hériter d'un viewport éteint.
-		vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-		vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		# Rendre ce qui était affiché, et non « les deux » : rallumer d'office
+		# ferait dessiner en ligne la vue que personne ne regarde.
+		_accorder_rendu_aux_vues()
 		if token != _round_token: return
 
 		# V2.2 — le noir gagne. La victime est déjà éteinte par die() ; la
@@ -1644,9 +1645,9 @@ func _clear_kill_stamp() -> void:
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
 	Engine.time_scale = 1.0
-	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé.
-	vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé —
+	# mais on rétablit l'état réel des vues, pas les deux d'office.
+	_accorder_rendu_aux_vues()
 	_clear_kill_stamp()
 	ui.hide_killcam()
 
@@ -2016,6 +2017,30 @@ func _check_rematch_start():
 	elif not p1_ready_for_rematch:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 
+## Une vue cachée ne doit pas RENDRE. C'est la moitié du coût du duel.
+##
+## **Cacher un `SubViewportContainer` ne suspend pas son `SubViewport`** : celui-ci
+## continue de dessiner la scène dans une texture que personne n'affiche. Le
+## `render_target_update_mode` n'était jamais mis à `UPDATE_DISABLED` en dehors du
+## gel du kill (V2.1), et toujours rétabli à `UPDATE_ALWAYS` derrière — donc en
+## ligne comme à l'entraînement, la moitié invisible de l'écran était rendue à
+## chaque image.
+##
+## Ce que ça coûte est mesuré, pas supposé : la décomposition du 2026-08-18 donne
+## **1,52 à 1,60 ms pour le second rendu**, soit la totalité de l'écart entre le
+## duel et un socle sans lui. En écran partagé cette seconde vue est légitime,
+## quelqu'un la regarde. **En ligne et à l'entraînement, personne ne la regarde.**
+##
+## La convergence vaut d'être notée : la cible de cadence vient de la latence EOS,
+## c'est-à-dire du mode **en ligne** — et c'est précisément là que ce coût ne
+## servait à rien.
+func _accorder_rendu_aux_vues() -> void:
+	for vue in [vp1, vp2]:
+		var conteneur := vue.get_parent() as Control
+		var vu := conteneur != null and conteneur.visible
+		vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS if vu \
+			else SubViewport.UPDATE_DISABLED
+
 func _restore_viewports():
 	# L'entraînement passe avant le mode réseau : il tourne en écran partagé du
 	# point de vue du transport — aucun pair, aucune autorité distante — mais un
@@ -2025,6 +2050,7 @@ func _restore_viewports():
 		vp1.get_parent().show()
 		vp2.get_parent().hide()
 		ui.center_line.hide()
+		_accorder_rendu_aux_vues()
 		cam1.zoom = Vector2(1.0, 1.0)
 		cam2.zoom = Vector2(1.0, 1.0)
 		return
@@ -2040,6 +2066,7 @@ func _restore_viewports():
 		vp1.get_parent().hide()
 		vp2.get_parent().show()
 		ui.center_line.hide()
+	_accorder_rendu_aux_vues()
 	cam1.zoom = Vector2(1.0, 1.0)
 	cam2.zoom = Vector2(1.0, 1.0)
 	cam1.global_position = p1.global_position

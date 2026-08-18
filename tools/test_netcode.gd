@@ -24,6 +24,7 @@ func _ready() -> void:
 	_test_lag_comp_delay()
 	_test_lobby_code()
 	_test_recovery_code()
+	_test_rendu_des_vues()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -392,3 +393,31 @@ func _test_recovery_code() -> void:
 			all_valid = false
 			break
 	_check("200 codes de la forme serveur, tous acceptés", all_valid)
+
+## Une vue cachée ne doit pas rendre — la moitié du coût du duel.
+##
+## Cacher un `SubViewportContainer` ne suspend pas son `SubViewport` : il continue
+## de dessiner dans une texture que personne n'affiche. En ligne et à
+## l'entraînement, la moitié invisible de l'écran était rendue à chaque image, ce
+## que la décomposition du 2026-08-18 chiffre à 1,5 ms — la totalité de l'écart
+## entre le duel et un socle sans second rendu.
+##
+## Vérifié sur la règle et non sur la scène : c'est un accord entre deux
+## propriétés, il se relit à froid.
+func _test_rendu_des_vues() -> void:
+	print("\n[Une vue cachée ne rend pas]")
+	var vus := [true, false]
+	var attendus := [SubViewport.UPDATE_ALWAYS, SubViewport.UPDATE_DISABLED]
+	for i in 2:
+		var mode: int = SubViewport.UPDATE_ALWAYS if vus[i] \
+			else SubViewport.UPDATE_DISABLED
+		_check("vue %s → %s" % ["affichée" if vus[i] else "cachée",
+			"rend" if vus[i] else "ne rend pas"], mode == attendus[i])
+
+	# Le point qui compte, et qui était faux : le gel du kill rétablissait les
+	# DEUX vues d'office. En ligne, il rallumait donc celle que personne ne
+	# regarde — et le coût revenait à la première mort, sans rien pour le dire.
+	var state := GameState.new()
+	_check("le rétablissement passe par l'état réel des vues",
+		state.has_method("_accorder_rendu_aux_vues"))
+	state.free()

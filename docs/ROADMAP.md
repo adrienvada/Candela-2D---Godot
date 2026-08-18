@@ -4257,9 +4257,38 @@ shaders du joueur ne se distinguent pas du bruit.**
 **Ce que ça tranche.** L'hypothèse de ce document — « deux `SubViewport` qui
 rendent chacun leurs lumières » — était **juste, et pour la moitié seulement de
 la raison invoquée** : c'est le **second rendu** qui coûte, pas l'éclairage. Une
-torche allumée ne se mesure pas ; un `.gdshader` de joueur non plus. Le levier
-est unique, et c'est **l'écran partagé permanent** — une décision de conception
-du jeu, présente même en ligne, pas un réglage.
+torche allumée ne se mesure pas ; un `.gdshader` de joueur non plus.
+
+**⚠️ Et une phrase de ce document était fausse : « l'écran partagé permanent est
+une décision de conception du jeu ».** Personne ne l'a jamais décidé — c'était une
+description d'architecture (`CLAUDE.md`) transformée en intention par la session
+qui rédigeait, puis présentée à Adrien comme un arbitrage à prendre. **Adrien l'a
+relevée lui-même** : « je ne crois pas que le deuxième écran permanent soit
+l'identité du jeu ».
+
+**En vérifiant, on a trouvé mieux qu'une correction de vocabulaire.** Cacher un
+`SubViewportContainer` **ne suspend pas** son `SubViewport` : `_restore_viewports()`
+appelait `hide()` sur la vue inutile en ligne et à l'entraînement, et celle-ci
+**continuait de dessiner dans une texture que personne n'affiche**. Le
+`render_target_update_mode` n'était mis à `UPDATE_DISABLED` que pendant le gel du
+kill, et rétabli à `UPDATE_ALWAYS` **sur les deux vues** derrière.
+
+C'est **exactement le piège que le banc de décomposition venait d'éviter le même
+jour** (`UPDATE_DISABLED` plutôt que `hide()`), présent dans le jeu lui-même.
+
+**Le levier n'est donc pas l'écran partagé, c'est un rendu inutile :**
+
+- en **écran partagé**, la seconde vue est légitime — quelqu'un la regarde ;
+- **en ligne et à l'entraînement, personne ne la regarde** et elle coûtait
+  pourtant les 1,5 ms mesurés, soit tout l'écart ;
+- et la convergence vaut d'être dite : **la cible de cadence vient de la latence
+  EOS**, donc du mode en ligne — précisément là où ce coût ne servait à rien.
+
+Corrigé : `_accorder_rendu_aux_vues()` accorde le mode de rendu à la visibilité
+réelle, y compris à la sortie du gel du kill — qui rallumait les deux d'office et
+faisait revenir le coût à la première mort, sans rien pour le dire. **Le gain
+reste à mesurer en ligne** : la décomposition a été prise en écran partagé, où
+les deux vues sont légitimes.
 
 **Deux réserves, et la seconde corrige ce qu'on croyait acquis.**
 
