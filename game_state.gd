@@ -1237,7 +1237,15 @@ func _do_end_round(winner_id: int):
 		# process, AVANT le rendu — geler là fige la frame d'avant l'impact
 		# (balle en vol, victime debout). `frame_post_draw` reprend juste après
 		# le draw de la frame qui contient le trait sur-exposé (V2.6).
-		await RenderingServer.frame_post_draw
+		# Sans rendu, ce signal n'est JAMAIS émis : en headless l'attente ne se
+		# résout pas, et toute la séquence de fin reste suspendue — écran de fin
+		# jamais posé, enregistrement jamais arrêté, `_end_sequence_active` collé
+		# à vrai. Le banc `test_online_match` échouait là, et le défaut était
+		# invisible en jeu puisqu'une fenêtre dessine.
+		if DisplayServer.get_name() == "headless":
+			await get_tree().process_frame
+		else:
+			await RenderingServer.frame_post_draw
 		if token != _round_token: return
 		vp1.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		vp2.render_target_update_mode = SubViewport.UPDATE_DISABLED
