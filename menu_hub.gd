@@ -148,6 +148,7 @@ func _build() -> void:
 	style.content_margin_bottom = MenuTheme.GAP_M
 	right.add_theme_stylebox_override("panel", style)
 	columns.add_child(right)
+	_right = right
 
 	# Aligné en haut : un contenu centré verticalement saute d'un écran à l'autre
 	# selon sa hauteur, et le regard doit le rattraper à chaque fois.
@@ -176,6 +177,7 @@ func _build() -> void:
 	_detail_host.add_child(_detail_text)
 
 var _host: Control
+var _right: PanelContainer
 
 ## M6 — l'encre qui écrit l'écran entrant. Vit dans `_host`, donc clippée comme
 ## les colonnes qu'elle balaie.
@@ -437,6 +439,11 @@ func ink() -> MenuInk:
 func noter_geste(btn: Control) -> void:
 	if btn != null and is_instance_valid(btn):
 		_geste_y = btn.get_global_rect().get_center().y
+
+## Le cadre de droite lui-même, pour qui veut poser une matière dessus (M14).
+## Son contenu appartient au hub ; sa surface est une affaire de rendu.
+func right_panel() -> PanelContainer:
+	return _right
 
 func detail_host() -> VBoxContainer:
 	return _detail_host

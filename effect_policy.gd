@@ -146,6 +146,12 @@ const EFFECTS := {
 		"nom": "Les squelettes de lumière",
 		"phrase": "Un tableau qui attend le réseau montre des barres balayées par une lueur, au lieu d'un texte figé.",
 	},
+	"verre_panneaux": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le verre fumé",
+		"phrase": "Le cadre de droite et les rangées de réglage prennent une matière de vitre. Le texte reste net.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

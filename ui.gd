@@ -272,6 +272,7 @@ var menu_tracer: MenuTracer
 var menu_backdrop: MenuBackdrop
 var menu_title: MenuTitle
 var menu_veil: MenuVeil
+var menu_glass: MenuGlass
 var pause_veil: MenuVeil
 
 ## Vrai tant que l'écran de calibration est affiché.
@@ -1770,6 +1771,14 @@ func _build_menu() -> void:
 	add_child(menu_backdrop)
 	menu_backdrop.adopter(backdrop)
 
+	# M14 — la matière des surfaces qu'on manipule. Posé après `_build_hub_screens()`,
+	# qui a construit les rangées de réglage : vitrer avant reviendrait à parcourir
+	# un arbre vide.
+	menu_glass = MenuGlass.new()
+	add_child(menu_glass)
+	menu_glass.vitrer(hub.right_panel())
+	menu_glass.vitrer_rangees(hub)
+
 	# M15 — le voile passe APRÈS tout ce qu'il filme, donc en dernier dans le
 	# panneau. Il y reste, plutôt que de monter au niveau des curseurs : un liseré
 	# de sélection grainé serait moins net, et la netteté du curseur est de
@@ -1782,12 +1791,17 @@ func _build_menu() -> void:
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
 	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
 	# maintenant, et à chaque fois que le joueur la change.
-	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
-		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
-				"regard_du_noir", "passant_vitre", "encre_coulee",
-				"gravure_code", "depart_au_tir", "extinction_menu",
-				"brume_menu", "bruit_de_l_oeil", "titre_vivant", "voile_menu"]:
-			_apply_menu_effects()
+	# Sans filtre sur la clé, et c'est délibéré depuis la quatorzième entrée.
+	#
+	# Il y avait ici la liste des effets de la vitrine, à tenir d'accord avec
+	# `_apply_menu_effects()`. Une liste de clés recopiée est un endroit où le
+	# prochain effet manquera — et il manquera SANS RIEN CASSER : le réglage
+	# n'aurait simplement pas d'effet tant qu'on ne quitte pas l'écran, ce qui
+	# ressemble trait pour trait à un curseur qui ne pilote rien. Tout réappliquer
+	# coûte une quinzaine d'affectations d'uniformes, à l'instant où un humain
+	# bouge un curseur : c'est gratuit, et ça ne peut plus diverger.
+	GameSettings.effect_changed.connect(func(_id: String, _v: float) -> void:
+		_apply_menu_effects()
 	)
 	_apply_menu_effects()
 
@@ -2292,6 +2306,8 @@ func _apply_menu_effects() -> void:
 		host_ip_engraver.set_intensite(gravure)
 	if menu_title != null:
 		menu_title.set_intensite(_intensite_vitrine("titre_vivant"))
+	if menu_glass != null:
+		menu_glass.set_intensite(_intensite_vitrine("verre_panneaux"))
 	var voile := _intensite_vitrine("voile_menu")
 	if menu_veil != null:
 		menu_veil.set_intensite(voile)

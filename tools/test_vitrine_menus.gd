@@ -14,6 +14,17 @@ extends SceneTree
 
 var _failures: int = 0
 
+## Budget d'attente d'une animation, en millisecondes.
+##
+## **On attend une CONDITION, jamais un nombre d'images.** Une boucle de quarante
+## `process_frame` mesure la machine, pas le code : en headless la cadence n'est
+## pas plafonnée, et quarante images valent une demi-seconde sur un poste calme
+## comme quarante millisecondes juste après vingt-trois autres lancements. Cette
+## suite a passé au vert seule et rouge dans le lot pour cette seule raison, le
+## 2026-08-18 — la même famille de défaut que le tampon de killcam dimensionné en
+## images.
+const BUDGET_MS := 4000
+
 func _init() -> void:
 	print("=== Test de la vitrine des menus (vague M) ===")
 	_run.call_deferred()
@@ -30,6 +41,7 @@ func _run() -> void:
 	_test_titre()
 	_test_voile()
 	await _test_squelettes()
+	await _test_verre()
 	await _test_extinction()
 	await _test_extinction_lisible()
 	await _test_calibration()
@@ -466,6 +478,68 @@ func _test_squelettes() -> void:
 
 	cadre.free()
 
+## M14 — le verre fumé, et surtout ce qu'il ne vitre PAS.
+func _test_verre() -> void:
+	print("\n[Le verre fumé]")
+	var g := MenuGlass.new()
+	root.add_child(g)
+
+	var cadre := PanelContainer.new()
+	cadre.size = Vector2(500, 600)
+	root.add_child(cadre)
+	g.vitrer(cadre)
+	var mat: ShaderMaterial = cadre.material
+	_check("la surface reçoit le matériau",
+		mat != null and mat.shader == MenuGlass.SHADER)
+	_check("avec sa taille", (mat.get_shader_parameter("taille") as Vector2) == cadre.size,
+		str(mat.get_shader_parameter("taille")))
+	# Une surface vitrée deux fois aurait deux matériaux, donc deux tailles à
+	# tenir d'accord, et un seul des deux serait mis à jour.
+	g.vitrer(cadre)
+	_check("vitrer deux fois ne change rien", cadre.material == mat)
+
+	# Le focus d'une rangée vient du CURSEUR qu'elle contient : elle-même n'est
+	# pas focalisable. Le brancher à la main sur chaque écran aurait fini par
+	# manquer sur le prochain.
+	var rangee := PanelContainer.new()
+	rangee.name = "Row_essai"
+	var boite := VBoxContainer.new()
+	rangee.add_child(boite)
+	var curseur := HSlider.new()
+	boite.add_child(curseur)
+	var muette := PanelContainer.new()
+	muette.name = "Ligne_1"
+	var arbre := VBoxContainer.new()
+	arbre.add_child(rangee)
+	arbre.add_child(muette)
+	root.add_child(arbre)
+
+	g.vitrer_rangees(arbre)
+	_check("une rangée de réglage est vitrée", rangee.material is ShaderMaterial)
+	# LE point de l'effet : un effet de matière se pose sur ce qu'on MANIPULE,
+	# pas sur ce qu'on LIT. Une ligne de classement porte des données, et une
+	# luisance sur un chiffre est un coût de lisibilité pour un gain décoratif.
+	_check("une ligne de données ne l'est pas", muette.material == null)
+
+	var mr: ShaderMaterial = rangee.material
+	_check("au repos, aucune lueur d'arête",
+		is_zero_approx(float(mr.get_shader_parameter("focus"))))
+	curseur.focus_entered.emit()
+	_check("le focus du curseur allume l'arête de sa rangée",
+		is_equal_approx(float(mr.get_shader_parameter("focus")), 1.0))
+	curseur.focus_exited.emit()
+	_check("et la rend au repos en sortant",
+		is_zero_approx(float(mr.get_shader_parameter("focus"))))
+
+	g.set_intensite(0.0)
+	_check("à zéro, toutes les surfaces sont rendues telles quelles",
+		is_zero_approx(float(mat.get_shader_parameter("intensite")))
+		and is_zero_approx(float(mr.get_shader_parameter("intensite"))))
+
+	cadre.free()
+	arbre.free()
+	g.free()
+
 ## Les deux instants où M10 passait pour un défaut d'affichage.
 ##
 ## Relevé par Adrien à l'usage : « on pourrait croire à des bugs d'affichage ».
@@ -498,14 +572,18 @@ func _test_extinction_lisible() -> void:
 
 	ui._allumer(menu)
 	var trahison := 0.0
-	for _i in 40:
+	var fin := Time.get_ticks_msec() + BUDGET_MS
+	while Time.get_ticks_msec() < fin:
 		var couverture := rideau.color.a / nuit
-		var vive := 0.0
+		var vive := 2.0
 		for s in surfaces:
-			vive = maxf(vive, (s as Control).modulate.r)
-		# L'arène se voit encore tant que le rideau n'est pas majoritairement là.
-		if couverture < 0.6:
-			trahison = maxf(trahison, vive)
+			var v: float = (s as Control).modulate.r
+			# L'arène se voit encore tant que le rideau n'est pas majoritairement là.
+			if couverture < 0.6:
+				trahison = maxf(trahison, v)
+			vive = minf(vive, v)
+		if vive >= 0.99:
+			break
 		await process_frame
 	_check("rien ne s'allume tant que l'arène se voit", is_zero_approx(trahison),
 		"%.3f de luminance en trop" % trahison)
@@ -517,12 +595,13 @@ func _test_extinction_lisible() -> void:
 
 	ui._eteindre(menu)
 	var noir := 0
-	for _i in 30:
+	fin = Time.get_ticks_msec() + BUDGET_MS
+	while menu.visible and Time.get_ticks_msec() < fin:
 		var couverture := rideau.color.a / nuit
 		var vive := 0.0
 		for s in surfaces:
 			vive = maxf(vive, (s as Control).modulate.r)
-		if menu.visible and couverture > 0.9 and vive < 0.02:
+		if couverture > 0.9 and vive < 0.02:
 			noir += 1
 		await process_frame
 	_check("aucune image d'écran entièrement noir", noir == 0, "%d images" % noir)
@@ -612,7 +691,7 @@ func _test_calibration() -> void:
 	var effets := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
 		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil",
-		"titre_vivant", "voile_menu", "balayage_attente"]
+		"titre_vivant", "voile_menu", "balayage_attente", "verre_panneaux"]
 
 	var hors_mesure := true
 	for cle in effets:
@@ -746,9 +825,17 @@ func _test_extinction() -> void:
 ## réglage qui marche.
 func _test_lignes_de_politique() -> void:
 	print("\n[Les réglages de la vitrine]")
+	# **Les quinze, sans exception.** Cette liste a perdu quatre entrées le
+	# 2026-08-18 en passant de main en main entre deux sessions, et rien ne l'a
+	# signalé : un effet non listé ne fait pas échouer un test, il se contente de
+	# ne plus être vérifié. D'où le contrôle de compte juste en dessous, qui lui
+	# se plaint quand la liste décroche de la table.
 	var attendues := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
-		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil"]
+		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil",
+		"titre_vivant", "voile_menu", "balayage_attente", "verre_panneaux"]
+	_check("la vitrine compte bien quinze effets", attendues.size() == 15,
+		str(attendues.size()))
 	for cle in attendues:
 		var ligne: Variant = EffectPolicy.EFFECTS.get(cle, null)
 		if not ligne is Dictionary:

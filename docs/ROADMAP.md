@@ -2206,6 +2206,20 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
+
+En headless la cadence n'est pas plafonnée : quarante `process_frame` valent une
+demi-seconde sur un poste calme et quarante millisecondes juste après vingt
+autres lancements. `test_vitrine_menus` a passé **au vert seule et au rouge dans
+le lot** pour cette seule raison, ce qui coûte cher à diagnostiquer puisque la
+suite accusée se disculpe dès qu'on la relance — et que la consigne de
+cohabitation dit justement de la relancer seule avant de conclure.
+
+Attendre une **condition**, avec un budget en millisecondes
+(`Time.get_ticks_msec()`), jamais un compte d'images. Même famille que le tampon
+de killcam dimensionné en images, plus bas : dès qu'une durée compte, la compter
+en images est faux.
+
 ### Le libellé d'une entrée de menu n'est pas dans `Button.text` (2026-08-18)
 
 `MenuHub.make_entry()` pose le libellé dans un `Label` **enfant**, à côté du
@@ -3025,16 +3039,17 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 14 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : LES QUINZE SONT LIVRÉS.** M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
 > M5 le bruit de l'œil, M6 l'encre coulée, M7 le code gravé, M8 le départ au
 > tir, M9 la torche du curseur, M10 l'extinction des feux, M11 le titre
-> incandescent, M12 la brume d'abysse, M13 les squelettes de lumière, M15 le
-> voile d'objectif. Chacun dans son fichier (`menu_gnomon.gd`,
-> `menu_after_image.gd`, `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`,
-> `menu_ink.gd`, `menu_engraver.gd`, `menu_tracer.gd`, `menu_backdrop.gd`,
-> `menu_title.gd`, `menu_veil.gd`, `menu_skeleton.gd`, avec leurs quatre
-> `.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
+> incandescent, M12 la brume d'abysse, M13 les squelettes de lumière, M14 le
+> verre fumé, M15 le voile d'objectif. Chacun dans son fichier
+> (`menu_gnomon.gd`, `menu_after_image.gd`, `menu_torch.gd`, `menu_watcher.gd`,
+> `menu_passerby.gd`, `menu_ink.gd`, `menu_engraver.gd`, `menu_tracer.gd`,
+> `menu_backdrop.gd`, `menu_title.gd`, `menu_veil.gd`, `menu_skeleton.gd`,
+> `menu_glass.gd`, avec leurs cinq `.gdshader`) plutôt que dans un `ui.gd` de
+> trois mille lignes —
 > **sauf M10, qui n'a pas de nœud à lui** : il vit dans les chemins show/hide des
 > deux panneaux, et c'est le seul endroit où il puisse vivre. Chacun avec sa
 > ligne d'`effect_policy` **lue dans les deux sens** :
@@ -3042,10 +3057,14 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
 > ressemble trait pour trait à un réglage qui marche.
 >
-> Reste **M14 le verre fumé** — les `PanelContainer` du hub et des rangées de
-> réglage. Aucun asset. En attente que la session « menus » finisse son audit du
-> cadre de droite : y poser un matériau avant qu'elle ait fini reviendrait à
-> décorer des panneaux qui vont encore bouger.
+> **Un seul étage de M14 est pris.** Sa fiche en prévoyait deux : l'étage sûr
+> (filet, luisance, strie, lueur d'arête au focus — tout en ALU, coût nul) et un
+> étage « flou réel » où la brume apparaîtrait défocalisée derrière le seul cadre
+> de droite, par gaussienne 9 taps sur `screen_texture`. Le second **n'est pas
+> pris**, et sa propre fiche disait pourquoi : « à valider au `bench_framerate`
+> (cible 1 % bas ≥ 120 fps) avant d'être gardé ». Le prendre sans cette mesure
+> serait ajouter une copie d'écran par image sur la foi d'une intuition. À
+> reprendre le jour où quelqu'un lance le banc.
 >
 > **M5 et M12 sont fusionnés dans un seul matériau**, comme leurs fiches le
 > prévoyaient : ils vivent sur le même quad — l'aplat de fond — et un second
@@ -3099,6 +3118,19 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > caractère — un scintillement par lettre, pas une vague. La phase se prend sur
 > `VERTEX.x`, continu d'un bout à l'autre du mot, normalisé par une largeur que
 > le shader ne peut pas connaître et qu'on lui pousse au redimensionnement.
+>
+> **M14 ne vitre pas ce qu'on lit.** Le cadre de droite et les rangées de
+> réglage, rien d'autre — en particulier pas les lignes du classement. Une
+> luisance sur un chiffre est un coût de lisibilité pour un gain purement
+> décoratif : un effet de matière se pose sur ce qu'on **manipule**, pas sur ce
+> qu'on **lit**. Ce qui rend l'effet gratuit en lisibilité, par ailleurs, est que
+> le matériau d'un `Control` ne peint que **son propre dessin** — sa `StyleBox` —
+> et ne descend pas dans ses enfants : le texte reste net sans qu'on ait rien à
+> faire pour lui.
+>
+> Même piège que sur le titre, même parade : une `StyleBoxFlat` à coins arrondis
+> n'est pas un quad, Godot la découpe, et `UV` n'y couvre pas proprement le
+> rectangle. La position vient de `VERTEX`.
 >
 > **M13 ne paraît que dans UN état, et ce n'est pas celui que sa fiche laissait
 > croire.** Les barres fantômes attendaient « pendant que le classement attend le
