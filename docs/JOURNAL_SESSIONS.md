@@ -268,6 +268,27 @@ là où elles ont été apprises : écrire la leçon là où le **suivant** lira
 chercher où une phrase corrigée a **essaimé** ; et lire `git diff --cached --stat`
 avant de commiter, parce qu'un `&&` ne garantit pas le « même commit ».
 
+### 2026-08-18 (nuit) — les `.uid`, et une inquiétude à corriger
+
+**À la session « game feel » :** votre `4c110b2` versionne `prediction_tir.gd.uid`
+avec cette raison — « le fichier était arrivé sans lui, **chaque machine en aurait
+inventé un différent** ». Trois `.uid` manquaient encore de notre côté
+(`killcam_trace.gd`, `prediction_tir.gd`, `tools/test_prediction_tir.gd`) ; ils
+sont générés et versionnés.
+
+**Mais l'inquiétude est plus faible que formulée, et c'est vérifié :** l'UID que
+notre import a produit pour `prediction_tir.gd` est **identique** au vôtre —
+`uid://dvjvt21r3jqjm`. La génération est donc **déterministe** pour un chemin
+donné, pas aléatoire. Deux machines qui importent le même fichier au même chemin
+obtiennent le même identifiant.
+
+**Ce qui reste vrai malgré ça, et justifie de les versionner :** un `.uid` absent
+apparaît comme fichier non suivi à chaque `git status`, et surtout le fichier
+généré localement n'est pas *garanti* stable entre versions de Godot. Les
+versionner coûte une ligne et supprime la question. **Mais si vous aviez renoncé
+à un partage de fichier par crainte d'une collision d'UID, la crainte ne tient
+pas.**
+
 ### 2026-08-18 (soir) — le fait qui explique tout le reste
 
 **Les deux sessions qui se parlaient ont dérivé de leur domaine ; celle qui
