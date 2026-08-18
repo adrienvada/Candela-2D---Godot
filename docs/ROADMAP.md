@@ -2829,23 +2829,31 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 9 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : 11 sur 15 livrés** — M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
-> M6 l'encre coulée, M7 le code gravé, M8 le départ au tir, M9 la torche du
-> curseur, M10 l'extinction des feux. Chacun dans son fichier (`menu_gnomon.gd`,
-> `menu_after_image.gd`, `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`,
-> `menu_ink.gd`, `menu_engraver.gd`, `menu_tracer.gd`) plutôt que dans un `ui.gd`
-> de trois mille lignes — **sauf M10, qui n'a pas de nœud à lui** : il vit dans
-> les chemins show/hide des deux panneaux, et c'est le seul endroit où il puisse
-> vivre. Chacun avec sa ligne d'`effect_policy` **lue dans les deux sens** :
+> M5 le bruit de l'œil, M6 l'encre coulée, M7 le code gravé, M8 le départ au
+> tir, M9 la torche du curseur, M10 l'extinction des feux, M12 la brume
+> d'abysse. Chacun dans son fichier (`menu_gnomon.gd`, `menu_after_image.gd`,
+> `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`,
+> `menu_engraver.gd`, `menu_tracer.gd`, `menu_backdrop.gd` +
+> `menu_backdrop.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
+> **sauf M10, qui n'a pas de nœud à lui** : il vit dans les chemins show/hide des
+> deux panneaux, et c'est le seul endroit où il puisse vivre. Chacun avec sa
+> ligne d'`effect_policy` **lue dans les deux sens** :
 > l'intensité mémorisée s'applique à la construction et à chaque changement. Une
 > ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
 > ressemble trait pour trait à un réglage qui marche.
 >
-> Les six autres suivent par lots. Aucun ne demande d'asset. **Cinq des six
-> (M5, M11, M12, M14, M15) demandent un shader** : ils seront groupés, c'est le
-> sous-ensemble qui demande le plus de précaution sous `gl_compatibility`. Reste
-> M13, les squelettes de lumière, seul effet restant sans shader.
+> Les quatre autres : M11 le titre incandescent, M13 les squelettes de lumière,
+> M14 le verre fumé, M15 le voile d'objectif. Aucun ne demande d'asset.
+>
+> **M5 et M12 sont fusionnés dans un seul matériau**, comme leurs fiches le
+> prévoyaient : ils vivent sur le même quad — l'aplat de fond — et un second
+> matériau plein écran aurait doublé le coût pour dessiner au même endroit. Le
+> menu et la pause partagent ce matériau : ils ne sont jamais visibles ensemble,
+> ils couvrent le même cadre, et deux matériaux auraient demandé de pousser
+> chaque uniforme deux fois — donc, un jour, de les pousser une fois. 100 % ALU,
+> zéro lecture de texture, `gl_compatibility` sans réserve.
 >
 > **Les livrés partagent une fiction et c'est voulu** : une flamme éclaire ce
 > menu depuis quelque part. Elle projette l'ombre du titre (M1), on la porte à la
@@ -2872,6 +2880,16 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > surtout des **retours à l'état sain** : arrêt en pleine coulée, extinction en
 > pleine coulée, seconde coulée qui en chevauche une première. Trois chemins,
 > trois façons de laisser une entrée dans le noir.
+>
+> **Le garde-fou de la calibration, arrivé avec M5 et rétroactif sur tous les
+> autres.** C'est le seul point de la vitrine qui ne soit pas une question de
+> goût. Le joueur règle son point de noir sur un champ mesuré ; trois centièmes
+> de luminance parasite décaleraient ce réglage — pour lui, et donc pour tous
+> ceux qui calibrent de la même façon. Les onze effets passent désormais par
+> `_intensite_vitrine()`, qui rend zéro sur cet écran. **Le garde-fou est à ce
+> seul endroit** plutôt que répété dans chaque effet, où il finirait par manquer
+> au douzième. Il manquait à M9 depuis sa livraison, alors que sa fiche le
+> demandait : c'est en écrivant M5 qu'on l'a vu.
 >
 > **Le contrat que M10 a fallu inventer, et qu'aucune fiche n'avait vu.** Le
 > panneau ne disparaît plus d'un coup : il se noie dans le noir avant que le

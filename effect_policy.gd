@@ -116,6 +116,18 @@ const EFFECTS := {
 		"nom": "Le départ au tir",
 		"phrase": "Lancer une partie tire une traçante dans le menu. N'apparaît que sur le bouton qui engage.",
 	},
+	"brume_menu": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "La brume d'abysse",
+		"phrase": "Le fond des menus devient une pénombre qui bouge, et glisse un peu à l'opposé du curseur.",
+	},
+	"bruit_de_l_oeil": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le bruit de l'œil",
+		"phrase": "Une granulation fourmille à la lisière de la lumière du curseur, comme un œil qui force dans le noir.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

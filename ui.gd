@@ -256,6 +256,15 @@ var menu_torch: MenuTorch
 var menu_watcher: MenuWatcher
 var menu_passerby: MenuPasserby
 var menu_tracer: MenuTracer
+var menu_backdrop: MenuBackdrop
+
+## Vrai tant que l'écran de calibration est affiché.
+##
+## **Aucun effet de la vitrine n'y ajoute de lumière.** Le joueur y règle son
+## point de noir sur un champ mesuré ; trois centièmes de luminance parasite
+## décaleraient ce réglage — pour lui, et donc pour tous ceux qui calibrent de la
+## même façon. Ce n'est pas une question d'esthétique, c'est la mesure.
+var _calibration := false
 
 ## M10 — panneaux en cours d'extinction, et le tween qui les éteint.
 ##
@@ -1011,9 +1020,18 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 
 	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
 	# curseur est un signe de vie, et c'est le même signe pour les deux.
+	var centre := control.get_global_rect().get_center()
 	if menu_torch != null:
-		menu_torch.viser(player, control.get_global_rect().get_center(),
-			COLOR_P1 if player == 0 else COLOR_P2)
+		menu_torch.viser(player, centre, COLOR_P1 if player == 0 else COLOR_P2)
+	# M5 borde la lumière de M9 : il lui faut donc SON rayon, pas un autre. Le
+	# déduire ailleurs décrocherait le grain du halo qu'il est censé ourler.
+	if menu_backdrop != null:
+		# `ui.gd` est un CanvasLayer : il n'a pas de rect à lui, il faut demander
+		# la vue.
+		var vue := get_viewport()
+		if vue != null:
+			menu_backdrop.viser(player, centre, MenuTorch.RAYON,
+				vue.get_visible_rect().size)
 	if menu_watcher != null:
 		menu_watcher.reveiller()
 
@@ -1729,6 +1747,13 @@ func _build_menu() -> void:
 	menu_tracer = MenuTracer.new()
 	add_child(menu_tracer)
 
+	# M12 + M5 — la brume et le bruit de l'œil vivent dans le matériau du fond,
+	# pas dans un nœud qui dessine. Ce porteur ne fait qu'amortir la parallaxe,
+	# seul morceau que le GPU ne peut pas tenir tout seul.
+	menu_backdrop = MenuBackdrop.new()
+	add_child(menu_backdrop)
+	menu_backdrop.adopter(backdrop)
+
 	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
 	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
@@ -1736,7 +1761,8 @@ func _build_menu() -> void:
 	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
 		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
 				"regard_du_noir", "passant_vitre", "encre_coulee",
-				"gravure_code", "depart_au_tir", "extinction_menu"]:
+				"gravure_code", "depart_au_tir", "extinction_menu",
+				"brume_menu", "bruit_de_l_oeil"]:
 			_apply_menu_effects()
 	)
 	_apply_menu_effects()
@@ -2222,28 +2248,48 @@ func _refresh_player_list() -> void:
 ## rien à imposer ici, et `false` est la bonne réponse — pas une simplification.
 func _apply_menu_effects() -> void:
 	if menu_gnomon != null:
-		menu_gnomon.set_intensite(GameSettings.effective_effect("cadran_titre", false))
+		menu_gnomon.set_intensite(_intensite_vitrine("cadran_titre"))
 	if menu_after_image != null:
-		menu_after_image.set_intensite(
-			GameSettings.effective_effect("remanence_curseur", false))
+		menu_after_image.set_intensite(_intensite_vitrine("remanence_curseur"))
 	if menu_torch != null:
-		menu_torch.set_intensite(GameSettings.effective_effect("torche_menu", false))
+		menu_torch.set_intensite(_intensite_vitrine("torche_menu"))
 	if menu_watcher != null:
-		menu_watcher.set_intensite(GameSettings.effective_effect("regard_du_noir", false))
+		menu_watcher.set_intensite(_intensite_vitrine("regard_du_noir"))
 	if menu_passerby != null:
-		menu_passerby.set_intensite(GameSettings.effective_effect("passant_vitre", false))
+		menu_passerby.set_intensite(_intensite_vitrine("passant_vitre"))
 	if menu_tracer != null:
-		menu_tracer.set_intensite(GameSettings.effective_effect("depart_au_tir", false))
+		menu_tracer.set_intensite(_intensite_vitrine("depart_au_tir"))
 	if hub != null and hub.ink() != null:
-		hub.ink().set_intensite(GameSettings.effective_effect("encre_coulee", false))
-	var gravure := GameSettings.effective_effect("gravure_code", false)
+		hub.ink().set_intensite(_intensite_vitrine("encre_coulee"))
+	var gravure := _intensite_vitrine("gravure_code")
 	if lobby_code_engraver != null:
 		lobby_code_engraver.set_intensite(gravure)
 	if host_ip_engraver != null:
 		host_ip_engraver.set_intensite(gravure)
+	if menu_backdrop != null:
+		menu_backdrop.set_brume(_intensite_vitrine("brume_menu"))
+		menu_backdrop.set_bruit(_intensite_vitrine("bruit_de_l_oeil"))
 	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
 	# panneaux, et son intensité est donc une simple valeur retenue ici.
-	_m10 = GameSettings.effective_effect("extinction_menu", false)
+	_m10 = _intensite_vitrine("extinction_menu")
+
+## L'intensité réelle d'un effet de la vitrine, ici et maintenant.
+##
+## Deux choses s'y ajoutent au réglage du joueur, et elles ne sont pas du même
+## ordre :
+##
+## - **Les menus ne sont jamais classés.** Le plancher de la politique n'a donc
+##   rien à imposer ici, et `false` est la bonne réponse — pas une simplification.
+## - **L'écran de calibration éteint tout.** Voir `_calibration` : le joueur y
+##   règle son point de noir sur un champ mesuré, et la moindre lumière ajoutée
+##   fausserait la mesure. Ce n'est pas un choix de goût, et c'est pour cette
+##   raison que le garde-fou est ici — au seul endroit par lequel passent les
+##   onze effets — plutôt que répété dans chacun d'eux, où il finirait par
+##   manquer au douzième.
+func _intensite_vitrine(cle: String) -> float:
+	if _calibration:
+		return 0.0
+	return GameSettings.effective_effect(cle, false)
 
 # ===========================================================================
 # M10 — L'EXTINCTION DES FEUX
@@ -2591,6 +2637,12 @@ func _on_hub_detail_changed(_title: String, text: String) -> void:
 	game_over_score.text = propre
 
 func _on_hub_screen_changed(id: String) -> void:
+	# Voir `_calibration` : on entre ou on sort du champ de mesure, et tous les
+	# effets de la vitrine s'éteignent ou se rallument d'un bloc.
+	var mesure := id == SCREEN_CALIBRATION
+	if mesure != _calibration:
+		_calibration = mesure
+		_apply_menu_effects()
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
 		screen.refresh()
@@ -3264,6 +3316,10 @@ func _build_pause_menu() -> void:
 	backdrop.color = Color(0.01, 0.012, 0.02, 0.88)
 	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	pause_panel.add_child(backdrop)
+	# Le même matériau que le menu : les deux fonds ne sont jamais visibles
+	# ensemble et couvrent le même cadre.
+	if menu_backdrop != null:
+		menu_backdrop.adopter(backdrop)
 
 	var center := CenterContainer.new()
 	pause_panel.add_child(center)

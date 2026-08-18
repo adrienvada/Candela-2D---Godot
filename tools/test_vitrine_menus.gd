@@ -26,7 +26,9 @@ func _run() -> void:
 	_test_encre_depart()
 	_test_tracante()
 	_test_gravure()
+	_test_fond()
 	await _test_extinction()
+	await _test_calibration()
 	_test_lignes_de_politique()
 
 	if _failures == 0:
@@ -300,6 +302,115 @@ func _test_gravure() -> void:
 		cases_ip.get_child_count() == 9, str(cases_ip.get_child_count()))
 	ip.free()
 
+## M12 + M5 — la brume d'abysse et le bruit de l'œil, dans un seul matériau.
+func _test_fond() -> void:
+	print("\n[Le fond des menus]")
+	var f := MenuBackdrop.new()
+	root.add_child(f)
+	var rect := ColorRect.new()
+	root.add_child(rect)
+
+	f.adopter(rect)
+	_check("l'aplat reçoit le matériau", rect.material is ShaderMaterial)
+	var mat: ShaderMaterial = rect.material
+	_check("et c'est bien le shader de fond", mat.shader == MenuBackdrop.SHADER)
+
+	f.set_brume(1.0)
+	f.set_bruit(1.0)
+	f.viser(0, Vector2(640, 360), 250.0, Vector2(1280, 720))
+	var t1: Vector4 = mat.get_shader_parameter("torche_p1")
+	_check("la torche est posée en UV", is_equal_approx(t1.x, 0.5)
+		and is_equal_approx(t1.y, 0.5), str(t1))
+	# Le rayon vit dans l'espace normalisé en HAUTEUR : c'est ce qui rend les
+	# anneaux ronds quel que soit le format de la fenêtre.
+	_check("et son rayon est normalisé sur la hauteur",
+		is_equal_approx(t1.w, 250.0 / 720.0), str(t1.w))
+	_check("le format est transmis",
+		is_equal_approx(float(mat.get_shader_parameter("ratio")), 1280.0 / 720.0))
+
+	# Le décor glisse à l'OPPOSÉ du curseur : dans le même sens, tout partirait
+	# d'un bloc et le relief disparaîtrait.
+	f.viser(0, Vector2(1280, 360), 250.0, Vector2(1280, 720))
+	_check("un curseur à droite pousse le décor à gauche", f._cible.x < 0.0,
+		str(f._cible))
+	_check("et le rattrapage se met en marche", f.is_processing())
+
+	# Coût nul au repos, la règle commune de la vitrine.
+	var tours := 0
+	while f.is_processing() and tours < 600:
+		f._process(0.016)
+		tours += 1
+	_check("la parallaxe se pose et cesse de tourner", not f.is_processing(),
+		"%d images" % tours)
+	_check("posée exactement sur sa cible", f._parallaxe == f._cible)
+
+	f.viser(0, null, 250.0, Vector2(1280, 720))
+	var eteinte: Vector4 = mat.get_shader_parameter("torche_p1")
+	_check("une torche éteinte a un rayon nul", is_zero_approx(eteinte.w))
+
+	# À zéro, l'aplat statique d'avant l'effet — parallaxe comprise : c'est le
+	# décor qui glissait, pas le panneau.
+	f.viser(0, Vector2(1280, 360), 250.0, Vector2(1280, 720))
+	f.set_brume(0.0)
+	_check("brume à zéro : plus de parallaxe", f._parallaxe == Vector2.ZERO
+		and not f.is_processing())
+	_check("et le shader le sait",
+		is_zero_approx(float(mat.get_shader_parameter("intensite_brume"))))
+
+	rect.free()
+	f.free()
+
+## Le garde-fou de la calibration, et c'est le seul de la vitrine qui ne soit pas
+## une question de goût.
+##
+## Le joueur y règle son point de noir sur un champ mesuré. Trois centièmes de
+## luminance parasite décaleraient ce réglage — pour lui, et donc pour tous ceux
+## qui calibrent de la même façon. Le garde-fou est au seul endroit par lequel
+## passent les onze effets, plutôt que répété dans chacun, où il finirait par
+## manquer au douzième.
+func _test_calibration() -> void:
+	print("\n[L'écran de mesure]")
+	var ui: Node = (load("res://ui.tscn") as PackedScene).instantiate()
+	ui.name = "UI2"
+	root.add_child(ui)
+	await process_frame
+
+	if not ui.has_method("_intensite_vitrine"):
+		_check("le harnais atteint _intensite_vitrine()", false)
+		ui.queue_free()
+		return
+
+	var effets := ["cadran_titre", "remanence_curseur", "torche_menu",
+		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
+		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil"]
+
+	var hors_mesure := true
+	for cle in effets:
+		if float(ui._intensite_vitrine(cle)) <= 0.0:
+			hors_mesure = false
+	_check("hors calibration, les onze effets vivent", hors_mesure)
+
+	ui._on_hub_screen_changed("calibration")
+	var eteints := true
+	for cle in effets:
+		if float(ui._intensite_vitrine(cle)) != 0.0:
+			eteints = false
+			_check("  %s éteint sur le champ de mesure" % cle, false)
+	_check("sur la calibration, les onze s'éteignent", eteints)
+	# Et pas seulement en théorie : les nœuds ont reçu l'ordre.
+	_check("la torche est réellement coupée",
+		is_zero_approx(float(ui.menu_torch.get("_intensite"))))
+	_check("la brume aussi",
+		is_zero_approx(float(ui.menu_backdrop.get("_brume"))))
+
+	ui._on_hub_screen_changed("accueil")
+	_check("en sortant, tout se rallume",
+		float(ui._intensite_vitrine("torche_menu")) > 0.0
+		and float(ui.menu_torch.get("_intensite")) > 0.0)
+
+	ui.queue_free()
+	await process_frame
+
 ## M10 — l'extinction des feux.
 ##
 ## Le test qui compte est **le contrat de la reprise** : pendant le fondu de
@@ -394,7 +505,7 @@ func _test_lignes_de_politique() -> void:
 	print("\n[Les réglages de la vitrine]")
 	var attendues := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
-		"depart_au_tir", "extinction_menu"]
+		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil"]
 	for cle in attendues:
 		var ligne: Variant = EffectPolicy.EFFECTS.get(cle, null)
 		if not ligne is Dictionary:
