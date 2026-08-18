@@ -4194,6 +4194,40 @@ quelques allocations par seconde — il ne peut pas produire un plancher aussi
 régulier. Il restait le premier suspect tant qu'on croyait à des pics ; le relevé
 honnête l'écarte.
 
+### Relevé des MENUS — 2026-08-18, banc corrigé, `--menus`
+
+```
+Images mesurées     : 3112 en 15,0 s
+FPS moyen           : 207        FPS médian : 200
+FPS 1 % bas         : 163        Image la plus lente : 14,5 ms (69 fps)
+Particules (pic)    : 0 / 200    Verdict 120 fps : TENU
+```
+
+**Les deux charges du jeu sont sans commune mesure**, et c'est la première fois
+qu'on peut le dire : 200 fps de médiane dans les menus contre 132 dans le duel,
+un 1 % bas 43 fps au-dessus de la cible contre 23 en dessous. Zéro particule et
+zéro balle confirment que la charge mesurée est bien la vitrine seule.
+
+**Conséquence de méthode : un verdict unique aurait été faux dans les deux
+sens.** Traiter les deux moments du jeu comme une seule mesure aurait bridé les
+menus pour un problème qui n'est pas le leur, ou déclaré le duel sain sur la
+bonne santé du hub.
+
+**Ce que le banc de menus a dû faire pour ne pas mentir** — et c'est le piège
+propre à cette charge : *un curseur immobile est le MEILLEUR cas, pas le pire*.
+Les effets de la vitrine coupent tous leur traitement au repos, par conception.
+Un banc qui ne bougerait pas rendrait un chiffre honnête sur une charge absente.
+Le mode `--menus` déplace donc le curseur à chaque image et traverse un écran
+toutes les 1,2 s, en passant par `noter_geste()` puis `push()` — sans quoi
+l'encre coulée ne se déclenche pas et l'effet le plus coûteux de la navigation
+manquerait à la mesure.
+
+**Signalé sans être expliqué** : l'image la plus lente des menus (14,5 ms) est
+*pire* que celle du duel (12,6 ms). Sur 3112 images c'est un point isolé — les
+31 plus lentes tiennent une moyenne de 6,1 ms — et il tombe probablement sur une
+traversée d'écran. Si quelqu'un cherche un jour un à-coup au changement d'écran,
+c'est ici qu'il commence.
+
 **Décision qui revient à Adrien** : 97 est-il acceptable ? La cible de 120 venait
 de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute ~10 ms au
 temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de **1,7 ms** —

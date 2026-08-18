@@ -55,6 +55,19 @@ func _run() -> void:
 	var vides: Array[String] = Banc.preconditions_manquantes(null, null)
 	_check("et elle sait dire quand ils manquent", not vides.is_empty())
 
+	# Le MODE MENUS a ses propres appuis, et il est né avec eux — c'est la
+	# consigne tirée de la panne du duel : un outil qu'aucune suite ne peut
+	# exécuter doit au moins exposer ses hypothèses sous une forme qu'une suite
+	# peut vérifier. Les deux listes sont séparées parce que les deux modes ne
+	# touchent pas au même jeu : une liste commune se plaindrait de l'absence
+	# d'une arme dans un banc qui n'en tire aucune.
+	var manquants_menus: Array[String] = Banc.preconditions_menus(ui)
+	_check("les appuis du mode menus existent encore", manquants_menus.is_empty(),
+		"; ".join(manquants_menus))
+	var vides_menus: Array[String] = Banc.preconditions_menus(null)
+	_check("et le mode menus sait dire quand ils manquent",
+		not vides_menus.is_empty())
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")

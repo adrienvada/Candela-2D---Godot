@@ -36,11 +36,18 @@ var _samples: Array[float] = []
 var _seconds := 15.0
 var _peak_particles := 0
 var _peak_bullets := 0
+## Mesure la charge des MENUS au lieu du duel. Voir `_stress_menus()`.
+var _menus := false
 
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	_seconds = float(_value(args, "--seconds", "15"))
+	# Deux charges, deux mesures. La vitrine des menus est une passe de rendu par
+	# image dans le hub ; le duel est une simulation à deux vues. **Un chiffre
+	# pris dans l'une ne dit rien de l'autre**, et les mélanger dans un seul
+	# relevé donnerait une moyenne qui ne décrit aucun des deux moments du jeu.
+	_menus = args.has("--menus")
 	# Le banc impose sa cadence : sans cela il hériterait du plafond enregistré
 	# dans les préférences et deux exécutions ne seraient plus comparables.
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
@@ -59,13 +66,18 @@ func _ready() -> void:
 	# erreur de script, n'entrait jamais dans le duel, et **restait ouvert sans
 	# rien mesurer**. Il a fallu le tuer à la main, le jour où on avait besoin du
 	# chiffre. Un banc qui échoue doit le dire et sortir.
-	var manquants := preconditions_manquantes(_ui, _main)
+	var manquants := preconditions_menus(_ui) if _menus \
+		else preconditions_manquantes(_ui, _main)
 	if not manquants.is_empty():
 		printerr("✗ le banc ne peut pas démarrer — le jeu a changé sous lui :")
 		for m in manquants:
 			printerr("    · ", m)
 		printerr("  Voir tools/test_banc.gd, qui vérifie ces appuis en headless.")
 		_sortir(1)
+		return
+
+	if _menus:
+		await _mesurer_menus()
 		return
 
 	# Écran partagé : les DEUX vues rendent, chacune avec son jeu de lumières et
@@ -93,6 +105,111 @@ func _ready() -> void:
 	await _stress(_seconds, true)
 	_report()
 	_sortir(0)
+
+
+## La charge des menus : le hub ouvert, les quinze effets de la vitrine actifs,
+## et un curseur qui ne s'arrête jamais.
+##
+## C'est le pire cas honnête du menu, et il ne ressemble en rien au duel : aucune
+## simulation, aucune particule, mais **une passe plein écran par image** (le
+## voile relit l'écran) posée sur un fond animé par shader, une torche, une
+## rémanence et un titre incandescent. C'est cette charge-là qu'il faut connaître
+## avant d'ajouter le flou défocalisé du second étage de M14.
+func _mesurer_menus() -> void:
+	_ui.show_main_menu()
+	await get_tree().process_frame
+	print("Menus ouverts — %d effets de vitrine actifs" % _compter_effets())
+	print("Échauffement %.0f s (compilation des shaders de la vitrine)…" % WARMUP_SEC)
+	await _stress_menus(WARMUP_SEC, false)
+	print("Mesure sur %.0f s…" % _seconds)
+	await _stress_menus(_seconds, true)
+	_report()
+	_sortir(0)
+
+
+## Un curseur qui parcourt les entrées sans jamais s'arrêter, et qui change
+## d'écran régulièrement.
+##
+## Le curseur immobile serait le meilleur cas, pas le pire : la torche, la
+## rémanence et la parallaxe du fond **coupent leur traitement au repos** — c'est
+## la règle commune de la vitrine. Un banc qui ne bougerait pas mesurerait un
+## menu endormi et conclurait que tout va bien.
+##
+## Le changement d'écran passe par `noter_geste()` puis `push()` : c'est
+## exactement ce que fait une entrée pressée, et c'est la seule façon de
+## déclencher l'encre coulée — un `push()` nu n'en produit pas, par conception.
+func _stress_menus(duration: float, sampling: bool) -> void:
+	var elapsed := 0.0
+	var depuis_navigation := 0.0
+	var index := 0
+	var ecrans := ["accueil", "local", "amical", "classe", "custom"]
+	var ecran := 0
+	while elapsed < duration:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		elapsed += dt
+		depuis_navigation += dt
+
+		# Le curseur passe d'une entrée à la suivante à chaque image : c'est plus
+		# rapide qu'un humain, et c'est voulu — on mesure le coût de la mise à
+		# jour, pas la vitesse d'un pouce.
+		var cibles: Array = _ui._nav_candidates(0)
+		if not cibles.is_empty():
+			index = (index + 1) % cibles.size()
+			var cible: Control = cibles[index]
+			if is_instance_valid(cible) and cible.is_visible_in_tree():
+				_ui._set_focus(0, cible)
+
+		# Une traversée d'écran toutes les 1,2 s : assez pour que l'encre coulée
+		# et le glissement soient dans la mesure, pas assez pour que le banc ne
+		# mesure QUE des transitions.
+		if depuis_navigation >= 1.2:
+			depuis_navigation = 0.0
+			ecran = (ecran + 1) % ecrans.size()
+			var hub = _ui.hub
+			if hub != null and hub.has_screen(ecrans[ecran]):
+				if not cibles.is_empty():
+					hub.noter_geste(cibles[index] as Control)
+				hub.push(ecrans[ecran])
+			elif hub != null:
+				hub.reset()
+
+		if sampling and dt > 0.0:
+			_samples.append(dt)
+
+
+func _compter_effets() -> int:
+	var vivants := 0
+	for nom in ["menu_gnomon", "menu_after_image", "menu_torch", "menu_watcher",
+			"menu_passerby", "menu_tracer", "menu_backdrop", "menu_title",
+			"menu_veil", "menu_glass"]:
+		if nom in _ui and _ui.get(nom) != null:
+			vivants += 1
+	return vivants
+
+
+## Les appuis du MODE MENUS, séparés de ceux du duel : les deux modes ne touchent
+## pas au même jeu, et une liste commune se serait plainte de l'absence d'une
+## arme dans un banc qui n'en tire aucune.
+static func preconditions_menus(ui: Node) -> Array[String]:
+	var absents: Array[String] = []
+	if ui == null:
+		absents.append("main.tscn n'expose plus UI")
+		return absents
+	for prop in ["hub", "menu_torch", "menu_backdrop", "menu_veil", "menu_glass"]:
+		if not prop in ui:
+			absents.append("UI.%s a disparu — la vitrine n'est plus là" % prop)
+	for methode in ["show_main_menu", "_set_focus", "_nav_candidates"]:
+		if not ui.has_method(methode):
+			absents.append("UI.%s() a disparu" % methode)
+	var hub = ui.get("hub") if "hub" in ui else null
+	if hub == null:
+		absents.append("UI.hub est nul")
+	elif not hub.has_method("noter_geste"):
+		# Sans lui, l'encre coulée ne se déclenche pas et le banc mesurerait un
+		# menu amputé de l'effet le plus coûteux de la navigation.
+		absents.append("MenuHub.noter_geste() a disparu — l'encre ne coulerait pas")
+	return absents
 
 
 ## Sortir par la porte du jeu, et non par `get_tree().quit()`.
