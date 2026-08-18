@@ -1977,6 +1977,15 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   établi. Relevé le 2026-08-18, non corrigé.
 
 **Outils et instrumentation**
+- **Un `class_name` tout neuf n'existe pas encore pour `--script`.** Le registre
+  des classes globales vit dans `.godot/global_script_class_cache.cfg`, qui est
+  **ignoré par git** — il se reconstruit à l'ouverture du projet dans l'éditeur,
+  pas au lancement headless. Un fichier créé hors éditeur donne donc
+  « Identifier "X" not declared in the current scope » dans toutes les suites,
+  alors que le fichier est parfait. Relevé le 2026-08-18 en créant `protocol.gd` ;
+  `--headless --quit` ne suffit pas, il faut `--headless --editor --quit-after N`.
+  Corollaire pour un clone neuf : **passer l'éditeur une fois avant
+  `run_suites.sh`**, sans quoi tout ce qui porte un `class_name` semble absent.
 - **Un remplacement de sous-chaîne qui mange un niveau d'indentation rend un
   script non compilable — et Godot désigne alors le mauvais fichier.** Relevé le
   2026-08-18 : `game_state.gd` corrompu par une substitution sur
