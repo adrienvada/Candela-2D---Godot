@@ -34,9 +34,9 @@ décision se juge à cette double aune.
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
 | 5 | **Les menus** | ✅ **Terminée** le 2026-08-18 — six étapes closes. Ne restent que des vérifications à la main |
-| 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
-| 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres. **8.8 et 8.9 closes** : une carte illisible refuse la manche, et deux versions différentes refusent de jouer |
+| 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
+| 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
+| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -600,9 +600,13 @@ sont pas du travail de phase : parcourir les menus à la main et juger si
 l'ensemble est agréable. Échap et F3 ont été vérifiés le 2026-08-18 — six gestes,
 six réponses.
 
-Trois choses ont été ajoutées au-delà du plan initial : la vague M (quinze effets
-de menu), la fenêtre de choix d'arme d'un match apparié, et un écran d'historique
-là où le plan n'attendait qu'un tableau.
+Trois choses ont été ajoutées au-delà du plan initial : la vague M, la fenêtre de
+choix d'arme d'un match apparié, et un écran d'historique là où le plan
+n'attendait qu'un tableau.
+
+**La vague M continue hors phase, à 11 sur 15** — restent M11, M13, M14 et M15.
+Clore la phase ne la clôt pas : c'est une vitrine d'effets, pas une étape dont
+quelque chose dépend. Le dire évite qu'un lecteur croie les quinze faits.
 
 **Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
 ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
@@ -1146,7 +1150,26 @@ seul. À confirmer à l'écran par Adrien.
 
 ---
 
-## Phase 6 — Rangs 🔵 À FAIRE — échelle validée
+## Phase 6 — Rangs ✅ CLOSE le 2026-08-18
+
+Ne reste qu'une vérification humaine : voir son rang s'afficher après un vrai
+match classé, à deux identités éphémères. Elle tombera d'elle-même dans l'essai
+d'appariement, le rang se lisant depuis le menu.
+
+**Ce qui a été livré, et le défaut qu'il a fallu trouver pour y arriver.** Le
+serveur calculait la catégorie et l'envoyait pour chaque ligne du classement
+depuis le 2026-08-17 — la lecture de **sa propre ligne** n'en retenait rien
+(`431daba`). Le travail serveur était fait et n'atteignait pas l'écran ; c'est le
+genre de manque qu'aucune erreur ne signale, puisque chaque moitié fonctionne.
+
+Le rang est retenu **tel que le serveur le rend**, jamais recomposé. Recoller
+« Bougie » et « II » côté jeu rejouerait une règle qui appartient au serveur, et
+le jour où l'échelle bougerait le jeu afficherait l'ancienne sans la moindre
+erreur.
+
+Deux absences sont traitées comme des absences : un joueur jamais classé n'a pas
+de catégorie — rien ne s'affiche plutôt qu'un « Aveugle I » inventé — et Candela
+n'a pas de division, ce que l'écran dit au lieu de laisser un blanc.
 
 Une dizaine de catégories, chacune subdivisée en divisions, à la manière de
 Rocket League.
@@ -1204,7 +1227,30 @@ et rien de nouveau dans le schéma.
 
 ---
 
-## Phase 7 — Déblocage d'armes 🔵 À FAIRE
+## Phase 7 — Déblocage d'armes ✅ MÉCANIQUE CLOSE le 2026-08-18
+
+**Il manque du contenu, pas du code.** Les catégories 5 à 10 ne débloquent rien
+faute d'armes à débloquer : Torche, Brasier, Phare, Aurore, Zénith et Candela
+retombent toutes sur le pistolet. C'est un trou à combler avec des assets, et il
+appartient à Adrien — au même titre que les 76 fichiers audio.
+
+Tout le mécanisme est en place et exercé :
+
+- **la table** (`rank_loadout.gd`, `e4323a1`) — un rang, une **sélection**, et non
+  un cran franchi. Elle n'est pas monotone, ce qu'un test vérifie explicitement
+  pour qu'une relecture ne le « corrige » pas ;
+- **le grisage** (`4f9a570`) — visible et grisé, jamais masqué, avec sa raison ;
+  puis restreint au râtelier de celui qui porte le rang (`78b244e`) ;
+- **la règle du miroir, opérationnelle** — la catégorie voyage dans le ticket ET
+  dans l'état de membre (`d584b6a`), parce que l'annonceur n'a jamais lu le
+  ticket de celui qui s'assied et qu'un seul chemin ne suffisait pas ;
+- **la fenêtre de choix** (`50b4ed5`, `b76115f`, `be77bbb`) — dix secondes, un
+  panneau modal, le choix borné à l'arsenal commun et **l'hôte qui refait le
+  contrôle à la réception** : un index reçu n'est pas un droit ;
+- **un banc dédié** (`d83810a`), sans réseau ni appariement.
+
+Le cas exercé n'est pas neutre : Lanterne contre Braise, où le mieux classé doit
+**descendre**. Un miroir inversé passerait tous les autres contrôles.
 
 > **Aucune correspondance arme ↔ rang n'existe en code** au 2026-08-18 — seulement
 > la table ci-dessous. Le premier geste de la phase est donc de l'écrire. Avec la
@@ -1358,7 +1404,45 @@ là où il y aura une sélection.
 
 ---
 
-## Phase 8 — Appariement : amical, classé, recherche automatique 🟡 EN COURS
+## Phase 8 — Appariement ✅ CLOSE CÔTÉ CODE le 2026-08-18
+
+**Une seule inconnue subsiste, et elle est humaine : l'essai à deux fenêtres.**
+Tout le reste est écrit, exercé, et une partie est prouvée contre le vrai service.
+
+Ce qui a été livré au-delà du plan, et pourquoi :
+
+- **plus de confirmation à l'appariement.** Adrien a vu passer la fenêtre de sept
+  secondes sans avoir le temps de cliquer ; lui redemander s'il veut ce qu'il
+  vient de demander ne servait à rien et faisait perdre l'appariement à qui
+  hésite. Le bandeau annonce le lancement, le match part. Ce que ça coûte est
+  écrit dans les tests retournés : **on ne peut plus renoncer entre « trouvé » et
+  « lancé »** — le refus a été retiré avec la confirmation, parce qu'il aurait
+  permis d'abandonner à l'instant où l'autre camp s'engage ;
+- **un recul avant republication du ticket.** Les consoles d'Adrien montraient
+  cinq tickets d'un côté, trois de l'autre, puis `create_lobby: TimedOut`,
+  `join_lobby: TimedOut`, `search_for_lobbies: NoConnection`. La cause n'est pas
+  l'élargissement de fourchette — il ne republie rien — mais le fait que
+  `queue_join_async` **détruit notre ticket avant** de tenter la jointure : une
+  jointure qui expire nous laisse sans ticket, le ticket perdu republie, la
+  recherche retente. Chaque tour crée et détruit un salon. Le recul double à
+  chaque échec (2 s → 16 s) et suspend la recherche plutôt que de la faire tourner
+  à vide ;
+- **la fenêtre de choix d'arme** de la Phase 7 s'ouvre sur ce chemin.
+
+### ⚠️ Le banc de match en ligne est une couverture conditionnelle
+
+`tools/test_online_match.tscn --host/--join` est **instable sur une machine
+chargée**, constaté le 2026-08-18 : deux passages consécutifs, deux échecs
+différents — d'abord le ping applicatif à zéro, puis l'écran de fin, la killcam et
+le score. Le chiffre qui permet de trancher est le **ping applicatif : 155 ms
+contre 26 habituels**, avec plusieurs instances Godot en vol. Ce sont des
+symptômes de famine de temporisateurs, pas de défauts de logique.
+
+À lancer **au calme**, et à ne pas prendre pour un défaut sans avoir regardé ce
+chiffre. Ses modes `--local`, `--training` et `--fenetre` sont dans le lanceur et
+ne souffrent pas de ça : un seul processus, aucun réseau.
+
+## Ce qu'il reste — l'ancienne section, conservée pour le détail
 
 Les deux entrées « Chercher un match » sont grisées dans le hub depuis le
 2026-08-17. Cette phase les allume.
