@@ -3144,7 +3144,25 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       sans avoir coupé serait pire qu'aucun banc.
     - On attend d'être **vraiment dans le décompte** avant de couper : couper
       avant exercerait une autre famille, et le banc croirait couvrir celle-ci.
-  - Restent manuelles : les 7 autres familles de la
+  - **Famille 1 automatisée le 2026-08-18** (`run_duo.sh --pause`) : **la pause
+    en ligne ne gèle rien.** Le contrat est écrit dans `ui.gd` — « en ligne il
+    figerait la simulation des deux joueurs, ce panneau se superpose donc à un
+    monde qui court » — et le joueur en pause reste **vulnérable**, ce qui
+    empêche la pause d'être une invincibilité gratuite.
+    - **Deux propriétés opposées, et c'est leur combinaison qui fait la règle :**
+      le monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une
+      sans l'autre laisserait passer les deux défauts qui comptent — une pause
+      qui gèle le match pour les deux, ou un joueur qui court encore pendant
+      qu'il lit son menu.
+    - Le chrono est mesuré **avant et après** côté hôte : c'est la seule preuve
+      que le monde a continué. Et `get_tree().paused` est vérifié **faux** côté
+      client, là où le gel serait invisible autrement.
+  - **Piège repayé en écrivant ce mode, et il vaut pour tous les bancs à deux
+    processus : l'hôte doit sortir en DERNIER.** Sorti le premier, il coupe le
+    lien pendant que l'autre mesure encore — et l'assertion tombe non pas parce
+    que la propriété est fausse, mais parce que le pair a disparu. Le mode
+    nominal le savait déjà ; je ne l'ai pas appliqué au mien.
+  - Restent manuelles : les 6 autres familles de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

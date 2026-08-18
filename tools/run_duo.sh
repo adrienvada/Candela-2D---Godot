@@ -52,6 +52,10 @@ if [ "${1:-}" = "--coupure" ]; then
   MODE_HOTE="--host-coupure"
   MODE_CLIENT="--join-coupure"
   TITRE="Coupure de l'adversaire pendant le décompte (famille 3)"
+elif [ "${1:-}" = "--pause" ]; then
+  MODE_HOTE="--host-pause"
+  MODE_CLIENT="--join-pause"
+  TITRE="La pause en ligne ne gèle rien (famille 1)"
 else
   MODE_HOTE="--host"
   MODE_CLIENT="--join"

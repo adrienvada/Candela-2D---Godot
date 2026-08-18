@@ -117,6 +117,19 @@ else
   printf '%-28s ÉCHEC\n' "duo_coupure"; fail=1
 fi
 
+# Famille 1 : la pause en ligne ne gèle rien.
+#
+# Deux propriétés OPPOSÉES, et c'est leur combinaison qui fait la règle : le
+# monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une sans
+# l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
+# le match pour les deux, ou un joueur qui court encore pendant qu'il lit son
+# menu. La pause ne doit pas être une invincibilité gratuite.
+if ./tools/run_duo.sh --pause; then
+  printf '%-28s OK\n' "duo_pause"
+else
+  printf '%-28s ÉCHEC\n' "duo_pause"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

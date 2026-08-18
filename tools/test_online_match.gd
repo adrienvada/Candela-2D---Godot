@@ -49,7 +49,11 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host-coupure"):
+	if _has("--host-pause"):
+		await _run_host_pause()
+	elif _has("--join-pause"):
+		await _run_client_pause()
+	elif _has("--host-coupure"):
 		await _run_host_coupure()
 	elif _has("--join-coupure"):
 		await _run_client_coupure()
@@ -339,6 +343,79 @@ func _run_host() -> void:
 ## immobile pour toujours dans son bac à sable ». Un joueur bloqué sans message
 ## et sans pouvoir bouger — le pire état atteignable, et le seul qui ne se
 ## signale par aucune erreur.
+## Famille 1 de la checklist : **la pause en ligne ne gèle rien.**
+##
+## Le contrat est écrit dans `ui.gd` : « en ligne il figerait la simulation des
+## deux joueurs, ce panneau se superpose donc à un monde qui court ». Le joueur
+## en pause reste **vulnérable** — c'est voulu, et c'est ce qui empêche la pause
+## d'être une invincibilité gratuite.
+##
+## Deux propriétés opposées, et c'est leur COMBINAISON qui fait la règle :
+## le monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une sans
+## l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
+## le match, ou un joueur qui court encore pendant qu'il lit son menu.
+func _run_host_pause() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+	print("MANCHE: en cours")
+
+	# Le client met la pause à peu près maintenant. On mesure le chrono avant et
+	# après une seconde de jeu : c'est la seule preuve que le monde a continué.
+	var avant: float = _main.time_left
+	await get_tree().create_timer(1.5).timeout
+	var apres: float = _main.time_left
+	_check("le chrono continue de tourner pendant la pause adverse",
+		avant - apres > 0.5, "%.2f s écoulées" % (avant - apres))
+	_check("la manche n'a pas été interrompue", _main.round_active)
+	# Le joueur en pause ne doit pas courir sur sa dernière commande : l'hôte
+	# reçoit des entrées neutres, pas l'absence d'entrées.
+	_check("l'adversaire en pause ne se déplace plus",
+		_main.p2.velocity.length() < 1.0, str(_main.p2.velocity))
+	_check("et ne sprinte pas non plus", not _main.p2.is_sprinting)
+	# **L'hôte part en DERNIER.** Sortir maintenant couperait le lien pendant que
+	# le client mesure encore, et son « la manche tourne toujours » tomberait —
+	# non parce que la pause gèle quoi que ce soit, mais parce que l'hôte a
+	# disparu. Le piège est déjà consigné dans le mode nominal de ce fichier ; il
+	# vaut pour tous les modes à deux processus, et je viens de le repayer.
+	await get_tree().create_timer(8.0).timeout
+	_quit(0)
+
+## Le client de la famille 1 : il rejoint, joue, **ouvre sa pause**, et son
+## personnage doit cesser d'agir sans que le monde s'arrête.
+func _run_client_pause() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-pause", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	_ui._open_pause()
+	await get_tree().process_frame
+	_check("le menu de pause est ouvert", _ui.is_pause_menu_open())
+	# **Le point du test.** En ligne la pause ne gèle rien : l'arbre ne doit PAS
+	# être en pause, sinon le joueur deviendrait invulnérable pendant qu'il lit
+	# son menu — et le monde s'arrêterait pour lui seul.
+	_check("l'arbre n'est pas gelé en ligne", not get_tree().paused)
+	await get_tree().create_timer(2.0).timeout
+	_check("la manche tourne toujours côté client", _main.round_active)
+	# Une seconde de plus que l'hôte : celui qui finit le premier ne doit pas
+	# couper le lien pendant que l'autre mesure encore.
+	await get_tree().create_timer(1.0).timeout
+	_quit(0)
+
 func _run_host_coupure() -> void:
 	await _select_mode(true)
 	_ui._open_lobby()

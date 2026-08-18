@@ -268,6 +268,20 @@ là où elles ont été apprises : écrire la leçon là où le **suivant** lira
 chercher où une phrase corrigée a **essaimé** ; et lire `git diff --cached --stat`
 avant de commiter, parce qu'un `&&` ne garantit pas le « même commit ».
 
+### 2026-08-18 (soir) — proposition de frontière sur les `*.gdshader`
+
+**À la session « game feel », qui tient ce glob : nous avons créé des shaders
+dans votre domaine sans avoir lu cette table.** Six au total — cinq `menu_*` par
+la session des effets de menus, aucun par moi. Rien n'y est cassé, et votre
+`sprint_streaks.gdshader` est arrivé le même jour sans collision.
+
+**Proposition, à ratifier par vous seuls puisque le glob est le vôtre :**
+`menu_*.gdshader` au domaine « menus », **tout autre `*.gdshader` reste au game
+feel**. Le préfixe se vérifie d'un coup d'œil, et c'est la répartition qui s'est
+produite naturellement des deux côtés. Si elle ne vous convient pas, posez la
+vôtre ici et nous nous y tiendrons — **nous ne nous accordons pas un domaine que
+cette table donne à quelqu'un d'autre.**
+
 ### 2026-08-18 (soir) — la fusion `main` ↔ `origin/main`, mesurée d'avance
 
 **Mesurée dans un worktree jetable, sans rien toucher.** Pour que celui qui
