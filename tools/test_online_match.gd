@@ -190,7 +190,7 @@ func _run_local() -> void:
 
 
 func _run_host() -> void:
-	_select_mode(true)
+	await _select_mode(true)
 	print("MENU: mode hôte sélectionné, transport %s" % ("LAN" if _lan else "Internet"))
 	# L'hôte ouvre son salon depuis le panneau, il n'appuie pas sur PRÊT : le
 	# code doit s'afficher avant que quiconque soit là, et PRÊT n'a de sens
@@ -219,6 +219,12 @@ func _run_host() -> void:
 	_check("PRÊT s'ouvre à l'arrivée de l'adversaire", not _ready_entry_disabled())
 	# Le match n'a PAS démarré tout seul : c'est tout l'objet de la porte.
 	_check("aucune manche n'a démarré à la connexion", not _main.round_active)
+	# `round_active` dit qu'aucune manche ne tourne ; il ne dit pas où se trouve le
+	# joueur. Les deux ont été vrais en même temps le 2026-08-18 : le client était
+	# téléporté hors du menu à la connexion, sans qu'aucune manche démarre, et le
+	# banc restait vert pendant qu'Adrien était bloqué. C'est `_is_main_menu` qui
+	# décrit ce que le joueur PERÇOIT.
+	_check("on est toujours dans le menu", _ui._is_main_menu)
 	_press_play()
 	await _verify_round()
 	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
@@ -228,7 +234,7 @@ func _run_host() -> void:
 
 
 func _run_client() -> void:
-	_select_mode(false)
+	await _select_mode(false)
 	_ui.join_input.text = _value("--join", "")
 	print("MENU: mode client, saisie « %s »" % _ui.join_input.text)
 	_check("la saisie survit à la validation d'alphabet",
@@ -253,6 +259,12 @@ func _run_client() -> void:
 	print("HOTE: connecté")
 	_check("PRÊT s'ouvre une fois le salon rejoint", not _ready_entry_disabled())
 	_check("aucune manche n'a démarré à la connexion", not _main.round_active)
+	# `round_active` dit qu'aucune manche ne tourne ; il ne dit pas où se trouve le
+	# joueur. Les deux ont été vrais en même temps le 2026-08-18 : le client était
+	# téléporté hors du menu à la connexion, sans qu'aucune manche démarre, et le
+	# banc restait vert pendant qu'Adrien était bloqué. C'est `_is_main_menu` qui
+	# décrit ce que le joueur PERÇOIT.
+	_check("on est toujours dans le menu", _ui._is_main_menu)
 	_press_play()
 	await _verify_round()
 	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
@@ -368,6 +380,20 @@ func _select_mode(is_host: bool) -> void:
 	else:
 		_ui.btn_transport_eos.button_pressed = true
 	_ui.hub.push(_ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN)
+	# `show_main_menu()` remet la pile à l'accueil, et il peut encore survenir
+	# après ce `push` : en EOS l'attente de la session lui laissait le temps de
+	# passer, le chemin LAN n'attend rien et le pilotage partait donc d'un écran
+	# qui n'était plus le bon. On laisse le menu se poser, puis on vérifie qu'on
+	# est bien où l'on croit — plutôt que de découvrir plus tard un contrôle qui
+	# accuse l'interface d'un défaut d'écran.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var attendu: String = _ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN
+	if _ui.hub.current_id() != attendu:
+		_ui.hub.push(attendu)
+		await get_tree().process_frame
+	_check("le salon visé est bien l'écran courant",
+		_ui.hub.current_id() == attendu, _ui.hub.current_id())
 
 ## Équivalent d'un clic sur « PRÊT ».
 func _press_play() -> void:
@@ -380,7 +406,13 @@ func _ready_entry_disabled() -> bool:
 	for entree: Button in _ui._ready_entries:
 		if is_instance_valid(entree) and entree.is_visible_in_tree():
 			return entree.disabled
-	return false
+	# Aucune entrée visible : on n'est pas sur un écran de salon, et répondre
+	# « pas grisé » ferait échouer le contrôle en accusant l'interface. C'est le
+	# défaut qui a fait passer le chemin LAN pour cassé pendant une journée —
+	# l'écran était simplement resté à l'accueil, et les quatre entrées étaient
+	# correctement grisées, hors de vue.
+	push_error("aucune entrée PRÊT visible — écran courant : %s" % _ui.hub.current_id())
+	return true
 
 
 func _await(predicate: Callable, timeout: float) -> bool:
