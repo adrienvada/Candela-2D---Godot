@@ -2013,6 +2013,24 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   cause dans son propre code.
 
 **Documents et messages de commit**
+- **La CI accuse le commit qu'elle a testé, pas celui qui a cassé.** Quand
+  plusieurs commits arrivent entre deux exécutions, le premier rouge désigne un
+  innocent. Le 2026-08-18, `ce2aabe` — **86 lignes de `docs/ROADMAP.md` et rien
+  d'autre** — a été signalé comme responsable d'une régression d'interface. Le
+  vrai coupable était `1d84580`, deux commits plus tôt, qui avait enveloppé
+  `join_input` dans un `join_box` sans que l'assertion du banc suive. Le
+  signalement demandait de corriger « en priorité » un trunk déjà réparé depuis
+  quatre commits (`d0902cc`).
+  **La vérification coûte trois secondes : `git show --stat <commit>`.** Un commit
+  qui ne touche pas le code en cause ne peut pas en être la cause. Et avant de
+  corriger un rouge rapporté, **rejouer la commande sur `HEAD`** : elle passait.
+- **C'est la troisième fois en trois jours que le récit désigne la mauvaise
+  chose.** Un message de commit affirmant un travail non fait ; une feuille de
+  route recopiant cette affirmation ; une CI accusant un commit de documentation.
+  Le point commun n'est pas la négligence, c'est que **le récit et le code sont
+  deux artefacts distincts qui dérivent l'un de l'autre sans jamais se
+  contredire à voix haute**. La seule parade qui marche est mécanique : lire le
+  diff, pas le titre.
 - **Un message de commit peut affirmer un travail qui n'a pas été fait, et la
   feuille de route le recopie ensuite.** `05b72c7` annonce « les deux entrées
   ne sont plus grisées » ; il n'a jamais touché ces entrées. L'affirmation a

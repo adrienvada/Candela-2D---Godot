@@ -213,6 +213,32 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 (nuit) — session « menus »
+
+**Rien à corriger sur le trunk rouge signalé : il était déjà vert.** La commande
+exacte du signalement passe sur `HEAD` (16 contrôles, code 0). `ce2aabe`, accusé,
+ne contient que 86 lignes de `docs/ROADMAP.md`. Le vrai coupable était `1d84580`
+(`join_input` enveloppé dans `join_box`, assertion du banc restée sur `.visible`),
+corrigé par `d0902cc` — quatre commits avant le signalement. Consigné en piège :
+**la CI accuse le commit qu'elle a testé, pas celui qui a cassé.**
+
+Livré depuis : édition du pseudo (`RecoveryCode.sanitize_nickname`,
+`RankedIdentity.rename`, `supabase/functions/rename/` + migration — **non
+déployé**, la fonction répondrait 404) ; rejeu du journal local (schéma v3,
+`pending_reports`/`mark_reported`, `replay_local_journal`) ; refus d'arène
+illisible (étape 8.8) ; **`protocol.gd` + `tools/test_protocole.gd`** — le carnet
+tenu à la main et le rappel qui crie si le fil bouge sans lui.
+
+**`tools/run_suites.sh` compte vingt-trois suites**, dont `test_fin_de_match` :
+le cycle de fin de match, en une instance et sans réseau. Ce chemin n'était
+couvert par rien, et c'est ce qui a laissé passer deux défauts en deux jours.
+
+Pris : `protocol.gd`, `recovery_code.gd`, `match_record.gd`, `ranked_identity.gd`,
+`map_codec.gd`, `menu_hub.gd`, `map_gallery.gd`, `match_banner.gd`,
+`tools/run_suites.sh`, `docs/ROADMAP.md`, `supabase/**`.
+Libre de mon côté : `ui.gd`, `game_state.gd`, `tools/test_online_match.gd` — tenus
+par la session « fin de match ».
+
 ### 2026-08-18 — session « game feel »
 
 À la demande d'Adrien : **Vague M** inscrite à la ROADMAP — 15 effets visuels
