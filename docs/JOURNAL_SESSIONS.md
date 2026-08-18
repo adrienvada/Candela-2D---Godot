@@ -26,6 +26,28 @@ par sujet impraticable.
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
+### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
+
+**Le glob `*.gdshader` réserve les shaders au domaine « game feel ». Il a été
+écrit quand tous les shaders du dépôt étaient des shaders de jeu** — liseré du
+joueur, sang, éblouissement, onde de choc. Les menus n'en avaient aucun.
+
+La vague M en a créé cinq, tous nommés `menu_*.gdshader` :
+`menu_backdrop`, `menu_title`, `menu_veil`, `menu_skeleton`, `menu_glass`.
+**J'étais donc en infraction avec la lettre de la table pendant une journée
+entière, sans le savoir, faute d'avoir lu ce fichier.** Aucun conflit n'en est
+résulté — ce sont des fichiers **créés**, pas modifiés, et la fusion mesurée le
+même soir n'en signale aucun.
+
+**La frontière proposée, en ajout et non en réécriture :** `menu_*.gdshader`
+appartient aux menus, tout autre `*.gdshader` reste au game feel. Le préfixe le
+rend vérifiable d'un coup d'œil, et il correspond à ce qui s'est produit
+naturellement des deux côtés — `sprint_streaks.gdshader` est arrivé chez eux le
+même jour, sans collision.
+
+Si la session « game feel » préfère une autre frontière, qu'elle la pose ici :
+je m'y tiendrai.
+
 ### `game_state.gd` — le seul fichier disputé
 
 Les deux domaines en ont besoin : l'orchestration du kill pour le game feel, la
@@ -212,6 +234,39 @@ démarre en Bougie et aurait trois armes d'emblée), **rejouer** après chaque v
 game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
+
+### 2026-08-18 (soir) — session « menus », déclaration tardive
+
+**Je n'avais pas lu ce fichier de la journée.** Je le déclare en tête parce que
+c'est le fait le plus utile de cette entrée : deux sessions locales ont travaillé
+douze heures en s'échangeant des messages, en croyant que c'était le canal — et
+**le canal documenté était ici**. La session distante, elle, l'a appliqué : elle
+a évité nos fichiers, consigné ce qu'elle ne pouvait pas faire, et nous a même
+remerciés pour du travail qu'elle attribuait correctement. Nous ne l'avons pas lue.
+
+**Livré (Phase 5, « la vitrine ») : les quinze effets de la vague M.** Fichiers
+créés — `menu_gnomon.gd`, `menu_after_image.gd`, `menu_torch.gd`,
+`menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`, `menu_engraver.gd`,
+`menu_tracer.gd`, `menu_backdrop.gd`, `menu_title.gd`, `menu_veil.gd`,
+`menu_skeleton.gd`, `menu_glass.gd` et cinq `menu_*.gdshader`. Fichiers touchés
+dans mon domaine : `ui.gd`, `menu_hub.gd`, `effect_policy.gd`,
+`screen_leaderboard.gd`.
+
+**Hors de mon domaine, et assumé : `game_state.gd` et `protocol.gd`.** Adrien a
+demandé explicitement le RPC hôte → client, qui n'existait pas — le client
+pressait PRÊT et attendait sans savoir s'il attendait l'hôte ou le réseau.
+`Protocol.VERSION` monte de 3 à 4, témoin recopié. **Je n'y touche plus.**
+
+**Deux mesures qui peuvent servir à tout le monde**, prises au banc corrigé,
+machine au calme : les menus tiennent 200 fps de médiane (le duel, 135), et **le
+1 % bas n'est reproductible nulle part** — 163, 169 puis 139 sur le même code.
+La médiane est la seule métrique sur laquelle décider. Détail et méthode dans
+`docs/ROADMAP.md`.
+
+**Trois leçons de méthode posées au `README.md`**, parce qu'elles ne valent rien
+là où elles ont été apprises : écrire la leçon là où le **suivant** lira ;
+chercher où une phrase corrigée a **essaimé** ; et lire `git diff --cached --stat`
+avant de commiter, parce qu'un `&&` ne garantit pas le « même commit ».
 
 ### 2026-08-18 (soir) — la fusion `main` ↔ `origin/main`, mesurée d'avance
 
