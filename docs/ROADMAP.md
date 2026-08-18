@@ -709,6 +709,23 @@ l'entrée du parcours du curseur ferait douter du bouton d'à côté. Sont gris�
 aujourd'hui : les deux « chercher un match » (appariement manquant), le lancement
 de l'entraînement, la configuration de la cible et l'écran audio.
 
+#### La barre du bas disparaît aussi de l'écran de fin (2026-08-18)
+
+Elle avait survécu là : REJOUER, MENU PRINCIPAL et QUITTER y doublaient la liste
+de gauche. **REJOUER prend désormais la place exacte de PRÊT** — même geste,
+même endroit, même style : s'engager dans la manche suivante. Les avoir séparés
+en deux boutons, l'un dans la liste et l'autre dans une barre, obligeait à deviner
+lequel comptait.
+
+MENU PRINCIPAL disparaît : le retour de la liste ferme le salon et ramène au menu.
+QUITTER aussi : **il n'existe que sur l'accueil**, jamais dans un salon.
+
+`btn_replay` reste la source de vérité du libellé et devient invisible. Plusieurs
+endroits écrivent son texte — « ✓ PRÊT », « Connexion au salon… » — et les
+recenser pour les rerouter créerait autant d'occasions d'en oublier un ; l'entrée
+de liste le recopie tant qu'on est sur l'écran de fin, et reprend son libellé
+d'origine au menu.
+
 #### Mise en page — révision du 2026-08-17 (soir)
 
 **La barre de boutons du bas a disparu du menu.** « Jouer », « Prêt » et
@@ -1129,12 +1146,36 @@ rien**, et c'est un trou à combler avec du contenu, pas avec une règle — les
 réservées au compétitif et la mécanique de changement en cours de match (voir plus
 bas) sont deux façons de le combler.
 
-| Catégorie | Arme |
+**Ce n'est pas un déblocage qui s'accumule** (précision d'Adrien, 2026-08-18).
+Un joueur reçoit **la sélection attribuée à son rang**, et rien d'autre : un
+Lanterne n'a pas quatre armes, il a l'Arbalète. La table associe un rang à une
+**sélection**, pas à un cran franchi.
+
+| Catégorie | Sélection attribuée |
 |---|---|
 | 1 — Aveugle | Pistolet |
 | 2 — Braise | Fusil |
 | 3 — Bougie | Pompe |
 | 4 — Lanterne | Arbalète |
+| 5 à 10 | Pistolet, faute d'armes supplémentaires |
+
+Deux conséquences qu'une table naïve manquerait :
+
+- **La progression n'est pas monotone.** Les rangs supérieurs redescendent au
+  Pistolet ; une table qui supposerait « plus haut = plus d'armes » serait fausse
+  dès Torche.
+- **La table est saisonnière** — « ça changera peut-être à chaque saison ». Elle
+  doit donc se remplacer sans toucher au reste, ce qui écarte de la coder en dur
+  dans l'interface.
+
+Elle rend une **sélection** (un tableau) et non une arme, même quand celle-ci n'en
+contient qu'une : le jour où le changement en cours de match arrive, rien ne
+change dans la forme. La règle du miroir devient « la sélection du moins bien
+classé », et se compose sans réécriture.
+
+**Le socle amical est fixé** : Pistolet, Fusil, Pompe, Arbalète — libres en écran
+partagé et dans tous les modes amicaux, **pas** en compétitif, où seule la
+sélection du rang vaut.
 
 ~~**En local, toutes les armes sont accessibles** (décision du 2026-08-16)~~ —
 **superseded le 2026-08-18** par la décision ci-dessous. La raison d'origine
@@ -2100,12 +2141,21 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   conditionnelle, pas une couverture.
 
 **Menus à deux écrans**
-- **La liste des joueurs est écrite du point de vue de l'hôte.** Chez le client
-  elle affiche « L'hôte » puis « Adversaire — connecté » — deux lignes pour la
-  même personne, le seul pair étant l'hôte — et **le client n'y figure jamais**.
-  Relevé le 2026-08-18, non corrigé. Une liste de joueurs où l'on ne se voit pas
-  laisse douter d'être connecté à quoi que ce soit, ce que cette liste était
-  précisément censée lever.
+- **~~La liste des joueurs est écrite du point de vue de l'hôte~~ — corrigé le
+  2026-08-18.** Le client y voyait « L'hôte » puis « Adversaire — connecté »,
+  deux lignes pour la même personne — l'hôte étant son unique pair — et **ne s'y
+  voyait jamais**. Une liste de joueurs où l'on ne figure pas laisse douter d'être
+  connecté à quoi que ce soit, ce qu'elle devait précisément lever. Elle se lit
+  désormais depuis la place de celui qui la regarde ; l'ordre, lui, reste celui du
+  salon et non celui des personnes présentes.
+- **~~Quitter un salon ne le fermait pas~~ — corrigé le 2026-08-18.** Le retour
+  ne faisait que remonter d'un cran : `current_mode` restait « hôte », donc le
+  bouton affichait « SALON OUVERT » grisé et **plus aucun autre salon ne pouvait
+  s'ouvrir**, tandis que l'en-tête gardait le score d'un match terminé. Deux
+  symptômes sans rapport apparent, une seule cause. Le retour d'un salon passe
+  maintenant par `main_menu_requested`, donc par le démontage complet de
+  `game_state` — archivage d'un abandon s'il y a lieu, salon EOS relâché, menu
+  remis à plat.
 
 **Ce que le banc affirme et ce que l'humain voit**
 - **Un banc vert et un joueur bloqué peuvent décrire le même code.** Le

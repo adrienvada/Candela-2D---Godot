@@ -49,6 +49,8 @@ const TAB_SLIDE := 32.0
 ## Métadonnées de navigation posées sur les contrôles.
 const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
+## Libellé d'origine d'une entrée de lancement, à restaurer hors écran de fin.
+const META_LAUNCH_BASE := "launch_base"
 
 ## Identifiants des écrans du hub (Phase 5, structure B).
 ##
@@ -443,6 +445,7 @@ func _pulse_press(control: Control) -> void:
 
 func _process(delta: float) -> void:
 	_update_network_status()
+	_sync_launch_entries()
 	_update_focus_rings()
 	_update_health_trails(delta)
 	_update_shake(delta)
@@ -1663,7 +1666,7 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	hub.add_back_entry(SCREEN_LOCAL)
+	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
 
 	# --- 1v1 amical -----------------------------------------------------------
 	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
@@ -1704,6 +1707,7 @@ func _build_hub_screens() -> void:
 			+ "match part quand les deux joueurs se sont déclarés prêts.",
 			"", COLOR_P1, "lancer", "", true)
 		_ready_entries.append(pret_hote)
+		pret_hote.set_meta(META_LAUNCH_BASE, "PRÊT")
 		h.add_child(pret_hote)
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
@@ -1714,9 +1718,11 @@ func _build_hub_screens() -> void:
 			+ "joueurs se sont déclarés prêts ; la carte est celle de l'hôte.",
 			"", COLOR_P1, "lancer", "", true)
 		_ready_entries.append(pret_invite)
+		pret_invite.set_meta(META_LAUNCH_BASE, "PRÊT")
 		j.add_child(pret_invite)
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
-		hub.add_back_entry(id)
+		_wire_salon_back(hub.add_back_entry(id,
+			"Ferme le salon et coupe le lien. L'adversaire en est averti."))
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
@@ -2002,18 +2008,34 @@ func _refresh_player_list() -> void:
 		return
 	var mode := selected_network_mode()
 	var ouvert := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
-	lobby_player_host.text = "Vous — hôte" if mode == NetworkManager.GameMode.ONLINE_HOST \
-		else "L'hôte"
-	# Même garde qu'au-dessus, et pour la même raison : cette fonction est appelée
-	# sur le chemin de la déconnexion, quand il n'y a justement plus de pair.
-	var adversaire := multiplayer.has_multiplayer_peer() \
+	# `has_multiplayer_peer()` et non `multiplayer != null` : cette fonction est
+	# appelée sur le chemin de la déconnexion, quand il n'y a justement plus de
+	# pair, et `get_peers()` fait alors crier Godot.
+	var lie := multiplayer.has_multiplayer_peer() \
 		and not multiplayer.get_peers().is_empty()
-	if adversaire:
-		lobby_player_guest.text = "Adversaire — connecté"
-		lobby_player_guest.add_theme_color_override("font_color", COLOR_P2)
+
+	# **La liste se lit depuis la place de celui qui la regarde.** Elle était
+	# rédigée du seul point de vue de l'hôte : le client y voyait « L'hôte » puis
+	# « Adversaire — connecté », deux lignes pour la même personne — l'hôte étant
+	# son unique pair — et ne s'y voyait jamais. Une liste de joueurs où l'on ne
+	# figure pas laisse douter d'être connecté à quoi que ce soit, ce qu'elle
+	# devait précisément lever.
+	#
+	# L'ordre ne change pas — l'hôte d'abord, l'invité ensuite — parce que c'est
+	# l'ordre du salon et non celui des personnes présentes.
+	if mode == NetworkManager.GameMode.ONLINE_HOST:
+		lobby_player_host.text = "Vous — hôte"
+		lobby_player_host.add_theme_color_override("font_color", COLOR_P1)
+		lobby_player_guest.text = "Adversaire — connecté" if lie \
+			else ("En attente d'un adversaire…" if ouvert else "—")
+		lobby_player_guest.add_theme_color_override("font_color",
+			COLOR_P2 if lie else COLOR_DIM)
 	else:
-		lobby_player_guest.text = "En attente d'un adversaire…" if ouvert else "—"
-		lobby_player_guest.add_theme_color_override("font_color", COLOR_DIM)
+		lobby_player_host.text = "L'hôte — connecté" if lie else "L'hôte — non rejoint"
+		lobby_player_host.add_theme_color_override("font_color",
+			COLOR_P2 if lie else COLOR_DIM)
+		lobby_player_guest.text = "Vous"
+		lobby_player_guest.add_theme_color_override("font_color", COLOR_P1)
 
 	btn_open_lobby.visible = mode == NetworkManager.GameMode.ONLINE_HOST
 	btn_open_lobby.disabled = ouvert
@@ -2024,8 +2046,8 @@ func _refresh_player_list() -> void:
 	var cote_invite := mode == NetworkManager.GameMode.ONLINE_CLIENT
 	if btn_join_lobby != null:
 		btn_join_lobby.visible = cote_invite
-		btn_join_lobby.disabled = adversaire
-		btn_join_lobby.text = "SALON REJOINT" if adversaire else "REJOINDRE LE SALON"
+		btn_join_lobby.disabled = lie
+		btn_join_lobby.text = "SALON REJOINT" if lie else "REJOINDRE LE SALON"
 	if btn_paste_code != null:
 		btn_paste_code.visible = cote_invite
 
@@ -2035,12 +2057,48 @@ func _refresh_player_list() -> void:
 	# d'Adrien) : un bouton qui lance tantôt un duel, tantôt une partie contre
 	# personne, ne dit pas ce qu'il fait.
 	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
-		and not adversaire
+		and not lie
 	for entree: Button in _ready_entries:
 		if is_instance_valid(entree):
 			entree.disabled = manque_un_joueur
 			entree.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
 				else Color.WHITE
+
+## Quitter un salon **ferme le salon**, il ne fait pas que remonter d'un cran.
+##
+## Sans cela, `current_mode` restait « hôte » après le départ : le bouton affichait
+## « SALON OUVERT » grisé et **plus aucun autre salon ne pouvait s'ouvrir**, tandis
+## que l'en-tête gardait le score d'un match terminé. Relevé par Adrien à l'usage.
+##
+## Le démontage passe par `main_menu_requested`, donc par `game_state`, qui sait
+## seul archiver un abandon s'il y a lieu, relâcher le salon EOS et remettre le
+## menu à plat. Le dupliquer ici en ferait une seconde vérité.
+func _wire_salon_back(btn: Button) -> void:
+	if btn == null:
+		return
+	btn.pressed.connect(func() -> void:
+		if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+			main_menu_requested.emit()
+	)
+
+## Le libellé du lanceur suit l'état du match, pas l'écran.
+##
+## Une seule entrée porte les deux gestes — « PRÊT » avant le match, « REJOUER »
+## après — parce que **c'est le même geste au même endroit** : s'engager dans la
+## manche suivante. Les avoir séparés en deux boutons, l'un dans la liste et
+## l'autre dans une barre du bas, obligeait à deviner lequel comptait.
+##
+## `btn_replay` reste la source de vérité et devient invisible : plusieurs
+## endroits écrivent son texte (« ✓ PRÊT », « Connexion au salon… »), et les
+## recenser pour les rerouter créerait autant d'occasions d'en oublier un.
+func _sync_launch_entries() -> void:
+	if hub == null or btn_replay == null:
+		return
+	for btn in _ready_entries:
+		if not is_instance_valid(btn):
+			continue
+		var base := String(btn.get_meta(META_LAUNCH_BASE, "PRÊT"))
+		hub.set_entry_label(btn, base if _is_main_menu else btn_replay.text)
 
 func _on_hub_action(action: String) -> void:
 	match action:
@@ -3397,7 +3455,9 @@ func show_main_menu() -> void:
 	game_over_panel.show()
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
-	game_over_score.text = "PRÊT À JOUER ?"
+	# Vide, et non « PRÊT À JOUER ? » : cette ligne porte la description de l'entrée
+	# survolée, et un texte de remplissage la remplacerait au premier retour au menu.
+	game_over_score.text = ""
 
 	# Rétablit d'un coup libellé du bouton, champ de saisie et ligne de statut :
 	# le retour au menu ne rejoue pas les bascules de mode.
@@ -3416,12 +3476,12 @@ func show_game_over(winner_id: int) -> void:
 	btn_back.hide()
 	if pause_panel != null:
 		pause_panel.hide()
-	# L'écran de fin garde sa barre : REJOUER et MENU PRINCIPAL n'ont pas d'entrée
-	# de hub équivalente — on n'est plus dans le menu à ce moment-là.
-	btn_actions.show()
-	btn_replay.show()
-	btn_main_menu.show()
-	btn_quit.show()
+	# **Plus de barre du bas, même ici.** REJOUER a désormais son entrée dans la
+	# liste, à la place exacte de PRÊT — même geste, même endroit. MENU PRINCIPAL
+	# et QUITTER disparaissent : le retour de la liste ferme le salon, et quitter
+	# le jeu est une entrée de l'accueil. Trois boutons qui doublaient la liste
+	# obligeaient à deviner lequel comptait.
+	btn_actions.hide()
 	weapon_hbox.show()
 	map_card.show()
 

@@ -446,6 +446,21 @@ func make_entry(label: String, detail: String, target: String = "",
 		btn.pressed.connect(func() -> void: show_detail(titre, texte, vitrine))
 	return btn
 
+## Change le libellé d'une entrée déjà construite.
+##
+## Le texte vit dans un `Label` enfoui sous le bouton, ce qui n'est l'affaire de
+## personne au-dehors : une entrée dont le sens change — « PRÊT » qui devient
+## « REJOUER » après un match — reste la même entrée, au même endroit, avec le
+## même style. La déplacer ou la reconstruire ferait sauter le curseur.
+func set_entry_label(btn: Button, text: String) -> void:
+	if btn == null:
+		return
+	for row in btn.get_children():
+		for child in row.get_children():
+			if child is Label and String((child as Label).text) not in ["›", "—"]:
+				(child as Label).text = text
+				return
+
 ## Fait raconter à l'entrée ce qu'elle raconte, sans passer par le focus de
 ## Godot. C'est le relais qu'appelle un curseur maison quand il se pose sur elle.
 ##
@@ -462,14 +477,20 @@ func reveal_entry(control: Control) -> bool:
 
 ## Ajoute le retour en bas d'une liste. À appeler pour **chaque** écran non
 ## racine : c'est la seule sortie garantie, souris comprise.
-func add_back_entry(id: String) -> void:
+##
+## Rend le bouton, parce que certains écrans ont plus à faire que remonter d'un
+## cran — quitter un salon coupe aussi le lien. L'appelant y branche ce qui le
+## concerne ; le retour lui-même reste le même partout.
+func add_back_entry(id: String, detail: String = "") -> Button:
 	var list := list_of(id)
 	if list == null:
-		return
+		return null
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, MenuTheme.GAP_XS)
 	list.add_child(spacer)
-	var btn := make_entry("‹  RETOUR", "Remonte d'un cran. La touche Échap fait la même chose.",
+	var btn := make_entry("‹  RETOUR",
+		detail if detail != "" else "Remonte d'un cran. La touche Échap fait la même chose.",
 		"", MenuTheme.DIM)
 	btn.pressed.connect(back)
 	list.add_child(btn)
+	return btn
