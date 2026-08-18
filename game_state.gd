@@ -1638,6 +1638,12 @@ func _apply_deferred_rematch() -> void:
 	if _pending_p2_weapon_idx >= 0:
 		_set_p2_weapon_button(_pending_p2_weapon_idx)
 		_pending_p2_weapon_idx = -1
+		# Le client s'était déclaré pendant la killcam : son intention a été
+		# retenue, elle se signale maintenant. Sans cette ligne, le seul cas où
+		# l'adversaire est prêt AVANT nous serait le seul à ne rien montrer.
+		if p2_ready_for_rematch and not p1_ready_for_rematch:
+			ui.time_label.text = "L'ADVERSAIRE EST PRÊT"
+			ui.signaler_adversaire_pret()
 	if _pending_client_start:
 		_pending_client_start = false
 		if client_peer_id != 0:
@@ -1929,6 +1935,14 @@ func _check_rematch_start():
 		if ui.p2_weapon_group.get_pressed_button():
 			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
 		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code(), _new_match_id())
+	elif p2_ready_for_rematch:
+		# **Le message disait l'inverse de la vérité.** Quand le client s'était
+		# déclaré et pas l'hôte, l'écran de l'hôte affichait « en attente d'un
+		# adversaire » — alors que l'adversaire était là, prêt, et attendait
+		# précisément celui qui lisait la phrase. On ne peut pas se dépêcher pour
+		# quelqu'un qu'on croit absent.
+		ui.time_label.text = "L'ADVERSAIRE EST PRÊT"
+		ui.signaler_adversaire_pret()
 	elif not p1_ready_for_rematch:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 

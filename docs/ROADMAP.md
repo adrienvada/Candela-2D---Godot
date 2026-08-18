@@ -2988,7 +2988,26 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     (`_relance_entries`) pour ne pas sauter le mode le plus joué **sans** changer
     au passage un libellé que personne n'a demandé de changer.
 - **V3.2 La pression du prêt** — quand l'adversaire passe « ✓ PRÊT » (RPC déjà
-  reçu), ping sonore + pulse du libellé. — *assets : 1 sample.*
+  reçu), ping sonore + pulse du libellé. — *assets : 1 sample.* **✅ Fait** — le
+  ping est câblé sur `ui_ready_ping`, clé déjà déclarée : il s'entendra le jour
+  où le fichier arrive, sans rien à recâbler.
+  - **Un message disait l'inverse de la vérité, et c'est le vrai gain.** Quand le
+    client s'était déclaré et pas l'hôte, l'écran de l'hôte affichait « EN
+    ATTENTE D'UN ADVERSAIRE » — alors que l'adversaire était là, prêt, et
+    attendait précisément celui qui lisait la phrase. On ne se dépêche pas pour
+    quelqu'un qu'on croit absent.
+  - Le cas du « prêt » reçu **pendant la killcam** est traité aussi : son
+    intention était déjà retenue, elle se signale à la sortie. Sans ça, le seul
+    cas où l'adversaire est prêt AVANT nous aurait été le seul à ne rien montrer.
+  - **Sur `self_modulate`**, ni `scale` (pris par la respiration V3.1) ni
+    `modulate` (porte le grisage quand il manque un joueur). Trois intentions
+    sur les mêmes boutons, trois propriétés — et la suite vérifie la
+    cohabitation, parce que chacun des deux effets fonctionne parfaitement seul.
+  - **Signalé, pas corrigé** (ce serait un changement de protocole) : le client
+    n'apprend **jamais** que l'hôte est prêt — aucun RPC ne le lui dit. Il presse
+    PRÊT, voit « ✓ PRÊT », puis attend sans savoir s'il attend l'hôte ou le
+    réseau. L'ajout d'un RPC hôte → client demanderait une montée de
+    `Protocol.VERSION`, ce qui dépasse un item de game feel.
 - **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par
   chiffre ; le CanvasModulate remonte du noir absolu au noir de jeu sur le
   « 1 » : la lumière naît au début de manche. — *assets : 3 notes courtes.*

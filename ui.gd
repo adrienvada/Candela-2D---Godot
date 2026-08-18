@@ -4398,6 +4398,7 @@ func _respirer_relance(actif: bool) -> void:
 		if not is_instance_valid(btn):
 			continue
 		btn.scale = Vector2.ONE
+		btn.self_modulate = Color.WHITE
 		if actif:
 			btn.pivot_offset = btn.size / 2.0
 			btn.set_meta(META_NAV_SEED, NAV_SEED_LES_DEUX)
@@ -4423,6 +4424,33 @@ func _appliquer_souffle(t: float) -> void:
 		if is_instance_valid(btn) and btn.is_visible_in_tree():
 			btn.pivot_offset = btn.size / 2.0
 			btn.scale = Vector2(enflure, enflure)
+
+## V3.2 — l'adversaire vient de se déclarer prêt : l'entrée de relance s'allume
+## une fois, et un ping la double.
+##
+## **Sur `self_modulate`, pas sur `scale` ni `modulate`.** La respiration V3.1
+## occupe déjà `scale` sur ces mêmes entrées, et `modulate` porte le grisage
+## quand il manque un joueur : écrire sur l'un ou l'autre ferait clignoter un
+## bouton grisé, ou couperait la respiration à chaque fois que l'autre se
+## déclare. Trois intentions, trois propriétés.
+##
+## Un éclat unique et court, pas une boucle : l'information est « il vient de se
+## déclarer », pas « il est prêt ». La seconde est déjà écrite en toutes lettres
+## au-dessus du chrono, et deux façons de dire la même chose se contredisent le
+## jour où l'une se désynchronise.
+func signaler_adversaire_pret() -> void:
+	var audio := get_node_or_null(^"/root/AudioManager")
+	if audio != null and audio.has_method("play_sfx"):
+		# La clé existe, le fichier pas encore : `play_sfx` rend null en silence.
+		# Le geste est câblé, il s'entendra le jour où le son arrive.
+		audio.play_sfx("ui_ready_ping")
+	for btn in _relance_entries:
+		if not is_instance_valid(btn) or not btn.is_visible_in_tree():
+			continue
+		var tw := create_tween()
+		btn.self_modulate = Color(1.9, 1.9, 1.9)
+		tw.tween_property(btn, "self_modulate", Color.WHITE, 0.55) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func hide_game_over() -> void:
 	_is_main_menu = false

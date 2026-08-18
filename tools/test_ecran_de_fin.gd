@@ -39,6 +39,7 @@ func _run() -> void:
 	_test_souffle()
 	await _test_ouverture_fermeture()
 	_test_graine()
+	await _test_pression_du_pret()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -126,3 +127,42 @@ func _test_graine() -> void:
 		and _ui.NAV_SEED_LES_DEUX < 0)
 	cible.remove_meta(_ui.META_NAV_SEED)
 	autre.remove_meta(_ui.META_NAV_SEED)
+
+## V3.2 — l'éclat qui dit que l'autre vient de se déclarer.
+##
+## Ce qui se vérifie ici, c'est la COHABITATION avec V3.1. Les deux effets vivent
+## sur les mêmes boutons ; s'ils partageaient une propriété, l'un couperait
+## l'autre — et le défaut serait invisible en test unitaire, puisque chacun
+## fonctionne seul.
+func _test_pression_du_pret() -> void:
+	print("\n[La pression du prêt]")
+	_ui.show_game_over(0)
+	await process_frame
+	var avant_echelle := (_ui._relance_entries[0] as Button).scale.x
+
+	_ui.signaler_adversaire_pret()
+	var eclaire := 0
+	for btn: Button in _ui._relance_entries:
+		if btn.is_visible_in_tree() and btn.self_modulate.r > 1.0:
+			eclaire += 1
+	_check("l'entrée visible s'allume", eclaire >= 1, "%d allumée(s)" % eclaire)
+
+	# Le point qui compte : la respiration tourne toujours, et sur sa propre
+	# propriété. Un éclat écrit sur `scale` l'aurait écrasée ; écrit sur
+	# `modulate`, il aurait rallumé un bouton grisé faute de joueur.
+	_check("la respiration n'est pas coupée", _ui._souffle_relance != null
+		and _ui._souffle_relance.is_valid())
+	_ui._appliquer_souffle(0.5)
+	var apres_echelle := (_ui._relance_entries[0] as Button).scale.x
+	_check("l'éclat et la respiration n'écrivent pas au même endroit",
+		not is_equal_approx(avant_echelle, apres_echelle)
+		or _ui._relance_entries[0].self_modulate.r > 1.0)
+
+	_ui.hide_game_over()
+	await process_frame
+	var restants := 0
+	for btn: Button in _ui._relance_entries:
+		if btn.self_modulate != Color.WHITE:
+			restants += 1
+	_check("l'éclat ne survit pas à la fermeture", restants == 0,
+		"%d entrée(s) encore allumée(s)" % restants)
