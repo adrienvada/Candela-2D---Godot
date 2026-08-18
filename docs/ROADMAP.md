@@ -2244,6 +2244,19 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   (vérifié par Adrien) : cela ressemble à un artefact de headless, ce n'est pas
   établi. Relevé le 2026-08-18, non corrigé.
 
+**Entrées et touches**
+- **Échap n'a pas un rôle mais quatre**, selon le contexte : ne pas quitter à
+  l'accueil, remonter d'un cran en profondeur, ouvrir la pause en match, la
+  refermer. C'est ce qui a fait traîner sa vérification deux jours — **un essai
+  unique n'en couvre qu'un, et le résultat paraît alors inconcluant plutôt
+  qu'incomplet.** Un relevé geste par geste, en tableau, tranche en trente
+  secondes ce qu'un essai global laisse en suspens.
+- **F3 est lu comme touche physique, hors Input Map, et macOS le capte avant le
+  jeu** (Mission Control). `fn + F3` est la parade. Corollaire qui explique trois
+  tentatives pilotées ratées : **une frappe synthétique atteint un champ de texte
+  par le chemin unicode, jamais une action de l'Input Map par le chemin
+  `keycode`.** Ce contrôle-là ne s'automatise pas.
+
 **Outils et instrumentation**
 - **Un `class_name` tout neuf n'existe pas encore pour `--script`.** Le registre
   des classes globales vit dans `.godot/global_script_class_cache.cfg`, qui est
@@ -3332,9 +3345,9 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 |---|---|
 | **Les 76 assets** | Aucun agent ne produit un son. Voir l'onglet ASSETS du suivi : noms exacts, durées sur la grille à 170 BPM, intentions. **Commencer par les cinq fichiers de musique** — délai le plus long, et ils réveillent un système entier déjà câblé. |
 | **Rejouer (jalon H3)** | Le seul juge du ressenti. À reprendre après chaque vague de game feel : une boucle qui ne redemande jamais dérive, elle optimise ce qu'elle sait mesurer. |
-| **Appariement automatique à deux fenêtres** | **Le prochain, et le dernier inconnu de la Phase 8.** Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. La découverte est prouvée ; la jointure, la poignée de main, l'accord sur qui héberge et la connexion ne le sont pas. Protocole détaillé, sept étapes. |
+| **Appariement automatique à deux fenêtres** | **Le prochain, et le dernier inconnu de la Phase 8.** ⚠️ Première tentative du 2026-08-18 **sans `--eos-ephemeral`** : même Device ID donc même PUID des deux côtés, chaque instance écartait le ticket de l'autre comme étant le sien, et les deux ont cherché indéfiniment. Rien n'indique un défaut de l'appariement — c'est le piège du PUID partagé, déjà consigné, rencontré pour de vrai. Deux instances avec `--eos-ephemeral`, à surveiller pendant qu'elles se cherchent. La découverte est prouvée ; la jointure, la poignée de main, l'accord sur qui héberge et la connexion ne le sont pas. Protocole détaillé, sept étapes. |
 | **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. Le test à deux fenêtres du 2026-08-18 ne le remplace pas : même machine, même réseau, donc **ni traversée de NAT ni latence réelle**. |
-| **Échap et F3 en jeu** | Trente secondes. Trois tentatives pilotées ont échoué sans conclure. |
+| ~~**Échap et F3 en jeu**~~ | ✅ **Fait le 2026-08-18** — les six gestes répondent. |
 | ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
 | **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
