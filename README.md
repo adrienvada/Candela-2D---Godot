@@ -65,6 +65,15 @@ conflits de version essuyés le 2026-08-18 avant que cette règle existe.
 Une session qui ouvre et ne trouve **aucune session déjà chargée de la
 republication** en devient responsable pour la suite, et le dit aux autres.
 
+> **Porteur au 2026-08-18** : la session qui a livré `6c0ad89` (structure des
+> menus). Constat fait et charge acceptée ce jour-là — il n'y en avait aucun.
+>
+> Une session qui ouvre ensuite **n'a pas à refaire ce constat** : elle demande
+> d'abord par `ListAgents` / `SendMessage` si le porteur est encore là, et ne
+> reprend la charge que s'il ne répond plus. Refaire le constat à l'aveugle
+> ramène exactement le problème que la centralisation a résolu — deux sessions
+> qui se croient seules et republient le même artefact le même jour.
+
 S'il fallait republier soi-même : l'outil `Artifact` **en passant l'URL du
 suivi** (ci-dessus) — sans elle, la publication crée un *second* artefact au lieu
 de mettre le premier à jour, et Adrien se retrouve avec deux tableaux qui se

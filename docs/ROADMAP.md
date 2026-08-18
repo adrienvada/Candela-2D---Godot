@@ -3716,13 +3716,13 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 |---|---|---|
 | ~~1~~ | ~~**Banc de file en scène**~~ | **FAIT** — EOS accepte le filtre entier, la conception tient. Un `.tscn` headless voit les autoloads du plugin EOS. Une seule instance suffit à répondre à la question qui bloque : EOS accepte-t-il un filtre entier avec `GreaterThanOrEqual` ? On ne cherche pas à trouver quelqu'un, on cherche à savoir si la **requête** est acceptée. |
 | ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
-| 4 | **Écran historique** (Phase 5, étape 5) | 🟡 **En cours** au 2026-08-18 (nuit) — `screen_history.gd` et sa suite apparaissent dans l'arbre. `match_history_view.gd` lit déjà le journal, avec 122 assertions. |
-| 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. **Passe par `ui.gd`** — vérifier qu'aucune session ne le tient. |
+| ~~4~~ | ~~**Écran historique**~~ | ✅ **FAIT le 2026-08-18** — `screen_history.gd`, sa suite `test_screen_historique`, et le compte des enregistrements écartés. |
+| ~~5~~ | ~~**Affichage du rang en jeu**~~ | ✅ **FAIT le 2026-08-18** — Phase 6 close : catégorie, division, points restants et échelon suivant, dans `ranked_identity.gd`. |
 | 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
 | ~~7~~ | ~~**Rejouer le journal local**~~ | ✅ **FAIT le 2026-08-18** — schéma v3, `pending_reports()` / `mark_reported()`, `replay_local_journal()`, vingt assertions. Le raccordement de `MatchRecord.build()` est fait aussi (`c064e6c`). |
 | ~~7bis~~ | ~~**La poignée de main de l'étape 8.9**~~ | ✅ **FAITE le 2026-08-18** — attribut `PROTO` sur le salon à code (lu avant la jointure), numéro dans le **filtre** de la file, `rpc_hello` à signature figée pour ENet, et le silence traité comme un refus. `Protocol.VERSION` est à **2**. |
-| 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. **Dépend de l'affichage du rang**, et passe par `ui.gd`. |
-| 9 | **Vagues de game feel procédurales** (V3, V5, V6) | Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. |
+| ~~8~~ | ~~**Déblocage d'armes, côté interface**~~ | ✅ **FAIT le 2026-08-18** — Phase 7 close côté mécanique : `rank_loadout.gd`, grisage avec la raison, règle du miroir de bout en bout. Reste le **contenu** des catégories 5 à 10, qui exige Adrien. |
+| 9 | **Vagues de game feel procédurales** (V3, V4, V5, V6) | **C'est le seul chantier de code encore ouvert.** Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. Les vagues 3 et 6 passent par `ui.gd` : vérifier qu'aucune session ne le tient avant d'y toucher. |
 
 ### Exige Adrien — rien ne remplace sa présence
 
@@ -3734,7 +3734,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | **Test à deux machines (H1)** | Une contre-vérification est due depuis les correctifs. Le test à deux fenêtres du 2026-08-18 ne le remplace pas : même machine, même réseau, donc **ni traversée de NAT ni latence réelle**. |
 | ~~**Échap et F3 en jeu**~~ | ✅ **Fait le 2026-08-18** — les six gestes répondent. |
 | ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
-| **Frottement du déblocage d'armes** | Un débutant démarre en Bougie, troisième catégorie : il aurait trois armes d'emblée et une seule à débloquer. Décaler le tableau, ou descendre le plancher ? |
+| ~~**Frottement du déblocage d'armes**~~ | ✅ **Tranché le 2026-08-18 par Adrien : descendre le plancher.** Tous les joueurs démarrent à l'échelon le plus bas (`RANK_FLOOR = START_RATING`), donc avec le seul pistolet, et les trois autres armes se gagnent. |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
 | **Déployer la fonction `rename`** | `supabase db push` puis `supabase functions deploy rename`. Écrite et testée depuis le 2026-08-18 ; l'écran du profil attend ce déploiement pour être câblé. |
 | **Numérotation de `Protocol.VERSION`** | Tranchée (« carnet + rappel »), mais **le numéro lui-même reste à monter à la main** à chaque changement du fil. C'est le seul jugement que la mécanique ne peut pas rendre. |
@@ -3749,81 +3749,65 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 
 > **Bilan du 2026-08-17.** Onze agents lancés, dix ont livré. Le onzième —
 > l'écran de **calibration de luminosité** — a été tué par une limite de session
-> et **n'a jamais été relancé** : c'est le seul travail commandé qui n'existe pas.
-> Il reste décrit à l'étape 4 de la Phase 5.
+> et n'a jamais été relancé. *(Livré depuis : il est aujourd'hui un panneau de la
+> rubrique Affichage, avec sa suite `test_screen_calibration`.)*
 >
-> *(Bilan du 2026-08-17 — au 2026-08-18, `run_suites.sh` en lance **vingt-trois**,
-> dont `test_fin_de_match` qui couvre le cycle de fin de match.)*
+> **Au 2026-08-18, `run_suites.sh` en lance vingt-neuf**, toutes vertes. Les
+> comptes qui figuraient ici — treize, dix-sept, vingt-trois — datent chacun d'un
+> moment de cette journée-là ; c'est le lanceur qui fait foi, pas ce document.
 >
-> Dix-huit fichiers `tools/test_*.gd` existent, **treize tournent**. Les cinq
-> autres : `test_matchmaking` et `test_screen_matchmaking`, écartées pour la
-> raison ci-dessous ; et trois bancs d'essai réseau qui ne sont pas des suites
-> (`test_transport`, `test_online_match`, `test_quit_path`).
+> Les trois bancs d'essai réseau ne sont pas des suites et n'y figurent pas :
+> `test_transport`, `test_online_match` (dont trois modes *sont* dans le lanceur)
+> et `test_quit_path`. Ils demandent deux processus et une session Epic.
 
-> **Le verrou est levé.** Les deux suites passent par `NetworkManager.quit_game()`,
-> l'unique porte de sortie du jeu : elle coupe le tick, laisse une frame s'écouler,
-> relâche puis ferme la plateforme. L'autoload `Matchmaker` est déclaré, et le
-> lanceur compte désormais **dix-sept suites**, toutes vertes au 2026-08-18
-> (les écrans audio et calibration ont apporté les deux dernières).
->
-> Un second défaut est tombé avec le premier, et il aurait cassé en production :
-> le cœur émet `state_changed(state)` avec un argument, l'écran connectait une
-> méthode qui n'en prend aucun. Godot refuse la connexion — le rafraîchissement
-> automatique n'aurait jamais eu lieu. Corrigé par `unbind(1)`.
->
-> **⚠️ Correction du 2026-08-18 : les deux entrées « chercher un match » ne sont
-> PAS ouvertes.** Le commit `05b72c7` l'affirme, et ce document le répétait ici
-> depuis. Vérifié dans le code : ce commit n'a ajouté que 7 lignes à `ui.gd` — la
-> constante `SCREEN_MATCHMAKING`, `_attach_screen` et l'entrée de retour. Les deux
-> entrées ([ui.gd:1609](../ui.gd) et [ui.gd:1652](../ui.gd)) portent toujours un
-> motif `NOT_YET`, donc `disabled = true`, et **aucun `push` ne mène à l'écran** :
-> il est construit, attaché, et inatteignable.
->
-> Ce qui manque : les deux entrées doivent viser `SCREEN_MATCHMAKING`, et comme
-> une seule instance d'écran sert les deux files, le mode se pose au passage —
-> `ScreenMatchmaking.set_ranked_queue(bool)` existe déjà pour ça.
+> **⚠️ Cette liste a menti pendant une journée.** Elle annonçait comme « seul
+> blocage de la Phase 8 » l'ouverture des deux entrées « chercher un match » —
+> déjà faites au moment où on la lisait ([ui.gd:1860](../ui.gd),
+> [ui.gd:1916](../ui.gd) : plus de motif `NOT_YET`, action `chercher`, style de
+> lanceur). Une liste de prochaines étapes périmée est **pire qu'absente** :
+> elle envoie refaire ce qui est fait, et détourne du reste. Réécrite le
+> 2026-08-18 en vérifiant chaque point dans le code.
 
-1. ~~Donner la séquence d'extinction d'EOS aux deux suites d'appariement.~~ **FAIT.**
-   `test_matchmaking` et `test_screen_matchmaking` passent toutes leurs
-   assertions et sortent en **139** dès que `eos_credentials.gd` est présent :
-   elles touchent `NetworkManager`, EOS démarre, et l'extinction croise
-   `EOS_Platform_Tick()`. C'est **le verrou de la Phase 8** — l'autoload
-   `Matchmaker` ne peut pas être déclaré avant, sous peine de propager le
-   segfault à toutes les suites.
-2. **Déclarer l'autoload et raccorder l'écran :** ~~autoload~~ **FAIT**,
-   ~~écran attaché~~ **FAIT**, **ouvrir les deux entrées grisées : PAS FAIT.**
-   Corrigé ici le 2026-08-18 : c'est aujourd'hui **le seul blocage** de la
-   Phase 8, et il tient en quelques lignes de `ui.gd` (voir l'encadré ci-dessus).
-3. ~~**Écrire un banc d'essai de file, en SCÈNE et non en script.**~~ **FAIT**
-   (`tools/test_queue.tscn`, `6df61db`) — et exercé deux fois : EOS accepte le
-   filtre entier, puis **deux identités distinctes se découvrent** (2026-08-18).
-   La conception de la file tient de bout en bout jusqu'à la découverte.
-4. **Puis essayer l'appariement à deux fenêtres** avec `--eos-ephemeral` (deux
-   instances locales partagent un Device ID, donc un PUID : chacune verrait le
-   ticket de l'autre comme le sien). **Attend le point 2** — l'écran est
-   inatteignable tant que les entrées sont grisées. Restent alors à prouver la
-   jointure, la poignée de main, l'accord sur qui héberge, et la connexion.
-   Protocole complet : [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
-4. **Rejouer le journal local** pour les rapports que le réseau a perdus.
-   `match_history.json` les a tous ; rien ne les remonte encore.
-5. **Vérifier que Échap et F3 répondent en jeu.** Deux tentatives pilotées ont
-   échoué sans qu'on puisse conclure : les frappes synthétiques passent dans un
-   champ de texte (chemin unicode) mais pas sur une action d'`InputMap` (chemin
-   `keycode`). Rien n'indique un défaut, rien ne l'exclut — trente secondes à la
-   main lèveraient le doute. **À lever avant la Phase 5** : une refonte des menus
-   se valide à la main, et Échap en est le geste de sortie.
-6. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+**Tout le code des phases 2 à 8 est livré.** Ce qui reste se range en trois tas,
+et un seul est du travail de session.
+
+### Le seul chantier de code ouvert
+
+1. **Les vagues de game feel** (section dédiée ci-dessus). Tout ce qui n'est pas
+   marqué *assets* se fait sans rien attendre de personne. Les vagues 3 et 6
+   passent par `ui.gd` — vérifier qu'aucune session ne le tient. Les vagues 4 et
+   5 vivent dans `player.gd`, les lumières et les particules : c'est le terrain
+   libre quand `ui.gd` est pris.
+2. Les **chantiers de robustesse** de l'étude du 2026-08-16 (section dédiée), à
+   piocher entre deux tâches. Aucun n'est bloquant.
+
+### Ce qui attend Adrien, et rien d'autre
+
+3. **L'appariement automatique à deux fenêtres**, avec `--eos-ephemeral` des deux
+   côtés — sans lui, les deux instances partagent un Device ID donc un PUID, et
+   chacune écarte le ticket de l'autre comme étant le sien (rencontré pour de
+   vrai le 2026-08-18). La découverte est prouvée ; la jointure, la poignée de
+   main, l'accord sur qui héberge et la connexion ne le sont pas. Protocole :
+   [PROTOCOLE_TEST_EOS.md](PROTOCOLE_TEST_EOS.md).
+4. **La contre-vérification à deux machines** (H1), due depuis les correctifs. Le
+   test à deux fenêtres ne la remplace pas : même machine, même réseau, donc ni
+   traversée de NAT ni latence réelle.
+5. **Les 76 assets**, à commencer par les cinq fichiers de musique — délai de
+   production le plus long, et ils réveillent un système entier déjà câblé (V1.1).
+6. **Le contenu des catégories de rang 5 à 10** : six armes à inventer. La
+   mécanique les attend, le tableau `RankLoadout.COMPETITIF` a leurs places.
+7. **Le déploiement de la fonction `rename`** — `supabase db push` puis
+   `supabase functions deploy rename`. Écrite et testée ; l'écran du profil
+   attend ce déploiement, un bouton qui répond 404 ne se distinguant pas d'un
+   jeu cassé.
+
+### Dettes anciennes, sans urgence
+
+8. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-7. Deux points connus, sans urgence : le relais Epic n'a jamais été exercé (la
-   connexion directe a toujours abouti), et la détection de déconnexion est
-   lente des deux côtés.
-8. Les chantiers de robustesse de l'étude du 2026-08-16 (section dédiée
-   ci-dessus) — à piocher entre deux phases, aucun n'est bloquant.
-8. Le **game feel** (section dédiée, six vagues priorisées) accompagne les
-   phases de contenu sans les bloquer : la Vague 1 réveille des systèmes déjà
-   câblés (meilleur ratio du projet), et la commande des assets V1.1 (stems)
-   et V1.3 (voix annonceur) gagne à partir maintenant — leur délai de
-   production est le plus long de toute la liste.
+9. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
+   directe a toujours abouti), et la détection de déconnexion est lente des deux
+   côtés.
 
 ## Journal des tests à deux machines
 
