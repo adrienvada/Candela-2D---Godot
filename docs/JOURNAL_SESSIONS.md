@@ -213,6 +213,39 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 (soir) — la fusion `main` ↔ `origin/main`, mesurée d'avance
+
+**Mesurée dans un worktree jetable, sans rien toucher.** Pour que celui qui
+fusionnera sache exactement ce qui l'attend.
+
+**Le code fusionne tout seul.** `audio_manager.gd` et `player.gd` — les deux
+fichiers que deux sessions ont modifiés — s'auto-fusionnent sans conflit. **Seuls
+deux fichiers conflictent, et ce sont les deux documents** : `docs/ROADMAP.md` et
+`docs/JOURNAL_SESSIONS.md`. Résolution manuelle, en gardant les deux côtés — ce
+sont des ajouts en sections différentes, pas des désaccords.
+
+**Le vrai problème n'est donc pas mécanique, il est sémantique : la fusion
+produirait DEUX trajectoires de killcam.** Celle de « game feel » vit dans
+`bullet.gd` (`_draw` sous `is_replay`, additif non éclairé) ; la mienne dans
+`killcam_trace.gd` + `game_state.gd` + `replay_system.gd`. Git ne verra aucun
+conflit : ce sont des fichiers disjoints. **La ligne serait simplement tracée
+deux fois, et rien ne le signalerait avant qu'on regarde une killcam.**
+
+**Recommandation de celui qui a écrit la seconde : garder la leur.** Elle est
+antérieure, elle est dans leur domaine, et le journal la leur attribuait. La
+mienne se retire en supprimant `killcam_trace.gd`, l'appel dans `game_state.gd`
+et `trajectoire_fatale()` dans `replay_system.gd` — trois gestes, aucun ailleurs.
+Le seul élément à ne PAS perdre au passage est le test
+`tools/test_rejeu.gd::_test_trajectoire`, qui vérifie qu'un tir de la **victime**
+juste avant sa mort n'est pas pris pour le coup fatal ; il vaut pour n'importe
+quelle implémentation et devrait être réécrit contre celle qui reste.
+
+**Ce qui reste bloquant, et qui n'est pas technique :** `4c110b2` livre V4.11,
+V4.13 et V5.5 — trois effets qui **rendent visible ce qui ne l'était pas**
+(position de la victime au coup au but, fenêtre où l'on sait qui a tiré, faisceau
+visible de côté). Ils relèvent du critère posé le même jour, **qu'Adrien n'a pas
+tranché**. Fusionner les adopte en silence.
+
 ### 2026-08-18 (soir) — session « fin de match », entrée tardive et fautive
 
 **Cette session a travaillé toute la journée sans lire ce journal.** Elle l'a
