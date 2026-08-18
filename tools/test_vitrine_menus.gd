@@ -35,6 +35,7 @@ func _run() -> void:
 	_test_encre_progression()
 	_test_encre_restaure_toujours()
 	_test_encre_depart()
+	_test_encre_respecte_le_grisage()
 	_test_tracante()
 	_test_gravure()
 	_test_fond()
@@ -211,6 +212,40 @@ func _test_encre_depart() -> void:
 		str(_alphas(col)))
 
 	encre._arreter()
+	col.free()
+	encre.free()
+
+## L'encre rend ce qu'elle a emprunté, PAS une valeur choisie d'avance.
+##
+## `modulate` ne lui appartient pas : une entrée « PRÊT » grisée faute d'un second
+## joueur est peinte à alpha 0,45 par le même canal. L'encre qui rallumerait tout
+## à 1,0 rendrait ce bouton pleinement lumineux alors qu'il reste `disabled` — un
+## contrôle qui a l'air disponible et ne répond pas, c'est-à-dire exactement ce
+## que le contrat « grisées, jamais masquées » veut éviter.
+func _test_encre_respecte_le_grisage() -> void:
+	print("\n[Ce que l'encre n'a pas le droit de rallumer]")
+	var encre := MenuInk.new()
+	root.add_child(encre)
+	var col := _colonne(3)
+	# La deuxième entrée est grisée, comme « PRÊT » quand il manque un joueur.
+	var grisee := col.get_child(1) as Control
+	grisee.modulate = Color(1.0, 1.0, 1.0, 0.45)
+	encre.set_intensite(1.0)
+
+	encre.couler(col, 0.0, Color.WHITE)
+	encre._arreter()
+	_check("une entrée grisée reste grisée après la coulée",
+		is_equal_approx(grisee.modulate.a, 0.45), "%.2f" % grisee.modulate.a)
+	_check("et les autres sont bien rendues pleines",
+		is_equal_approx((col.get_child(0) as Control).modulate.a, 1.0))
+
+	# Et par le chemin de l'extinction, qui est celui où le joueur baisse le
+	# curseur pendant que l'écran s'écrit.
+	encre.couler(col, 0.0, Color.WHITE)
+	encre.set_intensite(0.0)
+	_check("l'extinction en pleine coulée rend aussi le grisage",
+		is_equal_approx(grisee.modulate.a, 0.45), "%.2f" % grisee.modulate.a)
+
 	col.free()
 	encre.free()
 

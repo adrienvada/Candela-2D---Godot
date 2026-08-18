@@ -51,7 +51,14 @@ var _depart: float = 0.0
 var _portee: float = 1.0
 var _rect: Rect2 = Rect2()
 var _accent: Color = Color.WHITE
-var _touches: Array[Control] = []
+## Les contrôles éteints par la coulée en cours, **avec l'alpha qu'ils avaient**.
+##
+## `modulate` n'appartient pas à cet effet : une entrée « PRÊT » grisée faute
+## d'un second joueur est peinte à 0,45 par le même canal. Rendre 1,0 à tout le
+## monde rallumerait ce bouton alors qu'il reste `disabled` — un contrôle qui a
+## l'air disponible et ne répond pas. On rend donc ce qu'on a emprunté, jamais
+## une valeur choisie d'avance.
+var _touches: Array[Dictionary] = []
 var _tween: Tween
 
 func _init() -> void:
@@ -90,7 +97,7 @@ func couler(colonne: Control, depart_y: float, accent: Color) -> void:
 	for enfant in colonne.get_children():
 		var ctrl := enfant as Control
 		if ctrl != null:
-			_touches.append(ctrl)
+			_touches.append({"ctrl": ctrl, "origine": ctrl.modulate.a})
 			ctrl.modulate.a = 0.0
 
 	_progres = 0.0
@@ -101,9 +108,13 @@ func couler(colonne: Control, depart_y: float, accent: Color) -> void:
 func _avancer(t: float) -> void:
 	_progres = t
 	var front := _portee * t
-	for ctrl in _touches:
+	for touche in _touches:
+		var ctrl: Control = touche["ctrl"]
 		if not is_instance_valid(ctrl):
 			continue
+		# La valeur d'arrivée est celle qu'on a empruntée : une entrée grisée
+		# s'allume jusqu'à SON gris, pas jusqu'au plein.
+		var origine: float = touche["origine"]
 		var centre := ctrl.position.y + ctrl.size.y * 0.5 + _rect.position.y
 		var distance := absf(centre - _depart)
 		# Combien de front a dépassé cette entrée, ramené sur la retombée.
@@ -111,13 +122,13 @@ func _avancer(t: float) -> void:
 		if passe <= 0.0:
 			ctrl.modulate.a = 0.0
 		elif passe >= 1.0:
-			ctrl.modulate.a = 1.0
+			ctrl.modulate.a = origine
 		else:
 			# Le pic de surbrillance est de la lumière en trop, donc de l'alpha
-			# au-delà de 1 : Godot le borne au rendu, et l'entrée paraît blanchir
-			# une fraction de seconde avant de se poser. Aucun autre nœud, aucune
-			# couleur à mémoriser puis à rendre.
-			ctrl.modulate.a = 1.0 + SURBRILLANCE * _intensite * sin(passe * PI)
+			# au-delà de sa valeur : Godot le borne au rendu, et l'entrée paraît
+			# blanchir une fraction de seconde avant de se poser.
+			ctrl.modulate.a = origine * (1.0
+				+ SURBRILLANCE * _intensite * sin(passe * PI))
 	queue_redraw()
 
 func _arreter() -> void:
@@ -127,9 +138,10 @@ func _arreter() -> void:
 	_restaurer()
 
 func _restaurer() -> void:
-	for ctrl in _touches:
+	for touche in _touches:
+		var ctrl: Control = touche["ctrl"]
 		if is_instance_valid(ctrl):
-			ctrl.modulate.a = 1.0
+			ctrl.modulate.a = touche["origine"]
 	_touches.clear()
 	_progres = 0.0
 	queue_redraw()

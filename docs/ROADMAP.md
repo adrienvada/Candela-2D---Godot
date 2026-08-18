@@ -2250,6 +2250,26 @@ hors périmètre). Un tempo recopié est un tempo qui dérive — le jour où il
 ce qui bat encore à l'ancien ne se signale pas, il se contente d'être à côté.
 
 
+### Trois intentions sur un bouton, trois propriétés (2026-08-18)
+
+Les entrées du hub sont peintes par plusieurs effets à la fois, et chacun croit
+posséder son canal. À ce jour : **`scale`** porte la respiration de l'entrée qui
+relance (V3.1), **`self_modulate`** porte l'éclat de déclaration (V3.2), et
+**`modulate`** porte deux choses à lui seul — le grisage d'une entrée
+indisponible (`ui.gd`, « PRÊT » à 0,45 quand il manque un joueur) et l'allumage
+échelonné de l'encre coulée (M6).
+
+Le défaut réel qui en est sorti : **l'encre rendait 1,0 à tout le monde en fin de
+coulée**, donc rallumait à plein une entrée grisée qui restait `disabled` — un
+contrôle qui a l'air disponible et ne répond pas, c'est-à-dire exactement ce que
+le contrat « grisées, jamais masquées » veut éviter. Intermittent en prime :
+selon qu'un rafraîchissement du bloc salon repassait après la coulée ou non.
+
+**La règle : un effet qui emprunte une propriété partagée rend la valeur qu'il a
+trouvée, jamais une valeur choisie d'avance.** Capturer à l'entrée, restituer à
+la sortie. Un effet qui a besoin d'un canal à lui doit d'abord vérifier lesquels
+sont pris — les trois cités le sont.
+
 ### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
 
 En headless la cadence n'est pas plafonnée : quarante `process_frame` valent une
