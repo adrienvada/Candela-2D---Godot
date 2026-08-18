@@ -25,6 +25,20 @@ var _record_accum: float = 0.0
 
 var max_snapshots: int = 450 # 7,5 s à la cadence d'enregistrement ci-dessus
 var impact_frame: int = -1
+
+## L'impact a-t-il été détecté pour la manche en cours.
+##
+## `impact_frame == -1` ne peut pas tenir ce rôle : l'indice glisse d'un cran à
+## chaque image purgée du tampon, si bien qu'il **repasse par -1** une fois la
+## mort sortie de la fenêtre de rejeu. La détection se réarmait alors sur un
+## joueur toujours mort, replaçant l'impact au plafond du tampon — et
+## recommençait sans fin, à ~450 images d'intervalle.
+##
+## Visible dans le banc `test_online_match` sous la forme d'un `[REPLAY] P2 died.
+## impact_frame=450` répété indéfiniment ; la séquence de fin ne se terminait
+## jamais. En jeu fenêtré l'enregistrement s'arrête plus tôt, ce qui masquait le
+## défaut sans le corriger.
+var _impact_seen: bool = false
 var slow_mo_start_frame: int = -1
 var bullet_events: Array = []
 var last_played_frame: int = -1
@@ -56,6 +70,7 @@ func start_recording():
 	
 	impact_frame = -1
 	slow_mo_start_frame = -1
+	_impact_seen = false
 	last_played_frame = -1
 	time_since_impact_real = 0.0
 	playback_index = 0.0
@@ -82,7 +97,8 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p1_hp = p1.hp
 		
 		# Detect impact
-		if p1.hp <= 0 and impact_frame == -1:
+		if p1.hp <= 0 and not _impact_seen:
+			_impact_seen = true
 			impact_frame = snapshots.size()
 			slow_mo_start_frame = impact_frame - 15 # default fallback
 			for i in range(bullet_events.size() - 1, -1, -1):
@@ -102,7 +118,8 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p2_hp = p2.hp
 		
 		# Detect impact
-		if p2.hp <= 0 and impact_frame == -1:
+		if p2.hp <= 0 and not _impact_seen:
+			_impact_seen = true
 			impact_frame = snapshots.size()
 			slow_mo_start_frame = impact_frame - 15 # default fallback
 			for i in range(bullet_events.size() - 1, -1, -1):
@@ -119,9 +136,13 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 	snapshots.append(snap)
 	if snapshots.size() > max_snapshots:
 		snapshots.pop_front()
-		if impact_frame > -1:
+		# Arrêt à 0, et non à -1 : laisser l'indice continuer de descendre le fait
+		# repasser par la sentinelle « aucun impact », puis devenir négatif — donc
+		# servir d'ancre de rejeu négative. Quand la mort sort de la fenêtre, la
+		# plus vieille image retenue est la meilleure approximation qui reste.
+		if impact_frame > 0:
 			impact_frame -= 1
-		if slow_mo_start_frame > -1:
+		if slow_mo_start_frame > 0:
 			slow_mo_start_frame -= 1
 		for ev in bullet_events:
 			ev.frame -= 1

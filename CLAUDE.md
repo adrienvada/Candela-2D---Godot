@@ -17,11 +17,17 @@ humains/agents est dans [README.md](README.md). Règles non négociables :
   mise à jour). Expliquer le *pourquoi*, pas le *quoi*.
 - **Et republier le suivi de projet**, destiné à Adrien :
   https://claude.ai/code/artifact/ba2ce690-309e-4d87-b72b-3ace1a1b681e
-  Il se met à jour avec l'outil `Artifact` **en passant cette URL** — sans elle on
-  crée un second artefact au lieu de mettre le premier à jour. La feuille de route
-  est versionnée, le suivi ne l'est pas : **rien ne signale qu'il est périmé.**
-  Une session sans cet outil le dit dans son rapport, avec ce qu'il aurait fallu
-  changer.
+  **La republication est centralisée** (décidé le 2026-08-18, avec Adrien) :
+  une seule session s'en charge à la fois ; les autres ne republient pas
+  elles-mêmes, elles lui transmettent leur delta par message inter-session
+  (`ListAgents` / `SendMessage`). Aucune session déjà chargée de la
+  republication ? La première qui le constate en devient responsable et le dit
+  aux autres. Détail du protocole : [README.md](README.md#republier-le-suivi).
+  S'il faut republier soi-même : l'outil `Artifact` **en passant cette URL** —
+  sans elle on crée un second artefact au lieu de mettre le premier à jour. La
+  feuille de route est versionnée, le suivi ne l'est pas : **rien ne signale
+  qu'il est périmé.** Une session sans cet outil le dit dans son rapport, avec
+  ce qu'il aurait fallu changer.
 - Plusieurs sessions peuvent travailler en parallèle : jamais de `git checkout`
   sans vérifier qu'aucune autre session n'utilise l'arbre (préférer un
   worktree). Ne jamais pousser sur GitHub sans demande explicite d'Adrien.

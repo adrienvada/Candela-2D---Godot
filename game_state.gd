@@ -662,11 +662,64 @@ func rpc_start_round(w1_idx: int, w2_idx: int, map_code: String = "", match_id: 
 	_match_id = match_id
 	# Le client adopte la carte de l'hôte : sans ça les deux joueurs
 	# s'affronteraient sur des géométries différentes.
-	if map_code != "" and NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		var err := MapData.adopt_shared_map(map_code)
+	#
+	# Et s'il n'y arrive pas, **la manche ne commence pas.** Le code affichait
+	# auparavant un message puis démarrait quand même : chacun jouait alors sur sa
+	# propre arène, les balles traversant des murs absents chez l'un, la torche
+	# éclairant une géométrie que l'autre n'a pas. Les deux machines restent
+	# cohérentes avec elles-mêmes — aucun plantage, aucune erreur — et les deux
+	# joueurs se croient trichés. Mieux vaut refuser à la porte.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		var err := _adopt_host_map(map_code)
 		if err != "":
-			ui.show_dialog_message("Carte", "Carte de l'hôte illisible : " + err)
+			_refuse_match_on_map(err)
+			return
 	_do_start_round(w1_idx, w2_idx)
+
+## Adopte la carte annoncée par l'hôte. Rend la raison de l'échec, ou "".
+##
+## Un code vide **est** un échec, et c'était le cas le plus sournois : la garde
+## `if map_code != ""` le traitait comme « rien à faire », donc l'invité entrait
+## dans la manche sur sa carte précédente sans même un message. Une absence de
+## carte ne veut pas dire « garde la tienne », elle veut dire « je ne sais pas sur
+## quoi je joue ».
+func _adopt_host_map(map_code: String) -> String:
+	if map_code.is_empty():
+		return "l'hôte n'a annoncé aucune carte"
+	return MapData.adopt_shared_map(map_code)
+
+## [Client] Sort du match parce que l'arène est illisible, sans le compter comme
+## un abandon.
+##
+## `_forfeit_pending` n'est armé que par `_do_start_round`, et on n'y est jamais
+## arrivé : `_on_main_menu_requested()` peut donc faire le ménage habituel sans
+## rien archiver. Compter un forfait ici punirait un joueur d'un écart de version.
+##
+## L'hôte est prévenu **avant** la déconnexion, qui coupe le lien : sans ce
+## paquet il resterait seul dans son arène à attendre un adversaire déjà parti,
+## et finirait par lui compter la victoire.
+func _refuse_match_on_map(reason: String) -> void:
+	if multiplayer.has_multiplayer_peer():
+		rpc_id(1, "rpc_map_refused", reason)
+	_on_main_menu_requested()
+	ui.show_dialog_message("Arène incompatible",
+		("Impossible de lire l'arène de l'hôte : %s.\n\nLa partie n'a pas démarré — "
+		+ "mieux vaut cela que deux joueurs sur deux terrains différents. La cause "
+		+ "la plus courante est un écart de version entre les deux jeux.") % reason)
+
+## [Hôte] L'adversaire a refusé la carte et s'en va. Le lui dire, sinon l'hôte
+## attribue son départ à une déconnexion et lui compte le match.
+@rpc("any_peer", "reliable")
+func rpc_map_refused(reason: String):
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
+		return
+	# Le départ qui suit ne doit pas être archivé comme un abandon de l'adversaire.
+	_forfeit_pending = false
+	ui.show_dialog_message("Arène refusée",
+		("Votre adversaire n'a pas pu lire l'arène (%s) et a quitté.\n\nEssayez une "
+		+ "carte livrée avec le jeu, ou vérifiez que vous avez la même version.") % reason)
 
 ## [Hôte] Tire l'identifiant du match qui commence.
 ##

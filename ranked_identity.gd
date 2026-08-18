@@ -239,6 +239,19 @@ func report_match(match_id: String, outcome: String, data: Dictionary) -> void:
 func set_ranked_context(ranked: bool) -> void:
 	_ranked_context = ranked
 
+## La nature du match qu'on s'apprête à jouer — pour l'archiver avec lui.
+##
+## Lue par `game_state.gd` au moment de bâtir l'enregistrement, afin que le
+## journal local sache **plus tard** si ce match avait sa place au classement.
+## Sans elle, un rejeu devrait deviner, et un match amical rejoué vers le
+## classement serait impossible à démêler après coup.
+##
+## Elle décrit le match **courant**, jamais un match rejoué : `pending_reports()`
+## lit la nature dans l'enregistrement, qui est la seule source fiable une fois le
+## match passé.
+func is_ranked_context() -> bool:
+	return _ranked_context
+
 ## Relit le classement du joueur. Sans effet si rien n'est prêt ; l'issue arrive
 ## par `standing_changed`.
 ##
@@ -268,6 +281,58 @@ func _drain_reports() -> void:
 	if not _post(ENDPOINT_REPORT, payload):
 		_retry_or_drop("requête impossible")
 
+## Retire le rapport en tête et le clôt dans le journal local : il n'y a plus
+## rien à en attendre, que le serveur ait accusé réception ou refusé.
+func _settle_front() -> void:
+	if _report_queue.is_empty():
+		return
+	var done: Dictionary = _report_queue.pop_front()
+	_report_attempts = 0
+	MatchRecord.mark_reported(String(done.get("match_id", "")))
+
+## Renvoie les matchs classés que le serveur n'a jamais accusé réception.
+##
+## Trois chemins les perdaient définitivement, tous silencieux : identité pas
+## encore prête au moment du rapport (`report_match` sort sans rien faire), jeton
+## Epic indisponible (`_drain_reports` **vide la file entière**), et trois échecs
+## réseau d'affilée. Le match était pourtant archivé — il ne manquait que le
+## renvoi, et le classement avait des trous que personne ne pouvait voir.
+##
+## Le rejeu est sûr parce que le serveur est idempotent par construction : un
+## match déjà complet est refusé en 4xx, et un 4xx clôt l'enregistrement. Un
+## rapport de trop ne coûte donc qu'un aller-retour, là où un rapport manquant
+## fausse un classement pour toujours.
+##
+## La nature classée vient de l'**enregistrement**, jamais de `_ranked_context` :
+## celui-ci décrit le match qu'on s'apprête à jouer, pas celui qu'on rejoue.
+func replay_local_journal() -> int:
+	if state != State.READY:
+		return 0
+	var en_attente := MatchRecord.pending_reports(MatchRecord.load_history())
+	if en_attente.is_empty():
+		return 0
+	var deja := {}
+	for p in _report_queue:
+		deja[String((p as Dictionary).get("match_id", ""))] = true
+	var repris := 0
+	for entry in en_attente:
+		var e: Dictionary = entry
+		var id := String(e["match_id"])
+		if deja.has(id):
+			continue
+		_report_queue.append({
+			"match_id": id,
+			"outcome": String(e["issue"]),
+			"ranked": true,
+			"forfeit": bool(e.get("forfait", false)),
+			"duree": float(e.get("duree", 0.0)),
+		})
+		repris += 1
+	if repris > 0:
+		print("RankedIdentity: %d match(s) du journal local remis en file" % repris)
+		_drain_reports()
+	return repris
+
 ## Un envoi a échoué : on réessaie, puis on renonce en le disant.
 func _retry_or_drop(reason: String) -> void:
 	_report_attempts += 1
@@ -276,6 +341,11 @@ func _retry_or_drop(reason: String) -> void:
 		return
 	push_warning("RankedIdentity: rapport de match perdu après %d tentatives — %s"
 		% [REPORT_ATTEMPTS, reason])
+	# `pop_front()` et **surtout pas** `_settle_front()` : c'est toute la
+	# dissymétrie du dispositif. Le serveur a répondu — accusé ou refus — le match
+	# est clos ; le réseau a échoué — il ne sait rien de ce match, l'enregistrement
+	# reste ouvert et `replay_local_journal()` le reprendra au prochain démarrage.
+	# Le clore ici perdrait définitivement ce que l'étape entière cherche à sauver.
 	_report_queue.pop_front()
 	_report_attempts = 0
 	_drain_reports()
@@ -375,8 +445,7 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray,
 ## tient à jour tout seul, et le journal local a déjà enregistré le match.
 func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
 	if result == HTTPRequest.RESULT_SUCCESS and code == 200:
-		_report_queue.pop_front()
-		_report_attempts = 0
+		_settle_front()
 		_drain_reports()
 		# Le match vient peut-être de régler le classement : on le relit, mais
 		# seulement une fois la file vidée, pour ne pas se couper la parole.
@@ -389,8 +458,10 @@ func _on_report_completed(result: int, code: int, payload: Dictionary) -> void:
 	if result == HTTPRequest.RESULT_SUCCESS and code >= 400 and code < 500:
 		push_warning("RankedIdentity: rapport de match refusé (%d) — %s"
 			% [code, String(payload.get("raison", "sans raison"))])
-		_report_queue.pop_front()
-		_report_attempts = 0
+		# Refus définitif : le serveur a compris et tranché. Le match est clos dans
+		# le journal au même titre qu'un accusé de réception — sans quoi le rejeu
+		# le représenterait à chaque démarrage, indéfiniment.
+		_settle_front()
 		_drain_reports()
 		return
 
@@ -487,6 +558,11 @@ func _adopt(profile: Dictionary) -> void:
 	recovery_code = String(profile.get("recovery_code", ""))
 	last_error = ""
 	_set_state(State.READY)
+	# L'identité vient d'être acceptée : c'est le premier instant où un rapport
+	# peut partir, donc le bon moment pour rattraper ceux qui ne sont jamais
+	# partis. Après `_set_state`, sans quoi `replay_local_journal()` sortirait sur
+	# son propre garde-fou.
+	replay_local_journal()
 	profile_changed.emit()
 
 func _report(endpoint: String, success: bool, message: String) -> void:

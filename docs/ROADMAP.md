@@ -36,7 +36,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
-| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres, et **l'étape 8.8** (carte illisible = divergence silencieuse) |
+| 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres. **8.8 close** : une carte illisible refuse la manche au lieu de la commencer divergée |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -482,6 +482,64 @@ optimisation — avec ce rejeu comme référence pour la vérifier.
 | Affichage en jeu | ✅ « 1015 points · 1e · 3 matchs (1V 0D 2N) » dans l'onglet PROFIL |
 | `ratings` et `leaderboard` à la clé publiable | ✅ fermés |
 | 6 suites Godot · 64 tests Deno | ✅ |
+
+### Étape 2c — le rejeu du journal local ✅ CLOSE (2026-08-18)
+
+**Le classement avait des trous que personne ne pouvait voir.** Trois chemins
+perdaient un rapport de match définitivement, tous silencieux :
+
+1. `report_match()` sort sans rien faire si l'identité n'est pas encore `READY` —
+   or elle ne l'est pas au premier match d'une session lancée hors ligne ;
+2. `_drain_reports()` **vide la file entière** quand le jeton Epic est
+   indisponible ;
+3. `_retry_or_drop()` renonce après trois tentatives réseau.
+
+Dans les trois cas le match était bien archivé dans `user://match_history.json`.
+Le commentaire de `game_state.gd` promettait d'ailleurs qu'« une étape ultérieure
+pourra rejouer ce qui manque ».
+
+**Elle ne le pouvait pas.** L'enregistrement ne portait ni `match_id`, ni la
+nature classée, ni l'issue vue par cette machine — c'est-à-dire exactement les
+trois champs que le serveur exige. Le journal était un souvenir lisible par un
+humain, pas une source de rejeu. La promesse était sincère et intenable, et rien
+ne le signalait : c'est le même motif que les quatre écarts relevés la veille,
+sous une forme plus retorse — non pas une décision jamais posée, mais une
+**capacité affirmée que le format interdisait**.
+
+Schéma porté en **v3** : `match_id`, `classe`, `issue`, `remonte`.
+`MatchRecord.pending_reports()` sélectionne, `mark_reported()` clôt,
+`RankedIdentity.replay_local_journal()` renvoie à l'instant où l'identité devient
+utilisable.
+
+#### Les deux décisions qui portent tout le reste
+
+**Le rejeu est sûr parce que le serveur est idempotent par construction.** Un
+match déjà complet est refusé en 4xx, et un 4xx clôt l'enregistrement. Un rapport
+de trop ne coûte donc qu'un aller-retour, là où un rapport manquant fausse un
+classement pour toujours. Les deux sens d'erreur ne se valent pas, et c'est ce qui
+autorise à rejouer sans hésiter.
+
+**La dissymétrie entre « le serveur a répondu » et « le réseau a échoué. »** Un
+accusé de réception *et* un refus définitif closent l'enregistrement — il n'y a
+plus rien à en attendre. Un échec de transport, lui, le laisse **ouvert** : le
+serveur ne sait rien de ce match. Clore là perdrait très exactement ce que
+l'étape cherche à sauver, et c'est la seule ligne de tout le dispositif qu'il ne
+faut pas « simplifier ».
+
+Les enregistrements d'avant la v3 n'ont pas d'identifiant : ils sont
+définitivement irrejouables, et le filtre les écarte plutôt que d'envoyer des
+récits que le serveur ne saurait apparier.
+
+**Vingt assertions** (`tools/test_rejeu_journal.gd`). Ce qu'elles protègent est
+invisible à l'usage : un classement à trous ressemble en tout point à un
+classement juste — personne ne peut voir le match qui manque.
+
+**Reste un fil, et il n'est pas chez moi :** `MatchRecord.build()` accepte
+désormais `match_id`, `ranked` et `outcome`, mais **son unique appelant
+(`game_state.gd:_archive_match_result`) ne les passe pas encore** — le fichier
+appartenait à une autre session au moment de la livraison. Tant que ce n'est pas
+fait, les nouveaux enregistrements sortent avec un `match_id` vide et le rejeu ne
+reprend rien. La machinerie est prête et testée ; il manque une ligne d'appel.
 
 ### Périmètre
 
@@ -1458,7 +1516,7 @@ chemins convergents). Reste ce que l'appariement crée de neuf :
 Aucun de ces trois points ne se résout par de la technique seule ; les écrire
 évite de croire qu'un système d'appariement les règle.
 
-### Étape 8.8 — la carte que l'autre n'a pas 🔴 À FAIRE — divergence silencieuse
+### Étape 8.8 — la carte que l'autre n'a pas ✅ CLOSE (2026-08-18)
 
 **Le cas est déjà résolu par construction, et personne ne l'avait écrit.** La carte
 ne voyage pas par identifiant, elle voyage **par valeur** : `_host_map_code()`
@@ -1510,21 +1568,43 @@ Le décodage peut échouer pour quatre raisons, dont une **certaine** d'arriver 
 l'invité joue sur sa carte précédente. Même divergence, sans même la boîte de
 dialogue.
 
-#### Ce qu'il faut faire
+#### Ce qui a été fait
 
-- **Refuser de commencer plutôt que commencer divergé.** Un invité qui ne sait pas
-  lire la carte ne doit pas entrer dans la manche : il quitte et dit pourquoi.
-  C'est la seule règle qui compte, les autres n'en sont que la mise en œuvre.
-- **Le prévenir à l'hôte.** Sans retour, l'hôte reste seul dans son arène à
-  attendre un adversaire qui a été éjecté — et lui archiverait un forfait.
-- **Comparer les versions à la connexion, pas au lancement de la manche.** Un
-  échange de `MapCodec.VERSION` à la poignée de main transforme une divergence
-  découverte en plein match en un refus propre à la porte : « vos versions
-  diffèrent ». C'est le seul moment où l'information est encore actionnable.
-- **Traiter `map_code` vide comme un échec**, pas comme « rien à faire ».
-- Une suite headless qui joue les cinq cas : version future, grille hors bornes,
-  code tronqué, code vide, code valide. Aucun ne demande de réseau — `adopt_shared_map`
-  est une fonction pure sur une chaîne.
+- **La manche ne démarre plus.** `rpc_start_round` refuse et sort ; c'était la
+  seule règle qui comptait, tout le reste n'en est que la mise en œuvre.
+- **Sans forfait pour le refusé.** Le jeton `_forfeit_pending` n'est armé que par
+  `_do_start_round`, où l'on n'arrive jamais : `_on_main_menu_requested()` fait
+  donc le ménage habituel sans rien archiver. Punir un joueur d'un écart de
+  version aurait été le pire résultat possible.
+- **L'hôte est prévenu** (`rpc_map_refused`), avant la déconnexion qui coupe le
+  lien. Sans ce paquet il resterait seul dans son arène à attendre un adversaire
+  déjà parti, et finirait par lui compter la victoire.
+- **`map_code` vide est un échec**, plus « rien à faire ».
+- **`tools/test_carte_partagee.gd`** — quinze assertions sur les cinq cas, sans
+  réseau ni seconde machine. Le jeu d'essai dérive de la vraie carte livrée : un
+  décor écrit à la main finirait par diverger du format réel, et la suite
+  validerait un format que le jeu n'écrit plus.
+
+**Deux défauts trouvés en écrivant la suite**, tous deux dans `map_codec.gd` :
+`validate()` et `get_grid_size()` lisaient `grid_size` dans une variable typée
+`Dictionary`. Un JSON qui met autre chose sous cette clé **jette une erreur de
+script** au lieu du refus propre que toute la fonction s'applique à produire —
+l'appelant reçoit `null` et lit `["ok"]` dessus. Or `validate()` est précisément
+la porte d'entrée de tout code venu d'ailleurs. Les deux sites vérifient
+désormais le type avant de lire.
+
+#### Ce qui reste
+
+**Comparer les versions à la connexion**, et non au lancement de la manche. Le
+refus actuel est propre mais tardif : il arrive après la poignée de main, une
+fois les deux joueurs engagés. L'échange devrait avoir lieu à la porte.
+
+La difficulté n'est pas l'échange lui-même mais **le fait qu'il doive survivre à
+ce qu'il mesure** : deux builds dont les RPC ont des arités différentes se jettent
+mutuellement les paquets **sans aucune erreur console**. Un contrôle de version
+posé dans un RPC est donc muet exactement dans le cas qu'il devait détecter. Il
+faut un canal dont la forme ne change jamais — un paramètre optionnel n'y suffit
+pas à lui seul. À concevoir avant d'écrire.
 
 #### La question d'équité que le tirage au sort vient d'ouvrir
 
@@ -1688,15 +1768,48 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   `MenuHub.reveal_entry()`, appelé depuis `_set_focus()`.
 
 **Cartes et géométrie**
-- **Un échec d'adoption de la carte de l'hôte n'empêche pas la manche de
-  démarrer.** `rpc_start_round` affiche un message puis appelle `_do_start_round`
+- **Une variable typée `Dictionary` qui reçoit du JSON venu d'ailleurs jette au
+  lieu de refuser.** `MapCodec.validate()` et `get_grid_size()` lisaient
+  `grid_size` ainsi : un code où cette clé porte autre chose provoquait une
+  erreur de script *à l'intérieur* de la fonction chargée de rendre un refus
+  propre, l'appelant recevant `null` puis lisant `["ok"]` dessus. Le typage strict
+  est un contrat entre nous, pas avec une entrée non fiable — **vérifier le type
+  avant de lire, sur toute donnée qui a traversé un JSON.**
+- **~~Un échec d'adoption de la carte de l'hôte n'empêche pas la manche de
+  démarrer~~ — corrigé le 2026-08-18 (étape 8.8).** `rpc_start_round` affiche un message puis appelle `_do_start_round`
   quoi qu'il arrive : les deux joueurs jouent sur des géométries différentes,
   chaque machine restant cohérente avec elle-même. Aucun plantage, aucune erreur,
-  et deux joueurs persuadés que l'autre triche. Le cas **certain** d'arriver est
-  la différence de `MapCodec.VERSION` entre deux builds. Voir l'étape 8.8.
-- **Un `map_code` vide ne déclenche même pas le message** : la garde
-  `if map_code != ""` fait sauter l'adoption en silence. Une absence traitée comme
-  « rien à faire » alors que c'est « je ne sais pas sur quoi je joue ».
+  et deux joueurs persuadés que l'autre triche. Le cas **certain** d'arriver était
+  la différence de `MapCodec.VERSION` entre deux builds. La manche refuse
+  désormais de commencer. **Ce qu'il faut en retenir** : devant une donnée reçue
+  qu'on ne sait pas lire, continuer coûte toujours plus cher que s'arrêter — et
+  une divergence de simulation ne se signale par aucune erreur.
+- **Une absence n'est pas « rien à faire ».** La garde `if map_code != ""` faisait
+  sauter l'adoption en silence : le client entrait dans la manche sur sa carte
+  précédente, sans même le message d'erreur. Un champ vide voulait dire « je ne
+  sais pas sur quoi je joue ».
+
+**Fin de match en ligne**
+- **`tools/test_online_match.tscn` n'est dans aucun lanceur**, et c'est le seul
+  banc qui joue une fin de match à deux instances. Les vingt suites headless n'en
+  jouent aucune. **À lancer à la main avant de toucher au cycle de fin de match**
+  — il demande deux processus coordonnés, ce que `run_suites.sh` ne sait pas
+  faire ; l'inscrire demanderait de lui apprendre.
+- **Une commodité non demandée a coûté une régression visible à chaque fin de
+  match.** `_close_lobby_if_left()` fermait le salon en quittant l'écran : je
+  l'avais ajoutée de moi-même, elle n'était pas au périmètre. `show_game_over()`
+  appelle `hub.reset()`, qui émet `screen_changed("accueil")` **avant** le
+  `push()` — l'hôte coupait donc sa propre connexion, et les deux joueurs se
+  voyaient mutuellement déconnectés. Livrée avec dix-neuf suites vertes, sur le
+  chemin exact qu'Adrien testait. Corrigée le 2026-08-18 (`ec2eac1`). Deux leçons :
+  **ce qui n'est pas demandé se signale au lieu de s'écrire**, et une suite verte
+  ne dit rien d'un chemin qu'aucune suite ne parcourt.
+- **La killcam se rejoue en boucle en headless** — `impact_frame` collée au
+  plafond du tampon, donc `_end_sequence_active` ne retombe jamais et l'écran de
+  fin ne se pose pas. C'est ce qui garde `test_online_match` au rouge sur ses deux
+  derniers contrôles. **En jeu fenêtré l'écran de fin s'affiche normalement**
+  (vérifié par Adrien) : cela ressemble à un artefact de headless, ce n'est pas
+  établi. Relevé le 2026-08-18, non corrigé.
 
 **Tests headless**
 - **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
@@ -1723,6 +1836,13 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   qu'ils étaient réglés. **Écrire une décision et l'implémenter sont deux gestes**,
   et ce document ne distingue pas les deux à la lecture. Un futur lot gagnerait à
   marquer explicitement ce qui est *décidé* et ce qui est *fait*.
+- **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
+  commit qui suit part avec son message complet et son contenu amputé. Arrivé le
+  2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
+  fichier de test, le `.uid` listé n'ayant pas encore été régénéré par Godot. La
+  parade est mécanique et coûte deux secondes — **`git show --stat` avant de
+  pousser.** Le message n'est pas une preuve de ce qui est dedans, et c'est la
+  variante *involontaire* du piège ci-dessus.
 - **Le protocole de test suppose un alias `godot` qui n'existe pas sur le poste
   d'Adrien.** Toutes les commandes de `docs/PROTOCOLE_TEST_EOS.md` commençaient
   par `godot` ; il a eu `command not found` en copiant-collant. L'alias est
