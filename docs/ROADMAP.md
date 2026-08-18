@@ -2269,10 +2269,13 @@ raison — rien ne comparait le mécanisme à ce que l'écran montre :
 
 **Corollaire de rangement.** `torch_angle_deg` est un **demi**-angle
 (`get_torch_texture` allume les pixels dont l'écart à l'axe lui est inférieur).
-Le semis de poussière de V5.5 le prend pour un angle plein et le redivise par
-deux : la poussière danse dans un cône deux fois trop étroit. **Signalé, non
-corrigé** — hors du périmètre de cette étape, et c'est de la décoration, pas du
-jeu. Une ligne dans `player.gd`, à faire par la session qui tient ce fichier.
+Le même faux ami avait frappé deux fois : après l'éblouissement, le semis de
+poussière de V5.5, qui le prenait pour un angle plein et le redivisait par deux
+— la poussière dansait dans un cône deux fois trop étroit, et le pompe en
+semait dans un tiers de sa flaque. **Corrigé le 2026-08-18 sur demande
+d'Adrien.** La leçon n'est pas la ligne, c'est le nom : un nombre dont l'unité
+se devine se trompera une troisième fois. `WeaponData.demi_angle_torche()` et
+`cos_demi_cone()` sont désormais les deux seules lectures autorisées.
 
 ### Une suite qui pend bloque tout le lanceur (2026-08-18)
 
@@ -3455,12 +3458,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   cadence fixe dans le cône réel de l'arme (`torch_angle_deg`, portée
   courante) tant que la torche est allumée. Côté budget, la poussière passe
   par le pool plafonné : elle recycle, elle n'alloue pas.
-  ⚠️ **Signalé le 2026-08-18, non corrigé** (hors périmètre) : le semis prend
-  `torch_angle_deg` pour un angle plein et le redivise par deux, alors que
-  c'est déjà un **demi**-angle. La poussière danse dans un cône deux fois trop
-  étroit — décoratif, mais c'est le même faux ami qui a faussé
-  l'éblouissement. `WeaponData.cos_demi_cone()` dit maintenant la vérité en un
-  seul endroit ; une ligne de `player.gd` à y raccorder.
+  ✅ **Corrigé le 2026-08-18** : le semis prenait `torch_angle_deg` pour un
+  angle plein et le redivisait par deux, alors que c'est déjà un **demi**-angle
+  — la poussière dansait dans un cône deux fois trop étroit, le pompe n'en
+  semant que dans un tiers de sa flaque. Le semis lit maintenant
+  `WeaponData.demi_angle_torche()`, comme l'éblouissement lit
+  `cos_demi_cone()` : une seule lecture, un seul endroit où se tromper.
 - **V5.6 Rétrodiffusion pulsée au pas** — le BodyLight respire en marchant.
   **✅ Fait** — chaque pas détecté (le détecteur V1.x existant, déjà gardé
   contre les téléportations) arme une impulsion qui se résorbe en ~140 ms sur

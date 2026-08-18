@@ -230,10 +230,11 @@ branche, pas sur `main` : rien n'est poussé sans demande explicite d'Adrien. À
 qui reprendra ces fichiers : les zones sont étroites (le bloc éblouissement de
 `_process`, `apply_dazzle`, deux lignes de `update_hud`), mais elles existent.
 
-**Laissé exprès à la session qui tient `player.gd`** : le semis de poussière de
-V5.5 divise `torch_angle_deg` par deux alors que c'est déjà un demi-angle.
-Signalé dans la ROADMAP, non corrigé — hors périmètre, et `WeaponData.cos_demi_cone()`
-existe maintenant pour le raccorder proprement.
+**Signalé puis corrigé sur demande d'Adrien** (second commit) : le semis de
+poussière de V5.5 divisait `torch_angle_deg` par deux alors que c'est déjà un
+demi-angle. Il lit maintenant `WeaponData.demi_angle_torche()`. La session qui
+tient `player.gd` n'a donc rien à reprendre là-dessus — juste à savoir que la
+ligne a bougé.
 
 ### 2026-08-18 — session « game feel » (lot V3/V5/V6)
 

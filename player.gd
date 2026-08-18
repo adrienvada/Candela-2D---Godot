@@ -880,7 +880,12 @@ func _physics_process(delta):
 			if pool:
 				var faisceau := Vector2.from_angle(global_rotation)
 				var portee := randf_range(40.0, 240.0)
-				var demi_angle := deg_to_rad((current_weapon.torch_angle_deg if current_weapon else 30.0) * 0.5)
+				# `torch_angle_deg` est DÉJÀ un demi-angle : le multiplier par
+				# 0,5 semait la poussière dans un cône deux fois trop étroit
+				# (corrigé le 2026-08-18, même faux ami que l'éblouissement).
+				# 30° sans arme : le même défaut que `Vision.COS_DEMI_CONE`.
+				var demi_angle: float = current_weapon.demi_angle_torche() if current_weapon \
+					else deg_to_rad(30.0)
 				var ecart := faisceau.orthogonal() * portee * tan(demi_angle) * randf_range(-0.6, 0.6)
 				pool.emit(ParticlePool.Kind.DUST, muzzle.global_position + faisceau * portee + ecart,
 					Color(1.0, 0.97, 0.9, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
