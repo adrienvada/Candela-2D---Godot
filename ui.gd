@@ -82,6 +82,10 @@ const SCREEN_DISPLAY := "affichage"
 const SCREEN_AUDIO := "audio"
 const SCREEN_EFFECTS := "effets"
 const SCREEN_CALIBRATION := "calibration"
+## La calibration n'ouvre plus d'écran : elle s'affiche dans le cadre de droite,
+## comme les autres réglages. L'identifiant d'écran survit parce que le garde-fou
+## des effets s'en sert encore comme nom de la chose mesurée.
+const PANEL_CALIBRATION := "panneau_calibration"
 
 ## Clés des affichages riches du panneau de droite. Ce ne sont pas des écrans : on
 ## ne s'y déplace pas, ils se montrent à droite de la liste sous le curseur.
@@ -1974,8 +1978,9 @@ func _build_hub_screens() -> void:
 	_attach_screen(SCREEN_AUDIO, "Audio", ScreenAudio.new())
 	hub.add_back_entry(SCREEN_AUDIO)
 
-	_attach_screen(SCREEN_CALIBRATION, "Calibration", ScreenCalibration.new())
-	hub.add_back_entry(SCREEN_CALIBRATION)
+	hub.register_panel(PANEL_CALIBRATION, _build_calibration_panel())
+	# Le garde-fou suit désormais le PANNEAU, pas l'écran courant.
+	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
 	_attach_screen(SCREEN_HISTORY, "Historique", ScreenHistory.new())
@@ -2667,6 +2672,41 @@ func _attach_screen(id: String, title: String, screen: HubScreen) -> void:
 	screen.navigate_requested.connect(func(target: String) -> void: hub.push(target))
 	_screens[id] = screen
 
+## La calibration, en panneau de droite.
+##
+## L'écran autonome savait déjà tout faire ; seul son point d'accrochage change.
+## On l'enveloppe dans un conteneur qui MESURE — un `Control` nu rend une taille
+## minimale nulle même plein d'enfants, et la cible se poserait sous les entrées
+## d'à côté.
+func _build_calibration_panel() -> Control:
+	var boite := VBoxContainer.new()
+	boite.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var ecran := ScreenCalibration.new()
+	ecran.name = "PanneauCalibration"
+	boite.add_child(ecran)
+	ecran.build(boite)
+	_screens[SCREEN_CALIBRATION] = ecran
+	return boite
+
+## Les effets de vitrine s'éteignent **quand le champ de mesure est à l'écran**,
+## et non quand un écran nommé « calibration » est ouvert.
+##
+## La nuance a coûté un déplacement : la calibration est devenue un panneau, et un
+## garde-fou branché sur l'écran courant ne se serait plus levé du tout. Le champ
+## se serait retrouvé grainé, embrumé et vignetté — sans que rien paraisse
+## anormal, et en décalant le réglage de tous ceux qui calibrent de la même façon.
+##
+## Ce n'est pas un réglage de confort mais un contrat : trois centièmes de
+## luminance parasite sur un champ mesuré faussent la mesure.
+func _refresh_calibration_guard() -> void:
+	var mesure := hub != null and hub.shown_panel() == PANEL_CALIBRATION
+	if mesure == _calibration:
+		return
+	_calibration = mesure
+	_apply_menu_effects()
+	if mesure and _screens.has(SCREEN_CALIBRATION):
+		_screens[SCREEN_CALIBRATION].refresh()
+
 ## Chaque écran se remet en accord avec l'état du jeu au moment où il s'affiche,
 ## et jamais avant : rafraîchir un écran caché coûte des requêtes réseau que
 ## personne ne regarde.
@@ -2682,12 +2722,6 @@ func _on_hub_detail_changed(_title: String, text: String) -> void:
 	game_over_score.text = propre
 
 func _on_hub_screen_changed(id: String) -> void:
-	# Voir `_calibration` : on entre ou on sort du champ de mesure, et tous les
-	# effets de la vitrine s'éteignent ou se rallument d'un bloc.
-	var mesure := id == SCREEN_CALIBRATION
-	if mesure != _calibration:
-		_calibration = mesure
-		_apply_menu_effects()
 	if _screens.has(id):
 		var screen: HubScreen = _screens[id]
 		screen.refresh()
@@ -3570,9 +3604,12 @@ func _fill_display_screen(body: VBoxContainer) -> void:
 	body.add_child(hub.make_entry("IMAGES PAR SECONDE",
 		"Déplafonné par défaut : EOS coûte d'autant plus de latence que la cadence "
 		+ "est basse.", "", COLOR_GOLD, "", "", false, PANEL_FPS))
+	# La calibration se règle **dans le cadre**, comme la résolution ou le vsync :
+	# descendre d'un cran pour un réglage de plus rompait la grammaire de l'écran
+	# sans rien apporter.
 	body.add_child(hub.make_entry("CALIBRATION",
 		"Cible perceptive : ce qui doit se voir apparaît à peine, le reste reste "
-		+ "invisible.", SCREEN_CALIBRATION))
+		+ "invisible.", "", COLOR_GOLD, "", "", false, PANEL_CALIBRATION))
 
 func _build_resolution_panel() -> Control:
 	var row := VBoxContainer.new()

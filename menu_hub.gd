@@ -44,6 +44,10 @@ signal action_requested(action: String)
 ## Ce que l'entrée sous le curseur raconte. L'en-tête du jeu l'affiche : c'est le
 ## seul endroit où le regard passe déjà.
 signal detail_changed(title: String, text: String)
+## Le panneau de droite a changé. Ce qui s'y affiche peut engager plus que du
+## texte — la calibration y règle un point de noir sur un champ mesuré — et
+## l'appelant doit pouvoir réagir à sa venue comme à son départ.
+signal panel_changed(key: String)
 
 const ROOT := "accueil"
 
@@ -399,6 +403,10 @@ func show_detail(title: String, text: String, panel: String = "") -> void:
 ## « ce que l'écran montre par défaut » : sans ce repli, survoler une entrée sans
 ## panneau viderait la droite, et le salon disparaîtrait dès que le curseur se
 ## pose sur « PRÊT ».
+## Le panneau actuellement montré, ou une chaîne vide.
+func shown_panel() -> String:
+	return _shown_panel
+
 func _apply_panel(key: String) -> void:
 	var wanted := key if key != "" else String(_screen_panels.get(current_id(), ""))
 	if wanted == _shown_panel:
@@ -408,6 +416,7 @@ func _apply_panel(key: String) -> void:
 		var content: Control = _panels[k]
 		if content != null:
 			content.visible = k == wanted
+	panel_changed.emit(wanted)
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
