@@ -67,6 +67,22 @@ var losses: int = 0
 var draws: int = 0
 var is_ranked: bool = false
 
+## Le rang du joueur, tel que le SERVEUR l'a calculé. Rien n'est dérivé ici :
+## l'échelle a un seul propriétaire, et deux implémentations de la même échelle
+## divergeraient — c'est le classement affiché qui aurait tort, sans que rien ne
+## le signale.
+##
+## Vide tant que le joueur n'est pas classé. Un joueur sans ligne au classement
+## n'a pas de catégorie : lui afficher « Aveugle I » serait un rang inventé, au
+## même titre que les « 1000 points » déjà écartés.
+var rank_label: String = ""
+var rank_tier: String = ""
+var rank_tier_index: int = 0
+## 1 (I, la plus basse) à 3 ; 0 au sommet, qui n'a pas de division.
+var rank_division: int = 0
+var rank_next_label: String = ""
+var rank_points_to_next: int = -1
+
 ## Ce que la dernière lecture du classement a rendu au-delà de ma propre ligne.
 ##
 ## `_standing_loaded` n'est pas redondant avec un tableau vide : sans lui,
@@ -532,6 +548,7 @@ func _on_standing_completed(result: int, code: int, payload: Dictionary) -> void
 	if not mine is Dictionary:
 		# Profil connu mais jamais classé : aucun match concordant à son nom.
 		is_ranked = false
+		_clear_rank()
 		standing_changed.emit()
 		return
 	var d: Dictionary = mine
@@ -542,7 +559,55 @@ func _on_standing_completed(result: int, code: int, payload: Dictionary) -> void
 	losses = int(d.get("losses", 0))
 	draws = int(d.get("draws", 0))
 	is_ranked = true
+	_adopt_rank(d.get("tier", null))
 	standing_changed.emit()
+
+## Retient le rang rendu par le serveur pour MA ligne.
+##
+## Le serveur envoie l'objet complet — catégorie, division, libellé prêt à
+## afficher, rang suivant, points restants — parce que tout cela servira. On le
+## garde tel quel : recomposer « Bougie II » depuis la catégorie et la division
+## rejouerait ici une règle qui appartient au serveur, et le jour où l'échelle
+## bougerait, le jeu afficherait l'ancienne sans erreur.
+func _adopt_rank(tier: Variant) -> void:
+	if not tier is Dictionary:
+		# Classé mais sans rang rendu : on n'en invente pas un. Le reste du
+		# classement — points, position, bilan — reste parfaitement affichable.
+		_clear_rank()
+		return
+	var t: Dictionary = tier
+	rank_label = String(t.get("label", ""))
+	rank_tier = String(t.get("tier", ""))
+	rank_tier_index = int(t.get("tierIndex", 0))
+	# `division` vaut `null` au sommet : Candela n'a pas de division, et 0 le dit
+	# mieux qu'un 1 qui le ferait passer pour un débutant.
+	var div: Variant = t.get("division", null)
+	rank_division = int(div) if div != null else 0
+	var suivant: Variant = t.get("nextLabel", null)
+	rank_next_label = String(suivant) if suivant != null else ""
+	var reste: Variant = t.get("pointsToNext", null)
+	rank_points_to_next = int(ceilf(float(reste))) if reste != null else -1
+
+func _clear_rank() -> void:
+	rank_label = ""
+	rank_tier = ""
+	rank_tier_index = 0
+	rank_division = 0
+	rank_next_label = ""
+	rank_points_to_next = -1
+
+## Ce que l'interface a besoin de savoir du rang, en un seul point à sonder.
+func rank_snapshot() -> Dictionary:
+	return {
+		"connu": not rank_label.is_empty(),
+		"libelle": rank_label,
+		"categorie": rank_tier,
+		"index": rank_tier_index,
+		"division": rank_division,
+		"suivant": rank_next_label,
+		"points_restants": rank_points_to_next,
+		"au_sommet": not rank_label.is_empty() and rank_next_label.is_empty(),
+	}
 
 ## Aplatit la catégorie que le serveur rend sous forme d'objet.
 ##
@@ -582,9 +647,13 @@ func standing_label() -> String:
 		return ""
 	if not is_ranked:
 		return "Pas encore classé — jouez un match en ligne"
-	return "%d points · %de · %d match%s (%dV %dD %dN)" % [
+	var chiffres := "%d points · %de · %d match%s (%dV %dD %dN)" % [
 		rating, rank, matches_played, "s" if matches_played > 1 else "",
 		wins, losses, draws]
+	# Le rang passe devant : c'est ce qu'un joueur cherche, les points ne sont
+	# que la façon dont il s'obtient. Absent, la ligne reste celle d'avant plutôt
+	# que de laisser un blanc en tête.
+	return chiffres if rank_label.is_empty() else rank_label + " · " + chiffres
 
 ## Adopte un profil : identification initiale, ou rattachement d'une machine.
 ##

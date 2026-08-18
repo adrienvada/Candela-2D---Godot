@@ -2083,7 +2083,30 @@ func _my_rank_text() -> String:
 	if not is_instance_valid(RankedIdentity):
 		return "Classement non configuré sur cette installation."
 	var label := RankedIdentity.standing_label()
-	return label if label != "" else "Classement indisponible pour l'instant."
+	if label.is_empty():
+		return "Classement indisponible pour l'instant."
+
+	var rang: Dictionary = RankedIdentity.rank_snapshot() \
+		if RankedIdentity.has_method("rank_snapshot") else {}
+	# Sans rang connu, on n'en fabrique pas : un joueur jamais classé n'a pas de
+	# catégorie, et « Aveugle I » serait aussi inventé que des points qu'il n'a
+	# pas gagnés.
+	if not bool(rang.get("connu", false)):
+		return label
+
+	var lignes: Array[String] = [String(rang.get("libelle", ""))]
+	lignes.append(label)
+	if bool(rang.get("au_sommet", false)):
+		# Le sommet n'a pas de « prochain rang » : le dire vaut mieux qu'un blanc,
+		# qui ressemblerait à une lecture qui n'a pas abouti.
+		lignes.append("Sommet de l'échelle — plus rien au-dessus.")
+	else:
+		var reste := int(rang.get("points_restants", -1))
+		var suivant := String(rang.get("suivant", ""))
+		if reste >= 0 and not suivant.is_empty():
+			lignes.append("%d point%s pour atteindre %s." % [reste,
+				"s" if reste > 1 else "", suivant])
+	return "\n\n".join(lignes)
 
 func _top_ten_text() -> String:
 	var snap: Dictionary = RankedIdentity.standing_snapshot() \
