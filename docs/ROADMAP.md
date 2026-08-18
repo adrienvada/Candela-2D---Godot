@@ -3456,7 +3456,21 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 ### Vague 6 — Killcam, menu, méta (confort et rétention)
 
 - **V6.1 Grain VHS dynamique** — l'overlay killcam monte pendant le
-  bullet-time, se stabilise à l'impact (un uniform à animer).
+  bullet-time, se stabilise à l'impact. **✅ Fait.**
+  - **Les trois défauts d'image montent ensemble** — grain, aberration
+    chromatique et balayage. Un seul se lirait comme un réglage ; les trois
+    ensemble se lisent comme un état, « la bande souffre ».
+  - **La tension s'AJOUTE au niveau d'origine.** À zéro, l'image est exactement
+    celle d'avant l'ajout de l'uniforme : une killcam d'après-impact qui
+    grésillerait un peu plus qu'hier serait une régression que personne ne
+    saurait nommer.
+  - **Lissée vers sa cible, pas posée.** Le ralenti accélère par paliers (courbe
+    de V2.1) et suivre `time_scale` au pixel ferait clignoter le grain à chaque
+    changement de palier.
+  - `tension_killcam()` est **nommée et pure** : un effet piloté par
+    `Engine.time_scale` se réglerait sinon à l'œil, une frame à la fois, sur une
+    machine donnée. Bornée des deux côtés — un `time_scale` accéléré ou négatif
+    ne doit pas détruire l'image.
 - **V6.2 Trajectoire au trait** — la balle fatale dessine sa ligne complète en
   pointillé pendant le rejeu : la killcam devient professeur.
 - **V6.3 Sidechain du ralenti** — heartbeat + souffle seuls pendant le

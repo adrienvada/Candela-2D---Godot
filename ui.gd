@@ -454,6 +454,8 @@ var _is_main_menu: bool = true
 # ---------------------------------------------------------------------------
 
 var killcam_overlay: ColorRect
+## V6.1 — tension courante de la bande, lissée vers sa cible.
+var _killcam_tension: float = 0.0
 var killcam_container: Control
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
@@ -917,6 +919,13 @@ func _update_killcam(delta: float) -> void:
 
 	if killcam_overlay.material:
 		killcam_overlay.material.set_shader_parameter("time", ms / 1000.0)
+		# V6.1 — la bande souffre pendant le ralenti et se calme à l'impact.
+		# Lissée vers sa cible plutôt que posée : le ralenti accélère par paliers
+		# (courbe de V2.1), et suivre `time_scale` au pixel ferait clignoter le
+		# grain à chaque changement de palier.
+		var cible := tension_killcam(Engine.time_scale)
+		_killcam_tension = lerpf(_killcam_tension, cible, clampf(delta * 6.0, 0.0, 1.0))
+		killcam_overlay.material.set_shader_parameter("tension", _killcam_tension)
 
 	_killcam_glitch_timer -= delta
 	if _killcam_glitch_timer <= 0.0:
@@ -4591,6 +4600,18 @@ func hide_game_over() -> void:
 	# Retour au jeu : le HUD de match reprend sa place.
 	if is_instance_valid(match_hud):
 		match_hud.show()
+
+## V6.1 — combien la bande souffre, d'après le ralenti en cours.
+##
+## Zéro à vitesse normale : la killcam d'après-impact garde exactement l'image
+## qu'elle avait avant l'ajout de cet effet. Un au plus fort du ralenti — c'est le
+## moment où le joueur regarde la balle arriver, et où l'image a le droit de dire
+## que quelque chose ne va pas.
+##
+## Pure et nommée pour être vérifiable : un effet piloté par `Engine.time_scale`
+## se règle autrement à l'œil, une frame à la fois, sur une machine donnée.
+func tension_killcam(time_scale: float) -> float:
+	return clampf(1.0 - time_scale, 0.0, 1.0)
 
 func show_killcam() -> void:
 	killcam_overlay.show()

@@ -42,6 +42,7 @@ func _run() -> void:
 	await _test_pression_du_pret()
 	_test_chrono()
 	await _test_verdict()
+	_test_tension_killcam()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -260,3 +261,24 @@ func _test_verdict() -> void:
 	_check("refermer rend au score sa teinte de repos",
 		_ui.game_over_score.modulate.is_equal_approx(Color.WHITE),
 		str(_ui.game_over_score.modulate))
+
+## V6.1 — la bande de la killcam souffre pendant le ralenti.
+func _test_tension_killcam() -> void:
+	print("\n[La tension de la bande]")
+	# À vitesse normale, l'image doit être EXACTEMENT celle d'avant l'effet :
+	# une killcam d'après-impact qui grésillerait un peu plus qu'hier serait une
+	# régression que personne ne saurait nommer.
+	_check("à vitesse normale, aucune tension",
+		is_zero_approx(_ui.tension_killcam(1.0)))
+	# 1 − 0,005 = 0,995 : la première version de ce contrôle attendait 1,0 rond et
+	# tombait. C'est l'attente qui était fausse, pas la courbe — l'échelle de
+	# ralenti la plus forte du jeu vaut 0,005, jamais zéro.
+	_check("au plus fort du ralenti, tension quasi pleine",
+		_ui.tension_killcam(0.005) > 0.99,
+		str(_ui.tension_killcam(0.005)))
+	_check("elle monte quand le temps ralentit",
+		_ui.tension_killcam(0.2) > _ui.tension_killcam(0.8))
+	# Bornée des deux côtés : un `time_scale` supérieur à 1 (accéléré) ou négatif
+	# ne doit pas produire une tension hors de [0, 1] et détruire l'image.
+	_check("elle reste bornée",
+		_ui.tension_killcam(2.0) == 0.0 and _ui.tension_killcam(-5.0) == 1.0)
