@@ -1942,6 +1942,16 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   voit pas en développant, où l'on a une souris sous la main. Passer par
   `MenuHub.reveal_entry()`, appelé depuis `_set_focus()`.
 
+**Godot — API multijoueur**
+- **`multiplayer != null` n'est jamais faux sur un nœud de l'arbre**, et ce n'est
+  donc pas une garde. `get_peers()` sans pair assigné fait crier Godot — « No
+  multiplayer peer is assigned » — et le message part **par paires** à chaque
+  retour au menu, noyant tout ce qui compte dans le journal d'un essai à deux
+  fenêtres. La garde utile est `has_multiplayer_peer()`. Relevé le 2026-08-18 sur
+  une trace d'Adrien, dans deux fonctions écrites la veille : `_refresh_player_list`
+  et `_close_lobby_if_left`. **Un bruit d'erreur constant coûte autant qu'un
+  défaut** — il apprend à ne plus lire les erreurs.
+
 **Cartes et géométrie**
 - **Une variable typée `Dictionary` qui reçoit du JSON venu d'ailleurs jette au
   lieu de refuser.** `MapCodec.validate()` et `get_grid_size()` lisaient

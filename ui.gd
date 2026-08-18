@@ -20,6 +20,8 @@ signal main_menu_requested
 ## Rejoindre un salon n'est plus lancer un match : les deux gestes sont
 ## séparés depuis que le départ attend les deux « PRÊT ».
 signal join_requested
+## Entraînement solitaire demandé. Le hub ne sait pas ce que c'est ; il demande.
+signal training_requested
 
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
@@ -1741,12 +1743,13 @@ func _build_hub_screens() -> void:
 
 	# --- S'entraîner ----------------------------------------------------------
 	entrainement.add_child(hub.make_entry("LANCER L'ENTRAÎNEMENT",
-		"Seul, contre une cible.", "", COLOR_P1, "entrainement",
-		NOT_YET + " La cible existe déjà, mais ne s'active qu'en attendant un "
-		+ "adversaire."))
+		"Seul, contre une cible fixe, sur la carte par défaut. Rien n'est "
+		+ "enregistré ni classé. Échap pour revenir.",
+		"", COLOR_P1, "entrainement", "", true))
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
-		NOT_YET + " Aucun réglage encore : ni position, ni taille, ni mouvement."))
+		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
+		+ "réglages viendront avec la cible mouvante."))
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
@@ -1971,7 +1974,10 @@ func _close_lobby_if_left(id: String) -> void:
 	#
 	# Le salon suit l'écran plutôt que de se fermer : quitter *ensuite* vers autre
 	# chose le refermera normalement, une fois le pair réellement parti.
-	if multiplayer != null and not multiplayer.get_peers().is_empty():
+	# `has_multiplayer_peer()` et non `multiplayer != null` : le second n'est jamais
+	# faux sur un nœud de l'arbre, et `get_peers()` sans pair assigné fait crier
+	# Godot — « No multiplayer peer is assigned » — à chaque retour au menu.
+	if multiplayer.has_multiplayer_peer() and not multiplayer.get_peers().is_empty():
 		_lobby_screen = id
 		return
 	_lobby_screen = ""
@@ -1998,7 +2004,10 @@ func _refresh_player_list() -> void:
 	var ouvert := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
 	lobby_player_host.text = "Vous — hôte" if mode == NetworkManager.GameMode.ONLINE_HOST \
 		else "L'hôte"
-	var adversaire := not multiplayer.get_peers().is_empty() if multiplayer != null else false
+	# Même garde qu'au-dessus, et pour la même raison : cette fonction est appelée
+	# sur le chemin de la déconnexion, quand il n'y a justement plus de pair.
+	var adversaire := multiplayer.has_multiplayer_peer() \
+		and not multiplayer.get_peers().is_empty()
 	if adversaire:
 		lobby_player_guest.text = "Adversaire — connecté"
 		lobby_player_guest.add_theme_color_override("font_color", COLOR_P2)
@@ -2043,6 +2052,9 @@ func _on_hub_action(action: String) -> void:
 			quit_requested.emit()
 		"chercher":
 			_start_search()
+		"entrainement":
+			get_tree().paused = false
+			training_requested.emit()
 		"mon_rang":
 			hub.show_detail("Mon rang", _my_rank_text())
 		"top10":
