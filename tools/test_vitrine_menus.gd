@@ -29,6 +29,7 @@ func _run() -> void:
 	_test_fond()
 	_test_titre()
 	_test_voile()
+	await _test_squelettes()
 	await _test_extinction()
 	await _test_extinction_lisible()
 	await _test_calibration()
@@ -397,6 +398,74 @@ func _test_voile() -> void:
 
 	cadre.free()
 
+## M13 — les squelettes de lumière.
+func _test_squelettes() -> void:
+	print("\n[Les squelettes de lumière]")
+	var cadre := Control.new()
+	cadre.size = Vector2(800, 400)
+	root.add_child(cadre)
+	var k := MenuSkeleton.new()
+	cadre.add_child(k)
+	await process_frame
+
+	var mat: ShaderMaterial = k.material
+	_check("le squelette porte son shader",
+		mat != null and mat.shader == MenuSkeleton.SHADER)
+	# `top_level` : les conteneurs de Godot sautent leurs enfants top-level, donc
+	# le squelette se pose dans la colonne du tableau sans y prendre de place.
+	_check("il ne prend aucune place dans son conteneur", k.top_level)
+	# Jamais dans le parcours du curseur : ce sont des barres, pas des contrôles.
+	_check("et jamais dans le parcours du curseur",
+		k.focus_mode == Control.FOCUS_NONE
+		and k.mouse_filter == Control.MOUSE_FILTER_IGNORE)
+
+	var lignes: Array = []
+	for i in 4:
+		var cellules: Array = []
+		for j in 3:
+			var c := Control.new()
+			c.position = Vector2(j * 120, i * 30)
+			c.size = Vector2(100, 24)
+			cadre.add_child(c)
+			cellules.append(c)
+		lignes.append(cellules)
+	k.suivre(lignes)
+	k.set_intensite(1.0)
+
+	k.attendre()
+	_check("en attente, les barres sont là", k.visible)
+	_check("et la torche balaie",
+		is_equal_approx(float(mat.get_shader_parameter("balayage")), 1.0))
+
+	# L'absence n'est pas une panne : un tableau qui continuerait à faire semblant
+	# de chercher ce qu'il ne trouvera pas mentirait sur son état.
+	k.figer()
+	_check("après un échec, les barres restent", k.visible)
+	_check("mais la torche s'éteint",
+		is_zero_approx(float(mat.get_shader_parameter("balayage"))))
+
+	# Le fondu part de la première ligne : à mi-parcours, la première a plus
+	# disparu que la dernière.
+	k.attendre()
+	k._poser_revelation(0.5)
+	_check("les lignes s'effacent l'une après l'autre",
+		k._opacite(0) < k._opacite(3),
+		"%.2f contre %.2f" % [k._opacite(0), k._opacite(3)])
+	k._poser_revelation(1.0)
+	_check("à la fin, plus une seule barre",
+		is_zero_approx(k._opacite(0)) and is_zero_approx(k._opacite(3)))
+
+	k.taire()
+	_check("se taire referme tout", not k.visible)
+
+	# À zéro, l'écran d'avant l'effet : ni barres, ni balayage.
+	k.attendre()
+	k.set_intensite(0.0)
+	k.attendre()
+	_check("intensité nulle : rien n'est montré", not k.visible)
+
+	cadre.free()
+
 ## Les deux instants où M10 passait pour un défaut d'affichage.
 ##
 ## Relevé par Adrien à l'usage : « on pourrait croire à des bugs d'affichage ».
@@ -543,7 +612,7 @@ func _test_calibration() -> void:
 	var effets := ["cadran_titre", "remanence_curseur", "torche_menu",
 		"regard_du_noir", "passant_vitre", "encre_coulee", "gravure_code",
 		"depart_au_tir", "extinction_menu", "brume_menu", "bruit_de_l_oeil",
-		"titre_vivant", "voile_menu"]
+		"titre_vivant", "voile_menu", "balayage_attente"]
 
 	var hors_mesure := true
 	for cle in effets:
@@ -551,7 +620,15 @@ func _test_calibration() -> void:
 			hors_mesure = false
 	_check("hors calibration, les onze effets vivent", hors_mesure)
 
-	ui._on_hub_screen_changed("calibration")
+	# Le déclencheur a changé le 2026-08-18 : la calibration est devenue un
+	# PANNEAU du cadre de droite, elle n'ouvre plus d'écran. Un garde-fou branché
+	# sur l'écran courant ne se serait donc plus levé du tout — le champ de mesure
+	# se serait retrouvé grainé, embrumé et vignetté sans que rien paraisse
+	# anormal, en décalant le réglage de tous ceux qui calibrent de la même façon.
+	#
+	# Le contrôle suit la cause réelle : **le champ est-il à l'écran**, et non
+	# « un écran nommé calibration est-il ouvert ».
+	ui.hub.show_detail("Calibration", "", ui.PANEL_CALIBRATION)
 	var eteints := true
 	for cle in effets:
 		if float(ui._intensite_vitrine(cle)) != 0.0:
@@ -564,7 +641,7 @@ func _test_calibration() -> void:
 	_check("la brume aussi",
 		is_zero_approx(float(ui.menu_backdrop.get("_brume"))))
 
-	ui._on_hub_screen_changed("accueil")
+	ui.hub.show_detail("Accueil", "")
 	_check("en sortant, tout se rallume",
 		float(ui._intensite_vitrine("torche_menu")) > 0.0
 		and float(ui.menu_torch.get("_intensite")) > 0.0)

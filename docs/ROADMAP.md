@@ -2976,15 +2976,16 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 13 sur 15 livrés** — M1 le cadran de titre, M2 la
+> **État au 2026-08-18 : 14 sur 15 livrés** — M1 le cadran de titre, M2 la
 > rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
 > M5 le bruit de l'œil, M6 l'encre coulée, M7 le code gravé, M8 le départ au
 > tir, M9 la torche du curseur, M10 l'extinction des feux, M11 le titre
-> incandescent, M12 la brume d'abysse, M15 le voile d'objectif. Chacun dans son
-> fichier (`menu_gnomon.gd`, `menu_after_image.gd`, `menu_torch.gd`,
-> `menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`, `menu_engraver.gd`,
-> `menu_tracer.gd`, `menu_backdrop.gd`, `menu_title.gd`, `menu_veil.gd`, avec
-> leurs trois `.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
+> incandescent, M12 la brume d'abysse, M13 les squelettes de lumière, M15 le
+> voile d'objectif. Chacun dans son fichier (`menu_gnomon.gd`,
+> `menu_after_image.gd`, `menu_torch.gd`, `menu_watcher.gd`, `menu_passerby.gd`,
+> `menu_ink.gd`, `menu_engraver.gd`, `menu_tracer.gd`, `menu_backdrop.gd`,
+> `menu_title.gd`, `menu_veil.gd`, `menu_skeleton.gd`, avec leurs quatre
+> `.gdshader`) plutôt que dans un `ui.gd` de trois mille lignes —
 > **sauf M10, qui n'a pas de nœud à lui** : il vit dans les chemins show/hide des
 > deux panneaux, et c'est le seul endroit où il puisse vivre. Chacun avec sa
 > ligne d'`effect_policy` **lue dans les deux sens** :
@@ -2992,10 +2993,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > ligne de politique sans lecture donnerait un curseur qui ne pilote rien, ce qui
 > ressemble trait pour trait à un réglage qui marche.
 >
-> Restent **M13 les squelettes de lumière** (entièrement dans les écrans en
-> attente réseau — `screen_leaderboard.gd` et ses voisins) et **M14 le verre
-> fumé** (les `PanelContainer` du hub et des rangées de réglage). Aucun ne
-> demande d'asset.
+> Reste **M14 le verre fumé** — les `PanelContainer` du hub et des rangées de
+> réglage. Aucun asset. En attente que la session « menus » finisse son audit du
+> cadre de droite : y poser un matériau avant qu'elle ait fini reviendrait à
+> décorer des panneaux qui vont encore bouger.
 >
 > **M5 et M12 sont fusionnés dans un seul matériau**, comme leurs fiches le
 > prévoyaient : ils vivent sur le même quad — l'aplat de fond — et un second
@@ -3049,6 +3050,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > caractère — un scintillement par lettre, pas une vague. La phase se prend sur
 > `VERTEX.x`, continu d'un bout à l'autre du mot, normalisé par une largeur que
 > le shader ne peut pas connaître et qu'on lui pousse au redimensionnement.
+>
+> **M13 ne paraît que dans UN état, et ce n'est pas celui que sa fiche laissait
+> croire.** Les barres fantômes attendaient « pendant que le classement attend le
+> réseau », ce qui recouvre deux états très différents. Pendant
+> l'**identification**, on ne sait pas encore qui demande : dix lignes fantômes
+> promettraient alors un tableau dont rien ne dit qu'il existera, et
+> `test_screen_leaderboard` interdisait déjà d'afficher des lignes à ce
+> moment-là — l'interdit était juste. Les squelettes sont donc réservés à
+> **`LOADING`** : identifié, le tableau en route. Un échec **survenu pendant
+> l'attente** pose les barres sous les yeux (le geste dit « on a cherché et on
+> n'a pas trouvé ») ; un échec arrivé sans qu'on ait rien montré n'a rien à
+> poser. Aucun test existant n'a eu besoin d'être assoupli.
 >
 > **Le garde-fou de la calibration, arrivé avec M5 et rétroactif sur tous les
 > autres.** C'est le seul point de la vitrine qui ne soit pas une question de

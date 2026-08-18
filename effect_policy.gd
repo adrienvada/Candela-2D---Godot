@@ -140,6 +140,12 @@ const EFFECTS := {
 		"nom": "Le voile d'objectif",
 		"phrase": "Les menus semblent filmés : un grain fin, une vignette douce, une frange colorée dans les coins.",
 	},
+	"balayage_attente": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Les squelettes de lumière",
+		"phrase": "Un tableau qui attend le réseau montre des barres balayées par une lueur, au lieu d'un texte figé.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

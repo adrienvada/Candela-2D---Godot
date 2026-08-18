@@ -432,6 +432,23 @@ func _test_lecture() -> void:
 		not screen.table_is_empty())
 	_check("aucun chiffre pendant la lecture", not _has_digit(_texts(screen)),
 		_texts(screen))
+
+	# M13 — les squelettes de lumière. C'est le seul état où ils paraissent :
+	# identifié, le tableau en route. Les lignes existent donc, vides, et ce sont
+	# leurs barres fantômes qu'on voit à l'emplacement exact du texte à venir.
+	#
+	# Elles restent visibles pour une raison de mise en page autant que d'effet :
+	# un tableau replié puis déplié d'un coup ferait sauter tout ce qui le suit à
+	# l'arrivée des données.
+	_check("les lignes tiennent leur place pendant la lecture",
+		_visible_rows(screen) > 0, str(_visible_rows(screen)))
+	var vides := true
+	for row in screen._rows:
+		if not String((row["rank"] as Label).text).is_empty():
+			vides = false
+	_check("mais elles ne montrent rien qu'on puisse lire", vides)
+	_check("et la torche fouille le tableau",
+		screen._skeleton != null and screen._skeleton.visible)
 	_dispose(screen, identity)
 
 ## LE test de la suite. Un profil existe, il est reconnu, il n'a jamais joué de

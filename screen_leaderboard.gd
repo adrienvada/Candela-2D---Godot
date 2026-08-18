@@ -127,6 +127,12 @@ var _table_notice: Label
 var _mine_separator: Control
 var _mine_row: Dictionary = {}
 var _refresh_button: Button
+## M13 — les barres fantômes du tableau qui attend, et la torche qui les balaie.
+var _skeleton: MenuSkeleton
+## Vrai quand les barres fantômes sont à l'écran. C'est ce qui distingue un échec
+## survenu PENDANT l'attente — où les barres doivent se poser sous les yeux — d'un
+## échec arrivé sans qu'on ait jamais rien montré.
+var _attendait: bool = false
 
 var _display: Display = Display.UNCONFIGURED
 ## Vrai une fois branché aux signaux de l'identité classée. Un seul branchement
@@ -223,6 +229,16 @@ func build(body: VBoxContainer) -> void:
 
 	_refresh_button = _build_refresh_button()
 	body.add_child(_refresh_button)
+
+	# M13 — posé dans la colonne du tableau mais `top_level`, donc sans y prendre
+	# de place. Il masque le rang, le pseudo et le classement : les trois colonnes
+	# qu'on vient lire, et les seules dont l'absence se remarque.
+	_skeleton = MenuSkeleton.new()
+	table.add_child(_skeleton)
+	var lignes: Array = []
+	for row in _rows:
+		lignes.append([row["rank"], row["nickname"], row["rating"]])
+	_skeleton.suivre(lignes)
 
 	refresh()
 
@@ -352,6 +368,7 @@ func refresh() -> void:
 ## boucle, et le classement est un ornement du menu — pas une raison de marteler
 ## une Edge Function.
 func _redisplay() -> void:
+	_appliquer_intensite()
 	var identity := _identity()
 	_compute_state(identity)
 	if _rows.is_empty():
@@ -503,6 +520,25 @@ func _ranked_detail(identity: Node) -> String:
 	return _nickname_line(identity)
 
 func _apply_table(identity: Node) -> void:
+	# M13 — les barres fantômes n'apparaissent que dans UN état : identifié, le
+	# tableau en route. Pas pendant l'identification, où l'on ne sait pas encore
+	# qui demande : dix lignes fantômes promettraient alors un tableau dont rien
+	# ne dit qu'il existera, et l'écran a déjà un état qui parle pour ça.
+	if _display == Display.LOADING:
+		_attendre_le_reseau(true)
+		return
+	# Un échec pendant l'attente pose les barres sous les yeux, au lieu de les
+	# effacer : le geste dit « on a cherché et on n'a pas trouvé ». Un échec
+	# arrivé sans qu'on ait rien montré n'a rien à poser.
+	if _display == Display.FAILED and _attendait:
+		_attendre_le_reseau(false)
+		return
+	if _skeleton != null:
+		# `reveler()` ne fait un fondu que s'il y avait quelque chose à révéler ;
+		# sinon il se contente de se taire.
+		_skeleton.reveler()
+	_attendait = false
+
 	var mine_at := _index_of_mine(identity)
 	var shown := 0
 	for i in _rows.size():
@@ -523,6 +559,30 @@ func _apply_table(identity: Node) -> void:
 	(_mine_row["panel"] as Control).visible = _outside_top
 	if _outside_top:
 		_fill_row(_mine_row, _mine_as_row(identity), true)
+
+## Le tableau pendant qu'il attend. `cherche` faux = l'attente a échoué.
+##
+## Les lignes restent visibles et vides : c'est leur géométrie qui donne aux
+## barres leur emplacement, et c'est elle aussi qui évite le saut de mise en page
+## à l'arrivée des données.
+func _attendre_le_reseau(cherche: bool) -> void:
+	for row in _rows:
+		for cle in ["rank", "nickname", "tier", "rating", "matches", "record"]:
+			(row[cle] as Label).text = ""
+		(row["panel"] as Control).visible = true
+	_head.visible = true
+	_table_notice.visible = false
+	_mine_separator.visible = false
+	(_mine_row["panel"] as Control).visible = false
+	if _skeleton == null:
+		return
+	_attendait = cherche
+	if cherche:
+		_skeleton.attendre()
+	else:
+		# L'absence n'est pas une panne : un tableau qui continuerait à faire
+		# semblant de chercher ce qu'il ne trouvera pas mentirait sur son état.
+		_skeleton.figer()
 
 ## Ce qui remplace le tableau quand il n'y a rien à montrer. Chaîne vide quand
 ## le tableau, lui, a quelque chose à dire.
@@ -590,6 +650,24 @@ func _record(data: Dictionary) -> String:
 # L'écran se construit seul, sans hub et sans autoload — contrat de `HubScreen`,
 # et seule façon de l'exercer en test. Sans identité joignable, il affiche
 # « non configuré », ce qui se trouve être exactement la vérité.
+
+## L'intensité de M13, relue à chaque affichage.
+##
+## Par le CHEMIN de l'autoload, jamais par son nom : un fichier qui nomme
+## `GameSettings` ne compile pas sous `--script`, et sa suite pend au lieu
+## d'échouer. C'est déjà l'idiome de cet écran pour `RankedIdentity`.
+##
+## Relue ici et non branchée sur `effect_changed` : le réglage vit sur un autre
+## écran, donc on repasse forcément par un `refresh()` en revenant.
+func _appliquer_intensite() -> void:
+	if _skeleton == null or not is_inside_tree():
+		return
+	var reglages := get_node_or_null(^"/root/GameSettings")
+	if reglages == null or not reglages.has_method("effective_effect"):
+		return
+	# Le classement n'est jamais un contexte de match : le plancher de la
+	# politique n'a rien à imposer ici, et `false` est la bonne réponse.
+	_skeleton.set_intensite(float(reglages.effective_effect("balayage_attente", false)))
 
 func _identity() -> Node:
 	if identity_override != null:
