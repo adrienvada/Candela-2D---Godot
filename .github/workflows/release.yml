@@ -1,0 +1,146 @@
+# Publication d'une version — Phase 9, étape 1.
+#
+# Ne se déclenche QUE sur un tag `vX.Y.Z` posé à la main, ou sur demande
+# explicite. Publier est un geste humain : c'est le moment où l'on décide qu'une
+# version part dans la nature, et une version partie ne se rattrape pas — les
+# jeux déjà installés la trouveront encore dans deux ans.
+#
+# Ce que le job garantit, dans cet ordre :
+#
+#   1. le tag et `config/version` disent la même chose (sinon deux versions
+#      portent le même nom sans être le même code, et plus rien ne se diagnostique
+#      à distance) ;
+#   2. toutes les suites headless passent — on ne publie pas ce qu'on n'a pas
+#      testé, et la mise à jour automatique fait de chaque défaut publié un défaut
+#      installé partout ;
+#   3. le manifeste est signé. Sans la clé privée, le job échoue au lieu de
+#      publier une annonce que les jeux refuseront de toute façon.
+name: Publication
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.1-stable
+  GODOT_TEMPLATES: 4.7.1.stable
+
+permissions:
+  contents: write
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Le tag et la version du jeu disent la même chose
+        run: |
+          # Le déclenchement manuel est accepté, mais seulement depuis un tag :
+          # une publication sans tag donnerait une version que rien ne désigne, et
+          # `latest/download` pointerait sur un contenu qu'on ne saurait plus
+          # reconstruire.
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "::error::À lancer depuis un tag vX.Y.Z, pas depuis une branche."
+            exit 1
+          fi
+          version="$(sed -n 's/^config\/version="\(.*\)"$/\1/p' project.godot)"
+          echo "config/version=$version  tag=${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_NAME}" != "v$version" ]; then
+            echo "::error::Le tag ${GITHUB_REF_NAME} ne correspond pas à config/version ($version)."
+            exit 1
+          fi
+
+      - name: Cache du binaire et des modèles Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-avec-modeles
+
+      - name: Téléchargement de Godot et des modèles d'exportation
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          curl -sSL -o ~/godot-bin/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -o -q ~/godot-bin/godot.zip -d ~/godot-bin
+          chmod +x ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64
+          # Les modèles d'exportation viennent du gestionnaire officiel, jamais
+          # d'un `custom_template` : un téléchargement manuel corrompu avait déjà
+          # fait croire à un bug de l'éditeur (voir « Pièges connus »).
+          curl -sSL -o /tmp/modeles.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_TEMPLATES}
+          unzip -o -q /tmp/modeles.tpz -d /tmp/modeles
+          mv /tmp/modeles/templates/* ~/.local/share/godot/export_templates/${GODOT_TEMPLATES}/
+
+      - name: Import des ressources
+        run: ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
+
+      - name: Suites headless — on ne publie pas ce qui n'est pas vert
+        run: GODOT="$HOME/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" ./tools/run_suites.sh
+
+      - name: Export Windows
+        run: |
+          mkdir -p build/windows/Candela
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . \
+            --export-release "Windows Desktop" build/windows/Candela/Candela.exe
+          # L'archive porte le dossier `Candela` à sa racine : c'est le nom que le
+          # jeu vérifie avant de remplacer quoi que ce soit (champ `racine`).
+          # Côté macOS, Godot nomme le bundle d'après `config/name` : c'est
+          # « Candela 2D.app », avec l'espace — vérifié sur un export réel, et
+          # une racine annoncée à tort ferait échouer l'installation après la
+          # fermeture du jeu, au seul moment où plus rien ne peut le dire.
+          (cd build/windows && zip -qr Candela-windows.zip Candela)
+
+      - name: Export macOS
+        run: |
+          mkdir -p build/macos
+          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . \
+            --export-release "macOS" build/macos/Candela-macos.zip
+          # Non signé et non notarisé : la première installation passera par
+          # « Ouvrir quand même » dans les Réglages Système. Les mises à jour
+          # suivantes, elles, ne repassent pas devant Gatekeeper — un fichier
+          # écrit par le jeu ne porte pas l'attribut de quarantaine.
+
+      - name: Manifeste signé
+        env:
+          CLE: ${{ secrets.CANDELA_MAJ_CLE_PRIVEE }}
+        run: |
+          if [ -z "$CLE" ]; then
+            echo "::error::Le secret CANDELA_MAJ_CLE_PRIVEE est absent : un"
+            echo "::error::manifeste non signé serait refusé par tous les jeux."
+            exit 1
+          fi
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+          ./tools/fabrique_manifeste.sh \
+            --base-url "$base" \
+            --notes "${GITHUB_REF_NAME}" \
+            --verifier-tag "${GITHUB_REF_NAME}" \
+            --bundle "windows:build/windows/Candela-windows.zip:Candela" \
+            --bundle "macos:build/macos/Candela-macos.zip:Candela 2D.app" \
+            > manifeste.json
+          printf '%s' "$CLE" > /tmp/cle.pem
+          # Signature détachée sur les octets exacts du fichier publié : le jeu
+          # vérifie ce qu'il a téléchargé, sans jamais avoir à le réécrire.
+          openssl dgst -sha256 -sign /tmp/cle.pem -out /tmp/manifeste.sig manifeste.json
+          base64 -w0 /tmp/manifeste.sig > manifeste.json.sig
+          rm -f /tmp/cle.pem
+          cat manifeste.json
+
+      - name: Publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Candela ${GITHUB_REF_NAME}" \
+            --notes "Mise à jour depuis le menu du jeu : entrée MISE À JOUR." \
+            build/windows/Candela-windows.zip \
+            build/macos/Candela-macos.zip \
+            manifeste.json \
+            manifeste.json.sig

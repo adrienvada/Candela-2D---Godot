@@ -417,6 +417,27 @@ Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
 
 ---
 
+## Publier une version, et mettre à jour un jeu installé
+
+Le jeu installé se met à jour depuis son propre menu : entrée **MISE À JOUR** de
+l'accueil. Il lit une annonce signée publiée par la CI sur GitHub, la vérifie,
+télécharge, et remplace l'installation après s'être fermé.
+
+**Sans clé publique renseignée, le jeu démarre normalement** : l'écran affiche
+« mises à jour non configurées » et ne télécharge rien — même dégradation franche
+que sans identifiants EOS.
+
+Rien n'est jamais forcé : une version de retard n'empêche ni de démarrer, ni de
+jouer en écran scindé, ni d'ouvrir l'éditeur. Seul le jeu en ligne cesse — ce
+qu'il faisait déjà tout seul, deux versions différentes refusant de s'apparier.
+
+Publier : monter `config/version`, poser un tag `vX.Y.Z`, pousser le tag. La CI
+refuse un tag qui ne corresponde pas à la version du projet, et refuse de publier
+si une suite est rouge. Marche à suivre complète, fabrication de la paire de clés
+et cas de dépannage : [docs/MISE_A_JOUR.md](docs/MISE_A_JOUR.md).
+
+---
+
 ## Repères de code
 
 | Fichier | Rôle |
@@ -433,3 +454,5 @@ Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
 | `recovery_code.gd` · `lobby_code.gd` | Codes lus à voix haute : nettoyage, validation, mise en forme |
 | `supabase/` | Schéma SQL, Row Level Security et Edge Functions du classement |
 | `map_data.gd` · `map_codec.gd` · `map_geometry.gd` | Cartes : stockage, partage, géométrie |
+| `update_manifest.gd` · `update_installer.gd` · `update_manager.gd` | Mise à jour : annonce signée, remplacement de l'installation, correctifs |
+| `patch_loader.gd` | Monte le correctif `.pck` au démarrage — **premier autoload déclaré** |

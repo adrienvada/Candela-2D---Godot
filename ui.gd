@@ -97,6 +97,7 @@ const SCREEN_CUSTOM := "personnalisation"
 ## `SCREEN_CALIBRATION` survit comme nom de la chose mesurée et non comme écran :
 ## le garde-fou des effets s'en sert pour retrouver le champ à rafraîchir.
 const SCREEN_CALIBRATION := "calibration"
+const SCREEN_UPDATE := "mise_a_jour"
 
 ## Clés des affichages riches du panneau de droite. Ce ne sont pas des écrans : on
 ## ne s'y déplace pas, ils se montrent à droite de la liste sous le curseur.
@@ -1936,6 +1937,9 @@ func _build_hub_screens() -> void:
 		SCREEN_TRAINING))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
 		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
+	accueil.add_child(hub.make_entry("MISE À JOUR",
+		"Vérifie si une nouvelle version est publiée, et l'installe. Rien ne se "
+		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM))
 	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
 	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
 	# à l'arrivée dans le hub et rétablie ici.
@@ -2098,6 +2102,9 @@ func _build_hub_screens() -> void:
 	_attach_panel(PANEL_AUDIO, ScreenAudio.new())
 	# Le garde-fou suit le PANNEAU, pas l'écran courant.
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
+
+	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
+	hub.add_back_entry(SCREEN_UPDATE)
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
 	_attach_screen(SCREEN_HISTORY, "Historique", ScreenHistory.new())
