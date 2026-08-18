@@ -33,7 +33,7 @@ décision se juge à cette double aune.
 | 2 | P2P hôte-autoritaire (lobby / match / killcam) | ✅ Terminée — fusionnée dans `main` (`3dd2149`) |
 | 3 | **EOS — connectivité** | ✅ **Terminée** — validée à deux machines, fusionnée dans `main` |
 | 4 | **Supabase — compétitif / ELO** | ✅ **Terminée** — identité, matchs et classement déployés et vérifiés en production le 2026-08-16 |
-| 5 | **Les menus** | 🟡 **En cours** — structure B (le hub) retenue le 2026-08-17. Les trois derniers chantiers demandés (galerie de cartes, Contrôles/Affichage en listes, salon ouvert depuis le menu) sont livrés le 2026-08-18 ; **à vérifier à deux fenêtres** |
+| 5 | **Les menus** | ✅ **Terminée** le 2026-08-18 — six étapes closes. Ne restent que des vérifications à la main |
 | 6 | Rangs (catégories et divisions) | 🔵 À faire — échelle validée, dépend de la Phase 5 |
 | 7 | Déblocage d'armes par rang | 🔵 À faire — règle du miroir actée, dépend de la Phase 6 |
 | 8 | **Appariement** — amical, classé, recherche automatique | 🟡 **Raccordée le 2026-08-18** — les deux entrées lancent la recherche, un bandeau la porte, la manche démarre des deux côtés. **Découverte croisée prouvée contre le vrai EOS.** Reste l'essai à deux fenêtres. **8.8 et 8.9 closes** : une carte illisible refuse la manche, et deux versions différentes refusent de jouer |
@@ -593,7 +593,16 @@ reprend rien. La machinerie est prête et testée ; il manque une ligne d'appel.
 
 ---
 
-## Phase 5 — Les menus 🟡 EN COURS — le hub est en place
+## Phase 5 — Les menus ✅ CLOSE le 2026-08-18
+
+**Les six étapes sont livrées.** Ne restent que des vérifications humaines, qui ne
+sont pas du travail de phase : parcourir les menus à la main et juger si
+l'ensemble est agréable. Échap et F3 ont été vérifiés le 2026-08-18 — six gestes,
+six réponses.
+
+Trois choses ont été ajoutées au-delà du plan initial : la vague M (quinze effets
+de menu), la fenêtre de choix d'arme d'un match apparié, et un écran d'historique
+là où le plan n'attendait qu'un tableau.
 
 **Pourquoi cette phase vient avant les rangs et le déblocage d'armes.** Les rangs
 ont besoin d'un écran de classement, les armes verrouillées d'un sélecteur qui
@@ -1026,11 +1035,31 @@ réglage guidé — « ajustez jusqu'à distinguer tout juste cette silhouette �
 non un curseur nu : c'est une question d'honnêteté en compétition, pas de
 confort.
 
-**Étape 5 — les écrans manquants.**
-Classement (l'Edge Function `standing` renvoie déjà le top 10), entraînement
-(`TrainingTarget` existe déjà), historique des matchs (`match_history.json`
-existe déjà). Les trois sont surtout un travail d'affichage : le travail de fond
-est fait dans chaque cas.
+**Étape 5 — les écrans manquants. ✅ CLOSE le 2026-08-18**
+
+Les trois sont livrés, et le travail de fond préexistait dans chaque cas — c'est
+ce qui rendait l'étape courte.
+
+**Classement** — lu depuis 1v1 compétitif, dans le panneau de droite : « MON
+RANG » et « TOP 10 » le remplissent sans faire descendre d'un cran. L'écran
+autonome reste construit et sait tenir les six états du service, mais il est hors
+de l'arborescence : une consultation de trois lignes ne doit pas coûter un
+aller-retour. Le rang du joueur y figure depuis `431daba` — le serveur le
+calculait et l'envoyait, la lecture le jetait.
+
+**Entraînement** (`7e9fe8f`, `987909b`) — cible fixe au point d'apparition de J2,
+carte par défaut, vue unique. La propriété non négociable est que **rien n'y est
+archivé** : le journal local est la source du rejeu vers le classement, et une
+seule ligne écrite là polluerait un classement que personne ne saurait plus
+corriger. Un banc dédié le vérifie en comparant la taille du journal avant et
+après.
+
+**Historique** (`75bb3f5`) — le bilan de la soirée, puis les douze derniers
+matchs. Ce que sa suite protège en premier n'est pas l'affichage mais
+l'honnêteté : **ce qui a été écarté est dit**. Un journal peut contenir des
+enregistrements illisibles ou écrits par une version plus récente ; les taire
+donnerait un historique silencieusement incomplet, ce qui est la seule chose
+qu'un historique ne doit jamais être — on le croirait entier.
 
 **Étape 6 — édition du pseudo.** 🟡 **Déployée le 2026-08-18** par Adrien —
 `rename_profile` en base, fonction `rename` en ligne, porte vérifiée (`401` sans
