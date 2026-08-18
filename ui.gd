@@ -294,6 +294,20 @@ var menu_veil: MenuVeil
 var menu_glass: MenuGlass
 var pause_veil: MenuVeil
 
+## Les deux effets de la vitrine qui RELISENT L'ÉCRAN — le voile d'objectif (M15)
+## et le second étage du verre fumé (M14) — sont coupés depuis le 2026-08-19.
+##
+## **Adrien a vu le cadre de droite entièrement noir.** Ce sont les deux seuls
+## effets qui lisent `hint_screen_texture` dans les menus, et les deux seuls que
+## j'ai validés **au banc sans jamais les regarder** : j'ai mesuré ce qu'ils
+## coûtaient, jamais ce qu'ils montraient. Une mesure de coût ne dit rien d'une
+## image — c'est la version « rendu » de tout ce que la veille a démonté sur les
+## chiffres, et je l'ai commise le lendemain.
+##
+## Repasser à `true` remet les deux d'un coup ; ils se rallumeront **un par un**,
+## et cette fois quelqu'un regardera l'écran avant de conclure.
+const RELECTURE_ECRAN := false
+
 ## Vrai tant que l'écran de calibration est affiché.
 ##
 ## **Aucun effet de la vitrine n'y ajoute de lumière.** Le joueur y règle son
@@ -1845,16 +1859,17 @@ func _build_menu() -> void:
 	# Le second étage — la brume défocalisée — n'est donné qu'au cadre de droite :
 	# c'est une copie d'écran par image, et c'est la seule surface assez grande
 	# pour qu'on voie la profondeur qu'elle achète.
-	menu_glass.vitrer(hub.right_panel(), COLOR_P1, true)
+	menu_glass.vitrer(hub.right_panel(), COLOR_P1, RELECTURE_ECRAN)
 	menu_glass.vitrer_rangees(hub)
 
 	# M15 — le voile passe APRÈS tout ce qu'il filme, donc en dernier dans le
 	# panneau. Il y reste, plutôt que de monter au niveau des curseurs : un liseré
 	# de sélection grainé serait moins net, et la netteté du curseur est de
 	# l'information, pas de la décoration.
-	menu_veil = MenuVeil.new()
-	game_over_panel.add_child(menu_veil)
-	game_over_panel.move_child(menu_veil, -1)
+	if RELECTURE_ECRAN:
+		menu_veil = MenuVeil.new()
+		game_over_panel.add_child(menu_veil)
+		game_over_panel.move_child(menu_veil, -1)
 
 	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
@@ -3522,8 +3537,9 @@ func _build_pause_menu() -> void:
 	# ensemble et couvrent le même cadre.
 	if menu_backdrop != null:
 		menu_backdrop.adopter(backdrop)
-	pause_veil = MenuVeil.new()
-	pause_panel.add_child(pause_veil)
+	if RELECTURE_ECRAN:
+		pause_veil = MenuVeil.new()
+		pause_panel.add_child(pause_veil)
 
 	var center := CenterContainer.new()
 	pause_panel.add_child(center)
