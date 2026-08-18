@@ -144,6 +144,25 @@ jamais dans un commit séparé « mise à jour de la doc ». Concrètement :
 | Rien de tout cela | La date de dernière mise à jour uniquement |
 | **N'importe lequel de ces cas** | **Le suivi de projet, en plus** — il vit hors du dépôt, donc rien ne rattrape son oubli |
 
+**Comment garantir le « même commit », parce qu'un `&&` ne le garantit pas.**
+Enchaîner l'édition du document et le `git commit` dans une seule commande semble
+suffisant : ça ne l'est pas. Une édition qui échoue — erreur de syntaxe dans le
+script, motif introuvable, chemin fautif — peut laisser le commit partir **sans
+elle**, et le travail est alors décrit nulle part. C'est arrivé le 2026-08-18, et
+rien ne l'a signalé.
+
+Le geste qui le garantit, en deux temps :
+
+```bash
+git add <fichiers de code> docs/ROADMAP.md
+git diff --cached --stat        # LIRE la liste : la roadmap y est-elle ?
+```
+
+Puis commiter. Lire cette liste protège de trois erreurs d'un coup : le document
+oublié, un fichier de code oublié, et — le plus coûteux — **un fichier d'une
+autre session emporté par mégarde**. `git add` avec un chemin inexistant
+n'indexe rien du tout, sans le dire ; c'est la même sortie qui l'attrape.
+
 Règles de rédaction : expliquer **pourquoi**, pas **quoi** — le code dit déjà le
 quoi. Rester factuel : une chose non testée est écrite comme non testée.
 
