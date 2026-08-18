@@ -4493,10 +4493,33 @@ effet qu'on ne verrait que sur la plus grande.
 > changement de code, ici, serait exactement l'erreur qu'on a passé la journée à
 > traquer — un chiffre à qui l'on fait dire ce qu'il ne mesure pas.
 
-**Décision qui revient à Adrien** : 97 est-il acceptable ? La cible de 120 venait
-de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute ~10 ms au
-temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de **1,7 ms** —
-à comparer aux 54 ms de plancher RTT mesurés sur EOS.
+**Décision qui revenait à Adrien** : 97 est-il acceptable ? La cible de 120
+venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
+~10 ms au temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de
+**1,7 ms** — à comparer aux 54 ms de plancher RTT mesurés sur EOS.
+
+> **TRANCHÉ le 2026-08-18 par Adrien : « 1,7 ms c'est pas dramatique, on verra
+> plus tard. »**
+>
+> Lire exactement ce qui est dit, et rien de plus. Il **ajourne** l'arbitrage ;
+> il ne réécrit pas la règle. Concrètement :
+>
+> - **la cible reste écrite telle quelle** — `1 % bas ≥ 120` — en attendant une
+>   décision qui n'est pas urgente ;
+> - **elle cesse de bloquer quoi que ce soit.** Aucun chantier ne s'ajourne plus
+>   au motif que le 1 % bas est sous la cible : elle l'a fait deux fois le
+>   2026-08-18, sur un chiffre dont on sait maintenant qu'il varie de 81 à 97
+>   sans qu'une ligne change.
+>
+> Ce qui reste vrai et qui servira le jour où la question se rouvrira : **la
+> médiane est la seule métrique reproductible**, le jeu la tient (7,41 ms contre
+> 8,33 de budget), et le seul coût identifié est **la seconde vue** — c'est-à-dire
+> l'écran partagé permanent, une décision de conception et non un réglage.
+>
+> Ce qui reste à trancher, un jour : garder la cible sur le 1 % bas en exigeant
+> des relevés répétés et une dispersion, ou la réécrire sur la médiane. Les deux
+> formulations ne disent pas la même chose, et c'est pour ça qu'on ne l'a pas
+> tranché à sa place.
 
 ---
 
