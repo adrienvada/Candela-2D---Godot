@@ -1177,6 +1177,14 @@ classé », et se compose sans réécriture.
 partagé et dans tous les modes amicaux, **pas** en compétitif, où seule la
 sélection du rang vaut.
 
+**Le miroir suit le rang, pas la richesse de l'arsenal.** Conséquence directe de
+la non-monotonie, et elle surprend : un Candela qui affronte un Lanterne prend
+**l'Arbalète**, alors que sa propre sélection est le Pistolet. La règle dit « la
+sélection du moins bien classé », et le moins bien classé des deux est ici le
+mieux armé. C'est cohérent — l'arsenal commun est celui que les deux peuvent
+avoir — mais tout code qui prendrait « l'intersection » ou « le plus pauvre des
+deux arsenaux » serait faux.
+
 ~~**En local, toutes les armes sont accessibles** (décision du 2026-08-16)~~ —
 **superseded le 2026-08-18** par la décision ci-dessous. La raison d'origine
 (« l'écran partagé n'est pas classé, rien n'y justifie un verrou ») reste vraie
