@@ -56,6 +56,8 @@ var serie_longueur: int = 0
 var _mot_de_serie: String = ""
 ## V6.2 — la ligne du tir fatal pendant la killcam, effacée avec le tampon.
 var _trace_fatale: Node2D = null
+## Le pair est parti pendant une killcam : l'annonce attend qu'elle se termine.
+var _deconnexion_differee: bool = false
 ## La comptabilité de la série vit dans son propre fichier : elle ne dépend ni du
 ## réseau ni de l'audio, et doit rester testable sans eux.
 const SerieDeSession := preload("res://serie_de_session.gd")
@@ -360,6 +362,23 @@ func _on_peer_connected(id: int):
 		# avant l'arrivée de ce paquet imposait le pistolet à P2 pour tout le
 		# match — en BO1 aucun rematch ne vient rattraper le choix.
 
+## Le pair a disparu. **Sa killcam en cours, elle, va jusqu'au bout.**
+##
+## Décision d'Adrien (2026-08-19) : « on laisse terminer sa killcam même si
+## l'autre joueur se déconnecte ». La checklist le demandait depuis toujours —
+## « ni coupée, ni accélérée, ni recouverte par un écran d'attente » — et le code
+## faisait l'inverse.
+##
+## **Ce n'était pas une ligne à retirer.** Cinq gestes de ce chemin écrasaient la
+## killcam qu'on veut préserver : le jeton qui rend la séquence caduque,
+## `_end_sequence_active = false`, la restauration des vues, le dialogue qui la
+## recouvre, et le passage en bac à sable sous elle. La forme juste est de
+## **différer** tout ce qui touche à l'écran.
+##
+## **Reste immédiat, et doit le rester** : l'archivage du forfait — il lit des
+## valeurs que la suite efface — et la purge de P2, sans laquelle l'hôte
+## continuerait à le simuler sur sa dernière commande, torche allumée, pendant
+## toute la killcam. Un adversaire parti ne doit pas continuer d'éclairer.
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		# Avant toute remise à zéro : l'enregistrement lit les armes, le chrono et
@@ -367,53 +386,68 @@ func _on_peer_disconnected(id: int):
 		_archive_forfeit(0)
 		if id == client_peer_id:
 			client_peer_id = 0
-		# Toute séquence de fin en vol devient caduque : sans ce jeton elle
-		# reviendrait afficher un écran de victoire par-dessus l'attente.
-		_round_token += 1
-		_end_sequence_active = false
-		_pending_client_start = false
-		_pending_p2_weapon_idx = -1
-		# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
-		# l'hôte immobile pour toujours dans son bac à sable.
-		countdown_left = 0.0
-		ui.set_countdown(0.0)
-		ui.force_close_pause()
-		_abort_killcam()
-		_restore_viewports()
 		# L'hôte simule P2 : sans purge il continuerait à courir sur la dernière
-		# commande reçue.
+		# commande reçue. Immédiat même pendant une killcam — c'est de la
+		# simulation, pas de l'affichage.
 		p2.reset_network_input()
 		p2.velocity = Vector2.ZERO
 		p2.is_sprinting = false
 		p2.flashlight_on = false
-		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
-		round_active = false
-		sandbox_mode = true
-		p2_ready_for_rematch = false
-		# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
-		p1_ready_for_rematch = false
-		_hote_pret = false
-		local_ready_for_rematch = false
-		ui.btn_replay.text = "REJOUER"
-		ui.btn_replay.remove_theme_color_override("font_color")
-		p1_session_wins = 0
-		p2_session_wins = 0
-		serie_porteur = -1
-		serie_longueur = 0
-		_mot_de_serie = ""
-		p1_round_wins = 0
-		p2_round_wins = 0
-		p2.hide()
-		p2.set_collision_layer_value(1, false)
-		p2.set_collision_mask_value(1, false)
-		_set_training_target_active(true)
-		ui.show_waiting_for_opponent()
-		ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
-		if game_over:
-			ui.hide_game_over()
-			game_over = false
+		if _end_sequence_active:
+			# Une killcam est en cours : on ne touche à rien de ce qu'elle montre.
+			# La suite se déroulera à sa fin, dans `_annoncer_deconnexion()`.
+			_deconnexion_differee = true
+			return
+		_annoncer_deconnexion()
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Côté client, c'est l'HÔTE qui est parti : il n'y a plus de partie à
+		# préserver, seulement un menu où retourner.
 		_on_main_menu_requested()
+
+## La partie « écran » de la déconnexion, différée si une killcam la couvrait.
+func _annoncer_deconnexion() -> void:
+	_deconnexion_differee = false
+	# Toute séquence de fin en vol devient caduque : sans ce jeton elle
+	# reviendrait afficher un écran de victoire par-dessus l'attente.
+	_round_token += 1
+	_end_sequence_active = false
+	_pending_client_start = false
+	_pending_p2_weapon_idx = -1
+	# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
+	# l'hôte immobile pour toujours dans son bac à sable.
+	countdown_left = 0.0
+	ui.set_countdown(0.0)
+	ui.force_close_pause()
+	_abort_killcam()
+	_restore_viewports()
+	ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
+	round_active = false
+	sandbox_mode = true
+	p2_ready_for_rematch = false
+	# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
+	p1_ready_for_rematch = false
+	_hote_pret = false
+	local_ready_for_rematch = false
+	ui.btn_replay.text = "REJOUER"
+	ui.btn_replay.remove_theme_color_override("font_color")
+	p1_session_wins = 0
+	p2_session_wins = 0
+	serie_porteur = -1
+	serie_longueur = 0
+	_mot_de_serie = ""
+	p1_round_wins = 0
+	p2_round_wins = 0
+	p2.hide()
+	p2.set_collision_layer_value(1, false)
+	p2.set_collision_mask_value(1, false)
+	_set_training_target_active(true)
+	ui.show_waiting_for_opponent()
+	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
+	if game_over:
+		ui.hide_game_over()
+		game_over = false
+
+
 
 ## Entraînement solitaire : une arène, une cible, aucun adversaire.
 ##
@@ -1494,6 +1528,13 @@ func _do_end_round(winner_id: int):
 
 	_end_sequence_active = false
 	game_over = true
+	# La killcam est allée à son terme. Si le pair est parti pendant qu'elle
+	# jouait, c'est MAINTENANT qu'on l'annonce — avant l'écran de fin, et non
+	# après : proposer un « REJOUER » à quelqu'un dont l'adversaire n'existe plus
+	# serait une promesse d'une demi-seconde.
+	if _deconnexion_differee:
+		_annoncer_deconnexion()
+		return
 	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
 	local_ready_for_rematch = false
 	ui.show_game_over(winner_id)

@@ -80,23 +80,21 @@ proche de 120 ms une fois la partie lancée.)
 
 ## 4. Connexion pendant une killcam ou une fin de manche
 
-> ⚠️ **L'attendu de 4.1 est contredit par le code, et personne n'a tranché.**
-> Relevé le 2026-08-18 en cherchant comment automatiser cette famille.
+> ✅ **Tranché par Adrien le 2026-08-19 : « on laisse terminer sa killcam même si
+> l'autre joueur se déconnecte », et « le message tout de suite après ».**
 >
-> La ligne 4.1 attend que A **termine sa killcam en entier**. Or
-> `game_state.gd:381` — dans `_on_peer_disconnected` — appelle `_abort_killcam()`
-> dès que le pair disparaît : la killcam de A est **coupée**, la vitesse rendue,
-> et le dialogue de déconnexion s'affiche.
+> La checklist avait raison, le code avait tort — il coupait. **Ce n'était pas une
+> ligne à retirer :** cinq gestes du chemin de déconnexion écrasaient la killcam
+> qu'on veut préserver (le jeton qui rend la séquence caduque, la restauration des
+> vues, le dialogue qui la recouvre, le passage en bac à sable, la remise à zéro
+> du décompte). La forme retenue est de **différer tout ce qui touche à l'écran**.
 >
-> **Les deux comportements se défendent** et c'est bien le problème. Terminer la
-> killcam respecte le joueur qui regarde ; la couper reconnaît que le match est
-> fini de toute façon et rend la main plus vite. **Écrire un test contre l'un ou
-> l'autre reviendrait à trancher une question de jeu à la place d'Adrien** —
-> exactement ce que le 2026-08-18 a passé sa journée à démonter ailleurs.
+> **Restent immédiats** : l'archivage du forfait — il lit des valeurs que la suite
+> efface — et la purge de P2. Sans elle, l'hôte continuerait à simuler
+> l'adversaire sur sa dernière commande **torche allumée, pendant toute la
+> killcam** : une lumière orpheline qui éclaire pour un joueur qui n'existe plus.
 >
-> **Tant que ce n'est pas tranché, la famille 4 n'est pas automatisée**, et son
-> absence est un choix, pas un oubli. Les familles 1, 2 (moitié), 3, 5.2, 5.3, 6
-> et 7.2 le sont — voir `tools/run_duo.sh`.
+> Vérifié par `./tools/run_duo.sh --ralenti`.
 
 
 | # | Action | Attendu |

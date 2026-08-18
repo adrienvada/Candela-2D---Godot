@@ -535,12 +535,29 @@ func _run_host_ralenti() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	_check("le ralenti est levé sur ce chemin de sortie",
+	# **La killcam ne doit PAS être coupée** — décision d'Adrien du 2026-08-19,
+	# et exigence de la checklist depuis toujours : « ni coupée, ni accélérée, ni
+	# recouverte par un écran d'attente ». C'est la propriété neuve, et elle se
+	# vérifie à l'instant précis où l'ancien code aurait tout effacé.
+	_check("la killcam survit au départ de l'adversaire",
+		_main._end_sequence_active,
+		"séquence active=%s" % _main._end_sequence_active)
+	_check("le rejeu continue", ReplaySystem.playing_back)
+
+	# Puis elle va à son terme, et SEULEMENT là l'état est rendu.
+	if not await _await(func(): return not _main._end_sequence_active, 30.0):
+		_fail("la séquence de fin ne s'est jamais terminée")
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("le ralenti est levé une fois la killcam finie",
 		is_equal_approx(Engine.time_scale, 1.0), "time_scale=%.4f" % Engine.time_scale)
 	_check("le rejeu est arrêté", not ReplaySystem.playing_back)
-	_check("aucune séquence de fin ne survit", not _main._end_sequence_active)
 	_check("l'hôte reprend la main", _main.sandbox_mode and not _main.round_active)
 	_check("le décompte est effacé", is_zero_approx(_main.countdown_left))
+	# L'adversaire parti ne doit pas continuer d'éclairer pendant qu'on le
+	# regarde mourir : la purge de P2 est le seul geste resté immédiat.
+	_check("sa torche s'est éteinte tout de suite", not _main.p2.flashlight_on)
 	_quit(0)
 
 ## Le client de la famille 5.3 : il meurt, puis **disparaît pendant le ralenti**
