@@ -2448,19 +2448,39 @@ func _refresh_weapon_locks() -> void:
 	var tier := 0
 	if is_instance_valid(RankedIdentity) and RankedIdentity.is_ranked:
 		tier = int(RankedIdentity.rank_tier_index)
-	for paire in [[p1_weapon_group, [p1_btn1, p1_btn2, p1_btn3, p1_btn4]],
-			[p2_weapon_group, [p2_btn1, p2_btn2, p2_btn3, p2_btn4]]]:
-		var groupe: ButtonGroup = paire[0]
-		var boutons: Array = paire[1]
+	# `RankedIdentity` est l'identité du POSTE, pas celle d'un râtelier. Elle ne
+	# vaut donc que pour le joueur assis devant — et lui seul. En écran partagé,
+	# appliquer ce rang au second joueur lui prêterait celui du premier ; face à un
+	# adversaire en ligne, cela lui prêterait le nôtre, alors que son rang n'est
+	# pas encore échangé.
+	#
+	# Le client tient P2 (`_local_p2_weapon_idx` lit son groupe), tout le reste
+	# tient P1. Les autres râteliers gardent le socle : ne rien verrouiller vaut
+	# mieux que verrouiller d'après le mauvais joueur, une arme retirée à tort
+	# étant plus fâcheuse qu'une arme offerte à tort — la seconde se rattrape à
+	# l'arrivée de l'adversaire par la règle du miroir.
+	#
+	# Inerte aujourd'hui : hors compétitif le socle est entier de toute façon.
+	# Signalé par une session voisine, corrigé avant que ça morde — le jour où une
+	# arme sera réservée au classé.
+	var rateau_local := 1 if selected_network_mode() \
+		== NetworkManager.GameMode.ONLINE_CLIENT else 0
+	for cote in [0, 1]:
+		var groupe: ButtonGroup = p1_weapon_group if cote == 0 else p2_weapon_group
+		var boutons: Array = [p1_btn1, p1_btn2, p1_btn3, p1_btn4] if cote == 0 \
+			else [p2_btn1, p2_btn2, p2_btn3, p2_btn4]
+		var tier_du_cote := tier if cote == rateau_local else 0
 		var premier_libre := -1
 		for i in boutons.size():
 			var btn: Button = boutons[i]
 			if btn == null:
 				continue
-			var libre := RankLoadout.is_available(i, _weapon_context_ranked, tier)
+			var libre := RankLoadout.is_available(i, _weapon_context_ranked,
+				tier_du_cote)
 			btn.disabled = not libre
 			btn.modulate = Color.WHITE if libre else Color(1.0, 1.0, 1.0, 0.4)
-			btn.tooltip_text = RankLoadout.reason_for(i, _weapon_context_ranked, tier)
+			btn.tooltip_text = RankLoadout.reason_for(i, _weapon_context_ranked,
+				tier_du_cote)
 			if libre and premier_libre < 0:
 				premier_libre = i
 		# Une arme verrouillée qui reste SÉLECTIONNÉE partirait au match : le
