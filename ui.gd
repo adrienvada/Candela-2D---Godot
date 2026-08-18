@@ -301,6 +301,10 @@ var join_box: VBoxContainer
 ## Les entrées « PRÊT » des quatre salons, grisées tant qu'un second joueur
 ## est nécessaire et absent.
 var _ready_entries: Array[Button] = []
+
+## La file visée par l'écran courant. Le grisage des armes en dépend : hors
+## compétitif le socle entier est offert, en compétitif la sélection du rang.
+var _weapon_context_ranked: bool = false
 ## Écran qui a ouvert le salon, pour savoir quand on le quitte. Vide = fermé.
 var _lobby_screen: String = ""
 
@@ -2419,6 +2423,52 @@ func _apply_queue_kind(ranked: bool) -> void:
 	var recherche = _screens.get(SCREEN_MATCHMAKING, null)
 	if recherche != null and recherche.has_method("set_ranked_queue"):
 		recherche.set_ranked_queue(ranked)
+	_weapon_context_ranked = ranked
+	_refresh_weapon_locks()
+
+## Grise les armes que le contexte ne permet pas, et dit pourquoi.
+##
+## **Grisées, jamais masquées** : un joueur doit voir ce qu'il possède même quand
+## il ne peut pas s'en servir. Masquer laisserait croire que l'arme n'existe pas,
+## et un râtelier dont la longueur change d'un écran à l'autre se lit comme un
+## défaut.
+##
+## La règle vit dans `RankLoadout` et **nulle part ailleurs** : l'écran ne
+## reconstruit pas le raisonnement, il affiche la phrase que la table lui rend.
+## Deux explications du même refus finiraient par diverger, et c'est celle qui est
+## affichée qui aurait tort.
+##
+## Le rang de l'adversaire est inconnu ici — rien ne l'échange encore. On montre
+## donc sa propre sélection, qui ne peut que **rétrécir** à l'arrivée de l'autre
+## sous la règle du miroir, jamais s'élargir : rien de ce qui est annoncé ne sera
+## repris à tort.
+func _refresh_weapon_locks() -> void:
+	if p1_btn1 == null:
+		return
+	var tier := 0
+	if is_instance_valid(RankedIdentity) and RankedIdentity.is_ranked:
+		tier = int(RankedIdentity.rank_tier_index)
+	for paire in [[p1_weapon_group, [p1_btn1, p1_btn2, p1_btn3, p1_btn4]],
+			[p2_weapon_group, [p2_btn1, p2_btn2, p2_btn3, p2_btn4]]]:
+		var groupe: ButtonGroup = paire[0]
+		var boutons: Array = paire[1]
+		var premier_libre := -1
+		for i in boutons.size():
+			var btn: Button = boutons[i]
+			if btn == null:
+				continue
+			var libre := RankLoadout.is_available(i, _weapon_context_ranked, tier)
+			btn.disabled = not libre
+			btn.modulate = Color.WHITE if libre else Color(1.0, 1.0, 1.0, 0.4)
+			btn.tooltip_text = RankLoadout.reason_for(i, _weapon_context_ranked, tier)
+			if libre and premier_libre < 0:
+				premier_libre = i
+		# Une arme verrouillée qui reste SÉLECTIONNÉE partirait au match : le
+		# bouton est grisé, mais le groupe garde son choix. On rabat sur la
+		# première arme disponible plutôt que de laisser jouer ce qui est refusé.
+		var choisi: BaseButton = groupe.get_pressed_button()
+		if premier_libre >= 0 and (choisi == null or choisi.disabled):
+			(boutons[premier_libre] as Button).button_pressed = true
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
@@ -2729,6 +2779,12 @@ func _build_lobby_widgets() -> void:
 		_refresh_lobby_block()
 	)
 
+	# Le rang arrive en tâche de fond, après l'identification : les armes doivent
+	# se déverrouiller à ce moment-là sans que le joueur ait à ressortir de
+	# l'écran. Sans ce branchement, un joueur classé verrait le râtelier d'un
+	# joueur sans rang jusqu'à sa prochaine navigation.
+	if is_instance_valid(RankedIdentity) and RankedIdentity.has_signal("standing_changed"):
+		RankedIdentity.standing_changed.connect(_refresh_weapon_locks)
 	NetworkManager.lobby_code_ready.connect(_on_lobby_code_ready)
 	NetworkManager.eos_state_changed.connect(func(_state) -> void: _refresh_lobby_block())
 	# La liste des joueurs se tient à jour d'elle-même : l'hôte qui attend dans son
