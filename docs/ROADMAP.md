@@ -4202,6 +4202,92 @@ et un seul est du travail de session.
    directe a toujours abouti), et la détection de déconnexion est lente des deux
    côtés.
 
+## D'où viennent les millisecondes du duel — mesuré le 2026-08-18
+
+`tools/run_decomposition.sh`, sept relevés pris le 2026-08-18 avec l'accord
+d'Adrien. **Conclusion : la seconde vue EST le coût du duel ; les torches et les
+shaders du joueur ne se distinguent pas du bruit.**
+
+| Configuration | médiane | soit | 1 % bas |
+|---|---|---|---|
+| duel complet | 135 | 7,41 ms | 81 |
+| **socle nu** (1 vue, sans torches, sans shaders) | 165 | 6,06 ms | 117 |
+| sans la 2ᵉ vue | 172 | 5,81 ms | 118 |
+| sans les torches | 135 | 7,41 ms | 103 |
+| sans les shaders joueur | 132 | 7,58 ms | 92 |
+| socle + 2ᵉ vue seule | 132 | 7,58 ms | 99 |
+| socle + torches seules | 160 | 6,25 ms | 119 |
+| socle + shaders joueur seuls | 160 | 6,25 ms | 118 |
+
+**Tout l'écart à expliquer vaut 1,35 ms** (duel complet moins socle nu).
+
+| Poste | borne basse | borne haute | verdict |
+|---|---|---|---|
+| **2ᵉ vue** | 1,60 ms | 1,52 ms | **bornes serrées, et ≥ l'écart total : elle explique tout** |
+| torches | 0,00 ms | 0,19 ms | sous le bruit |
+| shaders joueur | −0,17 ms | 0,19 ms | **encadrent zéro : indiscernable** |
+
+**Ce que ça tranche.** L'hypothèse de ce document — « deux `SubViewport` qui
+rendent chacun leurs lumières » — était **juste, et pour la moitié seulement de
+la raison invoquée** : c'est le **second rendu** qui coûte, pas l'éclairage. Une
+torche allumée ne se mesure pas ; un `.gdshader` de joueur non plus. Le levier
+est unique, et c'est **l'écran partagé permanent** — une décision de conception
+du jeu, présente même en ligne, pas un réglage.
+
+**Deux réserves, et la seconde corrige ce qu'on croyait acquis.**
+
+1. **Le plancher de bruit vaut ~0,25 ms sur la médiane.** « Sans la 2ᵉ vue »
+   (172) ressort **plus rapide** que le socle nu (165), alors qu'il en fait
+   davantage. Aucun écart inférieur à ce plancher n'est lisible — ce qui suffit à
+   ranger torches et shaders comme « non mesurables », pas comme « gratuits ».
+2. **Le 1 % bas du duel est bruité lui aussi : 81 ici contre 97 deux heures
+   plus tôt, sur la même configuration.** On avait écrit que le duel, à charge
+   continue, donnait un 1 % bas solide — contrairement aux menus. **C'est faux
+   des deux côtés** : la traîne varie d'un relevé à l'autre partout. Seule la
+   **médiane** est reproductible. Toute décision prise sur un 1 % bas unique,
+   duel compris, est prise sur un chiffre qu'un second relevé déplacerait.
+
+**Pourquoi ce chantier.** Ce document attribuait les 7,6 ms du duel à « deux
+`SubViewport` qui rendent chacun leur jeu de lumières et d'ombres portées ».
+C'était une **hypothèse écrite comme une explication**, jamais mesurée — la forme
+exacte de ce que cette journée a passé son temps à démonter ailleurs, et écrite
+de la main de la session qui venait de démonter les deux autres.
+
+**Pourquoi sept et pas trois.** Retirer un poste du duel complet donne sa borne
+**basse** : ce qu'on économise quand tout le reste est encore là pour masquer son
+coût. Le rendre à un socle nu donne sa borne **haute** : ce qu'il coûte quand
+rien ne le recouvre. Le vrai coût est entre les deux, et **l'écart entre les
+bornes mesure le recouvrement lui-même** — ce qu'un relevé unique ne peut pas
+dire. Des bornes serrées tranchent ; des bornes larges apprennent que le poste ne
+s'isole pas, et c'est aussi une réponse.
+
+Le **socle nu** (une vue, sans torches, sans shaders joueur) est la mesure la
+plus intéressante des sept : elle dit le plancher qu'aucun réglage ne fera bouger.
+
+**Un garde-fou qui vaut comme règle générale : une variante de banc doit prouver
+qu'elle a changé quelque chose.** « Sans shaders » compte les matériaux retirés
+et **sort en échec sur zéro** ; la seconde vue passe par `UPDATE_DISABLED` et non
+`hide()`, un conteneur caché laissant le `SubViewport` rendre dans son coin. Sans
+ces deux contrôles, une variante produit un chiffre **valide sur une
+configuration qui n'est pas celle qu'elle annonce** — et deux mesures identiques
+se liraient alors comme « ce poste ne coûte rien », la conclusion la plus
+dangereuse des deux.
+
+---
+
+## Ce que les relevés ont déjà tranché pour le game feel
+
+**Le gel des vagues 4 et 5 était trop large, et c'est corrigé ici.** Il avait été
+posé vague par vague ; le coût se juge **item par item**.
+
+| Ce que fait l'item | Statut | Pourquoi |
+|---|---|---|
+| **Ponctuel et poolé** — un éclat, une secousse, un one-shot qui rend son nœud | **Ouvert** | Le pic de particules est à 122 sur 200, identique aux trois relevés : le budget n'est pas saturé, et rien de ponctuel n'entre dans le régime permanent. |
+| **Coût par image, en continu** — une `Light2D` de plus, un `.gdshader` sur un nœud toujours visible | **Gelé** | Le 1 % bas du duel est déjà sous la cible. Ajouter du permanent avant de savoir d'où vient le coût existant serait exactement ce que la règle du dépôt interdit. |
+| **Audio, menus, killcam** | **Ouvert** | Zones franches (manche finie) ou charge sans commune mesure — les menus tiennent à 163 de 1 % bas, 66 % de marge. |
+
+---
+
 ## Journal des relevés de cadence — 2026-08-18
 
 Trois relevés le même jour, **dont deux ne mesuraient rien.** L'histoire compte
