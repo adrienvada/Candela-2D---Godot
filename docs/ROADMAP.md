@@ -2206,6 +2206,37 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un outil de mesure hors couverture se périme en silence (2026-08-18)
+
+`tools/bench_framerate.gd` pilotait `_ui.btn_mode_local`, disparu à la Phase 5
+quand les modes sont devenus des entrées du hub. Le banc s'ouvrait, levait une
+erreur de script, **n'entrait jamais dans le duel et restait ouvert sans rien
+mesurer** — il a fallu le tuer à la main. Découvert à la minute exacte où le
+chiffre était demandé, après que trois sessions se soient arrêtées pour lui.
+
+La cause n'est pas la ligne. **Le banc ouvre une fenêtre, donc il ne peut être
+dans aucune suite headless**, et rien ne surveillait sa péremption. Remède :
+`bench_framerate.preconditions_manquantes()` nomme ses appuis sur le jeu, le banc
+les vérifie avant de mesurer et **sort en échec s'il en manque**, et
+`tools/test_banc.gd` les contrôle en headless — sans rien rasteriser. Le banc
+aurait échoué le jour de la refonte, pas une semaine plus tard.
+
+**Ce qui se généralise :** tout outil qu'aucune suite ne peut exécuter doit au
+moins exposer ses hypothèses sous une forme qu'une suite peut vérifier.
+
+### Un `preload` en tête de fichier compile avant les autoloads (2026-08-18)
+
+Troisième forme du même piège dans la journée. Une suite `--script` qui
+`preload` un fichier nommant `NetworkManager` (ou tout autre autoload) le compile
+**au chargement du script de test**, avant que les autoloads existent. L'échec ne
+s'arrête pas au fichier fautif : il se propage à tout ce qui en dépend, si bien
+que `main.tscn` arrive **sans ses scripts** et que la suite conclut « tout a
+disparu ». Utiliser `load()` après la première frame.
+
+Les deux autres formes : charger `game_state.gd` (« tous les tests passent » sur
+des appels morts) et poser des propriétés au vol sur un `Node2D` avec `set()`.
+
+
 ### La torche de l'adversaire s'entendait dans votre musique (2026-08-18)
 
 `AudioManager.set_player_torch()` était appelé pour **chaque** joueur, adversaire

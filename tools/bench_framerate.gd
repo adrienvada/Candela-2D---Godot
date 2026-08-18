@@ -40,9 +40,27 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_ui = _main.get_node("UI")
 
+	# **Vérifier ses appuis AVANT de mesurer.** Le banc lisait `btn_mode_local`,
+	# disparu avec la refonte des menus de la Phase 5 : il s'ouvrait, levait une
+	# erreur de script, n'entrait jamais dans le duel, et **restait ouvert sans
+	# rien mesurer**. Il a fallu le tuer à la main, le jour où on avait besoin du
+	# chiffre. Un banc qui échoue doit le dire et sortir.
+	var manquants := preconditions_manquantes(_ui, _main)
+	if not manquants.is_empty():
+		printerr("✗ le banc ne peut pas démarrer — le jeu a changé sous lui :")
+		for m in manquants:
+			printerr("    · ", m)
+		printerr("  Voir tools/test_banc.gd, qui vérifie ces appuis en headless.")
+		get_tree().quit(1)
+		return
+
 	# Écran partagé : les DEUX vues rendent, chacune avec son jeu de lumières et
 	# d'ombres portées. C'est le pire cas de la passe de performance.
-	_ui.btn_mode_local.button_pressed = true
+	#
+	# Le mode ne se choisit plus par un bouton mais par la navigation, qui écrit
+	# `_intended_mode`. Le banc n'a pas d'écran à parcourir : il pose l'intention
+	# directement, comme le ferait l'entrée « 1V1 écrans scindés ».
+	_ui._intended_mode = NetworkManager.GameMode.LOCAL_SPLITSCREEN
 	_select_shotgun(_ui.p1_weapon_group)
 	_select_shotgun(_ui.p2_weapon_group)
 	_main._on_replay_requested()
@@ -115,6 +133,38 @@ func _report() -> void:
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	print("  Verdict 120 fps  : %s" % ("TENU" if low1 >= 120.0 else "NON TENU (1 %% bas à %.0f)" % low1))
+
+
+## Les appuis du banc sur le jeu, nommés une fois et vérifiables sans fenêtre.
+##
+## C'est ce qui manquait : **le banc n'est dans aucune suite** — il ouvre une
+## fenêtre, il ne peut pas y être — donc rien ne signalait qu'il avait cessé de
+## fonctionner. Un outil de mesure hors couverture se périme en silence, et on
+## s'en aperçoit au moment précis où on a besoin de la mesure.
+##
+## La liste est publique et statique pour que `tools/test_banc.gd` la vérifie en
+## headless, sans rien rasteriser. Elle ne remplace pas le banc ; elle garantit
+## qu'il pourra démarrer.
+static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
+	var absents: Array[String] = []
+	if ui == null or main == null:
+		absents.append("main.tscn n'expose plus UI ou GameState")
+		return absents
+	for prop in ["_intended_mode", "p1_weapon_group", "p2_weapon_group"]:
+		if not prop in ui:
+			absents.append("UI.%s a disparu" % prop)
+	for prop in ["round_active", "p1", "p2", "particle_pool", "bullet_container"]:
+		if not prop in main:
+			absents.append("GameState.%s a disparu" % prop)
+	if not main.has_method("_on_replay_requested"):
+		absents.append("GameState._on_replay_requested() a disparu")
+	for groupe in ["p1_weapon_group", "p2_weapon_group"]:
+		if groupe in ui:
+			var g: ButtonGroup = ui.get(groupe)
+			if g == null or g.get_buttons().size() <= SHOTGUN_INDEX:
+				absents.append("UI.%s n'a plus d'arme à l'indice %d (pompe)"
+					% [groupe, SHOTGUN_INDEX])
+	return absents
 
 
 func _select_shotgun(group: ButtonGroup) -> void:
