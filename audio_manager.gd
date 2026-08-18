@@ -22,6 +22,15 @@ const SOUNDS: Dictionary = {
 	"ui_ready_ping": "res://assets/audio/sfx/ui_ready_ping.wav"
 }
 
+## Le tempo du jeu, en un seul endroit.
+##
+## Les stems, le pouls haptique et la vignette battante battent tous à 170 —
+## mais chacun le réécrivait chez lui (`player.gd` porte encore ses propres 170
+## et 85). Un tempo recopié est un tempo qui dérive : le jour où il change, ce
+## qui bat encore à l'ancien ne se signale pas, il se contente d'être à côté.
+const BPM: float = 170.0
+const PERIODE_BEAT: float = 60.0 / BPM
+
 const SFX_POOL_SIZE: int = 16
 
 ## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.

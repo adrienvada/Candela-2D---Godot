@@ -2206,6 +2206,16 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Le tempo du jeu est recopié à trois endroits (2026-08-18)
+
+170 BPM pilote les stems, le pouls haptique (V1.5) et la vignette battante
+(V4.7) — mais chacun l'écrivait chez lui. `AudioManager.BPM` /
+`AudioManager.PERIODE_BEAT` existent maintenant et servent la respiration V3.1 ;
+**`player.gd` porte encore ses propres 170 et 85 en dur** (signalé, pas corrigé :
+hors périmètre). Un tempo recopié est un tempo qui dérive — le jour où il change,
+ce qui bat encore à l'ancien ne se signale pas, il se contente d'être à côté.
+
+
 ### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
 
 En headless la cadence n'est pas plafonnée : quarante `process_frame` valent une
@@ -2919,7 +2929,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 ### Vague 3 — Le rematch et le rythme (là où « encore une » se décide)
 
 - **V3.1 REJOUER respire** — scale 1,00→1,03 au BPM, curseur aimanté dessus
-  (`nav_seed`).
+  (`nav_seed`). **✅ Fait** — l'écran de fin est le seul du jeu où une entrée
+  mérite d'attirer l'œil : après un match on ne cherche pas dans une liste, on
+  redemande. Trois pour cent et pas davantage, parce que l'entrée vit dans une
+  colonne dont les voisines ne bougent pas — au-delà, elle ne respire plus, elle
+  saute, et la liste entière paraît instable. Un cosinus plutôt que deux tweens
+  enchaînés : la courbe se referme sur elle-même, donc aucune couture au passage
+  d'un battement au suivant.
+  - **`nav_seed` accepte une valeur commune** (`NAV_SEED_LES_DEUX = -2`) : après
+    un match en écran partagé les deux joueurs redemandent, et faire chercher le
+    second lui ferait payer de ne pas être le premier. Négative à dessein — un
+    indice de joueur est positif, et écrire 2 aurait fait d'un troisième joueur
+    imaginaire une graine valide.
+  - **Ce que la suite protège est l'arrêt, pas l'animation.** Une respiration qui
+    survit à la fermeture laisserait une entrée du menu principal enfler seule —
+    et là elle ne dit plus « rejouer » mais « prêt » : le menu insisterait pour
+    lancer une partie que personne n'a demandée. Une boucle infinie ne se
+    signale jamais d'elle-même.
+  - **Signalé, pas corrigé** (hors périmètre) : en écran partagé l'entrée de
+    relance s'appelle « JOUER » et n'est pas dans `_ready_entries`, donc le
+    renommage PRÊT → REJOUER l'ignore. Le commentaire de `_sync_launch_entries`
+    affirme pourtant qu'« une seule entrée porte les deux gestes ». C'est vrai
+    en ligne, faux en écran partagé. La respiration passe par une liste séparée
+    (`_relance_entries`) pour ne pas sauter le mode le plus joué **sans** changer
+    au passage un libellé que personne n'a demandé de changer.
 - **V3.2 La pression du prêt** — quand l'adversaire passe « ✓ PRÊT » (RPC déjà
   reçu), ping sonore + pulse du libellé. — *assets : 1 sample.*
 - **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par

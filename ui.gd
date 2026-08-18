@@ -56,6 +56,11 @@ const TAB_SLIDE := 32.0
 ## Métadonnées de navigation posées sur les contrôles.
 const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
+## Valeur de `nav_seed` qui attire les deux curseurs sur la même entrée, au lieu
+## d'un joueur nommé. Négative à dessein : un indice de joueur est un entier
+## positif, et l'écrire 2 aurait fait d'un troisième joueur imaginaire une
+## graine valide.
+const NAV_SEED_LES_DEUX := -2
 ## Libellé d'origine d'une entrée de lancement, à restaurer hors écran de fin.
 const META_LAUNCH_BASE := "launch_base"
 ## M10 — opacité de nuit d'un rideau, et colonne que la cascade rallume.
@@ -353,6 +358,17 @@ var join_box: VBoxContainer
 ## Les entrées « PRÊT » des quatre salons, grisées tant qu'un second joueur
 ## est nécessaire et absent.
 var _ready_entries: Array[Button] = []
+## Toutes les entrées qui relancent une manche, écran partagé compris.
+##
+## `_ready_entries` ne suffisait pas : elle sert au **renommage** PRÊT → REJOUER
+## et ne contient donc que les quatre entrées de salon. En écran partagé, celle
+## qui relance s'appelle « JOUER » et n'y figure pas — la respiration de fin de
+## match aurait sauté le mode le plus joué. Liste séparée plutôt qu'ajout à
+## l'autre : y verser « JOUER » l'aurait aussi fait renommer, ce qui n'est pas
+## demandé ici.
+var _relance_entries: Array[Button] = []
+## La respiration V3.1, vivante seulement sur l'écran de fin.
+var _souffle_relance: Tween = null
 
 ## La file visée par l'écran courant. Le grisage des armes en dépend : hors
 ## compétitif le socle entier est offert, en compétitif la sélection du rang.
@@ -1093,7 +1109,8 @@ func _seed_focus(player: int) -> void:
 		return
 
 	for candidate in candidates:
-		if int(candidate.get_meta(META_NAV_SEED, -1)) == player:
+		var graine := int(candidate.get_meta(META_NAV_SEED, -1))
+		if graine == player or graine == NAV_SEED_LES_DEUX:
 			_set_focus(player, candidate, true)
 			return
 
@@ -1862,9 +1879,11 @@ func _build_hub_screens() -> void:
 		+ "en bas de l'écran.")
 
 	# --- 1v1 écrans scindés ---------------------------------------------------
-	scinde.add_child(hub.make_entry("JOUER",
+	var jouer_scinde := hub.make_entry("JOUER",
 		"Chaque joueur choisit son arme à droite, puis la manche démarre.",
-		"", COLOR_P1, "lancer", "", true))
+		"", COLOR_P1, "lancer", "", true)
+	_relance_entries.append(jouer_scinde)
+	scinde.add_child(jouer_scinde)
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
@@ -1909,6 +1928,7 @@ func _build_hub_screens() -> void:
 			+ "match part quand les deux joueurs se sont déclarés prêts.",
 			"", COLOR_P1, "lancer", "", true)
 		_ready_entries.append(pret_hote)
+		_relance_entries.append(pret_hote)
 		pret_hote.set_meta(META_LAUNCH_BASE, "PRÊT")
 		h.add_child(pret_hote)
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
@@ -1920,6 +1940,7 @@ func _build_hub_screens() -> void:
 			+ "joueurs se sont déclarés prêts ; la carte est celle de l'hôte.",
 			"", COLOR_P1, "lancer", "", true)
 		_ready_entries.append(pret_invite)
+		_relance_entries.append(pret_invite)
 		pret_invite.set_meta(META_LAUNCH_BASE, "PRÊT")
 		j.add_child(pret_invite)
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
@@ -4317,6 +4338,11 @@ func show_game_over(winner_id: int) -> void:
 	_allumer(game_over_panel)
 	game_over_score.text = ""
 	btn_replay.text = "REJOUER"
+	# Après le `push` : la graine est lue au moment où l'écran s'ouvre, et la
+	# poser ensuite n'aurait déplacé aucun curseur.
+	_respirer_relance(true)
+	_seed_focus(0)
+	_seed_focus(1)
 
 	# Fin de MATCH (format BO1). En ligne chaque machine annonce l'issue du point
 	# de vue de son joueur ; en écran partagé les deux joueurs partagent l'écran,
@@ -4349,8 +4375,58 @@ func show_game_over(winner_id: int) -> void:
 
 	_refresh_map_card()
 
+## V3.1 — l'entrée qui relance respire au tempo du jeu, et attire les curseurs.
+##
+## L'écran de fin est l'endroit où « encore une » se décide, et c'est le seul de
+## tout le jeu où une entrée mérite d'attirer l'œil : après un match, on ne
+## cherche pas dans une liste, on redemande. Elle enfle de 3 % à 170 BPM — le
+## tempo des stems et du pouls haptique, un seul cœur pour l'image, la main et
+## la musique.
+##
+## **Trois pour cent, et pas davantage.** L'entrée vit dans une colonne dont les
+## voisines ne bougent pas : au-delà, elle cesse d'être une entrée qui respire
+## pour devenir une entrée qui saute, et la liste entière paraît instable.
+##
+## La graine attire les DEUX curseurs, pas un joueur : après un match en écran
+## partagé, les deux joueurs redemandent, et faire chercher le second serait lui
+## faire payer le fait de ne pas être le premier.
+func _respirer_relance(actif: bool) -> void:
+	if _souffle_relance != null and _souffle_relance.is_valid():
+		_souffle_relance.kill()
+	_souffle_relance = null
+	for btn in _relance_entries:
+		if not is_instance_valid(btn):
+			continue
+		btn.scale = Vector2.ONE
+		if actif:
+			btn.pivot_offset = btn.size / 2.0
+			btn.set_meta(META_NAV_SEED, NAV_SEED_LES_DEUX)
+		else:
+			btn.remove_meta(META_NAV_SEED)
+	if not actif:
+		return
+	var periode: float = 60.0 / 170.0
+	var audio := get_node_or_null(^"/root/AudioManager")
+	if audio != null:
+		periode = float(audio.get("PERIODE_BEAT"))
+	_souffle_relance = create_tween().set_loops()
+	_souffle_relance.tween_method(_appliquer_souffle, 0.0, 1.0, periode)
+
+## Une enflure lisse par battement : 1,00 → 1,03 → 1,00.
+##
+## Un cosinus plutôt qu'un aller-retour de tween : la courbe se referme sur
+## elle-même, donc la boucle ne marque aucune couture au passage d'un battement
+## au suivant. Deux tweens enchaînés auraient laissé un arrêt d'une frame.
+func _appliquer_souffle(t: float) -> void:
+	var enflure := 1.0 + 0.015 - 0.015 * cos(t * TAU)
+	for btn in _relance_entries:
+		if is_instance_valid(btn) and btn.is_visible_in_tree():
+			btn.pivot_offset = btn.size / 2.0
+			btn.scale = Vector2(enflure, enflure)
+
 func hide_game_over() -> void:
 	_is_main_menu = false
+	_respirer_relance(false)
 	_eteindre(game_over_panel)
 	# Retour au jeu : le HUD de match reprend sa place.
 	if is_instance_valid(match_hud):
