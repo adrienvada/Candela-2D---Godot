@@ -3213,6 +3213,15 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
       libellé du salon à chaque appui, et cette ligne a été lue comme la preuve
       qu'un chemin de menu avait été emprunté. Elle ne prouvait rien — c'était un
       `print`. Une trace de diagnostic n'est pas un résultat.
+    - ⚠️ **Sa seconde moitié a été retirée le 2026-08-18 : elle était instable.**
+      Elle vérifiait que l'intention retenue du client est appliquée à la sortie
+      du ralenti — elle passait, puis échouait, sur le même code. La cause tient
+      à la fenêtre de séquence de fin, courte et **variable** (voir « la killcam
+      s'arrête avant le moment fatal » ci-dessus). **Un banc qui vacille est pire
+      qu'aucun banc** : il apprend à ignorer le lanceur, et le jour où il dit
+      vrai personne ne le croit. Reste la moitié déterministe — rien ne bouge
+      pendant le ralenti — qui protège du défaut le plus grave : une manche qui
+      démarrerait pendant que l'autre regarde encore.
   - **Famille 5.3 automatisée le 2026-08-18** (`run_duo.sh --ralenti`) :
     l'adversaire disparaît **pendant le ralenti**. C'est le croisement de deux
     chemins que rien n'exerçait ensemble — la perte de pair et la sortie de

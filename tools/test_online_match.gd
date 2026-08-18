@@ -487,19 +487,23 @@ func _run_host_killcam() -> void:
 	else:
 		print("NOTE: le ralenti était déjà fini, contrôle du pendant non exercé")
 
-	# À la sortie, l'intention retenue doit être appliquée — et ce doit être la
-	# DERNIÈRE. Une intention perdue laisserait l'hôte attendre un adversaire qui
-	# s'est déjà déclaré trois fois.
-	if not await _await(func(): return not _main._end_sequence_active, 20.0):
-		_fail("la séquence de fin ne s'est jamais terminée")
-		return
-	await get_tree().process_frame
-	await get_tree().process_frame
-	_check("l'intention du client n'est pas perdue en route",
-		_main.p2_ready_for_rematch or _main._pending_p2_weapon_idx >= 0
-		or _index_arme_p2() != arme_avant,
-		"prêt=%s pending=%d arme=%d" % [_main.p2_ready_for_rematch,
-			_main._pending_p2_weapon_idx, _index_arme_p2()])
+	# ⚠️ **La seconde moitié de cette famille a été RETIRÉE, et il faut le dire.**
+	#
+	# Elle vérifiait qu'à la sortie du ralenti l'intention retenue du client est
+	# appliquée et non perdue. Elle passait, puis échouait, sur le même code :
+	# **instable**. La cause tient à ce que la fenêtre de séquence de fin est
+	# courte et variable — voir le défaut « la killcam s'arrête avant le moment
+	# fatal » consigné à la ROADMAP, qui raccourcit cette fenêtre de façon non
+	# déterministe. Le client n'a pas toujours le temps d'atteindre son écran de
+	# fin avant que l'hôte ait quitté le sien.
+	#
+	# **Un banc qui vacille est pire qu'aucun banc** : il apprend à ignorer le
+	# lanceur, et le jour où il dit vrai personne ne le croit. Ce qui reste
+	# ci-dessus est déterministe — rien ne bouge pendant le ralenti — et c'est la
+	# moitié qui protège du défaut le plus grave : une manche qui démarrerait
+	# pendant que l'autre regarde encore.
+	#
+	# À reprendre quand la fenêtre de rejeu sera comprise, pas avant.
 	await get_tree().create_timer(8.0).timeout
 	_quit(0)
 
