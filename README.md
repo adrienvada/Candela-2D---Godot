@@ -355,6 +355,36 @@ transport, lien direct ou relayé, type de NAT, lumières et particules actives.
 
 ---
 
+### Ce qui se VOIT — `./tools/run_visuel.sh`
+
+Le lanceur headless ne rastérise rien. Il a couvert des états, des comptes et des
+transitions pendant deux jours pendant qu'un cadre de menu était entièrement noir
+et qu'un joueur restait planté en bas de l'écran, caméra immobile. **Les deux ont
+été trouvés à l'œil par Adrien.** On mesure ce qui s'écrit, pas ce qui se voit.
+
+Deux outils, de natures différentes, tous deux **fenêtrés** — donc hors du
+lanceur, à passer avant une livraison :
+
+| | Ce que c'est | Ce que ça coûte |
+|---|---|---|
+| **La planche de contact** | Une image par état du jeu dans `user://planche/`. **Elle n'affirme rien.** | Vingt secondes de machine, vingt secondes d'yeux |
+| **Les contrôles de rendu** | Trois propriétés de l'image, pas trois images de référence | Vingt secondes |
+
+**Pourquoi des propriétés et jamais des captures de référence.** Une image témoin
+casse à chaque changement légitime — un effet ajusté, une police, un pixel de
+marge — et *un contrôle qui casse tout le temps finit ignoré*. Une propriété
+énonce ce qu'on sait vrai du jeu et survit à la refonte de ce qu'elle regarde.
+
+Les trois, chacune attachée à un défaut **réellement survenu** — le seul bon
+critère pour décider laquelle écrire : le cadre de droite a du relief donc du
+contenu ; le joueur est au centre de sa vue, y compris après s'être déplacé ;
+l'arène reste sombre. La troisième ne vient d'aucun défaut : c'est la promesse du
+jeu, et rien ne la gardait.
+
+**Et la planche d'abord, si l'on ne fait qu'une des deux.** L'automatisation
+vérifie ce qu'on a pensé à vérifier ; l'œil voit ce à quoi personne n'avait
+pensé — ce qui est exactement ce qui a manqué.
+
 ## Configuration Epic Online Services
 
 Le mode en ligne passe par EOS. Recopier `eos_credentials.example.gd` en
