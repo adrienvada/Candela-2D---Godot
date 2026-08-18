@@ -90,6 +90,9 @@ var filter_tween: Tween
 var speaker_player: AudioStreamPlayer
 var heartbeat_tween: Tween
 
+## Nombre de torches comptées au dernier calcul, pour distinguer un allumage
+## d'une extinction : seul le premier mérite un balayage.
+var _torches_allumees: int = 0
 var low_health_players: Dictionary = {}
 var player_torches: Dictionary = {}
 var is_in_match: bool = false
@@ -395,12 +398,37 @@ func set_music_intensity(level: int) -> void:
 func set_in_match(in_match: bool) -> void:
 	is_in_match = in_match
 	player_torches.clear()
+	_torches_allumees = 0
 	# Chaque match repart au calme : l'intensité gagnée ne survit pas à la manche.
 	set_music_intensity(0)
 	if is_in_match:
 		update_torch_cutoff()
 	else:
 		set_music_cutoff(20000.0, 1)
+
+## La torche de ce joueur a-t-elle le droit d'être entendue ici ?
+##
+## **C'était une fuite d'information, et elle a bien failli être amplifiée.**
+## `set_player_torch` était appelé pour CHAQUE joueur, adversaire répliqué
+## compris : en ligne, quand l'autre allumait sa torche à l'autre bout de la
+## carte, invisible, la musique locale s'ouvrait de 150 Hz. Le jeu tout entier
+## repose sur le fait qu'allumer sa torche est un aveu — un aveu que l'adversaire
+## paie de sa position. Le bus musical le donnait gratuitement, sans regarder.
+##
+## `local_idx` vaut -1 en écran partagé : les deux joueurs regardent le même
+## écran et s'entendent par la même sortie, il n'y a rien à cacher. En ligne, il
+## désigne le seul joueur dont on a le droit de connaître la torche : soi.
+static func torche_comptee(player_id: int, local_idx: int) -> bool:
+	return local_idx < 0 or player_id == local_idx
+
+## La coupure du passe-bas musical, selon le nombre de torches allumées.
+##
+## V5.2 — l'écart était de 300 à 600 Hz, soit une octave qu'on ne remarque pas
+## en jouant. De 200 à 840, on l'entend : dans le noir la musique est sourde et
+## lointaine, torche allumée elle revient dans la pièce. **Allumer, c'est
+## entendre** — et le prix reste le même, on se montre.
+static func coupure_pour(torches: int) -> float:
+	return 200.0 + float(maxi(torches, 0)) * 320.0
 
 func set_player_torch(player_id: int, is_on: bool) -> void:
 	player_torches[player_id] = is_on
@@ -412,10 +440,21 @@ func update_torch_cutoff() -> void:
 	for pid in player_torches:
 		if player_torches[pid]:
 			active_count += 1
-			
-	# Base à 300Hz en match. Chaque lampe allumée ajoute +150Hz en 0.05s !
-	var target_cutoff := 300.0 + (float(active_count) * 150.0)
-	set_music_cutoff(target_cutoff, 0.1)
+
+	var cible := coupure_pour(active_count)
+	# V5.2 — le balayage. Une torche qui s'allume dépasse sa cible puis y
+	# retombe : c'est ce dépassement qu'on ENTEND, un filtre qui s'ouvre. Sans
+	# lui, le changement est réel mais passe pour un hasard du mixage.
+	# À l'extinction, aucun dépassement : on ne fête pas de se rendre invisible.
+	if active_count > _torches_allumees:
+		_torches_allumees = active_count
+		set_music_cutoff(cible * 1.7, 0.09)
+		var retombee := create_tween()
+		retombee.tween_interval(0.09)
+		retombee.tween_callback(func() -> void: set_music_cutoff(cible, 0.45))
+		return
+	_torches_allumees = active_count
+	set_music_cutoff(cible, 0.25)
 
 func set_music_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
 	var filter = _ensure_music_lowpass_effect()

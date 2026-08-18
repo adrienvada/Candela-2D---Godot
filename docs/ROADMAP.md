@@ -2206,6 +2206,27 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La torche de l'adversaire s'entendait dans votre musique (2026-08-18)
+
+`AudioManager.set_player_torch()` était appelé pour **chaque** joueur, adversaire
+répliqué compris. En ligne, quand l'autre allumait sa torche à l'autre bout de la
+carte, hors de vue, le passe-bas du bus musical **local** s'ouvrait de 150 Hz.
+
+Tout le jeu repose sur le fait qu'allumer sa torche est un aveu, payé de sa
+position. Le bus musical le donnait gratuitement, sans qu'on ait à regarder — une
+fuite par un canal que personne ne surveille, et qu'aucun test ne couvrait.
+Trouvée en préparant V5.2, c'est-à-dire **au moment précis où on s'apprêtait à
+l'amplifier**.
+
+Le remède est une règle nommée et pure, `AudioManager.torche_comptee(player_id,
+local_idx)` : en écran partagé (`local_idx == -1`) les deux torches comptent — même
+écran, même sortie audio, rien à cacher ; en ligne, seulement la sienne.
+
+**Ce que ça généralise :** tout ce qui réagit à l'état d'un joueur doit se demander
+de QUI il tient cet état. Le son, la vibration et l'image sont trois canaux, et
+seul le troisième se vérifie à l'œil.
+
+
 ### Une suite en `--script` ne doit pas charger `game_state.gd` (2026-08-18)
 
 Il référence `NetworkManager` et `AudioManager` **par leur nom d'autoload** ; en
@@ -3066,7 +3087,14 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   soirée, avec 2 frames de sur-intensité à l'amorçage. — *assets : 2 samples
   soignés.*
 - **V5.2 Allumer = entendre** — amplifier le passe-bas piloté par les torches
-  (déjà câblé) + sweep audible à l'allumage.
+  (déjà câblé) + sweep audible à l'allumage. **✅ Fait**, mais **il a d'abord
+  fallu colmater une fuite d'information** — voir les pièges. L'écart passe de
+  300-600 Hz (une octave qu'on ne remarque pas en jouant) à 200-840 : dans le
+  noir la musique est sourde et lointaine, torche allumée elle revient dans la
+  pièce. Le balayage dépasse la cible de 70 % en 0,09 s puis y retombe en
+  0,45 s — c'est le dépassement qu'on entend, un filtre qui s'ouvre ; sans lui
+  le changement est réel mais passe pour un hasard du mixage. **Aucun
+  dépassement à l'extinction** : on ne fête pas de redevenir invisible.
 - **V5.3 L'éblouissement se sent** — bloom pulsé + acouphène doux suivant
   `dazzle_amount` côté ébloui. — *assets : 1 boucle.*
 - **V5.4 Respiration de la torche** — Perlin lent ±3 % sur l'énergie.

@@ -32,6 +32,7 @@ func _run() -> void:
 	_test_bareme()
 	_test_arbitrage()
 	_test_duck()
+	_test_torches()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -140,3 +141,35 @@ func _test_duck() -> void:
 		"volume = %s" % (str(doux.volume_db) if doux != null else "aucune voix"))
 
 	am.queue_free()
+
+
+## V5.2 — ce que la torche fait entendre, et ce qu'elle ne doit PAS trahir.
+func _test_torches() -> void:
+	print("\n[La torche s'entend, mais seulement la sienne]")
+
+	# Le point qui compte, et qui était faux : en ligne, la torche de l'adversaire
+	# ouvrait le passe-bas musical local. Le jeu repose sur le fait qu'allumer est
+	# un aveu payé de sa position ; le bus musical le donnait gratuitement, sans
+	# même regarder. Une fuite d'information par un canal que personne ne surveille.
+	_check("en ligne, la torche adverse ne compte pas",
+		not AM.torche_comptee(1, 0) and not AM.torche_comptee(0, 1))
+	_check("en ligne, la sienne compte",
+		AM.torche_comptee(0, 0) and AM.torche_comptee(1, 1))
+	# En écran partagé les deux joueurs voient le même écran et s'entendent par la
+	# même sortie : il n'y a rien à cacher, et masquer serait arbitraire.
+	_check("en écran partagé, les deux comptent",
+		AM.torche_comptee(0, -1) and AM.torche_comptee(1, -1))
+
+	# L'écart doit s'ENTENDRE. De 300 à 600 Hz, c'est une octave qu'on ne remarque
+	# pas en jouant ; le rapport est ce qui compte, pas la différence.
+	var noir := AM.coupure_pour(0)
+	var une := AM.coupure_pour(1)
+	var deux := AM.coupure_pour(2)
+	_check("allumer ouvre franchement le filtre", une / noir >= 2.0,
+		"%.0f Hz → %.0f Hz, rapport %.2f" % [noir, une, une / noir])
+	_check("la coupure monte avec le nombre de torches", noir < une and une < deux)
+	# Un compte négatif ne doit pas produire une coupure sous le plancher : le
+	# dictionnaire des torches est nettoyé entre deux matchs, et un état bancal
+	# vaut mieux muet que sur-filtré.
+	_check("un compte aberrant retombe sur le plancher",
+		is_equal_approx(AM.coupure_pour(-3), noir), str(AM.coupure_pour(-3)))

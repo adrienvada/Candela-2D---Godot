@@ -439,9 +439,13 @@ func _process(delta):
 
 	# Hors du bloc de simulation : côté client la torche est répliquée, et les
 	# sorties anticipées de _physics_process ne doivent pas laisser le son bloqué.
+	# La torche de l'adversaire ne se déclare PAS au bus musical en ligne : elle
+	# ouvrirait le passe-bas local et dirait qu'il vient de s'allumer, hors de
+	# vue. Voir `AudioManager.torche_comptee`.
 	if flashlight_on != _torch_audio_state:
 		_torch_audio_state = flashlight_on
-		AudioManager.set_player_torch(player_id, flashlight_on)
+		if AudioManager.torche_comptee(player_id, _index_joueur_local()):
+			AudioManager.set_player_torch(player_id, flashlight_on)
 
 	if dead: return
 
@@ -541,6 +545,16 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
+## L'indice du joueur local, ou -1 en écran partagé — où les deux joueurs
+## partagent l'écran ET la sortie audio, donc n'ont rien à se cacher.
+func _index_joueur_local() -> int:
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST:
+			return 0
+		NetworkManager.GameMode.ONLINE_CLIENT:
+			return 1
+	return -1
+
 func _is_locally_piloted() -> bool:
 	match NetworkManager.current_mode:
 		NetworkManager.GameMode.ONLINE_HOST:
