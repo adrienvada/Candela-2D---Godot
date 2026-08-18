@@ -1996,6 +1996,20 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   inexistante » sur un nœud qui devrait en avoir une, chercher d'abord un script
   qui n'a pas compilé.
 
+**GDScript — noms**
+- **`trait` est un mot réservé.** `var trait := ColorRect.new()` donne « Expected
+  variable name after "var" », qui ne nomme pas le coupable.
+- **Une locale nommée `visible` masque le membre de `Control`** et fait échouer
+  l'analyse. Même famille : un nom innocent qui entre en collision avec le langage
+  ou la classe de base.
+- Les deux se présentent comme le piège d'outillage ci-dessus : **Godot annonce
+  l'erreur sur le fichier qui appelle, pas sur celui qui ne compile pas.** Relevé
+  le 2026-08-18 — `test_screen_matchmaking` est passée au rouge en annonçant
+  « SCREEN_FRIENDLY introuvable » alors que le fautif était un fichier neuf qu'elle
+  ne mentionne nulle part. Deux causes différentes, un seul symptôme : devant une
+  erreur qui n'a aucun sens dans le fichier désigné, chercher un script voisin qui
+  vient de changer.
+
 **GDScript — chaînes**
 - **`\u0000` dans un littéral GDScript ne donne pas un NUL** : l'analyseur le
   remplace par U+FFFD, qui n'est pas un caractère de contrôle. Recopier mot pour
@@ -2058,7 +2072,10 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   affichait bien `replay_system.gd | 29 ++++`. La ligne a été *regardée* sans être
   *lue*. Un contrôle qu'on exécute par habitude ne protège de rien. La parade sûre
   est `git commit -- <chemins>`, qui ne commite que ce qu'on nomme, quoi qu'il y
-  ait dans l'index.
+  ait dans l'index. **Elle ne connaît cependant que les fichiers suivis** : sur un
+  fichier neuf elle refuse (« pathspec did not match »), il faut `git add` d'abord
+  puis nommer la liste complète au commit. La protection reste entière, l'ordre
+  n'est pas facultatif.
 - **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
   commit qui suit part avec son message complet et son contenu amputé. Arrivé le
   2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
