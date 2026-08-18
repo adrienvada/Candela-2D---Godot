@@ -2960,9 +2960,22 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.14 Le sol répond** — décal lumineux 1 frame sous le tireur.
   **✅ Fait** — écho lumineux au sol, décor seulement, sans ombre.
 - **V4.15 Duck des pas sous le tir** — −6 dB pendant 300 ms après un coup de
-  feu.
+  feu. **✅ Fait** — appliqué dans `AudioManager.play_sfx_2d`, donc sans toucher
+  aux appelants, et **ajouté** au volume demandé plutôt que substitué. Ne
+  concerne que les pas : effacer l'impact effacerait l'information qu'on vient
+  de payer d'un tir.
 - **V4.16 Priorités du pool SFX** — protéger les sons « récit » (kill, hit
-  autoritaire) du vol de voix par les pas.
+  autoritaire) du vol de voix par les pas. **✅ Fait** — le pool tournait en
+  anneau, le dix-septième son écrasant le premier quel qu'il soit. Les pas
+  étant la source la plus bavarde (6-7 par seconde à deux joueurs), ce sont eux
+  qui volaient le plus souvent une voix : le son qui n'apprend rien coupait le
+  son qui apprend tout. Trois règles — une voix libre d'abord, sinon la moins
+  prioritaire (à égalité la plus ancienne, l'anneau confiné à une classe), et
+  **jamais plus important que soi** : un pas renonce plutôt que de couper un
+  coup au but. L'arbitrage est une **fonction pure** (`choisir_voix`), sans
+  nœud ni serveur audio, parce qu'en headless le pilote est muet et
+  `AudioStreamPlayer.playing` ne dit pas la vérité — sans ça, l'arbitrage
+  n'aurait été vérifiable qu'à l'oreille, en match, une fois.
 
 ### Vague 5 — Le noir qui respire (la traque, budget discret)
 

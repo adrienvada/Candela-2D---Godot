@@ -24,10 +24,55 @@ const SOUNDS: Dictionary = {
 
 const SFX_POOL_SIZE: int = 16
 
+## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.
+##
+## Le pool tournait en **anneau** : le dix-septième son écrasait le premier, quel
+## qu'il soit. Or les pas sont de loin la source la plus bavarde — un toutes les
+## ~0,3 s et par joueur, donc six à sept par seconde à deux. Dans une fusillade,
+## où s'ajoutent les tirs et les impacts de mur, ce sont eux qui reviennent le
+## plus souvent voler une voix. Ils pouvaient couper net le claquement de chair
+## d'un coup au but : **le son qui ne raconte rien coupait le son qui raconte.**
+##
+## Le classement suit ce que le son APPREND au joueur, pas son volume. Toucher
+## quelqu'un est l'information la plus chère du jeu — c'est la seule confirmation
+## qu'on obtient dans le noir. Un pas n'apprend qu'une présence, déjà donnée par
+## le suivant.
+const SFX_PRIORITE: Dictionary = {
+	"footstep": 0,
+	"wall_impact": 1,
+	"button_click": 1,
+	"ui_ready_ping": 1,
+	"shoot": 2,
+	"flesh_impact": 3,
+}
+## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
+## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier
+## personne, mais il ne doit pas non plus laisser un son anonyme couper un kill.
+const SFX_PRIORITE_DEFAUT: int = 2
+
+## V4.15 — les pas s'effacent sous le coup de feu.
+##
+## Un tir sature déjà l'attention ; les pas qui continuent dessous ne s'entendent
+## pas et volent des voix. Six décibels suffisent à les faire reculer sans les
+## faire disparaître — on doit encore savoir que l'autre bouge.
+const DUCK_TIR_DB: float = -6.0
+const DUCK_TIR_S: float = 0.3
+
 var sfx_players: Array[AudioStreamPlayer] = []
 var sfx_players_2d: Array[AudioStreamPlayer2D] = []
+## Dernière voix servie de chaque pool. Ce n'est plus un pointeur d'anneau depuis
+## que l'attribution est arbitrée par priorité — la valeur n'est plus lue pour
+## décider, seulement pour observer.
 var sfx_index: int = 0
 var sfx_2d_index: int = 0
+## Priorité et instant de départ de chaque voix des deux pools, pour arbitrer un
+## vol de voix. Dimensionnés dans `_ready()`, en même temps que les pools.
+var _sfx_prio: PackedInt32Array = PackedInt32Array()
+var _sfx_debut: PackedFloat64Array = PackedFloat64Array()
+var _sfx_prio_2d: PackedInt32Array = PackedInt32Array()
+var _sfx_debut_2d: PackedFloat64Array = PackedFloat64Array()
+## Instant du dernier coup de feu, en secondes depuis le lancement.
+var _dernier_tir: float = -1000.0
 
 # Lecteur musique unique (AudioStreamPlayer supportant nativement AudioStreamInteractive !)
 var music_player: AudioStreamPlayer
@@ -51,6 +96,8 @@ func _ready() -> void:
 		p.bus = "SFX"
 		add_child(p)
 		sfx_players.append(p)
+	_sfx_prio.resize(SFX_POOL_SIZE)
+	_sfx_debut.resize(SFX_POOL_SIZE)
 		
 	# Pool d'AudioStreamPlayer2D pour SFX 2D positionnels
 	for i in range(SFX_POOL_SIZE):
@@ -59,6 +106,8 @@ func _ready() -> void:
 		p2d.max_distance = 2000.0
 		add_child(p2d)
 		sfx_players_2d.append(p2d)
+	_sfx_prio_2d.resize(SFX_POOL_SIZE)
+	_sfx_debut_2d.resize(SFX_POOL_SIZE)
 		
 	# AudioStreamPlayer unique pour la musique
 	music_player = AudioStreamPlayer.new()
@@ -133,6 +182,52 @@ func get_audio_stream(stream_or_key: Variant) -> AudioStream:
 		_stream_cache[path] = stream
 	return stream
 
+## Choisit la voix qu'un nouveau son doit prendre, ou -1 s'il doit être renoncé.
+##
+## **Pure à dessein** : aucun nœud, aucune horloge, rien de l'état du serveur
+## audio. C'est ce qui la rend vérifiable en headless, où le pilote audio est
+## muet et où `AudioStreamPlayer.playing` ne dit pas la vérité — un arbitrage
+## qu'on ne peut pas tester est un arbitrage dont on découvre les défauts à
+## l'oreille, en match, une fois.
+##
+## Trois règles, dans cet ordre :
+##
+## 1. **Une voix libre d'abord**, toujours : ne voler que sous contrainte.
+## 2. Sinon, prendre la **moins prioritaire** ; à égalité, la plus ancienne —
+##    c'est le comportement d'anneau d'origine, mais confiné à une même classe.
+## 3. **Ne jamais voler plus important que soi.** Si toutes les voix comptent
+##    plus que le son entrant, il est renoncé. Un pas perdu ne s'entend pas ;
+##    un coup au but coupé en deux, si.
+static func choisir_voix(occupees: Array[bool], priorites: PackedInt32Array,
+		debuts: PackedFloat64Array, priorite: int) -> int:
+	var pire := -1
+	var pire_prio := 0
+	var pire_debut := 0.0
+	for i in occupees.size():
+		if not occupees[i]:
+			return i
+		var p: int = priorites[i] if i < priorites.size() else SFX_PRIORITE_DEFAUT
+		var d: float = debuts[i] if i < debuts.size() else 0.0
+		if pire < 0 or p < pire_prio or (p == pire_prio and d < pire_debut):
+			pire = i
+			pire_prio = p
+			pire_debut = d
+	if pire < 0 or pire_prio > priorite:
+		return -1
+	return pire
+
+## La priorité d'un son, d'après sa clé. Un flux passé directement n'en a pas.
+static func priorite_de(stream_or_key: Variant) -> int:
+	if stream_or_key is String:
+		return int(SFX_PRIORITE.get(stream_or_key, SFX_PRIORITE_DEFAUT))
+	return SFX_PRIORITE_DEFAUT
+
+func _occupations(pool: Array) -> Array[bool]:
+	var occupees: Array[bool] = []
+	for p in pool:
+		occupees.append(bool((p as Node).get("playing")))
+	return occupees
+
 # --- JOUER DES SFX GLOBAUX ---
 func play_sfx(stream_or_key: Variant, pitch_scale: float = 1.0, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer:
 	var stream = get_audio_stream(stream_or_key)
@@ -146,8 +241,15 @@ func play_sfx(stream_or_key: Variant, pitch_scale: float = 1.0, volume_db: float
 	if Engine.time_scale < 1.0:
 		final_pitch *= clamp(Engine.time_scale, 0.05, 1.0)
 		
-	var player = sfx_players[sfx_index]
-	sfx_index = (sfx_index + 1) % SFX_POOL_SIZE
+	var prio := priorite_de(stream_or_key)
+	var voie := choisir_voix(_occupations(sfx_players), _sfx_prio, _sfx_debut, prio)
+	if voie < 0:
+		return null
+	var maintenant := Time.get_ticks_msec() / 1000.0
+	_sfx_prio[voie] = prio
+	_sfx_debut[voie] = maintenant
+	sfx_index = voie
+	var player = sfx_players[voie]
 	
 	player.stream = stream
 	player.pitch_scale = final_pitch
@@ -173,13 +275,31 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	if Engine.time_scale < 1.0:
 		final_pitch *= clamp(Engine.time_scale, 0.05, 1.0)
 		
-	var player = sfx_players_2d[sfx_2d_index]
-	sfx_2d_index = (sfx_2d_index + 1) % SFX_POOL_SIZE
+	var maintenant := Time.get_ticks_msec() / 1000.0
+	# V4.15 — un tir vient de partir : les pas reculent de six décibels. Le coup
+	# de feu sature déjà l'attention, et les pas qui continuent dessous ne
+	# s'entendent pas tout en volant des voix. On les efface, on ne les coupe pas :
+	# savoir que l'autre bouge reste une information du jeu.
+	var volume_final := volume_db
+	if stream_or_key is String:
+		if stream_or_key == "shoot":
+			_dernier_tir = maintenant
+		elif stream_or_key == "footstep" and maintenant - _dernier_tir < DUCK_TIR_S:
+			volume_final += DUCK_TIR_DB
+	
+	var prio := priorite_de(stream_or_key)
+	var voie := choisir_voix(_occupations(sfx_players_2d), _sfx_prio_2d, _sfx_debut_2d, prio)
+	if voie < 0:
+		return null
+	_sfx_prio_2d[voie] = prio
+	_sfx_debut_2d[voie] = maintenant
+	sfx_2d_index = voie
+	var player = sfx_players_2d[voie]
 	
 	player.global_position = pos
 	player.stream = stream
 	player.pitch_scale = final_pitch
-	player.volume_db = volume_db
+	player.volume_db = volume_final
 	player.bus = bus_name
 	player.play()
 	return player
