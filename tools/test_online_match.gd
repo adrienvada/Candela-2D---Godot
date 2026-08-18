@@ -112,6 +112,14 @@ func _run_training() -> void:
 		_main.training_target.global_position.distance_to(spawn_j2) < 1.0,
 		"%s vs %s" % [_main.training_target.global_position, spawn_j2])
 	_check("le joueur 2 a quitté la scène", not _main.p2.visible)
+	# Un mode solitaire ne coupe pas l'écran en deux pour une moitié vide :
+	# défaut relevé par Adrien au premier essai, l'entraînement tournant en mode
+	# écran partagé du point de vue du transport.
+	_check("l'écran n'est pas partagé", _main.vp1.get_parent().visible
+		and not _main.vp2.get_parent().visible,
+		"vp1=%s vp2=%s" % [_main.vp1.get_parent().visible,
+			_main.vp2.get_parent().visible])
+	_check("la ligne de séparation est retirée", not _ui.center_line.visible)
 	_check("aucun forfait n'est en attente", not _main._forfeit_pending)
 	_check("aucun identifiant de match n'est armé", _main._match_id.is_empty())
 

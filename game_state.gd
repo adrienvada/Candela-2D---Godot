@@ -13,6 +13,15 @@ const MATCH_FORMAT := MatchRecord.Format.BO1
 var time_left: float = MatchRecord.ROUND_DURATION
 var round_active: bool = false
 var sandbox_mode: bool = false
+
+## Entraînement solitaire en cours.
+##
+## Distinct de `sandbox_mode`, qui couvre aussi l'hôte en ligne resté seul : ces
+## deux-là partagent « aucune manche, mais on peut tirer », et rien d'autre. Le
+## drapeau existe surtout pour `_restore_viewports()` — sans lui, l'entraînement
+## se déroule en mode écran partagé et rouvre donc les deux vues, alors qu'il n'y
+## a qu'un joueur.
+var training_mode: bool = false
 var game_over: bool = false
 var _first_replay_frame: bool = false
 var p1_ready_for_rematch: bool = false
@@ -373,6 +382,10 @@ func _on_training_requested() -> void:
 
 	round_active = false
 	sandbox_mode = true
+	# Après `_do_start_round`, qui le remet à faux : c'est lui qui vient de poser
+	# l'arène, et il ne peut pas savoir qu'on l'a appelé pour un entraînement.
+	training_mode = true
+	_restore_viewports()
 	# Aucun forfait ne peut naître d'un entraînement : il n'y a personne en face.
 	_forfeit_pending = false
 	_match_id = ""
@@ -794,6 +807,9 @@ func _host_map_code() -> String:
 	return ""
 
 func _do_start_round(w1_idx: int, w2_idx: int):
+	# Une vraie manche met fin à l'entraînement : sans cela, la vue resterait
+	# unique dans un duel en écran partagé.
+	training_mode = false
 	# Toute séquence de fin encore en vol doit lâcher la main ici.
 	_round_token += 1
 	_end_sequence_active = false
@@ -1734,6 +1750,17 @@ func _check_rematch_start():
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 
 func _restore_viewports():
+	# L'entraînement passe avant le mode réseau : il tourne en écran partagé du
+	# point de vue du transport — aucun pair, aucune autorité distante — mais un
+	# seul joueur le regarde. Couper l'écran en deux pour une moitié vide était le
+	# défaut relevé par Adrien à l'essai.
+	if training_mode:
+		vp1.get_parent().show()
+		vp2.get_parent().hide()
+		ui.center_line.hide()
+		cam1.zoom = Vector2(1.0, 1.0)
+		cam2.zoom = Vector2(1.0, 1.0)
+		return
 	if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		vp1.get_parent().show()
 		vp2.get_parent().show()
