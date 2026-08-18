@@ -64,6 +64,22 @@ run test_entrainement res://tools/test_online_match.tscn -- --training
 # intestable en pratique, donc jamais testée.
 run test_fenetre_de_choix res://tools/test_online_match.tscn -- --fenetre
 
+# Le match complet à DEUX PROCESSUS, en ENet sur 127.0.0.1.
+#
+# Dernier trou de l'étude de robustesse du 2026-08-16 : « les transitions d'état
+# en ligne ne sont couvertes que manuellement — c'est la zone la plus régressive
+# d'un jeu réseau ». Elles l'étaient parce qu'un match demande deux instances.
+# ENet lève l'obstacle : aucun identifiant Epic, adresse connue d'avance.
+#
+# Il coûte une minute environ, plus que toutes les autres réunies. C'est le prix
+# d'une couverture sur la zone la plus régressive, et il se paie une fois par
+# commit plutôt qu'une manche entière à la main.
+if ./tools/run_duo.sh; then
+  printf '%-28s OK\n' "duo_enet"
+else
+  printf '%-28s ÉCHEC\n' "duo_enet"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

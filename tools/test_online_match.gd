@@ -476,11 +476,24 @@ func _verify_kill_to_rematch() -> void:
 ## Le transport reste un choix de bouton — Internet ou réseau local est une vraie
 ## alternative. Le mode, lui, se pose en entrant dans le salon correspondant.
 func _select_mode(is_host: bool) -> void:
+	# **L'écran EST la décision de transport, la bascule ne l'est plus.**
+	#
+	# Ce banc poussait `SCREEN_HOST` / `SCREEN_JOIN` — les salons Internet — dans
+	# les deux cas, en comptant sur `btn_transport_lan` pour choisir ENet. Or
+	# depuis la refonte des menus, entrer dans un salon écrit lui-même le
+	# transport (`_apply_lobby_intent`) : le `push` écrasait donc la bascule une
+	# frame plus tard, et le chemin LAN repartait sur EOS. Le client se faisait
+	# refuser par « Connexion à Epic en cours », dans un mode qui n'a rien à
+	# demander à Epic.
+	#
+	# Invisible jusqu'ici parce que **personne ne lançait le duo en ENet** : les
+	# modes `--host` / `--join` s'exécutaient à la main, avec Epic. C'est
+	# exactement le trou que `run_duo.sh` vient combler, et il l'a trouvé à son
+	# premier lancement.
 	if _lan:
-		_ui.btn_transport_lan.button_pressed = true
+		_ui.hub.push(_ui.SCREEN_LOCAL_HOST if is_host else _ui.SCREEN_LOCAL_JOIN)
 	else:
-		_ui.btn_transport_eos.button_pressed = true
-	_ui.hub.push(_ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN)
+		_ui.hub.push(_ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN)
 	# `show_main_menu()` remet la pile à l'accueil, et il peut encore survenir
 	# après ce `push` : en EOS l'attente de la session lui laissait le temps de
 	# passer, le chemin LAN n'attend rien et le pilotage partait donc d'un écran
@@ -489,7 +502,11 @@ func _select_mode(is_host: bool) -> void:
 	# accuse l'interface d'un défaut d'écran.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	var attendu: String = _ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN
+	var attendu: String
+	if _lan:
+		attendu = _ui.SCREEN_LOCAL_HOST if is_host else _ui.SCREEN_LOCAL_JOIN
+	else:
+		attendu = _ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN
 	if _ui.hub.current_id() != attendu:
 		_ui.hub.push(attendu)
 		await get_tree().process_frame

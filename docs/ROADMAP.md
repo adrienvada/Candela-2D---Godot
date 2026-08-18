@@ -3002,11 +3002,33 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   - Reste non couvert : la **portée** de la torche et la révélation au tir — ce
     sont des propriétés du rendu (Light2D, énergie, texture), pas de la
     géométrie, et le headless n'en dit rien.
-- Les transitions d'état en ligne (les 8 familles de la
-  [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md)) ne sont
-  couvertes que manuellement — c'est la zone la plus régressive d'un jeu
-  réseau. Le banc à deux instances est automatisable en ENet (cible 127.0.0.1,
-  appariement scriptable), sans identifiants Epic.
+- ~~Les transitions d'état en ligne ne sont couvertes que manuellement.~~
+  **Automatisé le 2026-08-18** par `tools/run_duo.sh`, dans le lanceur. Deux
+  processus headless en ENet sur 127.0.0.1 : aucun identifiant Epic, aucun code
+  à se transmettre, l'adresse est connue d'avance. Le banc savait déjà jouer les
+  deux rôles ; il lui manquait quelqu'un pour les lancer.
+  - **Il a trouvé un défaut à son premier lancement.** `_select_mode` poussait
+    `SCREEN_HOST` / `SCREEN_JOIN` — les salons **Internet** — dans les deux cas,
+    en comptant sur `btn_transport_lan` pour choisir ENet. Or depuis la refonte,
+    **entrer dans un salon écrit lui-même le transport** : le `push` écrasait la
+    bascule une frame plus tard, et le chemin LAN repartait sur EOS. Le client se
+    faisait refuser par « Connexion à Epic en cours », dans un mode qui n'a rien
+    à demander à Epic. **Invisible parce que personne ne lançait le duo en ENet**
+    — c'est précisément le trou que ce runner comble.
+  - Ce qu'il vérifie, dans l'ordre : que les deux processus **sortent** (un banc
+    qui pend est le mode de défaillance déjà rencontré deux fois ce jour-là), en
+    0, sans `SCRIPT ERROR`, et **en disant de quel côté** vient l'échec.
+  - Attentes **conditionnelles**, jamais des `sleep` : l'hôte annonce son salon
+    par `CODE:`, le runner l'attend. Un délai fixe rendrait la couverture
+    dépendante de la charge — le défaut qui a coûté une demi-journée le même jour.
+  - Coût : ~1 min, plus que toutes les autres suites réunies. C'est le prix d'une
+    couverture sur la zone la plus régressive, payé une fois par commit plutôt
+    qu'une manche entière à la main.
+  - Reste manuel : les 8 familles de la
+    [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) elles-mêmes —
+    fermetures brutales, pause en ligne, reconnexions. Le runner couvre le
+    **chemin nominal** de bout en bout ; les transitions accidentelles restent à
+    écrire, et elles ont maintenant un socle pour l'être.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par
   `tools/test_rejeu.gd`, qui verrouille les deux défauts déjà payés — la cadence
   fixe à 60 Hz (une seconde à 492 fps doit donner ~60 images, pas 492) et l'ancre
