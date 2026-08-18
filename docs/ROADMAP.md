@@ -3125,11 +3125,28 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   - Coût : ~1 min, plus que toutes les autres suites réunies. C'est le prix d'une
     couverture sur la zone la plus régressive, payé une fois par commit plutôt
     qu'une manche entière à la main.
-  - Reste manuel : les 8 familles de la
-    [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) elles-mêmes —
-    fermetures brutales, pause en ligne, reconnexions. Le runner couvre le
-    **chemin nominal** de bout en bout ; les transitions accidentelles restent à
-    écrire, et elles ont maintenant un socle pour l'être.
+  - **Famille 3 automatisée le 2026-08-18** (`run_duo.sh --coupure`) :
+    l'adversaire **disparaît pendant le 3-2-1**, sans quitter proprement. C'est la
+    transition la plus régressive du jeu, et elle ne se vérifiait qu'en fermant
+    une fenêtre à la main au bon moment.
+    - **Le piège qu'elle protège est nommé dans le code lui-même** : « un départ
+      interrompu en plein 3-2-1 laisserait `countdown_left` figé, donc l'hôte
+      immobile pour toujours dans son bac à sable ». Un joueur bloqué, sans
+      message et sans pouvoir bouger — le pire état atteignable, et le seul
+      qu'aucune erreur ne signale.
+    - Dix contrôles sur la reprise : décompte effacé, aucune manche en cours,
+      bac à sable rendu, score et série remis à zéro, aucun « prêt » survivant,
+      et **le joueur 2 qui cesse de courir sur sa dernière commande**, torche
+      comprise — une lumière orpheline resterait allumée dans l'arène.
+    - Le client **se tue lui-même** (`OS.kill`), et le runner **exige qu'il ne
+      sorte PAS en 0** : une sortie propre préviendrait l'hôte par le protocole
+      et n'exercerait pas la détection de perte de pair. Un banc qui passerait
+      sans avoir coupé serait pire qu'aucun banc.
+    - On attend d'être **vraiment dans le décompte** avant de couper : couper
+      avant exercerait une autre famille, et le banc croirait couvrir celle-ci.
+  - Restent manuelles : les 7 autres familles de la
+    [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
+    RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par
   `tools/test_rejeu.gd`, qui verrouille les deux défauts déjà payés — la cadence
   fixe à 60 Hz (une seconde à 492 fps doit donner ~60 images, pas 492) et l'ancre

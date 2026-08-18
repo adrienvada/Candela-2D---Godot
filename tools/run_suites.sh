@@ -104,6 +104,19 @@ else
   printf '%-28s ÉCHEC\n' "duo_enet"; fail=1
 fi
 
+# Famille 3 de la checklist : l'adversaire disparaît pendant le 3-2-1.
+#
+# La transition la plus régressive du jeu, vérifiée jusqu'ici en fermant une
+# fenêtre à la main au bon moment. Le piège qu'elle protège est nommé dans
+# `game_state.gd` : un décompte laissé figé cloue l'hôte sur place, sans message
+# et sans pouvoir bouger. C'est le pire état atteignable, et le seul qu'aucune
+# erreur ne signale.
+if ./tools/run_duo.sh --coupure; then
+  printf '%-28s OK\n' "duo_coupure"
+else
+  printf '%-28s ÉCHEC\n' "duo_coupure"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

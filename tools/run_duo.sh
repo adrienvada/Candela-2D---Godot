@@ -46,9 +46,21 @@ nettoyer() {
 }
 trap nettoyer EXIT
 
-echo "── Match en ligne à deux instances (ENet, 127.0.0.1) ──"
+# Deux scénarios : le match nominal, et la coupure pendant le décompte.
+# `--coupure` en argument choisit le second.
+if [ "${1:-}" = "--coupure" ]; then
+  MODE_HOTE="--host-coupure"
+  MODE_CLIENT="--join-coupure"
+  TITRE="Coupure de l'adversaire pendant le décompte (famille 3)"
+else
+  MODE_HOTE="--host"
+  MODE_CLIENT="--join"
+  TITRE="Match en ligne à deux instances (ENet, 127.0.0.1)"
+fi
 
-"$GODOT" --headless --path . "$BANC" -- --host --transport enet >"$HOTE_LOG" 2>&1 &
+echo "── $TITRE ──"
+
+"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet >"$HOTE_LOG" 2>&1 &
 hote_pid=$!
 
 # Attendre une CONDITION, pas une durée : l'hôte annonce son salon par « CODE: ».
@@ -73,7 +85,7 @@ if ! grep -q '^CODE:' "$HOTE_LOG"; then
 fi
 echo "hôte prêt : $(grep -m1 '^CODE:' "$HOTE_LOG")"
 
-"$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet \
   >"$CLIENT_LOG" 2>&1 &
 client_pid=$!
 
@@ -104,6 +116,17 @@ for cote in hote client; do
   else log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"; fi
 
   erreurs="$(grep -c 'SCRIPT ERROR' "$log" || true)"
+  # Le client de la coupure se tue lui-même : sortir en 0 signifierait qu'il
+  # est parti proprement, donc que le test n'a PAS exercé la perte de pair.
+  if [ "$cote" = "client" ] && [ "${1:-}" = "--coupure" ]; then
+    if [ "$code" -eq 0 ]; then
+      printf '%-8s ÉCHEC — sorti proprement, la coupure n'"'"'a pas eu lieu\n' "$nom"
+      echec=1
+    else
+      printf '%-8s OK (coupé, code %d)\n' "$nom" "$code"
+    fi
+    continue
+  fi
   if [ "$code" -ne 0 ]; then
     printf '%-8s ÉCHEC (code %d)\n' "$nom" "$code"
     grep -E '^  ✗|^✗' "$log" | head -8

@@ -49,7 +49,11 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host"):
+	if _has("--host-coupure"):
+		await _run_host_coupure()
+	elif _has("--join-coupure"):
+		await _run_client_coupure()
+	elif _has("--host"):
 		await _run_host()
 	elif _has("--join"):
 		await _run_client()
@@ -60,7 +64,8 @@ func _ready() -> void:
 	elif _has("--fenetre"):
 		await _run_fenetre()
 	else:
-		print("Usage: --host | --join <CODE|IP> | --local | --training")
+		print("Usage: --host | --join <CODE|IP> | --local | --training"
+			+ " | --host-coupure | --join-coupure <IP>")
 		_quit(2)
 
 
@@ -320,6 +325,85 @@ func _run_host() -> void:
 	await get_tree().create_timer(10.0).timeout
 	_quit(0)
 
+
+## Famille 3 de la checklist en ligne : **l'adversaire disparaît pendant le
+## 3-2-1**, brutalement, sans prévenir.
+##
+## C'est la transition la plus régressive du jeu et elle n'était vérifiée qu'à la
+## main — fermer une fenêtre au bon moment, puis regarder l'autre écran. Ce que
+## le code prétend faire est écrit noir sur blanc dans `_on_peer_disconnected` ;
+## rien ne vérifiait qu'il le fasse.
+##
+## **Le piège que ce banc protège est nommé dans le code lui-même** : « un départ
+## interrompu en plein 3-2-1 laisserait `countdown_left` figé, donc l'hôte
+## immobile pour toujours dans son bac à sable ». Un joueur bloqué sans message
+## et sans pouvoir bouger — le pire état atteignable, et le seul qui ne se
+## signale par aucune erreur.
+func _run_host_coupure() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	print("ADVERSAIRE: connecté")
+	_press_play()
+
+	# On attend d'être VRAIMENT dans le décompte : couper avant qu'il commence
+	# testerait une autre transition (la famille 4), et le banc croirait couvrir
+	# celle-ci.
+	if not await _await(func(): return _main.countdown_left > 0.0, 20.0):
+		_fail("le décompte n'a jamais démarré")
+		return
+	print("DÉCOMPTE: en cours (%.1f s)" % _main.countdown_left)
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le client n'est jamais parti")
+		return
+	print("ADVERSAIRE: disparu pendant le décompte")
+	# Une frame pour laisser `_on_peer_disconnected` se dérouler entièrement.
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_check("le décompte est effacé", is_zero_approx(_main.countdown_left),
+		"%.2f s restantes" % _main.countdown_left)
+	_check("aucune manche ne tourne", not _main.round_active)
+	# LE point : l'hôte doit pouvoir bouger. Un décompte figé le clouerait sur
+	# place sans rien afficher qui l'explique.
+	_check("l'hôte reprend la main (bac à sable)", _main.sandbox_mode)
+	_check("le score de session est remis à zéro",
+		_main.p1_session_wins == 0 and _main.p2_session_wins == 0)
+	_check("aucun « prêt » ne survit à l'adversaire",
+		not _main.p1_ready_for_rematch and not _main.p2_ready_for_rematch
+		and not _main.local_ready_for_rematch)
+	_check("la série de session tombe avec lui", _main.serie_longueur == 0)
+	_check("le joueur 2 cesse de courir sur sa dernière commande",
+		_main.p2.velocity == Vector2.ZERO and not _main.p2.is_sprinting)
+	# Sa torche aussi : une lumière orpheline resterait allumée dans l'arène.
+	_check("sa torche est éteinte", not _main.p2.flashlight_on)
+	_quit(0)
+
+## Le client de la famille 3 : il rejoint, se déclare prêt, puis **disparaît**
+## pendant le décompte — sans quitter proprement, comme un ⌘Q ou une coupure.
+func _run_client_coupure() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-coupure", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	print("CLIENT: connecté")
+	_press_play()
+	if not await _await(func(): return _main.countdown_left > 0.0, 20.0):
+		_fail("le décompte n'a jamais démarré côté client")
+		return
+	print("CLIENT: décompte en cours, coupure brutale")
+	# Sortie SANS `quit_game()` : c'est tout l'objet du test. Une fermeture propre
+	# préviendrait l'hôte par le protocole et n'exercerait pas la détection de
+	# perte de pair.
+	OS.kill(OS.get_process_id())
 
 func _run_client() -> void:
 	await _select_mode(false)
