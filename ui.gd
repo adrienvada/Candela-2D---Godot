@@ -17,6 +17,9 @@ const SHADER_KILLCAM := preload("res://killcam_overlay.gdshader")
 signal replay_requested
 signal quit_requested
 signal main_menu_requested
+## Rejoindre un salon n'est plus lancer un match : les deux gestes sont
+## séparés depuis que le départ attend les deux « PRÊT ».
+signal join_requested
 
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
@@ -278,6 +281,12 @@ var lobby_players_box: VBoxContainer
 var lobby_player_host: Label
 var lobby_player_guest: Label
 var btn_open_lobby: Button
+var btn_paste_code: Button
+var btn_join_lobby: Button
+var join_box: VBoxContainer
+## Les entrées « PRÊT » des quatre salons, grisées tant qu'un second joueur
+## est nécessaire et absent.
+var _ready_entries: Array[Button] = []
 ## Écran qui a ouvert le salon, pour savoir quand on le quitte. Vide = fermé.
 var _lobby_screen: String = ""
 
@@ -1687,17 +1696,22 @@ func _build_hub_screens() -> void:
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
-		h.add_child(hub.make_entry("LANCER LE MATCH",
+		var pret_hote := hub.make_entry("PRÊT",
 			"Ouvrez d'abord le salon à droite et transmettez ce qu'il affiche. Le "
-			+ "match part dès que l'adversaire est là — ou tout de suite, en bac à "
-			+ "sable, s'il se fait attendre.", "", COLOR_P1, "lancer", "", true))
+			+ "match part quand les deux joueurs se sont déclarés prêts.",
+			"", COLOR_P1, "lancer", "", true)
+		_ready_entries.append(pret_hote)
+		h.add_child(pret_hote)
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
 			"", COLOR_P1, "", "", false, PANEL_MAPS))
 	for j in [invite, invite_lan]:
-		j.add_child(hub.make_entry("REJOINDRE LE SALON",
-			"Saisissez à droite ce que l'hôte vous a transmis. La carte est la "
-			+ "sienne.", "", COLOR_P1, "lancer", "", true))
+		var pret_invite := hub.make_entry("PRÊT",
+			"Rejoignez d'abord le salon à droite. Le match part quand les deux "
+			+ "joueurs se sont déclarés prêts ; la carte est celle de l'hôte.",
+			"", COLOR_P1, "lancer", "", true)
+		_ready_entries.append(pret_invite)
+		j.add_child(pret_invite)
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
 		hub.add_back_entry(id)
 
@@ -1832,12 +1846,47 @@ func _build_salon_aside() -> Control:
 	box.add_child(_build_player_list())
 	box.add_child(lobby_code_row)
 	box.add_child(host_ip_row)
-	var center := CenterContainer.new()
-	center.add_child(join_input)
-	box.add_child(center)
+	box.add_child(_build_join_row())
 	box.add_child(lobby_status_label)
 	box.add_child(_build_open_lobby_row())
 	return box
+
+## Le champ de code, son bouton COLLER, et le geste qui rejoint — dans cet ordre.
+##
+## Rejoindre est la conséquence de ce qu'on vient de coller : le bouton se place
+## donc sous le champ. Dans la liste de gauche il passait pour un lancement de
+## match, ce qu'il n'est plus — le match attend maintenant les deux « PRÊT ».
+func _build_join_row() -> Control:
+	join_box = VBoxContainer.new()
+	join_box.add_theme_constant_override("separation", GAP_XS)
+
+	var ligne := HBoxContainer.new()
+	ligne.alignment = BoxContainer.ALIGNMENT_CENTER
+	ligne.add_theme_constant_override("separation", GAP_XS)
+	ligne.add_child(join_input)
+	btn_paste_code = _make_button("COLLER", COLOR_P1)
+	btn_paste_code.add_theme_font_size_override("font_size", 13)
+	btn_paste_code.pressed.connect(_paste_lobby_code)
+	ligne.add_child(btn_paste_code)
+	join_box.add_child(ligne)
+
+	var centre := CenterContainer.new()
+	btn_join_lobby = _make_button("REJOINDRE LE SALON", COLOR_P1, true)
+	btn_join_lobby.custom_minimum_size = Vector2(280, 44)
+	btn_join_lobby.pressed.connect(func() -> void: join_requested.emit())
+	centre.add_child(btn_join_lobby)
+	join_box.add_child(centre)
+	return join_box
+
+## Colle le presse-papiers dans le champ de code, nettoyé comme la saisie l'est
+## déjà : un code recopié depuis une messagerie arrive avec des espaces ou des
+## tirets, et les refuser sans rien dire ferait douter du code lui-même.
+func _paste_lobby_code() -> void:
+	var brut := DisplayServer.clipboard_get()
+	join_input.text = LobbyCode.sanitize(brut) \
+		if NetworkManager.transport == NetworkManager.Transport.EOS \
+		else brut.strip_edges()
+	join_input.caret_column = join_input.text.length()
 
 ## Qui est dans le salon. L'hôte s'y voit lui-même : une liste où l'on ne figure
 ## pas laisse douter d'être bien connecté à quoi que ce soit.
@@ -1955,6 +2004,29 @@ func _refresh_player_list() -> void:
 	btn_open_lobby.visible = mode == NetworkManager.GameMode.ONLINE_HOST
 	btn_open_lobby.disabled = ouvert
 	btn_open_lobby.text = "SALON OUVERT" if ouvert else "CRÉER LE SALON"
+
+	# Rejoindre et coller n'ont de sens que chez l'invité : l'hôte publie un code,
+	# il n'en saisit pas.
+	var cote_invite := mode == NetworkManager.GameMode.ONLINE_CLIENT
+	if btn_join_lobby != null:
+		btn_join_lobby.visible = cote_invite
+		btn_join_lobby.disabled = adversaire
+		btn_join_lobby.text = "SALON REJOINT" if adversaire else "REJOINDRE LE SALON"
+	if btn_paste_code != null:
+		btn_paste_code.visible = cote_invite
+
+	# « PRÊT » reste visible et grisé tant qu'un second joueur est nécessaire et
+	# absent — masquer laisserait croire que le match ne peut pas partir du tout.
+	# Le lancement solo en bac à sable a été retiré avec ce grisage (décision
+	# d'Adrien) : un bouton qui lance tantôt un duel, tantôt une partie contre
+	# personne, ne dit pas ce qu'il fait.
+	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
+		and not adversaire
+	for entree: Button in _ready_entries:
+		if is_instance_valid(entree):
+			entree.disabled = manque_un_joueur
+			entree.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
+				else Color.WHITE
 
 func _on_hub_action(action: String) -> void:
 	match action:
@@ -2471,7 +2543,7 @@ func _refresh_lobby_block() -> void:
 		lobby_players_box.hide()
 		lobby_code_row.hide()
 		host_ip_row.hide()
-		join_input.hide()
+		join_box.hide()
 		btn_open_lobby.hide()
 		lobby_status_label.show()
 		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
@@ -2490,7 +2562,7 @@ func _refresh_lobby_block() -> void:
 		lobby_status_label.hide()
 		lobby_code_row.hide()
 		host_ip_row.hide()
-		join_input.hide()
+		join_box.hide()
 		lobby_players_box.hide()
 		btn_open_lobby.hide()
 		return
@@ -2506,7 +2578,7 @@ func _refresh_lobby_block() -> void:
 	lobby_status_label.show()
 
 	if mode == NetworkManager.GameMode.ONLINE_HOST:
-		join_input.hide()
+		join_box.hide()
 		host_ip_row.visible = not is_eos
 		lobby_code_row.visible = is_eos
 		var ouvert := NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST
@@ -2524,7 +2596,7 @@ func _refresh_lobby_block() -> void:
 	# Client — il n'y a pas de salon à ouvrir de ce côté, seulement un à rejoindre.
 	host_ip_row.hide()
 	lobby_code_row.hide()
-	join_input.show()
+	join_box.show()
 	btn_open_lobby.hide()
 	if is_eos:
 		join_input.placeholder_text = "CODE À %d CARACTÈRES" % LobbyCode.LENGTH

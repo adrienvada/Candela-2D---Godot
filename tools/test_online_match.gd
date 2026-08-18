@@ -85,7 +85,10 @@ func _run_local() -> void:
 func _run_host() -> void:
 	_select_mode(true)
 	print("MENU: mode hôte sélectionné, transport %s" % ("LAN" if _lan else "Internet"))
-	_press_play()
+	# L'hôte ouvre son salon depuis le panneau, il n'appuie pas sur PRÊT : le
+	# code doit s'afficher avant que quiconque soit là, et PRÊT n'a de sens
+	# qu'une fois l'adversaire arrivé.
+	_ui._open_lobby()
 
 	if _lan:
 		print("CODE: %d" % NetworkManager.DEFAULT_PORT)
@@ -94,15 +97,22 @@ func _run_host() -> void:
 			_fail("aucun code de salon publié")
 			return
 		print("CODE: %s" % NetworkManager.lobby_code)
-		# Ce que l'hôte a réellement sous les yeux pendant qu'il attend.
-		print("ECRAN_ATTENTE: %s" % _ui.waiting_label.text.replace("\n", " / "))
-		_check("le code de l'écran d'attente est celui du salon",
-			_ui.waiting_label.text.contains(NetworkManager.lobby_code))
+		# Le code se lit dans le panneau du salon, où l'hôte attend — il n'y a plus
+		# d'écran d'attente en jeu, le départ ayant lieu depuis le menu.
+		print("PANNEAU: %s" % _ui.lobby_code_label.text)
+		_check("le panneau du salon affiche le code",
+			_ui.lobby_code_label.text.contains(NetworkManager.lobby_code))
+
+	_check("PRÊT est grisé tant que l'hôte est seul", _ready_entry_disabled())
 
 	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
 		_fail("aucun adversaire n'a rejoint")
 		return
 	print("ADVERSAIRE: connecté (id %d)" % multiplayer.get_peers()[0])
+	_check("PRÊT s'ouvre à l'arrivée de l'adversaire", not _ready_entry_disabled())
+	# Le match n'a PAS démarré tout seul : c'est tout l'objet de la porte.
+	_check("aucune manche n'a démarré à la connexion", not _main.round_active)
+	_press_play()
 	await _verify_round()
 	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
 	# première ne doit pas partir pendant que l'autre teste encore son rematch.
@@ -123,7 +133,9 @@ func _run_client() -> void:
 	_rejected_at = -1
 	var pressed_at := Time.get_ticks_msec()
 	NetworkManager.connection_failed.connect(func(): _rejected_at = Time.get_ticks_msec())
-	_press_play()
+	_check("PRÊT est grisé avant d'avoir rejoint", _ready_entry_disabled())
+	# Rejoindre est un geste à part, sous le champ de code : il ne lance rien.
+	_ui.join_requested.emit()
 
 	if not await _await(func(): return not multiplayer.get_peers().is_empty() or _rejected_at > 0, PEER_TIMEOUT):
 		_fail("aucune réponse du salon en %ds" % PEER_TIMEOUT)
@@ -132,6 +144,9 @@ func _run_client() -> void:
 		_fail("salon refusé après %d ms : %s" % [_rejected_at - pressed_at, NetworkManager.last_error])
 		return
 	print("HOTE: connecté")
+	_check("PRÊT s'ouvre une fois le salon rejoint", not _ready_entry_disabled())
+	_check("aucune manche n'a démarré à la connexion", not _main.round_active)
+	_press_play()
 	await _verify_round()
 	# Les deux instances ne sont pas lancées en même temps : celle qui finit la
 	# première ne doit pas partir pendant que l'autre teste encore son rematch.
@@ -247,11 +262,18 @@ func _select_mode(is_host: bool) -> void:
 		_ui.btn_transport_eos.button_pressed = true
 	_ui.hub.push(_ui.SCREEN_HOST if is_host else _ui.SCREEN_JOIN)
 
-## Équivalent d'un clic sur le bouton principal du menu.
+## Équivalent d'un clic sur « PRÊT ».
 func _press_play() -> void:
-	print("BOUTON: « %s »" % _ui.btn_replay.text)
 	print("STATUT: %s" % _ui.lobby_status_label.text)
 	_main._on_replay_requested()
+
+## L'entrée « PRÊT » de l'écran courant est-elle grisée ? Le grisage est la façon
+## dont le menu dit « il manque quelqu'un » sans faire disparaître le bouton.
+func _ready_entry_disabled() -> bool:
+	for entree: Button in _ui._ready_entries:
+		if is_instance_valid(entree) and entree.is_visible_in_tree():
+			return entree.disabled
+	return false
 
 
 func _await(predicate: Callable, timeout: float) -> bool:

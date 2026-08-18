@@ -211,6 +211,7 @@ func _ready():
 	
 	ReplaySystem.replay_spawn_bullet.connect(_on_replay_spawn_bullet)
 	ui.replay_requested.connect(_on_replay_requested)
+	ui.join_requested.connect(_on_join_requested)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
 	
@@ -1477,13 +1478,12 @@ func rpc_client_weapon(idx: int):
 	# l'accepter réinitialiserait le duel en cours.
 	if round_active or countdown_left > 0.0: return
 	_set_p2_weapon_button(idx)
-	# Reçu en pleine killcam : on retient le choix, _apply_deferred_rematch
-	# lancera la manche une fois l'écran de fin stable.
+	# Ce paquet dit désormais « voici mon arme », plus « lance le match ». Le
+	# départ appartient à `_check_rematch_start()`, qui attend les deux « PRÊT » —
+	# sans quoi le duel commençait à la seconde où le client se connectait, et
+	# celui qui hébergeait le découvrait en se retrouvant en jeu.
 	if _end_sequence_active:
 		_pending_p2_weapon_idx = idx
-		_pending_client_start = true
-		return
-	rpc_start_round.rpc(_hosted_weapon_1_idx, idx, _host_map_code(), _new_match_id())
 
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
@@ -1547,23 +1547,17 @@ func _on_replay_requested():
 				if not NetworkManager.host_game():
 					return
 			_enter_hosted_game()
-			_start_round()
+			# Le match ne part plus à l'appui : il attend que les DEUX camps se
+			# soient déclarés prêts. C'est la machinerie du rematch, réemployée
+			# telle quelle — et c'est ce qui supprime le démarrage automatique à
+			# l'arrivée du client, que personne n'avait demandé.
+			p1_ready_for_rematch = true
+			if ui.p1_weapon_group.get_pressed_button():
+				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_check_rematch_start()
 		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
-			if not NetworkManager.join_game(ui.lobby_join_text()):
-				return
-			ui.btn_replay.text = "Connexion au salon…"
-
-			# L'échéance doit être neutralisée dès que l'issue est connue :
-			# sinon elle renvoie au menu une partie déjà commencée.
-			_join_deadline_active = true
-			var timer = get_tree().create_timer(NetworkManager.join_timeout())
-			timer.timeout.connect(func():
-				if not _join_deadline_active:
-					return
-				_join_deadline_active = false
-				if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and multiplayer.get_peers().size() == 0:
-					_on_connection_failed()
-			)
+			# Le client est déjà dans le salon : « PRÊT » ne fait que le déclarer.
+			rpc_id(1, "rpc_client_ready", _local_p2_weapon_idx())
 		else:
 			NetworkManager.disconnect_from_game()
 			_apply_network_mode()
@@ -1600,6 +1594,26 @@ func _on_replay_requested():
 			_check_rematch_start()
 		else:
 			_start_round()
+
+## Rejoindre le salon, et rien d'autre. Séparé du lancement pour qu'un joueur qui
+## arrive ne fasse pas commencer le match à celui qui attend : c'est le défaut
+## qu'Adrien a rencontré à deux fenêtres, où le duel démarrait à la connexion.
+func _on_join_requested() -> void:
+	if not ui._is_main_menu:
+		return
+	if not NetworkManager.join_game(ui.lobby_join_text()):
+		return
+	# L'échéance doit être neutralisée dès que l'issue est connue : sinon elle
+	# renvoie au menu une partie déjà commencée.
+	_join_deadline_active = true
+	var timer = get_tree().create_timer(NetworkManager.join_timeout())
+	timer.timeout.connect(func():
+		if not _join_deadline_active:
+			return
+		_join_deadline_active = false
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT and multiplayer.get_peers().size() == 0:
+			_on_connection_failed()
+	)
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready(w2_idx: int):
