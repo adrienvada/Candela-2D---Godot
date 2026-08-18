@@ -213,6 +213,22 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-18 — session « game feel » (lot V3/V5/V6)
+
+Reprise sur demande d'Adrien (« v3, v5, v6 »), lot taillé pour tenir dans mes
+seuls fichiers puisque `game_state.gd`/`ui.gd` sont à la session « fin de
+match ». **Livré : V4.11, V4.13 (particle_pool), V5.1 câblé-muet, V5.3 audio
+câblé-muet, V6.3 (audio_manager — le sidechain détecte `Engine.time_scale`
+lui-même, exprès : zéro site d'appel chez vous), V5.4, V5.5, V5.6, V5.9
+(player.gd + `sprint_streaks.gdshader`), V6.2 (bullet.gd).** Constaté au pull :
+V4.15/V4.16/V5.2 déjà faits par une autre main — merci, rien retouché.
+**À la session « fin de match », quand vous voudrez** (aucune urgence, specs
+sur les items ROADMAP) : V3.4 tic-tac (site d'appel là où `time_left` fait
+autorité), V5.12 réverb par carte (entrée de manche), V6.1 uniform du grain
+VHS et V6.5 négatif (orchestration killcam), V3.3 naissance de la lumière
+(décision de jeu, à arbitrer avec Adrien). Alignement fait : la clé V5.3
+pointe sur `tinnitus_dazzle.wav`, le nom que le manifeste annonce à Adrien.
+
 ### 2026-08-18 — session distante « couleurs des boutons »
 
 Session isolée (branche `claude/game-button-colors-jgztrn`, aucun autre agent

@@ -21,8 +21,16 @@ const CAPACITY := 240
 const MAX_ACTIVE := 200
 
 ## Profils d'impact. Le rendu reste celui d'avant : chair lourde et amortie,
-## étincelles vives et rebondissantes.
-enum Kind { BLOOD, SPARK }
+## étincelles vives et rebondissantes. S'y ajoutent la fumée de bouche (V4.13,
+## grise, additive, dérive lente après le flash) et la poussière de faisceau
+## (V5.5, grains ténus qui ne vivent que dans la lumière d'une torche).
+enum Kind { BLOOD, SPARK, SMOKE, DUST }
+
+## V4.11 — l'éclat : les gouttes de sang brillent fort leurs premiers instants
+## (leur lumière déjà sans ombre est brièvement surmultipliée) puis retombent
+## sur le fondu normal. Toucher, c'est voir — sur les deux écrans.
+const BLOOD_FLASH_DURATION := 0.2
+const BLOOD_FLASH_BOOST := 2.0
 
 var _pool: Array[RigidBody2D] = []
 var _free: Array[RigidBody2D] = []
@@ -107,13 +115,19 @@ func emit(kind: int, pos: Vector2, color: Color, amount: int,
 		var speed := randf_range(speed_min, speed_max)
 		rb.linear_velocity = Vector2(cos(spray_angle), sin(spray_angle)) * speed
 
-		var lifetime := randf_range(1.5, 3.0) if kind == Kind.BLOOD else randf_range(0.3, 0.8)
+		var lifetime: float
+		match kind:
+			Kind.BLOOD: lifetime = randf_range(1.5, 3.0)
+			Kind.SMOKE: lifetime = randf_range(0.8, 1.4)
+			Kind.DUST: lifetime = randf_range(0.9, 1.6)
+			_: lifetime = randf_range(0.3, 0.8)
 		_active.append({
 			"rb": rb,
 			"age": 0.0,
 			"life": lifetime,
 			"scale": rb.get_node("Poly").scale,
 			"energy": (rb.get_node("Light") as PointLight2D).energy,
+			"flash": BLOOD_FLASH_DURATION if kind == Kind.BLOOD else 0.0,
 		})
 	return amount
 
@@ -138,9 +152,38 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
 		poly.material = _mat_mix
 		light.texture = LightTextures.radial(64)
+		# V4.11 — l'éclat de l'impact : surmultipliée à l'émission, la lumière
+		# retombe à 1.0 en BLOOD_FLASH_DURATION (voir advance()).
 		light.energy = 1.0
 		rb.linear_damp = randf_range(8.0, 15.0) # Turbulence : friction lourde
 		rb.angular_velocity = randf_range(-40.0, 40.0)
+		rb.physics_material_override = _phys_blood
+	elif kind == Kind.SMOKE:
+		# V4.13 — fumée de bouche : gros grain additif, sans lumière, qui
+		# dérive puis s'éteint. La friction fait tout le travail de « nuage ».
+		circle.radius = 1.0
+		var s := randf_range(2.5, 4.5)
+		poly.polygon = PackedVector2Array([
+			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
+		poly.material = _mat_add
+		light.texture = LightTextures.radial(32)
+		light.energy = 0.0
+		rb.linear_damp = randf_range(5.0, 7.0)
+		rb.angular_velocity = randf_range(-6.0, 6.0)
+		rb.physics_material_override = _phys_blood
+	elif kind == Kind.DUST:
+		# V5.5 — poussière de faisceau : grain ténu, additif, presque immobile.
+		# Aucune lumière propre : il n'existe que révélé par la torche — et le
+		# matériau additif le laisse deviner en fantôme dans le cône.
+		circle.radius = 1.0
+		var s := randf_range(0.5, 1.0)
+		poly.polygon = PackedVector2Array([
+			Vector2(-1 * s, 0), Vector2(0, -1 * s), Vector2(1 * s, 0), Vector2(0, 1 * s)])
+		poly.material = _mat_add
+		light.texture = LightTextures.radial(32)
+		light.energy = 0.0
+		rb.linear_damp = randf_range(2.0, 3.0)
+		rb.angular_velocity = randf_range(-2.0, 2.0)
 		rb.physics_material_override = _phys_blood
 	else:
 		circle.radius = 1.0
@@ -191,7 +234,14 @@ func advance(delta: float) -> void:
 		var eased := 1.0 - t * t
 		var rb: RigidBody2D = entry["rb"]
 		(rb.get_node("Poly") as Polygon2D).scale = (entry["scale"] as Vector2) * eased
-		(rb.get_node("Light") as PointLight2D).energy = float(entry["energy"]) * eased
+		var energie := float(entry["energy"]) * eased
+		# V4.11 — l'éclat des premiers instants, décroissance linéaire.
+		var flash: float = float(entry.get("flash", 0.0))
+		if flash > 0.0:
+			flash -= delta
+			entry["flash"] = flash
+			energie += float(entry["energy"]) * BLOOD_FLASH_BOOST * maxf(flash, 0.0) / BLOOD_FLASH_DURATION
+		(rb.get_node("Light") as PointLight2D).energy = energie
 		i += 1
 
 ## Renvoie tout en réserve (début de manche, retour au menu).

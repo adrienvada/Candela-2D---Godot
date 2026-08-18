@@ -95,6 +95,12 @@ func _ready():
 	set_as_top_level(true)
 	spawn_pos = global_position
 
+	# V6.2 — le tracé killcam se dessine sur le nœud racine : matériau additif
+	# non éclairé, sinon le CanvasModulate noir l'avale. Les enfants ont leurs
+	# propres matériaux, celui-ci ne s'applique qu'au _draw() de la racine.
+	if is_replay:
+		material = _additive_material()
+
 func _physics_process(delta):
 	if not weapon:
 		queue_free()
@@ -158,7 +164,10 @@ func _physics_process(delta):
 				return
 		
 	global_position += step
-	
+
+	if is_replay:
+		queue_redraw()
+
 	# Stretch the light and core to form a long laser trail
 	var dist_from_spawn = global_position.distance_to(spawn_pos)
 	var trail_length = min(dist_from_spawn, 800.0)
@@ -168,6 +177,21 @@ func _physics_process(delta):
 	
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
+
+## V6.2 — Trajectoire au trait (killcam) : pendant le rejeu, la balle dessine
+## en pointillé le segment déjà parcouru, comme un schéma balistique. Le tracé
+## est en espace local (-X = derrière, la rotation suit `direction`) et repart
+## de zéro à chaque rebond, puisque `spawn_pos` est réarmé — fidèle au trajet.
+## En manche réelle (`is_replay` faux) : rien, aucune information gratuite.
+const TRACE_COLOR := Color(1.0, 1.0, 1.0, 0.35)
+
+func _draw() -> void:
+	if not is_replay:
+		return
+	var back := global_position.distance_to(spawn_pos)
+	if back < 8.0:
+		return
+	draw_dashed_line(Vector2(-back, 0.0), Vector2.ZERO, TRACE_COLOR, 2.0, 12.0)
 
 ## Impact joueur. `center` est le point de référence pour l'atténuation : la
 ## position réelle du joueur, ou celle remontée dans le temps quand le tir est

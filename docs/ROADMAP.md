@@ -3092,6 +3092,19 @@ est finie, budget libre). Tout shader neuf se précharge en `const`, toute
 particule passe par le pool, jamais d'ombres sur les lumières de particules.
 Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fournir.
 
+> **Lot du 2026-08-18 (session game feel) — V4.11, V4.13, V5.1, V5.3 audio,
+> V5.4, V5.5, V5.6, V5.9, V6.2, V6.3 livrés.** Le lot a été taillé pour tenir
+> **entièrement dans les fichiers de la session** (player.gd, bullet.gd,
+> particle_pool.gd, audio_manager.gd, shaders) : `game_state.gd` et `ui.gd`
+> sont passés à la session « fin de match », et tout ce qui exige un site
+> d'appel chez eux est **bloqué en attendant, pas abandonné** — V3.3 (naissance
+> de la lumière au FIGHT : décision de jeu, voir l'item), V3.4 (le tic-tac
+> sous 10 s se déclenche là où `time_left` fait autorité), V3.7/V3.8 (stingers
+> de fin — assets de toute façon), V5.12 (réverb dérivée de `grid_size` à
+> l'entrée de manche), V6.1/V6.5 (l'overlay killcam et son uniform vivent dans
+> l'orchestration de killcam). Les specs d'intégration sont sur chaque item ;
+> le reste de la vague 5 (V5.7, V5.8, V5.10, V5.11) attend assets ou arbitrage.
+
 ### Vague 1 — Réveiller ce qui dort (systèmes câblés, jamais alimentés)
 
 - **V1.1 Stems musicaux réels** — l'AudioStreamInteractive 4 couches à 170 BPM
@@ -3289,10 +3302,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.10 Vol de l'arbalète** — chuintement doppler discret du carreau sans
   lumière. — *assets : 1 boucle courte.*
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
-  (déjà sans ombre) : toucher, c'est voir.
+  (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
+  de la lumière déjà portée par la goutte, décroissance linéaire dans
+  `advance()` : l'éclat vit dans le tableau plat du pool, aucun nœud ni tween
+  de plus. Visible sur les deux écrans par construction — toucher n'est pas
+  une information privée, c'est la seule « annonce » que les deux partagent.
 - **V4.12 Recul de caméra directionnel** — kick 4-6 px opposé au tir.
   **✅ Fait** — 6 px résorbés en ~100 ms, additionnés au shake existant.
 - **V4.13 Fumée de bouche** — 2-3 particules additives dérivant 1 s.
+  **✅ Fait** — profil `SMOKE` du pool : gros grain additif **sans lumière
+  propre** (il n'existe que révélé — flash du tir, torche), forte friction
+  pour l'effet nuage. Émis dans `trigger_shoot_visuals`, donc sur les mêmes
+  chemins que le flash : hôte, tir prédit du client et killcam le voient tous.
 - **V4.14 Le sol répond** — décal lumineux 1 frame sous le tireur.
   **✅ Fait** — écho lumineux au sol, décor seulement, sans ombre.
 - **V4.15 Duck des pas sous le tir** — −6 dB pendant 300 ms après un coup de
@@ -3317,7 +3338,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 - **V5.1 Claquement de torche iconique** — le son entendu 500 fois par
   soirée, avec 2 frames de sur-intensité à l'amorçage. — *assets : 2 samples
-  soignés.*
+  soignés.* **✅ Câblé, muet** — `torch_on`/`torch_off` joués sur la
+  **transition** d'état seulement (pas à chaque frame où la torche est tenue),
+  dans `set_player_torch`, que le site d'appel filtre déjà par
+  `torche_comptee` : la torche adverse en ligne n'arrive jamais jusqu'au son.
+  Les deux fichiers sont au manifeste ; rien à recâbler à la livraison. La
+  sur-intensité d'amorçage appartient au sample lui-même, pas au code.
 - **V5.2 Allumer = entendre** — amplifier le passe-bas piloté par les torches
   (déjà câblé) + sweep audible à l'allumage. **✅ Fait**, mais **il a d'abord
   fallu colmater une fuite d'information** — voir les pièges. L'écart passe de
@@ -3328,16 +3354,48 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   le changement est réel mais passe pour un hasard du mixage. **Aucun
   dépassement à l'extinction** : on ne fête pas de redevenir invisible.
 - **V5.3 L'éblouissement se sent** — bloom pulsé + acouphène doux suivant
-  `dazzle_amount` côté ébloui. — *assets : 1 boucle.*
+  `dazzle_amount` côté ébloui. — *assets : 1 boucle.* **✅ Fait côté audio,
+  câblé-muet** — `AudioManager.set_dazzle_level(pid, dazzle_amount)` alimenté
+  chaque frame par le joueur **piloté localement** uniquement : l'éblouissement
+  est calculé par machine, on n'entend que le sien. En écran partagé les deux
+  joueurs partagent la sortie audio, le volume suit donc le **max** des deux
+  niveaux. La boucle (`tinnitus_dazzle.wav`, au manifeste) démarre/s'arrête
+  sur les franchissements et son volume suit le niveau — muette tant que le
+  fichier manque. **Le « bloom pulsé » n'est pas retenu** : pas de bloom sous
+  `gl_compatibility`, et l'overlay blanc existant porte déjà la sensation —
+  en pulser l'alpha brouillerait la lecture du niveau d'éblouissement, qui
+  est une information de duel, pas une décoration.
 - **V5.4 Respiration de la torche** — Perlin lent ±3 % sur l'énergie.
+  **✅ Fait** — le bruit module la **cible** du lerp d'énergie existant, pas
+  l'énergie elle-même : la respiration traverse les fondus d'allumage et
+  d'extinction sans les casser, et s'éteint avec eux. ±3 % et pas plus : la
+  torche doit sembler vivante, pas défaillante — une torche qui faiblit
+  visiblement dirait « pile morte », une mécanique qui n'existe pas.
 - **V5.5 Poussière dans le faisceau** — particules additives ténues (pool).
+  **✅ Fait** — profil `DUST` (grain minuscule, additif, presque immobile,
+  sans lumière propre : il n'existe que révélé par le faisceau), semé à
+  cadence fixe dans le cône réel de l'arme (`torch_angle_deg`, portée
+  courante) tant que la torche est allumée. Côté budget, la poussière passe
+  par le pool plafonné : elle recycle, elle n'alloue pas.
 - **V5.6 Rétrodiffusion pulsée au pas** — le BodyLight respire en marchant.
+  **✅ Fait** — chaque pas détecté (le détecteur V1.x existant, déjà gardé
+  contre les téléportations) arme une impulsion qui se résorbe en ~140 ms sur
+  la lumière de corps. La rétrodiffusion étant déjà visible de l'adversaire,
+  la pulser n'ajoute **aucune information nouvelle** — elle rend juste la
+  marche organique : on voit quelqu'un marcher, pas un lampadaire glisser.
 - **V5.7 Pas par matériau** — 2 jeux de pas pour les 2 sols du damier. —
   *assets : 2×4 samples.*
 - **V5.8 Shimmer du liseré néon** — les bordures des murs scintillent sous une
   lumière directe.
 - **V5.9 Streaks de sprint** — vignette resserrée + traits de vitesse côté
-  sprinteur.
+  sprinteur. **✅ Fait pour les traits** — shader plein écran préchargé
+  (`sprint_streaks.gdshader`) : pointillés radiaux filant vers l'extérieur,
+  confinés aux bords (le centre, là où on vise, reste propre), intensité
+  lissée à l'entrée/sortie de sprint. Le rect porte le `visibility_layer` du
+  joueur : chacun ne voit que sa propre vitesse. **La vignette resserrée est
+  écartée** : la vignette est le canal de la santé (V4.7 la fait battre sous
+  30 HP) — la resserrer au sprint superposerait deux messages sur le même
+  signal, et « je cours » se lirait « je saigne ».
 - **V5.10 Présence de la salle** — sons ponctuels pannés très espacés. —
   *assets : 5-8 samples d'ambiance.*
 - **V5.11 Frôlement de mur** — tissu + poussière à < 10 px d'un mur. —
@@ -3350,9 +3408,21 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.1 Grain VHS dynamique** — l'overlay killcam monte pendant le
   bullet-time, se stabilise à l'impact (un uniform à animer).
 - **V6.2 Trajectoire au trait** — la balle fatale dessine sa ligne complète en
-  pointillé pendant le rejeu : la killcam devient professeur.
+  pointillé pendant le rejeu : la killcam devient professeur. **✅ Fait** —
+  `_draw()` sur la balle, strictement conditionné à `is_replay` : en manche
+  réelle, rien, aucune information gratuite. Le tracé se dessine en espace
+  local (la rotation suit la direction) et repart de zéro à chaque rebond
+  comme la traîne — chaque segment du trajet est enseigné séparément, fidèle
+  à la géométrie. Matériau additif non éclairé sur la racine, sinon le
+  CanvasModulate noir avale le trait sous le voile de la killcam.
 - **V6.3 Sidechain du ralenti** — heartbeat + souffle seuls pendant le
-  bullet-time, tout relâcher à l'impact.
+  bullet-time, tout relâcher à l'impact. **✅ Fait** — AudioManager détecte
+  lui-même `Engine.time_scale < 0.5` en match : aucun site d'appel dans
+  `game_state.gd` (passé à la session « fin de match »), le couplage est un
+  constat, pas un câblage. Pendant le ralenti, les stems mélodiques tombent
+  et le heartbeat est **forcé à plein** quel que soit l'état de santé ; à la
+  sortie, l'intensité musicale est réévaluée depuis l'état réel (santé basse
+  comprise) plutôt que restaurée depuis un instantané qui aurait pu périmer.
 - **V6.4 Rembobinage VHS** — son de bande + timecode à rebours 300 ms au
   lancement. — *assets : 1 sample.*
 - **V6.5 Négatif à l'impact** — 2 frames d'inversion vidéo au moment fatal.
