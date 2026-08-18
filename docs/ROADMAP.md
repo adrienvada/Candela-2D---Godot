@@ -1117,6 +1117,12 @@ et rien de nouveau dans le schéma.
 
 ## Phase 7 — Déblocage d'armes 🔵 À FAIRE
 
+> **Aucune correspondance arme ↔ rang n'existe en code** au 2026-08-18 — seulement
+> la table ci-dessous. Le premier geste de la phase est donc de l'écrire. Avec la
+> décision du jour (un débutant part d'**Aveugle I**), la table d'origine redevient
+> cohérente telle quelle : Aveugle → Pistolet, Braise → Fusil, Bougie → Pompe,
+> Lanterne → Arbalète.
+
 Chaque catégorie débloque une arme. Les quatre armes actuelles occupent les
 quatre premières catégories ; **les catégories 5 à 10 ne débloquent donc encore
 rien**, et c'est un trou à combler avec du contenu, pas avec une règle.
@@ -1846,6 +1852,7 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 | Décision | Raison |
 |---|---|
 | **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
+| **Un débutant part d'Aveugle I** (2026-08-18) | Le classement de départ (1000) tombait dans **Bougie**, troisième catégorie sur dix : un débutant serait arrivé avec trois des quatre armes et n'en aurait débloqué qu'une. C'est `RANK_FLOOR` qui a été déplacé, **pas `START_RATING`** — la table des classements est reconstruite par rejeu intégral de l'historique, donc abaisser le départ aurait recalculé tous les matchs déjà joués et déplacé tous les joueurs. Déplacer le plancher ne change que la **lecture** de l'échelle. **Prix assumé :** un débutant ne peut plus chuter, ce que le calibrage d'origine cherchait précisément à éviter. ⚠️ **Non déployé** — tant que la fonction en ligne porte l'ancien plancher, l'écran affiche Bougie pour un débutant. |
 | **Format BO1, 5 minutes** | Un duel où chaque erreur est fatale se suffit en une manche : c'est ce qui rend chaque décision lourde. Le format transite par `MatchRecord.Format` — un BO3/BO5 s'ajouterait sans refonte, mais n'est pas implémenté. |
 | **EOS conservé** pour la connectivité | NAT traversal + relais gratuits, sans serveur à maintenir. |
 | **Code de salon**, pas de liste de salons | Geste le plus immédiat pour « je joue avec un ami ». La liste n'a de sens qu'avec du matchmaking → Phase 4. |
@@ -2026,6 +2033,21 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   La leçon exacte est donc : **un banc qui couvre un chemin ne protège que s'il
   tourne à chaque changement de ce chemin.** Un banc manuel est une couverture
   conditionnelle, pas une couverture.
+
+**Ce que le banc affirme et ce que l'humain voit**
+- **Un banc vert et un joueur bloqué peuvent décrire le même code.** Le
+  2026-08-18, le banc à deux instances affirmait « aucune manche n'a démarré à la
+  connexion » pendant qu'Adrien voyait son client **téléporté dans l'arène** dès la
+  jointure. Les deux disaient vrai : le banc interroge `round_active`, qui restait
+  faux, quand le joueur constate « je ne suis plus dans le menu ». Le client
+  quittait bien le menu sans qu'aucune manche ne démarre — d'où une arène figée,
+  chrono à l'arrêt, et un bouton PRÊT resté derrière lui.
+  **Un contrôle doit interroger ce que le joueur perçoit**, pas l'état interne le
+  plus proche. Ici : `ui._is_main_menu`, et non `round_active`.
+- **`PRÊT` n'est pas grisé quand l'hôte est seul, sur le chemin LAN.** Reproduit
+  le 2026-08-18 par A/B sur `test_online_match --host --transport enet` : identique
+  avant et après le correctif du jour, donc **préexistant**. Le banc à deux
+  instances tourne en EOS par défaut et ne le voit pas. Non corrigé.
 
 **Fin de match en ligne**
 - **`await RenderingServer.frame_post_draw` n'est JAMAIS émis en `--headless`.**

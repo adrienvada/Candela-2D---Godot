@@ -1633,7 +1633,13 @@ func _on_replay_requested():
 				# solo par-dessus l'écran d'erreur.
 				if not NetworkManager.host_game():
 					return
-			_enter_hosted_game()
+			# `_apply_network_mode()` seul, et surtout **pas** `_enter_hosted_game()` :
+			# celui-ci quitte le menu, or se déclarer prêt n'est pas partir. L'hôte
+			# se retrouvait sinon dans l'arène pendant que la porte attendait encore
+			# l'autre camp — arène sans manche, donc chrono figé et commandes mortes.
+			# C'est `_do_start_round()`, déclenché par `rpc_start_round`, qui referme
+			# le menu — et lui seul sait quand les deux sont d'accord.
+			_apply_network_mode()
 			# Le match ne part plus à l'appui : il attend que les DEUX camps se
 			# soient déclarés prêts. C'est la machinerie du rematch, réemployée
 			# telle quelle — et c'est ce qui supprime le démarrage automatique à
@@ -1860,12 +1866,18 @@ func _on_connection_success():
 	# Lu avant que l'écran de fin ne se referme, tant que le panneau du lobby
 	# reflète encore le choix du joueur.
 	var w2_idx := _local_p2_weapon_idx()
+	# Le câblage des entrées, oui — il ne coûte rien et doit précéder la manche.
+	# Mais **le client reste dans son salon** : il vient seulement de se connecter,
+	# il n'a pas encore dit PRÊT.
+	#
+	# Ces trois lignes le faisaient quitter le menu et entrer dans l'arène à la
+	# seconde où la connexion s'établissait — sans jamais pouvoir appuyer sur PRÊT,
+	# le bouton étant resté derrière lui. C'était le pendant client du départ
+	# automatique que la porte PRÊT avait supprimé côté hôte, et il avait survécu.
 	_apply_network_mode()
 	game_over = false
-	ui.hide_game_over()
-	_restore_viewports()
-	_start_round()
-	# L'hôte attend ce paquet pour lancer la manche avec la bonne arme.
+	# L'arme part dès maintenant pour que l'hôte l'ait avant même le PRÊT ; c'est
+	# `rpc_client_ready` qui la confirmera au moment de se déclarer.
 	rpc_id(1, "rpc_client_weapon", w2_idx)
 
 @rpc("any_peer", "reliable")
