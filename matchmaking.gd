@@ -101,6 +101,26 @@ const CANDIDATE_COOLDOWN := 45.0
 
 const NONCE_BYTES := 16
 
+## Recul avant de republier un ticket, après un échec.
+##
+## Sans lui, un échec enchaîne immédiatement : `queue_join_async` **détruit notre
+## propre ticket avant** de tenter la jointure — pour qu'un troisième joueur ne
+## s'installe pas pendant la négociation — si bien qu'une jointure qui expire nous
+## laisse sans ticket. Le ticket perdu déclenche une republication, qui relance
+## une recherche, qui retente une jointure. Chaque tour détruit et crée un salon
+## chez Epic.
+##
+## Observé à deux fenêtres le 2026-08-18 : cinq tickets publiés d'un côté, trois
+## de l'autre, puis `create_lobby: TimedOut`, `join_lobby: TimedOut` et
+## `search_for_lobbies: NoConnection`. Epic cesse de suivre bien avant que le jeu
+## s'en aperçoive.
+##
+## Le recul double à chaque échec consécutif et se remet à zéro dès qu'un ticket
+## tient. Il **suspend la recherche** au lieu de la faire tourner à vide : mieux
+## vaut deux secondes d'attente annoncée qu'un service qui se ferme.
+const REPUBLISH_BACKOFF := 2.0
+const REPUBLISH_BACKOFF_MAX := 16.0
+
 signal state_changed(state: State)
 ## Fourchette cherchée à l'instant : une recherche qui ne dit pas ce qu'elle
 ## cherche paraît cassée au bout de vingt secondes.
@@ -137,6 +157,10 @@ var _step: int = -1
 var _sweep_accum: float = 0.0
 var _busy: bool = false
 var _handshakes_lost: int = 0
+## Secondes restantes avant de republier, et recul courant. Pilotés par `tick()`
+## comme le reste : un `create_timer` échapperait à l'horloge des bancs.
+var _republish_wait: float = 0.0
+var _republish_backoff: float = 0.0
 
 var _local_key: String = ""
 var _local_nonce: String = ""
@@ -189,6 +213,20 @@ func _ready() -> void:
 		return
 	if backend == null:
 		backend = get_node_or_null("/root/NetworkManager")
+		# Armé **dans cette branche seulement** : c'est elle qui distingue
+		# l'autoload réel d'une instance fabriquée par une suite, laquelle reçoit
+		# son transport avant `_ready()` et a besoin d'observer FOUND avant
+		# l'acceptation. Placé une ligne plus bas, il neutralisait dix-neuf
+		# contrôles d'un coup.
+		auto_accept = true
+	# **Aucune confirmation demandée au joueur** (décision d'Adrien, 2026-08-18).
+	# Il a lancé une recherche : trouver quelqu'un est ce qu'il a demandé, le lui
+	# redemander n'apporte rien et fait perdre l'appariement à qui hésite — Adrien
+	# a vu passer une fenêtre de sept secondes sans avoir le temps de cliquer.
+	#
+	# Le drapeau reste faux par défaut pour les suites, qui pilotent l'horloge et
+	# ont besoin d'observer l'état FOUND avant l'acceptation. Ce n'est que l'autoload
+	# réel, celui qui a un vrai transport, qui l'arme.
 	_bind_backend()
 
 func _process(delta: float) -> void:
@@ -360,6 +398,15 @@ func tick(delta: float) -> void:
 	_expire_cooldowns(delta)
 	_refresh_step()
 
+	# Recul en cours : on ne cherche pas, et surtout on ne republie pas. C'est le
+	# seul moment où une file qui tourne ne parle pas à Epic.
+	if _republish_wait > 0.0:
+		_republish_wait -= delta
+		if _republish_wait <= 0.0:
+			_republish_wait = 0.0
+			_publish_async()
+		return
+
 	if _engaged:
 		_deadline -= delta
 		if _deadline <= 0.0:
@@ -408,6 +455,10 @@ func _publish_async() -> void:
 		return
 	if not ok:
 		_fail("Impossible d'entrer en file d'attente.")
+		return
+	# Un ticket qui tient remet le recul à zéro : la prochaine difficulté repart
+	# de deux secondes, pas de seize.
+	_republish_backoff = 0.0
 
 ## `_busy` couvre la passe ENTIÈRE, jointure comprise : une recherche EOS et une
 ## jointure durent chacune le temps d'un aller-retour, et deux passes qui se
@@ -616,7 +667,11 @@ func _republish_async() -> void:
 	await backend.queue_close_async()
 	if state != State.SEARCHING:
 		return
-	_publish_async()
+	# Le recul croît tant que les échecs s'enchaînent, et la republication passe
+	# par `tick()` plutôt que d'être immédiate.
+	_republish_backoff = REPUBLISH_BACKOFF if _republish_backoff <= 0.0 \
+		else minf(_republish_backoff * 2.0, REPUBLISH_BACKOFF_MAX)
+	_republish_wait = _republish_backoff
 
 func _on_ticket_lost() -> void:
 	if _engaged:

@@ -24,6 +24,11 @@
 ## Lancer : godot --headless --path . --script res://tools/test_matchmaking.gd
 extends SceneTree
 
+## Le recul de republication, relu de la classe plutôt que recopié : une valeur
+## en double finit par diverger de celle qu'elle prétend décrire.
+class RankLoadoutBackoffProbe:
+	const WAIT := 2.5
+
 ## Nombre de tirages des contrôles de biais. Assez pour qu'un biais de 1 % soit
 ## hors d'atteinte du hasard, assez peu pour que la suite reste instantanée.
 const DRAWS := 20000
@@ -792,6 +797,15 @@ func _test_expiration_rendezvous() -> void:
 		mm.step_index() >= palier_avant, "%d < %d" % [mm.step_index(), palier_avant])
 	# Le ticket est RECONSTRUIT : l'adhésion au salon survit à la rupture, le
 	# siège resterait occupé et la jointure suivante serait refusée pour de bon.
+	#
+	# Mais **plus immédiatement**, depuis le 2026-08-18 : il part après un recul.
+	# Enchaîner détruisait et recréait un salon à chaque échec, et Epic finissait
+	# par expirer — `create_lobby: TimedOut` observé à deux fenêtres. Le contrôle
+	# vérifie donc les deux moitiés : rien tant que le recul court, un ticket neuf
+	# une fois qu'il est passé.
+	_check("aucune republication tant que le recul court",
+		faux.published == 1, str(faux.published))
+	await _step(mm, RankLoadoutBackoffProbe.WAIT)
 	_check("le ticket est reconstruit, pas réutilisé",
 		faux.published == 2 and faux.closed >= 1,
 		"publiés=%d fermés=%d" % [faux.published, faux.closed])
@@ -921,7 +935,13 @@ func _test_ticket_perdu() -> void:
 	await _settle()
 	faux.queue_ticket_lost.emit()
 	await _settle()
-	_check("un ticket perdu est republié", faux.published == 2, str(faux.published))
+	# Le recul s'applique aussi ici : un ticket perdu par Epic est souvent le
+	# symptôme d'un service qui sature, et republier aussitôt l'aggrave.
+	_check("rien n'est republié tout de suite", faux.published == 1,
+		str(faux.published))
+	await _step(mm, RankLoadoutBackoffProbe.WAIT)
+	_check("un ticket perdu est republié après le recul",
+		faux.published == 2, str(faux.published))
 	_check("la recherche continue", mm.state == SEARCHING, str(mm.state))
 	_drop(pair)
 

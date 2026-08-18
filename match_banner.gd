@@ -195,6 +195,23 @@ func refresh() -> void:
 	_detail.text = _detail_text(etat, snap)
 	_apply_buttons(etat)
 	if etat != _dernier_etat:
+		# Une seule fois par appariement, sur la BASCULE : `refresh()` est appelée
+		# à chaque instantané, et jouer sur l'état plutôt que sur son changement
+		# ferait un bourdonnement continu.
+		if etat == ST_FOUND and _dernier_etat != ST_FOUND:
+			# Par le CHEMIN d'autoload, jamais par le nom : `AudioManager` n'existe
+			# pas à la compilation en mode `--script`, et le nommer empêchait ce
+			# fichier de compiler. La suite ne pouvait alors plus l'instancier, sa
+			# coroutine mourait avant `quit()`, et le processus **pendait** au lieu
+			# d'échouer — trois se sont accumulés sur la machine avant qu'on
+			# comprenne. C'est le même piège que `NetworkManager` dans
+			# `ranked_identity.gd`, sous une troisième forme.
+			#
+			# Ce fichier atteint déjà `/root/Matchmaker` de cette façon : l'idiome
+			# est le sien, pas une entorse.
+			var audio := get_node_or_null(^"/root/AudioManager")
+			if audio != null and audio.has_method("play_sfx"):
+				audio.play_sfx("ui_ready_ping")
 		_dernier_etat = etat
 	_recenter()
 
@@ -210,12 +227,12 @@ func _detail_text(etat: int, snap: Dictionary) -> String:
 			var f := String(snap.get("range_label", ""))
 			return "%s  ·  %s" % [t, f] if f != "" else t
 		ST_FOUND, ST_AWAITING:
-			var reste := float(snap.get("handshake_remaining", 0.0))
+			# Plus de décompte « pour répondre » : il n'y a plus rien à répondre.
+			# Reste ce qui s'apprend — qui héberge, puisqu'en P2P l'hôte joue sans
+			# latence et que taire l'asymétrie la transforme en rumeur.
 			var qui := _who_hosts()
-			var delai := "%d s pour répondre" % int(ceilf(reste)) if reste > 0.0 else ""
-			if qui != "" and delai != "":
-				return "%s  ·  %s" % [qui, delai]
-			return qui if qui != "" else delai
+			return "Lancement du match…  ·  %s" % qui if qui != "" \
+				else "Lancement du match…"
 		ST_FAILED:
 			var err := String(snap.get("last_error", ""))
 			return err if err != "" else "Réessayez dans un instant."
@@ -240,12 +257,13 @@ func _apply_buttons(etat: int) -> void:
 		ST_SEARCHING:
 			_set_button(_btn_engage, "")
 			_set_button(_btn_retrait, "ANNULER")
-		ST_FOUND:
-			_set_button(_btn_engage, "CONFIRMER")
-			_set_button(_btn_retrait, "REFUSER")
-		ST_AWAITING:
+		# Le match part tout seul : plus rien à confirmer ni à refuser. Laisser un
+		# bouton de refus ici rendrait l'abandon possible pendant l'annonce, à
+		# l'instant précis où le lien s'établit — et la file de l'autre camp
+		# tomberait sans qu'il ait rien fait.
+		ST_FOUND, ST_AWAITING:
 			_set_button(_btn_engage, "")
-			_set_button(_btn_retrait, "REFUSER")
+			_set_button(_btn_retrait, "")
 		ST_FAILED:
 			_set_button(_btn_engage, "")
 			_set_button(_btn_retrait, "FERMER")

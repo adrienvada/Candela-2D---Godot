@@ -132,14 +132,27 @@ func _test_trouve() -> void:
 	# n'affiche pas devient une rumeur.
 	_check("qui héberge est dit", _banner._detail.text.contains("vous hébergez"),
 		_banner._detail.text)
-	_check("le délai de réponse est dit", _banner._detail.text.contains("12 s"),
-		_banner._detail.text)
-	_check("confirmer ET refuser sont offerts",
-		_libelles() == ["CONFIRMER", "REFUSER"], str(_libelles()))
+	# RETOURNÉ le 2026-08-18 : le bandeau demandait « CONFIRMER / REFUSER » et
+	# affichait un décompte de réponse. Adrien a vu passer cette fenêtre de sept
+	# secondes sans avoir le temps de cliquer — et lui redemander s'il veut ce
+	# qu'il vient de demander n'apportait rien. Le match part désormais seul.
+	#
+	# Ce que ça coûte, et qui doit être su avant de rétablir une confirmation :
+	# **on ne peut plus renoncer entre « trouvé » et « lancé ».** Le choix est
+	# assumé — la fenêtre était trop courte pour être un vrai choix, et la seule
+	# chose qu'elle produisait était des appariements perdus.
+	_check("l'annonce du lancement remplace la demande de réponse",
+		_banner._detail.text.contains("Lancement"), _banner._detail.text)
+	_check("plus aucun décompte de réponse",
+		not _banner._detail.text.contains("12 s"), _banner._detail.text)
+	_check("aucun bouton n'est offert à cet instant",
+		_libelles().is_empty(), str(_libelles()))
 
-	# Deux emplacements fixes, rangés par intention. Un bouton unique passant
-	# d'ANNULER à CONFIRMER confirmerait un match à un doigt qui partait pour
-	# sortir de la file.
+	# L'emplacement de sortie reste **un objet distinct** de l'engagement, même
+	# quand les deux sont vides. C'est ce qui garantit qu'un bouton ne prendra
+	# jamais la place de l'autre le jour où l'un des deux réapparaît : un bouton
+	# unique passant d'ANNULER à CONFIRMER confirmerait un match à un doigt qui
+	# partait pour sortir de la file.
 	_pose(MatchBanner.ST_SEARCHING)
 	var sortie_avant := _banner._btn_retrait
 	_core.paire = {"local_hosts": false}
@@ -162,9 +175,11 @@ func _test_attente() -> void:
 	print("\n[En attente de l'adversaire]")
 	_core.paire = {"local_hosts": true}
 	_pose(MatchBanner.ST_AWAITING, {"handshake_remaining": 7.0})
-	# On a déjà confirmé : reconfirmer n'aurait aucun sens, mais se rétracter si.
-	_check("plus rien à confirmer, seulement à refuser",
-		_libelles() == ["REFUSER"], str(_libelles()))
+	# RETOURNÉ avec l'auto-acceptation : on n'a plus confirmé, on est lancé. Ni
+	# reconfirmation ni rétractation — voir `_test_sortie_toujours_offerte()` pour
+	# ce que cela coûte.
+	_check("aucun bouton pendant le lancement",
+		_libelles().is_empty(), str(_libelles()))
 
 func _test_echec() -> void:
 	print("\n[Échec]")
@@ -178,19 +193,33 @@ func _test_echec() -> void:
 	_check("sans raison, on dit quand même quelque chose",
 		_banner._detail.text != "")
 
-## L'invariant de la manette, et le seul qui ne souffre aucune exception :
-## tant qu'une file tourne, il doit toujours exister un contrôle **visible et
-## atteignable** pour en sortir. Sans lui, la seule issue serait de quitter le jeu.
+## L'invariant de la manette, **restreint le 2026-08-18** et non abandonné :
+## tant qu'on peut encore sortir, il doit exister un contrôle visible et
+## atteignable pour le faire. Sans lui, la seule issue serait de quitter le jeu.
+##
+## Il ne couvre plus « adversaire trouvé » ni « en attente » : depuis
+## l'auto-acceptation, le match part seul et il n'y a plus rien à quitter — la
+## file est close, le lien s'établit. Offrir une sortie là rendrait l'abandon
+## possible à l'instant précis où l'autre camp s'engage, et sa file tomberait
+## sans qu'il ait rien fait.
+##
+## L'invariant reste entier là où il a un sens : pendant la recherche, et après
+## un échec.
 func _test_sortie_toujours_offerte() -> void:
-	print("\n[Une sortie, toujours]")
-	for etat in [MatchBanner.ST_SEARCHING, MatchBanner.ST_FOUND,
-			MatchBanner.ST_AWAITING, MatchBanner.ST_FAILED]:
+	print("\n[Une sortie tant qu'on peut sortir]")
+	for etat in [MatchBanner.ST_SEARCHING, MatchBanner.ST_FAILED]:
 		_core.paire = {"local_hosts": true}
 		_pose(etat)
 		var sortie := _banner._btn_retrait
 		_check("état %d : sortie visible et atteignable" % etat,
 			sortie.visible and not sortie.disabled
 			and sortie.focus_mode != Control.FOCUS_NONE)
+	# Et symétriquement : pendant le lancement, aucune sortie n'est offerte.
+	for etat in [MatchBanner.ST_FOUND, MatchBanner.ST_AWAITING]:
+		_core.paire = {"local_hosts": true}
+		_pose(etat)
+		_check("état %d : le lancement ne s'abandonne pas" % etat,
+			not _banner._btn_retrait.visible)
 
 func _test_actions() -> void:
 	print("\n[Ce que les boutons appellent]")

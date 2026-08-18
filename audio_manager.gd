@@ -14,7 +14,12 @@ const SOUNDS: Dictionary = {
 	"spk_fight": "res://assets/audio/speaker/spk_fight.wav",
 	"spk_p1_wins": "res://assets/audio/speaker/spk_p1_wins.wav",
 	"spk_p2_wins": "res://assets/audio/speaker/spk_p2_wins.wav",
-	"spk_draw": "res://assets/audio/speaker/spk_draw.wav"
+	"spk_draw": "res://assets/audio/speaker/spk_draw.wav",
+	# Déjà attendu par le manifeste (V3.2) : `play_sfx` rend null sur une
+	# ressource absente, la clé se câble donc avant le fichier et reste muette
+	# sans erreur — plutôt qu'un bouche-trou qu'on finirait par prendre pour une
+	# intention.
+	"ui_ready_ping": "res://assets/audio/sfx/ui_ready_ping.wav"
 }
 
 const SFX_POOL_SIZE: int = 16
