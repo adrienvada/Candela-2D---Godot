@@ -85,6 +85,21 @@ republication** en devient responsable pour la suite, et le dit aux autres.
 > **Porteur au 2026-08-18** : la session qui a livré `6c0ad89` (structure des
 > menus). Constat fait et charge acceptée ce jour-là — il n'y en avait aucun.
 >
+> **⚠️ La centralisation ne suffit pas, et on l'a payé deux fois le même jour.**
+> Deux conflits de publication, une **Phase 9** apparue sans contrepartie dans le
+> dépôt, et une entrée que **personne ne revendique** — conservée par le porteur
+> qui croyait préserver le travail d'une session voisine, alors qu'elle
+> préservait celui d'un tiers, **sous un nom qui n'était pas le sien**.
+>
+> Le défaut de fond : **aucune entrée du suivi ne dit qui l'a écrite.** Sans
+> cela, une republication de bonne foi **propage l'attribution qu'elle trouve**.
+> Toute entrée ajoutée devrait porter sa source ; en attendant, une entrée dont
+> on n'est pas l'auteur se conserve mais **ne s'attribue pas**.
+>
+> Et le protocole ne peut rien contre une source qu'il ne voit pas : une session
+> hors de ce dépôt publie sans passer par le porteur. Seul Adrien sait quelles
+> sessions il a lancées.
+>
 > Une session qui ouvre ensuite **n'a pas à refaire ce constat** : elle demande
 > d'abord par `ListAgents` / `SendMessage` si le porteur est encore là, et ne
 > reprend la charge que s'il ne répond plus. Refaire le constat à l'aveugle
