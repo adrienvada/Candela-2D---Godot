@@ -1345,11 +1345,37 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		MapData.selected_map_id,
 		_mode_label(),
 		MATCH_FORMAT,
-		forfeit)
+		forfeit,
+		# Ce que le rejeu du journal a besoin de savoir pour renvoyer un rapport
+		# perdu : à quel match il se rattache, s'il comptait, et ce que cette
+		# machine a déclaré. Sans eux l'enregistrement décrit un match sans
+		# pouvoir le rapporter — ce que le journal prétendait déjà faire.
+		_match_id,
+		RankedIdentity.is_ranked_context() if is_instance_valid(RankedIdentity) else false,
+		_local_outcome(winner_id))
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
 	_report_to_ranking(winner_id, forfeit)
+
+## L'issue du match du point de vue de CETTE machine, dans le vocabulaire du
+## serveur.
+##
+## Une seule fonction la calcule, et c'est ce qui compte : le journal local et
+## l'envoi au classement doivent dire la même chose. Deux calculs séparés
+## finiraient par diverger, et un journal rejoué contredirait alors un rapport
+## déjà accepté — sans que rien ne le signale, puisque chacun serait cohérent
+## avec lui-même.
+##
+## Chaîne vide quand cette machine n'a pas de camp — écran partagé,
+## entraînement : il n'y a alors personne dont ce serait l'issue.
+func _local_outcome(winner_id: int) -> String:
+	var local_idx := _local_player_index()
+	if local_idx < 0:
+		return ""
+	if winner_id < 0:
+		return "draw"
+	return "win" if winner_id == local_idx else "loss"
 
 ## Dépose le résultat auprès du classement, du point de vue de CETTE machine.
 ##
@@ -1361,9 +1387,7 @@ func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
 	if local_idx < 0 or _match_id.is_empty():
 		return
 
-	var outcome := "draw"
-	if winner_id >= 0:
-		outcome = "win" if winner_id == local_idx else "loss"
+	var outcome := _local_outcome(winner_id)
 
 	var mine: Player = p1 if local_idx == 0 else p2
 	var theirs: Player = p2 if local_idx == 0 else p1
