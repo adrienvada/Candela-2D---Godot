@@ -246,6 +246,9 @@ var _leaderboard: ScreenLeaderboard
 ## seul par sa ligne d'`effect_policy`.
 var menu_gnomon: MenuGnomon
 var menu_after_image: MenuAfterImage
+var menu_torch: MenuTorch
+var menu_watcher: MenuWatcher
+var menu_passerby: MenuPasserby
 
 ## Bandeau de recherche d'adversaire, au bord haut de l'écran. Hors du menu :
 ## la recherche continue quel que soit l'écran regardé.
@@ -421,6 +424,10 @@ func _wire_buttons(node: Node) -> void:
 		_wire_buttons(child)
 
 func _on_any_button_pressed(btn: BaseButton) -> void:
+	# M9 — la flamme monte d'un cran à chaque appui. Tant que les sons d'interface
+	# manquent, c'est la seule conséquence sensible d'un geste.
+	if menu_torch != null:
+		menu_torch.palpiter()
 	AudioManager.play_button_click()
 	_pulse_press(btn)
 
@@ -947,6 +954,14 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 		p2_focus = control
 		if p2_cursor != null:
 			p2_cursor.aim(control.get_global_rect(), snap)
+
+	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
+	# curseur est un signe de vie, et c'est le même signe pour les deux.
+	if menu_torch != null:
+		menu_torch.viser(player, control.get_global_rect().get_center(),
+			COLOR_P1 if player == 0 else COLOR_P2)
+	if menu_watcher != null:
+		menu_watcher.reveiller()
 
 	# M2 — la rémanence. La position **quittée** est confiée à la couche avant que
 	# le curseur ne bouge, avec sa seule géométrie : le contrôle, lui, peut
@@ -1629,12 +1644,30 @@ func _build_menu() -> void:
 	menu_after_image = MenuAfterImage.new()
 	add_child(menu_after_image)
 
+	# M9 — la torche suit les curseurs, donc elle vit à leur niveau et **sous** eux :
+	# le liseré doit rester net par-dessus sa propre flaque.
+	menu_torch = MenuTorch.new()
+	add_child(menu_torch)
+	move_child(menu_torch, 0)
+
+	# M3 — le regard vit au même niveau : il se pose dans les marges de l'écran,
+	# pas dans le menu, et n'a donc rien à faire dans sa hiérarchie.
+	menu_watcher = MenuWatcher.new()
+	add_child(menu_watcher)
+
+	# M4 — le passant, lui, va **derrière les panneaux** : c'est toute l'idée,
+	# et c'est ce qui donne enfin un sens visible à leur translucidité.
+	menu_passerby = MenuPasserby.new()
+	game_over_panel.add_child(menu_passerby)
+	game_over_panel.move_child(menu_passerby, 1)
+
 	# Une ligne d'`effect_policy` sans lecture donnerait un curseur qui ne pilote
 	# rien — le défaut le plus vicieux d'un écran de réglages, puisqu'il ressemble
 	# trait pour trait à un réglage qui marche. On applique l'intensité mémorisée
 	# maintenant, et à chaque fois que le joueur la change.
 	GameSettings.effect_changed.connect(func(id: String, _v: float) -> void:
-		if id in ["cadran_titre", "remanence_curseur"]:
+		if id in ["cadran_titre", "remanence_curseur", "torche_menu",
+				"regard_du_noir", "passant_vitre"]:
 			_apply_menu_effects()
 	)
 	_apply_menu_effects()
@@ -2117,6 +2150,12 @@ func _apply_menu_effects() -> void:
 	if menu_after_image != null:
 		menu_after_image.set_intensite(
 			GameSettings.effective_effect("remanence_curseur", false))
+	if menu_torch != null:
+		menu_torch.set_intensite(GameSettings.effective_effect("torche_menu", false))
+	if menu_watcher != null:
+		menu_watcher.set_intensite(GameSettings.effective_effect("regard_du_noir", false))
+	if menu_passerby != null:
+		menu_passerby.set_intensite(GameSettings.effective_effect("passant_vitre", false))
 
 func _wire_salon_back(btn: Button) -> void:
 	if btn == null:

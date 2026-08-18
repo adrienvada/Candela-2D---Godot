@@ -2789,15 +2789,27 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
-> **État au 2026-08-18 : 2 sur 15 livrés** — M1 le cadran de titre, M2 la
-> rémanence rétinienne. Chacun dans son fichier (`menu_gnomon.gd`,
+> **État au 2026-08-18 : 5 sur 15 livrés** — M1 le cadran de titre, M2 la
+> rémanence rétinienne, M3 le regard du noir, M4 quelqu'un derrière la vitre,
+> M9 la torche du curseur. Chacun dans son fichier (`menu_gnomon.gd`,
 > `menu_after_image.gd`) plutôt que dans un `ui.gd` de trois mille lignes, chacun
 > avec sa ligne d'`effect_policy` **lue dans les deux sens** : l'intensité
 > mémorisée s'applique à la construction et à chaque changement. Une ligne de
 > politique sans lecture donnerait un curseur qui ne pilote rien, ce qui ressemble
 > trait pour trait à un réglage qui marche.
 >
-> Les treize autres suivent par lots. Aucun ne demande d'asset.
+> Les dix autres suivent par lots. Aucun ne demande d'asset.
+>
+> **Les cinq livrés partagent une fiction et c'est voulu** : une flamme éclaire ce
+> menu depuis quelque part. Elle projette l'ombre du titre (M1), on la porte à la
+> main sous le curseur (M9), quelqu'un la promène derrière les panneaux (M4), et
+> le noir qu'elle laisse a des yeux (M3). La rémanence (M2) est ce que tout cela
+> imprime sur une rétine. Ce n'est pas une collection d'effets, c'est un même
+> monde vu par cinq fenêtres.
+>
+> **Règle commune tenue par tous : coût nul au repos.** Chacun coupe son
+> `_process` dès qu'il n'a plus rien à changer — y compris la torche, qui s'arrête
+> une fois la lampe posée et la flamme retombée.
 
 Demandés par Adrien : « ultra-moderniser » les menus sans toucher à leur
 structure — uniquement du visuel, pour un vanilla extrême. Produits par la

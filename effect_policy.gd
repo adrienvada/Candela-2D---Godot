@@ -74,6 +74,24 @@ const EFFECTS := {
 		"nom": "Rémanence du curseur",
 		"phrase": "Le curseur laisse une après-image là où il était, comme une lumière vive sur la rétine.",
 	},
+	"torche_menu": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Torche du curseur",
+		"phrase": "Le curseur porte une flaque de lumière qui le suit. Elle n'éclaire rien qu'on ne voyait pas.",
+	},
+	"regard_du_noir": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Le regard du noir",
+		"phrase": "Après un long silence, deux reflets peuvent apparaître dans le noir du menu. Ils ne font rien.",
+	},
+	"passant_vitre": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "Quelqu'un derrière la vitre",
+		"phrase": "Une lueur passe parfois derrière les panneaux du menu, comme une torche de l'autre côté d'un verre.",
+	},
 	"secousse_camera": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,
