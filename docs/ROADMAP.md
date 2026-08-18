@@ -2325,11 +2325,29 @@ train de renoncer » a un cousin — **on croit corriger, on est en train de
 déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
 le code a été modifié quand même.
 
-**Piste la plus probable** : le report de l'annonce de déconnexion crée une
-fenêtre pendant laquelle un pair peut arriver, et le chemin différé traverse
-cette fenêtre en supposant l'état qu'il avait au départ. `client_peer_id` est
-remis à 0 **immédiatement** au départ du premier client ; rien ne le repose pour
-le second, dont le salon ignore donc probablement l'existence.
+**Deux pistes examinées, deux écartées — et c'est le plus utile de cette entrée.**
+
+1. ~~« `client_peer_id` n'est pas reposé pour le second client »~~ — **faux** :
+   `_on_peer_connected` le pose (ligne 332). Vérifié par lecture.
+2. ~~« le chemin différé parque le jeu en solo alors qu'un pair est là » —
+   J2 caché, sans collision, remplacé par la cible d'entraînement~~. Cette
+   incohérence **est réelle**, mais la corriger **ne fait pas passer le banc** :
+   ce n'est donc pas la cause. Le correctif a été **retiré**.
+
+**Ce qui reste vrai et candidat, sans preuve** : parquer en solo alors qu'un pair
+est connecté est incohérent, et mérite d'être corrigé un jour — mais **comme une
+amélioration propre, pas comme le correctif de ce défaut-ci**.
+
+⚠️ **Trois modifications du code de production ont été faites en poursuivant ce
+symptôme, aucune n'était la cause, et la troisième l'a été après avoir écrit la
+règle qui l'interdit.** Le geste juste, appliqué à la troisième : revenir en
+arrière. Un chemin de netcode ne se répare pas par tâtonnements — chaque essai
+non concluant y laisse un changement dont personne ne saura dire pourquoi il est
+là.
+
+**Pour qui reprendra :** commencer par instrumenter ce que voit le bloc salon
+(`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
+deviner ce qui manque en amont.
 
 ---
 
