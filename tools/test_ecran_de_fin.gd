@@ -43,6 +43,7 @@ func _run() -> void:
 	_test_chrono()
 	await _test_verdict()
 	_test_tension_killcam()
+	_test_negatif_killcam()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -282,3 +283,22 @@ func _test_tension_killcam() -> void:
 	# ne doit pas produire une tension hors de [0, 1] et détruire l'image.
 	_check("elle reste bornée",
 		_ui.tension_killcam(2.0) == 0.0 and _ui.tension_killcam(-5.0) == 1.0)
+
+## V6.5 — deux images de négatif au franchissement de l'impact.
+##
+## Ce qui se vérifie ici est le **rearmement**, pas l'effet. Le déclenchement se
+## fait au franchissement d'une image de rejeu : si l'état n'était pas remis à
+## neuf, la seconde killcam de la partie trouverait le seuil déjà dépassé et
+## **ne clignerait jamais**. Le premier kill serait parfait, tous les suivants
+## muets — un défaut qui ne se voit qu'à la deuxième mort.
+func _test_negatif_killcam() -> void:
+	print("\n[Le négatif se réarme à chaque killcam]")
+	_ui._killcam_derniere_image = 400
+	_ui._killcam_negatif = 0
+	_ui._killcam_tension = 0.9
+	_ui.show_killcam()
+	_check("l'image de rejeu repart d'avant tout impact",
+		_ui._killcam_derniere_image < 0, str(_ui._killcam_derniere_image))
+	_check("la tension repart de zéro", is_zero_approx(_ui._killcam_tension))
+	_check("aucun négatif en attente", _ui._killcam_negatif == 0)
+	_ui.hide_killcam()

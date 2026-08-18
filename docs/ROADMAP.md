@@ -3511,6 +3511,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.4 Rembobinage VHS** — son de bande + timecode à rebours 300 ms au
   lancement. — *assets : 1 sample.*
 - **V6.5 Négatif à l'impact** — 2 frames d'inversion vidéo au moment fatal.
+  **✅ Fait.** Compté en **images** et non en secondes : l'effet est un
+  clignement du rendu, et à 60 comme à 240 fps ce sont deux images qui doivent
+  basculer, pas une durée qui en couvrirait huit.
+  - **Déclenché au FRANCHISSEMENT** de l'image d'impact, jamais sur une
+    comparaison de seuil : le rejeu piétine sur une même image pendant le ralenti
+    extrême, et un `>=` déclencherait à chaque frame.
+  - L'inversion s'applique **après la vignette** — inverser avant rendrait les
+    bords sombres éclatants et emporterait le cadrage de l'image.
+  - `reinitialiser_killcam()` remet l'orchestration à neuf à chaque ouverture.
+    Sans ça, la **seconde** killcam de la partie trouverait le seuil déjà
+    franchi et ne clignerait jamais : premier kill parfait, tous les suivants
+    muets — un défaut qui ne se voit qu'à la deuxième mort.
 - **V6.6 Le menu vit dans le noir** — torche fantôme balayant le fond du menu.
 - **V6.7 Six slots néon** — le code de salon (6 caractères fixes) en 6 cases
   qui s'allument, clic par caractère. — *assets : 1-2 samples de frappe.*

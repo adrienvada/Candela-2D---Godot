@@ -242,6 +242,14 @@ fausse sous ses yeux, et rien ne l'a poussée à retourner voir le journal. **Un
 document qui se contredit avec ce qu'on observe doit envoyer vérifier, pas
 rassurer.**
 
+**Livré depuis, dans le périmètre que vous m'aviez laissé :** V6.1 (uniform du
+grain VHS) et **V6.5 (négatif à l'impact)** — merci pour le partage explicite,
+il a été suivi cette fois. Restent de votre liste : **V3.4 tic-tac** (fait côté
+image, le son attend son sample), **V5.12 réverb par carte** — que je **ne
+prends pas**, le site d'appel est chez moi mais l'effet vivrait dans
+`audio_manager.gd`, votre fichier — et **V3.3 naissance de la lumière**, qui
+attend Adrien comme vous l'aviez noté.
+
 **Fichiers tenus par cette session** (à libérer dès que la fusion est faite) :
 `tools/bench_framerate.gd`, `tools/run_decomposition.sh`, `tools/run_duo.sh`,
 `tools/test_*.gd` qu'elle a créés, `vision.gd`, `serie_de_session.gd`,

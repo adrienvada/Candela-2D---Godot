@@ -456,6 +456,15 @@ var _is_main_menu: bool = true
 var killcam_overlay: ColorRect
 ## V6.1 — tension courante de la bande, lissée vers sa cible.
 var _killcam_tension: float = 0.0
+## V6.5 — images d'inversion restantes. Compté en IMAGES et non en secondes,
+## parce que l'effet est un clignement du rendu : à 60 comme à 240 fps, ce sont
+## deux images qui doivent basculer, pas une durée qui en couvrirait huit.
+var _killcam_negatif: int = 0
+## L'image de rejeu vue au passage précédent, pour ne déclencher qu'au
+## FRANCHISSEMENT de l'impact. Le rejeu peut piétiner sur une image pendant le
+## ralenti extrême — comparer une position à un seuil déclencherait alors à
+## chaque frame.
+var _killcam_derniere_image: int = -1
 var killcam_container: Control
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
@@ -926,6 +935,19 @@ func _update_killcam(delta: float) -> void:
 		var cible := tension_killcam(Engine.time_scale)
 		_killcam_tension = lerpf(_killcam_tension, cible, clampf(delta * 6.0, 0.0, 1.0))
 		killcam_overlay.material.set_shader_parameter("tension", _killcam_tension)
+		# V6.5 — deux images de négatif au franchissement de l'impact.
+		var rejeu := get_node_or_null(^"/root/ReplaySystem")
+		if rejeu != null:
+			var image := int(rejeu.get("playback_index"))
+			var impact := int(rejeu.get("impact_frame"))
+			if impact >= 0 and _killcam_derniere_image < impact and image >= impact:
+				_killcam_negatif = 2
+			_killcam_derniere_image = image
+		if _killcam_negatif > 0:
+			_killcam_negatif -= 1
+			killcam_overlay.material.set_shader_parameter("negatif", 1.0)
+		else:
+			killcam_overlay.material.set_shader_parameter("negatif", 0.0)
 
 	_killcam_glitch_timer -= delta
 	if _killcam_glitch_timer <= 0.0:
@@ -4613,7 +4635,17 @@ func hide_game_over() -> void:
 func tension_killcam(time_scale: float) -> float:
 	return clampf(1.0 - time_scale, 0.0, 1.0)
 
+## Remet l'orchestration de la killcam à neuf. Sans ça, une seconde killcam
+## hériterait de l'image de rejeu de la précédente et **ne déclencherait jamais**
+## son négatif — le franchissement ayant déjà eu lieu, du point de vue du
+## compteur.
+func reinitialiser_killcam() -> void:
+	_killcam_tension = 0.0
+	_killcam_negatif = 0
+	_killcam_derniere_image = -1
+
 func show_killcam() -> void:
+	reinitialiser_killcam()
 	killcam_overlay.show()
 	killcam_container.show()
 	killcam_timecode.show()
