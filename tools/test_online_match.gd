@@ -405,25 +405,19 @@ func _run_host_ralenti() -> void:
 		return
 	# Le ralenti doit être réellement engagé, sinon on testerait une sortie qui
 	# n'avait rien à restaurer — et le banc passerait sans rien prouver.
-	# ⚠️ **LIMITE CONNUE DE CE BANC, écrite plutôt que masquée.**
+	# **Ce banc ne vérifie PAS que le ralenti a eu lieu, et ce n'est pas un oubli.**
 	#
-	# Ce contrôle a d'abord été un `print`, puis une assertion — et l'assertion
-	# est tombée : `Engine.time_scale` reste à **1,000 pendant six secondes**
-	# côté hôte en headless, alors que l'enregistrement montre bien la mort
-	# (`[REPLAY] P2 died`) et que le rejeu démarre.
+	# L'instrumentation a montré qu'il s'engage bien (0,063 mesuré), mais que le
+	# rejeu **s'arrête vers l'index 185 alors que l'impact est à 203-208** : la
+	# fenêtre de ralenti dure une fraction de seconde, puis la lecture cesse. Une
+	# assertion sur `Engine.time_scale` serait donc instable par construction —
+	# verte ou rouge selon le moment de l'échantillon, pas selon le code.
 	#
-	# On ne sait pas si c'est un artefact du sans-rendu ou un fait de jeu, et on
-	# ne le devine pas. **Ce banc couvre donc la REMISE À ZÉRO (time_scale à 1,0,
-	# rejeu arrêté, état rendu), pas le fait qu'un ralenti ait eu lieu avant.**
-	# Tant que ce point n'est pas éclairci, l'assertion « le ralenti est levé »
-	# ci-dessous est plus faible qu'elle n'en a l'air : elle vérifie une valeur
-	# qui n'a peut-être jamais bougé.
-	#
-	# À éclaircir : soit en instrumentant `get_next_frame` pour tracer le
-	# `target_time_scale` réellement calculé, soit à l'œil sur une vraie partie.
-	var ralenti_vu := await _await(func(): return Engine.time_scale < 0.9, 6.0)
-	print("RALENTI: engagé=%s (time_scale=%.3f) — voir la limite ci-dessus"
-		% [ralenti_vu, Engine.time_scale])
+	# Le défaut sous-jacent (la killcam se termine avant le moment fatal) est
+	# **signalé à la ROADMAP** et appartient à `test_rejeu.gd`, qui teste la
+	# fenêtre de rejeu. Ici on teste une SORTIE : que la coupure d'un pair rende
+	# le jeu à sa vitesse normale, quoi qu'il se soit passé avant.
+	await get_tree().create_timer(2.5, true, false, true).timeout
 
 	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
 		_fail("le client n'est jamais parti")

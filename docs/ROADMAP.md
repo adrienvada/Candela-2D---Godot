@@ -2264,6 +2264,44 @@ intention.
 
 ---
 
+## ⚠️ À CREUSER — la killcam s'arrête avant le moment fatal (2026-08-18)
+
+**Mesuré, reproductible, cause non établie.** Relevé en instrumentant le banc de
+la famille 5.3, qui cherchait tout autre chose.
+
+Sondes toutes les 0,35 s côté hôte, après un kill en ligne :
+
+```
+SONDE 12: time_scale=1.0000 index=175.5 impact=203 slow=184 lecture=true
+SONDE 13: time_scale=0.0633 index=185.3 impact=203 slow=184 lecture=true
+SONDE 14: time_scale=1.0000 index=185.4 impact=203 slow=184 lecture=false
+```
+
+**Le ralenti s'engage bien** — 0,063, la garde `impact_frame != -1 and
+slow_mo_start_frame != -1` passe, les deux valeurs sont valides. Mais la lecture
+**cesse à l'index 185,4 alors que l'impact est à 203** : la killcam se termine
+**une vingtaine d'images avant le moment sur lequel elle est calée**. Reproduit
+sur trois exécutions (impact 203, 207, 208 — arrêt toujours vers 184-185).
+
+**Ce que ça voudrait dire si c'est confirmé en jeu :** la killcam ne montre pas
+la mort. Elle montre les trois secondes qui la précèdent, ralentit une fraction
+de seconde, et s'arrête juste avant. Un défaut de cette taille aurait dû se voir
+à l'œil — donc soit il est propre au headless, soit il est masqué en jeu par le
+gel d'arrêt sur image (V2.1) qui suit, et que personne n'a distingué d'une
+killcam complète.
+
+**Pistes, dans l'ordre :** la borne `idx1 >= snapshots.size() - 1` de
+`get_next_frame` (le tampon contiendrait moins d'images que l'ancre ne
+l'indique), puis `stop_recording()` appelé avant que les images post-impact
+soient capturées.
+
+**À attraper dans `tools/test_rejeu.gd`**, qui teste la fenêtre de rejeu — pas
+dans le banc à deux instances, qui teste une sortie. Une assertion sur
+`Engine.time_scale` y serait instable par construction : verte ou rouge selon le
+moment de l'échantillon, pas selon le code.
+
+---
+
 ## Pièges connus — ne pas les redécouvrir
 
 ### Un percentile ne se mesure pas en un passage (2026-08-18)
