@@ -1975,6 +1975,14 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   défaut** — il apprend à ne plus lire les erreurs.
 
 **Cartes et géométrie**
+- **Une carte joueur d'Adrien porte le même identifiant que l'arène livrée**
+  (`00000001`). Le catalogue contient donc deux entrées de même `id`, et
+  `get_map()` rend **la première trouvée** — les cartes livrées étant scannées en
+  premier, l'arène standard masque la sienne. Relevé le 2026-08-18, **non
+  corrigé** : c'est une donnée sur le disque d'Adrien, pas un défaut de code, et
+  la corriger demande de décider quoi faire du fichier existant. L'identifiant
+  vient du **contenu** du fichier, pas de son nom — d'où la collision possible,
+  là où le slug est réservé par construction.
 - **Une variable typée `Dictionary` qui reçoit du JSON venu d'ailleurs jette au
   lieu de refuser.** `MapCodec.validate()` et `get_grid_size()` lisaient
   `grid_size` ainsi : un code où cette clé porte autre chose provoquait une
@@ -2009,9 +2017,15 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   la seconde correction invalidait une hypothèse écrite noir sur blanc dans le
   commentaire de la première.** Devant une fonction dont le commentaire dit
   « X s'en charge juste après », vérifier que X s'en charge toujours.
-  Trouvé par Adrien en jeu, invisible aux vingt-quatre suites : **les bancs
-  pressent PRÊT**, donc empruntent le chemin qui prépare la partie, jamais celui
-  où le client arrive pendant que l'hôte attend dans son salon.
+  Trouvé par Adrien en jeu. ⚠️ **La première rédaction de ce piège disait que les
+  bancs n'empruntaient jamais ce chemin — c'est faux.** Le banc à deux instances
+  le couvre depuis `1d84580` : il fait arriver le client pendant que l'hôte attend
+  dans son salon, puis presse PRÊT. Il n'a rien attrapé parce que **personne ne
+  l'a lancé entre le changement et le défaut** — il est hors du lanceur, pour des
+  raisons qui restent bonnes (deux processus, une session Epic).
+  La leçon exacte est donc : **un banc qui couvre un chemin ne protège que s'il
+  tourne à chaque changement de ce chemin.** Un banc manuel est une couverture
+  conditionnelle, pas une couverture.
 
 **Fin de match en ligne**
 - **`await RenderingServer.frame_post_draw` n'est JAMAIS émis en `--headless`.**
@@ -2184,8 +2198,16 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   est `git commit -- <chemins>`, qui ne commite que ce qu'on nomme, quoi qu'il y
   ait dans l'index. **Elle ne connaît cependant que les fichiers suivis** : sur un
   fichier neuf elle refuse (« pathspec did not match »), il faut `git add` d'abord
-  puis nommer la liste complète au commit. La protection reste entière, l'ordre
-  n'est pas facultatif.
+  puis nommer la liste complète au commit.
+  ⚠️ **Et elle ne protège que des fichiers, pas des lignes.** `git commit -- <chemin>`
+  commite l'état de l'**arbre de travail** pour ce chemin — donc *aussi* les
+  modifications non commitées d'une autre session dans le même fichier. C'est
+  arrivé **trois fois** le 2026-08-18 (`49a7b40`, `c01530d`, `2dcd37f`), chaque
+  fois en reprenant brièvement un fichier tenu par quelqu'un d'autre. Rien n'a été
+  perdu, mais trois commits portent du travail que leur message ne décrit pas.
+  **La seule parade réelle en arbre partagé : `git diff <chemin>` avant de
+  commiter, et le lire.** Prendre un fichier tenu par une autre session sans
+  regarder ce qu'il contient déjà revient à signer son travail.
 - **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
   commit qui suit part avec son message complet et son contenu amputé. Arrivé le
   2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
