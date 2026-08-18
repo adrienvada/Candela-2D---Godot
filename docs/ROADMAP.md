@@ -3162,7 +3162,20 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
     lien pendant que l'autre mesure encore — et l'assertion tombe non pas parce
     que la propriété est fausse, mais parce que le pair a disparu. Le mode
     nominal le savait déjà ; je ne l'ai pas appliqué au mien.
-  - Restent manuelles : les 6 autres familles de la
+  - **Famille 2 automatisée le 2026-08-18** (`run_duo.sh --killcam`) : ce que
+    l'adversaire fait **pendant votre killcam**. Deux exigences opposées encore :
+    son intention est **retenue** pendant le ralenti — rien ne bouge chez vous,
+    aucune manche ne démarre seule — et **n'est pas perdue** à la sortie.
+    - **Trois gates essayées avant la bonne, et les deux premières mesuraient
+      autre chose.** `not round_active` est vrai dès le **début** de la killcam :
+      le client pressait pendant son propre ralenti. `not _is_main_menu` est faux
+      pendant **tout** le match : l'attente rendait la main avant même la mort.
+      Seul `game_over` dit « ma killcam est finie ».
+    - **Un diagnostic pris pour une preuve, au passage :** le banc imprime le
+      libellé du salon à chaque appui, et cette ligne a été lue comme la preuve
+      qu'un chemin de menu avait été emprunté. Elle ne prouvait rien — c'était un
+      `print`. Une trace de diagnostic n'est pas un résultat.
+  - Restent manuelles : les 5 autres familles de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

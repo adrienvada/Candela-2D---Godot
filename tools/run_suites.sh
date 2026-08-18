@@ -130,6 +130,18 @@ else
   printf '%-28s ÉCHEC\n' "duo_pause"; fail=1
 fi
 
+# Famille 2 : ce que l'adversaire fait pendant votre killcam.
+#
+# Deux exigences opposées à nouveau : pendant le ralenti son intention est
+# RETENUE et non appliquée — rien ne bouge chez vous, aucune manche ne démarre
+# seule — mais à la sortie elle n'est pas PERDUE. Un changement d'arme appliqué
+# au milieu d'un ralenti couperait la killcam de celui qui regarde encore.
+if ./tools/run_duo.sh --killcam; then
+  printf '%-28s OK\n' "duo_killcam"
+else
+  printf '%-28s ÉCHEC\n' "duo_killcam"; fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

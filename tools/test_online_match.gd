@@ -49,7 +49,11 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host-pause"):
+	if _has("--host-killcam"):
+		await _run_host_killcam()
+	elif _has("--join-killcam"):
+		await _run_client_killcam()
+	elif _has("--host-pause"):
 		await _run_host_pause()
 	elif _has("--join-pause"):
 		await _run_client_pause()
@@ -354,6 +358,111 @@ func _run_host() -> void:
 ## le monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une sans
 ## l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
 ## le match, ou un joueur qui court encore pendant qu'il lit son menu.
+## Famille 2 de la checklist : **ce que l'adversaire fait pendant votre killcam
+## ne doit rien changer à votre écran — et ne doit rien perdre non plus.**
+##
+## Deux exigences opposées, comme la famille 1. Pendant le ralenti, l'intention du
+## client est **retenue** et non appliquée : rien ne bouge chez l'hôte, ni l'arme
+## de P2 ni le libellé du chrono. Mais à la sortie, **c'est le DERNIER choix** du
+## client qui vaut — pas le premier arrivé, pas rien.
+##
+## Le défaut que ça protège n'est pas cosmétique : un changement d'arme appliqué
+## au milieu d'un ralenti coupe la killcam de l'hôte, et une manche peut démarrer
+## seule pendant qu'il regarde encore.
+func _run_host_killcam() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active or _main.game_over, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+	print("KILLCAM: en cours")
+
+	# Le client va marteler « prêt » et changer d'arme pendant ce ralenti.
+	var arme_avant: int = _index_arme_p2()
+	await get_tree().create_timer(1.2).timeout
+	if _main._end_sequence_active:
+		_check("l'arme de P2 ne change pas pendant le ralenti",
+			_index_arme_p2() == arme_avant,
+			"%d → %d" % [arme_avant, _index_arme_p2()])
+		_check("aucune manche ne démarre pendant le ralenti", not _main.round_active)
+	else:
+		print("NOTE: le ralenti était déjà fini, contrôle du pendant non exercé")
+
+	# À la sortie, l'intention retenue doit être appliquée — et ce doit être la
+	# DERNIÈRE. Une intention perdue laisserait l'hôte attendre un adversaire qui
+	# s'est déjà déclaré trois fois.
+	if not await _await(func(): return not _main._end_sequence_active, 20.0):
+		_fail("la séquence de fin ne s'est jamais terminée")
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("l'intention du client n'est pas perdue en route",
+		_main.p2_ready_for_rematch or _main._pending_p2_weapon_idx >= 0
+		or _index_arme_p2() != arme_avant,
+		"prêt=%s pending=%d arme=%d" % [_main.p2_ready_for_rematch,
+			_main._pending_p2_weapon_idx, _index_arme_p2()])
+	await get_tree().create_timer(8.0).timeout
+	_quit(0)
+
+## L'indice de l'arme actuellement cochée pour P2, ou -1.
+func _index_arme_p2() -> int:
+	var b: BaseButton = _ui.p2_weapon_group.get_pressed_button()
+	return b.get_index() if b != null else -1
+
+## Le client de la famille 2 : il martèle son choix pendant la killcam de l'hôte.
+func _run_client_killcam() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-killcam", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	# **Attendre `game_over`, et rien d'autre.** Deux gates ont été essayées avant,
+	# fausses toutes les deux :
+	#
+	#   • `not round_active` — vrai dès le DÉBUT de la killcam, donc le client
+	#     pressait pendant son propre ralenti ;
+	#   • `not _ui._is_main_menu` — faux pendant TOUT le match, donc l'attente
+	#     rendait la main immédiatement, avant même la mort.
+	#
+	# `game_over` n'est posé qu'après la séquence de fin, juste avant l'écran de
+	# fin : c'est le seul état qui dise « ma killcam est finie ». C'est le
+	# scénario de la checklist — B a fini sa killcam avant A, et se déclare
+	# pendant que A regarde encore le ralenti.
+	if not await _await(func(): return _main.game_over, 30.0):
+		_fail("l'écran de fin ne s'est jamais ouvert côté client")
+		return
+	print("CLIENT: écran de fin ouvert, il martèle son choix")
+	# Trois déclarations d'affilée, arme différente à chaque fois : c'est la
+	# DERNIÈRE que l'hôte doit retenir.
+	var boutons: Array = _ui.p2_weapon_group.get_buttons()
+	for i in 3:
+		if boutons.size() > i:
+			(boutons[i] as BaseButton).button_pressed = true
+		_press_play()
+		await get_tree().create_timer(0.4).timeout
+	_check("le client a bien pu se déclarer", true)
+	await get_tree().create_timer(6.0).timeout
+	_quit(0)
+
 func _run_host_pause() -> void:
 	await _select_mode(true)
 	_ui._open_lobby()
