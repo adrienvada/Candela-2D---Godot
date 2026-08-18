@@ -222,6 +222,30 @@ Corollaire : **six familles couvertes par des assertions stables valent mieux qu
 huit dont trois qu'on apprendra à ne plus lire.** Une absence documentée n'est pas
 un trou.
 
+### Un test peut cacher une décision qu'on n'a pas prise
+
+**Écrire une assertion sur une question ouverte la tranche — et la rend
+invisible.** Plus personne ne sait qu'un choix a été fait ; on voit seulement
+qu'un test le vérifie. C'est le déguisement le plus difficile à refuser, parce
+qu'il prend la forme d'une **vertu** : de la couverture en plus.
+
+Le cas du 2026-08-18 : la famille 4 de
+[CHECKLIST_TESTS_EN_LIGNE.md](docs/CHECKLIST_TESTS_EN_LIGNE.md) attend que la
+killcam se termine en entier quand le pair disparaît ; `_on_peer_disconnected`
+la coupe. **Les deux comportements se défendent.** L'observable stable existait,
+le test était à une heure de travail, il aurait porté la couverture de sept
+familles à huit — et il aurait décidé, sans que quiconque l'ait demandé, comment
+le jeu se comporte quand un adversaire s'en va.
+
+**Le signe qui alerte :** on s'apprête à écrire un attendu qu'aucune décision
+n'appuie, et le code fait autre chose. Ce n'est pas un défaut à corriger, c'est
+**une question à poser**.
+
+**Où le signaler :** à côté de la ligne fautive, dans le document que quelqu'un
+lira **au moment où il en a besoin** — la checklist pour qui la déroule à la
+main, pas seulement la feuille de route. Le « suivant » n'est pas toujours un
+agent.
+
 ### Vérifier les craintes, pas seulement les affirmations
 
 **Une inquiétude corrigée vaut une correction : elle peut avoir empêché quelque
