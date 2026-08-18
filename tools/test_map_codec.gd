@@ -16,12 +16,48 @@ func _init() -> void:
 	_test_migration_v2()
 	_test_playability()
 	_test_builtin_maps()
+	_test_id_collision()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
+
+## Deux cartes ne doivent jamais partager un identifiant.
+##
+## Ce n'est pas théorique : importer le code de partage d'une arène **livrée** en
+## recopie l'identifiant, et le catalogue se retrouve avec deux entrées de même
+## id — `get_map()` rend alors la première trouvée, si bien que sélectionner
+## l'une charge l'autre. Une carte d'Adrien porte `00000001`, celui de l'arène
+## standard, arrivée exactement par ce chemin.
+##
+## La règle est exercée sur `id_collides()`, statique et sans disque : les suites
+## partagent le `user://` du jeu installé, et écrire un vrai fichier de carte pour
+## vérifier une règle de nommage serait payer cher une garantie faible.
+func _test_id_collision() -> void:
+	print("\n[Collision d'identifiants]")
+	var md: GDScript = load("res://map_data.gd")
+	var catalogue: Array = [
+		{"id": "00000001", "slug": "default"},
+		{"id": "00000002", "slug": "arene_circulaire"},
+		{"id": "1a0b2c3d", "slug": "cathedrale"},
+	]
+	_check("un identifiant libre ne collisionne pas",
+		not md.id_collides(catalogue, "deadbeef", "nouvelle"))
+	# LE cas qui a produit le défaut : un import qui recopie l'id d'une livrée.
+	_check("l'identifiant d'une carte livrée collisionne",
+		md.id_collides(catalogue, "00000001", "ma_copie"))
+	# Et celui qu'il ne faut PAS casser : réécrire sa propre carte garde son id,
+	# sans quoi chaque sauvegarde créerait une identité neuve.
+	_check("réécrire sa propre carte ne collisionne pas",
+		not md.id_collides(catalogue, "1a0b2c3d", "cathedrale"))
+	_check("un identifiant vide ne collisionne jamais",
+		not md.id_collides(catalogue, "", "nouvelle"))
+	# Une entrée malformée ne doit pas faire échouer la question posée.
+	_check("un catalogue bruité reste lisible",
+		md.id_collides([null, 42, {"id": "00000001", "slug": "default"}],
+			"00000001", "autre"))
 
 func _check(label: String, condition: bool, detail: String = "") -> void:
 	if condition:

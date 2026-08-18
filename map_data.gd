@@ -131,6 +131,30 @@ func _scan_dir(dir_path: String, source: String) -> Array[Dictionary]:
 ## Réservé aux cartes livrées : `res://assets/maps/` est en lecture seule et ses
 ## slugs sont donc stables, là où deux cartes peuvent partager un identifiant
 ## (celui-ci vient du contenu du fichier, pas de son nom).
+## L'identifiant est-il déjà porté par une carte AUTRE que celle-ci ?
+##
+## La comparaison se fait sur le slug, qui est l'identité de fichier : réécrire
+## `cathedrale.json` doit pouvoir garder son identifiant, alors qu'une carte
+## importée sous un autre nom ne le doit pas.
+##
+## Statique et sans état pour être exerçable sans toucher au disque — les suites
+## partagent le `user://` du jeu installé, et écrire un vrai fichier de carte pour
+## vérifier une règle de nommage serait payer cher une garantie faible.
+static func id_collides(catalog: Array, id: String, slug: String) -> bool:
+	if id.is_empty():
+		return false
+	for entry in catalog:
+		if not entry is Dictionary:
+			continue
+		var e: Dictionary = entry
+		if String(e.get("id", "")) == id and String(e.get("slug", "")) != slug:
+			return true
+	return false
+
+## Même question, posée au catalogue courant.
+func id_taken_by_other(id: String, slug: String) -> bool:
+	return id_collides(_catalog, id, slug)
+
 func get_map_by_slug(slug: String) -> Dictionary:
 	for entry in _catalog:
 		if String(entry.get("slug", "")) == slug:
@@ -211,7 +235,18 @@ func save_map(data: Dictionary, map_name: String, overwrite: bool = true) -> Dic
 	var out := data.duplicate(true)
 	out["name"] = clean_name
 	out["version"] = MapCodec.VERSION
-	if not out.has("id") or String(out.get("id", "")).is_empty():
+	# Un identifiant absent est tiré ; un identifiant **déjà pris par une autre
+	# carte** est retiré. Le second cas n'est pas théorique : importer le code de
+	# partage d'une arène livrée en recopie l'identifiant, et le catalogue se
+	# retrouve avec deux entrées de même id — `get_map()` rend alors la première
+	# trouvée, si bien que sélectionner l'une charge l'autre. Une carte d'Adrien
+	# porte ainsi `00000001`, celui de l'arène standard.
+	#
+	# On ne conserve donc l'identifiant fourni que s'il est libre : c'est ce qui
+	# permet à un ré-import de la MÊME carte de garder son identité, sans laisser
+	# deux cartes différentes la partager.
+	var fourni := String(out.get("id", ""))
+	if fourni.is_empty() or id_taken_by_other(fourni, slug):
 		out["id"] = MapCodec.generate_id()
 	if not out.has("created_utc"):
 		out["created_utc"] = Time.get_datetime_string_from_system(true)
