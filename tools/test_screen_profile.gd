@@ -361,11 +361,23 @@ func _test_prete() -> void:
 		screen._standing.text == String(identity.standing_label()), screen._standing.text)
 	_check("et prend la couleur du joueur", _color_of(screen._standing) == _theme.P1)
 
-	# L'édition du pseudo attend un point d'entrée serveur qui n'existe pas : le
-	# bouton est en place mais caché, donc hors d'atteinte du curseur. Un bouton
-	# visible qui échouerait vaudrait moins que pas de bouton du tout.
-	_check("le renommage se sait indisponible", not screen.can_rename())
-	_check("son bouton reste hors d'atteinte", not screen._btn_rename.visible)
+	# **Ce contrôle a été retourné le 2026-08-18.** Il affirmait l'inverse — « le
+	# renommage se sait indisponible », « son bouton reste hors d'atteinte » —
+	# parce qu'aucun point d'entrée serveur n'existait, et qu'un bouton visible qui
+	# échoue vaut moins que pas de bouton du tout.
+	#
+	# La fonction `rename` est déployée depuis. La raison d'origine reste juste,
+	# elle ne s'applique simplement plus : ce qui la faisait tenir a disparu.
+	# L'écrire ici plutôt que de supprimer le contrôle, parce qu'un test qui
+	# disparaît emporte la raison qu'il protégeait.
+	_check("le renommage est offert sur un profil prêt", screen.can_rename())
+	_check("et son bouton est atteignable", screen._btn_rename.visible)
+
+	# La condition, elle, tient toujours : sans identité prête, pas de pseudo à
+	# changer. C'est ce qui empêche le bouton de réapparaître pour rien.
+	_set_state(identity, "INITIALIZING")
+	_check("mais pas sur un profil qui s'identifie encore", not screen.can_rename())
+	_set_state(identity, "READY")
 
 # ---------------------------------------------------------------------------
 # ÉTAT 4 — ÉCHEC RÉSEAU

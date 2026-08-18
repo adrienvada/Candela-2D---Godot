@@ -1035,8 +1035,16 @@ est fait dans chaque cas.
 **Étape 6 — édition du pseudo.** 🟡 **Déployée le 2026-08-18** par Adrien —
 `rename_profile` en base, fonction `rename` en ligne, porte vérifiée (`401` sans
 jeton). Le nouveau plancher de rang est effectif en production dans la foulée :
-un débutant s'affiche **Aveugle I**. **Reste à câbler le champ dans l'écran du
-profil** — la raison d'attendre est levée.
+un débutant s'affiche **Aveugle I**. **Écran câblé le 2026-08-18** : le
+bouton MODIFIER s'ouvre sur une saisie préremplie du pseudo courant — on modifie
+un pseudo, on n'en saisit pas un nouveau — et la rangée remplace la ligne du
+pseudo plutôt que de s'ajouter dessous, pour que rien ne se déplace.
+
+`can_rename()` exige un profil **prêt** : une identité en cours n'a pas de pseudo
+à changer, et montrer le bouton donnerait une action qui échoue. Le contrôle qui
+affirmait l'inverse a été **retourné, pas supprimé** — il disait pourquoi le
+renommage était indisponible, et sa raison reste juste, elle ne s'applique
+simplement plus. **Étape close.**
 
 Le pseudo est la **seule** chose qu'un joueur peut changer de son profil : ni son
 identifiant, ni son code de récupération, ni son classement — tout le reste est

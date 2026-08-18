@@ -52,6 +52,11 @@ var _status: Label
 var _explain: Label
 var _nickname: Label
 var _btn_rename: Button
+var _rename_row: HBoxContainer
+var _rename_input: LineEdit
+var _btn_rename_ok: Button
+var _btn_rename_cancel: Button
+var _rename_feedback: Label
 var _standing: Label
 var _code: Label
 var _btn_copy: Button
@@ -85,13 +90,18 @@ func focus_seed() -> Control:
 		return _btn_link
 	return null
 
-## Le renommage attend un point d'entrée serveur qui n'existe pas : les
-## fonctions distantes se limitent à identify / link / report / standing, et le
-## pseudo est tiré par `identify`. Rend donc toujours faux aujourd'hui — c'est
-## le seul endroit à ouvrir le jour où la fonction existera, la place étant déjà
-## prise dans la mise en page.
+## Le renommage a attendu un point d'entrée serveur jusqu'au 2026-08-18 ; la
+## fonction `rename` est déployée depuis, et c'est ici que la porte s'ouvre —
+## la place était réservée dans la mise en page depuis l'origine.
+##
+## Deux conditions, et la seconde n'est pas décorative : un profil non identifié
+## n'a pas de pseudo à changer, et une installation sans classement n'a pas de
+## `rename()` à appeler. Montrer le bouton dans l'un ou l'autre cas donnerait une
+## action qui échoue — indiscernable d'un jeu cassé.
 func can_rename() -> bool:
-	return false
+	var identity := _identity()
+	return identity != null and _state() == RANKED.State.READY \
+		and identity.has_method("rename")
 
 ## Y a-t-il un code à montrer ? Un profil non identifié n'en a pas, et afficher
 ## un gabarit de tirets à sa place vaut mieux qu'un code inventé que le joueur
@@ -155,7 +165,39 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_btn_rename = _make_button("MODIFIER", MenuTheme.P1)
 	_btn_rename.custom_minimum_size = Vector2(120, 34)
 	_btn_rename.hide()
+	_btn_rename.pressed.connect(_open_rename)
 	name_row.add_child(_btn_rename)
+
+	# La saisie prend la place du pseudo plutôt que de s'ajouter en dessous : on
+	# modifie ce qu'on regarde, et la ligne ne se déplace pas au moment où l'on
+	# bascule de l'un à l'autre.
+	_rename_row = HBoxContainer.new()
+	_rename_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_rename_row.add_theme_constant_override("separation", MenuTheme.GAP_S)
+	_rename_row.hide()
+	body.add_child(_rename_row)
+
+	_rename_input = LineEdit.new()
+	_rename_input.custom_minimum_size = Vector2(300, 40)
+	_rename_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rename_input.max_length = RecoveryCode.NICKNAME_MAX
+	_rename_input.text_submitted.connect(func(_t: String) -> void: _request_rename())
+	_rename_row.add_child(_rename_input)
+
+	_btn_rename_ok = _make_button("VALIDER", MenuTheme.P1)
+	_btn_rename_ok.pressed.connect(_request_rename)
+	_rename_row.add_child(_btn_rename_ok)
+
+	_btn_rename_cancel = _make_button("ANNULER", MenuTheme.DIM)
+	_btn_rename_cancel.pressed.connect(_close_rename)
+	_rename_row.add_child(_btn_rename_cancel)
+
+	_rename_feedback = Label.new()
+	_rename_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rename_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rename_feedback.add_theme_font_size_override("font_size", 13)
+	_rename_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
+	body.add_child(_rename_feedback)
 
 	# Le classement lui-même reste vide tant qu'aucun match en ligne n'a été
 	# joué : afficher « 1000 points » à quelqu'un qui n'a jamais joué serait un
@@ -298,8 +340,11 @@ func refresh() -> void:
 
 	var nick := _nickname_text()
 	_nickname.text = nick
-	_nickname.visible = not nick.is_empty()
-	_btn_rename.visible = can_rename()
+	# Pendant la saisie, ni le pseudo ni le bouton : la rangée les remplace, et
+	# les laisser afficherait deux fois la même chose dont une périmée.
+	var en_saisie := _rename_row != null and _rename_row.visible
+	_nickname.visible = not nick.is_empty() and not en_saisie
+	_btn_rename.visible = can_rename() and not en_saisie
 
 	var standing := _standing_text()
 	_standing.text = standing
@@ -433,6 +478,44 @@ static func caret_for(kept: int) -> int:
 		return 0
 	return kept + (kept - 1) / RecoveryCode.GROUP
 
+## Ouvre la saisie, préremplie du pseudo courant.
+##
+## Préremplir plutôt que vider : on **modifie** un pseudo, on n'en saisit pas un
+## nouveau. Un champ vide obligerait à retaper ce qu'on voulait garder, et la
+## plupart des renommages sont des retouches.
+func _open_rename() -> void:
+	_rename_input.text = _nickname_text()
+	_rename_feedback.text = ""
+	_rename_row.show()
+	_nickname.hide()
+	_btn_rename.hide()
+	_rename_input.grab_focus()
+	_rename_input.select_all()
+
+func _close_rename() -> void:
+	_rename_row.hide()
+	_rename_feedback.text = ""
+	refresh()
+
+func _request_rename() -> void:
+	var identity := _identity()
+	if identity == null or not identity.has_method("rename"):
+		return
+	# Posé AVANT l'appel : `rename()` refuse localement un pseudo vide ou inchangé
+	# et émet son verdict de façon synchrone. L'ordre inverse écraserait le refus
+	# par un « en cours » qui ne finirait jamais — même piège que le rattachement.
+	_rename_feedback.text = "Enregistrement…"
+	_rename_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
+	identity.rename(_rename_input.text)
+
+func _on_rename_completed(success: bool, message: String) -> void:
+	_rename_feedback.text = message
+	_rename_feedback.add_theme_color_override("font_color",
+		MenuTheme.GOLD if success else MenuTheme.WARN)
+	if success:
+		_rename_row.hide()
+	refresh()
+
 func _request_link() -> void:
 	var identity := _identity()
 	if identity == null:
@@ -500,6 +583,10 @@ func _bind_identity() -> void:
 	# laisserait l'ancien pseudo et l'ancien code à l'écran, alors même que le
 	# profil a changé.
 	identity.link_completed.connect(_on_link_completed)
+	# Même raison que ci-dessus : un renommage réussi ne change pas l'état, donc
+	# n'émet aucun `state_changed` — l'écran garderait l'ancien pseudo.
+	if identity.has_signal("rename_completed"):
+		identity.rename_completed.connect(_on_rename_completed)
 	_bound = identity
 
 func _unbind() -> void:
@@ -509,6 +596,9 @@ func _unbind() -> void:
 	_bound.state_changed.disconnect(_on_state_changed)
 	_bound.standing_changed.disconnect(refresh)
 	_bound.link_completed.disconnect(_on_link_completed)
+	if _bound.has_signal("rename_completed") \
+			and _bound.rename_completed.is_connected(_on_rename_completed):
+		_bound.rename_completed.disconnect(_on_rename_completed)
 	_bound = null
 
 func _on_state_changed(_state: int) -> void:
