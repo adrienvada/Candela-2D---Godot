@@ -35,7 +35,9 @@ func _ready() -> void:
 	_ui = _main.get_node("UI")
 
 	# L'écran partagé et le LAN n'ont rien à attendre d'Epic.
-	var needs_eos := not _lan and not _has("--local")
+	# L'entraînement est solitaire : il n'a pas plus besoin d'Epic que l'écran
+	# partagé, et l'attendre ferait pendre le banc trente secondes pour rien.
+	var needs_eos := not _lan and not _has("--local") and not _has("--training")
 	if needs_eos:
 		if not await _await(func(): return NetworkManager.eos_state == NetworkManager.EosState.READY \
 				or NetworkManager.eos_state == NetworkManager.EosState.FAILED, EOS_READY_TIMEOUT):
@@ -52,10 +54,91 @@ func _ready() -> void:
 		await _run_client()
 	elif _has("--local"):
 		await _run_local()
+	elif _has("--training"):
+		await _run_training()
 	else:
-		print("Usage: --host | --join <CODE|IP> | --local")
+		print("Usage: --host | --join <CODE|IP> | --local | --training")
 		_quit(2)
 
+
+## L'entraînement solitaire. Ce que ce mode protège, dans l'ordre :
+##
+##   • **rien n'est archivé** — un entraînement n'est pas un match, et le journal
+##     local est la source du rejeu vers le classement. Une seule ligne écrite
+##     ici polluerait un classement que personne ne saurait plus corriger ;
+##   • la cible se tient au point d'apparition de J2, pas devant J1 : c'est ce
+##     qui rend l'exercice transférable à un vrai premier échange ;
+##   • la carte est celle par défaut, quelle qu'ait été la dernière sélection ;
+##   • on peut tirer alors qu'aucune manche n'est active — sans quoi
+##     l'entraînement serait un décor.
+func _run_training() -> void:
+	# La sélection est délibérément salie avant : on vérifie que l'entraînement
+	# la remet à la carte par défaut au lieu de la subir.
+	var cartes: Array = MapData.list_maps()
+	for carte in cartes:
+		var id := String((carte as Dictionary).get("id", ""))
+		if id != MapData.DEFAULT_MAP_ID:
+			MapData.select_map(id)
+			break
+	var journal_avant := _history_size()
+
+	_ui.hub.push(_ui.SCREEN_TRAINING)
+	_check("l'écran est bien celui de l'entraînement",
+		_ui.hub.current_id() == _ui.SCREEN_TRAINING)
+	_ui.training_requested.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var ids: Array[String] = []
+	for c in MapData.list_maps():
+		ids.append(String((c as Dictionary).get("id", "?")))
+	print("CATALOGUE: %s | DEFAUT: %s | SELECTION: %s"
+		% [", ".join(ids), MapData.DEFAULT_MAP_ID, MapData.selected_map_id])
+	# `DEFAULT_MAP_ID` est un slug ; la sélection retient un identifiant. Les
+	# comparer directement était l'erreur que ce banc a précisément servi à
+	# trouver dans `map_data.gd` — on passe donc par le catalogue.
+	var defaut: Dictionary = MapData.get_map_by_slug(MapData.DEFAULT_MAP_ID)
+	_check("l'arène livrée par défaut est au catalogue", not defaut.is_empty())
+	_check("la carte revient à celle par défaut",
+		MapData.selected_map_id == String(defaut.get("id", "")),
+		"%s attendu %s" % [MapData.selected_map_id, defaut.get("id", "?")])
+	_check("aucune manche n'est active", not _main.round_active)
+	_check("le bac à sable est armé", _main.sandbox_mode)
+	_check("la cible est visible", _main.training_target.visible)
+	# Le contrôle qui donne son sens au placement : la cible occupe la place de
+	# l'adversaire, à quelques pixels près.
+	var spawn_j2: Vector2 = _main._get_spawn_position(1)
+	_check("la cible est au point d'apparition de J2",
+		_main.training_target.global_position.distance_to(spawn_j2) < 1.0,
+		"%s vs %s" % [_main.training_target.global_position, spawn_j2])
+	_check("le joueur 2 a quitté la scène", not _main.p2.visible)
+	_check("aucun forfait n'est en attente", not _main._forfeit_pending)
+	_check("aucun identifiant de match n'est armé", _main._match_id.is_empty())
+
+	# Tirer doit marcher hors manche, sinon l'entraînement est un décor.
+	var balles_avant: int = _main.bullet_container.get_child_count()
+	_main.p1.shoot()
+	await get_tree().process_frame
+	_check("on peut tirer pendant l'entraînement",
+		_main.bullet_container.get_child_count() > balles_avant,
+		"%d → %d" % [balles_avant, _main.bullet_container.get_child_count()])
+
+	await get_tree().create_timer(1.0).timeout
+	_check("le journal local n'a pas bougé",
+		_history_size() == journal_avant,
+		"%d → %d" % [journal_avant, _history_size()])
+	_quit(0)
+
+## Taille du journal de matchs, ou -1 s'il n'existe pas encore.
+func _history_size() -> int:
+	if not FileAccess.file_exists(MatchRecord.HISTORY_PATH):
+		return -1
+	var f := FileAccess.open(MatchRecord.HISTORY_PATH, FileAccess.READ)
+	if f == null:
+		return -1
+	var n := f.get_length()
+	f.close()
+	return n
 
 ## L'écran partagé ne doit rien devoir au réseau : le bloc lobby disparaît, les
 ## deux vues restent, et rien n'est envoyé nulle part.

@@ -51,6 +51,12 @@ run test_netcode res://tools/test_netcode.tscn
 # protocole dans docs/PROTOCOLE_TEST_EOS.md.
 run test_fin_de_match res://tools/test_online_match.tscn -- --local
 
+# L'entraînement solitaire : une seule instance, aucun réseau. Ce qu'il protège
+# avant tout, c'est que RIEN n'y soit archivé — le journal local est la source du
+# rejeu vers le classement, et une ligne écrite ici polluerait un classement que
+# personne ne saurait plus corriger.
+run test_entrainement res://tools/test_online_match.tscn -- --training
+
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué ---"; exit 1
 fi

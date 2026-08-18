@@ -126,8 +126,30 @@ func _scan_dir(dir_path: String, source: String) -> Array[Dictionary]:
 # ---------------------------------------------------------------------------
 
 ## Choisit la carte active pour les prochains matchs. Conservée toute la session.
+## Une carte par son SLUG — le nom de fichier, sans extension.
+##
+## Réservé aux cartes livrées : `res://assets/maps/` est en lecture seule et ses
+## slugs sont donc stables, là où deux cartes peuvent partager un identifiant
+## (celui-ci vient du contenu du fichier, pas de son nom).
+func get_map_by_slug(slug: String) -> Dictionary:
+	for entry in _catalog:
+		if String(entry.get("slug", "")) == slug:
+			return entry
+	return {}
+
 func select_map(map_id: String) -> bool:
 	var entry := get_map(map_id)
+	# `DEFAULT_MAP_ID` est un SLUG, pas un identifiant : l'arène livrée s'appelle
+	# `default.json` mais porte `id: "00000001"` dans son contenu. La chercher par
+	# identifiant ne la trouvait donc jamais, et tous les replis « retour à la
+	# carte par défaut » échouaient en silence — le jeu paraissait pourtant y être
+	# puisque `selected_map_id` vaut « default » à l'initialisation.
+	#
+	# Le slug est d'ailleurs la bonne clé pour une carte livrée : il vient du nom
+	# de fichier, réservé par construction, là où l'identifiant vient du contenu
+	# et peut entrer en collision avec celui d'une carte joueur.
+	if entry.is_empty() and map_id == DEFAULT_MAP_ID:
+		entry = get_map_by_slug(DEFAULT_MAP_ID)
 	if entry.is_empty():
 		# Repli sur l'arène standard plutôt que de laisser le jeu sans carte.
 		if map_id != DEFAULT_MAP_ID:
