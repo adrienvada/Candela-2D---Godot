@@ -70,9 +70,25 @@ menus.
    dans une copie du projet et lancer les deux. Attendu — un refus à la porte avec
    un message clair, **pas** un « salon introuvable ».
 
-**Et hors de ce document, trente secondes :** vérifier **Échap** et **F3** en jeu.
-Trois tentatives pilotées ont échoué sans conclure — c'est le dernier contrôle
-qu'aucun agent ne sait faire.
+## Échap et F3 — ✅ vérifiés à la main le 2026-08-18
+
+Trois tentatives pilotées avaient échoué sans conclure : les frappes synthétiques
+atteignent un champ de texte, jamais une action de l'Input Map. Adrien a fait les
+six gestes ; **les six répondent.**
+
+| Geste | Attendu | Résultat |
+|---|---|---|
+| Échap à l'accueil | Rien — on ne quitte pas le jeu par Échap | ✅ |
+| Échap en profondeur de menu | Remonte d'un cran, jusqu'à l'accueil | ✅ |
+| Échap en match | Ouvre la pause | ✅ |
+| Échap, pause ouverte | Reprend la partie | ✅ |
+| Échap, options ouvertes depuis la pause | Revient à la pause | ✅ |
+| F3 en jeu | Ouvre puis referme le panneau de diagnostic | ✅ |
+
+Deux choses à retenir pour qui referait ce test. **Échap n'a pas un rôle mais
+quatre**, et un seul essai ne conclut donc rien — c'est ce qui a fait traîner ce
+contrôle. Et **F3 est lu comme touche PHYSIQUE**, hors Input Map : sur un Mac il
+faut souvent `fn + F3`, macOS captant F3 pour Mission Control avant le jeu.
 
 ## Ce que le bandeau doit annoncer
 
