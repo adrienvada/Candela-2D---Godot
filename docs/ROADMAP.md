@@ -2893,10 +2893,26 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
 
 **Tests**
 
-- La mécanique centrale du jeu — voir et être vu dans le noir — n'a **aucun
-  test automatique** : portée et cône de torche, révélation au tir, occlusion
-  effective. Les suites s'arrêtent à la géométrie des occluders, très en amont
-  du gameplay.
+- ~~La mécanique centrale du jeu — voir et être vu dans le noir — n'a **aucun
+  test automatique**.~~ **Ouvert le 2026-08-16, fermé le 2026-08-18** par
+  `tools/test_vision.gd`. Trente suites couvraient le codec, les menus, le
+  réseau et le classement ; la seule chose dont dépend l'intérêt du jeu ne
+  l'était pas.
+  - **Le cône** est sorti de `_check_dazzle` vers `vision.gd` — sans dépendance,
+    donc testable en `--script`. Le `0.866` y était écrit en dur, deux fois,
+    sans dire qu'il valait 30° : c'est un **réglage d'équilibre** (un cône plus
+    large rend la torche moins coûteuse à allumer), il porte maintenant un nom
+    et deux tests l'encadrent à 29° et 31°.
+  - **L'occlusion** est vérifiée dans un vrai monde physique bâti par
+    `MapGeometry` : un mur arrête le faisceau, une **fosse le laisse passer**
+    (décision de conception — « on peut éblouir son adversaire par-dessus un
+    gouffre ») tout en arrêtant le joueur.
+  - Le **contre-test** compte autant que le test : sans « sans mur entre eux, le
+    faisceau passe », un masque de collision erroné bloquerait tout, y compris
+    le vide, et le premier contrôle passerait quand même.
+  - Reste non couvert : la **portée** de la torche et la révélation au tir — ce
+    sont des propriétés du rendu (Light2D, énergie, texture), pas de la
+    géométrie, et le headless n'en dit rien.
 - Les transitions d'état en ligne (les 8 familles de la
   [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md)) ne sont
   couvertes que manuellement — c'est la zone la plus régressive d'un jeu

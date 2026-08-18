@@ -54,6 +54,9 @@ var _mot_de_serie: String = ""
 ## La comptabilité de la série vit dans son propre fichier : elle ne dépend ni du
 ## réseau ni de l'audio, et doit rester testable sans eux.
 const SerieDeSession := preload("res://serie_de_session.gd")
+## La règle du faisceau vit à part pour la même raison : elle doit se tester sans
+## le reste du jeu.
+const Vision := preload("res://vision.gd")
 
 # Manches gagnées dans le match en cours. En BO1 elles retombent à zéro à
 # chaque fin de match ; elles existent pour que les formats longs s'ajoutent
@@ -1119,8 +1122,8 @@ func _check_dazzle(delta: float):
 	var light_mask := MapGeometry.WALL_LAYER
 
 	if p1.flashlight_on:
-		var p1_to_p2 = p1.global_position.direction_to(p2.global_position)
-		if p1.global_transform.x.dot(p1_to_p2) > 0.866:
+		if Vision.dans_le_cone(p1.global_transform.x, p1.global_position,
+				p2.global_position):
 			var q = PhysicsRayQueryParameters2D.create(
 				p1.global_position, p2.global_position, light_mask)
 			q.exclude = [p1.get_rid()]
@@ -1129,8 +1132,8 @@ func _check_dazzle(delta: float):
 				p2.apply_dazzle(0.5 * delta)
 
 	if p2.flashlight_on:
-		var p2_to_p1 = p2.global_position.direction_to(p1.global_position)
-		if p2.global_transform.x.dot(p2_to_p1) > 0.866:
+		if Vision.dans_le_cone(p2.global_transform.x, p2.global_position,
+				p1.global_position):
 			var q = PhysicsRayQueryParameters2D.create(
 				p2.global_position, p1.global_position, light_mask)
 			q.exclude = [p2.get_rid()]
