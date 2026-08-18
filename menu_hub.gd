@@ -297,6 +297,9 @@ func _apply(direction: float) -> void:
 	target.show()
 
 	_title_label.text = String(_titles.get(id, id)).to_upper()
+	# La sélection ne survit pas au changement d'écran : elle désignerait une
+	# entrée d'un autre écran, et le cadre montrerait ce qu'on vient de quitter.
+	_selected_entry = null
 	_show_aside(id)
 
 	if direction != 0.0:
@@ -348,6 +351,34 @@ func _reset_transform(body: Control) -> void:
 # ---------------------------------------------------------------------------
 # PANNEAU DE DROITE
 # ---------------------------------------------------------------------------
+
+## L'entrée qui commande le cadre de droite. Le survol la laisse intacte.
+var _selected_entry: Button = null
+
+## Sélectionner : le cadre suit, et **reste** jusqu'à la prochaine sélection.
+func _select_entry(btn: Button) -> void:
+	_selected_entry = btn
+	_show_entry(btn)
+
+## Survoler : le cadre montre, sans que le choix bouge.
+func _preview_entry(btn: Button) -> void:
+	_show_entry(btn)
+
+## La souris s'en va : on remet ce que la sélection commandait. Retomber sur le
+## défaut de l'écran effacerait un choix que le joueur vient de faire.
+func _restore_selection() -> void:
+	if is_instance_valid(_selected_entry):
+		_show_entry(_selected_entry)
+	else:
+		_show_aside(current_id())
+
+func _show_entry(btn: Button) -> void:
+	var d: Variant = _entry_details.get(btn, null)
+	if not d is Dictionary:
+		return
+	var e: Dictionary = d
+	show_detail(String(e.get("titre", "")), String(e.get("texte", "")),
+		String(e.get("panneau", "")))
 
 ## Contenu par défaut de l'écran courant : ce qu'on lit quand rien n'est survolé.
 func _show_aside(id: String) -> void:
@@ -440,11 +471,30 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("disabled", normal)
 
+	# **Survol et sélection ne se ressemblent plus.** Ils portaient le même
+	# `StyleBoxFlat` : impossible de savoir, en regardant l'écran, laquelle des
+	# deux entrées éclairées était celle qui commande le cadre de droite. À la
+	# manette la question ne se pose pas — parcourir sélectionne — mais à la souris
+	# le curseur passe sur des entrées qu'il ne choisit pas.
+	#
+	# Le survol reste une lueur : bordure teintée, fond à peine coloré. La
+	# sélection est franche — bordure épaisse et fond deux fois plus dense — parce
+	# que c'est elle qui décide de ce qu'on lit à droite.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = accent
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.09)
+	hover.border_color = Color(accent.r, accent.g, accent.b, 0.55)
+	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.06)
 	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
+
+	var focus := normal.duplicate() as StyleBoxFlat
+	focus.border_color = accent
+	focus.set_border_width_all(2)
+	focus.bg_color = Color(accent.r, accent.g, accent.b, 0.16)
+	btn.add_theme_stylebox_override("focus", focus)
+	# Godot dessine `hover` par-dessus `focus` quand la souris passe sur l'entrée
+	# sélectionnée : sans cette variante, sélectionner puis survoler ferait
+	# **régresser** l'entrée vers l'apparence la plus faible des deux.
+	btn.add_theme_stylebox_override("hover_pressed", focus)
+	btn.add_theme_stylebox_override("focus_hover", focus)
 	btn.add_theme_stylebox_override("pressed", hover)
 
 	var row := HBoxContainer.new()
@@ -497,8 +547,16 @@ func make_entry(label: String, detail: String, target: String = "",
 	# galerie sous une entrée grisée laisserait croire qu'elle est utilisable.
 	var vitrine := "" if btn.disabled else panel
 	_entry_details[btn] = {"titre": titre, "texte": texte, "panneau": vitrine}
-	btn.focus_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
-	btn.mouse_entered.connect(func() -> void: show_detail(titre, texte, vitrine))
+	# **La sélection fige, le survol ne fait que passer.** Deux gestes distincts
+	# pour deux intentions distinctes : on choisit avec le curseur — manette ou
+	# clavier — et on regarde avec la souris. Sans cette distinction, promener la
+	# souris effaçait ce qu'on venait de sélectionner, et le cadre de droite ne
+	# répondait plus qu'au dernier mouvement, jamais à la décision.
+	btn.focus_entered.connect(func() -> void: _select_entry(btn))
+	btn.mouse_entered.connect(func() -> void: _preview_entry(btn))
+	# Au départ de la souris, le cadre revient à la sélection — et non au défaut de
+	# l'écran, qui effacerait le choix en cours.
+	btn.mouse_exited.connect(func() -> void: _restore_selection())
 
 	# M8 lit cette marque pour ne tirer que sur le geste qui engage une partie.
 	# Le gras la porte à l'œil, la marque la porte au code : les deux naissent
