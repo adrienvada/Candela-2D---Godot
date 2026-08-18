@@ -61,3 +61,35 @@ static func format(code: String) -> String:
 		groups.append(code.substr(index, GROUP))
 		index += GROUP
 	return "-".join(groups)
+
+# ---------------------------------------------------------------------------
+# PSEUDO
+# ---------------------------------------------------------------------------
+
+## Longueur maximale d'un pseudo — la même qu'en base (`nickname_length`) et que
+## `NICKNAME_MAX` côté serveur.
+const NICKNAME_MAX := 24
+
+## Nettoie une saisie de pseudo — miroir exact de `sanitizeNickname` dans
+## `supabase/functions/_shared/recovery_code.ts`.
+##
+## Le pseudo est nettoyé **deux fois**, ici et là-bas, et les deux se justifient
+## séparément : le client nettoie pour que le joueur **voie** ce qu'il obtiendra,
+## le serveur nettoie parce qu'il ne fait autorité sur rien de ce qui lui arrive.
+## Le risque du doublon est qu'ils divergent — le joueur se croirait alors appelé
+## autrement qu'il ne l'est, et ne s'en apercevrait que sur l'écran de fin de son
+## adversaire. D'où le voisinage avec `sanitize()` : le fichier serveur range ses
+## deux nettoyages ensemble, celui-ci fait de même, et une suite les compare cas
+## par cas.
+##
+## Les caractères de contrôle deviennent des espaces plutôt que de disparaître :
+## les retirer collerait deux mots que le joueur avait séparés.
+static func sanitize_nickname(raw: String) -> String:
+	var propre := ""
+	for c in raw:
+		var point := c.unicode_at(0)
+		propre += " " if point < 32 or point == 127 else c
+	while propre.contains("  "):
+		propre = propre.replace("  ", " ")
+	propre = propre.strip_edges()
+	return propre.substr(0, NICKNAME_MAX) if propre.length() > NICKNAME_MAX else propre

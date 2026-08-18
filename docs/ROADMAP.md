@@ -1015,9 +1015,45 @@ Classement (l'Edge Function `standing` renvoie déjà le top 10), entraînement
 existe déjà). Les trois sont surtout un travail d'affichage : le travail de fond
 est fait dans chaque cas.
 
-**Étape 6 — édition du pseudo.**
-`nickname` existe côté base et n'a aucune interface. Petite étape, mais elle
-touche à une écriture serveur : elle vient après le reste.
+**Étape 6 — édition du pseudo.** 🟡 Écrite et testée, **non déployée**.
+
+Le pseudo est la **seule** chose qu'un joueur peut changer de son profil : ni son
+identifiant, ni son code de récupération, ni son classement — tout le reste est
+dérivé ou constitutif. C'est ce qui rend l'étape petite.
+
+Livré le 2026-08-18 :
+
+- `supabase/migrations/20260818020000_rename_profile.sql` — `rename_profile()`,
+  qui **renomme par le PUID et lui seul**. Passer un identifiant de profil
+  laisserait renommer celui d'un autre à qui saurait le deviner ; le jeton Epic,
+  lui, ne prouve qu'une chose, et c'est la bonne. Ensemble vide en cas d'échec,
+  comme `link_profile` et pour la même raison.
+- `supabase/functions/rename/index.ts` — refuse un pseudo vide plutôt que de
+  retomber sur un « Joueur-XXXX » : le joueur croirait avoir renommé et
+  découvrirait autre chose sur l'écran de fin de son adversaire.
+- `RankedIdentity.rename()` et le signal `rename_completed`, calqués sur `link`.
+  Un pseudo identique à l'actuel n'entraîne aucun aller-retour — afficher
+  « enregistré » pour un changement qui n'en est pas un ne veut rien dire.
+
+**Le nettoyage du pseudo est en double, et c'est voulu.** Le client nettoie pour
+que le joueur **voie** ce qu'il obtiendra, le serveur nettoie parce qu'il ne fait
+autorité sur rien de ce qui lui arrive, et la base refuse parce qu'elle est la
+dernière ligne. Le risque du doublon est la divergence : le joueur se croirait
+appelé autrement qu'il ne l'est, et ne s'en apercevrait que sur l'écran de fin de
+son adversaire. D'où `RecoveryCode.sanitize_nickname()` — rangé **à côté** de
+`sanitize()`, exactement comme le serveur range ses deux nettoyages dans le même
+fichier — et `tools/test_pseudo.gd`, qui rejoue cas par cas les assertions de
+`recovery_code_test.ts`.
+
+#### Ce qui reste
+
+**Le déploiement**, qui demande Adrien : `supabase db push` puis
+`supabase functions deploy rename`. Rien n'est déployé — la fonction répondrait
+404 aujourd'hui, et c'est pour cela que l'écran n'est pas encore câblé.
+
+**Puis le champ dans l'écran du profil.** La place y est réservée depuis le début.
+Le câbler avant le déploiement donnerait un bouton qui échoue, ce qui ne se
+distingue pas d'un jeu cassé.
 
 ---
 
@@ -1811,6 +1847,13 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   (vérifié par Adrien) : cela ressemble à un artefact de headless, ce n'est pas
   établi. Relevé le 2026-08-18, non corrigé.
 
+**GDScript — chaînes**
+- **`\u0000` dans un littéral GDScript ne donne pas un NUL** : l'analyseur le
+  remplace par U+FFFD, qui n'est pas un caractère de contrôle. Recopier mot pour
+  mot le cas de test serveur (`sanitizeNickname("Va\u0000da")`) fait donc échouer
+  une fonction pourtant correcte. Relevé le 2026-08-18 en écrivant le miroir de
+  `recovery_code_test.ts` ; `\u0001` passe par la même branche et s'écrit, lui.
+
 **Tests headless**
 - **Un lot de suites lancé pendant qu'une autre session écrit ne prouve rien —
   ni en vert, ni en rouge.** Le 2026-08-18, `test_pause_menu` est sortie en échec
@@ -2305,7 +2348,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
 | 4 | **Écran historique** (Phase 5, étape 5) | `match_history_view.gd` lit déjà le journal et rend des lignes prêtes à afficher, avec 122 assertions. Travail d'affichage. |
 | 5 | **Affichage du rang en jeu** (Phase 6) | `rankOf` est déployée et `standing` rend déjà la catégorie. Il reste à la montrer. |
-| 6 | **Édition du pseudo** (Phase 5, étape 6) | Demande une Edge Function nouvelle — écrite, testée hors ligne et déployée sans intervention, comme les quatre précédentes. |
+| 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
 | 7 | **Rejouer le journal local** | `match_history.json` garde tout ce que le réseau a perdu ; rien ne le remonte encore. |
 | 8 | **Déblocage d'armes, côté interface** (Phase 7) | Armes verrouillées visibles et grisées, avec la raison. `game_state.gd` est libre : plus aucune session parallèle. |
 | 9 | **Vagues de game feel procédurales** (V3, V5, V6) | Tout ce qui n'est pas marqué *assets* se fait sans rien attendre. |

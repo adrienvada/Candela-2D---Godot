@@ -20,6 +20,7 @@ const FUNCTIONS_PATH := "/functions/v1/"
 
 const ENDPOINT_IDENTIFY := "identify"
 const ENDPOINT_LINK := "link"
+const ENDPOINT_RENAME := "rename"
 const ENDPOINT_REPORT := "report"
 const ENDPOINT_STANDING := "standing"
 
@@ -28,10 +29,11 @@ const ENDPOINT_STANDING := "standing"
 ## effacé : trois tentatives espacées valent mieux qu'une.
 ##
 ## Le filet de sécurité reste `user://match_history.json`, écrit avant tout
-## envoi : ce qui n'atteint pas le serveur n'est pas perdu pour autant, et une
-## étape ultérieure pourra rejouer le journal.
+## envoi : ce qui n'atteint pas le serveur n'est pas perdu pour autant, et
+## `replay_local_journal()` le rejoue à l'identification suivante.
 const REPORT_ATTEMPTS := 3
 const REPORT_RETRY_DELAY := 4.0
+
 
 ## Une Edge Function froide met quelques secondes à démarrer ; au-delà, c'est
 ## qu'elle ne répondra pas.
@@ -89,6 +91,9 @@ signal standing_changed
 signal profile_changed
 ## Issue d'un rattachement demandé par le joueur, avec le message à lui montrer.
 signal link_completed(success: bool, message: String)
+## Issue d'un changement de pseudo. Même forme que `link_completed` :
+## l'écran qui a lancé la demande est le seul à devoir en connaître le sort.
+signal rename_completed(success: bool, message: String)
 
 var _project_url: String = ""
 var _publishable_key: String = ""
@@ -205,6 +210,44 @@ func link(raw_code: String) -> bool:
 		link_completed.emit(false, "Requête de rattachement impossible.")
 		return false
 	return true
+
+## Change le pseudo du profil de cette machine.
+##
+## Le pseudo est **la seule chose** qu'un joueur peut changer de son profil : ni
+## son identifiant, ni son code de récupération, ni son classement — tout le
+## reste est dérivé ou constitutif.
+##
+## Le PUID n'est pas envoyé : le serveur le tire du jeton Epic. Le transmettre
+## laisserait renommer le profil d'un autre à qui saurait le deviner.
+##
+## Rend faux si la demande n'a même pas pu partir ; l'issue réelle arrive par
+## `rename_completed`.
+func rename(raw_nickname: String) -> bool:
+	var propre := RecoveryCode.sanitize_nickname(raw_nickname)
+	if propre.is_empty():
+		rename_completed.emit(false, "Le pseudo ne peut pas être vide.")
+		return false
+	if propre == nickname:
+		# Rien à changer : un aller-retour réseau pour aboutir au même pseudo
+		# afficherait un « enregistré » qui ne veut rien dire.
+		rename_completed.emit(true, "Pseudo inchangé.")
+		return true
+	if state != State.READY:
+		rename_completed.emit(false, "Profil indisponible pour l'instant.")
+		return false
+	if _pending != "":
+		rename_completed.emit(false, "Une demande est déjà en cours.")
+		return false
+
+	var token := _copy_id_token()
+	if token.is_empty():
+		rename_completed.emit(false, "Epic n'a pas délivré de jeton d'identité.")
+		return false
+	if not _post(ENDPOINT_RENAME, {"id_token": token, "nickname": propre}):
+		rename_completed.emit(false, "Requête de renommage impossible.")
+		return false
+	return true
+
 
 ## Dépose le résultat d'un match. Ne bloque jamais, n'échoue jamais bruyamment :
 ## le journal local a déjà été écrit, et c'est lui qui fait foi.
@@ -566,6 +609,14 @@ func _adopt(profile: Dictionary) -> void:
 	profile_changed.emit()
 
 func _report(endpoint: String, success: bool, message: String) -> void:
+	if endpoint == ENDPOINT_RENAME:
+		if not success:
+			# Un renommage refusé ne touche à rien : le joueur garde son pseudo,
+			# et l'écran le lui redira.
+			last_error = message
+			push_warning("RankedIdentity: renommage refusé — %s" % message)
+		rename_completed.emit(success, message)
+		return
 	if endpoint == ENDPOINT_LINK:
 		if not success:
 			# Un rattachement raté ne détruit pas l'identité déjà obtenue : le
