@@ -9,6 +9,10 @@
 ## mode script ne déclare pas à la compilation.
 extends Node
 
+## La durée de vie d'une prédiction a quitté `game_state.gd` pour un fichier sans
+## dépendance ; le banc lit la constante là où elle vit désormais.
+const PredictionTir := preload("res://prediction_tir.gd")
+
 var _failures: int = 0
 
 func _ready() -> void:
@@ -161,38 +165,57 @@ func _test_predicted_shots() -> void:
 	var state := GameState.new()
 	var now := Time.get_ticks_msec()
 
-	_check("file vide → tir officiel à rendre", not state._consume_predicted_shot())
+	_check("file vide → tir officiel à rendre", not state._consume_predicted_shot(0.0))
 
-	state._predicted_shots.append(now)
-	_check("tir récent → déjà rendu localement", state._consume_predicted_shot())
+	state._predicted_shots.append({"t": now, "angle": 0.0})
+	_check("tir récent → déjà rendu localement", state._consume_predicted_shot(0.0))
 	_check("consommé une seule fois", state._predicted_shots.is_empty())
+
+	# Une entrée porte désormais son instant ET son angle : l'ordre seul confondait
+	# deux tirs rapprochés, et la durée de vie fixe rendait la balle en double dès
+	# que le lien dépassait la seconde. La comptabilité vit dans
+	# `prediction_tir.gd` ; ce qui se vérifie ICI est son branchement réel.
+	var vieux := now - PredictionTir.TTL_DEFAUT_MS - 1
 
 	# Prédiction jamais confirmée (paquet perdu, tir refusé) : elle doit sortir
 	# de la file, sinon elle décalerait tous les tirs suivants d'un cran.
 	state._predicted_shots.clear()
-	state._predicted_shots.append(now - GameState.PREDICTED_SHOT_TTL_MS - 1)
-	_check("tir périmé → tir officiel à rendre", not state._consume_predicted_shot())
+	state._predicted_shots.append({"t": vieux, "angle": 0.0})
+	_check("tir périmé → tir officiel à rendre", not state._consume_predicted_shot(0.0))
 	_check("tir périmé purgé de la file", state._predicted_shots.is_empty())
 
 	state._predicted_shots.clear()
-	state._predicted_shots.append(now - GameState.PREDICTED_SHOT_TTL_MS - 1)
-	state._predicted_shots.append(now)
-	_check("périmé puis récent → le récent est reconnu", state._consume_predicted_shot())
+	state._predicted_shots.append({"t": vieux, "angle": 0.0})
+	state._predicted_shots.append({"t": now, "angle": 1.0})
+	_check("périmé puis récent → le récent est reconnu",
+		state._consume_predicted_shot(1.0))
 	_check("les deux entrées ont quitté la file", state._predicted_shots.is_empty())
 
 	state._predicted_shots.clear()
-	state._predicted_shots.append(now)
-	state._predicted_shots.append(now)
-	_check("volée de deux → premier reconnu", state._consume_predicted_shot())
-	_check("volée de deux → second reconnu", state._consume_predicted_shot())
-	_check("volée épuisée → tir officiel à rendre", not state._consume_predicted_shot())
+	state._predicted_shots.append({"t": now, "angle": 0.0})
+	state._predicted_shots.append({"t": now, "angle": 0.0})
+	_check("volée de deux → premier reconnu", state._consume_predicted_shot(0.0))
+	_check("volée de deux → second reconnu", state._consume_predicted_shot(0.0))
+	_check("volée épuisée → tir officiel à rendre",
+		not state._consume_predicted_shot(0.0))
+
+	# Deux tirs séparés dans l'espace : c'est le cas que l'ordre seul confondait.
+	# La balle qui revient doit retrouver SON tir, pas le plus ancien.
+	state._predicted_shots.clear()
+	state._predicted_shots.append({"t": now, "angle": 0.0})
+	state._predicted_shots.append({"t": now, "angle": PI / 2.0})
+	_check("la balle officielle retrouve son propre tir",
+		state._consume_predicted_shot(PI / 2.0))
+	_check("et laisse l'autre en file",
+		state._predicted_shots.size() == 1
+		and is_zero_approx(float(state._predicted_shots[0]["angle"])))
 
 	# Hors du rôle client, la prédiction n'existe pas : la file ne doit ni
 	# répondre ni être consommée.
 	NetworkManager.current_mode = NetworkManager.GameMode.ONLINE_HOST
 	state._predicted_shots.clear()
-	state._predicted_shots.append(now)
-	_check("hôte → jamais de tir prédit", not state._consume_predicted_shot())
+	state._predicted_shots.append({"t": now, "angle": 0.0})
+	_check("hôte → jamais de tir prédit", not state._consume_predicted_shot(0.0))
 	_check("hôte → file intacte", state._predicted_shots.size() == 1)
 
 	state.free()

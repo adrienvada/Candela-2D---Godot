@@ -2221,6 +2221,24 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une suite qui pend bloque tout le lanceur (2026-08-18)
+
+`run_suites.sh` n'avait **aucun plafond de temps**. Un appelant cassé a empêché
+`test_netcode.gd` de compiler ; la scène a tourné **sans script**, sans jamais
+sortir, et le lanceur a attendu **dix minutes** avant qu'on aille voir.
+
+C'est la forme la plus coûteuse du piège déjà connu — un fichier qui ne compile
+pas fait **pendre** le processus au lieu de le faire échouer. Une suite rouge
+crie ; une suite qui pend ne dit rien **et** bloque tout ce qui suit.
+
+Remède : chien de garde par suite (`PLAFOND_SUITE`, 120 s ; macOS n'a pas
+`timeout`), et le code 137 est rapporté comme « n'est pas sorti », avec les
+`Parse Error` de la sortie — qui nomment la vraie cause.
+
+**Corollaire pour toute signature modifiée :** `grep -rn "nom_de_la_fonction("`
+avant de commiter. Le compilateur ne prévient pas ici, il se tait et pend.
+
+
 ### `get_frames_per_second()` ne bouge qu'une fois par seconde (2026-08-18)
 
 Le banc l'échantillonnait à chaque image. Quinze secondes de mesure donnaient
@@ -2971,11 +2989,22 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
 
 **Netcode**
 
-- **Déduplication des tirs prédits en FIFO aveugle** (`_consume_predicted_shot`
-  n'apparie ni position ni angle). Si l'hôte refuse un tir (désaccord de
-  cadence), le tir officiel suivant consomme la mauvaise prédiction ; avec un
-  RTT > 1 s, le TTL expire et le client voit sa balle en double. Piste :
-  apparier par angle approximatif et caler le TTL sur le RTT mesuré.
+- ~~**Déduplication des tirs prédits en FIFO aveugle.**~~ **Fait le 2026-08-18**,
+  par les deux pistes que l'étude proposait, dans `prediction_tir.gd` (sans
+  dépendance, donc testable à froid).
+  - **Le TTL suit le RTT mesuré** (2,5×, borné 500-3000 ms) au lieu d'une seconde
+    fixe. Une durée de vie constante est fausse des deux côtés : trop courte sur
+    un mauvais lien — la prédiction expire avant le retour de la balle et **le
+    joueur voit son tir en double**, ce qui est le cas d'un réseau mobile saturé,
+    c'est-à-dire exactement celui pour qui la prédiction existe — et trop longue
+    sur un bon, où des fantômes traînent.
+  - **L'appariement regarde l'angle** : deux tirs rapprochés se confondent
+    autrement, l'ordre seul ne les sépare pas.
+  - **Contrainte tenue, et elle vaut comme règle : « améliorer le choix ne doit
+    pas dégrader le nombre. »** Si aucun angle ne correspond, on retombe sur la
+    plus ancienne — comportement d'origine. Un appariement plus fin qui ferait
+    apparaître un doublon là où l'ancien n'en faisait pas serait une régression
+    invisible ici et visible chez quelqu'un d'autre, sur un lien qu'on n'a pas.
 - **Mort simultanée = victoire du premier RPC arrivé** (`_end_sequence_active`
   ignore la seconde mort). Décision de design à prendre : un double kill
   vaut-il égalité ? Aujourd'hui l'égalité n'existe que par chrono écoulé.

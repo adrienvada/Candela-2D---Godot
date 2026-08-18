@@ -129,10 +129,13 @@ const KILL_FREEZE_DURATION := 0.15
 const KILL_DARKNESS_BODY := 0.15
 const KILL_DARKNESS_TORCH := 0.25
 
-# [Client] Tirs rendus localement avant l'accord de l'hôte, horodatés pour être
-# dédupliqués à l'arrivée de la balle officielle.
-const PREDICTED_SHOT_TTL_MS := 1000
-var _predicted_shots: Array[int] = []
+# [Client] Tirs rendus localement avant l'accord de l'hôte, retenus pour être
+# dédupliqués à l'arrivée de la balle officielle. Chaque entrée porte son instant
+# ET son angle : l'ordre seul confond deux tirs rapprochés, et une durée de vie
+# fixe rendait la balle en double dès que le lien dépassait la seconde.
+# Comptabilité dans `prediction_tir.gd`, sans dépendance, donc testable à froid.
+const PredictionTir := preload("res://prediction_tir.gd")
+var _predicted_shots: Array[Dictionary] = []
 
 # [Hôte] Historique des positions pour la compensation de latence. La fenêtre
 # couvre le recul maximal avec de la marge, sans conserver davantage.
@@ -1179,7 +1182,7 @@ func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int
 	var weapon = weapon_arbalete if weapon_idx == 3 else (weapon_pompe if weapon_idx == 2 else (weapon_fusil if weapon_idx == 1 else weapon_pistolet))
 	# Tir déjà rendu par la prédiction locale : seul l'enregistrement killcam
 	# reste à faire, sur la trajectoire arbitrée par l'hôte.
-	var already_shown := shooter_id == 1 and _consume_predicted_shot()
+	var already_shown := shooter_id == 1 and _consume_predicted_shot(rot)
 	_do_spawn_bullet(shooter, pos, rot, weapon, not already_shown)
 
 func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData):
@@ -1189,7 +1192,7 @@ func spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponData)
 		# Le client rend son propre tir sans attendre l'hôte, qui reste seul
 		# juge des dégâts et de la cadence réelle.
 		if shooter == p2:
-			_predicted_shots.append(Time.get_ticks_msec())
+			_predicted_shots.append({"t": Time.get_ticks_msec(), "angle": rot})
 			_do_spawn_bullet(shooter, pos, rot, weapon, true, false)
 		return
 
@@ -1262,13 +1265,14 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 ## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
 ## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)
 ## expirent d'elles-mêmes pour ne pas décaler la file.
-func _consume_predicted_shot() -> bool:
+func _consume_predicted_shot(angle: float) -> bool:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT: return false
-	var now := Time.get_ticks_msec()
-	while not _predicted_shots.is_empty() and now - _predicted_shots[0] > PREDICTED_SHOT_TTL_MS:
-		_predicted_shots.remove_at(0)
-	if _predicted_shots.is_empty(): return false
-	_predicted_shots.remove_at(0)
+	var ttl := PredictionTir.ttl_ms(NetworkManager.rtt_ms, NetworkManager.has_rtt)
+	PredictionTir.purger(_predicted_shots, Time.get_ticks_msec(), ttl)
+	var i := PredictionTir.choisir(_predicted_shots, angle)
+	if i < 0:
+		return false
+	_predicted_shots.remove_at(i)
 	return true
 
 ## [Hôte] Archive la position des deux joueurs pour la compensation de latence.
