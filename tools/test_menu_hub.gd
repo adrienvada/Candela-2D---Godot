@@ -44,6 +44,7 @@ func _run() -> void:
 	_test_panneaux()
 	_test_panneau_entree()
 	_test_panneau_indisponible()
+	_test_style_lanceur()
 
 	root.remove_child(_hub)
 	_hub.free()
@@ -281,3 +282,71 @@ func _test_panneau_indisponible() -> void:
 	_check("un contrôle étranger au hub est ignoré", not _hub.reveal_entry(etranger))
 	_check("et le panneau ne bouge pas", galerie.visible)
 	etranger.free()
+
+## Le style d'une entrée « lanceur », et pourquoi ce banc existe.
+##
+## Le correctif du 2026-08-18 est arrivé avec sa propre note d'honnêteté : « ce
+## banc ne teste que la navigation, jamais le style, et ne peut donc pas garantir
+## ce correctif à lui seul ». C'est ce trou-là qu'on comble.
+##
+## Le défaut relevé par Adrien à l'usage : JOUER, PRÊT, CHERCHER UN MATCH et
+## LANCER L'ENTRAÎNEMENT peignaient leur fond et leur cadre au repos avec
+## `MenuTheme.P1`/`.P2` — **la couleur du liseré des curseurs**. Un lanceur
+## portait donc en permanence la teinte qu'un curseur ne devrait porter qu'en le
+## visant, et l'œil croyait voir la sélection là où elle n'était pas.
+##
+## Ce qui est vérifié n'est donc pas « c'est joli » mais **une couleur ne dit
+## qu'une chose** : au repos, aucune entrée ne porte la couleur d'un curseur.
+func _test_style_lanceur() -> void:
+	print("\n[Le style d'un lanceur]")
+	var ordinaire := _hub.make_entry("ORDINAIRE", "", "", MenuTheme.P1)
+	var lanceur := _hub.make_entry("LANCEUR", "", "", MenuTheme.P1, "lancer", "", true)
+
+	var s_ord := ordinaire.get_theme_stylebox("normal") as StyleBoxFlat
+	var s_lan := lanceur.get_theme_stylebox("normal") as StyleBoxFlat
+	_check("les deux ont bien un style au repos", s_ord != null and s_lan != null)
+	if s_ord == null or s_lan == null:
+		return
+
+	_check("au repos, le lanceur a le fond commun", s_lan.bg_color == s_ord.bg_color,
+		"%s contre %s" % [s_lan.bg_color, s_ord.bg_color])
+	_check("et le cadre commun", s_lan.border_color == s_ord.border_color,
+		"%s contre %s" % [s_lan.border_color, s_ord.border_color])
+	# LE test. Ni P1 ni P2 au repos, sur aucune entrée : ces deux teintes
+	# appartiennent aux curseurs et à personne d'autre.
+	for couple in [[s_ord, "ordinaire"], [s_lan, "lanceur"]]:
+		var st: StyleBoxFlat = couple[0]
+		_check("l'entrée %s ne porte la couleur d'aucun curseur" % couple[1],
+			st.border_color != MenuTheme.P1 and st.border_color != MenuTheme.P2
+			and st.bg_color != MenuTheme.P1 and st.bg_color != MenuTheme.P2,
+			"fond %s, cadre %s" % [st.bg_color, st.border_color])
+
+	# Ce qui distingue un lanceur a remplacé la couleur : le gras.
+	_check("le lanceur se reconnaît à son gras",
+		_gras(lanceur) and not _gras(ordinaire))
+
+	# Et la marque que M8 lit — désormais le SEUL moyen de retrouver un lanceur au
+	# code, puisqu'il n'a plus de style à lui.
+	_check("le lanceur porte la marque, l'ordinaire non",
+		bool(lanceur.get_meta(MenuHub.META_LAUNCHER, false))
+		and not bool(ordinaire.get_meta(MenuHub.META_LAUNCHER, false)))
+
+	# Une entrée indisponible n'est pas un lanceur, quoi qu'on demande : elle
+	# n'engage rien, et la mettre en gras la ferait crier plus fort que les
+	# entrées qui marchent.
+	var grise := _hub.make_entry("GRISÉ", "", "", MenuTheme.P1, "lancer",
+		"pas encore", true)
+	_check("une entrée grisée ne passe pas en gras", not _gras(grise))
+
+	ordinaire.free()
+	lanceur.free()
+	grise.free()
+
+func _gras(btn: Button) -> bool:
+	for row in btn.get_children():
+		for child in row.get_children():
+			if child is Label:
+				var f := (child as Label).get_theme_font("font")
+				if f is FontVariation and (f as FontVariation).variation_embolden > 0.0:
+					return true
+	return false
