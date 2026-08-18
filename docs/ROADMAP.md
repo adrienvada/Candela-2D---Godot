@@ -2206,6 +2206,19 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une suite en `--script` ne doit pas charger `game_state.gd` (2026-08-18)
+
+Il référence `NetworkManager` et `AudioManager` **par leur nom d'autoload** ; en
+mode `--script` ces noms ne résolvent pas et le fichier ne compile pas. Une suite
+qui le `preload` voit alors chacun de ses appels échouer — et **l'erreur avorte
+la fonction de test sans incrémenter le compteur** : la suite annonce « tous les
+tests passent » sur des appels morts. Rencontré pour de vrai en écrivant V3.9.
+
+Seul le contrôle `grep -c 'SCRIPT ERROR'` de `run_suites.sh` l'attrape ; c'est
+exactement ce pour quoi il existe. **Le remède est de ne pas dépendre de
+l'orchestrateur** : ce qui est de la comptabilité pure (`serie_de_session.gd`)
+vit dans son propre fichier, sans dépendance, et se teste à froid.
+
 ### Le tempo du jeu est recopié à trois endroits (2026-08-18)
 
 170 BPM pilote les stems, le pouls haptique (V1.5) et la vignette battante
@@ -2961,7 +2974,15 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V3.4 Dernière minute** — chrono or, stem batterie (V1.2), tic-tac sous
   10 s. — *assets : 1 tic-tac.*
 - **V3.5 VICTOIRE qui claque** — lettres qui tombent une à une, fond pulsé au
-  BPM. — *assets : 1 impact typographique.*
+  BPM. — *assets : 1 impact typographique.* ⚠️ **Sa prémisse a expiré, à
+  rediscuter avant d'y toucher.** `game_over_title` **est** le titre du menu
+  (« CANDELA 2D »), et M11 l'a adopté : le shader de braise vit sur ce `Label`
+  et porte déjà la température du verdict — la victoire flambe, la défaite tombe
+  de moitié. M1 y ancre en plus l'ombre du cadran. Le remplacer par une rangée de
+  `Label` par lettre écraserait les deux. Reste possible sans rien casser :
+  révéler les caractères un à un (`visible_characters`), le shader peignant ce
+  qui est dessiné. Mais l'écran de fin est déjà signé, et en rajouter demande
+  d'abord de décider si le verdict manque de quelque chose.
 - **V3.6 Score qui se remplit** — la nouvelle unité de « SESSION : 3 - 2 »
   glisse avec un son de pion. — *assets : 1 sample.*
 - **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
@@ -2969,7 +2990,22 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
   détente. — *assets : 1 sample.*
 - **V3.9 Série de session** — « SÉRIE : 3 » à l'écran de fin, brisée avec un
-  bruit de verre. — *assets : 1 sample.*
+  bruit de verre. **✅ Fait côté image** (le bruit de verre attend son sample).
+  Ce qu'elle apporte que le score n'apportait pas : « 3 - 2 » ne dit pas dans
+  quel **ordre**. Trois victoires puis deux défaites, ou une alternance stricte,
+  donnent le même affichage — et on ne se sent pas du tout dans la même partie.
+  - Une **égalité fait tomber** la série : une série est faite de victoires
+    consécutives, et laisser une nulle la prolonger reviendrait à dire qu'on n'a
+    pas perdu, ce qui n'est pas la même fierté.
+  - Une **série de 1 ne se dit pas** — c'est un match gagné. L'annoncer à chaque
+    fin de match viderait le mot avant qu'il ait servi une fois. Et une série de
+    1 ne se **brise** pas non plus : elle passe.
+  - La **rupture se dit avant** la série qui commence. Perdre une série de quatre
+    est l'événement du match ; annoncer « SÉRIE : 1 » au vainqueur passerait à
+    côté de ce qui vient de se produire.
+  - Dans `serie_de_session.gd`, **pas dans `game_state.gd`** — voir les pièges :
+    une suite qui charge l'orchestrateur en `--script` annonce « tous les tests
+    passent » sur des appels morts.
 - **V3.10 Stingers accordés** — kill/victoire/défaite/égalité dans la tonalité
   du thème : le jeu devient un seul instrument. — *assets : couvert par V2.3,
   V3.7, V3.8.*
@@ -3820,6 +3856,16 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 ---
 
 ## Prochaines étapes
+
+> **Le banc de framerate demande DEUX relevés, pas un** (constat partagé avec la
+> session des effets, 2026-08-18). Deux charges de nature différente attendent la
+> même mesure : le flou défocalisé de M14 est une passe de rendu de plus par
+> image **dans les menus**, les particules de la vague 5 sont **en match**. Un
+> chiffre pris dans l'un ne dit rien de l'autre. Et le relevé n'a de valeur qu'au
+> calme : deux sessions en parallèle, plus l'éditeur Godot ouvert, suffisent à le
+> rendre ininterprétable — il faut alors le dire dans le résultat, ou fermer.
+> **Le banc ouvre une fenêtre sur le poste d'Adrien : il ne se lance pas sans lui
+> demander.**
 
 > **Cap donné par Adrien le 2026-08-16 :** le jeu est amusant (H3 tranché), le
 > classement est en place, et la suite est le contenu — les menus d'abord, puis

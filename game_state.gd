@@ -36,6 +36,24 @@ var _hosted_weapon_1_idx: int = 0
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+## V3.9 — la série de victoires consécutives de la session, et qui la porte.
+##
+## Le score de session dit déjà « 3 - 2 », mais pas dans quel ORDRE : trois
+## victoires puis deux défaites et une alternance stricte donnent le même
+## affichage, alors qu'on ne se sent pas du tout dans la même partie. La série
+## est ce que le score ne peut pas dire.
+##
+## `-1` en porteur = personne, ce qui est l'état d'une session neuve comme celui
+## d'une session qui vient de connaître une égalité.
+var serie_porteur: int = -1
+var serie_longueur: int = 0
+## Ce que la série a à dire du match qui vient de finir, retenu entre le moment
+## où l'état avance et celui où l'écran de fin s'affiche. Sans ce report, il
+## faudrait comparer l'avant et l'après une fois l'avant déjà écrasé.
+var _mot_de_serie: String = ""
+## La comptabilité de la série vit dans son propre fichier : elle ne dépend ni du
+## réseau ni de l'audio, et doit rester testable sans eux.
+const SerieDeSession := preload("res://serie_de_session.gd")
 
 # Manches gagnées dans le match en cours. En BO1 elles retombent à zéro à
 # chaque fin de match ; elles existent pour que les formats longs s'ajoutent
@@ -365,6 +383,9 @@ func _on_peer_disconnected(id: int):
 		ui.btn_replay.remove_theme_color_override("font_color")
 		p1_session_wins = 0
 		p2_session_wins = 0
+		serie_porteur = -1
+		serie_longueur = 0
+		_mot_de_serie = ""
 		p1_round_wins = 0
 		p2_round_wins = 0
 		p2.hide()
@@ -1328,6 +1349,13 @@ func _do_end_round(winner_id: int):
 			p1_session_wins += 1
 		elif winner_id == 1:
 			p2_session_wins += 1
+		# Le mot de la série est calculé AVANT que l'état n'avance : il compare
+		# ce qui vient de tomber à ce qui commence.
+		_mot_de_serie = SerieDeSession.mot(serie_porteur, serie_longueur,
+			winner_id, _local_player_index())
+		var suite := SerieDeSession.apres(serie_porteur, serie_longueur, winner_id)
+		serie_porteur = suite.x
+		serie_longueur = suite.y
 		_archive_match_result(winner_id)
 		p1_round_wins = 0
 		p2_round_wins = 0
@@ -1446,7 +1474,10 @@ func _do_end_round(winner_id: int):
 	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
 	local_ready_for_rematch = false
 	ui.show_game_over(winner_id)
-	ui.game_over_score.text = "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
+	var ligne := "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
+	if _mot_de_serie != "":
+		ligne += "   ·   " + _mot_de_serie
+	ui.game_over_score.text = ligne
 	_apply_deferred_rematch()
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
@@ -1987,6 +2018,9 @@ func _on_main_menu_requested():
 	# repart de 0 - 0.
 	p1_session_wins = 0
 	p2_session_wins = 0
+	serie_porteur = -1
+	serie_longueur = 0
+	_mot_de_serie = ""
 	p1_round_wins = 0
 	p2_round_wins = 0
 	_set_training_target_active(false)
