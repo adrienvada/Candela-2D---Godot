@@ -65,6 +65,7 @@ const SCREEN_RANKED := "en_ligne_competitif"
 const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
 const SCREEN_PROFILE := "profil"
+const SCREEN_HISTORY := "historique"
 const SCREEN_CUSTOM := "personnalisation"
 const SCREEN_CONTROLS := "controles"
 const SCREEN_DISPLAY := "affichage"
@@ -1728,7 +1729,9 @@ func _build_hub_screens() -> void:
 		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
 		COLOR_GOLD, "top10"))
 	classe.add_child(hub.make_entry("INFORMATIONS PROFIL",
-		"Identité, code de récupération, historique.", SCREEN_PROFILE))
+		"Identité, code de récupération, pseudo.", SCREEN_PROFILE))
+	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
+		"Vos derniers matchs, et le bilan de la soirée en cours.", SCREEN_HISTORY))
 	hub.add_back_entry(SCREEN_RANKED)
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
@@ -1789,6 +1792,8 @@ func _build_hub_screens() -> void:
 	hub.add_back_entry(SCREEN_CALIBRATION)
 
 	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
+	_attach_screen(SCREEN_HISTORY, "Historique", ScreenHistory.new())
+	hub.add_back_entry(SCREEN_HISTORY)
 	hub.add_back_entry(SCREEN_PROFILE)
 
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
