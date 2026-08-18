@@ -68,7 +68,11 @@ func _run_local() -> void:
 	_check("le mode retenu est l'écran partagé",
 		_ui.selected_network_mode() == NetworkManager.GameMode.LOCAL_SPLITSCREEN)
 	_check("le choix de transport est masqué en local", not _ui.transport_hbox.visible)
-	_check("le champ de saisie est masqué en local", not _ui.join_input.visible)
+	# `visible` ne dit que l'intention posée sur CE nœud : le champ vit dans un
+	# conteneur que le menu cache, et reste donc « visible » pour lui-même. Seul
+	# `is_visible_in_tree()` répond à la question posée.
+	_check("le champ de saisie est masqué en local",
+		not _ui.join_input.is_visible_in_tree())
 	_check("le code de salon est masqué en local", not _ui.lobby_code_row.visible)
 	_press_play()
 	_check("la manche locale démarre", await _await(func(): return _main.round_active, ROUND_TIMEOUT))
@@ -79,6 +83,26 @@ func _run_local() -> void:
 		_main.vp1.get_parent().visible and _main.vp2.get_parent().visible)
 	await get_tree().create_timer(2.0).timeout
 	_check("la manche locale tient", _main.round_active)
+
+	# Jusqu'à l'écran de fin, et c'est tout l'intérêt de ce mode : une seule
+	# instance, aucun réseau, et pourtant le chemin exact où vivait le défaut de
+	# `frame_post_draw` — une attente de rendu jamais satisfaite en headless, qui
+	# laissait la séquence de fin suspendue pour toujours. Ce contrôle-là peut
+	# entrer dans le lanceur de suites, là où les deux instances ne le peuvent pas.
+	print("KILL: on abat le joueur 2")
+	_main.p2.take_damage(1000.0, _main.p1)
+	_check("la manche locale se termine",
+		await _await(func(): return not _main.round_active, 10.0))
+	_check("la séquence de fin se déclenche",
+		await _await(func(): return _main._end_sequence_active or _main.game_over, 10.0))
+	_check("l'écran de fin finit par se poser",
+		await _await(func(): return _main.game_over and not _main._end_sequence_active, 25.0))
+	print("FIN: %s" % _ui.game_over_title.text)
+	_check("le titre de fin n'est plus celui du menu",
+		_ui.game_over_title.text != "CANDELA 2D", _ui.game_over_title.text)
+	_check("le score de session est enregistré",
+		_main.p1_session_wins + _main.p2_session_wins == 1,
+		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
 	_quit(0)
 
 
