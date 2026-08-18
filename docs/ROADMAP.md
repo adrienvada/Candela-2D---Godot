@@ -1656,6 +1656,79 @@ lui la connaît par cœur. Ce n'est pas un défaut technique, c'est un arbitrage
 **À trancher par Adrien.** Le tirage est aujourd'hui ouvert par défaut, et la
 restriction tient en une ligne de filtre sur `source == "builtin"`.
 
+### Étape 8.9 — se reconnaître avant de jouer 🔵 CONÇUE, à écrire
+
+Reste de l'étape 8.8. Le refus d'une arène illisible est propre mais **tardif** :
+il arrive après la poignée de main, une fois les deux joueurs engagés. La
+comparaison devrait avoir lieu à la porte.
+
+#### Le piège qui rend l'exercice non trivial
+
+**Un contrôle de version posé dans un RPC est muet exactement dans le cas qu'il
+devait détecter.** Godot route les RPC par nom *et* par arité : deux builds dont
+les signatures diffèrent se jettent mutuellement les paquets **sans aucune erreur
+console**. Le build v2 qui ajoute `rpc_hello(version: int)` n'obtient jamais de
+réponse d'un build v1 — non pas parce que les versions diffèrent, mais parce que
+le message n'existe pas là-bas. Et un silence ne se distingue pas d'un réseau
+lent.
+
+C'est le même défaut, une couche plus bas, que celui déjà payé sur les noms de
+nœuds auto-générés : **un RPC jeté ne dit rien.**
+
+#### La règle qui en découle
+
+**Le canal doit être figé pour toujours ; seule sa charge évolue.**
+
+Un unique RPC, une seule signature, jamais modifiée :
+
+```gdscript
+@rpc("any_peer", "reliable")
+func rpc_hello(payload: String) -> void:
+```
+
+Tout voyage **dans** la chaîne, en JSON. La forme ne bougeant plus jamais, l'arité
+ne peut plus diverger ; les champs, eux, s'ajoutent librement — un champ inconnu
+s'ignore, un champ absent vaut « ne sait pas ». C'est le seul RPC du jeu qui ait
+le droit d'être appelé par un pair dont on ignore la version.
+
+#### Mieux : ne pas avoir besoin du RPC
+
+Sur les deux chemins EOS, **la version peut voyager avant toute connexion**, dans
+les données de rendez-vous :
+
+- **Salon à code** — l'hôte publie déjà `EOS_CODE_ATTRIBUTE` sur son salon. Un
+  attribut `protocol` de plus est lu par le client **pendant la recherche**,
+  c'est-à-dire avant `create_client()`. Divergence → refus à la porte, avec un
+  message qui nomme la cause.
+- **File d'appariement** — le ticket porte déjà classement et engagement. Un
+  `protocol` de plus, et surtout : **il entre dans le filtre de recherche.** On
+  n'est alors jamais apparié avec un build incompatible, plutôt que d'être
+  apparié puis détrompé. C'est la version la plus économique de la correction —
+  le problème disparaît au lieu d'être traité.
+
+Reste **ENet en réseau local**, qui n'a aucun rendez-vous : c'est là, et là
+seulement, que `rpc_hello` sert. Chemin de développement et de dépannage, où les
+deux bouts sont presque toujours le même build.
+
+#### Ce qu'on compare
+
+Un `PROTOCOL_VERSION` unique et monotone, couvrant **tout ce qui est visible sur
+le fil** : formes de RPC, codec de carte, format des attributs de salon. Pas une
+version par sous-système — un joueur n'a pas à savoir lequel diffère.
+
+Et on **refuse dans les deux sens**, sans « plus récent tolère plus ancien » : le
+build ancien ne peut pas savoir ce que le nouveau a changé, donc sa tolérance
+serait une supposition. Refuser symétriquement est la seule règle que les deux
+côtés peuvent appliquer avec la même information.
+
+#### Ce qui reste à trancher
+
+La numérotation elle-même : `PROTOCOL_VERSION` doit-il s'incrémenter à la main —
+donc s'oublier — ou se dériver de ce qu'il couvre ? Une somme de contrôle sur les
+signatures de RPC serait automatique mais changerait sur un renommage sans
+conséquence, et interdirait toute compatibilité voulue. **À trancher avant
+d'écrire**, parce que ce choix ne se reprend pas.
+
 ### Deux manques vérifiés indépendamment le 2026-08-17
 
 Une relecture séparée de `network_manager.gd`, `ui.gd`, `map_data.gd` et
@@ -1879,6 +1952,19 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   qu'ils étaient réglés. **Écrire une décision et l'implémenter sont deux gestes**,
   et ce document ne distingue pas les deux à la lecture. Un futur lot gagnerait à
   marquer explicitement ce qui est *décidé* et ce qui est *fait*.
+- **`git commit` emporte tout l'index, pas seulement les fichiers qu'on vient
+  d'ajouter — et l'index est partagé entre sessions.** Arrivé le 2026-08-18 :
+  `49a7b40` s'intitule « La nature du match, lisible par qui l'archive » et
+  contient `ranked_identity.gd` **plus** 29 lignes de `replay_system.gd` qu'une
+  autre session avait indexées sans avoir encore commité. Rien n'est perdu, mais
+  le message ne décrit pas la moitié de son contenu : qui cherchera pourquoi
+  `impact_frame` porte un drapeau `_impact_seen` tombera sur un commit qui parle
+  d'archivage.
+  **Aggravant, et c'est le vrai enseignement :** le `git diff --cached --stat`
+  affichait bien `replay_system.gd | 29 ++++`. La ligne a été *regardée* sans être
+  *lue*. Un contrôle qu'on exécute par habitude ne protège de rien. La parade sûre
+  est `git commit -- <chemins>`, qui ne commite que ce qu'on nomme, quoi qu'il y
+  ait dans l'index.
 - **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
   commit qui suit part avec son message complet et son contenu amputé. Arrivé le
   2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
