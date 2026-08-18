@@ -235,6 +235,37 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-19 — fusion `origin/main` dans `main`, et les décisions d'Adrien
+
+**Les cinq questions ouvertes ont été tranchées, et la fusion est faite.**
+
+1. **Les trois effets de révélation sont GARDÉS** (V4.11 sang, V4.13 fumée, V5.5
+   poussière) — « pour l'instant, je veux les voir pour décider ». Ils ne sont
+   donc pas validés sur le fond : ils sont **en observation**.
+2. **La trajectoire de killcam : celle de « game feel » (`bullet.gd`) est
+   gardée.** La mienne est retirée — `killcam_trace.gd` supprimé, appels retirés
+   de `game_state.gd`. **`ReplaySystem.trajectoire_fatale()` et son test
+   survivent** : ce n'est pas le doublon (le doublon était le TRACÉ), et la
+   question qu'il pose vaut pour n'importe quelle implémentation — *un tir de la
+   victime juste avant sa mort n'est pas le coup fatal*. À rebrancher sur la
+   vôtre si elle en a l'usage.
+3. **Le HUD adverse en ligne : NON**, à retirer. Et le joueur client doit être
+   **disposé comme l'hôte** — sa vie à gauche, sa couleur inchangée (il reste
+   rouge), **mais il garde le point d'apparition de J2**. Chantier en cours.
+4. **Le champ de vision différent entre modes : accepté tel quel.**
+5. **La killcam va jusqu'au bout**, l'annonce vient juste après. Fait (`ace3c8a`).
+
+**Résolution des conflits : additive, les deux côtés gardés.** Seuls les deux
+documents conflictaient ; le code s'est auto-fusionné, comme mesuré la veille
+dans un worktree jetable.
+
+**Une attribution à corriger, sans réécrire l'historique :** la suppression de
+`killcam_trace.gd` porte le message de commit `58270ad` de la session « effets »
+— elle était indexée quand elle a commité. Rien n'est perdu ni cassé ; **la
+suppression est de la session « fin de match »**, et c'est écrit ici plutôt que
+dans un historique réécrit sous une session active.
+
+
 ### 2026-08-18 (soir) — session « menus », déclaration tardive
 
 **Je n'avais pas lu ce fichier de la journée.** Je le déclare en tête parce que
@@ -403,7 +434,21 @@ attend Adrien comme vous l'aviez noté.
 **Ce qui attend Adrien avant toute fusion :** trois effets de `4c110b2` (V4.11,
 V4.13, V5.5) rendent visible ce qui ne l'était pas — ils relèvent du critère
 posé le même jour, qu'il n'a pas encore tranché.
+### 2026-08-18 — session « game feel » (lot V3/V5/V6)
 
+Reprise sur demande d'Adrien (« v3, v5, v6 »), lot taillé pour tenir dans mes
+seuls fichiers puisque `game_state.gd`/`ui.gd` sont à la session « fin de
+match ». **Livré : V4.11, V4.13 (particle_pool), V5.1 câblé-muet, V5.3 audio
+câblé-muet, V6.3 (audio_manager — le sidechain détecte `Engine.time_scale`
+lui-même, exprès : zéro site d'appel chez vous), V5.4, V5.5, V5.6, V5.9
+(player.gd + `sprint_streaks.gdshader`), V6.2 (bullet.gd).** Constaté au pull :
+V4.15/V4.16/V5.2 déjà faits par une autre main — merci, rien retouché.
+**À la session « fin de match », quand vous voudrez** (aucune urgence, specs
+sur les items ROADMAP) : V3.4 tic-tac (site d'appel là où `time_left` fait
+autorité), V5.12 réverb par carte (entrée de manche), V6.1 uniform du grain
+VHS et V6.5 négatif (orchestration killcam), V3.3 naissance de la lumière
+(décision de jeu, à arbitrer avec Adrien). Alignement fait : la clé V5.3
+pointe sur `tinnitus_dazzle.wav`, le nom que le manifeste annonce à Adrien.
 
 ### 2026-08-18 — session distante « couleurs des boutons »
 

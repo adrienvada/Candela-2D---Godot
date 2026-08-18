@@ -8,6 +8,7 @@ const SHADER_RIM_LIGHT := preload("res://player_rim_light.gdshader")
 const SHADER_ENEMY_LIGHT := preload("res://player_enemy_light.gdshader")
 const SHADER_VIGNETTE := preload("res://damage_vignette.gdshader")
 const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
+const SHADER_SPRINT_STREAKS := preload("res://sprint_streaks.gdshader")
 
 @export var player_id: int = 0
 @export var speed: float = 260.0
@@ -33,6 +34,20 @@ var noise: FastNoiseLite
 var shake_time: float = 0.0
 
 var vignette_mat: ShaderMaterial
+## V5.9 — streaks de sprint sur le viewport du joueur, intensité lissée.
+var streaks_mat: ShaderMaterial
+var _streaks_i: float = 0.0
+var _streaks_last: float = -1.0
+
+## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
+const TORCH_BREATH_AMP := 0.03
+var _torch_breath_t: float = 0.0
+## V5.6 — la rétrodiffusion « respire » au pas : bosse brève, résorbée seule.
+const BACKSCATTER_STEP_PULSE := 0.35
+var _backscatter_pulse: float = 0.0
+## V5.5 — cadence d'émission de la poussière du faisceau.
+const DUST_INTERVAL := 0.12
+var _dust_accum: float = 0.0
 
 var flashlight_on: bool = false
 var is_sprinting: bool = false
@@ -300,6 +315,17 @@ func _ready():
 	vignette_mat.shader = SHADER_VIGNETTE
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
+
+	# V5.9 — streaks de sprint, même cloisonnement que la vignette : le rect
+	# porte le visibility_layer du joueur, l'adversaire ne voit rien.
+	var streaks_rect = ColorRect.new()
+	streaks_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	streaks_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	streaks_rect.visibility_layer = 2 if player_id == 0 else 4
+	streaks_mat = ShaderMaterial.new()
+	streaks_mat.shader = SHADER_SPRINT_STREAKS
+	streaks_rect.material = streaks_mat
+	ui_layer.add_child(streaks_rect)
 	
 	
 	# Configuration de la Lampe Torche Principale (Faisceau Avant)
@@ -477,6 +503,20 @@ func _process(delta):
 	
 	if dazzle_amount > 0:
 		dazzle_amount = max(0, dazzle_amount - delta * 2.0)
+
+	# V5.3 — l'acouphène suit l'éblouissement du joueur local. Chaque machine
+	# n'écoute que ses propres yeux ; l'appel est idempotent côté AudioManager.
+	if _is_locally_piloted():
+		AudioManager.set_dazzle_level(player_id, dazzle_amount)
+
+	# V5.9 — les streaks de sprint suivent l'état, avec un fondu court : la
+	# vitesse s'installe, elle ne clignote pas.
+	if streaks_mat:
+		var cible := 1.0 if (is_sprinting and not dead) else 0.0
+		_streaks_i = lerpf(_streaks_i, cible, minf(1.0, delta * 6.0))
+		if absf(_streaks_i - _streaks_last) > 0.005:
+			_streaks_last = _streaks_i
+			streaks_mat.set_shader_parameter("intensity", _streaks_i)
 		
 	if shake_intensity > 0:
 		shake_intensity = lerp(shake_intensity, 0.0, shake_decay * delta)
@@ -789,6 +829,8 @@ func _physics_process(delta):
 			_foot_side = -_foot_side
 			if state and state.arena:
 				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
+			# V5.6 — le halo de rétrodiffusion respire au même pas.
+			_backscatter_pulse = BACKSCATTER_STEP_PULSE
 
 	# Visuals update for all clients
 	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau
@@ -801,12 +843,35 @@ func _physics_process(delta):
 		if shoot_cooldown > 0:
 			flashlight.energy = randf_range(1.5, 2.0)
 		else:
-			flashlight.energy = lerp(flashlight.energy, 2.5, 8.0 * delta)
+			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
+			# identique pour les deux joueurs — la lumière vit, sans rien dire.
+			_torch_breath_t += delta
+			var souffle := 1.0 + noise.get_noise_1d(_torch_breath_t * 40.0) * TORCH_BREATH_AMP
+			flashlight.energy = lerp(flashlight.energy, 2.5 * souffle, 8.0 * delta)
 
+		# V5.6 — la rétrodiffusion gonfle d'un souffle à chaque pas (posé par le
+		# détecteur de pas plus haut) puis se résorbe seule : marcher torche
+		# allumée respire. L'info (torche visible) existe déjà.
+		_backscatter_pulse = move_toward(_backscatter_pulse, 0.0, delta * 2.5)
+		var pulse := 1.0 + _backscatter_pulse
 		if current_weapon:
-			body_light.energy = (flashlight.energy / 2.5) * 0.6 * current_weapon.backlight_multiplier
+			body_light.energy = (flashlight.energy / 2.5) * 0.6 * current_weapon.backlight_multiplier * pulse
 		else:
-			body_light.energy = (flashlight.energy / 2.5) * 0.6
+			body_light.energy = (flashlight.energy / 2.5) * 0.6 * pulse
+
+		# V5.5 — poussière dans le faisceau : un grain ténu à la fois, posé
+		# quelque part dans le cône. Visible des deux côtés, comme le faisceau.
+		_dust_accum += delta
+		if _dust_accum >= DUST_INTERVAL:
+			_dust_accum = 0.0
+			var pool := get_tree().get_first_node_in_group("particle_pool") as ParticlePool
+			if pool:
+				var faisceau := Vector2.from_angle(global_rotation)
+				var portee := randf_range(40.0, 240.0)
+				var demi_angle := deg_to_rad((current_weapon.torch_angle_deg if current_weapon else 30.0) * 0.5)
+				var ecart := faisceau.orthogonal() * portee * tan(demi_angle) * randf_range(-0.6, 0.6)
+				pool.emit(ParticlePool.Kind.DUST, muzzle.global_position + faisceau * portee + ecart,
+					Color(1.0, 0.97, 0.9, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
 	elif flashlight.enabled:
 		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
 		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))
@@ -932,6 +997,13 @@ func trigger_shoot_visuals():
 		tw_reveal.tween_property(vrep, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	
 	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
+
+	# V4.13 — fumée de bouche : trois grains gris qui dérivent après le flash.
+	var pool := get_tree().get_first_node_in_group("particle_pool") as ParticlePool
+	if pool:
+		var canon := Vector2.from_angle(global_rotation)
+		pool.emit(ParticlePool.Kind.SMOKE, muzzle.global_position + canon * 6.0,
+			Color(0.45, 0.45, 0.5, 0.28), 3, 20.0, 55.0, canon, 70.0)
 
 	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
 	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier

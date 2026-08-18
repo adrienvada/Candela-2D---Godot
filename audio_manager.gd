@@ -19,7 +19,14 @@ const SOUNDS: Dictionary = {
 	# ressource absente, la clé se câble donc avant le fichier et reste muette
 	# sans erreur — plutôt qu'un bouche-trou qu'on finirait par prendre pour une
 	# intention.
-	"ui_ready_ping": "res://assets/audio/sfx/ui_ready_ping.wav"
+	"ui_ready_ping": "res://assets/audio/sfx/ui_ready_ping.wav",
+	# V5.1 — le claquement de torche, LE son entendu cinq cents fois par soirée.
+	# Câblés, muets tant que les fichiers manquent (règle « câbler, taire,
+	# diagnostiquer ») ; entrées à ajouter au manifeste (domaine « menus »).
+	"torch_on": "res://assets/audio/sfx/torch_on.wav",
+	"torch_off": "res://assets/audio/sfx/torch_off.wav",
+	# V5.3 — l'acouphène d'éblouissement, boucle dont le volume suit dazzle_amount.
+	"dazzle_ringing": "res://assets/audio/sfx/tinnitus_dazzle.wav",
 }
 
 ## Le tempo du jeu, en un seul endroit.
@@ -459,7 +466,13 @@ static func coupure_pour(torches: int) -> float:
 	return 200.0 + float(maxi(torches, 0)) * 320.0
 
 func set_player_torch(player_id: int, is_on: bool) -> void:
+	# V5.1 — le claquement d'allumage/extinction, sur la transition seulement.
+	# Sans fuite par construction : le site d'appel (player.gd) filtre déjà par
+	# torche_comptee — la torche adverse en ligne n'arrive jamais ici.
+	var avant: bool = player_torches.get(player_id, false)
 	player_torches[player_id] = is_on
+	if avant != is_on:
+		play_sfx("torch_on" if is_on else "torch_off", 1.0, -6.0)
 	if is_in_match:
 		update_torch_cutoff()
 
@@ -511,6 +524,84 @@ func play_speaker(stream_or_key: Variant, volume_db: float = 0.0) -> void:
 
 func play_button_click(volume_db: float = 0.0) -> void:
 	play_sfx("button_click", 1.0, volume_db)
+
+# --- V5.3 : ACOUPHÈNE D'ÉBLOUISSEMENT ---
+
+## Boucle dont le volume suit l'éblouissement du joueur LOCAL — chaque machine
+## n'écoute que ses propres yeux (le site d'appel, player.gd, est déjà gardé
+## par _is_locally_piloted). En écran partagé, deux joueurs éblouis partagent
+## la sortie : on prend le maximum. Muet tant que l'asset manque.
+var _dazzle_levels: Dictionary = {}
+var _dazzle_player: AudioStreamPlayer
+var _dazzle_current: float = 0.0
+
+func set_dazzle_level(pid: int, amount: float) -> void:
+	_dazzle_levels[pid] = amount
+	var niveau := 0.0
+	for v in _dazzle_levels.values():
+		niveau = maxf(niveau, float(v))
+	# Idempotent : appelé chaque frame, il ne travaille que sur un vrai
+	# changement — même patron que set_music_intensity.
+	if absf(niveau - _dazzle_current) < 0.02 and (niveau > 0.01) == (_dazzle_current > 0.01):
+		return
+	_dazzle_current = niveau
+	if niveau <= 0.01:
+		if _dazzle_player and _dazzle_player.playing:
+			_dazzle_player.stop()
+		return
+	if _dazzle_player == null:
+		_dazzle_player = AudioStreamPlayer.new()
+		_dazzle_player.bus = "SFX"
+		add_child(_dazzle_player)
+	if not _dazzle_player.playing:
+		var s := get_audio_stream("dazzle_ringing")
+		if s == null:
+			return # Câblé, muet : l'asset n'existe pas encore.
+		_dazzle_player.stream = s
+		_dazzle_player.play()
+	_dazzle_player.volume_db = linear_to_db(clampf(niveau, 0.05, 1.0)) - 8.0
+
+# --- V6.3 : SIDECHAIN DU RALENTI (KILLCAM) ---
+
+## Pendant le bullet-time, la musique s'efface — seul le battement de cœur
+## reste — et tout revient à l'impact. Piloté par Engine.time_scale, qui est
+## déjà la source du pitch des SFX : aucun couplage nouveau avec la killcam.
+var _bullet_time_duck := false
+
+func _process(_delta: float) -> void:
+	var bt := Engine.time_scale < 0.5 and match_sync_stream != null
+	if bt == _bullet_time_duck:
+		return
+	_bullet_time_duck = bt
+	if bt:
+		for i in range(mini(3, match_sync_stream.stream_count)):
+			_tween_stem(i, -60.0, 0.12)
+		if match_sync_stream.stream_count > 3:
+			_tween_stem(3, 0.0, 0.12)
+	else:
+		# Réappliquer l'état nominal : l'intensité courante pour les stems 0-2
+		# (en forçant la garde d'idempotence), la santé basse pour le cœur.
+		var niveau := music_intensity
+		music_intensity = -1
+		set_music_intensity(niveau)
+		_eval_low_health_state()
+
+## Fondu d'un stem vers une cible, en écrasant le tween que l'intensité ou le
+## cœur aurait laissé en vol sur ce même stem.
+func _tween_stem(i: int, cible_db: float, duree: float) -> void:
+	if match_sync_stream == null or i >= match_sync_stream.stream_count:
+		return
+	if i == 3 and heartbeat_tween and heartbeat_tween.is_valid():
+		heartbeat_tween.kill()
+	if music_intensity_tweens.has(i) and music_intensity_tweens[i].is_valid():
+		music_intensity_tweens[i].kill()
+	var t := create_tween()
+	music_intensity_tweens[i] = t
+	var depuis := match_sync_stream.get_sync_stream_volume(i)
+	t.tween_method(
+		func(v: float): match_sync_stream.set_sync_stream_volume(i, v),
+		depuis, cible_db, duree
+	)
 
 # --- ETAT SANTE BASSE (STEM MUSICAL SYNCHRONISE) ---
 func update_low_health(player_id: int, is_low: bool) -> void:
