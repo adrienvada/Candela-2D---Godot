@@ -2298,6 +2298,41 @@ pour laquelle la seconde moitié de la famille 2 a été retirée.
 
 ---
 
+## ⚠️ À ÉTABLIR — la reconnexion pendant une killcam ne rend pas la main
+
+**Banc écrit, rouge, et volontairement HORS du lanceur** (`./tools/run_duo.sh
+--reconnexion`, famille 4.1). Il exerce le seul scénario à trois processus : le
+client meurt, quitte pendant la killcam de l'hôte, **et revient**.
+
+**Ce qu'il montre, reproduit à chaque exécution :**
+
+- l'hôte voit bien le retour (`ADVERSAIRE: revenu`) et sa killcam va à son terme ;
+- mais **aucune entrée `PRÊT` n'est visible ensuite** sur l'écran `local_hote` —
+  le salon est là, la porte ne s'ouvre pas ;
+- et **le client revenu perd le lien** (« Trying to call an RPC while no
+  multiplayer peer is active »).
+
+**La cause n'est pas établie, et c'est pour ça que rien n'est corrigé.** Deux
+modifications ont été faites au code de production en poursuivant ce symptôme
+avant de comprendre qu'elles n'en étaient pas la cause. Elles se défendent
+séparément et restent — ne pas annoncer une déconnexion à quelqu'un dont
+l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais **il faut
+les lire comme des améliorations indépendantes, pas comme un correctif de ce
+défaut-ci**.
+
+**La leçon de méthode, sous une forme neuve :** « on croit débuguer, on est en
+train de renoncer » a un cousin — **on croit corriger, on est en train de
+déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
+le code a été modifié quand même.
+
+**Piste la plus probable** : le report de l'annonce de déconnexion crée une
+fenêtre pendant laquelle un pair peut arriver, et le chemin différé traverse
+cette fenêtre en supposant l'état qu'il avait au départ. `client_peer_id` est
+remis à 0 **immédiatement** au départ du premier client ; rien ne le repose pour
+le second, dont le salon ignore donc probablement l'existence.
+
+---
+
 ## Pièges connus — ne pas les redécouvrir
 
 ### Un percentile ne se mesure pas en un passage (2026-08-18)

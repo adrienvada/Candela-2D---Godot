@@ -49,7 +49,9 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host-spam"):
+	if _has("--host-reconnexion"):
+		await _run_host_reconnexion()
+	elif _has("--host-spam"):
 		await _run_host_spam()
 	elif _has("--join-spam"):
 		await _run_client_spam()
@@ -449,6 +451,84 @@ func _run_host() -> void:
 ## Si le code se cassait — double départ, décompte joué deux fois — **ce
 ## contrôle tomberait**, puisque le compte passerait à deux. C'est ce qui le
 ## distingue d'un contrôle déplacé pour passer.
+## Famille 4.1 : **l'adversaire meurt, quitte pendant la killcam, revient.**
+##
+## Débloquée par la décision d'Adrien du 2026-08-19 — la killcam va jusqu'au
+## bout. Sans elle, il n'y avait pas de comportement attendu contre lequel
+## écrire, et l'écrire quand même aurait tranché une question de jeu.
+##
+## **L'observable est un COMPTE, pas un instant** : combien de manches démarrent
+## après la reconnexion. Une seule. Si le code se cassait — reprise fantôme,
+## double départ, ou reconnexion refusée — ce compte passerait à zéro ou à deux.
+func _run_host_reconnexion() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le premier client n'est jamais parti")
+		return
+	print("ADVERSAIRE: parti pendant la killcam")
+	_check("la killcam survit à son départ", _main._end_sequence_active)
+
+	# Il revient. Le salon doit l'accepter alors que l'hôte sort à peine de sa
+	# killcam et de son écran d'attente.
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), 90.0):
+		_fail("le second client n'a jamais rejoint")
+		return
+	print("ADVERSAIRE: revenu")
+	# **Il revient PENDANT la killcam — c'est tout l'objet du scénario.** Le menu
+	# est donc légitimement absent à cet instant : l'hôte regarde encore sa mort.
+	# On attend la fin de la séquence avant de demander si le salon l'accepte.
+	#
+	# Deux modifications du code de production ont été faites avant de comprendre
+	# ça, en poursuivant un symptôme qui venait de ce banc. Elles se défendent
+	# toutes les deux et restent — ne pas annoncer une déconnexion à quelqu'un
+	# dont l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais
+	# **aucune n'était la cause**. C'est « on croit débuguer, on est en train de
+	# renoncer » sous une forme nouvelle : on croit corriger, on est en train de
+	# déplacer la faute vers le code testé.
+	if not await _await(func(): return not _main._end_sequence_active, 40.0):
+		_fail("la killcam ne s'est jamais terminée")
+		return
+	_check("le salon rouvert accepte le retour",
+		await _await(func(): return not _ready_entry_disabled(), 20.0))
+
+	# Le compte : combien de manches démarrent après la reconnexion. Une.
+	var departs := 0
+	var etait_active: bool = _main.round_active
+	var t := 0.0
+	while t < 12.0:
+		_press_play()
+		await get_tree().create_timer(0.2, true, false, true).timeout
+		t += 0.2
+		if _main.round_active and not etait_active:
+			departs += 1
+		etait_active = _main.round_active
+	print("DÉPARTS après reconnexion: %d" % departs)
+	_check("la reconnexion produit exactement une manche", departs == 1,
+		"%d démarrage(s)" % departs)
+	_check("le score est reparti de zéro",
+		_main.p1_session_wins == 0 and _main.p2_session_wins == 0,
+		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
+	await get_tree().create_timer(4.0).timeout
+	_quit(0)
+
 func _run_host_spam() -> void:
 	await _select_mode(true)
 	_ui._open_lobby()

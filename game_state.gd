@@ -405,6 +405,17 @@ func _on_peer_disconnected(id: int):
 ## La partie « écran » de la déconnexion, différée si une killcam la couvrait.
 func _annoncer_deconnexion() -> void:
 	_deconnexion_differee = false
+	# **Quelqu'un a pu revenir pendant la killcam.** L'annonce est différée
+	# jusqu'à sa fin ; entre-temps, le joueur peut avoir relancé son jeu et
+	# rejoint — c'est le scénario 4.1 de la checklist. Annoncer alors « le
+	# Joueur 2 s'est déconnecté » et repasser en attente **coupe le lien qu'on
+	# vient d'accepter** : le nouveau venu se retrouve sans pair, et son premier
+	# RPC échoue.
+	#
+	# Défaut introduit par le report lui-même, et trouvé par le banc de la
+	# famille 4.1 — le report a créé une fenêtre où le monde peut changer, et le
+	# code différé la traversait sans regarder.
+	var revenu := not multiplayer.get_peers().is_empty()
 	# Toute séquence de fin en vol devient caduque : sans ce jeton elle
 	# reviendrait afficher un écran de victoire par-dessus l'attente.
 	_round_token += 1
@@ -418,7 +429,8 @@ func _annoncer_deconnexion() -> void:
 	ui.force_close_pause()
 	_abort_killcam()
 	_restore_viewports()
-	ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
+	if not revenu:
+		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
 	round_active = false
 	sandbox_mode = true
 	p2_ready_for_rematch = false
@@ -439,8 +451,16 @@ func _annoncer_deconnexion() -> void:
 	p2.set_collision_layer_value(1, false)
 	p2.set_collision_mask_value(1, false)
 	_set_training_target_active(true)
+	# **Le retour au salon a lieu dans TOUS les cas.** C'est lui qui ramène le
+	# menu ; le sauter laissait l'hôte dans l'arène sans salon, donc sans aucun
+	# moyen de se déclarer prêt — un joueur revenu trouvait la porte fermée.
+	# Défaut introduit en voulant justement épargner l'attente à qui n'attendait
+	# plus, et attrapé par le banc de la famille 4.1.
+	#
+	# Seul le MESSAGE dépend de la situation : on n'annonce pas une attente à
+	# quelqu'un dont l'adversaire est déjà là.
 	ui.show_waiting_for_opponent()
-	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
+	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..." if not revenu else "PRÊT ?"
 	if game_over:
 		ui.hide_game_over()
 		game_over = false
