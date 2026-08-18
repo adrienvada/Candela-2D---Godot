@@ -37,6 +37,7 @@ décision se juge à cette double aune.
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
 | 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
+| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-18** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -2117,6 +2118,83 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   d'architecture — il manque juste l'état persistant à afficher, pas la
   liberté de naviguer).
 
+## Phase 9 — Mise à jour du jeu installé 🟡 ÉCRITE, PAS ENCORE ÉPROUVÉE
+
+Demandée par Adrien le 2026-08-18 : « un endroit du menu où je clique sur mettre
+à jour, et une mise à jour automatique se lance ». Trois façons de faire ont été
+comparées ; celle-ci — remplacement du bundle depuis les Releases GitHub, avec un
+manifeste conçu dès le premier jour pour accueillir aussi les correctifs légers —
+a été retenue **parce qu'elle est la seule qui rende le bouton demandé** sans
+dépendre d'un lanceur tiers.
+
+### Ce que le refus symétrique change au problème
+
+`Protocol.accepts()` refuse dans les deux sens : dès qu'une version publiée
+touche au fil, la population se coupe en deux moitiés qui ne se voient
+littéralement pas. Le critère de conception n'est donc pas « est-ce que ça met à
+jour » mais **combien de temps deux versions coexistent dans la nature**. C'est
+ce qui justifie le chemin `.pck` : quatre mégaoctets referment la fracture en
+trois secondes là où cent la laissent ouverte une soirée.
+
+### Le niveau d'obligation — tranché par Adrien le 2026-08-18 : refus poli
+
+Rien n'est bloqué. Le jeu démarre, l'écran scindé, l'entraînement et l'éditeur de
+cartes fonctionnent avec une version de retard. La seule chose qui cesse —
+trouver un adversaire en ligne — **a déjà cessé toute seule**, et l'écran de mise
+à jour se contente de la nommer. L'alternative (mise à jour forcée) transformerait
+une gêne en panne : un jeu qui refuse de démarrer tant qu'on n'a pas téléchargé
+cent mégaoctets est un jeu qu'on n'ouvre pas ce soir-là.
+
+### Ce qui est livré
+
+| Pièce | Ce qu'elle garantit |
+|---|---|
+| `update_manifest.gd` | Lecture, comparaison de versions, choix du paquet, signature. Aucun réseau : **tout le jugement est vérifiable en headless** |
+| `update_installer.gd` | Racine d'installation, décompression, script d'échange, correctif. Le seul fichier qui sache ce qu'est un `.app` |
+| `update_manager.gd` (autoload) | Enchaînement et mise en mots. L'écran ne compare aucun état lui-même |
+| `patch_loader.gd` (autoload, **déclaré en premier**) | Monte le `.pck` avant tout autre autoload, avec témoin de démarrage et quarantaine |
+| `screen_update.gd` + entrée du hub | Le bouton demandé |
+| `tools/fabrique_manifeste.sh` | Le manifeste n'invente rien : version, protocole et empreintes sont lus aux sources |
+| `.github/workflows/release.yml` | Sur tag seulement : cohérence tag/version, suites vertes, export, signature, publication |
+| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. Le lanceur compte désormais 27 exécutions (25 suites en `--script`, deux bancs en scène) |
+
+### Ce qui a été vérifié pour de vrai, et ce qui ne l'a pas été
+
+Vérifié en exécution, ici :
+
+- **la chaîne de signature de bout en bout** — une signature `openssl` RSA-4096
+  SHA-256 détachée est acceptée par `Crypto.verify()` de Godot, et un seul octet
+  modifié dans le manifeste la fait refuser. C'était le point d'intégration le
+  plus risqué : deux bibliothèques différentes devaient s'accorder sans jamais
+  se parler ;
+- **les deux exports depuis un runner Linux** — Windows (50 Mo) et macOS (101 Mo)
+  sortent tous les deux, et le manifeste se fabrique dessus ;
+- **la moitié réversible du remplacement** — sur la vraie archive Windows de
+  50 Mo : le dossier d'étape se crée à côté de l'installation, l'archive s'y
+  décompresse, l'installation en place n'est pas touchée, et une archive qui ne
+  contient pas ce qu'elle annonce est refusée en nommant ce qu'elle contient.
+
+**Pas vérifié, et il faut le dire :** l'échange lui-même n'a jamais tourné sur
+une vraie machine — il demande un jeu exporté, installé, et une version publiée.
+Le script est éprouvé par lecture (il attend la fermeture du processus, garde
+l'ancienne installation, sait revenir en arrière), ce qui n'est pas la même chose
+que de l'avoir vu marcher. C'est le jalon H9.
+
+### Ce qui reste
+
+1. **H8 — la paire de clés.** Deux commandes `openssl`, la publique dans
+   `update_manager.gd`, la privée dans les secrets GitHub. Tant qu'elle manque,
+   l'écran affiche « mises à jour non configurées » et ne télécharge rien.
+2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
+   installer et mettre à jour sur une vraie machine.
+3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
+   Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
+   pas de translocation, un dossier et un `.exe`.
+
+Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
+
+---
+
 ## Décisions actées
 
 | Décision | Raison |
@@ -2141,6 +2219,9 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
+| **Mise à jour : refus poli, jamais forcée** (2026-08-18, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
+| **Rien ne s'installe sans signature valide** (2026-08-18) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
+| **Publier est un geste humain** (2026-08-18) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
 | **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
 
 ---
@@ -2715,6 +2796,49 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   croire à un bug de l'éditeur).
 - Les entitlements réseau ne servent que sous App Sandbox (Mac App Store). En
   distribution directe, EOS ouvre ses sockets sans entitlement.
+
+---
+
+**Mise à jour du jeu installé**
+- **Le bundle macOS ne s'appelle pas comme l'exécutable.** Godot le nomme d'après
+  `config/name` : c'est « Candela 2D.app », avec l'espace, alors que l'export
+  Windows produit `Candela.exe` dans un dossier `Candela`. Le manifeste annonce
+  cette racine et le jeu la vérifie **avant** de remplacer quoi que ce soit — une
+  racine annoncée à tort ne se découvrirait qu'après la fermeture du jeu, au seul
+  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-18.
+- **Le paquet macOS est universel, l'annoncer « x86_64 » le condamne.** Godot
+  exporte un binaire x86_64 + arm64 ; un manifeste qui déclare une architecture
+  ferait refuser le paquet par tous les Mac Apple Silicon, avec pour seul symptôme
+  « aucun paquet ne correspond à cette machine ». Architecture vide = convient
+  partout, et c'est ce que `fabrique_manifeste.sh` écrit pour macOS.
+- **`ZIPReader` ne restitue ni le bit d'exécution ni les liens symboliques.** Un
+  `.app` reconstruit avec lui ne se lance pas, et l'erreur ne ressemble en rien à
+  sa cause. La décompression passe donc par `ditto` (macOS) et `tar` (Windows),
+  jamais par l'API de Godot.
+- **Un correctif `.pck` doit être monté avant le premier autoload.** Godot les
+  instancie dans l'ordre de `project.godot` ; un correctif qui remplace
+  `network_manager.gd` et qui arrive après n'a plus rien à recouvrir, sans erreur
+  et sans trace. D'où `PatchLoader` en tête de liste. Corollaire : **un correctif
+  ne peut ni ajouter un autoload, ni changer le moteur, ni l'addon EOS** (une
+  GDExtension charge sa bibliothèque native au démarrage depuis `res://`), ni
+  toucher à `project.godot`.
+- **`%` est un caractère actif dans un `.bat`, `'` dans un script `sh`.** Le
+  script d'échange refuse de se produire si un chemin en contient un, plutôt que
+  de sortir un script mal cité qui effacerait autre chose que ce qu'il croit.
+- **`JSON.stringify` n'écrit pas d'espace après les deux-points.** Une suite qui
+  fabrique ses variantes par `replace('"format": 1', …)` ne remplace rien, ne dit
+  rien, et reste verte sans avoir exercé quoi que ce soit — six contrôles de
+  `test_mise_a_jour.gd` sont passés au vert pour cette seule raison avant que la
+  fabrique ne soit refaite en dictionnaires. Le mode de défaillance exact que ce
+  dépôt traque partout ailleurs.
+- **`"a" + "b" % x` applique le format au seul dernier littéral.** En GDScript le
+  `%` lie plus fort que le `+` : un message d'erreur construit sur deux lignes et
+  formaté à la fin lève une erreur d'exécution au lieu d'afficher la raison — et
+  c'est précisément dans le chemin d'erreur, celui qu'on teste le moins.
+- **Lancer plusieurs instances de Godot en parallèle fait échouer des suites
+  saines.** `test_pause_menu` et `test_screen_matchmaking` sont sorties en échec
+  pendant qu'un export tournait à côté ; seules, elles passent. Avant de
+  diagnostiquer une régression, vérifier qu'aucune autre instance ne tourne.
 
 ---
 
@@ -3599,6 +3723,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
+| H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
+| H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 
 ---
 
