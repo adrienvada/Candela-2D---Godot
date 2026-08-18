@@ -100,7 +100,13 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		if p1.hp <= 0 and not _impact_seen:
 			_impact_seen = true
 			impact_frame = snapshots.size()
-			slow_mo_start_frame = impact_frame - 15 # default fallback
+			# Borné à zéro, comme le chemin nominal quinze lignes plus bas. Sans ça,
+			# une mort survenue dans les quinze premières images rend une ancre
+			# NÉGATIVE — et `start_playback` ne la rejette pas, puisque sa sentinelle
+			# est -1 et non « négatif ». Le ralenti se calcule alors sur un vol de
+			# balle qui déborde avant le début de l'enregistrement : sa progression
+			# démarre déjà passé le seuil d'accélération, donc le ralenti n'a pas lieu.
+			slow_mo_start_frame = maxi(0, impact_frame - 15) # repli
 			for i in range(bullet_events.size() - 1, -1, -1):
 				if bullet_events[i].shooter == 1: # P2 is the killer
 					slow_mo_start_frame = max(0, bullet_events[i].frame - 1)
@@ -121,7 +127,13 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		if p2.hp <= 0 and not _impact_seen:
 			_impact_seen = true
 			impact_frame = snapshots.size()
-			slow_mo_start_frame = impact_frame - 15 # default fallback
+			# Borné à zéro, comme le chemin nominal quinze lignes plus bas. Sans ça,
+			# une mort survenue dans les quinze premières images rend une ancre
+			# NÉGATIVE — et `start_playback` ne la rejette pas, puisque sa sentinelle
+			# est -1 et non « négatif ». Le ralenti se calcule alors sur un vol de
+			# balle qui déborde avant le début de l'enregistrement : sa progression
+			# démarre déjà passé le seuil d'accélération, donc le ralenti n'a pas lieu.
+			slow_mo_start_frame = maxi(0, impact_frame - 15) # repli
 			for i in range(bullet_events.size() - 1, -1, -1):
 				if bullet_events[i].shooter == 0: # P1 is the killer
 					slow_mo_start_frame = max(0, bullet_events[i].frame - 1)

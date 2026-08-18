@@ -2918,8 +2918,22 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   couvertes que manuellement — c'est la zone la plus régressive d'un jeu
   réseau. Le banc à deux instances est automatisable en ENet (cible 127.0.0.1,
   appariement scriptable), sans identifiants Epic.
-- `ReplaySystem` (fenêtre de rejeu, `impact_frame`, ralenti) n'a pas de test
-  unitaire ; seule `test_online_match` compte des balles rejouées.
+- ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par
+  `tools/test_rejeu.gd`, qui verrouille les deux défauts déjà payés — la cadence
+  fixe à 60 Hz (une seconde à 492 fps doit donner ~60 images, pas 492) et l'ancre
+  d'impact qui ne repasse pas par sa propre sentinelle `-1`.
+  - **Et il en a trouvé un troisième, réel : `slow_mo_start_frame` pouvait être
+    négatif.** Le chemin nominal borne à zéro (`max(0, frame - 1)`), le **repli**
+    ne bornait pas (`impact_frame - 15`). Une mort dans les quinze premières
+    images rendait donc une ancre négative — que `start_playback` n'écarte pas,
+    sa sentinelle étant `-1` et non « négatif ». Le ralenti se calculait alors
+    sur un vol de balle débordant avant le début de l'enregistrement : sa
+    progression démarrait déjà passé le seuil d'accélération, **donc le ralenti
+    n'avait pas lieu**. Corrigé aux deux endroits.
+  - Piège de méthode rencontré une troisième fois dans la journée : un faux
+    joueur bâti en posant des propriétés au vol sur un `Node2D` (`set("hp", …)`)
+    n'en crée aucune — l'appel échoue, la fonction de test s'interrompt, et la
+    suite continue. Il faut une vraie classe.
 
 ---
 
