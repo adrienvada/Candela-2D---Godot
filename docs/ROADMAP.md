@@ -3232,7 +3232,19 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
     - À éclaircir en instrumentant le `target_time_scale` réellement calculé, ou
       à l'œil sur une vraie partie. **Écrit ici pour que personne ne prenne cette
       suite pour une garantie qu'elle ne donne pas.**
-  - Restent manuelles : les 4 autres familles (et la fin de la 5) de la
+  - **Famille 5.2 automatisée le 2026-08-18**, dans le banc à **une** instance
+    (`test_fin_de_match`) : la vitesse normale est rendue quand la killcam se
+    termine d'elle-même. C'est le chemin de sortie le plus fréquent du jeu —
+    celui de chaque mort de chaque partie — et le seul qu'une instance unique
+    puisse exercer.
+    - **Déterministe, contrairement au chemin de la déconnexion.** La séquence de
+      fin est allée à son terme : on mesure un état stable, pas une fenêtre
+      fugace de quelques dixièmes. C'est pourquoi ce contrôle vit dans le banc à
+      une instance et **pas** dans celui à deux, où il serait instable par
+      construction.
+    - Trois contrôles : `time_scale` rendu à 1,0, rejeu arrêté, et **aucune vue
+      laissée figée** — la ceinture de V2.1 passe par le même chemin.
+  - Restent manuelles : les 4 autres familles (et le reste de la 5) de la
     [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
     RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par

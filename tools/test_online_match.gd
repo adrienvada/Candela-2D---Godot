@@ -291,6 +291,29 @@ func _run_local() -> void:
 	_check("le score de session est enregistré",
 		_main.p1_session_wins + _main.p2_session_wins == 1,
 		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
+
+	# **Famille 5.2 : la vitesse normale est rendue quand la killcam se termine
+	# d'elle-même.** Le seul chemin de sortie qu'une instance unique puisse
+	# exercer, et le plus fréquent de tous — celui de chaque mort de chaque
+	# partie.
+	#
+	# Ce que ça protège : `Engine.time_scale` est un réglage GLOBAL du moteur.
+	# L'oublier ne ralentit pas la killcam, il ralentit **tout le jeu, menus
+	# compris** — et le joueur n'a aucune raison de relier un curseur qui rampe à
+	# une mort survenue dix secondes plus tôt.
+	#
+	# Déterministe ici, contrairement au chemin de la déconnexion : la séquence
+	# de fin est allée à son terme, on ne mesure donc pas une fenêtre fugace mais
+	# un état stable. C'est pour ça que ce contrôle vit dans le banc à une
+	# instance et pas dans celui à deux.
+	_check("la vitesse normale est rendue après la killcam",
+		is_equal_approx(Engine.time_scale, 1.0),
+		"time_scale=%.4f" % Engine.time_scale)
+	_check("le rejeu est bien arrêté", not ReplaySystem.playing_back)
+	# Et rien ne doit rester gelé : la ceinture de V2.1 passe par le même chemin.
+	_check("aucune vue ne reste figée",
+		_main.vp1.render_target_update_mode != SubViewport.UPDATE_DISABLED,
+		"vp1=%d" % _main.vp1.render_target_update_mode)
 	_quit(0)
 
 
