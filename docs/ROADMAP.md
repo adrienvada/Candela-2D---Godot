@@ -2353,6 +2353,36 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un commentaire décrit une intention, on le relit comme un constat (2026-08-19)
+
+Au-dessus de `ui.show_waiting_for_opponent()`, dans `_annoncer_deconnexion()`,
+un commentaire affirmait en gras : « **le retour au salon a lieu dans TOUS les
+cas** […] c'est lui qui ramène le menu ». Il avait été écrit **en corrigeant ce
+défaut-là**. `show_waiting_for_opponent()` n'allume qu'un **label du HUD de
+match** — aucun menu n'est ramené, et l'hôte restait dans son arène sans aucun
+moyen de se déclarer prêt.
+
+**Deux passes perdues à raisonner à partir de ce commentaire**, plus un
+diagnostic voisin cohérent et faux (`game_over` qui aurait fermé le menu). Ce
+qui a tranché, ce sont **trois sondes** : ne pas refermer → rouge ; rouvrir seul
+→ rouge ; rouvrir **et** ne pas refermer → vert. Le mécanisme concurrent était
+un **second** verrou, jamais le premier.
+
+**Sonder, pas raisonner, dès qu'un commentaire tient lieu de preuve.**
+
+### Famille 4.1 — le vrai fond n'est pas le menu (2026-08-19, OUVERT)
+
+Le menu réparé, le banc reste rouge pour une **autre** cause, mesurée : sur
+l'hôte, `multiplayer.multiplayer_peer` est **null immédiatement après le départ
+du client** (348 « No multiplayer peer is assigned » dans le journal). Le
+serveur est démonté, donc **aucune reconnexion n'est possible** — ce n'est pas
+un artefact de banc, c'est le jeu.
+
+Piste, non confirmée : `_close_lobby_if_left()` dans `ui.gd` coupe le salon dès
+qu'un changement d'écran survient alors que `get_peers()` est vide. Fichier
+d'une autre session, qui a été prévenue.
+
+
 ### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)
 
 Le lot des suites headless a pris **3672 s — soixante-et-une minutes** un soir,

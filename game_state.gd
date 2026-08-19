@@ -461,9 +461,14 @@ func _annoncer_deconnexion() -> void:
 	# quelqu'un dont l'adversaire est déjà là.
 	ui.show_waiting_for_opponent()
 	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..." if not revenu else "PRÊT ?"
-	if game_over:
-		ui.hide_game_over()
-		game_over = false
+	# **Et c'est CETTE ligne qui ramène le menu, pas celle du dessus.** Le
+	# commentaire ci-dessus a longtemps affirmé que `show_waiting_for_opponent()`
+	# s'en chargeait ; elle n'allume qu'un label du HUD de match, et le panneau
+	# restait éteint — l'hôte se retrouvait dans son arène sans aucun moyen de se
+	# déclarer prêt. Trois sondes ont été nécessaires pour l'établir, contre un
+	# mécanisme concurrent parfaitement cohérent et faux.
+	ui.rouvrir_le_salon()
+	game_over = false
 
 
 
@@ -1562,7 +1567,11 @@ func _do_end_round(winner_id: int):
 		# It freezes the screen perfectly on the death frame behind the menu.
 
 	_end_sequence_active = false
-	game_over = true
+	# **`game_over` est posé APRÈS la bifurcation, et c'est le sujet.** Il voulait
+	# dire « l'écran de fin est affiché » ; posé une ligne avant qu'on décide de
+	# l'afficher, il mentait dans cet intervalle — et le chemin différé le lisait
+	# précisément là. Une valeur qui décrivait un état s'était mise à décrire une
+	# intention, en gardant son nom.
 	# La killcam est allée à son terme. Si le pair est parti pendant qu'elle
 	# jouait, c'est MAINTENANT qu'on l'annonce — avant l'écran de fin, et non
 	# après : proposer un « REJOUER » à quelqu'un dont l'adversaire n'existe plus
@@ -1570,6 +1579,7 @@ func _do_end_round(winner_id: int):
 	if _deconnexion_differee:
 		_annoncer_deconnexion()
 		return
+	game_over = true
 	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
 	local_ready_for_rematch = false
 	ui.show_game_over(winner_id)
