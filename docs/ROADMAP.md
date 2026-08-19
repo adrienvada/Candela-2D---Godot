@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-18
+> Dernière mise à jour : 2026-08-19
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -4527,6 +4527,214 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 | UI / récit | frappes, ping prêt, pion, impacts typo, tic-tac, verre, rewind | ~10 samples |
 | Corps | souffles blessé, acouphènes | ~8 samples |
 | Visuel | quasi rien (procédural) — éventuellement 1-2 fontes, sprites D1, logo | 0-6 fichiers |
+
+---
+
+## Chantier direction artistique — sortir du look « généré » (inscrit le 2026-08-19)
+
+> **Le constat d'Adrien, à l'origine du chantier :** le jeu manque d'une
+> apparence pro et aboutie — « ça fait généré par IA ». Le diagnostic posé :
+> ce n'est pas le procédural en soi qui est coupable (Downwell, Teleglitch,
+> Ape Out sont massivement procéduraux et paraissent signés), c'est le
+> **procédural par défaut** — fonte Godot, couleurs primaires codées en dur,
+> dégradés radiaux mathématiquement parfaits, losanges de particules, easings
+> standard. Chaque valeur par défaut visible dit « personne n'a choisi ça ».
+> Un jeu paraît pro quand chaque pixel semble décidé. La ligne « Visuel :
+> quasi rien » de la table des ressources ci-dessus décrivait l'état d'esprit
+> d'avant ce chantier ; c'est précisément lui qu'Adrien a relevé.
+>
+> **Deux stratégies compatibles, menées de front :** rendre le procédural
+> *signé* (DA1, DA5 — faisable par les sessions, sans asset) et mettre de
+> l'autoral là où l'œil juge (DA2, DA3 — passe par Adrien et un artiste).
+> Candela n'a qu'un sujet visuel, la lumière : quelques ancres bien placées
+> (faisceau, personnage, titre) retournent la perception de tout le reste.
+>
+> **Ordre = priorité décroissante**, et le haut conditionne le bas : repeindre
+> avant d'avoir une palette, c'est repeindre deux fois. DA1.5 (le choix d'un
+> artiste unique) et DA5.6 (la résolution assumée) se tranchent **avant** la
+> première commande. Marquage : *(S)* = sessions seules, sans asset ·
+> *(G)* = gratuit, à sourcer par Adrien (fontes OFL, textures CC0) ·
+> *(C)* = commande artiste / sound designer. **Tout est « proposé » : aucun
+> item n'est commencé sans demande d'Adrien.**
+
+### DA1 — Le socle (sans lui, le reste repeint du sable)
+
+- **DA1.1 La bible visuelle d'une page** — palette de 6-7 couleurs *nommées*
+  avec un rôle chacune (le noir du monde, le blanc cassé de la lumière, l'or
+  tungstène, le carmin du sang, couleur J1, couleur J2, accent d'interface),
+  règles dures (jamais de blanc pur, jamais de primaire, saturation
+  plafonnée), plus un moodboard de ~10 références pour cadrer les commandes
+  (Darkwood, Teleglitch, Hotline Miami, Inside, Nex Machina). Tout le
+  chantier s'y réfère. *(S, arbitrage Adrien sur la palette)*
+- **DA1.2 Deux fontes, mort de la fonte par défaut** — une display à forte
+  personnalité (titres, FATAL, verdicts) + une UI sobre à **chiffres
+  tabulaires** (HUD, chrono, ping). SIL OFL : gratuit. Le levier au meilleur
+  ratio de toute la liste — la fonte par défaut est le marqueur amateur n°1.
+  *(G)*
+- **DA1.3 La passe typographique** — appliquer les deux fontes partout, échelle
+  fixe de 5-6 tailles, plus aucune taille arbitraire. *(S, après DA1.2)*
+- **DA1.4 La passe de palette** — remplacer chaque couleur codée en dur du
+  projet par une couleur nommée de la bible. C'est là que meurt le rouge pur
+  qui crie « programmeur ». *(S, après DA1.1)*
+- **DA1.5 Un seul artiste pour tout** — décision de casting avant toute
+  commande : des assets de sources dépareillées recréent l'incohérence qu'on
+  essaie de tuer. Un artiste, un lot, un style. *(Adrien)*
+- **DA1.6 Le wordmark CANDELA** — un vrai logo dessiné (la bougie est un cadeau
+  de naming), décliné partout. Tant que le titre est un `Label`, le jeu dit
+  « prototype ». *(C)*
+- **DA1.7 Icône d'app + boot splash** — bannir le logo Godot du démarrage.
+  *(dérivé de DA1.6)*
+- **DA1.8 Trois courbes d'easing maison** — une entrée, une sortie, un rebond,
+  définies une fois, utilisées partout, durées standardisées (90/180/300 ms).
+  La signature qui distingue un jeu « animé » d'un jeu « tweené ». *(S)*
+- **DA1.9 La grille de 8 px** — tous les menus sur une grille d'espacement
+  constante. L'à-peu-près d'alignement se voit sans se nommer. *(S)*
+
+### DA2 — Les ancres autorales in-game (là où l'œil juge en trois secondes)
+
+- **DA2.1 Le cookie de torche peint** — remplacer le dégradé radial parfait par
+  une texture de faisceau peinte : bords irréguliers, stries de lentille, cœur
+  chaud vignetté. **La plus grosse ancre du jeu** : tout est vu à travers cette
+  lumière, une seule texture change 80 % des pixels de chaque frame.
+  *(C, ou G en CC0 retouché)*
+- **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
+  d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
+  *(C : 3-4 textures)*
+- **DA2.3 Le muzzle flash en frames** — 2-3 images peintes au lieu du disque
+  lumineux : l'événement le plus vu après la torche. *(C : 1 planche)*
+- **DA2.4 Le sprite du joueur** — personnage top-down lisible en silhouette
+  (tête, épaules, arme), idle + 4-6 frames de marche. Un personnage incarne le
+  duel ; une forme fait un diagramme. *(C)*
+- **DA2.5 Les 4 armes en main** — silhouettes distinctes sur le sprite : le
+  pompe se reconnaît à sa forme avant son son. *(C, avec DA2.4)*
+- **DA2.6 Le tileset des sols** — les 2 matériaux du damier en vraies tuiles
+  avec usure et taches, 3-4 variantes par tuile posées aléatoirement pour
+  briser la répétition parfaite. *(C)*
+- **DA2.7 Le tileset des murs** — coins dessinés, liseré intégré au tile plutôt
+  que tracé. *(C, avec DA2.6)*
+- **DA2.8 Les decals de sang peints** — 6-8 éclaboussures remplaçant les
+  polygones : une scène de crime, pas un nuage de losanges. *(C : 1 planche)*
+- **DA2.9 Les impacts muraux** — éclats et brûlures en decals persistants.
+  *(C, avec DA2.8)*
+- **DA2.10 Le key art du titre** — une illustration d'ambiance (deux torches
+  dans le noir) derrière le menu : une image installe l'univers mieux que
+  quinze shaders. *(C)*
+- **DA2.11 Le viseur custom** — croix dessinée, réactive (s'ouvre au tir, se
+  teinte à l'éblouissement). *(C, ou S en vectoriel soigné)*
+- **DA2.12 Les traçantes texturées** — habiller la `Line2D` d'une texture de
+  trait (grain, pointes effilées) : la balle cesse d'être un segment. *(G ou C)*
+
+### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
+
+- **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
+  jugé. Priorité absolue du lot audio. *(C)*
+- **DA3.2 Les stems produits à 170 BPM** (= V1.1) — la musique adaptative est
+  câblée de bout en bout ; elle attend une vraie production. *(C)*
+- **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
+  `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
+  dépôt des fichiers. *(C : 3 samples)*
+- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10). *(C)*
+- **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
+  « fini » comme une voix. *(C)*
+- **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
+- **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
+  même matière sonore pour tous les menus. *(C : 5-6 samples)*
+- **DA3.8 Le room tone** (= V5.10) — un lit de silence habité sous la manche.
+  *(C)*
+- **DA3.9 Le mastering global** — loudness cohérente entre bus, limiteur,
+  égalisation : l'écart pro/amateur *s'entend* au volume près. *(C, câblage S)*
+
+### DA4 — L'interface habillée
+
+- **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
+  rectangles stylés par code. *(C)*
+- **DA4.2 Chrono, score, ping en chiffres tabulaires** — ils cessent de
+  « sauter » à chaque changement. *(S, découle de DA1.2)*
+- **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
+  style, plus d'outline automatique. *(S)*
+- **DA4.4 Le bandeau FATAL dessiné** — cartouche peint, pas un label sur le
+  noir. *(C)*
+- **DA4.5 La killcam habillée** — cadre VHS authored, timecode en fonte mono,
+  grain *texturé* plutôt que bruit calculé. *(C : 2-3 textures)*
+- **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
+  d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
+  devient une pièce signature. *(S)*
+- **DA4.7 La bannière de fin composée** — verdict, série, « effleuré : 13 px »
+  hiérarchisés comme une affiche, pas empilés. *(S après DA1, C pour l'ornement)*
+- **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
+  pour chaque carte. *(S)*
+- **DA4.9 Le code de salon en cases display** — V6.7 le prévoit ; la typo
+  display le rend iconique. *(S, après DA1.2)*
+- **DA4.10 Les glyphes manette officiels** — icônes de boutons dessinées au
+  lieu de « X », « LB » en texte. *(G : jeux de glyphes libres)*
+- **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
+  noms de touches. *(S + G)*
+- **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
+  carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
+- **DA4.13 Les transitions d'écran signature** — un seul motif de fondu (une
+  extinction ?), décliné partout. *(S)*
+- **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
+  rectangles colorés. *(C)*
+- **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
+  l'éditeur sous la bible. *(S + G)*
+- **DA4.16 Le panneau F3 lui-même** — même la debug UI dit quelque chose de la
+  rigueur du jeu. *(S)*
+- **DA4.17 Les messages d'erreur humanisés** — « L'hôte a quitté le salon »
+  stylé et calme, jamais un texte brut. *(S)*
+
+### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
+
+- **DA5.1 L'audit zéro-défaut** — une session parcourt chaque écran et liste
+  toute valeur par défaut encore visible : fonte, couleur, easing, curseur,
+  son manquant. Le livrable est la liste, cochée ensuite. *(S)*
+- **DA5.2 Blanc pur et noir pur interdits** hors fond du monde — tout passe au
+  blanc cassé et au noir de la bible. *(S)*
+- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
+  circulaire passe en texture. *(S + G)*
+- **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
+  qui « colle » tous les éléments entre eux, l'arme n°1 contre l'effet
+  collage. *(S)*
+- **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
+  les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
+- **DA5.6 La résolution assumée** — trancher pixel-perfect vs. smooth une fois
+  pour toutes, et s'y tenir sur chaque asset commandé. *(Adrien, avant toute
+  commande — conditionne DA1.5)*
+- **DA5.7 Un seul style d'outline/ombre de texte** — défini dans le thème, plus
+  jamais au cas par cas. *(S)*
+- **DA5.8 Recalibrer la vague M sous la nouvelle DA** — les 15 effets de menus
+  sont procéduraux : sous la nouvelle palette et les nouvelles fontes ils
+  deviennent un écrin ; sans ça, ils amplifient le look actuel. *(S)*
+
+### DA6 — Les moments qu'on screenshote
+
+- **DA6.1 L'écran de victoire en affiche** — composé comme un poster, pas comme
+  un menu. *(S + C)*
+- **DA6.2 La photo du gel fatal signée** — le gel V2.1 existe ; le cadrer, le
+  titrer, le dater : chaque kill produit une image montrable. *(S)*
+- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)*
+- **DA6.4 Le bilan de session partageable** — la même carte exportée en image.
+  *(S)*
+- **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
+  l'esquisse) : logo, souffle, lumière. *(S + C)*
+
+### DA7 — Le dispensable assumé (quand le reste est fait)
+
+- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)*
+- **DA7.2 Le trailer de 60 secondes.** *(C)*
+- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)*
+- **DA7.4 Un site d'une page.** *(S)*
+- **DA7.5 Palettes alternatives déblocables** — la bible déclinée (nocturne,
+  sépia), récompenses de rangs. *(S)*
+- **DA7.6 Skins de torche et de viseur** — mêmes emplacements, autres cookies.
+  *(C)*
+- **DA7.7 Le thème du menu réinterprété** — variante saisonnière ou de rang du
+  stem de menu. *(C)*
+- **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
+  reste trop longtemps sans jouer. *(S, après DA1.6)*
+
+**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
+DA1.4, DA1.8 (gratuits, sessions) en parallèle du lot audio DA3.1-DA3.3 (déjà
+câblé) et de la commande de DA2.1.
 
 ---
 
