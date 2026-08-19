@@ -2353,6 +2353,25 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)
+
+Le lot des suites headless a pris **3672 s — soixante-et-une minutes** un soir,
+contre **111 s** le lendemain sur le même code. Une suite lancée seule prend
+**2,6 s**. La différence est la **contention** : plusieurs sessions lançaient
+Godot en même temps, charge moyenne à **10**.
+
+**Ce que ça a failli coûter :** un mode `--rapide` a été ajouté sur l'hypothèse
+que les six scénarios à deux instances « coûtaient l'essentiel ». Mesuré, c'est
+faux — ils valent ~5 min sur les 222 s… non, sur un lot complet **de 222 s au
+calme**, dont ~110 s pour eux. Le mode reste utile, mais son commentaire
+affirmait une cause qui n'était pas la bonne, et il aurait envoyé le suivant
+optimiser le mauvais endroit.
+
+**Avant de découper, d'optimiser ou d'accuser une suite : regarder `uptime`.**
+C'est le même motif que le banc de cadence — un chiffre qui mesure la machine et
+qu'on prend pour une propriété du code.
+
+
 ### Un percentile ne se mesure pas en un passage (2026-08-18)
 
 Le 1 % bas varie d'un relevé à l'autre **sur la même configuration** : 163, 169
