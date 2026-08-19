@@ -4,10 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Avant toute chose
 
-**Lire [docs/ROADMAP.md](docs/ROADMAP.md) en entier avant d'agir.** C'est le
-document de référence : état des phases, décisions actées, « Pièges connus »
-(erreurs déjà payées une fois) et jalons humains. Le protocole complet
-humains/agents est dans [README.md](README.md). Règles non négociables :
+**Lire [docs/ROADMAP.md](docs/ROADMAP.md) en entier avant d'agir.** Depuis le
+2026-08-19 c'est un résumé court, volontairement simplifié pour Adrien : état
+des phases, ce qui reste, décisions et pièges les plus importants **par leur
+titre seulement**. Le détail technique complet de chacun — le pourquoi, le
+comment on l'a trouvé — vit dans
+[docs/ROADMAP_ARCHIVE_2026-08-19.md](docs/ROADMAP_ARCHIVE_2026-08-19.md), que
+le résumé pointe à chaque section. **Avant de travailler sur un sujet couvert
+par un titre de piège, ouvrir l'archive et lire l'entrée en entier** — le titre
+suffit à rappeler qu'une erreur existe, pas à éviter de la refaire. Le
+protocole complet humains/agents est dans [README.md](README.md). Règles non
+négociables :
 
 - Le travail avance par **étapes numérotées** ; ne pas anticiper l'étape
   suivante sans demande explicite. Aucune refonte opportuniste : un problème
