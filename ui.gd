@@ -4462,6 +4462,59 @@ func reinitialiser_chrono() -> void:
 		time_label.scale = Vector2.ONE
 		time_label.remove_theme_color_override("font_color")
 
+## Rouvre le SALON là où il est, sans l'habillage de fin de match.
+##
+## Née le 2026-08-19 d'un défaut du scénario 4.1 : l'adversaire meurt, quitte
+## pendant la killcam, revient. Le hub restait bien sur son écran de salon, avec
+## son entrée « PRÊT » — **dans un panneau que plus rien ne rallumait**. Le bon
+## écran, et pas de menu.
+##
+## ## Pourquoi ni l'une ni l'autre des deux fonctions voisines ne convenait
+##
+## **`show_waiting_for_opponent()` n'ouvre aucun menu, et ne doit pas en ouvrir.**
+## Son `waiting_label` vit dans le HUD de match, pas dans le panneau : c'est
+## l'attente **dans l'arène**, et le dépôt le dit ailleurs en toutes lettres —
+## « l'hôte est déjà dans l'arène : c'est l'écran d'attente qui porte le code,
+## pas le menu qu'il vient de quitter ». Lui faire rallumer le panneau
+## contredirait cette décision et casserait ses deux autres appelants, dont un
+## qui appelle `hide_game_over()` juste après, exprès.
+##
+## **`show_main_menu()` fait trop.** Elle remet le hub à l'accueil : un joueur
+## qui attendait dans son salon serait ramené à la racine et devrait redescendre
+## deux crans pour retrouver le « PRÊT » qu'il regardait.
+##
+## Ce qu'on veut est entre les deux, et n'existait pas : **rallumer le panneau
+## sur l'écran courant**, sans titre de victoire, sans score, sans réinitialiser
+## la navigation.
+func rouvrir_le_salon() -> void:
+	# On redevient « dans le menu » : c'est ce qui rend au lanceur son libellé de
+	# base — « PRÊT » et non « REJOUER » — car il n'y a plus de match à rejouer.
+	_is_main_menu = true
+	if is_instance_valid(match_hud):
+		match_hud.hide()
+	_options_from_pause = false
+	btn_back.hide()
+	btn_actions.hide()
+	if pause_panel != null:
+		_fermer_sec(pause_panel)
+	_restore_all_tabs()
+
+	# **Pas de `hub.reset()`** : c'est toute la différence avec `show_main_menu()`.
+	_allumer(game_over_panel)
+	game_over_title.text = "CANDELA 2D"
+	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
+	# Cette ligne porte la description de l'entrée survolée : un score de match
+	# terminé y resterait affiché sous un salon qui attend le suivant.
+	game_over_score.text = ""
+
+	# Le bloc salon se remet en accord avec l'état réel du lien — c'est lui qui
+	# grise ou dégrise « PRÊT » selon qu'un second joueur est là.
+	_refresh_lobby_block()
+	_refresh_player_list()
+	_sync_launch_entries()
+	_seed_focus(0)
+
+
 func show_main_menu() -> void:
 	_is_main_menu = true
 	if is_instance_valid(match_hud):
