@@ -3653,12 +3653,23 @@ func _close_pause_options() -> void:
 	_options_from_pause = false
 	btn_back.hide()
 	_fermer_sec(game_over_panel)
-	_restore_all_tabs()
+	_remettre_la_navigation_a_l_accueil()
 	_open_pause()
 
-## Rend les quatre onglets à la navigation. Le menu et l'écran de fin les veulent
-## tous ; seule la parenthèse « options depuis la pause » en masque trois.
-func _restore_all_tabs() -> void:
+## Ramène la navigation à l'accueil, en vidant la pile du hub.
+##
+## **Elle s'appelait `_restore_all_tabs()` et ne rendait aucun onglet.** Le nom
+## datait d'une barre d'onglets disparue à la Phase 5 ; son corps entier est
+## `hub.reset()` depuis. Renommée le 2026-08-19 parce que le nom a réellement
+## trompé quelqu'un : `rouvrir_le_salon()` l'appelait trois lignes au-dessus d'un
+## commentaire jurant qu'elle ne remettait pas la pile à zéro — et cette remise à
+## zéro démontait le serveur de l'hôte, qui ne pouvait alors plus jamais être
+## rejoint.
+##
+## **Ce n'est pas un geste anodin : `reset()` émet `screen_changed("accueil")`,
+## et `_close_lobby_if_left()` écoute.** N'appeler cette fonction que si l'on veut
+## vraiment repartir de la racine.
+func _remettre_la_navigation_a_l_accueil() -> void:
 	if hub != null:
 		hub.reset()
 
@@ -3916,7 +3927,7 @@ func _resume_game() -> void:
 	get_tree().paused = false
 	_options_from_pause = false
 	btn_back.hide()
-	_restore_all_tabs()
+	_remettre_la_navigation_a_l_accueil()
 	# La reprise ne perd JAMAIS un battement : l'arbre est dé-pausé au-dessus, et
 	# seul le visuel s'éteint encore. Voir `_extinction` — pour tout ce qui décide,
 	# les deux panneaux sont déjà fermés.
@@ -4497,9 +4508,23 @@ func rouvrir_le_salon() -> void:
 	btn_actions.hide()
 	if pause_panel != null:
 		_fermer_sec(pause_panel)
-	_restore_all_tabs()
 
-	# **Pas de `hub.reset()`** : c'est toute la différence avec `show_main_menu()`.
+	# **Pas de `hub.reset()`, et surtout pas par la porte de derrière** — c'est
+	# toute la différence avec `show_main_menu()`, et je l'avais écrit ici avant
+	# d'appeler trois lignes plus haut la fonction qui le fait.
+	#
+	# J'appelais ici `_restore_all_tabs()`, dont le nom promettait des onglets et
+	# **dont le corps entier était `hub.reset()`**. Elle s'appelle désormais
+	# `_remettre_la_navigation_a_l_accueil()`, ce qu'elle a toujours fait.
+	# L'appeler remettait la pile à l'accueil, `screen_changed("accueil")`
+	# partait, et `_close_lobby_if_left()` démontait le serveur — un hôte dont
+	# l'adversaire venait de quitter ne pouvait plus jamais être rejoint, l'écran
+	# continuant d'afficher un code de salon qui ne menait nulle part.
+	#
+	# Rien n'est perdu à ne pas l'appeler : ce que cette fonction servait à
+	# défaire — la parenthèse « options depuis la pause », qui masque trois
+	# rubriques — est déjà défait deux lignes plus haut par `_options_from_pause`
+	# et `btn_back.hide()`.
 	_allumer(game_over_panel)
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
@@ -4534,7 +4559,7 @@ func show_main_menu() -> void:
 	# Le retour au menu ne rejoue pas les bascules de mode : sans ce rappel, le
 	# panneau resterait celui de la partie précédente.
 	_update_weapon_panels_visibility()
-	_restore_all_tabs()
+	_remettre_la_navigation_a_l_accueil()
 
 	hub.reset()
 	_allumer(game_over_panel)
@@ -4571,7 +4596,7 @@ func show_game_over(winner_id: int) -> void:
 	map_card.show()
 
 	_update_weapon_panels_visibility()
-	_restore_all_tabs()
+	_remettre_la_navigation_a_l_accueil()
 	# La carte de la manche suivante est celle de l'hôte : laisser le client en
 	# choisir une lui ferait croire à un choix qui sera écrasé au lancement.
 	# Après un match, on repart du salon correspondant au mode joué : c'est là que
@@ -4825,7 +4850,7 @@ func force_close_pause() -> void:
 	if _options_from_pause:
 		_options_from_pause = false
 		btn_back.hide()
-		_restore_all_tabs()
+		_remettre_la_navigation_a_l_accueil()
 		_fermer_sec(game_over_panel)
 	# Sans condition de mode : une pause locale ouverte au moment où l'on bascule
 	# en ligne laisserait l'arbre gelé.
