@@ -235,6 +235,22 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-19 — session « game feel » : chantier DA inscrit, rien d'implémenté
+
+À la demande d'Adrien (« le jeu manque d'une apparence vraiment pro — ça fait
+généré par IA ») : **nouvelle section « Chantier direction artistique » dans la
+ROADMAP**, 68 items DA1.1-DA7.8 triés par priorité décroissante, marqués
+*(S)* sessions / *(G)* gratuit à sourcer / *(C)* commande artiste. **Aucun item
+n'est commencé** : c'est une liste proposée, chaque départ attend le feu vert
+d'Adrien — et DA1.5 (un seul artiste) + DA5.6 (résolution assumée) sont ses
+décisions à lui, avant toute commande. Les items audio recoupent les V-items
+existants (renvois notés : DA3.1 = V4.1, etc.), pas de double compte. Commit
+docs seul, poussé sur `main`.
+
+**Frontière des shaders : j'accepte la proposition de la session « menus »** —
+`menu_*.gdshader` appartient aux menus, tout autre `*.gdshader` reste au game
+feel. C'est ce que les deux côtés faisaient déjà naturellement.
+
 ### 2026-08-19 — fusion `origin/main` dans `main`, et les décisions d'Adrien
 
 **Les cinq questions ouvertes ont été tranchées, et la fusion est faite.**
