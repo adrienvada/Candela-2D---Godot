@@ -151,7 +151,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.polygon = PackedVector2Array([
 			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
 		poly.material = _mat_mix
-		light.texture = LightTextures.radial(64)
+		LightTextures.poser(light, LightTextures.ECLAT, 64.0)
 		# V4.11 — l'éclat de l'impact : surmultipliée à l'émission, la lumière
 		# retombe à 1.0 en BLOOD_FLASH_DURATION (voir advance()).
 		light.energy = 1.0
@@ -166,7 +166,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.polygon = PackedVector2Array([
 			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
 		poly.material = _mat_add
-		light.texture = LightTextures.radial(32)
+		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
 		rb.linear_damp = randf_range(5.0, 7.0)
 		rb.angular_velocity = randf_range(-6.0, 6.0)
@@ -180,7 +180,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.polygon = PackedVector2Array([
 			Vector2(-1 * s, 0), Vector2(0, -1 * s), Vector2(1 * s, 0), Vector2(0, 1 * s)])
 		poly.material = _mat_add
-		light.texture = LightTextures.radial(32)
+		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
 		rb.linear_damp = randf_range(2.0, 3.0)
 		rb.angular_velocity = randf_range(-2.0, 2.0)
@@ -190,7 +190,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.polygon = PackedVector2Array([
 			Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)])
 		poly.material = _mat_add
-		light.texture = LightTextures.radial(32)
+		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 1.5
 		rb.linear_damp = randf_range(1.0, 4.0) # Étincelles volatiles
 		rb.angular_velocity = randf_range(-20.0, 20.0)

@@ -27,7 +27,59 @@ const SOUNDS: Dictionary = {
 	"torch_off": "res://assets/audio/sfx/torch_off.wav",
 	# V5.3 — l'acouphène d'éblouissement, boucle dont le volume suit dazzle_amount.
 	"dazzle_ringing": "res://assets/audio/sfx/tinnitus_dazzle.wav",
+	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
+	# laquelle sort est `stinger_de_fin`, plus bas.
+	#
+	# Elles passent par le bus SFX et non par le bus musical, ce qui est
+	# contre-intuitif pour de la musique. La raison est le filtre passe-bas de la
+	# torche : dans le noir, le bus musical est coupe vers 300 Hz pour que la
+	# musique recule. Une ponctuation de kill y passerait comme un coup sourd, au
+	# moment precis ou elle doit trancher. **Le sting n'est pas de l'ambiance,
+	# c'est un evenement** : il doit survivre au filtre qui fait reculer l'ambiance.
+	"sting_kill": "res://assets/audio/music/sting_kill.ogg",
+	"sting_kill_match": "res://assets/audio/music/sting_kill_match.ogg",
+	"sting_defeat": "res://assets/audio/music/sting_defeat.ogg",
+	"sting_draw": "res://assets/audio/music/sting_draw.ogg",
 }
+
+## Quelle ponctuation clot cette manche, vue depuis CETTE machine ?
+##
+## Pure a dessein, comme `torche_comptee` : la regle se verifie sans serveur
+## audio, et c'est la seule facon de tester une decision qui depend de qui l'on
+## est. Une ponctuation qui se trompe de camp ne leve aucune erreur — elle
+## felicite le perdant, et on ne s'en apercoit qu'en jouant, une fois.
+##
+## - **Egalite** : le match s'acheve au temps, tout le monde entend la meme chose.
+## - **Kill sans fin de match** : les DEUX joueurs l'entendent (decision d'Adrien,
+##   2026-08-25). Un kill est un fait, pas une bonne nouvelle reservee a celui qui
+##   l'obtient.
+## - **Kill decisif** : le vainqueur entend le kill de match, le vaincu sa
+##   defaite. **En ecran partage, personne n'est « le » vaincu a la sortie
+##   audio** — les deux joueurs partagent les memes haut-parleurs, exactement
+##   comme pour `torche_comptee`. On y garde donc le kill decisif, qui decrit
+##   l'evenement sans designer un camp.
+##
+## ⚠️ Au format BO1 (le defaut), un kill met FIN au match : `sting_kill` ne sort
+## donc jamais dans ce format-la. Il attend un format plus long. Ce n'est pas un
+## defaut, mais c'est le genre de silence qu'on prend pour une panne.
+static func stinger_de_fin(winner_id: int, match_over: bool, local_idx: int) -> String:
+	if winner_id < 0:
+		return "sting_draw" if match_over else ""
+	if not match_over:
+		return "sting_kill"
+	if local_idx >= 0 and winner_id != local_idx:
+		return "sting_defeat"
+	return "sting_kill_match"
+
+## L'oreille suit-elle un joueur, dans ce mode ?
+##
+## Meme partage que `torche_comptee`, et pour la meme raison. **En ecran partage,
+## les deux joueurs ecoutent les memes haut-parleurs** : poser l'oreille sur l'un
+## des deux donnerait a son adversaire la distance et la direction de ses propres
+## pas, entendus depuis la tete de l'autre. Ce serait pire que le point fixe
+## d'aujourd'hui, pas mieux. En ligne, chacun a sa sortie : l'oreille peut suivre.
+static func oreille_suit(local_idx: int) -> bool:
+	return local_idx >= 0
 
 ## Le tempo du jeu, en un seul endroit.
 ##
@@ -37,6 +89,32 @@ const SOUNDS: Dictionary = {
 ## qui bat encore à l'ancien ne se signale pas, il se contente d'être à côté.
 const BPM: float = 170.0
 const PERIODE_BEAT: float = 60.0 / BPM
+
+## Les sons de tir, quatre variantes par arme : `weapon_<slug>_01..04.wav`.
+##
+## Le tirage au sort remplace ce que le pitch aléatoire faisait seul jusqu'ici.
+## Un même échantillon repitché reste le même échantillon — l'oreille l'entend
+## en une poignée de coups, et le tir est de loin le son le plus répété du jeu.
+const DIR_ARMES := "res://assets/audio/weapons/"
+const VARIANTES_TIR := 4
+
+## Le chemin d'une variante. Pure à dessein : vérifiable sans serveur audio.
+static func chemin_tir(slug: String, variante: int) -> String:
+	return "%sweapon_%s_%02d.wav" % [DIR_ARMES, slug, variante]
+
+## Ce son est-il un coup de feu ?
+##
+## V4.15 en dépend — les pas reculent de six décibels juste après un tir. La
+## question se réglait avant en comparant à la clé `"shoot"`, seule façon de
+## tirer à l'époque. Depuis que chaque arme a ses variantes, **un tir arrive
+## aussi sous la forme d'un CHEMIN**, et la comparaison à `"shoot"` répondait
+## alors « non » : les pas seraient restés au premier plan pendant les
+## fusillades, sans qu'aucune erreur ne le dise.
+static func est_un_tir(stream_or_key: Variant) -> bool:
+	if not (stream_or_key is String):
+		return false
+	var s: String = stream_or_key
+	return s == "shoot" or s.begins_with(DIR_ARMES)
 
 const SFX_POOL_SIZE: int = 16
 
@@ -240,6 +318,11 @@ static func choisir_voix(occupees: Array[bool], priorites: PackedInt32Array,
 
 ## La priorité d'un son, d'après sa clé. Un flux passé directement n'en a pas.
 static func priorite_de(stream_or_key: Variant) -> int:
+	# Un tir joué par son chemin vaut un tir joué par sa clé. Le défaut donnait
+	# déjà la même valeur, mais par coïncidence : l'écrire rend le classement
+	# vrai plutôt que chanceux, et il le restera si le défaut change.
+	if est_un_tir(stream_or_key):
+		return int(SFX_PRIORITE.get("shoot", SFX_PRIORITE_DEFAUT))
 	if stream_or_key is String:
 		return int(SFX_PRIORITE.get(stream_or_key, SFX_PRIORITE_DEFAUT))
 	return SFX_PRIORITE_DEFAUT
@@ -303,11 +386,11 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# s'entendent pas tout en volant des voix. On les efface, on ne les coupe pas :
 	# savoir que l'autre bouge reste une information du jeu.
 	var volume_final := volume_db
-	if stream_or_key is String:
-		if stream_or_key == "shoot":
-			_dernier_tir = maintenant
-		elif stream_or_key == "footstep" and maintenant - _dernier_tir < DUCK_TIR_S:
-			volume_final += DUCK_TIR_DB
+	if est_un_tir(stream_or_key):
+		_dernier_tir = maintenant
+	elif stream_or_key is String and stream_or_key == "footstep" \
+			and maintenant - _dernier_tir < DUCK_TIR_S:
+		volume_final += DUCK_TIR_DB
 	
 	var prio := priorite_de(stream_or_key)
 	var voie := choisir_voix(_occupations(sfx_players_2d), _sfx_prio_2d, _sfx_debut_2d, prio)
@@ -325,6 +408,24 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_name
 	player.play()
 	return player
+
+## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
+##
+## Le pitch reste, mais resserré : ±4 % au lieu de ±8 %. La variation large
+## servait à masquer la répétition d'un échantillon unique ; avec quatre prises
+## réelles elle n'a plus ce travail à faire, et trop de pitch s'entend — un
+## calibre qui change de taille d'un coup à l'autre.
+##
+## Une arme dont les variantes manquent retombe sur le son générique plutôt que
+## de se taire : la règle du dépôt est de câbler et de rester silencieux, mais
+## le coup de feu est le seul son qui porte une INFORMATION DE JEU — il dit
+## qu'on vient de tirer, et où. Le taire changerait l'équilibre, pas seulement
+## l'ambiance.
+func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_tir(slug, randi_range(1, VARIANTES_TIR))
+	if get_audio_stream(chemin) == null:
+		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
 
 func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer2D:
 	var pitch = randf_range(min_pitch, max_pitch)
@@ -355,6 +456,31 @@ func play_music(stream_or_key: Variant) -> void:
 
 	music_player.stream = stream
 	music_player.play()
+
+## Démarre la musique au lancement du jeu, par l'intro.
+##
+## Pourquoi `play_music("music_menu")` ne pouvait pas rendre ce service, et
+## pourquoi c'est contre-intuitif : elle appelle `play()`, qui démarre le flux à
+## son **clip initial** — l'intro — puis bascule aussitôt sur le menu. L'intro
+## sortait donc pour de vrai, mais jusqu'au prochain temps seulement (0,35 s à
+## 170 BPM, par le repli ANY→ANY), avant d'être fondue. Cinq secondes et demie
+## de musique écrites, jouées un tiers de seconde, sans que rien ne soit en
+## panne et sans qu'aucune erreur ne le dise.
+##
+## Ici on démarre et on ne demande RIEN. Le clip initial joue en entier, et son
+## `auto_advance` conduit au menu au bout de ses seize temps. Les retours au
+## menu qui suivront passent par `play_music`, qui trouve le lecteur déjà en
+## marche et se contente de basculer : l'intro ne revient pas de la partie.
+## C'est ce qui la garde rare — au dixième retour au menu d'une soirée, cinq
+## secondes d'attente ne sont plus une entrée en matière, c'est un péage.
+func demarrer_musique_au_lancement() -> void:
+	if music_player.stream is AudioStreamInteractive:
+		if not music_player.playing:
+			music_player.play()
+		return
+	# Sans le flux interactif — ressource absente — il n'y a pas d'intro à
+	# jouer ni d'enchaînement automatique pour en sortir : on ouvre sur le menu.
+	play_music("music_menu")
 
 func switch_music_clip(clip_name: String) -> void:
 	if music_player.stream is AudioStreamInteractive:
@@ -429,6 +555,68 @@ func silence_sec(duree: float = 1.0) -> void:
 	minuterie.timeout.connect(func() -> void:
 		AudioServer.set_bus_mute(idx, etait_coupe)
 		_silence_en_cours = false)
+
+## Noeud du monde de jeu qui heberge les voix positionnelles pendant un match, et
+## l'oreille posee sur le joueur local. Voir `poser_oreille`.
+var _hote_positionnel: Node = null
+var _oreille: AudioListener2D = null
+
+## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
+## sur le joueur local.
+##
+## **Sans les DEUX gestes, aucun des deux ne s'entend**, et c'est le piege de ce
+## correctif. Le pool d'`AudioStreamPlayer2D` est enfant de cet autoload, donc
+## dans le `World2D` de la RACINE ; le jeu vit dans celui du `SubViewport`. Un
+## `AudioStreamPlayer2D` ne s'adresse qu'aux viewports de son propre monde —
+## poser un `AudioListener2D` sur le joueur sans demenager le pool ne change rien
+## du tout, et on chercherait l'erreur dans le listener.
+##
+## Troisieme piece, invisible et mesuree : **un `SubViewport` n'est PAS une
+## oreille par defaut** — `audio_listener_enable_2d` vaut `false`, seule la
+## fenetre racine l'a a `true`. Sans l'activer, le viewport est ignore meme une
+## fois le pool au bon endroit.
+##
+## Ce que ca corrige : l'oreille etait plantee au centre de l'ecran virtuel,
+## immobile. Le panoramique disait ou le son etait SUR LA CARTE, pas par rapport
+## a soi ; avancer vers l'adversaire ne rendait pas ses pas plus forts. Rien
+## n'etait en erreur et tout etait audible — une sortie plausible.
+func poser_oreille(porteur: Node2D) -> void:
+	rendre_oreille()
+	if porteur == null or not is_instance_valid(porteur):
+		return
+	var hote := porteur.get_parent()
+	if hote == null:
+		return
+	_hote_positionnel = hote
+	for p in sfx_players_2d:
+		if is_instance_valid(p) and p.is_inside_tree():
+			p.reparent(hote, false)
+	var vue := porteur.get_viewport()
+	if vue != null:
+		vue.audio_listener_enable_2d = true
+	_oreille = AudioListener2D.new()
+	_oreille.name = "OreilleLocale"
+	porteur.add_child(_oreille)
+	_oreille.make_current()
+	# L'hote disparait a chaque reconstruction d'arene. Sans ce rappel, le pool
+	# partirait avec lui : seize voix liberees, et plus un seul son positionnel du
+	# reste de la session — sans erreur, evidemment.
+	if not hote.tree_exiting.is_connected(rendre_oreille):
+		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+
+## Ramene les voix a la maison et retire l'oreille. Idempotente a dessein : elle
+## est appelee au debut de `poser_oreille` autant qu'a la fin d'un match.
+func rendre_oreille() -> void:
+	if _oreille != null and is_instance_valid(_oreille):
+		_oreille.queue_free()
+	_oreille = null
+	if _hote_positionnel != null and is_instance_valid(_hote_positionnel):
+		if _hote_positionnel.tree_exiting.is_connected(rendre_oreille):
+			_hote_positionnel.tree_exiting.disconnect(rendre_oreille)
+	_hote_positionnel = null
+	for p in sfx_players_2d:
+		if is_instance_valid(p) and p.is_inside_tree() and p.get_parent() != self:
+			p.reparent(self, false)
 
 func set_in_match(in_match: bool) -> void:
 	is_in_match = in_match

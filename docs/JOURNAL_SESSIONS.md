@@ -332,6 +332,58 @@ rien ne bronche ; ils sont corrigés chez moi, mais **le contrôle manquant rest
 `project.godot` traîne dans l'arbre partagé. DA1 dit y travailler pour
 `config/icon` et `boot_splash/*` — si c'est la sienne, le mystère est clos ;
 sinon, à signaler à Adrien avant que quelqu'un l'embarque sans la voir.
+### 2026-08-25 — session « spatialisation du son » : deux documents corrigés, aucun code
+
+**Aucun fichier de code touché.** Cette session a répondu à une question d'Adrien
+— « où en est-on de la spatialisation du son ? » — puis écrit ce qu'elle a
+trouvé. `audio_manager.gd`, `game_state.gd` et `player.gd` restent entiers et
+disponibles pour la session « game feel ».
+
+**Le fait, mesuré et pas déduit : le jeu joue des sons positionnels et n'a
+jamais eu d'auditeur.** Le pool d'`AudioStreamPlayer2D` est enfant de
+l'autoload, donc dans le `World2D` de la racine, tandis que le jeu vit dans
+celui du `SubViewport`. Les caméras ne l'entendent donc jamais, et Godot pose
+l'oreille en un point fixe du monde, **hors de la carte**. Panoramique et
+atténuation disent la position **absolue** du son ; avancer vers l'adversaire ne
+rend pas ses pas plus forts. Diagnostic headless jetable, lancé puis supprimé —
+rien n'a été ajouté à `tools/`.
+
+**Écrit dans `docs/ROADMAP.md`** — en ajout, sans reformater la section de
+personne :
+
+- une section neuve, « Chantier — la spatialisation du son », items **S1 à S7** ;
+- une entrée « Pièges connus » (un son positionnel sans auditeur reste audible) ;
+- un renvoi en blocs-citation sous « Prochaines étapes », **sans toucher à la
+  numérotation** des listes existantes.
+
+**À l'attention de la session « game feel », qui tient les fichiers concernés :**
+S1 est un défaut, pas du polish, et il est **bloquant pour tout le reste** — dont
+**V5.12** (réverb par carte), qui posée avant lui ne s'entendrait que comme une
+couleur. S3 (occlusion par les murs) et S7 (rester en 2D ou passer les sons de
+manche en 3D) **changent l'information disponible en manche ou l'architecture** :
+ils se posent à Adrien, ils ne s'implémentent pas d'office.
+
+**Écrit dans `CLAUDE.md`** — trois divergences avec la ROADMAP, corrigées :
+
+1. il affirmait l'**écran partagé permanent, y compris en ligne**. C'est la
+   phrase qu'Adrien a rejetée le 2026-08-18, et la ROADMAP note qu'elle est
+   partie **de là** pour essaimer chez elle. La source est corrigée ;
+2. sa liste d'**autoloads** datait d'avant les Phases 8 et 9 — ni `PatchLoader`
+   (dont la position en tête est une contrainte technique), ni `UpdateManager`,
+   ni `RankedIdentity`, ni `Matchmaker` ;
+3. il ne décrivait **pas l'audio du tout**. Il porte désormais quatre lignes,
+   dont l'avertissement sur l'auditeur : ce défaut ne se voit pas à la lecture
+   du code, il se déduit du graphe de scène.
+
+**Ce que je signale et que je n'ai pas fait :** ce fichier-ci porte encore la
+phrase « l'écran partagé est permanent » (section barrée du 2026-08-17, clôture
+de la session « game feel »). Je ne l'ai **pas** réécrite — c'est une archive
+datée appartenant à une autre session, et la règle des sections l'emporte ici
+sur la chasse aux essaimages. Elle est fausse depuis le 2026-08-18 ; qui la
+relira le saura par cette entrée.
+
+Le delta a été transmis par `SendMessage` à la session chargée de republier le
+suivi de projet.
 
 ### 2026-08-24 — le hub : les lanceurs passent à droite, un rôle une couleur
 
@@ -1020,6 +1072,61 @@ la suite s'inscrit. **Rien d'autre.**
   état du monde qui n'existe plus.** À supprimer ou à garder derrière une garde
   qui refuse d'écrire si le `.tres` référence déjà des flux non vides — arbitrage
   d'Adrien, fichier à votre main.
+
+#### Ajout du 2026-08-24, soir — j'ai touché `game_state.gd` et `audio_manager.gd`
+
+**Deux fichiers du domaine « game feel », et je les ai ouverts.** Je le déclare
+ici plutôt que de le laisser découvrir dans un diff.
+
+Ce que c'est : Adrien a demandé que l'intro musicale se joue **au lancement
+seulement**. Trois lignes utiles, aucune refonte.
+
+- `game_state.gd` — la ligne d'ouverture de `_ready()` appelle désormais
+  `AudioManager.demarrer_musique_au_lancement()` au lieu de
+  `play_music("music_menu")`. Rien d'autre n'a bougé dans ce fichier.
+- `audio_manager.gd` — une fonction ajoutée, `demarrer_musique_au_lancement()`.
+  Rien de supprimé, rien de renommé, aucune signature touchée.
+- `assets/audio/music/main_stream_interactive.tres` (mon domaine) — une
+  transition explicite intro→menu.
+- `tools/test_musique.gd` (mon domaine) — huit contrôles de plus, dont deux qui
+  lisent la source de `game_state.gd` pour vérifier que l'ouverture ne redemande
+  pas le menu. **Si vous changez cette ligne, cette suite rougira** : c'est
+  voulu, et le message vous dira quoi.
+
+Les deux fichiers étaient propres dans l'arbre au moment où je les ai ouverts,
+vérifié par `git status`. Ils le sont redevenus.
+
+**La raison de fond, si quelqu'un veut la défaire :** `music_player.play()`
+démarre un `AudioStreamInteractive` à son `initial_clip`, pas au clip qu'on
+demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de seconde,
+avant d'être coupée par la bascule vers le menu. Détail complet dans les
+« Pièges connus » de la feuille de route.
+
+#### Lot du 2026-08-25 — worktree `audio-oreille-et-stingers`
+
+Cinq points arbitrés par Adrien, travaillés **hors de l'arbre partagé** à sa
+demande. Fichiers touchés : `audio_manager.gd`, `game_state.gd`,
+`asset_manifest.gd`, `tools/test_musique.gd`, `tools/test_oreille.gd` (créé),
+`tools/run_suites.sh`, et deux suppressions.
+
+1. **L'oreille audio** — le jeu n'en avait aucune. Corrigé **en ligne
+   seulement** ; en écran partagé on n'y touche pas, même raison que
+   `torche_comptee`. Détail dans « Pièges connus ».
+2. **Les quatre stingers câblés.** `stinger_de_fin` est une règle pure : un kill
+   non décisif s'entend **des deux côtés** (décision d'Adrien), un kill décisif
+   donne le kill de match au vainqueur et la défaite au vaincu. En écran
+   partagé, jamais de sting de défaite — personne n'est « le » vaincu à la
+   sortie audio. ⚠️ **Au format BO1, `sting_kill` ne sort jamais** : tout kill
+   est décisif. Ce n'est pas un défaut, mais c'est un silence qu'on prendra pour
+   une panne.
+3. **`tools/generate_music_streams.gd` supprimé.** Il reconstruisait un objet
+   *plausible* d'une version antérieure — trois clips, intro disparue. Un outil
+   qui ne sait plus reproduire l'objet qu'il prétend fabriquer ne se répare pas.
+4. **`asset_manifest.gd` corrigé** : les huit entrées `weapon_*_body` /
+   `weapon_*_tail` décrivaient des fichiers qui n'existeraient jamais, et les
+   seize réels n'étaient surveillés par personne. **Le domaine « menus » n'a plus
+   de session** — Adrien me l'a explicitement confié.
+5. **`weapon_pistolet.wav` supprimé** — version « un seul fichier » abandonnée.
 
 **Republication du suivi :** je ne l'ai pas prise. La session « DA2 »
 (`uds:/tmp/cc-socks/13973.sock`) la porte et a reçu mon delta.

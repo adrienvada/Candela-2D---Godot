@@ -60,6 +60,57 @@ const VARIANTES := [
 	{"nom": "INTÉGRÉ", "etiquette": ""},
 ]
 
+## Les masques de DA2.2 et DA2.3, et **l'empreinte au sol que chacun doit tenir**.
+##
+## ⚠️ **`empreinte` n'est pas décorative : c'est le garde-fou du piège de DA2.1.**
+## `texture_scale` multiplie la taille PROPRE de la texture, donc un masque de
+## 256² posé là où le jeu met un dégradé de 128² éclaire deux fois plus loin sans
+## qu'aucune valeur de gameplay ait bougé. On note ici l'empreinte du dégradé
+## remplacé, en unités de monde, et le banc en déduit l'échelle. **Comparer deux
+## masques à des portées différentes ne compare rien.**
+##
+## `null` en première position de chaque liste = le dégradé d'aujourd'hui,
+## fabriqué à la volée comme `player.gd` le fait. Sans lui on jugerait dans le
+## vide : la question n'est pas « est-ce joli » mais « est-ce mieux que ça ».
+const RETRO := [
+	{"nom": "dégradé actuel", "fichier": ""},
+	{"nom": "poussière", "fichier": "retrodiffusion_poussiere"},
+	{"nom": "corona", "fichier": "retrodiffusion_corona"},
+	{"nom": "brume", "fichier": "retrodiffusion_brume"},
+]
+const RETRO_EMPREINTE := 256.0
+
+const AMBIANTE := [
+	{"nom": "dégradé actuel", "fichier": ""},
+	{"nom": "braise", "fichier": "ambiante_braise"},
+	{"nom": "verre dépoli", "fichier": "ambiante_verre"},
+]
+const AMBIANTE_EMPREINTE := 150.0
+
+const ECLAT := [
+	{"nom": "dégradé actuel", "fichier": ""},
+	{"nom": "poudre", "fichier": "eclat_poudre"},
+	{"nom": "grain", "fichier": "eclat_grain"},
+	{"nom": "lisse", "fichier": "eclat_lisse"},
+]
+const ECLAT_EMPREINTE := 256.0
+
+## Le flash est le seul à changer d'empreinte : `player.gd` pose un dégradé de
+## 128² à `texture_scale` 0,5, soit **64 unités**. Les frames sont cuites en 256²,
+## donc l'échelle tombe à 0,25 — quatre fois plus de texels sur le même terrain.
+const FLASH := [
+	{"nom": "disque actuel", "fichier": ""},
+	{"nom": "1 · amorce", "fichier": "flash_1"},
+	{"nom": "2 · épanouissement", "fichier": "flash_2"},
+	{"nom": "3 · dissipation", "fichier": "flash_3"},
+]
+const FLASH_EMPREINTE := 64.0
+
+## Où poser les éclats ponctuels. Ils ne vivent pas sur le joueur — ce sont des
+## balles et des impacts, vus À DISTANCE. Les juger collés au porteur donnerait
+## une idée fausse de ce qu'on en voit en partie.
+const POSTES_ECLAT := [Vector2(240, -170), Vector2(400, 120), Vector2(-260, 90)]
+
 ## La table vient de `tools/torches.gd`, partagée avec la cuisson.
 const Torches := preload("res://tools/torches.gd")
 
@@ -77,8 +128,32 @@ var _porteur: Node2D
 var _torche: PointLight2D
 var _camera: Camera2D
 var _etiquette: Label
-var _variante := 1
+## ⚠️ **Zéro, pas un.** `VARIANTES` est passée de quatre entrées à une le
+## 2026-08-24, quand Adrien a choisi `bis04` et que la fabrique procédurale a
+## disparu ; l'index de départ, lui, est resté à 1. Le banc plantait donc à la
+## première image — `Out of bounds get index '1'` — et personne ne l'a vu parce
+## que personne ne l'a relancé après l'intégration. **Un outil qu'on ne rouvre
+## pas se casse en silence** : c'est la même famille que les entrées de feuille
+## de route qui se périment, appliquée à du code.
+var _variante := 0
 var _arme := 2  # la pompe : le cône le plus large montre le plus de matière
+
+var _retro: PointLight2D
+var _ambiante: PointLight2D
+var _eclats: Array[PointLight2D] = []
+var _flash: PointLight2D
+var _i_retro := 0
+var _i_ambiante := 0
+var _i_eclat := 0
+var _i_flash := 0
+## La torche noie tout. L'éteindre est le seul moyen de juger une lueur qui vaut
+## 0,6 d'énergie à côté d'un faisceau qui en vaut 2,5.
+var _torche_allumee := true
+## La partie « arme » de l'étiquette, posée par `_appliquer()` et relue par
+## `_etiqueter()` : les deux moitiés changent indépendamment.
+var _ligne_arme := ""
+## Masques demandés que Godot n'a pas pu charger. Voir `_poser()`.
+var _absents: Array[String] = []
 
 
 var _en_capture := false
@@ -87,8 +162,10 @@ var _en_capture := false
 func _ready() -> void:
 	_monter_arene()
 	_monter_porteur()
+	_monter_halos()
 	_monter_interface()
 	_appliquer()
+	_appliquer_halos()
 	if OS.get_cmdline_user_args().has("--captures"):
 		_en_capture = true
 		_capturer.call_deferred()
@@ -205,6 +282,125 @@ func _monter_porteur() -> void:
 	_camera.make_current()
 
 
+## Le dégradé radial d'aujourd'hui, refabriqué à l'identique de `player.gd` et
+## `light_textures.gd` : alpha 1 au centre, 0 au bord, blanc pur.
+##
+## ⚠️ **Blanc pur alors que la charte l'interdit, et ce n'est pas un oubli** :
+## ce n'est pas une couleur, c'est un MASQUE, multiplié par la teinte de la
+## `Light2D`. Y mettre le blanc cassé teinterait deux fois. Même raison que la
+## note en tête de `light_textures.gd`.
+func _degrade(taille: int) -> GradientTexture2D:
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1, 1))
+	g.set_color(1, Color(1, 1, 1, 0))
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.5)
+	t.fill_to = Vector2(0.5, 0.0)
+	t.width = taille
+	t.height = taille
+	return t
+
+
+## Monte les trois lueurs de DA2.2 et le flash de DA2.3, en copie conforme de
+## `player.gd` : mêmes énergies, mêmes masques d'ombre, mêmes positions. Un halo
+## jugé à la mauvaise énergie ne se juge pas — 0,6 et 2,5 ne racontent pas la
+## même histoire avec la même texture.
+func _monter_halos() -> void:
+	_retro = PointLight2D.new()
+	_retro.name = "Retrodiffusion"
+	_retro.shadow_enabled = true
+	_retro.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	_retro.shadow_item_cull_mask = 1
+	_retro.range_item_cull_mask = 1
+	_retro.color = Charte.HALOGENE
+	_retro.energy = 0.6
+	_retro.position = Vector2(18, 0)
+	_porteur.add_child(_retro)
+
+	_ambiante = PointLight2D.new()
+	_ambiante.name = "Ambiante"
+	_ambiante.shadow_enabled = true
+	_ambiante.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	_ambiante.shadow_item_cull_mask = 1
+	_ambiante.range_item_cull_mask = 1
+	_ambiante.color = Charte.HALOGENE
+	_ambiante.energy = 0.8
+	_porteur.add_child(_ambiante)
+
+	# Le flash vit au bout du canon, comme `$MuzzleFlash`. Il reste allumé ici :
+	# en jeu il dure 0,1 s, ce qui ne se juge pas. On regarde sa FORME.
+	_flash = PointLight2D.new()
+	_flash.name = "Flash"
+	_flash.shadow_enabled = true
+	_flash.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
+	_flash.shadow_item_cull_mask = 1
+	_flash.range_item_cull_mask = 1
+	_flash.color = Charte.AMBRE
+	_flash.energy = 1.0
+	_flash.position = Vector2(40, 0)
+	_porteur.add_child(_flash)
+
+	var depart := _porteur.global_position
+	for i in POSTES_ECLAT.size():
+		var e := PointLight2D.new()
+		e.name = "Eclat%d" % i
+		e.shadow_enabled = false
+		e.range_item_cull_mask = 1
+		e.color = Charte.AMBRE
+		e.energy = 1.2
+		e.global_position = depart + POSTES_ECLAT[i]
+		add_child(e)
+		_eclats.append(e)
+
+
+## Pose les quatre masques courants, chacun à l'échelle qui tient son empreinte.
+func _appliquer_halos() -> void:
+	var absents: Array[String] = []
+	for m in [_poser(_retro, RETRO[_i_retro], "halo", RETRO_EMPREINTE),
+			_poser(_ambiante, AMBIANTE[_i_ambiante], "halo", AMBIANTE_EMPREINTE),
+			_poser(_flash, FLASH[_i_flash], "flash", FLASH_EMPREINTE)]:
+		if m != "":
+			absents.append(m)
+	for e in _eclats:
+		var m := _poser(e, ECLAT[_i_eclat], "halo", ECLAT_EMPREINTE)
+		if m != "" and not absents.has(m):
+			absents.append(m)
+	_absents = absents
+	_torche.enabled = _torche_allumee
+	_etiqueter()
+
+
+## Le geste commun : charger le masque (ou refabriquer le dégradé), puis régler
+## `texture_scale` pour que l'empreinte au sol ne bouge pas d'un pixel.
+##
+## Rend "" si tout va bien, le nom du masque manquant sinon.
+##
+## ⚠️ **Le premier jet retombait sur le dégradé SANS RIEN DIRE, et c'était le
+## défaut le plus grave de ce banc.** Un masque non importé par Godot —
+## `ResourceLoader.exists()` faux, ce qui est l'état NORMAL d'un PNG fraîchement
+## cuit tant qu'aucune importation n'a tourné — donnait alors exactement la même
+## image que le dégradé de référence. Adrien a appuyé sur les touches, rien n'a
+## changé, et le seul diagnostic possible depuis l'écran était « les touches ne
+## marchent pas ». **Un repli qui imite la chose qu'il remplace ment sur la
+## nature de la panne.** Il se nomme donc, en clair, dans l'étiquette.
+func _poser(lumiere: PointLight2D, v: Dictionary, dossier: String, empreinte: float) -> String:
+	var fichier: String = v["fichier"]
+	var manquant := ""
+	if fichier == "":
+		lumiere.texture = _degrade(int(empreinte))
+	else:
+		var chemin := "res://assets/%s/%s.png" % [dossier, fichier]
+		if ResourceLoader.exists(chemin):
+			lumiere.texture = load(chemin)
+		else:
+			lumiere.texture = _degrade(int(empreinte))
+			manquant = fichier
+	lumiere.texture_scale = empreinte / float(lumiere.texture.get_width())
+	return manquant
+
+
 func _monter_interface() -> void:
 	var couche := CanvasLayer.new()
 	add_child(couche)
@@ -249,14 +445,33 @@ func _appliquer() -> void:
 	# La portée s'affiche en demi-écrans : « 0,85 écran » se juge, « 410 unités »
 	# ne se juge pas. Au-delà de 1,00 la torche éclaire hors du champ du joueur.
 	var ecrans := Torches.portee_ecrans(arme)
-	_etiquette.text = (
-		"VARIANTE  %s        ARME  %s  (demi-angle %.0f°, échelle %.1f)\n"
-		+ "portée %.0f unités = %.2f écran%s        %s        [%s]\n"
-		+ "1-4 variante · Espace arme · flèches déplacer · souris viser · Échap quitter\n"
-		+ "tools/torches.gd et game_state.gd sont tenus egaux par tools/test_torches.gd") % [
+	_ligne_arme = ("TORCHE  %s — %s  (demi-angle %.0f°, échelle %.1f)"
+		+ "        portée %.0f unités = %.2f écran%s        %s") % [
 			v["nom"], arme["nom"], arme["angle"], arme["echelle"],
-			Torches.portee(arme), ecrans, "  (HORS CHAMP)" if ecrans > 1.0 else "",
-			origine, str(arme["origine"])]
+			Torches.portee(arme), ecrans, "  (HORS CHAMP)" if ecrans > 1.0 else "", origine]
+	_etiqueter()
+
+
+## Les quatre choix courants, et les empreintes qu'ils tiennent. Afficher
+## l'empreinte n'est pas de la décoration : c'est ce qui rend visible qu'on
+## compare bien deux masques au même grandissement.
+func _etiqueter() -> void:
+	_etiquette.text = ("%s\n"
+		+ "RÉTRODIFFUSION  %s   ·   AMBIANTE  %s   ·   ÉCLAT  %s   ·   FLASH  %s\n"
+		+ "H rétro · A ambiante · E éclat · F flash · T torche (%s) · Espace arme"
+		+ " · flèches déplacer · souris viser · Échap quitter\n"
+		+ "empreintes tenues : %d / %d / %d / %d unités"
+		+ " — la résolution décide de la finesse, jamais de la portée%s") % [
+			_ligne_arme,
+			RETRO[_i_retro]["nom"], AMBIANTE[_i_ambiante]["nom"],
+			ECLAT[_i_eclat]["nom"], FLASH[_i_flash]["nom"],
+			"allumée" if _torche_allumee else "ÉTEINTE",
+			int(RETRO_EMPREINTE), int(AMBIANTE_EMPREINTE),
+			int(ECLAT_EMPREINTE), int(FLASH_EMPREINTE),
+			"" if _absents.is_empty() else
+				"\n\n⚠️  NON CHARGÉ, dégradé affiché à la place : %s"
+				% ", ".join(_absents)
+				+ "\n    Godot ne les a pas importés — lancer : godot --headless --path . --import"]
 
 
 func _process(delta: float) -> void:
@@ -279,6 +494,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif touche == KEY_SPACE:
 		_arme = (_arme + 1) % Torches.ARMES.size()
 		_appliquer()
+	elif touche == KEY_H:
+		_i_retro = (_i_retro + 1) % RETRO.size()
+		_appliquer_halos()
+	elif touche == KEY_A:
+		_i_ambiante = (_i_ambiante + 1) % AMBIANTE.size()
+		_appliquer_halos()
+	elif touche == KEY_E:
+		_i_eclat = (_i_eclat + 1) % ECLAT.size()
+		_appliquer_halos()
+	elif touche == KEY_F:
+		_i_flash = (_i_flash + 1) % FLASH.size()
+		_appliquer_halos()
+	elif touche == KEY_T:
+		_torche_allumee = not _torche_allumee
+		_appliquer_halos()
 	elif touche >= KEY_1 and touche <= KEY_4:
 		var i := touche - KEY_1
 		if i < VARIANTES.size():

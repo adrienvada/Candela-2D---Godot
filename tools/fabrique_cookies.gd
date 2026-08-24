@@ -131,6 +131,12 @@ const TAILLE_DEFAUT := 1024
 const SOURCES := "res://assets/sources/torche/"
 const SORTIE := "res://assets/torche/"
 
+## Racines du **mode radial** (DA2.2 halos, DA2.3 flash de bouche). `--source X`
+## lit `assets/sources/X/` et écrit `assets/X/` : un seul nom pour les deux, si
+## bien qu'on ne peut pas cuire depuis un dossier et livrer dans un autre.
+const RACINE_SOURCES := "res://assets/sources/"
+const RACINE_SORTIE := "res://assets/"
+
 ## Les quatre armes viennent de `tools/torches.gd`, partagé avec l'aperçu : deux
 ## tables auraient divergé au premier réglage, et le banc aurait montré autre
 ## chose que ce qu'on cuit.
@@ -198,6 +204,14 @@ var _profil := PackedFloat32Array()
 ## et moins ailleurs, donc la planche ne peut que RETIRER de la lumière.
 var _sommet := PackedFloat32Array()
 var _profil_max := 0.0
+## Dossier de lecture des planches, et mode d'échantillonnage. Le mode décide
+## de la façon dont on lit la planche ET de la façon dont on calcule son profil :
+## les deux doivent rester d'accord, d'où une seule variable pour les deux.
+var _sources := SOURCES
+var _mode := "cone"
+## Famille du mode radial : sert à la fois de sous-dossier de lecture et de
+## sous-dossier d'écriture.
+var _sortie_radial := ""
 
 
 func _init() -> void:
@@ -220,6 +234,33 @@ func _init() -> void:
 		"energie": _arg(args, "--energie", "libre"),
 		"debut": float(_arg(args, "--debut", str(MATIERE_DEBUT_DEFAUT))),
 	}
+
+	# ## Mode radial — DA2.2 (halos) et DA2.3 (flash de bouche)
+	#
+	# Il ne boucle pas sur les armes : une planche, un masque, un nom. Les armes
+	# n'ont rien à y voir — un halo de corps est le même pour les quatre, et une
+	# frame de flash aussi. Tout le reste est partagé avec le mode cône : le
+	# chargement, le rognage de cadre, le lissage, la division par le sommet et
+	# les trois modes d'énergie.
+	if _arg(args, "--mode", "cone") == "radial":
+		var famille := _arg(args, "--source", "")
+		var nom := _arg(args, "--nom", "")
+		if famille == "" or nom == "":
+			_erreur("Mode radial : --source et --nom sont obligatoires. Exemple : "
+				+ "--mode radial --source halo --planche H1A_02.jpg --nom retrodiffusion")
+			quit(1)
+			return
+		_mode = "radial"
+		_sources = RACINE_SOURCES + famille + "/"
+		_sortie_radial = famille
+		print("Mode radial — %s/%s -> %s/%s.png, %d²"
+			% [famille, planche_defaut, famille, nom, taille])
+		print("Curseurs : %s" % str(reglages))
+		if not _charger_planche(planche_defaut):
+			quit(1)
+			return
+		quit(0 if _cuire_radial(nom, planche_defaut, taille, reglages) else 1)
+		return
 
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SORTIE))
 
@@ -246,7 +287,7 @@ func _init() -> void:
 ## : `assets/sources/` porte un `.gdignore`, donc Godot n'y importe rien — et
 ## c'est voulu, ces images sont des sources, pas des ressources de jeu.
 func _charger_planche(nom: String) -> bool:
-	var chemin := ProjectSettings.globalize_path(SOURCES + nom)
+	var chemin := ProjectSettings.globalize_path(_sources + nom)
 	if not FileAccess.file_exists(chemin):
 		_erreur("Planche introuvable : %s" % chemin)
 		return false
@@ -284,7 +325,10 @@ func _charger_planche(nom: String) -> bool:
 		_luminance[i] = (donnees[o] * 0.2126 + donnees[o + 1] * 0.7152
 			+ donnees[o + 2] * 0.0722) / 255.0
 
-	_calculer_profil()
+	if _mode == "radial":
+		_calculer_profil_radial()
+	else:
+		_calculer_profil()
 	print("Planche %s : %dx%d, profil max %.3f" % [nom, _largeur, _hauteur, _profil_max])
 	return true
 
@@ -552,6 +596,199 @@ func _cuire(arme: Dictionary, planche: String, etiquette: String, taille: int,
 	print("  %-9s  demi-angle %5.1f°  planche %-16s  lumiere %5.1f%% de l'actuel%s  ->  %s"
 		% [arme["nom"], demi_deg, planche, part,
 			"" if ecrete == 0 else "  ECRETE:%d" % ecrete, nom_fichier])
+	return true
+
+
+## Lecture bilinéaire de la planche en coordonnées CARTÉSIENNES normalisées,
+## `fx` et `fy` de 0 à 1 sur la largeur et la hauteur.
+##
+## ⚠️ **Le mode radial ne peut pas échantillonner en polaire, et c'est la seule
+## différence structurelle avec les cookies de torche.** Un cône couvre au plus
+## 120° : ses deux bords en `v` ne se touchent jamais. Un halo couvre 360° — le
+## haut et le bas de la planche s'y rejoindraient le long d'un rayon, et toute
+## discontinuité entre eux deviendrait une **couture visible** en travers de la
+## lumière. On lit donc la planche telle quelle, centrée sur le centre.
+func _echantillon_xy(fx: float, fy: float) -> float:
+	var px: float = clampf(fx, 0.0, 1.0) * float(_largeur - 1)
+	var py: float = clampf(fy, 0.0, 1.0) * float(_hauteur - 1)
+	var x0 := int(px)
+	var y0 := int(py)
+	var x1: int = mini(x0 + 1, _largeur - 1)
+	var y1: int = mini(y0 + 1, _hauteur - 1)
+	var fdx := px - float(x0)
+	var fdy := py - float(y0)
+	var a := _luminance[y0 * _largeur + x0]
+	var b := _luminance[y0 * _largeur + x1]
+	var c := _luminance[y1 * _largeur + x0]
+	var d := _luminance[y1 * _largeur + x1]
+	return lerpf(lerpf(a, b, fdx), lerpf(c, d, fdx), fdy)
+
+
+## Profil radial d'une planche centrée : moyenne et **sommet** sur chaque cercle.
+##
+## Même rôle et même invariant que `_calculer_profil()` — on divise la structure
+## par le sommet de l'anneau, jamais par sa moyenne, pour que la planche ne
+## puisse que **retirer** de la lumière. Ce qui change est le parcours : on tourne
+## sur un cercle complet au lieu de balayer un cône.
+##
+## **La direction survit à cette division**, et c'est ce qui rend le mode utile
+## au flash de bouche : diviser tout un anneau par son point le plus clair laisse
+## intacts les rapports d'un angle à l'autre. Un souffle qui part à droite reste
+## un souffle qui part à droite.
+func _calculer_profil_radial() -> void:
+	_profil = PackedFloat32Array()
+	_profil.resize(PROFIL_PAS)
+	_sommet = PackedFloat32Array()
+	_sommet.resize(PROFIL_PAS)
+	_profil_max = 0.0
+	for i in range(PROFIL_PAS):
+		var u := (float(i) + 0.5) / float(PROFIL_PAS)
+		var somme := 0.0
+		var pic := 0.0
+		var n := 256
+		for j in range(n):
+			var a := TAU * (float(j) + 0.5) / float(n)
+			var g := _echantillon_xy(cos(a) * u * 0.5 + 0.5, sin(a) * u * 0.5 + 0.5)
+			somme += g
+			pic = maxf(pic, g)
+		var moy := somme / float(n)
+		_profil[i] = moy
+		_sommet[i] = pic
+		if moy > _profil_max:
+			_profil_max = moy
+	if _profil_max <= 0.0:
+		_profil_max = 1.0
+	_profil = _lisser(_profil)
+	_sommet = _lisser(_sommet)
+
+
+## Cuit un masque RADIAL — halo de rétrodiffusion, lueur ambiante, éclat de
+## balle, frame de flash de bouche.
+##
+## ## Ce dont il est la parité
+##
+## Le mode cône se compare au cookie d'aujourd'hui. Ici la référence est le
+## `GradientTexture2D` en `FILL_RADIAL` que `player.gd` et `light_textures.gd`
+## fabriquent à la volée : alpha 1 au centre, 0 au rayon, **droit**. La parité
+## vaut donc `1 - u`, et `--portee` la courbe comme ailleurs.
+##
+## ## Ce qu'il ne fait pas
+##
+## Ni cône, ni fondu de bord, ni halo de proximité : tout le disque est éclairé.
+## Ces trois-là appartiennent à une torche, pas à une lueur.
+func _cuire_radial(nom: String, planche: String, taille: int, r: Dictionary) -> bool:
+	var centre := float(taille) * 0.5
+	var rayon := float(taille) * 0.5
+	var pixels := PackedFloat32Array()
+	pixels.resize(taille * taille)
+	var somme := PackedFloat64Array()
+	somme.resize(RAYON_PAS)
+	var somme_parite := PackedFloat64Array()
+	somme_parite.resize(RAYON_PAS)
+	var anneaux := PackedInt32Array()
+	anneaux.resize(taille * taille)
+	anneaux.fill(-1)
+
+	for y in range(taille):
+		var dy := float(y) + 0.5 - centre
+		for x in range(taille):
+			var dx := float(x) + 0.5 - centre
+			var dist := sqrt(dx * dx + dy * dy)
+			if dist >= rayon:
+				continue
+			var u := dist / rayon
+			var att_code: float = pow(1.0 - u, r["portee"])
+			var i_profil: int = clampi(int(u * PROFIL_PAS), 0, PROFIL_PAS - 1)
+			var att_planche: float = _profil[i_profil] / _profil_max
+			var att: float = lerpf(att_code, att_planche, r["profil"])
+
+			var structure := 1.0
+			if r["matiere"] > 0.0:
+				var g := _echantillon_xy(dx / rayon * 0.5 + 0.5, dy / rayon * 0.5 + 0.5)
+				var pic: float = _sommet[i_profil]
+				structure = g / maxf(pic, _profil_max * PLANCHER_PROFIL)
+				if r["contraste"] != 1.0:
+					structure = pow(maxf(structure, 0.0), r["contraste"])
+				structure = clampf(structure, 0.0, 1.0)
+				var poids: float = r["matiere"] * smoothstep(0.0, r["debut"], u)
+				structure = lerpf(1.0, structure, poids)
+
+			var idx := y * taille + x
+			var anneau: int = clampi(int(u * RAYON_PAS), 0, RAYON_PAS - 1)
+			pixels[idx] = att * structure
+			anneaux[idx] = anneau
+			somme[anneau] += pixels[idx]
+			somme_parite[anneau] += att_code
+
+	var facteurs := PackedFloat64Array()
+	facteurs.resize(RAYON_PAS)
+	facteurs.fill(1.0)
+	var mode: String = r["energie"]
+	if mode == "totale":
+		var tot := 0.0
+		var tot_parite := 0.0
+		for k in range(RAYON_PAS):
+			tot += somme[k]
+			tot_parite += somme_parite[k]
+		if tot > 0.0:
+			facteurs.fill(tot_parite / tot)
+	elif mode == "radial":
+		for k in range(RAYON_PAS):
+			if somme[k] > 0.0:
+				facteurs[k] = somme_parite[k] / somme[k]
+	# Même correction d'écrêtage que le mode cône : le facteur naïf vise avant
+	# rabotage, la matière fait dépasser 1,0 au cœur, et le masque sortirait plus
+	# sombre que la cible. Quatre tours suffisent.
+	if mode != "libre":
+		for _tour in range(4):
+			var retenu := PackedFloat64Array()
+			retenu.resize(RAYON_PAS)
+			for i in range(taille * taille):
+				var k := anneaux[i]
+				if k >= 0:
+					retenu[k] += minf(pixels[i] * facteurs[k], 1.0)
+			for k in range(RAYON_PAS):
+				if retenu[k] > 0.0:
+					facteurs[k] *= somme_parite[k] / retenu[k]
+
+	var octets := PackedByteArray()
+	octets.resize(taille * taille * 4)
+	var ecrete := 0
+	var coin_max := 0.0
+	for i in range(taille * taille):
+		var o := i * 4
+		octets[o] = 255
+		octets[o + 1] = 255
+		octets[o + 2] = 255
+		var k := anneaux[i]
+		var val := 0.0
+		if k >= 0:
+			val = pixels[i] * facteurs[k]
+		else:
+			coin_max = maxf(coin_max, val)
+		if val > 1.0:
+			ecrete += 1
+			val = 1.0
+		octets[o + 3] = int(round(maxf(val, 0.0) * 255.0))
+
+	var img := Image.create_from_data(taille, taille, false, Image.FORMAT_RGBA8, octets)
+	var dossier := ProjectSettings.globalize_path(RACINE_SORTIE + _sortie_radial)
+	DirAccess.make_dir_recursive_absolute(dossier)
+	var chemin := dossier + "/" + nom + ".png"
+	var err := img.save_png(chemin)
+	if err != OK:
+		_erreur("Écriture impossible : %s (code %d)" % [chemin, err])
+		return false
+
+	var tot := 0.0
+	var tot_parite := 0.0
+	for k in range(RAYON_PAS):
+		tot += somme[k]
+		tot_parite += somme_parite[k]
+	var part := 100.0 * tot / maxf(tot_parite, 1e-9)
+	print("  %-16s  planche %-14s  %d²  lumiere %5.1f%% du degrade%s  ->  %s.png"
+		% [nom, planche, taille, part,
+			"" if ecrete == 0 else "  ECRETE:%d" % ecrete, nom])
 	return true
 
 

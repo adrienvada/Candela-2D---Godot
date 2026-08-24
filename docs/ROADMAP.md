@@ -2482,6 +2482,52 @@ répondre) et l'**ordre** des couches du clip « match » — 0 base, 1 batterie
 2 arpège, 3 pouls. `set_music_intensity` et `update_low_health` les adressent par
 indice. `tools/test_musique.gd` tient les deux.
 
+### Conserver l'énergie anneau par anneau SATURE une planche directionnelle (2026-08-25)
+
+Le mode `--energie radial` de la cuisson force chaque anneau du masque à porter
+la même lumière que le dégradé qu'il remplace. C'est exactement ce qu'il faut
+pour un halo — la portée ne bouge alors pas d'un pixel, mesuré à **1,1 %** près
+sur les huit masques de DA2.2.
+
+Appliqué aux trois frames du flash de bouche, il a **écrêté jusqu'à 3 997 pixels,
+soit 8 % du disque**. La cause n'est pas un réglage : c'est que la référence est
+isotrope et la planche ne l'est pas. Demander à un anneau dont toute la matière
+est d'un côté de porter le total d'un anneau uniforme ne laisse qu'une issue au
+côté clair — dépasser 1,0, et se faire raboter. **La direction se paie en
+saturation**, et la saturation détruit précisément la structure qu'on est venu
+chercher.
+
+Recuit en `--energie libre` : zéro écrêtage, et l'enveloppe temporelle survit
+d'elle-même (44 %, 42 %, 36 % de lumière au fil des trois frames) au lieu d'être
+aplatie par la normalisation. Le prix est un flash plus sombre que le disque
+d'origine — mais **la luminosité d'une lumière est un réglage de code**
+(`muzzle_flash_intensity`, le tween d'énergie), pas une propriété de sa texture.
+
+La règle : **`radial` pour ce qui est rond, `libre` pour ce qui pointe.**
+
+### Un repli qui IMITE ce qu'il remplace ment sur la nature de la panne (2026-08-25)
+
+`tools/apercu_torche.gd` se rabattait sur le dégradé procédural quand un masque
+peint était introuvable. Silencieusement. Or un PNG cuit mais **pas encore
+importé par Godot est invisible à `ResourceLoader`** — c'est l'état normal d'un
+asset frais, pas une anomalie.
+
+Adrien a donc appuyé sur les touches de comparaison et vu la même image à chaque
+fois, puisque le repli était exactement la chose que les masques remplacent. Le
+seul diagnostic possible depuis l'écran était **« les touches ne marchent pas »**
+— un défaut d'entrée, à l'autre bout de la chaîne de la vraie cause. Deux
+hypothèses fausses ont été explorées avant de mesurer.
+
+Un repli est légitime : sans lui, une texture nulle rend un **carré** lumineux,
+pire que l'ancien rendu. Ce qui ne l'est pas, c'est qu'il se taise. Il se nomme
+désormais en clair dans l'étiquette du banc, avec la commande qui répare
+(`godot --headless --path . --import`), et `LightTextures.masque()` lève un
+`push_error` avant de rendre `null`.
+
+**Le critère général : un repli doit être DISCERNABLE de la réussite.** Celui
+qui produit le même résultat visible que le chemin nominal ne dégrade pas le
+service, il déplace le diagnostic.
+
 ---
 
 ## Pièges connus — ne pas les redécouvrir
@@ -2609,6 +2655,67 @@ sonde jetable de vingt lignes pour *imprimer les trois cas côte à côte* avant
 conclure. Même motif que `K_ADVERSAIRE`, dont le premier commentaire affirmait
 une égalité de luminance fausse de 8 % : **quand une affirmation porte un nombre,
 c'est le calcul qui tranche, pas la lecture.**
+### Un son positionnel sans auditeur reste parfaitement audible (2026-08-25)
+
+Le jeu joue ses pas, ses tirs et ses impacts dans des `AudioStreamPlayer2D`
+depuis le premier jour, et **personne n'a jamais posé l'oreille**. Le défaut ne
+fait aucun bruit, au sens propre : Godot déclare la **racine** auditeur 2D par
+défaut, et sans caméra ni `AudioListener2D` il pose l'oreille au centre de
+l'écran virtuel — un point fixe du monde, hors de la carte. Tout continue de
+s'entendre, le panoramique bouge quand les sons bougent, aucune erreur, aucun
+test rouge. **Tout a l'air de marcher.**
+
+Ce qui le rend invisible à la relecture aussi : **le pool vit dans le mauvais
+monde.** Il est enfant de l'autoload, donc dans le `World2D` de la racine,
+tandis que le jeu vit dans celui du `SubViewport`. Or un `AudioStreamPlayer2D`
+ne s'adresse qu'aux viewports de **son** monde — poser un `AudioListener2D` sur
+le joueur ne changerait donc **rien du tout**, et on chercherait l'erreur dans
+l'auditeur, à l'autre bout de la chaîne de la vraie cause.
+
+Le contrôle qui tranche tient en une ligne et ne demande **aucun pilote audio** :
+`lecteur.get_world_2d() == vue_de_jeu.get_world_2d()`. C'est un fait de graphe
+de scène, pas un son : il se vérifie en headless, comme
+`tools/test_pool_sfx.gd` a su le faire pour l'arbitrage des voix.
+
+**La règle générale : un canal qui « marche » n'est pas un canal qui dit la
+vérité.** Troisième cas du dépôt, après les flux musicaux dits « vides » qui
+jouaient un timbre pendant deux mois et l'éblouissement branché sur une valeur
+qui ne montait jamais. Leur point commun n'est pas la nature du bug, c'est
+**une sortie plausible**. Ce qui les aurait attrapés n'est pas un test de plus :
+c'est de vérifier une fois ce que la sortie **veut dire**.
+
+### Un `M` de `git status` ne dit pas à qui est la modification (2026-08-24)
+
+Quatre attributions fausses dans la même soirée, sur le même arbre partagé, par
+deux sessions différentes. À chaque fois la déduction s'est trompée et la
+lecture du diff a tranché.
+
+| ce qu'on croyait | ce que c'était |
+|---|---|
+| `project.godot` modifié par personne d'identifiable | la session « menus », qui posait l'icône |
+| 92 lignes supprimées dans l'index « par une autre session » | un blob périmé de la session « menus » elle-même |
+| 40 lignes de `ROADMAP.md` attribuées à la session DA2 | la session « musique », sur le défaut de l'intro |
+| « tes corrections ne sont pas parties » dit à DA2 | `3191dd7` **était** ces corrections, déjà poussées |
+
+**La raison est structurelle, pas une question d'attention : git ne stocke aucun
+auteur pour une modification non commitée.** Il n'y a rien à interroger. Le `M`
+dit qu'un fichier diffère de l'index, un point. La seule source d'attribution
+est le **contenu**.
+
+Donc la règle n'est pas « mieux déduire », c'est **ne jamais déduire** :
+`git diff <chemin>` avant toute décision sur un fichier modifié qu'on n'a pas
+écrit soi-même. Trente secondes.
+
+**Ce qui justifie de la lire systématiquement, c'est l'asymétrie du coût.** Se
+tromper en croyant la modification à soi fait **perdre le travail d'un autre,
+sans conflit et sans avertissement** — c'est ainsi que 72 lignes ont disparu ce
+soir-là, et qu'un index périmé en attendait 92 de plus. Se tromper dans l'autre
+sens ne coûte qu'une question posée à une voisine. Les quatre cas ci-dessus sont
+tous du premier type.
+
+Corollaire pour les rapports entre sessions : **annoncer à quelqu'un l'état de
+son propre travail est le pire moment pour déduire.** Il ne pourra pas vérifier
+sans refaire le travail, et il n'a aucune raison de douter.
 
 ### Deux sessions qui lancent les suites en même temps se volent le port (2026-08-24)
 
@@ -4364,6 +4471,108 @@ obligeait à modifier `audio_manager.gd` et `asset_manifest.gd` — deux fichier
 tenus par d'autres sessions, pour un format qui aurait ramené le même défaut de
 boucle.
 
+### `play()` démarre au clip initial, pas au clip demandé (2026-08-24)
+
+Question d'Adrien, en une ligne : « est-ce que l'intro se lance au démarrage du
+jeu ? » Réponse mesurée : **elle se lançait, et elle était tuée un tiers de
+seconde plus tard.**
+
+`GameState._ready()` appelait `AudioManager.play_music("music_menu")`, et
+`play_music` fait deux choses à la suite : `music_player.play()`, puis
+`switch_to_clip_by_name("menu")`. Or **`play()` démarre un
+`AudioStreamInteractive` à son `initial_clip`** — le clip 0, c'est-à-dire
+l'intro. Elle partait donc pour de vrai, et la bascule demandée dans la même
+image la coupait au prochain temps, par le repli ANY→ANY
+(`from_time = NEXT_BEAT`, fondu de 0,5 temps). Cinq secondes et demie de musique
+écrites, jouées 0,35 s.
+
+Rien n'était en panne, et c'est tout le problème : le clip portait déjà son
+`auto_advance` vers le menu, la ressource était juste, le code était juste. La
+seule pièce fausse était **une croyance** — que `play()` démarre là où on lui
+dit. Il démarre là où la ressource lui dit.
+
+Ce qui le rend indétectable sans y penser : le symptôme est une intro *presque*
+inaudible, pas une intro absente. Un silence se remarque ; un tiers de seconde
+de musique au lancement passe pour un artefact de démarrage.
+
+Corrigé en trois pièces, et il en fallait trois : une transition **explicite**
+intro→menu (`from_time = END`, `to_time = START`, sans fondu) pour que
+l'enchaînement parte de la fin et non du prochain temps ; une fonction
+`AudioManager.demarrer_musique_au_lancement()` qui **ne demande rien** — elle
+démarre, et laisse le clip initial vivre ; et l'appel correspondant au
+lancement. Les retours au menu continuent de passer par `play_music`, qui trouve
+le lecteur en marche et se contente de basculer : **l'intro ne revient pas.**
+C'est le choix d'Adrien — au dixième retour au menu d'une soirée, cinq secondes
+d'attente cessent d'être une entrée en matière.
+
+Un piège d'énumération dans le même geste, attrapé par le test et pas par la
+relecture : **`TRANSITION_TO_TIME_START` vaut 1, pas 0.** Le 0 est
+`SAME_POSITION`. Écrire `to_time: 0` en croyant dire « au début » fait repartir
+le menu à une position arbitraire — et ça s'entend une fois sur deux, ce qui est
+la pire fréquence pour un défaut.
+
+### Le jeu jouait des sons positionnels sans aucune oreille (2026-08-25)
+
+Relevé par la session « spatialisation du son », vérifié et corrigé ici. **Le
+défaut avait l'âge du projet** : `AudioStreamPlayer2D` partout, panoramique
+partout, et **aucun auditeur**.
+
+Trois pièces manquaient, et la cruauté du défaut tient à ce qu'**aucune ne
+s'entend seule** :
+
+1. Le pool d'`AudioStreamPlayer2D` est enfant de l'autoload `AudioManager`, donc
+   dans le `World2D` de la **racine**. Le jeu vit dans celui du `SubViewport`. Un
+   `AudioStreamPlayer2D` ne s'adresse qu'aux viewports de son propre monde.
+2. **Un `SubViewport` n'est pas une oreille par défaut** —
+   `audio_listener_enable_2d` vaut `false` ; seule la fenêtre racine l'a à
+   `true`. Mesuré, pas déduit.
+3. Aucun `AudioListener2D` n'existait nulle part dans `main.tscn`.
+
+Poser un `AudioListener2D` sur le joueur **sans déménager le pool ne change rien
+du tout** — et on chercherait l'erreur dans le listener pendant des heures. C'est
+le piège qui compte ici : la pièce qu'on pense être la solution est celle qui ne
+sert à rien seule.
+
+Ce que le joueur entendait à la place : Godot posait l'oreille au centre de
+l'écran virtuel, à un point fixe. **Le panoramique disait où le son était sur la
+carte, pas par rapport à soi.** Avancer vers l'adversaire ne rendait pas ses pas
+plus forts. Rien n'était en erreur, tout était audible.
+
+**Corrigé en ligne uniquement** (`AudioManager.oreille_suit`, décision d'Adrien
+du 2026-08-25). En écran partagé on n'y touche pas, et c'est la même raison que
+`torche_comptee` : les deux joueurs écoutent les mêmes haut-parleurs, donc suivre
+l'un donnerait à l'autre ses propres pas entendus depuis une tête qui n'est pas
+la sienne. Ce serait **pire** que le point fixe, pas mieux.
+
+`tools/test_oreille.gd` monte un vrai arbre de jeu et vérifie les trois pièces —
+y compris, à dessein, que l'état d'origine était bien le défaut décrit. Ce qu'il
+ne prouve pas, et qui se juge au casque : que le panoramique s'entend.
+
+### La famille de défauts de cette nuit : la sortie plausible (2026-08-25)
+
+Quatre défauts en une nuit, tous de la même espèce, et il vaut mieux les nommer
+ensemble qu'un par un :
+
+| Ce qu'on croyait | Ce qui était vrai |
+|---|---|
+| Les flux musicaux étaient « vides » | Ils portaient un timbre audible à −19 dBFS |
+| Le manifeste inventoriait les sons d'armes | Huit entrées décrivaient des fichiers qui n'existeraient jamais |
+| Le jeu spatialisait ses sons | Il n'avait aucune oreille depuis toujours |
+| L'intro musicale ne se lançait pas | Elle se lançait et mourait en 0,35 s |
+
+**Aucun n'a jamais levé la moindre erreur. Aucun n'a jamais fait rougir un
+test.** À chaque fois le système produisait une sortie *plausible* : du son, un
+compteur, un panoramique, un démarrage. C'est le mode de défaillance contre
+lequel ce dépôt se bat le plus mal, parce que sa signature est l'absence de
+signature.
+
+Ce qui les a tous attrapés, sans exception : **mesurer la sortie plutôt que lire
+le code.** Décoder un `.ogg` pour vérifier qu'il contient du silence, comparer
+`get_world_2d()` de deux nœuds, sonder la valeur par défaut d'une propriété
+plutôt que la supposer. Le corollaire pratique : quand un système audio ou visuel
+« marche mais bizarrement », la question n'est pas *où est le bug* — c'est *qu'
+est-ce que je crois savoir sans l'avoir mesuré*.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -5018,7 +5227,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   peut pas teinter un chiffre isolément — et teinter la ligne entière dit
   mieux la même chose : « 3 - 2 » ne révèle pas **qui** vient de gagner.
 - **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
-  menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*
+  menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*  **✅ Câblé le 2026-08-25** — `AudioManager.stinger_de_fin` décide
+  lequel des quatre sort, selon le résultat et selon qui l'on est.
+
 - **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
   détente. — *assets : 1 sample.* **✅ Fait** (le soupir attend le sien). Gris et
   non blanc : le blanc est la couleur de ce qui s'affirme, une égalité n'affirme
@@ -5077,9 +5288,31 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague 4 — L'identité du tir et de l'impact
 
-- **V4.1 Un son PAR arme** — les 4 armes partagent `weapon_shoot.wav`. Corps +
-  queue distincts : le fusil claque, le pompe tonne, l'arbalète chuinte. —
-  *assets : 4×2 samples.*
+- **V4.1 Un son PAR arme** — **✅ Fait le 2026-08-25.** Les 4 armes partageaient
+  `weapon_shoot.wav`. Chacune a désormais **quatre variantes** dans
+  `assets/audio/weapons/`, tirées au sort à chaque coup
+  (`AudioManager.play_weapon_shot`).
+
+  **Le découpage corps + queue annoncé ici n'a pas été retenu, et la raison
+  vaut d'être gardée.** Il figurait au manifeste en huit entrées ; *rien ne le
+  consommait* — aucune ligne de code ne connaissait `weapon_*_body` ni
+  `weapon_*_tail`. Ce qui a tranché, c'est **V5.12** : une queue cuite dans
+  l'échantillon **fige une pièce dans l'asset**, et s'additionnerait à la réverb
+  dérivée de `grid_size`. Deux pièces superposées, dont la seconde ne dirait plus
+  rien de la carte. Le découpage ne redeviendra utile que le jour où l'on voudra
+  un rendu par distance — queue seule et étouffée au loin — et ce jour-là il se
+  ré-exporte.
+
+  **Quatre prises réelles plutôt qu'un échantillon repitché** : le tir est le son
+  le plus répété du jeu, et un même échantillon s'entend en une poignée de coups
+  quel que soit le pitch. Le pitch reste, resserré à ±4 % — la variation large
+  servait à masquer la répétition ; trop de pitch s'entend comme un calibre qui
+  change de taille d'un coup à l'autre.
+
+  Les fichiers sont **forcés en mono à l'import**, comme le reste des effets :
+  ils se jouent en 2D positionnel, et dans ce jeu **savoir d'où vient le coup est
+  l'information**. Un flux stéréo dans un lecteur positionnel dilue le
+  panoramique — la source cesse d'être un point.
 - **V4.2 Hitmarker centre/bord** — « thock » à pleins dégâts, « tick » en
   effleurement, branché sur `rpc_update_hp` (autoritaire), pas sur la balle
   prédite. — *assets : 2 samples.*
@@ -5996,7 +6229,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 |---|---|---|
 | Musique (V1.1, stingers) | 3 clips + 3 stems 170 BPM, 4 stingers accordés | ~10 .ogg |
 | Voix annonceur (V1.3) | fight, victoires, égalité + parfait, de justesse | 4-8 .wav |
-| Sons d'armes (V4.1) | corps + queue par arme | 8 samples |
+| ~~Sons d'armes (V4.1)~~ | **livré** — 4 variantes par arme, tirées au sort | 16 samples |
 | Foley | pas ×2, douilles, ricochets, frôlements, ambiances, torche | ~25 samples |
 | UI / récit | frappes, ping prêt, pion, impacts typo, tic-tac, verre, rewind | ~10 samples |
 | Corps | souffles blessé, acouphènes | ~8 samples |
@@ -6226,11 +6459,24 @@ un fait de jeu, pas à un rythme d'interface.
   `WeaponData.echelle_torche()`, qui rend l'empreinte au sol indépendante de la
   résolution du fichier — voir « Pièges connus », *la résolution d'une texture
   de lumière décide de sa PORTÉE*. *(C, ou G en CC0 retouché)*
-- **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
-  d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
-  *(C : 3-4 textures)*
-- **DA2.3 Le muzzle flash en frames** — 2-3 images peintes au lieu du disque
-  lumineux : l'événement le plus vu après la torche. *(C : 1 planche)*
+- **DA2.2 Les halos peints** ✅ **livrée le 2026-08-25** — trois masques choisis
+  par Adrien dans `tools/apercu_torche.tscn` : **`retrodiffusion_corona`** (le
+  halo de corps, 256²), **`ambiante_braise`** (la lueur personnelle, 150²),
+  **`eclat_poudre`** (balles, impacts, particules, sept postes d'empreintes
+  différentes). Cuits par `tools/fabrique_cookies.gd --mode radial`, posés par
+  `LightTextures.poser()`, tenus par `tools/test_lumieres.gd` (51 contrôles).
+  L'échantillonnage y est **cartésien et non polaire** : un halo couvre 360°, et
+  en polaire ses deux bords se rejoindraient le long d'un rayon en laissant une
+  couture visible. ⚠️ **La traînée de balle (`radial_tight`) reste un dégradé** —
+  aucune planche n'a été choisie pour elle, c'est la quatrième texture que la
+  ligne « 3-4 » prévoyait. *(C : 3-4 textures)*
+- **DA2.3 Le muzzle flash en frames** ✅ **livrée le 2026-08-25** — trois images
+  peintes (famille **FB** : amorce, épanouissement, dissipation), déroulées
+  par-dessus la descente d'énergie qui reste seule maîtresse de la luminosité.
+  **Trois est le nombre que la durée permet, pas un choix esthétique** : à 0,1 s
+  et 60 Hz chaque image tient deux images de rendu, à 0,05 s (l'arbalète) une
+  seule ; au-delà, une image ne serait jamais affichée. Cuites en **énergie
+  libre** et non radiale — voir « Pièges connus ». *(C : 1 planche)*
 - **DA2.4 Le sprite du joueur** — personnage top-down lisible en silhouette
   (tête, épaules, arme), idle + 4-6 frames de marche. Un personnage incarne le
   duel ; une forme fait un diagramme. *(C)*
@@ -6255,8 +6501,9 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
 
-- **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
-  jugé. Priorité absolue du lot audio. *(C)*
+- ~~**DA3.1 Les 4 sons de tir**~~ (= V4.1) — **✅ livrée le 2026-08-25**, en
+  seize prises (quatre par arme) plutôt qu'en huit corps/queues. Le premier son
+  entendu est le premier jugé, et il ne se répète plus.
 - ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
   2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
@@ -6877,6 +7124,119 @@ trahissent, et rien ne le dira tout seul.
 
 ---
 
+## Chantier — la spatialisation du son (inscrit le 2026-08-25)
+
+**Le constat qui ouvre le chantier : le jeu n'a pas d'oreille.** Le son de
+manche est pourtant positionnel de bout en bout — `AudioManager` tient un pool
+de seize `AudioStreamPlayer2D`, les pas, les tirs et les impacts s'y jouent à
+leur position réelle, et les seize prises de tir sont **forcées en mono à
+l'import** précisément pour que la source reste un point (V4.1, *« savoir d'où
+vient le coup est l'information »*). Tout ce travail vise juste. **Rien
+n'écoute depuis la place du joueur.**
+
+Mesuré le 2026-08-25 en headless, sur l'arbre courant :
+
+```
+root.is_audio_listener_2d = true          ← le seul auditeur du jeu
+root.get_audio_listener_2d = <null>       ← aucun AudioListener2D nulle part
+root.canvas_transform      = identité     ← il ne suit rien
+p2d.world_2d == root.world_2d ? true      ← le pool vit dans le monde de la racine
+SubViewport neuf : world_2d == root ? false
+```
+
+Le pool est enfant de l'autoload, donc dans le `World2D` de la **racine** ; le
+jeu vit dans celui du `SubViewport`, où sont les caméras. Un
+`AudioStreamPlayer2D` ne s'adresse qu'aux viewports de **son** monde : les
+caméras de jeu ne l'entendent jamais. Reste la racine, sans caméra ni auditeur —
+Godot pose alors l'oreille au centre de l'écran virtuel, soit **(960, 540) en
+coordonnées monde, fixe**. Une carte 20×20 en tuiles de 35 px s'étend de −35 à
+735 px : **l'oreille est posée en dehors de la carte, et elle n'en bouge
+jamais.**
+
+Ce que ça produit, et qui ne se devine à aucun moment en jouant :
+
+- le panoramique dit **où le son est sur la carte**, pas où il est par rapport à
+  soi — deux joueurs aux deux bouts entendent le même panoramique du même pas ;
+- **avancer vers l'adversaire ne rend pas ses pas plus forts** ;
+- l'écart de volume d'un bout à l'autre de la carte vaut environ **2 dB**.
+
+Autrement dit, dans un jeu dont la proposition est « la seule information est la
+lumière », le second canal d'information n'est pas imprécis : **il est faux**,
+et il l'est d'une façon qui s'écoute comme un fonctionnement normal. Le piège
+est consigné à sa section.
+
+**Périmètre, décidé avec Adrien le 2026-08-25 : le 1v1 SANS écran partagé
+d'abord.** C'est le cas favorable, et il existe déjà — en ligne comme à
+l'entraînement, une seule vue est affichée. Une vue, un joueur local, une sortie
+stéréo : l'oreille a une place évidente. L'écran partagé se traite après (S6).
+
+Les sept items ne sont pas de même nature, et c'est ainsi qu'il faut les lire :
+**S1 est un défaut**, S2 et S4 sont des **réglages qui se jugent à l'oreille**,
+S3 et S7 sont des **arbitrages qui appartiennent à Adrien**, S5 est déjà écrit
+ailleurs (V5.12) et attend S1, S6 est hors périmètre.
+
+- **S1 — L'oreille rejoint le joueur.** *Bloquant : tout le reste est inaudible
+  sans lui.* Deux gestes qui ne valent que **pris ensemble** — sortir le pool du
+  monde de la racine (le poser dans le monde de la vue de jeu) et poser un
+  auditeur qui suive le joueur **local**. L'un sans l'autre ne s'entend pas :
+  deux mondes distincts ne s'écoutent pas, et un auditeur posé dans un monde que
+  le pool n'habite pas ne reçoit rien — c'est exactement l'impasse dans laquelle
+  ce défaut envoie celui qui le corrige de bonne foi. Fichiers :
+  `audio_manager.gd` et `game_state.gd`, tous deux au domaine « game feel ».
+  **Vérifiable en headless sans pilote audio** : égalité des `World2D` et
+  présence de l'auditeur sont des faits de graphe de scène, pas des sons.
+- **S2 — La distance redevient une information.** `max_distance` vaut 2000 px
+  pour une carte qui en fait 700 à 840. Même l'oreille bien posée, « collé à
+  moi » et « à l'autre bout de la carte » ne seraient séparés que d'environ
+  **3,7 dB** : ce n'est pas une distance, c'est une nuance de mixage. La portée
+  et la courbe (`attenuation`) se dérivent de la carte
+  (`grid_size × tile_size`), comme V5.12 dérive déjà sa réverb — un chiffre rond
+  écrit en dur redeviendrait faux à la première carte d'une autre taille. **Le
+  réglage final se juge à l'oreille, pas au calcul** : jalon humain, comme la
+  récupération d'éblouissement l'a été le 2026-08-24.
+- **S3 — Un mur étouffe.** Rien n'atténue aujourd'hui un son émis derrière un
+  mur, alors que le mur arrête la lumière **et** le flash de bouche. C'est la
+  seule asymétrie qui reste entre les deux canaux d'information du jeu. La
+  requête existe déjà et sert à l'éblouissement (`GameState._ligne_de_vue`) ;
+  elle coûterait une requête physique **par son joué**, et les sons se comptent
+  par dizaines à la seconde, pas par image. Deux points techniques à connaître
+  d'avance : le bus se choisit à l'instant du `play_sfx_2d` (un bus « occlus »
+  avec passe-bas et perte de niveau), et **`area_mask` vaut 0 sur les lecteurs
+  du pool** — donc aucune `Area2D` ne peut redéfinir leur bus tant que ce
+  masque n'est pas posé. ⚠️ **Change l'information disponible en manche : se
+  pose à Adrien, ne s'implémente pas d'office** — même règle que les items D.
+- **S4 — Le loin ne sonne pas comme le près.** `AudioStreamPlayer2D` n'offre pas
+  d'`attenuation_filter` (c'est du 3D) : un tir lointain est le même timbre en
+  plus faible, alors que l'oreille juge la distance au **timbre** avant le
+  volume. Deux voies exclusives : un passe-bas piloté par la distance sur un bus
+  dédié, ou le retour du découpage corps/queue que V4.1 a écarté — et qu'elle a
+  écarté en laissant la porte ouverte, mot pour mot : « le jour où l'on voudra un
+  rendu par distance […] il se ré-exporte ». Dépend de l'arbitrage S7.
+- **S5 — La réverb dit la salle** (= **V5.12**, déjà inscrite en vague 5, non
+  faite). Aujourd'hui : une réverb unique et figée sur le bus SFX
+  (`room_size` 0,06, wet 0,38), la même sur toutes les cartes. **À raccorder
+  APRÈS S1** : posée sur une spatialisation qui ne pointe sur personne, une
+  réverb dérivée de la carte ne s'entendrait que comme une couleur de plus. Son
+  prix est déjà payé — c'est pour elle que V4.1 a renoncé aux queues cuites dans
+  l'échantillon.
+- **S6 — L'écran partagé : deux joueurs, une seule sortie stéréo.** Hors
+  périmètre jusqu'à nouvel ordre (Adrien, 2026-08-25). La contrainte à garder
+  en tête pour ne pas la découvrir en implémentant S1 : en « 1v1 écrans
+  scindés », les deux joueurs partagent la même paire d'enceintes, donc **toute
+  oreille attachée à l'un désavantage l'autre**. Ce n'est pas un réglage, c'est
+  un arbitrage — et il ne se prend pas au détour d'un autre item.
+- **S7 — Ce que la 2D ne donnera pas, quoi qu'on fasse.** Le panoramique stéréo
+  n'encode que **X** : en vue de dessus, l'axe Y n'existe pas à l'oreille, il ne
+  se traduit qu'en volume. L'oreille rendra donc **un axe et une distance,
+  jamais un point** — à savoir avant de promettre « localiser l'adversaire au
+  son ». Si un point est voulu, il faut passer les sons de manche en
+  `AudioStreamPlayer3D` avec un Z fictif, ce qui apporte du même coup le
+  filtrage par distance (S4) et les zones de réverb (S5), et coûte la reprise de
+  tous les sites d'appel. **C'est une décision d'architecture, pas un réglage :
+  à trancher AVANT S2 et S4**, sous peine de les régler deux fois.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -6970,6 +7330,13 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 
 **Tout le code des phases 2 à 8 est livré.** Ce qui reste se range en trois tas,
 et un seul est du travail de session.
+
+> **Ajouté le 2026-08-25 — un quatrième tas, et ce n'est pas du polish :** la
+> **spatialisation du son** (section dédiée ci-dessus). Son premier item, S1,
+> est un **défaut structurel** — le jeu joue des sons positionnels sans avoir
+> jamais posé d'auditeur —, il vit dans `audio_manager.gd` et `game_state.gd`,
+> donc dans le domaine « game feel ». Deux de ses items (S3, S7) attendent un
+> arbitrage d'Adrien et **ne se commencent pas**.
 
 ### Le seul chantier de code ouvert
 

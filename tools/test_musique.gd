@@ -4,7 +4,8 @@
 ## système musical a vécu deux mois **câblé sur du vide**. `AudioManager` chargeait
 ## `main_stream_interactive.tres`, y trouvait quatre clips, basculait de l'un à
 ## l'autre, ouvrait et fermait ses couches — et ne jouait rien, parce que les flux
-## embarqués étaient les silences produits par `generate_music_streams.gd`. Aucune
+## embarqués étaient les silences produits par `generate_music_streams.gd`
+## (retiré depuis). Aucune
 ## erreur, aucun test rouge : un jeu muet et un jeu dont on a coupé le volume ne se
 ## distinguent pas.
 ##
@@ -48,6 +49,10 @@ func _run() -> void:
 	print("=== MUSIQUE ===")
 	_test_flux_interactif()
 	_test_couches_du_match()
+	_test_ouverture()
+	_test_armes()
+	_test_stingers_regle()
+	_test_oreille()
 	_test_stingers()
 	_test_manifeste()
 	if _failures == 0:
@@ -139,6 +144,200 @@ func _test_couches_du_match() -> void:
 		_check("au repos, la couche %d (%s) est fermée" % [i, noms[i]],
 			sync.get_sync_stream_volume(i) <= -60.0,
 			"%.1f dB" % sync.get_sync_stream_volume(i))
+
+## L'intro au lancement, et une seule fois.
+##
+## Ce que ça protège tient à un détail que personne n'a de raison de soupçonner :
+## `music_player.play()` démarre le flux à son CLIP INITIAL, pas au clip qu'on
+## demande. Tant que l'intro est le clip 0, démarrer suffit à la jouer — et
+## demander autre chose dans la foulée suffit à la tuer. Elle a vécu ainsi, sortie
+## un tiers de seconde par le repli ANY→ANY, sans qu'aucune erreur ne le dise.
+##
+## Trois propriétés, et les trois sont nécessaires : l'intro doit être le clip
+## initial (sinon démarrer ne la joue pas), elle doit ENCHAÎNER seule (sinon la
+## musique s'arrête après cinq secondes et demie), et l'enchaînement doit partir
+## de la FIN et non du prochain temps (sinon elle est coupée comme avant, cette
+## fois sans qu'on sache pourquoi).
+func _test_ouverture() -> void:
+	print("\n[L'ouverture : l'intro, une fois]")
+	var res = load(CHEMIN_INTERACTIF)
+	if not (res is AudioStreamInteractive):
+		return
+	var initial := int(res.initial_clip)
+	_check("le clip initial est l'intro",
+		initial >= 0 and initial < res.clip_count
+			and String(res.get_clip_name(initial)) == "intro",
+		"clip %d" % initial)
+
+	var intro := -1
+	var menu := -1
+	for i in res.clip_count:
+		var n := String(res.get_clip_name(i))
+		if n == "intro":
+			intro = i
+		elif n == "menu":
+			menu = i
+	if intro < 0 or menu < 0:
+		return
+
+	_check("l'intro enchaîne toute seule",
+		int(res.get_clip_auto_advance(intro)) == AudioStreamInteractive.AUTO_ADVANCE_ENABLED)
+	_check("et elle enchaîne sur le menu",
+		int(res.get_clip_auto_advance_next_clip(intro)) == menu)
+
+	# Sans transition explicite, c'est le repli ANY→ANY qui s'applique — et il
+	# part au PROCHAIN TEMPS. C'est très exactement ce qui coupait l'intro.
+	_check("la transition intro → menu est explicite", res.has_transition(intro, menu))
+	if not res.has_transition(intro, menu):
+		return
+	_check("elle part de la fin de l'intro, pas du prochain temps",
+		int(res.get_transition_from_time(intro, menu))
+			== AudioStreamInteractive.TRANSITION_FROM_TIME_END,
+		str(res.get_transition_from_time(intro, menu)))
+	_check("et le menu repart de son début",
+		int(res.get_transition_to_time(intro, menu))
+			== AudioStreamInteractive.TRANSITION_TO_TIME_START,
+		str(res.get_transition_to_time(intro, menu)))
+
+	# Le démarrage doit passer par la fonction qui NE DEMANDE RIEN. Un
+	# `play_music("music_menu")` ici rejouerait le défaut à l'identique.
+	var source := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("GameState ouvre par demarrer_musique_au_lancement()",
+		source.contains("AudioManager.demarrer_musique_au_lancement()"))
+	_check("et ne redemande pas le menu au lancement",
+		not source.contains('add_to_group("game_state")\n\tAudioManager.play_music'))
+
+## Les quatre variantes de tir par arme.
+##
+## Ce que ça protège, et pourquoi ce n'est pas qu'un contrôle de présence : le
+## chemin d'un son de tir est CONSTRUIT (`weapon_<slug>_<nn>.wav`) à partir du
+## slug de l'arme. Un fichier mal numéroté, un slug mal orthographié, une arme
+## renommée — et `get_audio_stream` rend `null`, `play_weapon_shot` retombe sur
+## le son générique, et **le jeu continue de tirer normalement**. On n'entend pas
+## un défaut, on entend l'ancien son : la seule chose qui aurait changé, c'est
+## qu'une arme cesse d'avoir sa voix, sans que rien ne le dise.
+func _test_armes() -> void:
+	print("\n[Les tirs : quatre variantes par arme]")
+	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
+		var manquantes := PackedStringArray()
+		var stereo := PackedStringArray()
+		for i in range(1, AM.VARIANTES_TIR + 1):
+			var chemin := AM.chemin_tir(slug, i)
+			if not ResourceLoader.exists(chemin):
+				manquantes.append(chemin.get_file())
+				continue
+			var flux = load(chemin)
+			# Un tir se joue en 2D positionnel, et dans ce jeu SAVOIR D'OÙ vient
+			# le coup est l'information. Un flux stéréo dans un lecteur
+			# positionnel dilue le panoramique : la source cesse d'être un point.
+			if flux is AudioStreamWAV and flux.stereo:
+				stereo.append(chemin.get_file())
+		_check("%s : ses %d variantes sont là" % [slug, AM.VARIANTES_TIR],
+			manquantes.is_empty(), str(manquantes))
+		_check("%s : toutes en mono" % slug, stereo.is_empty(), str(stereo))
+
+	# Le nommage, vérifié sur la forme et pas sur un exemple : c'est lui qui fait
+	# le lien entre le slug d'une arme et son fichier.
+	_check("le chemin est bien formé",
+		AM.chemin_tir("pompe", 3) == "res://assets/audio/weapons/weapon_pompe_03.wav",
+		AM.chemin_tir("pompe", 3))
+
+	# V4.15 : les pas reculent sous le tir. La règle interrogeait la clé
+	# « shoot » ; un tir arrive désormais aussi par son CHEMIN, et la laisser
+	# telle quelle aurait rendu le duck muet sans rien casser de visible.
+	_check("un tir joué par sa clé est reconnu", AM.est_un_tir("shoot"))
+	_check("un tir joué par son chemin aussi",
+		AM.est_un_tir(AM.chemin_tir("fusil", 1)))
+	_check("un pas n'est pas un tir", not AM.est_un_tir("footstep"))
+	_check("un flux anonyme n'est pas un tir", not AM.est_un_tir(null))
+	_check("et un tir garde la priorité d'un tir",
+		AM.priorite_de(AM.chemin_tir("fusil", 1)) == AM.priorite_de("shoot"))
+
+	# Les deux appelants doivent passer par le tirage au sort. Un
+	# `play_sfx_2d_random_pitch("shoot", …)` resté en place rejouerait le son
+	# unique pour les quatre armes, sans que rien ne le signale.
+	for fichier in ["res://player.gd", "res://game_state.gd"]:
+		var source := FileAccess.get_file_as_string(fichier)
+		_check("%s tire par play_weapon_shot" % fichier.get_file(),
+			source.contains("AudioManager.play_weapon_shot("))
+		_check("%s ne joue plus le son générique" % fichier.get_file(),
+			not source.contains('play_sfx_2d_random_pitch("shoot"'))
+
+## Qui entend quoi a la fin d'une manche.
+##
+## Une ponctuation qui se trompe de camp **felicite le perdant**, et rien ne le
+## signale : le fichier existe, il se charge, il sort. C'est pour ca que la regle
+## est une fonction pure et qu'elle est eprouvee ici plutot qu'a l'oreille, une
+## fois, en match.
+func _test_stingers_regle() -> void:
+	print("\n[La ponctuation de fin : qui entend quoi]")
+	# Egalite : le match s'acheve au temps, les deux entendent la meme chose.
+	_check("egalite -> sting_draw pour l'hote",
+		AM.stinger_de_fin(-1, true, 0) == "sting_draw")
+	_check("egalite -> sting_draw pour le client",
+		AM.stinger_de_fin(-1, true, 1) == "sting_draw")
+	_check("egalite -> sting_draw en ecran partage",
+		AM.stinger_de_fin(-1, true, -1) == "sting_draw")
+
+	# Decision d'Adrien : un kill non decisif s'entend DES DEUX COTES.
+	_check("kill non decisif : le tueur l'entend",
+		AM.stinger_de_fin(0, false, 0) == "sting_kill")
+	_check("kill non decisif : LA VICTIME AUSSI",
+		AM.stinger_de_fin(0, false, 1) == "sting_kill")
+
+	# Kill decisif : chacun sa nouvelle.
+	_check("kill decisif : le vainqueur entend le kill de match",
+		AM.stinger_de_fin(0, true, 0) == "sting_kill_match")
+	_check("kill decisif : le vaincu entend sa defaite",
+		AM.stinger_de_fin(0, true, 1) == "sting_defeat")
+	_check("et dans l'autre sens aussi",
+		AM.stinger_de_fin(1, true, 0) == "sting_defeat"
+			and AM.stinger_de_fin(1, true, 1) == "sting_kill_match")
+
+	# En ecran partage personne n'est « le » vaincu a la sortie audio : les deux
+	# joueurs partagent les haut-parleurs. Meme raison que `torche_comptee`.
+	_check("ecran partage : jamais de sting de defaite",
+		AM.stinger_de_fin(0, true, -1) == "sting_kill_match"
+			and AM.stinger_de_fin(1, true, -1) == "sting_kill_match")
+
+	# Les quatre cles doivent resoudre vers un fichier reel, sinon la regle
+	# designe un son qui ne sortira pas.
+	for cle in ["sting_kill", "sting_kill_match", "sting_defeat", "sting_draw"]:
+		_check("la cle %s designe un fichier present" % cle,
+			ResourceLoader.exists(String(AM.SOUNDS.get(cle, ""))),
+			String(AM.SOUNDS.get(cle, "(absente de SOUNDS)")))
+
+## L'oreille suit le joueur local — en ligne seulement.
+##
+## En ecran partage, les deux joueurs ecoutent les memes haut-parleurs : suivre
+## l'un donnerait a l'autre ses propres pas entendus depuis une tete qui n'est
+## pas la sienne. C'est le meme partage que `torche_comptee`, et c'est une regle
+## d'EQUITE, pas de confort — donc elle se teste.
+func _test_oreille() -> void:
+	print("\n[L'oreille : en ligne seulement]")
+	_check("en ligne, l'oreille suit l'hote", AM.oreille_suit(0))
+	_check("en ligne, l'oreille suit le client", AM.oreille_suit(1))
+	_check("en ecran partage, on n'y touche pas", not AM.oreille_suit(-1))
+
+	# Le geste a trois pieces, et deux sur trois ne s'entendent pas seules. Ce
+	# controle-ci verifie la troisieme, celle qu'on ne soupconne pas : un
+	# SubViewport n'est PAS une oreille par defaut.
+	var vue := SubViewport.new()
+	get_root().add_child(vue)
+	_check("un SubViewport n'est pas une oreille par defaut",
+		not vue.audio_listener_enable_2d)
+	vue.queue_free()
+
+	# Et l'appelant doit bien poser les deux gestes ensemble.
+	var source := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("GameState pose l'oreille au debut du match",
+		source.contains("AudioManager.poser_oreille("))
+	_check("... derriere la regle oreille_suit, pas en dur",
+		source.contains("AudioManager.oreille_suit("))
+	_check("GameState la rend a la fin",
+		source.contains("AudioManager.rendre_oreille()"))
+	_check("GameState joue la ponctuation de fin",
+		source.contains("AudioManager.stinger_de_fin("))
 
 func _test_stingers() -> void:
 	print("\n[Les stingers]")
