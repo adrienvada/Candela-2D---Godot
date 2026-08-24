@@ -2113,7 +2113,7 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_EFFECTS))
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
-		"", COLOR_P1, "", "", false, PANEL_AUDIO))
+		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
 	hub.add_back_entry(SCREEN_CUSTOM)
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------

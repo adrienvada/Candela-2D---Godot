@@ -2457,6 +2457,54 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Un état branché sur `focus_entered` n'existe pas pour un curseur maison (2026-08-24)
+
+**Relevé par Adrien à l'écran, et c'est la troisième fois que ce décrochage coûte
+quelque chose.**
+
+L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite —
+vivait dans la stylebox `focus` de Godot, alimentée par `btn.focus_entered`. Or
+les deux curseurs du jeu sont maison : ils dessinent un liseré et n'appellent
+jamais `grab_focus()`. Conséquences, aucune signalée par quoi que ce soit :
+
+- **à la manette et au clavier, aucune entrée n'était jamais peinte**, de toute
+  une session ;
+- **à la souris**, l'ambre restait collé sur le dernier bouton *cliqué*, même
+  quand la sélection avait changé par un autre chemin — donc il désignait
+  régulièrement une entrée qui ne commandait plus rien.
+
+**Le commentaire du code affirmait pourtant « la sélection est franche — bordure
+épaisse et fond deux fois plus dense ».** Il décrivait une intention. Pire : je
+l'ai lu en cherchant la cause, je l'ai cru, et j'ai répondu à Adrien que l'ambre
+était présent mais trop faible. **Il était absent.** C'est le piège « un
+commentaire décrit une intention, on le relit comme un constat », payé une fois
+de plus — et cette fois par celui qui venait de le citer.
+
+**Ce qui a tranché : une capture d'écran d'Adrien**, où le cadre de droite
+affichait le texte d'EFFETS pendant qu'aucune entrée ne portait de marque. Deux
+relectures de code ne l'avaient pas vu.
+
+**Le correctif, et pourquoi il était à moitié fait depuis six jours.** Le relais
+`MenuHub.reveal_entry()` avait été posé le 2026-08-18 pour exactement cette
+raison — et il n'alimentait que le **cadre de droite**. La moitié du décrochage
+était corrigée, l'autre non. La sélection se peint désormais à la main
+(`_peindre()`), sur `normal` **et** `hover` : sans le second, survoler l'entrée
+choisie la ferait régresser vers la lueur de survol, c'est-à-dire paraître moins
+choisie au moment où on la vise.
+
+**Deux défauts voisins corrigés dans la foulée**, tous deux visibles une fois le
+mécanisme réparé : `pressed` retombait sur le style de **survol**, le plus faible
+des trois — au moment précis où l'on appuie, le bouton faiblissait ; et `AUDIO`
+portait `COLOR_P1` quand ses trois voisines de colonne portaient `COLOR_GOLD`,
+sans qu'aucune raison ne le justifie.
+
+**Densité arbitrée par Adrien : discrète.** C'est la bordure qui identifie —
+deux pixels d'ambre plein — et le fond ne fait que réchauffer, à un huitième
+d'opacité. Un premier essai au quart donnait un aplat : l'entrée cessait d'être
+*choisie* pour devenir un bouton d'une autre couleur, et son libellé y perdait
+son contraste. **Bleu autour, ambre dedans**, et le liseré du curseur reste le
+premier lu — c'est lui qui dit où l'on est.
+
 ### Où les deux instruments ne regardent pas (2026-08-24)
 
 Le dépôt a maintenant **deux** instruments de vérification, et il vaut mieux
