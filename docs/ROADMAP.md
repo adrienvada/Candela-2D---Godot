@@ -6475,6 +6475,29 @@ d'ambiance reste à faire.**
   (option 1, retenue par Adrien). Sur le menu principal, aucune entrée n'a de
   panneau : le cadre y est toujours noir.
 
+##### Vu à l'écran le 2026-08-25, et l'historique justifie le déplacement à lui seul
+
+Les trois états sont à la planche (`08-` à `09b-`). Le texte poussé s'affiche,
+le profil s'affiche, et **l'historique se révèle être un vrai tableau** — date,
+verdict teinté, durée, mode, adversaire, arme — qui **occupe naturellement toute
+la largeur du cadre**. Il était jusqu'ici derrière une navigation, dans une
+colonne de gauche large de 430 px. Ce n'est plus un rangement plus logique, c'est
+le seul endroit où ce contenu tient.
+
+**Ce qui reste faible, et c'est de la composition, pas du branchement :** les
+trois panneaux se collent en haut d'un cadre qui fait plus de mille pixels de
+haut, et le profil centre ses lignes sur toute la largeur — une phrase
+d'explication court sur 900 px, ce qui se lit mal. C'est le travail de DA4.7
+(hiérarchiser au lieu d'empiler), et ça vient après le lit d'ambiance.
+
+⚠️ **Observation hors périmètre, signalée à Adrien : l'historique local est
+pollué par les bancs.** La planche affiche « ce soir : 200 matchs · 98V 57D 0N ·
+72 forfaits », avec des durées de 0 à 3 secondes. Ce sont les six scénarios à
+deux instances de `run_duo.sh`, qui jouent de vrais matchs et les archivent dans
+`user://match_history.json` — le même fichier que les parties d'Adrien. Aucun
+défaut de code, mais **les bancs écrivent dans les données du joueur**, et
+l'écran d'historique est donc illisible sur une machine de développement.
+
 ##### Un second défaut dormait sous le premier
 
 `_detail_text` naissait à **un pixel de large** dans son panneau caché — mesuré
