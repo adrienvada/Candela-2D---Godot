@@ -984,6 +984,12 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_restore_viewports()
 	ui.hide_killcam()
 	AudioManager.set_in_match(true)
+	# L'oreille suit le joueur local — en ligne seulement. En ecran partage les
+	# deux joueurs partagent la sortie audio : suivre l'un donnerait a l'autre
+	# ses propres pas entendus d'ailleurs. Meme partage que `torche_comptee`.
+	var _idx_oreille := _local_player_index()
+	if AudioManager.oreille_suit(_idx_oreille):
+		AudioManager.poser_oreille(p1 if _idx_oreille == 0 else p2)
 	AudioManager.reset_low_health()
 	AudioManager.play_music("music_match")
 
@@ -1614,7 +1620,16 @@ func _do_end_round(winner_id: int):
 	ui.force_close_pause()
 	_predicted_shots.clear()
 	AudioManager.set_in_match(false)
+	AudioManager.rendre_oreille()
 	AudioManager.play_music("music_victory")
+
+	# V2.3 / V3.7 / V3.8 — la ponctuation de fin. `_do_end_round` tourne sur les
+	# DEUX machines (`call_local`), et `stinger_de_fin` decide ce que chacune
+	# entend depuis sa place. Un fichier absent ne joue rien, sans erreur.
+	var _sting := AudioManager.stinger_de_fin(winner_id, match_over,
+		_local_player_index())
+	if _sting != "":
+		AudioManager.play_sfx(_sting)
 
 	if winner_id == 0:
 		AudioManager.play_speaker("spk_p1_wins")

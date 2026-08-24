@@ -4359,6 +4359,68 @@ relecture : **`TRANSITION_TO_TIME_START` vaut 1, pas 0.** Le 0 est
 le menu à une position arbitraire — et ça s'entend une fois sur deux, ce qui est
 la pire fréquence pour un défaut.
 
+### Le jeu jouait des sons positionnels sans aucune oreille (2026-08-25)
+
+Relevé par la session « spatialisation du son », vérifié et corrigé ici. **Le
+défaut avait l'âge du projet** : `AudioStreamPlayer2D` partout, panoramique
+partout, et **aucun auditeur**.
+
+Trois pièces manquaient, et la cruauté du défaut tient à ce qu'**aucune ne
+s'entend seule** :
+
+1. Le pool d'`AudioStreamPlayer2D` est enfant de l'autoload `AudioManager`, donc
+   dans le `World2D` de la **racine**. Le jeu vit dans celui du `SubViewport`. Un
+   `AudioStreamPlayer2D` ne s'adresse qu'aux viewports de son propre monde.
+2. **Un `SubViewport` n'est pas une oreille par défaut** —
+   `audio_listener_enable_2d` vaut `false` ; seule la fenêtre racine l'a à
+   `true`. Mesuré, pas déduit.
+3. Aucun `AudioListener2D` n'existait nulle part dans `main.tscn`.
+
+Poser un `AudioListener2D` sur le joueur **sans déménager le pool ne change rien
+du tout** — et on chercherait l'erreur dans le listener pendant des heures. C'est
+le piège qui compte ici : la pièce qu'on pense être la solution est celle qui ne
+sert à rien seule.
+
+Ce que le joueur entendait à la place : Godot posait l'oreille au centre de
+l'écran virtuel, à un point fixe. **Le panoramique disait où le son était sur la
+carte, pas par rapport à soi.** Avancer vers l'adversaire ne rendait pas ses pas
+plus forts. Rien n'était en erreur, tout était audible.
+
+**Corrigé en ligne uniquement** (`AudioManager.oreille_suit`, décision d'Adrien
+du 2026-08-25). En écran partagé on n'y touche pas, et c'est la même raison que
+`torche_comptee` : les deux joueurs écoutent les mêmes haut-parleurs, donc suivre
+l'un donnerait à l'autre ses propres pas entendus depuis une tête qui n'est pas
+la sienne. Ce serait **pire** que le point fixe, pas mieux.
+
+`tools/test_oreille.gd` monte un vrai arbre de jeu et vérifie les trois pièces —
+y compris, à dessein, que l'état d'origine était bien le défaut décrit. Ce qu'il
+ne prouve pas, et qui se juge au casque : que le panoramique s'entend.
+
+### La famille de défauts de cette nuit : la sortie plausible (2026-08-25)
+
+Quatre défauts en une nuit, tous de la même espèce, et il vaut mieux les nommer
+ensemble qu'un par un :
+
+| Ce qu'on croyait | Ce qui était vrai |
+|---|---|
+| Les flux musicaux étaient « vides » | Ils portaient un timbre audible à −19 dBFS |
+| Le manifeste inventoriait les sons d'armes | Huit entrées décrivaient des fichiers qui n'existeraient jamais |
+| Le jeu spatialisait ses sons | Il n'avait aucune oreille depuis toujours |
+| L'intro musicale ne se lançait pas | Elle se lançait et mourait en 0,35 s |
+
+**Aucun n'a jamais levé la moindre erreur. Aucun n'a jamais fait rougir un
+test.** À chaque fois le système produisait une sortie *plausible* : du son, un
+compteur, un panoramique, un démarrage. C'est le mode de défaillance contre
+lequel ce dépôt se bat le plus mal, parce que sa signature est l'absence de
+signature.
+
+Ce qui les a tous attrapés, sans exception : **mesurer la sortie plutôt que lire
+le code.** Décoder un `.ogg` pour vérifier qu'il contient du silence, comparer
+`get_world_2d()` de deux nœuds, sonder la valeur par défaut d'une propriété
+plutôt que la supposer. Le corollaire pratique : quand un système audio ou visuel
+« marche mais bizarrement », la question n'est pas *où est le bug* — c'est *qu'
+est-ce que je crois savoir sans l'avoir mesuré*.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -5013,7 +5075,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   peut pas teinter un chiffre isolément — et teinter la ligne entière dit
   mieux la même chose : « 3 - 2 » ne révèle pas **qui** vient de gagner.
 - **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
-  menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*
+  menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*  **✅ Câblé le 2026-08-25** — `AudioManager.stinger_de_fin` décide
+  lequel des quatre sort, selon le résultat et selon qui l'on est.
+
 - **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
   détente. — *assets : 1 sample.* **✅ Fait** (le soupir attend le sien). Gris et
   non blanc : le blanc est la couleur de ce qui s'affirme, une égalité n'affirme
