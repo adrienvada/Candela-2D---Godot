@@ -247,6 +247,34 @@ func _test_intensite_texture() -> void:
 		is_zero_approx(Vision.intensite_texture(img_arb, avant, o, c_arb,
 			arbalete.echelle_torche())))
 
+	# **Une arme sans faisceau n'éblouit pas** (décision d'Adrien, 2026-08-24).
+	#
+	# Il y avait un repli sur la formule analytique dans `game_state`, défendu
+	# par l'idée qu'une torche sans cookie ne devait pas devenir « silencieusement
+	# inoffensive ». Le raisonnement était à l'envers : sans cookie, la
+	# `PointLight2D` n'a pas de texture et **ne rend aucune lumière**. Le repli
+	# faisait donc payer pour un faisceau que personne ne voit.
+	#
+	# Le contrôle porte sur `WeaponData`, parce que c'est là que la décision vit
+	# désormais — `game_state.gd` nomme des autoloads et ne peut pas être chargé
+	# en `--script` (piège du 2026-08-18). L'erreur de chargement attendue est
+	# imprimée par `get_torch_texture()` : elle est **voulue**, c'est elle qui
+	# empêche le silence.
+	var sans_cookie := WeaponData.new()
+	sans_cookie.torch_cookie = "il-n-y-a-pas-de-cookie-ici"
+	_check("une arme sans faisceau ne verse rien, dans l'axe",
+		is_zero_approx(sans_cookie.lumiere_axiale(80.0)))
+	_check("ni nulle part ailleurs",
+		is_zero_approx(sans_cookie.lumiere_recue(Vector2.RIGHT, Vector2.ZERO,
+			Vector2(30.0, 12.0))))
+	# Le contre-test qui donne sa valeur au précédent : la MÊME arme, avec un
+	# cookie, éblouit. Sans lui, un `lumiere_recue()` cassé rendant toujours zéro
+	# passerait les deux contrôles ci-dessus au vert.
+	sans_cookie.torch_cookie = "pompe"
+	_check("et la même arme, cookie retrouvé, éblouit de nouveau",
+		sans_cookie.lumiere_axiale(80.0) > 0.0,
+		str(sans_cookie.lumiere_axiale(80.0)))
+
 	# **Le halo entre dans le calcul, et il faut le savoir.** La texture porte,
 	# outre le cône, un halo faible sur les 20 % proches de l'émetteur et
 	# jusqu'à 80° : quelqu'un de collé à une torche allumée EST vu, même hors du
