@@ -4630,11 +4630,31 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   flux au lieu de les embarquer en base64 (704 ko → 2,9 ko).
 
   La leçon, et c'est elle qui vaut d'être notée : le système a vécu deux mois
-  « fonctionnel » et muet. Aucune erreur, aucun test rouge — `AudioManager`
-  chargeait quatre clips, basculait de l'un à l'autre, ouvrait ses couches, et
-  ne jouait rien. **Un jeu muet et un jeu dont on a baissé le volume ne se
-  distinguent pas**, et c'est exactement ce que `asset_manifest.gd` avait été
-  écrit pour rattraper. Il l'a rattrapé ; il aura fallu qu'on lise le panneau.
+  « fonctionnel » sans jouer sa musique. Aucune erreur, aucun test rouge —
+  `AudioManager` chargeait quatre clips, basculait de l'un à l'autre, ouvrait
+  ses couches, et rendait autre chose que ce qu'on croyait. C'est exactement ce
+  que `asset_manifest.gd` avait été écrit pour rattraper. Il l'a rattrapé ; il
+  aura fallu qu'on lise le panneau.
+
+  **Correction du 2026-08-24, après mesure — « muet » était faux, et je l'avais
+  écrit deux fois.** Signalé par la session « DA1 », vérifié en décodant les
+  fichiers depuis `3a1e18e` plutôt qu'en les croyant vides :
+
+  | Bouche-trou (avant) | Durée | Crête | RMS |
+  |---|---|---|---|
+  | `music_menu` / `music_match` / `music_victory` | 11,294 s | −19,2 dBFS | −33,0 dBFS |
+  | `music_intro` | 12,000 s | −15,2 dBFS | −32,6 dBFS |
+
+  Ce ne sont pas des silences, ce sont des **timbres audibles**. Le jeu ne se
+  taisait pas : il jouait doucement autre chose, et personne ne s'en est étonné
+  parce que tout le dépôt les appelait « flux vides ». C'est le mode de
+  défaillance le plus coûteux du lot — un défaut qu'on ne cherche pas, parce
+  que le mot qui le désigne dit déjà qu'il n'y a rien à entendre.
+
+  Deux détails qui vont avec, mesurés au passage : les 160 032 octets valent
+  **11,294 s et non 22,588 s**, et `music_intro` n'était pas une copie des
+  trois autres — durée, taille et timbre différents. La détection à l'égalité
+  exacte ne rattrapait donc qu'un seul gabarit sur deux.
 - **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
   par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
   **✅ Fait** — piloté par `GameState._update_music_intensity` chaque frame
