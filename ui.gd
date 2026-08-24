@@ -112,6 +112,10 @@ const SCREEN_LOCAL_JOIN := "local_invite"
 const SCREEN_RANKED := "en_ligne_competitif"
 const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
+## ⚠️ **Ces deux-là ne sont plus des écrans, ce sont des panneaux** (DA4.18) —
+## voir `PANEL_PROFILE` et `PANEL_HISTORY`. Les constantes restent pour que
+## `_on_hub_screen_changed` et les bancs n'aient pas à deviner un identifiant
+## disparu, mais **plus aucune entrée ne pousse vers elles**.
 const SCREEN_PROFILE := "profil"
 const SCREEN_HISTORY := "historique"
 const SCREEN_CUSTOM := "personnalisation"
@@ -144,6 +148,9 @@ const PANEL_CONTROLS := "panneau_controles"
 const PANEL_DISPLAY := "panneau_affichage"
 const PANEL_EFFECTS := "panneau_effets"
 const PANEL_AUDIO := "panneau_audio"
+## DA4.18 — le profil et l'historique se regardent à droite, comme les réglages.
+const PANEL_PROFILE := "panneau_profil"
+const PANEL_HISTORY := "panneau_historique"
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -2146,9 +2153,11 @@ func _build_hub_screens() -> void:
 		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
 		COLOR_GOLD, "top10"))
 	classe.add_child(hub.make_entry("INFORMATIONS PROFIL",
-		"Identité, code de récupération, pseudo.", SCREEN_PROFILE))
+		"Identité, code de récupération, pseudo — affichés à droite.",
+		"", COLOR_GOLD, "", "", false, PANEL_PROFILE))
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
-		"Vos derniers matchs, et le bilan de la soirée en cours.", SCREEN_HISTORY))
+		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
+		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
 	hub.add_back_entry(SCREEN_RANKED)
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
@@ -2214,10 +2223,21 @@ func _build_hub_screens() -> void:
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
 	hub.add_back_entry(SCREEN_UPDATE)
 
-	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
-	_attach_screen(SCREEN_HISTORY, "Historique", ScreenHistory.new())
-	hub.add_back_entry(SCREEN_HISTORY)
-	hub.add_back_entry(SCREEN_PROFILE)
+	# DA4.18 — **le profil et l'historique descendent d'un étage, comme les effets
+	# et l'audio avant eux.** Demande d'Adrien : « mon profil doit s'afficher à
+	# droite, comme l'historique, comme les scores, comme le top 10 ».
+	#
+	# Ils étaient les seuls écrans de méta à REMPLACER la colonne de gauche
+	# pendant que les quatre écrans de réglages remplissaient le cadre. Rien ne
+	# justifiait la différence : consulter son rang ou son historique est
+	# exactement le geste que le cadre de droite existe pour servir — « ceci se
+	# regarde, sans descendre d'un cran ».
+	#
+	# Aucun des deux n'a été réécrit, et c'est la démonstration du contrat
+	# `HubScreen` : un écran n'a pas le droit de connaître sa position dans
+	# l'arborescence, précisément pour qu'on puisse l'en changer.
+	_attach_panel(PANEL_PROFILE, ScreenProfile.new())
+	_attach_panel(PANEL_HISTORY, ScreenHistory.new())
 
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
 	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à

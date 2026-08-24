@@ -59,6 +59,7 @@ func _ready() -> void:
 		DirAccess.remove_absolute(f)
 
 	await _menus()
+	await _le_cadre_de_droite()
 	await _code_de_salon()
 	await _ecrans_de_fin()
 	await _entrainement()
@@ -124,6 +125,35 @@ func _menus() -> void:
 				if _ui.hub.has_method("reveal_entry"):
 					_ui.hub.reveal_entry(btn)
 				await _poser("04-%d-reglages" % i)
+
+
+## DA4.18 — le cadre de droite, montré SANS emprunter le chemin qui l'ouvre.
+##
+## **Le défaut relevé par Adrien le 2026-08-24 était invisible à cette planche**,
+## et pour la même raison que le code de salon : les panneaux de méta ne se
+## voient qu'en entrant dans `1v1 compétitif`, et `_on_hub_screen_changed` y écrit
+## l'intention de file classée. Un outil d'observation ne doit rien décider dans
+## le monde.
+##
+## `show_panel()` atteint le contenu sans prendre le chemin — le hub sait montrer
+## un panneau sans changer d'écran, c'est précisément ce pour quoi il existe.
+## Encore une fois : ce qui était inobservable n'était pas le contenu, c'était
+## l'itinéraire.
+func _le_cadre_de_droite() -> void:
+	if not _ui.hub.has_method("show_panel"):
+		printerr("  ! le hub ne sait plus montrer un panneau — le cadre n'est plus vu")
+		return
+	_ui.hub.reset()
+	# Le texte poussé (MON RANG, TOP 10) et les deux panneaux qui viennent de
+	# descendre d'un étage. Les trois états où le cadre était noir.
+	_ui.hub.montrer_texte("MON RANG",
+		"[b]Argent II[/b] — 1240 ELO\nSérie de la soirée : 3 victoires")
+	await _poser("08-cadre-texte-pousse")
+	for cas in [[_ui.PANEL_PROFILE, "09-cadre-profil"],
+			[_ui.PANEL_HISTORY, "09b-cadre-historique"]]:
+		_ui.hub.show_panel(String(cas[0]))
+		await _poser(String(cas[1]))
+	_ui.hub.show_panel("")
 
 
 ## Le code de salon, photographié SANS ouvrir de salon.
