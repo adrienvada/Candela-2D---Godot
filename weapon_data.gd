@@ -42,7 +42,46 @@ const Charte := preload("res://charte.gd")
 @export var bullet_width: float = 5.0
 
 ## Le cookie cuit, chargé une fois par arme. Voir `torch_cookie` plus haut.
+##
+## `Texture2D` et non `ImageTexture` : un PNG importé revient en
+## `CompressedTexture2D`, jamais en `ImageTexture`. Le type plus étroit
+## compilait tant que la texture était fabriquée en mémoire ; il aurait cassé au
+## premier chargement.
 var _torch_texture: Texture2D
+
+## L'`Image` est gardée à part de la texture : `get_image()` rapatrie depuis le
+## GPU à chaque appel, ce qui se paierait une fois par image et par joueur.
+var _torch_image: Image
+
+## Portée réelle du faisceau, en pixels — jusqu'où la torche pose encore de la
+## lumière. Lue par l'éblouissement, qui doit s'arrêter là où le faisceau
+## s'arrête.
+##
+## ⚠️ **Elle dérive de l'empreinte de RÉFÉRENCE, pas de la taille du fichier.**
+## La branche « éblouissement » portait ici une constante `TAILLE_TEXTURE_TORCHE`
+## à 512 décrite comme « le côté de la texture » : exacte quand la texture était
+## fabriquée en 512², **fausse dès le premier cookie cuit en 1024²**. La valeur
+## restait juste par accident — `echelle_torche()` compense justement pour que
+## l'empreinte au sol reste `512 × torch_scale` — mais le nom et le commentaire
+## mentaient, et c'est ainsi qu'on hérite d'un nombre que plus personne n'ose
+## toucher. Une seule constante porte désormais cette unité.
+func portee_torche() -> float:
+	return TAILLE_COOKIE_REFERENCE * 0.5 * torch_scale
+
+## Demi-angle du faisceau, en radians.
+##
+## `torch_angle_deg` est bien un **demi**-angle : le cookie allume les pixels
+## dont l'écart à l'axe lui est inférieur. Le pompe (60) éclaire donc à 120° au
+## total, l'arbalète (5) à 10°. La confusion coûte un facteur deux et ne se voit
+## pas : elle a faussé l'éblouissement, puis le semis de poussière de V5.5, qui
+## redivisait par deux. D'où ces deux fonctions — un seul endroit peut désormais
+## se tromper sur ce que le nombre veut dire.
+func demi_angle_torche() -> float:
+	return deg_to_rad(torch_angle_deg)
+
+## Le même, en cosinus, prêt pour un produit scalaire.
+func cos_demi_cone() -> float:
+	return cos(demi_angle_torche())
 
 ## La texture du faisceau, chargée depuis `res://assets/torche/`.
 ##
@@ -97,3 +136,30 @@ func echelle_torche() -> float:
 	if tex == null or tex.get_width() <= 0:
 		return torch_scale
 	return torch_scale * TAILLE_COOKIE_REFERENCE / float(tex.get_width())
+
+
+## L'image du faisceau, celle-là même que la lumière projette — pour que
+## l'éblouissement la LISE au lieu d'en recopier la formule.
+##
+## **C'est la fin d'une famille entière de défauts.** `Vision` refaisait le
+## calcul terme pour terme, avec ce commentaire : « recopié du rendu à dessein —
+## deux formules pour un même faisceau finiraient par diverger ». Le risque était
+## bien vu, le remède était le mauvais : une copie garantit que deux nombres
+## restent égaux, jamais qu'ils veulent dire la même chose.
+##
+## L'image passe TOUJOURS par `get_torch_texture()`, jamais par une relecture du
+## fichier : deux chemins vers la même vérité, c'est la faute que ce lot répare.
+## `decompress()` n'est pas une précaution de style — une texture importée en
+## VRAM revient compressée et `get_pixelv()` y échoue.
+func image_torche() -> Image:
+	if _torch_image != null:
+		return _torch_image
+	var tex := get_torch_texture()
+	if tex == null:
+		return null
+	var img := tex.get_image()
+	if img != null and img.is_compressed():
+		if img.decompress() != OK:
+			return null
+	_torch_image = img
+	return _torch_image

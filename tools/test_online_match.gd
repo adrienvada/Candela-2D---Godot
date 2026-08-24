@@ -38,7 +38,7 @@ func _ready() -> void:
 	# L'entraînement est solitaire : il n'a pas plus besoin d'Epic que l'écran
 	# partagé, et l'attendre ferait pendre le banc trente secondes pour rien.
 	var needs_eos := not _lan and not _has("--local") and not _has("--training") \
-		and not _has("--fenetre")
+		and not _has("--fenetre") and not _has("--eblouissement")
 	if needs_eos:
 		if not await _await(func(): return NetworkManager.eos_state == NetworkManager.EosState.READY \
 				or NetworkManager.eos_state == NetworkManager.EosState.FAILED, EOS_READY_TIMEOUT):
@@ -81,10 +81,88 @@ func _ready() -> void:
 		await _run_training()
 	elif _has("--fenetre"):
 		await _run_fenetre()
+	elif _has("--eblouissement"):
+		await _run_eblouissement()
 	else:
 		print("Usage: --host | --join <CODE|IP> | --local | --training"
-			+ " | --host-coupure | --join-coupure <IP>")
+			+ " | --fenetre | --eblouissement | --host-coupure | --join-coupure <IP>")
 		_quit(2)
+
+
+## L'éblouissement, dans un vrai match — le CÂBLAGE, pas le modèle.
+##
+## `test_eblouissement` prouve le modèle et `test_vision` la géométrie ; ni l'un
+## ni l'autre n'aurait vu le défaut du 2026-08-18, qui vivait **entre** les deux :
+## une montée dans un fichier, une descente dans un autre, et personne pour les
+## additionner. Une mécanique dont chaque moitié est verte peut être morte.
+##
+## Exercé en écran partagé : aucun réseau, une seule instance, et pourtant le
+## chemin réel — `game_state._process` → `_lumiere_recue` → `player`.
+##
+## J2 est replacé CHAQUE IMAGE devant J1 plutôt qu'orienté une fois : en headless
+## la visée de J1 retombe sur la souris (device 0), qui pointe le coin de l'écran
+## et tourne le joueur à chaque image. On suit sa direction au lieu de la
+## combattre — le test ne dépend alors ni de la carte ni du hasard du curseur.
+func _run_eblouissement() -> void:
+	_ui.hub.push(_ui.SCREEN_LOCAL)
+	_press_play()
+	_check("la manche démarre", await _await(func(): return _main.round_active, ROUND_TIMEOUT))
+	_check("le décompte finit", await _await(func(): return _main.countdown_left <= 0.0, ROUND_TIMEOUT))
+	var p1: Node2D = _main.p1
+	var p2: Node2D = _main.p2
+
+	# 80 px : dans la même flaque de lumière et dans la même cellule ouverte,
+	# quelle que soit la carte. Deux corps de 18 px de rayon ne s'y touchent pas.
+	Input.action_press("p1_torch")
+	await _tenir_devant(p1, p2, 1.0)
+	_check("la torche braquée éblouit", p2.dazzle_amount > 0.4, str(p2.dazzle_amount))
+	_check("celui qui éclaire n'est pas ébloui", is_zero_approx(p1.dazzle_amount),
+		str(p1.dazzle_amount))
+
+	# Le contre-test qui aurait tout dit : la valeur redescend, et elle redescend
+	# SEULEMENT quand le faisceau s'éteint.
+	Input.action_release("p1_torch")
+	await _tenir_devant(p1, p2, 2.0)
+	_check("torche éteinte, les yeux reviennent", is_zero_approx(p2.dazzle_amount),
+		str(p2.dazzle_amount))
+
+	# Derrière le porteur : hors du cône, donc rien. Sans ce contre-test, un
+	# calcul qui éblouirait TOUT LE MONDE passerait le premier contrôle.
+	Input.action_press("p1_torch")
+	await _tenir_derriere(p1, p2, 1.0)
+	_check("dans le dos du faisceau, rien", is_zero_approx(p2.dazzle_amount),
+		str(p2.dazzle_amount))
+	Input.action_release("p1_torch")
+
+	# Le flash de tir (2026-08-18) : pic instantané, torche éteinte.
+	await _tenir_devant(p1, p2, 0.5)
+	_check("aucun éblouissement avant le tir", is_zero_approx(p2.dazzle_amount))
+	p1.shoot()
+	await get_tree().process_frame
+	var apres_tir: float = p2.dazzle_amount
+	# En UNE image. C'est là toute la différence entre un flash et un faisceau :
+	# la torche pose 0,02 par image, il en faudrait vingt-cinq pour en arriver
+	# là. Un pic qui monterait progressivement ne serait pas un coup de feu.
+	_check("le flash de tir éblouit, d'un coup", apres_tir > 0.3, str(apres_tir))
+	await _tenir_devant(p1, p2, 2.5)
+	_check("puis le flash se résorbe", is_zero_approx(p2.dazzle_amount),
+		str(p2.dazzle_amount))
+	_quit(0)
+
+## Maintient J2 à 80 px devant J1 pendant `duree` secondes, image par image.
+func _tenir_devant(p1: Node2D, p2: Node2D, duree: float) -> void:
+	await _tenir(p1, p2, duree, 1.0)
+
+## Idem, mais dans son dos.
+func _tenir_derriere(p1: Node2D, p2: Node2D, duree: float) -> void:
+	await _tenir(p1, p2, duree, -1.0)
+
+func _tenir(p1: Node2D, p2: Node2D, duree: float, sens: float) -> void:
+	var reste := duree
+	while reste > 0.0:
+		p2.global_position = p1.global_position + p1.global_transform.x * 80.0 * sens
+		await get_tree().process_frame
+		reste -= get_process_delta_time()
 
 
 ## La fenêtre de choix d'un match apparié — dix secondes pendant lesquelles on

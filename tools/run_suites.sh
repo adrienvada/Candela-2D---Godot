@@ -42,7 +42,7 @@ SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
-        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_rejeu test_banc test_prediction_tir
+        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_rejeu test_banc test_prediction_tir
         test_mise_a_jour test_charte test_autoloads test_torches)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
@@ -118,6 +118,14 @@ run test_entrainement res://tools/test_online_match.tscn -- --training
 # `game_state`, et la faire dépendre de deux processus et d'Epic l'aurait rendue
 # intestable en pratique, donc jamais testée.
 run test_fenetre_de_choix res://tools/test_online_match.tscn -- --fenetre
+
+# L'éblouissement dans un vrai match — le CÂBLAGE, pas le modèle.
+#
+# `test_eblouissement` prouve le modèle et `test_vision` la géométrie. Le défaut
+# du 2026-08-18 vivait entre les deux : montée dans un fichier, descente dans un
+# autre, jamais additionnées. Les deux suites étaient vertes, la mécanique
+# centrale du jeu était morte. Ce mode-ci est le seul qui l'aurait vu.
+run test_eblouissement_en_jeu res://tools/test_online_match.tscn -- --eblouissement
 
 # Le match complet à DEUX PROCESSUS, en ENet sur 127.0.0.1.
 #

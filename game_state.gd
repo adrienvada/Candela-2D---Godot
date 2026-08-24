@@ -64,6 +64,7 @@ const SerieDeSession := preload("res://serie_de_session.gd")
 ## La règle du faisceau vit à part pour la même raison : elle doit se tester sans
 ## le reste du jeu.
 const Vision := preload("res://vision.gd")
+const Eblouissement := preload("res://eblouissement.gd")
 
 # Manches gagnées dans le match en cours. En BO1 elles retombent à zéro à
 # chaque fin de match ; elles existent pour que les formats longs s'ajoutent
@@ -991,6 +992,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p2.hp = 100.0
 	p1.dead = false
 	p2.dead = false
+	# Les yeux repartent neufs : un éblouissement pris à la dernière seconde
+	# d'une manche n'a rien à faire dans la suivante.
+	p1.dazzle_amount = 0.0
+	p2.dazzle_amount = 0.0
 	
 	p1.equip_weapon(weapon_for_index(w1_idx))
 	p2.equip_weapon(weapon_for_index(w2_idx))
@@ -1081,7 +1086,6 @@ func _process(delta):
 				else:
 					_do_end_round(-1)
 
-		_check_dazzle(delta)
 		_update_music_intensity()
 
 		
@@ -1096,6 +1100,13 @@ func _process(delta):
 		cam1.global_position = p1.global_position
 	if p2 != null:
 		cam2.global_position = p2.global_position
+
+	# Même raison, un cran plus loin : la RÉCUPÉRATION de l'éblouissement doit
+	# continuer pendant la killcam et l'écran de fin, sinon un joueur ébloui à la
+	# dernière seconde d'une manche la termine blanc et rouvre les yeux au
+	# « FIGHT ! » suivant. Le faisceau, lui, ne verse plus rien : les gardes de
+	# `_maj_eblouissement` s'en chargent.
+	_maj_eblouissement(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1215,32 +1226,132 @@ func _process(delta):
 	else:
 		ui.update_hud(p1, p2, time_left, not training_mode)
 
-func _check_dazzle(delta: float):
-	var space = p1.get_world_2d().direct_space_state
-	# Le rayon suit la lumière, pas le déplacement : il ne teste donc que les
-	# murs et les joueurs (couche 1). Une fosse laisse passer le faisceau, on
-	# peut éblouir son adversaire par-dessus un gouffre.
-	var light_mask := MapGeometry.WALL_LAYER
+## L'éblouissement des deux joueurs, une fois par image et en un seul endroit.
+##
+## En un seul endroit, c'est le cœur de la correction du 2026-08-18 : la montée
+## vivait ici et la descente dans `player._process`, sans condition, quatre fois
+## plus forte. Personne n'avait jamais additionné les deux, et l'effet ne
+## dépassait pas 0,008 (voir `eblouissement.gd`).
+##
+## **Autorité : l'hôte**, comme le reste de la simulation. La valeur est
+## répliquée (`net_dazzle`) et le client ne la recalcule PAS : il la calculerait
+## sur un adversaire interpolé, donc avec 100 ms de retard, et comme
+## l'éblouissement pénalise vitesse ET visée, sa prédiction divergerait en
+## permanence de l'arbitrage. Prix assumé : le voile blanc arrive chez le client
+## avec un demi aller-retour de retard, sur un effet qui dure une seconde.
+func _maj_eblouissement(delta: float) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if not is_instance_valid(p1) or not is_instance_valid(p2):
+		return
+	var espace := p1.get_world_2d().direct_space_state
+	# Les deux plafonds sont lus AVANT d'intégrer : intégrer au fil de la
+	# lecture ferait dépendre le résultat de l'ordre des deux joueurs.
+	var sur_p1 := _lumiere_recue(espace, p2, p1)
+	var sur_p2 := _lumiere_recue(espace, p1, p2)
+	p1.integrer_eblouissement(sur_p1, delta)
+	p2.integrer_eblouissement(sur_p2, delta)
 
-	if p1.flashlight_on:
-		if Vision.dans_le_cone(p1.global_transform.x, p1.global_position,
-				p2.global_position):
-			var q = PhysicsRayQueryParameters2D.create(
-				p1.global_position, p2.global_position, light_mask)
-			q.exclude = [p1.get_rid()]
-			var res = space.intersect_ray(q)
-			if res and res.collider == p2:
-				p2.apply_dazzle(0.5 * delta)
+## Un joueur qui compte : présent, vivant, et sur le terrain.
+##
+## `visible` n'est pas un détail d'affichage ici, c'est le drapeau « hors jeu » :
+## à l'entraînement, J2 est masqué et sorti des collisions mais son nœud continue
+## de tourner, manette comprise. Sans ce garde, une touche de torche pressée à
+## côté du clavier éblouirait le joueur qui s'entraîne, depuis un adversaire
+## invisible — le genre de défaut qu'on passe une soirée à ne pas croire.
+func _en_jeu(joueur: Node2D) -> bool:
+	return is_instance_valid(joueur) and joueur.visible and not joueur.dead
 
-	if p2.flashlight_on:
-		if Vision.dans_le_cone(p2.global_transform.x, p2.global_position,
-				p1.global_position):
-			var q = PhysicsRayQueryParameters2D.create(
-				p2.global_position, p1.global_position, light_mask)
-			q.exclude = [p2.get_rid()]
-			var res = space.intersect_ray(q)
-			if res and res.collider == p1:
-				p1.apply_dazzle(0.5 * delta)
+## Ce que la torche de `source` verse dans les yeux de `cible`, entre 0 et 1.
+func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
+		cible: Node2D) -> float:
+	if not _en_jeu(source) or not _en_jeu(cible):
+		return 0.0
+	if not source.flashlight_on:
+		return 0.0
+	# **On LIT le faisceau, on ne le recalcule pas.** L'image échantillonnée est
+	# celle-là même que la lumière projette : elle porte l'angle de l'arme, sa
+	# portée, sa luminosité et la matière du cookie, sans qu'aucune de ces
+	# quatre choses ait à être recopiée ici. Voir `Vision.intensite_texture`
+	# pour les trois divergences que la copie avait produites.
+	#
+	# Le repli sur la formule n'est pas décoratif : une arme sans texture doit
+	# éblouir quand même, faute de quoi une torche sans cookie deviendrait
+	# silencieusement inoffensive — exactement le genre de zéro qui ressemble à
+	# une règle du jeu.
+	var arme: WeaponData = source.current_weapon
+	var image: Image = arme.image_torche() if arme else null
+	var intensite := 0.0
+	if image != null:
+		# ⚠️ `echelle_torche()`, PAS `torch_scale` — l'échelle que la lumière
+		# emploie réellement. Les deux ont été le même nombre jusqu'aux cookies
+		# cuits en 1024² ; depuis, `echelle_torche()` compense la résolution et
+		# vaut la moitié. Passer `torch_scale` ici faisait échantillonner la
+		# texture à MI-DISTANCE du point visé : trop de pénalité au loin, et de
+		# la pénalité là où le faisceau est déjà éteint. Le jeu restait jouable.
+		# Attrapé par `test_vision` à la fusion des deux lots — c'est exactement
+		# ce que la lecture du pixel devait empêcher, et elle ne le pouvait pas
+		# tant que l'échelle passée n'était pas celle du rendu.
+		intensite = Vision.intensite_texture(image, source.global_transform.x,
+			source.global_position, cible.global_position, arme.echelle_torche())
+	else:
+		var portee: float = arme.portee_torche() if arme else 512.0
+		var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE
+		intensite = Vision.intensite_recue(source.global_transform.x,
+			source.global_position, cible.global_position, portee, cos_demi)
+	if intensite <= 0.0:
+		return 0.0
+	if not _ligne_de_vue(espace, source, cible):
+		return 0.0
+	# La lumière qui ARRIVE n'est pas la pénalité qu'elle COÛTE. `Vision` rend
+	# la première — le pixel du faisceau lui-même ; `Eblouissement.plafond_pour`
+	# la convertit en seconde. Sans cette courbe, le dernier tiers du faisceau
+	# éclairait visiblement sans presque rien coûter (relevé à l'écran le
+	# 2026-08-24, arbitré par Adrien).
+	return Eblouissement.plafond_pour(intensite)
+
+## Ligne de vue franche entre deux joueurs. Le rayon suit la LUMIÈRE, pas le
+## déplacement : il ne teste que les murs et les joueurs (couche 1). Une fosse
+## laisse donc passer le faisceau — on peut éblouir son adversaire par-dessus un
+## gouffre, décision de conception couverte par `test_vision`.
+func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
+		cible: Node2D) -> bool:
+	var q := PhysicsRayQueryParameters2D.create(source.global_position,
+		cible.global_position, MapGeometry.WALL_LAYER)
+	q.exclude = [source.get_rid()]
+	var res := espace.intersect_ray(q)
+	return res and res.collider == cible
+
+## Le flash de tir éblouit celui d'en face (décision du 2026-08-18, avec
+## Adrien). Pic instantané, qui passe par-dessus le plafond de la torche et se
+## résorbe en une seconde et demie — le modèle de `eblouissement.gd` le permet
+## sans cas particulier.
+##
+## Pas de cône : un canon crache dans toutes les directions. Une ligne de vue,
+## en revanche, oui — un mur arrête un flash comme il arrête un faisceau.
+func _flash_de_tir(tireur: Node2D) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return # L'hôte tranche, la valeur est répliquée.
+	if not is_instance_valid(p1) or not is_instance_valid(p2):
+		return
+	var cible: Node2D = null
+	if tireur == p1:
+		cible = p2
+	elif tireur == p2:
+		cible = p1
+	if cible == null or not _en_jeu(cible) or not _en_jeu(tireur):
+		return
+	var eclat := 1.0
+	var arme: WeaponData = tireur.current_weapon
+	if arme:
+		eclat = arme.muzzle_flash_intensity
+	var pic := Eblouissement.pic_de_flash(
+		tireur.global_position.distance_to(cible.global_position), eclat)
+	if pic <= 0.0:
+		return
+	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible):
+		return
+	cible.apply_dazzle(pic)
 
 func _get_weapon_idx(w: WeaponData) -> int:
 	if w == weapon_arbalete: return 3
@@ -1352,6 +1463,13 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 
 	if shooter.has_method("trigger_shoot_visuals"):
 		shooter.trigger_shoot_visuals()
+
+	# Le flash de tir éblouit. Ici et pas dans `trigger_shoot_visuals` : ce site
+	# est déjà celui qui ne joue qu'UNE fois par volée (la boucle des plombs du
+	# pompe est déroulée au-dessus) et jamais pour la balle officielle d'un tir
+	# que le client a déjà rendu — c'est ce que garde `spawn_nodes`. La killcam,
+	# elle, passe par `_on_replay_spawn_bullet` : un rejeu n'éblouit personne.
+	_flash_de_tir(shooter)
 
 ## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
 ## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)
@@ -2234,10 +2352,12 @@ func _on_main_menu_requested():
 	if is_instance_valid(p1):
 		p1.hp = 100.0
 		p1.dead = false
+		p1.dazzle_amount = 0.0
 		p1.global_position = _get_spawn_position(0)
 	if is_instance_valid(p2):
 		p2.hp = 100.0
 		p2.dead = false
+		p2.dazzle_amount = 0.0
 		p2.global_position = _get_spawn_position(1)
 		
 	# Le score de session ne survit pas au retour au menu : une nouvelle série

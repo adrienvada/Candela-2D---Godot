@@ -68,6 +68,18 @@ func _run() -> void:
 	_check("et le mode menus sait dire quand ils manquent",
 		not vides_menus.is_empty())
 
+	# La planche de l'éblouissement, même raison et même remède : elle ouvre une
+	# fenêtre, donc aucune suite ne peut l'exécuter — mais une suite peut lire
+	# ses hypothèses. Elle en a beaucoup plus que le banc de cadence, parce
+	# qu'elle pilote une manche entière au lieu de traverser des écrans : deux
+	# joueurs, une arme, une touche de torche, un modèle d'éblouissement.
+	var Planche: GDScript = load("res://tools/planche_eblouissement.gd")
+	var manquants_eb: Array[String] = Planche.preconditions_manquantes(ui, main)
+	_check("tous les appuis de la planche d'éblouissement existent encore",
+		manquants_eb.is_empty(), "; ".join(manquants_eb))
+	var vides_eb: Array[String] = Planche.preconditions_manquantes(null, null)
+	_check("et elle sait dire quand ils manquent", not vides_eb.is_empty())
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")

@@ -328,6 +328,87 @@ appelait `grab_focus()` là où le cadre de droite se remplit par
 `MenuHub.reveal_entry()` — elle empruntait un chemin que personne ne prend. Et
 elle ne voyait aucun écran de fin, où vivent deux des quinze effets. Les trois
 verdicts y sont désormais.
+### 2026-08-24 (suite) — l'éblouissement lit le faisceau au lieu de le recalculer
+
+**Second lot, sur arbitrage d'Adrien.** `Vision.intensite_texture` échantillonne
+l'alpha de la texture de torche ; `intensite_recue` devient un repli.
+
+**Fichiers pris puis RENDUS :** `vision.gd`, `weapon_data.gd` (une fonction
+ajoutée, `image_torche()`), `game_state.gd` (toujours `_lumiere_recue` seule),
+`tools/test_vision.gd`, `tools/planche_eblouissement.gd`. **Je ne tiens plus
+rien** — la session « assets visuels » peut prendre les trois fichiers qu'elle
+attend.
+
+**À la session « assets visuels », deux points qui vous concernent :**
+
+1. **`image_torche()` passe par `get_torch_texture()` et sait se passer de la
+   fabrique procédurale.** Quand vous remplacerez celle-ci par le chargement du
+   PNG cuit, la lecture continuera de fonctionner : elle retombe sur
+   `texture.get_image()`, avec `decompress()` si l'import rend une texture VRAM.
+   Sans ce repli, `_torch_image` serait resté nul et **l'éblouissement serait
+   silencieusement revenu à la formule analytique** — c'est-à-dire au défaut
+   qu'on vient de retirer.
+2. **Votre piège « `texture_scale` multiplie la taille propre de la texture »
+   n'existe plus côté pénalité.** L'échelle est lue dans `img.get_size()` : un
+   cookie de 1024² est traité correctement sans compensation. La compensation
+   reste due côté `player.gd` pour le RENDU, elle ne l'est plus pour le calcul.
+
+**Trois leçons posées aux « Pièges connus », dont deux valent pour tout le
+monde :** une entrée **barrée** empêche le suivant de regarder (celle du `0.866`
+disait « fermé » sur une constante qui appliquait un seul angle à quatre armes) ;
+un test qui n'emploie que les **données de production** ne peut pas voir les
+symétries qu'elles cachent (mon repère perpendiculaire était inversé, et les
+quatre textures étant symétriques en y, aucune donnée réelle ne pouvait le
+montrer) ; et un alpha `RGBA8` est quantifié, donc `is_equal_approx` y échoue
+d'une façon qui **ressemble exactement au défaut qu'on traque**.
+
+**Et une faute de ma part, consignée parce qu'elle a coûté du temps à quelqu'un
+d'autre :** j'ai décrit deux fois du code de ma branche comme s'il était sur
+`main`. La session « assets visuels » a dû aller vérifier les deux fois. Le
+remède tient en une commande : `git show origin/main:<fichier>`.
+
+### 2026-08-24 — session « éblouissement » : première séance à l'écran
+
+**Je travaille dans un worktree, l'arbre principal n'a pas bougé.** On m'a
+demandé un `git checkout` dans l'arbre principal ; les sessions « socle DA1 » et
+« assets visuels » m'ont toutes deux confirmé y travailler, la seconde avec du
+travail non commité. `main` est resté sur `7f5febe`. Le worktree est hors du
+dossier du projet, pour qu'aucun import de l'arbre principal n'aille voir dedans.
+
+**Fichiers pris, sur la branche `claude/joueur-enouillissement-effet-xq3143` :**
+`eblouissement.gd`, `game_state.gd` (une fonction : `_lumiere_recue`), `ui.gd`
+(un bloc déplacé dans `_build_menu`), `tools/test_eblouissement.gd`,
+`tools/run_visuel.sh`, et deux fichiers neufs
+`tools/planche_eblouissement.gd(+tscn)`. **Rendus.**
+
+**À la session « game feel », qui tient `game_state.gd` :** je n'y ai touché
+qu'à `_lumiere_recue`, pour une ligne de retour. La géométrie du faisceau
+(`Vision.intensite_recue`) est **inchangée** — c'était le point : elle doit
+rester le miroir exact de la texture de torche, et la conversion « lumière reçue
+→ pénalité » est partie dans `eblouissement.gd`, où elle est un réglage
+d'équilibre et non du rendu.
+
+**À la session « assets visuels » :** merci pour l'alerte sur les portées. Elle a
+changé la conclusion de ma séance — la dette est écrite dans la ROADMAP
+(« ⚠️ Dette : tout ceci porte sur l'ANCIEN faisceau ») et **Adrien a tranché
+d'attendre votre lot** : je n'ai touché aucun nombre de réglage, seulement deux
+défauts structurels. `WeaponData.demi_angle_torche()` et `cos_demi_cone()`
+existent bien sur cette branche, et le nom dit enfin la vérité — reprenez-les
+après fusion. Le tableau de mesures se rejoue avec
+`./tools/run_visuel.sh --eblouissement`.
+
+**Ce que je laisse au dépôt, et qui sert à tout le monde : un banc qui REGARDE
+une mécanique de jeu.** `tools/planche_eblouissement.tscn` ouvre une vraie
+fenêtre, joue une vraie manche en écran partagé, et rend 30 images plus un
+relevé de mesures. Il a trouvé en une séance deux défauts que trente-cinq suites
+vertes ne voyaient pas — dont un voile qui peignait par-dessus le HUD depuis
+toujours, sans que personne l'ait décidé.
+
+**Et une leçon de méthode, si vous écrivez un banc de rendu :** *mesurer et
+photographier doivent être deux passes.* Mon premier jet relevait le chronomètre
+entre deux captures, et chaque capture coûte 350 ms de repos plus le rendu — il
+annonçait une montée de 0,57 s pour une montée qui en prend 0,28. **Le banc
+mesurait sa propre lenteur**, et le chiffre était parfaitement plausible.
 
 ### 2026-08-24 — fusion avec le système de mise à jour
 
@@ -643,6 +724,28 @@ attend Adrien comme vous l'aviez noté.
 **Ce qui attend Adrien avant toute fusion :** trois effets de `4c110b2` (V4.11,
 V4.13, V5.5) rendent visible ce qui ne l'était pas — ils relèvent du critère
 posé le même jour, qu'il n'a pas encore tranché.
+### 2026-08-18 — session « éblouissement » (branche `claude/joueur-enouillissement-effet-xq3143`)
+
+Demande d'Adrien : « l'effet d'éblouissement ne fonctionne pas quand je joue ».
+Il ne fonctionnait pas, et il n'avait jamais fonctionné — montée `+0,5/s` d'un
+côté, descente `−2,0/s` **inconditionnelle** de l'autre, dans deux `_process`
+qui ne se sont jamais additionnés. Détail complet dans les pièges de la ROADMAP,
+avec les trois défauts voisins (cône en dur à 30° pour des armes qui vont de 5°
+à 60°, aucune portée, flash de tir sans effet).
+
+**Fichiers touchés — et ils appartiennent à d'autres domaines de ce journal :**
+`game_state.gd` et `player.gd` (session « game feel »), `ui.gd` (session
+« menus »), plus `vision.gd`, `weapon_data.gd` et deux fichiers neufs
+(`eblouissement.gd`, `tools/test_eblouissement.gd`). Le travail est sur une
+branche, pas sur `main` : rien n'est poussé sans demande explicite d'Adrien. À
+qui reprendra ces fichiers : les zones sont étroites (le bloc éblouissement de
+`_process`, `apply_dazzle`, deux lignes de `update_hud`), mais elles existent.
+
+**Signalé puis corrigé sur demande d'Adrien** (second commit) : le semis de
+poussière de V5.5 divisait `torch_angle_deg` par deux alors que c'est déjà un
+demi-angle. Il lit maintenant `WeaponData.demi_angle_torche()`. La session qui
+tient `player.gd` n'a donc rien à reprendre là-dessus — juste à savoir que la
+ligne a bougé.
 ### 2026-08-18 — session « game feel » (lot V3/V5/V6)
 
 Reprise sur demande d'Adrien (« v3, v5, v6 »), lot taillé pour tenir dans mes
