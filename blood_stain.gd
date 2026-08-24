@@ -1,5 +1,7 @@
 extends Node2D
 
+const Charte := preload("res://charte.gd")
+
 ## Tache de sang permanente au sol.
 ##
 ## Déposée par bullet.gd (_spawn_hit_effects) à chaque impact sur un joueur,
@@ -36,7 +38,7 @@ static var MAX_STAINS := 120
 static var _next_order := 0
 
 var _drops = []
-var color = Color(0.5, 0.0, 0.0, 0.9) # Sang séché, sombre
+var color = Color(Charte.CARMIN, 0.9) # Sang séché, sombre
 ## Rang de cette tache, figé à l'entrée dans l'arbre (voir _next_order).
 var _order := 0
 ## Copie J2, tenue par l'original pour être libérée d'un seul geste.
@@ -82,12 +84,13 @@ func setup(base_pos: Vector2, direction: Vector2):
 	queue_redraw()
 
 func _draw():
-	# Liseré rouge
+	# Liseré carmin, puis cœur presque noir : une goutte est plus sombre en son
+	# centre qu'à son bord, où la lumière rasante l'attrape.
 	for d in _drops:
-		draw_circle(d["pos"], d["radius"], Color(0.6, 0.0, 0.0, 0.8))
-	# Cœur sombre et luisant
+		draw_circle(d["pos"], d["radius"], Color(Charte.CARMIN, 0.8))
 	for d in _drops:
-		draw_circle(d["pos"], max(d["radius"] - 1.5, 0.0), Color(0.05, 0.0, 0.0, 0.95))
+		draw_circle(d["pos"], max(d["radius"] - 1.5, 0.0),
+			Color(Charte.CARMIN * 0.16, 0.95))
 
 func _ready():
 	# La copie J2 repasse par _ready : elle ne doit ni compter dans le plafond

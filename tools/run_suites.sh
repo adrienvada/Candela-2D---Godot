@@ -42,7 +42,8 @@ SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
-        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_rejeu test_banc test_prediction_tir)
+        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_rejeu test_banc test_prediction_tir
+        test_charte)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.

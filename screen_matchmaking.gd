@@ -168,16 +168,20 @@ enum Display {
 ## se réétiquette.
 const CLOCK_PERIOD := 1.0
 
-const FONT_STATUS := 19
-const FONT_DETAIL := 13
-const FONT_CLOCK := 17
-const FONT_BRACKET := 15
-const FONT_HOST := 16
-const FONT_HOST_WHY := 12
-const FONT_QUEUE := 13
-const FONT_ROLE := 12
-const FONT_NICKNAME := 20
-const FONT_STATS := 14
+# Dix tailles nommées, prises sur l'échelle de la charte plutôt que choisies
+# ici. Elles portaient dix valeurs distinctes entre 12 et 20 — une échelle
+# privée de plus, dans un fichier que personne n'atteint depuis le hub, donc la
+# plus facile à laisser dériver.
+const FONT_STATUS := MenuTheme.T_APPUI
+const FONT_DETAIL := MenuTheme.T_MENTION
+const FONT_CLOCK := MenuTheme.T_APPUI
+const FONT_BRACKET := MenuTheme.T_COURANT
+const FONT_HOST := MenuTheme.T_COURANT
+const FONT_HOST_WHY := MenuTheme.T_MENTION
+const FONT_QUEUE := MenuTheme.T_MENTION
+const FONT_ROLE := MenuTheme.T_MENTION
+const FONT_NICKNAME := MenuTheme.T_APPUI
+const FONT_STATS := MenuTheme.T_COURANT
 
 const BUTTON_SIZE := Vector2(300, 40)
 
@@ -304,13 +308,13 @@ func build(body: VBoxContainer) -> void:
 		return
 
 	var head := VBoxContainer.new()
-	head.add_theme_constant_override("separation", 4)
+	head.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	body.add_child(head)
 
 	_queue = _make_line(FONT_QUEUE, MenuTheme.DIM)
 	head.add_child(_queue)
 
-	_status = _make_line(FONT_STATUS, Color.WHITE)
+	_status = _make_line(FONT_STATUS, MenuTheme.LUMIERE)
 	head.add_child(_status)
 
 	_detail = _make_line(FONT_DETAIL, MenuTheme.DIM)
@@ -322,7 +326,7 @@ func build(body: VBoxContainer) -> void:
 	_build_cards(body)
 
 	var host_box := VBoxContainer.new()
-	host_box.add_theme_constant_override("separation", 2)
+	host_box.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	body.add_child(host_box)
 
 	_host = _make_line(FONT_HOST, MenuTheme.GOLD)
@@ -331,7 +335,7 @@ func build(body: VBoxContainer) -> void:
 	_host_why = _make_line(FONT_HOST_WHY, MenuTheme.DIM)
 	host_box.add_child(_host_why)
 
-	_clock = _make_line(FONT_CLOCK, Color.WHITE)
+	_clock = _make_line(FONT_CLOCK, MenuTheme.LUMIERE)
 	body.add_child(_clock)
 
 	# Verticale et non horizontale : les voisins de focus se déduisent de la
@@ -394,14 +398,14 @@ func _build_card(role: String, accent: Color) -> Dictionary:
 	panel.add_child(margin)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 2)
+	column.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	margin.add_child(column)
 
 	var role_label := _make_line(FONT_ROLE, accent)
 	role_label.text = role
 	column.add_child(role_label)
 
-	var nickname := _make_line(FONT_NICKNAME, Color.WHITE)
+	var nickname := _make_line(FONT_NICKNAME, MenuTheme.LUMIERE)
 	nickname.clip_text = true
 	column.add_child(nickname)
 

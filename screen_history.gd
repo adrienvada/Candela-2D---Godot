@@ -37,12 +37,12 @@ func build(body: VBoxContainer) -> void:
 	body.add_theme_constant_override("separation", MenuTheme.GAP_S)
 
 	_summary = Label.new()
-	_summary.add_theme_font_size_override("font_size", 20)
+	_summary.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	_summary.add_theme_color_override("font_color", MenuTheme.GOLD)
 	body.add_child(_summary)
 
 	_detail = Label.new()
-	_detail.add_theme_font_size_override("font_size", 14)
+	_detail.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	_detail.add_theme_color_override("font_color", MenuTheme.DIM)
 	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_detail)
@@ -53,7 +53,7 @@ func build(body: VBoxContainer) -> void:
 	body.add_child(filet)
 
 	_empty = Label.new()
-	_empty.add_theme_font_size_override("font_size", 15)
+	_empty.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	_empty.add_theme_color_override("font_color", MenuTheme.DIM)
 	_empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_empty)
@@ -62,7 +62,7 @@ func build(body: VBoxContainer) -> void:
 		_rows.append(_build_row(body, i))
 
 	_warning = Label.new()
-	_warning.add_theme_font_size_override("font_size", 13)
+	_warning.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_warning.add_theme_color_override("font_color", MenuTheme.WARN)
 	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_warning)
@@ -79,24 +79,24 @@ func _build_row(body: VBoxContainer, index: int) -> Dictionary:
 
 	var date := Label.new()
 	date.custom_minimum_size = Vector2(150, 0)
-	date.add_theme_font_size_override("font_size", 14)
+	date.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	date.add_theme_color_override("font_color", MenuTheme.DIM)
 	ligne.add_child(date)
 
 	var issue := Label.new()
 	issue.custom_minimum_size = Vector2(110, 0)
-	issue.add_theme_font_size_override("font_size", 15)
+	issue.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	ligne.add_child(issue)
 
 	var duree := Label.new()
 	duree.custom_minimum_size = Vector2(70, 0)
-	duree.add_theme_font_size_override("font_size", 14)
+	duree.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	duree.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ligne.add_child(duree)
 
 	var reste := Label.new()
 	reste.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	reste.add_theme_font_size_override("font_size", 14)
+	reste.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	reste.add_theme_color_override("font_color", MenuTheme.DIM)
 	ligne.add_child(reste)
 

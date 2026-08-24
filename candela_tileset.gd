@@ -6,6 +6,8 @@
 class_name CandelaTileSet
 extends RefCounted
 
+const Charte := preload("res://charte.gd")
+
 const TILE_SIZE    := Vector2i(35, 35)
 const GRID_SIZE    := Vector2i(20, 20)
 const FLOOR_ATLAS_A := Vector2i(0, 0)
@@ -24,25 +26,31 @@ static func create_tileset() -> TileSet:
 	var img := Image.create_empty(TILE_SIZE.x * 2, TILE_SIZE.y * 2, false, Image.FORMAT_RGBA8)
 
 	# --- Tile (0,0) : Sol A (case sombre du damier) ---
-	var floor_a_bg     := Color(0.10, 0.10, 0.12, 1.0)
-	var floor_a_border := Color(0.18, 0.18, 0.22, 1.0)
+	var floor_a_bg     := Charte.SOL_A
+	var floor_a_border := Charte.SOL_A_ARETE
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
 			img.set_pixel(x, y, floor_a_border if on_edge else floor_a_bg)
 
 	# --- Tile (0,1) : Sol B (case claire du damier) ---
-	var floor_b_bg     := Color(0.22, 0.22, 0.28, 1.0)
-	var floor_b_border := Color(0.30, 0.30, 0.36, 1.0)
+	var floor_b_bg     := Charte.SOL_B
+	var floor_b_border := Charte.SOL_B_ARETE
 	var oy := TILE_SIZE.y
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
 			img.set_pixel(x, oy + y, floor_b_border if on_edge else floor_b_bg)
 
-	# --- Tile (1,0) : Mur (noir + bordure blanche néon épaisse 2px) ---
-	var wall_bg     := Color(0.0, 0.0, 0.0, 1.0)
-	var wall_border := Color(1.0, 1.0, 1.0, 1.0)
+	# --- Tile (1,0) : Mur (le noir du monde + une arête que la torche accroche) ---
+	#
+	# **L'arête était `Color(1, 1, 1)`, et c'était le blanc pur le plus visible du
+	# jeu** : on ne voit presque rien d'autre que ces bordures pendant une manche.
+	# Un blanc pur ne dit pas « lumière », il dit « aucune décision n'a été prise
+	# ici » — et il donnait au décor une température de néon dans un jeu éclairé à
+	# la lampe torche. `HALOGENE` rend l'arête au filament qui l'éclaire.
+	var wall_bg     := Charte.NOIR
+	var wall_border := Charte.HALOGENE
 	var ox := TILE_SIZE.x
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):

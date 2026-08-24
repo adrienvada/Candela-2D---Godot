@@ -29,28 +29,55 @@ signal pick_window_cancelled
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
 # ---------------------------------------------------------------------------
+#
+# **Ce bloc portait la seconde copie de la palette du dépôt** — l'autre étant
+# dans `menu_theme.gd`, dont le commentaire promettait de les réunir « le temps
+# de l'étape 3 ». Elles avaient divergé, et personne ne pouvait le voir : chaque
+# moitié paraissait juste chez elle.
+#
+# Tout descend maintenant de `charte.gd`. Les noms restent parce que des
+# centaines de lignes les emploient ; les valeurs, elles, n'ont plus qu'un
+# domicile.
 
-const COLOR_P1 := Color(0.0, 0.94, 1.0)
-const COLOR_P2 := Color(1.0, 0.0, 0.33)
-const COLOR_GOLD := Color(1.0, 0.8, 0.0)
-const COLOR_DIM := Color(0.52, 0.55, 0.63)
-## Orange d'avertissement, déjà celui du bandeau d'identité éphémère.
-const COLOR_WARN := Color(1.0, 0.45, 0.2)
-const COLOR_LINE := Color(0.19, 0.2, 0.25)
-const COLOR_SURFACE := Color(0.05, 0.055, 0.075, 0.92)
+const Charte := preload("res://charte.gd")
 
-## Espacements : tous multiples de 8.
-const GAP_XS := 8
-const GAP_S := 16
-const GAP_M := 24
-const GAP_L := 40
+const COLOR_P1 := Charte.BLEU
+const COLOR_P2 := Charte.ROUGE
+const COLOR_GOLD := Charte.AMBRE
+const COLOR_DIM := Charte.DIM
+## L'accent d'interface — celui qui n'appartient à aucun des deux joueurs.
+const COLOR_ACCENT := Charte.ACIER
+## Avertissement qui n'est pas une erreur ; le succès et l'échec ont désormais
+## leurs propres couleurs (`Charte.ETAT_OK` / `Charte.ETAT_FAUTE`).
+const COLOR_WARN := Charte.ETAT_ATTENTION
+const COLOR_LINE := Charte.LINE
+const COLOR_SURFACE := Charte.SURFACE
+## Le blanc cassé de la lumière : il remplace chaque blanc pur de l'interface.
+const COLOR_LUMIERE := Charte.HALOGENE
+
+## Espacements : la grille de 8, et son unique demi-pas.
+const GAP_XXS := Charte.GAP_XXS
+const GAP_XS := Charte.GAP_XS
+const GAP_S := Charte.GAP_S
+const GAP_M := Charte.GAP_M
+const GAP_L := Charte.GAP_L
+
+## L'échelle typographique. Six tailles, et plus une seule arbitraire.
+const T_MENTION := Charte.T_MENTION
+const T_COURANT := Charte.T_COURANT
+const T_APPUI := Charte.T_APPUI
+const T_TITRE := Charte.T_TITRE
+const T_VERDICT := Charte.T_VERDICT
+const T_ENSEIGNE := Charte.T_ENSEIGNE
+## Le décompte 3-2-1 : deux fois l'enseigne, par construction et non par choix.
+const T_DECOMPTE := Charte.T_DECOMPTE
 ## Largeur d'un bouton de choix dans le cadre de droite. La colonne y est plus
 ## étroite qu'un écran plein : à 220 px, les cinq paliers d'images par seconde se
 ## repliaient sur trois lignes en fenêtré.
 const BOUTON_CHOIX_L := 168
 
 ## Transitions d'onglet : court, juste assez pour lier deux écrans.
-const TAB_FADE := 0.15
+const TAB_FADE := Charte.D_MOYEN
 const TAB_SLIDE := 32.0
 
 ## Métadonnées de navigation posées sur les contrôles.
@@ -126,7 +153,7 @@ const NOT_YET := "Pas encore disponible."
 
 class CircularCooldown extends Control:
 	var progress: float = 1.0
-	var color: Color = Color.WHITE
+	var color: Color = Charte.HALOGENE
 	## V4.4 — secousse du tir à sec, en secondes restantes. Le tremblement est
 	## dessiné et non appliqué à `position` : ce widget vit dans un conteneur, qui
 	## lui réimposerait sa place à la frame suivante.
@@ -145,7 +172,7 @@ class CircularCooldown extends Control:
 			var a := secousse * 9.0
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
-		draw_arc(center, radius, 0, TAU, 32, Color(0.2, 0.2, 0.2), 4.0, true)
+		draw_arc(center, radius, 0, TAU, 32, Charte.LINE, 4.0, true)
 		if progress > 0.0:
 			draw_arc(center, radius, -PI / 2.0, -PI / 2.0 + progress * TAU, 32, color, 4.0, true)
 
@@ -159,14 +186,14 @@ class CircularCooldown extends Control:
 ## Il suit sa cible en douceur : le déplacement du curseur devient lisible même
 ## quand deux joueurs bougent en même temps.
 class NeonFocusRing extends Panel:
-	var neon: Color = Color.WHITE
+	var neon: Color = Charte.ACIER
 	var target_rect: Rect2 = Rect2()
 
 	var _style: StyleBoxFlat
 	var _time: float = 0.0
 	var _snap: bool = true
 
-	func _init(tint: Color = Color.WHITE) -> void:
+	func _init(tint: Color = Charte.ACIER) -> void:
 		neon = tint
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -191,7 +218,7 @@ class NeonFocusRing extends Panel:
 	func _process(delta: float) -> void:
 		_time += delta
 		var wave := 0.5 + 0.5 * sin(_time * 6.0)
-		_style.border_color = neon.lerp(Color.WHITE, 0.45 * wave)
+		_style.border_color = neon.lerp(Charte.HALOGENE, 0.45 * wave)
 		_style.shadow_size = int(roundf(lerpf(6.0, 16.0, wave)))
 		_style.shadow_color = Color(neon.r, neon.g, neon.b, 0.22 + 0.33 * wave)
 
@@ -585,10 +612,14 @@ func _pulse_press(control: Control) -> void:
 	if control == null or not is_instance_valid(control):
 		return
 	control.pivot_offset = control.size / 2.0
+	# L'enfoncement part vite (SORTIE, durée courte), le retour rebondit une fois
+	# (REBOND). Les deux durées viennent de la charte : un appui qui répond en
+	# moins de 90 ms paraît ignoré, au-delà de 180 il paraît mou.
 	var tween := create_tween()
-	tween.tween_property(control, "scale", Vector2(0.94, 0.94), 0.06)
-	tween.tween_property(control, "scale", Vector2.ONE, 0.14) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Charte.animer(tween, control, "scale", Vector2.ONE, Vector2(0.94, 0.94),
+		Charte.D_COURT, Charte.Courbe.SORTIE)
+	Charte.animer(tween, control, "scale", Vector2(0.94, 0.94), Vector2.ONE,
+		Charte.D_MOYEN, Charte.Courbe.REBOND)
 
 # ===========================================================================
 # BOUCLE
@@ -611,11 +642,15 @@ func _update_network_status() -> void:
 		connected = status == MultiplayerPeer.CONNECTION_CONNECTED
 		connecting = status == MultiplayerPeer.CONNECTION_CONNECTING
 
-	var tint := Color.RED
+	# Le voyant du lien, sur la triade d'instrument. Il portait `Color.RED`,
+	# `Color.GREEN` et `Color.YELLOW` — trois primaires pures, c'est-à-dire trois
+	# fois « personne n'a choisi », sur le seul indicateur qui dit si le match
+	# tient.
+	var tint := Charte.ETAT_FAUTE
 	if connected:
-		tint = Color.GREEN
+		tint = Charte.ETAT_OK
 	elif connecting:
-		tint = Color.YELLOW
+		tint = Charte.ETAT_ATTENTION
 	network_status_label.add_theme_color_override("font_color", tint)
 
 	# Le format technique n'est plus lisible que par un développeur : il reste
@@ -694,11 +729,11 @@ func _update_ping_label() -> void:
 		return
 
 	var rtt := int(round(NetworkManager.rtt_ms))
-	var tint := Color(0.3, 1.0, 0.45)
+	var tint := Charte.ETAT_OK
 	if rtt >= 120:
-		tint = Color(1.0, 0.35, 0.35)
+		tint = Charte.ETAT_FAUTE
 	elif rtt >= 60:
-		tint = Color(1.0, 0.82, 0.2)
+		tint = Charte.ETAT_ATTENTION
 
 	ping_label.text = "● %d ms" % rtt
 	ping_label.add_theme_color_override("font_color", tint)
@@ -940,10 +975,10 @@ func _update_killcam(delta: float) -> void:
 
 	if (ms / 500) % 2 == 0:
 		killcam_timecode.text = "REC •\n%02d:%02d:%02d" % [mins, sec, frames]
-		killcam_timecode.add_theme_color_override("font_color", Color(1, 0, 0, 0.8))
+		killcam_timecode.add_theme_color_override("font_color", Color(Charte.ROUGE, 0.8))
 	else:
 		killcam_timecode.text = "REC  \n%02d:%02d:%02d" % [mins, sec, frames]
-		killcam_timecode.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
+		killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
 
 	if killcam_overlay.material:
 		killcam_overlay.material.set_shader_parameter("time", ms / 1000.0)
@@ -1229,7 +1264,7 @@ func _activate(player: int) -> void:
 func _build_hud() -> void:
 	var scanline := ColorRect.new()
 	scanline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scanline.color = Color(0, 0, 0, 0.1)
+	scanline.color = Color(Charte.NOIR, 0.1)
 	scanline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(scanline)
 
@@ -1271,13 +1306,13 @@ func _build_hud() -> void:
 
 	p1_dazzle = ColorRect.new()
 	p1_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p1_dazzle.color = Color(1, 1, 1, 0)
+	p1_dazzle.color = Color(Charte.HALOGENE, 0.0)
 	p1_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dazzle_hbox.add_child(p1_dazzle)
 
 	p2_dazzle = ColorRect.new()
 	p2_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p2_dazzle.color = Color(1, 1, 1, 0)
+	p2_dazzle.color = Color(Charte.HALOGENE, 0.0)
 	p2_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dazzle_hbox.add_child(p2_dazzle)
 
@@ -1301,7 +1336,7 @@ func _build_player_hud(player: int) -> Control:
 	panel.add_child(inner)
 
 	var hud := VBoxContainer.new()
-	hud.add_theme_constant_override("separation", 10)
+	hud.add_theme_constant_override("separation", GAP_XS)
 	inner.add_child(hud)
 
 	var header := HBoxContainer.new()
@@ -1309,7 +1344,7 @@ func _build_player_hud(player: int) -> Control:
 
 	var name_label := Label.new()
 	name_label.text = "JOUEUR 1" if player == 0 else "JOUEUR 2"
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", T_TITRE)
 	name_label.add_theme_color_override("font_color", tint)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if player == 1:
@@ -1318,7 +1353,7 @@ func _build_player_hud(player: int) -> Control:
 
 	var hp_label := Label.new()
 	hp_label.text = "SANTÉ"
-	hp_label.add_theme_font_size_override("font_size", 12)
+	hp_label.add_theme_font_size_override("font_size", T_MENTION)
 	hp_label.add_theme_color_override("font_color", COLOR_DIM)
 	hud.add_child(hp_label)
 
@@ -1362,7 +1397,7 @@ func _build_center_hud() -> Control:
 	center_hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_hud.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-	var panel := _create_glow_panel(Color(0.3, 0.3, 0.3))
+	var panel := _create_glow_panel(Charte.ACIER * 0.42)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	panel.custom_minimum_size = Vector2(208, 0)
 	center_hud.add_child(panel)
@@ -1380,21 +1415,21 @@ func _build_center_hud() -> Control:
 	var title := Label.new()
 	title.text = "CANDELA 2D"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_font_size_override("font_size", T_MENTION)
 	title.add_theme_color_override("font_color", COLOR_GOLD)
 	vbox.add_child(title)
 
 	time_label = Label.new()
 	time_label.text = "05:00"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_label.add_theme_font_size_override("font_size", 36)
+	time_label.add_theme_font_size_override("font_size", T_VERDICT)
 	vbox.add_child(time_label)
 
 	waiting_label = Label.new()
 	waiting_label.text = "EN ATTENTE DU JOUEUR 2..."
 	waiting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	waiting_label.add_theme_font_size_override("font_size", 24)
-	waiting_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.2))
+	waiting_label.add_theme_font_size_override("font_size", T_TITRE)
+	waiting_label.add_theme_color_override("font_color", Charte.ETAT_OK)
 	waiting_label.hide()
 	vbox.add_child(waiting_label)
 
@@ -1403,7 +1438,7 @@ func _build_center_hud() -> Control:
 func _create_glow_panel(color: Color) -> PanelContainer:
 	var panel := PanelContainer.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.05, 0.08, 0.9)
+	style.bg_color = Color(Charte.SURFACE, 0.9)
 	style.set_border_width_all(2)
 	style.border_color = color
 	style.set_corner_radius_all(12)
@@ -1423,12 +1458,12 @@ func _create_health_bars(color: Color) -> Dictionary:
 	bg_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.1, 0.1, 0.1, 0.5)
+	bg_style.bg_color = Color(Charte.LINE, 0.5)
 	bg_style.set_corner_radius_all(6)
 	bg_bar.add_theme_stylebox_override("background", bg_style)
 
 	var bg_fill := StyleBoxFlat.new()
-	bg_fill.bg_color = Color(0.8, 0.0, 0.2)
+	bg_fill.bg_color = Charte.ROUGE
 	bg_fill.set_corner_radius_all(6)
 	bg_bar.add_theme_stylebox_override("fill", bg_fill)
 
@@ -1467,14 +1502,14 @@ func _create_weapon_indicator(color: Color) -> Dictionary:
 	label.text = "PRÊT"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_font_size_override("font_size", T_MENTION)
 	circle_container.add_child(label)
 
 	var title := Label.new()
 	title.text = "ARME"
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 12)
-	title.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+	title.add_theme_font_size_override("font_size", T_MENTION)
+	title.add_theme_color_override("font_color", Charte.ACIER)
 
 	container.add_child(circle_container)
 	container.add_child(title)
@@ -1487,10 +1522,10 @@ func _create_torch_indicator() -> PanelContainer:
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
+	margin.add_theme_constant_override("margin_left", GAP_XS)
+	margin.add_theme_constant_override("margin_right", GAP_XS)
+	margin.add_theme_constant_override("margin_top", GAP_XXS)
+	margin.add_theme_constant_override("margin_bottom", GAP_XXS)
 	panel.add_child(margin)
 
 	var hbox := HBoxContainer.new()
@@ -1499,15 +1534,15 @@ func _create_torch_indicator() -> PanelContainer:
 
 	var icon := Label.new()
 	icon.text = "🔦"
-	icon.add_theme_font_size_override("font_size", 12)
+	icon.add_theme_font_size_override("font_size", T_MENTION)
 	hbox.add_child(icon)
 
 	var label := Label.new()
 	label.text = "TORCHE"
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", T_MENTION)
 	hbox.add_child(label)
 
-	_set_torch_style(panel, false, Color.WHITE)
+	_set_torch_style(panel, false, Charte.HALOGENE)
 	return panel
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
@@ -1516,13 +1551,13 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 	style.set_border_width_all(2)
 
 	if active:
-		style.bg_color = Color(0.1, 0.1, 0.1, 0.9)
+		style.bg_color = Color(Charte.LINE, 0.9)
 		style.border_color = player_color
 		style.shadow_color = player_color
 		style.shadow_size = 5
 	else:
-		style.bg_color = Color(0.05, 0.05, 0.05, 0.8)
-		style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+		style.bg_color = Color(Charte.SURFACE, 0.8)
+		style.border_color = Color(Charte.LINE, 1.0)
 		style.shadow_size = 0
 
 	panel.add_theme_stylebox_override("panel", style)
@@ -1530,9 +1565,9 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 	var hbox := panel.get_child(0).get_child(0)
 	var label := hbox.get_child(1) as Label
 	if active:
-		label.add_theme_color_override("font_color", Color.WHITE)
+		label.add_theme_color_override("font_color", Charte.HALOGENE)
 	else:
-		label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+		label.add_theme_color_override("font_color", Charte.DIM)
 
 # ===========================================================================
 # CONSTRUCTION — ANNEXES
@@ -1543,13 +1578,13 @@ func _build_status_bar() -> void:
 	network_status_label.z_index = 100
 	network_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	network_status_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	network_status_label.add_theme_font_size_override("font_size", 14)
-	network_status_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	network_status_label.add_theme_font_size_override("font_size", T_COURANT)
+	network_status_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	network_status_label.add_theme_constant_override("outline_size", 4)
 
 	ping_label = Label.new()
-	ping_label.add_theme_font_size_override("font_size", 14)
-	ping_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	ping_label.add_theme_font_size_override("font_size", T_COURANT)
+	ping_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	ping_label.add_theme_constant_override("outline_size", 4)
 	ping_label.hide()
 
@@ -1562,7 +1597,7 @@ func _build_status_bar() -> void:
 
 	var status_margin := MarginContainer.new()
 	status_margin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	status_margin.add_theme_constant_override("margin_bottom", 10)
+	status_margin.add_theme_constant_override("margin_bottom", GAP_XS)
 	status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	status_margin.add_child(status_row)
 	add_child(status_margin)
@@ -1575,9 +1610,9 @@ func _build_countdown() -> void:
 	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	countdown_label.add_theme_font_size_override("font_size", 140)
+	countdown_label.add_theme_font_size_override("font_size", T_DECOMPTE)
 	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
-	countdown_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	countdown_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	countdown_label.add_theme_constant_override("outline_size", 16)
 	countdown_label.z_index = 120
 	countdown_label.hide()
@@ -1602,7 +1637,7 @@ func set_countdown(value: float) -> void:
 	countdown_label.pivot_offset = countdown_label.size / 2.0
 	countdown_label.scale = Vector2(1.7, 1.7)
 	var tween := create_tween()
-	tween.tween_property(countdown_label, "scale", Vector2.ONE, 0.35) \
+	tween.tween_property(countdown_label, "scale", Vector2.ONE, Charte.D_LONG) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 ## L'attente d'un adversaire est le moment où l'hôte a besoin de quoi l'inviter :
@@ -1646,7 +1681,7 @@ func _build_debug_panel() -> void:
 	debug_panel.hide()
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0.75)
+	style.bg_color = Color(Charte.NOIR, 0.75)
 	style.set_border_width_all(1)
 	style.border_color = COLOR_GOLD
 	style.set_corner_radius_all(6)
@@ -1657,16 +1692,16 @@ func _build_debug_panel() -> void:
 	debug_panel.add_theme_stylebox_override("panel", style)
 
 	var debug_vbox := VBoxContainer.new()
-	debug_vbox.add_theme_constant_override("separation", 2)
+	debug_vbox.add_theme_constant_override("separation", GAP_XXS)
 
 	fps_label = Label.new()
 	fps_label.text = "DEBUG"
-	fps_label.add_theme_font_size_override("font_size", 13)
+	fps_label.add_theme_font_size_override("font_size", T_MENTION)
 	fps_label.add_theme_color_override("font_color", COLOR_GOLD)
 	debug_vbox.add_child(fps_label)
 
 	net_debug_label = Label.new()
-	net_debug_label.add_theme_font_size_override("font_size", 13)
+	net_debug_label.add_theme_font_size_override("font_size", T_MENTION)
 	net_debug_label.add_theme_color_override("font_color", COLOR_GOLD)
 	debug_vbox.add_child(net_debug_label)
 
@@ -1680,8 +1715,8 @@ func _build_debug_panel() -> void:
 	ephemeral_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	ephemeral_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	ephemeral_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ephemeral_banner.add_theme_font_size_override("font_size", 14)
-	ephemeral_banner.add_theme_color_override("font_color", Color(1.0, 0.45, 0.2))
+	ephemeral_banner.add_theme_font_size_override("font_size", T_COURANT)
+	ephemeral_banner.add_theme_color_override("font_color", Charte.ETAT_ATTENTION)
 	ephemeral_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ephemeral_banner.visible = NetworkManager.is_ephemeral_identity()
 	add_child(ephemeral_banner)
@@ -1691,7 +1726,7 @@ func _build_dialog() -> void:
 	dialog_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.1, 0.97)
+	style.bg_color = Color(Charte.SURFACE, 0.97)
 	style.set_border_width_all(2)
 	style.border_color = COLOR_GOLD
 	style.set_corner_radius_all(12)
@@ -1707,13 +1742,13 @@ func _build_dialog() -> void:
 
 	dialog_title = Label.new()
 	dialog_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_title.add_theme_font_size_override("font_size", 24)
+	dialog_title.add_theme_font_size_override("font_size", T_TITRE)
 	dialog_title.add_theme_color_override("font_color", COLOR_GOLD)
 	vbox.add_child(dialog_title)
 
 	dialog_message = Label.new()
 	dialog_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_message.add_theme_font_size_override("font_size", 15)
+	dialog_message.add_theme_font_size_override("font_size", T_COURANT)
 	vbox.add_child(dialog_message)
 
 	dialog_btn = _make_button("OK", COLOR_GOLD, true)
@@ -1743,16 +1778,16 @@ func _build_killcam() -> void:
 	killcam_container.hide()
 	add_child(killcam_container)
 
-	killcam_label_shadow1 = _make_killcam_label(Color(0, 1, 1, 0.5))
+	killcam_label_shadow1 = _make_killcam_label(Color(Charte.BLEU, 0.5))
 	killcam_container.add_child(killcam_label_shadow1)
-	killcam_label_shadow2 = _make_killcam_label(Color(1, 1, 0, 0.5))
+	killcam_label_shadow2 = _make_killcam_label(Color(Charte.AMBRE, 0.5))
 	killcam_container.add_child(killcam_label_shadow2)
-	killcam_label = _make_killcam_label(Color(1, 0, 0))
+	killcam_label = _make_killcam_label(Charte.ROUGE)
 	killcam_container.add_child(killcam_label)
 
 	killcam_timecode = Label.new()
-	killcam_timecode.add_theme_font_size_override("font_size", 24)
-	killcam_timecode.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
+	killcam_timecode.add_theme_font_size_override("font_size", T_TITRE)
+	killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
 	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	killcam_timecode.offset_right = -40
 	killcam_timecode.offset_top = 40
@@ -1763,7 +1798,7 @@ func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
 	label.text = "KILLCAM"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 48)
+	label.add_theme_font_size_override("font_size", T_VERDICT)
 	label.add_theme_color_override("font_color", tint)
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return label
@@ -1780,7 +1815,7 @@ func _build_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Color(0.01, 0.012, 0.02, 0.96)
+	backdrop.color = Charte.BACKDROP
 	# M10 lit ici l'opacité de nuit du panneau : elle est la valeur d'arrivée du
 	# rideau, et la relire dans le code de l'effet en ferait une seconde vérité
 	# qui finirait par diverger de celle-ci.
@@ -2178,7 +2213,7 @@ func _build_join_row() -> Control:
 	ligne.add_theme_constant_override("separation", GAP_XS)
 	ligne.add_child(join_input)
 	btn_paste_code = _make_button("COLLER", COLOR_P1)
-	btn_paste_code.add_theme_font_size_override("font_size", 13)
+	btn_paste_code.add_theme_font_size_override("font_size", T_MENTION)
 	btn_paste_code.pressed.connect(_paste_lobby_code)
 	ligne.add_child(btn_paste_code)
 	join_box.add_child(ligne)
@@ -2208,24 +2243,24 @@ func _paste_lobby_code() -> void:
 ## pas laisse douter d'être bien connecté à quoi que ce soit.
 func _build_player_list() -> Control:
 	lobby_players_box = VBoxContainer.new()
-	lobby_players_box.add_theme_constant_override("separation", 2)
+	lobby_players_box.add_theme_constant_override("separation", GAP_XXS)
 
 	var titre := Label.new()
 	titre.text = "JOUEURS"
 	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	titre.add_theme_font_size_override("font_size", 12)
+	titre.add_theme_font_size_override("font_size", T_MENTION)
 	titre.add_theme_color_override("font_color", COLOR_DIM)
 	lobby_players_box.add_child(titre)
 
 	lobby_player_host = Label.new()
 	lobby_player_host.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lobby_player_host.add_theme_font_size_override("font_size", 15)
+	lobby_player_host.add_theme_font_size_override("font_size", T_COURANT)
 	lobby_player_host.add_theme_color_override("font_color", COLOR_P1)
 	lobby_players_box.add_child(lobby_player_host)
 
 	lobby_player_guest = Label.new()
 	lobby_player_guest.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lobby_player_guest.add_theme_font_size_override("font_size", 15)
+	lobby_player_guest.add_theme_font_size_override("font_size", T_COURANT)
 	lobby_players_box.add_child(lobby_player_guest)
 
 	return lobby_players_box
@@ -2562,7 +2597,7 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 	# Rien ne disparaît sous le curseur, et le résolveur de navigation les trouve
 	# dès la première image.
 	for s in surfaces:
-		s.modulate = Color(0.0, 0.0, 0.0, 1.0)
+		s.modulate = Color(Charte.NOIR, 1.0)
 
 	var battement := M10_BATTEMENT * facteur
 	var t_rideau := M10_RIDEAU * facteur
@@ -2615,7 +2650,7 @@ func _eteindre(panneau: Control, court: bool = false) -> void:
 	var tw := create_tween()
 	tw.set_parallel(true)
 	for s in _surfaces_de(panneau):
-		tw.tween_property(s, "modulate", Color(0.0, 0.0, 0.0, 1.0), duree * 0.7)
+		tw.tween_property(s, "modulate", Color(Charte.NOIR, 1.0), duree * 0.7)
 	if rideau != null:
 		# Le rideau commence à se lever AVANT que les surfaces aient fini de se
 		# noyer : bout à bout, il resterait un écran entièrement noir entre les
@@ -3021,7 +3056,7 @@ func _build_menu_header() -> Control:
 	game_over_title = Label.new()
 	game_over_title.text = "CANDELA 2D"
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_over_title.add_theme_font_size_override("font_size", 60)
+	game_over_title.add_theme_font_size_override("font_size", T_ENSEIGNE)
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	header.add_child(game_over_title)
 
@@ -3044,7 +3079,7 @@ func _build_menu_header() -> Control:
 	game_over_score.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	game_over_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game_over_score.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	game_over_score.add_theme_font_size_override("font_size", 22)
+	game_over_score.add_theme_font_size_override("font_size", T_APPUI)
 	game_over_score.add_theme_color_override("font_color", COLOR_DIM)
 	game_over_score.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
@@ -3066,7 +3101,7 @@ func _build_menu_header() -> Control:
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
 	var btn := Button.new()
 	btn.text = label
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", T_APPUI)
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.85) if primary else COLOR_SURFACE
@@ -3080,7 +3115,7 @@ func _make_button(label: String, accent: Color, primary: bool = false) -> Button
 	btn.add_theme_stylebox_override("normal", normal)
 
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color.WHITE
+	hover.border_color = Charte.HALOGENE
 	hover.bg_color = accent if primary else Color(accent.r, accent.g, accent.b, 0.16)
 	hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.35)
 	hover.shadow_size = 8
@@ -3093,17 +3128,17 @@ func _make_button(label: String, accent: Color, primary: bool = false) -> Button
 	btn.add_theme_stylebox_override("hover_pressed", pressed)
 
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.06, 0.06, 0.08, 0.8)
+	disabled.bg_color = Color(Charte.SURFACE, 0.8)
 	disabled.border_color = COLOR_LINE
 	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Color(0.32, 0.33, 0.38))
+	btn.add_theme_color_override("font_disabled_color", Charte.DIM * 0.68)
 
 	if primary:
-		btn.add_theme_color_override("font_color", Color.BLACK)
-		btn.add_theme_color_override("font_hover_color", Color.BLACK)
-		btn.add_theme_color_override("font_pressed_color", Color.BLACK)
-		btn.add_theme_color_override("font_hover_pressed_color", Color.BLACK)
-		btn.add_theme_color_override("font_focus_color", Color.BLACK)
+		btn.add_theme_color_override("font_color", Charte.NOIR)
+		btn.add_theme_color_override("font_hover_color", Charte.NOIR)
+		btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
+		btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
+		btn.add_theme_color_override("font_focus_color", Charte.NOIR)
 
 	return btn
 
@@ -3114,7 +3149,7 @@ func _make_choice_button(label: String, accent: Color, group: ButtonGroup) -> Bu
 	btn.toggle_mode = true
 	btn.button_group = group
 	btn.custom_minimum_size = Vector2(200, 48)
-	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_font_size_override("font_size", T_COURANT)
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = COLOR_SURFACE
@@ -3131,21 +3166,21 @@ func _make_choice_button(label: String, accent: Color, group: ButtonGroup) -> Bu
 
 	var active := normal.duplicate() as StyleBoxFlat
 	active.bg_color = Color(accent.r, accent.g, accent.b, 0.9)
-	active.border_color = Color.WHITE
+	active.border_color = Charte.HALOGENE
 	active.shadow_color = Color(accent.r, accent.g, accent.b, 0.4)
 	active.shadow_size = 10
 	btn.add_theme_stylebox_override("pressed", active)
 	btn.add_theme_stylebox_override("hover_pressed", active)
 
-	btn.add_theme_color_override("font_pressed_color", Color.BLACK)
-	btn.add_theme_color_override("font_hover_pressed_color", Color.BLACK)
+	btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
+	btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
 	return btn
 
 func _make_section_label(text: String, tint: Color) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_font_size_override("font_size", T_MENTION)
 	label.add_theme_color_override("font_color", tint)
 	return label
 
@@ -3188,20 +3223,20 @@ func _build_map_card() -> Control:
 	var texts := VBoxContainer.new()
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	texts.add_theme_constant_override("separation", 2)
+	texts.add_theme_constant_override("separation", GAP_XXS)
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(texts)
 
 	var kicker := Label.new()
 	kicker.text = "CARTE"
-	kicker.add_theme_font_size_override("font_size", 11)
+	kicker.add_theme_font_size_override("font_size", T_MENTION)
 	kicker.add_theme_color_override("font_color", COLOR_DIM)
 	kicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(kicker)
 
 	map_card_name = Label.new()
 	map_card_name.text = "—"
-	map_card_name.add_theme_font_size_override("font_size", 22)
+	map_card_name.add_theme_font_size_override("font_size", T_APPUI)
 	map_card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	map_card_name.clip_text = true
 	map_card_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3209,7 +3244,7 @@ func _build_map_card() -> Control:
 
 	map_card_meta = Label.new()
 	map_card_meta.text = ""
-	map_card_meta.add_theme_font_size_override("font_size", 12)
+	map_card_meta.add_theme_font_size_override("font_size", T_MENTION)
 	map_card_meta.add_theme_color_override("font_color", COLOR_DIM)
 	map_card_meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(map_card_meta)
@@ -3262,7 +3297,7 @@ func _build_lobby_widgets() -> void:
 
 	lobby_status_label = Label.new()
 	lobby_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lobby_status_label.add_theme_font_size_override("font_size", 13)
+	lobby_status_label.add_theme_font_size_override("font_size", T_MENTION)
 	lobby_status_label.add_theme_color_override("font_color", COLOR_GOLD)
 	lobby_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -3276,7 +3311,7 @@ func _build_lobby_widgets() -> void:
 	lobby_code_row.add_child(lobby_code_engraver)
 
 	btn_copy_code = _make_button("COPIER", COLOR_GOLD)
-	btn_copy_code.add_theme_font_size_override("font_size", 13)
+	btn_copy_code.add_theme_font_size_override("font_size", T_MENTION)
 	btn_copy_code.pressed.connect(_copy_lobby_code)
 	lobby_code_row.add_child(btn_copy_code)
 
@@ -3291,7 +3326,7 @@ func _build_lobby_widgets() -> void:
 	host_ip_prefix = Label.new()
 	host_ip_prefix.text = "VOTRE IP"
 	host_ip_prefix.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	host_ip_prefix.add_theme_font_size_override("font_size", 13)
+	host_ip_prefix.add_theme_font_size_override("font_size", T_MENTION)
 	host_ip_prefix.add_theme_color_override("font_color", COLOR_DIM)
 	host_ip_row.add_child(host_ip_prefix)
 
@@ -3299,7 +3334,7 @@ func _build_lobby_widgets() -> void:
 	host_ip_row.add_child(host_ip_engraver)
 
 	var btn_copy_ip := _make_button("COPIER", COLOR_GOLD)
-	btn_copy_ip.add_theme_font_size_override("font_size", 13)
+	btn_copy_ip.add_theme_font_size_override("font_size", T_MENTION)
 	btn_copy_ip.pressed.connect(func() -> void:
 		DisplayServer.clipboard_set(local_ipv4())
 		host_ip_engraver.marquer_copie()
@@ -3517,7 +3552,7 @@ func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color, owner_id:
 	var btn := _make_choice_button(text, tint, group)
 	btn.text = text
 	btn.custom_minimum_size = Vector2(136, 80)
-	btn.add_theme_font_size_override("font_size", 17)
+	btn.add_theme_font_size_override("font_size", T_COURANT)
 	btn.set_meta(META_NAV_OWNER, owner_id)
 	return btn
 
@@ -3538,7 +3573,7 @@ func _build_pause_menu() -> void:
 
 	var backdrop := ColorRect.new()
 	backdrop.name = "Rideau"
-	backdrop.color = Color(0.01, 0.012, 0.02, 0.88)
+	backdrop.color = Color(Charte.BACKDROP, 0.88)
 	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	pause_panel.add_child(backdrop)
 	# Le même matériau que le menu : les deux fonds ne sont jamais visibles
@@ -3561,20 +3596,20 @@ func _build_pause_menu() -> void:
 	pause_title = Label.new()
 	pause_title.text = "PAUSE"
 	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_title.add_theme_font_size_override("font_size", 56)
+	pause_title.add_theme_font_size_override("font_size", T_VERDICT)
 	column.add_child(pause_title)
 
 	pause_score_label = Label.new()
 	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_score_label.add_theme_font_size_override("font_size", 26)
+	pause_score_label.add_theme_font_size_override("font_size", T_TITRE)
 	pause_score_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_score_label)
 
 	pause_time_label = Label.new()
 	pause_time_label.text = "TEMPS RESTANT : 00:00"
 	pause_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_time_label.add_theme_font_size_override("font_size", 26)
+	pause_time_label.add_theme_font_size_override("font_size", T_TITRE)
 	pause_time_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_time_label)
 
@@ -3609,7 +3644,7 @@ func _build_pause_menu() -> void:
 func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
 	var btn := _make_button(label, accent, primary)
 	btn.custom_minimum_size = Vector2(320, 56)
-	btn.add_theme_font_size_override("font_size", 20)
+	btn.add_theme_font_size_override("font_size", T_APPUI)
 	return btn
 
 ## Ouvre la pause. `_pause_freezes_world` décide du gel : en ligne il figerait la
@@ -3642,7 +3677,7 @@ func _open_pause_options() -> void:
 	btn_back.show()
 
 	game_over_title.text = "OPTIONS"
-	game_over_title.add_theme_color_override("font_color", Color.WHITE)
+	game_over_title.add_theme_color_override("font_color", Charte.HALOGENE)
 	game_over_score.text = ""
 
 	hub.reset()
@@ -3720,7 +3755,7 @@ func _build_controls_panel() -> Control:
 		var spec: Array = BINDABLE[rang]
 		var nom := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
 			HORIZONTAL_ALIGNMENT_RIGHT)
-		nom.add_theme_font_size_override("font_size", 14)
+		nom.add_theme_font_size_override("font_size", T_COURANT)
 		nom.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(nom)
 		for player in 2:
@@ -3738,7 +3773,7 @@ func _build_controls_panel() -> Control:
 	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", T_MENTION)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
@@ -3791,16 +3826,16 @@ func _build_display_panel() -> Control:
 ## de droite étant devenu le réglage lui-même, elle n'avait plus où se poser.
 func _make_reglage_titre(titre: String, explication: String) -> Control:
 	var bloc := VBoxContainer.new()
-	bloc.add_theme_constant_override("separation", 2)
+	bloc.add_theme_constant_override("separation", GAP_XXS)
 	var t := Label.new()
 	t.text = titre
-	t.add_theme_font_size_override("font_size", 15)
+	t.add_theme_font_size_override("font_size", T_COURANT)
 	t.add_theme_color_override("font_color", COLOR_GOLD)
 	bloc.add_child(t)
 	var x := Label.new()
 	x.text = explication
 	x.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	x.add_theme_font_size_override("font_size", 12)
+	x.add_theme_font_size_override("font_size", T_MENTION)
 	x.add_theme_color_override("font_color", COLOR_DIM)
 	bloc.add_child(x)
 	return bloc
@@ -3813,7 +3848,7 @@ func _build_resolution_panel() -> Control:
 	for i in labels.size():
 		var btn := _make_choice_button(labels[i], COLOR_GOLD, group)
 		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
-		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_font_size_override("font_size", T_COURANT)
 		btn.pressed.connect(_on_res_selected.bind(i))
 		# Cocher le choix enregistré. `button_pressed` n'émet que `toggled` :
 		# régler l'état ici ne redéclenche donc pas `_on_res_selected`.
@@ -3829,7 +3864,7 @@ func _build_vsync_panel() -> Control:
 	var btn_on := _make_choice_button("VSYNC ACTIVÉ", COLOR_GOLD, group)
 	for btn in [btn_off, btn_on]:
 		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
-		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_font_size_override("font_size", T_COURANT)
 	btn_off.button_pressed = not GameSettings.vsync_enabled
 	btn_on.button_pressed = GameSettings.vsync_enabled
 	btn_off.pressed.connect(func() -> void: GameSettings.set_vsync(false))
@@ -3845,7 +3880,7 @@ func _build_fps_panel() -> Control:
 		var label := "DÉPLAFONNÉ" if cap == 0 else str(cap)
 		var btn := _make_choice_button(label, COLOR_GOLD, group)
 		btn.custom_minimum_size = Vector2(BOUTON_CHOIX_L, 42)
-		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_font_size_override("font_size", T_COURANT)
 		btn.button_pressed = (cap == GameSettings.fps_cap)
 		btn.pressed.connect(func() -> void: GameSettings.set_fps_cap(cap))
 		row.add_child(btn)
@@ -3866,7 +3901,7 @@ func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = align
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", T_MENTION)
 	label.add_theme_color_override("font_color", tint)
 	return label
 
@@ -3898,7 +3933,7 @@ func _build_actions_bar() -> Control:
 
 	btn_replay = _make_button("REJOUER", COLOR_P1, true)
 	btn_replay.custom_minimum_size = Vector2(264, 56)
-	btn_replay.add_theme_font_size_override("font_size", 22)
+	btn_replay.add_theme_font_size_override("font_size", T_APPUI)
 	btn_replay.pressed.connect(func() -> void:
 		get_tree().paused = false
 		replay_requested.emit()
@@ -4266,7 +4301,7 @@ func _build_pick_panel() -> void:
 
 	_pick_reason = Label.new()
 	_pick_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pick_reason.add_theme_font_size_override("font_size", 13)
+	_pick_reason.add_theme_font_size_override("font_size", T_MENTION)
 	_pick_reason.add_theme_color_override("font_color", COLOR_GOLD)
 	_pick_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pick_reason.custom_minimum_size = Vector2(420, 0)
@@ -4407,7 +4442,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		p1_dazzle.color = Color(1, 1, 1, p1.dazzle_amount * 0.8)
+		p1_dazzle.color = Color(Charte.HALOGENE, p1.dazzle_amount * 0.8)
 
 	if p2:
 		if p2.hp < p2_target_hp:
@@ -4425,7 +4460,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		p2_dazzle.color = Color(1, 1, 1, p2.dazzle_amount * 0.8)
+		p2_dazzle.color = Color(Charte.HALOGENE, p2.dazzle_amount * 0.8)
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé
@@ -4641,10 +4676,10 @@ func show_game_over(winner_id: int) -> void:
 			COLOR_P1 if winner_id == 0 else COLOR_P2)
 	elif winner_id == local_idx:
 		game_over_title.text = "VICTOIRE"
-		game_over_title.add_theme_color_override("font_color", Color(0.35, 1.0, 0.45))
+		game_over_title.add_theme_color_override("font_color", Charte.ETAT_OK)
 	else:
 		game_over_title.text = "DÉFAITE"
-		game_over_title.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+		game_over_title.add_theme_color_override("font_color", Charte.ETAT_FAUTE)
 
 	# M11 — le même shader porte la température de l'issue : la victoire flambe
 	# une fois, la défaite voit son onde tomber de moitié. L'écran de fin est
@@ -4728,6 +4763,10 @@ func signaler_adversaire_pret() -> void:
 		if not is_instance_valid(btn) or not btn.is_visible_in_tree():
 			continue
 		var tw := create_tween()
+		# Surexposition passagère, pas une teinte : `self_modulate` multiplie ce qui
+		# est déjà peint. Comme `Color.WHITE` employé plus bas pour « aucune
+		# teinte », ces valeurs échappent à la règle « pas de valeur pure » — elles
+		# sont l'unité d'un produit, pas une couleur que le joueur lit.
 		btn.self_modulate = Color(1.9, 1.9, 1.9)
 		tw.tween_property(btn, "self_modulate", Color.WHITE, 0.55) \
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

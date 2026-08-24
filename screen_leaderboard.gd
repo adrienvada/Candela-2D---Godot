@@ -108,8 +108,8 @@ const COL_MATCHES := 78
 const COL_RECORD := 118
 
 const ROW_HEIGHT := 26
-const FONT_ROW := 15
-const FONT_HEAD := 12
+const FONT_ROW := MenuTheme.T_COURANT
+const FONT_HEAD := MenuTheme.T_MENTION
 
 ## Écrit par les tests, qui construisent l'écran sans autoload. En jeu il reste
 ## nul et l'écran s'adresse à `/root/RankedIdentity`.
@@ -183,25 +183,25 @@ func build(body: VBoxContainer) -> void:
 		return
 
 	var head_box := VBoxContainer.new()
-	head_box.add_theme_constant_override("separation", 2)
+	head_box.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	body.add_child(head_box)
 
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.add_theme_font_size_override("font_size", 19)
+	_status.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	head_box.add_child(_status)
 
 	_detail = Label.new()
 	_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_detail.add_theme_font_size_override("font_size", 13)
+	_detail.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_detail.add_theme_color_override("font_color", MenuTheme.DIM)
 	head_box.add_child(_detail)
 
 	var table := VBoxContainer.new()
 	table.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	table.add_theme_constant_override("separation", 2)
+	table.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	body.add_child(table)
 
 	_head = _build_header()
@@ -215,7 +215,7 @@ func build(body: VBoxContainer) -> void:
 	_table_notice = Label.new()
 	_table_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_table_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_table_notice.add_theme_font_size_override("font_size", 14)
+	_table_notice.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	_table_notice.add_theme_color_override("font_color", MenuTheme.DIM)
 	table.add_child(_table_notice)
 
@@ -624,7 +624,7 @@ func _fill_row(row: Dictionary, data: Dictionary, mine: bool) -> void:
 	(row["panel"] as PanelContainer).add_theme_stylebox_override("panel", _row_style(mine))
 	var accent := MenuTheme.P1 if mine else MenuTheme.GOLD
 	(row["nickname"] as Label).add_theme_color_override("font_color",
-		accent if mine else Color.WHITE)
+		accent if mine else MenuTheme.LUMIERE)
 	(row["rank"] as Label).add_theme_color_override("font_color", accent)
 
 ## Un nombre du serveur, ou un tiret. Jamais zéro par défaut : une absence et un

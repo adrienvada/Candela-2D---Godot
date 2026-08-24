@@ -1,0 +1,371 @@
+extends SceneTree
+
+## La charte tient-elle ses propres règles ?
+##
+## **Une charte n'est pas un document, c'est une contrainte** — sinon c'est une
+## intention, et ce dépôt a payé quatre fois en deux jours le prix d'une
+## intention écrite au passé. Ce banc rend la contrainte mécanique :
+##
+## - les **sept** couleurs obéissent aux règles dures (saturation plafonnée,
+##   aucune valeur pure sauf le noir du monde) ;
+## - les **dérivées** valent exactement leur formule. Elles sont écrites en
+##   littéral — GDScript ne sait pas appeler `lerp()` dans une constante — et
+##   c'est ici qu'on vérifie que le littéral n'a pas été retouché sans elle ;
+## - **le vert n'entre pas dans l'arène**, contrôlé en lisant les fichiers du
+##   monde plutôt qu'en s'en remettant à la discipline ;
+## - les **fontes font ce qu'on croit qu'elles font**. Deux propriétés se posent
+##   sans effet et sans erreur — l'axe de graisse par clé chaîne, et `tnum` sur
+##   une fonte qui ne l'a pas. Les deux sont donc vérifiées par la MESURE, jamais
+##   par la lecture du réglage.
+
+const C := preload("res://charte.gd")
+
+## Les fichiers où vit le monde : ce que la torche éclaire, et rien de l'interface.
+## Le vert y est interdit — voir `_test_pas_de_vert_dans_l_arene()`.
+const FICHIERS_MONDE := [
+	"res://player.gd",
+	"res://bullet.gd",
+	"res://blood_stain.gd",
+	"res://footprint.gd",
+	"res://candela_tileset.gd",
+	"res://light_textures.gd",
+	"res://particle_pool.gd",
+	"res://kill_shockwave.gd",
+	"res://pump_shockwave.gd",
+	"res://weapon_data.gd",
+	"res://training_target.gd",
+	"res://training_target_visual.gd",
+	"res://map_geometry.gd",
+]
+
+var _ok := 0
+var _ko := 0
+
+
+func _check(condition: bool, quoi: String) -> void:
+	if condition:
+		_ok += 1
+	else:
+		_ko += 1
+		printerr("  ✗ %s" % quoi)
+
+
+func _proche(a: float, b: float, quoi: String, tol := 0.0005) -> void:
+	_check(absf(a - b) <= tol, "%s : %.6f attendu, %.6f obtenu" % [quoi, b, a])
+
+
+func _couleur_egale(a: Color, b: Color, quoi: String) -> void:
+	var d := maxf(maxf(absf(a.r - b.r), absf(a.g - b.g)),
+		maxf(absf(a.b - b.b), absf(a.a - b.a)))
+	_check(d <= 0.0005, "%s : %s attendu, %s obtenu (écart %.5f)" % [quoi, b, a, d])
+
+
+## Les trois canaux seulement, l'opacité mise de côté.
+##
+## **Godot multiplie l'alpha comme le reste** : `ROUGE * 0.58` rend un rouge
+## sombre *et à moitié transparent*. Les dérivées de la charte sont opaques —
+## une teinte assombrie n'est pas une teinte effacée — donc la formule porte sur
+## la couleur, pas sur l'opacité. Ce banc l'a relevé à son premier lancement,
+## ce qui est exactement ce qu'on lui demande.
+static func _rvb(c: Color) -> Color:
+	return Color(c.r, c.g, c.b)
+
+
+## Saturation HSV : c'est elle que plafonne la règle 1, pas la « vivacité »
+## ressentie. Un plafond sur une grandeur nommée se vérifie ; un plafond sur une
+## impression se négocie à chaque fois.
+static func _saturation(c: Color) -> float:
+	var maxi := maxf(c.r, maxf(c.g, c.b))
+	var mini := minf(c.r, minf(c.g, c.b))
+	return 0.0 if maxi <= 0.0 else (maxi - mini) / maxi
+
+
+## Luminance perceptuelle. Le vert pèse davantage que le bleu : une moyenne naïve
+## dirait que le territoire de J2 est plus sombre que celui de J1.
+static func _luminance(c: Color) -> float:
+	return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+
+
+# --- Les règles dures --------------------------------------------------------
+
+func _test_saturation_plafonnee() -> void:
+	var sept := {
+		"HALOGENE": C.HALOGENE, "AMBRE": C.AMBRE, "VERT": C.VERT,
+		"BLEU": C.BLEU, "ROUGE": C.ROUGE, "ACIER": C.ACIER,
+	}
+	for nom: String in sept:
+		var s := _saturation(sept[nom])
+		_check(s <= 0.7501, "%s dépasse le plafond de saturation : %.3f" % [nom, s])
+	_check(_saturation(C.NOIR) == 0.0, "NOIR devrait être achromatique")
+
+
+func _test_aucune_valeur_pure() -> void:
+	# NOIR est exclu, et son exception est écrite dans la charte : l'écran de
+	# calibration mesure le point de noir du joueur sur lui.
+	var sept := {
+		"HALOGENE": C.HALOGENE, "AMBRE": C.AMBRE, "VERT": C.VERT,
+		"BLEU": C.BLEU, "ROUGE": C.ROUGE, "ACIER": C.ACIER,
+	}
+	for nom: String in sept:
+		var c: Color = sept[nom]
+		for canal in [c.r, c.g, c.b]:
+			_check(canal > 0.0 and canal < 1.0,
+				"%s porte un canal pur (%s) — règle 2" % [nom, c])
+
+
+# --- Les dérivées valent leur formule ----------------------------------------
+
+func _test_derivees() -> void:
+	_couleur_egale(_rvb(C.CARMIN), _rvb(C.ROUGE * 0.58), "CARMIN = ROUGE × 0,58")
+	_couleur_egale(_rvb(C.DIM), _rvb(C.ACIER * 0.70), "DIM = ACIER × 0,70")
+	_couleur_egale(C.LINE, C.NOIR.lerp(C.ACIER, 0.27), "LINE = NOIR→ACIER 27 %")
+	_couleur_egale(C.SOL_A, C.NOIR.lerp(C.ACIER, 0.145), "SOL_A = NOIR→ACIER 14,5 %")
+	_couleur_egale(C.SOL_A_ARETE, C.NOIR.lerp(C.ACIER, 0.18), "SOL_A_ARETE = NOIR→ACIER 18 %")
+	_couleur_egale(C.SOL_B, C.NOIR.lerp(C.ACIER, 0.30), "SOL_B = NOIR→ACIER 30 %")
+	_couleur_egale(C.SOL_B_ARETE, C.NOIR.lerp(C.ACIER, 0.38), "SOL_B_ARETE = NOIR→ACIER 38 %")
+	_couleur_egale(_rvb(C.ADVERSAIRE), _rvb(C.HALOGENE * C.K_ADVERSAIRE),
+		"ADVERSAIRE = HALOGENE × K")
+	# Les deux fonds portent un alpha propre : on compare les canaux séparément.
+	var s := C.NOIR.lerp(C.ACIER, 0.08)
+	_couleur_egale(Color(C.SURFACE.r, C.SURFACE.g, C.SURFACE.b),
+		Color(s.r, s.g, s.b), "SURFACE = NOIR→ACIER 8 %")
+	_proche(C.SURFACE.a, 0.92, "alpha de SURFACE")
+	var b := C.NOIR.lerp(C.ACIER, 0.02)
+	_couleur_egale(Color(C.BACKDROP.r, C.BACKDROP.g, C.BACKDROP.b),
+		Color(b.r, b.g, b.b), "BACKDROP = NOIR→ACIER 2 %")
+	_proche(C.BACKDROP.a, 0.96, "alpha de BACKDROP")
+
+
+## **Le contrôle d'équité, et le seul de ce banc qui protège le jeu et non l'œil.**
+##
+## L'adversaire vu depuis l'autre écran a changé de teinte, jamais de quantité de
+## lumière. Un coefficient retouché « parce que ça rendait mieux » ferait ici du
+## rouge, avant d'avoir avantagé qui que ce soit en ligne.
+func _test_equite_de_l_adversaire() -> void:
+	_proche(_luminance(C.ADVERSAIRE), _luminance(Color(0.7, 0.7, 0.7)),
+		"luminance de l'adversaire (équité)", 0.001)
+
+
+# --- Le vert n'entre pas dans l'arène ----------------------------------------
+
+## Vert au sens de la règle 3 : une teinte que l'œil nommerait verte. Les gris et
+## les blancs cassés en sont exclus par le seuil de saturation, sans quoi le
+## contrôle rougirait sur `Color(0.7, 0.7, 0.7)`.
+static func _est_vert(c: Color) -> bool:
+	if _saturation(c) < 0.18:
+		return false
+	var h := c.h * 360.0
+	return h >= 80.0 and h <= 165.0
+
+
+## Lit les fichiers du monde et refuse toute couleur verte qui s'y trouverait.
+##
+## **Contrôlé sur le texte des fichiers, pas sur des valeurs exportées**, parce
+## que c'est ainsi que le défaut arriverait : quelqu'un écrit un `Color(...)` à
+## la main dans une particule, et rien ne le signale. La règle vaut donc pour ce
+## qui est écrit, et pas seulement pour ce que la charte expose.
+func _test_pas_de_vert_dans_l_arene() -> void:
+	var motif := RegEx.new()
+	motif.compile(r"Color\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)")
+	var lus := 0
+	for chemin: String in FICHIERS_MONDE:
+		if not FileAccess.file_exists(chemin):
+			# Un fichier disparu ne fait pas échouer : il fait perdre la
+			# couverture, ce qui est pire. On le dit.
+			printerr("  ! fichier du monde introuvable, plus surveillé : %s" % chemin)
+			_ko += 1
+			continue
+		lus += 1
+		var texte := FileAccess.get_file_as_string(chemin)
+		var ligne := 0
+		for l in texte.split("\n"):
+			ligne += 1
+			for m in motif.search_all(l):
+				var c := Color(float(m.get_string(1)), float(m.get_string(2)),
+					float(m.get_string(3)))
+				_check(not _est_vert(c),
+					"%s:%d — vert dans l'arène : %s (règle 3)" % [chemin, ligne, c])
+	_check(lus == FICHIERS_MONDE.size(), "tous les fichiers du monde ont été lus")
+
+
+# --- Les courbes -------------------------------------------------------------
+
+func _test_courbes() -> void:
+	for q in [C.Courbe.ENTREE, C.Courbe.SORTIE, C.Courbe.REBOND]:
+		_proche(C.courbe(q, 0.0), 0.0, "courbe %d part de 0" % q)
+		_proche(C.courbe(q, 1.0), 1.0, "courbe %d arrive à 1" % q)
+
+	# L'entrée et la sortie restent dans le cadre ; le rebond, non, et c'est lui.
+	var crete_rebond := 0.0
+	var t := 0.0
+	while t <= 1.0:
+		var e := C.courbe(C.Courbe.ENTREE, t)
+		var s := C.courbe(C.Courbe.SORTIE, t)
+		_check(e >= -0.001 and e <= 1.001, "ENTREE sort du cadre en t=%.2f (%.3f)" % [t, e])
+		_check(s >= -0.001 and s <= 1.001, "SORTIE sort du cadre en t=%.2f (%.3f)" % [t, s])
+		crete_rebond = maxf(crete_rebond, C.courbe(C.Courbe.REBOND, t))
+		t += 0.02
+	_check(crete_rebond > 1.02,
+		"REBOND ne dépasse pas — sans dépassement ce n'est plus un rebond (crête %.3f)" % crete_rebond)
+
+	# Ce qui sépare vraiment les deux premières : l'entrée a déjà fait le gros du
+	# chemin au quart du temps, la sortie s'attarde. Vérifier seulement les bornes
+	# les laisserait interchangeables.
+	_check(C.courbe(C.Courbe.ENTREE, 0.25) > 0.5,
+		"ENTREE devrait avoir dépassé la moitié au quart du temps")
+	_check(C.courbe(C.Courbe.SORTIE, 0.25) < 0.15,
+		"SORTIE devrait à peine avoir bougé au quart du temps")
+
+	# Monotonie de l'entrée : un aller-retour y passerait pour un défaut d'affichage.
+	var precedent := -1.0
+	t = 0.0
+	while t <= 1.0:
+		var v := C.courbe(C.Courbe.ENTREE, t)
+		_check(v >= precedent - 0.001, "ENTREE recule en t=%.2f" % t)
+		precedent = v
+		t += 0.02
+
+
+## **`animer()` atteint-il vraiment la propriété qu'on lui nomme ?**
+##
+## Le contrôle qui manquait, et son absence a coûté un écran de menu entièrement
+## invisible : `Object.set("modulate:a", …)` ne lève rien et ne fait rien, alors
+## que `tween_property` accepte ce chemin. Une bonne moitié des animations du
+## dépôt sont écrites avec un sous-chemin — il fallait donc en exercer un.
+##
+## Le contrôle porte sur la VALEUR OBTENUE, jamais sur l'appel : c'est la même
+## règle que pour `tnum` et l'axe de graisse, et c'est la troisième fois dans ce
+## seul fichier qu'elle attrape quelque chose.
+## `custom_step()` n'applique rien tant que l'arbre n'a pas tourné une image :
+## un `Tween` fraîchement créé n'est pas encore démarré, et le pas manuel se
+## perd en silence. Deux frames d'abord, puis un pas franc — et surtout **pas**
+## une attente d'images pour mesurer, qui mesurerait la machine.
+func _test_animer_atteint_un_sous_chemin() -> void:
+	var hote := Node2D.new()
+	var plat := Node2D.new()
+	root.add_child(hote)
+	root.add_child(plat)
+	hote.modulate.a = 0.0
+	plat.rotation = 0.0
+	var tween := hote.create_tween()
+	C.animer(tween, hote, "modulate:a", 0.0, 1.0, C.D_MOYEN, C.Courbe.ENTREE)
+	# Et une propriété simple, pour que le correctif du chemin n'ait pas cassé
+	# le cas courant.
+	var t2 := plat.create_tween()
+	C.animer(t2, plat, "rotation", 0.0, 2.0, C.D_COURT, C.Courbe.SORTIE)
+
+	await process_frame
+	await process_frame
+
+	tween.custom_step(C.D_MOYEN * 0.5)
+	var milieu := hote.modulate.a
+	tween.custom_step(C.D_MOYEN)
+	var fin := hote.modulate.a
+	t2.custom_step(C.D_COURT * 2.0)
+
+	_check(milieu > 0.01, "animer() n'a pas bougé la sous-propriété (milieu = %.3f)" % milieu)
+	_proche(fin, 1.0, "animer() n'atteint pas sa valeur d'arrivée", 0.01)
+	_proche(plat.rotation, 2.0, "animer() sur une propriété simple", 0.01)
+
+	hote.queue_free()
+	plat.queue_free()
+
+
+func _test_durees() -> void:
+	_proche(C.D_COURT, 0.09, "durée courte")
+	_proche(C.D_MOYEN, 0.18, "durée moyenne")
+	_proche(C.D_LONG, 0.30, "durée longue")
+
+
+# --- Les fontes font-elles ce qu'on croit ? ----------------------------------
+
+func _test_polices_presentes() -> void:
+	var absentes := C.polices_manquantes()
+	_check(absentes.is_empty(), "fontes absentes : %s" % str(absentes))
+
+
+## Le tag entier de l'axe de graisse est bien celui de `wght`.
+func _test_tag_wght() -> void:
+	var ts := TextServerManager.get_primary_interface()
+	_check(ts.name_to_tag("wght") == C.TAG_WGHT,
+		"TAG_WGHT vaut %d, name_to_tag('wght') rend %d" % [C.TAG_WGHT, ts.name_to_tag("wght")])
+
+
+## **L'axe de graisse agit-il, ou est-il seulement écrit ?**
+##
+## `variation_opentype` accepte une clé en chaîne, la conserve, la relit — et
+## n'en fait rien. Le seul contrôle qui distingue les deux cas est de mesurer
+## deux graisses et d'exiger qu'elles diffèrent. Sans lui, le dépôt aurait
+## remplacé son faux gras par un autre faux gras.
+func _test_axe_de_graisse_agit() -> void:
+	for nom in ["display", "ui"]:
+		var basse: Font = (C.police_display(200) if nom == "display" else C.police_ui(200))
+		var haute: Font = (C.police_display(900) if nom == "display" else C.police_ui(900))
+		if basse == null or haute == null:
+			_check(false, "fonte %s introuvable pour le contrôle de graisse" % nom)
+			continue
+		var lb := basse.get_string_size("CANDELA", HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+		var lh := haute.get_string_size("CANDELA", HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
+		_check(absf(lh - lb) > 1.0,
+			"fonte %s : wght 200 et 900 rendent la même chasse (%.1f) — l'axe n'est pas appliqué"
+				% [nom, lb])
+
+
+## **Les chiffres sont-ils tabulaires ?**
+##
+## La question de DA4.2, et elle ne se pose pas au réglage. Poser
+## `opentype_features = {"tnum": 1}` sur une fonte qui n'a pas la fonctionnalité
+## ne fait rien et ne dit rien — c'est ce qui a écarté le premier candidat. On
+## mesure donc les dix chiffres : un chrono ne doit pas se déplacer en passant
+## de 1 à 0.
+func _test_chiffres_tabulaires() -> void:
+	var f := C.police_ui(C.POIDS_APPUI)
+	if f == null:
+		_check(false, "fonte d'interface introuvable")
+		return
+	var mini := INF
+	var maxi := -INF
+	for d in range(10):
+		var l := f.get_string_size(str(d).repeat(9), HORIZONTAL_ALIGNMENT_LEFT,
+			-1, C.T_APPUI).x
+		mini = minf(mini, l)
+		maxi = maxf(maxi, l)
+	_check(maxi - mini < 0.01,
+		"chiffres non tabulaires : de %.1f à %.1f px pour neuf chiffres" % [mini, maxi])
+
+
+func _test_echelle_typographique() -> void:
+	var echelle := [C.T_MENTION, C.T_COURANT, C.T_APPUI, C.T_TITRE,
+		C.T_VERDICT, C.T_ENSEIGNE]
+	for i in range(1, echelle.size()):
+		_check(echelle[i] > echelle[i - 1],
+			"l'échelle typographique doit être strictement croissante (rang %d)" % i)
+	# Six tailles, et le nombre compte : c'est lui qui empêche d'en ajouter une
+	# « juste pour ce cas-là ». Le dépôt en portait vingt-cinq.
+	_check(echelle.size() == 6, "l'échelle doit compter exactement six tailles")
+	# Le décompte est une dérivée, pas un septième cran.
+	_check(C.T_DECOMPTE == C.T_ENSEIGNE * 2,
+		"T_DECOMPTE doit valoir exactement deux fois l'enseigne")
+
+
+func _init() -> void:
+	print("=== Charte visuelle ===")
+	_test_saturation_plafonnee()
+	_test_aucune_valeur_pure()
+	_test_derivees()
+	_test_equite_de_l_adversaire()
+	_test_pas_de_vert_dans_l_arene()
+	_test_courbes()
+	await _test_animer_atteint_un_sous_chemin()
+	_test_durees()
+	_test_polices_presentes()
+	_test_tag_wght()
+	_test_axe_de_graisse_agit()
+	_test_chiffres_tabulaires()
+	_test_echelle_typographique()
+	if _ko == 0:
+		print("✓ %d contrôles passent" % _ok)
+		quit(0)
+	else:
+		printerr("✗ %d échecs sur %d contrôles" % [_ko, _ok + _ko])
+		quit(1)

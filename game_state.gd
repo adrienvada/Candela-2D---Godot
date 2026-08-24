@@ -1,6 +1,8 @@
 extends Node
 class_name GameState
 
+const Charte := preload("res://charte.gd")
+
 const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
 
 ## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
@@ -273,7 +275,10 @@ func _ready():
 	weapon_arbalete.backlight_multiplier = 0.1
 	weapon_arbalete.movement_speed_while_reloading = 0.5
 	weapon_arbalete.can_run_while_reloading = false
-	weapon_arbalete.bullet_color = Color(0.7, 0.7, 0.7, 1.0)
+	# L'arbalète est la seule arme qui n'émet pas de lumière : son carreau est de
+	# l'acier froid, jamais du feu. C'est ce qui la rend furtive, et la charte le
+	# dit maintenant au lieu de le laisser à un gris anonyme.
+	weapon_arbalete.bullet_color = Color(Charte.ACIER, 1.0)
 	weapon_arbalete.bullet_width = 3.0
 	weapon_arbalete.bullet_light_energy = 0.0
 	
@@ -286,7 +291,7 @@ func _ready():
 	ui.main_menu_requested.connect(_on_main_menu_requested)
 	
 	# Set global clear color to black to fix gray areas
-	RenderingServer.set_default_clear_color(Color.BLACK)
+	RenderingServer.set_default_clear_color(Charte.NOIR)
 	
 	# Share the world_2d for split screen
 	vp2.world_2d = vp1.world_2d
@@ -530,7 +535,7 @@ func _on_training_requested() -> void:
 func _on_debug_light_toggled(toggled_on: bool):
 	var mod = arena.get_node_or_null("CanvasModulate")
 	if mod:
-		mod.color = Color(0.3, 0.3, 0.3) if toggled_on else Color(0, 0, 0)
+		mod.color = Charte.NOIR.lerp(Charte.ACIER, 0.38) if toggled_on else Charte.NOIR
 
 ## Construit l'arène depuis la carte sélectionnée.
 ##
@@ -1534,7 +1539,7 @@ func _do_end_round(winner_id: int):
 		# Enter Fullscreen Killcam mode
 		var mod = arena.get_node_or_null("CanvasModulate")
 		if mod:
-			mod.color = Color(0.3, 0.3, 0.3)
+			mod.color = Charte.NOIR.lerp(Charte.ACIER, 0.38)
 		
 		if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 			vp2.get_parent().hide()
@@ -1700,10 +1705,11 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	var lbl := Label.new()
 	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
 	var settings := LabelSettings.new()
-	settings.font_size = 64
-	settings.font_color = Color(1.0, 0.1, 0.25)
+	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
+	settings.font_size = Charte.T_ENSEIGNE
+	settings.font_color = Charte.ROUGE
 	settings.outline_size = 10
-	settings.outline_color = Color.BLACK
+	settings.outline_color = Charte.NOIR
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1967,7 +1973,7 @@ func _on_replay_requested():
 
 		local_ready_for_rematch = true
 		ui.btn_replay.text = "✓ PRÊT"
-		ui.btn_replay.add_theme_color_override("font_color", Color.GREEN)
+		ui.btn_replay.add_theme_color_override("font_color", Charte.ETAT_OK)
 		
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 			rpc_id(1, "rpc_client_ready", w2_idx)
@@ -2170,7 +2176,7 @@ func _restore_viewports():
 	cam2.global_position = p2.global_position
 	var mod = arena.get_node_or_null("CanvasModulate")
 	if mod:
-		mod.color = Color(0, 0, 0)
+		mod.color = Charte.NOIR
 
 
 func _on_main_menu_requested():

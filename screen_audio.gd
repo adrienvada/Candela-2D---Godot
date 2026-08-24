@@ -158,7 +158,7 @@ func build(body: VBoxContainer) -> void:
 	var intro := Label.new()
 	intro.text = "Chaque cran fait sonner le bus qu'il règle : un volume se juge à l'oreille."
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	intro.add_theme_font_size_override("font_size", 14)
+	intro.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	intro.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(intro)
 
@@ -187,7 +187,7 @@ func _build_row(spec: Dictionary) -> Control:
 	panel.add_child(margin)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	margin.add_child(column)
 
 	var line := HBoxContainer.new()
@@ -197,7 +197,7 @@ func _build_row(spec: Dictionary) -> Control:
 	var name_label := Label.new()
 	name_label.text = String(spec["label"])
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_font_size_override("font_size", 17)
+	name_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	line.add_child(name_label)
 
 	var minus := _step_button("‹", id, -1)
@@ -225,12 +225,12 @@ func _build_row(spec: Dictionary) -> Control:
 	var value_label := Label.new()
 	value_label.custom_minimum_size = Vector2(78, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.add_theme_font_size_override("font_size", 17)
+	value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	line.add_child(value_label)
 
 	var notice := Label.new()
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notice.add_theme_font_size_override("font_size", 12)
+	notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	notice.add_theme_color_override("font_color", MenuTheme.DIM)
 	column.add_child(notice)
 
@@ -266,7 +266,7 @@ func _step_button(text: String, id: String, direction: int) -> Button:
 	btn.custom_minimum_size = Vector2(40, 30)
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	btn.add_theme_font_size_override("font_size", 20)
+	btn.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = MenuTheme.SURFACE

@@ -11,6 +11,8 @@
 class_name MapEditorHUD
 extends CanvasLayer
 
+const Charte := preload("res://charte.gd")
+
 ## Un bouton d'action a été actionné. Voir les constantes ACTION_*.
 signal action_requested(action: StringName)
 ## L'utilisateur a validé le nom de sauvegarde.
@@ -48,15 +50,15 @@ const ACTION_BACK: StringName = &"back"
 enum Toast { INFO, SUCCESS, WARN, ERROR }
 
 # --- Palette néon -----------------------------------------------------------
-const COL_PANEL := Color(0.035, 0.04, 0.055, 0.93)
-const COL_PANEL_SOFT := Color(0.07, 0.08, 0.10, 0.95)
-const COL_BORDER := Color(0.30, 0.80, 1.00, 0.28)
-const COL_TEXT := Color(0.90, 0.94, 1.00)
-const COL_DIM := Color(0.52, 0.57, 0.66)
-const COL_OK := Color(0.25, 1.00, 0.60)
-const COL_WARN := Color(1.00, 0.70, 0.18)
-const COL_ERROR := Color(1.00, 0.26, 0.42)
-const COL_ACCENT := Color(0.00, 0.94, 1.00)
+const COL_PANEL := Color(Charte.SURFACE * 0.7, 0.93)
+const COL_PANEL_SOFT := Color(Charte.SURFACE * 1.3, 0.95)
+const COL_BORDER := Color(Charte.BLEU, 0.28)
+const COL_TEXT := Charte.HALOGENE
+const COL_DIM := Charte.DIM
+const COL_OK := Charte.ETAT_OK
+const COL_WARN := Charte.ETAT_ATTENTION
+const COL_ERROR := Charte.ETAT_FAUTE
+const COL_ACCENT := Charte.BLEU
 
 const PANEL_WIDTH := 380.0
 const TOAST_LIFETIME := 2.6
@@ -130,7 +132,7 @@ func _build_header() -> void:
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	panel.add_child(box)
 
 	_title_label = _make_label("ÉDITEUR DE CARTE", 24, COL_TEXT)
@@ -150,7 +152,7 @@ func _build_step_bar() -> void:
 	root.add_child(wrapper)
 
 	_step_bar = HBoxContainer.new()
-	_step_bar.add_theme_constant_override("separation", 10)
+	_step_bar.add_theme_constant_override("separation", Charte.GAP_XS)
 	wrapper.add_child(_step_bar)
 
 ## Crée les pastilles d'étape. L'éditeur possède les libellés et les couleurs.
@@ -164,7 +166,7 @@ func build_steps(labels: PackedStringArray, colours: Array[Color]) -> void:
 		var button := Button.new()
 		button.text = labels[i]
 		button.focus_mode = Control.FOCUS_NONE
-		button.add_theme_font_size_override("font_size", 18)
+		button.add_theme_font_size_override("font_size", Charte.T_APPUI)
 		button.custom_minimum_size = Vector2(150, 42)
 		var index := i
 		button.pressed.connect(func() -> void: step_selected.emit(index))
@@ -184,7 +186,7 @@ func _build_side_panel() -> void:
 	outer.offset_right = -28.0
 	outer.offset_top = 24.0
 	outer.offset_bottom = -96.0
-	outer.add_theme_constant_override("separation", 12)
+	outer.add_theme_constant_override("separation", Charte.GAP_XS)
 	root.add_child(outer)
 
 	# Validation et outils défilent ; les actions primaires restent ancrées.
@@ -196,7 +198,7 @@ func _build_side_panel() -> void:
 
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 12)
+	column.add_theme_constant_override("separation", Charte.GAP_XS)
 	scroll.add_child(column)
 
 	column.add_child(_build_validation_panel())
@@ -209,7 +211,7 @@ func _build_validation_panel() -> PanelContainer:
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
 	box.add_child(_make_label("VALIDATION", 15, COL_DIM))
@@ -218,7 +220,7 @@ func _build_validation_panel() -> PanelContainer:
 	box.add_child(_verdict_label)
 
 	_checks_box = VBoxContainer.new()
-	_checks_box.add_theme_constant_override("separation", 3)
+	_checks_box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	box.add_child(_checks_box)
 
 	_reason_label = _make_label("", 14, COL_ERROR)
@@ -238,7 +240,7 @@ func _build_tools_panel() -> PanelContainer:
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
 	box.add_child(_make_label("OUTILS", 15, COL_DIM))
@@ -258,7 +260,7 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(_make_label("SYMÉTRIE", 13, COL_DIM))
 
 	var mirrors := HBoxContainer.new()
-	mirrors.add_theme_constant_override("separation", 8)
+	mirrors.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(mirrors)
 	mirrors.add_child(_make_button("⇔  H", ACTION_MIRROR_H, 16, true))
 	mirrors.add_child(_make_button("⇕  V", ACTION_MIRROR_V, 16, true))
@@ -267,7 +269,7 @@ func _build_tools_panel() -> PanelContainer:
 	# Les diagonales exigent une grille carrée : on les désactive sinon, avec
 	# une infobulle qui dit pourquoi plutôt que de laisser un bouton muet.
 	var diagonals := HBoxContainer.new()
-	diagonals.add_theme_constant_override("separation", 8)
+	diagonals.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(diagonals)
 	_btn_mirror_d = _make_button("⤡  DIAGONALE ↘", ACTION_MIRROR_D, 16, true)
 	_btn_mirror_ad = _make_button("⤢  DIAGONALE ↗", ACTION_MIRROR_AD, 16, true)
@@ -280,13 +282,13 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(_grid_label)
 
 	var width_row := HBoxContainer.new()
-	width_row.add_theme_constant_override("separation", 8)
+	width_row.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(width_row)
 	width_row.add_child(_make_button("−  LARGEUR", ACTION_GRID_NARROWER, 16, true))
 	width_row.add_child(_make_button("+  LARGEUR", ACTION_GRID_WIDER, 16, true))
 
 	var height_row := HBoxContainer.new()
-	height_row.add_theme_constant_override("separation", 8)
+	height_row.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(height_row)
 	height_row.add_child(_make_button("−  HAUTEUR", ACTION_GRID_SHORTER, 16, true))
 	height_row.add_child(_make_button("+  HAUTEUR", ACTION_GRID_TALLER, 16, true))
@@ -294,7 +296,7 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(_make_separator())
 
 	var history := HBoxContainer.new()
-	history.add_theme_constant_override("separation", 8)
+	history.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(history)
 	_btn_undo = _make_button("↶  ANNULER", ACTION_UNDO, 17, true)
 	_btn_redo = _make_button("↷  RÉTABLIR", ACTION_REDO, 17, true)
@@ -305,7 +307,7 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(_history_label)
 
 	var view := HBoxContainer.new()
-	view.add_theme_constant_override("separation", 8)
+	view.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(view)
 	_btn_light = _make_button("◎  APERÇU LUMIÈRE", ACTION_LIGHT, 16, true)
 	view.add_child(_btn_light)
@@ -314,13 +316,13 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_child(_make_separator())
 
 	var share := HBoxContainer.new()
-	share.add_theme_constant_override("separation", 8)
+	share.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(share)
 	share.add_child(_make_button("⧉  PARTAGER", ACTION_SHARE, 16, true))
 	share.add_child(_make_button("⤓  IMPORTER", ACTION_IMPORT, 16, true))
 
 	var reset := HBoxContainer.new()
-	reset.add_theme_constant_override("separation", 8)
+	reset.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(reset)
 	reset.add_child(_make_button("✦  NOUVELLE", ACTION_NEW, 16, true))
 	reset.add_child(_make_button("⌫  TOUT VIDER", ACTION_CLEAR, 16, true))
@@ -334,7 +336,7 @@ func _build_actions_panel() -> PanelContainer:
 	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
 	_btn_save = _make_button("💾  SAUVEGARDER", ACTION_SAVE, 20)
@@ -343,7 +345,7 @@ func _build_actions_panel() -> PanelContainer:
 	box.add_child(_btn_save)
 
 	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 8)
+	bottom.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(bottom)
 	_btn_test = _make_button("▶  TESTER", ACTION_TEST, 18, true)
 	bottom.add_child(_btn_test)
@@ -360,7 +362,7 @@ func _build_prompt_bar() -> void:
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	panel.add_child(box)
 
 	_prompt_pad = _make_label(
@@ -387,12 +389,12 @@ func _build_toast_box() -> void:
 	_toast_box.offset_right = -28.0
 	_toast_box.offset_bottom = -120.0
 	_toast_box.alignment = BoxContainer.ALIGNMENT_END
-	_toast_box.add_theme_constant_override("separation", 8)
+	_toast_box.add_theme_constant_override("separation", Charte.GAP_XS)
 	_toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_toast_box)
 
 func _build_sandbox_banner() -> void:
-	_sandbox_banner = _make_panel(Color(0.35, 0.05, 0.08, 0.92))
+	_sandbox_banner = _make_panel(Color(Charte.CARMIN * 0.6, 0.92))
 	_sandbox_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_sandbox_banner.offset_top = 24.0
 	_sandbox_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -400,10 +402,10 @@ func _build_sandbox_banner() -> void:
 	root.add_child(_sandbox_banner)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	_sandbox_banner.add_child(box)
 
-	var title := _make_label("●  MODE TEST", 30, Color(1.0, 0.45, 0.45))
+	var title := _make_label("●  MODE TEST", Charte.T_TITRE, Charte.ROUGE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 
@@ -427,7 +429,7 @@ func _build_modals() -> void:
 
 	var dim := ColorRect.new()
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.color = Color(Charte.NOIR, 0.72)
 	_modal_root.add_child(dim)
 
 	var center := CenterContainer.new()
@@ -447,14 +449,14 @@ func _build_save_panel() -> PanelContainer:
 	panel.hide()
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
 	box.add_child(_make_label("SAUVEGARDER LA CARTE", 26, COL_TEXT))
 	box.add_child(_make_label("Nom de la carte", 15, COL_DIM))
 
 	_name_edit = LineEdit.new()
-	_name_edit.add_theme_font_size_override("font_size", 22)
+	_name_edit.add_theme_font_size_override("font_size", Charte.T_APPUI)
 	_name_edit.custom_minimum_size = Vector2(0, 48)
 	_name_edit.text_changed.connect(_on_name_changed)
 	_name_edit.text_submitted.connect(func(_t: String) -> void: _emit_save())
@@ -468,7 +470,7 @@ func _build_save_panel() -> PanelContainer:
 
 	_map_list = ItemList.new()
 	_map_list.custom_minimum_size = Vector2(0, 230)
-	_map_list.add_theme_font_size_override("font_size", 17)
+	_map_list.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	_map_list.item_selected.connect(_on_map_list_selected)
 	box.add_child(_map_list)
 
@@ -478,7 +480,7 @@ func _build_save_panel() -> PanelContainer:
 	box.add_child(_dialog_error)
 
 	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 12)
+	buttons.add_theme_constant_override("separation", Charte.GAP_XS)
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	box.add_child(buttons)
 
@@ -498,14 +500,14 @@ func _build_import_panel() -> PanelContainer:
 	panel.hide()
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 12)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
 	box.add_child(_make_label("IMPORTER UNE CARTE", 26, COL_TEXT))
 	box.add_child(_make_label("Collez un code commençant par CANDELA-", 15, COL_DIM))
 
 	_code_edit = LineEdit.new()
-	_code_edit.add_theme_font_size_override("font_size", 18)
+	_code_edit.add_theme_font_size_override("font_size", Charte.T_APPUI)
 	_code_edit.custom_minimum_size = Vector2(680, 48)
 	_code_edit.placeholder_text = "CANDELA-…"
 	_code_edit.text_submitted.connect(func(_t: String) -> void: _emit_import())
@@ -518,7 +520,7 @@ func _build_import_panel() -> PanelContainer:
 	box.add_child(paste)
 
 	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 12)
+	buttons.add_theme_constant_override("separation", Charte.GAP_XS)
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	box.add_child(buttons)
 
@@ -733,7 +735,7 @@ func _rebuild_checks(checks: Array) -> void:
 			colour = COL_ERROR if blocking else COL_WARN
 
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
+		row.add_theme_constant_override("separation", Charte.GAP_XS)
 
 		var mark := _make_label(symbol, 17, colour)
 		mark.custom_minimum_size = Vector2(24, 0)
@@ -784,7 +786,7 @@ func show_toast(message: String, kind: Toast = Toast.INFO) -> void:
 		_:
 			colour = COL_ACCENT
 
-	var panel := _make_panel(Color(0.05, 0.06, 0.08, 0.94))
+	var panel := _make_panel(Color(Charte.SURFACE, 0.94))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.modulate.a = 0.0
 
@@ -798,7 +800,7 @@ func show_toast(message: String, kind: Toast = Toast.INFO) -> void:
 		_toast_box.get_child(0).queue_free()
 
 	var tween := panel.create_tween()
-	tween.tween_property(panel, "modulate:a", 1.0, 0.14)
+	tween.tween_property(panel, "modulate:a", 1.0, Charte.D_MOYEN)
 	tween.tween_interval(TOAST_LIFETIME)
 	tween.tween_property(panel, "modulate:a", 0.0, 0.45)
 	tween.tween_callback(panel.queue_free)
@@ -823,7 +825,7 @@ func _make_label(text: String, size: int, colour: Color) -> Label:
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", colour)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_color_override("font_outline_color", Color(Charte.NOIR, 0.85))
 	label.add_theme_constant_override("outline_size", 3)
 	return label
 
@@ -852,7 +854,7 @@ func _make_dialog_button(text: String, colour: Color) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_size_override("font_size", 20)
+	button.add_theme_font_size_override("font_size", Charte.T_APPUI)
 	button.custom_minimum_size = Vector2(220, 52)
 	_style_button(button, colour, true)
 	return button
@@ -872,8 +874,8 @@ func _style_button(button: Button, tint: Color, strong: bool) -> void:
 	pressed.bg_color = Color(tint.r, tint.g, tint.b, 0.46)
 
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.10, 0.10, 0.12, 0.55)
-	disabled.border_color = Color(0.30, 0.32, 0.36, 0.45)
+	disabled.bg_color = Color(Charte.SOL_A, 0.55)
+	disabled.border_color = Color(Charte.LINE * 1.55, 0.45)
 
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
@@ -881,7 +883,7 @@ func _style_button(button: Button, tint: Color, strong: bool) -> void:
 	button.add_theme_stylebox_override("disabled", disabled)
 	button.add_theme_stylebox_override("focus", hover)
 	button.add_theme_color_override("font_color", COL_TEXT)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Charte.HALOGENE)
 	button.add_theme_color_override("font_disabled_color", COL_DIM)
 
 func _style_step_button(button: Button, tint: Color, active: bool) -> void:

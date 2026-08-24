@@ -137,7 +137,7 @@ func build(body: VBoxContainer) -> void:
 func _build_identity_block(body: VBoxContainer) -> void:
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_font_size_override("font_size", 15)
+	_status.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	body.add_child(_status)
 
 	# La ligne qui empêche « non configuré » de passer pour une panne : elle dit
@@ -145,7 +145,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_explain = Label.new()
 	_explain.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_explain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_explain.add_theme_font_size_override("font_size", 13)
+	_explain.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_explain.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_explain)
 
@@ -155,7 +155,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	body.add_child(name_row)
 
 	_nickname = Label.new()
-	_nickname.add_theme_font_size_override("font_size", 26)
+	_nickname.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
 	_nickname.add_theme_color_override("font_color", MenuTheme.P1)
 	name_row.add_child(_nickname)
 
@@ -195,7 +195,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_rename_feedback = Label.new()
 	_rename_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rename_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rename_feedback.add_theme_font_size_override("font_size", 13)
+	_rename_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_rename_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_rename_feedback)
 
@@ -204,7 +204,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	# chiffre inventé.
 	_standing = Label.new()
 	_standing.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_standing.add_theme_font_size_override("font_size", 20)
+	_standing.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	body.add_child(_standing)
 
 func _build_code_block(body: VBoxContainer) -> void:
@@ -216,7 +216,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	body.add_child(code_row)
 
 	_code = Label.new()
-	_code.add_theme_font_size_override("font_size", 34)
+	_code.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
 	_code.add_theme_color_override("font_color", MenuTheme.GOLD)
 	code_row.add_child(_code)
 
@@ -229,7 +229,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	# du joueur au moment précis où il recopie douze caractères à la main.
 	_copy_feedback = Label.new()
 	_copy_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_copy_feedback.add_theme_font_size_override("font_size", 13)
+	_copy_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_copy_feedback.add_theme_color_override("font_color", MenuTheme.GOLD)
 	body.add_child(_copy_feedback)
 
@@ -237,7 +237,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	_hint.text = "Sans ce code, un changement d'ordinateur repart d'un profil vierge."
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hint.add_theme_font_size_override("font_size", 13)
+	_hint.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_hint.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_hint)
 
@@ -266,14 +266,14 @@ func _build_link_block(body: VBoxContainer) -> void:
 
 	_link_progress = Label.new()
 	_link_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_link_progress.add_theme_font_size_override("font_size", 13)
+	_link_progress.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_link_progress.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_link_progress)
 
 	_link_feedback = Label.new()
 	_link_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_link_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_link_feedback.add_theme_font_size_override("font_size", 13)
+	_link_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_link_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_link_feedback)
 
@@ -281,7 +281,7 @@ func _make_section(text: String, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	label.add_theme_color_override("font_color", color)
 	return label
 
@@ -290,7 +290,7 @@ func _make_button(text: String, accent: Color) -> Button:
 	btn.text = text
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.custom_minimum_size = Vector2(150, 40)
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	btn.add_theme_color_override("font_color", accent)
 
 	var normal := StyleBoxFlat.new()

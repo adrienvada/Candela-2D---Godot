@@ -1,6 +1,8 @@
 class_name MenuPasserby
 extends Control
 
+const Charte := preload("res://charte.gd")
+
 ## M4 — Quelqu'un derrière la vitre. Vague M, « la vitrine ».
 ##
 ## De loin en loin, une lueur floue et lente traverse l'écran **derrière** les
@@ -85,7 +87,7 @@ func _draw() -> void:
 	# très faibles, très larges.
 	for i in 8:
 		var part := 1.0 - float(i) / 8.0
-		var c := Color(1.0, 0.36, 0.45, 0.075 * _intensite * part * part)
+		var c := Color(Charte.ROUGE, 0.075 * _intensite * part * part)
 		draw_circle(p, RAYON * (1.0 - part * 0.85), c)
 
 	# L'éclat : bref, plus blanc, et il ne dure pas. C'est un coup de feu vu à
@@ -94,5 +96,5 @@ func _draw() -> void:
 		var vif := 1.0 - absf(_t - _eclat_a) / 0.05
 		for i in 4:
 			var part := 1.0 - float(i) / 4.0
-			var c := Color(1.0, 0.85, 0.7, 0.16 * _intensite * vif * part)
+			var c := Color(Charte.HALOGENE, 0.16 * _intensite * vif * part)
 			draw_circle(p, RAYON * 0.55 * (1.0 - part * 0.7), c)

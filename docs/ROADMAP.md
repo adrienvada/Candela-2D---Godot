@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-19
+> Dernière mise à jour : 2026-08-24
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2353,6 +2353,92 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### 53 suites vertes, et un écran de menu entièrement invisible (2026-08-24)
+
+**Le lot complet est passé — 229 s, code 0, aucune erreur de script — pendant que
+la colonne de gauche du hub était à `modulate.a = 0` après chaque navigation.**
+Toute la liste d'entrées d'un écran, invisible. Seul le liseré de sélection
+restait à l'écran, parce qu'il vit dans un nœud séparé du corps de l'écran : ce
+qu'on voyait était un cadre bleu vide au-dessus du vide.
+
+**C'est la planche de contact qui l'a montré**, à son premier emploi réel dans ce
+chantier. `test_vitrine_menus` et `test_menu_hub` étaient verts : ils vérifient
+que les entrées existent, sont atteignables au curseur et retrouvent leur alpha
+après une coulée d'encre — **jamais qu'elles sont visibles à l'instant où on
+regarde l'écran**.
+
+C'est la formule déjà écrite le 2026-08-19, confirmée une troisième fois : **on
+mesure ce qui s'écrit, pas ce qui se voit.** Et le corollaire tient : `run_visuel.sh`
+n'est pas une politesse de fin de tâche, c'est le seul contrôle du dépôt qui
+regarde.
+
+**La cause :** voir l'entrée suivante.
+
+### Une propriété qui se pose sans effet et sans erreur (2026-08-24)
+
+**Deux fois dans la même heure, en câblant les fontes.** On écrit quelque chose
+de correct, la propriété se relit correctement, et **le rendu ne change pas d'un
+pixel**. C'est la famille de défaut la plus chère du dépôt — la même que les noms
+de nœuds auto-générés de la Phase 3, un cran plus bas.
+
+1. **`opentype_features = {"tnum": 1}` sur une fonte qui n'a pas la
+   fonctionnalité.** Le dictionnaire contient bien la clé ; les chiffres restent
+   proportionnels. Le chrono continue de sauter, et rien ne le dit.
+2. **`variation_opentype = {"wght": 900}` avec une clé en CHAÎNE.** Seul le tag
+   **entier** agit (`2003265652`). Mesuré sur « CANDELA » en 40 px : 75 px de
+   large quelle que soit la graisse avec la chaîne, 75 → 131 px avec l'entier.
+   Sans cette mesure, le dépôt aurait remplacé son faux gras par un autre faux
+   gras, en annonçant l'avoir supprimé.
+3. **`Object.set("modulate:a", 0.5)` — la plus chère des trois.** `tween_property`
+   accepte les chemins de sous-propriété, et une bonne moitié des animations du
+   dépôt sont écrites ainsi. `set()`, lui, cherche une propriété portant ce nom
+   **littéral**, ne la trouve pas, et se tait. Vérifié : `set("modulate:a", 0.4)`
+   laisse l'alpha à 1,0 ; `set_indexed(NodePath("modulate:a"), 0.7)` le pose. Le
+   premier jet de `Charte.animer()` employait `set` — d'où l'écran de menu
+   invisible de l'entrée précédente.
+
+**La parade est la même dans les deux cas, et elle est générale : contrôler
+l'EFFET, jamais le réglage.** `tools/test_charte.gd` mesure la largeur de deux
+graisses et exige qu'elles diffèrent ; il mesure les dix chiffres et exige qu'ils
+soient égaux. Un contrôle qui relirait la propriété passerait au vert dans les
+deux cas fautifs.
+
+### `Color × float` multiplie aussi l'opacité (2026-08-24)
+
+`ROUGE * 0.58` rend un rouge sombre **et à moitié transparent**. Une teinte
+baissée n'est pas une teinte effacée : les dérivées de la charte sont opaques,
+donc les facteurs portent sur les trois canaux et le banc compare en RVB. Relevé
+par `test_charte` à son tout premier lancement — ce qui vaut mieux que de le
+découvrir sur une tache de sang qu'on voit à travers.
+
+### Un identifiant manquant dans `ui.gd` fait pendre trois suites (2026-08-24)
+
+Une passe mécanique a écrit `T_DECOMPTE` dans `ui.gd` sans que la constante y
+soit déclarée. **Une seule erreur d'analyse**, et le lot rend : six suites en
+échec, **trois qui ne sortent pas du tout** (chien de garde à 120 s), plus une
+cascade de `SCRIPT ERROR` désignant `game_state.gd:1099` — du code que personne
+n'avait touché, et qui échouait parce que `ui.gd` ne se chargeait pas.
+
+**Ce que ça confirme, et qui était déjà écrit ici : le message désigne le fichier
+qui appelle, pas celui qui ne compile pas.** La bonne réaction a été de refuser de
+« corriger » `game_state.gd` et d'aller chercher le `Parse Error`. La mauvaise
+aurait été de toucher au netcode.
+
+**Corollaire pour toute passe automatique sur des identifiants :** vérifier que
+chaque symbole introduit est déclaré, avant de lancer le lot. `grep` le fait en
+deux secondes ; le lanceur met dix minutes à le dire mal.
+
+### Ne pas éditer `run_suites.sh` pendant qu'il tourne — repayé (2026-08-24)
+
+Le piège était consigné plus bas depuis le 2026-08-18. Il a quand même été repayé
+le 2026-08-24 : une ligne ajoutée à `SUITES=(…)` **pendant** l'exécution du lot,
+pour y déclarer `test_charte`. Le lot a été arrêté et relancé, `bash -n` a
+confirmé que le fichier était intact — mais dix minutes de mesure étaient perdues.
+
+**Connaître un piège ne protège pas de lui.** Ce qui protège, c'est de ne pas
+avoir la main sur le fichier au moment où il s'exécute : ajouter la suite
+**avant** de lancer, ou après.
+
 ### Un commentaire décrit une intention, on le relit comme un constat (2026-08-19)
 
 Au-dessus de `ui.show_waiting_for_opponent()`, dans `_annoncer_deconnexion()`,
@@ -4587,9 +4673,130 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 > *(C)* = commande artiste / sound designer. **Tout est « proposé » : aucun
 > item n'est commencé sans demande d'Adrien.**
 
-### DA1 — Le socle (sans lui, le reste repeint du sable)
+### DA1 — Le socle ✅ **LIVRÉ le 2026-08-24** (DA1.1, 1.2, 1.3, 1.4, 1.8, 1.9)
 
-- **DA1.1 La bible visuelle d'une page** — palette de 6-7 couleurs *nommées*
+> **Six items sur neuf sont faits.** Restent DA1.5 (un seul artiste), DA1.6 (le
+> wordmark) et DA1.7 (icône et splash) — les trois qui demandent Adrien ou un
+> dessinateur. Tout ce qui était marqué *(S)* et *(G)* est livré.
+>
+> Tout descend maintenant de **`charte.gd`**, et de lui seul.
+
+#### Ce que la révision a appris, et qui ne se devinait pas
+
+**La première palette proposée était une palette assainie, pas une palette.**
+Elle corrigeait des défauts — saturations à 100 %, blanc pur, rouges primaires —
+et ne racontait rien. C'est Adrien qui l'a relevé en donnant le récit :
+« un lieu industriel dans le noir, militaire, ambiance tactique, vision à la
+lampe torche, LED ». Refaite **depuis** ce récit, elle a produit un principe que
+l'hygiène seule n'aurait jamais donné :
+
+> **Deux familles de lumière, et elles ne se mélangent pas.** Le MONDE est chaud
+> — halogène, feu, sang : ce que la torche révèle. L'APPAREIL est LED — froid,
+> étroit : ce que le matériel émet. *Si c'est chaud, c'est le monde ; si c'est
+> LED, c'est toi.*
+
+**Le vert est la seule couleur ajoutée, et il paie une confusion qui existait.**
+Le code écrivait `GOLD if success else WARN` : deux orangés voisins portant des
+sens **opposés**, lus à 12 px dans le noir. La triade d'instrument — vert « prêt »,
+ambre « attention », rouge « faute » — les sépare. Ce n'est pas une préférence,
+c'est un défaut de lisibilité qui avait un nom nulle part.
+
+**Le bleu et le rouge des joueurs : le récit ne demandait pas d'en changer, il
+explique pourquoi ils étaient justes.** *Blue force* contre *red force*, la
+convention de tout affichage tactique — c'est-à-dire, mot pour mot, la décision
+actée du 2026-08-19 (« la couleur suit le RÔLE, pas le numéro »). Seule la
+saturation a bougé, de 100 % à ~70 %.
+
+**`ACIER` traite la cause d'un défaut déjà corrigé en surface.** Le 2026-08-18,
+les entrées « lanceur » se confondaient avec le liseré de sélection ; on avait
+retiré la couleur des lanceurs. La cause restait : **l'interface n'avait pas de
+couleur à elle et empruntait celle d'un joueur.** Elle en a une.
+
+**Pas de kaki, et c'est délibéré.** Dans un jeu où l'on ne voit jamais le décor
+autrement qu'en arête éclairée, une couleur de camouflage est une couleur qu'on
+n'affiche jamais. Le militaire passe par la triade et la convention ami/ennemi.
+
+#### La discipline : littéral + formule + banc
+
+Les sept couleurs sont choisies ; **tout le reste est une opération sur elles** —
+`CARMIN = ROUGE × 0,58`, `DIM = ACIER × 0,70`, les fonds et les sols sont le noir
+monté vers l'acier. GDScript ne sachant pas appeler `lerp()` dans une constante,
+les dérivées sont écrites en littéral et **`tools/test_charte.gd` recalcule
+chacune à chaque exécution**. C'est le motif de `Protocol.WIRE_WITNESS` appliqué
+à la couleur : la valeur ne peut pas s'éloigner de sa formule en silence.
+
+**Une règle est devenue mécaniquement vérifiable : le vert n'entre jamais dans
+l'arène.** Le banc lit le TEXTE des treize fichiers du monde et refuse toute
+couleur verte qui s'y trouverait — pas les valeurs exportées, le texte, parce que
+c'est ainsi que le défaut arriverait : quelqu'un écrit un `Color(...)` à la main
+dans une particule. Corollaire utile : un pixel vert dans une capture est
+toujours de l'interface.
+
+**Et un contrôle qui protège le jeu, pas l'œil.** `ADVERSAIRE` — la couleur à
+laquelle on voit quelqu'un dans le noir — a changé de température sans changer de
+**luminance**, et le banc compare les deux. Le coefficient n'est pas choisi, il
+est résolu. ⚠️ **Le premier jet affirmait cette égalité dans son propre
+commentaire ; elle était fausse de 8 %.** Le gris neutre part d'une luminance de
+1,0, l'halogène de 0,917. C'est le calcul qui l'a dit, pas la relecture.
+
+#### Les fontes : la mesure a changé le choix
+
+**Display : `Big Shoulders Display`** (signalétique industrielle ultra-condensée,
+axe variable Thin→Black). **Interface : `Oxanium`** (linéale anguleuse à
+chanfreins, variable). Les deux en SIL OFL 1.1, licences versionnées à côté.
+
+Le premier candidat d'interface était *Chakra Petch*, qui portait le récit aussi
+bien. **Il a été écarté par une mesure, pas par goût** : ses chiffres ne sont pas
+tabulaires — `0` fait 12 px, `1` en fait 6,9 —, donc un chrono qui saute à chaque
+seconde. Oxanium est tabulaire **par construction** : les dix chiffres font 11 px
+pile, sans réglage à poser. *Une propriété qui n'a pas d'interrupteur ne peut pas
+être éteinte par mégarde.*
+
+Au passage, le dernier faux gras du dépôt disparaît : `menu_hub.gd` posait
+`variation_embolden = 1.2` avec ce commentaire — « le projet n'a pas de police à
+poids multiples ». Il en a deux, à axe variable.
+
+#### L'échelle, et ce qu'elle a révélé
+
+Six tailles (12 / 15 / 19 / 25 / 42 / 68) remplacent **vingt-cinq valeurs
+distinctes**. Le décompte 3-2-1 est une **dérivée** (deux fois l'enseigne) et non
+un septième cran : une échelle qui s'allonge « juste pour ce cas-là » a cessé
+d'être une échelle.
+
+**Le dépôt portait cinq copies de la palette et deux échelles privées** :
+`ui.gd`, `menu_theme.gd` (dont le commentaire promettait de les réunir « le temps
+de l'étape 3 », close depuis longtemps), `map_gallery.gd`, `map_editor_hud.gd`,
+plus les `FONT_*` de `screen_matchmaking.gd` et `screen_leaderboard.gd`. Elles
+avaient toutes divergé — six ors, sept rouges — et **aucune ne paraissait fausse
+chez elle**.
+
+#### Le mouvement
+
+Trois courbes maison (Bézier cubiques évaluées par `Charte.courbe()`, pas des
+`TRANS_*` de Godot) et trois durées — 90 / 180 / 300 ms. `Charte.animer()` les
+applique via `tween_method`, seul chemin qui pose une vraie courbe plutôt que la
+transition intégrée la plus proche. Les courbes sont **pures**, donc le banc
+vérifie leurs bornes, la monotonie de l'entrée et **le dépassement du rebond** —
+sans dépassement, ce n'est plus un rebond.
+
+Les durées de **jeu** ne sont pas touchées : un fondu de mort de 2 s est accordé à
+un fait de jeu, pas à un rythme d'interface.
+
+#### Ce qui reste dû sur ce lot
+
+- **Le rendu n'a pas encore été jugé à l'œil sur tous les écrans.** La planche de
+  contact a été passée (voir plus bas) ; les écrans de salon et d'appariement en
+  sont volontairement absents, y entrer ouvrant de vrais salons EOS.
+- **`light_textures.gd` garde ses `Color(1, 1, 1)`, et ce n'est pas un oubli** :
+  ce sont des **masques** multipliés par la teinte de la lumière qui les porte.
+  Y mettre le blanc cassé teinterait deux fois. La règle porte sur ce que le
+  joueur lit comme une couleur, pas sur un facteur neutre — même chose pour
+  `modulate = Color.WHITE`, qui veut dire « aucune teinte ».
+
+### DA1 — le détail des items
+
+- **DA1.1 La bible visuelle d'une page** ✅ — `charte.gd` + `tools/test_charte.gd`.
+  Palette de 6-7 couleurs *nommées*
   avec un rôle chacune (le noir du monde, le blanc cassé de la lumière, l'or
   tungstène, le carmin du sang, couleur J1, couleur J2, accent d'interface),
   règles dures (jamais de blanc pur, jamais de primaire, saturation
@@ -4762,9 +4969,18 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 - **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
   reste trop longtemps sans jouer. *(S, après DA1.6)*
 
-**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
-DA1.4, DA1.8 (gratuits, sessions) en parallèle du lot audio DA3.1-DA3.3 (déjà
-câblé) et de la commande de DA2.1.
+~~**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
+DA1.4, DA1.8~~ — **fait le 2026-08-24**, avec DA1.1 et DA1.9.
+
+**Le prochain départ au meilleur ratio :** le lot audio **DA3.1-DA3.3** (déjà
+câblé de bout en bout, il n'attend que des fichiers) et la commande de **DA2.1**,
+le cookie de torche peint — c'est « la plus grosse ancre du jeu », et elle passe
+désormais sur une palette arrêtée, donc elle ne sera pas à refaire.
+
+**Et DA5.8 est devenu urgent plutôt qu'optionnel.** Les quinze effets de la vague
+M ont été écrits sous l'ancienne palette ; ils tournent maintenant sous la
+nouvelle sans avoir été jugés à l'œil un par un. Ils la servent ou ils la
+trahissent, et rien ne le dira tout seul.
 
 ---
 

@@ -12,6 +12,17 @@ class_name LightTextures
 static var _cache: Dictionary = {}
 
 ## Dégradé blanc opaque au centre, transparent au bord, de `size` pixels.
+##
+## ⚠️ **Les `Color(1, 1, 1)` de ce fichier échappent à la règle « jamais de blanc
+## pur », et ce n'est pas un oubli.** Ce ne sont pas des couleurs : ce sont des
+## MASQUES, multipliés par la teinte de la `Light2D` qui les porte. Y mettre le
+## blanc cassé de la charte teinterait une seconde fois une lumière déjà teintée
+## — la torche deviendrait deux fois plus chaude que voulu, et personne ne
+## saurait dire pourquoi.
+##
+## La règle porte sur ce que le joueur lit comme une couleur, pas sur un facteur
+## neutre. C'est la même distinction que `Color(1, 1, 1, 0)` employé comme
+## « transparent » plutôt que comme « blanc ».
 static func radial(size: int) -> GradientTexture2D:
 	if _cache.has(size):
 		return _cache[size]

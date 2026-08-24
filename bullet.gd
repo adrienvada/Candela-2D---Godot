@@ -1,6 +1,8 @@
 extends Node2D
 class_name Bullet
 
+const Charte := preload("res://charte.gd")
+
 var weapon: WeaponData
 var bounces_left: int = 0
 var is_replay: bool = false
@@ -36,7 +38,7 @@ func _ready():
 	# Add a dynamic point light to the bullet itself
 	light = PointLight2D.new()
 	light.name = "TrailLight"
-	light.color = Color(1.0, 0.9, 0.5)
+	light.color = Charte.AMBRE
 	light.energy = 50.0
 	# Texture partagée : chaque balle en allouait une identique de 128×128, soit
 	# cinq par volée de pompe.
@@ -50,8 +52,9 @@ func _ready():
 	var core = Line2D.new()
 	core.name = "Core"
 	core.width = 5.0
-	# Bright molten metal yellow, HDR values for intense glow
-	core.default_color = Color(2.5, 2.0, 0.5, 1.0)
+	# Métal en fusion : la teinte du feu, poussée hors du cube [0, 1] par le
+	# matériau additif — voir `Charte.AMBRE_INCANDESCENT`.
+	core.default_color = Color(Charte.AMBRE_INCANDESCENT, 1.0)
 	var mat := _additive_material()
 	core.material = mat
 	add_child(core)
@@ -60,7 +63,7 @@ func _ready():
 	var aura = Sprite2D.new()
 	aura.name = "Aura"
 	aura.texture = grad_tex # Reuse the gradient texture from the light
-	aura.modulate = Color(1.0, 0.9, 0.5, 0.6) # Match bullet color, slightly transparent
+	aura.modulate = Color(Charte.AMBRE, 0.6) # Même teinte que la balle, atténuée
 	aura.material = mat # Reuse the unshaded, additive material (mat is already BLEND_MODE_ADD)
 	aura.scale = Vector2(1.5, 1.5) # Reduced scale to make it less thick
 	add_child(aura)
@@ -183,7 +186,7 @@ func _physics_process(delta):
 ## est en espace local (-X = derrière, la rotation suit `direction`) et repart
 ## de zéro à chaque rebond, puisque `spawn_pos` est réarmé — fidèle au trajet.
 ## En manche réelle (`is_replay` faux) : rien, aucune information gratuite.
-const TRACE_COLOR := Color(1.0, 1.0, 1.0, 0.35)
+const TRACE_COLOR := Color(Charte.HALOGENE, 0.35)
 
 func _draw() -> void:
 	if not is_replay:
@@ -321,7 +324,7 @@ func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: 
 func _spawn_hit_effects(pos: Vector2):
 	AudioManager.play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
 	# Pure blood red
-	var blood_color = Color(0.9, 0.0, 0.0)
+	var blood_color = Charte.CARMIN
 	# Exit wound: large splatter forward
 	_spawn_blood_particles(pos, blood_color, 15, 200.0, 800.0, direction, 60.0)
 	# Entry wound: smaller splatter backward (bouncing off the shooter or walls behind)
@@ -339,7 +342,7 @@ func _spawn_hit_effects(pos: Vector2):
 func _spawn_wall_effects(pos: Vector2):
 	AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
 	# Sparks bounce BACKWARDS from the wall
-	_spawn_spark_particles(pos, Color(1.0, 0.8, 0.2), 12, 100.0, 450.0, -direction, 120.0)
+	_spawn_spark_particles(pos, Charte.AMBRE, 12, 100.0, 450.0, -direction, 120.0)
 
 
 func _spawn_damage_number(pos: Vector2, amount: int):
@@ -347,20 +350,27 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 	lbl.text = str(amount)
 	
 	var settings = LabelSettings.new()
+	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
 	# V4.5 — le poids du chiffre EST l'information : taille proportionnelle aux
-	# dégâts (20 px pour un effleurement, 44 px pour un carreau d'arbalète), or
-	# au seuil des gros coups — 50, un demi-joueur.
-	settings.font_size = int(lerpf(20.0, 44.0, clampf(amount / 80.0, 0.0, 1.0)))
+	# dégâts. Les deux bornes sont des crans de l'échelle et non des nombres
+	# choisis ici — un effleurement se lit comme une valeur du HUD, un carreau
+	# d'arbalète comme un verdict.
+	settings.font_size = int(lerpf(Charte.T_APPUI, Charte.T_VERDICT,
+		clampf(amount / 80.0, 0.0, 1.0)))
+	# Trois paliers, et ils empruntent la triade d'état à l'envers : ce qui est
+	# bon pour celui qui frappe est mauvais pour celui qui encaisse. Le gros coup
+	# monte en ambre — 50, un demi-joueur —, le coup moyen en rouge, le reste
+	# reste chaud sans crier.
 	if amount >= 50:
-		settings.font_color = Color(1.0, 0.85, 0.2)
+		settings.font_color = Charte.AMBRE
 	elif amount >= 40:
-		settings.font_color = Color(1.0, 0.2, 0.2)
+		settings.font_color = Charte.ROUGE
 	else:
-		settings.font_color = Color(1.0, 0.7, 0.2)
+		settings.font_color = Charte.HALOGENE
 	settings.outline_size = 8
-	settings.outline_color = Color.BLACK
+	settings.outline_color = Charte.NOIR
 	settings.shadow_size = 4
-	settings.shadow_color = Color(0, 0, 0, 0.6)
+	settings.shadow_color = Color(Charte.NOIR, 0.6)
 	settings.shadow_offset = Vector2(2, 2)
 	
 	lbl.label_settings = settings

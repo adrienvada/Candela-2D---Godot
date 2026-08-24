@@ -16,6 +16,8 @@
 class_name MapGallery
 extends Control
 
+const Charte := preload("res://charte.gd")
+
 ## Émis quand le joueur choisit une carte (la sélection est déjà appliquée à MapData).
 signal map_chosen(map_id: String)
 ## Émis juste avant de basculer vers l'éditeur de cartes.
@@ -25,11 +27,11 @@ const TILE_SIZE := Vector2(160, 160)
 const THUMB_PX := 96
 const TILE_GAP := 16
 
-const COLOR_P1 := Color(0.0, 0.94, 1.0)
-const COLOR_P2 := Color(1.0, 0.0, 0.33)
-const COLOR_DIM := Color(0.52, 0.55, 0.63)
-const COLOR_OK := Color(0.35, 1.0, 0.6)
-const COLOR_ERROR := Color(1.0, 0.35, 0.45)
+const COLOR_P1 := Charte.BLEU
+const COLOR_P2 := Charte.ROUGE
+const COLOR_DIM := Charte.DIM
+const COLOR_OK := Charte.ETAT_OK
+const COLOR_ERROR := Charte.ETAT_FAUTE
 
 ## Délai avant qu'un « CONFIRMER ? » de suppression ne redevienne « SUPPRIMER ».
 const DELETE_CONFIRM_DELAY := 3.0
@@ -86,7 +88,7 @@ func _build() -> void:
 
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_theme_constant_override("separation", 16)
+	root.add_theme_constant_override("separation", Charte.GAP_S)
 	add_child(root)
 
 	root.add_child(_build_header())
@@ -108,7 +110,7 @@ func _build() -> void:
 	_empty_label = Label.new()
 	_empty_label.text = "Aucune carte pour l'instant — créez-en une."
 	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_empty_label.add_theme_font_size_override("font_size", 14)
+	_empty_label.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	_empty_label.add_theme_color_override("font_color", COLOR_DIM)
 	_empty_label.hide()
 	root.add_child(_empty_label)
@@ -125,13 +127,13 @@ func _build_header() -> Control:
 	var hint := Label.new()
 	hint.text = "La carte choisie reste active toute la session"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", Charte.T_MENTION)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	return hint
 
 func _build_import_row() -> Control:
 	_import_row = HBoxContainer.new()
-	_import_row.add_theme_constant_override("separation", 8)
+	_import_row.add_theme_constant_override("separation", Charte.GAP_XS)
 	_import_row.hide()
 
 	_import_field = LineEdit.new()
@@ -154,13 +156,13 @@ func _build_import_row() -> Control:
 func _build_actions() -> Control:
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 16)
+	actions.add_theme_constant_override("separation", Charte.GAP_S)
 
 	_btn_import = _make_action_button("IMPORTER UN CODE", COLOR_P1)
 	_btn_import.pressed.connect(_open_import)
 	actions.add_child(_btn_import)
 
-	_btn_share = _make_action_button("PARTAGER", Color.WHITE)
+	_btn_share = _make_action_button("PARTAGER", Charte.HALOGENE)
 	_btn_share.pressed.connect(_share_selected)
 	actions.add_child(_btn_share)
 
@@ -184,9 +186,9 @@ func _build_toast() -> Control:
 	_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.1, 0.96)
+	style.bg_color = Color(Charte.SURFACE, 0.96)
 	style.set_border_width_all(1)
-	style.border_color = Color(0.35, 0.38, 0.45)
+	style.border_color = Charte.ACIER * 0.5
 	style.set_corner_radius_all(8)
 	style.content_margin_left = 16
 	style.content_margin_right = 16
@@ -195,7 +197,7 @@ func _build_toast() -> Control:
 	_toast_panel.add_theme_stylebox_override("panel", style)
 
 	_toast_label = Label.new()
-	_toast_label.add_theme_font_size_override("font_size", 13)
+	_toast_label.add_theme_font_size_override("font_size", Charte.T_MENTION)
 	_toast_panel.add_child(_toast_label)
 
 	return _toast_panel
@@ -206,9 +208,9 @@ func _build_toast() -> Control:
 
 func _build_styles() -> void:
 	_style_normal = StyleBoxFlat.new()
-	_style_normal.bg_color = Color(0.05, 0.055, 0.075, 0.92)
+	_style_normal.bg_color = Charte.SURFACE
 	_style_normal.set_border_width_all(2)
-	_style_normal.border_color = Color(0.18, 0.19, 0.24)
+	_style_normal.border_color = Charte.LINE
 	_style_normal.set_corner_radius_all(10)
 	_style_normal.content_margin_left = 8
 	_style_normal.content_margin_right = 8
@@ -216,12 +218,12 @@ func _build_styles() -> void:
 	_style_normal.content_margin_bottom = 8
 
 	_style_hover = _style_normal.duplicate() as StyleBoxFlat
-	_style_hover.border_color = Color(0.55, 0.6, 0.7)
-	_style_hover.bg_color = Color(0.08, 0.09, 0.12, 0.96)
+	_style_hover.border_color = Charte.ACIER * 0.8
+	_style_hover.bg_color = Color(Charte.SURFACE * 1.5, 0.96)
 
 	_style_selected = _style_normal.duplicate() as StyleBoxFlat
 	_style_selected.border_color = COLOR_P1
-	_style_selected.bg_color = Color(0.04, 0.1, 0.13, 0.96)
+	_style_selected.bg_color = Color(Charte.BLEU * 0.13, 0.96)
 	_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.35)
 	_style_selected.shadow_size = 8
 
@@ -229,10 +231,10 @@ func _make_action_button(label: String, accent: Color) -> Button:
 	var btn := Button.new()
 	btn.text = label
 	btn.custom_minimum_size = Vector2(0, 40)
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.add_theme_font_size_override("font_size", Charte.T_COURANT)
 
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.05, 0.055, 0.075, 0.92)
+	normal.bg_color = Charte.SURFACE
 	normal.set_border_width_all(2)
 	normal.border_color = Color(accent.r, accent.g, accent.b, 0.45)
 	normal.set_corner_radius_all(8)
@@ -250,13 +252,13 @@ func _make_action_button(label: String, accent: Color) -> Button:
 
 	var pressed := normal.duplicate() as StyleBoxFlat
 	pressed.bg_color = Color(accent.r, accent.g, accent.b, 0.3)
-	pressed.border_color = Color.WHITE
+	pressed.border_color = Charte.HALOGENE
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.border_color = Color(0.16, 0.17, 0.2)
+	disabled.border_color = Charte.LINE * 0.85
 	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Color(0.32, 0.33, 0.38))
+	btn.add_theme_color_override("font_disabled_color", Charte.DIM * 0.68)
 
 	btn.pressed.connect(_press_feedback.bind(btn))
 	return btn
@@ -268,7 +270,7 @@ func _press_feedback(control: Control) -> void:
 	control.pivot_offset = control.size / 2.0
 	var tween := create_tween()
 	tween.tween_property(control, "scale", Vector2(0.94, 0.94), 0.06)
-	tween.tween_property(control, "scale", Vector2.ONE, 0.14) \
+	tween.tween_property(control, "scale", Vector2.ONE, Charte.D_MOYEN) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ---------------------------------------------------------------------------
@@ -321,7 +323,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	var box := VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	tile.add_child(box)
 
 	var thumb := TextureRect.new()
@@ -337,7 +339,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	var name_label := Label.new()
 	name_label.text = String(entry["name"])
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.clip_text = true
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -346,7 +348,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	var meta := Label.new()
 	meta.text = "%d×%d" % [grid_size.x, grid_size.y]
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	meta.add_theme_font_size_override("font_size", 11)
+	meta.add_theme_font_size_override("font_size", Charte.T_MENTION)
 	meta.add_theme_color_override("font_color", COLOR_DIM)
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(meta)
@@ -354,9 +356,9 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	var badge := Label.new()
 	badge.text = "OFFICIELLE" if source == "builtin" else "PERSO"
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.add_theme_font_size_override("font_size", 10)
+	badge.add_theme_font_size_override("font_size", Charte.T_MENTION)
 	badge.add_theme_color_override("font_color",
-		Color(1.0, 0.8, 0.0) if source == "builtin" else COLOR_P2)
+		Charte.AMBRE if source == "builtin" else COLOR_P2)
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(badge)
 
@@ -369,14 +371,14 @@ func _make_create_tile() -> Button:
 	tile.tooltip_text = "Créer une nouvelle carte dans l'éditeur"
 
 	var dashed := _style_normal.duplicate() as StyleBoxFlat
-	dashed.bg_color = Color(0.03, 0.035, 0.05, 0.7)
-	dashed.border_color = Color(0.35, 0.38, 0.45)
+	dashed.bg_color = Color(Charte.SURFACE * 0.6, 0.7)
+	dashed.border_color = Charte.ACIER * 0.5
 	tile.add_theme_stylebox_override("normal", dashed)
 	tile.add_theme_stylebox_override("focus", dashed)
 
 	var hover := dashed.duplicate() as StyleBoxFlat
-	hover.border_color = Color(1.0, 0.8, 0.0)
-	hover.bg_color = Color(0.1, 0.08, 0.02, 0.9)
+	hover.border_color = Charte.AMBRE
+	hover.bg_color = Color(Charte.AMBRE * 0.1, 0.9)
 	tile.add_theme_stylebox_override("hover", hover)
 	tile.add_theme_stylebox_override("pressed", hover)
 
@@ -384,21 +386,21 @@ func _make_create_tile() -> Button:
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 8)
+	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	tile.add_child(box)
 
 	var plus := Label.new()
 	plus.text = "+"
 	plus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	plus.add_theme_font_size_override("font_size", 48)
-	plus.add_theme_color_override("font_color", Color(1.0, 0.8, 0.0))
+	plus.add_theme_font_size_override("font_size", Charte.T_VERDICT)
+	plus.add_theme_color_override("font_color", Charte.AMBRE)
 	plus.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(plus)
 
 	var label := Label.new()
 	label.text = "CRÉER"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(label)
 
@@ -557,16 +559,16 @@ func _toast(message: String, tint: Color) -> void:
 		_toast_tween.kill()
 	_toast_panel.modulate.a = 0.0
 	_toast_tween = create_tween()
-	_toast_tween.tween_property(_toast_panel, "modulate:a", 1.0, 0.12)
+	_toast_tween.tween_property(_toast_panel, "modulate:a", 1.0, Charte.D_MOYEN)
 	_toast_tween.tween_interval(TOAST_DURATION)
-	_toast_tween.tween_property(_toast_panel, "modulate:a", 0.0, 0.35)
+	_toast_tween.tween_property(_toast_panel, "modulate:a", 0.0, Charte.D_LONG)
 
 func _process(delta: float) -> void:
 	# Liseré néon animé sur la carte sélectionnée.
 	_pulse += delta
 	if _style_selected != null:
 		var wave := 0.5 + 0.5 * sin(_pulse * 4.0)
-		_style_selected.border_color = COLOR_P1.lerp(Color.WHITE, 0.4 * wave)
+		_style_selected.border_color = COLOR_P1.lerp(Charte.HALOGENE, 0.4 * wave)
 		_style_selected.shadow_size = int(roundf(lerpf(6.0, 14.0, wave)))
 		_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.2 + 0.3 * wave)
 

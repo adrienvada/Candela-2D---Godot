@@ -1,6 +1,8 @@
 class_name MenuTracer
 extends Control
 
+const Charte := preload("res://charte.gd")
+
 ## M8 — Le départ au tir. Vague M, « la vitrine ».
 ##
 ## Presser une entrée **lanceur** — le style plein, le geste qui engage une
@@ -51,7 +53,7 @@ var _intensite: float = 1.0
 var _t: float = -1.0
 var _origine: Vector2 = Vector2.ZERO
 var _sens: float = 1.0
-var _teinte: Color = Color.WHITE
+var _teinte: Color = MenuTheme.ACCENT
 
 func _init() -> void:
 	name = "TraceanteMenu"
@@ -112,12 +114,12 @@ func _draw() -> void:
 		var c := _teinte
 		c.a = 0.34 * (1.0 - part) * mort * _intensite
 		draw_line(queue, tete, c, 1.0 + 7.0 * part)
-	draw_line(queue, tete, Color(1.0, 1.0, 1.0, 0.95 * mort * _intensite), 2.0)
+	draw_line(queue, tete, Color(Charte.HALOGENE, 0.95 * mort * _intensite), 2.0)
 
 	# L'étoile de bouche reste au départ : c'est la marque du coup, pas la balle.
 	if _t <= BOUCHE:
 		var eclat := 1.0 - _t / BOUCHE
-		var blanc := Color(1.0, 1.0, 1.0, 0.85 * eclat * _intensite)
+		var blanc := Color(Charte.HALOGENE, 0.85 * eclat * _intensite)
 		for i in BRANCHES:
 			var angle := TAU * float(i) / float(BRANCHES)
 			var rayon := RAYON_BOUCHE * eclat * (0.55 if i % 2 == 1 else 1.0)

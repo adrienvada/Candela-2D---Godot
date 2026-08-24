@@ -235,6 +235,45 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — session « direction artistique », socle DA1
+
+**Livré : DA1.1, DA1.2, DA1.3, DA1.4, DA1.8, DA1.9.** Fichier neuf `charte.gd`
+(la bible : couleurs, échelle typographique, grille, courbes) et sa suite
+`tools/test_charte.gd`, ajoutée au lanceur. Deux fontes OFL dans
+`assets/fonts/` avec leurs licences. Détail et *pourquoi* dans `docs/ROADMAP.md`,
+section « Chantier direction artistique ».
+
+**Fichiers touchés — beaucoup, et dans les deux domaines.** La passe de palette et
+la passe typographique traversent par nature tout le dépôt : `ui.gd`, les
+`screen_*.gd`, `menu_*.gd`, `map_*.gd` (domaine menus) **et** `player.gd`,
+`bullet.gd`, `blood_stain.gd`, `footprint.gd`, `candela_tileset.gd`,
+`weapon_data.gd`, `light_textures.gd`, `training_target*.gd`, `kill_shockwave.gd`,
+`game_state.gd` (domaine game feel). **`ListAgents` ne voyait aucune autre session
+au moment d'écrire**, et le travail était demandé explicitement par Adrien comme
+un lot transverse. Si une session « game feel » reprend : les changements y sont
+mécaniques (une couleur littérale → une couleur nommée), aucun comportement n'a
+été touché — sauf les deux points ci-dessous, qui sont signalés exprès.
+
+**Deux changements qui ne sont PAS cosmétiques, à connaître avant de relire :**
+
+1. **`Charte.ADVERSAIRE` remplace `Color(0.7, 0.7, 0.7)` dans `player.gd`.** C'est
+   la couleur à laquelle on voit son adversaire dans le noir, donc de l'équité.
+   Sa **luminance est identique** au gris qu'elle remplace — le coefficient est
+   résolu, pas choisi — et `test_charte` compare les deux. Ne pas la retoucher à
+   l'œil.
+2. **`ambient_light.color` n'était jamais posé dans `player.gd`**, donc blanc par
+   défaut : la seule lumière du jeu qui ne venait ni d'un feu ni d'un filament,
+   sans que personne l'ait décidé. Elle est maintenant en `HALOGENE`. C'est un
+   changement d'apparence en manche, assumé et signalé.
+
+**Signalé, pas corrigé (hors périmètre) :** `player.gd` porte toujours ses 170 et
+85 BPM en dur, alors que `AudioManager.BPM` existe — le piège « le tempo est
+recopié à trois endroits » est donc toujours ouvert.
+
+**Reste dû :** DA5.8 — les quinze effets de la vague M ont été écrits sous
+l'ancienne palette et n'ont pas été jugés un par un sous la nouvelle.
+
+
 ### 2026-08-19 — deux propriétés du dispositif, apprises en le pratiquant
 
 **1. Dans un arbre partagé, le hasard de qui commite en premier décide de qui
