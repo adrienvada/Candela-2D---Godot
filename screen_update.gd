@@ -28,7 +28,7 @@ extends HubScreen
 ## Quand la version publiée n'a pas le même protocole, l'écran écrit ce qui ne
 ## marchera plus — trouver un adversaire — et rien de plus. Aucun menu n'est
 ## verrouillé, aucune fenêtre modale n'attend un clic, le jeu ne se ferme pas.
-## C'est une décision d'Adrien (2026-08-18) : ce qui a cessé de fonctionner a
+## C'est une décision d'Adrien (2026-08-24) : ce qui a cessé de fonctionner a
 ## cessé tout seul, et une gêne annoncée vaut mieux qu'une panne organisée.
 
 const TITRE := "Mise à jour"

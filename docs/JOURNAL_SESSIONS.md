@@ -24,7 +24,7 @@ par sujet impraticable.
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
-| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-18**, plus personne dessus |
+| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »

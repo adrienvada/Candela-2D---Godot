@@ -49,7 +49,7 @@ décision se juge à cette double aune.
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
 | 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
-| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-18** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
+| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-24** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -2258,7 +2258,7 @@ intention.
 
 ## Phase 9 — Mise à jour du jeu installé 🟡 ÉCRITE, PAS ENCORE ÉPROUVÉE
 
-Demandée par Adrien le 2026-08-18 : « un endroit du menu où je clique sur mettre
+Demandée par Adrien le 2026-08-24 : « un endroit du menu où je clique sur mettre
 à jour, et une mise à jour automatique se lance ». Trois façons de faire ont été
 comparées ; celle-ci — remplacement du bundle depuis les Releases GitHub, avec un
 manifeste conçu dès le premier jour pour accueillir aussi les correctifs légers —
@@ -2274,7 +2274,7 @@ jour » mais **combien de temps deux versions coexistent dans la nature**. C'est
 ce qui justifie le chemin `.pck` : quatre mégaoctets referment la fracture en
 trois secondes là où cent la laissent ouverte une soirée.
 
-### Le niveau d'obligation — tranché par Adrien le 2026-08-18 : refus poli
+### Le niveau d'obligation — tranché par Adrien le 2026-08-24 : refus poli
 
 Rien n'est bloqué. Le jeu démarre, l'écran scindé, l'entraînement et l'éditeur de
 cartes fonctionnent avec une version de retard. La seule chose qui cesse —
@@ -2294,7 +2294,7 @@ cent mégaoctets est un jeu qu'on n'ouvre pas ce soir-là.
 | `screen_update.gd` + entrée du hub | Le bouton demandé |
 | `tools/fabrique_manifeste.sh` | Le manifeste n'invente rien : version, protocole et empreintes sont lus aux sources |
 | `.github/workflows/release.yml` | Sur tag seulement : cohérence tag/version, suites vertes, export, signature, publication |
-| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. Le lanceur compte désormais 37 exécutions (33 suites en `--script`, quatre bancs en scène) |
+| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. `tools/test_autoloads.gd` protège l'ordre des autoloads, que `project.godot` ne peut pas expliquer lui-même. Le lanceur compte désormais 39 exécutions (35 suites en `--script`, quatre bancs en scène) |
 
 ### Ce qui a été vérifié pour de vrai, et ce qui ne l'a pas été
 
@@ -2363,9 +2363,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
-| **Mise à jour : refus poli, jamais forcée** (2026-08-18, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
-| **Rien ne s'installe sans signature valide** (2026-08-18) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
-| **Publier est un geste humain** (2026-08-18) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
+| **Mise à jour : refus poli, jamais forcée** (2026-08-24, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
+| **Rien ne s'installe sans signature valide** (2026-08-24) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
+| **Publier est un geste humain** (2026-08-24) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
 | **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
 
 ---
@@ -2695,6 +2695,27 @@ deux options, c'est **la seule qui tienne**.
 **Un commentaire dans un fichier regénéré est un commentaire qu'on écrit pour
 soi.** L'explication a été déplacée dans `charte.gd`, à côté de `CHEMIN_UI`.
 Vaut pour `project.godot`, les `.import`, et tout ce que l'éditeur réécrit.
+
+**Complément mesuré le 2026-08-24, parce que la portée exacte change ce qu'on en
+fait.** Le coupable est bien **l'éditeur**, et lui seul : `ProjectSettings.save()`
+appelé par l'extension `godot_ai` (`plugin.gd`, `input_handler.gd`). Trois
+lancements ont été chronométrés sur le même fichier, commentaires en place :
+`--headless --quit` les laisse **intacts**, `--headless --import` aussi, et
+`./tools/run_suites.sh` en entier — trente-sept exécutions, 196 s — **également**.
+La boucle de test ne détruit donc rien ; ouvrir le projet dans l'éditeur, si.
+Le dire précisément évite d'aller chercher un coupable dans les suites, et évite
+surtout de croire qu'une explication ne survit à rien.
+
+**Et la conclusion va plus loin que le déménagement.** Un commentaire, où qu'il
+vive, n'empêche personne de « ranger » les autoloads par ordre alphabétique dans
+six mois. Les deux contraintes d'ordre de `project.godot` sont donc devenues un
+banc — `tools/test_autoloads.gd` : **`PatchLoader` en premier** (un correctif
+`.pck` monté après un autoload ne le recouvre plus, sans erreur) et
+**`GameSettings` après `InputSetup`** (sinon les liaisons par défaut recouvrent
+le remappage du joueur, perdu à chaque lancement, en silence). Le banc a été
+vérifié **en cassant les deux règles l'une après l'autre** : chacune rend le lot
+rouge avec la marche à suivre, et la remise en place le rend vert. La seconde
+règle vivait dans `CLAUDE.md` depuis l'origine et n'était protégée par rien.
 
 ### Une propriété qui se pose sans effet et sans erreur (2026-08-24)
 
@@ -3593,7 +3614,7 @@ quoi : le message liste des chaînes vides. Passer par
   Windows produit `Candela.exe` dans un dossier `Candela`. Le manifeste annonce
   cette racine et le jeu la vérifie **avant** de remplacer quoi que ce soit — une
   racine annoncée à tort ne se découvrirait qu'après la fermeture du jeu, au seul
-  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-18.
+  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-24.
 - **Le paquet macOS est universel, l'annoncer « x86_64 » le condamne.** Godot
   exporte un binaire x86_64 + arm64 ; un manifeste qui déclare une architecture
   ferait refuser le paquet par tous les Mac Apple Silicon, avec pour seul symptôme

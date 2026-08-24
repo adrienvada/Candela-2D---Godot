@@ -268,7 +268,7 @@ func _test_choix_paquet() -> void:
 # ---------------------------------------------------------------------------
 
 func _test_refus_poli() -> void:
-	print("\n[Refus poli — décision d'Adrien, 2026-08-18]")
+	print("\n[Refus poli — décision d'Adrien, 2026-08-24]")
 	var m: Object = _lire(_base())
 	_check("même protocole : rien à dire", m.message_en_ligne(2) == "")
 	var msg: String = m.message_en_ligne(3)
