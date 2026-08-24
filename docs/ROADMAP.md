@@ -2482,6 +2482,52 @@ répondre) et l'**ordre** des couches du clip « match » — 0 base, 1 batterie
 2 arpège, 3 pouls. `set_music_intensity` et `update_low_health` les adressent par
 indice. `tools/test_musique.gd` tient les deux.
 
+### Conserver l'énergie anneau par anneau SATURE une planche directionnelle (2026-08-25)
+
+Le mode `--energie radial` de la cuisson force chaque anneau du masque à porter
+la même lumière que le dégradé qu'il remplace. C'est exactement ce qu'il faut
+pour un halo — la portée ne bouge alors pas d'un pixel, mesuré à **1,1 %** près
+sur les huit masques de DA2.2.
+
+Appliqué aux trois frames du flash de bouche, il a **écrêté jusqu'à 3 997 pixels,
+soit 8 % du disque**. La cause n'est pas un réglage : c'est que la référence est
+isotrope et la planche ne l'est pas. Demander à un anneau dont toute la matière
+est d'un côté de porter le total d'un anneau uniforme ne laisse qu'une issue au
+côté clair — dépasser 1,0, et se faire raboter. **La direction se paie en
+saturation**, et la saturation détruit précisément la structure qu'on est venu
+chercher.
+
+Recuit en `--energie libre` : zéro écrêtage, et l'enveloppe temporelle survit
+d'elle-même (44 %, 42 %, 36 % de lumière au fil des trois frames) au lieu d'être
+aplatie par la normalisation. Le prix est un flash plus sombre que le disque
+d'origine — mais **la luminosité d'une lumière est un réglage de code**
+(`muzzle_flash_intensity`, le tween d'énergie), pas une propriété de sa texture.
+
+La règle : **`radial` pour ce qui est rond, `libre` pour ce qui pointe.**
+
+### Un repli qui IMITE ce qu'il remplace ment sur la nature de la panne (2026-08-25)
+
+`tools/apercu_torche.gd` se rabattait sur le dégradé procédural quand un masque
+peint était introuvable. Silencieusement. Or un PNG cuit mais **pas encore
+importé par Godot est invisible à `ResourceLoader`** — c'est l'état normal d'un
+asset frais, pas une anomalie.
+
+Adrien a donc appuyé sur les touches de comparaison et vu la même image à chaque
+fois, puisque le repli était exactement la chose que les masques remplacent. Le
+seul diagnostic possible depuis l'écran était **« les touches ne marchent pas »**
+— un défaut d'entrée, à l'autre bout de la chaîne de la vraie cause. Deux
+hypothèses fausses ont été explorées avant de mesurer.
+
+Un repli est légitime : sans lui, une texture nulle rend un **carré** lumineux,
+pire que l'ancien rendu. Ce qui ne l'est pas, c'est qu'il se taise. Il se nomme
+désormais en clair dans l'étiquette du banc, avec la commande qui répare
+(`godot --headless --path . --import`), et `LightTextures.masque()` lève un
+`push_error` avant de rendre `null`.
+
+**Le critère général : un repli doit être DISCERNABLE de la réussite.** Celui
+qui produit le même résultat visible que le chemin nominal ne dégrade pas le
+service, il déplace le diagnostic.
+
 ---
 
 ## Pièges connus — ne pas les redécouvrir
@@ -6197,11 +6243,24 @@ un fait de jeu, pas à un rythme d'interface.
   `WeaponData.echelle_torche()`, qui rend l'empreinte au sol indépendante de la
   résolution du fichier — voir « Pièges connus », *la résolution d'une texture
   de lumière décide de sa PORTÉE*. *(C, ou G en CC0 retouché)*
-- **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
-  d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
-  *(C : 3-4 textures)*
-- **DA2.3 Le muzzle flash en frames** — 2-3 images peintes au lieu du disque
-  lumineux : l'événement le plus vu après la torche. *(C : 1 planche)*
+- **DA2.2 Les halos peints** ✅ **livrée le 2026-08-25** — trois masques choisis
+  par Adrien dans `tools/apercu_torche.tscn` : **`retrodiffusion_corona`** (le
+  halo de corps, 256²), **`ambiante_braise`** (la lueur personnelle, 150²),
+  **`eclat_poudre`** (balles, impacts, particules, sept postes d'empreintes
+  différentes). Cuits par `tools/fabrique_cookies.gd --mode radial`, posés par
+  `LightTextures.poser()`, tenus par `tools/test_lumieres.gd` (51 contrôles).
+  L'échantillonnage y est **cartésien et non polaire** : un halo couvre 360°, et
+  en polaire ses deux bords se rejoindraient le long d'un rayon en laissant une
+  couture visible. ⚠️ **La traînée de balle (`radial_tight`) reste un dégradé** —
+  aucune planche n'a été choisie pour elle, c'est la quatrième texture que la
+  ligne « 3-4 » prévoyait. *(C : 3-4 textures)*
+- **DA2.3 Le muzzle flash en frames** ✅ **livrée le 2026-08-25** — trois images
+  peintes (famille **FB** : amorce, épanouissement, dissipation), déroulées
+  par-dessus la descente d'énergie qui reste seule maîtresse de la luminosité.
+  **Trois est le nombre que la durée permet, pas un choix esthétique** : à 0,1 s
+  et 60 Hz chaque image tient deux images de rendu, à 0,05 s (l'arbalète) une
+  seule ; au-delà, une image ne serait jamais affichée. Cuites en **énergie
+  libre** et non radiale — voir « Pièges connus ». *(C : 1 planche)*
 - **DA2.4 Le sprite du joueur** — personnage top-down lisible en silhouette
   (tête, épaules, arme), idle + 4-6 frames de marche. Un personnage incarne le
   duel ; une forme fait un diagramme. *(C)*

@@ -369,17 +369,17 @@ func _ready():
 	body_light.shadow_item_cull_mask = 1 | 2 # Les murs (1) bloquent la rétrodiffusion vers les ennemis (2)
 	body_light.range_item_cull_mask = 2 | 4  # Éclaire le joueur local (4) ET l'écran ennemi (2) quand en ligne de vue
 	
-	var b_grad = Gradient.new()
-	b_grad.set_color(0, Color(Charte.HALOGENE, 1.0))
-	b_grad.set_color(1, Color(Charte.HALOGENE, 0.0))
-	var b_tex = GradientTexture2D.new()
-	b_tex.gradient = b_grad
-	b_tex.fill = GradientTexture2D.FILL_RADIAL
-	b_tex.fill_from = Vector2(0.5, 0.5)
-	b_tex.fill_to = Vector2(0.5, 0.0)
-	b_tex.width = 256
-	b_tex.height = 256
-	body_light.texture = b_tex
+	# DA2.2 — le halo peint remplace le dégradé parfait.
+	#
+	# ⚠️ **La teinte DÉMÉNAGE de la texture vers la lumière.** L'ancien dégradé
+	# portait `HALOGENE` dans ses deux arrêts de couleur, et `body_light.color`
+	# restait blanc. Un masque peint est blanc par construction — il ne porte que
+	# de l'alpha —, donc sans cette ligne la rétrodiffusion virerait au blanc
+	# franc, la seule lumière du jeu qui ne viendrait ni d'un feu ni d'un
+	# filament. Même correction que celle déjà faite sur `ambient_light`.
+	body_light.color = Charte.HALOGENE
+	LightTextures.poser(body_light, LightTextures.RETRODIFFUSION,
+		LightTextures.EMPREINTE_RETRODIFFUSION)
 	body_light.energy = 0.6
 	body_light.position = Vector2(18, 0)
 	
@@ -389,21 +389,10 @@ func _ready():
 		equip_weapon(WeaponData.new())
 	
 	ambient_light = PointLight2D.new()
-	var a_grad = Gradient.new()
-	# Masque d'atténuation, pas une couleur : la teinte est posée sur la lumière
-	# elle-même, ligne plus bas. Voir la note de `light_textures.gd` — teinter
-	# les deux reviendrait à chauffer la lumière deux fois.
-	a_grad.set_color(0, Color(1, 1, 1, 1))
-	a_grad.set_color(1, Color(1, 1, 1, 0))
-	var a_tex = GradientTexture2D.new()
-	a_tex.gradient = a_grad
-	a_tex.fill = GradientTexture2D.FILL_RADIAL
-	a_tex.fill_from = Vector2(0.5, 0.5)
-	a_tex.fill_to = Vector2(0.5, 0.0)
-	a_tex.width = 150
-	a_tex.height = 150
-	
-	ambient_light.texture = a_tex
+	# DA2.2 — masque peint. Sa teinte était déjà sur la lumière et pas dans la
+	# texture, donc rien d'autre ne bouge ici.
+	LightTextures.poser(ambient_light, LightTextures.AMBIANTE,
+		LightTextures.EMPREINTE_AMBIANTE)
 	# Sa couleur n'était jamais posée, donc blanche par défaut : la seule lumière
 	# du jeu qui ne venait ni d'un feu ni d'un filament, sans que personne l'ait
 	# décidé.
@@ -460,21 +449,10 @@ func _ready():
 		aim_line.visibility_layer = 2
 	else:
 		aim_line.visibility_layer = 4
-	var mf_grad = Gradient.new()
-	mf_grad.set_color(0, Color.WHITE)
-	var c_end = Color.WHITE
-	c_end.a = 0.0
-	mf_grad.set_color(1, c_end)
-	var mf_tex = GradientTexture2D.new()
-	mf_tex.gradient = mf_grad
-	mf_tex.fill = GradientTexture2D.FILL_RADIAL
-	mf_tex.fill_from = Vector2(0.5, 0.5)
-	mf_tex.fill_to = Vector2(1, 0.5)
-	mf_tex.width = 128
-	mf_tex.height = 128
-	
-	muzzle_flash.texture = mf_tex
-	muzzle_flash.texture_scale = 0.5
+	# DA2.3 — trois images peintes au lieu du disque. On pose la première ici ;
+	# `trigger_shoot_visuals()` déroule les deux autres.
+	LightTextures.poser(muzzle_flash, LightTextures.FLASH[0],
+		LightTextures.EMPREINTE_FLASH)
 	muzzle_flash.color = Charte.AMBRE
 	muzzle_flash.offset = Vector2.ZERO
 
@@ -1021,7 +999,19 @@ func trigger_shoot_visuals():
 	var tw = create_tween()
 	var flash_intensity = current_weapon.muzzle_flash_intensity if current_weapon else 1.0
 	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
+	# DA2.3 — la séquence se déroule PAR-DESSUS la descente d'énergie, qui reste
+	# seule maîtresse de la luminosité. Chaque image tient un tiers de la durée :
+	# à 0,1 s et 60 Hz cela fait deux images de rendu chacune, à 0,05 s
+	# (l'arbalète) une seule. **C'est le nombre que la durée permet, pas un choix
+	# esthétique** — au-delà de trois, une image ne serait jamais affichée.
+	LightTextures.poser(muzzle_flash, LightTextures.FLASH[0],
+		LightTextures.EMPREINTE_FLASH)
 	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
+	for i in range(1, LightTextures.FLASH.size()):
+		var chemin: String = LightTextures.FLASH[i]
+		tw.parallel().tween_callback(func():
+			LightTextures.poser(muzzle_flash, chemin, LightTextures.EMPREINTE_FLASH)
+		).set_delay(flash_duration * float(i) / float(LightTextures.FLASH.size()))
 	tw.tween_callback(func(): muzzle_flash.enabled = false)
 	
 	visual_reveal.color.a = 1.0
@@ -1054,7 +1044,7 @@ func trigger_shoot_visuals():
 	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
 	# rôle, ceci n'est que son écho au sol.
 	var ground_flash := PointLight2D.new()
-	ground_flash.texture = LightTextures.radial(200)
+	LightTextures.poser(ground_flash, LightTextures.ECLAT, 200.0)
 	ground_flash.color = Charte.AMBRE
 	ground_flash.energy = 1.2
 	ground_flash.shadow_enabled = false
@@ -1111,7 +1101,7 @@ func rpc_update_hp(new_hp: float, source_id: int):
 	var hit_light = PointLight2D.new()
 	# Texture blanche partagée, teintée par `color` : une 400×400 était allouée
 	# à chaque impact reçu.
-	hit_light.texture = LightTextures.radial(400)
+	LightTextures.poser(hit_light, LightTextures.ECLAT, 400.0)
 	# La lumière de l'impact est celle du sang, pas un rouge d'alerte : elle
 	# éclaire une blessure, elle ne signale pas un état.
 	hit_light.color = Charte.CARMIN
