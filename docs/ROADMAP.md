@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-24
+> Dernière mise à jour : 2026-08-25
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2531,6 +2531,35 @@ service, il déplace le diagnostic.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un son positionnel sans auditeur reste parfaitement audible (2026-08-25)
+
+Le jeu joue ses pas, ses tirs et ses impacts dans des `AudioStreamPlayer2D`
+depuis le premier jour, et **personne n'a jamais posé l'oreille**. Le défaut ne
+fait aucun bruit, au sens propre : Godot déclare la **racine** auditeur 2D par
+défaut, et sans caméra ni `AudioListener2D` il pose l'oreille au centre de
+l'écran virtuel — un point fixe du monde, hors de la carte. Tout continue de
+s'entendre, le panoramique bouge quand les sons bougent, aucune erreur, aucun
+test rouge. **Tout a l'air de marcher.**
+
+Ce qui le rend invisible à la relecture aussi : **le pool vit dans le mauvais
+monde.** Il est enfant de l'autoload, donc dans le `World2D` de la racine,
+tandis que le jeu vit dans celui du `SubViewport`. Or un `AudioStreamPlayer2D`
+ne s'adresse qu'aux viewports de **son** monde — poser un `AudioListener2D` sur
+le joueur ne changerait donc **rien du tout**, et on chercherait l'erreur dans
+l'auditeur, à l'autre bout de la chaîne de la vraie cause.
+
+Le contrôle qui tranche tient en une ligne et ne demande **aucun pilote audio** :
+`lecteur.get_world_2d() == vue_de_jeu.get_world_2d()`. C'est un fait de graphe
+de scène, pas un son : il se vérifie en headless, comme
+`tools/test_pool_sfx.gd` a su le faire pour l'arbitrage des voix.
+
+**La règle générale : un canal qui « marche » n'est pas un canal qui dit la
+vérité.** Troisième cas du dépôt, après les flux musicaux dits « vides » qui
+jouaient un timbre pendant deux mois et l'éblouissement branché sur une valeur
+qui ne montait jamais. Leur point commun n'est pas la nature du bug, c'est
+**une sortie plausible**. Ce qui les aurait attrapés n'est pas un test de plus :
+c'est de vérifier une fois ce que la sortie **veut dire**.
 
 ### Un `M` de `git status` ne dit pas à qui est la modification (2026-08-24)
 
@@ -6573,6 +6602,119 @@ trahissent, et rien ne le dira tout seul.
 
 ---
 
+## Chantier — la spatialisation du son (inscrit le 2026-08-25)
+
+**Le constat qui ouvre le chantier : le jeu n'a pas d'oreille.** Le son de
+manche est pourtant positionnel de bout en bout — `AudioManager` tient un pool
+de seize `AudioStreamPlayer2D`, les pas, les tirs et les impacts s'y jouent à
+leur position réelle, et les seize prises de tir sont **forcées en mono à
+l'import** précisément pour que la source reste un point (V4.1, *« savoir d'où
+vient le coup est l'information »*). Tout ce travail vise juste. **Rien
+n'écoute depuis la place du joueur.**
+
+Mesuré le 2026-08-25 en headless, sur l'arbre courant :
+
+```
+root.is_audio_listener_2d = true          ← le seul auditeur du jeu
+root.get_audio_listener_2d = <null>       ← aucun AudioListener2D nulle part
+root.canvas_transform      = identité     ← il ne suit rien
+p2d.world_2d == root.world_2d ? true      ← le pool vit dans le monde de la racine
+SubViewport neuf : world_2d == root ? false
+```
+
+Le pool est enfant de l'autoload, donc dans le `World2D` de la **racine** ; le
+jeu vit dans celui du `SubViewport`, où sont les caméras. Un
+`AudioStreamPlayer2D` ne s'adresse qu'aux viewports de **son** monde : les
+caméras de jeu ne l'entendent jamais. Reste la racine, sans caméra ni auditeur —
+Godot pose alors l'oreille au centre de l'écran virtuel, soit **(960, 540) en
+coordonnées monde, fixe**. Une carte 20×20 en tuiles de 35 px s'étend de −35 à
+735 px : **l'oreille est posée en dehors de la carte, et elle n'en bouge
+jamais.**
+
+Ce que ça produit, et qui ne se devine à aucun moment en jouant :
+
+- le panoramique dit **où le son est sur la carte**, pas où il est par rapport à
+  soi — deux joueurs aux deux bouts entendent le même panoramique du même pas ;
+- **avancer vers l'adversaire ne rend pas ses pas plus forts** ;
+- l'écart de volume d'un bout à l'autre de la carte vaut environ **2 dB**.
+
+Autrement dit, dans un jeu dont la proposition est « la seule information est la
+lumière », le second canal d'information n'est pas imprécis : **il est faux**,
+et il l'est d'une façon qui s'écoute comme un fonctionnement normal. Le piège
+est consigné à sa section.
+
+**Périmètre, décidé avec Adrien le 2026-08-25 : le 1v1 SANS écran partagé
+d'abord.** C'est le cas favorable, et il existe déjà — en ligne comme à
+l'entraînement, une seule vue est affichée. Une vue, un joueur local, une sortie
+stéréo : l'oreille a une place évidente. L'écran partagé se traite après (S6).
+
+Les sept items ne sont pas de même nature, et c'est ainsi qu'il faut les lire :
+**S1 est un défaut**, S2 et S4 sont des **réglages qui se jugent à l'oreille**,
+S3 et S7 sont des **arbitrages qui appartiennent à Adrien**, S5 est déjà écrit
+ailleurs (V5.12) et attend S1, S6 est hors périmètre.
+
+- **S1 — L'oreille rejoint le joueur.** *Bloquant : tout le reste est inaudible
+  sans lui.* Deux gestes qui ne valent que **pris ensemble** — sortir le pool du
+  monde de la racine (le poser dans le monde de la vue de jeu) et poser un
+  auditeur qui suive le joueur **local**. L'un sans l'autre ne s'entend pas :
+  deux mondes distincts ne s'écoutent pas, et un auditeur posé dans un monde que
+  le pool n'habite pas ne reçoit rien — c'est exactement l'impasse dans laquelle
+  ce défaut envoie celui qui le corrige de bonne foi. Fichiers :
+  `audio_manager.gd` et `game_state.gd`, tous deux au domaine « game feel ».
+  **Vérifiable en headless sans pilote audio** : égalité des `World2D` et
+  présence de l'auditeur sont des faits de graphe de scène, pas des sons.
+- **S2 — La distance redevient une information.** `max_distance` vaut 2000 px
+  pour une carte qui en fait 700 à 840. Même l'oreille bien posée, « collé à
+  moi » et « à l'autre bout de la carte » ne seraient séparés que d'environ
+  **3,7 dB** : ce n'est pas une distance, c'est une nuance de mixage. La portée
+  et la courbe (`attenuation`) se dérivent de la carte
+  (`grid_size × tile_size`), comme V5.12 dérive déjà sa réverb — un chiffre rond
+  écrit en dur redeviendrait faux à la première carte d'une autre taille. **Le
+  réglage final se juge à l'oreille, pas au calcul** : jalon humain, comme la
+  récupération d'éblouissement l'a été le 2026-08-24.
+- **S3 — Un mur étouffe.** Rien n'atténue aujourd'hui un son émis derrière un
+  mur, alors que le mur arrête la lumière **et** le flash de bouche. C'est la
+  seule asymétrie qui reste entre les deux canaux d'information du jeu. La
+  requête existe déjà et sert à l'éblouissement (`GameState._ligne_de_vue`) ;
+  elle coûterait une requête physique **par son joué**, et les sons se comptent
+  par dizaines à la seconde, pas par image. Deux points techniques à connaître
+  d'avance : le bus se choisit à l'instant du `play_sfx_2d` (un bus « occlus »
+  avec passe-bas et perte de niveau), et **`area_mask` vaut 0 sur les lecteurs
+  du pool** — donc aucune `Area2D` ne peut redéfinir leur bus tant que ce
+  masque n'est pas posé. ⚠️ **Change l'information disponible en manche : se
+  pose à Adrien, ne s'implémente pas d'office** — même règle que les items D.
+- **S4 — Le loin ne sonne pas comme le près.** `AudioStreamPlayer2D` n'offre pas
+  d'`attenuation_filter` (c'est du 3D) : un tir lointain est le même timbre en
+  plus faible, alors que l'oreille juge la distance au **timbre** avant le
+  volume. Deux voies exclusives : un passe-bas piloté par la distance sur un bus
+  dédié, ou le retour du découpage corps/queue que V4.1 a écarté — et qu'elle a
+  écarté en laissant la porte ouverte, mot pour mot : « le jour où l'on voudra un
+  rendu par distance […] il se ré-exporte ». Dépend de l'arbitrage S7.
+- **S5 — La réverb dit la salle** (= **V5.12**, déjà inscrite en vague 5, non
+  faite). Aujourd'hui : une réverb unique et figée sur le bus SFX
+  (`room_size` 0,06, wet 0,38), la même sur toutes les cartes. **À raccorder
+  APRÈS S1** : posée sur une spatialisation qui ne pointe sur personne, une
+  réverb dérivée de la carte ne s'entendrait que comme une couleur de plus. Son
+  prix est déjà payé — c'est pour elle que V4.1 a renoncé aux queues cuites dans
+  l'échantillon.
+- **S6 — L'écran partagé : deux joueurs, une seule sortie stéréo.** Hors
+  périmètre jusqu'à nouvel ordre (Adrien, 2026-08-25). La contrainte à garder
+  en tête pour ne pas la découvrir en implémentant S1 : en « 1v1 écrans
+  scindés », les deux joueurs partagent la même paire d'enceintes, donc **toute
+  oreille attachée à l'un désavantage l'autre**. Ce n'est pas un réglage, c'est
+  un arbitrage — et il ne se prend pas au détour d'un autre item.
+- **S7 — Ce que la 2D ne donnera pas, quoi qu'on fasse.** Le panoramique stéréo
+  n'encode que **X** : en vue de dessus, l'axe Y n'existe pas à l'oreille, il ne
+  se traduit qu'en volume. L'oreille rendra donc **un axe et une distance,
+  jamais un point** — à savoir avant de promettre « localiser l'adversaire au
+  son ». Si un point est voulu, il faut passer les sons de manche en
+  `AudioStreamPlayer3D` avec un Z fictif, ce qui apporte du même coup le
+  filtrage par distance (S4) et les zones de réverb (S5), et coûte la reprise de
+  tous les sites d'appel. **C'est une décision d'architecture, pas un réglage :
+  à trancher AVANT S2 et S4**, sous peine de les régler deux fois.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -6666,6 +6808,13 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 
 **Tout le code des phases 2 à 8 est livré.** Ce qui reste se range en trois tas,
 et un seul est du travail de session.
+
+> **Ajouté le 2026-08-25 — un quatrième tas, et ce n'est pas du polish :** la
+> **spatialisation du son** (section dédiée ci-dessus). Son premier item, S1,
+> est un **défaut structurel** — le jeu joue des sons positionnels sans avoir
+> jamais posé d'auditeur —, il vit dans `audio_manager.gd` et `game_state.gd`,
+> donc dans le domaine « game feel ». Deux de ses items (S3, S7) attendent un
+> arbitrage d'Adrien et **ne se commencent pas**.
 
 ### Le seul chantier de code ouvert
 
