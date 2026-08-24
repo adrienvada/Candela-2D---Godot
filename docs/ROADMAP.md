@@ -2336,6 +2336,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 |---|---|
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
+| **Le son reste en 2D, et un mur étouffera par la réverb** (2026-08-25, Adrien) | Deux arbitrages du chantier « spatialisation du son », pris le jour où il a été inscrit. **2D** : mesuré plutôt que supposé, `AudioStreamPlayer3D` ne donne **pas** de localisation supplémentaire — Godot ne fait aucun rendu binaural et la sortie est stéréo, donc la direction se réduit des deux côtés à un équilibre gauche/droite. Son seul gain réel est le passe-bas qui s'ouvre avec la distance. Or ce qui manque au jeu est la direction *relative*, que S1 et S2 rendent sans changer de nœud. **Réversible sans travail perdu tant que les sites d'appel ne passent qu'un `Vector2`** — c'est cette signature qu'il faut protéger, pas le type du nœud. **Le mur** : oui, il étouffe, et la formulation d'Adrien porte la mécanique — « naturellement par la réverb ». Ce n'est donc pas *ajouter* de la réverb quand c'est occulté (l'oreille entendrait un effet s'allumer), c'est **retirer le son direct et laisser ce qui réverbérait déjà** : le son passe dans la pièce d'à côté. Même geste que la torche, où l'on ne peint pas d'ombre mais retire de la lumière. Conséquence de jeu assumée : **cela ajoute de l'information**, un pas sourd disant « derrière un mur » et un pas net « ligne directe » — l'oreille se met à enseigner la carte. |
 | **L'artiste unique, c'est Adrien — et le procédé se choisit par famille d'asset** (2026-08-24, Adrien) | DA1.5 demandait « un artiste, un lot, un style » pour éviter que des sources dépareillées recréent l'incohérence que tout le chantier chasse. L'artiste unique étant Adrien, **le risque a changé de nature : il n'est plus entre personnes, il est entre outils.** Deux textures faites à trois mois d'écart par deux procédés différents jurent exactement comme deux artistes différents. La décision n'est donc pas un nom, c'est une correspondance à tenir comme on tient la palette. **Lumière et matière** (cookie, halos, flash de bouche, sang, impacts, usure) : image générée convertie en masque **plus** paramétrage par le code — l'image ne fournit que la matière, le code garde la géométrie, ce qui laisse les quatre angles d'arme gratuits. **Wordmark, icône, viseur** : main levée sur gabarit, parce qu'un logo ne se génère pas. **Key art** : génération fortement retravaillée. Et la règle qui rend le premier procédé honnête : **une image générée n'est jamais l'asset, seulement sa matière** — on n'en garde que la luminance passée au contraste, si bien que ce qui survit est la structure du bruit et non le style du modèle. Sans elle, on remplace le look « généré par défaut » par le look « généré tout court », c'est-à-dire le défaut même qui a ouvert ce chantier. |
 | **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
 | **Le regard suit le joueur, pas le score** (2026-08-19) | Le suivi de caméra vivait dans `if round_active:` — « une manche **comptée** est en cours ». L'entraînement désarme volontairement cette manche : la caméra n'était donc **jamais** mise à jour de toute la session, et le joueur sortait du cadre. Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au classement. **C'est l'entraînement, le seul mode qui sépare les deux, qui a révélé la confusion** — et il a fallu qu'Adrien le signale, aucun test ne regardait où était la caméra. |
@@ -6586,11 +6587,26 @@ stéréo : l'oreille a une place évidente. L'écran partagé se traite après (
 
 Les sept items ne sont pas de même nature, et c'est ainsi qu'il faut les lire :
 **S1 est un défaut**, S2 et S4 sont des **réglages qui se jugent à l'oreille**,
-S3 et S7 sont des **arbitrages qui appartiennent à Adrien**, S5 est déjà écrit
-ailleurs (V5.12) et attend S1, S6 est hors périmètre.
+S3 et S7 étaient des **arbitrages qui appartiennent à Adrien**, S5 est déjà
+écrit ailleurs (V5.12) et attend S1, S6 est hors périmètre.
+
+**Les deux arbitrages sont tombés le 2026-08-25, le jour même :** S3 **oui** —
+un mur doit étouffer, « naturellement par la réverb » — et S7 **on reste en
+2D**. Ce qui attend encore l'oreille d'Adrien, et non un choix de conception,
+ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
 
 - **S1 — L'oreille rejoint le joueur.** *Bloquant : tout le reste est inaudible
-  sans lui.* Deux gestes qui ne valent que **pris ensemble** — sortir le pool du
+  sans lui.* **Implémenté le 2026-08-25 dans un worktree isolé**
+  (`worktree-audio-oreille-et-stingers`, `4d8a85e`), pas sur `main` : les deux
+  gestes y sont faits ensemble, avec une suite headless (`tools/test_oreille.gd`)
+  qui verrouille le défaut au lieu de le corriger une fois. Cette session-ci
+  n'a pas écrit ce code et n'en juge pas le détail ; elle note **une troisième
+  pièce qu'elle avait manquée et que cette branche a mesurée** : un
+  `SubViewport` n'est pas une oreille par défaut (`audio_listener_enable_2d`
+  vaut `false`). Il en fallait donc trois, pas deux.
+
+  Le contenu de l'item, qui reste la référence : deux gestes qui ne valent que
+  **pris ensemble** — sortir le pool du
   monde de la racine (le poser dans le monde de la vue de jeu) et poser un
   auditeur qui suive le joueur **local**. L'un sans l'autre ne s'entend pas :
   deux mondes distincts ne s'écoutent pas, et un auditeur posé dans un monde que
@@ -6608,17 +6624,44 @@ ailleurs (V5.12) et attend S1, S6 est hors périmètre.
   écrit en dur redeviendrait faux à la première carte d'une autre taille. **Le
   réglage final se juge à l'oreille, pas au calcul** : jalon humain, comme la
   récupération d'éblouissement l'a été le 2026-08-24.
-- **S3 — Un mur étouffe.** Rien n'atténue aujourd'hui un son émis derrière un
-  mur, alors que le mur arrête la lumière **et** le flash de bouche. C'est la
-  seule asymétrie qui reste entre les deux canaux d'information du jeu. La
+- **S3 — Un mur étouffe. ✅ TRANCHÉ le 2026-08-25 par Adrien : oui, « mais
+  naturellement par la réverb ».** L'intuition est juste et elle décide de
+  l'implémentation, donc elle mérite d'être écrite en entier plutôt que résumée
+  en « ajouter de l'occlusion ». Derrière un mur, **ce qui parvient à l'oreille
+  EST le champ réverbéré** : le direct est bloqué, ce qui reste a rebondi, donc
+  arrive plus tard et plus sombre. Mais **une réverb de bus ne sait pas où est
+  le mur** — elle ne peut pas devenir l'occlusion toute seule. Ce qui rend
+  l'effet naturel n'est donc **pas d'ajouter de la réverb quand c'est occulté**
+  (l'oreille entend alors un effet qui s'allume), c'est de **retirer le son
+  direct et de laisser ce qui réverbérait déjà**. Le son ne disparaît pas : il
+  passe dans la pièce d'à côté. C'est le raisonnement de la torche appliqué au
+  son — on n'ajoute pas d'ombre, on retire de la lumière.
+
+  Trois conséquences qui ne se devinent pas. **La réverb garde le
+  panoramique**, puisqu'elle s'applique après le placement de la voix : un son
+  occulté reste orienté, on perd la netteté et la certitude, pas la direction —
+  c'est le bon compromis pour un duel. **L'équilibre sec/réverbéré se pilote
+  par la ligne de vue**, et un vrai fondu entre les deux coûte deux voix sur
+  seize, contre une seule si le bus se choisit à l'instant du tir : commencer
+  par le choix de bus, l'arbitrage de voix (V4.16) existe déjà pour ça.
+  **Et cela AJOUTE de l'information au jeu, ça n'en retire pas** — un pas sourd
+  dit « il est derrière un mur », un pas net dit « j'ai une ligne directe sur
+  lui ». Un binaire devient une texture, et l'oreille se met à enseigner la
+  carte : c'est un changement d'équilibre du duel, pas un polish, et c'est
+  pour ça qu'il se posait à Adrien.
+
+  Ce qui reste vrai du constat d'origine : rien n'atténue aujourd'hui un son
+  émis derrière un mur, alors que le mur arrête la lumière **et** le flash de
+  bouche — c'était la dernière asymétrie entre les deux canaux d'information du
+  jeu. La
   requête existe déjà et sert à l'éblouissement (`GameState._ligne_de_vue`) ;
   elle coûterait une requête physique **par son joué**, et les sons se comptent
   par dizaines à la seconde, pas par image. Deux points techniques à connaître
   d'avance : le bus se choisit à l'instant du `play_sfx_2d` (un bus « occlus »
   avec passe-bas et perte de niveau), et **`area_mask` vaut 0 sur les lecteurs
   du pool** — donc aucune `Area2D` ne peut redéfinir leur bus tant que ce
-  masque n'est pas posé. ⚠️ **Change l'information disponible en manche : se
-  pose à Adrien, ne s'implémente pas d'office** — même règle que les items D.
+  masque n'est pas posé. Le principe est acté ; **le dosage se juge à l'oreille
+  et n'est pas encore écrit** — jalon humain, comme S2.
 - **S4 — Le loin ne sonne pas comme le près.** `AudioStreamPlayer2D` n'offre pas
   d'`attenuation_filter` (c'est du 3D) : un tir lointain est le même timbre en
   plus faible, alors que l'oreille juge la distance au **timbre** avant le
@@ -6634,20 +6677,61 @@ ailleurs (V5.12) et attend S1, S6 est hors périmètre.
   prix est déjà payé — c'est pour elle que V4.1 a renoncé aux queues cuites dans
   l'échantillon.
 - **S6 — L'écran partagé : deux joueurs, une seule sortie stéréo.** Hors
-  périmètre jusqu'à nouvel ordre (Adrien, 2026-08-25). La contrainte à garder
+  périmètre jusqu'à nouvel ordre (Adrien, 2026-08-25).
+
+  *État constaté le 2026-08-25, et présenté comme un fait, pas comme une
+  décision :* la branche `worktree-audio-oreille-et-stingers` (`4d8a85e`) pose
+  l'oreille **en ligne seulement** et laisse délibérément l'écran partagé sur
+  le point fixe, avec l'argument même de cet item. **Cette session-ci n'a pas
+  reçu d'Adrien la confirmation que c'est son arbitrage** — elle le note donc
+  sans le clore, exactement pour la raison qui a fait écrire cette section :
+  une description qu'on prend pour une intention.
+
+  La contrainte à garder
   en tête pour ne pas la découvrir en implémentant S1 : en « 1v1 écrans
   scindés », les deux joueurs partagent la même paire d'enceintes, donc **toute
   oreille attachée à l'un désavantage l'autre**. Ce n'est pas un réglage, c'est
   un arbitrage — et il ne se prend pas au détour d'un autre item.
-- **S7 — Ce que la 2D ne donnera pas, quoi qu'on fasse.** Le panoramique stéréo
-  n'encode que **X** : en vue de dessus, l'axe Y n'existe pas à l'oreille, il ne
-  se traduit qu'en volume. L'oreille rendra donc **un axe et une distance,
-  jamais un point** — à savoir avant de promettre « localiser l'adversaire au
-  son ». Si un point est voulu, il faut passer les sons de manche en
-  `AudioStreamPlayer3D` avec un Z fictif, ce qui apporte du même coup le
-  filtrage par distance (S4) et les zones de réverb (S5), et coûte la reprise de
-  tous les sites d'appel. **C'est une décision d'architecture, pas un réglage :
-  à trancher AVANT S2 et S4**, sous peine de les régler deux fois.
+- **S7 — 2D ou 3D. ✅ TRANCHÉ le 2026-08-25 par Adrien : on reste en 2D.**
+
+  ⚠️ **Cet item affirmait deux choses fausses avant d'être mesuré, et toutes
+  deux penchaient du même côté — celui du renoncement.** Il annonçait qu'un
+  `AudioStreamPlayer3D` donnerait « un point » et qu'il coûterait « la reprise
+  de tous les sites d'appel ». Vérifié dans le moteur, sur le poste d'Adrien :
+  **Godot ne fait aucun rendu binaural** — aucun réglage HRTF dans
+  `ProjectSettings` (il n'y a que `2d_panning_strength` et
+  `3d_panning_strength`), et la sortie est stéréo. En 3D comme en 2D, la
+  direction se réduit donc à un équilibre gauche/droite : **ni l'un ni l'autre
+  ne donne un point**, et un son droit devant se panoramique comme un son droit
+  derrière. Quant au coût, il est **confiné à `audio_manager.gd`** plus un
+  auditeur, parce que tous les appelants (`player.gd`, `bullet.gd`,
+  `game_state.gd`) passent un `Vector2` et **ignorent quel nœud joue le son**.
+  Le prix de l'option qu'on demandait d'arbitrer avait été surestimé : c'est
+  une façon de faire choisir par crainte, et elle se corrige en mesurant.
+
+  **L'écart réel entre les deux, relevé sur les propriétés des nœuds :**
+
+  | | `AudioStreamPlayer2D` | `AudioStreamPlayer3D` |
+  |---|---|---|
+  | Direction | gauche/droite | gauche/droite, **identique** |
+  | Devant/derrière, hauteur | non | non (pas de HRTF) |
+  | Distance → volume | `(1 − d/portée)^attenuation`, coupure sèche | 4 modèles, `unit_size`, `max_db` |
+  | **Distance → timbre** | **rien** | **`attenuation_filter` : 5000 Hz, −24 dB** |
+  | Réverb par zone | oui — `Area2D.audio_bus_override` | oui — `Area3D` |
+  | Cône d'émission, doppler | non | oui |
+
+  Le seul gain réel de la 3D est donc **la distance** — le passe-bas qui
+  s'ouvre avec l'éloignement, c'est-à-dire S4 gratuitement. Ni la
+  localisation, ni la réverb par zone, que la 2D sait déjà faire.
+
+  **Pourquoi rester en 2D :** ce qui manque au jeu est la direction *relative*,
+  et elle ne gagne rien à passer en 3D. **Point de bascule à surveiller, et il
+  se juge à l'oreille :** si après S1 et S2 « loin » et « près » ne se
+  distinguent toujours pas, c'est que le volume seul n'y suffit pas, et la 3D
+  redevient le bon geste — pour son filtre, pas pour sa dimension. La décision
+  reste réversible sans travail perdu **tant que les sites d'appel continuent
+  de ne passer qu'un `Vector2`** : c'est cette signature qu'il faut protéger,
+  pas le type du nœud.
 
 ---
 
