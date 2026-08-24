@@ -302,6 +302,14 @@ func panneau(key: String) -> Control:
 func set_screen_panel(id: String, key: String) -> void:
 	_screen_panels[id] = key
 
+## Le panneau par défaut d'un écran, ou une chaîne vide s'il n'en a pas.
+##
+## Existe pour qu'un appelant puisse poser un défaut **sans écraser** celui d'un
+## écran qui en a déjà un : le lit d'ambiance de DA4.18 ne doit remplir que les
+## cadres réellement vides, jamais prendre la place du salon ou de la galerie.
+func screen_panel(id: String) -> String:
+	return String(_screen_panels.get(id, ""))
+
 ## Montre un panneau sans passer par le survol d'une entrée.
 func show_panel(key: String) -> void:
 	_apply_panel(key)

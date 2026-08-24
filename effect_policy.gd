@@ -104,6 +104,12 @@ const EFFECTS := {
 		"nom": "Le code gravé",
 		"phrase": "Le code de salon se frappe caractère par caractère au lieu de s'afficher. Le code reste le même.",
 	},
+	"arene_au_repos": {
+		"famille": Family.CONFORT,
+		"plancher": 0.0,
+		"nom": "L'arène au repos",
+		"phrase": "Le cadre de droite montre la carte sélectionnée dans le noir, révélée par une lumière qui passe. À zéro, le cadre reste sombre et le rendu s'arrête vraiment.",
+	},
 	"extinction_menu": {
 		"famille": Family.CONFORT,
 		"plancher": 0.0,

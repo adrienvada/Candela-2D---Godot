@@ -151,6 +151,8 @@ const PANEL_AUDIO := "panneau_audio"
 ## DA4.18 — le profil et l'historique se regardent à droite, comme les réglages.
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
+## DA4.18 — le lit d'ambiance : la carte sélectionnée, révélée par une torche.
+const PANEL_ARENE := "panneau_arene"
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -336,6 +338,8 @@ var menu_backdrop: MenuBackdrop
 var menu_title: MenuTitle
 var menu_veil: MenuVeil
 var menu_glass: MenuGlass
+## DA4.18 — le lit d'ambiance du cadre de droite : la carte sous la torche.
+var menu_arene: MenuArene
 var pause_veil: MenuVeil
 
 ## Les deux effets de la vitrine qui RELISENT L'ÉCRAN — le voile d'objectif (M15)
@@ -2239,6 +2243,26 @@ func _build_hub_screens() -> void:
 	_attach_panel(PANEL_PROFILE, ScreenProfile.new())
 	_attach_panel(PANEL_HISTORY, ScreenHistory.new())
 
+	# DA4.18 — le lit d'ambiance. **C'est le panneau PAR DÉFAUT de l'accueil et
+	# des écrans qui n'en avaient aucun**, donc le cadre n'est plus jamais noir.
+	#
+	# Il est posé en dernier : `register_panel` refuse une clé déjà prise, et un
+	# panneau ajouté après coup se placerait au-dessus des autres dans la pile —
+	# ici sans conséquence puisqu'un seul est visible à la fois, mais l'ordre
+	# reste celui de la déclaration et il vaut mieux qu'il soit lisible.
+	menu_arene = MenuArene.new()
+	hub.register_panel(PANEL_ARENE, menu_arene)
+	# La carte peut changer pendant qu'on est dans les menus — c'est même tout
+	# l'objet de la galerie. Sans ce branchement, le cadre continuerait de montrer
+	# l'arène précédente jusqu'à la prochaine navigation.
+	MapData.map_selected.connect(func(_id: String) -> void:
+		if menu_arene != null:
+			menu_arene.rafraichir())
+	for ecran in [MenuHub.ROOT, SCREEN_LOCAL, SCREEN_FRIENDLY, SCREEN_RANKED,
+			SCREEN_TRAINING, SCREEN_CUSTOM]:
+		if hub.has_screen(ecran) and hub.screen_panel(ecran) == "":
+			hub.set_screen_panel(ecran, PANEL_ARENE)
+
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
 	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à
 	# rebours qu'il ne peut pas accélérer. La recherche part en arrière-plan et
@@ -2567,6 +2591,8 @@ func _apply_menu_effects() -> void:
 	if menu_backdrop != null:
 		menu_backdrop.set_brume(_intensite_vitrine("brume_menu"))
 		menu_backdrop.set_bruit(_intensite_vitrine("bruit_de_l_oeil"))
+	if menu_arene != null:
+		menu_arene.set_intensite(_intensite_vitrine("arene_au_repos"))
 	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
 	# panneaux, et son intensité est donc une simple valeur retenue ici.
 	_m10 = _intensite_vitrine("extinction_menu")
