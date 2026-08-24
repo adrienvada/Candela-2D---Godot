@@ -75,17 +75,27 @@ plugins (EOSG pour Epic Online Services, `godot_ai` pour le pont MCP éditeur).
 
 ### Autoloads (ordre déclaré dans project.godot)
 
-`ReplaySystem`, `InputSetup`, `AudioManager`, `MapData`, `NetworkManager`,
-`GameSettings`, plus les autoloads du plugin EOSG (`EOSGRuntime`, `HAuth`,
-`HLobbies`, `HP2P`…). **L'ordre compte** : `GameSettings` est déclaré après
-`InputSetup` pour que les liaisons de touches sauvegardées
-(`user://settings.cfg`) recouvrent les liaisons par défaut, et non l'inverse.
+`PatchLoader`, `ReplaySystem`, `InputSetup`, `AudioManager`, `MapData`,
+`NetworkManager`, `GameSettings`, `UpdateManager`, puis `RankedIdentity` et
+`Matchmaker`, plus les autoloads du plugin EOSG (`EOSGRuntime`, `HAuth`,
+`HLobbies`, `HP2P`…). **L'ordre compte, à deux endroits** : `GameSettings` est
+déclaré après `InputSetup` pour que les liaisons de touches sauvegardées
+(`user://settings.cfg`) recouvrent les liaisons par défaut, et non l'inverse ;
+et `PatchLoader` est **en tête de liste** — c'est une contrainte technique de la
+Phase 9, pas un rangement, et le déplacer casse silencieusement les correctifs.
 
 ### Boucle de jeu
 
-- `main.tscn` — racine `GameState` + deux `SubViewport` côte à côte (écran
-  partagé permanent, y compris en ligne). La séparation des vues passe par
-  `canvas_cull_mask` : chaque joueur ne voit que ses propres lumières.
+- `main.tscn` — racine `GameState` + deux `SubViewport` côte à côte. **Les deux
+  vues ne s'affichent qu'en « 1v1 écrans scindés » ; partout ailleurs — en
+  ligne, à l'entraînement — une seule vue.** (Décision d'Adrien, 2026-08-18 :
+  « je ne crois pas que le deuxième écran permanent soit l'identité du jeu ».
+  Ce fichier a affirmé le contraire, et l'affirmation a essaimé dans la
+  ROADMAP.) Cacher un `SubViewportContainer` **ne suspend pas** son
+  `SubViewport` : `_restore_viewports()` coupe aussi le
+  `render_target_update_mode` de la vue masquée, sans quoi elle dessine dans une
+  texture que personne n'affiche — 1,5 ms mesurées. La séparation des vues passe
+  par `canvas_cull_mask` : chaque joueur ne voit que ses propres lumières.
 - `game_state.gd` (`GameState`) — orchestration : manches, décompte partagé,
   RPC, spawn des balles, killcam, compensation de latence côté hôte. Format de
   match BO1 5 min, jamais en dur : il transite par `MatchRecord.Format`.
@@ -157,6 +167,23 @@ viennent ses commandes.
 MSAA 2D inopérant sous ce renderer — ne pas le réintroduire. Le gameplay
 repose entièrement sur les Light2D/occluders et une poignée de
 `.gdshader` à la racine.
+
+### Audio
+
+`AudioManager` (autoload) : deux pools de seize voix — globales et
+`AudioStreamPlayer2D` positionnelles —, arbitrage par priorité (un pas ne coupe
+pas un coup au but), musique interactive à 170 BPM, bus `Master` / `Music` /
+`SFX` / `Speaker`.
+
+**Le son est positionnel, mais le jeu n'a pas d'auditeur** (mesuré le
+2026-08-25). Le pool est enfant de l'autoload, donc dans le `World2D` de la
+**racine**, alors que le jeu vit dans celui du `SubViewport` : les caméras ne
+l'entendent jamais, et Godot pose l'oreille en un point **fixe** du monde, hors
+de la carte. Panoramique et atténuation disent donc la position **absolue** du
+son, pas sa position par rapport au joueur. Ne rien raisonner comme si la
+spatialisation fonctionnait : le chantier, son ordre et ce qui attend un
+arbitrage d'Adrien sont dans la ROADMAP, section « la spatialisation du son »
+(items S1 à S7).
 
 ## EOS — points de vigilance
 

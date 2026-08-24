@@ -246,6 +246,59 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « spatialisation du son » : deux documents corrigés, aucun code
+
+**Aucun fichier de code touché.** Cette session a répondu à une question d'Adrien
+— « où en est-on de la spatialisation du son ? » — puis écrit ce qu'elle a
+trouvé. `audio_manager.gd`, `game_state.gd` et `player.gd` restent entiers et
+disponibles pour la session « game feel ».
+
+**Le fait, mesuré et pas déduit : le jeu joue des sons positionnels et n'a
+jamais eu d'auditeur.** Le pool d'`AudioStreamPlayer2D` est enfant de
+l'autoload, donc dans le `World2D` de la racine, tandis que le jeu vit dans
+celui du `SubViewport`. Les caméras ne l'entendent donc jamais, et Godot pose
+l'oreille en un point fixe du monde, **hors de la carte**. Panoramique et
+atténuation disent la position **absolue** du son ; avancer vers l'adversaire ne
+rend pas ses pas plus forts. Diagnostic headless jetable, lancé puis supprimé —
+rien n'a été ajouté à `tools/`.
+
+**Écrit dans `docs/ROADMAP.md`** — en ajout, sans reformater la section de
+personne :
+
+- une section neuve, « Chantier — la spatialisation du son », items **S1 à S7** ;
+- une entrée « Pièges connus » (un son positionnel sans auditeur reste audible) ;
+- un renvoi en blocs-citation sous « Prochaines étapes », **sans toucher à la
+  numérotation** des listes existantes.
+
+**À l'attention de la session « game feel », qui tient les fichiers concernés :**
+S1 est un défaut, pas du polish, et il est **bloquant pour tout le reste** — dont
+**V5.12** (réverb par carte), qui posée avant lui ne s'entendrait que comme une
+couleur. S3 (occlusion par les murs) et S7 (rester en 2D ou passer les sons de
+manche en 3D) **changent l'information disponible en manche ou l'architecture** :
+ils se posent à Adrien, ils ne s'implémentent pas d'office.
+
+**Écrit dans `CLAUDE.md`** — trois divergences avec la ROADMAP, corrigées :
+
+1. il affirmait l'**écran partagé permanent, y compris en ligne**. C'est la
+   phrase qu'Adrien a rejetée le 2026-08-18, et la ROADMAP note qu'elle est
+   partie **de là** pour essaimer chez elle. La source est corrigée ;
+2. sa liste d'**autoloads** datait d'avant les Phases 8 et 9 — ni `PatchLoader`
+   (dont la position en tête est une contrainte technique), ni `UpdateManager`,
+   ni `RankedIdentity`, ni `Matchmaker` ;
+3. il ne décrivait **pas l'audio du tout**. Il porte désormais quatre lignes,
+   dont l'avertissement sur l'auditeur : ce défaut ne se voit pas à la lecture
+   du code, il se déduit du graphe de scène.
+
+**Ce que je signale et que je n'ai pas fait :** ce fichier-ci porte encore la
+phrase « l'écran partagé est permanent » (section barrée du 2026-08-17, clôture
+de la session « game feel »). Je ne l'ai **pas** réécrite — c'est une archive
+datée appartenant à une autre session, et la règle des sections l'emporte ici
+sur la chasse aux essaimages. Elle est fausse depuis le 2026-08-18 ; qui la
+relira le saura par cette entrée.
+
+Le delta a été transmis par `SendMessage` à la session chargée de republier le
+suivi de projet.
+
 ### 2026-08-24 — le hub : les lanceurs passent à droite, un rôle une couleur
 
 **Deux demandes d'Adrien, dans la même séance, et la seconde est née de la
