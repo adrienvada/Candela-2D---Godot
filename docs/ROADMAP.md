@@ -2486,6 +2486,39 @@ indice. `tools/test_musique.gd` tient les deux.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un `M` de `git status` ne dit pas à qui est la modification (2026-08-24)
+
+Quatre attributions fausses dans la même soirée, sur le même arbre partagé, par
+deux sessions différentes. À chaque fois la déduction s'est trompée et la
+lecture du diff a tranché.
+
+| ce qu'on croyait | ce que c'était |
+|---|---|
+| `project.godot` modifié par personne d'identifiable | la session « menus », qui posait l'icône |
+| 92 lignes supprimées dans l'index « par une autre session » | un blob périmé de la session « menus » elle-même |
+| 40 lignes de `ROADMAP.md` attribuées à la session DA2 | la session « musique », sur le défaut de l'intro |
+| « tes corrections ne sont pas parties » dit à DA2 | `3191dd7` **était** ces corrections, déjà poussées |
+
+**La raison est structurelle, pas une question d'attention : git ne stocke aucun
+auteur pour une modification non commitée.** Il n'y a rien à interroger. Le `M`
+dit qu'un fichier diffère de l'index, un point. La seule source d'attribution
+est le **contenu**.
+
+Donc la règle n'est pas « mieux déduire », c'est **ne jamais déduire** :
+`git diff <chemin>` avant toute décision sur un fichier modifié qu'on n'a pas
+écrit soi-même. Trente secondes.
+
+**Ce qui justifie de la lire systématiquement, c'est l'asymétrie du coût.** Se
+tromper en croyant la modification à soi fait **perdre le travail d'un autre,
+sans conflit et sans avertissement** — c'est ainsi que 72 lignes ont disparu ce
+soir-là, et qu'un index périmé en attendait 92 de plus. Se tromper dans l'autre
+sens ne coûte qu'une question posée à une voisine. Les quatre cas ci-dessus sont
+tous du premier type.
+
+Corollaire pour les rapports entre sessions : **annoncer à quelqu'un l'état de
+son propre travail est le pire moment pour déduire.** Il ne pourra pas vérifier
+sans refaire le travail, et il n'a aucune raison de douter.
+
 ### Deux sessions qui lancent les suites en même temps se volent le port (2026-08-24)
 
 `run_duo.sh` ouvre le salon sur **7777, en dur**. Deux sessions qui lancent
