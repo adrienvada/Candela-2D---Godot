@@ -2462,6 +2462,27 @@ là.
 (`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
 deviner ce qui manque en amont.
 
+### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
+
+`main_stream_interactive.tres` recopiait les paquets Ogg de chaque clip dans son
+propre corps, en base64 : 704 ko de texte pour sept flux qui vivaient déjà, en
+double, à côté de lui dans `assets/audio/music/`. Il les référence désormais par
+`ext_resource`, et pèse 2,9 ko.
+
+Ce n'est pas une affaire de poids. Un flux embarqué **fige la ressource** : le
+jour où l'on remplace un stem, le `.ogg` du dossier change et la musique du jeu
+ne change pas — et rien ne le dit, puisque les deux existent et que les deux se
+chargent. C'est le mode de défaillance que ce dépôt traque partout : deux
+sources de vérité dont une seule est écoutée, sans que rien ne distingue
+laquelle. Il fallait régénérer le `.tres` par script à chaque retouche, donc
+personne n'aurait retouché.
+
+Ce qui ne bouge pas et ne doit pas bouger : les **noms** des clips
+(`AudioManager.play_music` bascule par nom, un clip renommé cesse simplement de
+répondre) et l'**ordre** des couches du clip « match » — 0 base, 1 batterie,
+2 arpège, 3 pouls. `set_music_intensity` et `update_low_health` les adressent par
+indice. `tools/test_musique.gd` tient les deux.
+
 ---
 
 ## Pièges connus — ne pas les redécouvrir
@@ -3458,7 +3479,8 @@ moment. À réparer avant tout relevé.
 
 Vu au passage dans la même sortie : `play_music` lève trois erreurs Vorbis
 (`packet_sequence.is_null()`), les fichiers de musique n'étant pas encore
-fournis. Sans rapport, et attendu.
+fournis. Sans rapport, et attendu. — **Levé le 2026-08-24** : les flux réels
+sont en place (V1.1), ces trois erreurs n'ont plus lieu d'être.
 
 ### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
 
@@ -4095,6 +4117,35 @@ quoi : le message liste des chaînes vides. Passer par
   pendant qu'un export tournait à côté ; seules, elles passent. Avant de
   diagnostiquer une régression, vérifier qu'aucune autre instance ne tourne.
 
+### Un MP3 ne sait pas rendre une boucle sur la grille (2026-08-24)
+
+Adrien a livré la musique en `.mp3`. Le format ne code que des trames de **1152
+échantillons** et n'accepte aucune longueur intermédiaire : les onze fichiers
+arrivent donc arrondis à la trame, avec **1152 échantillons de silence exact en
+tête** (le retard d'encodeur, mesuré identique sur les onze) et une queue
+tronquée d'environ 48 ms. Déposés tels quels, ils sonnent juste **au premier
+tour** — et le défaut n'apparaît qu'au second, quand la boucle revient un
+quinzième de temps trop tôt.
+
+Ce qui le rend traître : les quatre couches du clip « match » dérivent
+**ensemble**, puisqu'elles portent le même décalage. Rien ne se désynchronise
+entre elles, rien ne sonne faux ; c'est la musique entière qui glisse contre les
+transitions `fade_beats` du flux interactif. On n'a donc aucun symptôme local à
+suivre.
+
+Le remède est à l'import, pas au mixage : rogner les 1152 échantillons de tête,
+compléter la queue jusqu'au compte exact de temps (64 temps à 170 BPM =
+1 084 235 échantillons), puis encoder en Vorbis. `tools/test_musique.gd` vérifie
+désormais que chaque flux dure un nombre **entier** de temps — c'est le seul
+contrôle qui aurait attrapé la chose sans oreille.
+
+**Et le poste n'avait pas d'encodeur Ogg** : le `ffmpeg` de Homebrew est
+construit sans `libvorbis`. `brew install vorbis-tools` fournit `oggenc`. Sans
+lui, la seule voie sans transcodage aurait été de garder les `.mp3`, ce qui
+obligeait à modifier `audio_manager.gd` et `asset_manifest.gd` — deux fichiers
+tenus par d'autres sessions, pour un format qui aurait ramené le même défaut de
+boucle.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -4571,9 +4622,19 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 ### Vague 1 — Réveiller ce qui dort (systèmes câblés, jamais alimentés)
 
 - **V1.1 Stems musicaux réels** — l'AudioStreamInteractive 4 couches à 170 BPM
-  est câblé mais `generate_music_streams.gd` produit des flux vides (seul le
-  heartbeat est réel). Le meilleur ratio du projet. — *assets : 3 clips +
-  3 stems .ogg bouclés à 170 BPM (commande à passer en premier, délai long).*
+  était câblé sur les flux vides de `generate_music_streams.gd` (seul le
+  heartbeat était réel). **✅ Fait le 2026-08-24** — Adrien a livré les onze
+  fichiers (`exports/V03`), intégrés en `.ogg` 48 kHz sous les noms que le
+  manifeste attendait déjà, donc **sans une ligne de code à changer**.
+  `main_stream_interactive.tres` a été réécrit au passage : il **référence** les
+  flux au lieu de les embarquer en base64 (704 ko → 2,9 ko).
+
+  La leçon, et c'est elle qui vaut d'être notée : le système a vécu deux mois
+  « fonctionnel » et muet. Aucune erreur, aucun test rouge — `AudioManager`
+  chargeait quatre clips, basculait de l'un à l'autre, ouvrait ses couches, et
+  ne jouait rien. **Un jeu muet et un jeu dont on a baissé le volume ne se
+  distinguent pas**, et c'est exactement ce que `asset_manifest.gd` avait été
+  écrit pour rattraper. Il l'a rattrapé ; il aura fallu qu'on lise le panneau.
 - **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
   par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
   **✅ Fait** — piloté par `GameState._update_music_intensity` chaque frame
@@ -5946,12 +6007,16 @@ un fait de jeu, pas à un rythme d'interface.
 
 - **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
   jugé. Priorité absolue du lot audio. *(C)*
-- **DA3.2 Les stems produits à 170 BPM** (= V1.1) — la musique adaptative est
-  câblée de bout en bout ; elle attend une vraie production. *(C)*
+- ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
+  2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
   `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
   dépôt des fichiers. *(C : 3 samples)*
-- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10). *(C)*
+- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10) — **les quatre
+  fichiers sont dans le dépôt depuis le 2026-08-24** (`sting_kill`,
+  `sting_kill_match`, `sting_defeat`, `sting_draw`, accordés et sur la grille).
+  **Rien ne les joue** : aucune clé dans `AudioManager.SOUNDS`, aucun appel. Il
+  ne reste que le câblage, et il est au domaine « game feel ».
 - **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
   « fini » comme une voix. *(C)*
 - **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
