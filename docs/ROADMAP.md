@@ -1141,13 +1141,15 @@ enregistrements illisibles ou écrits par une version plus récente ; les taire
 donnerait un historique silencieusement incomplet, ce qui est la seule chose
 qu'un historique ne doit jamais être — on le croirait entier.
 
-**Étape 6 — édition du pseudo.** 🟡 **Déployée le 2026-08-18** par Adrien —
+**Étape 6 — édition du pseudo.** ✅ **Déployée le 2026-08-24** par Adrien —
 `rename_profile` en base, fonction `rename` en ligne, porte vérifiée (`401` sans
-jeton). Le nouveau plancher de rang est effectif en production dans la foulée :
-un débutant s'affiche **Aveugle I**. **Écran câblé le 2026-08-18** : le
-bouton MODIFIER s'ouvre sur une saisie préremplie du pseudo courant — on modifie
-un pseudo, on n'en saisit pas un nouveau — et la rangée remplace la ligne du
-pseudo plutôt que de s'ajouter dessous, pour que rien ne se déplace.
+jeton, réponse identique à `link`, déjà en production). Le nouveau plancher de
+rang est effectif en production dans la foulée : un débutant s'affiche **Aveugle
+I**. **Écran câblé depuis le 2026-08-18** côté client, resté inerte en attendant
+ce déploiement : le bouton MODIFIER s'ouvre sur une saisie préremplie du pseudo
+courant — on modifie un pseudo, on n'en saisit pas un nouveau — et la rangée
+remplace la ligne du pseudo plutôt que de s'ajouter dessous, pour que rien ne se
+déplace.
 
 `can_rename()` exige un profil **prêt** : une identité en cours n'a pas de pseudo
 à changer, et montrer le bouton donnerait une action qui échoue. Le contrôle qui
@@ -1159,7 +1161,7 @@ Le pseudo est la **seule** chose qu'un joueur peut changer de son profil : ni so
 identifiant, ni son code de récupération, ni son classement — tout le reste est
 dérivé ou constitutif. C'est ce qui rend l'étape petite.
 
-Livré le 2026-08-18 :
+Livré le 2026-08-18, déployé le 2026-08-24 :
 
 - `supabase/migrations/20260818020000_rename_profile.sql` — `rename_profile()`,
   qui **renomme par le PUID et lui seul**. Passer un identifiant de profil
@@ -1183,15 +1185,10 @@ son adversaire. D'où `RecoveryCode.sanitize_nickname()` — rangé **à côté*
 fichier — et `tools/test_pseudo.gd`, qui rejoue cas par cas les assertions de
 `recovery_code_test.ts`.
 
-#### Ce qui reste
-
-**Le déploiement**, qui demande Adrien : `supabase db push` puis
-`supabase functions deploy rename`. Rien n'est déployé — la fonction répondrait
-404 aujourd'hui, et c'est pour cela que l'écran n'est pas encore câblé.
-
-**Puis le champ dans l'écran du profil.** La place y est réservée depuis le début.
-Le câbler avant le déploiement donnerait un bouton qui échoue, ce qui ne se
-distingue pas d'un jeu cassé.
+**Déploiement vérifié le 2026-08-24** : `supabase migration list` confirme
+`20260818020000` appliquée côté distant, et `rename` répond `401 jeton_absent`
+sans jeton — exactement la réponse de `link`, déjà en production. Plus rien
+n'attend Adrien sur cette étape.
 
 ### Couleur des entrées « lanceur » confondue avec le liseré de sélection — corrigé (2026-08-18)
 
@@ -6170,7 +6167,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
 | ~~4~~ | ~~**Écran historique**~~ | ✅ **FAIT le 2026-08-18** — `screen_history.gd`, sa suite `test_screen_historique`, et le compte des enregistrements écartés. |
 | ~~5~~ | ~~**Affichage du rang en jeu**~~ | ✅ **FAIT le 2026-08-18** — Phase 6 close : catégorie, division, points restants et échelon suivant, dans `ranked_identity.gd`. |
-| 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
+| ~~6~~ | ~~**Édition du pseudo**~~ (Phase 5, étape 6) | ✅ **FAIT le 2026-08-24** — écrite et testée le 2026-08-18, déployée le 2026-08-24 (`db push` + `functions deploy rename`), porte vérifiée `401` comme `link`. |
 | ~~7~~ | ~~**Rejouer le journal local**~~ | ✅ **FAIT le 2026-08-18** — schéma v3, `pending_reports()` / `mark_reported()`, `replay_local_journal()`, vingt assertions. Le raccordement de `MatchRecord.build()` est fait aussi (`c064e6c`). |
 | ~~7bis~~ | ~~**La poignée de main de l'étape 8.9**~~ | ✅ **FAITE le 2026-08-18** — attribut `PROTO` sur le salon à code (lu avant la jointure), numéro dans le **filtre** de la file, `rpc_hello` à signature figée pour ENet, et le silence traité comme un refus. `Protocol.VERSION` est à **2**. |
 | ~~8~~ | ~~**Déblocage d'armes, côté interface**~~ | ✅ **FAIT le 2026-08-18** — Phase 7 close côté mécanique : `rank_loadout.gd`, grisage avec la raison, règle du miroir de bout en bout. Reste le **contenu** des catégories 5 à 10, qui exige Adrien. |
@@ -6188,7 +6185,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
 | ~~**Frottement du déblocage d'armes**~~ | ✅ **Tranché le 2026-08-18 par Adrien : descendre le plancher.** Tous les joueurs démarrent à l'échelon le plus bas (`RANK_FLOOR = START_RATING`), donc avec le seul pistolet, et les trois autres armes se gagnent. |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
-| **Déployer la fonction `rename`** | `supabase db push` puis `supabase functions deploy rename`. Écrite et testée depuis le 2026-08-18 ; l'écran du profil attend ce déploiement pour être câblé. |
+| ~~**Déployer la fonction `rename`**~~ | ✅ **Fait le 2026-08-24** — `db push` + `functions deploy rename`, porte vérifiée `401` comme `link`. Écran câblé depuis le 18, opérationnel. |
 | **Numérotation de `Protocol.VERSION`** | Tranchée (« carnet + rappel »), mais **le numéro lui-même reste à monter à la main** à chaque changement du fil. C'est le seul jugement que la mécanique ne peut pas rendre. |
 
 ---
@@ -6258,16 +6255,12 @@ et un seul est du travail de session.
    production le plus long, et ils réveillent un système entier déjà câblé (V1.1).
 6. **Le contenu des catégories de rang 5 à 10** : six armes à inventer. La
    mécanique les attend, le tableau `RankLoadout.COMPETITIF` a leurs places.
-7. **Le déploiement de la fonction `rename`** — `supabase db push` puis
-   `supabase functions deploy rename`. Écrite et testée ; l'écran du profil
-   attend ce déploiement, un bouton qui répond 404 ne se distinguant pas d'un
-   jeu cassé.
 
 ### Dettes anciennes, sans urgence
 
-8. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+7. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-9. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
+8. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
    directe a toujours abouti), et la détection de déconnexion est lente des deux
    côtés.
 
