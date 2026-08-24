@@ -22,7 +22,14 @@ extends Control
 
 ## Rayon de la flaque, en pixels.
 const RAYON := 250.0
-## Alpha au centre. Trois centièmes : au-delà, le fond cesse d'être noir.
+## Alpha au centre. Cinq centièmes : au-delà, le fond cesse d'être noir.
+##
+## Le commentaire disait « trois » et la valeur en portait cinq — un écart sans
+## conséquence, sauf le jour où quelqu'un se fie au commentaire pour juger la
+## marge. Vérifié sous la charte : la luminance ajoutée à la crête vaut
+## `luminance(P1) × ALPHA × 0,35 ≈ 0,011`, soit moins du tiers du plafond que le
+## fond s'impose à lui-même (`LUM_MAX = 0,035` dans `menu_backdrop.gdshader`).
+## Les deux effets tiennent donc le même contrat, ce qu'aucun des deux ne disait.
 const ALPHA := 0.05
 ## Retard de la lampe sur le curseur. C'est lui qui donne le poids d'une main.
 const TRAINE := 9.0

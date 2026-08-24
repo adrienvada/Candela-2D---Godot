@@ -34,8 +34,13 @@ uniform float embrasement : hint_range(0.0, 1.0) = 1.0;
 uniform float depassement : hint_range(0.0, 1.0) = 0.0;
 // Amplitude de l'onde continue. Divisée par deux sur une défaite.
 uniform float amplitude : hint_range(0.0, 2.0) = 1.0;
-// Vers quoi la flambée de victoire tire, et de combien.
-uniform vec3 teinte_verdict = vec3(0.82, 1.0, 0.88);
+// Vers quoi la flambée de victoire tire. Poussée depuis la charte : c'est le
+// VERT de la triade d'instrument, tiré vers le blanc pour rester un glacis et
+// non un repeint.
+uniform vec3 teinte_verdict = vec3(0.827, 1.0, 0.867);
+// La température de la crête de l'onde. Poussée elle aussi — c'est l'halogène
+// de la charte, normalisé pour teinter sans assombrir.
+uniform vec3 teinte_crete = vec3(1.0, 0.929, 0.816);
 uniform float flambee : hint_range(0.0, 1.0) = 0.0;
 
 // Période de l'onde continue, en secondes.
@@ -46,8 +51,9 @@ const float ECART = 0.08;
 const float BRAISE = 0.12;
 // Largeur du front d'embrasement, en part du bloc.
 const float FRONT = 0.35;
-// La crête est plus chaude : un or qui monte vers le blanc-jaune.
-const vec3 CHAUD = vec3(1.0, 0.97, 0.86);
+// (La crête vit dans `teinte_crete`, poussée par `menu_title.gd`. Elle était
+// ici en `const`, donc invisible à la passe de palette, qui ne lisait que les
+// `.gd` — c'est le même angle mort que les territoires du fond.)
 
 varying float pos_x;
 
@@ -67,7 +73,7 @@ void fragment() {
 		// Plus chaud à la crête, et seulement à la crête.
 		lum = max(lum, 0.0);
 		vec3 col = COLOR.rgb * lum;
-		col = mix(col, col * CHAUD, max(onde, 0.0) * 0.25 * intensite);
+		col = mix(col, col * teinte_crete, max(onde, 0.0) * 0.25 * intensite);
 
 		// L'embrasement balaie de gauche à droite : le C prend feu, « 2D » en
 		// dernier. Hors embrasement (valeur 1), le front est passé partout et

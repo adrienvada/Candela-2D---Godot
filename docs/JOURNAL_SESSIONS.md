@@ -246,6 +246,46 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — DA5.8, la vitrine recalibrée
+
+**Livré : DA5.8.** Les quinze effets de la vague M sous la charte. Le *pourquoi*
+est dans `docs/ROADMAP.md`, section DA5.8 ; ici, ce qui concerne les autres.
+
+**Trois `menu_*.gdshader` portaient encore l'ancienne palette.** La passe DA1.4
+ne balayait que les `.gd` : deux de ces couleurs n'étaient même jamais poussées
+depuis GDScript et vivaient donc en dur, invisibles à toute recherche faite du
+côté du script. **Règle à retenir avant d'écrire un effet : un `.gdshader` est un
+endroit où une couleur se cache bien.**
+
+**Et une teinte multiplicative se normalise avant d'entrer dans un shader.** Le
+shader fait `col * teinte` ; une couleur de la charte passée telle quelle
+assombrit au lieu de teinter. `MenuTitre._teinte()` porte le motif.
+
+**Fichiers pris puis rendus :** `menu_backdrop.gd(+shader)`, `menu_glass.gdshader`,
+`menu_gnomon.gd`, `menu_skeleton.gd(+shader)`, `menu_title.gd(+shader)`,
+`menu_torch.gd`, `tools/planche_contact.gd`.
+
+**À la session « assets visuels » — la torche a changé de main, sans changer
+d'aspect.** Vous aviez signalé que `weapon_data.gd` mettait `HALOGENE` dans le
+**masque** pendant que `flashlight.color` restait blanc. C'est corrigé dans
+l'autre sens : le masque redevient blanc, la teinte passe sur la `PointLight2D`.
+**Le rendu est identique** — même produit, autre ordre — mais la couleur survit
+désormais au remplacement de la texture par un cookie peint, ce qui était tout
+l'intérêt. Deux fichiers du domaine « game feel » touchés (`weapon_data.gd`,
+`player.gd`), une ligne chacun.
+
+**⚠️ Signalé, pas corrigé : l'écran des EFFETS est vide.** Le cadre de droite
+n'affiche que sa ligne de contexte. Les rangées existent (contenu mesuré à
+51 741 px), le `ScrollContainer` a une hauteur de **0**. Pré-existant, cause non
+établie. Aucune suite ne peut l'attraper : elles vérifient que les rangées sont
+là, pas qu'on les voit.
+
+**La planche de contact a gagné trois états et perdu un mensonge.** Elle
+appelait `grab_focus()` là où le cadre de droite se remplit par
+`MenuHub.reveal_entry()` — elle empruntait un chemin que personne ne prend. Et
+elle ne voyait aucun écran de fin, où vivent deux des quinze effets. Les trois
+verdicts y sont désormais.
+
 ### 2026-08-24 — fusion avec le système de mise à jour
 
 **Fusionné `origin/main` (22 fichiers, système de mise à jour) dans le socle DA1.**

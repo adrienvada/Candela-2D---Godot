@@ -44,6 +44,27 @@ func _init() -> void:
 	_materiau.shader = SHADER
 	_materiau.set_shader_parameter("intensite", 1.0)
 	_materiau.set_shader_parameter("embrasement", 1.0)
+	# Les deux teintes du shader viennent de la charte, et elles y sont
+	# NORMALISÉES : le shader les emploie en facteur (`col * teinte`), donc une
+	# couleur passée telle quelle assombrirait au lieu de teinter. Diviser par le
+	# canal le plus fort garde la direction et rend la luminance.
+	_materiau.set_shader_parameter("teinte_crete", _teinte(MenuTheme.LUMIERE, 1.0))
+	# La victoire tire vers le vert « prêt » de la triade, à 30 % : c'est un
+	# glacis sur l'or, pas un repeint. Au-delà, le titre cesse d'être doré.
+	_materiau.set_shader_parameter("teinte_verdict", _teinte(MenuTheme.OK, 0.30))
+
+
+## Une teinte MULTIPLICATIVE tirée d'une couleur de la charte.
+##
+## Normalisée sur son canal le plus fort — sans quoi `col * teinte` baisserait la
+## luminance au lieu de la colorer — puis ramenée vers le blanc de `force`, qui
+## dose l'écart. À `force = 0`, la teinte est neutre et n'a aucun effet.
+static func _teinte(couleur: Color, force: float) -> Vector3:
+	var pic := maxf(couleur.r, maxf(couleur.g, couleur.b))
+	if pic <= 0.0:
+		return Vector3.ONE
+	var n := Vector3(couleur.r / pic, couleur.g / pic, couleur.b / pic)
+	return Vector3.ONE.lerp(n, clampf(force, 0.0, 1.0))
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS

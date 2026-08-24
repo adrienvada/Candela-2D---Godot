@@ -2316,6 +2316,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
+| **L'artiste unique, c'est Adrien — et le procédé se choisit par famille d'asset** (2026-08-24, Adrien) | DA1.5 demandait « un artiste, un lot, un style » pour éviter que des sources dépareillées recréent l'incohérence que tout le chantier chasse. L'artiste unique étant Adrien, **le risque a changé de nature : il n'est plus entre personnes, il est entre outils.** Deux textures faites à trois mois d'écart par deux procédés différents jurent exactement comme deux artistes différents. La décision n'est donc pas un nom, c'est une correspondance à tenir comme on tient la palette. **Lumière et matière** (cookie, halos, flash de bouche, sang, impacts, usure) : image générée convertie en masque **plus** paramétrage par le code — l'image ne fournit que la matière, le code garde la géométrie, ce qui laisse les quatre angles d'arme gratuits. **Wordmark, icône, viseur** : main levée sur gabarit, parce qu'un logo ne se génère pas. **Key art** : génération fortement retravaillée. Et la règle qui rend le premier procédé honnête : **une image générée n'est jamais l'asset, seulement sa matière** — on n'en garde que la luminance passée au contraste, si bien que ce qui survit est la structure du bruit et non le style du modèle. Sans elle, on remplace le look « généré par défaut » par le look « généré tout court », c'est-à-dire le défaut même qui a ouvert ce chantier. |
 | **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
 | **Le regard suit le joueur, pas le score** (2026-08-19) | Le suivi de caméra vivait dans `if round_active:` — « une manche **comptée** est en cours ». L'entraînement désarme volontairement cette manche : la caméra n'était donc **jamais** mise à jour de toute la session, et le joueur sortait du cadre. Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au classement. **C'est l'entraînement, le seul mode qui sépare les deux, qui a révélé la confusion** — et il a fallu qu'Adrien le signale, aucun test ne regardait où était la caméra. |
 | **Là où l'interface enseigne, l'absence est une réponse et l'estimation est un mensonge** (2026-08-18) | La règle existait déjà dans le dépôt sous trois noms différents — « ne jamais inventer un chiffre que le serveur n'a pas donné », le **tiret** plutôt que le zéro dans le classement, et « vide plutôt qu'approximatif » pour la trajectoire de killcam. C'est la même, et elle mérite un nom unique. **Une trajectoire fausse enseigne une leçon fausse ; un classement approximatif apprend un faux niveau ; un « adversaire prêt » deviné fait attendre pour rien.** Le critère n'est pas « a-t-on une valeur ? » mais « cette valeur va-t-elle être **apprise** ? » — si oui, ne rien montrer bat toujours une estimation, parce qu'une absence se remarque et se corrige, tandis qu'une estimation s'intègre. |
@@ -2454,6 +2456,29 @@ n'est pas une politesse de fin de tâche, c'est le seul contrôle du dépôt qui
 regarde.
 
 **La cause :** voir l'entrée suivante.
+
+### Un `duplicate()` n'emporte que ce qui est déjà posé (2026-08-24)
+
+Les fantômes de la killcam ne créent pas leur torche, ils la **dupliquent** —
+`game_state.gd:_setup_ghosts()` fait `p1.get_node("Flashlight").duplicate()`. Une
+propriété écrite **après** la copie n'y est donc jamais.
+
+La teinte du faisceau avait d'abord été posée dans `equip_weapon()`. Elle
+survivait quand même, par une chaîne de **trois maillons** : `_setup_players()`
+précède `_setup_ghosts()`, `add_child(p1)` déclenche `_ready` synchronement, et
+ce `_ready` appelle `equip_weapon()` avant de rendre la main. Intervertir deux
+lignes, ou sortir `equip_weapon` du `_ready`, et **les torches de killcam
+devenaient blanches** — invisible jusqu'au premier mort, c'est-à-dire découvert
+par un joueur et non par un test.
+
+**La règle : ce qui doit survivre à une copie se pose à la CONSTRUCTION, jamais
+dans une méthode appelée plus tard.** La teinte vit maintenant à côté de
+`energy` et des masques de calque, avec les autres propriétés qui ne dépendent
+pas de l'arme — et elle ne dépend plus d'un ordre d'appel.
+
+Relevé par la session « assets visuels », **en lecture de code**, sur un chemin
+qu'aucune suite ne couvre et que la planche de contact ne voit pas non plus : la
+killcam n'est dans aucun des deux.
 
 ### Godot efface les commentaires de `project.godot` (2026-08-24)
 
@@ -4811,9 +4836,9 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 
 ### DA1 — Le socle ✅ **LIVRÉ le 2026-08-24** (DA1.1, 1.2, 1.3, 1.4, 1.8, 1.9)
 
-> **Six items sur neuf sont faits.** Restent DA1.5 (un seul artiste), DA1.6 (le
-> wordmark) et DA1.7 (icône et splash) — les trois qui demandent Adrien ou un
-> dessinateur. Tout ce qui était marqué *(S)* et *(G)* est livré.
+> **Sept items sur neuf sont faits** — DA1.5 s'est tranché le 2026-08-24.
+> Restent DA1.6 (le wordmark) et DA1.7 (icône et splash), les deux qui demandent
+> un dessin. Tout ce qui était marqué *(S)* et *(G)* est livré.
 >
 > Tout descend maintenant de **`charte.gd`**, et de lui seul.
 
@@ -4949,9 +4974,10 @@ un fait de jeu, pas à un rythme d'interface.
 - **DA1.4 La passe de palette** — remplacer chaque couleur codée en dur du
   projet par une couleur nommée de la bible. C'est là que meurt le rouge pur
   qui crie « programmeur ». *(S, après DA1.1)*
-- **DA1.5 Un seul artiste pour tout** — décision de casting avant toute
-  commande : des assets de sources dépareillées recréent l'incohérence qu'on
-  essaie de tuer. Un artiste, un lot, un style. *(Adrien)*
+- **DA1.5 Un seul artiste pour tout** ✅ **TRANCHÉ le 2026-08-24 : c'est Adrien,
+  et le procédé se choisit par famille d'asset.** Un artiste unique ne suffit
+  plus à garantir un style : c'est la table des procédés qui le tient. Raison et
+  table en « Décisions actées ». *(Adrien)*
 - **DA1.6 Le wordmark CANDELA** — un vrai logo dessiné (la bougie est un cadeau
   de naming), décliné partout. Tant que le titre est un `Label`, le jeu dit
   « prototype ». *(C)*
@@ -5069,14 +5095,112 @@ un fait de jeu, pas à un rythme d'interface.
   collage. *(S)*
 - **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
   les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
-- **DA5.6 La résolution assumée** — trancher pixel-perfect vs. smooth une fois
-  pour toutes, et s'y tenir sur chaque asset commandé. *(Adrien, avant toute
-  commande — conditionne DA1.5)*
+- **DA5.6 La résolution assumée** ✅ **TRANCHÉ le 2026-08-24 : smooth.**
+  Filtrage linéaire, mipmaps, aucune texture en `nearest` ; la résolution se
+  choisit sur la densité de texels à l'écran. Raison en « Décisions actées ».
+  *(Adrien)*
 - **DA5.7 Un seul style d'outline/ombre de texte** — défini dans le thème, plus
   jamais au cas par cas. *(S)*
-- **DA5.8 Recalibrer la vague M sous la nouvelle DA** — les 15 effets de menus
-  sont procéduraux : sous la nouvelle palette et les nouvelles fontes ils
-  deviennent un écrin ; sans ça, ils amplifient le look actuel. *(S)*
+- **DA5.8 Recalibrer la vague M sous la nouvelle DA** ✅ **FAIT le 2026-08-24.**
+  Les 15 effets de menus sont procéduraux : sous la nouvelle palette et les
+  nouvelles fontes ils deviennent un écrin ; sans ça, ils amplifient le look
+  actuel. Détail ci-dessous. *(S)*
+
+#### DA5.8 — ce que le recalibrage a trouvé
+
+**Trois shaders portaient l'ancienne palette, et la passe DA1.4 ne les avait pas
+vus : elle ne balayait que les `.gd`.** Un `.gdshader` est un endroit où une
+couleur se cache bien — d'autant mieux que deux d'entre elles n'étaient **jamais
+poussées depuis GDScript** et vivaient donc en dur, invisibles à toute recherche
+faite du côté du script.
+
+| Où | Ce qui restait | Devenu |
+|---|---|---|
+| `menu_backdrop.gdshader` | les deux territoires P1/P2, en `const` | uniformes poussés depuis la charte |
+| `menu_title.gdshader` | `CHAUD` et `teinte_verdict`, en dur | dérivés de `LUMIERE` et de `ETAT_OK` |
+| `menu_glass.gdshader` | défaut `teinte_focus` = ancien cyan | aligné (il est écrasé, mais un défaut périmé se lit comme une intention) |
+| `menu_skeleton.gdshader` | balayage **achromatique** | la température d'une torche |
+
+Le dernier n'est pas une couleur oubliée mais une **contradiction** : la fiche de
+M13 dit « une torche qui fouille des étagères dans le noir », et la bande était
+peinte en blanc pur. L'effet contredisait ce qu'il racontait.
+
+**Les teintes multiplicatives sont NORMALISÉES avant d'être poussées.** Le shader
+les emploie en facteur (`col * teinte`) : une couleur de la charte passée telle
+quelle assombrirait au lieu de teinter. `MenuTitre._teinte()` divise par le canal
+le plus fort puis ramène vers le blanc d'une force qui dose l'écart. Sans ça, le
+titre aurait perdu en luminance à chaque crête d'onde.
+
+#### M1 — le cas d'école, et il était visible à l'œil
+
+Le cadran de titre projetait son ombre depuis **`size.y * 0.72`** — 72 % de la
+hauteur du conteneur. Une valeur juste tant que le titre était en fonte par
+défaut à 60 px. Passé en Big Shoulders à 68, dont les métriques n'ont rien à
+voir, **l'ombre s'est retrouvée au-DESSUS du mot** : elle ne se lisait plus comme
+une ombre mais comme une bavure d'affichage.
+
+Elle est désormais ancrée au **rectangle réel de la cible**, donc indépendante de
+la fonte et de la taille. Et son écrasement — 0,34, calibré contre une fonte
+large — est passé à **0,55** : avec une display ultra-condensée, une copie
+couchée à 34 % n'a plus assez d'encre pour se lire comme un mot, elle devient un
+trait. *Une même valeur d'écrasement ne dit pas la même chose selon la chasse.*
+
+#### M2 s'est réparé tout seul, et c'est vérifiable
+
+Sa fiche promettait « le curseur cyan laisse un fantôme **braise**, le rouge un
+fantôme **d'eau verte** ». La rémanence calcule la complémentaire de la couleur
+du curseur — et sous l'ancienne palette **saturée à 100 %**, ces complémentaires
+étaient un **rouge pur** `(1.0, 0.06, 0.0)` et un **vert pur** `(0.0, 1.0, 0.67)`.
+Ni braise, ni eau.
+
+Sous la charte : `(0.71, 0.28, 0.03)` et `(0.05, 0.71, 0.67)`. **L'effet avait été
+écrit pour une palette qui n'existait pas encore**, et sa fiche décrivait le
+résultat qu'il aurait *si* la saturation était plafonnée. Elle l'est.
+
+#### Ce que M9 n'a pas eu besoin qu'on change, et pourquoi le dire
+
+La torche du curseur reste peinte aux couleurs des joueurs, alors que la nouvelle
+règle dit « ce qui révèle est chaud ». Ce n'est pas un oubli : **le curseur n'est
+pas dans le monde, il est dans l'appareil.** La fiction d'origine — « le curseur
+est une torche » — devient sous le nouveau principe « le curseur est une diode
+qu'on promène », et les deux tiennent. Aucune couleur ne bouge.
+
+Corrigé au passage : son commentaire annonçait « trois centièmes » pour une
+valeur de cinq. Vérifié — la luminance ajoutée vaut ~0,011, moins du tiers du
+plafond que le fond s'impose (`LUM_MAX = 0,035`). Les deux effets tenaient le
+même contrat sans qu'aucun ne le dise.
+
+#### La planche photographiait un écran que personne ne voit
+
+**Elle appelait `grab_focus()`**, alors que le cadre de droite se remplit par
+`MenuHub.reveal_entry()` — le relais posé le 2026-08-18, quand on a découvert que
+les curseurs maison ne déclenchent jamais `focus_entered`. La planche empruntait
+donc un chemin **que personne ne prend**. Corrigé.
+
+**Et elle ne voyait aucun des écrans de fin**, où vivent deux des quinze effets :
+la température du verdict (M11) et l'ombre projetée par VICTOIRE / DÉFAITE /
+ÉGALITÉ (M1). Ils avaient donc été recalibrés à l'aveugle — ce que cet outil
+existe précisément pour empêcher. Les trois verdicts sont désormais au cadre
+(`20-`, `21-`, `22-`), et deux décisions anciennes s'y vérifient enfin : le
+verdict prend la couleur du **vainqueur** en écran partagé, et l'égalité reste
+**grise**, « parce que le blanc est la couleur de ce qui s'affirme ».
+
+#### ⚠️ Signalé, pas corrigé — l'écran des EFFETS est vide
+
+Hors périmètre de DA5.8, donc signalé comme l'exige le protocole.
+
+**Le cadre de droite de la rubrique « Effets » n'affiche que sa ligne de
+contexte : aucune rangée de réglage.** Vu sur la planche, et **identique avant le
+chantier** — ce n'est pas une régression de la charte.
+
+Ce qui est établi : les rangées **existent** dans l'arbre (contenu mesuré à
+51 741 px de haut), et le `ScrollContainer` qui les porte a une hauteur de **0**.
+Ce n'est donc pas un contenu manquant, c'est une mise en page qui s'effondre.
+Ce qui n'est **pas** établi : la cause exacte — je n'ai pas poussé plus loin.
+
+**Aucune suite ne peut l'attraper telle qu'elles sont écrites** : elles vérifient
+que les rangées sont là, pas qu'on les voit. Troisième occurrence de ce motif
+dans la même journée.
 
 ### DA6 — Les moments qu'on screenshote
 

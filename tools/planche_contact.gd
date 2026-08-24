@@ -59,6 +59,7 @@ func _ready() -> void:
 		DirAccess.remove_absolute(f)
 
 	await _menus()
+	await _ecrans_de_fin()
 	await _entrainement()
 
 	print("\n%d images écrites dans :\n  %s" % [_n, ProjectSettings.globalize_path(_dossier)])
@@ -105,10 +106,44 @@ func _menus() -> void:
 				if btn == null or btn.disabled:
 					continue
 				i += 1
-				# Le survol suffit : depuis la refonte, une rubrique remplit le
-				# cadre de droite sans qu'on l'active.
+				# **`grab_focus()` NE SUFFIT PAS, et la planche l'ignorait.**
+				#
+				# Le cadre de droite ne se remplit pas au focus de Godot : il se
+				# remplit par `MenuHub.reveal_entry()`, que `ui._set_focus()`
+				# appelle. C'est le relais posé le 2026-08-18, quand on a
+				# découvert que les curseurs maison ne déclenchent jamais
+				# `focus_entered` — ils dessinent un liseré, ils n'appellent pas
+				# `grab_focus()`.
+				#
+				# La planche empruntait donc un chemin QUE PERSONNE NE PREND, et
+				# photographiait un cadre vide que le joueur ne voit jamais. Un
+				# outil d'observation qui n'observe pas l'état réel est pire
+				# qu'absent : il rassure sur ce qu'il n'a pas regardé.
 				btn.grab_focus()
+				if _ui.hub.has_method("reveal_entry"):
+					_ui.hub.reveal_entry(btn)
 				await _poser("04-%d-reglages" % i)
+
+
+## Les trois verdicts.
+##
+## **Quatre des quinze effets de la vitrine ne vivent nulle part ailleurs**, et la
+## planche ne les voyait pas : la température du verdict portée par le titre
+## (M11) et l'ombre du cadran projetée par VICTOIRE / DÉFAITE / ÉGALITÉ (M1). On
+## les a donc recalibrés à l'aveugle une fois — c'est-à-dire exactement ce que
+## cet outil existe pour empêcher.
+##
+## `show_game_over` prend l'identifiant du vainqueur : 0, 1, ou -1 pour l'égalité.
+## Aucun réseau, aucune manche : c'est un écran, on le montre.
+func _ecrans_de_fin() -> void:
+	if not _ui.has_method("show_game_over"):
+		printerr("  ! UI.show_game_over() a disparu — les verdicts ne sont plus vus")
+		return
+	for cas in [[0, "20-verdict-victoire"], [1, "21-verdict-defaite"],
+			[-1, "22-verdict-egalite"]]:
+		_ui.show_game_over(int(cas[0]))
+		await _poser(String(cas[1]))
+	_ui.show_main_menu()
 
 
 ## L'entraînement : un seul joueur, une seule vue, et la caméra sur lui.

@@ -69,7 +69,18 @@ func get_torch_texture() -> ImageTexture:
 					intensity = max(intensity, halo_intensity * angle_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(Charte.HALOGENE, intensity * torch_brightness))
+				# **Un masque, pas une couleur.** La teinte de la torche vit sur la
+				# `PointLight2D` (`player.gd`, `flashlight.color`), pas ici : c'est
+				# l'alpha qui porte le profil du faisceau, le blanc n'est que
+				# l'unité du produit.
+				#
+				# Elle a été écrite ici un moment, et ça marchait — masque teinté ×
+				# lumière blanche donne le même résultat que masque blanc × lumière
+				# teintée. Sauf que le jour où ce masque devient une image PEINTE
+				# (DA2.1, le cookie de torche), la couleur disparaîtrait sans un
+				# mot : une texture d'artiste ne porte pas la charte. Signalé par
+				# la session « assets visuels », qui allait buter dessus.
+				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, intensity * torch_brightness))
 	
 	_torch_texture = ImageTexture.create_from_image(img)
 	return _torch_texture
@@ -112,7 +123,7 @@ func get_torch_texture_flat() -> ImageTexture:
 					intensity = max(intensity, halo_angle_fade * halo_dist_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(Charte.HALOGENE, intensity * torch_brightness))
+				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, intensity * torch_brightness))
 	
 	_torch_texture_flat = ImageTexture.create_from_image(img)
 	return _torch_texture_flat

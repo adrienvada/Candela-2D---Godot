@@ -48,6 +48,14 @@ func _init() -> void:
 	name = "FondDeMenu"
 	_materiau = ShaderMaterial.new()
 	_materiau.shader = SHADER
+	# Les deux territoires viennent de la charte, une fois pour toutes : ils
+	# étaient écrits en dur dans le shader, où la passe de palette ne les a pas
+	# vus. Un `.gdshader` est un endroit où une couleur se cache bien — et le
+	# fond du menu est justement l'endroit où on la remarque le moins.
+	_materiau.set_shader_parameter("territoire_p1",
+		Vector3(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b))
+	_materiau.set_shader_parameter("territoire_p2",
+		Vector3(MenuTheme.P2.r, MenuTheme.P2.g, MenuTheme.P2.b))
 	_appliquer()
 
 func _ready() -> void:
