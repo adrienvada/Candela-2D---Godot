@@ -312,6 +312,12 @@ var _previous_focus: Control
 var game_over_panel: PanelContainer
 var game_over_title: Label
 var game_over_score: Label
+## DA4.7 — le bilan composé de fin de match. Partage la boîte de `game_over_score` :
+## les deux ne coexistent jamais.
+var bilan: HBoxContainer
+var bilan_p1: Label
+var bilan_p2: Label
+var bilan_serie: Label
 
 ## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
 ## un écran, un sujet.
@@ -3059,6 +3065,13 @@ func _on_hub_detail_changed(_title: String, text: String) -> void:
 		return
 	var propre := text.replace("[b]", "").replace("[/b]", "").replace("\n\n", "  ")
 	game_over_score.text = propre
+	# DA4.7 — **le bilan cède à toute description**, et la règle est dans ce sens
+	# et pas dans l'autre. Les deux partagent la boîte ; ils ne peuvent donc pas
+	# s'afficher ensemble. Le bilan est l'instantané du match qui vient de finir,
+	# la description répond à un geste que le joueur fait **maintenant** — et ce
+	# qu'on demande passe toujours avant ce qu'on nous montre.
+	if propre != "":
+		effacer_bilan()
 
 func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
@@ -3319,9 +3332,123 @@ func _build_menu_header() -> Control:
 	desc_box.custom_minimum_size = Vector2(0, 60)
 	desc_box.clip_contents = true
 	desc_box.add_child(game_over_score)
+	desc_box.add_child(_build_bilan())
 	header.add_child(desc_box)
 
 	return header
+
+
+## DA4.7 — le bilan de fin de match, composé au lieu d'être empilé.
+##
+## **Ce que la fin de match affichait : une seule ligne grise.**
+## `SESSION : 2 - 1   ·   3 D'AFFILÉE`, à 19 px, en `DIM`, écrite par
+## `game_state.gd` **dans le label des descriptions d'entrées**. Trois
+## informations de nature différente — un score qui se compare, une série qui
+## s'exalte, un mode — séparées par des points médians et toutes du même poids.
+## C'est la définition d'un empilement : rien n'y a de rang, donc l'œil n'a pas
+## d'entrée.
+##
+## Composé, chaque chose reprend son registre :
+##
+## - **le score de session** est un COMPTEUR — appareil, tabulaire, et les deux
+##   nombres sont teintés de la couleur de leur joueur, ce qui les rend lisibles
+##   sans lire le libellé ;
+## - **la série** est un CRI — enseigne, ambre, et elle n'apparaît que
+##   lorsqu'elle existe. Une ligne « série : aucune » serait une ligne qui
+##   occupe la place d'une ligne qui aurait quelque chose à dire.
+##
+## **Il vit dans la même boîte que la description, et c'est délibéré.** Les deux
+## ne coexistent jamais : le bilan appartient à l'écran de fin, la description au
+## survol d'une entrée. Partager la boîte garantit qu'ils ne se poussent pas —
+## et le défaut inverse existait déjà, `show_lobby_again()` devant effacer à la
+## main un score qui restait affiché sous un salon attendant le match suivant.
+func _build_bilan() -> Control:
+	bilan = HBoxContainer.new()
+	bilan.name = "Bilan"
+	bilan.alignment = BoxContainer.ALIGNMENT_CENTER
+	bilan.add_theme_constant_override("separation", GAP_L)
+	bilan.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bilan.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bilan.hide()
+
+	var colonne := VBoxContainer.new()
+	colonne.alignment = BoxContainer.ALIGNMENT_CENTER
+	colonne.add_theme_constant_override("separation", 0)
+	bilan.add_child(colonne)
+
+	var legende := Label.new()
+	legende.text = "SESSION"
+	legende.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(legende, T_MENTION)
+	legende.add_theme_color_override("font_color", COLOR_DIM)
+	colonne.add_child(legende)
+
+	# Le score en trois `Label` et non en un seul : c'est le seul moyen de teinter
+	# chaque nombre de la couleur de son joueur. Une chaîne unique obligerait au
+	# bbcode, donc à un `RichTextLabel`, donc à perdre l'alignement tabulaire que
+	# `T_TITRE` en appareil garantit ici.
+	var score := HBoxContainer.new()
+	score.alignment = BoxContainer.ALIGNMENT_CENTER
+	score.add_theme_constant_override("separation", GAP_XXS)
+	colonne.add_child(score)
+
+	bilan_p1 = _make_chiffre_de_bilan(COLOR_P1)
+	score.add_child(bilan_p1)
+	var tiret := Label.new()
+	tiret.text = "–"
+	Charte.appareil(tiret, T_TITRE)
+	tiret.add_theme_color_override("font_color", COLOR_LINE)
+	score.add_child(tiret)
+	bilan_p2 = _make_chiffre_de_bilan(COLOR_P2)
+	score.add_child(bilan_p2)
+
+	bilan_serie = Label.new()
+	bilan_serie.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# L'enseigne : une série est une chose qu'on annonce, pas une valeur qu'on
+	# relève. Elle ne se remplace jamais sur place — elle apparaît, elle s'en va —
+	# donc la fonte d'affichage n'y pose aucun risque de tremblement.
+	Charte.enseigne(bilan_serie, T_TITRE)
+	bilan_serie.add_theme_color_override("font_color", COLOR_GOLD)
+	bilan_serie.hide()
+	bilan.add_child(bilan_serie)
+
+	return bilan
+
+
+func _make_chiffre_de_bilan(teinte: Color) -> Label:
+	var l := Label.new()
+	l.text = "0"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Appareil : ces deux nombres se remplacent sur place à chaque manche.
+	Charte.appareil(l, T_TITRE)
+	l.add_theme_color_override("font_color", teinte)
+	return l
+
+
+## Pose le bilan de fin de match. Appelée par `game_state.gd`, qui seul connaît
+## le score de session et la série.
+##
+## `serie` vide = pas de série en cours, et la ligne disparaît **entièrement**
+## plutôt que d'afficher une absence.
+func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "") -> void:
+	if bilan == null:
+		return
+	bilan_p1.text = str(p1_wins)
+	bilan_p2.text = str(p2_wins)
+	var mot := serie.strip_edges()
+	bilan_serie.text = mot.to_upper()
+	bilan_serie.visible = mot != ""
+	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
+	game_over_score.text = ""
+	bilan.show()
+
+
+## Rend la boîte à la description d'entrée. Sans cela, le bilan du match écoulé
+## resterait sous un salon qui attend le suivant — défaut déjà corrigé une fois
+## sur `game_over_score`, et qui se serait rouvert sur le bloc composé.
+func effacer_bilan() -> void:
+	if bilan != null:
+		bilan.hide()
 
 ## Bouton générique du menu. `primary` remplit le fond avec la teinte donnée.
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
@@ -4795,6 +4922,7 @@ func rouvrir_le_salon() -> void:
 	# Cette ligne porte la description de l'entrée survolée : un score de match
 	# terminé y resterait affiché sous un salon qui attend le suivant.
 	game_over_score.text = ""
+	effacer_bilan()
 
 	# Le bloc salon se remet en accord avec l'état réel du lien — c'est lui qui
 	# grise ou dégrise « PRÊT » selon qu'un second joueur est là.
@@ -5019,24 +5147,30 @@ func signaler_adversaire_pret() -> void:
 ## Sur `position` et `modulate` du seul libellé de score : aucune des trois
 ## propriétés déjà prises sur les entrées de relance n'est touchée.
 func _annoncer_score(winner_id: int) -> void:
-	if game_over_score == null:
+	# ⚠️ **DA4.7 — l'annonce porte désormais sur le BILAN, et il fallait la
+	# déplacer, pas la laisser.** Le score de session a quitté `game_over_score`
+	# pour le bloc composé ; l'animation serait restée branchée sur un `Label`
+	# vide et invisible. Elle aurait continué de tourner, sans erreur, sans rien
+	# animer — V3.6 se serait éteinte en silence, et c'est précisément la forme
+	# de panne que ce dépôt paie le plus souvent.
+	if bilan == null:
 		return
-	# Tuer la précédente AVANT de poser la nouvelle valeur : sans ça, l'ancienne
-	# continue de tirer `modulate` vers le blanc et écrase la teinte qu'on vient
-	# d'écrire. Défaut trouvé par la suite, pas à la lecture.
-	_arreter_annonce_score()
 	var teinte := COLOR_DIM
 	if winner_id == 0:
 		teinte = COLOR_P1
 	elif winner_id == 1:
 		teinte = COLOR_P2
-	var repos := game_over_score.position
-	game_over_score.position = repos + Vector2(0, 10)
-	game_over_score.modulate = teinte
+	# Tuer la précédente AVANT de poser la nouvelle valeur : sans ça, l'ancienne
+	# continue de tirer `modulate` vers le blanc et écrase la teinte qu'on vient
+	# d'écrire. Défaut trouvé par la suite, pas à la lecture.
+	_arreter_annonce_score()
+	var repos := bilan.position
+	bilan.position = repos + Vector2(0, 10)
+	bilan.modulate = teinte
 	_annonce_score = create_tween().set_parallel()
-	_annonce_score.tween_property(game_over_score, "position", repos, 0.45) \
+	_annonce_score.tween_property(bilan, "position", repos, 0.45) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_annonce_score.tween_property(game_over_score, "modulate", Color.WHITE, 0.9) \
+	_annonce_score.tween_property(bilan, "modulate", Color.WHITE, 0.9) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 ## Coupe l'annonce en cours et rend au libellé sa teinte de repos.
@@ -5044,8 +5178,8 @@ func _arreter_annonce_score() -> void:
 	if _annonce_score != null and _annonce_score.is_valid():
 		_annonce_score.kill()
 	_annonce_score = null
-	if game_over_score != null:
-		game_over_score.modulate = Color.WHITE
+	if bilan != null:
+		bilan.modulate = Color.WHITE
 
 func hide_game_over() -> void:
 	_is_main_menu = false

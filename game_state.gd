@@ -1044,7 +1044,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 		c.queue_free()
 	ReplaySystem.start_recording()
 	
-	ui.game_over_score.text = "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
+	# Entre deux manches : le même bilan, sans la série — elle ne se proclame
+	# qu'une fois le match joué.
+	ui.poser_bilan(p1_session_wins, p2_session_wins)
 
 func _process(delta):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
@@ -1731,10 +1733,18 @@ func _do_end_round(winner_id: int):
 	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
 	local_ready_for_rematch = false
 	ui.show_game_over(winner_id)
-	var ligne := "SESSION : %d - %d" % [p1_session_wins, p2_session_wins]
-	if _mot_de_serie != "":
-		ligne += "   ·   " + _mot_de_serie
-	ui.game_over_score.text = ligne
+	# DA4.7 — le bilan est COMPOSÉ par l'interface, plus concaténé ici.
+	#
+	# Cette ligne écrivait `SESSION : 2 - 1   ·   3 D'AFFILÉE` dans
+	# `game_over_score`, c'est-à-dire dans le label des **descriptions d'entrées**.
+	# Deux défauts en un : trois informations de rangs différents aplaties par des
+	# points médians, et un emprunt de nœud qui obligeait `show_lobby_again()` à
+	# effacer le score à la main pour qu'il ne survive pas au match suivant.
+	#
+	# `game_state` reste la seule source des deux valeurs — il est le seul à
+	# connaître le score de session et la série — mais il ne décide plus de leur
+	# mise en forme.
+	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie)
 	_apply_deferred_rematch()
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :

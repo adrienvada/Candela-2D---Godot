@@ -250,20 +250,20 @@ func _test_verdict() -> void:
 	# machine, défaut consigné le même jour.
 	_ui.show_game_over(0)
 	_check("le score s'annonce dans la couleur du gagnant",
-		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P1),
-		str(_ui.game_over_score.modulate))
+		_ui.bilan.modulate.is_equal_approx(_ui.COLOR_P1),
+		str(_ui.bilan.modulate))
 	_ui.hide_game_over()
 
 	_ui.show_game_over(1)
 	_check("et dans celle de l'autre joueur quand c'est lui",
-		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P2),
-		str(_ui.game_over_score.modulate))
+		_ui.bilan.modulate.is_equal_approx(_ui.COLOR_P2),
+		str(_ui.bilan.modulate))
 	# Une égalité ne teinte personne : il n'y a personne à teinter.
 	_ui.hide_game_over()
 	_ui.show_game_over(-1)
 	_check("une égalité ne colore le score pour personne",
-		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_DIM),
-		str(_ui.game_over_score.modulate))
+		_ui.bilan.modulate.is_equal_approx(_ui.COLOR_DIM),
+		str(_ui.bilan.modulate))
 
 	# Et ce qui compte le plus : refermer l'écran rend au libellé sa teinte de
 	# repos. Sans ça l'annonce survit, se bat avec la suivante, et le score reste
@@ -272,8 +272,8 @@ func _test_verdict() -> void:
 	_ui.hide_game_over()
 	await process_frame
 	_check("refermer rend au score sa teinte de repos",
-		_ui.game_over_score.modulate.is_equal_approx(Color.WHITE),
-		str(_ui.game_over_score.modulate))
+		_ui.bilan.modulate.is_equal_approx(Color.WHITE),
+		str(_ui.bilan.modulate))
 
 ## V6.1 — la bande de la killcam souffre pendant le ralenti.
 func _test_tension_killcam() -> void:
