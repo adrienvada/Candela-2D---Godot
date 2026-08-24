@@ -46,7 +46,8 @@ enum Mode {
 	DIPLOPIE,     ## La silhouette se dédouble ; le milieu est la vérité.
 	TREMBLEMENT,  ## La silhouette dérive continûment autour de sa position.
 	REMANENCE,    ## On voit où l'adversaire ÉTAIT, pas où il est.
-	CONTRASTE,    ## La silhouette se confond avec le voile.
+	CONTRASTE,    ## La silhouette s'efface jusqu'à disparaître.
+	LAMPE,        ## Les deux : le corps disparaît, sa lampe reste. **Choix d'Adrien.**
 }
 
 ## Les libellés, pour un banc et pour un menu d'options. Ici plutôt qu'ailleurs :
@@ -58,6 +59,7 @@ const NOMS := {
 	Mode.TREMBLEMENT: "tremblement",
 	Mode.REMANENCE: "rémanence",
 	Mode.CONTRASTE: "contraste",
+	Mode.LAMPE: "lampe (contraste + halo)",
 }
 
 # --------------------------------------------------------------------------
@@ -133,26 +135,32 @@ const DERIVE_PART_RAPIDE := 0.3
 ## (allumer et se figer devient la seule ligne de jeu).
 const RETARD_REMANENCE := 0.18
 
-## Ce qu'il reste d'opacité à la silhouette à saturation : 0,18.
+## Ce qu'il reste d'opacité à la silhouette à saturation : **zéro**. L'adversaire
+## devient rigoureusement invisible.
 ##
-## ⚠️ **Il y avait ici un second réglage, `MELANGE_CONTRASTE`, et il a été retiré
-## au premier rendu.** Son idée : mêler la couleur de la silhouette à celle du
-## voile, pour que la forme reste là sans se détacher du fond — et l'opacité
-## seule, disait le commentaire, rendrait la silhouette invisible sur du noir,
-## ce qui serait un autre mode.
+## **Arbitré par Adrien au banc, le 2026-08-25** : « j'aime beaucoup [le
+## contraste] mais il faut que ça puisse atteindre 100 % d'invisibilité ». La
+## valeur était 0,18 — un reste de silhouette, choisi par prudence.
 ##
-## **Le raisonnement était juste et l'implémentation impossible.** Le shader
-## ennemi (`player_enemy_light.gdshader`) plafonne `LIGHT` à `COLOR.rgb` :
-## éclaircir la couleur vers l'halogène, qui est plus clair que le gris
-## adversaire, fait **BRILLER** la silhouette au lieu de la fondre. Le réglage
-## faisait donc le contraire de son nom, et rien ne l'aurait dit — un nom qui
-## ment est plus coûteux qu'un réglage absent.
+## ⚠️ **Ce zéro serait dangereux seul, et il ne l'est pas parce qu'il ne vient
+## jamais seul.** Une disparition pure retire TOUTE information : plus rien ne
+## dit où viser, et le plafond de compétence tombe avec. C'est l'objection que
+## ce fichier portait contre le mode `CONTRASTE` poussé à bout — et **le mix
+## demandé par Adrien y répond exactement** : le halo de `Mode.LAMPE` reste
+## centré sur la position vraie. Le corps disparaît, sa lampe reste. On ne perd
+## pas la cible, on perd sa NETTETÉ — ce qui était la demande depuis le début.
 ##
-## **Ce que la simplification coûte, et il faut le savoir avant de juger ce
-## mode :** il ne fonctionne QUE tant que le voile blanc est là pour lui servir
-## de fond. Voile coupé (touche `V` au banc), il ne dit plus « il se confond »
-## mais « il disparaît ». C'est visible en un appui, et c'est désormais écrit.
-const ALPHA_CONTRASTE := 0.18
+## **La conséquence à tenir : `Mode.CONTRASTE` seul n'est plus jouable en
+## production, il n'est plus qu'un témoin de banc.** Le retenir sans halo
+## rendrait l'adversaire introuvable à saturation.
+##
+## ⚠️ Il y avait ici un second réglage, `MELANGE_CONTRASTE`, retiré au premier
+## rendu. Son idée : mêler la couleur de la silhouette à celle du voile. Le
+## shader ennemi (`player_enemy_light.gdshader`) plafonne `LIGHT` à `COLOR.rgb`,
+## donc éclaircir la couleur **relève le plafond** et fait BRILLER la silhouette
+## au lieu de la fondre. Le réglage faisait le contraire de son nom, et rien ne
+## l'aurait dit.
+const ALPHA_CONTRASTE := 0.0
 
 ## Le halo, en pixels d'écran et en opacité. `centre` reste à l'appelant : c'est
 ## lui qui sait projeter une position de monde dans SA vue, et ce fichier ne

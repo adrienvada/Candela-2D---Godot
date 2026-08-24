@@ -83,8 +83,21 @@ const RAYON_JOUEUR := 18.0
 const VISEE_PAR_S := 18.0
 const VISEE_PENALITE := 0.6
 
-## Le facteur d'opacité du voile blanc, recopié d'`ui.gd`.
-const VOILE_FACTEUR := 0.8
+## Le facteur d'opacité du voile blanc. `ui.gd` porte **0,8** ; le banc démarre
+## à **0,35**, et l'écart est une demande d'Adrien au banc le 2026-08-25 :
+## « il faut atténuer le voile ».
+##
+## Le raisonnement derrière l'atténuation, et il tient sans le ressenti : à 0,8
+## le voile écrase déjà tout le contraste de l'écran *avant* qu'un brouillage
+## n'intervienne (0,48 d'opacité plein écran à 0,60 d'éblouissement, mesuré). Il
+## fait donc deux métiers à la fois — dire « tu es ébloui » ET cacher
+## l'adversaire. Avec `Mode.LAMPE`, le second métier revient au halo, qui le
+## fait mieux parce qu'il est LOCAL : il cache l'adversaire sans coûter la
+## lecture du reste de la carte. Le voile peut alors se contenter du premier.
+##
+## **Réglable en direct au banc (`F` / `H`)** : c'est un nombre de ressenti, il
+## se juge en le bougeant, pas en le choisissant.
+const VOILE_FACTEUR_DEFAUT := 0.35
 
 ## Combien de fantômes en diplopie. Deux : le milieu de deux points se tient à
 ## l'œil, le barycentre de trois beaucoup moins.
@@ -115,7 +128,10 @@ var _distance: float = 300.0
 var _faisceau_suit: bool = false ## Le faisceau reste-t-il sur la position vraie ?
 var _penalites: bool = true      ## La visée molle de `player.gd`.
 var _voile: bool = true
+var _voile_facteur: float = VOILE_FACTEUR_DEFAUT
 var _verite: bool = false        ## Montrer où l'adversaire est VRAIMENT.
+## Ce qu'a envoyé la dernière touche restée sans effet. Voir `_unhandled_key_input`.
+var _touche_inconnue: String = ""
 
 # --- état vivant ------------------------------------------------------------
 var _dazzle: float = 0.0
@@ -398,6 +414,21 @@ func _batir_ecran() -> void:
 	_halo.name = "Halo"
 	_halo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_halo.texture = _texture_halo()
+	# ⚠️ **Sans ceci le halo se pose à côté de sa cible, et c'est le défaut
+	# qu'Adrien a vu au banc.** `expand_mode` vaut `EXPAND_KEEP_SIZE` par
+	# défaut : la taille MINIMALE du contrôle est alors celle de la texture,
+	# 512². Toute demande plus petite est relevée à 512 pendant que `position`,
+	# elle, est calculée sur le rayon voulu — le centre dessiné dérive de
+	# `256 − rayon` vers le bas et la droite, soit une centaine de pixels aux
+	# valeurs courantes.
+	#
+	# **Et il a survécu à une vérification par l'image**, parce que l'unique
+	# capture du halo avait l'émetteur pile au-dessus du canon : à cet endroit
+	# l'erreur horizontale est nulle et la verticale passe pour « le halo est un
+	# peu bas ». Une position centrée est le seul point aveugle de ce défaut, et
+	# c'est celui que j'avais choisi. Les captures de contrôle placent désormais
+	# l'émetteur DE CÔTÉ.
+	_halo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_halo.visible = false
 	var additif := CanvasItemMaterial.new()
 	additif.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -555,7 +586,7 @@ func _postes() -> Array[Dictionary]:
 		Brouillage.Mode.REMANENCE:
 			var passe := _relire(_temps - Brouillage.retard(_dazzle, _force))
 			sortie.append(passe)
-		Brouillage.Mode.CONTRASTE:
+		Brouillage.Mode.CONTRASTE, Brouillage.Mode.LAMPE:
 			opacite = Brouillage.opacite(_dazzle, _force)
 			sortie.append({"pos": _pos_vraie, "rot": _rot_vraie})
 		_:
@@ -617,9 +648,10 @@ func _rendre() -> void:
 	_croix.global_position = _pos_vraie
 
 	_voile_rect.color = Color(Charte.HALOGENE,
-		(_dazzle * VOILE_FACTEUR) if _voile else 0.0)
+		(_dazzle * _voile_facteur) if _voile else 0.0)
 
-	var h := Brouillage.halo(_dazzle, _force) if _mode == Brouillage.Mode.HALO else {"rayon": 0.0, "intensite": 0.0}
+	var porte_halo := _mode == Brouillage.Mode.HALO or _mode == Brouillage.Mode.LAMPE
+	var h := Brouillage.halo(_dazzle, _force) if porte_halo else {"rayon": 0.0, "intensite": 0.0}
 	var rayon := float(h["rayon"])
 	_halo.visible = rayon > 1.0
 	if _halo.visible:
@@ -698,16 +730,53 @@ func _unhandled_input(evenement: InputEvent) -> void:
 		_tirer()
 
 
+## Les six touches de mode, lues sur la touche PHYSIQUE.
+##
+## ⚠️ **Elles étaient lues sur `keycode`, et quatre des six ne marchaient pas sur
+## le clavier d'Adrien** — un AZERTY, où la rangée de chiffres porte `& é " ' ( à`
+## en étiquette non maïuscule. `keycode` rend « l'étiquette localisée » : `1`
+## devient `KEY_AMPERSAND`, `3` `KEY_QUOTEDBL`, `4` `KEY_APOSTROPHE`, `5`
+## `KEY_PARENLEFT`. Aucune ne tombait dans le `match`.
+##
+## **Et le défaut disait lui-même sa cause : seuls `0` et `2` fonctionnaient.**
+## Ce sont exactement les deux dont l'étiquette AZERTY (`à`, `é`) est une lettre
+## accentuée, donc sans constante `Key` correspondante — faute de mieux, Godot y
+## retombait sur le chiffre. Les quatre qui échouaient sont exactement les quatre
+## dont l'étiquette est un symbole ASCII qui, lui, a sa constante.
+##
+## `physical_keycode` décrit la POSITION sur le clavier, indépendamment de la
+## disposition : la rangée de chiffres y est toujours `KEY_0`…`KEY_9`. Les
+## chiffres sont d'ailleurs imprimés sur ces touches-là en AZERTY aussi, en
+## seconde légende — l'aide à l'écran reste donc vraie.
+##
+## **Les LETTRES, elles, restent sur `keycode`, et ce n'est pas une
+## incohérence :** en position physique, la touche marquée `A` d'un AZERTY est un
+## `KEY_Q`. Lire le physique y ferait mentir l'aide à l'écran, qui annonce des
+## étiquettes. Chiffres au physique, lettres à l'étiquette — chacun sur ce qui le
+## rend prévisible.
+const TOUCHES_MODE := {
+	KEY_0: Brouillage.Mode.AUCUN, KEY_KP_0: Brouillage.Mode.AUCUN,
+	KEY_1: Brouillage.Mode.HALO, KEY_KP_1: Brouillage.Mode.HALO,
+	KEY_2: Brouillage.Mode.DIPLOPIE, KEY_KP_2: Brouillage.Mode.DIPLOPIE,
+	KEY_3: Brouillage.Mode.TREMBLEMENT, KEY_KP_3: Brouillage.Mode.TREMBLEMENT,
+	KEY_4: Brouillage.Mode.REMANENCE, KEY_KP_4: Brouillage.Mode.REMANENCE,
+	KEY_5: Brouillage.Mode.CONTRASTE, KEY_KP_5: Brouillage.Mode.CONTRASTE,
+	KEY_6: Brouillage.Mode.LAMPE, KEY_KP_6: Brouillage.Mode.LAMPE,
+}
+
 func _unhandled_key_input(evenement: InputEvent) -> void:
 	if not (evenement is InputEventKey) or not evenement.pressed or evenement.echo:
 		return
+	# La touche physique d'abord : c'est elle qui porte les chiffres sur toutes
+	# les dispositions. On retombe sur `keycode` pour le cas — pavé numérique de
+	# certains claviers, machines exotiques — où le physique ne serait pas rempli.
+	if TOUCHES_MODE.has(evenement.physical_keycode):
+		_mode = TOUCHES_MODE[evenement.physical_keycode]
+		return
+	if TOUCHES_MODE.has(evenement.keycode):
+		_mode = TOUCHES_MODE[evenement.keycode]
+		return
 	match evenement.keycode:
-		KEY_0, KEY_KP_0: _mode = Brouillage.Mode.AUCUN
-		KEY_1, KEY_KP_1: _mode = Brouillage.Mode.HALO
-		KEY_2, KEY_KP_2: _mode = Brouillage.Mode.DIPLOPIE
-		KEY_3, KEY_KP_3: _mode = Brouillage.Mode.TREMBLEMENT
-		KEY_4, KEY_KP_4: _mode = Brouillage.Mode.REMANENCE
-		KEY_5, KEY_KP_5: _mode = Brouillage.Mode.CONTRASTE
 		KEY_LEFT: _force = maxf(0.0, _force - 0.1)
 		KEY_RIGHT: _force = minf(2.0, _force + 0.1)
 		KEY_UP:
@@ -726,6 +795,8 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_L: _faisceau_suit = not _faisceau_suit
 		KEY_P: _penalites = not _penalites
 		KEY_V: _voile = not _voile
+		KEY_F: _voile_facteur = maxf(0.0, _voile_facteur - 0.05)
+		KEY_H: _voile_facteur = minf(1.0, _voile_facteur + 0.05)
 		KEY_T: _verite = not _verite
 		KEY_R:
 			for m in Brouillage.Mode.values():
@@ -734,6 +805,19 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_ESCAPE:
 			_tableau()
 			get_tree().quit()
+		_:
+			# **Une touche qui ne fait rien ne doit pas se taire.** Le banc a été
+			# livré avec quatre touches de mode muettes sur le clavier d'Adrien,
+			# et le rapport ne pouvait rien dire de plus que « ça ne marche
+			# pas » : rien à l'écran ne disait ce que la touche avait envoyé.
+			# Trois nombres suffisent à trancher entre une disposition exotique,
+			# un pavé numérique et une touche simplement non câblée.
+			_touche_inconnue = "touche sans effet — étiquette %d, physique %d, texte « %s »" % [
+				evenement.keycode, evenement.physical_keycode,
+				char(evenement.unicode) if evenement.unicode > 31 else "",
+			]
+			return
+	_touche_inconnue = ""
 
 
 func _poser_arme() -> void:
@@ -758,15 +842,15 @@ func _maj_panneau() -> void:
 		"arme            %s" % arme.name,
 		"distance        %.0f px      mouvement  %s" % [_distance, NOMS_MOUVEMENT[_mouvement]],
 		"faisceau        %s" % ("suit le brouillage" if _faisceau_suit else "reste sur la vérité"),
-		"pénalité visée  %s        voile  %s" % [
-			"oui" if _penalites else "non", "oui" if _voile else "non"],
+		"pénalité visée  %s        voile  %s (×%.2f)" % [
+			"oui" if _penalites else "non", "oui" if _voile else "non", _voile_facteur],
 		"",
 		"tirs %d      au but %s      raté moyen %s" % [n, au_but, lateral],
-	])
+	] + (["", _touche_inconnue] if _touche_inconnue != "" else []))
 
 
 func _texte_aide() -> String:
-	return "clic tirer   0-5 mode   ←/→ force   A auto/forcé   ↑/↓ niveau   " \
+	return "clic tirer   0-6 mode (6 = lampe)   ←/→ force   A auto/forcé   ↑/↓ niveau   " \
 		+ "W arme   M mouvement   Z/X distance\n" \
-		+ "L le faisceau suit   P pénalité de visée   V voile   T montrer la vérité   " \
-		+ "R remettre à zéro   Échap tableau et sortie"
+		+ "F/H voile plus faible / plus fort   V voile oui-non   L le faisceau suit   " \
+		+ "P pénalité de visée   T montrer la vérité   R remettre à zéro   Échap tableau et sortie"

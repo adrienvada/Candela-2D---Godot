@@ -119,6 +119,19 @@ func _test_verite_recouvrable() -> void:
 	_check("le retard est borné par son réglage",
 		Brouillage.retard(1.0, 1.0) <= Brouillage.RETARD_REMANENCE + 1e-6)
 
+	# **Le contraste, lui, ne rend PAS la vérité recouvrable — c'est voulu, et
+	# c'est pour cela qu'il ne voyage plus seul.** Adrien a demandé le
+	# 2026-08-25 qu'il atteigne 100 % d'invisibilité ; à saturation il ne reste
+	# donc rien à viser. Ce qui rattrape la cible est le halo de `Mode.LAMPE`,
+	# centré sur la position vraie. Les deux contrôles ci-dessous tiennent
+	# ENSEMBLE la demande et son garde-fou : si quelqu'un remonte
+	# `ALPHA_CONTRASTE` la première rougit, si quelqu'un débranche le halo du
+	# mode `LAMPE` la seconde n'y suffira pas — d'où la note dans `brouillage.gd`.
+	_check("à saturation, l'adversaire est totalement invisible",
+		is_zero_approx(Brouillage.opacite(1.0)), "%.3f" % Brouillage.opacite(1.0))
+	_check("et le halo, lui, reste pour dire où il est",
+		Brouillage.halo(1.0)["rayon"] > 0.0 and Brouillage.halo(1.0)["intensite"] > 0.0)
+
 
 # ---------------------------------------------------------------------------
 # LES BORNES — l'amplitude annoncée est la vraie

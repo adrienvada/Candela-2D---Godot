@@ -7426,24 +7426,90 @@ Trois issues, aucune évidente, toutes à trancher par Adrien : donner au voile 
 **plancher** qu'aucun réglage ne peut passer ; lier le brouillage au voile
 malgré la décision ; ou ne retenir qu'un mode qui se suffit à lui-même.
 
-### Ce qui attend Adrien — B1 à B4
+### ✅ B1 tranché au banc par Adrien, le 2026-08-25 — « la lampe »
 
-- **B1 — quel(s) mode(s).** Le banc se lance seul : `godot --path .
-  res://tools/banc_brouillage.tscn`. `0` à `5` changent de mode en direct, `←/→`
-  règlent la force, le clic tire, `Échap` imprime le tableau. **Il chiffre
-  l'essai** : par mode, combien de tirs, combien au but, et de combien on rate en
-  moyenne. Le ressenti reste à Adrien ; le tableau existe pour qu'il ne se fie
-  pas qu'à lui.
-- **B2 — le faisceau suit-il le brouillage ?** (touche `L`). Voir plus haut :
-  sans cela, le cône continue de dire la vérité.
-- **B3 — faut-il baisser le voile si un mode est retenu ?** (touche `V` pour
-  juger sans lui).
-- **B4 — le curseur.** Voir l'encadré ci-dessus.
+**Premier essai manette en main, et il tranche la question centrale.** Adrien
+retient **un mix du contraste et du halo**, avec trois exigences :
 
-**Tant que B1 n'est pas tranché, rien ne se branche.** `brouillage.gd` n'a aucun
-lecteur en production, et c'est délibéré : brancher un mode « pour voir » dans
-`player.gd` ou `ui.gd` reviendrait à décider à la place d'Adrien tout en touchant
-des fichiers tenus par la session « game feel ».
+1. **Le contraste doit atteindre 100 % d'invisibilité** — « j'aime beaucoup,
+   mais il faut que ça puisse atteindre 100 % ». `ALPHA_CONTRASTE` passe de
+   **0,18 à 0,0**.
+2. **Le halo doit se poser sur l'émetteur.** C'était un **défaut**, pas un
+   choix (voir plus bas).
+3. **Le voile doit être atténué.** Le banc démarre désormais à **0,35** au lieu
+   des 0,8 d'`ui.gd`, et le facteur est réglable en direct (`F` / `H`).
+
+Le mode combiné existe sous le nom **`Mode.LAMPE`**, touche `6` : *le corps
+disparaît, sa lampe reste.* Les modes purs restent au banc comme témoins.
+
+**Ce que ce choix résout, et que le raisonnement seul n'avait pas vu.** Ce
+document portait une objection contre le contraste poussé à bout : une
+disparition pure retire TOUTE information, donc le plafond de compétence tombe
+avec. Le mix y répond exactement — **le halo reste centré sur la position
+vraie**, donc on ne perd pas la cible, on perd sa *netteté*. C'était la demande
+depuis le début. Et l'atténuation du voile suit la même logique : le voile
+faisait deux métiers (dire « tu es ébloui » ET cacher l'adversaire) ; le second
+revient au halo, qui le fait **localement**, sans coûter la lecture du reste de
+la carte.
+
+**Conséquence à tenir : `Mode.CONTRASTE` seul n'est plus jouable en
+production.** À 100 % d'invisibilité et sans halo, l'adversaire devient
+introuvable. Il ne survit que comme témoin de banc. Deux contrôles de
+`test_brouillage` tiennent la paire — l'invisibilité totale d'un côté, la
+présence du halo de l'autre.
+
+> ⚠️ **Ce qu'il reste à juger sur `LAMPE`, et qui ne se voit qu'en jouant :**
+> un halo radial centré sur la vérité a un **centre lisible**. Le risque est
+> qu'on apprenne à tirer au milieu de la tache, et que le brouillage se réduise
+> à une gêne cosmétique. Ce qui doit l'empêcher n'est pas un décentrage — ce
+> serait un mensonge — mais la **taille** de la tache, le fait qu'elle bouge, et
+> la visée déjà ralentie. À vérifier au tableau de tirs, pas à l'œil : si le
+> « % au but » de `lampe` rejoint celui d'`aucun`, c'est que le centre se lit
+> trop bien, et c'est `RAYON_HALO` qu'il faut monter.
+
+### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
+
+`TextureRect.expand_mode` vaut `EXPAND_KEEP_SIZE` par défaut : la taille
+**minimale** du contrôle est alors celle de sa texture, 512². Toute taille
+demandée plus petite était relevée à 512 pendant que la position, elle, restait
+calculée sur le rayon voulu — le centre dessiné dérivait de `256 − rayon`, une
+centaine de pixels vers le bas et la droite aux valeurs courantes.
+
+**Le plus instructif est comment il a passé une vérification par l'image.**
+L'unique capture du halo avait été prise avec l'émetteur **pile au-dessus du
+canon**. À cet endroit l'erreur horizontale est rigoureusement nulle, et
+l'erreur verticale se lit comme « le halo est un peu bas » — c'est-à-dire comme
+un réglage, pas comme un défaut. **Une position centrée est le seul point
+aveugle de ce défaut, et c'est celle qui avait été choisie pour le contrôler.**
+
+La règle qui en sort, et elle vaut pour toute planche de ce dépôt : **une
+capture de contrôle ne se prend pas sur un cas symétrique.** La symétrie est
+exactement ce qui annule les erreurs qu'on cherche.
+
+### Ce qui attend encore Adrien — B2 à B4
+
+Le banc se lance seul : `godot --path . res://tools/banc_brouillage.tscn`. `0`
+à `6` changent de mode en direct, `←/→` règlent la force, `F`/`H` le voile, le
+clic tire, `Échap` imprime le tableau — par mode, combien de tirs, combien au
+but, de combien on rate.
+
+- ~~**B1 — quel(s) mode(s).**~~ ✅ **Tranché le 2026-08-25 : `Mode.LAMPE`**
+  (contraste à 100 % + halo). Voir ci-dessus.
+- **B2 — le faisceau suit-il le brouillage ?** (touche `L`). **Sans objet pour
+  `LAMPE`** : ce mode ne déplace rien, il efface et il éclaire. La question ne
+  se rouvrira que si un mode à déplacement revenait.
+- **B3 — quelle valeur pour le voile ?** Le principe est tranché (l'atténuer) ;
+  **le nombre ne l'est pas.** Le banc démarre à 0,35 contre 0,8 en production,
+  et `F`/`H` le règlent en direct. C'est le dernier réglage de ressenti à poser.
+- **B4 — le curseur.** Inchangé, et le mix le rend **plus** pressant, pas moins :
+  voir l'encadré ci-dessus. Un joueur qui met le voile à zéro garderait un
+  adversaire invisible et un halo pour seule information — ce qui peut être un
+  réglage acceptable, ou un avantage. À trancher avant tout branchement.
+
+**Rien n'est branché tant que B3 et B4 ne sont pas posés.** `brouillage.gd` n'a
+toujours aucun lecteur en production : le branchement touche `player.gd`,
+`ui.gd` et `game_state.gd`, tenus par la session « game feel », et il fige des
+nombres que seul le banc peut donner.
 
 ---
 
