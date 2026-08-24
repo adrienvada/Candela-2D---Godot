@@ -6588,8 +6588,34 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
-- **DA4.7 La bannière de fin composée** — verdict, série, « effleuré : 13 px »
-  hiérarchisés comme une affiche, pas empilés. *(S après DA1, C pour l'ornement)*
+- **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le
+  2026-08-25** — verdict, score de session et série sont désormais hiérarchisés
+  au lieu d'être aplatis. Ce qui manque : « effleuré : 13 px », voir ci-dessous.
+
+  **Ce qu'affichait la fin de match : `SESSION : 2 - 1   ·   3 D'AFFILÉE`.**
+  Trois informations de natures différentes, séparées par des points médians,
+  toutes du même poids, à 19 px en `DIM` — et écrites par `game_state.gd` **dans
+  le label des descriptions d'entrées**. Rien n'y avait de rang, donc l'œil n'y
+  avait pas d'entrée.
+
+  Composé, chaque chose reprend son registre : le score est un **compteur**
+  (appareil, tabulaire, chaque nombre teinté de la couleur de son joueur, ce qui
+  le rend lisible sans lire le libellé) ; la série est un **cri** (enseigne,
+  ambre) et n'apparaît que lorsqu'elle existe.
+
+  ⚠️ **Un effet a failli s'éteindre en silence, et c'est le fait à retenir.**
+  V3.6 — l'annonce du score, qui le fait monter de dix pixels dans la couleur de
+  celui qui vient de marquer — animait `game_over_score`. Le score ayant
+  déménagé dans le bloc composé, elle serait restée branchée sur un `Label` vide
+  et invisible : elle aurait continué de tourner, sans erreur, sans rien animer.
+  **Déplacer une donnée déplace tout ce qui la regarde**, et rien dans le
+  langage ne le signale.
+
+  ⬜ **Reste : « effleuré : 13 px ».** La donnée existe (`player.gd`,
+  `last_fatal_perp`) mais elle est consommée sur place, en espace-monde, pour un
+  label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
+  `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
+  feel ». **À demander avant de le faire.** *(S)*
 - **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
   pour chaque carte. *(S)*
 - **DA4.9 Le code de salon en cases display** ✅ **livrée le 2026-08-24** — les
