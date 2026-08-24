@@ -267,7 +267,13 @@ func _dire_les_reglages() -> void:
 		var arme: WeaponData = _main.weapon_for_index(idx)
 		print("  %-9s texture %.3f   (formule %.3f)" % [_nom(arme),
 			Vision.intensite_texture(arme.image_torche(), Vector2.RIGHT,
-				Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS, arme.torch_scale),
+				# `echelle_torche()`, pas `torch_scale` : l'échelle que la
+				# LUMIÈRE emploie. Les deux étaient le même nombre jusqu'aux
+				# cookies cuits en 1024². Cette planche a rapporté quatre
+				# plafonds faux avant qu'on le voie — elle échantillonnait plus
+				# près du centre, donc plus clair, et faisait passer un défaut
+				# d'outil pour un effet du cookie peint.
+				Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS, arme.echelle_torche()),
 			Vision.intensite_recue(Vector2.RIGHT, Vector2.ZERO,
 				Vector2.RIGHT * CORPS_A_CORPS, arme.portee_torche(),
 				arme.cos_demi_cone())])
@@ -295,7 +301,7 @@ func _mesurer_le_temps() -> void:
 	var arme: WeaponData = _main.p1.current_weapon
 	var plafond: float = Eblouissement.plafond_pour(Vision.intensite_texture(
 		arme.image_torche(), Vector2.RIGHT, Vector2.ZERO,
-		Vector2.RIGHT * CORPS_A_CORPS, arme.torch_scale))
+		Vector2.RIGHT * CORPS_A_CORPS, arme.echelle_torche()))
 
 	# MONTÉE. Le chronomètre part à la première image où la valeur bouge, et non
 	# à l'appui : entre les deux il y a une image de scrutation d'entrée, et la
