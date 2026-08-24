@@ -2521,6 +2521,37 @@ dix-huit fois trop de lumière au bord. L'invariant retenu est plus fort et se
 vérifie sans seuil : *la structure est divisée par le SOMMET de son anneau, jamais
 par sa moyenne*, si bien que **le cookie cuit n'éclaire jamais plus que celui
 qu'il remplace, à aucune distance et sous aucun angle**.
+### Une garantie tenue par une ligne que rien ne relie à elle (2026-08-24)
+
+Retirer le repli analytique de l'éblouissement était juste — sans cookie, la
+torche ne rend aucune lumière, donc rien ne doit être subi. Mais le changement a
+**déplacé une charge sans le dire** : tant que le repli existait, une arme sans
+cookie éblouissait quand même — moche, et bruyant à sa façon. Depuis, elle ne
+fait **rien du tout** : ni lumière, ni pénalité, ni exception.
+
+Le seul signal restant est **une ligne, dans un autre fichier** — le
+`push_error` de `WeaponData.get_torch_texture()`. Le jour où quelqu'un la
+dégrade en `print()` pour nettoyer la console, ou la retire parce qu'« elle ne
+sert à rien, les cookies sont versionnés », la torche silencieusement
+inoffensive revient, et cette fois sans repli pour l'atténuer.
+
+**Le commentaire disait « un cookie manquant reste bruyant » — une propriété
+vraie, sans dire de quoi elle dépend.** C'est la forme la plus discrète de la
+journée, et la cinquième : après le contrôle hors sujet, l'entrée barrée, la
+liste d'appuis périmée et le nombre sans son échelle, voici **la garantie dont
+personne ne sait ce qui la tient**. Aucune ne ment ; toutes dispensent d'aller
+voir.
+
+Relevée par la session « assets visuels », qui a vu dans le changement d'une
+autre ce que celle-ci ne pouvait pas voir dans le sien — c'est le motif de toute
+la journée, et il a fonctionné six fois.
+
+**La parade appliquée :** nommer la dépendance **du côté qui en dépend**, pas du
+côté qui la fournit. Le fichier qui lève l'erreur n'a aucune raison de savoir
+que l'éblouissement s'y adosse ; celui qui s'y adosse, si. Un contrôle qui
+relierait vraiment les deux reste à poser, et il vit chez le fournisseur : *une
+arme dont le cookie n'existe pas rend `null` et ne se tait pas*.
+
 ### Un nombre sans son échelle n'est pas un nombre (2026-08-24)
 
 Quatre plafonds d'éblouissement transmis à la session voisine — « pistolet

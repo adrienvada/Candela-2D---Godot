@@ -1287,9 +1287,25 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# calculait l'éblouissement depuis autre chose que l'écran.
 	#
 	# `lumiere_recue()` rend zéro quand l'arme n'a pas d'image, et ce zéro-là
-	# est la règle : on ne peut pas être aveuglé par une lampe éteinte. Un
-	# cookie manquant reste bruyant — `get_torch_texture()` lève une erreur au
-	# chargement — donc le silence redouté n'existe pas.
+	# est la règle : on ne peut pas être aveuglé par une lampe éteinte.
+	#
+	# ⚠️ **CE ZÉRO N'EST ACCEPTABLE QUE PARCE QU'IL CRIE AILLEURS, et il ne crie
+	# que grâce à UNE ligne** — le `push_error` de
+	# `WeaponData.get_torch_texture()` quand le fichier de cookie est
+	# introuvable. C'est la seule chose qui distingue « cette arme n'éblouit
+	# pas » d'un défaut d'installation.
+	#
+	# Relevé par la session « assets visuels » le 2026-08-24, et elle a raison :
+	# en retirant le repli j'ai rendu sa ligne **porteuse** sans que rien ne le
+	# dise. Le jour où quelqu'un la dégrade en `print()` pour nettoyer la
+	# console, ou la retire parce qu'« elle ne sert à rien, les cookies sont
+	# versionnés », la torche silencieusement inoffensive que le repli
+	# prétendait empêcher revient — et cette fois sans repli du tout.
+	#
+	# **Ne pas retirer ce `push_error` sans le remplacer par plus bruyant.**
+	# C'est écrit ici plutôt que là-bas parce que c'est ici que la dépendance
+	# existe : le fichier qui lève l'erreur n'a aucune raison de savoir que
+	# l'éblouissement s'y adosse.
 	var arme: WeaponData = source.current_weapon
 	if arme == null:
 		return 0.0
