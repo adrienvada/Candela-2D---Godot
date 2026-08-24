@@ -289,7 +289,7 @@ static func _socle_compatible(p: Dictionary, socle: String) -> bool:
 ## Ce qu'il faut dire au joueur quand la version publiée n'a pas le même
 ## protocole que la sienne. Vide si tout va bien.
 ##
-## **Rien n'est bloqué, et c'est une décision d'Adrien (2026-08-18).** Le jeu ne
+## **Rien n'est bloqué, et c'est une décision d'Adrien (2026-08-24).** Le jeu ne
 ## se ferme pas, ne verrouille aucun menu, ne force aucun téléchargement : l'écran
 ## scindé, l'entraînement et l'éditeur de cartes n'ont jamais eu besoin d'un
 ## adversaire distant. Ce qui cesse de fonctionner — trouver quelqu'un en ligne —
