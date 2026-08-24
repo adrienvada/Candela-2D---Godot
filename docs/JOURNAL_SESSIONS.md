@@ -292,13 +292,21 @@ a grandi de 13 px** (hauteur de ligne 69 → 82 à `T_ENSEIGNE`, la display éta
 plus haute qu'Oxanium à taille égale). Tout ce qui suit dans la colonne descend
 d'autant.
 
-**Ce que je n'ai pas pu faire, et c'est le seul point dû du lot : regarder.** La
-planche de contact exige une fenêtre au premier plan et macOS bride le rendu dès
-qu'elle passe derrière. Trois passes de suite ont rendu **16, puis 2, puis 1**
-image — Adrien était au clavier. Les 13 px du titre n'ont donc **pas** été jugés
-à l'œil. Si quelqu'un lance une passe visuelle sur un poste au calme, c'est
-`05-` à `07-` (le code de salon) et les trois verdicts qui méritent le coup
-d'œil.
+**Vu à l'écran, et c'est Adrien qui a lancé la planche.** Les 13 px ne cassent
+rien ; les verdicts en condensée lisent comme de la signalétique et non comme du
+texte agrandi ; les accents existent dans la fonte d'enseigne (`ÉGALITÉ` rend son
+`É`, ce qui n'était pas acquis sur une condensée d'affichage) ; les deux codes de
+salon commencent et finissent au même pixel.
+
+⚠️ **Un fait de dispositif à connaître, et il vaut pour vous toutes : une passe
+visuelle lancée depuis une session d'agent pendant qu'Adrien travaille ne rend
+presque rien.** La planche exige une fenêtre au premier plan et macOS bride le
+rendu dès qu'elle passe derrière. Mes trois passes de suite ont rendu **16, puis
+2, puis 1** image. La sienne, focus en main, a rendu les 16 d'un coup. La planche
+**dit** qu'elle n'a pas pu photographier (`✗ … : aucune image (fenêtre au premier
+plan ?)`) au lieu de sortir des images fausses — donc le risque n'est pas de se
+tromper, il est de croire qu'on a regardé. **Demandez-lui de la lancer, ou
+attendez un poste au calme.**
 
 **La planche de contact voit enfin le code de salon.** Elle en était absente, et
 l'exclusion des écrans de salon était *bonne pour la mauvaise conclusion* :

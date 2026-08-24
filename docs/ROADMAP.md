@@ -6358,12 +6358,31 @@ n'en est pas affectée — elle est posée par offsets calculés et non par la t
 du texte — et le rapport s'améliore même : elle mesure 84 px de haut pour un
 `Label` qui passe de 69 à 82.
 
-⚠️ **Ces 13 px n'ont PAS été jugés à l'œil**, et c'est le seul point du lot qui
-reste dû. La planche de contact n'a pas pu tourner : elle exige une fenêtre au
-premier plan, et macOS bride le rendu dès qu'elle passe derrière — trois passes
-consécutives ont rendu 16, puis 2, puis 1 image, Adrien étant au clavier. Le
-banc de contact est passé une fois avant la fusion ; le titre en fonte
-d'enseigne n'y figure pas. **À regarder avant de fusionner dans `main`.**
+✅ **Jugé à l'œil le 2026-08-24, planche lancée par Adrien lui-même.** Les 13 px
+ne cassent rien : l'en-tête reste aéré, rien ne déborde, la ligne de description
+sous le titre garde sa place. Trois observations que seule l'image donne :
+
+- **Le verdict tient sa promesse.** `JOUEUR 2 GAGNE` et `ÉGALITÉ` en condensée
+  lisent comme de la signalétique et non comme du texte agrandi. La parenté avec
+  le FATAL de l'arène se voit — c'était tout l'objet du changement.
+- **Les accents existent dans la fonte d'enseigne.** `ÉGALITÉ` rend son `É`
+  correctement. Ce n'était pas acquis : une condensée d'affichage tronque
+  souvent son jeu de glyphes, et le verdict d'égalité aurait été le seul écran à
+  le montrer.
+- **Le code de salon tient à l'œil ce que le banc tenait au chiffre.**
+  `WXYZW3` et `JT7JT7` commencent et finissent au même pixel. L'air entre les
+  cases est généreux et lit comme un numéro de série, ce qui est l'effet
+  recherché.
+
+⚠️ **La passe visuelle est fragile pour une raison qui n'a rien à voir avec le
+code, et il faut le savoir avant de s'en servir** : elle exige une fenêtre au
+premier plan, et macOS bride le rendu dès qu'elle passe derrière. Trois passes
+consécutives lancées depuis une session d'agent ont rendu **16, puis 2, puis 1**
+image, pendant qu'Adrien travaillait au clavier — et la planche le **dit**
+(`✗ … : aucune image (fenêtre au premier plan ?)`) au lieu de rendre des images
+fausses, ce qui est le bon comportement. Lancée par Adrien sur une machine dont
+il tenait le focus, elle a rendu les 16 d'un coup. **Une passe visuelle se lance
+donc quand personne d'autre ne travaille, ou par la personne devant l'écran.**
 
 ##### Le banc a maintenant deux versants, et le second manquait
 
