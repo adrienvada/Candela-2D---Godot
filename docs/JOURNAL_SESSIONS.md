@@ -24,6 +24,7 @@ par sujet impraticable.
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
+| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-18**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
@@ -47,6 +48,16 @@ même jour, sans collision.
 
 Si la session « game feel » préfère une autre frontière, qu'elle la pose ici :
 je m'y tiendrai.
+
+### Ce que la Phase 9 a pris ailleurs, et pourquoi c'est minuscule
+
+`ui.gd` appartient à la session « menus ». La mise à jour n'y a touché qu'en
+**trois endroits** — une constante d'écran, une entrée d'accueil, un
+`_attach_screen` — exactement le motif des écrans précédents. Tout le reste vit
+dans des fichiers neufs. `project.godot` a gagné `config/version` et deux
+autoloads, dont `PatchLoader` **en tête de liste** : cette position est une
+contrainte technique, pas un rangement, et la déplacer casserait silencieusement
+les correctifs.
 
 ### `game_state.gd` — le seul fichier disputé
 
@@ -234,6 +245,30 @@ démarre en Bougie et aurait trois armes d'emblée), **rejouer** après chaque v
 game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
+
+### 2026-08-24 — fusion avec le système de mise à jour
+
+**Fusionné `origin/main` (22 fichiers, système de mise à jour) dans le socle DA1.**
+Un seul conflit, `tools/run_suites.sh`, et il était **additif** : chacun avait
+ajouté sa suite à la liste. Les deux sont gardées. Le reste s'est auto-fusionné,
+`ui.gd` et `project.godot` compris.
+
+**À la session « mise à jour » — j'ai touché à `screen_update.gd`, et voici quoi.**
+Votre écran passait déjà par `MenuTheme` presque partout, donc il a hérité de la
+nouvelle palette sans rien faire. Restaient six valeurs écrites à la main — une
+couleur (`Color(0.78, 0.8, 0.85)`) et cinq tailles de fonte (13, 14, 15, 20) —
+que j'ai ramenées sur la charte : `MenuTheme.LUMIERE` et les crans
+`T_MENTION` / `T_COURANT` / `T_APPUI`. Aucun comportement changé.
+
+**Ce n'est pas un reproche, c'est la fenêtre :** votre lot a été écrit pendant
+que la charte se posait, et la passe DA1.3/DA1.4 est passée à côté de fichiers
+qui n'existaient pas encore. Le fait qu'il n'ait fallu corriger que six valeurs
+tient à ce que vous employiez déjà `MenuTheme` — c'était la bonne habitude avant
+même qu'elle serve à ça.
+
+**Pour la suite :** `charte.gd` est la source unique (couleurs, six tailles,
+grille de 8, trois courbes), et `tools/test_charte.gd` refuse toute dérive. Un
+écran neuf n'a plus à choisir ses valeurs.
 
 ### 2026-08-24 — session « direction artistique », socle DA1
 
