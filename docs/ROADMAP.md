@@ -2324,7 +2324,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **On est éblouissable de dos** (2026-08-18, Adrien) | L'orientation de la victime n'entre pas dans le calcul : une torche braquée sur sa nuque éblouit. C'est une **décision**, pas un oubli — dans un jeu où la lumière est la seule information, être pris dans un faisceau doit coûter quelque chose quelle que soit la direction du regard, et la règle inverse rendrait le duel dos-à-dos illisible. À rouvrir si le jeu s'en trouve confus. |
 | **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard, sur un effet qui dure une seconde et demie. |
 | **L'éblouissement LIT le faisceau, il ne le recalcule plus** (2026-08-24, Adrien) | `Vision.intensite_texture` échantillonne l'alpha de la texture que la lumière projette ; `intensite_recue` n'est plus qu'un repli pour une arme sans texture. La copie était délibérée — *« deux formules pour un même faisceau finiraient par diverger »* — et le raisonnement était juste : **une copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la même chose.** Trois divergences en étaient sorties, toutes muettes : `torch_brightness` que le modèle ignorait, le cône écrit en dur à 30° pour quatre armes de 5 à 60°, et le profil peint des cookies qui tombe à 0,49-0,73 de la formule dans les flancs. **Un pixel ne peut pas diverger de lui-même**, et il porte tout à la fois — angle, portée, luminosité, matière peinte. Deux conséquences qui ne se devinent pas : **l'échelle vient de `img.get_size()`**, donc le piège « un cookie de 1024² porte deux fois plus loin qu'un 512² » n'existe plus côté pénalité, rien n'est à compenser ; et **le halo de proximité entre dans le calcul** — mesuré à 0,004 brut à 75° et un dixième de portée, 0,000 dans le dos, donc cohérent et négligeable. |
-| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Son plafond à bout portant tombe de 0,636 à **0,188**, et à mi-portée dans l'axe de 0,591 à **0,319**. Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. |
+| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
@@ -2441,6 +2441,31 @@ deviner ce qui manque en amont.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un nombre sans son échelle n'est pas un nombre (2026-08-24)
+
+Quatre plafonds d'éblouissement transmis à la session voisine — « pistolet
+0,931, fusil 0,914, pompe 0,686, arbalète 0,188 ». **Le premier était une
+pénalité, les trois autres des lectures brutes de texture**, et il y a une racine
+carrée entre les deux échelles. L'arbalète y passait pour tomber à 0,188 alors
+qu'elle tombe à **0,434**.
+
+Personne n'aurait pu le voir : les quatre nombres sont plausibles, du même ordre
+de grandeur, et rangés dans un joli tableau. Le destinataire s'apprêtait à les
+comparer aux siens après fusion — il aurait trouvé 0,43 là où on lui annonçait
+0,19 et **conclu que la fusion avait cassé quelque chose**.
+
+La cause n'est pas l'étourderie, elle est dans l'outil : `planche_eblouissement`
+imprimait le **brut** dans un bloc et l'**après-courbe** dans un autre, à trente
+lignes d'écart. Citer un mot de chaque était l'erreur naturelle. **Deux échelles
+imprimées à deux endroits SONT un nombre sans son échelle** — le banc les met
+désormais côte à côte sur la même ligne, colonnes nommées.
+
+Même famille que le demi-angle pris pour un angle plein, et que l'alpha de
+texture pris pour de la clarté perçue : **une grandeur qui change de sens en
+chemin, sans changer d'unité ni de nom.** C'est la troisième fois dans ce
+document. La parade est toujours la même : nommer l'échelle *à l'endroit où le
+nombre se lit*, jamais dans un commentaire ailleurs.
 
 ### La planche a sorti une image qui contredisait son propre chiffre (2026-08-24)
 
@@ -3837,10 +3862,21 @@ en fenêtre réelle. Ce qu'il a établi, et qui n'était pas su :
 | pistolet, mi-faisceau (294 px) | 0,500 | 0,707 | 0,706 |
 | pistolet, bord du cône (27° sur 30) | 0,209 | 0,458 | 0,460 |
 | pistolet, bout de portée (559 px sur 589) | 0,050 | 0,217 | 0,217 |
-| **arbalète, plafond à 80 px** | 0,636 | 0,798 | **0,188** |
+| **arbalète, plafond à 80 px** | 0,636 | 0,798 | **0,434** |
 | **arbalète, dans l'axe (448 px)** | 0,349 | 0,590 | **0,319** |
 | arbalète, dans le dos (halo) | 0,000 | 0,000 | 0,000 |
 | **hors du cône** | **0,000** | **0,000** | **0,000** |
+
+> ⚠️ **Toutes les valeurs de ce tableau sont des PÉNALITÉS, après la courbe.**
+> Le banc, lui, imprime les deux échelles à deux endroits : `--- le plafond réel
+> à 80 px ---` donne la lecture **brute** du pixel, la ligne `MONTÉE … plafond
+> géométrique` donne l'**après-courbe**. Il y a une racine carrée entre les deux.
+> Le 2026-08-24, quatre plafonds ont été transmis à la session voisine en citant
+> un mot de chaque colonne — l'arbalète y passait pour tomber à 0,188 alors
+> qu'elle tombe à 0,434. **Un nombre sans son échelle n'est pas un nombre**, et
+> celui-ci aurait fait conclure à une fusion cassée. Les valeurs brutes
+> correspondantes sont : pistolet 0,867 · fusil 0,914 · pompe 0,686 ·
+> arbalète 0,188.
 
 Les trois armes à `torch_brightness = 1` ne bougent pas d'un millième entre la
 deuxième et la troisième colonne — c'est la vérification que l'échantillonnage

@@ -262,12 +262,22 @@ func _dire_les_reglages() -> void:
 	# Lu dans la TEXTURE, comme le fait la production depuis le 2026-08-24 : la
 	# formule analytique donnerait un autre chiffre pour l'arbalète, dont la
 	# luminosité de 0,3 ne vit que dans l'alpha de l'image.
+	# **Les deux échelles sur la même ligne, et c'est une réparation.** Ce bloc
+	# n'imprimait que le brut pendant que la mesure de montée imprimait
+	# l'après-courbe : quatre plafonds ont été transmis à la session voisine en
+	# citant un mot de chaque, et l'arbalète y passait pour tomber à 0,188 quand
+	# elle tombe à 0,434. Il y a une racine carrée entre les deux colonnes.
+	# **Un nombre sans son échelle n'est pas un nombre** — et deux échelles
+	# imprimées à deux endroits différents SONT un nombre sans son échelle.
 	print("\n--- le plafond réel à 80 px dans l'axe (ce vers quoi la montée tend) ---")
+	print("  %-9s %8s  %8s   %s" % ["", "brut", "PÉNALITÉ", "(formule, pour mémoire)"])
 	for idx in range(4):
 		var arme: WeaponData = _main.weapon_for_index(idx)
-		print("  %-9s texture %.3f   (formule %.3f)" % [_nom(arme),
-			Vision.intensite_texture(arme.image_torche(), Vector2.RIGHT,
-				Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS, arme.torch_scale),
+		var brut: float = Vision.intensite_texture(arme.image_torche(),
+			Vector2.RIGHT, Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS,
+			arme.torch_scale)
+		print("  %-9s %8.3f  %8.3f   %.3f" % [_nom(arme), brut,
+			Eblouissement.plafond_pour(brut),
 			Vision.intensite_recue(Vector2.RIGHT, Vector2.ZERO,
 				Vector2.RIGHT * CORPS_A_CORPS, arme.portee_torche(),
 				arme.cos_demi_cone())])
