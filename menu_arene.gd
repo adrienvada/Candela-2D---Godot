@@ -47,8 +47,10 @@ const CYCLE := 23.0
 ## Portée de la lumière en pixels-monde. Généreuse — on veut révéler une pièce,
 ## pas jouer.
 const PORTEE := 460.0
-## Marge autour de la carte, en pixels de cadre.
-const MARGE := 24.0
+## Part de la carte que la lumière peut parcourir, en fraction de son étendue.
+## Elle reste loin des bords : une lampe qui sort du cadre laisse un écran noir,
+## et la moitié du cycle serait perdue.
+const COURSE := Vector2(0.30, 0.24)
 
 var _viewport: SubViewport
 var _monde: Node2D
@@ -217,17 +219,39 @@ func _poser_la_carte() -> void:
 	var rects := MapGeometry.merge_rects(
 		MapGeometry.build_grid(data, MapGeometry.Kind.WALLS))
 
+	# ⚠️ **LE SOL D'ABORD, et son absence était le défaut du premier jet.**
+	#
+	# Premier rendu à l'écran : une écharde de lumière dans une boîte noire. La
+	# géométrie était juste — 4 rectangles, 4 occluders, la sonde le disait — et
+	# il n'y avait **rien à révéler.** Dans l'arène, ce que la torche montre c'est
+	# le SOL ; les murs n'en sont que l'arête. Un panneau qui ne dessine que les
+	# murs donne une lampe braquée sur le vide.
+	#
+	# Pire : `MapGeometry` pose ses occluders avec un retrait de 3 px **à
+	# l'intérieur** du rectangle du mur — pour que la face du mur prenne la
+	# lumière au lieu d'être dans sa propre ombre. Sans sol, ces 3 px étaient la
+	# seule chose éclairée de tout le panneau. C'est exactement l'écharde qu'on
+	# voyait.
+	#
+	# La leçon, et elle vaut au-delà d'ici : **une sonde qui compte les objets ne
+	# dit rien de ce qu'ils rendent.** 4 rectangles et 4 occluders, tout était
+	# « vert », et l'écran était noir.
+	var sol := Polygon2D.new()
+	sol.name = "Sol"
+	var boite_sol := _etendue_des(rects, tuile)
+	sol.polygon = _quad(boite_sol)
+	# Le plus sombre des deux sols du damier : on ne dessine pas le damier lui-même
+	# — à cette échelle il ferait un moiré — mais on en garde la matière, pour que
+	# le sol du menu et celui du jeu soient de la même couleur.
+	sol.color = Charte.SOL_A
+	_murs.add_child(sol)
+
 	var etendue := Rect2()
 	var premier := true
 	for r: Rect2i in rects:
 		var boite := Rect2(Vector2(r.position) * tuile, Vector2(r.size) * tuile)
 		var poly := Polygon2D.new()
-		poly.polygon = PackedVector2Array([
-			boite.position,
-			boite.position + Vector2(boite.size.x, 0.0),
-			boite.end,
-			boite.position + Vector2(0.0, boite.size.y),
-		])
+		poly.polygon = _quad(boite)
 		# La couleur d'une arête éclairée. Le `CanvasModulate` la ramène à zéro
 		# partout où la torche n'atteint pas : ce qu'on peint ici, c'est ce que la
 		# lumière RÉVÉLERAIT, pas ce qui s'affiche.
@@ -246,6 +270,27 @@ func _poser_la_carte() -> void:
 	_cadrer()
 
 
+## Le quadrilatère d'un rectangle, dans l'ordre horaire.
+static func _quad(r: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([
+		r.position,
+		r.position + Vector2(r.size.x, 0.0),
+		r.end,
+		r.position + Vector2(0.0, r.size.y),
+	])
+
+
+## L'étendue couverte par des rectangles de grille, en pixels-monde.
+static func _etendue_des(rects: Array[Rect2i], tuile: Vector2) -> Rect2:
+	var out := Rect2()
+	var premier := true
+	for r: Rect2i in rects:
+		var boite := Rect2(Vector2(r.position) * tuile, Vector2(r.size) * tuile)
+		out = boite if premier else out.merge(boite)
+		premier = false
+	return out
+
+
 ## Cadre la caméra du viewport sur l'étendue de la carte, avec une marge.
 func _cadrer() -> void:
 	if _etendue.size.x <= 0.0 or _etendue.size.y <= 0.0:
@@ -253,8 +298,18 @@ func _cadrer() -> void:
 	var vue := Vector2(_viewport.size)
 	if vue.x < 2.0 or vue.y < 2.0:
 		return
-	var utile := vue - Vector2(MARGE, MARGE) * 2.0
-	var facteur: float = minf(utile.x / _etendue.size.x, utile.y / _etendue.size.y)
+	# ⚠️ **`maxf` et non `minf` : on COUVRE, on ne contient pas.**
+	#
+	# Premier jet en « contenir » : la carte est carrée, le cadre fait trois fois
+	# plus large que haut, et le résultat était un petit carré perdu au milieu de
+	# deux grandes marges noires — une vignette, pas une fenêtre.
+	#
+	# Couvrir rogne les bords de la carte, et c'est le bon prix : **ce panneau
+	# n'est pas un plan, c'est une vue.** Le plan existe déjà ailleurs, dans la
+	# fiche de carte du salon (`map_card`), avec son échelle et ses points
+	# d'apparition. Ici on veut la sensation d'être dans le noir avec une lampe,
+	# et un diagramme centré ne la donne pas.
+	var facteur: float = maxf(vue.x / _etendue.size.x, vue.y / _etendue.size.y)
 	_monde.scale = Vector2(facteur, facteur)
 	_monde.position = vue * 0.5 - _etendue.get_center() * facteur
 	# La portée de la lumière est exprimée en pixels-monde : elle suit donc la
@@ -271,7 +326,7 @@ func _process(delta: float) -> void:
 	# devine pas. Un balayage périodique évident se lit comme une animation en
 	# boucle ; celui-ci se lit comme quelqu'un qui cherche.
 	var a := TAU * _t / CYCLE
-	var p := Vector2(sin(a) * 0.42, sin(a * 1.618 + 1.1) * 0.34)
+	var p := Vector2(sin(a), sin(a * 1.618 + 1.1)) * COURSE
 	_lumiere.position = _etendue.get_center() + p * _etendue.size
 	# La lampe respire très légèrement — un filament, pas une LED.
 	_lumiere.energy = 1.15 + 0.07 * sin(a * 3.3)
