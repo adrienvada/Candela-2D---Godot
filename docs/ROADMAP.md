@@ -2486,6 +2486,40 @@ indice. `tools/test_musique.gd` tient les deux.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Le produit promettait par écrit ce qu'il ne faisait pas (2026-08-24)
+
+Deux entrées de l'écran `1v1 compétitif` portent, **dans leur propre texte lu par
+le joueur** : « affichés à droite » et « affiché à droite — sans quitter cet
+écran ». Les deux appellent `hub.show_detail()`, qui écrit dans deux `Control`
+cachés à la construction et que rien ne rallume. On clique, la phrase promet, il
+ne se passe rien.
+
+**Ce n'est pas le bug qui est intéressant — c'est qu'il portait sa propre
+description.** Le dépôt consigne déjà quatre formes de garantie qui se périme en
+silence : le commentaire vrai au passé, la liste d'appuis, le nombre sans son
+échelle, la garantie tenue par une ligne d'un autre fichier. En voici une
+cinquième, et c'est la plus visible de toutes : **la promesse était affichée à
+l'écran, en français, au joueur.** Personne ne l'a lue comme une assertion à
+vérifier.
+
+**La leçon opérationnelle :** un libellé d'interface qui décrit un comportement
+(« à droite », « sans quitter », « en un clic ») est une **spécification**, et
+elle est testable. `MON RANG` promet que le cadre de droite change — c'est
+exactement l'assertion qu'un banc peut poser.
+
+**Et le banc qui aurait dû l'attraper existait et était vert.**
+`tools/test_audit_menus.gd` s'intitule « aucune entrée ne laisse le cadre de
+droite vide ». Il vérifie que chaque entrée **possède** un texte ou un panneau —
+les données ont toujours été là. Il ne vérifie pas que le cadre **montre** quoi
+que ce soit. Un banc qui contrôle la source au lieu du rendu passe au vert sur un
+écran noir ; c'est la troisième fois, après le cadre de menu entièrement noir du
+2026-08-18 et le joueur planté en bas de l'écran du 2026-08-19.
+
+**La parade générale, valable au-delà de ce cas :** quand un contrôle porte sur
+de l'affichage, l'assertion finale doit lire une propriété **du nœud rendu** —
+`visible`, `size`, la couleur d'un pixel — et jamais le dictionnaire qui l'a
+alimenté. Les deux sont à un appel de distance, et un seul dit la vérité.
+
 ### Un worktree neuf n'a pas de cache d'import, et le banc rougit ailleurs (2026-08-24)
 
 Premier lancement des suites depuis un `git worktree` fraîchement créé :
@@ -6410,6 +6444,67 @@ l'interface (le socle typographique dont DA4.7 dépendait).
 dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
 DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
 tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
+
+#### ⚠️ DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
+
+**Ouvert. À traiter avant le reste de DA4** : c'est le plus grand rectangle de
+l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montre
+rien la plupart du temps.
+
+##### Ce qui a été établi, mesuré plutôt que supposé
+
+**1. Les deux `Control` qui portent le texte du cadre sont cachés depuis leur
+construction, et rien ne les rallume jamais.** `menu_hub.gd` fait
+`_detail_title.hide()` et `_detail_text.hide()` ; `show_detail()` écrit
+consciencieusement dans les deux, appelle `_apply_panel()`, émet son signal — et
+**n'appelle jamais `show()`**. Vérifié à l'exécution : après un `show_detail()`,
+les deux nœuds portent le bon texte et `visible = false`.
+
+**2. Ce n'est pas un oubli, c'est une décision dont la conséquence n'a pas été
+pesée.** Le commentaire au-dessus l'assume : *« le panneau de droite ne porte
+plus la description : elle est montée dans l'en-tête, sous le titre — lire
+l'explication d'une entrée ne devrait pas demander de traverser l'écran du
+regard »*. Le raisonnement est bon. Ce qu'il n'a pas prévu, c'est qu'en enlevant
+la description on ne laissait **rien** à la place.
+
+**3. Et deux entrées PROMETTENT ce cadre dans leur propre libellé.** Dans
+`1v1 compétitif`, `MON RANG` dit « affichés **à droite** » et `TOP 10` dit
+« affiché **à droite** — sans quitter cet écran ». Toutes deux appellent
+`hub.show_detail(...)`, donc écrivent dans les nœuds invisibles : **on clique, le
+texte promet, il ne se passe rien.** C'est un cul-de-sac silencieux sur l'écran
+qui porte la Phase 6.
+
+**4. La grammaire de l'interface est incohérente, et c'est le fond du sujet.**
+Deux mécanismes coexistent :
+
+| Mécanisme | Ce qu'il fait | Qui l'emploie |
+|---|---|---|
+| `_attach_panel()` | le contenu **remplit le cadre de droite** | Contrôles, Affichage, Effets, Audio |
+| `_attach_screen()` | le contenu **remplace la colonne de gauche** | Profil, Historique, Classement, Mise à jour |
+
+Adrien le formule ainsi : *« mon profil doit s'afficher à droite, comme
+l'historique, comme les scores, comme le top 10 »*. Les quatre écrans de
+réglages le font déjà ; les quatre écrans de méta ne le font pas. Rien ne
+justifie la différence — `HubScreen` interdit par contrat à un écran de connaître
+sa position dans l'arborescence, **précisément pour qu'on puisse le déplacer**.
+
+##### Ce qui reste à trancher : que met-on dans ce cadre au survol ?
+
+Vider le défaut ne suffit pas — il faut **quelque chose qui donne envie**.
+Demande d'Adrien : « peut-être un screenshot du jeu ? du mode actuel ? Faut que
+ce soit sexy. » Propositions faites le 2026-08-24, **arbitrage en attente**, voir
+le chat de la session DA4. À vérifier une fois posé : les quatre écrans de méta
+et le parcours `1v1 compétitif` en entier.
+
+##### Pourquoi aucune suite ne l'a vu, et c'est la partie qui doit changer
+
+`tools/test_audit_menus.gd` existe **exactement pour ça** — son titre est
+« aucune entrée ne laisse le cadre de droite vide » — et il est vert. Il lit
+`_entry_details` et vérifie que chaque entrée porte un `texte` **ou** un
+`panneau`. Les données sont là, elles ont toujours été là. **Ce qui manque, c'est
+l'affichage**, et il n'a jamais été regardé. Le banc vérifie qu'on a *de quoi*
+remplir le cadre, pas qu'il *est* rempli — troisième occurrence du motif consigné
+le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 
 - **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
   rectangles stylés par code. *(C)*
