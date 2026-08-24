@@ -2337,7 +2337,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ⚠️ **Ces valeurs vivent dans `tools/torches.gd` ; `game_state.gd` porte encore les anciennes** — elles y seront portées à l'intégration de DA2.1. |
+| **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
 | **L'artiste unique, c'est Adrien — et le procédé se choisit par famille d'asset** (2026-08-24, Adrien) | DA1.5 demandait « un artiste, un lot, un style » pour éviter que des sources dépareillées recréent l'incohérence que tout le chantier chasse. L'artiste unique étant Adrien, **le risque a changé de nature : il n'est plus entre personnes, il est entre outils.** Deux textures faites à trois mois d'écart par deux procédés différents jurent exactement comme deux artistes différents. La décision n'est donc pas un nom, c'est une correspondance à tenir comme on tient la palette. **Lumière et matière** (cookie, halos, flash de bouche, sang, impacts, usure) : image générée convertie en masque **plus** paramétrage par le code — l'image ne fournit que la matière, le code garde la géométrie, ce qui laisse les quatre angles d'arme gratuits. **Wordmark, icône, viseur** : main levée sur gabarit, parce qu'un logo ne se génère pas. **Key art** : génération fortement retravaillée. Et la règle qui rend le premier procédé honnête : **une image générée n'est jamais l'asset, seulement sa matière** — on n'en garde que la luminance passée au contraste, si bien que ce qui survit est la structure du bruit et non le style du modèle. Sans elle, on remplace le look « généré par défaut » par le look « généré tout court », c'est-à-dire le défaut même qui a ouvert ce chantier. |
 | **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
@@ -6019,22 +6019,27 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA2 — Les ancres autorales in-game (là où l'œil juge en trois secondes)
 
-- **DA2.1 Le cookie de torche peint** 🟡 **OUTILLAGE LIVRÉ le 2026-08-24, choix
-  en attente d'Adrien.** Trois variantes cuites en 1024² depuis des planches
-  générées, à comparer dans le banc puis à intégrer. Ce qui existe :
+- **DA2.1 Le cookie de torche peint** ✅ **livrée le 2026-08-24** — Adrien a
+  comparé trois variantes cuites en 1024² dans le banc et retenu **`bis04`**,
+  désormais cuite pour les quatre armes et intégrée à `weapon_data.gd` /
+  `player.gd` / `game_state.gd`. L'outillage reste en place pour recuire :
   `tools/fabrique_cookies.gd` (cuisson hors ligne, curseurs `matiere`, `debut`,
   `contraste`, `energie`), `tools/apercu_torche.gd` (le banc, quatre variantes à
   la volée dans une vraie carte avec occluders), `tools/torches.gd` (la table des
-  portées, partagée pour que les deux outils ne divergent pas).
+  portées, partagée pour que les deux outils ne divergent pas) et
+  `tools/test_torches.gd` (36 contrôles qui exigent que la table et le jeu
+  disent la même chose).
   **Le procédé retenu : la planche ne devient pas le cookie, elle le MODULE.**
   L'échantillonnage est polaire — largeur de la planche = portée, hauteur =
   ouverture —, si bien qu'une seule planche sert les quatre armes et que
   `torch_angle_deg` reste vivant. Prix mesuré et assumé : le faisceau garde sa
   portée exacte et **63 à 72 % de sa lumière**, la planche ne pouvant que creuser.
-  Reste à faire : le choix de la variante, puis l'intégration dans
-  `weapon_data.gd` / `player.gd` / `game_state.gd` — dont la compensation de
-  `texture_scale` (voir « Pièges connus »), la ligne la plus dangereuse du lot.
-  *(C, ou G en CC0 retouché)*
+  ⚠️ La compensation de `texture_scale` était annoncée comme la ligne la plus
+  dangereuse du lot, et elle a mordu : à réglage inchangé, un cookie de 1024²
+  portait **deux fois plus loin** qu'un 512². Fermée par
+  `WeaponData.echelle_torche()`, qui rend l'empreinte au sol indépendante de la
+  résolution du fichier — voir « Pièges connus », *la résolution d'une texture
+  de lumière décide de sa PORTÉE*. *(C, ou G en CC0 retouché)*
 - **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
   d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
   *(C : 3-4 textures)*
