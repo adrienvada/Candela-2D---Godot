@@ -2366,7 +2366,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Killcam locale** (chacun rejoue son enregistrement) | Le joueur revoit exactement ce qu'il a vu : meilleur outil pour comprendre sa mort. Les deux killcams peuvent légitimement différer. |
 | **Menus : structure B, le hub** (2026-08-17) | Un accueil de grandes destinations, chacune un écran entier. Coûte deux clics de plus par partie que les deux autres propositions ; rapporte un écran par sujet, seule forme qui absorbe les rangs, le déblocage d'armes et les saisons sans surcharger l'onglet JOUER, déjà plein. |
 | **Rangs dérivés du classement, jamais stockés** (2026-08-17) | Même raison que la table `ratings`, déjà reconstruite par rejeu : changer une borne d'échelle ne doit pas coûter une migration de données. `rankOf(rating)` vit dans `elo.ts`, testable hors ligne. |
-| **Assets manquants : câbler, taire, diagnostiquer** (2026-08-17) | Le code qui joue un son absent s'écrit normalement et reste silencieux, sans erreur. Aucun bouche-trou n'est fabriqué : un placeholder qui traîne finit par être pris pour une intention. `asset_manifest.gd` porte les 76 fichiers attendus et distingue **absent** de **présent mais vide** — `music_menu.ogg`, `music_match.ogg` et `music_victory.ogg` pèsent exactement 160 032 octets, trois copies du même flux vide qu'un contrôle de présence déclarerait bons. La détection se fait à la taille du fichier, ce qui se corrige tout seul le jour où le vrai arrive. État visible en jeu par **F3**. |
+| **Assets manquants : câbler, taire, diagnostiquer** (2026-08-17) | Le code qui joue un son absent s'écrit normalement et reste silencieux, sans erreur. Aucun bouche-trou n'est fabriqué : un placeholder qui traîne finit par être pris pour une intention. `asset_manifest.gd` porte les 76 fichiers attendus et distingue **absent** de **présent mais vide** — `music_menu.ogg`, `music_match.ogg` et `music_victory.ogg` pesaient exactement 160 032 octets, trois copies du même flux vide qu'un contrôle de présence déclarerait bons. La détection se fait à la taille du fichier. **Éprouvé le 2026-08-24** : les vraies musiques sont arrivées et la détection s'est corrigée seule, sans que personne y touche. Les champs voisins écrits à la main, eux, ont menti jusqu'à ce qu'on les relise (voir « Un champ que personne ne lit »). État visible en jeu par **F3**. |
 | **Armes : règle du miroir en classé** (2026-08-17, confirmée par Adrien) | Les deux joueurs partagent l'arsenal du moins bien classé. Sans elle, le mieux classé arriverait avec des options que l'autre ne peut pas avoir — l'Arbalète étant à la fois l'arme furtive et la quatrième débloquée. Coût assumé : l'arsenal varie selon l'adversaire, ce que l'interface doit expliquer au moment où ça arrive. |
 | **Un abandon vaut forfait** | Décision du 2026-08-16. Quitter un match en ligne en cours donne la victoire à celui qui reste : c'est archivé, drapeau `forfait` à l'appui. **La faille est connue et acceptée** : il suffit de couper la connexion de l'adversaire pour lui voler un forfait, ou d'invoquer sa propre coupure. Les deux autres règles envisagées ne valent pas mieux — jeter le match récompense celui qui débranche en train de perdre. Aucune n'est bonne ; celle-ci a au moins le mérite de ne pas rendre l'abandon gratuit. À revoir quand il y aura assez de joueurs pour que ça se pratique. |
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
@@ -2462,30 +2462,55 @@ là.
 (`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
 deviner ce qui manque en amont.
 
-### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
-
-`main_stream_interactive.tres` recopiait les paquets Ogg de chaque clip dans son
-propre corps, en base64 : 704 ko de texte pour sept flux qui vivaient déjà, en
-double, à côté de lui dans `assets/audio/music/`. Il les référence désormais par
-`ext_resource`, et pèse 2,9 ko.
-
-Ce n'est pas une affaire de poids. Un flux embarqué **fige la ressource** : le
-jour où l'on remplace un stem, le `.ogg` du dossier change et la musique du jeu
-ne change pas — et rien ne le dit, puisque les deux existent et que les deux se
-chargent. C'est le mode de défaillance que ce dépôt traque partout : deux
-sources de vérité dont une seule est écoutée, sans que rien ne distingue
-laquelle. Il fallait régénérer le `.tres` par script à chaque retouche, donc
-personne n'aurait retouché.
-
-Ce qui ne bouge pas et ne doit pas bouger : les **noms** des clips
-(`AudioManager.play_music` bascule par nom, un clip renommé cesse simplement de
-répondre) et l'**ordre** des couches du clip « match » — 0 base, 1 batterie,
-2 arpège, 3 pouls. `set_music_intensity` et `update_low_health` les adressent par
-indice. `tools/test_musique.gd` tient les deux.
-
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un champ que personne ne lit ne se corrige pas tout seul (2026-08-24)
+
+Le jour où Adrien a livré les vraies musiques, `asset_manifest.gd` a cessé de
+signaler trois bouche-trous **sans qu'on touche à rien** : la détection compare
+la taille du fichier, donc elle s'est corrigée seule. C'était exactement
+l'intention de 2026-08-17, et elle a tenu.
+
+Dans le même dictionnaire, à trois caractères de là, `p: true` a continué
+d'annoncer ces mêmes trois bouche-trous, et trois durées de stinger sont restées
+fausses de 0,7 à 1,4 s. Aucune erreur, aucune suite rouge — parce que **rien ne
+lit ces champs** : les seules occurrences de `["p"]` dans le dépôt portent un
+`Vector2` d'un dictionnaire sans rapport. Ce sont des commentaires déguisés en
+données.
+
+La règle : dans une même structure, séparer ce qui est **mesuré** de ce qui est
+**déclaré**. Le mesuré suit le monde ; le déclaré pourrit, et il pourrit d'autant
+plus silencieusement qu'il voisine avec du mesuré dont il emprunte le crédit. Un
+champ qu'aucun code ne lit est de la documentation, quelle que soit sa syntaxe.
+
+Corollaire vérifié le jour même : le signalement venait d'une session voisine,
+qui ne tenait pas ce fichier. Les chiffres ont quand même été **mesurés**
+(`AudioStream.get_length()`) avant correction — et la mesure a rapporté mieux que
+le signalement, en montrant que les onze fichiers tombent pile sur la grille à
+170 BPM (64 temps les boucles, 16 l'intro et la victoire, 4 et 8 les stingers).
+Rapport juste, mesure quand même : elle a coûté trente secondes et confirmé une
+propriété que personne n'avait pensé à annoncer.
+
+**Et le même jour, la mesure elle-même s'est révélée trop étroite.** Signalé par
+la session DA2, vérifié ici au décodeur : `music_intro.ogg` était un bouche-trou
+qui **passait à travers** la détection. Celle-ci teste `taille == 160 032`, or
+cette valeur est celle d'un flux de 22,588 s ; l'intro faisait 12 s, donc
+167 364 octets, donc « présente et bonne » au panneau F3. Une égalité exacte ne
+rattrape qu'un seul gabarit.
+
+Deux choses à corriger un jour, **signalées et pas touchées** (hors périmètre du
+jour, `asset_manifest.gd` porte un commentaire au bon endroit) :
+
+1. la détection devrait porter sur une propriété du contenu — durée hors grille,
+   niveau crête — et non sur un nombre d'octets qui change avec la durée ;
+2. le vocabulaire ment aussi. Ces fichiers sont décrits partout comme des « flux
+   vides ». Ils ne sont pas silencieux : le bouche-trou de `music_menu.ogg`
+   mesure −32,1 dB de moyenne et **−17,0 dB de crête**. Quelqu'un qui monte le
+   volume entend quelque chose et en conclut que la musique marche. « Vide »
+   était une intention de fabrication, jamais une propriété du fichier — encore
+   un déclaré qu'on a lu comme un mesuré.
 
 ### Un garde-fou qui nomme des appuis se périme EN VERT (2026-08-24)
 
@@ -3433,8 +3458,7 @@ moment. À réparer avant tout relevé.
 
 Vu au passage dans la même sortie : `play_music` lève trois erreurs Vorbis
 (`packet_sequence.is_null()`), les fichiers de musique n'étant pas encore
-fournis. Sans rapport, et attendu. — **Levé le 2026-08-24** : les flux réels
-sont en place (V1.1), ces trois erreurs n'ont plus lieu d'être.
+fournis. Sans rapport, et attendu.
 
 ### Un banc qui attend des IMAGES mesure la machine, pas le code (2026-08-18)
 
@@ -4071,35 +4095,6 @@ quoi : le message liste des chaînes vides. Passer par
   pendant qu'un export tournait à côté ; seules, elles passent. Avant de
   diagnostiquer une régression, vérifier qu'aucune autre instance ne tourne.
 
-### Un MP3 ne sait pas rendre une boucle sur la grille (2026-08-24)
-
-Adrien a livré la musique en `.mp3`. Le format ne code que des trames de **1152
-échantillons** et n'accepte aucune longueur intermédiaire : les onze fichiers
-arrivent donc arrondis à la trame, avec **1152 échantillons de silence exact en
-tête** (le retard d'encodeur, mesuré identique sur les onze) et une queue
-tronquée d'environ 48 ms. Déposés tels quels, ils sonnent juste **au premier
-tour** — et le défaut n'apparaît qu'au second, quand la boucle revient un
-quinzième de temps trop tôt.
-
-Ce qui le rend traître : les quatre couches du clip « match » dérivent
-**ensemble**, puisqu'elles portent le même décalage. Rien ne se désynchronise
-entre elles, rien ne sonne faux ; c'est la musique entière qui glisse contre les
-transitions `fade_beats` du flux interactif. On n'a donc aucun symptôme local à
-suivre.
-
-Le remède est à l'import, pas au mixage : rogner les 1152 échantillons de tête,
-compléter la queue jusqu'au compte exact de temps (64 temps à 170 BPM =
-1 084 235 échantillons), puis encoder en Vorbis. `tools/test_musique.gd` vérifie
-désormais que chaque flux dure un nombre **entier** de temps — c'est le seul
-contrôle qui aurait attrapé la chose sans oreille.
-
-**Et le poste n'avait pas d'encodeur Ogg** : le `ffmpeg` de Homebrew est
-construit sans `libvorbis`. `brew install vorbis-tools` fournit `oggenc`. Sans
-lui, la seule voie sans transcodage aurait été de garder les `.mp3`, ce qui
-obligeait à modifier `audio_manager.gd` et `asset_manifest.gd` — deux fichiers
-tenus par d'autres sessions, pour un format qui aurait ramené le même défaut de
-boucle.
-
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -4576,19 +4571,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 ### Vague 1 — Réveiller ce qui dort (systèmes câblés, jamais alimentés)
 
 - **V1.1 Stems musicaux réels** — l'AudioStreamInteractive 4 couches à 170 BPM
-  était câblé sur les flux vides de `generate_music_streams.gd` (seul le
-  heartbeat était réel). **✅ Fait le 2026-08-24** — Adrien a livré les onze
-  fichiers (`exports/V03`), intégrés en `.ogg` 48 kHz sous les noms que le
-  manifeste attendait déjà, donc **sans une ligne de code à changer**.
-  `main_stream_interactive.tres` a été réécrit au passage : il **référence** les
-  flux au lieu de les embarquer en base64 (704 ko → 2,9 ko).
-
-  La leçon, et c'est elle qui vaut d'être notée : le système a vécu deux mois
-  « fonctionnel » et muet. Aucune erreur, aucun test rouge — `AudioManager`
-  chargeait quatre clips, basculait de l'un à l'autre, ouvrait ses couches, et
-  ne jouait rien. **Un jeu muet et un jeu dont on a baissé le volume ne se
-  distinguent pas**, et c'est exactement ce que `asset_manifest.gd` avait été
-  écrit pour rattraper. Il l'a rattrapé ; il aura fallu qu'on lise le panneau.
+  est câblé mais `generate_music_streams.gd` produit des flux vides (seul le
+  heartbeat est réel). Le meilleur ratio du projet. — *assets : 3 clips +
+  3 stems .ogg bouclés à 170 BPM (commande à passer en premier, délai long).*
 - **V1.2 Brancher `set_music_intensity`** — écrit, jamais appelé. Règles : 0
   par défaut, 1 en dernière minute, 2 quand les deux joueurs sont sous 30 HP.
   **✅ Fait** — piloté par `GameState._update_music_intensity` chaque frame
@@ -5951,16 +5936,12 @@ un fait de jeu, pas à un rythme d'interface.
 
 - **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
   jugé. Priorité absolue du lot audio. *(C)*
-- ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
-  2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
+- **DA3.2 Les stems produits à 170 BPM** (= V1.1) — la musique adaptative est
+  câblée de bout en bout ; elle attend une vraie production. *(C)*
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
   `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
   dépôt des fichiers. *(C : 3 samples)*
-- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10) — **les quatre
-  fichiers sont dans le dépôt depuis le 2026-08-24** (`sting_kill`,
-  `sting_kill_match`, `sting_defeat`, `sting_draw`, accordés et sur la grille).
-  **Rien ne les joue** : aucune clé dans `AudioManager.SOUNDS`, aucun appel. Il
-  ne reste que le câblage, et il est au domaine « game feel ».
+- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10). *(C)*
 - **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
   « fini » comme une voix. *(C)*
 - **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*

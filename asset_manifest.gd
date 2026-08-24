@@ -28,7 +28,21 @@ extends RefCounted
 ## à Adrien la même liste, avec durées et intentions.
 
 ## Taille, en octets, du flux vide produit par `generate_music_streams.gd`.
-## Trois fichiers la portent aujourd'hui à l'identique.
+##
+## **Plus aucun fichier ne la porte depuis le 2026-08-24** : les vraies musiques
+## sont arrivées, et la détection s'est corrigée toute seule — c'était l'intérêt
+## de mesurer la taille plutôt que de tenir une liste à la main.
+##
+## Les trois `p: true` qui les accompagnaient, eux, ne se sont PAS corrigés
+## seuls : ce champ n'est lu par rien, c'est de la documentation, et une
+## documentation ne se met pas à jour parce que le monde a changé. Elle a
+## continué d'annoncer trois bouche-trous pendant que les vrais fichiers
+## jouaient. Signalé par la session « musique », qui ne tenait pas ce fichier.
+## ⚠️ Cette valeur est celle d'un flux de 22,588 s. Un bouche-trou d'une autre
+## durée a une autre taille et passe donc à travers : `music_intro.ogg` (12 s,
+## 167 364 o) a été déclaré « présent et bon » jusqu'au 2026-08-24. Et ces flux
+## ne sont pas silencieux — crête mesurée à −17 dB. Signalé, non corrigé : la
+## bonne détection porterait sur le contenu, pas sur un nombre d'octets.
 const PLACEHOLDER_OGG_SIZE := 160032
 
 const DIR_MUSIC := "res://assets/audio/music/"
@@ -39,21 +53,21 @@ const DIR_SPEAKER := "res://assets/audio/speaker/"
 ## game feel qui l'attend, `p` true si un bouche-trou occupe déjà la place.
 const EXPECTED: Array = [
 	# --- Musique, tout à 170 BPM -------------------------------------------
-	{"f": "music_menu.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": true},
+	{"f": "music_menu.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	# Piste de match non interactive, encore référencée par `AudioManager.SOUNDS`
 	# en repli du flux à quatre couches.
-	{"f": "music_match.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": true},
+	{"f": "music_match.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_match_base.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_match_drums.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_match_arp.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
-	{"f": "music_victory.ogg", "d": DIR_MUSIC, "s": 5.647, "w": "V1.1", "p": true},
+	{"f": "music_victory.ogg", "d": DIR_MUSIC, "s": 5.647, "w": "V1.1", "p": false},
 	{"f": "music_intro.ogg", "d": DIR_MUSIC, "s": 5.647, "w": "V1.1", "p": false},
 
 	# --- Stingers, dans la tonalité du thème --------------------------------
-	{"f": "sting_kill.ogg", "d": DIR_MUSIC, "s": 0.706, "w": "V2.3", "p": false},
+	{"f": "sting_kill.ogg", "d": DIR_MUSIC, "s": 1.412, "w": "V2.3", "p": false},
 	{"f": "sting_kill_match.ogg", "d": DIR_MUSIC, "s": 1.412, "w": "V2.3", "p": false},
-	{"f": "sting_defeat.ogg", "d": DIR_MUSIC, "s": 2.118, "w": "V3.7", "p": false},
-	{"f": "sting_draw.ogg", "d": DIR_MUSIC, "s": 1.412, "w": "V3.8", "p": false},
+	{"f": "sting_defeat.ogg", "d": DIR_MUSIC, "s": 2.824, "w": "V3.7", "p": false},
+	{"f": "sting_draw.ogg", "d": DIR_MUSIC, "s": 2.824, "w": "V3.8", "p": false},
 
 	# --- Annonceur — le dossier lui-même n'existe pas encore ----------------
 	{"f": "spk_fight.wav", "d": DIR_SPEAKER, "s": 0.8, "w": "V1.3", "p": false},
