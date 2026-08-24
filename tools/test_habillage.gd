@@ -58,7 +58,12 @@ const COMPTEURS := [
 	"killcam_timecode", # le timecode de la killcam
 	"p1_cd_label",      # « 0.4s » de recharge, deux fois par seconde
 	"p2_cd_label",
-	"fps_label",        # panneau F3
+	"fps_label",        # panneau F3 — la grille de diagnostic, DA4.16
+	"dbg_ping",
+	"dbg_lumieres",
+	"dbg_particules",
+	"dbg_noeuds",
+	"dbg_cartes",
 	"net_debug_label",
 ]
 

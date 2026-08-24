@@ -6652,8 +6652,34 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   rectangles colorés. *(C)*
 - **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
   l'éditeur sous la bible. *(S + G)*
-- **DA4.16 Le panneau F3 lui-même** — même la debug UI dit quelque chose de la
-  rigueur du jeu. *(S)*
+- **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
+  quelque chose, en effet : le contraire de ce qu'on voulait.
+
+  **Il était bordé d'`AMBRE`.** Or l'ambre veut dire *ce qui appelle* — le feu,
+  la mise en garde, le chrono de dernière minute. Un cadre de diagnostic ouvert
+  en permanence pendant qu'on joue n'appelle rien, il se consulte. Il porte
+  maintenant `LINE` et `ACIER`, la couleur que l'interface s'est donnée en DA1.4
+  précisément pour cesser d'emprunter celles des autres. **C'est la même faute
+  que les entrées « lanceur » du 2026-08-18**, au même endroit du raisonnement.
+
+  **Et son contenu était une ligne à barres verticales** — `DEBUG | FPS 120 |
+  Ping 42 ms | Lumières 8 | Particules 30/200 | …`, tout en or, à 12 px. Ce
+  n'est pas seulement laid : **il faut relire toute la ligne pour trouver une
+  valeur**, à l'instant précis où l'on veut en vérifier une seule. C'est
+  désormais une grille de deux colonnes — libellés en `DIM` à gauche, valeurs
+  tabulaires alignées à droite : on lit une colonne, pas une phrase.
+
+  **Trois mesures prennent la triade d'instrument** — images par seconde, ping,
+  saturation du bassin de particules. Le vert est interdit dans l'arène par la
+  règle 3 de la charte, mais le panneau F3 **est** de l'interface : c'est même
+  le lieu le plus légitime de la triade, un tableau de bord existant pour dire
+  d'un coup d'œil si la valeur va, alerte ou faute.
+
+  ⚠️ **Les seuils ne sont pas choisis ici, et c'est ce qui les rend justes.**
+  120 images/s est la cible de `bench_framerate` ; 60 et 120 ms sont exactement
+  les paliers que `_update_ping_label()` emploie déjà pour le HUD. Un panneau de
+  diagnostic avec ses propres seuils dirait « ça va » pendant que le HUD dit
+  « attention ». *(S)*
 - **DA4.17 Les messages d'erreur humanisés** — « L'hôte a quitté le salon »
   stylé et calme, jamais un texte brut. *(S)*
 

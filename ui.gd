@@ -531,6 +531,13 @@ var _button_to_update: Button = null
 var debug_panel: PanelContainer
 var fps_label: Label
 var net_debug_label: Label
+## DA4.16 — les valeurs de la grille de diagnostic. Toutes en registre appareil,
+## donc tabulaires : elles se remplacent quatre fois par seconde.
+var dbg_ping: Label
+var dbg_lumieres: Label
+var dbg_particules: Label
+var dbg_noeuds: Label
+var dbg_cartes: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
 
@@ -899,14 +906,35 @@ func _update_debug(_delta: float) -> void:
 		particles = gs.particle_pool.active_count()
 		cap = ParticlePool.MAX_ACTIVE
 
-	var ping := "—"
-	if NetworkManager.has_rtt:
-		ping = "%d ms" % int(round(NetworkManager.rtt_ms))
+	# **Les deux seuils du jeu, et ils ne sont pas choisis ici.** 120 images/s est
+	# la cible du banc de cadence (`bench_framerate`, « 1 % bas ≥ 120 fps ») ; 60
+	# et 120 ms sont exactement les paliers que `_update_ping_label()` emploie déjà
+	# pour le HUD. Un panneau de diagnostic qui aurait ses propres seuils dirait
+	# « ça va » pendant que le HUD dit « attention ».
+	var fps: int = Engine.get_frames_per_second()
+	fps_label.text = str(fps)
+	fps_label.add_theme_color_override("font_color",
+		_teinte_de_mesure(float(fps), 120.0, 60.0))
 
-	fps_label.text = "DEBUG | FPS %d | Ping %s | Lumières %d | Particules %d/%d | Nœuds arène %d | Cartes %d" % [
-		Engine.get_frames_per_second(), ping, _debug_light_count,
-		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
-	]
+	if NetworkManager.has_rtt:
+		var rtt: float = round(NetworkManager.rtt_ms)
+		dbg_ping.text = "%d ms" % int(rtt)
+		dbg_ping.add_theme_color_override("font_color",
+			_teinte_de_mesure(rtt, 60.0, 120.0, false))
+	else:
+		dbg_ping.text = "—"
+		dbg_ping.add_theme_color_override("font_color", COLOR_DIM)
+
+	dbg_lumieres.text = str(_debug_light_count)
+	# La saturation du bassin de particules est la seule de ces valeurs qui puisse
+	# dégrader le jeu sans qu'on le voie : elle se teinte donc, comme les images
+	# par seconde.
+	dbg_particules.text = "%d / %d" % [particles, cap]
+	dbg_particules.add_theme_color_override("font_color",
+		_teinte_de_mesure(float(particles), float(cap) * 0.6, float(cap) * 0.9, false)
+		if cap > 0 else COLOR_ACCENT)
+	dbg_noeuds.text = str(_debug_arena_nodes)
+	dbg_cartes.text = str(MapData.list_maps().size())
 	net_debug_label.text = _network_debug_line()
 	var p2_path := _p2_path_label()
 	if p2_path != "":
@@ -1767,29 +1795,53 @@ func _build_debug_panel() -> void:
 	debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_panel.hide()
 
+	# DA4.16 — **le panneau de diagnostic passe à la couleur de l'instrument.**
+	#
+	# Il était bordé d'`AMBRE`, et `AMBRE` veut dire *ce qui appelle* : c'est la
+	# couleur du feu, de la mise en garde, du chrono de dernière minute. Un cadre
+	# de diagnostic ouvert en permanence pendant qu'on joue n'appelle rien — il
+	# se consulte. Il emprunte donc `LINE` et `ACIER`, la couleur que l'interface
+	# s'est donnée en DA1.4 précisément pour cesser d'emprunter celles des autres.
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Charte.NOIR, 0.75)
 	style.set_border_width_all(1)
-	style.border_color = COLOR_GOLD
+	style.border_color = COLOR_LINE
 	style.set_corner_radius_all(6)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
+	style.content_margin_left = GAP_S
+	style.content_margin_right = GAP_S
+	style.content_margin_top = GAP_XS
+	style.content_margin_bottom = GAP_XS
 	debug_panel.add_theme_stylebox_override("panel", style)
 
 	var debug_vbox := VBoxContainer.new()
 	debug_vbox.add_theme_constant_override("separation", GAP_XXS)
 
-	fps_label = Label.new()
-	fps_label.text = "DEBUG"
-	fps_label.add_theme_font_size_override("font_size", T_MENTION)
-	fps_label.add_theme_color_override("font_color", COLOR_GOLD)
-	debug_vbox.add_child(fps_label)
+	# **Une grille de deux colonnes, et non une ligne à barres verticales.**
+	# `DEBUG | FPS 120 | Ping 42 ms | Lumières 8 | …` à 12 px dans le noir n'est
+	# pas seulement laid : il oblige à relire toute la ligne pour trouver une
+	# valeur, à l'instant précis où l'on veut vérifier une seule chose. Les
+	# libellés à gauche en `DIM`, les valeurs à droite alignées et tabulaires : on
+	# lit une colonne, pas une phrase.
+	var grille := GridContainer.new()
+	grille.columns = 2
+	grille.add_theme_constant_override("h_separation", GAP_S)
+	grille.add_theme_constant_override("v_separation", 2)
+	debug_vbox.add_child(grille)
 
+	fps_label = _make_ligne_debug(grille, "IMAGES/S")
+	dbg_ping = _make_ligne_debug(grille, "PING")
+	dbg_lumieres = _make_ligne_debug(grille, "LUMIÈRES")
+	dbg_particules = _make_ligne_debug(grille, "PARTICULES")
+	dbg_noeuds = _make_ligne_debug(grille, "NŒUDS ARÈNE")
+	dbg_cartes = _make_ligne_debug(grille, "CARTES")
+
+	# La ligne réseau garde toute la largeur : elle est faite de phrases courtes
+	# (transport, lien direct ou relayé, NAT) et non de nombres à aligner.
 	net_debug_label = Label.new()
-	net_debug_label.add_theme_font_size_override("font_size", T_MENTION)
-	net_debug_label.add_theme_color_override("font_color", COLOR_GOLD)
+	net_debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	net_debug_label.custom_minimum_size = Vector2(320, 0)
+	Charte.appareil(net_debug_label, T_MENTION)
+	net_debug_label.add_theme_color_override("font_color", COLOR_DIM)
 	debug_vbox.add_child(net_debug_label)
 
 	debug_panel.add_child(debug_vbox)
@@ -1807,6 +1859,45 @@ func _build_debug_panel() -> void:
 	ephemeral_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ephemeral_banner.visible = NetworkManager.is_ephemeral_identity()
 	add_child(ephemeral_banner)
+
+## Une ligne du panneau F3 : le libellé à gauche, la valeur à droite.
+##
+## Rend la valeur, seule chose que l'appelant ait à tenir. Le libellé est posé
+## une fois pour toutes et ne change jamais — un diagnostic dont les intitulés
+## bougeraient serait à relire à chaque coup d'œil.
+func _make_ligne_debug(grille: GridContainer, libelle: String) -> Label:
+	var l := Label.new()
+	l.text = libelle
+	Charte.appareil(l, T_MENTION)
+	l.add_theme_color_override("font_color", COLOR_DIM)
+	grille.add_child(l)
+
+	var v := Label.new()
+	v.text = "—"
+	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Appareil, donc tabulaire : ces valeurs se remplacent quatre fois par seconde
+	# et une largeur qui bouge ferait respirer toute la grille.
+	Charte.appareil(v, T_MENTION)
+	v.add_theme_color_override("font_color", COLOR_ACCENT)
+	grille.add_child(v)
+	return v
+
+
+## La teinte d'une mesure, selon la triade d'instrument.
+##
+## **Le vert n'entre jamais dans l'arène — mais le panneau F3 EST de
+## l'interface**, et la règle 3 de la charte ne s'applique qu'au monde. C'est
+## même le lieu le plus légitime de la triade : un tableau de bord existe pour
+## dire d'un coup d'œil si la valeur va, alerte, ou faute.
+func _teinte_de_mesure(valeur: float, bon: float, moyen: float,
+		plus_haut_vaut_mieux: bool = true) -> Color:
+	var ok := valeur >= bon if plus_haut_vaut_mieux else valeur <= bon
+	if ok:
+		return Charte.ETAT_OK
+	var passable := valeur >= moyen if plus_haut_vaut_mieux else valeur <= moyen
+	return Charte.ETAT_ATTENTION if passable else Charte.ETAT_FAUTE
+
 
 func _build_dialog() -> void:
 	dialog_panel = PanelContainer.new()
