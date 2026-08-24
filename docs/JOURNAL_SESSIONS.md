@@ -246,6 +246,71 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — session « DA4 », en WORKTREE : la moitié de la charte n'était pas portée
+
+**Première session du dépôt à travailler dans un `git worktree` isolé**
+(`.claude/worktrees/DA4-interface-habillee`, branche
+`worktree-DA4-interface-habillee`, basée sur `main` local `a99a110`). Index
+propre, aucun risque d'emporter le travail d'une voisine — le défaut qui a
+frappé deux fois le 2026-08-19. **Contrepartie : une fusion à venir**, que je
+mesurerai d'avance plutôt que de la découvrir.
+
+**Livré : DA4.2, DA4.9.** Le *pourquoi* est dans `docs/ROADMAP.md`, section DA4.
+Ici, ce qui concerne les autres.
+
+**Le constat qui a ouvert le lot, et il vous concerne tous :**
+`Charte.police_display()` n'était appelée que depuis **trois** sites du dépôt —
+`player.gd`, `bullet.gd`, `game_state.gd` — tous en espace-monde. **`ui.gd` ne
+l'appelait jamais.** La fonte d'enseigne livrée par DA1.2 n'atteignait pas un
+seul écran, et aucun `Control` du dépôt ne posait de graisse. Si vous écrivez de
+l'interface : `Charte.enseigne(lbl, taille)` et `Charte.appareil(lbl, taille)`
+posent fonte + taille + graisse **en un geste**. C'était le nombre de gestes qui
+tenait le défaut, pas la négligence.
+
+⚠️ **Une règle nouvelle, et elle est mesurée : la fonte d'enseigne ne porte
+jamais un signe qui se remplace sur place.** `BigShouldersDisplay` n'est pas
+tabulaire — `00:00` fait 83 px, `11:11` en fait 49 à `T_VERDICT`. Chrono, ping,
+score, timecode restent à l'appareil. `tools/test_habillage.gd` le vérifie **par
+la mesure des dix chiffres du `Control` réel**, pas en regardant quelle fonte on
+croit avoir posée. Sept compteurs sous surveillance ; si vous en ajoutez un, la
+liste `COMPTEURS` du banc est l'endroit.
+
+**Fichiers pris puis RENDUS** — je ne tiens plus rien : `charte.gd` (ajout seul,
+après `polices_manquantes()`), `menu_engraver.gd`, `tools/planche_contact.gd`,
+`tools/run_suites.sh` (une entrée, et le compte passé à **44**),
+`tools/test_habillage.gd` (neuf).
+
+**À la session DA1, qui tenait `ui.gd`, `menu_hub.gd` et `project.godot` :** je
+ne les ai pas touchés, comme convenu. **Le HUD, la killcam et le bandeau de
+verdict — soit la moitié de DA4 — ne sont donc pas commencés** et attendent que
+vous rendiez la main. Quand je les reprendrai, je passerai par votre
+`_poser_titre()` et jamais par `game_over_title.text =`.
+
+**La planche de contact voit enfin le code de salon.** Elle en était absente, et
+l'exclusion des écrans de salon était *bonne pour la mauvaise conclusion* :
+entrer dans l'écran est une décision de mode qui ouvrirait de vrais salons EOS,
+mais le bloc de gravure est un `Control` autonome, sans réseau ni autoload. Ce
+qui était inobservable, ce n'était pas le code — c'était le chemin qu'on prenait
+pour l'atteindre. Trois images de plus (`05-` à `07-`).
+
+⚠️ **Avant votre première suite dans un worktree neuf, lancez `--import`.**
+`.godot/imported/` n'est pas versionné : sans lui les deux fontes ne se chargent
+pas, `test_charte` rougit sans qu'une ligne de code soit en cause, et —
+beaucoup plus grave — **tout banc qui mesure une fonte passe au VERT**, la fonte
+de repli de Godot étant tabulaire. Détail aux « Pièges connus ».
+
+**Signalé, pas corrigé (hors périmètre) :** la ROADMAP affirmait en DA1.3 que
+`tools/test_charte.gd` « refuse toute taille hors échelle ». Il ne le fait pas —
+il vérifie que l'échelle est croissante et compte six crans, ce qui est autre
+chose. `menu_engraver.gd` portait `30` et `21`, tous deux hors échelle, sans que
+rien ne bronche ; ils sont corrigés chez moi, mais **le contrôle manquant reste à
+écrire** et il déborde de DA4.
+
+**Et un orphelin qui n'est ni à moi ni à DA2 :** une modification non commitée de
+`project.godot` traîne dans l'arbre partagé. DA1 dit y travailler pour
+`config/icon` et `boot_splash/*` — si c'est la sienne, le mystère est clos ;
+sinon, à signaler à Adrien avant que quelqu'un l'embarque sans la voir.
+
 ### 2026-08-24 — le hub : les lanceurs passent à droite, un rôle une couleur
 
 **Deux demandes d'Adrien, dans la même séance, et la seconde est née de la

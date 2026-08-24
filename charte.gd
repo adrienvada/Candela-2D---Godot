@@ -305,6 +305,131 @@ static func polices_manquantes() -> Array[String]:
 
 
 # =============================================================================
+# HABILLER UN CONTRÔLE — la fonte, la taille et la graisse posées ENSEMBLE
+# =============================================================================
+#
+# **Le dépôt avait deux fontes et n'en portait qu'une.** DA1.2 a livré les deux
+# fichiers, leurs licences, l'axe variable et sa vérification ; six jours plus
+# tard `police_display()` n'était appelée que depuis **trois** sites, tous en
+# espace-monde — `player.gd`, `bullet.gd`, `game_state.gd`. Les 5 000 lignes qui
+# construisent les menus, le HUD, la killcam et l'écran de fin ne l'appelaient
+# **jamais**. La fonte d'enseigne n'atteignait pas un seul écran.
+#
+# La cause n'est pas l'oubli, c'est l'ergonomie : poser une fonte demandait
+# `add_theme_font_override` **plus** `add_theme_font_size_override` **plus** une
+# `FontVariation` pour la graisse — trois gestes pour une intention. Personne ne
+# fait trois gestes cinquante fois. Les deux fonctions ci-dessous en font un.
+#
+# C'est le même remède que la palette : ce n'est pas la discipline qui a tenu les
+# 51 littérales, c'est d'avoir un nom plus court à écrire que la valeur.
+#
+# ## Les deux registres, et la mesure qui les sépare
+#
+# **`enseigne()` — ce qui s'écrit une fois.** CANDELA, FATAL, VICTOIRE, KILLCAM,
+# le code de salon, le décompte. Du texte qui apparaît, se lit, et s'en va.
+#
+# **`appareil()` — tout le reste**, et en particulier **tout ce qui se remplace
+# sur place**.
+#
+# ⚠️ **La frontière n'est pas une préférence, elle est mesurée, et l'écart est
+# énorme.** `Big Shoulders Display` n'est pas tabulaire : à `T_VERDICT`, la
+# chaîne `00:00` fait 83 px et `11:11` en fait **49** — 41 % de largeur en moins
+# pour le même nombre de signes. Un chrono écrit dans cette fonte ne « saute »
+# pas, il **tremble** : sa boîte change de largeur à chaque seconde.
+#
+# Pour mémoire, le défaut qui avait fait écarter *Chakra Petch* de la place de
+# fonte d'interface en DA1.2 valait 12 px contre 6,9 sur un seul glyphe. Celui-ci
+# est d'un autre ordre. **Ce n'est pas un défaut de la fonte** — une signalétique
+# industrielle n'a aucune raison d'être tabulaire, et l'ultra-condensé qui fait
+# sa personnalité est exactement ce qui l'en empêche. C'est un défaut d'emploi,
+# et il ne peut se produire que d'un côté de la frontière.
+#
+# La règle mécanique qui en découle, vérifiée par `tools/test_habillage.gd` :
+# **aucun compteur ne porte la fonte d'enseigne.** Le banc mesure les dix
+# chiffres du `Control` réel plutôt que de lire quelle fonte on croit y avoir
+# posée — c'est la seule formulation qui survive à un remplacement de fonte.
+#
+# Un chiffre qui varie n'est pas pour autant interdit d'enseigne : les nombres de
+# dégâts de `bullet.gd` sont en display, et ils y sont bien. Ils naissent, ils
+# montent, ils meurent — **aucun ne se substitue à un autre dans la même boîte**.
+# Le critère n'est pas « est-ce un nombre », c'est « est-ce que ça se remplace
+# sur place ».
+
+## Les deux registres. Voir la note ci-dessus pour ce qui les sépare.
+enum Registre {
+	## LED, ce que l'appareil affiche : Oxanium, tabulaire, jusqu'à `POIDS_APPUI`.
+	APPAREIL,
+	## L'enseigne : Big Shoulders Display, condensée, à partir de `POIDS_DISPLAY`.
+	ENSEIGNE,
+}
+
+
+## La graisse qui va avec une taille, dans un registre donné.
+##
+## **Une formule, pas un choix** — même discipline que les couleurs dérivées.
+## Une graisse choisie au site d'appel est une graisse qui diverge : c'est
+## exactement ainsi que le dépôt s'est retrouvé avec vingt-cinq tailles.
+##
+## Chacun des quatre poids a **un seul domicile**, et c'est ce qui rend la table
+## lisible d'un coup d'œil : `POIDS_COURANT` et `POIDS_APPUI` sont à l'appareil,
+## `POIDS_DISPLAY` et `POIDS_ENSEIGNE` à l'enseigne. Un poids employé des deux
+## côtés ne dirait plus rien de l'endroit où on le lit.
+##
+## L'appareil **plafonne à `POIDS_APPUI`** : un tableau de bord ne crie pas. Le
+## gras d'affiche appartient à l'enseigne, qui est là pour ça.
+static func graisse_pour(taille: int, registre: Registre = Registre.APPAREIL) -> int:
+	if registre == Registre.ENSEIGNE:
+		return POIDS_DISPLAY if taille <= T_TITRE else POIDS_ENSEIGNE
+	return POIDS_COURANT if taille <= T_COURANT else POIDS_APPUI
+
+
+## Habille un `Control` : fonte d'enseigne, taille, et la graisse qui va avec.
+##
+## Pour les mots qui s'écrivent une fois. **Jamais pour un compteur** — voir la
+## note de section, et `tools/test_habillage.gd` qui le refuse par la mesure.
+static func enseigne(control: Control, taille: int, poids: int = -1) -> void:
+	habiller_selon(control, taille, Registre.ENSEIGNE, poids)
+
+
+## Habille un `Control` : fonte d'interface, taille, et la graisse qui va avec.
+##
+## Le registre par défaut de tout ce qui s'affiche. Ses chiffres sont tabulaires
+## par construction, donc rien de ce qu'on lui confie ne peut trembler.
+static func appareil(control: Control, taille: int, poids: int = -1) -> void:
+	habiller_selon(control, taille, Registre.APPAREIL, poids)
+
+
+## Habille un `Control` dans un registre calculé à l'exécution.
+##
+## Préférer [method enseigne] ou [method appareil] : elles **nomment** le choix à
+## l'endroit où on le lit. Cette forme n'existe que pour le cas où le registre ne
+## se connaît pas à l'écriture — `menu_engraver.gd` le tire de son gabarit, un
+## code et une adresse IP passant par le même constructeur.
+##
+## ⚠️ **La taille se pose même quand la fonte manque, et l'ordre compte.**
+##
+## Règle du dépôt — « câbler, taire, diagnostiquer » : un fichier de fonte absent
+## rend `null`, on ne pose alors aucun override de fonte et Godot sert la sienne.
+## L'écran reste lisible et l'absence se lit au panneau F3, pas en erreur.
+##
+## Poser la taille malgré tout est ce qui fait la différence entre « la fonte
+## manque » et « la mise en page a disparu » : sans elle, un dépôt sans polices
+## rendrait tous ses écrans à la taille par défaut, c'est-à-dire illisibles, et
+## l'on chercherait le défaut ailleurs que dans les deux fichiers manquants.
+static func habiller_selon(control: Control, taille: int, registre: Registre,
+		poids: int = -1) -> void:
+	if control == null:
+		return
+	control.add_theme_font_size_override("font_size", taille)
+	var g := poids if poids > 0 else graisse_pour(taille, registre)
+	var f := (police_display(g) if registre == Registre.ENSEIGNE
+		else police_ui(g))
+	if f == null:
+		return
+	control.add_theme_font_override("font", f)
+
+
+# =============================================================================
 # RYTHME — la grille de 8
 # =============================================================================
 #

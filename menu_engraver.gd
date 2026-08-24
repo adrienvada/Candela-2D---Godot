@@ -39,6 +39,28 @@ extends Control
 ## déclenche l'animation ; sinon le code se regraverait à chaque signal réseau,
 ## et l'événement perdrait tout son poids.
 
+## DA4.9 — **le code prend la fonte d'enseigne, et le gabarit décide du registre.**
+##
+## Le code de salon est l'objet social du jeu : celui qu'on lit à voix haute à un
+## ami. La vague M lui avait déjà donné sa cérémonie — les six impacts, le métal
+## qui refroidit — mais il restait écrit dans la fonte de tout le reste. Il est
+## désormais en `BigShouldersDisplay`, la signalétique industrielle, ce qui le
+## rend **iconique** au lieu de simplement gros.
+##
+## ⚠️ **Cette fonte n'est pas tabulaire, et ici ça n'a aucune importance —
+## uniquement grâce au gabarit fixe.** Chaque caractère est centré dans sa propre
+## case dimensionnée d'avance : un `W` et un `J` occupent le même espace, donc le
+## bloc ne bouge jamais. C'est la seule disposition qui rende l'ultra-condensé
+## inoffensif ; le même code écrit en ligne libre changerait de largeur à chaque
+## tirage. Voir la note de section de [Charte] sur les deux registres.
+##
+## **D'où la règle appliquée ici : le registre suit le GABARIT, pas l'appelant.**
+## Gabarit fixe = un code, un objet qu'on transmet, donc l'enseigne. Mesure libre
+## = une adresse IP de longueur inconnue, donc l'appareil et ses chiffres
+## tabulaires. Le lier au gabarit plutôt qu'à un paramètre de plus, c'est le
+## rendre impossible à contredire : la seule disposition qui protège du
+## non-tabulaire est exactement celle qui l'autorise.
+
 ## Nombre de cases. Le code de salon en fait six, le code de récupération aussi.
 const CASES := 6
 ## Décalage d'un impact au suivant.
@@ -65,10 +87,14 @@ var _etincelles: Array[Dictionary] = []
 var _alea := RandomNumberGenerator.new()
 ## Nombre de cases imposé. Zéro = mesure libre, les cases suivent la chaîne.
 var _gabarit: int = CASES
-var _taille: int = 30
+var _taille: int = MenuTheme.T_VERDICT
 var _teinte: Color = MenuTheme.GOLD
+## Largeur d'une case en gabarit fixe, et hauteur de la rangée : MESURÉES sur la
+## fonte réellement posée, jamais déduites d'un coefficient — voir [method _mesurer].
+var _case: float = 0.0
+var _hauteur: float = 0.0
 
-func _init(gabarit: int = CASES, taille: int = 30,
+func _init(gabarit: int = CASES, taille: int = MenuTheme.T_VERDICT,
 		teinte: Color = MenuTheme.GOLD) -> void:
 	name = "GravureCode"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -84,13 +110,20 @@ func _init(gabarit: int = CASES, taille: int = 30,
 	_boite.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_boite)
 
+	_mesurer()
+
 	# La coche de copie a sa propre case : la coller au code obligerait à
 	# reconstruire les caractères pour l'afficher, donc à les regraver.
+	#
+	# Elle reste dans la fonte d'INTERFACE quel que soit le registre du code :
+	# « ✓ » n'appartient à aucune des deux fontes du projet, il vient de la fonte
+	# de repli du système. Lui poser une enseigne ultra-condensée ne changerait
+	# donc rien à son dessin, et prétendrait le contraire.
 	_check = Label.new()
 	_check.name = "Coche"
-	_check.custom_minimum_size = Vector2(_taille * 0.8, _taille * 1.27)
+	_check.custom_minimum_size = Vector2(_case * 0.8, _hauteur)
 	_check.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_check.add_theme_font_size_override("font_size", int(_taille * 0.73))
+	Charte.appareil(_check, int(_taille * 0.73))
 	_check.add_theme_color_override("font_color", _teinte)
 	_check.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_boite.add_child(_check)
@@ -112,6 +145,50 @@ func _init(gabarit: int = CASES, taille: int = 30,
 func _get_minimum_size() -> Vector2:
 	return _boite.get_combined_minimum_size() if _boite != null else Vector2.ZERO
 
+## Le registre de ce bloc. Voir la note de tête : il suit le gabarit.
+func registre() -> Charte.Registre:
+	return Charte.Registre.ENSEIGNE if _gabarit > 0 else Charte.Registre.APPAREIL
+
+## La fonte réellement posée sur les caractères, ou `null` si le fichier manque.
+func police() -> Font:
+	var g := Charte.graisse_pour(_taille, registre())
+	return (Charte.police_display(g) if registre() == Charte.Registre.ENSEIGNE
+		else Charte.police_ui(g))
+
+## Mesure la case sur la fonte réellement posée, au lieu de la deviner.
+##
+## ⚠️ **Les deux coefficients d'avant — `× 0,87` en largeur, `× 1,27` en hauteur —
+## étaient justes pour Oxanium et faux pour toute autre fonte.** À taille égale la
+## display fait **66 % de la largeur** et **121 % de la hauteur de ligne** : les
+## six cases auraient bâillé d'un tiers, et la case aurait été plus courte que le
+## texte qu'elle contient. Un coefficient réglé à l'œil sur une fonte est une
+## dépendance cachée à cette fonte — le genre de lien qui ne se voit que le jour
+## où on en change, c'est-à-dire trop tard.
+##
+## La largeur est celle du **glyphe le plus large de l'alphabet des codes**, pas
+## du caractère affiché : c'est ce qui tient la promesse « un I et un W occupent
+## la même case ». Elle se mesure sur `LobbyCode.ALPHABET`, dont dérive aussi
+## celui du code de récupération — un seul alphabet, donc une seule mesure.
+##
+## Sans fonte chargée (fichier absent, ou cache d'import pas encore construit),
+## on retombe sur les anciens coefficients : le bloc reste dimensionné, la
+## gravure reste jouable, et l'absence se lit au panneau F3.
+func _mesurer() -> void:
+	var f := police()
+	if f == null:
+		_case = _taille * 0.87
+		_hauteur = _taille * 1.27
+		return
+	var large := 0.0
+	for c in LobbyCode.ALPHABET:
+		large = maxf(large, f.get_string_size(c,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, _taille).x)
+	# Un demi-pas de grille d'air de chaque côté : sans lui les caractères se
+	# touchent, et six lettres collées cessent de se lire comme six signes.
+	_case = large + MenuTheme.GAP_XXS
+	_hauteur = f.get_string_size("W", HORIZONTAL_ALIGNMENT_LEFT, -1, _taille).y \
+		+ MenuTheme.GAP_XXS
+
 ## Amène le nombre de cases à `n`, en créant ou en retirant ce qu'il faut. La
 ## coche reste la dernière : elle suit le code, elle ne s'y mêle pas.
 func _ajuster_cases(n: int) -> void:
@@ -120,12 +197,14 @@ func _ajuster_cases(n: int) -> void:
 		lbl.name = "CodeChar%d" % _labels.size()
 		lbl.text = VIDE
 		# En gabarit fixe, un « I » et un « W » occupent la même case : le code ne
-		# change pas de longueur selon les lettres tirées.
-		lbl.custom_minimum_size = Vector2(
-			_taille * 0.87 if _gabarit > 0 else 0.0, _taille * 1.27)
+		# change pas de longueur selon les lettres tirées. Cette promesse tenait
+		# par un coefficient réglé sur Oxanium ; elle tient désormais par la
+		# mesure du glyphe le plus large — et `tools/test_habillage.gd` la vérifie
+		# en gravant six `W` puis six `J` et en comparant les deux largeurs.
+		lbl.custom_minimum_size = Vector2(_case if _gabarit > 0 else 0.0, _hauteur)
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", _taille)
+		Charte.habiller_selon(lbl, _taille, registre())
 		lbl.add_theme_color_override("font_color", _teinte)
 		# Hors parcours du curseur : ce sont des caractères, pas des contrôles.
 		lbl.focus_mode = Control.FOCUS_NONE

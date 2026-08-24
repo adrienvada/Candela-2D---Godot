@@ -2486,6 +2486,69 @@ indice. `tools/test_musique.gd` tient les deux.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un worktree neuf n'a pas de cache d'import, et le banc rougit ailleurs (2026-08-24)
+
+Premier lancement des suites depuis un `git worktree` fraîchement créé :
+**`test_charte` échoue**, seul, sans qu'une ligne de code soit en cause. Le même
+banc passe dans l'arbre partagé, sur le même commit.
+
+La cause : `.godot/imported/` **n'est pas versionné**, donc un worktree neuf n'en
+a pas. Godot ne peut pas ouvrir les `.fontdata`, et les deux fontes ne se
+chargent pas. Le banc mesure des chasses de glyphes ; sans fonte, il n'a rien à
+mesurer.
+
+**Ce qui rend le piège vicieux, c'est le diagnostic de l'API :**
+`ResourceLoader.exists()` répond **vrai** — le `.ttf` est bien là —, et `load()`
+échoue quand même. `Charte.polices_manquantes()`, qui interroge le premier,
+annonce donc que tout est en place pendant que la fonte est introuvable. Les deux
+questions sont différentes et une seule est posée.
+
+**Et il déborde très largement de `test_charte`.** Toute mesure sur une fonte
+absente retombe silencieusement sur la fonte par défaut de Godot — **qui est
+tabulaire**. Un banc qui vérifie que les compteurs ne tremblent pas passerait
+donc **au vert sur une interface entièrement nue**, ce qui est pire que rouge :
+il affirmerait précisément ce qui est faux. `tools/test_habillage.gd` ouvre pour
+cette raison sur un contrôle de chargement effectif — `police_ui() != null` —
+avant toute autre mesure.
+
+**La parade, en une commande, avant la première suite d'un worktree neuf :**
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import
+```
+
+Un peu moins d'une minute. À faire aussi après tout ajout d'asset binaire.
+
+### Un coefficient réglé sur une fonte est une dépendance cachée à cette fonte (2026-08-24)
+
+`menu_engraver.gd` dimensionnait les six cases du code de salon par deux
+multiplications : `taille × 0,87` en largeur, `taille × 1,27` en hauteur. Les
+deux nombres sont justes — pour Oxanium. Ils ont été réglés à l'œil devant
+Oxanium, et **rien n'indiquait qu'ils en dépendaient**.
+
+À taille nominale égale, `BigShouldersDisplay` fait **66 % de la largeur** et
+**121 % de la hauteur de ligne** d'Oxanium. Passer le code en fonte d'enseigne
+(DA4.9) avec les coefficients d'origine aurait donné des cases **bâillant d'un
+tiers** et une hauteur de case **inférieure au texte qu'elle contient**.
+
+**C'est la même famille que le tempo recopié à trois endroits et que la
+résolution de texture qui décide de la portée : une valeur qui a l'air d'être un
+réglage, et qui est en fait le résultat d'une mesure faite une fois, sur une
+entrée qu'on ne nomme pas.** Elle ne se dégrade pas, elle ne dérive pas — elle
+attend le jour où l'entrée change, et ce jour-là elle est fausse d'un coup, sans
+avoir jamais bougé.
+
+**La parade appliquée : remplacer le coefficient par la mesure qu'il résumait.**
+La case vaut désormais le glyphe le plus large de `LobbyCode.ALPHABET`, mesuré
+dans la fonte réellement posée, plus un demi-pas de grille. C'est plus court à
+lire que les deux multiplications, et ça se corrige tout seul au prochain
+changement de fonte.
+
+**Le signe qui permet de les repérer** : un littéral non rond multipliant une
+taille ou une dimension — `0,87`, `1,27`, `0,73`. Un nombre rond est
+généralement une décision ; un nombre à deux décimales est presque toujours une
+mesure fossilisée, et il faut alors chercher *de quoi* elle dépend.
+
 ### Isoler ses propres hunks par plumbing a une course (2026-08-24)
 
 Arbre partagé par quatre sessions. Pour ne pas emporter le travail non commité
@@ -6123,10 +6186,109 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA4 — L'interface habillée
 
+#### Le lot du 2026-08-24 : le dépôt avait deux fontes et n'en portait qu'une
+
+**Le chantier DA4 s'ouvre sur un chiffre, pas sur une intention.** DA1.2 a livré
+`BigShouldersDisplay` et `Oxanium` le matin même : deux fichiers OFL, leurs
+licences versionnées à côté, l'axe variable vérifié par la mesure, une échelle de
+six tailles, quatre graisses nommées. Six jours de travail plus tard,
+`Charte.police_display()` était appelée depuis **trois** sites — `player.gd`,
+`bullet.gd`, `game_state.gd` —, tous en espace-monde.
+
+**Les 5 000 lignes de `ui.gd` ne l'appelaient jamais.** Tous les menus, le HUD,
+la killcam, l'écran de fin, le titre du jeu à 68 px : la fonte d'enseigne
+n'atteignait pas un seul écran. Et aucun `Control` du dépôt ne posait de graisse
+— `POIDS_APPUI` et `POIDS_ENSEIGNE` n'existaient que pour l'arène. L'interface
+entière rendait **une fonte, un poids**, ce qui est la définition exacte de « pas
+habillée ».
+
+**Rien ne le disait, et `tools/test_charte.gd` ne pouvait pas le dire.** Ce n'est
+pas un défaut de sa part : il vérifie *la charte*, pas *son emploi*. Que les
+chiffres d'Oxanium soient tabulaires, que l'axe de graisse agisse, que l'échelle
+compte six crans — ces trois affirmations restent vraies dans un dépôt où plus
+personne n'appliquerait la charte à quoi que ce soit. **Une charte peut être
+intégralement conforme et intégralement inemployée.**
+
+##### La cause n'est pas l'oubli, c'est le nombre de gestes
+
+Poser une fonte demandait `add_theme_font_override` **plus**
+`add_theme_font_size_override` **plus** une `FontVariation` pour la graisse :
+trois gestes pour une intention. Personne ne fait trois gestes cinquante fois.
+
+C'est très exactement ce qui avait déjà tenu les 51 couleurs littérales de
+DA1.4 : ce n'est pas la discipline qui les a remplacées, c'est d'avoir eu un nom
+**plus court à écrire que la valeur**. `Charte.enseigne(lbl, T_ENSEIGNE)` et
+`Charte.appareil(lbl, T_COURANT)` font le geste unique, et posent les trois
+propriétés **ensemble** — c'est ce qui les empêche de diverger, comme les 25
+tailles avaient divergé.
+
+##### La frontière entre les deux registres est mesurée, pas choisie
+
+⚠️ **`BigShouldersDisplay` n'est pas tabulaire, et l'écart est d'un autre ordre
+que tout ce qui a été relevé jusqu'ici.** À `T_VERDICT`, la chaîne `00:00` fait
+**83 px** et `11:11` en fait **49** — 41 % de largeur en moins pour le même
+nombre de signes. À `T_APPUI`, les dix chiffres vont de 5 à 9 px.
+
+Pour mémoire, le défaut qui avait fait écarter *Chakra Petch* de la place de
+fonte d'interface en DA1.2 valait 12 px contre 6,9 sur **un seul glyphe**.
+
+**Ce n'est pas un défaut de la fonte.** Une signalétique industrielle n'a aucune
+raison d'être tabulaire, et l'ultra-condensé qui fait sa personnalité est
+précisément ce qui l'en empêche. C'est un défaut d'**emploi**, et il ne peut se
+produire que d'un côté de la frontière :
+
+> **La fonte d'enseigne ne porte jamais un signe qui se remplace sur place.**
+> Elle prend les mots qui s'écrivent une fois — CANDELA, FATAL, VICTOIRE,
+> KILLCAM, le code de salon. Le chrono, le ping, le score et le timecode restent
+> à l'appareil, dont les chiffres sont tabulaires par construction.
+
+**Le critère n'est pas « est-ce un nombre ».** Les nombres de dégâts de
+`bullet.gd` sont en enseigne, et ils y sont bien : ils naissent, ils montent, ils
+meurent, et **aucun ne se substitue à un autre dans la même boîte**. Le critère
+est la substitution en place — c'est là, et seulement là, que la largeur qui
+change se lit comme un tremblement.
+
+##### Ce que le banc mesure, et pourquoi il est formulé ainsi
+
+`tools/test_habillage.gd` (44ᵉ suite) monte l'interface réelle et mesure **les
+dix chiffres de chaque compteur dans la fonte que le `Control` résout
+effectivement**. Sept compteurs sont sous surveillance : chrono, ping, timecode
+de killcam, les deux étiquettes de recharge, et les deux lignes du panneau F3.
+
+⚠️ **La règle est écrite sur la mesure, jamais sur le nom de la fonte.** « Le
+chrono n'est pas en display » serait vrai aujourd'hui et vide demain : il
+suffirait d'une troisième fonte pour que le contrôle passe au vert sur un défaut
+réel. Ce qu'on interdit, c'est le tremblement — pas un fichier.
+
+**Le banc a été vu rougir avant d'être livré.** La fonte d'enseigne posée exprès
+sur le chrono : `ui.time_label tremble : 9.0 px d'écart entre ses chiffres à
+42 px`. C'est la leçon de `test_ecran_de_fin`, qui posait une graine de
+navigation sur deux boutons puis n'assertait que sur des constantes — un contrôle
+qu'on n'a pas vu échouer n'est pas un contrôle.
+
+Il porte aussi un garde-fou qui protège tous les autres : **si les fontes ne se
+chargent pas, chaque `Control` retombe sur la fonte par défaut de Godot, qui est
+tabulaire — et les sept contrôles de tremblement passeraient au vert sur une
+interface entièrement nue.** Voir « Pièges connus », *un worktree neuf n'a pas de
+cache d'import*.
+
+##### Ce qui est livré, et ce qui attendait une autre session
+
+Livrés : **DA4.2** et **DA4.9**. `ui.gd` était tenu par la session DA1
+(wordmark et icône, DA1.6/DA1.7) pendant toute la séance : le HUD, la killcam et
+le bandeau de verdict n'ont donc **pas** été repris, et attendent qu'elle rende
+la main. Le lot s'est reporté sur ce qui était libre.
+
 - **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
   rectangles stylés par code. *(C)*
-- **DA4.2 Chrono, score, ping en chiffres tabulaires** — ils cessent de
-  « sauter » à chaque changement. *(S, découle de DA1.2)*
+- **DA4.2 Chrono, score, ping en chiffres tabulaires** ✅ **livrée le 2026-08-24**
+  — et la formulation d'origine était trop faible. « Ils cessent de sauter »
+  décrivait un confort ; ce qui est posé est une **interdiction mesurée**, celle
+  de la fonte d'enseigne sur tout ce qui se remplace en place, vérifiée sur sept
+  compteurs par `tools/test_habillage.gd`. Les chiffres ne sautaient déjà pas —
+  Oxanium est tabulaire par construction depuis DA1.2 — mais **rien n'empêchait
+  qu'ils se mettent à sauter**, et l'item ne demandait que l'état, pas la
+  garantie. *(S)*
 - **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
   style, plus d'outline automatique. *(S)*
 - **DA4.4 Le bandeau FATAL dessiné** — cartouche peint, pas un label sur le
@@ -6140,8 +6302,24 @@ un fait de jeu, pas à un rythme d'interface.
   hiérarchisés comme une affiche, pas empilés. *(S après DA1, C pour l'ornement)*
 - **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
   pour chaque carte. *(S)*
-- **DA4.9 Le code de salon en cases display** — V6.7 le prévoit ; la typo
-  display le rend iconique. *(S, après DA1.2)*
+- **DA4.9 Le code de salon en cases display** ✅ **livrée le 2026-08-24** — les
+  six cases sont en `BigShouldersDisplay` à `T_VERDICT`, et **le registre suit le
+  GABARIT, pas l'appelant** : gabarit fixe = un code, donc l'enseigne ; mesure
+  libre = une adresse IP, donc l'appareil et ses chiffres tabulaires. Le lier au
+  gabarit le rend impossible à contredire — la seule disposition qui protège
+  d'une fonte non tabulaire (chaque signe centré dans sa propre case) est
+  exactement celle qui l'autorise. Bénéfice de bord : l'adresse IP passe au bon
+  registre **sans toucher `ui.gd`**, tenu par une autre session.
+
+  ⚠️ **Deux coefficients réglés à l'œil sont tombés au passage, et ils étaient
+  faux dès qu'on changeait de fonte** — voir « Pièges connus », *un coefficient
+  réglé sur une fonte est une dépendance cachée à cette fonte*. La case se mesure
+  désormais sur le glyphe le plus large de `LobbyCode.ALPHABET`, dans la fonte
+  réellement posée.
+
+  La promesse « un `I` et un `W` occupent la même case » existait en commentaire
+  depuis la vague M et **ne reposait sur rien** : elle est maintenant vérifiée en
+  gravant six `W` puis six `J` et en comparant les deux largeurs. *(S)*
 - **DA4.10 Les glyphes manette officiels** — icônes de boutons dessinées au
   lieu de « X », « LB » en texte. *(G : jeux de glyphes libres)*
 - **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
