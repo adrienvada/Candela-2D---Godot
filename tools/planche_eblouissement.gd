@@ -446,12 +446,19 @@ func _coherence_faisceau() -> void:
 			var vu: float = _main.p2.dazzle_amount
 			var mur: bool = not _main._ligne_de_vue(
 				_main.p1.get_world_2d().direct_space_state, _main.p1, _main.p2)
-			await _poser("50-coherence-%s-%s" % [_nom(arme).to_lower(), poste[0]],
-				"%s · %s : %.2f%s" % [_nom(arme), poste[0], vu, "  (MUR)" if mur else ""])
+			await _poser_en_tenant("50-coherence-%s-%s" % [_nom(arme).to_lower(), poste[0]],
+				"%s · %s : %.2f%s" % [_nom(arme), poste[0], vu, "  (MUR)" if mur else ""],
+				rayon, angle)
+			# Relu APRÈS la capture : c'est cette valeur-là qui correspond à
+			# l'image, et l'écart avec celle d'avant dit si le poste était
+			# stable. Un poste qui bouge entre les deux ne prouve rien.
+			var apres: float = _main.p2.dazzle_amount
 			Input.action_release("p1_torch")
-			_journal.append("cohérence %-9s %-14s (%4.1f°, %4.0f px) → %.3f%s" % [
-				_nom(arme), poste[0], rad_to_deg(angle), rayon, vu,
-				"   ⚠ mur entre les deux" if mur else ""])
+			_journal.append("cohérence %-9s %-14s (%4.1f°, %4.0f px) → %.3f%s%s" % [
+				_nom(arme), poste[0], rad_to_deg(angle), rayon, apres,
+				"   ⚠ mur entre les deux" if mur else "",
+				"   ⚠ poste instable (%.3f avant la pose)" % vu
+					if absf(apres - vu) > 0.05 else ""])
 	_main.p1.equip_weapon(_main.weapon_for_index(0))
 
 
@@ -665,6 +672,53 @@ func _poser(nom: String, note: String = "") -> void:
 	img.save_png("%s/%s.png" % [_dossier, nom])
 	_n += 1
 	print("  · %-38s %s" % [nom, note])
+
+
+## Photographie un poste de faisceau **sans lâcher la scène**.
+##
+## **C'est la promesse même de cette planche, et le premier jet la trahissait.**
+## `_poser` laisse 350 ms de repos puis attend le rendu : pendant ce temps, plus
+## personne ne replace J2 et la visée de J1 continue de suivre la souris. Le
+## nombre était donc relevé à un instant, l'image prise à un autre — et la
+## planche a sorti un « bout de portée → 0,217 » illustré par un joueur
+## visiblement HORS du faisceau.
+##
+## Une planche dont l'image contredit son chiffre est pire qu'une planche
+## absente : elle est faite pour comparer ce qu'on subit à ce qu'on voit, et
+## c'était exactement ce lien-là qu'elle cassait.
+func _poser_en_tenant(nom: String, note: String, rayon: float, ecart: float) -> void:
+	var fin := Time.get_ticks_msec() + int(REPOS * 1000.0)
+	while Time.get_ticks_msec() < fin:
+		_tenir_une_image(rayon, ecart)
+		await get_tree().process_frame
+	_au_premier_plan()
+	var img: Image = await _capturer_en_tenant(rayon, ecart)
+	if img == null:
+		_au_premier_plan()
+		img = await _capturer_en_tenant(rayon, ecart)
+	if img == null:
+		printerr("  ✗ %s : aucune image (fenêtre au second plan)" % nom)
+		_perdues += 1
+		return
+	img.save_png("%s/%s.png" % [_dossier, nom])
+	_n += 1
+	print("  · %-38s %s" % [nom, note])
+
+
+func _capturer_en_tenant(rayon: float, ecart: float) -> Image:
+	var rendu := [false]
+	var cb := func() -> void: rendu[0] = true
+	RenderingServer.frame_post_draw.connect(cb, CONNECT_ONE_SHOT)
+	var fin := Time.get_ticks_msec() + 3000
+	while not rendu[0] and Time.get_ticks_msec() < fin:
+		_tenir_une_image(rayon, ecart)
+		await get_tree().process_frame
+	if not rendu[0]:
+		if RenderingServer.frame_post_draw.is_connected(cb):
+			RenderingServer.frame_post_draw.disconnect(cb)
+		return null
+	var texture := get_tree().root.get_texture()
+	return texture.get_image() if texture != null else null
 
 
 func _capturer_avec_reprise() -> Image:

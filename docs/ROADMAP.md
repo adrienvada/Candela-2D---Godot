@@ -2442,6 +2442,31 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La planche a sorti une image qui contredisait son propre chiffre (2026-08-24)
+
+`planche_eblouissement` imprimait « bout de portée → 0,217 » **sous une image
+montrant le joueur visiblement HORS du faisceau**. Les deux étaient exacts, et
+pris à deux instants différents : la valeur pendant que le banc maintenait les
+deux joueurs en place, l'image 350 ms plus tard, pendant le repos de la pose —
+moment où plus personne ne replaçait J2 et où la visée de J1 continuait de
+suivre la souris.
+
+**C'est le pire défaut possible pour cet outil précisément**, parce qu'il existe
+pour comparer *ce qu'on subit* à *ce qu'on voit* : il cassait le seul lien qu'il
+était chargé d'établir. Une planche dont l'image contredit son chiffre est pire
+qu'une planche absente — on croit avoir vérifié.
+
+Deux remèdes, et le second est le plus utile : la scène est désormais **tenue
+pendant le repos ET pendant la capture** (`_poser_en_tenant`), et la valeur est
+**relue après l'image**, l'écart avec celle d'avant étant imprimé quand il
+dépasse 0,05 (« poste instable »). Le banc ne peut donc plus mentir en silence :
+soit les deux instants concordent, soit il le dit.
+
+**Généralisable :** dès qu'un outil relève un nombre et une image, il doit ou
+bien les prendre au même instant, ou bien **mesurer et publier leur écart**.
+Aucun contrôle ne l'aurait vu — c'est un défaut qui ne se lit que sur la planche
+elle-même, en regardant.
+
 ### `uptime` ment sur la contention ; comptez les Godot (2026-08-24)
 
 Le piège « un lanceur lent ne dit rien du code, il dit qui d'autre travaille »
