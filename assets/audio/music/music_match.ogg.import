@@ -13,7 +13,7 @@ dest_files=["res://.godot/imported/music_match.ogg-bc7da6a3ac780fdf8e46857e73765
 [params]
 
 loop=true
-loop_offset=0
+loop_offset=0.0
 bpm=170.0
-beat_count=0
+beat_count=64
 bar_beats=4

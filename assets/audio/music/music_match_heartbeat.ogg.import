@@ -15,5 +15,5 @@ dest_files=["res://.godot/imported/music_match_heartbeat.ogg-1c5f3baeeef5f4e24df
 loop=true
 loop_offset=0.0
 bpm=170.0
-beat_count=0
+beat_count=4
 bar_beats=4

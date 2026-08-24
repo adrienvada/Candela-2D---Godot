@@ -879,3 +879,60 @@ les `screen_*.gd`, `effect_policy.gd`, `asset_manifest.gd`, `ranked_identity.gd`
 
 Soixante-dix propositions inscrites à la feuille de route, en six vagues triées
 par ratio effet/effort (`364b94c`, fusionné dans `main` par `478507f`).
+
+### 2026-08-24 — session « musique »
+
+**Domaine tenu, et il est étroit :** `assets/audio/music/**` (les onze fichiers
+livrés par Adrien et leurs `.import`), `assets/audio/music/main_stream_interactive.tres`,
+`tools/test_musique.gd` (créé), et la seule ligne 45 de `tools/run_suites.sh` où
+la suite s'inscrit. **Rien d'autre.**
+
+**Ce que je n'ai PAS touché, délibérément, et ce qu'il reste à faire chez vous :**
+
+- `audio_manager.gd` (domaine « game feel ») — aucune modification n'a été
+  nécessaire : les noms de fichiers attendus par `SOUNDS` et par le manifeste
+  étaient déjà exactement ceux des exports. C'est le seul mérite de cette
+  livraison. **Mais les quatre stingers (`sting_kill`, `sting_kill_match`,
+  `sting_defeat`, `sting_draw`) sont dans le dépôt et RIEN NE LES JOUE** :
+  aucune clé dans `SOUNDS`, aucun appel. C'est V2.3 / V3.7 / V3.8 / V3.10, à
+  vous. Les fichiers vous attendent, accordés et calés sur la grille.
+- `asset_manifest.gd` (domaine « menus ») — aucune modification nécessaire non
+  plus : le drapeau bouche-trou se mesure à la taille du fichier, il est donc
+  tombé tout seul, exactement comme sa docstring l'annonçait. **Deux champs
+  purement informatifs mentent en revanche maintenant** : les `p: true` des trois
+  entrées musicales, et les durées `s` des quatre stingers — Adrien a livré
+  `sting_kill`/`sting_kill_match` en 4 temps (1,412 s) et `sting_defeat`/
+  `sting_draw` en 8 temps (2,824 s), pas les valeurs listées. À corriger par qui
+  tient le fichier ; je n'y touche pas.
+- `tools/generate_music_streams.gd` (domaine « game feel ») — laissé tel quel,
+  mais **il est périmé**. Première rédaction de cette ligne : « le relancer
+  écraserait la musique du jeu par du silence ». **C'est faux, et la session
+  « éblouissement » a eu raison de le vérifier plutôt que de le relayer.** La
+  portée exacte, relue ligne à ligne :
+
+  - il **n'écrit aucun `.ogg`** — son unique `ResourceSaver.save()` vise
+    `main_stream_interactive.tres`, rien d'autre. Les onze fichiers livrés ne
+    peuvent pas être perdus par lui ;
+  - c'est un `@tool extends EditorScript` : il ne part **que** depuis l'éditeur,
+    par Fichier → Lancer. Aucun `--script`, aucun lanceur, aucune suite ne le
+    déclenche ;
+  - ce qu'il détruirait, c'est le **branchement** : il reconstruit le `.tres`
+    avec des `AudioStreamOggVorbis.new()` vides pour la base, la batterie et
+    l'arpège, et avec `clip_count = 3` — donc sans le clip `intro` et sans les
+    transitions actuelles. Les `.ogg` resteraient sur le disque, simplement plus
+    référencés par personne.
+
+  L'effet en jeu reste « la musique joue du silence sans la moindre erreur »,
+  mais c'est un **débranchement, pas une perte** : réintégrer suffit à réparer.
+  La nuance change le remède, et c'est pour ça qu'elle est écrite ici.
+
+  Ce qui date le script, et qui dit quoi en faire : il charge le heartbeat *s'il
+  existe*, mais fabrique les trois autres couches vides sans même essayer. Cette
+  asymétrie est la signature de l'époque où le heartbeat était le seul vrai
+  fichier du dépôt. **Il n'est pas dangereux par accident : il est resté à un
+  état du monde qui n'existe plus.** À supprimer ou à garder derrière une garde
+  qui refuse d'écrire si le `.tres` référence déjà des flux non vides — arbitrage
+  d'Adrien, fichier à votre main.
+
+**Republication du suivi :** je ne l'ai pas prise. La session « DA2 »
+(`uds:/tmp/cc-socks/13973.sock`) la porte et a reçu mon delta.

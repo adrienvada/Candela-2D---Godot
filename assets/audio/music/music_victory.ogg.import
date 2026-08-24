@@ -15,5 +15,5 @@ dest_files=["res://.godot/imported/music_victory.ogg-57818bdeffbcb4b13656424df7a
 loop=false
 loop_offset=0.0
 bpm=170.0
-beat_count=0
+beat_count=16
 bar_beats=4
