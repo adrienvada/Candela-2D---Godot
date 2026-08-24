@@ -89,6 +89,25 @@ var _shown_panel: String = ""
 ## au pad, c'est-à-dire à peu près tout le monde.
 var _entry_details: Dictionary = {}
 
+## Les deux apparences de chaque entrée : au repos, et sélectionnée.
+##
+## **Elles se posent à la main parce que la stylebox `focus` de Godot ne peut pas
+## faire ce travail ici.** Le style « sélectionné » y avait été mis, et rempli par
+## `focus_entered` — or les deux curseurs du jeu sont maison : ils dessinent un
+## liseré et n'appellent jamais `grab_focus()`. Conséquence, relevée par Adrien à
+## l'écran le 2026-08-24 : **à la manette et au clavier, aucune entrée n'était
+## jamais peinte**, de toute une session ; et à la souris, l'ambre restait collé
+## sur le dernier bouton cliqué même quand la sélection avait changé ailleurs.
+##
+## Le commentaire du code affirmait pourtant « la sélection est franche ». Il
+## décrivait une intention, pas un fait — c'est le piège déjà consigné deux fois
+## dans la feuille de route, et il a fallu une capture d'écran pour le voir.
+##
+## Le relais `reveal_entry()` avait été posé le 2026-08-18 pour la même raison, et
+## il n'avait alimenté que le CADRE DE DROITE. La moitié du décrochage était
+## corrigée, l'autre non.
+var _entry_styles: Dictionary = {}
+
 ## Chemin courant. Jamais vide : `ROOT` en est le fond.
 var _stack: PackedStringArray = PackedStringArray([ROOT])
 
@@ -305,6 +324,9 @@ func _apply(direction: float) -> void:
 	_title_label.text = String(_titles.get(id, id)).to_upper()
 	# La sélection ne survit pas au changement d'écran : elle désignerait une
 	# entrée d'un autre écran, et le cadre montrerait ce qu'on vient de quitter.
+	# **On l'éteint avant de l'oublier** — sinon elle reste allumée derrière soi,
+	# et l'écran d'à côté garde une entrée choisie qui ne commande plus rien.
+	_peindre(_selected_entry, false)
 	_selected_entry = null
 	_show_aside(id)
 
@@ -367,10 +389,33 @@ func _reset_transform(body: Control) -> void:
 ## L'entrée qui commande le cadre de droite. Le survol la laisse intacte.
 var _selected_entry: Button = null
 
-## Sélectionner : le cadre suit, et **reste** jusqu'à la prochaine sélection.
+## Sélectionner : le cadre suit, l'entrée s'allume, et les deux **restent**
+## jusqu'à la prochaine sélection.
 func _select_entry(btn: Button) -> void:
+	if _selected_entry == btn:
+		_show_entry(btn)
+		return
+	_peindre(_selected_entry, false)
 	_selected_entry = btn
+	_peindre(btn, true)
 	_show_entry(btn)
+
+
+## Pose l'une des deux apparences d'une entrée.
+##
+## `normal` ET `hover` : sans le second, promener la souris sur l'entrée
+## sélectionnée la ferait **régresser** vers la lueur de survol, c'est-à-dire
+## paraître moins choisie au moment où on la vise.
+func _peindre(btn: Button, choisie: bool) -> void:
+	if not is_instance_valid(btn) or btn.disabled:
+		return
+	var s: Variant = _entry_styles.get(btn, null)
+	if not s is Dictionary:
+		return
+	var jeu: Dictionary = s
+	var cle := "choisie" if choisie else "repos"
+	btn.add_theme_stylebox_override("normal", jeu[cle])
+	btn.add_theme_stylebox_override("hover", jeu["choisie"] if choisie else jeu["survol"])
 
 ## Survoler : le cadre montre, sans que le choix bouge.
 func _preview_entry(btn: Button) -> void:
@@ -493,31 +538,64 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("disabled", normal)
 
-	# **Survol et sélection ne se ressemblent plus.** Ils portaient le même
-	# `StyleBoxFlat` : impossible de savoir, en regardant l'écran, laquelle des
-	# deux entrées éclairées était celle qui commande le cadre de droite. À la
-	# manette la question ne se pose pas — parcourir sélectionne — mais à la souris
-	# le curseur passe sur des entrées qu'il ne choisit pas.
+	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
-	# Le survol reste une lueur : bordure teintée, fond à peine coloré. La
-	# sélection est franche — bordure épaisse et fond deux fois plus dense — parce
-	# que c'est elle qui décide de ce qu'on lit à droite.
+	# **Le survol et la sélection ne portaient pas des états, ils portaient des
+	# SUJETS.** Chaque entrée teintait ses deux styles avec son propre accent :
+	# rien que sur l'accueil, quatre couleurs — bleu pour les modes, ambre pour le
+	# compétitif, gris pour les réglages, rouge pour quitter. Survoler le
+	# compétitif donnait donc de l'ambre et survoler sa voisine du bleu pâle sur
+	# du noir, c'est-à-dire presque rien. « Ambre » ne voulait pas dire
+	# « sélectionné », il voulait dire « cette entrée-là est dorée ».
+	#
+	# Et les deux états ne différaient que par l'opacité — 6 % contre 12 % — et un
+	# pixel de bordure. À la souris, indiscernables.
+	#
+	# Trois signaux, trois couleurs, et elles ne dépendent plus du sujet :
+	#   · **acier** — le curseur de la souris passe ici ;
+	#   · **ambre** — c'est cette entrée que le cadre de droite montre ;
+	#   · **bleu / rouge** — le liseré d'un des deux curseurs du jeu.
+	#
+	# L'accent propre à l'entrée survit là où il dit quelque chose de vrai : le
+	# chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur
+	# la lecture de l'état.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(accent.r, accent.g, accent.b, 0.55)
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.06)
+	hover.border_color = Color(MenuTheme.ACCENT, 0.55)
+	hover.bg_color = Color(MenuTheme.ACCENT, 0.07)
 	btn.add_theme_stylebox_override("hover", hover)
 
-	var focus := normal.duplicate() as StyleBoxFlat
-	focus.border_color = accent
-	focus.set_border_width_all(2)
-	focus.bg_color = Color(accent.r, accent.g, accent.b, 0.16)
-	btn.add_theme_stylebox_override("focus", focus)
-	# Godot dessine `hover` par-dessus `focus` quand la souris passe sur l'entrée
-	# sélectionnée : sans cette variante, sélectionner puis survoler ferait
-	# **régresser** l'entrée vers l'apparence la plus faible des deux.
-	btn.add_theme_stylebox_override("hover_pressed", focus)
-	btn.add_theme_stylebox_override("focus_hover", focus)
-	btn.add_theme_stylebox_override("pressed", hover)
+	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
+	#
+	# **Discrète, et voulue telle** (arbitrage d'Adrien, 2026-08-24) : bleu autour,
+	# ambre dedans.
+	#
+	# C'est la BORDURE qui identifie — deux pixels d'ambre plein, lisibles d'un
+	# coup d'œil dans une colonne — et le fond ne fait que réchauffer. Un premier
+	# essai à un quart d'opacité donnait un aplat : l'entrée cessait d'être choisie
+	# pour devenir un bouton d'une autre couleur, et le libellé y perdait son
+	# contraste. À un huitième, l'ambre se voit sans couvrir, et le liseré bleu du
+	# curseur reste le premier lu — ce qu'il doit être, puisqu'il dit où l'on est.
+	var choisie := normal.duplicate() as StyleBoxFlat
+	choisie.border_color = MenuTheme.GOLD
+	choisie.set_border_width_all(2)
+	choisie.bg_color = Color(MenuTheme.GOLD, 0.12)
+	_entry_styles[btn] = {"repos": normal, "survol": hover, "choisie": choisie}
+
+	# **Le focus de Godot ne peint plus rien**, et c'est le correctif du défaut
+	# qu'Adrien a vu : il portait l'apparence choisie, en plus de la peinture
+	# explicite de `_peindre()`. Deux mécanismes pour un même signal, sur deux
+	# déclencheurs différents — un clic donne le focus Godot, qui survit à la
+	# sélection suivante. Une entrée s'allumait donc sans être choisie, et se
+	# rallumait au survol.
+	#
+	# La sélection est désormais peinte à un seul endroit. Le focus de Godot n'est
+	# de toute façon pas le curseur du joueur : le jeu a les siens, qui dessinent
+	# leur liseré par-dessus.
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_stylebox_override("focus_hover", hover)
+	# L'appui, lui, montre déjà ce que l'entrée est sur le point de devenir.
+	btn.add_theme_stylebox_override("pressed", choisie)
+	btn.add_theme_stylebox_override("hover_pressed", choisie)
 
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT,
@@ -625,8 +703,12 @@ func reveal_entry(control: Control) -> bool:
 	var d: Variant = _entry_details.get(control, null)
 	if not d is Dictionary:
 		return false
-	var e: Dictionary = d
-	show_detail(String(e["titre"]), String(e["texte"]), String(e["panneau"]))
+	# **`_select_entry` et non `show_detail` seul.** Ce relais existe parce que les
+	# curseurs maison ne déclenchent pas `focus_entered` ; il alimentait le cadre
+	# de droite et **laissait l'entrée non peinte** — donc à la manette, rien ne
+	# disait jamais laquelle commandait ce cadre. Parcourir sélectionne, comme le
+	# dit le contrat de `make_entry()` : c'est ici qu'il fallait le rendre vrai.
+	_select_entry(control as Button)
 	return true
 
 ## Ajoute le retour en bas d'une liste. À appeler pour **chaque** écran non

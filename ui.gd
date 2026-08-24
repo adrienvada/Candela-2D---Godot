@@ -90,6 +90,8 @@ const META_NAV_SEED := "nav_seed"
 const NAV_SEED_LES_DEUX := -2
 ## Libellé d'origine d'une entrée de lancement, à restaurer hors écran de fin.
 const META_LAUNCH_BASE := "launch_base"
+## L'action que le bouton du cadre déclenche sur l'écran courant.
+const META_LAUNCH_ACTION := "launch_action"
 ## M10 — opacité de nuit d'un rideau, et colonne que la cascade rallume.
 const META_ALPHA_NUIT := "alpha_nuit"
 const META_CASCADE := "cascade"
@@ -418,16 +420,44 @@ var btn_join_lobby: Button
 var join_box: VBoxContainer
 ## Les entrées « PRÊT » des quatre salons, grisées tant qu'un second joueur
 ## est nécessaire et absent.
-var _ready_entries: Array[Button] = []
-## Toutes les entrées qui relancent une manche, écran partagé compris.
+## **Le geste qui engage, et il vit dans le CADRE DE DROITE.**
 ##
-## `_ready_entries` ne suffisait pas : elle sert au **renommage** PRÊT → REJOUER
-## et ne contient donc que les quatre entrées de salon. En écran partagé, celle
-## qui relance s'appelle « JOUER » et n'y figure pas — la respiration de fin de
-## match aurait sauté le mode le plus joué. Liste séparée plutôt qu'ajout à
-## l'autre : y verser « JOUER » l'aurait aussi fait renommer, ce qui n'est pas
-## demandé ici.
-var _relance_entries: Array[Button] = []
+## Arbitrage d'Adrien du 2026-08-24 : la colonne de gauche porte des
+## destinations, le cadre porte ce qu'on y prépare **et l'action qui le
+## consomme**. Un bouton « JOUER » à gauche pendant que le choix d'arme dont il
+## dépend est à droite séparait le geste de son objet.
+##
+## **Un seul bouton pour huit écrans**, parce que le panneau lui-même est unique
+## et partagé : c'est déjà `_refresh_lobby_block()` qui décide de ce qui s'y voit
+## selon le mode. Son libellé et son action suivent l'écran, par `LANCEURS`.
+##
+## Ce que ça simplifie au passage, et ce n'est pas rien : `_ready_entries` et
+## `_relance_entries` **disparaissent**. Le commentaire qui justifiait d'en tenir
+## deux disait qu'elles existaient parce que les lanceurs étaient éparpillés sous
+## des noms différents — « PRÊT » ici, « JOUER » là, et l'une des deux listes
+## sautait le mode le plus joué. Un seul bouton, plus de liste à tenir d'accord.
+var panel_launch: Button
+
+## Ce que le bouton du cadre dit et fait, par écran : libellé de repos, action.
+##
+## Le libellé de repos n'est pas toujours celui qu'on lit — sur l'écran de fin,
+## `_sync_launch_entries()` le remplace par celui de `btn_replay`, qui reste la
+## source de vérité (« ✓ PRÊT », « Connexion au salon… »).
+## Les clés sont les CONSTANTES d'écran, jamais leurs chaînes recopiées : un
+## identifiant mal orthographié ne lèverait rien — `MenuHub.push()` refuse un
+## écran inconnu en silence, et la table rendrait simplement un bouton muet.
+const LANCEURS := {
+	SCREEN_LOCAL: ["JOUER", "lancer"],
+	SCREEN_HOST: ["PRÊT", "lancer"],
+	SCREEN_JOIN: ["PRÊT", "lancer"],
+	SCREEN_LOCAL_HOST: ["PRÊT", "lancer"],
+	SCREEN_LOCAL_JOIN: ["PRÊT", "lancer"],
+	SCREEN_FRIENDLY: ["CHERCHER UN MATCH", "chercher"],
+	SCREEN_RANKED: ["CHERCHER UN MATCH", "chercher"],
+	SCREEN_TRAINING: ["LANCER L'ENTRAÎNEMENT", "entrainement"],
+}
+
+
 ## La respiration V3.1, vivante seulement sur l'écran de fin.
 var _souffle_relance: Tween = null
 ## L'annonce du score V3.6. Retenue pour la même raison que la respiration : une
@@ -2014,22 +2044,22 @@ func _build_hub_screens() -> void:
 		+ "en bas de l'écran.")
 
 	# --- 1v1 écrans scindés ---------------------------------------------------
-	var jouer_scinde := hub.make_entry("JOUER",
-		"Chaque joueur choisit son arme à droite, puis la manche démarre.",
-		"", COLOR_P1, "lancer", "", true)
-	_relance_entries.append(jouer_scinde)
-	scinde.add_child(jouer_scinde)
+	scinde.add_child(hub.make_entry("PRÉPARER LE MATCH",
+		"Carte et armes à droite. Le bouton qui lance la manche est là-bas aussi, "
+		+ "sous les râteliers — près de ce qu'il consomme.",
+		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
 	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
 
 	# --- 1v1 amical -----------------------------------------------------------
-	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Lance la recherche et vous rend la main : elle continue pendant que vous "
+	amical.add_child(hub.make_entry("PRÉPARER LE MATCH",
+		"Choisissez votre arme à droite — après l'appui, le match part tout seul. "
+		+ "La recherche vous rend la main : elle continue pendant que vous "
 		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
 		+ "tirée au hasard, résultat hors classement.",
-		"", COLOR_P1, "chercher", "", true))
+		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
 		SCREEN_FRIENDLY_ONLINE))
@@ -2058,36 +2088,30 @@ func _build_hub_screens() -> void:
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
-		var pret_hote := hub.make_entry("PRÊT",
-			"Ouvrez d'abord le salon à droite et transmettez ce qu'il affiche. Le "
-			+ "match part quand les deux joueurs se sont déclarés prêts.",
-			"", COLOR_P1, "lancer", "", true)
-		_ready_entries.append(pret_hote)
-		_relance_entries.append(pret_hote)
-		pret_hote.set_meta(META_LAUNCH_BASE, "PRÊT")
-		h.add_child(pret_hote)
+		h.add_child(hub.make_entry("PRÉPARER LE MATCH",
+			"Ouvrez le salon à droite et transmettez ce qu'il affiche. Le bouton "
+			+ "PRÊT y attend, sous la liste des joueurs : le match part quand les "
+			+ "deux se sont déclarés.",
+			"", COLOR_GOLD, "", "", false, PANEL_SALON))
 		h.add_child(hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
 			"", COLOR_P1, "", "", false, PANEL_MAPS))
 	for j in [invite, invite_lan]:
-		var pret_invite := hub.make_entry("PRÊT",
-			"Rejoignez d'abord le salon à droite. Le match part quand les deux "
-			+ "joueurs se sont déclarés prêts ; la carte est celle de l'hôte.",
-			"", COLOR_P1, "lancer", "", true)
-		_ready_entries.append(pret_invite)
-		_relance_entries.append(pret_invite)
-		pret_invite.set_meta(META_LAUNCH_BASE, "PRÊT")
-		j.add_child(pret_invite)
+		j.add_child(hub.make_entry("PRÉPARER LE MATCH",
+			"Rejoignez le salon à droite ; le bouton PRÊT y attend. Le match part "
+			+ "quand les deux joueurs se sont déclarés, et la carte est celle de "
+			+ "l'hôte.",
+			"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
 		_wire_salon_back(hub.add_back_entry(id,
 			"Ferme le salon et coupe le lien. L'adversaire en est averti."))
 
 	# --- 1v1 compétitif -------------------------------------------------------
-	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Lance la recherche et vous rend la main. La fourchette de classement "
-		+ "s'élargit avec l'attente ; le bandeau du haut montre celle qui est "
-		+ "cherchée. Le résultat compte.",
-		"", COLOR_GOLD, "chercher", "", true))
+	classe.add_child(hub.make_entry("PRÉPARER LE MATCH",
+		"Votre arme se choisit à droite, avant l'appui : après, le match part tout "
+		+ "seul. La fourchette de classement s'élargit avec l'attente ; le bandeau "
+		+ "du haut montre celle qui est cherchée. Le résultat compte.",
+		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
 		"mon_rang"))
@@ -2106,10 +2130,11 @@ func _build_hub_screens() -> void:
 		+ "En attendant, un match privé vous fait jouer ; il ne compte pas.")
 
 	# --- S'entraîner ----------------------------------------------------------
-	entrainement.add_child(hub.make_entry("LANCER L'ENTRAÎNEMENT",
-		"Seul, contre une cible fixe, sur la carte par défaut. Rien n'est "
+	entrainement.add_child(hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
+		"Seul, contre une cible fixe, sur la carte par défaut. Choisissez votre "
+		+ "arme à droite ; le bouton qui lance est sous le râtelier. Rien n'est "
 		+ "enregistré ni classé. Échap pour revenir.",
-		"", COLOR_P1, "entrainement", "", true))
+		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
@@ -2134,7 +2159,7 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_EFFECTS))
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
-		"", COLOR_P1, "", "", false, PANEL_AUDIO))
+		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
 	hub.add_back_entry(SCREEN_CUSTOM)
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
@@ -2225,7 +2250,28 @@ func _build_salon_aside() -> Control:
 	box.add_child(_build_join_row())
 	box.add_child(lobby_status_label)
 	box.add_child(_build_open_lobby_row())
+	# **Le geste qui engage ferme le panneau**, dans l'ordre où on s'en sert :
+	# on regarde la carte, on choisit son arme, on voit qui est là, on ouvre la
+	# porte — et on part. En écran partagé les rangées de salon sont masquées, et
+	# le bouton se retrouve donc directement sous les râteliers d'armes.
+	box.add_child(_build_launch_row())
 	return box
+
+
+## Le bouton de lancement du cadre de droite.
+##
+## Il porte le **style plein**, qui vient de perdre sa place dans la colonne de
+## gauche — et il la retrouve ici sans le défaut qui l'avait fait retirer le
+## 2026-08-18 : à gauche, un fond teinté entrait en concurrence avec le liseré du
+## curseur ; dans le cadre, rien ne le lui dispute.
+func _build_launch_row() -> Control:
+	panel_launch = _make_button("JOUER", COLOR_GOLD, true)
+	panel_launch.size_flags_horizontal = Control.SIZE_SHRINK_END
+	panel_launch.pressed.connect(func() -> void:
+		var action := String(panel_launch.get_meta(META_LAUNCH_ACTION, ""))
+		if action != "":
+			_on_hub_action(action))
+	return panel_launch
 
 ## Le champ de code, son bouton COLLER, et le geste qui rejoint — dans cet ordre.
 ##
@@ -2424,11 +2470,10 @@ func _refresh_player_list() -> void:
 	# personne, ne dit pas ce qu'il fait.
 	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
 		and not lie
-	for entree: Button in _ready_entries:
-		if is_instance_valid(entree):
-			entree.disabled = manque_un_joueur
-			entree.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
-				else Color.WHITE
+	if panel_launch != null and is_instance_valid(panel_launch):
+		panel_launch.disabled = manque_un_joueur
+		panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
+			else Color.WHITE
 
 ## Quitter un salon **ferme le salon**, il ne fait pas que remonter d'un cran.
 ##
@@ -2706,13 +2751,31 @@ func _wire_salon_back(btn: Button) -> void:
 ## endroits écrivent son texte (« ✓ PRÊT », « Connexion au salon… »), et les
 ## recenser pour les rerouter créerait autant d'occasions d'en oublier un.
 func _sync_launch_entries() -> void:
-	if hub == null or btn_replay == null:
+	if btn_replay == null or panel_launch == null \
+			or not is_instance_valid(panel_launch):
 		return
-	for btn in _ready_entries:
-		if not is_instance_valid(btn):
-			continue
-		var base := String(btn.get_meta(META_LAUNCH_BASE, "PRÊT"))
-		hub.set_entry_label(btn, base if _is_main_menu else btn_replay.text)
+	var base := String(panel_launch.get_meta(META_LAUNCH_BASE, "PRÊT"))
+	panel_launch.text = base if _is_main_menu else btn_replay.text
+
+## Accorde le bouton du cadre à l'écran courant : libellé, action, présence.
+##
+## **Absent des écrans qui ne lancent rien** plutôt que grisé : un bouton
+## d'engagement sur l'accueil ou sur le profil ne dirait pas « pas maintenant »,
+## il dirait « il y a quelque chose à lancer ici », ce qui est faux.
+func _accorder_lanceur(id: String) -> void:
+	if panel_launch == null or not is_instance_valid(panel_launch):
+		return
+	var spec: Variant = LANCEURS.get(id, null)
+	if not spec is Array:
+		panel_launch.hide()
+		panel_launch.remove_meta(META_LAUNCH_ACTION)
+		return
+	var couple: Array = spec
+	panel_launch.show()
+	panel_launch.set_meta(META_LAUNCH_BASE, String(couple[0]))
+	panel_launch.set_meta(META_LAUNCH_ACTION, String(couple[1]))
+	_sync_launch_entries()
+
 
 func _on_hub_action(action: String) -> void:
 	match action:
@@ -2959,6 +3022,7 @@ func _on_hub_screen_changed(id: String) -> void:
 		SCREEN_FRIENDLY, SCREEN_LOCAL, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN, \
 		SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
 			_apply_queue_kind(false)
+	_accorder_lanceur(id)
 	if id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
 			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED]:
 		_refresh_map_card()
@@ -4736,13 +4800,23 @@ func show_game_over(winner_id: int) -> void:
 ## La graine attire les DEUX curseurs, pas un joueur : après un match en écran
 ## partagé, les deux joueurs redemandent, et faire chercher le second serait lui
 ## faire payer le fait de ne pas être le premier.
+## Les boutons qu'une animation de relance a le droit de toucher.
+##
+## Il n'y en a qu'un — celui du cadre de droite — mais la fonction rend un
+## tableau plutôt que le bouton seul : les trois animations qui l'appellent
+## (respiration V3.1, éclat de déclaration V3.2, remise à plat) itèrent déjà, et
+## le jour où l'écran de fin en portera un second, rien à réécrire chez elles.
+func _lanceurs_vivants() -> Array[Button]:
+	if panel_launch != null and is_instance_valid(panel_launch):
+		return [panel_launch]
+	return []
+
+
 func _respirer_relance(actif: bool) -> void:
 	if _souffle_relance != null and _souffle_relance.is_valid():
 		_souffle_relance.kill()
 	_souffle_relance = null
-	for btn in _relance_entries:
-		if not is_instance_valid(btn):
-			continue
+	for btn in _lanceurs_vivants():
 		btn.scale = Vector2.ONE
 		btn.self_modulate = Color.WHITE
 		if actif:
@@ -4766,8 +4840,8 @@ func _respirer_relance(actif: bool) -> void:
 ## au suivant. Deux tweens enchaînés auraient laissé un arrêt d'une frame.
 func _appliquer_souffle(t: float) -> void:
 	var enflure := 1.0 + 0.015 - 0.015 * cos(t * TAU)
-	for btn in _relance_entries:
-		if is_instance_valid(btn) and btn.is_visible_in_tree():
+	for btn in _lanceurs_vivants():
+		if btn.is_visible_in_tree():
 			btn.pivot_offset = btn.size / 2.0
 			btn.scale = Vector2(enflure, enflure)
 
@@ -4790,8 +4864,8 @@ func signaler_adversaire_pret() -> void:
 		# La clé existe, le fichier pas encore : `play_sfx` rend null en silence.
 		# Le geste est câblé, il s'entendra le jour où le son arrive.
 		audio.play_sfx("ui_ready_ping")
-	for btn in _relance_entries:
-		if not is_instance_valid(btn) or not btn.is_visible_in_tree():
+	for btn in _lanceurs_vivants():
+		if not btn.is_visible_in_tree():
 			continue
 		var tw := create_tween()
 		# Surexposition passagère, pas une teinte : `self_modulate` multiplie ce qui

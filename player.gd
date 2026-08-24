@@ -346,6 +346,19 @@ func _ready():
 	flashlight.shadow_item_cull_mask = 1 | 2 # Les murs (1) projettent des ombres sur les ennemis (2) sans auto-ombrage (4)
 	flashlight.range_item_cull_mask = 1 | 2 | 4 # Éclaire les murs (1), les ennemis (2) et le joueur local (4)
 	flashlight.energy = 2.5
+	# La température du faisceau. **Ici et pas dans `equip_weapon()` : elle n'est
+	# pas une propriété de l'arme, c'est celle de la lumière.**
+	#
+	# Et le placement n'est pas qu'une question de rangement. Les fantômes de la
+	# killcam ne créent pas leur torche, ils la **dupliquent**
+	# (`game_state.gd:_setup_ghosts`) — un `duplicate()` n'emporte que ce qui est
+	# déjà posé. Depuis `equip_weapon()`, la couleur ne survivait que parce que
+	# `_setup_players()` précède `_setup_ghosts()` et que `_ready` appelle
+	# `equip_weapon` avant de rendre la main : trois maillons, et intervertir deux
+	# lignes rendait **les torches de killcam blanches**, ce que personne n'aurait
+	# vu avant le premier mort. Posée à la construction, elle ne dépend plus de
+	# rien. Fil repéré par la session « assets visuels ».
+	flashlight.color = Charte.HALOGENE
 	flashlight.offset = Vector2.ZERO
 	flashlight.position = Vector2(30, 0)
 	
@@ -470,7 +483,10 @@ func equip_weapon(weapon: WeaponData):
 	
 	var tex = weapon.get_torch_texture()
 	flashlight.texture = tex
-	flashlight.texture_scale = weapon.torch_scale
+	# La teinte n'est pas touchée ici : elle est posée une fois à la construction
+	# de la torche, et une arme n'en change pas.
+	flashlight.texture_scale = weapon.echelle_torche()
+
 
 func _process(delta):
 	# Publié ici et non dans _physics_process : les sorties anticipées (mort,

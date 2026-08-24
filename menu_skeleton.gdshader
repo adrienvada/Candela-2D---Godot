@@ -31,6 +31,13 @@ const float PERIODE = 1.1;
 const float LARGEUR = 120.0;
 // Ce que la bande ajoute au plus fort.
 const float ECLAT = 0.06;
+// La COULEUR de la bande, poussée depuis la charte.
+//
+// Elle était achromatique — un blanc pur ajouté aux trois canaux. Or ce
+// balayage n'est pas un scanner : sa fiche dit « une torche qui fouille des
+// étagères dans le noir », et une torche de ce jeu est un filament. Peindre sa
+// lumière en blanc, c'était laisser l'effet contredire ce qu'il raconte.
+uniform vec3 teinte_bande = vec3(1.0, 0.929, 0.816);
 // Inclinaison, en radians (20°).
 const float PENTE = 0.349;
 
@@ -48,6 +55,6 @@ void fragment() {
 		float d = abs(axe - tete) / LARGEUR;
 		float bande = max(0.0, 1.0 - d);
 		// Au carré : un dégradé linéaire donne un bord visible, celui-ci fond.
-		COLOR.rgb += vec3(ECLAT * bande * bande * balayage * intensite);
+		COLOR.rgb += teinte_bande * (ECLAT * bande * bande * balayage * intensite);
 	}
 }

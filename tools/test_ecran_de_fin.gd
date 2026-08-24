@@ -56,9 +56,13 @@ func _run() -> void:
 ## La courbe d'enflure, sur tout un battement.
 func _test_souffle() -> void:
 	print("\n[La respiration reste une respiration]")
-	var entrees: Array = _ui._relance_entries
-	_check("les entrées de relance sont recensées", entrees.size() >= 5,
-		"%d trouvée(s) — 4 salons + l'écran partagé" % entrees.size())
+	# **Un seul bouton depuis le 2026-08-24**, et c'est le sujet du changement :
+	# le geste qui engage a quitté la colonne de gauche pour le cadre de droite,
+	# près du choix d'arme dont il dépend. Il y en avait cinq — un par écran, sous
+	# deux noms différents ; le panneau étant unique et partagé, un seul suffit.
+	var entrees: Array = _ui._lanceurs_vivants()
+	_check("le bouton de lancement du cadre est recensé", entrees.size() == 1,
+		"%d trouvé(s) — le cadre de droite n'en porte qu'un" % entrees.size())
 
 	# On applique la courbe à la main sur tout un cycle : c'est le seul moyen de
 	# vérifier l'amplitude sans dépendre du moment où le tween est échantillonné.
@@ -95,19 +99,19 @@ func _test_ouverture_fermeture() -> void:
 	_check("la respiration tourne", _ui._souffle_relance != null
 		and _ui._souffle_relance.is_valid())
 	var graines := 0
-	for btn: Button in _ui._relance_entries:
+	var lanceurs: Array = _ui._lanceurs_vivants()
+	for btn: Button in lanceurs:
 		if int(btn.get_meta(_ui.META_NAV_SEED, -1)) == _ui.NAV_SEED_LES_DEUX:
 			graines += 1
-	_check("chaque entrée de relance attire les deux curseurs",
-		graines == _ui._relance_entries.size(),
-		"%d sur %d" % [graines, _ui._relance_entries.size()])
+	_check("le bouton de relance attire les deux curseurs",
+		graines == lanceurs.size(), "%d sur %d" % [graines, lanceurs.size()])
 
 	_ui.hide_game_over()
 	await process_frame
 	_check("la respiration s'arrête", _ui._souffle_relance == null)
 	var reste := 0
 	var enflees := 0
-	for btn: Button in _ui._relance_entries:
+	for btn: Button in _ui._lanceurs_vivants():
 		if btn.has_meta(_ui.META_NAV_SEED):
 			reste += 1
 		if not is_equal_approx(btn.scale.x, 1.0):
@@ -121,17 +125,24 @@ func _test_ouverture_fermeture() -> void:
 ## La graine « les deux » attire bien les deux curseurs, et non un seul.
 func _test_graine() -> void:
 	print("\n[Une graine pour deux curseurs]")
-	var cible: Button = _ui._relance_entries[0]
-	cible.set_meta(_ui.META_NAV_SEED, _ui.NAV_SEED_LES_DEUX)
-	# Une graine nommée ne doit toujours attirer QUE son joueur : la nouvelle
-	# valeur s'ajoute au comportement d'origine, elle ne le remplace pas.
-	var autre: Button = _ui._relance_entries[1]
-	autre.set_meta(_ui.META_NAV_SEED, 1)
+	# **Ce contrôle portait sur DEUX boutons et n'en lisait aucun.** Il posait une
+	# graine commune sur l'un, une graine nommée sur l'autre, puis n'assertait que
+	# sur les constantes — le montage était décoratif. Il ne restait qu'un bouton
+	# de relance après le 2026-08-24, ce qui a rendu la chose visible plutôt que
+	# de la casser : le second index n'existait plus.
+	#
+	# Réécrit pour dire ce qu'il vérifie vraiment : la valeur commune ne peut pas
+	# être confondue avec un indice de joueur — elle est négative, là où un indice
+	# est positif ou nul. Plus un aller-retour réel sur le bouton qui existe.
 	_check("la valeur commune se distingue d'un indice de joueur",
 		_ui.NAV_SEED_LES_DEUX != 0 and _ui.NAV_SEED_LES_DEUX != 1
 		and _ui.NAV_SEED_LES_DEUX < 0)
+	var cible: Button = _ui._lanceurs_vivants()[0]
+	cible.set_meta(_ui.META_NAV_SEED, _ui.NAV_SEED_LES_DEUX)
+	_check("la graine se pose et se relit",
+		int(cible.get_meta(_ui.META_NAV_SEED, -99)) == _ui.NAV_SEED_LES_DEUX)
 	cible.remove_meta(_ui.META_NAV_SEED)
-	autre.remove_meta(_ui.META_NAV_SEED)
+	_check("et se retire", not cible.has_meta(_ui.META_NAV_SEED))
 
 ## V3.2 — l'éclat qui dit que l'autre vient de se déclarer.
 ##
@@ -143,11 +154,11 @@ func _test_pression_du_pret() -> void:
 	print("\n[La pression du prêt]")
 	_ui.show_game_over(0)
 	await process_frame
-	var avant_echelle := (_ui._relance_entries[0] as Button).scale.x
+	var avant_echelle := (_ui._lanceurs_vivants()[0] as Button).scale.x
 
 	_ui.signaler_adversaire_pret()
 	var eclaire := 0
-	for btn: Button in _ui._relance_entries:
+	for btn: Button in _ui._lanceurs_vivants():
 		if btn.is_visible_in_tree() and btn.self_modulate.r > 1.0:
 			eclaire += 1
 	_check("l'entrée visible s'allume", eclaire >= 1, "%d allumée(s)" % eclaire)
@@ -158,15 +169,15 @@ func _test_pression_du_pret() -> void:
 	_check("la respiration n'est pas coupée", _ui._souffle_relance != null
 		and _ui._souffle_relance.is_valid())
 	_ui._appliquer_souffle(0.5)
-	var apres_echelle := (_ui._relance_entries[0] as Button).scale.x
+	var apres_echelle := (_ui._lanceurs_vivants()[0] as Button).scale.x
 	_check("l'éclat et la respiration n'écrivent pas au même endroit",
 		not is_equal_approx(avant_echelle, apres_echelle)
-		or _ui._relance_entries[0].self_modulate.r > 1.0)
+		or _ui._lanceurs_vivants()[0].self_modulate.r > 1.0)
 
 	_ui.hide_game_over()
 	await process_frame
 	var restants := 0
-	for btn: Button in _ui._relance_entries:
+	for btn: Button in _ui._lanceurs_vivants():
 		if btn.self_modulate != Color.WHITE:
 			restants += 1
 	_check("l'éclat ne survit pas à la fermeture", restants == 0,

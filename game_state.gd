@@ -230,6 +230,9 @@ func _ready():
 	AudioManager.play_music("music_menu")
 
 	
+	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
+	# « pistolet », 35° de demi-angle, échelle 1,6. Elles y sont écrites une fois
+	# et pas recopiées ici : une valeur posée deux fois finit par différer.
 	weapon_pistolet = WeaponData.new()
 	
 	weapon_fusil = WeaponData.new()
@@ -241,8 +244,12 @@ func _ready():
 	weapon_fusil.damage_edge = 25.0
 	weapon_fusil.max_bounces = 2
 	weapon_fusil.damages_shooter = true
+	weapon_fusil.torch_cookie = "fusil"
 	weapon_fusil.torch_angle_deg = 10.0
-	weapon_fusil.torch_scale = 3.5
+	# 3,5 auparavant. Portées arbitrées par Adrien le 2026-08-24 : chaque joueur
+	# voit 480 unités devant lui, et seule l'arbalète a le droit d'éclairer plus
+	# loin que ce qu'elle montre. Le fusil tombe à 0,96 écran, le pistolet à 0,85.
+	weapon_fusil.torch_scale = 1.8
 	
 	weapon_pompe = WeaponData.new()
 	weapon_pompe.name = "Pompe"
@@ -254,6 +261,7 @@ func _ready():
 	weapon_pompe.max_bounces = 0
 	weapon_pompe.projectile_count = 5
 	weapon_pompe.spread_angles_deg = [0.0, 20.0, -20.0, 60.0, -60.0]
+	weapon_pompe.torch_cookie = "pompe"
 	weapon_pompe.torch_angle_deg = 60.0
 	weapon_pompe.torch_scale = 1.0
 	
@@ -267,6 +275,7 @@ func _ready():
 	weapon_arbalete.max_bounces = 0
 	weapon_arbalete.damages_shooter = false
 	weapon_arbalete.emits_light = false
+	weapon_arbalete.torch_cookie = "arbalete"
 	weapon_arbalete.torch_angle_deg = 5.0 # Très fin
 	weapon_arbalete.torch_scale = 3.5     # Aussi loin que le fusil
 	weapon_arbalete.torch_brightness = 0.3 # Plus discret / moins lumineux
@@ -1135,7 +1144,7 @@ func _process(delta):
 			ghost_p1.get_node("Flash").energy = current_snap.p1_flash
 			if current_snap.p1_weapon:
 				ghost_p1.get_node("Light").texture = current_snap.p1_weapon.get_torch_texture()
-				ghost_p1.get_node("Light").texture_scale = current_snap.p1_weapon.torch_scale
+				ghost_p1.get_node("Light").texture_scale = current_snap.p1_weapon.echelle_torche()
 			
 			ghost_p2.global_position = current_snap.p2_pos
 			ghost_p2.rotation = current_snap.p2_rot
@@ -1146,7 +1155,7 @@ func _process(delta):
 			ghost_p2.get_node("Flash").energy = current_snap.p2_flash
 			if current_snap.p2_weapon:
 				ghost_p2.get_node("Light").texture = current_snap.p2_weapon.get_torch_texture()
-				ghost_p2.get_node("Light").texture_scale = current_snap.p2_weapon.torch_scale
+				ghost_p2.get_node("Light").texture_scale = current_snap.p2_weapon.echelle_torche()
 			
 			# Sync real players physical positions for accurate replay collisions
 			p1.global_position = current_snap.p1_pos
@@ -1274,8 +1283,17 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	var image: Image = arme.image_torche() if arme else null
 	var intensite := 0.0
 	if image != null:
+		# ⚠️ `echelle_torche()`, PAS `torch_scale` — l'échelle que la lumière
+		# emploie réellement. Les deux ont été le même nombre jusqu'aux cookies
+		# cuits en 1024² ; depuis, `echelle_torche()` compense la résolution et
+		# vaut la moitié. Passer `torch_scale` ici faisait échantillonner la
+		# texture à MI-DISTANCE du point visé : trop de pénalité au loin, et de
+		# la pénalité là où le faisceau est déjà éteint. Le jeu restait jouable.
+		# Attrapé par `test_vision` à la fusion des deux lots — c'est exactement
+		# ce que la lecture du pixel devait empêcher, et elle ne le pouvait pas
+		# tant que l'échelle passée n'était pas celle du rendu.
 		intensite = Vision.intensite_texture(image, source.global_transform.x,
-			source.global_position, cible.global_position, arme.torch_scale)
+			source.global_position, cible.global_position, arme.echelle_torche())
 	else:
 		var portee: float = arme.portee_torche() if arme else 512.0
 		var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE

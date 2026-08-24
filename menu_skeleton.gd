@@ -60,6 +60,13 @@ func _init() -> void:
 	position = Vector2.ZERO
 	_materiau = ShaderMaterial.new()
 	_materiau.shader = SHADER
+	# La bande a la température de la lumière qui la justifie. Normalisée sur son
+	# canal le plus fort : elle s'AJOUTE aux pixels, donc une couleur passée telle
+	# quelle assombrirait la crête au lieu de la teinter.
+	var l := MenuTheme.LUMIERE
+	var pic := maxf(l.r, maxf(l.g, l.b))
+	_materiau.set_shader_parameter("teinte_bande",
+		Vector3(l.r / pic, l.g / pic, l.b / pic))
 	material = _materiau
 
 func _ready() -> void:

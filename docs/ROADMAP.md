@@ -49,7 +49,7 @@ décision se juge à cette double aune.
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
 | 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
-| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-18** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
+| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-24** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -780,7 +780,11 @@ de l'entraînement, la configuration de la cible et l'écran audio.
 #### La barre du bas disparaît aussi de l'écran de fin (2026-08-18)
 
 Elle avait survécu là : REJOUER, MENU PRINCIPAL et QUITTER y doublaient la liste
-de gauche. **REJOUER prend désormais la place exacte de PRÊT** — même geste,
+de gauche. **REJOUER prend désormais la place exacte de PRÊT** *(⚠️ superseded
+le 2026-08-24 : les deux ont quitté la colonne pour le cadre de droite. Le
+problème que cette décision réglait — « deviner lequel des deux comptait » — est
+réglé plus radicalement, puisqu'il n'y a plus qu'un seul bouton, et qu'il est là
+où l'on regarde en choisissant son arme.)* — même geste,
 même endroit, même style : s'engager dans la manche suivante. Les avoir séparés
 en deux boutons, l'un dans la liste et l'autre dans une barre, obligeait à deviner
 lequel comptait.
@@ -803,7 +807,24 @@ une barre qui doublait tout ça obligeait à deviner lequel des deux gestes comp
 **L'écran de fin garde sa barre** — REJOUER et MENU PRINCIPAL n'ont pas
 d'équivalent dans le hub, et on n'y est plus dans le menu.
 
-**Les entrées qui lancent un match portent le style plein.** Le geste qui engage
+> ⚠️ **SUPERSEDED le 2026-08-24 par « le geste qui engage vit dans le cadre de
+> droite » (arbitrage d'Adrien).** La colonne de gauche ne porte plus aucun
+> lanceur : le bouton descend dans le cadre, sous les râteliers d'armes dont il
+> dépend, et l'entrée de gauche qui ouvre ce cadre s'appelle « PRÉPARER LE
+> MATCH ». Le style plein n'a donc plus de porteur à gauche — **il en retrouve
+> un dans le cadre**, où rien ne le dispute au liseré du curseur. C'est même ce
+> qui résout le défaut ci-dessous : le style plein avait été retiré des lanceurs
+> le 2026-08-18 parce qu'il se confondait avec la sélection. Le déplacer lui
+> rend sa place au lieu de le supprimer.
+>
+> Ce que le renversement coûte, et qui est assumé : **un déplacement de curseur
+> de plus à chaque relance**, sur le geste le plus répété du jeu. C'est le
+> critère « immédiat » qui encaisse. Si ça devient pénible à l'usage, le
+> correctif n'est pas de revenir en arrière mais d'**aimanter le curseur sur le
+> bouton du cadre à l'ouverture** — piste notée, pas implémentée : la poser
+> d'avance serait corriger un défaut que personne n'a encore ressenti.
+
+~~**Les entrées qui lancent un match portent le style plein.**~~ Le geste qui engage
 une partie doit se distinguer de tout ce qui n'engage rien.
 
 **La description a quitté le panneau de droite** pour se poser sous le titre du
@@ -2237,7 +2258,7 @@ intention.
 
 ## Phase 9 — Mise à jour du jeu installé 🟡 ÉCRITE, PAS ENCORE ÉPROUVÉE
 
-Demandée par Adrien le 2026-08-18 : « un endroit du menu où je clique sur mettre
+Demandée par Adrien le 2026-08-24 : « un endroit du menu où je clique sur mettre
 à jour, et une mise à jour automatique se lance ». Trois façons de faire ont été
 comparées ; celle-ci — remplacement du bundle depuis les Releases GitHub, avec un
 manifeste conçu dès le premier jour pour accueillir aussi les correctifs légers —
@@ -2253,7 +2274,7 @@ jour » mais **combien de temps deux versions coexistent dans la nature**. C'est
 ce qui justifie le chemin `.pck` : quatre mégaoctets referment la fracture en
 trois secondes là où cent la laissent ouverte une soirée.
 
-### Le niveau d'obligation — tranché par Adrien le 2026-08-18 : refus poli
+### Le niveau d'obligation — tranché par Adrien le 2026-08-24 : refus poli
 
 Rien n'est bloqué. Le jeu démarre, l'écran scindé, l'entraînement et l'éditeur de
 cartes fonctionnent avec une version de retard. La seule chose qui cesse —
@@ -2273,7 +2294,7 @@ cent mégaoctets est un jeu qu'on n'ouvre pas ce soir-là.
 | `screen_update.gd` + entrée du hub | Le bouton demandé |
 | `tools/fabrique_manifeste.sh` | Le manifeste n'invente rien : version, protocole et empreintes sont lus aux sources |
 | `.github/workflows/release.yml` | Sur tag seulement : cohérence tag/version, suites vertes, export, signature, publication |
-| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. Le lanceur compte désormais 37 exécutions (33 suites en `--script`, quatre bancs en scène) |
+| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. `tools/test_autoloads.gd` protège l'ordre des autoloads, que `project.godot` ne peut pas expliquer lui-même. Le lanceur compte désormais 39 exécutions (35 suites en `--script`, quatre bancs en scène) |
 
 ### Ce qui a été vérifié pour de vrai, et ce qui ne l'a pas été
 
@@ -2316,6 +2337,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ⚠️ **Ces valeurs vivent dans `tools/torches.gd` ; `game_state.gd` porte encore les anciennes** — elles y seront portées à l'intégration de DA2.1. |
+| **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
+| **L'artiste unique, c'est Adrien — et le procédé se choisit par famille d'asset** (2026-08-24, Adrien) | DA1.5 demandait « un artiste, un lot, un style » pour éviter que des sources dépareillées recréent l'incohérence que tout le chantier chasse. L'artiste unique étant Adrien, **le risque a changé de nature : il n'est plus entre personnes, il est entre outils.** Deux textures faites à trois mois d'écart par deux procédés différents jurent exactement comme deux artistes différents. La décision n'est donc pas un nom, c'est une correspondance à tenir comme on tient la palette. **Lumière et matière** (cookie, halos, flash de bouche, sang, impacts, usure) : image générée convertie en masque **plus** paramétrage par le code — l'image ne fournit que la matière, le code garde la géométrie, ce qui laisse les quatre angles d'arme gratuits. **Wordmark, icône, viseur** : main levée sur gabarit, parce qu'un logo ne se génère pas. **Key art** : génération fortement retravaillée. Et la règle qui rend le premier procédé honnête : **une image générée n'est jamais l'asset, seulement sa matière** — on n'en garde que la luminance passée au contraste, si bien que ce qui survit est la structure du bruit et non le style du modèle. Sans elle, on remplace le look « généré par défaut » par le look « généré tout court », c'est-à-dire le défaut même qui a ouvert ce chantier. |
 | **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
 | **Le regard suit le joueur, pas le score** (2026-08-19) | Le suivi de caméra vivait dans `if round_active:` — « une manche **comptée** est en cours ». L'entraînement désarme volontairement cette manche : la caméra n'était donc **jamais** mise à jour de toute la session, et le joueur sortait du cadre. Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au classement. **C'est l'entraînement, le seul mode qui sépare les deux, qui a révélé la confusion** — et il a fallu qu'Adrien le signale, aucun test ne regardait où était la caméra. |
 | **Là où l'interface enseigne, l'absence est une réponse et l'estimation est un mensonge** (2026-08-18) | La règle existait déjà dans le dépôt sous trois noms différents — « ne jamais inventer un chiffre que le serveur n'a pas donné », le **tiret** plutôt que le zéro dans le classement, et « vide plutôt qu'approximatif » pour la trajectoire de killcam. C'est la même, et elle mérite un nom unique. **Une trajectoire fausse enseigne une leçon fausse ; un classement approximatif apprend un faux niveau ; un « adversaire prêt » deviné fait attendre pour rien.** Le critère n'est pas « a-t-on une valeur ? » mais « cette valeur va-t-elle être **apprise** ? » — si oui, ne rien montrer bat toujours une estimation, parce qu'une absence se remarque et se corrige, tandis qu'une estimation s'intègre. |
@@ -2348,9 +2372,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
-| **Mise à jour : refus poli, jamais forcée** (2026-08-18, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
-| **Rien ne s'installe sans signature valide** (2026-08-18) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
-| **Publier est un geste humain** (2026-08-18) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
+| **Mise à jour : refus poli, jamais forcée** (2026-08-24, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
+| **Rien ne s'installe sans signature valide** (2026-08-24) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
+| **Publier est un geste humain** (2026-08-24) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
 | **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
 
 ---
@@ -2442,6 +2466,35 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La résolution d'une texture de lumière décide de sa PORTÉE (2026-08-24)
+
+**`PointLight2D.texture_scale` multiplie la taille PROPRE de la texture.** Un
+cookie de 512² à `torch_scale = 1.0` couvre 512 unités de monde ; le même cookie
+recuit en 1024², au même `torch_scale`, en couvre **1024**. La torche porte deux
+fois plus loin, et **aucune valeur de gameplay n'a bougé**.
+
+Payé en vrai sur DA2.1. Mes contrôles annonçaient une énergie conservée à 0,2 %
+près — ils mesuraient en **coordonnées de texture**, où tout allait bien.
+**C'est Adrien qui l'a vu à l'écran, en une phrase : « ça éclaire beaucoup trop
+loin. »** Une mesure juste dans le mauvais repère est plus dangereuse qu'une
+absence de mesure : elle rassure.
+
+La parade est une ligne, et elle doit accompagner tout changement de résolution :
+
+    texture_scale = torch_scale * 512.0 / float(texture.get_width())
+
+**La règle générale, elle, dépasse la lumière : une propriété d'implémentation
+— une résolution, un format, un nombre d'images — ne doit jamais décider d'une
+grandeur de jeu.** Quand elle le fait, elle le fait en silence, et le silence est
+le problème.
+
+Corollaire du même chantier : **conserver l'énergie TOTALE d'un masque ne
+conserve pas sa portée.** Le total peut être exact pendant que la répartition
+s'est effondrée — ici, un cœur saturé à 255 sur les deux tiers de la longueur et
+dix-huit fois trop de lumière au bord. L'invariant retenu est plus fort et se
+vérifie sans seuil : *la structure est divisée par le SOMMET de son anneau, jamais
+par sa moyenne*, si bien que **le cookie cuit n'éclaire jamais plus que celui
+qu'il remplace, à aucune distance et sous aucun angle**.
 ### Un nombre sans son échelle n'est pas un nombre (2026-08-24)
 
 Quatre plafonds d'éblouissement transmis à la session voisine — « pistolet
@@ -2721,17 +2774,273 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Nommer une égalité interdite, plutôt qu'une valeur attendue (2026-08-24)
+
+**La règle qui explique pourquoi certains contrôles attrapent des choses et
+d'autres non.** Formulée par la session « assets visuels », à partir d'un défaut
+de son propre lot ; écrite ici parce qu'elle vaut pour tout le dépôt.
+
+Le mur n'est pas « le visuel ne se teste pas ». C'est qu'on essaie de nommer la
+mauvaise chose. « Ce cookie de torche a la bonne allure » n'est pas assertable et
+ne le sera jamais — mais **une texture ne fait pas que ressembler à quelque
+chose, elle DÉCIDE de choses**, et celles-là ont des noms.
+
+Le cas qui l'a produite : la cuisson des cookies de torche déplaçait la
+**quantité de lumière** de chaque arme — jusqu'à **+96 % sur l'arbalète**,
+c'est-à-dire sur l'arme furtive, sans qu'une seule ligne d'équilibrage ne bouge.
+La question à poser devant tout asset : *qu'est-ce que cette texture décide, en
+plus de son allure ?*
+
+⚠️ **Et sa contrepartie, sans quoi l'exemple dit le contraire de la règle.**
+Conserver l'énergie était juste **parce que la décision en cours était
+esthétique** — on remplaçait un dégradé par une image peinte, pas on ne réglait
+l'éclairage. Le jour où l'on voudra régler la lumière pour de bon, il faudra
+qu'elle bouge, et un banc qui l'aurait figée serait alors l'obstacle.
+
+**La règle n'est pas « ne rien déplacer », c'est « ne rien déplacer sans le
+savoir ».** Un contrôle qui interdit le mouvement se transforme en carcan à la
+première vraie décision ; un contrôle qui l'oblige à être **explicite** ne gêne
+jamais celui qui sait ce qu'il fait. Nuance apportée par la session « assets
+visuels », qui a prévu un `--energie libre` pour ce jour-là.
+
+**Le corollaire est la vraie trouvaille : la propriété la plus rentable à nommer
+est presque toujours une ÉGALITÉ INTERDITE, ou une égalité EXIGÉE — jamais une
+valeur attendue.** Vérifié après coup sur tout ce qui a fonctionné le
+2026-08-24, et les quatre contrôles avaient été écrits séparément sans que
+personne voie la forme commune :
+
+| Contrôle | Forme | Ce qu'il a attrapé |
+|---|---|---|
+| le vert n'entre pas dans l'arène | interdiction | (préventif) |
+| la luminance de l'adversaire n'a pas bougé | égalité exigée | un commentaire faux de 8 % |
+| deux graisses rendent des chasses différentes | égalité interdite | la clé `wght` en chaîne, sans effet |
+| les dix chiffres font la même largeur | égalité exigée | une fonte non tabulaire |
+
+Aucun ne demande de décider ce qui est beau, et tous attrapent la classe de
+défaut qui passe sous les suites : **celle où quelque chose est resté identique
+alors que ça aurait dû bouger.**
+
+#### ⚠️ La règle ne suffit pas : il faut aussi le bon espace
+
+**Contre-exemple fourni par la session qui a formulé la règle, sur son propre
+lot — et il est plus instructif que la règle.**
+
+Elle avait nommé la bonne grandeur : *l'énergie totale de la torche est
+conservée*. Le contrôle était écrit, il passait, il annonçait **0,2 % d'écart**.
+Et la portée des torches avait quand même doublé.
+
+Parce que la mesure se faisait **en coordonnées de texture**, où tout allait
+bien. En unités de monde — c'est-à-dire là où le jeu se joue — la même texture
+recuite de 512² en 1024² portait deux fois plus loin, `texture_scale` multipliant
+la taille *propre* de l'image. C'est Adrien qui l'a vu à l'écran, en une phrase.
+
+> **Nommer la bonne grandeur ne suffit pas, il faut la mesurer dans le bon
+> espace.**
+
+Et le mode de défaillance mérite son nom : **le contrôle n'était pas faux, il
+était HORS SUJET** — ce qui est plus difficile à voir qu'une erreur, *parce qu'il
+passe au vert*. Une suite rouge envoie chercher ; une suite verte qui mesure
+autre chose que ce qu'on croit **rassure**, et c'est le seul état dont personne
+ne se méfie.
+
+D'où le corollaire pratique, qui s'ajoute à la règle plutôt qu'il ne la
+remplace : après avoir nommé la grandeur, **nommer l'espace dans lequel elle a un
+sens pour le joueur**. Une luminance se juge à l'écran, pas dans un atlas ; une
+portée en fractions de champ de vision, pas en unités ; une chasse de fonte en
+pixels rendus, pas en unités de police.
+
+Le motif complet, pour un asset qui en remplace un autre : comparer sur des
+grandeurs invariantes, et **échouer s'ils sont trop proches OU trop loin** — trop
+proches, on a livré un fichier qui ne change rien ; trop loin, on a déplacé
+l'équilibrage en croyant faire de l'art.
+
+**Chantier ouvert, délibérément pas fait le jour même :** un banc qui réclame les
+quatre états d'une entrée de menu (repos, survol, sélection, curseur) et exige
+qu'ils soient deux à deux distinguables. Il aurait attrapé les trois défauts
+qu'Adrien a trouvés à l'œil. Il n'est pas écrit pour deux raisons : la session
+qui venait d'introduire deux de ces trois défauts est **le plus mauvais juge de
+son seuil** — elle le poserait là où son code passe ; et le seuil doit être
+**résolu** depuis un contraste perceptuel, pas choisi.
+
+### Un menu peut être cohérent partout et illisible quand même (2026-08-24)
+
+**Le correctif de la sélection a rendu visible un défaut plus ancien : les deux
+états ne portaient pas des ÉTATS, ils portaient des SUJETS.**
+
+Chaque entrée teintait son survol et sa sélection avec **son propre accent**.
+Rien que sur l'accueil, quatre couleurs : bleu pour les modes de jeu, ambre pour
+le compétitif, gris pour les réglages, rouge pour QUITTER. Survoler « 1V1
+COMPÉTITIF » donnait donc de l'ambre, et survoler sa voisine du bleu pâle sur du
+noir — c'est-à-dire presque rien. **« Ambre » ne voulait pas dire
+« sélectionné », il voulait dire « cette entrée-là est dorée ».**
+
+Et les deux états ne différaient que par l'opacité — **6 % contre 12 %** — et un
+pixel de bordure. Mesuré sur une entrée réelle : ses trois styleboxes rendaient
+la même valeur. À la souris, indiscernables.
+
+**Arbitrage d'Adrien : un rôle, une couleur.** Trois signaux, trois couleurs, et
+elles ne dépendent plus du sujet :
+
+| Signal | Couleur | Ce qu'il dit |
+|---|---|---|
+| survol souris | **acier** | le curseur passe ici |
+| sélection | **ambre**, pour toute entrée | c'est elle que le cadre de droite montre |
+| liseré | **bleu / rouge** | le curseur d'un joueur |
+
+L'accent propre à l'entrée survit **là où il dit quelque chose de vrai** : le
+chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur la
+lecture de l'état. Et l'appui montre désormais l'ambre — ce que l'entrée est sur
+le point de devenir — au lieu de retomber sur le style le plus faible.
+
+**Ce que ça généralise :** une couleur qui encode à la fois *quoi* et *dans quel
+état* n'encode ni l'un ni l'autre. Le joueur ne peut pas savoir si l'ambre parle
+du sujet ou de l'état, donc il n'apprend ni l'un ni l'autre — et il ne peut même
+pas nommer ce qui le gêne. Adrien a mis trois messages à le formuler ; le défaut
+était là depuis l'écriture du hub.
+
+### Un état branché sur `focus_entered` n'existe pas pour un curseur maison (2026-08-24)
+
+**Relevé par Adrien à l'écran, et c'est la troisième fois que ce décrochage coûte
+quelque chose.**
+
+L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite —
+vivait dans la stylebox `focus` de Godot, alimentée par `btn.focus_entered`. Or
+les deux curseurs du jeu sont maison : ils dessinent un liseré et n'appellent
+jamais `grab_focus()`. Conséquences, aucune signalée par quoi que ce soit :
+
+- **à la manette et au clavier, aucune entrée n'était jamais peinte**, de toute
+  une session ;
+- **à la souris**, l'ambre restait collé sur le dernier bouton *cliqué*, même
+  quand la sélection avait changé par un autre chemin — donc il désignait
+  régulièrement une entrée qui ne commandait plus rien.
+
+**Le commentaire du code affirmait pourtant « la sélection est franche — bordure
+épaisse et fond deux fois plus dense ».** Il décrivait une intention. Pire : je
+l'ai lu en cherchant la cause, je l'ai cru, et j'ai répondu à Adrien que l'ambre
+était présent mais trop faible. **Il était absent.** C'est le piège « un
+commentaire décrit une intention, on le relit comme un constat », payé une fois
+de plus — et cette fois par celui qui venait de le citer.
+
+**Ce qui a tranché : une capture d'écran d'Adrien**, où le cadre de droite
+affichait le texte d'EFFETS pendant qu'aucune entrée ne portait de marque. Deux
+relectures de code ne l'avaient pas vu.
+
+**Le correctif, et pourquoi il était à moitié fait depuis six jours.** Le relais
+`MenuHub.reveal_entry()` avait été posé le 2026-08-18 pour exactement cette
+raison — et il n'alimentait que le **cadre de droite**. La moitié du décrochage
+était corrigée, l'autre non. La sélection se peint désormais à la main
+(`_peindre()`), sur `normal` **et** `hover` : sans le second, survoler l'entrée
+choisie la ferait régresser vers la lueur de survol, c'est-à-dire paraître moins
+choisie au moment où on la vise.
+
+**Deux défauts voisins corrigés dans la foulée**, tous deux visibles une fois le
+mécanisme réparé : `pressed` retombait sur le style de **survol**, le plus faible
+des trois — au moment précis où l'on appuie, le bouton faiblissait ; et `AUDIO`
+portait `COLOR_P1` quand ses trois voisines de colonne portaient `COLOR_GOLD`,
+sans qu'aucune raison ne le justifie.
+
+**Densité arbitrée par Adrien : discrète.** C'est la bordure qui identifie —
+deux pixels d'ambre plein — et le fond ne fait que réchauffer, à un huitième
+d'opacité. Un premier essai au quart donnait un aplat : l'entrée cessait d'être
+*choisie* pour devenir un bouton d'une autre couleur, et son libellé y perdait
+son contraste. **Bleu autour, ambre dedans**, et le liseré du curseur reste le
+premier lu — c'est lui qui dit où l'on est.
+
+### Où les deux instruments ne regardent pas (2026-08-24)
+
+Le dépôt a maintenant **deux** instruments de vérification, et il vaut mieux
+savoir ce qu'ils ne voient ni l'un ni l'autre que de croire qu'à eux deux ils
+couvrent l'écran.
+
+| Instrument | Ce qu'il atteint | Ce qui lui échappe |
+|---|---|---|
+| `run_suites.sh` | des états, des comptes, des transitions — tout ce qui a un **nom** dans le code | ce qui n'a de nom nulle part : une position, une couleur, une opacité |
+| `run_visuel.sh` | ce qui se **voit**, sur les écrans qu'il visite | tout le reste des écrans, et tout ce qui n'est pas un état posé |
+
+**Leur intersection laisse un trou nommable, et le voici : la killcam.** Aucune
+suite ne l'exerce — elle demande une mort, donc une manche — et la planche ne la
+visite pas. C'est là qu'un défaut attend le premier mort d'une vraie partie,
+c'est-à-dire un joueur.
+
+Ce n'est pas théorique : c'est exactement où le fil de la teinte de torche a été
+trouvé le 2026-08-24, **par une lecture de code d'une autre session**, sur un
+chemin que ni le lot vert ni les treize images n'auraient signalé.
+
+**La leçon de méthode, et elle vaut au-delà de la killcam :** deux instruments
+qui passent au vert ne disent rien d'un endroit qu'aucun des deux n'atteint. Un
+lot annoncé « vérifié » devrait nommer ce qui n'a pas pu l'être — c'est moins
+confortable et c'est la seule forme honnête.
+
+**Autres zones dans le même cas, pour qu'elles cessent d'être invisibles :** les
+écrans de salon et d'appariement (la planche les écarte exprès — y entrer ouvre
+de vrais salons EOS), le second écran en jeu, et tout ce qui demande deux
+machines. Les trois se vérifient à la main, et ne se vérifient qu'ainsi.
+
+### Un `duplicate()` n'emporte que ce qui est déjà posé (2026-08-24)
+
+Les fantômes de la killcam ne créent pas leur torche, ils la **dupliquent** —
+`game_state.gd:_setup_ghosts()` fait `p1.get_node("Flashlight").duplicate()`. Une
+propriété écrite **après** la copie n'y est donc jamais.
+
+La teinte du faisceau avait d'abord été posée dans `equip_weapon()`. Elle
+survivait quand même, par une chaîne de **trois maillons** : `_setup_players()`
+précède `_setup_ghosts()`, `add_child(p1)` déclenche `_ready` synchronement, et
+ce `_ready` appelle `equip_weapon()` avant de rendre la main. Intervertir deux
+lignes, ou sortir `equip_weapon` du `_ready`, et **les torches de killcam
+devenaient blanches** — invisible jusqu'au premier mort, c'est-à-dire découvert
+par un joueur et non par un test.
+
+**La règle : ce qui doit survivre à une copie se pose à la CONSTRUCTION, jamais
+dans une méthode appelée plus tard.** La teinte vit maintenant à côté de
+`energy` et des masques de calque, avec les autres propriétés qui ne dépendent
+pas de l'arme — et elle ne dépend plus d'un ordre d'appel.
+
+Relevé par la session « assets visuels », **en lecture de code**, sur un chemin
+qu'aucune suite ne couvre et que la planche de contact ne voit pas non plus : la
+killcam n'est dans aucun des deux.
+
 ### Godot efface les commentaires de `project.godot` (2026-08-24)
 
 Le réglage `gui/theme/custom_font` avait été posé avec douze lignes expliquant
 *pourquoi* la fonte d'interface vit là plutôt que Control par Control. **Elles
-ont disparu au premier enregistrement de l'éditeur**, qui réécrit le fichier
-dans son ordre canonique et n'y garde aucun commentaire. Le réglage, lui, a
-survécu — donc rien ne signale la perte.
+ont disparu**, le fichier étant réécrit dans son ordre canonique sans aucun
+commentaire. Le réglage, lui, a survécu — donc rien ne signale la perte.
+
+⚠️ **Première rédaction : « au premier enregistrement de l'éditeur ». C'est plus
+large que ça, et la correction change la conclusion.** Relevé par la session
+« assets visuels », qui les a restaurés deux fois dans l'après-midi et les a vus
+repartir entre les deux, **sans jamais ouvrir l'éditeur** : `--headless --script`
+suffit. Autrement dit, **`./tools/run_suites.sh` efface ces commentaires**, et
+n'importe qui lançant une suite le fait aussi.
+
+Ce n'est donc pas « quelqu'un a été distrait », c'est **« exécuter le projet
+efface ces commentaires »**. Déplacer l'explication n'est pas la meilleure des
+deux options, c'est **la seule qui tienne**.
 
 **Un commentaire dans un fichier regénéré est un commentaire qu'on écrit pour
 soi.** L'explication a été déplacée dans `charte.gd`, à côté de `CHEMIN_UI`.
 Vaut pour `project.godot`, les `.import`, et tout ce que l'éditeur réécrit.
+
+**Complément mesuré le 2026-08-24, parce que la portée exacte change ce qu'on en
+fait.** Le coupable est bien **l'éditeur**, et lui seul : `ProjectSettings.save()`
+appelé par l'extension `godot_ai` (`plugin.gd`, `input_handler.gd`). Trois
+lancements ont été chronométrés sur le même fichier, commentaires en place :
+`--headless --quit` les laisse **intacts**, `--headless --import` aussi, et
+`./tools/run_suites.sh` en entier — trente-sept exécutions, 196 s — **également**.
+La boucle de test ne détruit donc rien ; ouvrir le projet dans l'éditeur, si.
+Le dire précisément évite d'aller chercher un coupable dans les suites, et évite
+surtout de croire qu'une explication ne survit à rien.
+
+**Et la conclusion va plus loin que le déménagement.** Un commentaire, où qu'il
+vive, n'empêche personne de « ranger » les autoloads par ordre alphabétique dans
+six mois. Les deux contraintes d'ordre de `project.godot` sont donc devenues un
+banc — `tools/test_autoloads.gd` : **`PatchLoader` en premier** (un correctif
+`.pck` monté après un autoload ne le recouvre plus, sans erreur) et
+**`GameSettings` après `InputSetup`** (sinon les liaisons par défaut recouvrent
+le remappage du joueur, perdu à chaque lancement, en silence). Le banc a été
+vérifié **en cassant les deux règles l'une après l'autre** : chacune rend le lot
+rouge avec la marche à suivre, et la remise en place le rend vert. La seconde
+règle vivait dans `CLAUDE.md` depuis l'origine et n'était protégée par rien.
 
 ### Une propriété qui se pose sans effet et sans erreur (2026-08-24)
 
@@ -3680,7 +3989,7 @@ quoi : le message liste des chaînes vides. Passer par
   Windows produit `Candela.exe` dans un dossier `Candela`. Le manifeste annonce
   cette racine et le jeu la vérifie **avant** de remplacer quoi que ce soit — une
   racine annoncée à tort ne se découvrirait qu'après la fermeture du jeu, au seul
-  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-18.
+  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-24.
 - **Le paquet macOS est universel, l'annoncer « x86_64 » le condamne.** Godot
   exporte un binaire x86_64 + arm64 ; un manifeste qui déclare une architecture
   ferait refuser le paquet par tous les Mac Apple Silicon, avec pour seul symptôme
@@ -3762,11 +4071,62 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   `tools/test_vision.gd`. Trente suites couvraient le codec, les menus, le
   réseau et le classement ; la seule chose dont dépend l'intérêt du jeu ne
   l'était pas.
-  - **Le cône** est sorti de `_check_dazzle` vers `vision.gd` — sans dépendance,
-    donc testable en `--script`. Le `0.866` y était écrit en dur, deux fois,
-    sans dire qu'il valait 30° : c'est un **réglage d'équilibre** (un cône plus
-    large rend la torche moins coûteuse à allumer), il porte maintenant un nom
-    et deux tests l'encadrent à 29° et 31°.
+  - ⚠️ **Le cône : ROUVERT le 2026-08-24. Ce qui est écrit ci-dessous est vrai
+    et passe complètement à côté du défaut.** Texte d'origine conservé, parce
+    que c'est lui la leçon :
+
+    > Le `0.866` était écrit en dur, deux fois, sans dire qu'il valait 30° :
+    > c'est un **réglage d'équilibre** (un cône plus large rend la torche moins
+    > coûteuse à allumer), il porte maintenant un nom et deux tests l'encadrent
+    > à 29° et 31°.
+
+    **Le dépôt a regardé cette constante, l'a jugée, l'a baptisée et l'a figée
+    par deux tests — sans voir qu'elle applique UN SEUL angle à QUATRE armes
+    dont les faisceaux vont de 5° à 60°.** `game_state.gd` appelle
+    `Vision.dans_le_cone()` sans jamais lui passer l'arme. En partie, aujourd'hui :
+    la **pompe** éclaire 120° et n'éblouit que sur 60 — on est révélé, donc visé,
+    sans subir de pénalité ; l'**arbalète** éclaire 10° et éblouit sur 60 — elle
+    aveugle des joueurs qu'elle n'illumine pas, alors qu'elle est l'arme furtive.
+    Seul le **pistolet** tombait juste, à 30° pile ; l'arbitrage des portées du
+    2026-08-24 l'a porté à 35°, si bien que **plus aucune arme ne correspond**.
+
+    **Et le remède documenté n'a pas raté le défaut : il l'a consolidé.** Un
+    nombre nu invite à demander d'où il sort. Un nombre nommé, expliqué comme un
+    réglage d'équilibre et encadré par deux tests **a l'air décidé** — plus
+    personne ne le regarde. `tools/test_vision.gd` vérifie 29° dedans / 31°
+    dehors : il fige la constante contre elle-même et restera vert quelles que
+    soient les armes.
+
+    **La leçon dépasse ce cas, et elle prolonge celle du contrôle hors sujet :
+    une ligne barrée empêche le prochain de regarder.** Une suite verte qui
+    mesure autre chose rassure ; une entrée déclarée close fait mieux — elle
+    dispense d'aller voir. Rouvrir coûte une ligne, redécouvrir coûte une
+    session.
+
+    Retrouvé indépendamment le 2026-08-24 en intégrant DA2.1, et **refermé le
+    même jour par la fusion de `claude/joueur-enouillissement-effet-xq3143`.**
+
+    ✅ **Cette fois la fermeture est un fait, pas une affirmation** — et c'est
+    toute la différence avec la première. Vérifié après fusion : `0.866` n'est
+    plus qu'une **valeur par défaut de paramètre**. Les deux seuls chemins de
+    production passent l'angle de l'arme — `game_state._lumiere_recue` via
+    `arme.cos_demi_cone()`, `player.gd` via `current_weapon.demi_angle_torche()`
+    pour le semis de poussière — et ne retombent sur 30° que faute d'arme. La
+    constante a cessé d'être un réglage d'équilibre : c'est un repli.
+
+    Et la pénalité ne recopie plus le faisceau, **elle le lit** :
+    `Vision.intensite_texture` échantillonne l'alpha du cookie, qui porte à lui
+    seul l'angle, la portée, la luminosité et la matière peinte. Un pixel ne peut
+    pas diverger de lui-même.
+
+    ⚠️ **La fusion a immédiatement attrapé un défaut au point de couture**, ce
+    qui vaut mieux que n'importe quelle relecture : `_lumiere_recue` passait
+    `torch_scale` là où le rendu emploie `echelle_torche()`. Les deux étaient le
+    même nombre jusqu'aux cookies 1024², et valent depuis le simple et le double.
+    L'éblouissement échantillonnait donc le faisceau **à mi-distance du point
+    visé** — trop de pénalité au loin, de la pénalité là où le faisceau est
+    éteint, et un jeu parfaitement jouable. Deux lots verts chacun de son côté ;
+    c'est leur rencontre qui l'a montré.
   - **L'occlusion** est vérifiée dans un vrai monde physique bâti par
     `MapGeometry` : un mur arrête le faisceau, une **fosse le laisse passer**
     (décision de conception — « on peut éblouir son adversaire par-dessus un
@@ -5303,9 +5663,9 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 
 ### DA1 — Le socle ✅ **LIVRÉ le 2026-08-24** (DA1.1, 1.2, 1.3, 1.4, 1.8, 1.9)
 
-> **Six items sur neuf sont faits.** Restent DA1.5 (un seul artiste), DA1.6 (le
-> wordmark) et DA1.7 (icône et splash) — les trois qui demandent Adrien ou un
-> dessinateur. Tout ce qui était marqué *(S)* et *(G)* est livré.
+> **Sept items sur neuf sont faits** — DA1.5 s'est tranché le 2026-08-24.
+> Restent DA1.6 (le wordmark) et DA1.7 (icône et splash), les deux qui demandent
+> un dessin. Tout ce qui était marqué *(S)* et *(G)* est livré.
 >
 > Tout descend maintenant de **`charte.gd`**, et de lui seul.
 
@@ -5441,9 +5801,10 @@ un fait de jeu, pas à un rythme d'interface.
 - **DA1.4 La passe de palette** — remplacer chaque couleur codée en dur du
   projet par une couleur nommée de la bible. C'est là que meurt le rouge pur
   qui crie « programmeur ». *(S, après DA1.1)*
-- **DA1.5 Un seul artiste pour tout** — décision de casting avant toute
-  commande : des assets de sources dépareillées recréent l'incohérence qu'on
-  essaie de tuer. Un artiste, un lot, un style. *(Adrien)*
+- **DA1.5 Un seul artiste pour tout** ✅ **TRANCHÉ le 2026-08-24 : c'est Adrien,
+  et le procédé se choisit par famille d'asset.** Un artiste unique ne suffit
+  plus à garantir un style : c'est la table des procédés qui le tient. Raison et
+  table en « Décisions actées ». *(Adrien)*
 - **DA1.6 Le wordmark CANDELA** — un vrai logo dessiné (la bougie est un cadeau
   de naming), décliné partout. Tant que le titre est un `Label`, le jeu dit
   « prototype ». *(C)*
@@ -5457,10 +5818,21 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA2 — Les ancres autorales in-game (là où l'œil juge en trois secondes)
 
-- **DA2.1 Le cookie de torche peint** — remplacer le dégradé radial parfait par
-  une texture de faisceau peinte : bords irréguliers, stries de lentille, cœur
-  chaud vignetté. **La plus grosse ancre du jeu** : tout est vu à travers cette
-  lumière, une seule texture change 80 % des pixels de chaque frame.
+- **DA2.1 Le cookie de torche peint** 🟡 **OUTILLAGE LIVRÉ le 2026-08-24, choix
+  en attente d'Adrien.** Trois variantes cuites en 1024² depuis des planches
+  générées, à comparer dans le banc puis à intégrer. Ce qui existe :
+  `tools/fabrique_cookies.gd` (cuisson hors ligne, curseurs `matiere`, `debut`,
+  `contraste`, `energie`), `tools/apercu_torche.gd` (le banc, quatre variantes à
+  la volée dans une vraie carte avec occluders), `tools/torches.gd` (la table des
+  portées, partagée pour que les deux outils ne divergent pas).
+  **Le procédé retenu : la planche ne devient pas le cookie, elle le MODULE.**
+  L'échantillonnage est polaire — largeur de la planche = portée, hauteur =
+  ouverture —, si bien qu'une seule planche sert les quatre armes et que
+  `torch_angle_deg` reste vivant. Prix mesuré et assumé : le faisceau garde sa
+  portée exacte et **63 à 72 % de sa lumière**, la planche ne pouvant que creuser.
+  Reste à faire : le choix de la variante, puis l'intégration dans
+  `weapon_data.gd` / `player.gd` / `game_state.gd` — dont la compensation de
+  `texture_scale` (voir « Pièges connus »), la ligne la plus dangereuse du lot.
   *(C, ou G en CC0 retouché)*
 - **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
   d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
@@ -5561,14 +5933,112 @@ un fait de jeu, pas à un rythme d'interface.
   collage. *(S)*
 - **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
   les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
-- **DA5.6 La résolution assumée** — trancher pixel-perfect vs. smooth une fois
-  pour toutes, et s'y tenir sur chaque asset commandé. *(Adrien, avant toute
-  commande — conditionne DA1.5)*
+- **DA5.6 La résolution assumée** ✅ **TRANCHÉ le 2026-08-24 : smooth.**
+  Filtrage linéaire, mipmaps, aucune texture en `nearest` ; la résolution se
+  choisit sur la densité de texels à l'écran. Raison en « Décisions actées ».
+  *(Adrien)*
 - **DA5.7 Un seul style d'outline/ombre de texte** — défini dans le thème, plus
   jamais au cas par cas. *(S)*
-- **DA5.8 Recalibrer la vague M sous la nouvelle DA** — les 15 effets de menus
-  sont procéduraux : sous la nouvelle palette et les nouvelles fontes ils
-  deviennent un écrin ; sans ça, ils amplifient le look actuel. *(S)*
+- **DA5.8 Recalibrer la vague M sous la nouvelle DA** ✅ **FAIT le 2026-08-24.**
+  Les 15 effets de menus sont procéduraux : sous la nouvelle palette et les
+  nouvelles fontes ils deviennent un écrin ; sans ça, ils amplifient le look
+  actuel. Détail ci-dessous. *(S)*
+
+#### DA5.8 — ce que le recalibrage a trouvé
+
+**Trois shaders portaient l'ancienne palette, et la passe DA1.4 ne les avait pas
+vus : elle ne balayait que les `.gd`.** Un `.gdshader` est un endroit où une
+couleur se cache bien — d'autant mieux que deux d'entre elles n'étaient **jamais
+poussées depuis GDScript** et vivaient donc en dur, invisibles à toute recherche
+faite du côté du script.
+
+| Où | Ce qui restait | Devenu |
+|---|---|---|
+| `menu_backdrop.gdshader` | les deux territoires P1/P2, en `const` | uniformes poussés depuis la charte |
+| `menu_title.gdshader` | `CHAUD` et `teinte_verdict`, en dur | dérivés de `LUMIERE` et de `ETAT_OK` |
+| `menu_glass.gdshader` | défaut `teinte_focus` = ancien cyan | aligné (il est écrasé, mais un défaut périmé se lit comme une intention) |
+| `menu_skeleton.gdshader` | balayage **achromatique** | la température d'une torche |
+
+Le dernier n'est pas une couleur oubliée mais une **contradiction** : la fiche de
+M13 dit « une torche qui fouille des étagères dans le noir », et la bande était
+peinte en blanc pur. L'effet contredisait ce qu'il racontait.
+
+**Les teintes multiplicatives sont NORMALISÉES avant d'être poussées.** Le shader
+les emploie en facteur (`col * teinte`) : une couleur de la charte passée telle
+quelle assombrirait au lieu de teinter. `MenuTitre._teinte()` divise par le canal
+le plus fort puis ramène vers le blanc d'une force qui dose l'écart. Sans ça, le
+titre aurait perdu en luminance à chaque crête d'onde.
+
+#### M1 — le cas d'école, et il était visible à l'œil
+
+Le cadran de titre projetait son ombre depuis **`size.y * 0.72`** — 72 % de la
+hauteur du conteneur. Une valeur juste tant que le titre était en fonte par
+défaut à 60 px. Passé en Big Shoulders à 68, dont les métriques n'ont rien à
+voir, **l'ombre s'est retrouvée au-DESSUS du mot** : elle ne se lisait plus comme
+une ombre mais comme une bavure d'affichage.
+
+Elle est désormais ancrée au **rectangle réel de la cible**, donc indépendante de
+la fonte et de la taille. Et son écrasement — 0,34, calibré contre une fonte
+large — est passé à **0,55** : avec une display ultra-condensée, une copie
+couchée à 34 % n'a plus assez d'encre pour se lire comme un mot, elle devient un
+trait. *Une même valeur d'écrasement ne dit pas la même chose selon la chasse.*
+
+#### M2 s'est réparé tout seul, et c'est vérifiable
+
+Sa fiche promettait « le curseur cyan laisse un fantôme **braise**, le rouge un
+fantôme **d'eau verte** ». La rémanence calcule la complémentaire de la couleur
+du curseur — et sous l'ancienne palette **saturée à 100 %**, ces complémentaires
+étaient un **rouge pur** `(1.0, 0.06, 0.0)` et un **vert pur** `(0.0, 1.0, 0.67)`.
+Ni braise, ni eau.
+
+Sous la charte : `(0.71, 0.28, 0.03)` et `(0.05, 0.71, 0.67)`. **L'effet avait été
+écrit pour une palette qui n'existait pas encore**, et sa fiche décrivait le
+résultat qu'il aurait *si* la saturation était plafonnée. Elle l'est.
+
+#### Ce que M9 n'a pas eu besoin qu'on change, et pourquoi le dire
+
+La torche du curseur reste peinte aux couleurs des joueurs, alors que la nouvelle
+règle dit « ce qui révèle est chaud ». Ce n'est pas un oubli : **le curseur n'est
+pas dans le monde, il est dans l'appareil.** La fiction d'origine — « le curseur
+est une torche » — devient sous le nouveau principe « le curseur est une diode
+qu'on promène », et les deux tiennent. Aucune couleur ne bouge.
+
+Corrigé au passage : son commentaire annonçait « trois centièmes » pour une
+valeur de cinq. Vérifié — la luminance ajoutée vaut ~0,011, moins du tiers du
+plafond que le fond s'impose (`LUM_MAX = 0,035`). Les deux effets tenaient le
+même contrat sans qu'aucun ne le dise.
+
+#### La planche photographiait un écran que personne ne voit
+
+**Elle appelait `grab_focus()`**, alors que le cadre de droite se remplit par
+`MenuHub.reveal_entry()` — le relais posé le 2026-08-18, quand on a découvert que
+les curseurs maison ne déclenchent jamais `focus_entered`. La planche empruntait
+donc un chemin **que personne ne prend**. Corrigé.
+
+**Et elle ne voyait aucun des écrans de fin**, où vivent deux des quinze effets :
+la température du verdict (M11) et l'ombre projetée par VICTOIRE / DÉFAITE /
+ÉGALITÉ (M1). Ils avaient donc été recalibrés à l'aveugle — ce que cet outil
+existe précisément pour empêcher. Les trois verdicts sont désormais au cadre
+(`20-`, `21-`, `22-`), et deux décisions anciennes s'y vérifient enfin : le
+verdict prend la couleur du **vainqueur** en écran partagé, et l'égalité reste
+**grise**, « parce que le blanc est la couleur de ce qui s'affirme ».
+
+#### ⚠️ Signalé, pas corrigé — l'écran des EFFETS est vide
+
+Hors périmètre de DA5.8, donc signalé comme l'exige le protocole.
+
+**Le cadre de droite de la rubrique « Effets » n'affiche que sa ligne de
+contexte : aucune rangée de réglage.** Vu sur la planche, et **identique avant le
+chantier** — ce n'est pas une régression de la charte.
+
+Ce qui est établi : les rangées **existent** dans l'arbre (contenu mesuré à
+51 741 px de haut), et le `ScrollContainer` qui les porte a une hauteur de **0**.
+Ce n'est donc pas un contenu manquant, c'est une mise en page qui s'effondre.
+Ce qui n'est **pas** établi : la cause exacte — je n'ai pas poussé plus loin.
+
+**Aucune suite ne peut l'attraper telle qu'elles sont écrites** : elles vérifient
+que les rangées sont là, pas qu'on les voit. Troisième occurrence de ce motif
+dans la même journée.
 
 ### DA6 — Les moments qu'on screenshote
 

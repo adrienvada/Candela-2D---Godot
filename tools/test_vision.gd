@@ -197,12 +197,24 @@ func _test_intensite_texture() -> void:
 		is_zero_approx(Vision.intensite_texture(img, avant, o, Vector2(16, 0), 0.0)))
 
 	# --- Sur de VRAIES textures d'armes : c'est là que se joue ce que la copie
-	# manquait. Deux armes seulement, chacune coûtant 262 144 itérations.
+	# manquait.
+	#
+	# ⚠️ **`torch_cookie` n'est pas décoratif ici.** Depuis DA2.1, l'image n'est
+	# plus fabriquée d'après les champs de l'arme : elle est CHARGÉE d'après ce
+	# nom. Une arme construite avec les bons angles mais sans son cookie lit
+	# celui du pistolet — et le contrôle mesure alors une autre arme que celle
+	# qu'il croit décrire. C'est arrivé à la fusion des deux lots : la
+	# « luminosité de l'arme » lisait 0,498 au lieu de 0,105, parce que
+	# l'arbalète portait le faisceau du pistolet. Les angles et l'échelle
+	# restent posés — ils servent à `portee_torche()` et au repli — mais **c'est
+	# le nom qui décide des pixels.**
 	var arbalete := WeaponData.new()
+	arbalete.torch_cookie = "arbalete"
 	arbalete.torch_angle_deg = 5.0
 	arbalete.torch_scale = 3.5
 	arbalete.torch_brightness = 0.3
 	var pompe := WeaponData.new()
+	pompe.torch_cookie = "pompe"
 	pompe.torch_angle_deg = 60.0
 	pompe.torch_scale = 1.0
 
@@ -218,7 +230,7 @@ func _test_intensite_texture() -> void:
 	# Attendu à mi-portée dans l'axe : (1 - 0,5) × fondu(5°) × 0,3.
 	var mi_arb: float = arbalete.portee_torche() * 0.5
 	var lu: float = Vision.intensite_texture(img_arb, avant, o,
-		Vector2(mi_arb, 0), arbalete.torch_scale)
+		Vector2(mi_arb, 0), arbalete.echelle_torche())
 	var attendu: float = 0.5 * clampf(deg_to_rad(5.0) * 8.0, 0.0, 1.0) * 0.3
 	_check("la luminosité de l'arme est dans ce qu'elle inflige (%.3f ≈ %.3f)"
 		% [lu, attendu], absf(lu - attendu) < 0.02, "%f vs %f" % [lu, attendu])
@@ -230,10 +242,10 @@ func _test_intensite_texture() -> void:
 	var c_pompe := Vector2.RIGHT.rotated(deg_to_rad(40.0)) * d_pompe
 	var c_arb := Vector2.RIGHT.rotated(deg_to_rad(40.0)) * mi_arb
 	_check("le faisceau large du pompe éblouit à 40° de son axe",
-		Vision.intensite_texture(img_pompe, avant, o, c_pompe, pompe.torch_scale) > 0.0)
+		Vision.intensite_texture(img_pompe, avant, o, c_pompe, pompe.echelle_torche()) > 0.0)
 	_check("le trait de l'arbalète, non",
 		is_zero_approx(Vision.intensite_texture(img_arb, avant, o, c_arb,
-			arbalete.torch_scale)))
+			arbalete.echelle_torche())))
 
 	# **Le halo entre dans le calcul, et il faut le savoir.** La texture porte,
 	# outre le cône, un halo faible sur les 20 % proches de l'émetteur et
@@ -242,7 +254,7 @@ func _test_intensite_texture() -> void:
 	# souhaitable — il empêche que ça change sans que personne le remarque.
 	var colle: float = Vision.intensite_texture(img_pompe, avant, o,
 		Vector2.RIGHT.rotated(deg_to_rad(75.0)) * (pompe.portee_torche() * 0.1),
-		pompe.torch_scale)
+		pompe.echelle_torche())
 	_check("le halo de proximité éblouit hors du cône (%.3f)" % colle, colle > 0.0)
 	_check("mais faiblement", colle < 0.2, str(colle))
 

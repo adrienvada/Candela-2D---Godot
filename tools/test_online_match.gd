@@ -1188,18 +1188,24 @@ func _press_play() -> void:
 	print("STATUT: %s" % _ui.lobby_status_label.text)
 	_main._on_replay_requested()
 
-## L'entrée « PRÊT » de l'écran courant est-elle grisée ? Le grisage est la façon
-## dont le menu dit « il manque quelqu'un » sans faire disparaître le bouton.
+## Le bouton « PRÊT » est-il grisé ? Le grisage est la façon dont le menu dit
+## « il manque quelqu'un » sans faire disparaître le bouton.
+##
+## **Il vit dans le CADRE DE DROITE depuis le 2026-08-24**, plus dans la colonne
+## de gauche : le geste qui engage a rejoint le choix d'arme dont il dépend. Il
+## n'y en a plus qu'un pour les huit écrans de préparation, le panneau étant
+## unique et partagé.
 func _ready_entry_disabled() -> bool:
-	for entree: Button in _ui._ready_entries:
-		if is_instance_valid(entree) and entree.is_visible_in_tree():
+	var lanceurs: Array = _ui._lanceurs_vivants()
+	for entree: Button in lanceurs:
+		if entree.is_visible_in_tree():
 			return entree.disabled
-	# Aucune entrée visible : on n'est pas sur un écran de salon, et répondre
+	# Rien de visible : on n'est pas sur un écran de préparation, et répondre
 	# « pas grisé » ferait échouer le contrôle en accusant l'interface. C'est le
 	# défaut qui a fait passer le chemin LAN pour cassé pendant une journée —
-	# l'écran était simplement resté à l'accueil, et les quatre entrées étaient
+	# l'écran était simplement resté à l'accueil, et les entrées étaient
 	# correctement grisées, hors de vue.
-	push_error("aucune entrée PRÊT visible — écran courant : %s" % _ui.hub.current_id())
+	push_error("aucun bouton PRÊT visible — écran courant : %s" % _ui.hub.current_id())
 	return true
 
 

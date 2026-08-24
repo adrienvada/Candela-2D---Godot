@@ -30,7 +30,10 @@ uniform float intensite : hint_range(0.0, 1.0) = 1.0;
 uniform vec2 taille = vec2(400.0, 200.0);
 // 1 quand la rangée porte le focus. La lueur interne ne vit que là.
 uniform float focus : hint_range(0.0, 1.0) = 0.0;
-uniform vec4 teinte_focus : source_color = vec4(0.0, 0.94, 1.0, 1.0);
+// Défaut de secours seulement : `menu_glass.vitrer()` pousse toujours la vraie
+// teinte, prise sur la charte. Il portait l'ancien cyan d'arcade — un défaut
+// périmé se lit comme une intention.
+uniform vec4 teinte_focus : source_color = vec4(0.29, 0.72, 0.97, 1.0);
 // Second étage : la brume qu'on voit à travers la vitre est DÉFOCALISÉE. À zéro,
 // le verre est un simple aplat teinté et rien n'est relu à l'écran.
 uniform float flou : hint_range(0.0, 1.0) = 0.0;

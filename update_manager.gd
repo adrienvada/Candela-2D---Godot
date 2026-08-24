@@ -24,7 +24,7 @@ extends Node
 ##    silencieuse, l'installation est un geste du joueur. Un jeu compétitif qui se
 ##    met à jour tout seul peut changer le comportement d'une arme entre deux
 ##    manches d'une même soirée.
-## 3. **Rien n'est jamais bloqué** — décision d'Adrien, 2026-08-18 : refus poli.
+## 3. **Rien n'est jamais bloqué** — décision d'Adrien, 2026-08-24 : refus poli.
 ##    Une version de retard rend le jeu en ligne inopérant, ce que
 ##    `Protocol.accepts()` fait déjà tout seul ; l'écran le **nomme**, il ne
 ##    verrouille rien. Écran scindé, entraînement et éditeur de cartes continuent.

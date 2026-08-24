@@ -1,0 +1,21 @@
+# Sources brutes de génération — ce qui entre au dépôt et ce qui n'y entre pas.
+#
+# **Seules les planches qui ont produit un cookie sont versionnées.** Elles sont
+# la seule façon de recuire un cookie livré : sans elles, `fabrique_cookies.gd`
+# n'a rien à moudre et l'asset devient irreproductible.
+#
+# Le reste — les 32 générations de la passe de tri du 2026-08-24, familles A1 à
+# A5 et B1 à B3 — pèse 60 Mo pour zéro cookie produit. Elles ont servi une fois,
+# à choisir une direction ; les garder au dépôt reviendrait à payer un tri pour
+# toujours. Elles restent sur le poste d'Adrien.
+#
+# Si une famille B (stries, saleté de lentille, voile) sert un jour de matière,
+# c'est ce jour-là qu'on l'ajoute — en la nommant ci-dessous, pas en versionnant
+# le lot entier.
+*
+!.gitignore
+!.gdignore
+!A4_bis_01.jpg
+!A4_bis_02.jpg
+!A4_bis_03.jpg
+!A4_bis_04.jpg

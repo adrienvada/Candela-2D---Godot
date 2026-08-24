@@ -11,7 +11,7 @@ pour que cette phrase soit vraie sans jamais casser l'installation de personne.
 
 | Décision | Pourquoi |
 |---|---|
-| **Refus poli** (Adrien, 2026-08-18) | Une version de retard ne bloque rien : ni le démarrage, ni l'écran scindé, ni l'éditeur de cartes. Ce qui cesse — trouver un adversaire — a déjà cessé tout seul, `Protocol.accepts()` refusant symétriquement. L'écran le **nomme**. Un jeu qui refuse de démarrer transforme une gêne en panne. |
+| **Refus poli** (Adrien, 2026-08-24) | Une version de retard ne bloque rien : ni le démarrage, ni l'écran scindé, ni l'éditeur de cartes. Ce qui cesse — trouver un adversaire — a déjà cessé tout seul, `Protocol.accepts()` refusant symétriquement. L'écran le **nomme**. Un jeu qui refuse de démarrer transforme une gêne en panne. |
 | **Rien sans signature valide** | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : aucun système ne vérifiera à notre place ce que ce code fait exécuter. Le jeu porte un classement ELO ; un manifeste substitué en chemin ferait tourner n'importe quel binaire sous l'identité du joueur. |
 | **Jamais automatique** | La vérification est silencieuse, l'installation est un geste. Un jeu compétitif qui se met à jour tout seul change le comportement d'une arme entre deux manches d'une même soirée. |
 | **Publier est un geste humain** | La CI ne publie que sur un tag `vX.Y.Z` posé à la main. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
@@ -29,6 +29,29 @@ pour que cette phrase soit vraie sans jamais casser l'installation de personne.
 | `tools/fabrique_manifeste.sh` | Fabrique le manifeste depuis les fichiers exportés. N'invente aucune valeur. |
 | `.github/workflows/release.yml` | Sur tag : vérifie, teste, exporte, signe, publie. |
 | `tools/test_mise_a_jour.gd` | La suite : 110 contrôles, dont la chaîne de signature et le script d'échange. |
+| `tools/test_autoloads.gd` | L'ordre des autoloads, que `project.godot` ne peut pas expliquer lui-même. |
+
+## Deux réglages de `project.godot`, et pourquoi ils sont expliqués ici
+
+`project.godot` ne peut pas porter ses propres explications : Godot le réécrit
+dès qu'une extension d'éditeur appelle `ProjectSettings.save()` — `godot_ai` le
+fait — et cette réécriture **jette toutes les lignes de commentaire**. Une
+explication posée là est condamnée, et elle l'a été une fois. Les deux qui
+concernent la mise à jour vivent donc ici, et la contrainte d'ordre est
+mécanisée par `tools/test_autoloads.gd` : un commentaire n'aurait de toute façon
+empêché personne de « ranger » les autoloads six mois plus tard.
+
+- **`config/version`** — la version du socle installé, source unique. Le
+  manifeste la recopie, la CI refuse de publier un tag qui ne lui correspond pas,
+  et `UpdateManager` la compare à ce qui est publié. Elle se monte **à la main**,
+  comme `Protocol.VERSION`, et pour la même raison : décider qu'une version part
+  dans la nature est un jugement.
+- **`PatchLoader` déclaré en premier dans `[autoload]`** — Godot instancie les
+  autoloads dans l'ordre déclaré. Un correctif `.pck` qui remplace
+  `network_manager.gd` et qui serait monté après l'instanciation de
+  `NetworkManager` ne recouvrirait plus rien : aucune erreur, aucune trace, un
+  jeu qui annonce une version qu'il n'exécute pas. Le banc refuse tout autre
+  ordre, en disant quoi remettre en place.
 
 ## À faire une fois — jalon H8, et rien ne marche avant
 

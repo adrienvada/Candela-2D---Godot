@@ -24,7 +24,7 @@ par sujet impraticable.
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
-| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-18**, plus personne dessus |
+| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
@@ -246,6 +246,88 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — le hub : les lanceurs passent à droite, un rôle une couleur
+
+**Deux demandes d'Adrien, dans la même séance, et la seconde est née de la
+première.**
+
+**1. Le geste qui engage vit dans le cadre de droite.** Les six lanceurs ont
+quitté la colonne de gauche ; chaque écran de préparation y porte désormais
+« PRÉPARER LE MATCH », une destination ordinaire qui ouvre le cadre. Le bouton
+lui-même est **unique** — le panneau étant partagé par huit écrans, son libellé
+et son action suivent l'écran (table `UI.LANCEURS`).
+
+Ce que ça simplifie : `_ready_entries` et `_relance_entries` **disparaissent**.
+Leur commentaire expliquait qu'il en fallait deux parce que les lanceurs étaient
+éparpillés sous des noms différents, et que l'une des deux sautait le mode le
+plus joué. Un seul bouton, plus de liste à tenir d'accord.
+
+**2. Un rôle, une couleur.** Le correctif de la sélection a rendu visible un
+défaut plus ancien : survol et sélection portaient **l'accent de chaque entrée**,
+pas un état. Quatre couleurs sur le seul écran d'accueil. Désormais : acier =
+survol, ambre = sélection (sur toute entrée), bleu/rouge = curseur. L'accent
+propre à l'entrée ne teinte plus que le chevron.
+
+**Ce que ça change pour vous si vous touchez au hub :** `make_entry(accent)` ne
+décide plus de l'apparence des deux états, seulement du chevron. Un écran neuf
+n'a donc plus à choisir ses couleurs d'état — il les hérite.
+
+**Deux bancs corrigés, et le second est instructif :**
+
+- `tools/test_online_match.gd` pressait les entrées « PRÊT » de gauche ; recâblé
+  sur `UI._lanceurs_vivants()`.
+- `tools/test_ecran_de_fin.gd` lisait `_relance_entries` et **sortait en 0 avec
+  quatre erreurs de script** — seul le grep de `run_suites.sh` l'a attrapé. Il
+  contenait en outre un contrôle **décoratif** : il posait une graine de
+  navigation sur deux boutons puis n'assertait que sur des constantes. Le passage
+  à un seul lanceur l'a révélé au lieu de le casser, l'index `[1]` n'existant
+  plus. Réécrit pour vérifier ce qu'il prétend.
+
+**Ce que je signale et que je n'ai pas fait :** aucun contrôle ne couvre les
+trois états d'une entrée. Adrien a trouvé **trois défauts visuels d'affilée** que
+ni les 54 suites ni la planche n'avaient vus. La cause est nommée aux « Pièges
+connus » : un contrôle porte sur ce qui a un nom dans le code, et une couleur
+d'état n'en avait pas. Ce qui manque, c'est de les rendre nommables.
+
+### 2026-08-24 — DA5.8, la vitrine recalibrée
+
+**Livré : DA5.8.** Les quinze effets de la vague M sous la charte. Le *pourquoi*
+est dans `docs/ROADMAP.md`, section DA5.8 ; ici, ce qui concerne les autres.
+
+**Trois `menu_*.gdshader` portaient encore l'ancienne palette.** La passe DA1.4
+ne balayait que les `.gd` : deux de ces couleurs n'étaient même jamais poussées
+depuis GDScript et vivaient donc en dur, invisibles à toute recherche faite du
+côté du script. **Règle à retenir avant d'écrire un effet : un `.gdshader` est un
+endroit où une couleur se cache bien.**
+
+**Et une teinte multiplicative se normalise avant d'entrer dans un shader.** Le
+shader fait `col * teinte` ; une couleur de la charte passée telle quelle
+assombrit au lieu de teinter. `MenuTitre._teinte()` porte le motif.
+
+**Fichiers pris puis rendus :** `menu_backdrop.gd(+shader)`, `menu_glass.gdshader`,
+`menu_gnomon.gd`, `menu_skeleton.gd(+shader)`, `menu_title.gd(+shader)`,
+`menu_torch.gd`, `tools/planche_contact.gd`.
+
+**À la session « assets visuels » — la torche a changé de main, sans changer
+d'aspect.** Vous aviez signalé que `weapon_data.gd` mettait `HALOGENE` dans le
+**masque** pendant que `flashlight.color` restait blanc. C'est corrigé dans
+l'autre sens : le masque redevient blanc, la teinte passe sur la `PointLight2D`.
+**Le rendu est identique** — même produit, autre ordre — mais la couleur survit
+désormais au remplacement de la texture par un cookie peint, ce qui était tout
+l'intérêt. Deux fichiers du domaine « game feel » touchés (`weapon_data.gd`,
+`player.gd`), une ligne chacun.
+
+**⚠️ Signalé, pas corrigé : l'écran des EFFETS est vide.** Le cadre de droite
+n'affiche que sa ligne de contexte. Les rangées existent (contenu mesuré à
+51 741 px), le `ScrollContainer` a une hauteur de **0**. Pré-existant, cause non
+établie. Aucune suite ne peut l'attraper : elles vérifient que les rangées sont
+là, pas qu'on les voit.
+
+**La planche de contact a gagné trois états et perdu un mensonge.** Elle
+appelait `grab_focus()` là où le cadre de droite se remplit par
+`MenuHub.reveal_entry()` — elle empruntait un chemin que personne ne prend. Et
+elle ne voyait aucun écran de fin, où vivent deux des quinze effets. Les trois
+verdicts y sont désormais.
 ### 2026-08-24 (suite) — l'éblouissement lit le faisceau au lieu de le recalculer
 
 **Second lot, sur arbitrage d'Adrien.** `Vision.intensite_texture` échantillonne

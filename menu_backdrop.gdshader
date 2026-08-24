@@ -33,12 +33,22 @@ uniform vec4 torche_p1 = vec4(0.5, 0.5, 0.0, 0.0);
 uniform vec4 torche_p2 = vec4(0.5, 0.5, 0.0, 0.0);
 // Rapport largeur/hauteur, pour que les anneaux soient ronds.
 uniform float ratio = 1.777;
+// Les couleurs des deux territoires, poussées par `menu_backdrop.gd`.
+uniform vec3 territoire_p1 = vec3(0.29, 0.72, 0.97);
+uniform vec3 territoire_p2 = vec3(0.95, 0.29, 0.33);
 
 // Bornes de luminance de la brume. Le plafond n'est pas un réglage : c'est le
 // contrat du jeu.
 const float LUM_MIN = 0.010;
 const float LUM_MAX = 0.035;
-// Les territoires : cyan à gauche, rouge à droite. Quasi subliminal.
+// Les territoires : le bleu de J1 à gauche, le rouge de J2 à droite. Quasi
+// subliminal.
+//
+// ⚠️ **Les deux teintes sont POUSSÉES depuis `charte.gd`, plus écrites ici.**
+// Elles y étaient en dur — `vec3(0.0, 0.62, 0.72)` et `vec3(0.72, 0.10, 0.24)`,
+// c'est-à-dire l'ancien cyan d'arcade et l'ancien carmin — et la passe de
+// palette de DA1.4 ne les a pas vues : elle ne balayait que les `.gd`. Un
+// shader est un endroit où une couleur se cache bien.
 const float TERRITOIRE = 0.020;
 // Amplitude du bruit rétinien, en luminance.
 const float GRAIN = 0.028;
@@ -89,7 +99,7 @@ void fragment() {
 
 		// Les territoires. La gauche est à P1, la droite à P2 — la même
 		// convention que l'écran partagé, apprise sans un mot.
-		vec3 teinte = mix(vec3(0.0, 0.62, 0.72), vec3(0.72, 0.10, 0.24),
+		vec3 teinte = mix(territoire_p1, territoire_p2,
 			smoothstep(0.3, 0.7, uv.x));
 		ajout += vec3(brume) + teinte * TERRITOIRE * intensite_brume;
 		ajout *= intensite_brume;

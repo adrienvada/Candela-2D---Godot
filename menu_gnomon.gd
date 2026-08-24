@@ -30,6 +30,19 @@ const DEGRES_PAR_MINUTE := 6.0
 ## gauche : l'ombre part donc vers le bas à droite, comme un matin.
 const ANGLE_INITIAL := -35.0
 
+## Écrasement vertical de l'ombre. Une ombre portée n'est pas une copie
+## translatée : elle est couchée.
+##
+## **Valait 0,34, calibré contre une fonte large.** L'enseigne est passée en
+## Big Shoulders, ultra-condensée : à 0,34, la copie couchée n'avait plus assez
+## d'encre pour se lire comme un mot — elle devenait un trait. Une même valeur
+## d'écrasement ne dit pas la même chose selon la chasse de la fonte.
+const ECRASEMENT := 0.55
+
+## Cisaillement horizontal, en part de la hauteur. C'est lui qui couche l'ombre
+## du côté opposé à la flamme.
+const CISAILLEMENT := 1.6
+
 var _cible: Label
 var _intensite: float = 1.0
 var _ecoule: float = 0.0
@@ -80,13 +93,28 @@ func _draw() -> void:
 	var angle := deg_to_rad(ANGLE_INITIAL + _ecoule / 60.0 * DEGRES_PAR_MINUTE)
 	var largeur := police.get_string_size(_cible.text, HORIZONTAL_ALIGNMENT_LEFT,
 		-1, taille).x
-	var base := Vector2((size.x - largeur) * 0.5, size.y * 0.72)
+
+	# L'ombre part des PIEDS DU MOT, pas d'une fraction du cadre.
+	#
+	# ⚠️ **Elle partait de `size.y * 0.72`** — 72 % de la hauteur du conteneur,
+	# une valeur qui tombait juste tant que le titre était en fonte par défaut à
+	# 60 px. La charte l'a passé en Big Shoulders à 68, dont les métriques n'ont
+	# rien à voir : l'ombre s'est retrouvée AU-DESSUS du mot, et ne se lisait plus
+	# comme une ombre mais comme une bavure d'affichage.
+	#
+	# C'est le motif de DA5.8 en un seul effet : la vague M a été calibrée contre
+	# une typographie qui n'existe plus. Ancrée au rectangle réel de la cible,
+	# elle suit désormais n'importe quelle fonte et n'importe quelle taille.
+	var cadre := _cible.get_rect()
+	var base := Vector2(
+		cadre.position.x + (cadre.size.x - largeur) * 0.5,
+		cadre.position.y + police.get_ascent(taille))
 
 	# Cisaillement horizontal + écrasement vertical : une ombre projetée au sol
 	# n'est pas une copie translatée, elle est couchée.
 	draw_set_transform_matrix(Transform2D(
 		Vector2(1.0, 0.0),
-		Vector2(sin(angle) * 1.6, 0.34),
+		Vector2(sin(angle) * CISAILLEMENT, ECRASEMENT),
 		base))
 	draw_string(police, Vector2.ZERO, _cible.text,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, taille, encre)
