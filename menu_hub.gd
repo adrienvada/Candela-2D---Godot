@@ -538,18 +538,30 @@ func make_entry(label: String, detail: String, target: String = "",
 	btn.add_theme_stylebox_override("normal", normal)
 	btn.add_theme_stylebox_override("disabled", normal)
 
-	# **Survol et sélection ne se ressemblent plus.** Ils portaient le même
-	# `StyleBoxFlat` : impossible de savoir, en regardant l'écran, laquelle des
-	# deux entrées éclairées était celle qui commande le cadre de droite. À la
-	# manette la question ne se pose pas — parcourir sélectionne — mais à la souris
-	# le curseur passe sur des entrées qu'il ne choisit pas.
+	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
-	# Le survol reste une lueur : bordure teintée, fond à peine coloré. La
-	# sélection est franche — bordure épaisse et fond deux fois plus dense — parce
-	# que c'est elle qui décide de ce qu'on lit à droite.
+	# **Le survol et la sélection ne portaient pas des états, ils portaient des
+	# SUJETS.** Chaque entrée teintait ses deux styles avec son propre accent :
+	# rien que sur l'accueil, quatre couleurs — bleu pour les modes, ambre pour le
+	# compétitif, gris pour les réglages, rouge pour quitter. Survoler le
+	# compétitif donnait donc de l'ambre et survoler sa voisine du bleu pâle sur
+	# du noir, c'est-à-dire presque rien. « Ambre » ne voulait pas dire
+	# « sélectionné », il voulait dire « cette entrée-là est dorée ».
+	#
+	# Et les deux états ne différaient que par l'opacité — 6 % contre 12 % — et un
+	# pixel de bordure. À la souris, indiscernables.
+	#
+	# Trois signaux, trois couleurs, et elles ne dépendent plus du sujet :
+	#   · **acier** — le curseur de la souris passe ici ;
+	#   · **ambre** — c'est cette entrée que le cadre de droite montre ;
+	#   · **bleu / rouge** — le liseré d'un des deux curseurs du jeu.
+	#
+	# L'accent propre à l'entrée survit là où il dit quelque chose de vrai : le
+	# chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur
+	# la lecture de l'état.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(accent.r, accent.g, accent.b, 0.55)
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.06)
+	hover.border_color = Color(MenuTheme.ACCENT, 0.55)
+	hover.bg_color = Color(MenuTheme.ACCENT, 0.07)
 	btn.add_theme_stylebox_override("hover", hover)
 
 	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
@@ -564,18 +576,26 @@ func make_entry(label: String, detail: String, target: String = "",
 	# contraste. À un huitième, l'ambre se voit sans couvrir, et le liseré bleu du
 	# curseur reste le premier lu — ce qu'il doit être, puisqu'il dit où l'on est.
 	var choisie := normal.duplicate() as StyleBoxFlat
-	choisie.border_color = accent
+	choisie.border_color = MenuTheme.GOLD
 	choisie.set_border_width_all(2)
-	choisie.bg_color = Color(accent.r, accent.g, accent.b, 0.12)
+	choisie.bg_color = Color(MenuTheme.GOLD, 0.12)
 	_entry_styles[btn] = {"repos": normal, "survol": hover, "choisie": choisie}
 
-	# Les états de Godot pointent tous sur la même apparence choisie. `pressed`
-	# compris : il retombait sur le style de SURVOL, le plus faible des trois —
-	# donc au moment précis où l'on appuie, le bouton faiblissait.
-	btn.add_theme_stylebox_override("focus", choisie)
-	btn.add_theme_stylebox_override("hover_pressed", choisie)
-	btn.add_theme_stylebox_override("focus_hover", choisie)
+	# **Le focus de Godot ne peint plus rien**, et c'est le correctif du défaut
+	# qu'Adrien a vu : il portait l'apparence choisie, en plus de la peinture
+	# explicite de `_peindre()`. Deux mécanismes pour un même signal, sur deux
+	# déclencheurs différents — un clic donne le focus Godot, qui survit à la
+	# sélection suivante. Une entrée s'allumait donc sans être choisie, et se
+	# rallumait au survol.
+	#
+	# La sélection est désormais peinte à un seul endroit. Le focus de Godot n'est
+	# de toute façon pas le curseur du joueur : le jeu a les siens, qui dessinent
+	# leur liseré par-dessus.
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_stylebox_override("focus_hover", hover)
+	# L'appui, lui, montre déjà ce que l'entrée est sur le point de devenir.
 	btn.add_theme_stylebox_override("pressed", choisie)
+	btn.add_theme_stylebox_override("hover_pressed", choisie)
 
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT,

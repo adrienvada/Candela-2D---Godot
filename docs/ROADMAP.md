@@ -780,7 +780,11 @@ de l'entraînement, la configuration de la cible et l'écran audio.
 #### La barre du bas disparaît aussi de l'écran de fin (2026-08-18)
 
 Elle avait survécu là : REJOUER, MENU PRINCIPAL et QUITTER y doublaient la liste
-de gauche. **REJOUER prend désormais la place exacte de PRÊT** — même geste,
+de gauche. **REJOUER prend désormais la place exacte de PRÊT** *(⚠️ superseded
+le 2026-08-24 : les deux ont quitté la colonne pour le cadre de droite. Le
+problème que cette décision réglait — « deviner lequel des deux comptait » — est
+réglé plus radicalement, puisqu'il n'y a plus qu'un seul bouton, et qu'il est là
+où l'on regarde en choisissant son arme.)* — même geste,
 même endroit, même style : s'engager dans la manche suivante. Les avoir séparés
 en deux boutons, l'un dans la liste et l'autre dans une barre, obligeait à deviner
 lequel comptait.
@@ -803,7 +807,24 @@ une barre qui doublait tout ça obligeait à deviner lequel des deux gestes comp
 **L'écran de fin garde sa barre** — REJOUER et MENU PRINCIPAL n'ont pas
 d'équivalent dans le hub, et on n'y est plus dans le menu.
 
-**Les entrées qui lancent un match portent le style plein.** Le geste qui engage
+> ⚠️ **SUPERSEDED le 2026-08-24 par « le geste qui engage vit dans le cadre de
+> droite » (arbitrage d'Adrien).** La colonne de gauche ne porte plus aucun
+> lanceur : le bouton descend dans le cadre, sous les râteliers d'armes dont il
+> dépend, et l'entrée de gauche qui ouvre ce cadre s'appelle « PRÉPARER LE
+> MATCH ». Le style plein n'a donc plus de porteur à gauche — **il en retrouve
+> un dans le cadre**, où rien ne le dispute au liseré du curseur. C'est même ce
+> qui résout le défaut ci-dessous : le style plein avait été retiré des lanceurs
+> le 2026-08-18 parce qu'il se confondait avec la sélection. Le déplacer lui
+> rend sa place au lieu de le supprimer.
+>
+> Ce que le renversement coûte, et qui est assumé : **un déplacement de curseur
+> de plus à chaque relance**, sur le geste le plus répété du jeu. C'est le
+> critère « immédiat » qui encaisse. Si ça devient pénible à l'usage, le
+> correctif n'est pas de revenir en arrière mais d'**aimanter le curseur sur le
+> bouton du cadre à l'ouverture** — piste notée, pas implémentée : la poser
+> d'avance serait corriger un défaut que personne n'a encore ressenti.
+
+~~**Les entrées qui lancent un match portent le style plein.**~~ Le geste qui engage
 une partie doit se distinguer de tout ce qui n'engage rien.
 
 **La description a quitté le panneau de droite** pour se poser sous le titre du
@@ -2457,6 +2478,42 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Un menu peut être cohérent partout et illisible quand même (2026-08-24)
+
+**Le correctif de la sélection a rendu visible un défaut plus ancien : les deux
+états ne portaient pas des ÉTATS, ils portaient des SUJETS.**
+
+Chaque entrée teintait son survol et sa sélection avec **son propre accent**.
+Rien que sur l'accueil, quatre couleurs : bleu pour les modes de jeu, ambre pour
+le compétitif, gris pour les réglages, rouge pour QUITTER. Survoler « 1V1
+COMPÉTITIF » donnait donc de l'ambre, et survoler sa voisine du bleu pâle sur du
+noir — c'est-à-dire presque rien. **« Ambre » ne voulait pas dire
+« sélectionné », il voulait dire « cette entrée-là est dorée ».**
+
+Et les deux états ne différaient que par l'opacité — **6 % contre 12 %** — et un
+pixel de bordure. Mesuré sur une entrée réelle : ses trois styleboxes rendaient
+la même valeur. À la souris, indiscernables.
+
+**Arbitrage d'Adrien : un rôle, une couleur.** Trois signaux, trois couleurs, et
+elles ne dépendent plus du sujet :
+
+| Signal | Couleur | Ce qu'il dit |
+|---|---|---|
+| survol souris | **acier** | le curseur passe ici |
+| sélection | **ambre**, pour toute entrée | c'est elle que le cadre de droite montre |
+| liseré | **bleu / rouge** | le curseur d'un joueur |
+
+L'accent propre à l'entrée survit **là où il dit quelque chose de vrai** : le
+chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur la
+lecture de l'état. Et l'appui montre désormais l'ambre — ce que l'entrée est sur
+le point de devenir — au lieu de retomber sur le style le plus faible.
+
+**Ce que ça généralise :** une couleur qui encode à la fois *quoi* et *dans quel
+état* n'encode ni l'un ni l'autre. Le joueur ne peut pas savoir si l'ambre parle
+du sujet ou de l'état, donc il n'apprend ni l'un ni l'autre — et il ne peut même
+pas nommer ce qui le gêne. Adrien a mis trois messages à le formuler ; le défaut
+était là depuis l'écriture du hub.
+
 ### Un état branché sur `focus_entered` n'existe pas pour un curseur maison (2026-08-24)
 
 **Relevé par Adrien à l'écran, et c'est la troisième fois que ce décrochage coûte
@@ -2562,9 +2619,19 @@ killcam n'est dans aucun des deux.
 
 Le réglage `gui/theme/custom_font` avait été posé avec douze lignes expliquant
 *pourquoi* la fonte d'interface vit là plutôt que Control par Control. **Elles
-ont disparu au premier enregistrement de l'éditeur**, qui réécrit le fichier
-dans son ordre canonique et n'y garde aucun commentaire. Le réglage, lui, a
-survécu — donc rien ne signale la perte.
+ont disparu**, le fichier étant réécrit dans son ordre canonique sans aucun
+commentaire. Le réglage, lui, a survécu — donc rien ne signale la perte.
+
+⚠️ **Première rédaction : « au premier enregistrement de l'éditeur ». C'est plus
+large que ça, et la correction change la conclusion.** Relevé par la session
+« assets visuels », qui les a restaurés deux fois dans l'après-midi et les a vus
+repartir entre les deux, **sans jamais ouvrir l'éditeur** : `--headless --script`
+suffit. Autrement dit, **`./tools/run_suites.sh` efface ces commentaires**, et
+n'importe qui lançant une suite le fait aussi.
+
+Ce n'est donc pas « quelqu'un a été distrait », c'est **« exécuter le projet
+efface ces commentaires »**. Déplacer l'explication n'est pas la meilleure des
+deux options, c'est **la seule qui tienne**.
 
 **Un commentaire dans un fichier regénéré est un commentaire qu'on écrit pour
 soi.** L'explication a été déplacée dans `charte.gd`, à côté de `CHEMIN_UI`.

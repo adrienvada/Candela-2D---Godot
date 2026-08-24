@@ -246,6 +246,49 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — le hub : les lanceurs passent à droite, un rôle une couleur
+
+**Deux demandes d'Adrien, dans la même séance, et la seconde est née de la
+première.**
+
+**1. Le geste qui engage vit dans le cadre de droite.** Les six lanceurs ont
+quitté la colonne de gauche ; chaque écran de préparation y porte désormais
+« PRÉPARER LE MATCH », une destination ordinaire qui ouvre le cadre. Le bouton
+lui-même est **unique** — le panneau étant partagé par huit écrans, son libellé
+et son action suivent l'écran (table `UI.LANCEURS`).
+
+Ce que ça simplifie : `_ready_entries` et `_relance_entries` **disparaissent**.
+Leur commentaire expliquait qu'il en fallait deux parce que les lanceurs étaient
+éparpillés sous des noms différents, et que l'une des deux sautait le mode le
+plus joué. Un seul bouton, plus de liste à tenir d'accord.
+
+**2. Un rôle, une couleur.** Le correctif de la sélection a rendu visible un
+défaut plus ancien : survol et sélection portaient **l'accent de chaque entrée**,
+pas un état. Quatre couleurs sur le seul écran d'accueil. Désormais : acier =
+survol, ambre = sélection (sur toute entrée), bleu/rouge = curseur. L'accent
+propre à l'entrée ne teinte plus que le chevron.
+
+**Ce que ça change pour vous si vous touchez au hub :** `make_entry(accent)` ne
+décide plus de l'apparence des deux états, seulement du chevron. Un écran neuf
+n'a donc plus à choisir ses couleurs d'état — il les hérite.
+
+**Deux bancs corrigés, et le second est instructif :**
+
+- `tools/test_online_match.gd` pressait les entrées « PRÊT » de gauche ; recâblé
+  sur `UI._lanceurs_vivants()`.
+- `tools/test_ecran_de_fin.gd` lisait `_relance_entries` et **sortait en 0 avec
+  quatre erreurs de script** — seul le grep de `run_suites.sh` l'a attrapé. Il
+  contenait en outre un contrôle **décoratif** : il posait une graine de
+  navigation sur deux boutons puis n'assertait que sur des constantes. Le passage
+  à un seul lanceur l'a révélé au lieu de le casser, l'index `[1]` n'existant
+  plus. Réécrit pour vérifier ce qu'il prétend.
+
+**Ce que je signale et que je n'ai pas fait :** aucun contrôle ne couvre les
+trois états d'une entrée. Adrien a trouvé **trois défauts visuels d'affilée** que
+ni les 54 suites ni la planche n'avaient vus. La cause est nommée aux « Pièges
+connus » : un contrôle porte sur ce qui a un nom dans le code, et une couleur
+d'état n'en avait pas. Ce qui manque, c'est de les rendre nommables.
+
 ### 2026-08-24 — DA5.8, la vitrine recalibrée
 
 **Livré : DA5.8.** Les quinze effets de la vague M sous la charte. Le *pourquoi*
