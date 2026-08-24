@@ -246,6 +246,84 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « brouillage » : un modèle, un banc, et RIEN de branché
+
+**Demande d'Adrien : que l'éblouissement rende plus difficile de *viser* celui
+qui éblouit — qu'il brouille sa position.** Le constat qui la motive est exact :
+l'éblouissement coûte la vitesse et la vivacité de visée, donc le **contrôle**,
+et ne coûte rien à l'**information**. La silhouette de celui qui braque sa torche
+reste aussi nette et aussi bien placée qu'avant.
+
+**Travail fait dans un worktree** (`.claude/worktrees/brouillage-eblouissement`,
+branche `worktree-brouillage-eblouissement`), **jamais dans l'arbre principal** —
+`player.gd`, `game_state.gd` et `ui.gd` y sont modifiés par d'autres sessions au
+moment où j'écris.
+
+**Trois fichiers NEUFS, zéro fichier de production touché :**
+
+- `brouillage.gd` (racine) — le modèle, sans dépendance, comme `vision.gd` et
+  `eblouissement.gd` et pour la même raison ;
+- `tools/banc_brouillage.gd` + `.tscn` — le banc interactif ;
+- `tools/test_brouillage.gd` — la suite, **ajoutée à `run_suites.sh`** (seule
+  ligne modifiée dans un fichier existant, hors `docs/`).
+
+**Je ne tiens plus rien.** Aucun fichier n'est réservé par cette session.
+
+**À la session « game feel », qui tient les fichiers concernés :** le jour où
+Adrien tranche un mode, le branchement touche **vos** fichiers — `player.gd` pour
+le rendu de `visual_enemy`, `ui.gd` pour le voile, `game_state.gd` pour
+l'arbitrage hôte. Je ne l'ai pas fait, et pas seulement par courtoisie de
+domaine : brancher un mode « pour voir » reviendrait à décider à la place
+d'Adrien. `brouillage.gd` n'a donc **aucun lecteur en production**, et c'est
+délibéré.
+
+**Trois choses relevées en construisant, qui vous concernent même sans ce
+chantier :**
+
+1. **`player_enemy_light.gdshader` plafonne `LIGHT` à `COLOR.rgb`.** Éclaircir la
+   couleur d'une silhouette ennemie **relève son plafond** : elle BRILLE au lieu
+   de s'estomper. Un réglage entier a été écrit puis retiré au premier rendu.
+   À savoir avant de vouloir teinter quoi que ce soit qui porte ce shader.
+2. **Le voile blanc écrase déjà tout le contraste avant qu'un brouillage
+   n'intervienne** — 0,48 d'opacité plein écran à 0,60 d'éblouissement, relevé
+   sur image. Si un mode est retenu, le facteur 0,8 d'`ui.gd` devra
+   probablement baisser, sans quoi les deux s'empilent en écran blanc.
+3. **`trait` est un mot réservé de GDScript.** Le refus est une *erreur
+   d'analyse* : la scène tourne **sans script** et sort proprement en 0. C'est la
+   panne que `run_visuel.sh` grepe explicitement, et elle s'est produite ici au
+   premier lancement.
+
+**Lot complet vert, `test_brouillage` compris.**
+
+> ⚠️ **Cette entrée a d'abord annoncé un échec de `test_lumieres` (50/51), et
+> l'annonce était périmée en quelques minutes.** J'avais mesuré contre
+> `3b847b6`, où `player.gd:477` portait encore `muzzle_flash.texture_scale` que
+> la suite interdit. **DA2 l'a retirée entre ma mesure et ma rédaction**
+> (`721837b`) : sur `main` à `7a70f0d`, `texture_scale` n'apparaît plus qu'une
+> fois dans `player.gd`, ligne 466, et sur `flashlight`. Relevé par la session
+> « spatialisation du son », qui a rejoué la suite : **51/51**. Vérifié ici
+> après rebase.
+>
+> **La leçon est structurelle et vaut pour toute session de cet arbre : un
+> constat d'état y vieillit en minutes.** Quatre à six sessions commitent en
+> parallèle ; transmettre « telle suite échoue » revient à transmettre une
+> photo. **Refaire la mesure coûte moins cher que la propager**, et une mesure
+> propagée à tort fait chercher une régression qui n'existe pas — exactement le
+> travail en double que ce journal existe pour éviter.
+
+**Conflits sur `docs/` — résolus ici, pas laissés à qui fusionnera.** Ce
+fichier-ci et `docs/ROADMAP.md` ont été modifiés en **ajout** : une entrée en
+tête de cette section, une section neuve « Chantier — brouiller la position de
+celui qui éblouit ». La session « spatialisation du son » avait inséré la sienne
+au même endroit le même jour ; le rebase sur `7a70f0d` a produit les deux
+« les deux ont ajouté » attendus, **résolus en gardant les deux** — sa section de
+chantier avant la mienne, son entrée de journal sous la mienne (« le plus récent
+en haut »). Aucune de ses lignes n'a été relue, reformatée ni réordonnée.
+
+**« Pièges connus » n'a pas été touché**, délibérément : ne pas élargir la
+surface de conflit d'une table que quatre sessions écrivent. Ce qui y aurait
+figuré est dans la section du chantier.
+
 ### 2026-08-24 — session « DA4 », en WORKTREE : la moitié de la charte n'était pas portée
 
 **Première session du dépôt à travailler dans un `git worktree` isolé**

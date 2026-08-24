@@ -7338,6 +7338,115 @@ ailleurs (V5.12) et attend S1, S6 est hors périmètre.
 
 ---
 
+## Chantier — brouiller la position de celui qui éblouit (inscrit le 2026-08-25)
+
+**Demande d'Adrien, le 2026-08-25 :** « il faut que l'éblouissement rende plus
+difficile de viser le joueur qui éblouit […] il faut aussi que cela *floute*, ou
+*brouille* la position du joueur émetteur ».
+
+**Le constat qui la motive, et il est exact.** L'éblouissement coûte deux choses,
+et toutes deux au **contrôle** : la vitesse de déplacement (`×0,4` à saturation,
+`player.gd`) et la vivacité de visée (`×0,4` sur le `lerp_angle`). Il ne coûte
+**rien à l'information** — la silhouette de celui qui braque sa torche reste
+aussi nette et aussi bien placée qu'avant. On vise donc toujours juste, seulement
+plus lentement. Dans un jeu dont la proposition entière est « la seule
+information est la lumière », c'est la moitié manquante.
+
+**Ce qui est livré, et ce qui ne l'est pas.** Aucun fichier de production n'est
+touché : ni `player.gd`, ni `game_state.gd`, ni `ui.gd`, ni `eblouissement.gd`.
+Trois fichiers **neufs** seulement — le modèle `brouillage.gd` (sans dépendance,
+comme `vision.gd` et `eblouissement.gd`, et pour la même raison), le banc
+`tools/banc_brouillage.tscn`, la suite `tools/test_brouillage.gd`. **Rien n'est
+branché en jeu, et rien ne doit l'être avant que le banc ait tranché.**
+
+### Les cinq options, et ce que chacune coûte à qui la subit
+
+| # | Mode | Ce qu'on perd | Ce qui reste, donc le plafond de compétence | Le risque propre |
+|---|---|---|---|---|
+| 1 | **halo** | Le voile blanc se concentre en bloom autour de la source, et l'avale. | La **direction** : le bloom est centré sur lui. | Il **désigne** l'adversaire. À faible éblouissement, il peut être un gain net d'information. |
+| 2 | **diplopie** | La silhouette se dédouble sur un cercle qui tourne lentement. | Le **milieu des deux copies est la position vraie**, exactement. Garder la tête froide et viser entre les deux marche. | Trop écarté ou trop net, on ne lit plus un dédoublement mais deux adversaires. |
+| 3 | **tremblement** | La silhouette dérive continûment autour d'elle-même (≤ 34 px). | La **moyenne temporelle est nulle** : la patience paie. | Se lit comme une **désynchronisation réseau**. C'est le pire malentendu possible en ligne — le joueur incrimine sa connexion, pas la torche. |
+| 4 | **rémanence** | On voit où l'adversaire **était**, jusqu'à 0,18 s plus tôt. | La position montrée a **vraiment existé** : on prend l'avance, comme sur une cible mouvante. | **Ne punit que celui qui bouge.** Un émetteur qui allume et se fige n'est pas brouillé du tout — « allumer et ne plus bouger » deviendrait une ligne de jeu. |
+| 5 | **contraste** | La silhouette se dissout dans le voile (opacité → 0,18). | Rien de faux n'est montré : le signal est **retiré**, jamais déplacé. | Ne fonctionne **que tant que le voile est là** pour servir de fond ; sans lui, il ne dit plus « il se confond » mais « il disparaît ». |
+
+Aucune n'est recommandée seule sans essai. La combinaison qui se défend le mieux
+sur le papier est **1 + 2** : le halo rend la cause visible — on comprend
+*pourquoi* on ne vise plus —, la diplopie prend la précision sans mentir sur la
+direction ni retirer le plafond de compétence. Mais c'est exactement le genre de
+raisonnement que le 2026-08-24 a renversé sur la vitesse de récupération : *il se
+tenait, il n'avait jamais été éprouvé.* D'où le banc.
+
+### Ce que la construction a déjà appris, avant tout jugement de goût
+
+- **Le voile fait déjà presque tout le travail, et c'est le point le plus
+  gênant.** À 0,60 d'éblouissement le voile vaut 0,48 d'opacité sur tout
+  l'écran : le contraste de la silhouette ennemie est déjà écrasé *avant* qu'un
+  brouillage n'intervienne. Relevé sur image, pas déduit. **Conséquence : si un
+  mode est retenu, il faudra probablement BAISSER le facteur 0,8 du voile**,
+  sans quoi les deux s'empilent en écran blanc — et un écran blanc ne se joue
+  pas, il s'attend.
+- **L'apex du faisceau trahit la position, et trois modes sur cinq l'ignorent.**
+  Diplopie, tremblement et rémanence ne déplacent que l'image du corps ; le cône
+  de lumière, lui, continue de partir du point vrai, et il est parfaitement
+  visible. Le banc porte donc une bascule (`L`) : le faisceau suit-il le
+  brouillage, ou reste-t-il sur la vérité ? **C'est une vraie question de
+  conception, pas un détail d'implémentation** — faire trembler tout le champ
+  lumineux est bien plus violent, et sans doute plus juste.
+- **Un tremblement rapide se défait tout seul.** Le premier réglage faisait
+  dériver la silhouette à **322 px/s**, plus vite qu'un joueur qui court. Deux
+  conséquences, et la seconde compte davantage : ça se lisait comme une
+  vibration, donc comme un défaut d'affichage ; et **l'œil intègre ce qui tremble
+  vite**, si bien que la moyenne perçue redevient la position vraie — le
+  brouillage s'annulait au moment précis où on le regardait. Le plafond est
+  désormais physique et éprouvé par la suite : *jamais plus vite qu'un joueur qui
+  marche*. Ce qui se déplace comme un joueur se lit comme un joueur.
+- **Le shader ennemi plafonne `LIGHT` à `COLOR.rgb`.** Un réglage entier
+  (« mêler la silhouette à la couleur du voile ») a été écrit, puis retiré au
+  premier rendu : éclaircir la couleur vers l'halogène **relève le plafond** et
+  fait donc BRILLER la silhouette au lieu de la fondre. Le réglage faisait
+  l'inverse de son nom et rien ne l'aurait dit. À savoir avant de vouloir teinter
+  quoi que ce soit qui porte `player_enemy_light.gdshader`.
+
+### ⚠️ La conséquence qu'on ne voit pas venir : le curseur « Éblouissement »
+
+Une décision actée dit que `GameSettings.current_effect("eblouissement")` module
+**le voile et rien d'autre** — jamais la pénalité de vitesse ni de visée, parce
+qu'« un curseur qui allégerait la pénalité serait un avantage compétitif déguisé
+en confort ».
+
+**Un brouillage est une pénalité d'information. Il tombe donc du mauvais côté de
+cette frontière : il ne peut pas passer par le curseur.** Et cela crée une
+situation qui n'existait pas : un joueur qui met le voile à zéro **garde le
+brouillage sans sa cause visible**. Le mode `contraste` cesse alors de
+fonctionner (plus de fond où se dissoudre), et le `tremblement` perd sa
+justification à l'écran — il ne reste qu'une silhouette qui gigote sans raison,
+c'est-à-dire, pour le joueur, un bug de réseau.
+
+Trois issues, aucune évidente, toutes à trancher par Adrien : donner au voile un
+**plancher** qu'aucun réglage ne peut passer ; lier le brouillage au voile
+malgré la décision ; ou ne retenir qu'un mode qui se suffit à lui-même.
+
+### Ce qui attend Adrien — B1 à B4
+
+- **B1 — quel(s) mode(s).** Le banc se lance seul : `godot --path .
+  res://tools/banc_brouillage.tscn`. `0` à `5` changent de mode en direct, `←/→`
+  règlent la force, le clic tire, `Échap` imprime le tableau. **Il chiffre
+  l'essai** : par mode, combien de tirs, combien au but, et de combien on rate en
+  moyenne. Le ressenti reste à Adrien ; le tableau existe pour qu'il ne se fie
+  pas qu'à lui.
+- **B2 — le faisceau suit-il le brouillage ?** (touche `L`). Voir plus haut :
+  sans cela, le cône continue de dire la vérité.
+- **B3 — faut-il baisser le voile si un mode est retenu ?** (touche `V` pour
+  juger sans lui).
+- **B4 — le curseur.** Voir l'encadré ci-dessus.
+
+**Tant que B1 n'est pas tranché, rien ne se branche.** `brouillage.gd` n'a aucun
+lecteur en production, et c'est délibéré : brancher un mode « pour voir » dans
+`player.gd` ou `ui.gd` reviendrait à décider à la place d'Adrien tout en touchant
+des fichiers tenus par la session « game feel ».
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
