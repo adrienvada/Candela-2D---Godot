@@ -2457,6 +2457,36 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Où les deux instruments ne regardent pas (2026-08-24)
+
+Le dépôt a maintenant **deux** instruments de vérification, et il vaut mieux
+savoir ce qu'ils ne voient ni l'un ni l'autre que de croire qu'à eux deux ils
+couvrent l'écran.
+
+| Instrument | Ce qu'il atteint | Ce qui lui échappe |
+|---|---|---|
+| `run_suites.sh` | des états, des comptes, des transitions — tout ce qui a un **nom** dans le code | ce qui n'a de nom nulle part : une position, une couleur, une opacité |
+| `run_visuel.sh` | ce qui se **voit**, sur les écrans qu'il visite | tout le reste des écrans, et tout ce qui n'est pas un état posé |
+
+**Leur intersection laisse un trou nommable, et le voici : la killcam.** Aucune
+suite ne l'exerce — elle demande une mort, donc une manche — et la planche ne la
+visite pas. C'est là qu'un défaut attend le premier mort d'une vraie partie,
+c'est-à-dire un joueur.
+
+Ce n'est pas théorique : c'est exactement où le fil de la teinte de torche a été
+trouvé le 2026-08-24, **par une lecture de code d'une autre session**, sur un
+chemin que ni le lot vert ni les treize images n'auraient signalé.
+
+**La leçon de méthode, et elle vaut au-delà de la killcam :** deux instruments
+qui passent au vert ne disent rien d'un endroit qu'aucun des deux n'atteint. Un
+lot annoncé « vérifié » devrait nommer ce qui n'a pas pu l'être — c'est moins
+confortable et c'est la seule forme honnête.
+
+**Autres zones dans le même cas, pour qu'elles cessent d'être invisibles :** les
+écrans de salon et d'appariement (la planche les écarte exprès — y entrer ouvre
+de vrais salons EOS), le second écran en jeu, et tout ce qui demande deux
+machines. Les trois se vérifient à la main, et ne se vérifient qu'ainsi.
+
 ### Un `duplicate()` n'emporte que ce qui est déjà posé (2026-08-24)
 
 Les fantômes de la killcam ne créent pas leur torche, ils la **dupliquent** —
