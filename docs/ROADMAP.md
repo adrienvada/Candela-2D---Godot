@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-24
+> Dernière mise à jour : 2026-08-25
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -6445,11 +6445,51 @@ dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite
 DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
 tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
 
-#### ⚠️ DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
+#### DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
 
-**Ouvert. À traiter avant le reste de DA4** : c'est le plus grand rectangle de
-l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montre
+**Priorisé devant le reste de DA4 par Adrien** : c'est le plus grand rectangle de
+l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montrait
 rien la plupart du temps.
+
+**🟡 Premier lot livré le 2026-08-25 — les promesses sont tenues, le lit
+d'ambiance reste à faire.**
+
+- ✅ **`MON RANG` et `TOP 10` affichent enfin.** Elles passent par un verbe qui
+  dit où va le texte, `MenuHub.montrer_texte()`, au lieu de `show_detail()` qui
+  alimente l'en-tête. Les deux `Control` cachés deviennent **un panneau comme les
+  autres**, sous une clé réservée : les rallumer tels quels aurait fait
+  réapparaître la description à deux endroits, ce que la décision du 2026-08-18
+  évitait à juste titre.
+- ✅ **Le profil et l'historique descendent d'un étage** — `_attach_panel` au lieu
+  de `_attach_screen`, comme les effets et l'audio avant eux. **Aucun des deux
+  n'a été réécrit** : le contrat `HubScreen` interdit à un écran de connaître sa
+  position, et c'est exactement la liberté qu'on encaisse ici. Quatre lignes
+  d'accrochage, zéro ligne de contenu.
+- ✅ **Les quatre libellés disent « à droite », et c'est vrai dans les quatre
+  cas.** La promesse et le comportement sont alignés.
+- ✅ **Le banc regarde le nœud rendu.** `test_audit_menus` vérifie `visible` **et**
+  une largeur utile, plus le versant inverse — qu'une description ne s'empare pas
+  du cadre. Sans ce second contrôle, corriger d'un côté ferait réapparaître le
+  doublon de l'autre.
+- ⬜ **Reste : le lit d'ambiance de l'accueil** — « la carte sous la torche »
+  (option 1, retenue par Adrien). Sur le menu principal, aucune entrée n'a de
+  panneau : le cadre y est toujours noir.
+
+##### Un second défaut dormait sous le premier
+
+`_detail_text` naissait à **un pixel de large** dans son panneau caché — mesuré
+`(1.0, 1296.0)`. Visible mais large d'un pixel, il aurait rendu exactement le même
+écran noir, et **on aurait cru le correctif raté.** Deux défauts empilés qui
+produisent le même symptôme : corriger le premier seul aurait conduit à conclure
+que le diagnostic était faux.
+
+##### Le dégât collatéral, et il est instructif
+
+`test_menu_hub` indexait les enfants du cadre **par position** —
+`get_children()[2]`, `[3]`. L'arrivée du panneau intégré les a décalés d'un cran,
+et le banc est sorti avec **deux erreurs de script et un code 0** : seul le grep
+de `run_suites.sh` l'a attrapé. Remplacé par une recherche par clé,
+`MenuHub.panneau()` — **une position n'est pas une identité.**
 
 ##### Ce qui a été établi, mesuré plutôt que supposé
 
