@@ -1,0 +1,16 @@
+# Sources brutes de génération — même règle que `torche/`.
+#
+# **Seules les planches qui ont produit un asset livré sont versionnées.** Elles
+# sont la seule façon de le recuire : sans elles, l'asset devient irreproductible.
+# Le lot de tri, lui, ne rentre pas au dépôt — il sert une fois, à choisir une
+# direction, et reste sur le poste d'Adrien.
+#
+# Une planche retenue s'ajoute NOMMÉMENT ci-dessous, jamais en versionnant le lot.
+*
+!.gitignore
+!.gdignore
+
+# Retenues le 2026-08-25 : les trois frames du flash de bouche (DA2.3).
+!FB_1.jpg
+!FB_2.jpg
+!FB_3.jpg

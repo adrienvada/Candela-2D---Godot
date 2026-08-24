@@ -11,6 +11,84 @@ class_name LightTextures
 
 static var _cache: Dictionary = {}
 
+## ## Les masques peints de DA2.2 et DA2.3
+##
+## Choisis par Adrien le 2026-08-24 dans `tools/apercu_torche.tscn`, cuits par
+## `tools/fabrique_cookies.gd --mode radial`. Les noms de fichiers portent la
+## variante retenue : recuire une autre variante et changer ces trois lignes
+## suffit à en changer.
+const RETRODIFFUSION := "res://assets/halo/retrodiffusion_corona.png"
+const AMBIANTE := "res://assets/halo/ambiante_braise.png"
+const ECLAT := "res://assets/halo/eclat_poudre.png"
+
+## Les trois images du flash de bouche, dans l'ordre du temps : amorce,
+## épanouissement, dissipation. Voir `player.gd::trigger_shoot_visuals`.
+const FLASH := [
+	"res://assets/flash/flash_1.png",
+	"res://assets/flash/flash_2.png",
+	"res://assets/flash/flash_3.png",
+]
+
+## Les empreintes au sol que chaque masque doit tenir, en unités de monde —
+## celles des dégradés qu'ils remplacent. Elles vivent à côté des chemins parce
+## qu'un chemin sans son empreinte est un piège : voir `poser()`.
+const EMPREINTE_RETRODIFFUSION := 256.0
+const EMPREINTE_AMBIANTE := 150.0
+## 128² à `texture_scale` 0,5 dans l'ancien code. Les frames sont cuites en 256²,
+## donc quatre fois plus de texels sur le même terrain.
+const EMPREINTE_FLASH := 64.0
+
+static var _masques: Dictionary = {}
+
+
+## Un masque peint, chargé une fois.
+##
+## ⚠️ **Rend `null` et CRIE si le fichier manque, au lieu de se rabattre en
+## silence.** Un PNG cuit mais pas encore importé par Godot est invisible à
+## `ResourceLoader` : c'est l'état normal d'un asset frais. Le 2026-08-24, le
+## banc d'aperçu se rabattait alors sur le dégradé sans rien dire — et comme le
+## dégradé est exactement ce que le masque remplace, l'écran était identique.
+## Le seul diagnostic possible pour Adrien était « les touches ne marchent pas ».
+static func masque(chemin: String) -> Texture2D:
+	if _masques.has(chemin):
+		return _masques[chemin]
+	var t: Texture2D = null
+	if ResourceLoader.exists(chemin):
+		t = load(chemin)
+	else:
+		push_error("LightTextures : masque de lumiere absent — %s. "
+			% chemin + "Cuire avec tools/fabrique_cookies.gd --mode radial, "
+			+ "puis : godot --headless --path . --import")
+	_masques[chemin] = t
+	return t
+
+
+## Pose un masque sur une lumière **pour une empreinte au sol donnée**, en unités
+## de monde.
+##
+## ⚠️ **C'est le seul endroit du code qui calcule cette échelle, et c'est
+## délibéré.** `PointLight2D.texture_scale` multiplie la taille PROPRE de la
+## texture : un masque de 256² posé là où vivait un dégradé de 128² éclaire deux
+## fois plus loin, sans qu'aucune valeur de jeu ait bougé. Le défaut s'est
+## produit sur DA2.1 et Adrien l'a vu à l'écran avant toute mesure — « ça éclaire
+## beaucoup trop loin ». La leçon a été refermée là-bas par
+## `WeaponData.echelle_torche()` ; ici elle l'est par cette fonction.
+##
+## **Personne d'autre ne doit écrire `texture_scale` sur une lumière peinte.**
+## `tools/test_lumieres.gd` l'exige.
+##
+## Le repli sur le dégradé procédural n'est pas muet : `masque()` a déjà crié.
+## Il existe parce qu'une texture nulle rendrait un CARRÉ lumineux — pire que
+## l'ancien rendu, et sans rapport visible avec la cause.
+static func poser(lumiere: PointLight2D, chemin: String, empreinte: float) -> void:
+	var t := masque(chemin)
+	if t == null:
+		lumiere.texture = radial(int(empreinte))
+		lumiere.texture_scale = 1.0
+		return
+	lumiere.texture = t
+	lumiere.texture_scale = empreinte / float(t.get_width())
+
 ## Dégradé blanc opaque au centre, transparent au bord, de `size` pixels.
 ##
 ## ⚠️ **Les `Color(1, 1, 1)` de ce fichier échappent à la règle « jamais de blanc
