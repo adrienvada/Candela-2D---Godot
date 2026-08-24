@@ -70,6 +70,11 @@ func _test_identite_a_zero() -> void:
 	var h := Brouillage.halo(0.0)
 	_check("aucun halo", is_zero_approx(h["rayon"]) and is_zero_approx(h["intensite"]))
 	_check("aucune perte de contraste", is_equal_approx(Brouillage.opacite(0.0), 1.0))
+	var fl := Brouillage.flou(0.0)
+	_check("aucun flou", is_zero_approx(fl["rayon"]) and is_zero_approx(fl["force"]))
+	_check("le halo est plein en son centre et NUL sur son bord",
+		is_equal_approx(Brouillage.profil_halo(0.0), 1.0)
+		and is_zero_approx(Brouillage.profil_halo(1.0)))
 
 	# Une force nulle est l'autre porte de sortie : c'est ainsi qu'un mode se
 	# désactive depuis les options sans que personne ait à écrire un `if`.
@@ -131,6 +136,25 @@ func _test_verite_recouvrable() -> void:
 		is_zero_approx(Brouillage.opacite(1.0)), "%.3f" % Brouillage.opacite(1.0))
 	_check("et le halo, lui, reste pour dire où il est",
 		Brouillage.halo(1.0)["rayon"] > 0.0 and Brouillage.halo(1.0)["intensite"] > 0.0)
+
+	# **Le flou doit porter plus loin que le halo.** Le halo cache un CORPS, le
+	# flou casse une CONVERGENCE — et deux arêtes se prolongent bien au-delà du
+	# corps. Un flou plus étroit que le halo laisserait les arêtes redevenir
+	# nettes juste là où elles se rejoignent, ce qui est exactement l'endroit
+	# qu'Adrien a vu trahir la position (2026-08-25).
+	_check("la zone floutée déborde le halo",
+		Brouillage.flou(1.0)["rayon"] > Brouillage.halo(1.0)["rayon"],
+		"flou %.0f contre halo %.0f" % [
+			Brouillage.flou(1.0)["rayon"], Brouillage.halo(1.0)["rayon"]])
+
+	# La courbe du contraste ne doit pas déborder ses bornes : l'exposant ne
+	# redresse que le milieu, comme partout ailleurs dans ce chantier.
+	var bornes_ok := is_equal_approx(Brouillage.opacite(0.0), 1.0) \
+		and is_zero_approx(Brouillage.opacite(1.0))
+	var plus_vite := Brouillage.opacite(0.5) < 0.5 - 0.05
+	_check("la courbe du contraste garde ses deux bornes", bornes_ok)
+	_check("et fait tomber la silhouette plus vite qu'une droite",
+		plus_vite, "%.3f à mi-éblouissement" % Brouillage.opacite(0.5))
 
 
 # ---------------------------------------------------------------------------

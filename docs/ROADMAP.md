@@ -7467,6 +7467,83 @@ présence du halo de l'autre.
 > « % au but » de `lampe` rejoint celui d'`aucun`, c'est que le centre se lit
 > trop bien, et c'est `RAYON_HALO` qu'il faut monter.
 
+### Second essai d'Adrien, le 2026-08-25 — quatre corrections et un défaut de fond
+
+« C'est pas mal du tout avec le contraste et le halo, mais… » Quatre demandes,
+et la dernière rouvre une question que ce document avait posée le matin même :
+
+1. **Le halo est trop gros, trop large.** `RAYON_HALO` : 260 → **150**.
+2. **Plus intense en son centre, chute plus rapide au bord.** Le profil était un
+   dégradé de trois points écrit à la main, quasi linéaire — donc une tache
+   molle. Il vient désormais de `Brouillage.profil_halo`, `(1 − r) ^ 2,5`, et
+   l'intensité au centre passe à 1,0. **Les deux ensemble et pas l'un sans
+   l'autre** : monter le centre sans creuser la chute ramènerait le disque plein,
+   c'est-à-dire le halo qui DÉSIGNE au lieu de cacher.
+3. **Le contraste doit tomber plus vite.** La chute était linéaire : à
+   mi-éblouissement il restait la moitié de la silhouette, ce qui se lit encore
+   très bien sur du noir. `COURBE_CONTRASTE = 2,0` la porte à 0,25.
+   **Ce n'est pas cosmétique** : la saturation n'est presque jamais atteinte en
+   jeu (plafond réel du pistolet à bout portant : 0,93), donc une chute linéaire
+   réservait l'invisibilité à un cas de figure que le duel ordinaire ne produit
+   pas.
+4. **On supprime le voile.** Il ne s'affiche plus par défaut au banc. Ce que sa
+   disparition confirme : il faisait **deux métiers** — dire « tu es ébloui » et
+   cacher l'adversaire. Le halo et le flou font le second, et localement.
+
+### Le cône trahissait l'apex — et c'était écrit ici depuis l'ouverture
+
+« Il faudrait ajouter du flou dans la zone de l'émission de lumière, sinon le
+cône révèle où est le joueur. »
+
+**Ce document portait déjà cette phrase**, à l'ouverture du chantier : *« l'apex
+du faisceau trahit la position, et trois modes sur cinq l'ignorent »*. Elle y
+était classée comme une remarque sur les modes à déplacement ; elle valait aussi
+pour `LAMPE`, et personne ne l'avait vu. **Effacer le corps ne sert à rien tant
+que deux arêtes qui convergent se prolongent à l'œil.**
+
+Le remède est un vrai flou d'écran, `brouillage_flou.gdshader` : dix-sept
+prélèvements, noyau plein au centre et **nul sur le bord du disque** — à rayon
+constant, la bordure mélangerait du flou et du net côte à côte et poserait une
+forme nette de plus, c'est-à-dire un repère aussi bon que celui qu'on efface.
+Mesuré : le contraste local de la zone d'émission tombe de **24,5 %** à 24 px de
+noyau (−8,5 % à 8, −35,9 % à 40).
+
+**La zone floutée est plus large que le halo** — 210 contre 150 — et une suite
+l'exige : le halo cache un CORPS, le flou casse une CONVERGENCE, qui se lit bien
+au-delà du corps.
+
+> ⚠️ **À savoir avant de brancher : ce flou lit l'écran.** Il exige un
+> `BackBufferCopy` et il est aujourd'hui en `COPY_MODE_VIEWPORT`, donc une
+> recopie plein cadre par image. En jeu il y aurait **deux vues**, et la cible de
+> cadence est un 1 % bas ≥ 120 fps. Le repasser en `COPY_MODE_RECT` est
+> possible — c'est ainsi qu'il a commencé — mais c'est à mesurer au banc de
+> cadence, pas à supposer.
+
+### ⚠️ Le shader lisait un tampon qu'on écrivait — et un faux correctif a failli le cimenter
+
+Le flou a d'abord rendu l'image **juste, à la bonne place, et beaucoup trop
+claire**. Diagnostic évident : un sRGB appliqué deux fois. J'ai posé un
+`pow(couleur, 2,2)` — qui l'a rendue beaucoup trop **sombre**. Un balayage de
+l'exposant contre une référence sans disque n'a rien trouvé qui colle : 1,0
+donnait +19 % de luminance, 1,4 en donnait −43 %.
+
+**Aucun exposant ne collait parce qu'aucun exposant n'était le problème.** Ce
+qui l'a dit : la luminance n'était qu'à +19 % pendant que le contraste était à
+**+226 %**. Un décalage colorimétrique déplace les deux ensemble ; cet excès de
+VARIANCE seul désignait autre chose — le rectangle lisait un tampon qu'on était
+en train d'écrire dans la même passe de canevas. Déplacé sur sa propre
+`CanvasLayer`, au-dessus du monde entier, il colle à la référence à **0,000 %**
+près sur les deux mesures, sans aucune correction.
+
+**Deux choses à en retenir, et la seconde vaut au-delà de ce shader :**
+
+- une lecture d'écran en 2D n'a de sens que si ce qu'elle lit est **fini d'être
+  dessiné** ; une couche à part est le seul moyen de le garantir ;
+- **un facteur de correction qui « marche à peu près » est le meilleur moyen de
+  cimenter un défaut ailleurs.** Le 2,2 était plausible, documentable, et faux.
+  Seule la mesure contre une référence l'a écarté — le contrôle décisif tenait
+  en une ligne : *à noyau nul, le disque doit devenir invisible.*
+
 ### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
 
 `TextureRect.expand_mode` vaut `EXPAND_KEEP_SIZE` par défaut : la taille

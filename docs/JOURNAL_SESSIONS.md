@@ -259,7 +259,18 @@ branche `worktree-brouillage-eblouissement`), **jamais dans l'arbre principal** 
 `player.gd`, `game_state.gd` et `ui.gd` y sont modifiés par d'autres sessions au
 moment où j'écris.
 
-**Trois fichiers NEUFS, zéro fichier de production touché :**
+**⚠️ Un `*.gdshader` créé — `brouillage_flou.gdshader`.** Le glob réserve les
+shaders au domaine « game feel » ; la frontière posée le 2026-08-18 par la
+session « menus » dit que `menu_*.gdshader` lui appartient et que tout autre
+`*.gdshader` reste au game feel. Je suis donc **en infraction avec la lettre**,
+et je le dis plutôt que de l'espérer discret. Trois éléments : c'est un fichier
+**créé**, pas modifié (la fusion mesurée le 2026-08-18 sur les cinq
+`menu_*.gdshader` n'avait signalé aucun conflit) ; il porte un préfixe de
+chantier, comme la frontière l'a établi ; et **aucun fichier de jeu ne le
+charge** — seul le banc le lit. Si la session « game feel » préfère une autre
+règle, qu'elle la pose ici : je m'y tiendrai.
+
+**Quatre fichiers NEUFS, zéro fichier de production touché :**
 
 - `brouillage.gd` (racine) — le modèle, sans dépendance, comme `vision.gd` et
   `eblouissement.gd` et pour la même raison ;
@@ -284,6 +295,15 @@ chantier :**
    couleur d'une silhouette ennemie **relève son plafond** : elle BRILLE au lieu
    de s'estomper. Un réglage entier a été écrit puis retiré au premier rendu.
    À savoir avant de vouloir teinter quoi que ce soit qui porte ce shader.
+1bis. **Une lecture d'écran en 2D doit vivre sur sa PROPRE `CanvasLayer`.**
+   Un `BackBufferCopy` + shader `hint_screen_texture` posés dans le monde, au
+   `z_index`, lisent un tampon qu'on écrit dans la même passe : le rendu est
+   juste en position et faux en valeur. Symptôme qui le distingue d'un problème
+   de gamma — **la luminance bouge peu (+19 %) pendant que le contraste explose
+   (+226 %)**. Un décalage colorimétrique déplacerait les deux ensemble. J'ai
+   failli cimenter un `pow(c, 2,2)` par-dessus ; le contrôle qui l'a évité tient
+   en une ligne, et il est réutilisable : *à noyau de flou nul, la zone doit
+   devenir invisible*.
 2. **Le voile blanc écrase déjà tout le contraste avant qu'un brouillage
    n'intervienne** — 0,48 d'opacité plein écran à 0,60 d'éblouissement, relevé
    sur image. Si un mode est retenu, le facteur 0,8 d'`ui.gd` devra

@@ -69,16 +69,40 @@ const NOMS := {
 # rajouter ici rendrait deux réglages responsables de la même sensation.
 # --------------------------------------------------------------------------
 
-## Rayon du halo à saturation, en pixels d'ÉCRAN (le seul mode qui ne travaille
-## pas en unités de monde : il vit sur le voile, au-dessus des deux vues).
-## 260 px sur une demi-fenêtre de 640 : de quoi avaler la silhouette et ses
-## alentours sans blanchir le quart de l'écran.
-const RAYON_HALO := 260.0
+## Rayon du halo à saturation, en pixels d'ÉCRAN (le seul réglage qui ne
+## travaille pas en unités de monde : il vit au-dessus de la vue).
+##
+## **150 px, et non 260 : « le halo est trop gros, trop large » (Adrien, au
+## banc, 2026-08-25).** Le premier chiffre avait été posé pour « avaler la
+## silhouette et ses alentours » ; à l'essai il avale surtout l'écran.
+const RAYON_HALO := 150.0
 
-## Opacité au centre du halo, à saturation. Volontairement sous 1,0 : à 1,0 le
-## halo devient un disque plein, et un disque plein DÉSIGNE l'adversaire au lieu
-## de le cacher — le piège de ce mode, et la première chose à regarder au banc.
-const INTENSITE_HALO := 0.85
+## Opacité au centre du halo, à saturation. **1,0 depuis le 2026-08-25** —
+## « il faudrait que le halo soit plus intense en son centre ».
+##
+## ⚠️ **Ce fichier a longtemps tenu 0,85 avec un motif écrit : à 1,0 le halo
+## devient un disque plein, et un disque plein DÉSIGNE l'adversaire au lieu de
+## le cacher.** Le motif reste juste ; ce qui a changé, c'est ce qui le tient.
+## Ce n'est plus le pic qui empêche le disque plein, c'est `NETTETE_HALO` : la
+## chute est désormais si rapide que la surface saturée se réduit à un noyau. On
+## peut donc monter le centre sans étaler le plateau. **Monter l'un sans
+## l'autre ramènerait le disque plein**, et avec lui le halo qui désigne.
+const INTENSITE_HALO := 1.0
+
+## L'exposant qui creuse le halo : `alpha(r) = (1 − r) ^ NETTETE_HALO`.
+##
+## « Plus intense en son centre et diminue plus rapidement en son bord »
+## (Adrien, 2026-08-25). À 1,0 la chute est linéaire — une pente douce du centre
+## au bord, ce qui donne une tache molle et large. À 2,5 : 0,55 au cinquième du
+## rayon, 0,18 à mi-rayon, 0,02 aux quatre cinquièmes.
+##
+## **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme —
+## même raisonnement que `Eblouissement.COURBURE_LUMIERE` : plein au centre,
+## rigoureusement nul au bord, quel que soit l'exposant. Un exposant ne redresse
+## que le milieu ; un seuil ou un décalage auraient cassé l'une des deux bornes,
+## et celle du bord est la seule chose qui empêche le halo d'avoir un CONTOUR.
+## Un halo à contour net est une forme de plus à lire, donc un repère de plus.
+const NETTETE_HALO := 2.5
 
 ## Écart entre chaque fantôme et la position vraie, à saturation, en pixels de
 ## monde. 30 px pour un joueur de 18 px de rayon : les copies se touchent
@@ -162,14 +186,70 @@ const RETARD_REMANENCE := 0.18
 ## l'aurait dit.
 const ALPHA_CONTRASTE := 0.0
 
+## L'exposant qui fait tomber la silhouette : `alpha = (1 − t) ^ COURBE_CONTRASTE`.
+##
+## « Il faudrait que le contraste diminue plus rapidement également » (Adrien,
+## au banc, 2026-08-25). La chute était **linéaire** : à mi-éblouissement il
+## restait la moitié de la silhouette, ce qui se lit encore très bien sur du
+## noir. À 2,0 : 0,56 au quart, 0,25 à mi-chemin, 0,06 aux trois quarts —
+## l'adversaire a disparu bien avant la saturation, qui n'est presque jamais
+## atteinte en jeu (le plafond réel du pistolet à bout portant vaut 0,93).
+##
+## **C'est ce détail qui rend la demande nécessaire plutôt que cosmétique :**
+## une chute linéaire réservait l'invisibilité à un cas de figure que le jeu ne
+## produit qu'à bout portant dans l'axe. La courbe la rend atteignable dans le
+## duel ordinaire.
+##
+## Mêmes deux bornes intactes qu'ailleurs : `alpha(0) = 1`, `alpha(1) = 0`.
+const COURBE_CONTRASTE := 2.0
+
+## Le rayon de la zone floutée à saturation, en pixels d'écran, et la force du
+## flou en son centre.
+##
+## **Le cône trahit l'apex, et c'est le défaut qui décide de ce mode** (Adrien,
+## 2026-08-25) : « il faudrait ajouter du flou dans la zone de l'émission de
+## lumière, sinon le cône révèle où est le joueur ». Effacer le corps ne sert à
+## rien tant que **deux arêtes qui convergent se prolongent à l'œil**.
+##
+## Le rayon est plus large que celui du halo — 210 contre 150 — et ce n'est pas
+## un arrondi : le halo doit cacher un CORPS, le flou doit casser une
+## CONVERGENCE, qui se lit bien au-delà du corps. Un flou plus étroit que le
+## halo laisserait les arêtes redevenir nettes juste là où elles se rejoignent.
+const RAYON_FLOU := 210.0
+const FORCE_FLOU := 1.0
+
 ## Le halo, en pixels d'écran et en opacité. `centre` reste à l'appelant : c'est
 ## lui qui sait projeter une position de monde dans SA vue, et ce fichier ne
 ## connaît ni caméra ni viewport.
-static func halo(dazzle: float, force: float = 1.0) -> Dictionary:
+##
+## Les maxima sont des PARAMÈTRES et non des lectures directes des constantes,
+## pour que le banc puisse les régler en direct sans recopier la formule. La
+## production appelle sans rien passer et prend les valeurs actées ; le banc
+## passe ses valeurs vives et imprime, en sortant, celles qu'il faudra
+## transcrire ici. **Une seule formule, deux appelants** — c'est la règle que ce
+## dépôt a payée trois fois pour l'apprendre.
+static func halo(dazzle: float, force: float = 1.0,
+		rayon_max: float = RAYON_HALO, intensite_max: float = INTENSITE_HALO) -> Dictionary:
 	var t := _dose(dazzle, force)
 	return {
-		"rayon": RAYON_HALO * t,
-		"intensite": INTENSITE_HALO * t,
+		"rayon": rayon_max * t,
+		"intensite": intensite_max * t,
+	}
+
+## Le profil radial du halo, échantillonné pour fabriquer son dégradé : plein au
+## centre, nul au bord, creusé par `nettete`. `r` va de 0 (centre) à 1 (bord).
+static func profil_halo(r: float, nettete: float = NETTETE_HALO) -> float:
+	return pow(clampf(1.0 - clampf(r, 0.0, 1.0), 0.0, 1.0), maxf(nettete, 0.01))
+
+## Le flou de la zone d'émission : rayon de la zone en pixels d'écran, et force
+## du flou en son centre. Voir `RAYON_FLOU` — c'est ce qui empêche le cône de
+## trahir son apex.
+static func flou(dazzle: float, force: float = 1.0,
+		rayon_max: float = RAYON_FLOU, force_max: float = FORCE_FLOU) -> Dictionary:
+	var t := _dose(dazzle, force)
+	return {
+		"rayon": rayon_max * t,
+		"force": force_max * t,
 	}
 
 ## Les décalages des fantômes, en pixels de monde, autour de la position vraie.
@@ -228,8 +308,10 @@ static func retard(dazzle: float, force: float = 1.0) -> float:
 
 ## La perte de contraste : ce qu'il reste d'opacité à la silhouette, entre 1 (on
 ## la voit) et `ALPHA_CONTRASTE` (elle se dissout dans le voile).
-static func opacite(dazzle: float, force: float = 1.0) -> float:
-	return lerpf(1.0, ALPHA_CONTRASTE, _dose(dazzle, force))
+static func opacite(dazzle: float, force: float = 1.0,
+		courbe: float = COURBE_CONTRASTE) -> float:
+	var t := _dose(dazzle, force)
+	return lerpf(ALPHA_CONTRASTE, 1.0, pow(1.0 - t, maxf(courbe, 0.01)))
 
 ## La dose commune : l'éblouissement multiplié par le réglage de force, ramené
 ## dans [0,1].

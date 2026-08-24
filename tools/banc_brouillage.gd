@@ -56,6 +56,7 @@ const Brouillage := preload("res://brouillage.gd")
 const Eblouissement := preload("res://eblouissement.gd")
 const Charte := preload("res://charte.gd")
 const SHADER_ENNEMI := preload("res://player_enemy_light.gdshader")
+const SHADER_FLOU := preload("res://brouillage_flou.gdshader")
 
 ## Le polygone du joueur, recopié de `player.tscn` — seize côtés, rayon 18.
 ## Recopié et non chargé : instancier `player.tscn` amènerait
@@ -127,8 +128,51 @@ var _mouvement: int = Mouvement.VA_ET_VIENT
 var _distance: float = 300.0
 var _faisceau_suit: bool = false ## Le faisceau reste-t-il sur la position vraie ?
 var _penalites: bool = true      ## La visée molle de `player.gd`.
-var _voile: bool = true
+## **Le voile est SUPPRIMÉ par défaut** — « on supprime le voile » (Adrien, au
+## banc, 2026-08-25). La touche `V` le rend, et le réglage « voile » le dose :
+## il reste au banc comme témoin, pas comme proposition.
+##
+## Ce que sa disparition confirme, et qui n'était qu'une hypothèse à l'ouverture
+## du chantier : le voile faisait **deux métiers** — dire « tu es ébloui » et
+## cacher l'adversaire. Le halo et le flou font le second, et LOCALEMENT. Le
+## premier métier, lui, n'avait apparemment pas besoin d'un aplat plein écran.
+var _voile: bool = false
 var _voile_facteur: float = VOILE_FACTEUR_DEFAUT
+
+# Les réglages vifs du mode « lampe ». Ils DÉMARRENT sur les constantes du
+# modèle et sont passés en paramètres à `Brouillage` : le banc ne recopie
+# aucune formule, il ne fait que déplacer des nombres. En sortant, il imprime
+# ceux qu'il a atteints, pour qu'on les transcrive dans `brouillage.gd`.
+var _rayon_halo: float = Brouillage.RAYON_HALO
+var _intensite_halo: float = Brouillage.INTENSITE_HALO
+var _nettete_halo: float = Brouillage.NETTETE_HALO
+var _courbe_contraste: float = Brouillage.COURBE_CONTRASTE
+var _rayon_flou: float = Brouillage.RAYON_FLOU
+var _force_flou: float = Brouillage.FORCE_FLOU
+## Le rayon du noyau de flou, en pixels — la « quantité de flou », distincte de
+## la TAILLE de la zone floutée (`_rayon_flou`). Vit au banc seul : c'est un
+## paramètre de shader, pas une grandeur de jeu.
+## 24 px, mesuré et non choisi : la chute de contraste local dans la zone
+## d'émission vaut −8,5 % à 8 px, **−24,5 % à 24**, −35,9 % à 40. En dessous de
+## 20 la convergence des deux arêtes reste lisible ; au-delà de 40 le faisceau
+## cesse de ressembler à un faisceau.
+var _noyau_flou: float = 24.0
+
+## Le réglage que `←/→` modifie. `Tab` en change.
+var _reglage: int = 0
+
+## Nom affiché · propriété · borne basse · borne haute · pas.
+const REGLAGES := [
+	["force du mode", "_force", 0.0, 2.0, 0.1],
+	["rayon du halo", "_rayon_halo", 20.0, 420.0, 10.0],
+	["intensité du halo", "_intensite_halo", 0.0, 1.0, 0.05],
+	["netteté du halo", "_nettete_halo", 0.5, 6.0, 0.25],
+	["courbe du contraste", "_courbe_contraste", 0.5, 5.0, 0.25],
+	["rayon de la zone floue", "_rayon_flou", 0.0, 480.0, 20.0],
+	["force du flou", "_force_flou", 0.0, 1.0, 0.1],
+	["quantité de flou", "_noyau_flou", 0.0, 48.0, 2.0],
+	["voile", "_voile_facteur", 0.0, 1.0, 0.05],
+]
 var _verite: bool = false        ## Montrer où l'adversaire est VRAIMENT.
 ## Ce qu'a envoyé la dernière touche restée sans effet. Voir `_unhandled_key_input`.
 var _touche_inconnue: String = ""
@@ -156,6 +200,9 @@ var _tourelle: Node2D
 var _voile_rect: ColorRect
 var _halo: TextureRect
 var _croix: Node2D
+var _copie_ecran: BackBufferCopy
+var _flou: ColorRect
+var _mat_flou: ShaderMaterial
 var _tracer: Line2D
 var _tracer_reste: float = 0.0
 var _verdict: Label
@@ -304,6 +351,38 @@ func _batir_monde() -> void:
 		branche.material = non_ombre
 		_croix.add_child(branche)
 
+	# Le flou vit sur sa PROPRE couche, au-dessus du monde entier.
+	#
+	# ⚠️ **Il était d'abord dans le monde, à `z_index = 15`, et il rendait
+	# n'importe quoi** — image à la bonne place, luminance à +19 % et contraste à
+	# +226 %. Un simple décalage d'espace colorimétrique aurait déplacé les deux
+	# ensemble ; cet excès de VARIANCE seul disait autre chose : le rectangle
+	# lisait un tampon qu'on était en train d'écrire dans la même passe de
+	# canevas. Une couche à part force le monde à être entièrement dessiné avant
+	# la recopie, ce qui est le seul état où la lecture d'écran a un sens.
+	#
+	# Ordre des couches, et il décide du rendu : monde (0) → flou (1) → halo,
+	# voile et panneau (2). Le halo doit passer APRÈS le flou — il représente la
+	# lumière qui arrive dans l'œil, pas une chose du monde à brouiller.
+	var couche_flou := CanvasLayer.new()
+	couche_flou.name = "CoucheFlou"
+	couche_flou.layer = 1
+	add_child(couche_flou)
+
+	_copie_ecran = BackBufferCopy.new()
+	_copie_ecran.name = "CopieEcran"
+	_copie_ecran.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	couche_flou.add_child(_copie_ecran)
+
+	_flou = ColorRect.new()
+	_flou.name = "Flou"
+	_flou.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flou.visible = false
+	_mat_flou = ShaderMaterial.new()
+	_mat_flou.shader = SHADER_FLOU
+	_flou.material = _mat_flou
+	couche_flou.add_child(_flou)
+
 	_tracer = Line2D.new()
 	_tracer.name = "Tracer"
 	_tracer.width = 2.0
@@ -397,6 +476,9 @@ func _damier() -> ImageTexture:
 func _batir_ecran() -> void:
 	var couche := CanvasLayer.new()
 	couche.name = "Ecran"
+	# Au-dessus de la couche du flou (1) : le halo est la lumière qui arrive dans
+	# l'œil, pas une chose du monde qu'on brouille.
+	couche.layer = 2
 	add_child(couche)
 
 	# Le voile, puis le halo PAR-DESSUS : le halo est additif, il doit mordre sur
@@ -486,12 +568,23 @@ func _etiquette(parent: CanvasLayer, ou: Vector2, taille: int) -> Label:
 ## une fois — une texture recalculée à chaque changement de rayon coûterait un
 ## hoquet pile au moment où l'effet se déclenche, la faute déjà payée par les
 ## shaders compilés au premier mort.
+## ⚠️ **Le profil vient de `Brouillage.profil_halo`, jamais d'un dégradé écrit à
+## la main.** Il portait ici trois points (1,0 · 0,45 · 0,0) qui décrivaient une
+## chute quasi linéaire ; Adrien l'a jugée trop molle et trop large au banc. Un
+## dégradé écrit à la main est un endroit où une courbe se cache — et où elle
+## cesse d'être réglable, donc jugeable.
 func _texture_halo() -> GradientTexture2D:
 	var grad := Gradient.new()
-	grad.offsets = PackedFloat32Array([0.0, 0.45, 1.0])
-	grad.colors = PackedColorArray([
-		Color(Charte.HALOGENE, 1.0), Color(Charte.HALOGENE, 0.45), Color(Charte.HALOGENE, 0.0),
-	])
+	# Douze points suffisent pour que l'interpolation linéaire entre eux ne se
+	# distingue plus de la courbe, même à l'exposant le plus creusé.
+	var offsets := PackedFloat32Array()
+	var couleurs := PackedColorArray()
+	for i in 12:
+		var r := float(i) / 11.0
+		offsets.append(r)
+		couleurs.append(Color(Charte.HALOGENE, Brouillage.profil_halo(r, _nettete_halo)))
+	grad.offsets = offsets
+	grad.colors = couleurs
 	var tex := GradientTexture2D.new()
 	tex.gradient = grad
 	tex.fill = GradientTexture2D.FILL_RADIAL
@@ -587,7 +680,7 @@ func _postes() -> Array[Dictionary]:
 			var passe := _relire(_temps - Brouillage.retard(_dazzle, _force))
 			sortie.append(passe)
 		Brouillage.Mode.CONTRASTE, Brouillage.Mode.LAMPE:
-			opacite = Brouillage.opacite(_dazzle, _force)
+			opacite = Brouillage.opacite(_dazzle, _force, _courbe_contraste)
 			sortie.append({"pos": _pos_vraie, "rot": _rot_vraie})
 		_:
 			sortie.append({"pos": _pos_vraie, "rot": _rot_vraie})
@@ -650,8 +743,28 @@ func _rendre() -> void:
 	_voile_rect.color = Color(Charte.HALOGENE,
 		(_dazzle * _voile_facteur) if _voile else 0.0)
 
+	# Le flou vit en unités de MONDE (il suit l'émetteur dans la scène) alors que
+	# son rayon est donné en pixels d'écran. La caméra étant à zoom 1, les deux
+	# coïncident ; si le zoom changeait un jour, c'est ici qu'il faudrait diviser.
+	var f := Brouillage.flou(_dazzle, _force, _rayon_flou, _force_flou) \
+		if _mode == Brouillage.Mode.LAMPE else {"rayon": 0.0, "force": 0.0}
+	var rayon_flou := float(f["rayon"])
+	_flou.visible = rayon_flou > 2.0 and float(f["force"]) > 0.001
+	_copie_ecran.visible = _flou.visible
+	if _flou.visible:
+		# Sur sa couche, le flou est en coordonnées d'ÉCRAN — même conversion que
+		# le halo, et pour la même raison : une couche ignore la caméra.
+		var cote := rayon_flou * 2.0
+		var centre_flou := get_viewport().get_canvas_transform() * _pos_vraie
+		_flou.size = Vector2(cote, cote)
+		_flou.position = centre_flou - Vector2(rayon_flou, rayon_flou)
+		_mat_flou.set_shader_parameter("rayon_noyau", _noyau_flou)
+
+		_mat_flou.set_shader_parameter("force", float(f["force"]))
+
 	var porte_halo := _mode == Brouillage.Mode.HALO or _mode == Brouillage.Mode.LAMPE
-	var h := Brouillage.halo(_dazzle, _force) if porte_halo else {"rayon": 0.0, "intensite": 0.0}
+	var h := Brouillage.halo(_dazzle, _force, _rayon_halo, _intensite_halo) \
+		if porte_halo else {"rayon": 0.0, "intensite": 0.0}
 	var rayon := float(h["rayon"])
 	_halo.visible = rayon > 1.0
 	if _halo.visible:
@@ -701,6 +814,33 @@ func _tirer() -> void:
 
 
 func _tableau() -> void:
+	# Les réglages AVANT le tableau de tirs : ce sont eux qu'on vient chercher
+	# en sortant, et un banc qui laisse repartir sans ses nombres oblige à
+	# refaire la séance. Les valeurs modifiées sont marquées, avec celle du
+	# modèle en regard — c'est la liste de ce qu'il faut transcrire dans
+	# `brouillage.gd`, et rien d'autre.
+	print("")
+	print("--- les réglages atteints (★ = changé depuis `brouillage.gd`) ---")
+	var defauts := {
+		"_force": 1.0,
+		"_rayon_halo": Brouillage.RAYON_HALO,
+		"_intensite_halo": Brouillage.INTENSITE_HALO,
+		"_nettete_halo": Brouillage.NETTETE_HALO,
+		"_courbe_contraste": Brouillage.COURBE_CONTRASTE,
+		"_rayon_flou": Brouillage.RAYON_FLOU,
+		"_force_flou": Brouillage.FORCE_FLOU,
+		"_noyau_flou": 14.0,
+		"_voile_facteur": VOILE_FACTEUR_DEFAUT,
+	}
+	for r in REGLAGES:
+		var nom: String = r[1]
+		var valeur: float = get(nom)
+		var defaut: float = defauts.get(nom, valeur)
+		print("  %s %-24s %8.2f   (modèle : %.2f)" % [
+			"★" if not is_equal_approx(valeur, defaut) else " ", r[0], valeur, defaut])
+	print("  %s voile affiché             %8s" % [
+		" " if not _voile else "★", "oui" if _voile else "non (supprimé)"])
+
 	print("")
 	print("--- brouillage : ce que chaque mode a coûté à la visée ---")
 	print("  %-13s %6s %8s %10s %12s %7s" % ["mode", "tirs", "au but", "écart moy.", "latéral moy.", "force"])
@@ -777,8 +917,9 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		_mode = TOUCHES_MODE[evenement.keycode]
 		return
 	match evenement.keycode:
-		KEY_LEFT: _force = maxf(0.0, _force - 0.1)
-		KEY_RIGHT: _force = minf(2.0, _force + 0.1)
+		KEY_TAB: _reglage = (_reglage + 1) % REGLAGES.size()
+		KEY_LEFT: _bouger_reglage(-1)
+		KEY_RIGHT: _bouger_reglage(1)
 		KEY_UP:
 			_auto = false
 			_niveau_manuel = minf(1.0, _niveau_manuel + 0.05)
@@ -795,8 +936,6 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_L: _faisceau_suit = not _faisceau_suit
 		KEY_P: _penalites = not _penalites
 		KEY_V: _voile = not _voile
-		KEY_F: _voile_facteur = maxf(0.0, _voile_facteur - 0.05)
-		KEY_H: _voile_facteur = minf(1.0, _voile_facteur + 0.05)
 		KEY_T: _verite = not _verite
 		KEY_R:
 			for m in Brouillage.Mode.values():
@@ -820,6 +959,20 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 	_touche_inconnue = ""
 
 
+## Déplace le réglage sélectionné d'un cran. La netteté du halo est le seul à
+## exiger un travail : son dégradé est CUIT dans une texture, il faut le refaire.
+## Ici et pas dans `_rendre` — une texture reconstruite à chaque image coûterait
+## un hoquet permanent, la faute déjà payée par les shaders compilés au premier
+## mort.
+func _bouger_reglage(sens: int) -> void:
+	var r: Array = REGLAGES[_reglage]
+	var nom: String = r[1]
+	var valeur: float = get(nom)
+	set(nom, clampf(valeur + float(r[4]) * float(sens), float(r[2]), float(r[3])))
+	if nom == "_nettete_halo":
+		_halo.texture = _texture_halo()
+
+
 func _poser_arme() -> void:
 	var arme := _armes[_arme_idx]
 	_torche.texture = arme.get_torch_texture()
@@ -835,8 +988,11 @@ func _maj_panneau() -> void:
 	if n > 0:
 		au_but = "%.0f %%" % (100.0 * float(r["touches"]) / float(n))
 		lateral = "%.0f px" % (float(r["somme_lateral"]) / float(n))
+	var reglage: Array = REGLAGES[_reglage]
 	_panneau.text = "\n".join([
-		"MODE   %d · %s      force %.1f" % [_mode, Brouillage.NOMS[_mode], _force],
+		"MODE   %d · %s" % [_mode, Brouillage.NOMS[_mode]],
+		"RÉGLAGE  ‹ %s  %.2f ›   (Tab pour changer)" % [
+			reglage[0], float(get(reglage[1]))],
 		"",
 		"éblouissement   %.2f   (%s)" % [_dazzle, "mesuré" if _auto else "forcé"],
 		"arme            %s" % arme.name,
@@ -850,7 +1006,7 @@ func _maj_panneau() -> void:
 
 
 func _texte_aide() -> String:
-	return "clic tirer   0-6 mode (6 = lampe)   ←/→ force   A auto/forcé   ↑/↓ niveau   " \
-		+ "W arme   M mouvement   Z/X distance\n" \
-		+ "F/H voile plus faible / plus fort   V voile oui-non   L le faisceau suit   " \
-		+ "P pénalité de visée   T montrer la vérité   R remettre à zéro   Échap tableau et sortie"
+	return "clic tirer   0-6 mode (6 = lampe)   Tab choisir un réglage   ←/→ le régler   " \
+		+ "A auto/forcé   ↑/↓ niveau   W arme   M mouvement   Z/X distance\n" \
+		+ "V remettre le voile   L le faisceau suit   P pénalité de visée   " \
+		+ "T montrer la vérité   R remettre à zéro   Échap réglages, tableau et sortie"
