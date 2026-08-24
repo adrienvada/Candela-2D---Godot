@@ -216,6 +216,23 @@ const T_DECOMPTE := T_ENSEIGNE * 2
 ## L'enseigne et les verdicts : *Big Shoulders Display*, signalétique
 ## industrielle ultra-condensée, variable de Thin à Black. C'est le lieu.
 const CHEMIN_DISPLAY := "res://assets/fonts/BigShouldersDisplay.ttf"
+
+## ## L'enseigne
+##
+## Le nom du jeu n'est pas écrit, il est **dessiné** : lettres au pochoir,
+## halogène sur noir, liseré ambre. Tant qu'il sortait d'une police
+## d'interface, l'écran d'accueil disait « prototype » avant de dire
+## « Candela » — c'est ce que DA1.6 retire.
+##
+## L'alpha du fichier est sa **luminance** : le dessin est de la lumière sur du
+## noir, donc son halo se compose sur n'importe quel fond sombre sans halo
+## carré. Ne pas le remplacer par un détourage franc, on perdrait le halo.
+const CHEMIN_ENSEIGNE := "res://assets/logos/wordmark.png"
+
+## L'icône d'application et l'écran de démarrage vivent à côté ; ils sont
+## déclarés dans `project.godot` et ne se chargent pas d'ici — Godot lit
+## l'écran de démarrage **avant** le système de ressources.
+const CHEMIN_ICONE := "res://assets/logos/icone.png"
 ## Tout le reste : *Oxanium*, linéale anguleuse à chanfreins, variable elle
 ## aussi. C'est l'appareil.
 ##
