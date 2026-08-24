@@ -2532,6 +2532,36 @@ service, il déplace le diagnostic.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Deux machines, deux UID pour le même chemin (2026-08-25)
+
+Le journal affirme depuis le 2026-08-18 que la génération d'UID est
+**déterministe pour un chemin donné** : « l'UID que notre import a produit pour
+`prediction_tir.gd` est identique au vôtre — la génération n'est donc pas
+aléatoire ». La mesure était juste, la généralisation ne l'est pas.
+
+Contre-exemple, relevé en fusionnant `origin/main` dans le worktree DA4 :
+
+| Où | UID de `tools/test_musique.gd` |
+|---|---|
+| worktree DA4, généré par `--import` | `uid://qfh28uh28u71` |
+| `origin/main`, versionné | `uid://debjcj28ioisf` |
+
+**Même chemin, même version de Godot, même machine.** La fusion a d'ailleurs
+refusé de démarrer pour cette seule raison — *untracked working tree files would
+be overwritten*.
+
+**Ce que ça change :** versionner les `.uid` n'est pas un confort qui « supprime
+la question », c'est une **nécessité**. Un `.uid` absent du dépôt sera réinventé
+différemment par chaque arbre qui l'importe, et deux arbres finiront par se
+disputer une ressource que Godot croit distincte. Le remède reste celui déjà
+appliqué — les versionner tous, y compris ceux des bancs — mais la raison est
+plus forte qu'annoncée.
+
+**Et le réflexe à avoir en fusion :** un `.uid` non suivi qui bloque un `git
+merge` n'est jamais à garder. Celui du dépôt fait foi ; le local est un
+sous-produit d'un `--import`.
+
+
 ### Le produit promettait par écrit ce qu'il ne faisait pas (2026-08-24)
 
 Deux entrées de l'écran `1v1 compétitif` portent, **dans leur propre texte lu par
