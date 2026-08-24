@@ -27,7 +27,59 @@ const SOUNDS: Dictionary = {
 	"torch_off": "res://assets/audio/sfx/torch_off.wav",
 	# V5.3 — l'acouphène d'éblouissement, boucle dont le volume suit dazzle_amount.
 	"dazzle_ringing": "res://assets/audio/sfx/tinnitus_dazzle.wav",
+	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
+	# laquelle sort est `stinger_de_fin`, plus bas.
+	#
+	# Elles passent par le bus SFX et non par le bus musical, ce qui est
+	# contre-intuitif pour de la musique. La raison est le filtre passe-bas de la
+	# torche : dans le noir, le bus musical est coupe vers 300 Hz pour que la
+	# musique recule. Une ponctuation de kill y passerait comme un coup sourd, au
+	# moment precis ou elle doit trancher. **Le sting n'est pas de l'ambiance,
+	# c'est un evenement** : il doit survivre au filtre qui fait reculer l'ambiance.
+	"sting_kill": "res://assets/audio/music/sting_kill.ogg",
+	"sting_kill_match": "res://assets/audio/music/sting_kill_match.ogg",
+	"sting_defeat": "res://assets/audio/music/sting_defeat.ogg",
+	"sting_draw": "res://assets/audio/music/sting_draw.ogg",
 }
+
+## Quelle ponctuation clot cette manche, vue depuis CETTE machine ?
+##
+## Pure a dessein, comme `torche_comptee` : la regle se verifie sans serveur
+## audio, et c'est la seule facon de tester une decision qui depend de qui l'on
+## est. Une ponctuation qui se trompe de camp ne leve aucune erreur — elle
+## felicite le perdant, et on ne s'en apercoit qu'en jouant, une fois.
+##
+## - **Egalite** : le match s'acheve au temps, tout le monde entend la meme chose.
+## - **Kill sans fin de match** : les DEUX joueurs l'entendent (decision d'Adrien,
+##   2026-08-25). Un kill est un fait, pas une bonne nouvelle reservee a celui qui
+##   l'obtient.
+## - **Kill decisif** : le vainqueur entend le kill de match, le vaincu sa
+##   defaite. **En ecran partage, personne n'est « le » vaincu a la sortie
+##   audio** — les deux joueurs partagent les memes haut-parleurs, exactement
+##   comme pour `torche_comptee`. On y garde donc le kill decisif, qui decrit
+##   l'evenement sans designer un camp.
+##
+## ⚠️ Au format BO1 (le defaut), un kill met FIN au match : `sting_kill` ne sort
+## donc jamais dans ce format-la. Il attend un format plus long. Ce n'est pas un
+## defaut, mais c'est le genre de silence qu'on prend pour une panne.
+static func stinger_de_fin(winner_id: int, match_over: bool, local_idx: int) -> String:
+	if winner_id < 0:
+		return "sting_draw" if match_over else ""
+	if not match_over:
+		return "sting_kill"
+	if local_idx >= 0 and winner_id != local_idx:
+		return "sting_defeat"
+	return "sting_kill_match"
+
+## L'oreille suit-elle un joueur, dans ce mode ?
+##
+## Meme partage que `torche_comptee`, et pour la meme raison. **En ecran partage,
+## les deux joueurs ecoutent les memes haut-parleurs** : poser l'oreille sur l'un
+## des deux donnerait a son adversaire la distance et la direction de ses propres
+## pas, entendus depuis la tete de l'autre. Ce serait pire que le point fixe
+## d'aujourd'hui, pas mieux. En ligne, chacun a sa sortie : l'oreille peut suivre.
+static func oreille_suit(local_idx: int) -> bool:
+	return local_idx >= 0
 
 ## Le tempo du jeu, en un seul endroit.
 ##
@@ -503,6 +555,68 @@ func silence_sec(duree: float = 1.0) -> void:
 	minuterie.timeout.connect(func() -> void:
 		AudioServer.set_bus_mute(idx, etait_coupe)
 		_silence_en_cours = false)
+
+## Noeud du monde de jeu qui heberge les voix positionnelles pendant un match, et
+## l'oreille posee sur le joueur local. Voir `poser_oreille`.
+var _hote_positionnel: Node = null
+var _oreille: AudioListener2D = null
+
+## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
+## sur le joueur local.
+##
+## **Sans les DEUX gestes, aucun des deux ne s'entend**, et c'est le piege de ce
+## correctif. Le pool d'`AudioStreamPlayer2D` est enfant de cet autoload, donc
+## dans le `World2D` de la RACINE ; le jeu vit dans celui du `SubViewport`. Un
+## `AudioStreamPlayer2D` ne s'adresse qu'aux viewports de son propre monde —
+## poser un `AudioListener2D` sur le joueur sans demenager le pool ne change rien
+## du tout, et on chercherait l'erreur dans le listener.
+##
+## Troisieme piece, invisible et mesuree : **un `SubViewport` n'est PAS une
+## oreille par defaut** — `audio_listener_enable_2d` vaut `false`, seule la
+## fenetre racine l'a a `true`. Sans l'activer, le viewport est ignore meme une
+## fois le pool au bon endroit.
+##
+## Ce que ca corrige : l'oreille etait plantee au centre de l'ecran virtuel,
+## immobile. Le panoramique disait ou le son etait SUR LA CARTE, pas par rapport
+## a soi ; avancer vers l'adversaire ne rendait pas ses pas plus forts. Rien
+## n'etait en erreur et tout etait audible — une sortie plausible.
+func poser_oreille(porteur: Node2D) -> void:
+	rendre_oreille()
+	if porteur == null or not is_instance_valid(porteur):
+		return
+	var hote := porteur.get_parent()
+	if hote == null:
+		return
+	_hote_positionnel = hote
+	for p in sfx_players_2d:
+		if is_instance_valid(p) and p.is_inside_tree():
+			p.reparent(hote, false)
+	var vue := porteur.get_viewport()
+	if vue != null:
+		vue.audio_listener_enable_2d = true
+	_oreille = AudioListener2D.new()
+	_oreille.name = "OreilleLocale"
+	porteur.add_child(_oreille)
+	_oreille.make_current()
+	# L'hote disparait a chaque reconstruction d'arene. Sans ce rappel, le pool
+	# partirait avec lui : seize voix liberees, et plus un seul son positionnel du
+	# reste de la session — sans erreur, evidemment.
+	if not hote.tree_exiting.is_connected(rendre_oreille):
+		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+
+## Ramene les voix a la maison et retire l'oreille. Idempotente a dessein : elle
+## est appelee au debut de `poser_oreille` autant qu'a la fin d'un match.
+func rendre_oreille() -> void:
+	if _oreille != null and is_instance_valid(_oreille):
+		_oreille.queue_free()
+	_oreille = null
+	if _hote_positionnel != null and is_instance_valid(_hote_positionnel):
+		if _hote_positionnel.tree_exiting.is_connected(rendre_oreille):
+			_hote_positionnel.tree_exiting.disconnect(rendre_oreille)
+	_hote_positionnel = null
+	for p in sfx_players_2d:
+		if is_instance_valid(p) and p.is_inside_tree() and p.get_parent() != self:
+			p.reparent(self, false)
 
 func set_in_match(in_match: bool) -> void:
 	is_in_match = in_match

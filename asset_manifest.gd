@@ -27,7 +27,8 @@ extends RefCounted
 ## Le panneau F3 en rend compte en jeu. L'onglet ASSETS du suivi de projet donne
 ## à Adrien la même liste, avec durées et intentions.
 
-## Taille, en octets, du flux vide produit par `generate_music_streams.gd`.
+## Taille, en octets, du flux vide qu'a produit `generate_music_streams.gd`
+## — script retire le 2026-08-25, une fois les vraies musiques livrees.
 ##
 ## **Plus aucun fichier ne la porte depuis le 2026-08-24** : les vraies musiques
 ## sont arrivées, et la détection s'est corrigée toute seule — c'était l'intérêt
@@ -53,6 +54,9 @@ const PLACEHOLDER_OGG_SIZE := 160032
 const DIR_MUSIC := "res://assets/audio/music/"
 const DIR_SFX := "res://assets/audio/sfx/"
 const DIR_SPEAKER := "res://assets/audio/speaker/"
+## Les sons de tir ont leur propre dossier depuis le 2026-08-25 : quatre
+## variantes par arme, tirees au sort a chaque coup.
+const DIR_ARMES := "res://assets/audio/weapons/"
 
 ## Chaque entrée : `f` fichier, `d` dossier, `s` durée visée (s), `w` la vague de
 ## game feel qui l'attend, `p` true si un bouche-trou occupe déjà la place.
@@ -83,14 +87,32 @@ const EXPECTED: Array = [
 	{"f": "spk_close_call.wav", "d": DIR_SPEAKER, "s": 1.2, "w": "V1.3", "p": false},
 
 	# --- Armes : corps + queue par arme -------------------------------------
-	{"f": "weapon_pistolet_body.wav", "d": DIR_SFX, "s": 0.12, "w": "V4.1", "p": false},
-	{"f": "weapon_pistolet_tail.wav", "d": DIR_SFX, "s": 0.6, "w": "V4.1", "p": false},
-	{"f": "weapon_fusil_body.wav", "d": DIR_SFX, "s": 0.15, "w": "V4.1", "p": false},
-	{"f": "weapon_fusil_tail.wav", "d": DIR_SFX, "s": 0.9, "w": "V4.1", "p": false},
-	{"f": "weapon_pompe_body.wav", "d": DIR_SFX, "s": 0.2, "w": "V4.1", "p": false},
-	{"f": "weapon_pompe_tail.wav", "d": DIR_SFX, "s": 1.2, "w": "V4.1", "p": false},
-	{"f": "weapon_arbalete_body.wav", "d": DIR_SFX, "s": 0.1, "w": "V4.1", "p": false},
-	{"f": "weapon_arbalete_tail.wav", "d": DIR_SFX, "s": 0.3, "w": "V4.1", "p": false},
+	# ⚠️ **Ces huit entrees decrivaient un decoupage corps + queue qui n'a jamais
+	# existe et n'existera pas.** Elles ont vecu ici sans que rien ne les
+	# consomme, et le panneau F3 annoncait donc huit sons manquants qui
+	# n'arriveraient jamais — pendant que les seize vrais n'etaient surveilles par
+	# personne. L'inventaire etait faux, pas le disque : le mode de defaillance
+	# exact que ce fichier existe pour empecher, retourne contre lui.
+	#
+	# Le decoupage a ete abandonne le 2026-08-25 : une queue cuite dans
+	# l'echantillon fige une piece dans l'asset, et se serait ajoutee a la reverb
+	# derivee de `grid_size` (V5.12).
+	{"f": "weapon_pistolet_01.wav", "d": DIR_ARMES, "s": 0.529, "w": "V4.1", "p": false},
+	{"f": "weapon_pistolet_02.wav", "d": DIR_ARMES, "s": 0.706, "w": "V4.1", "p": false},
+	{"f": "weapon_pistolet_03.wav", "d": DIR_ARMES, "s": 0.445, "w": "V4.1", "p": false},
+	{"f": "weapon_pistolet_04.wav", "d": DIR_ARMES, "s": 0.486, "w": "V4.1", "p": false},
+	{"f": "weapon_fusil_01.wav", "d": DIR_ARMES, "s": 0.706, "w": "V4.1", "p": false},
+	{"f": "weapon_fusil_02.wav", "d": DIR_ARMES, "s": 0.882, "w": "V4.1", "p": false},
+	{"f": "weapon_fusil_03.wav", "d": DIR_ARMES, "s": 0.529, "w": "V4.1", "p": false},
+	{"f": "weapon_fusil_04.wav", "d": DIR_ARMES, "s": 0.706, "w": "V4.1", "p": false},
+	{"f": "weapon_pompe_01.wav", "d": DIR_ARMES, "s": 1.412, "w": "V4.1", "p": false},
+	{"f": "weapon_pompe_02.wav", "d": DIR_ARMES, "s": 1.588, "w": "V4.1", "p": false},
+	{"f": "weapon_pompe_03.wav", "d": DIR_ARMES, "s": 0.882, "w": "V4.1", "p": false},
+	{"f": "weapon_pompe_04.wav", "d": DIR_ARMES, "s": 1.059, "w": "V4.1", "p": false},
+	{"f": "weapon_arbalete_01.wav", "d": DIR_ARMES, "s": 0.397, "w": "V4.1", "p": false},
+	{"f": "weapon_arbalete_02.wav", "d": DIR_ARMES, "s": 0.353, "w": "V4.1", "p": false},
+	{"f": "weapon_arbalete_03.wav", "d": DIR_ARMES, "s": 0.441, "w": "V4.1", "p": false},
+	{"f": "weapon_arbalete_04.wav", "d": DIR_ARMES, "s": 0.353, "w": "V4.1", "p": false},
 
 	# --- Impacts et ratés ----------------------------------------------------
 	{"f": "hit_center.wav", "d": DIR_SFX, "s": 0.15, "w": "V4.2", "p": false},

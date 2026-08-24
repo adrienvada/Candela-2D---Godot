@@ -1016,5 +1016,31 @@ demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de secon
 avant d'être coupée par la bascule vers le menu. Détail complet dans les
 « Pièges connus » de la feuille de route.
 
+#### Lot du 2026-08-25 — worktree `audio-oreille-et-stingers`
+
+Cinq points arbitrés par Adrien, travaillés **hors de l'arbre partagé** à sa
+demande. Fichiers touchés : `audio_manager.gd`, `game_state.gd`,
+`asset_manifest.gd`, `tools/test_musique.gd`, `tools/test_oreille.gd` (créé),
+`tools/run_suites.sh`, et deux suppressions.
+
+1. **L'oreille audio** — le jeu n'en avait aucune. Corrigé **en ligne
+   seulement** ; en écran partagé on n'y touche pas, même raison que
+   `torche_comptee`. Détail dans « Pièges connus ».
+2. **Les quatre stingers câblés.** `stinger_de_fin` est une règle pure : un kill
+   non décisif s'entend **des deux côtés** (décision d'Adrien), un kill décisif
+   donne le kill de match au vainqueur et la défaite au vaincu. En écran
+   partagé, jamais de sting de défaite — personne n'est « le » vaincu à la
+   sortie audio. ⚠️ **Au format BO1, `sting_kill` ne sort jamais** : tout kill
+   est décisif. Ce n'est pas un défaut, mais c'est un silence qu'on prendra pour
+   une panne.
+3. **`tools/generate_music_streams.gd` supprimé.** Il reconstruisait un objet
+   *plausible* d'une version antérieure — trois clips, intro disparue. Un outil
+   qui ne sait plus reproduire l'objet qu'il prétend fabriquer ne se répare pas.
+4. **`asset_manifest.gd` corrigé** : les huit entrées `weapon_*_body` /
+   `weapon_*_tail` décrivaient des fichiers qui n'existeraient jamais, et les
+   seize réels n'étaient surveillés par personne. **Le domaine « menus » n'a plus
+   de session** — Adrien me l'a explicitement confié.
+5. **`weapon_pistolet.wav` supprimé** — version « un seul fichier » abandonnée.
+
 **Republication du suivi :** je ne l'ai pas prise. La session « DA2 »
 (`uds:/tmp/cc-socks/13973.sock`) la porte et a reçu mon delta.
