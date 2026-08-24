@@ -36,6 +36,13 @@ var _samples: Array[float] = []
 var _seconds := 15.0
 var _peak_particles := 0
 var _peak_bullets := 0
+## Postes RETIRÉS de la charge. Les trois drapeaux se composent, ce qui donne les
+## sept configurations utiles sans en inventer d'autres.
+var _sans_vue := false
+var _sans_torches := false
+var _sans_shaders := false
+## Mode menus (session voisine), qui n'est pas une variante du duel.
+var _variante := ""
 ## Mesure la charge des MENUS au lieu du duel. Voir `_stress_menus()`.
 var _menus := false
 
@@ -53,7 +60,32 @@ func _ready() -> void:
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
+	# **Décomposer, parce qu'un total n'est pas une explication.**
+	#
+	# La roadmap attribuait les 7,6 ms du duel à « deux SubViewport qui rendent
+	# chacun leur jeu de lumières et d'ombres portées ». C'était une hypothèse
+	# écrite comme un fait, et jamais mesurée — la forme exacte de ce que le
+	# 2026-08-18 a passé la journée à démonter ailleurs.
+	#
+	# Trois variantes, même charge et même durée que le duel complet, chacune
+	# retirant UN poste :
+	#   --une-vue      : la seconde vue ne rend plus  → coût du double rendu
+	#   --sans-torches : les torches restent éteintes → coût des Light2D/occluders
+	#   --sans-shaders : les matériaux du joueur sautent → coût des .gdshader
+	#
+	# **Ce que ça donne et ce que ça ne donne pas.** Les postes se recouvrent :
+	# une torche éteinte allège aussi le second viewport. La somme des écarts ne
+	# fera donc pas 7,6 ms, et n'a pas à la faire. On obtient l'ORDRE DE GRANDEUR
+	# de chaque poste — pas une décomposition exacte. Le dire évite qu'on prenne
+	# plus tard ce chiffre pour plus précis qu'il n'est.
+	_sans_vue = args.has("--une-vue")
+	_sans_torches = args.has("--sans-torches")
+	_sans_shaders = args.has("--sans-shaders")
+	if args.has("--menus"):
+		_variante = "--menus"
+
 	print("=== Banc de cadence d'image ===")
+	print("Charge: %s" % _libelle_charge())
 	print("Plafond: %s | vsync: désactivé" % ("aucun" if Engine.max_fps == 0 else str(Engine.max_fps)))
 
 	_main = preload("res://main.tscn").instantiate()
@@ -98,6 +130,7 @@ func _ready() -> void:
 
 	print("Manche lancée — armes : %s / %s" % [
 		_main.p1.current_weapon.name, _main.p2.current_weapon.name])
+	_appliquer_variante()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	await _stress(WARMUP_SEC, false)
 
@@ -242,7 +275,10 @@ func _stress(duration: float, sampling: bool) -> void:
 		_main.p2.global_position = _main.p1.global_position + Vector2(DUEL_DISTANCE, 0.0)
 		for p in [_main.p1, _main.p2]:
 			p.hp = 100.0
-			p.flashlight_on = true
+			# Torches éteintes : c'est le seul geste du duel qu'on retire, et il
+			# emporte avec lui les Light2D, leurs ombres portées et la
+			# rétrodiffusion. Le reste de la boucle est identique au mot près.
+			p.flashlight_on = not _sans_torches
 			if p.shoot_cooldown <= 0.0:
 				p.shoot()
 		# Se viser mutuellement : les balles portent, donc les impacts aussi.
@@ -260,6 +296,60 @@ func _stress(duration: float, sampling: bool) -> void:
 			# banc prétendrait mesurer une charge qu'il n'aurait pas prouvée.
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
 			_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
+
+
+## Retire UN poste de la charge, une fois la manche lancée.
+##
+## Après le lancement et avant l'échauffement : la manche doit démarrer dans les
+## mêmes conditions que le duel complet — un décompte qui échouerait faute de
+## seconde vue mesurerait autre chose que ce qu'on croit — et l'échauffement doit
+## voir la charge définitive, sinon il chargerait des shaders qu'on vient de
+## retirer.
+func _libelle_charge() -> String:
+	if _variante == "--menus":
+		return "menus"
+	var retires: Array[String] = []
+	if _sans_vue: retires.append("sans 2e vue")
+	if _sans_torches: retires.append("sans torches")
+	if _sans_shaders: retires.append("sans shaders")
+	if retires.is_empty():
+		return "duel complet"
+	if retires.size() == 3:
+		return "socle nu (tout retiré)"
+	return "duel " + ", ".join(retires)
+
+func _appliquer_variante() -> void:
+	if _sans_vue:
+		# `UPDATE_DISABLED` et non `hide()` : un conteneur caché laisse le
+		# SubViewport rendre dans son coin, et on mesurerait le même coût en
+		# croyant l'avoir retiré.
+		_main.vp2.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		print("RETIRÉ: seconde vue arrêtée")
+	if _sans_shaders:
+		var retires := 0
+		for joueur in [_main.p1, _main.p2]:
+			retires += _demateriauser(joueur)
+		# Un zéro dirait que la variante n'a rien changé, et le banc mesurerait le
+		# duel complet sous un autre nom — le mode de défaillance de la journée.
+		if retires == 0:
+			printerr("✗ aucun matériau retiré : la variante ne mesure rien")
+			_sortir(1)
+			return
+		print("RETIRÉ: %d matériaux des joueurs" % retires)
+	if _sans_torches:
+		print("RETIRÉ: torches maintenues éteintes")
+
+## Retire tous les `.material` d'un sous-arbre. Rend le compte — un zéro dirait
+## que la variante n'a rien changé, et le banc mesurerait le duel complet sous
+## un autre nom.
+func _demateriauser(racine: Node) -> int:
+	var n := 0
+	for enfant in racine.get_children():
+		if enfant is CanvasItem and (enfant as CanvasItem).material != null:
+			(enfant as CanvasItem).material = null
+			n += 1
+		n += _demateriauser(enfant)
+	return n
 
 
 func _report() -> void:
@@ -285,7 +375,7 @@ func _report() -> void:
 		somme_lentes += sorted[i]
 	var low1 := float(lents) / somme_lentes
 
-	print("\n=== RÉSULTAT ===")
+	print("\n=== RÉSULTAT (%s) ===" % _libelle_charge())
 	print("  Images mesurées  : %d en %.1f s" % [sorted.size(), total])
 	print("  FPS moyen        : %.0f" % avg)
 	print("  FPS médian       : %.0f" % (1.0 / sorted[sorted.size() / 2]))

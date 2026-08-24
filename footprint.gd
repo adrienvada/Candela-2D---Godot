@@ -1,6 +1,8 @@
 extends Node2D
 class_name Footprint
 
+const Charte := preload("res://charte.gd")
+
 ## Empreinte de pas éphémère (module D1).
 ##
 ## Une petite semelle sombre posée au sol à chaque pas. Elle n'est PAS unshaded :
@@ -19,7 +21,7 @@ const FOOTPRINT_TTL := 2.0
 
 ## Sombre et semi-transparente : sous la torche elle se lit comme une salissure
 ## du sol, pas comme un marqueur de HUD.
-const SOLE_COLOR := Color(0.06, 0.06, 0.08, 0.55)
+const SOLE_COLOR := Color(Charte.SOL_A * 0.6, 0.55)
 
 ## Décalage latéral gauche/droite (px). Sans lui les pas s'alignent en pointillé
 ## de métronome ; avec, la trace évoque une vraie démarche.

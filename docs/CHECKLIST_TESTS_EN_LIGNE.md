@@ -80,6 +80,23 @@ proche de 120 ms une fois la partie lancée.)
 
 ## 4. Connexion pendant une killcam ou une fin de manche
 
+> ✅ **Tranché par Adrien le 2026-08-19 : « on laisse terminer sa killcam même si
+> l'autre joueur se déconnecte », et « le message tout de suite après ».**
+>
+> La checklist avait raison, le code avait tort — il coupait. **Ce n'était pas une
+> ligne à retirer :** cinq gestes du chemin de déconnexion écrasaient la killcam
+> qu'on veut préserver (le jeton qui rend la séquence caduque, la restauration des
+> vues, le dialogue qui la recouvre, le passage en bac à sable, la remise à zéro
+> du décompte). La forme retenue est de **différer tout ce qui touche à l'écran**.
+>
+> **Restent immédiats** : l'archivage du forfait — il lit des valeurs que la suite
+> efface — et la purge de P2. Sans elle, l'hôte continuerait à simuler
+> l'adversaire sur sa dernière commande **torche allumée, pendant toute la
+> killcam** : une lumière orpheline qui éclaire pour un joueur qui n'existe plus.
+>
+> Vérifié par `./tools/run_duo.sh --ralenti`.
+
+
 | # | Action | Attendu |
 |---|--------|---------|
 | 4.1 | Manche en cours à deux, B meurt ; pendant la killcam de A, tuer le processus de B, le relancer et rejoindre immédiatement | A termine **sa killcam en entier** (ni coupée, ni accélérée, ni recouverte par un écran d'attente), puis la manche démarre pour les deux |

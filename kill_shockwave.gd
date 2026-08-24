@@ -1,6 +1,8 @@
 extends Node2D
 class_name KillShockwave
 
+const Charte := preload("res://charte.gd")
+
 ## V2.4 — Onde de choc du kill.
 ##
 ## Au kill, un double anneau lumineux part du corps de la victime et traverse
@@ -44,8 +46,10 @@ const INNER_ALPHA := 0.4
 ## Composantes sur-unitaires comme le Core des balles (bullet.gd) : en blend
 ## additif elles saturent vers le blanc au départ — c'est le « vif » voulu —
 ## et l'alpha mourant ramène naturellement la teinte dorée sous-jacente.
-const OUTER_COLOR := Color(1.8, 1.5, 0.8)
-const INNER_COLOR := Color(1.0, 0.12, 0.08)
+# Anneau extérieur : la lumière du feu, poussée en surexposition par l'additif.
+const OUTER_COLOR := Color(Charte.AMBRE * 1.9, 1.0)
+# Cœur : le rouge de la faute, à l'instant où elle est commise.
+const INNER_COLOR := Charte.ROUGE
 
 var _age := 0.0
 

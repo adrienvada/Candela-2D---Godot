@@ -4,11 +4,23 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-18
+> Dernière mise à jour : 2026-08-24
 >
-> **Plus aucune session parallèle.** Une seule branche, `main`, un seul arbre de
-> travail. Les dix worktrees d'agents et les six branches périmées ont été
-> retirés : tous les livrables étaient déjà versionnés dans `main`.
+> ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
+> ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
+> **quatre sessions y travaillent**, dont une qui **pousse sur `origin`** et ne
+> reçoit aucun message : son seul canal est le dépôt, comme le prévoit
+> [docs/JOURNAL_SESSIONS.md](JOURNAL_SESSIONS.md).
+>
+> **Lire ce journal AVANT d'écrire dans un fichier.** Il porte une table de
+> domaines — qui tient quel fichier — et les intentions annoncées par chaque
+> session. Cette ligne-ci le faisait passer pour une archive ; il ne l'est pas.
+>
+> Ce que l'oubli a produit le 2026-08-18 : **V6.2 implémentée deux fois**, de
+> deux façons correctes, dans deux fichiers différents — le journal l'attribuait
+> pourtant explicitement, et laissait V6.1 à l'autre session. Et plusieurs
+> fichiers du domaine « game feel » (`player.gd`, `audio_manager.gd`,
+> `game_state.gd`) modifiés par une session qui ne les tenait pas.
 
 ---
 
@@ -37,6 +49,7 @@ décision se juge à cette double aune.
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
 | 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
+| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-18** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -2191,10 +2204,122 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
   d'architecture — il manque juste l'état persistant à afficher, pas la
   liberté de naviguer).
 
+## À trancher — le HUD montre l'adversaire en ligne
+
+**Découvert le 2026-08-18 en cherchant si un tremblement de cercle de recharge
+pouvait fuiter. Il y a beaucoup plus gros au même endroit.**
+
+`_build_player_hud(0)` et `_build_player_hud(1)` sont tous deux ajoutés au HUD de
+match, et **rien ne masque celui de l'adversaire en ligne**. Chaque joueur voit
+donc, en temps réel et sans rien éclairer :
+
+- **les points de vie de l'autre** (`p2_hp.value = p2.hp`, valeur autoritaire) ;
+- **son cercle de recharge**, donc l'instant exact où son arme redevient prête ;
+- l'état de sa torche et son éblouissement.
+
+**C'est légitime en écran partagé** — deux joueurs côte à côte, chacun voit
+l'écran de l'autre de toute façon. **En ligne, c'est une autre affaire :** le jeu
+tient dans la phrase « la seule information est la lumière », et savoir que
+l'adversaire est à 20 PV ou que son pompe redevient prêt dans 0,3 s est une
+information qu'aucune torche n'a payée.
+
+**Ce document ne tranche pas.** Cela peut être un choix assumé — beaucoup de jeux
+de duel montrent les deux barres, et cela rend la fin de match lisible. Mais rien
+n'indique que quiconque l'ait décidé pour CE jeu, et c'est exactement le motif du
+2026-08-18 : une **description d'implémentation** qui se transmet comme une
+intention.
+
+**Si c'est à corriger, c'est petit** : masquer le panneau adverse quand
+`NetworkManager.current_mode` n'est pas `LOCAL_SPLITSCREEN`, comme
+`_restore_viewports()` le fait déjà pour les vues.
+
+---
+
+## Phase 9 — Mise à jour du jeu installé 🟡 ÉCRITE, PAS ENCORE ÉPROUVÉE
+
+Demandée par Adrien le 2026-08-18 : « un endroit du menu où je clique sur mettre
+à jour, et une mise à jour automatique se lance ». Trois façons de faire ont été
+comparées ; celle-ci — remplacement du bundle depuis les Releases GitHub, avec un
+manifeste conçu dès le premier jour pour accueillir aussi les correctifs légers —
+a été retenue **parce qu'elle est la seule qui rende le bouton demandé** sans
+dépendre d'un lanceur tiers.
+
+### Ce que le refus symétrique change au problème
+
+`Protocol.accepts()` refuse dans les deux sens : dès qu'une version publiée
+touche au fil, la population se coupe en deux moitiés qui ne se voient
+littéralement pas. Le critère de conception n'est donc pas « est-ce que ça met à
+jour » mais **combien de temps deux versions coexistent dans la nature**. C'est
+ce qui justifie le chemin `.pck` : quatre mégaoctets referment la fracture en
+trois secondes là où cent la laissent ouverte une soirée.
+
+### Le niveau d'obligation — tranché par Adrien le 2026-08-18 : refus poli
+
+Rien n'est bloqué. Le jeu démarre, l'écran scindé, l'entraînement et l'éditeur de
+cartes fonctionnent avec une version de retard. La seule chose qui cesse —
+trouver un adversaire en ligne — **a déjà cessé toute seule**, et l'écran de mise
+à jour se contente de la nommer. L'alternative (mise à jour forcée) transformerait
+une gêne en panne : un jeu qui refuse de démarrer tant qu'on n'a pas téléchargé
+cent mégaoctets est un jeu qu'on n'ouvre pas ce soir-là.
+
+### Ce qui est livré
+
+| Pièce | Ce qu'elle garantit |
+|---|---|
+| `update_manifest.gd` | Lecture, comparaison de versions, choix du paquet, signature. Aucun réseau : **tout le jugement est vérifiable en headless** |
+| `update_installer.gd` | Racine d'installation, décompression, script d'échange, correctif. Le seul fichier qui sache ce qu'est un `.app` |
+| `update_manager.gd` (autoload) | Enchaînement et mise en mots. L'écran ne compare aucun état lui-même |
+| `patch_loader.gd` (autoload, **déclaré en premier**) | Monte le `.pck` avant tout autre autoload, avec témoin de démarrage et quarantaine |
+| `screen_update.gd` + entrée du hub | Le bouton demandé |
+| `tools/fabrique_manifeste.sh` | Le manifeste n'invente rien : version, protocole et empreintes sont lus aux sources |
+| `.github/workflows/release.yml` | Sur tag seulement : cohérence tag/version, suites vertes, export, signature, publication |
+| `tools/test_mise_a_jour.gd` | **110 contrôles**, dont la chaîne de signature complète et le script d'échange. Le lanceur compte désormais 37 exécutions (33 suites en `--script`, quatre bancs en scène) |
+
+### Ce qui a été vérifié pour de vrai, et ce qui ne l'a pas été
+
+Vérifié en exécution, ici :
+
+- **la chaîne de signature de bout en bout** — une signature `openssl` RSA-4096
+  SHA-256 détachée est acceptée par `Crypto.verify()` de Godot, et un seul octet
+  modifié dans le manifeste la fait refuser. C'était le point d'intégration le
+  plus risqué : deux bibliothèques différentes devaient s'accorder sans jamais
+  se parler ;
+- **les deux exports depuis un runner Linux** — Windows (50 Mo) et macOS (101 Mo)
+  sortent tous les deux, et le manifeste se fabrique dessus ;
+- **la moitié réversible du remplacement** — sur la vraie archive Windows de
+  50 Mo : le dossier d'étape se crée à côté de l'installation, l'archive s'y
+  décompresse, l'installation en place n'est pas touchée, et une archive qui ne
+  contient pas ce qu'elle annonce est refusée en nommant ce qu'elle contient.
+
+**Pas vérifié, et il faut le dire :** l'échange lui-même n'a jamais tourné sur
+une vraie machine — il demande un jeu exporté, installé, et une version publiée.
+Le script est éprouvé par lecture (il attend la fermeture du processus, garde
+l'ancienne installation, sait revenir en arrière), ce qui n'est pas la même chose
+que de l'avoir vu marcher. C'est le jalon H9.
+
+### Ce qui reste
+
+1. **H8 — la paire de clés.** Deux commandes `openssl`, la publique dans
+   `update_manager.gd`, la privée dans les secrets GitHub. Tant qu'elle manque,
+   l'écran affiche « mises à jour non configurées » et ne télécharge rien.
+2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
+   installer et mettre à jour sur une vraie machine.
+3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
+   Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
+   pas de translocation, un dossier et un `.exe`.
+
+Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
+
+---
+
 ## Décisions actées
 
 | Décision | Raison |
 |---|---|
+| **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
+| **Le regard suit le joueur, pas le score** (2026-08-19) | Le suivi de caméra vivait dans `if round_active:` — « une manche **comptée** est en cours ». L'entraînement désarme volontairement cette manche : la caméra n'était donc **jamais** mise à jour de toute la session, et le joueur sortait du cadre. Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au classement. **C'est l'entraînement, le seul mode qui sépare les deux, qui a révélé la confusion** — et il a fallu qu'Adrien le signale, aucun test ne regardait où était la caméra. |
+| **Là où l'interface enseigne, l'absence est une réponse et l'estimation est un mensonge** (2026-08-18) | La règle existait déjà dans le dépôt sous trois noms différents — « ne jamais inventer un chiffre que le serveur n'a pas donné », le **tiret** plutôt que le zéro dans le classement, et « vide plutôt qu'approximatif » pour la trajectoire de killcam. C'est la même, et elle mérite un nom unique. **Une trajectoire fausse enseigne une leçon fausse ; un classement approximatif apprend un faux niveau ; un « adversaire prêt » deviné fait attendre pour rien.** Le critère n'est pas « a-t-on une valeur ? » mais « cette valeur va-t-elle être **apprise** ? » — si oui, ne rien montrer bat toujours une estimation, parce qu'une absence se remarque et se corrige, tandis qu'une estimation s'intègre. |
+| **L'écran partagé n'existe que dans « 1v1 écrans scindés »** (2026-08-18, Adrien) | Ce document affirmait que l'écran partagé permanent était « une décision de conception du jeu, présente même en ligne ». **C'était faux, et personne ne l'avait décidé** — une description d'architecture (`CLAUDE.md`) transformée en intention par la session qui rédigeait. Adrien l'a relevée : « je ne crois pas que le deuxième écran permanent soit l'identité du jeu ». La règle est maintenant explicite : **une seule vue partout ailleurs**, en ligne comme à l'entraînement. Le comportement d'affichage l'appliquait déjà ; ce qui manquait, c'est que le **rendu** le suive — la vue cachée dessinait encore, pour 1,5 ms mesurées. |
 | **Le flash de tir éblouit** (2026-08-18, Adrien) | Le geste le plus lumineux du jeu ne coûtait rien à celui qui le déclenche. Pic instantané de 0,6 à bout portant, éteint au-delà de 600 px, pondéré par `muzzle_flash_intensity` — l'arbalète (0,1) reste l'arme discrète, par le réglage qui servait déjà au rendu. Pas de cône (un canon crache dans toutes les directions), mais une ligne de vue : un mur arrête un flash comme il arrête un faisceau. Conséquence de jeu assumée : **le premier tir manqué à bout portant devient une ouverture pour l'adversaire**, alors qu'il était jusqu'ici sans conséquence. |
 | **On est éblouissable de dos** (2026-08-18, Adrien) | L'orientation de la victime n'entre pas dans le calcul : une torche braquée sur sa nuque éblouit. C'est une **décision**, pas un oubli — dans un jeu où la lumière est la seule information, être pris dans un faisceau doit coûter quelque chose quelle que soit la direction du regard, et la règle inverse rendrait le duel dos-à-dos illisible. À rouvrir si le jeu s'en trouve confus. |
 | **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard, sur un effet qui dure une seconde et demie. |
@@ -2219,12 +2344,296 @@ automatique, confirme tout ce qui précède et ajoute deux manques que les
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
+| **Mise à jour : refus poli, jamais forcée** (2026-08-18, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
+| **Rien ne s'installe sans signature valide** (2026-08-18) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
+| **Publier est un geste humain** (2026-08-18) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
 | **PostgREST appelé directement, sans `supabase-js`** | Décision du 2026-08-16. Deux appels de fonction ne justifient pas de faire dépendre d'un paquet distant la seule porte d'entrée du classement. Tout tient en `fetch`, et `deno check` fonctionne hors ligne. |
+
+---
+
+## ~~À creuser — la killcam s'arrête avant le moment fatal~~ — **FAUSSE ALERTE**
+
+**Signalé le 2026-08-18, retiré le même jour. Le défaut n'existe pas : c'était le
+banc qui le fabriquait.**
+
+L'instrumentation montrait le rejeu s'arrêtant à l'index 185 alors que
+`impact_frame` valait 203, et j'en ai conclu que la killcam ne montrait jamais la
+mort. **Sauf que le scénario mesuré était la famille 5.3 — celui où le client se
+coupe brutalement PENDANT le ralenti.** `_on_peer_disconnected` appelle
+`_abort_killcam()` (ligne 381), qui pose `playing_back = false` et rend
+`time_scale` à 1,0. **Le rejeu s'arrêtait parce que mon propre test venait de
+tuer le pair.** C'est le comportement attendu, et c'est même exactement ce que ce
+banc doit vérifier.
+
+Un test unitaire écrit pour trancher l'hypothèse concurrente — un tampon plus
+court que l'ancre — l'écarte aussi : `tools/test_rejeu.gd::_test_ancre_dans_le_tampon`
+vérifie que l'ancre tombe dans le tampon et qu'il reste des images après elle.
+
+**Ce que ça coûte d'écrire quand même :** j'ai attribué au jeu un effet produit
+par mon instrument, et je l'ai consigné comme « mesuré, reproductible ». Il
+l'était — reproductible parce que le banc le reproduisait. **Une mesure
+reproductible n'est pas une mesure d'autre chose que soi tant qu'on n'a pas
+écarté l'instrument.** C'est la même famille que les trois relevés de cadence de
+la journée, cette fois avec l'expérimentateur dans la mesure.
+
+**Ce qui reste vrai et utile :** le ralenti s'engage bien (0,063 mesuré, ancres
+valides), et sa fenêtre est **courte** — quelques dixièmes de seconde, ce qui
+suffit à rendre instable toute assertion qui l'échantillonne. C'est la raison
+pour laquelle la seconde moitié de la famille 2 a été retirée.
+
+---
+
+## ⚠️ À ÉTABLIR — la reconnexion pendant une killcam ne rend pas la main
+
+**Banc écrit, rouge, et volontairement HORS du lanceur** (`./tools/run_duo.sh
+--reconnexion`, famille 4.1). Il exerce le seul scénario à trois processus : le
+client meurt, quitte pendant la killcam de l'hôte, **et revient**.
+
+**Ce qu'il montre, reproduit à chaque exécution :**
+
+- l'hôte voit bien le retour (`ADVERSAIRE: revenu`) et sa killcam va à son terme ;
+- mais **aucune entrée `PRÊT` n'est visible ensuite** sur l'écran `local_hote` —
+  le salon est là, la porte ne s'ouvre pas ;
+- et **le client revenu perd le lien** (« Trying to call an RPC while no
+  multiplayer peer is active »).
+
+**La cause n'est pas établie, et c'est pour ça que rien n'est corrigé.** Deux
+modifications ont été faites au code de production en poursuivant ce symptôme
+avant de comprendre qu'elles n'en étaient pas la cause. Elles se défendent
+séparément et restent — ne pas annoncer une déconnexion à quelqu'un dont
+l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais **il faut
+les lire comme des améliorations indépendantes, pas comme un correctif de ce
+défaut-ci**.
+
+**La leçon de méthode, sous une forme neuve :** « on croit débuguer, on est en
+train de renoncer » a un cousin — **on croit corriger, on est en train de
+déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
+le code a été modifié quand même.
+
+**Deux pistes examinées, deux écartées — et c'est le plus utile de cette entrée.**
+
+1. ~~« `client_peer_id` n'est pas reposé pour le second client »~~ — **faux** :
+   `_on_peer_connected` le pose (ligne 332). Vérifié par lecture.
+2. ~~« le chemin différé parque le jeu en solo alors qu'un pair est là » —
+   J2 caché, sans collision, remplacé par la cible d'entraînement~~. Cette
+   incohérence **est réelle**, mais la corriger **ne fait pas passer le banc** :
+   ce n'est donc pas la cause. Le correctif a été **retiré**.
+
+**Ce qui reste vrai et candidat, sans preuve** : parquer en solo alors qu'un pair
+est connecté est incohérent, et mérite d'être corrigé un jour — mais **comme une
+amélioration propre, pas comme le correctif de ce défaut-ci**.
+
+⚠️ **Trois modifications du code de production ont été faites en poursuivant ce
+symptôme, aucune n'était la cause, et la troisième l'a été après avoir écrit la
+règle qui l'interdit.** Le geste juste, appliqué à la troisième : revenir en
+arrière. Un chemin de netcode ne se répare pas par tâtonnements — chaque essai
+non concluant y laisse un changement dont personne ne saura dire pourquoi il est
+là.
+
+**Pour qui reprendra :** commencer par instrumenter ce que voit le bloc salon
+(`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
+deviner ce qui manque en amont.
 
 ---
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un `.godot` périmé fait échouer les bancs à deux instances, et l'erreur ment (2026-08-24)
+
+Après une fusion qui apporte des fichiers neufs — polices, et surtout des
+scripts portant un `class_name` — le cache d'import n'est plus à jour. Godot ne
+retrouve alors ni `UpdateManifest` ni `UpdateInstaller`, l'autoload
+`update_manager.gd` **ne compile pas**, et tout ce qui suit s'écroule.
+
+**Ce qu'on voit n'a aucun rapport avec la cause.** Le banc annonce « l'hôte n'a
+pas ouvert de salon en 60 s », puis déroule vingt lignes de
+`Invalid assignment of property 'offset' … on a base object of type 'Nil'` dans
+`game_state._process`. On cherche une régression de caméra ; il n'y en a pas.
+La caméra est nulle parce que `_ready` n'est jamais allé jusqu'à
+`_setup_players()`, et le `tail -20` du journal d'hôte ne montre que la fin de
+la cascade — jamais la ligne qui l'a déclenchée.
+
+Deux réflexes, dans cet ordre : **lire le DÉBUT du journal d'hôte**, pas sa fin ;
+et après tout `git merge`/`git pull` qui apporte des fichiers, lancer
+`godot --headless --path . --import` avant les suites. Ouvrir le projet dans
+l'éditeur fait la même chose — c'est pour ça que le piège ne se voit pas sur le
+poste d'Adrien, seulement dans une session qui ne lance jamais l'éditeur.
+
+Accessoirement, le cache périmé coûte aussi du temps : le même lot est passé de
+**898 s à 202 s** une fois l'import refait.
+
+### 53 suites vertes, et un écran de menu entièrement invisible (2026-08-24)
+
+**Le lot complet est passé — 229 s, code 0, aucune erreur de script — pendant que
+la colonne de gauche du hub était à `modulate.a = 0` après chaque navigation.**
+Toute la liste d'entrées d'un écran, invisible. Seul le liseré de sélection
+restait à l'écran, parce qu'il vit dans un nœud séparé du corps de l'écran : ce
+qu'on voyait était un cadre bleu vide au-dessus du vide.
+
+**C'est la planche de contact qui l'a montré**, à son premier emploi réel dans ce
+chantier. `test_vitrine_menus` et `test_menu_hub` étaient verts : ils vérifient
+que les entrées existent, sont atteignables au curseur et retrouvent leur alpha
+après une coulée d'encre — **jamais qu'elles sont visibles à l'instant où on
+regarde l'écran**.
+
+C'est la formule déjà écrite le 2026-08-19, confirmée une troisième fois : **on
+mesure ce qui s'écrit, pas ce qui se voit.** Et le corollaire tient : `run_visuel.sh`
+n'est pas une politesse de fin de tâche, c'est le seul contrôle du dépôt qui
+regarde.
+
+**La cause :** voir l'entrée suivante.
+
+### Godot efface les commentaires de `project.godot` (2026-08-24)
+
+Le réglage `gui/theme/custom_font` avait été posé avec douze lignes expliquant
+*pourquoi* la fonte d'interface vit là plutôt que Control par Control. **Elles
+ont disparu au premier enregistrement de l'éditeur**, qui réécrit le fichier
+dans son ordre canonique et n'y garde aucun commentaire. Le réglage, lui, a
+survécu — donc rien ne signale la perte.
+
+**Un commentaire dans un fichier regénéré est un commentaire qu'on écrit pour
+soi.** L'explication a été déplacée dans `charte.gd`, à côté de `CHEMIN_UI`.
+Vaut pour `project.godot`, les `.import`, et tout ce que l'éditeur réécrit.
+
+### Une propriété qui se pose sans effet et sans erreur (2026-08-24)
+
+**Deux fois dans la même heure, en câblant les fontes.** On écrit quelque chose
+de correct, la propriété se relit correctement, et **le rendu ne change pas d'un
+pixel**. C'est la famille de défaut la plus chère du dépôt — la même que les noms
+de nœuds auto-générés de la Phase 3, un cran plus bas.
+
+1. **`opentype_features = {"tnum": 1}` sur une fonte qui n'a pas la
+   fonctionnalité.** Le dictionnaire contient bien la clé ; les chiffres restent
+   proportionnels. Le chrono continue de sauter, et rien ne le dit.
+2. **`variation_opentype = {"wght": 900}` avec une clé en CHAÎNE.** Seul le tag
+   **entier** agit (`2003265652`). Mesuré sur « CANDELA » en 40 px : 75 px de
+   large quelle que soit la graisse avec la chaîne, 75 → 131 px avec l'entier.
+   Sans cette mesure, le dépôt aurait remplacé son faux gras par un autre faux
+   gras, en annonçant l'avoir supprimé.
+3. **`Object.set("modulate:a", 0.5)` — la plus chère des trois.** `tween_property`
+   accepte les chemins de sous-propriété, et une bonne moitié des animations du
+   dépôt sont écrites ainsi. `set()`, lui, cherche une propriété portant ce nom
+   **littéral**, ne la trouve pas, et se tait. Vérifié : `set("modulate:a", 0.4)`
+   laisse l'alpha à 1,0 ; `set_indexed(NodePath("modulate:a"), 0.7)` le pose. Le
+   premier jet de `Charte.animer()` employait `set` — d'où l'écran de menu
+   invisible de l'entrée précédente.
+
+**La parade est la même dans les deux cas, et elle est générale : contrôler
+l'EFFET, jamais le réglage.** `tools/test_charte.gd` mesure la largeur de deux
+graisses et exige qu'elles diffèrent ; il mesure les dix chiffres et exige qu'ils
+soient égaux. Un contrôle qui relirait la propriété passerait au vert dans les
+deux cas fautifs.
+
+### `Color × float` multiplie aussi l'opacité (2026-08-24)
+
+`ROUGE * 0.58` rend un rouge sombre **et à moitié transparent**. Une teinte
+baissée n'est pas une teinte effacée : les dérivées de la charte sont opaques,
+donc les facteurs portent sur les trois canaux et le banc compare en RVB. Relevé
+par `test_charte` à son tout premier lancement — ce qui vaut mieux que de le
+découvrir sur une tache de sang qu'on voit à travers.
+
+### Un identifiant manquant dans `ui.gd` fait pendre trois suites (2026-08-24)
+
+Une passe mécanique a écrit `T_DECOMPTE` dans `ui.gd` sans que la constante y
+soit déclarée. **Une seule erreur d'analyse**, et le lot rend : six suites en
+échec, **trois qui ne sortent pas du tout** (chien de garde à 120 s), plus une
+cascade de `SCRIPT ERROR` désignant `game_state.gd:1099` — du code que personne
+n'avait touché, et qui échouait parce que `ui.gd` ne se chargeait pas.
+
+**Ce que ça confirme, et qui était déjà écrit ici : le message désigne le fichier
+qui appelle, pas celui qui ne compile pas.** La bonne réaction a été de refuser de
+« corriger » `game_state.gd` et d'aller chercher le `Parse Error`. La mauvaise
+aurait été de toucher au netcode.
+
+**Corollaire pour toute passe automatique sur des identifiants :** vérifier que
+chaque symbole introduit est déclaré, avant de lancer le lot. `grep` le fait en
+deux secondes ; le lanceur met dix minutes à le dire mal.
+
+### Ne pas éditer `run_suites.sh` pendant qu'il tourne — repayé (2026-08-24)
+
+Le piège était consigné plus bas depuis le 2026-08-18. Il a quand même été repayé
+le 2026-08-24 : une ligne ajoutée à `SUITES=(…)` **pendant** l'exécution du lot,
+pour y déclarer `test_charte`. Le lot a été arrêté et relancé, `bash -n` a
+confirmé que le fichier était intact — mais dix minutes de mesure étaient perdues.
+
+**Connaître un piège ne protège pas de lui.** Ce qui protège, c'est de ne pas
+avoir la main sur le fichier au moment où il s'exécute : ajouter la suite
+**avant** de lancer, ou après.
+
+### Un commentaire décrit une intention, on le relit comme un constat (2026-08-19)
+
+Au-dessus de `ui.show_waiting_for_opponent()`, dans `_annoncer_deconnexion()`,
+un commentaire affirmait en gras : « **le retour au salon a lieu dans TOUS les
+cas** […] c'est lui qui ramène le menu ». Il avait été écrit **en corrigeant ce
+défaut-là**. `show_waiting_for_opponent()` n'allume qu'un **label du HUD de
+match** — aucun menu n'est ramené, et l'hôte restait dans son arène sans aucun
+moyen de se déclarer prêt.
+
+**Deux passes perdues à raisonner à partir de ce commentaire**, plus un
+diagnostic voisin cohérent et faux (`game_over` qui aurait fermé le menu). Ce
+qui a tranché, ce sont **trois sondes** : ne pas refermer → rouge ; rouvrir seul
+→ rouge ; rouvrir **et** ne pas refermer → vert. Le mécanisme concurrent était
+un **second** verrou, jamais le premier.
+
+**Sonder, pas raisonner, dès qu'un commentaire tient lieu de preuve.**
+
+### Famille 4.1 — le vrai fond n'est pas le menu (2026-08-19, OUVERT)
+
+Le menu réparé, le banc reste rouge pour une **autre** cause, mesurée : sur
+l'hôte, `multiplayer.multiplayer_peer` est **null immédiatement après le départ
+du client** (348 « No multiplayer peer is assigned » dans le journal). Le
+serveur est démonté, donc **aucune reconnexion n'est possible** — ce n'est pas
+un artefact de banc, c'est le jeu.
+
+Piste, non confirmée : `_close_lobby_if_left()` dans `ui.gd` coupe le salon dès
+qu'un changement d'écran survient alors que `get_peers()` est vide. Fichier
+d'une autre session, qui a été prévenue.
+
+
+### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)
+
+Le lot des suites headless a pris **3672 s — soixante-et-une minutes** un soir,
+contre **111 s** le lendemain sur le même code. Une suite lancée seule prend
+**2,6 s**. La différence est la **contention** : plusieurs sessions lançaient
+Godot en même temps, charge moyenne à **10**.
+
+**Ce que ça a failli coûter :** un mode `--rapide` a été ajouté sur l'hypothèse
+que les six scénarios à deux instances « coûtaient l'essentiel ». Mesuré, c'est
+faux — ils valent ~5 min sur les 222 s… non, sur un lot complet **de 222 s au
+calme**, dont ~110 s pour eux. Le mode reste utile, mais son commentaire
+affirmait une cause qui n'était pas la bonne, et il aurait envoyé le suivant
+optimiser le mauvais endroit.
+
+**Avant de découper, d'optimiser ou d'accuser une suite : regarder `uptime`.**
+C'est le même motif que le banc de cadence — un chiffre qui mesure la machine et
+qu'on prend pour une propriété du code.
+
+
+### Un percentile ne se mesure pas en un passage (2026-08-18)
+
+Le 1 % bas varie d'un relevé à l'autre **sur la même configuration** : 163, 169
+puis 139 dans les menus ; 97 puis 81 dans le duel. La médiane, elle, ne bouge pas
+d'une image.
+
+Une explication structurelle avait été inventée pour le rendre acceptable — « la
+charge des menus est ponctuée, celle du duel est continue » — et elle a tenu une
+demi-journée avant que le duel donne 81. **Attribuer à la charge ce qui appartient
+à l'instrument produit une règle qu'on va appliquer** ; c'est la forme d'erreur la
+plus coûteuse, plus qu'un chiffre faux.
+
+**La règle : la médiane tranche partout, le 1 % bas nulle part sans répétition.**
+Un 1 % bas ne s'énonce qu'avec sa dispersion, sur plusieurs relevés.
+
+### Lire le premier nombre d'une ligne dont le libellé en contient un (2026-08-18)
+
+`grep -oE '[0-9]+' | head -1` sur « `FPS 1 % bas : 97` » rend **1**, le chiffre du
+libellé. La première version de `run_decomposition.sh` a rapporté « 1 % bas = 1 »
+pour ses sept relevés.
+
+**On a été sauvés par l'absurdité du résultat.** La même erreur sur un libellé
+sans chiffre — ou décalée d'un cran — aurait rendu **97** : plausible, faux, et
+indétectable. Extraire **après le séparateur** (`sed -n 's/.*: *\([0-9]*\).*/\1/p'`),
+jamais le premier nombre de la ligne.
 ### L'éblouissement n'a jamais fonctionné, et trente suites étaient vertes (2026-08-18)
 
 Adrien : « j'ai l'impression que l'effet d'éblouissement ne fonctionne pas ».
@@ -3027,6 +3436,49 @@ quoi : le message liste des chaînes vides. Passer par
 
 ---
 
+**Mise à jour du jeu installé**
+- **Le bundle macOS ne s'appelle pas comme l'exécutable.** Godot le nomme d'après
+  `config/name` : c'est « Candela 2D.app », avec l'espace, alors que l'export
+  Windows produit `Candela.exe` dans un dossier `Candela`. Le manifeste annonce
+  cette racine et le jeu la vérifie **avant** de remplacer quoi que ce soit — une
+  racine annoncée à tort ne se découvrirait qu'après la fermeture du jeu, au seul
+  moment où plus rien ne peut le dire. Relevé sur un export réel le 2026-08-18.
+- **Le paquet macOS est universel, l'annoncer « x86_64 » le condamne.** Godot
+  exporte un binaire x86_64 + arm64 ; un manifeste qui déclare une architecture
+  ferait refuser le paquet par tous les Mac Apple Silicon, avec pour seul symptôme
+  « aucun paquet ne correspond à cette machine ». Architecture vide = convient
+  partout, et c'est ce que `fabrique_manifeste.sh` écrit pour macOS.
+- **`ZIPReader` ne restitue ni le bit d'exécution ni les liens symboliques.** Un
+  `.app` reconstruit avec lui ne se lance pas, et l'erreur ne ressemble en rien à
+  sa cause. La décompression passe donc par `ditto` (macOS) et `tar` (Windows),
+  jamais par l'API de Godot.
+- **Un correctif `.pck` doit être monté avant le premier autoload.** Godot les
+  instancie dans l'ordre de `project.godot` ; un correctif qui remplace
+  `network_manager.gd` et qui arrive après n'a plus rien à recouvrir, sans erreur
+  et sans trace. D'où `PatchLoader` en tête de liste. Corollaire : **un correctif
+  ne peut ni ajouter un autoload, ni changer le moteur, ni l'addon EOS** (une
+  GDExtension charge sa bibliothèque native au démarrage depuis `res://`), ni
+  toucher à `project.godot`.
+- **`%` est un caractère actif dans un `.bat`, `'` dans un script `sh`.** Le
+  script d'échange refuse de se produire si un chemin en contient un, plutôt que
+  de sortir un script mal cité qui effacerait autre chose que ce qu'il croit.
+- **`JSON.stringify` n'écrit pas d'espace après les deux-points.** Une suite qui
+  fabrique ses variantes par `replace('"format": 1', …)` ne remplace rien, ne dit
+  rien, et reste verte sans avoir exercé quoi que ce soit — six contrôles de
+  `test_mise_a_jour.gd` sont passés au vert pour cette seule raison avant que la
+  fabrique ne soit refaite en dictionnaires. Le mode de défaillance exact que ce
+  dépôt traque partout ailleurs.
+- **`"a" + "b" % x` applique le format au seul dernier littéral.** En GDScript le
+  `%` lie plus fort que le `+` : un message d'erreur construit sur deux lignes et
+  formaté à la fin lève une erreur d'exécution au lieu d'afficher la raison — et
+  c'est précisément dans le chemin d'erreur, celui qu'on teste le moins.
+- **Lancer plusieurs instances de Godot en parallèle fait échouer des suites
+  saines.** `test_pause_menu` et `test_screen_matchmaking` sont sorties en échec
+  pendant qu'un export tournait à côté ; seules, elles passent. Avant de
+  diagnostiquer une régression, vérifier qu'aucune autre instance ne tourne.
+
+---
+
 ## Chantiers de robustesse — étude du 2026-08-16
 
 Une relecture exhaustive du code (huit sous-systèmes) a relevé une série de
@@ -3128,11 +3580,133 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   - Coût : ~1 min, plus que toutes les autres suites réunies. C'est le prix d'une
     couverture sur la zone la plus régressive, payé une fois par commit plutôt
     qu'une manche entière à la main.
-  - Reste manuel : les 8 familles de la
-    [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) elles-mêmes —
-    fermetures brutales, pause en ligne, reconnexions. Le runner couvre le
-    **chemin nominal** de bout en bout ; les transitions accidentelles restent à
-    écrire, et elles ont maintenant un socle pour l'être.
+  - **Famille 3 automatisée le 2026-08-18** (`run_duo.sh --coupure`) :
+    l'adversaire **disparaît pendant le 3-2-1**, sans quitter proprement. C'est la
+    transition la plus régressive du jeu, et elle ne se vérifiait qu'en fermant
+    une fenêtre à la main au bon moment.
+    - **Le piège qu'elle protège est nommé dans le code lui-même** : « un départ
+      interrompu en plein 3-2-1 laisserait `countdown_left` figé, donc l'hôte
+      immobile pour toujours dans son bac à sable ». Un joueur bloqué, sans
+      message et sans pouvoir bouger — le pire état atteignable, et le seul
+      qu'aucune erreur ne signale.
+    - Dix contrôles sur la reprise : décompte effacé, aucune manche en cours,
+      bac à sable rendu, score et série remis à zéro, aucun « prêt » survivant,
+      et **le joueur 2 qui cesse de courir sur sa dernière commande**, torche
+      comprise — une lumière orpheline resterait allumée dans l'arène.
+    - Le client **se tue lui-même** (`OS.kill`), et le runner **exige qu'il ne
+      sorte PAS en 0** : une sortie propre préviendrait l'hôte par le protocole
+      et n'exercerait pas la détection de perte de pair. Un banc qui passerait
+      sans avoir coupé serait pire qu'aucun banc.
+    - On attend d'être **vraiment dans le décompte** avant de couper : couper
+      avant exercerait une autre famille, et le banc croirait couvrir celle-ci.
+  - **Famille 1 automatisée le 2026-08-18** (`run_duo.sh --pause`) : **la pause
+    en ligne ne gèle rien.** Le contrat est écrit dans `ui.gd` — « en ligne il
+    figerait la simulation des deux joueurs, ce panneau se superpose donc à un
+    monde qui court » — et le joueur en pause reste **vulnérable**, ce qui
+    empêche la pause d'être une invincibilité gratuite.
+    - **Deux propriétés opposées, et c'est leur combinaison qui fait la règle :**
+      le monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une
+      sans l'autre laisserait passer les deux défauts qui comptent — une pause
+      qui gèle le match pour les deux, ou un joueur qui court encore pendant
+      qu'il lit son menu.
+    - Le chrono est mesuré **avant et après** côté hôte : c'est la seule preuve
+      que le monde a continué. Et `get_tree().paused` est vérifié **faux** côté
+      client, là où le gel serait invisible autrement.
+  - **Piège repayé en écrivant ce mode, et il vaut pour tous les bancs à deux
+    processus : l'hôte doit sortir en DERNIER.** Sorti le premier, il coupe le
+    lien pendant que l'autre mesure encore — et l'assertion tombe non pas parce
+    que la propriété est fausse, mais parce que le pair a disparu. Le mode
+    nominal le savait déjà ; je ne l'ai pas appliqué au mien.
+  - **Famille 2 automatisée le 2026-08-18** (`run_duo.sh --killcam`) : ce que
+    l'adversaire fait **pendant votre killcam**. Deux exigences opposées encore :
+    son intention est **retenue** pendant le ralenti — rien ne bouge chez vous,
+    aucune manche ne démarre seule — et **n'est pas perdue** à la sortie.
+    - **Trois gates essayées avant la bonne, et les deux premières mesuraient
+      autre chose.** `not round_active` est vrai dès le **début** de la killcam :
+      le client pressait pendant son propre ralenti. `not _is_main_menu` est faux
+      pendant **tout** le match : l'attente rendait la main avant même la mort.
+      Seul `game_over` dit « ma killcam est finie ».
+    - **Un diagnostic pris pour une preuve, au passage :** le banc imprime le
+      libellé du salon à chaque appui, et cette ligne a été lue comme la preuve
+      qu'un chemin de menu avait été emprunté. Elle ne prouvait rien — c'était un
+      `print`. Une trace de diagnostic n'est pas un résultat.
+    - ⚠️ **Sa seconde moitié a été retirée le 2026-08-18 : elle était instable.**
+      Elle vérifiait que l'intention retenue du client est appliquée à la sortie
+      du ralenti — elle passait, puis échouait, sur le même code. La cause tient
+      à la fenêtre de séquence de fin, courte et **variable** (voir « la killcam
+      s'arrête avant le moment fatal » ci-dessus). **Un banc qui vacille est pire
+      qu'aucun banc** : il apprend à ignorer le lanceur, et le jour où il dit
+      vrai personne ne le croit. Reste la moitié déterministe — rien ne bouge
+      pendant le ralenti — qui protège du défaut le plus grave : une manche qui
+      démarrerait pendant que l'autre regarde encore.
+  - **Famille 5.3 automatisée le 2026-08-18** (`run_duo.sh --ralenti`) :
+    l'adversaire disparaît **pendant le ralenti**. C'est le croisement de deux
+    chemins que rien n'exerçait ensemble — la perte de pair et la sortie de
+    ralenti. Un `time_scale` oublié ne ralentit pas la killcam, il ralentit
+    **tout le jeu, menus compris**, et personne ne relierait un curseur qui rampe
+    à une déconnexion d'il y a dix secondes.
+    - ⚠️ **Limite écrite plutôt que masquée : `Engine.time_scale` reste à 1,000
+      pendant six secondes côté hôte en headless**, alors que l'enregistrement
+      montre la mort et que le rejeu démarre. Le contrôle a d'abord été un
+      `print`, puis une assertion — **et l'assertion est tombée**. On ne sait pas
+      si c'est un artefact du sans-rendu ou un fait de jeu. **Ce banc couvre donc
+      la remise à zéro, pas le fait qu'un ralenti ait eu lieu avant** : son
+      « le ralenti est levé » vérifie une valeur qui n'a peut-être jamais bougé.
+    - À éclaircir en instrumentant le `target_time_scale` réellement calculé, ou
+      à l'œil sur une vraie partie. **Écrit ici pour que personne ne prenne cette
+      suite pour une garantie qu'elle ne donne pas.**
+  - **Famille 5.2 automatisée le 2026-08-18**, dans le banc à **une** instance
+    (`test_fin_de_match`) : la vitesse normale est rendue quand la killcam se
+    termine d'elle-même. C'est le chemin de sortie le plus fréquent du jeu —
+    celui de chaque mort de chaque partie — et le seul qu'une instance unique
+    puisse exercer.
+    - **Déterministe, contrairement au chemin de la déconnexion.** La séquence de
+      fin est allée à son terme : on mesure un état stable, pas une fenêtre
+      fugace de quelques dixièmes. C'est pourquoi ce contrôle vit dans le banc à
+      une instance et **pas** dans celui à deux, où il serait instable par
+      construction.
+    - Trois contrôles : `time_scale` rendu à 1,0, rejeu arrêté, et **aucune vue
+      laissée figée** — la ceinture de V2.1 passe par le même chemin.
+  - **Famille 7.2 verrouillée le 2026-08-18**, dans `test_audit_menus` : **la
+    carte appartient à l'hôte.** L'invité ne se voit pas proposer d'en changer —
+    non par avarice, mais parce que son choix serait **écrasé au lancement**. Un
+    bouton qui laisse choisir puis n'en tient pas compte est pire qu'un bouton
+    absent : il fait croire à une décision qui n'existe pas.
+    - Vérifié comme **propriété de structure du menu**, sans réseau ni
+      adversaire : les deux écrans hôte offrent le panneau des cartes, les deux
+      écrans invité non, et l'écran partagé le garde — les deux joueurs y sont du
+      même côté.
+    - Encore un contrôle placé là où il est déterministe plutôt que là où le
+      sujet semble vivre. Le reste de la famille 7 (la carte suivante est bien
+      jouée des deux côtés, carte personnalisée absente du disque de l'invité)
+      demande deux instances et n'est pas couvert.
+  - **Famille 6 automatisée le 2026-08-18** (`run_duo.sh --spam`) : les deux
+    joueurs martèlent « prêt » pendant six secondes, **une seule manche doit
+    démarrer**.
+    - **Elle paraissait intestable, et c'est parce qu'on cherchait la mauvaise
+      chose.** Elle décrit un martèlement pendant des transitions, donc des
+      fenêtres de quelques dixièmes. Mais **sa propriété n'est pas une fenêtre,
+      c'est un COMPTE** — et un compte est stable quel que soit le tempo. Si le
+      code se cassait (double départ), il passerait à deux et le contrôle
+      tomberait.
+    - ⚠️ **Une seconde assertion a été tentée trois fois puis retirée**, et le
+      récit est dans le banc : « décompte qui repart » s'est révélé faux sur sa
+      prémisse (l'état `round_active` + `countdown_left > 0` est celui, normal,
+      du 3-2-1), puis décalé d'un cran, puis en échec pour une raison non
+      élucidée. **Retirée plutôt qu'affaiblie** — chaque correction la
+      rapprochait de « ne rien vérifier », et la troisième aurait été le moment
+      de l'assouplir jusqu'à ce qu'elle passe.
+  - ⚠️ **La famille 4 n'est pas automatisable en l'état, et pas pour une raison
+    technique : son attendu est contredit par le code.** La checklist demande que
+    A « termine sa killcam en entier » quand le pair disparaît ; `_on_peer_disconnected`
+    appelle `_abort_killcam()` et la coupe. **Les deux se défendent** — terminer
+    respecte le joueur qui regarde, couper reconnaît que le match est fini et rend
+    la main plus vite. Écrire un test contre l'un ou l'autre reviendrait à
+    **trancher une question de jeu à la place d'Adrien**. Signalé dans la
+    checklist ; son absence est un choix, pas un oubli.
+  - Restent manuelles : la famille 4 (bloquée ci-dessus) et le reste des 5 et 7 de la
+    [CHECKLIST_TESTS_EN_LIGNE.md](CHECKLIST_TESTS_EN_LIGNE.md) — pause en ligne,
+    RPC pendant la killcam, reconnexions. Elles ont maintenant un socle.
 - ~~`ReplaySystem` n'a pas de test unitaire.~~ **Fermé le 2026-08-18** par
   `tools/test_rejeu.gd`, qui verrouille les deux défauts déjà payés — la cadence
   fixe à 60 Hz (une seconde à 492 fps doit donner ~60 images, pas 492) et l'ancre
@@ -3325,11 +3899,20 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   qui est dessiné. Mais l'écran de fin est déjà signé, et en rajouter demande
   d'abord de décider si le verdict manque de quelque chose.
 - **V3.6 Score qui se remplit** — la nouvelle unité de « SESSION : 3 - 2 »
-  glisse avec un son de pion. — *assets : 1 sample.*
+  glisse avec un son de pion. — *assets : 1 sample.* **✅ Fait côté image.** La
+  ligne monte de dix pixels **en prenant la couleur de celui qui vient de
+  marquer**, puis retombe au repos. Le libellé restant un seul `Label`, on ne
+  peut pas teinter un chiffre isolément — et teinter la ligne entière dit
+  mieux la même chose : « 3 - 2 » ne révèle pas **qui** vient de gagner.
 - **V3.7 Stinger de défaite noble** — 2 s qui se résolvent vers le thème du
   menu : perdre ne doit pas donner envie de quitter. — *assets : 1 stinger.*
 - **V3.8 L'égalité pèse** — silence sec 1 s puis « ÉGALITÉ » gris et soupir de
-  détente. — *assets : 1 sample.*
+  détente. — *assets : 1 sample.* **✅ Fait** (le soupir attend le sien). Gris et
+  non blanc : le blanc est la couleur de ce qui s'affirme, une égalité n'affirme
+  rien. Le silence sec **coupe le bus musical** plutôt que d'en baisser le
+  volume, et **restitue l'état trouvé** — le bus est déjà coupé quand le joueur a
+  mis la musique à zéro, le rallumer d'office lui rendrait un son qu'il a
+  retiré. Même règle que pour toute propriété partagée.
 - **V3.9 Série de session** — « SÉRIE : 3 » à l'écran de fin, brisée avec un
   bruit de verre. **✅ Fait côté image** (le bruit de verre attend son sample).
   Ce qu'elle apporte que le score n'apportait pas : « 3 - 2 » ne dit pas dans
@@ -3351,6 +3934,34 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   du thème : le jeu devient un seul instrument. — *assets : couvert par V2.3,
   V3.7, V3.8.*
 
+> **⚠️ Avant de piocher dans les vagues 4 et 5 : beaucoup de ces items ne sont pas
+> de la finition, ce sont des décisions de conception déguisées.** Le gel lié aux
+> fps est levé (Adrien, 2026-08-18) ; ce tri-ci est indépendant et il reste.
+>
+> Dans ce jeu, **la lumière EST l'information**. Un effet visuel en manche n'est
+> donc jamais neutre : il ajoute une chose que quelqu'un peut voir. Trois exemples
+> dans la liste ci-dessous, tous rédigés comme des propositions esthétiques :
+>
+> - **V4.11 « les gouttes brillent 200 ms de leur propre lumière — toucher, c'est
+>   voir »** : un sang auto-éclairé **révèle la position de la victime** au moment
+>   du coup au but, dans le noir. C'est peut-être exactement ce qu'on veut ; ce
+>   n'est pas une décision qu'un agent prend en implémentant.
+> - **V4.13 fumée de bouche, 1 s** : prolonge d'une seconde la trace d'un tir,
+>   donc la fenêtre pendant laquelle on sait où l'autre a tiré.
+> - **V5.5 poussière dans le faisceau** : rend le faisceau visible **de côté**,
+>   donc trahit un porteur de torche qu'on ne voyait pas jusque-là.
+>
+> **La leçon du 2026-08-18 s'applique mot pour mot :** ces phrases viennent de
+> l'étude d'animations du 2026-08-16, pas d'Adrien. Les traiter comme des
+> décisions prises, c'est refaire ce qui a été fait avec « l'écran partagé
+> permanent est une décision de conception » — **transformer une description en
+> intention**. Elles se **posent** à Adrien, elles ne s'implémentent pas d'office.
+>
+> Reste implémentable sans arbitrage : ce qui ne change **rien à ce qui est
+> visible en manche** — l'audio, les menus, la killcam (zone franche, la manche
+> est finie), et les effets purement locaux à celui qui agit déjà (recul de
+> caméra, vibration).
+
 ### Vague 4 — L'identité du tir et de l'impact
 
 - **V4.1 Un son PAR arme** — les 4 armes partagent `weapon_shoot.wav`. Corps +
@@ -3362,7 +3973,19 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
   le geste le plus stylé du jeu. — *assets : 3 samples.*
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
-  presse pendant le rechargement. — *assets : 1 sample.*
+  presse pendant le rechargement. — *assets : 1 sample.* **✅ Fait côté image.**
+  Presser la détente pendant le rechargement ne produisait **rien** : ni son, ni
+  image, ni vibration. Le joueur ne pouvait pas distinguer « j'ai appuyé trop
+  tôt » de « ma touche n'a pas répondu » — le seul geste du jeu qui échouait en
+  silence.
+  - **Front montant seulement** : détente maintenue une seconde, le refus se dit
+    une fois. Un tremblement continu ressemblerait à une panne d'affichage.
+  - **Dessiné, pas déplacé** : le widget vit dans un conteneur, qui lui
+    réimposerait sa position à la frame suivante.
+  - **Uniquement pour celui qui a pressé.** En ligne l'hôte simule aussi
+    l'adversaire : sans filtre, son HUD tremblerait quand le client tire à sec,
+    lui apprenant que l'autre vient d'essayer de tirer — donc qu'il est à portée
+    et à découvert. Même règle que pour le passe-bas des torches.
 - **V4.5 Chiffres de dégâts avec poids** — pop TRANS_BACK, taille ∝ dégâts,
   or si ≥ 50. **✅ Fait** — 20→44 px proportionnels, or au seuil de 50.
 - **V4.6 Zoom-kick à l'encaisse** — 2 % de dézoom 100 ms côté blessé.
@@ -3493,8 +4116,44 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 ### Vague 6 — Killcam, menu, méta (confort et rétention)
 
 - **V6.1 Grain VHS dynamique** — l'overlay killcam monte pendant le
-  bullet-time, se stabilise à l'impact (un uniform à animer).
+  bullet-time, se stabilise à l'impact. **✅ Fait.**
+  - **Les trois défauts d'image montent ensemble** — grain, aberration
+    chromatique et balayage. Un seul se lirait comme un réglage ; les trois
+    ensemble se lisent comme un état, « la bande souffre ».
+  - **La tension s'AJOUTE au niveau d'origine.** À zéro, l'image est exactement
+    celle d'avant l'ajout de l'uniforme : une killcam d'après-impact qui
+    grésillerait un peu plus qu'hier serait une régression que personne ne
+    saurait nommer.
+  - **Lissée vers sa cible, pas posée.** Le ralenti accélère par paliers (courbe
+    de V2.1) et suivre `time_scale` au pixel ferait clignoter le grain à chaque
+    changement de palier.
+  - `tension_killcam()` est **nommée et pure** : un effet piloté par
+    `Engine.time_scale` se réglerait sinon à l'œil, une frame à la fois, sur une
+    machine donnée. Bornée des deux côtés — un `time_scale` accéléré ou négatif
+    ne doit pas détruire l'image.
 - **V6.2 Trajectoire au trait** — la balle fatale dessine sa ligne complète en
+  pointillé pendant le rejeu : la killcam devient professeur. **✅ Fait.**
+  La killcam montrait la mort **sans l'expliquer** : on voyait tomber, pas d'où
+  le coup venait. Dans un jeu où l'on meurt de ce qu'on n'a pas vu, c'est
+  exactement l'information qui manque pour progresser — la ligne répond à la
+  seule question que se pose la victime, *il était où ?*
+  - **Aucune fuite** : la manche est finie, chacun rejoue **son propre**
+    enregistrement, et la trajectoire est celle de la balle qui l'a tué — un fait
+    déjà consommé.
+  - **En pointillé, et tracé progressivement.** Un trait plein se lirait comme
+    une balle encore en vol ; le pointillé dit « ceci s'est passé ». Le tracé
+    avance en **temps réel**, pas en temps de scène : c'est un commentaire sur la
+    scène, pas un élément de la scène — sinon il ramperait pendant le ralenti.
+  - **Vide plutôt qu'approximatif** quand l'enregistrement ne permet pas de
+    conclure (mort par chrono, tir sorti de la fenêtre) : **une trajectoire
+    fausse enseignerait une leçon fausse**, ce qui est pire que de ne rien
+    enseigner.
+  - Le tir fatal se désigne par **la même règle que le départ du ralenti** — le
+    dernier tir du **tueur** avant l'impact. Deux façons de le désigner finiraient
+    par en désigner deux différents. La suite vérifie qu'un tir de la **victime**
+    juste avant sa mort n'est pas confondu avec le coup fatal : un simple
+    « dernier tir enregistré » ferait partir la ligne de la position du mort, et
+    enseignerait un emplacement qui n'a jamais existé.
   pointillé pendant le rejeu : la killcam devient professeur. **✅ Fait** —
   `_draw()` sur la balle, strictement conditionné à `is_replay` : en manche
   réelle, rien, aucune information gratuite. Le tracé se dessine en espace
@@ -3513,6 +4172,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.4 Rembobinage VHS** — son de bande + timecode à rebours 300 ms au
   lancement. — *assets : 1 sample.*
 - **V6.5 Négatif à l'impact** — 2 frames d'inversion vidéo au moment fatal.
+  **✅ Fait.** Compté en **images** et non en secondes : l'effet est un
+  clignement du rendu, et à 60 comme à 240 fps ce sont deux images qui doivent
+  basculer, pas une durée qui en couvrirait huit.
+  - **Déclenché au FRANCHISSEMENT** de l'image d'impact, jamais sur une
+    comparaison de seuil : le rejeu piétine sur une même image pendant le ralenti
+    extrême, et un `>=` déclencherait à chaque frame.
+  - L'inversion s'applique **après la vignette** — inverser avant rendrait les
+    bords sombres éclatants et emporterait le cadrage de l'image.
+  - `reinitialiser_killcam()` remet l'orchestration à neuf à chaque ouverture.
+    Sans ça, la **seconde** killcam de la partie trouverait le seuil déjà
+    franchi et ne clignerait jamais : premier kill parfait, tous les suivants
+    muets — un défaut qui ne se voit qu'à la deuxième mort.
 - **V6.6 Le menu vit dans le noir** — torche fantôme balayant le fond du menu.
 - **V6.7 Six slots néon** — le code de salon (6 caractères fixes) en 6 cases
   qui s'allument, clic par caractère. — *assets : 1-2 samples de frappe.*
@@ -4220,6 +4891,344 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 
 ---
 
+## Chantier direction artistique — sortir du look « généré » (inscrit le 2026-08-19)
+
+> **Le constat d'Adrien, à l'origine du chantier :** le jeu manque d'une
+> apparence pro et aboutie — « ça fait généré par IA ». Le diagnostic posé :
+> ce n'est pas le procédural en soi qui est coupable (Downwell, Teleglitch,
+> Ape Out sont massivement procéduraux et paraissent signés), c'est le
+> **procédural par défaut** — fonte Godot, couleurs primaires codées en dur,
+> dégradés radiaux mathématiquement parfaits, losanges de particules, easings
+> standard. Chaque valeur par défaut visible dit « personne n'a choisi ça ».
+> Un jeu paraît pro quand chaque pixel semble décidé. La ligne « Visuel :
+> quasi rien » de la table des ressources ci-dessus décrivait l'état d'esprit
+> d'avant ce chantier ; c'est précisément lui qu'Adrien a relevé.
+>
+> **Deux stratégies compatibles, menées de front :** rendre le procédural
+> *signé* (DA1, DA5 — faisable par les sessions, sans asset) et mettre de
+> l'autoral là où l'œil juge (DA2, DA3 — passe par Adrien et un artiste).
+> Candela n'a qu'un sujet visuel, la lumière : quelques ancres bien placées
+> (faisceau, personnage, titre) retournent la perception de tout le reste.
+>
+> **Ordre = priorité décroissante**, et le haut conditionne le bas : repeindre
+> avant d'avoir une palette, c'est repeindre deux fois. DA1.5 (le choix d'un
+> artiste unique) et DA5.6 (la résolution assumée) se tranchent **avant** la
+> première commande. Marquage : *(S)* = sessions seules, sans asset ·
+> *(G)* = gratuit, à sourcer par Adrien (fontes OFL, textures CC0) ·
+> *(C)* = commande artiste / sound designer. **Tout est « proposé » : aucun
+> item n'est commencé sans demande d'Adrien.**
+
+### DA1 — Le socle ✅ **LIVRÉ le 2026-08-24** (DA1.1, 1.2, 1.3, 1.4, 1.8, 1.9)
+
+> **Six items sur neuf sont faits.** Restent DA1.5 (un seul artiste), DA1.6 (le
+> wordmark) et DA1.7 (icône et splash) — les trois qui demandent Adrien ou un
+> dessinateur. Tout ce qui était marqué *(S)* et *(G)* est livré.
+>
+> Tout descend maintenant de **`charte.gd`**, et de lui seul.
+
+#### Ce que la révision a appris, et qui ne se devinait pas
+
+**La première palette proposée était une palette assainie, pas une palette.**
+Elle corrigeait des défauts — saturations à 100 %, blanc pur, rouges primaires —
+et ne racontait rien. C'est Adrien qui l'a relevé en donnant le récit :
+« un lieu industriel dans le noir, militaire, ambiance tactique, vision à la
+lampe torche, LED ». Refaite **depuis** ce récit, elle a produit un principe que
+l'hygiène seule n'aurait jamais donné :
+
+> **Deux familles de lumière, et elles ne se mélangent pas.** Le MONDE est chaud
+> — halogène, feu, sang : ce que la torche révèle. L'APPAREIL est LED — froid,
+> étroit : ce que le matériel émet. *Si c'est chaud, c'est le monde ; si c'est
+> LED, c'est toi.*
+
+**Le vert est la seule couleur ajoutée, et il paie une confusion qui existait.**
+Le code écrivait `GOLD if success else WARN` : deux orangés voisins portant des
+sens **opposés**, lus à 12 px dans le noir. La triade d'instrument — vert « prêt »,
+ambre « attention », rouge « faute » — les sépare. Ce n'est pas une préférence,
+c'est un défaut de lisibilité qui avait un nom nulle part.
+
+**Le bleu et le rouge des joueurs : le récit ne demandait pas d'en changer, il
+explique pourquoi ils étaient justes.** *Blue force* contre *red force*, la
+convention de tout affichage tactique — c'est-à-dire, mot pour mot, la décision
+actée du 2026-08-19 (« la couleur suit le RÔLE, pas le numéro »). Seule la
+saturation a bougé, de 100 % à ~70 %.
+
+**`ACIER` traite la cause d'un défaut déjà corrigé en surface.** Le 2026-08-18,
+les entrées « lanceur » se confondaient avec le liseré de sélection ; on avait
+retiré la couleur des lanceurs. La cause restait : **l'interface n'avait pas de
+couleur à elle et empruntait celle d'un joueur.** Elle en a une.
+
+**Pas de kaki, et c'est délibéré.** Dans un jeu où l'on ne voit jamais le décor
+autrement qu'en arête éclairée, une couleur de camouflage est une couleur qu'on
+n'affiche jamais. Le militaire passe par la triade et la convention ami/ennemi.
+
+#### La discipline : littéral + formule + banc
+
+Les sept couleurs sont choisies ; **tout le reste est une opération sur elles** —
+`CARMIN = ROUGE × 0,58`, `DIM = ACIER × 0,70`, les fonds et les sols sont le noir
+monté vers l'acier. GDScript ne sachant pas appeler `lerp()` dans une constante,
+les dérivées sont écrites en littéral et **`tools/test_charte.gd` recalcule
+chacune à chaque exécution**. C'est le motif de `Protocol.WIRE_WITNESS` appliqué
+à la couleur : la valeur ne peut pas s'éloigner de sa formule en silence.
+
+**Une règle est devenue mécaniquement vérifiable : le vert n'entre jamais dans
+l'arène.** Le banc lit le TEXTE des treize fichiers du monde et refuse toute
+couleur verte qui s'y trouverait — pas les valeurs exportées, le texte, parce que
+c'est ainsi que le défaut arriverait : quelqu'un écrit un `Color(...)` à la main
+dans une particule. Corollaire utile : un pixel vert dans une capture est
+toujours de l'interface.
+
+**Et un contrôle qui protège le jeu, pas l'œil.** `ADVERSAIRE` — la couleur à
+laquelle on voit quelqu'un dans le noir — a changé de température sans changer de
+**luminance**, et le banc compare les deux. Le coefficient n'est pas choisi, il
+est résolu. ⚠️ **Le premier jet affirmait cette égalité dans son propre
+commentaire ; elle était fausse de 8 %.** Le gris neutre part d'une luminance de
+1,0, l'halogène de 0,917. C'est le calcul qui l'a dit, pas la relecture.
+
+#### Les fontes : la mesure a changé le choix
+
+**Display : `Big Shoulders Display`** (signalétique industrielle ultra-condensée,
+axe variable Thin→Black). **Interface : `Oxanium`** (linéale anguleuse à
+chanfreins, variable). Les deux en SIL OFL 1.1, licences versionnées à côté.
+
+Le premier candidat d'interface était *Chakra Petch*, qui portait le récit aussi
+bien. **Il a été écarté par une mesure, pas par goût** : ses chiffres ne sont pas
+tabulaires — `0` fait 12 px, `1` en fait 6,9 —, donc un chrono qui saute à chaque
+seconde. Oxanium est tabulaire **par construction** : les dix chiffres font 11 px
+pile, sans réglage à poser. *Une propriété qui n'a pas d'interrupteur ne peut pas
+être éteinte par mégarde.*
+
+Au passage, le dernier faux gras du dépôt disparaît : `menu_hub.gd` posait
+`variation_embolden = 1.2` avec ce commentaire — « le projet n'a pas de police à
+poids multiples ». Il en a deux, à axe variable.
+
+#### L'échelle, et ce qu'elle a révélé
+
+Six tailles (12 / 15 / 19 / 25 / 42 / 68) remplacent **vingt-cinq valeurs
+distinctes**. Le décompte 3-2-1 est une **dérivée** (deux fois l'enseigne) et non
+un septième cran : une échelle qui s'allonge « juste pour ce cas-là » a cessé
+d'être une échelle.
+
+**Le dépôt portait cinq copies de la palette et deux échelles privées** :
+`ui.gd`, `menu_theme.gd` (dont le commentaire promettait de les réunir « le temps
+de l'étape 3 », close depuis longtemps), `map_gallery.gd`, `map_editor_hud.gd`,
+plus les `FONT_*` de `screen_matchmaking.gd` et `screen_leaderboard.gd`. Elles
+avaient toutes divergé — six ors, sept rouges — et **aucune ne paraissait fausse
+chez elle**.
+
+#### Le mouvement
+
+Trois courbes maison (Bézier cubiques évaluées par `Charte.courbe()`, pas des
+`TRANS_*` de Godot) et trois durées — 90 / 180 / 300 ms. `Charte.animer()` les
+applique via `tween_method`, seul chemin qui pose une vraie courbe plutôt que la
+transition intégrée la plus proche. Les courbes sont **pures**, donc le banc
+vérifie leurs bornes, la monotonie de l'entrée et **le dépassement du rebond** —
+sans dépassement, ce n'est plus un rebond.
+
+Les durées de **jeu** ne sont pas touchées : un fondu de mort de 2 s est accordé à
+un fait de jeu, pas à un rythme d'interface.
+
+#### Ce qui reste dû sur ce lot
+
+- **Le rendu n'a pas encore été jugé à l'œil sur tous les écrans.** La planche de
+  contact a été passée (voir plus bas) ; les écrans de salon et d'appariement en
+  sont volontairement absents, y entrer ouvrant de vrais salons EOS.
+- **`light_textures.gd` garde ses `Color(1, 1, 1)`, et ce n'est pas un oubli** :
+  ce sont des **masques** multipliés par la teinte de la lumière qui les porte.
+  Y mettre le blanc cassé teinterait deux fois. La règle porte sur ce que le
+  joueur lit comme une couleur, pas sur un facteur neutre — même chose pour
+  `modulate = Color.WHITE`, qui veut dire « aucune teinte ».
+
+### DA1 — le détail des items
+
+- **DA1.1 La bible visuelle d'une page** ✅ — `charte.gd` + `tools/test_charte.gd`.
+  Palette de 6-7 couleurs *nommées*
+  avec un rôle chacune (le noir du monde, le blanc cassé de la lumière, l'or
+  tungstène, le carmin du sang, couleur J1, couleur J2, accent d'interface),
+  règles dures (jamais de blanc pur, jamais de primaire, saturation
+  plafonnée), plus un moodboard de ~10 références pour cadrer les commandes
+  (Darkwood, Teleglitch, Hotline Miami, Inside, Nex Machina). Tout le
+  chantier s'y réfère. *(S, arbitrage Adrien sur la palette)*
+- **DA1.2 Deux fontes, mort de la fonte par défaut** — une display à forte
+  personnalité (titres, FATAL, verdicts) + une UI sobre à **chiffres
+  tabulaires** (HUD, chrono, ping). SIL OFL : gratuit. Le levier au meilleur
+  ratio de toute la liste — la fonte par défaut est le marqueur amateur n°1.
+  *(G)*
+- **DA1.3 La passe typographique** — appliquer les deux fontes partout, échelle
+  fixe de 5-6 tailles, plus aucune taille arbitraire. *(S, après DA1.2)*
+- **DA1.4 La passe de palette** — remplacer chaque couleur codée en dur du
+  projet par une couleur nommée de la bible. C'est là que meurt le rouge pur
+  qui crie « programmeur ». *(S, après DA1.1)*
+- **DA1.5 Un seul artiste pour tout** — décision de casting avant toute
+  commande : des assets de sources dépareillées recréent l'incohérence qu'on
+  essaie de tuer. Un artiste, un lot, un style. *(Adrien)*
+- **DA1.6 Le wordmark CANDELA** — un vrai logo dessiné (la bougie est un cadeau
+  de naming), décliné partout. Tant que le titre est un `Label`, le jeu dit
+  « prototype ». *(C)*
+- **DA1.7 Icône d'app + boot splash** — bannir le logo Godot du démarrage.
+  *(dérivé de DA1.6)*
+- **DA1.8 Trois courbes d'easing maison** — une entrée, une sortie, un rebond,
+  définies une fois, utilisées partout, durées standardisées (90/180/300 ms).
+  La signature qui distingue un jeu « animé » d'un jeu « tweené ». *(S)*
+- **DA1.9 La grille de 8 px** — tous les menus sur une grille d'espacement
+  constante. L'à-peu-près d'alignement se voit sans se nommer. *(S)*
+
+### DA2 — Les ancres autorales in-game (là où l'œil juge en trois secondes)
+
+- **DA2.1 Le cookie de torche peint** — remplacer le dégradé radial parfait par
+  une texture de faisceau peinte : bords irréguliers, stries de lentille, cœur
+  chaud vignetté. **La plus grosse ancre du jeu** : tout est vu à travers cette
+  lumière, une seule texture change 80 % des pixels de chaque frame.
+  *(C, ou G en CC0 retouché)*
+- **DA2.2 Les halos peints** — rétrodiffusion, lumière de corps, lueurs
+  d'ambiance : mêmes dégradés parfaits aujourd'hui, mêmes textures demain.
+  *(C : 3-4 textures)*
+- **DA2.3 Le muzzle flash en frames** — 2-3 images peintes au lieu du disque
+  lumineux : l'événement le plus vu après la torche. *(C : 1 planche)*
+- **DA2.4 Le sprite du joueur** — personnage top-down lisible en silhouette
+  (tête, épaules, arme), idle + 4-6 frames de marche. Un personnage incarne le
+  duel ; une forme fait un diagramme. *(C)*
+- **DA2.5 Les 4 armes en main** — silhouettes distinctes sur le sprite : le
+  pompe se reconnaît à sa forme avant son son. *(C, avec DA2.4)*
+- **DA2.6 Le tileset des sols** — les 2 matériaux du damier en vraies tuiles
+  avec usure et taches, 3-4 variantes par tuile posées aléatoirement pour
+  briser la répétition parfaite. *(C)*
+- **DA2.7 Le tileset des murs** — coins dessinés, liseré intégré au tile plutôt
+  que tracé. *(C, avec DA2.6)*
+- **DA2.8 Les decals de sang peints** — 6-8 éclaboussures remplaçant les
+  polygones : une scène de crime, pas un nuage de losanges. *(C : 1 planche)*
+- **DA2.9 Les impacts muraux** — éclats et brûlures en decals persistants.
+  *(C, avec DA2.8)*
+- **DA2.10 Le key art du titre** — une illustration d'ambiance (deux torches
+  dans le noir) derrière le menu : une image installe l'univers mieux que
+  quinze shaders. *(C)*
+- **DA2.11 Le viseur custom** — croix dessinée, réactive (s'ouvre au tir, se
+  teinte à l'éblouissement). *(C, ou S en vectoriel soigné)*
+- **DA2.12 Les traçantes texturées** — habiller la `Line2D` d'une texture de
+  trait (grain, pointes effilées) : la balle cesse d'être un segment. *(G ou C)*
+
+### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
+
+- **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
+  jugé. Priorité absolue du lot audio. *(C)*
+- **DA3.2 Les stems produits à 170 BPM** (= V1.1) — la musique adaptative est
+  câblée de bout en bout ; elle attend une vraie production. *(C)*
+- **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
+  `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
+  dépôt des fichiers. *(C : 3 samples)*
+- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10). *(C)*
+- **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
+  « fini » comme une voix. *(C)*
+- **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
+- **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
+  même matière sonore pour tous les menus. *(C : 5-6 samples)*
+- **DA3.8 Le room tone** (= V5.10) — un lit de silence habité sous la manche.
+  *(C)*
+- **DA3.9 Le mastering global** — loudness cohérente entre bus, limiteur,
+  égalisation : l'écart pro/amateur *s'entend* au volume près. *(C, câblage S)*
+
+### DA4 — L'interface habillée
+
+- **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
+  rectangles stylés par code. *(C)*
+- **DA4.2 Chrono, score, ping en chiffres tabulaires** — ils cessent de
+  « sauter » à chaque changement. *(S, découle de DA1.2)*
+- **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
+  style, plus d'outline automatique. *(S)*
+- **DA4.4 Le bandeau FATAL dessiné** — cartouche peint, pas un label sur le
+  noir. *(C)*
+- **DA4.5 La killcam habillée** — cadre VHS authored, timecode en fonte mono,
+  grain *texturé* plutôt que bruit calculé. *(C : 2-3 textures)*
+- **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
+  d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
+  devient une pièce signature. *(S)*
+- **DA4.7 La bannière de fin composée** — verdict, série, « effleuré : 13 px »
+  hiérarchisés comme une affiche, pas empilés. *(S après DA1, C pour l'ornement)*
+- **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
+  pour chaque carte. *(S)*
+- **DA4.9 Le code de salon en cases display** — V6.7 le prévoit ; la typo
+  display le rend iconique. *(S, après DA1.2)*
+- **DA4.10 Les glyphes manette officiels** — icônes de boutons dessinées au
+  lieu de « X », « LB » en texte. *(G : jeux de glyphes libres)*
+- **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
+  noms de touches. *(S + G)*
+- **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
+  carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
+- **DA4.13 Les transitions d'écran signature** — un seul motif de fondu (une
+  extinction ?), décliné partout. *(S)*
+- **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
+  rectangles colorés. *(C)*
+- **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
+  l'éditeur sous la bible. *(S + G)*
+- **DA4.16 Le panneau F3 lui-même** — même la debug UI dit quelque chose de la
+  rigueur du jeu. *(S)*
+- **DA4.17 Les messages d'erreur humanisés** — « L'hôte a quitté le salon »
+  stylé et calme, jamais un texte brut. *(S)*
+
+### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
+
+- **DA5.1 L'audit zéro-défaut** — une session parcourt chaque écran et liste
+  toute valeur par défaut encore visible : fonte, couleur, easing, curseur,
+  son manquant. Le livrable est la liste, cochée ensuite. *(S)*
+- **DA5.2 Blanc pur et noir pur interdits** hors fond du monde — tout passe au
+  blanc cassé et au noir de la bible. *(S)*
+- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
+  circulaire passe en texture. *(S + G)*
+- **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
+  qui « colle » tous les éléments entre eux, l'arme n°1 contre l'effet
+  collage. *(S)*
+- **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
+  les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
+- **DA5.6 La résolution assumée** — trancher pixel-perfect vs. smooth une fois
+  pour toutes, et s'y tenir sur chaque asset commandé. *(Adrien, avant toute
+  commande — conditionne DA1.5)*
+- **DA5.7 Un seul style d'outline/ombre de texte** — défini dans le thème, plus
+  jamais au cas par cas. *(S)*
+- **DA5.8 Recalibrer la vague M sous la nouvelle DA** — les 15 effets de menus
+  sont procéduraux : sous la nouvelle palette et les nouvelles fontes ils
+  deviennent un écrin ; sans ça, ils amplifient le look actuel. *(S)*
+
+### DA6 — Les moments qu'on screenshote
+
+- **DA6.1 L'écran de victoire en affiche** — composé comme un poster, pas comme
+  un menu. *(S + C)*
+- **DA6.2 La photo du gel fatal signée** — le gel V2.1 existe ; le cadrer, le
+  titrer, le dater : chaque kill produit une image montrable. *(S)*
+- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)*
+- **DA6.4 Le bilan de session partageable** — la même carte exportée en image.
+  *(S)*
+- **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
+  l'esquisse) : logo, souffle, lumière. *(S + C)*
+
+### DA7 — Le dispensable assumé (quand le reste est fait)
+
+- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)*
+- **DA7.2 Le trailer de 60 secondes.** *(C)*
+- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)*
+- **DA7.4 Un site d'une page.** *(S)*
+- **DA7.5 Palettes alternatives déblocables** — la bible déclinée (nocturne,
+  sépia), récompenses de rangs. *(S)*
+- **DA7.6 Skins de torche et de viseur** — mêmes emplacements, autres cookies.
+  *(C)*
+- **DA7.7 Le thème du menu réinterprété** — variante saisonnière ou de rang du
+  stem de menu. *(C)*
+- **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
+  reste trop longtemps sans jouer. *(S, après DA1.6)*
+
+~~**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
+DA1.4, DA1.8~~ — **fait le 2026-08-24**, avec DA1.1 et DA1.9.
+
+**Le prochain départ au meilleur ratio :** le lot audio **DA3.1-DA3.3** (déjà
+câblé de bout en bout, il n'attend que des fichiers) et la commande de **DA2.1**,
+le cookie de torche peint — c'est « la plus grosse ancre du jeu », et elle passe
+désormais sur une palette arrêtée, donc elle ne sera pas à refaire.
+
+**Et DA5.8 est devenu urgent plutôt qu'optionnel.** Les quinze effets de la vague
+M ont été écrits sous l'ancienne palette ; ils tournent maintenant sous la
+nouvelle sans avoir été jugés à l'œil un par un. Ils la servent ou ils la
+trahissent, et rien ne le dira tout seul.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -4233,6 +5242,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
+| H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
+| H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 
 ---
 
@@ -4349,6 +5360,150 @@ et un seul est du travail de session.
 9. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
    directe a toujours abouti), et la détection de déconnexion est lente des deux
    côtés.
+
+## D'où viennent les millisecondes du duel — mesuré le 2026-08-18
+
+`tools/run_decomposition.sh`, sept relevés pris le 2026-08-18 avec l'accord
+d'Adrien. **Conclusion : la seconde vue EST le coût du duel ; les torches et les
+shaders du joueur ne se distinguent pas du bruit.**
+
+| Configuration | médiane | soit | 1 % bas |
+|---|---|---|---|
+| duel complet | 135 | 7,41 ms | 81 |
+| **socle nu** (1 vue, sans torches, sans shaders) | 165 | 6,06 ms | 117 |
+| sans la 2ᵉ vue | 172 | 5,81 ms | 118 |
+| sans les torches | 135 | 7,41 ms | 103 |
+| sans les shaders joueur | 132 | 7,58 ms | 92 |
+| socle + 2ᵉ vue seule | 132 | 7,58 ms | 99 |
+| socle + torches seules | 160 | 6,25 ms | 119 |
+| socle + shaders joueur seuls | 160 | 6,25 ms | 118 |
+
+**Tout l'écart à expliquer vaut 1,35 ms** (duel complet moins socle nu).
+
+| Poste | borne basse | borne haute | verdict |
+|---|---|---|---|
+| **2ᵉ vue** | 1,60 ms | 1,52 ms | **bornes serrées, et ≥ l'écart total : elle explique tout** |
+| torches | 0,00 ms | 0,19 ms | sous le bruit |
+| shaders joueur | −0,17 ms | 0,19 ms | **encadrent zéro : indiscernable** |
+
+**Ce que ça tranche.** L'hypothèse de ce document — « deux `SubViewport` qui
+rendent chacun leurs lumières » — était **juste, et pour la moitié seulement de
+la raison invoquée** : c'est le **second rendu** qui coûte, pas l'éclairage. Une
+torche allumée ne se mesure pas ; un `.gdshader` de joueur non plus.
+
+**⚠️ Et une phrase de ce document était fausse : « l'écran partagé permanent est
+une décision de conception du jeu ».** Personne ne l'a jamais décidé — c'était une
+description d'architecture (`CLAUDE.md`) transformée en intention par la session
+qui rédigeait, puis présentée à Adrien comme un arbitrage à prendre. **Adrien l'a
+relevée lui-même** : « je ne crois pas que le deuxième écran permanent soit
+l'identité du jeu ».
+
+**En vérifiant, on a trouvé mieux qu'une correction de vocabulaire.** Cacher un
+`SubViewportContainer` **ne suspend pas** son `SubViewport` : `_restore_viewports()`
+appelait `hide()` sur la vue inutile en ligne et à l'entraînement, et celle-ci
+**continuait de dessiner dans une texture que personne n'affiche**. Le
+`render_target_update_mode` n'était mis à `UPDATE_DISABLED` que pendant le gel du
+kill, et rétabli à `UPDATE_ALWAYS` **sur les deux vues** derrière.
+
+C'est **exactement le piège que le banc de décomposition venait d'éviter le même
+jour** (`UPDATE_DISABLED` plutôt que `hide()`), présent dans le jeu lui-même.
+
+**Le levier n'est donc pas l'écran partagé, c'est un rendu inutile :**
+
+- en **écran partagé**, la seconde vue est légitime — quelqu'un la regarde ;
+- **en ligne et à l'entraînement, personne ne la regarde** et elle coûtait
+  pourtant les 1,5 ms mesurés, soit tout l'écart ;
+- et la convergence vaut d'être dite : **la cible de cadence vient de la latence
+  EOS**, donc du mode en ligne — précisément là où ce coût ne servait à rien.
+
+Corrigé : `_accorder_rendu_aux_vues()` accorde le mode de rendu à la visibilité
+réelle, y compris à la sortie du gel du kill — qui rallumait les deux d'office et
+faisait revenir le coût à la première mort, sans rien pour le dire. **Le gain
+reste à mesurer en ligne** : la décomposition a été prise en écran partagé, où
+les deux vues sont légitimes.
+
+**Signalé, pas corrigé — le champ de vision diffère entre les modes.** Les deux
+`SubViewportContainer` sont en `EXPAND | FILL` dans un `HBoxContainer` : cacher
+l'un fait occuper toute la largeur à l'autre, ce qui est le comportement voulu.
+Mais le zoom de caméra reste 1,0 dans les deux cas — donc **en ligne on voit
+environ deux fois plus large qu'en écran partagé**. C'est symétrique entre les
+deux joueurs d'un même match, donc ce n'est pas un avantage ; c'est en revanche
+une **différence entre modes** dans un jeu où l'information est tout le sujet, et
+une carte apprise en écran partagé ne se joue pas pareil en ligne. À trancher par
+Adrien, pas par le code.
+
+**Deux réserves, et la seconde corrige ce qu'on croyait acquis.**
+
+1. **Le plancher de bruit vaut ~0,25 ms sur la médiane.** « Sans la 2ᵉ vue »
+   (172) ressort **plus rapide** que le socle nu (165), alors qu'il en fait
+   davantage. Aucun écart inférieur à ce plancher n'est lisible — ce qui suffit à
+   ranger torches et shaders comme « non mesurables », pas comme « gratuits ».
+2. **Le 1 % bas du duel est bruité lui aussi : 81 ici contre 97 deux heures
+   plus tôt, sur la même configuration.** On avait écrit que le duel, à charge
+   continue, donnait un 1 % bas solide — contrairement aux menus. **C'est faux
+   des deux côtés** : la traîne varie d'un relevé à l'autre partout. Seule la
+   **médiane** est reproductible. Toute décision prise sur un 1 % bas unique,
+   duel compris, est prise sur un chiffre qu'un second relevé déplacerait.
+
+**Ce que la cible devient, dit précisément.** Elle est écrite « **1 % bas** ≥ 120
+fps », donc sur la métrique dont on vient d'établir qu'elle **ne se mesure pas en
+un passage**. Sur la médiane — la seule reproductible — le duel tient **7,41 ms
+contre 8,33 ms de budget**, et toutes les configurations mesurées sont au-dessus
+de 120.
+
+Il serait tentant d'en conclure « le jeu a toujours tenu les 120 fps ». **Ce
+serait refaire l'erreur du jour** : changer de métrique pour obtenir le verdict
+qui arrange, exactement comme le banc d'origine changeait d'échantillon sans le
+dire. Ce qui est vrai est plus étroit et plus utile :
+
+- **la cible telle qu'elle est écrite n'est pas vérifiable en un relevé** ;
+- **sur la métrique qui l'est, le jeu passe** ;
+- donc soit on **réécrit la cible sur la médiane** — et elle est tenue — soit on
+  la garde sur le 1 % bas et **il faut alors répéter les relevés**, en donnant la
+  dispersion et non un nombre.
+
+Le choix appartient à Adrien ; ce document ne le prend pas à sa place.
+
+**Pourquoi ce chantier.** Ce document attribuait les 7,6 ms du duel à « deux
+`SubViewport` qui rendent chacun leur jeu de lumières et d'ombres portées ».
+C'était une **hypothèse écrite comme une explication**, jamais mesurée — la forme
+exacte de ce que cette journée a passé son temps à démonter ailleurs, et écrite
+de la main de la session qui venait de démonter les deux autres.
+
+**Pourquoi sept et pas trois.** Retirer un poste du duel complet donne sa borne
+**basse** : ce qu'on économise quand tout le reste est encore là pour masquer son
+coût. Le rendre à un socle nu donne sa borne **haute** : ce qu'il coûte quand
+rien ne le recouvre. Le vrai coût est entre les deux, et **l'écart entre les
+bornes mesure le recouvrement lui-même** — ce qu'un relevé unique ne peut pas
+dire. Des bornes serrées tranchent ; des bornes larges apprennent que le poste ne
+s'isole pas, et c'est aussi une réponse.
+
+Le **socle nu** (une vue, sans torches, sans shaders joueur) est la mesure la
+plus intéressante des sept : elle dit le plancher qu'aucun réglage ne fera bouger.
+
+**Un garde-fou qui vaut comme règle générale : une variante de banc doit prouver
+qu'elle a changé quelque chose.** « Sans shaders » compte les matériaux retirés
+et **sort en échec sur zéro** ; la seconde vue passe par `UPDATE_DISABLED` et non
+`hide()`, un conteneur caché laissant le `SubViewport` rendre dans son coin. Sans
+ces deux contrôles, une variante produit un chiffre **valide sur une
+configuration qui n'est pas celle qu'elle annonce** — et deux mesures identiques
+se liraient alors comme « ce poste ne coûte rien », la conclusion la plus
+dangereuse des deux.
+
+---
+
+## Ce que les relevés ont déjà tranché pour le game feel
+
+**Le gel des vagues 4 et 5 était trop large, et c'est corrigé ici.** Il avait été
+posé vague par vague ; le coût se juge **item par item**.
+
+| Ce que fait l'item | Statut | Pourquoi |
+|---|---|---|
+| **Ponctuel et poolé** — un éclat, une secousse, un one-shot qui rend son nœud | **Ouvert** | Le pic de particules est à 122 sur 200, identique aux trois relevés : le budget n'est pas saturé, et rien de ponctuel n'entre dans le régime permanent. |
+| **Coût par image, en continu** — une `Light2D` de plus, un `.gdshader` sur un nœud toujours visible | **Gelé** | Le 1 % bas du duel est déjà sous la cible. Ajouter du permanent avant de savoir d'où vient le coût existant serait exactement ce que la règle du dépôt interdit. |
+| **Audio, menus, killcam** | **Ouvert** | Zones franches (manche finie) ou charge sans commune mesure — les menus tiennent à 163 de 1 % bas, 66 % de marge. |
+
+---
 
 ## Journal des relevés de cadence — 2026-08-18
 
@@ -4469,10 +5624,51 @@ effet qu'on ne verrait que sur la plus grande.
 > changement de code, ici, serait exactement l'erreur qu'on a passé la journée à
 > traquer — un chiffre à qui l'on fait dire ce qu'il ne mesure pas.
 
-**Décision qui revient à Adrien** : 97 est-il acceptable ? La cible de 120 venait
-de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute ~10 ms au
-temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de **1,7 ms** —
-à comparer aux 54 ms de plancher RTT mesurés sur EOS.
+**Décision qui revenait à Adrien** : 97 est-il acceptable ? La cible de 120
+venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
+~10 ms au temps de réaction ; à 120 il en ajouterait 8,3. L'écart réel est de
+**1,7 ms** — à comparer aux 54 ms de plancher RTT mesurés sur EOS.
+
+> **TRANCHÉ le 2026-08-18 par Adrien : « 1,7 ms c'est pas dramatique, on verra
+> plus tard. »**
+>
+> Lire exactement ce qui est dit, et rien de plus. Il **ajourne** l'arbitrage ;
+> il ne réécrit pas la règle. Concrètement :
+>
+> - **la cible reste écrite telle quelle** — `1 % bas ≥ 120` — en attendant une
+>   décision qui n'est pas urgente ;
+> - **elle cesse de bloquer quoi que ce soit.** Aucun chantier ne s'ajourne plus
+>   au motif que le 1 % bas est sous la cible : elle l'a fait deux fois le
+>   2026-08-18, sur un chiffre dont on sait maintenant qu'il varie de 81 à 97
+>   sans qu'une ligne change.
+>
+> Ce qui reste vrai et qui servira le jour où la question se rouvrira : **la
+> médiane est la seule métrique reproductible**, le jeu la tient (7,41 ms contre
+> 8,33 de budget), et le seul coût identifié est **la seconde vue**.
+>
+> ⚠️ **Ce paragraphe disait « l'écran partagé permanent, une décision de
+> conception et non un réglage ». C'est la formule qu'Adrien venait de rejeter**
+> (« je ne crois pas que le deuxième écran permanent soit l'identité du jeu »),
+> corrigée deux commits plus tôt, et **revenue à un autre endroit du même
+> document** — écrite de bonne foi par une session qui reprenait la synthèse
+> d'avant la correction.
+>
+> **Une erreur corrigée revient par la synthèse.** Le correctif était posé là où
+> l'erreur était née ; la reformulation, elle, est allée la rechercher dans le
+> souvenir de ce qu'on croyait établi. C'est le pendant du piège du README —
+> écrire la leçon là où le suivant lira ne suffit pas si l'ancienne version reste
+> lisible ailleurs. **Corriger un document, c'est aussi chercher où la phrase a
+> déjà essaimé.**
+>
+> Ce qui est exact : la seconde vue est le seul coût identifié ; **l'écran partagé
+> n'existe désormais que dans « 1v1 écrans scindés »** (décision d'Adrien, table
+> des décisions actées), et en ligne comme à l'entraînement la vue cachée ne rend
+> plus — elle rendait encore la veille de cette ligne.
+>
+> Ce qui reste à trancher, un jour : garder la cible sur le 1 % bas en exigeant
+> des relevés répétés et une dispersion, ou la réécrire sur la médiane. Les deux
+> formulations ne disent pas la même chose, et c'est pour ça qu'on ne l'a pas
+> tranché à sa place.
 
 ---
 

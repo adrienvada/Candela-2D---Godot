@@ -40,15 +40,47 @@ hote_pid=""
 client_pid=""
 
 nettoyer() {
-  for pid in "$hote_pid" "$client_pid"; do
+  for pid in "$hote_pid" "$client_pid" "${client2_pid:-}"; do
     [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
   done
 }
 trap nettoyer EXIT
 
-echo "── Match en ligne à deux instances (ENet, 127.0.0.1) ──"
+# Deux scénarios : le match nominal, et la coupure pendant le décompte.
+# `--coupure` en argument choisit le second.
+if [ "${1:-}" = "--coupure" ]; then
+  MODE_HOTE="--host-coupure"
+  MODE_CLIENT="--join-coupure"
+  TITRE="Coupure de l'adversaire pendant le décompte (famille 3)"
+elif [ "${1:-}" = "--reconnexion" ]; then
+  MODE_HOTE="--host-reconnexion"
+  MODE_CLIENT="--join-ralenti"
+  TITRE="L'adversaire quitte pendant la killcam et revient (famille 4.1)"
+elif [ "${1:-}" = "--spam" ]; then
+  MODE_HOTE="--host-spam"
+  MODE_CLIENT="--join-spam"
+  TITRE="Martèlement de « prêt » des deux côtés (famille 6)"
+elif [ "${1:-}" = "--ralenti" ]; then
+  MODE_HOTE="--host-ralenti"
+  MODE_CLIENT="--join-ralenti"
+  TITRE="Coupure pendant le ralenti (famille 5.3)"
+elif [ "${1:-}" = "--killcam" ]; then
+  MODE_HOTE="--host-killcam"
+  MODE_CLIENT="--join-killcam"
+  TITRE="RPC pendant la killcam (famille 2)"
+elif [ "${1:-}" = "--pause" ]; then
+  MODE_HOTE="--host-pause"
+  MODE_CLIENT="--join-pause"
+  TITRE="La pause en ligne ne gèle rien (famille 1)"
+else
+  MODE_HOTE="--host"
+  MODE_CLIENT="--join"
+  TITRE="Match en ligne à deux instances (ENet, 127.0.0.1)"
+fi
 
-"$GODOT" --headless --path . "$BANC" -- --host --transport enet >"$HOTE_LOG" 2>&1 &
+echo "── $TITRE ──"
+
+"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet >"$HOTE_LOG" 2>&1 &
 hote_pid=$!
 
 # Attendre une CONDITION, pas une durée : l'hôte annonce son salon par « CODE: ».
@@ -73,9 +105,20 @@ if ! grep -q '^CODE:' "$HOTE_LOG"; then
 fi
 echo "hôte prêt : $(grep -m1 '^CODE:' "$HOTE_LOG")"
 
-"$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet \
   >"$CLIENT_LOG" 2>&1 &
 client_pid=$!
+
+# Famille 4.1 : le premier client se tue pendant la killcam, un SECOND revient.
+# C'est le seul scénario à trois processus, et le retour doit être tenté pendant
+# que l'hôte est encore dans sa séquence de fin — sinon on testerait une simple
+# jointure sur un salon au repos, pas une reconnexion.
+if [ "${1:-}" = "--reconnexion" ]; then
+  ( sleep 18
+    "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+      >"$TMP/client2.log" 2>&1 ) &
+  client2_pid=$!
+fi
 
 # Attendre les deux, sans dépasser le plafond. `wait` seul n'a pas de délai.
 fini=0
@@ -104,6 +147,18 @@ for cote in hote client; do
   else log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"; fi
 
   erreurs="$(grep -c 'SCRIPT ERROR' "$log" || true)"
+  # Le client de la coupure se tue lui-même : sortir en 0 signifierait qu'il
+  # est parti proprement, donc que le test n'a PAS exercé la perte de pair.
+  if [ "$cote" = "client" ] && { [ "${1:-}" = "--coupure" ] || [ "${1:-}" = "--ralenti" ] \
+      || [ "${1:-}" = "--reconnexion" ]; }; then
+    if [ "$code" -eq 0 ]; then
+      printf '%-8s ÉCHEC — sorti proprement, la coupure n'"'"'a pas eu lieu\n' "$nom"
+      echec=1
+    else
+      printf '%-8s OK (coupé, code %d)\n' "$nom" "$code"
+    fi
+    continue
+  fi
   if [ "$code" -ne 0 ]; then
     printf '%-8s ÉCHEC (code %d)\n' "$nom" "$code"
     grep -E '^  ✗|^✗' "$log" | head -8

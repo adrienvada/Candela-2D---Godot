@@ -258,7 +258,11 @@ static func percent_to_level(percent: int) -> float:
 ## Opaque, pour la même raison : un champ translucide laisserait ce qu'il y a
 ## derrière décider du résultat de la mesure.
 static func field_black() -> Color:
-	return Color(0.0, 0.0, 0.0, 1.0)
+	# `Charte.NOIR` et non un noir écrit ici : c'est CE champ qui justifie que le
+	# noir du monde soit la seule valeur pure de toute la charte. Les deux doivent
+	# donc rester le même objet, faute de quoi la règle perdrait sa raison d'être
+	# le jour où l'un des deux bougerait.
+	return Color(MenuTheme.C.NOIR, 1.0)
 
 ## Couleur d'un cran : le noir du champ, RELEVÉ du contraste perçu.
 ##
@@ -366,7 +370,7 @@ func build(body: VBoxContainer) -> void:
 	var protocole := Label.new()
 	protocole.name = "Protocole"
 	protocole.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	protocole.add_theme_font_size_override("font_size", 14)
+	protocole.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	protocole.add_theme_color_override("font_color", MenuTheme.DIM)
 	protocole.text = PROTOCOLE
 	body.add_child(protocole)
@@ -421,7 +425,7 @@ func _build_field() -> Control:
 		var mark := Label.new()
 		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		mark.add_theme_font_size_override("font_size", 11)
+		mark.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 		match i:
 			INDEX_REVEAL:
 				mark.text = MARK_REVEAL
@@ -442,7 +446,7 @@ func _build_verdict() -> Control:
 	_verdict_label.name = "Verdict"
 	_verdict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_verdict_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_verdict_label.add_theme_font_size_override("font_size", 16)
+	_verdict_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	return _verdict_label
 
 ## La course, et la réponse à la question « que fait gauche/droite ? ».
@@ -470,7 +474,7 @@ func _build_course() -> Control:
 	row.add_child(_btn_darker)
 
 	var middle := VBoxContainer.new()
-	middle.add_theme_constant_override("separation", 2)
+	middle.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	row.add_child(middle)
 
 	_gauge = HSlider.new()
@@ -491,7 +495,7 @@ func _build_course() -> Control:
 	_value_label = Label.new()
 	_value_label.name = "Valeur"
 	_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_value_label.add_theme_font_size_override("font_size", 17)
+	_value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	middle.add_child(_value_label)
 
 	_btn_brighter = _make_button("BoutonClair", LABEL_BRIGHTER)
@@ -509,7 +513,7 @@ func _build_footer() -> Control:
 	_bound_notice.name = "BoutDeCourse"
 	_bound_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_bound_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bound_notice.add_theme_font_size_override("font_size", 12)
+	_bound_notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_bound_notice.add_theme_color_override("font_color", MenuTheme.WARN)
 	_bound_notice.text = BOUND_NOTICE
 	column.add_child(_bound_notice)
@@ -528,7 +532,7 @@ func _build_footer() -> Control:
 	footer.name = "Note"
 	footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	footer.add_theme_font_size_override("font_size", 12)
+	footer.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	footer.add_theme_color_override("font_color", MenuTheme.DIM)
 	footer.text = FOOTER
 	column.add_child(footer)
@@ -540,7 +544,7 @@ func _make_button(node_name: String, text: String) -> Button:
 	button.name = node_name
 	button.text = text
 	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	button.custom_minimum_size = Vector2(180, 40)
 	return button
 
@@ -627,7 +631,7 @@ func _on_gauge_changed(percent: float) -> void:
 ## qui laisse toute la logique dans des fonctions pures et exerçables sans
 ## fenêtre — un test headless ne dessine jamais.
 class Field extends Control:
-	var background: Color = Color.BLACK
+	var background: Color = MenuTheme.C.NOIR
 	var patches: PackedColorArray = PackedColorArray()
 
 	func _draw() -> void:

@@ -1,6 +1,8 @@
 extends Node
 class_name GameState
 
+const Charte := preload("res://charte.gd")
+
 const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
 
 ## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
@@ -54,6 +56,8 @@ var serie_longueur: int = 0
 ## où l'état avance et celui où l'écran de fin s'affiche. Sans ce report, il
 ## faudrait comparer l'avant et l'après une fois l'avant déjà écrasé.
 var _mot_de_serie: String = ""
+## Le pair est parti pendant une killcam : l'annonce attend qu'elle se termine.
+var _deconnexion_differee: bool = false
 ## La comptabilité de la série vit dans son propre fichier : elle ne dépend ni du
 ## réseau ni de l'audio, et doit rester testable sans eux.
 const SerieDeSession := preload("res://serie_de_session.gd")
@@ -272,7 +276,10 @@ func _ready():
 	weapon_arbalete.backlight_multiplier = 0.1
 	weapon_arbalete.movement_speed_while_reloading = 0.5
 	weapon_arbalete.can_run_while_reloading = false
-	weapon_arbalete.bullet_color = Color(0.7, 0.7, 0.7, 1.0)
+	# L'arbalète est la seule arme qui n'émet pas de lumière : son carreau est de
+	# l'acier froid, jamais du feu. C'est ce qui la rend furtive, et la charte le
+	# dit maintenant au lieu de le laisser à un gris anonyme.
+	weapon_arbalete.bullet_color = Color(Charte.ACIER, 1.0)
 	weapon_arbalete.bullet_width = 3.0
 	weapon_arbalete.bullet_light_energy = 0.0
 	
@@ -285,7 +292,7 @@ func _ready():
 	ui.main_menu_requested.connect(_on_main_menu_requested)
 	
 	# Set global clear color to black to fix gray areas
-	RenderingServer.set_default_clear_color(Color.BLACK)
+	RenderingServer.set_default_clear_color(Charte.NOIR)
 	
 	# Share the world_2d for split screen
 	vp2.world_2d = vp1.world_2d
@@ -359,6 +366,23 @@ func _on_peer_connected(id: int):
 		# avant l'arrivée de ce paquet imposait le pistolet à P2 pour tout le
 		# match — en BO1 aucun rematch ne vient rattraper le choix.
 
+## Le pair a disparu. **Sa killcam en cours, elle, va jusqu'au bout.**
+##
+## Décision d'Adrien (2026-08-19) : « on laisse terminer sa killcam même si
+## l'autre joueur se déconnecte ». La checklist le demandait depuis toujours —
+## « ni coupée, ni accélérée, ni recouverte par un écran d'attente » — et le code
+## faisait l'inverse.
+##
+## **Ce n'était pas une ligne à retirer.** Cinq gestes de ce chemin écrasaient la
+## killcam qu'on veut préserver : le jeton qui rend la séquence caduque,
+## `_end_sequence_active = false`, la restauration des vues, le dialogue qui la
+## recouvre, et le passage en bac à sable sous elle. La forme juste est de
+## **différer** tout ce qui touche à l'écran.
+##
+## **Reste immédiat, et doit le rester** : l'archivage du forfait — il lit des
+## valeurs que la suite efface — et la purge de P2, sans laquelle l'hôte
+## continuerait à le simuler sur sa dernière commande, torche allumée, pendant
+## toute la killcam. Un adversaire parti ne doit pas continuer d'éclairer.
 func _on_peer_disconnected(id: int):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		# Avant toute remise à zéro : l'enregistrement lit les armes, le chrono et
@@ -366,53 +390,93 @@ func _on_peer_disconnected(id: int):
 		_archive_forfeit(0)
 		if id == client_peer_id:
 			client_peer_id = 0
-		# Toute séquence de fin en vol devient caduque : sans ce jeton elle
-		# reviendrait afficher un écran de victoire par-dessus l'attente.
-		_round_token += 1
-		_end_sequence_active = false
-		_pending_client_start = false
-		_pending_p2_weapon_idx = -1
-		# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
-		# l'hôte immobile pour toujours dans son bac à sable.
-		countdown_left = 0.0
-		ui.set_countdown(0.0)
-		ui.force_close_pause()
-		_abort_killcam()
-		_restore_viewports()
 		# L'hôte simule P2 : sans purge il continuerait à courir sur la dernière
-		# commande reçue.
+		# commande reçue. Immédiat même pendant une killcam — c'est de la
+		# simulation, pas de l'affichage.
 		p2.reset_network_input()
 		p2.velocity = Vector2.ZERO
 		p2.is_sprinting = false
 		p2.flashlight_on = false
-		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
-		round_active = false
-		sandbox_mode = true
-		p2_ready_for_rematch = false
-		# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
-		p1_ready_for_rematch = false
-		_hote_pret = false
-		local_ready_for_rematch = false
-		ui.btn_replay.text = "REJOUER"
-		ui.btn_replay.remove_theme_color_override("font_color")
-		p1_session_wins = 0
-		p2_session_wins = 0
-		serie_porteur = -1
-		serie_longueur = 0
-		_mot_de_serie = ""
-		p1_round_wins = 0
-		p2_round_wins = 0
-		p2.hide()
-		p2.set_collision_layer_value(1, false)
-		p2.set_collision_mask_value(1, false)
-		_set_training_target_active(true)
-		ui.show_waiting_for_opponent()
-		ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
-		if game_over:
-			ui.hide_game_over()
-			game_over = false
+		if _end_sequence_active:
+			# Une killcam est en cours : on ne touche à rien de ce qu'elle montre.
+			# La suite se déroulera à sa fin, dans `_annoncer_deconnexion()`.
+			_deconnexion_differee = true
+			return
+		_annoncer_deconnexion()
 	elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Côté client, c'est l'HÔTE qui est parti : il n'y a plus de partie à
+		# préserver, seulement un menu où retourner.
 		_on_main_menu_requested()
+
+## La partie « écran » de la déconnexion, différée si une killcam la couvrait.
+func _annoncer_deconnexion() -> void:
+	_deconnexion_differee = false
+	# **Quelqu'un a pu revenir pendant la killcam.** L'annonce est différée
+	# jusqu'à sa fin ; entre-temps, le joueur peut avoir relancé son jeu et
+	# rejoint — c'est le scénario 4.1 de la checklist. Annoncer alors « le
+	# Joueur 2 s'est déconnecté » et repasser en attente **coupe le lien qu'on
+	# vient d'accepter** : le nouveau venu se retrouve sans pair, et son premier
+	# RPC échoue.
+	#
+	# Défaut introduit par le report lui-même, et trouvé par le banc de la
+	# famille 4.1 — le report a créé une fenêtre où le monde peut changer, et le
+	# code différé la traversait sans regarder.
+	var revenu := not multiplayer.get_peers().is_empty()
+	# Toute séquence de fin en vol devient caduque : sans ce jeton elle
+	# reviendrait afficher un écran de victoire par-dessus l'attente.
+	_round_token += 1
+	_end_sequence_active = false
+	_pending_client_start = false
+	_pending_p2_weapon_idx = -1
+	# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
+	# l'hôte immobile pour toujours dans son bac à sable.
+	countdown_left = 0.0
+	ui.set_countdown(0.0)
+	ui.force_close_pause()
+	_abort_killcam()
+	_restore_viewports()
+	if not revenu:
+		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
+	round_active = false
+	sandbox_mode = true
+	p2_ready_for_rematch = false
+	# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
+	p1_ready_for_rematch = false
+	_hote_pret = false
+	local_ready_for_rematch = false
+	ui.btn_replay.text = "REJOUER"
+	ui.btn_replay.remove_theme_color_override("font_color")
+	p1_session_wins = 0
+	p2_session_wins = 0
+	serie_porteur = -1
+	serie_longueur = 0
+	_mot_de_serie = ""
+	p1_round_wins = 0
+	p2_round_wins = 0
+	p2.hide()
+	p2.set_collision_layer_value(1, false)
+	p2.set_collision_mask_value(1, false)
+	_set_training_target_active(true)
+	# **Le retour au salon a lieu dans TOUS les cas.** C'est lui qui ramène le
+	# menu ; le sauter laissait l'hôte dans l'arène sans salon, donc sans aucun
+	# moyen de se déclarer prêt — un joueur revenu trouvait la porte fermée.
+	# Défaut introduit en voulant justement épargner l'attente à qui n'attendait
+	# plus, et attrapé par le banc de la famille 4.1.
+	#
+	# Seul le MESSAGE dépend de la situation : on n'annonce pas une attente à
+	# quelqu'un dont l'adversaire est déjà là.
+	ui.show_waiting_for_opponent()
+	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..." if not revenu else "PRÊT ?"
+	# **Et c'est CETTE ligne qui ramène le menu, pas celle du dessus.** Le
+	# commentaire ci-dessus a longtemps affirmé que `show_waiting_for_opponent()`
+	# s'en chargeait ; elle n'allume qu'un label du HUD de match, et le panneau
+	# restait éteint — l'hôte se retrouvait dans son arène sans aucun moyen de se
+	# déclarer prêt. Trois sondes ont été nécessaires pour l'établir, contre un
+	# mécanisme concurrent parfaitement cohérent et faux.
+	ui.rouvrir_le_salon()
+	game_over = false
+
+
 
 ## Entraînement solitaire : une arène, une cible, aucun adversaire.
 ##
@@ -472,7 +536,7 @@ func _on_training_requested() -> void:
 func _on_debug_light_toggled(toggled_on: bool):
 	var mod = arena.get_node_or_null("CanvasModulate")
 	if mod:
-		mod.color = Color(0.3, 0.3, 0.3) if toggled_on else Color(0, 0, 0)
+		mod.color = Charte.NOIR.lerp(Charte.ACIER, 0.38) if toggled_on else Charte.NOIR
 
 ## Construit l'arène depuis la carte sélectionnée.
 ##
@@ -1015,15 +1079,24 @@ func _process(delta):
 
 		_update_music_intensity()
 
-		# Cameras track live players
+		
+	# **Le regard suit le joueur, pas le score.** Ce suivi vivait dans
+	# `if round_active:` — c'est-à-dire « une manche COMPTÉE est en cours ». Or
+	# l'entraînement désarme volontairement cette manche : la caméra n'était donc
+	# jamais mise à jour de toute la session, et le joueur sortait du cadre.
+	# Suivre quelqu'un du regard n'a rien à voir avec le fait que ça compte au
+	# classement ; c'est l'entraînement, le seul mode qui sépare les deux, qui a
+	# révélé la confusion.
+	if p1 != null:
 		cam1.global_position = p1.global_position
+	if p2 != null:
 		cam2.global_position = p2.global_position
 
-	# HORS du bloc `round_active` : la RÉCUPÉRATION doit continuer pendant la
-	# killcam et l'écran de fin. Sinon un joueur ébloui à la dernière seconde
-	# d'une manche la termine blanc et rouvre les yeux au « FIGHT ! » suivant —
-	# le faisceau, lui, ne verse plus rien, les gardes de `_maj_eblouissement`
-	# s'en chargent.
+	# Même raison, un cran plus loin : la RÉCUPÉRATION de l'éblouissement doit
+	# continuer pendant la killcam et l'écran de fin, sinon un joueur ébloui à la
+	# dernière seconde d'une manche la termine blanc et rouvre les yeux au
+	# « FIGHT ! » suivant. Le faisceau, lui, ne verse plus rien : les gardes de
+	# `_maj_eblouissement` s'en chargent.
 	_maj_eblouissement(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
@@ -1133,7 +1206,16 @@ func _process(delta):
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
 			
-	ui.update_hud(p1, p2, time_left, not training_mode)
+	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
+	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
+	# Décision d'Adrien (2026-08-19) — « le client devient bleu, c'est l'adversaire
+	# qui doit apparaître rouge pour lui ». La couleur suit donc le RÔLE, pas le
+	# numéro ; le numéro garde ce qui lui appartient vraiment, le point
+	# d'apparition.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		ui.update_hud(p2, p1, time_left, not training_mode)
+	else:
+		ui.update_hud(p1, p2, time_left, not training_mode)
 
 ## L'éblouissement des deux joueurs, une fois par image et en un seul endroit.
 ##
@@ -1508,8 +1590,9 @@ func _do_end_round(winner_id: int):
 		await get_tree().create_timer(KILL_FREEZE_DURATION, true, false, true).timeout
 		# Rétablir AVANT le test de jeton : une manche relancée pendant le gel
 		# ne doit jamais hériter d'un viewport éteint.
-		vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-		vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		# Rendre ce qui était affiché, et non « les deux » : rallumer d'office
+		# ferait dessiner en ligne la vue que personne ne regarde.
+		_accorder_rendu_aux_vues()
 		if token != _round_token: return
 
 		# V2.2 — le noir gagne. La victime est déjà éteinte par die() ; la
@@ -1546,7 +1629,7 @@ func _do_end_round(winner_id: int):
 		# Enter Fullscreen Killcam mode
 		var mod = arena.get_node_or_null("CanvasModulate")
 		if mod:
-			mod.color = Color(0.3, 0.3, 0.3)
+			mod.color = Charte.NOIR.lerp(Charte.ACIER, 0.38)
 		
 		if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 			vp2.get_parent().hide()
@@ -1579,6 +1662,18 @@ func _do_end_round(winner_id: int):
 		# It freezes the screen perfectly on the death frame behind the menu.
 
 	_end_sequence_active = false
+	# **`game_over` est posé APRÈS la bifurcation, et c'est le sujet.** Il voulait
+	# dire « l'écran de fin est affiché » ; posé une ligne avant qu'on décide de
+	# l'afficher, il mentait dans cet intervalle — et le chemin différé le lisait
+	# précisément là. Une valeur qui décrivait un état s'était mise à décrire une
+	# intention, en gardant son nom.
+	# La killcam est allée à son terme. Si le pair est parti pendant qu'elle
+	# jouait, c'est MAINTENANT qu'on l'annonce — avant l'écran de fin, et non
+	# après : proposer un « REJOUER » à quelqu'un dont l'adversaire n'existe plus
+	# serait une promesse d'une demi-seconde.
+	if _deconnexion_differee:
+		_annoncer_deconnexion()
+		return
 	game_over = true
 	# show_game_over remet le bouton sur « REJOUER » : l'état suit le libellé.
 	local_ready_for_rematch = false
@@ -1700,10 +1795,11 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	var lbl := Label.new()
 	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
 	var settings := LabelSettings.new()
-	settings.font_size = 64
-	settings.font_color = Color(1.0, 0.1, 0.25)
+	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
+	settings.font_size = Charte.T_ENSEIGNE
+	settings.font_color = Charte.ROUGE
 	settings.outline_size = 10
-	settings.outline_color = Color.BLACK
+	settings.outline_color = Charte.NOIR
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1734,9 +1830,9 @@ func _clear_kill_stamp() -> void:
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
 	Engine.time_scale = 1.0
-	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé.
-	vp1.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	vp2.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé —
+	# mais on rétablit l'état réel des vues, pas les deux d'office.
+	_accorder_rendu_aux_vues()
 	_clear_kill_stamp()
 	ui.hide_killcam()
 
@@ -1967,7 +2063,7 @@ func _on_replay_requested():
 
 		local_ready_for_rematch = true
 		ui.btn_replay.text = "✓ PRÊT"
-		ui.btn_replay.add_theme_color_override("font_color", Color.GREEN)
+		ui.btn_replay.add_theme_color_override("font_color", Charte.ETAT_OK)
 		
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 			rpc_id(1, "rpc_client_ready", w2_idx)
@@ -2106,6 +2202,30 @@ func _check_rematch_start():
 	elif not p1_ready_for_rematch:
 		ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 
+## Une vue cachée ne doit pas RENDRE. C'est la moitié du coût du duel.
+##
+## **Cacher un `SubViewportContainer` ne suspend pas son `SubViewport`** : celui-ci
+## continue de dessiner la scène dans une texture que personne n'affiche. Le
+## `render_target_update_mode` n'était jamais mis à `UPDATE_DISABLED` en dehors du
+## gel du kill (V2.1), et toujours rétabli à `UPDATE_ALWAYS` derrière — donc en
+## ligne comme à l'entraînement, la moitié invisible de l'écran était rendue à
+## chaque image.
+##
+## Ce que ça coûte est mesuré, pas supposé : la décomposition du 2026-08-18 donne
+## **1,52 à 1,60 ms pour le second rendu**, soit la totalité de l'écart entre le
+## duel et un socle sans lui. En écran partagé cette seconde vue est légitime,
+## quelqu'un la regarde. **En ligne et à l'entraînement, personne ne la regarde.**
+##
+## La convergence vaut d'être notée : la cible de cadence vient de la latence EOS,
+## c'est-à-dire du mode **en ligne** — et c'est précisément là que ce coût ne
+## servait à rien.
+func _accorder_rendu_aux_vues() -> void:
+	for vue in [vp1, vp2]:
+		var conteneur := vue.get_parent() as Control
+		var vu := conteneur != null and conteneur.visible
+		vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS if vu \
+			else SubViewport.UPDATE_DISABLED
+
 func _restore_viewports():
 	# L'entraînement passe avant le mode réseau : il tourne en écran partagé du
 	# point de vue du transport — aucun pair, aucune autorité distante — mais un
@@ -2115,6 +2235,14 @@ func _restore_viewports():
 		vp1.get_parent().show()
 		vp2.get_parent().hide()
 		ui.center_line.hide()
+		_accorder_rendu_aux_vues()
+		# Cette branche sort en `return` AVANT la fin de la fonction : tout ce qui
+		# s'y ajoute doit donc être répété ici. Deux défauts en ont découlé et
+		# Adrien les a vus le 2026-08-19 — les deux panneaux de HUD affichés pour
+		# un seul joueur, et le joueur en bas de l'écran parce que la caméra
+		# n'avait jamais été placée.
+		ui.disposer_hud(true)
+		cam1.global_position = p1.global_position
 		cam1.zoom = Vector2(1.0, 1.0)
 		cam2.zoom = Vector2(1.0, 1.0)
 		return
@@ -2130,13 +2258,15 @@ func _restore_viewports():
 		vp1.get_parent().hide()
 		vp2.get_parent().show()
 		ui.center_line.hide()
+	_accorder_rendu_aux_vues()
+	ui.disposer_hud()
 	cam1.zoom = Vector2(1.0, 1.0)
 	cam2.zoom = Vector2(1.0, 1.0)
 	cam1.global_position = p1.global_position
 	cam2.global_position = p2.global_position
 	var mod = arena.get_node_or_null("CanvasModulate")
 	if mod:
-		mod.color = Color(0, 0, 0)
+		mod.color = Charte.NOIR
 
 
 func _on_main_menu_requested():

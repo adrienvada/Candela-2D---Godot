@@ -54,6 +54,7 @@ func _run() -> void:
 	_audit_entrees()
 	_audit_panneaux_declares()
 	_audit_personnalisation()
+	_audit_carte_appartient_a_l_hote()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -198,3 +199,38 @@ func _compte_commandes(racine: Control) -> int:
 				n += 1
 			n += _compte_commandes(c)
 	return n
+
+## Famille 7.2 de la checklist en ligne : **la carte appartient à l'hôte.**
+##
+## L'invité ne doit pas se voir proposer d'en changer — non par avarice, mais
+## parce que son choix serait **écrasé au lancement** : c'est la carte de l'hôte
+## qui est envoyée. Un bouton qui laisse choisir puis n'en tient pas compte est
+## pire qu'un bouton absent ; il fait croire à une décision qui n'existe pas.
+##
+## Vérifié ici plutôt que dans un banc à deux instances : c'est une propriété de
+## structure du menu, elle ne demande ni réseau ni adversaire, et elle est
+## déterministe — contrairement à tout ce qui s'échantillonne pendant une
+## transition.
+func _audit_carte_appartient_a_l_hote() -> void:
+	print("\n[La carte appartient à l'hôte]")
+	var details: Dictionary = _ui.hub._entry_details
+	var avec_cartes := func(ecran: String) -> bool:
+		var liste: VBoxContainer = _ui.hub.list_of(ecran)
+		if liste == null:
+			return false
+		for enfant in liste.get_children():
+			if not enfant is Button:
+				continue
+			var d: Dictionary = details.get(enfant, {})
+			if String(d.get("panneau", "")) == _ui.PANEL_MAPS:
+				return true
+		return false
+
+	for hote: String in [_ui.SCREEN_HOST, _ui.SCREEN_LOCAL_HOST]:
+		_check("l'hôte peut changer de carte (%s)" % hote, avec_cartes.call(hote))
+	for invite: String in [_ui.SCREEN_JOIN, _ui.SCREEN_LOCAL_JOIN]:
+		_check("l'invité ne se voit pas proposer d'en changer (%s)" % invite,
+			not avec_cartes.call(invite))
+	# Et l'écran partagé, lui, l'offre : les deux joueurs sont du même côté.
+	_check("l'écran partagé garde le choix de la carte",
+		avec_cartes.call(_ui.SCREEN_LOCAL))

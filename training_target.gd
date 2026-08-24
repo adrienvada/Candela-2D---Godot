@@ -1,6 +1,8 @@
 extends StaticBody2D
 class_name TrainingTarget
 
+const Charte := preload("res://charte.gd")
+
 ## Cible d'échauffement du bac à sable.
 ##
 ## Seul gameplay de l'attente : elle encaisse les tirs avec les effets d'impact
@@ -53,10 +55,10 @@ func _ready() -> void:
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.custom_minimum_size = Vector2(160, 30)
 	_label.position = Vector2(-80, -70)
-	_label.add_theme_font_size_override("font_size", 20)
-	_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
+	_label.add_theme_font_size_override("font_size", Charte.T_APPUI)
+	_label.add_theme_color_override("font_color", Charte.AMBRE)
 	_label.add_theme_constant_override("outline_size", 6)
-	_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	var lbl_mat := CanvasItemMaterial.new()
 	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	_label.material = lbl_mat

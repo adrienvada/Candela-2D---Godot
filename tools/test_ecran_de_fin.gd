@@ -41,6 +41,10 @@ func _run() -> void:
 	_test_graine()
 	await _test_pression_du_pret()
 	_test_chrono()
+	await _test_verdict()
+	_test_tension_killcam()
+	_test_negatif_killcam()
+	_test_disposition_hud()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -208,3 +212,159 @@ func _test_chrono() -> void:
 	_ui.update_hud(null, null, 42.0, false)
 	_check("sans horloge, le HUD n'écrase pas le libellé",
 		_ui.time_label.text == "ENTRAÎNEMENT", _ui.time_label.text)
+
+## V3.6 et V3.8 — l'écran de fin dit ce qui vient de se passer.
+func _test_verdict() -> void:
+	print("\n[Le verdict et le score]")
+	# V3.8 : l'égalité en gris, pas en blanc. Le blanc est la couleur de ce qui
+	# s'affirme ; une égalité n'affirme rien.
+	_ui.show_game_over(-1)
+	await process_frame
+	_check("une égalité s'écrit en gris",
+		_ui.game_over_title.get_theme_color("font_color") == _ui.COLOR_DIM,
+		str(_ui.game_over_title.get_theme_color("font_color")))
+	# Et le silence sec n'a pas laissé la musique coupée derrière lui.
+	var audio: Node = root.get_node_or_null(^"/root/AudioManager")
+	if audio != null:
+		_check("le silence sec se déclare terminé un jour",
+			audio.has_method("silence_sec"))
+	_ui.hide_game_over()
+	await process_frame
+
+	# V3.6 : le score prend la couleur de qui vient de marquer, puis revient.
+	#
+	# Lu SANS laisser passer de frame : la teinte est une valeur de départ, et le
+	# fondu vers le blanc commence dès la frame suivante. Attendre ici mesurerait
+	# le fondu, pas l'annonce — et l'assertion dépendrait de la charge de la
+	# machine, défaut consigné le même jour.
+	_ui.show_game_over(0)
+	_check("le score s'annonce dans la couleur du gagnant",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P1),
+		str(_ui.game_over_score.modulate))
+	_ui.hide_game_over()
+
+	_ui.show_game_over(1)
+	_check("et dans celle de l'autre joueur quand c'est lui",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_P2),
+		str(_ui.game_over_score.modulate))
+	# Une égalité ne teinte personne : il n'y a personne à teinter.
+	_ui.hide_game_over()
+	_ui.show_game_over(-1)
+	_check("une égalité ne colore le score pour personne",
+		_ui.game_over_score.modulate.is_equal_approx(_ui.COLOR_DIM),
+		str(_ui.game_over_score.modulate))
+
+	# Et ce qui compte le plus : refermer l'écran rend au libellé sa teinte de
+	# repos. Sans ça l'annonce survit, se bat avec la suivante, et le score reste
+	# aux couleurs du vainqueur précédent — trouvé par cette suite, pas à la
+	# lecture.
+	_ui.hide_game_over()
+	await process_frame
+	_check("refermer rend au score sa teinte de repos",
+		_ui.game_over_score.modulate.is_equal_approx(Color.WHITE),
+		str(_ui.game_over_score.modulate))
+
+## V6.1 — la bande de la killcam souffre pendant le ralenti.
+func _test_tension_killcam() -> void:
+	print("\n[La tension de la bande]")
+	# À vitesse normale, l'image doit être EXACTEMENT celle d'avant l'effet :
+	# une killcam d'après-impact qui grésillerait un peu plus qu'hier serait une
+	# régression que personne ne saurait nommer.
+	_check("à vitesse normale, aucune tension",
+		is_zero_approx(_ui.tension_killcam(1.0)))
+	# 1 − 0,005 = 0,995 : la première version de ce contrôle attendait 1,0 rond et
+	# tombait. C'est l'attente qui était fausse, pas la courbe — l'échelle de
+	# ralenti la plus forte du jeu vaut 0,005, jamais zéro.
+	_check("au plus fort du ralenti, tension quasi pleine",
+		_ui.tension_killcam(0.005) > 0.99,
+		str(_ui.tension_killcam(0.005)))
+	_check("elle monte quand le temps ralentit",
+		_ui.tension_killcam(0.2) > _ui.tension_killcam(0.8))
+	# Bornée des deux côtés : un `time_scale` supérieur à 1 (accéléré) ou négatif
+	# ne doit pas produire une tension hors de [0, 1] et détruire l'image.
+	_check("elle reste bornée",
+		_ui.tension_killcam(2.0) == 0.0 and _ui.tension_killcam(-5.0) == 1.0)
+
+## V6.5 — deux images de négatif au franchissement de l'impact.
+##
+## Ce qui se vérifie ici est le **rearmement**, pas l'effet. Le déclenchement se
+## fait au franchissement d'une image de rejeu : si l'état n'était pas remis à
+## neuf, la seconde killcam de la partie trouverait le seuil déjà dépassé et
+## **ne clignerait jamais**. Le premier kill serait parfait, tous les suivants
+## muets — un défaut qui ne se voit qu'à la deuxième mort.
+func _test_negatif_killcam() -> void:
+	print("\n[Le négatif se réarme à chaque killcam]")
+	_ui._killcam_derniere_image = 400
+	_ui._killcam_negatif = 0
+	_ui._killcam_tension = 0.9
+	_ui.show_killcam()
+	_check("l'image de rejeu repart d'avant tout impact",
+		_ui._killcam_derniere_image < 0, str(_ui._killcam_derniere_image))
+	_check("la tension repart de zéro", is_zero_approx(_ui._killcam_tension))
+	_check("aucun négatif en attente", _ui._killcam_negatif == 0)
+	_ui.hide_killcam()
+
+## Décision d'Adrien du 2026-08-19 : **en ligne, on ne voit plus le HUD de
+## l'adversaire**, et le panneau du joueur local passe à gauche.
+##
+## Ce que ça retirait : ses points de vie, et surtout **son cercle de recharge** —
+## l'instant exact où son arme redevient prête. Dans un jeu dont la règle est
+## « la seule information est la lumière », c'était un renseignement gratuit.
+##
+## Les trois propriétés se vérifient ensemble parce qu'elles peuvent se contredire :
+## cacher le bon panneau **et** le mettre à gauche **et** garder les deux en écran
+## partagé. Vérifier l'une sans les autres laisserait passer un panneau caché du
+## mauvais côté, ou un écran partagé amputé de moitié.
+func _test_disposition_hud() -> void:
+	print("\n[Qui voit quel HUD, et de quel côté]")
+	# `NetworkManager` par le NŒUD et non par son nom : en mode `--script` le nom
+	# d'autoload ne résout pas à la compilation, et le fichier entier cesse de se
+	# charger. Piège consigné, rencontré une fois de plus ici.
+	var reseau: Node = root.get_node_or_null(^"/root/NetworkManager")
+	if reseau == null:
+		_check("NetworkManager est joignable", false)
+		return
+	var mode_avant = reseau.current_mode
+
+	reseau.current_mode = reseau.GameMode.LOCAL_SPLITSCREEN
+	_ui.disposer_hud()
+	_check("écran partagé : les deux panneaux restent",
+		_ui.hud_panneau_p1.visible and _ui.hud_panneau_p2.visible)
+	_check("écran partagé : J1 reste à gauche",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+
+	reseau.current_mode = reseau.GameMode.ONLINE_HOST
+	_ui.disposer_hud()
+	_check("hôte : le panneau adverse disparaît", not _ui.hud_panneau_p2.visible)
+	_check("hôte : le sien reste visible", _ui.hud_panneau_p1.visible)
+	_check("hôte : et il est à gauche",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+
+	reseau.current_mode = reseau.GameMode.ONLINE_CLIENT
+	_ui.disposer_hud()
+	# **Le client voit le panneau BLEU, à gauche, comme l'hôte.** Ce n'est pas
+	# « son » panneau qu'on déplace : les deux panneaux sont « moi » et « l'autre »,
+	# et `GameState` alimente le premier avec le joueur local quel que soit son
+	# numéro. Une première version déplaçait le panneau de J2 vers la gauche en le
+	# gardant rouge — Adrien a corrigé : « le client devient bleu, c'est
+	# l'adversaire qui doit apparaître rouge pour lui ».
+	_check("client : le panneau adverse disparaît", not _ui.hud_panneau_p2.visible)
+	_check("client : le panneau local reste le premier, donc bleu",
+		_ui.hud_panneau_p1.visible
+		and _ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1)
+
+	# L'entraînement n'a qu'un joueur : le second panneau annoncerait la santé de
+	# quelqu'un qui n'est pas dans la scène.
+	reseau.current_mode = reseau.GameMode.LOCAL_SPLITSCREEN
+	_ui.disposer_hud(true)
+	_check("entraînement : un seul panneau", _ui.hud_panneau_p1.visible
+		and not _ui.hud_panneau_p2.visible)
+
+	# Retour en écran partagé : rien ne doit rester caché ni déplacé.
+	_ui.disposer_hud()
+	_check("retour en écran partagé : les deux reviennent",
+		_ui.hud_panneau_p1.visible and _ui.hud_panneau_p2.visible)
+	_check("retour en écran partagé : J1 à gauche, J2 à droite",
+		_ui.hud_rangee.get_child(0) == _ui.hud_panneau_p1
+		and _ui.hud_panneau_p2.size_flags_horizontal == Control.SIZE_SHRINK_END)
+	reseau.current_mode = mode_avant

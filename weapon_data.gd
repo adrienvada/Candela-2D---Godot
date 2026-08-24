@@ -1,6 +1,8 @@
 extends Resource
 class_name WeaponData
 
+const Charte := preload("res://charte.gd")
+
 @export var name: String = "Pistolet"
 @export var cooldown: float = 1.0
 @export var bullet_speed: float = 12000.0
@@ -26,7 +28,7 @@ class_name WeaponData
 @export var can_run_while_reloading: bool = true
 
 @export_group("Projectile Visuals")
-@export var bullet_color: Color = Color(2.5, 2.0, 0.5, 1.0)
+@export var bullet_color: Color = Charte.AMBRE_INCANDESCENT
 @export var bullet_light_energy: float = 50.0
 @export var bullet_width: float = 5.0
 
@@ -93,7 +95,7 @@ func get_torch_texture() -> ImageTexture:
 					intensity = max(intensity, halo_intensity * angle_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity * torch_brightness))
+				img.set_pixel(x, y, Color(Charte.HALOGENE, intensity * torch_brightness))
 	
 	_torch_texture = ImageTexture.create_from_image(img)
 	return _torch_texture
@@ -136,7 +138,7 @@ func get_torch_texture_flat() -> ImageTexture:
 					intensity = max(intensity, halo_angle_fade * halo_dist_fade)
 				
 			if intensity > 0:
-				img.set_pixel(x, y, Color(1.0, 0.95, 0.75, intensity * torch_brightness))
+				img.set_pixel(x, y, Color(Charte.HALOGENE, intensity * torch_brightness))
 	
 	_torch_texture_flat = ImageTexture.create_from_image(img)
 	return _torch_texture_flat

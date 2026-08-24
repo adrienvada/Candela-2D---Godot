@@ -24,7 +24,40 @@ par sujet impraticable.
 | Domaine | Fichiers réservés | Session |
 |---|---|---|
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
+| **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-18**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
+
+### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
+
+**Le glob `*.gdshader` réserve les shaders au domaine « game feel ». Il a été
+écrit quand tous les shaders du dépôt étaient des shaders de jeu** — liseré du
+joueur, sang, éblouissement, onde de choc. Les menus n'en avaient aucun.
+
+La vague M en a créé cinq, tous nommés `menu_*.gdshader` :
+`menu_backdrop`, `menu_title`, `menu_veil`, `menu_skeleton`, `menu_glass`.
+**J'étais donc en infraction avec la lettre de la table pendant une journée
+entière, sans le savoir, faute d'avoir lu ce fichier.** Aucun conflit n'en est
+résulté — ce sont des fichiers **créés**, pas modifiés, et la fusion mesurée le
+même soir n'en signale aucun.
+
+**La frontière proposée, en ajout et non en réécriture :** `menu_*.gdshader`
+appartient aux menus, tout autre `*.gdshader` reste au game feel. Le préfixe le
+rend vérifiable d'un coup d'œil, et il correspond à ce qui s'est produit
+naturellement des deux côtés — `sprint_streaks.gdshader` est arrivé chez eux le
+même jour, sans collision.
+
+Si la session « game feel » préfère une autre frontière, qu'elle la pose ici :
+je m'y tiendrai.
+
+### Ce que la Phase 9 a pris ailleurs, et pourquoi c'est minuscule
+
+`ui.gd` appartient à la session « menus ». La mise à jour n'y a touché qu'en
+**trois endroits** — une constante d'écran, une entrée d'accueil, un
+`_attach_screen` — exactement le motif des écrans précédents. Tout le reste vit
+dans des fichiers neufs. `project.godot` a gagné `config/version` et deux
+autoloads, dont `PatchLoader` **en tête de liste** : cette position est une
+contrainte technique, pas un rangement, et la déplacer casserait silencieusement
+les correctifs.
 
 ### `game_state.gd` — le seul fichier disputé
 
@@ -213,6 +246,320 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — fusion avec le système de mise à jour
+
+**Fusionné `origin/main` (22 fichiers, système de mise à jour) dans le socle DA1.**
+Un seul conflit, `tools/run_suites.sh`, et il était **additif** : chacun avait
+ajouté sa suite à la liste. Les deux sont gardées. Le reste s'est auto-fusionné,
+`ui.gd` et `project.godot` compris.
+
+**À la session « mise à jour » — j'ai touché à `screen_update.gd`, et voici quoi.**
+Votre écran passait déjà par `MenuTheme` presque partout, donc il a hérité de la
+nouvelle palette sans rien faire. Restaient six valeurs écrites à la main — une
+couleur (`Color(0.78, 0.8, 0.85)`) et cinq tailles de fonte (13, 14, 15, 20) —
+que j'ai ramenées sur la charte : `MenuTheme.LUMIERE` et les crans
+`T_MENTION` / `T_COURANT` / `T_APPUI`. Aucun comportement changé.
+
+**Ce n'est pas un reproche, c'est la fenêtre :** votre lot a été écrit pendant
+que la charte se posait, et la passe DA1.3/DA1.4 est passée à côté de fichiers
+qui n'existaient pas encore. Le fait qu'il n'ait fallu corriger que six valeurs
+tient à ce que vous employiez déjà `MenuTheme` — c'était la bonne habitude avant
+même qu'elle serve à ça.
+
+**Pour la suite :** `charte.gd` est la source unique (couleurs, six tailles,
+grille de 8, trois courbes), et `tools/test_charte.gd` refuse toute dérive. Un
+écran neuf n'a plus à choisir ses valeurs.
+
+### 2026-08-24 — session « direction artistique », socle DA1
+
+**Livré : DA1.1, DA1.2, DA1.3, DA1.4, DA1.8, DA1.9.** Fichier neuf `charte.gd`
+(la bible : couleurs, échelle typographique, grille, courbes) et sa suite
+`tools/test_charte.gd`, ajoutée au lanceur. Deux fontes OFL dans
+`assets/fonts/` avec leurs licences. Détail et *pourquoi* dans `docs/ROADMAP.md`,
+section « Chantier direction artistique ».
+
+**Fichiers touchés — beaucoup, et dans les deux domaines.** La passe de palette et
+la passe typographique traversent par nature tout le dépôt : `ui.gd`, les
+`screen_*.gd`, `menu_*.gd`, `map_*.gd` (domaine menus) **et** `player.gd`,
+`bullet.gd`, `blood_stain.gd`, `footprint.gd`, `candela_tileset.gd`,
+`weapon_data.gd`, `light_textures.gd`, `training_target*.gd`, `kill_shockwave.gd`,
+`game_state.gd` (domaine game feel). **`ListAgents` ne voyait aucune autre session
+au moment d'écrire**, et le travail était demandé explicitement par Adrien comme
+un lot transverse. Si une session « game feel » reprend : les changements y sont
+mécaniques (une couleur littérale → une couleur nommée), aucun comportement n'a
+été touché — sauf les deux points ci-dessous, qui sont signalés exprès.
+
+**Deux changements qui ne sont PAS cosmétiques, à connaître avant de relire :**
+
+1. **`Charte.ADVERSAIRE` remplace `Color(0.7, 0.7, 0.7)` dans `player.gd`.** C'est
+   la couleur à laquelle on voit son adversaire dans le noir, donc de l'équité.
+   Sa **luminance est identique** au gris qu'elle remplace — le coefficient est
+   résolu, pas choisi — et `test_charte` compare les deux. Ne pas la retoucher à
+   l'œil.
+2. **`ambient_light.color` n'était jamais posé dans `player.gd`**, donc blanc par
+   défaut : la seule lumière du jeu qui ne venait ni d'un feu ni d'un filament,
+   sans que personne l'ait décidé. Elle est maintenant en `HALOGENE`. C'est un
+   changement d'apparence en manche, assumé et signalé.
+
+**Signalé, pas corrigé (hors périmètre) :** `player.gd` porte toujours ses 170 et
+85 BPM en dur, alors que `AudioManager.BPM` existe — le piège « le tempo est
+recopié à trois endroits » est donc toujours ouvert.
+
+**Reste dû :** DA5.8 — les quinze effets de la vague M ont été écrits sous
+l'ancienne palette et n'ont pas été jugés un par un sous la nouvelle.
+
+
+### 2026-08-19 — deux propriétés du dispositif, apprises en le pratiquant
+
+**1. Dans un arbre partagé, le hasard de qui commite en premier décide de qui
+signe le travail de l'autre.** C'est arrivé **deux fois dans la même journée, une
+fois dans chaque sens** : la suppression de `killcam_trace.gd` (session « fin de
+match ») est partie dans un commit de la session « effets » ; le changement de
+`disposer_hud` (session « effets ») est parti dans un commit de la session « fin
+de match ».
+
+Ce n'est pas une négligence : `git commit` prend **tout l'index**, et l'index est
+commun. Le seul remède connu — lire `git diff --cached --stat` avant de commiter
+— **ne marche que si l'on s'arrête sur ce qu'on lit** : une des deux sessions l'a
+lu, a vu les deux lignes de suppression, et a commité quand même.
+
+**Rien n'a été perdu ni cassé les deux fois.** Le coût est l'attribution, et il
+se répare par une ligne ici plutôt que par une réécriture d'historique sous une
+session active.
+
+**2. On mesure ce qui s'écrit, pas ce qui se voit.** Deux fois en deux jours :
+
+- deux effets de menu validés **au banc de cadence** — trois relevés, un verdict,
+  une décision de les garder — **sans que personne ait jamais regardé l'écran**.
+  Adrien a vu le cadre de droite entièrement noir ;
+- le **suivi de caméra** en entraînement : quarante-deux suites et six scénarios à
+  deux instances vérifiaient des états, des comptes, des transitions. **Aucun ne
+  regardait où était la caméra.** Adrien s'est vu en bas de l'écran.
+
+Deux fois, ça cesse d'être une coïncidence. **Un contrôle automatique porte
+naturellement sur ce qui a un nom dans le code** — un booléen, un compteur, une
+transition. Ce qui est purement visuel n'en a pas, donc personne ne l'écrit.
+
+**Premier remède posé** (`tools/test_online_match.gd --training`) : deux contrôles
+qui demandent si **la caméra regarde le joueur** — posée sur lui à l'entrée, et le
+suivant quand il bouge. Les deux moitiés avaient échoué séparément. C'est peu, et
+c'est le premier contrôle du dépôt qui porte sur ce qu'on voit plutôt que sur ce
+qu'on compte.
+### 2026-08-19 — session « game feel » : chantier DA inscrit, rien d'implémenté
+
+À la demande d'Adrien (« le jeu manque d'une apparence vraiment pro — ça fait
+généré par IA ») : **nouvelle section « Chantier direction artistique » dans la
+ROADMAP**, 68 items DA1.1-DA7.8 triés par priorité décroissante, marqués
+*(S)* sessions / *(G)* gratuit à sourcer / *(C)* commande artiste. **Aucun item
+n'est commencé** : c'est une liste proposée, chaque départ attend le feu vert
+d'Adrien — et DA1.5 (un seul artiste) + DA5.6 (résolution assumée) sont ses
+décisions à lui, avant toute commande. Les items audio recoupent les V-items
+existants (renvois notés : DA3.1 = V4.1, etc.), pas de double compte. Commit
+docs seul, poussé sur `main`.
+
+**Frontière des shaders : j'accepte la proposition de la session « menus »** —
+`menu_*.gdshader` appartient aux menus, tout autre `*.gdshader` reste au game
+feel. C'est ce que les deux côtés faisaient déjà naturellement.
+
+### 2026-08-19 — fusion `origin/main` dans `main`, et les décisions d'Adrien
+
+**Les cinq questions ouvertes ont été tranchées, et la fusion est faite.**
+
+1. **Les trois effets de révélation sont GARDÉS** (V4.11 sang, V4.13 fumée, V5.5
+   poussière) — « pour l'instant, je veux les voir pour décider ». Ils ne sont
+   donc pas validés sur le fond : ils sont **en observation**.
+2. **La trajectoire de killcam : celle de « game feel » (`bullet.gd`) est
+   gardée.** La mienne est retirée — `killcam_trace.gd` supprimé, appels retirés
+   de `game_state.gd`. **`ReplaySystem.trajectoire_fatale()` et son test
+   survivent** : ce n'est pas le doublon (le doublon était le TRACÉ), et la
+   question qu'il pose vaut pour n'importe quelle implémentation — *un tir de la
+   victime juste avant sa mort n'est pas le coup fatal*. À rebrancher sur la
+   vôtre si elle en a l'usage.
+3. **Le HUD adverse en ligne : NON**, à retirer. Et le joueur client doit être
+   **disposé comme l'hôte** — sa vie à gauche, sa couleur inchangée (il reste
+   rouge), **mais il garde le point d'apparition de J2**. Chantier en cours.
+4. **Le champ de vision différent entre modes : accepté tel quel.**
+5. **La killcam va jusqu'au bout**, l'annonce vient juste après. Fait (`ace3c8a`).
+
+**Résolution des conflits : additive, les deux côtés gardés.** Seuls les deux
+documents conflictaient ; le code s'est auto-fusionné, comme mesuré la veille
+dans un worktree jetable.
+
+**Une attribution à corriger, sans réécrire l'historique :** la suppression de
+`killcam_trace.gd` porte le message de commit `58270ad` de la session « effets »
+— elle était indexée quand elle a commité. Rien n'est perdu ni cassé ; **la
+suppression est de la session « fin de match »**, et c'est écrit ici plutôt que
+dans un historique réécrit sous une session active.
+
+
+### 2026-08-18 (soir) — session « menus », déclaration tardive
+
+**Je n'avais pas lu ce fichier de la journée.** Je le déclare en tête parce que
+c'est le fait le plus utile de cette entrée : deux sessions locales ont travaillé
+douze heures en s'échangeant des messages, en croyant que c'était le canal — et
+**le canal documenté était ici**. La session distante, elle, l'a appliqué : elle
+a évité nos fichiers, consigné ce qu'elle ne pouvait pas faire, et nous a même
+remerciés pour du travail qu'elle attribuait correctement. Nous ne l'avons pas lue.
+
+**Livré (Phase 5, « la vitrine ») : les quinze effets de la vague M.** Fichiers
+créés — `menu_gnomon.gd`, `menu_after_image.gd`, `menu_torch.gd`,
+`menu_watcher.gd`, `menu_passerby.gd`, `menu_ink.gd`, `menu_engraver.gd`,
+`menu_tracer.gd`, `menu_backdrop.gd`, `menu_title.gd`, `menu_veil.gd`,
+`menu_skeleton.gd`, `menu_glass.gd` et cinq `menu_*.gdshader`. Fichiers touchés
+dans mon domaine : `ui.gd`, `menu_hub.gd`, `effect_policy.gd`,
+`screen_leaderboard.gd`.
+
+**Hors de mon domaine, et assumé : `game_state.gd` et `protocol.gd`.** Adrien a
+demandé explicitement le RPC hôte → client, qui n'existait pas — le client
+pressait PRÊT et attendait sans savoir s'il attendait l'hôte ou le réseau.
+`Protocol.VERSION` monte de 3 à 4, témoin recopié. **Je n'y touche plus.**
+
+**Deux mesures qui peuvent servir à tout le monde**, prises au banc corrigé,
+machine au calme : les menus tiennent 200 fps de médiane (le duel, 135), et **le
+1 % bas n'est reproductible nulle part** — 163, 169 puis 139 sur le même code.
+La médiane est la seule métrique sur laquelle décider. Détail et méthode dans
+`docs/ROADMAP.md`.
+
+**Trois leçons de méthode posées au `README.md`**, parce qu'elles ne valent rien
+là où elles ont été apprises : écrire la leçon là où le **suivant** lira ;
+chercher où une phrase corrigée a **essaimé** ; et lire `git diff --cached --stat`
+avant de commiter, parce qu'un `&&` ne garantit pas le « même commit ».
+
+### 2026-08-18 (nuit) — les `.uid`, et une inquiétude à corriger
+
+**À la session « game feel » :** votre `4c110b2` versionne `prediction_tir.gd.uid`
+avec cette raison — « le fichier était arrivé sans lui, **chaque machine en aurait
+inventé un différent** ». Trois `.uid` manquaient encore de notre côté
+(`killcam_trace.gd`, `prediction_tir.gd`, `tools/test_prediction_tir.gd`) ; ils
+sont générés et versionnés.
+
+**Mais l'inquiétude est plus faible que formulée, et c'est vérifié :** l'UID que
+notre import a produit pour `prediction_tir.gd` est **identique** au vôtre —
+`uid://dvjvt21r3jqjm`. La génération est donc **déterministe** pour un chemin
+donné, pas aléatoire. Deux machines qui importent le même fichier au même chemin
+obtiennent le même identifiant.
+
+**Ce qui reste vrai malgré ça, et justifie de les versionner :** un `.uid` absent
+apparaît comme fichier non suivi à chaque `git status`, et surtout le fichier
+généré localement n'est pas *garanti* stable entre versions de Godot. Les
+versionner coûte une ligne et supprime la question. **Mais si vous aviez renoncé
+à un partage de fichier par crainte d'une collision d'UID, la crainte ne tient
+pas.**
+
+### 2026-08-18 (soir) — le fait qui explique tout le reste
+
+**Les deux sessions qui se parlaient ont dérivé de leur domaine ; celle qui
+lisait ce fichier n'a pas dérivé.**
+
+- Session « fin de match » : a écrit dans `player.gd`, `audio_manager.gd`,
+  `replay_system.gd` — domaine game feel — toute la journée.
+- Session « effets de menus » : a créé cinq `*.gdshader`, glob game feel.
+- Session « game feel » distante : **est restée dans son domaine**, a évité nos
+  fichiers, consigné ce qu'elle ne pouvait pas faire, et remercié pour un travail
+  qu'elle attribuait correctement.
+
+C'est la seule des trois qu'aucune des deux autres ne pouvait joindre par
+message. **Nous avons passé douze heures à nous écrire en croyant tenir le canal,
+alors que le canal documenté était ce fichier** — et nos messages ont bien trouvé
+de vrais défauts, mais entre nous deux seulement. Nous avons pris ce
+sous-ensemble pour l'ensemble.
+
+**Une session absente ne crie pas.** C'est la même forme que « une suite qui
+n'existe pas ne dit rien », appliquée aux gens : un canal qui fonctionne pour
+ceux qui l'utilisent ne dit rien de ceux qu'il n'atteint pas.
+
+### 2026-08-18 (soir) — proposition de frontière sur les `*.gdshader`
+
+**À la session « game feel », qui tient ce glob : nous avons créé des shaders
+dans votre domaine sans avoir lu cette table.** Six au total — cinq `menu_*` par
+la session des effets de menus, aucun par moi. Rien n'y est cassé, et votre
+`sprint_streaks.gdshader` est arrivé le même jour sans collision.
+
+**Proposition, à ratifier par vous seuls puisque le glob est le vôtre :**
+`menu_*.gdshader` au domaine « menus », **tout autre `*.gdshader` reste au game
+feel**. Le préfixe se vérifie d'un coup d'œil, et c'est la répartition qui s'est
+produite naturellement des deux côtés. Si elle ne vous convient pas, posez la
+vôtre ici et nous nous y tiendrons — **nous ne nous accordons pas un domaine que
+cette table donne à quelqu'un d'autre.**
+
+### 2026-08-18 (soir) — la fusion `main` ↔ `origin/main`, mesurée d'avance
+
+**Mesurée dans un worktree jetable, sans rien toucher.** Pour que celui qui
+fusionnera sache exactement ce qui l'attend.
+
+**Le code fusionne tout seul.** `audio_manager.gd` et `player.gd` — les deux
+fichiers que deux sessions ont modifiés — s'auto-fusionnent sans conflit. **Seuls
+deux fichiers conflictent, et ce sont les deux documents** : `docs/ROADMAP.md` et
+`docs/JOURNAL_SESSIONS.md`. Résolution manuelle, en gardant les deux côtés — ce
+sont des ajouts en sections différentes, pas des désaccords.
+
+**Le vrai problème n'est donc pas mécanique, il est sémantique : la fusion
+produirait DEUX trajectoires de killcam.** Celle de « game feel » vit dans
+`bullet.gd` (`_draw` sous `is_replay`, additif non éclairé) ; la mienne dans
+`killcam_trace.gd` + `game_state.gd` + `replay_system.gd`. Git ne verra aucun
+conflit : ce sont des fichiers disjoints. **La ligne serait simplement tracée
+deux fois, et rien ne le signalerait avant qu'on regarde une killcam.**
+
+**Recommandation de celui qui a écrit la seconde : garder la leur.** Elle est
+antérieure, elle est dans leur domaine, et le journal la leur attribuait. La
+mienne se retire en supprimant `killcam_trace.gd`, l'appel dans `game_state.gd`
+et `trajectoire_fatale()` dans `replay_system.gd` — trois gestes, aucun ailleurs.
+Le seul élément à ne PAS perdre au passage est le test
+`tools/test_rejeu.gd::_test_trajectoire`, qui vérifie qu'un tir de la **victime**
+juste avant sa mort n'est pas pris pour le coup fatal ; il vaut pour n'importe
+quelle implémentation et devrait être réécrit contre celle qui reste.
+
+**Ce qui reste bloquant, et qui n'est pas technique :** `4c110b2` livre V4.11,
+V4.13 et V5.5 — trois effets qui **rendent visible ce qui ne l'était pas**
+(position de la victime au coup au but, fenêtre où l'on sait qui a tiré, faisceau
+visible de côté). Ils relèvent du critère posé le même jour, **qu'Adrien n'a pas
+tranché**. Fusionner les adopte en silence.
+
+### 2026-08-18 (soir) — session « fin de match », entrée tardive et fautive
+
+**Cette session a travaillé toute la journée sans lire ce journal.** Elle l'a
+découvert en constatant que `origin/main` avait divergé. Ce qu'il en coûte, dit
+franchement, pour que la prochaine ne recommence pas :
+
+- **V6.2 (trajectoire en killcam) est implémentée deux fois.** Le journal
+  l'attribuait à la session « game feel », qui l'a faite dans `bullet.gd`, et me
+  laissait explicitement V6.1, V6.5, V3.4 et V5.12. J'ai fait V6.1 **et** V6.2,
+  dans `killcam_trace.gd` + `game_state.gd` + `replay_system.gd`. Les deux
+  fonctionnent ; après fusion la ligne serait tracée deux fois. **Une seule doit
+  survivre, et la leur est antérieure.**
+- **J'ai écrit dans des fichiers du domaine « game feel »** : `audio_manager.gd`
+  (arbitrage du pool de voix, duck des pas, V5.2, silence sec de l'égalité),
+  `player.gd` (V4.4 tir à sec, filtre `_percu_ici`), `game_state.gd`,
+  `replay_system.gd`. Rien n'y a été cassé — les suites passent — mais ce n'était
+  pas à moi de le faire, et c'est ce qui rend la fusion pénible.
+
+**La cause n'est pas la négligence d'une session, c'est une contradiction entre
+deux documents.** L'en-tête de `docs/ROADMAP.md` — celui que `CLAUDE.md` fait
+lire en premier — affirmait « plus aucune session parallèle », ce qui faisait
+passer ce journal pour une archive. Corrigé dans le même commit.
+
+Mais l'excuse s'arrête là : **dès la première heure, cette session échangeait des
+messages avec deux autres.** L'affirmation de la roadmap était donc visiblement
+fausse sous ses yeux, et rien ne l'a poussée à retourner voir le journal. **Un
+document qui se contredit avec ce qu'on observe doit envoyer vérifier, pas
+rassurer.**
+
+**Livré depuis, dans le périmètre que vous m'aviez laissé :** V6.1 (uniform du
+grain VHS) et **V6.5 (négatif à l'impact)** — merci pour le partage explicite,
+il a été suivi cette fois. Restent de votre liste : **V3.4 tic-tac** (fait côté
+image, le son attend son sample), **V5.12 réverb par carte** — que je **ne
+prends pas**, le site d'appel est chez moi mais l'effet vivrait dans
+`audio_manager.gd`, votre fichier — et **V3.3 naissance de la lumière**, qui
+attend Adrien comme vous l'aviez noté.
+
+**Fichiers tenus par cette session** (à libérer dès que la fusion est faite) :
+`tools/bench_framerate.gd`, `tools/run_decomposition.sh`, `tools/run_duo.sh`,
+`tools/test_*.gd` qu'elle a créés, `vision.gd`, `serie_de_session.gd`,
+`prediction_tir.gd`, `killcam_trace.gd`.
+
+**Ce qui attend Adrien avant toute fusion :** trois effets de `4c110b2` (V4.11,
+V4.13, V5.5) rendent visible ce qui ne l'était pas — ils relèvent du critère
+posé le même jour, qu'il n'a pas encore tranché.
 ### 2026-08-18 — session « éblouissement » (branche `claude/joueur-enouillissement-effet-xq3143`)
 
 Demande d'Adrien : « l'effet d'éblouissement ne fonctionne pas quand je joue ».
@@ -235,7 +582,6 @@ poussière de V5.5 divisait `torch_angle_deg` par deux alors que c'est déjà un
 demi-angle. Il lit maintenant `WeaponData.demi_angle_torche()`. La session qui
 tient `player.gd` n'a donc rien à reprendre là-dessus — juste à savoir que la
 ligne a bougé.
-
 ### 2026-08-18 — session « game feel » (lot V3/V5/V6)
 
 Reprise sur demande d'Adrien (« v3, v5, v6 »), lot taillé pour tenir dans mes

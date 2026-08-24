@@ -26,6 +26,8 @@ func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# La couleur ne sert à rien — le shader écrit `COLOR` de bout en bout — mais un
 	# `ColorRect` transparent ne dessinerait pas de quad, donc pas de passe.
+	# Neutre du matériau : ce `ColorRect` ne montre jamais sa propre couleur, le
+	# shader peint à sa place. Un blanc y est l'unité d'un produit, pas une teinte.
 	color = Color.WHITE
 	_materiau = ShaderMaterial.new()
 	_materiau.shader = SHADER

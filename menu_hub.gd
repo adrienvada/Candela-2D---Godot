@@ -116,7 +116,7 @@ func _build() -> void:
 	columns.add_child(left)
 
 	_title_label = Label.new()
-	_title_label.add_theme_font_size_override("font_size", 30)
+	_title_label.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
 	_title_label.add_theme_color_override("font_color", MenuTheme.GOLD)
 	left.add_child(_title_label)
 
@@ -163,7 +163,7 @@ func _build() -> void:
 	# disait rien. Lire l'explication d'une entrée ne devrait pas demander de
 	# traverser l'écran du regard.
 	_detail_title = Label.new()
-	_detail_title.add_theme_font_size_override("font_size", 20)
+	_detail_title.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	_detail_title.add_theme_color_override("font_color", MenuTheme.P1)
 	_detail_title.hide()
 	_detail_host.add_child(_detail_title)
@@ -171,7 +171,7 @@ func _build() -> void:
 	_detail_text = RichTextLabel.new()
 	_detail_text.bbcode_enabled = true
 	_detail_text.fit_content = true
-	_detail_text.add_theme_font_size_override("normal_font_size", 15)
+	_detail_text.add_theme_font_size_override("normal_font_size", MenuTheme.T_COURANT)
 	_detail_text.add_theme_color_override("default_color", MenuTheme.DIM)
 	_detail_text.hide()
 	_detail_host.add_child(_detail_text)
@@ -324,13 +324,19 @@ func _slide(body: Control, direction: float) -> void:
 	body.offset_left = offset
 	body.offset_right = offset
 
+	# La traversée d'écran prend la courbe d'ENTRÉE de la charte — la même que
+	# tout ce qui arrive à l'écran dans ce jeu. Elle remplace un `TRANS_CUBIC`
+	# choisi ici et nulle part ailleurs : c'est ce genre de réglage local, répété
+	# cinq fois avec cinq valeurs différentes, qui fait qu'un jeu paraît « tweené »
+	# plutôt qu'animé.
 	_tween = create_tween()
 	_tween.set_parallel(true)
-	_tween.tween_property(body, "modulate:a", 1.0, MenuTheme.FADE)
-	_tween.tween_property(body, "offset_left", 0.0, MenuTheme.FADE) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_tween.tween_property(body, "offset_right", 0.0, MenuTheme.FADE) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	MenuTheme.C.animer(_tween, body, "modulate:a", 0.0, 1.0, MenuTheme.FADE,
+		MenuTheme.C.Courbe.ENTREE)
+	MenuTheme.C.animer(_tween, body, "offset_left", offset, 0.0, MenuTheme.FADE,
+		MenuTheme.C.Courbe.ENTREE)
+	MenuTheme.C.animer(_tween, body, "offset_right", offset, 0.0, MenuTheme.FADE,
+		MenuTheme.C.Courbe.ENTREE)
 
 	# L'encre est un second animateur, pas un remplaçant : le glissement reste ce
 	# qu'il était, l'encre ne touche qu'aux alphas des entrées et à son ménisque.
@@ -523,9 +529,9 @@ func make_entry(label: String, detail: String, target: String = "",
 	lbl.text = label
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	lbl.add_theme_color_override("font_color",
-		MenuTheme.DIM if btn.disabled else Color.WHITE)
+		MenuTheme.DIM if btn.disabled else MenuTheme.LUMIERE)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Le gras remplace la couleur pour marquer un geste qui engage : la couleur
 	# est réservée aux deux curseurs, un accent posé ici s'y confondrait au repos.
@@ -542,7 +548,7 @@ func make_entry(label: String, detail: String, target: String = "",
 		var chevron := Label.new()
 		chevron.text = "›"
 		chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		chevron.add_theme_font_size_override("font_size", 24)
+		chevron.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
 		chevron.add_theme_color_override("font_color", accent)
 		chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(chevron)
@@ -550,7 +556,7 @@ func make_entry(label: String, detail: String, target: String = "",
 		var lock := Label.new()
 		lock.text = "—"
 		lock.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		lock.add_theme_font_size_override("font_size", 16)
+		lock.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 		lock.add_theme_color_override("font_color", MenuTheme.DIM)
 		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(lock)

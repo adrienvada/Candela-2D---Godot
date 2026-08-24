@@ -81,17 +81,17 @@ func _build() -> void:
 	add_theme_stylebox_override("panel", style)
 
 	var colonne := VBoxContainer.new()
-	colonne.add_theme_constant_override("separation", 2)
+	colonne.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	add_child(colonne)
 
 	_titre = Label.new()
 	_titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titre.add_theme_font_size_override("font_size", 17)
+	_titre.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	colonne.add_child(_titre)
 
 	_detail = Label.new()
 	_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_detail.add_theme_font_size_override("font_size", 13)
+	_detail.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	_detail.add_theme_color_override("font_color", MenuTheme.DIM)
 	colonne.add_child(_detail)
 
@@ -116,7 +116,7 @@ func _make_button(accent: Color) -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(160, 38)
 	btn.focus_mode = Control.FOCUS_ALL
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	btn.hide()
 
 	var normal := StyleBoxFlat.new()
@@ -191,7 +191,7 @@ func refresh() -> void:
 	_titre.text = "%s  —  %s" % [String(snap.get("state_label", "")).to_upper(),
 		"CLASSÉ" if classe else "AMICAL"]
 	_titre.add_theme_color_override("font_color",
-		MenuTheme.GOLD if classe else Color.WHITE)
+		MenuTheme.GOLD if classe else MenuTheme.LUMIERE)
 	_detail.text = _detail_text(etat, snap)
 	_apply_buttons(etat)
 	if etat != _dernier_etat:

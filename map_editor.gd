@@ -17,6 +17,8 @@
 
 extends Node2D
 
+const Charte := preload("res://charte.gd")
+
 ## Étapes d'édition, dans l'ordre de la barre du haut.
 enum EditorStep { FLOOR, WALLS, SPAWN_P1, SPAWN_P2 }
 ## Outil courant, déduit des modificateurs maintenus.
@@ -32,10 +34,10 @@ const STEP_LABELS: Array[String] = [
 	"SOL", "MURS", "APPARITION J1", "APPARITION J2",
 ]
 const STEP_COLOURS: Array[Color] = [
-	Color(0.30, 1.00, 0.72),   # SOL — vert néon
-	Color(0.92, 0.94, 1.00),   # MURS — blanc
-	Color(0.00, 0.94, 1.00),   # J1 — cyan (couleur du joueur 1)
-	Color(1.00, 0.20, 0.42),   # J2 — rouge (couleur du joueur 2)
+	Charte.VERT,       # SOL — la diode « disponible »
+	Charte.HALOGENE,   # MURS — la lumière qui les révèle
+	Charte.BLEU,       # J1
+	Charte.ROUGE,      # J2
 ]
 
 ## Pas de redimensionnement de la grille, en cases par appui.
@@ -315,7 +317,7 @@ func _setup_cursor_light() -> void:
 	cursor_light.texture = texture
 	cursor_light.texture_scale = 1.4
 	cursor_light.energy = 1.9
-	cursor_light.color = Color(1.0, 0.95, 0.84)
+	cursor_light.color = Charte.HALOGENE
 	cursor_light.shadow_enabled = true
 	cursor_light.enabled = false
 
@@ -736,7 +738,7 @@ func _refresh_tool_hint(force: bool = false) -> void:
 func _on_cells_touched(cells: Array[Vector2i], layer: StringName, painting: bool) -> void:
 	_request_validation()
 
-	var colour := Color(1.0, 0.35, 0.45)
+	var colour := Charte.ROUGE
 	if painting:
 		colour = STEP_COLOURS[1] if layer == MapEditorTools.LAYER_WALLS else STEP_COLOURS[0]
 
@@ -782,9 +784,9 @@ func _spawn_tile_pop(cell: Vector2i, colour: Color) -> void:
 
 	var tween := quad.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(quad, "scale", Vector2.ONE, 0.26) \
+	tween.tween_property(quad, "scale", Vector2.ONE, Charte.D_LONG) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(quad, "modulate:a", 0.0, 0.26) \
+	tween.tween_property(quad, "modulate:a", 0.0, Charte.D_LONG) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tween.chain().tween_callback(quad.queue_free)
 
@@ -1077,7 +1079,7 @@ func _on_import_confirmed(code: String) -> void:
 func _toggle_light_preview() -> void:
 	_light_preview = not _light_preview
 	cursor_light.enabled = _light_preview
-	ambient.color = Color(0.06, 0.06, 0.09) if _light_preview else Color.WHITE
+	ambient.color = Charte.NOIR.lerp(Charte.ACIER, 0.09) if _light_preview else Color.WHITE
 	hud.set_light_preview(_light_preview)
 
 	if _light_preview:
@@ -1142,7 +1144,7 @@ func _enter_sandbox() -> void:
 	preview_layer.hide()
 	grid_backdrop.hide()
 	cursor_light.enabled = false
-	ambient.color = Color(0.0, 0.0, 0.0)
+	ambient.color = Charte.NOIR
 
 	# La géométrie est reconstruite à chaque entrée : les murs ont pu changer.
 	_clear_sandbox_content()
@@ -1171,7 +1173,7 @@ func _exit_sandbox() -> void:
 	preview_layer.show()
 	grid_backdrop.show()
 	cursor_light.enabled = _light_preview
-	ambient.color = Color(0.06, 0.06, 0.09) if _light_preview else Color.WHITE
+	ambient.color = Charte.NOIR.lerp(Charte.ACIER, 0.09) if _light_preview else Color.WHITE
 
 	# L'édition reprend exactement là où elle s'était arrêtée.
 	camera.center_on(_cell_centre(grid_pos), true)
@@ -1240,7 +1242,7 @@ func _on_grid_draw() -> void:
 
 	# Contour de la zone jouable.
 	grid_backdrop.draw_rect(Rect2(Vector2.ZERO, full),
-		Color(0.35, 0.85, 1.0, 0.35), false, 2.0)
+		Color(Charte.BLEU, 0.35), false, 2.0)
 
 func _grid_colour(point: Vector2, centre: Vector2, full: Vector2, major: bool) -> Color:
 	var normalised := (point - centre) / maxf(1.0, minf(full.x, full.y) * 0.5)
@@ -1248,7 +1250,7 @@ func _grid_colour(point: Vector2, centre: Vector2, full: Vector2, major: bool) -
 	var alpha := lerpf(0.26, 0.03, edge)
 	if major:
 		alpha *= 1.9
-	return Color(0.35, 0.78, 1.0, alpha)
+	return Color(Charte.BLEU, alpha)
 
 # ---------------------------------------------------------------------------
 # DESSIN — APERÇUS
@@ -1260,7 +1262,7 @@ func _on_preview_draw() -> void:
 	# Zones de sol coupées du reste de la carte.
 	for cell in _orphan_cells:
 		preview_layer.draw_rect(Rect2(Vector2(cell) * tile, tile),
-			Color(1.0, 0.60, 0.10, 0.20), true)
+			Color(Charte.AMBRE, 0.20), true)
 
 	_draw_spawn_marker(0)
 	_draw_spawn_marker(1)
@@ -1276,7 +1278,7 @@ func _draw_rect_preview(tile: Vector2) -> void:
 	var rect := Rect2(Vector2(r_min) * tile, Vector2(r_max - r_min + Vector2i.ONE) * tile)
 
 	var pulse := sin(_pulse * 5.0) * 0.5 + 0.5
-	var colour := _step_colour() if _stroke_painting else Color(1.0, 0.30, 0.36)
+	var colour := _step_colour() if _stroke_painting else Charte.ROUGE
 
 	preview_layer.draw_rect(rect,
 		Color(colour.r, colour.g, colour.b, 0.14 + 0.08 * pulse), true)
@@ -1287,7 +1289,7 @@ func _draw_rect_preview(tile: Vector2) -> void:
 	preview_layer.draw_string(ThemeDB.fallback_font,
 		rect.position + Vector2(6, 20),
 		"%d × %d  (%d)" % [size.x, size.y, size.x * size.y],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 1, 0.92))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, Charte.T_COURANT, Color(Charte.HALOGENE, 0.92))
 
 func _draw_spawn_marker(index: int) -> void:
 	var cell := tools.get_spawn(index)
@@ -1321,7 +1323,7 @@ func _on_cursor_draw() -> void:
 	var brush := _stroke_brush if _stroke_active else _current_brush()
 
 	if _stroke_active and not _stroke_painting:
-		colour = Color(1.0, 0.30, 0.36)
+		colour = Charte.ROUGE
 
 	# Halo
 	cursor.draw_circle(Vector2.ZERO, radius * (1.25 + 0.12 * pulse),
@@ -1341,4 +1343,4 @@ func _on_cursor_draw() -> void:
 			cursor.draw_arc(Vector2.ZERO, radius, 0.0, TAU, 32,
 				Color(colour.r, colour.g, colour.b, 0.8 + 0.2 * pulse), 2.5)
 
-	cursor.draw_circle(Vector2.ZERO, 2.5, Color(1, 1, 1, 0.95))
+	cursor.draw_circle(Vector2.ZERO, 2.5, Color(Charte.HALOGENE, 0.95))

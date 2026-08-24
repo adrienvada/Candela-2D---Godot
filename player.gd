@@ -1,6 +1,8 @@
 extends CharacterBody2D
 class_name Player
 
+const Charte := preload("res://charte.gd")
+
 # Shaders partagés. Préchargés en ressource plutôt que compilés à la volée :
 # un Shader.new() dans die() faisait compiler le programme au moment exact du
 # premier mort, donc un hoquet visible pile sur l'action décisive.
@@ -173,7 +175,7 @@ func _ready():
 	sync.synchronized.connect(_on_net_synchronized)
 	add_child(sync)
 	
-	var p_color = Color(0, 0.94, 1.0) if player_id == 0 else Color(1.0, 0, 0.33)
+	var p_color = Charte.BLEU if player_id == 0 else Charte.ROUGE
 	visual.color = p_color
 	visual_ptr.color = p_color
 	
@@ -199,7 +201,10 @@ func _ready():
 	visual_reveal_enemy = visual_reveal.duplicate()
 	visual_reveal_enemy_ptr = visual_reveal_ptr.duplicate()
 	
-	var gray = Color(0.7, 0.7, 0.7)
+	# La teinte de la lampe qui le révèle, à luminance strictement égale au gris
+	# neutre d'avant — c'est la seule dérivée de la charte qui touche à l'équité,
+	# et un banc compare les deux luminances.
+	var gray = Charte.ADVERSAIRE
 	visual_enemy.color = gray
 	visual_enemy_ptr.color = gray
 	visual_reveal_enemy.color = gray
@@ -352,8 +357,8 @@ func _ready():
 	body_light.range_item_cull_mask = 2 | 4  # Éclaire le joueur local (4) ET l'écran ennemi (2) quand en ligne de vue
 	
 	var b_grad = Gradient.new()
-	b_grad.set_color(0, Color(1, 0.95, 0.8, 1.0))
-	b_grad.set_color(1, Color(1, 0.95, 0.8, 0.0))
+	b_grad.set_color(0, Color(Charte.HALOGENE, 1.0))
+	b_grad.set_color(1, Color(Charte.HALOGENE, 0.0))
 	var b_tex = GradientTexture2D.new()
 	b_tex.gradient = b_grad
 	b_tex.fill = GradientTexture2D.FILL_RADIAL
@@ -372,6 +377,9 @@ func _ready():
 	
 	ambient_light = PointLight2D.new()
 	var a_grad = Gradient.new()
+	# Masque d'atténuation, pas une couleur : la teinte est posée sur la lumière
+	# elle-même, ligne plus bas. Voir la note de `light_textures.gd` — teinter
+	# les deux reviendrait à chauffer la lumière deux fois.
 	a_grad.set_color(0, Color(1, 1, 1, 1))
 	a_grad.set_color(1, Color(1, 1, 1, 0))
 	var a_tex = GradientTexture2D.new()
@@ -383,6 +391,10 @@ func _ready():
 	a_tex.height = 150
 	
 	ambient_light.texture = a_tex
+	# Sa couleur n'était jamais posée, donc blanche par défaut : la seule lumière
+	# du jeu qui ne venait ni d'un feu ni d'un filament, sans que personne l'ait
+	# décidé.
+	ambient_light.color = Charte.HALOGENE
 	ambient_light.energy = 0.8
 	ambient_light.shadow_enabled = true
 	ambient_light.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
@@ -419,7 +431,7 @@ func _ready():
 	
 	aim_line = Line2D.new()
 	aim_line.width = 2.0
-	aim_line.default_color = Color(1.0, 1.0, 1.0, 0.25)
+	aim_line.default_color = Color(Charte.HALOGENE, 0.25)
 	aim_line.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	
 	var dash_img = Image.create_empty(16, 2, false, Image.FORMAT_RGBA8)
@@ -450,7 +462,7 @@ func _ready():
 	
 	muzzle_flash.texture = mf_tex
 	muzzle_flash.texture_scale = 0.5
-	muzzle_flash.color = Color(1.0, 0.8, 0.5)
+	muzzle_flash.color = Charte.AMBRE
 	muzzle_flash.offset = Vector2.ZERO
 
 func equip_weapon(weapon: WeaponData):
@@ -888,7 +900,7 @@ func _physics_process(delta):
 					else deg_to_rad(30.0)
 				var ecart := faisceau.orthogonal() * portee * tan(demi_angle) * randf_range(-0.6, 0.6)
 				pool.emit(ParticlePool.Kind.DUST, muzzle.global_position + faisceau * portee + ecart,
-					Color(1.0, 0.97, 0.9, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
+					Color(Charte.HALOGENE, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
 	elif flashlight.enabled:
 		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
 		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))
@@ -900,8 +912,33 @@ func _physics_process(delta):
 
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
-	if can_move and input_provider.is_shoot_pressed() and shoot_cooldown <= 0 and not is_sprinting:
+	var presse := input_provider.is_shoot_pressed()
+	if can_move and presse and shoot_cooldown <= 0 and not is_sprinting:
 		shoot()
+	elif can_move and presse and not _detente_pressee and _percu_ici():
+		# Front montant seulement : détente maintenue pendant une seconde de
+		# rechargement, le tremblement doit dire « trop tôt » une fois, pas vibrer
+		# en continu comme une panne.
+		tir_a_sec = 0.22
+	_detente_pressee = presse
+	if tir_a_sec > 0.0:
+		tir_a_sec = maxf(0.0, tir_a_sec - delta)
+
+## V4.4 — presser la détente pendant le rechargement ne produisait RIEN.
+##
+## Ni son, ni image, ni vibration : le joueur ne pouvait pas distinguer « j'ai
+## appuyé trop tôt » de « ma touche n'a pas répondu ». C'est le seul geste du jeu
+## qui échouait en silence.
+##
+## **Uniquement pour le joueur qui a pressé, et sur SON écran.** En ligne, l'hôte
+## simule aussi l'adversaire : sans ce filtre, le HUD de l'hôte tremblerait quand
+## le client tire à sec — lui apprenant que l'autre vient d'essayer de tirer, donc
+## qu'il est à portée et à découvert. Même règle que pour le passe-bas des
+## torches : ce qui réagit à l'état d'un joueur doit se demander de qui il tient
+## cet état.
+func _percu_ici() -> bool:
+	var local := _index_joueur_local()
+	return local < 0 or player_id == local
 
 func _update_aim_line() -> void:
 	if aim_cast == null or aim_line == null: return
@@ -909,6 +946,11 @@ func _update_aim_line() -> void:
 	if aim_cast.is_colliding():
 		end_pos = to_local(aim_cast.get_collision_point())
 	aim_line.points = PackedVector2Array([Vector2(28, 0), end_pos])
+
+## V4.4 — temps restant du tremblement de refus, lu par le HUD.
+var tir_a_sec: float = 0.0
+## État précédent de la détente, pour ne réagir qu'au front montant.
+var _detente_pressee: bool = false
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
@@ -978,8 +1020,8 @@ func trigger_shoot_visuals():
 	if has_node("VisualRevealEnemy"):
 		var vre = get_node("VisualRevealEnemy")
 		var vrep = get_node("VisualRevealEnemyPtr")
-		vre.color = Color(1.0, 1.0, 1.0, 1.0) 
-		vrep.color = Color(1.0, 1.0, 1.0, 1.0)
+		vre.color = Color(Charte.HALOGENE, 1.0)
+		vrep.color = Color(Charte.HALOGENE, 1.0)
 		tw_reveal.tween_property(vre, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		tw_reveal.tween_property(vrep, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	
@@ -990,14 +1032,14 @@ func trigger_shoot_visuals():
 	if pool:
 		var canon := Vector2.from_angle(global_rotation)
 		pool.emit(ParticlePool.Kind.SMOKE, muzzle.global_position + canon * 6.0,
-			Color(0.45, 0.45, 0.5, 0.28), 3, 20.0, 55.0, canon, 70.0)
+			Color(Charte.ACIER * 0.6, 0.28), 3, 20.0, 55.0, canon, 70.0)
 
 	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
 	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
 	# rôle, ceci n'est que son écho au sol.
 	var ground_flash := PointLight2D.new()
 	ground_flash.texture = LightTextures.radial(200)
-	ground_flash.color = Color(1.0, 0.85, 0.5)
+	ground_flash.color = Charte.AMBRE
 	ground_flash.energy = 1.2
 	ground_flash.shadow_enabled = false
 	ground_flash.range_item_cull_mask = 1
@@ -1054,8 +1096,9 @@ func rpc_update_hp(new_hp: float, source_id: int):
 	# Texture blanche partagée, teintée par `color` : une 400×400 était allouée
 	# à chaque impact reçu.
 	hit_light.texture = LightTextures.radial(400)
-	# Pure blood red light, not pink/magenta
-	hit_light.color = Color(0.9, 0.0, 0.0)
+	# La lumière de l'impact est celle du sang, pas un rouge d'alerte : elle
+	# éclaire une blessure, elle ne signale pas un état.
+	hit_light.color = Charte.CARMIN
 	hit_light.energy = 2.0
 	hit_light.shadow_enabled = true
 	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
@@ -1118,10 +1161,11 @@ func die(killer: Node2D):
 	if killer and killer != self and killer.current_weapon:
 		lbl.text = "FATAL — %s" % killer.current_weapon.name.to_upper()
 	var settings = LabelSettings.new()
-	settings.font_size = 72
-	settings.font_color = Color(1.0, 0.0, 0.0)
+	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
+	settings.font_size = Charte.T_ENSEIGNE
+	settings.font_color = Charte.ROUGE
 	settings.outline_size = 12
-	settings.outline_color = Color.BLACK
+	settings.outline_color = Charte.NOIR
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.position = global_position - Vector2(100, 100)
@@ -1148,10 +1192,11 @@ func die(killer: Node2D):
 		var sub = Label.new()
 		sub.text = "à %d px du centre" % int(roundf(last_fatal_perp))
 		var sub_settings = LabelSettings.new()
-		sub_settings.font_size = 28
-		sub_settings.font_color = Color(1.0, 0.85, 0.85)
+		sub_settings.font = Charte.police_display(Charte.POIDS_DISPLAY)
+		sub_settings.font_size = Charte.T_TITRE
+		sub_settings.font_color = Charte.HALOGENE
 		sub_settings.outline_size = 8
-		sub_settings.outline_color = Color.BLACK
+		sub_settings.outline_color = Charte.NOIR
 		sub.label_settings = sub_settings
 		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		sub.position = global_position + Vector2(-100, -20)

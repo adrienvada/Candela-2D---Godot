@@ -63,6 +63,9 @@ func laisser(rect: Rect2, teinte: Color) -> void:
 
 ## Le négatif, et rien d'autre. C'est ce choix qui distingue l'effet d'un trail.
 func _complementaire(c: Color) -> Color:
+	# Complémentaire de la couleur REÇUE : ce n'est pas une teinte de la charte,
+	# c'est une opération sur celle du curseur. La règle « pas de valeur pure » ne
+	# s'y applique pas — le 1.0 y est l'unité du calcul, pas du blanc.
 	return Color(1.0 - c.r, 1.0 - c.g, 1.0 - c.b)
 
 func _process(delta: float) -> void:

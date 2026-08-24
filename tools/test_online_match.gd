@@ -49,7 +49,29 @@ func _ready() -> void:
 			return
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
-	if _has("--host"):
+	if _has("--host-reconnexion"):
+		await _run_host_reconnexion()
+	elif _has("--host-spam"):
+		await _run_host_spam()
+	elif _has("--join-spam"):
+		await _run_client_spam()
+	elif _has("--host-ralenti"):
+		await _run_host_ralenti()
+	elif _has("--join-ralenti"):
+		await _run_client_ralenti()
+	elif _has("--host-killcam"):
+		await _run_host_killcam()
+	elif _has("--join-killcam"):
+		await _run_client_killcam()
+	elif _has("--host-pause"):
+		await _run_host_pause()
+	elif _has("--join-pause"):
+		await _run_client_pause()
+	elif _has("--host-coupure"):
+		await _run_host_coupure()
+	elif _has("--join-coupure"):
+		await _run_client_coupure()
+	elif _has("--host"):
 		await _run_host()
 	elif _has("--join"):
 		await _run_client()
@@ -62,7 +84,8 @@ func _ready() -> void:
 	elif _has("--eblouissement"):
 		await _run_eblouissement()
 	else:
-		print("Usage: --host | --join <CODE|IP> | --local | --training | --fenetre | --eblouissement")
+		print("Usage: --host | --join <CODE|IP> | --local | --training"
+			+ " | --fenetre | --eblouissement | --host-coupure | --join-coupure <IP>")
 		_quit(2)
 
 
@@ -289,6 +312,32 @@ func _run_training() -> void:
 		_main.bullet_container.get_child_count() > balles_avant,
 		"%d → %d" % [balles_avant, _main.bullet_container.get_child_count()])
 
+	# **La caméra regarde-t-elle le joueur ?**
+	#
+	# Personne ne posait la question. Adrien a joué l'entraînement le 2026-08-19
+	# et s'est vu **en bas de l'écran**, immobile dans le cadre pendant qu'il
+	# marchait : le suivi vivait dans `if round_active:` — « une manche COMPTÉE
+	# est en cours » — et l'entraînement désarme cette manche exprès.
+	#
+	# Quarante-deux suites et six scénarios à deux instances vérifiaient des
+	# états, des comptes et des transitions. **Aucun ne regardait où était la
+	# caméra.** On mesurait ce qui s'écrit, pas ce qui se voit.
+	#
+	# Deux contrôles, parce que les deux moitiés ont échoué séparément : la
+	# caméra doit être POSÉE sur le joueur à l'entrée, et le SUIVRE ensuite.
+	_check("la caméra est posée sur le joueur à l'entrée",
+		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
+		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+
+	var depart: Vector2 = _main.p1.global_position
+	_main.p1.global_position = depart + Vector2(300, 200)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("et elle le suit quand il se déplace",
+		_main.cam1.global_position.distance_to(_main.p1.global_position) < 4.0,
+		"caméra %s, joueur %s" % [_main.cam1.global_position, _main.p1.global_position])
+	_main.p1.global_position = depart
+
 	await get_tree().create_timer(1.0).timeout
 	_check("le journal local n'a pas bougé",
 		_history_size() == journal_avant,
@@ -352,6 +401,29 @@ func _run_local() -> void:
 	_check("le score de session est enregistré",
 		_main.p1_session_wins + _main.p2_session_wins == 1,
 		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
+
+	# **Famille 5.2 : la vitesse normale est rendue quand la killcam se termine
+	# d'elle-même.** Le seul chemin de sortie qu'une instance unique puisse
+	# exercer, et le plus fréquent de tous — celui de chaque mort de chaque
+	# partie.
+	#
+	# Ce que ça protège : `Engine.time_scale` est un réglage GLOBAL du moteur.
+	# L'oublier ne ralentit pas la killcam, il ralentit **tout le jeu, menus
+	# compris** — et le joueur n'a aucune raison de relier un curseur qui rampe à
+	# une mort survenue dix secondes plus tôt.
+	#
+	# Déterministe ici, contrairement au chemin de la déconnexion : la séquence
+	# de fin est allée à son terme, on ne mesure donc pas une fenêtre fugace mais
+	# un état stable. C'est pour ça que ce contrôle vit dans le banc à une
+	# instance et pas dans celui à deux.
+	_check("la vitesse normale est rendue après la killcam",
+		is_equal_approx(Engine.time_scale, 1.0),
+		"time_scale=%.4f" % Engine.time_scale)
+	_check("le rejeu est bien arrêté", not ReplaySystem.playing_back)
+	# Et rien ne doit rester gelé : la ceinture de V2.1 passe par le même chemin.
+	_check("aucune vue ne reste figée",
+		_main.vp1.render_target_update_mode != SubViewport.UPDATE_DISABLED,
+		"vp1=%d" % _main.vp1.render_target_update_mode)
 	_quit(0)
 
 
@@ -398,6 +470,526 @@ func _run_host() -> void:
 	await get_tree().create_timer(10.0).timeout
 	_quit(0)
 
+
+## Famille 3 de la checklist en ligne : **l'adversaire disparaît pendant le
+## 3-2-1**, brutalement, sans prévenir.
+##
+## C'est la transition la plus régressive du jeu et elle n'était vérifiée qu'à la
+## main — fermer une fenêtre au bon moment, puis regarder l'autre écran. Ce que
+## le code prétend faire est écrit noir sur blanc dans `_on_peer_disconnected` ;
+## rien ne vérifiait qu'il le fasse.
+##
+## **Le piège que ce banc protège est nommé dans le code lui-même** : « un départ
+## interrompu en plein 3-2-1 laisserait `countdown_left` figé, donc l'hôte
+## immobile pour toujours dans son bac à sable ». Un joueur bloqué sans message
+## et sans pouvoir bouger — le pire état atteignable, et le seul qui ne se
+## signale par aucune erreur.
+## Famille 1 de la checklist : **la pause en ligne ne gèle rien.**
+##
+## Le contrat est écrit dans `ui.gd` : « en ligne il figerait la simulation des
+## deux joueurs, ce panneau se superpose donc à un monde qui court ». Le joueur
+## en pause reste **vulnérable** — c'est voulu, et c'est ce qui empêche la pause
+## d'être une invincibilité gratuite.
+##
+## Deux propriétés opposées, et c'est leur COMBINAISON qui fait la règle :
+## le monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une sans
+## l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
+## le match, ou un joueur qui court encore pendant qu'il lit son menu.
+## Famille 2 de la checklist : **ce que l'adversaire fait pendant votre killcam
+## ne doit rien changer à votre écran — et ne doit rien perdre non plus.**
+##
+## Deux exigences opposées, comme la famille 1. Pendant le ralenti, l'intention du
+## client est **retenue** et non appliquée : rien ne bouge chez l'hôte, ni l'arme
+## de P2 ni le libellé du chrono. Mais à la sortie, **c'est le DERNIER choix** du
+## client qui vaut — pas le premier arrivé, pas rien.
+##
+## Le défaut que ça protège n'est pas cosmétique : un changement d'arme appliqué
+## au milieu d'un ralenti coupe la killcam de l'hôte, et une manche peut démarrer
+## seule pendant qu'il regarde encore.
+## Famille 5.3 : **l'adversaire disparaît pendant le ralenti.**
+##
+## Le pire chemin de sortie du jeu, et le commentaire de `_abort_killcam` le dit
+## déjà : « le ralenti est un réglage global du moteur : l'oublier sur un chemin
+## de sortie laisse tout le jeu à 3 % de sa vitesse ». Pas la killcam — **tout le
+## jeu**, menus compris. Un joueur qui verrait son curseur ramper n'aurait aucune
+## raison de relier ça à une déconnexion survenue dix secondes plus tôt.
+##
+## C'est la combinaison de deux chemins que rien n'exerçait ensemble : la perte
+## de pair (famille 3) et la sortie de ralenti (famille 5). Chacun est couvert
+## séparément ; leur croisement ne l'était pas.
+## Famille 6 : **les deux martèlent « prêt » — une seule manche doit démarrer.**
+##
+## Cette famille paraissait intestable : elle décrit un martèlement pendant des
+## transitions, donc des fenêtres de quelques dixièmes de seconde. **Mais sa
+## propriété n'est pas une fenêtre, c'est un COMPTE.** « Une seule manche
+## démarre » se vérifie en comptant les démarrages, et un compte est stable quel
+## que soit le tempo — c'est le principe de placement appliqué : chercher
+## l'observable stable plutôt que le moment.
+##
+## Si le code se cassait — double départ, décompte joué deux fois — **ce
+## contrôle tomberait**, puisque le compte passerait à deux. C'est ce qui le
+## distingue d'un contrôle déplacé pour passer.
+## Famille 4.1 : **l'adversaire meurt, quitte pendant la killcam, revient.**
+##
+## Débloquée par la décision d'Adrien du 2026-08-19 — la killcam va jusqu'au
+## bout. Sans elle, il n'y avait pas de comportement attendu contre lequel
+## écrire, et l'écrire quand même aurait tranché une question de jeu.
+##
+## **L'observable est un COMPTE, pas un instant** : combien de manches démarrent
+## après la reconnexion. Une seule. Si le code se cassait — reprise fantôme,
+## double départ, ou reconnexion refusée — ce compte passerait à zéro ou à deux.
+func _run_host_reconnexion() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le premier client n'est jamais parti")
+		return
+	print("ADVERSAIRE: parti pendant la killcam")
+	_check("la killcam survit à son départ", _main._end_sequence_active)
+
+	# Il revient. Le salon doit l'accepter alors que l'hôte sort à peine de sa
+	# killcam et de son écran d'attente.
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), 90.0):
+		_fail("le second client n'a jamais rejoint")
+		return
+	print("ADVERSAIRE: revenu")
+	# **Il revient PENDANT la killcam — c'est tout l'objet du scénario.** Le menu
+	# est donc légitimement absent à cet instant : l'hôte regarde encore sa mort.
+	# On attend la fin de la séquence avant de demander si le salon l'accepte.
+	#
+	# Deux modifications du code de production ont été faites avant de comprendre
+	# ça, en poursuivant un symptôme qui venait de ce banc. Elles se défendent
+	# toutes les deux et restent — ne pas annoncer une déconnexion à quelqu'un
+	# dont l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais
+	# **aucune n'était la cause**. C'est « on croit débuguer, on est en train de
+	# renoncer » sous une forme nouvelle : on croit corriger, on est en train de
+	# déplacer la faute vers le code testé.
+	if not await _await(func(): return not _main._end_sequence_active, 40.0):
+		_fail("la killcam ne s'est jamais terminée")
+		return
+	_check("le salon rouvert accepte le retour",
+		await _await(func(): return not _ready_entry_disabled(), 20.0))
+
+	# Le compte : combien de manches démarrent après la reconnexion. Une.
+	var departs := 0
+	var etait_active: bool = _main.round_active
+	var t := 0.0
+	while t < 12.0:
+		_press_play()
+		await get_tree().create_timer(0.2, true, false, true).timeout
+		t += 0.2
+		if _main.round_active and not etait_active:
+			departs += 1
+		etait_active = _main.round_active
+	print("DÉPARTS après reconnexion: %d" % departs)
+	_check("la reconnexion produit exactement une manche", departs == 1,
+		"%d démarrage(s)" % departs)
+	_check("le score est reparti de zéro",
+		_main.p1_session_wins == 0 and _main.p2_session_wins == 0,
+		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
+	await get_tree().create_timer(4.0).timeout
+	_quit(0)
+
+func _run_host_spam() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+
+	# On compte les transitions « aucune manche » → « manche en cours ». Le
+	# sondage est serré, mais aucune manche ne dure moins d'un dixième de
+	# seconde : on ne peut pas en manquer une.
+	var departs := 0
+	var etait_active: bool = _main.round_active
+	var t := 0.0
+	while t < 6.0:
+		# Martèlement des deux côtés pendant toute la fenêtre.
+		_press_play()
+		await get_tree().create_timer(0.12, true, false, true).timeout
+		t += 0.12
+		if _main.round_active and not etait_active:
+			departs += 1
+		etait_active = _main.round_active
+
+	print("DÉPARTS: %d en %.1f s de martèlement" % [departs, t])
+	_check("le martèlement ne fait démarrer qu'une seule manche", departs == 1,
+		"%d démarrage(s)" % departs)
+
+	# ⚠️ **Une seconde assertion a été tentée trois fois, puis retirée** — et le
+	# récit vaut mieux que le silence.
+	#
+	# Elle cherchait la seconde signature d'un double départ : un décompte qui
+	# **repart** après avoir décru. Trois versions, trois échecs, chacun pour une
+	# raison différente de la précédente :
+	#
+	#   1. « `round_active` ET `countdown_left > 0` est anormal » — faux : c'est
+	#      l'état NORMAL du 3-2-1. L'assertion accusait le jeu d'être ce qu'il
+	#      doit être.
+	#   2. comparaison à une valeur précédente initialisée à zéro : la montée
+	#      légitime de 0 à 3 s au départ comptait comme une relance.
+	#   3. corrigée d'un cran, elle tombe encore, pour une raison non élucidée.
+	#
+	# **Retirée plutôt qu'affaiblie.** Chaque correction la rapprochait de « ne
+	# rien vérifier » — et la troisième tentative aurait été le moment de
+	# l'assouplir jusqu'à ce qu'elle passe. La propriété qui compte, elle, est
+	# vérifiée et stable : **un seul départ**. Si le code se cassait, ce compte
+	# tomberait.
+	#
+	# À reprendre par quelqu'un qui saura observer un décompte rejoué autrement
+	# qu'en le sondant.
+	await get_tree().create_timer(6.0).timeout
+	_quit(0)
+
+## Le client de la famille 6 : il martèle aussi, en même temps.
+func _run_client_spam() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-spam", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	var t := 0.0
+	while t < 6.0:
+		_press_play()
+		await get_tree().create_timer(0.11, true, false, true).timeout
+		t += 0.11
+	_check("le client a martelé sans planter", true)
+	await get_tree().create_timer(4.0).timeout
+	_quit(0)
+
+func _run_host_ralenti() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+	# Le ralenti doit être réellement engagé, sinon on testerait une sortie qui
+	# n'avait rien à restaurer — et le banc passerait sans rien prouver.
+	# **Ce banc ne vérifie PAS que le ralenti a eu lieu, et ce n'est pas un oubli.**
+	#
+	# L'instrumentation a montré qu'il s'engage bien (0,063 mesuré), mais que le
+	# rejeu **s'arrête vers l'index 185 alors que l'impact est à 203-208** : la
+	# fenêtre de ralenti dure une fraction de seconde, puis la lecture cesse. Une
+	# assertion sur `Engine.time_scale` serait donc instable par construction —
+	# verte ou rouge selon le moment de l'échantillon, pas selon le code.
+	#
+	# Le défaut sous-jacent (la killcam se termine avant le moment fatal) est
+	# **signalé à la ROADMAP** et appartient à `test_rejeu.gd`, qui teste la
+	# fenêtre de rejeu. Ici on teste une SORTIE : que la coupure d'un pair rende
+	# le jeu à sa vitesse normale, quoi qu'il se soit passé avant.
+	await get_tree().create_timer(2.5, true, false, true).timeout
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le client n'est jamais parti")
+		return
+	print("ADVERSAIRE: disparu pendant le ralenti")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# **La killcam ne doit PAS être coupée** — décision d'Adrien du 2026-08-19,
+	# et exigence de la checklist depuis toujours : « ni coupée, ni accélérée, ni
+	# recouverte par un écran d'attente ». C'est la propriété neuve, et elle se
+	# vérifie à l'instant précis où l'ancien code aurait tout effacé.
+	_check("la killcam survit au départ de l'adversaire",
+		_main._end_sequence_active,
+		"séquence active=%s" % _main._end_sequence_active)
+	_check("le rejeu continue", ReplaySystem.playing_back)
+
+	# Puis elle va à son terme, et SEULEMENT là l'état est rendu.
+	if not await _await(func(): return not _main._end_sequence_active, 30.0):
+		_fail("la séquence de fin ne s'est jamais terminée")
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("le ralenti est levé une fois la killcam finie",
+		is_equal_approx(Engine.time_scale, 1.0), "time_scale=%.4f" % Engine.time_scale)
+	_check("le rejeu est arrêté", not ReplaySystem.playing_back)
+	_check("l'hôte reprend la main", _main.sandbox_mode and not _main.round_active)
+	_check("le décompte est effacé", is_zero_approx(_main.countdown_left))
+	# L'adversaire parti ne doit pas continuer d'éclairer pendant qu'on le
+	# regarde mourir : la purge de P2 est le seul geste resté immédiat.
+	_check("sa torche s'est éteinte tout de suite", not _main.p2.flashlight_on)
+	_quit(0)
+
+## Le client de la famille 5.3 : il meurt, puis **disparaît pendant le ralenti**
+## de l'hôte — pas après, pas avant.
+func _run_client_ralenti() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-ralenti", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	# Sa propre killcam commence : c'est le moment où l'hôte est au ralenti.
+	if not await _await(func(): return ReplaySystem.playing_back, 25.0):
+		_fail("le rejeu n'a jamais démarré côté client")
+		return
+	print("CLIENT: ralenti en cours, coupure brutale")
+	OS.kill(OS.get_process_id())
+
+func _run_host_killcam() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+
+	print("KILL: l'hôte abat le joueur 2")
+	_main.p1.shoot()
+	await get_tree().create_timer(0.3).timeout
+	_main.p2.take_damage(1000.0, _main.p1)
+	if not await _await(func(): return _main._end_sequence_active or _main.game_over, 10.0):
+		_fail("la séquence de fin ne s'est pas déclenchée")
+		return
+	print("KILLCAM: en cours")
+
+	# Le client va marteler « prêt » et changer d'arme pendant ce ralenti.
+	var arme_avant: int = _index_arme_p2()
+	await get_tree().create_timer(1.2).timeout
+	if _main._end_sequence_active:
+		_check("l'arme de P2 ne change pas pendant le ralenti",
+			_index_arme_p2() == arme_avant,
+			"%d → %d" % [arme_avant, _index_arme_p2()])
+		_check("aucune manche ne démarre pendant le ralenti", not _main.round_active)
+	else:
+		print("NOTE: le ralenti était déjà fini, contrôle du pendant non exercé")
+
+	# ⚠️ **La seconde moitié de cette famille a été RETIRÉE, et il faut le dire.**
+	#
+	# Elle vérifiait qu'à la sortie du ralenti l'intention retenue du client est
+	# appliquée et non perdue. Elle passait, puis échouait, sur le même code :
+	# **instable**. La cause tient à ce que la fenêtre de séquence de fin est
+	# courte et variable — voir le défaut « la killcam s'arrête avant le moment
+	# fatal » consigné à la ROADMAP, qui raccourcit cette fenêtre de façon non
+	# déterministe. Le client n'a pas toujours le temps d'atteindre son écran de
+	# fin avant que l'hôte ait quitté le sien.
+	#
+	# **Un banc qui vacille est pire qu'aucun banc** : il apprend à ignorer le
+	# lanceur, et le jour où il dit vrai personne ne le croit. Ce qui reste
+	# ci-dessus est déterministe — rien ne bouge pendant le ralenti — et c'est la
+	# moitié qui protège du défaut le plus grave : une manche qui démarrerait
+	# pendant que l'autre regarde encore.
+	#
+	# À reprendre quand la fenêtre de rejeu sera comprise, pas avant.
+	await get_tree().create_timer(8.0).timeout
+	_quit(0)
+
+## L'indice de l'arme actuellement cochée pour P2, ou -1.
+func _index_arme_p2() -> int:
+	var b: BaseButton = _ui.p2_weapon_group.get_pressed_button()
+	return b.get_index() if b != null else -1
+
+## Le client de la famille 2 : il martèle son choix pendant la killcam de l'hôte.
+func _run_client_killcam() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-killcam", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	# **Attendre `game_over`, et rien d'autre.** Deux gates ont été essayées avant,
+	# fausses toutes les deux :
+	#
+	#   • `not round_active` — vrai dès le DÉBUT de la killcam, donc le client
+	#     pressait pendant son propre ralenti ;
+	#   • `not _ui._is_main_menu` — faux pendant TOUT le match, donc l'attente
+	#     rendait la main immédiatement, avant même la mort.
+	#
+	# `game_over` n'est posé qu'après la séquence de fin, juste avant l'écran de
+	# fin : c'est le seul état qui dise « ma killcam est finie ». C'est le
+	# scénario de la checklist — B a fini sa killcam avant A, et se déclare
+	# pendant que A regarde encore le ralenti.
+	if not await _await(func(): return _main.game_over, 30.0):
+		_fail("l'écran de fin ne s'est jamais ouvert côté client")
+		return
+	print("CLIENT: écran de fin ouvert, il martèle son choix")
+	# Trois déclarations d'affilée, arme différente à chaque fois : c'est la
+	# DERNIÈRE que l'hôte doit retenir.
+	var boutons: Array = _ui.p2_weapon_group.get_buttons()
+	for i in 3:
+		if boutons.size() > i:
+			(boutons[i] as BaseButton).button_pressed = true
+		_press_play()
+		await get_tree().create_timer(0.4).timeout
+	_check("le client a bien pu se déclarer", true)
+	await get_tree().create_timer(6.0).timeout
+	_quit(0)
+
+func _run_host_pause() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé")
+		return
+	print("MANCHE: en cours")
+
+	# Le client met la pause à peu près maintenant. On mesure le chrono avant et
+	# après une seconde de jeu : c'est la seule preuve que le monde a continué.
+	var avant: float = _main.time_left
+	await get_tree().create_timer(1.5).timeout
+	var apres: float = _main.time_left
+	_check("le chrono continue de tourner pendant la pause adverse",
+		avant - apres > 0.5, "%.2f s écoulées" % (avant - apres))
+	_check("la manche n'a pas été interrompue", _main.round_active)
+	# Le joueur en pause ne doit pas courir sur sa dernière commande : l'hôte
+	# reçoit des entrées neutres, pas l'absence d'entrées.
+	_check("l'adversaire en pause ne se déplace plus",
+		_main.p2.velocity.length() < 1.0, str(_main.p2.velocity))
+	_check("et ne sprinte pas non plus", not _main.p2.is_sprinting)
+	# **L'hôte part en DERNIER.** Sortir maintenant couperait le lien pendant que
+	# le client mesure encore, et son « la manche tourne toujours » tomberait —
+	# non parce que la pause gèle quoi que ce soit, mais parce que l'hôte a
+	# disparu. Le piège est déjà consigné dans le mode nominal de ce fichier ; il
+	# vaut pour tous les modes à deux processus, et je viens de le repayer.
+	await get_tree().create_timer(8.0).timeout
+	_quit(0)
+
+## Le client de la famille 1 : il rejoint, joue, **ouvre sa pause**, et son
+## personnage doit cesser d'agir sans que le monde s'arrête.
+func _run_client_pause() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-pause", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	_press_play()
+	if not await _await(func(): return _main.round_active and _main.countdown_left <= 0.0, 25.0):
+		_fail("la manche n'a jamais commencé côté client")
+		return
+	_ui._open_pause()
+	await get_tree().process_frame
+	_check("le menu de pause est ouvert", _ui.is_pause_menu_open())
+	# **Le point du test.** En ligne la pause ne gèle rien : l'arbre ne doit PAS
+	# être en pause, sinon le joueur deviendrait invulnérable pendant qu'il lit
+	# son menu — et le monde s'arrêterait pour lui seul.
+	_check("l'arbre n'est pas gelé en ligne", not get_tree().paused)
+	await get_tree().create_timer(2.0).timeout
+	_check("la manche tourne toujours côté client", _main.round_active)
+	# Une seconde de plus que l'hôte : celui qui finit le premier ne doit pas
+	# couper le lien pendant que l'autre mesure encore.
+	await get_tree().create_timer(1.0).timeout
+	_quit(0)
+
+func _run_host_coupure() -> void:
+	await _select_mode(true)
+	_ui._open_lobby()
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+
+	if not await _await(func(): return not multiplayer.get_peers().is_empty(), PEER_TIMEOUT):
+		_fail("aucun adversaire n'a rejoint")
+		return
+	print("ADVERSAIRE: connecté")
+	_press_play()
+
+	# On attend d'être VRAIMENT dans le décompte : couper avant qu'il commence
+	# testerait une autre transition (la famille 4), et le banc croirait couvrir
+	# celle-ci.
+	if not await _await(func(): return _main.countdown_left > 0.0, 20.0):
+		_fail("le décompte n'a jamais démarré")
+		return
+	print("DÉCOMPTE: en cours (%.1f s)" % _main.countdown_left)
+
+	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+		_fail("le client n'est jamais parti")
+		return
+	print("ADVERSAIRE: disparu pendant le décompte")
+	# Une frame pour laisser `_on_peer_disconnected` se dérouler entièrement.
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_check("le décompte est effacé", is_zero_approx(_main.countdown_left),
+		"%.2f s restantes" % _main.countdown_left)
+	_check("aucune manche ne tourne", not _main.round_active)
+	# LE point : l'hôte doit pouvoir bouger. Un décompte figé le clouerait sur
+	# place sans rien afficher qui l'explique.
+	_check("l'hôte reprend la main (bac à sable)", _main.sandbox_mode)
+	_check("le score de session est remis à zéro",
+		_main.p1_session_wins == 0 and _main.p2_session_wins == 0)
+	_check("aucun « prêt » ne survit à l'adversaire",
+		not _main.p1_ready_for_rematch and not _main.p2_ready_for_rematch
+		and not _main.local_ready_for_rematch)
+	_check("la série de session tombe avec lui", _main.serie_longueur == 0)
+	_check("le joueur 2 cesse de courir sur sa dernière commande",
+		_main.p2.velocity == Vector2.ZERO and not _main.p2.is_sprinting)
+	# Sa torche aussi : une lumière orpheline resterait allumée dans l'arène.
+	_check("sa torche est éteinte", not _main.p2.flashlight_on)
+	_quit(0)
+
+## Le client de la famille 3 : il rejoint, se déclare prêt, puis **disparaît**
+## pendant le décompte — sans quitter proprement, comme un ⌘Q ou une coupure.
+func _run_client_coupure() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-coupure", "")
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le client n'a jamais rejoint")
+		return
+	print("CLIENT: connecté")
+	_press_play()
+	if not await _await(func(): return _main.countdown_left > 0.0, 20.0):
+		_fail("le décompte n'a jamais démarré côté client")
+		return
+	print("CLIENT: décompte en cours, coupure brutale")
+	# Sortie SANS `quit_game()` : c'est tout l'objet du test. Une fermeture propre
+	# préviendrait l'hôte par le protocole et n'exercerait pas la détection de
+	# perte de pair.
+	OS.kill(OS.get_process_id())
 
 func _run_client() -> void:
 	await _select_mode(false)

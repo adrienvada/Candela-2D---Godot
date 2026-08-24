@@ -80,7 +80,7 @@ func _init(gabarit: int = CASES, taille: int = 30,
 	_boite = HBoxContainer.new()
 	_boite.name = "Cases"
 	_boite.alignment = BoxContainer.ALIGNMENT_CENTER
-	_boite.add_theme_constant_override("separation", 2)
+	_boite.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	_boite.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_boite)
 
@@ -207,7 +207,7 @@ func _process(delta: float) -> void:
 			# Le métal refroidit vite au début puis lentement : la courbe fait le
 			# travail que ferait un dégradé, sans en dessiner un.
 			lbl.add_theme_color_override("font_color",
-				Color.WHITE.lerp(MenuTheme.GOLD, sqrt(part)))
+				MenuTheme.LUMIERE.lerp(MenuTheme.GOLD, sqrt(part)))
 			lbl.position.y = SECOUSSE * _intensite * (1.0 - part) * cos(part * PI * 3.0)
 		else:
 			lbl.add_theme_color_override("font_color", MenuTheme.GOLD)
@@ -243,6 +243,6 @@ func _dessiner_etincelles() -> void:
 		return
 	for e in _etincelles:
 		var mort := 1.0 - float(e["t"]) / VIE_ETINCELLE
-		var c := Color.WHITE.lerp(MenuTheme.GOLD, 1.0 - mort)
+		var c := MenuTheme.LUMIERE.lerp(MenuTheme.GOLD, 1.0 - mort)
 		c.a = mort * _intensite
 		_sparks.draw_circle(e["p"] as Vector2, 1.0 + mort, c)

@@ -174,6 +174,33 @@ func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: Weap
 			"weapon": weapon
 		})
 
+## V6.2 — d'où est parti le coup fatal, et où il a touché.
+##
+## Rend `[origine, impact]`, ou un tableau vide quand l'enregistrement ne permet
+## pas de le dire — mort par chrono, tir sorti de la fenêtre, impact inconnu.
+## **Vide plutôt qu'approximatif** : une trajectoire fausse enseignerait une
+## leçon fausse, ce qui est pire que de ne rien enseigner.
+##
+## La victime est celle dont les points de vie sont tombés à l'image d'impact ;
+## le tueur est l'autre. On remonte alors ses tirs jusqu'au dernier qui précède
+## l'impact — c'est la même règle que celle qui fixe le départ du ralenti, et
+## elle doit le rester : deux façons de désigner le tir fatal finiraient par
+## désigner deux tirs différents.
+func trajectoire_fatale() -> PackedVector2Array:
+	if impact_frame < 0 or impact_frame >= snapshots.size():
+		return PackedVector2Array()
+	var snap = snapshots[impact_frame]
+	var victime_p1: bool = snap.p1_hp <= 0.0
+	if not victime_p1 and snap.p2_hp > 0.0:
+		return PackedVector2Array()
+	var impact: Vector2 = snap.p1_pos if victime_p1 else snap.p2_pos
+	var tueur := 1 if victime_p1 else 0
+	for i in range(bullet_events.size() - 1, -1, -1):
+		var ev: Dictionary = bullet_events[i]
+		if int(ev["shooter"]) == tueur and int(ev["frame"]) <= impact_frame:
+			return PackedVector2Array([ev["pos"], impact])
+	return PackedVector2Array()
+
 ## Nombre d'images montrées avant l'impact — trois secondes de contexte.
 const PRE_IMPACT_FRAMES := 180.0
 ## Marge devant le tir fatal, pour qu'on voie partir la balle et non la voir

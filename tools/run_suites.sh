@@ -10,13 +10,40 @@
 # garde-fou qui ne dépende pas de la vigilance de l'auteur du test.
 set -uo pipefail
 
+# `--rapide` saute les six scénarios à DEUX INSTANCES.
+#
+# ⚠️ **Ce commentaire affirmait qu'ils coûtaient « l'essentiel » du temps. Mesuré :
+# c'est faux.** Une suite headless prend **2,6 s** lancée seule, les 36 en font
+# donc ~90 s ; les six scénarios à deux instances ~5 min. Le `--rapide` fait
+# gagner ces cinq minutes, pas davantage.
+#
+# **Et la vraie cause des lots interminables n'est aucune des deux : c'est la
+# CONTENTION.** Un lot complet a pris **61 minutes** le 2026-08-19 avec une charge
+# moyenne à 10 — plusieurs sessions lançant Godot en même temps. Le même lot
+# prenait 2 min 17 la veille au calme. **Un lanceur lent ne dit rien du code, il
+# dit qui d'autre travaille.** Avant de découper ou d'optimiser quoi que ce soit
+# ici, regarder `uptime`.
+#
+# **Le défaut reste le lot COMPLET, et c'est délibéré.** Baisser la barre par
+# défaut l'aurait affaiblie en silence : le jour où quelqu'un ajoute un défaut de
+# transition, personne ne s'apercevrait que la couverture avait été retirée. Il
+# faut demander à en faire moins, jamais l'obtenir sans le savoir.
+#
+# Quand utiliser lequel :
+#   • `--rapide` pendant qu'on itère — les 42 suites headless, ~1 min ;
+#   • le lot complet **avant de commiter**, comme l'exige `CLAUDE.md`.
+RAPIDE=0
+if [ "${1:-}" = "--rapide" ]; then RAPIDE=1; fi
+DEBUT=$SECONDS
+
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
-        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_rejeu test_banc test_prediction_tir)
+        test_vitrine_menus test_audit_menus test_pool_sfx test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_rejeu test_banc test_prediction_tir
+        test_mise_a_jour test_charte)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.
@@ -36,8 +63,12 @@ run() {
   tmp="$(mktemp)"
   "$GODOT" --headless --path . "$@" >"$tmp" 2>&1 &
   local gpid=$!
-  ( sleep "$PLAFOND_SUITE"; kill -9 "$gpid" 2>/dev/null ) &
+  # `disown` puis redirection : sans eux, le shell annonce « Terminated: 15 »
+  # pour CHAQUE chien de garde abattu, soit une ligne de bruit par suite — et
+  # c'est exactement le genre de bavardage qui fait qu'on cesse de lire la sortie.
+  ( sleep "$PLAFOND_SUITE"; kill -9 "$gpid" 2>/dev/null ) 2>/dev/null &
   chien=$!
+  disown "$chien" 2>/dev/null || true
   wait "$gpid"; code=$?
   kill "$chien" 2>/dev/null
   sortie="$(cat "$tmp")"; rm -f "$tmp"
@@ -106,13 +137,86 @@ run test_eblouissement_en_jeu res://tools/test_online_match.tscn -- --eblouissem
 # Il coûte une minute environ, plus que toutes les autres réunies. C'est le prix
 # d'une couverture sur la zone la plus régressive, et il se paie une fois par
 # commit plutôt qu'une manche entière à la main.
-if ./tools/run_duo.sh; then
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh; then
   printf '%-28s OK\n' "duo_enet"
 else
   printf '%-28s ÉCHEC\n' "duo_enet"; fail=1
 fi
 
-if [ "$fail" -ne 0 ]; then
-  echo "--- au moins une suite a échoué ---"; exit 1
+# Famille 3 de la checklist : l'adversaire disparaît pendant le 3-2-1.
+#
+# La transition la plus régressive du jeu, vérifiée jusqu'ici en fermant une
+# fenêtre à la main au bon moment. Le piège qu'elle protège est nommé dans
+# `game_state.gd` : un décompte laissé figé cloue l'hôte sur place, sans message
+# et sans pouvoir bouger. C'est le pire état atteignable, et le seul qu'aucune
+# erreur ne signale.
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --coupure; then
+  printf '%-28s OK\n' "duo_coupure"
+else
+  printf '%-28s ÉCHEC\n' "duo_coupure"; fail=1
 fi
-echo "--- toutes les suites passent, sans erreur de script ---"
+
+# Famille 1 : la pause en ligne ne gèle rien.
+#
+# Deux propriétés OPPOSÉES, et c'est leur combinaison qui fait la règle : le
+# monde continue **et** celui qui navigue cesse d'agir. Vérifier l'une sans
+# l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
+# le match pour les deux, ou un joueur qui court encore pendant qu'il lit son
+# menu. La pause ne doit pas être une invincibilité gratuite.
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --pause; then
+  printf '%-28s OK\n' "duo_pause"
+else
+  printf '%-28s ÉCHEC\n' "duo_pause"; fail=1
+fi
+
+# Famille 2 : ce que l'adversaire fait pendant votre killcam.
+#
+# Deux exigences opposées à nouveau : pendant le ralenti son intention est
+# RETENUE et non appliquée — rien ne bouge chez vous, aucune manche ne démarre
+# seule — mais à la sortie elle n'est pas PERDUE. Un changement d'arme appliqué
+# au milieu d'un ralenti couperait la killcam de celui qui regarde encore.
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --killcam; then
+  printf '%-28s OK\n' "duo_killcam"
+else
+  printf '%-28s ÉCHEC\n' "duo_killcam"; fail=1
+fi
+
+# Famille 5.3 : l'adversaire disparaît PENDANT le ralenti.
+#
+# Le croisement de deux chemins que rien n'exerçait ensemble — la perte de pair
+# et la sortie de ralenti. Un `time_scale` oublié ne ralentit pas la killcam,
+# il ralentit TOUT LE JEU, menus compris, et le joueur n'a aucune raison de
+# relier son curseur qui rampe à une déconnexion d'il y a dix secondes.
+#
+# ⚠️ Ce banc couvre la remise à zéro, PAS le fait qu'un ralenti ait eu lieu
+# avant : `Engine.time_scale` reste à 1,0 en headless, limite écrite dans le
+# banc lui-même.
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --ralenti; then
+  printf '%-28s OK\n' "duo_ralenti"
+else
+  printf '%-28s ÉCHEC\n' "duo_ralenti"; fail=1
+fi
+
+# Famille 6 : les deux martèlent « prêt » — une seule manche doit démarrer.
+#
+# Cette famille paraissait intestable : elle décrit un martèlement pendant des
+# transitions, donc des fenêtres de quelques dixièmes. Mais sa propriété n'est
+# pas une fenêtre, c'est un COMPTE — et un compte est stable quel que soit le
+# tempo. C'est le principe de placement appliqué : chercher l'observable stable
+# plutôt que le moment.
+if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --spam; then
+  printf '%-28s OK\n' "duo_spam"
+else
+  printf '%-28s ÉCHEC\n' "duo_spam"; fail=1
+fi
+
+DUREE=$((SECONDS - DEBUT))
+if [ "$fail" -ne 0 ]; then
+  echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1
+fi
+if [ "$RAPIDE" -eq 1 ]; then
+  echo "--- suites headless vertes en ${DUREE}s — SCÉNARIOS À DEUX INSTANCES NON JOUÉS ---"
+  echo "    (relancer sans --rapide avant de commiter)"
+else
+  echo "--- tout passe, sans erreur de script (${DUREE}s) ---"
+fi

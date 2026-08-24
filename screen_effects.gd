@@ -74,7 +74,7 @@ func build(body: VBoxContainer) -> void:
 	_context_label = Label.new()
 	_context_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_context_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_context_label.add_theme_font_size_override("font_size", 14)
+	_context_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	body.add_child(_context_label)
 
 	# La table est plus haute que le corps d'un écran de hub, et elle grandira.
@@ -100,18 +100,18 @@ func build(body: VBoxContainer) -> void:
 
 func _build_family_header(family: int) -> Control:
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 
 	var title := Label.new()
 	title.text = EffectPolicy.family_label(family).to_upper()
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
 	title.add_theme_color_override("font_color", MenuTheme.GOLD)
 	box.add_child(title)
 
 	var rule := Label.new()
 	rule.text = EffectPolicy.family_rule(family)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rule.add_theme_font_size_override("font_size", 13)
+	rule.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	rule.add_theme_color_override("font_color", MenuTheme.DIM)
 	box.add_child(rule)
 
@@ -130,7 +130,7 @@ func _build_row(id: String) -> Control:
 	panel.add_child(margin)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	margin.add_child(column)
 
 	var line := HBoxContainer.new()
@@ -140,7 +140,7 @@ func _build_row(id: String) -> Control:
 	var name_label := Label.new()
 	name_label.text = EffectPolicy.label_of(id)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_font_size_override("font_size", 17)
+	name_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	line.add_child(name_label)
 
 	var slider := HSlider.new()
@@ -159,12 +159,12 @@ func _build_row(id: String) -> Control:
 	var value_label := Label.new()
 	value_label.custom_minimum_size = Vector2(64, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.add_theme_font_size_override("font_size", 17)
+	value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
 	line.add_child(value_label)
 
 	var notice := Label.new()
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notice.add_theme_font_size_override("font_size", 12)
+	notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
 	notice.add_theme_color_override("font_color", MenuTheme.DIM)
 	column.add_child(notice)
 

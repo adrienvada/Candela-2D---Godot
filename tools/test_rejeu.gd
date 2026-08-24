@@ -63,6 +63,8 @@ func _run() -> void:
 	_test_impact_unique()
 	_test_sentinelle()
 	_test_ancrage()
+	_test_trajectoire()
+	_test_ancre_dans_le_tampon()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -195,4 +197,89 @@ func _test_ancrage() -> void:
 		"index %.1f, attendu %.1f, ancre %d, total %d"
 		% [r.playback_index, attendu, ancre, r.snapshots.size()])
 	_check("et il démarre bien AVANT l'ancre", r.playback_index < float(ancre))
+	_liberer(b)
+
+## V6.2 — d'où venait le coup, et quand on ne peut pas le dire.
+##
+## Le contrôle qui compte est le second : **une trajectoire fausse enseignerait
+## une leçon fausse**, ce qui est pire que de ne rien enseigner. La killcam sert
+## à comprendre d'où le coup est parti ; une ligne qui désignerait le mauvais
+## endroit ferait apprendre une position qui n'a jamais existé.
+func _test_trajectoire() -> void:
+	print("\n[La trajectoire du tir fatal]")
+	var b := _banc()
+	var r: Node = b[0]
+	var p1: FauxJoueur = b[1]
+	var p2: FauxJoueur = b[2]
+
+	# Sans mort, rien à tracer : l'enregistrement n'a pas d'ancre d'impact.
+	for i in 10:
+		r.record_frame(p1, p2, b[3], 1.0 / 60.0)
+	_check("sans mort, aucune trajectoire", r.trajectoire_fatale().is_empty())
+
+	# P2 tire, puis P1 meurt : la ligne va du tir vers la victime.
+	r.record_bullet_fired(1, Vector2(100, 50), 0.0, null)
+	for i in 5:
+		r.record_frame(p1, p2, b[3], 1.0 / 60.0)
+	p1.global_position = Vector2(400, 50)
+	p1.hp = 0.0
+	r.record_frame(p1, p2, b[3], 1.0 / 60.0)
+	var t: PackedVector2Array = r.trajectoire_fatale()
+	_check("la ligne part du tir du tueur", t.size() == 2 and t[0] == Vector2(100, 50),
+		str(t))
+	_check("et arrive sur la victime", t.size() == 2 and t[1] == Vector2(400, 50),
+		str(t))
+	_liberer(b)
+
+	# Un tir de la VICTIME juste avant sa mort ne doit pas être pris pour le tir
+	# fatal : c'est l'erreur qu'un simple « dernier tir enregistré » commettrait,
+	# et elle désignerait la position du mort comme origine du coup.
+	var c := _banc()
+	var r2: Node = c[0]
+	var q1: FauxJoueur = c[1]
+	var q2: FauxJoueur = c[2]
+	r2.record_bullet_fired(1, Vector2(10, 10), 0.0, null)
+	for i in 3:
+		r2.record_frame(q1, q2, c[3], 1.0 / 60.0)
+	r2.record_bullet_fired(0, Vector2(900, 900), 0.0, null)
+	q1.global_position = Vector2(500, 500)
+	q1.hp = 0.0
+	r2.record_frame(q1, q2, c[3], 1.0 / 60.0)
+	var t2: PackedVector2Array = r2.trajectoire_fatale()
+	_check("le dernier tir de la victime n'est pas le tir fatal",
+		t2.size() == 2 and t2[0] == Vector2(10, 10), str(t2))
+	_liberer(c)
+
+## L'ancre d'impact désigne-t-elle une image qui existe encore ?
+##
+## Hypothèse à écarter ou confirmer, née de l'instrumentation du 2026-08-18 : le
+## rejeu s'arrêtait à l'index ~185 alors que `impact_frame` valait 203. La borne
+## de `get_next_frame` est `idx1 >= snapshots.size() - 1` — donc un tampon plus
+## COURT que l'ancre expliquerait tout : la lecture s'arrêterait à la fin du
+## tampon, avant d'atteindre l'impact, sans la moindre erreur.
+func _test_ancre_dans_le_tampon() -> void:
+	print("\n[L'ancre d'impact tombe-t-elle dans le tampon ?]")
+	var b := _banc()
+	var r: Node = b[0]
+	var p1: FauxJoueur = b[1]
+	for i in 200:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	p1.hp = 0.0
+	r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	# L'enregistrement CONTINUE après la mort — le sang, la réaction — puis
+	# s'arrête. C'est ce qui doit donner au rejeu de quoi atteindre l'impact.
+	p1.hp = 100.0
+	for i in 40:
+		r.record_frame(p1, b[2], b[3], 1.0 / 60.0)
+	r.stop_recording()
+
+	_check("l'ancre est dans le tampon",
+		r.impact_frame < r.snapshots.size(),
+		"impact=%d, tampon=%d" % [r.impact_frame, r.snapshots.size()])
+	# Et il doit rester des images APRÈS l'impact : la borne d'arrêt étant
+	# `size - 1`, une ancre posée sur la dernière image ferait cesser la lecture
+	# au moment précis où elle devrait montrer la mort.
+	_check("il reste des images après l'impact",
+		r.snapshots.size() - 1 > r.impact_frame,
+		"impact=%d, dernière=%d" % [r.impact_frame, r.snapshots.size() - 1])
 	_liberer(b)

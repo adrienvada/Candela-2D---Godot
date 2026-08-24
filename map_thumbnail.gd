@@ -18,12 +18,14 @@
 class_name MapThumbnail
 extends RefCounted
 
+const Charte := preload("res://charte.gd")
+
 ## Palette « plan » : déclinaison lisible en petit de l'esthétique néon du jeu.
-const COLOR_BACKGROUND := Color(0.035, 0.035, 0.055, 1.0)
-const COLOR_FLOOR := Color(0.14, 0.15, 0.19, 1.0)
-const COLOR_WALL := Color(0.93, 0.95, 1.0, 1.0)
-const COLOR_SPAWN_P1 := Color(0.0, 0.94, 1.0, 1.0)
-const COLOR_SPAWN_P2 := Color(1.0, 0.0, 0.33, 1.0)
+const COLOR_BACKGROUND := Color(Charte.SURFACE, 1.0)
+const COLOR_FLOOR := Color(Charte.SOL_B * 0.72, 1.0)
+const COLOR_WALL := Color(Charte.HALOGENE, 1.0)
+const COLOR_SPAWN_P1 := Color(Charte.BLEU, 1.0)
+const COLOR_SPAWN_P2 := Color(Charte.ROUGE, 1.0)
 
 const MIN_PX_PER_TILE := 1
 const MAX_PX_PER_TILE := 32

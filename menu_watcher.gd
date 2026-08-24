@@ -1,6 +1,8 @@
 class_name MenuWatcher
 extends Control
 
+const Charte := preload("res://charte.gd")
+
 ## M3 — Le regard du noir. Vague M, « la vitrine ».
 ##
 ## Après un long moment sans que rien ne bouge, **deux reflets minuscules**
@@ -83,7 +85,7 @@ func _draw() -> void:
 	var alpha := (1.0 - part) / 0.16 if part > 0.84 else part / 0.84
 	if absf(part - 0.5) < 0.02:
 		alpha = 0.0
-	var c := Color(1.0, 0.36, 0.45, clampf(alpha, 0.0, 1.0) * 0.5 * _intensite)
+	var c := Color(Charte.ROUGE, clampf(alpha, 0.0, 1.0) * 0.5 * _intensite)
 	for cote in [-1.0, 1.0]:
 		var centre := _pos + Vector2(ECART * 0.5 * cote, 0.0)
 		for i in 3:

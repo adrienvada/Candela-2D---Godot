@@ -1,6 +1,8 @@
 class_name MenuInk
 extends Control
 
+const Charte := preload("res://charte.gd")
+
 ## M6 — L'encre coulée. Vague M, « la vitrine ».
 ##
 ## Un écran ne se contente plus d'arriver : il **s'imprime**. Depuis la hauteur
@@ -50,7 +52,7 @@ var _progres: float = 0.0
 var _depart: float = 0.0
 var _portee: float = 1.0
 var _rect: Rect2 = Rect2()
-var _accent: Color = Color.WHITE
+var _accent: Color = MenuTheme.ACCENT
 ## Les contrôles éteints par la coulée en cours, **avec l'alpha qu'ils avaient**.
 ##
 ## `modulate` n'appartient pas à cet effet : une entrée « PRÊT » grisée faute
@@ -166,5 +168,5 @@ func _draw() -> void:
 			c.a = 0.16 * (1.0 - part) * _intensite * reste
 			draw_rect(Rect2(_rect.position.x, y - FRANGE * part * 0.5,
 				_rect.size.x, maxf(FRANGE * part, TRAIT)), c)
-		var coeur := Color(1.0, 1.0, 1.0, 0.75 * _intensite * reste)
+		var coeur := Color(Charte.HALOGENE, 0.75 * _intensite * reste)
 		draw_rect(Rect2(_rect.position.x, y - TRAIT * 0.5, _rect.size.x, TRAIT), coeur)
