@@ -2486,6 +2486,31 @@ indice. `tools/test_musique.gd` tient les deux.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Deux sessions qui lancent les suites en même temps se volent le port (2026-08-24)
+
+`run_duo.sh` ouvre le salon sur **7777, en dur**. Deux sessions qui lancent
+`run_suites.sh` simultanément — situation normale ici, on est quatre à six sur
+l'arbre — se disputent ce port, et le perdant échoue.
+
+Ce qui rend le piège coûteux, c'est la *forme* de l'échec. Il ne dit pas
+« port occupé ». Il dit :
+
+    ECHEC: le client n'a jamais rejoint
+    ECHEC: aucun adversaire n'a rejoint
+
+soit exactement ce qu'afficherait un vrai défaut de connexion — sans erreur de
+script, sans trace, avec les cinq autres scénarios verts autour. On cherche donc
+la panne dans le réseau du jeu, où elle n'est pas.
+
+Le contrôle qui tranche en trente secondes : **rejouer le scénario seul**
+(`./tools/run_duo.sh --coupure`). Vert isolé, rouge en parallèle = contention.
+Et pour savoir avant de chercher : `pgrep -f run_suites` dit s'il y a une
+voisine, `lsof -nP -iUDP:7777` dit si le port est pris.
+
+Correctif possible, **signalé et non fait** (hors périmètre du jour) : tirer le
+port d'une variable d'environnement avec une valeur par défaut, pour que chaque
+session ait le sien.
+
 ### Isoler ses propres hunks par plumbing a une course (2026-08-24)
 
 Arbre partagé par quatre sessions. Pour ne pas emporter le travail non commité
@@ -6034,11 +6059,18 @@ un fait de jeu, pas à un rythme d'interface.
   et le procédé se choisit par famille d'asset.** Un artiste unique ne suffit
   plus à garantir un style : c'est la table des procédés qui le tient. Raison et
   table en « Décisions actées ». *(Adrien)*
-- **DA1.6 Le wordmark CANDELA** — un vrai logo dessiné (la bougie est un cadeau
-  de naming), décliné partout. Tant que le titre est un `Label`, le jeu dit
-  « prototype ». *(C)*
-- **DA1.7 Icône d'app + boot splash** — bannir le logo Godot du démarrage.
-  *(dérivé de DA1.6)*
+- **DA1.6 Le wordmark CANDELA** ✅ **livrée le 2026-08-24** — lettres au pochoir,
+  halogène sur noir, liseré ambre ; sources d'Adrien dans `assets/logos/`.
+  L'enseigne est un `TextureRect` posé **par-dessus** le `Label` du titre, pas à
+  sa place : le même nœud porte cinq textes (le nom du jeu, « OPTIONS », trois
+  verdicts) et seul le premier a un logo. Un seul point de décision,
+  `_poser_titre()` — huit affectations y passent, sinon un chemin oublié
+  laisserait le logo sur « DÉFAITE ». L'ombre M1 et la braise M11 sont intactes :
+  l'enseigne est **enfant** du `Label`, donc calée sur le rectangle où le gnomon
+  s'ancre déjà. *(C)*
+- **DA1.7 Icône d'app + boot splash** ✅ **livrée le 2026-08-24** — `config/icon`
+  ne pointe plus sur `icon.svg` ; l'écran de démarrage est l'enseigne sur le
+  `NOIR` de la charte. Le logo Godot a disparu du lancement. *(dérivé de DA1.6)*
 - **DA1.8 Trois courbes d'easing maison** ✅ **livrée le 2026-08-24** — `ENTREE`,
   `SORTIE`, `REBOND` en Bézier cubique résolue par Newton-Raphson, durées
   `D_COURT`/`D_MOYEN`/`D_LONG` (90/180/300 ms), un seul point d'entrée

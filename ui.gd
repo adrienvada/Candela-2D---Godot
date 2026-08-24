@@ -318,6 +318,8 @@ var _leaderboard: ScreenLeaderboard
 ## n'ont rien à faire dans un `ui.gd` de trois mille lignes, et chacun se coupe
 ## seul par sa ligne d'`effect_policy`.
 var menu_gnomon: MenuGnomon
+## L'enseigne dessinée qui recouvre le titre quand il porte le nom du jeu.
+var menu_enseigne: TextureRect
 var menu_after_image: MenuAfterImage
 var menu_torch: MenuTorch
 var menu_watcher: MenuWatcher
@@ -3141,16 +3143,62 @@ func _refresh_weapon_locks() -> void:
 		if premier_libre >= 0 and (choisi == null or choisi.disabled):
 			(boutons[premier_libre] as Button).button_pressed = true
 
+## Le titre du menu porte tantôt le nom du jeu, tantôt un verdict. Un seul
+## endroit tranche, sinon un chemin oublié laisserait le logo sur « DÉFAITE ».
+## `self_modulate` et non `modulate` : le second effacerait aussi l'enfant.
+func _poser_titre(texte: String) -> void:
+	game_over_title.text = texte
+	if menu_enseigne == null or not is_instance_valid(menu_enseigne):
+		return
+	var enseigne := texte == "CANDELA 2D"
+	menu_enseigne.visible = enseigne
+	game_over_title.self_modulate.a = 0.0 if enseigne else 1.0
+
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
 	header.add_theme_constant_override("separation", GAP_XS)
 
 	game_over_title = Label.new()
-	game_over_title.text = "CANDELA 2D"
+	_poser_titre("CANDELA 2D")
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	game_over_title.add_theme_font_size_override("font_size", T_ENSEIGNE)
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	header.add_child(game_over_title)
+
+	# DA1.6 — l'enseigne dessinée, posée PAR-DESSUS le `Label` et non à sa place.
+	# Le même nœud porte cinq textes : le nom du jeu, « OPTIONS », et trois
+	# verdicts. Seul le premier a un logo ; les autres restent du texte, avec la
+	# braise M11 et l'ombre M1 intactes. Enfant du `Label`, donc calé sur son
+	# rectangle : le gnomon s'y ancre déjà, il n'a rien à réapprendre.
+	menu_enseigne = TextureRect.new()
+	menu_enseigne.name = "Enseigne"
+	menu_enseigne.texture = load(Charte.CHEMIN_ENSEIGNE)
+	# Centrée dans le rectangle du `Label`, à une taille CALCULÉE et non choisie :
+	# l'encre du fichier occupe 482 px sur 508 de haut, on vise 80 px d'encre à
+	# l'écran — la hauteur du titre qu'elle remplace. Ancrer en plein cadre
+	# donnait un logo pleine page, le rectangle du `Label` faisant toute la
+	# largeur de l'en-tête.
+	const ENCRE_VISEE := 80.0
+	const ENCRE_DU_FICHIER := 482.0 / 508.0
+	var h := ENCRE_VISEE / ENCRE_DU_FICHIER
+	var l := h * 1600.0 / 508.0
+	menu_enseigne.anchor_left = 0.5
+	menu_enseigne.anchor_right = 0.5
+	menu_enseigne.anchor_top = 0.5
+	menu_enseigne.anchor_bottom = 0.5
+	menu_enseigne.offset_left = -l * 0.5
+	menu_enseigne.offset_right = l * 0.5
+	menu_enseigne.offset_top = -h * 0.5
+	menu_enseigne.offset_bottom = h * 0.5
+	menu_enseigne.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# Sans ceci, la taille MINIMALE du contrôle est celle de la texture (1600 px) :
+	# elle écrase les offsets ci-dessus et le logo déborde de l'écran. Le défaut
+	# de `TextureRect` est `EXPAND_KEEP_SIZE`, ce qui ne se voit pas dans le code
+	# qui pose une taille — il se voit à l'écran, en grand.
+	menu_enseigne.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	menu_enseigne.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_title.add_child(menu_enseigne)
+	_poser_titre("CANDELA 2D")
 
 	# M1 — le cadran. Derrière le titre, hors du flux : ancré en plein cadre sur
 	# l'en-tête, il ne pousse rien et ne rétrécit rien. `move_child` le place sous
@@ -3768,7 +3816,7 @@ func _open_pause_options() -> void:
 	btn_quit.hide()
 	btn_back.show()
 
-	game_over_title.text = "OPTIONS"
+	_poser_titre("OPTIONS")
 	game_over_title.add_theme_color_override("font_color", Charte.HALOGENE)
 	game_over_score.text = ""
 
@@ -4656,7 +4704,7 @@ func rouvrir_le_salon() -> void:
 	# rubriques — est déjà défait deux lignes plus haut par `_options_from_pause`
 	# et `btn_back.hide()`.
 	_allumer(game_over_panel)
-	game_over_title.text = "CANDELA 2D"
+	_poser_titre("CANDELA 2D")
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	# Cette ligne porte la description de l'entrée survolée : un score de match
 	# terminé y resterait affiché sous un salon qui attend le suivant.
@@ -4693,7 +4741,7 @@ func show_main_menu() -> void:
 
 	hub.reset()
 	_allumer(game_over_panel)
-	game_over_title.text = "CANDELA 2D"
+	_poser_titre("CANDELA 2D")
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	# Vide, et non « PRÊT À JOUER ? » : cette ligne porte la description de l'entrée
 	# survolée, et un texte de remplissage la remplacerait au premier retour au menu.
@@ -4760,20 +4808,20 @@ func show_game_over(winner_id: int) -> void:
 		# qui s'affirme, et une égalité n'affirme rien. Le silence sec qui
 		# l'accompagne fait le reste — le mot arrive dans un vide, au lieu de se
 		# poser sur une musique qui continue comme si de rien n'était.
-		game_over_title.text = "ÉGALITÉ"
+		_poser_titre("ÉGALITÉ")
 		game_over_title.add_theme_color_override("font_color", COLOR_DIM)
 		var audio := get_node_or_null(^"/root/AudioManager")
 		if audio != null and audio.has_method("silence_sec"):
 			audio.silence_sec(1.0)
 	elif local_idx == -1:
-		game_over_title.text = "JOUEUR 1 GAGNE" if winner_id == 0 else "JOUEUR 2 GAGNE"
+		_poser_titre("JOUEUR 1 GAGNE" if winner_id == 0 else "JOUEUR 2 GAGNE")
 		game_over_title.add_theme_color_override("font_color",
 			COLOR_P1 if winner_id == 0 else COLOR_P2)
 	elif winner_id == local_idx:
-		game_over_title.text = "VICTOIRE"
+		_poser_titre("VICTOIRE")
 		game_over_title.add_theme_color_override("font_color", Charte.ETAT_OK)
 	else:
-		game_over_title.text = "DÉFAITE"
+		_poser_titre("DÉFAITE")
 		game_over_title.add_theme_color_override("font_color", Charte.ETAT_FAUTE)
 
 	# M11 — le même shader porte la température de l'issue : la victoire flambe
