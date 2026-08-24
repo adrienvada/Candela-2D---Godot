@@ -6331,12 +6331,66 @@ tabulaire — et les sept contrôles de tremblement passeraient au vert sur une
 interface entièrement nue.** Voir « Pièges connus », *un worktree neuf n'a pas de
 cache d'import*.
 
-##### Ce qui est livré, et ce qui attendait une autre session
+##### La fonte d'enseigne entre enfin dans l'interface
 
-Livrés : **DA4.2** et **DA4.9**. `ui.gd` était tenu par la session DA1
-(wordmark et icône, DA1.6/DA1.7) pendant toute la séance : le HUD, la killcam et
-le bandeau de verdict n'ont donc **pas** été repris, et attendent qu'elle rende
-la main. Le lot s'est reporté sur ce qui était libre.
+DA1 ayant rendu `ui.gd` en fin de séance, le lot a pu poser les deux registres
+là où la charte les désigne. **Six `Control` changent, et c'est tout — mais ce
+sont ceux qu'on regarde :**
+
+| Contrôle | Registre | Pourquoi |
+|---|---|---|
+| le décompte 3-2-1 | **enseigne** | Un chiffre seul qui occupe l'écran n'est pas du texte. Ancré en plein cadre, donc rien ne peut trembler : `3`, `2` et `1` ne se comparent jamais, ils se succèdent au même endroit. |
+| `KILLCAM` | **enseigne** | Un mot fixe, écrit une fois. |
+| le titre / les verdicts | **enseigne** | Voir ci-dessous. |
+| le chrono | appareil | Le compteur le plus exposé, et le seul qui **bat** sous dix secondes. |
+| le ping | appareil | Se réécrit dans une rangée centrée dont il pousserait les voisins. |
+| le timecode de killcam | appareil | Ancré **en haut à droite** : une largeur qui varie décolle le texte du bord. C'est le seul endroit du jeu où le tremblement se lirait comme un défaut de marge, pas de chiffre. |
+
+**Le verdict referme une incohérence qui existait entre l'arène et l'interface.**
+`player.gd` écrivait déjà FATAL en fonte d'affichage à `T_ENSEIGNE` ; l'écran de
+fin écrivait VICTOIRE et DÉFAITE en fonte d'interface. **Les deux mots tombent à
+quelques secondes d'intervalle sur le même temps fort** — l'un dans l'arène,
+l'autre sur l'écran de fin — et ils ne se ressemblaient pas.
+
+**Conséquence de mise en page, mesurée et assumée : l'en-tête du menu grandit de
+13 px** (hauteur de ligne 69 → 82 à `T_ENSEIGNE`). L'enseigne dessinée de DA1.6
+n'en est pas affectée — elle est posée par offsets calculés et non par la taille
+du texte — et le rapport s'améliore même : elle mesure 84 px de haut pour un
+`Label` qui passe de 69 à 82.
+
+⚠️ **Ces 13 px n'ont PAS été jugés à l'œil**, et c'est le seul point du lot qui
+reste dû. La planche de contact n'a pas pu tourner : elle exige une fenêtre au
+premier plan, et macOS bride le rendu dès qu'elle passe derrière — trois passes
+consécutives ont rendu 16, puis 2, puis 1 image, Adrien étant au clavier. Le
+banc de contact est passé une fois avant la fusion ; le titre en fonte
+d'enseigne n'y figure pas. **À regarder avant de fusionner dans `main`.**
+
+##### Le banc a maintenant deux versants, et le second manquait
+
+`tools/test_habillage.gd` n'interdisait d'abord que le mauvais registre. **Or un
+dépôt qui n'emploie nulle part la fonte d'affichage passe tous les contrôles de
+tremblement** — c'est très exactement l'état dans lequel le projet a vécu six
+jours. Interdire ne dit rien sur l'emploi.
+
+Trois enseignes sont donc désormais exigées : le titre, le décompte, `KILLCAM`.
+Le contrôle est formulé « ce n'est pas la fonte d'interface » et non « c'est
+`BigShouldersDisplay` » — nommer le fichier attendu rendrait le banc faux le jour
+où l'enseigne change, c'est-à-dire le jour où l'on a besoin qu'il tienne.
+
+**Les deux versants ont été vus rougir séparément** avant livraison : fonte
+d'enseigne posée sur le chrono → `tremble : 9.0 px d'écart` ; fonte d'interface
+posée sur le décompte → `rend « VICTOIRE » exactement comme la fonte d'interface
+(598.0 px) : elle n'est pas habillée`.
+
+##### Ce qui est livré, et ce qui ne l'est pas
+
+Livrés : **DA4.2** et **DA4.9**, plus l'entrée de la fonte d'enseigne dans
+l'interface (le socle typographique dont DA4.7 dépendait).
+
+**Non commencés, et ils sont nombreux :** DA4.1 (9-slice), DA4.3 (le contour
+dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
+DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
+tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
 
 - **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
   rectangles stylés par code. *(C)*

@@ -1476,7 +1476,12 @@ func _build_center_hud() -> Control:
 	time_label = Label.new()
 	time_label.text = "05:00"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_label.add_theme_font_size_override("font_size", T_VERDICT)
+	# DA4.2 — **le compteur le plus exposé du jeu, et le seul qui bat.** Sous dix
+	# secondes il pulse à la seconde ; une fonte non tabulaire ferait respirer sa
+	# boîte en même temps que la pulsation, et les deux mouvements se
+	# confondraient. Il reste donc à l'appareil, et `tools/test_habillage.gd`
+	# mesure ses dix chiffres pour que ça ne dépende plus de ce commentaire.
+	Charte.appareil(time_label, T_VERDICT)
 	vbox.add_child(time_label)
 
 	waiting_label = Label.new()
@@ -1637,7 +1642,10 @@ func _build_status_bar() -> void:
 	network_status_label.add_theme_constant_override("outline_size", 4)
 
 	ping_label = Label.new()
-	ping_label.add_theme_font_size_override("font_size", T_COURANT)
+	# DA4.2 — l'appareil, explicitement. Un compteur : il se réécrit à chaque
+	# relevé de RTT, au milieu d'une rangée centrée dont il déplacerait les
+	# voisins en changeant de largeur.
+	Charte.appareil(ping_label, T_COURANT)
 	ping_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	ping_label.add_theme_constant_override("outline_size", 4)
 	ping_label.hide()
@@ -1664,7 +1672,15 @@ func _build_countdown() -> void:
 	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	countdown_label.add_theme_font_size_override("font_size", T_DECOMPTE)
+	# DA4 — l'enseigne, et c'est le cas le plus net du jeu. Un chiffre seul qui
+	# occupe l'écran n'est pas du texte, c'est un élément graphique : la charte le
+	# dit déjà en faisant de `T_DECOMPTE` une dérivée plutôt qu'un septième cran.
+	#
+	# Aucun risque de tremblement malgré une fonte non tabulaire : le `Label` est
+	# ancré en plein cadre et centré, donc chaque chiffre est cadré sur lui-même.
+	# `3`, `2` et `1` n'ont pas à faire la même largeur — ils ne se comparent
+	# jamais, ils se succèdent au même endroit.
+	Charte.enseigne(countdown_label, T_DECOMPTE)
 	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
 	countdown_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	countdown_label.add_theme_constant_override("outline_size", 16)
@@ -1840,7 +1856,11 @@ func _build_killcam() -> void:
 	killcam_container.add_child(killcam_label)
 
 	killcam_timecode = Label.new()
-	killcam_timecode.add_theme_font_size_override("font_size", T_TITRE)
+	# DA4.2 — l'appareil. Le timecode défile image par image ; il est en outre
+	# ancré en HAUT À DROITE, donc une largeur qui varie décolle le texte du bord
+	# au lieu de le laisser aligné. C'est le seul compteur du jeu où le
+	# tremblement se verrait comme un défaut de marge plutôt que de chiffre.
+	Charte.appareil(killcam_timecode, T_TITRE)
 	killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
 	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	killcam_timecode.offset_right = -40
@@ -1852,7 +1872,12 @@ func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
 	label.text = "KILLCAM"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", T_VERDICT)
+	# DA4 — l'enseigne. Un mot fixe, écrit une fois, jamais remplacé : le cas
+	# exact que la fonte d'affichage existe pour porter. Le timecode juste à côté
+	# reste à l'appareil, lui, parce qu'il défile — les deux registres se voient
+	# donc côte à côte à l'écran, ce qui est la meilleure démonstration de la
+	# frontière.
+	Charte.enseigne(label, T_VERDICT)
 	label.add_theme_color_override("font_color", tint)
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return label
@@ -3161,7 +3186,17 @@ func _build_menu_header() -> Control:
 	game_over_title = Label.new()
 	_poser_titre("CANDELA 2D")
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_over_title.add_theme_font_size_override("font_size", T_ENSEIGNE)
+	# DA4 — l'enseigne, et elle referme une incohérence entre l'arène et
+	# l'interface. `player.gd` écrit déjà FATAL en fonte d'affichage à
+	# `T_ENSEIGNE` ; ce nœud-ci écrivait VICTOIRE et DÉFAITE en fonte
+	# d'interface. **Les deux mots tombent à quelques secondes d'intervalle sur le
+	# même temps fort**, l'un dans l'arène, l'autre sur l'écran de fin — et ils ne
+	# se ressemblaient pas.
+	#
+	# Rien ne tremble ici : les cinq textes de ce `Label` sont des mots, pas des
+	# compteurs, et le seul qui contient un chiffre (« CANDELA 2D ») est de toute
+	# façon recouvert par l'enseigne dessinée de DA1.6.
+	Charte.enseigne(game_over_title, T_ENSEIGNE)
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	header.add_child(game_over_title)
 

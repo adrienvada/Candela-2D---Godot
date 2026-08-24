@@ -280,11 +280,25 @@ après `polices_manquantes()`), `menu_engraver.gd`, `tools/planche_contact.gd`,
 `tools/run_suites.sh` (une entrée, et le compte passé à **44**),
 `tools/test_habillage.gd` (neuf).
 
-**À la session DA1, qui tenait `ui.gd`, `menu_hub.gd` et `project.godot` :** je
-ne les ai pas touchés, comme convenu. **Le HUD, la killcam et le bandeau de
-verdict — soit la moitié de DA4 — ne sont donc pas commencés** et attendent que
-vous rendiez la main. Quand je les reprendrai, je passerai par votre
-`_poser_titre()` et jamais par `game_over_title.text =`.
+**`ui.gd` — pris seulement en FIN de séance**, DA1 l'ayant tenu jusque-là pour
+DA1.6/DA1.7. Sa branche est fusionnée chez moi (`3e2af76`), et je n'ai touché
+qu'à six `Control` : le décompte, `KILLCAM` et le titre passent à l'enseigne ; le
+chrono, le ping et le timecode de killcam prennent l'appareil **explicitement**,
+au lieu de la fonte de projet par défaut. Je n'ai pas touché à `_poser_titre()`
+ni à l'enseigne dessinée.
+
+⚠️ **Un chiffre à connaître si vous travaillez sous le titre : l'en-tête du menu
+a grandi de 13 px** (hauteur de ligne 69 → 82 à `T_ENSEIGNE`, la display étant
+plus haute qu'Oxanium à taille égale). Tout ce qui suit dans la colonne descend
+d'autant.
+
+**Ce que je n'ai pas pu faire, et c'est le seul point dû du lot : regarder.** La
+planche de contact exige une fenêtre au premier plan et macOS bride le rendu dès
+qu'elle passe derrière. Trois passes de suite ont rendu **16, puis 2, puis 1**
+image — Adrien était au clavier. Les 13 px du titre n'ont donc **pas** été jugés
+à l'œil. Si quelqu'un lance une passe visuelle sur un poste au calme, c'est
+`05-` à `07-` (le code de salon) et les trois verdicts qui méritent le coup
+d'œil.
 
 **La planche de contact voit enfin le code de salon.** Elle en était absente, et
 l'exclusion des écrans de salon était *bonne pour la mauvaise conclusion* :

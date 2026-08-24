@@ -62,6 +62,19 @@ const COMPTEURS := [
 	"net_debug_label",
 ]
 
+## Les étiquettes qui doivent porter l'ENSEIGNE — le versant positif de la règle.
+##
+## **Sans cette liste, le banc ne saurait qu'interdire.** Un dépôt qui n'emploie
+## nulle part la fonte d'affichage passe tous les contrôles de tremblement : c'est
+## exactement l'état dans lequel le projet a vécu six jours après DA1.2, deux
+## fontes livrées et une seule portée. Interdire le mauvais registre ne dit rien
+## sur l'emploi du bon.
+const ENSEIGNES := [
+	"game_over_title",  # CANDELA 2D, OPTIONS, et les trois verdicts
+	"countdown_label",  # 3 — 2 — 1
+	"killcam_label",    # KILLCAM
+]
+
 var _ok := 0
 var _ko := 0
 var _ui: Node
@@ -114,6 +127,7 @@ func _run() -> void:
 
 	_test_les_polices_sont_chargees()
 	_test_aucun_compteur_ne_tremble()
+	_test_les_enseignes_portent_l_enseigne()
 	_test_le_code_ne_bouge_pas()
 	_test_le_registre_suit_le_gabarit()
 	_test_la_graisse_agit()
@@ -171,6 +185,44 @@ func _test_aucun_compteur_ne_tremble() -> void:
 			"ui.%s tremble : %.1f px d'écart entre ses chiffres à %d px" % [
 				champ, ecart, taille])
 	_check(vus == COMPTEURS.size(), "tous les compteurs ont été mesurés")
+
+
+## Le versant positif : les mots d'enseigne sont bien dans l'autre registre.
+##
+## ⚠️ **Formulé comme « ce n'est pas la fonte d'interface », et non comme « c'est
+## BigShouldersDisplay ».** Nommer le fichier attendu rendrait le contrôle faux le
+## jour où l'enseigne change — or c'est justement le jour où l'on a besoin qu'il
+## tienne. Ce qu'on affirme, c'est que ces mots ne sont pas rendus dans la fonte
+## de tout le reste ; c'est la propriété qui porte le sens.
+##
+## La comparaison se fait sur une **chasse mesurée** plutôt que sur l'identité des
+## objets `Font` : deux `FontVariation` distinctes peuvent envelopper le même
+## fichier, et l'égalité d'objets répondrait alors « différentes » sans que rien
+## ne le soit à l'écran.
+func _test_les_enseignes_portent_l_enseigne() -> void:
+	var vus := 0
+	for champ: String in ENSEIGNES:
+		var lbl := _ui.get(champ) as Control
+		if lbl == null:
+			printerr("  ! enseigne introuvable, plus surveillée : ui.%s" % champ)
+			_ko += 1
+			continue
+		vus += 1
+		var f := lbl.get_theme_font("font")
+		var taille := lbl.get_theme_font_size("font_size")
+		if f == null:
+			_check(false, "ui.%s ne résout aucune fonte" % champ)
+			continue
+		var ui_font := C.police_ui(C.graisse_pour(taille, C.Registre.APPAREIL))
+		if ui_font == null:
+			continue
+		var mot := "VICTOIRE"
+		var a := f.get_string_size(mot, HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x
+		var b := ui_font.get_string_size(mot, HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x
+		_check(absf(a - b) > 1.0,
+			"ui.%s rend « %s » exactement comme la fonte d'interface (%.1f px) : elle n'est pas habillée" % [
+				champ, mot, a])
+	_check(vus == ENSEIGNES.size(), "toutes les enseignes ont été mesurées")
 
 
 ## DA4.9 — six `W` et six `J` occupent exactement la même place.
