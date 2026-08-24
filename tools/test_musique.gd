@@ -48,6 +48,8 @@ func _run() -> void:
 	print("=== MUSIQUE ===")
 	_test_flux_interactif()
 	_test_couches_du_match()
+	_test_ouverture()
+	_test_armes()
 	_test_stingers()
 	_test_manifeste()
 	if _failures == 0:
@@ -139,6 +141,124 @@ func _test_couches_du_match() -> void:
 		_check("au repos, la couche %d (%s) est fermée" % [i, noms[i]],
 			sync.get_sync_stream_volume(i) <= -60.0,
 			"%.1f dB" % sync.get_sync_stream_volume(i))
+
+## L'intro au lancement, et une seule fois.
+##
+## Ce que ça protège tient à un détail que personne n'a de raison de soupçonner :
+## `music_player.play()` démarre le flux à son CLIP INITIAL, pas au clip qu'on
+## demande. Tant que l'intro est le clip 0, démarrer suffit à la jouer — et
+## demander autre chose dans la foulée suffit à la tuer. Elle a vécu ainsi, sortie
+## un tiers de seconde par le repli ANY→ANY, sans qu'aucune erreur ne le dise.
+##
+## Trois propriétés, et les trois sont nécessaires : l'intro doit être le clip
+## initial (sinon démarrer ne la joue pas), elle doit ENCHAÎNER seule (sinon la
+## musique s'arrête après cinq secondes et demie), et l'enchaînement doit partir
+## de la FIN et non du prochain temps (sinon elle est coupée comme avant, cette
+## fois sans qu'on sache pourquoi).
+func _test_ouverture() -> void:
+	print("\n[L'ouverture : l'intro, une fois]")
+	var res = load(CHEMIN_INTERACTIF)
+	if not (res is AudioStreamInteractive):
+		return
+	var initial := int(res.initial_clip)
+	_check("le clip initial est l'intro",
+		initial >= 0 and initial < res.clip_count
+			and String(res.get_clip_name(initial)) == "intro",
+		"clip %d" % initial)
+
+	var intro := -1
+	var menu := -1
+	for i in res.clip_count:
+		var n := String(res.get_clip_name(i))
+		if n == "intro":
+			intro = i
+		elif n == "menu":
+			menu = i
+	if intro < 0 or menu < 0:
+		return
+
+	_check("l'intro enchaîne toute seule",
+		int(res.get_clip_auto_advance(intro)) == AudioStreamInteractive.AUTO_ADVANCE_ENABLED)
+	_check("et elle enchaîne sur le menu",
+		int(res.get_clip_auto_advance_next_clip(intro)) == menu)
+
+	# Sans transition explicite, c'est le repli ANY→ANY qui s'applique — et il
+	# part au PROCHAIN TEMPS. C'est très exactement ce qui coupait l'intro.
+	_check("la transition intro → menu est explicite", res.has_transition(intro, menu))
+	if not res.has_transition(intro, menu):
+		return
+	_check("elle part de la fin de l'intro, pas du prochain temps",
+		int(res.get_transition_from_time(intro, menu))
+			== AudioStreamInteractive.TRANSITION_FROM_TIME_END,
+		str(res.get_transition_from_time(intro, menu)))
+	_check("et le menu repart de son début",
+		int(res.get_transition_to_time(intro, menu))
+			== AudioStreamInteractive.TRANSITION_TO_TIME_START,
+		str(res.get_transition_to_time(intro, menu)))
+
+	# Le démarrage doit passer par la fonction qui NE DEMANDE RIEN. Un
+	# `play_music("music_menu")` ici rejouerait le défaut à l'identique.
+	var source := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("GameState ouvre par demarrer_musique_au_lancement()",
+		source.contains("AudioManager.demarrer_musique_au_lancement()"))
+	_check("et ne redemande pas le menu au lancement",
+		not source.contains('add_to_group("game_state")\n\tAudioManager.play_music'))
+
+## Les quatre variantes de tir par arme.
+##
+## Ce que ça protège, et pourquoi ce n'est pas qu'un contrôle de présence : le
+## chemin d'un son de tir est CONSTRUIT (`weapon_<slug>_<nn>.wav`) à partir du
+## slug de l'arme. Un fichier mal numéroté, un slug mal orthographié, une arme
+## renommée — et `get_audio_stream` rend `null`, `play_weapon_shot` retombe sur
+## le son générique, et **le jeu continue de tirer normalement**. On n'entend pas
+## un défaut, on entend l'ancien son : la seule chose qui aurait changé, c'est
+## qu'une arme cesse d'avoir sa voix, sans que rien ne le dise.
+func _test_armes() -> void:
+	print("\n[Les tirs : quatre variantes par arme]")
+	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
+		var manquantes := PackedStringArray()
+		var stereo := PackedStringArray()
+		for i in range(1, AM.VARIANTES_TIR + 1):
+			var chemin := AM.chemin_tir(slug, i)
+			if not ResourceLoader.exists(chemin):
+				manquantes.append(chemin.get_file())
+				continue
+			var flux = load(chemin)
+			# Un tir se joue en 2D positionnel, et dans ce jeu SAVOIR D'OÙ vient
+			# le coup est l'information. Un flux stéréo dans un lecteur
+			# positionnel dilue le panoramique : la source cesse d'être un point.
+			if flux is AudioStreamWAV and flux.stereo:
+				stereo.append(chemin.get_file())
+		_check("%s : ses %d variantes sont là" % [slug, AM.VARIANTES_TIR],
+			manquantes.is_empty(), str(manquantes))
+		_check("%s : toutes en mono" % slug, stereo.is_empty(), str(stereo))
+
+	# Le nommage, vérifié sur la forme et pas sur un exemple : c'est lui qui fait
+	# le lien entre le slug d'une arme et son fichier.
+	_check("le chemin est bien formé",
+		AM.chemin_tir("pompe", 3) == "res://assets/audio/weapons/weapon_pompe_03.wav",
+		AM.chemin_tir("pompe", 3))
+
+	# V4.15 : les pas reculent sous le tir. La règle interrogeait la clé
+	# « shoot » ; un tir arrive désormais aussi par son CHEMIN, et la laisser
+	# telle quelle aurait rendu le duck muet sans rien casser de visible.
+	_check("un tir joué par sa clé est reconnu", AM.est_un_tir("shoot"))
+	_check("un tir joué par son chemin aussi",
+		AM.est_un_tir(AM.chemin_tir("fusil", 1)))
+	_check("un pas n'est pas un tir", not AM.est_un_tir("footstep"))
+	_check("un flux anonyme n'est pas un tir", not AM.est_un_tir(null))
+	_check("et un tir garde la priorité d'un tir",
+		AM.priorite_de(AM.chemin_tir("fusil", 1)) == AM.priorite_de("shoot"))
+
+	# Les deux appelants doivent passer par le tirage au sort. Un
+	# `play_sfx_2d_random_pitch("shoot", …)` resté en place rejouerait le son
+	# unique pour les quatre armes, sans que rien ne le signale.
+	for fichier in ["res://player.gd", "res://game_state.gd"]:
+		var source := FileAccess.get_file_as_string(fichier)
+		_check("%s tire par play_weapon_shot" % fichier.get_file(),
+			source.contains("AudioManager.play_weapon_shot("))
+		_check("%s ne joue plus le son générique" % fichier.get_file(),
+			not source.contains('play_sfx_2d_random_pitch("shoot"'))
 
 func _test_stingers() -> void:
 	print("\n[Les stingers]")

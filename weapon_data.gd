@@ -23,6 +23,20 @@ const Vision := preload("res://vision.gd")
 ## accent, et un nom de fichier déduit d'un libellé d'interface se casse le jour
 ## où quelqu'un renomme l'arme à l'écran.
 @export var torch_cookie: String = "pistolet"
+
+## Le slug de l'arme — `pistolet`, `fusil`, `pompe`, `arbalete`.
+##
+## C'est `torch_cookie` et rien d'autre, exposé sous le nom de ce qu'il est
+## vraiment. Le champ porte le nom de son PREMIER usage, pas de son sens ; il
+## sert aussi à nommer les sons de tir (`assets/audio/weapons/`).
+##
+## Pourquoi pas un second champ `slug` : ce fichier a déjà payé la leçon plus
+## bas — « une copie garantit que deux nombres divergent ». Deux slugs pour une
+## arme, c'est le jour où le cookie dit `arbalete` et le son `arbalète`, sans
+## que rien ne le signale : le son ne se charge pas, et un son absent ne lève
+## aucune erreur.
+func slug() -> String:
+	return torch_cookie
 ## ⚠️ **DEMI-angle**, pas l'ouverture totale : la comparaison est
 ## `abs(dir.angle()) <= deg_to_rad(torch_angle_deg)`, donc 60° ouvre un cône de
 ## 120°. Cuit dans le cookie — le changer oblige à recuire.

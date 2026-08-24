@@ -1041,7 +1041,7 @@ func trigger_shoot_visuals():
 		tw_reveal.tween_property(vre, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		tw_reveal.tween_property(vrep, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	
-	AudioManager.play_sfx_2d_random_pitch("shoot", muzzle.global_position, 0.92, 1.08)
+	AudioManager.play_weapon_shot(current_weapon.slug() if current_weapon else "pistolet", muzzle.global_position)
 
 	# V4.13 — fumée de bouche : trois grains gris qui dérivent après le flash.
 	var pool := get_tree().get_first_node_in_group("particle_pool") as ParticlePool

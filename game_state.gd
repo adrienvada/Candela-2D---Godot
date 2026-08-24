@@ -227,7 +227,9 @@ func camera_hit_kick(pid: int) -> void:
 
 func _ready():
 	add_to_group("game_state")
-	AudioManager.play_music("music_menu")
+	# L'intro ne se joue qu'ici, au lancement. Les retours au menu passent par
+	# `play_music`, qui bascule sans redémarrer le flux.
+	AudioManager.demarrer_musique_au_lancement()
 
 	
 	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
@@ -1550,7 +1552,7 @@ func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: 
 	# --- REPLAY / KILLCAM AUDIO ---
 	# Joue le son du tir lors du rejeu d'une balle pendant la Killcam.
 	# AudioManager applique automatiquement le ralenti dynamique basé sur Engine.time_scale (ex: 0.03x pendant le bullet time).
-	AudioManager.play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08)
+	AudioManager.play_weapon_shot(weapon.slug() if weapon else "pistolet", pos)
 
 func player_died(dead_id: int, _killer_id: int):
 	if not round_active: return

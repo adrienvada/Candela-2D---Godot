@@ -4273,6 +4273,46 @@ obligeait à modifier `audio_manager.gd` et `asset_manifest.gd` — deux fichier
 tenus par d'autres sessions, pour un format qui aurait ramené le même défaut de
 boucle.
 
+### `play()` démarre au clip initial, pas au clip demandé (2026-08-24)
+
+Question d'Adrien, en une ligne : « est-ce que l'intro se lance au démarrage du
+jeu ? » Réponse mesurée : **elle se lançait, et elle était tuée un tiers de
+seconde plus tard.**
+
+`GameState._ready()` appelait `AudioManager.play_music("music_menu")`, et
+`play_music` fait deux choses à la suite : `music_player.play()`, puis
+`switch_to_clip_by_name("menu")`. Or **`play()` démarre un
+`AudioStreamInteractive` à son `initial_clip`** — le clip 0, c'est-à-dire
+l'intro. Elle partait donc pour de vrai, et la bascule demandée dans la même
+image la coupait au prochain temps, par le repli ANY→ANY
+(`from_time = NEXT_BEAT`, fondu de 0,5 temps). Cinq secondes et demie de musique
+écrites, jouées 0,35 s.
+
+Rien n'était en panne, et c'est tout le problème : le clip portait déjà son
+`auto_advance` vers le menu, la ressource était juste, le code était juste. La
+seule pièce fausse était **une croyance** — que `play()` démarre là où on lui
+dit. Il démarre là où la ressource lui dit.
+
+Ce qui le rend indétectable sans y penser : le symptôme est une intro *presque*
+inaudible, pas une intro absente. Un silence se remarque ; un tiers de seconde
+de musique au lancement passe pour un artefact de démarrage.
+
+Corrigé en trois pièces, et il en fallait trois : une transition **explicite**
+intro→menu (`from_time = END`, `to_time = START`, sans fondu) pour que
+l'enchaînement parte de la fin et non du prochain temps ; une fonction
+`AudioManager.demarrer_musique_au_lancement()` qui **ne demande rien** — elle
+démarre, et laisse le clip initial vivre ; et l'appel correspondant au
+lancement. Les retours au menu continuent de passer par `play_music`, qui trouve
+le lecteur en marche et se contente de basculer : **l'intro ne revient pas.**
+C'est le choix d'Adrien — au dixième retour au menu d'une soirée, cinq secondes
+d'attente cessent d'être une entrée en matière.
+
+Un piège d'énumération dans le même geste, attrapé par le test et pas par la
+relecture : **`TRANSITION_TO_TIME_START` vaut 1, pas 0.** Le 0 est
+`SAME_POSITION`. Écrire `to_time: 0` en croyant dire « au début » fait repartir
+le menu à une position arbitraire — et ça s'entend une fois sur deux, ce qui est
+la pire fréquence pour un défaut.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -4986,9 +5026,31 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 
 ### Vague 4 — L'identité du tir et de l'impact
 
-- **V4.1 Un son PAR arme** — les 4 armes partagent `weapon_shoot.wav`. Corps +
-  queue distincts : le fusil claque, le pompe tonne, l'arbalète chuinte. —
-  *assets : 4×2 samples.*
+- **V4.1 Un son PAR arme** — **✅ Fait le 2026-08-25.** Les 4 armes partageaient
+  `weapon_shoot.wav`. Chacune a désormais **quatre variantes** dans
+  `assets/audio/weapons/`, tirées au sort à chaque coup
+  (`AudioManager.play_weapon_shot`).
+
+  **Le découpage corps + queue annoncé ici n'a pas été retenu, et la raison
+  vaut d'être gardée.** Il figurait au manifeste en huit entrées ; *rien ne le
+  consommait* — aucune ligne de code ne connaissait `weapon_*_body` ni
+  `weapon_*_tail`. Ce qui a tranché, c'est **V5.12** : une queue cuite dans
+  l'échantillon **fige une pièce dans l'asset**, et s'additionnerait à la réverb
+  dérivée de `grid_size`. Deux pièces superposées, dont la seconde ne dirait plus
+  rien de la carte. Le découpage ne redeviendra utile que le jour où l'on voudra
+  un rendu par distance — queue seule et étouffée au loin — et ce jour-là il se
+  ré-exporte.
+
+  **Quatre prises réelles plutôt qu'un échantillon repitché** : le tir est le son
+  le plus répété du jeu, et un même échantillon s'entend en une poignée de coups
+  quel que soit le pitch. Le pitch reste, resserré à ±4 % — la variation large
+  servait à masquer la répétition ; trop de pitch s'entend comme un calibre qui
+  change de taille d'un coup à l'autre.
+
+  Les fichiers sont **forcés en mono à l'import**, comme le reste des effets :
+  ils se jouent en 2D positionnel, et dans ce jeu **savoir d'où vient le coup est
+  l'information**. Un flux stéréo dans un lecteur positionnel dilue le
+  panoramique — la source cesse d'être un point.
 - **V4.2 Hitmarker centre/bord** — « thock » à pleins dégâts, « tick » en
   effleurement, branché sur `rpc_update_hp` (autoritaire), pas sur la balle
   prédite. — *assets : 2 samples.*
@@ -5905,7 +5967,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 |---|---|---|
 | Musique (V1.1, stingers) | 3 clips + 3 stems 170 BPM, 4 stingers accordés | ~10 .ogg |
 | Voix annonceur (V1.3) | fight, victoires, égalité + parfait, de justesse | 4-8 .wav |
-| Sons d'armes (V4.1) | corps + queue par arme | 8 samples |
+| ~~Sons d'armes (V4.1)~~ | **livré** — 4 variantes par arme, tirées au sort | 16 samples |
 | Foley | pas ×2, douilles, ricochets, frôlements, ambiances, torche | ~25 samples |
 | UI / récit | frappes, ping prêt, pion, impacts typo, tic-tac, verre, rewind | ~10 samples |
 | Corps | souffles blessé, acouphènes | ~8 samples |
@@ -6164,8 +6226,9 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
 
-- **DA3.1 Les 4 sons de tir** (= V4.1) — le premier son entendu est le premier
-  jugé. Priorité absolue du lot audio. *(C)*
+- ~~**DA3.1 Les 4 sons de tir**~~ (= V4.1) — **✅ livrée le 2026-08-25**, en
+  seize prises (quatre par arme) plutôt qu'en huit corps/queues. Le premier son
+  entendu est le premier jugé, et il ne se répète plus.
 - ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
   2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,

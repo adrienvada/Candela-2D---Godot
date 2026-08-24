@@ -38,6 +38,32 @@ const SOUNDS: Dictionary = {
 const BPM: float = 170.0
 const PERIODE_BEAT: float = 60.0 / BPM
 
+## Les sons de tir, quatre variantes par arme : `weapon_<slug>_01..04.wav`.
+##
+## Le tirage au sort remplace ce que le pitch aléatoire faisait seul jusqu'ici.
+## Un même échantillon repitché reste le même échantillon — l'oreille l'entend
+## en une poignée de coups, et le tir est de loin le son le plus répété du jeu.
+const DIR_ARMES := "res://assets/audio/weapons/"
+const VARIANTES_TIR := 4
+
+## Le chemin d'une variante. Pure à dessein : vérifiable sans serveur audio.
+static func chemin_tir(slug: String, variante: int) -> String:
+	return "%sweapon_%s_%02d.wav" % [DIR_ARMES, slug, variante]
+
+## Ce son est-il un coup de feu ?
+##
+## V4.15 en dépend — les pas reculent de six décibels juste après un tir. La
+## question se réglait avant en comparant à la clé `"shoot"`, seule façon de
+## tirer à l'époque. Depuis que chaque arme a ses variantes, **un tir arrive
+## aussi sous la forme d'un CHEMIN**, et la comparaison à `"shoot"` répondait
+## alors « non » : les pas seraient restés au premier plan pendant les
+## fusillades, sans qu'aucune erreur ne le dise.
+static func est_un_tir(stream_or_key: Variant) -> bool:
+	if not (stream_or_key is String):
+		return false
+	var s: String = stream_or_key
+	return s == "shoot" or s.begins_with(DIR_ARMES)
+
 const SFX_POOL_SIZE: int = 16
 
 ## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.
@@ -240,6 +266,11 @@ static func choisir_voix(occupees: Array[bool], priorites: PackedInt32Array,
 
 ## La priorité d'un son, d'après sa clé. Un flux passé directement n'en a pas.
 static func priorite_de(stream_or_key: Variant) -> int:
+	# Un tir joué par son chemin vaut un tir joué par sa clé. Le défaut donnait
+	# déjà la même valeur, mais par coïncidence : l'écrire rend le classement
+	# vrai plutôt que chanceux, et il le restera si le défaut change.
+	if est_un_tir(stream_or_key):
+		return int(SFX_PRIORITE.get("shoot", SFX_PRIORITE_DEFAUT))
 	if stream_or_key is String:
 		return int(SFX_PRIORITE.get(stream_or_key, SFX_PRIORITE_DEFAUT))
 	return SFX_PRIORITE_DEFAUT
@@ -303,11 +334,11 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# s'entendent pas tout en volant des voix. On les efface, on ne les coupe pas :
 	# savoir que l'autre bouge reste une information du jeu.
 	var volume_final := volume_db
-	if stream_or_key is String:
-		if stream_or_key == "shoot":
-			_dernier_tir = maintenant
-		elif stream_or_key == "footstep" and maintenant - _dernier_tir < DUCK_TIR_S:
-			volume_final += DUCK_TIR_DB
+	if est_un_tir(stream_or_key):
+		_dernier_tir = maintenant
+	elif stream_or_key is String and stream_or_key == "footstep" \
+			and maintenant - _dernier_tir < DUCK_TIR_S:
+		volume_final += DUCK_TIR_DB
 	
 	var prio := priorite_de(stream_or_key)
 	var voie := choisir_voix(_occupations(sfx_players_2d), _sfx_prio_2d, _sfx_debut_2d, prio)
@@ -325,6 +356,24 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_name
 	player.play()
 	return player
+
+## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
+##
+## Le pitch reste, mais resserré : ±4 % au lieu de ±8 %. La variation large
+## servait à masquer la répétition d'un échantillon unique ; avec quatre prises
+## réelles elle n'a plus ce travail à faire, et trop de pitch s'entend — un
+## calibre qui change de taille d'un coup à l'autre.
+##
+## Une arme dont les variantes manquent retombe sur le son générique plutôt que
+## de se taire : la règle du dépôt est de câbler et de rester silencieux, mais
+## le coup de feu est le seul son qui porte une INFORMATION DE JEU — il dit
+## qu'on vient de tirer, et où. Le taire changerait l'équilibre, pas seulement
+## l'ambiance.
+func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_tir(slug, randi_range(1, VARIANTES_TIR))
+	if get_audio_stream(chemin) == null:
+		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
 
 func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer2D:
 	var pitch = randf_range(min_pitch, max_pitch)
@@ -355,6 +404,31 @@ func play_music(stream_or_key: Variant) -> void:
 
 	music_player.stream = stream
 	music_player.play()
+
+## Démarre la musique au lancement du jeu, par l'intro.
+##
+## Pourquoi `play_music("music_menu")` ne pouvait pas rendre ce service, et
+## pourquoi c'est contre-intuitif : elle appelle `play()`, qui démarre le flux à
+## son **clip initial** — l'intro — puis bascule aussitôt sur le menu. L'intro
+## sortait donc pour de vrai, mais jusqu'au prochain temps seulement (0,35 s à
+## 170 BPM, par le repli ANY→ANY), avant d'être fondue. Cinq secondes et demie
+## de musique écrites, jouées un tiers de seconde, sans que rien ne soit en
+## panne et sans qu'aucune erreur ne le dise.
+##
+## Ici on démarre et on ne demande RIEN. Le clip initial joue en entier, et son
+## `auto_advance` conduit au menu au bout de ses seize temps. Les retours au
+## menu qui suivront passent par `play_music`, qui trouve le lecteur déjà en
+## marche et se contente de basculer : l'intro ne revient pas de la partie.
+## C'est ce qui la garde rare — au dixième retour au menu d'une soirée, cinq
+## secondes d'attente ne sont plus une entrée en matière, c'est un péage.
+func demarrer_musique_au_lancement() -> void:
+	if music_player.stream is AudioStreamInteractive:
+		if not music_player.playing:
+			music_player.play()
+		return
+	# Sans le flux interactif — ressource absente — il n'y a pas d'intro à
+	# jouer ni d'enchaînement automatique pour en sortir : on ouvre sur le menu.
+	play_music("music_menu")
 
 func switch_music_clip(clip_name: String) -> void:
 	if music_player.stream is AudioStreamInteractive:

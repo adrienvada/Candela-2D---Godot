@@ -934,5 +934,34 @@ la suite s'inscrit. **Rien d'autre.**
   qui refuse d'écrire si le `.tres` référence déjà des flux non vides — arbitrage
   d'Adrien, fichier à votre main.
 
+#### Ajout du 2026-08-24, soir — j'ai touché `game_state.gd` et `audio_manager.gd`
+
+**Deux fichiers du domaine « game feel », et je les ai ouverts.** Je le déclare
+ici plutôt que de le laisser découvrir dans un diff.
+
+Ce que c'est : Adrien a demandé que l'intro musicale se joue **au lancement
+seulement**. Trois lignes utiles, aucune refonte.
+
+- `game_state.gd` — la ligne d'ouverture de `_ready()` appelle désormais
+  `AudioManager.demarrer_musique_au_lancement()` au lieu de
+  `play_music("music_menu")`. Rien d'autre n'a bougé dans ce fichier.
+- `audio_manager.gd` — une fonction ajoutée, `demarrer_musique_au_lancement()`.
+  Rien de supprimé, rien de renommé, aucune signature touchée.
+- `assets/audio/music/main_stream_interactive.tres` (mon domaine) — une
+  transition explicite intro→menu.
+- `tools/test_musique.gd` (mon domaine) — huit contrôles de plus, dont deux qui
+  lisent la source de `game_state.gd` pour vérifier que l'ouverture ne redemande
+  pas le menu. **Si vous changez cette ligne, cette suite rougira** : c'est
+  voulu, et le message vous dira quoi.
+
+Les deux fichiers étaient propres dans l'arbre au moment où je les ai ouverts,
+vérifié par `git status`. Ils le sont redevenus.
+
+**La raison de fond, si quelqu'un veut la défaire :** `music_player.play()`
+démarre un `AudioStreamInteractive` à son `initial_clip`, pas au clip qu'on
+demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de seconde,
+avant d'être coupée par la bascule vers le menu. Détail complet dans les
+« Pièges connus » de la feuille de route.
+
 **Republication du suivi :** je ne l'ai pas prise. La session « DA2 »
 (`uds:/tmp/cc-socks/13973.sock`) la porte et a reçu mon delta.
