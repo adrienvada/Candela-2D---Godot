@@ -2495,6 +2495,18 @@ c'est-à-dire sur l'arme furtive, sans qu'une seule ligne d'équilibrage ne boug
 La question à poser devant tout asset : *qu'est-ce que cette texture décide, en
 plus de son allure ?*
 
+⚠️ **Et sa contrepartie, sans quoi l'exemple dit le contraire de la règle.**
+Conserver l'énergie était juste **parce que la décision en cours était
+esthétique** — on remplaçait un dégradé par une image peinte, pas on ne réglait
+l'éclairage. Le jour où l'on voudra régler la lumière pour de bon, il faudra
+qu'elle bouge, et un banc qui l'aurait figée serait alors l'obstacle.
+
+**La règle n'est pas « ne rien déplacer », c'est « ne rien déplacer sans le
+savoir ».** Un contrôle qui interdit le mouvement se transforme en carcan à la
+première vraie décision ; un contrôle qui l'oblige à être **explicite** ne gêne
+jamais celui qui sait ce qu'il fait. Nuance apportée par la session « assets
+visuels », qui a prévu un `--energie libre` pour ce jour-là.
+
 **Le corollaire est la vraie trouvaille : la propriété la plus rentable à nommer
 est presque toujours une ÉGALITÉ INTERDITE, ou une égalité EXIGÉE — jamais une
 valeur attendue.** Vérifié après coup sur tout ce qui a fonctionné le
