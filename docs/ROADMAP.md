@@ -2519,35 +2519,63 @@ avant toute autre mesure.
 
 Un peu moins d'une minute. À faire aussi après tout ajout d'asset binaire.
 
-### Un coefficient réglé sur une fonte est une dépendance cachée à cette fonte (2026-08-24)
+### Une erreur uniforme ne ressemble pas à une erreur, elle ressemble à un choix (2026-08-24)
 
 `menu_engraver.gd` dimensionnait les six cases du code de salon par deux
-multiplications : `taille × 0,87` en largeur, `taille × 1,27` en hauteur. Les
-deux nombres sont justes — pour Oxanium. Ils ont été réglés à l'œil devant
-Oxanium, et **rien n'indiquait qu'ils en dépendaient**.
+multiplications : `taille × 0,87` en largeur, `taille × 1,27` en hauteur. Le
+raisonnement en abordant DA4.9 était : *ces coefficients ont été réglés à l'œil
+devant Oxanium, ils vont donc casser sous la fonte d'enseigne.* La ROADMAP a même
+porté pendant une heure la phrase « les cases auraient bâillé d'un tiers ».
 
-À taille nominale égale, `BigShouldersDisplay` fait **66 % de la largeur** et
-**121 % de la hauteur de ligne** d'Oxanium. Passer le code en fonte d'enseigne
-(DA4.9) avec les coefficients d'origine aurait donné des cases **bâillant d'un
-tiers** et une hauteur de case **inférieure au texte qu'elle contient**.
+**Mesuré, c'est faux — et la vérité est plus intéressante.** Sous la fonte
+d'enseigne à `T_VERDICT`, l'ancien coefficient donne 36,5 px pour un glyphe
+maximal de 31 px : 1,5 px de trop, 4 %. Personne n'aurait rien vu.
 
-**C'est la même famille que le tempo recopié à trois endroits et que la
-résolution de texture qui décide de la portée : une valeur qui a l'air d'être un
-réglage, et qui est en fait le résultat d'une mesure faite une fois, sur une
-entrée qu'on ne nomme pas.** Elle ne se dégrade pas, elle ne dérive pas — elle
-attend le jour où l'entrée change, et ce jour-là elle est fausse d'un coup, sans
-avoir jamais bougé.
+**Le défaut n'était pas à venir, il était déjà là — sur la fonte pour laquelle le
+coefficient avait été réglé :**
+
+| Fonte | Glyphe le plus large | Case donnée par `× 0,87` |
+|---|---|---|
+| Oxanium 400 @30 (l'ancien réglage) | **28,0 px** | **26,1 px** |
+| Display 800 @42 (le nouveau) | 31,0 px | 36,5 px |
+
+**La case était plus étroite de 1,9 px que la lettre la plus large qu'elle devait
+contenir.** Sur un code de salon, c'est-à-dire sur l'objet qu'on lit à voix haute
+à un ami — six caractères, tirés dans un alphabet où le `W` et le `M` sont
+fréquents.
+
+**Et voilà pourquoi personne ne l'a jamais vu : l'erreur était uniforme.** Les six
+cases étaient trop étroites *de la même quantité*, donc rien ne dépassait par
+rapport à son voisin, rien n'était de travers, aucune ligne ne cassait. Le bloc
+paraissait simplement un peu serré — c'est-à-dire **exactement ce qu'aurait
+donné quelqu'un qui aurait choisi de le serrer.** Un défaut qui frappe un élément
+sur six se voit ; un défaut qui frappe les six également se lit comme une
+intention.
+
+C'est la parenté avec *exact au chiffre près, et faux à l'œil*, mais par l'autre
+bout : là, le chiffre était juste et le rendu faux ; ici le rendu est **plausible**
+et c'est ce qui protège le chiffre faux.
 
 **La parade appliquée : remplacer le coefficient par la mesure qu'il résumait.**
-La case vaut désormais le glyphe le plus large de `LobbyCode.ALPHABET`, mesuré
-dans la fonte réellement posée, plus un demi-pas de grille. C'est plus court à
-lire que les deux multiplications, et ça se corrige tout seul au prochain
-changement de fonte.
+La case vaut désormais le glyphe le plus large de `LobbyCode.ALPHABET` mesuré dans
+la fonte réellement posée, plus un demi-pas de grille — 35 px au lieu de 36,5, et
+surtout 32 px au lieu de 26,1 si l'on était resté sous Oxanium. C'est plus court à
+lire que la multiplication, et ça se corrige seul au prochain changement de fonte.
 
 **Le signe qui permet de les repérer** : un littéral non rond multipliant une
-taille ou une dimension — `0,87`, `1,27`, `0,73`. Un nombre rond est
-généralement une décision ; un nombre à deux décimales est presque toujours une
-mesure fossilisée, et il faut alors chercher *de quoi* elle dépend.
+taille ou une dimension — `0,87`, `1,27`, `0,73`. Un nombre rond est généralement
+une décision ; un nombre à deux décimales est presque toujours une mesure
+fossilisée, et il faut alors chercher **de quoi** elle dépend — puis vérifier
+qu'elle était juste *au départ*, ce qui n'allait pas de soi ici.
+
+**Enfin, la façon dont ça a été trouvé mérite d'être notée, parce qu'elle est
+reproductible.** Ce n'est pas la relecture : le premier jet du commentaire ET de
+la ROADMAP affirmait le mauvais diagnostic, avec aplomb. C'est d'avoir écrit une
+sonde jetable de vingt lignes pour *imprimer les trois cas côte à côte* avant de
+conclure. Même motif que `K_ADVERSAIRE`, dont le premier commentaire affirmait
+une égalité de luminance fausse de 8 % : **quand une affirmation porte un nombre,
+c'est le calcul qui tranche, pas la lecture.**
+
 ### Deux sessions qui lancent les suites en même temps se volent le port (2026-08-24)
 
 `run_duo.sh` ouvre le salon sur **7777, en dur**. Deux sessions qui lancent
@@ -6342,11 +6370,15 @@ la main. Le lot s'est reporté sur ce qui était libre.
   exactement celle qui l'autorise. Bénéfice de bord : l'adresse IP passe au bon
   registre **sans toucher `ui.gd`**, tenu par une autre session.
 
-  ⚠️ **Deux coefficients réglés à l'œil sont tombés au passage, et ils étaient
-  faux dès qu'on changeait de fonte** — voir « Pièges connus », *un coefficient
-  réglé sur une fonte est une dépendance cachée à cette fonte*. La case se mesure
-  désormais sur le glyphe le plus large de `LobbyCode.ALPHABET`, dans la fonte
-  réellement posée.
+  ⚠️ **Et le lot a trouvé au passage un défaut qui n'était pas celui qu'on
+  cherchait.** On soupçonnait les deux coefficients de dimensionnement
+  (`× 0,87`, `× 1,27`) de casser sous la nouvelle fonte ; mesurés, ils tiennent
+  à 4 % près. **Ils étaient faux depuis le début sur Oxanium** — 26,1 px de case
+  pour une lettre de 28,0 px —, et invisibles parce que les six cases étaient
+  trop étroites *de la même quantité*. Détail en « Pièges connus », *une erreur
+  uniforme ne ressemble pas à une erreur, elle ressemble à un choix*. La case se
+  mesure désormais sur le glyphe le plus large de `LobbyCode.ALPHABET`, dans la
+  fonte réellement posée.
 
   La promesse « un `I` et un `W` occupent la même case » existait en commentaire
   depuis la vague M et **ne reposait sur rien** : elle est maintenant vérifiée en

@@ -158,12 +158,19 @@ func police() -> Font:
 ## Mesure la case sur la fonte réellement posée, au lieu de la deviner.
 ##
 ## ⚠️ **Les deux coefficients d'avant — `× 0,87` en largeur, `× 1,27` en hauteur —
-## étaient justes pour Oxanium et faux pour toute autre fonte.** À taille égale la
-## display fait **66 % de la largeur** et **121 % de la hauteur de ligne** : les
-## six cases auraient bâillé d'un tiers, et la case aurait été plus courte que le
-## texte qu'elle contient. Un coefficient réglé à l'œil sur une fonte est une
-## dépendance cachée à cette fonte — le genre de lien qui ne se voit que le jour
-## où on en change, c'est-à-dire trop tard.
+## n'étaient pas « justes pour Oxanium et faux ailleurs ». Ils étaient faux POUR
+## OXANIUM.** À taille 30, la lettre la plus large de l'alphabet des codes fait
+## **28,0 px** et la case en faisait **26,1**. Le `W` et le `M` étaient à
+## l'étroit dans leur case depuis le premier jour.
+##
+## **Et c'est l'uniformité du défaut qui l'a caché.** Les six cases étaient trop
+## étroites de la même quantité : rien ne dépassait par rapport à son voisin, rien
+## n'était de travers. Le bloc paraissait serré, c'est-à-dire exactement ce
+## qu'aurait donné quelqu'un ayant choisi de le serrer.
+##
+## Le soupçon de départ — « ces coefficients vont casser sous la fonte
+## d'enseigne » — était d'ailleurs faux : mesurés, ils y tiennent à 4 % près.
+## C'est en allant vérifier ce soupçon qu'on a trouvé l'autre défaut.
 ##
 ## La largeur est celle du **glyphe le plus large de l'alphabet des codes**, pas
 ## du caractère affiché : c'est ce qui tient la promesse « un I et un W occupent
