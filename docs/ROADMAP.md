@@ -2374,6 +2374,18 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Godot efface les commentaires de `project.godot` (2026-08-24)
+
+Le réglage `gui/theme/custom_font` avait été posé avec douze lignes expliquant
+*pourquoi* la fonte d'interface vit là plutôt que Control par Control. **Elles
+ont disparu au premier enregistrement de l'éditeur**, qui réécrit le fichier
+dans son ordre canonique et n'y garde aucun commentaire. Le réglage, lui, a
+survécu — donc rien ne signale la perte.
+
+**Un commentaire dans un fichier regénéré est un commentaire qu'on écrit pour
+soi.** L'explication a été déplacée dans `charte.gd`, à côté de `CHEMIN_UI`.
+Vaut pour `project.godot`, les `.import`, et tout ce que l'éditeur réécrit.
+
 ### Une propriété qui se pose sans effet et sans erreur (2026-08-24)
 
 **Deux fois dans la même heure, en câblant les fontes.** On écrit quelque chose

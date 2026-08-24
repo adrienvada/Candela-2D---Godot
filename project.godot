@@ -55,6 +55,10 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/epic-online-services-godot/plugin.cfg", "res://addons/godot_ai/plugin.cfg")
 
+[gui]
+
+theme/custom_font="res://assets/fonts/Oxanium.ttf"
+
 [input]
 
 p1_move_up={
@@ -157,18 +161,3 @@ p2_torch={
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-
-[gui]
-
-; La fonte d'interface du jeu, posée ici plutôt que Control par Control.
-;
-; Godot la donne par défaut à TOUT `Control` de l'arbre : c'est le seul réglage
-; qui atteint aussi les nœuds construits ailleurs qu'à la main — boîtes de
-; dialogue, éditeur de cartes, panneau de diagnostic. Sans lui, la passe
-; typographique aurait laissé derrière elle les écrans que personne n'a pensé à
-; visiter, et c'est précisément là que la fonte par défaut se serait vue.
-;
-; La chaîne de secours de Godot reste en place : fichier absent, l'interface
-; retombe sur la fonte intégrée et le jeu démarre — règle « câbler, taire,
-; diagnostiquer ». `Charte.polices_manquantes()` le dit au panneau F3.
-theme/custom_font="res://assets/fonts/Oxanium.ttf"

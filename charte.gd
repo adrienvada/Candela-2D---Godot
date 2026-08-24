@@ -227,6 +227,19 @@ const CHEMIN_DISPLAY := "res://assets/fonts/BigShouldersDisplay.ttf"
 ## tabulaire **par construction** : les dix chiffres font 11 px pile, sans
 ## drapeau à poser. Une propriété qui n'a pas d'interrupteur ne peut pas être
 ## éteinte par mégarde.
+##
+## **Elle est aussi posée en `gui/theme/custom_font` dans `project.godot`**, et
+## c'est là que se trouve le vrai levier de la passe typographique : Godot donne
+## cette fonte par défaut à **tout `Control` de l'arbre**. C'est le seul réglage
+## qui atteigne les écrans construits ailleurs qu'à la main — boîtes de dialogue,
+## éditeur de cartes, panneau F3 — c'est-à-dire précisément ceux que personne ne
+## pense à visiter, et donc ceux où la fonte par défaut se serait vue.
+##
+## ⚠️ **L'explication vit ici et pas dans `project.godot` : Godot réécrit ce
+## fichier à chaque enregistrement et en efface les commentaires.** Le premier
+## jet en portait douze lignes ; elles ont disparu au premier lancement de
+## l'éditeur, sans que rien ne le signale. Un commentaire dans un fichier
+## regénéré est un commentaire qu'on écrit pour soi.
 const CHEMIN_UI := "res://assets/fonts/Oxanium.ttf"
 
 ## Le tag OpenType `wght`, en entier.
