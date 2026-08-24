@@ -38,11 +38,16 @@ extends RefCounted
 ## documentation ne se met pas à jour parce que le monde a changé. Elle a
 ## continué d'annoncer trois bouche-trous pendant que les vrais fichiers
 ## jouaient. Signalé par la session « musique », qui ne tenait pas ce fichier.
-## ⚠️ Cette valeur est celle d'un flux de 22,588 s. Un bouche-trou d'une autre
-## durée a une autre taille et passe donc à travers : `music_intro.ogg` (12 s,
-## 167 364 o) a été déclaré « présent et bon » jusqu'au 2026-08-24. Et ces flux
-## ne sont pas silencieux — crête mesurée à −17 dB. Signalé, non corrigé : la
-## bonne détection porterait sur le contenu, pas sur un nombre d'octets.
+## ⚠️ Mesuré au décodeur le 2026-08-24 : cette valeur est celle d'un flux de
+## **11,294 s** (32 temps), soit la moitié d'une vraie boucle. Un bouche-trou
+## d'un autre gabarit a une autre taille et passe donc à travers :
+## `music_intro.ogg` faisait 12,000 s pour 167 364 o, et a été déclaré
+## « présent et bon » jusqu'à cette date. Il y avait deux gabarits, le contrôle
+## n'en couvrait qu'un.
+##
+## Et ces flux ne sont pas silencieux : crête à −17,0 dB pour les trois,
+## −13,4 dB pour l'intro. Signalé, non corrigé : la bonne détection porterait
+## sur le contenu — durée hors grille, niveau crête — pas sur un nombre d'octets.
 const PLACEHOLDER_OGG_SIZE := 160032
 
 const DIR_MUSIC := "res://assets/audio/music/"

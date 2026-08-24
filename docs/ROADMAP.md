@@ -2487,6 +2487,34 @@ indice. `tools/test_musique.gd` tient les deux.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Isoler ses propres hunks par plumbing a une course (2026-08-24)
+
+Arbre partagé par quatre sessions. Pour ne pas emporter le travail non commité
+des voisines dans son commit, la manœuvre employée était : lire
+`git show HEAD:fichier`, y rejouer ses seules modifications, `git hash-object -w`,
+`git update-index --cacheinfo`, commiter. L'intention est bonne et le résultat
+l'était sur le contenu. **Elle a quand même détruit 72 lignes.**
+
+Deux défauts, tous deux dans l'écart entre la lecture et le commit :
+
+1. **La course.** Entre `git show HEAD:…` et `git commit`, une autre session a
+   commité `b8286b3`. Le commit produit avait donc `b8286b3` pour *parent* mais
+   un arbre construit sur son *grand-parent* : il a proprement réverté les
+   72 lignes de la voisine, sans conflit, sans avertissement. Il a fallu un
+   commit de récupération (`52d6f1d`) pour les ressusciter.
+2. **Le résidu.** L'index garde le blob posé à la main. Les commits suivants des
+   voisines (faits par `git commit <chemin>`, qui n'actualise pas l'index)
+   l'ont laissé en place : `git status` affichait **92 lignes supprimées en
+   attente**, et un `git commit` nu de n'importe qui les aurait validées.
+
+La manœuvre reste la bonne, à trois conditions : **relire le SHA de `HEAD` juste
+avant de commiter et abandonner s'il a bougé** ; **relire `git diff --cached`
+avant de commiter** plutôt qu'après ; **désindexer le chemin après le commit**
+(`git restore --staged`) pour ne pas laisser d'arme chargée dans l'index commun.
+
+La leçon générale : une commande qui écrit dans l'index d'un arbre partagé n'est
+pas une opération locale. Elle laisse un état que les autres vont rencontrer.
+
 ### Un champ que personne ne lit ne se corrige pas tout seul (2026-08-24)
 
 Le jour où Adrien a livré les vraies musiques, `asset_manifest.gd` a cessé de
@@ -2515,11 +2543,22 @@ Rapport juste, mesure quand même : elle a coûté trente secondes et confirmé 
 propriété que personne n'avait pensé à annoncer.
 
 **Et le même jour, la mesure elle-même s'est révélée trop étroite.** Signalé par
-la session DA2, vérifié ici au décodeur : `music_intro.ogg` était un bouche-trou
-qui **passait à travers** la détection. Celle-ci teste `taille == 160 032`, or
-cette valeur est celle d'un flux de 22,588 s ; l'intro faisait 12 s, donc
-167 364 octets, donc « présente et bonne » au panneau F3. Une égalité exacte ne
-rattrape qu'un seul gabarit.
+la session DA2 : `music_intro.ogg` était un bouche-trou qui **passait à travers**
+la détection. Celle-ci teste `taille == 160 032`, or il existait **deux
+gabarits** de bouche-trou et elle n'en couvrait qu'un :
+
+| fichier | taille | durée | temps à 170 | crête |
+|---|---|---|---|---|
+| `music_menu` / `music_match` / `music_victory` | 160 032 o | 11,294 s | 32 | −17,0 dB |
+| `music_intro` | 167 364 o | 12,000 s | 34 | −13,4 dB |
+
+**Et cette entrée a d'abord été écrite fausse.** Elle annonçait que 160 032
+octets valaient 22,588 s. Personne ne l'avait mesuré : la durée avait été
+*déduite* de celle des vraies boucles, puis écrite comme un constat. C'est
+exactement le défaut que le paragraphe précédent dénonce, commis dans le
+paragraphe qui le dénonce — et rattrapé par une session voisine qui a décodé les
+fichiers au lieu de lire la ligne. Le bouche-trou faisait la **moitié** d'une
+vraie boucle.
 
 Deux choses à corriger un jour, **signalées et pas touchées** (hors périmètre du
 jour, `asset_manifest.gd` porte un commentaire au bon endroit) :
