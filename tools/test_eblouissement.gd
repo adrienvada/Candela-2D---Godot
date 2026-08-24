@@ -178,12 +178,24 @@ func _test_descente() -> void:
 		is_equal_approx(_integre(1.0, 0.0, plein), 0.0), str(_integre(1.0, 0.0, plein)))
 	_check("et pas avant", _integre(1.0, 0.0, plein * 0.5) > 0.1,
 		str(_integre(1.0, 0.0, plein * 0.5)))
-	# La récupération est plus LENTE que la montée : c'est ce décalage qui fait
-	# de l'éblouissement une ouverture exploitable plutôt qu'une gêne qui passe
-	# avant qu'on en profite. Réglage de jeu, gardé par un test parce que
-	# l'inverser ne casserait rien de visible.
-	_check("récupérer prend plus longtemps qu'être ébloui",
-		Eblouissement.DESCENTE_PAR_S < Eblouissement.MONTEE_PAR_S)
+	# **Ce contrôle a été RETOURNÉ le 2026-08-24, pas supprimé.** Il exigeait
+	# l'inverse — que la récupération soit plus LENTE que la montée — au nom
+	# d'un raisonnement qui se tenait : *ce décalage fait de l'éblouissement une
+	# ouverture exploitable plutôt qu'une gêne qui passe avant qu'on en profite.*
+	#
+	# **Il n'avait jamais été éprouvé.** La mécanique ne fonctionnait pas avant
+	# ce jour-là, donc personne ne l'avait jouée. Manette en main, Adrien a
+	# tranché l'inverse : une seconde et demie d'aveuglement ne se lit pas comme
+	# une ouverture pour l'adversaire, elle se lit comme une perte de contrôle
+	# sur son propre personnage.
+	#
+	# La raison d'origine reste écrite ci-dessus parce qu'elle n'était pas
+	# fausse — elle était **invérifiée**. C'est la différence qui compte, et
+	# c'est elle qui doit être relue si quelqu'un veut rouvrir le sujet : ce
+	# n'est plus un argument contre l'expérience, c'en est une hypothèse que
+	# l'expérience a écartée.
+	_check("on retrouve ses yeux plus vite qu'on ne les perd",
+		Eblouissement.DESCENTE_PAR_S > Eblouissement.MONTEE_PAR_S)
 
 # ---------------------------------------------------------------------------
 # LA CADENCE
@@ -201,8 +213,13 @@ func _test_cadence() -> void:
 	var c := _integre(0.0, 1.0, 0.5, 1.0 / 15.0)
 	_check("60, 492 et 15 fps donnent le même éblouissement",
 		absf(a - b) < 1e-4 and absf(a - c) < 1e-4, "%f / %f / %f" % [a, b, c])
-	var d := _integre(1.0, 0.0, 0.5, 1.0 / 60.0)
-	var e := _integre(1.0, 0.0, 0.5, 1.0 / 492.0)
+	# **Échantillonné DANS la rampe, pas après.** Avec la descente portée à
+	# 2,67/s le 2026-08-24, un demi-seconde la termine : les deux mesures
+	# valaient zéro et le contrôle passait au vert en ne comparant plus rien.
+	# Un contrôle qui ne peut plus rougir n'est pas un contrôle. 0,2 s laisse la
+	# valeur à mi-chemin, où une dépendance à la cadence se verrait.
+	var d := _integre(1.0, 0.0, 0.2, 1.0 / 60.0)
+	var e := _integre(1.0, 0.0, 0.2, 1.0 / 492.0)
 	_check("et la même récupération", absf(d - e) < 1e-4, "%f / %f" % [d, e])
 
 # ---------------------------------------------------------------------------

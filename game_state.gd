@@ -1339,7 +1339,8 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 
 ## Le flash de tir éblouit celui d'en face (décision du 2026-08-18, avec
 ## Adrien). Pic instantané, qui passe par-dessus le plafond de la torche et se
-## résorbe en une seconde et demie — le modèle de `eblouissement.gd` le permet
+## résorbe en un peu plus de deux dixièmes de seconde depuis que la descente a
+## été accélérée (2026-08-24) — le modèle de `eblouissement.gd` le permet
 ## sans cas particulier.
 ##
 ## Pas de cône : un canon crache dans toutes les directions. Une ligne de vue,
