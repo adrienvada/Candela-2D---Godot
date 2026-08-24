@@ -2323,6 +2323,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Le flash de tir éblouit** (2026-08-18, Adrien) | Le geste le plus lumineux du jeu ne coûtait rien à celui qui le déclenche. Pic instantané de 0,6 à bout portant, éteint au-delà de 600 px, pondéré par `muzzle_flash_intensity` — l'arbalète (0,1) reste l'arme discrète, par le réglage qui servait déjà au rendu. Pas de cône (un canon crache dans toutes les directions), mais une ligne de vue : un mur arrête un flash comme il arrête un faisceau. Conséquence de jeu assumée : **le premier tir manqué à bout portant devient une ouverture pour l'adversaire**, alors qu'il était jusqu'ici sans conséquence. |
 | **On est éblouissable de dos** (2026-08-18, Adrien) | L'orientation de la victime n'entre pas dans le calcul : une torche braquée sur sa nuque éblouit. C'est une **décision**, pas un oubli — dans un jeu où la lumière est la seule information, être pris dans un faisceau doit coûter quelque chose quelle que soit la direction du regard, et la règle inverse rendrait le duel dos-à-dos illisible. À rouvrir si le jeu s'en trouve confus. |
 | **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard, sur un effet qui dure une seconde et demie. |
+| **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
+| **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
 | **Divisions : I la plus basse** (convention Rocket League) | Décidée à l'écriture d'`elo.ts` et déployée le 2026-08-17, jamais remontée comme telle — la feuille de route la listait encore comme une question ouverte pour Adrien. C'est l'inverse de League of Legends, d'où le rappel dans le code : **interverties, les divisions produisent une échelle parfaitement plausible à l'œil**, et l'erreur ne se voit qu'au moment où un joueur se plaint de descendre en gagnant. |
 | **Un débutant part d'Aveugle I** (2026-08-18) | Le classement de départ (1000) tombait dans **Bougie**, troisième catégorie sur dix : un débutant serait arrivé avec trois des quatre armes et n'en aurait débloqué qu'une. C'est `RANK_FLOOR` qui a été déplacé, **pas `START_RATING`** — la table des classements est reconstruite par rejeu intégral de l'historique, donc abaisser le départ aurait recalculé tous les matchs déjà joués et déplacé tous les joueurs. Déplacer le plancher ne change que la **lecture** de l'échelle. **Prix assumé :** un débutant ne peut plus chuter, ce que le calibrage d'origine cherchait précisément à éviter. ⚠️ **Non déployé** — tant que la fonction en ligne porte l'ancien plancher, l'écran affiche Bougie pour un débutant. |
@@ -2437,6 +2439,113 @@ deviner ce qui manque en amont.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un banc qui reproduit en panne le défaut qu'il traque (2026-08-24)
+
+`tools/planche_eblouissement.tscn` presse `p1_torch` pour allumer la torche.
+**Si cette action quittait l'Input Map, la torche ne s'allumerait jamais et tout
+le relevé rendrait zéro** — c'est-à-dire trait pour trait la signature du défaut
+de 2026-08-18 que cette planche existe pour surveiller. Le banc annoncerait la
+panne qu'il est chargé de détecter, avec des chiffres parfaitement plausibles,
+et on irait chercher dans `eblouissement.gd`.
+
+**Ce n'est pas un cas particulier, c'est une propriété des bancs de bout en
+bout :** ils partagent leurs appuis avec ce qu'ils mesurent, donc leurs pannes
+imitent les défauts qu'ils cherchent. D'où la règle : **un banc doit vérifier
+ses appuis AVANT de mesurer, et échouer bruyamment plutôt que rendre zéro.**
+`preconditions_manquantes()` les nomme, `tools/test_banc.gd` les lit en headless.
+C'est la parade déjà écrite pour `bench_framerate` — appliquée cette fois avant
+la première panne, parce que le pire moment pour la découvrir était identifiable
+d'avance : le jour où il faudra rejuger l'éblouissement après le lot des cookies.
+
+**Corollaire, et il vaut au-delà des bancs : un zéro est la valeur la plus
+dangereuse du dépôt.** Il est le résultat légitime de « hors du faisceau », le
+résultat d'une panne d'entrée, et le résultat d'un fichier qui ne compile pas.
+Partout où zéro peut vouloir dire trois choses, il faut le **nommer** — d'où le
+« MUR entre les deux, relevé sauté » de la planche plutôt qu'un 0,000 aligné
+avec les autres.
+
+### Un banc qui vacille est pire qu'aucun banc (2026-08-24)
+
+Deux passages consécutifs de la même planche, sur le même code : l'un rend un
+relevé de cohérence complet, l'autre « MUR entre les deux » sur les **quinze**
+postes. Les deux sont honnêtes. La cause n'est dans aucun des deux : la carte est
+tirée au hasard, le point d'apparition tombe où il tombe, et la visée de J1 suit
+la souris — donc une direction fixe mais **arbitraire**, constante pour toute
+l'exécution. Le relevé se faisait un coup dans un couloir, un coup contre un mur.
+
+Un outil qui donne deux verdicts opposés apprend à ignorer son propre lanceur, et
+le jour où il dit vrai, personne ne le croit. La planche cherche donc à J1 un
+emplacement dégagé, en anneaux concentriques — **en exigeant que le chemin
+jusque-là soit libre lui aussi**. Sans cette seconde condition on téléporte le
+joueur dans la pierre et on mesure un dégagement parfait vu de l'intérieur d'un
+mur : la mesure est juste, le repère est faux.
+
+### Une erreur d'analyse fait tourner la scène sans script, et sort en 0 (2026-08-24)
+
+Une inférence de type ratée (`var espace := …` sur un `Node` non typé) a suffi :
+`Failed to load script`, la scène tourne **sans script**, ne mesure rien, n'écrit
+rien, et le processus sort proprement en **0**. Un passage complet perdu avant de
+comprendre — et le lanceur annonçait « les outils visuels sont passés ».
+
+C'est la troisième forme du même piège dans ce document, après la suite qui pend
+et le banc qui pilotait un bouton disparu. `run_suites.sh` s'en protégeait déjà
+en grepant `SCRIPT ERROR` malgré un code 0 ; `run_visuel.sh` ne le faisait pas.
+Il relit désormais la sortie de ses trois outils et cherche `Parse Error` et
+`Failed to load script`.
+
+**La règle, sous sa forme la plus courte : le code de sortie ne suffit jamais à
+dire qu'un outil a travaillé.**
+
+### Exact au chiffre près, et faux à l'œil (2026-08-24)
+
+**L'éblouissement recopiait la texture de torche terme pour terme, et c'est
+précisément ce qui clochait.** `Vision.intensite_recue` porte le commentaire
+« recopié du rendu à dessein — deux formules pour un même faisceau finiraient
+par diverger » ; le raisonnement est juste et la conclusion l'était aussi. Elle
+avait seulement un angle mort : **l'alpha d'une texture et la clarté perçue ne
+sont pas la même quantité.** Sur du noir absolu, 5 % de lumière se lit encore
+comme « éclairé ».
+
+Mesuré au banc visuel : à 95 % de la portée du pistolet, un joueur se tient dans
+une plaque de lumière franchement visible et prenait **0,050** de pénalité —
+c'est-à-dire un voile invisible. Le dernier tiers du faisceau éblouissait bien
+moins qu'il n'éclairait, et **aucune suite ne pouvait le dire**, puisque la
+valeur calculée était exacte au regard de la formule qu'on lui demandait de
+suivre.
+
+**La leçon n'est pas « la formule était fausse ».** Elle est : *une grandeur
+recopiée d'un système à l'autre change de sens en chemin.* La copie garantit que
+les deux nombres restent égaux ; elle ne garantit pas qu'ils veulent dire la
+même chose des deux côtés. C'est la même famille que le demi-angle pris pour un
+angle plein — un nombre dont l'unité se devine — d'un cran plus abstrait : ici
+l'unité est explicite, c'est l'**usage** qui diffère.
+
+Le correctif est donc une conversion nommée (`Eblouissement.plafond_pour`) et
+non une retouche de `vision.gd` : la géométrie reste le miroir de la texture,
+et la traduction « lumière reçue → ce que ça coûte » vit là où elle est un
+réglage d'équilibre.
+
+### Ce qu'on voit n'a pas de nom, donc rien ne le tient (2026-08-24)
+
+**Le voile d'éblouissement peignait par-dessus le HUD**, et personne ne l'avait
+décidé : `dazzle_hbox` était simplement `add_child` après la rangée de HUD, et
+dans un `CanvasLayer` l'ordre de déclaration EST l'ordre de dessin. À
+saturation, un joueur ne lisait plus sa propre vie, son cercle de recharge ni le
+chrono. Trente-cinq suites vertes, et le défaut se voit en une image.
+
+C'est la troisième fois que le dépôt écrit la même chose — « on mesure ce qui
+s'écrit, pas ce qui se voit » (2026-08-19), puis « 53 suites vertes et un écran
+de menu invisible ». Ce cas-ci ajoute une précision utile : **il n'existe pas de
+contrôle raisonnable pour cet ordre.** Un test qui comparerait deux indices
+d'enfants passerait au vert le jour où le HUD déménagerait dans un autre nœud,
+et échouerait sur tout réagencement innocent. Ce qui protège ici est un
+commentaire posé à l'endroit exact où quelqu'un serait tenté de déplacer la
+ligne — assumé comme tel, avec ce que ça vaut.
+
+**Et le corollaire pour la planche de contact :** elle n'a rien affirmé, elle a
+seulement posé l'image. C'est ce qui lui a permis de trouver un défaut que
+personne n'aurait su formuler d'avance.
 
 ### Un `.godot` périmé fait échouer les bancs à deux instances, et l'erreur ment (2026-08-24)
 
@@ -3558,6 +3667,122 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   - Reste non couvert : la révélation au tir et l'énergie des lumières — ce sont
     des propriétés du rendu (Light2D, texture), pas de la géométrie, et le
     headless n'en dit rien.
+  - **Et par un quatrième, le 2026-08-24 : `tools/planche_eblouissement.tscn`,
+    qui REGARDE.** C'est lui qui a fermé le « reste non couvert » ci-dessus, et
+    il a trouvé deux défauts qu'aucune assertion écrite d'avance n'aurait pris
+    (les deux entrées de « Pièges connus » du jour). Il ouvre une vraie fenêtre,
+    joue une vraie manche en écran partagé, et sort 30 images plus un relevé de
+    mesures — temps de montée et de descente, pic de flash arme par arme, valeur
+    subie à cinq postes du faisceau. Il est dans `tools/run_visuel.sh`, pas dans
+    `run_suites.sh` : `--headless` ne rastérise rien et `frame_post_draw` n'y est
+    jamais émis.
+
+    **Il n'affirme presque rien, à dessein** — même règle que la planche de
+    contact des menus : pas d'image de référence, pas de seuil, rien qui se
+    périme. Il ne sort en échec que sur **deux propriétés d'équité** : le voile
+    de J2 qui déborderait chez J1 (mesuré : la vue de J1 passe de 0,049 à 0,043
+    de luminance quand J2 sature — elle baisse), et un blanc qui survivrait à la
+    fin d'une manche. Tout le reste est du jugement, qu'il imprime sans trancher.
+
+    **Trois pièges payés en l'écrivant**, tous consignés en tête du fichier :
+    mesurer et photographier doivent être deux passes (une capture coûte 350 ms,
+    et le premier jet mesurait sa propre lenteur — il annonçait 0,57 s pour une
+    montée qui en prend 0,28) ; faire tirer J1 sur J2 à bout portant **tue le
+    sujet** et tout ce qui suit rend zéro sans rien dire, d'où un flash mesuré à
+    90° de l'axe, ce qui prouve au passage l'absence de cône ; et macOS cesse
+    d'émettre `frame_post_draw` pour une fenêtre au second plan, d'où une reprise
+    plutôt qu'un délai fixe.
+
+    **Et il nomme ses appuis, dès le premier jour.** `preconditions_manquantes()`
+    liste ce dont il dépend — deux joueurs, trois méthodes de `GameState`, les
+    actions `p1_torch`/`p2_torch` de l'Input Map, les constantes du modèle, quatre
+    méthodes de `WeaponData` — et `tools/test_banc.gd` les vérifie **en headless,
+    sans rien rastériser**. C'est la parade déjà écrite pour `bench_framerate`,
+    appliquée avant la panne au lieu d'après : un banc qui ouvre une fenêtre ne
+    peut être dans aucune suite, donc rien ne surveille sa péremption, et le pire
+    moment pour le découvrir cassé est identifiable d'avance — le jour où il
+    faudra rejuger l'éblouissement après le lot des cookies. Le contrôle qui
+    compte le plus est le plus bête : si `p1_torch` quittait l'Input Map, la
+    torche ne s'allumerait jamais et **tout le relevé rendrait zéro**, c'est-à-dire
+    exactement la signature du défaut de 2026-08-18 que cette planche surveille.
+
+    **Deux durcissements payés le jour même, et le second vaut pour les trois
+    outils visuels.** (1) Le relevé de cohérence était une **loterie** : la carte
+    est tirée au hasard, le point d'apparition tombe où il tombe, et la visée de
+    J1 suit la souris — donc une direction fixe mais arbitraire. Deux passages
+    consécutifs ont donné l'un un relevé complet, l'autre « MUR » sur les quinze
+    postes. La planche cherche désormais à J1 un emplacement dégagé, en anneaux
+    concentriques, **en exigeant que le chemin jusque-là soit libre lui aussi** —
+    sans quoi on téléporterait le joueur dans la pierre et on mesurerait un
+    dégagement parfait vu de l'intérieur d'un mur. (2) Une **erreur d'analyse
+    fait tourner la scène SANS script**, donc sans rien mesurer ni écrire, et
+    elle sort proprement en **0** : `run_visuel.sh` relit maintenant la sortie de
+    chaque outil et cherche `Parse Error`, exactement comme `run_suites.sh` grep
+    `SCRIPT ERROR` pour la même raison. Le code de sortie ne suffit jamais à dire
+    qu'un outil a travaillé.
+
+### Premier jugement à l'œil de l'éblouissement — 2026-08-24
+
+**La mécanique n'avait jamais été regardée.** Tout avait été écrit et vérifié en
+headless, en conteneur distant. Ce relevé est le premier, sur le Mac d'Adrien,
+en fenêtre réelle. Ce qu'il a établi, et qui n'était pas su :
+
+| | avant | après la courbe |
+|---|---|---|
+| plafond réel à 80 px dans l'axe (pistolet) | 0,864 | 0,930 |
+| pistolet, mi-faisceau (294 px) | 0,500 | 0,707 |
+| pistolet, bord du cône (27° sur 30) | 0,209 | 0,458 |
+| pompe, bout de portée (243 px sur 256) | 0,050 | 0,224 |
+| arbalète, dans l'axe (448 px) | 0,349 | 0,590 |
+| **hors du cône** | **0,000** | **0,000** |
+
+- **Les 80 % d'opacité ne sont jamais atteints en jeu.** La lumière reçue
+  plafonne à 0,864 (pistolet), 0,911 (fusil), 0,688 (pompe), 0,636 (arbalète) à
+  bout portant *dans l'axe*, faute de quoi le voile plafonnait entre 0,51 et
+  0,73. La courbe remonte ces chiffres sans changer le principe.
+- **La descente colle au modèle à 8 ms près** : 1,492 s mesurées pour 1,485 s
+  promises. **Aucun réglage de temps n'a été touché** — la montée est déjà
+  « rapide, quasi immédiate » (90 % du plafond en 0,51 s), et le « 0,8 s pour
+  saturer » du commentaire décrivait un cas qui n'existe pas.
+- **Le flash tient son intention** : 0,514 pour pistolet, fusil et pompe à
+  80 px et 0,294 à 300 px (modèle : 0,520 et 0,300) ; **0,046 pour l'arbalète**,
+  dont l'écran d'en face reste noir. L'arme discrète le reste par construction.
+- **L'arbalète ne délivre jamais son plein, même en plein axe** : son demi-angle
+  de 5° est plus étroit que le fondu d'arête de 7°, donc l'axe est déjà dans le
+  fondu. Défendable pour une arme furtive, mais c'est un **accident de formule,
+  pas une décision** — à trancher le jour où quelqu'un s'en plaindra.
+- **fps inchangés** : médiane 144, 1 % bas 99 au banc duel standard, du même
+  ordre que le relevé honnête du 2026-08-18 (97).
+
+**Ce qui n'a PAS pu être jugé, et qu'il ne faut pas croire couvert :**
+
+- **le flash au-delà de 550 px**, et les deux postes les plus lointains du
+  faisceau (le bout de portée du pistolet, 559 px, et celui de l'arbalète,
+  851 px). Il faut une ligne dégagée de cette longueur, et les cartes n'en
+  offrent pas toujours. Le banc le **dit** — « MUR entre les deux, relevé
+  sauté » — au lieu de rendre un zéro qu'on prendrait pour une mesure ; c'est la
+  seule chose qui compte ici, puisqu'un zéro silencieux est exactement la
+  signature du défaut de 2026-08-18 ;
+- **le ressenti manette en main.** Les deux joueurs ont été pilotés par script.
+  Les temps sont mesurés à la milliseconde ; savoir s'ils *se sentent* justes
+  reste à Adrien.
+
+### ⚠️ Dette : tout ceci porte sur l'ANCIEN faisceau
+
+Signalé le 2026-08-24 par la session « assets visuels », pendant ce relevé.
+Adrien a arbitré le même jour de nouvelles valeurs de torche — pistolet
+30° → 35° et `torch_scale` 2,3 → 1,6, fusil 3,5 → 1,8 — qui vivent pour
+l'instant dans `tools/torches.gd` : **`game_state.gd` porte encore les
+anciennes.** Le cookie peint passe en outre de 512² à 1024² (portée doublée si
+`texture_scale` n'est pas compensé) et sort à 63-72 % de la lumière actuelle.
+
+**Le cône, la portée et l'intensité vont donc tous les trois changer**, et
+l'éblouissement se lit sur les trois. Un pistolet plus large de 5° et plus court
+de 30 % est une pénalité qui ne tombe plus au même endroit. **Décision d'Adrien
+du 2026-08-24 : on attend leur lot** — aucun nombre de réglage n'a été touché
+ici, seules les deux corrections structurelles ont été posées. Le tableau
+ci-dessus est à rejouer après l'intégration des cookies, en relançant
+`./tools/run_visuel.sh --eblouissement`.
 - ~~Les transitions d'état en ligne ne sont couvertes que manuellement.~~
   **Automatisé le 2026-08-18** par `tools/run_duo.sh`, dans le lanceur. Deux
   processus headless en ENet sur 127.0.0.1 : aucun identifiant Epic, aucun code

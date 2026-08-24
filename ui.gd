@@ -1280,6 +1280,45 @@ func _build_hud() -> void:
 	center_line.add_theme_stylebox_override("panel", line_style)
 	add_child(center_line)
 
+	# Le voile d'éblouissement, une moitié d'écran chacun. Blanc plat et pas
+	# pulsé : décision du 2026-08-18 (V5.3) — sous `gl_compatibility` il n'y a
+	# pas de bloom, et faire battre l'alpha brouillerait la lecture du NIVEAU
+	# d'éblouissement, qui est une information de duel, pas une décoration.
+	# Son opacité passe par le curseur « Éblouissement » de l'écran des effets
+	# (famille Monde, plancher 0,8 en classé) ; la pénalité de vitesse et de
+	# visée, elle, n'est pas réglable — un curseur qui l'allégerait serait un
+	# avantage compétitif déguisé en confort.
+	#
+	# **Il est monté AVANT le HUD, et l'ordre est la décision.** Ajouté après,
+	# il peignait par-dessus la barre de vie, le cooldown et le chrono : à
+	# saturation on ne lisait plus son PROPRE état. Or l'éblouissement doit
+	# coûter la lecture du monde — c'est-à-dire de l'adversaire et de sa
+	# lumière —, jamais celle de sa propre fiche : la première est le jeu, la
+	# seconde n'est qu'une punition de plus, et elle ne se rattrape par aucune
+	# compétence. Vu à l'écran le 2026-08-24, tranché par Adrien le jour même.
+	#
+	# Aucun test ne tient cet ordre, et il ne le peut pas facilement : ce qui
+	# se voit n'a pas de nom dans le code (piège consigné le 2026-08-19). Ce
+	# commentaire est donc le seul garde-fou — le voile doit rester au-dessus
+	# de l'arène et au-dessous du HUD.
+	var dazzle_hbox := HBoxContainer.new()
+	dazzle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dazzle_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dazzle_hbox.add_theme_constant_override("separation", 0)
+	add_child(dazzle_hbox)
+
+	p1_dazzle = ColorRect.new()
+	p1_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p1_dazzle.color = Color(Charte.HALOGENE, 0.0)
+	p1_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dazzle_hbox.add_child(p1_dazzle)
+
+	p2_dazzle = ColorRect.new()
+	p2_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p2_dazzle.color = Color(Charte.HALOGENE, 0.0)
+	p2_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dazzle_hbox.add_child(p2_dazzle)
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_top", GAP_M)
@@ -1298,32 +1337,6 @@ func _build_hud() -> void:
 	hbox.add_child(_build_center_hud())
 	hbox.add_child(hud_panneau_p2)
 	hud_rangee = hbox
-
-	var dazzle_hbox := HBoxContainer.new()
-	dazzle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dazzle_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dazzle_hbox.add_theme_constant_override("separation", 0)
-	add_child(dazzle_hbox)
-
-	# Le voile d'éblouissement, une moitié d'écran chacun. Blanc plat et pas
-	# pulsé : décision du 2026-08-18 (V5.3) — sous `gl_compatibility` il n'y a
-	# pas de bloom, et faire battre l'alpha brouillerait la lecture du NIVEAU
-	# d'éblouissement, qui est une information de duel, pas une décoration.
-	# Son opacité passe par le curseur « Éblouissement » de l'écran des effets
-	# (famille Monde, plancher 0,8 en classé) ; la pénalité de vitesse et de
-	# visée, elle, n'est pas réglable — un curseur qui l'allégerait serait un
-	# avantage compétitif déguisé en confort.
-	p1_dazzle = ColorRect.new()
-	p1_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p1_dazzle.color = Color(Charte.HALOGENE, 0.0)
-	p1_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dazzle_hbox.add_child(p1_dazzle)
-
-	p2_dazzle = ColorRect.new()
-	p2_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p2_dazzle.color = Color(Charte.HALOGENE, 0.0)
-	p2_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dazzle_hbox.add_child(p2_dazzle)
 
 func _build_player_hud(player: int) -> Control:
 	var tint := COLOR_P1 if player == 0 else COLOR_P2

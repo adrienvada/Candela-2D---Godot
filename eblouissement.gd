@@ -62,6 +62,41 @@ const PIC_FLASH := 0.6
 ## (~590 px) : ce qui aveugle doit rester ce qui est proche.
 const PORTEE_FLASH := 600.0
 
+## L'exposant qui courbe la lumière reçue avant qu'elle ne devienne une
+## pénalité. Arbitré par Adrien le 2026-08-24, après relevé à l'écran.
+##
+## `Vision.intensite_recue` recopie terme pour terme la formule de la texture
+## de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du
+## faisceau. C'est exact à l'alpha près, et faux à l'œil — sur du noir absolu,
+## 5 % de lumière se lit encore comme « éclairé ». Mesuré en jeu : à 95 % de la
+## portée du pistolet, un joueur se tenait dans une plaque de lumière
+## franchement visible et ne prenait que **0,050**, soit un voile invisible. Le
+## dernier tiers du faisceau éblouissait bien moins qu'il n'éclairait.
+##
+## 0,5 — la racine carrée — plutôt que le tiers de la vraie courbe de clarté
+## perceptuelle : le tiers porte le bout du faisceau à 0,37, c'est-à-dire qu'on
+## serait notablement ébloui à l'extrême limite de la flaque. Cela déplacerait
+## la couture au lieu de la coudre. La racine rend 0,22 là-bas, 0,71 à
+## mi-faisceau, 0,93 à bout portant.
+##
+## **Les deux bouts ne bougent pas**, et c'est ce qui a décidé de la forme :
+## hors du faisceau on ne prend toujours rien, une lumière saturante sature
+## toujours. Un exposant ne redresse que le milieu ; un seuil ou un décalage
+## auraient cassé l'une des deux bornes — et celle du bas est la mécanique même
+## du jeu, puisqu'elle dit « ici, on ne te voit pas ».
+const COURBURE_LUMIERE := 0.5
+
+## Ce qu'une quantité de lumière reçue COÛTE aux yeux, entre 0 et 1.
+##
+## Séparé de `Vision.intensite_recue` à dessein. La géométrie dit combien de
+## lumière arrive, et elle doit rester le miroir exact de la texture — deux
+## formules pour un même faisceau finiraient par diverger sans que rien ne le
+## dise, et c'est écrit dans `vision.gd`. Ce fichier-ci dit ce que cette
+## lumière fait à celui qui la reçoit. Les mélanger rendrait le RENDU
+## tributaire d'un réglage d'équilibre.
+static func plafond_pour(lumiere: float) -> float:
+	return pow(clampf(lumiere, 0.0, 1.0), COURBURE_LUMIERE)
+
 ## Une image d'éblouissement. `plafond` est la lumière reçue à cet instant
 ## (0 = noir complet, 1 = faisceau saturant dans les yeux).
 ##

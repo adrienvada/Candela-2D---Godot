@@ -32,6 +32,7 @@ func _init() -> void:
 func _run() -> void:
 	print("=== L'ÉBLOUISSEMENT ===")
 	_test_montee()
+	_test_courbe()
 	_test_plafond()
 	_test_descente()
 	_test_cadence()
@@ -74,6 +75,71 @@ func _test_montee() -> void:
 	# Le contre-test : sans lui, une montée cent fois trop rapide passerait.
 	_check("mais pas à la moitié du temps", _integre(0.0, 1.0, plein * 0.5) < 0.9,
 		str(_integre(0.0, 1.0, plein * 0.5)))
+
+# ---------------------------------------------------------------------------
+# LA COURBE — de la lumière reçue à la pénalité
+# ---------------------------------------------------------------------------
+
+func _test_courbe() -> void:
+	print("\n[La courbe lumière → pénalité]")
+	# Les deux bornes sont la mécanique du jeu, pas des cas limites.
+	#
+	# **Celle du bas d'abord**, parce qu'elle est la plus chère à casser : hors
+	# du faisceau on ne prend RIEN. Une courbe qui relèverait le zéro — un
+	# seuil, un décalage, un `max()` mal placé — rendrait le noir absolu
+	# éblouissant, et le jeu entier repose sur le fait que le noir ne coûte
+	# rien. Le contrôle a l'air trivial ; il est le seul qui protège la
+	# proposition de départ du jeu.
+	_check("le noir ne coûte rien",
+		is_zero_approx(Eblouissement.plafond_pour(0.0)))
+	_check("une lumière saturante sature toujours",
+		is_equal_approx(Eblouissement.plafond_pour(1.0), 1.0))
+
+	# Monotone : plus de lumière ne peut jamais coûter moins. Sans ce contrôle,
+	# un exposant négatif passerait les deux bornes et inverserait le jeu — se
+	# rapprocher d'une torche soulagerait.
+	var precedent := -1.0
+	var monotone := true
+	for i in range(0, 21):
+		var x := float(i) / 20.0
+		var y: float = Eblouissement.plafond_pour(x)
+		if y < precedent:
+			monotone = false
+		precedent = y
+	_check("plus de lumière ne coûte jamais moins", monotone)
+
+	# Elle RELÈVE, elle n'abaisse jamais : c'est le sens du correctif. Une
+	# courbure supérieure à 1 creuserait au lieu de redresser, et aggraverait
+	# très exactement le défaut qu'elle est censée corriger.
+	var releve := true
+	for i in range(1, 20):
+		var x := float(i) / 20.0
+		if Eblouissement.plafond_pour(x) < x - 1e-6:
+			releve = false
+	_check("la courbe relève le milieu, jamais l'inverse", releve)
+
+	# LE cas qui l'a motivée, mesuré à l'écran le 2026-08-24 : à 95 % de la
+	# portée du pistolet, `Vision` rend 0,050 — un voile invisible — pour un
+	# joueur qui se tient dans une plaque de lumière franchement visible.
+	# Le chiffre attendu n'est pas rond parce qu'il vient d'une mesure, pas
+	# d'un souhait.
+	var bout := Eblouissement.plafond_pour(0.05)
+	_check("le bout du faisceau se sent enfin (0,05 de lumière → %.2f)" % bout,
+		bout > 0.2, str(bout))
+	# Et le contre-test : il se sent, il n'assomme pas. Sans cette borne, une
+	# courbure plus agressive rendrait le simple fait d'être à portée aussi
+	# coûteux que d'être dans l'axe, et la torche cesserait de se viser.
+	_check("mais il n'assomme pas", bout < 0.4, str(bout))
+
+	# Bornes : une intensité aberrante ne doit pas sortir de [0, 1]. `pow()`
+	# sur un négatif rend NAN, qui se propagerait dans `dazzle_amount` et
+	# empoisonnerait la vitesse ET la visée sans lever la moindre erreur.
+	_check("une lumière > 1 est ramenée",
+		is_equal_approx(Eblouissement.plafond_pour(4.0), 1.0))
+	_check("une lumière négative vaut le noir",
+		is_zero_approx(Eblouissement.plafond_pour(-2.0)))
+	_check("et rien ne rend NAN",
+		not is_nan(Eblouissement.plafond_pour(-2.0)))
 
 # ---------------------------------------------------------------------------
 # LE PLAFOND

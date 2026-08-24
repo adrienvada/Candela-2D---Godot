@@ -1271,7 +1271,12 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 		return 0.0
 	if not _ligne_de_vue(espace, source, cible):
 		return 0.0
-	return intensite
+	# La lumière qui ARRIVE n'est pas la pénalité qu'elle COÛTE. `Vision` rend
+	# la première, miroir exact de la texture ; `Eblouissement.plafond_pour`
+	# convertit en seconde. Sans cette courbe, le dernier tiers du faisceau
+	# éclairait visiblement sans presque rien coûter (relevé à l'écran le
+	# 2026-08-24, arbitré par Adrien).
+	return Eblouissement.plafond_pour(intensite)
 
 ## Ligne de vue franche entre deux joueurs. Le rayon suit la LUMIÈRE, pas le
 ## déplacement : il ne teste que les murs et les joueurs (couche 1). Une fosse

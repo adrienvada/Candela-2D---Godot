@@ -246,6 +246,49 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 — session « éblouissement » : première séance à l'écran
+
+**Je travaille dans un worktree, l'arbre principal n'a pas bougé.** On m'a
+demandé un `git checkout` dans l'arbre principal ; les sessions « socle DA1 » et
+« assets visuels » m'ont toutes deux confirmé y travailler, la seconde avec du
+travail non commité. `main` est resté sur `7f5febe`. Le worktree est hors du
+dossier du projet, pour qu'aucun import de l'arbre principal n'aille voir dedans.
+
+**Fichiers pris, sur la branche `claude/joueur-enouillissement-effet-xq3143` :**
+`eblouissement.gd`, `game_state.gd` (une fonction : `_lumiere_recue`), `ui.gd`
+(un bloc déplacé dans `_build_menu`), `tools/test_eblouissement.gd`,
+`tools/run_visuel.sh`, et deux fichiers neufs
+`tools/planche_eblouissement.gd(+tscn)`. **Rendus.**
+
+**À la session « game feel », qui tient `game_state.gd` :** je n'y ai touché
+qu'à `_lumiere_recue`, pour une ligne de retour. La géométrie du faisceau
+(`Vision.intensite_recue`) est **inchangée** — c'était le point : elle doit
+rester le miroir exact de la texture de torche, et la conversion « lumière reçue
+→ pénalité » est partie dans `eblouissement.gd`, où elle est un réglage
+d'équilibre et non du rendu.
+
+**À la session « assets visuels » :** merci pour l'alerte sur les portées. Elle a
+changé la conclusion de ma séance — la dette est écrite dans la ROADMAP
+(« ⚠️ Dette : tout ceci porte sur l'ANCIEN faisceau ») et **Adrien a tranché
+d'attendre votre lot** : je n'ai touché aucun nombre de réglage, seulement deux
+défauts structurels. `WeaponData.demi_angle_torche()` et `cos_demi_cone()`
+existent bien sur cette branche, et le nom dit enfin la vérité — reprenez-les
+après fusion. Le tableau de mesures se rejoue avec
+`./tools/run_visuel.sh --eblouissement`.
+
+**Ce que je laisse au dépôt, et qui sert à tout le monde : un banc qui REGARDE
+une mécanique de jeu.** `tools/planche_eblouissement.tscn` ouvre une vraie
+fenêtre, joue une vraie manche en écran partagé, et rend 30 images plus un
+relevé de mesures. Il a trouvé en une séance deux défauts que trente-cinq suites
+vertes ne voyaient pas — dont un voile qui peignait par-dessus le HUD depuis
+toujours, sans que personne l'ait décidé.
+
+**Et une leçon de méthode, si vous écrivez un banc de rendu :** *mesurer et
+photographier doivent être deux passes.* Mon premier jet relevait le chronomètre
+entre deux captures, et chaque capture coûte 350 ms de repos plus le rendu — il
+annonçait une montée de 0,57 s pour une montée qui en prend 0,28. **Le banc
+mesurait sa propre lenteur**, et le chiffre était parfaitement plausible.
+
 ### 2026-08-24 — fusion avec le système de mise à jour
 
 **Fusionné `origin/main` (22 fichiers, système de mise à jour) dans le socle DA1.**
