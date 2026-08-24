@@ -51,6 +51,14 @@ signal panel_changed(key: String)
 
 const ROOT := "accueil"
 
+## Le panneau de texte intégré, celui que [method montrer_texte] remplit.
+##
+## Réservé : `register_panel()` refuse une clé déjà prise, donc personne ne peut
+## le remplacer par mégarde. Il vit au même rang que les panneaux confiés de
+## l'extérieur — c'est ce qui garantit qu'afficher du texte **éteint** le panneau
+## précédent, au lieu de s'empiler dessus.
+const PANNEAU_TEXTE := "texte"
+
 ## Marque les entrées « lanceur » — le geste qui engage une partie.
 ##
 ## Depuis le 2026-08-18, le lanceur n'a **plus de style plein** : sa couleur se
@@ -115,6 +123,8 @@ var _title_label: Label
 var _detail_host: VBoxContainer
 var _detail_title: Label
 var _detail_text: RichTextLabel
+## Le panneau de texte, celui que [method montrer_texte] remplit.
+var _texte_panneau: VBoxContainer
 var _tween: Tween
 
 func _init() -> void:
@@ -177,23 +187,47 @@ func _build() -> void:
 	_detail_host.add_theme_constant_override("separation", MenuTheme.GAP_S)
 	right.add_child(_detail_host)
 
-	# Le panneau de droite ne porte plus la description : elle est montée dans
-	# l'en-tête du jeu, sous le titre, à la place d'un « PRÊT À JOUER ? » qui ne
-	# disait rien. Lire l'explication d'une entrée ne devrait pas demander de
-	# traverser l'écran du regard.
+	# ⚠️ **DA4.18 — ces deux `Control` ont passé des semaines cachés, à recevoir
+	# du texte que personne ne voyait.**
+	#
+	# La décision d'origine était bonne : la description d'une entrée est montée
+	# dans l'en-tête, sous le titre, parce que *lire l'explication d'une entrée ne
+	# devrait pas demander de traverser l'écran du regard*. Ce qu'elle n'a pas
+	# prévu, c'est qu'en retirant la description on ne laissait **rien** à la
+	# place — et que `show_detail()` continuait d'écrire ici, dans le vide.
+	#
+	# Deux entrées le promettaient pourtant **au joueur, en toutes lettres** :
+	# « MON RANG — affichés à droite », « TOP 10 — affiché à droite, sans quitter
+	# cet écran ». On cliquait, la phrase promettait, il ne se passait rien.
+	#
+	# **Le remède n'est pas de les rallumer** — la description reviendrait alors à
+	# deux endroits à la fois, ce que la décision d'origine évitait à juste titre.
+	# Le remède est d'en faire **un panneau comme les autres**, avec sa clé, que
+	# seul un appelant qui veut vraiment remplir le cadre demande, par un verbe qui
+	# le dit : [method montrer_texte].
+	_texte_panneau = VBoxContainer.new()
+	_texte_panneau.name = "PanneauTexte"
+	_texte_panneau.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+
 	_detail_title = Label.new()
-	_detail_title.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
-	_detail_title.add_theme_color_override("font_color", MenuTheme.P1)
-	_detail_title.hide()
-	_detail_host.add_child(_detail_title)
+	Charte.appareil(_detail_title, MenuTheme.T_APPUI)
+	_detail_title.add_theme_color_override("font_color", MenuTheme.GOLD)
+	_texte_panneau.add_child(_detail_title)
 
 	_detail_text = RichTextLabel.new()
 	_detail_text.bbcode_enabled = true
 	_detail_text.fit_content = true
+	# Sans cette largeur, un `RichTextLabel` posé dans un panneau caché naît à
+	# **un pixel** de large et n'en ressort jamais : mesuré à `(1.0, 1296.0)` au
+	# moment du diagnostic. Le texte existait, il était rendu sur une colonne d'un
+	# pixel — ce qui aurait ressemblé à « le cadre est vide » même une fois visible.
+	_detail_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_detail_text.custom_minimum_size = Vector2(0, Charte.GAP_XL)
 	_detail_text.add_theme_font_size_override("normal_font_size", MenuTheme.T_COURANT)
 	_detail_text.add_theme_color_override("default_color", MenuTheme.DIM)
-	_detail_text.hide()
-	_detail_host.add_child(_detail_text)
+	_texte_panneau.add_child(_detail_text)
+
+	register_panel(PANNEAU_TEXTE, _texte_panneau)
 
 var _host: Control
 var _right: PanelContainer
@@ -253,6 +287,16 @@ func register_panel(key: String, content: Control) -> void:
 	content.hide()
 	_panels[key] = content
 	_detail_host.add_child(content)
+
+## Le panneau enregistré sous cette clé, ou `null`.
+##
+## **Existe pour que personne n'ait à compter les enfants de `detail_host()`.**
+## Les bancs le faisaient — `get_children()[2]`, `[3]` — et l'arrivée d'un panneau
+## intégré ([constant PANNEAU_TEXTE]) les a tous décalés d'un cran. Ils sont
+## sortis avec **deux erreurs de script et un code 0** : seul le grep de
+## `run_suites.sh` les a attrapés. Une position n'est pas une identité.
+func panneau(key: String) -> Control:
+	return _panels.get(key, null)
 
 ## Panneau montré à l'entrée dans un écran, tant qu'aucune entrée ne parle.
 func set_screen_panel(id: String, key: String) -> void:
@@ -445,12 +489,36 @@ func _show_aside(id: String) -> void:
 	else:
 		show_detail(String(_titles.get(id, "")), "")
 
-## Remplit le panneau de droite. Les entrées d'information passent par ici.
+## Ce que raconte l'entrée sous le curseur. **Alimente l'en-tête, pas le cadre.**
+##
+## ⚠️ **Le nom ment un peu, et il ment depuis longtemps** — « detail » laisse
+## croire que cette fonction remplit le panneau de droite. Elle ne le fait pas :
+## la description part par `detail_changed` vers l'en-tête, sous le titre, et
+## seule la clé `panel` décide de ce que le cadre montre.
+##
+## C'est ce malentendu qui a coûté DA4.18 : deux appelants passaient ici du texte
+## destiné au cadre, il partait dans l'en-tête — où il était aussitôt écrasé par
+## la description suivante — et le cadre restait noir. Pour remplir le cadre avec
+## du texte, c'est [method montrer_texte].
 func show_detail(title: String, text: String, panel: String = "") -> void:
-	_detail_title.text = title
-	_detail_text.text = text
 	_apply_panel(panel)
 	detail_changed.emit(title, text)
+
+
+## Remplit le CADRE DE DROITE avec un titre et un texte, et le montre.
+##
+## Le verbe dit ce qu'il fait, et c'est tout l'intérêt : le cadre est le plus
+## grand rectangle de l'interface, y écrire doit se demander explicitement. Un
+## appelant qui veut seulement expliquer une entrée passe par [method show_detail]
+## et son texte va sous le titre.
+##
+## Le texte accepte le bbcode — `_detail_text` est un `RichTextLabel` — et un
+## titre vide efface simplement la ligne de titre.
+func montrer_texte(title: String, text: String) -> void:
+	_detail_title.text = title
+	_detail_title.visible = title.strip_edges() != ""
+	_detail_text.text = text
+	_apply_panel(PANNEAU_TEXTE)
 
 ## Montre un panneau et un seul. Une clé vide ne veut pas dire « rien » mais
 ## « ce que l'écran montre par défaut » : sans ce repli, survoler une entrée sans

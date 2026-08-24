@@ -2817,10 +2817,15 @@ func _on_hub_action(action: String) -> void:
 		"entrainement":
 			get_tree().paused = false
 			training_requested.emit()
+		# DA4.18 — `montrer_texte` et non `show_detail` : ces deux entrées
+		# promettent le cadre de droite dans leur propre libellé (« affichés à
+		# droite », « sans quitter cet écran »), et `show_detail` envoie à
+		# l'en-tête. La promesse était donc affichée au joueur et contredite à
+		# chaque clic.
 		"mon_rang":
-			hub.show_detail("Mon rang", _my_rank_text())
+			hub.montrer_texte("MON RANG", _my_rank_text())
 		"top10":
-			hub.show_detail("Top 10", _top_ten_text())
+			hub.montrer_texte("TOP 10", _top_ten_text())
 
 ## Ouvrir ou rejoindre un salon met fin à la recherche automatique.
 ##
