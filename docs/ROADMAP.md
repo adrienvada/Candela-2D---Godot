@@ -2555,6 +2555,35 @@ Aucun ne demande de décider ce qui est beau, et tous attrapent la classe de
 défaut qui passe sous les suites : **celle où quelque chose est resté identique
 alors que ça aurait dû bouger.**
 
+#### ⚠️ La règle ne suffit pas : il faut aussi le bon espace
+
+**Contre-exemple fourni par la session qui a formulé la règle, sur son propre
+lot — et il est plus instructif que la règle.**
+
+Elle avait nommé la bonne grandeur : *l'énergie totale de la torche est
+conservée*. Le contrôle était écrit, il passait, il annonçait **0,2 % d'écart**.
+Et la portée des torches avait quand même doublé.
+
+Parce que la mesure se faisait **en coordonnées de texture**, où tout allait
+bien. En unités de monde — c'est-à-dire là où le jeu se joue — la même texture
+recuite de 512² en 1024² portait deux fois plus loin, `texture_scale` multipliant
+la taille *propre* de l'image. C'est Adrien qui l'a vu à l'écran, en une phrase.
+
+> **Nommer la bonne grandeur ne suffit pas, il faut la mesurer dans le bon
+> espace.**
+
+Et le mode de défaillance mérite son nom : **le contrôle n'était pas faux, il
+était HORS SUJET** — ce qui est plus difficile à voir qu'une erreur, *parce qu'il
+passe au vert*. Une suite rouge envoie chercher ; une suite verte qui mesure
+autre chose que ce qu'on croit **rassure**, et c'est le seul état dont personne
+ne se méfie.
+
+D'où le corollaire pratique, qui s'ajoute à la règle plutôt qu'il ne la
+remplace : après avoir nommé la grandeur, **nommer l'espace dans lequel elle a un
+sens pour le joueur**. Une luminance se juge à l'écran, pas dans un atlas ; une
+portée en fractions de champ de vision, pas en unités ; une chasse de fonte en
+pixels rendus, pas en unités de police.
+
 Le motif complet, pour un asset qui en remplace un autre : comparer sur des
 grandeurs invariantes, et **échouer s'ils sont trop proches OU trop loin** — trop
 proches, on a livré un fichier qui ne change rien ; trop loin, on a déplacé
