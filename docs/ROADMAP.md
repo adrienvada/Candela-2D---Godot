@@ -2478,6 +2478,53 @@ regarde.
 
 **La cause :** voir l'entrée suivante.
 
+### Nommer une égalité interdite, plutôt qu'une valeur attendue (2026-08-24)
+
+**La règle qui explique pourquoi certains contrôles attrapent des choses et
+d'autres non.** Formulée par la session « assets visuels », à partir d'un défaut
+de son propre lot ; écrite ici parce qu'elle vaut pour tout le dépôt.
+
+Le mur n'est pas « le visuel ne se teste pas ». C'est qu'on essaie de nommer la
+mauvaise chose. « Ce cookie de torche a la bonne allure » n'est pas assertable et
+ne le sera jamais — mais **une texture ne fait pas que ressembler à quelque
+chose, elle DÉCIDE de choses**, et celles-là ont des noms.
+
+Le cas qui l'a produite : la cuisson des cookies de torche déplaçait la
+**quantité de lumière** de chaque arme — jusqu'à **+96 % sur l'arbalète**,
+c'est-à-dire sur l'arme furtive, sans qu'une seule ligne d'équilibrage ne bouge.
+La question à poser devant tout asset : *qu'est-ce que cette texture décide, en
+plus de son allure ?*
+
+**Le corollaire est la vraie trouvaille : la propriété la plus rentable à nommer
+est presque toujours une ÉGALITÉ INTERDITE, ou une égalité EXIGÉE — jamais une
+valeur attendue.** Vérifié après coup sur tout ce qui a fonctionné le
+2026-08-24, et les quatre contrôles avaient été écrits séparément sans que
+personne voie la forme commune :
+
+| Contrôle | Forme | Ce qu'il a attrapé |
+|---|---|---|
+| le vert n'entre pas dans l'arène | interdiction | (préventif) |
+| la luminance de l'adversaire n'a pas bougé | égalité exigée | un commentaire faux de 8 % |
+| deux graisses rendent des chasses différentes | égalité interdite | la clé `wght` en chaîne, sans effet |
+| les dix chiffres font la même largeur | égalité exigée | une fonte non tabulaire |
+
+Aucun ne demande de décider ce qui est beau, et tous attrapent la classe de
+défaut qui passe sous les suites : **celle où quelque chose est resté identique
+alors que ça aurait dû bouger.**
+
+Le motif complet, pour un asset qui en remplace un autre : comparer sur des
+grandeurs invariantes, et **échouer s'ils sont trop proches OU trop loin** — trop
+proches, on a livré un fichier qui ne change rien ; trop loin, on a déplacé
+l'équilibrage en croyant faire de l'art.
+
+**Chantier ouvert, délibérément pas fait le jour même :** un banc qui réclame les
+quatre états d'une entrée de menu (repos, survol, sélection, curseur) et exige
+qu'ils soient deux à deux distinguables. Il aurait attrapé les trois défauts
+qu'Adrien a trouvés à l'œil. Il n'est pas écrit pour deux raisons : la session
+qui venait d'introduire deux de ces trois défauts est **le plus mauvais juge de
+son seuil** — elle le poserait là où son code passe ; et le seuil doit être
+**résolu** depuis un contraste perceptuel, pas choisi.
+
 ### Un menu peut être cohérent partout et illisible quand même (2026-08-24)
 
 **Le correctif de la sélection a rendu visible un défaut plus ancien : les deux
