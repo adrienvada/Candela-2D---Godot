@@ -5862,16 +5862,24 @@ un fait de jeu, pas à un rythme d'interface.
   plafonnée), plus un moodboard de ~10 références pour cadrer les commandes
   (Darkwood, Teleglitch, Hotline Miami, Inside, Nex Machina). Tout le
   chantier s'y réfère. *(S, arbitrage Adrien sur la palette)*
-- **DA1.2 Deux fontes, mort de la fonte par défaut** — une display à forte
+- **DA1.2 Deux fontes, mort de la fonte par défaut** ✅ **livrée le 2026-08-24**
+  — `BigShouldersDisplay` (display) et `Oxanium` (UI), les deux OFL, embarquées
+  dans `assets/fonts/`, `Oxanium` posée en fonte de projet. Une display à forte
   personnalité (titres, FATAL, verdicts) + une UI sobre à **chiffres
   tabulaires** (HUD, chrono, ping). SIL OFL : gratuit. Le levier au meilleur
   ratio de toute la liste — la fonte par défaut est le marqueur amateur n°1.
   *(G)*
-- **DA1.3 La passe typographique** — appliquer les deux fontes partout, échelle
-  fixe de 5-6 tailles, plus aucune taille arbitraire. *(S, après DA1.2)*
-- **DA1.4 La passe de palette** — remplacer chaque couleur codée en dur du
-  projet par une couleur nommée de la bible. C'est là que meurt le rouge pur
-  qui crie « programmeur ». *(S, après DA1.1)*
+- **DA1.3 La passe typographique** ✅ **livrée le 2026-08-24** — échelle de six
+  tailles nommées dans `charte.gd` (`T_MENTION` à `T_ENSEIGNE`, plus
+  `T_DECOMPTE`), appliquées partout ; `tools/test_charte.gd` refuse toute taille
+  hors échelle. Les chiffres tabulaires sont vérifiés **par la mesure** — les dix
+  glyphes doivent rendre la même chasse — et non par la présence du drapeau
+  `tnum`, qui ne dit rien quand la fonte n'a pas la fonctionnalité. *(S)*
+- **DA1.4 La passe de palette** ✅ **livrée le 2026-08-24** — ~51 littérales
+  remplacées par une couleur nommée. Le banc interdit désormais la saturation
+  au-delà de 75 %, tout canal pur hors `NOIR`, et **le vert dans l'arène** (il
+  est réservé à l'état « ok » de l'interface) : la règle est vérifiée sur le
+  *texte* de treize fichiers de monde, pas sur des constantes. *(S)*
 - **DA1.5 Un seul artiste pour tout** ✅ **TRANCHÉ le 2026-08-24 : c'est Adrien,
   et le procédé se choisit par famille d'asset.** Un artiste unique ne suffit
   plus à garantir un style : c'est la table des procédés qui le tient. Raison et
@@ -5881,11 +5889,13 @@ un fait de jeu, pas à un rythme d'interface.
   « prototype ». *(C)*
 - **DA1.7 Icône d'app + boot splash** — bannir le logo Godot du démarrage.
   *(dérivé de DA1.6)*
-- **DA1.8 Trois courbes d'easing maison** — une entrée, une sortie, un rebond,
-  définies une fois, utilisées partout, durées standardisées (90/180/300 ms).
-  La signature qui distingue un jeu « animé » d'un jeu « tweené ». *(S)*
-- **DA1.9 La grille de 8 px** — tous les menus sur une grille d'espacement
-  constante. L'à-peu-près d'alignement se voit sans se nommer. *(S)*
+- **DA1.8 Trois courbes d'easing maison** ✅ **livrée le 2026-08-24** — `ENTREE`,
+  `SORTIE`, `REBOND` en Bézier cubique résolue par Newton-Raphson, durées
+  `D_COURT`/`D_MOYEN`/`D_LONG` (90/180/300 ms), un seul point d'entrée
+  `Charte.animer()`. *(S)*
+- **DA1.9 La grille de 8 px** ✅ **livrée le 2026-08-24** — six écarts nommés
+  (`GAP_XXS` 4 px à `GAP_XL` 64 px), tous multiples de 8 sauf le demi-cran, et
+  plus une seule marge écrite à la main dans les menus. *(S)*
 
 ### DA2 — Les ancres autorales in-game (là où l'œil juge en trois secondes)
 
