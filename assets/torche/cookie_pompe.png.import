@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://chna5jm5dik3q"
-path="res://.godot/imported/cookie_fusil_bis04.png-72e627c67cc3a2128a00a4d056aea695.ctex"
+uid="uid://dw7wc2xsamvyd"
+path="res://.godot/imported/cookie_pompe.png-b5c7e6b38da05b32d10e8a5816a15c0b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/torche/cookie_fusil_bis04.png"
-dest_files=["res://.godot/imported/cookie_fusil_bis04.png-72e627c67cc3a2128a00a4d056aea695.ctex"]
+source_file="res://assets/torche/cookie_pompe.png"
+dest_files=["res://.godot/imported/cookie_pompe.png-b5c7e6b38da05b32d10e8a5816a15c0b.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bx63i0wtm0ruv"
-path="res://.godot/imported/cookie_arbalete_bis04.png-54199f10305f3f884def62b2abf21ce8.ctex"
+uid="uid://b3ywt2mcd4rxq"
+path="res://.godot/imported/cookie_fusil.png-b1fc4b5e2afd865520f53835ece8b050.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/torche/cookie_arbalete_bis04.png"
-dest_files=["res://.godot/imported/cookie_arbalete_bis04.png-54199f10305f3f884def62b2abf21ce8.ctex"]
+source_file="res://assets/torche/cookie_fusil.png"
+dest_files=["res://.godot/imported/cookie_fusil.png-b1fc4b5e2afd865520f53835ece8b050.ctex"]
 
 [params]
 

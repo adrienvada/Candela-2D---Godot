@@ -479,7 +479,8 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture = tex
 	# La teinte n'est pas touchée ici : elle est posée une fois à la construction
 	# de la torche, et une arme n'en change pas.
-	flashlight.texture_scale = weapon.torch_scale
+	flashlight.texture_scale = weapon.echelle_torche()
+
 
 func _process(delta):
 	# Publié ici et non dans _physics_process : les sorties anticipées (mort,

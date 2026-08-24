@@ -45,17 +45,19 @@ extends Node2D
 ## `frame_post_draw` cesse d'arriver et les captures sortent vides.
 
 const Charte := preload("res://charte.gd")
-const WD := preload("res://weapon_data.gd")
 
-## Les variantes comparées. `etiquette` vide = le cookie fabriqué par le code,
-## c'est-à-dire ce que le jeu affiche aujourd'hui — la référence doit être dans
-## la comparaison, sinon on choisit entre trois nouveautés sans savoir laquelle
-## bat l'existant.
+## Les cookies à regarder.
+##
+## **La comparaison a servi et n'a plus lieu d'être** : Adrien a choisi `bis04`
+## le 2026-08-24, et la fabrique procédurale qui servait de référence a disparu
+## de `weapon_data.gd` avec l'intégration. Le banc n'arbitre donc plus, il
+## MONTRE — ce qui reste sa vraie utilité, puisque rien d'autre ne rend un cookie
+## dans le noir avec ses ombres.
+##
+## Le jour où une variante revient (DA7.6, skins de torche), on cuit avec
+## `--etiquette` et on rajoute une ligne ici.
 const VARIANTES := [
-	{"nom": "ACTUEL (code)", "etiquette": ""},
-	{"nom": "bis04", "etiquette": "bis04"},
-	{"nom": "bis01", "etiquette": "bis01"},
-	{"nom": "bis02", "etiquette": "bis02"},
+	{"nom": "INTÉGRÉ", "etiquette": ""},
 ]
 
 ## La table vient de `tools/torches.gd`, partagée avec la cuisson.
@@ -224,20 +226,14 @@ func _appliquer() -> void:
 	var v: Dictionary = VARIANTES[_variante]
 	var origine := ""
 
-	if v["etiquette"] == "":
-		var w = WD.new()
-		w.torch_angle_deg = arme["angle"]
-		w.torch_brightness = arme["brillance"]
-		_torche.texture = w.get_torch_texture()
-		origine = "fabriqué à l'exécution, 512²"
-	else:
-		var chemin := "res://assets/torche/cookie_%s_%s.png" % [arme["fichier"], v["etiquette"]]
-		if not ResourceLoader.exists(chemin):
-			_etiquette.text = "MANQUANT : %s\n(cuire la variante d'abord)" % chemin
-			return
-		var tex: Texture2D = load(chemin)
-		_torche.texture = tex
-		origine = "%s, %d²" % [chemin.get_file(), tex.get_width()]
+	var suffixe := "" if v["etiquette"] == "" else "_" + str(v["etiquette"])
+	var chemin := "res://assets/torche/cookie_%s%s.png" % [arme["fichier"], suffixe]
+	if not ResourceLoader.exists(chemin):
+		_etiquette.text = "MANQUANT : %s\n(cuire d'abord)" % chemin
+		return
+	var tex: Texture2D = load(chemin)
+	_torche.texture = tex
+	origine = "%s, %d²" % [chemin.get_file(), tex.get_width()]
 
 	# ⚠️ **`texture_scale` multiplie la taille PROPRE de la texture.** Le cookie
 	# d'origine fait 512² ; un cookie cuit en fait 1024. Posé tel quel, le même
@@ -257,7 +253,7 @@ func _appliquer() -> void:
 		"VARIANTE  %s        ARME  %s  (demi-angle %.0f°, échelle %.1f)\n"
 		+ "portée %.0f unités = %.2f écran%s        %s        [%s]\n"
 		+ "1-4 variante · Espace arme · flèches déplacer · souris viser · Échap quitter\n"
-		+ "valeurs d'essai — game_state.gd porte encore les anciennes") % [
+		+ "tools/torches.gd et game_state.gd sont tenus egaux par tools/test_torches.gd") % [
 			v["nom"], arme["nom"], arme["angle"], arme["echelle"],
 			Torches.portee(arme), ecrans, "  (HORS CHAMP)" if ecrans > 1.0 else "",
 			origine, str(arme["origine"])]

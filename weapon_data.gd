@@ -16,8 +16,17 @@ const Charte := preload("res://charte.gd")
 @export var emits_light: bool = true
 
 @export_group("Flashlight")
-@export var torch_angle_deg: float = 30.0
-@export var torch_scale: float = 2.3
+## Nom du cookie cuit, sans chemin ni extension : `res://assets/torche/cookie_<x>.png`.
+##
+## Un champ explicite plutôt qu'un slug dérivé de `name` : « Arbalète » porte un
+## accent, et un nom de fichier déduit d'un libellé d'interface se casse le jour
+## où quelqu'un renomme l'arme à l'écran.
+@export var torch_cookie: String = "pistolet"
+## ⚠️ **DEMI-angle**, pas l'ouverture totale : la comparaison est
+## `abs(dir.angle()) <= deg_to_rad(torch_angle_deg)`, donc 60° ouvre un cône de
+## 120°. Cuit dans le cookie — le changer oblige à recuire.
+@export var torch_angle_deg: float = 35.0
+@export var torch_scale: float = 1.6
 @export var torch_brightness: float = 1.0
 
 @export_group("Visibility & Mobility")
@@ -32,98 +41,59 @@ const Charte := preload("res://charte.gd")
 @export var bullet_light_energy: float = 50.0
 @export var bullet_width: float = 5.0
 
-var _torch_texture: ImageTexture
+## Le cookie cuit, chargé une fois par arme. Voir `torch_cookie` plus haut.
+var _torch_texture: Texture2D
 
-func get_torch_texture() -> ImageTexture:
+## La texture du faisceau, chargée depuis `res://assets/torche/`.
+##
+## **Elle était fabriquée ici, pixel par pixel, au premier équipement** — 262 144
+## itérations de GDScript pendant une manche, soit un hoquet posé exactement sur
+## le moment où l'arme change. Même classe de défaut que le shader compilé au
+## premier mort, déjà payée une fois. Elle est désormais cuite hors ligne par
+## `tools/fabrique_cookies.gd` et versionnée.
+##
+## ⚠️ **Aucun bouche-trou en cas d'absence.** Un cookie manquant crie dans la
+## console et rend `null` : la torche devient un carré lumineux, ce qui ne se
+## confond avec rien. Fabriquer un dégradé de secours redonnerait un faisceau
+## plausible, et un faisceau plausible se prend pour une intention — c'est la
+## règle « câbler, taire, diagnostiquer » du dépôt, appliquée à un asset dont
+## l'absence ne peut pas rester discrète.
+func get_torch_texture() -> Texture2D:
 	if _torch_texture != null:
 		return _torch_texture
-		
-	var tex_size = 512
-	var img = Image.create_empty(tex_size, tex_size, false, Image.FORMAT_RGBA8)
-	var center = Vector2(tex_size / 2.0, tex_size / 2.0)
-	var max_dist = tex_size / 2.0
-	var cone_angle = deg_to_rad(torch_angle_deg)
-	
-	for y in range(tex_size):
-		for x in range(tex_size):
-			var pos = Vector2(x, y)
-			var dist = pos.distance_to(center)
-			if dist >= max_dist:
-				continue
-				
-			var dir = center.direction_to(pos)
-			var angle = abs(dir.angle())
-			var intensity = 0.0
-			
-			if angle <= cone_angle:
-				var beam_intensity = 1.0 - (dist / max_dist)
-				var angle_fade = clamp((cone_angle - angle) * 8.0, 0.0, 1.0)
-				intensity = max(intensity, beam_intensity * angle_fade)
-				
-			var halo_angle = deg_to_rad(80.0)
-			if angle <= halo_angle:
-				var halo_dist = max_dist * 0.2
-				if dist < halo_dist:
-					var halo_intensity = pow(1.0 - (dist / halo_dist), 2.5) * 0.15
-					var angle_fade = clamp((halo_angle - angle) * 4.0, 0.0, 1.0)
-					intensity = max(intensity, halo_intensity * angle_fade)
-				
-			if intensity > 0:
-				# **Un masque, pas une couleur.** La teinte de la torche vit sur la
-				# `PointLight2D` (`player.gd`, `flashlight.color`), pas ici : c'est
-				# l'alpha qui porte le profil du faisceau, le blanc n'est que
-				# l'unité du produit.
-				#
-				# Elle a été écrite ici un moment, et ça marchait — masque teinté ×
-				# lumière blanche donne le même résultat que masque blanc × lumière
-				# teintée. Sauf que le jour où ce masque devient une image PEINTE
-				# (DA2.1, le cookie de torche), la couleur disparaîtrait sans un
-				# mot : une texture d'artiste ne porte pas la charte. Signalé par
-				# la session « assets visuels », qui allait buter dessus.
-				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, intensity * torch_brightness))
-	
-	_torch_texture = ImageTexture.create_from_image(img)
+	var chemin := "res://assets/torche/cookie_%s.png" % torch_cookie
+	if not ResourceLoader.exists(chemin):
+		push_error("WeaponData : cookie de torche introuvable — %s" % chemin)
+		return null
+	_torch_texture = load(chemin)
 	return _torch_texture
 
-var _torch_texture_flat: ImageTexture
 
-func get_torch_texture_flat() -> ImageTexture:
-	if _torch_texture_flat != null:
-		return _torch_texture_flat
-		
-	var tex_size = 512
-	var img = Image.create_empty(tex_size, tex_size, false, Image.FORMAT_RGBA8)
-	var center = Vector2(tex_size / 2.0, tex_size / 2.0)
-	var max_dist = tex_size / 2.0
-	var cone_angle = deg_to_rad(torch_angle_deg)
-	
-	for y in range(tex_size):
-		for x in range(tex_size):
-			var pos = Vector2(x, y)
-			var dist = pos.distance_to(center)
-			if dist >= max_dist:
-				continue
-				
-			var dir = center.direction_to(pos)
-			var angle = abs(dir.angle())
-			var intensity = 0.0
-			
-			if angle <= cone_angle:
-				# Solid light, but with a slight diffuse edge to prevent harsh pixelated steps
-				var angle_fade = clamp((cone_angle - angle) * 16.0, 0.0, 1.0)
-				var dist_fade = clamp((max_dist - dist) / 25.0, 0.0, 1.0)
-				intensity = angle_fade * dist_fade
-				
-			var halo_angle = deg_to_rad(80.0)
-			if angle <= halo_angle:
-				var halo_dist = max_dist * 0.2
-				if dist < halo_dist:
-					var halo_angle_fade = clamp((halo_angle - angle) * 8.0, 0.0, 1.0)
-					var halo_dist_fade = clamp((halo_dist - dist) / 15.0, 0.0, 1.0)
-					intensity = max(intensity, halo_angle_fade * halo_dist_fade)
-				
-			if intensity > 0:
-				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, intensity * torch_brightness))
-	
-	_torch_texture_flat = ImageTexture.create_from_image(img)
-	return _torch_texture_flat
+## Empreinte de référence d'un cookie, en texels. `torch_scale` s'exprime dans
+## cette unité, jamais dans celle du fichier.
+const TAILLE_COOKIE_REFERENCE := 512.0
+
+## Le `texture_scale` à poser sur la `PointLight2D`.
+##
+## ⚠️ **La ligne la plus dangereuse du chantier DA2.1, et elle vit ICI pour
+## qu'il n'y en ait qu'une.** `texture_scale` multiplie la taille PROPRE de la
+## texture : le cookie historique faisait 512², les cookies cuits en font 1024.
+## Posé tel quel, le même `torch_scale` couvre **deux fois plus d'unités de
+## monde** — la torche porte deux fois plus loin, et aucune valeur de gameplay
+## n'a bougé.
+##
+## Le défaut a été vu à l'œil par Adrien — « ça éclaire beaucoup trop loin » —
+## pendant que les contrôles annonçaient une énergie conservée à 0,2 % près : ils
+## mesuraient en coordonnées de texture, où tout allait bien. *Une mesure juste
+## dans le mauvais repère rassure.* Voir « Pièges connus ».
+##
+## **Deux appelants, et le second est celui qui coûte cher** : `player.gd` pour
+## la torche jouée, et `game_state.gd` pour les fantômes de killcam. Le second ne
+## se voit qu'après une mort, qu'aucune suite n'exerce et que la planche de
+## contact ne visite pas — laisser les deux calculer la même chose chacun de son
+## côté, c'était garantir qu'un seul serait corrigé.
+func echelle_torche() -> float:
+	var tex := get_torch_texture()
+	if tex == null or tex.get_width() <= 0:
+		return torch_scale
+	return torch_scale * TAILLE_COOKIE_REFERENCE / float(tex.get_width())

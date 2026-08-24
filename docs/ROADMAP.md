@@ -3756,11 +3756,42 @@ Le reste demande un arbitrage ou un vrai chantier — rien n'est bloquant :
   `tools/test_vision.gd`. Trente suites couvraient le codec, les menus, le
   réseau et le classement ; la seule chose dont dépend l'intérêt du jeu ne
   l'était pas.
-  - **Le cône** est sorti de `_check_dazzle` vers `vision.gd` — sans dépendance,
-    donc testable en `--script`. Le `0.866` y était écrit en dur, deux fois,
-    sans dire qu'il valait 30° : c'est un **réglage d'équilibre** (un cône plus
-    large rend la torche moins coûteuse à allumer), il porte maintenant un nom
-    et deux tests l'encadrent à 29° et 31°.
+  - ⚠️ **Le cône : ROUVERT le 2026-08-24. Ce qui est écrit ci-dessous est vrai
+    et passe complètement à côté du défaut.** Texte d'origine conservé, parce
+    que c'est lui la leçon :
+
+    > Le `0.866` était écrit en dur, deux fois, sans dire qu'il valait 30° :
+    > c'est un **réglage d'équilibre** (un cône plus large rend la torche moins
+    > coûteuse à allumer), il porte maintenant un nom et deux tests l'encadrent
+    > à 29° et 31°.
+
+    **Le dépôt a regardé cette constante, l'a jugée, l'a baptisée et l'a figée
+    par deux tests — sans voir qu'elle applique UN SEUL angle à QUATRE armes
+    dont les faisceaux vont de 5° à 60°.** `game_state.gd` appelle
+    `Vision.dans_le_cone()` sans jamais lui passer l'arme. En partie, aujourd'hui :
+    la **pompe** éclaire 120° et n'éblouit que sur 60 — on est révélé, donc visé,
+    sans subir de pénalité ; l'**arbalète** éclaire 10° et éblouit sur 60 — elle
+    aveugle des joueurs qu'elle n'illumine pas, alors qu'elle est l'arme furtive.
+    Seul le **pistolet** tombait juste, à 30° pile ; l'arbitrage des portées du
+    2026-08-24 l'a porté à 35°, si bien que **plus aucune arme ne correspond**.
+
+    **Et le remède documenté n'a pas raté le défaut : il l'a consolidé.** Un
+    nombre nu invite à demander d'où il sort. Un nombre nommé, expliqué comme un
+    réglage d'équilibre et encadré par deux tests **a l'air décidé** — plus
+    personne ne le regarde. `tools/test_vision.gd` vérifie 29° dedans / 31°
+    dehors : il fige la constante contre elle-même et restera vert quelles que
+    soient les armes.
+
+    **La leçon dépasse ce cas, et elle prolonge celle du contrôle hors sujet :
+    une ligne barrée empêche le prochain de regarder.** Une suite verte qui
+    mesure autre chose rassure ; une entrée déclarée close fait mieux — elle
+    dispense d'aller voir. Rouvrir coûte une ligne, redécouvrir coûte une
+    session.
+
+    Retrouvé indépendamment le 2026-08-24 en intégrant DA2.1, et corrigé sur la
+    branche `claude/joueur-enouillissement-effet-xq3143` — **mais pas sur `main`,
+    où rien n'en gardait trace.** Reste dû ici tant que cette branche n'est pas
+    fusionnée.
   - **L'occlusion** est vérifiée dans un vrai monde physique bâti par
     `MapGeometry` : un mur arrête le faisceau, une **fosse le laisse passer**
     (décision de conception — « on peut éblouir son adversaire par-dessus un

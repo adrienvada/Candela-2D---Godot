@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b3c1wje8jlasu"
-path="res://.godot/imported/cookie_arbalete_bis02.png-6906f83b213386bac32c35ec4b26fe2b.ctex"
+uid="uid://csuyv38ly713g"
+path="res://.godot/imported/cookie_pistolet.png-eaaab694e3021344b140ce416a32b115.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/torche/cookie_arbalete_bis02.png"
-dest_files=["res://.godot/imported/cookie_arbalete_bis02.png-6906f83b213386bac32c35ec4b26fe2b.ctex"]
+source_file="res://assets/torche/cookie_pistolet.png"
+dest_files=["res://.godot/imported/cookie_pistolet.png-eaaab694e3021344b140ce416a32b115.ctex"]
 
 [params]
 
