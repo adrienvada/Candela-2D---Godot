@@ -445,7 +445,8 @@ func _annoncer_deconnexion() -> void:
 	_abort_killcam()
 	_restore_viewports()
 	if not revenu:
-		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.")
+		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.",
+			UI.Registre.ATTENTION)
 	round_active = false
 	sandbox_mode = true
 	p2_ready_for_rematch = false
@@ -915,7 +916,8 @@ func _refuse_match_on_map(reason: String) -> void:
 	ui.show_dialog_message("Arène incompatible",
 		("Impossible de lire l'arène de l'hôte : %s.\n\nLa partie n'a pas démarré — "
 		+ "mieux vaut cela que deux joueurs sur deux terrains différents. La cause "
-		+ "la plus courante est un écart de version entre les deux jeux.") % reason)
+		+ "la plus courante est un écart de version entre les deux jeux.") % reason,
+		UI.Registre.FAUTE)
 
 ## [Hôte] L'adversaire a refusé la carte et s'en va. Le lui dire, sinon l'hôte
 ## attribue son départ à une déconnexion et lui compte le match.
@@ -929,7 +931,8 @@ func rpc_map_refused(reason: String):
 	_forfeit_pending = false
 	ui.show_dialog_message("Arène refusée",
 		("Votre adversaire n'a pas pu lire l'arène (%s) et a quitté.\n\nEssayez une "
-		+ "carte livrée avec le jeu, ou vérifiez que vous avez la même version.") % reason)
+		+ "carte livrée avec le jeu, ou vérifiez que vous avez la même version.") % reason,
+		UI.Registre.ATTENTION)
 
 ## [Hôte] Tire l'identifiant du match qui commence.
 ##
@@ -2431,7 +2434,9 @@ func _on_quit_requested():
 func _on_host_disconnected():
 	# L'hôte est parti en cours de match : le client encaisse la victoire.
 	_archive_forfeit(1)
-	ui.show_dialog_message("Déconnexion", "L'hôte a fermé la partie. Retour au menu principal.")
+	ui.show_dialog_message("Déconnexion",
+		"L'hôte a fermé la partie. Retour au menu principal.",
+		UI.Registre.ATTENTION)
 	_on_main_menu_requested()
 
 ## [Client Uniquement] Intercepte un échec de connexion (timeout ou serveur plein).
@@ -2442,7 +2447,9 @@ func _on_connection_failed():
 	var reason: String = NetworkManager.last_error
 	if reason.is_empty():
 		reason = "Impossible de rejoindre le salon (adresse injoignable ou salon complet)."
-	ui.show_dialog_message("Erreur", reason)
+	# « Erreur » ne disait rien : le joueur sait déjà que ça a raté, il veut
+	# savoir QUOI. Le titre nomme le geste qui a échoué.
+	ui.show_dialog_message("Connexion impossible", reason, UI.Registre.FAUTE)
 	_on_main_menu_requested()
 
 ## [Client Uniquement] Appelé quand la connexion au serveur réussit.

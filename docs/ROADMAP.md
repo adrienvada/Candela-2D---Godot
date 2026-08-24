@@ -6680,8 +6680,39 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   les paliers que `_update_ping_label()` emploie déjà pour le HUD. Un panneau de
   diagnostic avec ses propres seuils dirait « ça va » pendant que le HUD dit
   « attention ». *(S)*
-- **DA4.17 Les messages d'erreur humanisés** — « L'hôte a quitté le salon »
-  stylé et calme, jamais un texte brut. *(S)*
+- **DA4.17 Les messages d'erreur humanisés** ✅ **livrée le 2026-08-25** — et
+  l'item se trompait de cible, ce qui vaut d'être noté.
+
+  **Les textes étaient déjà humains.** « Impossible de lire l'arène de l'hôte…
+  la cause la plus courante est un écart de version entre les deux jeux » nomme
+  le problème, dit ce qui n'a pas eu lieu et propose un remède. Les sessions
+  précédentes avaient fait ce travail sans qu'un item le réclame. Il n'y avait
+  **aucun texte brut à humaniser.**
+
+  **Ce qui manquait était la présentation : tout se ressemblait.**
+  « Déconnexion », « Appariement » et « Erreur » sortaient dans le même or, le
+  même cadre, le même bouton — le joueur ne pouvait pas savoir, avant d'avoir
+  lu, s'il venait de perdre sa partie ou de recevoir une information. La triade
+  d'instrument le dit maintenant en une teinte, avant la première syllabe :
+  `INFORMATION` en acier, `ATTENTION` en ambre, `FAUTE` en rouge, sur le titre
+  et le filet.
+
+  Deux titres changent aussi. **« Erreur » ne disait rien** — le joueur sait
+  déjà que ça a raté, il veut savoir *quoi* : c'est « Connexion impossible ». Et
+  « Appariement » devient « Appariement indisponible », classé `ATTENTION` et
+  non `FAUTE` : une installation sans Epic n'est pas en faute, le jeu se joue
+  normalement, seul l'appariement manque.
+
+  ⚠️ **Deux règles posées, et elles vont à l'encontre du réflexe :**
+
+  - **Le corps du message reste toujours en `HALOGENE`, jamais rouge.** La
+    charte l'écrit à propos de `ROUGE` : contraste 4,9:1 sur `SURFACE`,
+    « suffisant pour un verdict en gros, insuffisant pour une phrase ». Teinter
+    le paragraphe rendrait l'explication plus dure à lire **au moment précis où
+    elle est le plus utile**. Seuls le titre et le filet portent la couleur.
+  - **Le bouton ne prend jamais la couleur du registre.** Il ne détruit rien, il
+    ferme. Un « OK » rouge se lit comme une action dangereuse alors qu'il n'y a
+    plus rien à décider. *(S)*
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 

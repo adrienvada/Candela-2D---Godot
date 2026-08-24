@@ -299,7 +299,18 @@ var p2_bg_hp: float = 100.0
 # DIALOGUE MODAL
 # ---------------------------------------------------------------------------
 
+## DA4.17 — la gravité d'un message, qui décide de sa teinte.
+enum Registre {
+	## Ce qui se dit sans que rien n'aille mal : un appariement, un état.
+	INFORMATION,
+	## Ce qui interrompt sans être une faute : une déconnexion, un refus.
+	ATTENTION,
+	## Ce qui a échoué et empêche de continuer.
+	FAUTE,
+}
+
 var dialog_panel: PanelContainer
+var _dialog_style: StyleBoxFlat
 var dialog_title: Label
 var dialog_message: Label
 var dialog_btn: Button
@@ -1903,16 +1914,18 @@ func _build_dialog() -> void:
 	dialog_panel = PanelContainer.new()
 	dialog_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE, 0.97)
-	style.set_border_width_all(2)
-	style.border_color = COLOR_GOLD
-	style.set_corner_radius_all(12)
-	style.content_margin_left = GAP_L
-	style.content_margin_right = GAP_L
-	style.content_margin_top = GAP_M
-	style.content_margin_bottom = GAP_M
-	dialog_panel.add_theme_stylebox_override("panel", style)
+	# DA4.17 — **le cadre porte le registre du message.** Sa teinte est posée par
+	# `show_dialog_message()`, pas ici : elle change à chaque ouverture.
+	_dialog_style = StyleBoxFlat.new()
+	_dialog_style.bg_color = Color(Charte.SURFACE, 0.97)
+	_dialog_style.set_border_width_all(2)
+	_dialog_style.border_color = COLOR_ACCENT
+	_dialog_style.set_corner_radius_all(12)
+	_dialog_style.content_margin_left = GAP_L
+	_dialog_style.content_margin_right = GAP_L
+	_dialog_style.content_margin_top = GAP_M
+	_dialog_style.content_margin_bottom = GAP_M
+	dialog_panel.add_theme_stylebox_override("panel", _dialog_style)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", GAP_S)
@@ -1920,16 +1933,30 @@ func _build_dialog() -> void:
 
 	dialog_title = Label.new()
 	dialog_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_title.add_theme_font_size_override("font_size", T_TITRE)
-	dialog_title.add_theme_color_override("font_color", COLOR_GOLD)
+	# L'enseigne : « DÉCONNEXION », « ARÈNE REFUSÉE » sont des mots qu'on assène
+	# une fois, jamais des valeurs qui se remplacent. Même registre que les
+	# verdicts, et pour la même raison.
+	Charte.enseigne(dialog_title, T_TITRE)
 	vbox.add_child(dialog_title)
 
 	dialog_message = Label.new()
 	dialog_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_message.add_theme_font_size_override("font_size", T_COURANT)
+	dialog_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# ⚠️ **Le corps du message reste TOUJOURS en `HALOGENE`, quel que soit le
+	# registre.** La charte l'écrit noir sur blanc à propos de `ROUGE` : son
+	# contraste sur `SURFACE` vaut 4,9:1 — « suffisant pour un libellé de bouton ou
+	# un verdict en gros, insuffisant pour une phrase ». Teinter le paragraphe en
+	# rouge rendrait l'explication plus dure à lire au moment précis où elle est le
+	# plus utile. Seuls le titre et le filet portent la couleur.
+	dialog_message.custom_minimum_size = Vector2(520, 0)
+	Charte.appareil(dialog_message, T_COURANT)
+	dialog_message.add_theme_color_override("font_color", COLOR_LUMIERE)
 	vbox.add_child(dialog_message)
 
-	dialog_btn = _make_button("OK", COLOR_GOLD, true)
+	# **Le bouton ne prend jamais la couleur du registre**, et c'est délibéré : il
+	# ne détruit rien, il ferme. Un « OK » rouge se lit comme une action
+	# dangereuse alors qu'il n'y a plus rien à décider.
+	dialog_btn = _make_button("OK", COLOR_ACCENT, true)
 	dialog_btn.custom_minimum_size = Vector2(160, 48)
 	dialog_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	dialog_btn.pressed.connect(_on_dialog_closed)
@@ -3009,8 +3036,11 @@ func _start_search() -> void:
 
 	var core := get_node_or_null(^"/root/Matchmaker")
 	if core == null or not core.has_method("start_search"):
-		show_dialog_message("Appariement",
-			"L'appariement automatique n'est pas disponible sur cette installation.")
+		# Une installation sans Epic n'est pas en faute : le jeu se joue
+		# normalement, seul l'appariement manque. `ATTENTION` et non `FAUTE`.
+		show_dialog_message("Appariement indisponible",
+			"L'appariement automatique n'est pas disponible sur cette installation.",
+			Registre.ATTENTION)
 		return
 
 	# Un joueur non classé n'est pas estimé : le cœur ne le bride sur aucune
@@ -3026,8 +3056,9 @@ func _start_search() -> void:
 		categorie = int(RankedIdentity.rank_tier_index)
 	if not core.start_search(1 if classe else 0, note, false, categorie):
 		var raison := String(core.last_error) if core.get("last_error") != null else ""
-		show_dialog_message("Appariement",
-			raison if raison != "" else "La recherche n'a pas pu démarrer.")
+		show_dialog_message("Recherche impossible",
+			raison if raison != "" else "La recherche n'a pas pu démarrer.",
+			Registre.FAUTE)
 
 ## Le classement, en texte, pour le panneau de droite. Aucun chiffre inventé : un
 ## joueur sans ligne au classement n'a pas de rang, et on le dit.
@@ -5323,8 +5354,28 @@ func set_split_screen_visible(is_visible: bool) -> void:
 	center_line.visible = is_visible
 
 ## [UI] Affiche une boîte de dialogue modale au centre de l'écran.
-func show_dialog_message(title: String, message: String) -> void:
-	dialog_title.text = title
+##
+## DA4.17 — **le registre décide de la teinte du titre et du filet.**
+##
+## Les textes de ce jeu étaient déjà humains : « Impossible de lire l'arène de
+## l'hôte… la cause la plus courante est un écart de version entre les deux
+## jeux » explique et propose un remède. Ce qui manquait n'était pas la langue,
+## c'était que **tout se ressemblait** : « Déconnexion », « Appariement » et
+## « Erreur » sortaient dans le même or, le même cadre, le même bouton. Le
+## joueur ne pouvait pas savoir avant de lire s'il venait de perdre sa partie ou
+## de recevoir une information.
+##
+## La triade d'instrument le dit en une teinte, avant la première syllabe.
+func show_dialog_message(title: String, message: String,
+		registre: Registre = Registre.INFORMATION) -> void:
+	dialog_title.text = title.to_upper()
+	var teinte := COLOR_ACCENT
+	match registre:
+		Registre.ATTENTION: teinte = Charte.ETAT_ATTENTION
+		Registre.FAUTE: teinte = Charte.ETAT_FAUTE
+	dialog_title.add_theme_color_override("font_color", teinte)
+	if _dialog_style != null:
+		_dialog_style.border_color = teinte
 	dialog_message.text = message
 	dialog_panel.show()
 	_previous_focus = p1_focus
