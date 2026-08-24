@@ -2529,6 +2529,70 @@ désormais en clair dans l'étiquette du banc, avec la commande qui répare
 qui produit le même résultat visible que le chemin nominal ne dégrade pas le
 service, il déplace le diagnostic.
 
+### La feuille de contraintes remplace la conversion, pour ce qui n'est pas lumière (2026-08-25, Adrien)
+
+*Une image générée n'est jamais l'asset, seulement sa matière* voulait dire, pour
+les masques de lumière : **on n'en garde que la luminance.** La règle est
+inapplicable à un sprite de 36 pixels ou à une tuile de 35 — là, ce qu'on garde
+est le dessin. Sans équivalent, la porte se rouvrait sur le « look généré tout
+court » que tout le chantier DA existe pour fermer.
+
+L'équivalent est une **feuille de contraintes**, validée par Adrien :
+
+1. **À plat, aucune lumière cuite.** Ni reflet, ni ombre portée, ni dégradé
+   d'éclairage. L'arène est éclairée par des `Light2D` en temps réel : toute
+   lumière peinte se bat contre elles.
+2. **Palette de la charte**, découpe en alpha pure.
+3. **Généré à la taille d'emploi, ou au plus huit fois.**
+
+⚠️ **Et la règle qui la rend honnête : ce qui peut être mesuré doit l'être par
+l'outil, pas demandé au prompt.** `tools/fabrique_tuiles.gd` divise chaque tuile
+par sa propre luminance basse fréquence — la lumière peinte disparaît
+mécaniquement. `tools/fabrique_sprites.gd` mesure ce qui en reste et l'imprime,
+sans corriger : sur un sprite, retirer le modelé retirerait le dessin. **Une
+consigne qu'on ne peut pas vérifier est une consigne qu'on ne tient pas.**
+
+Le troisième point n'est pas une commodité. Une planche de 2048² pour une tuile
+de 35 est suréchantillonnée **vingt-neuf fois** : on choisit alors sur une image
+que le jeu n'affichera jamais.
+
+### Un mur n'est pas une surface, c'est une masse cernée d'un filament (2026-08-25, Adrien)
+
+DA2.7 demandait des murs peints. Essayée, mesurée, **abandonnée** — et le chemin
+vaut plus que la conclusion, parce que deux hypothèses fausses l'ont précédée.
+
+Les murs peints ne se distinguaient pas des murs actuels. D'abord accusé le
+**fondu additif** de la couche des murs : faux, Adrien l'a réfuté à l'écran en
+éteignant la torche — le `CanvasModulate` noir éteint tout ce que la lumière
+n'atteint pas, un mur non éclairé n'ajoute rien. Puis accusé le **plafond de
+luminance** que cette première peur avait fait poser : faux aussi, le tripler
+n'a pas déplacé un millième.
+
+La mesure a fini par le dire, et il fallait mesurer **l'intérieur seul** : la
+matière porte un écart-type de **0,032**, l'arête halogène **0,30**. L'intérieur
+n'était ni bridé ni éteint, il était **noyé — dix fois plus faible que son propre
+bord.** Étiré jusqu'à 0,118 il devenait visible, mais amplifiait le grain de
+redimensionnement autant que la structure.
+
+**Conclusion d'Adrien : « DA2.7 ne vaut pas le coup ».** Un mur noir cerné d'un
+filament que la torche accroche était déjà la bonne idée. Les tuiles de mur ont
+été retirées plutôt que gardées « au cas où » : *un bouche-trou qui traîne finit
+par être pris pour une intention.*
+
+### Un viseur se génère, finalement (2026-08-25, Adrien)
+
+**Revirement assumé, écrit comme tel.** La décision du 2026-08-24 disait :
+*« wordmark, icône, viseur : main levée sur gabarit, parce qu'un logo ne se
+génère pas ».* Adrien a tranché l'inverse pour le viseur, et DA2.11 lui revient.
+
+La ligne d'origine n'est pas réécrite : **une décision qu'on voit changer d'avis
+reste lisible ; une décision réécrite fait croire qu'on n'a jamais pensé
+autrement.** Le wordmark et l'icône, eux, restent à la main levée — c'est le
+viseur seul qui bouge, et il bouge parce que ce n'est pas un logo : c'est une
+croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
+signature.
+
+
 ---
 
 ## Pièges connus — ne pas les redécouvrir
@@ -6360,11 +6424,20 @@ un fait de jeu, pas à un rythme d'interface.
   duel ; une forme fait un diagramme. *(C)*
 - **DA2.5 Les 4 armes en main** — silhouettes distinctes sur le sprite : le
   pompe se reconnaît à sa forme avant son son. *(C, avec DA2.4)*
-- **DA2.6 Le tileset des sols** — les 2 matériaux du damier en vraies tuiles
-  avec usure et taches, 3-4 variantes par tuile posées aléatoirement pour
-  briser la répétition parfaite. *(C)*
-- **DA2.7 Le tileset des murs** — coins dessinés, liseré intégré au tile plutôt
-  que tracé. *(C, avec DA2.6)*
+- **DA2.6 Le tileset des sols** ✅ **livrée le 2026-08-25** — les deux cases du
+  damier sont des tuiles peintes, choisies par Adrien dans
+  `tools/apercu_matiere.tscn` (variante 1, damier « faible »), cuites par
+  `tools/fabrique_tuiles.gd` depuis une planche versionnée — donc recuisables.
+  Chaque case prend l'une de **huit orientations** tirées d'un hachage de sa
+  position : coût nul (Godot les porte dans l'identifiant de tuile alternative,
+  8 sur 8 vérifiées) et **déterministe**, pour que les deux machines d'un match
+  voient le même sol. **Le damier s'affaiblit sans disparaître** — il opposait
+  0,111 à 0,231 de luminance, il oppose désormais 0,148 à 0,178 : le grain porte
+  maintenant une part de l'information que le contraste portait seul. *(C)*
+- ~~**DA2.7 Le tileset des murs**~~ — ❌ **ESSAYÉE PUIS ABANDONNÉE le 2026-08-25
+  (Adrien).** Raison mesurée en « Décisions actées ». En deux mots : l'arête
+  halogène EST le mur, et une matière peinte à l'intérieur n'ajoutait rien
+  qu'elle ne noyait. *(abandonnée)*
 - **DA2.8 Les decals de sang peints** — 6-8 éclaboussures remplaçant les
   polygones : une scène de crime, pas un nuage de losanges. *(C : 1 planche)*
 - **DA2.9 Les impacts muraux** — éclats et brûlures en decals persistants.
@@ -6372,8 +6445,20 @@ un fait de jeu, pas à un rythme d'interface.
 - **DA2.10 Le key art du titre** — une illustration d'ambiance (deux torches
   dans le noir) derrière le menu : une image installe l'univers mieux que
   quinze shaders. *(C)*
-- **DA2.11 Le viseur custom** — croix dessinée, réactive (s'ouvre au tir, se
-  teinte à l'éblouissement). *(C, ou S en vectoriel soigné)*
+- **DA2.11 Le viseur custom** ⚠️ **ce n'est pas un habillage, c'est un MANQUE**
+  (constaté le 2026-08-25) — le dépôt ne contient **aucun** viseur : zéro
+  occurrence de `crosshair`, `viseur`, `reticule`, et aucun
+  `set_custom_mouse_cursor` nulle part. **Le jeu affiche donc la flèche du
+  système pendant les matchs**, dans un jeu dont toute la proposition est « la
+  seule information est la lumière ». Personne ne l'avait relevé parce qu'on ne
+  cherche pas une absence : il n'y a pas de nom à grep. Deux points de
+  rattachement vérifiés : `InputProvider.get_aim_direction()` rend la visée sans
+  que rien ne sache d'où elle vient (clavier-souris et manette, sans un `if`) ;
+  et ⚠️ **l'écran partagé exige un `visibility_layer` explicite** — 2 pour la vue
+  de J1, 4 pour celle de J2 —, faute de quoi le viseur s'affiche dans les deux
+  vues, défaut déjà payé sur le flash de mort le 2026-08-17.
+  *(C — génération autorisée par Adrien le 2026-08-25, voir le revirement en
+  « Décisions actées »)*
 - **DA2.12 Les traçantes texturées** — habiller la `Line2D` d'une texture de
   trait (grain, pointes effilées) : la balle cesse d'être un segment. *(G ou C)*
 

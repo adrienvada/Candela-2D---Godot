@@ -383,7 +383,11 @@ func apply_to_layers(floor_layer: TileMapLayer, walls_layer: TileMapLayer,
 	walls_layer.clear()
 
 	for cell in MapCodec.get_floor_cells(map):
-		floor_layer.set_cell(cell, 0, CandelaTileSet.get_floor_atlas(cell))
+		# DA2.6 — huit orientations tirées de la position. Voir
+		# `CandelaTileSet.orientation()` : coût nul, et déterministe pour que les
+		# deux machines d'un match voient le même sol.
+		floor_layer.set_cell(cell, 0, CandelaTileSet.get_floor_atlas(cell),
+			CandelaTileSet.orientation(cell))
 
 	for cell in MapCodec.get_wall_cells(map):
 		walls_layer.set_cell(cell, 0, CandelaTileSet.WALL_ATLAS)
