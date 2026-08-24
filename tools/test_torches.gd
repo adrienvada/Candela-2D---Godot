@@ -36,6 +36,11 @@ extends SceneTree
 const Torches := preload("res://tools/torches.gd")
 const WD := preload("res://weapon_data.gd")
 
+## Penchement haut/bas maximal toléré sur un cookie. Voir `_test_penchement()`
+## pour la dérivation : au-dessus du plancher du procédé (0,25 %), sous le seuil
+## de perception (1 à 2 % au mieux, bien pire dans le noir).
+const PENCHEMENT_MAX := 0.01
+
 var _echecs := 0
 var _total := 0
 
@@ -103,8 +108,92 @@ func _init() -> void:
 		_vrai("%s : empreinte %d au lieu de %d" % [t["fichier"], empreinte, attendue],
 			is_equal_approx(empreinte, attendue))
 
+	_test_penchement()
+	_test_personne_ne_choisit_l_echelle(jeu)
+
 	print("test_torches : %d/%d" % [_total - _echecs, _total])
 	quit(1 if _echecs > 0 else 0)
+
+
+## Un cookie penche-t-il d'un côté ?
+##
+## **`test_vision.gd` le dit depuis le premier jour : « un faisceau qui
+## pencherait d'un côté serait un avantage muet pour qui tourne dans le bon
+## sens ».** C'était garanti tant que la texture était calculée — la formule
+## emploie `abs(angle)`, donc la symétrie était une propriété de la
+## construction. **Un cookie peint ne la garantit plus par rien.**
+##
+## Mesuré sur les quatre cookies actuels : ils penchent de 0,22 à 0,25 %, la
+## moitié haute étant la plus claire. C'est le plancher qu'impose la planche
+## source, elle-même asymétrique.
+##
+## ## Le seuil, et d'où il sort
+##
+## **1 %**, et il n'est pas choisi au doigt mouillé :
+##
+## - **le plancher observé est 0,25 %.** Un seuil doit passer au-dessus, sinon
+##   il rougit sur ce que le procédé produit normalement — quatre fois la marge ;
+## - **le plafond est perceptuel.** La loi de Weber situe le plus petit écart de
+##   luminance discernable autour de 1 à 2 % dans de bonnes conditions ; dans le
+##   noir quasi total où se joue Candela, il est bien pire. Un seuil à 1 % rougit
+##   donc **avant** que quiconque puisse en tirer un avantage.
+##
+## Ce que ce contrôle attrape n'est pas le cookie d'aujourd'hui : c'est le
+## suivant. Une planche peinte à la main, un skin de DA7.6, une génération
+## refaite — rien de tout ça n'est symétrique par construction, et rien ne le
+## dirait. **Il date le moment où un asset cesse d'être neutre.**
+func _test_penchement() -> void:
+	for t in Torches.ARMES:
+		var w := WD.new()
+		w.torch_cookie = t["fichier"]
+		var img := w.image_torche()
+		if img == null:
+			_vrai("%s : image lisible pour le penchement" % t["fichier"], false)
+			continue
+		var h := img.get_height()
+		var l := img.get_width()
+		var haut := 0.0
+		var bas := 0.0
+		# Une grille suffit : on cherche un biais d'ensemble, pas un pixel.
+		var pas := maxi(1, l / 256)
+		for y in range(0, h / 2, pas):
+			for x in range(0, l, pas):
+				haut += img.get_pixel(x, y).a
+				bas += img.get_pixel(x, h - 1 - y).a
+		var total := haut + bas
+		if total <= 0.0:
+			_vrai("%s : cookie non vide" % t["fichier"], false)
+			continue
+		var penche: float = absf(haut - bas) / total * 2.0
+		_vrai("%s : penche de %.2f %% (plafond %.0f %%)"
+			% [t["fichier"], penche * 100.0, PENCHEMENT_MAX * 100.0],
+			penche <= PENCHEMENT_MAX)
+
+
+## Personne ne choisit l'échelle d'échantillonnage à la place de l'arme.
+##
+## ⚠️ **Le même défaut s'est produit TROIS FOIS le 2026-08-24**, dans
+## `game_state.gd`, `tools/test_vision.gd` et `tools/planche_eblouissement.gd` :
+## chacun passait `torch_scale` à `Vision.intensite_texture()` là où le rendu
+## emploie `echelle_torche()`. Identiques jusqu'aux cookies 1024², simple et
+## double depuis.
+##
+## `WeaponData.lumiere_recue()` a fermé la cause en cessant de poser la question.
+## Ce contrôle ferme la porte : **un fichier de jeu ne doit plus appeler
+## `intensite_texture` directement.** Les bancs le peuvent — `test_vision`
+## éprouve la primitive elle-même, et c'est légitime : il lui passe des échelles
+## artificielles pour vérifier qu'elle en tient compte.
+##
+## Contrôle sur le TEXTE, comme le vert interdit dans l'arène de `test_charte` :
+## c'est par le texte que le défaut reviendrait, quelqu'un recopiant un appel
+## qui marchait ailleurs.
+func _test_personne_ne_choisit_l_echelle(jeu: String) -> void:
+	_vrai("game_state n'appelle plus intensite_texture directement",
+		not jeu.contains("Vision.intensite_texture("))
+	var planche := _lire("res://tools/planche_eblouissement.gd")
+	if planche != "":
+		_vrai("la planche d'éblouissement passe par l'arme",
+			not planche.contains("Vision.intensite_texture("))
 
 
 func _lire(chemin: String) -> String:

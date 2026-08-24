@@ -159,7 +159,15 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 				absents.append("Vision.%s() a disparu" % methode)
 
 	var arme := WeaponData.new()
-	for methode in ["portee_torche", "cos_demi_cone", "demi_angle_torche", "image_torche"]:
+	# ⚠️ **Cette liste a nommé `image_torche` pendant quelques heures après que la
+	# planche eut cessé de l'appeler**, et ne nommait pas `lumiere_axiale`, qu'elle
+	# appelait. Périmée par une migration parfaitement légitime, le jour même où
+	# elle avait été écrite. Un renommage de `lumiere_axiale` aurait alors cassé
+	# la planche en laissant `test_banc` VERT.
+	#
+	# Un garde-fou qui nomme des appuis se relit à chaque migration d'API, au même
+	# titre que les appelants — sinon il devient ce contre quoi il protège.
+	for methode in ["portee_torche", "cos_demi_cone", "demi_angle_torche", "lumiere_axiale"]:
 		if not arme.has_method(methode):
 			absents.append("WeaponData.%s() a disparu" % methode)
 	for prop in ["torch_angle_deg", "muzzle_flash_intensity"]:
@@ -273,14 +281,13 @@ func _dire_les_reglages() -> void:
 	print("  %-9s %8s  %8s   %s" % ["", "brut", "PÉNALITÉ", "(formule, pour mémoire)"])
 	for idx in range(4):
 		var arme: WeaponData = _main.weapon_for_index(idx)
-		# `echelle_torche()`, pas `torch_scale` : l'échelle que la LUMIÈRE
-		# emploie. Les deux étaient le même nombre jusqu'aux cookies cuits en
-		# 1024². Cette planche a rapporté quatre plafonds faux avant qu'on le
-		# voie — elle échantillonnait plus près du centre, donc plus clair, et
-		# faisait passer un défaut d'outil pour un effet du cookie peint.
-		var brut: float = Vision.intensite_texture(arme.image_torche(),
-			Vector2.RIGHT, Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS,
-			arme.echelle_torche())
+		# **Cette planche a rapporté quatre plafonds faux** avant qu'on le voie :
+		# elle passait `torch_scale` là où le rendu emploie `echelle_torche()`,
+		# échantillonnait donc plus près du centre, donc plus clair, et faisait
+		# passer un défaut d'outil pour un effet du cookie peint. Elle ne choisit
+		# plus d'échelle du tout — l'arme la connaît. Voir
+		# `WeaponData.lumiere_recue()`.
+		var brut: float = arme.lumiere_axiale(CORPS_A_CORPS)
 		print("  %-9s %8.3f  %8.3f   %.3f" % [_nom(arme), brut,
 			Eblouissement.plafond_pour(brut),
 			Vision.intensite_recue(Vector2.RIGHT, Vector2.ZERO,
@@ -308,9 +315,7 @@ func _sweep_du_voile() -> void:
 func _mesurer_le_temps() -> void:
 	print("\n--- les deux temps, mesurés image par image ---")
 	var arme: WeaponData = _main.p1.current_weapon
-	var plafond: float = Eblouissement.plafond_pour(Vision.intensite_texture(
-		arme.image_torche(), Vector2.RIGHT, Vector2.ZERO,
-		Vector2.RIGHT * CORPS_A_CORPS, arme.echelle_torche()))
+	var plafond: float = Eblouissement.plafond_pour(arme.lumiere_axiale(CORPS_A_CORPS))
 
 	# MONTÉE. Le chronomètre part à la première image où la valeur bouge, et non
 	# à l'appui : entre les deux il y a une image de scrutation d'entrée, et la

@@ -2,6 +2,7 @@ extends Resource
 class_name WeaponData
 
 const Charte := preload("res://charte.gd")
+const Vision := preload("res://vision.gd")
 
 @export var name: String = "Pistolet"
 @export var cooldown: float = 1.0
@@ -163,3 +164,33 @@ func image_torche() -> Image:
 			return null
 	_torch_image = img
 	return _torch_image
+
+
+## Ce que ce faisceau verse sur un point du monde.
+##
+## ⚠️ **Elle existe parce que le même défaut s'est produit TROIS FOIS le
+## 2026-08-24, dans trois fichiers différents.** `Vision.intensite_texture()`
+## demande l'échelle à laquelle la texture est étalée ; chaque appelant devait
+## donc la choisir, et chacun pouvait se tromper. Ils se sont trompés de la même
+## façon — `torch_scale` au lieu de `echelle_torche()` — dans
+## `game_state._lumiere_recue`, dans `tools/test_vision.gd` et dans
+## `tools/planche_eblouissement.gd`.
+##
+## Les deux nombres ont été identiques pendant toute la vie du projet, tant que
+## le cookie faisait 512². Depuis DA2.1 ils valent le simple et le double, et
+## l'erreur fait **échantillonner le faisceau à mi-distance du point visé** :
+## trop de pénalité au loin, de la pénalité là où le faisceau est éteint, et un
+## jeu qui reste parfaitement jouable.
+##
+## **L'échelle est désormais choisie ici, une fois, à côté de la texture qu'elle
+## décrit.** Un appelant ne peut plus se tromper parce qu'on ne lui demande plus
+## rien. Proposée par la session « éblouissement », qui avait nommé la cause :
+## la même question posée par deux chemins finit par recevoir deux réponses.
+func lumiere_recue(avant: Vector2, depuis: Vector2, vers: Vector2) -> float:
+	return Vision.intensite_texture(image_torche(), avant, depuis, vers, echelle_torche())
+
+
+## Le même, dans l'axe du faisceau, à `distance` pixels de la source. C'est la
+## mesure des bancs : « que verse cette arme droit devant, à 80 px ? »
+func lumiere_axiale(distance: float) -> float:
+	return lumiere_recue(Vector2.RIGHT, Vector2.ZERO, Vector2.RIGHT * distance)

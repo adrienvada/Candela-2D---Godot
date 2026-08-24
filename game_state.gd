@@ -1283,17 +1283,11 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	var image: Image = arme.image_torche() if arme else null
 	var intensite := 0.0
 	if image != null:
-		# ⚠️ `echelle_torche()`, PAS `torch_scale` — l'échelle que la lumière
-		# emploie réellement. Les deux ont été le même nombre jusqu'aux cookies
-		# cuits en 1024² ; depuis, `echelle_torche()` compense la résolution et
-		# vaut la moitié. Passer `torch_scale` ici faisait échantillonner la
-		# texture à MI-DISTANCE du point visé : trop de pénalité au loin, et de
-		# la pénalité là où le faisceau est déjà éteint. Le jeu restait jouable.
-		# Attrapé par `test_vision` à la fusion des deux lots — c'est exactement
-		# ce que la lecture du pixel devait empêcher, et elle ne le pouvait pas
-		# tant que l'échelle passée n'était pas celle du rendu.
-		intensite = Vision.intensite_texture(image, source.global_transform.x,
-			source.global_position, cible.global_position, arme.echelle_torche())
+		# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui
+		# demande plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où
+		# ce choix, laissé à l'appelant, s'est trompé le même jour.
+		intensite = arme.lumiere_recue(source.global_transform.x,
+			source.global_position, cible.global_position)
 	else:
 		var portee: float = arme.portee_torche() if arme else 512.0
 		var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE

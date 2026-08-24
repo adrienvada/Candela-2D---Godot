@@ -2466,6 +2466,31 @@ deviner ce qui manque en amont.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un garde-fou qui nomme des appuis se périme EN VERT (2026-08-24)
+
+`tools/planche_eblouissement.gd` déclare les méthodes dont il dépend et refuse
+de tourner si l'une manque — bonne idée, posée le matin même contre ce motif.
+**L'après-midi, une migration d'API l'avait déjà périmé.** La planche cessait
+d'appeler `image_torche()` pour passer par `WeaponData.lumiere_axiale()` ; la
+liste continuait de nommer la première et ne nommait pas la seconde.
+
+Un renommage de `lumiere_axiale()` aurait donc cassé la planche **en laissant
+`test_banc` vert** — le garde-fou surveillait une porte qu'on n'empruntait plus,
+et laissait ouverte celle par où l'on passait.
+
+**Une liste d'appuis est du code appelant.** Elle se relit à chaque migration,
+au même titre que les appels eux-mêmes. Sinon elle devient exactement ce contre
+quoi elle protège : une chose qui a l'air vérifiée.
+
+C'est la même famille que le contrôle hors sujet et que l'entrée barrée : trois
+formes du même piège — **quelque chose qui rassure sans regarder au bon
+endroit.** Le vert, la ligne barrée, la liste d'appuis. Aucun des trois ne ment ;
+tous les trois dispensent d'aller voir.
+
+Corollaire de méthode, appris le même jour en éprouvant le contrôle
+anti-penchement sur un cookie truqué avant de le restaurer : **un contrôle qu'on
+n'a jamais vu rougir n'est pas un contrôle, c'est une intention.**
+
 ### La résolution d'une texture de lumière décide de sa PORTÉE (2026-08-24)
 
 **`PointLight2D.texture_scale` multiplie la taille PROPRE de la texture.** Un
