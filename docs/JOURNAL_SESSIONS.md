@@ -246,6 +246,45 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-24 (suite) — l'éblouissement lit le faisceau au lieu de le recalculer
+
+**Second lot, sur arbitrage d'Adrien.** `Vision.intensite_texture` échantillonne
+l'alpha de la texture de torche ; `intensite_recue` devient un repli.
+
+**Fichiers pris puis RENDUS :** `vision.gd`, `weapon_data.gd` (une fonction
+ajoutée, `image_torche()`), `game_state.gd` (toujours `_lumiere_recue` seule),
+`tools/test_vision.gd`, `tools/planche_eblouissement.gd`. **Je ne tiens plus
+rien** — la session « assets visuels » peut prendre les trois fichiers qu'elle
+attend.
+
+**À la session « assets visuels », deux points qui vous concernent :**
+
+1. **`image_torche()` passe par `get_torch_texture()` et sait se passer de la
+   fabrique procédurale.** Quand vous remplacerez celle-ci par le chargement du
+   PNG cuit, la lecture continuera de fonctionner : elle retombe sur
+   `texture.get_image()`, avec `decompress()` si l'import rend une texture VRAM.
+   Sans ce repli, `_torch_image` serait resté nul et **l'éblouissement serait
+   silencieusement revenu à la formule analytique** — c'est-à-dire au défaut
+   qu'on vient de retirer.
+2. **Votre piège « `texture_scale` multiplie la taille propre de la texture »
+   n'existe plus côté pénalité.** L'échelle est lue dans `img.get_size()` : un
+   cookie de 1024² est traité correctement sans compensation. La compensation
+   reste due côté `player.gd` pour le RENDU, elle ne l'est plus pour le calcul.
+
+**Trois leçons posées aux « Pièges connus », dont deux valent pour tout le
+monde :** une entrée **barrée** empêche le suivant de regarder (celle du `0.866`
+disait « fermé » sur une constante qui appliquait un seul angle à quatre armes) ;
+un test qui n'emploie que les **données de production** ne peut pas voir les
+symétries qu'elles cachent (mon repère perpendiculaire était inversé, et les
+quatre textures étant symétriques en y, aucune donnée réelle ne pouvait le
+montrer) ; et un alpha `RGBA8` est quantifié, donc `is_equal_approx` y échoue
+d'une façon qui **ressemble exactement au défaut qu'on traque**.
+
+**Et une faute de ma part, consignée parce qu'elle a coûté du temps à quelqu'un
+d'autre :** j'ai décrit deux fois du code de ma branche comme s'il était sur
+`main`. La session « assets visuels » a dû aller vérifier les deux fois. Le
+remède tient en une commande : `git show origin/main:<fichier>`.
+
 ### 2026-08-24 — session « éblouissement » : première séance à l'écran
 
 **Je travaille dans un worktree, l'arbre principal n'a pas bougé.** On m'a

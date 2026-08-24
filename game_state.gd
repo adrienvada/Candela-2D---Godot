@@ -1260,20 +1260,34 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 		return 0.0
 	if not source.flashlight_on:
 		return 0.0
-	# Le cône ET la portée sortent de l'ARME, ils étaient écrits en dur — voir
-	# `Vision.intensite_recue` pour ce que ça coûtait au pompe et à l'arbalète.
+	# **On LIT le faisceau, on ne le recalcule pas.** L'image échantillonnée est
+	# celle-là même que la lumière projette : elle porte l'angle de l'arme, sa
+	# portée, sa luminosité et la matière du cookie, sans qu'aucune de ces
+	# quatre choses ait à être recopiée ici. Voir `Vision.intensite_texture`
+	# pour les trois divergences que la copie avait produites.
+	#
+	# Le repli sur la formule n'est pas décoratif : une arme sans texture doit
+	# éblouir quand même, faute de quoi une torche sans cookie deviendrait
+	# silencieusement inoffensive — exactement le genre de zéro qui ressemble à
+	# une règle du jeu.
 	var arme: WeaponData = source.current_weapon
-	var portee: float = arme.portee_torche() if arme else 512.0
-	var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE
-	var intensite := Vision.intensite_recue(source.global_transform.x,
-		source.global_position, cible.global_position, portee, cos_demi)
+	var image: Image = arme.image_torche() if arme else null
+	var intensite := 0.0
+	if image != null:
+		intensite = Vision.intensite_texture(image, source.global_transform.x,
+			source.global_position, cible.global_position, arme.torch_scale)
+	else:
+		var portee: float = arme.portee_torche() if arme else 512.0
+		var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE
+		intensite = Vision.intensite_recue(source.global_transform.x,
+			source.global_position, cible.global_position, portee, cos_demi)
 	if intensite <= 0.0:
 		return 0.0
 	if not _ligne_de_vue(espace, source, cible):
 		return 0.0
 	# La lumière qui ARRIVE n'est pas la pénalité qu'elle COÛTE. `Vision` rend
-	# la première, miroir exact de la texture ; `Eblouissement.plafond_pour`
-	# convertit en seconde. Sans cette courbe, le dernier tiers du faisceau
+	# la première — le pixel du faisceau lui-même ; `Eblouissement.plafond_pour`
+	# la convertit en seconde. Sans cette courbe, le dernier tiers du faisceau
 	# éclairait visiblement sans presque rien coûter (relevé à l'écran le
 	# 2026-08-24, arbitré par Adrien).
 	return Eblouissement.plafond_pour(intensite)

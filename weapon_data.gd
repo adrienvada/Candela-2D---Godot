@@ -60,6 +60,53 @@ func cos_demi_cone() -> float:
 
 var _torch_texture: ImageTexture
 
+## L'image du faisceau, celle-là même que la lumière projette — pour que
+## l'éblouissement la LISE au lieu d'en recopier la formule.
+##
+## **C'est la fin d'une famille entière de défauts.** `Vision` refaisait le
+## calcul de `get_torch_texture()` terme pour terme, avec ce commentaire :
+## « recopié du rendu à dessein — deux formules pour un même faisceau finiraient
+## par diverger ». Le risque était bien vu, le remède était le mauvais : une
+## copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la
+## même chose. Trois divergences en sont sorties, mesurées le 2026-08-24 —
+## `torch_brightness` que le modèle ignorait (l'arbalète éblouissait comme le
+## pistolet avec un faisceau trois fois plus sombre), le cône écrit en dur, et
+## le profil peint des cookies qui tombe à la moitié dans les flancs.
+##
+## Un pixel ne peut pas diverger de lui-même. Et il porte **tout** : l'angle de
+## son arme, sa portée, sa luminosité, et demain la matière peinte du cookie.
+##
+## L'`Image` est gardée à part de la texture : `ImageTexture.get_image()`
+## rapatrie depuis le GPU à chaque appel, ce qui se paierait une fois par image
+## et par joueur.
+var _torch_image: Image
+
+## L'image passe TOUJOURS par `get_torch_texture()`, jamais par une relecture du
+## fichier : deux chemins vers la même vérité, c'est la faute que ce lot répare.
+##
+## **Et elle sait se passer de la fabrique procédurale.** La session « assets
+## visuels » remplace celle-ci par le chargement d'un cookie peint ; le jour où
+## `_torch_image` cessera d'être posé en chemin, se contenter de le rendre
+## donnerait `null` — et l'éblouissement retomberait **en silence** sur la
+## formule analytique, c'est-à-dire sur le défaut qu'on vient de retirer. Le
+## repli par la texture rend la lecture indifférente à la provenance de l'image.
+##
+## `decompress()` n'est pas une précaution de style : une texture importée en
+## VRAM revient compressée, et `get_pixelv()` y échoue. Le contrôle d'usage
+## `is_compressed()` évite d'y toucher quand elle ne l'est pas.
+func image_torche() -> Image:
+	if _torch_image != null:
+		return _torch_image
+	var tex := get_torch_texture()
+	if tex == null:
+		return null
+	var img := tex.get_image()
+	if img != null and img.is_compressed():
+		if img.decompress() != OK:
+			return null
+	_torch_image = img
+	return _torch_image
+
 func get_torch_texture() -> ImageTexture:
 	if _torch_texture != null:
 		return _torch_texture
@@ -97,6 +144,7 @@ func get_torch_texture() -> ImageTexture:
 			if intensity > 0:
 				img.set_pixel(x, y, Color(Charte.HALOGENE, intensity * torch_brightness))
 	
+	_torch_image = img
 	_torch_texture = ImageTexture.create_from_image(img)
 	return _torch_texture
 

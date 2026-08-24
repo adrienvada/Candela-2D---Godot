@@ -147,8 +147,19 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 			if not noms_modele.has(methode):
 				absents.append("Eblouissement.%s() a disparu" % methode)
 
+	var geometrie := load("res://vision.gd") as GDScript
+	if geometrie == null:
+		absents.append("vision.gd est introuvable")
+	else:
+		var noms_vision := {}
+		for m in geometrie.get_script_method_list():
+			noms_vision[m["name"]] = true
+		for methode in ["intensite_recue", "intensite_texture"]:
+			if not noms_vision.has(methode):
+				absents.append("Vision.%s() a disparu" % methode)
+
 	var arme := WeaponData.new()
-	for methode in ["portee_torche", "cos_demi_cone", "demi_angle_torche"]:
+	for methode in ["portee_torche", "cos_demi_cone", "demi_angle_torche", "image_torche"]:
 		if not arme.has_method(methode):
 			absents.append("WeaponData.%s() a disparu" % methode)
 	for prop in ["torch_angle_deg", "muzzle_flash_intensity"]:
@@ -248,12 +259,18 @@ func _dire_les_reglages() -> void:
 	# Ce que le faisceau verse réellement à bout portant, arme par arme. Ce
 	# nombre est le PLAFOND que la montée vise : sans lui, un « la valeur ne
 	# monte qu'à 0,86 » passerait pour un défaut du modèle.
+	# Lu dans la TEXTURE, comme le fait la production depuis le 2026-08-24 : la
+	# formule analytique donnerait un autre chiffre pour l'arbalète, dont la
+	# luminosité de 0,3 ne vit que dans l'alpha de l'image.
 	print("\n--- le plafond réel à 80 px dans l'axe (ce vers quoi la montée tend) ---")
 	for idx in range(4):
 		var arme: WeaponData = _main.weapon_for_index(idx)
-		print("  %-9s plafond %.3f" % [_nom(arme), Vision.intensite_recue(
-			Vector2.RIGHT, Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS,
-			arme.portee_torche(), arme.cos_demi_cone())])
+		print("  %-9s texture %.3f   (formule %.3f)" % [_nom(arme),
+			Vision.intensite_texture(arme.image_torche(), Vector2.RIGHT,
+				Vector2.ZERO, Vector2.RIGHT * CORPS_A_CORPS, arme.torch_scale),
+			Vision.intensite_recue(Vector2.RIGHT, Vector2.ZERO,
+				Vector2.RIGHT * CORPS_A_CORPS, arme.portee_torche(),
+				arme.cos_demi_cone())])
 
 
 ## Le voile seul, à des valeurs imposées. C'est la seule façon de juger
@@ -276,8 +293,9 @@ func _sweep_du_voile() -> void:
 func _mesurer_le_temps() -> void:
 	print("\n--- les deux temps, mesurés image par image ---")
 	var arme: WeaponData = _main.p1.current_weapon
-	var plafond: float = Vision.intensite_recue(Vector2.RIGHT, Vector2.ZERO,
-		Vector2.RIGHT * CORPS_A_CORPS, arme.portee_torche(), arme.cos_demi_cone())
+	var plafond: float = Eblouissement.plafond_pour(Vision.intensite_texture(
+		arme.image_torche(), Vector2.RIGHT, Vector2.ZERO,
+		Vector2.RIGHT * CORPS_A_CORPS, arme.torch_scale))
 
 	# MONTÉE. Le chronomètre part à la première image où la valeur bouge, et non
 	# à l'appui : entre les deux il y a une image de scrutation d'entrée, et la
@@ -401,14 +419,27 @@ func _coherence_faisceau() -> void:
 		# Dégagé arme par arme : le pompe a besoin de 294 px, l'arbalète de
 		# 1030. Un seul emplacement pour les trois n'existerait sur presque
 		# aucune carte, et le chercher ferait échouer les trois ensemble.
+		# Le poste « dans-le-dos » a besoin de dégagement DERRIÈRE le porteur.
+		# Sans cette exigence il rendait « MUR » à tous les coups, donc le halo
+		# n'était jamais chiffré — un poste qui ne mesure jamais rien est pire
+		# qu'un poste absent : il a l'air couvert.
 		_degager([[arme.portee_torche() * 0.5, 0.0],
 			[arme.portee_torche() * 0.5, arme.demi_angle_torche() * 1.15],
-			[arme.portee_torche() * 1.15, 0.0]])
+			[arme.portee_torche() * 1.15, 0.0],
+			[CORPS_A_CORPS, PI]])
+		# « dans-le-dos » n'est pas un poste comme les autres : il est là parce
+		# que la lecture du pixel a fait ENTRER le halo de proximité dans le
+		# calcul, et qu'un changement de jeu doit être chiffré à chaque passage
+		# plutôt que découvert. Un joueur collé à une torche allumée est vu ;
+		# reste à savoir combien ça lui coûte.
 		for poste in [["axe", 0.0, 0.5], ["bord-du-cone", 0.9, 0.5],
 				["juste-dehors", 1.15, 0.5], ["bout-de-portee", 0.0, 0.95],
-				["au-dela", 0.0, 1.15]]:
+				["au-dela", 0.0, 1.15], ["dans-le-dos", 0.0, 0.0]]:
 			var angle: float = arme.demi_angle_torche() * float(poste[1])
 			var rayon: float = arme.portee_torche() * float(poste[2])
+			if String(poste[0]) == "dans-le-dos":
+				angle = PI
+				rayon = CORPS_A_CORPS
 			_main.p2.dazzle_amount = 0.0
 			Input.action_press("p1_torch")
 			await _tenir(0.8, rayon, angle)
