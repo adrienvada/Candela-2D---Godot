@@ -44,10 +44,32 @@ extends RefCounted
 ## éblouirait en passant, sans avoir rien visé.
 const MONTEE_PAR_S := 1.25
 
-## 1,5 s pour retrouver ses yeux depuis la saturation complète. Volontairement
-## plus lente que la montée : c'est ce décalage qui fait de l'éblouissement une
-## ouverture exploitable, et non une gêne qui passe avant qu'on en profite.
-const DESCENTE_PAR_S := 1.0 / 1.5
+## 0,375 s pour retrouver ses yeux depuis la saturation complète — **quatre fois
+## plus rapide qu'avant, sur le jugement d'Adrien manette en main** (2026-08-24).
+##
+## ⚠️ **Ce réglage a longtemps été l'inverse, et pour une raison écrite :** la
+## descente valait 1,5 s, *« volontairement plus lente que la montée : c'est ce
+## décalage qui fait de l'éblouissement une ouverture exploitable, et non une
+## gêne qui passe avant qu'on en profite »*. Le raisonnement se tenait. **Il n'a
+## simplement jamais été éprouvé** — la mécanique n'a fonctionné pour de vrai
+## que le 2026-08-24, et personne ne l'avait jouée avant ce soir-là. À l'essai,
+## une seconde et demie d'aveuglement ne se lit pas comme une ouverture pour
+## l'adversaire : elle se lit comme une perte de contrôle sur son propre
+## personnage.
+##
+## **La descente est donc désormais PLUS RAPIDE que la montée** (2,67/s contre
+## 1,25/s), ce qu'un test interdisait explicitement. Le contrôle a été retourné,
+## pas supprimé : sa raison reste lisible dans `test_eblouissement`, elle ne
+## s'applique simplement plus.
+##
+## **Ce que ça coûte, et qu'il faut savoir avant de le rejuger :** le flash de
+## tir se résorbe maintenant en **0,22 s** au lieu de 0,9. Le pic reste le même
+## (`PIC_FLASH`), c'est sa durée qui fond. Un premier tir manqué à bout portant
+## reste une ouverture, mais une ouverture **brève** — si elle devient trop
+## brève pour être exploitée, c'est `PIC_FLASH` qu'il faut monter, pas la
+## descente qu'il faut ralentir : on a mesuré que la lenteur, elle, se ressent
+## comme une punition.
+const DESCENTE_PAR_S := 1.0 / 0.375
 
 ## Ce qu'un tir jette dans les yeux d'en face, à bout portant et à pleine
 ## intensité d'arme. Le tir est le geste le plus lumineux du jeu et il ne

@@ -20,6 +20,14 @@ extends RefCounted
 ## 2026-08-18 il n'est plus qu'un DÉFAUT : le cône réel vient de l'arme portée
 ## (`WeaponData.cos_demi_cone`), et il varie de 5° pour l'arbalète à 60° pour le
 ## pompe.
+## ⚠️ **Plus aucun chemin de production ne lit cette constante depuis le
+## 2026-08-24.** Elle ne sert que de défaut aux deux fonctions ci-dessous et aux
+## suites qui les éprouvent. Elle est laissée en place parce que
+## `intensite_recue` reste la **référence analytique** contre laquelle le cookie
+## peint est validé (0,3 % d'écart mesuré) — mais elle ne décide plus de rien
+## dans une manche, et un lecteur pressé pourrait croire l'inverse. Le dire ici
+## coûte trois lignes ; le supposer a coûté une journée, la fiche « le 0.866 est
+## un réglage d'équilibre » ayant fermé un défaut qu'elle consolidait.
 const COS_DEMI_CONE := 0.866
 
 ## La cible est-elle dans le faisceau de la source ?

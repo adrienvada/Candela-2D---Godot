@@ -1275,24 +1275,45 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# quatre choses ait à être recopiée ici. Voir `Vision.intensite_texture`
 	# pour les trois divergences que la copie avait produites.
 	#
-	# Le repli sur la formule n'est pas décoratif : une arme sans texture doit
-	# éblouir quand même, faute de quoi une torche sans cookie deviendrait
-	# silencieusement inoffensive — exactement le genre de zéro qui ressemble à
-	# une règle du jeu.
+	# **Et pas de faisceau, pas de pénalité** (décision d'Adrien, 2026-08-24).
+	# Il y avait ici un repli sur la formule analytique, défendu par un
+	# commentaire qui disait qu'une arme sans texture « doit éblouir quand
+	# même », sans quoi une torche sans cookie deviendrait silencieusement
+	# inoffensive. **C'était le raisonnement à l'envers.** `equip_weapon` pose
+	# `flashlight.texture = get_torch_texture()` : sans cookie, la torche ne
+	# rend AUCUNE lumière. Le repli faisait donc payer une pénalité pour un
+	# faisceau que personne ne voit — très exactement l'incohérence que tout ce
+	# chantier a passé sa journée à retirer, et le dernier endroit du jeu qui
+	# calculait l'éblouissement depuis autre chose que l'écran.
+	#
+	# `lumiere_recue()` rend zéro quand l'arme n'a pas d'image, et ce zéro-là
+	# est la règle : on ne peut pas être aveuglé par une lampe éteinte.
+	#
+	# ⚠️ **CE ZÉRO N'EST ACCEPTABLE QUE PARCE QU'IL CRIE AILLEURS, et il ne crie
+	# que grâce à UNE ligne** — le `push_error` de
+	# `WeaponData.get_torch_texture()` quand le fichier de cookie est
+	# introuvable. C'est la seule chose qui distingue « cette arme n'éblouit
+	# pas » d'un défaut d'installation.
+	#
+	# Relevé par la session « assets visuels » le 2026-08-24, et elle a raison :
+	# en retirant le repli j'ai rendu sa ligne **porteuse** sans que rien ne le
+	# dise. Le jour où quelqu'un la dégrade en `print()` pour nettoyer la
+	# console, ou la retire parce qu'« elle ne sert à rien, les cookies sont
+	# versionnés », la torche silencieusement inoffensive que le repli
+	# prétendait empêcher revient — et cette fois sans repli du tout.
+	#
+	# **Ne pas retirer ce `push_error` sans le remplacer par plus bruyant.**
+	# C'est écrit ici plutôt que là-bas parce que c'est ici que la dépendance
+	# existe : le fichier qui lève l'erreur n'a aucune raison de savoir que
+	# l'éblouissement s'y adosse.
 	var arme: WeaponData = source.current_weapon
-	var image: Image = arme.image_torche() if arme else null
-	var intensite := 0.0
-	if image != null:
-		# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui
-		# demande plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où
-		# ce choix, laissé à l'appelant, s'est trompé le même jour.
-		intensite = arme.lumiere_recue(source.global_transform.x,
-			source.global_position, cible.global_position)
-	else:
-		var portee: float = arme.portee_torche() if arme else 512.0
-		var cos_demi: float = arme.cos_demi_cone() if arme else Vision.COS_DEMI_CONE
-		intensite = Vision.intensite_recue(source.global_transform.x,
-			source.global_position, cible.global_position, portee, cos_demi)
+	if arme == null:
+		return 0.0
+	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
+	# plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où ce choix,
+	# laissé à l'appelant, s'est trompé le même jour.
+	var intensite := arme.lumiere_recue(source.global_transform.x,
+		source.global_position, cible.global_position)
 	if intensite <= 0.0:
 		return 0.0
 	if not _ligne_de_vue(espace, source, cible):
@@ -1318,7 +1339,8 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 
 ## Le flash de tir éblouit celui d'en face (décision du 2026-08-18, avec
 ## Adrien). Pic instantané, qui passe par-dessus le plafond de la torche et se
-## résorbe en une seconde et demie — le modèle de `eblouissement.gd` le permet
+## résorbe en un peu plus de deux dixièmes de seconde depuis que la descente a
+## été accélérée (2026-08-24) — le modèle de `eblouissement.gd` le permet
 ## sans cas particulier.
 ##
 ## Pas de cône : un canon crache dans toutes les directions. Une ligne de vue,

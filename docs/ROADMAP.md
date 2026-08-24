@@ -1141,13 +1141,15 @@ enregistrements illisibles ou écrits par une version plus récente ; les taire
 donnerait un historique silencieusement incomplet, ce qui est la seule chose
 qu'un historique ne doit jamais être — on le croirait entier.
 
-**Étape 6 — édition du pseudo.** 🟡 **Déployée le 2026-08-18** par Adrien —
+**Étape 6 — édition du pseudo.** ✅ **Déployée le 2026-08-24** par Adrien —
 `rename_profile` en base, fonction `rename` en ligne, porte vérifiée (`401` sans
-jeton). Le nouveau plancher de rang est effectif en production dans la foulée :
-un débutant s'affiche **Aveugle I**. **Écran câblé le 2026-08-18** : le
-bouton MODIFIER s'ouvre sur une saisie préremplie du pseudo courant — on modifie
-un pseudo, on n'en saisit pas un nouveau — et la rangée remplace la ligne du
-pseudo plutôt que de s'ajouter dessous, pour que rien ne se déplace.
+jeton, réponse identique à `link`, déjà en production). Le nouveau plancher de
+rang est effectif en production dans la foulée : un débutant s'affiche **Aveugle
+I**. **Écran câblé depuis le 2026-08-18** côté client, resté inerte en attendant
+ce déploiement : le bouton MODIFIER s'ouvre sur une saisie préremplie du pseudo
+courant — on modifie un pseudo, on n'en saisit pas un nouveau — et la rangée
+remplace la ligne du pseudo plutôt que de s'ajouter dessous, pour que rien ne se
+déplace.
 
 `can_rename()` exige un profil **prêt** : une identité en cours n'a pas de pseudo
 à changer, et montrer le bouton donnerait une action qui échoue. Le contrôle qui
@@ -1159,7 +1161,7 @@ Le pseudo est la **seule** chose qu'un joueur peut changer de son profil : ni so
 identifiant, ni son code de récupération, ni son classement — tout le reste est
 dérivé ou constitutif. C'est ce qui rend l'étape petite.
 
-Livré le 2026-08-18 :
+Livré le 2026-08-18, déployé le 2026-08-24 :
 
 - `supabase/migrations/20260818020000_rename_profile.sql` — `rename_profile()`,
   qui **renomme par le PUID et lui seul**. Passer un identifiant de profil
@@ -1183,15 +1185,10 @@ son adversaire. D'où `RecoveryCode.sanitize_nickname()` — rangé **à côté*
 fichier — et `tools/test_pseudo.gd`, qui rejoue cas par cas les assertions de
 `recovery_code_test.ts`.
 
-#### Ce qui reste
-
-**Le déploiement**, qui demande Adrien : `supabase db push` puis
-`supabase functions deploy rename`. Rien n'est déployé — la fonction répondrait
-404 aujourd'hui, et c'est pour cela que l'écran n'est pas encore câblé.
-
-**Puis le champ dans l'écran du profil.** La place y est réservée depuis le début.
-Le câbler avant le déploiement donnerait un bouton qui échoue, ce qui ne se
-distingue pas d'un jeu cassé.
+**Déploiement vérifié le 2026-08-24** : `supabase migration list` confirme
+`20260818020000` appliquée côté distant, et `rename` répond `401 jeton_absent`
+sans jeton — exactement la réponse de `link`, déjà en production. Plus rien
+n'attend Adrien sur cette étape.
 
 ### Couleur des entrées « lanceur » confondue avec le liseré de sélection — corrigé (2026-08-18)
 
@@ -2346,8 +2343,10 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **L'écran partagé n'existe que dans « 1v1 écrans scindés »** (2026-08-18, Adrien) | Ce document affirmait que l'écran partagé permanent était « une décision de conception du jeu, présente même en ligne ». **C'était faux, et personne ne l'avait décidé** — une description d'architecture (`CLAUDE.md`) transformée en intention par la session qui rédigeait. Adrien l'a relevée : « je ne crois pas que le deuxième écran permanent soit l'identité du jeu ». La règle est maintenant explicite : **une seule vue partout ailleurs**, en ligne comme à l'entraînement. Le comportement d'affichage l'appliquait déjà ; ce qui manquait, c'est que le **rendu** le suive — la vue cachée dessinait encore, pour 1,5 ms mesurées. |
 | **Le flash de tir éblouit** (2026-08-18, Adrien) | Le geste le plus lumineux du jeu ne coûtait rien à celui qui le déclenche. Pic instantané de 0,6 à bout portant, éteint au-delà de 600 px, pondéré par `muzzle_flash_intensity` — l'arbalète (0,1) reste l'arme discrète, par le réglage qui servait déjà au rendu. Pas de cône (un canon crache dans toutes les directions), mais une ligne de vue : un mur arrête un flash comme il arrête un faisceau. Conséquence de jeu assumée : **le premier tir manqué à bout portant devient une ouverture pour l'adversaire**, alors qu'il était jusqu'ici sans conséquence. |
 | **On est éblouissable de dos** (2026-08-18, Adrien) | L'orientation de la victime n'entre pas dans le calcul : une torche braquée sur sa nuque éblouit. C'est une **décision**, pas un oubli — dans un jeu où la lumière est la seule information, être pris dans un faisceau doit coûter quelque chose quelle que soit la direction du regard, et la règle inverse rendrait le duel dos-à-dos illisible. À rouvrir si le jeu s'en trouve confus. |
-| **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard, sur un effet qui dure une seconde et demie. |
+| **L'éblouissement est arbitré par l'hôte** (2026-08-18) | Le client ne le calcule pas : il le calculerait sur un adversaire **interpolé**, donc avec 100 ms de retard, et comme l'effet pénalise vitesse ET visée, sa prédiction divergerait en permanence de l'arbitrage — une correction de position permanente pour un effet cosmétique en apparence. La valeur passe par `net_dazzle`, sur le synchroniseur qui portait déjà les HP. **Prix assumé :** le voile blanc arrive chez le client avec un demi aller-retour de retard. ⚠️ *Mis à jour le 2026-08-24 : cette ligne disait « sur un effet qui dure une seconde et demie » pour montrer que le retard était négligeable. **L'effet dure désormais 0,375 s**, la récupération ayant été accélérée. Le retard reste petit — un demi aller-retour vaut 13 à 30 ms sur les liens mesurés, soit 3 à 8 % de la vie de l'effet au lieu de 1 à 2 % — donc **la décision tient, mais sa marge a été divisée par quatre**. Si la descente était encore accélérée, c'est ici qu'il faudrait revenir : le voile du client finirait par arriver après la moitié de ce qu'il doit montrer.* |
 | **L'éblouissement LIT le faisceau, il ne le recalcule plus** (2026-08-24, Adrien) | `Vision.intensite_texture` échantillonne l'alpha de la texture que la lumière projette ; `intensite_recue` n'est plus qu'un repli pour une arme sans texture. La copie était délibérée — *« deux formules pour un même faisceau finiraient par diverger »* — et le raisonnement était juste : **une copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la même chose.** Trois divergences en étaient sorties, toutes muettes : `torch_brightness` que le modèle ignorait, le cône écrit en dur à 30° pour quatre armes de 5 à 60°, et le profil peint des cookies qui tombe à 0,49-0,73 de la formule dans les flancs. **Un pixel ne peut pas diverger de lui-même**, et il porte tout à la fois — angle, portée, luminosité, matière peinte. Deux conséquences qui ne se devinent pas : **l'échelle vient de `img.get_size()`**, donc le piège « un cookie de 1024² porte deux fois plus loin qu'un 512² » n'existe plus côté pénalité, rien n'est à compenser ; et **le halo de proximité entre dans le calcul** — mesuré à 0,004 brut à 75° et un dixième de portée, 0,000 dans le dos, donc cohérent et négligeable. |
+| **La récupération est quatre fois plus rapide, et plus rapide que la montée** (2026-08-24, Adrien, manette en main) | La descente passe de **1,5 s à 0,375 s**. Elle valait l'inverse, et pour une raison écrite : *« volontairement plus lente que la montée : c'est ce décalage qui fait de l'éblouissement une ouverture exploitable, et non une gêne qui passe avant qu'on en profite »*. **Le raisonnement se tenait ; il n'avait jamais été éprouvé.** La mécanique ne fonctionnait pas avant le 2026-08-24 — personne ne l'avait jamais jouée. À l'essai, une seconde et demie d'aveuglement ne se lit pas comme une ouverture pour l'adversaire : elle se lit comme **une perte de contrôle sur son propre personnage**. C'est le premier réglage de ce chantier tranché par le jeu et non par la mesure, et il **renverse** ce que le raisonnement seul avait produit. Le contrôle qui l'interdisait a été **retourné, pas supprimé** : sa raison reste lisible dans `test_eblouissement`, requalifiée en hypothèse que l'expérience a écartée. **Prix assumé, à connaître avant de rejuger : le flash de tir se résorbe en 0,22 s au lieu de 0,9.** Le pic est le même, sa durée fond. Si l'ouverture devient trop brève pour être exploitée, c'est `PIC_FLASH` qu'il faut monter — pas la descente qu'il faut ralentir, puisque c'est la lenteur qui a été jugée punitive. |
+| **Pas de faisceau, pas de pénalité** (2026-08-24, Adrien) | `game_state._lumiere_recue` gardait un repli sur la formule analytique quand l'arme n'avait pas de texture, défendu par un commentaire affirmant qu'une torche sans cookie ne devait pas devenir « silencieusement inoffensive ». **Le raisonnement était à l'envers, et c'est en vérifiant le travail d'une autre session que je l'ai vu dans le mien** : `equip_weapon` pose `flashlight.texture = get_torch_texture()`, donc sans cookie la lumière ne rend **rien**. Le repli faisait payer une pénalité pour un faisceau que personne ne voit — **le dernier endroit du jeu qui calculait l'éblouissement depuis autre chose que l'écran**, dans un chantier dont c'était tout le sujet. Le silence redouté n'existait pas non plus : un cookie manquant lève une erreur au chargement. `lumiere_recue()` rend zéro, et ce zéro est la règle — on ne peut pas être aveuglé par une lampe éteinte. **Conséquence à connaître : `Vision.COS_DEMI_CONE` n'a plus aucun lecteur en production.** Elle reste comme défaut des fonctions analytiques, qui gardent un rôle — `intensite_recue` est la référence contre laquelle le cookie peint est validé. C'est écrit au-dessus de la constante, faute de quoi elle aurait de nouveau l'air décidée. |
 | **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
@@ -2626,6 +2625,37 @@ dix-huit fois trop de lumière au bord. L'invariant retenu est plus fort et se
 vérifie sans seuil : *la structure est divisée par le SOMMET de son anneau, jamais
 par sa moyenne*, si bien que **le cookie cuit n'éclaire jamais plus que celui
 qu'il remplace, à aucune distance et sous aucun angle**.
+### Une garantie tenue par une ligne que rien ne relie à elle (2026-08-24)
+
+Retirer le repli analytique de l'éblouissement était juste — sans cookie, la
+torche ne rend aucune lumière, donc rien ne doit être subi. Mais le changement a
+**déplacé une charge sans le dire** : tant que le repli existait, une arme sans
+cookie éblouissait quand même — moche, et bruyant à sa façon. Depuis, elle ne
+fait **rien du tout** : ni lumière, ni pénalité, ni exception.
+
+Le seul signal restant est **une ligne, dans un autre fichier** — le
+`push_error` de `WeaponData.get_torch_texture()`. Le jour où quelqu'un la
+dégrade en `print()` pour nettoyer la console, ou la retire parce qu'« elle ne
+sert à rien, les cookies sont versionnés », la torche silencieusement
+inoffensive revient, et cette fois sans repli pour l'atténuer.
+
+**Le commentaire disait « un cookie manquant reste bruyant » — une propriété
+vraie, sans dire de quoi elle dépend.** C'est la forme la plus discrète de la
+journée, et la cinquième : après le contrôle hors sujet, l'entrée barrée, la
+liste d'appuis périmée et le nombre sans son échelle, voici **la garantie dont
+personne ne sait ce qui la tient**. Aucune ne ment ; toutes dispensent d'aller
+voir.
+
+Relevée par la session « assets visuels », qui a vu dans le changement d'une
+autre ce que celle-ci ne pouvait pas voir dans le sien — c'est le motif de toute
+la journée, et il a fonctionné six fois.
+
+**La parade appliquée :** nommer la dépendance **du côté qui en dépend**, pas du
+côté qui la fournit. Le fichier qui lève l'erreur n'a aucune raison de savoir
+que l'éblouissement s'y adosse ; celui qui s'y adosse, si. Un contrôle qui
+relierait vraiment les deux reste à poser, et il vit chez le fournisseur : *une
+arme dont le cookie n'existe pas rend `null` et ne se tait pas*.
+
 ### Un nombre sans son échelle n'est pas un nombre (2026-08-24)
 
 Quatre plafonds d'éblouissement transmis à la session voisine — « pistolet
@@ -6323,7 +6353,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | ~~2~~ | ~~**Écran audio**~~ · ~~**Écran de calibration**~~ | **FAITS le 2026-08-17**, branchés dans le hub. |
 | ~~4~~ | ~~**Écran historique**~~ | ✅ **FAIT le 2026-08-18** — `screen_history.gd`, sa suite `test_screen_historique`, et le compte des enregistrements écartés. |
 | ~~5~~ | ~~**Affichage du rang en jeu**~~ | ✅ **FAIT le 2026-08-18** — Phase 6 close : catégorie, division, points restants et échelon suivant, dans `ranked_identity.gd`. |
-| 6 | **Édition du pseudo** (Phase 5, étape 6) | ✅ Écrite et testée le 2026-08-18. **Le déploiement demande Adrien** — `supabase db push` puis `supabase functions deploy rename` ; l'écran sera câblé après, un bouton qui répond 404 ne se distinguant pas d'un jeu cassé. |
+| ~~6~~ | ~~**Édition du pseudo**~~ (Phase 5, étape 6) | ✅ **FAIT le 2026-08-24** — écrite et testée le 2026-08-18, déployée le 2026-08-24 (`db push` + `functions deploy rename`), porte vérifiée `401` comme `link`. |
 | ~~7~~ | ~~**Rejouer le journal local**~~ | ✅ **FAIT le 2026-08-18** — schéma v3, `pending_reports()` / `mark_reported()`, `replay_local_journal()`, vingt assertions. Le raccordement de `MatchRecord.build()` est fait aussi (`c064e6c`). |
 | ~~7bis~~ | ~~**La poignée de main de l'étape 8.9**~~ | ✅ **FAITE le 2026-08-18** — attribut `PROTO` sur le salon à code (lu avant la jointure), numéro dans le **filtre** de la file, `rpc_hello` à signature figée pour ENet, et le silence traité comme un refus. `Protocol.VERSION` est à **2**. |
 | ~~8~~ | ~~**Déblocage d'armes, côté interface**~~ | ✅ **FAIT le 2026-08-18** — Phase 7 close côté mécanique : `rank_loadout.gd`, grisage avec la raison, règle du miroir de bout en bout. Reste le **contenu** des catégories 5 à 10, qui exige Adrien. |
@@ -6341,7 +6371,7 @@ peut travailler des heures sans Adrien**, et il n'a rien à débloquer pour ça.
 | ~~**Sens des divisions de rang**~~ | ⚠️ **Ce n'était pas une décision ouverte** — elle est prise et **déployée** depuis le 2026-08-17. `elo.ts` documente `division` comme « 1 (I, la plus basse) à 3 (III) », convention Rocket League, et `labelAt()` l'applique. Restait à le **dire** à Adrien, pas à le lui demander. La contredire coûterait un redéploiement. |
 | ~~**Frottement du déblocage d'armes**~~ | ✅ **Tranché le 2026-08-18 par Adrien : descendre le plancher.** Tous les joueurs démarrent à l'échelon le plus bas (`RANK_FLOOR = START_RATING`), donc avec le seul pistolet, et les trois autres armes se gagnent. |
 | **Adhésion Apple Developer (H4)** | 99 $/an, décision d'achat. |
-| **Déployer la fonction `rename`** | `supabase db push` puis `supabase functions deploy rename`. Écrite et testée depuis le 2026-08-18 ; l'écran du profil attend ce déploiement pour être câblé. |
+| ~~**Déployer la fonction `rename`**~~ | ✅ **Fait le 2026-08-24** — `db push` + `functions deploy rename`, porte vérifiée `401` comme `link`. Écran câblé depuis le 18, opérationnel. |
 | **Numérotation de `Protocol.VERSION`** | Tranchée (« carnet + rappel »), mais **le numéro lui-même reste à monter à la main** à chaque changement du fil. C'est le seul jugement que la mécanique ne peut pas rendre. |
 
 ---
@@ -6411,16 +6441,12 @@ et un seul est du travail de session.
    production le plus long, et ils réveillent un système entier déjà câblé (V1.1).
 6. **Le contenu des catégories de rang 5 à 10** : six armes à inventer. La
    mécanique les attend, le tableau `RankLoadout.COMPETITIF` a leurs places.
-7. **Le déploiement de la fonction `rename`** — `supabase db push` puis
-   `supabase functions deploy rename`. Écrite et testée ; l'écran du profil
-   attend ce déploiement, un bouton qui répond 404 ne se distinguant pas d'un
-   jeu cassé.
 
 ### Dettes anciennes, sans urgence
 
-8. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
+7. Reste dû de la Phase 2, jamais déroulé : la checklist manuelle
    `CHECKLIST_TESTS_EN_LIGNE.md` et la validation à 120 ms de latence simulée.
-9. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
+8. Deux points connus : le relais Epic n'a jamais été exercé (la connexion
    directe a toujours abouti), et la détection de déconnexion est lente des deux
    côtés.
 
