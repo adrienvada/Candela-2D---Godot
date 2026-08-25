@@ -274,6 +274,26 @@ passé la journée.** La session DA3 a vérifié après coup que la garde était
 Ce qui l'a arrêté : la session « brouillage » est allée **lire le fichier avant
 de voter**. Dix secondes de `grep` contre une demi-journée à quatre.
 
+> **Correction du même jour, apportée par DA2, et elle aggrave le diagnostic.**
+> Ce n'est pas que personne n'avait rouvert le fichier : **l'un de nous l'a
+> rouvert, a lu la réponse, et ne l'a pas dite.** Vingt minutes après avoir voté
+> B, DA2 a ouvert `run_duo.sh` — pour y chercher une syntaxe d'appel — a lu le
+> garde en entier, a noté qu'il existait, et n'a pas relié sa lecture au vote
+> qu'elle venait d'émettre. Le fil a continué vingt minutes de plus sur une
+> question déjà tranchée, **avec la réponse ouverte dans une de nos fenêtres.**
+>
+> Le mécanisme est nommé, et il est plus général que l'incident : **lire un
+> fichier POUR UNE AUTRE RAISON ne fait pas relire ce qu'on croit savoir de
+> lui.** Le garde était hors de la question posée, donc il n'a rien dit. Ce
+> dépôt avait déjà consigné le cousin de ce piège le 2026-08-18 — un
+> `git diff --cached --stat` « regardé sans être lu » ; la variante d'aujourd'hui
+> est pire, parce que l'information n'était pas seulement affichée, elle était
+> **pertinente**, et c'est la question du lecteur qui l'a filtrée.
+>
+> Les deux mécanismes se composent, et c'est leur produit qui explique qu'on ait
+> été quatre : **un titre de commit décrit une intention, et un lecteur ne voit
+> que ce qu'il est venu chercher.**
+
 Trois formulations à garder, et aucune n'est de moi seul :
 
 - **un titre de commit décrit une INTENTION, pas un PÉRIMÈTRE** — `707bf6d`
