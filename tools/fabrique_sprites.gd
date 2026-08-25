@@ -65,10 +65,28 @@ func _init() -> void:
 		quit(1)
 		return
 	var epaules := float(_arg(args, "--epaules", "36"))
+	## Découpe d'une bande de frames.
+	##
+	## ⚠️ **L'échelle et le pivot sont mesurés sur la PREMIÈRE case et imposés à
+	## toutes**, et c'est tout l'intérêt. Mesurer chaque case pour elle-même
+	## normaliserait sa propre largeur d'épaules : le personnage grandirait et
+	## rétrécirait à chaque pas. Pire, recentrer chaque case sur son propre corps
+	## **supprimerait le balancement** — c'est-à-dire exactement l'animation
+	## qu'on est venu chercher. Une frame ne se juge pas seule ; elle se juge
+	## contre la précédente.
+	##
+	## La toile est calculée sur le rayon MAXIMAL de toutes les cases, pour que
+	## les quatre sortent à la même taille et se remplacent sans sauter.
+	var frames := int(_arg(args, "--frames", "1"))
 
 	var img := _charger(RACINE_SOURCES + famille + "/" + planche)
 	if img == null:
 		quit(1)
+		return
+
+	if frames > 1:
+		_cuire_bande(img, nom, epaules, frames)
+		quit(0)
 		return
 
 	var n := img.get_width()
@@ -204,6 +222,72 @@ func _largeur_epaules(img: Image, b: Rect2i) -> int:
 		if d > g and d - g + 1 > pire:
 			pire = d - g + 1
 	return pire
+
+
+## Découpe une bande de `frames` cases, à échelle et pivot communs.
+func _cuire_bande(img: Image, nom: String, epaules: float, frames: int) -> void:
+	var pw := img.get_width() / frames
+	var ph := img.get_height()
+	var cases: Array[Image] = []
+	for i in frames:
+		var c := img.get_region(Rect2i(i * pw, 0, pw, ph))
+		_oter_magenta(c)
+		cases.append(c)
+
+	# Échelle et pivot : mesurés sur la PREMIÈRE case, imposés aux autres.
+	var b0 := _boite(cases[0])
+	if b0.size.x <= 0:
+		printerr("fabrique_sprites : case 1 vide apres detourage")
+		return
+	var larg := _largeur_epaules(cases[0], b0)
+	var k := epaules / float(larg)
+	var pivot0 := _centre_du_corps(cases[0].get_region(b0)) + Vector2(b0.position)
+	print("%-10s  bande de %d cases de %dx%d" % [nom, frames, pw, ph])
+	print("            epaules %d px (case 1) -> %.1f px en jeu (facteur %.4f)"
+		% [larg, epaules, k])
+
+	# Rayon commun : le plus grand de toutes les cases, autour du pivot commun.
+	var rayon := 0.0
+	for c in cases:
+		for y in ph:
+			for x in pw:
+				if c.get_pixel(x, y).a > 0.5:
+					rayon = maxf(rayon, absf(float(x) - pivot0.x))
+					rayon = maxf(rayon, absf(float(y) - pivot0.y))
+	var cote: int = maxi(int(ceil(rayon * k)) * 2 + 2, 8)
+
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SORTIE))
+	for i in frames:
+		var mise := Image.create_empty(int(round(pw * k)), int(round(ph * k)),
+			false, Image.FORMAT_RGBA8)
+		mise.copy_from(cases[i])
+		mise.resize(maxi(int(round(pw * k)), 1), maxi(int(round(ph * k)), 1),
+			Image.INTERPOLATE_LANCZOS)
+		var toile := Image.create_empty(cote, cote, false, Image.FORMAT_RGBA8)
+		toile.fill(Color(0, 0, 0, 0))
+		var coin := Vector2i(int(round(cote / 2.0 - pivot0.x * k)),
+			int(round(cote / 2.0 - pivot0.y * k)))
+		toile.blit_rect(mise, Rect2i(0, 0, mise.get_width(), mise.get_height()), coin)
+		var f := "%s_%d.png" % [nom, i + 1]
+		if toile.save_png(ProjectSettings.globalize_path(SORTIE + f)) != OK:
+			printerr("fabrique_sprites : ecriture de %s impossible" % f)
+			return
+		var sil := Image.create_empty(cote, cote, false, Image.FORMAT_RGBA8)
+		for y in cote:
+			for x in cote:
+				sil.set_pixel(x, y, Color(1, 1, 1, toile.get_pixel(x, y).a))
+		sil.save_png(ProjectSettings.globalize_path(SORTIE + "%s_%d_silhouette.png"
+			% [nom, i + 1]))
+		print("            %s  toile %d²" % [f, cote])
+
+
+## Le magenta de fond devient transparent.
+func _oter_magenta(img: Image) -> void:
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if Vector3(c.r - 1.0, c.g, c.b - 1.0).length() < TOLERANCE:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
 
 
 ## Le centre du corps : barycentre des pixels opaques du tiers HAUT.

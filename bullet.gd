@@ -343,6 +343,23 @@ func _spawn_wall_effects(pos: Vector2):
 	AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
 	# Sparks bounce BACKWARDS from the wall
 	_spawn_spark_particles(pos, Charte.AMBRE, 12, 100.0, 450.0, -direction, 120.0)
+	# DA2.9 — l'éclat reste. Les étincelles disent l'instant, la marque dit que
+	# quelqu'un a tiré ici : c'est la seule trace qu'un tir MANQUÉ laisse au
+	# monde, et elle raconte le match autant que le sang.
+	# ⚠️ L'arène se prend par `game_state.arena`, PAS par `get_parent()` : le
+	# parent d'une balle est le nœud des balles, qui ne survit pas à la manche.
+	# Un éclat qui y naîtrait disparaîtrait au changement de manche alors que
+	# les taches de sang, elles, racontent le match entier.
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs and gs.arena:
+		var eclat := Node2D.new()
+		eclat.set_script(preload("res://wall_impact.gd"))
+		# `setup()` AVANT `add_child()` : il rend `false` si aucun éclat n'est
+		# chargeable, et on renonce alors sans avoir rien ajouté à l'arbre.
+		if eclat.setup(pos):
+			gs.arena.add_child(eclat)
+		else:
+			eclat.free()
 
 
 func _spawn_damage_number(pos: Vector2, amount: int):

@@ -208,5 +208,21 @@ func _create_p2_duplicate():
 		stain_p2.add_to_group("blood_p2")
 		stain_p2.visibility_layer = 4 # Viewport J2
 		stain_p2.light_mask = 1 | 32  # Torche (1) + ambiance personnelle J2 (32)
+	# ⚠️ **`duplicate()` NE RECOPIE PAS les variables de script**, et il faut donc
+	# reporter l'état à la main. Mesuré le 2026-08-25 : un nœud dont `_drops`
+	# contient deux gouttes rend une copie dont `_drops` est VIDE. Seules les
+	# propriétés natives suivent — `rotation` passe, `position` passe, rien de ce
+	# que le script déclare ne passe.
+	#
+	# **Le défaut est antérieur au sang peint** : sous le dessin procédural, la
+	# copie J2 naissait déjà avec zéro goutte, donc **le joueur 2 n'a jamais vu
+	# une seule tache**. Rien ne le signalait — la copie existait, elle était au
+	# bon endroit, aux bons masques, et elle dessinait le vide. Une sortie
+	# plausible de plus.
+		stain_p2.set("_texture", _texture)
+		stain_p2.set("_coeur", _coeur)
+		stain_p2.set("_echelle", _echelle)
+		stain_p2.set("_drops", _drops)
+		stain_p2.queue_redraw()
 		get_parent().add_child(stain_p2)
 		_p2_copy = stain_p2

@@ -2596,6 +2596,41 @@ croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
 
 
+### `duplicate()` ne recopie pas les variables de script (2026-08-25)
+
+**Le joueur 2 n'a jamais vu une seule tache de sang.** Découvert en construisant
+`wall_impact.gd` sur le modèle de `blood_stain.gd` — pas en cherchant un défaut.
+
+L'écran partagé est permanent : chaque décal existe en deux exemplaires, un par
+viewport, et le second est fabriqué par `duplicate()` puis rebasculé sur les
+masques de J2. La copie naissait au bon endroit, aux bons masques, dans le bon
+groupe. **Elle dessinait le vide.**
+
+Mesuré : un nœud dont `_drops` contient deux gouttes rend une copie dont
+`_drops` est **vide**. Seules les propriétés natives suivent — `rotation` passe,
+`position` passe, `visibility_layer` passe. Rien de ce que le script déclare ne
+passe.
+
+```
+_drops original : 2
+_drops copie J2 : 0
+```
+
+Le remède tient en trois lignes : reporter l'état à la main après la copie. Ce
+qui coûte, c'est de le savoir.
+
+⚠️ **Et c'est encore une sortie plausible** — la quatrième de la même famille
+relevée en deux jours, après les flux musicaux vides, les huit entrées fantômes
+du manifeste et l'auditeur qui n'existait pas. À chaque fois : rien n'est en
+panne, aucune erreur n'est levée, le nœud est là, et le résultat est faux. La
+signature commune est qu'**un objet correctement construit peut être
+correctement vide**, et qu'aucun contrôle de présence ne distingue les deux.
+
+La leçon de méthode vaut mieux que le correctif : **le défaut n'a pas été trouvé
+en relisant `blood_stain.gd`, mais en écrivant un second système sur son
+modèle.** Reconstruire oblige à vérifier chaque hypothèse que la relecture
+accepte.
+
 ---
 
 ## Pièges connus — ne pas les redécouvrir
@@ -6783,10 +6818,14 @@ un fait de jeu, pas à un rythme d'interface.
   sa spéculaire n'a rien à réfléchir sur un aplat uniforme. Le dessin remplacé
   produisait ce contraste en deux passes ; les deux textures le reproduisent.
   *(C : 1 planche)*
-- **DA2.9 Les impacts muraux** 🟡 **CUITS, PAS INTÉGRÉS le 2026-08-25** — douze
-  éclats en étoile découpés d'une planche de seize, prêts dans
-  `assets/decals/`. **Rien ne les pose encore** : il n'existe aucun système de
-  décal mural, contrairement au sang qui avait déjà le sien.
+- **DA2.9 Les impacts muraux** ✅ **livrée le 2026-08-25** — `wall_impact.gd`
+  pose un éclat persistant à chaque balle qui touche la géométrie. **C'est la
+  seule trace qu'un tir MANQUÉ laisse au monde**, et elle raconte le match
+  autant que le sang. Douze éclats sous huit orientations tirées au sort : le
+  motif ne se reconnaît pas. Teintés `ACIER` et non `HALOGENE` — un éclat est du
+  métal mis à nu, une matière froide que la torche révèle, pas une source
+  chaude. Plafond à 90, plus bas que les 120 du sang parce qu'un impact mural
+  coûte un tir manqué, et qu'il y en a bien plus que de touches.
   ⚠️ **Quatre des seize sont sortis VIDES**, et la raison mérite d'être connue :
   c'étaient les brûlures, dessinées en sombre sur noir. L'alpha d'un décal vient
   de sa luminance — **une brûlure noire est un décal transparent.** La consigne
