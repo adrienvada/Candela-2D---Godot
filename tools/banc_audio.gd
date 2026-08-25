@@ -37,6 +37,43 @@ var _auto: bool = true
 ## souvenir.
 var _memoire := {}
 
+## ============================================================================
+## S6 — LES TROIS FAÇONS D'ÉCOUTER UN ÉCRAN PARTAGÉ
+## ============================================================================
+##
+## En « 1v1 écrans scindés », **deux joueurs partagent une seule paire
+## d'enceintes**. Toute oreille posée sur l'un renseigne l'autre depuis une tête
+## qui n'est pas la sienne. Trois issues, et c'est un choix de jeu, pas un
+## réglage — d'où ce banc plutôt qu'une décision au raisonnement.
+##
+## - **POINT_FIXE** — ce que fait le jeu aujourd'hui : aucun auditeur, Godot
+##   retombe sur le centre de l'écran virtuel. Symétrique donc équitable, mais le
+##   panoramique dit la position **sur la carte** et non par rapport à soi : une
+##   information fausse plutôt qu'absente.
+## - **MILIEU** — une oreille au milieu des deux joueurs. Symétrique aussi, et
+##   elle dit quelque chose de vrai : la position relative au **centre du duel**.
+## - **SOMME** — une oreille par joueur, chacune sur sa vue. **C'est le
+##   comportement natif du moteur** : `AudioStreamPlayer2D` boucle sur tous les
+##   viewports auditeurs de son monde et **somme une sortie par viewport**. Le
+##   plus proche l'emporte tout seul, sa copie étant simplement plus forte —
+##   aucun arbitrage à écrire.
+##
+## ⚠️ **Ce que le mode SOMME casse, et il faut l'entendre pour le juger :
+## l'occlusion cesse de fonctionner.** `est_occulte` teste le trajet vers UNE
+## oreille ; avec deux, il faudrait étouffer la copie de J1 sans toucher à celle
+## de J2 — impossible avec une seule voix et un seul bus. Il faudrait deux voix
+## par son, dans un pool de seize que les pas saturent déjà. **Ce n'est pas un
+## défaut du banc, c'est la conséquence structurelle du mode**, et c'est
+## probablement l'argument qui tranchera S6.
+enum Ecoute { POINT_FIXE, MILIEU, SOMME }
+var _mode: Ecoute = Ecoute.POINT_FIXE
+var _j1: Node2D
+var _j2: Node2D
+var _vue_a: SubViewport
+var _vue_b: SubViewport
+var _oreille_a: AudioListener2D
+var _oreille_b: AudioListener2D
+
 func _ready() -> void:
 	var data: Dictionary = MapData.get_selected()
 	if data.is_empty():
@@ -59,6 +96,38 @@ func _ready() -> void:
 	_oreille_porteur.add_child(tete)
 	AudioManager.poser_oreille(tete)
 
+	# Les deux joueurs du banc. En mode MILIEU, la tête d'`AudioManager` se pose
+	# entre eux ; en mode SOMME, chacun porte sa propre oreille.
+	_j1 = Node2D.new()
+	_j1.name = "J1"
+	_j1.global_position = centre + Vector2(-260, 120)
+	add_child(_j1)
+	_j2 = Node2D.new()
+	_j2.name = "J2"
+	_j2.global_position = centre + Vector2(260, -120)
+	add_child(_j2)
+
+	# Deux vues qui PARTAGENT le monde du banc — exactement ce que fait
+	# `game_state.gd:309` avec `vp2.world_2d = vp1.world_2d`. Elles ne rendent
+	# rien : seule leur qualité d'auditrices nous intéresse, et **l'écoute suit le
+	# viewport auquel le listener est attaché, pas celui qui rend.**
+	for nom in ["VueA", "VueB"]:
+		var v := SubViewport.new()
+		v.name = nom
+		v.world_2d = get_world_2d()
+		v.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		add_child(v)
+		var porte := Node2D.new()
+		v.add_child(porte)
+		var o := AudioListener2D.new()
+		porte.add_child(o)
+		if nom == "VueA":
+			_vue_a = v
+			_oreille_a = o
+		else:
+			_vue_b = v
+			_oreille_b = o
+
 	_source = Node2D.new()
 	_source.name = "Source"
 	_source.global_position = centre + Vector2(300, 0)
@@ -77,7 +146,42 @@ func _ready() -> void:
 	_etiquette.add_theme_font_size_override("font_size", 15)
 	couche.add_child(_etiquette)
 	AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion)
+	_appliquer_mode()
 	_memoriser()
+
+## Pose l'écoute demandée. Idempotente : rejouée à chaque changement de mode et à
+## chaque déplacement des joueurs.
+##
+## **Le point qui ne se devine pas :** la racine est auditrice par défaut
+## (`SceneTree` la déclare telle au démarrage). En mode SOMME il faut donc la
+## **couper**, sinon une TROISIÈME sortie s'ajoute aux deux — celle du point
+## fixe, c'est-à-dire précisément le défaut qu'on cherche à quitter, mêlé au
+## reste et parfaitement audible.
+func _appliquer_mode() -> void:
+	var racine := get_tree().root
+	match _mode:
+		Ecoute.POINT_FIXE:
+			AudioManager.rendre_oreille()
+			racine.audio_listener_enable_2d = true
+			_vue_a.audio_listener_enable_2d = false
+			_vue_b.audio_listener_enable_2d = false
+		Ecoute.MILIEU:
+			_vue_a.audio_listener_enable_2d = false
+			_vue_b.audio_listener_enable_2d = false
+			racine.audio_listener_enable_2d = true
+			var tete := _tete()
+			if tete != null:
+				tete.global_position = (_j1.global_position + _j2.global_position) * 0.5
+				AudioManager.poser_oreille(tete)
+		Ecoute.SOMME:
+			AudioManager.rendre_oreille()
+			racine.audio_listener_enable_2d = false
+			_oreille_a.global_position = _j1.global_position
+			_oreille_b.global_position = _j2.global_position
+			_vue_a.audio_listener_enable_2d = true
+			_vue_b.audio_listener_enable_2d = true
+			_oreille_a.make_current()
+			_oreille_b.make_current()
 
 ## Le dernier verdict d'occlusion, calculé en physique et relu partout ailleurs.
 ##
@@ -102,6 +206,10 @@ func _ready() -> void:
 var _occulte: bool = false
 
 func _physics_process(delta: float) -> void:
+	_suivre_les_joueurs()
+	# En mode SOMME, `est_occulte` n'a aucune oreille unique à interroger : il
+	# rend `false`, et l'affichage le dit en clair plutôt que de laisser croire
+	# qu'aucun mur ne s'interpose.
 	_occulte = AudioManager.est_occulte(_source.global_position)
 	if _auto_un_coup:
 		_auto_un_coup = false
@@ -117,6 +225,20 @@ func _process(delta: float) -> void:
 	queue_redraw()
 	_etiquette.text = _texte()
 
+## Les oreilles suivent les joueurs qu'on déplace, sans quoi le mode se réglerait
+## une fois pour toutes à l'ouverture du banc.
+func _suivre_les_joueurs() -> void:
+	match _mode:
+		Ecoute.MILIEU:
+			var tete := _tete()
+			if tete != null:
+				tete.global_position = (_j1.global_position + _j2.global_position) * 0.5
+		Ecoute.SOMME:
+			_oreille_a.global_position = _j1.global_position
+			_oreille_b.global_position = _j2.global_position
+		_:
+			pass
+
 ## La souris place les deux points, et c'est mieux que des flèches.
 ##
 ## Les flèches servent désormais aux molettes ; mais surtout, **on juge une
@@ -131,9 +253,9 @@ func _deplacer_source(_delta: float) -> void:
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		_source.global_position = get_global_mouse_position()
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		var tete := _tete()
-		if tete != null:
-			tete.global_position = get_global_mouse_position()
+		_j1.global_position = get_global_mouse_position()
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
+		_j2.global_position = get_global_mouse_position()
 
 ## Une touche est lue hors physique : jouer tout de suite ferait partir le son en
 ## direct, quel que soit le mur. On attend le prochain tic — un vingtième de
@@ -156,8 +278,16 @@ func _draw() -> void:
 	if tete == null:
 		return
 	var couleur := Charte.ROUGE if _occulte else Charte.ACIER
-	draw_line(_source.global_position, tete.global_position, couleur, 2.0)
-	draw_circle(tete.global_position, 9.0, Charte.BLEU)
+	if _mode == Ecoute.SOMME:
+		# Deux traits, deux oreilles : on voit d'un coup laquelle est la plus
+		# proche, donc laquelle domine la somme.
+		draw_line(_source.global_position, _j1.global_position, Charte.BLEU, 2.0)
+		draw_line(_source.global_position, _j2.global_position, Charte.ROUGE, 2.0)
+	else:
+		draw_line(_source.global_position, tete.global_position, couleur, 2.0)
+		draw_circle(tete.global_position, 9.0, Charte.AMBRE)
+	draw_circle(_j1.global_position, 9.0, Charte.BLEU)
+	draw_circle(_j2.global_position, 9.0, Charte.ROUGE)
 	draw_circle(_source.global_position, 7.0, couleur)
 	var portee: float = AudioManager.portee_courante(_son_courant)
 	draw_arc(tete.global_position, portee, 0.0, TAU, 96, couleur, 1.0)
@@ -181,6 +311,8 @@ func _texte() -> String:
 			"ON" if _auto else "OFF",
 			"ON" if AudioManager.occlusion_active else "OFF"],
 		"  X mémoriser · C comparer · ÉCHAP quitter",
+		"  CLIC DROIT J1 · CLIC MILIEU J2 · E : écoute      %s" % _nom_mode(),
+		"      %s" % _detail_mode(),
 		"",
 		"  LES TROIS SONS, tels qu'ils sont dosés en ce moment :",
 		"    %s pas          niveau %+6.1f dB   portée %5.0f px" % [
@@ -219,6 +351,21 @@ func _db_estime(dist: float, portee: float) -> String:
 	if lineaire <= 0.0001:
 		return "silence"
 	return "%.1f dB" % (20.0 * (log(lineaire) / log(10.0)))
+
+func _nom_mode() -> String:
+	match _mode:
+		Ecoute.POINT_FIXE: return "POINT FIXE (le jeu aujourd'hui)"
+		Ecoute.MILIEU: return "MILIEU des deux joueurs"
+		_: return "SOMME — une oreille par joueur"
+
+func _detail_mode() -> String:
+	match _mode:
+		Ecoute.POINT_FIXE:
+			return "le panoramique dit où le son est SUR LA CARTE, pas par rapport à vous"
+		Ecoute.MILIEU:
+			return "une image cohérente, centrée sur le duel"
+		_:
+			return "le plus proche domine — mais L'OCCLUSION NE FONCTIONNE PLUS (une voix, deux oreilles)"
 
 func _memoriser() -> void:
 	_memoire = {
@@ -298,4 +445,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_X: _memoriser()
 		KEY_C: _comparer()
 		KEY_SPACE: _jouer_au_prochain_tic()
-		KEY_ESCAPE: get_tree().quit()
+		KEY_E:
+			_mode = ((_mode + 1) % 3) as Ecoute
+			_appliquer_mode()
+		KEY_ESCAPE:
+			# La racine redevient auditrice en partant : le mode SOMME la coupe,
+			# et la laisser coupée derrière soi rendrait muet tout ce qui joue
+			# hors match — menus compris — sans qu'aucune erreur ne le dise.
+			get_tree().root.audio_listener_enable_2d = true
+			get_tree().quit()

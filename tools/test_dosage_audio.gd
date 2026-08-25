@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 39
+var _attendus: int = 40
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -237,7 +237,33 @@ func _test_le_mur_arrete_vraiment() -> void:
 	am.rendre_oreille()
 	_check("sans oreille, aucun son n'est étouffé", not am.est_occulte(source))
 
+	_check("une oreille posée n'en laisse qu'UNE dans le monde",
+		_compter_auditeurs(am) == 1, "%d viewports auditeurs" % _compter_auditeurs(am))
+
 	monde.queue_free()
+
+## Combien de viewports se déclarent auditeurs du monde où vit le pool ?
+##
+## **L'invariant qui compte, et il n'est pas évident : il en faut exactement UN.**
+## `AudioStreamPlayer2D` boucle sur tous les viewports auditeurs de son `World2D`
+## et **somme une sortie par viewport**. Deux auditeurs dont un sans
+## `AudioListener2D`, et chaque son sort deux fois — une copie juste, une copie
+## depuis le centre de l'écran virtuel, c'est-à-dire le défaut d'origine remis
+## par-dessus le correctif. Le symptôme ne serait pas un silence mais **un son
+## parfaitement audible**, +3 dB et panoramique brouillé : personne ne dirait
+## « c'est cassé », on dirait « c'est bizarre ».
+##
+## Ce contrôle existe parce que le chantier R (résolution de rendu) envisage de
+## donner au viewport racine le `world_2d` du jeu. Fait sans couper l'écoute de
+## la racine, ce montage produit exactement ce défaut-là.
+func _compter_auditeurs(am: Node) -> int:
+	var n := 0
+	if root.is_audio_listener_2d():
+		n += 1
+	for enfant in root.get_children():
+		if enfant is SubViewport and (enfant as SubViewport).is_audio_listener_2d():
+			n += 1
+	return n
 
 ## Le banc se pilote-t-il sur le clavier d'Adrien ?
 ##
