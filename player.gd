@@ -1235,10 +1235,42 @@ func die(killer: Node2D):
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.position = global_position - Vector2(100, 100)
 	lbl.z_index = 200
+
 	
 	var lbl_mat = CanvasItemMaterial.new()
 	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	lbl.material = lbl_mat
+	# DA4.4 — **le cartouche peint derrière le mot.**
+	#
+	# FATAL était un label sur le noir : le mot le plus fort du jeu, posé sur
+	# rien. Il a maintenant un support — une plaque de tôle frappée, bords rongés,
+	# l'encre a bavé.
+	#
+	# **Le mot reste du TEXTE**, dans la fonte d'enseigne, et la texture ne porte
+	# que le support : c'est ce qui laisse « FATAL — POMPE » s'allonger avec le nom
+	# de l'arme sans qu'aucune image soit à refaire. Enfant du `Label` et dessiné
+	# dessous (`show_behind_parent`), donc il suit le mot dans son envol et sa
+	# disparition sans qu'on ait à animer deux nœuds.
+	var chemin_cartouche := "res://assets/ui/cartouche_fatal.png"
+	if ResourceLoader.exists(chemin_cartouche):
+		var plaque := TextureRect.new()
+		plaque.texture = load(chemin_cartouche)
+		plaque.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		plaque.stretch_mode = TextureRect.STRETCH_SCALE
+		plaque.show_behind_parent = true
+		plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Débordant du mot : une plaque au ras du texte se lit comme un surlignage.
+		# Les proportions suivent celles du fichier (512 × 256).
+		plaque.size = Vector2(300.0, 150.0)
+		plaque.position = Vector2(-50.0, -34.0)
+		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
+		# `CARMIN` et non `ROUGE` : c'est le rouge vu à l'intensité d'une chose qui
+		# ne s'éclaire plus elle-même, et le mot en `ROUGE` doit ressortir dessus.
+		plaque.modulate = Charte.CARMIN
+		# Non éclairé, comme le mot qu'il porte : un support de texte qui
+		# s'assombrirait hors de la torche disparaîtrait au pire moment.
+		plaque.material = lbl_mat
+		lbl.add_child(plaque)
 	
 	get_parent().add_child(lbl)
 	

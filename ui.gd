@@ -112,6 +112,10 @@ const SCREEN_LOCAL_JOIN := "local_invite"
 const SCREEN_RANKED := "en_ligne_competitif"
 const SCREEN_MATCHMAKING := "recherche"
 const SCREEN_TRAINING := "entrainement"
+## ⚠️ **Ces deux-là ne sont plus des écrans, ce sont des panneaux** (DA4.18) —
+## voir `PANEL_PROFILE` et `PANEL_HISTORY`. Les constantes restent pour que
+## `_on_hub_screen_changed` et les bancs n'aient pas à deviner un identifiant
+## disparu, mais **plus aucune entrée ne pousse vers elles**.
 const SCREEN_PROFILE := "profil"
 const SCREEN_HISTORY := "historique"
 const SCREEN_CUSTOM := "personnalisation"
@@ -144,6 +148,9 @@ const PANEL_CONTROLS := "panneau_controles"
 const PANEL_DISPLAY := "panneau_affichage"
 const PANEL_EFFECTS := "panneau_effets"
 const PANEL_AUDIO := "panneau_audio"
+## DA4.18 — le profil et l'historique se regardent à droite, comme les réglages.
+const PANEL_PROFILE := "panneau_profil"
+const PANEL_HISTORY := "panneau_historique"
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -189,6 +196,10 @@ class CircularCooldown extends Control:
 ## Il suit sa cible en douceur : le déplacement du curseur devient lisible même
 ## quand deux joueurs bougent en même temps.
 class NeonFocusRing extends Panel:
+	## Côté de la torche, en pixels. Sous 24 px sa silhouette devient une tache ;
+	## au-dessus de 32 elle concurrence le libellé qu'elle désigne.
+	const TAILLE_TORCHE := 28.0
+
 	var neon: Color = Charte.ACIER
 	var target_rect: Rect2 = Rect2()
 
@@ -196,9 +207,37 @@ class NeonFocusRing extends Panel:
 	var _time: float = 0.0
 	var _snap: bool = true
 
+	## DA4.14 — **la torche, posée à gauche du cadre.**
+	##
+	## Le liseré reste : il dit *quelle zone* est sélectionnée, ce qu'une icône ne
+	## peut pas dire. La torche dit *qui* sélectionne — et c'est elle qui remplace
+	## le rectangle coloré comme signe de propriété. Les deux ne font pas le même
+	## travail, et l'item ne demandait de supprimer ni l'un ni l'autre.
+	##
+	## La texture est un **masque en niveaux de gris** : `modulate` y applique la
+	## couleur du joueur. C'est la discipline DA1.5 — l'image ne fournit que la
+	## matière, le code garde la couleur — et c'est ce qui permet à un seul fichier
+	## de servir les deux joueurs.
+	var torche: TextureRect
+
 	func _init(tint: Color = Charte.ACIER) -> void:
 		neon = tint
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var chemin := "res://assets/ui/curseur_torche.png"
+		if ResourceLoader.exists(chemin):
+			torche = TextureRect.new()
+			torche.name = "Torche"
+			torche.texture = load(chemin)
+			torche.modulate = tint
+			# ⚠️ `EXPAND_KEEP_SIZE` est le défaut et impose la taille de la texture
+			# comme taille minimale : 128 px au lieu des 28 voulus. Piège payé par
+			# DA1 le 2026-08-24, qui a posé 265 px et vu l'écran en afficher 1600.
+			torche.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			torche.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			torche.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			torche.size = Vector2(TAILLE_TORCHE, TAILLE_TORCHE)
+			add_child(torche)
 
 		_style = StyleBoxFlat.new()
 		_style.draw_center = false
@@ -224,6 +263,15 @@ class NeonFocusRing extends Panel:
 		_style.border_color = neon.lerp(Charte.HALOGENE, 0.45 * wave)
 		_style.shadow_size = int(roundf(lerpf(6.0, 16.0, wave)))
 		_style.shadow_color = Color(neon.r, neon.g, neon.b, 0.22 + 0.33 * wave)
+
+		# La torche respire avec le liseré, mais **plus discrètement** : c'est une
+		# flamme, pas un clignotant. Elle est calée sur le bord gauche du cadre,
+		# hors de lui — un signe de propriété se pose à côté de ce qu'il désigne,
+		# il ne s'y superpose pas.
+		if torche != null:
+			torche.modulate = Color(neon, 0.72 + 0.28 * wave)
+			torche.position = Vector2(-TAILLE_TORCHE - Charte.GAP_XS,
+				(size.y - TAILLE_TORCHE) * 0.5)
 
 		if _snap:
 			_snap = false
@@ -290,7 +338,18 @@ var p2_bg_hp: float = 100.0
 # DIALOGUE MODAL
 # ---------------------------------------------------------------------------
 
+## DA4.17 — la gravité d'un message, qui décide de sa teinte.
+enum Registre {
+	## Ce qui se dit sans que rien n'aille mal : un appariement, un état.
+	INFORMATION,
+	## Ce qui interrompt sans être une faute : une déconnexion, un refus.
+	ATTENTION,
+	## Ce qui a échoué et empêche de continuer.
+	FAUTE,
+}
+
 var dialog_panel: PanelContainer
+var _dialog_style: StyleBoxFlat
 var dialog_title: Label
 var dialog_message: Label
 var dialog_btn: Button
@@ -303,6 +362,12 @@ var _previous_focus: Control
 var game_over_panel: PanelContainer
 var game_over_title: Label
 var game_over_score: Label
+## DA4.7 — le bilan composé de fin de match. Partage la boîte de `game_over_score` :
+## les deux ne coexistent jamais.
+var bilan: HBoxContainer
+var bilan_p1: Label
+var bilan_p2: Label
+var bilan_serie: Label
 
 ## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
 ## un écran, un sujet.
@@ -329,6 +394,8 @@ var menu_backdrop: MenuBackdrop
 var menu_title: MenuTitle
 var menu_veil: MenuVeil
 var menu_glass: MenuGlass
+## DA4.18 — le lit d'ambiance du cadre de droite : la carte sous la torche.
+var menu_arene: MenuArene
 var pause_veil: MenuVeil
 
 ## Les deux effets de la vitrine qui RELISENT L'ÉCRAN — le voile d'objectif (M15)
@@ -514,6 +581,13 @@ var _button_to_update: Button = null
 var debug_panel: PanelContainer
 var fps_label: Label
 var net_debug_label: Label
+## DA4.16 — les valeurs de la grille de diagnostic. Toutes en registre appareil,
+## donc tabulaires : elles se remplacent quatre fois par seconde.
+var dbg_ping: Label
+var dbg_lumieres: Label
+var dbg_particules: Label
+var dbg_noeuds: Label
+var dbg_cartes: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
 
@@ -882,14 +956,35 @@ func _update_debug(_delta: float) -> void:
 		particles = gs.particle_pool.active_count()
 		cap = ParticlePool.MAX_ACTIVE
 
-	var ping := "—"
-	if NetworkManager.has_rtt:
-		ping = "%d ms" % int(round(NetworkManager.rtt_ms))
+	# **Les deux seuils du jeu, et ils ne sont pas choisis ici.** 120 images/s est
+	# la cible du banc de cadence (`bench_framerate`, « 1 % bas ≥ 120 fps ») ; 60
+	# et 120 ms sont exactement les paliers que `_update_ping_label()` emploie déjà
+	# pour le HUD. Un panneau de diagnostic qui aurait ses propres seuils dirait
+	# « ça va » pendant que le HUD dit « attention ».
+	var fps: int = Engine.get_frames_per_second()
+	fps_label.text = str(fps)
+	fps_label.add_theme_color_override("font_color",
+		_teinte_de_mesure(float(fps), 120.0, 60.0))
 
-	fps_label.text = "DEBUG | FPS %d | Ping %s | Lumières %d | Particules %d/%d | Nœuds arène %d | Cartes %d" % [
-		Engine.get_frames_per_second(), ping, _debug_light_count,
-		particles, cap, _debug_arena_nodes, MapData.list_maps().size(),
-	]
+	if NetworkManager.has_rtt:
+		var rtt: float = round(NetworkManager.rtt_ms)
+		dbg_ping.text = "%d ms" % int(rtt)
+		dbg_ping.add_theme_color_override("font_color",
+			_teinte_de_mesure(rtt, 60.0, 120.0, false))
+	else:
+		dbg_ping.text = "—"
+		dbg_ping.add_theme_color_override("font_color", COLOR_DIM)
+
+	dbg_lumieres.text = str(_debug_light_count)
+	# La saturation du bassin de particules est la seule de ces valeurs qui puisse
+	# dégrader le jeu sans qu'on le voie : elle se teinte donc, comme les images
+	# par seconde.
+	dbg_particules.text = "%d / %d" % [particles, cap]
+	dbg_particules.add_theme_color_override("font_color",
+		_teinte_de_mesure(float(particles), float(cap) * 0.6, float(cap) * 0.9, false)
+		if cap > 0 else COLOR_ACCENT)
+	dbg_noeuds.text = str(_debug_arena_nodes)
+	dbg_cartes.text = str(MapData.list_maps().size())
 	net_debug_label.text = _network_debug_line()
 	var p2_path := _p2_path_label()
 	if p2_path != "":
@@ -1476,7 +1571,12 @@ func _build_center_hud() -> Control:
 	time_label = Label.new()
 	time_label.text = "05:00"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_label.add_theme_font_size_override("font_size", T_VERDICT)
+	# DA4.2 — **le compteur le plus exposé du jeu, et le seul qui bat.** Sous dix
+	# secondes il pulse à la seconde ; une fonte non tabulaire ferait respirer sa
+	# boîte en même temps que la pulsation, et les deux mouvements se
+	# confondraient. Il reste donc à l'appareil, et `tools/test_habillage.gd`
+	# mesure ses dix chiffres pour que ça ne dépende plus de ce commentaire.
+	Charte.appareil(time_label, T_VERDICT)
 	vbox.add_child(time_label)
 
 	waiting_label = Label.new()
@@ -1489,8 +1589,38 @@ func _build_center_hud() -> Control:
 
 	return center_hud
 
+## DA4.1 — **le cadre du HUD est peint, plus tracé.**
+##
+## C'était un rectangle arrondi de 2 px avec une ombre portée : la signature
+## exacte du panneau qu'aucune main n'a dessiné. Il porte désormais une plaque de
+## matériel usée, en 9-slice de marge 32 px — coins renforcés, bord irrégulier.
+##
+## **La texture est un masque gris et `modulate_color` y met la couleur du
+## joueur** : un seul fichier sert les deux HUD, comme la torche des curseurs.
+## C'est la discipline DA1.5 — l'image ne fournit que la matière, le code garde
+## la couleur — et c'est ce qui permet à la charte de retoucher `BLEU` ou `ROUGE`
+## sans qu'aucune texture soit à refaire.
+##
+## **Le repli n'est pas décoratif** : sans le fichier, on retombe sur l'ancien
+## `StyleBoxFlat`. Un HUD sans cadre serait un HUD sans bord — c'est-à-dire deux
+## blocs de texte flottant sur l'arène — alors qu'un cadre tracé reste un cadre.
+## Règle du dépôt : câbler, taire, diagnostiquer.
 func _create_glow_panel(color: Color) -> PanelContainer:
 	var panel := PanelContainer.new()
+	var chemin := "res://assets/ui/cadre_hud.png"
+	if ResourceLoader.exists(chemin):
+		var peint := StyleBoxTexture.new()
+		peint.texture = load(chemin)
+		# 32 px de chaque côté : c'est le gabarit demandé au brief, et le centre de
+		# la texture est vérifié uniforme à 0,004 près — sans quoi l'étirement le
+		# déformerait visiblement sur un panneau de 352 × 152.
+		peint.set_texture_margin_all(32)
+		peint.modulate_color = color
+		# Le contenu ne colle pas au liseré : la marge intérieure suit la grille.
+		peint.set_content_margin_all(GAP_XS)
+		panel.add_theme_stylebox_override("panel", peint)
+		return panel
+
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Charte.SURFACE, 0.9)
 	style.set_border_width_all(2)
@@ -1637,7 +1767,10 @@ func _build_status_bar() -> void:
 	network_status_label.add_theme_constant_override("outline_size", 4)
 
 	ping_label = Label.new()
-	ping_label.add_theme_font_size_override("font_size", T_COURANT)
+	# DA4.2 — l'appareil, explicitement. Un compteur : il se réécrit à chaque
+	# relevé de RTT, au milieu d'une rangée centrée dont il déplacerait les
+	# voisins en changeant de largeur.
+	Charte.appareil(ping_label, T_COURANT)
 	ping_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	ping_label.add_theme_constant_override("outline_size", 4)
 	ping_label.hide()
@@ -1664,7 +1797,15 @@ func _build_countdown() -> void:
 	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	countdown_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	countdown_label.add_theme_font_size_override("font_size", T_DECOMPTE)
+	# DA4 — l'enseigne, et c'est le cas le plus net du jeu. Un chiffre seul qui
+	# occupe l'écran n'est pas du texte, c'est un élément graphique : la charte le
+	# dit déjà en faisant de `T_DECOMPTE` une dérivée plutôt qu'un septième cran.
+	#
+	# Aucun risque de tremblement malgré une fonte non tabulaire : le `Label` est
+	# ancré en plein cadre et centré, donc chaque chiffre est cadré sur lui-même.
+	# `3`, `2` et `1` n'ont pas à faire la même largeur — ils ne se comparent
+	# jamais, ils se succèdent au même endroit.
+	Charte.enseigne(countdown_label, T_DECOMPTE)
 	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
 	countdown_label.add_theme_color_override("font_outline_color", Charte.NOIR)
 	countdown_label.add_theme_constant_override("outline_size", 16)
@@ -1689,10 +1830,15 @@ func set_countdown(value: float) -> void:
 	_countdown_shown = n
 	countdown_label.text = str(n)
 	countdown_label.pivot_offset = countdown_label.size / 2.0
+	# DA4.13 — la courbe maison `REBOND` à la place de `TRANS_BACK`. Ce n'est pas
+	# la transition la plus proche, c'est **la** transition du projet : le même
+	# dépassement se retrouve sous chaque appui de bouton et sous chaque tuile de
+	# la galerie. C'est ce qui donne la sensation qu'une seule main a animé
+	# l'écran, et c'est tout l'objet de l'item.
 	countdown_label.scale = Vector2(1.7, 1.7)
 	var tween := create_tween()
-	tween.tween_property(countdown_label, "scale", Vector2.ONE, Charte.D_LONG) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Charte.animer(tween, countdown_label, "scale", Vector2(1.7, 1.7), Vector2.ONE,
+		Charte.D_LONG, Charte.Courbe.REBOND)
 
 ## L'attente d'un adversaire est le moment où l'hôte a besoin de quoi l'inviter :
 ## son code de salon sur Internet, son adresse IP en réseau local.
@@ -1734,29 +1880,53 @@ func _build_debug_panel() -> void:
 	debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	debug_panel.hide()
 
+	# DA4.16 — **le panneau de diagnostic passe à la couleur de l'instrument.**
+	#
+	# Il était bordé d'`AMBRE`, et `AMBRE` veut dire *ce qui appelle* : c'est la
+	# couleur du feu, de la mise en garde, du chrono de dernière minute. Un cadre
+	# de diagnostic ouvert en permanence pendant qu'on joue n'appelle rien — il
+	# se consulte. Il emprunte donc `LINE` et `ACIER`, la couleur que l'interface
+	# s'est donnée en DA1.4 précisément pour cesser d'emprunter celles des autres.
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Charte.NOIR, 0.75)
 	style.set_border_width_all(1)
-	style.border_color = COLOR_GOLD
+	style.border_color = COLOR_LINE
 	style.set_corner_radius_all(6)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
+	style.content_margin_left = GAP_S
+	style.content_margin_right = GAP_S
+	style.content_margin_top = GAP_XS
+	style.content_margin_bottom = GAP_XS
 	debug_panel.add_theme_stylebox_override("panel", style)
 
 	var debug_vbox := VBoxContainer.new()
 	debug_vbox.add_theme_constant_override("separation", GAP_XXS)
 
-	fps_label = Label.new()
-	fps_label.text = "DEBUG"
-	fps_label.add_theme_font_size_override("font_size", T_MENTION)
-	fps_label.add_theme_color_override("font_color", COLOR_GOLD)
-	debug_vbox.add_child(fps_label)
+	# **Une grille de deux colonnes, et non une ligne à barres verticales.**
+	# `DEBUG | FPS 120 | Ping 42 ms | Lumières 8 | …` à 12 px dans le noir n'est
+	# pas seulement laid : il oblige à relire toute la ligne pour trouver une
+	# valeur, à l'instant précis où l'on veut vérifier une seule chose. Les
+	# libellés à gauche en `DIM`, les valeurs à droite alignées et tabulaires : on
+	# lit une colonne, pas une phrase.
+	var grille := GridContainer.new()
+	grille.columns = 2
+	grille.add_theme_constant_override("h_separation", GAP_S)
+	grille.add_theme_constant_override("v_separation", 2)
+	debug_vbox.add_child(grille)
 
+	fps_label = _make_ligne_debug(grille, "IMAGES/S")
+	dbg_ping = _make_ligne_debug(grille, "PING")
+	dbg_lumieres = _make_ligne_debug(grille, "LUMIÈRES")
+	dbg_particules = _make_ligne_debug(grille, "PARTICULES")
+	dbg_noeuds = _make_ligne_debug(grille, "NŒUDS ARÈNE")
+	dbg_cartes = _make_ligne_debug(grille, "CARTES")
+
+	# La ligne réseau garde toute la largeur : elle est faite de phrases courtes
+	# (transport, lien direct ou relayé, NAT) et non de nombres à aligner.
 	net_debug_label = Label.new()
-	net_debug_label.add_theme_font_size_override("font_size", T_MENTION)
-	net_debug_label.add_theme_color_override("font_color", COLOR_GOLD)
+	net_debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	net_debug_label.custom_minimum_size = Vector2(320, 0)
+	Charte.appareil(net_debug_label, T_MENTION)
+	net_debug_label.add_theme_color_override("font_color", COLOR_DIM)
 	debug_vbox.add_child(net_debug_label)
 
 	debug_panel.add_child(debug_vbox)
@@ -1775,20 +1945,61 @@ func _build_debug_panel() -> void:
 	ephemeral_banner.visible = NetworkManager.is_ephemeral_identity()
 	add_child(ephemeral_banner)
 
+## Une ligne du panneau F3 : le libellé à gauche, la valeur à droite.
+##
+## Rend la valeur, seule chose que l'appelant ait à tenir. Le libellé est posé
+## une fois pour toutes et ne change jamais — un diagnostic dont les intitulés
+## bougeraient serait à relire à chaque coup d'œil.
+func _make_ligne_debug(grille: GridContainer, libelle: String) -> Label:
+	var l := Label.new()
+	l.text = libelle
+	Charte.appareil(l, T_MENTION)
+	l.add_theme_color_override("font_color", COLOR_DIM)
+	grille.add_child(l)
+
+	var v := Label.new()
+	v.text = "—"
+	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Appareil, donc tabulaire : ces valeurs se remplacent quatre fois par seconde
+	# et une largeur qui bouge ferait respirer toute la grille.
+	Charte.appareil(v, T_MENTION)
+	v.add_theme_color_override("font_color", COLOR_ACCENT)
+	grille.add_child(v)
+	return v
+
+
+## La teinte d'une mesure, selon la triade d'instrument.
+##
+## **Le vert n'entre jamais dans l'arène — mais le panneau F3 EST de
+## l'interface**, et la règle 3 de la charte ne s'applique qu'au monde. C'est
+## même le lieu le plus légitime de la triade : un tableau de bord existe pour
+## dire d'un coup d'œil si la valeur va, alerte, ou faute.
+func _teinte_de_mesure(valeur: float, bon: float, moyen: float,
+		plus_haut_vaut_mieux: bool = true) -> Color:
+	var ok := valeur >= bon if plus_haut_vaut_mieux else valeur <= bon
+	if ok:
+		return Charte.ETAT_OK
+	var passable := valeur >= moyen if plus_haut_vaut_mieux else valeur <= moyen
+	return Charte.ETAT_ATTENTION if passable else Charte.ETAT_FAUTE
+
+
 func _build_dialog() -> void:
 	dialog_panel = PanelContainer.new()
 	dialog_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE, 0.97)
-	style.set_border_width_all(2)
-	style.border_color = COLOR_GOLD
-	style.set_corner_radius_all(12)
-	style.content_margin_left = GAP_L
-	style.content_margin_right = GAP_L
-	style.content_margin_top = GAP_M
-	style.content_margin_bottom = GAP_M
-	dialog_panel.add_theme_stylebox_override("panel", style)
+	# DA4.17 — **le cadre porte le registre du message.** Sa teinte est posée par
+	# `show_dialog_message()`, pas ici : elle change à chaque ouverture.
+	_dialog_style = StyleBoxFlat.new()
+	_dialog_style.bg_color = Color(Charte.SURFACE, 0.97)
+	_dialog_style.set_border_width_all(2)
+	_dialog_style.border_color = COLOR_ACCENT
+	_dialog_style.set_corner_radius_all(12)
+	_dialog_style.content_margin_left = GAP_L
+	_dialog_style.content_margin_right = GAP_L
+	_dialog_style.content_margin_top = GAP_M
+	_dialog_style.content_margin_bottom = GAP_M
+	dialog_panel.add_theme_stylebox_override("panel", _dialog_style)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", GAP_S)
@@ -1796,16 +2007,30 @@ func _build_dialog() -> void:
 
 	dialog_title = Label.new()
 	dialog_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_title.add_theme_font_size_override("font_size", T_TITRE)
-	dialog_title.add_theme_color_override("font_color", COLOR_GOLD)
+	# L'enseigne : « DÉCONNEXION », « ARÈNE REFUSÉE » sont des mots qu'on assène
+	# une fois, jamais des valeurs qui se remplacent. Même registre que les
+	# verdicts, et pour la même raison.
+	Charte.enseigne(dialog_title, T_TITRE)
 	vbox.add_child(dialog_title)
 
 	dialog_message = Label.new()
 	dialog_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	dialog_message.add_theme_font_size_override("font_size", T_COURANT)
+	dialog_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# ⚠️ **Le corps du message reste TOUJOURS en `HALOGENE`, quel que soit le
+	# registre.** La charte l'écrit noir sur blanc à propos de `ROUGE` : son
+	# contraste sur `SURFACE` vaut 4,9:1 — « suffisant pour un libellé de bouton ou
+	# un verdict en gros, insuffisant pour une phrase ». Teinter le paragraphe en
+	# rouge rendrait l'explication plus dure à lire au moment précis où elle est le
+	# plus utile. Seuls le titre et le filet portent la couleur.
+	dialog_message.custom_minimum_size = Vector2(520, 0)
+	Charte.appareil(dialog_message, T_COURANT)
+	dialog_message.add_theme_color_override("font_color", COLOR_LUMIERE)
 	vbox.add_child(dialog_message)
 
-	dialog_btn = _make_button("OK", COLOR_GOLD, true)
+	# **Le bouton ne prend jamais la couleur du registre**, et c'est délibéré : il
+	# ne détruit rien, il ferme. Un « OK » rouge se lit comme une action
+	# dangereuse alors qu'il n'y a plus rien à décider.
+	dialog_btn = _make_button("OK", COLOR_ACCENT, true)
 	dialog_btn.custom_minimum_size = Vector2(160, 48)
 	dialog_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	dialog_btn.pressed.connect(_on_dialog_closed)
@@ -1840,7 +2065,11 @@ func _build_killcam() -> void:
 	killcam_container.add_child(killcam_label)
 
 	killcam_timecode = Label.new()
-	killcam_timecode.add_theme_font_size_override("font_size", T_TITRE)
+	# DA4.2 — l'appareil. Le timecode défile image par image ; il est en outre
+	# ancré en HAUT À DROITE, donc une largeur qui varie décolle le texte du bord
+	# au lieu de le laisser aligné. C'est le seul compteur du jeu où le
+	# tremblement se verrait comme un défaut de marge plutôt que de chiffre.
+	Charte.appareil(killcam_timecode, T_TITRE)
 	killcam_timecode.add_theme_color_override("font_color", Color(Charte.HALOGENE, 0.8))
 	killcam_timecode.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	killcam_timecode.offset_right = -40
@@ -1852,7 +2081,12 @@ func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
 	label.text = "KILLCAM"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", T_VERDICT)
+	# DA4 — l'enseigne. Un mot fixe, écrit une fois, jamais remplacé : le cas
+	# exact que la fonte d'affichage existe pour porter. Le timecode juste à côté
+	# reste à l'appareil, lui, parce qu'il défile — les deux registres se voient
+	# donc côte à côte à l'écran, ce qui est la meilleure démonstration de la
+	# frontière.
+	Charte.enseigne(label, T_VERDICT)
 	label.add_theme_color_override("font_color", tint)
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return label
@@ -2121,9 +2355,11 @@ func _build_hub_screens() -> void:
 		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
 		COLOR_GOLD, "top10"))
 	classe.add_child(hub.make_entry("INFORMATIONS PROFIL",
-		"Identité, code de récupération, pseudo.", SCREEN_PROFILE))
+		"Identité, code de récupération, pseudo — affichés à droite.",
+		"", COLOR_GOLD, "", "", false, PANEL_PROFILE))
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
-		"Vos derniers matchs, et le bilan de la soirée en cours.", SCREEN_HISTORY))
+		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
+		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
 	hub.add_back_entry(SCREEN_RANKED)
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
@@ -2189,10 +2425,61 @@ func _build_hub_screens() -> void:
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
 	hub.add_back_entry(SCREEN_UPDATE)
 
-	_attach_screen(SCREEN_PROFILE, "Profil", ScreenProfile.new())
-	_attach_screen(SCREEN_HISTORY, "Historique", ScreenHistory.new())
-	hub.add_back_entry(SCREEN_HISTORY)
-	hub.add_back_entry(SCREEN_PROFILE)
+	# DA4.18 — **le profil et l'historique descendent d'un étage, comme les effets
+	# et l'audio avant eux.** Demande d'Adrien : « mon profil doit s'afficher à
+	# droite, comme l'historique, comme les scores, comme le top 10 ».
+	#
+	# Ils étaient les seuls écrans de méta à REMPLACER la colonne de gauche
+	# pendant que les quatre écrans de réglages remplissaient le cadre. Rien ne
+	# justifiait la différence : consulter son rang ou son historique est
+	# exactement le geste que le cadre de droite existe pour servir — « ceci se
+	# regarde, sans descendre d'un cran ».
+	#
+	# Aucun des deux n'a été réécrit, et c'est la démonstration du contrat
+	# `HubScreen` : un écran n'a pas le droit de connaître sa position dans
+	# l'arborescence, précisément pour qu'on puisse l'en changer.
+	_attach_panel(PANEL_PROFILE, ScreenProfile.new())
+	_attach_panel(PANEL_HISTORY, ScreenHistory.new())
+
+	# DA4.18 — le lit d'ambiance. **C'est le panneau PAR DÉFAUT de l'accueil et
+	# des écrans qui n'en avaient aucun**, donc le cadre n'est plus jamais noir.
+	#
+	# Il est posé en dernier : `register_panel` refuse une clé déjà prise, et un
+	# panneau ajouté après coup se placerait au-dessus des autres dans la pile —
+	# ici sans conséquence puisqu'un seul est visible à la fois, mais l'ordre
+	# reste celui de la déclaration et il vaut mieux qu'il soit lisible.
+	# DA4.18 — **le lit de fond, et il n'est PAS un panneau.**
+	#
+	# Premier jet : enregistré comme panneau parmi les autres, et posé en défaut
+	# des six écrans qui n'en avaient aucun. Ça marchait, et c'était faux — vu à la
+	# planche : le panneau n'obtenait que ~330 px dans un cadre de 545, parce que
+	# `_detail_host` aligne ses enfants en haut et n'en étire aucun. Sur un viewport
+	# large et court avec une carte carrée, le cadrage ne montrait plus qu'une
+	# **tranche de 38 % de la carte**.
+	#
+	# **Un lit d'ambiance n'est pas un panneau, c'est ce qu'on voit quand aucun
+	# panneau ne parle.** Il vit donc dans le cadre lui-même, DERRIÈRE la pile de
+	# panneaux, et il en épouse toute la surface. Aucun conteneur ne le contraint
+	# plus, et il n'occupe plus une case dans une liste où il n'avait rien à faire.
+	menu_arene = MenuArene.new()
+	var cadre_droit := hub.right_panel()
+	cadre_droit.add_child(menu_arene)
+	# Derrière `_detail_host` : un décor qui passerait devant le contenu serait un
+	# voile, pas un fond.
+	cadre_droit.move_child(menu_arene, 0)
+	# La carte peut changer pendant qu'on est dans les menus — c'est même tout
+	# l'objet de la galerie. Sans ce branchement, le cadre continuerait de montrer
+	# l'arène précédente jusqu'à la prochaine navigation.
+	MapData.map_selected.connect(func(_id: String) -> void:
+		if menu_arene != null:
+			menu_arene.rafraichir())
+	# **Il s'efface quand un panneau parle.** Un tableau d'historique lu par-dessus
+	# une arène éclairée serait illisible ; le même fond à 18 % reste une présence
+	# sans devenir un bruit. C'est le panneau montré qui décide, pas l'écran : deux
+	# entrées du même écran peuvent en montrer un et pas l'autre.
+	hub.panel_changed.connect(func(cle: String) -> void:
+		if menu_arene != null:
+			menu_arene.set_retrait(cle != ""))
 
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
 	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à
@@ -2522,6 +2809,8 @@ func _apply_menu_effects() -> void:
 	if menu_backdrop != null:
 		menu_backdrop.set_brume(_intensite_vitrine("brume_menu"))
 		menu_backdrop.set_bruit(_intensite_vitrine("bruit_de_l_oeil"))
+	if menu_arene != null:
+		menu_arene.set_intensite(_intensite_vitrine("arene_au_repos"))
 	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
 	# panneaux, et son intensité est donc une simple valeur retenue ici.
 	_m10 = _intensite_vitrine("extinction_menu")
@@ -2792,10 +3081,15 @@ func _on_hub_action(action: String) -> void:
 		"entrainement":
 			get_tree().paused = false
 			training_requested.emit()
+		# DA4.18 — `montrer_texte` et non `show_detail` : ces deux entrées
+		# promettent le cadre de droite dans leur propre libellé (« affichés à
+		# droite », « sans quitter cet écran »), et `show_detail` envoie à
+		# l'en-tête. La promesse était donc affichée au joueur et contredite à
+		# chaque clic.
 		"mon_rang":
-			hub.show_detail("Mon rang", _my_rank_text())
+			hub.montrer_texte("MON RANG", _my_rank_text())
 		"top10":
-			hub.show_detail("Top 10", _top_ten_text())
+			hub.montrer_texte("TOP 10", _top_ten_text())
 
 ## Ouvrir ou rejoindre un salon met fin à la recherche automatique.
 ##
@@ -2836,8 +3130,11 @@ func _start_search() -> void:
 
 	var core := get_node_or_null(^"/root/Matchmaker")
 	if core == null or not core.has_method("start_search"):
-		show_dialog_message("Appariement",
-			"L'appariement automatique n'est pas disponible sur cette installation.")
+		# Une installation sans Epic n'est pas en faute : le jeu se joue
+		# normalement, seul l'appariement manque. `ATTENTION` et non `FAUTE`.
+		show_dialog_message("Appariement indisponible",
+			"L'appariement automatique n'est pas disponible sur cette installation.",
+			Registre.ATTENTION)
 		return
 
 	# Un joueur non classé n'est pas estimé : le cœur ne le bride sur aucune
@@ -2853,8 +3150,9 @@ func _start_search() -> void:
 		categorie = int(RankedIdentity.rank_tier_index)
 	if not core.start_search(1 if classe else 0, note, false, categorie):
 		var raison := String(core.last_error) if core.get("last_error") != null else ""
-		show_dialog_message("Appariement",
-			raison if raison != "" else "La recherche n'a pas pu démarrer.")
+		show_dialog_message("Recherche impossible",
+			raison if raison != "" else "La recherche n'a pas pu démarrer.",
+			Registre.FAUTE)
 
 ## Le classement, en texte, pour le panneau de droite. Aucun chiffre inventé : un
 ## joueur sans ligne au classement n'a pas de rang, et on le dit.
@@ -2983,6 +3281,13 @@ func _on_hub_detail_changed(_title: String, text: String) -> void:
 		return
 	var propre := text.replace("[b]", "").replace("[/b]", "").replace("\n\n", "  ")
 	game_over_score.text = propre
+	# DA4.7 — **le bilan cède à toute description**, et la règle est dans ce sens
+	# et pas dans l'autre. Les deux partagent la boîte ; ils ne peuvent donc pas
+	# s'afficher ensemble. Le bilan est l'instantané du match qui vient de finir,
+	# la description répond à un geste que le joueur fait **maintenant** — et ce
+	# qu'on demande passe toujours avant ce qu'on nous montre.
+	if propre != "":
+		effacer_bilan()
 
 func _on_hub_screen_changed(id: String) -> void:
 	if _screens.has(id):
@@ -3161,7 +3466,17 @@ func _build_menu_header() -> Control:
 	game_over_title = Label.new()
 	_poser_titre("CANDELA 2D")
 	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_over_title.add_theme_font_size_override("font_size", T_ENSEIGNE)
+	# DA4 — l'enseigne, et elle referme une incohérence entre l'arène et
+	# l'interface. `player.gd` écrit déjà FATAL en fonte d'affichage à
+	# `T_ENSEIGNE` ; ce nœud-ci écrivait VICTOIRE et DÉFAITE en fonte
+	# d'interface. **Les deux mots tombent à quelques secondes d'intervalle sur le
+	# même temps fort**, l'un dans l'arène, l'autre sur l'écran de fin — et ils ne
+	# se ressemblaient pas.
+	#
+	# Rien ne tremble ici : les cinq textes de ce `Label` sont des mots, pas des
+	# compteurs, et le seul qui contient un chiffre (« CANDELA 2D ») est de toute
+	# façon recouvert par l'enseigne dessinée de DA1.6.
+	Charte.enseigne(game_over_title, T_ENSEIGNE)
 	game_over_title.add_theme_color_override("font_color", COLOR_GOLD)
 	header.add_child(game_over_title)
 
@@ -3233,9 +3548,123 @@ func _build_menu_header() -> Control:
 	desc_box.custom_minimum_size = Vector2(0, 60)
 	desc_box.clip_contents = true
 	desc_box.add_child(game_over_score)
+	desc_box.add_child(_build_bilan())
 	header.add_child(desc_box)
 
 	return header
+
+
+## DA4.7 — le bilan de fin de match, composé au lieu d'être empilé.
+##
+## **Ce que la fin de match affichait : une seule ligne grise.**
+## `SESSION : 2 - 1   ·   3 D'AFFILÉE`, à 19 px, en `DIM`, écrite par
+## `game_state.gd` **dans le label des descriptions d'entrées**. Trois
+## informations de nature différente — un score qui se compare, une série qui
+## s'exalte, un mode — séparées par des points médians et toutes du même poids.
+## C'est la définition d'un empilement : rien n'y a de rang, donc l'œil n'a pas
+## d'entrée.
+##
+## Composé, chaque chose reprend son registre :
+##
+## - **le score de session** est un COMPTEUR — appareil, tabulaire, et les deux
+##   nombres sont teintés de la couleur de leur joueur, ce qui les rend lisibles
+##   sans lire le libellé ;
+## - **la série** est un CRI — enseigne, ambre, et elle n'apparaît que
+##   lorsqu'elle existe. Une ligne « série : aucune » serait une ligne qui
+##   occupe la place d'une ligne qui aurait quelque chose à dire.
+##
+## **Il vit dans la même boîte que la description, et c'est délibéré.** Les deux
+## ne coexistent jamais : le bilan appartient à l'écran de fin, la description au
+## survol d'une entrée. Partager la boîte garantit qu'ils ne se poussent pas —
+## et le défaut inverse existait déjà, `show_lobby_again()` devant effacer à la
+## main un score qui restait affiché sous un salon attendant le match suivant.
+func _build_bilan() -> Control:
+	bilan = HBoxContainer.new()
+	bilan.name = "Bilan"
+	bilan.alignment = BoxContainer.ALIGNMENT_CENTER
+	bilan.add_theme_constant_override("separation", GAP_L)
+	bilan.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bilan.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bilan.hide()
+
+	var colonne := VBoxContainer.new()
+	colonne.alignment = BoxContainer.ALIGNMENT_CENTER
+	colonne.add_theme_constant_override("separation", 0)
+	bilan.add_child(colonne)
+
+	var legende := Label.new()
+	legende.text = "SESSION"
+	legende.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(legende, T_MENTION)
+	legende.add_theme_color_override("font_color", COLOR_DIM)
+	colonne.add_child(legende)
+
+	# Le score en trois `Label` et non en un seul : c'est le seul moyen de teinter
+	# chaque nombre de la couleur de son joueur. Une chaîne unique obligerait au
+	# bbcode, donc à un `RichTextLabel`, donc à perdre l'alignement tabulaire que
+	# `T_TITRE` en appareil garantit ici.
+	var score := HBoxContainer.new()
+	score.alignment = BoxContainer.ALIGNMENT_CENTER
+	score.add_theme_constant_override("separation", GAP_XXS)
+	colonne.add_child(score)
+
+	bilan_p1 = _make_chiffre_de_bilan(COLOR_P1)
+	score.add_child(bilan_p1)
+	var tiret := Label.new()
+	tiret.text = "–"
+	Charte.appareil(tiret, T_TITRE)
+	tiret.add_theme_color_override("font_color", COLOR_LINE)
+	score.add_child(tiret)
+	bilan_p2 = _make_chiffre_de_bilan(COLOR_P2)
+	score.add_child(bilan_p2)
+
+	bilan_serie = Label.new()
+	bilan_serie.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# L'enseigne : une série est une chose qu'on annonce, pas une valeur qu'on
+	# relève. Elle ne se remplace jamais sur place — elle apparaît, elle s'en va —
+	# donc la fonte d'affichage n'y pose aucun risque de tremblement.
+	Charte.enseigne(bilan_serie, T_TITRE)
+	bilan_serie.add_theme_color_override("font_color", COLOR_GOLD)
+	bilan_serie.hide()
+	bilan.add_child(bilan_serie)
+
+	return bilan
+
+
+func _make_chiffre_de_bilan(teinte: Color) -> Label:
+	var l := Label.new()
+	l.text = "0"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Appareil : ces deux nombres se remplacent sur place à chaque manche.
+	Charte.appareil(l, T_TITRE)
+	l.add_theme_color_override("font_color", teinte)
+	return l
+
+
+## Pose le bilan de fin de match. Appelée par `game_state.gd`, qui seul connaît
+## le score de session et la série.
+##
+## `serie` vide = pas de série en cours, et la ligne disparaît **entièrement**
+## plutôt que d'afficher une absence.
+func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "") -> void:
+	if bilan == null:
+		return
+	bilan_p1.text = str(p1_wins)
+	bilan_p2.text = str(p2_wins)
+	var mot := serie.strip_edges()
+	bilan_serie.text = mot.to_upper()
+	bilan_serie.visible = mot != ""
+	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
+	game_over_score.text = ""
+	bilan.show()
+
+
+## Rend la boîte à la description d'entrée. Sans cela, le bilan du match écoulé
+## resterait sous un salon qui attend le suivant — défaut déjà corrigé une fois
+## sur `game_over_score`, et qui se serait rouvert sur le bloc composé.
+func effacer_bilan() -> void:
+	if bilan != null:
+		bilan.hide()
 
 ## Bouton générique du menu. `primary` remplit le fond avec la teinte donnée.
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
@@ -3356,7 +3785,11 @@ func _build_map_card() -> Control:
 	map_card_thumb.custom_minimum_size = Vector2(80, 80)
 	map_card_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_card_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	map_card_thumb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# **Plus de `NEAREST` ici non plus.** DA5.6 est tranchée — « filtrage linéaire
+	# et mipmaps, aucune texture en `nearest` » — et la vignette de 80 px l'était
+	# pour la même raison que celle de la galerie : elle était agrandie. Le remède
+	# est le même, et il est celui que la décision indiquait : rendre à la densité
+	# de texels de l'écran plutôt que contourner le filtrage.
 	map_card_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(map_card_thumb)
 
@@ -3407,7 +3840,10 @@ func _refresh_map_card() -> void:
 	map_card_meta.text = "%d×%d  ·  %d murs  ·  %s" % [
 		grid.x, grid.y, int(entry["wall_count"]), origin,
 	]
-	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 80)
+	# 160 et non 80 : la vignette occupe 80 points, donc 160 pixels sur un écran
+	# HiDPI. Rendre à 80 revenait à l'agrandir d'un facteur deux — et c'est cet
+	# agrandissement, pas le filtrage, qui la rendait floue.
+	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 160)
 
 ## Construit les pièces du salon, sans les rattacher : ce sont les écrans du hub
 ## qui décident où elles s'affichent.
@@ -4709,6 +5145,7 @@ func rouvrir_le_salon() -> void:
 	# Cette ligne porte la description de l'entrée survolée : un score de match
 	# terminé y resterait affiché sous un salon qui attend le suivant.
 	game_over_score.text = ""
+	effacer_bilan()
 
 	# Le bloc salon se remet en accord avec l'état réel du lien — c'est lui qui
 	# grise ou dégrise « PRÊT » selon qu'un second joueur est là.
@@ -4933,33 +5370,43 @@ func signaler_adversaire_pret() -> void:
 ## Sur `position` et `modulate` du seul libellé de score : aucune des trois
 ## propriétés déjà prises sur les entrées de relance n'est touchée.
 func _annoncer_score(winner_id: int) -> void:
-	if game_over_score == null:
+	# ⚠️ **DA4.7 — l'annonce porte désormais sur le BILAN, et il fallait la
+	# déplacer, pas la laisser.** Le score de session a quitté `game_over_score`
+	# pour le bloc composé ; l'animation serait restée branchée sur un `Label`
+	# vide et invisible. Elle aurait continué de tourner, sans erreur, sans rien
+	# animer — V3.6 se serait éteinte en silence, et c'est précisément la forme
+	# de panne que ce dépôt paie le plus souvent.
+	if bilan == null:
 		return
-	# Tuer la précédente AVANT de poser la nouvelle valeur : sans ça, l'ancienne
-	# continue de tirer `modulate` vers le blanc et écrase la teinte qu'on vient
-	# d'écrire. Défaut trouvé par la suite, pas à la lecture.
-	_arreter_annonce_score()
 	var teinte := COLOR_DIM
 	if winner_id == 0:
 		teinte = COLOR_P1
 	elif winner_id == 1:
 		teinte = COLOR_P2
-	var repos := game_over_score.position
-	game_over_score.position = repos + Vector2(0, 10)
-	game_over_score.modulate = teinte
+	# Tuer la précédente AVANT de poser la nouvelle valeur : sans ça, l'ancienne
+	# continue de tirer `modulate` vers le blanc et écrase la teinte qu'on vient
+	# d'écrire. Défaut trouvé par la suite, pas à la lecture.
+	_arreter_annonce_score()
+	var repos := bilan.position
+	bilan.position = repos + Vector2(0, 10)
+	bilan.modulate = teinte
 	_annonce_score = create_tween().set_parallel()
-	_annonce_score.tween_property(game_over_score, "position", repos, 0.45) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_annonce_score.tween_property(game_over_score, "modulate", Color.WHITE, 0.9) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# DA4.13 — deux courbes maison, et **deux durées de l'échelle** au lieu de
+	# 0,45 et 0,9 s posés à la main. Le mouvement retombe en `SORTIE` — c'est ce
+	# qui s'en va —, la teinte s'éteint plus lentement : le score bouge une fois,
+	# et sa couleur met deux fois plus longtemps à dire qui vient de marquer.
+	Charte.animer(_annonce_score, bilan, "position", bilan.position, repos,
+		Charte.D_LONG, Charte.Courbe.SORTIE)
+	Charte.animer(_annonce_score, bilan, "modulate", teinte, Color.WHITE,
+		Charte.D_LONG * 2.0, Charte.Courbe.SORTIE)
 
 ## Coupe l'annonce en cours et rend au libellé sa teinte de repos.
 func _arreter_annonce_score() -> void:
 	if _annonce_score != null and _annonce_score.is_valid():
 		_annonce_score.kill()
 	_annonce_score = null
-	if game_over_score != null:
-		game_over_score.modulate = Color.WHITE
+	if bilan != null:
+		bilan.modulate = Color.WHITE
 
 func hide_game_over() -> void:
 	_is_main_menu = false
@@ -5012,8 +5459,28 @@ func set_split_screen_visible(is_visible: bool) -> void:
 	center_line.visible = is_visible
 
 ## [UI] Affiche une boîte de dialogue modale au centre de l'écran.
-func show_dialog_message(title: String, message: String) -> void:
-	dialog_title.text = title
+##
+## DA4.17 — **le registre décide de la teinte du titre et du filet.**
+##
+## Les textes de ce jeu étaient déjà humains : « Impossible de lire l'arène de
+## l'hôte… la cause la plus courante est un écart de version entre les deux
+## jeux » explique et propose un remède. Ce qui manquait n'était pas la langue,
+## c'était que **tout se ressemblait** : « Déconnexion », « Appariement » et
+## « Erreur » sortaient dans le même or, le même cadre, le même bouton. Le
+## joueur ne pouvait pas savoir avant de lire s'il venait de perdre sa partie ou
+## de recevoir une information.
+##
+## La triade d'instrument le dit en une teinte, avant la première syllabe.
+func show_dialog_message(title: String, message: String,
+		registre: Registre = Registre.INFORMATION) -> void:
+	dialog_title.text = title.to_upper()
+	var teinte := COLOR_ACCENT
+	match registre:
+		Registre.ATTENTION: teinte = Charte.ETAT_ATTENTION
+		Registre.FAUTE: teinte = Charte.ETAT_FAUTE
+	dialog_title.add_theme_color_override("font_color", teinte)
+	if _dialog_style != null:
+		_dialog_style.border_color = teinte
 	dialog_message.text = message
 	dialog_panel.show()
 	_previous_focus = p1_focus

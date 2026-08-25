@@ -52,11 +52,42 @@ func build(body: VBoxContainer) -> void:
 	filet.custom_minimum_size = Vector2(0, 1)
 	body.add_child(filet)
 
+	# DA4.12 — l'état vide est illustré. Une phrase seule au milieu d'un grand vide
+	# se lit comme un écran qui a échoué à charger ; sous une image, elle se lit
+	# comme une réponse — *il n'y a rien, et c'est normal.*
+	#
+	# ⚠️ **`_empty` reste un `Label` et garde son nom**, contrairement à la galerie
+	# où j'ai transformé la variable en conteneur. La raison est mécanique : trois
+	# endroits de ce fichier écrivent `_empty.text` et `_empty.visible`, et un banc
+	# les lit. Envelopper la variable aurait demandé de tous les reprendre pour un
+	# gain nul — c'est le conteneur qui porte la visibilité, et le `Label` reste ce
+	# qu'il était.
+	var boite_vide := VBoxContainer.new()
+	boite_vide.alignment = BoxContainer.ALIGNMENT_CENTER
+	boite_vide.add_theme_constant_override("separation", MenuTheme.GAP_S)
+	body.add_child(boite_vide)
+
+	var chemin_vide := "res://assets/ui/vide_historique.png"
+	if ResourceLoader.exists(chemin_vide):
+		var dessin := TextureRect.new()
+		dessin.texture = load(chemin_vide)
+		# Masque gris teinté par le code : l'image ne fournit que la matière.
+		dessin.modulate = MenuTheme.LINE
+		dessin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		dessin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		dessin.custom_minimum_size = Vector2(0, 128)
+		boite_vide.add_child(dessin)
+
 	_empty = Label.new()
-	_empty.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(_empty, MenuTheme.T_COURANT)
 	_empty.add_theme_color_override("font_color", MenuTheme.DIM)
 	_empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_child(_empty)
+	boite_vide.add_child(_empty)
+	# La visibilité du groupe suit celle du libellé : les trois sites qui écrivent
+	# `_empty.visible` continuent de fonctionner, et l'illustration les suit.
+	_empty.visibility_changed.connect(func() -> void:
+		boite_vide.visible = _empty.visible)
 
 	for i in SHOWN:
 		_rows.append(_build_row(body, i))

@@ -374,6 +374,191 @@ avec Adrien ; ça ne se glisse pas dans un lot de confort.
 contactée pendant le lot ; le delta lui a été transmis par `SendMessage`, et le
 hash suivra.
 
+
+### 2026-08-25 — session « brouillage » : un modèle, un banc, et RIEN de branché
+
+**Demande d'Adrien : que l'éblouissement rende plus difficile de *viser* celui
+qui éblouit — qu'il brouille sa position.** Le constat qui la motive est exact :
+l'éblouissement coûte la vitesse et la vivacité de visée, donc le **contrôle**,
+et ne coûte rien à l'**information**. La silhouette de celui qui braque sa torche
+reste aussi nette et aussi bien placée qu'avant.
+
+**Travail fait dans un worktree** (`.claude/worktrees/brouillage-eblouissement`,
+branche `worktree-brouillage-eblouissement`), **jamais dans l'arbre principal** —
+`player.gd`, `game_state.gd` et `ui.gd` y sont modifiés par d'autres sessions au
+moment où j'écris.
+
+**⚠️ Un `*.gdshader` créé — `brouillage_flou.gdshader`.** Le glob réserve les
+shaders au domaine « game feel » ; la frontière posée le 2026-08-18 par la
+session « menus » dit que `menu_*.gdshader` lui appartient et que tout autre
+`*.gdshader` reste au game feel. Je suis donc **en infraction avec la lettre**,
+et je le dis plutôt que de l'espérer discret. Trois éléments : c'est un fichier
+**créé**, pas modifié (la fusion mesurée le 2026-08-18 sur les cinq
+`menu_*.gdshader` n'avait signalé aucun conflit) ; il porte un préfixe de
+chantier, comme la frontière l'a établi ; et **aucun fichier de jeu ne le
+charge** — seul le banc le lit. Si la session « game feel » préfère une autre
+règle, qu'elle la pose ici : je m'y tiendrai.
+
+**Quatre fichiers NEUFS, zéro fichier de production touché :**
+
+- `brouillage.gd` (racine) — le modèle, sans dépendance, comme `vision.gd` et
+  `eblouissement.gd` et pour la même raison ;
+- `tools/banc_brouillage.gd` + `.tscn` — le banc interactif ;
+- `tools/test_brouillage.gd` — la suite, **ajoutée à `run_suites.sh`** (seule
+  ligne modifiée dans un fichier existant, hors `docs/`).
+
+**Je ne tiens plus rien.** Aucun fichier n'est réservé par cette session.
+
+**À la session « game feel », qui tient les fichiers concernés :** le jour où
+Adrien tranche un mode, le branchement touche **vos** fichiers — `player.gd` pour
+le rendu de `visual_enemy`, `ui.gd` pour le voile, `game_state.gd` pour
+l'arbitrage hôte. Je ne l'ai pas fait, et pas seulement par courtoisie de
+domaine : brancher un mode « pour voir » reviendrait à décider à la place
+d'Adrien. `brouillage.gd` n'a donc **aucun lecteur en production**, et c'est
+délibéré.
+
+**Trois choses relevées en construisant, qui vous concernent même sans ce
+chantier :**
+
+1. **`player_enemy_light.gdshader` plafonne `LIGHT` à `COLOR.rgb`.** Éclaircir la
+   couleur d'une silhouette ennemie **relève son plafond** : elle BRILLE au lieu
+   de s'estomper. Un réglage entier a été écrit puis retiré au premier rendu.
+   À savoir avant de vouloir teinter quoi que ce soit qui porte ce shader.
+1bis. **Une lecture d'écran en 2D doit vivre sur sa PROPRE `CanvasLayer`.**
+   Un `BackBufferCopy` + shader `hint_screen_texture` posés dans le monde, au
+   `z_index`, lisent un tampon qu'on écrit dans la même passe : le rendu est
+   juste en position et faux en valeur. Symptôme qui le distingue d'un problème
+   de gamma — **la luminance bouge peu (+19 %) pendant que le contraste explose
+   (+226 %)**. Un décalage colorimétrique déplacerait les deux ensemble. J'ai
+   failli cimenter un `pow(c, 2,2)` par-dessus ; le contrôle qui l'a évité tient
+   en une ligne, et il est réutilisable : *à noyau de flou nul, la zone doit
+   devenir invisible*.
+2. **Le voile blanc écrase déjà tout le contraste avant qu'un brouillage
+   n'intervienne** — 0,48 d'opacité plein écran à 0,60 d'éblouissement, relevé
+   sur image. Si un mode est retenu, le facteur 0,8 d'`ui.gd` devra
+   probablement baisser, sans quoi les deux s'empilent en écran blanc.
+3. **`trait` est un mot réservé de GDScript.** Le refus est une *erreur
+   d'analyse* : la scène tourne **sans script** et sort proprement en 0. C'est la
+   panne que `run_visuel.sh` grepe explicitement, et elle s'est produite ici au
+   premier lancement.
+
+**Lot complet vert, `test_brouillage` compris.**
+
+> ⚠️ **Cette entrée a d'abord annoncé un échec de `test_lumieres` (50/51), et
+> l'annonce était périmée en quelques minutes.** J'avais mesuré contre
+> `3b847b6`, où `player.gd:477` portait encore `muzzle_flash.texture_scale` que
+> la suite interdit. **DA2 l'a retirée entre ma mesure et ma rédaction**
+> (`721837b`) : sur `main` à `7a70f0d`, `texture_scale` n'apparaît plus qu'une
+> fois dans `player.gd`, ligne 466, et sur `flashlight`. Relevé par la session
+> « spatialisation du son », qui a rejoué la suite : **51/51**. Vérifié ici
+> après rebase.
+>
+> **La leçon est structurelle et vaut pour toute session de cet arbre : un
+> constat d'état y vieillit en minutes.** Quatre à six sessions commitent en
+> parallèle ; transmettre « telle suite échoue » revient à transmettre une
+> photo. **Refaire la mesure coûte moins cher que la propager**, et une mesure
+> propagée à tort fait chercher une régression qui n'existe pas — exactement le
+> travail en double que ce journal existe pour éviter.
+
+**Conflits sur `docs/` — résolus ici, pas laissés à qui fusionnera.** Ce
+fichier-ci et `docs/ROADMAP.md` ont été modifiés en **ajout** : une entrée en
+tête de cette section, une section neuve « Chantier — brouiller la position de
+celui qui éblouit ». La session « spatialisation du son » avait inséré la sienne
+au même endroit le même jour ; le rebase sur `7a70f0d` a produit les deux
+« les deux ont ajouté » attendus, **résolus en gardant les deux** — sa section de
+chantier avant la mienne, son entrée de journal sous la mienne (« le plus récent
+en haut »). Aucune de ses lignes n'a été relue, reformatée ni réordonnée.
+
+**« Pièges connus » n'a pas été touché**, délibérément : ne pas élargir la
+surface de conflit d'une table que quatre sessions écrivent. Ce qui y aurait
+figuré est dans la section du chantier.
+
+### 2026-08-24 — session « DA4 », en WORKTREE : la moitié de la charte n'était pas portée
+
+**Première session du dépôt à travailler dans un `git worktree` isolé**
+(`.claude/worktrees/DA4-interface-habillee`, branche
+`worktree-DA4-interface-habillee`, basée sur `main` local `a99a110`). Index
+propre, aucun risque d'emporter le travail d'une voisine — le défaut qui a
+frappé deux fois le 2026-08-19. **Contrepartie : une fusion à venir**, que je
+mesurerai d'avance plutôt que de la découvrir.
+
+**Livré : DA4.2, DA4.9.** Le *pourquoi* est dans `docs/ROADMAP.md`, section DA4.
+Ici, ce qui concerne les autres.
+
+**Le constat qui a ouvert le lot, et il vous concerne tous :**
+`Charte.police_display()` n'était appelée que depuis **trois** sites du dépôt —
+`player.gd`, `bullet.gd`, `game_state.gd` — tous en espace-monde. **`ui.gd` ne
+l'appelait jamais.** La fonte d'enseigne livrée par DA1.2 n'atteignait pas un
+seul écran, et aucun `Control` du dépôt ne posait de graisse. Si vous écrivez de
+l'interface : `Charte.enseigne(lbl, taille)` et `Charte.appareil(lbl, taille)`
+posent fonte + taille + graisse **en un geste**. C'était le nombre de gestes qui
+tenait le défaut, pas la négligence.
+
+⚠️ **Une règle nouvelle, et elle est mesurée : la fonte d'enseigne ne porte
+jamais un signe qui se remplace sur place.** `BigShouldersDisplay` n'est pas
+tabulaire — `00:00` fait 83 px, `11:11` en fait 49 à `T_VERDICT`. Chrono, ping,
+score, timecode restent à l'appareil. `tools/test_habillage.gd` le vérifie **par
+la mesure des dix chiffres du `Control` réel**, pas en regardant quelle fonte on
+croit avoir posée. Sept compteurs sous surveillance ; si vous en ajoutez un, la
+liste `COMPTEURS` du banc est l'endroit.
+
+**Fichiers pris puis RENDUS** — je ne tiens plus rien : `charte.gd` (ajout seul,
+après `polices_manquantes()`), `menu_engraver.gd`, `tools/planche_contact.gd`,
+`tools/run_suites.sh` (une entrée, et le compte passé à **44**),
+`tools/test_habillage.gd` (neuf).
+
+**`ui.gd` — pris seulement en FIN de séance**, DA1 l'ayant tenu jusque-là pour
+DA1.6/DA1.7. Sa branche est fusionnée chez moi (`3e2af76`), et je n'ai touché
+qu'à six `Control` : le décompte, `KILLCAM` et le titre passent à l'enseigne ; le
+chrono, le ping et le timecode de killcam prennent l'appareil **explicitement**,
+au lieu de la fonte de projet par défaut. Je n'ai pas touché à `_poser_titre()`
+ni à l'enseigne dessinée.
+
+⚠️ **Un chiffre à connaître si vous travaillez sous le titre : l'en-tête du menu
+a grandi de 13 px** (hauteur de ligne 69 → 82 à `T_ENSEIGNE`, la display étant
+plus haute qu'Oxanium à taille égale). Tout ce qui suit dans la colonne descend
+d'autant.
+
+**Vu à l'écran, et c'est Adrien qui a lancé la planche.** Les 13 px ne cassent
+rien ; les verdicts en condensée lisent comme de la signalétique et non comme du
+texte agrandi ; les accents existent dans la fonte d'enseigne (`ÉGALITÉ` rend son
+`É`, ce qui n'était pas acquis sur une condensée d'affichage) ; les deux codes de
+salon commencent et finissent au même pixel.
+
+⚠️ **Un fait de dispositif à connaître, et il vaut pour vous toutes : une passe
+visuelle lancée depuis une session d'agent pendant qu'Adrien travaille ne rend
+presque rien.** La planche exige une fenêtre au premier plan et macOS bride le
+rendu dès qu'elle passe derrière. Mes trois passes de suite ont rendu **16, puis
+2, puis 1** image. La sienne, focus en main, a rendu les 16 d'un coup. La planche
+**dit** qu'elle n'a pas pu photographier (`✗ … : aucune image (fenêtre au premier
+plan ?)`) au lieu de sortir des images fausses — donc le risque n'est pas de se
+tromper, il est de croire qu'on a regardé. **Demandez-lui de la lancer, ou
+attendez un poste au calme.**
+
+**La planche de contact voit enfin le code de salon.** Elle en était absente, et
+l'exclusion des écrans de salon était *bonne pour la mauvaise conclusion* :
+entrer dans l'écran est une décision de mode qui ouvrirait de vrais salons EOS,
+mais le bloc de gravure est un `Control` autonome, sans réseau ni autoload. Ce
+qui était inobservable, ce n'était pas le code — c'était le chemin qu'on prenait
+pour l'atteindre. Trois images de plus (`05-` à `07-`).
+
+⚠️ **Avant votre première suite dans un worktree neuf, lancez `--import`.**
+`.godot/imported/` n'est pas versionné : sans lui les deux fontes ne se chargent
+pas, `test_charte` rougit sans qu'une ligne de code soit en cause, et —
+beaucoup plus grave — **tout banc qui mesure une fonte passe au VERT**, la fonte
+de repli de Godot étant tabulaire. Détail aux « Pièges connus ».
+
+**Signalé, pas corrigé (hors périmètre) :** la ROADMAP affirmait en DA1.3 que
+`tools/test_charte.gd` « refuse toute taille hors échelle ». Il ne le fait pas —
+il vérifie que l'échelle est croissante et compte six crans, ce qui est autre
+chose. `menu_engraver.gd` portait `30` et `21`, tous deux hors échelle, sans que
+rien ne bronche ; ils sont corrigés chez moi, mais **le contrôle manquant reste à
+écrire** et il déborde de DA4.
+
+**Et un orphelin qui n'est ni à moi ni à DA2 :** une modification non commitée de
+`project.godot` traîne dans l'arbre partagé. DA1 dit y travailler pour
+`config/icon` et `boot_splash/*` — si c'est la sienne, le mystère est clos ;
+sinon, à signaler à Adrien avant que quelqu'un l'embarque sans la voir.
 ### 2026-08-25 — session « spatialisation du son » : deux documents corrigés, aucun code
 
 **Aucun fichier de code touché.** Cette session a répondu à une question d'Adrien

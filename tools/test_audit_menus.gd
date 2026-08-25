@@ -55,6 +55,7 @@ func _run() -> void:
 	_audit_panneaux_declares()
 	_audit_personnalisation()
 	_audit_carte_appartient_a_l_hote()
+	await _audit_le_cadre_montre_vraiment()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -62,6 +63,50 @@ func _run() -> void:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	main.queue_free()
 	quit(1 if _failures > 0 else 0)
+
+## Le cadre MONTRE-t-il, ou a-t-il seulement de quoi montrer ?
+##
+## ⚠️ **Ce banc s'intitule « aucune entrée ne laisse le cadre de droite vide » et
+## il était vert pendant que le cadre était noir.** Tout ce qui précède lit
+## `_entry_details` : la donnée existe, elle a toujours existé. L'affichage, lui,
+## n'avait jamais été regardé — les deux `Control` qui portent le texte étaient
+## cachés depuis leur construction et rien ne les rallumait (DA4.18).
+##
+## **La règle qui en sort, et elle vaut au-delà d'ici : quand un contrôle porte
+## sur de l'affichage, l'assertion finale lit une propriété du NŒUD RENDU** —
+## `visible`, `size` — et jamais le dictionnaire qui l'a alimenté. Les deux sont à
+## un appel de distance, et un seul dit la vérité.
+##
+## La largeur est vérifiée autant que la visibilité : au moment du diagnostic, le
+## `RichTextLabel` naissait à **un pixel** de large dans son panneau caché. Visible
+## mais large d'un pixel, il aurait produit exactement le même écran noir.
+func _audit_le_cadre_montre_vraiment() -> void:
+	print("\n[Le cadre de droite montre, il n'a pas seulement de quoi montrer]")
+	var hub = _ui.hub
+
+	hub.montrer_texte("MON RANG", "Argent II — 1240 ELO")
+	await process_frame
+	await process_frame
+
+	_check("montrer_texte allume bien le panneau de texte",
+		hub.shown_panel() == hub.PANNEAU_TEXTE, hub.shown_panel())
+	_check("le titre du cadre est visible", hub._detail_title.visible)
+	_check("le corps du cadre est visible", hub._detail_text.visible)
+	# Un `RichTextLabel` de un pixel de large rend un écran noir aussi sûrement
+	# qu'un nœud caché.
+	_check("le corps du cadre a une largeur utile",
+		hub._detail_text.size.x > 200.0, "%.0f px" % hub._detail_text.size.x)
+
+	# Et le versant inverse : une simple description d'entrée ne doit PAS
+	# s'emparer du cadre. Elle part dans l'en-tête, sous le titre — décision du
+	# 2026-08-18, « lire l'explication d'une entrée ne devrait pas demander de
+	# traverser l'écran du regard ». Sans ce contrôle, la corriger d'un côté la
+	# ferait réapparaître en double de l'autre.
+	hub.show_detail("Une entrée", "Sa description appartient à l'en-tête.")
+	await process_frame
+	_check("une description d'entrée ne s'empare pas du cadre",
+		hub.shown_panel() != hub.PANNEAU_TEXTE, hub.shown_panel())
+
 
 ## Chaque entrée du hub porte-t-elle de quoi remplir la droite ?
 func _audit_entrees() -> void:

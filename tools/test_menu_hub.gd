@@ -232,13 +232,13 @@ func _test_panneau_entree() -> void:
 	_hub.list_of("salon").add_child(pret)
 	_hub.list_of("salon").add_child(cartes)
 
-	var salon: Control = _hub.detail_host().get_children()[2]
+	var salon: Control = _hub.panneau("p_salon")
 
 	# Le geste que la refonte devait rendre possible : montrer les vignettes sans
 	# descendre d'un cran.
 	cartes.mouse_entered.emit()
 	_check("survoler l'entrée montre son panneau",
-		_hub.detail_host().get_children()[3].visible)
+		_hub.panneau("p_cartes").visible)
 	_check("sans changer d'écran", _hub.current_id() == "salon", _hub.current_id())
 
 	# Et le repli, qui est la moitié du travail : une entrée sans panneau ne vide
@@ -247,7 +247,7 @@ func _test_panneau_entree() -> void:
 	pret.mouse_entered.emit()
 	_check("une entrée sans panneau rend l'écran à son défaut", salon.visible)
 	_check("et la galerie se retire",
-		not _hub.detail_host().get_children()[3].visible)
+		not _hub.panneau("p_cartes").visible)
 
 ## Une entrée grisée n'emmène nulle part, panneau compris : afficher la galerie
 ## sous une entrée indisponible laisserait croire qu'elle est utilisable.
@@ -255,8 +255,8 @@ func _test_panneau_indisponible() -> void:
 	print("\n[Panneaux — entrée indisponible]")
 	_hub.reset()
 	_hub.push("salon")
-	var salon: Control = _hub.detail_host().get_children()[2]
-	var galerie: Control = _hub.detail_host().get_children()[3]
+	var salon: Control = _hub.panneau("p_salon")
+	var galerie: Control = _hub.panneau("p_cartes")
 
 	var grise := _hub.make_entry("CHANGER DE CARTE", "Choisir l'arène.",
 		"", Color.WHITE, "", "Pas encore disponible.", false, "p_cartes")

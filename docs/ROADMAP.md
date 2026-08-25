@@ -2691,6 +2691,197 @@ savent donc recuire plus fin : **c'est un paramètre à changer, pas une
 regénération à commander.** Ce qui coûtera, ce sont les images par seconde, pas
 les assets.
 
+
+### Le voleur de port 7777 n'est pas toujours une voisine (2026-08-25)
+
+Le piège du port occupé est déjà consigné, et son contrôle recommandé est
+`pgrep -f run_suites` — *y a-t-il une autre session qui lance les suites ?* **Ce
+contrôle rate le cas le plus fréquent, et il l'a raté trois fois en deux jours.**
+
+`duo_enet` échouait à chaque lot complet et passait rejoué seul, **sans qu'aucun
+lanceur voisin ne tourne**. La cause, prise en flagrant délit :
+
+```
+$ ps aux | grep "[G]odot --headless" | wc -l
+       2
+$ lsof -nP -iUDP:7777
+Godot   30632 vada   13u  IPv6 ...  UDP *:7777
+```
+
+**Un Godot d'un lot PRÉCÉDENT, encore vivant, tenant le port.** Pas une session
+concurrente : un processus qui n'est pas sorti, souvent parce qu'un chien de
+garde l'a tué en `SIGKILL` (scénarios `--coupure` et `--ralenti`, qui coupent le
+client exprès) ou parce qu'un lot a été interrompu. `pgrep -f run_suites` ne le
+voit pas — le lanceur, lui, est bien terminé.
+
+**Le contrôle qui tranche vraiment, et il nomme le coupable :**
+
+```bash
+lsof -nP -iUDP:7777
+```
+
+S'il rend une ligne alors qu'aucun lot ne tourne, `pkill -f "Godot --headless"`
+et relancer. Vérifié : trois lots rouges d'affilée, puis vert au premier essai
+après le `pkill`.
+
+**Ce que ça corrige dans le piège existant** : « compter les lanceurs » répond à
+la mauvaise question. Ce qui compte n'est pas *qui travaille*, c'est *qui tient
+le port* — et la seconde question a une réponse exacte que la première n'a pas.
+
+
+### Deux machines, deux UID pour le même chemin (2026-08-25)
+
+Le journal affirme depuis le 2026-08-18 que la génération d'UID est
+**déterministe pour un chemin donné** : « l'UID que notre import a produit pour
+`prediction_tir.gd` est identique au vôtre — la génération n'est donc pas
+aléatoire ». La mesure était juste, la généralisation ne l'est pas.
+
+Contre-exemple, relevé en fusionnant `origin/main` dans le worktree DA4 :
+
+| Où | UID de `tools/test_musique.gd` |
+|---|---|
+| worktree DA4, généré par `--import` | `uid://qfh28uh28u71` |
+| `origin/main`, versionné | `uid://debjcj28ioisf` |
+
+**Même chemin, même version de Godot, même machine.** La fusion a d'ailleurs
+refusé de démarrer pour cette seule raison — *untracked working tree files would
+be overwritten*.
+
+**Ce que ça change :** versionner les `.uid` n'est pas un confort qui « supprime
+la question », c'est une **nécessité**. Un `.uid` absent du dépôt sera réinventé
+différemment par chaque arbre qui l'importe, et deux arbres finiront par se
+disputer une ressource que Godot croit distincte. Le remède reste celui déjà
+appliqué — les versionner tous, y compris ceux des bancs — mais la raison est
+plus forte qu'annoncée.
+
+**Et le réflexe à avoir en fusion :** un `.uid` non suivi qui bloque un `git
+merge` n'est jamais à garder. Celui du dépôt fait foi ; le local est un
+sous-produit d'un `--import`.
+
+
+### Le produit promettait par écrit ce qu'il ne faisait pas (2026-08-24)
+
+Deux entrées de l'écran `1v1 compétitif` portent, **dans leur propre texte lu par
+le joueur** : « affichés à droite » et « affiché à droite — sans quitter cet
+écran ». Les deux appellent `hub.show_detail()`, qui écrit dans deux `Control`
+cachés à la construction et que rien ne rallume. On clique, la phrase promet, il
+ne se passe rien.
+
+**Ce n'est pas le bug qui est intéressant — c'est qu'il portait sa propre
+description.** Le dépôt consigne déjà quatre formes de garantie qui se périme en
+silence : le commentaire vrai au passé, la liste d'appuis, le nombre sans son
+échelle, la garantie tenue par une ligne d'un autre fichier. En voici une
+cinquième, et c'est la plus visible de toutes : **la promesse était affichée à
+l'écran, en français, au joueur.** Personne ne l'a lue comme une assertion à
+vérifier.
+
+**La leçon opérationnelle :** un libellé d'interface qui décrit un comportement
+(« à droite », « sans quitter », « en un clic ») est une **spécification**, et
+elle est testable. `MON RANG` promet que le cadre de droite change — c'est
+exactement l'assertion qu'un banc peut poser.
+
+**Et le banc qui aurait dû l'attraper existait et était vert.**
+`tools/test_audit_menus.gd` s'intitule « aucune entrée ne laisse le cadre de
+droite vide ». Il vérifie que chaque entrée **possède** un texte ou un panneau —
+les données ont toujours été là. Il ne vérifie pas que le cadre **montre** quoi
+que ce soit. Un banc qui contrôle la source au lieu du rendu passe au vert sur un
+écran noir ; c'est la troisième fois, après le cadre de menu entièrement noir du
+2026-08-18 et le joueur planté en bas de l'écran du 2026-08-19.
+
+**La parade générale, valable au-delà de ce cas :** quand un contrôle porte sur
+de l'affichage, l'assertion finale doit lire une propriété **du nœud rendu** —
+`visible`, `size`, la couleur d'un pixel — et jamais le dictionnaire qui l'a
+alimenté. Les deux sont à un appel de distance, et un seul dit la vérité.
+
+### Un worktree neuf n'a pas de cache d'import, et le banc rougit ailleurs (2026-08-24)
+
+Premier lancement des suites depuis un `git worktree` fraîchement créé :
+**`test_charte` échoue**, seul, sans qu'une ligne de code soit en cause. Le même
+banc passe dans l'arbre partagé, sur le même commit.
+
+La cause : `.godot/imported/` **n'est pas versionné**, donc un worktree neuf n'en
+a pas. Godot ne peut pas ouvrir les `.fontdata`, et les deux fontes ne se
+chargent pas. Le banc mesure des chasses de glyphes ; sans fonte, il n'a rien à
+mesurer.
+
+**Ce qui rend le piège vicieux, c'est le diagnostic de l'API :**
+`ResourceLoader.exists()` répond **vrai** — le `.ttf` est bien là —, et `load()`
+échoue quand même. `Charte.polices_manquantes()`, qui interroge le premier,
+annonce donc que tout est en place pendant que la fonte est introuvable. Les deux
+questions sont différentes et une seule est posée.
+
+**Et il déborde très largement de `test_charte`.** Toute mesure sur une fonte
+absente retombe silencieusement sur la fonte par défaut de Godot — **qui est
+tabulaire**. Un banc qui vérifie que les compteurs ne tremblent pas passerait
+donc **au vert sur une interface entièrement nue**, ce qui est pire que rouge :
+il affirmerait précisément ce qui est faux. `tools/test_habillage.gd` ouvre pour
+cette raison sur un contrôle de chargement effectif — `police_ui() != null` —
+avant toute autre mesure.
+
+**La parade, en une commande, avant la première suite d'un worktree neuf :**
+
+```bash
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import
+```
+
+Un peu moins d'une minute. À faire aussi après tout ajout d'asset binaire.
+
+### Une erreur uniforme ne ressemble pas à une erreur, elle ressemble à un choix (2026-08-24)
+
+`menu_engraver.gd` dimensionnait les six cases du code de salon par deux
+multiplications : `taille × 0,87` en largeur, `taille × 1,27` en hauteur. Le
+raisonnement en abordant DA4.9 était : *ces coefficients ont été réglés à l'œil
+devant Oxanium, ils vont donc casser sous la fonte d'enseigne.* La ROADMAP a même
+porté pendant une heure la phrase « les cases auraient bâillé d'un tiers ».
+
+**Mesuré, c'est faux — et la vérité est plus intéressante.** Sous la fonte
+d'enseigne à `T_VERDICT`, l'ancien coefficient donne 36,5 px pour un glyphe
+maximal de 31 px : 1,5 px de trop, 4 %. Personne n'aurait rien vu.
+
+**Le défaut n'était pas à venir, il était déjà là — sur la fonte pour laquelle le
+coefficient avait été réglé :**
+
+| Fonte | Glyphe le plus large | Case donnée par `× 0,87` |
+|---|---|---|
+| Oxanium 400 @30 (l'ancien réglage) | **28,0 px** | **26,1 px** |
+| Display 800 @42 (le nouveau) | 31,0 px | 36,5 px |
+
+**La case était plus étroite de 1,9 px que la lettre la plus large qu'elle devait
+contenir.** Sur un code de salon, c'est-à-dire sur l'objet qu'on lit à voix haute
+à un ami — six caractères, tirés dans un alphabet où le `W` et le `M` sont
+fréquents.
+
+**Et voilà pourquoi personne ne l'a jamais vu : l'erreur était uniforme.** Les six
+cases étaient trop étroites *de la même quantité*, donc rien ne dépassait par
+rapport à son voisin, rien n'était de travers, aucune ligne ne cassait. Le bloc
+paraissait simplement un peu serré — c'est-à-dire **exactement ce qu'aurait
+donné quelqu'un qui aurait choisi de le serrer.** Un défaut qui frappe un élément
+sur six se voit ; un défaut qui frappe les six également se lit comme une
+intention.
+
+C'est la parenté avec *exact au chiffre près, et faux à l'œil*, mais par l'autre
+bout : là, le chiffre était juste et le rendu faux ; ici le rendu est **plausible**
+et c'est ce qui protège le chiffre faux.
+
+**La parade appliquée : remplacer le coefficient par la mesure qu'il résumait.**
+La case vaut désormais le glyphe le plus large de `LobbyCode.ALPHABET` mesuré dans
+la fonte réellement posée, plus un demi-pas de grille — 35 px au lieu de 36,5, et
+surtout 32 px au lieu de 26,1 si l'on était resté sous Oxanium. C'est plus court à
+lire que la multiplication, et ça se corrige seul au prochain changement de fonte.
+
+**Le signe qui permet de les repérer** : un littéral non rond multipliant une
+taille ou une dimension — `0,87`, `1,27`, `0,73`. Un nombre rond est généralement
+une décision ; un nombre à deux décimales est presque toujours une mesure
+fossilisée, et il faut alors chercher **de quoi** elle dépend — puis vérifier
+qu'elle était juste *au départ*, ce qui n'allait pas de soi ici.
+
+**Enfin, la façon dont ça a été trouvé mérite d'être notée, parce qu'elle est
+reproductible.** Ce n'est pas la relecture : le premier jet du commentaire ET de
+la ROADMAP affirmait le mauvais diagnostic, avec aplomb. C'est d'avoir écrit une
+sonde jetable de vingt lignes pour *imprimer les trois cas côte à côte* avant de
+conclure. Même motif que `K_ADVERSAIRE`, dont le premier commentaire affirmait
+une égalité de luminance fausse de 8 % : **quand une affirmation porte un nombre,
+c'est le calcul qui tranche, pas la lecture.**
 ### Un son positionnel sans auditeur reste parfaitement audible (2026-08-25)
 
 Le jeu joue ses pas, ses tirs et ses impacts dans des `AudioStreamPlayer2D`
@@ -6595,41 +6786,558 @@ un fait de jeu, pas à un rythme d'interface.
 
 ### DA4 — L'interface habillée
 
-- **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
-  rectangles stylés par code. *(C)*
-- **DA4.2 Chrono, score, ping en chiffres tabulaires** — ils cessent de
-  « sauter » à chaque changement. *(S, découle de DA1.2)*
+#### Le lot du 2026-08-24 : le dépôt avait deux fontes et n'en portait qu'une
+
+**Le chantier DA4 s'ouvre sur un chiffre, pas sur une intention.** DA1.2 a livré
+`BigShouldersDisplay` et `Oxanium` le matin même : deux fichiers OFL, leurs
+licences versionnées à côté, l'axe variable vérifié par la mesure, une échelle de
+six tailles, quatre graisses nommées. Six jours de travail plus tard,
+`Charte.police_display()` était appelée depuis **trois** sites — `player.gd`,
+`bullet.gd`, `game_state.gd` —, tous en espace-monde.
+
+**Les 5 000 lignes de `ui.gd` ne l'appelaient jamais.** Tous les menus, le HUD,
+la killcam, l'écran de fin, le titre du jeu à 68 px : la fonte d'enseigne
+n'atteignait pas un seul écran. Et aucun `Control` du dépôt ne posait de graisse
+— `POIDS_APPUI` et `POIDS_ENSEIGNE` n'existaient que pour l'arène. L'interface
+entière rendait **une fonte, un poids**, ce qui est la définition exacte de « pas
+habillée ».
+
+**Rien ne le disait, et `tools/test_charte.gd` ne pouvait pas le dire.** Ce n'est
+pas un défaut de sa part : il vérifie *la charte*, pas *son emploi*. Que les
+chiffres d'Oxanium soient tabulaires, que l'axe de graisse agisse, que l'échelle
+compte six crans — ces trois affirmations restent vraies dans un dépôt où plus
+personne n'appliquerait la charte à quoi que ce soit. **Une charte peut être
+intégralement conforme et intégralement inemployée.**
+
+##### La cause n'est pas l'oubli, c'est le nombre de gestes
+
+Poser une fonte demandait `add_theme_font_override` **plus**
+`add_theme_font_size_override` **plus** une `FontVariation` pour la graisse :
+trois gestes pour une intention. Personne ne fait trois gestes cinquante fois.
+
+C'est très exactement ce qui avait déjà tenu les 51 couleurs littérales de
+DA1.4 : ce n'est pas la discipline qui les a remplacées, c'est d'avoir eu un nom
+**plus court à écrire que la valeur**. `Charte.enseigne(lbl, T_ENSEIGNE)` et
+`Charte.appareil(lbl, T_COURANT)` font le geste unique, et posent les trois
+propriétés **ensemble** — c'est ce qui les empêche de diverger, comme les 25
+tailles avaient divergé.
+
+##### La frontière entre les deux registres est mesurée, pas choisie
+
+⚠️ **`BigShouldersDisplay` n'est pas tabulaire, et l'écart est d'un autre ordre
+que tout ce qui a été relevé jusqu'ici.** À `T_VERDICT`, la chaîne `00:00` fait
+**83 px** et `11:11` en fait **49** — 41 % de largeur en moins pour le même
+nombre de signes. À `T_APPUI`, les dix chiffres vont de 5 à 9 px.
+
+Pour mémoire, le défaut qui avait fait écarter *Chakra Petch* de la place de
+fonte d'interface en DA1.2 valait 12 px contre 6,9 sur **un seul glyphe**.
+
+**Ce n'est pas un défaut de la fonte.** Une signalétique industrielle n'a aucune
+raison d'être tabulaire, et l'ultra-condensé qui fait sa personnalité est
+précisément ce qui l'en empêche. C'est un défaut d'**emploi**, et il ne peut se
+produire que d'un côté de la frontière :
+
+> **La fonte d'enseigne ne porte jamais un signe qui se remplace sur place.**
+> Elle prend les mots qui s'écrivent une fois — CANDELA, FATAL, VICTOIRE,
+> KILLCAM, le code de salon. Le chrono, le ping, le score et le timecode restent
+> à l'appareil, dont les chiffres sont tabulaires par construction.
+
+**Le critère n'est pas « est-ce un nombre ».** Les nombres de dégâts de
+`bullet.gd` sont en enseigne, et ils y sont bien : ils naissent, ils montent, ils
+meurent, et **aucun ne se substitue à un autre dans la même boîte**. Le critère
+est la substitution en place — c'est là, et seulement là, que la largeur qui
+change se lit comme un tremblement.
+
+##### Ce que le banc mesure, et pourquoi il est formulé ainsi
+
+`tools/test_habillage.gd` (44ᵉ suite) monte l'interface réelle et mesure **les
+dix chiffres de chaque compteur dans la fonte que le `Control` résout
+effectivement**. Sept compteurs sont sous surveillance : chrono, ping, timecode
+de killcam, les deux étiquettes de recharge, et les deux lignes du panneau F3.
+
+⚠️ **La règle est écrite sur la mesure, jamais sur le nom de la fonte.** « Le
+chrono n'est pas en display » serait vrai aujourd'hui et vide demain : il
+suffirait d'une troisième fonte pour que le contrôle passe au vert sur un défaut
+réel. Ce qu'on interdit, c'est le tremblement — pas un fichier.
+
+**Le banc a été vu rougir avant d'être livré.** La fonte d'enseigne posée exprès
+sur le chrono : `ui.time_label tremble : 9.0 px d'écart entre ses chiffres à
+42 px`. C'est la leçon de `test_ecran_de_fin`, qui posait une graine de
+navigation sur deux boutons puis n'assertait que sur des constantes — un contrôle
+qu'on n'a pas vu échouer n'est pas un contrôle.
+
+Il porte aussi un garde-fou qui protège tous les autres : **si les fontes ne se
+chargent pas, chaque `Control` retombe sur la fonte par défaut de Godot, qui est
+tabulaire — et les sept contrôles de tremblement passeraient au vert sur une
+interface entièrement nue.** Voir « Pièges connus », *un worktree neuf n'a pas de
+cache d'import*.
+
+##### La fonte d'enseigne entre enfin dans l'interface
+
+DA1 ayant rendu `ui.gd` en fin de séance, le lot a pu poser les deux registres
+là où la charte les désigne. **Six `Control` changent, et c'est tout — mais ce
+sont ceux qu'on regarde :**
+
+| Contrôle | Registre | Pourquoi |
+|---|---|---|
+| le décompte 3-2-1 | **enseigne** | Un chiffre seul qui occupe l'écran n'est pas du texte. Ancré en plein cadre, donc rien ne peut trembler : `3`, `2` et `1` ne se comparent jamais, ils se succèdent au même endroit. |
+| `KILLCAM` | **enseigne** | Un mot fixe, écrit une fois. |
+| le titre / les verdicts | **enseigne** | Voir ci-dessous. |
+| le chrono | appareil | Le compteur le plus exposé, et le seul qui **bat** sous dix secondes. |
+| le ping | appareil | Se réécrit dans une rangée centrée dont il pousserait les voisins. |
+| le timecode de killcam | appareil | Ancré **en haut à droite** : une largeur qui varie décolle le texte du bord. C'est le seul endroit du jeu où le tremblement se lirait comme un défaut de marge, pas de chiffre. |
+
+**Le verdict referme une incohérence qui existait entre l'arène et l'interface.**
+`player.gd` écrivait déjà FATAL en fonte d'affichage à `T_ENSEIGNE` ; l'écran de
+fin écrivait VICTOIRE et DÉFAITE en fonte d'interface. **Les deux mots tombent à
+quelques secondes d'intervalle sur le même temps fort** — l'un dans l'arène,
+l'autre sur l'écran de fin — et ils ne se ressemblaient pas.
+
+**Conséquence de mise en page, mesurée et assumée : l'en-tête du menu grandit de
+13 px** (hauteur de ligne 69 → 82 à `T_ENSEIGNE`). L'enseigne dessinée de DA1.6
+n'en est pas affectée — elle est posée par offsets calculés et non par la taille
+du texte — et le rapport s'améliore même : elle mesure 84 px de haut pour un
+`Label` qui passe de 69 à 82.
+
+✅ **Jugé à l'œil le 2026-08-24, planche lancée par Adrien lui-même.** Les 13 px
+ne cassent rien : l'en-tête reste aéré, rien ne déborde, la ligne de description
+sous le titre garde sa place. Trois observations que seule l'image donne :
+
+- **Le verdict tient sa promesse.** `JOUEUR 2 GAGNE` et `ÉGALITÉ` en condensée
+  lisent comme de la signalétique et non comme du texte agrandi. La parenté avec
+  le FATAL de l'arène se voit — c'était tout l'objet du changement.
+- **Les accents existent dans la fonte d'enseigne.** `ÉGALITÉ` rend son `É`
+  correctement. Ce n'était pas acquis : une condensée d'affichage tronque
+  souvent son jeu de glyphes, et le verdict d'égalité aurait été le seul écran à
+  le montrer.
+- **Le code de salon tient à l'œil ce que le banc tenait au chiffre.**
+  `WXYZW3` et `JT7JT7` commencent et finissent au même pixel. L'air entre les
+  cases est généreux et lit comme un numéro de série, ce qui est l'effet
+  recherché.
+
+⚠️ **La passe visuelle est fragile pour une raison qui n'a rien à voir avec le
+code, et il faut le savoir avant de s'en servir** : elle exige une fenêtre au
+premier plan, et macOS bride le rendu dès qu'elle passe derrière. Trois passes
+consécutives lancées depuis une session d'agent ont rendu **16, puis 2, puis 1**
+image, pendant qu'Adrien travaillait au clavier — et la planche le **dit**
+(`✗ … : aucune image (fenêtre au premier plan ?)`) au lieu de rendre des images
+fausses, ce qui est le bon comportement. Lancée par Adrien sur une machine dont
+il tenait le focus, elle a rendu les 16 d'un coup. **Une passe visuelle se lance
+donc quand personne d'autre ne travaille, ou par la personne devant l'écran.**
+
+##### Le banc a maintenant deux versants, et le second manquait
+
+`tools/test_habillage.gd` n'interdisait d'abord que le mauvais registre. **Or un
+dépôt qui n'emploie nulle part la fonte d'affichage passe tous les contrôles de
+tremblement** — c'est très exactement l'état dans lequel le projet a vécu six
+jours. Interdire ne dit rien sur l'emploi.
+
+Trois enseignes sont donc désormais exigées : le titre, le décompte, `KILLCAM`.
+Le contrôle est formulé « ce n'est pas la fonte d'interface » et non « c'est
+`BigShouldersDisplay` » — nommer le fichier attendu rendrait le banc faux le jour
+où l'enseigne change, c'est-à-dire le jour où l'on a besoin qu'il tienne.
+
+**Les deux versants ont été vus rougir séparément** avant livraison : fonte
+d'enseigne posée sur le chrono → `tremble : 9.0 px d'écart` ; fonte d'interface
+posée sur le décompte → `rend « VICTOIRE » exactement comme la fonte d'interface
+(598.0 px) : elle n'est pas habillée`.
+
+##### Ce qui est livré, et ce qui ne l'est pas
+
+Livrés : **DA4.2** et **DA4.9**, plus l'entrée de la fonte d'enseigne dans
+l'interface (le socle typographique dont DA4.7 dépendait).
+
+**Non commencés, et ils sont nombreux :** DA4.1 (9-slice), DA4.3 (le contour
+dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
+DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
+tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
+
+#### DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
+
+**Priorisé devant le reste de DA4 par Adrien** : c'est le plus grand rectangle de
+l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montrait
+rien la plupart du temps.
+
+**🟡 Premier lot livré le 2026-08-25 — les promesses sont tenues, le lit
+d'ambiance reste à faire.**
+
+- ✅ **`MON RANG` et `TOP 10` affichent enfin.** Elles passent par un verbe qui
+  dit où va le texte, `MenuHub.montrer_texte()`, au lieu de `show_detail()` qui
+  alimente l'en-tête. Les deux `Control` cachés deviennent **un panneau comme les
+  autres**, sous une clé réservée : les rallumer tels quels aurait fait
+  réapparaître la description à deux endroits, ce que la décision du 2026-08-18
+  évitait à juste titre.
+- ✅ **Le profil et l'historique descendent d'un étage** — `_attach_panel` au lieu
+  de `_attach_screen`, comme les effets et l'audio avant eux. **Aucun des deux
+  n'a été réécrit** : le contrat `HubScreen` interdit à un écran de connaître sa
+  position, et c'est exactement la liberté qu'on encaisse ici. Quatre lignes
+  d'accrochage, zéro ligne de contenu.
+- ✅ **Les quatre libellés disent « à droite », et c'est vrai dans les quatre
+  cas.** La promesse et le comportement sont alignés.
+- ✅ **Le banc regarde le nœud rendu.** `test_audit_menus` vérifie `visible` **et**
+  une largeur utile, plus le versant inverse — qu'une description ne s'empare pas
+  du cadre. Sans ce second contrôle, corriger d'un côté ferait réapparaître le
+  doublon de l'autre.
+- ✅ **Le lit d'ambiance est posé** — « la carte sous la torche », option retenue
+  par Adrien. Le cadre montre la carte réellement sélectionnée, rendue par le
+  moteur avec les mêmes occluders que le match qui suit, révélée par une lumière
+  qui dérive.
+
+  ⚠️ **Il a fallu trois passes, et les deux premières ont raté pour des raisons
+  qu'aucune mesure headless n'attrapait.** Elles valent d'être nommées, parce que
+  la même erreur de méthode les relie :
+
+  | Passe | Ce que la sonde disait | Ce que l'écran montrait |
+  |---|---|---|
+  | 1 | 4 rectangles, 4 occluders, texture posée, lumière qui bouge | une écharde dans une boîte noire |
+  | 2 | idem, plus le sol dessiné | une tranche de carte, deux bandes sombres |
+  | 3 | 96 % × 97 % du cadre, 80 % de la carte visible | *à juger* |
+
+  **Une sonde qui compte des objets ne dit rien de ce qu'ils rendent.** Le sol
+  manquait (passe 1) : la seule chose éclairée était le retrait de 3 px que la
+  géométrie laisse au bord des murs. La portée était en dur et le noir était pur
+  (passe 2). Et la troisième cause était **structurelle** : le nœud était rangé
+  comme un panneau parmi les autres, dans un conteneur aligné en haut qui n'étire
+  personne — il demandait 500 px et en obtenait 330, d'où un cadrage qui ne
+  montrait que 38 % de la carte.
+
+  **Un lit d'ambiance n'est pas un panneau : c'est ce qu'on voit quand aucun
+  panneau ne parle.** Il vit désormais dans le cadre lui-même, derrière la pile,
+  et recule à 18 % dès qu'un panneau s'affiche — un tableau d'historique lu
+  par-dessus une arène éclairée serait illisible. **Le plancher de hauteur a
+  disparu, et son absence est le signe que le nœud est enfin au bon endroit : une
+  valeur qu'il faut forcer est presque toujours le symptôme d'un rangement
+  fautif.**
+
+##### Vu à l'écran le 2026-08-25, et l'historique justifie le déplacement à lui seul
+
+Les trois états sont à la planche (`08-` à `09b-`). Le texte poussé s'affiche,
+le profil s'affiche, et **l'historique se révèle être un vrai tableau** — date,
+verdict teinté, durée, mode, adversaire, arme — qui **occupe naturellement toute
+la largeur du cadre**. Il était jusqu'ici derrière une navigation, dans une
+colonne de gauche large de 430 px. Ce n'est plus un rangement plus logique, c'est
+le seul endroit où ce contenu tient.
+
+**Ce qui reste faible, et c'est de la composition, pas du branchement :** les
+trois panneaux se collent en haut d'un cadre qui fait plus de mille pixels de
+haut, et le profil centre ses lignes sur toute la largeur — une phrase
+d'explication court sur 900 px, ce qui se lit mal. C'est le travail de DA4.7
+(hiérarchiser au lieu d'empiler), et ça vient après le lit d'ambiance.
+
+⚠️ **Observation hors périmètre, signalée à Adrien : l'historique local est
+pollué par les bancs.** La planche affiche « ce soir : 200 matchs · 98V 57D 0N ·
+72 forfaits », avec des durées de 0 à 3 secondes. Ce sont les six scénarios à
+deux instances de `run_duo.sh`, qui jouent de vrais matchs et les archivent dans
+`user://match_history.json` — le même fichier que les parties d'Adrien. Aucun
+défaut de code, mais **les bancs écrivent dans les données du joueur**, et
+l'écran d'historique est donc illisible sur une machine de développement.
+
+##### Un second défaut dormait sous le premier
+
+`_detail_text` naissait à **un pixel de large** dans son panneau caché — mesuré
+`(1.0, 1296.0)`. Visible mais large d'un pixel, il aurait rendu exactement le même
+écran noir, et **on aurait cru le correctif raté.** Deux défauts empilés qui
+produisent le même symptôme : corriger le premier seul aurait conduit à conclure
+que le diagnostic était faux.
+
+##### Le dégât collatéral, et il est instructif
+
+`test_menu_hub` indexait les enfants du cadre **par position** —
+`get_children()[2]`, `[3]`. L'arrivée du panneau intégré les a décalés d'un cran,
+et le banc est sorti avec **deux erreurs de script et un code 0** : seul le grep
+de `run_suites.sh` l'a attrapé. Remplacé par une recherche par clé,
+`MenuHub.panneau()` — **une position n'est pas une identité.**
+
+##### Ce qui a été établi, mesuré plutôt que supposé
+
+**1. Les deux `Control` qui portent le texte du cadre sont cachés depuis leur
+construction, et rien ne les rallume jamais.** `menu_hub.gd` fait
+`_detail_title.hide()` et `_detail_text.hide()` ; `show_detail()` écrit
+consciencieusement dans les deux, appelle `_apply_panel()`, émet son signal — et
+**n'appelle jamais `show()`**. Vérifié à l'exécution : après un `show_detail()`,
+les deux nœuds portent le bon texte et `visible = false`.
+
+**2. Ce n'est pas un oubli, c'est une décision dont la conséquence n'a pas été
+pesée.** Le commentaire au-dessus l'assume : *« le panneau de droite ne porte
+plus la description : elle est montée dans l'en-tête, sous le titre — lire
+l'explication d'une entrée ne devrait pas demander de traverser l'écran du
+regard »*. Le raisonnement est bon. Ce qu'il n'a pas prévu, c'est qu'en enlevant
+la description on ne laissait **rien** à la place.
+
+**3. Et deux entrées PROMETTENT ce cadre dans leur propre libellé.** Dans
+`1v1 compétitif`, `MON RANG` dit « affichés **à droite** » et `TOP 10` dit
+« affiché **à droite** — sans quitter cet écran ». Toutes deux appellent
+`hub.show_detail(...)`, donc écrivent dans les nœuds invisibles : **on clique, le
+texte promet, il ne se passe rien.** C'est un cul-de-sac silencieux sur l'écran
+qui porte la Phase 6.
+
+**4. La grammaire de l'interface est incohérente, et c'est le fond du sujet.**
+Deux mécanismes coexistent :
+
+| Mécanisme | Ce qu'il fait | Qui l'emploie |
+|---|---|---|
+| `_attach_panel()` | le contenu **remplit le cadre de droite** | Contrôles, Affichage, Effets, Audio |
+| `_attach_screen()` | le contenu **remplace la colonne de gauche** | Profil, Historique, Classement, Mise à jour |
+
+Adrien le formule ainsi : *« mon profil doit s'afficher à droite, comme
+l'historique, comme les scores, comme le top 10 »*. Les quatre écrans de
+réglages le font déjà ; les quatre écrans de méta ne le font pas. Rien ne
+justifie la différence — `HubScreen` interdit par contrat à un écran de connaître
+sa position dans l'arborescence, **précisément pour qu'on puisse le déplacer**.
+
+##### Ce qui reste à trancher : que met-on dans ce cadre au survol ?
+
+Vider le défaut ne suffit pas — il faut **quelque chose qui donne envie**.
+Demande d'Adrien : « peut-être un screenshot du jeu ? du mode actuel ? Faut que
+ce soit sexy. » Propositions faites le 2026-08-24, **arbitrage en attente**, voir
+le chat de la session DA4. À vérifier une fois posé : les quatre écrans de méta
+et le parcours `1v1 compétitif` en entier.
+
+##### Pourquoi aucune suite ne l'a vu, et c'est la partie qui doit changer
+
+`tools/test_audit_menus.gd` existe **exactement pour ça** — son titre est
+« aucune entrée ne laisse le cadre de droite vide » — et il est vert. Il lit
+`_entry_details` et vérifie que chaque entrée porte un `texte` **ou** un
+`panneau`. Les données sont là, elles ont toujours été là. **Ce qui manque, c'est
+l'affichage**, et il n'a jamais été regardé. Le banc vérifie qu'on a *de quoi*
+remplir le cadre, pas qu'il *est* rempli — troisième occurrence du motif consigné
+le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
+
+- **DA4.1 HUD en 9-slice dessinés** ✅ **livrée le 2026-08-25** — le cadre du HUD
+  était un rectangle arrondi de 2 px avec une ombre portée, c'est-à-dire la
+  signature exacte du panneau qu'aucune main n'a dessiné. Il porte une plaque de
+  matériel usée, en 9-slice de marge 32 px.
+
+  **La texture est un masque gris et `modulate_color` y met la couleur du
+  joueur** : un seul fichier sert les deux HUD, comme la torche des curseurs.
+  C'est ce qui permet de retoucher `BLEU` ou `ROUGE` dans la charte sans qu'aucune
+  texture soit à refaire. Le repli sur l'ancien `StyleBoxFlat` est conservé : un
+  HUD sans cadre serait deux blocs de texte flottant sur l'arène, alors qu'un
+  cadre tracé reste un cadre. *(C — généré, procédé DA1.5)*
+- **DA4.2 Chrono, score, ping en chiffres tabulaires** ✅ **livrée le 2026-08-24**
+  — et la formulation d'origine était trop faible. « Ils cessent de sauter »
+  décrivait un confort ; ce qui est posé est une **interdiction mesurée**, celle
+  de la fonte d'enseigne sur tout ce qui se remplace en place, vérifiée sur sept
+  compteurs par `tools/test_habillage.gd`. Les chiffres ne sautaient déjà pas —
+  Oxanium est tabulaire par construction depuis DA1.2 — mais **rien n'empêchait
+  qu'ils se mettent à sauter**, et l'item ne demandait que l'état, pas la
+  garantie. *(S)*
 - **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
   style, plus d'outline automatique. *(S)*
-- **DA4.4 Le bandeau FATAL dessiné** — cartouche peint, pas un label sur le
-  noir. *(C)*
+- **DA4.4 Le bandeau FATAL dessiné** ✅ **livrée le 2026-08-25** — le mot le plus
+  fort du jeu était posé sur rien. Il a maintenant une plaque de tôle frappée,
+  bords rongés, l'encre a bavé.
+
+  **Le mot reste du TEXTE**, dans la fonte d'enseigne, et la texture ne porte que
+  le support : c'est ce qui laisse « FATAL — POMPE » s'allonger avec le nom de
+  l'arme sans qu'aucune image soit à refaire. Enfant du `Label` et dessiné
+  dessous, donc il suit le mot dans son envol sans qu'on anime deux nœuds.
+
+  Teinté en `CARMIN` et non `ROUGE` — le rouge vu à l'intensité d'une chose qui
+  ne s'éclaire plus elle-même — pour que le mot en `ROUGE` ressorte dessus. Et
+  non éclairé, comme le mot qu'il porte : un support de texte qui s'assombrirait
+  hors de la torche disparaîtrait au pire moment. *(C — généré, procédé DA1.5)*
 - **DA4.5 La killcam habillée** — cadre VHS authored, timecode en fonte mono,
   grain *texturé* plutôt que bruit calculé. *(C : 2-3 textures)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
-- **DA4.7 La bannière de fin composée** — verdict, série, « effleuré : 13 px »
-  hiérarchisés comme une affiche, pas empilés. *(S après DA1, C pour l'ornement)*
-- **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
-  pour chaque carte. *(S)*
-- **DA4.9 Le code de salon en cases display** — V6.7 le prévoit ; la typo
-  display le rend iconique. *(S, après DA1.2)*
-- **DA4.10 Les glyphes manette officiels** — icônes de boutons dessinées au
-  lieu de « X », « LB » en texte. *(G : jeux de glyphes libres)*
+- **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le
+  2026-08-25** — verdict, score de session et série sont désormais hiérarchisés
+  au lieu d'être aplatis. Ce qui manque : « effleuré : 13 px », voir ci-dessous.
+
+  **Ce qu'affichait la fin de match : `SESSION : 2 - 1   ·   3 D'AFFILÉE`.**
+  Trois informations de natures différentes, séparées par des points médians,
+  toutes du même poids, à 19 px en `DIM` — et écrites par `game_state.gd` **dans
+  le label des descriptions d'entrées**. Rien n'y avait de rang, donc l'œil n'y
+  avait pas d'entrée.
+
+  Composé, chaque chose reprend son registre : le score est un **compteur**
+  (appareil, tabulaire, chaque nombre teinté de la couleur de son joueur, ce qui
+  le rend lisible sans lire le libellé) ; la série est un **cri** (enseigne,
+  ambre) et n'apparaît que lorsqu'elle existe.
+
+  ⚠️ **Un effet a failli s'éteindre en silence, et c'est le fait à retenir.**
+  V3.6 — l'annonce du score, qui le fait monter de dix pixels dans la couleur de
+  celui qui vient de marquer — animait `game_over_score`. Le score ayant
+  déménagé dans le bloc composé, elle serait restée branchée sur un `Label` vide
+  et invisible : elle aurait continué de tourner, sans erreur, sans rien animer.
+  **Déplacer une donnée déplace tout ce qui la regarde**, et rien dans le
+  langage ne le signale.
+
+  ⬜ **Reste : « effleuré : 13 px ».** La donnée existe (`player.gd`,
+  `last_fatal_perp`) mais elle est consommée sur place, en espace-monde, pour un
+  label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
+  `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
+  feel ». **À demander avant de le faire.** *(S)*
+- **DA4.8 Les vignettes de la galerie encadrées** ✅ **livrée le 2026-08-25** —
+  et elle a fait tomber une infraction à une décision actée.
+
+  **La vignette est montée dans un cadre**, fond noir du monde, filet `LINE` :
+  une image posée sur un fond se lit comme une image ; la même image serrée dans
+  un cadre se lit comme un **objet** — une plaque, une pièce qu'on choisit.
+
+  **La provenance quitte la pile de texte pour devenir une pastille sur le
+  cadre.** Elle y gagne deux fois : le bloc passe de trois lignes centrées à deux
+  — un titre et sa légende, donc une hiérarchie — et la mention se lit sans
+  quitter l'image qu'elle qualifie. Le titre monte d'une **graisse** plutôt que
+  d'une taille : l'échelle n'a que six crans, et c'est justement à ça que servent
+  les quatre poids.
+
+  ⚠️ **`texture_filter = NEAREST` était posé à DEUX endroits, contre la décision
+  DA5.6 du 2026-08-24** — *« filtrage linéaire et mipmaps, **aucune texture en
+  `nearest`** »* — et **avec un commentaire qui le défendait** : « pixels francs,
+  une miniature ne doit pas devenir floue ».
+
+  **Le commentaire décrivait un vrai symptôme et se trompait de cause.** La
+  vignette n'était pas floue à cause du filtrage : elle était **agrandie** —
+  rendue à 96 px et affichée sur ~124 dans la galerie, rendue à 80 et affichée
+  sur 160 points HiDPI dans la fiche de carte. La décision disait d'ailleurs quoi
+  faire à la place, dans la même phrase : *« la résolution d'un asset se choisit
+  sur la densité de texels à l'écran »*. Les deux rendus passent à 256 et 160 ;
+  plus rien n'est agrandi, et le filtrage linéaire n'a plus rien à flouter.
+
+  C'est la deuxième fois dans ce lot qu'un contournement **portait sa propre
+  justification en commentaire** — après les coefficients de dimensionnement du
+  code de salon. Un commentaire qui défend une entorse est le meilleur endroit
+  où chercher la cause qu'on n'a pas traitée. *(S)*
+- **DA4.9 Le code de salon en cases display** ✅ **livrée le 2026-08-24** — les
+  six cases sont en `BigShouldersDisplay` à `T_VERDICT`, et **le registre suit le
+  GABARIT, pas l'appelant** : gabarit fixe = un code, donc l'enseigne ; mesure
+  libre = une adresse IP, donc l'appareil et ses chiffres tabulaires. Le lier au
+  gabarit le rend impossible à contredire — la seule disposition qui protège
+  d'une fonte non tabulaire (chaque signe centré dans sa propre case) est
+  exactement celle qui l'autorise. Bénéfice de bord : l'adresse IP passe au bon
+  registre **sans toucher `ui.gd`**, tenu par une autre session.
+
+  ⚠️ **Et le lot a trouvé au passage un défaut qui n'était pas celui qu'on
+  cherchait.** On soupçonnait les deux coefficients de dimensionnement
+  (`× 0,87`, `× 1,27`) de casser sous la nouvelle fonte ; mesurés, ils tiennent
+  à 4 % près. **Ils étaient faux depuis le début sur Oxanium** — 26,1 px de case
+  pour une lettre de 28,0 px —, et invisibles parce que les six cases étaient
+  trop étroites *de la même quantité*. Détail en « Pièges connus », *une erreur
+  uniforme ne ressemble pas à une erreur, elle ressemble à un choix*. La case se
+  mesure désormais sur le glyphe le plus large de `LobbyCode.ALPHABET`, dans la
+  fonte réellement posée.
+
+  La promesse « un `I` et un `W` occupent la même case » existait en commentaire
+  depuis la vague M et **ne reposait sur rien** : elle est maintenant vérifiée en
+  gravant six `W` puis six `J` et en comparant les deux largeurs. *(S)*
+- **DA4.10 Les glyphes manette officiels** ✅ **déjà faite — constaté le
+  2026-08-25, aucun travail requis.** `assets/ui/prompts/` porte **seize SVG**
+  (croix, rond, carré, triangle, les quatre flèches, L1/L2/L3, R1/R2/R3, share,
+  options) **et ils sont câblés** : `_get_joypad_btn_info()` associe chaque
+  `JOY_BUTTON_*` à son fichier, `_apply_btn_info()` le charge et efface le
+  libellé texte.
+
+  **Le repli est propre, et c'est ce qui rend l'item réellement clos** :
+  `ResourceLoader.exists()` garde le chargement, et un glyphe absent redonne le
+  texte au lieu d'un bouton muet. C'est la règle « câbler, taire, diagnostiquer »
+  appliquée sans qu'on la lui ait demandée.
+
+  ⚠️ **Un seul fichier manque, et il ne sera pas comblé** : `ps.svg`, référencé
+  par `JOY_BUTTON_GUIDE`. C'est un symbole déposé de Sony — le repli en texte
+  « PS » est la bonne réponse, pas une texture à produire. Signalé pour que
+  personne ne le « corrige ».
+
+  **Ce que l'item enseigne, au-delà de lui-même** : c'est la troisième fois en
+  deux jours qu'on trouve des assets **livrés et non employés** ou **employés
+  sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
+  les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
+  elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
 - **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
   noms de touches. *(S + G)*
 - **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
   carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
-- **DA4.13 Les transitions d'écran signature** — un seul motif de fondu (une
-  extinction ?), décliné partout. *(S)*
+- **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
+  le constat est le même que pour les fontes.
+
+  **DA1.8 a livré trois courbes maison** (`ENTREE`, `SORTIE`, `REBOND`) et un
+  point d'entrée unique, `Charte.animer()`, précisément pour remplacer les
+  `TRANS_*` de Godot. Compté ce jour : **7 appels à `Charte.animer()` contre 31
+  `set_trans(Tween.TRANS_*)`**, répartis sur **cinq transitions différentes** —
+  `CUBIC`, `SINE`, `BACK`, `QUAD`, `EXPO`. Le vocabulaire est livré, le code parle
+  encore l'ancien.
+
+  **Trois sites convertis**, choisis parce qu'ils sont les plus vus : le décompte
+  3-2-1, l'appui sur une tuile de galerie, et l'annonce du score de fin. Les
+  durées posées à la main (0,06 / 0,45 / 0,9 s) passent aux trois crans de
+  l'échelle.
+
+  ⬜ **Reste cinq sites** — `menu_title.gd` (2), `map_editor.gd` (2),
+  `audio_manager.gd` (1), plus deux dans `ui.gd`. Aucun n'est difficile ; ils
+  demandent seulement de connaître la valeur de départ, `Charte.animer()`
+  passant par `tween_method` et non par `tween_property`.
+
+  **Et l'item demandait autre chose que ce qu'il dit.** « Un seul motif de
+  fondu » suppose que le problème est le fondu ; il est plus large — c'est
+  l'unité du geste. Le rebond sous un bouton, sous une tuile et sous le décompte
+  est ce qui donne la sensation qu'une seule main a animé l'écran. *(S)*
 - **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
   rectangles colorés. *(C)*
 - **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
   l'éditeur sous la bible. *(S + G)*
-- **DA4.16 Le panneau F3 lui-même** — même la debug UI dit quelque chose de la
-  rigueur du jeu. *(S)*
-- **DA4.17 Les messages d'erreur humanisés** — « L'hôte a quitté le salon »
-  stylé et calme, jamais un texte brut. *(S)*
+- **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
+  quelque chose, en effet : le contraire de ce qu'on voulait.
+
+  **Il était bordé d'`AMBRE`.** Or l'ambre veut dire *ce qui appelle* — le feu,
+  la mise en garde, le chrono de dernière minute. Un cadre de diagnostic ouvert
+  en permanence pendant qu'on joue n'appelle rien, il se consulte. Il porte
+  maintenant `LINE` et `ACIER`, la couleur que l'interface s'est donnée en DA1.4
+  précisément pour cesser d'emprunter celles des autres. **C'est la même faute
+  que les entrées « lanceur » du 2026-08-18**, au même endroit du raisonnement.
+
+  **Et son contenu était une ligne à barres verticales** — `DEBUG | FPS 120 |
+  Ping 42 ms | Lumières 8 | Particules 30/200 | …`, tout en or, à 12 px. Ce
+  n'est pas seulement laid : **il faut relire toute la ligne pour trouver une
+  valeur**, à l'instant précis où l'on veut en vérifier une seule. C'est
+  désormais une grille de deux colonnes — libellés en `DIM` à gauche, valeurs
+  tabulaires alignées à droite : on lit une colonne, pas une phrase.
+
+  **Trois mesures prennent la triade d'instrument** — images par seconde, ping,
+  saturation du bassin de particules. Le vert est interdit dans l'arène par la
+  règle 3 de la charte, mais le panneau F3 **est** de l'interface : c'est même
+  le lieu le plus légitime de la triade, un tableau de bord existant pour dire
+  d'un coup d'œil si la valeur va, alerte ou faute.
+
+  ⚠️ **Les seuils ne sont pas choisis ici, et c'est ce qui les rend justes.**
+  120 images/s est la cible de `bench_framerate` ; 60 et 120 ms sont exactement
+  les paliers que `_update_ping_label()` emploie déjà pour le HUD. Un panneau de
+  diagnostic avec ses propres seuils dirait « ça va » pendant que le HUD dit
+  « attention ». *(S)*
+- **DA4.17 Les messages d'erreur humanisés** ✅ **livrée le 2026-08-25** — et
+  l'item se trompait de cible, ce qui vaut d'être noté.
+
+  **Les textes étaient déjà humains.** « Impossible de lire l'arène de l'hôte…
+  la cause la plus courante est un écart de version entre les deux jeux » nomme
+  le problème, dit ce qui n'a pas eu lieu et propose un remède. Les sessions
+  précédentes avaient fait ce travail sans qu'un item le réclame. Il n'y avait
+  **aucun texte brut à humaniser.**
+
+  **Ce qui manquait était la présentation : tout se ressemblait.**
+  « Déconnexion », « Appariement » et « Erreur » sortaient dans le même or, le
+  même cadre, le même bouton — le joueur ne pouvait pas savoir, avant d'avoir
+  lu, s'il venait de perdre sa partie ou de recevoir une information. La triade
+  d'instrument le dit maintenant en une teinte, avant la première syllabe :
+  `INFORMATION` en acier, `ATTENTION` en ambre, `FAUTE` en rouge, sur le titre
+  et le filet.
+
+  Deux titres changent aussi. **« Erreur » ne disait rien** — le joueur sait
+  déjà que ça a raté, il veut savoir *quoi* : c'est « Connexion impossible ». Et
+  « Appariement » devient « Appariement indisponible », classé `ATTENTION` et
+  non `FAUTE` : une installation sans Epic n'est pas en faute, le jeu se joue
+  normalement, seul l'appariement manque.
+
+  ⚠️ **Deux règles posées, et elles vont à l'encontre du réflexe :**
+
+  - **Le corps du message reste toujours en `HALOGENE`, jamais rouge.** La
+    charte l'écrit à propos de `ROUGE` : contraste 4,9:1 sur `SURFACE`,
+    « suffisant pour un verdict en gros, insuffisant pour une phrase ». Teinter
+    le paragraphe rendrait l'explication plus dure à lire **au moment précis où
+    elle est le plus utile**. Seuls le titre et le filet portent la couleur.
+  - **Le bouton ne prend jamais la couleur du registre.** Il ne détruit rien, il
+    ferme. Un « OK » rouge se lit comme une action dangereuse alors qu'il n'y a
+    plus rien à décider. *(S)*
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 
@@ -7101,6 +7809,355 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   reste réversible sans travail perdu **tant que les sites d'appel continuent
   de ne passer qu'un `Vector2`** : c'est cette signature qu'il faut protéger,
   pas le type du nœud.
+
+---
+
+## Chantier — brouiller la position de celui qui éblouit (inscrit le 2026-08-25)
+
+**Demande d'Adrien, le 2026-08-25 :** « il faut que l'éblouissement rende plus
+difficile de viser le joueur qui éblouit […] il faut aussi que cela *floute*, ou
+*brouille* la position du joueur émetteur ».
+
+**Le constat qui la motive, et il est exact.** L'éblouissement coûte deux choses,
+et toutes deux au **contrôle** : la vitesse de déplacement (`×0,4` à saturation,
+`player.gd`) et la vivacité de visée (`×0,4` sur le `lerp_angle`). Il ne coûte
+**rien à l'information** — la silhouette de celui qui braque sa torche reste
+aussi nette et aussi bien placée qu'avant. On vise donc toujours juste, seulement
+plus lentement. Dans un jeu dont la proposition entière est « la seule
+information est la lumière », c'est la moitié manquante.
+
+**Ce qui est livré, et ce qui ne l'est pas.** Aucun fichier de production n'est
+touché : ni `player.gd`, ni `game_state.gd`, ni `ui.gd`, ni `eblouissement.gd`.
+Trois fichiers **neufs** seulement — le modèle `brouillage.gd` (sans dépendance,
+comme `vision.gd` et `eblouissement.gd`, et pour la même raison), le banc
+`tools/banc_brouillage.tscn`, la suite `tools/test_brouillage.gd`. **Rien n'est
+branché en jeu, et rien ne doit l'être avant que le banc ait tranché.**
+
+### Les cinq options, et ce que chacune coûte à qui la subit
+
+| # | Mode | Ce qu'on perd | Ce qui reste, donc le plafond de compétence | Le risque propre |
+|---|---|---|---|---|
+| 1 | **halo** | Le voile blanc se concentre en bloom autour de la source, et l'avale. | La **direction** : le bloom est centré sur lui. | Il **désigne** l'adversaire. À faible éblouissement, il peut être un gain net d'information. |
+| 2 | **diplopie** | La silhouette se dédouble sur un cercle qui tourne lentement. | Le **milieu des deux copies est la position vraie**, exactement. Garder la tête froide et viser entre les deux marche. | Trop écarté ou trop net, on ne lit plus un dédoublement mais deux adversaires. |
+| 3 | **tremblement** | La silhouette dérive continûment autour d'elle-même (≤ 34 px). | La **moyenne temporelle est nulle** : la patience paie. | Se lit comme une **désynchronisation réseau**. C'est le pire malentendu possible en ligne — le joueur incrimine sa connexion, pas la torche. |
+| 4 | **rémanence** | On voit où l'adversaire **était**, jusqu'à 0,18 s plus tôt. | La position montrée a **vraiment existé** : on prend l'avance, comme sur une cible mouvante. | **Ne punit que celui qui bouge.** Un émetteur qui allume et se fige n'est pas brouillé du tout — « allumer et ne plus bouger » deviendrait une ligne de jeu. |
+| 5 | **contraste** | La silhouette se dissout dans le voile (opacité → 0,18). | Rien de faux n'est montré : le signal est **retiré**, jamais déplacé. | Ne fonctionne **que tant que le voile est là** pour servir de fond ; sans lui, il ne dit plus « il se confond » mais « il disparaît ». |
+
+Aucune n'est recommandée seule sans essai. La combinaison qui se défend le mieux
+sur le papier est **1 + 2** : le halo rend la cause visible — on comprend
+*pourquoi* on ne vise plus —, la diplopie prend la précision sans mentir sur la
+direction ni retirer le plafond de compétence. Mais c'est exactement le genre de
+raisonnement que le 2026-08-24 a renversé sur la vitesse de récupération : *il se
+tenait, il n'avait jamais été éprouvé.* D'où le banc.
+
+### Ce que la construction a déjà appris, avant tout jugement de goût
+
+- **Le voile fait déjà presque tout le travail, et c'est le point le plus
+  gênant.** À 0,60 d'éblouissement le voile vaut 0,48 d'opacité sur tout
+  l'écran : le contraste de la silhouette ennemie est déjà écrasé *avant* qu'un
+  brouillage n'intervienne. Relevé sur image, pas déduit. **Conséquence : si un
+  mode est retenu, il faudra probablement BAISSER le facteur 0,8 du voile**,
+  sans quoi les deux s'empilent en écran blanc — et un écran blanc ne se joue
+  pas, il s'attend.
+- **L'apex du faisceau trahit la position, et trois modes sur cinq l'ignorent.**
+  Diplopie, tremblement et rémanence ne déplacent que l'image du corps ; le cône
+  de lumière, lui, continue de partir du point vrai, et il est parfaitement
+  visible. Le banc porte donc une bascule (`L`) : le faisceau suit-il le
+  brouillage, ou reste-t-il sur la vérité ? **C'est une vraie question de
+  conception, pas un détail d'implémentation** — faire trembler tout le champ
+  lumineux est bien plus violent, et sans doute plus juste.
+- **Un tremblement rapide se défait tout seul.** Le premier réglage faisait
+  dériver la silhouette à **322 px/s**, plus vite qu'un joueur qui court. Deux
+  conséquences, et la seconde compte davantage : ça se lisait comme une
+  vibration, donc comme un défaut d'affichage ; et **l'œil intègre ce qui tremble
+  vite**, si bien que la moyenne perçue redevient la position vraie — le
+  brouillage s'annulait au moment précis où on le regardait. Le plafond est
+  désormais physique et éprouvé par la suite : *jamais plus vite qu'un joueur qui
+  marche*. Ce qui se déplace comme un joueur se lit comme un joueur.
+- **Le shader ennemi plafonne `LIGHT` à `COLOR.rgb`.** Un réglage entier
+  (« mêler la silhouette à la couleur du voile ») a été écrit, puis retiré au
+  premier rendu : éclaircir la couleur vers l'halogène **relève le plafond** et
+  fait donc BRILLER la silhouette au lieu de la fondre. Le réglage faisait
+  l'inverse de son nom et rien ne l'aurait dit. À savoir avant de vouloir teinter
+  quoi que ce soit qui porte `player_enemy_light.gdshader`.
+
+### ⚠️ La conséquence qu'on ne voit pas venir : le curseur « Éblouissement »
+
+Une décision actée dit que `GameSettings.current_effect("eblouissement")` module
+**le voile et rien d'autre** — jamais la pénalité de vitesse ni de visée, parce
+qu'« un curseur qui allégerait la pénalité serait un avantage compétitif déguisé
+en confort ».
+
+**Un brouillage est une pénalité d'information. Il tombe donc du mauvais côté de
+cette frontière : il ne peut pas passer par le curseur.** Et cela crée une
+situation qui n'existait pas : un joueur qui met le voile à zéro **garde le
+brouillage sans sa cause visible**. Le mode `contraste` cesse alors de
+fonctionner (plus de fond où se dissoudre), et le `tremblement` perd sa
+justification à l'écran — il ne reste qu'une silhouette qui gigote sans raison,
+c'est-à-dire, pour le joueur, un bug de réseau.
+
+Trois issues, aucune évidente, toutes à trancher par Adrien : donner au voile un
+**plancher** qu'aucun réglage ne peut passer ; lier le brouillage au voile
+malgré la décision ; ou ne retenir qu'un mode qui se suffit à lui-même.
+
+### ✅ B1 tranché au banc par Adrien, le 2026-08-25 — « la lampe »
+
+**Premier essai manette en main, et il tranche la question centrale.** Adrien
+retient **un mix du contraste et du halo**, avec trois exigences :
+
+1. **Le contraste doit atteindre 100 % d'invisibilité** — « j'aime beaucoup,
+   mais il faut que ça puisse atteindre 100 % ». `ALPHA_CONTRASTE` passe de
+   **0,18 à 0,0**.
+2. **Le halo doit se poser sur l'émetteur.** C'était un **défaut**, pas un
+   choix (voir plus bas).
+3. **Le voile doit être atténué.** Le banc démarre désormais à **0,35** au lieu
+   des 0,8 d'`ui.gd`, et le facteur est réglable en direct (`F` / `H`).
+
+Le mode combiné existe sous le nom **`Mode.LAMPE`**, touche `6` : *le corps
+disparaît, sa lampe reste.* Les modes purs restent au banc comme témoins.
+
+**Ce que ce choix résout, et que le raisonnement seul n'avait pas vu.** Ce
+document portait une objection contre le contraste poussé à bout : une
+disparition pure retire TOUTE information, donc le plafond de compétence tombe
+avec. Le mix y répond exactement — *(⚠️ au 2026-08-25, troisième essai, ce
+n'est plus exact : voir plus bas, le halo est devenu une traînée décentrée et
+le repère est passé du centre à son extrémité arrière)* — **le halo reste
+centré sur la position
+vraie**, donc on ne perd pas la cible, on perd sa *netteté*. C'était la demande
+depuis le début. Et l'atténuation du voile suit la même logique : le voile
+faisait deux métiers (dire « tu es ébloui » ET cacher l'adversaire) ; le second
+revient au halo, qui le fait **localement**, sans coûter la lecture du reste de
+la carte.
+
+**Conséquence à tenir : `Mode.CONTRASTE` seul n'est plus jouable en
+production.** À 100 % d'invisibilité et sans halo, l'adversaire devient
+introuvable. Il ne survit que comme témoin de banc. Deux contrôles de
+`test_brouillage` tiennent la paire — l'invisibilité totale d'un côté, la
+présence du halo de l'autre.
+
+> ⚠️ **Ce qu'il reste à juger sur `LAMPE`, et qui ne se voit qu'en jouant :**
+> un halo radial centré sur la vérité a un **centre lisible**. Le risque est
+> qu'on apprenne à tirer au milieu de la tache, et que le brouillage se réduise
+> à une gêne cosmétique. Ce qui doit l'empêcher n'est pas un décentrage — ce
+> serait un mensonge — mais la **taille** de la tache, le fait qu'elle bouge, et
+> la visée déjà ralentie. À vérifier au tableau de tirs, pas à l'œil : si le
+> « % au but » de `lampe` rejoint celui d'`aucun`, c'est que le centre se lit
+> trop bien, et c'est `RAYON_HALO` qu'il faut monter.
+
+### Second essai d'Adrien, le 2026-08-25 — quatre corrections et un défaut de fond
+
+« C'est pas mal du tout avec le contraste et le halo, mais… » Quatre demandes,
+et la dernière rouvre une question que ce document avait posée le matin même :
+
+1. **Le halo est trop gros, trop large.** `RAYON_HALO` : 260 → **150**.
+2. **Plus intense en son centre, chute plus rapide au bord.** Le profil était un
+   dégradé de trois points écrit à la main, quasi linéaire — donc une tache
+   molle. Il vient désormais de `Brouillage.profil_halo`, `(1 − r) ^ 2,5`, et
+   l'intensité au centre passe à 1,0. **Les deux ensemble et pas l'un sans
+   l'autre** : monter le centre sans creuser la chute ramènerait le disque plein,
+   c'est-à-dire le halo qui DÉSIGNE au lieu de cacher.
+3. **Le contraste doit tomber plus vite.** La chute était linéaire : à
+   mi-éblouissement il restait la moitié de la silhouette, ce qui se lit encore
+   très bien sur du noir. `COURBE_CONTRASTE = 2,0` la porte à 0,25.
+   **Ce n'est pas cosmétique** : la saturation n'est presque jamais atteinte en
+   jeu (plafond réel du pistolet à bout portant : 0,93), donc une chute linéaire
+   réservait l'invisibilité à un cas de figure que le duel ordinaire ne produit
+   pas.
+4. **On supprime le voile.** Il ne s'affiche plus par défaut au banc. Ce que sa
+   disparition confirme : il faisait **deux métiers** — dire « tu es ébloui » et
+   cacher l'adversaire. Le halo et le flou font le second, et localement.
+
+### Le cône trahissait l'apex — et c'était écrit ici depuis l'ouverture
+
+« Il faudrait ajouter du flou dans la zone de l'émission de lumière, sinon le
+cône révèle où est le joueur. »
+
+**Ce document portait déjà cette phrase**, à l'ouverture du chantier : *« l'apex
+du faisceau trahit la position, et trois modes sur cinq l'ignorent »*. Elle y
+était classée comme une remarque sur les modes à déplacement ; elle valait aussi
+pour `LAMPE`, et personne ne l'avait vu. **Effacer le corps ne sert à rien tant
+que deux arêtes qui convergent se prolongent à l'œil.**
+
+Le remède est un vrai flou d'écran, `brouillage_flou.gdshader` : dix-sept
+prélèvements, noyau plein au centre et **nul sur le bord du disque** — à rayon
+constant, la bordure mélangerait du flou et du net côte à côte et poserait une
+forme nette de plus, c'est-à-dire un repère aussi bon que celui qu'on efface.
+Mesuré : le contraste local de la zone d'émission tombe de **24,5 %** à 24 px de
+noyau (−8,5 % à 8, −35,9 % à 40).
+
+**La zone floutée est plus large que le halo** — 210 contre 150 — et une suite
+l'exige : le halo cache un CORPS, le flou casse une CONVERGENCE, qui se lit bien
+au-delà du corps.
+
+> ⚠️ **À savoir avant de brancher : ce flou lit l'écran.** Il exige un
+> `BackBufferCopy` et il est aujourd'hui en `COPY_MODE_VIEWPORT`, donc une
+> recopie plein cadre par image. En jeu il y aurait **deux vues**, et la cible de
+> cadence est un 1 % bas ≥ 120 fps. Le repasser en `COPY_MODE_RECT` est
+> possible — c'est ainsi qu'il a commencé — mais c'est à mesurer au banc de
+> cadence, pas à supposer.
+
+### ⚠️ Le shader lisait un tampon qu'on écrivait — et un faux correctif a failli le cimenter
+
+Le flou a d'abord rendu l'image **juste, à la bonne place, et beaucoup trop
+claire**. Diagnostic évident : un sRGB appliqué deux fois. J'ai posé un
+`pow(couleur, 2,2)` — qui l'a rendue beaucoup trop **sombre**. Un balayage de
+l'exposant contre une référence sans disque n'a rien trouvé qui colle : 1,0
+donnait +19 % de luminance, 1,4 en donnait −43 %.
+
+**Aucun exposant ne collait parce qu'aucun exposant n'était le problème.** Ce
+qui l'a dit : la luminance n'était qu'à +19 % pendant que le contraste était à
+**+226 %**. Un décalage colorimétrique déplace les deux ensemble ; cet excès de
+VARIANCE seul désignait autre chose — le rectangle lisait un tampon qu'on était
+en train d'écrire dans la même passe de canevas. Déplacé sur sa propre
+`CanvasLayer`, au-dessus du monde entier, il colle à la référence à **0,000 %**
+près sur les deux mesures, sans aucune correction.
+
+**Deux choses à en retenir, et la seconde vaut au-delà de ce shader :**
+
+- une lecture d'écran en 2D n'a de sens que si ce qu'elle lit est **fini d'être
+  dessiné** ; une couche à part est le seul moyen de le garantir ;
+- **un facteur de correction qui « marche à peu près » est le meilleur moyen de
+  cimenter un défaut ailleurs.** Le 2,2 était plausible, documentable, et faux.
+  Seule la mesure contre une référence l'a écarté — le contrôle décisif tenait
+  en une ligne : *à noyau nul, le disque doit devenir invisible.*
+
+### Troisième essai, le 2026-08-25 — le halo était un CERCLE, donc un repère
+
+Adrien, capture à l'appui : « le problème c'est que le cercle est toujours
+visible grâce à la luminosité centrale du halo. Il faudrait qu'elle s'étale
+davantage, dans la direction du faisceau, avec le flou. »
+
+**Le défaut est de forme, et il retourne une demande précédente contre son
+but.** Un halo rond est une forme ; son cœur lumineux en marque le centre,
+c'est-à-dire très exactement le point qu'on cherche à rendre introuvable. Et
+**plus le cœur est net, mieux il le marque** — donc la netteté demandée au
+deuxième essai (`NETTETE_HALO`, la chute creusée) travaillait *contre* le but
+sans que ni lui ni moi ne l'ayons vu.
+
+**La correction n'est pas d'adoucir le cœur** — ce serait défaire la demande
+précédente — **mais de l'étirer.** Le halo et le flou deviennent deux ellipses
+couchées sur l'axe du faisceau et poussées vers la victime. Le cœur devient une
+traînée : aussi vif, il ne désigne plus. Mesuré sur image, faisceau vertical :
+la zone claire fait **33 px en travers contre 225 le long**, soit un rapport de
+6,8 là où un cercle rend 1,0.
+
+Réglages du même essai : flou plus intense (noyau 24 → **34**), halo moins
+puissant (intensité 1,0 → **0,7**), silhouette effacée plus vite (courbe 2,0 →
+**3,4**, soit 0,11 d'opacité à mi-éblouissement contre 0,25).
+
+> ⚠️ **Le repère a changé de nature, et une phrase de ce document est devenue
+> fausse.** Il était écrit que « le halo reste centré sur la position vraie »,
+> et que c'était ce qui gardait la vérité recouvrable. **Ce n'est plus exact :**
+> la traînée est décentrée vers la victime, son barycentre n'est plus
+> l'émetteur. Ce qui reste vrai — et ce sur quoi repose désormais tout le
+> plafond de compétence — c'est que **l'émetteur est à l'extrémité arrière de la
+> traînée**, celle qui s'éloigne de soi. On lit une forme au lieu d'un point.
+> Ce n'est pas un mensonge, la traînée décrit fidèlement où la lumière est ;
+> mais « viser le centre du halo » était un conseil juste et ne l'est plus.
+
+> ⚠️ ~~**Conséquence non demandée : le joueur ébloui se voit lui-même flou.**~~
+> **Tranché le 2026-08-25 : il ne doit pas l'être.** « Il ne faut pas que notre
+> propre personnage devienne flou » (Adrien). Le flou porte désormais un trou
+> autour de soi — nul en deçà de 44 px, plein au-delà de 104. **Le fondu entre
+> les deux n'est pas un ornement** : un disque net au milieu du flou serait une
+> forme de plus à lire, donc un repère, et on aurait remplacé un cercle par un
+> autre. Mesuré : avec le trou, le contraste sur son propre personnage est
+> **identique au millième** à celui d'une image sans aucun flou ; sans lui, il
+> tombait de 35,5 %.
+>
+> Ce n'était pas qu'un confort : la décision actée du voile sous le HUD dit déjà
+> que l'éblouissement doit coûter la lecture **du monde**, jamais celle de sa
+> propre fiche. Se perdre soi-même est une punition de plus que ne rattrape
+> aucune compétence.
+
+### ✅ Les réglages retenus par Adrien, le 2026-08-25 — B3 clos
+
+Quatrième et dernier essai de la soirée : **« c'est super : voile à 0,3, effet
+à 2, il ne faut pas que notre propre personnage devienne flou ».**
+
+| | valeur | où |
+|---|---|---|
+| voile | **0,3** | `Brouillage.VOILE_FACTEUR` — ⚠️ `ui.gd` porte encore **0,8** |
+| gain du brouillage | **2,0** | `Brouillage.GAIN` |
+| trou autour de soi | 44 → 104 px | `EXCLUSION_PRES` / `EXCLUSION_LOIN` |
+
+**B3 est donc clos** : le voile a fait 0,8 → supprimé → 0,3 en une soirée, et
+ce n'est pas de l'hésitation. Il faisait deux métiers — dire « tu es ébloui » ET
+cacher l'adversaire ; le halo et le flou ont pris le second, et **localement**.
+Il ne reste que le premier, qui se contente de 0,3.
+
+**Le gain n'est pas une intensité, c'est une VITESSE** : à 2,0 la dose sature dès
+0,5 d'éblouissement, donc tout le brouillage est atteint à mi-faisceau. Cela
+compte parce que la saturation n'est presque jamais atteinte en jeu — plafond
+réel du pistolet à bout portant : 0,93, et bien moins hors de l'axe. **Il vit
+dans le modèle et non au banc**, sinon la production ne ferait pas ce qui a été
+jugé.
+
+**Il ne reste que B4** — le curseur « Éblouissement » — avant qu'un branchement
+soit possible.
+
+### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
+
+`TextureRect.expand_mode` vaut `EXPAND_KEEP_SIZE` par défaut : la taille
+**minimale** du contrôle est alors celle de sa texture, 512². Toute taille
+demandée plus petite était relevée à 512 pendant que la position, elle, restait
+calculée sur le rayon voulu — le centre dessiné dérivait de `256 − rayon`, une
+centaine de pixels vers le bas et la droite aux valeurs courantes.
+
+**Le plus instructif est comment il a passé une vérification par l'image.**
+L'unique capture du halo avait été prise avec l'émetteur **pile au-dessus du
+canon**. À cet endroit l'erreur horizontale est rigoureusement nulle, et
+l'erreur verticale se lit comme « le halo est un peu bas » — c'est-à-dire comme
+un réglage, pas comme un défaut. **Une position centrée est le seul point
+aveugle de ce défaut, et c'est celle qui avait été choisie pour le contrôler.**
+
+La règle qui en sort, et elle vaut pour toute planche de ce dépôt : **une
+capture de contrôle ne se prend pas sur un cas symétrique.** La symétrie est
+exactement ce qui annule les erreurs qu'on cherche.
+
+### Ce qui attend encore Adrien — B2 à B4
+
+Le banc se lance seul : `godot --path . res://tools/banc_brouillage.tscn`. `0`
+à `6` changent de mode en direct, `←/→` règlent la force, `F`/`H` le voile, le
+clic tire, `Échap` imprime le tableau — par mode, combien de tirs, combien au
+but, de combien on rate.
+
+- ~~**B1 — quel(s) mode(s).**~~ ✅ **Tranché le 2026-08-25 : `Mode.LAMPE`**
+  (contraste à 100 % + halo). Voir ci-dessus.
+- **B2 — le faisceau suit-il le brouillage ?** (touche `L`). **Sans objet pour
+  `LAMPE`** : ce mode ne déplace rien, il efface et il éclaire. La question ne
+  se rouvrira que si un mode à déplacement revenait.
+- ~~**B3 — quelle valeur pour le voile ?**~~ ✅ **Tranché le 2026-08-25 : 0,3.**
+  Voir la section des réglages retenus. ⚠️ `ui.gd` porte encore 0,8 : c'est la
+  seule valeur de production à changer au branchement.
+- ~~**B4 — le curseur.**~~ ✅ **Tranché le 2026-08-25 : il n'y en a pas.**
+  « On ne peut pas régler la valeur éblouissement, il ne faut pas donner
+  d'avantage à un des deux » (Adrien).
+
+  **Cette décision dépasse celle du 2026-08-18 au lieu de la contredire.**
+  L'ancienne plaçait la frontière entre le CONFORT (le voile, réglable) et la
+  PÉNALITÉ (vitesse et visée, jamais réglables). **Ce chantier a déplacé le
+  voile du mauvais côté de cette frontière** : tant qu'il ne faisait que
+  blanchir l'écran, le baisser ne rendait pas l'adversaire plus lisible — il
+  l'était déjà, net et bien placé. Depuis que la lecture de l'adversaire dépend
+  du halo, du flou et de l'effacement, **tout ce qui touche à l'éblouissement
+  touche à l'information**, et un curseur devient un avantage quel que soit ce
+  qu'il règle.
+
+  Ce qu'il faudra faire au branchement : **`ui.gd` cesse de multiplier le voile
+  par `GameSettings.current_effect("eblouissement")`** et pose `VOILE_FACTEUR`
+  tel quel ; l'entrée « Éblouissement » de l'écran des effets n'a plus d'objet.
+  Ces trois fichiers appartiennent à la session « menus » — **la modification se
+  demande, elle ne se fait pas d'office**, et elle n'est donc pas faite ici.
+
+**Les quatre items sont clos. Le chantier n'attend plus d'arbitrage** — il
+attend un branchement, qui touche des fichiers tenus par une autre session.
+
+**Rien n'est branché tant que B4 n'est pas posé.** `brouillage.gd` n'a toujours
+aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
+`game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
+manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
+et ils vivent dans `brouillage.gd`.
 
 ---
 
