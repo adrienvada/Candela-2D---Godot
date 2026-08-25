@@ -113,6 +113,26 @@ var _torch_audio_state: bool = false
 
 @onready var visual_dim = $VisualDim
 @onready var visual_dim_ptr = $VisualDim/DirPointerDim
+## ## Les sprites du joueur (DA2.4 + DA2.5, fusionnés)
+##
+## Choisis par Adrien le 2026-08-25, cuits par `tools/fabrique_sprites.gd` à
+## **36 px d'épaules** — exactement le diamètre du `Polygon2D` qu'ils remplacent.
+## L'arme dépasse au-delà : c'est une information NOUVELLE, elle ne prend la
+## place de rien. L'occluder reste donc un cercle de rayon 18, qui correspond au
+## CORPS : un canon fin n'arrête pas une lampe torche, un torse si.
+##
+## Deux fichiers par arme. Le peint pour la vue du porteur ; ⚠️ **la silhouette
+## blanche pour la vue adverse et pour les révélations**, parce que
+## `Polygon2D.color` MULTIPLIE la texture et que `Charte.ADVERSAIRE` est
+## calibrée en luminance pour l'équité. Multiplier ce gris par un sprite peint
+## assombrirait l'adversaire sans qu'aucune décision ne l'ait voulu.
+const SPRITES := "res://assets/sprites/"
+
+## Teinte du joueur, ramenée vers le blanc. À 0 le sprite prendrait la couleur
+## pleine et le dessin serait écrasé ; à 1 les deux joueurs seraient identiques
+## et on perdrait l'identification instantanée dont un duel a besoin.
+const TEINTE_VERS_BLANC := 0.55
+
 @onready var visual_reveal = $VisualReveal
 @onready var visual_reveal_ptr = $VisualReveal/DirPointerReveal
 @onready var visual = $VisualColored
@@ -175,7 +195,8 @@ func _ready():
 	sync.synchronized.connect(_on_net_synchronized)
 	add_child(sync)
 	
-	var p_color = Charte.BLEU if player_id == 0 else Charte.ROUGE
+	var p_color = (Charte.BLEU if player_id == 0 else Charte.ROUGE) \
+		.lerp(Color.WHITE, TEINTE_VERS_BLANC)
 	visual.color = p_color
 	visual_ptr.color = p_color
 	
@@ -456,8 +477,46 @@ func _ready():
 	muzzle_flash.color = Charte.AMBRE
 	muzzle_flash.offset = Vector2.ZERO
 
+## Pose le sprite de l'arme sur les cinq vues du joueur.
+##
+## Le `Polygon2D` devient un QUAD à la taille du sprite : on garde ainsi tout le
+## câblage existant — masques de lumière, couches de visibilité, alphas,
+## matériau non éclairé des révélations — sans y toucher une ligne. `color`
+## continue de faire ce qu'elle faisait, elle multiplie simplement une texture
+## qui n'est plus un pixel blanc.
+##
+## Rend `false` et CRIE si le sprite manque : un repli muet redonnerait le
+## disque, c'est-à-dire exactement ce qu'on remplace, et le seul diagnostic
+## possible depuis l'écran serait « ça n'a pas changé ».
+func _poser_sprite(slug: String) -> bool:
+	var peint := SPRITES + slug + ".png"
+	var silhouette := SPRITES + slug + "_silhouette.png"
+	if not ResourceLoader.exists(peint) or not ResourceLoader.exists(silhouette):
+		push_error("player : sprite absent — %s (cuire avec tools/fabrique_sprites.gd, "
+			% peint + "puis : godot --headless --path . --import)")
+		return false
+	var t_peint: Texture2D = load(peint)
+	var t_sil: Texture2D = load(silhouette)
+	var demi := Vector2(t_peint.get_width(), t_peint.get_height()) * 0.5
+	var quad := PackedVector2Array([
+		Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
+		Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
+
+	for paire in [[visual, t_peint], [visual_dim, t_peint], [visual_reveal, t_sil],
+			[visual_enemy, t_sil], [visual_reveal_enemy, t_sil]]:
+		var poly: Polygon2D = paire[0]
+		if poly == null:
+			continue
+		poly.polygon = quad
+		poly.texture = paire[1]
+		_calculate_uvs(poly)
+	return true
+
+
 func equip_weapon(weapon: WeaponData):
 	current_weapon = weapon
+	# DA2.4 + DA2.5 — la silhouette du joueur change avec son arme.
+	_poser_sprite(weapon.slug() if weapon.has_method("slug") else "pistolet")
 	
 	var tex = weapon.get_torch_texture()
 	flashlight.texture = tex

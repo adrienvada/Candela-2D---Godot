@@ -26,8 +26,27 @@ extends SceneTree
 ## consigne qu'on ne tient pas. Le chiffre est imprimé, pas corrigé : sur un
 ## sprite, contrairement à une tuile, retirer le modelé retirerait le dessin.
 ##
+## ## La valeur d'`--epaules` retenue, et comment elle a été trouvée
+##
+## **17,1**, et ce n'est pas un choix esthétique : c'est la valeur pour laquelle
+## le sprite le plus encombrant — le pompe — atteint **35,1 px de diamètre**,
+## juste sous les 36 du `Polygon2D` qu'il remplace. Adrien a demandé que le
+## sprite tienne dans l'ancien cercle ; l'occluder de rayon 18 les contient donc
+## tous les quatre sans qu'on y touche.
+##
+## ⚠️ **Un facteur UNIQUE pour les quatre, jamais un par arme.** Caler chaque
+## sprite sur son propre diamètre donnerait quatre soldats de gabarits
+## différents selon l'arme portée — le fusil est plus long, son porteur
+## rétrécirait plus. Les corps doivent rester identiques ; c'est l'arme qui
+## dépasse plus ou moins.
+##
+## La valeur a été trouvée en MESURANT la sortie, pas en la calculant : un
+## premier jet estimait l'échelle depuis la planche et annonçait 36 là où il
+## produisait 27,9. Un curseur qui ment est pire que pas de curseur — il a été
+## retiré, et la valeur mesurée est écrite ici.
+##
 ##     godot --headless --path . --script res://tools/fabrique_sprites.gd -- \
-##       --source player --planche S_shotgun_01.jpg --nom pompe --epaules 36
+##       --source player --planche S_shotgun_01.jpg --nom pompe --epaules 17.1
 
 const RACINE_SOURCES := "res://assets/sources/"
 const SORTIE := "res://assets/sprites/"
@@ -79,12 +98,30 @@ func _init() -> void:
 	var coupe := img.get_region(b)
 	coupe.resize(maxi(cible_x, 1), maxi(cible_y, 1), Image.INTERPOLATE_LANCZOS)
 
-	# 4. Toile carrée, sprite centré : le joueur tourne autour de son centre.
-	var cote: int = maxi(cible_x, cible_y)
+	# 4. Toile centrée sur le CORPS, pas sur la boîte englobante.
+	#
+	# ⚠️ **C'est le pivot du joueur, et se tromper de centre fausse la visée.**
+	# `player.tscn` met `Muzzle`, `MuzzleFlash` et `Flashlight` à (28, 0) : les
+	# balles et la lumière partent du centre du sprite, droit devant. Si la toile
+	# est centrée sur la boîte englobante, un fusil long pousse le corps vers
+	# l'arrière — le canon dessiné cesse alors de passer par le point d'où les
+	# balles sortent, et le sprite ment sur sa propre mécanique. À 36 pixels ça
+	# ne se voit pas ; ça se sent.
+	#
+	# Le corps est cherché dans le tiers HAUT, là où l'arme ne dépasse pas
+	# encore — même raison que `_largeur_epaules()`.
+	var pivot := _centre_du_corps(coupe)
+	var rayon: int = 0
+	for y in coupe.get_height():
+		for x in coupe.get_width():
+			if coupe.get_pixel(x, y).a > 0.5:
+				rayon = maxi(rayon, int(ceil(absf(float(x) - pivot.x))))
+				rayon = maxi(rayon, int(ceil(absf(float(y) - pivot.y))))
+	var cote: int = maxi(rayon * 2 + 2, 8)
 	var toile := Image.create_empty(cote, cote, false, Image.FORMAT_RGBA8)
 	toile.fill(Color(0, 0, 0, 0))
-	toile.blit_rect(coupe, Rect2i(0, 0, cible_x, cible_y),
-		Vector2i((cote - cible_x) / 2, (cote - cible_y) / 2))
+	var coin := Vector2i(int(round(cote / 2.0 - pivot.x)), int(round(cote / 2.0 - pivot.y)))
+	toile.blit_rect(coupe, Rect2i(0, 0, cible_x, cible_y), coin)
 
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SORTIE))
 	var fichier := "%s.png" % nom
@@ -94,12 +131,35 @@ func _init() -> void:
 		quit(1)
 		return
 
+	# ## La silhouette, et pourquoi elle n'est pas un luxe
+	#
+	# ⚠️ **`Polygon2D.color` MULTIPLIE la texture.** La vue adverse est teintée
+	# `Charte.ADVERSAIRE`, dont le commentaire de `player.gd` dit qu'elle est « la
+	# seule dérivée de la charte qui touche à l'équité, et un banc compare les
+	# deux luminances ». Multiplier ce gris par un sprite peint — dont la
+	# luminance descend à 0,2 — assombrirait l'adversaire d'un facteur qu'aucune
+	# décision n'a pris. Ce serait un changement COMPÉTITIF déguisé en habillage.
+	#
+	# La silhouette est donc blanche : `color` la rend alors exactement à sa
+	# valeur, comme l'aplat qu'elle remplace. On gagne la forme, on ne touche
+	# pas à la luminance.
+	var sil := Image.create_empty(toile.get_width(), toile.get_height(), false,
+		Image.FORMAT_RGBA8)
+	for y in toile.get_height():
+		for x in toile.get_width():
+			sil.set_pixel(x, y, Color(1, 1, 1, toile.get_pixel(x, y).a))
+	var f_sil := "%s_silhouette.png" % nom
+	if sil.save_png(ProjectSettings.globalize_path(SORTIE + f_sil)) != OK:
+		printerr("fabrique_sprites : ecriture de la silhouette impossible")
+		quit(1)
+		return
+
 	print("%-10s  planche %dx%d, %.0f%% de fond ote" % [nom, n, n,
 		100.0 * oteMagenta / float(n * n)])
 	print("            epaules %d px sur la planche -> %.0f px en jeu (facteur %.3f)"
 		% [larg_epaules, epaules, k])
-	print("            toile %d² — l'arme depasse de %d px au-dela des epaules"
-		% [cote, int((cote - epaules) / 2.0)])
+	print("            toile %d² centree sur le CORPS — pivot a (%.0f, %.0f) dans la coupe"
+		% [cote, pivot.x, pivot.y])
 	print("            lumiere peinte restante : %.3f  (0 = parfaitement a plat)"
 		% _lumiere_peinte(coupe))
 	quit(0)
@@ -144,6 +204,31 @@ func _largeur_epaules(img: Image, b: Rect2i) -> int:
 		if d > g and d - g + 1 > pire:
 			pire = d - g + 1
 	return pire
+
+
+## Le centre du corps : barycentre des pixels opaques du tiers HAUT.
+##
+## Le tiers haut ne contient que le casque et les épaules — en vue de dessus,
+## les avant-bras et l'arme partent vers l'avant, donc plus bas. Le barycentre y
+## est donc celui du corps, insensible à la longueur de l'arme.
+func _centre_du_corps(img: Image) -> Vector2:
+	var h := img.get_height()
+	var n := img.get_width()
+	var limite: int = maxi(1, int(h / 3.0))
+	var sx := 0.0
+	var sy := 0.0
+	var compte := 0
+	for y in limite:
+		for x in n:
+			if img.get_pixel(x, y).a > 0.5:
+				sx += float(x)
+				sy += float(y)
+				compte += 1
+	if compte == 0:
+		return Vector2(n * 0.5, h * 0.5)
+	# En y, le barycentre du tiers haut est trop haut : on le ramène au centre
+	# des épaules, une demi-largeur d'épaule plus bas.
+	return Vector2(sx / float(compte), sy / float(compte) + float(limite) * 0.5)
 
 
 ## Variation basse fréquence de la luminance : ce qui reste d'éclairage peint.

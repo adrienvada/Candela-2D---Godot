@@ -47,6 +47,27 @@ const SOLS := ["actuel", "faible"]
 const MURS := ["actuel"]
 const DOSSIER := "res://assets/tuiles/"
 
+## ## Le quatuor d'armes (DA2.4 + DA2.5, fusionnés par Adrien)
+##
+## Cinq figures alignées au nord-ouest du départ, éclairées par la torche du
+## porteur qui passe devant. La première est le **`Polygon2D` d'aujourd'hui** —
+## un disque à seize côtés, rayon 18, au bleu du joueur 1 — parce que la question
+## n'est jamais « est-ce joli » mais « est-ce mieux que ça ».
+##
+## ⚠️ **L'ordre des quatre armes n'est PAS annoncé, et c'est tout le test.**
+## DA2.5 ne demande pas de belles armes, elle demande des armes qu'on distingue :
+## *le pompe se reconnaît à sa forme avant son son.* Un test de goût ne répond
+## pas à ça — un test de NOMINATION si. Si Adrien ne peut pas les nommer, les
+## sprites ont échoué, quelle que soit leur beauté.
+##
+## L'ordre réel est ci-dessous, à ne lire qu'après avoir essayé.
+const ORDRE_FIGURES := ["fusil", "pistolet", "arbalete", "pompe"]
+## Écart entre deux figures. Assez grand pour qu'une torche n'en éclaire qu'une
+## ou deux à la fois : les voir toutes en pleine lumière dirait autre chose que
+## ce que le jeu montre.
+const ECART_FIGURES := 120.0
+
+
 const VITESSE := 600.0
 ## Le zoom du jeu : chaque joueur voit un `SubViewport` de 960 px de large sur
 ## les 1920 du projet. Juger à zoom 1 montrerait la matière deux fois trop
@@ -69,12 +90,19 @@ var _i_mur := 0
 var _torche_allumee := true
 var _zoom_pixel := false
 var _rotations := true
+## Plein feu sur le quatuor. ⚠️ **Ce n'est PAS la condition du jeu**, et c'est
+## assumé : comparer quatre silhouettes qu'on ne voit qu'une à la fois, dans un
+## faisceau qui bouge, ne compare rien. Le plein feu sert à trancher la forme ;
+## la torche sert à vérifier que la forme tient dans le noir. Il faut les deux.
+var _plein_feu := false
+var _lumiere_quatuor: PointLight2D
 var _absents: Array[String] = []
 
 
 func _ready() -> void:
 	_monter_arene()
 	_monter_porteur()
+	_monter_figures()
 	_monter_interface()
 	_appliquer()
 
@@ -141,6 +169,86 @@ func _monter_porteur() -> void:
 	_camera.zoom = Vector2.ONE * ZOOM_JEU
 	_porteur.add_child(_camera)
 	_camera.make_current()
+
+
+## Le disque d'aujourd'hui et les quatre sprites, alignés devant le départ. Ils
+## portent le `light_mask` par défaut, donc la torche les éclaire comme les murs.
+func _monter_figures() -> void:
+	var depart := _porteur.global_position + Vector2(-240.0, -200.0)
+
+	var disque := Polygon2D.new()
+	disque.name = "DisqueActuel"
+	var pts := PackedVector2Array()
+	for i in 16:
+		var a := TAU * float(i) / 16.0
+		pts.append(Vector2(cos(a), sin(a)) * 18.0)
+	disque.polygon = pts
+	disque.color = Charte.BLEU
+	disque.global_position = depart
+	add_child(disque)
+	_lueur_personnelle(disque)
+
+	for i in ORDRE_FIGURES.size():
+		var chemin := "res://assets/sprites/%s.png" % ORDRE_FIGURES[i]
+		if not ResourceLoader.exists(chemin):
+			if not _absents.has(chemin.get_file()):
+				_absents.append(chemin.get_file())
+			continue
+		var sp := Sprite2D.new()
+		sp.name = "Figure%d" % i
+		sp.texture = load(chemin)
+		sp.global_position = depart + Vector2(ECART_FIGURES * float(i + 1), 0.0)
+		add_child(sp)
+		_lueur_personnelle(sp)
+
+	_monter_plein_feu(depart + Vector2(ECART_FIGURES * 2.0, 0.0))
+
+
+
+## La lueur ambiante du joueur, copiée de `player.gd` : masque peint de DA2.2,
+## 150 unités d'empreinte, `HALOGENE`, énergie 0,8.
+##
+## ⚠️ **Sans elle, une figure n'existe que dans le faisceau.** C'était le défaut
+## du premier jet : Adrien ne voyait pas les sprites, et il avait raison — dans
+## le jeu, TON propre sprite est éclairé par ta lueur personnelle, jamais par ta
+## torche, qui part devant toi. Une figure sans lueur n'était donc pas une
+## figure du jeu, c'était une cible dans le noir.
+func _lueur_personnelle(figure: Node2D) -> void:
+	var l := PointLight2D.new()
+	l.name = "Lueur"
+	l.color = Charte.HALOGENE
+	l.energy = 0.8
+	l.shadow_enabled = false
+	if ResourceLoader.exists(LightTextures.AMBIANTE):
+		var t: Texture2D = load(LightTextures.AMBIANTE)
+		l.texture = t
+		l.texture_scale = LightTextures.EMPREINTE_AMBIANTE / float(t.get_width())
+	figure.add_child(l)
+
+
+## Un large halo au-dessus des cinq figures, pour les comparer d'un coup.
+func _monter_plein_feu(centre: Vector2) -> void:
+	_lumiere_quatuor = PointLight2D.new()
+	_lumiere_quatuor.name = "PleinFeu"
+	_lumiere_quatuor.color = Charte.HALOGENE
+	_lumiere_quatuor.energy = 1.4
+	_lumiere_quatuor.shadow_enabled = false
+	_lumiere_quatuor.enabled = false
+	var t := GradientTexture2D.new()
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1, 1))
+	g.set_color(1, Color(1, 1, 1, 0))
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.5)
+	t.fill_to = Vector2(0.5, 0.0)
+	t.width = 512
+	t.height = 512
+	_lumiere_quatuor.texture = t
+	_lumiere_quatuor.texture_scale = 2.0
+	_lumiere_quatuor.global_position = centre
+	add_child(_lumiere_quatuor)
+
 
 
 func _monter_interface() -> void:
@@ -267,12 +375,16 @@ func _appliquer() -> void:
 			_porteur.global_position = _sol.to_global(_sol.map_to_local(depart))
 
 	_torche.enabled = _torche_allumee
+	if _lumiere_quatuor != null:
+		_lumiere_quatuor.enabled = _plein_feu
 	_camera.zoom = Vector2.ONE * (ZOOM_PIXEL if _zoom_pixel else ZOOM_JEU)
 	_etiqueter()
 
 
 func _etiqueter() -> void:
 	_etiquette.text = ("SOL  %s        MUR  %s        tuiles de %d px\n"
+		+ "Au NORD-OUEST du depart : le disque d'aujourd'hui, puis les 4 armes."
+		+ "  L = plein feu pour les comparer.\n"
 		+ "F sol · M mur · T torche (%s) · Z zoom (%s) · R rotations (%s)"
 		+ " · flèches déplacer · souris viser · Échap quitter\n"
 		+ "⚠️  la couche des murs est en fondu ADDITIF : eteins la torche (T)"
@@ -314,6 +426,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_appliquer()
 		KEY_Z:
 			_zoom_pixel = not _zoom_pixel
+			_appliquer()
+		KEY_L:
+			_plein_feu = not _plein_feu
 			_appliquer()
 		KEY_R:
 			_rotations = not _rotations

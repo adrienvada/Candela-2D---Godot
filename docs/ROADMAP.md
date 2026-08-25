@@ -6513,11 +6513,23 @@ un fait de jeu, pas à un rythme d'interface.
   et 60 Hz chaque image tient deux images de rendu, à 0,05 s (l'arbalète) une
   seule ; au-delà, une image ne serait jamais affichée. Cuites en **énergie
   libre** et non radiale — voir « Pièges connus ». *(C : 1 planche)*
-- **DA2.4 Le sprite du joueur** — personnage top-down lisible en silhouette
-  (tête, épaules, arme), idle + 4-6 frames de marche. Un personnage incarne le
-  duel ; une forme fait un diagramme. *(C)*
-- **DA2.5 Les 4 armes en main** — silhouettes distinctes sur le sprite : le
-  pompe se reconnaît à sa forme avant son son. *(C, avec DA2.4)*
+- **DA2.4 Le sprite du joueur** 🟡 **PARTIELLE le 2026-08-25** — le personnage
+  existe et est intégré : casque, épaules, avant-bras, vu de dessus strict, à
+  **36 px d'épaules**, exactement le diamètre du `Polygon2D` qu'il remplace.
+  ⚠️ **Il manque les 4-6 frames de marche** que cette entrée demande : le sprite
+  est une pose fixe. Le joueur n'est plus un diagramme, il n'est pas encore
+  animé. **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
+  arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
+  cuit donc quatre sprites complets, un par arme, plutôt qu'un corps et quatre
+  armes à raccorder. *(C)*
+- **DA2.5 Les 4 armes en main** 🟡 **INTÉGRÉE, DISTINCTION NON REVÉRIFIÉE** — les
+  quatre sprites sont cuits et posés. ⚠️ **Le test qui décide n'a pas été refait
+  depuis la dernière regénération.** Il ne s'agit pas de goût : `tools/apercu_matiere.tscn`
+  aligne les quatre figures sans annoncer l'ordre, et Adrien les nomme. **Au
+  premier passage il en a nommé deux sur quatre**, confondant le pistolet et
+  l'arbalète — et la mesure l'avait prédit, les deux dépassaient identiquement
+  de 5 px au-delà des épaules. Après regénération les dépassements valent 29,
+  38, 40 et 26 px ; reste à savoir si l'œil suit le chiffre. *(C, avec DA2.4)*
 - **DA2.6 Le tileset des sols** ✅ **livrée le 2026-08-25** — les deux cases du
   damier sont des tuiles peintes, choisies par Adrien dans
   `tools/apercu_matiere.tscn` (variante 1, damier « faible »), cuites par
