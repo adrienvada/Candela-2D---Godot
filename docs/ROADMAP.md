@@ -2617,6 +2617,79 @@ croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
 
 
+### Le 1 % bas n'est pas tenu, et ce n'est pas le brouillage (2026-08-25)
+
+**Mesuré neuf fois, `bench_framerate --vue-unique` : 1 % bas entre 43 et 60.**
+Jamais au-dessus. La cible est 60.
+
+⚠️ **La demande de branchement du brouillage partait d'un chiffre isolé.** Elle
+affirme *« le jeu franchit la cible de DEUX images par seconde (61 mesuré) »* et
+en tire qu'un flou lisant l'écran pourrait « manger la marge entière ». Il n'y a
+pas deux images de marge : **il manque dix à quinze images**, et le brouillage
+n'y est pour rien puisqu'il n'est pas branché. Le 61 venait d'un relevé
+favorable, et un 1 % bas est **la moyenne des quinze images les plus lentes sur
+mille cinq cents** — la statistique la plus bruitée du banc, celle qu'on ne cite
+jamais sans son écart.
+
+Deux corrections de méthode, payées en route :
+
+- j'ai d'abord cru que l'éditeur Godot ouvert faussait les relevés. **Fermé,
+  c'est PIRE** (43-45-51 contre 60-51-57). Ce n'était pas une charge parasite,
+  c'était le bruit de la métrique ;
+- et la lecture d'écran du brouillage n'est **pas** permanente, contrairement à
+  ce qu'annonce la demande : `_copie_ecran.visible = _flou.visible`, donc elle
+  ne coûte que pendant un éblouissement.
+
+#### `tools/banc_pics.tscn` — le banc qui date les pics au lieu de les compter
+
+`bench_framerate` dit **combien**, pas **pourquoi**, et l'écart le réclamait : la
+médiane tient 100 à 123 fps pendant que le 1 % bas tombe à 45. Soixante images
+par seconde entre le milieu et la queue, ce n'est pas une charge de fond.
+
+Le banc **date** chaque image lente et **compare** ce qui se passe pendant, à ce
+qui se passe le reste du temps. ⚠️ **Le son est coupé** (bus `Master`, avant la
+scène **et** après — `AudioManager` pose ses volumes à l'init et écraserait une
+sourdine mise trop tôt) : demandé nommément par Adrien, un duel de quinze
+secondes tirant au pompe est insupportable pour qui travaille à côté.
+
+**Ce qu'il dit, en trois relevés concordants :**
+
+- ⚠️ **les pics sont ÉTALÉS, pas groupés au début** (12 à 23 % dans le premier
+  cinquième). Ce n'est donc **pas** une compilation de shader : c'est un coût
+  permanent, qui se paiera en match. La distinction décide de tout — un pic de
+  compilation ne se voit qu'au chargement, et `bench_framerate` les mélange ;
+- **aucun corrélat ne dépasse le seuil.** Appels de dessin +14 à +18 % sur les
+  images lentes (suggestif, sous les 25 %), objets +3 %, particules ±6 %, nœuds
+  +2 %. La cause n'est pas dans ce que ce banc sait compter ;
+- mémoire statique : +2,7 à +2,9 Mo sur quinze secondes.
+
+#### Deux pièges que ce banc a failli produire lui-même
+
+⚠️ **Un format qui écrase la donnée ment autant qu'un contrôle qui ne peut pas
+échouer.** Les colonnes `process` et `physique` — les deux qui disent si le CPU
+est en cause — s'imprimaient en entiers alors qu'elles sont en secondes : elles
+affichaient « 0 », et le banc paraissait n'avoir rien mesuré là où il avait
+mesuré l'essentiel.
+
+⚠️ **Et une fois lisibles, elles étaient impossibles.** `TIME_PROCESS` vaut
+19,3 ms pendant que l'image médiane dure 9,1 ms — un temps de traitement ne peut
+pas dépasser l'image qui le contient. Ce moniteur est une **moyenne glissante**,
+pas un relevé par image. Le banc en tirait « **−3,1 %** du temps est hors du code
+de jeu » : un pourcentage négatif, imprimé sans broncher. **Un banc qui rend un
+nombre impossible est pire qu'un banc muet — il a l'autorité d'une mesure.** Il
+refuse désormais ce partage et le dit.
+
+Et le garde qui refuse a lui-même dû être repris : il comparait le moniteur à
+l'image **lente**, qu'il ne dépasse qu'une fois sur deux — donc il ne se
+déclenchait qu'une fois sur deux, et le banc concluait le reste du temps à partir
+d'une mesure qu'il savait fausse. **Un garde intermittent est un faux vert qui
+attend son tour.** Comparé à la **médiane**, il tranche à tous les coups.
+
+**Ce qui reste à trouver** : la cause des pics n'est dans aucun des corrélats
+mesurés. Prochaine piste, dans l'ordre — le coût par image du rendu (les +18 %
+d'appels de dessin), puis l'allocation.
+
+
 ### Le lanceur était sourd exactement là où le dépôt a choisi de crier (2026-08-25)
 
 **« Tout passe, sans erreur de script » ne disait rien d'un jeu qui aurait perdu
