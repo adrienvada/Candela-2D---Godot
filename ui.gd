@@ -2999,29 +2999,60 @@ func _refresh_player_list() -> void:
 	# Le lancement solo en bac à sable a été retiré avec ce grisage (décision
 	# d'Adrien) : un bouton qui lance tantôt un duel, tantôt une partie contre
 	# personne, ne dit pas ce qu'il fait.
-	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
-		and not lie
-	if panel_launch != null and is_instance_valid(panel_launch):
-		# ⚠️ **Le grisage ne vaut que pour un bouton qui LANCE, jamais pour un
-		# bouton qui CHERCHE.** Relevé par Adrien à l'écran le 2026-08-26 : en 1v1
-		# amical et en compétitif, « LANCER LA RECHERCHE EN LIGNE » était grisé et
-		# l'appariement devenait **inatteignable**.
-		#
-		# La règle « pas de second joueur, pas de départ » est juste pour un salon
-		# privé : on attend quelqu'un qui a le code, et partir seul n'aurait pas de
-		# sens. Elle est **absurde pour une recherche** — chercher un adversaire,
-		# c'est très exactement ne pas en avoir. Le bouton se grisait donc pour la
-		# raison même qui justifie de l'utiliser.
-		#
-		# Le prédicat lit l'ACTION du bouton, qui est déjà portée par `LANCEURS` :
-		# rien de nouveau à tenir d'accord, et un écran ajouté demain héritera du
-		# bon comportement du seul fait de déclarer son action.
-		var cherche := String(panel_launch.get_meta(META_LAUNCH_ACTION, "")) \
-			== "chercher"
-		var a_griser := manque_un_joueur
-		panel_launch.disabled = a_griser
-		panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if a_griser \
-			else Color.WHITE
+	# ⚠️ **L'état du lanceur se rederive ICI aussi, et ce second appel n'est pas
+	# une redondance : c'est LUI qui rouvre « PRÊT » à l'arrivée de l'adversaire.**
+	#
+	# Cette fonction est branchée sur `player_connected` / `player_disconnected` ;
+	# `_refresh_lobby_block()` ne l'est pas. En déplaçant le calcul là-bas j'avais
+	# rendu le bouton insensible au moment même qu'il attend — le duo à deux
+	# instances l'a dit tout de suite : « PRÊT s'ouvre à l'arrivée de l'adversaire »
+	# est tombé des deux côtés.
+	#
+	# Deux sites d'appel, **une seule dérivation** : le calcul reste à un endroit,
+	# seuls les instants où on le rejoue sont deux — un changement d'écran, et un
+	# changement de peuplement du salon.
+	_accorder_l_etat_du_lanceur()
+
+## Le lanceur du cadre est-il cliquable, et pourquoi.
+##
+## **Un seul endroit décide**, et il est atteint quel que soit l'écran. La règle
+## tient en une phrase : *on ne grise que ce qui LANCE, et seulement s'il manque
+## quelqu'un.*
+##
+## - **Chercher un adversaire ne demande personne** — c'est même la définition de
+##   l'acte. Les écrans d'appariement portent l'action `chercher`, jamais grisée.
+## - **L'écran scindé ne demande personne non plus** : les deux joueurs sont
+##   devant la même machine.
+## - **Un salon privé, si** : on attend quelqu'un qui a le code, et partir seul
+##   n'aurait pas de sens. C'est le seul cas où le bouton se grise, et il reste
+##   VISIBLE — le masquer laisserait croire que le match ne peut pas partir du
+##   tout, alors qu'il n'attend qu'un second joueur.
+func _accorder_l_etat_du_lanceur() -> void:
+	if panel_launch == null or not is_instance_valid(panel_launch):
+		return
+	# ⚠️ **Seule l'action `lancer` peut exiger un second joueur, et la table le
+	# dit déjà.** `chercher` va en trouver un — c'est la définition de l'acte —,
+	# `entrainement` est solo. Lire l'action plutôt qu'énumérer des écrans, c'est
+	# ce qui fait qu'un écran ajouté demain hérite du bon comportement du seul
+	# fait de déclarer ce qu'il lance.
+	#
+	# Le premier jet ne connaissait que `chercher` et grisait donc
+	# **l'entraînement**, découvert en étendant le banc à tous les lanceurs plutôt
+	# qu'aux deux écrans signalés.
+	var action := String(panel_launch.get_meta(META_LAUNCH_ACTION, ""))
+	var attend_quelqu_un := action == "lancer"
+	var solo_possible := selected_network_mode() \
+		== NetworkManager.GameMode.LOCAL_SPLITSCREEN
+	# Le MÊME prédicat que `_refresh_player_list()`, mot pour mot. En inventer un
+	# second — même équivalent — c'est signer le jour où les deux divergeront :
+	# c'est la leçon que ce dépôt a payée sur la palette, sur le tempo et sur
+	# l'échelle typographique.
+	var lie := multiplayer.has_multiplayer_peer() \
+		and not multiplayer.get_peers().is_empty()
+	var a_griser := attend_quelqu_un and not solo_possible and not lie
+	panel_launch.disabled = a_griser
+	panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if a_griser else Color.WHITE
+
 
 ## Quitter un salon **ferme le salon**, il ne fait pas que remonter d'un cran.
 ##
@@ -4237,6 +4268,21 @@ func _build_lobby_widgets() -> void:
 ## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
 ## indépendantes n'arrivaient plus à tenir cohérentes.
 func _refresh_lobby_block() -> void:
+	# ⚠️ **L'état du lanceur se pose ICI, avant toute branche, et c'est la
+	# deuxième correction du même défaut.**
+	#
+	# Il était écrit dans le bloc des salons privés, tout en bas. Or cette
+	# fonction porte **trois retours anticipés** — le garde, l'écran d'appariement,
+	# l'écran d'écran-scindé — et chacun saute ce bloc. Le bouton gardait donc
+	# l'état laissé par l'écran PRÉCÉDENT : grisé en 1v1 amical d'abord, puis en
+	# écran scindé après que j'eus corrigé la première branche seulement.
+	#
+	# **Corriger branche par branche est ce qui a échoué.** Tant que la valeur est
+	# posée dans une branche, chaque `return` ajouté demain rouvre le défaut, en
+	# silence et selon le chemin emprunté. Posée en tête, aucun retour ne peut plus
+	# la sauter — c'est la même discipline que `_suivre_le_curseur_systeme()`, qui
+	# dérive à chaque image plutôt que d'apparier une pose et une restauration.
+	_accorder_l_etat_du_lanceur()
 	if lobby_status_label == null:
 		return
 
@@ -4272,10 +4318,8 @@ func _refresh_lobby_block() -> void:
 		# plutôt qu'en mémorisant. On rend donc l'état ici, explicitement.
 		#
 		# **Chercher un adversaire, c'est très exactement ne pas en avoir** : ces
-		# deux écrans n'ont aucune raison d'attendre un second joueur.
-		if panel_launch != null and is_instance_valid(panel_launch):
-			panel_launch.disabled = false
-			panel_launch.modulate = Color.WHITE
+		# deux écrans n'ont aucune raison d'attendre un second joueur. L'état est
+		# posé en tête de fonction, donc ce retour ne le saute plus.
 		return
 
 	var mode := selected_network_mode()
