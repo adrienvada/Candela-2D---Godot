@@ -1646,12 +1646,18 @@ func _do_end_round(winner_id: int):
 	if _sting != "":
 		AudioManager.play_sfx(_sting)
 
-	if winner_id == 0:
-		AudioManager.play_speaker("spk_p1_wins")
-	elif winner_id == 1:
-		AudioManager.play_speaker("spk_p2_wins")
-	else:
-		AudioManager.play_speaker("spk_draw")
+	# V1.3 — l'annonceur. `voix_de_fin` decide ce que CETTE machine entend : en
+	# ecran scindé elle nomme le vainqueur, ailleurs elle s'adresse a celui qui
+	# ecoute (« tu as gagne », « sans faute », « de justesse », « perdu »).
+	var _pv_vainqueur := 0.0
+	if winner_id == 0 and p1 != null:
+		_pv_vainqueur = p1.hp
+	elif winner_id == 1 and p2 != null:
+		_pv_vainqueur = p2.hp
+	var _voix := AudioManager.voix_de_fin(winner_id, _local_player_index(),
+		training_mode, _pv_vainqueur)
+	if _voix != "":
+		AudioManager.play_speaker(_voix)
 
 	if winner_id != -1:
 		# V2.1 — attendre que la frame de l'impact soit DESSINÉE avant de geler.

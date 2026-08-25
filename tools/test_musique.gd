@@ -51,6 +51,8 @@ func _run() -> void:
 	_test_couches_du_match()
 	_test_ouverture()
 	_test_armes()
+	_test_percuteur()
+	_test_annonceur()
 	_test_stingers_regle()
 	_test_oreille()
 	_test_stingers()
@@ -269,6 +271,126 @@ func _test_armes() -> void:
 ## signale : le fichier existe, il se charge, il sort. C'est pour ca que la regle
 ## est une fonction pure et qu'elle est eprouvee ici plutot qu'a l'oreille, une
 ## fois, en match.
+## Le percuteur a vide, et le piege qu'il tend au pool.
+##
+## Les fichiers `weapon_dry_*` vivent dans le meme dossier que les tirs. Or
+## `est_un_tir()` reconnait un coup de feu **a son prefixe de chemin** : sans
+## exclusion, un clic a vide aurait pris la priorite d'un tir ET declenche le
+## duck des pas (V4.15). Un joueur martelant une detente vide aurait efface les
+## pas de son adversaire — l'inverse exact de ce que ce son raconte.
+##
+## Rien n'aurait leve d'erreur : le clic se serait entendu, les pas auraient
+## juste ete un peu plus bas. Encore une sortie plausible.
+func _test_percuteur() -> void:
+	print("\n[Le percuteur a vide]")
+	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
+		var chemin := AM.chemin_percuteur(slug)
+		_check("%s : son percuteur est la" % slug,
+			ResourceLoader.exists(chemin), chemin)
+		if ResourceLoader.exists(chemin):
+			var flux = load(chemin)
+			# Positionnel comme les tirs, donc mono : un clic a vide dit « je
+			# suis la », et une source stereo cesse d'etre un point.
+			#
+			# Les VOIX, elles, ne sont pas concernees : l'annonceur passe par un
+			# `AudioStreamPlayer` global, sans panoramique. Les forcer en mono
+			# n'aurait rien gagne et aurait jete la largeur du mixage.
+			_check("%s : en mono" % slug,
+				not (flux is AudioStreamWAV and flux.stereo))
+
+	_check("le chemin est bien forme",
+		AM.chemin_percuteur("pompe")
+			== "res://assets/audio/weapons/weapon_dry_pompe.wav",
+		AM.chemin_percuteur("pompe"))
+
+	# LE controle qui compte.
+	_check("un clic a vide N'EST PAS un tir",
+		not AM.est_un_tir(AM.chemin_percuteur("fusil")))
+	_check("... alors qu'un vrai tir du meme dossier en est un",
+		AM.est_un_tir(AM.chemin_tir("fusil", 1)))
+	# ⚠️ Ce controle a d'abord affirme que le percuteur n'avait PAS la priorite
+	# d'un tir. C'etait faux, et pour une raison qui vaut d'etre gardee : un son
+	# inconnu du bareme recoit `SFX_PRIORITE_DEFAUT`, qui vaut 2 — exactement la
+	# valeur de `shoot`. Le percuteur a donc bien la meme priorite, non par
+	# heritage mais par le defaut, et c'est **voulu** : le bareme place le son
+	# anonyme au-dessus des pas et en dessous du recit. Ce qu'il fallait
+	# verifier, c'est le duck, pas le rang.
+	# Le dosage : un percuteur porte PEU et pese PEU. Sans ligne dediee il
+	# prendrait le defaut (1,0 x diagonale, 0 dB) et s'entendrait d'un bout a
+	# l'autre de la carte — pour un clic, ce serait une annonce.
+	var pc := AM.chemin_percuteur("fusil")
+	_check("il porte moins loin qu'un impact de mur",
+		AM.portee_relative_de(pc) < AM.portee_relative_de("wall_impact"),
+		"%.2f" % AM.portee_relative_de(pc))
+	_check("mais plus loin qu'un pas",
+		AM.portee_relative_de(pc) > AM.portee_relative_de("footstep"))
+	_check("il ne prend PAS la portee par defaut",
+		not is_equal_approx(AM.portee_relative_de(pc), AM.PORTEE_RELATIVE_DEFAUT))
+	_check("et il pese moins qu'un tir",
+		AM.niveau_relatif_de(pc) < AM.niveau_relatif_de("shoot"),
+		"%.1f dB" % AM.niveau_relatif_de(pc))
+
+	_check("il se place au-dessus des pas",
+		AM.priorite_de(AM.chemin_percuteur("fusil")) > AM.priorite_de("footstep"))
+	_check("et en dessous du coup au but",
+		AM.priorite_de(AM.chemin_percuteur("fusil")) < AM.priorite_de("flesh_impact"))
+
+## L'annonceur : a qui parle-t-il, et que dit-il ?
+##
+## La regle d'Adrien : en ecran scindé l'annonceur NOMME le vainqueur, partout
+## ailleurs il s'adresse a celui qui ecoute. Se tromper de cote ici, c'est
+## annoncer « le joueur 2 a gagne » a quelqu'un qui joue seul, ou pire, feliciter
+## le perdant. Rien ne leverait d'erreur : un fichier existe, il sort.
+func _test_annonceur() -> void:
+	print("\n[L'annonceur : a qui il parle]")
+	# Ecran scindé : deux joueurs, memes haut-parleurs, il faut NOMMER.
+	_check("ecran scindé, J1 gagne -> spk_p1_wins",
+		AM.voix_de_fin(0, -1, false, 55.0) == "spk_p1_wins")
+	_check("ecran scindé, J2 gagne -> spk_p2_wins",
+		AM.voix_de_fin(1, -1, false, 55.0) == "spk_p2_wins")
+	# Et il NOMME meme sur un sans-faute : la variante ne doit pas manger
+	# l'information de qui a gagne, qui est la seule utile a deux devant l'ecran.
+	_check("ecran scindé : la variante ne remplace pas le nom",
+		AM.voix_de_fin(0, -1, false, AM.PV_MAX) == "spk_p1_wins")
+
+	# En ligne : il s'adresse a celui qui ecoute.
+	_check("en ligne, je gagne -> win", AM.voix_de_fin(0, 0, false, 55.0) == "win")
+	_check("en ligne, je perds -> defeat",
+		AM.voix_de_fin(0, 1, false, 55.0) == "defeat")
+	_check("et dans l'autre sens",
+		AM.voix_de_fin(1, 1, false, 55.0) == "win"
+			and AM.voix_de_fin(1, 0, false, 55.0) == "defeat")
+
+	# Les variantes, et leur exclusion mutuelle.
+	_check("intact -> sans faute",
+		AM.voix_de_fin(0, 0, false, AM.PV_MAX) == "spk_perfect")
+	_check("au ras -> de justesse",
+		AM.voix_de_fin(0, 0, false, AM.PV_DE_JUSTESSE) == "spk_close_call")
+	_check("entre les deux -> win tout court",
+		AM.voix_de_fin(0, 0, false, 50.0) == "win")
+	# Le perdant n'herite d'aucune variante : ses PV ne sont pas ceux du vainqueur.
+	_check("le vaincu entend defeat quels que soient les PV",
+		AM.voix_de_fin(0, 1, false, AM.PV_MAX) == "defeat"
+			and AM.voix_de_fin(0, 1, false, 1.0) == "defeat")
+
+	# L'egalite passe avant tout le reste, des deux cotes.
+	for idx in [-1, 0, 1]:
+		_check("egalite -> spk_draw (local_idx %d)" % idx,
+			AM.voix_de_fin(-1, idx, false, 0.0) == "spk_draw")
+
+	# Toutes les cles doivent resoudre vers un fichier reel.
+	for cle in ["spk_fight", "spk_draw", "spk_p1_wins", "spk_p2_wins",
+			"win", "defeat", "spk_perfect", "spk_close_call"]:
+		_check("la cle %s designe un fichier present" % cle,
+			ResourceLoader.exists(String(AM.SOUNDS.get(cle, ""))),
+			String(AM.SOUNDS.get(cle, "(absente de SOUNDS)")))
+
+	# La regle doit DERIVER d'ecoute_somme, pas la recopier : deux predicats
+	# paralleles divergent le jour ou l'on n'en corrige qu'un.
+	var source := FileAccess.get_file_as_string("res://audio_manager.gd")
+	_check("voix_de_fin s'appuie sur ecoute_somme",
+		source.contains("if ecoute_somme(local_idx, entrainement):"))
+
 func _test_stingers_regle() -> void:
 	print("\n[La ponctuation de fin : qui entend quoi]")
 	# Egalite : le match s'acheve au temps, les deux entendent la meme chose.
