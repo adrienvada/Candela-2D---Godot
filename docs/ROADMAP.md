@@ -9537,6 +9537,31 @@ Reste donc :
 
    Doubler la texture demande donc de **séparer la région d'atlas de la taille de
    case**, et toute confusion entre les deux touche des cartes déjà enregistrées.
+
+   ⚠️ **PRÉCISION qui change la nature du travail** (trouvée par la session
+   « spatialisation du son », vérifiée avant reprise) : ce champ du format est
+   **écrit et lu par personne.**
+
+   - écrit deux fois — `map_codec.gd:215` et `map_data.gd:360` —, les deux
+     depuis `CandelaTileSet.TILE_SIZE`, jamais depuis la carte ;
+   - lu **zéro fois**. `MapGeometry.build_collisions()` accepte bien un
+     `tile_size` en paramètre, mais **avec la constante pour défaut**, et
+     `menu_arene.gd:301` l'appelle sans l'argument. La géométrie ignore donc la
+     valeur stockée, et l'audio aussi.
+
+   Ça coupe dans les deux sens. **La migration est plus SIMPLE qu'annoncé** —
+   aucun lecteur ne casse si la constante change, puisqu'il n'y a pas de
+   lecteur. Mais **le champ promet ce qu'il ne tient pas** : chaque carte
+   enregistrée porte `tile_size: 35`, ce qui a toutes les apparences d'un
+   filet pour les anciennes cartes, et n'en est pas un. Qui planifierait la
+   migration en comptant dessus bâtirait sur du vide.
+
+   Troisième exemplaire du même piège en deux jours : **un champ que personne ne
+   lit ne se corrige pas tout seul**, et il ment d'autant mieux qu'il a l'air
+   prévoyant. Deux issues, et le laisser inerte n'en est pas une : soit le champ
+   devient **lu** — géométrie et audio prennent la valeur de la carte, ensemble
+   ou pas du tout —, soit il est **retiré** du format pour cesser de promettre.
+   Le choix appartient au domaine éditeur/cartes.
    Ce n'est plus « rien d'autre à décider » : c'est un chantier à part entière,
    avec une compatibilité ascendante à tenir.
 
