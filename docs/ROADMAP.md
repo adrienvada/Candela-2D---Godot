@@ -7365,6 +7365,355 @@ ailleurs (V5.12) et attend S1, S6 est hors périmètre.
 
 ---
 
+## Chantier — brouiller la position de celui qui éblouit (inscrit le 2026-08-25)
+
+**Demande d'Adrien, le 2026-08-25 :** « il faut que l'éblouissement rende plus
+difficile de viser le joueur qui éblouit […] il faut aussi que cela *floute*, ou
+*brouille* la position du joueur émetteur ».
+
+**Le constat qui la motive, et il est exact.** L'éblouissement coûte deux choses,
+et toutes deux au **contrôle** : la vitesse de déplacement (`×0,4` à saturation,
+`player.gd`) et la vivacité de visée (`×0,4` sur le `lerp_angle`). Il ne coûte
+**rien à l'information** — la silhouette de celui qui braque sa torche reste
+aussi nette et aussi bien placée qu'avant. On vise donc toujours juste, seulement
+plus lentement. Dans un jeu dont la proposition entière est « la seule
+information est la lumière », c'est la moitié manquante.
+
+**Ce qui est livré, et ce qui ne l'est pas.** Aucun fichier de production n'est
+touché : ni `player.gd`, ni `game_state.gd`, ni `ui.gd`, ni `eblouissement.gd`.
+Trois fichiers **neufs** seulement — le modèle `brouillage.gd` (sans dépendance,
+comme `vision.gd` et `eblouissement.gd`, et pour la même raison), le banc
+`tools/banc_brouillage.tscn`, la suite `tools/test_brouillage.gd`. **Rien n'est
+branché en jeu, et rien ne doit l'être avant que le banc ait tranché.**
+
+### Les cinq options, et ce que chacune coûte à qui la subit
+
+| # | Mode | Ce qu'on perd | Ce qui reste, donc le plafond de compétence | Le risque propre |
+|---|---|---|---|---|
+| 1 | **halo** | Le voile blanc se concentre en bloom autour de la source, et l'avale. | La **direction** : le bloom est centré sur lui. | Il **désigne** l'adversaire. À faible éblouissement, il peut être un gain net d'information. |
+| 2 | **diplopie** | La silhouette se dédouble sur un cercle qui tourne lentement. | Le **milieu des deux copies est la position vraie**, exactement. Garder la tête froide et viser entre les deux marche. | Trop écarté ou trop net, on ne lit plus un dédoublement mais deux adversaires. |
+| 3 | **tremblement** | La silhouette dérive continûment autour d'elle-même (≤ 34 px). | La **moyenne temporelle est nulle** : la patience paie. | Se lit comme une **désynchronisation réseau**. C'est le pire malentendu possible en ligne — le joueur incrimine sa connexion, pas la torche. |
+| 4 | **rémanence** | On voit où l'adversaire **était**, jusqu'à 0,18 s plus tôt. | La position montrée a **vraiment existé** : on prend l'avance, comme sur une cible mouvante. | **Ne punit que celui qui bouge.** Un émetteur qui allume et se fige n'est pas brouillé du tout — « allumer et ne plus bouger » deviendrait une ligne de jeu. |
+| 5 | **contraste** | La silhouette se dissout dans le voile (opacité → 0,18). | Rien de faux n'est montré : le signal est **retiré**, jamais déplacé. | Ne fonctionne **que tant que le voile est là** pour servir de fond ; sans lui, il ne dit plus « il se confond » mais « il disparaît ». |
+
+Aucune n'est recommandée seule sans essai. La combinaison qui se défend le mieux
+sur le papier est **1 + 2** : le halo rend la cause visible — on comprend
+*pourquoi* on ne vise plus —, la diplopie prend la précision sans mentir sur la
+direction ni retirer le plafond de compétence. Mais c'est exactement le genre de
+raisonnement que le 2026-08-24 a renversé sur la vitesse de récupération : *il se
+tenait, il n'avait jamais été éprouvé.* D'où le banc.
+
+### Ce que la construction a déjà appris, avant tout jugement de goût
+
+- **Le voile fait déjà presque tout le travail, et c'est le point le plus
+  gênant.** À 0,60 d'éblouissement le voile vaut 0,48 d'opacité sur tout
+  l'écran : le contraste de la silhouette ennemie est déjà écrasé *avant* qu'un
+  brouillage n'intervienne. Relevé sur image, pas déduit. **Conséquence : si un
+  mode est retenu, il faudra probablement BAISSER le facteur 0,8 du voile**,
+  sans quoi les deux s'empilent en écran blanc — et un écran blanc ne se joue
+  pas, il s'attend.
+- **L'apex du faisceau trahit la position, et trois modes sur cinq l'ignorent.**
+  Diplopie, tremblement et rémanence ne déplacent que l'image du corps ; le cône
+  de lumière, lui, continue de partir du point vrai, et il est parfaitement
+  visible. Le banc porte donc une bascule (`L`) : le faisceau suit-il le
+  brouillage, ou reste-t-il sur la vérité ? **C'est une vraie question de
+  conception, pas un détail d'implémentation** — faire trembler tout le champ
+  lumineux est bien plus violent, et sans doute plus juste.
+- **Un tremblement rapide se défait tout seul.** Le premier réglage faisait
+  dériver la silhouette à **322 px/s**, plus vite qu'un joueur qui court. Deux
+  conséquences, et la seconde compte davantage : ça se lisait comme une
+  vibration, donc comme un défaut d'affichage ; et **l'œil intègre ce qui tremble
+  vite**, si bien que la moyenne perçue redevient la position vraie — le
+  brouillage s'annulait au moment précis où on le regardait. Le plafond est
+  désormais physique et éprouvé par la suite : *jamais plus vite qu'un joueur qui
+  marche*. Ce qui se déplace comme un joueur se lit comme un joueur.
+- **Le shader ennemi plafonne `LIGHT` à `COLOR.rgb`.** Un réglage entier
+  (« mêler la silhouette à la couleur du voile ») a été écrit, puis retiré au
+  premier rendu : éclaircir la couleur vers l'halogène **relève le plafond** et
+  fait donc BRILLER la silhouette au lieu de la fondre. Le réglage faisait
+  l'inverse de son nom et rien ne l'aurait dit. À savoir avant de vouloir teinter
+  quoi que ce soit qui porte `player_enemy_light.gdshader`.
+
+### ⚠️ La conséquence qu'on ne voit pas venir : le curseur « Éblouissement »
+
+Une décision actée dit que `GameSettings.current_effect("eblouissement")` module
+**le voile et rien d'autre** — jamais la pénalité de vitesse ni de visée, parce
+qu'« un curseur qui allégerait la pénalité serait un avantage compétitif déguisé
+en confort ».
+
+**Un brouillage est une pénalité d'information. Il tombe donc du mauvais côté de
+cette frontière : il ne peut pas passer par le curseur.** Et cela crée une
+situation qui n'existait pas : un joueur qui met le voile à zéro **garde le
+brouillage sans sa cause visible**. Le mode `contraste` cesse alors de
+fonctionner (plus de fond où se dissoudre), et le `tremblement` perd sa
+justification à l'écran — il ne reste qu'une silhouette qui gigote sans raison,
+c'est-à-dire, pour le joueur, un bug de réseau.
+
+Trois issues, aucune évidente, toutes à trancher par Adrien : donner au voile un
+**plancher** qu'aucun réglage ne peut passer ; lier le brouillage au voile
+malgré la décision ; ou ne retenir qu'un mode qui se suffit à lui-même.
+
+### ✅ B1 tranché au banc par Adrien, le 2026-08-25 — « la lampe »
+
+**Premier essai manette en main, et il tranche la question centrale.** Adrien
+retient **un mix du contraste et du halo**, avec trois exigences :
+
+1. **Le contraste doit atteindre 100 % d'invisibilité** — « j'aime beaucoup,
+   mais il faut que ça puisse atteindre 100 % ». `ALPHA_CONTRASTE` passe de
+   **0,18 à 0,0**.
+2. **Le halo doit se poser sur l'émetteur.** C'était un **défaut**, pas un
+   choix (voir plus bas).
+3. **Le voile doit être atténué.** Le banc démarre désormais à **0,35** au lieu
+   des 0,8 d'`ui.gd`, et le facteur est réglable en direct (`F` / `H`).
+
+Le mode combiné existe sous le nom **`Mode.LAMPE`**, touche `6` : *le corps
+disparaît, sa lampe reste.* Les modes purs restent au banc comme témoins.
+
+**Ce que ce choix résout, et que le raisonnement seul n'avait pas vu.** Ce
+document portait une objection contre le contraste poussé à bout : une
+disparition pure retire TOUTE information, donc le plafond de compétence tombe
+avec. Le mix y répond exactement — *(⚠️ au 2026-08-25, troisième essai, ce
+n'est plus exact : voir plus bas, le halo est devenu une traînée décentrée et
+le repère est passé du centre à son extrémité arrière)* — **le halo reste
+centré sur la position
+vraie**, donc on ne perd pas la cible, on perd sa *netteté*. C'était la demande
+depuis le début. Et l'atténuation du voile suit la même logique : le voile
+faisait deux métiers (dire « tu es ébloui » ET cacher l'adversaire) ; le second
+revient au halo, qui le fait **localement**, sans coûter la lecture du reste de
+la carte.
+
+**Conséquence à tenir : `Mode.CONTRASTE` seul n'est plus jouable en
+production.** À 100 % d'invisibilité et sans halo, l'adversaire devient
+introuvable. Il ne survit que comme témoin de banc. Deux contrôles de
+`test_brouillage` tiennent la paire — l'invisibilité totale d'un côté, la
+présence du halo de l'autre.
+
+> ⚠️ **Ce qu'il reste à juger sur `LAMPE`, et qui ne se voit qu'en jouant :**
+> un halo radial centré sur la vérité a un **centre lisible**. Le risque est
+> qu'on apprenne à tirer au milieu de la tache, et que le brouillage se réduise
+> à une gêne cosmétique. Ce qui doit l'empêcher n'est pas un décentrage — ce
+> serait un mensonge — mais la **taille** de la tache, le fait qu'elle bouge, et
+> la visée déjà ralentie. À vérifier au tableau de tirs, pas à l'œil : si le
+> « % au but » de `lampe` rejoint celui d'`aucun`, c'est que le centre se lit
+> trop bien, et c'est `RAYON_HALO` qu'il faut monter.
+
+### Second essai d'Adrien, le 2026-08-25 — quatre corrections et un défaut de fond
+
+« C'est pas mal du tout avec le contraste et le halo, mais… » Quatre demandes,
+et la dernière rouvre une question que ce document avait posée le matin même :
+
+1. **Le halo est trop gros, trop large.** `RAYON_HALO` : 260 → **150**.
+2. **Plus intense en son centre, chute plus rapide au bord.** Le profil était un
+   dégradé de trois points écrit à la main, quasi linéaire — donc une tache
+   molle. Il vient désormais de `Brouillage.profil_halo`, `(1 − r) ^ 2,5`, et
+   l'intensité au centre passe à 1,0. **Les deux ensemble et pas l'un sans
+   l'autre** : monter le centre sans creuser la chute ramènerait le disque plein,
+   c'est-à-dire le halo qui DÉSIGNE au lieu de cacher.
+3. **Le contraste doit tomber plus vite.** La chute était linéaire : à
+   mi-éblouissement il restait la moitié de la silhouette, ce qui se lit encore
+   très bien sur du noir. `COURBE_CONTRASTE = 2,0` la porte à 0,25.
+   **Ce n'est pas cosmétique** : la saturation n'est presque jamais atteinte en
+   jeu (plafond réel du pistolet à bout portant : 0,93), donc une chute linéaire
+   réservait l'invisibilité à un cas de figure que le duel ordinaire ne produit
+   pas.
+4. **On supprime le voile.** Il ne s'affiche plus par défaut au banc. Ce que sa
+   disparition confirme : il faisait **deux métiers** — dire « tu es ébloui » et
+   cacher l'adversaire. Le halo et le flou font le second, et localement.
+
+### Le cône trahissait l'apex — et c'était écrit ici depuis l'ouverture
+
+« Il faudrait ajouter du flou dans la zone de l'émission de lumière, sinon le
+cône révèle où est le joueur. »
+
+**Ce document portait déjà cette phrase**, à l'ouverture du chantier : *« l'apex
+du faisceau trahit la position, et trois modes sur cinq l'ignorent »*. Elle y
+était classée comme une remarque sur les modes à déplacement ; elle valait aussi
+pour `LAMPE`, et personne ne l'avait vu. **Effacer le corps ne sert à rien tant
+que deux arêtes qui convergent se prolongent à l'œil.**
+
+Le remède est un vrai flou d'écran, `brouillage_flou.gdshader` : dix-sept
+prélèvements, noyau plein au centre et **nul sur le bord du disque** — à rayon
+constant, la bordure mélangerait du flou et du net côte à côte et poserait une
+forme nette de plus, c'est-à-dire un repère aussi bon que celui qu'on efface.
+Mesuré : le contraste local de la zone d'émission tombe de **24,5 %** à 24 px de
+noyau (−8,5 % à 8, −35,9 % à 40).
+
+**La zone floutée est plus large que le halo** — 210 contre 150 — et une suite
+l'exige : le halo cache un CORPS, le flou casse une CONVERGENCE, qui se lit bien
+au-delà du corps.
+
+> ⚠️ **À savoir avant de brancher : ce flou lit l'écran.** Il exige un
+> `BackBufferCopy` et il est aujourd'hui en `COPY_MODE_VIEWPORT`, donc une
+> recopie plein cadre par image. En jeu il y aurait **deux vues**, et la cible de
+> cadence est un 1 % bas ≥ 120 fps. Le repasser en `COPY_MODE_RECT` est
+> possible — c'est ainsi qu'il a commencé — mais c'est à mesurer au banc de
+> cadence, pas à supposer.
+
+### ⚠️ Le shader lisait un tampon qu'on écrivait — et un faux correctif a failli le cimenter
+
+Le flou a d'abord rendu l'image **juste, à la bonne place, et beaucoup trop
+claire**. Diagnostic évident : un sRGB appliqué deux fois. J'ai posé un
+`pow(couleur, 2,2)` — qui l'a rendue beaucoup trop **sombre**. Un balayage de
+l'exposant contre une référence sans disque n'a rien trouvé qui colle : 1,0
+donnait +19 % de luminance, 1,4 en donnait −43 %.
+
+**Aucun exposant ne collait parce qu'aucun exposant n'était le problème.** Ce
+qui l'a dit : la luminance n'était qu'à +19 % pendant que le contraste était à
+**+226 %**. Un décalage colorimétrique déplace les deux ensemble ; cet excès de
+VARIANCE seul désignait autre chose — le rectangle lisait un tampon qu'on était
+en train d'écrire dans la même passe de canevas. Déplacé sur sa propre
+`CanvasLayer`, au-dessus du monde entier, il colle à la référence à **0,000 %**
+près sur les deux mesures, sans aucune correction.
+
+**Deux choses à en retenir, et la seconde vaut au-delà de ce shader :**
+
+- une lecture d'écran en 2D n'a de sens que si ce qu'elle lit est **fini d'être
+  dessiné** ; une couche à part est le seul moyen de le garantir ;
+- **un facteur de correction qui « marche à peu près » est le meilleur moyen de
+  cimenter un défaut ailleurs.** Le 2,2 était plausible, documentable, et faux.
+  Seule la mesure contre une référence l'a écarté — le contrôle décisif tenait
+  en une ligne : *à noyau nul, le disque doit devenir invisible.*
+
+### Troisième essai, le 2026-08-25 — le halo était un CERCLE, donc un repère
+
+Adrien, capture à l'appui : « le problème c'est que le cercle est toujours
+visible grâce à la luminosité centrale du halo. Il faudrait qu'elle s'étale
+davantage, dans la direction du faisceau, avec le flou. »
+
+**Le défaut est de forme, et il retourne une demande précédente contre son
+but.** Un halo rond est une forme ; son cœur lumineux en marque le centre,
+c'est-à-dire très exactement le point qu'on cherche à rendre introuvable. Et
+**plus le cœur est net, mieux il le marque** — donc la netteté demandée au
+deuxième essai (`NETTETE_HALO`, la chute creusée) travaillait *contre* le but
+sans que ni lui ni moi ne l'ayons vu.
+
+**La correction n'est pas d'adoucir le cœur** — ce serait défaire la demande
+précédente — **mais de l'étirer.** Le halo et le flou deviennent deux ellipses
+couchées sur l'axe du faisceau et poussées vers la victime. Le cœur devient une
+traînée : aussi vif, il ne désigne plus. Mesuré sur image, faisceau vertical :
+la zone claire fait **33 px en travers contre 225 le long**, soit un rapport de
+6,8 là où un cercle rend 1,0.
+
+Réglages du même essai : flou plus intense (noyau 24 → **34**), halo moins
+puissant (intensité 1,0 → **0,7**), silhouette effacée plus vite (courbe 2,0 →
+**3,4**, soit 0,11 d'opacité à mi-éblouissement contre 0,25).
+
+> ⚠️ **Le repère a changé de nature, et une phrase de ce document est devenue
+> fausse.** Il était écrit que « le halo reste centré sur la position vraie »,
+> et que c'était ce qui gardait la vérité recouvrable. **Ce n'est plus exact :**
+> la traînée est décentrée vers la victime, son barycentre n'est plus
+> l'émetteur. Ce qui reste vrai — et ce sur quoi repose désormais tout le
+> plafond de compétence — c'est que **l'émetteur est à l'extrémité arrière de la
+> traînée**, celle qui s'éloigne de soi. On lit une forme au lieu d'un point.
+> Ce n'est pas un mensonge, la traînée décrit fidèlement où la lumière est ;
+> mais « viser le centre du halo » était un conseil juste et ne l'est plus.
+
+> ⚠️ ~~**Conséquence non demandée : le joueur ébloui se voit lui-même flou.**~~
+> **Tranché le 2026-08-25 : il ne doit pas l'être.** « Il ne faut pas que notre
+> propre personnage devienne flou » (Adrien). Le flou porte désormais un trou
+> autour de soi — nul en deçà de 44 px, plein au-delà de 104. **Le fondu entre
+> les deux n'est pas un ornement** : un disque net au milieu du flou serait une
+> forme de plus à lire, donc un repère, et on aurait remplacé un cercle par un
+> autre. Mesuré : avec le trou, le contraste sur son propre personnage est
+> **identique au millième** à celui d'une image sans aucun flou ; sans lui, il
+> tombait de 35,5 %.
+>
+> Ce n'était pas qu'un confort : la décision actée du voile sous le HUD dit déjà
+> que l'éblouissement doit coûter la lecture **du monde**, jamais celle de sa
+> propre fiche. Se perdre soi-même est une punition de plus que ne rattrape
+> aucune compétence.
+
+### ✅ Les réglages retenus par Adrien, le 2026-08-25 — B3 clos
+
+Quatrième et dernier essai de la soirée : **« c'est super : voile à 0,3, effet
+à 2, il ne faut pas que notre propre personnage devienne flou ».**
+
+| | valeur | où |
+|---|---|---|
+| voile | **0,3** | `Brouillage.VOILE_FACTEUR` — ⚠️ `ui.gd` porte encore **0,8** |
+| gain du brouillage | **2,0** | `Brouillage.GAIN` |
+| trou autour de soi | 44 → 104 px | `EXCLUSION_PRES` / `EXCLUSION_LOIN` |
+
+**B3 est donc clos** : le voile a fait 0,8 → supprimé → 0,3 en une soirée, et
+ce n'est pas de l'hésitation. Il faisait deux métiers — dire « tu es ébloui » ET
+cacher l'adversaire ; le halo et le flou ont pris le second, et **localement**.
+Il ne reste que le premier, qui se contente de 0,3.
+
+**Le gain n'est pas une intensité, c'est une VITESSE** : à 2,0 la dose sature dès
+0,5 d'éblouissement, donc tout le brouillage est atteint à mi-faisceau. Cela
+compte parce que la saturation n'est presque jamais atteinte en jeu — plafond
+réel du pistolet à bout portant : 0,93, et bien moins hors de l'axe. **Il vit
+dans le modèle et non au banc**, sinon la production ne ferait pas ce qui a été
+jugé.
+
+**Il ne reste que B4** — le curseur « Éblouissement » — avant qu'un branchement
+soit possible.
+
+### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
+
+`TextureRect.expand_mode` vaut `EXPAND_KEEP_SIZE` par défaut : la taille
+**minimale** du contrôle est alors celle de sa texture, 512². Toute taille
+demandée plus petite était relevée à 512 pendant que la position, elle, restait
+calculée sur le rayon voulu — le centre dessiné dérivait de `256 − rayon`, une
+centaine de pixels vers le bas et la droite aux valeurs courantes.
+
+**Le plus instructif est comment il a passé une vérification par l'image.**
+L'unique capture du halo avait été prise avec l'émetteur **pile au-dessus du
+canon**. À cet endroit l'erreur horizontale est rigoureusement nulle, et
+l'erreur verticale se lit comme « le halo est un peu bas » — c'est-à-dire comme
+un réglage, pas comme un défaut. **Une position centrée est le seul point
+aveugle de ce défaut, et c'est celle qui avait été choisie pour le contrôler.**
+
+La règle qui en sort, et elle vaut pour toute planche de ce dépôt : **une
+capture de contrôle ne se prend pas sur un cas symétrique.** La symétrie est
+exactement ce qui annule les erreurs qu'on cherche.
+
+### Ce qui attend encore Adrien — B2 à B4
+
+Le banc se lance seul : `godot --path . res://tools/banc_brouillage.tscn`. `0`
+à `6` changent de mode en direct, `←/→` règlent la force, `F`/`H` le voile, le
+clic tire, `Échap` imprime le tableau — par mode, combien de tirs, combien au
+but, de combien on rate.
+
+- ~~**B1 — quel(s) mode(s).**~~ ✅ **Tranché le 2026-08-25 : `Mode.LAMPE`**
+  (contraste à 100 % + halo). Voir ci-dessus.
+- **B2 — le faisceau suit-il le brouillage ?** (touche `L`). **Sans objet pour
+  `LAMPE`** : ce mode ne déplace rien, il efface et il éclaire. La question ne
+  se rouvrira que si un mode à déplacement revenait.
+- ~~**B3 — quelle valeur pour le voile ?**~~ ✅ **Tranché le 2026-08-25 : 0,3.**
+  Voir la section des réglages retenus. ⚠️ `ui.gd` porte encore 0,8 : c'est la
+  seule valeur de production à changer au branchement.
+- ~~**B4 — le curseur.**~~ ✅ **Tranché le 2026-08-25 : il n'y en a pas.**
+  « On ne peut pas régler la valeur éblouissement, il ne faut pas donner
+  d'avantage à un des deux » (Adrien).
+
+  **Cette décision dépasse celle du 2026-08-18 au lieu de la contredire.**
+  L'ancienne plaçait la frontière entre le CONFORT (le voile, réglable) et la
+  PÉNALITÉ (vitesse et visée, jamais réglables). **Ce chantier a déplacé le
+  voile du mauvais côté de cette frontière** : tant qu'il ne faisait que
+  blanchir l'écran, le baisser ne rendait pas l'adversaire plus lisible — il
+  l'était déjà, net et bien placé. Depuis que la lecture de l'adversaire dépend
+  du halo, du flou et de l'effacement, **tout ce qui touche à l'éblouissement
+  touche à l'information**, et un curseur devient un avantage quel que soit ce
+  qu'il règle.
+
+  Ce qu'il faudra faire au branchement : **`ui.gd` cesse de multiplier le voile
+  par `GameSettings.current_effect("eblouissement")`** et pose `VOILE_FACTEUR`
+  tel quel ; l'entrée « Éblouissement » de l'écran des effets n'a plus d'objet.
+  Ces trois fichiers appartiennent à la session « menus » — **la modification se
+  demande, elle ne se fait pas d'office**, et elle n'est donc pas faite ici.
+
+**Les quatre items sont clos. Le chantier n'attend plus d'arbitrage** — il
+attend un branchement, qui touche des fichiers tenus par une autre session.
+
+**Rien n'est branché tant que B4 n'est pas posé.** `brouillage.gd` n'a toujours
+aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
+`game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
+manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
+et ils vivent dans `brouillage.gd`.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
