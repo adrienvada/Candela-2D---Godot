@@ -6972,8 +6972,30 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   noms de touches. *(S + G)*
 - **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
   carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
-- **DA4.13 Les transitions d'écran signature** — un seul motif de fondu (une
-  extinction ?), décliné partout. *(S)*
+- **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
+  le constat est le même que pour les fontes.
+
+  **DA1.8 a livré trois courbes maison** (`ENTREE`, `SORTIE`, `REBOND`) et un
+  point d'entrée unique, `Charte.animer()`, précisément pour remplacer les
+  `TRANS_*` de Godot. Compté ce jour : **7 appels à `Charte.animer()` contre 31
+  `set_trans(Tween.TRANS_*)`**, répartis sur **cinq transitions différentes** —
+  `CUBIC`, `SINE`, `BACK`, `QUAD`, `EXPO`. Le vocabulaire est livré, le code parle
+  encore l'ancien.
+
+  **Trois sites convertis**, choisis parce qu'ils sont les plus vus : le décompte
+  3-2-1, l'appui sur une tuile de galerie, et l'annonce du score de fin. Les
+  durées posées à la main (0,06 / 0,45 / 0,9 s) passent aux trois crans de
+  l'échelle.
+
+  ⬜ **Reste cinq sites** — `menu_title.gd` (2), `map_editor.gd` (2),
+  `audio_manager.gd` (1), plus deux dans `ui.gd`. Aucun n'est difficile ; ils
+  demandent seulement de connaître la valeur de départ, `Charte.animer()`
+  passant par `tween_method` et non par `tween_property`.
+
+  **Et l'item demandait autre chose que ce qu'il dit.** « Un seul motif de
+  fondu » suppose que le problème est le fondu ; il est plus large — c'est
+  l'unité du geste. Le rebond sous un bouton, sous une tuile et sous le décompte
+  est ce qui donne la sensation qu'une seule main a animé l'écran. *(S)*
 - **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
   rectangles colorés. *(C)*
 - **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de

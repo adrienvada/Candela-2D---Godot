@@ -1761,10 +1761,15 @@ func set_countdown(value: float) -> void:
 	_countdown_shown = n
 	countdown_label.text = str(n)
 	countdown_label.pivot_offset = countdown_label.size / 2.0
+	# DA4.13 — la courbe maison `REBOND` à la place de `TRANS_BACK`. Ce n'est pas
+	# la transition la plus proche, c'est **la** transition du projet : le même
+	# dépassement se retrouve sous chaque appui de bouton et sous chaque tuile de
+	# la galerie. C'est ce qui donne la sensation qu'une seule main a animé
+	# l'écran, et c'est tout l'objet de l'item.
 	countdown_label.scale = Vector2(1.7, 1.7)
 	var tween := create_tween()
-	tween.tween_property(countdown_label, "scale", Vector2.ONE, Charte.D_LONG) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Charte.animer(tween, countdown_label, "scale", Vector2(1.7, 1.7), Vector2.ONE,
+		Charte.D_LONG, Charte.Courbe.REBOND)
 
 ## L'attente d'un adversaire est le moment où l'hôte a besoin de quoi l'inviter :
 ## son code de salon sur Internet, son adresse IP en réseau local.
@@ -5297,10 +5302,14 @@ func _annoncer_score(winner_id: int) -> void:
 	bilan.position = repos + Vector2(0, 10)
 	bilan.modulate = teinte
 	_annonce_score = create_tween().set_parallel()
-	_annonce_score.tween_property(bilan, "position", repos, 0.45) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_annonce_score.tween_property(bilan, "modulate", Color.WHITE, 0.9) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# DA4.13 — deux courbes maison, et **deux durées de l'échelle** au lieu de
+	# 0,45 et 0,9 s posés à la main. Le mouvement retombe en `SORTIE` — c'est ce
+	# qui s'en va —, la teinte s'éteint plus lentement : le score bouge une fois,
+	# et sa couleur met deux fois plus longtemps à dire qui vient de marquer.
+	Charte.animer(_annonce_score, bilan, "position", bilan.position, repos,
+		Charte.D_LONG, Charte.Courbe.SORTIE)
+	Charte.animer(_annonce_score, bilan, "modulate", teinte, Color.WHITE,
+		Charte.D_LONG * 2.0, Charte.Courbe.SORTIE)
 
 ## Coupe l'annonce en cours et rend au libellé sa teinte de repos.
 func _arreter_annonce_score() -> void:

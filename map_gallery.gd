@@ -280,9 +280,14 @@ func _press_feedback(control: Control) -> void:
 		return
 	control.pivot_offset = control.size / 2.0
 	var tween := create_tween()
-	tween.tween_property(control, "scale", Vector2(0.94, 0.94), 0.06)
-	tween.tween_property(control, "scale", Vector2.ONE, Charte.D_MOYEN) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# DA4.13 — l'enfoncement puis le rebond, tous deux sur des courbes de la
+	# charte. La descente est une `SORTIE` (elle traîne puis file), la remontée le
+	# `REBOND` : c'est exactement le geste d'une touche qu'on relâche, et c'est le
+	# même partout — `ui._pulse_press()` fait le même mouvement sur les boutons.
+	Charte.animer(tween, control, "scale", Vector2.ONE, Vector2(0.94, 0.94),
+		Charte.D_COURT, Charte.Courbe.SORTIE)
+	Charte.animer(tween, control, "scale", Vector2(0.94, 0.94), Vector2.ONE,
+		Charte.D_MOYEN, Charte.Courbe.REBOND)
 
 # ---------------------------------------------------------------------------
 # TUILES
