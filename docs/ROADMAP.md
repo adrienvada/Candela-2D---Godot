@@ -2598,6 +2598,30 @@ signature.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Des clés dépréciées font réécrire `project.godot` tout seul (2026-08-25)
+
+`boot_splash/fullsize` et `boot_splash/use_filter` n'existent plus en Godot 4.7.
+Le dépôt les portait quand même — écrites par DA1 (`3e2af76`, wordmark et boot
+splash) sous une version antérieure. **À chaque `godot --import` et à chaque
+ouverture de l'éditeur, Godot les migre** vers `boot_splash/stretch_mode=0` et
+remonte `config/icon`. Le fichier se retrouve modifié sans que personne ne l'ait
+touché.
+
+Ce que ça coûte : `project.godot` est **perpétuellement sale** dans l'arbre
+partagé, et git refuse alors toute fusion qui le touche — *« Your local changes
+to the following files would be overwritten by merge »*. Le prix est payé par la
+session suivante, jamais par celle qui a lancé l'import. Il a bloqué la fusion du
+lot « affichage », et **trois sessions ont été interrogées avant qu'on comprenne
+que le coupable n'était humain d'aucun côté.** DA2 a fourni le fait qui tranche :
+une dizaine de `--import` cette nuit-là pour les masques DA2.2/DA2.3 et les
+tuiles DA2.6, chacun réécrivant le fichier.
+
+**La parade est de commiter la migration, pas de la retirer** — décision d'Adrien
+le 2026-08-25. La retirer la fait revenir au prochain import ; la commiter ferme
+le cycle. Et la règle générale, qui dépasse ce fichier : *une modification
+qu'aucun humain n'a écrite et qui revient toute seule n'est pas un accident de
+travail, c'est un état du dépôt* — et un état, ça se commite.
+
 ### Une fenêtre Godot se compte en pixels NATIFS, pas en points (2026-08-25)
 
 Sur macOS, `window_set_size(Vector2i(1280, 720))` ne demande pas une fenêtre de
@@ -2656,6 +2680,15 @@ Deux choses en découlent, et aucune n'est faite :
    cookie de torche qui parlera le premier**, pas les tuiles : le 1024² visé par
    DA5.6 retomberait à 3,5 texels par pixel, exactement la mollesse que le 512²
    présentait et que ce choix corrigeait.
+
+Précision fournie par la session DA2, qui mesurait la même chaîne par l'autre
+bout le même jour, et qui rassure sur le coût de ce jour-là : les tuiles
+(35 px), les sprites de joueur (36 px) et les cookies sont **cuits à taille
+fixe** depuis des planches de 2048² — vingt-neuf à cinquante-sept fois plus
+grandes que la sortie. `tools/fabrique_tuiles.gd` et `tools/fabrique_sprites.gd`
+savent donc recuire plus fin : **c'est un paramètre à changer, pas une
+regénération à commander.** Ce qui coûtera, ce sont les images par seconde, pas
+les assets.
 
 ### Un son positionnel sans auditeur reste parfaitement audible (2026-08-25)
 
