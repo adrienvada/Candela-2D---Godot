@@ -2617,6 +2617,84 @@ croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
 
 
+### Le lanceur était sourd exactement là où le dépôt a choisi de crier (2026-08-25)
+
+**« Tout passe, sans erreur de script » ne disait rien d'un jeu qui aurait perdu
+toutes ses textures.** `run_suites.sh` et `run_duo.sh` ne cherchaient que
+`SCRIPT ERROR`. Or le motif que ce dépôt s'impose partout — **on câble, on ne
+retombe jamais en silence, on crie** — passe par `push_error()` : masque de
+lumière absent, sprite absent, viseur absent. Ces cris-là, aucun lanceur ne les
+entendait.
+
+Trouvé le 2026-08-25 en cherchant à vérifier qu'un viseur se montait vraiment en
+match. La suite était verte **et ne pouvait pas répondre à la question.**
+
+#### La chaîne exacte, et pourquoi la première était fausse
+
+⚠️ **Ce n'est PAS `USER ERROR`.** C'est ce que j'ai affirmé de mémoire, une
+seconde session l'a relayé en écrivant « je l'ai vérifié », et c'était faux dans
+les deux bouches. Mesuré au banc :
+
+```
+push_error("X")   → ERROR: X
+                     at: push_error (core/variant/variant_utility.cpp:1023)
+push_warning("X") → WARNING: X
+printerr("X")     → X          ← aucun préfixe, rien du tout
+```
+
+`ERROR:` est **mot pour mot** ce que Godot imprime pour son propre bruit de fin
+de course (« 16 resources still in use at exit »). Grepper `ERROR:` aurait fait
+rougir tous les lots. La signature qui distingue un cri **délibéré** est la
+ligne d'origine qui le suit : **`at: push_error (`**.
+
+⚠️ **Et `printerr()` reste invisible** — pas de préfixe du tout, donc rien ne le
+distingue d'un `print()`. Mesuré : **une seule occurrence** dans tout le code de
+production à la racine (`network_manager.gd`). La garde couvre donc ce qu'elle
+doit couvrir, mais un second `printerr` serait muet. C'est une limite assumée,
+pas un oubli.
+
+#### Ce que la garde a trouvé au premier essai, et pourquoi elle ne le punit pas
+
+`test_vision` émet **quatre `push_error` en passant au vert**, depuis on ne sait
+quand. Mais ils sont **voulus** : le test construit exprès une arme dont le
+cookie n'existe pas, et son propre commentaire le dit — « l'erreur attendue est
+imprimée par `get_torch_texture()` : elle est **voulue**, c'est elle qui empêche
+le silence ». Ces quatre cris sont **la preuve que le test réussit.**
+
+⚠️ **Donc une garde qui exigerait zéro cri rendrait le repli bruyant
+intestable** : on ne pourrait plus écrire un test qui vérifie qu'on crie. Le
+dépôt avait déjà tranché ; il restait à ne pas le contredire.
+
+D'où une **égalité déclarée** plutôt qu'une interdiction : une suite annonce
+`CRIS ATTENDUS: <n>` dans sa sortie, et sans déclaration la tolérance est zéro.
+Trois raisons, la troisième étant la seule qui compte vraiment :
+
+1. aucune liste d'exemptions à maintenir — un test de repli se déclare lui-même,
+   et ça se lit dans le test ;
+2. le lanceur reste strict par défaut ;
+3. **une égalité vaut mieux qu'un plafond.** Elle attrape le cas inverse : un
+   test de repli qui **cesserait** de crier parce qu'un `push_error` a été
+   remplacé par un `return` silencieux — précisément la régression que tout le
+   motif existe pour empêcher — passerait sous un plafond et rougit sous une
+   égalité. Même forme que l'égalité exigée de `test_torches.gd`.
+
+Éprouvé rouge dans les deux sens avant d'être cru : `4 push_error(s), 3
+déclaré(s)` d'un côté, `0 push_error(s), 2 déclaré(s)` de l'autre.
+
+#### La leçon de méthode, et elle n'est pas de moi
+
+Une session a nommé ce qui s'est passé entre nous mieux que je ne l'aurais fait,
+en constatant qu'elle avait écrit « je l'ai vérifié » après n'avoir contrôlé
+qu'un membre d'une affirmation composée — le grep du lanceur, vrai ; la chaîne
+`USER ERROR`, jamais mesurée :
+
+> **Corriger le détail d'une affirmation lui donne du poids ; certifier la
+> moitié d'une affirmation la fait passer tout entière.**
+
+C'est le même mécanisme que le faux-vert ci-dessous : dans les deux cas, ce qui
+circule n'est pas une erreur mais **une garantie mal bornée**.
+
+
 ### Un contrôle textuel qui cherche `ma_fonction()` ne peut pas échouer (2026-08-25)
 
 **Deux contrôles de `tools/test_viseur.gd` sont restés verts pendant que je les

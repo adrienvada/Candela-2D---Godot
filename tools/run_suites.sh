@@ -8,6 +8,45 @@
 # Le cas s'est produit pour de vrai le 2026-08-17, sur la suite de la pause,
 # après la disparition de la barre d'onglets. Grepper la sortie est le seul
 # garde-fou qui ne dépende pas de la vigilance de l'auteur du test.
+#
+# ⚠️ **Et il était sourd à la moitié qui compte.** Ce contrôle ne cherchait que
+# `SCRIPT ERROR`. Or les `push_error()` — le CRI DU REPLI MUET, sur lequel tout
+# le dépôt s'appuie pour qu'une absence se VOIE : masque de lumière manquant,
+# sprite manquant, viseur manquant — ne portent pas cette mention. Le lanceur
+# était donc muet exactement là où le code a choisi de crier, et « tout passe,
+# sans erreur de script » ne disait rien d'un jeu qui aurait perdu toutes ses
+# textures. Trouvé le 2026-08-25 en cherchant à vérifier qu'un viseur se montait
+# vraiment en match : la suite était verte et ne pouvait pas répondre.
+#
+# ⚠️ **La chaîne n'est PAS `USER ERROR`** — c'est ce que le premier rapport
+# annonçait, moi compris, et c'était faux. Mesuré : Godot imprime
+# `ERROR: <message>`, mot pour mot ce qu'il imprime pour son propre bruit de fin
+# de course (« 16 resources still in use at exit »). Grepper `ERROR:` ferait
+# donc rougir tous les lots. La signature qui distingue un cri DÉLIBÉRÉ est la
+# ligne d'origine qui le suit : `at: push_error (`.
+#
+# ⚠️ **Ce que la garde n'entend PAS : `printerr()`.** Il n'imprime aucun préfixe
+# — pas même `ERROR:` — juste le texte nu, donc rien ne le distingue d'un
+# `print()`. Un cri passé par là restera muet. Mesuré le 2026-08-25 : **une
+# seule occurrence** dans tout le code de production à la racine
+# (`network_manager.gd`), le motif « repli muet » passant partout ailleurs par
+# `push_error`. La garde couvre donc ce qu'elle doit couvrir — mais si un second
+# `printerr` apparaît, personne ne l'entendra.
+#
+# ## Les cris VOULUS : une égalité déclarée, pas une interdiction
+#
+# ⚠️ **Une garde qui exigerait zéro cri rendrait le repli bruyant intestable.**
+# `test_vision` construit exprès une arme dont le cookie n'existe pas, pour
+# vérifier que le jeu CRIE au lieu de retomber en silence ; ses quatre
+# `push_error` sont la preuve que le test réussit. Interdire tout cri, ce serait
+# interdire d'éprouver le motif que le dépôt s'impose partout.
+#
+# Une suite déclare donc ses cris attendus en imprimant `CRIS ATTENDUS: <n>` ;
+# sans déclaration, la tolérance est **zéro**. Le lanceur échoue si le compte
+# **diffère** — et cette égalité vaut mieux qu'un plafond : elle attrape aussi
+# le cas inverse, un test de repli qui CESSERAIT de crier parce qu'un
+# `push_error` a été remplacé par un `return` silencieux. Même forme que
+# l'égalité exigée de `test_torches.gd`.
 set -uo pipefail
 
 # `--rapide` saute les six scénarios à DEUX INSTANCES.
@@ -79,17 +118,32 @@ run() {
   # 137 = tué par le chien de garde (128 + SIGKILL).
   if [ "$code" -eq 137 ]; then
     printf '%-28s ÉCHEC — n'"'"'est pas sorti en %ss (bloqué)\n' "$nom" "$PLAFOND_SUITE"
-    printf '%s\n' "$sortie" | grep -E 'SCRIPT ERROR|Parse Error' | head -4
+    printf '%s\n' "$sortie" | grep -E 'SCRIPT ERROR|Parse Error|at: push_error \(' | head -4
     fail=1
     return
   fi
   local erreurs
   erreurs="$(printf '%s\n' "$sortie" | grep -c 'SCRIPT ERROR' || true)"
+  # Le cri du repli muet — voir l'en-tête pour la signature, et pourquoi ce
+  # n'est surtout pas `ERROR:`.
+  local cris attendus
+  cris="$(printf '%s\n' "$sortie" | grep -c 'at: push_error (' || true)"
+  # Les cris que la suite déclare attendre — voir l'en-tête. `tail -1` : si une
+  # suite déclarait deux fois, la dernière fait foi plutôt qu'un cumul muet.
+  attendus="$(printf '%s\n' "$sortie" \
+    | sed -n 's/^CRIS ATTENDUS: *\([0-9][0-9]*\).*/\1/p' | tail -1)"
+  attendus="${attendus:-0}"
   if [ "$code" -ne 0 ]; then
     printf '%-28s ÉCHEC (code %d)\n' "$nom" "$code"; fail=1
   elif [ "$erreurs" -ne 0 ]; then
     printf '%-28s ÉCHEC — %s erreur(s) de script malgré un code 0\n' "$nom" "$erreurs"
     printf '%s\n' "$sortie" | grep -A2 'SCRIPT ERROR' | head -12
+    fail=1
+  elif [ "$cris" -ne "$attendus" ]; then
+    printf '%-28s ÉCHEC — %s push_error(s), %s déclaré(s)\n' "$nom" "$cris" "$attendus"
+    # `-B1` parce que le message est sur la ligne AVANT `at: push_error` :
+    # sans lui on afficherait l'origine sans jamais dire ce qui manque.
+    printf '%s\n' "$sortie" | grep -B1 -A1 'at: push_error (' | head -12
     fail=1
   else
     printf '%-28s OK\n' "$nom"

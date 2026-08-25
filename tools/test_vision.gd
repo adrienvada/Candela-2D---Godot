@@ -260,6 +260,18 @@ func _test_intensite_texture() -> void:
 	# en `--script` (piège du 2026-08-18). L'erreur de chargement attendue est
 	# imprimée par `get_torch_texture()` : elle est **voulue**, c'est elle qui
 	# empêche le silence.
+	# ⚠️ **Déclaration au lanceur — ne pas retirer sans compter.**
+	# `run_suites.sh` échoue si le nombre de `push_error()` d'une suite diffère
+	# de ce qu'elle annonce ici. Les quatre cris ci-dessous sont **la preuve que
+	# ce test réussit** : ils viennent de `get_torch_texture()`, appelé quatre
+	# fois sur l'arme sans cookie par les deux `_check` qui suivent, chacun
+	# passant par `lumiere_axiale()` puis `lumiere_recue()`.
+	#
+	# L'égalité protège dans les deux sens. Si quelqu'un remplaçait ce
+	# `push_error` par un `return` silencieux — la régression que tout le motif
+	# « repli muet » existe pour empêcher —, le compte tomberait à zéro et le lot
+	# rougirait. Un simple plafond ne l'aurait pas vu.
+	print("CRIS ATTENDUS: 4")
 	var sans_cookie := WeaponData.new()
 	sans_cookie.torch_cookie = "il-n-y-a-pas-de-cookie-ici"
 	_check("une arme sans faisceau ne verse rien, dans l'axe",

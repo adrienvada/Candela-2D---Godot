@@ -17,6 +17,10 @@
 #   2. les deux sortent en 0 ;
 #   3. aucun n'a émis de SCRIPT ERROR — une erreur de script n'échoue PAS une
 #      suite GDScript, seul un `_check` incrémente le compteur ;
+#   3bis. aucun n'a émis de `push_error()` — le CRI DU REPLI MUET (masque,
+#      sprite ou viseur absent). Même angle mort que dans `run_suites.sh`,
+#      corrigé le même jour : la signature est `at: push_error (`, PAS
+#      `ERROR:`, que Godot imprime aussi pour son propre bruit de fin ;
 #   4. l'échec dit DE QUEL CÔTÉ il vient, sans quoi il n'apprend rien.
 #
 # Lancer : ./tools/run_duo.sh
@@ -227,6 +231,7 @@ for cote in hote client; do
   else log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"; fi
 
   erreurs="$(grep -c 'SCRIPT ERROR' "$log" || true)"
+  cris="$(grep -c 'at: push_error (' "$log" || true)"
   # Le client de la coupure se tue lui-même : sortir en 0 signifierait qu'il
   # est parti proprement, donc que le test n'a PAS exercé la perte de pair.
   if [ "$cote" = "client" ] && { [ "${1:-}" = "--coupure" ] || [ "${1:-}" = "--ralenti" ] \
@@ -246,6 +251,10 @@ for cote in hote client; do
   elif [ "$erreurs" -ne 0 ]; then
     printf '%-8s ÉCHEC — %s erreur(s) de script malgré un code 0\n' "$nom" "$erreurs"
     grep -A2 'SCRIPT ERROR' "$log" | head -12
+    echec=1
+  elif [ "$cris" -ne 0 ]; then
+    printf '%-8s ÉCHEC — %s push_error(s) malgré un code 0\n' "$nom" "$cris"
+    grep -B1 -A1 'at: push_error (' "$log" | head -12
     echec=1
   else
     printf '%-8s OK\n' "$nom"
