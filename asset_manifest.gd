@@ -53,7 +53,11 @@ const PLACEHOLDER_OGG_SIZE := 160032
 
 const DIR_MUSIC := "res://assets/audio/music/"
 const DIR_SFX := "res://assets/audio/sfx/"
-const DIR_SPEAKER := "res://assets/audio/speaker/"
+## ⚠️ **Ce dossier n'a jamais existe.** Les voix d'annonceur sont arrivees le
+## 2026-08-25 dans `voice/`, et les chemins de `AudioManager.SOUNDS` pointaient
+## ici — vers un dossier vide — depuis des mois. Le bus, lui, s'appelle toujours
+## `Speaker` : c'est une sortie, pas un rangement.
+const DIR_VOIX := "res://assets/audio/voice/"
 ## Les sons de tir ont leur propre dossier depuis le 2026-08-25 : quatre
 ## variantes par arme, tirees au sort a chaque coup.
 const DIR_ARMES := "res://assets/audio/weapons/"
@@ -78,13 +82,21 @@ const EXPECTED: Array = [
 	{"f": "sting_defeat.ogg", "d": DIR_MUSIC, "s": 2.824, "w": "V3.7", "p": false},
 	{"f": "sting_draw.ogg", "d": DIR_MUSIC, "s": 2.824, "w": "V3.8", "p": false},
 
-	# --- Annonceur — le dossier lui-même n'existe pas encore ----------------
-	{"f": "spk_fight.wav", "d": DIR_SPEAKER, "s": 0.8, "w": "V1.3", "p": false},
-	{"f": "spk_p1_wins.wav", "d": DIR_SPEAKER, "s": 1.2, "w": "V1.3", "p": false},
-	{"f": "spk_p2_wins.wav", "d": DIR_SPEAKER, "s": 1.2, "w": "V1.3", "p": false},
-	{"f": "spk_draw.wav", "d": DIR_SPEAKER, "s": 1.0, "w": "V1.3", "p": false},
-	{"f": "spk_perfect.wav", "d": DIR_SPEAKER, "s": 1.0, "w": "V1.3", "p": false},
-	{"f": "spk_close_call.wav", "d": DIR_SPEAKER, "s": 1.2, "w": "V1.3", "p": false},
+	# --- Annonceur — livre le 2026-08-25, dans `voice/` ---------------------
+	#
+	# Deux familles qui ne se melangent pas : `spk_p1_wins` / `spk_p2_wins` ne
+	# servent QU'EN ECRAN SCINDE, ou l'annonceur doit nommer le vainqueur parce
+	# que deux joueurs partagent les haut-parleurs. Partout ailleurs il s'adresse
+	# a celui qui ecoute — `win`, `defeat`, et les deux variantes. La regle est
+	# `AudioManager.voix_de_fin`.
+	{"f": "spk_fight.wav", "d": DIR_VOIX, "s": 0.770, "w": "V1.3", "p": false},
+	{"f": "spk_draw.wav", "d": DIR_VOIX, "s": 2.141, "w": "V1.3", "p": false},
+	{"f": "spk_p1_wins.wav", "d": DIR_VOIX, "s": 1.540, "w": "V1.3", "p": false},
+	{"f": "spk_p2_wins.wav", "d": DIR_VOIX, "s": 1.423, "w": "V1.3", "p": false},
+	{"f": "win.wav", "d": DIR_VOIX, "s": 0.882, "w": "V1.3", "p": false},
+	{"f": "defeat.wav", "d": DIR_VOIX, "s": 0.757, "w": "V1.3", "p": false},
+	{"f": "spk_perfect.wav", "d": DIR_VOIX, "s": 2.428, "w": "V1.3", "p": false},
+	{"f": "spk_close_call.wav", "d": DIR_VOIX, "s": 2.506, "w": "V1.3", "p": false},
 
 	# --- Armes : corps + queue par arme -------------------------------------
 	# ⚠️ **Ces huit entrees decrivaient un decoupage corps + queue qui n'a jamais
@@ -120,7 +132,12 @@ const EXPECTED: Array = [
 	{"f": "ricochet_01.wav", "d": DIR_SFX, "s": 0.4, "w": "V4.3", "p": false},
 	{"f": "ricochet_02.wav", "d": DIR_SFX, "s": 0.4, "w": "V4.3", "p": false},
 	{"f": "ricochet_03.wav", "d": DIR_SFX, "s": 0.4, "w": "V4.3", "p": false},
-	{"f": "weapon_dry.wav", "d": DIR_SFX, "s": 0.1, "w": "V4.4", "p": false},
+	# V4.4 — un percuteur par arme, livre le 2026-08-25. L'entree generique
+	# `weapon_dry.wav` decrivait un fichier unique qui n'a jamais existe.
+	{"f": "weapon_dry_pistolet.wav", "d": DIR_ARMES, "s": 0.117, "w": "V4.4", "p": false},
+	{"f": "weapon_dry_fusil.wav", "d": DIR_ARMES, "s": 0.276, "w": "V4.4", "p": false},
+	{"f": "weapon_dry_pompe.wav", "d": DIR_ARMES, "s": 0.244, "w": "V4.4", "p": false},
+	{"f": "weapon_dry_arbalete.wav", "d": DIR_ARMES, "s": 0.097, "w": "V4.4", "p": false},
 
 	# --- Douilles -------------------------------------------------------------
 	{"f": "shell_01.wav", "d": DIR_SFX, "s": 0.3, "w": "V4.8", "p": false},

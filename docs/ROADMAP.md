@@ -3112,7 +3112,25 @@ il affirmerait précisément ce qui est faux. `tools/test_habillage.gd` ouvre po
 cette raison sur un contrôle de chargement effectif — `police_ui() != null` —
 avant toute autre mesure.
 
-**La parade, en une commande, avant la première suite d'un worktree neuf :**
+**Et il mord AUSSI après chaque fusion, pas seulement à la création — c'est même
+sa forme la plus fréquente, ajoutée le 2026-08-25 après une troisième morsure.**
+
+Le symptôme ne ressemble alors pas du tout à sa cause : on tire le travail d'une
+voisine, on relance le lot, et **quatre suites rougissent avec des erreurs dans
+des fichiers qu'on n'a jamais ouverts** — `candela_tileset.gd`, `player.gd`. Le
+premier réflexe est de croire à une régression de l'autre session, ou à une
+incompatibilité entre les deux lots. Ce n'était ni l'un ni l'autre : la fusion
+apportait des **assets neufs**, et `.godot/imported/` ne les connaissait pas.
+
+> **Des erreurs dans les fichiers d'une autre session, juste après avoir tiré son
+> travail, sont un défaut de cache d'import jusqu'à preuve du contraire.**
+
+Le contrôle qui tranche en dix secondes : l'erreur est-elle un `null` sur une
+ressource (`Cannot call method 'get_image' on a null value`) plutôt qu'une erreur
+de logique ? Si oui, réimporter avant de lire une seule ligne du code d'autrui.
+
+**La parade, en une commande — avant la première suite d'un worktree neuf, et
+après toute fusion apportant des assets :**
 
 ```bash
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import
@@ -5141,6 +5159,48 @@ plutôt que la supposer. Le corollaire pratique : quand un système audio ou vis
 « marche mais bizarrement », la question n'est pas *où est le bug* — c'est *qu'
 est-ce que je crois savoir sans l'avoir mesuré*.
 
+### Un dossier qui n'a jamais existé, et personne pour le dire (2026-08-25)
+
+`AudioManager.SOUNDS` pointait les quatre voix d'annonceur vers
+`res://assets/audio/speaker/`. **Ce dossier n'a jamais été créé.** Les chemins
+ont donc rendu `null` en silence pendant des mois — `get_audio_stream` ne lève
+rien sur une ressource absente, c'est la règle « câbler, taire, diagnostiquer ».
+
+Ce qui rend le cas intéressant, c'est que le manifeste **le savait** : ses
+entrées `spk_*` étaient marquées absentes, et le panneau F3 les comptait. La
+détection a fonctionné. Ce qui manquait, c'est que personne ne rapproche
+« absent » de « et le chemin lui-même est faux » — on lisait l'absence comme
+« Adrien n'a pas encore produit les voix », pas comme « le chemin ne mène nulle
+part ». Les deux se ressemblent dans un compteur.
+
+Quand les fichiers sont arrivés, ils sont allés dans `voice/`. Le nom `speaker`
+survivait parce que c'est celui du **bus**, qui est une sortie et non un
+rangement. Les deux ne se confondent plus : `DIR_VOIX` pour les fichiers, bus
+`Speaker` pour la sortie.
+
+### Le percuteur à vide portait toute la carte (2026-08-25, attrapé avant l'écoute)
+
+Deux pièges d'un coup, et aucun des deux ne se serait entendu comme un défaut.
+
+**Le premier : un clic à vide passait pour un coup de feu.** Les fichiers
+`weapon_dry_*` vivent dans `assets/audio/weapons/`, et `est_un_tir()` reconnaît
+un tir **à son préfixe de chemin**. Un joueur martelant une détente vide aurait
+donc fait reculer les pas de son adversaire de six décibels (V4.15) — l'inverse
+exact de ce que ce son raconte, qui est « je ne tire pas ». Rien n'aurait levé
+d'erreur : le clic se serait entendu, les pas auraient juste été un peu plus
+bas, et personne n'aurait relié les deux.
+
+**Le second : sans ligne dans `PORTEE_RELATIVE`, le percuteur prenait le
+défaut** — 1,0 × la diagonale de la carte, à 0 dB. Un clic mécanique se serait
+entendu d'un bout à l'autre de l'arène, aussi loin qu'un tir. Signalé par la
+session « spatialisation du son » avant même que le son ne soit joué une fois.
+
+Il a désormais sa ligne : **0,55 de portée, −9 dB**. Plus qu'un pas, bien moins
+qu'un impact de mur. C'est un choix de conception, pas un réglage : un clic à
+vide est l'aveu le plus cher du jeu après la torche — « je suis désarmé, et je
+suis là ». À portée courte il ne trahit que celui qui est déjà assez près pour
+vous trouver ; à portée longue il deviendrait une annonce.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -5659,6 +5719,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   `spk_p2_wins`/`spk_draw` sont câblés dans `SOUNDS` mais absents du dépôt
   (`assets/audio/speaker/` n'existe pas). — *assets : 4 lignes voix, 8 avec
   « PARFAIT » (kill sans dégât reçu) et « DE JUSTESSE » (< 10 HP restants).*
+  **✅ Fait le 2026-08-25.** Huit fichiers livrés dans `assets/audio/voice/`.
+  La règle est `AudioManager.voix_de_fin`, **dérivée d'`ecoute_somme`** et non
+  écrite à côté : en écran scindé l'annonceur NOMME le vainqueur (deux joueurs,
+  mêmes haut-parleurs), partout ailleurs il s'adresse à celui qui écoute — `win`,
+  `defeat`, plus `spk_perfect` (sorti intact) et `spk_close_call` (sous 10 PV).
+  Décision d'Adrien.
 - **V1.4 Volumes utilisateur** — Master/Musique/Effets/Annonceur dans Options.
   Précondition de tout le reste : on ne densifie pas un mixage non réglable.
 - **V1.5 Vibrations manette** — `start_joy_vibration` absent du code : tir

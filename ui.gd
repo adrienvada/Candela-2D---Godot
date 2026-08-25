@@ -152,6 +152,24 @@ const PANEL_AUDIO := "panneau_audio"
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
 
+## **Un aperçu par mode, demandé par Adrien le 2026-08-25.**
+##
+## Le cadre de droite montre le mode **tel qu'il est une fois lancé**, et non
+## l'arène vide où l'on jouera. Cette table est le seul endroit qui rattache un
+## écran à son image — `menu_apercu.gd` ne connaît aucun mode.
+##
+## ⚠️ **Le compétitif n'y est pas, et c'est délibéré** : Adrien y veut « le
+## classement en cours du joueur », c'est-à-dire de la **donnée**, pas une image.
+## Il passe donc par le panneau de texte, avec `_my_rank_text()`. Mettre une
+## capture là où le joueur veut son rang serait de la décoration posée à la
+## place d'une information.
+const APERCUS := {
+	SCREEN_LOCAL: "res://assets/ui/apercu_ecran_scinde.png",
+	SCREEN_FRIENDLY: "res://assets/ui/apercu_duel_en_ligne.png",
+	SCREEN_TRAINING: "res://assets/ui/apercu_entrainement.png",
+	SCREEN_CUSTOM: "res://assets/ui/apercu_personnalisation.png",
+}
+
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
 ## et une entrée retirée du parcours du curseur fait douter du bouton d'à côté.
@@ -394,8 +412,6 @@ var menu_backdrop: MenuBackdrop
 var menu_title: MenuTitle
 var menu_veil: MenuVeil
 var menu_glass: MenuGlass
-## DA4.18 — le lit d'ambiance du cadre de droite : la carte sous la torche.
-var menu_arene: MenuArene
 var pause_veil: MenuVeil
 
 ## Les deux effets de la vitrine qui RELISENT L'ÉCRAN — le voile d'objectif (M15)
@@ -521,8 +537,11 @@ const LANCEURS := {
 	SCREEN_JOIN: ["PRÊT", "lancer"],
 	SCREEN_LOCAL_HOST: ["PRÊT", "lancer"],
 	SCREEN_LOCAL_JOIN: ["PRÊT", "lancer"],
-	SCREEN_FRIENDLY: ["CHERCHER UN MATCH", "chercher"],
-	SCREEN_RANKED: ["CHERCHER UN MATCH", "chercher"],
+	# « EN LIGNE » est porté par les deux bouts — l'entrée de gauche et le bouton
+	# du cadre — parce que ces deux écrans ont aussi un versant local, et que rien
+	# d'autre ne distinguait les deux gestes.
+	SCREEN_FRIENDLY: ["LANCER LA RECHERCHE EN LIGNE", "chercher"],
+	SCREEN_RANKED: ["LANCER LA RECHERCHE EN LIGNE", "chercher"],
 	SCREEN_TRAINING: ["LANCER L'ENTRAÎNEMENT", "entrainement"],
 }
 
@@ -2323,7 +2342,11 @@ func _build_hub_screens() -> void:
 	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
 
 	# --- 1v1 amical -----------------------------------------------------------
-	amical.add_child(hub.make_entry("PRÉPARER LE MATCH",
+	# **« PRÉPARER » décrivait le panneau, pas le geste.** Corrigé par Adrien le
+	# 2026-08-25 : ces deux entrées ne préparent rien, elles ouvrent le cadre d'où
+	# l'on part chercher un adversaire EN LIGNE. Le libellé le dit maintenant, et
+	# le bouton du cadre l'achève — « LANCER LA RECHERCHE EN LIGNE ».
+	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
 		"Choisissez votre arme à droite — après l'appui, le match part tout seul. "
 		+ "La recherche vous rend la main : elle continue pendant que vous "
 		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
@@ -2376,7 +2399,7 @@ func _build_hub_screens() -> void:
 			"Ferme le salon et coupe le lien. L'adversaire en est averti."))
 
 	# --- 1v1 compétitif -------------------------------------------------------
-	classe.add_child(hub.make_entry("PRÉPARER LE MATCH",
+	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
 		"Votre arme se choisit à droite, avant l'appui : après, le match part tout "
 		+ "seul. La fourchette de classement s'élargit avec l'attente ; le bandeau "
 		+ "du haut montre celle qui est cherchée. Le résultat compte.",
@@ -2481,38 +2504,31 @@ func _build_hub_screens() -> void:
 	# panneau ajouté après coup se placerait au-dessus des autres dans la pile —
 	# ici sans conséquence puisqu'un seul est visible à la fois, mais l'ordre
 	# reste celui de la déclaration et il vaut mieux qu'il soit lisible.
-	# DA4.18 — **le lit de fond, et il n'est PAS un panneau.**
+	# **Un panneau d'aperçu par écran**, posé en défaut de l'écran : c'est ce
+	# qu'on voit tant qu'aucune entrée ne réclame autre chose. Chaque écran a le
+	# sien — un seul nœud partagé montrerait la mauvaise image le temps d'une
+	# frame en changeant d'écran, et ce scintillement se voit.
+	for ecran: String in APERCUS.keys():
+		if not hub.has_screen(ecran):
+			continue
+		var cle := "apercu_" + ecran
+		hub.register_panel(cle, MenuApercu.new(String(APERCUS[ecran])))
+		# Sans écraser un défaut déjà posé : le salon et la galerie passent avant.
+		if hub.screen_panel(ecran) == "":
+			hub.set_screen_panel(ecran, cle)
+
+	# ⚠️ **L'arène en fond a été ANNULÉE par Adrien le 2026-08-25.**
 	#
-	# Premier jet : enregistré comme panneau parmi les autres, et posé en défaut
-	# des six écrans qui n'en avaient aucun. Ça marchait, et c'était faux — vu à la
-	# planche : le panneau n'obtenait que ~330 px dans un cadre de 545, parce que
-	# `_detail_host` aligne ses enfants en haut et n'en étire aucun. Sur un viewport
-	# large et court avec une carte carrée, le cadrage ne montrait plus qu'une
-	# **tranche de 38 % de la carte**.
+	# L'idée était de remplir le cadre avec la carte du prochain match, révélée
+	# par une lumière qui dérive. Elle a été livrée, corrigée trois fois, et
+	# **écartée sur jugement** : ce n'est pas ce qu'on veut voir en choisissant un
+	# mode. Ce qu'on veut voir, c'est **le mode lui-même** — une image de ce à quoi
+	# il ressemble une fois qu'on y joue.
 	#
-	# **Un lit d'ambiance n'est pas un panneau, c'est ce qu'on voit quand aucun
-	# panneau ne parle.** Il vit donc dans le cadre lui-même, DERRIÈRE la pile de
-	# panneaux, et il en épouse toute la surface. Aucun conteneur ne le contraint
-	# plus, et il n'occupe plus une case dans une liste où il n'avait rien à faire.
-	menu_arene = MenuArene.new()
-	var cadre_droit := hub.right_panel()
-	cadre_droit.add_child(menu_arene)
-	# Derrière `_detail_host` : un décor qui passerait devant le contenu serait un
-	# voile, pas un fond.
-	cadre_droit.move_child(menu_arene, 0)
-	# La carte peut changer pendant qu'on est dans les menus — c'est même tout
-	# l'objet de la galerie. Sans ce branchement, le cadre continuerait de montrer
-	# l'arène précédente jusqu'à la prochaine navigation.
-	MapData.map_selected.connect(func(_id: String) -> void:
-		if menu_arene != null:
-			menu_arene.rafraichir())
-	# **Il s'efface quand un panneau parle.** Un tableau d'historique lu par-dessus
-	# une arène éclairée serait illisible ; le même fond à 18 % reste une présence
-	# sans devenir un bruit. C'est le panneau montré qui décide, pas l'écran : deux
-	# entrées du même écran peuvent en montrer un et pas l'autre.
-	hub.panel_changed.connect(func(cle: String) -> void:
-		if menu_arene != null:
-			menu_arene.set_retrait(cle != ""))
+	# `menu_arene.gd` reste au dépôt, inemployé : il porte trois passes de
+	# diagnostic sur les 9-slice, le cadrage et les lits de fond, et le supprimer
+	# jetterait ce qui a été appris avec. Il n'est plus instancié.
+
 
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
 	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à
@@ -2842,8 +2858,6 @@ func _apply_menu_effects() -> void:
 	if menu_backdrop != null:
 		menu_backdrop.set_brume(_intensite_vitrine("brume_menu"))
 		menu_backdrop.set_bruit(_intensite_vitrine("bruit_de_l_oeil"))
-	if menu_arene != null:
-		menu_arene.set_intensite(_intensite_vitrine("arene_au_repos"))
 	# M10 n'a pas de nœud à lui : il vit dans les chemins show/hide des deux
 	# panneaux, et son intensité est donc une simple valeur retenue ici.
 	_m10 = _intensite_vitrine("extinction_menu")
@@ -3309,17 +3323,23 @@ func _refresh_calibration_guard() -> void:
 ## Le texte arrive en BBCode — le panneau de droite savait le rendre, une `Label`
 ## non. On le nettoie plutôt que d'imposer un `RichTextLabel` à l'en-tête, qui
 ## sert aussi à annoncer VICTOIRE et DÉFAITE.
+## ⚠️ **La description ne s'écrit plus ici, et c'est une demande d'Adrien.**
+##
+## Elle vivait sous le titre du jeu, en haut de l'écran. La sélection se fait à
+## gauche, l'explication s'affichait en haut : **le regard traversait la page
+## pour savoir ce qu'il venait de choisir.** Elle est désormais au PIED du cadre
+## de droite, au bas de ce qu'elle explique, et le hub s'en charge lui-même dans
+## `show_detail()`.
+##
+## Ce qui reste ici : **effacer le bilan de fin de match**. Les deux se
+## disputaient la boîte de l'en-tête ; le bilan y est maintenant seul, mais il
+## doit toujours céder dès que le joueur se remet à parcourir les entrées — ce
+## qu'on demande passe avant ce qu'on nous montre.
 func _on_hub_detail_changed(_title: String, text: String) -> void:
 	if not _is_main_menu or game_over_score == null:
 		return
-	var propre := text.replace("[b]", "").replace("[/b]", "").replace("\n\n", "  ")
-	game_over_score.text = propre
-	# DA4.7 — **le bilan cède à toute description**, et la règle est dans ce sens
-	# et pas dans l'autre. Les deux partagent la boîte ; ils ne peuvent donc pas
-	# s'afficher ensemble. Le bilan est l'instantané du match qui vient de finir,
-	# la description répond à un geste que le joueur fait **maintenant** — et ce
-	# qu'on demande passe toujours avant ce qu'on nous montre.
-	if propre != "":
+	game_over_score.text = ""
+	if text.strip_edges() != "":
 		effacer_bilan()
 
 func _on_hub_screen_changed(id: String) -> void:
@@ -3368,6 +3388,16 @@ func _on_hub_screen_changed(id: String) -> void:
 		_refresh_map_card()
 		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
+	# **Le compétitif ouvre sur le classement du joueur.** Demande d'Adrien : c'est
+	# ce qu'on vient y chercher. Les autres écrans montrent une capture du mode,
+	# celui-ci montre une **donnée** — et poser une image à la place du rang
+	# reviendrait à décorer l'endroit où l'on attend une réponse.
+	#
+	# Relu à chaque entrée, jamais mis en cache : le rang arrive en tâche de fond
+	# après l'identification, et une valeur retenue afficherait « non classé » à
+	# quelqu'un qui vient de l'être.
+	if id == SCREEN_RANKED:
+		hub.montrer_texte("MON RANG", _my_rank_text())
 	if id == SCREEN_TRAINING and _leaderboard != null:
 		_leaderboard.refresh()
 	_seed_focus(0)
