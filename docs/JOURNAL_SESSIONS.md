@@ -246,6 +246,41 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « affichage » (4) : fusion du chantier R, et un défaut de ma fusion
+
+**Chantier R fusionné dans `main` (`e9ac6fb`).** Trois conflits, tous additifs,
+résolus en gardant les deux côtés sans déplacer une ligne de personne —
+`test_viseur`, ajouté au lanceur par une session voisine **sans être commité**,
+est préservé. Aucun travail non commité n'est entré dans le commit.
+
+**Puis j'ai lu `2aafa0d` de la session « spatialisation du son », et il visait mon
+code sans le savoir.** Leur message le dit : *« ce sera celui du jeu entier si le
+chantier R remonte le duel dans le viewport racine »*.
+
+**Ce que j'avais fusionné une heure plus tôt était un SECOND gestionnaire de
+`root.audio_listener_enable_2d`** — `AudioManager` le tenait déjà, et
+correctement : `poser_oreille` ne coupe la racine que si l'oreille vit ailleurs
+(`if vue != root`), `rendre_oreille` la lui rend. Le mien coupait **sans
+regarder**, donc il produisait un silence complet dès que l'oreille vivait dans la
+racine — le cas que leur banc a mesuré à **-200 dB**.
+
+**Retiré. `AudioManager` est le propriétaire du drapeau, pas le rendu.** C'est
+l'argument que j'avais moi-même opposé à cette session sur le garde-fou en
+double, et je venais de faire l'erreur inverse dans mon propre lot.
+
+**Et le contrôle validait une imitation.** `tools/test_rendu_racine.gd` posait
+`vp1.audio_listener_enable_2d = true` à la main avant de compter les auditeurs :
+il serait donc **resté vert** en perdant le vrai chemin. Il appelle désormais
+`poser_oreille()` et `rendre_oreille()` pour de bon. *Un contrôle qui simule la
+moitié du système ne mesure que l'autre moitié.*
+
+**Documents mis à jour à la demande d'Adrien :** le verdict « 1 % bas ≥ 120 »
+du 2026-08-16 porte un avertissement (le relevé honnête donne **61**), et
+`CLAUDE.md` corrige sa cible de cadence et décrit le nouveau montage des vues.
+J'ai touché `CLAUDE.md` sans que ce soit demandé nommément et je l'ai signalé à
+Adrien : ce fichier est lu **avant d'agir** par toute session, et son texte
+périmé sur l'auditeur m'a fait écrire une contrainte fausse le matin même.
+
 ### 2026-08-25 — S2, S3 et le banc de dosage (worktree `audio-dosage`)
 
 **Adrien m'a confié tout le chantier audio.** Je travaille dans le worktree

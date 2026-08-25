@@ -2716,11 +2716,22 @@ relit le code en déposant un `.wav`. Quand une famille de sons partage un
 dossier avec une autre, la question se pose à un prédicat nommé — pas à un
 préfixe recopié.
 
-*Trouvé par la session « DA3 Audio » en câblant le percuteur, sur signalement
-croisé : je l'avais avertie que le nouveau son prendrait la portée par défaut,
-elle a vu en le corrigeant qu'il prenait aussi la priorité et le duck d'un tir.
-Le signalement portait sur la table des portées ; la faute était dans le
-prédicat.*
+*Attribution rectifiée à sa demande, et elle avait raison d'insister :
+`est_un_tir` — `s.begins_with(DIR_ARMES)` — a été écrite par la session « DA3
+Audio » pour V4.1, un jour où ce dossier ne contenait que des tirs. **Elle a donc
+trouvé son propre piège**, et elle l'a trouvé parce qu'elle savait comment la
+fonction classait. Ma part est un avertissement qui portait à côté : j'avais
+prévenu que le nouveau son prendrait la **portée** par défaut. C'était vrai, et
+c'est ce qui rendait la chose dangereuse — **un avertissement juste sur un
+symptôme fait paraître la cause traitée.** Il prenait aussi la priorité et le
+duck. Elle est allée au prédicat au lieu de s'arrêter à la table que je
+pointais.*
+
+*La distinction qu'elle ajoute et qui rend la règle utilisable : les cookies de
+torche se chargent par `torch_cookie`, les variantes de tir par un numéro dans
+leur nom — **ceux-là dérivent d'un champ explicite, pas d'un dossier.** Ce n'est
+pas le nommage qui est en cause, c'est de faire porter une règle par
+l'emplacement.*
 
 
 ### `cam1` à `Nil` ne parle jamais de la caméra (2026-08-25)
@@ -8892,20 +8903,44 @@ des assets — « les `SubViewport` rendent à taille fixe, donc rien n'est à
 recuire ». C'était vrai avant (b), c'est faux après, et les deux sessions
 concernées ont été prévenues le jour même.
 
-Ce qu'il reste à faire, dans l'ordre :
+**La densité de référence : ×2** — proposée par DA2 le 2026-08-25, et son
+argument est meilleur que le mien parce qu'il est **asymétrique**.
+Sur-échantillonner se règle par mipmaps et filtrage linéaire : ça coûte de la
+mémoire et de la bande passante sur des sorties de 35 px, autant dire rien.
+**Sous-échantillonner ne se règle par rien** — aucun filtre ne restitue un détail
+absent de la texture, ça coûte de la netteté. Dans un jeu dont toute la
+proposition est que la lumière est la seule information, la netteté des surfaces
+qui portent cette lumière n'est pas un poste où l'on rogne. *(Reste à faire
+valider par Adrien : R6 n'est l'étape courante de personne.)*
 
-1. **Tuiles et sprites** — la session DA2 l'a mesuré : les planches sources font
-   2048² pour des sorties de 35 et 36 px, et `tools/fabrique_tuiles.gd` /
-   `tools/fabrique_sprites.gd` savent recuire. **C'est un paramètre, pas une
-   commande d'assets.**
-2. **Cookie de torche** — et ici, attention au piège *la résolution d'une texture
-   de lumière décide de sa PORTÉE* : recuire sans la ligne de correction
-   (`texture_scale = torch_scale * 512.0 / texture.get_width()`) change la portée
-   de la torche, **donc une valeur de jeu**, en silence.
-3. **Choisir la densité de référence.** Recuire « pour le plein écran » (×2)
-   sur-échantillonne la fenêtre de développement ; recuire pour ×1,33
-   sous-échantillonne le plein écran. Le choix se fait une fois, pour toutes les
-   familles, sinon on recrée l'incohérence que le chantier DA chasse.
+**Et le périmètre est plus petit qu'annoncé — vérifié, pas déduit.** Ce
+paragraphe listait le cookie de torche comme le premier à recuire, avec son piège
+de portée. **C'est faux : les familles de LUMIÈRE sont déjà à l'abri, et testées.**
+
+- Le **cookie** passe par `WeaponData.echelle_torche()`, et `tools/test_torches.gd`
+  vérifie que l'empreinte vaut `512 × torch_scale` **quelle que soit la résolution
+  du fichier** (`empreinte := tex.get_width() * w.echelle_torche()`). Le piège de
+  portée n'est pas ouvert : il est fermé par un contrôle qui rougit.
+- Les **halos peints** : `LightTextures.poser()` prend une **empreinte en unités
+  de monde** et en dérive `texture_scale` ; `tools/test_lumieres.gd` le vérifie à
+  quatre résolutions différentes.
+
+C'est la propriété qui compte, et elle mérite d'être nommée : **découpler la
+taille de la TEXTURE de l'empreinte en MONDE rend la recuisson gratuite.** Là où
+c'est fait, R6 n'a rien à faire.
+
+Reste donc :
+
+1. **Les tuiles** — un paramètre de `tools/fabrique_tuiles.gd`, planches sources
+   en 2048² pour des sorties de 35 px. Rien d'autre à décider.
+2. **Les sprites, et c'est le seul vrai travail de R6.** Signalé par DA2 le jour
+   même, depuis DA2.4 : `_poser_sprite()` construit son quad à
+   `texture.get_width()`, donc **un sprite recuit deux fois plus fin doublerait la
+   taille du joueur à l'écran**. Et le roulis de marche, exprimé en unités de
+   monde (1,6 unité), deviendrait deux fois trop discret par rapport à lui. Il
+   faut donc appliquer aux sprites le geste déjà fait pour les lumières :
+   découpler la taille de texture de l'empreinte en monde. **Ce n'est pas un
+   paramètre, c'est une correction — et elle n'est pas faite.**
 
 ---
 

@@ -89,9 +89,23 @@ func _run() -> void:
 	# parfaitement audible**, environ +3 dB, panoramique juste mêlé au faux. On
 	# chercherait dans le mixage, pas ici.
 	#
-	# Ici on simule ce que fait `AudioManager.poser_oreille()` — rendre `vp1`
-	# auditeur — puis on exige qu'il n'y ait QU'UN auditeur sur ce monde.
-	main.vp1.audio_listener_enable_2d = true
+	# **On appelle le VRAI `poser_oreille`, on ne simule plus.** La première
+	# version de ce contrôle posait `vp1.audio_listener_enable_2d = true` à la
+	# main, puis vérifiait le compte — et elle validait donc l'invariant contre
+	# une imitation. Elle serait restée verte le jour où le rendu a cessé de
+	# gérer ce drapeau pour le laisser à `AudioManager`, qui en est le
+	# propriétaire. Un contrôle qui simule la moitié du système ne mesure que
+	# l'autre moitié.
+	# **Par l'arbre, pas par le nom.** En mode `--script`, ce fichier est compilé
+	# AVANT que les autoloads existent : nommer `AudioManager` directement donne
+	# « Identifier not found » et la suite ne tourne pas du tout. Même piège que
+	# `test_banc.gd`, autre déguisement.
+	var audio: Node = root.get_node_or_null("AudioManager")
+	if audio == null:
+		_check("l'autoload AudioManager est là", false)
+		_sortir()
+		return
+	audio.poser_oreille(main.p1)
 	var auditeurs := _auditeurs_du_duel(main)
 	_check("vue unique : un seul viewport écoute le monde du duel",
 		auditeurs.size() == 1,
@@ -110,10 +124,11 @@ func _run() -> void:
 		"racine %d vs %d attendu" % [racine.canvas_cull_mask, masque_avant])
 	_check("retour : chaque caméra a retrouvé sa vue",
 		main.cam1.custom_viewport == main.vp1 and main.cam2.custom_viewport == main.vp2)
-	# **Et la racine doit REDEVENIR auditrice.** C'est l'état que `SceneTree`
-	# installe au démarrage, et tout ce qui joue hors match en dépend — menus
-	# compris. Le laisser à `false` derrière soi rendrait le jeu muet ailleurs,
-	# sans erreur et sans que ce lot-ci soit soupçonné.
+	# **Et la racine doit REDEVENIR auditrice**, faute de quoi le jeu serait muet
+	# partout ailleurs — menus compris — sans erreur et sans que ce lot-ci soit
+	# soupçonné. C'est `rendre_oreille()` qui le fait, pas le rendu : on l'appelle
+	# donc pour de vrai, comme la fin d'un match le ferait.
+	audio.rendre_oreille()
 	_check("retour : la racine réécoute, comme au démarrage",
 		root.is_audio_listener_2d(),
 		"les menus et tout ce qui joue hors match passent par elle")

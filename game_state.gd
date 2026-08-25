@@ -2411,22 +2411,23 @@ func _rendre_dans_la_racine(vue: SubViewport) -> void:
 	racine.canvas_cull_mask = vue.canvas_cull_mask
 	cam.custom_viewport = racine
 	cam.make_current()
-	# **La racine doit CESSER d'écouter, et cette ligne n'a rien de cosmétique.**
+	# **L'écoute ne se règle PAS ici, et c'est délibéré.**
 	#
-	# Un `AudioStreamPlayer2D` sort une fois par viewport AUDITEUR de son
-	# `World2D`. La racine l'est par défaut ; en lui prêtant le monde du duel, on
-	# en fait une seconde oreille à côté de l'`AudioListener2D` que
-	# `AudioManager.poser_oreille()` a posé sur le joueur. Chaque pas, chaque tir
-	# sortirait alors **deux fois** : une fois depuis l'oreille du joueur, une
-	# fois depuis le repli de la racine — le centre de son écran virtuel, c'est-à-
-	# dire le point fixe hors de la carte qui ÉTAIT le défaut d'origine réparé par
-	# S1 la veille.
+	# Prêter à la racine le `World2D` du duel en fait bien une seconde oreille —
+	# un `AudioStreamPlayer2D` sort une fois par viewport auditeur, donc chaque
+	# son sortirait deux fois. Ce fichier a d'abord corrigé ça lui-même, en
+	# coupant `racine.audio_listener_enable_2d` juste ici. **C'était un second
+	# gestionnaire du même drapeau, et le plus dangereux des deux :** il coupait
+	# sans regarder où vit l'oreille, donc il produisait un SILENCE COMPLET dès
+	# que l'oreille vivait dans la racine — mesuré ailleurs à -200 dB sur le bus.
 	#
-	# Le symptôme serait le pire de sa famille : pas un silence, un son
-	# parfaitement audible à +3 dB environ, panoramique juste mêlé au faux. On
-	# aurait cherché dans le mixage. Signalé et mesuré par la session
-	# « spatialisation du son », vérifié ici par `tools/test_rendu_racine.gd`.
-	racine.audio_listener_enable_2d = false
+	# `AudioManager` possède ce drapeau et le tient correctement : `poser_oreille`
+	# ne coupe la racine que si l'oreille est ailleurs (`if vue != root`), et
+	# `rendre_oreille` la lui rend. Un invariant tenu à deux endroits finit par
+	# diverger ; celui-ci a son propriétaire, et ce n'est pas le rendu.
+	#
+	# Ce qui reste vrai et vérifié par `tools/test_rendu_racine.gd` : après la
+	# bascule ET l'oreille posée, **un seul viewport écoute le monde du duel**.
 	_rendu_racine = true
 
 
@@ -2443,11 +2444,8 @@ func _rendre_dans_les_sous_vues() -> void:
 		if _monde_racine != null:
 			racine.world_2d = _monde_racine
 		racine.canvas_cull_mask = MASQUE_CULL_TOUT
-		# Rendre l'écoute à la racine : c'est l'état que `SceneTree` installe au
-		# démarrage, et **tout ce qui joue hors match en dépend**, menus compris.
-		# La laisser sourde derrière soi rendrait le jeu muet ailleurs, sans
-		# erreur — et ce lot-ci ne serait pas soupçonné.
-		racine.audio_listener_enable_2d = true
+		# Pas de `audio_listener_enable_2d` ici non plus : `rendre_oreille()` rend
+		# déjà l'écoute à la racine, et c'est son rôle. Voir plus haut.
 	if cam1 != null:
 		cam1.custom_viewport = vp1
 		cam1.make_current()
