@@ -2599,6 +2599,41 @@ signature.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
+
+La phrase manquait au dépôt et elle a failli coûter un défaut entier. **Un
+`SubViewport` reste le viewport auditeur même avec son `render_target_update_mode`
+à `UPDATE_DISABLED`** : il suffit qu'il soit dans l'arbre. Rendu et écoute sont
+deux listes indépendantes, et rien dans le code ne le dit.
+
+**Le corollaire est le piège, et il ne se devine pas :** `AudioStreamPlayer2D`
+boucle sur **tous** les viewports auditeurs de son `World2D` et **somme une
+sortie par viewport**. Deux viewports auditeurs du même monde, dont un sans
+`AudioListener2D`, et chaque son sort **deux fois** — une copie juste, une copie
+depuis le centre de l'écran virtuel. Or **`SceneTree` déclare la racine auditrice
+au démarrage** : tout montage qui donne à la racine le `world_2d` du jeu produit
+donc ce doublement, sans qu'une ligne de code n'ait l'air fautive.
+
+Le symptôme est de la pire famille : **pas un silence, un son parfaitement
+audible.** Environ +3 dB, panoramique juste mêlé à un panoramique faux. Personne
+ne dit « le son est cassé » ; on dit « le son est bizarre », et on cherche dans
+le mixage.
+
+**Le contrôle qui tranche est un fait de graphe, sans pilote audio : compter les
+viewports auditeurs du monde de jeu et exiger qu'il y en ait exactement UN.**
+Il vit dans `tools/test_rendu_racine.gd` (domaine « résolution de rendu »).
+
+Et la précaution de retour, qui coûte autant que l'aller : `SceneTree` compte sur
+la racine auditrice pour tout ce qui joue **hors match**, menus compris. Un
+montage qui la coupe doit la rétablir en sortant, sinon le jeu devient muet
+ailleurs — et rien ne relie ce silence-là au lot qui l'a causé.
+
+*Découvert en travaillant à deux sessions : la première l'a prédit depuis le
+code de l'oreille, la seconde l'a fait rougir dans son montage réel avant de
+corriger. Aucune des deux ne l'aurait vu seule — l'une avait le mécanisme, l'autre
+le montage.*
+
+
 ### Des clés dépréciées font réécrire `project.godot` tout seul (2026-08-25)
 
 `boot_splash/fullsize` et `boot_splash/use_filter` n'existent plus en Godot 4.7.

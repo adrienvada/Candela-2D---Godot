@@ -237,6 +237,14 @@ func _test_le_mur_arrete_vraiment() -> void:
 	am.rendre_oreille()
 	_check("sans oreille, aucun son n'est étouffé", not am.est_occulte(source))
 
+	# ⏳ **PROVISOIRE, et il faut le dire ici plutôt que de le laisser deviner.**
+	# La session « résolution d'affichage » tient le même invariant dans
+	# `tools/test_rendu_racine.gd`, sur le montage RÉEL du jeu (racine, `vp1`,
+	# `vp2`) alors que celui-ci l'éprouve sur un monde fabriqué. **Un même
+	# invariant à deux endroits finit par diverger** — le sien est le bon, et
+	# celui-ci disparaîtra le jour où sa branche atterrira. Il reste en attendant
+	# parce que la retirer avant ouvrirait une fenêtre sans aucune protection sur
+	# un défaut qui vient d'être payé deux fois.
 	_check("une oreille posée n'en laisse qu'UNE dans le monde",
 		_compter_auditeurs(am) == 1, "%d viewports auditeurs" % _compter_auditeurs(am))
 
