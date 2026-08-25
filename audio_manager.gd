@@ -324,9 +324,37 @@ func portee_courante(stream_or_key: Variant) -> float:
 ## est UNE dimension perceptive, pas deux.** A 0 le mur ne fait rien ; a 1 il
 ## coupe a 300 Hz et retire 14 dB. Les deux bougent ensemble parce qu'ils disent
 ## la meme chose — un mur epais assourdit ET attenue, jamais l'un sans l'autre.
-const OCCLUSION_COUPURE_MIN: float = 300.0
+## ⚠️ **CORRIGE LE 2026-08-25, APRES ECOUTE : un mur ne RETIRE pas le son
+## direct, il le TRANSMET assourdi.**
+##
+## La premiere version prenait la formule d'Adrien — « naturellement par la
+## reverb » — au pied de la lettre et effondrait le `dry` a 0,12 dans le fichier
+## de bus, hors de portee de la molette. Resultat mesure et entendu : **le meme
+## silence a tous les niveaux**. « Derriere un mur j'entends rien, devant
+## j'entends comme si de rien n'etait. » Douze pour cent d'un son percussif court,
+## plus une queue de reverb, ne font pas un son etouffe : ils font une absence.
+##
+## La physique dit l'inverse de ce que j'avais code : **les basses traversent un
+## mur**, ce sont les aigus qui restent de l'autre cote. Le direct doit donc
+## rester SUBSTANTIEL et perdre son haut du spectre. La reverb complete, elle ne
+## remplace pas. La formule d'Adrien decrivait bien ce qu'on ENTEND — la piece
+## d'a cote — mais pas le mecanisme qui y mene.
+##
+## Les quatre parametres bougent maintenant ENSEMBLE sur une seule molette,
+## parce qu'un mur les deplace ensemble : plus il est epais, plus il coupe les
+## aigus, plus il attenue, et plus la part reverberee domine ce qui reste.
+const OCCLUSION_COUPURE_MIN: float = 400.0
 const OCCLUSION_COUPURE_MAX: float = 5000.0
-const OCCLUSION_PERTE_MAX_DB: float = -14.0
+const OCCLUSION_PERTE_MAX_DB: float = -10.0
+## Le direct qui traverse : presque tout a force nulle, un peu plus de la moitie
+## a force pleine. **Jamais 0,12** — c'etait le defaut.
+const OCCLUSION_DRY_MAX: float = 0.95
+const OCCLUSION_DRY_MIN: float = 0.55
+const OCCLUSION_WET_MIN: float = 0.30
+const OCCLUSION_WET_MAX: float = 0.75
+## Attenuation supplementaire par PART occultee, en plus de celle du bus. C'est
+## elle qui fait la pente : un tiers occulte coute un tiers de ce creux.
+const OCCLUSION_PENTE_DB: float = -5.0
 
 ## Force appliquee au bus d'occlusion. 0,55 correspond au reglage cuit dans
 ## `default_bus_layout.tres` (620 Hz, -7 dB) : le banc demarre donc exactement
@@ -346,6 +374,10 @@ func appliquer_force_occlusion(force: float) -> void:
 		if effet is AudioEffectFilter:
 			(effet as AudioEffectFilter).cutoff_hz = lerpf(
 				OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, force_occlusion)
+		if effet is AudioEffectReverb:
+			var r := effet as AudioEffectReverb
+			r.dry = lerpf(OCCLUSION_DRY_MAX, OCCLUSION_DRY_MIN, force_occlusion)
+			r.wet = lerpf(OCCLUSION_WET_MIN, OCCLUSION_WET_MAX, force_occlusion)
 
 ## La coupure courante du MUR, pour affichage. Pure.
 ##
@@ -423,6 +455,46 @@ static func bus_pour(bus_demande: String, occulte: bool) -> String:
 ## Rend `false` des qu'on ne peut pas repondre — pas d'oreille posee, occlusion
 ## coupee, hors frame de physique. **Le doute joue en direct** : etouffer un son
 ## qu'on n'a pas su tester retirerait une information sur une incertitude.
+## Quelle PART du trajet est bouchee ? 0 = degage, 1 = franchement derriere un mur.
+##
+## **« Elle est binaire » — Adrien, 2026-08-25, et il a raison : un seul rayon ne
+## peut repondre que oui ou non.** Un joueur qui se penche a l'angle d'un mur
+## basculait donc d'un coup entre « comme si de rien n'etait » et « etouffe », a
+## un pixel pres, plusieurs fois par seconde en marchant. Ce clignotement est
+## pire qu'une occlusion absente : il attire l'attention sur le mixage au lieu de
+## renseigner sur l'adversaire.
+##
+## Trois rayons — l'axe et deux lateraux ecartes de 24 px — rendent un TIERS, un
+## DEUX-TIERS ou un TOUT. Le bord d'un mur devient une pente courte au lieu d'une
+## falaise, pour deux requetes physiques de plus sur un son qui n'en coutait
+## qu'une. Ce n'est pas une vraie diffraction : c'est le minimum qui supprime le
+## clignotement, et c'est ce qu'on cherchait.
+const OCCLUSION_ECART_LATERAL: float = 24.0
+
+func part_occultee(pos: Vector2) -> float:
+	if not occlusion_active or _oreille == null or not is_instance_valid(_oreille):
+		return 0.0
+	if not _oreille.is_inside_tree():
+		return 0.0
+	if not Engine.is_in_physics_frame():
+		occlusions_hors_frame += 1
+		return 0.0
+	var monde := _oreille.get_world_2d()
+	if monde == null:
+		return 0.0
+	var espace := monde.direct_space_state
+	if espace == null:
+		return 0.0
+	var vers := _oreille.global_position
+	var perp := (vers - pos).orthogonal().normalized() * OCCLUSION_ECART_LATERAL
+	var touches := 0
+	for decalage in [Vector2.ZERO, perp, -perp]:
+		var q := PhysicsRayQueryParameters2D.create(pos + decalage, vers + decalage,
+			MapGeometry.WALL_LAYER)
+		if not espace.intersect_ray(q).is_empty():
+			touches += 1
+	return float(touches) / 3.0
+
 func est_occulte(pos: Vector2) -> bool:
 	if not occlusion_active or _oreille == null or not is_instance_valid(_oreille):
 		return false
@@ -741,8 +813,13 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.volume_db = volume_final + float(
 		_niveau_dose.get(cle_niveau, niveau_relatif_de(stream_or_key)))
 	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
-	# position du son et celle de l'oreille.
-	player.bus = bus_pour(bus_name, est_occulte(pos))
+	# position du son et celle de l'oreille. La PART occultee adoucit en plus le
+	# bord : un son occulte au tiers part sur le bus etouffe, mais n'y perd qu'un
+	# tiers de la penalite. Sans ca, l'angle d'un mur fait clignoter le mixage.
+	var part := part_occultee(pos)
+	player.bus = bus_pour(bus_name, part > 0.0)
+	if part > 0.0:
+		player.volume_db += OCCLUSION_PENTE_DB * part
 	player.play()
 	return player
 

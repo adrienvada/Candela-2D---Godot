@@ -30,8 +30,8 @@ resource_name = "ReverbOcclus"
 room_size = 0.06
 damping = 0.16
 hipass = 0.26
-dry = 0.12
-wet = 0.85
+dry = 0.75
+wet = 0.52
 
 [resource]
 bus/1/name = &"Music"
@@ -62,7 +62,7 @@ bus/4/name = &"SFX_Occlus"
 bus/4/solo = false
 bus/4/mute = false
 bus/4/bypass_fx = false
-bus/4/volume_db = -7.0
+bus/4/volume_db = -5.5
 bus/4/send = &"SFX"
 bus/4/effect/0/effect = SubResource("AudioEffectLowPassFilter_occlus")
 bus/4/effect/0/enabled = true
