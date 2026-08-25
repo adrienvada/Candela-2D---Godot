@@ -5496,6 +5496,58 @@ vide est l'aveu le plus cher du jeu après la torche — « je suis désarmé, e
 suis là ». À portée courte il ne trahit que celui qui est déjà assez près pour
 vous trouver ; à portée longue il deviendrait une annonce.
 
+### La séance de dosage du 2026-08-26 : Adrien aplatit les portées
+
+Deuxième séance au banc, et elle renverse une intention de conception — pas un
+réglage. Les valeurs sont dans `AudioManager`, avec leur date.
+
+| Son | Portée avant | Portée après | Niveau |
+|---|---|---|---|
+| pas | 0,15 | **0,60** | −13 dB |
+| coup au but | 1,35 | **0,60** | −2 dB |
+| percuteur | 0,55 | **0,65** | −9 dB |
+| impact mur | 1,20 | **0,80** | −3 dB |
+| tir | 1,60 | **0,85** | 0 dB |
+
+**L'écart des portées passe de 1-à-10,7 à 1-à-1,4.** Presque tout s'entend
+presque partout ; ce qui distingue les sons n'est plus leur portée mais leur
+niveau, qui s'étale de −13 à 0 dB. C'est la même position que la courbe à 0,40
+de la veille, poussée jusqu'au bout : **dans le noir, entendre que l'autre
+existe vaut plus que savoir à quelle distance il est.**
+
+**La décision la plus forte de la séance, et elle est arrivée en dernier :
+« le bruit d'impact ne doit pas porter au-delà des pas ».** Le coup au but est
+le seul son que le banc n'exposait pas ; il était resté à 1,35 pendant que tout
+le reste descendait, et il aurait porté **2406 px quand le tir qui le cause en
+portait 1515** — le bruit de l'impact aurait trahi 60 % plus loin que le coup de
+feu.
+
+La règle posée dépasse la correction d'échelle : **être touché ne doit pas
+trahir plus que marcher.** Le coup au but reste le deuxième son le plus fort du
+jeu (−2 dB) mais devient intime — il confirme au tireur qu'il a touché, sans
+annoncer à la carte entière où se passe le duel. Fort et court, au lieu de fort
+et loin.
+
+**Ce que j'avais faux, et pourquoi.** J'avais posé le percuteur à 0,55 en
+raisonnant « un peu plus de la moitié de la référence ». Le nombre avait l'air
+modeste ; multiplié par le facteur global de **1,80** qu'Adrien avait réglé la
+veille, il donnait 0,99 — **exactement la diagonale de la carte**. Le percuteur
+portait d'un bout à l'autre de l'arène, ce que son propre commentaire disait
+vouloir empêcher.
+
+La leçon vaut au-delà de ce nombre : **une valeur relative ne se juge pas
+seule.** Elle vit dans un produit, et le facteur qui la multiplie a pu être
+réglé par quelqu'un d'autre, un autre jour. Le premier écran du banc l'a montré
+en une ligne — `portée 980 px (diagonale carte 990 × relative 0,55 × facteur
+1,80)` — ce qu'aucune relecture du code n'avait donné, parce que le code ne
+montre jamais le produit, seulement ses facteurs.
+
+`tools/test_musique.gd` garde désormais la **forme** de ce jugement, pas ses
+valeurs exactes : le coup au but sous le pas en portée et au-dessus en niveau,
+les portées en un mouchoir et les niveaux étalés, aucun son ne couvrant plus
+d'une diagonale et demie. Un dosage doit pouvoir être repris au banc sans casser
+sa propre garde ; ce qui est verrouillé, c'est la décision, pas le chiffre.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16

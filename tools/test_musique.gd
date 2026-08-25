@@ -51,6 +51,7 @@ func _run() -> void:
 	_test_couches_du_match()
 	_test_ouverture()
 	_test_armes()
+	_test_dosage()
 	_test_percuteur()
 	_test_annonceur()
 	_test_stingers_regle()
@@ -281,6 +282,82 @@ func _test_armes() -> void:
 ##
 ## Rien n'aurait leve d'erreur : le clic se serait entendu, les pas auraient
 ## juste ete un peu plus bas. Encore une sortie plausible.
+## Le dosage jugé par Adrien au banc le 2026-08-26.
+##
+## **Ce que ce contrôle protège n'est pas une valeur, c'est un JUGEMENT.** Ces
+## nombres ne se déduisent d'aucun raisonnement — ils ont été entendus. Un jour
+## quelqu'un les trouvera bizarres (les portées se tiennent en un mouchoir, un
+## coup au but porte aussi peu qu'un pas) et voudra « remettre de l'ordre ». Les
+## rapports ci-dessous sont là pour que ce quelqu'un se cogne à une suite rouge
+## avant de le faire, et aille lire pourquoi.
+##
+## Les contrôles portent sur des RAPPORTS, jamais sur les valeurs exactes : un
+## dosage doit pouvoir être repris au banc sans casser sa propre garde. Ce qui
+## est verrouillé, c'est la FORME de la décision.
+func _test_dosage() -> void:
+	print("\n[Le dosage jugé au banc, 2026-08-26]")
+	var p := func(c): return AM.PORTEE_RELATIVE.get(c, AM.PORTEE_RELATIVE_DEFAUT)
+	var n := func(c): return AM.NIVEAU_RELATIF.get(c, AM.NIVEAU_RELATIF_DEFAUT)
+
+	# LA règle posée par Adrien, et la plus facile à défaire par mégarde :
+	# être touché ne doit pas trahir plus que marcher.
+	_check("le coup au but ne porte pas plus loin qu'un pas",
+		p.call("flesh_impact") <= p.call("footstep"),
+		"impact %.2f vs pas %.2f" % [p.call("flesh_impact"), p.call("footstep")])
+
+	# ... mais il reste FORT. C'est le couple qui fait la décision : intime et
+	# lourd. Séparer les deux moitiés viderait la règle de son sens.
+	_check("et pourtant il pèse plus qu'un pas",
+		n.call("flesh_impact") > n.call("footstep"),
+		"%.1f dB vs %.1f dB" % [n.call("flesh_impact"), n.call("footstep")])
+
+	# Le percuteur trahit un peu plus qu'un pas — jugé contre lui, pas seul.
+	_check("le percuteur porte un peu plus qu'un pas",
+		p.call("weapon_dry") > p.call("footstep"))
+	_check("mais moins qu'un tir",
+		p.call("weapon_dry") < p.call("shoot"))
+
+	# Le tir reste la référence de niveau : tout se place sous lui.
+	_check("le tir est le zéro des niveaux",
+		is_equal_approx(n.call("shoot"), 0.0), "%.1f" % n.call("shoot"))
+	for cle in ["footstep", "wall_impact", "flesh_impact", "weapon_dry"]:
+		_check("%s pèse moins que le tir" % cle, n.call(cle) < n.call("shoot"))
+
+	# La forme de la séance : les portées se sont resserrées, les niveaux se sont
+	# étalés. C'est LA position de conception, et elle se lit dans les écarts.
+	var portees := []
+	var niveaux := []
+	for cle in ["footstep", "flesh_impact", "wall_impact", "shoot", "weapon_dry"]:
+		portees.append(float(p.call(cle)))
+		niveaux.append(float(n.call(cle)))
+	var ecart_portee: float = portees.max() / portees.min()
+	var ecart_niveau: float = niveaux.max() - niveaux.min()
+	_check("les portées se tiennent en un mouchoir (rapport < 2)",
+		ecart_portee < 2.0, "rapport %.2f" % ecart_portee)
+	_check("les niveaux, eux, s'étalent franchement (> 10 dB)",
+		ecart_niveau > 10.0, "%.1f dB" % ecart_niveau)
+
+	# Les deux molettes globales, tranchées la veille. La courbe surtout : elle
+	# est l'INVERSE de ce que le raisonnement avait produit, donc la première
+	# qu'un futur « corrigeons ça » remettrait à 2,0.
+	_check("le facteur de portée est celui d'Adrien (1,80)",
+		is_equal_approx(AM.FACTEUR_PORTEE_DEFAUT, 1.8),
+		"%.2f" % AM.FACTEUR_PORTEE_DEFAUT)
+	_check("la courbe reste sous 1 — le son PRÉSENT presque partout",
+		AM.COURBE_DISTANCE_DEFAUT < 1.0, "%.2f" % AM.COURBE_DISTANCE_DEFAUT)
+	_check("la force du mur est celle jugée au banc (0,45)",
+		is_equal_approx(AM.FORCE_OCCLUSION_DEFAUT, 0.45),
+		"%.2f" % AM.FORCE_OCCLUSION_DEFAUT)
+
+	# Et la vérification qui aurait attrapé mon erreur du percuteur : une portée
+	# relative ne se juge pas seule, elle se multiplie par le facteur global.
+	# Aucun son ne doit couvrir la carte entière — sinon sa portée ne dit plus rien.
+	var diag := AM.diagonale_carte(AM.GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)
+	for cle in ["footstep", "flesh_impact", "weapon_dry"]:
+		var absolue: float = diag * float(p.call(cle)) * AM.FACTEUR_PORTEE_DEFAUT
+		_check("%s : porte moins que 1,5 diagonale" % cle,
+			absolue < diag * 1.5, "%.0f px pour une carte de %.0f" % [absolue, diag])
+
 func _test_percuteur() -> void:
 	print("\n[Le percuteur a vide]")
 	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
