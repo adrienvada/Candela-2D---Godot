@@ -65,7 +65,7 @@ var _toast_panel: PanelContainer
 var _toast_label: Label
 var _toast_tween: Tween
 
-var _empty_label: Label
+var _empty_label: VBoxContainer
 
 ## Tuiles de carte uniquement (la tuile « + Créer » n'en fait pas partie).
 var _tiles: Array[Button] = []
@@ -118,13 +118,38 @@ func _build() -> void:
 	_grid.add_theme_constant_override("v_separation", TILE_GAP)
 	_scroll.add_child(_grid)
 
-	_empty_label = Label.new()
-	_empty_label.text = "Aucune carte pour l'instant — créez-en une."
-	_empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_empty_label.add_theme_font_size_override("font_size", Charte.T_COURANT)
-	_empty_label.add_theme_color_override("font_color", COLOR_DIM)
+	# DA4.12 — **l'état vide est illustré, et il n'est pas une erreur.**
+	#
+	# Une phrase seule au milieu d'un grand vide se lit comme un écran qui a
+	# échoué à charger. La même phrase sous une image se lit comme une réponse :
+	# *il n'y a rien, et c'est normal.* La distinction n'est pas décorative — c'est
+	# la différence entre « le jeu est cassé » et « à vous de jouer ».
+	_empty_label = VBoxContainer.new()
+	_empty_label.alignment = BoxContainer.ALIGNMENT_CENTER
+	_empty_label.add_theme_constant_override("separation", Charte.GAP_S)
 	_empty_label.hide()
 	root.add_child(_empty_label)
+
+	var chemin_vide := "res://assets/ui/vide_galerie.png"
+	if ResourceLoader.exists(chemin_vide):
+		var dessin := TextureRect.new()
+		dessin.texture = load(chemin_vide)
+		# Masque gris teinté par le code : la discipline DA1.5, l'image ne fournit
+		# que la matière. `LINE` plutôt que `DIM` — une illustration d'absence doit
+		# rester en retrait de la phrase qu'elle accompagne, sinon elle devient le
+		# sujet.
+		dessin.modulate = Charte.LINE
+		dessin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		dessin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		dessin.custom_minimum_size = Vector2(0, 128)
+		_empty_label.add_child(dessin)
+
+	var phrase := Label.new()
+	phrase.text = "Aucune carte pour l'instant — créez-en une."
+	phrase.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(phrase, Charte.T_COURANT)
+	phrase.add_theme_color_override("font_color", COLOR_DIM)
+	_empty_label.add_child(phrase)
 
 	root.add_child(_build_import_row())
 	root.add_child(_build_actions())

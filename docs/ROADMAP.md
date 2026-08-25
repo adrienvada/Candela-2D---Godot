@@ -2532,6 +2532,43 @@ service, il déplace le diagnostic.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Le voleur de port 7777 n'est pas toujours une voisine (2026-08-25)
+
+Le piège du port occupé est déjà consigné, et son contrôle recommandé est
+`pgrep -f run_suites` — *y a-t-il une autre session qui lance les suites ?* **Ce
+contrôle rate le cas le plus fréquent, et il l'a raté trois fois en deux jours.**
+
+`duo_enet` échouait à chaque lot complet et passait rejoué seul, **sans qu'aucun
+lanceur voisin ne tourne**. La cause, prise en flagrant délit :
+
+```
+$ ps aux | grep "[G]odot --headless" | wc -l
+       2
+$ lsof -nP -iUDP:7777
+Godot   30632 vada   13u  IPv6 ...  UDP *:7777
+```
+
+**Un Godot d'un lot PRÉCÉDENT, encore vivant, tenant le port.** Pas une session
+concurrente : un processus qui n'est pas sorti, souvent parce qu'un chien de
+garde l'a tué en `SIGKILL` (scénarios `--coupure` et `--ralenti`, qui coupent le
+client exprès) ou parce qu'un lot a été interrompu. `pgrep -f run_suites` ne le
+voit pas — le lanceur, lui, est bien terminé.
+
+**Le contrôle qui tranche vraiment, et il nomme le coupable :**
+
+```bash
+lsof -nP -iUDP:7777
+```
+
+S'il rend une ligne alors qu'aucun lot ne tourne, `pkill -f "Godot --headless"`
+et relancer. Vérifié : trois lots rouges d'affilée, puis vert au premier essai
+après le `pkill`.
+
+**Ce que ça corrige dans le piège existant** : « compter les lanceurs » répond à
+la mauvaise question. Ce qui compte n'est pas *qui travaille*, c'est *qui tient
+le port* — et la seconde question a une réponse exacte que la première n'a pas.
+
+
 ### Deux machines, deux UID pour le même chemin (2026-08-25)
 
 Le journal affirme depuis le 2026-08-18 que la génération d'UID est
