@@ -9394,8 +9394,45 @@ c'est fait, R6 n'a rien à faire.
 
 Reste donc :
 
-1. **Les tuiles** — un paramètre de `tools/fabrique_tuiles.gd`, planches sources
-   en 2048² pour des sorties de 35 px. Rien d'autre à décider.
+1. ~~**Les tuiles** — un paramètre de `tools/fabrique_tuiles.gd`.~~
+   ⚠️ **FAUX, vérifié le 2026-08-25 : ce n'est pas un paramètre, c'est une
+   migration de format.** `fabrique_tuiles.gd` le dit lui-même à sa constante :
+   *« Elle n'est pas paramétrable : une tuile d'une autre taille ne rentrerait
+   pas dans l'atlas. »* Et `CandelaTileSet.TILE_SIZE` sert **trois rôles à la
+   fois** :
+
+   - la région de l'atlas de texture (`ts.tile_size`, les `blit_rect`) ;
+   - **la taille d'une case du MONDE** — `map_geometry.gd` en dérive collision et
+     occlusion, `menu_arene.gd` son aperçu ;
+   - ⚠️ **une valeur du FORMAT DE SAUVEGARDE** — `map_codec.gd:215` et
+     `map_data.gd:360` l'écrivent dans le fichier (`"tile_size"`).
+
+   Doubler la texture demande donc de **séparer la région d'atlas de la taille de
+   case**, et toute confusion entre les deux touche des cartes déjà enregistrées.
+   Ce n'est plus « rien d'autre à décider » : c'est un chantier à part entière,
+   avec une compatibilité ascendante à tenir.
+
+   **Le motif se répète** : la troisième affirmation de portée de la journée
+   démentie par une lecture — après les options de lanceur déjà implémentées et
+   les « trois planches » de key art qui étaient deux. Une entrée de feuille de
+   route qui dit *« rien d'autre à décider »* mérite qu'on aille voir, parce que
+   c'est la formule qu'on écrit quand on n'a pas regardé.
+
+1ter. ⚠️ **Et les RÉGLAGES qui ont produit les assets validés ne sont consignés
+   nulle part.** Les outils documentent des invocations d'exemple
+   (`--epaules 17.1` pour les sprites, `--taille 160` pour le sang), mais pas les
+   curseurs fins de chaque cuisson retenue : quelle `--luminance` a donné le sol
+   « faible » qu'Adrien a validé, quels `--matiere` et `--profil` ont donné les
+   cookies. **Recuire à l'aveugle rejouerait ses arbitrages au hasard.**
+
+   Conséquence directe sur l'ordre des choses : **une recuisson partielle est
+   pire que pas de recuisson**, puisque la décision est « une fois, pour TOUTES
+   les familles » — traiter les seuls sprites recréerait l'incohérence de densité
+   que R6 existe pour supprimer. Le préalable n'est donc pas de recuire, c'est
+   de **rendre les recettes reproductibles**, une par asset livré. Les planches
+   sources sont versionnées précisément pour ça (`assets/sources/*/.gitignore` :
+   *« sans elles, l'asset devient irreproductible »*) — mais une planche sans sa
+   recette ne l'est qu'à moitié.
 
 1bis. ⚠️ **LES DÉCALS, non listés jusqu'ici et pourtant couplés.** Trouvé le
    2026-08-25 en relisant avec la lunette de DA4, après le viseur.
