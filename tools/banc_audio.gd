@@ -266,8 +266,22 @@ func _jouer_au_prochain_tic() -> void:
 
 var _auto_un_coup: bool = false
 
+## Ce qu'il faut REELLEMENT passer a `play_sfx_2d` pour ce son.
+##
+## ⚠️ **Toutes les cles de barème ne sont pas des cles de `SOUNDS`.** Le
+## percuteur est indexe `"weapon_dry"` dans `PORTEE_RELATIVE` et
+## `NIVEAU_RELATIF`, mais il se joue par CHEMIN (`weapon_dry_<arme>.wav`) — la
+## cle seule ne resout aucun flux. Le banc affichait donc 0,55 / -9 dB, des
+## chiffres justes, pour un son qui ne sortait pas. **Des valeurs plausibles sur
+## un silence** : la troisieme forme du meme defaut, apres « l'outil ne mesure
+## pas le jeu » et « la molette ne pilote que le banc ».
+func _flux_courant() -> Variant:
+	if _son_courant == "weapon_dry":
+		return AudioManager.chemin_percuteur("pistolet")
+	return _son_courant
+
 func _jouer() -> void:
-	AudioManager.play_sfx_2d_random_pitch(_son_courant, _source.global_position,
+	AudioManager.play_sfx_2d_random_pitch(_flux_courant(), _source.global_position,
 		0.95, 1.05)
 
 ## Le dessin dit ce que l'oreille ne peut pas prouver : où est le rayon, et s'il
@@ -315,15 +329,18 @@ func _texte() -> String:
 		"      %s" % _detail_mode(),
 		"",
 		"  LES QUATRE SONS, tels qu'ils sont dosés en ce moment :",
-		"    %s pas          niveau %+6.1f dB   portée %5.0f px" % [
+		"    %s pas          niveau %+6.1f dB   portée %5.0f px  %s" % [
 			"▶" if _son_courant == "footstep" else " ",
-			AudioManager.niveau_dose("footstep"), AudioManager.portee_courante("footstep")],
-		"    %s tir          niveau %+6.1f dB   portée %5.0f px" % [
+			AudioManager.niveau_dose("footstep"), AudioManager.portee_courante("footstep"),
+			_aveu_de_bareme("footstep")],
+		"    %s tir          niveau %+6.1f dB   portée %5.0f px  %s" % [
 			"▶" if _son_courant == "shoot" else " ",
-			AudioManager.niveau_dose("shoot"), AudioManager.portee_courante("shoot")],
-		"    %s impact mur   niveau %+6.1f dB   portée %5.0f px" % [
+			AudioManager.niveau_dose("shoot"), AudioManager.portee_courante("shoot"),
+			_aveu_de_bareme("shoot")],
+		"    %s impact mur   niveau %+6.1f dB   portée %5.0f px  %s" % [
 			"▶" if _son_courant == "wall_impact" else " ",
-			AudioManager.niveau_dose("wall_impact"), AudioManager.portee_courante("wall_impact")],
+			AudioManager.niveau_dose("wall_impact"), AudioManager.portee_courante("wall_impact"),
+			_aveu_de_bareme("wall_impact")],
 		"    %s percuteur    niveau %+6.1f dB   portée %5.0f px  %s" % [
 			"▶" if _son_courant == "weapon_dry" else " ",
 			AudioManager.niveau_dose("weapon_dry"), AudioManager.portee_courante("weapon_dry"),
@@ -367,9 +384,16 @@ func _db_estime(dist: float, portee: float) -> String:
 ## et le jeu en jouait une autre — et elle ne se voit pas : un chiffre par défaut
 ## ressemble à un chiffre choisi.
 func _aveu_de_bareme(cle: String) -> String:
-	if AudioManager.PORTEE_RELATIVE.has(cle):
-		return ""
-	return "⚠ pas encore au barème — valeurs par défaut"
+	if not AudioManager.PORTEE_RELATIVE.has(cle):
+		return "⚠ pas au barème — valeurs par défaut"
+	# **Et surtout : le fichier existe-t-il ?** Un son au barème mais sans flux
+	# affiche des chiffres justes et ne sort pas. C'est la regle du depot
+	# — cabler, taire, diagnostiquer — dont il ne restait que les deux premiers
+	# tiers : le banc fait enfin le troisieme.
+	var flux: Variant = AudioManager.chemin_percuteur("pistolet") if cle == "weapon_dry" else cle
+	if AudioManager.get_audio_stream(flux) == null:
+		return "⚠ AUCUN FICHIER — muet"
+	return ""
 
 func _nom_mode() -> String:
 	match _mode:

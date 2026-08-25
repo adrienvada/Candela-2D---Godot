@@ -2694,6 +2694,33 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
+
+Le piège du `.godot` périmé est déjà consigné pour le **checkout**. Il se paie
+aussi, et plus sournoisement, après une **fusion** : `git merge` ajoute des
+`.png`, des `.wav`, leurs `.import` — et rien ne réimporte.
+
+Constaté : `test_vision` **verte à 15 h, rouge à 15 h 10**, sans qu'une ligne de
+code ait changé entre les deux. Deux contrôles tombaient — « une arme sans
+faisceau ne verse rien ». La suite lit les textures de cône des armes ; une
+texture que `ResourceLoader` ne voit pas rend le même verdict qu'une arme sans
+faisceau. **Le symptôme accuse le modèle de vision ; la cause est un fichier que
+Godot n'a pas encore ouvert.**
+
+`godot --headless --path . --import` : verte au premier essai, et le lot complet
+passe derrière (273 s).
+
+**La règle : après toute fusion qui apporte des assets, importer AVANT de
+lancer les suites.** Un lot rouge lancé sans ça n'accuse pas ce qu'il croit — et
+sur un arbre que six sessions partagent, la fusion des autres suffit à périmer
+le cache sans qu'on ait rien fait soi-même.
+
+*Troisième forme rencontrée dans la journée de « le symptôme désigne un autre
+coupable que le sien », après le port volé et l'autoload qui ne compile pas.
+C'est un motif, pas une série de coïncidences : **un outil de mesure qui
+dépend d'un état invisible accuse toujours ce qu'il mesure.***
+
+
 ### Certifier la moitié d'une affirmation la fait passer tout entière (2026-08-25)
 
 Une session m'annonce que le lanceur est sourd aux `push_error`, « parce que
