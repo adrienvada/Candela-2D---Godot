@@ -788,8 +788,41 @@ func _process(delta: float) -> void:
 ## fenêtre. Ça se défend pour un jeu, mais ça piège la souris d'Adrien pendant
 ## qu'il développe, et la visée n'y gagne rien — `get_aim_direction()` rend une
 ## direction, pas une position.
+## ⚠️ **La condition était `_is_main_menu` SEUL, et elle faisait disparaître la
+## souris partout où il faut cliquer** — relevé par Adrien à l'écran le
+## 2026-08-25.
+##
+## `_is_main_menu` ne veut pas dire « un menu est ouvert », il veut dire « on est
+## dans le hub ». La pause, les boîtes de dialogue et la fenêtre de choix d'arme
+## s'ouvrent **par-dessus le match**, donc avec `_is_main_menu` à faux : la
+## flèche y était masquée, et il fallait la manette pour en sortir.
+##
+## **Le commentaire d'origine décrivait exactement ce défaut comme la chose à
+## éviter** — « sans plus aucun moyen de cliquer *Quitter* » — et le code le
+## produisait quand même. Il avait raison sur le risque et se trompait sur le
+## prédicat.
+##
+## La règle est donc : **la flèche se montre dès qu'un contrôle attend un clic**,
+## pas seulement dans le hub. Les quatre cas sont dérivés, jamais mémorisés — un
+## drapeau posé à l'ouverture et retiré à la fermeture aurait la même faiblesse
+## que celle décrite plus haut : il suffit d'un chemin de sortie oublié.
+func _un_menu_attend_un_clic() -> bool:
+	if _is_main_menu:
+		return true
+	if is_pause_menu_open():
+		return true
+	# Un dialogue est modal : il prend le focus des deux joueurs et il faut
+	# l'acquitter. Sans souris, un joueur au clavier seul y reste coincé.
+	if dialog_panel != null and dialog_panel.visible:
+		return true
+	# La fenêtre de choix d'arme d'un match apparié : dix secondes pour cliquer.
+	if pick_panel != null and pick_panel.visible:
+		return true
+	return false
+
+
 func _suivre_le_curseur_systeme() -> void:
-	var voulu := (Input.MOUSE_MODE_VISIBLE if _is_main_menu
+	var voulu := (Input.MOUSE_MODE_VISIBLE if _un_menu_attend_un_clic()
 		else Input.MOUSE_MODE_HIDDEN)
 	if Input.mouse_mode != voulu:
 		Input.mouse_mode = voulu

@@ -56,11 +56,78 @@ var _total := 0
 
 
 func _init() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
 	_test_image()
 	_test_deux_vues()
 	_test_une_seule_fleche()
+	await _test_la_fleche_revient_ou_il_faut_cliquer()
 	print("test_viseur : %d/%d" % [_total - _echecs, _total])
 	quit(1 if _echecs > 0 else 0)
+
+
+## ⚠️ **Le contrôle que ce banc n'avait pas, et le défaut est passé par le trou.**
+##
+## Tout ce qui précède lit le TEXTE de `ui.gd` : le mode est réglé, il existe un
+## `HIDDEN`, il existe un `VISIBLE`, la valeur se dérive dans une fonction dédiée.
+## Les quatre affirmations étaient vraies **pendant que la souris disparaissait de
+## la pause, des dialogues et de la fenêtre de choix d'arme** — relevé par Adrien
+## à l'écran le 2026-08-25.
+##
+## La cause : le prédicat était `_is_main_menu`, qui ne veut pas dire « un menu est
+## ouvert » mais « on est dans le hub ». **Un banc qui vérifie qu'une décision est
+## prise ne vérifie pas qu'elle est prise juste.**
+##
+## Celui-ci ouvre donc les trois panneaux pour de vrai et interroge le prédicat.
+func _test_la_fleche_revient_ou_il_faut_cliquer() -> void:
+	await process_frame
+	var scene: PackedScene = load("res://main.tscn")
+	if scene == null:
+		_vrai("main.tscn charge", false)
+		return
+	var main: Node = scene.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+	var ui: Node = main.get_node_or_null("UI")
+	if ui == null or not ui.has_method("_un_menu_attend_un_clic"):
+		_vrai("l'interface expose le predicat du curseur", false)
+		main.queue_free()
+		return
+
+	# En match, hors de tout menu : la fleche doit disparaitre. Sans ce versant,
+	# un predicat qui repondrait TOUJOURS vrai passerait les trois suivants.
+	ui.hide_game_over()
+	await process_frame
+	_vrai("en match, la fleche est masquee", not ui._un_menu_attend_un_clic())
+
+	if ui.has_method("_open_pause"):
+		ui._open_pause()
+		await process_frame
+		_vrai("dans la pause, la fleche revient", ui._un_menu_attend_un_clic())
+		if ui.has_method("_resume_game"):
+			ui._resume_game()
+			await process_frame
+
+	if ui.has_method("show_dialog_message"):
+		ui.show_dialog_message("Essai", "Un dialogue attend un clic.")
+		await process_frame
+		_vrai("dans un dialogue, la fleche revient", ui._un_menu_attend_un_clic())
+		if ui.has_method("_on_dialog_closed"):
+			ui._on_dialog_closed()
+			await process_frame
+
+	if ui.has_method("show_pick_window"):
+		ui.show_pick_window([0, 1], "Essai")
+		await process_frame
+		_vrai("dans la fenetre de choix, la fleche revient",
+			ui._un_menu_attend_un_clic())
+		if ui.has_method("hide_pick_window"):
+			ui.hide_pick_window()
+
+	main.queue_free()
 
 
 func _test_image() -> void:
@@ -204,7 +271,19 @@ func _test_une_seule_fleche() -> void:
 		var suite := interface.substr(i)
 		var fin := suite.find("\nfunc ", 1)
 		var corps := suite if fin < 0 else suite.substr(0, fin)
-		_vrai("la derivation lit l'ecran affiche", corps.contains("_is_main_menu"))
+		# ⚠️ **Ce contrôle exigeait `_is_main_menu` dans le corps, et c'est ce
+		# prédicat-là qui était le défaut** : il veut dire « on est dans le hub »,
+		# pas « un menu attend un clic ». La souris disparaissait donc de la pause,
+		# des dialogues et de la fenêtre de choix d'arme.
+		#
+		# Exiger un NOM DE VARIABLE fige le raisonnement qu'on croyait juste le
+		# jour où on a écrit le banc. On exige désormais que la dérivation consulte
+		# **un prédicat**, sans dire lequel — et c'est le contrôle à l'exécution
+		# ci-dessous qui juge s'il répond juste, en ouvrant les panneaux pour de
+		# vrai. Un banc dit *que* la décision est prise ; seul l'écran dit qu'elle
+		# est prise **bien**.
+		_vrai("la derivation consulte un predicat de menu",
+			corps.contains("_un_menu_attend_un_clic"))
 
 
 ## Le bloc privé de ses commentaires — un commentaire qui explique quoi ne PAS
