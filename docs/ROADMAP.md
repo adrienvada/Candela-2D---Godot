@@ -170,6 +170,27 @@ code, sans configuration, sans redirection de port.
   elle n'est pas au premier plan. Mesuré sur **Apple M3**, fenêtre 1280×720 :
   une machine plus modeste demandera sa propre mesure.
 
+  > ⚠️ **Ce verdict ne décrit plus le jeu — relevé du 2026-08-25, chantier R,
+  > jalon H10.** Fenêtre 2560×1440 au **premier plan**, focus stable attesté par
+  > le banc : **1 % bas de 61 en vue unique**, et 63 sur l'ancien chemin de
+  > rendu. Pas 120. Le chantier R n'y est pour rien — les deux chemins donnent
+  > le même chiffre à deux images près.
+  >
+  > **Deux choses ont changé depuis, et aucune n'est une régression de code.**
+  > La fenêtre a doublé (1280×720 → 2560×1440, décision du 2026-08-25), donc le
+  > viewport racine est passé de 0,92 à 3,69 Mpx. Et surtout, **le banc sait
+  > maintenant dire ce que le focus faisait** : la dispersion « 145 à 160 »
+  > attribuée ci-dessus au second plan venait en réalité des **transitions** de
+  > focus, et un relevé contaminé donne un 1 % bas de 44 à 81 sur une machine
+  > qui en tient 120. Le verdict de 2026-08-16 a pu être pris dans l'un ou
+  > l'autre état ; rien ne permet de le savoir, puisque rien ne le mesurait.
+  >
+  > **Ce qu'il faut en retenir : le chiffre affiché en tête de ce document —
+  > « cible : 1 % bas ≥ 120 fps » — n'est plus un constat, c'est un objectif.**
+  > Adrien a abaissé la barre à **60** le 2026-08-25 (chantier R, étape R5), et
+  > le jeu passe cette barre-là de deux images par seconde. **Savoir s'il faut
+  > remonter vers 120, et à quel prix, est une décision qui n'a pas été prise.**
+
 - **Préférences persistées** — vsync, plafond d'images par seconde, résolution
   et remappage des touches vivent dans `user://settings.cfg`, sectionné
   (`video` / `display` / `input`), appliqué au démarrage par l'autoload

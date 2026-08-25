@@ -53,7 +53,12 @@ godot --headless --path . --script res://tools/test_map_codec.gd
 Les tests sortent avec le code 1 en cas d'échec. Autres bancs d'essai dans
 `tools/` : `test_transport.tscn`, `test_online_match.tscn`,
 `test_quit_path.tscn` (EOS/ENet, protocole dans `docs/PROTOCOLE_TEST_EOS.md`)
-et `bench_framerate.tscn` (charge réelle, cible : 1 % bas ≥ 120 fps).
+et `bench_framerate.tscn` (charge réelle). **La cible est passée de 120 à
+`1 % bas ≥ 60` le 2026-08-25** (chantier R, étape R5, décision d'Adrien) — et
+le jeu la passe de deux images par seconde, mesuré fenêtre au premier plan.
+Le banc refuse désormais un relevé pris pendant que la fenêtre change de
+focus : ce sont ces transitions, et non le second plan, qui décident du
+1 % bas.
 
 En jeu, **F3** ouvre le panneau de diagnostic (fps, ping, transport, lien
 direct/relayé, NAT, lumières, particules). Pas de linter ni de CI : la barre
@@ -96,6 +101,21 @@ Phase 9, pas un rangement, et le déplacer casse silencieusement les correctifs.
   `render_target_update_mode` de la vue masquée, sans quoi elle dessine dans une
   texture que personne n'affiche — 1,5 ms mesurées. La séparation des vues passe
   par `canvas_cull_mask` : chaque joueur ne voit que ses propres lumières.
+
+  **En vue unique, le duel n'est plus rendu par un `SubViewport` du tout**
+  (chantier R, 2026-08-25) : la racine adopte le même `World2D`, le masque de
+  cull de la vue regardée et sa caméra, les deux `SubViewport` s'arrêtent, et le
+  jeu est donc rastérisé à la résolution de la **fenêtre** au lieu d'être dessiné
+  à 957×1080 puis étiré. Mesuré : **+15 % de cadence pour 3,6 fois plus de
+  pixels**, la texture intermédiaire supprimée coûtant plus cher que les pixels
+  gagnés sur un GPU à rendu par tuiles. L'écran scindé garde ses deux vues.
+  `rendu_racine_autorise` ramène l'ancien chemin en une ligne.
+
+  ⚠️ **Deux conséquences qui ne se devinent pas.** La racine doit cesser d'être
+  auditrice pendant la bascule (`audio_listener_enable_2d`), sans quoi chaque son
+  positionnel sort **deux fois** — voir « Pièges connus ». Et la densité de texels
+  suit désormais la fenêtre en vue unique : une tuile de 35 px tombe à 0,5 texel
+  par pixel en plein écran (chantier R, étape R6).
 - `game_state.gd` (`GameState`) — orchestration : manches, décompte partagé,
   RPC, spawn des balles, killcam, compensation de latence côté hôte. Format de
   match BO1 5 min, jamais en dur : il transite par `MatchRecord.Format`.
