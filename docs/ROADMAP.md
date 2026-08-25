@@ -3832,17 +3832,32 @@ personne n'aurait su formuler d'avance.
 
 ### Un `.godot` périmé fait échouer les bancs à deux instances, et l'erreur ment (2026-08-24)
 
-> **Ajout du 2026-08-25, sans toucher au texte ci-dessous : `--import` lancé en
-> TÂCHE DE FOND ne suffit pas, et il annonce pourtant zéro problème.** Worktree
-> neuf, `--import` lancé en parallèle de la première ouverture du projet, sortie
-> propre — et le lot suivant échoue sur une police non importée puis sur une
-> erreur d'analyse dans le plugin EOS, c'est-à-dire exactement la cascade décrite
-> plus bas. Relancé **en avant-plan**, tout passe.
+> **Ajout du 2026-08-25, sans toucher au texte ci-dessous. Le geste écrit plus
+> bas — « lancer `--import` avant les suites » — est nécessaire et PAS suffisant :
+> le silence de `--import` n'est pas neutre, il ressemble à un succès.**
 >
-> Le geste sûr est donc plus étroit qu'écrit ici : *un import qui court en même
-> temps qu'autre chose ne prouve rien ; on l'attend.* Et le piège se déguise une
-> fois de plus en défaut d'autrui — j'ai d'abord cru que mon propre changement de
-> port cassait le salon.
+> Deux exemplaires le même jour, deux façons de se faire avoir, une seule cause :
+>
+> - **lancé en tâche de fond**, en parallèle de la première ouverture du projet.
+>   Sortie propre, zéro problème annoncé — et le lot suivant échoue sur une police
+>   non importée puis sur une erreur d'analyse du plugin EOS, la cascade décrite
+>   plus bas. *(session « affichage »)*
+> - **lancé plusieurs fois avec sa sortie coupée** (`> /dev/null 2>&1`). Il
+>   annonçait donc zéro problème à chaque fois, et on le croyait. *(session
+>   « DA3 Audio »)*
+>
+> Dans les deux cas, relancé **en avant-plan et attendu**, tout passe.
+>
+> **Ce que ça a failli coûter, et c'est le vrai enseignement : les deux fois, le
+> piège s'est déguisé en défaut d'autrui.** L'une a cru que son propre changement
+> de port cassait le salon ; l'autre a failli conclure que la suite d'une autre
+> session était cassée — et **bloquer sur ce diagnostic une poussée de 26
+> commits**. Après réimport : 16/16.
+>
+> La règle, plus étroite que « lancer l'import » : **un import dont on n'a pas
+> LU la sortie, en avant-plan, ne prouve rien.** C'est le motif du jour appliqué
+> à un outil — *`--import` avec la sortie coupée a l'air de vérifier quelque
+> chose, et ne vérifie rien.*
 
 Après une fusion qui apporte des fichiers neufs — polices, et surtout des
 scripts portant un `class_name` — le cache d'import n'est plus à jour. Godot ne
