@@ -178,6 +178,21 @@ var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
 @onready var hit_sound = $HitSound
 var step_distance_accumulated: float = 0.0
+
+## ## Le roulis de marche (DA2.4)
+##
+## Amplitude du balancement du corps, en unités de monde, mesurée au sommet du
+## pas. Le corps fait environ 17 unités de large : 1,6 en représente un dixième,
+## assez pour se lire à 36 px, trop peu pour qu'on croie à une glissade.
+const ROULIS_MARCHE := 1.6
+## Vitesse de retour au repos, en unités par seconde. Elle doit rester **au
+## large** de ce que la démarche demande, sinon elle l'écrête au lieu de la
+## lisser : à l'allure de marche un demi-pas dure ~0,11 s, soit ~0,23 unité par
+## tick à 60 Hz ; 30 en autorise 0,50. Ce qu'elle sert vraiment, c'est l'arrêt —
+## sans elle, s'immobiliser en plein pas laisserait le corps penché à demeure.
+const ROULIS_RETOUR := 30.0
+## Roulis courant, lissé. État par joueur, comme `_foot_side`.
+var _roulis := 0.0
 ## D1 — alternance pied gauche/droit des empreintes : +1/-1, inversé à chaque
 ## pas. État PAR JOUEUR, tenu ici et non dans Footprint.
 var _foot_side := 1
@@ -967,6 +982,37 @@ func _physics_process(delta):
 				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
 			# V5.6 — le halo de rétrodiffusion respire au même pas.
 			_backscatter_pulse = BACKSCATTER_STEP_PULSE
+
+	# DA2.4 — le corps roule sur le pied porteur.
+	#
+	# ⚠️ **Ce n'est pas une animation de remplacement, c'est la bonne réponse à
+	# la contrainte.** L'item demandait quatre images de marche ; quatre images
+	# FIXES ne peuvent pas rester en phase avec un détecteur de pas qui compte
+	# une DISTANCE (45 px, 60 en sprint) et non un temps. Le son du pas,
+	# l'empreinte au sol et la bosse de rétrodiffusion tombent déjà ensemble
+	# juste au-dessus ; le roulis se dérive du même accumulateur, donc il tombe
+	# avec eux — à toutes les vitesses, sprint compris, et sans un réglage.
+	#
+	# ⚠️ **Et il ne peut pas mentir sur la visée.** Un roulis se fait en
+	# TRANSLATION le long de l'axe local Y, jamais en rotation : `rotation` dit
+	# où le joueur vise, et c'est l'information la plus chère du jeu. Des frames
+	# peintes avec l'arme pivotée l'auraient contredite douze fois par seconde.
+	#
+	# `_foot_side` alterne juste au-dessus : le corps penche donc d'un côté puis
+	# de l'autre, ce qui est ce que fait un marcheur, et non un métronome.
+	var vise_roulis := 0.0
+	if step_moved > 0.5 and step_moved < 100.0:
+		var pas_courant := 60.0 if is_sprinting else 45.0
+		vise_roulis = sin(step_distance_accumulated / pas_courant * PI) \
+			* ROULIS_MARCHE * float(_foot_side)
+	_roulis = move_toward(_roulis, vise_roulis, ROULIS_RETOUR * delta)
+	for poly in [visual, visual_dim, visual_reveal, visual_enemy,
+			visual_reveal_enemy]:
+		if poly != null:
+			# Les cinq vues reposent en (0,0) — déclaré nulle part dans
+			# `player.tscn`, donc vrai par défaut, et les deux vues « ennemi »
+			# sont des `duplicate()` des autres.
+			poly.position.y = _roulis
 
 	# Visuals update for all clients
 	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau
