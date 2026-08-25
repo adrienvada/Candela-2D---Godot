@@ -6839,6 +6839,18 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   double, et il est nommé comme tel : il est là pour être **lu**, jamais pour
   décider ce qui sort.
 
+  ⚠️ **Et il ne se pilotait pas.** Écrit avec un `match` sur `keycode`, il
+  attendait `KEY_1` — or **le clavier d'Adrien est en AZERTY**, où la rangée du
+  haut produit `&`, `é`, `"` sans Maj. Les touches ne faisaient donc rien du
+  tout : aucune erreur, aucun test rouge, un banc qui a l'air cassé. Corrigé en
+  lisant la **position physique** des touches (`physical_keycode`, identique
+  quelle que soit la disposition) et en n'employant que des touches qui ne
+  bougent pas d'un clavier à l'autre — la souris place les deux points, les
+  flèches tournent les molettes. **La disposition du clavier n'est pas un détail
+  de confort sur un outil de dosage :** un banc qu'on ne peut pas piloter ne
+  dose rien, et c'était la seule livraison du lot qui comptait vraiment. Un
+  contrôle textuel garde le retour à `keycode`.
+
   ⚠️ **Ce que le banc ne dira pas** : si l'on parvient à *localiser* un
   adversaire. C'est une question de duel, pas de mixage — elle demande deux
   machines, et c'est la même dette que la contre-vérification H1. Le banc règle

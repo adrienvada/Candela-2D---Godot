@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 37
+var _attendus: int = 39
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -50,6 +50,7 @@ func _run() -> void:
 	_test_bus()
 	_test_oreille_entrainement()
 	await _test_le_mur_arrete_vraiment()
+	_test_le_banc_se_pilote_en_azerty()
 	# Deux conditions, pas une : tous les contrôles exécutés doivent passer, ET
 	# ils doivent tous s'être exécutés. Une erreur de script interrompt la
 	# fonction de test en cours sans interrompre la suite — c'est un piège déjà
@@ -237,3 +238,24 @@ func _test_le_mur_arrete_vraiment() -> void:
 	_check("sans oreille, aucun son n'est étouffé", not am.est_occulte(source))
 
 	monde.queue_free()
+
+## Le banc se pilote-t-il sur le clavier d'Adrien ?
+##
+## **Il ne se pilotait pas.** Écrit avec un `match` sur `keycode`, il attendait
+## `KEY_1` ; sur l'AZERTY d'Adrien la rangée du haut produit `&`, `é`, `"` sans
+## Maj, donc `KEY_AMPERSAND`, et les touches ne faisaient simplement **rien**.
+## Aucune erreur, aucun test rouge : un banc qui a l'air cassé, dans un lot dont
+## le banc est justement la livraison qui compte.
+##
+## `physical_keycode` désigne la position sur un clavier US quelle que soit la
+## disposition. Le contrôle est textuel faute de pouvoir simuler une disposition
+## en headless — grossier, mais il attrape la seule régression qui compte : le
+## retour à `keycode`.
+func _test_le_banc_se_pilote_en_azerty() -> void:
+	print(" le banc se pilote sur un clavier français")
+	var source := FileAccess.get_file_as_string("res://tools/banc_audio.gd")
+	_check("le banc lit la POSITION des touches",
+		source.contains("k.physical_keycode"))
+	_check("... et jamais leur étiquette",
+		not source.contains("match k.keycode"),
+		"un match sur keycode est revenu : injouable en AZERTY")

@@ -88,14 +88,23 @@ func _process(delta: float) -> void:
 	queue_redraw()
 	_etiquette.text = _texte()
 
-func _deplacer_source(delta: float) -> void:
-	var d := Vector2.ZERO
-	if Input.is_key_pressed(KEY_LEFT): d.x -= 1.0
-	if Input.is_key_pressed(KEY_RIGHT): d.x += 1.0
-	if Input.is_key_pressed(KEY_UP): d.y -= 1.0
-	if Input.is_key_pressed(KEY_DOWN): d.y += 1.0
-	if d != Vector2.ZERO:
-		_source.global_position += d.normalized() * PAS_SOURCE * delta
+## La souris place les deux points, et c'est mieux que des flèches.
+##
+## Les flèches servent désormais aux molettes ; mais surtout, **on juge une
+## spatialisation en pointant**, pas en pilotant un curseur à vitesse constante.
+## Bouton gauche : la source suit. Bouton droit : l'oreille se déplace — c'est ce
+## qui permet d'écouter la même source depuis les deux côtés d'un mur sans rien
+## déplacer d'autre.
+##
+## Relâché, rien ne bouge : un réglage se juge sur un son immobile, en tournant
+## une seule molette à la fois.
+func _deplacer_source(_delta: float) -> void:
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_source.global_position = get_global_mouse_position()
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		var tete := _tete()
+		if tete != null:
+			tete.global_position = get_global_mouse_position()
 
 func _jouer() -> void:
 	AudioManager.play_sfx_2d_random_pitch(_son_courant, _source.global_position,
@@ -131,10 +140,11 @@ func _texte() -> String:
 	var lignes := [
 		"BANC AUDIO — dosage S2 (portée) et S3 (occlusion)",
 		"",
-		"  flèches : déplacer la source      W/S : facteur de portée   %.2f" % AudioManager.facteur_portee,
-		"  1 pas · 2 tir · 3 impact mur      X/C : courbe              %.2f" % AudioManager.courbe_distance,
-		"  ESPACE : jouer une fois           O   : occlusion           %s" % ("ON" if AudioManager.occlusion_active else "OFF"),
-		"  A : auto (%s)                      M   : mémoriser  ·  B : comparer" % ("ON" if _auto else "OFF"),
+		"  CLIC GAUCHE : poser la source     ↑ / ↓ : portée            %.2f" % AudioManager.facteur_portee,
+		"  CLIC DROIT  : poser l'oreille     ← / → : courbe            %.2f" % AudioManager.courbe_distance,
+		"  1 pas · 2 tir · 3 impact mur      O     : occlusion         %s" % ("ON" if AudioManager.occlusion_active else "OFF"),
+		"  ESPACE : jouer une fois           TAB   : auto              %s" % ("ON" if _auto else "OFF"),
+		"  X : mémoriser  ·  C : comparer    ÉCHAP : quitter",
 		"",
 		"  son                  %s" % _son_courant,
 		"  distance             %5.0f px" % dist,
@@ -185,21 +195,39 @@ func _comparer() -> void:
 	AudioManager.occlusion_active = _memoire["occlusion"]
 	_memoire = {"facteur": f, "courbe": c, "occlusion": o}
 
+## Les touches sont lues par leur POSITION PHYSIQUE, pas par leur étiquette.
+##
+## **Le banc était injouable sur le clavier d'Adrien, qui est en AZERTY.** Sur
+## cette disposition la rangée du haut produit `&`, `é`, `"` sans Maj : un
+## `match` sur `keycode` recevait `KEY_AMPERSAND` et n'a jamais vu `KEY_1`. Rien
+## n'était en erreur — les touches ne faisaient simplement rien, ce qui se lit
+## comme un banc cassé.
+##
+## `physical_keycode` désigne l'emplacement sur un clavier US, quelle que soit la
+## disposition : la touche en haut à gauche de la rangée des chiffres rend
+## `KEY_1` en AZERTY comme en QWERTY, **sans Maj**.
+##
+## Reste un piège que la position ne règle pas : une lettre change de place d'une
+## disposition à l'autre (le `W` physique est le `Z` d'un AZERTY, le `A` physique
+## son `Q`). Les touches retenues ici sont donc **celles qui ne bougent pas** —
+## `O`, `X`, `C`, `B`, les flèches, Tab, Espace, Échap — et l'affichage nomme ce
+## qu'Adrien a réellement sous les doigts. La disposition d'un banc n'est pas un
+## détail de confort : un outil de dosage qu'on ne peut pas piloter ne dose rien.
 func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if k == null or not k.pressed or k.echo:
 		return
-	match k.keycode:
-		KEY_W: AudioManager.facteur_portee = clampf(AudioManager.facteur_portee + 0.05, 0.1, 4.0)
-		KEY_S: AudioManager.facteur_portee = clampf(AudioManager.facteur_portee - 0.05, 0.1, 4.0)
-		KEY_X: AudioManager.courbe_distance = clampf(AudioManager.courbe_distance - 0.1, 0.2, 6.0)
-		KEY_C: AudioManager.courbe_distance = clampf(AudioManager.courbe_distance + 0.1, 0.2, 6.0)
+	match k.physical_keycode:
+		KEY_UP: AudioManager.facteur_portee = clampf(AudioManager.facteur_portee + 0.05, 0.1, 4.0)
+		KEY_DOWN: AudioManager.facteur_portee = clampf(AudioManager.facteur_portee - 0.05, 0.1, 4.0)
+		KEY_LEFT: AudioManager.courbe_distance = clampf(AudioManager.courbe_distance - 0.1, 0.2, 6.0)
+		KEY_RIGHT: AudioManager.courbe_distance = clampf(AudioManager.courbe_distance + 0.1, 0.2, 6.0)
 		KEY_O: AudioManager.occlusion_active = not AudioManager.occlusion_active
 		KEY_1: _son_courant = "footstep"
 		KEY_2: _son_courant = "shoot"
 		KEY_3: _son_courant = "wall_impact"
-		KEY_A: _auto = not _auto
-		KEY_M: _memoriser()
-		KEY_B: _comparer()
+		KEY_TAB: _auto = not _auto
+		KEY_X: _memoriser()
+		KEY_C: _comparer()
 		KEY_SPACE: _jouer()
 		KEY_ESCAPE: get_tree().quit()
