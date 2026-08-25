@@ -1085,6 +1085,7 @@ func poser_oreille(porteur: Node2D) -> void:
 	# reste de la session — sans erreur, evidemment.
 	if not hote.tree_exiting.is_connected(rendre_oreille):
 		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+	_tracer_ecoute("une oreille posee sur %s" % porteur.name)
 
 ## Pose UNE oreille par joueur, chacune dans sa propre vue — le mode « canapé ».
 ##
@@ -1142,6 +1143,82 @@ func poser_deux_oreilles(j1: Node2D, j2: Node2D, vue1: Viewport, vue2: Viewport)
 
 	if not hote.tree_exiting.is_connected(rendre_oreille):
 		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+	_tracer_ecoute("deux oreilles posees — ecran partage (somme)")
+
+## ============================================================================
+## LE DIAGNOSTIC D'ECOUTE — pour lire ce qui sort, pas ce qu'on croit poser
+## ============================================================================
+##
+## **Ecrit parce qu'un graphe correct n'est pas un son qui sort.** Trois fois de
+## suite, « auditeurs = 1, oreille courante, pool dans le bon monde » a ete
+## verifie et trouve juste pendant que le silence durait. Ces trois faits sont
+## vrais et ne prouvent rien : il manquait quelqu'un pour ecouter, ou le son
+## partait hors de portee.
+##
+## Il vit dans l'autoload et **ne touche a aucun fichier d'une autre session** —
+## `ui.gd` et son panneau F3 appartiennent au domaine « menus ». Il s'imprime
+## dans la console, donc visible directement quand on lance depuis l'editeur.
+##
+## Imprime aux TRANSITIONS (pose et retrait d'oreille) plutot que sur demande :
+## c'est la transition qui casse, et personne ne pense a interroger l'etat juste
+## apres l'avoir changee. Sur demande aussi, par **F4**.
+func diagnostic_ecoute() -> String:
+	var lignes := PackedStringArray()
+	var arbre := get_tree()
+	if arbre == null:
+		return "[audio] pas d'arbre"
+
+	var auditeurs := PackedStringArray()
+	if arbre.root.is_audio_listener_2d():
+		auditeurs.append("racine%s" % ("" if arbre.root.get_audio_listener_2d() != null else " (SANS oreille — point fixe)"))
+	for v in _vues_ecoutantes:
+		if v != null and is_instance_valid(v) and (v as Viewport).is_audio_listener_2d():
+			auditeurs.append(String((v as Viewport).name))
+
+	lignes.append("[audio] auditeurs : %s" % (", ".join(auditeurs) if auditeurs.size() > 0
+		else "AUCUN — rien ne sortira"))
+	lignes.append("[audio] oreilles  : principale=%s seconde=%s" % [
+		"oui" if _oreille != null and is_instance_valid(_oreille) else "non",
+		"oui" if _oreille2 != null and is_instance_valid(_oreille2) else "non"])
+	if _oreille != null and is_instance_valid(_oreille):
+		lignes.append("[audio]   principale sur %s, courante=%s, viewport=%s" % [
+			_oreille.get_parent().name, _oreille.is_current(),
+			_oreille.get_viewport().name if _oreille.get_viewport() != null else "—"])
+	var voix: AudioStreamPlayer2D = sfx_players_2d[0] if sfx_players_2d.size() > 0 else null
+	if voix != null:
+		lignes.append("[audio] pool chez : %s" % voix.get_parent().name)
+	lignes.append("[audio] portee d'un pas=%.0f px, d'un tir=%.0f px (carte %.0f, facteur %.2f)" % [
+		portee_courante("footstep"), portee_courante("shoot"),
+		_portee_carte, facteur_portee])
+	var idx := AudioServer.get_bus_index(BUS_SFX)
+	if idx != -1:
+		lignes.append("[audio] bus SFX : %s, volume %.1f dB" % [
+			"COUPE" if AudioServer.is_bus_mute(idx) else "actif",
+			AudioServer.get_bus_volume_db(idx)])
+	lignes.append("[audio] replis hors physique : %d" % occlusions_hors_frame)
+	return "\n".join(lignes)
+
+## L'etat s'imprime aux transitions, en build debug seulement.
+##
+## **En build release, `print()` est tamponne et vide a la fermeture propre** :
+## un diagnostic qui ne sort qu'a la sortie ne diagnostique rien. Il n'a de sens
+## que depuis l'editeur, ou Adrien le lit pendant qu'il joue.
+var _a_trace_une_pose := false
+
+func _tracer_ecoute(quand: String) -> void:
+	if not OS.is_debug_build():
+		return
+	if quand.begins_with("une oreille") or quand.begins_with("deux oreilles"):
+		_a_trace_une_pose = true
+	print("--- ecoute : %s ---" % quand)
+	print(diagnostic_ecoute())
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	if k == null or not k.pressed or k.echo:
+		return
+	if k.physical_keycode == KEY_F4:
+		_tracer_ecoute("F4, a la demande")
 
 ## Ramene les voix a la maison et retire l'oreille. Idempotente a dessein : elle
 ## est appelee au debut de `poser_oreille` autant qu'a la fin d'un match.
@@ -1165,6 +1242,12 @@ func rendre_oreille() -> void:
 	_vues_ecoutantes = []
 	if get_tree() != null:
 		get_tree().root.audio_listener_enable_2d = true
+	# Tracé au RETRAIT autant qu'à la pose : le défaut du 2026-08-25 était une
+	# pose suivie d'un retrait qui la défaisait. Ne tracer que les poses aurait
+	# montré un état juste à chaque fois.
+	if _a_trace_une_pose:
+		_a_trace_une_pose = false
+		_tracer_ecoute("oreille rendue")
 	if _hote_positionnel != null and is_instance_valid(_hote_positionnel):
 		if _hote_positionnel.tree_exiting.is_connected(rendre_oreille):
 			_hote_positionnel.tree_exiting.disconnect(rendre_oreille)
