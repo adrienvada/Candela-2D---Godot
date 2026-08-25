@@ -21,7 +21,7 @@ wet = 0.38
 
 [sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_occlus"]
 resource_name = "MurPasseBas"
-cutoff_hz = 620.0
+cutoff_hz = 2700.0
 resonance = 0.0
 db = 1
 
@@ -31,7 +31,7 @@ room_size = 0.06
 damping = 0.16
 hipass = 0.26
 dry = 0.75
-wet = 0.52
+wet = 0.525
 
 [resource]
 bus/1/name = &"Music"
@@ -62,7 +62,7 @@ bus/4/name = &"SFX_Occlus"
 bus/4/solo = false
 bus/4/mute = false
 bus/4/bypass_fx = false
-bus/4/volume_db = -5.5
+bus/4/volume_db = -5.0
 bus/4/send = &"SFX"
 bus/4/effect/0/effect = SubResource("AudioEffectLowPassFilter_occlus")
 bus/4/effect/0/enabled = true

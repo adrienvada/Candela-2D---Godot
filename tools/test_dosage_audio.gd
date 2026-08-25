@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 44
+var _attendus: int = 45
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -157,7 +157,22 @@ func _test_bus() -> void:
 		_check("il envoie dans le bus de jeu, pas dans Master",
 			String(AudioServer.get_bus_send(idx)) == AM.BUS_SFX,
 			String(AudioServer.get_bus_send(idx)))
-		_check("il porte un passe-bas et une réverb",
+			# **Le jeu doit APPLIQUER la force, pas seulement la déclarer.** Elle ne
+		# l'était que par le banc : en match, le bus gardait les valeurs cuites
+		# dans le `.tres` — coupure à 620 Hz quand le banc à 0,55 en produisait
+		# 2470, soit quatre fois plus étouffé en jouant qu'en dosant. Un dosage
+		# fait à l'oreille se serait perdu entre l'outil et le match, sans
+		# erreur. Ce contrôle compare le bus réel à ce que la force annonce.
+		var gestionnaire := root.get_node_or_null(^"/root/AudioManager")
+		var force: float = 0.0 if gestionnaire == null else float(gestionnaire.force_occlusion)
+		var filtre := AudioServer.get_bus_effect(idx, 0) as AudioEffectFilter
+		_check("le bus est accordé à la force déclarée",
+			gestionnaire != null and filtre != null
+				and absf(filtre.cutoff_hz - AM.coupure_occlusion_pour(force)) < 1.0,
+			"%.0f Hz dans le bus contre %.0f Hz annoncés" % [
+				0.0 if filtre == null else filtre.cutoff_hz,
+				AM.coupure_occlusion_pour(force)])
+	_check("il porte un passe-bas et une réverb",
 			AudioServer.get_bus_effect_count(idx) >= 2)
 
 ## La règle de l'oreille demande « y a-t-il exactement un auditeur devant

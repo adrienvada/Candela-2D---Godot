@@ -367,11 +367,22 @@ const OCCLUSION_WET_MAX: float = 0.75
 ## elle qui fait la pente : un tiers occulte coute un tiers de ce creux.
 const OCCLUSION_PENTE_DB: float = -5.0
 
-## Force appliquee au bus d'occlusion. 0,55 correspond au reglage cuit dans
-## `default_bus_layout.tres` (620 Hz, -7 dB) : le banc demarre donc exactement
-## sur ce qu'Adrien a deja entendu, et tout ecart qu'il posera sera un ecart
-## contre ce souvenir-la.
-var force_occlusion: float = 0.55
+## Force appliquee au bus d'occlusion. **0,50 — pose par Adrien le 2026-08-25.**
+##
+## ⚠️ **Et cette valeur a revele que RIEN NE L'APPLIQUAIT EN JEU.** Seul le banc
+## appelait `appliquer_force_occlusion` ; en match, le bus gardait les valeurs
+## brutes de `default_bus_layout.tres` — dont une coupure a **620 Hz** quand le
+## banc a 0,55 en produisait **2470**. Quatre fois plus etouffe en jouant qu'en
+## dosant. Adrien aurait regle a l'oreille au banc et entendu autre chose en
+## match, sans qu'aucune erreur ne le dise : **le banc mesurait une chose et le
+## jeu en jouait une autre**, exactement le defaut contre lequel ce banc avait
+## ete ecrit.
+##
+## Depuis, `_ready()` applique la force au demarrage : **le code fait foi, le
+## fichier de bus n'est qu'un etat initial.** Ses valeurs y sont accordees a
+## 0,50 pour qu'il ne raconte pas autre chose que le code — deux sources qui
+## divergent en silence sont le mode de defaillance que ce depot traque partout.
+var force_occlusion: float = 0.50
 
 ## Ecrit la force dans le bus. Idempotente, appelable a chaque frame.
 func appliquer_force_occlusion(force: float) -> void:
@@ -647,6 +658,12 @@ func _ready() -> void:
 			
 	# Assurer la présence de l'effet LowPassFilter sur le bus Music
 	_ensure_music_lowpass_effect()
+
+	# S3 — poser la force d'occlusion dès le démarrage. **Sans cette ligne, la
+	# molette du banc ne pilote que le banc** : le jeu garderait les valeurs
+	# cuites dans le fichier de bus, et tout dosage fait à l'oreille serait perdu
+	# entre l'outil et le match.
+	appliquer_force_occlusion(force_occlusion)
 	
 	# AudioStreamPlayer pour l'annonceur / speaker
 	speaker_player = AudioStreamPlayer.new()
