@@ -11,10 +11,24 @@ const SOUNDS: Dictionary = {
 	"music_match": "res://assets/audio/music/music_match.ogg",
 	"music_victory": "res://assets/audio/music/music_victory.ogg",
 	"music_interactive": "res://assets/audio/music/main_stream_interactive.tres",
-	"spk_fight": "res://assets/audio/speaker/spk_fight.wav",
-	"spk_p1_wins": "res://assets/audio/speaker/spk_p1_wins.wav",
-	"spk_p2_wins": "res://assets/audio/speaker/spk_p2_wins.wav",
-	"spk_draw": "res://assets/audio/speaker/spk_draw.wav",
+	# V1.3 — les voix d'annonceur. **Elles vivent dans `voice/`, pas dans
+	# `speaker/`** : ces chemins pointaient vers un dossier qui n'a jamais
+	# existe, et `get_audio_stream` rendait donc `null` en silence depuis des
+	# mois. Le bus, lui, s'appelle toujours `Speaker` — c'est une sortie, pas un
+	# dossier.
+	"spk_fight": "res://assets/audio/voice/spk_fight.wav",
+	"spk_draw": "res://assets/audio/voice/spk_draw.wav",
+	# Ces deux-la ne servent QU'EN ECRAN SCINDE : la ou deux joueurs partagent
+	# les memes haut-parleurs, l'annonceur doit dire LEQUEL a gagne. Partout
+	# ailleurs il s'adresse a quelqu'un, et « tu as gagne » vaut mieux que
+	# « le joueur 1 a gagne ». Decision d'Adrien, 2026-08-25.
+	"spk_p1_wins": "res://assets/audio/voice/spk_p1_wins.wav",
+	"spk_p2_wins": "res://assets/audio/voice/spk_p2_wins.wav",
+	# Et ceux-ci ne servent QUE HORS ecran scindé, pour la meme raison.
+	"win": "res://assets/audio/voice/win.wav",
+	"defeat": "res://assets/audio/voice/defeat.wav",
+	"spk_perfect": "res://assets/audio/voice/spk_perfect.wav",
+	"spk_close_call": "res://assets/audio/voice/spk_close_call.wav",
 	# Déjà attendu par le manifeste (V3.2) : `play_sfx` rend null sur une
 	# ressource absente, la clé se câble donc avant le fichier et reste muette
 	# sans erreur — plutôt qu'un bouche-trou qu'on finirait par prendre pour une
@@ -114,6 +128,44 @@ static func index_porteur(local_idx: int) -> int:
 static func ecoute_somme(local_idx: int, entrainement: bool = false) -> bool:
 	return not oreille_suit(local_idx, entrainement)
 
+## Points de vie au depart, et seuil du « de justesse ». Nommes ici parce que
+## `voix_de_fin` les compare : un seuil ecrit en dur dans une comparaison est un
+## seuil que personne ne retrouve le jour ou il faut le bouger.
+const PV_MAX: float = 100.0
+const PV_DE_JUSTESSE: float = 10.0
+
+## Que dit l'annonceur a la fin du match, vu depuis CETTE machine ? (V1.3)
+##
+## La regle d'Adrien (2026-08-25) tient en une phrase : **en ecran scindé
+## l'annonceur nomme le vainqueur, partout ailleurs il s'adresse a celui qui
+## ecoute.** « Le joueur 1 a gagne » n'a de sens que quand deux joueurs se
+## partagent les memes haut-parleurs et qu'il faut lever l'ambiguite ; devant un
+## seul auditeur, c'est une periphrase pour « tu as gagne ».
+##
+## **Derivee d'`ecoute_somme`, pas ecrite a cote.** C'est exactement la meme
+## question que l'oreille — combien d'auditeurs devant l'ecran — et cette
+## question s'est deja trompee une fois en interrogeant le transport au lieu du
+## nombre d'oreilles (voir `oreille_suit` et l'entrainement). Deux regles
+## paralleles finiraient par diverger le jour ou l'on n'en corrige qu'une, et le
+## jeu annoncerait « joueur 2 » a quelqu'un qui joue seul.
+##
+## `pv_vainqueur` sert les deux variantes, et elles s'excluent : intact, c'est un
+## sans-faute ; sous le seuil, c'est passe de peu. Un match gagne a 100 PV ne
+## peut pas etre « de justesse », l'ordre des tests le dit sans commentaire.
+static func voix_de_fin(winner_id: int, local_idx: int, entrainement: bool,
+		pv_vainqueur: float) -> String:
+	if winner_id < 0:
+		return "spk_draw"
+	if ecoute_somme(local_idx, entrainement):
+		return "spk_p1_wins" if winner_id == 0 else "spk_p2_wins"
+	if local_idx >= 0 and winner_id != local_idx:
+		return "defeat"
+	if pv_vainqueur >= PV_MAX:
+		return "spk_perfect"
+	if pv_vainqueur <= PV_DE_JUSTESSE:
+		return "spk_close_call"
+	return "win"
+
 ## Le tempo du jeu, en un seul endroit.
 ##
 ## Les stems, le pouls haptique et la vignette battante battent tous à 170 —
@@ -131,6 +183,20 @@ const PERIODE_BEAT: float = 60.0 / BPM
 const DIR_ARMES := "res://assets/audio/weapons/"
 const VARIANTES_TIR := 4
 
+## Le percuteur a vide, un par arme (V4.4).
+##
+## ⚠️ **Ces fichiers vivent dans `DIR_ARMES`, comme les tirs — et c'est un piege.**
+## `est_un_tir()` reconnait un coup de feu a ce prefixe : sans l'exclusion
+## explicite qu'elle porte, un clic a vide aurait pris la priorite d'un tir dans
+## le pool ET fait reculer les pas de six decibels (V4.15). Un joueur qui
+## martele une detente vide aurait efface les pas de son adversaire — soit
+## exactement l'inverse de ce que le son a vide raconte, qui est « je suis
+## desarme ».
+const PREFIXE_PERCUTEUR := "weapon_dry_"
+
+static func chemin_percuteur(slug: String) -> String:
+	return "%s%s%s.wav" % [DIR_ARMES, PREFIXE_PERCUTEUR, slug]
+
 ## Le chemin d'une variante. Pure à dessein : vérifiable sans serveur audio.
 static func chemin_tir(slug: String, variante: int) -> String:
 	return "%sweapon_%s_%02d.wav" % [DIR_ARMES, slug, variante]
@@ -147,7 +213,20 @@ static func est_un_tir(stream_or_key: Variant) -> bool:
 	if not (stream_or_key is String):
 		return false
 	var s: String = stream_or_key
+	if est_un_percuteur(s):
+		return false
 	return s == "shoot" or s.begins_with(DIR_ARMES)
+
+## Ce son est-il un percuteur a vide ?
+##
+## Nomme plutot que teste au prefixe sur place : la question se pose a QUATRE
+## endroits — le duck des pas, la priorite, la portee et le niveau — et un
+## prefixe recopie quatre fois est un prefixe qui n'en corrige que trois le jour
+## ou il change.
+static func est_un_percuteur(stream_or_key: Variant) -> bool:
+	if not (stream_or_key is String):
+		return false
+	return String(stream_or_key).get_file().begins_with(PREFIXE_PERCUTEUR)
 
 ## ============================================================================
 ## S2 — LA DISTANCE REDEVIENT UNE INFORMATION
@@ -195,6 +274,12 @@ const PORTEE_RELATIVE: Dictionary = {
 	"wall_impact": 1.20,
 	"flesh_impact": 1.35,
 	"shoot": 1.60,
+	# V4.4 — le percuteur porte PEU, et c'est tout l'interet du son. Un clic a
+	# vide dit « je suis desarme, et je suis la » : c'est l'aveu le plus cher du
+	# jeu apres la torche. Qu'il s'entende d'un bout a l'autre de la carte en
+	# ferait une annonce ; a portee courte, il ne trahit que celui qui est deja
+	# assez pres pour etre trouve. Plus qu'un pas, bien moins qu'un impact.
+	"weapon_dry": 0.55,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -220,12 +305,15 @@ const NIVEAU_RELATIF: Dictionary = {
 	"wall_impact": -3.0,
 	"flesh_impact": -2.0,
 	"shoot": 0.0,
+	"weapon_dry": -9.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
 
 ## Le niveau d'un son, d'apres sa cle. Meme precaution que pour la portee : un
 ## tir arrive aussi sous forme de chemin depuis V4.1.
 static func niveau_relatif_de(stream_or_key: Variant) -> float:
+	if est_un_percuteur(stream_or_key):
+		return float(NIVEAU_RELATIF.get("weapon_dry", NIVEAU_RELATIF_DEFAUT))
 	if est_un_tir(stream_or_key):
 		return float(NIVEAU_RELATIF.get("shoot", NIVEAU_RELATIF_DEFAUT))
 	if stream_or_key is String:
@@ -303,6 +391,8 @@ static func diagonale_carte(grille: Vector2i, tuile: Vector2i) -> float:
 ## `priorite_de`, et pour la meme raison : depuis V4.1 le tir arrive sous les
 ## deux formes, et une comparaison qui ne repond qu'a l'une echoue en silence.
 static func portee_relative_de(stream_or_key: Variant) -> float:
+	if est_un_percuteur(stream_or_key):
+		return float(PORTEE_RELATIVE.get("weapon_dry", PORTEE_RELATIVE_DEFAUT))
 	if est_un_tir(stream_or_key):
 		return float(PORTEE_RELATIVE.get("shoot", PORTEE_RELATIVE_DEFAUT))
 	if stream_or_key is String:

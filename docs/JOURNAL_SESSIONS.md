@@ -1364,6 +1364,29 @@ demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de secon
 avant d'être coupée par la bascule vers le menu. Détail complet dans les
 « Pièges connus » de la feuille de route.
 
+#### Lot du 2026-08-25 — annonceur et percuteur (worktree `audio-annonceur-et-percuteur`)
+
+Deux livraisons d'Adrien intégrées : les **voix d'annonceur** (V1.3, huit
+fichiers dans `assets/audio/voice/`) et les **percuteurs à vide** (V4.4, un par
+arme).
+
+**Fichiers touchés** : `audio_manager.gd` (le dictionnaire `SOUNDS`, la règle
+`voix_de_fin`, `est_un_percuteur`, deux lignes de tables), `game_state.gd` (le
+bloc de fin de match), `player.gd` (une ligne dans la branche du tir refusé),
+`asset_manifest.gd`, `tools/test_musique.gd`.
+
+**Négocié avec la session « spatialisation du son »** avant d'écrire : elle tient
+le chantier audio, nous n'avons que `SOUNDS` et le bloc de fin de match en
+commun, et ce sont des ajouts. Elle a confirmé qu'`ecoute_somme` est le
+**prédicat canonique** de « la sortie est partagée entre deux joueurs » — la
+règle des voix en dérive au lieu d'en inventer une seconde. Deux prédicats
+parallèles répondent pareil jusqu'au jour où l'on n'en corrige qu'un.
+
+**Deux défauts attrapés avant la première écoute**, tous deux signalés ou
+confirmés dans l'échange : un clic à vide comptait comme un coup de feu (donc
+faisait reculer les pas de l'adversaire), et il prenait la portée par défaut,
+donc s'entendait sur toute la carte. Détail dans « Pièges connus ».
+
 #### Lot du 2026-08-25 — worktree `audio-oreille-et-stingers`
 
 Cinq points arbitrés par Adrien, travaillés **hors de l'arbre partagé** à sa

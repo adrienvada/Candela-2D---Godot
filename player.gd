@@ -973,6 +973,15 @@ func _physics_process(delta):
 		# rechargement, le tremblement doit dire « trop tôt » une fois, pas vibrer
 		# en continu comme une panne.
 		tir_a_sec = 0.22
+		# V4.4 — le percuteur. Positionnel a la bouche : un clic a vide est un
+		# evenement du monde, et dans ce jeu il RACONTE quelque chose de cher —
+		# « je suis desarme, et je suis la ». Il ne compte pas comme un tir pour
+		# le pool (voir `AudioManager.est_un_tir`), sans quoi il ferait reculer
+		# les pas de l'adversaire au moment ou l'on ne tire justement pas.
+		if current_weapon:
+			AudioManager.play_sfx_2d(
+				AudioManager.chemin_percuteur(current_weapon.slug()),
+				muzzle.global_position)
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
