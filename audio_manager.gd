@@ -1050,6 +1050,22 @@ func poser_oreille(porteur: Node2D) -> void:
 	var vue := porteur.get_viewport()
 	if vue != null:
 		vue.audio_listener_enable_2d = true
+		# ⚠️ **ET COUPER LA RACINE, sans quoi il y a DEUX auditeurs.**
+		#
+		# `SceneTree` declare la racine auditrice au demarrage. Activer la vue de
+		# jeu ne la remplace pas : elle S'AJOUTE. Or `AudioStreamPlayer2D` somme
+		# une sortie par viewport auditeur — chaque son sortait donc deux fois,
+		# une copie juste depuis l'oreille du joueur, une copie depuis le point
+		# fixe hors de la carte. **C'est le defaut que S1 pretendait reparer,
+		# survivant a son propre correctif** et mesure en entrainement le
+		# 2026-08-25 : `auditeurs = 2 ["racine", "SubViewport1"]`.
+		#
+		# Invisible jusqu'ici parce que la copie fautive etait le plus souvent
+		# HORS PORTEE — le point fixe est loin de la carte, et les portees ont
+		# ete resserrees. Elle ne produisait donc « que » un son sourd et
+		# decale par instants, pas une erreur.
+		_vues_ecoutantes = [vue]
+		get_tree().root.audio_listener_enable_2d = false
 	_oreille = AudioListener2D.new()
 	_oreille.name = "OreilleLocale"
 	porteur.add_child(_oreille)
