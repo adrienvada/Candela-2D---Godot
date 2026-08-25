@@ -638,6 +638,8 @@ var _killcam_negatif: int = 0
 ## chaque frame.
 var _killcam_derniere_image: int = -1
 var killcam_container: Control
+## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
+var killcam_cadre: NinePatchRect
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -1662,11 +1664,25 @@ func _create_glow_panel(color: Color) -> PanelContainer:
 	var chemin := "res://assets/ui/cadre_hud.png"
 	if ResourceLoader.exists(chemin):
 		var peint := StyleBoxTexture.new()
-		peint.texture = load(chemin)
-		# 32 px de chaque côté : c'est le gabarit demandé au brief, et le centre de
-		# la texture est vérifié uniforme à 0,004 près — sans quoi l'étirement le
-		# déformerait visiblement sur un panneau de 352 × 152.
-		peint.set_texture_margin_all(32)
+		var tex_cadre := load(chemin) as Texture2D
+		peint.texture = tex_cadre
+		# ⚠️ **La marge se DÉDUIT de la texture, elle n'est pas écrite.**
+		#
+		# Le brief demandait 32 px sur une planche de 128², soit **le quart de la
+		# largeur**. Écrire 32 en dur marche — jusqu'au jour où la planche est
+		# recuite à 256² pour gagner en densité de texels (DA5.6 le prévoit
+		# explicitement, et le chantier R6 le fait pour les sprites). La marge ne
+		# couvrirait alors plus que la moitié de la bordure : **le 9-slice
+		# trancherait en plein dans le dessin**, et le cadre partirait en bouillie
+		# sans qu'aucune erreur ne le signale.
+		#
+		# C'est le même motif que le coefficient de case du code de salon et que le
+		# contour des chiffres de dégâts : une valeur absolue là où il fallait un
+		# rapport. Trois fois suffisent pour cesser d'en écrire.
+		var m_cadre := 32
+		if tex_cadre != null and tex_cadre.get_width() > 0:
+			m_cadre = int(round(tex_cadre.get_width() / 4.0))
+		peint.set_texture_margin_all(m_cadre)
 		peint.modulate_color = color
 		# Le contenu ne colle pas au liseré : la marge intérieure suit la grille.
 		peint.set_content_margin_all(GAP_XS)
@@ -2099,6 +2115,15 @@ func _build_killcam() -> void:
 
 	var material := ShaderMaterial.new()
 	material.shader = SHADER_KILLCAM
+	# DA4.5 — le grain texturé remplace le bruit calculé. Règle du dépôt : un
+	# fichier absent ne casse rien. Sans la planche, l'uniforme reste vide et le
+	# shader échantillonne du noir — le grain disparaît, l'image reste juste.
+	var planche := "res://assets/ui/grain_video.png"
+	if ResourceLoader.exists(planche):
+		# La répétition est portée par le `repeat_enable` de l'uniforme, côté
+		# shader : en Godot 4 c'est l'échantillonneur qui décide, et l'import de la
+		# texture n'a pas de réglage de répétition à donner. Rien à vérifier ici.
+		material.set_shader_parameter("grain", load(planche))
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -2128,6 +2153,44 @@ func _build_killcam() -> void:
 	killcam_timecode.offset_top = 40
 	killcam_timecode.hide()
 	add_child(killcam_timecode)
+
+	# DA4.5 — **le cadre du moniteur, et il vit DANS l'interface.**
+	#
+	# Le voile de killcam est reparenté par `GameState` dans l'arène, pour être
+	# sous les lumières. Le cadre, lui, n'a rien à faire là : c'est un objet
+	# d'affichage, pas un objet du monde. Le poser dans l'arène le ferait
+	# s'assombrir hors des torches — un cadre de moniteur qui s'éteint quand on
+	# ne l'éclaire pas.
+	#
+	# `NinePatchRect` et non `TextureRect` : la texture fait 512² et l'écran
+	# n'est ni carré ni de cette taille. Sans 9-slice, les coins arrondis
+	# s'étireraient en ovales, ce qui est le défaut le plus reconnaissable qu'on
+	# puisse poser sur un cadre.
+	var chemin_cadre := "res://assets/ui/cadre_vhs.png"
+	if ResourceLoader.exists(chemin_cadre):
+		killcam_cadre = NinePatchRect.new()
+		killcam_cadre.name = "CadreKillcam"
+		var tex_vhs := load(chemin_cadre) as Texture2D
+		killcam_cadre.texture = tex_vhs
+		killcam_cadre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		# Déduite de la texture pour la même raison que le cadre du HUD : le brief
+		# demandait 64 px sur une planche de 512², soit **le huitième de la
+		# largeur**. Un recuit à densité double casserait une valeur écrite en dur,
+		# en silence.
+		var m_vhs := 64
+		if tex_vhs != null and tex_vhs.get_width() > 0:
+			m_vhs = int(round(tex_vhs.get_width() / 8.0))
+		killcam_cadre.patch_margin_left = m_vhs
+		killcam_cadre.patch_margin_right = m_vhs
+		killcam_cadre.patch_margin_top = m_vhs
+		killcam_cadre.patch_margin_bottom = m_vhs
+		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
+		# `HALOGENE` très atténué : un liseré de moniteur se devine, il ne se lit
+		# pas — et la killcam doit rester la chose qu'on regarde.
+		killcam_cadre.modulate = Color(Charte.HALOGENE, 0.30)
+		killcam_cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		killcam_cadre.hide()
+		add_child(killcam_cadre)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
@@ -5506,6 +5569,8 @@ func show_killcam() -> void:
 	killcam_overlay.show()
 	killcam_container.show()
 	killcam_timecode.show()
+	if killcam_cadre != null:
+		killcam_cadre.show()
 	var bb := get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB")
 	if bb:
 		bb.show()
@@ -5514,6 +5579,8 @@ func hide_killcam() -> void:
 	killcam_overlay.hide()
 	killcam_container.hide()
 	killcam_timecode.hide()
+	if killcam_cadre != null:
+		killcam_cadre.hide()
 	var bb := get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB")
 	if bb:
 		bb.hide()
