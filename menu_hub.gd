@@ -121,6 +121,10 @@ var _stack: PackedStringArray = PackedStringArray([ROOT])
 
 var _title_label: Label
 var _detail_host: VBoxContainer
+## Le pied du cadre : le nom de l'entrée sélectionnée, et ce qu'elle explique.
+var _pied: VBoxContainer
+var _pied_titre: Label
+var _pied_texte: RichTextLabel
 var _detail_title: Label
 var _detail_text: RichTextLabel
 ## Le panneau de texte, celui que [method montrer_texte] remplit.
@@ -179,13 +183,69 @@ func _build() -> void:
 	columns.add_child(right)
 	_right = right
 
+	# **Le cadre a deux étages, et le second est un pied de page.**
+	#
+	# En haut ce que l'entrée MONTRE — un panneau, une galerie, un salon. En bas
+	# ce qu'elle DIT : son nom et son explication. La description vivait jusqu'ici
+	# sous le titre du jeu, à l'autre bout de l'écran ; elle obligeait donc à
+	# traverser la page du regard pour savoir ce qu'on venait de sélectionner à
+	# gauche. Elle est maintenant **au pied de ce qu'elle explique**.
+	var colonne := VBoxContainer.new()
+	colonne.name = "Colonne"
+	colonne.add_theme_constant_override("separation", MenuTheme.GAP_M)
+	right.add_child(colonne)
+
 	# Aligné en haut : un contenu centré verticalement saute d'un écran à l'autre
 	# selon sa hauteur, et le regard doit le rattraper à chaque fois.
 	_detail_host = VBoxContainer.new()
 	_detail_host.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_detail_host.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	# `EXPAND_FILL` et non `SHRINK_BEGIN` : c'est lui qui pousse le pied de page
+	# vers le bas du cadre. Sans cela les deux étages se collent en haut et le
+	# pied cesse d'être un pied.
+	_detail_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_detail_host.add_theme_constant_override("separation", MenuTheme.GAP_S)
-	right.add_child(_detail_host)
+	colonne.add_child(_detail_host)
+
+	# --- Le pied : ce que l'entrée sous le curseur raconte --------------------
+	_pied = VBoxContainer.new()
+	_pied.name = "Pied"
+	_pied.size_flags_vertical = Control.SIZE_SHRINK_END
+	_pied.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
+	colonne.add_child(_pied)
+
+	# Un filet sépare le pied de ce qu'il commente. Sans lui, la description se
+	# lit comme la dernière ligne du panneau au-dessus.
+	var filet := Panel.new()
+	filet.custom_minimum_size = Vector2(0, 1)
+	var filet_style := StyleBoxFlat.new()
+	filet_style.bg_color = MenuTheme.LINE
+	filet.add_theme_stylebox_override("panel", filet_style)
+	filet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pied.add_child(filet)
+
+	# **Le nom de l'entrée est REPRIS ici**, et ce n'est pas une redondance : la
+	# sélection se fait à gauche, la lecture à droite, et rien ne disait laquelle
+	# des sept entrées la description commentait. Un titre repris est ce qui
+	# rattache une explication à son objet quand les deux sont séparés par la
+	# largeur d'un écran.
+	_pied_titre = Label.new()
+	_pied_titre.name = "TitreRepris"
+	Charte.appareil(_pied_titre, MenuTheme.T_APPUI, Charte.POIDS_APPUI)
+	_pied_titre.add_theme_color_override("font_color", MenuTheme.GOLD)
+	_pied.add_child(_pied_titre)
+
+	_pied_texte = RichTextLabel.new()
+	_pied_texte.name = "Description"
+	_pied_texte.bbcode_enabled = true
+	_pied_texte.fit_content = true
+	_pied_texte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Deux lignes réservées : sans plancher, le pied change de hauteur à chaque
+	# survol et tout le cadre au-dessus respire avec lui. Même défaut que la boîte
+	# de description de l'en-tête, qui portait déjà ce plancher pour cette raison.
+	_pied_texte.custom_minimum_size = Vector2(0, 44)
+	_pied_texte.add_theme_font_size_override("normal_font_size", MenuTheme.T_COURANT)
+	_pied_texte.add_theme_color_override("default_color", MenuTheme.DIM)
+	_pied.add_child(_pied_texte)
 
 	# ⚠️ **DA4.18 — ces deux `Control` ont passé des semaines cachés, à recevoir
 	# du texte que personne ne voyait.**
@@ -509,8 +569,27 @@ func _show_aside(id: String) -> void:
 ## la description suivante — et le cadre restait noir. Pour remplir le cadre avec
 ## du texte, c'est [method montrer_texte].
 func show_detail(title: String, text: String, panel: String = "") -> void:
+	_poser_le_pied(title, text)
 	_apply_panel(panel)
 	detail_changed.emit(title, text)
+
+
+## Écrit le pied du cadre : le nom de l'entrée, puis ce qu'elle explique.
+##
+## Le bbcode est retiré du texte plutôt que rendu — la description sert aussi à
+## l'en-tête et à des bancs, et un `[b]` qui traverse en clair est plus visible
+## qu'un gras qui manque.
+func _poser_le_pied(title: String, text: String) -> void:
+	if _pied_titre == null:
+		return
+	var nom := title.strip_edges().to_upper()
+	_pied_titre.text = nom
+	_pied_titre.visible = nom != ""
+	var propre := text.replace("[b]", "").replace("[/b]", "")
+	_pied_texte.text = propre
+	# Le pied disparaît en entier quand il n'a rien à dire : un filet et deux
+	# lignes vides au bas du cadre se lisent comme un contenu qui a échoué.
+	_pied.visible = nom != "" or propre.strip_edges() != ""
 
 
 ## Remplit le CADRE DE DROITE avec un titre et un texte, et le montre.
