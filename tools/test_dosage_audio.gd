@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 40
+var _attendus: int = 44
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -170,6 +170,18 @@ func _test_oreille_entrainement() -> void:
 	_check("client en ligne : l'oreille suit", AM.oreille_suit(1, false))
 	_check("écran partagé : l'oreille ne suit personne", not AM.oreille_suit(-1, false))
 	_check("entraînement : l'oreille suit", AM.oreille_suit(-1, true))
+	# S6 — l'écran partagé écoute par DEUX oreilles (décision d'Adrien,
+	# 2026-08-25). Les trois cas doivent rester exhaustifs et exclusifs : un mode
+	# qui tomberait dans aucun des deux jouerait sans oreille du tout, et un mode
+	# qui tomberait dans les deux en poserait trois.
+	_check("écran partagé : on écoute par la somme", AM.ecoute_somme(-1, false))
+	_check("en ligne : pas de somme", not AM.ecoute_somme(0, false)
+		and not AM.ecoute_somme(1, false))
+	_check("entraînement : pas de somme", not AM.ecoute_somme(-1, true))
+	_check("aucun mode ne tombe entre les deux règles",
+		AM.ecoute_somme(-1, false) != AM.oreille_suit(-1, false)
+		and AM.ecoute_somme(0, false) != AM.oreille_suit(0, false)
+		and AM.ecoute_somme(-1, true) != AM.oreille_suit(-1, true))
 	_check("le porteur par défaut est J1, pas J2", AM.index_porteur(-1) == 0)
 	_check("le client en ligne porte l'oreille sur J2", AM.index_porteur(1) == 1)
 	_check("l'hôte la porte sur J1", AM.index_porteur(0) == 0)

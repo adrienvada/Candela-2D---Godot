@@ -103,6 +103,17 @@ static func oreille_suit(local_idx: int, entrainement: bool = false) -> bool:
 static func index_porteur(local_idx: int) -> int:
 	return 1 if local_idx == 1 else 0
 
+## Ecoute-t-on par DEUX oreilles, une par joueur ? (Decision d'Adrien, 2026-08-25.)
+##
+## Les trois cas sont exhaustifs et complementaires — en ligne et a l'entrainement
+## il n'y a qu'un auditeur devant l'ecran, donc une oreille ; en ecran partage ils
+## sont deux, donc deux. **Ecrite comme la negation exacte d'`oreille_suit` plutot
+## que comme une seconde regle** : deux regles independantes finiraient par se
+## contredire sur un cas que personne n'a prevu, et le jeu se retrouverait avec
+## zero oreille ou trois.
+static func ecoute_somme(local_idx: int, entrainement: bool = false) -> bool:
+	return not oreille_suit(local_idx, entrainement)
+
 ## Le tempo du jeu, en un seul endroit.
 ##
 ## Les stems, le pouls haptique et la vignette battante battent tous à 170 —
@@ -472,6 +483,13 @@ static func bus_pour(bus_demande: String, occulte: bool) -> String:
 const OCCLUSION_ECART_LATERAL: float = 24.0
 
 func part_occultee(pos: Vector2) -> float:
+	# **En mode « canapé », l'occlusion N'EXISTE PAS, et c'est une consequence
+	# assumee de la decision d'Adrien du 2026-08-25, pas un oubli.** Etouffer la
+	# copie de J1 sans toucher a celle de J2 demanderait deux voix par son, dans
+	# un pool de seize que les pas saturent deja. Rendre `0.0` ici est donc la
+	# reponse juste : aucun mur n'etouffe rien quand deux oreilles ecoutent.
+	if _oreille2 != null:
+		return 0.0
 	if not occlusion_active or _oreille == null or not is_instance_valid(_oreille):
 		return 0.0
 	if not _oreille.is_inside_tree():
@@ -974,6 +992,13 @@ func silence_sec(duree: float = 1.0) -> void:
 ## l'oreille posee sur le joueur local. Voir `poser_oreille`.
 var _hote_positionnel: Node = null
 var _oreille: AudioListener2D = null
+## Mode « canapé » seulement : la seconde oreille, son relais sous `vue2`, le
+## joueur qu'il recopie, et les vues qu'on a rendues auditrices — pour savoir
+## quoi rendre a l'etat d'origine.
+var _oreille2: AudioListener2D = null
+var _relais: Node2D = null
+var _suivi: Node2D = null
+var _vues_ecoutantes: Array = []
 
 ## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
 ## sur le joueur local.
@@ -1018,12 +1043,85 @@ func poser_oreille(porteur: Node2D) -> void:
 	if not hote.tree_exiting.is_connected(rendre_oreille):
 		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
 
+## Pose UNE oreille par joueur, chacune dans sa propre vue — le mode « canapé ».
+##
+## **Decision d'Adrien du 2026-08-25 : en ecran partage, on fait la SOMME.** Le
+## moteur la produit tout seul — `AudioStreamPlayer2D` boucle sur tous les
+## viewports auditeurs de son `World2D` et somme une sortie par viewport. Chaque
+## copie arrive au volume que CE joueur-la entendrait, si bien que **le plus
+## proche l'emporte sans qu'on arbitre** : sa copie est simplement plus forte.
+##
+## ⚠️ **Une oreille ne peut pas etre l'enfant du joueur ici, et c'est le piege du
+## montage.** `make_current()` enregistre le listener sur SON viewport, et les
+## deux joueurs vivent tous deux sous `vue1` (`vp2` partage le monde mais
+## n'heberge aucun joueur). Deux oreilles posees sur les joueurs se disputeraient
+## donc `vue1`, et `vue2` n'ecouterait rien : on aurait une oreille au lieu de
+## deux, sans erreur. La seconde vit donc sous `vue2` sur un **relais** dont la
+## position recopie celle de J2 a chaque frame.
+##
+## ⚠️ **La racine se coupe, et c'est vital.** `SceneTree` la declare auditrice au
+## demarrage : sans cette coupure, une TROISIEME sortie s'ajoute — celle du point
+## fixe hors de la carte, c'est-a-dire le defaut que S1 vient de reparer, remis
+## par-dessus son propre correctif et parfaitement audible. Voir le piege
+## « L'ecoute suit le viewport du listener » dans la ROADMAP.
+func poser_deux_oreilles(j1: Node2D, j2: Node2D, vue1: Viewport, vue2: Viewport) -> void:
+	rendre_oreille()
+	if j1 == null or j2 == null or vue1 == null or vue2 == null:
+		return
+	if not is_instance_valid(j1) or not is_instance_valid(j2):
+		return
+	var hote := j1.get_parent()
+	if hote == null:
+		return
+	_hote_positionnel = hote
+	for p in sfx_players_2d:
+		if is_instance_valid(p) and p.is_inside_tree():
+			p.reparent(hote, false)
+
+	get_tree().root.audio_listener_enable_2d = false
+	vue1.audio_listener_enable_2d = true
+	vue2.audio_listener_enable_2d = true
+
+	_oreille = AudioListener2D.new()
+	_oreille.name = "OreilleJ1"
+	j1.add_child(_oreille)
+	_oreille.make_current()
+
+	_relais = Node2D.new()
+	_relais.name = "RelaisOreilleJ2"
+	vue2.add_child(_relais)
+	_oreille2 = AudioListener2D.new()
+	_oreille2.name = "OreilleJ2"
+	_relais.add_child(_oreille2)
+	_oreille2.make_current()
+	_suivi = j2
+	_vues_ecoutantes = [vue1, vue2]
+
+	if not hote.tree_exiting.is_connected(rendre_oreille):
+		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+
 ## Ramene les voix a la maison et retire l'oreille. Idempotente a dessein : elle
 ## est appelee au debut de `poser_oreille` autant qu'a la fin d'un match.
 func rendre_oreille() -> void:
 	if _oreille != null and is_instance_valid(_oreille):
 		_oreille.queue_free()
 	_oreille = null
+	# Le mode « canapé » laisse trois choses derriere lui, et **les oublier rend
+	# le jeu muet hors match sans qu'aucune erreur ne le dise** : la racine
+	# coupee, deux vues auditrices, et un relais qui suit un joueur disparu.
+	if _oreille2 != null and is_instance_valid(_oreille2):
+		_oreille2.queue_free()
+	_oreille2 = null
+	if _relais != null and is_instance_valid(_relais):
+		_relais.queue_free()
+	_relais = null
+	_suivi = null
+	for v in _vues_ecoutantes:
+		if v != null and is_instance_valid(v):
+			(v as Viewport).audio_listener_enable_2d = false
+	_vues_ecoutantes = []
+	if get_tree() != null:
+		get_tree().root.audio_listener_enable_2d = true
 	if _hote_positionnel != null and is_instance_valid(_hote_positionnel):
 		if _hote_positionnel.tree_exiting.is_connected(rendre_oreille):
 			_hote_positionnel.tree_exiting.disconnect(rendre_oreille)
@@ -1171,6 +1269,15 @@ func set_dazzle_level(pid: int, amount: float) -> void:
 var _bullet_time_duck := false
 
 func _process(_delta: float) -> void:
+	# Le relais de la seconde oreille recopie la position de J2 (mode « canapé »).
+	# **Ici, et AVANT la sortie anticipée du duck de ralenti** : ce `_process`
+	# rend la main dès la deuxième ligne la plupart des frames. Un second
+	# `_process` aurait été refusé par le parseur ; le placer après le `return`
+	# ne l'aurait été par personne, et l'oreille de J2 serait restée immobile.
+	if _relais != null and is_instance_valid(_relais) \
+			and _suivi != null and is_instance_valid(_suivi):
+		_relais.global_position = _suivi.global_position
+
 	var bt := Engine.time_scale < 0.5 and match_sync_stream != null
 	if bt == _bullet_time_duck:
 		return

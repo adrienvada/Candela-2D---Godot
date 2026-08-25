@@ -1876,10 +1876,15 @@ func _archive_forfeit(winner_id: int) -> void:
 ## conséquence, et c'est ce qui permet au second appel de corriger le premier.
 func _accorder_oreille() -> void:
 	var idx := _local_player_index()
-	if not AudioManager.oreille_suit(idx, training_mode):
-		AudioManager.rendre_oreille()
+	if AudioManager.oreille_suit(idx, training_mode):
+		AudioManager.poser_oreille(p2 if AudioManager.index_porteur(idx) == 1 else p1)
 		return
-	AudioManager.poser_oreille(p2 if AudioManager.index_porteur(idx) == 1 else p1)
+	# Écran partagé : deux joueurs, une seule paire d'enceintes, donc **deux
+	# oreilles dont le moteur fait la somme** (décision d'Adrien, 2026-08-25). Le
+	# plus proche l'emporte tout seul, sa copie étant plus forte. Prix assumé et
+	# tranché avec lui : **l'occlusion n'existe pas dans ce mode** — étouffer la
+	# copie de J1 sans toucher à celle de J2 demanderait deux voix par son.
+	AudioManager.poser_deux_oreilles(p1, p2, vp1, vp2)
 
 func _local_player_index() -> int:
 	match NetworkManager.current_mode:
