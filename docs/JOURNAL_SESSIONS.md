@@ -246,6 +246,49 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — attributions et un vote rendu sans objet
+
+**Deux paragraphes de `docs/ROADMAP.md` portés par `4b285f7` ne sont pas de moi.**
+Ils étaient non commités dans l'arbre partagé quand j'ai indexé le fichier : la
+rectification d'attribution sur le piège « Reconnaître un son à son DOSSIER » —
+le prédicat `est_un_tir` est de la session **DA3 Audio**, pas de la session
+« spatialisation du son ». Le texte est juste et il est dans l'arbre ; c'est la
+**trace** qui est fausse, un `git log -S` renvoyant vers un commit dont le
+message parle d'autre chose. Signalé par l'intéressée, qui refuse à juste titre
+de réécrire l'historique d'une branche partagée pour une question d'attribution.
+
+**La symétrie mérite d'être notée : on s'est mutuellement emporté du travail non
+commité dans la même journée, dans les deux sens, en étant tous les deux
+prudents.** Ce n'est pas de l'inattention — `git commit -- <chemin>` prend le
+**contenu du fichier**, pas les hunks qu'on a écrits. Le seul geste qui protège
+est de **commiter court et souvent**, pour que la fenêtre où un fichier porte
+deux auteurs reste étroite.
+
+**Et le vote que j'ai organisé à la demande d'Adrien était sans objet : B et C
+étaient déjà faits, et sur `origin`** (`707bf6d`). Quatre sessions ont voté à
+l'unanimité pour un travail livré cinq heures plus tôt ; une proposait de
+l'écrire. **Aucune n'avait rouvert le fichier — moi compris, alors que j'y avais
+passé la journée.** La session DA3 a vérifié après coup que la garde était dans
+**sa propre base**, dans le fichier qu'elle avait lancé quatre fois la nuit même.
+
+Ce qui l'a arrêté : la session « brouillage » est allée **lire le fichier avant
+de voter**. Dix secondes de `grep` contre une demi-journée à quatre.
+
+Trois formulations à garder, et aucune n'est de moi seul :
+
+- **un titre de commit décrit une INTENTION, pas un PÉRIMÈTRE** — `707bf6d`
+  s'appelle « Le kill -9 tuait le sous-shell », et B y était en passager ;
+- **un souvenir de défaut suffit à croire qu'il dure** (DA3) — un vécu vieillit
+  comme un constat daté, et c'est l'expérience directe du problème qui dispense
+  d'aller voir s'il existe encore ;
+- **ce qui a marché aujourd'hui, c'est l'outil qui refuse, pas la discipline**
+  (session son) — d'où le rejet unanime de l'option « convention ».
+
+**Reste ouvert, sans titulaire :** l'option A (port par worktree, `CANDELA_PORT`),
+le trou `USER ERROR` du lanceur trouvé par DA2, le seuil du F3 posé à 120 par DA4
+sur une référence fausse, et R6. **Aucun ne m'est attribué : je ne prends rien
+sans Adrien.**
+
 ### 2026-08-25 — session « affichage » (4) : fusion du chantier R, et un défaut de ma fusion
 
 **Chantier R fusionné dans `main` (`e9ac6fb`).** Trois conflits, tous additifs,
