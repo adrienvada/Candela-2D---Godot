@@ -1,0 +1,15 @@
+# Sources brutes de génération — même règle que `torche/`.
+#
+# **Seules les planches qui ont produit un asset livré sont versionnées.** Elles
+# sont la seule façon de le recuire : sans elles, l'asset devient irreproductible.
+# Le lot de tri, lui, ne rentre pas au dépôt — il sert une fois, à choisir une
+# direction, et reste sur le poste d'Adrien.
+#
+# Une planche retenue s'ajoute NOMMÉMENT ci-dessous, jamais en versionnant le lot.
+*
+!.gitignore
+!.gdignore
+
+# Retenue le 2026-08-25 : elle a produit les decals livres. Sans elle,
+# tools/fabrique_decals.gd n'a rien a moudre.
+!I1_01.jpg

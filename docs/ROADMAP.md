@@ -6770,10 +6770,28 @@ un fait de jeu, pas à un rythme d'interface.
   (Adrien).** Raison mesurée en « Décisions actées ». En deux mots : l'arête
   halogène EST le mur, et une matière peinte à l'intérieur n'ajoutait rien
   qu'elle ne noyait. *(abandonnée)*
-- **DA2.8 Les decals de sang peints** — 6-8 éclaboussures remplaçant les
-  polygones : une scène de crime, pas un nuage de losanges. *(C : 1 planche)*
-- **DA2.9 Les impacts muraux** — éclats et brûlures en decals persistants.
-  *(C, avec DA2.8)*
+- **DA2.8 Les decals de sang peints** ✅ **livrée le 2026-08-25** — le sang
+  n'est plus un semis de 15 à 30 cercles tirés au sort : c'est **une
+  éclaboussure peinte, tournée dans l'axe du tir**. Une tache raconte donc d'où
+  le coup venait, ce qu'un semis ne pouvait pas dire. Deux formes — une flaque
+  d'impact dense, une traînée directionnelle — tirées au sort avec une échelle
+  variable. ⚠️ **L'entrée en demandait 6 à 8, il y en a DEUX** : Gemini a bloqué
+  en boucle sur les suivantes. Les quatre à six manquantes sont commandées.
+  ⚠️ **Deux textures par éclaboussure, et le cœur n'est pas décoratif** :
+  `blood_shader.gdshader` « préserve le centre noir et les bords rouges », donc
+  sa spéculaire n'a rien à réfléchir sur un aplat uniforme. Le dessin remplacé
+  produisait ce contraste en deux passes ; les deux textures le reproduisent.
+  *(C : 1 planche)*
+- **DA2.9 Les impacts muraux** 🟡 **CUITS, PAS INTÉGRÉS le 2026-08-25** — douze
+  éclats en étoile découpés d'une planche de seize, prêts dans
+  `assets/decals/`. **Rien ne les pose encore** : il n'existe aucun système de
+  décal mural, contrairement au sang qui avait déjà le sien.
+  ⚠️ **Quatre des seize sont sortis VIDES**, et la raison mérite d'être connue :
+  c'étaient les brûlures, dessinées en sombre sur noir. L'alpha d'un décal vient
+  de sa luminance — **une brûlure noire est un décal transparent.** La consigne
+  « sombres et contrastés », donnée à cause du fondu additif des murs,
+  contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
+  rien n'a été regénéré. *(C, avec DA2.8)*
 - **DA2.10 Le key art du titre** — une illustration d'ambiance (deux torches
   dans le noir) derrière le menu : une image installe l'univers mieux que
   quinze shaders. *(C)*

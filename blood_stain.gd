@@ -37,6 +37,24 @@ static var MAX_STAINS := 120
 ## aucun risque de collision de rang entre deux matchs.
 static var _next_order := 0
 
+## ## Les éclaboussures peintes (DA2.8)
+##
+## Cuites par `tools/fabrique_decals.gd` depuis des planches blanches sur noir :
+## la luminance devient l'alpha, la teinte reste au code. Deux fichiers par
+## éclaboussure — la forme entière, et son **cœur**, la partie franchement
+## opaque.
+##
+## ⚠️ **Le cœur n'est pas un ornement.** `blood_shader.gdshader` dit de lui-même
+## qu'il « préserve le centre noir et les bords rouges » : sa réflexion
+## spéculaire multiplie la couleur du sang, donc un aplat uniforme ne lui donne
+## rien à réfléchir. Le dessin procédural qu'on remplace produisait ce contraste
+## en deux passes — liseré carmin, puis cœur presque noir un pixel et demi plus
+## petit. Les deux textures reproduisent exactement ce geste.
+const ECLABOUSSURES := ["res://assets/decals/sang_1.png", "res://assets/decals/sang_2.png"]
+
+var _texture: Texture2D = null
+var _coeur: Texture2D = null
+var _echelle := 1.0
 var _drops = []
 var color = Color(Charte.CARMIN, 0.9) # Sang séché, sombre
 ## Rang de cette tache, figé à l'entrée dans l'arbre (voir _next_order).
@@ -56,7 +74,22 @@ func setup(base_pos: Vector2, direction: Vector2):
 	material = ShaderMaterial.new()
 	material.shader = BLOOD_SHADER
 	
-	# Éclaboussure générée le long de la trajectoire du tir
+	# DA2.8 — une éclaboussure peinte, tournée dans l'axe du tir.
+	#
+	# La rotation porte sur le NŒUD : l'éclaboussure est dessinée pointant vers
+	# la droite, et `direction` la met dans l'axe de la balle. Une tache de sang
+	# raconte d'où le coup venait ; la faire tourner est ce qui distingue une
+	# scène de crime d'un semis de losanges.
+	_choisir_eclaboussure()
+	if _texture != null:
+		rotation = direction.angle()
+		_echelle = randf_range(0.75, 1.25)
+		queue_redraw()
+		return
+
+	# Repli procédural. ⚠️ Il CRIE avant d'arriver ici — voir
+	# `_choisir_eclaboussure()`. Il existe parce qu'une tache absente serait un
+	# tir sans conséquence visible, pire qu'une tache moins belle.
 	var num_drops = randi_range(15, 30)
 	
 	# Flaque centrale au point d'impact
@@ -83,9 +116,36 @@ func setup(base_pos: Vector2, direction: Vector2):
 	
 	queue_redraw()
 
+## Choisit une éclaboussure et son cœur, ou laisse `_texture` à `null`.
+##
+## Rend la main en criant si les fichiers manquent : un décal cuit mais pas
+## encore importé par Godot est invisible à `ResourceLoader`, et c'est l'état
+## normal d'un asset frais. Sans ce cri, le jeu retomberait sur les cercles et
+## personne ne saurait dire pourquoi les éclaboussures n'ont pas changé.
+func _choisir_eclaboussure() -> void:
+	var i := randi() % ECLABOUSSURES.size()
+	var chemin: String = ECLABOUSSURES[i]
+	var coeur := chemin.replace(".png", "_coeur.png")
+	if not ResourceLoader.exists(chemin) or not ResourceLoader.exists(coeur):
+		push_error("blood_stain : eclaboussure absente — %s " % chemin
+			+ "(cuire avec tools/fabrique_decals.gd, puis : "
+			+ "godot --headless --path . --import). Repli sur les cercles.")
+		return
+	_texture = load(chemin)
+	_coeur = load(coeur)
+
+
 func _draw():
 	# Liseré carmin, puis cœur presque noir : une goutte est plus sombre en son
 	# centre qu'à son bord, où la lumière rasante l'attrape.
+	if _texture != null:
+		var t := _texture.get_size() * _echelle
+		draw_texture_rect(_texture, Rect2(-t * 0.5, t), false,
+			Color(Charte.CARMIN, 0.8))
+		var c := _coeur.get_size() * _echelle
+		draw_texture_rect(_coeur, Rect2(-c * 0.5, c), false,
+			Color(Charte.CARMIN * 0.16, 0.95))
+		return
 	for d in _drops:
 		draw_circle(d["pos"], d["radius"], Color(Charte.CARMIN, 0.8))
 	for d in _drops:
