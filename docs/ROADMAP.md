@@ -9425,6 +9425,29 @@ Reste donc :
    « faible » qu'Adrien a validé, quels `--matiere` et `--profil` ont donné les
    cookies. **Recuire à l'aveugle rejouerait ses arbitrages au hasard.**
 
+   ✅ **Et pour le sol, la valeur a été RETROUVÉE plutôt que choisie
+   (2026-08-25).** Adrien, à qui elle était demandée, ne s'en souvenait pas et a
+   dit « choisis une valeur ». Il n'y avait pas à choisir : `--luminance` est
+   *« la luminance moyenne visée »*, et l'outil l'**impose**. Elle est donc
+   lisible dans l'asset livré. Mesuré sur les tuiles validées :
+
+   ```
+   solA_faible_1.png   35x35   moyenne 0.1476
+   solB_faible_1.png   35x35   moyenne 0.1780
+   ```
+
+   Le « faible » du nom vient de `--nom`, l'outil écrivant `<nom>_<n>.png` — ce
+   n'était pas un mode, c'était l'étiquette d'une variante retenue parmi
+   plusieurs. La recette du sol est donc `--nom solA_faible --luminance 0.1476`
+   et son jumeau à 0,1780.
+
+   ⚠️ **La leçon dépasse ce paramètre : une recette perdue se retrouve dans le
+   PRODUIT quand l'outil impose un résultat plutôt qu'un procédé.** Ce qui est
+   irrécupérable, ce sont les curseurs qui *influencent* sans déterminer —
+   `--contraste`, `--matiere`, `--profil`. D'où une règle utile pour les outils à
+   venir : **un curseur qui vise une grandeur mesurable rend sa propre recette
+   retrouvable**, un curseur qui pondère ne le fait pas.
+
    Conséquence directe sur l'ordre des choses : **une recuisson partielle est
    pire que pas de recuisson**, puisque la décision est « une fois, pour TOUTES
    les familles » — traiter les seuls sprites recréerait l'incohérence de densité
