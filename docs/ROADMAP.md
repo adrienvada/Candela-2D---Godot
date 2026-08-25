@@ -7923,8 +7923,16 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
 - **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
   noms de touches. *(S + G)*
-- **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
-  carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
+- **DA4.12 Les états vides illustrés** ✅ **livrée le 2026-08-25** — historique
+  sans match, galerie sans carte. Une phrase seule au milieu d'un grand vide se
+  lit comme **un écran qui a échoué à charger** ; la même phrase sous une image
+  se lit comme une réponse — *il n'y a rien, et c'est normal*. Ce n'est pas
+  décoratif : c'est la différence entre « le jeu est cassé » et « à vous de
+  jouer ».
+
+  Les deux dessins sont teintés en `LINE` et non `DIM` : une illustration
+  d'absence doit rester **en retrait de la phrase qu'elle accompagne**, sinon
+  elle devient le sujet. *(C — généré, procédé DA1.5)*
 - **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
   le constat est le même que pour les fontes.
 
@@ -7949,8 +7957,17 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   fondu » suppose que le problème est le fondu ; il est plus large — c'est
   l'unité du geste. Le rebond sous un bouton, sous une tuile et sous le décompte
   est ce qui donne la sensation qu'une seule main a animé l'écran. *(S)*
-- **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
-  rectangles colorés. *(C)*
+- **DA4.14 Les curseurs J1/J2 dessinés** ✅ **livrée le 2026-08-25** — une petite
+  torche se pose à gauche du cadre de sélection, teintée par `modulate` : **un
+  seul fichier sert les deux joueurs**, et retoucher `BLEU` ou `ROUGE` dans la
+  charte ne demande aucune regénération.
+
+  ⚠️ **Le liseré RESTE, et c'est une décision.** Il dit *quelle zone* est
+  sélectionnée, ce qu'une icône ne peut pas dire ; la torche dit *qui*
+  sélectionne. Les deux ne font pas le même travail, et l'item ne demandait de
+  supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
+  lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
+  généré, procédé DA1.5)*
 - **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
   l'éditeur sous la bible. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
