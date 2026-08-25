@@ -243,8 +243,20 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 		_spawn_damage_number(hit_point, int(opp_hit_damage))
 	_fade_and_destroy(hit_point)
 
-## Impact sur la cible d'échauffement : mêmes effets qu'un mur, plus le chiffre
-## de dégâts, calculé comme sur un joueur pour que l'entraînement soit lisible.
+## Impact sur la cible d'échauffement : effets visuels d'un mur, chiffre de
+## dégâts calculé comme sur un joueur, et **son de coup au but**.
+##
+## ⚠️ **Le son ne dit plus « mur », il dit « touché » — corrigé le 2026-08-25 sur
+## demande d'Adrien.** La cible partageait tous les effets du mur, son compris :
+## à l'oreille, **atteindre la cible et rater à côté produisaient exactement le
+## même bruit.** Dans le seul mode dont le sujet est de viser, c'était effacer
+## la seule information qui compte.
+##
+## `flesh_impact` et non un échantillon neuf : la cible **tient lieu de corps**
+## — ses dégâts sont déjà calculés comme sur un joueur, centre et bord compris.
+## Lui donner le son du corps rend l'entraînement cohérent avec le match, où
+## c'est ce claquement-là qui confirme un coup au but. Aucun asset à commander,
+## et rien à recâbler le jour où la cible aura sa matière propre.
 func _hit_training_target(target: TrainingTarget, hit_point: Vector2) -> void:
 	var to_target := target.global_position - global_position
 	var dist_to_axis: float = abs(to_target.cross(direction))
@@ -253,7 +265,11 @@ func _hit_training_target(target: TrainingTarget, hit_point: Vector2) -> void:
 
 	if not is_replay:
 		target.register_training_hit(dmg)
-	_spawn_wall_effects(hit_point)
+	# Les étincelles et l'éclat restent ceux d'un mur : la cible est en dur, elle
+	# ne saigne pas. C'est le SON qui change de camp, parce que c'est lui qui
+	# porte l'information dans un mode où l'on ne regarde pas le décor.
+	_spawn_wall_effects(hit_point, false)
+	AudioManager.play_sfx_2d_random_pitch("flesh_impact", hit_point, 0.92, 1.08)
 	if not is_replay:
 		_spawn_damage_number(hit_point, dmg)
 	_fade_and_destroy(hit_point)
@@ -353,8 +369,13 @@ func _spawn_hit_effects(pos: Vector2):
 		arena.add_child(stain)
 		stain.setup(pos, direction)
 
-func _spawn_wall_effects(pos: Vector2):
-	AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
+## `avec_son` permet à la cible d'échauffement de garder les étincelles du mur
+## sans en prendre le bruit. Un drapeau plutôt qu'une copie de la fonction : les
+## effets visuels d'un impact ont déjà trois lieux de vérité (particules, éclat,
+## arène), et un quatrième finirait par diverger.
+func _spawn_wall_effects(pos: Vector2, avec_son: bool = true):
+	if avec_son:
+		AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
 	# Sparks bounce BACKWARDS from the wall
 	_spawn_spark_particles(pos, Charte.AMBRE, 12, 100.0, 450.0, -direction, 120.0)
 	# DA2.9 — l'éclat reste. Les étincelles disent l'instant, la marque dit que
