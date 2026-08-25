@@ -4790,6 +4790,12 @@ quoi : le message liste des chaînes vides. Passer par
   **Corollaire, et il vaut au-delà de git :** plus une rédaction attend dans
   l'arbre de travail, plus elle est exposée. Écrire la ROADMAP *après* que la
   suite est verte, et non pendant, réduit la fenêtre de vingt minutes à une.
+  ⚠️ **Le paragraphe que vous lisez a été emporté à son tour**, sept minutes
+  après avoir été écrit, par `317ab03` — une session qui parle de percuteurs.
+  Ce n'est pas une coïncidence amusante, c'est la mesure du phénomène : sur cet
+  arbre, aux heures pleines, **tout texte laissé non commité a quelques minutes
+  d'espérance de vie**, pas vingt. La seule rédaction qui vous appartienne est
+  celle que vous commitez dans le même appel que son écriture.
 - **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
   commit qui suit part avec son message complet et son contenu amputé. Arrivé le
   2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
