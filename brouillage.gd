@@ -87,7 +87,16 @@ const RAYON_HALO := 150.0
 ## chute est désormais si rapide que la surface saturée se réduit à un noyau. On
 ## peut donc monter le centre sans étaler le plateau. **Monter l'un sans
 ## l'autre ramènerait le disque plein**, et avec lui le halo qui désigne.
-const INTENSITE_HALO := 1.0
+## **0,7 depuis le second essai** — « il faudrait que le halo soit moins
+## puissant » (Adrien, 2026-08-25). Il valait 1,0 depuis le premier, où la
+## demande était l'inverse.
+##
+## Les deux demandes ne se contredisent pas, et c'est le flou qui les réconcilie :
+## au premier essai le halo portait **seul** la charge de cacher l'émetteur, donc
+## il fallait qu'il tape fort. Le flou lui en a retiré la moitié — celle qui
+## concerne le faisceau. Un halo qui tape moins fort cache désormais autant, et
+## il rend l'écran de nouveau lisible autour de lui.
+const INTENSITE_HALO := 0.7
 
 ## L'exposant qui creuse le halo : `alpha(r) = (1 − r) ^ NETTETE_HALO`.
 ##
@@ -103,6 +112,29 @@ const INTENSITE_HALO := 1.0
 ## et celle du bord est la seule chose qui empêche le halo d'avoir un CONTOUR.
 ## Un halo à contour net est une forme de plus à lire, donc un repère de plus.
 const NETTETE_HALO := 2.5
+
+## Le halo s'étire lui aussi dans l'axe du faisceau : `RAYON_HALO` est son
+## demi-axe EN TRAVERS, celui-ci son rapport longueur/largeur.
+##
+## ⚠️ **C'est un défaut de forme, relevé par Adrien sur capture (2026-08-25) :**
+## « le cercle est toujours visible grâce à la luminosité centrale du halo ».
+## Un halo rond est une **forme**, donc un repère — et son cœur lumineux marque
+## son centre, c'est-à-dire très exactement le point qu'on cherche à rendre
+## introuvable. Plus le cœur est net, mieux il le marque : la netteté demandée
+## au premier essai travaillait CONTRE le but, sans que ni lui ni moi ne le
+## voyions.
+##
+## **La correction n'est pas d'adoucir le cœur** — ce serait défaire la demande
+## précédente — mais de l'ÉTIRER. Le cœur devient une traînée le long du
+## faisceau au lieu d'un point : il reste vif, il ne désigne plus. C'est aussi
+## ce qu'on voit d'une source dirigée dans la vraie vie, où l'éblouissement
+## bave dans l'axe de la lampe.
+const ALLONGEMENT_HALO := 2.4
+
+## De combien le halo est poussé vers la victime, en fraction de son demi-grand
+## axe — même raison que `AVANCE_FLOU` : derrière l'émetteur il n'y a pas de
+## faisceau, et un halo centré sur lui recentre le regard sur lui.
+const AVANCE_HALO := 0.3
 
 ## Écart entre chaque fantôme et la position vraie, à saturation, en pixels de
 ## monde. 30 px pour un joueur de 18 px de rayon : les copies se touchent
@@ -174,6 +206,19 @@ const RETARD_REMANENCE := 0.18
 ## centré sur la position vraie. Le corps disparaît, sa lampe reste. On ne perd
 ## pas la cible, on perd sa NETTETÉ — ce qui était la demande depuis le début.
 ##
+## ⚠️ **« Centré sur la position vraie » n'est plus exact depuis
+## `ALLONGEMENT_HALO`, et le repère a changé de nature.** Le halo est désormais
+## une traînée couchée sur l'axe du faisceau et poussée vers la victime : son
+## **barycentre n'est plus l'émetteur**. Ce qui reste vrai — et ce sur quoi
+## repose tout le plafond de compétence de ce mode — c'est que **l'émetteur est
+## à l'extrémité ARRIÈRE de la traînée**, celle qui s'éloigne de soi. On lit une
+## forme au lieu d'un point.
+##
+## C'est plus difficile, et ce n'est pas un mensonge : la traînée décrit
+## fidèlement où la lumière est. Mais la phrase « viser le centre du halo »
+## était juste et ne l'est plus, et quelqu'un qui rejugerait ce mode sur elle se
+## tromperait.
+##
 ## **La conséquence à tenir : `Mode.CONTRASTE` seul n'est plus jouable en
 ## production, il n'est plus qu'un témoin de banc.** Le retenir sans halo
 ## rendrait l'adversaire introuvable à saturation.
@@ -201,7 +246,20 @@ const ALPHA_CONTRASTE := 0.0
 ## duel ordinaire.
 ##
 ## Mêmes deux bornes intactes qu'ailleurs : `alpha(0) = 1`, `alpha(1) = 0`.
-const COURBE_CONTRASTE := 2.0
+## **3,4 depuis le second essai** — « il faudrait que la silhouette disparaisse
+## encore davantage et plus rapidement » (Adrien, 2026-08-25). Elle valait 2,0,
+## qui valait elle-même 1,0 (une droite) au premier jet.
+##
+## Ce que chaque passe a déplacé, à mi-éblouissement : **0,50 → 0,25 → 0,11**.
+## Et aux trois quarts : 0,25 → 0,06 → 0,01. L'adversaire est donc désormais
+## effacé bien avant que l'éblouissement ne sature — ce qui compte, puisque la
+## saturation n'est presque jamais atteinte en jeu (plafond réel du pistolet à
+## bout portant : 0,93).
+##
+## **La borne basse n'a jamais bougé et ne doit pas bouger** : hors faisceau on
+## voit l'adversaire normalement. C'est la proposition même du jeu, et un
+## exposant la préserve exactement là où un seuil la casserait.
+const COURBE_CONTRASTE := 3.4
 
 ## Le rayon de la zone floutée à saturation, en pixels d'écran, et la force du
 ## flou en son centre.
@@ -215,8 +273,39 @@ const COURBE_CONTRASTE := 2.0
 ## un arrondi : le halo doit cacher un CORPS, le flou doit casser une
 ## CONVERGENCE, qui se lit bien au-delà du corps. Un flou plus étroit que le
 ## halo laisserait les arêtes redevenir nettes juste là où elles se rejoignent.
-const RAYON_FLOU := 210.0
+## ⚠️ **`RAYON_FLOU` est le demi-axe EN TRAVERS du faisceau, pas un rayon de
+## disque.** La zone était un disque ; Adrien l'a jugée insuffisante au second
+## essai (2026-08-25) : « il faudrait que le flou soit plus intense, et s'étale
+## davantage en direction de l'ébloui, dans la direction du faisceau ».
+##
+## Le disque avait un défaut de forme, pas de taille : **la convergence des deux
+## arêtes ne se lit pas autour de l'apex, elle se lit LE LONG du faisceau.** Un
+## disque en gomme le sommet et laisse intactes les deux droites qui y mènent —
+## il suffit alors de les prolonger de l'œil. L'ellipse suit le faisceau, donc
+## elle brouille ce qui sert effectivement à viser.
+const RAYON_FLOU := 190.0
+
+## Le rapport longueur/largeur de l'ellipse, dans l'axe du faisceau. 2,6 : la
+## zone s'étire vers celui qu'on éblouit, là où le cône s'ouvre et où ses arêtes
+## sont les plus lisibles.
+const ALLONGEMENT_FLOU := 2.6
+
+## De combien l'ellipse est poussée VERS la victime, en fraction de son
+## demi-grand axe. 0,4 — elle n'est pas centrée sur l'émetteur : derrière lui il
+## n'y a pas de faisceau à brouiller, et flouter le vide ne coûte que des
+## pixels. Ce décalage ne déplace jamais rien de ce qui est dessiné, il choisit
+## seulement où la lecture est dégradée.
+const AVANCE_FLOU := 0.4
+
 const FORCE_FLOU := 1.0
+
+## Le rayon du noyau de flou, en pixels d'écran : la QUANTITÉ de flou, distincte
+## de la taille de la zone.
+##
+## **34 px, contre 24 au premier jet** — « il faudrait que le flou soit plus
+## intense » (Adrien, 2026-08-25). La chute de contraste local mesurée dans la
+## zone d'émission vaut −8,5 % à 8 px, −24,5 % à 24, −35,9 % à 40.
+const NOYAU_FLOU := 34.0
 
 ## Le halo, en pixels d'écran et en opacité. `centre` reste à l'appelant : c'est
 ## lui qui sait projeter une position de monde dans SA vue, et ce fichier ne

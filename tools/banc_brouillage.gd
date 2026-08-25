@@ -146,17 +146,17 @@ var _voile_facteur: float = VOILE_FACTEUR_DEFAUT
 var _rayon_halo: float = Brouillage.RAYON_HALO
 var _intensite_halo: float = Brouillage.INTENSITE_HALO
 var _nettete_halo: float = Brouillage.NETTETE_HALO
+var _allongement_halo: float = Brouillage.ALLONGEMENT_HALO
+var _avance_halo: float = Brouillage.AVANCE_HALO
 var _courbe_contraste: float = Brouillage.COURBE_CONTRASTE
 var _rayon_flou: float = Brouillage.RAYON_FLOU
 var _force_flou: float = Brouillage.FORCE_FLOU
 ## Le rayon du noyau de flou, en pixels — la « quantité de flou », distincte de
 ## la TAILLE de la zone floutée (`_rayon_flou`). Vit au banc seul : c'est un
 ## paramètre de shader, pas une grandeur de jeu.
-## 24 px, mesuré et non choisi : la chute de contraste local dans la zone
-## d'émission vaut −8,5 % à 8 px, **−24,5 % à 24**, −35,9 % à 40. En dessous de
-## 20 la convergence des deux arêtes reste lisible ; au-delà de 40 le faisceau
-## cesse de ressembler à un faisceau.
-var _noyau_flou: float = 24.0
+var _noyau_flou: float = Brouillage.NOYAU_FLOU
+var _allongement_flou: float = Brouillage.ALLONGEMENT_FLOU
+var _avance_flou: float = Brouillage.AVANCE_FLOU
 
 ## Le réglage que `←/→` modifie. `Tab` en change.
 var _reglage: int = 0
@@ -167,10 +167,14 @@ const REGLAGES := [
 	["rayon du halo", "_rayon_halo", 20.0, 420.0, 10.0],
 	["intensité du halo", "_intensite_halo", 0.0, 1.0, 0.05],
 	["netteté du halo", "_nettete_halo", 0.5, 6.0, 0.25],
+	["allongement du halo", "_allongement_halo", 1.0, 5.0, 0.2],
+	["avance du halo", "_avance_halo", 0.0, 1.0, 0.05],
 	["courbe du contraste", "_courbe_contraste", 0.5, 5.0, 0.25],
-	["rayon de la zone floue", "_rayon_flou", 0.0, 480.0, 20.0],
+	["largeur de la zone floue", "_rayon_flou", 0.0, 480.0, 20.0],
+	["allongement dans l'axe", "_allongement_flou", 1.0, 5.0, 0.2],
+	["avance vers la victime", "_avance_flou", 0.0, 1.0, 0.05],
 	["force du flou", "_force_flou", 0.0, 1.0, 0.1],
-	["quantité de flou", "_noyau_flou", 0.0, 48.0, 2.0],
+	["quantité de flou", "_noyau_flou", 0.0, 64.0, 2.0],
 	["voile", "_voile_facteur", 0.0, 1.0, 0.05],
 ]
 var _verite: bool = false        ## Montrer où l'adversaire est VRAIMENT.
@@ -752,14 +756,26 @@ func _rendre() -> void:
 	_flou.visible = rayon_flou > 2.0 and float(f["force"]) > 0.001
 	_copie_ecran.visible = _flou.visible
 	if _flou.visible:
-		# Sur sa couche, le flou est en coordonnées d'ÉCRAN — même conversion que
-		# le halo, et pour la même raison : une couche ignore la caméra.
-		var cote := rayon_flou * 2.0
-		var centre_flou := get_viewport().get_canvas_transform() * _pos_vraie
-		_flou.size = Vector2(cote, cote)
-		_flou.position = centre_flou - Vector2(rayon_flou, rayon_flou)
+		# **Une ELLIPSE couchée sur l'axe du faisceau, pas un disque.** Le
+		# rectangle est la boîte de l'ellipse : le masque du shader
+		# (`length(UV − 0,5) × 2`) est un cercle en UV, donc une ellipse à
+		# l'écran dès que le rectangle cesse d'être carré. Rien à changer côté
+		# shader — c'est la géométrie qui porte la forme.
+		#
+		# Sur sa couche, le flou est en coordonnées d'ÉCRAN, comme le halo : une
+		# couche ignore la caméra. La caméra n'ayant pas de rotation, l'angle du
+		# faisceau vaut le même dans les deux repères ; si elle en gagnait un
+		# jour, c'est ici qu'il faudrait le composer.
+		var demi_long := rayon_flou * _allongement_flou
+		var taille := Vector2(demi_long, rayon_flou) * 2.0
+		var avant := Vector2.RIGHT.rotated(_rot_vraie)
+		var centre_flou := get_viewport().get_canvas_transform() * _pos_vraie \
+			+ avant * (demi_long * _avance_flou)
+		_flou.size = taille
+		_flou.pivot_offset = taille * 0.5
+		_flou.rotation = _rot_vraie
+		_flou.position = centre_flou - taille * 0.5
 		_mat_flou.set_shader_parameter("rayon_noyau", _noyau_flou)
-
 		_mat_flou.set_shader_parameter("force", float(f["force"]))
 
 	var porte_halo := _mode == Brouillage.Mode.HALO or _mode == Brouillage.Mode.LAMPE
@@ -768,12 +784,23 @@ func _rendre() -> void:
 	var rayon := float(h["rayon"])
 	_halo.visible = rayon > 1.0
 	if _halo.visible:
+		# **Une ellipse couchée sur l'axe, comme le flou et pour la même
+		# raison :** un halo rond est une forme, et son cœur lumineux en marque
+		# le centre — c'est-à-dire le point qu'on veut rendre introuvable. Étiré,
+		# le cœur devient une traînée : aussi vif, mais il ne désigne plus.
+		#
 		# Du monde vers la couche d'écran. `get_canvas_transform()` porte la
 		# caméra ; la mise à l'échelle de la fenêtre s'applique ensuite aux DEUX
 		# couches, donc elles restent d'accord quelle que soit la taille.
-		var centre := get_viewport().get_canvas_transform() * _pos_vraie
-		_halo.size = Vector2(rayon, rayon) * 2.0
-		_halo.position = centre - Vector2(rayon, rayon)
+		var demi_long_h := rayon * _allongement_halo
+		var taille_h := Vector2(demi_long_h, rayon) * 2.0
+		var avant_h := Vector2.RIGHT.rotated(_rot_vraie)
+		var centre := get_viewport().get_canvas_transform() * _pos_vraie \
+			+ avant_h * (demi_long_h * _avance_halo)
+		_halo.size = taille_h
+		_halo.pivot_offset = taille_h * 0.5
+		_halo.rotation = _rot_vraie
+		_halo.position = centre - taille_h * 0.5
 		_halo.modulate = Color(1, 1, 1, float(h["intensite"]))
 
 
@@ -826,10 +853,14 @@ func _tableau() -> void:
 		"_rayon_halo": Brouillage.RAYON_HALO,
 		"_intensite_halo": Brouillage.INTENSITE_HALO,
 		"_nettete_halo": Brouillage.NETTETE_HALO,
+		"_allongement_halo": Brouillage.ALLONGEMENT_HALO,
+		"_avance_halo": Brouillage.AVANCE_HALO,
 		"_courbe_contraste": Brouillage.COURBE_CONTRASTE,
 		"_rayon_flou": Brouillage.RAYON_FLOU,
+		"_allongement_flou": Brouillage.ALLONGEMENT_FLOU,
+		"_avance_flou": Brouillage.AVANCE_FLOU,
 		"_force_flou": Brouillage.FORCE_FLOU,
-		"_noyau_flou": 14.0,
+		"_noyau_flou": Brouillage.NOYAU_FLOU,
 		"_voile_facteur": VOILE_FACTEUR_DEFAUT,
 	}
 	for r in REGLAGES:

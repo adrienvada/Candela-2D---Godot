@@ -7445,7 +7445,10 @@ disparaît, sa lampe reste.* Les modes purs restent au banc comme témoins.
 **Ce que ce choix résout, et que le raisonnement seul n'avait pas vu.** Ce
 document portait une objection contre le contraste poussé à bout : une
 disparition pure retire TOUTE information, donc le plafond de compétence tombe
-avec. Le mix y répond exactement — **le halo reste centré sur la position
+avec. Le mix y répond exactement — *(⚠️ au 2026-08-25, troisième essai, ce
+n'est plus exact : voir plus bas, le halo est devenu une traînée décentrée et
+le repère est passé du centre à son extrémité arrière)* — **le halo reste
+centré sur la position
 vraie**, donc on ne perd pas la cible, on perd sa *netteté*. C'était la demande
 depuis le début. Et l'atténuation du voile suit la même logique : le voile
 faisait deux métiers (dire « tu es ébloui » ET cacher l'adversaire) ; le second
@@ -7543,6 +7546,48 @@ près sur les deux mesures, sans aucune correction.
   cimenter un défaut ailleurs.** Le 2,2 était plausible, documentable, et faux.
   Seule la mesure contre une référence l'a écarté — le contrôle décisif tenait
   en une ligne : *à noyau nul, le disque doit devenir invisible.*
+
+### Troisième essai, le 2026-08-25 — le halo était un CERCLE, donc un repère
+
+Adrien, capture à l'appui : « le problème c'est que le cercle est toujours
+visible grâce à la luminosité centrale du halo. Il faudrait qu'elle s'étale
+davantage, dans la direction du faisceau, avec le flou. »
+
+**Le défaut est de forme, et il retourne une demande précédente contre son
+but.** Un halo rond est une forme ; son cœur lumineux en marque le centre,
+c'est-à-dire très exactement le point qu'on cherche à rendre introuvable. Et
+**plus le cœur est net, mieux il le marque** — donc la netteté demandée au
+deuxième essai (`NETTETE_HALO`, la chute creusée) travaillait *contre* le but
+sans que ni lui ni moi ne l'ayons vu.
+
+**La correction n'est pas d'adoucir le cœur** — ce serait défaire la demande
+précédente — **mais de l'étirer.** Le halo et le flou deviennent deux ellipses
+couchées sur l'axe du faisceau et poussées vers la victime. Le cœur devient une
+traînée : aussi vif, il ne désigne plus. Mesuré sur image, faisceau vertical :
+la zone claire fait **33 px en travers contre 225 le long**, soit un rapport de
+6,8 là où un cercle rend 1,0.
+
+Réglages du même essai : flou plus intense (noyau 24 → **34**), halo moins
+puissant (intensité 1,0 → **0,7**), silhouette effacée plus vite (courbe 2,0 →
+**3,4**, soit 0,11 d'opacité à mi-éblouissement contre 0,25).
+
+> ⚠️ **Le repère a changé de nature, et une phrase de ce document est devenue
+> fausse.** Il était écrit que « le halo reste centré sur la position vraie »,
+> et que c'était ce qui gardait la vérité recouvrable. **Ce n'est plus exact :**
+> la traînée est décentrée vers la victime, son barycentre n'est plus
+> l'émetteur. Ce qui reste vrai — et ce sur quoi repose désormais tout le
+> plafond de compétence — c'est que **l'émetteur est à l'extrémité arrière de la
+> traînée**, celle qui s'éloigne de soi. On lit une forme au lieu d'un point.
+> Ce n'est pas un mensonge, la traînée décrit fidèlement où la lumière est ;
+> mais « viser le centre du halo » était un conseil juste et ne l'est plus.
+
+> ⚠️ **Conséquence non demandée, à trancher : le joueur ébloui se voit
+> lui-même flou.** La zone floue est poussée vers la victime ; à distance de
+> duel ordinaire, elle atteint son propre personnage. C'est peut-être juste —
+> on est ébloui, toute la vision se dégrade. Mais une décision actée dit que
+> l'éblouissement doit coûter la lecture **du monde**, jamais celle de sa propre
+> fiche, et se perdre soi-même est plus proche de la seconde. **Réglable par
+> « avance vers la victime » au banc**, et non tranché ici.
 
 ### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
 
