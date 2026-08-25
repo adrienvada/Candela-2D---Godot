@@ -3860,6 +3860,27 @@ confirmé que le fichier était intact — mais dix minutes de mesure étaient p
 avoir la main sur le fichier au moment où il s'exécute : ajouter la suite
 **avant** de lancer, ou après.
 
+> ⚠️ **Repayé une TROISIÈME fois le 2026-08-25 — et le titre de cette entrée y
+> est pour quelque chose.** J'éditais `tools/run_duo.sh` pendant qu'une autre
+> session exécutait `run_suites.sh`. Chez elle : deux scénarios en échec avec
+> des **erreurs de syntaxe bash à des lignes qui n'existent pas** en lecture
+> normale. Rien dans son arbre n'était cassé ; `bash` relit un script au fil de
+> son exécution, et il relisait un fichier que je réécrivais.
+>
+> **Le piège porte le nom d'UN fichier, et le danger est une CLASSE.** J'ai lu
+> cette entrée, je me suis su prudent sur `run_suites.sh` — et j'ai édité le
+> script qu'il appelle. Un titre trop étroit ne protège pas : il rassure.
+> **La règle est : aucun script shell ne se modifie pendant qu'un lot tourne**,
+> ni le lanceur, ni ce qu'il appelle, ni ce qu'ils sourcent.
+>
+> **Et le symptôme accuse un innocent**, comme le voleur de port : une erreur de
+> syntaxe désigne le contenu du fichier, alors que la cause est *le moment*.
+> Celui qui la reçoit relit son code et n'y trouve rien — parce qu'il n'y a rien.
+>
+> Le contrôle avant d'éditer un lanceur est le même que pour le port :
+> `pgrep -f "run_suites|run_duo"`. Ici il répond juste — c'est bien le lanceur
+> qu'on cherche.
+
 ### Un commentaire décrit une intention, on le relit comme un constat (2026-08-19)
 
 Au-dessus de `ui.show_waiting_for_opponent()`, dans `_annoncer_deconnexion()`,
