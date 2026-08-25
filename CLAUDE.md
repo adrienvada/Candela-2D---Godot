@@ -173,17 +173,38 @@ repose entièrement sur les Light2D/occluders et une poignée de
 `AudioManager` (autoload) : deux pools de seize voix — globales et
 `AudioStreamPlayer2D` positionnelles —, arbitrage par priorité (un pas ne coupe
 pas un coup au but), musique interactive à 170 BPM, bus `Master` / `Music` /
-`SFX` / `Speaker`.
+`SFX` / `SFX_Occlus` / `Speaker`.
 
-**Le son est positionnel, mais le jeu n'a pas d'auditeur** (mesuré le
-2026-08-25). Le pool est enfant de l'autoload, donc dans le `World2D` de la
-**racine**, alors que le jeu vit dans celui du `SubViewport` : les caméras ne
-l'entendent jamais, et Godot pose l'oreille en un point **fixe** du monde, hors
-de la carte. Panoramique et atténuation disent donc la position **absolue** du
-son, pas sa position par rapport au joueur. Ne rien raisonner comme si la
-spatialisation fonctionnait : le chantier, son ordre et ce qui attend un
-arbitrage d'Adrien sont dans la ROADMAP, section « la spatialisation du son »
-(items S1 à S7).
+**L'oreille est posée sur le joueur local** (`poser_oreille`, depuis `4d8a85e`).
+Trois gestes qui ne valent que pris ensemble, et dont aucun ne s'entend seul :
+le pool **déménage** dans le `World2D` de la vue de jeu (enfant de l'autoload, il
+vivait dans celui de la racine), le `SubViewport` est **activé** comme oreille
+(`audio_listener_enable_2d` vaut `false` par défaut), et un `AudioListener2D`
+est posé sur le joueur. **Ne supprimer aucun des trois sans lire la ROADMAP** —
+et surtout pas le troisième : sans auditeur explicite, Godot retombe sur le
+centre de l'écran virtuel, un point fixe hors de la carte, ce qui est le défaut
+d'origine.
+
+L'oreille suit partout où il n'y a **qu'un** auditeur devant l'écran — en ligne
+et à l'entraînement. Pas en écran partagé : deux joueurs y écoutent les mêmes
+haut-parleurs. La règle est `oreille_suit(local_idx, entrainement)`, et elle
+interroge le **nombre d'auditeurs**, jamais le transport.
+
+Portée et occlusion : `PORTEE_RELATIVE` et `NIVEAU_RELATIF` disent, par son,
+jusqu'où il informe et combien il pèse ; la portée se dérive de la **carte**
+(`accorder_a_la_carte`, appelée par `rebuild_arena`). Un mur étouffe en routant
+le son vers `SFX_Occlus` — même pièce que `SFX`, direct retiré. Le dosage se
+fait au banc `tools/banc_audio.tscn`, jamais en éditant une constante à l'aveugle.
+
+> ⚠️ **Ce paragraphe a affirmé le contraire pendant une demi-journée**, et il
+> l'affirmait « mesuré le 2026-08-25 » — c'était vrai à l'écriture, faux dès la
+> fusion `e3e1b34`. **Une session s'y est fiée sans aller voir le code et a bâti
+> une contrainte inter-chantiers sur un état périmé.** Le passage disait vrai au
+> présent d'un jour et se lisait comme une propriété du projet. Deux leçons, et
+> la seconde est la plus chère : un constat daté **vieillit sans prévenir**, donc
+> ce fichier décrit ce que le code FAIT et non ce qui lui manque ; et un défaut
+> annoncé ici envoie chercher un travail déjà fait, ce qui coûte plus qu'un
+> silence.
 
 ## EOS — points de vigilance
 
