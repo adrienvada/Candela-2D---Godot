@@ -307,17 +307,32 @@ func _test_stingers_regle() -> void:
 			ResourceLoader.exists(String(AM.SOUNDS.get(cle, ""))),
 			String(AM.SOUNDS.get(cle, "(absente de SOUNDS)")))
 
-## L'oreille suit le joueur local — en ligne seulement.
+## L'oreille suit le joueur local — partout ou il n'y en a qu'un.
 ##
-## En ecran partage, les deux joueurs ecoutent les memes haut-parleurs : suivre
-## l'un donnerait a l'autre ses propres pas entendus depuis une tete qui n'est
-## pas la sienne. C'est le meme partage que `torche_comptee`, et c'est une regle
-## d'EQUITE, pas de confort — donc elle se teste.
+## ⚠️ **Cette section disait « en ligne seulement », et c'etait trop etroit.**
+## Ce qui exclut l'ecran partage n'est pas d'etre en local : c'est que **deux
+## joueurs y ecoutent les memes haut-parleurs**, si bien que suivre l'un
+## donnerait a l'autre ses propres pas entendus depuis une tete qui n'est pas la
+## sienne. L'entrainement est local ET solitaire — une vue, un joueur, une
+## sortie — et il etait exclu avec l'ecran partage alors qu'il est le SEUL MODE
+## SOLO du jeu, donc le seul ou l'on puisse doser un reglage sonore sans monter
+## deux instances. Corrige le 2026-08-25 (session « spatialisation du son »),
+## sur signalement croise entre sessions.
+##
+## C'est une regle d'EQUITE et pas de confort — donc elle se teste.
 func _test_oreille() -> void:
-	print("\n[L'oreille : en ligne seulement]")
+	print("\n[L'oreille : partout ou il n'y a qu'un auditeur]")
 	_check("en ligne, l'oreille suit l'hote", AM.oreille_suit(0))
 	_check("en ligne, l'oreille suit le client", AM.oreille_suit(1))
-	_check("en ecran partage, on n'y touche pas", not AM.oreille_suit(-1))
+	_check("en ecran partage, on n'y touche pas", not AM.oreille_suit(-1, false))
+	_check("en entrainement, l'oreille suit", AM.oreille_suit(-1, true))
+	# Le porteur, et c'est le defaut qui se cachait DERRIERE le premier : hors
+	# ligne l'index vaut -1, et la forme naive `p1 if idx == 0 else p2` designait
+	# alors J2 — cache et immobile en entrainement. L'oreille se serait posee sur
+	# un fantome, et le symptome aurait ete « le panoramique ne bouge pas »,
+	# c'est-a-dire le defaut d'avant sous un correctif qui a l'air pose.
+	_check("hors ligne, le porteur est J1 et pas J2", AM.index_porteur(-1) == 0)
+	_check("le client en ligne porte l'oreille sur J2", AM.index_porteur(1) == 1)
 
 	# Le geste a trois pieces, et deux sur trois ne s'entendent pas seules. Ce
 	# controle-ci verifie la troisieme, celle qu'on ne soupconne pas : un
@@ -338,6 +353,14 @@ func _test_oreille() -> void:
 		source.contains("AudioManager.rendre_oreille()"))
 	_check("GameState joue la ponctuation de fin",
 		source.contains("AudioManager.stinger_de_fin("))
+	# Troisieme defaut de la meme chaine, et le plus silencieux : l'entrainement
+	# passe par `_do_start_round`, qui remet `training_mode` a FAUX avant de
+	# rendre la main. Une regle qui interroge le drapeau depuis l'interieur du
+	# demarrage lit donc toujours « non ». Il faut un second appel, la ou le
+	# drapeau est enfin vrai — sans quoi le correctif est pose et sans effet.
+	_check("l'oreille est reposee dans le chemin d'entrainement",
+		source.count("_accorder_oreille()") >= 3,
+		"%d appel(s)/definition(s) de _accorder_oreille" % source.count("_accorder_oreille()"))
 
 func _test_stingers() -> void:
 	print("\n[Les stingers]")

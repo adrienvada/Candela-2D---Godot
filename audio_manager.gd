@@ -73,13 +73,35 @@ static func stinger_de_fin(winner_id: int, match_over: bool, local_idx: int) -> 
 
 ## L'oreille suit-elle un joueur, dans ce mode ?
 ##
-## Meme partage que `torche_comptee`, et pour la meme raison. **En ecran partage,
-## les deux joueurs ecoutent les memes haut-parleurs** : poser l'oreille sur l'un
-## des deux donnerait a son adversaire la distance et la direction de ses propres
-## pas, entendus depuis la tete de l'autre. Ce serait pire que le point fixe
-## d'aujourd'hui, pas mieux. En ligne, chacun a sa sortie : l'oreille peut suivre.
-static func oreille_suit(local_idx: int) -> bool:
-	return local_idx >= 0
+## **La question n'est pas « suis-je en ligne », c'est « y a-t-il exactement une
+## oreille devant l'ecran ».** Ce qui exclut l'ecran partage n'est pas d'etre en
+## local : c'est que **deux joueurs y ecoutent les memes haut-parleurs**. Poser
+## l'oreille sur l'un donnerait a l'autre la distance et la direction de ses
+## propres pas, entendus depuis une tete qui n'est pas la sienne — pire que le
+## point fixe, pas mieux.
+##
+## L'entrainement est local ET solitaire : une vue, un joueur, une sortie. La
+## premiere version de cette regle interrogeait le transport, et l'excluait donc
+## avec l'ecran partage — alors qu'il est le SEUL MODE SOLO du jeu, celui ou l'on
+## peut juger un dosage sans monter deux instances.
+##
+## ⚠️ **Deuxieme fois que ce piege se paie sur l'entrainement.** La feuille de
+## route porte deja « Le regard suit le joueur, pas le score » : le suivi de
+## camera vivait dans `if round_active:`, l'entrainement desarme la manche, la
+## camera ne suivait donc jamais. Meme faute, meme mode — l'entrainement est le
+## seul endroit ou le jeu separe des concepts que le code confond.
+static func oreille_suit(local_idx: int, entrainement: bool = false) -> bool:
+	return local_idx >= 0 or entrainement
+
+## Qui porte l'oreille, sachant l'index du joueur local.
+##
+## Ecrite positivement plutot qu'en `== 0 else p2` : hors ligne l'index vaut
+## **-1**, et la forme naive designait alors J2 — en entrainement, un joueur
+## cache et immobile. L'oreille se serait posee sur un fantome et le symptome
+## aurait ete « le panoramique ne bouge pas », c'est-a-dire le defaut d'avant
+## sous un correctif qui a l'air pose.
+static func index_porteur(local_idx: int) -> int:
+	return 1 if local_idx == 1 else 0
 
 ## Le tempo du jeu, en un seul endroit.
 ##
@@ -115,6 +137,309 @@ static func est_un_tir(stream_or_key: Variant) -> bool:
 		return false
 	var s: String = stream_or_key
 	return s == "shoot" or s.begins_with(DIR_ARMES)
+
+## ============================================================================
+## S2 — LA DISTANCE REDEVIENT UNE INFORMATION
+## ============================================================================
+##
+## `max_distance` valait **2000 px pour toutes les voix**, sur une carte qui en
+## fait 700 a 840. Meme l'oreille bien posee, « colle a moi » et « a l'autre
+## bout » n'etaient separes que d'environ **3,7 dB** : ce n'est pas une distance,
+## c'est une nuance de mixage. Et un chiffre rond ecrit en dur redevient faux a
+## la premiere carte d'une autre taille — la portee se **derive de la carte**,
+## comme V5.12 derive sa reverb de `grid_size`.
+##
+## ✅ **DOSE PAR ADRIEN AU BANC LE 2026-08-25** — facteur de portee **1,80** et
+## courbe **0,40**. Ces deux-la ne sont plus des propositions : elles ont ete
+## jugees a l'oreille, et la courbe a ete deplacee de 2,0 a 0,4, soit dans le
+## sens **oppose** a ce que le raisonnement recommandait (voir
+## `COURBE_DISTANCE_DEFAUT`).
+##
+## ⚠️ **Les portees RELATIVES d'un son a l'autre, elles, restent des
+## propositions** : le banc ne joue qu'un son a la fois, donc leur rapport n'a
+## pas ete compare. Ce qui a ete juge, c'est l'echelle d'ensemble.
+
+## Portee de chaque son, en fraction de la diagonale de la carte.
+##
+## **Tous les sons ne portent pas pareil, et c'est une information de jeu.** Un
+## coup de feu s'entend d'un bout a l'autre de l'arene — le taire au loin
+## retirerait le renseignement le plus cher du jeu apres la lumiere. Un pas est
+## un indice de PROXIMITE : l'entendre a travers toute la carte le rendrait
+## bavard sans rien apprendre, puisqu'on ne saurait pas s'il est pres.
+##
+## Meme logique de classement que `SFX_PRIORITE`, et ce n'est pas un hasard :
+## les deux tables disent ce que le son APPREND, l'une en voix, l'autre en
+## pixels.
+## ✅ **Rapports triples le 2026-08-25 a la demande d'Adrien, apres ecoute.**
+## Le rapport tir/pas passe de **3,6 a 10,7** — exactement trois fois plus de
+## contraste, obtenu en divisant la portee du pas par trois (0,45 → 0,15) plutot
+## qu'en allongeant celle du tir, qui lui convenait deja.
+##
+## Et l'ORDRE a change, pas seulement l'echelle : les impacts remontent tout pres
+## du tir (« legerement moins forts que les tirs ») au lieu d'occuper un milieu
+## qui n'existait que dans mon classement. La hierarchie qu'il a demandee est
+## **tir > impacts >>> pas**, pas une echelle reguliere.
+const PORTEE_RELATIVE: Dictionary = {
+	"footstep": 0.15,
+	"wall_impact": 1.20,
+	"flesh_impact": 1.35,
+	"shoot": 1.60,
+}
+const PORTEE_RELATIVE_DEFAUT: float = 1.0
+
+## Niveau de chaque son, en decibels, AVANT toute distance.
+##
+## **Dimension neuve, ajoutee le 2026-08-25 sur demande d'Adrien** : « il faut
+## que les tirs soient vraiment plus forts que le reste, et les pas beaucoup plus
+## attenues ». Jusqu'ici tous les sons partaient au meme niveau et seule la
+## PORTEE les distinguait — or porter loin et sonner fort sont deux choses. Un
+## pas proche restait aussi present qu'un tir proche.
+##
+## Les deux tables se lisent ensemble : `PORTEE_RELATIVE` dit **jusqu'ou** un son
+## informe, celle-ci dit **combien il pese** quand il informe. Le pas est le seul
+## a etre lourdement penalise sur les deux, et c'est voulu — c'est le son le plus
+## bavard du jeu (six a sept par seconde a deux joueurs), donc celui dont le
+## cout d'attention est le plus mal reparti.
+##
+## ⚠️ **A doser** : ces valeurs sont un point de depart accorde a la demande
+## « rapports x3 », elles n'ont pas ete jugees une par une. Les molettes 4/5 du
+## banc les deplacent son par son.
+const NIVEAU_RELATIF: Dictionary = {
+	"footstep": -12.0,
+	"wall_impact": -3.0,
+	"flesh_impact": -2.0,
+	"shoot": 0.0,
+}
+const NIVEAU_RELATIF_DEFAUT: float = 0.0
+
+## Le niveau d'un son, d'apres sa cle. Meme precaution que pour la portee : un
+## tir arrive aussi sous forme de chemin depuis V4.1.
+static func niveau_relatif_de(stream_or_key: Variant) -> float:
+	if est_un_tir(stream_or_key):
+		return float(NIVEAU_RELATIF.get("shoot", NIVEAU_RELATIF_DEFAUT))
+	if stream_or_key is String:
+		return float(NIVEAU_RELATIF.get(stream_or_key, NIVEAU_RELATIF_DEFAUT))
+	return NIVEAU_RELATIF_DEFAUT
+
+## Ecarts de dosage poses par le banc, par cle de son. Vides en jeu : ils
+## n'existent que le temps d'une seance d'ecoute, et ce qui en sort se recopie
+## dans les tables ci-dessus. **Un reglage qui ne survit qu'en memoire n'est pas
+## un reglage, c'est un souvenir.**
+var _portee_dosee: Dictionary = {}
+var _niveau_dose: Dictionary = {}
+
+func doser_portee(cle: String, valeur: float) -> void:
+	_portee_dosee[cle] = clampf(valeur, 0.02, 6.0)
+
+func doser_niveau(cle: String, valeur: float) -> void:
+	_niveau_dose[cle] = clampf(valeur, -40.0, 12.0)
+
+func portee_dosee(cle: String) -> float:
+	return float(_portee_dosee.get(cle, portee_relative_de(cle)))
+
+func niveau_dose(cle: String) -> float:
+	return float(_niveau_dose.get(cle, niveau_relatif_de(cle)))
+
+## Diagonale de la carte par defaut (20x20 cases de 35 px), en pixels. Sert tant
+## qu'`accorder_a_la_carte()` n'a pas ete appelee — une suite, un menu, un banc.
+## Ce n'est pas un repli silencieux : c'est la meme grandeur, calculee sur la
+## carte que le jeu charge par defaut.
+const PORTEE_CARTE_DEFAUT: float = 989.95
+
+## Courbe d'attenuation (`AudioStreamPlayer2D.attenuation`), exposant applique a
+## `(1 - d/portee)`.
+##
+## **0,40 — juge par Adrien au banc le 2026-08-25, et c'est l'inverse de ce que
+## le raisonnement avait produit.** La valeur proposee etait 2,0, choisie parce
+## qu'elle fait couter 12 dB a la mi-portee : « une distance, pas un reglage ».
+## A l'oreille, non. Un exposant inferieur a 1 garde le son PRESENT presque
+## partout et ne l'efface qu'au bout — mi-portee ne coute plus que 2,4 dB, et la
+## chute arrive tard.
+##
+## Ce que ce choix dit du jeu, et il faut le lire avant de le rejuger : dans le
+## noir absolu, **entendre que l'autre existe vaut plus que savoir a quelle
+## distance il est**. Une decroissance franche rend la distance lisible et rend
+## le silence trop frequent — or le silence, ici, n'est pas une information, c'est
+## une absence d'information. Le second precedent du depot ou l'oreille renverse
+## le calcul, apres la recuperation d'eblouissement (2026-08-24).
+const COURBE_DISTANCE_DEFAUT: float = 0.4
+
+## Diagonale de la carte courante, posee par `accorder_a_la_carte()`.
+var _portee_carte: float = PORTEE_CARTE_DEFAUT
+
+## Les deux molettes du dosage. Publiques a dessein : le banc les tourne pendant
+## que le son joue, et **un dosage qui demande de relancer le jeu ne se fait
+## pas** — c'est ce regime qui a laisse l'eblouissement non fonctionnel deux mois
+## sans que personne s'en apercoive.
+## **1,80 — juge par Adrien au banc le 2026-08-25.** Toutes les portees relatives
+## sont donc multipliees par 1,8 : un pas porte 802 px sur la carte par defaut,
+## un tir 2851. Le facteur reste une molette et n'est pas fondu dans la table —
+## c'est ce qui garde LISIBLE le fait qu'un humain a tranche, et de combien il a
+## deplace la proposition.
+const FACTEUR_PORTEE_DEFAUT: float = 1.8
+
+var facteur_portee: float = FACTEUR_PORTEE_DEFAUT
+var courbe_distance: float = COURBE_DISTANCE_DEFAUT
+
+## La diagonale d'une carte, en pixels. Pure : verifiable sans arene ni audio.
+static func diagonale_carte(grille: Vector2i, tuile: Vector2i) -> float:
+	return Vector2(float(grille.x) * float(tuile.x),
+		float(grille.y) * float(tuile.y)).length()
+
+## La portee relative d'un son, d'apres sa cle.
+##
+## Un tir joue par son CHEMIN vaut un tir joue par sa cle — meme precaution que
+## `priorite_de`, et pour la meme raison : depuis V4.1 le tir arrive sous les
+## deux formes, et une comparaison qui ne repond qu'a l'une echoue en silence.
+static func portee_relative_de(stream_or_key: Variant) -> float:
+	if est_un_tir(stream_or_key):
+		return float(PORTEE_RELATIVE.get("shoot", PORTEE_RELATIVE_DEFAUT))
+	if stream_or_key is String:
+		return float(PORTEE_RELATIVE.get(stream_or_key, PORTEE_RELATIVE_DEFAUT))
+	return PORTEE_RELATIVE_DEFAUT
+
+## La portee absolue d'un son, en pixels. Pure, et c'est elle que la suite tient.
+static func portee_absolue(stream_or_key: Variant, portee_carte: float,
+		facteur: float) -> float:
+	return maxf(1.0, portee_carte * portee_relative_de(stream_or_key) * facteur)
+
+## La meme, mais en tenant compte d'un dosage en cours au banc. Non statique :
+## elle lit l'etat de la seance. En jeu, sans seance, elle rend exactement
+## `portee_absolue` — le banc ne peut donc pas faire diverger le jeu de sa table.
+func portee_courante(stream_or_key: Variant) -> float:
+	var cle := String(stream_or_key) if stream_or_key is String else ""
+	var relative := float(_portee_dosee.get(cle, portee_relative_de(stream_or_key)))
+	return maxf(1.0, _portee_carte * relative * facteur_portee)
+
+## ============================================================================
+## S3 bis — LA FORCE DE L'OCCLUSION, EN UNE SEULE MOLETTE
+## ============================================================================
+##
+## « L'occlusion marche moyen, je ne sais pas pourquoi » (Adrien, 2026-08-25).
+## Cette phrase dit surtout qu'il lui manquait de quoi chercher : le passe-bas et
+## la perte de niveau etaient cuits dans le layout, donc invisibles et
+## intouchables pendant l'ecoute.
+##
+## **Une seule molette pour les deux, parce que « a quel point un mur etouffe »
+## est UNE dimension perceptive, pas deux.** A 0 le mur ne fait rien ; a 1 il
+## coupe a 300 Hz et retire 14 dB. Les deux bougent ensemble parce qu'ils disent
+## la meme chose — un mur epais assourdit ET attenue, jamais l'un sans l'autre.
+const OCCLUSION_COUPURE_MIN: float = 300.0
+const OCCLUSION_COUPURE_MAX: float = 5000.0
+const OCCLUSION_PERTE_MAX_DB: float = -14.0
+
+## Force appliquee au bus d'occlusion. 0,55 correspond au reglage cuit dans
+## `default_bus_layout.tres` (620 Hz, -7 dB) : le banc demarre donc exactement
+## sur ce qu'Adrien a deja entendu, et tout ecart qu'il posera sera un ecart
+## contre ce souvenir-la.
+var force_occlusion: float = 0.55
+
+## Ecrit la force dans le bus. Idempotente, appelable a chaque frame.
+func appliquer_force_occlusion(force: float) -> void:
+	force_occlusion = clampf(force, 0.0, 1.0)
+	var idx := AudioServer.get_bus_index(BUS_SFX_OCCLUS)
+	if idx == -1:
+		return
+	AudioServer.set_bus_volume_db(idx, OCCLUSION_PERTE_MAX_DB * force_occlusion)
+	for i in AudioServer.get_bus_effect_count(idx):
+		var effet := AudioServer.get_bus_effect(idx, i)
+		if effet is AudioEffectFilter:
+			(effet as AudioEffectFilter).cutoff_hz = lerpf(
+				OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, force_occlusion)
+
+## La coupure courante du MUR, pour affichage. Pure.
+##
+## Nommee `coupure_occlusion_pour` et non `coupure_pour` : ce fichier porte deja
+## une `coupure_pour(torches)` — le passe-bas de la musique pilote par les
+## torches (V5.2). Deux coupures, deux sujets ; le parseur a attrape la
+## collision, mais un nom qui aurait passe aurait ete pire qu'une erreur.
+static func coupure_occlusion_pour(force: float) -> float:
+	return lerpf(OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, clampf(force, 0.0, 1.0))
+
+## Accorde le son a la carte qu'on vient de poser. Appelee par `rebuild_arena`.
+func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i) -> void:
+	_portee_carte = maxf(1.0, diagonale_carte(grille, tuile))
+
+func portee_carte() -> float:
+	return _portee_carte
+
+## ============================================================================
+## S3 — UN MUR ETOUFFE (decision d'Adrien, 2026-08-25)
+## ============================================================================
+##
+## « Oui, mais **naturellement par la reverb** » — et cette formulation porte la
+## mecanique. Derriere un mur, ce qui parvient a l'oreille EST le champ
+## reverbere : le direct est bloque, ce qui reste a rebondi. Donc **on n'ajoute
+## pas de reverb quand c'est occulte** — l'oreille entendrait un effet
+## s'allumer — **on retire le son direct et on laisse ce qui reverberait deja**.
+## Le son ne disparait pas : il passe dans la piece d'a cote. Meme geste que la
+## torche, ou l'on ne peint pas d'ombre, on retire de la lumiere.
+##
+## Concretement, le bus `SFX_Occlus` porte la MEME piece que `SFX` — memes
+## `room_size`, `damping`, `hipass` — avec le **`dry` effondre** et le `wet`
+## releve, plus un passe-bas. C'est litteralement « le meme endroit, sans le
+## direct ». Un second jeu de reglages en ferait une autre piece, et deux pieces
+## superposees ne diraient plus rien de la carte — c'est le raisonnement qui a
+## fait renoncer aux queues cuites dans l'echantillon (V4.1).
+##
+## **Une voix, pas deux.** Un vrai fondu sec/reverbere demanderait de jouer le
+## son sur deux bus a la fois, donc deux voix sur seize pour un seul evenement,
+## dans un pool que les pas saturent deja. Le choix de bus a l'instant du tir
+## rend la meme information pour une voix. Si le fondu devient necessaire, c'est
+## `SFX_POOL_SIZE` qu'il faudra revoir d'abord.
+const BUS_SFX := "SFX"
+const BUS_SFX_OCCLUS := "SFX_Occlus"
+
+## L'occlusion est-elle active ? Coupee, tout part en direct — c'est l'etat
+## d'avant, et le banc s'en sert pour l'A/B.
+var occlusion_active: bool = true
+
+## Combien de sons ont ete joues SANS que l'occlusion ait pu etre calculee.
+##
+## Un `PhysicsDirectSpaceState2D` ne se consulte que pendant une frame de
+## physique ; un son joue depuis un `Timer` ou une frame de rendu ne peut donc
+## pas etre teste. Il part alors en direct — le repli le plus sur, puisqu'il ne
+## retire rien.
+##
+## **Mais un repli doit etre DISCERNABLE de la reussite** (piege du 2026-08-25,
+## paye sur `apercu_torche`). Sans ce compteur, une occlusion qui ne se
+## calculerait jamais s'entendrait exactement comme une occlusion desactivee, et
+## on chercherait le defaut dans le bus.
+var occlusions_hors_frame: int = 0
+
+## Quel bus pour ce son ? Pure a dessein.
+##
+## Ne detourne **que** le bus de jeu : un appelant qui demande explicitement
+## `Master` (les apercus de l'ecran audio) ou `Speaker` garde ce qu'il a demande.
+## Sans cette garde, regler le volume dans les options ferait passer les apercus
+## par la reverb d'occlusion.
+static func bus_pour(bus_demande: String, occulte: bool) -> String:
+	if bus_demande != BUS_SFX:
+		return bus_demande
+	return BUS_SFX_OCCLUS if occulte else BUS_SFX
+
+## Un mur separe-t-il ce point de l'oreille ?
+##
+## Rend `false` des qu'on ne peut pas repondre — pas d'oreille posee, occlusion
+## coupee, hors frame de physique. **Le doute joue en direct** : etouffer un son
+## qu'on n'a pas su tester retirerait une information sur une incertitude.
+func est_occulte(pos: Vector2) -> bool:
+	if not occlusion_active or _oreille == null or not is_instance_valid(_oreille):
+		return false
+	if not _oreille.is_inside_tree():
+		return false
+	if not Engine.is_in_physics_frame():
+		occlusions_hors_frame += 1
+		return false
+	var monde := _oreille.get_world_2d()
+	if monde == null:
+		return false
+	var espace := monde.direct_space_state
+	if espace == null:
+		return false
+	var q := PhysicsRayQueryParameters2D.create(pos, _oreille.global_position,
+		MapGeometry.WALL_LAYER)
+	return not espace.intersect_ray(q).is_empty()
 
 const SFX_POOL_SIZE: int = 16
 
@@ -404,8 +729,20 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.global_position = pos
 	player.stream = stream
 	player.pitch_scale = final_pitch
-	player.volume_db = volume_final
-	player.bus = bus_name
+	# S2 — la portee se pose PAR SON et par carte, pas une fois pour toutes a la
+	# construction du pool : le pool est partage, la voix qui joue un pas vient
+	# de jouer un tir, et une portee posee a `_ready()` serait celle du dernier
+	# son qui l'a occupee.
+	player.max_distance = portee_courante(stream_or_key)
+	player.attenuation = courbe_distance
+	# Le niveau par son s'AJOUTE au volume demande, il ne le remplace pas : le
+	# duck des pas sous le tir (V4.15) reste un ecart, pas une valeur absolue.
+	var cle_niveau := String(stream_or_key) if stream_or_key is String else ""
+	player.volume_db = volume_final + float(
+		_niveau_dose.get(cle_niveau, niveau_relatif_de(stream_or_key)))
+	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
+	# position du son et celle de l'oreille.
+	player.bus = bus_pour(bus_name, est_occulte(pos))
 	player.play()
 	return player
 

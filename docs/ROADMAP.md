@@ -2337,6 +2337,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
+| **Aucun dosage n'est demandé à Adrien sans le moyen de l'entendre** (2026-08-25, Adrien) | Il a demandé le banc avant même qu'on lui propose les valeurs : *« Oui il faut un banc pour que je puisse doser. »* La règle qui en sort dépasse l'audio. **Un réglage qui se juge à la sensation ne se règle pas en éditant une constante et en relançant** — une itération par minute, et le souvenir du réglage précédent est déjà parti. L'oreille, comme l'œil, ne juge pas dans l'absolu : elle juge des ÉCARTS, donc il faut pouvoir revenir en arrière **pendant que ça joue**. Le dépôt a déjà payé l'absence de ce moyen au prix fort : l'éblouissement est resté non fonctionnel deux mois, et sa récupération, une fois enfin jouée manette en main, a été **renversée** par l'expérience contre ce que le raisonnement seul avait produit. Corollaire pour toute session : livrer un réglage sans son banc, c'est livrer une question qu'Adrien ne pourra pas trancher. |
 | **Le son reste en 2D, et un mur étouffera par la réverb** (2026-08-25, Adrien) | Deux arbitrages du chantier « spatialisation du son », pris le jour où il a été inscrit. **2D** : mesuré plutôt que supposé, `AudioStreamPlayer3D` ne donne **pas** de localisation supplémentaire — Godot ne fait aucun rendu binaural et la sortie est stéréo, donc la direction se réduit des deux côtés à un équilibre gauche/droite. Son seul gain réel est le passe-bas qui s'ouvre avec la distance. Or ce qui manque au jeu est la direction *relative*, que S1 et S2 rendent sans changer de nœud. **Réversible sans travail perdu tant que les sites d'appel ne passent qu'un `Vector2`** — c'est cette signature qu'il faut protéger, pas le type du nœud. **Le mur** : oui, il étouffe, et la formulation d'Adrien porte la mécanique — « naturellement par la réverb ». Ce n'est donc pas *ajouter* de la réverb quand c'est occulté (l'oreille entendrait un effet s'allumer), c'est **retirer le son direct et laisser ce qui réverbérait déjà** : le son passe dans la pièce d'à côté. Même geste que la torche, où l'on ne peint pas d'ombre mais retire de la lumière. Conséquence de jeu assumée : **cela ajoute de l'information**, un pas sourd disant « derrière un mur » et un pas net « ligne directe » — l'oreille se met à enseigner la carte. |
 | **L'artiste unique, c'est Adrien — et le procédé se choisit par famille d'asset** (2026-08-24, Adrien) | DA1.5 demandait « un artiste, un lot, un style » pour éviter que des sources dépareillées recréent l'incohérence que tout le chantier chasse. L'artiste unique étant Adrien, **le risque a changé de nature : il n'est plus entre personnes, il est entre outils.** Deux textures faites à trois mois d'écart par deux procédés différents jurent exactement comme deux artistes différents. La décision n'est donc pas un nom, c'est une correspondance à tenir comme on tient la palette. **Lumière et matière** (cookie, halos, flash de bouche, sang, impacts, usure) : image générée convertie en masque **plus** paramétrage par le code — l'image ne fournit que la matière, le code garde la géométrie, ce qui laisse les quatre angles d'arme gratuits. **Wordmark, icône, viseur** : main levée sur gabarit, parce qu'un logo ne se génère pas. **Key art** : génération fortement retravaillée. Et la règle qui rend le premier procédé honnête : **une image générée n'est jamais l'asset, seulement sa matière** — on n'en garde que la luminance passée au contraste, si bien que ce qui survit est la structure du bruit et non le style du modèle. Sans elle, on remplace le look « généré par défaut » par le look « généré tout court », c'est-à-dire le défaut même qui a ouvert ce chantier. |
 | **En ligne, on ne voit plus le HUD de l'adversaire** (2026-08-19, Adrien) | Il montrait ses **points de vie** et surtout **son cercle de recharge** — l'instant exact où son arme redevient prête. Dans un jeu dont la règle est « la seule information est la lumière », c'était un renseignement que personne n'avait payé en s'éclairant ; le cercle est le plus cher des deux, puisque sans lui il faut **compter** après avoir entendu un tir, et qu'avec lui on **lit**. Rien n'indiquait que quiconque l'ait décidé — c'était une conséquence d'implémentation. **En écran partagé les deux restent** : les joueurs voient l'écran l'un de l'autre de toute façon. **Les deux panneaux ne sont plus « J1 » et « J2 » mais « moi » et « l'autre »** : le premier est bleu et à gauche, le second rouge et à droite, et `GameState` alimente le premier avec le joueur **local** quel que soit son numéro. Correction d'Adrien le même jour : « le client devient bleu, c'est l'adversaire qui doit apparaître rouge pour lui » — **la couleur suit le RÔLE, pas le numéro**. Le numéro garde ce qui lui appartient vraiment : le **point d'apparition**, qui reste celui de J2. |
@@ -6837,15 +6838,52 @@ un mur doit étouffer, « naturellement par la réverb » — et S7 **on reste e
 2D**. Ce qui attend encore l'oreille d'Adrien, et non un choix de conception,
 ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
 
-- **S1 — L'oreille rejoint le joueur.** *Bloquant : tout le reste est inaudible
-  sans lui.* **Implémenté le 2026-08-25 dans un worktree isolé**
-  (`worktree-audio-oreille-et-stingers`, `4d8a85e`), pas sur `main` : les deux
-  gestes y sont faits ensemble, avec une suite headless (`tools/test_oreille.gd`)
-  qui verrouille le défaut au lieu de le corriger une fois. Cette session-ci
-  n'a pas écrit ce code et n'en juge pas le détail ; elle note **une troisième
-  pièce qu'elle avait manquée et que cette branche a mesurée** : un
-  `SubViewport` n'est pas une oreille par défaut (`audio_listener_enable_2d`
-  vaut `false`). Il en fallait donc trois, pas deux.
+- **S1 — L'oreille rejoint le joueur. ✅ FAIT, sur `main`** (`4d8a85e`, fusionné
+  par `e3e1b34`), avec une suite headless (`tools/test_oreille.gd`) qui
+  verrouille le défaut au lieu de le corriger une fois.
+
+  ⚠️ *Cette ligne a dit « dans un worktree, pas sur `main` » pendant vingt
+  minutes, et c'était vrai en l'écrivant : `origin` a bougé entre-temps. Sur un
+  arbre que six sessions partagent, **un état écrit vieillit plus vite qu'il ne
+  se relit** — c'est une raison de plus de ne mesurer qu'au moment de décider.*
+
+  **Trois pièces, pas deux** — la troisième avait été manquée par cette section
+  et mesurée par la branche : un `SubViewport` n'est **pas** une oreille par
+  défaut (`audio_listener_enable_2d` vaut `false`).
+
+  **Et deux défauts se cachaient derrière le correctif, tous deux corrigés le
+  2026-08-25 dans le worktree `audio-dosage`.** Ils méritent d'être lus
+  ensemble, parce qu'ils forment une chaîne où chaque maillon rend le suivant
+  invisible :
+
+  1. **La règle interrogeait le transport** (`local_idx >= 0`) quand la vraie
+     question est *« y a-t-il exactement un auditeur devant l'écran ? »*.
+     L'entraînement — une vue, un joueur, une sortie — était donc exclu avec
+     l'écran partagé, alors que la raison d'exclure celui-ci (deux joueurs, une
+     paire d'enceintes) ne le concerne pas. Or **l'entraînement est le seul mode
+     solo du jeu**, donc le seul où l'on peut doser un réglage sonore sans
+     monter deux instances : le mode dont on avait le plus besoin était le seul
+     privé d'oreille.
+  2. **Le porteur était faux dès qu'on corrigeait la règle.** `p1 if idx == 0
+     else p2` désigne **J2** quand l'index vaut −1 — en entraînement, un joueur
+     caché et immobile. L'oreille se serait posée sur un fantôme et le symptôme
+     aurait été « le panoramique ne bouge pas » : le défaut d'avant, sous un
+     correctif qui a l'air posé.
+  3. **Et le drapeau se lit trop tôt.** L'entraînement passe par
+     `_do_start_round`, **qui remet `training_mode` à faux avant de rendre la
+     main** — c'est écrit dans son propre commentaire. Une règle qui interroge
+     le drapeau depuis l'intérieur du démarrage lit donc toujours « non ». Il
+     faut un second appel, là où le drapeau est enfin vrai. Sans lui, les deux
+     correctifs précédents auraient été posés, justes, et sans aucun effet.
+
+  **La leçon, et c'est la deuxième fois que l'entraînement l'enseigne :** la
+  feuille de route porte déjà « Le regard suit le joueur, pas le score » — le
+  suivi de caméra vivait dans `if round_active:`, l'entraînement désarme la
+  manche, la caméra ne suivait donc jamais. Même faute, même mode. **Ce n'est
+  pas une coïncidence : l'entraînement est le seul endroit du jeu qui sépare des
+  concepts que le code confond** — être en ligne, être seul, jouer une manche
+  comptée. Tout drapeau qui mélange ces trois-là s'y trahira, et nulle part
+  ailleurs.
 
   Le contenu de l'item, qui reste la référence : deux gestes qui ne valent que
   **pris ensemble** — sortir le pool du
@@ -6857,7 +6895,21 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   `audio_manager.gd` et `game_state.gd`, tous deux au domaine « game feel ».
   **Vérifiable en headless sans pilote audio** : égalité des `World2D` et
   présence de l'auditeur sont des faits de graphe de scène, pas des sons.
-- **S2 — La distance redevient une information.** `max_distance` vaut 2000 px
+- **S2 — La distance redevient une information. ✅ CÂBLÉ le 2026-08-25, PAS
+  ENCORE DOSÉ.** La portée se dérive désormais de la carte
+  (`AudioManager.accorder_a_la_carte`, appelée par `rebuild_arena` — le seul
+  endroit qui connaît la taille de la carte et qui suit un changement depuis le
+  menu), et **elle est posée par son** : un tir porte 1,6 fois la diagonale, un
+  pas 0,45. Les deux tables du fichier disent maintenant la même chose sous deux
+  angles — `SFX_PRIORITE` ce que le son apprend en voix, `PORTEE_RELATIVE` ce
+  qu'il apprend en pixels. Un tir s'entend d'un bout à l'autre de l'arène parce
+  que c'est le renseignement le plus cher du jeu après la lumière ; un pas est
+  un indice de proximité, et l'entendre partout le rendrait bavard sans rien
+  apprendre.
+
+  ⚠️ **Les valeurs sont des propositions, pas des décisions** — aucune n'a été
+  jugée à l'oreille. Elles se dosent au banc (voir plus bas). Le constat qui les
+  motive : `max_distance` valait 2000 px
   pour une carte qui en fait 700 à 840. Même l'oreille bien posée, « collé à
   moi » et « à l'autre bout de la carte » ne seraient séparés que d'environ
   **3,7 dB** : ce n'est pas une distance, c'est une nuance de mixage. La portée
@@ -6892,7 +6944,30 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   carte : c'est un changement d'équilibre du duel, pas un polish, et c'est
   pour ça qu'il se posait à Adrien.
 
-  Ce qui reste vrai du constat d'origine : rien n'atténue aujourd'hui un son
+  **✅ CÂBLÉ le 2026-08-25, PAS ENCORE DOSÉ.** Le bus `SFX_Occlus` porte la
+  **même pièce** que `SFX` — mêmes `room_size`, `damping`, `hipass` — avec le
+  `dry` effondré à 0,12, le `wet` relevé à 0,85 et un passe-bas à 620 Hz. C'est
+  littéralement « le même endroit, sans le direct ». Un second jeu de réglages
+  en aurait fait une autre pièce, et deux pièces superposées ne diraient plus
+  rien de la carte : c'est le raisonnement qui a fait renoncer aux queues cuites
+  dans l'échantillon (V4.1).
+
+  **Il envoie dans `SFX`, pas dans `Master`, et ce n'est pas un détail.** D'une
+  part le curseur « Effets » des options continue de le gouverner sans qu'on
+  touche à `settings_manager.gd` (domaine « menus ») — sans quoi les sons
+  occultés auraient ignoré le réglage de volume, en silence. D'autre part la
+  chaîne devient physiquement honnête : **la pièce d'à côté, puis la vôtre.**
+
+  Le rayon part du son vers l'oreille au seul instant où l'on connaît les deux
+  positions — dans `play_sfx_2d`. **Le doute joue en direct** : pas d'oreille
+  posée, occlusion coupée, ou appel hors frame de physique, et le son part sec.
+  Étouffer un son qu'on n'a pas su tester retirerait une information sur une
+  incertitude. Ces replis sont **comptés** (`occlusions_hors_frame`) et lus par
+  le banc : un repli qui ne se distingue pas de la réussite déplace le
+  diagnostic au lieu de dégrader le service — piège payé le 2026-08-25 sur
+  `apercu_torche`.
+
+  Ce qui reste vrai du constat d'origine : rien n'atténuait un son
   émis derrière un mur, alors que le mur arrête la lumière **et** le flash de
   bouche — c'était la dernière asymétrie entre les deux canaux d'information du
   jeu. La
@@ -6918,6 +6993,46 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   réverb dérivée de la carte ne s'entendrait que comme une couleur de plus. Son
   prix est déjà payé — c'est pour elle que V4.1 a renoncé aux queues cuites dans
   l'échantillon.
+- **S8 — Le banc de dosage. ✅ FAIT le 2026-08-25** (`tools/banc_audio.tscn`),
+  et **il est la condition de S2 et S3, pas leur accessoire.**
+
+  **La règle, validée par Adrien le 2026-08-25 : aucun dosage ne lui est demandé
+  sans le moyen de l'entendre.** Doser en éditant une constante, relançant le
+  jeu et rejouant une manche, c'est une itération par minute — et une mémoire
+  d'oreille perdue entre deux essais, alors que **l'oreille ne juge pas dans
+  l'absolu, elle juge des écarts**. C'est le régime exact qui a laissé
+  l'éblouissement non fonctionnel pendant deux mois sans que personne s'en
+  aperçoive : ce qu'on ne peut pas comparer, on ne le corrige pas, on s'y
+  habitue.
+
+  Le banc déplace la source, interpose les murs de la vraie carte, tourne le
+  facteur de portée et la courbe **pendant que le son joue**, coupe l'occlusion
+  d'une touche pour l'A/B, et met un réglage en mémoire pour y revenir. Il
+  affiche la distance, la portée du son courant, l'atténuation en décibels, le
+  bus effectivement choisi et le compteur de replis.
+
+  **Il appelle `AudioManager`, il ne le recopie pas** — condition non
+  négociable : un banc qui réimplémente ce qu'il mesure fait régler quelque
+  chose qui n'est pas le jeu. Son afficheur de décibels est le seul calcul en
+  double, et il est nommé comme tel : il est là pour être **lu**, jamais pour
+  décider ce qui sort.
+
+  ⚠️ **Et il ne se pilotait pas.** Écrit avec un `match` sur `keycode`, il
+  attendait `KEY_1` — or **le clavier d'Adrien est en AZERTY**, où la rangée du
+  haut produit `&`, `é`, `"` sans Maj. Les touches ne faisaient donc rien du
+  tout : aucune erreur, aucun test rouge, un banc qui a l'air cassé. Corrigé en
+  lisant la **position physique** des touches (`physical_keycode`, identique
+  quelle que soit la disposition) et en n'employant que des touches qui ne
+  bougent pas d'un clavier à l'autre — la souris place les deux points, les
+  flèches tournent les molettes. **La disposition du clavier n'est pas un détail
+  de confort sur un outil de dosage :** un banc qu'on ne peut pas piloter ne
+  dose rien, et c'était la seule livraison du lot qui comptait vraiment. Un
+  contrôle textuel garde le retour à `keycode`.
+
+  ⚠️ **Ce que le banc ne dira pas** : si l'on parvient à *localiser* un
+  adversaire. C'est une question de duel, pas de mixage — elle demande deux
+  machines, et c'est la même dette que la contre-vérification H1. Le banc règle
+  le mixage ; le duel valide le jeu. Deux séances, pas une.
 - **S6 — L'écran partagé : deux joueurs, une seule sortie stéréo.** Hors
   périmètre jusqu'à nouvel ordre (Adrien, 2026-08-25).
 
