@@ -246,6 +246,34 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### ✅ PARTIELLEMENT SERVIE — brancher le brouillage de l'éblouissement (2026-08-25)
+
+**Points 1, 2 et le voile : branchés le 2026-08-25 (commit ci-dessous).** Le
+point 3 — halo et flou, le seul qui LISE L'ÉCRAN — reste ouvert, et la mesure
+qui le conditionne a donné un résultat qu'il faut lire avant de s'y remettre :
+voir « Le 1 % bas n'est pas tenu » puis sa rectification thermique dans
+`docs/ROADMAP.md`. En deux mots : **la prémisse de cette demande (« le jeu
+franchit la cible de deux images par seconde ») n'est pas vérifiable en l'état**,
+et la seule mesure assez longue pour être lue donne la cible **tenue** (1 % bas
+à 60,5 sur 60 s). Il faut une machine froide et un relevé long, pas dix courts.
+
+⚠️ **Un point que la demande n'anticipait pas, et qui s'inverse facilement :**
+l'alpha de l'adversaire suit l'éblouissement du **REGARDEUR**, pas du regardé.
+`visual_enemy` est le corps d'un joueur *tel que l'autre le voit* — c'est donc le
+`dazzle_amount` de l'autre qui décide s'il le distingue. Prendre le sien produit
+l'effet exactement inverse : on s'efface soi-même en éblouissant quelqu'un.
+
+⚠️ **Et un piège de branchement qui a coûté un lot rouge :** `brouillage.gd`
+**n'a pas de `class_name`** — c'est un fichier sans dépendance, que la maison
+`preload` comme `vision.gd` et `eblouissement.gd`. Sans le `const Brouillage :=
+preload(...)`, `ui.gd` cesse de compiler, et **quatre suites de MENUS
+échouent** en désignant des écrans qui n'ont rien fait. Même forme que
+`blood_stain.gd` le même jour, qui en faisait tomber 32 via `bullet.gd` : dans un
+projet où tout se précharge, **une erreur de compilation ne rougit jamais là où
+elle est.**
+
+*Texte d'origine de la demande, conservé :*
+
 ### 📌 DEMANDE OUVERTE — brancher le brouillage de l'éblouissement (2026-08-25)
 
 **À qui reprendra `ui.gd`, `player.gd` ou `game_state.gd`.** Demandé par Adrien.

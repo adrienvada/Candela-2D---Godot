@@ -13,6 +13,13 @@ const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
 const SHADER_SPRINT_STREAKS := preload("res://sprint_streaks.gdshader")
 ## Le modèle d'éblouissement, sans dépendance — voir `eblouissement.gd`.
 const Eblouissement := preload("res://eblouissement.gd")
+## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
+## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
+## `preload` plutôt que de les déclarer globalement. Oublier ce `preload` ne
+## produit pas une erreur à l'endroit fautif : `ui.gd` cesse de compiler, et
+## **quatre suites de menus échouent** en désignant des écrans qui n'ont rien
+## fait. Payé le 2026-08-25.
+const Brouillage := preload("res://brouillage.gd")
 
 @export var player_id: int = 0
 @export var speed: float = 260.0
@@ -1044,6 +1051,26 @@ func _physics_process(delta):
 				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
 			# V5.6 — le halo de rétrodiffusion respire au même pas.
 			_backscatter_pulse = BACKSCATTER_STEP_PULSE
+
+	# Chantier « brouiller la position de celui qui éblouit » — l'adversaire
+	# s'efface pour QUI EST ÉBLOUI.
+	#
+	# ⚠️ **`modulate.a` et RIEN d'autre.** `player_enemy_light.gdshader` plafonne
+	# `LIGHT` à `COLOR.rgb` : éclaircir la COULEUR relève ce plafond et fait
+	# BRILLER la silhouette au lieu de la fondre. Un réglage entier est mort de
+	# ça, et le piège ne se voit qu'à l'écran — le code paraît juste.
+	#
+	# ⚠️ **L'alpha suit l'éblouissement du REGARDEUR, pas du regardé.**
+	# `visual_enemy` est ce corps-ci tel que l'AUTRE le voit : c'est donc le
+	# dazzle de l'autre qui décide s'il le distingue. Prendre le sien inverserait
+	# l'effet — on s'effacerait soi-même en éblouissant quelqu'un.
+	if state != null and visual_enemy != null:
+		var regardeur: Node = state.p2 if player_id == 0 else state.p1
+		if is_instance_valid(regardeur):
+			var a := Brouillage.opacite(float(regardeur.dazzle_amount))
+			visual_enemy.modulate.a = a
+			if visual_enemy_ptr != null:
+				visual_enemy_ptr.modulate.a = a
 
 	# DA2.4 — le corps roule sur le pied porteur.
 	#

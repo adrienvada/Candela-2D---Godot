@@ -40,6 +40,13 @@ signal pick_window_cancelled
 # domicile.
 
 const Charte := preload("res://charte.gd")
+## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
+## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
+## `preload` plutôt que de les déclarer globalement. Oublier ce `preload` ne
+## produit pas une erreur à l'endroit fautif : `ui.gd` cesse de compiler, et
+## **quatre suites de menus échouent** en désignant des écrans qui n'ont rien
+## fait. Payé le 2026-08-25.
+const Brouillage := preload("res://brouillage.gd")
 
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
@@ -5215,9 +5222,20 @@ const CHRONO_URGENT_S := 10.0
 var _chrono_etat: int = -1
 
 func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
-	# Lu une fois pour les deux moitiés d'écran : `current_effect` dérive
-	# lui-même le contexte classé, on ne le lui souffle pas.
-	var voile := GameSettings.current_effect("eblouissement")
+	# ⚠️ **Le voile n'est plus réglable, et ce n'est pas un durcissement gratuit.**
+	# Décision d'Adrien, 2026-08-25 : « on ne peut pas régler la valeur
+	# éblouissement, il ne faut pas donner d'avantage à un des deux ». Elle
+	# DÉPASSE celle du 2026-08-18 au lieu de la contredire : l'ancienne laissait
+	# le curseur moduler le voile parce que le voile ne faisait que blanchir
+	# l'écran — l'adversaire restait net et bien placé derrière. Depuis que sa
+	# lecture dépend du halo et du flou, **tout ce qui touche à l'éblouissement
+	# touche à l'information**, et un curseur devient un avantage compétitif quel
+	# que soit ce qu'il règle.
+	#
+	# La valeur passe donc de 0,8 à `Brouillage.VOILE_FACTEUR` (0,3), et le 0,8
+	# disparaît avec le curseur : le voile faisait deux métiers — dire « tu es
+	# ébloui » ET cacher l'adversaire. Le second est parti au halo et au flou ;
+	# il ne reste que le premier, qui se contente de 0,3.
 	if p1:
 		if p1.hp < p1_target_hp:
 			p1_shake_time = 0.2
@@ -5234,7 +5252,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		p1_dazzle.color = Color(Charte.HALOGENE, p1.dazzle_amount * 0.8 * voile)
+		p1_dazzle.color = Color(Charte.HALOGENE,
+			p1.dazzle_amount * Brouillage.VOILE_FACTEUR)
 
 	if p2:
 		if p2.hp < p2_target_hp:
@@ -5252,7 +5271,8 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		p2_dazzle.color = Color(Charte.HALOGENE, p2.dazzle_amount * 0.8 * voile)
+		p2_dazzle.color = Color(Charte.HALOGENE,
+			p2.dazzle_amount * Brouillage.VOILE_FACTEUR)
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé
