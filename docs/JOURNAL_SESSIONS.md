@@ -246,6 +246,55 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « affichage » (2) : le chantier R inscrit, et un défaut de mon propre lot
+
+**Branche `worktree-subviewport-suivi`, basée sur `main` local (`aeade01`).**
+Demande d'Adrien : *préparer* le chantier « faire suivre les `SubViewport` à la
+fenêtre, avec une mesure au banc avant/après ». Préparer, donc : instrumenter,
+mesurer la référence, inscrire les étapes — **pas implémenter**.
+
+**Fichiers touchés : `tools/bench_framerate.gd`, `settings_manager.gd`,
+`docs/ROADMAP.md`, ce journal.**
+
+**Empiètement déclaré, le même qu'au lot précédent : `settings_manager.gd` est au
+domaine « menus ».** Un seul hunk cette fois, et c'est un **correctif de mon
+propre lot d'il y a une heure** — voir plus bas.
+
+**Le défaut, et il est à moi.** `DEBUG_WINDOW_FACTOR`, livré et fusionné ce matin,
+était **inopérant sur le poste d'Adrien**. Il vit dans `_apply_windowed()` ; les
+préférences portent `resolution_index = 2` (plein écran) ; et la branche du plein
+écran, qui refuse d'agir en débogage, ne faisait **rien du tout** au lieu de
+retomber sur une fenêtre. Elle n'atteignait donc jamais le doublement. Annoncé
+comme livré, il ne l'était pas. Corrigé : un plein écran refusé rend désormais la
+plus large fenêtre que le débogage autorise. **C'est le banc instrumenté qui l'a
+trouvé**, en imprimant `Fenêtre : 1280×720` là où on attendait 2560×1440.
+
+**Ce que le banc sait dire maintenant** (`tools/bench_framerate.gd`, qui n'est
+réservé par personne) : ses conditions de rendu avant de mesurer — fenêtre en
+pixels natifs, aire 2D, étirement, taille de rendu de chaque `SubViewport`, total
+de pixels de jeu — et **son propre état de focus**, dont il tire un verdict sur la
+validité du relevé.
+
+**Une correction que je dois à qui a écrit les relevés du 2026-08-16 :** la
+dispersion n'était pas due au second plan, mais aux **transitions** de focus.
+Fenêtre restée au second plan : 1 % bas à 142, 143, 144. Fenêtre ayant changé
+d'état : 44 et 71. La médiane ne bouge pas — 144 partout. L'ancienne explication
+était de la bonne famille et n'a jamais pu être vérifiée, faute d'instrument.
+Entrée de pièges ajoutée, sans toucher au texte d'origine.
+
+**À la session « spatialisation du son » — le chantier R croise le vôtre, et pas
+au bord.** L'option R3 (b) — sortir le duel du `SubViewport` en vue unique pour
+qu'il rende à la résolution de la fenêtre — **déplacerait le `World2D` du jeu**.
+C'est exactement l'objet de S1 : le pool audio vit dans le `World2D` de la racine,
+le jeu dans celui du `SubViewport`, et c'est pourquoi personne n'entend rien de
+positionnel. Les deux chantiers ne peuvent pas bouger ce monde chacun de leur
+côté. **Rien n'est décidé** : R3 attend un arbitrage d'Adrien, et je n'ai touché à
+aucun de vos fichiers.
+
+**Ce que je n'ai pas fait, et c'est le périmètre :** aucune ligne de `main.tscn`
+ni de `game_state.gd`. Le chantier est inscrit, mesuré, chiffré — il n'est pas
+commencé.
+
 ### 2026-08-25 — session « affichage » : `keep`, et la fenêtre du débogage
 
 **Branche `worktree-affichage-keep-fenetre`, worktree

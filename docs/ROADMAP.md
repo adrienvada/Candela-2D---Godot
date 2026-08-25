@@ -2598,6 +2598,60 @@ signature.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Ce n'est pas le second plan qui casse le 1 % bas, c'est la TRANSITION (2026-08-25)
+
+**Cette page attribuait déjà la dispersion des relevés de cadence à « la fenêtre
+que macOS bride quand elle n'est pas au premier plan » (2026-08-16, médianes de
+145 à 160). C'était la bonne famille de cause et la mauvaise cause.** Le banc ne
+mesurait pas le focus : il ne pouvait donc ni confirmer ni écarter l'explication,
+et elle est restée écrite comme un fait pendant neuf jours.
+
+Mesuré le 2026-08-25, six exécutions à charge et fenêtre identiques, une fois le
+banc instrumenté :
+
+- fenêtre **restée** au second plan : 1 % bas de **142, 143, 144** ;
+- fenêtre ayant **changé** d'état pendant la mesure : 1 % bas de **44 et 71**,
+  avec des images isolées à 18 et 60 ms ;
+- **la médiane ne bouge pas — 144 partout.**
+
+Le second plan seul ne coûte donc rien de visible. Ce qui coûte, c'est le moment
+où la fenêtre prend ou perd le focus : une poignée d'images à 18 ou 60 ms, et
+comme le 1 % bas d'un relevé de quinze secondes ne porte que sur une vingtaine
+d'images, **ces quelques hoquets décident du percentile à eux seuls**.
+
+Ce qui rend le piège coûteux : le chiffre faux est *parfaitement plausible*.
+« Doubler la fenêtre fait tomber le 1 % bas de 143 à 44 » se lit comme une
+régression de rendu, et aurait condamné le chantier R avant qu'il commence.
+
+La règle, désormais imprimée par le banc lui-même : **un relevé à focus mixte se
+jette.** Stable au premier plan ou stable au second plan sont l'un et l'autre
+exploitables — le second est un plancher, pas une aberration.
+
+### Le réglage était juste, le code était juste, le chemin entre les deux n'existait pas (2026-08-25)
+
+`DEBUG_WINDOW_FACTOR` double la fenêtre en débogage. Il vit dans
+`_apply_windowed()`. Le poste de développement a `resolution_index = 2` — **plein
+écran** — enregistré dans `user://settings.cfg`, et la branche du plein écran
+refuse d'agir en débogage pour ne pas masquer l'éditeur… **en ne faisant rien du
+tout**. Elle n'appelait donc jamais `_apply_windowed()`, et la fenêtre restait
+celle de `project.godot`.
+
+Résultat : la fonctionnalité était inopérante **précisément chez celui qui l'avait
+demandée**, et elle a été annoncée comme livrée. Aucune suite ne pouvait
+l'attraper — aucune n'ouvre de fenêtre — et la relecture du code ne l'attrape pas
+non plus, puisque les deux morceaux sont corrects séparément.
+
+**C'est le banc qui l'a trouvée, en imprimant `Fenêtre : 1280×720` là où on
+attendait 2560×1440.** Leçon de méthode, et elle vaut au-delà de ce cas : *un
+instrument qui imprime ses conditions attrape les défauts que ni les tests ni la
+relecture ne voient*, parce qu'il énonce ce qui est au lieu de vérifier ce qu'on
+a prévu.
+
+Corollaire pour tout `match` sur une préférence : **une branche qui refuse une
+option doit rendre la meilleure approximation disponible, jamais un statu quo
+muet.** Ici, un plein écran refusé se rend maintenant en la plus large fenêtre
+que le débogage autorise.
+
 ### Des clés dépréciées font réécrire `project.godot` tout seul (2026-08-25)
 
 `boot_splash/fullsize` et `boot_splash/use_filter` n'existent plus en Godot 4.7.
@@ -6974,6 +7028,103 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   reste réversible sans travail perdu **tant que les sites d'appel continuent
   de ne passer qu'un `Vector2`** : c'est cette signature qu'il faut protéger,
   pas le type du nœud.
+
+---
+
+## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
+
+**Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus
+grand.** Les `SubViewport` de `main.tscn` rendent à taille FIXE — 957×1080 et
+958×1080 en écran scindé, 1916×1080 en vue unique — **quelle que soit la
+fenêtre**, parce que `SubViewportContainer` ne répercute pas le facteur
+d'étirement sur le viewport qu'il porte. Agrandir la fenêtre étire donc l'image
+au lieu de l'affiner. Voir le piège « Agrandir la fenêtre n'agrandit pas le rendu
+du jeu ».
+
+Ce n'est pas un défaut : c'est un choix que personne n'a fait, et qui coûte de la
+netteté là où le jeu se joue.
+
+### R1 — Le banc doit dire ce qu'il rendait ✅ fait le 2026-08-25
+
+Sans ça, aucun avant/après n'est possible et **rien ne le signale**.
+`tools/bench_framerate.gd` imprime désormais, avant de mesurer : taille de
+fenêtre en pixels natifs, aire 2D et facteur d'étirement, taille de rendu de
+chaque `SubViewport` (en marquant celui qui est arrêté par `--une-vue`), et le
+total de pixels de jeu par image. Il suit aussi l'état de focus et **qualifie son
+propre relevé** — voir R2.
+
+### R2 — Relevé de référence ✅ fait le 2026-08-25
+
+Cinq exécutions, `--seconds 15`, duel complet, pompe contre pompe, torches
+allumées, sur Apple M3.
+
+| Fenêtre | Focus | Médian | 1 % bas | Pire image |
+|---|---|---|---|---|
+| 1280×720 | stable | 144 | 143 | 7,3 ms |
+| 2560×1440 | **mixte (93 %)** | 144 | 71 | 18,5 ms |
+| 2560×1440 | **mixte (89 %)** | 144 | 44 | 59,6 ms |
+| 2560×1440 | stable | 144 | 142 | 7,2 ms |
+| 2560×1440 | stable | 144 | 143 | 7,3 ms |
+| 2560×1440 | stable | 144 | 144 | 7,0 ms |
+
+**Deux résultats, et le second a failli passer pour le premier.**
+
+1. **Doubler la fenêtre ne coûte rien de mesurable** : médiane 144 partout,
+   1 % bas 142 à 144 dès que le focus est stable. C'est cohérent — les
+   `SubViewport` rendent les mêmes 2,07 Mpx, seul le blit final grandit.
+2. **Ce qui détruit le 1 % bas, ce sont les TRANSITIONS de focus**, pas la
+   charge. Les deux relevés à 44 et 71 sont exactement les deux où la fenêtre a
+   changé d'état pendant la mesure. Sans l'instrumentation de R1, on aurait lu
+   « doubler la fenêtre fait tomber le 1 % bas de 143 à 44 » — un chiffre faux,
+   parfaitement plausible, et qui aurait condamné le chantier avant qu'il
+   commence.
+
+**Référence à battre, donc : médiane 144, 1 % bas 142-144, pire image ~7,2 ms,
+pour 2,07 Mpx de jeu par image.** Protocole obligatoire : focus stable, relevé
+mixte jeté, trois exécutions.
+
+### R3 — Choisir le mécanisme ⚠️ demande un arbitrage d'Adrien
+
+Trois voies, et elles n'ont ni le même coût ni le même périmètre.
+
+**(a) Supersampler les `SubViewport`.** Remplacer `SubViewportContainer` par un
+`Control` qui dessine la texture, poser `SubViewport.size = taille × étirement`,
+et **corriger le zoom des caméras du même facteur** — sans quoi le champ de
+vision change, ce que `keep` vient précisément de figer. Touche `main.tscn` et
+`game_state.gd`, où le zoom est posé à 1.0 en cinq endroits et animé pour la
+killcam et l'encaissement. Coût de rendu : ×4 en plein écran (2,07 → 8,29 Mpx).
+
+**(b) Sortir le duel du `SubViewport` en vue unique.** En ligne et à
+l'entraînement il n'y a qu'une vue ; le jeu pourrait vivre dans le viewport
+racine, qui rend déjà à la résolution de la fenêtre. **Gratuit en pixels** — le
+blit intermédiaire disparaît au lieu de grossir — et c'est le mode compétitif,
+donc celui où la netteté compte. Mais ça déplace le `World2D` du jeu, et **ça
+croise le chantier son** : S1 dit que le pool audio vit dans le `World2D` de la
+racine tandis que le jeu vit dans celui du `SubViewport`. Les deux chantiers
+doivent se parler avant que l'un des deux bouge ce monde.
+
+**(c) Ne rien faire, et l'assumer par écrit.** La netteté actuelle est celle d'un
+1080p étiré. Personne ne s'en est plaint avant qu'on la mesure.
+
+### R4 — Mesurer l'après, même protocole
+
+Même fenêtre, même charge, focus stable, trois exécutions, relevés mixtes jetés.
+
+### R5 — Fixer le seuil AVANT de mesurer ⚠️ Adrien
+
+Le verdict « 1 % bas ≥ 120 fps » est la cible historique. **Elle se confirme ou
+se déplace maintenant, pas après le relevé** : un seuil choisi en regardant le
+résultat n'est pas un seuil.
+
+### R6 — Ce qui suit, si le seuil passe
+
+Recuire tuiles, sprites et cookie de torche à la nouvelle densité. La session DA2
+l'a mesuré du même jour : les planches sources font 2048² pour des sorties de 35
+et 36 px, et `tools/fabrique_tuiles.gd` / `tools/fabrique_sprites.gd` savent
+recuire — **c'est un paramètre, pas une commande d'assets**. Attention en
+revanche au piège *la résolution d'une texture de lumière décide de sa PORTÉE* :
+recuire le cookie sans la ligne de correction change la portée de la torche, donc
+une valeur de jeu.
 
 ---
 

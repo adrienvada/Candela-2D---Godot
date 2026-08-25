@@ -45,6 +45,14 @@ var _sans_shaders := false
 var _variante := ""
 ## Mesure la charge des MENUS au lieu du duel. Voir `_stress_menus()`.
 var _menus := false
+## Images mesurées pendant que la fenêtre n'avait PAS le focus.
+##
+## macOS bride une fenêtre au second plan. La ROADMAP attribuait déjà à ça la
+## dispersion des relevés du 2026-08-16 — 145 à 160 de médiane sur trois
+## exécutions — mais le banc ne le mesurait pas : il ne pouvait donc ni le
+## confirmer ni l'écarter. Un relevé pris derrière une autre fenêtre est un
+## PLANCHER, pas une mesure, et il doit le dire lui-même.
+var _images_hors_focus := 0
 
 
 func _ready() -> void:
@@ -131,6 +139,7 @@ func _ready() -> void:
 	print("Manche lancée — armes : %s / %s" % [
 		_main.p1.current_weapon.name, _main.p2.current_weapon.name])
 	_appliquer_variante()
+	_conditions()
 	print("Échauffement %.0f s (chargement des shaders, remplissage du pool)…" % WARMUP_SEC)
 	await _stress(WARMUP_SEC, false)
 
@@ -209,6 +218,8 @@ func _stress_menus(duration: float, sampling: bool) -> void:
 
 		if sampling and dt > 0.0:
 			_samples.append(dt)
+			if not get_window().has_focus():
+				_images_hors_focus += 1
 
 
 func _compter_effets() -> int:
@@ -292,6 +303,8 @@ func _stress(duration: float, sampling: bool) -> void:
 			var dt := get_process_delta_time()
 			if dt > 0.0:
 				_samples.append(dt)
+			if not get_window().has_focus():
+				_images_hors_focus += 1
 			# Relevés au vol : lus après la boucle ils vaudraient zéro, et le
 			# banc prétendrait mesurer une charge qu'il n'aurait pas prouvée.
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
@@ -352,6 +365,42 @@ func _demateriauser(racine: Node) -> int:
 	return n
 
 
+## Ce que le banc rendait VRAIMENT, en pixels, imprimé avant de mesurer.
+##
+## Sans ces lignes, deux relevés ne sont pas comparables et **rien ne le
+## signale** — c'est le même mode de défaillance que le compteur de fps mis à
+## jour une fois par seconde : un tableau qui a l'air riche et ne dit rien.
+##
+## Le cas s'est présenté le 2026-08-25 : la fenêtre de débogage a doublé, donc
+## le viewport racine est passé de 0,92 à 3,69 Mpx, **pendant que les
+## `SubViewport` restaient à 958×1080 chacun**. Les images par seconde ont
+## bougé sans qu'aucune ligne du jeu ne change, et les relevés historiques
+## (1 % bas ≥ 120, médianes 145 à 160, fenêtre 1280×720) ont cessé d'être
+## comparables sans que le banc en dise un mot.
+##
+## C'est exactement la mesure que le chantier R1-R6 doit déplacer : il fait
+## suivre les `SubViewport` à la fenêtre, donc il multiplie la dernière ligne.
+func _conditions() -> void:
+	var fenetre := DisplayServer.window_get_size()
+	var aire := get_viewport().get_visible_rect().size
+	# L'étirement est le rapport que `canvas_items` applique entre l'aire 2D et
+	# les pixels réels. En `keep` il est identique sur les deux axes.
+	var etirement := (float(fenetre.y) / aire.y) if aire.y > 0.0 else 0.0
+	print("Fenêtre       : %d×%d pixels natifs (%.2f Mpx)"
+		% [fenetre.x, fenetre.y, fenetre.x * fenetre.y / 1e6])
+	print("Aire 2D       : %.0f×%.0f — étirement ×%.2f" % [aire.x, aire.y, etirement])
+	var pixels_jeu := 0
+	for vue in [_main.vp1, _main.vp2]:
+		if vue == null:
+			continue
+		var actif: bool = vue.render_target_update_mode != SubViewport.UPDATE_DISABLED
+		print("  %-12s: rendu %d×%d%s"
+			% [vue.name, vue.size.x, vue.size.y, "" if actif else "  (ARRÊTÉ)"])
+		if actif:
+			pixels_jeu += vue.size.x * vue.size.y
+	print("Pixels de jeu : %.2f Mpx par image" % (pixels_jeu / 1e6))
+
+
 func _report() -> void:
 	if _samples.is_empty():
 		printerr("✗ aucun échantillon")
@@ -386,6 +435,29 @@ func _report() -> void:
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
 	print("  Verdict 120 fps  : %s" % ("TENU" if low1 >= 120.0 else "NON TENU (1 %% bas à %.0f)" % low1))
+	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
+	#
+	# Mesuré le 2026-08-25, cinq relevés à charge et fenêtre identiques : les
+	# deux exécutions où la fenêtre a changé d'état de focus donnent un 1 % bas
+	# de 44 et 71, les trois qui sont restées dans un état stable donnent 142,
+	# 143 et 143. La médiane, elle, ne bouge pas — 144 partout. Une transition
+	# de focus coûte une image à 18 ou 60 ms, et vingt images suffisent à décider
+	# du percentile.
+	#
+	# D'où la règle, et elle conditionne tout usage avant/après du banc :
+	# **un relevé à focus MIXTE ne se compare à rien et se jette.** Stable au
+	# premier plan ou stable au second plan sont l'un et l'autre exploitables ;
+	# le second est un plancher, pas une aberration.
+	var part := 100.0 * float(_images_hors_focus) / float(sorted.size())
+	if _images_hors_focus == 0:
+		print("  Focus            : stable au premier plan — relevé comparable")
+	elif _images_hors_focus == sorted.size():
+		print("  Focus            : stable au SECOND PLAN — comparable, mais c'est un plancher")
+	else:
+		print("  ⚠ FOCUS MIXTE sur %.0f %% des images (%d/%d) : la fenêtre a changé"
+			% [part, _images_hors_focus, sorted.size()])
+		print("    d'état pendant la mesure. Le 1 %% bas ci-dessus ne mesure QUE ça.")
+		print("    **RELEVÉ À JETER** — refaire sans toucher à la fenêtre.")
 
 
 ## Les appuis du banc sur le jeu, nommés une fois et vérifiables sans fenêtre.
