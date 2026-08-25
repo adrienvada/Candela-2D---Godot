@@ -2243,6 +2243,58 @@ func _make_killcam_label(tint: Color) -> Label:
 # CONSTRUCTION — MENU
 # ===========================================================================
 
+## ## DA2.10 — la planche de titre en fond de menu
+##
+## **Choisie par Adrien le 2026-08-25 : `rasants`**, et le choix s'est fait à la
+## mesure plutôt qu'à l'œil. Le critère qui décide d'un fond de menu n'est pas la
+## beauté de l'image mais **la place calme derrière le texte** : le quart
+## supérieur de `rasants` plafonne à 0,125 de luminance avec 0,013 d'écart-type,
+## quand celui de `convergents` porte une torche à **0,998** — un blanc crevé qui
+## rendrait illisible tout lettrage le croisant.
+##
+## ⚠️ **Au-DESSUS du rideau, pas derrière.** `Charte.BACKDROP` est à alpha 0,96 :
+## une planche posée dessous ne passerait qu'à 4 %, c'est-à-dire pas du tout. Le
+## rideau reste le sol de l'écran ; la planche est un voile posé sur lui, sous
+## tout le contenu.
+##
+## ⚠️ **Et elle ne doit pas concurrencer le texte.** Sa bande claire culmine à
+## 0,998, exactement la luminance d'un titre en `HALOGENE` : à pleine force, les
+## faisceaux disputeraient l'écran aux mots. `PRESENCE_KEY_ART` la ramène sous ce
+## seuil — l'image doit se sentir, pas se lire.
+##
+## Conséquence de ce placement, et elle est assumée : la planche **ne reçoit pas**
+## la brume ni la parallaxe, qui vivent dans le matériau du rideau, en dessous.
+## Un premier jet honnête vaut mieux qu'un couplage au shader qu'personne n'a
+## demandé ; si Adrien veut que la planche respire avec le reste, c'est un pas
+## séparé.
+const KEY_ART := "res://assets/keyart/keyart_rasants.png"
+
+## Présence de la planche, 0 à 1. À 0,34, son faisceau le plus clair tombe vers
+## 0,34 de luminance — nettement sous un texte en `HALOGENE`, assez au-dessus du
+## fond pour qu'on voie deux torches se faire face.
+const PRESENCE_KEY_ART := 0.34
+
+
+func _poser_le_key_art() -> void:
+	if not ResourceLoader.exists(KEY_ART):
+		push_error("ui : key art absent — %s " % KEY_ART
+			+ "(cuire avec tools/fabrique_keyart.gd, puis : "
+			+ "godot --headless --path . --import)")
+		return
+	var art := TextureRect.new()
+	art.name = "KeyArt"
+	art.texture = load(KEY_ART)
+	# `COVERED` et non `SCALE` : la planche est en 16/9 et l'écran ne l'est pas
+	# toujours. L'étirer déformerait des faisceaux dont l'angle est le sujet.
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.modulate = Color(1.0, 1.0, 1.0, PRESENCE_KEY_ART)
+	# Sans ça, la planche avale les clics destinés au menu.
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_panel.add_child(art)
+
+
 func _build_menu() -> void:
 	game_over_panel = PanelContainer.new()
 	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -2257,6 +2309,8 @@ func _build_menu() -> void:
 	# qui finirait par diverger de celle-ci.
 	backdrop.set_meta(META_ALPHA_NUIT, backdrop.color.a)
 	game_over_panel.add_child(backdrop)
+
+	_poser_le_key_art()
 
 	var outer := MarginContainer.new()
 	outer.add_theme_constant_override("margin_top", GAP_L)

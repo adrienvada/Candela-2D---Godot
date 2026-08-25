@@ -7510,7 +7510,44 @@ un fait de jeu, pas à un rythme d'interface.
   ✅ **`rasants` CHOISIE par Adrien le 2026-08-25**, conformément à la mesure.
   Les deux planches sont conservées ; le choix ne coûte rien à refaire.
 
-  ⚠️ **L'asset est choisi, il n'est toujours pas POSÉ — et personne ne le tient.**
+  ✅ **POSÉE le 2026-08-25**, Adrien ayant dit « attaque DA2.10 ». Un
+  `TextureRect` nommé `KeyArt`, dans `_poser_le_key_art()`.
+
+  ⚠️ **Au-DESSUS du rideau, pas derrière — et ce n'est pas un détail de
+  z-order.** `Charte.BACKDROP` est à alpha **0,96** : une planche posée dessous
+  ne passerait qu'à 4 %, c'est-à-dire pas du tout. Le rideau reste le sol de
+  l'écran, la planche est un voile posé dessus, sous tout le contenu.
+
+  **`PRESENCE_KEY_ART = 0,34`, et le chiffre se mesure.** La bande claire de la
+  planche culmine à 0,998 — exactement la luminance d'un titre en `HALOGENE`.
+  À pleine force les faisceaux disputeraient l'écran aux mots. Composite
+  vérifié après coup, en refaisant l'empilage du moteur (rideau à 0,96, puis
+  planche à 0,34) :
+
+  ```
+  bande       moyenne    ecart      max
+  haut 25%      0.011    0.004    0.039
+  25-50%        0.026    0.022    0.190
+  50-75%        0.117    0.078    0.348   <- le plus clair du fond
+  bas 25%       0.071    0.059    0.260
+  ```
+
+  Le point le plus clair du fond tombe à **0,348** contre ~0,95 pour un texte :
+  l'image se sent, elle ne se lit pas.
+
+  **`STRETCH_KEEP_ASPECT_COVERED` et non `SCALE`** : la planche est en 16/9 et
+  l'écran ne l'est pas toujours. L'étirer déformerait des faisceaux **dont
+  l'angle est le sujet** — c'est ce qui distingue `rasants` de `convergents`.
+  Et `MOUSE_FILTER_IGNORE`, sans quoi elle avalerait les clics du menu.
+
+  ⚠️ **Ce que cette pose n'a PAS fait, et c'est assumé** : la planche ne reçoit
+  ni la brume ni la parallaxe, qui vivent dans le matériau du rideau, en
+  dessous. Un premier jet honnête vaut mieux qu'un couplage au shader que
+  personne n'a demandé. Si Adrien veut que la planche respire avec le reste,
+  c'est un pas séparé.
+
+  *Historique : l'asset est resté choisi mais non posé quelques heures, sans
+  titulaire —*
   Le fond du menu (`MenuBackdrop`, `MenuGlass`, parallaxe, brume dans le
   matériau) vit dans `ui.gd`, domaine de DA4 ; la session DA4 a explicitement
   décliné, non par refus mais par fin de capacité : *« le poser à moitié serait
