@@ -2334,6 +2334,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
 | **Le son reste en 2D, et un mur étouffera par la réverb** (2026-08-25, Adrien) | Deux arbitrages du chantier « spatialisation du son », pris le jour où il a été inscrit. **2D** : mesuré plutôt que supposé, `AudioStreamPlayer3D` ne donne **pas** de localisation supplémentaire — Godot ne fait aucun rendu binaural et la sortie est stéréo, donc la direction se réduit des deux côtés à un équilibre gauche/droite. Son seul gain réel est le passe-bas qui s'ouvre avec la distance. Or ce qui manque au jeu est la direction *relative*, que S1 et S2 rendent sans changer de nœud. **Réversible sans travail perdu tant que les sites d'appel ne passent qu'un `Vector2`** — c'est cette signature qu'il faut protéger, pas le type du nœud. **Le mur** : oui, il étouffe, et la formulation d'Adrien porte la mécanique — « naturellement par la réverb ». Ce n'est donc pas *ajouter* de la réverb quand c'est occulté (l'oreille entendrait un effet s'allumer), c'est **retirer le son direct et laisser ce qui réverbérait déjà** : le son passe dans la pièce d'à côté. Même geste que la torche, où l'on ne peint pas d'ombre mais retire de la lumière. Conséquence de jeu assumée : **cela ajoute de l'information**, un pas sourd disant « derrière un mur » et un pas net « ligne directe » — l'oreille se met à enseigner la carte. |
@@ -2532,6 +2533,65 @@ service, il déplace le diagnostic.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une fenêtre Godot se compte en pixels NATIFS, pas en points (2026-08-25)
+
+Sur macOS, `window_set_size(Vector2i(1280, 720))` ne demande pas une fenêtre de
+1280 points : il demande 1280 **pixels de dalle**. Sur l'écran de développement —
+Retina, échelle 2, 3840×2486 pixels pour 1920×1243 points — la fenêtre n'occupe
+donc que **640×360 points**, un tiers de la largeur de l'écran.
+
+C'est toute l'explication du « le jeu s'ouvre dans une petite fenêtre », et
+**rien ne la désigne** : le réglage dit 1280×720, la résolution de rendu est
+bien celle-là, aucun chiffre n'est faux. Seule la taille physique surprend, et
+elle ne s'écrit nulle part.
+
+Mesuré, et pas déduit : en plein écran, `window_get_size()` rend `(3840, 2410)`.
+Si la taille était comptée en points, elle rendrait `(1920, 1243)`.
+
+Corollaire pour tout code qui dimensionne une fenêtre : **écrêter à
+`DisplayServer.screen_get_usable_rect()`**. Une fenêtre plus haute que la zone
+utile glisse sa barre de titre sous la barre de menus — on ne peut alors plus
+ni la déplacer ni la fermer à la souris.
+
+**Effet de bord mesurable, à ne pas prendre pour une régression :
+`tools/bench_framerate.tscn` ouvre une vraie fenêtre et charge les autoloads,
+donc il hérite du facteur.** Les relevés historiques — 1 % bas ≥ 120, médianes
+145 à 160 — ont été pris en fenêtre **1280×720** ; les prochains le seront en
+**2560×1440**, soit quatre fois plus de pixels dans le viewport racine. Les
+`SubViewport` étant figés (piège suivant), l'arène ne coûte pas plus cher, mais
+le HUD et le blit final si. **Comparer un relevé d'après à un relevé d'avant
+sans le dire fabriquerait une régression qui n'existe pas.** Épingler la fenêtre
+dans le banc réglerait la question ; ce n'est pas fait.
+
+### Agrandir la fenêtre n'agrandit pas le rendu du jeu (2026-08-25)
+
+**Les `SubViewport` de `main.tscn` rendent à taille FIXE, quelle que soit la
+fenêtre** : 958×1080 par joueur en écran scindé, 1916×1080 en vue unique. Mesuré
+sur une reproduction isolée, à quatre tailles de fenêtre de 1280×720 à 3840×2160
+— le `SubViewportContainer` ne répercute pas le facteur d'étirement sur le
+viewport qu'il porte.
+
+Conséquence contre-intuitive, et c'est elle qu'il faut retenir : **agrandir la
+fenêtre rend le jeu plus FLOU, pas plus net.** L'arène est rendue à 1080p puis
+étirée à la taille de la fenêtre. Seuls le HUD et les menus, qui vivent dans le
+viewport racine, gagnent réellement en finesse. À 1280×720, l'arène était même
+légèrement suréchantillonnée — rendue à 1080p pour être affichée en 720p.
+
+Deux choses en découlent, et aucune n'est faite :
+
+1. **Le gain de netteté se paye en taux de remplissage, pas en résolution
+   d'assets.** Faire suivre les `SubViewport` multiplierait par **exactement 4**
+   les pixels de jeu en plein écran — 2,07 → 8,29 Mpx, le `keep` letterboxant le
+   rendu à 3840×2160, soit 2 par axe. La cible « 1 % bas ≥ 120 fps » a été
+   mesurée en fenêtre 1280×720 : elle serait à remesurer, pas à supposer.
+2. **Tant que les `SubViewport` sont figés, aucune texture n'a besoin d'être
+   recuite.** Une tuile de 35 px couvre une case de 35 unités : le rapport est
+   de **1 texel pour 1 pixel de viewport**, et il ne bouge pas avec la fenêtre.
+   Le jour où les `SubViewport` suivront, il bougera d'un coup — et c'est **le
+   cookie de torche qui parlera le premier**, pas les tuiles : le 1024² visé par
+   DA5.6 retomberait à 3,5 texels par pixel, exactement la mollesse que le 512²
+   présentait et que ce choix corrigeait.
 
 ### Un son positionnel sans auditeur reste parfaitement audible (2026-08-25)
 
