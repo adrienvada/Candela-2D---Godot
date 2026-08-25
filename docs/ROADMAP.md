@@ -6343,7 +6343,7 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 > étage « flou réel » où la brume apparaîtrait défocalisée derrière le seul cadre
 > de droite, par gaussienne 9 taps sur `screen_texture`. Le second **n'est pas
 > pris**, et sa propre fiche disait pourquoi : « à valider au `bench_framerate`
-> (cible 1 % bas ≥ 120 fps) avant d'être gardé ». Le prendre sans cette mesure
+> (cible 1 % bas ≥ 60 fps) avant d'être gardé ». Le prendre sans cette mesure
 > serait ajouter une copie d'écran par image sur la foi d'une intuition. À
 > reprendre le jour où quelqu'un lance le banc.
 >
@@ -6639,7 +6639,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
   centre/rayon poussés par _update_focus_rings (déjà en _process), temps
   quantifié dans le shader, uniform d'intensité lu de current_effect. Fragment
   trivial (une hash, deux smoothstep) : négligeable pour la cible 1 % bas ≥
-  120 fps, gl_compatibility sans réserve. Peut partager son quad et ses
+  60 fps, gl_compatibility sans réserve. Peut partager son quad et ses
   uniforms avec la Brume d'abysse (rang 12) — un seul shader de backdrop pour
   les deux. À 0, rend le backdrop actuel à l'identique ; coupé net sur l'écran
   calibration. Ligne `bruit_de_l_oeil`, CONFORT, plancher 0.0.
@@ -6895,7 +6895,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
   pur : coût nul, gl_compatibility OK. Étage flou réel : hint_screen_texture
   est éprouvé au dépôt sous gl_compatibility (killcam_overlay.gdshader:3) ;
   une copie d'écran + 9 taps sur ~500×600 px, réservé au SEUL panneau de
-  droite, à valider au bench_framerate (cible 1 % bas ≥ 120 fps) avant d'être
+  droite, à valider au bench_framerate (cible 1 % bas ≥ 60 fps) avant d'être
   gardé. Styles et nœuds existants, structure intacte. Ligne `verre_panneaux`,
   CONFORT, plancher 0.0 (0 = aplats actuels).
   Ressources : aucune
@@ -6919,7 +6919,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
   pause, MOUSE_FILTER_IGNORE, shader préchargé en const. Frange : 3 lectures
   hint_screen_texture pondérées par la distance au centre — l'idiome exact du
   killcam, prouvé sous gl_compatibility ; grain et vignette en ALU. Un quad, 3
-  taps : très en deçà du budget 1 % bas ≥ 120 fps. Garde-fou impératif : le
+  taps : très en deçà du budget 1 % bas ≥ 60 fps. Garde-fou impératif : le
   voile s'éteint sur l'écran calibration via screen_changed — du bruit de
   luminance sur le champ noir fausserait la mesure de tous les joueurs du même
   côté. Caché en match : zéro coût. Structure intacte. Ligne `voile_menu`,
@@ -6983,7 +6983,7 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
   *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**
 - **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
-  `bench_framerate` avant d'acter (1 % bas ≥ 120). **→ À implémenter derrière
+  `bench_framerate` avant d'acter (1 % bas ≥ 60). **→ À implémenter derrière
   un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
   **✅ Implémenté** (`pump_shockwave.gd` + `.gdshader`, drapeau
   `--fx-shockwave`). À mesurer : 1 % bas en duel pompe contre pompe, drapeau
@@ -7363,7 +7363,47 @@ un fait de jeu, pas à un rythme d'interface.
   contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
   rien n'a été regénéré. *(C, avec DA2.8)*
 - **DA2.10 Le key art du titre** 🟡 **ASSET PRÊT, PAS POSÉ le 2026-08-25** —
-  trois planches retouchées et ramenées sur la charte par
+  ⚠️ **DEUX planches cuites, pas trois.** Cette entrée a annoncé trois planches
+  « retouchées et ramenées sur la charte » ; `assets/keyart/` n'en a jamais
+  contenu que deux, et git n'en a jamais connu d'autres. La troisième source,
+  `K1_03.jpg`, n'a pas été écartée pour sa qualité : **elle est en portrait**
+  (1536 × 2752) quand les deux autres sont en paysage. Ce n'est pas une
+  candidate refusée, c'est un autre format — deux faisceaux croisés en X sur une
+  grande moitié basse noire, une composition d'**affiche ou de capsule de
+  boutique**, inutilisable comme fond d'un menu en 16/9. Elle mérite d'être
+  gardée sous ce titre-là plutôt que comptée ici. Le compte faux venait de la
+  source, pas du travail : trois sources, deux sorties, et personne ne l'a
+  revérifié en écrivant.
+
+  **Laquelle poser : `rasants`, et ce n'est pas un avis.** Le critère qui décide
+  d'un fond de menu n'est pas la beauté de l'image mais **la place calme
+  disponible derrière le titre**. Mesuré par bandes horizontales (luminance
+  moyenne, écart-type, maximum) :
+
+  ```
+  planche        bande     moyenne    ecart      max
+  convergents    haut 25%    0.052    0.125    0.998   ← une torche crevée
+                 25-50%      0.098    0.136    0.822
+  rasants        haut 25%    0.009    0.013    0.125   ← noir, et calme
+                 25-50%      0.054    0.065    0.612
+  ```
+
+  Le quart supérieur de `rasants` plafonne à **0,125** : son pixel le plus clair
+  est encore sombre, et son écart-type est **dix fois** plus bas. Un titre s'y
+  pose sur du noir vrai. Celui de `convergents` contient une torche à **0,998**,
+  c'est-à-dire un blanc crevé : n'importe quel lettrage qui la croise devient
+  illisible, et la déplacer pour l'éviter, c'est laisser l'image décider de la
+  mise en page.
+
+  S'y ajoute une raison de fond, moins mesurable mais qui va dans le même sens :
+  `rasants` montre des faisceaux **rasants** qui écrivent de longues ombres
+  portées sur le sol — c'est littéralement l'occlusion, la mécanique du jeu —
+  et deux torches qui se font face à la même hauteur, ce qui est un duel.
+  `convergents` éclaire depuis le haut : c'est une battue, pas un 1v1.
+
+  Les deux planches sont conservées ; le choix ne coûte rien à refaire.
+
+  Retouchées et ramenées sur la charte par
   `tools/fabrique_keyart.gd`, dans `assets/keyart/`. **Rien ne les affiche** :
   le fond du menu est un système complet — `MenuBackdrop`, `MenuGlass`,
   parallaxe, brume dans le matériau — qui vit dans `ui.gd`, **domaine de DA4**.
@@ -7977,7 +8017,7 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   d'un coup d'œil si la valeur va, alerte ou faute.
 
   ⚠️ **Les seuils ne sont pas choisis ici, et c'est ce qui les rend justes.**
-  120 images/s est la cible de `bench_framerate` ; 60 et 120 ms sont exactement
+  60 images/s est la cible de `bench_framerate` ; 60 et 120 ms sont exactement
   les paliers que `_update_ping_label()` emploie déjà pour le HUD. Un panneau de
   diagnostic avec ses propres seuils dirait « ça va » pendant que le HUD dit
   « attention ». *(S)*
@@ -8697,7 +8737,7 @@ au-delà du corps.
 > ⚠️ **À savoir avant de brancher : ce flou lit l'écran.** Il exige un
 > `BackBufferCopy` et il est aujourd'hui en `COPY_MODE_VIEWPORT`, donc une
 > recopie plein cadre par image. En jeu il y aurait **deux vues**, et la cible de
-> cadence est un 1 % bas ≥ 120 fps. Le repasser en `COPY_MODE_RECT` est
+> cadence est un 1 % bas ≥ 60 fps. Le repasser en `COPY_MODE_RECT` est
 > possible — c'est ainsi qu'il a commencé — mais c'est à mesurer au banc de
 > cadence, pas à supposer.
 
