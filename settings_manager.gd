@@ -301,6 +301,22 @@ func _apply_resolution() -> void:
 			# il masquerait l'éditeur et la console.
 			if not OS.is_debug_build():
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			else:
+				# **Ne rien faire ici rendait `DEBUG_WINDOW_FACTOR` inopérant, et
+				# précisément chez celui qui l'avait demandé.**
+				#
+				# Mesuré le 2026-08-25, par le banc et pas par la lecture : le
+				# poste de développement a `resolution_index = 2` enregistré dans
+				# `user://settings.cfg`. Le doublement vit dans
+				# `_apply_windowed()`, que cette branche n'atteignait jamais — la
+				# fenêtre restait donc celle de `project.godot`, 1280×720, soit
+				# 640×360 points sur un Retina. Le réglage était juste, le code
+				# était juste, et le chemin entre les deux n'existait pas.
+				#
+				# Un plein écran refusé se rend en **la plus large fenêtre que le
+				# débogage autorise**, pas en silence : le joueur a demandé le
+				# maximum, on lui doit une réponse et non un statu quo.
+				_apply_windowed(Vector2i(1280, 720))
 
 func _apply_windowed(size: Vector2i) -> void:
 	var cible := size * DEBUG_WINDOW_FACTOR if OS.is_debug_build() else size

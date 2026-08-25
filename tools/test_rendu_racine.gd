@@ -1,0 +1,153 @@
+## Le duel change de viewport selon le nombre de vues — et il doit savoir REVENIR.
+##
+## Chantier R, option (b) : en vue unique le duel est rendu par le viewport
+## racine, à la résolution de la fenêtre, au lieu d'être dessiné à 957×1080 dans
+## un `SubViewport` puis étiré. En écran scindé il repasse par ses deux vues, qui
+## sont indispensables — deux masques de cull, deux caméras.
+##
+## **C'est un aller-RETOUR, et c'est le retour qui est dangereux.** L'aller est
+## visible : si la vue unique n'était pas rendue, l'écran serait noir et
+## quelqu'un le dirait dans la minute. Le retour ne se voit pas de la même façon :
+## une racine laissée sur le monde du duel, un masque de cull jamais rétabli ou
+## une caméra restée pointée sur la racine donnent un écran scindé **à moitié
+## juste** — une vue correcte, l'autre vide ou montrant les lumières de l'autre
+## joueur. Dans un jeu où être vu c'est être mort, cette dernière n'est pas un
+## défaut d'affichage, c'est un défaut d'équité.
+##
+## Cette suite ne rend rien. Elle vérifie l'ÉTAT du montage après chaque bascule,
+## ce qu'un banc à fenêtre ne fait pas et ce qu'aucun test ne faisait.
+##
+## Lancer : godot --headless --path . --script res://tools/test_rendu_racine.gd
+extends SceneTree
+
+var _failures: int = 0
+
+func _check(label: String, ok: bool, detail: String = "") -> void:
+	if ok:
+		print("  ✓ ", label)
+	else:
+		_failures += 1
+		printerr("  ✗ ", label, ("  → " + detail) if detail != "" else "")
+
+func _init() -> void:
+	call_deferred("_run")
+
+func _run() -> void:
+	print("=== LE DUEL SAIT-IL CHANGER DE VIEWPORT, ET REVENIR ===")
+	await process_frame
+	# `load` et non `preload`, pour la raison consignée dans `test_banc.gd` : un
+	# `preload` compilerait la scène avant que les autoloads existent.
+	var scene: PackedScene = load("res://main.tscn")
+	if scene == null:
+		_check("main.tscn se charge", false)
+		_sortir()
+		return
+	var main: Node = scene.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+
+	var racine: Window = root
+	var monde_racine_avant: World2D = racine.world_2d
+	var masque_avant: int = racine.canvas_cull_mask
+
+	if main.cam1 == null or main.cam2 == null:
+		_check("les caméras existent après le démarrage", false,
+			"sans elles la bascule sort sans rien changer, par conception")
+		_sortir()
+		return
+
+	# --- Aller : une seule vue regardée, comme en ligne et à l'entraînement ---
+	main.vp2.get_parent().hide()
+	main._accorder_rendu_aux_vues()
+
+	_check("vue unique : le duel est rendu par la racine", main._rendu_racine)
+	_check("vue unique : la racine a adopté le monde du duel",
+		racine.world_2d == main.vp1.world_2d)
+	_check("vue unique : la racine porte le masque de cull de la vue regardée",
+		racine.canvas_cull_mask == main.vp1.canvas_cull_mask,
+		"racine %d vs vue %d" % [racine.canvas_cull_mask, main.vp1.canvas_cull_mask])
+	_check("vue unique : la caméra locale rend dans la racine",
+		main.cam1.custom_viewport == racine)
+	# Le SubViewport ARRÊTÉ est la moitié du gain : une vue cachée qui dessine
+	# encore coûte 1,5 ms pour une texture que personne n'affiche.
+	for vue in [main.vp1, main.vp2]:
+		_check("vue unique : %s est arrêté" % vue.name,
+			vue.render_target_update_mode == SubViewport.UPDATE_DISABLED)
+
+	# **Le piège que la bascule du `world_2d` ouvre sur l'AUDIO, signalé par la
+	# session « spatialisation du son » et mesuré par elle avant d'être écrit.**
+	#
+	# Un `AudioStreamPlayer2D` sort une fois PAR VIEWPORT AUDITEUR de son
+	# `World2D`. La racine est auditrice par défaut ; si elle adopte le monde du
+	# duel alors que `vp1` porte déjà l'`AudioListener2D`, **chaque son est joué
+	# deux fois** : une fois depuis l'oreille du joueur, une fois depuis le repli
+	# de la racine — c'est-à-dire le centre de son écran virtuel, le point fixe
+	# hors de la carte qui était exactement le défaut d'origine de S1.
+	#
+	# Le symptôme est le pire de sa famille : **pas un silence, un son
+	# parfaitement audible**, environ +3 dB, panoramique juste mêlé au faux. On
+	# chercherait dans le mixage, pas ici.
+	#
+	# Ici on simule ce que fait `AudioManager.poser_oreille()` — rendre `vp1`
+	# auditeur — puis on exige qu'il n'y ait QU'UN auditeur sur ce monde.
+	main.vp1.audio_listener_enable_2d = true
+	var auditeurs := _auditeurs_du_duel(main)
+	_check("vue unique : un seul viewport écoute le monde du duel",
+		auditeurs.size() == 1,
+		"auditeurs : %s — deux, et chaque son sort deux fois" % str(auditeurs))
+
+	# --- Retour : les deux vues, l'écran scindé local ---
+	main.vp2.get_parent().show()
+	main._accorder_rendu_aux_vues()
+
+	_check("retour : le duel ne passe plus par la racine", not main._rendu_racine)
+	_check("retour : la racine a retrouvé SON monde",
+		racine.world_2d == monde_racine_avant,
+		"une racine laissée sur le monde du duel dessine l'arène sous le HUD")
+	_check("retour : le masque de cull de la racine est rétabli",
+		racine.canvas_cull_mask == masque_avant,
+		"racine %d vs %d attendu" % [racine.canvas_cull_mask, masque_avant])
+	_check("retour : chaque caméra a retrouvé sa vue",
+		main.cam1.custom_viewport == main.vp1 and main.cam2.custom_viewport == main.vp2)
+	# **Et la racine doit REDEVENIR auditrice.** C'est l'état que `SceneTree`
+	# installe au démarrage, et tout ce qui joue hors match en dépend — menus
+	# compris. Le laisser à `false` derrière soi rendrait le jeu muet ailleurs,
+	# sans erreur et sans que ce lot-ci soit soupçonné.
+	_check("retour : la racine réécoute, comme au démarrage",
+		root.is_audio_listener_2d(),
+		"les menus et tout ce qui joue hors match passent par elle")
+	for vue in [main.vp1, main.vp2]:
+		_check("retour : %s dessine de nouveau" % vue.name,
+			vue.render_target_update_mode == SubViewport.UPDATE_ALWAYS)
+
+	# --- L'interrupteur de recours doit vraiment ramener l'ancien chemin ---
+	main.rendu_racine_autorise = false
+	main.vp2.get_parent().hide()
+	main._accorder_rendu_aux_vues()
+	_check("interrupteur à false : la vue unique repasse par son SubViewport",
+		not main._rendu_racine)
+	_check("interrupteur à false : la vue regardée dessine encore",
+		main.vp1.render_target_update_mode == SubViewport.UPDATE_ALWAYS)
+
+	_sortir()
+
+## Les viewports qui ÉCOUTENT le monde du duel, nommés pour que l'échec soit
+## lisible. Trois candidats seulement : la racine et les deux vues partagent ce
+## `World2D`, personne d'autre ne l'a.
+func _auditeurs_du_duel(main: Node) -> Array[String]:
+	var noms: Array[String] = []
+	var monde: World2D = main.vp1.world_2d
+	for vue in [root, main.vp1, main.vp2]:
+		if vue.world_2d == monde and vue.is_audio_listener_2d():
+			noms.append("racine" if vue == root else String(vue.name))
+	return noms
+
+
+func _sortir() -> void:
+	if _failures == 0:
+		print("\n✓ Tous les tests passent")
+		quit(0)
+	else:
+		printerr("\n✗ %d test(s) en échec" % _failures)
+		quit(1)

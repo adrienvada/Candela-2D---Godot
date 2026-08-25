@@ -326,6 +326,186 @@ Adrien qui tranche, au banc, et il n'y a rien à en conclure avant.
 >   l'ecriture et faux quelques heures plus tard. Elle a bati une contrainte
 >   inter-chantiers dessus et a du la reecrire. Corrige — **ce fichier decrit
 >   desormais ce que le code FAIT, jamais ce qui lui manque.**
+### 2026-08-25 — session « affichage » (3) : R3 (b) implémenté, et `game_state.gd` pris
+
+**Je prends `game_state.gd`** — le fichier que ce journal désigne comme le seul
+disputé, attribué au domaine « game feel » jusqu'à nouvel ordre. Demandé à la
+session « spatialisation du son » avant d'écrire, annoncé ici comme le prévoit le
+protocole. **Périmètre : `_accorder_rendu_aux_vues()` et le montage des vues.**
+Rien d'autre — et surtout pas le bloc audio (`_accorder_oreille()`, l'accord de
+portée dans `rebuild_arena`), ni les caméras, ni le zoom.
+
+**Ce qui change.** En vue unique — en ligne, à l'entraînement — le duel est rendu
+par le **viewport racine**, à la résolution de la fenêtre, au lieu d'être dessiné
+à 957×1080 dans un `SubViewport` puis étiré. Aucun nœud ne bouge : la racine
+adopte le même `World2D`, le masque de cull de la vue regardée et sa caméra ; les
+deux `SubViewport` passent en `UPDATE_DISABLED`. **L'écran scindé local est
+inchangé.**
+
+**Pourquoi (b) et pas (a), dans les mots d'Adrien : « pour des raisons d'équité en
+compétitif ».** Agrandir le `SubViewport` aurait obligé à corriger le zoom des
+caméras du même facteur dans cinq endroits, dont la killcam — donc à rouvrir la
+question du champ de vision que le passage en `keep` venait de fermer le matin
+même. La racine est en `canvas_items` + `keep` : son aire 2D reste 1920×1080
+quelle que soit la fenêtre, donc une caméra à `zoom = 1.0` montre exactement le
+même monde. Le champ de vision ne peut pas dériver.
+
+**Mesure R4, et elle ne prouve pas ce qu'on espérait.** Avant : 1,03 Mpx,
+médiane 144, 1 % bas 142. Après : 3,69 Mpx, médiane 144, 1 % bas 143. **Mais le
+socle nu — torches éteintes, shaders retirés — donne AUSSI 144.** La fenêtre au
+second plan est bridée là ; le banc mesure le plafond, pas la charge. Ce qui est
+acquis : les deux chemins passent le seuil de R5 (60) avec plus du double de
+marge. Ce qui ne l'est pas : « c'est gratuit ». Jalon **H10** ajouté pour un
+relevé au premier plan, que seule une main humaine peut faire.
+
+**À la session « game feel », quand elle reprendra `game_state.gd` :**
+l'interrupteur `rendu_racine_autorise` ramène tout à l'ancien comportement en une
+ligne. Il est là pour le banc, et il sert de recours.
+
+> **H10 fait par Adrien le même jour, et il renverse deux de mes conclusions.**
+> Fenêtre au premier plan, focus stable attesté par le banc : **avant** 1,03 Mpx,
+> médiane 105, 1 % bas 63 ; **après** 3,69 Mpx, médiane **120**, 1 % bas 61.
+>
+> 1. **Le chantier ne coûte pas, il rapporte : +15 % de cadence pour 3,6 fois
+>    plus de pixels.** Cause matérielle : le chemin d'avant écrivait dans une
+>    texture intermédiaire avant de la recopier, et sur un GPU Apple — rendu par
+>    tuiles — changer de cible force un vidage coûteux. Aucune lecture de code ne
+>    donnait ça.
+> 2. **« Le seuil est franchi avec plus du double de marge » était faux**, et je
+>    l'avais écrit ici comme dans la ROADMAP. Le 1 % bas réel est de 61 contre une
+>    barre à 60 : deux images par seconde. Mon chiffre venait des relevés
+>    plafonnés au second plan.
+>
+> **Et un fait qui dépasse ce chantier, à ne pas lui attribuer :** 63 avant, 61
+> après — le chantier ne dégrade rien. Mais le jeu tourne à un 1 % bas d'environ
+> **60** dans la fenêtre de développement, très loin des « 120 tenus » annoncés
+> depuis le 2026-08-16 — un relevé pris en 1280×720, sans instrument capable de
+> dire ce que le focus faisait. **Signalé à Adrien, pas transformé en chantier :
+> ce n'est pas à moi d'ouvrir ça.**
+
+**Ce lot a failli être la deuxième version du défaut que S1 venait de réparer, et
+c'est la session « spatialisation du son » qui l'a arrêté.** Elle a monté le repro
+en headless plutôt que de raisonner : en prêtant à la racine le `World2D` du duel,
+on en faisait une **seconde oreille**. Un `AudioStreamPlayer2D` sort une fois par
+viewport auditeur, donc chaque pas et chaque tir seraient sortis **deux fois** —
+une fois depuis l'oreille du joueur, une fois depuis le centre de l'écran virtuel
+de la racine, c'est-à-dire le point fixe hors de la carte de S1. Symptôme : pas un
+silence, **un son audible à +3 dB avec un panoramique juste mêlé au faux**. On
+aurait cherché dans le mixage.
+
+Vérifié dans mon montage réel avant de corriger — `["racine", "SubViewport1"]` —
+puis corrigé (`audio_listener_enable_2d` à `false` à la bascule, `true` au
+retour). **Le garde-fou est chez moi, pas chez eux** : c'est leur code qui
+subirait le défaut, c'est le mien qui le crée. `tools/test_rendu_racine.gd`
+compte les auditeurs du monde de jeu et en exige un seul, en nommant les fautifs.
+Demandé à la session son de ne PAS le doubler dans `test_dosage_audio` : un même
+invariant à deux endroits finit par diverger. Ils gardent le leur **marqué
+PROVISOIRE en clair**, le temps que cette branche atterrisse — c'est la bonne
+décision, retirer une protection avant que la remplaçante soit dans l'arbre
+ouvrirait une fenêtre sans filet sur un défaut payé deux fois dans la journée.
+**À faire quand cette branche est fusionnée : les prévenir**, ils retirent le
+leur le jour même.
+
+**Et j'ai retiré ma propre entrée de « Pièges connus » sur ce sujet** : la session
+son avait écrit la sienne en parallèle (`868edd1`), plus complète que la mienne et
+citant déjà `tools/test_rendu_racine.gd`. Deux entrées sur le même piège, en tête
+de la même section, se seraient télescopées à la fusion en plus de diverger. La
+règle que je leur ai opposée sur le garde-fou vaut pour la documentation.
+
+**Réserve sur la mesure R4 :** elle est antérieure à leur correctif d'occlusion à
+trois rayons (`a32cd0c`), qui ajoute deux requêtes physiques par son joué. Non
+refait — le relevé est de toute façon plafonné par le bridage de la fenêtre au
+second plan, donc il ne verrait pas ces rayons davantage que le reste. C'est
+H10 qui tranchera.
+
+### 2026-08-25 — session « affichage » (2) : le chantier R inscrit, et un défaut de mon propre lot
+
+**Branche `worktree-subviewport-suivi`, basée sur `main` local (`aeade01`).**
+Demande d'Adrien : *préparer* le chantier « faire suivre les `SubViewport` à la
+fenêtre, avec une mesure au banc avant/après ». Préparer, donc : instrumenter,
+mesurer la référence, inscrire les étapes — **pas implémenter**.
+
+**Fichiers touchés : `tools/bench_framerate.gd`, `settings_manager.gd`,
+`docs/ROADMAP.md`, ce journal.**
+
+**Empiètement déclaré, le même qu'au lot précédent : `settings_manager.gd` est au
+domaine « menus ».** Un seul hunk cette fois, et c'est un **correctif de mon
+propre lot d'il y a une heure** — voir plus bas.
+
+**Le défaut, et il est à moi.** `DEBUG_WINDOW_FACTOR`, livré et fusionné ce matin,
+était **inopérant sur le poste d'Adrien**. Il vit dans `_apply_windowed()` ; les
+préférences portent `resolution_index = 2` (plein écran) ; et la branche du plein
+écran, qui refuse d'agir en débogage, ne faisait **rien du tout** au lieu de
+retomber sur une fenêtre. Elle n'atteignait donc jamais le doublement. Annoncé
+comme livré, il ne l'était pas. Corrigé : un plein écran refusé rend désormais la
+plus large fenêtre que le débogage autorise. **C'est le banc instrumenté qui l'a
+trouvé**, en imprimant `Fenêtre : 1280×720` là où on attendait 2560×1440.
+
+**Ce que le banc sait dire maintenant** (`tools/bench_framerate.gd`, qui n'est
+réservé par personne) : ses conditions de rendu avant de mesurer — fenêtre en
+pixels natifs, aire 2D, étirement, taille de rendu de chaque `SubViewport`, total
+de pixels de jeu — et **son propre état de focus**, dont il tire un verdict sur la
+validité du relevé.
+
+**Une correction que je dois à qui a écrit les relevés du 2026-08-16 :** la
+dispersion n'était pas due au second plan, mais aux **transitions** de focus.
+Fenêtre restée au second plan : 1 % bas à 142, 143, 144. Fenêtre ayant changé
+d'état : 44 et 71. La médiane ne bouge pas — 144 partout. L'ancienne explication
+était de la bonne famille et n'a jamais pu être vérifiée, faute d'instrument.
+Entrée de pièges ajoutée, sans toucher au texte d'origine.
+
+**À la session « spatialisation du son » — le chantier R croise le vôtre, et pas
+au bord.** L'option R3 (b) — sortir le duel du `SubViewport` en vue unique pour
+qu'il rende à la résolution de la fenêtre — **déplacerait le `World2D` du jeu**.
+C'est exactement l'objet de S1 : le pool audio vit dans le `World2D` de la racine,
+le jeu dans celui du `SubViewport`, et c'est pourquoi personne n'entend rien de
+positionnel. Les deux chantiers ne peuvent pas bouger ce monde chacun de leur
+côté. **Rien n'est décidé** : R3 attend un arbitrage d'Adrien, et je n'ai touché à
+aucun de vos fichiers.
+
+> **Correction, une heure plus tard, et l'erreur est à moi.** Le paragraphe
+> ci-dessus est laissé tel quel parce qu'un journal qui se réécrit ne sert à
+> rien. **S1 n'est pas à venir : il est FAIT** (`4d8a85e`, fusionné par
+> `e3e1b34`, donc déjà dans ma base) — la session son me l'a signalé, et je l'ai
+> vérifié avant de l'écrire : `AudioManager.poser_oreille()` existe et
+> `game_state.gd:992` l'appelle. **J'ai lu `CLAUDE.md`, qui décrit encore le jeu
+> comme sans auditeur, et je ne suis pas allé voir le code.** Exactement le
+> piège que cette feuille de route nomme ailleurs : *vérifier le code, pas le
+> récit.*
+>
+> La contrainte réelle est plus légère que ce que j'annonçais, et elle est
+> maintenant dans R3 (b) : un monde unique rendrait deux des trois gestes de
+> `poser_oreille()` redondants, mais **l'`AudioListener2D` reste nécessaire** —
+> le supprimer réintroduirait le défaut d'origine par une refonte qui n'a rien à
+> voir avec le son.
+>
+> **Signalé et non fait, parce que ce n'est pas mon fichier :** `CLAUDE.md`
+> affirme toujours « le son est positionnel, mais le jeu n'a pas d'auditeur
+> (mesuré le 2026-08-25) ». C'est ce texte-là qui m'a induit en erreur, et il en
+> induira d'autres.
+
+**Ce que je n'ai pas fait, et c'est le périmètre :** aucune ligne de `main.tscn`
+ni de `game_state.gd`. Le chantier est inscrit, mesuré, chiffré — il n'est pas
+commencé.
+
+**Demandé par la session « son », noté et NON fait — à prendre par qui en aura
+besoin.** Un poste `--sans-reverb` dans `tools/bench_framerate.gd`, sur le modèle
+de `--sans-torches`, pour chiffrer le coût du bus d'occlusion. Ce qu'il faudrait :
+couper `SFX_Occlus` (`set_bus_bypass_effects` ou `set_bus_mute` sur son index) —
+réverb et passe-bas permanents ajoutés par leur lot — **et un second poste qui
+coupe aussi la réverb du bus `SFX`**, antérieure, sans quoi le relevé ne dirait
+pas laquelle des deux coûte. Pas fait ici parce qu'Adrien a demandé de *préparer
+le chantier R*, pas d'étendre le banc, et que la session demandeuse dit
+elle-même qu'il n'y a **ni urgence ni coût démontré** — une réverb tourne sur le
+fil audio, pas sur le fil de rendu, donc l'hypothèse la plus probable est qu'elle
+ne paraisse pas du tout dans le 1 % bas. C'est bien pour ça qu'il faudra la
+mesurer avant d'en parler.
+
+**⚠️ `CLAUDE.md` sur `main` porte encore le texte qui m'a fait écrire une
+contrainte fausse** — « le jeu n'a pas d'auditeur ». La session son l'a corrigé
+chez elle (`af81c0d`, worktree `audio-dosage`), **mais sa branche n'est pas
+fusionnée.** Toute session qui lira `CLAUDE.md` d'ici là refera mon erreur. En
+attendant : l'auditeur est posé depuis `4d8a85e`.
 
 ### 2026-08-25 — session « affichage » : `keep`, et la fenêtre du débogage
 

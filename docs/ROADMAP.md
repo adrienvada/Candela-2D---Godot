@@ -2707,6 +2707,59 @@ code de l'oreille, la seconde l'a fait rougir dans son montage réel avant de
 corriger. Aucune des deux ne l'aurait vu seule — l'une avait le mécanisme, l'autre
 le montage.*
 
+### Ce n'est pas le second plan qui casse le 1 % bas, c'est la TRANSITION (2026-08-25)
+
+**Cette page attribuait déjà la dispersion des relevés de cadence à « la fenêtre
+que macOS bride quand elle n'est pas au premier plan » (2026-08-16, médianes de
+145 à 160). C'était la bonne famille de cause et la mauvaise cause.** Le banc ne
+mesurait pas le focus : il ne pouvait donc ni confirmer ni écarter l'explication,
+et elle est restée écrite comme un fait pendant neuf jours.
+
+Mesuré le 2026-08-25, six exécutions à charge et fenêtre identiques, une fois le
+banc instrumenté :
+
+- fenêtre **restée** au second plan : 1 % bas de **142, 143, 144** ;
+- fenêtre ayant **changé** d'état pendant la mesure : 1 % bas de **44 et 71**,
+  avec des images isolées à 18 et 60 ms ;
+- **la médiane ne bouge pas — 144 partout.**
+
+Le second plan seul ne coûte donc rien de visible. Ce qui coûte, c'est le moment
+où la fenêtre prend ou perd le focus : une poignée d'images à 18 ou 60 ms, et
+comme le 1 % bas d'un relevé de quinze secondes ne porte que sur une vingtaine
+d'images, **ces quelques hoquets décident du percentile à eux seuls**.
+
+Ce qui rend le piège coûteux : le chiffre faux est *parfaitement plausible*.
+« Doubler la fenêtre fait tomber le 1 % bas de 143 à 44 » se lit comme une
+régression de rendu, et aurait condamné le chantier R avant qu'il commence.
+
+La règle, désormais imprimée par le banc lui-même : **un relevé à focus mixte se
+jette.** Stable au premier plan ou stable au second plan sont l'un et l'autre
+exploitables — le second est un plancher, pas une aberration.
+
+### Le réglage était juste, le code était juste, le chemin entre les deux n'existait pas (2026-08-25)
+
+`DEBUG_WINDOW_FACTOR` double la fenêtre en débogage. Il vit dans
+`_apply_windowed()`. Le poste de développement a `resolution_index = 2` — **plein
+écran** — enregistré dans `user://settings.cfg`, et la branche du plein écran
+refuse d'agir en débogage pour ne pas masquer l'éditeur… **en ne faisant rien du
+tout**. Elle n'appelait donc jamais `_apply_windowed()`, et la fenêtre restait
+celle de `project.godot`.
+
+Résultat : la fonctionnalité était inopérante **précisément chez celui qui l'avait
+demandée**, et elle a été annoncée comme livrée. Aucune suite ne pouvait
+l'attraper — aucune n'ouvre de fenêtre — et la relecture du code ne l'attrape pas
+non plus, puisque les deux morceaux sont corrects séparément.
+
+**C'est le banc qui l'a trouvée, en imprimant `Fenêtre : 1280×720` là où on
+attendait 2560×1440.** Leçon de méthode, et elle vaut au-delà de ce cas : *un
+instrument qui imprime ses conditions attrape les défauts que ni les tests ni la
+relecture ne voient*, parce qu'il énonce ce qui est au lieu de vérifier ce qu'on
+a prévu.
+
+Corollaire pour tout `match` sur une préférence : **une branche qui refuse une
+option doit rendre la meilleure approximation disponible, jamais un statu quo
+muet.** Ici, un plein écran refusé se rend maintenant en la plus large fenêtre
+que le débogage autorise.
 
 ### Des clés dépréciées font réécrire `project.godot` tout seul (2026-08-25)
 
@@ -8431,6 +8484,270 @@ aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
 `game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
 manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
 et ils vivent dans `brouillage.gd`.
+## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
+
+**Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus
+grand.** Les `SubViewport` de `main.tscn` rendent à taille FIXE — 957×1080 et
+958×1080 en écran scindé, 1916×1080 en vue unique — **quelle que soit la
+fenêtre**, parce que `SubViewportContainer` ne répercute pas le facteur
+d'étirement sur le viewport qu'il porte. Agrandir la fenêtre étire donc l'image
+au lieu de l'affiner. Voir le piège « Agrandir la fenêtre n'agrandit pas le rendu
+du jeu ».
+
+Ce n'est pas un défaut : c'est un choix que personne n'a fait, et qui coûte de la
+netteté là où le jeu se joue.
+
+### R1 — Le banc doit dire ce qu'il rendait ✅ fait le 2026-08-25
+
+Sans ça, aucun avant/après n'est possible et **rien ne le signale**.
+`tools/bench_framerate.gd` imprime désormais, avant de mesurer : taille de
+fenêtre en pixels natifs, aire 2D et facteur d'étirement, taille de rendu de
+chaque `SubViewport` (en marquant celui qui est arrêté par `--une-vue`), et le
+total de pixels de jeu par image. Il suit aussi l'état de focus et **qualifie son
+propre relevé** — voir R2.
+
+### R2 — Relevé de référence ✅ fait le 2026-08-25
+
+Cinq exécutions, `--seconds 15`, duel complet, pompe contre pompe, torches
+allumées, sur Apple M3.
+
+| Fenêtre | Focus | Médian | 1 % bas | Pire image |
+|---|---|---|---|---|
+| 1280×720 | stable | 144 | 143 | 7,3 ms |
+| 2560×1440 | **mixte (93 %)** | 144 | 71 | 18,5 ms |
+| 2560×1440 | **mixte (89 %)** | 144 | 44 | 59,6 ms |
+| 2560×1440 | stable | 144 | 142 | 7,2 ms |
+| 2560×1440 | stable | 144 | 143 | 7,3 ms |
+| 2560×1440 | stable | 144 | 144 | 7,0 ms |
+
+**Deux résultats, et le second a failli passer pour le premier.**
+
+1. **Doubler la fenêtre ne coûte rien de mesurable** : médiane 144 partout,
+   1 % bas 142 à 144 dès que le focus est stable. C'est cohérent — les
+   `SubViewport` rendent les mêmes 2,07 Mpx, seul le blit final grandit.
+2. **Ce qui détruit le 1 % bas, ce sont les TRANSITIONS de focus**, pas la
+   charge. Les deux relevés à 44 et 71 sont exactement les deux où la fenêtre a
+   changé d'état pendant la mesure. Sans l'instrumentation de R1, on aurait lu
+   « doubler la fenêtre fait tomber le 1 % bas de 143 à 44 » — un chiffre faux,
+   parfaitement plausible, et qui aurait condamné le chantier avant qu'il
+   commence.
+
+**Référence à battre, donc : médiane 144, 1 % bas 142-144, pire image ~7,2 ms,
+pour 2,07 Mpx de jeu par image.** Protocole obligatoire : focus stable, relevé
+mixte jeté, trois exécutions.
+
+### R3 — Choisir le mécanisme ⚠️ demande un arbitrage d'Adrien
+
+Trois voies, et elles n'ont ni le même coût ni le même périmètre.
+
+**(a) Supersampler les `SubViewport`.** Remplacer `SubViewportContainer` par un
+`Control` qui dessine la texture, poser `SubViewport.size = taille × étirement`,
+et **corriger le zoom des caméras du même facteur** — sans quoi le champ de
+vision change, ce que `keep` vient précisément de figer. Touche `main.tscn` et
+`game_state.gd`, où le zoom est posé à 1.0 en cinq endroits et animé pour la
+killcam et l'encaissement. Coût de rendu : ×4 en plein écran (2,07 → 8,29 Mpx).
+
+**(b) Sortir le duel du `SubViewport` en vue unique — ✅ RETENU par Adrien le
+2026-08-25 « pour des raisons d'équité en compétitif », et ✅ IMPLÉMENTÉ le même
+jour.** En ligne et à l'entraînement il n'y a qu'une vue ; le jeu est désormais
+rendu par le viewport racine, à la résolution de la fenêtre. C'est le mode
+compétitif, donc celui où la netteté compte.
+
+**Comment c'est fait, et ce que ça ne fait pas.** Aucun nœud ne bouge : joueurs,
+arène et balles restent enfants de `vp1`. La racine adopte le même `World2D`, le
+masque de cull de la vue regardée, et sa caméra (`custom_viewport`) ; les deux
+`SubViewport` passent en `UPDATE_DISABLED`. L'écran scindé local est inchangé —
+il a besoin de ses deux vues, deux masques, deux caméras. Tout tient dans
+`_accorder_rendu_aux_vues()`, qui savait déjà quelle vue est regardée.
+
+**L'interrupteur `rendu_racine_autorise`** ramène la vue unique à son
+`SubViewport`. Il existe pour que le banc mesure les deux chemins dans la même
+exécution (R4), et sert de recours si le rendu racine se révélait mauvais
+quelque part.
+
+> **Correction, et elle porte sur l'argument qui a emporté la décision.** Ce
+> paragraphe annonçait (b) comme **« gratuit en pixels »**, au motif que le blit
+> intermédiaire disparaît au lieu de grossir. La moitié est vraie, la conclusion
+> est fausse : **si le jeu est dessiné à la résolution de la fenêtre, il coûte
+> les pixels de la fenêtre.** En vue unique, le rendu passe de 1916×1080 —
+> 2,07 Mpx — à 3,69 Mpx dans la fenêtre de débogage doublée, et 8,29 Mpx en
+> plein écran. Ce sont les pixels chers : lumières, occluders, mélange. L'étape
+> supprimée avait été comptée, l'étape restante avait été oubliée.
+>
+> **La netteté se paye en pixels dans les deux voies. Il n'y a pas de repas
+> gratuit**, et (a) et (b) coûtent sensiblement la même chose sur la vue qu'elles
+> touchent — au blit près, qui est bon marché.
+>
+> Ce qui reste vrai, et ce qui fait choisir (b) : **aucun zoom de caméra à
+> retoucher.** L'étirement de la fenêtre s'en charge, donc le champ de vision ne
+> peut pas dériver — ce que le passage en `keep` vient précisément de verrouiller.
+> (a) rouvrirait cette porte dans cinq endroits de `game_state.gd`, dont la
+> killcam. S'y ajoute une pièce mobile en moins : plus d'image intermédiaire en
+> vue unique.
+
+> **Correction du 2026-08-25, apportée par la session « spatialisation du son »
+> et vérifiée avant d'être écrite ici.** Ce paragraphe disait que (b) croisait
+> S1 « qui dit que le pool audio vit dans le `World2D` de la racine ». **C'était
+> périmé d'une journée : S1 est FAIT** (`4d8a85e`, fusionné par `e3e1b34`, donc
+> déjà dans la base de ce chantier), `AudioManager.poser_oreille()` existe et
+> `game_state.gd:992` l'appelle.
+>
+> **La contrainte réelle tient en une ligne : (b) peut déplacer le monde, il ne
+> doit pas supprimer l'`AudioListener2D`.** Des trois gestes de
+> `poser_oreille()`, un monde unique en rendrait deux redondants — le
+> reparentage du pool deviendrait un déplacement interne, et
+> `audio_listener_enable_2d` est déjà à `true` sur la fenêtre racine. Le
+> troisième reste **nécessaire quel que soit le viewport** : sans auditeur
+> explicite, Godot retombe sur le centre de l'écran virtuel, c'est-à-dire le
+> défaut d'origine réintroduit par une refonte qui n'a rien à voir avec le son.
+>
+> **Et un argument POUR (b) qui ne vient pas des pixels :** depuis S1, le pool
+> de seize voix vit dans le monde du jeu et se fait reparenter à chaque manche,
+> avec un rappel sur `tree_exiting` — sans quoi les seize voix partent avec
+> l'arène et plus aucun son positionnel ne sort de la session, sans erreur. Un
+> monde unique supprimerait ce va-et-vient : une pièce mobile en moins sur un
+> chemin qui a déjà son piège.
+>
+> `audio_manager.gd` appartient au domaine « game feel » / son : l'alléger se
+> demande à cette session, ça ne se fait pas depuis ici.
+
+**(c) Ne rien faire, et l'assumer par écrit.** La netteté actuelle est celle d'un
+1080p étiré. Personne ne s'en est plaint avant qu'on la mesure.
+
+### R4 — Mesurer l'après ✅ fait le 2026-08-25, **et le relevé ne prouve pas ce qu'on espérait**
+
+Les deux chemins mesurés **dans la même session, sur la même machine, sous le
+même focus** — c'est à ça que sert l'interrupteur `rendu_racine_autorise` et le
+`--sans-racine` du banc. Comparer deux commits sur deux lancements aurait laissé
+la machine et le focus varier entre les deux moitiés de la mesure.
+
+| Vue unique | Pixels de jeu | Médiane | 1 % bas | Pire image |
+|---|---|---|---|---|
+| **avant** — `SubViewport` 957×1080 puis étiré | 1,03 Mpx | 144 | 142 | 7,3 ms |
+| **après** — racine 2560×1440 | **3,69 Mpx** | 144 | 143 | 7,3 ms |
+
+**3,6 fois plus de pixels, aucun écart mesurable. Et c'est précisément ce dont
+il faut se méfier.**
+
+**Le contrôle qui a sauvé la conclusion : le socle nu donne AUSSI 144.** Toutes
+torches éteintes, tous shaders retirés, seconde vue arrêtée — 1,03 Mpx et
+médiane 144, 1 % bas 142, pire image 7,3 ms. Aux erreurs de mesure près, c'est le
+même relevé que le duel complet à 3,69 Mpx.
+
+Conclusion honnête : **la fenêtre au second plan est bridée autour de 144 fps, et
+le banc ne voit rien en dessous de ce plafond.** Il ne mesure donc pas la charge,
+il mesure le plafond. Ce que le relevé établit vraiment :
+
+- ✅ **les deux chemins tiennent ≥ 142 de 1 % bas** sous ce plafond ;
+- ❌ **il n'établit PAS que le chantier est gratuit.** « 3,6× les pixels pour
+  zéro coût » est une conclusion que ce relevé ne porte pas, et l'écrire aurait
+  été le même défaut que les quinze mesures recopiées cent quarante fois du
+  compteur de fps.
+
+#### Le vrai relevé — Adrien, fenêtre au PREMIER PLAN, le 2026-08-25 (jalon H10 ✅)
+
+Deux exécutions, focus **stable au premier plan** attesté par le banc lui-même,
+donc comparables. Le plafond disparaît, et le résultat renverse deux choses.
+
+| Vue unique, premier plan | Pixels de jeu | Moyen | Médian | 1 % bas | Pire image |
+|---|---|---|---|---|---|
+| **avant** — `SubViewport` 957×1080 | 1,03 Mpx | 104 | 105 | 63 | 17,6 ms |
+| **après** — racine 2560×1440 | **3,69 Mpx** | **121** | **120** | 61 | 19,4 ms |
+
+**1. Le chantier ne coûte pas, il RAPPORTE : +15 % de cadence pour 3,6 fois plus
+de pixels.** L'explication est matérielle et vaut d'être retenue : le chemin
+d'avant écrivait dans une texture intermédiaire puis la recopiait à l'écran. Sur
+un GPU Apple, qui rend par tuiles, **changer de cible de rendu force un vidage de
+tuiles coûteux**. Supprimer l'étape économise plus que les pixels ajoutés ne
+coûtent. C'est l'inverse de ce que la prudence faisait attendre, et aucune
+lecture de code ne l'aurait donné.
+
+**2. Correction de ce que cette section affirmait plus haut : la marge sur le
+seuil n'est PAS « du double », elle est de deux images par seconde.** Le
+1 % bas réel est de **61 après et 63 avant**, contre une barre à 60. Le chiffre
+« 142 » venait des relevés plafonnés et ne décrivait pas le jeu.
+
+**3. Et un constat qui dépasse ce chantier, à ne pas lui attribuer :** 63 avant,
+61 après — l'écart est dans le bruit, donc **le chantier R ne dégrade pas le
+1 % bas**. Mais le jeu, mesuré honnêtement dans la fenêtre de développement,
+tourne à un 1 % bas d'environ **60**, très loin des « 120 tenus » que ce document
+annonce depuis le 2026-08-16. Ce relevé-là avait été pris en fenêtre 1280×720, et
+sans instrument capable de dire ce que le focus faisait. **C'est un fait sur le
+jeu, pas sur ce lot, et il appelle une décision d'Adrien.**
+
+Réserve de méthode : une exécution par configuration. L'écart de +15 % dépasse la
+dispersion observée le même jour sur deux relevés identiques (73 contre 81), donc
+la direction est solide — deux exécutions de plus la confirmeraient.
+
+### R5 — Le seuil, fixé AVANT de mesurer ✅ tranché par Adrien le 2026-08-25
+
+**La barre passe de « 1 % bas ≥ 120 fps » à « 1 % bas ≥ 60 fps ».** Décision
+d'Adrien, prise avant tout relevé d'après — c'est là tout l'objet de cette
+étape : un seuil choisi en regardant le résultat n'est pas un seuil, c'est une
+justification.
+
+**Ce que ça ouvrait, écrit le jour même : « la barre ne mordra probablement pas,
+la référence est à 142-144, il faudrait perdre plus de la moitié de la cadence
+pour toucher 60 ».**
+
+> ⚠️ **Faux, et conservé ici parce que l'erreur est instructive.** Ce « 142-144 »
+> venait de relevés pris fenêtre au second plan, donc plafonnés — le socle nu
+> donnait le même chiffre. Le relevé honnête d'Adrien, fenêtre au premier plan,
+> donne un 1 % bas de **61 après et 63 avant** : la barre de 60 est franchie de
+> deux images par seconde, pas du double. **Elle a bien failli mordre.**
+>
+> La décision reste la bonne — le chantier ne dégrade pas le 1 % bas, 63 → 61
+> étant dans le bruit — mais elle a été prise sur un chiffre qui ne décrivait pas
+> le jeu. *Un seuil fixé d'avance protège du biais de conclusion ; il ne protège
+> pas d'une référence fausse.*
+
+**Et une distinction qu'il ne faut pas perdre, parce que les deux chiffres se
+ressemblent.** « 1 % bas à 60 » n'est pas « plafonner à 60 ». La Phase 3 a
+mesuré que la cadence commande le RTT d'EOS — 60 fps plafonnés donnent
+RTT_MIN 46 ms et RTT_AVG ~50, contre 13,3 et 22,3 déplafonné, soit **le double
+de latence réseau**. Ce prix-là n'est PAS celui qu'Adrien vient d'accepter : il a
+accepté que le centième d'images le plus lent descende à 60, pas que le jeu y
+vive. La médiane reste déplafonnée, et c'est elle qui décide du RTT.
+
+**Si le seuil ne passait pas** — cas peu probable, mais tranché d'avance : on en
+fait un **réglage** dans les Options, à côté des intensités d'effets. La netteté
+ne change aucune information de jeu — elle ne dit rien de plus sur l'adversaire —
+donc en faire une option ne crée pas d'inégalité, contrairement au champ de
+vision. C'est précisément pourquoi `keep` n'est pas réglable et pourquoi
+celle-ci pourrait l'être.
+
+**Mesuré sur la vue unique**, et non sur l'écran scindé : c'est la vue que (b)
+transforme, et c'est le mode classé. L'écran scindé reste au comportement actuel
+et n'a donc pas de « après » à mesurer.
+
+### R6 — Recuire les assets ⏳ le seuil est passé, donc c'est DÛ
+
+**Le fait géométrique, et il ne dépend d'aucune mesure de cadence :** en vue
+unique, un asset dessiné pour couvrir N unités de monde couvre désormais N ×
+l'étirement de la fenêtre. **×1,33 dans la fenêtre de développement doublée, ×2
+en plein écran.** Une tuile de 35 px sur une case de 35 unités passe donc de 1
+texel par pixel à **0,5 en plein écran** : elle sera interpolée, pas nette.
+L'écran scindé local, lui, garde ses `SubViewport` à taille fixe et son 1:1.
+
+**Cela renverse la consigne donnée le matin même** aux sessions qui produisent
+des assets — « les `SubViewport` rendent à taille fixe, donc rien n'est à
+recuire ». C'était vrai avant (b), c'est faux après, et les deux sessions
+concernées ont été prévenues le jour même.
+
+Ce qu'il reste à faire, dans l'ordre :
+
+1. **Tuiles et sprites** — la session DA2 l'a mesuré : les planches sources font
+   2048² pour des sorties de 35 et 36 px, et `tools/fabrique_tuiles.gd` /
+   `tools/fabrique_sprites.gd` savent recuire. **C'est un paramètre, pas une
+   commande d'assets.**
+2. **Cookie de torche** — et ici, attention au piège *la résolution d'une texture
+   de lumière décide de sa PORTÉE* : recuire sans la ligne de correction
+   (`texture_scale = torch_scale * 512.0 / texture.get_width()`) change la portée
+   de la torche, **donc une valeur de jeu**, en silence.
+3. **Choisir la densité de référence.** Recuire « pour le plein écran » (×2)
+   sur-échantillonne la fenêtre de développement ; recuire pour ×1,33
+   sous-échantillonne le plein écran. Le choix se fait une fois, pour toutes les
+   familles, sinon on recrée l'incohérence que le chantier DA chasse.
 
 ---
 
@@ -8449,6 +8766,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
 | H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
+| H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---
 

@@ -204,6 +204,24 @@ var cam1: Camera2D
 var cam2: Camera2D
 var current_snap
 
+## Chantier R (b) — le duel est-il rendu par le viewport racine plutôt que par un
+## `SubViewport` ? Voir `_rendre_dans_la_racine()`.
+var _rendu_racine := false
+## Interrupteur du chantier R, public et volontairement simple.
+##
+## À `false`, la vue unique repasse par son `SubViewport` comme avant le
+## 2026-08-25. Deux usages, et le second est le plus important : **il permet à un
+## banc de mesurer l'AVANT et l'APRÈS dans la même exécution**, au lieu de
+## comparer deux commits sur deux lancements — ce qui laisserait la machine, la
+## charge et le focus varier entre les deux moitiés de la mesure. Il sert aussi
+## de recours si le rendu racine se révélait mauvais sur une machine donnée.
+var rendu_racine_autorise := true
+## Le `World2D` propre de la fenêtre, mémorisé avant qu'on lui prête celui du jeu.
+## Sans lui, revenir à l'écran scindé laisserait la racine sur le monde du duel.
+var _monde_racine: World2D = null
+## Masque de cull « tout visible », valeur d'origine d'un viewport.
+const MASQUE_CULL_TOUT := 0xFFFFFFFF
+
 var cam1_shake_time: float = 0.0
 var cam2_shake_time: float = 0.0
 
@@ -2337,11 +2355,106 @@ func _check_rematch_start():
 ## c'est-à-dire du mode **en ligne** — et c'est précisément là que ce coût ne
 ## servait à rien.
 func _accorder_rendu_aux_vues() -> void:
+	var regardees: Array[SubViewport] = []
 	for vue in [vp1, vp2]:
 		var conteneur := vue.get_parent() as Control
-		var vu := conteneur != null and conteneur.visible
+		if conteneur != null and conteneur.visible:
+			regardees.append(vue)
+
+	# R3 (b) : une seule vue regardée ⇒ le duel se rend DANS LA RACINE.
+	if regardees.size() == 1 and rendu_racine_autorise:
+		_rendre_dans_la_racine(regardees[0])
+	else:
+		_rendre_dans_les_sous_vues()
+
+	for vue in [vp1, vp2]:
+		var conteneur := vue.get_parent() as Control
+		# `_rendu_racine` l'emporte : la vue regardée n'a plus rien à dessiner,
+		# c'est la racine qui la remplace.
+		var vu: bool = conteneur != null and conteneur.visible and not _rendu_racine
 		vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS if vu \
 			else SubViewport.UPDATE_DISABLED
+
+
+## Rend le duel directement dans le viewport racine, à la résolution de la
+## fenêtre. **Chantier R, étape R3 option (b), retenue par Adrien le 2026-08-25
+## pour l'équité en compétition.**
+##
+## Le problème : un `SubViewport` rend à taille FIXE — 1916×1080 en vue unique —
+## quel que soit la fenêtre, parce que `SubViewportContainer` ne lui répercute
+## pas le facteur d'étirement. Le duel était donc dessiné en 1080p puis ÉTIRÉ.
+##
+## **Pourquoi la racine règle ça sans toucher aux caméras**, et c'est toute la
+## raison du choix : le viewport racine est en `canvas_items` + `keep`, donc son
+## aire 2D reste 1920×1080 quelle que soit la fenêtre pendant que le rendu, lui,
+## se fait en pixels de fenêtre. Une caméra à `zoom = 1.0` y montre exactement le
+## même monde qu'avant. L'autre voie — agrandir le `SubViewport` — aurait exigé
+## de corriger le zoom du même facteur dans les cinq endroits où il est posé,
+## dont la killcam, **et donc de rouvrir la question du champ de vision que le
+## passage en `keep` venait de fermer.** C'est un sujet d'équité, pas de confort.
+##
+## On ne déplace AUCUN nœud : les joueurs, l'arène et les balles restent enfants
+## de `vp1`. La racine adopte simplement le même `World2D`, le masque de cull de
+## la vue regardée, et sa caméra.
+func _rendre_dans_la_racine(vue: SubViewport) -> void:
+	var racine := get_window()
+	var cam: Camera2D = cam1 if vue == vp1 else cam2
+	# **Sortir sans rien changer tant que les caméras n'existent pas.** Cette
+	# fonction est appelée avant `_setup_players()` sur certains chemins ; basculer
+	# le monde sans caméra donnerait un écran noir que rien ne signalerait. Le
+	# rendu reste alors dans les `SubViewport`, et le prochain accord rattrape.
+	if racine == null or cam == null:
+		return
+	if _monde_racine == null:
+		_monde_racine = racine.world_2d
+	racine.world_2d = vue.world_2d
+	racine.canvas_cull_mask = vue.canvas_cull_mask
+	cam.custom_viewport = racine
+	cam.make_current()
+	# **La racine doit CESSER d'écouter, et cette ligne n'a rien de cosmétique.**
+	#
+	# Un `AudioStreamPlayer2D` sort une fois par viewport AUDITEUR de son
+	# `World2D`. La racine l'est par défaut ; en lui prêtant le monde du duel, on
+	# en fait une seconde oreille à côté de l'`AudioListener2D` que
+	# `AudioManager.poser_oreille()` a posé sur le joueur. Chaque pas, chaque tir
+	# sortirait alors **deux fois** : une fois depuis l'oreille du joueur, une
+	# fois depuis le repli de la racine — le centre de son écran virtuel, c'est-à-
+	# dire le point fixe hors de la carte qui ÉTAIT le défaut d'origine réparé par
+	# S1 la veille.
+	#
+	# Le symptôme serait le pire de sa famille : pas un silence, un son
+	# parfaitement audible à +3 dB environ, panoramique juste mêlé au faux. On
+	# aurait cherché dans le mixage. Signalé et mesuré par la session
+	# « spatialisation du son », vérifié ici par `tools/test_rendu_racine.gd`.
+	racine.audio_listener_enable_2d = false
+	_rendu_racine = true
+
+
+## Remet le duel dans ses deux `SubViewport` — l'écran scindé, qui en a besoin :
+## deux vues, deux masques de cull, deux caméras.
+##
+## Idempotente à dessein : appelée à chaque accord, elle ne fait rien tant que
+## la racine n'a pas été détournée.
+func _rendre_dans_les_sous_vues() -> void:
+	if not _rendu_racine:
+		return
+	var racine := get_window()
+	if racine != null:
+		if _monde_racine != null:
+			racine.world_2d = _monde_racine
+		racine.canvas_cull_mask = MASQUE_CULL_TOUT
+		# Rendre l'écoute à la racine : c'est l'état que `SceneTree` installe au
+		# démarrage, et **tout ce qui joue hors match en dépend**, menus compris.
+		# La laisser sourde derrière soi rendrait le jeu muet ailleurs, sans
+		# erreur — et ce lot-ci ne serait pas soupçonné.
+		racine.audio_listener_enable_2d = true
+	if cam1 != null:
+		cam1.custom_viewport = vp1
+		cam1.make_current()
+	if cam2 != null:
+		cam2.custom_viewport = vp2
+		cam2.make_current()
+	_rendu_racine = false
 
 func _restore_viewports():
 	# L'entraînement passe avant le mode réseau : il tourne en écran partagé du
