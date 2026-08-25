@@ -2927,7 +2927,25 @@ il affirmerait précisément ce qui est faux. `tools/test_habillage.gd` ouvre po
 cette raison sur un contrôle de chargement effectif — `police_ui() != null` —
 avant toute autre mesure.
 
-**La parade, en une commande, avant la première suite d'un worktree neuf :**
+**Et il mord AUSSI après chaque fusion, pas seulement à la création — c'est même
+sa forme la plus fréquente, ajoutée le 2026-08-25 après une troisième morsure.**
+
+Le symptôme ne ressemble alors pas du tout à sa cause : on tire le travail d'une
+voisine, on relance le lot, et **quatre suites rougissent avec des erreurs dans
+des fichiers qu'on n'a jamais ouverts** — `candela_tileset.gd`, `player.gd`. Le
+premier réflexe est de croire à une régression de l'autre session, ou à une
+incompatibilité entre les deux lots. Ce n'était ni l'un ni l'autre : la fusion
+apportait des **assets neufs**, et `.godot/imported/` ne les connaissait pas.
+
+> **Des erreurs dans les fichiers d'une autre session, juste après avoir tiré son
+> travail, sont un défaut de cache d'import jusqu'à preuve du contraire.**
+
+Le contrôle qui tranche en dix secondes : l'erreur est-elle un `null` sur une
+ressource (`Cannot call method 'get_image' on a null value`) plutôt qu'une erreur
+de logique ? Si oui, réimporter avant de lire une seule ligne du code d'autrui.
+
+**La parade, en une commande — avant la première suite d'un worktree neuf, et
+après toute fusion apportant des assets :**
 
 ```bash
 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import
