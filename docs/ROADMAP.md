@@ -2694,6 +2694,35 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Reconnaître un son à son DOSSIER, c'est le classer par où il vit (2026-08-25)
+
+`AudioManager.est_un_tir()` répond vrai pour la clé `"shoot"` **ou pour tout
+chemin commençant par `DIR_ARMES`** (`res://assets/audio/weapons/`). Écrit pour
+V4.1, quand ce dossier ne contenait que les seize prises de tir, c'était exact.
+
+**Le jour où un autre son y est déposé, il devient un tir sans que personne ne
+l'ait décidé.** C'est arrivé avec les `weapon_dry_*` (le percuteur à vide) :
+livrés dans le même dossier, ils héritaient de la sémantique « coup de feu », et
+**un clic à vide faisait donc reculer les pas de l'adversaire de six décibels**
+(V4.15). Un joueur martelant une détente vide effaçait les pas d'en face —
+l'inverse exact de ce que ce son raconte, puisqu'il avoue qu'on est désarmé.
+
+Aucune erreur, aucun test rouge : le duck est un écart de volume, pas un état.
+
+**Ce que ça enseigne au-delà de l'audio : classer par l'EMPLACEMENT d'un fichier
+plutôt que par sa NATURE fait dépendre le comportement du jeu d'une décision de
+rangement.** Déplacer un asset devient un changement de règles, et personne ne
+relit le code en déposant un `.wav`. Quand une famille de sons partage un
+dossier avec une autre, la question se pose à un prédicat nommé — pas à un
+préfixe recopié.
+
+*Trouvé par la session « DA3 Audio » en câblant le percuteur, sur signalement
+croisé : je l'avais avertie que le nouveau son prendrait la portée par défaut,
+elle a vu en le corrigeant qu'il prenait aussi la priorité et le duck d'un tir.
+Le signalement portait sur la table des portées ; la faute était dans le
+prédicat.*
+
+
 ### `cam1` à `Nil` ne parle jamais de la caméra (2026-08-25)
 
 ```
@@ -4741,6 +4770,26 @@ quoi : le message liste des chaînes vides. Passer par
   **La seule parade réelle en arbre partagé : `git diff <chemin>` avant de
   commiter, et le lire.** Prendre un fichier tenu par une autre session sans
   regarder ce qu'il contient déjà revient à signer son travail.
+- ⚠️ **Le miroir du piège ci-dessus : c'est VOTRE fichier qui part avec le
+  commit d'un autre — et la règle « ROADMAP dans le même commit » y survit
+  mal.** Arrivé le 2026-08-25 : la justification de DA2.4 était écrite dans
+  `docs/ROADMAP.md` et attendait que la suite passe ; pendant ces vingt minutes,
+  `318e6ef` — une session audio, qui parle de caméras et de `cam1 à Nil` — a
+  emporté le fichier entier. Quand `19b4f20` a enfin commité le code de la
+  marche, **il n'y avait plus rien à commiter dans la ROADMAP** : `git add` a
+  réussi sans un mot, et le commit est parti à trois fichiers au lieu de quatre.
+  Rien n'est perdu et rien n'est en conflit — mais qui lira `19b4f20` pour
+  comprendre *pourquoi* la marche n'est pas peinte ne trouvera pas la réponse
+  dedans, et le commit qui la porte parle d'autre chose.
+  **Ce que ça change en pratique :** la parade documentée plus haut protège
+  celui qui commite, pas celui qui écrit. Le seul contrôle qui l'attrape est
+  `git show --stat` **sur son propre commit, juste après** — la ROADMAP y manque,
+  ou elle n'y manque pas. Et le remède n'est **jamais** de réécrire l'historique
+  d'une branche que quatre sessions partagent : on rétablit le lien en nommant
+  le commit dans l'entrée, ce que fait DA2.4 ci-dessus.
+  **Corollaire, et il vaut au-delà de git :** plus une rédaction attend dans
+  l'arbre de travail, plus elle est exposée. Écrire la ROADMAP *après* que la
+  suite est verte, et non pendant, réduit la fenêtre de vingt minutes à une.
 - **Un `git add` groupé qui trébuche sur un fichier absent n'indexe RIEN**, et le
   commit qui suit part avec son message complet et son contenu amputé. Arrivé le
   2026-08-18 sur l'étape 8.8 : `6783d56` porte tout le récit et n'emporte que le
@@ -7015,7 +7064,8 @@ un fait de jeu, pas à un rythme d'interface.
      seconde. (Ma propre première consigne à Gemini demandait le contraire —
      l'erreur venait de moi, pas du générateur.)
 
-  D'où la solution retenue : le corps **roule sur le pied porteur**, en
+  D'où la solution retenue (commit `19b4f20`) : le corps **roule sur le pied
+  porteur**, en
   translation le long de l'axe local Y, d'amplitude dérivée du **même
   accumulateur** que le pas (`sin(distance / pas × π) × 1,6 × côté_du_pied`).
   Elle tombe donc exactement avec le son et l'empreinte, à toutes les allures et
