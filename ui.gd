@@ -152,6 +152,24 @@ const PANEL_AUDIO := "panneau_audio"
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
 
+## **Un aperçu par mode, demandé par Adrien le 2026-08-25.**
+##
+## Le cadre de droite montre le mode **tel qu'il est une fois lancé**, et non
+## l'arène vide où l'on jouera. Cette table est le seul endroit qui rattache un
+## écran à son image — `menu_apercu.gd` ne connaît aucun mode.
+##
+## ⚠️ **Le compétitif n'y est pas, et c'est délibéré** : Adrien y veut « le
+## classement en cours du joueur », c'est-à-dire de la **donnée**, pas une image.
+## Il passe donc par le panneau de texte, avec `_my_rank_text()`. Mettre une
+## capture là où le joueur veut son rang serait de la décoration posée à la
+## place d'une information.
+const APERCUS := {
+	SCREEN_LOCAL: "res://assets/ui/apercu_ecran_scinde.png",
+	SCREEN_FRIENDLY: "res://assets/ui/apercu_duel_en_ligne.png",
+	SCREEN_TRAINING: "res://assets/ui/apercu_entrainement.png",
+	SCREEN_CUSTOM: "res://assets/ui/apercu_personnalisation.png",
+}
+
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
 ## et une entrée retirée du parcours du curseur fait douter du bouton d'à côté.
@@ -2453,6 +2471,19 @@ func _build_hub_screens() -> void:
 	# panneau ajouté après coup se placerait au-dessus des autres dans la pile —
 	# ici sans conséquence puisqu'un seul est visible à la fois, mais l'ordre
 	# reste celui de la déclaration et il vaut mieux qu'il soit lisible.
+	# **Un panneau d'aperçu par écran**, posé en défaut de l'écran : c'est ce
+	# qu'on voit tant qu'aucune entrée ne réclame autre chose. Chaque écran a le
+	# sien — un seul nœud partagé montrerait la mauvaise image le temps d'une
+	# frame en changeant d'écran, et ce scintillement se voit.
+	for ecran: String in APERCUS.keys():
+		if not hub.has_screen(ecran):
+			continue
+		var cle := "apercu_" + ecran
+		hub.register_panel(cle, MenuApercu.new(String(APERCUS[ecran])))
+		# Sans écraser un défaut déjà posé : le salon et la galerie passent avant.
+		if hub.screen_panel(ecran) == "":
+			hub.set_screen_panel(ecran, cle)
+
 	# ⚠️ **L'arène en fond a été ANNULÉE par Adrien le 2026-08-25.**
 	#
 	# L'idée était de remplir le cadre avec la carte du prochain match, révélée
@@ -3324,6 +3355,16 @@ func _on_hub_screen_changed(id: String) -> void:
 		_refresh_map_card()
 		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
+	# **Le compétitif ouvre sur le classement du joueur.** Demande d'Adrien : c'est
+	# ce qu'on vient y chercher. Les autres écrans montrent une capture du mode,
+	# celui-ci montre une **donnée** — et poser une image à la place du rang
+	# reviendrait à décorer l'endroit où l'on attend une réponse.
+	#
+	# Relu à chaque entrée, jamais mis en cache : le rang arrive en tâche de fond
+	# après l'identification, et une valeur retenue afficherait « non classé » à
+	# quelqu'un qui vient de l'être.
+	if id == SCREEN_RANKED:
+		hub.montrer_texte("MON RANG", _my_rank_text())
 	if id == SCREEN_TRAINING and _leaderboard != null:
 		_leaderboard.refresh()
 	_seed_focus(0)
