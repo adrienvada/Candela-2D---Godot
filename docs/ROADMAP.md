@@ -7094,11 +7094,30 @@ vision change, ce que `keep` vient précisément de figer. Touche `main.tscn` et
 `game_state.gd`, où le zoom est posé à 1.0 en cinq endroits et animé pour la
 killcam et l'encaissement. Coût de rendu : ×4 en plein écran (2,07 → 8,29 Mpx).
 
-**(b) Sortir le duel du `SubViewport` en vue unique.** En ligne et à
-l'entraînement il n'y a qu'une vue ; le jeu pourrait vivre dans le viewport
-racine, qui rend déjà à la résolution de la fenêtre. **Gratuit en pixels** — le
-blit intermédiaire disparaît au lieu de grossir — et c'est le mode compétitif,
-donc celui où la netteté compte.
+**(b) Sortir le duel du `SubViewport` en vue unique — ✅ RETENU par Adrien le
+2026-08-25.** En ligne et à l'entraînement il n'y a qu'une vue ; le jeu vivrait
+dans le viewport racine, qui rend déjà à la résolution de la fenêtre. C'est le
+mode compétitif, donc celui où la netteté compte.
+
+> **Correction, et elle porte sur l'argument qui a emporté la décision.** Ce
+> paragraphe annonçait (b) comme **« gratuit en pixels »**, au motif que le blit
+> intermédiaire disparaît au lieu de grossir. La moitié est vraie, la conclusion
+> est fausse : **si le jeu est dessiné à la résolution de la fenêtre, il coûte
+> les pixels de la fenêtre.** En vue unique, le rendu passe de 1916×1080 —
+> 2,07 Mpx — à 3,69 Mpx dans la fenêtre de débogage doublée, et 8,29 Mpx en
+> plein écran. Ce sont les pixels chers : lumières, occluders, mélange. L'étape
+> supprimée avait été comptée, l'étape restante avait été oubliée.
+>
+> **La netteté se paye en pixels dans les deux voies. Il n'y a pas de repas
+> gratuit**, et (a) et (b) coûtent sensiblement la même chose sur la vue qu'elles
+> touchent — au blit près, qui est bon marché.
+>
+> Ce qui reste vrai, et ce qui fait choisir (b) : **aucun zoom de caméra à
+> retoucher.** L'étirement de la fenêtre s'en charge, donc le champ de vision ne
+> peut pas dériver — ce que le passage en `keep` vient précisément de verrouiller.
+> (a) rouvrirait cette porte dans cinq endroits de `game_state.gd`, dont la
+> killcam. S'y ajoute une pièce mobile en moins : plus d'image intermédiaire en
+> vue unique.
 
 > **Correction du 2026-08-25, apportée par la session « spatialisation du son »
 > et vérifiée avant d'être écrite ici.** Ce paragraphe disait que (b) croisait
@@ -7133,11 +7152,37 @@ donc celui où la netteté compte.
 
 Même fenêtre, même charge, focus stable, trois exécutions, relevés mixtes jetés.
 
-### R5 — Fixer le seuil AVANT de mesurer ⚠️ Adrien
+### R5 — Le seuil, fixé AVANT de mesurer ✅ tranché par Adrien le 2026-08-25
 
-Le verdict « 1 % bas ≥ 120 fps » est la cible historique. **Elle se confirme ou
-se déplace maintenant, pas après le relevé** : un seuil choisi en regardant le
-résultat n'est pas un seuil.
+**La barre passe de « 1 % bas ≥ 120 fps » à « 1 % bas ≥ 60 fps ».** Décision
+d'Adrien, prise avant tout relevé d'après — c'est là tout l'objet de cette
+étape : un seuil choisi en regardant le résultat n'est pas un seuil, c'est une
+justification.
+
+**Ce que ça ouvre, dit franchement : la barre ne mordra probablement pas.** La
+référence est à 142-144, et (b) multiplie les pixels de jeu par 1,8 dans la
+fenêtre doublée, par 4 en plein écran. Il faudrait perdre plus de la moitié de la
+cadence pour toucher 60. Le relevé de R4 reste dû — on ne suppose pas une
+mesure — mais il servira surtout à **constater le coût**, pas à trancher.
+
+**Et une distinction qu'il ne faut pas perdre, parce que les deux chiffres se
+ressemblent.** « 1 % bas à 60 » n'est pas « plafonner à 60 ». La Phase 3 a
+mesuré que la cadence commande le RTT d'EOS — 60 fps plafonnés donnent
+RTT_MIN 46 ms et RTT_AVG ~50, contre 13,3 et 22,3 déplafonné, soit **le double
+de latence réseau**. Ce prix-là n'est PAS celui qu'Adrien vient d'accepter : il a
+accepté que le centième d'images le plus lent descende à 60, pas que le jeu y
+vive. La médiane reste déplafonnée, et c'est elle qui décide du RTT.
+
+**Si le seuil ne passait pas** — cas peu probable, mais tranché d'avance : on en
+fait un **réglage** dans les Options, à côté des intensités d'effets. La netteté
+ne change aucune information de jeu — elle ne dit rien de plus sur l'adversaire —
+donc en faire une option ne crée pas d'inégalité, contrairement au champ de
+vision. C'est précisément pourquoi `keep` n'est pas réglable et pourquoi
+celle-ci pourrait l'être.
+
+**Mesuré sur la vue unique**, et non sur l'écran scindé : c'est la vue que (b)
+transforme, et c'est le mode classé. L'écran scindé reste au comportement actuel
+et n'a donc pas de « après » à mesurer.
 
 ### R6 — Ce qui suit, si le seuil passe
 
