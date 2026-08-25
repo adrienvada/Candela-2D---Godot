@@ -2799,6 +2799,44 @@ après le `pkill`.
 la mauvaise question. Ce qui compte n'est pas *qui travaille*, c'est *qui tient
 le port* — et la seconde question a une réponse exacte que la première n'a pas.
 
+> **✅ FERMÉ le 2026-08-25 — l'orphelin avait UNE cause précise, et le lanceur
+> ne peut plus la produire ni la subir.** Demande d'Adrien : « pour qu'on n'ait
+> plus le problème ».
+>
+> **La cause : `client2_pid=$!` capturait le PID du SOUS-SHELL, pas celui de
+> Godot.** Le scénario `--reconnexion` lançait son troisième processus dans un
+> `( sleep 18 ; godot … ) &`. Le nettoyage tuait donc consciencieusement le
+> sous-shell — souvent déjà mort — pendant que **Godot, lui, survivait** et
+> gardait le port. Le `trap` était correct, sa cible ne l'était pas : un
+> `kill -9` sur le mauvais PID réussit sans rien libérer. Corrigé par un `exec`
+> dans le sous-shell, qui le fait **remplacer** par Godot : `$!` désigne enfin
+> le processus qu'on croit tuer. Vérifié — le scénario tourne et ne laisse plus
+> rien derrière lui.
+>
+> **Trois garde-fous, et chacun répare un mensonge différent :**
+>
+> 1. **`run_duo.sh` REFUSE de démarrer si le port est pris**, au lieu de
+>    produire « aucun adversaire n'a rejoint ». Il nomme les PID, distingue le
+>    lot en cours (*attendez*) de l'orphelin (*`pkill`*), et **ne tue jamais
+>    rien de lui-même** : six sessions partagent la machine, un nettoyage
+>    automatique casserait la mesure d'une voisine.
+> 2. **Le nettoyage vérifie qu'il a nettoyé**, et crie s'il reste un tenant —
+>    mais **seulement si on a lancé quelque chose**. Le premier jet accusait
+>    d'un orphelin qu'on n'avait pas créé, sur un lanceur qui venait de refuser
+>    de démarrer : le faux diagnostic déplacé d'un cran au lieu d'être supprimé.
+> 3. **Un refus n'est plus un échec.** `run_duo.sh` rend **3**, le lanceur
+>    affiche `REPORTÉ` et **ne met pas `fail` à 1** ; la dernière ligne dit
+>    combien de scénarios n'ont pas tourné. Les confondre est ce qui a produit
+>    le « 13 suites en échec » : un compte gonflé par de la contention envoie
+>    chercher une panne réseau qui n'existe pas.
+>
+> **La leçon générale, et c'est elle qui vaut au-delà de ce port :** ces quatre
+> diagnostics n'ont pas été perdus faute de rigueur — trois sessions ont vérifié
+> soigneusement, chacune sa pièce. Ils ont été perdus parce que **l'outil de
+> mesure rendait un symptôme qui désignait un autre coupable que le sien.**
+> Contre ça, aucune discipline de lecture ne protège : c'est à l'outil de ne pas
+> mentir.
+
 
 ### Deux machines, deux UID pour le même chemin (2026-08-25)
 
@@ -6832,9 +6870,24 @@ un fait de jeu, pas à un rythme d'interface.
   « sombres et contrastés », donnée à cause du fondu additif des murs,
   contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
   rien n'a été regénéré. *(C, avec DA2.8)*
-- **DA2.10 Le key art du titre** — une illustration d'ambiance (deux torches
-  dans le noir) derrière le menu : une image installe l'univers mieux que
-  quinze shaders. *(C)*
+- **DA2.10 Le key art du titre** 🟡 **ASSET PRÊT, PAS POSÉ le 2026-08-25** —
+  trois planches retouchées et ramenées sur la charte par
+  `tools/fabrique_keyart.gd`, dans `assets/keyart/`. **Rien ne les affiche** :
+  le fond du menu est un système complet — `MenuBackdrop`, `MenuGlass`,
+  parallaxe, brume dans le matériau — qui vit dans `ui.gd`, **domaine de DA4**.
+  L'asset est de DA2, sa pose ne l'est pas.
+  ⚠️ **La décision du 24 annonçait « génération fortement retravaillée », et la
+  mesure a dit le contraire.** Le noir des trois planches est déjà à **0,000
+  exactement** — ce que la promesse du jeu exige et qu'aucune retouche n'aurait
+  eu à corriger — et la teinte des faisceaux tombait déjà à 1-8 % de
+  `HALOGENE` : le modèle a décrit un tungstène et a atterri presque pile sur la
+  lumière du jeu. Il restait **un seul écart**, le bleu à 0,74-0,79 contre 0,82.
+  Corrigé, et **uniquement sur les hautes lumières** : corriger toute l'image
+  aurait bleui les ombres, et un noir bleuté n'est plus le noir absolu — on
+  aurait perdu la seule chose que ces planches avaient déjà juste. Vérifié après
+  coup, le point noir et la moyenne des ombres n'ont pas bougé d'un centième.
+  **Prétendre à une reprise que la mesure ne demande pas serait fabriquer du
+  travail.** *(C)*
 - **DA2.11 Le viseur custom** ⚠️ **ce n'est pas un habillage, c'est un MANQUE**
   (constaté le 2026-08-25) — le dépôt ne contient **aucun** viseur : zéro
   occurrence de `crosshair`, `viseur`, `reticule`, et aucun

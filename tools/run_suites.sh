@@ -58,6 +58,9 @@ SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
 PLAFOND_SUITE=${PLAFOND_SUITE:-120}
 
 fail=0
+# Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
+# qui n'a pas eu lieu n'est pas une mesure ratée.
+reportes=0
 run() {
   local nom="$1"; shift
   local sortie tmp chien code
@@ -135,14 +138,41 @@ run test_eblouissement_en_jeu res://tools/test_online_match.tscn -- --eblouissem
 # d'un jeu réseau ». Elles l'étaient parce qu'un match demande deux instances.
 # ENet lève l'obstacle : aucun identifiant Epic, adresse connue d'avance.
 #
+## Un scénario à deux instances : OK, REPORTÉ, ou ÉCHEC.
+##
+## **Trois issues et non deux, parce que deux mentaient.** `run_duo.sh` rend
+## désormais **3** quand il refuse de démarrer — le port UDP 7777 est tenu par
+## un autre lot, souvent celui d'une session voisine sur le même arbre. Ce n'est
+## pas un échec : c'est une mesure qui n'a pas eu lieu.
+##
+## Les compter ensemble a coûté quatre diagnostics à trois sessions le
+## 2026-08-25. Le lanceur annonçait « au moins une suite a échoué », quelqu'un
+## lisait la queue de sortie, et l'on partait chercher une régression de netcode
+## — puis une panne de caméra — pendant que la vraie cause était un Godot
+## orphelin qui tenait le port. **Un résumé qui gonfle un compte d'échecs est
+## aussi trompeur qu'une erreur qui ment sur sa cause.**
+##
+## REPORTÉ ne met PAS `fail` à 1 : le lot reste vert, et sa dernière ligne dit
+## combien de scénarios n'ont pas pu tourner.
+duo() {
+  local nom="$1"; shift
+  if [ "$RAPIDE" -eq 1 ]; then return 0; fi
+  ./tools/run_duo.sh "$@"
+  local code=$?
+  if [ "$code" -eq 0 ]; then
+    printf '%-28s OK\n' "$nom"
+  elif [ "$code" -eq 3 ]; then
+    printf '%-28s REPORTÉ (port occupé, pas une panne)\n' "$nom"
+    reportes=$((reportes + 1))
+  else
+    printf '%-28s ÉCHEC\n' "$nom"; fail=1
+  fi
+}
+
 # Il coûte une minute environ, plus que toutes les autres réunies. C'est le prix
 # d'une couverture sur la zone la plus régressive, et il se paie une fois par
 # commit plutôt qu'une manche entière à la main.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh; then
-  printf '%-28s OK\n' "duo_enet"
-else
-  printf '%-28s ÉCHEC\n' "duo_enet"; fail=1
-fi
+duo duo_enet
 
 # Famille 3 de la checklist : l'adversaire disparaît pendant le 3-2-1.
 #
@@ -151,11 +181,7 @@ fi
 # `game_state.gd` : un décompte laissé figé cloue l'hôte sur place, sans message
 # et sans pouvoir bouger. C'est le pire état atteignable, et le seul qu'aucune
 # erreur ne signale.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --coupure; then
-  printf '%-28s OK\n' "duo_coupure"
-else
-  printf '%-28s ÉCHEC\n' "duo_coupure"; fail=1
-fi
+duo duo_coupure --coupure
 
 # Famille 1 : la pause en ligne ne gèle rien.
 #
@@ -164,11 +190,7 @@ fi
 # l'autre laisserait passer les deux défauts qui comptent — une pause qui gèle
 # le match pour les deux, ou un joueur qui court encore pendant qu'il lit son
 # menu. La pause ne doit pas être une invincibilité gratuite.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --pause; then
-  printf '%-28s OK\n' "duo_pause"
-else
-  printf '%-28s ÉCHEC\n' "duo_pause"; fail=1
-fi
+duo duo_pause --pause
 
 # Famille 2 : ce que l'adversaire fait pendant votre killcam.
 #
@@ -176,11 +198,7 @@ fi
 # RETENUE et non appliquée — rien ne bouge chez vous, aucune manche ne démarre
 # seule — mais à la sortie elle n'est pas PERDUE. Un changement d'arme appliqué
 # au milieu d'un ralenti couperait la killcam de celui qui regarde encore.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --killcam; then
-  printf '%-28s OK\n' "duo_killcam"
-else
-  printf '%-28s ÉCHEC\n' "duo_killcam"; fail=1
-fi
+duo duo_killcam --killcam
 
 # Famille 5.3 : l'adversaire disparaît PENDANT le ralenti.
 #
@@ -192,11 +210,7 @@ fi
 # ⚠️ Ce banc couvre la remise à zéro, PAS le fait qu'un ralenti ait eu lieu
 # avant : `Engine.time_scale` reste à 1,0 en headless, limite écrite dans le
 # banc lui-même.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --ralenti; then
-  printf '%-28s OK\n' "duo_ralenti"
-else
-  printf '%-28s ÉCHEC\n' "duo_ralenti"; fail=1
-fi
+duo duo_ralenti --ralenti
 
 # Famille 6 : les deux martèlent « prêt » — une seule manche doit démarrer.
 #
@@ -205,11 +219,7 @@ fi
 # pas une fenêtre, c'est un COMPTE — et un compte est stable quel que soit le
 # tempo. C'est le principe de placement appliqué : chercher l'observable stable
 # plutôt que le moment.
-if [ "$RAPIDE" -eq 1 ]; then :; elif ./tools/run_duo.sh --spam; then
-  printf '%-28s OK\n' "duo_spam"
-else
-  printf '%-28s ÉCHEC\n' "duo_spam"; fail=1
-fi
+duo duo_spam --spam
 
 DUREE=$((SECONDS - DEBUT))
 if [ "$fail" -ne 0 ]; then
@@ -218,6 +228,13 @@ fi
 if [ "$RAPIDE" -eq 1 ]; then
   echo "--- suites headless vertes en ${DUREE}s — SCÉNARIOS À DEUX INSTANCES NON JOUÉS ---"
   echo "    (relancer sans --rapide avant de commiter)"
+elif [ "$reportes" -ne 0 ]; then
+  # **Vert, mais incomplet — et il faut que la DERNIÈRE ligne le dise.** C'est
+  # elle qu'on lit ; un « tout passe » sur un lot amputé de ses scénarios réseau
+  # ferait commiter du netcode que personne n'a exercé.
+  echo "--- tout passe, MAIS ${reportes} scénario(s) à deux instances REPORTÉ(S) (${DUREE}s) ---"
+  echo "    Port 7777 occupé : ce n'est pas une panne, c'est une mesure qui n'a pas eu lieu."
+  echo "    Relancer quand le champ est libre :  lsof -nP -iUDP:7777"
 else
   echo "--- tout passe, sans erreur de script (${DUREE}s) ---"
 fi

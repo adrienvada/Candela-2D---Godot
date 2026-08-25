@@ -33,6 +33,50 @@ ATTENTE_HOTE=60
 # pour toujours, et c'est le lanceur entier qui devient inutilisable.
 PLAFOND=180
 
+# Le port du salon ENet. Un seul lot peut l'occuper à la fois sur cette machine.
+PORT=7777
+
+## Qui tient le port, s'il est tenu ? Rend les PID, une par ligne.
+tenants_du_port() {
+  lsof -nP -iUDP:"$PORT" -t 2>/dev/null
+}
+
+## REFUSER PLUTÔT QUE DE PRODUIRE UN FAUX DIAGNOSTIC.
+##
+## Ce contrôle existe parce que son absence a coûté QUATRE diagnostics à TROIS
+## sessions dans la même journée (2026-08-25). Un port déjà pris ne se voyait
+## nulle part : l'hôte n'ouvrait pas de salon, le banc rendait « aucun adversaire
+## n'a rejoint », et la scène qui ne démarrait pas produisait une cascade de
+## `offset` sur un objet Nil. Trois sessions ont cherché une régression de
+## netcode et une panne de caméra qui n'existaient ni l'une ni l'autre.
+##
+## **Le lanceur ne tue rien de lui-même.** Six sessions travaillent sur cette
+## machine ; un `pkill` automatique tuerait le lot légitime d'une voisine au
+## milieu de sa mesure. Il dit ce qu'il voit, il distingue le lot en cours de
+## l'orphelin, et il rend la commande à taper.
+verifier_port_libre() {
+  local pids
+  pids="$(tenants_du_port)"
+  [ -z "$pids" ] && return 0
+
+  echo "REFUS — le port UDP $PORT est déjà pris ; ce banc ne peut pas s'exécuter."
+  echo "  Sans ce refus, l'hôte n'ouvrirait pas de salon et l'échec dirait"
+  echo "  « aucun adversaire n'a rejoint » : un faux défaut de réseau."
+  echo "  Le détiennent :"
+  local p
+  for p in $pids; do
+    echo "    · PID $p — $(ps -o command= -p "$p" 2>/dev/null | cut -c1-90)"
+  done
+  if pgrep -f "run_suites|run_duo" >/dev/null 2>&1; then
+    echo "  Un lot tourne en ce moment (une autre session, sans doute) :"
+    echo "  ATTENDEZ qu'il finisse. Ne tuez rien, vous casseriez sa mesure."
+  else
+    echo "  AUCUN lot ne tourne : c'est un ORPHELIN d'un lot précédent."
+    echo "  Remède :  pkill -f \"Godot --headless\""
+  fi
+  return 1
+}
+
 TMP="$(mktemp -d)"
 HOTE_LOG="$TMP/hote.log"
 CLIENT_LOG="$TMP/client.log"
@@ -43,6 +87,31 @@ nettoyer() {
   for pid in "$hote_pid" "$client_pid" "${client2_pid:-}"; do
     [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
   done
+  # **Vérifier que le nettoyage a nettoyé.** Un `kill -9` sur le mauvais PID
+  # réussit sans rien libérer : c'est exactement ce qui produisait les
+  # orphelins, et personne ne le voyait puisque la sortie du lanceur ne parlait
+  # que de tests. Le port met un instant à se libérer après la mort du
+  # processus, d'où les quelques essais.
+  #
+  # ⚠️ **Seulement si on a lancé quelque chose.** Ce garde-fou a crié
+  # « ORPHELIN » à son premier essai alors que le lanceur venait de REFUSER de
+  # démarrer : le port était tenu par la voisine, pas par nous. Un contrôle qui
+  # accuse d'un dégât qu'on n'a pas fait est exactement le faux diagnostic que
+  # ce lot supprime — il l'aurait juste déplacé d'un cran.
+  [ -z "$hote_pid" ] && return 0
+  local reste i
+  for i in 1 2 3 4 5 6; do
+    reste="$(tenants_du_port)"
+    [ -z "$reste" ] && return 0
+    sleep 0.5
+  done
+  echo "⚠️  ORPHELIN — le port $PORT est encore tenu APRÈS le nettoyage :"
+  local p
+  for p in $reste; do
+    echo "    · PID $p — $(ps -o command= -p "$p" 2>/dev/null | cut -c1-90)"
+  done
+  echo "    Le prochain lot échouera sur « aucun adversaire n'a rejoint »."
+  echo "    Remède :  pkill -f \"Godot --headless\""
 }
 trap nettoyer EXIT
 
@@ -80,6 +149,12 @@ fi
 
 echo "── $TITRE ──"
 
+# **Code 3 et non 1, et c'est tout l'objet de ce garde-fou.** « Je n'ai pas pu
+# m'exécuter » n'est pas « le jeu est cassé ». Confondre les deux est la faute
+# même qui a coûté quatre diagnostics à trois sessions : un compte d'échecs
+# gonflé par de la contention envoie chercher une panne réseau qui n'existe pas.
+verifier_port_libre || exit 3
+
 "$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet >"$HOTE_LOG" 2>&1 &
 hote_pid=$!
 
@@ -114,8 +189,13 @@ client_pid=$!
 # que l'hôte est encore dans sa séquence de fin — sinon on testerait une simple
 # jointure sur un salon au repos, pas une reconnexion.
 if [ "${1:-}" = "--reconnexion" ]; then
+  # `exec` n'est PAS un détail de style : sans lui, `$!` capture le PID du
+  # SOUS-SHELL, pas celui de Godot. Le nettoyage tuait donc le sous-shell et
+  # laissait Godot vivant — un orphelin qui garde le port 7777 et empoisonne
+  # tous les lots suivants. Avec `exec`, le sous-shell est REMPLACÉ par Godot :
+  # `$!` désigne le processus qu'on croit tuer.
   ( sleep 18
-    "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
       >"$TMP/client2.log" 2>&1 ) &
   client2_pid=$!
 fi
