@@ -1631,11 +1631,25 @@ func _create_glow_panel(color: Color) -> PanelContainer:
 	var chemin := "res://assets/ui/cadre_hud.png"
 	if ResourceLoader.exists(chemin):
 		var peint := StyleBoxTexture.new()
-		peint.texture = load(chemin)
-		# 32 px de chaque côté : c'est le gabarit demandé au brief, et le centre de
-		# la texture est vérifié uniforme à 0,004 près — sans quoi l'étirement le
-		# déformerait visiblement sur un panneau de 352 × 152.
-		peint.set_texture_margin_all(32)
+		var tex_cadre := load(chemin) as Texture2D
+		peint.texture = tex_cadre
+		# ⚠️ **La marge se DÉDUIT de la texture, elle n'est pas écrite.**
+		#
+		# Le brief demandait 32 px sur une planche de 128², soit **le quart de la
+		# largeur**. Écrire 32 en dur marche — jusqu'au jour où la planche est
+		# recuite à 256² pour gagner en densité de texels (DA5.6 le prévoit
+		# explicitement, et le chantier R6 le fait pour les sprites). La marge ne
+		# couvrirait alors plus que la moitié de la bordure : **le 9-slice
+		# trancherait en plein dans le dessin**, et le cadre partirait en bouillie
+		# sans qu'aucune erreur ne le signale.
+		#
+		# C'est le même motif que le coefficient de case du code de salon et que le
+		# contour des chiffres de dégâts : une valeur absolue là où il fallait un
+		# rapport. Trois fois suffisent pour cesser d'en écrire.
+		var m_cadre := 32
+		if tex_cadre != null and tex_cadre.get_width() > 0:
+			m_cadre = int(round(tex_cadre.get_width() / 4.0))
+		peint.set_texture_margin_all(m_cadre)
 		peint.modulate_color = color
 		# Le contenu ne colle pas au liseré : la marge intérieure suit la grille.
 		peint.set_content_margin_all(GAP_XS)
@@ -2123,14 +2137,20 @@ func _build_killcam() -> void:
 	if ResourceLoader.exists(chemin_cadre):
 		killcam_cadre = NinePatchRect.new()
 		killcam_cadre.name = "CadreKillcam"
-		killcam_cadre.texture = load(chemin_cadre)
+		var tex_vhs := load(chemin_cadre) as Texture2D
+		killcam_cadre.texture = tex_vhs
 		killcam_cadre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		# 64 px de marge : c'est le gabarit du brief, et le centre de la texture
-		# est vérifié à alpha zéro exact — donc l'étirement n'a rien à déformer.
-		killcam_cadre.patch_margin_left = 64
-		killcam_cadre.patch_margin_right = 64
-		killcam_cadre.patch_margin_top = 64
-		killcam_cadre.patch_margin_bottom = 64
+		# Déduite de la texture pour la même raison que le cadre du HUD : le brief
+		# demandait 64 px sur une planche de 512², soit **le huitième de la
+		# largeur**. Un recuit à densité double casserait une valeur écrite en dur,
+		# en silence.
+		var m_vhs := 64
+		if tex_vhs != null and tex_vhs.get_width() > 0:
+			m_vhs = int(round(tex_vhs.get_width() / 8.0))
+		killcam_cadre.patch_margin_left = m_vhs
+		killcam_cadre.patch_margin_right = m_vhs
+		killcam_cadre.patch_margin_top = m_vhs
+		killcam_cadre.patch_margin_bottom = m_vhs
 		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
 		# `HALOGENE` très atténué : un liseré de moniteur se devine, il ne se lit
 		# pas — et la killcam doit rester la chose qu'on regarde.
