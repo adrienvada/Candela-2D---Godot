@@ -246,6 +246,70 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 📌 DEMANDE OUVERTE — brancher le brouillage de l'éblouissement (2026-08-25)
+
+**À qui reprendra `ui.gd`, `player.gd` ou `game_state.gd`.** Demandé par Adrien.
+Aucune session ne tenait ces trois fichiers au moment où c'est écrit — d'où le
+dépôt plutôt qu'un message, qui serait mort avec sa session.
+
+Le chantier « brouiller la position de celui qui éblouit » est **clos côté
+arbitrage** : B1 à B4 tranchés par Adrien en quatre essais manette en main
+(section dédiée dans `docs/ROADMAP.md`). Le modèle, le banc et la suite sont sur
+`origin/main`. **Rien n'est branché, et aucun fichier de production ne lit
+`brouillage.gd`** — si on lance le jeu aujourd'hui, l'éblouissement se comporte
+exactement comme avant.
+
+#### ⚠️ La première tâche n'est PAS de brancher, c'est de mesurer
+
+`brouillage_flou.gdshader` lit l'écran : `BackBufferCopy` **plein cadre, une
+fois par image**. En écran scindé il y a **deux `SubViewport` à 957×1080**, et
+le chantier R n'a optimisé que la vue unique — ce chemin-là n'a rien gagné.
+
+**La cible est `1 % bas ≥ 60` et le jeu la franchit de DEUX images par seconde**
+(61 mesuré fenêtre au premier plan). La marge peut donc être mangée entière.
+`bench_framerate` sait juger : `--vue-unique` isole le mode classé, le banc
+imprime ses conditions de rendu et **refuse un relevé pris à focus mixte** — ce
+sont les transitions de focus, pas le second plan, qui décident du 1 % bas
+(44 à 81 sur une machine qui en tient 120).
+
+**Si le coût est disqualifiant, le mode `LAMPE` tombe** — ou son flou passe en
+`COPY_MODE_RECT`, ce qui reste à éprouver. Ne pas brancher avant de savoir.
+
+#### Ce qu'il y a à faire, une fois la mesure faite
+
+1. **`ui.gd` — une seule valeur de production à changer.** Lignes 5040, 5057 et
+   5075 : le voile est `dazzle_amount * 0.8 * voile`, où `voile` vient de
+   `GameSettings.current_effect("eblouissement")`. Poser `Brouillage.VOILE_FACTEUR`
+   (0,3) **tel quel**, sans le curseur. L'entrée « Éblouissement » de l'écran des
+   effets n'a plus d'objet.
+   ⚠️ **Ne pas réordonner `_build_hud()`** : le voile passe au-dessus de l'arène
+   et **au-dessous** du HUD, sans quoi on ne lit plus sa propre barre de vie à
+   saturation. Un commentaire le protège ; il n'est pas décoratif.
+2. **`player.gd`** — `visual_enemy` / `visual_enemy_ptr` prennent
+   `modulate.a = Brouillage.opacite(dazzle)`. **`modulate.a` et RIEN d'autre** :
+   `player_enemy_light.gdshader` plafonne `LIGHT` à `COLOR.rgb`, donc éclaircir
+   la couleur relève le plafond et fait BRILLER la silhouette au lieu de la
+   fondre. Un réglage entier est mort de ça.
+3. **Halo et flou** — deux ellipses couchées sur l'axe du faisceau et poussées
+   vers la victime, sur des `CanvasLayer` distinctes : monde (0) → flou (1) →
+   halo (2). ⚠️ **La lecture d'écran DOIT vivre sur sa propre couche** : dans le
+   monde, elle lit un tampon qu'on écrit dans la même passe et rend n'importe
+   quoi — luminance à peine décalée, contraste à +226 %. Symptôme trompeur, on
+   croit à un problème de gamma. Voir l'en-tête du shader.
+4. **Le trou autour de soi** (`EXCLUSION_PRES` → `EXCLUSION_LOIN`) : en jeu, son
+   centre est le centre de sa propre vue. Décision d'Adrien — l'éblouissement
+   coûte la lecture **du monde**, jamais celle de sa propre fiche.
+
+#### Ce qui existe pour vous aider
+
+- `tools/banc_brouillage.tscn` — banc interactif, `Tab` choisit un réglage,
+  `←/→` le règle, `Échap` imprime les valeurs atteintes **et** un tableau de
+  tirs par mode (tirs, % au but, écart latéral moyen). Il chiffre l'essai.
+- `tools/test_brouillage.gd` — dans le lanceur. Elle tient les invariants, pas
+  les goûts : identité à éblouissement nul, bornes, monotonie, déterminisme.
+- Tous les nombres retenus vivent dans `brouillage.gd`, commentés avec la
+  demande d'Adrien qui les a produits.
+
 ### 2026-08-25 — attributions et un vote rendu sans objet
 
 **Deux paragraphes de `docs/ROADMAP.md` portés par `4b285f7` ne sont pas de moi.**
