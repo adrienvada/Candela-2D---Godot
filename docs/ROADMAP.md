@@ -9243,6 +9243,31 @@ Reste donc :
 
 1. **Les tuiles** — un paramètre de `tools/fabrique_tuiles.gd`, planches sources
    en 2048² pour des sorties de 35 px. Rien d'autre à décider.
+
+1bis. ⚠️ **LES DÉCALS, non listés jusqu'ici et pourtant couplés.** Trouvé le
+   2026-08-25 en relisant avec la lunette de DA4, après le viseur.
+   `blood_stain.gd` et `wall_impact.gd` dessinent tous deux à
+   `_texture.get_size() * _echelle`, où `_echelle` n'est qu'une **variation
+   aléatoire** (0,75-1,25 pour le sang, 0,22-0,34 pour les éclats) : la taille
+   de base est celle du FICHIER. Recuits à ×2, **les taches de sang et les
+   éclats de mur doubleraient à l'écran.**
+
+   Ce sont donc **quatre familles** qui ont besoin de la même division —
+   sprites, viseur, sang, éclats — quand cette liste n'en nommait qu'une. Et
+   comme la décision d'Adrien est explicitement « une fois, pour TOUTES les
+   familles », lancer la recuisson en l'état casserait **deux familles sur
+   quatre en silence**.
+
+   ⚠️ **Une valeur posée quatre fois finit par diverger** — c'est le procès que
+   `charte.gd` fait lui-même aux 220 `Color(...)` qu'il a remplacés, et à la
+   palette recopiée dont « chaque moitié paraît juste ». Le foyer naturel est
+   donc `Charte`, qui est déjà une `class_name` accessible partout et porte
+   cinquante constantes de ce genre — pas une constante recopiée dans quatre
+   fichiers.
+
+   **Signalé, pas corrigé** : la session qui l'a trouvé tenait le découplage des
+   sprites, et étendre de soi-même un périmètre confié est précisément ce que la
+   consigne interdit. En attente d'Adrien.
 2. ~~**Les sprites, et c'est le seul vrai travail de R6.**~~ ✅ **DÉCOUPLÉS le
    2026-08-25** (commit ci-dessous). `_poser_sprite()` passe désormais par
    `empreinte_sprite()`, qui divise par `DENSITE_SPRITES` : un `fusil.png` recuit
