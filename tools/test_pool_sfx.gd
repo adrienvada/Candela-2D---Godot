@@ -119,7 +119,17 @@ func _test_duck() -> void:
 		am.queue_free()
 		return
 	var repos := pas.volume_db
-	_check("hors tir, le pas garde son volume", is_zero_approx(repos), str(repos))
+	# ⚠️ **Ce contrôle mesurait un ZÉRO, et il est devenu faux le 2026-08-25** :
+	# depuis que chaque son porte son propre niveau (`NIVEAU_RELATIF`, demande
+	# d'Adrien « les tirs plus forts, les pas beaucoup plus atténués »), un pas au
+	# repos vaut -12 dB et non 0. Le contrôle ne disait donc pas ce qu'il croyait
+	# dire : il vérifiait « le volume vaut zéro », alors que ce qui compte est
+	# « rien ne s'est ajouté ». Réécrit comme tel — il tient maintenant quelle que
+	# soit la table de niveaux, et c'est la règle du dépôt : **nommer l'égalité
+	# interdite plutôt qu'une valeur attendue.**
+	_check("hors tir, le pas garde son niveau de repos",
+		is_equal_approx(repos, am.niveau_dose("footstep")),
+		"%s au lieu de %s" % [repos, am.niveau_dose("footstep")])
 
 	am.play_sfx_2d("shoot", Vector2.ZERO)
 	var apres: AudioStreamPlayer2D = am.play_sfx_2d("footstep", Vector2.ZERO)
@@ -131,14 +141,27 @@ func _test_duck() -> void:
 	# l'information qu'on vient de payer d'un tir.
 	var impact: AudioStreamPlayer2D = am.play_sfx_2d("flesh_impact", Vector2.ZERO)
 	_check("le coup au but ne recule pas, lui",
-		impact != null and is_zero_approx(impact.volume_db),
-		"volume = %s" % (str(impact.volume_db) if impact != null else "aucune voix"))
+		impact != null and is_equal_approx(impact.volume_db,
+			am.niveau_dose("flesh_impact")),
+		"volume = %s au lieu de %s" % [
+			(str(impact.volume_db) if impact != null else "aucune voix"),
+			am.niveau_dose("flesh_impact")])
 
 	# Et il n'écrase pas le volume demandé par l'appelant : il s'y ajoute.
 	var doux: AudioStreamPlayer2D = am.play_sfx_2d("footstep", Vector2.ZERO, 1.0, -3.0)
 	_check("le recul s'ajoute au volume demandé",
-		doux != null and is_equal_approx(doux.volume_db, -3.0 + am.DUCK_TIR_DB),
+		doux != null and is_equal_approx(doux.volume_db,
+			-3.0 + am.DUCK_TIR_DB + am.niveau_dose("footstep")),
 		"volume = %s" % (str(doux.volume_db) if doux != null else "aucune voix"))
+
+	# Et le niveau par son est lui aussi un ÉCART, pas une valeur posée : trois
+	# additions se superposent sur la même voix — ce que l'appelant demande, le
+	# recul V4.15, et le niveau du son. Les vérifier séparément laisserait passer
+	# celui qui écraserait les deux autres.
+	_check("les trois écarts s'additionnent, aucun n'écrase les autres",
+		doux != null and is_equal_approx(
+			doux.volume_db - repos, -3.0 + am.DUCK_TIR_DB),
+		"écart = %s" % (str(doux.volume_db - repos) if doux != null else "aucune voix"))
 
 	am.queue_free()
 

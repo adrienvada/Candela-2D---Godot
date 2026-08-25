@@ -170,13 +170,75 @@ static func est_un_tir(stream_or_key: Variant) -> bool:
 ## Meme logique de classement que `SFX_PRIORITE`, et ce n'est pas un hasard :
 ## les deux tables disent ce que le son APPREND, l'une en voix, l'autre en
 ## pixels.
+## ✅ **Rapports triples le 2026-08-25 a la demande d'Adrien, apres ecoute.**
+## Le rapport tir/pas passe de **3,6 a 10,7** — exactement trois fois plus de
+## contraste, obtenu en divisant la portee du pas par trois (0,45 → 0,15) plutot
+## qu'en allongeant celle du tir, qui lui convenait deja.
+##
+## Et l'ORDRE a change, pas seulement l'echelle : les impacts remontent tout pres
+## du tir (« legerement moins forts que les tirs ») au lieu d'occuper un milieu
+## qui n'existait que dans mon classement. La hierarchie qu'il a demandee est
+## **tir > impacts >>> pas**, pas une echelle reguliere.
 const PORTEE_RELATIVE: Dictionary = {
-	"footstep": 0.45,
-	"wall_impact": 0.70,
-	"flesh_impact": 0.85,
+	"footstep": 0.15,
+	"wall_impact": 1.20,
+	"flesh_impact": 1.35,
 	"shoot": 1.60,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
+
+## Niveau de chaque son, en decibels, AVANT toute distance.
+##
+## **Dimension neuve, ajoutee le 2026-08-25 sur demande d'Adrien** : « il faut
+## que les tirs soient vraiment plus forts que le reste, et les pas beaucoup plus
+## attenues ». Jusqu'ici tous les sons partaient au meme niveau et seule la
+## PORTEE les distinguait — or porter loin et sonner fort sont deux choses. Un
+## pas proche restait aussi present qu'un tir proche.
+##
+## Les deux tables se lisent ensemble : `PORTEE_RELATIVE` dit **jusqu'ou** un son
+## informe, celle-ci dit **combien il pese** quand il informe. Le pas est le seul
+## a etre lourdement penalise sur les deux, et c'est voulu — c'est le son le plus
+## bavard du jeu (six a sept par seconde a deux joueurs), donc celui dont le
+## cout d'attention est le plus mal reparti.
+##
+## ⚠️ **A doser** : ces valeurs sont un point de depart accorde a la demande
+## « rapports x3 », elles n'ont pas ete jugees une par une. Les molettes 4/5 du
+## banc les deplacent son par son.
+const NIVEAU_RELATIF: Dictionary = {
+	"footstep": -12.0,
+	"wall_impact": -3.0,
+	"flesh_impact": -2.0,
+	"shoot": 0.0,
+}
+const NIVEAU_RELATIF_DEFAUT: float = 0.0
+
+## Le niveau d'un son, d'apres sa cle. Meme precaution que pour la portee : un
+## tir arrive aussi sous forme de chemin depuis V4.1.
+static func niveau_relatif_de(stream_or_key: Variant) -> float:
+	if est_un_tir(stream_or_key):
+		return float(NIVEAU_RELATIF.get("shoot", NIVEAU_RELATIF_DEFAUT))
+	if stream_or_key is String:
+		return float(NIVEAU_RELATIF.get(stream_or_key, NIVEAU_RELATIF_DEFAUT))
+	return NIVEAU_RELATIF_DEFAUT
+
+## Ecarts de dosage poses par le banc, par cle de son. Vides en jeu : ils
+## n'existent que le temps d'une seance d'ecoute, et ce qui en sort se recopie
+## dans les tables ci-dessus. **Un reglage qui ne survit qu'en memoire n'est pas
+## un reglage, c'est un souvenir.**
+var _portee_dosee: Dictionary = {}
+var _niveau_dose: Dictionary = {}
+
+func doser_portee(cle: String, valeur: float) -> void:
+	_portee_dosee[cle] = clampf(valeur, 0.02, 6.0)
+
+func doser_niveau(cle: String, valeur: float) -> void:
+	_niveau_dose[cle] = clampf(valeur, -40.0, 12.0)
+
+func portee_dosee(cle: String) -> float:
+	return float(_portee_dosee.get(cle, portee_relative_de(cle)))
+
+func niveau_dose(cle: String) -> float:
+	return float(_niveau_dose.get(cle, niveau_relatif_de(cle)))
 
 ## Diagonale de la carte par defaut (20x20 cases de 35 px), en pixels. Sert tant
 ## qu'`accorder_a_la_carte()` n'a pas ete appelee — une suite, un menu, un banc.
@@ -240,6 +302,59 @@ static func portee_relative_de(stream_or_key: Variant) -> float:
 static func portee_absolue(stream_or_key: Variant, portee_carte: float,
 		facteur: float) -> float:
 	return maxf(1.0, portee_carte * portee_relative_de(stream_or_key) * facteur)
+
+## La meme, mais en tenant compte d'un dosage en cours au banc. Non statique :
+## elle lit l'etat de la seance. En jeu, sans seance, elle rend exactement
+## `portee_absolue` — le banc ne peut donc pas faire diverger le jeu de sa table.
+func portee_courante(stream_or_key: Variant) -> float:
+	var cle := String(stream_or_key) if stream_or_key is String else ""
+	var relative := float(_portee_dosee.get(cle, portee_relative_de(stream_or_key)))
+	return maxf(1.0, _portee_carte * relative * facteur_portee)
+
+## ============================================================================
+## S3 bis — LA FORCE DE L'OCCLUSION, EN UNE SEULE MOLETTE
+## ============================================================================
+##
+## « L'occlusion marche moyen, je ne sais pas pourquoi » (Adrien, 2026-08-25).
+## Cette phrase dit surtout qu'il lui manquait de quoi chercher : le passe-bas et
+## la perte de niveau etaient cuits dans le layout, donc invisibles et
+## intouchables pendant l'ecoute.
+##
+## **Une seule molette pour les deux, parce que « a quel point un mur etouffe »
+## est UNE dimension perceptive, pas deux.** A 0 le mur ne fait rien ; a 1 il
+## coupe a 300 Hz et retire 14 dB. Les deux bougent ensemble parce qu'ils disent
+## la meme chose — un mur epais assourdit ET attenue, jamais l'un sans l'autre.
+const OCCLUSION_COUPURE_MIN: float = 300.0
+const OCCLUSION_COUPURE_MAX: float = 5000.0
+const OCCLUSION_PERTE_MAX_DB: float = -14.0
+
+## Force appliquee au bus d'occlusion. 0,55 correspond au reglage cuit dans
+## `default_bus_layout.tres` (620 Hz, -7 dB) : le banc demarre donc exactement
+## sur ce qu'Adrien a deja entendu, et tout ecart qu'il posera sera un ecart
+## contre ce souvenir-la.
+var force_occlusion: float = 0.55
+
+## Ecrit la force dans le bus. Idempotente, appelable a chaque frame.
+func appliquer_force_occlusion(force: float) -> void:
+	force_occlusion = clampf(force, 0.0, 1.0)
+	var idx := AudioServer.get_bus_index(BUS_SFX_OCCLUS)
+	if idx == -1:
+		return
+	AudioServer.set_bus_volume_db(idx, OCCLUSION_PERTE_MAX_DB * force_occlusion)
+	for i in AudioServer.get_bus_effect_count(idx):
+		var effet := AudioServer.get_bus_effect(idx, i)
+		if effet is AudioEffectFilter:
+			(effet as AudioEffectFilter).cutoff_hz = lerpf(
+				OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, force_occlusion)
+
+## La coupure courante du MUR, pour affichage. Pure.
+##
+## Nommee `coupure_occlusion_pour` et non `coupure_pour` : ce fichier porte deja
+## une `coupure_pour(torches)` — le passe-bas de la musique pilote par les
+## torches (V5.2). Deux coupures, deux sujets ; le parseur a attrape la
+## collision, mais un nom qui aurait passe aurait ete pire qu'une erreur.
+static func coupure_occlusion_pour(force: float) -> float:
+	return lerpf(OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, clampf(force, 0.0, 1.0))
 
 ## Accorde le son a la carte qu'on vient de poser. Appelee par `rebuild_arena`.
 func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i) -> void:
@@ -614,13 +729,17 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.global_position = pos
 	player.stream = stream
 	player.pitch_scale = final_pitch
-	player.volume_db = volume_final
 	# S2 — la portee se pose PAR SON et par carte, pas une fois pour toutes a la
 	# construction du pool : le pool est partage, la voix qui joue un pas vient
 	# de jouer un tir, et une portee posee a `_ready()` serait celle du dernier
 	# son qui l'a occupee.
-	player.max_distance = portee_absolue(stream_or_key, _portee_carte, facteur_portee)
+	player.max_distance = portee_courante(stream_or_key)
 	player.attenuation = courbe_distance
+	# Le niveau par son s'AJOUTE au volume demande, il ne le remplace pas : le
+	# duck des pas sous le tir (V4.15) reste un ecart, pas une valeur absolue.
+	var cle_niveau := String(stream_or_key) if stream_or_key is String else ""
+	player.volume_db = volume_final + float(
+		_niveau_dose.get(cle_niveau, niveau_relatif_de(stream_or_key)))
 	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
 	# position du son et celle de l'oreille.
 	player.bus = bus_pour(bus_name, est_occulte(pos))

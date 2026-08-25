@@ -76,6 +76,7 @@ func _ready() -> void:
 	_etiquette.position = Vector2(16, 12)
 	_etiquette.add_theme_font_size_override("font_size", 15)
 	couche.add_child(_etiquette)
+	AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion)
 	_memoriser()
 
 ## Le dernier verdict d'occlusion, calculé en physique et relu partout ailleurs.
@@ -158,8 +159,7 @@ func _draw() -> void:
 	draw_line(_source.global_position, tete.global_position, couleur, 2.0)
 	draw_circle(tete.global_position, 9.0, Charte.BLEU)
 	draw_circle(_source.global_position, 7.0, couleur)
-	var portee: float = AudioManager.portee_absolue(_son_courant,
-		AudioManager.portee_carte(), AudioManager.facteur_portee)
+	var portee: float = AudioManager.portee_courante(_son_courant)
 	draw_arc(tete.global_position, portee, 0.0, TAU, 96, couleur, 1.0)
 
 func _tete() -> Node2D:
@@ -170,22 +170,37 @@ func _tete() -> Node2D:
 func _texte() -> String:
 	var tete := _tete()
 	var dist := 0.0 if tete == null else _source.global_position.distance_to(tete.global_position)
-	var portee: float = AudioManager.portee_absolue(_son_courant,
-		AudioManager.portee_carte(), AudioManager.facteur_portee)
+	var portee: float = AudioManager.portee_courante(_son_courant)
 	var lignes := [
 		"BANC AUDIO — dosage S2 (portée) et S3 (occlusion)",
 		"",
-		"  CLIC GAUCHE : poser la source     ↑ / ↓ : portée            %.2f" % AudioManager.facteur_portee,
-		"  CLIC DROIT  : poser l'oreille     ← / → : courbe            %.2f" % AudioManager.courbe_distance,
-		"  1 pas · 2 tir · 3 impact mur      O     : occlusion         %s" % ("ON" if AudioManager.occlusion_active else "OFF"),
-		"  ESPACE : jouer une fois           TAB   : auto              %s" % ("ON" if _auto else "OFF"),
-		"  X : mémoriser  ·  C : comparer    ÉCHAP : quitter",
+		"  CLIC GAUCHE : source · CLIC DROIT : oreille    ↑/↓ portée globale  %.2f" % AudioManager.facteur_portee,
+		"  1 pas · 2 tir · 3 impact mur                   ←/→ courbe          %.2f" % AudioManager.courbe_distance,
+		"  4/5 niveau du son · 6/7 portée du son          8/9 force du mur    %.2f" % AudioManager.force_occlusion,
+		"  ESPACE jouer · TAB auto (%s) · O occlusion (%s)" % [
+			"ON" if _auto else "OFF",
+			"ON" if AudioManager.occlusion_active else "OFF"],
+		"  X mémoriser · C comparer · ÉCHAP quitter",
+		"",
+		"  LES TROIS SONS, tels qu'ils sont dosés en ce moment :",
+		"    %s pas          niveau %+6.1f dB   portée %5.0f px" % [
+			"▶" if _son_courant == "footstep" else " ",
+			AudioManager.niveau_dose("footstep"), AudioManager.portee_courante("footstep")],
+		"    %s tir          niveau %+6.1f dB   portée %5.0f px" % [
+			"▶" if _son_courant == "shoot" else " ",
+			AudioManager.niveau_dose("shoot"), AudioManager.portee_courante("shoot")],
+		"    %s impact mur   niveau %+6.1f dB   portée %5.0f px" % [
+			"▶" if _son_courant == "wall_impact" else " ",
+			AudioManager.niveau_dose("wall_impact"), AudioManager.portee_courante("wall_impact")],
 		"",
 		"  son                  %s" % _son_courant,
 		"  distance             %5.0f px" % dist,
 		"  portée de ce son     %5.0f px   (diagonale carte %.0f × relative %.2f × facteur %.2f)" % [
 			portee, AudioManager.portee_carte(),
-			AudioManager.portee_relative_de(_son_courant), AudioManager.facteur_portee],
+			AudioManager.portee_dosee(_son_courant), AudioManager.facteur_portee],
+		"  coupure du mur       %5.0f Hz  ·  perte %.1f dB" % [
+			AudioManager.coupure_occlusion_pour(AudioManager.force_occlusion),
+			AudioManager.OCCLUSION_PERTE_MAX_DB * AudioManager.force_occlusion],
 		"  atténuation estimée  %s" % _db_estime(dist, portee),
 		"  mur entre les deux   %s" % ("OUI — bus SFX_Occlus" if _occulte else "non — bus SFX"),
 		"  replis hors physique %d" % AudioManager.occlusions_hors_frame,
@@ -210,13 +225,14 @@ func _memoriser() -> void:
 		"facteur": AudioManager.facteur_portee,
 		"courbe": AudioManager.courbe_distance,
 		"occlusion": AudioManager.occlusion_active,
+		"force": AudioManager.force_occlusion,
 	}
 
 func _texte_memoire() -> String:
 	if _memoire.is_empty():
 		return "(vide)"
-	return "facteur %.2f · courbe %.2f · occlusion %s" % [
-		_memoire["facteur"], _memoire["courbe"],
+	return "facteur %.2f · courbe %.2f · mur %.2f · occlusion %s" % [
+		_memoire["facteur"], _memoire["courbe"], _memoire.get("force", 0.0),
 		"ON" if _memoire["occlusion"] else "OFF"]
 
 func _comparer() -> void:
@@ -225,10 +241,12 @@ func _comparer() -> void:
 	var f := AudioManager.facteur_portee
 	var c := AudioManager.courbe_distance
 	var o := AudioManager.occlusion_active
+	var fo := AudioManager.force_occlusion
 	AudioManager.facteur_portee = _memoire["facteur"]
 	AudioManager.courbe_distance = _memoire["courbe"]
 	AudioManager.occlusion_active = _memoire["occlusion"]
-	_memoire = {"facteur": f, "courbe": c, "occlusion": o}
+	AudioManager.appliquer_force_occlusion(_memoire.get("force", fo))
+	_memoire = {"facteur": f, "courbe": c, "occlusion": o, "force": fo}
 
 ## Les touches sont lues par leur POSITION PHYSIQUE, pas par leur étiquette.
 ##
@@ -261,6 +279,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_1: _son_courant = "footstep"
 		KEY_2: _son_courant = "shoot"
 		KEY_3: _son_courant = "wall_impact"
+		# 4/5 et 6/7 dosent LE SON COURANT, pas l'ensemble. C'est ce qui manquait
+		# pour regler des RAPPORTS : « les tirs plus forts que le reste, les pas
+		# beaucoup plus attenues » ne se dose pas avec une molette globale.
+		KEY_4: AudioManager.doser_niveau(_son_courant,
+			AudioManager.niveau_dose(_son_courant) - 1.0)
+		KEY_5: AudioManager.doser_niveau(_son_courant,
+			AudioManager.niveau_dose(_son_courant) + 1.0)
+		KEY_6: AudioManager.doser_portee(_son_courant,
+			AudioManager.portee_dosee(_son_courant) - 0.05)
+		KEY_7: AudioManager.doser_portee(_son_courant,
+			AudioManager.portee_dosee(_son_courant) + 0.05)
+		# 8/9 : a quel point un mur etouffe. UNE molette pour la coupure et la
+		# perte de niveau, parce que c'est une seule dimension perceptive.
+		KEY_8: AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion - 0.05)
+		KEY_9: AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion + 0.05)
 		KEY_TAB: _auto = not _auto
 		KEY_X: _memoriser()
 		KEY_C: _comparer()
