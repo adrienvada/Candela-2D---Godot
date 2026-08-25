@@ -313,16 +313,52 @@ static func est_un_percuteur(stream_or_key: Variant) -> bool:
 ## qui n'existait que dans mon classement. La hierarchie qu'il a demandee est
 ## **tir > impacts >>> pas**, pas une echelle reguliere.
 const PORTEE_RELATIVE: Dictionary = {
-	"footstep": 0.15,
-	"wall_impact": 1.20,
-	"flesh_impact": 1.35,
-	"shoot": 1.60,
+	# ⚠️ **JUGES PAR ADRIEN AU BANC, LE 2026-08-26.** Ce ne sont plus des
+	# rapports raisonnes : chaque valeur a ete entendue contre les autres, source
+	# immobile, une molette a la fois.
+	#
+	# **Ce que la seance a change, et c'est une position de conception :** l'ecart
+	# entre les portees allait de 1 a 10,7 ; il va desormais de 1 a 1,4. Presque
+	# tout s'entend presque partout, et **ce qui distingue les sons n'est plus
+	# leur portee mais leur NIVEAU** (voir la table suivante, qui s'etale de -13
+	# a 0 dB). Les pas portent loin et pesent peu : ils disent une presence sans
+	# la situer.
+	#
+	# C'est la meme decision que la courbe a 0,40, poussee jusqu'au bout — dans
+	# le noir absolu, entendre que l'autre existe vaut plus que savoir a quelle
+	# distance il est. Le silence n'est pas une information, c'est une absence
+	# d'information.
+	"footstep": 0.60,
+	# **Le coup au but ne porte pas plus loin qu'un pas** (Adrien, 2026-08-26).
+	# Il valait 1,35 — un reliquat de l'echelle d'avant, seul son a n'avoir pas
+	# ete au banc : il aurait porte 2406 px quand le tir qui le cause en portait
+	# 1515. **Le bruit de l'impact aurait trahi 60 % plus loin que le coup de feu.**
+	#
+	# La regle posee est plus forte qu'une correction d'echelle : **etre touche ne
+	# doit pas trahir plus que marcher.** Le coup au but reste FORT (-2 dB, le
+	# deuxieme du jeu) mais devient INTIME — il confirme a celui qui tire qu'il a
+	# touche, sans annoncer a la carte entiere ou se passe le duel.
+	"flesh_impact": 0.60,
+	"wall_impact": 0.80,
+	"shoot": 0.85,
 	# V4.4 — le percuteur porte PEU, et c'est tout l'interet du son. Un clic a
 	# vide dit « je suis desarme, et je suis la » : c'est l'aveu le plus cher du
 	# jeu apres la torche. Qu'il s'entende d'un bout a l'autre de la carte en
 	# ferait une annonce ; a portee courte, il ne trahit que celui qui est deja
 	# assez pres pour etre trouve. Plus qu'un pas, bien moins qu'un impact.
-	"weapon_dry": 0.55,
+	# **0,65 — juge par Adrien au banc, le 2026-08-26**, contre les pas et non
+	# dans l'absolu : un clic a vide trahit un peu plus qu'un pas.
+	#
+	# ⚠️ La proposition etait **0,55, et elle etait fausse d'un facteur trois**.
+	# Le nombre avait l'air modeste, mais il se multiplie par le facteur global de
+	# 1,80 qu'Adrien avait deja regle : 0,55 x 1,80 = 0,99, soit **exactement la
+	# diagonale de la carte**. Le percuteur portait d'un bout a l'autre de
+	# l'arene — precisement ce que son commentaire disait vouloir empecher.
+	#
+	# La lecon vaut au-dela de ce nombre : **une valeur RELATIVE ne se juge pas
+	# seule.** Elle vit dans un produit, et le facteur qui la multiplie a ete
+	# regle par quelqu'un d'autre, un autre jour.
+	"weapon_dry": 0.65,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -340,11 +376,15 @@ const PORTEE_RELATIVE_DEFAUT: float = 1.0
 ## bavard du jeu (six a sept par seconde a deux joueurs), donc celui dont le
 ## cout d'attention est le plus mal reparti.
 ##
-## ⚠️ **A doser** : ces valeurs sont un point de depart accorde a la demande
-## « rapports x3 », elles n'ont pas ete jugees une par une. Les molettes 4/5 du
-## banc les deplacent son par son.
+## ✅ **JUGES PAR ADRIEN AU BANC, LE 2026-08-26.** L'avertissement precedent
+## disait « a doser, pas juges un par un » — il ne s'applique plus. Chaque niveau
+## a ete entendu contre les autres, a source immobile.
+##
+## Seul le pas a bouge (-12 → -13 dB) : c'est la table des PORTEES qui a porte
+## l'essentiel de la seance. Mais c'est ici que vit desormais la hierarchie, les
+## portees s'etant resserrees de 1-a-10,7 vers 1-a-1,4.
 const NIVEAU_RELATIF: Dictionary = {
-	"footstep": -12.0,
+	"footstep": -13.0,
 	"wall_impact": -3.0,
 	"flesh_impact": -2.0,
 	"shoot": 0.0,
@@ -517,7 +557,13 @@ const OCCLUSION_WET_MAX: float = 0.75
 ## elle qui fait la pente : un tiers occulte coute un tiers de ce creux.
 const OCCLUSION_PENTE_DB: float = -5.0
 
-## Force appliquee au bus d'occlusion. **0,50 — pose par Adrien le 2026-08-25.**
+## Force appliquee au bus d'occlusion. **0,45 — juge par Adrien au banc le
+## 2026-08-26**, apres un premier reglage a 0,50 la veille. Nommee en constante
+## plutot qu'ecrite dans la variable : c'est une valeur tranchee par un humain,
+## elle merite d'etre trouvable.
+const FORCE_OCCLUSION_DEFAUT: float = 0.45
+
+## Force appliquee au bus d'occlusion.
 ##
 ## ⚠️ **Et cette valeur a revele que RIEN NE L'APPLIQUAIT EN JEU.** Seul le banc
 ## appelait `appliquer_force_occlusion` ; en match, le bus gardait les valeurs
@@ -532,7 +578,7 @@ const OCCLUSION_PENTE_DB: float = -5.0
 ## fichier de bus n'est qu'un etat initial.** Ses valeurs y sont accordees a
 ## 0,50 pour qu'il ne raconte pas autre chose que le code — deux sources qui
 ## divergent en silence sont le mode de defaillance que ce depot traque partout.
-var force_occlusion: float = 0.50
+var force_occlusion: float = FORCE_OCCLUSION_DEFAUT
 
 ## Ecrit la force dans le bus. Idempotente, appelable a chaque frame.
 func appliquer_force_occlusion(force: float) -> void:

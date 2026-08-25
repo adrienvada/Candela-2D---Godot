@@ -101,18 +101,53 @@ func _test_diagonale() -> void:
 		"%f vs %f" % [plate, carree])
 
 ## Le classement des portées dit ce que le son APPREND, comme celui des
-## priorités. Un tir traverse la carte ; un pas est un indice de proximité.
+## priorités.
+##
+## ⚠️ **RÉÉCRIT LE 2026-08-26 : Adrien a renversé l'intention que ces contrôles
+## gardaient.** La version précédente disait « un tir traverse la carte, un pas
+## est un indice de proximité » — c'était la conception d'alors, et elle était
+## juste alors. Après sa seconde séance au banc, les portées se tiennent en un
+## mouchoir (1-à-1,4 au lieu de 1-à-10,7) et **la hiérarchie a déménagé dans les
+## NIVEAUX**, qui s'étalent de −13 à 0 dB. Tout s'entend presque partout ; ce qui
+## distingue les sons, c'est leur poids.
+##
+## Ces contrôles ne gardaient donc pas un invariant, ils gardaient une **époque**.
+## Ce qui suit garde ce qui a été JUGÉ, en rapports plutôt qu'en seuils absolus.
+## Modifié par la session « audio » avec l'arbitrage d'Adrien, pas de son propre
+## chef — voir docs/JOURNAL_SESSIONS.md, lot du 2026-08-26.
 func _test_portee_par_son() -> void:
 	print(" portée par son")
 	_check("le tir porte le plus loin",
-		AM.portee_relative_de("shoot") > AM.portee_relative_de("flesh_impact"))
-	_check("le coup au but porte plus loin que l'impact de mur",
-		AM.portee_relative_de("flesh_impact") > AM.portee_relative_de("wall_impact"))
-	_check("le pas porte le moins loin",
+		AM.portee_relative_de("shoot") >= AM.portee_relative_de("wall_impact"))
+	_check("l'impact de mur porte plus loin qu'un pas",
 		AM.portee_relative_de("wall_impact") > AM.portee_relative_de("footstep"))
-	_check("le tir dépasse la carte", AM.portee_relative_de("shoot") > 1.0)
-	_check("le pas ne couvre pas la moitié de la carte",
-		AM.portee_relative_de("footstep") < 0.5)
+
+	# **« Le bruit d'impact ne doit pas porter au-delà des pas » — Adrien,
+	# 2026-08-26.** Être touché ne doit pas trahir plus que marcher. Le coup au
+	# but reste FORT (−2 dB) mais devient INTIME : il confirme au tireur qu'il a
+	# touché sans annoncer à la carte où se passe le duel. C'est le contrôle
+	# le plus facile à défaire par mégarde, parce qu'il a l'air d'une anomalie.
+	_check("le coup au but ne porte pas plus loin qu'un pas",
+		AM.portee_relative_de("flesh_impact") <= AM.portee_relative_de("footstep"))
+
+	# ⚠️ **CES DEUX CONTRÔLES TESTAIENT LE RELATIF SEUL, ET LEUR LIBELLÉ PARLAIT
+	# D'ABSOLU.** « Le tir dépasse la carte » comparait `portee_relative_de` à
+	# 1,0 — en oubliant `FACTEUR_PORTEE_DEFAUT`, qui vaut 1,80 et que multiplie
+	# chaque portée. Un tir à 0,85 de relatif porte 1,53 diagonale : il dépasse
+	# bel et bien la carte, et le contrôle le déclarait faux.
+	#
+	# **C'est le même défaut que celui payé le même jour sur le percuteur**, posé
+	# à 0,55 « un peu plus de la moitié » — soit 0,99 diagonale une fois
+	# multiplié, la carte entière. **Une valeur relative ne se juge pas seule :
+	# elle vit dans un produit dont l'autre facteur a pu être réglé un autre
+	# jour, par quelqu'un d'autre.** On teste donc l'absolu, comme le libellé le
+	# promet depuis toujours.
+	_check("le tir dépasse la carte",
+		AM.portee_relative_de("shoot") * AM.FACTEUR_PORTEE_DEFAUT > 1.0,
+		"%.2f diagonale" % (AM.portee_relative_de("shoot") * AM.FACTEUR_PORTEE_DEFAUT))
+	_check("aucun son ne porte plus d'une diagonale et demie",
+		AM.portee_relative_de("shoot") * AM.FACTEUR_PORTEE_DEFAUT < 2.0,
+		"%.2f diagonale" % (AM.portee_relative_de("shoot") * AM.FACTEUR_PORTEE_DEFAUT))
 
 	# Le piège de V4.1, repayé ici : depuis que chaque arme a ses variantes, un
 	# tir arrive AUSSI sous forme de chemin. Une table interrogée par la seule

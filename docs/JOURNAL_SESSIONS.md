@@ -1734,6 +1734,25 @@ demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de secon
 avant d'être coupée par la bascule vers le menu. Détail complet dans les
 « Pièges connus » de la feuille de route.
 
+#### Lot du 2026-08-26 — le dosage audio d'Adrien (worktree `audio-dosage-adrien`)
+
+Seconde séance au banc, valeurs inscrites dans `audio_manager.gd` avec leur date
+et leur auteur. Fichiers touchés : `audio_manager.gd` (deux tables + la constante
+de force d'occlusion), `tools/test_musique.gd`, les deux documents.
+
+**Ce n'est pas un réglage, c'est une position de conception** : les portées se
+resserrent de 1-à-10,7 vers 1-à-1,4, et la hiérarchie déménage dans les niveaux.
+Détail et raisons dans « Pièges connus ».
+
+**La règle à ne pas défaire par mégarde :** le coup au but ne porte pas plus loin
+qu'un pas — être touché ne doit pas trahir plus que marcher. Il reste fort
+(−2 dB) et devient court (0,60). Le test garde le couple, pas les nombres :
+séparer les deux moitiés viderait la décision de son sens.
+
+**`FORCE_OCCLUSION_DEFAUT` est une constante nommée** désormais (0,45), au lieu
+d'un littéral dans la variable : une valeur tranchée par un humain mérite d'être
+trouvable.
+
 #### Lot du 2026-08-25 — annonceur et percuteur (worktree `audio-annonceur-et-percuteur`)
 
 Deux livraisons d'Adrien intégrées : les **voix d'annonceur** (V1.3, huit
