@@ -1844,10 +1844,17 @@ func _create_torch_indicator() -> PanelContainer:
 	hbox.add_theme_constant_override("separation", GAP_XS)
 	margin.add_child(hbox)
 
-	var icon := Label.new()
-	icon.text = "🔦"
-	icon.add_theme_font_size_override("font_size", T_MENTION)
-	hbox.add_child(icon)
+	# La torche du HUD : une icône dessinée, ou rien. Le libellé « TORCHE » juste
+	# à côté porte déjà le sens — un emoji de secours n'ajouterait qu'un défaut.
+	var tex_torche := MenuIcones.icone(MenuIcones.TORCHE)
+	if tex_torche != null:
+		var icon := TextureRect.new()
+		icon.texture = tex_torche
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(icon)
 
 	var label := Label.new()
 	label.text = "TORCHE"
@@ -2995,8 +3002,25 @@ func _refresh_player_list() -> void:
 	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
 		and not lie
 	if panel_launch != null and is_instance_valid(panel_launch):
-		panel_launch.disabled = manque_un_joueur
-		panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
+		# ⚠️ **Le grisage ne vaut que pour un bouton qui LANCE, jamais pour un
+		# bouton qui CHERCHE.** Relevé par Adrien à l'écran le 2026-08-26 : en 1v1
+		# amical et en compétitif, « LANCER LA RECHERCHE EN LIGNE » était grisé et
+		# l'appariement devenait **inatteignable**.
+		#
+		# La règle « pas de second joueur, pas de départ » est juste pour un salon
+		# privé : on attend quelqu'un qui a le code, et partir seul n'aurait pas de
+		# sens. Elle est **absurde pour une recherche** — chercher un adversaire,
+		# c'est très exactement ne pas en avoir. Le bouton se grisait donc pour la
+		# raison même qui justifie de l'utiliser.
+		#
+		# Le prédicat lit l'ACTION du bouton, qui est déjà portée par `LANCEURS` :
+		# rien de nouveau à tenir d'accord, et un écran ajouté demain héritera du
+		# bon comportement du seul fait de déclarer son action.
+		var cherche := String(panel_launch.get_meta(META_LAUNCH_ACTION, "")) \
+			== "chercher"
+		var a_griser := manque_un_joueur
+		panel_launch.disabled = a_griser
+		panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if a_griser \
 			else Color.WHITE
 
 ## Quitter un salon **ferme le salon**, il ne fait pas que remonter d'un cran.
@@ -4233,6 +4257,25 @@ func _refresh_lobby_block() -> void:
 		btn_open_lobby.hide()
 		lobby_status_label.show()
 		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
+		# ⚠️ **LA CAUSE DU BOUTON GRISÉ, et elle est dans ce retour anticipé.**
+		#
+		# Relevé par Adrien le 2026-08-26 : « LANCER LA RECHERCHE EN LIGNE » était
+		# grisé en amical et en compétitif. Le grisage est posé plus bas, dans le
+		# bloc des salons privés — **et ce `return` l'empêche d'être atteint ici.**
+		# Rien ne le remettait donc jamais à faux : le bouton restait grisé par le
+		# passage précédent sur un écran de salon, et l'appariement devenait
+		# inatteignable **selon le chemin emprunté**, ce qui est le pire des cas —
+		# le défaut n'apparaît pas si l'on arrive directement.
+		#
+		# Un état posé dans une branche et jamais rendu dans l'autre : c'est la
+		# forme de dérive que ce fichier combat partout ailleurs en **dérivant**
+		# plutôt qu'en mémorisant. On rend donc l'état ici, explicitement.
+		#
+		# **Chercher un adversaire, c'est très exactement ne pas en avoir** : ces
+		# deux écrans n'ont aucune raison d'attendre un second joueur.
+		if panel_launch != null and is_instance_valid(panel_launch):
+			panel_launch.disabled = false
+			panel_launch.modulate = Color.WHITE
 		return
 
 	var mode := selected_network_mode()
@@ -4337,10 +4380,14 @@ func _build_weapon_block() -> Control:
 	# Ce HBox ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
 	var p1_row := HBoxContainer.new()
 	p1_row.add_theme_constant_override("separation", GAP_XS)
-	p1_btn1 = _create_weapon_btn("🔫 Pistolet", p1_weapon_group, COLOR_P1, 0)
-	p1_btn2 = _create_weapon_btn("💥 Fusil", p1_weapon_group, COLOR_P1, 0)
-	p1_btn3 = _create_weapon_btn("☄️ Pompe", p1_weapon_group, COLOR_P1, 0)
-	p1_btn4 = _create_weapon_btn("🏹 Arbalète", p1_weapon_group, COLOR_P1, 0)
+	p1_btn1 = _create_weapon_btn("Pistolet", p1_weapon_group, COLOR_P1, 0,
+		"pistolet")
+	p1_btn2 = _create_weapon_btn("Fusil", p1_weapon_group, COLOR_P1, 0,
+		"fusil")
+	p1_btn3 = _create_weapon_btn("Pompe", p1_weapon_group, COLOR_P1, 0,
+		"pompe")
+	p1_btn4 = _create_weapon_btn("Arbalète", p1_weapon_group, COLOR_P1, 0,
+		"arbalete")
 	p1_btn1.button_pressed = true
 	p1_btn1.set_meta(META_NAV_SEED, 0)
 	p1_row.add_child(p1_btn1)
@@ -4356,10 +4403,14 @@ func _build_weapon_block() -> Control:
 
 	var p2_row := HBoxContainer.new()
 	p2_row.add_theme_constant_override("separation", GAP_XS)
-	p2_btn1 = _create_weapon_btn("🔫 Pistolet", p2_weapon_group, COLOR_P2, 1)
-	p2_btn2 = _create_weapon_btn("💥 Fusil", p2_weapon_group, COLOR_P2, 1)
-	p2_btn3 = _create_weapon_btn("☄️ Pompe", p2_weapon_group, COLOR_P2, 1)
-	p2_btn4 = _create_weapon_btn("🏹 Arbalète", p2_weapon_group, COLOR_P2, 1)
+	p2_btn1 = _create_weapon_btn("Pistolet", p2_weapon_group, COLOR_P2, 1,
+		"pistolet")
+	p2_btn2 = _create_weapon_btn("Fusil", p2_weapon_group, COLOR_P2, 1,
+		"fusil")
+	p2_btn3 = _create_weapon_btn("Pompe", p2_weapon_group, COLOR_P2, 1,
+		"pompe")
+	p2_btn4 = _create_weapon_btn("Arbalète", p2_weapon_group, COLOR_P2, 1,
+		"arbalete")
 	p2_btn1.button_pressed = true
 	p2_btn1.set_meta(META_NAV_SEED, 1)
 	p2_row.add_child(p2_btn1)
@@ -4373,12 +4424,27 @@ func _build_weapon_block() -> Control:
 
 ## `nav_owner` réserve le bouton au joueur concerné : le curseur de J1 ne peut
 ## pas entrer dans la rangée de J2, et réciproquement.
-func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color, owner_id: int) -> Button:
+## ⚠️ **Le libellé n'a plus d'emoji, et l'icône est un fichier.**
+##
+## Les quatre boutons portaient 🔫 💥 ☄️ 🏹. Un emoji est le seul glyphe du jeu
+## que la charte n'atteint pas : il est rendu par la fonte du **système**, donc
+## il contourne les deux fontes de DA1.2, arrive en saturation pleine contre la
+## règle 1, et change d'aspect d'une machine à l'autre. Trois défauts en un
+## caractère.
+##
+## `slug` et non le libellé : « Arbalète » porte un accent et une majuscule, et
+## dériver un chemin de fichier d'un texte affiché garantit qu'un renommage fera
+## disparaître une icône sans erreur. Même leçon que `weapon_data.gd`.
+func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color,
+		owner_id: int, slug: String = "") -> Button:
 	var btn := _make_choice_button(text, tint, group)
 	btn.text = text
 	btn.custom_minimum_size = Vector2(136, 80)
 	btn.add_theme_font_size_override("font_size", T_COURANT)
 	btn.set_meta(META_NAV_OWNER, owner_id)
+	# Rien si l'icône n'est pas cuite : le libellé seul reste lisible. Câbler,
+	# taire, diagnostiquer.
+	MenuIcones.poser_sur(btn, slug, tint)
 	return btn
 
 # ---------------------------------------------------------------------------
@@ -5182,10 +5248,10 @@ func hide_pick_window() -> void:
 
 func _weapon_label(idx: int) -> String:
 	match idx:
-		RankLoadout.ARBALETE: return "🏹 Arbalète"
-		RankLoadout.POMPE: return "☄️ Pompe"
-		RankLoadout.FUSIL: return "💥 Fusil"
-		_: return "🔫 Pistolet"
+		RankLoadout.ARBALETE: return "Arbalète"
+		RankLoadout.POMPE: return "Pompe"
+		RankLoadout.FUSIL: return "Fusil"
+		_: return "Pistolet"
 
 func _on_pick_weapon(idx: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")
