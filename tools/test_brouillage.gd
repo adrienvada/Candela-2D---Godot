@@ -42,6 +42,7 @@ func _run() -> void:
 	_test_determinisme()
 	_test_continuite()
 	_test_noms()
+	_test_emprise_de_copie()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -52,6 +53,47 @@ func _run() -> void:
 # ---------------------------------------------------------------------------
 # INVARIANT 1 — à éblouissement nul, rien ne bouge
 # ---------------------------------------------------------------------------
+
+## La zone photocopiée couvre-t-elle tout ce que le shader ira LIRE ?
+##
+## ⚠️ **Le défaut que ce contrôle attrape ne se voit pas sur une capture.**
+## Depuis le passage en `COPY_MODE_RECT` — dix fois moins de pixels copiés, pour
+## une image identique —, la texture d'écran n'est valide QUE dans le rectangle
+## demandé. Un rectangle trop petit fait lire au bord de l'ellipse des texels
+## laissés par une copie précédente : un liseré fantôme, visible seulement quand
+## l'émetteur bouge. Sur une capture fixe, tout paraît juste.
+##
+## On vérifie donc la géométrie plutôt que l'image : **les quatre coins du
+## rectangle TOURNÉ, écartés du rayon de noyau, tombent-ils dans l'emprise ?**
+## C'est le pire cas — un coin est le point le plus éloigné du centre — et il
+## suffit, puisque l'emprise est un rectangle aligné : s'il contient les quatre
+## coins dilatés, il contient tout le reste.
+##
+## Les angles éprouvés ne sont pas décoratifs : 0 et 90° sont les cas où la
+## formule dégénère (un des deux termes s'annule) et où une emprise naïve
+## paraîtrait juste ; 45° est celui où elle est le plus fausse.
+func _test_emprise_de_copie() -> void:
+	var tailles := [Vector2(988.0, 380.0), Vector2(200.0, 200.0),
+		Vector2(1400.0, 120.0)]
+	var angles := [0.0, PI / 6.0, PI / 4.0, PI / 3.0, PI / 2.0, 2.3, -1.1]
+	var noyau := 48.0 # la borne haute du curseur du banc
+	for taille in tailles:
+		for a2 in angles:
+			var demi: Vector2 = Brouillage.emprise_copie(taille, a2, noyau)
+			var demi_t: Vector2 = taille * 0.5
+			var pire := 0.0
+			for sx in [-1.0, 1.0]:
+				for sy in [-1.0, 1.0]:
+					# Le coin, tourné, puis poussé vers l'extérieur du rayon de
+					# noyau : c'est le texel le plus lointain que le shader
+					# puisse aller chercher depuis ce coin.
+					var coin := Vector2(demi_t.x * sx, demi_t.y * sy).rotated(a2)
+					var lu := coin + coin.normalized() * noyau
+					pire = maxf(pire, absf(lu.x) - demi.x)
+					pire = maxf(pire, absf(lu.y) - demi.y)
+			_check("emprise %dx%d à %.0f° contient ses coins lus (marge %.1f px)"
+				% [taille.x, taille.y, rad_to_deg(a2), -pire], pire <= 0.0)
+
 
 func _test_identite_a_zero() -> void:
 	print("\n[À éblouissement nul, tout mode est l'identité]")
