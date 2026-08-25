@@ -733,6 +733,7 @@ func _pulse_press(control: Control) -> void:
 # ===========================================================================
 
 func _process(delta: float) -> void:
+	_suivre_le_curseur_systeme()
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
@@ -740,6 +741,38 @@ func _process(delta: float) -> void:
 	_update_shake(delta)
 	_update_debug(delta)
 	_update_killcam(delta)
+
+## La flèche du système suit l'écran affiché (DA2.11).
+##
+## ⚠️ **Poser le viseur ne suffisait pas : il fallait éteindre l'autre.** Le
+## dépôt n'avait aucun `set_custom_mouse_cursor` ni aucun réglage de
+## `mouse_mode` — la flèche de macOS restait donc affichée pendant les matchs,
+## dans un jeu dont toute la proposition est « la seule information est la
+## lumière ». Ajouter un viseur sans traiter ça aurait donné **deux pointeurs**.
+##
+## ⚠️ **Dérivé chaque image, jamais appairé.** `_is_main_menu` bascule en quatre
+## endroits (`rouvrir_le_salon`, `show_main_menu`, `show_game_over`,
+## `hide_game_over`) et `round_active` en sept : poser un masquage d'un côté et
+## une restauration de l'autre, c'est signer la dérive — il suffit d'un chemin
+## de sortie oublié pour rendre la souris invisible à demeure, y compris dans
+## les menus, sans plus aucun moyen de cliquer « Quitter ». Ici l'état se
+## recalcule : quel que soit le chemin emprunté, l'image suivante le rattrape.
+##
+## ⚠️ **Le menu en a besoin, lui.** `_on_button_hovered` déplace la sélection de
+## J1 au survol : masquer la flèche partout retirerait la navigation à la
+## souris. C'est pourquoi la condition est l'écran affiché et non « le jeu est
+## lancé ».
+##
+## `HIDDEN` et non `CONFINED_HIDDEN` : confiner enfermerait le pointeur dans la
+## fenêtre. Ça se défend pour un jeu, mais ça piège la souris d'Adrien pendant
+## qu'il développe, et la visée n'y gagne rien — `get_aim_direction()` rend une
+## direction, pas une position.
+func _suivre_le_curseur_systeme() -> void:
+	var voulu := (Input.MOUSE_MODE_VISIBLE if _is_main_menu
+		else Input.MOUSE_MODE_HIDDEN)
+	if Input.mouse_mode != voulu:
+		Input.mouse_mode = voulu
+
 
 func _update_network_status() -> void:
 	var connected := false

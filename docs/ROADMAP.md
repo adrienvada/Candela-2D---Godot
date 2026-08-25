@@ -2596,6 +2596,44 @@ croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
 
 
+### Un contrôle textuel qui cherche `ma_fonction()` ne peut pas échouer (2026-08-25)
+
+**Deux contrôles de `tools/test_viseur.gd` sont restés verts pendant que je les
+sabotais.** Ils cherchaient l'appel d'une fonction dans le texte d'un fichier :
+
+```gdscript
+_vrai("la dérivation tourne à chaque image",
+    interface.contains("_suivre_le_curseur_systeme()"))
+```
+
+C'est vert. Ça reste vert après avoir retiré l'appel de `_process`. Ça restera
+vert quoi qu'on retire — parce que **la ligne de déclaration contient la même
+chaîne** : `func _suivre_le_curseur_systeme() -> void:`. Le contrôle ne mesure
+pas que la fonction est appelée, il mesure qu'elle **existe**, ce que la ligne
+d'à côté affirme déjà.
+
+Le remède est d'exiger l'appel, c'est-à-dire une ligne qui contienne le nom sans
+être la déclaration :
+
+```gdscript
+for l in interface.split("\n"):
+    if l.contains("_suivre_le_curseur_systeme()") and not l.contains("func "):
+        appelee = true
+```
+
+Même famille, rencontrée dans le même banc : `corps.contains("2")` pour
+vérifier qu'un `visibility_layer` vaut 2 — vert grâce au `Vector2` de la ligne
+d'au-dessus. **On isole la ligne, pas le bloc.**
+
+⚠️ **Ce qui rend ce piège coûteux n'est pas l'erreur, c'est sa signature :** un
+contrôle faux-vert est indistinguable d'un contrôle satisfait. Il gonfle le
+compteur, passe la suite, et fait croire qu'une régression est surveillée. Les
+deux n'ont été démasqués que parce que le banc a été **délibérément saboté avant
+d'être cru** — huit sabotages, dont deux n'ont pas rougi. Un banc qui n'a jamais
+rougi n'a rien prouvé ; c'est le seul moyen de distinguer « ça marche » de « ça
+ne peut pas dire le contraire ».
+
+
 ### `duplicate()` ne recopie pas les variables de script (2026-08-25)
 
 **Le joueur 2 n'a jamais vu une seule tache de sang.** Découvert en construisant
@@ -6910,8 +6948,8 @@ un fait de jeu, pas à un rythme d'interface.
   coup, le point noir et la moyenne des ombres n'ont pas bougé d'un centième.
   **Prétendre à une reprise que la mesure ne demande pas serait fabriquer du
   travail.** *(C)*
-- **DA2.11 Le viseur custom** ⚠️ **ce n'est pas un habillage, c'est un MANQUE**
-  (constaté le 2026-08-25) — le dépôt ne contient **aucun** viseur : zéro
+- **DA2.11 Le viseur custom** ✅ **livrée le 2026-08-25** — ⚠️ **ce n'était pas
+  un habillage, c'était un MANQUE** — le dépôt ne contient **aucun** viseur : zéro
   occurrence de `crosshair`, `viseur`, `reticule`, et aucun
   `set_custom_mouse_cursor` nulle part. **Le jeu affiche donc la flèche du
   système pendant les matchs**, dans un jeu dont toute la proposition est « la
@@ -6922,8 +6960,39 @@ un fait de jeu, pas à un rythme d'interface.
   et ⚠️ **l'écran partagé exige un `visibility_layer` explicite** — 2 pour la vue
   de J1, 4 pour celle de J2 —, faute de quoi le viseur s'affiche dans les deux
   vues, défaut déjà payé sur le flash de mort le 2026-08-17.
-  *(C — génération autorisée par Adrien le 2026-08-25, voir le revirement en
+  *(variante C — quatre chevrons rentrants — choisie par Adrien le 2026-08-25
+  sur quatre propositions ; génération autorisée par le revirement consigné en
   « Décisions actées »)*
+
+  **Ce qui a été livré, et l'écueil qui n'était pas dans l'énoncé.** L'item
+  décrivait un viseur à poser ; il en fallait deux moitiés. Poser le sprite
+  sans **éteindre la flèche du système** aurait donné **deux pointeurs à
+  l'écran** — l'énoncé nommait pourtant le défaut (« le jeu affiche la flèche du
+  système »), mais l'intitulé « viseur custom » invitait à ne lire que l'ajout.
+
+  - **Le sprite** est enfant du joueur, posé en `(110, 0)` : `rotation` suit
+    déjà la visée, donc aucun code de suivi. ⚠️ **La distance est fixe, et ce
+    n'est pas un pis-aller** — `get_aim_direction()` rend une direction
+    **normalisée**, la position de la souris est jetée avant d'arriver là. C'est
+    voulu : le joueur vise un cap, et la manette ne sait rien dire d'autre.
+    Aller rechercher la souris dans `player.gd` y rétablirait la connaissance du
+    périphérique que tout le patron `InputProvider` existe pour lui retirer.
+  - **Non éclairé** (`LIGHT_MODE_UNSHADED`) : un viseur qui s'éteindrait dans le
+    noir serait inutilisable là où le jeu se joue. Il n'appartient pas au monde
+    que la torche révèle.
+  - ⚠️ **La flèche du système se DÉRIVE, elle ne s'appaire pas.** `ui.gd`
+    recalcule `Input.mouse_mode` à chaque image depuis `_is_main_menu`. Ce
+    drapeau bascule en quatre endroits, `round_active` en sept : poser un
+    masquage d'un côté et une restauration de l'autre, c'est signer la dérive —
+    **un seul chemin de sortie oublié laisse la souris invisible dans les
+    menus, où plus rien n'est cliquable.** Un état recalculé se rattrape tout
+    seul à l'image suivante. Et la flèche doit revenir en menu : c'est le survol
+    souris qui y déplace la sélection de J1.
+  - **`tools/test_viseur.gd`** (16 contrôles) mesure l'image — trou central de
+    rayon 16 px sur 24, quadrants à 0,11 % du quart parfait, coins à zéro — et
+    lit le texte pour les deux régressions nommées ci-dessus. **Éprouvé rouge
+    sur huit sabotages avant d'être cru.** Deux de ses contrôles étaient
+    d'abord incapables d'échouer : voir le piège consigné plus bas.
 - **DA2.12 Les traçantes texturées** ✅ **livrée le 2026-08-25** — deux masques,
   et l'item en fermait deux. Le **halo de traînée** remplace le dégradé de
   `radial_tight` : c'est la quatrième texture que DA2.2 annonçait et n'avait

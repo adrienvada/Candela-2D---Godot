@@ -128,6 +128,31 @@ var _torch_audio_state: bool = false
 ## assombrirait l'adversaire sans qu'aucune décision ne l'ait voulu.
 const SPRITES := "res://assets/sprites/"
 
+## ## Le viseur (DA2.11)
+##
+## ⚠️ **Ce n'est pas un habillage, c'est un MANQUE qu'on comble.** Le dépôt ne
+## contenait aucun viseur et aucun `set_custom_mouse_cursor` : le jeu affichait
+## **la flèche du système pendant les matchs**, dans un jeu dont toute la
+## proposition est « la seule information est la lumière ». Personne ne l'avait
+## relevé parce qu'on ne cherche pas une absence — il n'y a pas de nom à grep.
+## Variante `C` — quatre chevrons vers l'intérieur — choisie par Adrien le
+## 2026-08-25.
+const VISEUR := "res://assets/viseur/viseur.png"
+
+## Distance du viseur devant le joueur, en unités de monde.
+##
+## ⚠️ **Elle est fixe, et ce n'est pas un choix de confort.**
+## `InputProvider.get_aim_direction()` rend une direction NORMALISÉE : la
+## distance de la souris est jetée avant d'arriver ici, et c'est voulu — le
+## joueur vise un cap, pas un point, et la manette ne peut rien dire d'autre.
+## Poser le viseur à distance fixe dans l'axe est donc le seul placement qui
+## traite les deux périphériques pareil. Aller chercher la souris ici
+## rétablirait dans `player.gd` la connaissance du périphérique que tout le
+## patron `InputProvider` existe pour lui retirer.
+##
+## 110 : devant le canon (28) et bien avant le bord du champ (478).
+const DISTANCE_VISEUR := 110.0
+
 ## Teinte du joueur, ramenée vers le blanc. À 0 le sprite prendrait la couleur
 ## pleine et le dessin serait écrasé ; à 1 les deux joueurs seraient identiques
 ## et on perdrait l'identification instantanée dont un duel a besoin.
@@ -382,6 +407,8 @@ func _ready():
 	flashlight.color = Charte.HALOGENE
 	flashlight.offset = Vector2.ZERO
 	flashlight.position = Vector2(30, 0)
+
+	_monter_viseur()
 	
 	# Configuration de la Rétrodiffusion de Lentille (Halo autour du corps quand la torche est active)
 	body_light.enabled = false
@@ -511,6 +538,38 @@ func _poser_sprite(slug: String) -> bool:
 		poly.texture = paire[1]
 		_calculate_uvs(poly)
 	return true
+
+
+## DA2.11 — le viseur, enfant du joueur donc porté par sa rotation.
+##
+## Il n'a besoin d'aucun code de suivi : `rotation` suit déjà la visée, et un
+## enfant posé en `(DISTANCE_VISEUR, 0)` est par construction dans l'axe.
+##
+## ⚠️ **`visibility_layer` explicite, sinon il s'affiche DANS LES DEUX VUES.**
+## L'écran partagé est permanent, y compris en ligne : 2 pour la vue de J1, 4
+## pour celle de J2. C'est le défaut exact payé sur le flash de mort le
+## 2026-08-17, et il est consigné.
+##
+## ⚠️ **Non éclairé, et c'est une décision.** Un viseur qui s'éteindrait dans le
+## noir serait inutilisable là où le jeu se joue. Il ne fait pas partie du monde
+## que la torche révèle : il est l'œil du joueur posé dessus.
+func _monter_viseur() -> void:
+	if not ResourceLoader.exists(VISEUR):
+		push_error("player : viseur absent — %s " % VISEUR
+			+ "(cuire avec tools/fabrique_decals.gd, puis : "
+			+ "godot --headless --path . --import)")
+		return
+	var v := Sprite2D.new()
+	v.name = "Viseur"
+	v.texture = load(VISEUR)
+	v.position = Vector2(DISTANCE_VISEUR, 0)
+	v.modulate = Color(Charte.HALOGENE, 0.72)
+	v.visibility_layer = 2 if player_id == 0 else 4
+	var mat := CanvasItemMaterial.new()
+	mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	v.material = mat
+	v.z_index = 9 # Sous le joueur (10), au-dessus de tout le reste
+	add_child(v)
 
 
 func equip_weapon(weapon: WeaponData):
