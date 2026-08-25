@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 45
+var _attendus: int = 52
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -72,9 +72,28 @@ func _test_diagonale() -> void:
 	_check("20×20 en tuiles de 35 → ~990 px", absf(d20 - 989.95) < 0.5, str(d20))
 	var d24 := AM.diagonale_carte(Vector2i(24, 24), Vector2i(35, 35))
 	_check("une carte plus grande porte plus loin", d24 > d20, "%f vs %f" % [d24, d20])
-	_check("la constante de repli VAUT la carte par défaut",
-		absf(AM.PORTEE_CARTE_DEFAUT - d20) < 0.5,
-		"repli %f contre carte %f" % [AM.PORTEE_CARTE_DEFAUT, d20])
+
+	# ⚠️ **Ce contrôle comparait une copie à une copie.** Il vérifiait que la
+	# constante `PORTEE_CARTE_DEFAUT` (989,95, écrite à la main) valait
+	# `diagonale_carte(Vector2i(20, 20), Vector2i(35, 35))` — dont les deux
+	# littéraux étaient eux aussi écrits ici. Le jour où `CandelaTileSet.TILE_SIZE`
+	# change, les deux restent faux ENSEMBLE et la suite reste verte : **un
+	# garde-fou qui compare une copie à une copie ne garde rien.** Il interroge
+	# maintenant la vraie source, et la constante a laissé place à une dérivation.
+	_check("le repli se dérive de la VRAIE taille de tuile",
+		absf(AM.portee_carte_defaut()
+			- AM.diagonale_carte(AM.GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)) < 0.001,
+		"%f contre %f" % [AM.portee_carte_defaut(),
+			AM.diagonale_carte(AM.GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)])
+	# Et la grille annoncée est bien celle de la carte que le jeu charge par
+	# défaut : sans ce contrôle, la dérivation serait exacte sur une carte
+	# imaginaire.
+	var md := root.get_node_or_null(^"/root/MapData")
+	if md != null:
+		md.select_map(md.DEFAULT_MAP_ID)
+		var reelle: Vector2i = MapCodec.get_grid_size(md.get_selected())
+		_check("la grille par défaut est celle de la carte par défaut",
+			reelle == AM.GRILLE_DEFAUT, "%s contre %s" % [reelle, AM.GRILLE_DEFAUT])
 	var plate := AM.diagonale_carte(Vector2i(40, 10), Vector2i(35, 35))
 	var carree := AM.diagonale_carte(Vector2i(20, 20), Vector2i(35, 35))
 	_check("à surface égale, la carte plate porte plus loin", plate > carree,
@@ -105,6 +124,28 @@ func _test_portee_par_son() -> void:
 	_check("un son inconnu prend le défaut",
 		is_equal_approx(AM.portee_relative_de("cliquetis_imaginaire"),
 			AM.PORTEE_RELATIVE_DEFAUT))
+	# ⚠️ **Le classement ne doit plus dépendre du DOSSIER.** `est_un_tir` répondait
+	# vrai pour tout chemin sous `assets/audio/weapons/` — si bien que déposer un
+	# fichier dans un répertoire était une décision de gameplay. Ces contrôles
+	# éprouvent les sons qui n'existent pas encore : une queue de tir, une
+	# variante de distance, un rechargement. Ils vivront dans le même dossier, et
+	# aucun ne doit devenir un tir.
+	_check("une queue de tir n'est PAS un tir",
+		not AM.est_un_tir(AM.DIR_ARMES + "weapon_pistolet_tail.wav"))
+	_check("une variante de distance non plus",
+		not AM.est_un_tir(AM.DIR_ARMES + "weapon_pistolet_lointain.wav"))
+	_check("un rechargement non plus",
+		not AM.est_un_tir(AM.DIR_ARMES + "weapon_reload_pompe.wav"))
+	_check("le percuteur non plus",
+		not AM.est_un_tir(AM.chemin_percuteur("pistolet")))
+	# Et ce que `chemin_tir` construit reste reconnu, pour les quatre variantes.
+	var toutes := true
+	for v in range(1, AM.VARIANTES_TIR + 1):
+		if not AM.est_un_tir(AM.chemin_tir("pompe", v)):
+			toutes = false
+	_check("les quatre variantes que chemin_tir fabrique sont des tirs", toutes)
+	_check("la clé générique d'avant V4.1 reste un tir", AM.est_un_tir("shoot"))
+
 	_check("un flux sans clé prend le défaut",
 		is_equal_approx(AM.portee_relative_de(AudioStreamWAV.new()),
 			AM.PORTEE_RELATIVE_DEFAUT))

@@ -196,6 +196,8 @@ const PERIODE_BEAT: float = 60.0 / BPM
 ## Un même échantillon repitché reste le même échantillon — l'oreille l'entend
 ## en une poignée de coups, et le tir est de loin le son le plus répété du jeu.
 const DIR_ARMES := "res://assets/audio/weapons/"
+## Prefixe commun aux sons d'armes. Sert a RECONNAITRE, `chemin_tir` a CONSTRUIRE.
+const PREFIXE_TIR := "weapon_"
 const VARIANTES_TIR := 4
 
 ## Le percuteur a vide, un par arme (V4.4).
@@ -224,13 +226,39 @@ static func chemin_tir(slug: String, variante: int) -> String:
 ## aussi sous la forme d'un CHEMIN**, et la comparaison à `"shoot"` répondait
 ## alors « non » : les pas seraient restés au premier plan pendant les
 ## fusillades, sans qu'aucune erreur ne le dise.
+## Ce son est-il un coup de feu ?
+##
+## ⚠️ **Cette fonction classait par DOSSIER, et ça a coûté un défaut réel.**
+## Elle répondait vrai pour tout chemin commençant par `DIR_ARMES`. Écrit pour
+## V4.1, quand ce dossier ne contenait que les seize prises de tir, c'était
+## exact — puis le percuteur à vide y a été livré, **et un clic à vide s'est mis
+## à faire reculer les pas de l'adversaire de six décibels** (V4.15), l'inverse
+## exact de ce que ce son raconte. La session DA3 l'a colmaté par une exclusion ;
+## le fond restait : **le prochain fichier déposé là redevenait un tir.**
+##
+## Elle classe désormais par **ce que le nom du fichier EST**, et précisément par
+## ce que `chemin_tir()` fabrique — `weapon_<arme>_NN.wav`. Les deux fonctions se
+## répondent : l'une construit, l'autre reconnaît, et un son qui n'a pas été
+## construit par la première n'est pas reconnu par la seconde. **Déposer un
+## fichier dans un dossier n'est plus une décision de gameplay.**
+##
+## La clé `"shoot"` reste vraie : c'est le son générique d'avant V4.1, encore
+## joué en repli quand les variantes d'une arme manquent.
 static func est_un_tir(stream_or_key: Variant) -> bool:
 	if not (stream_or_key is String):
 		return false
 	var s: String = stream_or_key
+	if s == "shoot":
+		return true
 	if est_un_percuteur(s):
 		return false
-	return s == "shoot" or s.begins_with(DIR_ARMES)
+	var nom := s.get_file().get_basename()
+	if not nom.begins_with(PREFIXE_TIR):
+		return false
+	# `weapon_pistolet_03` — le suffixe est un numero de variante a deux chiffres,
+	# precede d'un souligne. C'est ce que `chemin_tir` ecrit, et rien d'autre.
+	var coupe := nom.rsplit("_", true, 1)
+	return coupe.size() == 2 and coupe[1].length() == 2 and coupe[1].is_valid_int()
 
 ## Ce son est-il un percuteur a vide ?
 ##
@@ -354,11 +382,28 @@ func portee_dosee(cle: String) -> float:
 func niveau_dose(cle: String) -> float:
 	return float(_niveau_dose.get(cle, niveau_relatif_de(cle)))
 
-## Diagonale de la carte par defaut (20x20 cases de 35 px), en pixels. Sert tant
-## qu'`accorder_a_la_carte()` n'a pas ete appelee — une suite, un menu, un banc.
-## Ce n'est pas un repli silencieux : c'est la meme grandeur, calculee sur la
-## carte que le jeu charge par defaut.
-const PORTEE_CARTE_DEFAUT: float = 989.95
+## Grille de la carte par defaut. C'est la SEULE valeur recopiee ici, et elle est
+## une propriete de `assets/maps/default.json` — pas une constante d'audio.
+const GRILLE_DEFAUT := Vector2i(20, 20)
+
+## Diagonale de la carte par defaut, en pixels. Sert tant qu'`accorder_a_la_carte()`
+## n'a pas ete appelee — une suite, un menu, un banc. Ce n'est pas un repli
+## silencieux : c'est la meme grandeur, calculee sur la carte que le jeu charge
+## par defaut.
+##
+## ⚠️ **C'etait `989.95`, recopie a la main, et un test le gardait — contre une
+## AUTRE copie.** Le controle comparait la constante a
+## `diagonale_carte(Vector2i(20, 20), Vector2i(35, 35))`, dont les deux littéraux
+## etaient eux aussi ecrits dans le test. Le jour ou `CandelaTileSet.TILE_SIZE`
+## change, la constante ET son garde-fou restent faux **ensemble**, et la suite
+## reste verte. **Un garde-fou qui compare une copie a une copie ne garde rien.**
+## Signale par la session DA3, qui a vu la copie ; le garde-fou factice est ma
+## part.
+##
+## Derive maintenant de `CandelaTileSet.TILE_SIZE` : une fonction et non une
+## constante, GDScript n'admettant pas d'appel dans une expression `const`.
+static func portee_carte_defaut() -> float:
+	return diagonale_carte(GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)
 
 ## Courbe d'attenuation (`AudioStreamPlayer2D.attenuation`), exposant applique a
 ## `(1 - d/portee)`.
@@ -379,7 +424,7 @@ const PORTEE_CARTE_DEFAUT: float = 989.95
 const COURBE_DISTANCE_DEFAUT: float = 0.4
 
 ## Diagonale de la carte courante, posee par `accorder_a_la_carte()`.
-var _portee_carte: float = PORTEE_CARTE_DEFAUT
+var _portee_carte: float = portee_carte_defaut()
 
 ## Les deux molettes du dosage. Publiques a dessein : le banc les tourne pendant
 ## que le son joue, et **un dosage qui demande de relancer le jeu ne se fait
@@ -734,7 +779,14 @@ func _ready() -> void:
 	for i in range(SFX_POOL_SIZE):
 		var p2d := AudioStreamPlayer2D.new()
 		p2d.bus = "SFX"
-		p2d.max_distance = 2000.0
+		# ⚠️ **Aucune portee posee ici, et c'est deliberé.** Il y avait
+		# `max_distance = 2000.0` — devenu doublement inutile depuis S2 : la
+		# portee est reecrite a CHAQUE `play_sfx_2d` (le pool est partage, la voix
+		# qui joue un pas vient de jouer un tir), et 2000 est de toute facon le
+		# defaut de Godot. La ligne ne faisait donc rien **tout en se lisant comme
+		# une valeur active** : le genre de litteral qu'on retrouve dans six mois,
+		# qu'on ajuste, et dont on cherche longtemps pourquoi il n'a aucun effet.
+		# Signale par la session DA3.
 		add_child(p2d)
 		sfx_players_2d.append(p2d)
 	_sfx_prio_2d.resize(SFX_POOL_SIZE)

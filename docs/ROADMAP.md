@@ -2853,6 +2853,18 @@ l'inverse exact de ce que ce son raconte, puisqu'il avoue qu'on est désarmé.
 
 Aucune erreur, aucun test rouge : le duck est un écart de volume, pas un état.
 
+> ✅ **FERMÉ le 2026-08-25.** `est_un_tir` classe désormais par ce que le nom du
+> fichier EST, et précisément par ce que `chemin_tir()` fabrique —
+> `weapon_<arme>_NN.wav`, suffixe numérique à deux chiffres. **Les deux fonctions
+> se répondent : l'une construit, l'autre reconnaît**, et un son qui n'a pas été
+> construit par la première n'est pas reconnu par la seconde. Déposer un fichier
+> dans un dossier a cessé d'être une décision de gameplay.
+>
+> Éprouvé sur les sons **qui n'existent pas encore** — une queue de tir, une
+> variante de distance, un rechargement : tous vivront dans ce dossier, aucun ne
+> devient un tir. C'est le seul genre de test qui vaille ici, puisque le défaut
+> ne se déclenche qu'à l'arrivée d'un fichier futur.
+
 **Ce que ça enseigne au-delà de l'audio : classer par l'EMPLACEMENT d'un fichier
 plutôt que par sa NATURE fait dépendre le comportement du jeu d'une décision de
 rangement.** Déplacer un asset devient un changement de règles, et personne ne
