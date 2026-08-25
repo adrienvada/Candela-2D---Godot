@@ -6748,9 +6748,36 @@ d'ambiance reste à faire.**
   une largeur utile, plus le versant inverse — qu'une description ne s'empare pas
   du cadre. Sans ce second contrôle, corriger d'un côté ferait réapparaître le
   doublon de l'autre.
-- ⬜ **Reste : le lit d'ambiance de l'accueil** — « la carte sous la torche »
-  (option 1, retenue par Adrien). Sur le menu principal, aucune entrée n'a de
-  panneau : le cadre y est toujours noir.
+- ✅ **Le lit d'ambiance est posé** — « la carte sous la torche », option retenue
+  par Adrien. Le cadre montre la carte réellement sélectionnée, rendue par le
+  moteur avec les mêmes occluders que le match qui suit, révélée par une lumière
+  qui dérive.
+
+  ⚠️ **Il a fallu trois passes, et les deux premières ont raté pour des raisons
+  qu'aucune mesure headless n'attrapait.** Elles valent d'être nommées, parce que
+  la même erreur de méthode les relie :
+
+  | Passe | Ce que la sonde disait | Ce que l'écran montrait |
+  |---|---|---|
+  | 1 | 4 rectangles, 4 occluders, texture posée, lumière qui bouge | une écharde dans une boîte noire |
+  | 2 | idem, plus le sol dessiné | une tranche de carte, deux bandes sombres |
+  | 3 | 96 % × 97 % du cadre, 80 % de la carte visible | *à juger* |
+
+  **Une sonde qui compte des objets ne dit rien de ce qu'ils rendent.** Le sol
+  manquait (passe 1) : la seule chose éclairée était le retrait de 3 px que la
+  géométrie laisse au bord des murs. La portée était en dur et le noir était pur
+  (passe 2). Et la troisième cause était **structurelle** : le nœud était rangé
+  comme un panneau parmi les autres, dans un conteneur aligné en haut qui n'étire
+  personne — il demandait 500 px et en obtenait 330, d'où un cadrage qui ne
+  montrait que 38 % de la carte.
+
+  **Un lit d'ambiance n'est pas un panneau : c'est ce qu'on voit quand aucun
+  panneau ne parle.** Il vit désormais dans le cadre lui-même, derrière la pile,
+  et recule à 18 % dès qu'un panneau s'affiche — un tableau d'historique lu
+  par-dessus une arène éclairée serait illisible. **Le plancher de hauteur a
+  disparu, et son absence est le signe que le nœud est enfin au bon endroit : une
+  valeur qu'il faut forcer est presque toujours le symptôme d'un rangement
+  fautif.**
 
 ##### Vu à l'écran le 2026-08-25, et l'historique justifie le déplacement à lui seul
 

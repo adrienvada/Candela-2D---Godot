@@ -151,8 +151,6 @@ const PANEL_AUDIO := "panneau_audio"
 ## DA4.18 — le profil et l'historique se regardent à droite, comme les réglages.
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
-## DA4.18 — le lit d'ambiance : la carte sélectionnée, révélée par une torche.
-const PANEL_ARENE := "panneau_arene"
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -2420,18 +2418,38 @@ func _build_hub_screens() -> void:
 	# panneau ajouté après coup se placerait au-dessus des autres dans la pile —
 	# ici sans conséquence puisqu'un seul est visible à la fois, mais l'ordre
 	# reste celui de la déclaration et il vaut mieux qu'il soit lisible.
+	# DA4.18 — **le lit de fond, et il n'est PAS un panneau.**
+	#
+	# Premier jet : enregistré comme panneau parmi les autres, et posé en défaut
+	# des six écrans qui n'en avaient aucun. Ça marchait, et c'était faux — vu à la
+	# planche : le panneau n'obtenait que ~330 px dans un cadre de 545, parce que
+	# `_detail_host` aligne ses enfants en haut et n'en étire aucun. Sur un viewport
+	# large et court avec une carte carrée, le cadrage ne montrait plus qu'une
+	# **tranche de 38 % de la carte**.
+	#
+	# **Un lit d'ambiance n'est pas un panneau, c'est ce qu'on voit quand aucun
+	# panneau ne parle.** Il vit donc dans le cadre lui-même, DERRIÈRE la pile de
+	# panneaux, et il en épouse toute la surface. Aucun conteneur ne le contraint
+	# plus, et il n'occupe plus une case dans une liste où il n'avait rien à faire.
 	menu_arene = MenuArene.new()
-	hub.register_panel(PANEL_ARENE, menu_arene)
+	var cadre_droit := hub.right_panel()
+	cadre_droit.add_child(menu_arene)
+	# Derrière `_detail_host` : un décor qui passerait devant le contenu serait un
+	# voile, pas un fond.
+	cadre_droit.move_child(menu_arene, 0)
 	# La carte peut changer pendant qu'on est dans les menus — c'est même tout
 	# l'objet de la galerie. Sans ce branchement, le cadre continuerait de montrer
 	# l'arène précédente jusqu'à la prochaine navigation.
 	MapData.map_selected.connect(func(_id: String) -> void:
 		if menu_arene != null:
 			menu_arene.rafraichir())
-	for ecran in [MenuHub.ROOT, SCREEN_LOCAL, SCREEN_FRIENDLY, SCREEN_RANKED,
-			SCREEN_TRAINING, SCREEN_CUSTOM]:
-		if hub.has_screen(ecran) and hub.screen_panel(ecran) == "":
-			hub.set_screen_panel(ecran, PANEL_ARENE)
+	# **Il s'efface quand un panneau parle.** Un tableau d'historique lu par-dessus
+	# une arène éclairée serait illisible ; le même fond à 18 % reste une présence
+	# sans devenir un bruit. C'est le panneau montré qui décide, pas l'écran : deux
+	# entrées du même écran peuvent en montrer un et pas l'autre.
+	hub.panel_changed.connect(func(cle: String) -> void:
+		if menu_arene != null:
+			menu_arene.set_retrait(cle != ""))
 
 	# L'écran de recherche N'EST PAS dans l'arborescence, et c'est une décision :
 	# chercher un adversaire ne doit pas immobiliser le joueur devant un compte à

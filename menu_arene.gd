@@ -67,6 +67,8 @@ var _t: float = 0.0
 var _intensite: float = 1.0
 var _etendue: Rect2 = Rect2()
 var _carte_posee: String = ""
+## Le fond s'efface quand un panneau parle. Voir [method set_retrait].
+var _retrait: float = 0.0
 
 
 func _init() -> void:
@@ -84,24 +86,12 @@ func _init() -> void:
 	# reste noir pour une raison qui n'a rien à voir avec le rendu — défaut déjà
 	# payé par la galerie de cartes et par l'écran des EFFETS.
 	#
-	# ⚠️ **CE NOMBRE EST LE DÉFAUT QUI RESTE, et il est mesuré : 500 est demandé,
-	# ~330 est obtenu.** Vu à la planche le 2026-08-25 — le panneau n'occupe qu'une
-	# bande dans le haut d'un cadre de ~545 px, et le reste du cadre est vide.
-	#
-	# **La conséquence dépasse la hauteur.** Le cadrage COUVRE (voir `_cadrer()`) :
-	# sur un viewport de 860 × 330 et une carte carrée, le facteur est imposé par
-	# la largeur, et l'on ne voit plus qu'une **tranche horizontale de 38 % de la
-	# carte**. D'où l'impression de zoom, et d'où les bandes sombres — ce sont les
-	# murs du bord vus de très près, pas un défaut de lumière.
-	#
-	# **Ce qu'il faut faire, et pourquoi ce n'est pas une ligne :** `_detail_host`
-	# est `SHRINK_BEGIN` (décision du hub, pour qu'un contenu ne saute pas d'un
-	# écran à l'autre), donc aucun enfant ne s'y étire — un plancher plus grand ne
-	# suffira pas, il faut soit desserrer ce conteneur pour ce panneau, soit le
-	# poser sur `hub.right_panel()` en lit de fond plutôt que comme panneau. Le
-	# second est probablement le bon : un lit d'ambiance n'est pas un panneau parmi
-	# d'autres, il est ce qu'on voit quand aucun panneau ne parle.
-	custom_minimum_size = Vector2(0, 500)
+	# **Aucun plancher de hauteur, et c'est le signe que le nœud est au bon endroit.**
+	# Il vit dans le `PanelContainer` du cadre de droite, qui étire ses enfants sur
+	# toute sa surface. La version précédente demandait 500 px et en obtenait ~330,
+	# parce qu'elle était rangée dans un conteneur aligné en haut qui n'étire
+	# personne — une valeur qu'il faut forcer est presque toujours le symptôme d'un
+	# nœud rangé au mauvais endroit.
 
 	_viewport = SubViewport.new()
 	_viewport.name = "Arene"
@@ -182,7 +172,7 @@ func _ready() -> void:
 ## vraiment — le viewport cesse de se rendre — au lieu de tourner en transparent.
 func set_intensite(valeur: float) -> void:
 	_intensite = clampf(valeur, 0.0, 1.0)
-	_vue.modulate.a = _intensite
+	_appliquer_opacite()
 	_sur_visibilite()
 
 
@@ -196,6 +186,22 @@ func rafraichir() -> void:
 	_carte_posee = ""
 	if is_visible_in_tree():
 		_poser_la_carte()
+
+
+## Le cadre montre un panneau : le fond passe au second plan.
+##
+## **Il ne s'éteint pas, il recule.** L'éteindre ferait clignoter le cadre à
+## chaque déplacement du curseur ; le garder à pleine intensité rendrait un
+## tableau d'historique illisible par-dessus. 18 % est le point où il reste une
+## présence sans devenir un bruit.
+func set_retrait(en_retrait: bool) -> void:
+	_retrait = 0.82 if en_retrait else 0.0
+	_appliquer_opacite()
+
+
+func _appliquer_opacite() -> void:
+	if _vue != null:
+		_vue.modulate.a = _intensite * (1.0 - _retrait)
 
 
 func _sur_visibilite() -> void:
