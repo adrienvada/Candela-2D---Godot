@@ -6917,8 +6917,28 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   La promesse « un `I` et un `W` occupent la même case » existait en commentaire
   depuis la vague M et **ne reposait sur rien** : elle est maintenant vérifiée en
   gravant six `W` puis six `J` et en comparant les deux largeurs. *(S)*
-- **DA4.10 Les glyphes manette officiels** — icônes de boutons dessinées au
-  lieu de « X », « LB » en texte. *(G : jeux de glyphes libres)*
+- **DA4.10 Les glyphes manette officiels** ✅ **déjà faite — constaté le
+  2026-08-25, aucun travail requis.** `assets/ui/prompts/` porte **seize SVG**
+  (croix, rond, carré, triangle, les quatre flèches, L1/L2/L3, R1/R2/R3, share,
+  options) **et ils sont câblés** : `_get_joypad_btn_info()` associe chaque
+  `JOY_BUTTON_*` à son fichier, `_apply_btn_info()` le charge et efface le
+  libellé texte.
+
+  **Le repli est propre, et c'est ce qui rend l'item réellement clos** :
+  `ResourceLoader.exists()` garde le chargement, et un glyphe absent redonne le
+  texte au lieu d'un bouton muet. C'est la règle « câbler, taire, diagnostiquer »
+  appliquée sans qu'on la lui ait demandée.
+
+  ⚠️ **Un seul fichier manque, et il ne sera pas comblé** : `ps.svg`, référencé
+  par `JOY_BUTTON_GUIDE`. C'est un symbole déposé de Sony — le repli en texte
+  « PS » est la bonne réponse, pas une texture à produire. Signalé pour que
+  personne ne le « corrige ».
+
+  **Ce que l'item enseigne, au-delà de lui-même** : c'est la troisième fois en
+  deux jours qu'on trouve des assets **livrés et non employés** ou **employés
+  sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
+  les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
+  elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
 - **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
   noms de touches. *(S + G)*
 - **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
