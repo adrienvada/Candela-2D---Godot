@@ -2617,6 +2617,44 @@ croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
 
 
+### ✅ RECTIFIÉ — la cible EST tenue, mes relevés valaient la moitié (2026-08-26)
+
+**Adrien a lancé le banc lui-même, fenêtre au premier plan :**
+
+```
+Images mesurées : 9771 en 60,0 s     Fenêtre : 2560x1440 natifs (3,69 Mpx)
+FPS médian      : 165                Racine  : rendu 2560x1440
+FPS 1 % bas     : 75                 Verdict 60 fps : TENU
+Image la plus lente : 20,3 ms        Focus : stable au PREMIER PLAN
+```
+
+**Mes propres relevés donnaient 37-38 et « NON TENU ».** Ils étaient pris au
+**second plan** : macOS bride une fenêtre de fond, et une application lancée
+depuis un terminal ne peut pas réclamer le premier plan (mesuré, la demande est
+refusée). **L'écart n'est pas un biais, c'est un facteur deux.**
+
+⚠️ **Et le banc le disait.** Il étiquette « stable au SECOND PLAN — comparable,
+mais c'est un plancher », et j'ai construit une conclusion dessus quand même.
+**Un avertissement placé APRÈS le résultat qu'il invalide arrive trop tard pour
+qui lit de haut en bas** — c'est une leçon d'ordre de présentation, pas de
+vigilance. La ligne de focus devrait précéder les chiffres qu'elle conditionne.
+
+Tout ce que la section ci-dessous conclut sur la cible est donc **faux**, et son
+texte est conservé pour que le chemin reste lisible. Ce qui en survit :
+
+- la dérive thermique est réelle (les relevés d'une session s'usent) ;
+- le 1 % bas est bruité, et **un seul relevé long vaut mieux que dix courts** ;
+- ni les torches, ni les shaders, ni l'audio, ni le plafond de cadence ne
+  causent les pics — ces éliminations tiennent, elles étaient comparatives.
+
+⚠️ **La marge est plus étroite que le verdict ne le suggère.** 1 % bas à 75 ne
+veut pas dire « 15 images de marge » : la pire image dure **20,3 ms** contre
+**16,7 ms** de budget à 60 fps, soit **3,4 ms** de coussin sur les images qui
+comptent. Une copie plein cadre de 3,69 Mpx peut les manger à elle seule —
+**`COPY_MODE_RECT` reste donc le bon choix** pour le flou du brouillage, non
+plus par prudence mais par arithmétique.
+
+
 ### Le 1 % bas n'est pas tenu, et ce n'est pas le brouillage (2026-08-25)
 
 **Mesuré neuf fois, `bench_framerate --vue-unique` : 1 % bas entre 43 et 60.**
