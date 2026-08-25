@@ -447,7 +447,37 @@ const GAIN := 2.0
 ## halo et le flou qui ont pris son travail : il faisait deux métiers — dire
 ## « tu es ébloui » ET cacher l'adversaire. Le second est parti ailleurs, et
 ## **localement** ; il ne reste que le premier, qui se contente de 0,3.
+##
+## ⚠️ **ET IL N'EST PAS RÉGLABLE.** Décision d'Adrien, 2026-08-25 : « on ne peut
+## pas régler la valeur éblouissement, il ne faut pas donner d'avantage à un des
+## deux ». Voir la note sur `EffectPolicy` juste en dessous — c'est la seule
+## chose de ce fichier qui oblige à toucher un fichier d'options.
 const VOILE_FACTEUR := 0.3
+
+## ⚠️ **AUCUN RÉGLAGE D'OPTIONS NE DOIT MODULER QUOI QUE CE SOIT D'ICI.**
+##
+## Décision d'Adrien du 2026-08-25, et elle **dépasse** celle du 2026-08-18 au
+## lieu de la contredire. L'ancienne disait : le curseur « Éblouissement » module
+## le voile blanc, **jamais** la pénalité de vitesse et de visée — « un curseur
+## qui allégerait la pénalité serait un avantage compétitif déguisé en confort ».
+## La frontière passait donc entre le CONFORT (le voile) et la PÉNALITÉ.
+##
+## **Ce chantier a déplacé le voile du mauvais côté de cette frontière.** Tant
+## qu'il ne faisait que blanchir l'écran, le baisser ne rendait pas l'adversaire
+## plus lisible — il l'était déjà, net et bien placé. Depuis que la lecture de
+## l'adversaire dépend du halo, du flou et de l'effacement, **tout ce qui touche
+## à l'éblouissement touche à l'information**, et un curseur devient un avantage
+## quel que soit ce qu'il règle.
+##
+## Ce qu'il faudra faire au branchement, et c'est la seule chose de ce chantier
+## qui oblige à toucher les options : **`ui.gd` doit cesser de multiplier le
+## voile par `GameSettings.current_effect("eblouissement")`** et poser
+## `VOILE_FACTEUR` tel quel. L'entrée « Éblouissement » de l'écran des effets
+## n'a plus d'objet.
+##
+## `ui.gd`, `settings_manager.gd` et `effect_policy.gd` appartiennent à la
+## session « menus » : la modification se demande, elle ne se fait pas d'office.
+const REGLABLE_PAR_LES_OPTIONS := false
 
 ## La dose commune : l'éblouissement multiplié par le réglage de force, ramené
 ## dans [0,1].

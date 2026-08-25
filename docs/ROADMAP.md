@@ -7656,10 +7656,28 @@ but, de combien on rate.
 - ~~**B3 — quelle valeur pour le voile ?**~~ ✅ **Tranché le 2026-08-25 : 0,3.**
   Voir la section des réglages retenus. ⚠️ `ui.gd` porte encore 0,8 : c'est la
   seule valeur de production à changer au branchement.
-- **B4 — le curseur.** Inchangé, et le mix le rend **plus** pressant, pas moins :
-  voir l'encadré ci-dessus. Un joueur qui met le voile à zéro garderait un
-  adversaire invisible et un halo pour seule information — ce qui peut être un
-  réglage acceptable, ou un avantage. À trancher avant tout branchement.
+- ~~**B4 — le curseur.**~~ ✅ **Tranché le 2026-08-25 : il n'y en a pas.**
+  « On ne peut pas régler la valeur éblouissement, il ne faut pas donner
+  d'avantage à un des deux » (Adrien).
+
+  **Cette décision dépasse celle du 2026-08-18 au lieu de la contredire.**
+  L'ancienne plaçait la frontière entre le CONFORT (le voile, réglable) et la
+  PÉNALITÉ (vitesse et visée, jamais réglables). **Ce chantier a déplacé le
+  voile du mauvais côté de cette frontière** : tant qu'il ne faisait que
+  blanchir l'écran, le baisser ne rendait pas l'adversaire plus lisible — il
+  l'était déjà, net et bien placé. Depuis que la lecture de l'adversaire dépend
+  du halo, du flou et de l'effacement, **tout ce qui touche à l'éblouissement
+  touche à l'information**, et un curseur devient un avantage quel que soit ce
+  qu'il règle.
+
+  Ce qu'il faudra faire au branchement : **`ui.gd` cesse de multiplier le voile
+  par `GameSettings.current_effect("eblouissement")`** et pose `VOILE_FACTEUR`
+  tel quel ; l'entrée « Éblouissement » de l'écran des effets n'a plus d'objet.
+  Ces trois fichiers appartiennent à la session « menus » — **la modification se
+  demande, elle ne se fait pas d'office**, et elle n'est donc pas faite ici.
+
+**Les quatre items sont clos. Le chantier n'attend plus d'arbitrage** — il
+attend un branchement, qui touche des fichiers tenus par une autre session.
 
 **Rien n'est branché tant que B4 n'est pas posé.** `brouillage.gd` n'a toujours
 aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
