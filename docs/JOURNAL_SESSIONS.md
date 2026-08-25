@@ -316,6 +316,25 @@ aucun de vos fichiers.
 ni de `game_state.gd`. Le chantier est inscrit, mesuré, chiffré — il n'est pas
 commencé.
 
+**Demandé par la session « son », noté et NON fait — à prendre par qui en aura
+besoin.** Un poste `--sans-reverb` dans `tools/bench_framerate.gd`, sur le modèle
+de `--sans-torches`, pour chiffrer le coût du bus d'occlusion. Ce qu'il faudrait :
+couper `SFX_Occlus` (`set_bus_bypass_effects` ou `set_bus_mute` sur son index) —
+réverb et passe-bas permanents ajoutés par leur lot — **et un second poste qui
+coupe aussi la réverb du bus `SFX`**, antérieure, sans quoi le relevé ne dirait
+pas laquelle des deux coûte. Pas fait ici parce qu'Adrien a demandé de *préparer
+le chantier R*, pas d'étendre le banc, et que la session demandeuse dit
+elle-même qu'il n'y a **ni urgence ni coût démontré** — une réverb tourne sur le
+fil audio, pas sur le fil de rendu, donc l'hypothèse la plus probable est qu'elle
+ne paraisse pas du tout dans le 1 % bas. C'est bien pour ça qu'il faudra la
+mesurer avant d'en parler.
+
+**⚠️ `CLAUDE.md` sur `main` porte encore le texte qui m'a fait écrire une
+contrainte fausse** — « le jeu n'a pas d'auditeur ». La session son l'a corrigé
+chez elle (`af81c0d`, worktree `audio-dosage`), **mais sa branche n'est pas
+fusionnée.** Toute session qui lira `CLAUDE.md` d'ici là refera mon erreur. En
+attendant : l'auditeur est posé depuis `4d8a85e`.
+
 ### 2026-08-25 — session « affichage » : `keep`, et la fenêtre du débogage
 
 **Branche `worktree-affichage-keep-fenetre`, worktree
