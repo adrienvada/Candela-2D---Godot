@@ -7838,8 +7838,28 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   Oxanium est tabulaire par construction depuis DA1.2 — mais **rien n'empêchait
   qu'ils se mettent à sauter**, et l'item ne demandait que l'état, pas la
   garantie. *(S)*
-- **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
-  style, plus d'outline automatique. *(S)*
+- **DA4.3 Les chiffres de dégâts en fonte display** ✅ **livrée le 2026-08-25** —
+  la moitié « fonte » l'était depuis DA1 ; restait le contour, et il portait un
+  défaut mesurable.
+
+  **Il valait 8 px, fixe, pour une taille qui va de 19 à 42.** Un effleurement
+  recevait donc un halo de **42 % de sa propre taille** et un carreau d'arbalète
+  de 19 % : **les petits chiffres étaient noyés dans leur contour, les gros
+  non.** C'est l'inverse exact de ce que V4.5 cherche à faire — *le poids du
+  chiffre EST l'information* — et un halo qui épaissit d'autant plus qu'il est
+  petit écrase la différence qu'on venait d'établir.
+
+  Le contour est désormais un **rapport** (11 %), soit 2 à 5 px sur toute
+  l'échelle : assez pour détacher le chiffre d'un mur éclairé, jamais assez pour
+  boucher les contre-formes de la fonte d'affichage, qui est ultra-condensée et
+  les a étroites. L'ombre suit la même échelle et porte ce que le contour ne peut
+  pas — une **direction** : un contour uniforme colle le chiffre à l'écran, une
+  ombre décalée le pose au-dessus de la scène.
+
+  **Troisième occurrence du même motif en deux jours** — après le coefficient de
+  case du code de salon et la portée de lumière du panneau d'arène : *une valeur
+  absolue là où il fallait un rapport, juste pour un seul cas et fausse pour tous
+  les autres.* *(S)*
 - **DA4.4 Le bandeau FATAL dessiné** ✅ **livrée le 2026-08-25** — le mot le plus
   fort du jeu était posé sur rien. Il a maintenant une plaque de tôle frappée,
   bords rongés, l'encre a bavé.
@@ -7853,8 +7873,31 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   ne s'éclaire plus elle-même — pour que le mot en `ROUGE` ressorte dessus. Et
   non éclairé, comme le mot qu'il porte : un support de texte qui s'assombrirait
   hors de la torche disparaîtrait au pire moment. *(C — généré, procédé DA1.5)*
-- **DA4.5 La killcam habillée** — cadre VHS authored, timecode en fonte mono,
-  grain *texturé* plutôt que bruit calculé. *(C : 2-3 textures)*
+- **DA4.5 La killcam habillée** ✅ **livrée le 2026-08-25** — les trois volets.
+
+  **Le grain vient d'une texture, plus d'un calcul.** `fract(sin(dot(...)))`
+  produit un bruit **blanc** : chaque pixel indépendant de son voisin. Une bande
+  vidéo usée ne fait pas ça — elle porte de la poussière, des rayures
+  verticales, des zones plus fatiguées que d'autres. **Le hasard uniforme ne
+  ressemble à aucune matière**, et c'est ce qui donnait à la killcam son air de
+  filtre plutôt que d'archive. La planche défile en diagonale à deux vitesses
+  premières entre elles, ce qui retarde longtemps la répétition visible.
+
+  ⚠️ **Le coefficient a dû doubler, et l'oublier aurait effacé l'effet en
+  silence** : une texture centrée sur zéro n'a que la moitié de l'amplitude d'un
+  `fract()` qui va de 0 à 1. Garder l'ancien facteur aurait donné un grain deux
+  fois plus faible, sans erreur et sans que personne sache pourquoi.
+
+  **Le cadre de moniteur vit dans l'INTERFACE, pas dans l'arène.** Le voile de
+  killcam, lui, y est reparenté pour passer sous les lumières ; le cadre n'a rien
+  à y faire — c'est un objet d'affichage, et l'y mettre l'aurait fait
+  **s'assombrir hors des torches**. Un cadre de moniteur qui s'éteint quand on ne
+  l'éclaire pas. `NinePatchRect` à 64 px de marge, sur une texture dont le centre
+  est vérifié à alpha zéro exact.
+
+  **Le timecode était déjà réglé** par DA4.2 : il est en registre appareil, donc
+  tabulaire par construction. C'est ce que « fonte mono » demandait — la propriété
+  voulue est la chasse fixe, pas la famille. *(C — généré, procédé DA1.5)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
@@ -7963,8 +8006,16 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
 - **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
   noms de touches. *(S + G)*
-- **DA4.12 Les états vides illustrés** — historique sans match, galerie sans
-  carte : une petite illustration et une phrase, pas un écran nu. *(C, petit)*
+- **DA4.12 Les états vides illustrés** ✅ **livrée le 2026-08-25** — historique
+  sans match, galerie sans carte. Une phrase seule au milieu d'un grand vide se
+  lit comme **un écran qui a échoué à charger** ; la même phrase sous une image
+  se lit comme une réponse — *il n'y a rien, et c'est normal*. Ce n'est pas
+  décoratif : c'est la différence entre « le jeu est cassé » et « à vous de
+  jouer ».
+
+  Les deux dessins sont teintés en `LINE` et non `DIM` : une illustration
+  d'absence doit rester **en retrait de la phrase qu'elle accompagne**, sinon
+  elle devient le sujet. *(C — généré, procédé DA1.5)*
 - **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
   le constat est le même que pour les fontes.
 
@@ -7989,8 +8040,17 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   fondu » suppose que le problème est le fondu ; il est plus large — c'est
   l'unité du geste. Le rebond sous un bouton, sous une tuile et sous le décompte
   est ce qui donne la sensation qu'une seule main a animé l'écran. *(S)*
-- **DA4.14 Les curseurs J1/J2 dessinés** — deux petites torches plutôt que deux
-  rectangles colorés. *(C)*
+- **DA4.14 Les curseurs J1/J2 dessinés** ✅ **livrée le 2026-08-25** — une petite
+  torche se pose à gauche du cadre de sélection, teintée par `modulate` : **un
+  seul fichier sert les deux joueurs**, et retoucher `BLEU` ou `ROUGE` dans la
+  charte ne demande aucune regénération.
+
+  ⚠️ **Le liseré RESTE, et c'est une décision.** Il dit *quelle zone* est
+  sélectionnée, ce qu'une icône ne peut pas dire ; la torche dit *qui*
+  sélectionne. Les deux ne font pas le même travail, et l'item ne demandait de
+  supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
+  lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
+  généré, procédé DA1.5)*
 - **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
   l'éditeur sous la bible. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
