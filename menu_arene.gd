@@ -44,13 +44,19 @@ const Charte := preload("res://charte.gd")
 ## une lumière qui balaie vite devient un gyrophare et vole l'attention à la
 ## colonne de gauche, qui est ce qu'on est venu lire.
 const CYCLE := 23.0
-## Portée de la lumière en pixels-monde. Généreuse — on veut révéler une pièce,
-## pas jouer.
-const PORTEE := 460.0
+## Portée de la lumière, **en fraction de la plus grande dimension de la carte**.
+##
+## ⚠️ **C'était 460 pixels-monde en dur, et c'est la première des trois causes du
+## premier rendu raté.** Une portée fixe est juste pour une carte de 700 px et
+## fausse pour toutes les autres : sur une grande carte elle donne une lampe de
+## poche perdue dans un hangar. La portée d'une lumière d'ambiance se dit par
+## rapport à ce qu'elle doit révéler, jamais en valeur absolue — même famille que
+## le coefficient de case réglé sur une fonte.
+const PORTEE_RELATIVE := 0.62
 ## Part de la carte que la lumière peut parcourir, en fraction de son étendue.
 ## Elle reste loin des bords : une lampe qui sort du cadre laisse un écran noir,
 ## et la moitié du cycle serait perdue.
-const COURSE := Vector2(0.30, 0.24)
+const COURSE := Vector2(0.26, 0.20)
 
 var _viewport: SubViewport
 var _monde: Node2D
@@ -78,9 +84,23 @@ func _init() -> void:
 	# reste noir pour une raison qui n'a rien à voir avec le rendu — défaut déjà
 	# payé par la galerie de cartes et par l'écran des EFFETS.
 	#
-	# 500 px couvre le cadre à la résolution de référence. C'est un lit d'ambiance :
-	# il veut occuper le cadre entier, pas une bande. **À juger à l'écran** — c'est
-	# la seule valeur de ce lot qu'aucune mesure ne tranche.
+	# ⚠️ **CE NOMBRE EST LE DÉFAUT QUI RESTE, et il est mesuré : 500 est demandé,
+	# ~330 est obtenu.** Vu à la planche le 2026-08-25 — le panneau n'occupe qu'une
+	# bande dans le haut d'un cadre de ~545 px, et le reste du cadre est vide.
+	#
+	# **La conséquence dépasse la hauteur.** Le cadrage COUVRE (voir `_cadrer()`) :
+	# sur un viewport de 860 × 330 et une carte carrée, le facteur est imposé par
+	# la largeur, et l'on ne voit plus qu'une **tranche horizontale de 38 % de la
+	# carte**. D'où l'impression de zoom, et d'où les bandes sombres — ce sont les
+	# murs du bord vus de très près, pas un défaut de lumière.
+	#
+	# **Ce qu'il faut faire, et pourquoi ce n'est pas une ligne :** `_detail_host`
+	# est `SHRINK_BEGIN` (décision du hub, pour qu'un contenu ne saute pas d'un
+	# écran à l'autre), donc aucun enfant ne s'y étire — un plancher plus grand ne
+	# suffira pas, il faut soit desserrer ce conteneur pour ce panneau, soit le
+	# poser sur `hub.right_panel()` en lit de fond plutôt que comme panneau. Le
+	# second est probablement le bon : un lit d'ambiance n'est pas un panneau parmi
+	# d'autres, il est ce qu'on voit quand aucun panneau ne parle.
 	custom_minimum_size = Vector2(0, 500)
 
 	_viewport = SubViewport.new()
@@ -102,8 +122,17 @@ func _init() -> void:
 
 	# Le noir du monde, posé comme dans l'arène : sans lui, un `Polygon2D` se
 	# rendrait à pleine couleur et la lumière n'aurait rien à révéler.
+	# ⚠️ **`NOIR` pur, et c'était la deuxième cause.** Dans l'arène, le noir absolu
+	# EST le jeu : ne rien voir hors de sa torche est la mécanique centrale. Mais
+	# ce panneau n'est pas l'arène, c'est un **décor de menu** — et un décor dont
+	# 90 % de la surface est un noir mathématique ne décore rien. On voyait une
+	# écharde parce qu'il n'y avait rien d'autre à voir.
+	#
+	# Le sol est donc relevé au ras du visible : assez pour qu'on devine la forme
+	# de l'arène, assez peu pour que la torche reste ce qui la RÉVÈLE. C'est la
+	# différence entre citer la mécanique et la rejouer.
 	var nuit := CanvasModulate.new()
-	nuit.color = Charte.NOIR
+	nuit.color = Charte.NOIR.lerp(Charte.SOL_A, 0.42)
 	_monde.add_child(nuit)
 
 	_murs = Node2D.new()
@@ -117,7 +146,6 @@ func _init() -> void:
 	_lumiere.shadow_enabled = true
 	_lumiere.shadow_filter = Light2D.SHADOW_FILTER_PCF5
 	_lumiere.texture = LightTextures.radial(256)
-	_lumiere.texture_scale = PORTEE / 128.0
 	_monde.add_child(_lumiere)
 
 	_vue = TextureRect.new()
@@ -312,6 +340,12 @@ func _cadrer() -> void:
 	var facteur: float = maxf(vue.x / _etendue.size.x, vue.y / _etendue.size.y)
 	_monde.scale = Vector2(facteur, facteur)
 	_monde.position = vue * 0.5 - _etendue.get_center() * facteur
+	# ⚠️ **Troisième cause du premier rendu : la portée se posait UNE FOIS, à la
+	# construction, avant que la carte ne soit connue.** Elle vit ici, où l'on
+	# connaît enfin l'étendue — et elle est en pixels-monde, donc la mise à
+	# l'échelle du monde s'y applique toute seule.
+	var portee: float = maxf(_etendue.size.x, _etendue.size.y) * PORTEE_RELATIVE
+	_lumiere.texture_scale = portee / 128.0
 	# La portée de la lumière est exprimée en pixels-monde : elle suit donc la
 	# mise à l'échelle toute seule, et une grande carte n'est pas révélée par une
 	# lampe minuscule.
