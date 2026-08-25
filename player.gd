@@ -153,10 +153,10 @@ const SPRITES := "res://assets/sprites/"
 ## là où ça ne l'est pas, recuire est un piège.** R6 n'avait plus que les
 ## sprites à traiter.
 ##
-## Vaut 1,0 tant que les sprites sont cuits à leur taille de jeu. **Passer à 2,0
-## le jour de la recuisson, et pas avant** — `tools/test_sprites.gd` rougit si
-## les deux ne bougent pas ensemble.
-const DENSITE_SPRITES := 1.0
+## ⚠️ **La valeur ne vit PAS ici : elle est dans `Charte.DENSITE_ASSETS`.** Quatre
+## familles en dépendent — sprites, sang, éclats de mur, viseur — et la décision
+## d'Adrien est « une fois, pour toutes les familles ». Quatre copies finiraient
+## par diverger, et chacune paraîtrait juste.
 
 
 ## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
@@ -164,7 +164,7 @@ const DENSITE_SPRITES := 1.0
 ## l'éprouver à plusieurs résolutions sans monter un `Player` — et donc de
 ## prouver que recuire ne déplace rien.
 static func empreinte_sprite(largeur_texture: int) -> float:
-	return float(largeur_texture) / DENSITE_SPRITES
+	return float(largeur_texture) / Charte.DENSITE_ASSETS
 
 ## ## Le viseur (DA2.11)
 ##

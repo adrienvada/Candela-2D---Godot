@@ -494,6 +494,31 @@ const D_MOYEN := 0.18
 ## 300 ms — ce qu'on a le droit de regarder : une révélation, un verdict.
 const D_LONG := 0.30
 
+## ## La densité des assets (chantier R, étape R6)
+##
+## **Texels par unité de monde.** Tout ce qui se dessine à partir d'une texture
+## doit diviser la taille du fichier par cette valeur pour obtenir sa taille en
+## MONDE. Sans cette division, **recuire un asset le redimensionne à l'écran**.
+##
+## ⚠️ **Pourquoi ici et pas dans chaque fichier.** Quatre familles en dépendent
+## — les sprites du joueur, les taches de sang, les éclats de mur, et le viseur
+## par un autre chemin — et la décision d'Adrien du 2026-08-25 est explicitement
+## « une fois, pour TOUTES les familles ». Une valeur posée quatre fois finit par
+## diverger : c'est exactement le procès que ce fichier fait aux 220 `Color(...)`
+## qu'il a remplacés, et à la palette recopiée dont « chaque moitié paraît
+## juste ». Une densité recopiée serait la même erreur avec un autre type.
+##
+## ⚠️ **Ce qui est en jeu dépasse la taille.** Le roulis de marche de DA2.4 vaut
+## 1,6 unité de MONDE : un joueur deux fois plus grand aurait gardé le même
+## roulis, donc une démarche deux fois plus discrète, sans qu'une ligne de la
+## marche ait bougé. Un réglage calibré à l'œil serait devenu faux à cause d'un
+## paramètre de cuisson, et personne n'aurait relié les deux.
+##
+## Vaut 1,0 tant que les assets sont cuits à leur taille de jeu. **Passer à 2,0
+## le jour de la recuisson, et pas avant** — `tools/test_sprites.gd` rougit si
+## la densité et les fichiers ne bougent pas ensemble.
+const DENSITE_ASSETS := 1.0
+
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],

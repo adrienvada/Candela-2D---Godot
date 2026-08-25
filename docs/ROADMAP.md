@@ -9381,9 +9381,25 @@ Reste donc :
    cinquante constantes de ce genre — pas une constante recopiée dans quatre
    fichiers.
 
-   **Signalé, pas corrigé** : la session qui l'a trouvé tenait le découplage des
-   sprites, et étendre de soi-même un périmètre confié est précisément ce que la
-   consigne interdit. En attente d'Adrien.
+   ✅ **CORRIGÉ le 2026-08-25**, Adrien ayant tranché « corrige tout ». La
+   densité vit désormais dans **`Charte.DENSITE_ASSETS`** — pas recopiée dans
+   quatre fichiers — et les quatre familles en dérivent. `tools/test_sprites.gd`
+   (22 contrôles) interdit à `player.gd` de redéclarer la sienne et exige des
+   deux décals qu'ils divisent ; éprouvé rouge sur quatre sabotages, dont
+   « le sang redessine à la taille de son fichier ».
+
+   ⚠️ **Et la réparation a coûté un lot rouge à 32 suites, pour une TABULATION.**
+   Le remplacement automatique visait `\tvar t := _texture.get_size()…` avec UNE
+   tabulation quand la ligne en portait DEUX. Le garde-fou du script — vérifier
+   que le motif est unique avant de remplacer — **était vert** : il comptait une
+   **sous-chaîne**, pas une ligne. Le remplacement a donc démarré au milieu de
+   l'indentation, `blood_stain.gd` a cessé de compiler, et comme `bullet.gd` le
+   précharge, **32 suites sont tombées avec lui** en annonçant chacune « 2
+   erreurs de script ». Aucune ne nommait la vraie cause.
+
+   **Encore la famille du jour** : un contrôle qui atteste l'unicité d'un motif
+   n'atteste pas qu'on a visé la bonne chose. Ancrer sur une ligne entière —
+   retour à la ligne compris — aurait rougi tout de suite.
 2. ~~**Les sprites, et c'est le seul vrai travail de R6.**~~ ✅ **DÉCOUPLÉS le
    2026-08-25** (commit ci-dessous). `_poser_sprite()` passe désormais par
    `empreinte_sprite()`, qui divise par `DENSITE_SPRITES` : un `fusil.png` recuit

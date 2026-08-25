@@ -67,10 +67,16 @@ func _init() -> void:
 		_vrai("player.gd lisible", false)
 		_verdict()
 		return
-	var densite := _nombre(source, "const DENSITE_SPRITES := ")
+	# La densité vit dans `Charte` depuis qu'elle sert quatre familles — voir
+	# `charte.gd`. Une valeur posée quatre fois finit par diverger.
+	var charte := _lire("res://charte.gd")
+	var densite := _nombre(charte, "const DENSITE_ASSETS := ")
 	var roulis := _nombre(source, "const ROULIS_MARCHE := ")
-	_vrai("player.gd déclare une densité de sprites",
+	_vrai("Charte déclare une densité d'assets",
 		not is_nan(densite) and densite > 0.0)
+	# ⚠️ Une densité locale rouvrirait la porte : quatre copies, quatre dérives.
+	_vrai("player.gd ne redéclare pas sa propre densité",
+		not source.contains("const DENSITE_SPRITES :="))
 	_vrai("player.gd déclare une amplitude de roulis", not is_nan(roulis))
 	if is_nan(densite) or is_nan(roulis):
 		_verdict()
@@ -103,6 +109,7 @@ func _init() -> void:
 			is_equal_approx(float(largeur_x2) / 2.0, attendue))
 
 	_test_le_quad_passe_par_l_empreinte(source)
+	_test_les_decals_divisent_aussi()
 	_test_le_roulis_reste_proportionne(roulis)
 	_verdict()
 
@@ -125,6 +132,33 @@ func _test_le_quad_passe_par_l_empreinte(texte: String) -> void:
 		corps.contains("empreinte_sprite("))
 	_vrai("le quad ne se bâtit pas sur la largeur brute",
 		not corps.contains("Vector2(t_peint.get_width()"))
+
+
+## Les décals aussi, sinon la recuisson casse deux familles sur quatre.
+##
+## ⚠️ **Non listés par R6 jusqu'au 2026-08-25.** `blood_stain.gd` et
+## `wall_impact.gd` dessinaient à `_texture.get_size() * _echelle`, où `_echelle`
+## n'est qu'une variation ALÉATOIRE (0,75-1,25 pour le sang, 0,22-0,34 pour les
+## éclats) : la taille de base était celle du FICHIER. Recuits à ×2, taches de
+## sang et éclats de mur auraient doublé à l'écran — sans erreur, sans warning,
+## et sans qu'on relie ça à un paramètre de cuisson.
+##
+## Trouvés en relisant avec la lunette que DA4 a nommée — *une valeur absolue là
+## où il faut un rapport* —, après que la même relecture eut donné le viseur.
+func _test_les_decals_divisent_aussi() -> void:
+	for chemin in ["res://blood_stain.gd", "res://wall_impact.gd"]:
+		var texte := _lire(chemin)
+		if texte == "":
+			_vrai("%s lisible" % chemin.get_file(), false)
+			continue
+		var code := _sans_commentaires(texte)
+		# Toute taille tirée d'une texture doit être divisée. On cherche la
+		# forme fautive plutôt que la forme correcte : c'est elle qui reviendrait.
+		var brut := code.contains("get_size() * _echelle\n") \
+			or code.contains("get_size() * _echelle)")
+		_vrai("%s : aucune taille brute de texture" % chemin.get_file(), not brut)
+		_vrai("%s : divise par la densité" % chemin.get_file(),
+			code.contains("Charte.DENSITE_ASSETS"))
 
 
 ## Le roulis de marche reste-t-il proportionné au corps ?

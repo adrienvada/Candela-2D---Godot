@@ -139,10 +139,15 @@ func _draw():
 	# Liseré carmin, puis cœur presque noir : une goutte est plus sombre en son
 	# centre qu'à son bord, où la lumière rasante l'attrape.
 	if _texture != null:
-		var t := _texture.get_size() * _echelle
+		# ⚠️ **Divisé par la densité, sinon recuire redimensionne le décal.**
+		# `_echelle` n'est qu'une variation ALÉATOIRE d'une instance à l'autre :
+		# sans cette division, la taille de base d'une tache de sang serait celle
+		# de son FICHIER, et une recuisson à ×2 la doublerait à l'écran. Voir
+		# `Charte.DENSITE_ASSETS` — même geste que pour les sprites du joueur.
+		var t := _texture.get_size() * _echelle / Charte.DENSITE_ASSETS
 		draw_texture_rect(_texture, Rect2(-t * 0.5, t), false,
 			Color(Charte.CARMIN, 0.8))
-		var c := _coeur.get_size() * _echelle
+		var c := _coeur.get_size() * _echelle / Charte.DENSITE_ASSETS
 		draw_texture_rect(_coeur, Rect2(-c * 0.5, c), false,
 			Color(Charte.CARMIN * 0.16, 0.95))
 		return
