@@ -37,8 +37,34 @@ ATTENTE_HOTE=60
 # pour toujours, et c'est le lanceur entier qui devient inutilisable.
 PLAFOND=180
 
-# Le port du salon ENet. Un seul lot peut l'occuper à la fois sur cette machine.
-PORT=7777
+# Le port du salon ENet, **DÉRIVÉ DE L'ARBRE DE TRAVAIL**.
+#
+# Un port fixe pour six sessions qui partagent la machine, c'est une file
+# d'attente que personne n'a demandée : le refus ci-dessous protège du faux
+# diagnostic, mais il ne rend pas la mesure possible pour autant. Deux worktrees
+# doivent pouvoir mesurer EN MÊME TEMPS.
+#
+# La journée du 2026-08-25 a tranché la forme : quatre diagnostics faux à trois
+# sessions, et la conclusion unanime que **l'outil qui évite bat la discipline
+# qui se souvient**. Un `CANDELA_PORT` qu'il faudrait penser à exporter aurait
+# été de la discipline ; le dériver n'en demande aucune.
+#
+# **Dérivé ICI et exporté, jamais recalculé en aval** — c'est la condition posée
+# par DA2, et elle évite une panne muette : si l'hôte et le client dérivaient
+# chacun de leur propre chemin, deux processus lancés depuis des dossiers
+# différents ouvriraient deux ports et ne se verraient jamais. L'échec dirait
+# « aucun adversaire n'a rejoint », c'est-à-dire rien.
+#
+# **Plage 20000-39999**, à l'écart des ports éphémères de macOS (49152+) : un
+# hash qui y tomberait entrerait en conflit avec ce que l'OS vient d'attribuer,
+# de façon intermittente et irreproductible — le pire mode de panne pour un banc.
+if [ -n "${CANDELA_PORT:-}" ]; then
+  PORT="$CANDELA_PORT"
+else
+  PORT=$(( 20000 + $(pwd -P | cksum | cut -d' ' -f1) % 20000 ))
+fi
+# Godot le lit dans `NetworkManager.DEFAULT_PORT`, en debug seulement.
+export CANDELA_PORT="$PORT"
 
 ## Qui tient le port, s'il est tenu ? Rend les PID, une par ligne.
 tenants_du_port() {
@@ -151,7 +177,7 @@ else
   TITRE="Match en ligne à deux instances (ENet, 127.0.0.1)"
 fi
 
-echo "── $TITRE ──"
+echo "── $TITRE ──  (port $PORT)"
 
 # **Code 3 et non 1, et c'est tout l'objet de ce garde-fou.** « Je n'ai pas pu
 # m'exécuter » n'est pas « le jeu est cassé ». Confondre les deux est la faute
