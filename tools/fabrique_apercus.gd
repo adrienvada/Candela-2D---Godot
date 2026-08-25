@@ -119,8 +119,20 @@ func _duel_local() -> void:
 	if p2.has_method("shoot"):
 		p2.shoot()
 
+	# **Deux aperçus, une seule scène, et le recadrage n'est pas un raccourci.**
+	#
+	# Adrien décrit le duel en ligne ainsi : « un écran seul, où un ennemi allume
+	# sa lumière, on le vise et on tire ». C'est **exactement la moitié gauche** de
+	# ce qu'on vient de photographier — la vue de J1, qui voit la torche de J2 et
+	# lui tire dessus. La différence entre les deux modes n'est pas la scène, c'est
+	# le nombre de vues.
+	#
+	# Les produire du même instant garantit qu'elles ne se contredisent pas. Deux
+	# captures prises séparément montreraient deux duels différents, et le joueur
+	# qui compare les deux entrées y lirait une différence de jeu là où il n'y a
+	# qu'une différence d'affichage.
 	await _poser("apercu_ecran_scinde")
-	print("  · l'écran scindé est pris ; le duel en ligne se recadre à la main")
+	await _poser("apercu_duel_en_ligne", true)
 
 
 ## L'entraînement : un joueur, une cible.
@@ -156,9 +168,16 @@ func _laisser(secondes: float) -> void:
 		await get_tree().process_frame
 
 
-func _poser(nom: String) -> void:
+## Photographie l'écran. `moitie_gauche` ne garde que la vue de J1.
+func _poser(nom: String, moitie_gauche: bool = false) -> void:
 	await _laisser(REPOS)
 	var img: Image = await Commun.capturer(get_tree())
+	if img != null and moitie_gauche:
+		# Le trait de séparation vit au centre exact : on coupe **avant** lui, pas
+		# dessus, sinon l'aperçu du mode en ligne porterait la bordure d'un écran
+		# scindé — c'est-à-dire la marque du mode qu'il n'est pas.
+		var l := int(img.get_width() / 2) - 2
+		img = img.get_region(Rect2i(0, 0, maxi(l, 1), img.get_height()))
 	if img == null:
 		# Presque toujours une fenêtre passée à l'arrière-plan, que macOS bride.
 		# On le DIT : une fabrique qui écrit une image noire est pire qu'une qui
