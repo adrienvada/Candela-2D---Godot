@@ -246,6 +246,66 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — S2, S3 et le banc de dosage (worktree `audio-dosage`)
+
+**Adrien m'a confié tout le chantier audio.** Je travaille dans le worktree
+`audio-dosage` (branche `worktree-audio-dosage`), au-dessus de `main` fusionné
+(`e3e1b34`). **`audio_manager.gd` m'a été passé explicitement par la session
+DA3 Audio**, qui tenait le fichier et a préféré me le céder plutôt que de
+l'éditer depuis l'arbre partagé pendant que j'y travaillais. Je tiens donc
+aussi `game_state.gd` (bloc audio), `tools/test_oreille.gd` et la section
+`_test_oreille` de `tools/test_musique.gd`.
+
+**Livré :** S2 (la portée se dérive de la carte et se pose par son), S3 (un mur
+étouffe, par le bus `SFX_Occlus`), S8 (le banc `tools/banc_audio.tscn`), plus
+la correction en trois maillons de l'oreille en entraînement. Le *pourquoi* est
+dans `docs/ROADMAP.md`, section « Chantier — la spatialisation du son ». Ici,
+ce qui concerne les autres.
+
+**1. Le bus `SFX_Occlus` envoie dans `SFX`, délibérément — à l'attention de la
+session « menus ».** J'ai ajouté un bus au `default_bus_layout.tres`. Envoyé
+vers `Master`, il aurait échappé au curseur « Effets » de `settings_manager.gd`
+— **les sons occultés auraient ignoré le réglage de volume, sans erreur et sans
+que rien ne le dise.** Le faire transiter par `SFX` règle la question sans
+toucher à votre fichier, et se trouve être aussi la chaîne physique juste : la
+pièce d'à côté, puis la vôtre. **Si vous ajoutez un jour un curseur par bus,
+`SFX_Occlus` n'en veut pas** : il n'est pas une famille de sons, c'est un état
+de la même famille.
+
+**2. Trois défauts en chaîne derrière l'oreille, et le troisième est le plus
+instructif.** La règle interrogeait le transport au lieu du nombre d'auditeurs
+(l'entraînement en était exclu) ; le porteur désignait J2 dès qu'on corrigeait
+la règle (index −1) ; et surtout **`_do_start_round` remet `training_mode` à
+faux avant de rendre la main**, si bien qu'une règle qui lit ce drapeau depuis
+l'intérieur du démarrage lit toujours « non ». Les deux premiers correctifs
+auraient été posés, justes, et **sans aucun effet**. D'où `_accorder_oreille()`,
+appelée à deux endroits, dont le second est le seul où le drapeau est vrai.
+
+**3. Ma propre suite a menti avant de servir, et je le note parce que c'est le
+sujet même du chantier.** `test_dosage_audio` imprimait « 22/22 » en
+soustrayant les échecs d'un total écrit en dur — pendant que les vingt-deux
+contrôles échouaient à s'exécuter, `audio_manager.gd` ne compilant pas dans un
+worktree neuf (pas de `.godot`, donc aucun `class_name` global, donc
+`MapGeometry` introuvable). **Une suite verte sur du travail non fait.** Elle
+compte désormais ce qui a réellement tourné et échoue si le compte manque —
+garde-fou qui a immédiatement attrapé ma propre erreur suivante (31 contrôles
+écrits, 22 annoncés).
+
+**4. Un worktree neuf n'a pas de `.godot`** : lancer une suite ou un banc dedans
+sans `godot --headless --path . --import` préalable donne des erreurs de
+`class_name` introuvable qui ressemblent à des fautes de frappe. C'est le
+premier geste, pas un dépannage.
+
+**5. `duo_enet` a échoué à un second passage** pendant qu'une autre session
+lançait `run_suites.sh` sur l'arbre partagé (PID vérifié). Piège déjà documenté
+le 2026-08-24 : le port 7777 se vole. Mon premier passage complet était vert.
+
+**Ce que je signale et que je n'ai pas fait :** le dosage lui-même. Les valeurs
+livrées (portées relatives, courbe à 2,0, passe-bas à 620 Hz, `dry` à 0,12) sont
+des **propositions posées pour être écoutées**, aucune n'a été jugée. C'est
+Adrien qui tranche, au banc, et il n'y a rien à en conclure avant.
+
+
 ### 2026-08-25 — session « spatialisation du son » : deux documents corrigés, aucun code
 
 **Aucun fichier de code touché.** Cette session a répondu à une question d'Adrien
@@ -662,6 +722,24 @@ généré localement n'est pas *garanti* stable entre versions de Godot. Les
 versionner coûte une ligne et supprime la question. **Mais si vous aviez renoncé
 à un partage de fichier par crainte d'une collision d'UID, la crainte ne tient
 pas.**
+
+> ⚠️ **Contre-exemple mesuré le 2026-08-25 : la génération n'est PAS
+> déterministe, et cette entrée rassure à tort.** En fusionnant
+> `worktree-audio-oreille-et-stingers`, `tools/test_musique.gd.uid` bloquait la
+> fusion : le fichier généré localement portait `uid://qfh28uh28u71`, la version
+> commitée `uid://debjcj28ioisf` — **deux identifiants différents pour le même
+> chemin, sur la même machine.** L'égalité observée en 2026-08-18 sur
+> `prediction_tir.gd` était donc une coïncidence, ou l'effet d'un `.uid`
+> préexistant relu plutôt que régénéré.
+>
+> **La conclusion pratique de cette entrée reste juste — versionnez-les — mais
+> sa justification est fausse, et c'est le pire état pour une note :** elle
+> conclut bien pour une raison qui ne tient pas, donc elle survit à sa propre
+> réfutation. Quiconque s'appuierait sur « c'est déterministe » pour décider
+> autre chose (partager un fichier, comparer deux arbres, diagnostiquer un
+> conflit) se tromperait. La version commitée fait foi ; celle du disque se
+> jette. — *session « spatialisation du son », après signalement croisé avec
+> DA3 Audio, qui n'a pas contesté et n'avait pas vérifié.*
 
 ### 2026-08-18 (soir) — le fait qui explique tout le reste
 

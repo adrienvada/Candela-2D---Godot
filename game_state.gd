@@ -544,6 +544,13 @@ func _on_training_requested() -> void:
 	p2.set_collision_mask_value(1, false)
 	_set_training_target_active(true)
 
+	# L'oreille se repose ICI, et pas seulement dans `_do_start_round` : c'est le
+	# premier endroit de ce chemin où `training_mode` est enfin vrai. Sans ce
+	# second appel, l'entraînement — seul mode solo du jeu, donc le seul où l'on
+	# puisse doser un réglage sonore sans monter deux instances — resterait sur
+	# l'oreille fixe. Voir `_accorder_oreille`.
+	_accorder_oreille()
+
 func _on_debug_light_toggled(toggled_on: bool):
 	var mod = arena.get_node_or_null("CanvasModulate")
 	if mod:
@@ -563,6 +570,14 @@ func rebuild_arena() -> void:
 	if data.is_empty():
 		push_error("GameState: aucune carte à charger")
 		return
+
+	# S2 — la portée des sons se dérive de la carte qu'on vient de choisir, ici
+	# et nulle part ailleurs : c'est le seul endroit qui connaît sa taille et qui
+	# est rappelé à chaque manche, donc le seul qui suive un changement de carte
+	# depuis le menu. Une portée écrite en dur redeviendrait fausse à la première
+	# carte d'une autre taille, et rien ne le dirait.
+	AudioManager.accorder_a_la_carte(MapCodec.get_grid_size(data),
+		CandelaTileSet.TILE_SIZE)
 
 	# La géométrie historique de arena.tscn ne sert plus qu'à documenter le
 	# format ; elle est neutralisée pour ne pas doubler la carte JSON.
@@ -984,12 +999,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_restore_viewports()
 	ui.hide_killcam()
 	AudioManager.set_in_match(true)
-	# L'oreille suit le joueur local — en ligne seulement. En ecran partage les
-	# deux joueurs partagent la sortie audio : suivre l'un donnerait a l'autre
-	# ses propres pas entendus d'ailleurs. Meme partage que `torche_comptee`.
-	var _idx_oreille := _local_player_index()
-	if AudioManager.oreille_suit(_idx_oreille):
-		AudioManager.poser_oreille(p1 if _idx_oreille == 0 else p2)
+	_accorder_oreille()
 	AudioManager.reset_low_health()
 	AudioManager.play_music("music_match")
 
@@ -1839,6 +1849,25 @@ func _archive_forfeit(winner_id: int) -> void:
 	_archive_match_result(winner_id, true)
 
 ## Indice du joueur incarné par CETTE machine, -1 hors ligne.
+## Pose (ou retire) l'oreille sur le joueur que cette machine regarde.
+##
+## **Appelée à DEUX endroits, et il le faut** : à la fin de `_do_start_round`, et
+## de nouveau à la fin de `_on_training_requested`. L'entraînement passe par le
+## démarrage ordinaire, mais il ne pose `training_mode = true` qu'**après** son
+## retour — `_do_start_round` le remet à faux, c'est écrit dans son propre
+## commentaire. Une règle qui interroge `training_mode` depuis l'intérieur du
+## démarrage lit donc toujours « non », et le correctif serait posé sans effet :
+## exactement le mode de défaillance que ce chantier documente.
+##
+## `poser_oreille` commence par `rendre_oreille` : l'appeler deux fois est sans
+## conséquence, et c'est ce qui permet au second appel de corriger le premier.
+func _accorder_oreille() -> void:
+	var idx := _local_player_index()
+	if not AudioManager.oreille_suit(idx, training_mode):
+		AudioManager.rendre_oreille()
+		return
+	AudioManager.poser_oreille(p2 if AudioManager.index_porteur(idx) == 1 else p1)
+
 func _local_player_index() -> int:
 	match NetworkManager.current_mode:
 		NetworkManager.GameMode.ONLINE_HOST: return 0
