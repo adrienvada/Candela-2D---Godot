@@ -7098,10 +7098,33 @@ killcam et l'encaissement. Coût de rendu : ×4 en plein écran (2,07 → 8,29 M
 l'entraînement il n'y a qu'une vue ; le jeu pourrait vivre dans le viewport
 racine, qui rend déjà à la résolution de la fenêtre. **Gratuit en pixels** — le
 blit intermédiaire disparaît au lieu de grossir — et c'est le mode compétitif,
-donc celui où la netteté compte. Mais ça déplace le `World2D` du jeu, et **ça
-croise le chantier son** : S1 dit que le pool audio vit dans le `World2D` de la
-racine tandis que le jeu vit dans celui du `SubViewport`. Les deux chantiers
-doivent se parler avant que l'un des deux bouge ce monde.
+donc celui où la netteté compte.
+
+> **Correction du 2026-08-25, apportée par la session « spatialisation du son »
+> et vérifiée avant d'être écrite ici.** Ce paragraphe disait que (b) croisait
+> S1 « qui dit que le pool audio vit dans le `World2D` de la racine ». **C'était
+> périmé d'une journée : S1 est FAIT** (`4d8a85e`, fusionné par `e3e1b34`, donc
+> déjà dans la base de ce chantier), `AudioManager.poser_oreille()` existe et
+> `game_state.gd:992` l'appelle.
+>
+> **La contrainte réelle tient en une ligne : (b) peut déplacer le monde, il ne
+> doit pas supprimer l'`AudioListener2D`.** Des trois gestes de
+> `poser_oreille()`, un monde unique en rendrait deux redondants — le
+> reparentage du pool deviendrait un déplacement interne, et
+> `audio_listener_enable_2d` est déjà à `true` sur la fenêtre racine. Le
+> troisième reste **nécessaire quel que soit le viewport** : sans auditeur
+> explicite, Godot retombe sur le centre de l'écran virtuel, c'est-à-dire le
+> défaut d'origine réintroduit par une refonte qui n'a rien à voir avec le son.
+>
+> **Et un argument POUR (b) qui ne vient pas des pixels :** depuis S1, le pool
+> de seize voix vit dans le monde du jeu et se fait reparenter à chaque manche,
+> avec un rappel sur `tree_exiting` — sans quoi les seize voix partent avec
+> l'arène et plus aucun son positionnel ne sort de la session, sans erreur. Un
+> monde unique supprimerait ce va-et-vient : une pièce mobile en moins sur un
+> chemin qui a déjà son piège.
+>
+> `audio_manager.gd` appartient au domaine « game feel » / son : l'alléger se
+> demande à cette session, ça ne se fait pas depuis ici.
 
 **(c) Ne rien faire, et l'assumer par écrit.** La netteté actuelle est celle d'un
 1080p étiré. Personne ne s'en est plaint avant qu'on la mesure.

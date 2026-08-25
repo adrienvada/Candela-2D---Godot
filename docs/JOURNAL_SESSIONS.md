@@ -291,6 +291,27 @@ positionnel. Les deux chantiers ne peuvent pas bouger ce monde chacun de leur
 côté. **Rien n'est décidé** : R3 attend un arbitrage d'Adrien, et je n'ai touché à
 aucun de vos fichiers.
 
+> **Correction, une heure plus tard, et l'erreur est à moi.** Le paragraphe
+> ci-dessus est laissé tel quel parce qu'un journal qui se réécrit ne sert à
+> rien. **S1 n'est pas à venir : il est FAIT** (`4d8a85e`, fusionné par
+> `e3e1b34`, donc déjà dans ma base) — la session son me l'a signalé, et je l'ai
+> vérifié avant de l'écrire : `AudioManager.poser_oreille()` existe et
+> `game_state.gd:992` l'appelle. **J'ai lu `CLAUDE.md`, qui décrit encore le jeu
+> comme sans auditeur, et je ne suis pas allé voir le code.** Exactement le
+> piège que cette feuille de route nomme ailleurs : *vérifier le code, pas le
+> récit.*
+>
+> La contrainte réelle est plus légère que ce que j'annonçais, et elle est
+> maintenant dans R3 (b) : un monde unique rendrait deux des trois gestes de
+> `poser_oreille()` redondants, mais **l'`AudioListener2D` reste nécessaire** —
+> le supprimer réintroduirait le défaut d'origine par une refonte qui n'a rien à
+> voir avec le son.
+>
+> **Signalé et non fait, parce que ce n'est pas mon fichier :** `CLAUDE.md`
+> affirme toujours « le son est positionnel, mais le jeu n'a pas d'auditeur
+> (mesuré le 2026-08-25) ». C'est ce texte-là qui m'a induit en erreur, et il en
+> induira d'autres.
+
 **Ce que je n'ai pas fait, et c'est le périmètre :** aucune ligne de `main.tscn`
 ni de `game_state.gd`. Le chantier est inscrit, mesuré, chiffré — il n'est pas
 commencé.
