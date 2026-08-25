@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 52
+var _attendus: int = 57
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -51,6 +51,7 @@ func _run() -> void:
 	_test_oreille_entrainement()
 	await _test_le_mur_arrete_vraiment()
 	_test_le_banc_se_pilote_en_azerty()
+	await _test_l_entrainement_entend_vraiment()
 	# Deux conditions, pas une : tous les contrôles exécutés doivent passer, ET
 	# ils doivent tous s'être exécutés. Une erreur de script interrompt la
 	# fonction de test en cours sans interrompre la suite — c'est un piège déjà
@@ -340,6 +341,63 @@ func _compter_auditeurs(am: Node) -> int:
 		if enfant is SubViewport and (enfant as SubViewport).is_audio_listener_2d():
 			n += 1
 	return n
+
+## L'entraînement pose-t-il vraiment son oreille ? **En montant le vrai jeu.**
+##
+## ⚠️ **Ce contrôle remplace un contrôle TEXTUEL, et le remplacement est le
+## sujet.** `test_musique` comptait les occurrences de `_accorder_oreille()` dans
+## la source de `game_state.gd` — au moins trois, une définition et deux appels.
+## Il attestait d'une FORME d'implémentation, pas d'un sens : rouge sur une
+## refonte correcte, vert sur une refonte qui aurait cassé l'entraînement en
+## gardant ses trois occurrences. **Un contrôle textuel dit « quelque chose est
+## branché là », jamais « la bonne chose est branchée là »** — famille consignée
+## trois fois le 2026-08-25.
+##
+## Celui-ci monte `main.tscn`, appelle le vrai `_on_training_requested()`, et
+## regarde où est l'oreille. C'est plus lent et c'est le prix du sens.
+##
+## Le piège qu'il garde, et qui ne se devine pas : l'entraînement passe par
+## `_do_start_round`, **qui remet `training_mode` à faux avant de rendre la
+## main**. Une règle qui lit ce drapeau depuis l'intérieur du démarrage lit
+## toujours « non ». Les correctifs précédents auraient été posés, justes, et
+## sans aucun effet.
+func _test_l_entrainement_entend_vraiment() -> void:
+	print(" l'entraînement pose vraiment son oreille (jeu monté)")
+	var principal = load("res://main.tscn").instantiate()
+	root.add_child(principal)
+	await physics_frame
+	await physics_frame
+
+	principal._on_training_requested()
+	await physics_frame
+	await physics_frame
+
+	var am := root.get_node_or_null(^"/root/AudioManager")
+	_check("une oreille est posée en entraînement",
+		am != null and am._oreille != null and is_instance_valid(am._oreille))
+	if am != null and am._oreille != null and is_instance_valid(am._oreille):
+		_check("elle est sur le joueur que l'on regarde",
+			am._oreille.get_parent() == principal.p1,
+			String(am._oreille.get_parent().name))
+		_check("et elle est courante dans sa vue", am._oreille.is_current())
+	# L'invariant du doublement : la racine ne doit PAS rester auditrice en plus
+	# de la vue de jeu, sinon chaque son sort deux fois — une copie juste, une
+	# copie depuis le point fixe hors de la carte.
+	var auditeurs := 0
+	if root.is_audio_listener_2d():
+		auditeurs += 1
+	for v in [principal.vp1, principal.vp2]:
+		if v != null and (v as Viewport).is_audio_listener_2d():
+			auditeurs += 1
+	_check("exactement UN auditeur, pas deux", auditeurs == 1, "%d auditeurs" % auditeurs)
+	# Et le son doit atteindre une voix : une oreille bien posée sur un pool resté
+	# dans l'autre monde ne s'entendrait pas davantage.
+	var voix: AudioStreamPlayer2D = am.play_sfx_2d("footstep", principal.p1.global_position)
+	_check("un pas trouve une voix, dans le monde du joueur",
+		voix != null and voix.get_world_2d() == principal.p1.get_world_2d())
+
+	principal.queue_free()
+	await physics_frame
 
 ## Le banc se pilote-t-il sur le clavier d'Adrien ?
 ##

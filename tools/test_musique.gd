@@ -480,9 +480,18 @@ func _test_oreille() -> void:
 	# rendre la main. Une regle qui interroge le drapeau depuis l'interieur du
 	# demarrage lit donc toujours « non ». Il faut un second appel, la ou le
 	# drapeau est enfin vrai — sans quoi le correctif est pose et sans effet.
-	_check("l'oreille est reposee dans le chemin d'entrainement",
-		source.count("_accorder_oreille()") >= 3,
-		"%d appel(s)/definition(s) de _accorder_oreille" % source.count("_accorder_oreille()"))
+	# ⚠️ **Ce contrôle comptait `_accorder_oreille()` dans le TEXTE, et il a été
+	# retiré le 2026-08-25.** Il exigeait au moins trois occurrences — une
+	# définition, deux appels — c'est-à-dire une FORME d'implémentation et non un
+	# sens. Il serait devenu rouge sur une refonte correcte, et vert sur une
+	# refonte qui aurait cassé l'entraînement en gardant les trois occurrences.
+	#
+	# **Un contrôle textuel atteste d'un câblage, jamais d'un sens** : il dit
+	# « quelque chose est branché là », jamais « la bonne chose est branchée là ».
+	# La famille a été consignée trois fois dans la même journée, et celui-ci en
+	# était. Le sens se vérifie en EXÉCUTANT — c'est fait dans
+	# `tools/test_dosage_audio.gd`, qui monte `main.tscn`, entre réellement en
+	# entraînement et regarde où est l'oreille.
 
 func _test_stingers() -> void:
 	print("\n[Les stingers]")
