@@ -1065,7 +1065,17 @@ func poser_oreille(porteur: Node2D) -> void:
 		# ete resserrees. Elle ne produisait donc « que » un son sourd et
 		# decale par instants, pas une erreur.
 		_vues_ecoutantes = [vue]
-		get_tree().root.audio_listener_enable_2d = false
+		# ⚠️ **Sauf si l'oreille vit DANS la racine** — sinon on coupe le viewport
+		# qui la porte, et il n'y a plus aucun auditeur du tout. Mesuré : crête du
+		# bus SFX à **-200 dB**, silence complet, sur un banc qui marchait la
+		# minute d'avant. Le premier jet de ce correctif coupait sans regarder.
+		#
+		# Le cas n'est pas theorique : c'est celui du banc de dosage, et ce sera
+		# celui du jeu entier si le chantier R remonte le duel dans le viewport
+		# racine. **Un correctif qui suppose que le monde est ailleurs casse le
+		# jour ou il est ici.**
+		if vue != get_tree().root:
+			get_tree().root.audio_listener_enable_2d = false
 	_oreille = AudioListener2D.new()
 	_oreille.name = "OreilleLocale"
 	porteur.add_child(_oreille)
