@@ -6893,8 +6893,37 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
   `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
   feel ». **À demander avant de le faire.** *(S)*
-- **DA4.8 Les vignettes de la galerie encadrées** — cadre, ombre, titre composé
-  pour chaque carte. *(S)*
+- **DA4.8 Les vignettes de la galerie encadrées** ✅ **livrée le 2026-08-25** —
+  et elle a fait tomber une infraction à une décision actée.
+
+  **La vignette est montée dans un cadre**, fond noir du monde, filet `LINE` :
+  une image posée sur un fond se lit comme une image ; la même image serrée dans
+  un cadre se lit comme un **objet** — une plaque, une pièce qu'on choisit.
+
+  **La provenance quitte la pile de texte pour devenir une pastille sur le
+  cadre.** Elle y gagne deux fois : le bloc passe de trois lignes centrées à deux
+  — un titre et sa légende, donc une hiérarchie — et la mention se lit sans
+  quitter l'image qu'elle qualifie. Le titre monte d'une **graisse** plutôt que
+  d'une taille : l'échelle n'a que six crans, et c'est justement à ça que servent
+  les quatre poids.
+
+  ⚠️ **`texture_filter = NEAREST` était posé à DEUX endroits, contre la décision
+  DA5.6 du 2026-08-24** — *« filtrage linéaire et mipmaps, **aucune texture en
+  `nearest`** »* — et **avec un commentaire qui le défendait** : « pixels francs,
+  une miniature ne doit pas devenir floue ».
+
+  **Le commentaire décrivait un vrai symptôme et se trompait de cause.** La
+  vignette n'était pas floue à cause du filtrage : elle était **agrandie** —
+  rendue à 96 px et affichée sur ~124 dans la galerie, rendue à 80 et affichée
+  sur 160 points HiDPI dans la fiche de carte. La décision disait d'ailleurs quoi
+  faire à la place, dans la même phrase : *« la résolution d'un asset se choisit
+  sur la densité de texels à l'écran »*. Les deux rendus passent à 256 et 160 ;
+  plus rien n'est agrandi, et le filtrage linéaire n'a plus rien à flouter.
+
+  C'est la deuxième fois dans ce lot qu'un contournement **portait sa propre
+  justification en commentaire** — après les coefficients de dimensionnement du
+  code de salon. Un commentaire qui défend une entorse est le meilleur endroit
+  où chercher la cause qu'on n'a pas traitée. *(S)*
 - **DA4.9 Le code de salon en cases display** ✅ **livrée le 2026-08-24** — les
   six cases sont en `BigShouldersDisplay` à `T_VERDICT`, et **le registre suit le
   GABARIT, pas l'appelant** : gabarit fixe = un code, donc l'enseigne ; mesure

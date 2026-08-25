@@ -24,7 +24,18 @@ signal map_chosen(map_id: String)
 signal editor_requested
 
 const TILE_SIZE := Vector2(160, 160)
-const THUMB_PX := 96
+## ⚠️ **96 px, et la vignette s'affichait sur ~124 : elle était AGRANDIE.**
+##
+## C'est ce qui avait justifié un `texture_filter = NEAREST` — « pixels francs,
+## une miniature ne doit pas devenir floue » — c'est-à-dire un contournement du
+## symptôme, et une infraction directe à DA5.6 : *filtrage linéaire et mipmaps,
+## **aucune texture en `nearest`***.
+##
+## La décision disait aussi comment faire à la place : « la résolution d'un asset
+## se choisit sur **la densité de texels à l'écran**, pas sur une grille ». 256 px
+## couvre la vignette à sa taille réelle sur un écran HiDPI, donc elle n'est plus
+## jamais agrandie — et le filtrage linéaire n'a plus rien à flouter.
+const THUMB_PX := 256
 const TILE_GAP := 16
 
 const COLOR_P1 := Charte.BLEU
@@ -326,41 +337,70 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	tile.add_child(box)
 
+	# DA4.8 — **la vignette est MONTÉE dans un cadre**, elle ne flotte plus.
+	#
+	# Une image posée sur un fond se lit comme une image ; la même image dans un
+	# cadre qui la serre se lit comme un **objet** — une plaque, une pièce qu'on
+	# choisit. C'est le mot exact de l'item : « cadre, ombre, titre composé ».
+	# Le fond du cadre est le noir du monde : ce qu'on regarde est une arène.
+	var cadre := PanelContainer.new()
+	cadre.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cadre_style := StyleBoxFlat.new()
+	cadre_style.bg_color = Charte.NOIR
+	cadre_style.set_border_width_all(1)
+	cadre_style.border_color = Charte.LINE
+	cadre_style.set_corner_radius_all(4)
+	cadre.add_theme_stylebox_override("panel", cadre_style)
+	box.add_child(cadre)
+
 	var thumb := TextureRect.new()
 	thumb.texture = MapThumbnail.render_fit(entry["data"], THUMB_PX)
 	thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	# Pixels francs : une miniature de 80 px agrandie ne doit pas devenir floue.
-	thumb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	thumb.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(thumb)
+	cadre.add_child(thumb)
+
+	# **La provenance quitte la pile de texte pour devenir une pastille sur le
+	# cadre.** Elle y gagne deux fois : le bloc de texte passe de trois lignes
+	# centrées à deux — un titre et sa légende, donc une hiérarchie — et la
+	# mention se lit sans quitter l'image qu'elle qualifie.
+	var pastille := Label.new()
+	pastille.text = "OFFICIELLE" if source == "builtin" else "PERSO"
+	pastille.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT,
+		Control.PRESET_MODE_MINSIZE, Charte.GAP_XXS)
+	pastille.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	Charte.appareil(pastille, Charte.T_MENTION)
+	pastille.add_theme_color_override("font_color",
+		Charte.AMBRE if source == "builtin" else COLOR_P2)
+	pastille.add_theme_color_override("font_outline_color", Charte.NOIR)
+	# Sans contour, une pastille claire posée sur une arène claire disparaît :
+	# la vignette n'a pas de zone calme réservée, elle montre ce qu'elle montre.
+	pastille.add_theme_constant_override("outline_size", 4)
+	pastille.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cadre.add_child(pastille)
 
 	var name_label := Label.new()
 	name_label.text = String(entry["name"])
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", Charte.T_COURANT)
+	# Le titre monte d'une graisse : c'est ce qui le distingue de sa légende sans
+	# lui donner une taille de plus, l'échelle n'ayant que six crans.
+	Charte.appareil(name_label, Charte.T_COURANT, Charte.POIDS_APPUI)
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.clip_text = true
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(name_label)
 
 	var meta := Label.new()
-	meta.text = "%d×%d" % [grid_size.x, grid_size.y]
+	meta.text = "%d × %d · %d murs" % [grid_size.x, grid_size.y,
+		int(entry["wall_count"])]
 	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	meta.add_theme_font_size_override("font_size", Charte.T_MENTION)
+	# Appareil : ces nombres changent d'une vignette à l'autre, et une colonne de
+	# chiffres qui ne s'aligne pas se lit comme un alignement raté.
+	Charte.appareil(meta, Charte.T_MENTION)
 	meta.add_theme_color_override("font_color", COLOR_DIM)
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(meta)
-
-	var badge := Label.new()
-	badge.text = "OFFICIELLE" if source == "builtin" else "PERSO"
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge.add_theme_font_size_override("font_size", Charte.T_MENTION)
-	badge.add_theme_color_override("font_color",
-		Charte.AMBRE if source == "builtin" else COLOR_P2)
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(badge)
 
 	return tile
 

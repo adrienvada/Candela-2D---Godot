@@ -3691,7 +3691,11 @@ func _build_map_card() -> Control:
 	map_card_thumb.custom_minimum_size = Vector2(80, 80)
 	map_card_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_card_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	map_card_thumb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# **Plus de `NEAREST` ici non plus.** DA5.6 est tranchée — « filtrage linéaire
+	# et mipmaps, aucune texture en `nearest` » — et la vignette de 80 px l'était
+	# pour la même raison que celle de la galerie : elle était agrandie. Le remède
+	# est le même, et il est celui que la décision indiquait : rendre à la densité
+	# de texels de l'écran plutôt que contourner le filtrage.
 	map_card_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(map_card_thumb)
 
@@ -3742,7 +3746,10 @@ func _refresh_map_card() -> void:
 	map_card_meta.text = "%d×%d  ·  %d murs  ·  %s" % [
 		grid.x, grid.y, int(entry["wall_count"]), origin,
 	]
-	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 80)
+	# 160 et non 80 : la vignette occupe 80 points, donc 160 pixels sur un écran
+	# HiDPI. Rendre à 80 revenait à l'agrandir d'un facteur deux — et c'est cet
+	# agrandissement, pas le filtrage, qui la rendait floue.
+	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 160)
 
 ## Construit les pièces du salon, sans les rattacher : ce sont les écrans du hub
 ## qui décident où elles s'affichent.
