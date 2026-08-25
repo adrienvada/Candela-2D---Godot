@@ -119,6 +119,7 @@ func _test_image() -> void:
 
 ## Le viseur reste-t-il dans la vue de son joueur ?
 func _test_deux_vues() -> void:
+	var t: Texture2D = load(VISEUR) if ResourceLoader.exists(VISEUR) else null
 	var joueur := _lire("res://player.gd")
 	if joueur == "":
 		_vrai("player.gd lisible", false)
@@ -151,6 +152,24 @@ func _test_deux_vues() -> void:
 			monte = true
 			break
 	_vrai("le viseur est monte, pas seulement declare", monte)
+
+	# ⚠️ **Recuire le viseur ne doit pas le redimensionner.** Un `Sprite2D`
+	# dessine à la taille de sa texture : sans échelle dérivée, un fichier
+	# recuit à ×2 doublerait le viseur à l'écran. Même famille que
+	# `DENSITE_SPRITES` et que les marges de 9-slice de DA4 — une valeur absolue
+	# là où il faut un rapport.
+	_vrai("le viseur déclare une empreinte en monde",
+		joueur.contains("EMPREINTE_VISEUR"))
+	var code_v := _sans_commentaires(corps)
+	_vrai("l'échelle du viseur se dérive de sa texture",
+		code_v.contains("EMPREINTE_VISEUR / float(t.get_width())"))
+	# L'empreinte tient aujourd'hui parce que le fichier fait 48 px ; le
+	# contrôle vaut pour le jour où il n'en fera plus 48.
+	if t != null and t.get_width() > 0:
+		var empreinte := _nombre(joueur, "const EMPREINTE_VISEUR := ")
+		var echelle := empreinte / float(t.get_width())
+		_vrai("viseur : empreinte %.1f unités quelle que soit la résolution"
+			% empreinte, is_equal_approx(float(t.get_width()) * echelle, empreinte))
 
 
 ## N'y a-t-il qu'un seul pointeur à l'écran ?
@@ -186,6 +205,35 @@ func _test_une_seule_fleche() -> void:
 		var fin := suite.find("\nfunc ", 1)
 		var corps := suite if fin < 0 else suite.substr(0, fin)
 		_vrai("la derivation lit l'ecran affiche", corps.contains("_is_main_menu"))
+
+
+## Le bloc privé de ses commentaires — un commentaire qui explique quoi ne PAS
+## faire contient forcément le motif interdit. Piège consigné le 2026-08-25.
+func _sans_commentaires(bloc: String) -> String:
+	var sortie := ""
+	for l in bloc.split("\n"):
+		var nette := l
+		var d := nette.find("#")
+		if d >= 0:
+			nette = nette.substr(0, d)
+		if nette.strip_edges() != "":
+			sortie += nette + "\n"
+	return sortie
+
+
+## Premier nombre qui suit `cle`. NAN si absente.
+func _nombre(texte: String, cle: String) -> float:
+	var i := texte.find(cle)
+	if i < 0:
+		return NAN
+	var reste := texte.substr(i + cle.length(), 24)
+	var brut := ""
+	for c in reste:
+		if c.is_valid_int() or c == "." or (brut == "" and c == "-"):
+			brut += c
+		else:
+			break
+	return NAN if brut == "" else float(brut)
 
 
 func _lire(chemin: String) -> String:

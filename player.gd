@@ -128,6 +128,44 @@ var _torch_audio_state: bool = false
 ## assombrirait l'adversaire sans qu'aucune décision ne l'ait voulu.
 const SPRITES := "res://assets/sprites/"
 
+## ## La densité des sprites (chantier R, étape R6)
+##
+## **Texels par unité de monde.** Le quad d'un sprite ne se construit PAS à la
+## taille de sa texture : il se construit à `taille_texture / DENSITE_SPRITES`.
+##
+## ⚠️ **Sans cette division, recuire un asset le redimensionne à l'écran.**
+## C'est le blocage exact que R6 a rencontré : la décision du 2026-08-25 est de
+## recuire toutes les familles à **×2**, parce qu'en vue unique le duel est
+## rendu à la résolution de la fenêtre depuis le chantier R — une tuile de 35 px
+## tombe à 0,5 texel par pixel en plein écran. Or `_poser_sprite()` bâtissait son
+## quad à `texture.get_width()` : un `fusil.png` recuit de 82 à 164 px aurait
+## **doublé la taille du joueur**, et personne n'aurait relié ça à une recuisson.
+##
+## ⚠️ **Et le dégât ne se serait pas arrêté à la taille.** Le roulis de marche
+## de DA2.4 vaut `ROULIS_MARCHE` unités de MONDE : un joueur deux fois plus
+## grand aurait gardé le même roulis, donc une démarche deux fois plus discrète,
+## sans qu'une seule ligne de la marche ait bougé. Un réglage calibré à l'œil
+## serait devenu faux à cause d'un paramètre de cuisson.
+##
+## Le geste est celui que `LightTextures.poser()` applique déjà aux lumières
+## (`texture_scale = empreinte / largeur_texture`), et que `test_lumieres.gd`
+## verrouille à quatre résolutions. **Là où c'est fait, recuire est gratuit ;
+## là où ça ne l'est pas, recuire est un piège.** R6 n'avait plus que les
+## sprites à traiter.
+##
+## Vaut 1,0 tant que les sprites sont cuits à leur taille de jeu. **Passer à 2,0
+## le jour de la recuisson, et pas avant** — `tools/test_sprites.gd` rougit si
+## les deux ne bougent pas ensemble.
+const DENSITE_SPRITES := 1.0
+
+
+## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
+## texture. Statique et sans dépendance : c'est ce qui permet à un banc de
+## l'éprouver à plusieurs résolutions sans monter un `Player` — et donc de
+## prouver que recuire ne déplace rien.
+static func empreinte_sprite(largeur_texture: int) -> float:
+	return float(largeur_texture) / DENSITE_SPRITES
+
 ## ## Le viseur (DA2.11)
 ##
 ## ⚠️ **Ce n'est pas un habillage, c'est un MANQUE qu'on comble.** Le dépôt ne
@@ -152,6 +190,22 @@ const VISEUR := "res://assets/viseur/viseur.png"
 ##
 ## 110 : devant le canon (28) et bien avant le bord du champ (478).
 const DISTANCE_VISEUR := 110.0
+
+## Empreinte du viseur, en unités de MONDE.
+##
+## ⚠️ **Un `Sprite2D` dessine à la taille de sa TEXTURE.** Le viseur livré ce
+## matin n'avait pas de taille explicite : il occupait 48 unités parce que son
+## fichier faisait 48 px, et une recuisson à ×2 l'aurait **doublé à l'écran**.
+## Défaut trouvé le 2026-08-25 en relisant mon propre travail après que DA4 a
+## nommé le motif — *une valeur absolue là où il fallait un rapport* —, qu'elle
+## venait de rencontrer pour la quatrième fois en deux jours, dont deux fois sur
+## des marges de 9-slice exprimées en pixels de texture.
+##
+## Le motif est le même que `DENSITE_SPRITES` et que `LightTextures.poser()`,
+## et il vaut la peine d'être énoncé une bonne fois : **tout littéral qui
+## multiplie ou mesure une dimension d'écran est suspect dans un chantier de
+## densité.** Ici l'empreinte est déclarée, et l'échelle s'en déduit.
+const EMPREINTE_VISEUR := 48.0
 
 ## Teinte du joueur, ramenée vers le blanc. À 0 le sprite prendrait la couleur
 ## pleine et le dessin serait écrasé ; à 1 les deux joueurs seraient identiques
@@ -539,7 +593,11 @@ func _poser_sprite(slug: String) -> bool:
 		return false
 	var t_peint: Texture2D = load(peint)
 	var t_sil: Texture2D = load(silhouette)
-	var demi := Vector2(t_peint.get_width(), t_peint.get_height()) * 0.5
+	# ⚠️ Passe par `empreinte_sprite()` — voir `DENSITE_SPRITES`. Bâtir le quad
+	# sur `get_width()` brut est le piège que R6 a levé : la recuisson d'un asset
+	# redimensionnerait le joueur.
+	var demi := Vector2(empreinte_sprite(t_peint.get_width()),
+		empreinte_sprite(t_peint.get_height())) * 0.5
 	var quad := PackedVector2Array([
 		Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
 		Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
@@ -576,7 +634,11 @@ func _monter_viseur() -> void:
 		return
 	var v := Sprite2D.new()
 	v.name = "Viseur"
-	v.texture = load(VISEUR)
+	var t: Texture2D = load(VISEUR)
+	v.texture = t
+	# L'empreinte commande, pas le fichier — voir `EMPREINTE_VISEUR`.
+	if t != null and t.get_width() > 0:
+		v.scale = Vector2.ONE * (EMPREINTE_VISEUR / float(t.get_width()))
 	v.position = Vector2(DISTANCE_VISEUR, 0)
 	v.modulate = Color(Charte.HALOGENE, 0.72)
 	v.visibility_layer = 2 if player_id == 0 else 4

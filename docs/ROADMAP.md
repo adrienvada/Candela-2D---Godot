@@ -9243,11 +9243,65 @@ Reste donc :
 
 1. **Les tuiles** — un paramètre de `tools/fabrique_tuiles.gd`, planches sources
    en 2048² pour des sorties de 35 px. Rien d'autre à décider.
-2. **Les sprites, et c'est le seul vrai travail de R6.** Signalé par DA2 le jour
-   même, depuis DA2.4 : `_poser_sprite()` construit son quad à
-   `texture.get_width()`, donc **un sprite recuit deux fois plus fin doublerait la
-   taille du joueur à l'écran**. Et le roulis de marche, exprimé en unités de
-   monde (1,6 unité), deviendrait deux fois trop discret par rapport à lui. Il
+2. ~~**Les sprites, et c'est le seul vrai travail de R6.**~~ ✅ **DÉCOUPLÉS le
+   2026-08-25** (commit ci-dessous). `_poser_sprite()` passe désormais par
+   `empreinte_sprite()`, qui divise par `DENSITE_SPRITES` : un `fusil.png` recuit
+   de 82 à 164 px occupera toujours 82 unités de monde.
+
+   **`tools/test_sprites.gd` (17 contrôles) verrouille l'APPARIEMENT, pas la
+   taille.** Le banc n'a pas d'avis sur la bonne taille du joueur — elle relève
+   d'un arbitrage d'Adrien. Il exige que densité et recuisson **bougent
+   ensemble** : densité passée à 2,0 sans recuire → `empreinte 41.0 au lieu de
+   82.0` ; sprite recuit à 164 px sans toucher la densité → `empreinte 164.0 au
+   lieu de 82.0`. Les deux sens éprouvés rouges avant que le banc soit cru.
+
+   Il verrouille aussi un **lien** que rien d'autre ne portait : le roulis de
+   marche vaut 1,6 unité de MONDE, calibré à l'œil contre un corps d'environ 17
+   unités. Un joueur deux fois plus grand aurait gardé le même roulis — donc une
+   démarche deux fois plus discrète, **sans qu'une ligne de la marche ait
+   bougé**. Le rapport est borné entre 1 et 4 % ; il vaut 1,95 % aujourd'hui.
+
+   ⚠️ **Le banc ne peut PAS charger `player.gd`.** Premier jet en
+   `preload("res://player.gd")` : il pend, parce que le fichier référence
+   `NetworkManager` au niveau de la classe et que les autoloads n'existent pas en
+   `--script` (« Identifier not found »). C'est le piège du 2026-08-18, et c'est
+   déjà la raison pour laquelle `test_torches.gd` lit le TEXTE de `game_state.gd`.
+   Les deux constantes se lisent donc dans la source — ce qui est de toute façon
+   le bon niveau : c'est par le texte que le défaut reviendrait.
+
+   ⚠️ **Et la recuisson elle-même n'est PAS faite.** Ce commit ne fait que la
+   rendre inoffensive. Passer `DENSITE_SPRITES` à 2,0 et recuire est désormais un
+   geste sûr — c'est un pas séparé, qui attend Adrien.
+
+#### Le motif qui a fait trouver le reste : une valeur absolue là où il faut un rapport
+
+**Nommé par DA4 le 2026-08-25**, après l'avoir rencontré **quatre fois en deux
+jours** : le coefficient de case du code de salon (26,1 px pour une lettre de
+28,0, faux depuis le premier jour), la portée de lumière du panneau d'arène, le
+contour des chiffres de dégâts (8 px fixes pour une taille allant de 19 à 42), et
+deux marges de 9-slice écrites en pixels de TEXTURE — celles-là auraient
+**tranché en plein dans le dessin** après recuisson, sans une erreur.
+
+Énoncé : **dans un chantier de densité, tout littéral qui multiplie ou mesure une
+dimension d'écran est suspect.**
+
+Relire son propre travail du jour avec cette lunette a immédiatement donné une
+cinquième occurrence, dans le viseur livré le matin même : un `Sprite2D` dessine
+à la taille de sa TEXTURE, et celui-ci n'avait pas de taille explicite. Il
+occupait 48 unités de monde **parce que son fichier fait 48 px** ; recuit à ×2 il
+aurait doublé à l'écran, et la seule plainte possible aurait été « le viseur est
+devenu énorme », sans rapport visible avec une recuisson. Corrigé sur le modèle
+des lumières — empreinte déclarée, échelle dérivée — et verrouillé par deux
+contrôles de `tools/test_viseur.gd`, éprouvés rouges.
+
+⚠️ **Ce qui rend ce motif coûteux n'est pas sa difficulté, c'est son angle
+mort.** Le viseur a été écrit deux fonctions au-dessus de la correction
+`DENSITE_SPRITES`, le même jour, par la même session : **corriger un motif ne
+fait pas relire le reste de son fichier avec.** Six occurrences chez trois
+sessions, et — le constat est de DA3 — **aucune n'a été trouvée par celle qui
+l'avait écrite.** C'est un motif qui se transmet mieux qu'il ne s'auto-détecte.
+
+   Le texte d'origine, conservé :
    faut donc appliquer aux sprites le geste déjà fait pour les lumières :
    découpler la taille de texture de l'empreinte en monde. **Ce n'est pas un
    paramètre, c'est une correction — et elle n'est pas faite.**
