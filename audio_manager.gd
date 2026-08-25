@@ -103,6 +103,21 @@ static func oreille_suit(local_idx: int, entrainement: bool = false) -> bool:
 static func index_porteur(local_idx: int) -> int:
 	return 1 if local_idx == 1 else 0
 
+## La sortie audio est-elle PARTAGEE entre deux joueurs ?
+##
+## **Predicat canonique, et il ne sert pas qu'aux oreilles.** Toute regle qui
+## depend de « y a-t-il une ou deux personnes devant cette sortie » se branche
+## ici : les deux oreilles de l'ecran partage, mais aussi la voix d'annonceur —
+## `spk_p1_wins` en ecran scinde contre `win`/`defeat` ailleurs — et demain tout
+## ce qui devra decrire un evenement sans designer un camp.
+##
+## **Ne pas en ecrire une seconde.** Deux predicats paralleles repondent pareil
+## jusqu'au jour ou quelqu'un en corrige un seul ; ce jour-la, une moitie du jeu
+## croit qu'il y a deux joueurs pendant que l'autre croit qu'il y en a un. La
+## question s'ecrit UNE fois et se lit partout — c'est la lecon de
+## `oreille_suit`, qui interrogeait le transport quand il fallait compter les
+## auditeurs, et qui a coute l'entrainement muet.
+##
 ## Ecoute-t-on par DEUX oreilles, une par joueur ? (Decision d'Adrien, 2026-08-25.)
 ##
 ## Les trois cas sont exhaustifs et complementaires — en ligne et a l'entrainement

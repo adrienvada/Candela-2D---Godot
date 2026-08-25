@@ -2694,6 +2694,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### `cam1` à `Nil` ne parle jamais de la caméra (2026-08-25)
+
+```
+Invalid assignment of property 'offset' … on a base object of type 'Nil'
+    at GameState._process(), game_state.gd:1132
+```
+
+**Cette erreur a été diagnostiquée TROIS fois dans la même journée, avec trois
+causes différentes, et aucune n'était la caméra.** Un Godot orphelin tenant le
+port 7777 ; un cache `.godot` périmé ; et un `audio_manager.gd` qui ne compilait
+pas, sauvegardé au milieu du lot d'une autre session.
+
+**La signature est toujours la même parce que le mécanisme est toujours le
+même** : quelque chose empêche `_ready()` d'aller jusqu'à `_setup_players()`
+(ligne 672, qui crée `cam1`), pendant que `_process()` tourne déjà. La caméra
+n'est pas absente : **elle n'a jamais été créée**, et vingt lignes d'erreur
+identiques défilent sans jamais nommer ce qui a interrompu le démarrage.
+
+Le cas le plus fréquent, et le plus trompeur : **un autoload qui ne compile
+pas.** Godot le signale une fois, en haut du journal — `Failed to instantiate an
+autoload` — puis déroule la cascade qui, elle, se répète. **On lit la fin du
+journal, jamais le début.**
+
+**La règle : devant un `cam1` à `Nil`, ne pas ouvrir `game_state.gd`. Remonter
+au PREMIER message d'erreur du journal.** Si c'est un `Parse Error` sur un
+autoload, tout le reste en découle. Et sur un arbre partagé, l'autoload fautif
+n'est pas forcément le vôtre : `git status` dit qui a un fichier ouvert.
+
+*Consigné par la session « résolution d'affichage », qui a payé deux de ces
+trois occurrences et a nommé le motif — les trois autres sessions cherchaient
+chacune une cause différente pour un symptôme unique.*
+
+
 ### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
 
 La phrase manquait au dépôt et elle a failli coûter un défaut entier. **Un
@@ -6947,12 +6980,60 @@ un fait de jeu, pas à un rythme d'interface.
   et 60 Hz chaque image tient deux images de rendu, à 0,05 s (l'arbalète) une
   seule ; au-delà, une image ne serait jamais affichée. Cuites en **énergie
   libre** et non radiale — voir « Pièges connus ». *(C : 1 planche)*
-- **DA2.4 Le sprite du joueur** 🟡 **PARTIELLE le 2026-08-25** — le personnage
+- **DA2.4 Le sprite du joueur** ✅ **livrée le 2026-08-25** — le personnage
   existe et est intégré : casque, épaules, avant-bras, vu de dessus strict, à
   **36 px d'épaules**, exactement le diamètre du `Polygon2D` qu'il remplace.
-  ⚠️ **Il manque les 4-6 frames de marche** que cette entrée demande : le sprite
-  est une pose fixe. Le joueur n'est plus un diagramme, il n'est pas encore
-  animé. **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
+  **La marche est animée depuis le 2026-08-25**, mais **pas** par des frames
+  peintes — et le détour vaut d'être lu, parce que la consigne d'origine était
+  irréalisable telle quelle.
+
+  Premier constat, mesuré : les seize frames livrées faisaient **s'effondrer la
+  portée de l'arme**. Fusil +40,5 px en statique contre +22,5 en marche, pompe
+  +38,5 contre +22,5 — les quatre armes devenaient **indistinguables pendant la
+  marche**, alors qu'en statique elles s'échelonnent de +27,5 à +40,5. Dans un
+  jeu où lire l'arme adverse décide du duel, ce n'est pas un défaut cosmétique,
+  c'est une perte d'information. Cause trouvée en ouvrant les planches sources :
+  **ce ne sont pas les mêmes caméras.** La planche statique est une vue de
+  dessus stricte (on voit le dessus du crâne) ; la planche de marche est une vue
+  oblique de trois-quarts arrière, jambes visibles, avec du flou de mouvement et
+  des bavures magenta. Aucune découpe ne réconcilie deux caméras.
+
+  Regénérer avec la planche statique **en pièce jointe** a réglé la caméra du
+  premier coup — c'est le geste qui manquait, et il n'est possible que depuis
+  une session qui sait joindre un fichier. Mais deux obstacles sont restés, et
+  ce sont eux qui ont tranché :
+
+  1. ⚠️ **Des frames fixes ne peuvent pas rester en phase avec le pas.** Le
+     détecteur de pas de `player.gd` compte une **distance** — 45 px, 60 en
+     sprint — et non un temps ; le son, l'empreinte au sol et la bosse de
+     rétrodiffusion tombent déjà ensemble sur ce compteur. Une planche de quatre
+     images jouée à cadence fixe dériverait de tout ça dès qu'on change
+     d'allure, et le sprint la ferait mentir en permanence.
+  2. ⚠️ **Une arme peinte pivotée mentirait sur la visée.** `rotation` dit déjà
+     où le joueur vise : c'est l'information la plus chère du jeu. Toute
+     inclinaison d'arme cuite dans une frame la contredit douze fois par
+     seconde. (Ma propre première consigne à Gemini demandait le contraire —
+     l'erreur venait de moi, pas du générateur.)
+
+  D'où la solution retenue : le corps **roule sur le pied porteur**, en
+  translation le long de l'axe local Y, d'amplitude dérivée du **même
+  accumulateur** que le pas (`sin(distance / pas × π) × 1,6 × côté_du_pied`).
+  Elle tombe donc exactement avec le son et l'empreinte, à toutes les allures et
+  sans un réglage ; elle ne peut pas pivoter l'arme ; et comme elle réemploie le
+  sprite statique validé, **la portée de l'arme est préservée par construction**
+  — le défaut d'origine devient impossible plutôt que corrigé. Le retour au
+  repos est lissé, sans quoi s'arrêter en plein pas laisserait le corps penché à
+  demeure. `ROULIS_MARCHE` règle l'amplitude en une ligne.
+
+  Reste ouvert, et c'est un choix d'Adrien, pas un manque technique : une
+  variation de membres peinte par-dessus ce roulis. Elle demanderait quatre
+  planches tenant l'échelle **et** la longueur d'arme de la planche statique,
+  ce que trois tentatives n'ont pas obtenu. Les seize PNG `*_marche_*.png` qui
+  traînent dans `assets/sprites/` sont ceux de la mauvaise caméra : ils ne sont
+  suivis par git ni chargés par quoi que ce soit, mais ils portent un nom
+  crédible — **ne pas les câbler.**
+
+  **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
   cuit donc quatre sprites complets, un par arme, plutôt qu'un corps et quatre
   armes à raccorder. *(C)*
