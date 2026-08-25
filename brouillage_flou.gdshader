@@ -39,6 +39,24 @@ uniform float rayon_noyau : hint_range(0.0, 48.0) = 14.0;
 // 0 = pas de flou du tout, 1 = plein effet. Suit l'éblouissement.
 uniform float force : hint_range(0.0, 1.0) = 1.0;
 
+// **Le trou autour de SOI.** `exclusion_centre` est la position du joueur qui
+// subit l'éblouissement, en UV d'écran ; le flou est nul en deçà de
+// `exclusion_pres` et plein au-delà de `exclusion_loin`, en pixels d'écran.
+//
+// « Il ne faut pas que notre propre personnage devienne flou » (Adrien,
+// 2026-08-25). La zone floue est poussée vers la victime, donc à distance de
+// duel elle atteignait son propre corps. Ce n'est pas qu'une gêne : une
+// décision actée veut que l'éblouissement coûte la lecture DU MONDE, jamais
+// celle de sa propre fiche.
+//
+// **Le fondu entre les deux rayons n'est pas un ornement.** Un disque net au
+// milieu du flou serait une forme de plus à lire, donc un repère — le défaut
+// même que le halo en traînée vient de corriger. À rayon unique, on aurait
+// remplacé un cercle par un autre.
+uniform vec2 exclusion_centre = vec2(0.5, 0.5);
+uniform float exclusion_pres = 44.0;
+uniform float exclusion_loin = 104.0;
+
 // Deux anneaux de huit, plus le centre. Huit directions plutôt que quatre :
 // à quatre, un contour droit reste droit — le faisceau a précisément deux
 // arêtes droites, donc ce sont elles qu'on manquerait.
@@ -57,6 +75,13 @@ void fragment() {
 	}
 	// Plein au centre, nul au bord — voir la note sur le fondu plus haut.
 	float k = force * (1.0 - smoothstep(0.0, 1.0, d));
+
+	// Puis le trou autour de soi. La distance se mesure en PIXELS et non en UV :
+	// un écran n'est pas carré, et une distance en UV rendrait le trou
+	// elliptique — donc une forme, une fois de plus.
+	vec2 ecart_px = (SCREEN_UV - exclusion_centre) / SCREEN_PIXEL_SIZE;
+	k *= smoothstep(exclusion_pres, exclusion_loin, length(ecart_px));
+
 	vec2 pas = rayon_noyau * k * SCREEN_PIXEL_SIZE;
 
 	// ⚠️ **`FRAGCOORD.xy * SCREEN_PIXEL_SIZE` et non `SCREEN_UV`.** Les deux

@@ -84,22 +84,6 @@ const RAYON_JOUEUR := 18.0
 const VISEE_PAR_S := 18.0
 const VISEE_PENALITE := 0.6
 
-## Le facteur d'opacité du voile blanc. `ui.gd` porte **0,8** ; le banc démarre
-## à **0,35**, et l'écart est une demande d'Adrien au banc le 2026-08-25 :
-## « il faut atténuer le voile ».
-##
-## Le raisonnement derrière l'atténuation, et il tient sans le ressenti : à 0,8
-## le voile écrase déjà tout le contraste de l'écran *avant* qu'un brouillage
-## n'intervienne (0,48 d'opacité plein écran à 0,60 d'éblouissement, mesuré). Il
-## fait donc deux métiers à la fois — dire « tu es ébloui » ET cacher
-## l'adversaire. Avec `Mode.LAMPE`, le second métier revient au halo, qui le
-## fait mieux parce qu'il est LOCAL : il cache l'adversaire sans coûter la
-## lecture du reste de la carte. Le voile peut alors se contenter du premier.
-##
-## **Réglable en direct au banc (`F` / `H`)** : c'est un nombre de ressenti, il
-## se juge en le bougeant, pas en le choisissant.
-const VOILE_FACTEUR_DEFAUT := 0.35
-
 ## Combien de fantômes en diplopie. Deux : le milieu de deux points se tient à
 ## l'œil, le barycentre de trois beaucoup moins.
 const COPIES_DIPLOPIE := 2
@@ -120,7 +104,9 @@ const NOMS_MOUVEMENT := ["immobile", "va-et-vient", "cercle", "erratique"]
 
 # --- état réglable ----------------------------------------------------------
 var _mode: int = Brouillage.Mode.AUCUN
-var _force: float = 1.0
+## Le gain, dérogeable au banc. Il DÉMARRE sur celui du modèle — 2,0, choisi par
+## Adrien (« effet à 2 ») — pour que le banc montre ce que la production fera.
+var _force: float = Brouillage.GAIN
 var _auto: bool = true          ## L'éblouissement est-il MESURÉ, ou forcé à la main ?
 var _niveau_manuel: float = 0.7
 var _arme_idx: int = 0
@@ -128,16 +114,13 @@ var _mouvement: int = Mouvement.VA_ET_VIENT
 var _distance: float = 300.0
 var _faisceau_suit: bool = false ## Le faisceau reste-t-il sur la position vraie ?
 var _penalites: bool = true      ## La visée molle de `player.gd`.
-## **Le voile est SUPPRIMÉ par défaut** — « on supprime le voile » (Adrien, au
-## banc, 2026-08-25). La touche `V` le rend, et le réglage « voile » le dose :
-## il reste au banc comme témoin, pas comme proposition.
-##
-## Ce que sa disparition confirme, et qui n'était qu'une hypothèse à l'ouverture
-## du chantier : le voile faisait **deux métiers** — dire « tu es ébloui » et
-## cacher l'adversaire. Le halo et le flou font le second, et LOCALEMENT. Le
-## premier métier, lui, n'avait apparemment pas besoin d'un aplat plein écran.
-var _voile: bool = false
-var _voile_facteur: float = VOILE_FACTEUR_DEFAUT
+## **Le voile est REVENU, à 0,3** — troisième et dernier état de la soirée, après
+## 0,8 (hérité) puis « on supprime le voile ». Ce n'est pas de l'hésitation : le
+## voile faisait **deux métiers**, dire « tu es ébloui » et cacher l'adversaire.
+## Le halo et le flou ont pris le second, et LOCALEMENT ; il ne reste que le
+## premier, qui se contente de 0,3.
+var _voile: bool = true
+var _voile_facteur: float = Brouillage.VOILE_FACTEUR
 
 # Les réglages vifs du mode « lampe ». Ils DÉMARRENT sur les constantes du
 # modèle et sont passés en paramètres à `Brouillage` : le banc ne recopie
@@ -157,6 +140,8 @@ var _force_flou: float = Brouillage.FORCE_FLOU
 var _noyau_flou: float = Brouillage.NOYAU_FLOU
 var _allongement_flou: float = Brouillage.ALLONGEMENT_FLOU
 var _avance_flou: float = Brouillage.AVANCE_FLOU
+var _exclusion_pres: float = Brouillage.EXCLUSION_PRES
+var _exclusion_loin: float = Brouillage.EXCLUSION_LOIN
 
 ## Le réglage que `←/→` modifie. `Tab` en change.
 var _reglage: int = 0
@@ -175,6 +160,8 @@ const REGLAGES := [
 	["avance vers la victime", "_avance_flou", 0.0, 1.0, 0.05],
 	["force du flou", "_force_flou", 0.0, 1.0, 0.1],
 	["quantité de flou", "_noyau_flou", 0.0, 64.0, 2.0],
+	["trou autour de soi (près)", "_exclusion_pres", 0.0, 200.0, 4.0],
+	["trou autour de soi (loin)", "_exclusion_loin", 0.0, 300.0, 8.0],
 	["voile", "_voile_facteur", 0.0, 1.0, 0.05],
 ]
 var _verite: bool = false        ## Montrer où l'adversaire est VRAIMENT.
@@ -777,6 +764,14 @@ func _rendre() -> void:
 		_flou.position = centre_flou - taille * 0.5
 		_mat_flou.set_shader_parameter("rayon_noyau", _noyau_flou)
 		_mat_flou.set_shader_parameter("force", float(f["force"]))
+		# Le trou autour de soi, en UV d'écran. **En jeu, ce point est le centre
+		# de sa propre vue** — la caméra suit le joueur ; ici on le calcule
+		# depuis la tourelle, qui est le personnage de celui qui subit.
+		var taille_vue := get_viewport().get_visible_rect().size
+		var soi := get_viewport().get_canvas_transform() * _tourelle.global_position
+		_mat_flou.set_shader_parameter("exclusion_centre", soi / taille_vue)
+		_mat_flou.set_shader_parameter("exclusion_pres", _exclusion_pres)
+		_mat_flou.set_shader_parameter("exclusion_loin", _exclusion_loin)
 
 	var porte_halo := _mode == Brouillage.Mode.HALO or _mode == Brouillage.Mode.LAMPE
 	var h := Brouillage.halo(_dazzle, _force, _rayon_halo, _intensite_halo) \
@@ -849,7 +844,7 @@ func _tableau() -> void:
 	print("")
 	print("--- les réglages atteints (★ = changé depuis `brouillage.gd`) ---")
 	var defauts := {
-		"_force": 1.0,
+		"_force": Brouillage.GAIN,
 		"_rayon_halo": Brouillage.RAYON_HALO,
 		"_intensite_halo": Brouillage.INTENSITE_HALO,
 		"_nettete_halo": Brouillage.NETTETE_HALO,
@@ -861,7 +856,9 @@ func _tableau() -> void:
 		"_avance_flou": Brouillage.AVANCE_FLOU,
 		"_force_flou": Brouillage.FORCE_FLOU,
 		"_noyau_flou": Brouillage.NOYAU_FLOU,
-		"_voile_facteur": VOILE_FACTEUR_DEFAUT,
+		"_exclusion_pres": Brouillage.EXCLUSION_PRES,
+		"_exclusion_loin": Brouillage.EXCLUSION_LOIN,
+		"_voile_facteur": Brouillage.VOILE_FACTEUR,
 	}
 	for r in REGLAGES:
 		var nom: String = r[1]

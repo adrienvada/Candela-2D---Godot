@@ -77,25 +77,25 @@ const NOMS := {
 ## silhouette et ses alentours » ; à l'essai il avale surtout l'écran.
 const RAYON_HALO := 150.0
 
-## Opacité au centre du halo, à saturation. **1,0 depuis le 2026-08-25** —
-## « il faudrait que le halo soit plus intense en son centre ».
+## Opacité au cœur du halo, à saturation. **0,7**, et la valeur a fait
+## l'aller-retour en une soirée : 0,85 (posé), 1,0 (« plus intense en son
+## centre »), 0,7 (« moins puissant »).
 ##
-## ⚠️ **Ce fichier a longtemps tenu 0,85 avec un motif écrit : à 1,0 le halo
-## devient un disque plein, et un disque plein DÉSIGNE l'adversaire au lieu de
-## le cacher.** Le motif reste juste ; ce qui a changé, c'est ce qui le tient.
-## Ce n'est plus le pic qui empêche le disque plein, c'est `NETTETE_HALO` : la
-## chute est désormais si rapide que la surface saturée se réduit à un noyau. On
-## peut donc monter le centre sans étaler le plateau. **Monter l'un sans
-## l'autre ramènerait le disque plein**, et avec lui le halo qui désigne.
-## **0,7 depuis le second essai** — « il faudrait que le halo soit moins
-## puissant » (Adrien, 2026-08-25). Il valait 1,0 depuis le premier, où la
-## demande était l'inverse.
+## **Les trois ne se contredisent pas, et ce sont le flou puis l'allongement qui
+## les réconcilient.** Au premier essai le halo portait **seul** la charge de
+## cacher l'émetteur : il fallait qu'il tape fort. Le flou lui en a retiré la
+## moitié — celle qui concerne le faisceau —, et l'étirement a réglé le reste :
+## un cœur étiré cache autant qu'un cœur vif sans désigner de centre. Un halo
+## qui tape moins fort cache donc désormais autant, et il rend l'écran de
+## nouveau lisible autour de lui.
 ##
-## Les deux demandes ne se contredisent pas, et c'est le flou qui les réconcilie :
-## au premier essai le halo portait **seul** la charge de cacher l'émetteur, donc
-## il fallait qu'il tape fort. Le flou lui en a retiré la moitié — celle qui
-## concerne le faisceau. Un halo qui tape moins fort cache désormais autant, et
-## il rend l'écran de nouveau lisible autour de lui.
+## ⚠️ **Le motif qui tenait 0,85 sous 1,0 reste valable, mais ce n'est plus lui
+## qui tient :** « à 1,0 le halo devient un disque plein, et un disque plein
+## DÉSIGNE l'adversaire au lieu de le cacher ». Ce qui empêche le disque plein
+## est maintenant `NETTETE_HALO` (la chute creusée réduit la surface saturée à un
+## noyau) et `ALLONGEMENT_HALO` (le noyau est une traînée, pas un point).
+## **Défaire l'un des deux sans redescendre l'intensité ramènerait le halo qui
+## désigne**, qui est le défaut qu'Adrien a relevé sur capture.
 const INTENSITE_HALO := 0.7
 
 ## L'exposant qui creuse le halo : `alpha(r) = (1 − r) ^ NETTETE_HALO`.
@@ -299,6 +299,26 @@ const AVANCE_FLOU := 0.4
 
 const FORCE_FLOU := 1.0
 
+## **Le rayon autour de SOI où le flou ne mord pas**, en pixels d'écran : plein
+## effet au-delà de `EXCLUSION_LOIN`, rigoureusement nul en deçà de
+## `EXCLUSION_PRES`.
+##
+## « Il ne faut pas que notre propre personnage devienne flou » (Adrien,
+## 2026-08-25). La zone floue est poussée vers la victime ; à distance de duel
+## ordinaire elle atteignait son propre personnage.
+##
+## **Et ce n'est pas qu'une gêne de lecture, c'est une décision actée du
+## projet :** l'éblouissement doit coûter la lecture **du monde** — l'adversaire
+## et sa lumière —, jamais celle de sa propre fiche. Se perdre soi-même est une
+## punition de plus que ne rattrape aucune compétence. Le même raisonnement
+## avait déjà fait passer le voile blanc SOUS le HUD.
+##
+## Le fondu entre les deux rayons n'est pas un ornement : un disque net
+## d'image nette au milieu du flou serait **une forme de plus à lire**, donc un
+## repère — exactement le défaut que le halo en traînée vient de corriger.
+const EXCLUSION_PRES := 44.0
+const EXCLUSION_LOIN := 104.0
+
 ## Le rayon du noyau de flou, en pixels d'écran : la QUANTITÉ de flou, distincte
 ## de la taille de la zone.
 ##
@@ -317,7 +337,7 @@ const NOYAU_FLOU := 34.0
 ## passe ses valeurs vives et imprime, en sortant, celles qu'il faudra
 ## transcrire ici. **Une seule formule, deux appelants** — c'est la règle que ce
 ## dépôt a payée trois fois pour l'apprendre.
-static func halo(dazzle: float, force: float = 1.0,
+static func halo(dazzle: float, force: float = GAIN,
 		rayon_max: float = RAYON_HALO, intensite_max: float = INTENSITE_HALO) -> Dictionary:
 	var t := _dose(dazzle, force)
 	return {
@@ -333,7 +353,7 @@ static func profil_halo(r: float, nettete: float = NETTETE_HALO) -> float:
 ## Le flou de la zone d'émission : rayon de la zone en pixels d'écran, et force
 ## du flou en son centre. Voir `RAYON_FLOU` — c'est ce qui empêche le cône de
 ## trahir son apex.
-static func flou(dazzle: float, force: float = 1.0,
+static func flou(dazzle: float, force: float = GAIN,
 		rayon_max: float = RAYON_FLOU, force_max: float = FORCE_FLOU) -> Dictionary:
 	var t := _dose(dazzle, force)
 	return {
@@ -351,7 +371,7 @@ static func flou(dazzle: float, force: float = 1.0,
 ## Le barycentre de N points également répartis sur un cercle est le centre du
 ## cercle, exactement — c'est ce qui rend la vérité recouvrable, et c'est pour
 ## cette propriété que la figure est un cercle régulier et non un semis.
-static func fantomes(dazzle: float, force: float = 1.0, temps: float = 0.0,
+static func fantomes(dazzle: float, force: float = GAIN, temps: float = 0.0,
 		copies: int = 2) -> PackedVector2Array:
 	var sortie := PackedVector2Array()
 	var t := _dose(dazzle, force)
@@ -376,7 +396,7 @@ static func fantomes(dazzle: float, force: float = 1.0, temps: float = 0.0,
 ## pas celle d'un axe. Sans elle, la diagonale vaudrait √2 fois le réglage, et
 ## c'est exactement le genre d'écart qu'on découvre en mesurant six mois plus
 ## tard.
-static func derive(dazzle: float, force: float = 1.0, temps: float = 0.0,
+static func derive(dazzle: float, force: float = GAIN, temps: float = 0.0,
 		graine: float = 0.0) -> Vector2:
 	var t := _dose(dazzle, force)
 	if t <= 0.0:
@@ -392,15 +412,42 @@ static func derive(dazzle: float, force: float = 1.0, temps: float = 0.0,
 ## fichier ne peut pas, et ne doit pas — un tampon dimensionné en nombre
 ## d'images a déjà tronqué la killcam sur une machine à 492 fps, et la leçon vaut
 ## pour tout ce qui mémorise ici.
-static func retard(dazzle: float, force: float = 1.0) -> float:
+static func retard(dazzle: float, force: float = GAIN) -> float:
 	return RETARD_REMANENCE * _dose(dazzle, force)
 
 ## La perte de contraste : ce qu'il reste d'opacité à la silhouette, entre 1 (on
 ## la voit) et `ALPHA_CONTRASTE` (elle se dissout dans le voile).
-static func opacite(dazzle: float, force: float = 1.0,
+static func opacite(dazzle: float, force: float = GAIN,
 		courbe: float = COURBE_CONTRASTE) -> float:
 	var t := _dose(dazzle, force)
 	return lerpf(ALPHA_CONTRASTE, 1.0, pow(1.0 - t, maxf(courbe, 0.01)))
+
+## Le GAIN du brouillage : de combien l'éblouissement est multiplié avant de
+## devenir une dose. **2,0, choisi par Adrien au banc le 2026-08-25** (« effet
+## à 2 »).
+##
+## Ce n'est pas un facteur d'intensité, c'est un facteur de **vitesse** : à
+## gain 2 la dose sature dès 0,5 d'éblouissement, donc tout le brouillage est
+## atteint à mi-faisceau au lieu du plein feu. Cela compte parce que la
+## saturation n'est presque jamais atteinte en jeu — plafond réel du pistolet à
+## bout portant : 0,93, et bien moins dès qu'on s'écarte de l'axe.
+##
+## **Il vit ici et pas au banc**, sinon la production ne ferait pas ce
+## qu'Adrien a jugé : le banc n'est qu'un endroit où l'on bouge des nombres, la
+## valeur retenue doit revenir dans le modèle. Le paramètre `force` des
+## fonctions publiques reste son point de dérogation, pour le banc et les tests.
+const GAIN := 2.0
+
+## L'opacité du voile blanc, décidée au banc : **0,3**.
+##
+## ⚠️ **`ui.gd` porte encore 0,8**, et ce sera à changer au branchement.
+##
+## Le voile est passé par trois états en une soirée : 0,8 (hérité), *supprimé*
+## (« on supprime le voile »), puis 0,3. Ce n'est pas de l'hésitation, c'est le
+## halo et le flou qui ont pris son travail : il faisait deux métiers — dire
+## « tu es ébloui » ET cacher l'adversaire. Le second est parti ailleurs, et
+## **localement** ; il ne reste que le premier, qui se contente de 0,3.
+const VOILE_FACTEUR := 0.3
 
 ## La dose commune : l'éblouissement multiplié par le réglage de force, ramené
 ## dans [0,1].

@@ -7581,13 +7581,46 @@ puissant (intensité 1,0 → **0,7**), silhouette effacée plus vite (courbe 2,0
 > Ce n'est pas un mensonge, la traînée décrit fidèlement où la lumière est ;
 > mais « viser le centre du halo » était un conseil juste et ne l'est plus.
 
-> ⚠️ **Conséquence non demandée, à trancher : le joueur ébloui se voit
-> lui-même flou.** La zone floue est poussée vers la victime ; à distance de
-> duel ordinaire, elle atteint son propre personnage. C'est peut-être juste —
-> on est ébloui, toute la vision se dégrade. Mais une décision actée dit que
-> l'éblouissement doit coûter la lecture **du monde**, jamais celle de sa propre
-> fiche, et se perdre soi-même est plus proche de la seconde. **Réglable par
-> « avance vers la victime » au banc**, et non tranché ici.
+> ⚠️ ~~**Conséquence non demandée : le joueur ébloui se voit lui-même flou.**~~
+> **Tranché le 2026-08-25 : il ne doit pas l'être.** « Il ne faut pas que notre
+> propre personnage devienne flou » (Adrien). Le flou porte désormais un trou
+> autour de soi — nul en deçà de 44 px, plein au-delà de 104. **Le fondu entre
+> les deux n'est pas un ornement** : un disque net au milieu du flou serait une
+> forme de plus à lire, donc un repère, et on aurait remplacé un cercle par un
+> autre. Mesuré : avec le trou, le contraste sur son propre personnage est
+> **identique au millième** à celui d'une image sans aucun flou ; sans lui, il
+> tombait de 35,5 %.
+>
+> Ce n'était pas qu'un confort : la décision actée du voile sous le HUD dit déjà
+> que l'éblouissement doit coûter la lecture **du monde**, jamais celle de sa
+> propre fiche. Se perdre soi-même est une punition de plus que ne rattrape
+> aucune compétence.
+
+### ✅ Les réglages retenus par Adrien, le 2026-08-25 — B3 clos
+
+Quatrième et dernier essai de la soirée : **« c'est super : voile à 0,3, effet
+à 2, il ne faut pas que notre propre personnage devienne flou ».**
+
+| | valeur | où |
+|---|---|---|
+| voile | **0,3** | `Brouillage.VOILE_FACTEUR` — ⚠️ `ui.gd` porte encore **0,8** |
+| gain du brouillage | **2,0** | `Brouillage.GAIN` |
+| trou autour de soi | 44 → 104 px | `EXCLUSION_PRES` / `EXCLUSION_LOIN` |
+
+**B3 est donc clos** : le voile a fait 0,8 → supprimé → 0,3 en une soirée, et
+ce n'est pas de l'hésitation. Il faisait deux métiers — dire « tu es ébloui » ET
+cacher l'adversaire ; le halo et le flou ont pris le second, et **localement**.
+Il ne reste que le premier, qui se contente de 0,3.
+
+**Le gain n'est pas une intensité, c'est une VITESSE** : à 2,0 la dose sature dès
+0,5 d'éblouissement, donc tout le brouillage est atteint à mi-faisceau. Cela
+compte parce que la saturation n'est presque jamais atteinte en jeu — plafond
+réel du pistolet à bout portant : 0,93, et bien moins hors de l'axe. **Il vit
+dans le modèle et non au banc**, sinon la production ne ferait pas ce qui a été
+jugé.
+
+**Il ne reste que B4** — le curseur « Éblouissement » — avant qu'un branchement
+soit possible.
 
 ### ⚠️ Le halo se posait à côté de sa cible — défaut, et il avait survécu à une image
 
@@ -7620,18 +7653,19 @@ but, de combien on rate.
 - **B2 — le faisceau suit-il le brouillage ?** (touche `L`). **Sans objet pour
   `LAMPE`** : ce mode ne déplace rien, il efface et il éclaire. La question ne
   se rouvrira que si un mode à déplacement revenait.
-- **B3 — quelle valeur pour le voile ?** Le principe est tranché (l'atténuer) ;
-  **le nombre ne l'est pas.** Le banc démarre à 0,35 contre 0,8 en production,
-  et `F`/`H` le règlent en direct. C'est le dernier réglage de ressenti à poser.
+- ~~**B3 — quelle valeur pour le voile ?**~~ ✅ **Tranché le 2026-08-25 : 0,3.**
+  Voir la section des réglages retenus. ⚠️ `ui.gd` porte encore 0,8 : c'est la
+  seule valeur de production à changer au branchement.
 - **B4 — le curseur.** Inchangé, et le mix le rend **plus** pressant, pas moins :
   voir l'encadré ci-dessus. Un joueur qui met le voile à zéro garderait un
   adversaire invisible et un halo pour seule information — ce qui peut être un
   réglage acceptable, ou un avantage. À trancher avant tout branchement.
 
-**Rien n'est branché tant que B3 et B4 ne sont pas posés.** `brouillage.gd` n'a
-toujours aucun lecteur en production : le branchement touche `player.gd`,
-`ui.gd` et `game_state.gd`, tenus par la session « game feel », et il fige des
-nombres que seul le banc peut donner.
+**Rien n'est branché tant que B4 n'est pas posé.** `brouillage.gd` n'a toujours
+aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
+`game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
+manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
+et ils vivent dans `brouillage.gd`.
 
 ---
 
