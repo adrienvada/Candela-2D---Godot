@@ -7185,16 +7185,46 @@ Conclusion honnête : **la fenêtre au second plan est bridée autour de 144 fps
 le banc ne voit rien en dessous de ce plafond.** Il ne mesure donc pas la charge,
 il mesure le plafond. Ce que le relevé établit vraiment :
 
-- ✅ **les deux chemins tiennent ≥ 142 de 1 % bas**, donc le seuil de R5 (60) est
-  franchi avec une marge de plus du double — la décision est acquise ;
+- ✅ **les deux chemins tiennent ≥ 142 de 1 % bas** sous ce plafond ;
 - ❌ **il n'établit PAS que le chantier est gratuit.** « 3,6× les pixels pour
   zéro coût » est une conclusion que ce relevé ne porte pas, et l'écrire aurait
   été le même défaut que les quinze mesures recopiées cent quarante fois du
   compteur de fps.
 
-**Ce qui reste dû, et ce n'est pas automatisable :** une exécution avec la
-fenêtre au PREMIER PLAN, où le plafond disparaît. C'est un jalon humain — voir la
-section correspondante. Le banc dit lui-même dans quel état il était.
+#### Le vrai relevé — Adrien, fenêtre au PREMIER PLAN, le 2026-08-25 (jalon H10 ✅)
+
+Deux exécutions, focus **stable au premier plan** attesté par le banc lui-même,
+donc comparables. Le plafond disparaît, et le résultat renverse deux choses.
+
+| Vue unique, premier plan | Pixels de jeu | Moyen | Médian | 1 % bas | Pire image |
+|---|---|---|---|---|---|
+| **avant** — `SubViewport` 957×1080 | 1,03 Mpx | 104 | 105 | 63 | 17,6 ms |
+| **après** — racine 2560×1440 | **3,69 Mpx** | **121** | **120** | 61 | 19,4 ms |
+
+**1. Le chantier ne coûte pas, il RAPPORTE : +15 % de cadence pour 3,6 fois plus
+de pixels.** L'explication est matérielle et vaut d'être retenue : le chemin
+d'avant écrivait dans une texture intermédiaire puis la recopiait à l'écran. Sur
+un GPU Apple, qui rend par tuiles, **changer de cible de rendu force un vidage de
+tuiles coûteux**. Supprimer l'étape économise plus que les pixels ajoutés ne
+coûtent. C'est l'inverse de ce que la prudence faisait attendre, et aucune
+lecture de code ne l'aurait donné.
+
+**2. Correction de ce que cette section affirmait plus haut : la marge sur le
+seuil n'est PAS « du double », elle est de deux images par seconde.** Le
+1 % bas réel est de **61 après et 63 avant**, contre une barre à 60. Le chiffre
+« 142 » venait des relevés plafonnés et ne décrivait pas le jeu.
+
+**3. Et un constat qui dépasse ce chantier, à ne pas lui attribuer :** 63 avant,
+61 après — l'écart est dans le bruit, donc **le chantier R ne dégrade pas le
+1 % bas**. Mais le jeu, mesuré honnêtement dans la fenêtre de développement,
+tourne à un 1 % bas d'environ **60**, très loin des « 120 tenus » que ce document
+annonce depuis le 2026-08-16. Ce relevé-là avait été pris en fenêtre 1280×720, et
+sans instrument capable de dire ce que le focus faisait. **C'est un fait sur le
+jeu, pas sur ce lot, et il appelle une décision d'Adrien.**
+
+Réserve de méthode : une exécution par configuration. L'écart de +15 % dépasse la
+dispersion observée le même jour sur deux relevés identiques (73 contre 81), donc
+la direction est solide — deux exécutions de plus la confirmeraient.
 
 ### R5 — Le seuil, fixé AVANT de mesurer ✅ tranché par Adrien le 2026-08-25
 
@@ -7203,11 +7233,20 @@ d'Adrien, prise avant tout relevé d'après — c'est là tout l'objet de cette
 étape : un seuil choisi en regardant le résultat n'est pas un seuil, c'est une
 justification.
 
-**Ce que ça ouvre, dit franchement : la barre ne mordra probablement pas.** La
-référence est à 142-144, et (b) multiplie les pixels de jeu par 1,8 dans la
-fenêtre doublée, par 4 en plein écran. Il faudrait perdre plus de la moitié de la
-cadence pour toucher 60. Le relevé de R4 reste dû — on ne suppose pas une
-mesure — mais il servira surtout à **constater le coût**, pas à trancher.
+**Ce que ça ouvrait, écrit le jour même : « la barre ne mordra probablement pas,
+la référence est à 142-144, il faudrait perdre plus de la moitié de la cadence
+pour toucher 60 ».**
+
+> ⚠️ **Faux, et conservé ici parce que l'erreur est instructive.** Ce « 142-144 »
+> venait de relevés pris fenêtre au second plan, donc plafonnés — le socle nu
+> donnait le même chiffre. Le relevé honnête d'Adrien, fenêtre au premier plan,
+> donne un 1 % bas de **61 après et 63 avant** : la barre de 60 est franchie de
+> deux images par seconde, pas du double. **Elle a bien failli mordre.**
+>
+> La décision reste la bonne — le chantier ne dégrade pas le 1 % bas, 63 → 61
+> étant dans le bruit — mais elle a été prise sur un chiffre qui ne décrivait pas
+> le jeu. *Un seuil fixé d'avance protège du biais de conclusion ; il ne protège
+> pas d'une référence fausse.*
 
 **Et une distinction qu'il ne faut pas perdre, parce que les deux chiffres se
 ressemblent.** « 1 % bas à 60 » n'est pas « plafonner à 60 ». La Phase 3 a
@@ -7274,7 +7313,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
 | H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
-| H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | Quand Adrien passera devant la machine |
+| H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---
 

@@ -282,6 +282,27 @@ relevé au premier plan, que seule une main humaine peut faire.
 l'interrupteur `rendu_racine_autorise` ramène tout à l'ancien comportement en une
 ligne. Il est là pour le banc, et il sert de recours.
 
+> **H10 fait par Adrien le même jour, et il renverse deux de mes conclusions.**
+> Fenêtre au premier plan, focus stable attesté par le banc : **avant** 1,03 Mpx,
+> médiane 105, 1 % bas 63 ; **après** 3,69 Mpx, médiane **120**, 1 % bas 61.
+>
+> 1. **Le chantier ne coûte pas, il rapporte : +15 % de cadence pour 3,6 fois
+>    plus de pixels.** Cause matérielle : le chemin d'avant écrivait dans une
+>    texture intermédiaire avant de la recopier, et sur un GPU Apple — rendu par
+>    tuiles — changer de cible force un vidage coûteux. Aucune lecture de code ne
+>    donnait ça.
+> 2. **« Le seuil est franchi avec plus du double de marge » était faux**, et je
+>    l'avais écrit ici comme dans la ROADMAP. Le 1 % bas réel est de 61 contre une
+>    barre à 60 : deux images par seconde. Mon chiffre venait des relevés
+>    plafonnés au second plan.
+>
+> **Et un fait qui dépasse ce chantier, à ne pas lui attribuer :** 63 avant, 61
+> après — le chantier ne dégrade rien. Mais le jeu tourne à un 1 % bas d'environ
+> **60** dans la fenêtre de développement, très loin des « 120 tenus » annoncés
+> depuis le 2026-08-16 — un relevé pris en 1280×720, sans instrument capable de
+> dire ce que le focus faisait. **Signalé à Adrien, pas transformé en chantier :
+> ce n'est pas à moi d'ouvrir ça.**
+
 **Ce lot a failli être la deuxième version du défaut que S1 venait de réparer, et
 c'est la session « spatialisation du son » qui l'a arrêté.** Elle a monté le repro
 en headless plutôt que de raisonner : en prêtant à la racine le `World2D` du duel,
