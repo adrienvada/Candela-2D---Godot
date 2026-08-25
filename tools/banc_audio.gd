@@ -78,13 +78,41 @@ func _ready() -> void:
 	couche.add_child(_etiquette)
 	_memoriser()
 
-func _process(delta: float) -> void:
-	_deplacer_source(delta)
+## Le dernier verdict d'occlusion, calculé en physique et relu partout ailleurs.
+##
+## **Sans ce cache, le banc ne testait rien.** Il interrogeait l'occlusion depuis
+## `_process` — pour dessiner, pour l'affichage, pour jouer — et un rayon ne se
+## lance QUE pendant une frame de physique : chaque appel tombait sur le repli
+## « je ne sais pas, donc je ne retire rien ». Les sons partaient tous en direct,
+## l'écran affichait « mur entre les deux : non » à travers un mur épais, et le
+## test d'occlusion était incompréhensible parce qu'il n'avait pas lieu.
+##
+## **Le compteur de replis a révélé le défaut à l'écran, avant tout diagnostic :
+## 29 286 replis en une poignée de secondes.** C'est exactement ce pour quoi il
+## avait été écrit — un repli qui ne se distingue pas de la réussite déplace le
+## diagnostic au lieu de dégrader le service. Sans lui, on aurait cherché le
+## défaut dans le bus, le mixage ou le masque de collision.
+##
+## À noter, parce que ça aurait pu être bien pire : **le jeu, lui, était sain.**
+## Les pas et les tirs partent de `_physics_process` (`player.gd`), donc
+## l'occlusion s'y calcule pour de bon. Le défaut était dans l'outil de mesure,
+## pas dans ce qu'il mesure — un banc qui reproduit en panne le défaut qu'il
+## traque, piège déjà consigné le 2026-08-24.
+var _occulte: bool = false
+
+func _physics_process(delta: float) -> void:
+	_occulte = AudioManager.est_occulte(_source.global_position)
+	if _auto_un_coup:
+		_auto_un_coup = false
+		_jouer()
 	if _auto:
 		_minuteur -= delta
 		if _minuteur <= 0.0:
 			_minuteur = PERIODE_PAS
 			_jouer()
+
+func _process(delta: float) -> void:
+	_deplacer_source(delta)
 	queue_redraw()
 	_etiquette.text = _texte()
 
@@ -106,6 +134,15 @@ func _deplacer_source(_delta: float) -> void:
 		if tete != null:
 			tete.global_position = get_global_mouse_position()
 
+## Une touche est lue hors physique : jouer tout de suite ferait partir le son en
+## direct, quel que soit le mur. On attend le prochain tic — un vingtième de
+## seconde que l'oreille ne remarque pas, et le verdict est vrai.
+func _jouer_au_prochain_tic() -> void:
+	_minuteur = 0.0
+	_auto_un_coup = true
+
+var _auto_un_coup: bool = false
+
 func _jouer() -> void:
 	AudioManager.play_sfx_2d_random_pitch(_son_courant, _source.global_position,
 		0.95, 1.05)
@@ -117,8 +154,7 @@ func _draw() -> void:
 	var tete := _tete()
 	if tete == null:
 		return
-	var occulte := AudioManager.est_occulte(_source.global_position)
-	var couleur := Charte.ROUGE if occulte else Charte.ACIER
+	var couleur := Charte.ROUGE if _occulte else Charte.ACIER
 	draw_line(_source.global_position, tete.global_position, couleur, 2.0)
 	draw_circle(tete.global_position, 9.0, Charte.BLEU)
 	draw_circle(_source.global_position, 7.0, couleur)
@@ -136,7 +172,6 @@ func _texte() -> String:
 	var dist := 0.0 if tete == null else _source.global_position.distance_to(tete.global_position)
 	var portee: float = AudioManager.portee_absolue(_son_courant,
 		AudioManager.portee_carte(), AudioManager.facteur_portee)
-	var occulte := AudioManager.est_occulte(_source.global_position)
 	var lignes := [
 		"BANC AUDIO — dosage S2 (portée) et S3 (occlusion)",
 		"",
@@ -152,7 +187,7 @@ func _texte() -> String:
 			portee, AudioManager.portee_carte(),
 			AudioManager.portee_relative_de(_son_courant), AudioManager.facteur_portee],
 		"  atténuation estimée  %s" % _db_estime(dist, portee),
-		"  mur entre les deux   %s" % ("OUI — bus SFX_Occlus" if occulte else "non — bus SFX"),
+		"  mur entre les deux   %s" % ("OUI — bus SFX_Occlus" if _occulte else "non — bus SFX"),
 		"  replis hors physique %d" % AudioManager.occlusions_hors_frame,
 		"",
 		"  mémoire : %s" % _texte_memoire(),
@@ -229,5 +264,5 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_TAB: _auto = not _auto
 		KEY_X: _memoriser()
 		KEY_C: _comparer()
-		KEY_SPACE: _jouer()
+		KEY_SPACE: _jouer_au_prochain_tic()
 		KEY_ESCAPE: get_tree().quit()

@@ -149,10 +149,15 @@ static func est_un_tir(stream_or_key: Variant) -> bool:
 ## la premiere carte d'une autre taille — la portee se **derive de la carte**,
 ## comme V5.12 derive sa reverb de `grid_size`.
 ##
-## ⚠️ **Les valeurs ci-dessous sont des PROPOSITIONS, pas des decisions.** Adrien
-## les dose au banc (`tools/banc_audio.tscn`) ; aucune n'a encore ete jugee a
-## l'oreille. Ecrit ici pour que personne ne les prenne pour un arbitrage —
-## c'est la faute que ce depot documente le plus souvent.
+## ✅ **DOSE PAR ADRIEN AU BANC LE 2026-08-25** — facteur de portee **1,80** et
+## courbe **0,40**. Ces deux-la ne sont plus des propositions : elles ont ete
+## jugees a l'oreille, et la courbe a ete deplacee de 2,0 a 0,4, soit dans le
+## sens **oppose** a ce que le raisonnement recommandait (voir
+## `COURBE_DISTANCE_DEFAUT`).
+##
+## ⚠️ **Les portees RELATIVES d'un son a l'autre, elles, restent des
+## propositions** : le banc ne joue qu'un son a la fois, donc leur rapport n'a
+## pas ete compare. Ce qui a ete juge, c'est l'echelle d'ensemble.
 
 ## Portee de chaque son, en fraction de la diagonale de la carte.
 ##
@@ -180,10 +185,22 @@ const PORTEE_RELATIVE_DEFAUT: float = 1.0
 const PORTEE_CARTE_DEFAUT: float = 989.95
 
 ## Courbe d'attenuation (`AudioStreamPlayer2D.attenuation`), exposant applique a
-## `(1 - d/portee)`. A 1,0 la decroissance est trop lente pour se lire ; a 2,0 la
-## mi-portee coute 12 dB, ce qui s'entend comme une distance et non comme un
-## reglage. **A doser.**
-const COURBE_DISTANCE_DEFAUT: float = 2.0
+## `(1 - d/portee)`.
+##
+## **0,40 — juge par Adrien au banc le 2026-08-25, et c'est l'inverse de ce que
+## le raisonnement avait produit.** La valeur proposee etait 2,0, choisie parce
+## qu'elle fait couter 12 dB a la mi-portee : « une distance, pas un reglage ».
+## A l'oreille, non. Un exposant inferieur a 1 garde le son PRESENT presque
+## partout et ne l'efface qu'au bout — mi-portee ne coute plus que 2,4 dB, et la
+## chute arrive tard.
+##
+## Ce que ce choix dit du jeu, et il faut le lire avant de le rejuger : dans le
+## noir absolu, **entendre que l'autre existe vaut plus que savoir a quelle
+## distance il est**. Une decroissance franche rend la distance lisible et rend
+## le silence trop frequent — or le silence, ici, n'est pas une information, c'est
+## une absence d'information. Le second precedent du depot ou l'oreille renverse
+## le calcul, apres la recuperation d'eblouissement (2026-08-24).
+const COURBE_DISTANCE_DEFAUT: float = 0.4
 
 ## Diagonale de la carte courante, posee par `accorder_a_la_carte()`.
 var _portee_carte: float = PORTEE_CARTE_DEFAUT
@@ -192,7 +209,14 @@ var _portee_carte: float = PORTEE_CARTE_DEFAUT
 ## que le son joue, et **un dosage qui demande de relancer le jeu ne se fait
 ## pas** — c'est ce regime qui a laisse l'eblouissement non fonctionnel deux mois
 ## sans que personne s'en apercoive.
-var facteur_portee: float = 1.0
+## **1,80 — juge par Adrien au banc le 2026-08-25.** Toutes les portees relatives
+## sont donc multipliees par 1,8 : un pas porte 802 px sur la carte par defaut,
+## un tir 2851. Le facteur reste une molette et n'est pas fondu dans la table —
+## c'est ce qui garde LISIBLE le fait qu'un humain a tranche, et de combien il a
+## deplace la proposition.
+const FACTEUR_PORTEE_DEFAUT: float = 1.8
+
+var facteur_portee: float = FACTEUR_PORTEE_DEFAUT
 var courbe_distance: float = COURBE_DISTANCE_DEFAUT
 
 ## La diagonale d'une carte, en pixels. Pure : verifiable sans arene ni audio.
