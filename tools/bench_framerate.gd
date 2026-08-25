@@ -133,6 +133,7 @@ func _ready() -> void:
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_couper_le_son("avant la scène")
+	_reclamer_le_premier_plan()
 
 	# **Décomposer, parce qu'un total n'est pas une explication.**
 	#
@@ -590,6 +591,26 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 				absents.append("UI.%s n'a plus d'arme à l'indice %d (pompe)"
 					% [groupe, SHOTGUN_INDEX])
 	return absents
+
+
+## Réclamer le premier plan, parce que le relevé n'a pas de sens sans lui.
+##
+## ⚠️ **macOS bride une fenêtre au second plan**, et ce banc le sait déjà : il
+## refuse un relevé pris à focus mixte et étiquette un relevé de fond « c'est un
+## plancher ». Mais il se contentait de le CONSTATER, or il est lancé depuis un
+## terminal — qui garde le premier plan. Le relevé partait donc bridé une fois
+## sur deux, et le banc en avertissait dans sa dernière ligne, après une minute
+## de mesure perdue.
+##
+## **Constater une condition qu'on peut établir, c'est se résigner à un relevé
+## sur deux.** Un banc qui a besoin du premier plan doit le demander.
+##
+## Ça reste une demande : le système peut la refuser, et l'étiquette de focus
+## garde donc tout son rôle — elle dit ce qui s'est réellement passé, pas ce
+## qu'on a réclamé.
+func _reclamer_le_premier_plan() -> void:
+	DisplayServer.window_move_to_foreground()
+	get_window().grab_focus()
 
 
 ## Le son, coupé — et ce n'est pas une politesse, c'est une correction.

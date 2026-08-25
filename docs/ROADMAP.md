@@ -2663,6 +2663,23 @@ secondes tirant au pompe est insupportable pour qui travaille à côté.
   +2 %. La cause n'est pas dans ce que ce banc sait compter ;
 - mémoire statique : +2,7 à +2,9 Mo sur quinze secondes.
 
+#### ⚠️ Un relevé valide demande un HUMAIN (2026-08-26)
+
+**macOS bride une fenêtre au second plan, et une application lancée depuis un
+terminal ne peut pas réclamer le premier plan** — la demande est refusée, mesuré.
+Le banc étiquette honnêtement ses relevés (« stable au SECOND PLAN — c'est un
+plancher »), mais l'étiquette arrive *après* la minute de mesure.
+
+Les chiffres le disent : machine froide, deux relevés de 60 s au second plan
+donnent **37 et 38**, quand un relevé au premier plan la veille donnait **60,5**.
+**L'écart entre premier et second plan est du même ordre que celui qu'on
+cherchait à expliquer** — donc aucune conclusion sur la cible ne tient sans
+vérifier cette ligne-là d'abord.
+
+**Protocole, et il n'est pas automatisable :** c'est Adrien qui lance le banc, ou
+qui clique la fenêtre dès qu'elle apparaît. Une session ne peut pas produire ce
+relevé seule, et doit dire lequel des deux cas elle a obtenu.
+
 #### Deux pièges que ce banc a failli produire lui-même
 
 ⚠️ **Un format qui écrase la donnée ment autant qu'un contrôle qui ne peut pas
