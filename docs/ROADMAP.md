@@ -7375,7 +7375,52 @@ un fait de jeu, pas à un rythme d'interface.
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
   cuit donc quatre sprites complets, un par arme, plutôt qu'un corps et quatre
   armes à raccorder. *(C)*
-- **DA2.5 Les 4 armes en main** 🟡 **INTÉGRÉE, DISTINCTION NON REVÉRIFIÉE** — les
+- **DA2.5 Les 4 armes en main** ✅ **CLOSE le 2026-08-25 par décision d'Adrien**,
+  et la décision renverse le principe que cette entrée défendait. Il a écarté le
+  test : *« pars du principe qu'on les reconnaît, ce n'est pas grave si ce n'est
+  pas finement identifiable »*.
+
+  ⚠️ **Le texte d'origine reste ci-dessous, non réécrit.** Il affirme que la
+  distinction « n'est pas une affaire de goût » et qu'elle décide des duels ;
+  Adrien tranche l'inverse. **Une décision qu'on voit changer d'avis reste
+  lisible ; une décision réécrite fait croire qu'on n'a jamais pensé autrement.**
+
+  **Ce que la mesure disait au moment de la décision**, pour que le choix soit
+  daté et non pas rétrospectivement embelli. Écart entre paires, sur quatre
+  caractéristiques (portée, épaules, masse d'encre, épaisseur du canon) :
+
+  ```
+  fusil / pompe            4,9 %   11,5 %    9,8 %   14,0 %
+  pistolet / arbalete      6,8 %    8,7 %    6,7 %    9,4 %
+  les quatre autres paires        23 % a 44 %
+  ```
+
+  Première lecture : « pistolet / arbalète indistincts ». **Fausse, et l'erreur
+  venait de la mesure, pas des sprites** — quatre scalaires moyennent, donc ils
+  écrasent la forme. Le profil de largeur le long de l'axe dit autre chose :
+
+  ```
+  fusil     21 18 16 12 10 10  6  6  2  2  2  2
+  pompe     16 13 10  9  7  8  7  6  6  3  2
+  pistolet  21 18 15 12 10 10  7  8
+  arbalete  17 14 10 26 19 12  7        <- renflement a 9 px
+  ```
+
+  **L'arbalète est la seule dont le profil n'est pas décroissant** : ce 26 est
+  l'arc transversal, une signature qu'aucune autre ne porte. Elle est donc
+  séparable — par la forme, pas par la taille. La paire réellement à risque était
+  **fusil / pompe** : même profil décroissant, longueurs de canon de 34 et 32 px,
+  2 px d'écart de portée.
+
+  ⚠️ **Ce que la clôture ne dit PAS.** Le test de nomination n'a pas été passé :
+  on ne sait donc toujours pas si l'œil suit le chiffre, et la prédiction
+  fusil / pompe n'a été ni confirmée ni infirmée. La distinction est **assumée
+  suffisante**, pas **vérifiée suffisante** — et c'est une position parfaitement
+  tenable pour un jeu où l'arme adverse s'entrevoit une demi-seconde dans le noir.
+  Si un jour un duel se perd sur une confusion d'arme, c'est ici qu'il faudra
+  revenir, et `tools/apercu_matiere.tscn` attend toujours.
+
+  *Texte d'origine, conservé :* les
   quatre sprites sont cuits et posés. ⚠️ **Le test qui décide n'a pas été refait
   depuis la dernière regénération.** Il ne s'agit pas de goût : `tools/apercu_matiere.tscn`
   aligne les quatre figures sans annoncer l'ordre, et Adrien les nomme. **Au
@@ -7462,7 +7507,17 @@ un fait de jeu, pas à un rythme d'interface.
   et deux torches qui se font face à la même hauteur, ce qui est un duel.
   `convergents` éclaire depuis le haut : c'est une battue, pas un 1v1.
 
+  ✅ **`rasants` CHOISIE par Adrien le 2026-08-25**, conformément à la mesure.
   Les deux planches sont conservées ; le choix ne coûte rien à refaire.
+
+  ⚠️ **L'asset est choisi, il n'est toujours pas POSÉ — et personne ne le tient.**
+  Le fond du menu (`MenuBackdrop`, `MenuGlass`, parallaxe, brume dans le
+  matériau) vit dans `ui.gd`, domaine de DA4 ; la session DA4 a explicitement
+  décliné, non par refus mais par fin de capacité : *« le poser à moitié serait
+  pire que de le laisser »*. **C'est donc un travail prêt à partir, sans
+  titulaire**, et il tiendra en une ligne de brief pour qui reprendra
+  l'interface : poser `assets/keyart/keyart_rasants.png` en fond de menu, titre
+  dans le quart supérieur — celui qui plafonne à 0,125 de luminance.
 
   Retouchées et ramenées sur la charte par
   `tools/fabrique_keyart.gd`, dans `assets/keyart/`. **Rien ne les affiche** :
