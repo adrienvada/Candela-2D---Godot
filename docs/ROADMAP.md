@@ -2695,6 +2695,55 @@ C'est le même mécanisme que le faux-vert ci-dessous : dans les deux cas, ce qu
 circule n'est pas une erreur mais **une garantie mal bornée**.
 
 
+### Un contrôle textuel épingle un IDENTIFIANT, jamais un SENS (2026-08-25)
+
+**Le troisième membre de la famille, et le seul qui défende activement le
+défaut qu'il devrait attraper.**
+
+DA2.11 dérivait la flèche du système de `_is_main_menu`. Le mécanisme était bon
+— dériver plutôt qu'appairer, pour qu'aucun chemin de sortie oublié ne laisse la
+souris invisible. **Le prédicat, lui, était faux** : `_is_main_menu` veut dire
+« on est dans le hub », pas « un menu attend un clic ». La souris disparaissait
+donc dans la pause, dans les dialogues et dans la fenêtre de choix d'arme —
+c'est-à-dire précisément là où il faut cliquer. Trouvé par DA4, corrigé en
+`e82df4f` (`_un_menu_attend_un_clic()`).
+
+⚠️ **Et le banc de l'auteur exigeait le prédicat défectueux :**
+
+```gdscript
+_vrai("la derivation lit l'ecran affiche", corps.contains("_is_main_menu"))
+```
+
+Ce contrôle ne se contentait pas de manquer le défaut. **Il rougissait sur le
+correctif.** Quiconque remplaçait le prédicat cassait le test, et se serait
+demandé s'il avait tort. Un banc peut donc être pire que muet : il peut monter
+la garde devant l'erreur.
+
+#### Ce qui distingue les trois membres de la famille
+
+| forme | ce qu'elle mesure | comment elle ment |
+|---|---|---|
+| `contains("ma_fonction()")` | que la fonction **existe** | la ligne `func` la contient déjà : ne peut pas échouer |
+| `contains("rotation")` sur un bloc commenté | ce que le code **dit de lui-même** | le commentaire qui interdit le motif contient le motif |
+| `contains("_is_main_menu")` | **quel identifiant** est lu | passe parce que le code est faux, rougit quand il est juste |
+
+**La racine commune :** un contrôle textuel atteste d'un *câblage*, jamais d'un
+*sens*. Il peut dire « quelque chose est branché là » ; il ne peut pas dire « la
+bonne chose est branchée là ». Vérifier un sens demande d'**exécuter**.
+
+⚠️ **Et la contrainte qui m'y avait poussée était moins serrée que je ne le
+croyais.** J'avais choisi le texte parce que `ui.gd` et `player.gd` ne se
+chargent pas en `--script` — vrai, et consigné depuis le 2026-08-18. J'en avais
+conclu « donc on lit le texte », alors que la conclusion juste était « donc il
+faut un banc qui monte une scène ». DA4 a écrit quatre contrôles **à
+l'exécution** : ils interrogent `_un_menu_attend_un_clic()` en match, dans la
+pause et dans un dialogue. Les quatre anciens contrôles textuels, eux, **étaient
+tous verts pendant que le défaut existait**.
+
+Une limite réelle sert d'excuse à une limite plus large qu'elle : c'est ainsi
+qu'on se retrouve à tester le texte d'un fichier qu'on aurait pu exécuter.
+
+
 ### Un contrôle textuel qui cherche `ma_fonction()` ne peut pas échouer (2026-08-25)
 
 **Deux contrôles de `tools/test_viseur.gd` sont restés verts pendant que je les
