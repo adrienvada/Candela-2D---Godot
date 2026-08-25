@@ -23,6 +23,18 @@ const FPS_CAPS: Array[int] = [0, 60, 120, 144, 240]
 ## écran.
 const RESOLUTION_COUNT := 3
 
+## Facteur appliqué à la taille de la fenêtre en débogage, et à elle seule.
+##
+## Mesuré le 2026-08-25 : macOS compte les fenêtres en pixels NATIFS, et l'écran
+## de développement est un Retina à l'échelle 2 — 3840×2486 pixels pour 1920×1243
+## points. Une fenêtre de 1280×720 pixels n'y occupe donc que 640×360 points, un
+## tiers de la largeur de l'écran : c'est toute l'explication du « ça s'ouvre
+## dans une petite fenêtre », et rien n'y paraît côté résolution.
+##
+## Le jeu exporté ne double pas : l'écran d'un joueur n'est pas forcément Retina,
+## et le même facteur y déborderait de l'écran.
+const DEBUG_WINDOW_FACTOR := 2
+
 ## Noms exacts des bus de `default_bus_layout.tres`, tels qu'`audio_manager.gd`
 ## les adresse. Toute divergence se traduit par un index -1, traité comme une
 ## absence et non comme une erreur : voir `_apply_bus_volume()`.
@@ -89,7 +101,11 @@ var _settings_path := SETTINGS_PATH
 func _ready() -> void:
 	_load()
 	_apply_video()
-	if _has_saved_resolution:
+	# En débogage, la fenêtre est posée même sans choix enregistré : c'est le seul
+	# chemin qui applique `DEBUG_WINDOW_FACTOR` dès le lancement. Hors débogage la
+	# règle d'origine tient — une installation neuve garde la fenêtre de
+	# `project.godot` au lieu de se voir recentrée d'office.
+	if _has_saved_resolution or OS.is_debug_build():
 		_apply_resolution()
 	# Les bus existent dès le chargement de la disposition audio, bien avant les
 	# autoloads : aucune dépendance à l'ordre de démarrage d'AudioManager ici.
@@ -287,11 +303,18 @@ func _apply_resolution() -> void:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 func _apply_windowed(size: Vector2i) -> void:
+	var cible := size * DEBUG_WINDOW_FACTOR if OS.is_debug_build() else size
+	# Doubler ne doit jamais déborder : une fenêtre plus haute que la zone utile
+	# glisse sa barre de titre sous la barre de menus, donc hors d'atteinte — on
+	# ne peut plus ni la déplacer ni la fermer à la souris.
+	var utile := DisplayServer.screen_get_usable_rect().size
+	if utile.x > 0 and utile.y > 0:
+		cible = Vector2i(mini(cible.x, utile.x), mini(cible.y, utile.y))
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-	DisplayServer.window_set_size(size)
+	DisplayServer.window_set_size(cible)
 	var screen_size := DisplayServer.screen_get_size()
 	if screen_size.x > 0 and screen_size.y > 0:
-		DisplayServer.window_set_position((screen_size - size) / 2)
+		DisplayServer.window_set_position((screen_size - cible) / 2)
 
 func _apply_bindings() -> void:
 	for action in _bindings:

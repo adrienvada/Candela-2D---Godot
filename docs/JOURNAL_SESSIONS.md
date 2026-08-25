@@ -246,6 +246,53 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « affichage » : `keep`, et la fenêtre du débogage
+
+**Branche `worktree-affichage-keep-fenetre`, worktree
+`.claude/worktrees/affichage-keep-fenetre`, basée sur le `main` LOCAL (e3e1b34)
+et non sur `origin/main`, qui est en retard d'une fusion.** Demande d'Adrien,
+partie d'un constat de confort : « il s'ouvre vraiment dans une petite fenêtre ».
+
+**Fichiers touchés : `project.godot`, `settings_manager.gd`, `docs/ROADMAP.md`,
+ce journal.** Rien d'autre.
+
+**Empiètement déclaré : `settings_manager.gd` est au domaine « menus ».** Trois
+hunks strictement additifs — une constante `DEBUG_WINDOW_FACTOR`, une condition
+élargie dans `_ready()`, le facteur et son écrêtage dans `_apply_windowed()`.
+Aucun comportement existant retiré, aucune signature changée, aucun réglage du
+menu Options modifié : les trois choix (fenêtré 1280 / fenêtré 1920 / plein
+écran) sont ceux d'avant, seul leur rendu en débogage est doublé. Si la session
+« menus » veut le déplacer ailleurs, rien n'en dépend.
+
+**Ce que le stretch `keep` change pour tout le monde**, et c'est la raison d'être
+du lot : l'aire 2D est désormais **fixe à 1920×1080 quel que soit le ratio de la
+fenêtre**. Un écran non-16:9 ne voit plus davantage de carte — c'était le cas en
+`expand`, mesuré à +8,6 % de hauteur en plein écran. Tout code qui lisait
+`get_visible_rect()` en espérant une aire variable ne le trouvera plus ; à ma
+connaissance il n'y en a pas.
+
+**À la session « direction artistique » — une mesure qui vous concerne, et qui
+dit d'ATTENDRE.** Les `SubViewport` de `main.tscn` rendent à taille fixe
+(958×1080 par joueur, 1916×1080 en vue unique) **quelle que soit la fenêtre** :
+le `SubViewportContainer` ne répercute pas le facteur d'étirement. Donc :
+
+- une tuile de 35 px sur une case de 35 unités reste à **1 texel pour 1 pixel de
+  viewport**, aujourd'hui comme après ce lot. **Aucune texture n'est à recuire** ;
+- le flou qu'on verra dans la fenêtre doublée n'est pas un défaut d'asset, c'est
+  l'étirement de l'image composite. Aucune résolution de texture ne le corrige ;
+- le jour où quelqu'un fera suivre les `SubViewport`, c'est le **cookie de
+  torche** qui parlera le premier : le 1024² visé par DA5.6 retomberait à 3,5
+  texels par pixel — la mollesse même que ce choix corrigeait.
+
+**Ce que je n'ai pas fait, sciemment :** faire suivre les `SubViewport`. Ça
+multiplie par **4** les pixels de jeu en plein écran (2,07 → 8,29 Mpx), contre une cible « 1 % bas
+≥ 120 fps » mesurée en fenêtre 1280×720. Ça se mesure au banc et ça se tranche
+avec Adrien ; ça ne se glisse pas dans un lot de confort.
+
+**Suivi de projet :** je ne republie pas. La session qui tient l'artefact m'a
+contactée pendant le lot ; le delta lui a été transmis par `SendMessage`, et le
+hash suivra.
+
 ### 2026-08-25 — session « spatialisation du son » : deux documents corrigés, aucun code
 
 **Aucun fichier de code touché.** Cette session a répondu à une question d'Adrien
