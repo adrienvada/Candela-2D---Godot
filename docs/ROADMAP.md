@@ -2694,6 +2694,45 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Certifier la moitié d'une affirmation la fait passer tout entière (2026-08-25)
+
+Une session m'annonce que le lanceur est sourd aux `push_error`, « parce que
+Godot les imprime en `USER ERROR` ». **J'ai vérifié le lanceur — vrai, il ne
+grep que `SCRIPT ERROR|Parse Error` — et j'ai écrit « je l'ai vérifié » pour
+l'affirmation ENTIÈRE.** La chaîne, je ne l'avais pas mesurée. Elle était fausse :
+
+    push_error("X")   → ERROR: X
+                          at: push_error (core/variant/variant_utility.cpp:1023)
+    printerr("X")     → X            ← aucun préfixe du tout
+
+Ni `USER ERROR` nulle part. Et le faux est parti de là vers Adrien, puis vers le
+suivi de projet, **avec le mot « vérifié » collé dessus.**
+
+**Le mécanisme, et il n'a rien d'une étourderie : la certification blanchit.**
+Une affirmation relayée avec « j'ai vérifié » acquiert le poids d'une mesure, et
+le lecteur suivant cesse légitimement de contrôler — c'est même à ça que sert le
+mot. Le porter sur un composé dont on n'a contrôlé qu'un membre transfère la
+confiance aux membres qu'on n'a pas touchés.
+
+C'est la même famille qu'un constat de la veille, formulé par la session
+« spatialisation du son » en se rétractant : **corriger le détail d'une
+affirmation lui donne du crédit** — elle avait rectifié un chiffre dans le
+rapport d'une autre session tout en gardant sa conclusion, qui était la partie
+fausse. Vérifier une moitié, corriger une moitié : les deux gestes déplacent la
+confiance vers ce qu'on n'a pas regardé.
+
+**La parade est une discipline de formulation, pas de vigilance : nommer ce
+qu'on a vérifié, jamais l'affirmation.** « J'ai vérifié que le lanceur ne grep
+que ces deux chaînes ; la sortie de `push_error`, je ne l'ai pas mesurée » aurait
+laissé le doute exactement là où il était. **Un « vérifié » sans objet nommé est
+un chèque en blanc tiré sur le lecteur suivant.**
+
+*Épilogue utile : la chaîne mesurée a rapporté un angle mort que personne ne
+cherchait — `printerr()` n'imprime aucun préfixe, donc un cri passé par lui reste
+invisible à toute garde qui filtre les erreurs. Une seule occurrence en
+production (`network_manager.gd`), mais la garde le dit désormais dans son
+commentaire.*
+
 ### Reconnaître un son à son DOSSIER, c'est le classer par où il vit (2026-08-25)
 
 `AudioManager.est_un_tir()` répond vrai pour la clé `"shoot"` **ou pour tout
