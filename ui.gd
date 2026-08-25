@@ -638,6 +638,8 @@ var _killcam_negatif: int = 0
 ## chaque frame.
 var _killcam_derniere_image: int = -1
 var killcam_container: Control
+## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
+var killcam_cadre: NinePatchRect
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -2066,6 +2068,15 @@ func _build_killcam() -> void:
 
 	var material := ShaderMaterial.new()
 	material.shader = SHADER_KILLCAM
+	# DA4.5 — le grain texturé remplace le bruit calculé. Règle du dépôt : un
+	# fichier absent ne casse rien. Sans la planche, l'uniforme reste vide et le
+	# shader échantillonne du noir — le grain disparaît, l'image reste juste.
+	var planche := "res://assets/ui/grain_video.png"
+	if ResourceLoader.exists(planche):
+		# La répétition est portée par le `repeat_enable` de l'uniforme, côté
+		# shader : en Godot 4 c'est l'échantillonneur qui décide, et l'import de la
+		# texture n'a pas de réglage de répétition à donner. Rien à vérifier ici.
+		material.set_shader_parameter("grain", load(planche))
 	killcam_overlay.material = material
 	# killcam_overlay n'est PAS ajouté ici : GameState le reparente dans l'arène.
 
@@ -2095,6 +2106,38 @@ func _build_killcam() -> void:
 	killcam_timecode.offset_top = 40
 	killcam_timecode.hide()
 	add_child(killcam_timecode)
+
+	# DA4.5 — **le cadre du moniteur, et il vit DANS l'interface.**
+	#
+	# Le voile de killcam est reparenté par `GameState` dans l'arène, pour être
+	# sous les lumières. Le cadre, lui, n'a rien à faire là : c'est un objet
+	# d'affichage, pas un objet du monde. Le poser dans l'arène le ferait
+	# s'assombrir hors des torches — un cadre de moniteur qui s'éteint quand on
+	# ne l'éclaire pas.
+	#
+	# `NinePatchRect` et non `TextureRect` : la texture fait 512² et l'écran
+	# n'est ni carré ni de cette taille. Sans 9-slice, les coins arrondis
+	# s'étireraient en ovales, ce qui est le défaut le plus reconnaissable qu'on
+	# puisse poser sur un cadre.
+	var chemin_cadre := "res://assets/ui/cadre_vhs.png"
+	if ResourceLoader.exists(chemin_cadre):
+		killcam_cadre = NinePatchRect.new()
+		killcam_cadre.name = "CadreKillcam"
+		killcam_cadre.texture = load(chemin_cadre)
+		killcam_cadre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		# 64 px de marge : c'est le gabarit du brief, et le centre de la texture
+		# est vérifié à alpha zéro exact — donc l'étirement n'a rien à déformer.
+		killcam_cadre.patch_margin_left = 64
+		killcam_cadre.patch_margin_right = 64
+		killcam_cadre.patch_margin_top = 64
+		killcam_cadre.patch_margin_bottom = 64
+		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
+		# `HALOGENE` très atténué : un liseré de moniteur se devine, il ne se lit
+		# pas — et la killcam doit rester la chose qu'on regarde.
+		killcam_cadre.modulate = Color(Charte.HALOGENE, 0.30)
+		killcam_cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		killcam_cadre.hide()
+		add_child(killcam_cadre)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()
@@ -5473,6 +5516,8 @@ func show_killcam() -> void:
 	killcam_overlay.show()
 	killcam_container.show()
 	killcam_timecode.show()
+	if killcam_cadre != null:
+		killcam_cadre.show()
 	var bb := get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB")
 	if bb:
 		bb.show()
@@ -5481,6 +5526,8 @@ func hide_killcam() -> void:
 	killcam_overlay.hide()
 	killcam_container.hide()
 	killcam_timecode.hide()
+	if killcam_cadre != null:
+		killcam_cadre.hide()
 	var bb := get_node_or_null("../SplitScreen/ViewportContainer1/SubViewport1/Arena/KillcamBB")
 	if bb:
 		bb.hide()

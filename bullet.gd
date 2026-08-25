@@ -398,11 +398,32 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 		settings.font_color = Charte.ROUGE
 	else:
 		settings.font_color = Charte.HALOGENE
-	settings.outline_size = 8
+	# DA4.3 — **le contour cesse d'être un nombre et devient un rapport.**
+	#
+	# Il valait 8 px, fixe, pour une taille de police qui va de `T_APPUI` (19) à
+	# `T_VERDICT` (42). Un effleurement recevait donc un halo de **42 % de sa
+	# propre taille** et un carreau d'arbalète de 19 % : **les petits chiffres
+	# étaient noyés dans leur propre contour, les gros non.** Or c'est précisément
+	# l'inverse de ce que V4.5 cherche à faire — le poids du chiffre EST
+	# l'information, et un halo qui l'épaissit d'autant plus qu'il est petit
+	# écrase la différence qu'on venait d'établir.
+	#
+	# C'est la même famille que le coefficient de case du code de salon et que la
+	# portée de lumière en dur : **une valeur absolue là où il fallait un
+	# rapport**, juste pour un seul cas et fausse pour tous les autres.
+	#
+	# 11 % maintient le trait entre 2 et 5 px sur toute l'échelle — assez pour
+	# détacher le chiffre d'un mur éclairé, jamais assez pour boucher les contre-
+	# formes de la fonte d'affichage, qui est ultra-condensée et les a étroites.
+	settings.outline_size = maxi(2, int(round(settings.font_size * 0.11)))
 	settings.outline_color = Charte.NOIR
-	settings.shadow_size = 4
+	# L'ombre porte, elle, ce que le contour ne peut pas : une DIRECTION. Un
+	# contour uniforme colle le chiffre à l'écran ; une ombre décalée le pose
+	# au-dessus de la scène. Elle suit la même échelle, pour la même raison.
+	settings.shadow_size = maxi(2, int(round(settings.font_size * 0.06)))
 	settings.shadow_color = Color(Charte.NOIR, 0.6)
-	settings.shadow_offset = Vector2(2, 2)
+	var d := maxf(2.0, settings.font_size * 0.06)
+	settings.shadow_offset = Vector2(d, d)
 	
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
