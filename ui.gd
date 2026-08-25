@@ -198,6 +198,10 @@ class CircularCooldown extends Control:
 ## Il suit sa cible en douceur : le déplacement du curseur devient lisible même
 ## quand deux joueurs bougent en même temps.
 class NeonFocusRing extends Panel:
+	## Côté de la torche, en pixels. Sous 24 px sa silhouette devient une tache ;
+	## au-dessus de 32 elle concurrence le libellé qu'elle désigne.
+	const TAILLE_TORCHE := 28.0
+
 	var neon: Color = Charte.ACIER
 	var target_rect: Rect2 = Rect2()
 
@@ -205,9 +209,37 @@ class NeonFocusRing extends Panel:
 	var _time: float = 0.0
 	var _snap: bool = true
 
+	## DA4.14 — **la torche, posée à gauche du cadre.**
+	##
+	## Le liseré reste : il dit *quelle zone* est sélectionnée, ce qu'une icône ne
+	## peut pas dire. La torche dit *qui* sélectionne — et c'est elle qui remplace
+	## le rectangle coloré comme signe de propriété. Les deux ne font pas le même
+	## travail, et l'item ne demandait de supprimer ni l'un ni l'autre.
+	##
+	## La texture est un **masque en niveaux de gris** : `modulate` y applique la
+	## couleur du joueur. C'est la discipline DA1.5 — l'image ne fournit que la
+	## matière, le code garde la couleur — et c'est ce qui permet à un seul fichier
+	## de servir les deux joueurs.
+	var torche: TextureRect
+
 	func _init(tint: Color = Charte.ACIER) -> void:
 		neon = tint
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var chemin := "res://assets/ui/curseur_torche.png"
+		if ResourceLoader.exists(chemin):
+			torche = TextureRect.new()
+			torche.name = "Torche"
+			torche.texture = load(chemin)
+			torche.modulate = tint
+			# ⚠️ `EXPAND_KEEP_SIZE` est le défaut et impose la taille de la texture
+			# comme taille minimale : 128 px au lieu des 28 voulus. Piège payé par
+			# DA1 le 2026-08-24, qui a posé 265 px et vu l'écran en afficher 1600.
+			torche.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			torche.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			torche.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			torche.size = Vector2(TAILLE_TORCHE, TAILLE_TORCHE)
+			add_child(torche)
 
 		_style = StyleBoxFlat.new()
 		_style.draw_center = false
@@ -233,6 +265,15 @@ class NeonFocusRing extends Panel:
 		_style.border_color = neon.lerp(Charte.HALOGENE, 0.45 * wave)
 		_style.shadow_size = int(roundf(lerpf(6.0, 16.0, wave)))
 		_style.shadow_color = Color(neon.r, neon.g, neon.b, 0.22 + 0.33 * wave)
+
+		# La torche respire avec le liseré, mais **plus discrètement** : c'est une
+		# flamme, pas un clignotant. Elle est calée sur le bord gauche du cadre,
+		# hors de lui — un signe de propriété se pose à côté de ce qu'il désigne,
+		# il ne s'y superpose pas.
+		if torche != null:
+			torche.modulate = Color(neon, 0.72 + 0.28 * wave)
+			torche.position = Vector2(-TAILLE_TORCHE - Charte.GAP_XS,
+				(size.y - TAILLE_TORCHE) * 0.5)
 
 		if _snap:
 			_snap = false
