@@ -159,22 +159,42 @@ const PANEL_AUDIO := "panneau_audio"
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
 
-## **Un aperçu par mode, demandé par Adrien le 2026-08-25.**
+## **Une illustration par ENTRÉE, pas par écran** — demandé par Adrien le
+## 2026-08-26, après avoir vu la console de réglages posée dans le cadre :
+## *« chaque fois que je pointe mon curseur sur un menu, il y ait une image
+## d'illustration à droite qui donne envie et plonge dans l'univers. »*
 ##
-## Le cadre de droite montre le mode **tel qu'il est une fois lancé**, et non
-## l'arène vide où l'on jouera. Cette table est le seul endroit qui rattache un
-## écran à son image — `menu_apercu.gd` ne connaît aucun mode.
+## ⚠️ **La maille compte plus qu'il n'y paraît.** Le premier jet attachait
+## l'aperçu à l'ÉCRAN : on entrait dans « 1v1 écrans scindés » et l'image
+## arrivait. Mais le menu principal est justement l'endroit où l'on n'est encore
+## entré nulle part — son cadre restait noir, et c'est là que le joueur choisit.
+## **Une image qui donne envie doit arriver AVANT le clic, pas après.**
 ##
-## ⚠️ **Le compétitif n'y est pas, et c'est délibéré** : Adrien y veut « le
-## classement en cours du joueur », c'est-à-dire de la **donnée**, pas une image.
-## Il passe donc par le panneau de texte, avec `_my_rank_text()`. Mettre une
-## capture là où le joueur veut son rang serait de la décoration posée à la
-## place d'une information.
-const APERCUS := {
+## Le hub sait déjà faire ça : `make_entry()` prend une clé de panneau, et
+## `_show_entry()` l'applique au survol comme à la sélection. Il n'y avait rien à
+## inventer — seulement à s'en servir au bon endroit.
+##
+## Deux natures d'image cohabitent, et la distinction est délibérée :
+##
+## - **le menu principal montre des ILLUSTRATIONS** — on n'y choisit pas encore
+##   une partie, on choisit une envie ;
+## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
+##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
+const ILLUSTRATIONS := {
+	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
+	"ill_amical": "res://assets/ui/ill_amical.png",
+	"ill_competitif": "res://assets/ui/ill_competitif.png",
+	"ill_entrainement": "res://assets/ui/ill_entrainement.png",
+	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
+	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
+	"ill_quitter": "res://assets/ui/ill_quitter.png",
+}
+
+## Les captures de jeu, attachées aux écrans de préparation.
+const APERCUS = {
 	SCREEN_LOCAL: "res://assets/ui/apercu_ecran_scinde.png",
 	SCREEN_FRIENDLY: "res://assets/ui/apercu_duel_en_ligne.png",
 	SCREEN_TRAINING: "res://assets/ui/apercu_entrainement.png",
-	SCREEN_CUSTOM: "res://assets/ui/apercu_personnalisation.png",
 }
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
@@ -2456,21 +2476,26 @@ func _build_hub_screens() -> void:
 	# --- Accueil --------------------------------------------------------------
 	accueil.add_child(hub.make_entry("1V1 ÉCRANS SCINDÉS",
 		"Deux joueurs sur ce poste, écran partagé. Rien n'est en jeu : toutes les "
-		+ "armes sont accessibles.", SCREEN_LOCAL))
+		+ "armes sont accessibles.", SCREEN_LOCAL, COLOR_ACCENT, "", "", false,
+		"ill_scinde"))
 	accueil.add_child(hub.make_entry("1V1 AMICAL",
 		"Contre quelqu'un d'autre, en ligne ou en local. Le résultat ne compte pas "
-		+ "au classement.", SCREEN_FRIENDLY))
+		+ "au classement.", SCREEN_FRIENDLY, COLOR_ACCENT, "", "", false,
+		"ill_amical"))
 	accueil.add_child(hub.make_entry("1V1 COMPÉTITIF",
 		"Match classé : le résultat compte, et l'arsenal s'aligne sur le moins bien "
-		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD))
+		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD, "", "", false,
+		"ill_competitif"))
 	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
 		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
-		SCREEN_TRAINING))
+		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
-		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
+		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM,
+		COLOR_DIM, "", "", false, "ill_personnalisation"))
 	accueil.add_child(hub.make_entry("MISE À JOUR",
 		"Vérifie si une nouvelle version est publiée, et l'installe. Rien ne se "
-		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM))
+		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM,
+		"", "", false, "ill_maj"))
 	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
 	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
 	# à l'arrivée dans le hub et rétablie ici.
@@ -2665,6 +2690,10 @@ func _build_hub_screens() -> void:
 	# qu'on voit tant qu'aucune entrée ne réclame autre chose. Chaque écran a le
 	# sien — un seul nœud partagé montrerait la mauvaise image le temps d'une
 	# frame en changeant d'écran, et ce scintillement se voit.
+	# Les illustrations du menu principal : une par entrée, montrée au survol.
+	for cle: String in ILLUSTRATIONS.keys():
+		hub.register_panel(cle, MenuApercu.new(String(ILLUSTRATIONS[cle])))
+
 	for ecran: String in APERCUS.keys():
 		if not hub.has_screen(ecran):
 			continue
