@@ -53,6 +53,14 @@ var _menus := false
 ## confirmer ni l'écarter. Un relevé pris derrière une autre fenêtre est un
 ## PLANCHER, pas une mesure, et il doit le dire lui-même.
 var _images_hors_focus := 0
+## Chantier R — mesurer la VUE UNIQUE (en ligne, entraînement) et non l'écran
+## scindé. La charge simulée reste celle du duel complet : seul le chemin de
+## RENDU change, ce qui est exactement ce que le chantier déplace.
+var _vue_unique := false
+## Force la vue unique à repasser par son `SubViewport`, c'est-à-dire l'état
+## d'AVANT le chantier R. Sert à mesurer les deux chemins dans la même session,
+## sur la même machine, sous le même focus.
+var _sans_racine := false
 
 
 func _ready() -> void:
@@ -89,6 +97,8 @@ func _ready() -> void:
 	_sans_vue = args.has("--une-vue")
 	_sans_torches = args.has("--sans-torches")
 	_sans_shaders = args.has("--sans-shaders")
+	_vue_unique = args.has("--vue-unique")
+	_sans_racine = args.has("--sans-racine")
 	if args.has("--menus"):
 		_variante = "--menus"
 
@@ -325,6 +335,8 @@ func _libelle_charge() -> String:
 	if _sans_vue: retires.append("sans 2e vue")
 	if _sans_torches: retires.append("sans torches")
 	if _sans_shaders: retires.append("sans shaders")
+	if _vue_unique:
+		retires.append("vue unique" + (" AVANT chantier R" if _sans_racine else " rendue par la racine"))
 	if retires.is_empty():
 		return "duel complet"
 	if retires.size() == 3:
@@ -332,6 +344,18 @@ func _libelle_charge() -> String:
 	return "duel " + ", ".join(retires)
 
 func _appliquer_variante() -> void:
+	# **La vue unique se pose en cachant le conteneur, pas en arretant le rendu.**
+	# C'est le geste exact de `_restore_viewports()` en ligne et a l'entrainement,
+	# et c'est lui que `_accorder_rendu_aux_vues()` lit pour decider s'il rend
+	# dans la racine. Arreter le SubViewport a la main (ce que fait `--une-vue`)
+	# mesurerait un ecran scinde ampute, pas une vue unique.
+	if _vue_unique:
+		_main.rendu_racine_autorise = not _sans_racine
+		_main.vp2.get_parent().hide()
+		_main.ui.center_line.hide()
+		_main._accorder_rendu_aux_vues()
+		print("VUE UNIQUE: seconde vue fermee, rendu %s"
+			% ("par les SubViewport (avant chantier R)" if _sans_racine else "par la RACINE"))
 	if _sans_vue:
 		# `UPDATE_DISABLED` et non `hide()` : un conteneur caché laisse le
 		# SubViewport rendre dans son coin, et on mesurerait le même coût en
@@ -398,6 +422,15 @@ func _conditions() -> void:
 			% [vue.name, vue.size.x, vue.size.y, "" if actif else "  (ARRÊTÉ)"])
 		if actif:
 			pixels_jeu += vue.size.x * vue.size.y
+	# **Le chantier R déplace le rendu du duel, pas seulement sa taille.** Quand
+	# la racine rend le jeu, les `SubViewport` sont arrêtés et ne comptent plus :
+	# le duel occupe l'aire 2D rastérisée à la résolution de la fenêtre.
+	if _main._rendu_racine:
+		var largeur := int(round(aire.x * etirement))
+		var hauteur := int(round(aire.y * etirement))
+		pixels_jeu = largeur * hauteur
+		print("  %-12s: rendu %d×%d  ← chantier R, le duel passe par la RACINE"
+			% ["Racine", largeur, hauteur])
 	print("Pixels de jeu : %.2f Mpx par image" % (pixels_jeu / 1e6))
 
 
@@ -454,9 +487,16 @@ func _report() -> void:
 	elif _images_hors_focus == sorted.size():
 		print("  Focus            : stable au SECOND PLAN — comparable, mais c'est un plancher")
 	else:
-		print("  ⚠ FOCUS MIXTE sur %.0f %% des images (%d/%d) : la fenêtre a changé"
-			% [part, _images_hors_focus, sorted.size()])
-		print("    d'état pendant la mesure. Le 1 %% bas ci-dessus ne mesure QUE ça.")
+		# **Afficher la MINORITÉ, pas le pourcentage.** Un relevé à 2166 images sur
+		# 2173 hors focus s'annonçait « 100 % mixte », ce qui se lit comme une
+		# erreur d'affichage et donne envie de passer outre. Les sept images de
+		# l'autre état sont pourtant le sujet : le 1 %% bas ne porte que sur une
+		# vingtaine d'images, donc une poignée de transitions le décide.
+		var minorite := mini(_images_hors_focus, sorted.size() - _images_hors_focus)
+		print("  ⚠ FOCUS MIXTE : %d image(s) sur %d dans l'autre état (%.1f %% hors focus)"
+			% [minorite, sorted.size(), part])
+		print("    La fenêtre a changé d'état pendant la mesure, et le 1 %% bas ne")
+		print("    porte que sur %d images : ces transitions le décident." % lents)
 		print("    **RELEVÉ À JETER** — refaire sans toucher à la fenêtre.")
 
 

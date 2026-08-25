@@ -246,6 +246,77 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « affichage » (3) : R3 (b) implémenté, et `game_state.gd` pris
+
+**Je prends `game_state.gd`** — le fichier que ce journal désigne comme le seul
+disputé, attribué au domaine « game feel » jusqu'à nouvel ordre. Demandé à la
+session « spatialisation du son » avant d'écrire, annoncé ici comme le prévoit le
+protocole. **Périmètre : `_accorder_rendu_aux_vues()` et le montage des vues.**
+Rien d'autre — et surtout pas le bloc audio (`_accorder_oreille()`, l'accord de
+portée dans `rebuild_arena`), ni les caméras, ni le zoom.
+
+**Ce qui change.** En vue unique — en ligne, à l'entraînement — le duel est rendu
+par le **viewport racine**, à la résolution de la fenêtre, au lieu d'être dessiné
+à 957×1080 dans un `SubViewport` puis étiré. Aucun nœud ne bouge : la racine
+adopte le même `World2D`, le masque de cull de la vue regardée et sa caméra ; les
+deux `SubViewport` passent en `UPDATE_DISABLED`. **L'écran scindé local est
+inchangé.**
+
+**Pourquoi (b) et pas (a), dans les mots d'Adrien : « pour des raisons d'équité en
+compétitif ».** Agrandir le `SubViewport` aurait obligé à corriger le zoom des
+caméras du même facteur dans cinq endroits, dont la killcam — donc à rouvrir la
+question du champ de vision que le passage en `keep` venait de fermer le matin
+même. La racine est en `canvas_items` + `keep` : son aire 2D reste 1920×1080
+quelle que soit la fenêtre, donc une caméra à `zoom = 1.0` montre exactement le
+même monde. Le champ de vision ne peut pas dériver.
+
+**Mesure R4, et elle ne prouve pas ce qu'on espérait.** Avant : 1,03 Mpx,
+médiane 144, 1 % bas 142. Après : 3,69 Mpx, médiane 144, 1 % bas 143. **Mais le
+socle nu — torches éteintes, shaders retirés — donne AUSSI 144.** La fenêtre au
+second plan est bridée là ; le banc mesure le plafond, pas la charge. Ce qui est
+acquis : les deux chemins passent le seuil de R5 (60) avec plus du double de
+marge. Ce qui ne l'est pas : « c'est gratuit ». Jalon **H10** ajouté pour un
+relevé au premier plan, que seule une main humaine peut faire.
+
+**À la session « game feel », quand elle reprendra `game_state.gd` :**
+l'interrupteur `rendu_racine_autorise` ramène tout à l'ancien comportement en une
+ligne. Il est là pour le banc, et il sert de recours.
+
+**Ce lot a failli être la deuxième version du défaut que S1 venait de réparer, et
+c'est la session « spatialisation du son » qui l'a arrêté.** Elle a monté le repro
+en headless plutôt que de raisonner : en prêtant à la racine le `World2D` du duel,
+on en faisait une **seconde oreille**. Un `AudioStreamPlayer2D` sort une fois par
+viewport auditeur, donc chaque pas et chaque tir seraient sortis **deux fois** —
+une fois depuis l'oreille du joueur, une fois depuis le centre de l'écran virtuel
+de la racine, c'est-à-dire le point fixe hors de la carte de S1. Symptôme : pas un
+silence, **un son audible à +3 dB avec un panoramique juste mêlé au faux**. On
+aurait cherché dans le mixage.
+
+Vérifié dans mon montage réel avant de corriger — `["racine", "SubViewport1"]` —
+puis corrigé (`audio_listener_enable_2d` à `false` à la bascule, `true` au
+retour). **Le garde-fou est chez moi, pas chez eux** : c'est leur code qui
+subirait le défaut, c'est le mien qui le crée. `tools/test_rendu_racine.gd`
+compte les auditeurs du monde de jeu et en exige un seul, en nommant les fautifs.
+Demandé à la session son de ne PAS le doubler dans `test_dosage_audio` : un même
+invariant à deux endroits finit par diverger. Ils gardent le leur **marqué
+PROVISOIRE en clair**, le temps que cette branche atterrisse — c'est la bonne
+décision, retirer une protection avant que la remplaçante soit dans l'arbre
+ouvrirait une fenêtre sans filet sur un défaut payé deux fois dans la journée.
+**À faire quand cette branche est fusionnée : les prévenir**, ils retirent le
+leur le jour même.
+
+**Et j'ai retiré ma propre entrée de « Pièges connus » sur ce sujet** : la session
+son avait écrit la sienne en parallèle (`868edd1`), plus complète que la mienne et
+citant déjà `tools/test_rendu_racine.gd`. Deux entrées sur le même piège, en tête
+de la même section, se seraient télescopées à la fusion en plus de diverger. La
+règle que je leur ai opposée sur le garde-fou vaut pour la documentation.
+
+**Réserve sur la mesure R4 :** elle est antérieure à leur correctif d'occlusion à
+trois rayons (`a32cd0c`), qui ajoute deux requêtes physiques par son joué. Non
+refait — le relevé est de toute façon plafonné par le bridage de la fenêtre au
+second plan, donc il ne verrait pas ces rayons davantage que le reste. C'est
+H10 qui tranchera.
+
 ### 2026-08-25 — session « affichage » (2) : le chantier R inscrit, et un défaut de mon propre lot
 
 **Branche `worktree-subviewport-suivi`, basée sur `main` local (`aeade01`).**

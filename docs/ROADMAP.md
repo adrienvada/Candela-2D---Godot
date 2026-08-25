@@ -7095,9 +7095,22 @@ vision change, ce que `keep` vient précisément de figer. Touche `main.tscn` et
 killcam et l'encaissement. Coût de rendu : ×4 en plein écran (2,07 → 8,29 Mpx).
 
 **(b) Sortir le duel du `SubViewport` en vue unique — ✅ RETENU par Adrien le
-2026-08-25.** En ligne et à l'entraînement il n'y a qu'une vue ; le jeu vivrait
-dans le viewport racine, qui rend déjà à la résolution de la fenêtre. C'est le
-mode compétitif, donc celui où la netteté compte.
+2026-08-25 « pour des raisons d'équité en compétitif », et ✅ IMPLÉMENTÉ le même
+jour.** En ligne et à l'entraînement il n'y a qu'une vue ; le jeu est désormais
+rendu par le viewport racine, à la résolution de la fenêtre. C'est le mode
+compétitif, donc celui où la netteté compte.
+
+**Comment c'est fait, et ce que ça ne fait pas.** Aucun nœud ne bouge : joueurs,
+arène et balles restent enfants de `vp1`. La racine adopte le même `World2D`, le
+masque de cull de la vue regardée, et sa caméra (`custom_viewport`) ; les deux
+`SubViewport` passent en `UPDATE_DISABLED`. L'écran scindé local est inchangé —
+il a besoin de ses deux vues, deux masques, deux caméras. Tout tient dans
+`_accorder_rendu_aux_vues()`, qui savait déjà quelle vue est regardée.
+
+**L'interrupteur `rendu_racine_autorise`** ramène la vue unique à son
+`SubViewport`. Il existe pour que le banc mesure les deux chemins dans la même
+exécution (R4), et sert de recours si le rendu racine se révélait mauvais
+quelque part.
 
 > **Correction, et elle porte sur l'argument qui a emporté la décision.** Ce
 > paragraphe annonçait (b) comme **« gratuit en pixels »**, au motif que le blit
@@ -7148,9 +7161,40 @@ mode compétitif, donc celui où la netteté compte.
 **(c) Ne rien faire, et l'assumer par écrit.** La netteté actuelle est celle d'un
 1080p étiré. Personne ne s'en est plaint avant qu'on la mesure.
 
-### R4 — Mesurer l'après, même protocole
+### R4 — Mesurer l'après ✅ fait le 2026-08-25, **et le relevé ne prouve pas ce qu'on espérait**
 
-Même fenêtre, même charge, focus stable, trois exécutions, relevés mixtes jetés.
+Les deux chemins mesurés **dans la même session, sur la même machine, sous le
+même focus** — c'est à ça que sert l'interrupteur `rendu_racine_autorise` et le
+`--sans-racine` du banc. Comparer deux commits sur deux lancements aurait laissé
+la machine et le focus varier entre les deux moitiés de la mesure.
+
+| Vue unique | Pixels de jeu | Médiane | 1 % bas | Pire image |
+|---|---|---|---|---|
+| **avant** — `SubViewport` 957×1080 puis étiré | 1,03 Mpx | 144 | 142 | 7,3 ms |
+| **après** — racine 2560×1440 | **3,69 Mpx** | 144 | 143 | 7,3 ms |
+
+**3,6 fois plus de pixels, aucun écart mesurable. Et c'est précisément ce dont
+il faut se méfier.**
+
+**Le contrôle qui a sauvé la conclusion : le socle nu donne AUSSI 144.** Toutes
+torches éteintes, tous shaders retirés, seconde vue arrêtée — 1,03 Mpx et
+médiane 144, 1 % bas 142, pire image 7,3 ms. Aux erreurs de mesure près, c'est le
+même relevé que le duel complet à 3,69 Mpx.
+
+Conclusion honnête : **la fenêtre au second plan est bridée autour de 144 fps, et
+le banc ne voit rien en dessous de ce plafond.** Il ne mesure donc pas la charge,
+il mesure le plafond. Ce que le relevé établit vraiment :
+
+- ✅ **les deux chemins tiennent ≥ 142 de 1 % bas**, donc le seuil de R5 (60) est
+  franchi avec une marge de plus du double — la décision est acquise ;
+- ❌ **il n'établit PAS que le chantier est gratuit.** « 3,6× les pixels pour
+  zéro coût » est une conclusion que ce relevé ne porte pas, et l'écrire aurait
+  été le même défaut que les quinze mesures recopiées cent quarante fois du
+  compteur de fps.
+
+**Ce qui reste dû, et ce n'est pas automatisable :** une exécution avec la
+fenêtre au PREMIER PLAN, où le plafond disparaît. C'est un jalon humain — voir la
+section correspondante. Le banc dit lui-même dans quel état il était.
 
 ### R5 — Le seuil, fixé AVANT de mesurer ✅ tranché par Adrien le 2026-08-25
 
@@ -7184,15 +7228,34 @@ celle-ci pourrait l'être.
 transforme, et c'est le mode classé. L'écran scindé reste au comportement actuel
 et n'a donc pas de « après » à mesurer.
 
-### R6 — Ce qui suit, si le seuil passe
+### R6 — Recuire les assets ⏳ le seuil est passé, donc c'est DÛ
 
-Recuire tuiles, sprites et cookie de torche à la nouvelle densité. La session DA2
-l'a mesuré du même jour : les planches sources font 2048² pour des sorties de 35
-et 36 px, et `tools/fabrique_tuiles.gd` / `tools/fabrique_sprites.gd` savent
-recuire — **c'est un paramètre, pas une commande d'assets**. Attention en
-revanche au piège *la résolution d'une texture de lumière décide de sa PORTÉE* :
-recuire le cookie sans la ligne de correction change la portée de la torche, donc
-une valeur de jeu.
+**Le fait géométrique, et il ne dépend d'aucune mesure de cadence :** en vue
+unique, un asset dessiné pour couvrir N unités de monde couvre désormais N ×
+l'étirement de la fenêtre. **×1,33 dans la fenêtre de développement doublée, ×2
+en plein écran.** Une tuile de 35 px sur une case de 35 unités passe donc de 1
+texel par pixel à **0,5 en plein écran** : elle sera interpolée, pas nette.
+L'écran scindé local, lui, garde ses `SubViewport` à taille fixe et son 1:1.
+
+**Cela renverse la consigne donnée le matin même** aux sessions qui produisent
+des assets — « les `SubViewport` rendent à taille fixe, donc rien n'est à
+recuire ». C'était vrai avant (b), c'est faux après, et les deux sessions
+concernées ont été prévenues le jour même.
+
+Ce qu'il reste à faire, dans l'ordre :
+
+1. **Tuiles et sprites** — la session DA2 l'a mesuré : les planches sources font
+   2048² pour des sorties de 35 et 36 px, et `tools/fabrique_tuiles.gd` /
+   `tools/fabrique_sprites.gd` savent recuire. **C'est un paramètre, pas une
+   commande d'assets.**
+2. **Cookie de torche** — et ici, attention au piège *la résolution d'une texture
+   de lumière décide de sa PORTÉE* : recuire sans la ligne de correction
+   (`texture_scale = torch_scale * 512.0 / texture.get_width()`) change la portée
+   de la torche, **donc une valeur de jeu**, en silence.
+3. **Choisir la densité de référence.** Recuire « pour le plein écran » (×2)
+   sur-échantillonne la fenêtre de développement ; recuire pour ×1,33
+   sous-échantillonne le plein écran. Le choix se fait une fois, pour toutes les
+   familles, sinon on recrée l'incohérence que le chantier DA chasse.
 
 ---
 
@@ -7211,6 +7274,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
 | H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
+| H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | Quand Adrien passera devant la machine |
 
 ---
 
