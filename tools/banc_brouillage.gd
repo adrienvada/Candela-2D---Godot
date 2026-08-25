@@ -362,7 +362,21 @@ func _batir_monde() -> void:
 
 	_copie_ecran = BackBufferCopy.new()
 	_copie_ecran.name = "CopieEcran"
-	_copie_ecran.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	# ⚠️ **`RECT` et non `VIEWPORT` : on photocopie l'ellipse, pas l'écran.**
+	#
+	# `COPY_MODE_VIEWPORT` recopie tout le tampon — 2560 × 1440, soit 3,69 Mpx —
+	# pour brouiller une ellipse qui en couvre au maximum 0,375. **Dix fois trop**,
+	# et l'image rendue est identique au pixel près : la copie ne sert qu'à
+	# donner au shader de quoi lire, or il ne lit que sous lui.
+	#
+	# Ça compte parce que la marge est mince : relevé du 2026-08-26, fenêtre au
+	# premier plan, la pire image dure **20,3 ms** contre **16,7 ms** de budget à
+	# 60 fps — **3,4 ms de coussin**. Une copie plein cadre peut les manger à elle
+	# seule, et c'est ce qui a fait hésiter à brancher le mode `LAMPE`.
+	#
+	# Le `rect` se recalcule à chaque image dans `_maj_effets()` : l'ellipse
+	# bouge avec l'émetteur.
+	_copie_ecran.copy_mode = BackBufferCopy.COPY_MODE_RECT
 	couche_flou.add_child(_copie_ecran)
 
 	_flou = ColorRect.new()
@@ -762,6 +776,26 @@ func _rendre() -> void:
 		_flou.pivot_offset = taille * 0.5
 		_flou.rotation = _rot_vraie
 		_flou.position = centre_flou - taille * 0.5
+		# **Le rectangle à photocopier — et il couvre ce que le shader LIT, pas
+		# ce qu'il PEINT.** Les deux ne coïncident pas : chaque fragment
+		# prélève seize voisins jusqu'à `rayon_noyau` pixels de lui (les
+		# vecteurs d'`ANNEAU` sont unitaires, donc c'est bien la borne). Un
+		# rectangle ajusté au dessin laisserait le bord lire des texels
+		# **périmés** — hors du `rect`, la texture d'écran garde ce qu'une copie
+		# précédente y avait laissé. Le défaut serait un liseré fantôme sur le
+		# pourtour de l'ellipse, visible seulement en mouvement.
+		#
+		# ⚠️ **Et l'emprise est celle du rectangle TOURNÉ.** `_flou.rotation`
+		# suit l'axe du faisceau ; prendre `taille` telle quelle donnerait une
+		# boîte trop petite dès que l'angle n'est pas droit, et le coin de
+		# l'ellipse lirait du périmé. Pour un rectangle (l, h) tourné de θ,
+		# la demi-emprise vaut (l/2·|cos| + h/2·|sin|, l/2·|sin| + h/2·|cos|).
+		var demi_emprise := Brouillage.emprise_copie(
+			taille, _rot_vraie, _noyau_flou + 2.0)
+		# Le `rect` est en coordonnées LOCALES du `BackBufferCopy`, qui est posé
+		# à l'origine de sa `CanvasLayer` — donc en coordonnées d'écran, comme
+		# le flou lui-même.
+		_copie_ecran.rect = Rect2(centre_flou - demi_emprise, demi_emprise * 2.0)
 		_mat_flou.set_shader_parameter("rayon_noyau", _noyau_flou)
 		_mat_flou.set_shader_parameter("force", float(f["force"]))
 		# Le trou autour de soi, en UV d'écran. **En jeu, ce point est le centre
