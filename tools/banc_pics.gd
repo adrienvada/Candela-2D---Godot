@@ -190,6 +190,52 @@ func _rapport() -> void:
 	else:
 		print("    → ÉTALÉES : le coût est permanent, il se paiera en match.")
 
+	# ── À QUEL RYTHME ? La question qui sépare une tâche cadencée d'un aléa.
+	#
+	# ⚠️ **C'est le discriminant le plus fort et il ne coûte rien à calculer.**
+	# Des pics à intervalle RÉGULIER désignent quelque chose qui se déclenche par
+	# horloge — vidange d'un tampon, ramassage de mémoire, écriture d'archive,
+	# état réseau recalculé. Des pics à intervalle ALÉATOIRE désignent
+	# l'extérieur : compositeur, thermique, autre processus. Aucune optimisation
+	# du jeu ne touche le second cas, et c'est une économie de journée que de le
+	# savoir avant de chercher.
+	var dates := []
+	for img in lentes:
+		dates.append(float(img["t"]))
+	dates.sort()
+	var ecarts := []
+	for i in range(1, dates.size()):
+		ecarts.append(dates[i] - dates[i - 1])
+	print("\n--- À QUEL RYTHME les pics reviennent-ils ---")
+	var ligne := ""
+	for d in dates:
+		ligne += "%.1f " % d
+	print("  dates (s) : %s" % ligne)
+	if ecarts.size() >= 3:
+		var moy := 0.0
+		for e in ecarts:
+			moy += e
+		moy /= float(ecarts.size())
+		var variance := 0.0
+		for e in ecarts:
+			variance += pow(e - moy, 2.0)
+		var sigma := sqrt(variance / float(ecarts.size()))
+		var cv := sigma / moy if moy > 0.0 else 0.0
+		print("  intervalle moyen : %.2f s  (écart-type %.2f, dispersion %.0f %%)"
+			% [moy, sigma, cv * 100.0])
+		# Un processus de Poisson — donc sans horloge — a une dispersion de 100 %.
+		# Nettement en dessous, il y a une cadence ; autour ou au-dessus, il n'y
+		# en a pas.
+		if cv < 0.5:
+			print("  ⚠️ RÉGULIERS : dispersion sous 50 %%, il y a une horloge derrière.")
+			print("     Chercher ce qui se déclenche toutes les %.1f s." % moy)
+		elif cv > 0.9:
+			print("  → ALÉATOIRES : dispersion proche de 100 %%, c'est du hasard pur")
+			print("     (loi de Poisson). Signature de l'EXTÉRIEUR — compositeur,")
+			print("     thermique, autre processus — pas d'une tâche du jeu.")
+		else:
+			print("  → ni franchement réguliers ni franchement aléatoires.")
+
 	# ── QUOI ? Ce qui distingue une image lente d'une image ordinaire.
 	print("\n--- CE QUI DISTINGUE une image lente (médiane lente / médiane globale) ---")
 	print("  %-14s %14s %12s %10s" % ["grandeur", "images lentes", "toutes", "écart"])

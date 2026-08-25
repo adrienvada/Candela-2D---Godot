@@ -32,6 +32,42 @@ extends Node
 ## réellement été prises sous l'ancienne barre.
 const CIBLE_1_POURCENT_BAS := 60.0
 
+## Durée d'échauffement, non mesurée.
+##
+## ⚠️ **Elle valait 2 s, et l'échauffement réel en dure DOUZE.** Mesuré le
+## 2026-08-25 sur un relevé de 60 s : **100 % des images lentes tombent dans les
+## douze premières secondes**, puis plus une seule pendant quarante-huit. Un banc
+## qui échauffe 2 s et mesure 15 s passait donc les quatre cinquièmes de son
+## relevé DANS l'échauffement, et rendait « NON TENU » sur un jeu qui tient sa
+## cible : 1 % bas à **60,5** sur la minute, médiane à **144**.
+##
+## ⚠️ **Le piège est celui de la fenêtre d'observation, et il est général** : une
+## fenêtre plus courte que le transitoire qu'elle veut exclure fait passer ce
+## transitoire pour un régime permanent. Neuf relevés de 12 à 20 s ont conclu
+## « le jeu ne tient pas sa cible » ; un relevé de 60 s dit l'inverse, avec les
+## mêmes images. Ce n'est pas le jeu qui a changé, c'est la durée du regard.
+## ⚠️ **Elle valait 2 s ; portée à 12 s puis REMISE à 2 s, et le détour est le
+## résultat.** Un relevé de 60 s du 2026-08-25 montrait 100 % des images lentes
+## dans les douze premières secondes, puis plus une seule pendant quarante-huit :
+## un échauffement de 2 s laissait donc le transitoire dans la mesure. Mais
+## porter l'échauffement à 12 s **n'a rien amélioré** — 43, 45, 45 — ce qui
+## réfute l'explication.
+##
+## Ce que la série entière dit, elle : **les relevés de la session ont dérivé
+## vers le bas de bout en bout** — 60/51/57, puis 43/45/51, puis 43/45/45 — après
+## une vingtaine de bancs fenêtrés enchaînés en une heure. **La machine chauffait,
+## et c'est le banc qui la chauffait.**
+##
+## ⚠️ **Un banc de cadence lancé en boucle mesure sa propre chaleur.** Aucun
+## garde-fou du fichier ne l'attrape : il vérifie le focus, la charge, les
+## conditions de rendu — pas l'état thermique, qui est invisible depuis le
+## processus. Deux relevés séparés de dix minutes ne sont pas deux échantillons
+## de la même population.
+##
+## **Le protocole qui vaut** : machine refroidie, UN relevé long (60 s), pas dix
+## courts. Le 1 % bas est de toute façon la moyenne du centile le plus lent — il
+## trouve toujours une queue, quelle qu'elle soit, donc le multiplier ne le
+## stabilise pas, ça l'use.
 const WARMUP_SEC := 2.0
 const SHOTGUN_INDEX := 2
 ## Portée utile du pompe : assez près pour que chaque tir touche.
@@ -96,6 +132,7 @@ func _ready() -> void:
 	# dans les préférences et deux exécutions ne seraient plus comparables.
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	_couper_le_son("avant la scène")
 
 	# **Décomposer, parce qu'un total n'est pas une explication.**
 	#
@@ -130,6 +167,7 @@ func _ready() -> void:
 	_main = preload("res://main.tscn").instantiate()
 	add_child(_main)
 	await get_tree().process_frame
+	_couper_le_son("après la scène")
 	_ui = _main.get_node("UI")
 
 	# **Vérifier ses appuis AVANT de mesurer.** Le banc lisait `btn_mode_local`,
@@ -552,6 +590,33 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 				absents.append("UI.%s n'a plus d'arme à l'indice %d (pompe)"
 					% [groupe, SHOTGUN_INDEX])
 	return absents
+
+
+## Le son, coupé — et ce n'est pas une politesse, c'est une correction.
+##
+## ⚠️ **Ce banc jouait un duel au pompe à plein volume, pendant quinze secondes,
+## à chaque lancement.** Il est fait pour tourner en boucle — matrices de
+## variantes, relevés répétés pour dompter le bruit du 1 % bas — donc il tirait
+## des dizaines de fois d'affilée sur la machine de quelqu'un qui travaille à
+## côté. Adrien a dû le demander deux fois le 2026-08-25, la seconde en
+## majuscules ; c'est une fois de trop pour un défaut qui coûte quatre lignes.
+##
+## ⚠️ **Deux fois, et pas par superstition** : `AudioManager` pose ses volumes de
+## bus à son initialisation, donc une sourdine mise avant qu'il existe serait
+## effacée par lui. Le banc l'imprime, pour qu'un silence ne puisse pas être
+## confondu avec un banc qui n'a rien lancé.
+##
+## Le pilote `Dummy` (`godot --audio-driver Dummy`) reste plus radical : il
+## empêche le son au niveau du système. Mais il change ce qu'on mesure, et un
+## banc de cadence ne doit pas mesurer une configuration que personne ne joue.
+func _couper_le_son(quand: String) -> void:
+	var maitre := AudioServer.get_bus_index("Master")
+	if maitre < 0:
+		printerr("  ⚠ bus Master introuvable — le son n'a PAS pu être coupé")
+		return
+	AudioServer.set_bus_mute(maitre, true)
+	AudioServer.set_bus_volume_db(maitre, -80.0)
+	print("  son coupé (%s) : muet=%s" % [quand, AudioServer.is_bus_mute(maitre)])
 
 
 func _select_shotgun(group: ButtonGroup) -> void:
