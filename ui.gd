@@ -1589,8 +1589,38 @@ func _build_center_hud() -> Control:
 
 	return center_hud
 
+## DA4.1 — **le cadre du HUD est peint, plus tracé.**
+##
+## C'était un rectangle arrondi de 2 px avec une ombre portée : la signature
+## exacte du panneau qu'aucune main n'a dessiné. Il porte désormais une plaque de
+## matériel usée, en 9-slice de marge 32 px — coins renforcés, bord irrégulier.
+##
+## **La texture est un masque gris et `modulate_color` y met la couleur du
+## joueur** : un seul fichier sert les deux HUD, comme la torche des curseurs.
+## C'est la discipline DA1.5 — l'image ne fournit que la matière, le code garde
+## la couleur — et c'est ce qui permet à la charte de retoucher `BLEU` ou `ROUGE`
+## sans qu'aucune texture soit à refaire.
+##
+## **Le repli n'est pas décoratif** : sans le fichier, on retombe sur l'ancien
+## `StyleBoxFlat`. Un HUD sans cadre serait un HUD sans bord — c'est-à-dire deux
+## blocs de texte flottant sur l'arène — alors qu'un cadre tracé reste un cadre.
+## Règle du dépôt : câbler, taire, diagnostiquer.
 func _create_glow_panel(color: Color) -> PanelContainer:
 	var panel := PanelContainer.new()
+	var chemin := "res://assets/ui/cadre_hud.png"
+	if ResourceLoader.exists(chemin):
+		var peint := StyleBoxTexture.new()
+		peint.texture = load(chemin)
+		# 32 px de chaque côté : c'est le gabarit demandé au brief, et le centre de
+		# la texture est vérifié uniforme à 0,004 près — sans quoi l'étirement le
+		# déformerait visiblement sur un panneau de 352 × 152.
+		peint.set_texture_margin_all(32)
+		peint.modulate_color = color
+		# Le contenu ne colle pas au liseré : la marge intérieure suit la grille.
+		peint.set_content_margin_all(GAP_XS)
+		panel.add_theme_stylebox_override("panel", peint)
+		return panel
+
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Charte.SURFACE, 0.9)
 	style.set_border_width_all(2)

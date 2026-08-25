@@ -6910,8 +6910,17 @@ l'affichage**, et il n'a jamais été regardé. Le banc vérifie qu'on a *de quo
 remplir le cadre, pas qu'il *est* rempli — troisième occurrence du motif consigné
 le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 
-- **DA4.1 HUD en 9-slice dessinés** — jauges et cadres peints au lieu des
-  rectangles stylés par code. *(C)*
+- **DA4.1 HUD en 9-slice dessinés** ✅ **livrée le 2026-08-25** — le cadre du HUD
+  était un rectangle arrondi de 2 px avec une ombre portée, c'est-à-dire la
+  signature exacte du panneau qu'aucune main n'a dessiné. Il porte une plaque de
+  matériel usée, en 9-slice de marge 32 px.
+
+  **La texture est un masque gris et `modulate_color` y met la couleur du
+  joueur** : un seul fichier sert les deux HUD, comme la torche des curseurs.
+  C'est ce qui permet de retoucher `BLEU` ou `ROUGE` dans la charte sans qu'aucune
+  texture soit à refaire. Le repli sur l'ancien `StyleBoxFlat` est conservé : un
+  HUD sans cadre serait deux blocs de texte flottant sur l'arène, alors qu'un
+  cadre tracé reste un cadre. *(C — généré, procédé DA1.5)*
 - **DA4.2 Chrono, score, ping en chiffres tabulaires** ✅ **livrée le 2026-08-24**
   — et la formulation d'origine était trop faible. « Ils cessent de sauter »
   décrivait un confort ; ce qui est posé est une **interdiction mesurée**, celle
@@ -6922,8 +6931,19 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   garantie. *(S)*
 - **DA4.3 Les chiffres de dégâts en fonte display** — contour dessiné dans le
   style, plus d'outline automatique. *(S)*
-- **DA4.4 Le bandeau FATAL dessiné** — cartouche peint, pas un label sur le
-  noir. *(C)*
+- **DA4.4 Le bandeau FATAL dessiné** ✅ **livrée le 2026-08-25** — le mot le plus
+  fort du jeu était posé sur rien. Il a maintenant une plaque de tôle frappée,
+  bords rongés, l'encre a bavé.
+
+  **Le mot reste du TEXTE**, dans la fonte d'enseigne, et la texture ne porte que
+  le support : c'est ce qui laisse « FATAL — POMPE » s'allonger avec le nom de
+  l'arme sans qu'aucune image soit à refaire. Enfant du `Label` et dessiné
+  dessous, donc il suit le mot dans son envol sans qu'on anime deux nœuds.
+
+  Teinté en `CARMIN` et non `ROUGE` — le rouge vu à l'intensité d'une chose qui
+  ne s'éclaire plus elle-même — pour que le mot en `ROUGE` ressorte dessus. Et
+  non éclairé, comme le mot qu'il porte : un support de texte qui s'assombrirait
+  hors de la torche disparaîtrait au pire moment. *(C — généré, procédé DA1.5)*
 - **DA4.5 La killcam habillée** — cadre VHS authored, timecode en fonte mono,
   grain *texturé* plutôt que bruit calculé. *(C : 2-3 textures)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
