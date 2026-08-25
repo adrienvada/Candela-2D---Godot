@@ -56,6 +56,7 @@ func _run() -> void:
 	_audit_personnalisation()
 	_audit_carte_appartient_a_l_hote()
 	await _audit_le_cadre_montre_vraiment()
+	await _audit_on_peut_lancer_une_recherche()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -63,6 +64,78 @@ func _run() -> void:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	main.queue_free()
 	quit(1 if _failures > 0 else 0)
+
+## **Peut-on cliquer sur ce qui cherche un adversaire ?**
+##
+## ⚠️ Le bouton du cadre était grisé en 1v1 amical et en compétitif — relevé par
+## Adrien à l'écran le 2026-08-26. La règle « pas de second joueur, pas de
+## départ » s'y appliquait, alors qu'elle n'a de sens que pour un salon privé :
+## **chercher un adversaire, c'est très exactement ne pas en avoir.** Le bouton
+## se grisait donc pour la raison même qui justifiait de s'en servir, et
+## l'appariement devenait inatteignable à la souris comme à la manette.
+##
+## Aucun banc ne pouvait l'attraper : ils vérifiaient tous qu'une entrée EXISTE
+## et qu'elle porte un libellé. **Un bouton présent, nommé, et désactivé passe
+## tous ces contrôles** — c'est la troisième forme du même motif, après le cadre
+## de droite vide et la souris masquée.
+func _audit_on_peut_lancer_une_recherche() -> void:
+	print("\n[Le bouton qui cherche un adversaire est cliquable]")
+	var hub = _ui.hub
+	for ecran: String in [_ui.SCREEN_FRIENDLY, _ui.SCREEN_RANKED]:
+		if not hub.has_screen(ecran):
+			continue
+		hub.reset()
+		hub.push(ecran)
+		# ⚠️ **Il faut reproduire la CONDITION, pas seulement l'écran.**
+		#
+		# Premier jet de ce contrôle : il entrait dans l'écran et lisait le bouton.
+		# Il passait au vert **même en remettant la règle fautive** — parce qu'au
+		# repos le mode réseau vaut `LOCAL_SPLITSCREEN`, et que le grisage ne
+		# s'arme qu'en ligne. Le banc regardait le bon bouton dans le mauvais état,
+		# ce qui est la définition d'un contrôle décoratif.
+		#
+		# On pose donc le mode en ligne sans pair connecté : très exactement ce
+		# qu'est un joueur qui arrive sur l'écran pour chercher un adversaire.
+		# Par le CHEMIN d'autoload : `NetworkManager` n'est pas un identifiant à la
+		# compilation dans un banc lancé en `--script`, et le nommer empêche le
+		# fichier de compiler. Même idiome que `match_banner.gd`. **Par `root` et non
+		# par `self`** : ce banc étend `SceneTree`, qui n'est pas un `Node` et n'a
+		# donc pas `get_node_or_null()`.
+		var reseau: Node = root.get_node_or_null(^"NetworkManager")
+		if reseau == null:
+			_check("NetworkManager joignable", false)
+			continue
+		# 1 = `GameMode.ONLINE_HOST`. Le littéral est commenté parce qu'une
+		# énumération d'autoload n'est pas atteignable depuis un `--script` — et un
+		# nombre nu ici serait exactement la valeur absolue qu'on chasse ailleurs.
+		reseau.current_mode = 1
+		# ⚠️ **On reproduit le CHEMIN, pas seulement l'écran.** Le défaut ne se
+		# déclenche pas si l'on arrive directement : il faut d'abord passer par un
+		# écran de salon, qui grise le bouton faute de second joueur. C'est ce
+		# passage-là qui laissait l'état collé — et c'est pourquoi le premier jet
+		# de ce contrôle passait au vert même avec la règle fautive en place.
+		_ui._refresh_lobby_block()
+		if _ui.panel_launch != null:
+			_ui.panel_launch.disabled = true
+		await process_frame
+		_ui._refresh_lobby_block()
+		await process_frame
+		await process_frame
+		var b = _ui.panel_launch
+		if b == null:
+			_check("le bouton du cadre existe (%s)" % ecran, false)
+			continue
+		_check("« %s » est visible (%s)" % [b.text, ecran], b.visible)
+		# Le contrôle qui compte, et le seul que les autres ne faisaient pas.
+		_check("« %s » est CLIQUABLE (%s)" % [b.text, ecran], not b.disabled,
+			"grisé : l'appariement serait inatteignable")
+		_check("son libellé dit qu'on cherche (%s)" % ecran,
+			b.text.to_upper().contains("RECHERCHE"), b.text)
+	var reseau_fin: Node = root.get_node_or_null(^"NetworkManager")
+	if reseau_fin != null:
+		reseau_fin.current_mode = 0  # LOCAL_SPLITSCREEN : on rend l'état trouvé.
+	hub.reset()
+
 
 ## Le cadre MONTRE-t-il, ou a-t-il seulement de quoi montrer ?
 ##
