@@ -305,7 +305,7 @@ func _texte() -> String:
 		"BANC AUDIO — dosage S2 (portée) et S3 (occlusion)",
 		"",
 		"  CLIC GAUCHE : source · CLIC DROIT : oreille    ↑/↓ portée globale  %.2f" % AudioManager.facteur_portee,
-		"  1 pas · 2 tir · 3 impact mur                   ←/→ courbe          %.2f" % AudioManager.courbe_distance,
+		"  1 pas · 2 tir · 3 impact mur · 0 percuteur     ←/→ courbe          %.2f" % AudioManager.courbe_distance,
 		"  4/5 niveau du son · 6/7 portée du son          8/9 force du mur    %.2f" % AudioManager.force_occlusion,
 		"  ESPACE jouer · TAB auto (%s) · O occlusion (%s)" % [
 			"ON" if _auto else "OFF",
@@ -314,7 +314,7 @@ func _texte() -> String:
 		"  CLIC DROIT J1 · CLIC MILIEU J2 · E : écoute      %s" % _nom_mode(),
 		"      %s" % _detail_mode(),
 		"",
-		"  LES TROIS SONS, tels qu'ils sont dosés en ce moment :",
+		"  LES QUATRE SONS, tels qu'ils sont dosés en ce moment :",
 		"    %s pas          niveau %+6.1f dB   portée %5.0f px" % [
 			"▶" if _son_courant == "footstep" else " ",
 			AudioManager.niveau_dose("footstep"), AudioManager.portee_courante("footstep")],
@@ -324,6 +324,10 @@ func _texte() -> String:
 		"    %s impact mur   niveau %+6.1f dB   portée %5.0f px" % [
 			"▶" if _son_courant == "wall_impact" else " ",
 			AudioManager.niveau_dose("wall_impact"), AudioManager.portee_courante("wall_impact")],
+		"    %s percuteur    niveau %+6.1f dB   portée %5.0f px  %s" % [
+			"▶" if _son_courant == "weapon_dry" else " ",
+			AudioManager.niveau_dose("weapon_dry"), AudioManager.portee_courante("weapon_dry"),
+			_aveu_de_bareme("weapon_dry")],
 		"",
 		"  son                  %s" % _son_courant,
 		"  distance             %5.0f px" % dist,
@@ -351,6 +355,21 @@ func _db_estime(dist: float, portee: float) -> String:
 	if lineaire <= 0.0001:
 		return "silence"
 	return "%.1f dB" % (20.0 * (log(lineaire) / log(10.0)))
+
+## Dit en clair qu'un son n'est PAS au barème, donc qu'il affiche des valeurs
+## par défaut et non les siennes.
+##
+## **Sans cet aveu, on doserait une valeur qui n'est pas celle du jeu.** Le
+## percuteur est câblé dans un worktree voisin qui n'a pas encore atterri : tant
+## qu'il n'est pas là, ses lignes de `PORTEE_RELATIVE` et `NIVEAU_RELATIF`
+## n'existent pas ici, et le banc montre 1,0 × diagonale à 0 dB. C'est
+## exactement la confusion que ce banc a déjà payée — l'outil montrait une chose
+## et le jeu en jouait une autre — et elle ne se voit pas : un chiffre par défaut
+## ressemble à un chiffre choisi.
+func _aveu_de_bareme(cle: String) -> String:
+	if AudioManager.PORTEE_RELATIVE.has(cle):
+		return ""
+	return "⚠ pas encore au barème — valeurs par défaut"
 
 func _nom_mode() -> String:
 	match _mode:
@@ -426,6 +445,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_1: _son_courant = "footstep"
 		KEY_2: _son_courant = "shoot"
 		KEY_3: _son_courant = "wall_impact"
+		# Le percuteur a vide (V4.4). **Il ne se juge pas seul, il se juge contre
+		# les pas** — les deux disent « je suis la » a courte portee, et la seule
+		# question qui compte est laquelle des deux trahit le plus. L'ordre a
+		# tenir sous la molette, propose par la session DA3 qui l'a cable : plus
+		# discret qu'un tir de loin, plus net qu'un pas de pres. C'est un geste
+		# DELIBERE, pas une consequence du deplacement.
+		KEY_0: _son_courant = "weapon_dry"
 		# 4/5 et 6/7 dosent LE SON COURANT, pas l'ensemble. C'est ce qui manquait
 		# pour regler des RAPPORTS : « les tirs plus forts que le reste, les pas
 		# beaucoup plus attenues » ne se dose pas avec une molette globale.
