@@ -2,14 +2,35 @@
 ##
 ## La passe de performance de l'étape 9 avait été mesurée côté CPU seulement
 ## (`bench_particles.gd`, headless). Déplafonner la cadence d'image déplace la
-## question sur le GPU : le jeu tient-il réellement au-dessus de 120 fps quand
-## les deux vues rendent, torches allumées, pendant un échange au pompe ?
+## question sur le GPU : le jeu tient-il réellement sa cadence cible quand les
+## deux vues rendent, torches allumées, pendant un échange au pompe ?
+## (La cible est `CIBLE_1_POURCENT_BAS`, plus bas — elle a valu 120, elle vaut
+## 60 depuis le 2026-08-25, et l'écrire en toutes lettres ici l'a déjà périmée
+## une fois.)
 ##
 ## Headless ne répond pas — rien n'est rasterisé. Ce banc ouvre donc une vraie
 ## fenêtre. Il n'est jamais lancé par le jeu.
 ##
 ## Lancer : godot --path . res://tools/bench_framerate.tscn -- [--seconds 15] [--max-fps 0]
 extends Node
+
+## La cible, en un seul endroit — le verdict la lit, il ne la réécrit pas.
+##
+## ⚠️ **Le verdict était écrit en dur à 120, et il l'est resté après que la
+## barre soit passée à 60** (chantier R, étape R5, décision d'Adrien du
+## 2026-08-25, `CLAUDE.md` et `docs/ROADMAP.md`). Le banc annonçait donc
+## « NON TENU » sur un jeu qui **atteint** la cible en vigueur — un outil de
+## mesure qui rend le verdict d'une règle abrogée, ce qui est pire qu'un outil
+## muet : on l'a cru.
+##
+## Le nombre vit ici et nulle part ailleurs dans ce fichier, pour que la
+## prochaine décision d'Adrien n'ait qu'une ligne à changer.
+##
+## ⚠️ **Ne pas « corriger » les 120 qui restent plus bas dans ce fichier.** Ce
+## sont des relevés HISTORIQUES — « les relevés historiques (1 % bas ≥ 120,
+## médianes 145 à 160) » —, et les réécrire ferait mentir des mesures qui ont
+## réellement été prises sous l'ancienne barre.
+const CIBLE_1_POURCENT_BAS := 60.0
 
 const WARMUP_SEC := 2.0
 const SHOTGUN_INDEX := 2
@@ -467,7 +488,8 @@ func _report() -> void:
 		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
-	print("  Verdict 120 fps  : %s" % ("TENU" if low1 >= 120.0 else "NON TENU (1 %% bas à %.0f)" % low1))
+	print("  Verdict %.0f fps   : %s" % [CIBLE_1_POURCENT_BAS,
+		"TENU" if low1 >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas à %.0f)" % low1])
 	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
 	#
 	# Mesuré le 2026-08-25, cinq relevés à charge et fenêtre identiques : les
