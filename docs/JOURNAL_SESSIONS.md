@@ -740,6 +740,23 @@ pas.**
 > conflit) se tromperait. La version commitée fait foi ; celle du disque se
 > jette. — *session « spatialisation du son », après signalement croisé avec
 > DA3 Audio, qui n'a pas contesté et n'avait pas vérifié.*
+>
+> **Second relevé, une heure plus tard, et il nuance le premier sans le
+> renverser :** `tools/test_oreille.gd.uid` généré dans un worktree neuf est
+> ressorti **identique** à la version d'`origin` (`uid://cqbw28qgp0au3`). Donc
+> ce n'est pas non plus aléatoire à chaque import. Deux relevés, deux
+> résultats : un même chemin a rendu deux identifiants sur `test_musique.gd` et
+> un seul sur `test_oreille.gd`.
+>
+> **La formulation qui tient les deux, et c'est elle qu'il faut retenir : on ne
+> peut pas s'y FIER.** Un contre-exemple suffit à tuer « toujours » ; un cas
+> concordant ne restaure pas la garantie, il montre seulement que le mécanisme
+> n'est pas hasardeux. La différence pratique est nulle — dans les deux cas la
+> version commitée fait foi — mais elle est décisive pour qui raisonne : **une
+> règle vraie neuf fois sur dix ne se distingue d'une règle vraie que le jour
+> où elle échoue**, et ce jour-là on cherche ailleurs. C'est exactement pour ça
+> que la note d'origine était dangereuse : elle transformait une observation en
+> propriété.
 
 ### 2026-08-18 (soir) — le fait qui explique tout le reste
 
