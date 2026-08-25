@@ -6824,9 +6824,10 @@ un fait de jeu, pas à un rythme d'interface.
   `LightTextures.poser()`, tenus par `tools/test_lumieres.gd` (51 contrôles).
   L'échantillonnage y est **cartésien et non polaire** : un halo couvre 360°, et
   en polaire ses deux bords se rejoindraient le long d'un rayon en laissant une
-  couture visible. ⚠️ **La traînée de balle (`radial_tight`) reste un dégradé** —
-  aucune planche n'a été choisie pour elle, c'est la quatrième texture que la
-  ligne « 3-4 » prévoyait. *(C : 3-4 textures)*
+  couture visible. ✅ **La quatrième texture existe depuis le 2026-08-25** — la
+  traînée de balle était restée un dégradé procédural quand les trois autres
+  étaient devenues des masques peints. Fermée avec DA2.12 ; `radial_tight` a été
+  **retirée**, sans appelant. *(C : 3-4 textures)*
 - **DA2.3 Le muzzle flash en frames** ✅ **livrée le 2026-08-25** — trois images
   peintes (famille **FB** : amorce, épanouissement, dissipation), déroulées
   par-dessus la descente d'énergie qui reste seule maîtresse de la luminosité.
@@ -6923,8 +6924,15 @@ un fait de jeu, pas à un rythme d'interface.
   vues, défaut déjà payé sur le flash de mort le 2026-08-17.
   *(C — génération autorisée par Adrien le 2026-08-25, voir le revirement en
   « Décisions actées »)*
-- **DA2.12 Les traçantes texturées** — habiller la `Line2D` d'une texture de
-  trait (grain, pointes effilées) : la balle cesse d'être un segment. *(G ou C)*
+- **DA2.12 Les traçantes texturées** ✅ **livrée le 2026-08-25** — deux masques,
+  et l'item en fermait deux. Le **halo de traînée** remplace le dégradé de
+  `radial_tight` : c'est la quatrième texture que DA2.2 annonçait et n'avait
+  jamais livrée — une dette qui vivait dans une entrée **close**, donc que rien
+  ne rappelait. Et la **traçante** habille la `Line2D`, qui était un trait plein.
+  ⚠️ **Le sens de la texture n'est pas anodin** : les points vont de la balle
+  vers la queue, donc le bord gauche de la texture tombe sur le projectile. La
+  planche est cuite retournée (`--miroir`) pour que le dense soit sur la balle —
+  **une traînée s'éteint dans son sillage, elle ne s'y allume pas.**
 
 ### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
 

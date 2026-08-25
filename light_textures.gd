@@ -21,6 +21,19 @@ const RETRODIFFUSION := "res://assets/halo/retrodiffusion_corona.png"
 const AMBIANTE := "res://assets/halo/ambiante_braise.png"
 const ECLAT := "res://assets/halo/eclat_poudre.png"
 
+## ## Le halo de la traînée de balle (DA2.12, et la dette de DA2.2)
+##
+## ⚠️ **C'est la quatrième texture que DA2.2 annonçait et qui n'a jamais existé.**
+## L'entrée disait « 3-4 textures » et n'en a livré trois : `radial_tight` est
+## resté un dégradé procédural pendant que les autres devenaient des masques
+## peints. La dette vivait donc dans une entrée **close** — le pire endroit, car
+## rien ne la rappelle. Elle se referme ici.
+##
+## Plus concentré qu'un halo de corps : c'est la lumière qu'une balle emporte
+## avec elle, étirée en traînée par `bullet.gd` via `light.scale`.
+const TRAINEE := "res://assets/halo/trainee.png"
+const EMPREINTE_TRAINEE := 128.0
+
 ## Les trois images du flash de bouche, dans l'ordre du temps : amorce,
 ## épanouissement, dissipation. Voir `player.gd::trigger_shoot_visuals`.
 const FLASH := [
@@ -117,21 +130,3 @@ static func radial(size: int) -> GradientTexture2D:
 	_cache[size] = tex
 	return tex
 
-## Variante dont le dégradé s'éteint au bord du carré (fill_to vertical) : c'est
-## le profil utilisé par la traînée de balle, plus concentrée.
-static func radial_tight(size: int) -> GradientTexture2D:
-	var key := -size
-	if _cache.has(key):
-		return _cache[key]
-	var grad := Gradient.new()
-	grad.set_color(0, Color(1, 1, 1, 1))
-	grad.set_color(1, Color(0, 0, 0, 1))
-	var tex := GradientTexture2D.new()
-	tex.gradient = grad
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = Vector2(0.5, 0.5)
-	tex.fill_to = Vector2(0.5, 0.0)
-	tex.width = size
-	tex.height = size
-	_cache[key] = tex
-	return tex

@@ -38,6 +38,16 @@ func _init() -> void:
 		quit(1)
 		return
 	var taille := int(_arg(args, "--taille", "160"))
+	## Retourne la planche horizontalement.
+	##
+	## ⚠️ **Nécessaire pour la traçante, et le sens n'est pas evident.** La
+	## `Line2D` de la balle va de `Vector2.ZERO` — la balle elle-même — vers
+	## `Vector2(-longueur, 0)`, la queue. En mode étiré, la texture se pose donc
+	## de gauche à droite le long de ce trajet : son bord GAUCHE tombe sur la
+	## balle. Une planche dense à droite mettrait le plus lumineux sur la queue
+	## et l'extinction sur le projectile — une traînée qui s'allume derrière au
+	## lieu de s'éteindre.
+	var miroir := _arg(args, "--miroir", "non") == "oui"
 	## Découpe en grille. ⚠️ **Une planche de decals n'en contient pas forcément
 	## un seul.** La planche d'impacts muraux livrée le 2026-08-25 en portait
 	## SEIZE en grille 4×4 ; traitée d'un bloc, elle donnait un decal unique
@@ -58,6 +68,8 @@ func _init() -> void:
 	if nx * ny > 1:
 		print("Planche %s : %dx%d, %d panneaux de %dx%d"
 			% [planche, img.get_width(), img.get_height(), nx * ny, pw, ph])
+	if miroir:
+		img.flip_x()
 	var rang := 0
 	var code := 0
 	for j in ny:

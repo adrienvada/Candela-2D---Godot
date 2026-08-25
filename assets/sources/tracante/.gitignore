@@ -10,10 +10,5 @@
 !.gitignore
 !.gdignore
 
-# Retenues le 2026-08-25 : elles ont produit les trois masques de DA2.2.
-!H1C_03.jpg
-!H2A_01.jpg
-!H3C_01.jpg
-
-# Retenue le 2026-08-25 : le halo serre de la trainee (DA2.12).
-!H4_01.jpg
+# Retenue le 2026-08-25 : elle a produit assets/decals/tracante.png (DA2.12).
+!T_01.jpg

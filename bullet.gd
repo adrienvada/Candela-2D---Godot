@@ -40,10 +40,12 @@ func _ready():
 	light.name = "TrailLight"
 	light.color = Charte.AMBRE
 	light.energy = 50.0
-	# Texture partagée : chaque balle en allouait une identique de 128×128, soit
-	# cinq par volée de pompe.
-	var grad_tex := LightTextures.radial_tight(128)
-	light.texture = grad_tex
+	# DA2.12 — le halo peint de la traînée. Texture partagée et mise en cache :
+	# chaque balle en allouait une identique de 128×128, soit cinq par volée de
+	# pompe. `poser()` tient l'empreinte au sol quelle que soit la résolution du
+	# fichier — recuire en 256² ne devra rien déplacer.
+	LightTextures.poser(light, LightTextures.TRAINEE, LightTextures.EMPREINTE_TRAINEE)
+	var grad_tex := light.texture
 	light.shadow_enabled = true
 	light.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
 	light.range_item_cull_mask = 1 | 2 | 4 # Trail light illuminates players (2)
@@ -55,6 +57,18 @@ func _ready():
 	# Métal en fusion : la teinte du feu, poussée hors du cube [0, 1] par le
 	# matériau additif — voir `Charte.AMBRE_INCANDESCENT`.
 	core.default_color = Color(Charte.AMBRE_INCANDESCENT, 1.0)
+	# DA2.12 — la traçante cesse d'être un trait plein.
+	#
+	# ⚠️ **Le sens de la texture n'est pas anodin.** Les points vont de
+	# `Vector2.ZERO` — la balle — vers `Vector2(-longueur, 0)`, la queue. En mode
+	# étiré, le bord GAUCHE de la texture tombe donc sur la balle. La planche a
+	# été cuite retournée (`--miroir oui`) pour que le dense soit sur le
+	# projectile et l'extinction derrière : une traînée s'éteint dans son sillage,
+	# elle ne s'y allume pas.
+	var trace := LightTextures.masque("res://assets/decals/tracante.png")
+	if trace != null:
+		core.texture = trace
+		core.texture_mode = Line2D.LINE_TEXTURE_STRETCH
 	var mat := _additive_material()
 	core.material = mat
 	add_child(core)
