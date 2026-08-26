@@ -2338,9 +2338,15 @@ que de l'avoir vu marcher. C'est le jalon H9.
 
 ### Ce qui reste
 
-1. **H8 — la paire de clés.** Deux commandes `openssl`, la publique dans
-   `update_manager.gd`, la privée dans les secrets GitHub. Tant qu'elle manque,
-   l'écran affiche « mises à jour non configurées » et ne télécharge rien.
+1. **H8 — la paire de clés.** ✅ Moitié publique posée le 2026-08-26. Reste le
+   secret GitHub `CANDELA_MAJ_CLE_PRIVEE` — la clé privée ne passe par aucun
+   agent, par aucun message, par aucun commit.
+   **Piège vécu le même jour, et il vaut d'être écrit :** un tag `v0.1.0` a été
+   posé avant que la clé publique ne soit dans le fichier et avant que le secret
+   n'existe. Le tag est parti seul (une poussée de tag emporte ses objets même
+   quand la poussée de `main` est refusée) et a désigné un commit que `main` ne
+   connaissait pas. La publication a échoué là où elle devait : à la signature.
+   **Poser le tag après que le commit visé est sur GitHub**, jamais avant.
 2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
    installer et mettre à jour sur une vraie machine.
 3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
@@ -7808,7 +7814,20 @@ un fait de jeu, pas à un rythme d'interface.
   planche est cuite retournée (`--miroir`) pour que le dense soit sur la balle —
   **une traînée s'éteint dans son sillage, elle ne s'y allume pas.**
 
-### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
+### DA3 — L'audio
+
+> **Le sous-titre disait « le câblage existe, il joue du silence ». Il ne joue
+> plus de silence.** Au 2026-08-26, le dépôt porte **45 fichiers audio** — 12 en
+> musique, 20 pour les armes, 8 de voix, 5 d'effets d'origine — et le dosage a
+> été jugé à l'oreille par Adrien en deux séances au banc.
+>
+> **Ce qui reste de DA3 n'est plus du câblage, c'est de la PRODUCTION** : les
+> sons qui manquent manquent parce qu'ils n'ont pas été faits, pas parce que le
+> code les ignore. Seul DA3.9 (mastering) est un travail de session.
+>
+> **Titulaire depuis le 2026-08-26 : la session « DA3 »**, à la demande d'Adrien
+> — le son entier, après la disparition de la session « spatialisation ».
+
 
 - ~~**DA3.1 Les 4 sons de tir**~~ (= V4.1) — **✅ livrée le 2026-08-25**, en
   seize prises (quatre par arme) plutôt qu'en huit corps/queues. Le premier son
@@ -7818,13 +7837,35 @@ un fait de jeu, pas à un rythme d'interface.
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
   `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
   dépôt des fichiers. *(C : 3 samples)*
-- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10) — **les quatre
-  fichiers sont dans le dépôt depuis le 2026-08-24** (`sting_kill`,
-  `sting_kill_match`, `sting_defeat`, `sting_draw`, accordés et sur la grille).
-  **Rien ne les joue** : aucune clé dans `AudioManager.SOUNDS`, aucun appel. Il
-  ne reste que le câblage, et il est au domaine « game feel ».
-- **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
-  « fini » comme une voix. *(C)*
+
+  ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION à trancher AVANT le
+  câblage, pas après.** C'est une boucle dont le volume suit l'éblouissement, et
+  la règle posée le 2026-08-25 s'y applique : *un curseur de confort ne doit pas
+  moduler une pénalité d'information.* S'il informe — « tu es ébloui, voilà ce
+  qu'il te reste » — il relève de la même règle que le voile blanc et ne doit pas
+  être réglable ; s'il habille, il suit le curseur d'effets. La question est
+  indécidable tant que le fichier n'existe pas, ce qui est une raison de plus de
+  la poser au moment du dépôt.
+- ~~**DA3.4 Les stingers accordés**~~ (= V2.3, V3.7, V3.8, V3.10) — **✅ livrée
+  le 2026-08-25.** Les quatre fichiers étaient au dépôt depuis la veille sans que
+  rien ne les joue ; ils sont câblés par `AudioManager.stinger_de_fin`, une règle
+  pure qui décide ce que CETTE machine entend. Un kill non décisif s'entend **des
+  deux côtés** (décision d'Adrien) ; un kill décisif donne le kill de match au
+  vainqueur et la défaite au vaincu ; en écran scindé, jamais de défaite —
+  personne n'y est « le » vaincu à la sortie audio.
+
+  ⚠️ **Au format BO1, `sting_kill` ne sortira jamais** : tout kill y est décisif.
+  Ce n'est pas un défaut, mais c'est un silence qu'on prendra pour une panne.
+- ~~**DA3.5 La voix d'annonceur**~~ (= V1.3) — **✅ livrée le 2026-08-25.** Huit
+  fichiers dans `assets/audio/voice/`. La règle est `AudioManager.voix_de_fin`,
+  **dérivée d'`ecoute_somme`** : en écran scindé l'annonceur NOMME le vainqueur —
+  deux joueurs, mêmes haut-parleurs, il faut lever l'ambiguïté — partout ailleurs
+  il s'adresse à celui qui écoute (`win`, `defeat`, `spk_perfect` sorti intact,
+  `spk_close_call` sous 10 PV).
+
+  ⚠️ Les chemins pointaient vers `assets/audio/speaker/`, **un dossier qui n'a
+  jamais existé** : les voix étaient muettes en silence depuis des mois. Le mot
+  `speaker` ne désigne plus qu'un **bus** — une sortie, pas un rangement.
 - **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
 - **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
   même matière sonore pour tous les menus. *(C : 5-6 samples)*
@@ -9780,7 +9821,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
-| H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
+| H8 | **Paire de clés de mise à jour** | ✅ **Clé publique en place le 2026-08-26** — paire RSA-4096 fabriquée par Adrien, publique dans `update_manager.gd` (relue par `openssl`, chargée par `Crypto` de Godot). **Reste la moitié qu'aucun agent ne doit toucher** : le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`, à créer depuis `~/candela_maj_privee.pem`. Sans lui, la CI refuse de publier plutôt que d'annoncer une version non signée. | Avant toute publication |
 | H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
