@@ -159,7 +159,18 @@ echo "── $TITRE ──"
 # gonflé par de la contention envoie chercher une panne réseau qui n'existe pas.
 verifier_port_libre || exit 3
 
-"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet >"$HOTE_LOG" 2>&1 &
+# ⚠️ **`--no-eos` : ces scenarios tournent en ENet, EOS n'y sert a rien.**
+#
+# Sans lui, chaque instance ouvre une session Epic — un aller-retour reseau
+# reel, douze fois par lot complet. Mesure le 2026-08-26 : 17 s le scenario
+# avec, 15 s sans, soit ~12 s sur le lot.
+#
+# Le gain de temps n'est pas le meilleur argument. Le vrai est qu'un lot LOCAL
+# ne doit pas dependre d'internet ni de la disponibilite d'Epic : un banc qui
+# rougit parce qu'Epic est lent est un FAUX ROUGE, et un faux rouge se fait
+# debrancher. Le drapeau existait deja dans network_manager.gd, personne ne
+# s'en servait.
+"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet --no-eos >"$HOTE_LOG" 2>&1 &
 hote_pid=$!
 
 # Attendre une CONDITION, pas une durée : l'hôte annonce son salon par « CODE: ».
@@ -184,7 +195,7 @@ if ! grep -q '^CODE:' "$HOTE_LOG"; then
 fi
 echo "hôte prêt : $(grep -m1 '^CODE:' "$HOTE_LOG")"
 
-"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet \
+"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos \
   >"$CLIENT_LOG" 2>&1 &
 client_pid=$!
 
@@ -199,7 +210,7 @@ if [ "${1:-}" = "--reconnexion" ]; then
   # tous les lots suivants. Avec `exec`, le sous-shell est REMPLACÉ par Godot :
   # `$!` désigne le processus qu'on croit tuer.
   ( sleep 18
-    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet --no-eos \
       >"$TMP/client2.log" 2>&1 ) &
   client2_pid=$!
 fi
