@@ -2362,7 +2362,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | Décision | Raison |
 |---|---|
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les six scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot**, pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
-| **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. |
+| **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
@@ -3018,10 +3018,27 @@ désigne.** Un argument nommé par position, un effectif écrit en chiffre — d
 les deux cas la trace textuelle du sprint avait déjà disparu du site qui en
 dépendait. Chercher le nom retiré ne peut, par construction, pas les trouver.
 
-Corollaire pratique : **c'est le lot complet qui fait foi, jamais le grep.** Les
-deux occurrences ont été rendues par des suites, l'une (`test_audit_menus`)
-écrite par une autre session pour une raison sans rapport. Un contrôle qui compte
-ce qu'un écran montre attrape des retraits que son auteur n'imaginait pas.
+**Une TROISIÈME occurrence, trouvée par la session DA4, et c'est la pire des
+trois** : `ui.gd` annonçait « **Les trois actions** réassignables, pour les deux
+joueurs à la fois ». Ce n'était pas un commentaire — **c'est le texte affiché
+dans le menu**. Un joueur lisait « trois » et en voyait deux. Les deux premières
+ne coûtaient qu'un rouge à un agent ; celle-ci mentait à l'écran, et **aucune
+suite ne pouvait la rendre** : un libellé faux reste un libellé valide.
+
+Corollaire pratique, en deux temps. **C'est le lot complet qui fait foi, jamais
+le grep** — les deux premières ont été rendues par des suites, dont une
+(`test_audit_menus`) écrite par une autre session pour une raison sans rapport :
+un contrôle qui compte ce qu'un écran montre attrape des retraits que son auteur
+n'imaginait pas. Mais le lot ne suffit pas non plus, et la troisième le prouve —
+elle n'est sortie que d'une **relecture du rendu**. Ce qu'un banc ne peut pas
+attraper, c'est une phrase qui a cessé d'être vraie.
+
+**Le geste qui referme les trois : ne pas écrire l'effectif.** Le seuil de
+`test_audit_menus` se déduit désormais de `BINDABLE.size() * 2` (DA4), et les
+deux phrases de `ui.gd` ont **perdu leur compte** au lieu de le voir corrigé —
+« les actions réassignables », sans nombre. Un effectif en toutes lettres
+redevient faux à la prochaine action ajoutée, et rougit alors au nom d'un
+innocent : ici la rubrique des contrôles, qui n'avait rien fait.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -8621,44 +8638,18 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
   tombe alors à 171 px de monde pour un bandeau qui en fait 657.
 
-  **La cause est structurelle, pas un réglage à retoucher.** Le `Label` n'a pas
-  de largeur, donc `HORIZONTAL_ALIGNMENT_CENTER` **ne fait rien** : le texte part
-  de l'origine et grandit vers la droite uniquement. L'offset `-100` avait été
-  calibré pour le mot « FATAL » seul (130 px) ; avec le nom de l'arme le texte
-  triple, et tout part du même côté.
+  **La cause est structurelle, pas un réglage à retoucher.** Le rect du `Label`
+  **épouse son texte** — `Control.size` est borné par la taille minimale — donc
+  centrer *dans* ce rect ne déplace rien : le texte part de `position` et grandit
+  vers la droite uniquement. L'offset `-100` avait été calibré pour le mot
+  « FATAL » seul (130 px) ; avec le nom de l'arme le texte triple, et tout part
+  du même côté.
 
-  Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
-  que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et
-  **le cartouche `300 × 150`**. Ce dernier est donc **plus étroit que son propre
-  texte pour trois armes sur quatre**, alors que le commentaire au-dessus promet
-  qu'il déborde du mot. C'est la **sixième occurrence** du motif *une valeur
-  absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
-  elle-même, en 2026-08-25, sans que rien ne la mesure.
-
-  **Correctif attendu** : largeur relevée sur le texte, centrage du label sur le
-  joueur, pivot au milieu, cartouche dérivé de la taille du label. Aucune image
-  à refaire.
-
-  ⚠️ **Non corrigé par la session DA4, et c'est délibéré** : `player.gd` est du
-  domaine « game feel », et la session DA2 y avait un lot non commité au moment
-  du relevé. Arbitrage d'Adrien en attente sur qui le prend. *(S)*
-- ⚠️ **DA4.4 — LE BANDEAU FATAL DÉBORDE DE L'ÉCRAN. Défaut ouvert, relevé par
-  Adrien le 2026-08-26 en écran scindé, mesuré le jour même.**
-
-  `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
-  l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
-  visibles de chaque côté du joueur** : le bandeau s'étale de −150 à **+507 px**
-  et sort du cadre à droite.
-
-  ⚠️ **Et il déborde le plus au moment précis où il apparaît.** La caméra zoome
-  jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
-  tombe alors à 171 px de monde pour un bandeau qui en fait 657.
-
-  **La cause est structurelle, pas un réglage à retoucher.** Le `Label` n'a pas
-  de largeur, donc `HORIZONTAL_ALIGNMENT_CENTER` **ne fait rien** : le texte part
-  de l'origine et grandit vers la droite uniquement. L'offset `-100` avait été
-  calibré pour le mot « FATAL » seul (130 px) ; avec le nom de l'arme le texte
-  triple, et tout part du même côté.
+  > *Formulation corrigée par DA2 le 2026-08-26 : ce paragraphe disait « le Label
+  > n'a pas de largeur ». Il en a une, et c'est le fait d'épouser le texte qui
+  > rend le centrage inopérant. Conclusion et correctif inchangés — mais une
+  > feuille de route est relue par des gens qui n'iront pas vérifier, et un
+  > mécanisme faux y survit plus longtemps qu'un chiffre faux.*
 
   Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
   que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et

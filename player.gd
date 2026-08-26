@@ -1201,8 +1201,10 @@ func _physics_process(delta):
 		var step_dist := 45.0
 		if step_distance_accumulated >= step_dist:
 			step_distance_accumulated = 0.0
-			var pitch_mult := 1.0
-			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
+			# Fourchette fixe. Elle passait par un facteur qui valait plus que 1
+			# en sprint ; le sprint parti, ce facteur ne variait plus et ne
+			# faisait plus que suggérer une modulation inexistante.
+			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.95, 1.05)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
