@@ -22,6 +22,22 @@ const Eblouissement := preload("res://eblouissement.gd")
 const Brouillage := preload("res://brouillage.gd")
 
 @export var player_id: int = 0
+
+## La couche d'occluder de CE joueur, et celle de l'autre.
+##
+## Deux couches distinctes — 4 pour J1, 8 pour J2 — parce qu'une torche doit
+## ombrer le corps d'en face **sans ombrer le sien**. Une couche commune rendait
+## les deux indissociables : on ne pouvait qu'ombrer les deux ou aucun, et le
+## jeu avait choisi aucun.
+var COUCHE_OCCLUDER_SIENNE: int:
+	get: return 4 << player_id
+var COUCHE_OCCLUDER_ADVERSE: int:
+	get: return 4 << (1 - player_id)
+## La couche du TORSE, réservée au rétroéclairage — 16 pour J1, 32 pour J2.
+var COUCHE_TORSE: int:
+	get: return 16 << player_id
+var COUCHE_TORSE_ADVERSE: int:
+	get: return 16 << (1 - player_id)
 @export var speed: float = 260.0
 @export var input_provider: InputProvider
 
@@ -219,6 +235,7 @@ const EMPREINTE_VISEUR := 48.0
 ## et on perdrait l'identification instantanée dont un duel a besoin.
 const TEINTE_VERS_BLANC := 0.55
 
+
 @onready var visual_reveal = $VisualReveal
 @onready var visual_reveal_ptr = $VisualReveal/DirPointerReveal
 @onready var visual = $VisualColored
@@ -311,8 +328,27 @@ func _ready():
 	visual_reveal_ptr.color = p_color
 	visual_reveal_ptr.color.a = 0.0
 	
-	# Make the nose very thin
-	var narrow_nose = PackedVector2Array([Vector2(18, -2), Vector2(18, 2), Vector2(28, 0)])
+	# ## Le nez de direction — supprimé le 2026-08-26, à la demande d'Adrien
+	#
+	# `DirPointer` disait où regardait un DISQUE, qui n'a pas d'avant. Depuis
+	# DA2.4 le joueur porte un sprite, et un sprite porte une arme : l'arme
+	# pointe. Le nez affichait donc la même information une seconde fois — et
+	# avec un triangle blanc de dix pixels qui, dans le noir absolu, était la
+	# chose la plus lumineuse de l'écran.
+	#
+	# ⚠️ **Un polygone VIDE, et non `visible = false`.** Le masquage a été essayé
+	# d'abord : le nez revenait « par moments » (Adrien, le jour même), parce que
+	# les cinq pointeurs traversent plusieurs chemins — révélation, mort,
+	# duplication vers les vues ennemies — dont certains reposent la visibilité.
+	# **Un garde qu'un autre code peut défaire n'est pas un garde.** Sans
+	# sommets, un `Polygon2D` ne dessine rien, quoi qu'on lui demande ensuite.
+	#
+	# ⚠️ **Les nœuds RESTENT**, et ce n'est pas de la paresse : soixante-cinq
+	# références leur assignent couches de visibilité, masques de lumière et
+	# matériaux dans cinq fichiers. Les arracher serait un remaniement large pour
+	# supprimer un dessin — le rapport risque/bénéfice ne le justifie pas
+	# aujourd'hui. Signalé comme dette, pas fait en passant.
+	var narrow_nose = PackedVector2Array()
 	visual_ptr.polygon = narrow_nose
 	visual_dim_ptr.polygon = narrow_nose
 	visual_reveal_ptr.polygon = narrow_nose
@@ -465,7 +501,23 @@ func _ready():
 	flashlight.enabled = false
 	flashlight.shadow_enabled = true
 	flashlight.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
-	flashlight.shadow_item_cull_mask = 1 | 2 # Les murs (1) projettent des ombres sur les ennemis (2) sans auto-ombrage (4)
+	# ⚠️ **Un corps bloque la torche de l'AUTRE, jamais la sienne.**
+	#
+	# Ce masque valait `1 | 2` : les murs, et rien d'autre. L'occluder des deux
+	# joueurs vivant sur la couche 4, **aucun corps n'a jamais projeté d'ombre
+	# depuis une torche** — relevé à l'écran par Adrien le 2026-08-26, deux fois
+	# avant qu'on regarde au bon endroit.
+	#
+	# Ajouter simplement la couche 4 aurait été pire : les deux joueurs y étant,
+	# chacun se serait ombragé lui-même, et on se serait tenu dans sa propre
+	# ombre en permanence. C'est le « sans auto-ombrage » que l'ancien
+	# commentaire protégeait, et il avait raison de le protéger.
+	#
+	# D'où **une couche par joueur** — 4 pour J1, 8 pour J2 (`4 << player_id`) —
+	# et une torche qui ne regarde que celle de l'autre. Le corps adverse
+	# découpe alors le faisceau, ce qui est exactement l'information que le jeu
+	# vend : on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière.
+	flashlight.shadow_item_cull_mask = 1 | 2 | COUCHE_OCCLUDER_ADVERSE
 	flashlight.range_item_cull_mask = 1 | 2 | 4 # Éclaire les murs (1), les ennemis (2) et le joueur local (4)
 	flashlight.energy = 2.5
 	# La température du faisceau. **Ici et pas dans `equip_weapon()` : elle n'est
@@ -490,7 +542,23 @@ func _ready():
 	body_light.enabled = false
 	body_light.shadow_enabled = true # Activé pour que les murs bloquent le rétroéclairage !
 	body_light.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
-	body_light.shadow_item_cull_mask = 1 | 2 # Les murs (1) bloquent la rétrodiffusion vers les ennemis (2)
+	# ⚠️ **Le dos du porteur reste dans le noir, et il lui faut son PROPRE
+	# occluder.** Demande d'Adrien du 2026-08-26 : la rétrodiffusion éclairait le
+	# joueur tout autour, dos compris, alors qu'un homme qui tient une lampe
+	# devant lui se fait de l'ombre à lui-même.
+	#
+	# ⚠️ **Le grand occluder ne pouvait pas servir.** Il épouse la silhouette
+	# depuis ce matin et atteint 24 unités vers l'avant, canon compris, alors que
+	# `body_light` est posée à 18 : la lampe se serait retrouvée **à l'intérieur
+	# de son propre occluder**, ce qui ne produit ni ombre ni lumière mais du
+	# hasard. D'où un second occluder, un simple disque de torse, plus petit que
+	# la distance de la lampe.
+	#
+	# Et la séparation dit quelque chose de juste : **le torse arrête la
+	# rétrodiffusion, le canon non.** C'est exactement l'argument que
+	# l'occlusion des torches avait tenu avant qu'Adrien le renverse — il reste
+	# vrai ici, où la lumière est rasante et l'objet mince.
+	body_light.shadow_item_cull_mask = 1 | 2 | COUCHE_TORSE | COUCHE_TORSE_ADVERSE
 	body_light.range_item_cull_mask = 2 | 4  # Éclaire le joueur local (4) ET l'écran ennemi (2) quand en ligne de vue
 	
 	# DA2.2 — le halo peint remplace le dégradé parfait.
@@ -506,6 +574,7 @@ func _ready():
 		LightTextures.EMPREINTE_RETRODIFFUSION)
 	body_light.energy = 0.6
 	body_light.position = Vector2(18, 0)
+	_monter_occluder_de_torse()
 	
 	if current_weapon:
 		equip_weapon(current_weapon)
@@ -541,11 +610,17 @@ func _ready():
 		var main_occ = get_node("LightOccluder2D")
 		main_occ.occluder.polygon = pts
 		main_occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
-		main_occ.occluder_light_mask = 4 # Put player occluder on layer 3 (value 4)
+		# Une couche par joueur : c'est ce qui permet à une torche d'ombrer
+		# l'autre corps sans ombrer le sien. Voir `flashlight.shadow_item_cull_mask`.
+		main_occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
 		
 	muzzle_flash.enabled = false
 	muzzle_flash.shadow_enabled = true
-	muzzle_flash.shadow_item_cull_mask = 1 | 4 # Casts shadows from walls(1) and players(4)
+	# Même règle que la torche : le flash de tir découpe le corps d'en face, pas
+	# le sien. Il valait `1 | 4`, donc il ombrait le tireur lui-même — invisible
+	# tant que les deux joueurs partageaient la couche 4, faux dès qu'ils la
+	# quittent.
+	muzzle_flash.shadow_item_cull_mask = 1 | COUCHE_OCCLUDER_ADVERSE
 	muzzle_flash.range_item_cull_mask = 1 | 2 # Illuminates walls and players
 	# Aim line setup
 	aim_cast = RayCast2D.new()
@@ -617,7 +692,107 @@ func _poser_sprite(slug: String) -> bool:
 		poly.polygon = quad
 		poly.texture = paire[1]
 		_calculate_uvs(poly)
+
+	# Le nez de direction ne se cache pas ici : il n'a plus de sommets du tout.
+	# Voir `narrow_nose` — un masquage se défait, un polygone vide non.
+	_accorder_occluder_a_la_silhouette(t_sil)
 	return true
+
+
+## Le disque de torse qui arrête la rétrodiffusion.
+##
+## ⚠️ **Rayon 12, et le nombre n'est pas libre.** `body_light` est posée à 18
+## unités devant le centre : l'occluder doit être STRICTEMENT plus petit, sinon
+## la lampe tombe dedans et l'ombre devient indéfinie. 12 laisse six unités de
+## marge et correspond à peu près au torse — la partie du corps qui, vue de
+## dessus, arrête vraiment une lumière rasante.
+##
+## Il est monté à part du grand occluder parce qu'ils ne servent pas la même
+## lumière : celui-ci ne doit JAMAIS voir une torche, sans quoi chaque joueur se
+## tiendrait dans sa propre ombre.
+func _monter_occluder_de_torse() -> void:
+	if has_node("OccluderTorse"):
+		return
+	var occ := LightOccluder2D.new()
+	occ.name = "OccluderTorse"
+	var forme := OccluderPolygon2D.new()
+	var pts := PackedVector2Array()
+	for i in 16:
+		var ang := (float(i) / 16.0) * TAU
+		pts.append(Vector2(cos(ang), sin(ang)) * 12.0)
+	forme.polygon = pts
+	forme.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	occ.occluder = forme
+	occ.occluder_light_mask = COUCHE_TORSE
+	add_child(occ)
+
+
+## L'ombre du joueur épouse sa silhouette, au lieu d'être un rond.
+##
+## ⚠️ **C'était un cercle de rayon 18, et c'était un choix — qu'Adrien a
+## renversé.** Le commentaire d'origine le défendait ainsi : « un canon fin
+## n'arrête pas une lampe torche, un torse si ». L'argument se tient en optique,
+## mais il produit à l'écran une ombre ronde derrière un personnage qui n'est pas
+## rond, et le mensonge se voit — verdict d'Adrien le 2026-08-26 : « c'est nul,
+## l'occlusion ne se fait pas selon le sprite ».
+##
+## **La silhouette existe déjà** : `<arme>_silhouette.png` est cuite par
+## `fabrique_sprites.gd` pour les vues « révélation ». On la relit ici plutôt que
+## d'inventer une seconde vérité de forme.
+##
+## ⚠️ **Échantillonnage RADIAL, pas de tracé de contour.** Un vrai contour
+## (marching squares) rendrait les concavités — l'espace entre les bras — mais
+## il demande de gérer les trous, les îlots et les diagonales ambiguës, pour une
+## ombre de trente pixels dans le noir. Trente-deux rayons depuis le centre
+## donnent une étoile qui épouse le corps ET le canon, ne peut pas produire de
+## polygone dégénéré, et se calcule une fois par changement d'arme.
+func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
+	if not has_node("LightOccluder2D") or sil == null:
+		return
+	var img := sil.get_image()
+	if img == null:
+		return
+	var l := img.get_width()
+	var h := img.get_height()
+	var cx := float(l) * 0.5
+	var cy := float(h) * 0.5
+	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
+	var vers_monde := empreinte_sprite(l) / float(l)
+	var pts := PackedVector2Array()
+	const RAYONS := 32
+	for i in RAYONS:
+		var ang := (float(i) / float(RAYONS)) * TAU
+		var dir := Vector2(cos(ang), sin(ang))
+		# On part du bord et on rentre : le premier pixel opaque rencontré est
+		# le plus lointain dans cette direction.
+		var portee := maxf(cx, cy) * 1.5
+		var trouve := 0.0
+		var r := portee
+		while r > 1.0:
+			var px := int(cx + dir.x * r)
+			var py := int(cy + dir.y * r)
+			if px >= 0 and px < l and py >= 0 and py < h \
+					and img.get_pixel(px, py).a > 0.35:
+				trouve = r
+				break
+			r -= 1.0
+		# ⚠️ **Le plancher ne sert QU'À éviter un polygone dégénéré.**
+		#
+		# Il valait d'abord 18 — le rayon de l'ancien cercle — « par prudence ».
+		# Mesuré ensuite : la silhouette du pistolet va de **5,8 à 24,8** unités
+		# selon la direction, moyenne 12,8, et **28 directions sur 32 tombaient
+		# sous 18**. Le plancher n'était donc pas une sécurité, c'était la forme :
+		# il rendait exactement le cercle qu'on voulait remplacer, avec une petite
+		# bosse devant. Adrien l'a vu à l'écran avant que je le mesure — « cela
+		# fait toujours un cercle, non ? ».
+		#
+		# **Une prudence qui recouvre la donnée n'est plus une prudence.** Trois
+		# unités suffisent à garantir un sommet non nul, et ne dominent jamais.
+		pts.append(dir * maxf(trouve, 3.0 / vers_monde) * vers_monde)
+	var occ := get_node("LightOccluder2D")
+	occ.occluder.polygon = pts
+	occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
 
 
 ## DA2.11 — le viseur, enfant du joueur donc porté par sa rotation.
@@ -1556,9 +1731,33 @@ func _calculate_uvs(poly: Polygon2D):
 	if w == 0: w = 1
 	if h == 0: h = 1
 	
+	# ⚠️ **`Polygon2D.uv` est en PIXELS DE TEXTURE, pas en 0..1.**
+	#
+	# Cette fonction produisait des UV normalisées. Avec une texture de 1×1 —
+	# ce que portaient les cinq vues avant DA2.4, un `Polygon2D` exigeant une
+	# texture sous peine de voir ses UV s'effondrer — c'était juste par accident :
+	# 0..1 pixel couvre exactement le pixel unique. **Le bug était donc
+	# inoffensif depuis toujours, et invisible pour la même raison.**
+	#
+	# DA2.4 a posé de vraies textures. Le quad s'est mis à échantillonner un
+	# carré d'UN TEXEL dans le coin haut-gauche du sprite — où le soldat est
+	# transparent. **Le joueur a disparu.** Relevé à l'écran par Adrien le
+	# 2026-08-26 : « je ne vois rien, que le nez blanc de chaque joueur ».
+	#
+	# ⚠️ **Et le nez était la preuve.** `visual_ptr` a gardé sa texture 1×1 :
+	# échantillonner son coin rend du blanc, donc il restait juste. La seule
+	# chose encore visible à l'écran était exactement la seule qui échappait au
+	# défaut. Un symptôme qui désigne sa cause, pour qui regarde ce qui RESTE.
+	#
+	# Le facteur d'échelle vaut (1,1) sur une texture de 1×1 : les vues qui n'ont
+	# pas de sprite gardent donc le comportement d'avant, au bit près.
+	var tex := poly.texture
+	var ech := Vector2.ONE
+	if tex != null:
+		ech = Vector2(tex.get_width(), tex.get_height())
 	var uvs = PackedVector2Array()
 	for p in pts:
-		uvs.append(Vector2((p.x - min_x)/w, (p.y - min_y)/h))
+		uvs.append(Vector2((p.x - min_x) / w, (p.y - min_y) / h) * ech)
 	poly.uv = uvs
 
 func hide_all_visuals():
