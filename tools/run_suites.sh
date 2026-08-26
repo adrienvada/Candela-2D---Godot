@@ -76,6 +76,73 @@ if [ "${1:-}" = "--rapide" ]; then RAPIDE=1; fi
 DEBUT=$SECONDS
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+
+# ---------------------------------------------------------------------------
+# UN `user://` PAR LOT
+# ---------------------------------------------------------------------------
+#
+# Godot dérive `user://` de `HOME`. Sans les deux lignes ci-dessous, TOUS les
+# lots — quel que soit l'arbre de travail d'où on les lance — écrivent dans le
+# même `~/Library/Application Support/Godot/app_userdata/Candela 2D` : celui du
+# jeu installé, avec ses cartes, ses réglages et son journal de matchs.
+#
+# Deux dégâts, et le second est le plus cher.
+#
+# **Le lot écrit chez le joueur.** La ROADMAP le dit déjà — « un test qui appelle
+# un setter réécrit les vraies préférences du joueur » — et les suites s'en
+# protègent une par une, par des chemins temporaires et un contrôle final que le
+# vrai `settings.cfg` est intact. Cette discipline tient tant qu'UN SEUL lot
+# tourne.
+#
+# **Deux lots simultanés se rendent FAUSSEMENT ROUGES.** Six sessions partagent
+# cette machine ; deux `run_suites.sh` en même temps, ce sont deux processus qui
+# écrivent le même fichier temporaire, au même nom, dans le même `user://`.
+# Mesuré le 2026-08-26 en lançant chaque suite qui touche `user://` en six copies
+# simultanées : `test_match_history_view` **6/6 en échec**, `test_audio_settings`
+# 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy`
+# 2/6, `test_rejeu_journal` 2/6 — les six autres tiennent. Avec un `user://` par
+# copie, les mêmes 36 exécutions passent **36/36**.
+#
+# Ce qui rend ce défaut coûteux n'est pas qu'il fasse échouer : c'est **ce que
+# disent ses messages**. « les cinq matchs sont rendus → 0 », « journal tronqué →
+# liste vide » accusent le code, jamais la voisine. C'est exactement le faux
+# diagnostic que le port dérivé a supprimé côté réseau, et il restait armé ici, à
+# chaque lot.
+#
+# **Ce script ne supprime jamais ce répertoire, ni rien d'autre.** Il vit sous
+# `mktemp -d`, donc dans le dossier temporaire que macOS purge de lui-même. Un
+# lanceur de tests n'a aucune raison d'effacer quoi que ce soit ; la journée du
+# 2026-08-26 a rappelé ce que coûte l'inverse. Le chemin est annoncé en fin de
+# lot — c'est là que vivent les `logs/godot.log` de ses processus.
+#
+# `run_duo.sh`, appelé plus bas, hérite de cet environnement. Lancé seul, à la
+# main, il continue d'utiliser le `user://` du jeu : ce n'est pas un oubli, c'est
+# un outil de mise au point qu'on veut parfois voir écrire pour de vrai.
+#
+# ⚠️ **`mktemp -d` est gardé, et ce garde n'est pas de la politesse.** Ce script
+# n'a pas `set -e` : une affectation qui échoue ne l'arrête pas. Un `mktemp -d`
+# qui rate — `/tmp` plein, quota, `TMPDIR` inutilisable — laisserait donc
+# `HOME` **vide**, et à partir de cette ligne tout ce qui est relatif au foyer
+# viserait la RACINE : `"$HOME/x"` devient `/x`, pour ce script comme pour tout
+# ce qu'il lance, Godot compris. Reproduit le 2026-08-26 en faisant échouer
+# `mktemp` : `HOME=[]`, `"$HOME/x"` → `/x`. Le lot doit REFUSER de partir dans
+# cet état, pas s'y engager en silence.
+#
+# Code 3, comme `run_duo.sh` : « je n'ai pas pu m'exécuter » n'est pas « le jeu
+# est cassé », et un compte d'échecs gonflé envoie chercher une panne qui
+# n'existe pas.
+#
+# Signalé par la session DA2, qui a lu cette ligne pendant que je l'écrivais.
+MAISON_DU_LOT="$(mktemp -d)" || {
+  echo "REFUS — 'mktemp -d' a échoué : impossible d'isoler le user:// du lot." >&2
+  exit 3
+}
+if [ -z "$MAISON_DU_LOT" ] || [ ! -d "$MAISON_DU_LOT" ]; then
+  echo "REFUS — foyer de lot invalide ([$MAISON_DU_LOT]) : lot non lancé." >&2
+  exit 3
+fi
+export HOME="$MAISON_DU_LOT"
+
 SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
@@ -103,8 +170,47 @@ reportes=0
 run() {
   local nom="$1"; shift
   local sortie tmp chien code
+
+  # ------------------------------------------------------------------------
+  # `--no-eos` POUR TOUS — et posé ICI, pas à chaque appel
+  # ------------------------------------------------------------------------
+  #
+  # C'est le corollaire obligatoire du `user://` par lot, et il ne se devine
+  # pas. **L'identité Epic — le Device ID — vit sous `HOME`.** Un foyer neuf
+  # n'en contient aucune : le SDK part donc en créer une PAR LE RÉSEAU, à
+  # chaque suite et à chaque lot. `create_device_id()` puis un `await` sur le
+  # rappel d'Epic, dans `network_manager.gd`.
+  #
+  # Mesuré le 2026-08-27 sur `test_matchmaking`, identifiants présents, foyer
+  # isolé : **15 s** au lieu de 4, le temps du dialogue avec Epic. Chez la
+  # session DA2, deux fois de suite, la même suite **ne revenait pas** — quatre
+  # suites tuées par le chien de garde et un lot de 789 s au lieu de 200. La
+  # différence entre les deux mesures n'est pas dans le code, elle est chez
+  # Epic : c'est dire si l'on ne veut pas de cette dépendance ici. **Un vert
+  # obtenu le jour où Epic répond n'est pas un vert.**
+  #
+  # Et le prix silencieux serait pire que la lenteur : chaque lot frapperait une
+  # identité Epic NEUVE, ce que tout le dépôt s'interdit (« ne JAMAIS appeler
+  # `delete_device_id()` : PUID différent à chaque lancement »).
+  #
+  # Ce n'est donc pas une optimisation, c'est la décision `cdefb7b` du
+  # 2026-08-26 — « un lot de tests local ne dépend jamais d'Epic » — appliquée à
+  # l'endroit qui l'avait manquée : elle n'était descendue que dans
+  # `run_duo.sh`. Coût en couverture : **aucun**, et ce n'est pas une opinion —
+  # le lot complet passe à 68 OK dans un arbre sans `eos_credentials.gd`, donc
+  # avec EOS jamais initialisé. Aucune suite n'exerce Epic.
+  #
+  # **Posé dans `run()` et non aux six appels** parce qu'un banc ajouté demain
+  # hériterait sinon du blocage sans que personne y pense — même raison que le
+  # reste de ce fichier : un garde-fou ne doit pas dépendre de la vigilance.
+  # `--` d'abord si l'appelant n'en a pas : au-delà, Godot passe tout au jeu.
+  local args=("$@") a separateur=0
+  for a in "${args[@]}"; do [ "$a" = "--" ] && separateur=1; done
+  [ "$separateur" -eq 0 ] && args+=("--")
+  args+=("--no-eos")
+
   tmp="$(mktemp)"
-  "$GODOT" --headless --path . "$@" >"$tmp" 2>&1 &
+  "$GODOT" --headless --path . "${args[@]}" >"$tmp" 2>&1 &
   local gpid=$!
   # `disown` puis redirection : sans eux, le shell annonce « Terminated: 15 »
   # pour CHAQUE chien de garde abattu, soit une ligne de bruit par suite — et
@@ -276,6 +382,12 @@ duo duo_ralenti --ralenti
 duo duo_spam --spam
 
 DUREE=$((SECONDS - DEBUT))
+# **Annoncé à chaque lot, et pas seulement en cas d'échec.** Ce lanceur ne joue
+# plus dans le `user://` du jeu : c'est un changement de comportement, et un
+# changement de comportement silencieux est précisément ce que ce fichier
+# reproche ailleurs à `--rapide`. La ligne dit aussi où lire les journaux.
+# Avant le verdict, jamais après : la DERNIÈRE ligne appartient au résultat.
+echo "user:// de ce lot : $MAISON_DU_LOT (ce script n'y supprime rien)"
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1
 fi
