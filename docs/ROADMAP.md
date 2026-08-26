@@ -8694,9 +8694,76 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
      de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
      confond avec « ça travaille ». *(S)*
-- **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
-  d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
-  devient une pièce signature. *(S)*
+- **DA4.6 Le trait balistique en schéma** ✅ **livrée le 2026-08-27** — le
+  pointillé V6.2 devient un relevé coté.
+
+  **V6.2 tenait en une ligne** : `draw_dashed_line(depart, balle, …)`. Elle
+  montrait *où* la balle était passée et laissait ouvertes les deux questions
+  qu'on se pose en regardant une killcam.
+
+  1. **D'où venait-elle ?** Un segment n'a pas d'orientation — deux joueurs face
+     à face laissent le même trait. Des **chevrons** le disent maintenant.
+  2. **De quelle distance ?** « Il m'a eu de loin » devient un nombre : une
+     **ligne de cote** avec ses lignes d'attache et ses obliques ISO, et la
+     valeur **à l'horizontale** quel que soit l'angle du tir. Ce n'est pas une
+     coquetterie mais la convention du dessin technique : une cote qu'il faut
+     pencher la tête pour lire n'est pas une cote.
+
+  Le format est celui d'« EFFLEURÉ — N PX » livré en DA4.7 : la killcam et le
+  bilan de fin parlent du même monde, ils doivent le dire dans la même unité.
+
+  ### La règle qui gouverne tout le lot
+
+  ⚠️ **Ce qui est ANNOTATION se compense du zoom ; ce qui est GÉOMÉTRIE suit le
+  monde.** La caméra de killcam va de 0,7× à 2,8× (`game_state.gd`) — un facteur
+  **quatre**. Une cote posée en pixels locaux ferait 18 px d'écart au dézoom et
+  73 au serré, **sur le même tir** : illisible d'un côté, envahissante de
+  l'autre. Sixième occurrence du motif du 2026-08-19 — *une valeur absolue là où
+  il fallait un rapport* — et la première où il est attrapé avant d'être livré.
+
+  **L'écart des chevrons, lui, reste en pixels monde, et le banc l'EXIGE.** Ce
+  n'est pas une exception oubliée : leur densité à l'écran devient alors
+  proportionnelle à la distance réellement parcourue, ce qu'un relevé doit dire.
+  Sans ce contrôle, « tout compenser » se lirait comme une correction.
+
+  ### Deux fautes que seul un banc pouvait voir
+
+  ⚠️ **La cote se retournait à tout tir vers la gauche.** En repère local,
+  « au-dessus du trait » désigne deux côtés opposés selon le sens du tir : la
+  cote serait passée sous le trait et le texte se serait lu à l'envers sur
+  **dix-sept angles sur trente-six**. Le côté se décide donc en interrogeant le
+  monde, pas le repère local. Vérifié en sabotant la formule : le banc nomme les
+  dix-sept angles.
+
+  ⚠️ **Le texte serait passé en escalier.** Godot rastérise un glyphe à la taille
+  entière demandée : `T_MENTION / zoom` donne **4 px** à 2,8×, agrandis ensuite
+  par la caméra. La contre-rotation et la contre-échelle passent donc toutes deux
+  par `draw_set_transform`, le glyphe étant gravé à sa taille finale d'écran —
+  les deux facteurs s'annulent et le rendu est net à tous les zooms.
+
+  ### L'item demandait une fonte que la charte a refusée
+
+  ⚠️ **« Fonte mono » n'existe pas dans ce dépôt, et ne doit pas y entrer.**
+  DA1.2 a choisi **deux** fontes, leurs licences et leur axe variable ; en
+  ajouter une troisième pour une seule cote défait ce travail. Et ce que « mono »
+  cherchait ici — un chiffre qui ne tremble pas quand il change — **Oxanium le
+  fait déjà par construction**, ses dix chiffres à 11 px pile, propriété mesurée
+  et consignée en DA1.2. C'était le nom qui manquait, pas la fonte. *(Même motif
+  qu'en DA4.13 et DA4.17 : l'item nomme un moyen là où il visait une propriété.)*
+
+  ### Le calcul a un nom
+
+  `Bullet.geometrie_du_releve(portee, zoom, angle)`, un `static func` qui rend
+  chevrons, cote, attaches, obliques et ancre de texte. **Rien ne peut mesurer
+  une cote dessinée** : il faudrait tuer un joueur, lancer une killcam et lire
+  des pixels au bon instant. Cinquième occurrence du motif du 2026-08-19 — *ce
+  qu'on voit n'a pas de nom, donc rien ne le tient* —, et c'est l'extraction qui
+  rend les 91 contrôles possibles.
+
+  `tools/test_releve_balistique.gd`, 91 contrôles, verts, vérifiés **rouges** sur
+  les deux versants qui portent le lot. Le zoom est lu sur le viewport
+  (`get_camera_2d()`) et jamais demandé à `GameState` : en écran scindé chaque
+  vue a sa propre caméra, et « le » zoom n'aurait pas de sens. *(S)*
 - **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le
   2026-08-25** — verdict, score de session et série sont désormais hiérarchisés
   au lieu d'être aplatis. Ce qui manque : « effleuré : 13 px », voir ci-dessous.

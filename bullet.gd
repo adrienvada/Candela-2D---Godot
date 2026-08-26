@@ -200,7 +200,134 @@ func _physics_process(delta):
 ## est en espace local (-X = derrière, la rotation suit `direction`) et repart
 ## de zéro à chaque rebond, puisque `spawn_pos` est réarmé — fidèle au trajet.
 ## En manche réelle (`is_replay` faux) : rien, aucune information gratuite.
+##
+## ## DA4.6 — le pointillé devient un relevé
+##
+## Un relevé d'expert ne se contente pas de montrer où la balle est passée : il
+## **cote**. Trois ajouts, et chacun répond à une question que le pointillé seul
+## laissait ouverte.
+##
+## 1. **Des chevrons disent le SENS.** Un segment n'a pas d'orientation ; deux
+##    joueurs face à face produisent deux traits identiques. En killcam, savoir
+##    d'où le coup est parti est précisément ce qu'on regarde.
+## 2. **Une ligne de cote dit la DISTANCE**, avec ses lignes d'attache et ses
+##    obliques ISO. « Il m'a eu de loin » devient un nombre.
+## 3. **La valeur se lit à l'horizontale**, quelle que soit l'inclinaison du tir.
+##    Ce n'est pas une coquetterie : c'est la convention du dessin technique, et
+##    une cote qu'il faut pencher la tête pour lire n'est pas une cote.
+##
+## ⚠️ **Tout ce qui est ANNOTATION se compense du zoom ; tout ce qui est
+## GÉOMÉTRIE suit le monde.** La caméra de killcam va de 0,7× à 2,8× — un facteur
+## **quatre**. Une cote posée en pixels locaux serait illisible à 8 px au dézoom
+## et grosse comme un titre au zoom serré, sur le même tir. C'est la sixième
+## occurrence du motif consigné le 2026-08-19 : *une valeur absolue là où il
+## fallait un rapport*.
+##
+## L'écart des chevrons, lui, reste en pixels **monde** — et c'est le contraire
+## d'une inconséquence. Leur densité à l'écran devient alors proportionnelle à la
+## distance réelle : c'est exactement ce qu'un relevé doit dire.
+##
+## ⚠️ **La fonte mono demandée par l'item n'existe pas, et ne doit pas exister.**
+## DA1.2 a choisi deux fontes, leurs licences et leur axe variable ; en ajouter
+## une troisième pour une seule cote défait ce travail. Ce que « mono » cherchait
+## ici, c'est un chiffre qui ne tremble pas quand il change — et **Oxanium est
+## tabulaire par construction**, ses dix chiffres à 11 px pile. La propriété
+## demandée est déjà là ; c'est le nom qui manquait.
 const TRACE_COLOR := Color(Charte.HALOGENE, 0.35)
+## L'annotation lit plus franc que l'objet qu'elle mesure : c'est ce qui la
+## distingue d'un second trajet.
+const COTE_COULEUR := Color(Charte.HALOGENE, 0.62)
+
+## Écart entre deux chevrons, en pixels **monde** — voir la note ci-dessus.
+const CHEVRON_PAS := 46.0
+## Garde-fou : au-delà, on cesse d'en poser. Une portée maximale d'arme divisée
+## par le pas donne une trentaine de chevrons ; ce plafond n'existe que pour
+## qu'une portée aberrante ne fasse pas boucler `_draw`.
+const CHEVRON_MAX := 48
+
+# Dimensions d'annotation, en pixels **écran** : multipliées par 1/zoom.
+const CHEVRON_L := 8.0
+const CHEVRON_H := 5.5
+const COTE_ECART := 26.0
+const COTE_DEBORD := 6.0
+const COTE_PATTE := 5.0
+const COTE_TEXTE_AIR := 5.0
+## En deçà, une cote est du bruit : le trait ne tient pas ses propres obliques.
+const COTE_MINIMUM := 64.0
+
+
+## Le zoom de la caméra qui regarde cette balle, ou 1,0 si personne ne regarde.
+##
+## ⚠️ **Lu sur le viewport, jamais demandé à `GameState`.** La balle n'a aucune
+## raison de connaître l'orchestrateur, et en écran scindé chaque vue a sa propre
+## caméra : demander « le » zoom n'aurait même pas de sens.
+func _zoom_de_la_vue() -> float:
+	var vp := get_viewport()
+	if vp == null:
+		return 1.0
+	var cam := vp.get_camera_2d()
+	if cam == null:
+		return 1.0
+	return maxf(0.05, minf(cam.zoom.x, cam.zoom.y))
+
+
+## La géométrie complète du relevé, en espace local de la balle.
+##
+## ⚠️ **Ce calcul a un nom parce que `_draw()` n'en a pas.** Rien ne peut mesurer
+## une cote dessinée : il faudrait tuer un joueur, lancer une killcam et lire des
+## pixels. C'est la cinquième occurrence du motif du 2026-08-19 — *ce qu'on voit
+## n'a pas de nom, donc rien ne le tient* — et l'extraction vaut autant que le
+## dessin qu'elle rend possible. `tools/test_releve_balistique.gd` s'y branche.
+##
+## `portee` est la distance parcourue depuis l'apparition (ou le dernier rebond),
+## `zoom` celui de la caméra, `angle` la rotation de la balle en radians.
+static func geometrie_du_releve(portee: float, zoom: float,
+		angle: float) -> Dictionary:
+	var k := 1.0 / maxf(zoom, 0.05)
+	var depart := Vector2(-portee, 0.0)
+
+	# Les chevrons : posés du départ vers la balle, pointe en avant (+X).
+	var chevrons: Array[Vector2] = []
+	var n := int(portee / CHEVRON_PAS)
+	for i in range(1, mini(n, CHEVRON_MAX) + 1):
+		chevrons.append(Vector2(-portee + float(i) * CHEVRON_PAS, 0.0))
+
+	# ⚠️ **De quel côté du trait poser la cote ?** Toujours du côté qui est EN
+	# HAUT à l'écran, quel que soit le sens du tir — sinon la cote passe sous le
+	# trait dès qu'on tire vers la gauche, et le relevé se retourne en cours de
+	# killcam. On demande donc au monde, pas au repère local.
+	var s := 1.0 if Vector2(0.0, -1.0).rotated(angle).y > 0.0 else -1.0
+	var ecart := s * COTE_ECART * k
+	var cote_a := depart + Vector2(0.0, ecart)
+	var cote_b := Vector2(0.0, ecart)
+	var debord := Vector2(0.0, s * COTE_DEBORD * k)
+
+	# Les obliques ISO : un trait à 45° traversant la ligne de cote à chaque
+	# extrémité. Direction du trait + perpendiculaire, normalisées.
+	var oblique := (Vector2.RIGHT + Vector2(0.0, s)).normalized() \
+		* (COTE_PATTE * k)
+
+	return {
+		"trace": [depart, Vector2.ZERO],
+		"chevrons": chevrons,
+		"chevron_l": CHEVRON_L * k,
+		"chevron_h": CHEVRON_H * k,
+		"cote": [cote_a, cote_b],
+		"attaches": [
+			[depart, cote_a + debord],
+			[Vector2.ZERO, cote_b + debord],
+		],
+		"obliques": [
+			[cote_a - oblique, cote_a + oblique],
+			[cote_b - oblique, cote_b + oblique],
+		],
+		"ancre_texte": (cote_a + cote_b) * 0.5
+			+ Vector2(0.0, s * COTE_TEXTE_AIR * k),
+		"epaisseur": maxf(1.0, 1.4 * k),
+		"cote_visible": portee >= COTE_MINIMUM,
+		"echelle_texte": k,
+	}
+
 
 func _draw() -> void:
 	if not is_replay:
@@ -208,7 +335,54 @@ func _draw() -> void:
 	var back := global_position.distance_to(spawn_pos)
 	if back < 8.0:
 		return
-	draw_dashed_line(Vector2(-back, 0.0), Vector2.ZERO, TRACE_COLOR, 2.0, 12.0)
+
+	var g := geometrie_du_releve(back, _zoom_de_la_vue(), rotation)
+	var e: float = g["epaisseur"]
+	var trace: Array = g["trace"]
+	draw_dashed_line(trace[0], trace[1], TRACE_COLOR, e * 1.4, 12.0)
+
+	var cl: float = g["chevron_l"]
+	var ch: float = g["chevron_h"]
+	for p: Vector2 in g["chevrons"]:
+		draw_polyline(PackedVector2Array([
+			p + Vector2(-cl, -ch), p, p + Vector2(-cl, ch),
+		]), COTE_COULEUR, e)
+
+	if not g["cote_visible"]:
+		return
+
+	var cote: Array = g["cote"]
+	draw_line(cote[0], cote[1], COTE_COULEUR, e)
+	for paire: Array in g["attaches"]:
+		draw_line(paire[0], paire[1], COTE_COULEUR, e * 0.7)
+	for paire: Array in g["obliques"]:
+		draw_line(paire[0], paire[1], COTE_COULEUR, e)
+
+	_draw_cote(g, back)
+
+
+## La valeur de la cote, à l'horizontale et à taille d'écran constante.
+##
+## ⚠️ **La contre-rotation ET la contre-échelle passent par `draw_set_transform`,
+## et pas par une taille de fonte calculée.** Godot rastérise un glyphe à la
+## taille entière qu'on demande : passer `T_MENTION / zoom` donnerait 4 px à
+## 2,8×, agrandis ensuite par la caméra — un texte en escalier. Ici le glyphe est
+## gravé à sa taille finale d'écran, puis la transformation l'y ramène : les deux
+## facteurs s'annulent et le rendu est net à tous les zooms.
+func _draw_cote(g: Dictionary, portee: float) -> void:
+	var f := Charte.police_ui(Charte.POIDS_APPUI)
+	if f == null:
+		return
+	# Même unité et même forme qu'« EFFLEURÉ — N PX » en fin de match : la
+	# killcam et le bilan parlent du même monde, ils doivent le dire pareil.
+	var texte := "%d PX" % int(roundf(portee))
+	var largeur := f.get_string_size(texte, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		Charte.T_MENTION).x
+	var k: float = g["echelle_texte"]
+	draw_set_transform(g["ancre_texte"], -rotation, Vector2(k, k))
+	draw_string(f, Vector2(-largeur * 0.5, 0.0), texte,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, Charte.T_MENTION, COTE_COULEUR)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## Impact joueur. `center` est le point de référence pour l'atténuation : la
 ## position réelle du joueur, ou celle remontée dans le temps quand le tir est
