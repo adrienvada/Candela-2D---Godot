@@ -159,22 +159,42 @@ const PANEL_AUDIO := "panneau_audio"
 const PANEL_PROFILE := "panneau_profil"
 const PANEL_HISTORY := "panneau_historique"
 
-## **Un aperçu par mode, demandé par Adrien le 2026-08-25.**
+## **Une illustration par ENTRÉE, pas par écran** — demandé par Adrien le
+## 2026-08-26, après avoir vu la console de réglages posée dans le cadre :
+## *« chaque fois que je pointe mon curseur sur un menu, il y ait une image
+## d'illustration à droite qui donne envie et plonge dans l'univers. »*
 ##
-## Le cadre de droite montre le mode **tel qu'il est une fois lancé**, et non
-## l'arène vide où l'on jouera. Cette table est le seul endroit qui rattache un
-## écran à son image — `menu_apercu.gd` ne connaît aucun mode.
+## ⚠️ **La maille compte plus qu'il n'y paraît.** Le premier jet attachait
+## l'aperçu à l'ÉCRAN : on entrait dans « 1v1 écrans scindés » et l'image
+## arrivait. Mais le menu principal est justement l'endroit où l'on n'est encore
+## entré nulle part — son cadre restait noir, et c'est là que le joueur choisit.
+## **Une image qui donne envie doit arriver AVANT le clic, pas après.**
 ##
-## ⚠️ **Le compétitif n'y est pas, et c'est délibéré** : Adrien y veut « le
-## classement en cours du joueur », c'est-à-dire de la **donnée**, pas une image.
-## Il passe donc par le panneau de texte, avec `_my_rank_text()`. Mettre une
-## capture là où le joueur veut son rang serait de la décoration posée à la
-## place d'une information.
-const APERCUS := {
+## Le hub sait déjà faire ça : `make_entry()` prend une clé de panneau, et
+## `_show_entry()` l'applique au survol comme à la sélection. Il n'y avait rien à
+## inventer — seulement à s'en servir au bon endroit.
+##
+## Deux natures d'image cohabitent, et la distinction est délibérée :
+##
+## - **le menu principal montre des ILLUSTRATIONS** — on n'y choisit pas encore
+##   une partie, on choisit une envie ;
+## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
+##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
+const ILLUSTRATIONS := {
+	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
+	"ill_amical": "res://assets/ui/ill_amical.png",
+	"ill_competitif": "res://assets/ui/ill_competitif.png",
+	"ill_entrainement": "res://assets/ui/ill_entrainement.png",
+	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
+	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
+	"ill_quitter": "res://assets/ui/ill_quitter.png",
+}
+
+## Les captures de jeu, attachées aux écrans de préparation.
+const APERCUS = {
 	SCREEN_LOCAL: "res://assets/ui/apercu_ecran_scinde.png",
 	SCREEN_FRIENDLY: "res://assets/ui/apercu_duel_en_ligne.png",
 	SCREEN_TRAINING: "res://assets/ui/apercu_entrainement.png",
-	SCREEN_CUSTOM: "res://assets/ui/apercu_personnalisation.png",
 }
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
@@ -1824,10 +1844,17 @@ func _create_torch_indicator() -> PanelContainer:
 	hbox.add_theme_constant_override("separation", GAP_XS)
 	margin.add_child(hbox)
 
-	var icon := Label.new()
-	icon.text = "🔦"
-	icon.add_theme_font_size_override("font_size", T_MENTION)
-	hbox.add_child(icon)
+	# La torche du HUD : une icône dessinée, ou rien. Le libellé « TORCHE » juste
+	# à côté porte déjà le sens — un emoji de secours n'ajouterait qu'un défaut.
+	var tex_torche := MenuIcones.icone(MenuIcones.TORCHE)
+	if tex_torche != null:
+		var icon := TextureRect.new()
+		icon.texture = tex_torche
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(icon)
 
 	var label := Label.new()
 	label.text = "TORCHE"
@@ -2456,21 +2483,26 @@ func _build_hub_screens() -> void:
 	# --- Accueil --------------------------------------------------------------
 	accueil.add_child(hub.make_entry("1V1 ÉCRANS SCINDÉS",
 		"Deux joueurs sur ce poste, écran partagé. Rien n'est en jeu : toutes les "
-		+ "armes sont accessibles.", SCREEN_LOCAL))
+		+ "armes sont accessibles.", SCREEN_LOCAL, COLOR_ACCENT, "", "", false,
+		"ill_scinde"))
 	accueil.add_child(hub.make_entry("1V1 AMICAL",
 		"Contre quelqu'un d'autre, en ligne ou en local. Le résultat ne compte pas "
-		+ "au classement.", SCREEN_FRIENDLY))
+		+ "au classement.", SCREEN_FRIENDLY, COLOR_ACCENT, "", "", false,
+		"ill_amical"))
 	accueil.add_child(hub.make_entry("1V1 COMPÉTITIF",
 		"Match classé : le résultat compte, et l'arsenal s'aligne sur le moins bien "
-		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD))
+		+ "classé des deux.", SCREEN_RANKED, COLOR_GOLD, "", "", false,
+		"ill_competitif"))
 	accueil.add_child(hub.make_entry("S'ENTRAÎNER",
 		"Seul, contre une cible. De quoi prendre une arme en main sans enjeu.",
-		SCREEN_TRAINING))
+		SCREEN_TRAINING, COLOR_ACCENT, "", "", false, "ill_entrainement"))
 	accueil.add_child(hub.make_entry("PERSONNALISATION",
-		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM, COLOR_DIM))
+		"Contrôles, affichage, effets, audio, calibration.", SCREEN_CUSTOM,
+		COLOR_DIM, "", "", false, "ill_personnalisation"))
 	accueil.add_child(hub.make_entry("MISE À JOUR",
 		"Vérifie si une nouvelle version est publiée, et l'installe. Rien ne se "
-		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM))
+		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM,
+		"", "", false, "ill_maj"))
 	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
 	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
 	# à l'arrivée dans le hub et rétablie ici.
@@ -2665,6 +2697,10 @@ func _build_hub_screens() -> void:
 	# qu'on voit tant qu'aucune entrée ne réclame autre chose. Chaque écran a le
 	# sien — un seul nœud partagé montrerait la mauvaise image le temps d'une
 	# frame en changeant d'écran, et ce scintillement se voit.
+	# Les illustrations du menu principal : une par entrée, montrée au survol.
+	for cle: String in ILLUSTRATIONS.keys():
+		hub.register_panel(cle, MenuApercu.new(String(ILLUSTRATIONS[cle])))
+
 	for ecran: String in APERCUS.keys():
 		if not hub.has_screen(ecran):
 			continue
@@ -2963,12 +2999,60 @@ func _refresh_player_list() -> void:
 	# Le lancement solo en bac à sable a été retiré avec ce grisage (décision
 	# d'Adrien) : un bouton qui lance tantôt un duel, tantôt une partie contre
 	# personne, ne dit pas ce qu'il fait.
-	var manque_un_joueur := mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN \
-		and not lie
-	if panel_launch != null and is_instance_valid(panel_launch):
-		panel_launch.disabled = manque_un_joueur
-		panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if manque_un_joueur \
-			else Color.WHITE
+	# ⚠️ **L'état du lanceur se rederive ICI aussi, et ce second appel n'est pas
+	# une redondance : c'est LUI qui rouvre « PRÊT » à l'arrivée de l'adversaire.**
+	#
+	# Cette fonction est branchée sur `player_connected` / `player_disconnected` ;
+	# `_refresh_lobby_block()` ne l'est pas. En déplaçant le calcul là-bas j'avais
+	# rendu le bouton insensible au moment même qu'il attend — le duo à deux
+	# instances l'a dit tout de suite : « PRÊT s'ouvre à l'arrivée de l'adversaire »
+	# est tombé des deux côtés.
+	#
+	# Deux sites d'appel, **une seule dérivation** : le calcul reste à un endroit,
+	# seuls les instants où on le rejoue sont deux — un changement d'écran, et un
+	# changement de peuplement du salon.
+	_accorder_l_etat_du_lanceur()
+
+## Le lanceur du cadre est-il cliquable, et pourquoi.
+##
+## **Un seul endroit décide**, et il est atteint quel que soit l'écran. La règle
+## tient en une phrase : *on ne grise que ce qui LANCE, et seulement s'il manque
+## quelqu'un.*
+##
+## - **Chercher un adversaire ne demande personne** — c'est même la définition de
+##   l'acte. Les écrans d'appariement portent l'action `chercher`, jamais grisée.
+## - **L'écran scindé ne demande personne non plus** : les deux joueurs sont
+##   devant la même machine.
+## - **Un salon privé, si** : on attend quelqu'un qui a le code, et partir seul
+##   n'aurait pas de sens. C'est le seul cas où le bouton se grise, et il reste
+##   VISIBLE — le masquer laisserait croire que le match ne peut pas partir du
+##   tout, alors qu'il n'attend qu'un second joueur.
+func _accorder_l_etat_du_lanceur() -> void:
+	if panel_launch == null or not is_instance_valid(panel_launch):
+		return
+	# ⚠️ **Seule l'action `lancer` peut exiger un second joueur, et la table le
+	# dit déjà.** `chercher` va en trouver un — c'est la définition de l'acte —,
+	# `entrainement` est solo. Lire l'action plutôt qu'énumérer des écrans, c'est
+	# ce qui fait qu'un écran ajouté demain hérite du bon comportement du seul
+	# fait de déclarer ce qu'il lance.
+	#
+	# Le premier jet ne connaissait que `chercher` et grisait donc
+	# **l'entraînement**, découvert en étendant le banc à tous les lanceurs plutôt
+	# qu'aux deux écrans signalés.
+	var action := String(panel_launch.get_meta(META_LAUNCH_ACTION, ""))
+	var attend_quelqu_un := action == "lancer"
+	var solo_possible := selected_network_mode() \
+		== NetworkManager.GameMode.LOCAL_SPLITSCREEN
+	# Le MÊME prédicat que `_refresh_player_list()`, mot pour mot. En inventer un
+	# second — même équivalent — c'est signer le jour où les deux divergeront :
+	# c'est la leçon que ce dépôt a payée sur la palette, sur le tempo et sur
+	# l'échelle typographique.
+	var lie := multiplayer.has_multiplayer_peer() \
+		and not multiplayer.get_peers().is_empty()
+	var a_griser := attend_quelqu_un and not solo_possible and not lie
+	panel_launch.disabled = a_griser
+	panel_launch.modulate = Color(1.0, 1.0, 1.0, 0.45) if a_griser else Color.WHITE
+
 
 ## Quitter un salon **ferme le salon**, il ne fait pas que remonter d'un cran.
 ##
@@ -4184,6 +4268,21 @@ func _build_lobby_widgets() -> void:
 ## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
 ## indépendantes n'arrivaient plus à tenir cohérentes.
 func _refresh_lobby_block() -> void:
+	# ⚠️ **L'état du lanceur se pose ICI, avant toute branche, et c'est la
+	# deuxième correction du même défaut.**
+	#
+	# Il était écrit dans le bloc des salons privés, tout en bas. Or cette
+	# fonction porte **trois retours anticipés** — le garde, l'écran d'appariement,
+	# l'écran d'écran-scindé — et chacun saute ce bloc. Le bouton gardait donc
+	# l'état laissé par l'écran PRÉCÉDENT : grisé en 1v1 amical d'abord, puis en
+	# écran scindé après que j'eus corrigé la première branche seulement.
+	#
+	# **Corriger branche par branche est ce qui a échoué.** Tant que la valeur est
+	# posée dans une branche, chaque `return` ajouté demain rouvre le défaut, en
+	# silence et selon le chemin emprunté. Posée en tête, aucun retour ne peut plus
+	# la sauter — c'est la même discipline que `_suivre_le_curseur_systeme()`, qui
+	# dérive à chaque image plutôt que d'apparier une pose et une restauration.
+	_accorder_l_etat_du_lanceur()
 	if lobby_status_label == null:
 		return
 
@@ -4204,6 +4303,23 @@ func _refresh_lobby_block() -> void:
 		btn_open_lobby.hide()
 		lobby_status_label.show()
 		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
+		# ⚠️ **LA CAUSE DU BOUTON GRISÉ, et elle est dans ce retour anticipé.**
+		#
+		# Relevé par Adrien le 2026-08-26 : « LANCER LA RECHERCHE EN LIGNE » était
+		# grisé en amical et en compétitif. Le grisage est posé plus bas, dans le
+		# bloc des salons privés — **et ce `return` l'empêche d'être atteint ici.**
+		# Rien ne le remettait donc jamais à faux : le bouton restait grisé par le
+		# passage précédent sur un écran de salon, et l'appariement devenait
+		# inatteignable **selon le chemin emprunté**, ce qui est le pire des cas —
+		# le défaut n'apparaît pas si l'on arrive directement.
+		#
+		# Un état posé dans une branche et jamais rendu dans l'autre : c'est la
+		# forme de dérive que ce fichier combat partout ailleurs en **dérivant**
+		# plutôt qu'en mémorisant. On rend donc l'état ici, explicitement.
+		#
+		# **Chercher un adversaire, c'est très exactement ne pas en avoir** : ces
+		# deux écrans n'ont aucune raison d'attendre un second joueur. L'état est
+		# posé en tête de fonction, donc ce retour ne le saute plus.
 		return
 
 	var mode := selected_network_mode()
@@ -4308,10 +4424,14 @@ func _build_weapon_block() -> Control:
 	# Ce HBox ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
 	var p1_row := HBoxContainer.new()
 	p1_row.add_theme_constant_override("separation", GAP_XS)
-	p1_btn1 = _create_weapon_btn("🔫 Pistolet", p1_weapon_group, COLOR_P1, 0)
-	p1_btn2 = _create_weapon_btn("💥 Fusil", p1_weapon_group, COLOR_P1, 0)
-	p1_btn3 = _create_weapon_btn("☄️ Pompe", p1_weapon_group, COLOR_P1, 0)
-	p1_btn4 = _create_weapon_btn("🏹 Arbalète", p1_weapon_group, COLOR_P1, 0)
+	p1_btn1 = _create_weapon_btn("Pistolet", p1_weapon_group, COLOR_P1, 0,
+		"pistolet")
+	p1_btn2 = _create_weapon_btn("Fusil", p1_weapon_group, COLOR_P1, 0,
+		"fusil")
+	p1_btn3 = _create_weapon_btn("Pompe", p1_weapon_group, COLOR_P1, 0,
+		"pompe")
+	p1_btn4 = _create_weapon_btn("Arbalète", p1_weapon_group, COLOR_P1, 0,
+		"arbalete")
 	p1_btn1.button_pressed = true
 	p1_btn1.set_meta(META_NAV_SEED, 0)
 	p1_row.add_child(p1_btn1)
@@ -4327,10 +4447,14 @@ func _build_weapon_block() -> Control:
 
 	var p2_row := HBoxContainer.new()
 	p2_row.add_theme_constant_override("separation", GAP_XS)
-	p2_btn1 = _create_weapon_btn("🔫 Pistolet", p2_weapon_group, COLOR_P2, 1)
-	p2_btn2 = _create_weapon_btn("💥 Fusil", p2_weapon_group, COLOR_P2, 1)
-	p2_btn3 = _create_weapon_btn("☄️ Pompe", p2_weapon_group, COLOR_P2, 1)
-	p2_btn4 = _create_weapon_btn("🏹 Arbalète", p2_weapon_group, COLOR_P2, 1)
+	p2_btn1 = _create_weapon_btn("Pistolet", p2_weapon_group, COLOR_P2, 1,
+		"pistolet")
+	p2_btn2 = _create_weapon_btn("Fusil", p2_weapon_group, COLOR_P2, 1,
+		"fusil")
+	p2_btn3 = _create_weapon_btn("Pompe", p2_weapon_group, COLOR_P2, 1,
+		"pompe")
+	p2_btn4 = _create_weapon_btn("Arbalète", p2_weapon_group, COLOR_P2, 1,
+		"arbalete")
 	p2_btn1.button_pressed = true
 	p2_btn1.set_meta(META_NAV_SEED, 1)
 	p2_row.add_child(p2_btn1)
@@ -4344,12 +4468,27 @@ func _build_weapon_block() -> Control:
 
 ## `nav_owner` réserve le bouton au joueur concerné : le curseur de J1 ne peut
 ## pas entrer dans la rangée de J2, et réciproquement.
-func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color, owner_id: int) -> Button:
+## ⚠️ **Le libellé n'a plus d'emoji, et l'icône est un fichier.**
+##
+## Les quatre boutons portaient 🔫 💥 ☄️ 🏹. Un emoji est le seul glyphe du jeu
+## que la charte n'atteint pas : il est rendu par la fonte du **système**, donc
+## il contourne les deux fontes de DA1.2, arrive en saturation pleine contre la
+## règle 1, et change d'aspect d'une machine à l'autre. Trois défauts en un
+## caractère.
+##
+## `slug` et non le libellé : « Arbalète » porte un accent et une majuscule, et
+## dériver un chemin de fichier d'un texte affiché garantit qu'un renommage fera
+## disparaître une icône sans erreur. Même leçon que `weapon_data.gd`.
+func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color,
+		owner_id: int, slug: String = "") -> Button:
 	var btn := _make_choice_button(text, tint, group)
 	btn.text = text
 	btn.custom_minimum_size = Vector2(136, 80)
 	btn.add_theme_font_size_override("font_size", T_COURANT)
 	btn.set_meta(META_NAV_OWNER, owner_id)
+	# Rien si l'icône n'est pas cuite : le libellé seul reste lisible. Câbler,
+	# taire, diagnostiquer.
+	MenuIcones.poser_sur(btn, slug, tint)
 	return btn
 
 # ---------------------------------------------------------------------------
@@ -5153,10 +5292,10 @@ func hide_pick_window() -> void:
 
 func _weapon_label(idx: int) -> String:
 	match idx:
-		RankLoadout.ARBALETE: return "🏹 Arbalète"
-		RankLoadout.POMPE: return "☄️ Pompe"
-		RankLoadout.FUSIL: return "💥 Fusil"
-		_: return "🔫 Pistolet"
+		RankLoadout.ARBALETE: return "Arbalète"
+		RankLoadout.POMPE: return "Pompe"
+		RankLoadout.FUSIL: return "Fusil"
+		_: return "Pistolet"
 
 func _on_pick_weapon(idx: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")

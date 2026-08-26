@@ -53,7 +53,21 @@ const URL_SIGNATURE := URL_MANIFESTE + ".sig"
 ## configurées » et ne télécharge rien — dégradation franche, même patron que
 ## `eos_credentials.gd` absent. La fabrication de la paire est un jalon humain
 ## (H8) : `docs/MISE_A_JOUR.md` donne les deux commandes.
-const CLE_PUBLIQUE := ""
+const CLE_PUBLIQUE := """-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAu8ICiegdFuMq0rAytB8f
+0gO3C3+gBIp2dFxKK5XX/nQjKwisaneHPp7pBrteGogJgoCXV083guwDPHZ4eI6m
+MecFSBa+JSVseVMoCTSaXGkB+fll2EFELcALLJRu+qZUlJe8W4XqMVmHrvxMaU+2
+zshq0w//veykfUds5k2pzGLLc21GjEJx2Iy3PvhrocEKRd/8R5SLWxduCnOojbPy
+8H5fwghCttkkXr+zAVPcg1neWcrlBjFUxY0JYh0XmhIRomXy0RJKkdNmVWLrg0rq
+gWd5rMKLrYVV5OezGN7Jpg1bbykpLkuP7TsISOyKlYXfQHhgH93faMB2eh1Y1nZi
+wBJFGWzNSApF4Vbh11YSkMpnDhdPzEsvwb4FhgYnpHO31ZlBsF7I1a+CWx/P97A3
+vwEalNe4L6vGeQlPAnJyDOdDmLqc+99iJglq7AcLd55d6S5xWchlNF25b8gXLfPf
+IaKvXrOjNpGE5YGoQnkBKq++Uh39jaQ0B2bkCyN29CHcuPu++N8R5RY37t2818hI
+cr/8/5jefet/COZk5K5F/P3L2KuJQVRH3S1+HxZP5NczCEzN9MQvK9a3NbgmKQEC
++iAr9wCfw/e/dalpwzGljtJdpR3ZT62qricyTmsSVCMUArvPHdy4QJueMrNSEkOe
+QdR7IOdYLWc6Fu6FelSoZiECAwEAAQ==
+-----END PUBLIC KEY-----
+"""
 
 const DOSSIER := "user://maj"
 
