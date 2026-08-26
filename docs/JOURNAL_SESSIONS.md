@@ -1734,6 +1734,32 @@ demande ensuite. C'est pour ça que l'intro sortait déjà — un tiers de secon
 avant d'être coupée par la bascule vers le menu. Détail complet dans les
 « Pièges connus » de la feuille de route.
 
+### 2026-08-26 — le son a un titulaire : la session « DA3 »
+
+**Adrien m'a confié le son entier** (« tu reprends le son entièrement, tu es la
+session DA3 »), après la disparition de la session « spatialisation du son », qui
+tenait le chantier, le banc et `tools/test_dosage_audio.gd`. Son worktree
+`audio-dosage` subsiste sur le disque : **vérifié vide** — zéro commit non
+publié, aucun fichier en cours. Rien à récupérer, et il peut être retiré par qui
+en a le droit.
+
+**Fichiers du domaine, à partir de maintenant :** `audio_manager.gd`,
+`assets/audio/**`, `tools/banc_audio.*`, `tools/test_musique.gd`,
+`tools/test_oreille.gd`, `tools/test_dosage_audio.gd`, et le bloc audio de
+`asset_manifest.gd` (que personne d'autre ne tient).
+
+**Ce que je NE tiens pas**, et qu'il faut demander avant d'y écrire :
+`game_state.gd` et `player.gd`, où l'audio n'a que des points d'appel (le tir, le
+percuteur, la fin de manche, l'oreille). J'y touche au minimum et je le déclare.
+
+**État réel du domaine au moment de la reprise**, mesuré et non déduit : 45
+fichiers audio au dépôt, le dosage jugé à l'oreille en deux séances, DA3.1, 3.2,
+3.4 et 3.5 livrées. Ce qui reste — DA3.3, 3.6, 3.7, 3.8 — attend des fichiers
+qu'Adrien n'a pas produits ; seul **DA3.9 (mastering)** est un travail de session.
+La feuille de route décrivait encore DA3.4 et DA3.5 comme à faire : corrigé dans
+le même commit. **Un item livré qui reste marqué à faire envoie quelqu'un
+refaire le travail** — c'est le coût que ce journal existe pour éviter.
+
 #### Lot du 2026-08-26 — le dosage audio d'Adrien (worktree `audio-dosage-adrien`)
 
 Seconde séance au banc, valeurs inscrites dans `audio_manager.gd` avec leur date

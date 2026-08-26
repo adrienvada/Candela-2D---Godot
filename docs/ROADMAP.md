@@ -7770,7 +7770,20 @@ un fait de jeu, pas à un rythme d'interface.
   planche est cuite retournée (`--miroir`) pour que le dense soit sur la balle —
   **une traînée s'éteint dans son sillage, elle ne s'y allume pas.**
 
-### DA3 — L'audio, la moitié du « pro » (le câblage existe, il joue du silence)
+### DA3 — L'audio
+
+> **Le sous-titre disait « le câblage existe, il joue du silence ». Il ne joue
+> plus de silence.** Au 2026-08-26, le dépôt porte **45 fichiers audio** — 12 en
+> musique, 20 pour les armes, 8 de voix, 5 d'effets d'origine — et le dosage a
+> été jugé à l'oreille par Adrien en deux séances au banc.
+>
+> **Ce qui reste de DA3 n'est plus du câblage, c'est de la PRODUCTION** : les
+> sons qui manquent manquent parce qu'ils n'ont pas été faits, pas parce que le
+> code les ignore. Seul DA3.9 (mastering) est un travail de session.
+>
+> **Titulaire depuis le 2026-08-26 : la session « DA3 »**, à la demande d'Adrien
+> — le son entier, après la disparition de la session « spatialisation ».
+
 
 - ~~**DA3.1 Les 4 sons de tir**~~ (= V4.1) — **✅ livrée le 2026-08-25**, en
   seize prises (quatre par arme) plutôt qu'en huit corps/queues. Le premier son
@@ -7780,13 +7793,35 @@ un fait de jeu, pas à un rythme d'interface.
 - **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
   `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
   dépôt des fichiers. *(C : 3 samples)*
-- **DA3.4 Les stingers accordés** (= V2.3, V3.7, V3.8, V3.10) — **les quatre
-  fichiers sont dans le dépôt depuis le 2026-08-24** (`sting_kill`,
-  `sting_kill_match`, `sting_defeat`, `sting_draw`, accordés et sur la grille).
-  **Rien ne les joue** : aucune clé dans `AudioManager.SOUNDS`, aucun appel. Il
-  ne reste que le câblage, et il est au domaine « game feel ».
-- **DA3.5 La voix d'annonceur** (= V1.3) — 3-2-1, FIGHT, verdicts. Rien ne dit
-  « fini » comme une voix. *(C)*
+
+  ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION à trancher AVANT le
+  câblage, pas après.** C'est une boucle dont le volume suit l'éblouissement, et
+  la règle posée le 2026-08-25 s'y applique : *un curseur de confort ne doit pas
+  moduler une pénalité d'information.* S'il informe — « tu es ébloui, voilà ce
+  qu'il te reste » — il relève de la même règle que le voile blanc et ne doit pas
+  être réglable ; s'il habille, il suit le curseur d'effets. La question est
+  indécidable tant que le fichier n'existe pas, ce qui est une raison de plus de
+  la poser au moment du dépôt.
+- ~~**DA3.4 Les stingers accordés**~~ (= V2.3, V3.7, V3.8, V3.10) — **✅ livrée
+  le 2026-08-25.** Les quatre fichiers étaient au dépôt depuis la veille sans que
+  rien ne les joue ; ils sont câblés par `AudioManager.stinger_de_fin`, une règle
+  pure qui décide ce que CETTE machine entend. Un kill non décisif s'entend **des
+  deux côtés** (décision d'Adrien) ; un kill décisif donne le kill de match au
+  vainqueur et la défaite au vaincu ; en écran scindé, jamais de défaite —
+  personne n'y est « le » vaincu à la sortie audio.
+
+  ⚠️ **Au format BO1, `sting_kill` ne sortira jamais** : tout kill y est décisif.
+  Ce n'est pas un défaut, mais c'est un silence qu'on prendra pour une panne.
+- ~~**DA3.5 La voix d'annonceur**~~ (= V1.3) — **✅ livrée le 2026-08-25.** Huit
+  fichiers dans `assets/audio/voice/`. La règle est `AudioManager.voix_de_fin`,
+  **dérivée d'`ecoute_somme`** : en écran scindé l'annonceur NOMME le vainqueur —
+  deux joueurs, mêmes haut-parleurs, il faut lever l'ambiguïté — partout ailleurs
+  il s'adresse à celui qui écoute (`win`, `defeat`, `spk_perfect` sorti intact,
+  `spk_close_call` sous 10 PV).
+
+  ⚠️ Les chemins pointaient vers `assets/audio/speaker/`, **un dossier qui n'a
+  jamais existé** : les voix étaient muettes en silence depuis des mois. Le mot
+  `speaker` ne désigne plus qu'un **bus** — une sortie, pas un rangement.
 - **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
 - **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
   même matière sonore pour tous les menus. *(C : 5-6 samples)*
