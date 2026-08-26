@@ -8914,8 +8914,102 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
   lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
   généré, procédé DA1.5)*
-- **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
-  l'éditeur sous la bible. *(S + G)*
+- **DA4.15 L'éditeur de cartes aligné** ✅ **livrée le 2026-08-27** — quatorze
+  icônes câblées, dix-neuf tailles rangées, dix-neuf glyphes retirés.
+
+  **Le panneau parlait par rébus.** Seize boutons portaient chacun un caractère
+  Unicode rare en tête de libellé — `▭ ⌗ ⇔ ⇕ ⟳ ⤡ ⤢ ↶ ↷ ◎ ⧉ ⤓ ✦ ⌫ ▶ ✕` — plus
+  un emoji, `💾`, sur SAUVEGARDER. **DA4.19 avait déclaré la chasse aux emojis
+  terminée sur cinq ; il y en avait six.** Le sixième vivait dans le seul écran
+  que l'inventaire n'avait pas ouvert.
+
+  ⚠️ **Un nettoyage annoncé complet empêche le suivant** : on ne recompte pas ce
+  qu'on croit fini. Le compte se tient désormais dans un banc et non dans une
+  phrase — `tools/test_icones_editeur.gd` lit les **chaînes littérales** des
+  fichiers d'écran, commentaires exclus, et refuse tout pictogramme qui n'est
+  pas nommé dans sa liste `TOLERES`. Réintroduire `⌗` demandera de l'y écrire,
+  donc de le décider.
+
+  ### L'icône livrée disait le contraire de son bouton
+
+  ⚠️ **Le fichier `outil_miroir_d.png` portait l'axe ↗ — l'anti-diagonale.**
+  Câblé sous son nom, le bouton « DIAGONALE ↘ » aurait montré la flèche inverse
+  de ce qu'il fait : le joueur aurait plié sa carte sur le mauvais axe sans
+  aucun moyen de comprendre pourquoi. Vérifié à la **mesure** et non à l'œil —
+  couverture alpha le long des deux diagonales, 58 % contre 35 % — parce qu'une
+  icône de symétrie inversée est indétectable en relecture.
+
+  **Un glyphe faux se voit ; une image fausse se croit.** Personne ne relit une
+  icône, on la reconnaît — et reconnaître, c'est justement cesser de regarder.
+  C'est le risque propre au remplacement d'un texte par un dessin, et il ne
+  s'annule pas en dessinant mieux.
+
+  Le fichier est renommé `outil_miroir_ad.png`, et **la diagonale est son reflet
+  calculé** : `MenuIcones.REFLET_DE`. Un seul fichier, deux boutons, l'exactitude
+  de la paire devenue propriété du code plutôt qu'accord entre deux dessins —
+  même geste que la torche de DA4.14 qui sert les deux joueurs par `modulate`.
+  Le banc mesure le reflet pixel par pixel **dans les deux sens** : il est bien
+  le miroir, et il n'est **pas** l'original — sans ce second contrôle, une
+  dérivation qui ne ferait rien resterait verte sur toute image symétrique.
+
+  ### Le repli silencieux cachait l'absence qu'il amortit
+
+  ⚠️ **Les quatorze icônes étaient posées sur le disque et importées nulle
+  part.** `.godot/imported/` n'en contenait aucune. Le câblage était complet,
+  chaque bouton appelait `poser_outil()`, chaque appel rendait `false`, et
+  l'éditeur s'affichait exactement comme avant.
+
+  **Un repli qui marche rend l'absence indistinguable de la présence.** La règle
+  « câbler, taire, diagnostiquer » reste juste — mais elle exige un contrôle qui,
+  lui, ne se replie pas. C'est le premier du banc : il échoue si un seul fichier
+  catalogué ne se charge pas, et il vérifie en plus que la texture n'est pas de
+  taille nulle, parce qu'une image vide se charge sans erreur.
+
+  ### Le panneau avait sa propre échelle typographique
+
+  Sept tailles pour seize boutons — 13, 15, 16, 17, 18, 19, 20 — plus 14, 21, 24
+  et 26 dans les modales et l'en-tête. **C'est la maladie exacte que la bible a
+  été écrite pour soigner** (« le dépôt portait 25 tailles distinctes, aucune
+  issue d'une règle ») : l'éditeur y avait échappé. Dix-neuf littéraux rangés
+  dans les six crans, **par le sens que la bible donne à chacun** et non par
+  arrondi au plus proche : un libellé de bouton est du texte courant, une mention
+  DIM est une mention, un titre de modale est un titre.
+
+  La primauté de SAUVEGARDER et d'AUTO-MUR se disait déjà par la couleur et la
+  hauteur ; la taille était un troisième canal pour la même chose, et **une
+  troisième voie ne hiérarchise pas, elle brouille.**
+
+  ⚠️ **Et le banc qui tient cette règle ne pouvait pas être un grep.** Pas une
+  de ces sept tailles n'apparaissait au site du `add_theme_font_size_override` :
+  elles étaient des **arguments** passés à `_make_label()` et `_make_button()`,
+  qui les posaient ensuite. Une règle textuelle cherchant `font_size", <nombre>`
+  serait restée verte sur les seize boutons fautifs — elle aurait nommé le défaut
+  sans jamais le voir. Le contrôle construit donc le HUD et demande à chaque
+  `Control` la taille qu'il **rend**, peu importe par où elle est arrivée.
+
+  ### Ce qui n'a pas été fait, et pourquoi
+
+  - **Huit actions restent sans icône** — les quatre boutons de grille, NOUVELLE,
+    IMPORTER, SAUVEGARDER, TESTER, RETOUR. Ce n'est pas un oubli mais un état
+    déclaré : `MenuIcones.SANS_ICONE` les nomme, et le banc exige que **toute**
+    action figure dans l'une des quatre listes. Ajouter un bouton demain sans
+    trancher la question fera rougir le banc, ce qui est le meilleur moment pour
+    qu'elle se pose. *(G — cinq icônes à générer, procédé DA1.5)*
+  - **Les deux flèches ↘ ↗ restent dans les libellés** des diagonales, seule
+    redondance conservée. Sans elles, une icône absente laisserait deux boutons
+    voisins lisant tous deux « DIAGONALE » : **un repli doit rester
+    discriminant, sinon ce n'est pas un repli.**
+  - **Mipmaps activés sur les quatorze icônes d'outils, pas sur les cinq
+    d'armes.** Une icône de 128 px rendue à 22 échantillonne 4 texels sur 41 sans
+    mipmap : les traits fins se brisent et *changent* quand le bouton bouge.
+    DA5.6 a déjà tranché (« filtrage linéaire, mipmaps ») — appliquer la décision
+    n'est pas en prendre une. Les cinq icônes d'armes ont le même réglage à
+    `false` et relèvent de DA4.19, close : **signalé, pas corrigé.** *(S)*
+  - `✕` et `☐` restent dans la ligne d'aide manette : ce sont les touches
+    **telles qu'elles sont gravées sur la manette**, pas des décorations.
+
+  27 contrôles, verts, vérifiés rouges sur trois versants — le reflet non
+  retourné, un emoji réintroduit, une taille hors échelle. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
   quelque chose, en effet : le contraire de ce qu'on voulait.
 
@@ -8981,6 +9075,14 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   2026-08-26** — *item ouvert après coup, sur demande d'Adrien : « remplace tous
   les icônes dans les barres de menu par des vraies images ». Le travail existait
   sans ligne pour le porter ; c'est le motif consigné en DA4.13, corrigé ici.*
+
+  ⚠️ **« Le dernier emoji » était faux, et l'a été un jour entier.** Il y en
+  avait un sixième — `💾` sur SAUVEGARDER dans l'éditeur de cartes — plus
+  dix-huit glyphes Unicode rares dans le même panneau. Relevé et corrigé par
+  DA4.15 le 2026-08-27. Le titre de cet item disait *le dernier* parce que
+  l'inventaire n'avait ouvert que les écrans de `ui.gd` ; **un nettoyage annoncé
+  complet empêche le suivant**, puisqu'on ne recompte pas ce qu'on croit fini.
+  Le compte vit maintenant dans `tools/test_icones_editeur.gd`.
 
   **Le dépôt portait cinq emojis** — 🔫 🏹 ☄️ 💥 🔦 — dans les boutons d'arme et
   l'indicateur de torche. Ils paraissent inoffensifs et ils étaient le marqueur

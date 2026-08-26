@@ -135,13 +135,13 @@ func _build_header() -> void:
 	box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	panel.add_child(box)
 
-	_title_label = _make_label("ÉDITEUR DE CARTE", 24, COL_TEXT)
+	_title_label = _make_label("ÉDITEUR DE CARTE", Charte.T_TITRE, COL_TEXT)
 	box.add_child(_title_label)
 
-	_subtitle_label = _make_label("grille 32×32", 15, COL_DIM)
+	_subtitle_label = _make_label("grille 32×32", Charte.T_APPUI, COL_DIM)
 	box.add_child(_subtitle_label)
 
-	_tool_label = _make_label("Pinceau", 16, COL_ACCENT)
+	_tool_label = _make_label("Pinceau", Charte.T_COURANT, COL_ACCENT)
 	box.add_child(_tool_label)
 
 func _build_step_bar() -> void:
@@ -214,16 +214,16 @@ func _build_validation_panel() -> PanelContainer:
 	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
-	box.add_child(_make_label("VALIDATION", 15, COL_DIM))
+	box.add_child(_make_label("VALIDATION", Charte.T_MENTION, COL_DIM))
 
-	_verdict_label = _make_label("—", 21, COL_WARN)
+	_verdict_label = _make_label("—", Charte.T_APPUI, COL_WARN)
 	box.add_child(_verdict_label)
 
 	_checks_box = VBoxContainer.new()
 	_checks_box.add_theme_constant_override("separation", Charte.GAP_XXS)
 	box.add_child(_checks_box)
 
-	_reason_label = _make_label("", 14, COL_ERROR)
+	_reason_label = _make_label("", Charte.T_COURANT, COL_ERROR)
 	_reason_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_reason_label.custom_minimum_size = Vector2(PANEL_WIDTH - 34.0, 0)
 	box.add_child(_reason_label)
@@ -243,89 +243,97 @@ func _build_tools_panel() -> PanelContainer:
 	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
-	box.add_child(_make_label("OUTILS", 15, COL_DIM))
+	box.add_child(_make_label("OUTILS", Charte.T_MENTION, COL_DIM))
 
 	# Le pinceau est le réglage le plus structurant : en tête de panneau.
-	_btn_brush = _make_button("▭  PINCEAU : RECTANGLE", ACTION_BRUSH, 18)
+	# Libellé et icône arrivent par `set_brush()` : le HUD ne connaît pas le
+	# mode par défaut, et n'a aucune raison de le deviner.
+	_btn_brush = _make_button("PINCEAU", ACTION_BRUSH)
 	_btn_brush.custom_minimum_size = Vector2(0, 46)
 	box.add_child(_btn_brush)
 
 	# Auto-mur : le gain de temps le plus spectaculaire de l'éditeur, donc
 	# pleine largeur et couleur d'accentuation.
-	var auto_walls := _make_button("⌗  AUTO-MUR   (ceinture le sol)", ACTION_AUTO_WALLS, 19)
+	var auto_walls := _make_button("AUTO-MUR   (ceinture le sol)",
+		ACTION_AUTO_WALLS)
 	auto_walls.custom_minimum_size = Vector2(0, 52)
 	_style_button(auto_walls, COL_ACCENT, true)
 	box.add_child(auto_walls)
 
-	box.add_child(_make_label("SYMÉTRIE", 13, COL_DIM))
+	box.add_child(_make_label("SYMÉTRIE", Charte.T_MENTION, COL_DIM))
 
 	var mirrors := HBoxContainer.new()
 	mirrors.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(mirrors)
-	mirrors.add_child(_make_button("⇔  H", ACTION_MIRROR_H, 16, true))
-	mirrors.add_child(_make_button("⇕  V", ACTION_MIRROR_V, 16, true))
-	mirrors.add_child(_make_button("⟳  180°", ACTION_ROTATE_180, 16, true))
+	mirrors.add_child(_make_button("H", ACTION_MIRROR_H, true))
+	mirrors.add_child(_make_button("V", ACTION_MIRROR_V, true))
+	mirrors.add_child(_make_button("180°", ACTION_ROTATE_180, true))
 
 	# Les diagonales exigent une grille carrée : on les désactive sinon, avec
 	# une infobulle qui dit pourquoi plutôt que de laisser un bouton muet.
+	#
+	# ⚠️ **Les deux flèches restent dans le libellé** alors que les icônes disent
+	# déjà l'axe — seule redondance conservée du panneau. Sans elles, une icône
+	# absente laisserait deux boutons voisins lisant tous deux « DIAGONALE » :
+	# le repli texte doit rester DISCRIMINANT, sinon ce n'est pas un repli.
 	var diagonals := HBoxContainer.new()
 	diagonals.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(diagonals)
-	_btn_mirror_d = _make_button("⤡  DIAGONALE ↘", ACTION_MIRROR_D, 16, true)
-	_btn_mirror_ad = _make_button("⤢  DIAGONALE ↗", ACTION_MIRROR_AD, 16, true)
+	_btn_mirror_d = _make_button("DIAGONALE ↘", ACTION_MIRROR_D, true)
+	_btn_mirror_ad = _make_button("DIAGONALE ↗", ACTION_MIRROR_AD, true)
 	diagonals.add_child(_btn_mirror_d)
 	diagonals.add_child(_btn_mirror_ad)
 
 	box.add_child(_make_separator())
 
-	_grid_label = _make_label("TAILLE DE LA GRILLE", 13, COL_DIM)
+	_grid_label = _make_label("TAILLE DE LA GRILLE", Charte.T_MENTION, COL_DIM)
 	box.add_child(_grid_label)
 
 	var width_row := HBoxContainer.new()
 	width_row.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(width_row)
-	width_row.add_child(_make_button("−  LARGEUR", ACTION_GRID_NARROWER, 16, true))
-	width_row.add_child(_make_button("+  LARGEUR", ACTION_GRID_WIDER, 16, true))
+	width_row.add_child(_make_button("−  LARGEUR", ACTION_GRID_NARROWER, true))
+	width_row.add_child(_make_button("+  LARGEUR", ACTION_GRID_WIDER, true))
 
 	var height_row := HBoxContainer.new()
 	height_row.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(height_row)
-	height_row.add_child(_make_button("−  HAUTEUR", ACTION_GRID_SHORTER, 16, true))
-	height_row.add_child(_make_button("+  HAUTEUR", ACTION_GRID_TALLER, 16, true))
+	height_row.add_child(_make_button("−  HAUTEUR", ACTION_GRID_SHORTER, true))
+	height_row.add_child(_make_button("+  HAUTEUR", ACTION_GRID_TALLER, true))
 
 	box.add_child(_make_separator())
 
 	var history := HBoxContainer.new()
 	history.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(history)
-	_btn_undo = _make_button("↶  ANNULER", ACTION_UNDO, 17, true)
-	_btn_redo = _make_button("↷  RÉTABLIR", ACTION_REDO, 17, true)
+	_btn_undo = _make_button("ANNULER", ACTION_UNDO, true)
+	_btn_redo = _make_button("RÉTABLIR", ACTION_REDO, true)
 	history.add_child(_btn_undo)
 	history.add_child(_btn_redo)
 
-	_history_label = _make_label("Historique vide", 13, COL_DIM)
+	_history_label = _make_label("Historique vide", Charte.T_MENTION, COL_DIM)
 	box.add_child(_history_label)
 
 	var view := HBoxContainer.new()
 	view.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(view)
-	_btn_light = _make_button("◎  APERÇU LUMIÈRE", ACTION_LIGHT, 16, true)
+	_btn_light = _make_button("APERÇU LUMIÈRE", ACTION_LIGHT, true)
 	view.add_child(_btn_light)
-	view.add_child(_make_button("⤢  VOIR TOUTE LA CARTE", ACTION_FRAME, 16, true))
+	view.add_child(_make_button("VOIR TOUTE LA CARTE", ACTION_FRAME, true))
 
 	box.add_child(_make_separator())
 
 	var share := HBoxContainer.new()
 	share.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(share)
-	share.add_child(_make_button("⧉  PARTAGER", ACTION_SHARE, 16, true))
-	share.add_child(_make_button("⤓  IMPORTER", ACTION_IMPORT, 16, true))
+	share.add_child(_make_button("PARTAGER", ACTION_SHARE, true))
+	share.add_child(_make_button("IMPORTER", ACTION_IMPORT, true))
 
 	var reset := HBoxContainer.new()
 	reset.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(reset)
-	reset.add_child(_make_button("✦  NOUVELLE", ACTION_NEW, 16, true))
-	reset.add_child(_make_button("⌫  TOUT VIDER", ACTION_CLEAR, 16, true))
+	reset.add_child(_make_button("NOUVELLE", ACTION_NEW, true))
+	reset.add_child(_make_button("TOUT VIDER", ACTION_CLEAR, true))
 
 	return panel
 
@@ -339,7 +347,11 @@ func _build_actions_panel() -> PanelContainer:
 	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
-	_btn_save = _make_button("💾  SAUVEGARDER", ACTION_SAVE, 20)
+	# ⚠️ **`💾` était le sixième emoji du dépôt**, et DA4.19 avait déclaré la
+	# chasse terminée sur cinq. Il part comme les autres, icône ou non : le garder
+	# « en attendant » laisserait le défaut qu'on corrige. SAUVEGARDER, TESTER et
+	# RETOUR n'ont pas encore d'icône dessinée — voir `MenuIcones.SANS_ICONE`.
+	_btn_save = _make_button("SAUVEGARDER", ACTION_SAVE)
 	_btn_save.custom_minimum_size = Vector2(0, 52)
 	_style_button(_btn_save, COL_OK, true)
 	box.add_child(_btn_save)
@@ -347,9 +359,9 @@ func _build_actions_panel() -> PanelContainer:
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", Charte.GAP_XS)
 	box.add_child(bottom)
-	_btn_test = _make_button("▶  TESTER", ACTION_TEST, 18, true)
+	_btn_test = _make_button("TESTER", ACTION_TEST, true)
 	bottom.add_child(_btn_test)
-	bottom.add_child(_make_button("✕  RETOUR", ACTION_BACK, 18, true))
+	bottom.add_child(_make_button("RETOUR", ACTION_BACK, true))
 
 	return panel
 
@@ -368,7 +380,7 @@ func _build_prompt_bar() -> void:
 	_prompt_pad = _make_label(
 		"MANETTE   ✕ tracer (2 coins) · ☐ effacer · L2 bascule libre/rectangle"
 		+ " · R2 pot · L1/R1 étape · stick droit caméra · Select annuler · Start sauver",
-		15, COL_DIM)
+		Charte.T_MENTION, COL_DIM)
 	_prompt_pad.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_prompt_pad)
 
@@ -376,7 +388,7 @@ func _build_prompt_bar() -> void:
 		"SOURIS   glisser pour tracer un rectangle · clic droit effacer · B change de pinceau"
 		+ " · Maj bascule libre · Ctrl+clic pot · molette zoom · clic molette ou Espace caméra"
 		+ " · Ctrl+Z annuler · Tab étape · Ctrl+S sauver",
-		15, COL_DIM)
+		Charte.T_MENTION, COL_DIM)
 	_prompt_key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_prompt_key)
 
@@ -411,7 +423,7 @@ func _build_sandbox_banner() -> void:
 
 	var hint := _make_label(
 		"Rond ou Échap pour revenir à l'édition — votre carte est conservée",
-		16, COL_TEXT)
+		Charte.T_COURANT, COL_TEXT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(hint)
 
@@ -452,8 +464,8 @@ func _build_save_panel() -> PanelContainer:
 	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
-	box.add_child(_make_label("SAUVEGARDER LA CARTE", 26, COL_TEXT))
-	box.add_child(_make_label("Nom de la carte", 15, COL_DIM))
+	box.add_child(_make_label("SAUVEGARDER LA CARTE", Charte.T_TITRE, COL_TEXT))
+	box.add_child(_make_label("Nom de la carte", Charte.T_MENTION, COL_DIM))
 
 	_name_edit = LineEdit.new()
 	_name_edit.add_theme_font_size_override("font_size", Charte.T_APPUI)
@@ -462,11 +474,12 @@ func _build_save_panel() -> PanelContainer:
 	_name_edit.text_submitted.connect(func(_t: String) -> void: _emit_save())
 	box.add_child(_name_edit)
 
-	_collision_label = _make_label("", 15, COL_WARN)
+	_collision_label = _make_label("", Charte.T_COURANT, COL_WARN)
 	box.add_child(_collision_label)
 
 	box.add_child(_make_separator())
-	box.add_child(_make_label("Cartes existantes — cliquez pour reprendre un nom", 15, COL_DIM))
+	box.add_child(_make_label("Cartes existantes — cliquez pour reprendre un nom",
+		Charte.T_MENTION, COL_DIM))
 
 	_map_list = ItemList.new()
 	_map_list.custom_minimum_size = Vector2(0, 230)
@@ -474,7 +487,7 @@ func _build_save_panel() -> PanelContainer:
 	_map_list.item_selected.connect(_on_map_list_selected)
 	box.add_child(_map_list)
 
-	_dialog_error = _make_label("", 16, COL_ERROR)
+	_dialog_error = _make_label("", Charte.T_COURANT, COL_ERROR)
 	_dialog_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_dialog_error.custom_minimum_size = Vector2(680, 0)
 	box.add_child(_dialog_error)
@@ -503,8 +516,9 @@ func _build_import_panel() -> PanelContainer:
 	box.add_theme_constant_override("separation", Charte.GAP_XS)
 	panel.add_child(box)
 
-	box.add_child(_make_label("IMPORTER UNE CARTE", 26, COL_TEXT))
-	box.add_child(_make_label("Collez un code commençant par CANDELA-", 15, COL_DIM))
+	box.add_child(_make_label("IMPORTER UNE CARTE", Charte.T_TITRE, COL_TEXT))
+	box.add_child(_make_label("Collez un code commençant par CANDELA-",
+		Charte.T_MENTION, COL_DIM))
 
 	_code_edit = LineEdit.new()
 	_code_edit.add_theme_font_size_override("font_size", Charte.T_APPUI)
@@ -664,10 +678,16 @@ func set_history(can_undo: bool, can_redo: bool, undo_label: String) -> void:
 		_history_label.add_theme_color_override("font_color", COL_DIM)
 
 ## Reflète le pinceau persistant dans le panneau d'outils.
-func set_brush(label: String, highlight: bool) -> void:
+##
+## ⚠️ **`slug` et non un nom de fichier.** C'est le seul bouton dont l'icône ne
+## se déduit pas de son action — `ACTION_BRUSH` désigne « changer de pinceau »,
+## pas « le pinceau courant ». L'appelant connaît le mode ; il passe son slug, et
+## `map_editor_hud.gd` continue d'ignorer où vivent les fichiers.
+func set_brush(slug: String, label: String, highlight: bool) -> void:
 	if is_instance_valid(_btn_brush):
 		_btn_brush.text = label
 		_style_button(_btn_brush, COL_ACCENT if highlight else COL_BORDER, highlight)
+		MenuIcones.poser_outil(_btn_brush, slug, COL_TEXT)
 
 ## Affiche la taille de grille et verrouille les diagonales hors grille carrée.
 func set_grid_state(size: Vector2i) -> void:
@@ -682,7 +702,9 @@ func set_grid_state(size: Vector2i) -> void:
 			else "Les diagonales échangent largeur et hauteur : grille carrée requise."
 
 func set_light_preview(active: bool) -> void:
-	_btn_light.text = "◉  LUMIÈRE ACTIVE" if active else "◎  APERÇU LUMIÈRE"
+	# L'icône de l'ampoule ne change pas : c'est le même bouton, dans deux
+	# états. Ce sont le libellé et la couleur qui portent la bascule.
+	_btn_light.text = "LUMIÈRE ACTIVE" if active else "APERÇU LUMIÈRE"
 	_style_button(_btn_light, COL_ACCENT if active else COL_BORDER, active)
 
 ## Affiche le résultat de MapCodec.check_playable() et verrouille en
@@ -737,11 +759,11 @@ func _rebuild_checks(checks: Array) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", Charte.GAP_XS)
 
-		var mark := _make_label(symbol, 17, colour)
+		var mark := _make_label(symbol, Charte.T_COURANT, colour)
 		mark.custom_minimum_size = Vector2(24, 0)
 		row.add_child(mark)
 
-		var text := _make_label(String(check.get("label", "")), 16,
+		var text := _make_label(String(check.get("label", "")), Charte.T_COURANT,
 			COL_TEXT if passed else colour)
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.custom_minimum_size = Vector2(PANEL_WIDTH - 70.0, 0)
@@ -763,7 +785,7 @@ func set_sandbox_mode(active: bool) -> void:
 	_sandbox_banner.visible = active
 	_step_bar.get_parent().visible = not active
 	_prompt_pad.get_parent().get_parent().visible = not active
-	_btn_test.text = "■  QUITTER LE TEST" if active else "▶  TESTER"
+	_btn_test.text = "QUITTER LE TEST" if active else "TESTER"
 	_refresh_locks()
 
 # ---------------------------------------------------------------------------
@@ -790,7 +812,7 @@ func show_toast(message: String, kind: Toast = Toast.INFO) -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.modulate.a = 0.0
 
-	var label := _make_label(prefix + message, 19, colour)
+	var label := _make_label(prefix + message, Charte.T_APPUI, colour)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(label)
 	_toast_box.add_child(panel)
@@ -837,17 +859,31 @@ func _make_separator() -> HSeparator:
 	separator.add_theme_stylebox_override("separator", style)
 	return separator
 
-func _make_button(text: String, action: StringName, size: int,
-		expand: bool = false) -> Button:
+## Un bouton d'action, à la taille de la maison, icône posée si elle existe.
+##
+## ⚠️ **L'icône se déduit de l'action, et ce n'est pas une commodité.** La clé de
+## `MenuIcones.PAR_OUTIL` EST la constante `ACTION_*` : aucun site d'appel n'a
+## donc de nom de fichier à répéter, et il devient impossible d'en câbler un sur
+## le mauvais bouton. Le seul cas qui déroge — le pinceau, dont l'icône dépend du
+## mode et non de l'action — passe par `icone`, explicitement.
+##
+## **Plus de taille en paramètre.** Le panneau en portait sept (13 à 20) pour
+## seize boutons ; la bible en prévoit une pour les libellés de bouton, et la
+## primauté se dit déjà par la couleur et la hauteur. Une troisième voie pour la
+## même chose ne hiérarchise pas, elle brouille.
+func _make_button(text: String, action: StringName,
+		expand: bool = false, icone: String = "") -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", size)
+	button.add_theme_font_size_override("font_size", Charte.T_COURANT)
 	button.custom_minimum_size = Vector2(0, 40)
 	if expand:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(func() -> void: action_requested.emit(action))
 	_style_button(button, COL_BORDER, false)
+	MenuIcones.poser_outil(button, icone if icone != "" else String(action),
+		COL_TEXT)
 	return button
 
 func _make_dialog_button(text: String, colour: Color) -> Button:
