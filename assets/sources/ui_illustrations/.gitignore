@@ -9,3 +9,22 @@
 *
 !.gitignore
 !.gdignore
+
+# Retenues le 2026-08-26 — chacune a produit une illustration livrée, et le
+# rapprochement se lit dans les noms. `creer_rejoindre_01` en a produit DEUX :
+# la même porte vue des deux côtés, générée d'un seul tirage puis découpée, ce
+# qui est précisément ce qui les rend fraternelles à l'écran.
+#
+# ⚠️ **Elles ne l'étaient pas, et la doctrine ci-dessus disait pourtant qu'elles
+# devaient l'être.** Relevé par la session DA2 le 2026-08-26 : ce fichier était
+# versionné, la règle était écrite, et aucune planche n'avait suivi. Les neuf
+# `ill_*.png` livrées étaient donc **irreproductibles** — une doctrine appliquée
+# à moitié protège moins qu'une doctrine absente, parce qu'on la croit tenue.
+!amical_01.jpg
+!competitif_01.jpg
+!creer_rejoindre_01.jpg
+!ecran_scinde_01.jpg
+!entrainement_01.jpg
+!mise_a_jour_01.jpg
+!quitter_01.jpg
+!retour_01.jpg

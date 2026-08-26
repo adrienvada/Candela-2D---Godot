@@ -1,0 +1,24 @@
+# Sources brutes de génération — même règle que `ui_illustrations/`.
+#
+# **Seules les planches qui ont produit un asset livré sont versionnées.** Elles
+# sont la seule façon de le recuire : sans elles, l'asset devient irreproductible.
+# Le lot de tri, lui, ne rentre pas au dépôt — il sert une fois, à choisir une
+# direction, et reste sur le poste d'Adrien.
+#
+# Une planche retenue s'ajoute NOMMÉMENT ci-dessous, jamais en versionnant le lot.
+*
+!.gitignore
+!.gdignore
+
+# Retenues le 2026-08-26 — les quatorze icônes d'outils de l'éditeur (DA4.15).
+#
+# ⚠️ **Quatre des cinq planches portent PLUSIEURS icônes**, et c'est un choix, pas
+# une économie : `mirroir_rotation_sheet_01` tient les quatre symétries et la
+# rotation d'un seul tirage. Des tirages indépendants n'auraient pas produit des
+# variantes du même geste mais cinq dessins voisins — la leçon de
+# `creer_rejoindre_01`, appliquée d'emblée.
+!annuler_refaire_01.jpg
+!effacer_partager_01.jpg
+!mirroir_rotation_sheet_01.jpg
+!murs_lumiere_cadre_01.jpg
+!pinceau_rect_pot_01.jpg

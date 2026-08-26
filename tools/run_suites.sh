@@ -275,6 +275,26 @@ duo duo_ralenti --ralenti
 # plutôt que le moment.
 duo duo_spam --spam
 
+# --- Aucun asset livré ne vit hors du dépôt ---------------------------------
+#
+# ⚠️ **Ce contrôle est en bash et pas en GDScript, et c'est la raison d'être du
+# placement.** La question n'est pas « le fichier est-il sur le disque ? » — les
+# bancs Godot répondent déjà à celle-là, et elle a répondu OUI le 2026-08-26
+# pendant que quatorze icônes livrées n'existaient QUE sur le poste d'Adrien, le
+# jour même où un incident effaçait sa session. La question est « git le
+# connaît-il ? », et seul git peut y répondre.
+#
+# Ce que ça attrape : un asset déposé dans `assets/` et jamais ajouté. Il se voit
+# à l'écran, tous les bancs sont verts, et il disparaît avec la machine.
+hors_depot=$(git ls-files --others --exclude-standard -- assets/ui assets/audio assets/maps 2>/dev/null | wc -l | tr -d ' ')
+if [ "${hors_depot:-0}" -ne 0 ]; then
+  echo "--- ${hors_depot} asset(s) présent(s) mais HORS DU DÉPÔT ---"
+  git ls-files --others --exclude-standard -- assets/ui assets/audio assets/maps | sed 's/^/    /'
+  echo "    Ils s'affichent, les bancs sont verts, et ils meurent avec la machine."
+  echo "    git add les fichiers ci-dessus, ou explique leur exclusion dans un .gitignore."
+  fail=1
+fi
+
 DUREE=$((SECONDS - DEBUT))
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1

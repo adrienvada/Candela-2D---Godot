@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-26
+> Dernière mise à jour : 2026-08-27
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -10235,6 +10235,36 @@ Reste donc :
    sources sont versionnées précisément pour ça (`assets/sources/*/.gitignore` :
    *« sans elles, l'asset devient irreproductible »*) — mais une planche sans sa
    recette ne l'est qu'à moitié.
+
+   > ⚠️ **Cette phrase a été fausse pendant deux jours, et personne ne pouvait le
+   > voir.** Relevé par la session DA2 le 2026-08-26 : `ui_illustrations/` avait
+   > son `.gitignore` versionné, la doctrine y était écrite noir sur blanc, et
+   > **aucune de ses huit planches n'avait suivi.** `ui_outils/` n'avait même pas
+   > de doctrine. Les neuf `ill_*.png` livrées et les quatorze icônes d'outils
+   > étaient donc irreproductibles, et les icônes n'existaient **que sur le poste
+   > d'Adrien** — le jour même où un incident a effacé sa session.
+   >
+   > **Une doctrine appliquée à moitié protège moins qu'une doctrine absente**,
+   > parce qu'on la croit tenue : ce paragraphe la citait comme une garantie
+   > acquise. Corrigé le 2026-08-26 — les treize planches sont au dépôt, nommées
+   > une à une comme la règle l'exige.
+   >
+   > Et la façon dont l'écart a échappé aux deux sessions mérite d'être notée :
+   > **`git status` replie un répertoire entièrement non suivi en UNE ligne.**
+   > Un `git status --porcelain | grep '\.jpg$'` rend `0`, et ce `0` se lit comme
+   > « rien ne manque » alors qu'il veut dire « je n'ai pas regardé dedans ».
+   > S'y ajoute un piège de worktree : un worktree ne contient que les fichiers
+   > SUIVIS plus ce qu'on y crée, donc **compter des fichiers non suivis depuis un
+   > worktree rend toujours zéro**. Deux sessions ont mesuré deux arbres
+   > différents et se sont crues en désaccord.
+   >
+   > **Une garde est posée dans `tools/run_suites.sh`, et elle est en bash — pas
+   > en GDScript.** Ce n'est pas un rangement : les bancs Godot répondent à « le
+   > fichier est-il sur le disque ? », et cette question-là a répondu OUI tout du
+   > long. La bonne question est « git le connaît-il ? », et seul git peut y
+   > répondre. Un asset déposé dans `assets/` et jamais ajouté s'affiche à
+   > l'écran, laisse toutes les suites vertes, et meurt avec la machine — la
+   > garde échoue désormais dessus.
 
 1bis. ⚠️ **LES DÉCALS, non listés jusqu'ici et pourtant couplés.** Trouvé le
    2026-08-25 en relisant avec la lunette de DA4, après le viseur.
