@@ -2444,56 +2444,102 @@ pour laquelle la seconde moitié de la famille 2 a été retirée.
 
 ---
 
-## ⚠️ À ÉTABLIR — la reconnexion pendant une killcam ne rend pas la main
+## ⚠️ Famille 4.1 — le banc mesurait la famille d'à côté (rouvert le 2026-08-26)
 
-**Banc écrit, rouge, et volontairement HORS du lanceur** (`./tools/run_duo.sh
---reconnexion`, famille 4.1). Il exerce le seul scénario à trois processus : le
-client meurt, quitte pendant la killcam de l'hôte, **et revient**.
+**L'entrée qui occupait cette place affirmait trois choses. Les trois étaient
+fausses au moment où on les lisait, et la troisième depuis huit heures quand
+elle a été écrite.** Le récit vaut mieux que la correction seule, parce que la
+faute est de méthode et qu'elle est reproductible.
 
-**Ce qu'il montre, reproduit à chaque exécution :**
+### Ce qui était écrit, et ce qui est mesuré
 
-- l'hôte voit bien le retour (`ADVERSAIRE: revenu`) et sa killcam va à son terme ;
-- mais **aucune entrée `PRÊT` n'est visible ensuite** sur l'écran `local_hote` —
-  le salon est là, la porte ne s'ouvre pas ;
-- et **le client revenu perd le lien** (« Trying to call an RPC while no
-  multiplayer peer is active »).
+| L'entrée disait | Mesuré le 2026-08-26 |
+|---|---|
+| « aucune entrée `PRÊT` n'est visible ensuite » | **Corrigé.** `le salon rouvert accepte le retour` passe dans tous les cas, killcam en cours comprise. |
+| « le client revenu perd le lien » | **Artefact d'instrument.** Voir plus bas : le troisième processus jouait le mauvais rôle. |
+| « deux modifications… aucune n'était la cause » | **Faux : elles l'étaient.** `git log` date cette entrée du 2026-08-19 **00:57** (`6b2d811`) et le câblage de `ui.rouvrir_le_salon()` du même jour **09:28** (`0a651ca`), dont le message dit lui-même « Rouvrir ET ne pas refermer : vert ». |
 
-**La cause n'est pas établie, et c'est pour ça que rien n'est corrigé.** Deux
-modifications ont été faites au code de production en poursuivant ce symptôme
-avant de comprendre qu'elles n'en étaient pas la cause. Elles se défendent
-séparément et restent — ne pas annoncer une déconnexion à quelqu'un dont
-l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais **il faut
-les lire comme des améliorations indépendantes, pas comme un correctif de ce
-défaut-ci**.
+L'entrée a donc été rédigée **huit heures avant son propre correctif**, et elle a
+survécu une semaine parce que **le banc était hors du lanceur** — il était hors
+du lanceur parce qu'il était rouge, et il est resté rouge dans la feuille de
+route parce que personne ne le relançait. La boucle se referme sur elle-même.
 
-**La leçon de méthode, sous une forme neuve :** « on croit débuguer, on est en
-train de renoncer » a un cousin — **on croit corriger, on est en train de
-déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
-le code a été modifié quand même.
+> **La leçon, et elle a déjà un cousin dans ce fichier** (« un constat daté
+> vieillit sans prévenir ») : **un banc qu'on sort du lanceur parce qu'il est
+> rouge cesse d'être un banc.** Il devient une phrase. Le geste juste, quand on
+> assume un rouge, est de le laisser dans le lot et de le marquer, jamais de
+> l'en retirer.
 
-**Deux pistes examinées, deux écartées — et c'est le plus utile de cette entrée.**
+### Le banc était vert, et il l'était pour la mauvaise raison
 
-1. ~~« `client_peer_id` n'est pas reposé pour le second client »~~ — **faux** :
-   `_on_peer_connected` le pose (ligne 332). Vérifié par lecture.
-2. ~~« le chemin différé parque le jeu en solo alors qu'un pair est là » —
-   J2 caché, sans collision, remplacé par la cible d'entraînement~~. Cette
-   incohérence **est réelle**, mais la corriger **ne fait pas passer le banc** :
-   ce n'est donc pas la cause. Le correctif a été **retiré**.
+Relancé tel quel le 2026-08-26 : **vert, quatre fois de suite.** Sauf qu'il
+n'exerçait pas le scénario de son titre.
 
-**Ce qui reste vrai et candidat, sans preuve** : parquer en solo alors qu'un pair
-est connecté est incohérent, et mérite d'être corrigé un jour — mais **comme une
-amélioration propre, pas comme le correctif de ce défaut-ci**.
+Le retour du second client était ordonnancé par un **`sleep 18` fixe** du
+lanceur, contre une séquence de fin qui dure une douzaine de secondes et qui
+démarre elle-même après un lancement de Godot, un décompte et un tir. Horodaté :
+mort à T, killcam close vers T+11 s, **retour à T+15 s**. C'est la ligne **4.2**
+de la checklist — « B rejoint alors que A est déjà sur l'écran de fin » —, pas la
+4.1.
 
-⚠️ **Trois modifications du code de production ont été faites en poursuivant ce
-symptôme, aucune n'était la cause, et la troisième l'a été après avoir écrit la
-règle qui l'interdit.** Le geste juste, appliqué à la troisième : revenir en
-arrière. Un chemin de netcode ne se répare pas par tâtonnements — chaque essai
-non concluant y laisse un changement dont personne ne saura dire pourquoi il est
-là.
+Il a suffi de déplacer ce seul délai pour que le tableau se lise :
 
-**Pour qui reprendra :** commencer par instrumenter ce que voit le bloc salon
-(`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
-deviner ce qui manque en amont.
+| retour relâché à | placement réel | verdict |
+|---|---|---|
+| 18 s (le lanceur) | après la killcam | vert, ×4 |
+| 14 s | pendant la killcam | **`✗ la reconnexion produit exactement une manche → 0 démarrage(s)`** |
+| 12 s | pendant la killcam | idem, ×2 |
+| 8 s | départ et retour à ~0,1 s d'écart | le banc se casse seul : `ECHEC: le premier client n'est jamais parti`, pendant que son propre journal montre le départ — le sondage à 0,25 s manquait la fenêtre |
+
+> **Un délai fixe opposé à une durée variable n'est pas une attente, c'est un
+> tirage au sort** — et ce lanceur écrit lui-même, quinze lignes plus haut,
+> qu'il faut « attendre une CONDITION, pas une durée ». La règle était posée, à
+> un endroit, et pas à l'autre.
+
+### Le vrai défaut de la 4.1, et il n'a rien à voir avec le menu
+
+Quand le retour tombe **pendant** la killcam : le salon rouvre, `PRÊT` est
+visible et cliquable, et **aucune manche ne démarre — jamais.** Les deux joueurs
+voient chacun un « prêt » qui ne produit rien ; l'hôte peut appuyer soixante
+fois. Récupérable à la main — le client appuie deux fois de plus — et rien ne le
+dit.
+
+Mécanisme, lu dans le code et cohérent avec tous les relevés :
+
+1. le revenant appuie sur `PRÊT` pendant la killcam ; `rpc_client_ready` pose
+   `p2_ready_for_rematch = true`, retient l'arme et sort, parce que
+   `_end_sequence_active` ;
+2. à la fin de la killcam, `_do_end_round` voit `_deconnexion_differee`, appelle
+   `_annoncer_deconnexion()` **et `return`** — `_apply_deferred_rematch()` n'est
+   jamais atteint ;
+3. `_annoncer_deconnexion()` joue le script « l'adversaire est parti » sur un
+   adversaire **qui est là** : `_pending_client_start = false`,
+   `_pending_p2_weapon_idx = -1`, `p2_ready_for_rematch = false` ;
+4. le revenant, lui, croit être prêt — son bouton affiche « ✓ PRÊT » — et ne
+   réémettra jamais.
+
+**Le fond : `_annoncer_deconnexion()` fait deux métiers** — solder le match, et
+signaler une absence. Le drapeau `revenu` avait été ajouté pour taire le premier
+symptôme, le **dialogue** ; tout le reste du script « parti » continuait de
+s'appliquer au revenant.
+
+### Ce que le banc sait faire maintenant
+
+- **le retour se déclenche sur une condition** : l'hôte imprime `RETOUR:`, le
+  lanceur pose un jeton, et le revenant — démarré depuis le début, en attente
+  sur ce fichier — rejoint dans la demi-seconde ;
+- **il refuse de juger ce qu'il n'a pas exercé** : il relève
+  `_end_sequence_active` à l'instant exact du retour et sort en **3**, « mesure
+  non faite », si le placement n'est pas celui du scénario ;
+- **départ et retour s'observent par signal**, plus par sondage ;
+- **`--reconnexion` (4.1) et `--reconnexion-tardive` (4.2) sont deux scénarios**,
+  la checklist les distinguant déjà ;
+- **le troisième journal est noté.** Il était écrit et jamais lu : le revenant
+  jouait `--join`, le scénario NOMINAL, face à un hôte qui sort une quinzaine de
+  secondes après son arrivée. Ses « Trying to call an RPC while no multiplayer
+  peer is active » étaient en aval de cette sortie et de rien d'autre — et ils
+  ont été consignés ici comme un défaut du jeu. **Un journal produit sans être
+  lu est pire qu'un journal absent : il a l'air d'une preuve.**
 
 ### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
 
@@ -4552,7 +4598,7 @@ un **second** verrou, jamais le premier.
 
 **Sonder, pas raisonner, dès qu'un commentaire tient lieu de preuve.**
 
-### Famille 4.1 — le vrai fond n'est pas le menu (2026-08-19, OUVERT)
+### ~~Famille 4.1 — le vrai fond n'est pas le menu~~ — **CLOS le 2026-08-26**
 
 Le menu réparé, le banc reste rouge pour une **autre** cause, mesurée : sur
 l'hôte, `multiplayer.multiplayer_peer` est **null immédiatement après le départ
@@ -4563,6 +4609,14 @@ un artefact de banc, c'est le jeu.
 Piste, non confirmée : `_close_lobby_if_left()` dans `ui.gd` coupe le salon dès
 qu'un changement d'écran survient alors que `get_peers()` est vide. Fichier
 d'une autre session, qui a été prévenue.
+
+**Corrigé, et la piste était la bonne.** `_close_lobby_if_left()` garde désormais
+le salon tant qu'un pair est là, et `rouvrir_le_salon()` s'interdit
+explicitement `hub.reset()` pour ne pas la déclencher — le commentaire de cette
+fonction le dit en toutes lettres. Mesuré le 2026-08-26 : le second client
+rejoint, `peer connected` apparaît chez l'hôte à chaque exécution, le serveur
+n'est plus démonté. **Ce qui restait rouge dans la famille 4.1 est ailleurs**, et
+vit désormais dans sa propre entrée en tête de fichier.
 
 
 ### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)

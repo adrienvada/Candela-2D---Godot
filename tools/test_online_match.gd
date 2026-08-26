@@ -20,6 +20,19 @@ var _ui: Node
 var _lan := false
 var _rejected_at := -1
 
+## Départ et retour du pair, observés par SIGNAL et non par sondage.
+##
+## **Des champs, pas des locales** : une lambda GDScript capture les locales par
+## valeur, et l'affectation n'en ressortirait jamais — le piège est déjà nommé
+## plus bas, sur `_rejected_at`.
+##
+## `_retour_pendant_la_fin` est relevé à l'instant EXACT du retour, parce que
+## c'est la seule chose qui distingue la famille 4.1 de la 4.2, et qu'aucune des
+## deux ne se laisse déduire après coup.
+var _depart_vu := false
+var _retour_vu := false
+var _retour_pendant_la_fin := false
+
 
 func _ready() -> void:
 	_args = OS.get_cmdline_user_args()
@@ -50,7 +63,11 @@ func _ready() -> void:
 	print("EOS: %s" % NetworkManager.eos_state_label())
 
 	if _has("--host-reconnexion"):
-		await _run_host_reconnexion()
+		await _run_host_reconnexion(true)
+	elif _has("--host-reconnexion-tardive"):
+		await _run_host_reconnexion(false)
+	elif _has("--join-retour"):
+		await _run_client_retour()
 	elif _has("--host-spam"):
 		await _run_host_spam()
 	elif _has("--join-spam"):
@@ -529,7 +546,8 @@ func _run_host() -> void:
 ## Si le code se cassait — double départ, décompte joué deux fois — **ce
 ## contrôle tomberait**, puisque le compte passerait à deux. C'est ce qui le
 ## distingue d'un contrôle déplacé pour passer.
-## Famille 4.1 : **l'adversaire meurt, quitte pendant la killcam, revient.**
+## Famille 4.1 : **l'adversaire meurt, quitte pendant la killcam, et revient
+## PENDANT qu'elle joue encore.** La 4.2 est le même trajet, retour APRÈS.
 ##
 ## Débloquée par la décision d'Adrien du 2026-08-19 — la killcam va jusqu'au
 ## bout. Sans elle, il n'y avait pas de comportement attendu contre lequel
@@ -538,7 +556,41 @@ func _run_host() -> void:
 ## **L'observable est un COMPTE, pas un instant** : combien de manches démarrent
 ## après la reconnexion. Une seule. Si le code se cassait — reprise fantôme,
 ## double départ, ou reconnexion refusée — ce compte passerait à zéro ou à deux.
-func _run_host_reconnexion() -> void:
+##
+## ⚠️ **Ce banc a passé une semaine à mesurer autre chose que son titre.** Le
+## retour était ordonnancé par un `sleep 18` du lanceur, contre une séquence de
+## fin qui dure une douzaine de secondes : horodaté le 2026-08-26, le revenant
+## arrivait **quatre secondes après** la fin de la killcam. Ce que le banc
+## exerçait était donc la ligne 4.2 de la checklist — « B rejoint alors que A est
+## déjà sur l'écran de fin » — qui passe. Déplacer ce seul délai de dix-huit à
+## douze secondes suffisait à le rougir, deux fois sur deux.
+##
+## Deux gardes en découlent, et aucune n'est décorative :
+##
+## 1. **le retour se déclenche sur une CONDITION.** L'hôte imprime `RETOUR:`
+##    quand il le veut, le lanceur pose le jeton, et le revenant — déjà démarré,
+##    en attente — rejoint dans la demi-seconde. Un délai fixe opposé à une durée
+##    variable est un tirage au sort, et le lanceur le dit lui-même à propos de
+##    `CODE:` ;
+## 2. **le banc REFUSE de juger ce qu'il n'a pas exercé.** Il relève
+##    `_end_sequence_active` à l'instant même du retour ; si le placement n'est
+##    pas celui du scénario, il sort en **3** — « mesure non faite », le même code
+##    que le port occupé. Un vert emprunté à l'autre cas serait pire qu'un rouge.
+##
+## Le départ et le retour s'observent par **signal**, plus par sondage : à 0,25 s
+## de période, la fenêtre de 0,1 s entre les deux se manquait, et le banc rendait
+## « le premier client n'est jamais parti » pendant que son propre journal montrait
+## le départ. Un message qui accuse le jeu d'un défaut d'instrument.
+func _run_host_reconnexion(pendant_la_killcam: bool) -> void:
+	NetworkManager.player_disconnected.connect(func(_id: int) -> void: _depart_vu = true)
+	NetworkManager.player_connected.connect(func(_id: int) -> void:
+		# Le premier client compte pour une arrivée, lui aussi : seul ce qui suit
+		# un départ est un RETOUR.
+		if not _depart_vu:
+			return
+		_retour_vu = true
+		_retour_pendant_la_fin = _main._end_sequence_active)
+
 	await _select_mode(true)
 	_ui._open_lobby()
 	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
@@ -558,34 +610,46 @@ func _run_host_reconnexion() -> void:
 		_fail("la séquence de fin ne s'est pas déclenchée")
 		return
 
-	if not await _await(func(): return multiplayer.get_peers().is_empty(), 30.0):
+	if not await _await(func(): return _depart_vu, 30.0):
 		_fail("le premier client n'est jamais parti")
 		return
 	print("ADVERSAIRE: parti pendant la killcam")
 	_check("la killcam survit à son départ", _main._end_sequence_active)
 
-	# Il revient. Le salon doit l'accepter alors que l'hôte sort à peine de sa
-	# killcam et de son écran d'attente.
-	if not await _await(func(): return not multiplayer.get_peers().is_empty(), 90.0):
+	# Le cas tardif laisse d'abord la séquence se clore — c'est sa définition, et
+	# c'est ce que ce banc mesurait sans le savoir.
+	if not pendant_la_killcam:
+		if not await _await(func(): return not _main._end_sequence_active, 40.0):
+			_fail("la killcam ne s'est jamais terminée")
+			return
+	print("RETOUR:")
+	if not await _await(func(): return _retour_vu, 90.0):
 		_fail("le second client n'a jamais rejoint")
 		return
-	print("ADVERSAIRE: revenu")
-	# **Il revient PENDANT la killcam — c'est tout l'objet du scénario.** Le menu
+	print("ADVERSAIRE: revenu — séquence de fin en cours : %s" % _retour_pendant_la_fin)
+
+	if _retour_pendant_la_fin != pendant_la_killcam:
+		printerr("MESURE NON FAITE — le retour est tombé %s la séquence de fin, "
+			% ("PENDANT" if _retour_pendant_la_fin else "APRÈS")
+			+ "or ce scénario exerce le cas %s."
+			% ("PENDANT" if pendant_la_killcam else "APRÈS"))
+		_quit(3)
+		return
+
+	# **Il revient pendant la killcam — c'est tout l'objet du scénario.** Le menu
 	# est donc légitimement absent à cet instant : l'hôte regarde encore sa mort.
 	# On attend la fin de la séquence avant de demander si le salon l'accepte.
-	#
-	# Deux modifications du code de production ont été faites avant de comprendre
-	# ça, en poursuivant un symptôme qui venait de ce banc. Elles se défendent
-	# toutes les deux et restent — ne pas annoncer une déconnexion à quelqu'un
-	# dont l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais
-	# **aucune n'était la cause**. C'est « on croit débuguer, on est en train de
-	# renoncer » sous une forme nouvelle : on croit corriger, on est en train de
-	# déplacer la faute vers le code testé.
 	if not await _await(func(): return not _main._end_sequence_active, 40.0):
 		_fail("la killcam ne s'est jamais terminée")
 		return
 	_check("le salon rouvert accepte le retour",
 		await _await(func(): return not _ready_entry_disabled(), 20.0))
+	# Les deux drapeaux du rematch, au sortir de la killcam. Ils ne sont pas
+	# affirmés — ils sont IMPRIMÉS : quand le compte ci-dessous tombe à zéro,
+	# c'est la première chose qu'on veut lire, et aller la chercher a déjà coûté
+	# une passe entière.
+	print("PRÊTS au sortir de la killcam : hôte=%s revenant=%s"
+		% [_main.p1_ready_for_rematch, _main.p2_ready_for_rematch])
 
 	# Le compte : combien de manches démarrent après la reconnexion. Une.
 	var departs := 0
@@ -604,6 +668,48 @@ func _run_host_reconnexion() -> void:
 	_check("le score est reparti de zéro",
 		_main.p1_session_wins == 0 and _main.p2_session_wins == 0,
 		"%d / %d" % [_main.p1_session_wins, _main.p2_session_wins])
+	await get_tree().create_timer(4.0).timeout
+	_quit(0)
+
+## Le REVENANT des familles 4.1 et 4.2 : il attend son tour, rejoint, se déclare
+## prêt **une seule fois**, et la manche doit démarrer.
+##
+## ⚠️ **Ce rôle n'existait pas, et c'est ce qui a fait entrer un faux symptôme
+## dans la feuille de route.** Le troisième processus était lancé avec `--join`,
+## c'est-à-dire le scénario NOMINAL, qui attend un match complet — face à un hôte
+## qui joue un autre script et sort une quinzaine de secondes après son arrivée.
+## Son journal se remplissait donc de « Trying to call an RPC while no
+## multiplayer peer is active », en aval de la sortie de l'hôte et de rien
+## d'autre ; et le lanceur ne notait pas ce journal, si bien que rien n'a jamais
+## contredit la lecture qu'on en a faite.
+##
+## **Une seule pression sur PRÊT, et c'est la propriété du scénario**, pas une
+## économie : la question posée est « son engagement survit-il à la fin de la
+## killcam d'en face ? ». Réappuyer y répondrait à sa place.
+func _run_client_retour() -> void:
+	await _select_mode(false)
+	_ui.join_input.text = _value("--join-retour", "")
+	var jeton := _value("--jeton", "")
+	if jeton == "":
+		_fail("aucun jeton de retour (--jeton) : le placement serait un délai fixe")
+		return
+	# Il est démarré DEPUIS LE DÉBUT et n'attend qu'un signal : c'est ce qui
+	# retire du chemin critique les deux à quatre secondes de démarrage de Godot,
+	# lesquelles suffisaient à faire glisser le retour hors de la killcam.
+	print("REVENANT: en attente du jeton %s" % jeton)
+	if not await _await(func(): return FileAccess.file_exists(jeton), 120.0):
+		_fail("le jeton de retour n'est jamais arrivé")
+		return
+	_ui.join_requested.emit()
+	if not await _await(func(): return multiplayer.has_multiplayer_peer() \
+			and multiplayer.get_peers().size() > 0, PEER_TIMEOUT):
+		_fail("le retour n'a pas abouti")
+		return
+	print("REVENANT: dans le salon")
+	_check("PRÊT s'ouvre au revenant", not _ready_entry_disabled())
+	_press_play()
+	_check("la manche démarre sans qu'il ait à se redéclarer",
+		await _await(func(): return _main.round_active, 40.0))
 	await get_tree().create_timer(4.0).timeout
 	_quit(0)
 
