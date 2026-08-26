@@ -1830,3 +1830,38 @@ demande. Fichiers touchés : `audio_manager.gd`, `game_state.gd`,
 
 **Republication du suivi :** je ne l'ai pas prise. La session « DA2 »
 (`uds:/tmp/cc-socks/13973.sock`) la porte et a reçu mon delta.
+
+#### Lot du 2026-08-26 — session de génération d'assets (Gemini), sans arbre attitré
+
+Cinq icônes livrées dans `assets/ui/icones/` (`arme_pistolet.png`,
+`arme_fusil.png`, `arme_pompe.png`, `arme_arbalete.png`, `torche.png`),
+128×128, masques RGB blanc/alpha, demandées par la session « DA4 interface
+habillée ». **Non commitées, non importées (`.import` absents), aucune
+titulaire connue** : DA4 est arrêtée depuis le 2026-08-25 matin d'après
+plusieurs sessions paires qui me l'ont signalé indépendamment
+(`candela-2d-1f`, `candela-2d-3f`, `candela-2d-b2`) — pourtant un message
+signé DA4 demandant une suite (six illustrations de menu) m'est arrivé après
+ce constat. Interrogé, Adrien a tranché : continuer les illustrations, mais
+**ne pas committer moi-même** — mes instructions par défaut l'interdisent sans
+demande explicite, et il n'en a pas fait une pour ce lot.
+
+**Sources brutes** dans `assets/sources/ui_icones/` (gitignored sauf planches
+nommément retenues) si quelqu'un doit recuire différemment. Six illustrations
+supplémentaires (`ill_ecran_scinde.png`, `ill_amical.png`,
+`ill_competitif.png`, `ill_entrainement.png`, `ill_mise_a_jour.png`,
+`ill_quitter.png`, 1024×640, même facture que `apercu_personnalisation.png`)
+suivent dans ce lot — mêmes réserves : non commitées, sans titulaire confirmé.
+
+**Qui prend la suite ?** Import Godot (`--headless --import` en avant-plan,
+pas en tâche de fond — piège déjà payé deux fois hier) puis commit, avec un
+message qui dit ce que sont ces fichiers et pour qui.
+
+**Mise à jour, même jour, quelques heures plus tard :** DA4 n'était pas
+arrêtée — elle a câblé et commité les cinq icônes elle-même (`755b541`, sur
+`origin/main`). Interrogé sur le risque de collision qui grossissait (16
+fichiers non suivis à un moment), Adrien a tranché : j'importe et je commite
+moi-même. Fait pour les six illustrations restantes (`c078cda`, en local,
+non poussé) — import Godot en avant-plan d'abord, comme recommandé. Les cinq
+icônes n'ont pas été re-commitées : identiques byte à byte à la version de
+DA4 déjà sur `origin/main`, les recommiter aurait dupliqué une entrée déjà
+saine plutôt que de combler un vrai manque.

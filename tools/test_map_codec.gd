@@ -166,10 +166,10 @@ func _test_default_map_loads() -> void:
 
 	var d: Dictionary = result["data"]
 	_check("version 3", int(d["version"]) == 3)
-	_check("256 tuiles de sol", MapCodec.get_floor_cells(d).size() == 256)
-	_check("144 tuiles de mur", MapCodec.get_wall_cells(d).size() == 144)
-	_check("spawn P1 posé", MapCodec.get_spawn(d, 0) == Vector2i(4, 10))
-	_check("spawn P2 posé", MapCodec.get_spawn(d, 1) == Vector2i(15, 10))
+	_check("576 tuiles de sol", MapCodec.get_floor_cells(d).size() == 576)
+	_check("324 tuiles de mur", MapCodec.get_wall_cells(d).size() == 324)
+	_check("spawn P1 posé", MapCodec.get_spawn(d, 0) == Vector2i(6, 15))
+	_check("spawn P2 posé", MapCodec.get_spawn(d, 1) == Vector2i(23, 15))
 
 func _test_slugify() -> void:
 	print("\n[Slugify]")

@@ -99,14 +99,14 @@ func _test_apply_to_layers() -> void:
 
 	_map_data.apply_to_layers(floor_layer, walls_layer, spawns, data)
 
-	_check("sol peint (256 tuiles)", floor_layer.get_used_cells().size() == 256,
+	_check("sol peint (576 tuiles)", floor_layer.get_used_cells().size() == 576,
 		"%d" % floor_layer.get_used_cells().size())
-	_check("murs peints (144 tuiles)", walls_layer.get_used_cells().size() == 144,
+	_check("murs peints (324 tuiles)", walls_layer.get_used_cells().size() == 324,
 		"%d" % walls_layer.get_used_cells().size())
 
 	# Un second appel ne doit pas cumuler avec le précédent.
 	_map_data.apply_to_layers(floor_layer, walls_layer, spawns, data)
-	_check("réapplication sans cumul", floor_layer.get_used_cells().size() == 256,
+	_check("réapplication sans cumul", floor_layer.get_used_cells().size() == 576,
 		"%d" % floor_layer.get_used_cells().size())
 
 	floor_layer.free()
