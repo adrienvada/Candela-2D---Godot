@@ -287,10 +287,23 @@ duo duo_spam --spam
 #
 # Ce que ça attrape : un asset déposé dans `assets/` et jamais ajouté. Il se voit
 # à l'écran, tous les bancs sont verts, et il disparaît avec la machine.
-hors_depot=$(git ls-files --others --exclude-standard -- assets/ui assets/audio assets/maps 2>/dev/null | wc -l | tr -d ' ')
+#
+# ⚠️ **`assets/` en entier, et surtout PAS une liste de sous-dossiers.** Le
+# premier jet en nommait trois — `ui`, `audio`, `maps` — sur les quatorze que le
+# dépôt porte. Les onze autres, dont `sprites/`, n'étaient pas surveillés : les
+# trente-deux images de la démarche, cuites le 2026-08-25, seraient restées
+# invisibles à la garde écrite pour les trouver. **Une énumération partielle se
+# lit comme une liste complète** — c'est exactement la faute que ce contrôle
+# existe pour attraper, commise dans le contrôle lui-même. Relevé par la session
+# DA2 le 2026-08-27.
+#
+# Les planches sources non retenues restent muettes : `--exclude-standard` honore
+# les `.gitignore` de `assets/sources/`, et c'est voulu — leur doctrine les exclut
+# nommément. Un fichier ignoré est un fichier dont l'absence a été DÉCIDÉE.
+hors_depot=$(git ls-files --others --exclude-standard -- assets 2>/dev/null | wc -l | tr -d ' ')
 if [ "${hors_depot:-0}" -ne 0 ]; then
   echo "--- ${hors_depot} asset(s) présent(s) mais HORS DU DÉPÔT ---"
-  git ls-files --others --exclude-standard -- assets/ui assets/audio assets/maps | sed 's/^/    /'
+  git ls-files --others --exclude-standard -- assets | sed 's/^/    /'
   echo "    Ils s'affichent, les bancs sont verts, et ils meurent avec la machine."
   echo "    git add les fichiers ci-dessus, ou explique leur exclusion dans un .gitignore."
   fail=1

@@ -10434,6 +10434,24 @@ Reste donc :
    > répondre. Un asset déposé dans `assets/` et jamais ajouté s'affiche à
    > l'écran, laisse toutes les suites vertes, et meurt avec la machine — la
    > garde échoue désormais dessus.
+   >
+   > ⚠️ **Et la garde portait la faute qu'elle attrape.** Son premier jet
+   > n'énumérait que trois sous-dossiers — `assets/ui`, `assets/audio`,
+   > `assets/maps` — sur les **quatorze** que le dépôt porte. Les onze autres,
+   > dont `assets/sprites/`, n'étaient pas surveillés : **les trente-deux images
+   > de la démarche, cuites le 2026-08-25 et toujours dans aucun commit, seraient
+   > restées invisibles à la garde écrite pour les trouver.** Relevé par la
+   > session DA2 le 2026-08-27, vérifié en posant un fichier témoin dans
+   > `assets/sprites/` — l'ancienne garde ne dit rien, la nouvelle le nomme.
+   >
+   > **Une énumération partielle se lit comme une liste complète.** C'est le même
+   > mécanisme que le `git status` replié deux paragraphes plus haut : dans les
+   > deux cas on obtient un silence, et dans les deux cas ce silence veut dire
+   > « je n'ai pas regardé » alors qu'il se lit « il n'y a rien ». La garde
+   > surveille maintenant `assets` en entier, ce qui est à la fois plus simple et
+   > plus juste — les planches sources non retenues restent muettes puisque
+   > `--exclude-standard` honore leur doctrine, et **un fichier ignoré est un
+   > fichier dont l'absence a été décidée.**
 
 1bis. ⚠️ **LES DÉCALS, non listés jusqu'ici et pourtant couplés.** Trouvé le
    2026-08-25 en relisant avec la lunette de DA4, après le viseur.
