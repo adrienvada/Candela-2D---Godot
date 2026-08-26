@@ -2338,9 +2338,15 @@ que de l'avoir vu marcher. C'est le jalon H9.
 
 ### Ce qui reste
 
-1. **H8 — la paire de clés.** Deux commandes `openssl`, la publique dans
-   `update_manager.gd`, la privée dans les secrets GitHub. Tant qu'elle manque,
-   l'écran affiche « mises à jour non configurées » et ne télécharge rien.
+1. **H8 — la paire de clés.** ✅ Moitié publique posée le 2026-08-26. Reste le
+   secret GitHub `CANDELA_MAJ_CLE_PRIVEE` — la clé privée ne passe par aucun
+   agent, par aucun message, par aucun commit.
+   **Piège vécu le même jour, et il vaut d'être écrit :** un tag `v0.1.0` a été
+   posé avant que la clé publique ne soit dans le fichier et avant que le secret
+   n'existe. Le tag est parti seul (une poussée de tag emporte ses objets même
+   quand la poussée de `main` est refusée) et a désigné un commit que `main` ne
+   connaissait pas. La publication a échoué là où elle devait : à la signature.
+   **Poser le tag après que le commit visé est sur GitHub**, jamais avant.
 2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
    installer et mettre à jour sur une vraie machine.
 3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
@@ -2615,6 +2621,44 @@ autrement.** Le wordmark et l'icône, eux, restent à la main levée — c'est l
 viseur seul qui bouge, et il bouge parce que ce n'est pas un logo : c'est une
 croix de quelques dizaines de pixels dont la forme se juge en jeu, pas une
 signature.
+
+
+### ✅ RECTIFIÉ — la cible EST tenue, mes relevés valaient la moitié (2026-08-26)
+
+**Adrien a lancé le banc lui-même, fenêtre au premier plan :**
+
+```
+Images mesurées : 9771 en 60,0 s     Fenêtre : 2560x1440 natifs (3,69 Mpx)
+FPS médian      : 165                Racine  : rendu 2560x1440
+FPS 1 % bas     : 75                 Verdict 60 fps : TENU
+Image la plus lente : 20,3 ms        Focus : stable au PREMIER PLAN
+```
+
+**Mes propres relevés donnaient 37-38 et « NON TENU ».** Ils étaient pris au
+**second plan** : macOS bride une fenêtre de fond, et une application lancée
+depuis un terminal ne peut pas réclamer le premier plan (mesuré, la demande est
+refusée). **L'écart n'est pas un biais, c'est un facteur deux.**
+
+⚠️ **Et le banc le disait.** Il étiquette « stable au SECOND PLAN — comparable,
+mais c'est un plancher », et j'ai construit une conclusion dessus quand même.
+**Un avertissement placé APRÈS le résultat qu'il invalide arrive trop tard pour
+qui lit de haut en bas** — c'est une leçon d'ordre de présentation, pas de
+vigilance. La ligne de focus devrait précéder les chiffres qu'elle conditionne.
+
+Tout ce que la section ci-dessous conclut sur la cible est donc **faux**, et son
+texte est conservé pour que le chemin reste lisible. Ce qui en survit :
+
+- la dérive thermique est réelle (les relevés d'une session s'usent) ;
+- le 1 % bas est bruité, et **un seul relevé long vaut mieux que dix courts** ;
+- ni les torches, ni les shaders, ni l'audio, ni le plafond de cadence ne
+  causent les pics — ces éliminations tiennent, elles étaient comparatives.
+
+⚠️ **La marge est plus étroite que le verdict ne le suggère.** 1 % bas à 75 ne
+veut pas dire « 15 images de marge » : la pire image dure **20,3 ms** contre
+**16,7 ms** de budget à 60 fps, soit **3,4 ms** de coussin sur les images qui
+comptent. Une copie plein cadre de 3,69 Mpx peut les manger à elle seule —
+**`COPY_MODE_RECT` reste donc le bon choix** pour le flou du brouillage, non
+plus par prudence mais par arithmétique.
 
 
 ### Le 1 % bas n'est pas tenu, et ce n'est pas le brouillage (2026-08-25)
@@ -9586,6 +9630,31 @@ Reste donc :
 
    Doubler la texture demande donc de **séparer la région d'atlas de la taille de
    case**, et toute confusion entre les deux touche des cartes déjà enregistrées.
+
+   ⚠️ **PRÉCISION qui change la nature du travail** (trouvée par la session
+   « spatialisation du son », vérifiée avant reprise) : ce champ du format est
+   **écrit et lu par personne.**
+
+   - écrit deux fois — `map_codec.gd:215` et `map_data.gd:360` —, les deux
+     depuis `CandelaTileSet.TILE_SIZE`, jamais depuis la carte ;
+   - lu **zéro fois**. `MapGeometry.build_collisions()` accepte bien un
+     `tile_size` en paramètre, mais **avec la constante pour défaut**, et
+     `menu_arene.gd:301` l'appelle sans l'argument. La géométrie ignore donc la
+     valeur stockée, et l'audio aussi.
+
+   Ça coupe dans les deux sens. **La migration est plus SIMPLE qu'annoncé** —
+   aucun lecteur ne casse si la constante change, puisqu'il n'y a pas de
+   lecteur. Mais **le champ promet ce qu'il ne tient pas** : chaque carte
+   enregistrée porte `tile_size: 35`, ce qui a toutes les apparences d'un
+   filet pour les anciennes cartes, et n'en est pas un. Qui planifierait la
+   migration en comptant dessus bâtirait sur du vide.
+
+   Troisième exemplaire du même piège en deux jours : **un champ que personne ne
+   lit ne se corrige pas tout seul**, et il ment d'autant mieux qu'il a l'air
+   prévoyant. Deux issues, et le laisser inerte n'en est pas une : soit le champ
+   devient **lu** — géométrie et audio prennent la valeur de la carte, ensemble
+   ou pas du tout —, soit il est **retiré** du format pour cesser de promettre.
+   Le choix appartient au domaine éditeur/cartes.
    Ce n'est plus « rien d'autre à décider » : c'est un chantier à part entière,
    avec une compatibilité ascendante à tenir.
 
@@ -9752,7 +9821,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
-| H8 | **Paire de clés de mise à jour** | Deux commandes `openssl` ; la publique se recopie dans `update_manager.gd`, la privée devient le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`. Aucun agent ne doit détenir une clé privée de signature. **Tant qu'elle manque, l'écran affiche « mises à jour non configurées » et ne télécharge rien.** | Avant toute publication |
+| H8 | **Paire de clés de mise à jour** | ✅ **Clé publique en place le 2026-08-26** — paire RSA-4096 fabriquée par Adrien, publique dans `update_manager.gd` (relue par `openssl`, chargée par `Crypto` de Godot). **Reste la moitié qu'aucun agent ne doit toucher** : le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`, à créer depuis `~/candela_maj_privee.pem`. Sans lui, la CI refuse de publier plutôt que d'annoncer une version non signée. | Avant toute publication |
 | H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 

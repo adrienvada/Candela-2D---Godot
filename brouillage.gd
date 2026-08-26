@@ -417,6 +417,36 @@ static func retard(dazzle: float, force: float = GAIN) -> float:
 
 ## La perte de contraste : ce qu'il reste d'opacité à la silhouette, entre 1 (on
 ## la voit) et `ALPHA_CONTRASTE` (elle se dissout dans le voile).
+## La demi-emprise ÉCRAN de la zone à photocopier, en pixels.
+##
+## ⚠️ **Elle couvre ce que le shader LIT, pas ce qu'il PEINT**, et les deux ne
+## coïncident pas. Chaque fragment du flou prélève seize voisins jusqu'à
+## `rayon_noyau` pixels de lui — les vecteurs d'`ANNEAU` sont unitaires, donc
+## c'est bien la borne. Une emprise ajustée au dessin ferait lire au bord des
+## texels **périmés** : hors de la zone copiée, la texture d'écran garde ce
+## qu'une copie précédente y avait laissé. Le symptôme serait un liseré fantôme
+## sur le pourtour, visible seulement en mouvement — donc jamais sur une capture.
+##
+## ⚠️ **Et l'emprise est celle du rectangle TOURNÉ.** Le flou suit l'axe du
+## faisceau ; prendre la taille telle quelle donne une boîte trop petite dès que
+## l'angle n'est pas droit, et les coins lisent du périmé. Pour un rectangle
+## (l, h) tourné de θ, la demi-emprise vaut :
+##
+##     (l/2·|cos θ| + h/2·|sin θ| , l/2·|sin θ| + h/2·|cos θ|)
+##
+## Cette fonction vit ICI et non dans le banc parce qu'un banc ne se teste pas :
+## elle est de la géométrie pure, donc éprouvable sans rien rendre — et
+## `tools/test_brouillage.gd` vérifie que les quatre coins tournés y tombent.
+static func emprise_copie(taille: Vector2, rotation: float,
+		marge: float) -> Vector2:
+	var co := absf(cos(rotation))
+	var si := absf(sin(rotation))
+	var demi := taille * 0.5
+	return Vector2(
+		demi.x * co + demi.y * si + marge,
+		demi.x * si + demi.y * co + marge)
+
+
 static func opacite(dazzle: float, force: float = GAIN,
 		courbe: float = COURBE_CONTRASTE) -> float:
 	var t := _dose(dazzle, force)

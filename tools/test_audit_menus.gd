@@ -81,7 +81,16 @@ func _run() -> void:
 func _audit_on_peut_lancer_une_recherche() -> void:
 	print("\n[Le bouton qui cherche un adversaire est cliquable]")
 	var hub = _ui.hub
-	for ecran: String in [_ui.SCREEN_FRIENDLY, _ui.SCREEN_RANKED]:
+	# ⚠️ **Tous les écrans qui portent un lanceur, pas les deux qu'Adrien a
+	# signalés.** La table `LANCEURS` fait foi : elle est la déclaration, et la
+	# parcourir garantit qu'un écran ajouté demain sera couvert du seul fait de
+	# s'y inscrire.
+	#
+	# Ce contrôle a été écrit deux fois. La première version ne visait que les
+	# deux écrans d'appariement ; le défaut est réapparu **le lendemain sur
+	# l'écran scindé**, par un troisième retour anticipé que personne n'avait
+	# regardé. Corriger — et vérifier — cas par cas est ce qui a échoué.
+	for ecran: String in _ui.LANCEURS.keys():
 		if not hub.has_screen(ecran):
 			continue
 		hub.reset()
@@ -126,11 +135,27 @@ func _audit_on_peut_lancer_une_recherche() -> void:
 			_check("le bouton du cadre existe (%s)" % ecran, false)
 			continue
 		_check("« %s » est visible (%s)" % [b.text, ecran], b.visible)
-		# Le contrôle qui compte, et le seul que les autres ne faisaient pas.
-		_check("« %s » est CLIQUABLE (%s)" % [b.text, ecran], not b.disabled,
-			"grisé : l'appariement serait inatteignable")
-		_check("son libellé dit qu'on cherche (%s)" % ecran,
-			b.text.to_upper().contains("RECHERCHE"), b.text)
+		# **Le contrôle attend le bon état, pas « toujours cliquable ».** Un salon
+		# privé sans second joueur DOIT être grisé : partir seul n'aurait pas de
+		# sens, et le bouton reste visible pour dire « il manque quelqu'un » plutôt
+		# que « il n'y a rien à lancer ici ». Ce qui ne doit jamais l'être, c'est
+		# ce qui n'attend personne.
+		var action := String((_ui.LANCEURS[ecran] as Array)[1])
+		# **L'écran scindé lance à deux sur la même machine** : il porte l'action
+		# `lancer` et n'attend pourtant personne. Le banc lit donc le mode, comme
+		# le code — sans quoi il exigerait un grisage qui serait un défaut.
+		var en_ligne: bool = _ui.selected_network_mode() != 0
+		if action == "lancer" and en_ligne:
+			_check("« %s » attend un second joueur, donc grisé (%s)" % [b.text, ecran],
+				b.disabled, "cliquable alors qu'il manque quelqu'un")
+		else:
+			_check("« %s » est CLIQUABLE (%s)" % [b.text, ecran], not b.disabled,
+				"grisé alors qu'il n'attend personne : inatteignable")
+		# Le libellé n'est vérifié que là où il promet une recherche : ailleurs, le
+		# lanceur dit « PRÊT » et c'est très bien.
+		if String((_ui.LANCEURS[ecran] as Array)[1]) == "chercher":
+			_check("son libellé dit qu'on cherche (%s)" % ecran,
+				b.text.to_upper().contains("RECHERCHE"), b.text)
 	var reseau_fin: Node = root.get_node_or_null(^"NetworkManager")
 	if reseau_fin != null:
 		reseau_fin.current_mode = 0  # LOCAL_SPLITSCREEN : on rend l'état trouvé.
