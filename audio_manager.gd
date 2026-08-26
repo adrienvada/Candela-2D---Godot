@@ -519,6 +519,105 @@ func portee_courante(stream_or_key: Variant) -> float:
 	return maxf(1.0, _portee_carte * relative * facteur_portee)
 
 ## ============================================================================
+## DA3.9 — LA SORTIE NE SATURE PLUS, ET LE LIMITEUR NE MIXE PAS
+## ============================================================================
+##
+## **Le probleme, mesure le 2026-08-26 :** vingt-six des quarante-cinq fichiers
+## du depot depassent 0 dBFS en pic reel, jusqu'a **+4,0** pour
+## `weapon_pistolet_03`. Un seul tir suffisait donc a demander a la sortie plus
+## qu'elle ne peut rendre ; en fusillade, avec la reverb du bus SFX et la musique
+## dessous, la somme saturait — et elle saturait **au moment le plus intense**,
+## c'est-a-dire la ou le jeu ne peut pas se permettre de sonner amateur.
+##
+## **CE QU'ON NE FAIT PAS, ET C'EST LA DECISION D'ADRIEN (2026-08-26) :** on
+## n'aligne pas la loudness des familles. « Il faut que les ecarts de loudness
+## soient importants, et puissent etre corriges a la marge dans le panneau de
+## reglage du son. » L'ecart EST le mixage — musique a -18 LUFS, armes a -4 — et
+## l'aplatir detruirait ce qu'il a juge au banc. Le panneau (Master / Musique /
+## Effets / Annonceur) fait l'ajustement fin, pas le mastering.
+##
+## **CE QU'ON FAIT : de la MARGE, puis un filet.**
+##
+## La marge est une **translation, pas une compression** : baisser tout d'une
+## meme quantite en decibels preserve exactement chaque rapport juge au banc. Le
+## mixage d'Adrien passe intact, il descend simplement sous le plafond. C'est la
+## seule facon d'empecher la saturation sans toucher a une seule de ses valeurs.
+##
+## **Et le limiteur reste MUET en jeu normal, par construction.** C'est la
+## contrainte « esprit du jeu », et elle n'est pas cosmetique : dans un duel ou le
+## son est la seule information, un limiteur qui mord a chaque tir baisserait les
+## pas de l'adversaire — **il retirerait l'information au moment precis ou elle
+## compte le plus**. Meme famille que la regle du voile : ce qui protege le
+## confort ne doit pas moduler ce qui renseigne.
+##
+## Le dimensionnement decoule donc de la mesure, pas d'une habitude : la marge
+## couvre le pic le plus fort du depot (+4,0) plus un demi-decibel, si bien qu'un
+## son SEUL, aussi fort soit-il, passe **sous** le plafond sans jamais reveiller
+## le limiteur. Seules les SOMMES le reveillent — plusieurs tirs, ou un tir sur un
+## stinger. C'est exactement le role d'un filet : rare, bref, et inaudible tant
+## qu'on ne tombe pas.
+##
+## ⚠️ **UN SEUL limiteur, et sur Master seulement.** La tentation etait d'en
+## poser un seul sur `SFX` pour que la musique ne baisse jamais. Ecartee : un
+## limiteur sur SFX mordrait sur les tirs — donc baisserait les pas, qui partagent
+## ce bus — et rejouerait le defaut qu'on veut eviter, deplace d'un cran. Mieux
+## vaut un filet unique qui ne se declenche presque jamais qu'un etage de plus
+## qui travaille tout le temps.
+##
+## **Le code fait foi, le fichier de bus n'est qu'un etat initial** — lecon payee
+## sur la force d'occlusion, ou le banc dosait 2470 Hz pendant que le jeu jouait
+## 620. `_ready()` pose le limiteur au demarrage ; ses valeurs sont ecrites dans
+## `default_bus_layout.tres` uniquement pour que le fichier ne raconte pas autre
+## chose que le code.
+
+## Pic reel le plus fort du depot, mesure le 2026-08-26 (`weapon_pistolet_03`).
+## Sert a dimensionner la marge, et a la reverifier quand des sons arrivent.
+const PIC_MAX_DEPOT_DB: float = 4.0
+
+## La marge, en decibels. Negative : c'est une translation vers le bas.
+## Couvre `PIC_MAX_DEPOT_DB` plus un demi-decibel de securite.
+const MARGE_DB: float = -4.5
+
+## Le plafond du filet. -0,5 plutot que 0 : une conversion vers le materiel peut
+## depasser de quelques dixiemes entre deux echantillons.
+const PLAFOND_DB: float = -0.5
+
+const BUS_MASTER := "Master"
+
+## Marge et plafond courants — publics, le banc les tourne pendant que ca joue.
+var marge_db: float = MARGE_DB
+var plafond_db: float = PLAFOND_DB
+
+## Pose le filet sur Master, ou met a jour celui qui y est. Idempotente.
+##
+## Rend `false` si le bus n'existe pas — en headless comme dans un worktree neuf,
+## la disposition audio peut manquer, et une suite ne doit pas echouer pour ca.
+func poser_limiteur() -> bool:
+	var idx := AudioServer.get_bus_index(BUS_MASTER)
+	if idx == -1:
+		return false
+	var limiteur: AudioEffectHardLimiter = null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var e := AudioServer.get_bus_effect(idx, i)
+		if e is AudioEffectHardLimiter:
+			limiteur = e
+			break
+	if limiteur == null:
+		limiteur = AudioEffectHardLimiter.new()
+		AudioServer.add_bus_effect(idx, limiteur)
+	limiteur.pre_gain_db = marge_db
+	limiteur.ceiling_db = plafond_db
+	return true
+
+## Un son de ce niveau reveille-t-il le filet ? Pure, donc verifiable.
+##
+## C'est la propriete qui definit le reglage : **un son SEUL ne doit jamais le
+## reveiller**, aussi fort soit-il. Si celui-ci rend `true` pour le pic le plus
+## fort du depot, la marge est trop courte et le limiteur s'est mis a mixer.
+static func reveille_le_filet(pic_db: float, marge: float, plafond: float) -> bool:
+	return pic_db + marge > plafond
+
+## ============================================================================
 ## S3 bis — LA FORCE DE L'OCCLUSION, EN UNE SEULE MOLETTE
 ## ============================================================================
 ##
@@ -867,6 +966,11 @@ func _ready() -> void:
 			
 	# Assurer la présence de l'effet LowPassFilter sur le bus Music
 	_ensure_music_lowpass_effect()
+
+	# DA3.9 — le filet de sortie. Posé par le CODE et non par le fichier de bus :
+	# c'est la leçon de la force d'occlusion, où le banc dosait une valeur que le
+	# jeu n'appliquait pas.
+	poser_limiteur()
 
 	# S3 — poser la force d'occlusion dès le démarrage. **Sans cette ligne, la
 	# molette du banc ne pilote que le banc** : le jeu garderait les valeurs

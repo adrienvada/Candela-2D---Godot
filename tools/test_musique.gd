@@ -51,6 +51,8 @@ func _run() -> void:
 	_test_couches_du_match()
 	_test_ouverture()
 	_test_armes()
+	_test_filet_de_sortie()
+	_test_aucun_fichier_muet()
 	_test_dosage()
 	_test_percuteur()
 	_test_annonceur()
@@ -357,6 +359,156 @@ func _test_dosage() -> void:
 		var absolue: float = diag * float(p.call(cle)) * AM.FACTEUR_PORTEE_DEFAUT
 		_check("%s : porte moins que 1,5 diagonale" % cle,
 			absolue < diag * 1.5, "%.0f px pour une carte de %.0f" % [absolue, diag])
+
+## AUCUN fichier du barème ne doit être muet.
+##
+## ⚠️ **Ce contrôle existe parce que j'ai livré un fichier vide et que mes propres
+## tests l'ont laissé passer.** `voice/defeat.wav` — la voix qui annonce la
+## défaite — contenait 0,76 s de silence numérique : un pic de **1 sur 32768**,
+## soit −90 dBFS. Tout joueur qui perdait un match n'entendait rien.
+##
+## **Ce que mes tests vérifiaient, et pourquoi ça ne suffisait pas.** Pour les
+## voix, je contrôlais `ResourceLoader.exists()` — le fichier est là, la clé
+## résout, le chemin est bon. Trois vérités qui ne disent rien du contenu. Pour
+## les stingers j'avais pourtant écrit « porte du son » en mesurant la durée...
+## mais une durée non nulle ne prouve rien non plus : le fichier durait 0,76 s.
+##
+## **Et le manifeste ne pouvait pas le voir** : sa détection de bouche-trou
+## compare une TAILLE exacte (160 032 octets, celle des flux générés). Un silence
+## d'une autre taille passe à travers — c'est l'angle mort déjà relevé sur
+## `music_intro.ogg` le 2026-08-24, et il vient de coûter une seconde fois.
+##
+## Le seul contrôle qui tranche est celui-ci : **ouvrir les données et regarder
+## si quelque chose bouge.** Un son se mesure, il ne se déduit pas d'un chemin.
+## Le filet de sortie (DA3.9), et surtout : qu'il reste MUET en jeu normal.
+##
+## **La propriété qui compte n'est pas qu'un limiteur existe, c'est qu'il ne
+## serve presque jamais.** Dans un duel où le son est la seule information, un
+## limiteur qui mord à chaque tir baisserait les pas de l'adversaire — il
+## retirerait ce que le jeu donne à entendre, au moment précis où ça compte.
+## Même famille que la règle du voile : ce qui protège le confort ne doit pas
+## moduler ce qui renseigne.
+##
+## D'où le contrôle central : **le pic le plus fort du dépôt, une fois la marge
+## appliquée, doit passer SOUS le plafond.** Un son seul ne réveille jamais le
+## filet ; seules les sommes le réveillent.
+func _test_filet_de_sortie() -> void:
+	print("\n[Le filet de sortie : il doit rester muet]")
+
+	# LE contrôle. Si la marge se raccourcit ou qu'un son plus fort arrive, le
+	# filet se met à mixer — et personne ne l'entendra comme tel.
+	_check("un son SEUL, même le plus fort, ne réveille pas le filet",
+		not AM.reveille_le_filet(AM.PIC_MAX_DEPOT_DB, AM.MARGE_DB, AM.PLAFOND_DB),
+		"pic %+.1f + marge %+.1f = %+.1f, plafond %+.1f" % [
+			AM.PIC_MAX_DEPOT_DB, AM.MARGE_DB,
+			AM.PIC_MAX_DEPOT_DB + AM.MARGE_DB, AM.PLAFOND_DB])
+
+	# ... mais une SOMME doit le réveiller, sinon il ne sert à rien. Deux sons au
+	# pic maximum font +6 dB : c'est le cas qu'il existe pour attraper.
+	_check("mais deux sons simultanés le réveillent",
+		AM.reveille_le_filet(AM.PIC_MAX_DEPOT_DB + 6.0, AM.MARGE_DB, AM.PLAFOND_DB))
+
+	# La marge doit couvrir le dépôt réel. Ce contrôle rougit le jour où Adrien
+	# livre un son plus fort que tout ce qui existe — et c'est le bon moment
+	# pour le savoir, pas six mois plus tard à l'oreille.
+	_check("la marge couvre le pic le plus fort du dépôt",
+		AM.PIC_MAX_DEPOT_DB + AM.MARGE_DB <= AM.PLAFOND_DB)
+	_check("le plafond laisse de la place aux dépassements inter-échantillons",
+		AM.PLAFOND_DB < 0.0, "%+.1f" % AM.PLAFOND_DB)
+
+	# La marge est une TRANSLATION : elle ne doit toucher aucun rapport jugé au
+	# banc. Le vérifier revient à vérifier qu'elle vit ailleurs que dans la table.
+	var source := FileAccess.get_file_as_string("res://audio_manager.gd")
+	_check("la marge ne vit pas dans la table des niveaux",
+		not source.contains("MARGE_DB,\n\t\"footstep\""))
+	_check("le limiteur est posé par le CODE, pas seulement par le fichier de bus",
+		source.contains("poser_limiteur()"))
+
+	# Un seul filet, et sur Master. Un limiteur sur SFX mordrait sur les tirs,
+	# donc baisserait les pas qui partagent ce bus : le défaut déplacé d'un cran.
+	_check("le filet vit sur Master", AM.BUS_MASTER == "Master")
+
+func _test_aucun_fichier_muet() -> void:
+	print("\n[Aucun fichier du barème n'est muet]")
+	# On passe TOUT ce que SOUNDS sait résoudre, plus les variantes construites.
+	var chemins := PackedStringArray()
+	for cle in AM.SOUNDS:
+		chemins.append(String(AM.SOUNDS[cle]))
+	for slug in ["pistolet", "fusil", "pompe", "arbalete"]:
+		chemins.append(AM.chemin_percuteur(slug))
+		for i in range(1, AM.VARIANTES_TIR + 1):
+			chemins.append(AM.chemin_tir(slug, i))
+
+	var muets := PackedStringArray()
+	var testes := 0
+	for chemin in chemins:
+		if not ResourceLoader.exists(chemin):
+			continue  # absent : c'est la règle « câbler, taire » — pas un défaut
+		# Les conteneurs (`AudioStreamInteractive`, `AudioStreamSynchronized`)
+		# n'ont pas de contenu propre : leur longueur vaut 0 par nature, et les
+		# juger muets serait un faux positif. Leurs clips sont vérifiés ailleurs.
+		if not chemin.ends_with(".wav"):
+			continue
+		testes += 1
+		if _wav_muet(chemin):
+			muets.append(String(chemin).get_file())
+
+	_check("au moins vingt .wav ont été ouverts", testes >= 20, str(testes))
+	_check("aucun n'est muet", muets.is_empty(), str(muets))
+
+## Ce flux contient-il quelque chose ?
+##
+## Lit les données réelles plutôt que la durée. Un `AudioStreamWAV` expose ses
+## octets ; un Ogg ne les expose pas, on retombe alors sur la durée — imparfait,
+## mais c'est le seul angle disponible et les Ogg du dépôt sont tous mesurés
+## par ailleurs.
+## Ce fichier contient-il quelque chose ?
+##
+## **Lit le FICHIER SOURCE sur le disque, pas la ressource importée** — et c'est
+## le coeur du contrôle, pas un détail. Godot importe les `.wav` en QOA :
+## `AudioStreamWAV.data` ne contient alors plus du PCM mais un flux compressé,
+## que rien ne permet d'inspecter échantillon par échantillon. Ma première
+## version lisait ces octets comme du 16 bits signé, y trouvait du bruit de
+## compression, et **déclarait vivant un fichier vide** — le défaut même qu'elle
+## était censée attraper, reproduit à l'intérieur de son garde-fou.
+##
+## Lire la source règle ça, et vaut mieux pour une autre raison : c'est ce
+## qu'Adrien a livré qu'on veut juger, pas ce que l'importeur en a fait.
+##
+## ⚠️ **Limite assumée : ne couvre que les `.wav`.** Un `.ogg` est compressé à la
+## source, il faudrait le décoder. Les Ogg du dépôt sont vérifiés autrement — la
+## suite exige d'eux une durée exacte en temps musicaux, ce qu'un fichier vide
+## n'a aucune raison d'avoir. Un contrôle qui ne couvre pas tout et le dit vaut
+## mieux qu'un contrôle qui prétend tout couvrir.
+static func _wav_muet(chemin: String) -> bool:
+	var f := FileAccess.open(chemin, FileAccess.READ)
+	if f == null:
+		return false
+	var octets := f.get_buffer(f.get_length())
+	f.close()
+	if octets.size() < 44:
+		return true
+	# On cherche le morceau « data » du RIFF plutôt que de supposer un en-tête de
+	# 44 octets : les exports portent souvent des morceaux LIST ou fact avant lui.
+	var debut := -1
+	var i := 12
+	while i + 8 <= octets.size():
+		var nom := octets.slice(i, i + 4).get_string_from_ascii()
+		var taille := octets.decode_u32(i + 4)
+		if nom == "data":
+			debut = i + 8
+			break
+		i += 8 + taille + (taille & 1)
+	if debut < 0:
+		return false
+	# 16 bits signés. Un seul échantillon au-dessus de -60 dBFS (32/32768) suffit
+	# à prouver que le fichier vit ; un souffle de fond dépasse largement ce seuil.
+	var j := debut
+	while j + 1 < octets.size():
+		if absi(octets.decode_s16(j)) > 32:
+			return false
+		j += 2 * 8  # un échantillon sur huit : on cherche un pic, pas une moyenne
+	return true
 
 func _test_percuteur() -> void:
 	print("\n[Le percuteur a vide]")
