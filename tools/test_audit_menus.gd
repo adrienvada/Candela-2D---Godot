@@ -57,6 +57,7 @@ func _run() -> void:
 	_audit_carte_appartient_a_l_hote()
 	await _audit_le_cadre_montre_vraiment()
 	await _audit_on_peut_lancer_une_recherche()
+	_audit_aucun_cadre_vide()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -78,6 +79,48 @@ func _run() -> void:
 ## et qu'elle porte un libellé. **Un bouton présent, nommé, et désactivé passe
 ## tous ces contrôles** — c'est la troisième forme du même motif, après le cadre
 ## de droite vide et la souris masquée.
+## **Aucune entrée, nulle part, ne laisse le cadre de droite noir.**
+##
+## ⚠️ Ce fichier porte ce titre depuis le 2026-08-18 et ne le vérifiait pas. Son
+## premier contrôle lit `_entry_details` et exige un texte **ou** un panneau —
+## or le texte va désormais au pied du cadre, pas dans le cadre. Une entrée sans
+## panneau le laisse donc noir tout en passant ce contrôle.
+##
+## L'audit du 2026-08-26 en a trouvé **dix**, sur cinq écrans : les cinq
+## « RETOUR », « QUITTER », « CRÉER » et « REJOINDRE » des deux écrans de salon,
+## et un bouton de l'écran de mise à jour. Aucune n'était exotique — ce sont les
+## entrées qu'on ne pense jamais à survoler pour vérifier une image.
+##
+## **Ce contrôle-ci RÉSOUT ce que le cadre montrerait** — le panneau de l'entrée,
+## ou à défaut celui de l'écran — au lieu de lire les dictionnaires. C'est la
+## troisième fois que la distinction tranche : on ne vérifie pas qu'il y a de
+## quoi montrer, on vérifie ce qui serait montré.
+func _audit_aucun_cadre_vide() -> void:
+	print("\n[Aucune entrée ne laisse le cadre de droite noir]")
+	var hub = _ui.hub
+	var vides: Array[String] = []
+	for ecran: String in hub._lists.keys():
+		var defaut: String = hub.screen_panel(ecran)
+		var liste: Node = hub.list_of(ecran)
+		if liste == null:
+			continue
+		for enfant in liste.get_children():
+			var btn := enfant as Button
+			if btn == null:
+				continue
+			var d: Variant = hub._entry_details.get(btn, null)
+			var panneau := ""
+			var nom := "(sans nom)"
+			if d is Dictionary:
+				panneau = String((d as Dictionary).get("panneau", ""))
+				nom = String((d as Dictionary).get("titre", nom))
+			var montre: String = panneau if panneau != "" else defaut
+			if montre == "":
+				vides.append("%s / %s" % [ecran, nom])
+	_check("aucune entrée ne laisse le cadre noir", vides.is_empty(),
+		", ".join(vides))
+
+
 func _audit_on_peut_lancer_une_recherche() -> void:
 	print("\n[Le bouton qui cherche un adversaire est cliquable]")
 	var hub = _ui.hub
