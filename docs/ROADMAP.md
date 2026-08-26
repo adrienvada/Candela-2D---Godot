@@ -2958,6 +2958,52 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La mesure répond, mais pas à la question posée (2026-08-27)
+
+**Quatre défauts distincts, un seul mécanisme**, dégagé avec la session DA2 en
+rapprochant des trouvailles qu'on croyait sans rapport. Dans les quatre cas on
+avait mesuré quelque chose, obtenu un résultat franc, et conclu — sur une
+mesure qui ne portait pas sur ce qu'on croyait.
+
+1. **`git status` replie un répertoire entièrement non suivi en UNE ligne.** Un
+   `git status --porcelain | grep '\.jpg$'` rend `0`. Ce `0` se lit « rien ne
+   manque » et veut dire « je n'ai pas regardé dedans ».
+2. **Un seuil comptait le sprint sans le nommer** (`574b961`) : le nombre était
+   juste, l'action qu'il comptait n'était nulle part écrite.
+3. **Un `grep` d'audit ne cherchait pas ce qu'il croyait chercher** — les
+   tailles fautives n'étaient pas au site de l'appel qu'il inspectait, mais dans
+   les arguments passés à la fabrique. Vert sur seize boutons fautifs.
+4. **Une garde d'assets énumérait trois sous-dossiers sur quatorze** — dont pas
+   `assets/sprites/`, où dorment trente-deux images non versionnées.
+
+**Le trait commun : une énumération partielle se lit comme une liste complète,
+et un silence se lit comme une absence.** Aucun de ces quatre contrôles n'a
+menti ; chacun a répondu exactement à la question qu'on lui posait, et personne
+n'a vérifié que c'était la bonne.
+
+**La parade est un contrôle à l'envers**, pas une relecture. Un fichier témoin
+déposé dans `assets/sprites/` a montré en une commande que l'ancienne garde ne
+disait rien — ce qu'aucune relecture du code n'avait vu, parce que la liste des
+trois dossiers *paraît* délibérée. **Une garde qu'on n'a pas vue échouer ne
+garde rien**, et c'est la seule façon connue de distinguer « vert parce que tout
+va bien » de « vert parce que je regarde ailleurs ».
+
+⚠️ **Le corollaire de méthode.** Quand un contrôle rend zéro, la question à se
+poser n'est pas « est-ce vrai ? » mais **« ce zéro peut-il seulement être autre
+chose que zéro ? »**. S'il ne peut pas, ce n'est pas une mesure.
+
+### Un rôle annoncé ne survit pas à la session qui l'annonce (2026-08-27)
+
+La republication centralisée du suivi a coûté un aller-retour à trois sessions
+en une soirée : l'une s'était déclarée titulaire, une autre la croyait encore
+en charge, et **la première s'était éteinte entre-temps**. Le protocole
+centralisé du README n'a **aucun mécanisme de relève** — il dit qui prend, pas
+qui rend.
+
+**C'est la liste des sessions vivantes qui tranche, jamais ce qu'une session a
+annoncé une heure plus tôt.** Une information sur l'état des sessions vieillit
+en minutes, et une session ne peut pas annoncer sa propre fin.
+
 ### Une branche finie ne se signale pas toute seule (2026-08-26)
 
 `worktree-lanceur-port` portait deux commits **écrits, éprouvés et complets** —
