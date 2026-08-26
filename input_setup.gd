@@ -73,7 +73,11 @@ func _setup_all_inputs():
 	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	add_joy_axis.call("p1_torch", p1_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Courir
+	# Carré : libre. Il portait « Courir » jusqu'à la suppression du sprint
+	# (2026-08-26) ; la liaison est partie sans son commentaire, qui a continué
+	# d'annoncer une ligne absente. Avec Triangle, c'est l'un des deux boutons
+	# de face que le JEU n'utilise pas — l'éditeur de cartes, lui, les prend
+	# tous les deux (Effacer et Tester).
 	
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -115,7 +119,11 @@ func _setup_all_inputs():
 	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	add_joy_axis.call("p2_torch", p2_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Courir
+	# Carré : libre. Il portait « Courir » jusqu'à la suppression du sprint
+	# (2026-08-26) ; la liaison est partie sans son commentaire, qui a continué
+	# d'annoncer une ligne absente. Avec Triangle, c'est l'un des deux boutons
+	# de face que le JEU n'utilise pas — l'éditeur de cartes, lui, les prend
+	# tous les deux (Effacer et Tester).
 	
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix

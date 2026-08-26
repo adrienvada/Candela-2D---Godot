@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-26
+> Dernière mise à jour : 2026-08-27
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3135,6 +3135,59 @@ deux phrases de `ui.gd` ont **perdu leur compte** au lieu de le voir corrigé �
 « les actions réassignables », sans nombre. Un effectif en toutes lettres
 redevient faux à la prochaine action ajoutée, et rougit alors au nom d'un
 innocent : ici la rubrique des contrôles, qui n'avait rien fait.
+
+### Une mécanique retirée laisse des résidus que le grep TROUVE (2026-08-27)
+
+Le piège juste au-dessus dit qu'une dépendance survit à la disparition du mot
+qui la désigne, et qu'il faut donc chercher autre chose que le nom retiré. Le
+lendemain de la suppression du sprint, un simple `grep -i sprint` a rendu
+**trois résidus de plus** — et il les a rendus tous les trois, sans effort. Le
+mécanisme est donc l'inverse du précédent, et il est plus banal : **ce n'est pas
+la recherche qui a manqué, c'est de la relancer.** Le lot était vert, le sujet
+paraissait clos.
+
+Les trois, par gravité croissante :
+
+1. **`p1_sprint` et `p2_sprint` étaient encore déclarés dans l'Input Map**
+   (`project.godot`), liés à Maj et à M, lus par personne. Deux touches
+   réservées par des actions fantômes — et **aucune suite ne pouvait le voir** :
+   rien ne vérifie la liste des actions déclarées. Sans effet, jusqu'au jour où
+   quelqu'un veut lier Maj.
+2. **`input_setup.gd` annonçait deux fois `# Carré = Courir`.** La liaison
+   manette était partie, son commentaire non : il a continué d'annoncer une
+   ligne absente. Un commentaire orphelin ne ment pas seulement sur le passé —
+   il fait croire qu'un bouton est pris.
+3. **`brouillage.gd` justifiait deux réglages par une vitesse de sprint.** C'est
+   le seul des trois qui ait changé un EFFET. `RETARD_REMANENCE` valait 0,18 s,
+   posé pour « à 520 px/s en sprint, 94 px d'avance à prendre, soit cinq rayons
+   de joueur ». Le sprint parti, la seule vitesse est 260 px/s : les mêmes
+   0,18 s n'achetaient plus que **47 px, la moitié**. Le nombre n'avait pas
+   bougé ; le monde autour de lui, si.
+
+**Ce que le troisième apprend, et qui vaut bien au-delà du sprint : un réglage
+dérivé d'une grandeur doit nommer cette grandeur DANS LE CODE.** Écrite dans le
+commentaire, elle ne tient rien — elle raconte, au présent, un présent qui
+passe. C'est la même famille que le constat daté de `CLAUDE.md`, à ceci près
+qu'ici ce n'est pas une phrase qui vieillit, c'est **le chiffrage d'une
+constante**. `brouillage.gd` porte donc `VITESSE_MARCHE` et `AVANCE_REMANENCE`,
+et `RETARD_REMANENCE` s'en déduit — 0,36 s. Le réglage est l'avance en pixels ;
+le temps n'en est que la conversion, et il suivra si la vitesse rebouge.
+
+**La recopie est tenue par une suite, et c'est la moitié qui compte.**
+`brouillage.gd` n'a aucune dépendance — c'est ce qui lui permet de tourner sous
+`--script` là où `game_state.gd` ne compile pas — donc il ne peut pas lire
+`player.gd`, seulement le recopier. `test_brouillage._test_vitesse_de_reference`
+relit le **littéral** de `player.gd` et rougit si les deux divergent, en nommant
+les deux valeurs. Contrôle **éprouvé à l'envers avant d'être retenu** (260 → 259 :
+rouge, message juste) : un garde-fou qu'on n'a jamais vu échouer ne garde rien,
+c'est le défaut du 2026-08-18 — trente suites vertes sur une mécanique inerte.
+
+**Portée du redosage, mesurée avant de toucher :** `derive()` et `retard()` ne
+sont appelés que depuis `tools/`. Les modes TREMBLEMENT et RÉMANENCE ne sont pas
+branchés — le jeu tourne sur halo + contraste + flou. Doubler le retard ne change
+donc rien à une partie ; ça change ce que le **banc** montre, c'est-à-dire ce sur
+quoi Adrien tranchera. Un banc qui montre un mode à la moitié de son réglage
+prévu fait juger autre chose que ce qu'on croit juger.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
