@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-25
+> Dernière mise à jour : 2026-08-26
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2361,6 +2361,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
@@ -2954,6 +2955,42 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Retirer un paramètre ne se vérifie pas en cherchant son nom (2026-08-26)
+
+En supprimant le sprint, `update_input_state()` perd un argument. Réflexe
+naturel : `grep -rn sprint` pour trouver tous les appelants à corriger. Le lot
+est reparti vert au premier essai — **et il manquait un appelant.**
+
+`tools/test_online_match.gd` passait la valeur en **littéral** :
+`update_input_state(seq, mov, aim, false, false, false)`. Aucun des trois
+`false` ne porte le mot « sprint » ; le grep n'avait rien à trouver, et il n'a
+donc rien trouvé. Le nom disparaît du site d'appel **au moment même** où le
+paramètre est nommé par position.
+
+**La règle : après un changement de signature, on cherche la FONCTION, jamais
+l'argument** — `grep -rn 'update_input_state('` — et on compte les arguments de
+chaque appel. Même famille que les contrôles creux déjà consignés ici : dans les
+deux cas, une recherche rend « aucun problème » alors qu'elle n'interrogeait pas
+ce qu'on croyait. Ici, l'aveu est arrivé par les suites ; il aurait pu arriver
+par un RPC muet en ligne, où plus rien ne l'aurait dit.
+
+**Le même retrait a produit une SECONDE occurrence, d'une autre forme, et c'est
+elle qui généralise la leçon.** `tools/test_audit_menus.gd` exigeait
+`"CONTRÔLES": 6,  # trois actions × deux joueurs`. Les trois actions étaient
+Tirer, Torche et **Courir** ; le seuil comptait donc le sprint sans jamais le
+nommer. Le lot est passé au rouge, et le message accusait la rubrique des
+contrôles — un écran qui n'avait rien fait.
+
+Ce qui relie les deux : **une dépendance survit à la disparition du mot qui la
+désigne.** Un argument nommé par position, un effectif écrit en chiffre — dans
+les deux cas la trace textuelle du sprint avait déjà disparu du site qui en
+dépendait. Chercher le nom retiré ne peut, par construction, pas les trouver.
+
+Corollaire pratique : **c'est le lot complet qui fait foi, jamais le grep.** Les
+deux occurrences ont été rendues par des suites, l'une (`test_audit_menus`)
+écrite par une autre session pour une raison sans rapport. Un contrôle qui compte
+ce qu'un écran montre attrape des retraits que son auteur n'imaginait pas.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -6468,9 +6505,13 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   *assets : 2×4 samples.*
 - **V5.8 Shimmer du liseré néon** — les bordures des murs scintillent sous une
   lumière directe.
-- **V5.9 Streaks de sprint** — vignette resserrée + traits de vitesse côté
-  sprinteur. **✅ Fait pour les traits** — shader plein écran préchargé
-  (`sprint_streaks.gdshader`) : pointillés radiaux filant vers l'extérieur,
+- ~~**V5.9 Streaks de sprint**~~ — ❌ **SANS OBJET depuis le 2026-08-26** : le
+  sprint est supprimé (voir « Décisions actées »), donc `sprint_streaks.gdshader`
+  est supprimé avec lui. L'effet fonctionnait ; il n'a plus rien à signaler.
+  Conservé ci-dessous parce que la **raison d'écarter la vignette** vaut au-delà
+  du sprint et resservira au premier effet plein écran qu'on voudra ajouter.
+  Description d'origine : vignette resserrée + traits de vitesse côté
+  sprinteur. Shader plein écran préchargé : pointillés radiaux filant vers l'extérieur,
   confinés aux bords (le centre, là où on vise, reste propre), intensité
   lissée à l'entrée/sortie de sprint. Le rect porte le `visibility_layer` du
   joueur : chacun ne voit que sa propre vitesse. **La vignette resserrée est
@@ -7532,6 +7573,14 @@ un fait de jeu, pas à un rythme d'interface.
      rétrodiffusion tombent déjà ensemble sur ce compteur. Une planche de quatre
      images jouée à cadence fixe dériverait de tout ça dès qu'on change
      d'allure, et le sprint la ferait mentir en permanence.
+
+     ✅ **Cet obstacle est tombé le 2026-08-26**, et par une décision qui ne le
+     visait pas : Adrien a supprimé le sprint. Il ne reste **qu'un seuil, 45 px**,
+     donc plus de changement d'allure et plus rien à faire mentir. Une planche de
+     marche indexée sur le compteur de distance — et non sur une horloge — reste
+     en phase par construction. **L'obstacle n°2 (l'arme pivotée qui mentirait
+     sur la visée) tient toujours**, lui, et c'est celui qui décide : la planche
+     ne peut montrer que les jambes.
   2. ⚠️ **Une arme peinte pivotée mentirait sur la visée.** `rotation` dit déjà
      où le joueur vise : c'est l'information la plus chère du jeu. Toute
      inclinaison d'arme cuite dans une frame la contredit douze fois par

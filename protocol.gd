@@ -41,7 +41,12 @@ class_name Protocol
 ## 2 — la poignée de main elle-même : `rpc_hello` et l'attribut de salon `PROTO`.
 ##     Un build v1 n'a pas `rpc_hello` ; il ne répond donc jamais, et c'est
 ##     `_check_hello_arrived` qui le refuse — le silence est un refus.
-const VERSION := 4
+## 5 — la suppression du SPRINT (2026-08-26, décision d'Adrien). `rpc_send_inputs`
+##     perd son sixième argument : un client v4 enverrait six valeurs à un hôte
+##     v5 qui en attend cinq. **Rupture franche, donc le numéro monte** — c'est
+##     exactement le cas que ce carnet existe pour attraper, et le témoin du fil
+##     l'a signalé avant qu'on y pense.
+const VERSION := 5
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -49,7 +54,7 @@ const VERSION := 4
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "d4eea1edd81c888c"
+const WIRE_WITNESS := "7995a5689978147a"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

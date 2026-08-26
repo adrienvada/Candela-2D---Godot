@@ -437,7 +437,6 @@ func _on_peer_disconnected(id: int):
 		# simulation, pas de l'affichage.
 		p2.reset_network_input()
 		p2.velocity = Vector2.ZERO
-		p2.is_sprinting = false
 		p2.flashlight_on = false
 		if _end_sequence_active:
 			# Une killcam est en cours : on ne touche à rien de ce qu'elle montre.

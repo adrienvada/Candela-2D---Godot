@@ -10,7 +10,6 @@ const SHADER_RIM_LIGHT := preload("res://player_rim_light.gdshader")
 const SHADER_ENEMY_LIGHT := preload("res://player_enemy_light.gdshader")
 const SHADER_VIGNETTE := preload("res://damage_vignette.gdshader")
 const SHADER_DEATH_FLASH := preload("res://death_flash.gdshader")
-const SHADER_SPRINT_STREAKS := preload("res://sprint_streaks.gdshader")
 ## Le modèle d'éblouissement, sans dépendance — voir `eblouissement.gd`.
 const Eblouissement := preload("res://eblouissement.gd")
 ## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
@@ -61,10 +60,6 @@ var noise: FastNoiseLite
 var shake_time: float = 0.0
 
 var vignette_mat: ShaderMaterial
-## V5.9 — streaks de sprint sur le viewport du joueur, intensité lissée.
-var streaks_mat: ShaderMaterial
-var _streaks_i: float = 0.0
-var _streaks_last: float = -1.0
 
 ## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
 const TORCH_BREATH_AMP := 0.03
@@ -77,7 +72,6 @@ const DUST_INTERVAL := 0.12
 var _dust_accum: float = 0.0
 
 var flashlight_on: bool = false
-var is_sprinting: bool = false
 var dead: bool = false
 
 # Numérotation des paquets d'input client→hôte. Le canal est unreliable :
@@ -485,16 +479,14 @@ func _ready():
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 
-	# V5.9 — streaks de sprint, même cloisonnement que la vignette : le rect
-	# porte le visibility_layer du joueur, l'adversaire ne voit rien.
-	var streaks_rect = ColorRect.new()
-	streaks_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	streaks_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	streaks_rect.visibility_layer = 2 if player_id == 0 else 4
-	streaks_mat = ShaderMaterial.new()
-	streaks_mat.shader = SHADER_SPRINT_STREAKS
-	streaks_rect.material = streaks_mat
-	ui_layer.add_child(streaks_rect)
+	# ⚠️ **Les streaks de vitesse (V5.9) sont RETIRÉS avec le sprint** (Adrien,
+	# 2026-08-26), et pas seulement éteints. Le premier jet se contentait de
+	# figer leur intensité à zéro — mais le rect couvre tout l'écran et reste
+	# visible : son fragment shader s'exécute sur chaque pixel, à intensité
+	# nulle comme à un. C'était donc une passe plein écran par joueur pour un
+	# effet qui ne peut plus se déclencher, sur un jeu qui dispose de 3,4 ms de
+	# marge sur ses pires images. **Un effet éteint qui rastérise encore n'est
+	# pas éteint, il est invisible — ce n'est pas la même chose.**
 	
 	
 	# Configuration de la Lampe Torche Principale (Faisceau Avant)
@@ -904,14 +896,6 @@ func _process(delta):
 	if _is_locally_piloted():
 		AudioManager.set_dazzle_level(player_id, dazzle_amount)
 
-	# V5.9 — les streaks de sprint suivent l'état, avec un fondu court : la
-	# vitesse s'installe, elle ne clignote pas.
-	if streaks_mat:
-		var cible := 1.0 if (is_sprinting and not dead) else 0.0
-		_streaks_i = lerpf(_streaks_i, cible, minf(1.0, delta * 6.0))
-		if absf(_streaks_i - _streaks_last) > 0.005:
-			_streaks_last = _streaks_i
-			streaks_mat.set_shader_parameter("intensity", _streaks_i)
 		
 	if shake_intensity > 0:
 		shake_intensity = lerp(shake_intensity, 0.0, shake_decay * delta)
@@ -929,7 +913,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, sprint: bool) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -951,7 +935,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, sprint)
+	input_provider.update_input_state(mov, aim, shoot, torch)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -969,14 +953,13 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
-	var sprint := input_provider.is_sprint_pressed() and mov.length() > 0.1
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
-		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(), sprint)
+		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1134,7 +1117,6 @@ func _physics_process(delta):
 	# position d'apparition et non sur un instantané périmé.
 	if state and state.countdown_left > 0.0:
 		velocity = Vector2.ZERO
-		is_sprinting = false
 		flashlight_on = false
 		flashlight.enabled = false
 		body_light.enabled = false
@@ -1149,7 +1131,6 @@ func _physics_process(delta):
 		can_move = is_multiplayer_authority()
 	if menu_open:
 		velocity = Vector2.ZERO
-		is_sprinting = false
 		can_move = false
 
 	if state and not (state.round_active or state.sandbox_mode):
@@ -1168,11 +1149,11 @@ func _physics_process(delta):
 		
 	if can_move:
 		var input_dir = input_provider.get_movement_vector()
-		is_sprinting = input_provider.is_sprint_pressed() and input_dir.length() > 0.1
-		if shoot_cooldown > 0 and current_weapon and not current_weapon.can_run_while_reloading:
-			is_sprinting = false
-			
-		var current_speed = speed * (2.0 if is_sprinting else 1.0)
+		# ⚠️ **Plus de multiplicateur : le sprint est supprimé** (Adrien,
+		# 2026-08-26). La vitesse ne dépend plus que de l'arme et de
+		# l'éblouissement — deux causes qui se lisent, là où le sprint doublait
+		# la vitesse sans que l'adversaire puisse le voir venir.
+		var current_speed = speed
 		if shoot_cooldown > 0 and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
 		if dazzle_amount > 0:
@@ -1188,10 +1169,11 @@ func _physics_process(delta):
 			var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
 			rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
 			
-		if is_sprinting:
-			flashlight_on = false
-		else:
-			flashlight_on = input_provider.is_flashlight_pressed()
+		# ⚠️ **Courir éteignait la torche ; le sprint parti, la règle disparaît
+		# avec lui** (Adrien, 2026-08-26). C'était une contrepartie : la vitesse
+		# se payait en cécité. Sans sprint, il n'y a plus rien à payer, et la
+		# torche n'obéit plus qu'au bouton.
+		flashlight_on = input_provider.is_flashlight_pressed()
 
 		if role == NetRole.PREDICTED:
 			# Correction appliquée AVANT l'archivage : l'historique doit décrire
@@ -1212,12 +1194,14 @@ func _physics_process(delta):
 	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
 	if step_moved > 0.5 and step_moved < 100.0:
 		step_distance_accumulated += step_moved
-		# L'état de sprint n'est pas répliqué : l'adversaire interpolé retombe
-		# sur le pas de 45 px — un poil plus bavard, jamais moins.
-		var step_dist := 60.0 if is_sprinting else 45.0
+		# ⚠️ **Une seule distance depuis la suppression du sprint (2026-08-26).**
+		# Elle valait 60 px en sprint, 45 en marche — et l'état n'étant pas
+		# répliqué, l'adversaire interpolé retombait de toute façon sur 45. Le
+		# sprint parti, la valeur cesse d'être une branche.
+		var step_dist := 45.0
 		if step_distance_accumulated >= step_dist:
 			step_distance_accumulated = 0.0
-			var pitch_mult := 1.122 if is_sprinting else 1.0
+			var pitch_mult := 1.0
 			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, pitch_mult * 0.95, pitch_mult * 1.05)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
@@ -1266,8 +1250,7 @@ func _physics_process(delta):
 	# de l'autre, ce qui est ce que fait un marcheur, et non un métronome.
 	var vise_roulis := 0.0
 	if step_moved > 0.5 and step_moved < 100.0:
-		var pas_courant := 60.0 if is_sprinting else 45.0
-		vise_roulis = sin(step_distance_accumulated / pas_courant * PI) \
+		vise_roulis = sin(step_distance_accumulated / 45.0 * PI) \
 			* ROULIS_MARCHE * float(_foot_side)
 	_roulis = move_toward(_roulis, vise_roulis, ROULIS_RETOUR * delta)
 	for poly in [visual, visual_dim, visual_reveal, visual_enemy,
@@ -1335,7 +1318,9 @@ func _physics_process(delta):
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	if can_move and presse and shoot_cooldown <= 0 and not is_sprinting:
+	# `not is_sprinting` retiré avec le sprint : on ne pouvait pas tirer en
+	# courant, il n'y a plus de course.
+	if can_move and presse and shoot_cooldown <= 0:
 		shoot()
 	elif can_move and presse and not _detente_pressee and _percu_ici():
 		# Front montant seulement : détente maintenue pendant une seconde de

@@ -4659,7 +4659,6 @@ func _on_map_chosen(_map_id: String) -> void:
 const BINDABLE := [
 	["Tirer", "shoot", "Le tir. Un flash qui révèle votre position à tout le monde."],
 	["Torche", "torch", "L'allumage de la torche : elle montre, et elle trahit."],
-	["Courir", "sprint", "Le sprint. Rapide, bruyant, et la torche décroche."],
 ]
 
 ## Les trois actions et leurs deux colonnes de joueurs, d'un seul bloc.
