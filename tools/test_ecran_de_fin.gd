@@ -45,6 +45,7 @@ func _run() -> void:
 	_test_tension_killcam()
 	_test_negatif_killcam()
 	_test_disposition_hud()
+	_test_effleurement()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -52,6 +53,48 @@ func _run() -> void:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	_main.queue_free()
 	quit(1 if _failures > 0 else 0)
+
+## **DA4.7 — « effleuré : 13 px » arrive-t-il vraiment à l'écran de fin ?**
+##
+## La donnée existait depuis V2.9 mais mourait dans l'arène : elle était posée
+## sur un `Label` au-dessus du cadavre, puis remise à `-1` deux lignes plus bas.
+## Un chemin `player` → `game_state` → `ui` la conduit maintenant au bandeau.
+##
+## ⚠️ **Le contrôle qui compte est celui de l'ABSENCE.** Une valeur inconnue est
+## le cas ORDINAIRE en ligne — V2.9 ne la connaît que sur la machine qui a simulé
+## la balle fatale, donc le vainqueur ne l'a le plus souvent pas. Un bandeau qui
+## afficherait « -1 PX », ou même un « — » poli, transformerait un silence normal
+## en anomalie visible à chaque match. La colonne entière disparaît.
+##
+## L'oracle est écrit ici, pas demandé au code : on pose une valeur connue et on
+## exige la chaîne exacte. C'est la leçon de l'audit de la colonne de lecture,
+## rédigé une heure plus tôt et déjà décoratif une fois.
+func _test_effleurement() -> void:
+	print("\n[La marge du tir décisif atteint le bandeau]")
+	_ui.poser_bilan(2, 1, "", 13.0)
+	_check("la colonne se montre quand la marge est connue",
+		_ui.bilan_effleure != null and _ui.bilan_effleure.visible)
+	_check("elle dit la marge en pixels",
+		_ui.bilan_marge.text == "13 PX", _ui.bilan_marge.text)
+
+	# La marge arrive en flottant depuis la simulation : elle s'arrondit, elle
+	# ne se tronque pas. 12,6 px sont 13, pas 12.
+	_ui.poser_bilan(2, 1, "", 12.6)
+	_check("la marge s'arrondit au pixel le plus proche",
+		_ui.bilan_marge.text == "13 PX", _ui.bilan_marge.text)
+
+	# Et le cas ordinaire en ligne : personne n'a simulé la balle ici.
+	_ui.poser_bilan(2, 1, "", -1.0)
+	_check("marge inconnue : la colonne disparaît entièrement",
+		not _ui.bilan_effleure.visible)
+
+	# Le défaut de `poser_bilan` doit valoir « inconnue » : l'appel d'entre-deux-
+	# manches ne passe pas de marge, et il ne doit pas hériter de la précédente.
+	_ui.poser_bilan(2, 1, "", 13.0)
+	_ui.poser_bilan(2, 1)
+	_check("un appel sans marge n'hérite pas de la manche d'avant",
+		not _ui.bilan_effleure.visible)
+
 
 ## La courbe d'enflure, sur tout un battement.
 func _test_souffle() -> void:

@@ -8185,11 +8185,50 @@ la largeur du cadre**. Il était jusqu'ici derrière une navigation, dans une
 colonne de gauche large de 430 px. Ce n'est plus un rangement plus logique, c'est
 le seul endroit où ce contenu tient.
 
-**Ce qui reste faible, et c'est de la composition, pas du branchement :** les
-trois panneaux se collent en haut d'un cadre qui fait plus de mille pixels de
-haut, et le profil centre ses lignes sur toute la largeur — une phrase
-d'explication court sur 900 px, ce qui se lit mal. C'est le travail de DA4.7
-(hiérarchiser au lieu d'empiler), et ça vient après le lit d'ambiance.
+**Ce qui restait faible, et c'était de la composition, pas du branchement :** le
+profil centrait ses lignes sur toute la largeur — une phrase d'explication
+courant sur des centaines de pixels, ce qui se lit mal.
+
+##### ✅ La colonne de lecture, posée le 2026-08-26
+
+**Le cadre fait 1 290 px de large**, mesuré au banc — et non 900 comme
+l'estimait le paragraphe ci-dessus. Une colonne de texte y est maintenant
+plafonnée à `Charte.MESURE` **signes**, centrée.
+
+**66 signes** : le milieu de la fourchette que la typographie tient depuis le
+plomb (55 à 75). En deçà l'œil saute de ligne trop souvent ; au delà il retrouve
+mal le début de la suivante, parce que le retour chariot devient un saut à
+l'aveugle.
+
+⚠️ **En signes, jamais en pixels** — et `mesure_px()` relève la chasse sur la
+**fonte réelle** au lieu d'appliquer un facteur en dur. Une largeur en pixels
+est juste pour une taille de fonte et fausse pour les cinq autres : c'est la
+sixième occurrence du motif *une valeur absolue là où il fallait un rapport*, et
+la première où on l'a vue venir avant de la commettre.
+
+⚠️ **C'est un plafond d'ÉTIREMENT, pas un corset.** La colonne est posée en
+taille minimale : un enfant qui exige davantage l'élargit. C'est ce qui permet
+de l'appliquer à tous les panneaux d'un coup sans vérifier chacun — le seul cas
+à trancher est celui qui veut vraiment les bords, et il le dit lui-même par
+`HubScreen.pleine_largeur()`. Un écran décrit ce qu'il est ; il ne sait toujours
+pas où il est, exactement comme pour `screen_title()` et `focus_seed()`.
+
+**Un seul écran le demande** : l'historique. Six colonnes — date, verdict, durée,
+mode, adversaire, arme. Ce n'est pas de la prose : personne ne lit une ligne de
+tableau de gauche à droite, on y descend une colonne. La mesure n'y protège
+rien et ne ferait que serrer six colonnes dans la moitié du cadre.
+
+⚠️ **Et le banc de ce correctif a été décoratif — quatrième fois du chantier.**
+Il demandait à l'écran `pleine_largeur()`, puis vérifiait que la largeur rendue
+correspondait à cette réponse. **Mettre le défaut du contrat à `true` le laissait
+entièrement vert** : les quatre panneaux s'étalaient, et l'attendu s'étalait avec
+eux. Vérifié en le sabotant — quatre ✓ franchement faux.
+
+**Un banc dont l'oracle sort du code testé ne teste rien : il paraphrase.** La
+table des largeurs attendues est maintenant écrite **dans le banc**, et c'est
+elle qui porte la décision de DA4.18. Un écran qui change de camp doit faire
+rougir ce fichier ; c'est le but, pas une gêne. Sous sabotage, le banc dit
+désormais `1290 px sur 1290 (plafond visé 518)`.
 
 ⚠️ **Observation hors périmètre, signalée à Adrien : l'historique local est
 pollué par les bancs.** La planche affiche « ce soir : 200 matchs · 98V 57D 0N ·
@@ -8477,11 +8516,39 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Déplacer une donnée déplace tout ce qui la regarde**, et rien dans le
   langage ne le signale.
 
-  ⬜ **Reste : « effleuré : 13 px ».** La donnée existe (`player.gd`,
-  `last_fatal_perp`) mais elle est consommée sur place, en espace-monde, pour un
-  label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
-  `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
-  feel ». **À demander avant de le faire.** *(S)*
+  ✅ **« Effleuré : 13 px » livré le 2026-08-26**, sur autorisation d'Adrien de
+  toucher les deux fichiers de « game feel ». Le chemin
+  `player` → `game_state` → `ui` tient en **quatre lignes de logique** : un appel
+  de groupe dans `die()`, un champ et un verbe dans `game_state`, un paramètre de
+  plus à `poser_bilan()`.
+
+  **La donnée existait depuis V2.9 et mourait dans l'arène.** Elle s'affichait
+  deux secondes au-dessus d'un cadavre, puis `last_fatal_perp` retombait à `-1`.
+  Or le moment où « j'y étais presque » travaille n'est pas celui-là : c'est
+  **celui où le joueur décide de rejouer ou de partir**. Un moteur de rematch
+  affiché pendant qu'on regarde encore sa propre mort arrive trop tôt.
+
+  ⚠️ **L'ordre des deux lignes est tout le correctif.** Le report est fait
+  **avant** la remise à `-1` qui suit — cette remise est ce qui garantit qu'un
+  effleurement ne resserve pas à la manche d'après, et l'inverser donnerait « la
+  marge d'un tir d'il y a trois manches » sans qu'aucune erreur ne le dise.
+
+  ⚠️ **L'absence est le cas ORDINAIRE, pas le cas d'erreur.** V2.9 ne connaît
+  cette valeur que sur la machine qui a **simulé** la balle fatale : en ligne, le
+  vainqueur ne l'a le plus souvent pas. La colonne entière disparaît alors —
+  afficher « -1 PX », ou même un tiret poli, ferait passer un silence normal pour
+  une anomalie à chaque match. Même règle que la série, et pour la même raison.
+
+  **Trois registres, trois natures**, ce qui était le fond de l'item : le score
+  est un **compteur** (appareil, tabulaire, teinté par joueur), la série un
+  **cri** (enseigne, ambre), la marge une **mesure** — appareil, mais en lumière
+  et non en couleur de camp : elle n'appartient à personne, elle dit de combien
+  le tir a failli manquer, pas qui l'a tiré.
+
+  **Et elle n'est passée qu'à la fin du match.** L'appel d'entre-deux-manches la
+  laisse volontairement inconnue : l'arène vient d'écrire « à N px du centre »
+  au-dessus du corps, et la répéter trois secondes plus tard dirait deux fois la
+  même chose au même moment. *(S)*
 - **DA4.8 Les vignettes de la galerie encadrées** ✅ **livrée le 2026-08-25** —
   et elle a fait tomber une infraction à une décision actée.
 
@@ -8584,10 +8651,49 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   durées posées à la main (0,06 / 0,45 / 0,9 s) passent aux trois crans de
   l'échelle.
 
-  ⬜ **Reste cinq sites** — `menu_title.gd` (2), `map_editor.gd` (2),
-  `audio_manager.gd` (1), plus deux dans `ui.gd`. Aucun n'est difficile ; ils
-  demandent seulement de connaître la valeur de départ, `Charte.animer()`
-  passant par `tween_method` et non par `tween_property`.
+  ✅ **Fermée le 2026-08-26 pour tout le domaine de l'interface.** Recompté au
+  passage : le texte disait « cinq sites » et en listait sept — un décompte
+  écrit à la main dans la même phrase que la liste qui le contredit. Six ont été
+  convertis, `menu_title.gd` (2), `map_editor.gd` (2), `ui.gd` (2) ; **plus un
+  seul `set_trans` ne subsiste dans un fichier d'écran.**
+
+  ⚠️ **Une partie des sites n'avait aucun moyen de se convertir, et le constat
+  d'origine ne le disait pas.** `Charte.animer()` écrit par `set_indexed` : elle
+  exige un chemin de propriété. Les deux grandeurs de `menu_title.gd` se posent
+  par `_poser_embrasement()` et `_poser_flambee()`, qui alimentent un shader —
+  aucune propriété à nommer. Le chiffre « 7 contre 31 » se lisait comme une
+  négligence des sites d'appel ; il mesurait en partie **un trou dans le point
+  d'entrée**. `Charte.animer_via()` le comble, et le comptage redevient honnête.
+
+  ⚠️ **`ENTREE` sert une extinction, et il ne faut pas le « corriger ».** Le nom
+  des courbes dit leur emploi ordinaire, pas leur forme : `ENTREE` chute vite
+  puis s'attarde — la rémanence exacte d'une flambée. `SORTIE` tiendrait la
+  pleine lumière puis couperait net, c'est-à-dire une flambée qu'on éteint à
+  l'interrupteur. Le commentaire est posé sur place, parce qu'un lecteur qui
+  n'irait qu'au nom retomberait dans le piège.
+
+  ⚠️ **Une différence de comportement, sous un délai.** `tween_property` relève
+  la valeur de départ quand le tweener DÉMARRE ; `Charte.animer()` la fige à
+  l'appel. Sur le réveil des surfaces de M10, qui porte un délai par bloc, les
+  deux coïncident — rien ne touche la silhouette entre-temps. Ailleurs, ils
+  divergeraient sans la moindre erreur. Écrit sur place.
+
+  **La durée de 0,55 s du pouls des lanceurs passe au cran long** (0,30) : un
+  geste qui dure deux fois plus que tout le reste de l'écran ne se lit pas comme
+  la même main, et c'était le point de l'item.
+
+  ⬜ **Reste un site, et il n'est pas à moi** — `audio_manager.gd`, domaine
+  « game feel », **titulaire : la session DA3 depuis le 2026-08-26**. Il est
+  explicitement exclu par le banc, qui porte la liste : le retirer de
+  `_HORS_PERIMETRE` suffira le jour où cette session le décide. Les quatre
+  fichiers d'arène (`player.gd` 11, `bullet.gd` 7, `game_state.gd` 2) sont hors
+  périmètre pour la même raison.
+
+  **Un banc tient désormais l'écart**, dans `tools/test_charte.gd` : aucun
+  fichier d'écran n'emploie plus les courbes de Godot, et `animer_via()` fait
+  bien suivre la COURBE — contrôlé au quart du parcours, où `ENTREE` a déjà
+  dépassé la moitié de sa course là où une interpolation linéaire vaudrait 0,25.
+  Vérifié rouge avant livraison, sur les deux versants. *(S)*
 
   **Et l'item demandait autre chose que ce qu'il dit.** « Un seul motif de
   fondu » suppose que le problème est le fondu ; il est plus large — c'est

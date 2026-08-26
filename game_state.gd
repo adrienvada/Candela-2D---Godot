@@ -37,10 +37,33 @@ var p2_ready_for_rematch: bool = false
 var local_ready_for_rematch: bool = false
 var _hosted_weapon_1_idx: int = 0
 
+## DA4.7 — la marge du dernier tir fatal **connue sur cette machine**, en pixels.
+##
+## `-1` = inconnue, et l'écran de fin se tait alors plutôt que d'inventer un
+## nombre. Ce n'est pas un cas rare ni un défaut : V2.9 pose cette valeur sur la
+## machine qui a SIMULÉ la balle fatale. En ligne, le vainqueur ne l'a donc
+## souvent pas — et c'est cohérent, puisque c'est au perdant que « j'y étais
+## presque » s'adresse.
+##
+## ⚠️ **Cosmétique, jamais arbitrale.** Chez le client c'est la prédiction locale
+## qui parle et non l'hôte : deux machines peuvent afficher deux marges
+## légèrement différentes pour le même tir, exactement comme les deux killcams
+## peuvent légitimement différer. Rien de ce qui compte au score n'en dépend.
+var dernier_effleurement: float = -1.0
+
 # Score de session : nombre de matchs gagnés depuis le lancement de la série.
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
+##
+## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
+## écrase sans condition : c'est **la dernière** qui compte, celle du tir qui
+## vient de clore la manche.
+func noter_effleurement(px: float) -> void:
+	dernier_effleurement = maxf(px, 0.0)
+
+
 ## V3.9 — la série de victoires consécutives de la session, et qui la porte.
 ##
 ## Le score de session dit déjà « 3 - 2 », mais pas dans quel ORDRE : trois
@@ -494,6 +517,7 @@ func _annoncer_deconnexion() -> void:
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
+	dernier_effleurement = -1.0
 	p1_round_wins = 0
 	p2_round_wins = 0
 	p2.hide()
@@ -1813,7 +1837,15 @@ func _do_end_round(winner_id: int):
 	# `game_state` reste la seule source des deux valeurs — il est le seul à
 	# connaître le score de session et la série — mais il ne décide plus de leur
 	# mise en forme.
-	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie)
+	# DA4.7 — la marge n'est passée QU'ICI, à la fin du match.
+	#
+	# L'appel d'entre-deux-manches (plus haut) la laisse à `-1` volontairement :
+	# l'arène vient d'écrire « à N px du centre » au-dessus du corps, et la
+	# répéter trois secondes plus tard dans le bandeau ferait dire deux fois la
+	# même chose au même moment. À la fin du match, la scène est effacée et le
+	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
+	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
+		dernier_effleurement)
 	_apply_deferred_rematch()
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
@@ -2633,6 +2665,7 @@ func _on_main_menu_requested():
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
+	dernier_effleurement = -1.0
 	p1_round_wins = 0
 	p2_round_wins = 0
 	_set_training_target_active(false)

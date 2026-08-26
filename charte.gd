@@ -394,6 +394,43 @@ enum Registre {
 ##
 ## L'appareil **plafonne à `POIDS_APPUI`** : un tableau de bord ne crie pas. Le
 ## gras d'affiche appartient à l'enseigne, qui est là pour ça.
+## La MESURE — largeur maximale d'une colonne de texte, **en signes**.
+##
+## 66 : le milieu de la fourchette que la typographie tient depuis le plomb
+## (55 à 75). En deçà l'œil saute de ligne trop souvent ; au delà il retrouve
+## mal le début de la suivante, parce que le retour chariot devient un saut à
+## l'aveugle. C'est très exactement ce qui se passait dans le cadre de droite du
+## hub, où une phrase d'explication courait sur 900 px.
+##
+## ⚠️ **En signes, jamais en pixels.** Une largeur en pixels est juste pour une
+## taille de fonte et fausse pour les cinq autres — c'est le motif « une valeur
+## absolue là où il fallait un rapport », relevé cinq fois dans ce dépôt.
+const MESURE := 66
+
+
+## La mesure en pixels pour une taille donnée, **relevée sur la fonte réelle**.
+##
+## ⚠️ **Un facteur de chasse en dur aurait vieilli à la première fonte changée**,
+## et sans rien casser de visible : la colonne serait simplement devenue un peu
+## trop large ou un peu trop étroite, ce que personne ne signale jamais.
+##
+## `police_ui()` peut rendre `null` — fontes absentes, cas prévu et toléré par
+## DA1.2. Le repli vaut alors la moitié de la taille par signe : juste pour
+## aucune fonte, mais du bon ordre de grandeur, ce qui vaut mieux qu'une colonne
+## nulle. Câbler, taire, diagnostiquer.
+static func mesure_px(taille: int = T_COURANT, signes: int = MESURE) -> float:
+	var f := police_ui()
+	if f == null:
+		return float(signes) * float(taille) * 0.5
+	# Un échantillon, pas une lettre : la chasse moyenne d'une fonte
+	# proportionnelle ne se lit sur aucun caractère pris seul — « i » la
+	# sous-estime de moitié, « m » la double.
+	const ECHANTILLON := "abcdefghijklmnopqrstuvwxyz"
+	var largeur: float = f.get_string_size(ECHANTILLON,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x
+	return largeur / float(ECHANTILLON.length()) * float(signes)
+
+
 static func graisse_pour(taille: int, registre: Registre = Registre.APPAREIL) -> int:
 	if registre == Registre.ENSEIGNE:
 		return POIDS_DISPLAY if taille <= T_TITRE else POIDS_ENSEIGNE
@@ -571,6 +608,35 @@ static func animer(tween: Tween, objet: Object, propriete: String,
 		if is_instance_valid(objet):
 			objet.set_indexed(chemin, interpoler(depart, arrivee, quelle, t))
 	return tween.tween_method(appliquer, 0.0, 1.0, duree)
+
+
+## Anime en passant par un **appel** plutôt que par une propriété.
+##
+## Mêmes courbes, même échelle de durées qu'`animer()` — pour les grandeurs qui
+## ne sont pas rangées dans une propriété : un paramètre de shader, une valeur
+## recalculée, un état qu'on pose par une méthode.
+##
+## ⚠️ **Son absence bloquait une partie de DA4.13, et ça ne se voyait pas.**
+## `animer()` écrit par `set_indexed`, elle exige donc un chemin de propriété ;
+## `menu_title.gd` pose ses deux grandeurs par `_poser_embrasement()` et
+## `_poser_flambee()`, qui alimentent un shader. Le constat de l'item — « le
+## vocabulaire est livré, le code parle encore l'ancien » — se lisait comme une
+## négligence des sites d'appel, alors qu'**une partie d'entre eux n'avait
+## aucun moyen de se convertir**. On ne convertit pas ce que le point d'entrée
+## ne sait pas prendre.
+##
+## ⚠️ **`is_valid()` et non `is_instance_valid()`.** Un `Callable` lié à un objet
+## libéré reste un `Callable` bien formé ; c'est `is_valid()` qui répond faux.
+## Le tester avec `is_instance_valid()` demanderait de démonter le `Callable`
+## pour en extraire l'objet — et rendrait vrai pour une méthode statique, qui
+## n'a pas d'objet du tout.
+static func animer_via(tween: Tween, appliquer: Callable,
+		depart: Variant, arrivee: Variant, duree: float,
+		quelle: Courbe = Courbe.ENTREE) -> MethodTweener:
+	var poser := func(t: float) -> void:
+		if appliquer.is_valid():
+			appliquer.call(interpoler(depart, arrivee, quelle, t))
+	return tween.tween_method(poser, 0.0, 1.0, duree)
 
 
 # --- Bézier cubique ----------------------------------------------------------

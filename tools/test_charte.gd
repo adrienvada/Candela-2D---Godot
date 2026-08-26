@@ -271,6 +271,95 @@ func _test_animer_atteint_un_sous_chemin() -> void:
 	plat.queue_free()
 
 
+## **`animer_via()` atteint-il l'appel, et le fait-il suivre la COURBE ?**
+##
+## Deux choses à prouver, et la seconde est celle qui compte. Qu'un `Callable`
+## soit appelé se voit ; qu'il reçoive une valeur **courbée** ne se voit pas —
+## un jour où `interpoler()` serait court-circuitée, l'animation deviendrait
+## linéaire, tout continuerait de fonctionner, et personne ne saurait dire
+## pourquoi l'écran a l'air moins vivant.
+##
+## Le contrôle est donc posé à **un quart du parcours** : `ENTREE` y dépasse
+## déjà la moitié de sa course (c'est ce que vérifie `_test_courbes`), là où une
+## interpolation linéaire vaudrait exactement 0,25. Un écart qu'aucune tolérance
+## raisonnable ne confond.
+func _test_animer_via_atteint_l_appel() -> void:
+	var hote := Node2D.new()
+	root.add_child(hote)
+	var recu: Array[float] = []
+	var sonde := func(v: float) -> void:
+		recu.append(v)
+
+	var tween := hote.create_tween()
+	C.animer_via(tween, sonde, 0.0, 1.0, C.D_MOYEN, C.Courbe.ENTREE)
+
+	await process_frame
+	await process_frame
+
+	tween.custom_step(C.D_MOYEN * 0.25)
+	var au_quart := recu[-1] if not recu.is_empty() else -1.0
+	tween.custom_step(C.D_MOYEN)
+	var fin := recu[-1] if not recu.is_empty() else -1.0
+
+	_check(not recu.is_empty(), "animer_via() n'a jamais appelé son Callable")
+	_check(au_quart > 0.5,
+		"animer_via() n'applique pas la courbe : au quart, %.3f (linéaire = 0,25)"
+			% au_quart)
+	_proche(fin, 1.0, "animer_via() n'atteint pas sa valeur d'arrivée", 0.01)
+
+	# Un `Callable` lié à un objet libéré doit être ignoré, pas appelé. C'est le
+	# pendant du `is_instance_valid()` d'`animer()`, et la raison pour laquelle
+	# le garde-fou emploie `is_valid()`.
+	var mort := Node2D.new()
+	root.add_child(mort)
+	var tw2 := hote.create_tween()
+	C.animer_via(tw2, Callable(mort, "set_rotation"), 0.0, 1.0, C.D_COURT)
+	mort.free()
+	await process_frame
+	tw2.custom_step(C.D_COURT)
+	_check(true, "animer_via() survit à un Callable dont l'objet est mort")
+
+	hote.queue_free()
+
+
+## **Les écrans parlent-ils encore l'ancienne langue ?** (DA4.13)
+##
+## DA1.8 a livré trois courbes maison et un point d'entrée unique pour remplacer
+## les `TRANS_*` de Godot. **Livrer un vocabulaire ne fait pas qu'on le parle** :
+## au 2026-08-25 le dépôt comptait 7 appels à `Charte.animer()` contre 31
+## `set_trans()`. Rien ne tenait l'écart, donc il ne se réduisait pas.
+##
+## ⚠️ **Ce contrôle lit la SOURCE, et c'est assumé ici.** Le dépôt se méfie à
+## juste titre des bancs qui lisent le code plutôt que l'écran — c'est un motif
+## consigné trois fois. L'exception tient à ce qu'on mesure : la courbe qu'une
+## animation emprunte **est** une propriété du texte, pas du pixel. On ne peut
+## pas la relever sur un rendu sans réimplémenter un profileur d'animation.
+##
+## ⚠️ **Le domaine « game feel » est HORS périmètre, pas exempté.**
+## `player.gd`, `bullet.gd`, `game_state.gd` et `audio_manager.gd` appartiennent
+## à une autre session (voir `docs/JOURNAL_SESSIONS.md`) : les convertir serait
+## une refonte opportuniste sur des fichiers qu'on ne tient pas. Le jour où cette
+## session le décide, il suffit de les retirer de la liste ci-dessous.
+const _HORS_PERIMETRE := ["player.gd", "bullet.gd", "game_state.gd",
+	"audio_manager.gd"]
+
+func _test_les_ecrans_parlent_la_langue_de_la_maison() -> void:
+	var fautifs: Array[String] = []
+	var d := DirAccess.open("res://")
+	if d == null:
+		_check(false, "impossible d'ouvrir res:// pour l'audit des courbes")
+		return
+	for f in d.get_files():
+		if not f.ends_with(".gd") or _HORS_PERIMETRE.has(f):
+			continue
+		var texte := FileAccess.get_file_as_string("res://" + f)
+		if texte.contains("set_trans(Tween.TRANS_"):
+			fautifs.append(f)
+	_check(fautifs.is_empty(),
+		"ces écrans emploient encore les courbes de Godot : %s"
+			% ", ".join(fautifs))
+
+
 func _test_durees() -> void:
 	_proche(C.D_COURT, 0.09, "durée courte")
 	_proche(C.D_MOYEN, 0.18, "durée moyenne")
@@ -357,6 +446,8 @@ func _init() -> void:
 	_test_pas_de_vert_dans_l_arene()
 	_test_courbes()
 	await _test_animer_atteint_un_sous_chemin()
+	await _test_animer_via_atteint_l_appel()
+	_test_les_ecrans_parlent_la_langue_de_la_maison()
 	_test_durees()
 	_test_polices_presentes()
 	_test_tag_wght()

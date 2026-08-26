@@ -1686,6 +1686,18 @@ func die(killer: Node2D):
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
 		sub_tw.chain().tween_callback(sub.queue_free)
+	# DA4.7 — **la marge survit à la manche.** Elle criait « j'y étais presque »
+	# pendant deux secondes au-dessus d'un cadavre, puis disparaissait ; or le
+	# moment où ce chiffre pèse le plus est celui où le joueur décide de rejouer
+	# ou de partir, et c'est l'écran de fin. On le confie à `game_state`, seul à
+	# savoir quand un match s'arrête.
+	#
+	# ⚠️ **Avant la remise à -1, et pas après.** La ligne suivante consomme la
+	# valeur ; c'est elle qui garantit qu'un effleurement ne resserve pas à la
+	# manche d'après, et l'ordre des deux lignes est tout ce qui sépare « la
+	# marge du tir décisif » de « la marge d'un tir d'il y a trois manches ».
+	if last_fatal_perp >= 0.0:
+		get_tree().call_group("game_state", "noter_effleurement", last_fatal_perp)
 	last_fatal_perp = -1.0
 
 	# V1.5 — le vainqueur sent le kill : double coup dans SA manette.
