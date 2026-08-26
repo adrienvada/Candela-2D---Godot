@@ -8000,6 +8000,31 @@ un fait de jeu, pas à un rythme d'interface.
   Quatre armes × quatre poses × deux versions. Encore un effectif écrit à la
   main, dans un document qui en a corrigé quatre autres le même jour.
 
+  **Un banc les montre plutôt que de les raconter** — `tools/banc_marche.tscn`,
+  posé le 2026-08-27 à la demande d'Adrien, branche `worktree-marche`. Trois
+  marcheurs sur la même trajectoire, à la même vitesse, sur le même compteur de
+  distance : le jeu d'aujourd'hui (sprite statique + roulis), la planche peinte à
+  sa taille native, et la planche **remise à l'échelle** du sprite statique. La
+  troisième ligne n'est pas un ornement : elle **sépare les deux reproches**, la
+  cuisson d'un côté et la caméra de l'autre. Ce qui reste faux une fois
+  l'échelle corrigée ne peut plus être mis sur le compte du générateur.
+
+  ⚠️ **La ligne de visée est le seul juge de l'obstacle n°2**, et c'est pour elle
+  que le banc existe. Elle part du centre dans la direction de `rotation`. Si
+  l'arme peinte pointe ailleurs, le sprite ment sur la visée douze fois par
+  seconde — un argument qui ne se tranche pas au raisonnement, seulement à l'œil.
+  Le banc est **éclairé** par défaut, contre l'usage du jeu : on ne juge pas une
+  démarche à travers le cône d'une torche. `L` rend l'obscurité quand on veut
+  vérifier que le réglage y survit.
+
+  Le banc **ne recopie aucun nombre** : le seuil de pas et la vitesse sont lus
+  dans le TEXTE de `player.gd` au démarrage, et le bandeau affiche lesquels il a
+  lus — en rouge si la lecture échoue, plutôt qu'un repli silencieux sur un
+  défaut. Un banc qui montrerait une cadence que le jeu n'a plus ferait juger
+  autre chose que ce qu'on croit juger ; c'est le défaut qui a coûté la moitié de
+  son effet à `RETARD_REMANENCE` la veille. Et sa grille vaut **un pas** de côté,
+  non huit pixels : une case franchie doit valoir exactement un pas.
+
   **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
   cuit donc quatre sprites complets, un par arme, plutôt qu'un corps et quatre
