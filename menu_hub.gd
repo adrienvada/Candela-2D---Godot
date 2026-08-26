@@ -872,7 +872,15 @@ func reveal_entry(control: Control) -> bool:
 ## Rend le bouton, parce que certains écrans ont plus à faire que remonter d'un
 ## cran — quitter un salon coupe aussi le lien. L'appelant y branche ce qui le
 ## concerne ; le retour lui-même reste le même partout.
-func add_back_entry(id: String, detail: String = "") -> Button:
+## Le « RETOUR » de bas de liste, présent sur chaque écran.
+##
+## ⚠️ **Il portait un panneau vide, et il y en a un par écran.** Survoler
+## « RETOUR » laissait donc le cadre de droite noir sur cinq écrans à la fois —
+## trouvé par un audit qui résout ce que le cadre MONTRERAIT, entrée par entrée,
+## au lieu de lire les dictionnaires. C'est le seul moyen de voir ce genre de
+## trou : personne ne pense à survoler « RETOUR » pour vérifier une image.
+func add_back_entry(id: String, detail: String = "",
+		panneau: String = "") -> Button:
 	var list := list_of(id)
 	if list == null:
 		return null
@@ -881,7 +889,7 @@ func add_back_entry(id: String, detail: String = "") -> Button:
 	list.add_child(spacer)
 	var btn := make_entry("‹  RETOUR",
 		detail if detail != "" else "Remonte d'un cran. La touche Échap fait la même chose.",
-		"", MenuTheme.DIM)
+		"", MenuTheme.DIM, "", "", false, panneau)
 	btn.pressed.connect(func() -> void:
 		noter_geste(btn)
 		back())

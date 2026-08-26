@@ -188,14 +188,32 @@ const ILLUSTRATIONS := {
 	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
 	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
 	"ill_quitter": "res://assets/ui/ill_quitter.png",
+	# Trouvées par l'audit du 2026-08-26 : dix entrées laissaient le cadre noir,
+	# dont les cinq « RETOUR » et les deux gestes de salon.
+	"ill_retour": "res://assets/ui/ill_retour.png",
+	"ill_creer": "res://assets/ui/ill_creer.png",
+	"ill_rejoindre": "res://assets/ui/ill_rejoindre.png",
 }
 
-## Les captures de jeu, attachées aux écrans de préparation.
-const APERCUS = {
-	SCREEN_LOCAL: "res://assets/ui/apercu_ecran_scinde.png",
-	SCREEN_FRIENDLY: "res://assets/ui/apercu_duel_en_ligne.png",
-	SCREEN_TRAINING: "res://assets/ui/apercu_entrainement.png",
-}
+## ⚠️ **Les captures de jeu ont été RETIRÉES le 2026-08-26, et le motif vaut
+## mieux que l'item.**
+##
+## Trois captures — écran scindé, duel en ligne, entraînement — étaient câblées
+## en panneau par défaut des écrans de préparation, et **elles ne se sont jamais
+## affichées une seule fois.** Ces huit écrans ont déjà le salon posé en défaut,
+## et l'enregistrement était gardé par un `if screen_panel(ecran) == ""` écrit
+## exprès pour « ne pas écraser le salon ni la galerie ».
+##
+## **Le garde-fou rendait inatteignable la chose qu'il protégeait.** Il n'a jamais
+## rien empêché de mal tourner : il a simplement fait que le code d'à côté ne
+## servait à rien, sans erreur, sans avertissement, et sans qu'aucun banc puisse
+## le voir — un panneau enregistré et jamais montré est indiscernable d'un
+## panneau montré ailleurs.
+##
+## Ce qui reste, et qui est la bonne réponse : **le râtelier d'armes EST ce qu'on
+## veut voir à cet étage.** On y choisit son arme, pas son envie. Les
+## illustrations, elles, vivent au menu principal — là où l'on choisit encore.
+
 
 ## Phrase portée par une entrée grisée. Dire « pas encore fait » vaut mieux que
 ## masquer : une entrée absente laisse croire que la fonction n'existera jamais,
@@ -2513,7 +2531,7 @@ func _build_hub_screens() -> void:
 	# sens — et personne n'en verrait la fin.
 	accueil.add_child(hub.make_entry("QUITTER",
 		"Ferme le jeu proprement — la plateforme Epic est relâchée avant la sortie.",
-		"", COLOR_P2, "quitter"))
+		"", COLOR_P2, "quitter", "", false, "ill_quitter"))
 	hub.set_aside(MenuHub.ROOT, "Candela 2D",
 		"Duel 1v1 dans le noir absolu. La seule information est la lumière : votre "
 		+ "torche, qui révèle mais trahit, le flash d'un tir, la rétrodiffusion sur "
@@ -2528,7 +2546,7 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
+	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_retour"))
 
 	# --- 1v1 amical -----------------------------------------------------------
 	# **« PRÉPARER » décrivait le panneau, pas le geste.** Corrigé par Adrien le
@@ -2547,7 +2565,7 @@ func _build_hub_screens() -> void:
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
 		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
 		SCREEN_FRIENDLY_LOCAL))
-	hub.add_back_entry(SCREEN_FRIENDLY)
+	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_retour")
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
 	# choix, et entrer dans l'un des deux écrans le pose. Même raisonnement que
@@ -2561,9 +2579,11 @@ func _build_hub_screens() -> void:
 				"Votre adresse IP, à transmettre à votre adversaire.",
 				"L'adresse IP de l'hôte."]]:
 		var liste: VBoxContainer = spec[0]
-		liste.add_child(hub.make_entry("CRÉER", String(spec[4]), String(spec[2])))
-		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3])))
-		hub.add_back_entry(String(spec[1]))
+		liste.add_child(hub.make_entry("CRÉER", String(spec[4]), String(spec[2]),
+			COLOR_ACCENT, "", "", false, "ill_creer"))
+		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3]),
+			COLOR_ACCENT, "", "", false, "ill_rejoindre"))
+		hub.add_back_entry(String(spec[1]), "", "ill_retour")
 
 	# --- Les quatre salons ----------------------------------------------------
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
@@ -2585,7 +2605,8 @@ func _build_hub_screens() -> void:
 			"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
 		_wire_salon_back(hub.add_back_entry(id,
-			"Ferme le salon et coupe le lien. L'adversaire en est averti."))
+			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
+			"ill_retour"))
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
@@ -2605,7 +2626,7 @@ func _build_hub_screens() -> void:
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
 		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
-	hub.add_back_entry(SCREEN_RANKED)
+	hub.add_back_entry(SCREEN_RANKED, "", "ill_retour")
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
 		+ "se recalcule, les rangs existent. Ce qui manque est l'appariement — de "
@@ -2625,7 +2646,7 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	hub.add_back_entry(SCREEN_TRAINING)
+	hub.add_back_entry(SCREEN_TRAINING, "", "ill_retour")
 
 	# --- Personnalisation -----------------------------------------------------
 	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
@@ -2643,7 +2664,7 @@ func _build_hub_screens() -> void:
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
 		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
-	hub.add_back_entry(SCREEN_CUSTOM)
+	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_retour")
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
 	# La galerie n'est plus un écran : elle est le panneau de droite d'une entrée
@@ -2668,7 +2689,14 @@ func _build_hub_screens() -> void:
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
-	hub.add_back_entry(SCREEN_UPDATE)
+	hub.add_back_entry(SCREEN_UPDATE, "", "ill_retour")
+	# ⚠️ **Un défaut d'écran, et non un panneau par entrée.** Cet écran construit
+	# ses propres boutons — `ScreenUpdate.build()` les ajoute directement, sans
+	# passer par `make_entry()` — donc ils n'ont pas de panneau et n'en auront
+	# jamais. Poser le défaut sur l'ÉCRAN les couvre tous, y compris ceux que
+	# l'écran ajoutera demain. C'est le seul cas du hub où la maille par entrée ne
+	# suffit pas, parce qu'un écran attaché apporte ses entrées avec lui.
+	hub.set_screen_panel(SCREEN_UPDATE, "ill_maj")
 
 	# DA4.18 — **le profil et l'historique descendent d'un étage, comme les effets
 	# et l'audio avant eux.** Demande d'Adrien : « mon profil doit s'afficher à
@@ -2701,14 +2729,6 @@ func _build_hub_screens() -> void:
 	for cle: String in ILLUSTRATIONS.keys():
 		hub.register_panel(cle, MenuApercu.new(String(ILLUSTRATIONS[cle])))
 
-	for ecran: String in APERCUS.keys():
-		if not hub.has_screen(ecran):
-			continue
-		var cle := "apercu_" + ecran
-		hub.register_panel(cle, MenuApercu.new(String(APERCUS[ecran])))
-		# Sans écraser un défaut déjà posé : le salon et la galerie passent avant.
-		if hub.screen_panel(ecran) == "":
-			hub.set_screen_panel(ecran, cle)
 
 	# ⚠️ **L'arène en fond a été ANNULÉE par Adrien le 2026-08-25.**
 	#

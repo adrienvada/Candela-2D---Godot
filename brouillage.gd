@@ -417,6 +417,34 @@ static func retard(dazzle: float, force: float = GAIN) -> float:
 
 ## La perte de contraste : ce qu'il reste d'opacité à la silhouette, entre 1 (on
 ## la voit) et `ALPHA_CONTRASTE` (elle se dissout dans le voile).
+## Le dégradé radial du halo, prêt à poser.
+##
+## Vit ici et non chez ses deux appelants — le banc et l'appareil de vue —
+## parce qu'une texture fabriquée deux fois finit par différer, et que
+## l'écart serait invisible : deux halos presque pareils restent deux halos.
+## Douze points suffisent pour que l'interpolation linéaire ne se distingue
+## plus de la courbe, même à l'exposant le plus creusé.
+static func texture_halo(nettete: float = NETTETE_HALO,
+		teinte: Color = Color(1.0, 0.93, 0.82)) -> GradientTexture2D:
+	var grad := Gradient.new()
+	var offsets := PackedFloat32Array()
+	var couleurs := PackedColorArray()
+	for i in 12:
+		var r := float(i) / 11.0
+		offsets.append(r)
+		couleurs.append(Color(teinte.r, teinte.g, teinte.b, profil_halo(r, nettete)))
+	grad.offsets = offsets
+	grad.colors = couleurs
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	tex.width = 512
+	tex.height = 512
+	return tex
+
+
 ## La demi-emprise ÉCRAN de la zone à photocopier, en pixels.
 ##
 ## ⚠️ **Elle couvre ce que le shader LIT, pas ce qu'il PEINT**, et les deux ne

@@ -207,6 +207,19 @@ var current_snap
 ## Chantier R (b) — le duel est-il rendu par le viewport racine plutôt que par un
 ## `SubViewport` ? Voir `_rendre_dans_la_racine()`.
 var _rendu_racine := false
+
+## ## Le brouillage de l'éblouissement — un appareil par vue rendue
+##
+## **Option 3, retenue par Adrien le 2026-08-26** : le flou et le halo vivent à
+## l'intérieur de la vue qui rend, plutôt qu'un appareil global découpé en
+## moitiés. À l'intérieur d'un viewport, la conversion monde → écran est celle
+## du viewport : on ne peut plus poser l'effet sur la mauvaise moitié, et c'est
+## un défaut qu'aucun test automatique ne verrait.
+##
+## Index 0 = la vue de J1, index 1 = celle de J2. Ils suivent le même bascule
+## que le rendu : dans les `SubViewport` en écran scindé, dans la RACINE en vue
+## unique — où les `SubViewport` sont arrêtés et n'ont plus rien à porter.
+var _brouillages: Array = []
 ## Interrupteur du chantier R, public et volontairement simple.
 ##
 ## À `false`, la vue unique repasse par son `SubViewport` comme avant le
@@ -1090,6 +1103,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 func _process(delta):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		_record_position_history()
+
+	_maj_brouillage()
 
 	if round_active:
 		if countdown_left > 0.0:
@@ -2360,6 +2375,29 @@ func _check_rematch_start():
 ## La convergence vaut d'être notée : la cible de cadence vient de la latence EOS,
 ## c'est-à-dire du mode **en ligne** — et c'est précisément là que ce coût ne
 ## servait à rien.
+## Le brouillage, une image à la fois.
+##
+## ⚠️ **L'intensité vient du REGARDEUR, la position de l'ÉMETTEUR.** Les
+## intervertir donne un effet cohérent et faux : on se cacherait soi-même en
+## éblouissant quelqu'un. Pour la vue de J1, c'est donc `maj(p1, p2)` — J1 subit,
+## J2 est celui qu'on brouille.
+##
+## Hors manche, tout s'éteint : un `BackBufferCopy` visible recopie à chaque
+## image, qu'on lise sa copie ou non.
+func _maj_brouillage() -> void:
+	if _brouillages.is_empty():
+		return
+	var actif: bool = round_active and is_instance_valid(p1) and is_instance_valid(p2)
+	for i in 2:
+		var app: Node = _brouillages[i]
+		if app.get_parent() == null:
+			continue
+		if not actif:
+			app.eteindre()
+			continue
+		app.maj(p1 if i == 0 else p2, p2 if i == 0 else p1)
+
+
 func _accorder_rendu_aux_vues() -> void:
 	var regardees: Array[SubViewport] = []
 	for vue in [vp1, vp2]:
@@ -2380,6 +2418,37 @@ func _accorder_rendu_aux_vues() -> void:
 		var vu: bool = conteneur != null and conteneur.visible and not _rendu_racine
 		vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS if vu \
 			else SubViewport.UPDATE_DISABLED
+
+	_accorder_brouillage_aux_vues()
+
+
+## Chaque appareil de brouillage rejoint la vue qui le rend.
+##
+## ⚠️ **Il suit le rendu, pas l'affichage.** En vue unique, le conteneur de la
+## vue regardée est bien visible, mais son `SubViewport` est ARRÊTÉ : y laisser
+## l'appareil reviendrait à dessiner dans une texture que personne ne montre.
+## C'est le même piège que `_restore_viewports()` avait payé sur le
+## `render_target_update_mode` — 1,5 ms pour rien.
+func _accorder_brouillage_aux_vues() -> void:
+	if _brouillages.is_empty():
+		for i in 2:
+			var app: Node = preload("res://brouillage_vue.gd").new()
+			app.name = "BrouillageVue%d" % (i + 1)
+			_brouillages.append(app)
+	for i in 2:
+		var app: Node = _brouillages[i]
+		var vue: SubViewport = vp1 if i == 0 else vp2
+		var conteneur := vue.get_parent() as Control
+		var regardee: bool = conteneur != null and conteneur.visible
+		if not regardee:
+			if app.get_parent() != null:
+				app.get_parent().remove_child(app)
+			continue
+		var parent: Node = self if _rendu_racine else vue
+		if app.get_parent() != parent:
+			if app.get_parent() != null:
+				app.get_parent().remove_child(app)
+			parent.add_child(app)
 
 
 ## Rend le duel directement dans le viewport racine, à la résolution de la
