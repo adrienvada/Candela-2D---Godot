@@ -384,7 +384,13 @@ func niveau_dose(cle: String) -> float:
 
 ## Grille de la carte par defaut. C'est la SEULE valeur recopiee ici, et elle est
 ## une propriete de `assets/maps/default.json` — pas une constante d'audio.
-const GRILLE_DEFAUT := Vector2i(20, 20)
+## ⚠️ **Elle doit valoir la grille de `assets/maps/default.json`**, et
+## `test_dosage_audio` le vérifie : « la grille par défaut est celle de la carte
+## par défaut ». Passée de 20×20 à 30×30 le 2026-08-26, quand Adrien a demandé
+## une arène une fois et demie plus grande. Le banc a attrapé l'oubli le jour
+## même — sans lui, la portée de repli aurait décrit une carte imaginaire, et le
+## dosage du son aurait été juste sur une arène qui n'existe plus.
+const GRILLE_DEFAUT := Vector2i(30, 30)
 
 ## Diagonale de la carte par defaut, en pixels. Sert tant qu'`accorder_a_la_carte()`
 ## n'a pas ete appelee — une suite, un menu, un banc. Ce n'est pas un repli

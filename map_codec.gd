@@ -262,9 +262,9 @@ static func slugify(map_name: String) -> String:
 static func get_grid_size(data: Dictionary) -> Vector2i:
 	var brut: Variant = data.get("grid_size", {})
 	if typeof(brut) != TYPE_DICTIONARY:
-		return Vector2i(20, 20)
+		return Vector2i(30, 30)
 	var g: Dictionary = brut
-	return Vector2i(int(g.get("x", 20)), int(g.get("y", 20)))
+	return Vector2i(int(g.get("x", 30)), int(g.get("y", 30)))
 
 static func get_floor_cells(data: Dictionary) -> Array[Vector2i]:
 	return decode_runs(String(data.get("floor", "")))

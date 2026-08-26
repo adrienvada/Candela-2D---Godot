@@ -399,7 +399,12 @@ func _test_edge_cases() -> void:
 
 	# Dictionnaire vide : aucune donnée, aucun plantage attendu.
 	var empty_solid := MapGeometry.build_solid_grid({})
-	_check("carte vide → grille par défaut 22×22", empty_solid.size() == 22,
+	# ⚠️ **32 et non 22 : c'est la grille par défaut du codec, débordée d'une
+	# case de chaque côté pour fermer la carte.** Elle suit `default.json`, passée
+	# de 20×20 à 30×30 le 2026-08-26. Ce contrôle a rougi le jour même — il
+	# vérifie qu'une carte VIDE se remplit quand même de solide, et son chiffre
+	# est donc une copie de la taille livrée. Il l'attrape au lieu de la subir.
+	_check("carte vide → grille par défaut 32×32", empty_solid.size() == 32,
 		"%d colonnes" % empty_solid.size())
 	var empty_rects := MapGeometry.merge_rects(empty_solid)
 	_check("carte vide → un seul rectangle plein", empty_rects.size() == 1,
