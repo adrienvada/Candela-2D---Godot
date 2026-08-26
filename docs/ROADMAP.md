@@ -8626,8 +8626,8 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Le timecode était déjà réglé** par DA4.2 : il est en registre appareil, donc
   tabulaire par construction. C'est ce que « fonte mono » demandait — la propriété
   voulue est la chasse fixe, pas la famille. *(C — généré, procédé DA1.5)*
-- ⚠️ **DA4.4 — LE BANDEAU FATAL DÉBORDE DE L'ÉCRAN. Défaut ouvert, relevé par
-  Adrien le 2026-08-26 en écran scindé, mesuré le jour même.**
+- ✅ **DA4.4 (suite) — le bandeau FATAL débordait de l'écran. Relevé par Adrien
+  le 2026-08-26 en écran scindé, mesuré et CORRIGÉ le jour même.**
 
   `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
   l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
@@ -8659,13 +8659,41 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
   elle-même, en 2026-08-25, sans que rien ne la mesure.
 
-  **Correctif attendu** : largeur relevée sur le texte, centrage du label sur le
-  joueur, pivot au milieu, cartouche dérivé de la taille du label. Aucune image
-  à refaire.
+  **Correctif livré** : `Player.geometrie_du_bandeau()`, un `static func` qui rend
+  `mot`, `marge`, `plaque` et `enfle`. Aucune image à refaire.
 
-  ⚠️ **Non corrigé par la session DA4, et c'est délibéré** : `player.gd` est du
-  domaine « game feel », et la session DA2 y avait un lot non commité au moment
-  du relevé. Arbitrage d'Adrien en attente sur qui le prend. *(S)*
+  ⚠️ **La vraie correction est que le calcul a un NOM.** Il vivait dispersé dans
+  `die()` : aucun banc ne pouvait l'atteindre sans tuer un joueur. C'est la
+  quatrième occurrence du motif du 2026-08-19 — *ce qu'on voit n'a pas de nom,
+  donc rien ne le tient* — et l'extraction vaut autant que les rapports qu'elle
+  contient.
+
+  **La marge est constante, la plaque non.** C'est ce qui distingue un cartouche
+  d'un surlignage : la même plaque autour de « FATAL » et de « FATAL — ARBALÈTE »
+  doit montrer la même **bordure**, pas la même proportion. Les deux coefficients
+  rendent exactement les 300 × 150 d'origine sur le mot seul — la correction ne
+  redessine pas ce qui avait été validé, elle le fait tenir sur le reste.
+
+  ⚠️ **Et le banc a attrapé une faute dans la correction elle-même.** Le premier
+  jet bornait l'agrandissement sur la largeur du **texte** : un libellé très long
+  ressortait à 518 px de chaque côté pour 478 disponibles, la plaque étant plus
+  large de deux marges. **C'est l'erreur d'origine — mesurer le mot alors que
+  c'est la plaque qui est dessinée — commise un cran plus loin, par celui qui
+  venait de la diagnostiquer.** Un correctif n'est pas immunisé contre le motif
+  qu'il corrige.
+
+  **Deux pièges de banc, dont un inédit, consignés dans `tools/test_bandeau_fatal.gd` :**
+
+  1. **Nommer une classe dans un banc `--script` en fait une dépendance de
+     COMPILATION.** Godot compile `player.gd` pendant qu'il compile le banc, donc
+     avant qu'aucun autoload existe — et `player.gd` nomme `NetworkManager`.
+     Différer `_init()` n'y change rien : la faute est commise à la compilation.
+     Le piège cousin déjà consigné porte sur l'ordre d'**exécution** ; celui-ci
+     porte sur l'ordre de **compilation** et se répare autrement — charger le
+     script par son chemin, à l'exécution.
+  2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
+     de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
+     confond avec « ça travaille ». *(S)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
