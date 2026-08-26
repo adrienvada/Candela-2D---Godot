@@ -4771,7 +4771,12 @@ const BINDABLE := [
 	["Torche", "torch", "L'allumage de la torche : elle montre, et elle trahit."],
 ]
 
-## Les trois actions et leurs deux colonnes de joueurs, d'un seul bloc.
+## Les actions réassignables et leurs deux colonnes de joueurs, d'un seul bloc.
+##
+## ⚠️ **« Les trois actions » a été écrit ici, et c'est devenu faux** le jour où
+## le sprint a été retiré : il en reste deux. Un décompte en toutes lettres dans
+## une phrase vieillit sans que rien ne le signale — le banc d'audit portait la
+## même faute sous forme de seuil, et il a rougi en accusant un écran innocent.
 ##
 ## Chaque action avait son entrée et son panneau : la configuration complète
 ## n'était jamais visible d'un coup, et un doublon entre deux actions — la même

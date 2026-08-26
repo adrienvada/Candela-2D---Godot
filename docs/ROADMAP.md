@@ -8609,6 +8609,72 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Le timecode était déjà réglé** par DA4.2 : il est en registre appareil, donc
   tabulaire par construction. C'est ce que « fonte mono » demandait — la propriété
   voulue est la chasse fixe, pas la famille. *(C — généré, procédé DA1.5)*
+- ⚠️ **DA4.4 — LE BANDEAU FATAL DÉBORDE DE L'ÉCRAN. Défaut ouvert, relevé par
+  Adrien le 2026-08-26 en écran scindé, mesuré le jour même.**
+
+  `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
+  l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
+  visibles de chaque côté du joueur** : le bandeau s'étale de −150 à **+507 px**
+  et sort du cadre à droite.
+
+  ⚠️ **Et il déborde le plus au moment précis où il apparaît.** La caméra zoome
+  jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
+  tombe alors à 171 px de monde pour un bandeau qui en fait 657.
+
+  **La cause est structurelle, pas un réglage à retoucher.** Le `Label` n'a pas
+  de largeur, donc `HORIZONTAL_ALIGNMENT_CENTER` **ne fait rien** : le texte part
+  de l'origine et grandit vers la droite uniquement. L'offset `-100` avait été
+  calibré pour le mot « FATAL » seul (130 px) ; avec le nom de l'arme le texte
+  triple, et tout part du même côté.
+
+  Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
+  que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et
+  **le cartouche `300 × 150`**. Ce dernier est donc **plus étroit que son propre
+  texte pour trois armes sur quatre**, alors que le commentaire au-dessus promet
+  qu'il déborde du mot. C'est la **sixième occurrence** du motif *une valeur
+  absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
+  elle-même, en 2026-08-25, sans que rien ne la mesure.
+
+  **Correctif attendu** : largeur relevée sur le texte, centrage du label sur le
+  joueur, pivot au milieu, cartouche dérivé de la taille du label. Aucune image
+  à refaire.
+
+  ⚠️ **Non corrigé par la session DA4, et c'est délibéré** : `player.gd` est du
+  domaine « game feel », et la session DA2 y avait un lot non commité au moment
+  du relevé. Arbitrage d'Adrien en attente sur qui le prend. *(S)*
+- ⚠️ **DA4.4 — LE BANDEAU FATAL DÉBORDE DE L'ÉCRAN. Défaut ouvert, relevé par
+  Adrien le 2026-08-26 en écran scindé, mesuré le jour même.**
+
+  `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
+  l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
+  visibles de chaque côté du joueur** : le bandeau s'étale de −150 à **+507 px**
+  et sort du cadre à droite.
+
+  ⚠️ **Et il déborde le plus au moment précis où il apparaît.** La caméra zoome
+  jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
+  tombe alors à 171 px de monde pour un bandeau qui en fait 657.
+
+  **La cause est structurelle, pas un réglage à retoucher.** Le `Label` n'a pas
+  de largeur, donc `HORIZONTAL_ALIGNMENT_CENTER` **ne fait rien** : le texte part
+  de l'origine et grandit vers la droite uniquement. L'offset `-100` avait été
+  calibré pour le mot « FATAL » seul (130 px) ; avec le nom de l'arme le texte
+  triple, et tout part du même côté.
+
+  Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
+  que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et
+  **le cartouche `300 × 150`**. Ce dernier est donc **plus étroit que son propre
+  texte pour trois armes sur quatre**, alors que le commentaire au-dessus promet
+  qu'il déborde du mot. C'est la **sixième occurrence** du motif *une valeur
+  absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
+  elle-même, en 2026-08-25, sans que rien ne la mesure.
+
+  **Correctif attendu** : largeur relevée sur le texte, centrage du label sur le
+  joueur, pivot au milieu, cartouche dérivé de la taille du label. Aucune image
+  à refaire.
+
+  ⚠️ **Non corrigé par la session DA4, et c'est délibéré** : `player.gd` est du
+  domaine « game feel », et la session DA2 y avait un lot non commité au moment
+  du relevé. Arbitrage d'Adrien en attente sur qui le prend. *(S)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*

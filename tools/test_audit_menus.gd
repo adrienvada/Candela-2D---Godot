@@ -418,13 +418,28 @@ func _audit_personnalisation() -> void:
 	# Ce qu'on compte : des commandes ACTIONNABLES, pas des boutons. Les effets se
 	# règlent au curseur et l'audio au bouton ; exiger des boutons partout aurait
 	# fait passer une rubrique entière pour vide alors qu'elle est complète.
+	# ⚠️ **CONTRÔLES se DÉDUIT, il ne se chiffre plus.** Ce seuil valait `6` avec
+	# le commentaire « trois actions × deux joueurs » — les trois étant Tirer,
+	# Torche et Courir. Le sprint supprimé le 2026-08-26, la rubrique est tombée
+	# à 4 et ce banc a rougi **en accusant la rubrique des contrôles**, un écran
+	# qui n'avait rien fait. DA2 l'a remis à `4`, ce qui était juste.
+	#
+	# **Mais un nombre écrit à la main redeviendra faux à la prochaine action
+	# ajoutée ou retirée**, et il rougira encore au nom d'un innocent. Pire :
+	# `grep sprint` ne pouvait pas trouver ce `6`. Le seuil COMPTAIT le sprint
+	# sans jamais le NOMMER — même piège qu'un argument passé en littéral, qui
+	# ne porte plus le nom de ce qu'il transmet.
+	#
+	# Dérivé de `BINDABLE`, il suit tout seul. Et il vérifie une propriété plus
+	# forte que « au moins quatre commandes » : **chaque action déclarée produit
+	# bien ses deux colonnes de joueur.** Une action ajoutée sans ligne d'écran,
+	# ou une colonne perdue, le fait rougir — ce qu'un nombre figé ne voyait pas.
+	#
+	# Ce n'est pas l'oracle-tiré-du-code-testé de la colonne de lecture : la
+	# table déclare, l'écran construit, et ce sont deux chemins distincts. On
+	# vérifie que le second honore la première.
 	var attendus := {
-		# **4 et non 6 depuis le 2026-08-26** : le sprint supprimé, « Courir »
-		# quitte la grille de touches. Ce seuil comptait les actions RÉELLES ;
-		# le baisser n'affaiblit pas le contrôle, il le remet en phase avec ce
-		# que la rubrique doit montrer. Le laisser à 6 aurait rendu ce lot rouge
-		# en permanence, et un rouge permanent se fait débrancher.
-		"CONTRÔLES": 4,  # deux actions × deux joueurs
+		"CONTRÔLES": _ui.BINDABLE.size() * 2,
 		"AFFICHAGE": 9,  # 3 résolutions + 2 vsync + 5 cadences, au moins
 		"EFFETS": 4,
 		"AUDIO": 4,
