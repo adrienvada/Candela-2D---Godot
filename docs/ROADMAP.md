@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-25
+> Dernière mise à jour : 2026-08-26
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -8099,15 +8099,23 @@ d'enseigne posée sur le chrono → `tremble : 9.0 px d'écart` ; fonte d'interf
 posée sur le décompte → `rend « VICTOIRE » exactement comme la fonte d'interface
 (598.0 px) : elle n'est pas habillée`.
 
-##### Ce qui est livré, et ce qui ne l'est pas
+##### Ce qui était livré au soir du 2026-08-24 — instantané périmé, gardé comme trace
 
-Livrés : **DA4.2** et **DA4.9**, plus l'entrée de la fonte d'enseigne dans
-l'interface (le socle typographique dont DA4.7 dépendait).
+> ⚠️ **Ce paragraphe décrivait un état, pas une propriété, et il a vieilli en
+> deux jours.** Il est conservé parce qu'il date une séance, mais **il ne dit
+> plus l'état du chantier** : au 2026-08-26, quatorze des dix-neuf items sont
+> livrés. **La liste qui fait foi est celle des items eux-mêmes, plus bas** — un
+> item porte sa propre date de livraison, un récapitulatif ne porte que celle du
+> jour où on l'a écrit. Ne jamais relire un décompte global sans regarder à quand
+> il remonte.
 
-**Non commencés, et ils sont nombreux :** DA4.1 (9-slice), DA4.3 (le contour
-dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
-DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
-tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
+Livrés *ce soir-là* : **DA4.2** et **DA4.9**, plus l'entrée de la fonte
+d'enseigne dans l'interface (le socle typographique dont DA4.7 dépendait).
+
+Non commencés *ce soir-là* : DA4.1, DA4.3, DA4.4 à DA4.8, DA4.10 à DA4.17.
+`ui.gd` n'avait été libéré qu'en fin de séance ; tout ce qui demandait des
+textures dessinées attendait en outre le procédé DA1.5 — **tranché depuis**
+(Gemini, voir DA4.18).
 
 #### DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
 
@@ -8115,8 +8123,10 @@ tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
 l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montrait
 rien la plupart du temps.
 
-**🟡 Premier lot livré le 2026-08-25 — les promesses sont tenues, le lit
-d'ambiance reste à faire.**
+**✅ Fermée le 2026-08-26, en deux lots.** Premier lot le 2026-08-25 : les
+promesses des libellés sont tenues, le contenu descend d'un étage. Second lot le
+2026-08-26 : **le cadre porte une illustration au survol de chaque entrée**, et
+un audit exécuté prouve qu'aucune ne le laisse noir.
 
 - ✅ **`MON RANG` et `TOP 10` affichent enfin.** Elles passent par un verbe qui
   dit où va le texte, `MenuHub.montrer_texte()`, au lieu de `show_detail()` qui
@@ -8242,13 +8252,115 @@ réglages le font déjà ; les quatre écrans de méta ne le font pas. Rien ne
 justifie la différence — `HubScreen` interdit par contrat à un écran de connaître
 sa position dans l'arborescence, **précisément pour qu'on puisse le déplacer**.
 
-##### Ce qui reste à trancher : que met-on dans ce cadre au survol ?
+##### Tranché le 2026-08-26 : une illustration par entrée, générée
 
-Vider le défaut ne suffit pas — il faut **quelque chose qui donne envie**.
-Demande d'Adrien : « peut-être un screenshot du jeu ? du mode actuel ? Faut que
-ce soit sexy. » Propositions faites le 2026-08-24, **arbitrage en attente**, voir
-le chat de la session DA4. À vérifier une fois posé : les quatre écrans de méta
-et le parcours `1v1 compétitif` en entier.
+**Arbitrage d'Adrien** — DA1.5 est décidé, ce sera Gemini ; et la règle est
+« une image par bouton sélectionné », pour *toute* entrée survolée, parce que le
+cadre doit « donner envie et plonger dans l'univers ». Dix illustrations vivent
+donc dans `assets/ui/ill_*.png`, enregistrées en panneaux par une boucle sur la
+table `ILLUSTRATIONS` de `ui.gd`.
+
+**Le lit d'ambiance a été construit, corrigé trois fois, puis écarté sur
+jugement** — « je n'aime pas l'écran sur le menu principal, on annule cette
+idée ». `menu_arene.gd` reste au dépôt, plus instancié. Le motif mérite d'être
+retenu : l'arène en fond répondait à la question *comment remplir le cadre ?*
+alors que la vraie question était *que veut voir quelqu'un qui hésite entre cinq
+modes ?* — et la réponse à celle-là n'est pas la carte du prochain match.
+
+**La distinction qui a émergé, et elle survit à l'arbitrage :** le menu principal
+montre des **illustrations** — on n'y choisit pas une partie, on y choisit une
+envie ; les écrans de mode montreraient des **captures** du jeu réel — on y
+prépare un match, et ce qu'on veut alors savoir c'est à quoi il ressemble
+vraiment. Elle est écrite en tête de `ui.gd`.
+
+##### Le texte descriptif déménage dans le cadre, et il répète le titre
+
+Demande d'Adrien, posée « avant toute chose » : la description de **tous** les
+boutons de **tous** les menus quittait le dessous du titre du jeu pour aller
+**dans le cadre de droite, en bas**, en reprenant le libellé du bouton
+sélectionné.
+
+Le cadre est donc à **deux étages** : `_detail_host` occupe tout le haut et
+reçoit le panneau, `_pied` est ancré en bas sous un filet. Ce n'est pas un
+rangement — c'est ce qui permet à une illustration de remplir le cadre **sans
+chasser l'explication**, les deux ayant chacun leur territoire au lieu de se
+disputer le même.
+
+⚠️ **Répéter le titre n'est pas une redondance.** L'œil qui vient de traverser
+l'écran vers l'image a perdu de vue ce qu'il survolait ; le titre répété est ce
+qui referme la boucle. C'est la même raison qui avait fait monter la description
+dans l'en-tête le 2026-08-18 — sauf qu'on sait maintenant que déplacer ne suffit
+pas, il faut **doubler**.
+
+##### L'audit a trouvé dix cadres noirs, et aucun n'était exotique
+
+Une fois les six premières illustrations posées, la question d'Adrien était la
+bonne : *« vérifie L'ENSEMBLE de tous les menus, et indique-moi ceux qui
+n'affichent rien à droite »*. Réponse mesurée, pas estimée : **dix entrées**,
+dont les **cinq « RETOUR »** et les **deux gestes de salon** (créer, rejoindre).
+
+Les cinq RETOUR ont été servis par **un seul changement** — un troisième
+paramètre à `add_back_entry()` — parce qu'ils passaient déjà tous par le même
+verbe. Une entrée qu'on a pris la peine de factoriser une fois se répare une
+fois ; c'est le dividende tardif d'un travail fait en son temps.
+
+⚠️ **`ill_retour` est volontairement DISCRÈTE**, et c'est une décision de
+composition, pas une économie. Elle sert cinq écrans : si elle attirait l'œil
+autant qu'une entrée de mode, elle serait ratée. Mesurée à **3,6 % de pixels
+clairs contre 27,5 % pour `ill_creer`**. Et `creer`/`rejoindre` ont été générées
+**ensemble dans une seule planche puis découpées** — la même porte vue des deux
+côtés, plutôt que deux tirages indépendants qui auraient divergé : c'est leur
+parenté qui dit au joueur, sans un mot, que ce sont deux faces du même geste.
+
+##### Trois captures étaient câblées et ne se sont jamais affichées une seule fois
+
+La table `APERCUS` posait une capture en panneau par défaut sur huit écrans de
+préparation. **Ces huit écrans ont déjà le salon posé en défaut**, et le défaut
+d'écran gagne toujours : le code était mort depuis son écriture, sans erreur et
+sans trace. Retiré.
+
+C'est la **quatrième occurrence** du motif *ce qu'on voit n'a pas de nom, donc
+rien ne le tient* — et la première où le symptôme était l'inverse de l'habituel :
+non pas un cadre vide qu'aucun banc ne voyait, mais un contenu chargé, valide, et
+que personne n'a jamais regardé.
+
+##### Deux défauts trouvés en cours de route, dont un corrigé deux fois
+
+- **Le bouton « lancer la recherche » était grisé.** Corrigé une première fois
+  sur la seule branche signalée ; le défaut est réapparu ailleurs le lendemain.
+  Cause réelle : `_refresh_lobby_block()` porte **trois retours anticipés**, et
+  l'état du lanceur était posé après eux. Il est désormais accordé **en tête**,
+  par `_accorder_l_etat_du_lanceur()`. ⚠️ **Et il a d'abord été déplacé du mauvais
+  endroit** — le code vivait dans `_refresh_player_list()`, appelée *par signal* :
+  le déplacer rendait le bouton insensible à l'arrivée d'un pair. Il est donc
+  appelé **des deux**. Corriger un défaut de rafraîchissement demande de savoir
+  *qui appelle quoi et quand*, pas seulement *où est la ligne fautive*.
+- **Le curseur de la souris disparaissait sous les menus.** Le curseur-torche
+  devait s'ajouter au curseur système, pas le remplacer. La règle est maintenant
+  dérivée à chaque appel — `_un_menu_attend_un_clic()` — au lieu d'être posée et
+  restaurée par paires.
+
+⚠️ **Mes bancs de ces deux correctifs ont été décoratifs trois fois de suite**,
+et toujours pour la même raison : ils reproduisaient l'état *au repos* plutôt que
+l'état *fautif*. Au repos le mode réseau est `LOCAL_SPLITSCREEN`, où le bouton
+doit être cliquable — le banc passait donc au vert avec la règle cassée. Un banc
+de non-régression qu'on n'a pas vu rougir **n'est pas un banc**, c'est une
+formalité ; tous ceux de cette séance ont été sabotés volontairement avant
+livraison.
+
+##### Ce que les suites tiennent désormais
+
+`tools/test_audit_menus.gd` a gagné trois contrôles qui montent une scène réelle
+au lieu de lire un dictionnaire :
+
+| Contrôle | Ce qu'il empêche de revenir |
+|---|---|
+| `_audit_le_cadre_montre_vraiment()` | un panneau alimenté mais invisible |
+| `_audit_aucun_cadre_vide()` | une entrée sans panneau **ni** texte |
+| `_audit_on_peut_lancer_une_recherche()` | un lanceur grisé quand il ne doit pas l'être |
+
+Et `tools/test_viseur.gd` ouvre pour de vrai la pause, un dialogue et une fenêtre
+de choix, au lieu de supposer l'état de l'écran.
 
 ##### Pourquoi aucune suite ne l'a vu, et c'est la partie qui doit changer
 
@@ -8555,6 +8667,50 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   - **Le bouton ne prend jamais la couleur du registre.** Il ne détruit rien, il
     ferme. Un « OK » rouge se lit comme une action dangereuse alors qu'il n'y a
     plus rien à décider. *(S)*
+- **DA4.19 Les icônes dessinées, et la mort du dernier emoji** ✅ **livrée le
+  2026-08-26** — *item ouvert après coup, sur demande d'Adrien : « remplace tous
+  les icônes dans les barres de menu par des vraies images ». Le travail existait
+  sans ligne pour le porter ; c'est le motif consigné en DA4.13, corrigé ici.*
+
+  **Le dépôt portait cinq emojis** — 🔫 🏹 ☄️ 💥 🔦 — dans les boutons d'arme et
+  l'indicateur de torche. Ils paraissent inoffensifs et ils étaient le marqueur
+  amateur le plus visible qui restait, pour trois raisons **cumulées** :
+
+  1. **Ils sont rendus par la fonte emoji du SYSTÈME.** Tout le travail de DA1.2
+     — deux fontes choisies, licences, axe variable — les contourne. C'étaient
+     les seuls glyphes du jeu que la charte n'atteignait pas.
+  2. **Ils arrivent en couleur pleine.** La règle 1 plafonne la saturation à
+     75 % parce que le 100 % est « la signature du personne n'a choisi » ; un
+     emoji est à 100 % par construction, et il porte en plus des teintes que la
+     charte réserve à des sens précis.
+  3. **Ils diffèrent d'une machine à l'autre.** Le même code montrait un
+     pistolet gris sur macOS, un autre sur Windows, une case vide sur un Linux
+     sans fonte emoji. **Une identité visuelle ne peut pas dépendre du système
+     d'exploitation du joueur.**
+
+  `menu_icones.gd` rend une texture pour un nom, et rien d'autre : aucune mise en
+  page, aucune couleur, aucune taille — ce sont des décisions de site d'appel.
+  La teinte est posée par l'appelant sur un **masque gris**, donc **un seul
+  fichier sert les deux joueurs**, bleu d'un côté rouge de l'autre. Discipline
+  DA1.5 : l'image fournit la matière, le code garde la couleur.
+
+  ⚠️ **Indexé sur le slug, jamais sur le nom affiché.** « Arbalète » porte un
+  accent et une majuscule ; dériver un chemin de fichier d'un libellé
+  traduisible garantit qu'un jour le renommage d'un bouton fera disparaître une
+  icône, sans erreur et sans que le lien soit visible. `weapon_data.gd` avait
+  déjà payé cette leçon.
+
+  ⚠️ **`icon_max_width`, et non une taille de contrôle.** Un `Button` ne
+  redimensionne pas son icône : sans ce réglage il l'affiche à sa taille native —
+  128 px dans un bouton haut de 40. **C'est le cousin exact du piège
+  `EXPAND_KEEP_SIZE`** payé par DA1 le 2026-08-24 : on pose une taille, elle est
+  ignorée, et l'écran affiche autre chose.
+
+  **Le libellé perd son emoji dans tous les cas**, icône cuite ou non : le garder
+  « en attendant » aurait laissé le dépôt dans l'état qu'on corrigeait. Le repli
+  est la moitié du travail — une icône absente retombe sur le texte, et
+  `manquantes()` la nomme dans le panneau F3. Câbler, taire, diagnostiquer.
+  *(C — généré, procédé DA1.5)*
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 
