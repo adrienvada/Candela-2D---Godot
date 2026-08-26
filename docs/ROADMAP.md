@@ -2444,7 +2444,7 @@ pour laquelle la seconde moitié de la famille 2 a été retirée.
 
 ---
 
-## ⚠️ Famille 4.1 — le banc mesurait la famille d'à côté (rouvert le 2026-08-26)
+## ✅ Famille 4.1 — CLOSE le 2026-08-26 (banc refait, cause établie, correctif posé)
 
 **L'entrée qui occupait cette place affirmait trois choses. Les trois étaient
 fausses au moment où on les lisait, et la troisième depuis huit heures quand
@@ -2540,6 +2540,56 @@ s'appliquer au revenant.
   peer is active » étaient en aval de cette sortie et de rien d'autre — et ils
   ont été consignés ici comme un défaut du jeu. **Un journal produit sans être
   lu est pire qu'un journal absent : il a l'air d'une preuve.**
+
+### Le correctif — une fonction qui faisait deux métiers
+
+`_annoncer_deconnexion()` *soldait le match* **et** *signalait une absence*, sous
+un seul nom. Le drapeau `revenu` avait été ajouté pour taire le **dialogue**, et
+le dialogue seulement ; tout le reste du script « parti » continuait de
+s'appliquer à quelqu'un qui venait de revenir.
+
+> **Un drapeau posé à l'entrée d'une fonction ne protège que la ligne qu'on a
+> pensé à garder.** Ce que la fonction fait d'autre le traverse en silence. C'est
+> le cousin exact de « un état posé dans une branche est un état que chaque
+> `return` peut sauter », déjà consigné ici : la même faute, prise par l'autre
+> bout.
+
+Le partage en trois rend le tri visible, et il n'y a plus de « reste » :
+
+| fonction | quand | ce qu'elle fait |
+|---|---|---|
+| `_solder_le_match()` | **toujours** | jeton, killcam soldée, chrono, vues, score à zéro (checklist 4.3), engagement de l'hôte désarmé, retour au salon |
+| `_signaler_adversaire_parti()` | personne en face | dialogue, écran d'attente, `p2_ready_for_rematch` désarmé, P2 caché et sans collision, cible d'entraînement |
+| `_accueillir_le_revenant()` | quelqu'un est là | l'arme retenue se pose, le « PRÊT » du revenant **survit**, et `_check_rematch_start()` décide |
+
+**Le départ automatique sans `PRÊT` est retiré** — arbitrage d'Adrien du
+2026-08-26. `_pending_client_start` armait un `rpc_start_round` que la fin de la
+séquence tirait toute seule : une manche partait sans qu'aucun des deux camps
+n'ait rien déclaré, reste d'avant la porte PRÊT. Le champ n'avait plus de
+lecteur, il a donc disparu — un état mort se fait relire par quelqu'un qui le
+croit vivant.
+
+**Et le bac à sable cesse de se poser sur un salon peuplé.** L'incohérence était
+déjà notée ici comme « réelle, mais pas la cause », et une session l'avait
+corrigée puis retirée à juste titre : elle ne faisait pas passer le banc. Elle
+n'est pas revenue comme un correctif — elle est **tombée du partage** : cacher P2
+et allumer la cible d'entraînement veut dire « il n'y a personne », donc ces
+lignes vivent sous ce nom-là. `sandbox_mode`, lui, reste des deux côtés : il ne
+parle pas de l'adversaire mais de l'absence de manche, et sans lui `player.gd`
+cesse de traiter les commandes — l'hôte immobile derrière son menu, ce que la
+ligne 4.4 de la checklist interdit.
+
+### Ce qui reste, et qui n'est pas de ce lot
+
+- **`p2_ready_for_rematch` est un booléen qui ne dit pas QUI.** Effacé à tort
+  jusqu'ici ; le jour où on cesse de l'effacer, il peut au contraire être
+  **transféré** — un pair héritant du « prêt » d'un autre, parti entre-temps. Les
+  deux fautes ont la même racine, et la porter par identifiant de pair les
+  supprime ensemble. Item propre, non ouvert.
+- **La ligne 4.4 de la checklist n'est pas couverte par un banc** : « aucun
+  panneau résiduel, vitesse normale, A peut se déplacer et tirer » pendant
+  l'attente. Le partage ci-dessus la rend probablement vraie ; personne ne l'a
+  mesurée.
 
 ### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
 

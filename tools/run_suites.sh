@@ -275,6 +275,24 @@ duo duo_ralenti --ralenti
 # plutôt que le moment.
 duo duo_spam --spam
 
+# Familles 4.1 et 4.2 : l'adversaire meurt, quitte pendant la killcam, revient.
+#
+# ⚠️ **Ces deux-là ont manqué au lot pendant une semaine, et l'absence s'est
+# refermée sur elle-même** : le banc avait été sorti du lanceur parce qu'il était
+# rouge, et il est resté rouge dans la feuille de route parce que personne ne le
+# relançait. Il était vert depuis le matin du 2026-08-19. **Un banc qu'on retire
+# du lot parce qu'il rougit cesse d'être un banc : il devient une phrase.**
+#
+# Deux scénarios et non un, parce que l'INSTANT du retour est tout le sujet : la
+# 4.1 le veut pendant la killcam de l'hôte, la 4.2 sur son écran de fin. Un seul
+# banc les confondait — et passait sur la seconde en croyant juger la première.
+#
+# Chacun peut rendre REPORTÉ (code 3) : le placement du retour dépend du tempo de
+# la machine, et un banc qui rougit sous la charge est un faux rouge, donc un
+# banc qu'on finit par débrancher.
+duo duo_reconnexion --reconnexion
+duo duo_reconnexion_tardive --reconnexion-tardive
+
 DUREE=$((SECONDS - DEBUT))
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1
