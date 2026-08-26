@@ -7870,14 +7870,26 @@ un fait de jeu, pas à un rythme d'interface.
   `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
   dépôt des fichiers. *(C : 3 samples)*
 
-  ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION à trancher AVANT le
-  câblage, pas après.** C'est une boucle dont le volume suit l'éblouissement, et
-  la règle posée le 2026-08-25 s'y applique : *un curseur de confort ne doit pas
+  ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION — et le câblage y a
+  déjà répondu sans que personne ne la pose.** Ce paragraphe a dit pendant huit
+  jours qu'il fallait trancher *avant* le câblage : c'est faux, `set_dazzle_level`
+  existe depuis `4c110b2` (lot V5.3), garde-fou de nullité compris, et il ne
+  manque que le fichier. Vérifié dans le code le 2026-08-26.
+
+  La règle posée le 2026-08-25 s'applique : *un curseur de confort ne doit pas
   moduler une pénalité d'information.* S'il informe — « tu es ébloui, voilà ce
   qu'il te reste » — il relève de la même règle que le voile blanc et ne doit pas
-  être réglable ; s'il habille, il suit le curseur d'effets. La question est
-  indécidable tant que le fichier n'existe pas, ce qui est une raison de plus de
-  la poser au moment du dépôt.
+  être réglable ; s'il habille, il suit le curseur d'effets. **Or le lecteur est
+  câblé sur `SFX`**, que `settings_manager.gd` sait couper franc (`set_bus_mute`
+  au zéro du curseur) : la réponse « il habille » est donc déjà en place, par
+  défaut et non par décision.
+
+  ⚠️ **Et le bus choisi porte une seconde question, plus dure que la
+  première.** `SFX` est aussi le bus des pas — la seule information du jeu. Une
+  boucle continue y masque acoustiquement l'adversaire *pendant* l'éblouissement,
+  c'est-à-dire au moment où le joueur en a le plus besoin. Double peine
+  délibérée ou effet de bord d'un choix de bus : à trancher au dépôt du fichier,
+  et le banc `tools/banc_audio.tscn` est l'endroit pour en juger.
 - ~~**DA3.4 Les stingers accordés**~~ (= V2.3, V3.7, V3.8, V3.10) — **✅ livrée
   le 2026-08-25.** Les quatre fichiers étaient au dépôt depuis la veille sans que
   rien ne les joue ; ils sont câblés par `AudioManager.stinger_de_fin`, une règle
