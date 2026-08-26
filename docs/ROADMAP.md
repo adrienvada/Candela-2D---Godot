@@ -3018,10 +3018,27 @@ désigne.** Un argument nommé par position, un effectif écrit en chiffre — d
 les deux cas la trace textuelle du sprint avait déjà disparu du site qui en
 dépendait. Chercher le nom retiré ne peut, par construction, pas les trouver.
 
-Corollaire pratique : **c'est le lot complet qui fait foi, jamais le grep.** Les
-deux occurrences ont été rendues par des suites, l'une (`test_audit_menus`)
-écrite par une autre session pour une raison sans rapport. Un contrôle qui compte
-ce qu'un écran montre attrape des retraits que son auteur n'imaginait pas.
+**Une TROISIÈME occurrence, trouvée par la session DA4, et c'est la pire des
+trois** : `ui.gd` annonçait « **Les trois actions** réassignables, pour les deux
+joueurs à la fois ». Ce n'était pas un commentaire — **c'est le texte affiché
+dans le menu**. Un joueur lisait « trois » et en voyait deux. Les deux premières
+ne coûtaient qu'un rouge à un agent ; celle-ci mentait à l'écran, et **aucune
+suite ne pouvait la rendre** : un libellé faux reste un libellé valide.
+
+Corollaire pratique, en deux temps. **C'est le lot complet qui fait foi, jamais
+le grep** — les deux premières ont été rendues par des suites, dont une
+(`test_audit_menus`) écrite par une autre session pour une raison sans rapport :
+un contrôle qui compte ce qu'un écran montre attrape des retraits que son auteur
+n'imaginait pas. Mais le lot ne suffit pas non plus, et la troisième le prouve —
+elle n'est sortie que d'une **relecture du rendu**. Ce qu'un banc ne peut pas
+attraper, c'est une phrase qui a cessé d'être vraie.
+
+**Le geste qui referme les trois : ne pas écrire l'effectif.** Le seuil de
+`test_audit_menus` se déduit désormais de `BINDABLE.size() * 2` (DA4), et les
+deux phrases de `ui.gd` ont **perdu leur compte** au lieu de le voir corrigé —
+« les actions réassignables », sans nombre. Un effectif en toutes lettres
+redevient faux à la prochaine action ajoutée, et rougit alors au nom d'un
+innocent : ici la rubrique des contrôles, qui n'avait rien fait.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 

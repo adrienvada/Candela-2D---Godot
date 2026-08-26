@@ -2668,7 +2668,7 @@ func _build_hub_screens() -> void:
 	# descente. Chacune déplie sa page complète à droite, au survol comme à la
 	# sélection — et la sélection la fige, pour qu'on puisse y amener le curseur.
 	custom.add_child(hub.make_entry("CONTRÔLES",
-		"Les trois actions réassignables, pour les deux joueurs à la fois.",
+		"Les actions réassignables, pour les deux joueurs à la fois.",
 		"", COLOR_GOLD, "", "", false, PANEL_CONTROLS))
 	custom.add_child(hub.make_entry("AFFICHAGE",
 		"Fenêtre, vsync, images par seconde, calibration.",
@@ -4696,7 +4696,10 @@ const BINDABLE := [
 	["Torche", "torch", "L'allumage de la torche : elle montre, et elle trahit."],
 ]
 
-## Les trois actions et leurs deux colonnes de joueurs, d'un seul bloc.
+## Les actions réassignables et leurs deux colonnes de joueurs, d'un seul
+## bloc. **Aucun effectif écrit ici** : il valait « trois » jusqu'au retrait
+## du sprint le 2026-08-26, et un nombre en toutes lettres redevient faux à
+## la prochaine action ajoutée ou retirée. `BINDABLE` fait foi, seul.
 ##
 ## Chaque action avait son entrée et son panneau : la configuration complète
 ## n'était jamais visible d'un coup, et un doublon entre deux actions — la même
