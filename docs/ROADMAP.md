@@ -2361,7 +2361,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les six scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot**, pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
+| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
@@ -3054,6 +3054,38 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
+
+Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
+trouver un trousseau pour stocker "ad4842…9388" ». Je l'ai attribuée à **VLC**,
+sur deux faits vrais : VLC démarré à 21:38:12, trousseau écrit à 21:38, et VLC
+livré en binaire Intel sur un Mac arm64 — un candidat crédible pour une API
+dépréciée. Adrien a fermé le sujet sur cette base.
+
+**C'était faux.** La chaîne de 32 hexadécimaux **est le `PRODUCT_ID` EOS de
+Candela** : la boîte venait du SDK Epic à l'intérieur de Godot, par
+`create_device_id`. L'identifiant était lisible dès la première capture d'écran,
+et il désignait le coupable sans ambiguïté — pendant que je corrélais des
+horodatages sur une machine qui fait vingt choses à la fois.
+
+> **Quand une panne porte un identifiant, on l'identifie ; on ne le corrèle pas.**
+> Une corrélation temporelle répond à « qu'est-ce qui s'est passé au même
+> moment », qui n'est pas la question. C'est la même famille que le voleur de
+> port et que `cam1` à `Nil` : le symptôme accuse un innocent, et l'innocent est
+> plausible — c'est ce qui rend l'accusation coûteuse. Ici elle a en plus obtenu
+> l'assentiment d'Adrien, ce qui l'a presque close.
+
+**Ce que la mesure a ensuite établi**, et qui vaut d'être su : le PUID est
+**stable** d'un lancement à l'autre (`0002…21ef` deux fois), aucun fichier n'est
+écrit localement, aucune entrée de trousseau ne porte le `PRODUCT_ID`. L'ancre du
+PUID n'est donc pas locale — elle est tenue du côté d'Epic, rattachée à la
+machine, ce que le dépôt disait déjà sans le formuler ainsi (« deux instances
+locales partagent le même Device ID », d'où `--eos-ephemeral`). **Le refus du
+trousseau ne menace pas l'identité classée, et ne coûte rien de mesurable.**
+
+Carte complète des clés du projet, et protocole pour refaire cette mesure :
+[CLES_ET_IDENTIFIANTS.md](CLES_ET_IDENTIFIANTS.md).
+
 ### Une branche finie ne se signale pas toute seule (2026-08-26)
 
 `worktree-lanceur-port` portait deux commits **écrits, éprouvés et complets** —
@@ -3188,6 +3220,63 @@ branchés — le jeu tourne sur halo + contraste + flou. Doubler le retard ne ch
 donc rien à une partie ; ça change ce que le **banc** montre, c'est-à-dire ce sur
 quoi Adrien tranchera. Un banc qui montre un mode à la moitié de son réglage
 prévu fait juger autre chose que ce qu'on croit juger.
+
+### Le code dit ce qu'il fait, la documentation dit ce qui a eu lieu (2026-08-27)
+
+**Décision d'Adrien**, le jour où les trois résidus ont été refermés : *« supprime
+les occurrences de sprint dans le code »*. Il en restait vingt-neuf, toutes en
+commentaire, aucune dans du code exécuté — des post-mortem accrochés aux lignes
+qu'ils avaient jadis expliquées.
+
+C'est l'application directe de la leçon que `CLAUDE.md` porte déjà : **ce fichier
+décrit ce que le code FAIT, pas ce qui lui manque.** Un commentaire qui raconte
+une mécanique disparue fait deux dégâts. Il envoie chercher quelque chose qui
+n'existe plus, et il vieillit sans prévenir — il était vrai le jour où on l'a
+écrit, il se lit comme une propriété du projet. Le second est le plus cher : une
+session s'y fie sans aller voir le code.
+
+**Et la règle qu'Adrien a énoncée dans le même souffle, parce qu'elle est la
+condition de la première : la documentation est DOUBLÉE, le suivi de projet est
+COMPLÉMENTAIRE.** Un delta envoyé au tableau de bord ne dispense jamais de
+l'écrire ici. Le tableau de bord n'est pas versionné et **rien ne signale qu'il
+est périmé** ; la ROADMAP, elle, voyage dans le commit qui la justifie. L'artefact
+ajoute une lecture pour un humain — il ne remplace aucune trace. Corollaire
+opérationnel : on n'allège jamais un document en comptant sur l'autre.
+
+**Ce que les commentaires portaient et que ce document ne portait pas.** Quatre
+faits, écrits ici AVANT d'être retirés du code — sans quoi la suppression les
+aurait détruits au lieu de les déplacer :
+
+1. **Courir éteignait la torche, et cette règle est tombée avec l'allure.**
+   C'était une contrepartie : la vitesse se payait en cécité. Il n'y a plus rien
+   à payer, donc la torche n'obéit plus qu'au bouton. **C'est un choix de game
+   design, pas un nettoyage** — si une seconde allure revient un jour, la
+   contrepartie ne revient pas toute seule avec elle.
+2. **On ne pouvait pas tirer en courant.** La condition de tir portait un
+   `not is_sprinting` ; elle ne le porte plus. Même remarque : la règle a disparu
+   avec la mécanique, elle n'a pas été arbitrée pour elle-même.
+3. **Un effet éteint qui rastérise encore n'est pas éteint, il est invisible — ce
+   n'est pas la même chose.** Les traits de vitesse (V5.9) ont d'abord été
+   « éteints » en figeant leur intensité à zéro. Mais le `ColorRect` couvrait tout
+   l'écran et restait visible : son fragment shader s'exécutait sur chaque pixel,
+   à intensité nulle comme à un — une passe plein écran par joueur, pour un effet
+   qui ne pouvait plus se déclencher, sur un jeu qui dispose de 3,4 ms de marge
+   sur ses pires images. **Cette leçon vaut pour tout effet qu'on désactivera à
+   l'avenir** : couper l'intensité ne coupe pas le coût, seul le retrait du nœud
+   le fait.
+4. **Un facteur qui ne varie jamais suggère une modulation qui n'existe pas.** La
+   hauteur du son de pas passait par un multiplicateur qui valait autre chose que
+   1 dans un seul cas ; ce cas parti, le facteur ne modulait plus rien mais
+   continuait d'annoncer qu'il modulait. La fourchette est fixe et le dit.
+
+**Un quatrième effectif écrit à la main a été trouvé au passage**, et il était
+dans le commentaire même qui interdit d'en écrire : `ui.gd` annonçait « une
+grille de trois lignes » pour une table qui en produit deux. Il n'a pas été
+corrigé, il a été **retiré** — c'est le geste que ce document prescrit depuis les
+trois premiers. La même phrase existe encore ici, plus haut, dans le compte rendu
+daté de la refonte des menus : là elle décrit un état passé, et une archive datée
+a le droit de dire ce qui était vrai ce jour-là. C'est toute la différence entre
+les deux documents.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
