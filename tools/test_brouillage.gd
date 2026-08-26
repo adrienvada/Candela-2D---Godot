@@ -345,10 +345,10 @@ func _test_noms() -> void:
 ## `brouillage.gd` n'a aucune dépendance, et c'est ce qui lui permet de tourner
 ## sous `--script` : il ne peut donc pas LIRE `player.gd`, seulement le recopier.
 ##
-## ⚠️ **Une recopie non tenue se périme en silence.** Deux réglages de ce fichier
-## se sont justifiés par une vitesse de sprint (520 px/s) pendant un jour de plus
-## que le sprint lui-même, et l'un d'eux — `RETARD_REMANENCE` — n'achetait plus
-## que la moitié de l'effet pour lequel il avait été posé. **Aucune suite ne
+## ⚠️ **Une recopie non tenue se périme en silence.** Deux réglages de
+## `brouillage.gd` se sont justifiés par une vitesse que le jeu n'avait plus, et
+## l'un d'eux — `RETARD_REMANENCE` — n'achetait plus que la moitié de l'effet
+## pour lequel il avait été posé. **Aucune suite ne
 ## pouvait le voir** : une suite lit des nombres, elle ne lit pas les raisons
 ## qu'on leur a données. Celle-ci lit la raison.
 ##

@@ -533,16 +533,6 @@ func _ready():
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 
-	# ⚠️ **Les streaks de vitesse (V5.9) sont RETIRÉS avec le sprint** (Adrien,
-	# 2026-08-26), et pas seulement éteints. Le premier jet se contentait de
-	# figer leur intensité à zéro — mais le rect couvre tout l'écran et reste
-	# visible : son fragment shader s'exécute sur chaque pixel, à intensité
-	# nulle comme à un. C'était donc une passe plein écran par joueur pour un
-	# effet qui ne peut plus se déclencher, sur un jeu qui dispose de 3,4 ms de
-	# marge sur ses pires images. **Un effet éteint qui rastérise encore n'est
-	# pas éteint, il est invisible — ce n'est pas la même chose.**
-	
-	
 	# Configuration de la Lampe Torche Principale (Faisceau Avant)
 	flashlight.enabled = false
 	flashlight.shadow_enabled = true
@@ -1203,10 +1193,11 @@ func _physics_process(delta):
 		
 	if can_move:
 		var input_dir = input_provider.get_movement_vector()
-		# ⚠️ **Plus de multiplicateur : le sprint est supprimé** (Adrien,
-		# 2026-08-26). La vitesse ne dépend plus que de l'arme et de
-		# l'éblouissement — deux causes qui se lisent, là où le sprint doublait
-		# la vitesse sans que l'adversaire puisse le voir venir.
+		# ⚠️ **La vitesse ne dépend que de deux causes, et toutes deux se
+		# LISENT** : l'arme qu'on porte et l'éblouissement qu'on subit. Rien ne
+		# doit accélérer un joueur sans que l'adversaire puisse le voir venir —
+		# dans un jeu dont la seule information est la lumière, une accélération
+		# muette est une information retirée à l'autre.
 		var current_speed = speed
 		if shoot_cooldown > 0 and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
@@ -1223,10 +1214,9 @@ func _physics_process(delta):
 			var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
 			rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
 			
-		# ⚠️ **Courir éteignait la torche ; le sprint parti, la règle disparaît
-		# avec lui** (Adrien, 2026-08-26). C'était une contrepartie : la vitesse
-		# se payait en cécité. Sans sprint, il n'y a plus rien à payer, et la
-		# torche n'obéit plus qu'au bouton.
+		# La torche n'obéit qu'au bouton : **aucun autre état du joueur ne
+		# l'éteint.** Elle montre et elle trahit ; le moment est un choix, et il
+		# reste entier.
 		flashlight_on = input_provider.is_flashlight_pressed()
 
 		if role == NetRole.PREDICTED:
@@ -1248,16 +1238,16 @@ func _physics_process(delta):
 	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
 	if step_moved > 0.5 and step_moved < 100.0:
 		step_distance_accumulated += step_moved
-		# ⚠️ **Une seule distance depuis la suppression du sprint (2026-08-26).**
-		# Elle valait 60 px en sprint, 45 en marche — et l'état n'étant pas
-		# répliqué, l'adversaire interpolé retombait de toute façon sur 45. Le
-		# sprint parti, la valeur cesse d'être une branche.
+		# ⚠️ **Une seule distance, et surtout pas une branche.** Le seuil doit
+		# être le même pour le joueur simulé et pour l'adversaire interpolé : un
+		# pas qui se déclenche plus tôt d'un côté que de l'autre rend
+		# l'information asymétrique — l'un entend et piste, l'autre pas.
 		var step_dist := 45.0
 		if step_distance_accumulated >= step_dist:
 			step_distance_accumulated = 0.0
-			# Fourchette fixe. Elle passait par un facteur qui valait plus que 1
-			# en sprint ; le sprint parti, ce facteur ne variait plus et ne
-			# faisait plus que suggérer une modulation inexistante.
+			# Fourchette fixe : rien ne module la hauteur du pas. **Un facteur
+			# qui ne varie jamais suggère une modulation qui n'existe pas** — il
+			# coûte une relecture à chaque passage, et il en promet une.
 			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.95, 1.05)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
@@ -1292,10 +1282,10 @@ func _physics_process(delta):
 	# ⚠️ **Ce n'est pas une animation de remplacement, c'est la bonne réponse à
 	# la contrainte.** L'item demandait quatre images de marche ; quatre images
 	# FIXES ne peuvent pas rester en phase avec un détecteur de pas qui compte
-	# une DISTANCE (45 px, 60 en sprint) et non un temps. Le son du pas,
+	# une DISTANCE (45 px) et non un temps. Le son du pas,
 	# l'empreinte au sol et la bosse de rétrodiffusion tombent déjà ensemble
 	# juste au-dessus ; le roulis se dérive du même accumulateur, donc il tombe
-	# avec eux — à toutes les vitesses, sprint compris, et sans un réglage.
+	# avec eux — à toutes les vitesses, et sans un réglage.
 	#
 	# ⚠️ **Et il ne peut pas mentir sur la visée.** Un roulis se fait en
 	# TRANSLATION le long de l'axe local Y, jamais en rotation : `rotation` dit
@@ -1374,8 +1364,6 @@ func _physics_process(delta):
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	# `not is_sprinting` retiré avec le sprint : on ne pouvait pas tirer en
-	# courant, il n'y a plus de course.
 	if can_move and presse and shoot_cooldown <= 0:
 		shoot()
 	elif can_move and presse and not _detente_pressee and _percu_ici():

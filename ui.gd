@@ -4772,9 +4772,8 @@ const BINDABLE := [
 ]
 
 ## Les actions réassignables et leurs deux colonnes de joueurs, d'un seul
-## bloc. **Aucun effectif écrit ici** : il valait « trois » jusqu'au retrait
-## du sprint le 2026-08-26, et un nombre en toutes lettres redevient faux à
-## la prochaine action ajoutée ou retirée. `BINDABLE` fait foi, seul.
+## bloc. **Aucun effectif écrit ici** : un nombre en toutes lettres redevient
+## faux à la prochaine action ajoutée ou retirée. `BINDABLE` fait foi, seul.
 ##
 ## ⚠️ **La même faute existait sous trois formes le même jour, et la troisième
 ## est la seule qui ait menti au JOUEUR.** Un seuil de banc (`6`, « trois
@@ -4784,13 +4783,15 @@ const BINDABLE := [
 ## l'écran, et **aucune suite ne pouvait la voir : un libellé faux reste un
 ## libellé valide.** Elle n'est sortie que d'une relecture du rendu.
 ##
-## Aucun `grep sprint` n'atteignait aucune des trois : toutes comptaient le
-## sprint sans jamais le nommer.
+## Aucune recherche textuelle n'atteignait les trois : **elles comptaient une
+## action sans jamais la nommer**, et ce qu'on ne nomme pas, on ne le trouve pas.
 ##
 ## Chaque action avait son entrée et son panneau : la configuration complète
 ## n'était jamais visible d'un coup, et un doublon entre deux actions — la même
-## touche pour tirer et pour sprinter — ne se repérait qu'en faisant l'aller-retour
-## de mémoire. Une grille de trois lignes le montre.
+## touche liée deux fois — ne se repérait qu'en faisant l'aller-retour de
+## mémoire. La grille le montre d'un coup. **Sans compter ses lignes** : cette
+## phrase-ci en annonçait trois pour une table qui en produit deux, dans le
+## commentaire même qui interdit d'écrire un effectif.
 ##
 ## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
 ## P1 ne peut pas réassigner la manette de P2.

@@ -3278,6 +3278,21 @@ daté de la refonte des menus : là elle décrit un état passé, et une archive
 a le droit de dire ce qui était vrai ce jour-là. C'est toute la différence entre
 les deux documents.
 
+⚠️ **Cette entrée et le code qu'elle justifie ne voyagent pas dans le même
+commit, contre la règle du `CLAUDE.md`, et ce n'est pas un choix.** Elle a été
+écrite ici d'abord — exprès, pour que le retrait ne détruise rien —, et une autre
+session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt :
+elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
+rien à voir. Le retrait lui-même suit dans le commit d'après.
+
+**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
+partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
+bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
+add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
+de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
+— il est bien versionné — c'est le **lien** entre une décision et son code,
+c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
+
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
 Le piège du `.godot` périmé est déjà consigné pour le **checkout**. Il se paie

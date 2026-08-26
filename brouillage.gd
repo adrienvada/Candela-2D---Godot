@@ -70,15 +70,15 @@ const NOMS := {
 ## divergent.
 ##
 ## ⚠️ **Sans ce lien, le nombre se périme en silence — et c'est arrivé.** Deux
-## réglages de ce fichier se justifiaient par une vitesse de SPRINT (520 px/s)
-## qui n'existe plus depuis le 2026-08-26. Aucune suite ne pouvait le voir : une
-## suite lit des nombres, pas les raisons qu'on leur a données. **Une vitesse
-## citée dans un commentaire ne vieillit avec rien ; une vitesse nommée dans le
-## code vieillit avec le jeu.** C'est toute la différence entre les deux, et
-## elle a coûté la moitié de l'effet de `RETARD_REMANENCE` pendant un jour.
+## réglages de ce fichier se justifiaient par une vitesse que le jeu a cessé
+## d'avoir. Aucune suite ne pouvait le voir : une suite lit des nombres, pas les
+## raisons qu'on leur a données. **Une vitesse citée dans un commentaire ne
+## vieillit avec rien ; une vitesse nommée dans le code vieillit avec le jeu.**
+## C'est toute la différence, et elle a coûté la moitié de l'effet de
+## `RETARD_REMANENCE` pendant une journée.
 ##
-## Une seule allure, donc une seule constante : le sprint supprimé, « marche »
-## et « vitesse du joueur » sont le même nombre.
+## Une seule allure, donc une seule constante : « marche » et « vitesse du
+## joueur » sont le même nombre.
 const VITESSE_MARCHE := 260.0
 
 # --------------------------------------------------------------------------
@@ -179,9 +179,8 @@ const AMPLITUDE_DERIVE := 34.0
 ##
 ## ⚠️ **Elles valaient 1,0 et 2,7, et c'est la première suite qui l'a rattrapé :
 ## la silhouette dérivait à 322 px/s, soit plus vite qu'un joueur ne peut se
-## déplacer** (`VITESSE_MARCHE`, 260 px/s — il y avait alors une seconde allure
-## à 520, et la comparaison se faisait contre elle). Deux conséquences, et la
-## seconde est celle qui compte :
+## déplacer** (`VITESSE_MARCHE`, 260 px/s). Deux conséquences, et la seconde est
+## celle qui compte :
 ##
 ## - ça ne se lisait pas comme une dérive mais comme une **vibration**, c'est-
 ##   à-dire comme un défaut d'affichage ;
@@ -212,23 +211,21 @@ const AVANCE_REMANENCE := 94.0
 ## Le retard de rémanence à saturation, en secondes. **Dérivé, jamais écrit** :
 ## une avance en pixels ne devient un temps qu'en passant par une vitesse.
 ##
-## ⚠️ **Il valait 0,18 s, écrit à la main, et sa justification disait « à
-## 520 px/s en sprint, 94 px d'avance à prendre ».** Le sprint supprimé le
-## 2026-08-26, ces 520 px/s ont disparu — et les mêmes 0,18 s n'achetaient plus
-## que 47 px, la moitié de ce pour quoi elles avaient été posées. Le nombre
-## n'avait pas bougé ; c'est le monde autour de lui qui avait changé, et rien
-## n'a rougi. **Un réglage dérivé d'une vitesse doit nommer cette vitesse dans
+## ⚠️ **Il valait 0,18 s, écrit à la main, et sa justification invoquait une
+## vitesse de 520 px/s.** Cette vitesse a disparu du jeu — et les mêmes 0,18 s
+## n'achetaient plus que 47 px, la moitié de ce pour quoi elles avaient été
+## posées. Le nombre n'avait pas bougé ; c'est le monde autour de lui qui avait
+## changé, et rien n'a rougi. **Un réglage dérivé d'une vitesse doit nommer cette vitesse dans
 ## le code.** Écrite dans le commentaire, elle ne tient rien : elle ne fait que
 ## raconter, au présent, un présent qui passe.
 ##
 ## ⚠️ **C'est le seul mode dont le coût dépend de ce que fait CELUI QU'ON VISE.**
 ## Un adversaire immobile n'est pas brouillé du tout, un adversaire qui se
-## déplace l'est pleinement. **Et depuis la suppression du sprint, il n'y a plus
-## qu'une façon de se déplacer** : le coût ne se module plus par l'allure
-## choisie, seulement par bouger ou ne pas bouger. La nuance a disparu avec le
-## sprint, et le choix est devenu binaire. À juger au banc : c'est peut-être la
-## bonne mécanique (bouger sous sa propre torche devient payant), ou la mauvaise
-## (allumer et se figer devient la seule ligne de jeu).
+## déplace l'est pleinement. **Et il n'y a qu'une façon de se déplacer** : le
+## coût ne se module pas, il se déclenche — bouger ou ne pas bouger, rien entre
+## les deux. À juger au banc : c'est peut-être la bonne mécanique (bouger sous
+## sa propre torche devient payant), ou la mauvaise (allumer et se figer devient
+## la seule ligne de jeu).
 const RETARD_REMANENCE := AVANCE_REMANENCE / VITESSE_MARCHE
 
 ## Ce qu'il reste d'opacité à la silhouette à saturation : **zéro**. L'adversaire
