@@ -8628,8 +8628,15 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
   lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
   généré, procédé DA1.5)*
-- **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
-  l'éditeur sous la bible. *(S + G)*
+- **DA4.15 L'éditeur de cartes aligné** 🟡 **matière livrée le 2026-08-26** —
+  quatorze icônes d'outils (`assets/ui/icones/outil_*.png`), même procédé que
+  les icônes d'armes déjà livrées : masques en niveaux de gris, fond
+  transparent, 128×128, la teinte posée par le code. La famille symétrie
+  (miroir horizontal/vertical/diagonal, rotation) et la paire annuler/refaire
+  générées ensemble puis découpées — même raison que `creer`/`rejoindre` en
+  DA4.13 : des variantes d'un même geste divergeraient si tirées séparément.
+  Reste : câblage dans l'éditeur et vérification de lisibilité à 20 px par
+  DA4. Palette de l'éditeur sous la bible pas encore traitée. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
   quelque chose, en effet : le contraire de ce qu'on voulait.
 
