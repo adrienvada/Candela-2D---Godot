@@ -223,6 +223,8 @@ func _physics_process(delta: float) -> void:
 func _process(delta: float) -> void:
 	_deplacer_source(delta)
 	queue_redraw()
+	AudioManager.poser_limiteur()
+	_suivre_crete()
 	_etiquette.text = _texte()
 
 ## Les oreilles suivent les joueurs qu'on déplace, sans quoi le mode se réglerait
@@ -311,6 +313,34 @@ func _tete() -> Node2D:
 		return null
 	return _oreille_porteur.get_child(0) as Node2D
 
+## La crete de Master, en dBFS, et depuis combien de temps elle n'a pas depasse.
+##
+## **C'est le seul juge fiable du filet.** Un limiteur qui mord sur un
+## transitoire de tir ne s'entend pas comme une distorsion : il s'entend comme
+## « la musique a hoquete », et on cherche le defaut ailleurs. Le temoin dit ce
+## que l'oreille ne peut pas prouver.
+var _crete_max: float = -99.0
+var _crete_depuis: float = 0.0
+
+func _suivre_crete() -> void:
+	var idx := AudioServer.get_bus_index(AudioManager.BUS_MASTER)
+	if idx == -1:
+		return
+	var c := maxf(AudioServer.get_bus_peak_volume_left_db(idx, 0),
+		AudioServer.get_bus_peak_volume_right_db(idx, 0))
+	if c > _crete_max:
+		_crete_max = c
+		_crete_depuis = 0.0
+	else:
+		_crete_depuis += get_process_delta_time()
+
+func _texte_filet() -> String:
+	var mord := AudioManager.reveille_le_filet(
+		AudioManager.PIC_MAX_DEPOT_DB, AudioManager.marge_db, AudioManager.plafond_db)
+	return "marge %+.1f dB · plafond %+.1f dB · crête %+.1f dBFS · %s" % [
+		AudioManager.marge_db, AudioManager.plafond_db, _crete_max,
+		"⚠ MORD SUR UN SON SEUL" if mord else "filet muet sur un son seul"]
+
 func _texte() -> String:
 	var tete := _tete()
 	var dist := 0.0 if tete == null else _source.global_position.distance_to(tete.global_position)
@@ -325,6 +355,7 @@ func _texte() -> String:
 			"ON" if _auto else "OFF",
 			"ON" if AudioManager.occlusion_active else "OFF"],
 		"  X mémoriser · C comparer · ÉCHAP quitter",
+		"  M/P marge du filet · L/K plafond              %s" % _texte_filet(),
 		"  CLIC DROIT J1 · CLIC MILIEU J2 · E : écoute      %s" % _nom_mode(),
 		"      %s" % _detail_mode(),
 		"",
@@ -491,6 +522,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		# perte de niveau, parce que c'est une seule dimension perceptive.
 		KEY_8: AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion - 0.05)
 		KEY_9: AudioManager.appliquer_force_occlusion(AudioManager.force_occlusion + 0.05)
+		# DA3.9 — la marge et le plafond du filet de sortie. **Le temoin de crete
+		# compte plus que les molettes** : il dit si le filet mord, ce qu'aucune
+		# oreille ne sait juger de facon fiable sur un transitoire de tir.
+		KEY_M: AudioManager.marge_db = clampf(AudioManager.marge_db - 0.5, -12.0, 0.0)
+		KEY_P: AudioManager.marge_db = clampf(AudioManager.marge_db + 0.5, -12.0, 0.0)
+		KEY_L: AudioManager.plafond_db = clampf(AudioManager.plafond_db - 0.1, -6.0, 0.0)
+		KEY_K: AudioManager.plafond_db = clampf(AudioManager.plafond_db + 0.1, -6.0, 0.0)
 		KEY_TAB: _auto = not _auto
 		KEY_X: _memoriser()
 		KEY_C: _comparer()

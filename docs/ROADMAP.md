@@ -5592,6 +5592,38 @@ les portées en un mouchoir et les niveaux étalés, aucun son ne couvrant plus
 d'une diagonale et demie. Un dosage doit pouvoir être repris au banc sans casser
 sa propre garde ; ce qui est verrouillé, c'est la décision, pas le chiffre.
 
+### Un fichier livré, présent, et vide (2026-08-26)
+
+`voice/defeat.wav` — la voix qui annonce la défaite — contenait **0,76 s de
+silence numérique** : un pic de 1 sur 32768, soit −90 dBFS. Tout joueur qui
+perdait un match n'entendait rien. Le fichier était au dépôt depuis la veille,
+intégré, inventorié, testé.
+
+**Ce que mes tests vérifiaient, et pourquoi ça ne suffisait pas.** Pour les voix,
+`ResourceLoader.exists()` : le fichier est là, la clé résout, le chemin est bon.
+Trois vérités qui ne disent **rien du contenu**. Pour les stingers j'avais
+pourtant écrit « porte du son » en mesurant la durée — mais une durée non nulle
+ne prouve rien non plus, celui-ci durait 0,76 s.
+
+**Et le manifeste ne pouvait pas le voir** : sa détection de bouche-trou compare
+une **taille exacte** (160 032 octets). Un silence d'une autre taille passe à
+travers — angle mort déjà relevé sur `music_intro.ogg` le 2026-08-24, et qui
+vient de coûter une seconde fois.
+
+Trouvé en mesurant la loudness des 45 fichiers pour préparer DA3.9, pas en
+cherchant un défaut. **La mesure a trouvé ce que la relecture ne pouvait pas
+voir** — troisième fois de la semaine.
+
+**Le garde-fou a failli reproduire le défaut à l'intérieur de lui-même.** Sa
+première version lisait les octets de la ressource **importée** ; or Godot
+compresse les `.wav` en QOA, elle y trouvait du bruit de compression et
+**déclarait vivant un fichier vide**. Elle lit désormais le fichier **source**,
+ce qui juge ce qu'Adrien a livré plutôt que ce que l'importeur en a fait — et
+c'est le bon niveau : on veut savoir si la livraison est bonne, pas si
+l'importeur a bien travaillé.
+
+Cycle complet vérifié : rouge sur le fichier vide, vert sur le réexport.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -7871,8 +7903,43 @@ un fait de jeu, pas à un rythme d'interface.
   même matière sonore pour tous les menus. *(C : 5-6 samples)*
 - **DA3.8 Le room tone** (= V5.10) — un lit de silence habité sous la manche.
   *(C)*
-- **DA3.9 Le mastering global** — loudness cohérente entre bus, limiteur,
-  égalisation : l'écart pro/amateur *s'entend* au volume près. *(C, câblage S)*
+- **DA3.9 Le mastering global** — **✅ la moitié qui compte est faite le
+  2026-08-26 ; l'autre moitié est ANNULÉE par décision d'Adrien.**
+
+  **Annulé : « loudness cohérente entre bus ».** *« Il faut que les écarts de
+  loudness soient importants, et puissent être corrigés à la marge dans le
+  panneau de réglage du son »* (2026-08-26). L'écart **est** le mixage — musique
+  à −18 LUFS, armes à −4 — et l'aligner détruirait ce qui a été jugé au banc. Le
+  panneau (Master / Musique / Effets / Annonceur) fait l'ajustement fin ; le
+  mastering ne le fait pas à sa place.
+
+  **Fait : le filet de sortie.** Mesuré, **26 des 45 fichiers dépassaient
+  0 dBFS**, jusqu'à +4,0 pour `weapon_pistolet_03` — un seul tir demandait déjà
+  à la sortie plus qu'elle ne peut rendre, et une fusillade saturait au moment
+  le plus intense. Un `AudioEffectHardLimiter` sur Master, marge −4,5 dB,
+  plafond −0,5 dB.
+
+  **Le principe, et c'est lui qui fait tout : la marge travaille, le filet se
+  tait.** Une marge est une **translation, pas une compression** — baisser tout
+  d'une même quantité préserve exactement chaque rapport jugé au banc. Le
+  dimensionnement vient de la mesure : la marge couvre le pic le plus fort du
+  dépôt plus un demi-décibel, si bien qu'un son **seul** ne réveille jamais le
+  limiteur. Seules les sommes le réveillent.
+
+  **Pourquoi ce n'est pas un détail d'ingénierie mais une contrainte de jeu :**
+  dans un duel où le son est la seule information, un limiteur qui mord à chaque
+  tir baisserait les pas de l'adversaire — **il retirerait l'information au
+  moment précis où elle compte le plus.** Même famille que la règle du voile :
+  ce qui protège le confort ne doit pas moduler ce qui renseigne.
+
+  ⚠️ **Un seul limiteur, et sur Master.** Un limiteur sur `SFX` mordrait sur les
+  tirs, donc baisserait les pas qui partagent ce bus : le défaut déplacé d'un
+  cran. Vérifié par suite que ni `Music`, ni `SFX`, ni `Speaker` n'en portent.
+
+  Réglable au banc (`M`/`P` la marge, `L`/`K` le plafond) avec un **témoin de
+  crête** — un limiteur qui mord sur un transitoire ne s'entend pas comme une
+  distorsion mais comme « la musique a hoqueté », et on cherche alors le défaut
+  ailleurs. Le témoin dit ce que l'oreille ne peut pas prouver.
 
 ### DA4 — L'interface habillée
 

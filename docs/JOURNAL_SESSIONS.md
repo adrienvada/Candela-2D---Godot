@@ -1760,6 +1760,28 @@ La feuille de route décrivait encore DA3.4 et DA3.5 comme à faire : corrigé d
 le même commit. **Un item livré qui reste marqué à faire envoie quelqu'un
 refaire le travail** — c'est le coût que ce journal existe pour éviter.
 
+#### Lot du 2026-08-26 (soir) — le filet de sortie, et un fichier vide
+
+**DA3.9 est tranchée en deux par Adrien** : pas d'alignement de loudness — les
+écarts sont voulus et se corrigent au panneau — mais un filet de sortie contre la
+saturation. `AudioEffectHardLimiter` sur Master, marge −4,5 dB, plafond −0,5 dB,
+réglable au banc avec un témoin de crête.
+
+**Le principe tient en une phrase : la marge travaille, le filet se tait.** Un
+limiteur qui mord à chaque tir baisserait les pas — il retirerait l'information
+au moment où elle compte. Une suite garde cette propriété : un son seul, même le
+plus fort du dépôt, ne doit jamais le réveiller.
+
+**`voice/defeat.wav` était vide** — 0,76 s de silence numérique, découvert en
+mesurant la loudness des 45 fichiers. Adrien a réexporté, c'est vert. Le
+garde-fou lit désormais le fichier **source** et non la ressource importée : les
+`.wav` sont compressés en QOA à l'import, et lire ces octets-là faisait passer un
+fichier vide pour vivant.
+
+**Fichiers touchés :** `audio_manager.gd`, `default_bus_layout.tres`,
+`tools/banc_audio.gd`, `tools/test_musique.gd`, `assets/audio/voice/defeat.wav`,
+les deux documents. Tout est dans le domaine DA3.
+
 #### Lot du 2026-08-26 — le dosage audio d'Adrien (worktree `audio-dosage-adrien`)
 
 Seconde séance au banc, valeurs inscrites dans `audio_manager.gd` avec leur date
