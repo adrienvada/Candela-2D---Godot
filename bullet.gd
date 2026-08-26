@@ -6,6 +6,17 @@ const Charte := preload("res://charte.gd")
 var weapon: WeaponData
 var bounces_left: int = 0
 var is_replay: bool = false
+## DA4.6 — cette balle porte-t-elle le relevé coté ?
+##
+## ⚠️ **Un seul tir par killcam**, celui qui a tué. Une killcam rejoue TOUT ce
+## qui a été tiré dans sa fenêtre : coter chaque balle empilerait des cotes sur
+## des tirs manqués, et **ce qui annote partout n'annote plus rien**. Les autres
+## balles gardent leur traînée pointillée — elles sont le contexte, pas la leçon.
+##
+## Qui est le tir fatal se décide dans `ReplaySystem.index_du_tir_fatal()`, et
+## nulle part ailleurs : le dernier tir tout court ne convient pas, un tir de la
+## victime juste avant sa mort n'étant pas le coup fatal.
+var releve: bool = false
 
 var source_player: Node2D
 var direction: Vector2 = Vector2.ZERO
@@ -340,6 +351,11 @@ func _draw() -> void:
 	var e: float = g["epaisseur"]
 	var trace: Array = g["trace"]
 	draw_dashed_line(trace[0], trace[1], TRACE_COLOR, e * 1.4, 12.0)
+
+	# La traînée pointillée reste sur toutes les balles rejouées — c'est V6.2,
+	# validée. Ce qui suit n'appartient qu'au tir fatal.
+	if not releve:
+		return
 
 	var cl: float = g["chevron_l"]
 	var ch: float = g["chevron_h"]

@@ -1092,7 +1092,7 @@ func _verify_kill_to_rematch() -> void:
 	# La killcam de l'invité ne montrait ni tirs ni impacts. take_damage seul ne
 	# reproduit rien : il faut de vraies balles dans la fenêtre de rejeu.
 	var replayed := [0]
-	ReplaySystem.replay_spawn_bullet.connect(func(_s, _p, _r, _w): replayed[0] += 1)
+	ReplaySystem.replay_spawn_bullet.connect(func(_s, _p, _r, _w, _f): replayed[0] += 1)
 
 	if is_host:
 		print("TIRS: l'hôte tire trois fois")

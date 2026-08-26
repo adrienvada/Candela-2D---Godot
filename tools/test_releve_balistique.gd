@@ -237,6 +237,38 @@ func _test_pas_de_cote_sur_un_moignon(balle: GDScript) -> void:
 			"la visibilité de la cote dépend du zoom (%.1f×)" % z)
 
 
+# ---------------------------------------------------------------------------
+# 6. UN SEUL TIR PORTE LE RELEVÉ
+# ---------------------------------------------------------------------------
+
+## ⚠️ **Une killcam rejoue TOUT ce qui a été tiré dans sa fenêtre.** Coter chaque
+## balle empilerait des cotes sur des tirs manqués, et *ce qui annote partout
+## n'annote plus rien*. Relevé par Adrien avant même d'avoir vu l'écran.
+##
+## Le contrôle porte sur les deux bouts de la chaîne : la balle a bien un drapeau
+## qui NAÎT à faux — une balle de manche réelle ne doit rien coter, même si
+## quelqu'un lui pose `is_replay` — et le rejeu sait désigner le tir fatal par
+## son INDICE, pas seulement par ses coordonnées.
+func _test_un_seul_tir_est_releve(balle: GDScript) -> void:
+	var b: Node2D = balle.new()
+	_check(not bool(b.get("releve")),
+		"une balle naît avec le relevé ACTIF : une manche réelle serait cotée")
+	b.free()
+
+	var rejeu: GDScript = load("res://replay_system.gd")
+	_check(rejeu != null and rejeu.new().has_method("index_du_tir_fatal"),
+		"ReplaySystem ne sait pas désigner le tir fatal par son indice")
+
+	# ⚠️ Et il ne doit y avoir qu'UNE façon de le désigner : `trajectoire_fatale`
+	# doit s'appuyer sur le même indice, sinon les deux finiront par désigner deux
+	# tirs différents — c'est ce que son propre commentaire annonçait depuis V6.2.
+	var source := FileAccess.get_file_as_string("res://replay_system.gd")
+	var corps := source.split("func trajectoire_fatale()")
+	_check(corps.size() == 2 and corps[1].split("func ")[0]
+			.contains("index_du_tir_fatal()"),
+		"trajectoire_fatale() redésigne le tir fatal au lieu de réutiliser l'indice")
+
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -250,6 +282,7 @@ func _run() -> void:
 		quit(1)
 		return
 
+	_test_un_seul_tir_est_releve(balle)
 	_test_l_annotation_tient_sa_taille_ecran(balle)
 	_test_les_chevrons_sont_en_pixels_monde(balle)
 	_test_la_cote_ne_se_retourne_jamais(balle)

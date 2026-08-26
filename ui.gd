@@ -872,6 +872,20 @@ func _process(delta: float) -> void:
 func _un_menu_attend_un_clic() -> bool:
 	if _is_main_menu:
 		return true
+	# ⚠️ **L'écran de fin de match, oublié des quatre cas ci-dessus** — relevé par
+	# Adrien à l'écran le 2026-08-27 : « après un match mon curseur ne réapparaît
+	# pas ». `show_game_over()` pose `_is_main_menu = false` PUIS allume
+	# `game_over_panel` : aucune des quatre conditions ne correspondait, et le
+	# joueur se retrouvait devant REJOUER et MENU PRINCIPAL sans pointeur.
+	#
+	# **C'est la troisième fois que cette liste se révèle incomplète**, et la
+	# deuxième pour la même raison : elle *paraît* délibérée. Le commentaire du
+	# 2026-08-25 décrit déjà le défaut — « sans plus aucun moyen de cliquer
+	# *Quitter* » — corrige trois cas, et en laisse un. Une énumération partielle
+	# se lit comme une liste complète ; voir « la mesure répond, mais pas à la
+	# question posée » dans les pièges connus de la ROADMAP.
+	if _panneau_ouvert(game_over_panel):
+		return true
 	if is_pause_menu_open():
 		return true
 	# Un dialogue est modal : il prend le focus des deux joueurs et il faut

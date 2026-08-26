@@ -2856,6 +2856,28 @@ correctif.** Quiconque remplaçait le prédicat cassait le test, et se serait
 demandé s'il avait tort. Un banc peut donc être pire que muet : il peut monter
 la garde devant l'erreur.
 
+⚠️ **TROISIÈME OCCURRENCE, le 2026-08-27 : l'écran de fin de match manquait
+encore.** Relevé par Adrien à l'écran — *« après un match mon curseur ne
+réapparaît pas »*. `show_game_over()` pose `_is_main_menu = false` **puis** allume
+`game_over_panel` : aucun des quatre cas de `_un_menu_attend_un_clic()` ne
+correspondait, et le joueur restait devant REJOUER et MENU PRINCIPAL sans
+pointeur.
+
+**Le correctif du 2026-08-25 avait remplacé un prédicat faux par une
+énumération incomplète**, ce qui déplace le défaut sans le supprimer : la liste
+de quatre *paraît* délibérée, donc aucune relecture ne la remet en cause. C'est
+le motif « la mesure répond, mais pas à la question posée » — et son quatrième
+membre, celui qui montre que **corriger un cas ne prouve rien sur les autres.**
+
+**Un banc tient enfin la propriété** — `tools/test_curseur_systeme.gd`. Il
+n'interroge pas la condition, il **ouvre chaque panneau et compte ses boutons
+cliquables** : un panneau qui porte des `Button` visibles attend un clic, que la
+condition le sache ou non. La source de vérité est donc indépendante de ce
+qu'on vérifie, ce qui manquait aux trois tentatives précédentes. Il tient aussi
+le versant inverse — en manche, la flèche disparaît — sans quoi rendre la
+condition toujours vraie passerait au vert en remettant la flèche de macOS
+par-dessus le jeu, le défaut d'origine de DA2.11.
+
 #### Ce qui distingue les trois membres de la famille
 
 | forme | ce qu'elle mesure | comment elle ment |
@@ -8806,7 +8828,31 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   qu'on voit n'a pas de nom, donc rien ne le tient* —, et c'est l'extraction qui
   rend les 91 contrôles possibles.
 
-  `tools/test_releve_balistique.gd`, 91 contrôles, verts, vérifiés **rouges** sur
+  ### Un seul tir porte le relevé
+
+  ⚠️ **Une killcam rejoue TOUT ce qui a été tiré dans sa fenêtre**, et le premier
+  jet cotait chaque balle. Relevé par Adrien avant même d'avoir vu l'écran :
+  *« il faut que ce soit seulement le dernier tir au ralenti »*. Il a raison, et
+  la raison porte plus loin que l'encombrement — **ce qui annote partout n'annote
+  plus rien** : une cote sur un tir manqué met au même rang ce qui a tué et ce
+  qui a raté, c'est-à-dire exactement la distinction que la killcam existe pour
+  faire voir.
+
+  Les autres balles gardent leur traînée pointillée : elles sont le contexte, pas
+  la leçon. *(Si le pointillé lui-même doit disparaître des tirs manqués, c'est
+  une ligne à changer — la question est posée à Adrien, pas tranchée ici.)*
+
+  **Qui est le tir fatal se décide en UN endroit.** `trajectoire_fatale()`
+  portait déjà la règle — la victime est celle dont les points de vie tombent à
+  l'image d'impact, le tueur est l'autre, et on remonte **ses** tirs, un tir de
+  la victime juste avant sa mort n'étant pas le coup fatal. La tentation était
+  d'ajouter une seconde boucle qui redescende les tirs pour en tirer un indice ;
+  le commentaire de V6.2 disait déjà pourquoi c'eût été une faute — *deux façons
+  de désigner le tir fatal finiraient par désigner deux tirs différents*. D'où
+  `index_du_tir_fatal()`, **extrait** et non réécrit, dont `trajectoire_fatale()`
+  se sert désormais. Un contrôle du banc lit la source pour l'exiger.
+
+  `tools/test_releve_balistique.gd`, 94 contrôles, verts, vérifiés **rouges** sur
   les deux versants qui portent le lot. Le zoom est lu sur le viewport
   (`get_camera_2d()`) et jamais demandé à `GameState` : en écran scindé chaque
   vue a sa propre caméra, et « le » zoom n'aurait pas de sens. *(S)*

@@ -1614,9 +1614,13 @@ func _lag_comp_delay() -> float:
 func rpc_sync_time(value: float) -> void:
 	time_left = value
 
-func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
+func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
+		weapon: WeaponData, fatal: bool = false):
 	var b = bullet_scene.instantiate()
 	b.is_replay = true
+	# DA4.6 — seul le tir fatal porte le relevé coté. Les autres gardent leur
+	# traînée : ils sont le contexte, pas la leçon.
+	b.releve = fatal
 	b.global_position = pos
 	b.rotation = rot
 	b.direction = Vector2(cos(rot), sin(rot))
