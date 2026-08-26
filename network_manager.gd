@@ -18,8 +18,42 @@ var transport: Transport = Transport.EOS
 enum EosState { UNCONFIGURED, INITIALIZING, READY, FAILED }
 var eos_state: EosState = EosState.UNCONFIGURED
 
-const DEFAULT_PORT := 7777
+## Port du salon ENet. **Variable et non constante, pour une seule raison :
+## plusieurs worktrees partagent cette machine.**
+##
+## `run_duo.sh` dérive un port par arbre de travail et l'exporte dans
+## `CANDELA_PORT` ; deux lots lancés depuis deux worktrees cessent alors de se
+## disputer 7777 **sans que personne n'ait à y penser**. C'est le geste que la
+## journée du 2026-08-25 a désigné : quatre diagnostics faux à trois sessions,
+## et la conclusion unanime que *l'outil qui évite bat la discipline qui se
+## souvient*.
+##
+## ⚠️ **Honoré en DÉBOGAGE SEULEMENT**, et c'est délibéré. Une variable
+## d'environnement oubliée dans le terminal d'un joueur ferait ouvrir son salon
+## sur un port que personne n'attend, et sa partie LAN échouerait sans que rien
+## ne le dise. Le dépôt a déjà ce précédent exact avec `--eos-ephemeral`,
+## neutralisé hors build debug. Signalé par la session DA2.
+static var DEFAULT_PORT: int = _port_de_lancement()
+const PORT_PAR_DEFAUT := 7777
 const MAX_CLIENTS  := 1 # Only 1v1 (1 Host + 1 Client)
+
+## Lit `CANDELA_PORT` en débogage, avec un garde-fou de plage.
+##
+## **Un port hors plage est refusé plutôt que subi.** Une valeur vide, non
+## numérique ou éphémère (49152+ sur macOS) donnerait un salon qui s'ouvre
+## ailleurs ou qui entre en conflit avec ce que l'OS vient d'attribuer — panne
+## intermittente et irreproductible, le pire mode de défaillance pour un banc.
+static func _port_de_lancement() -> int:
+	if not OS.is_debug_build():
+		return PORT_PAR_DEFAUT
+	var brut := OS.get_environment("CANDELA_PORT")
+	if not brut.is_valid_int():
+		return PORT_PAR_DEFAUT
+	var port := int(brut)
+	if port < 1024 or port > 49151:
+		push_error("CANDELA_PORT hors plage (%d) — 7777 conservé" % port)
+		return PORT_PAR_DEFAUT
+	return port
 
 var peer: MultiplayerPeer
 

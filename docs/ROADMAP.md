@@ -2363,6 +2363,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 |---|---|
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les six scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot**, pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. |
+| **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
 | **Seule l'arbalète éclaire au-delà de l'écran** (2026-08-24, Adrien) | Chaque joueur voit **480 unités devant lui**. Au-delà, sa torche allume quelque chose qu'il ne voit pas et qui le trahit : elle coûte sans rien rapporter. Le pistolet passe de 30°/2,3 à **35°/1,6** (0,85 écran), le fusil de 3,5 à **1,8** (0,96), la pompe (60°/1,0 — 0,53) et l'arbalète (5°/3,5 — **1,87**) ne bougent pas. L'arbalète est l'arme furtive et lointaine ; le privilège de porter hors champ lui revient, et à elle seule. **La portée se lit désormais en fractions d'écran, pas en unités** — « 0,85 écran » se juge, « 410 unités » ne se juge pas. Effet second non cherché mais mesuré : à texture égale sur moins de terrain, la densité de texels du pistolet est multipliée par **2,9**, celle du fusil par 3,9. Raccourcir pour le jeu a réglé la netteté par-dessus le marché. ✅ **Portées dans `game_state.gd` le 2026-08-24**, à l'intégration de DA2.1. `tools/torches.gd` en garde une copie — la cuisson et le banc se chargent hors du jeu, où `game_state.gd` ne se charge pas — et `tools/test_torches.gd` exige leur égalité en lisant le TEXTE des deux sources. La divergence qui a réellement existé ici ne peut donc plus revenir muette. |
 | **La résolution est assumée en smooth, pas en pixel-perfect** (2026-08-24, Adrien) | DA5.6, qui conditionnait toute commande d'asset. Le pixel-perfect impose une grille à des objets qui n'en ont pas : le monde de Candela n'est pas fait de sprites, il est fait de **lumière**, et un masque de lumière est agrandi jusqu'à 3,5 fois par `torch_scale` — une grille de texels y serait un défaut visible, jamais un style. Ce qui en découle et ne se rediscute plus : **filtrage linéaire et mipmaps à l'import, aucune texture en `nearest`**, et la résolution d'un asset cesse d'être un carcan — elle se choisit sur la densité de texels à l'écran, pas sur une grille. Première application : le cookie de torche vise **1024²**, où un texel couvre 1,75 pixel d'écran, contre 3,5 pour le 512² que `weapon_data.gd` fabrique aujourd'hui. |
@@ -2956,6 +2957,35 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une branche finie ne se signale pas toute seule (2026-08-26)
+
+`worktree-lanceur-port` portait deux commits **écrits, éprouvés et complets** —
+le port des bancs dérivé de l'arbre de travail, et le seuil du F3 remis à 60/30.
+Ils sont restés hors de `main` pendant une journée entière. La session qui les
+avait écrits s'est fermée avant de fusionner, et **rien n'a dit qu'ils
+existaient** : `git log main` ne montre pas ce qui n'est pas fusionné, et la
+ROADMAP décrivait déjà le port comme une décision actée, ce qui donnait le
+sentiment inverse — le travail *semblait* dans le tronc parce qu'il était
+documenté comme s'il y était.
+
+Le coût réel : j'ai commencé à écrire un **second** mécanisme de port, pour la
+parallélisation des scénarios duo, avant de découvrir le premier. Deux
+mécanismes concurrents pour le même besoin auraient été la vraie perte, pas la
+journée d'attente.
+
+**La règle, en deux gestes.** Avant de bâtir un mécanisme, `git branch -a` et
+`git log --oneline main..<branche>` sur ce qui traîne : une branche non fusionnée
+est une réponse possible à la question qu'on s'apprête à reposer. Et à
+l'inverse, en fermant un chantier : **une entrée de ROADMAP qui décrit un
+travail comme acté alors qu'il vit encore sur une branche est un mensonge à
+retardement** — c'est la même famille que le constat daté consigné dans
+`CLAUDE.md`, où un paragraphe vrai à l'écriture devient faux sans prévenir.
+
+Fusionné le 2026-08-26 sur instruction d'Adrien (« Fusionne à sa place »), après
+avoir vérifié que le worktree était inerte — aucun fichier suivi modifié,
+dernier commit huit heures plus tôt — et qu'aucune des cinq sessions actives ne
+l'avait repris.
 
 ### Retirer un paramètre ne se vérifie pas en cherchant son nom (2026-08-26)
 
@@ -4063,6 +4093,33 @@ seulement posé l'image. C'est ce qui lui a permis de trouver un défaut que
 personne n'aurait su formuler d'avance.
 
 ### Un `.godot` périmé fait échouer les bancs à deux instances, et l'erreur ment (2026-08-24)
+
+> **Ajout du 2026-08-25, sans toucher au texte ci-dessous. Le geste écrit plus
+> bas — « lancer `--import` avant les suites » — est nécessaire et PAS suffisant :
+> le silence de `--import` n'est pas neutre, il ressemble à un succès.**
+>
+> Deux exemplaires le même jour, deux façons de se faire avoir, une seule cause :
+>
+> - **lancé en tâche de fond**, en parallèle de la première ouverture du projet.
+>   Sortie propre, zéro problème annoncé — et le lot suivant échoue sur une police
+>   non importée puis sur une erreur d'analyse du plugin EOS, la cascade décrite
+>   plus bas. *(session « affichage »)*
+> - **lancé plusieurs fois avec sa sortie coupée** (`> /dev/null 2>&1`). Il
+>   annonçait donc zéro problème à chaque fois, et on le croyait. *(session
+>   « DA3 Audio »)*
+>
+> Dans les deux cas, relancé **en avant-plan et attendu**, tout passe.
+>
+> **Ce que ça a failli coûter, et c'est le vrai enseignement : les deux fois, le
+> piège s'est déguisé en défaut d'autrui.** L'une a cru que son propre changement
+> de port cassait le salon ; l'autre a failli conclure que la suite d'une autre
+> session était cassée — et **bloquer sur ce diagnostic une poussée de 26
+> commits**. Après réimport : 16/16.
+>
+> La règle, plus étroite que « lancer l'import » : **un import dont on n'a pas
+> LU la sortie, en avant-plan, ne prouve rien.** C'est le motif du jour appliqué
+> à un outil — *`--import` avec la sortie coupée a l'air de vérifier quelque
+> chose, et ne vérifie rien.*
 
 Après une fusion qui apporte des fichiers neufs — polices, et surtout des
 scripts portant un `class_name` — le cache d'import n'est plus à jour. Godot ne

@@ -246,6 +246,60 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-25 — session « affichage » (5) : le port cesse d'être une file d'attente
+
+**Adrien m'a confié le lanceur (option A) et le seuil du F3.** Branche
+`worktree-lanceur-port`. **Fichiers touchés : `network_manager.gd`,
+`tools/run_duo.sh`, `ui.gd`, `docs/ROADMAP.md`, ce journal.**
+
+**Empiètement déclaré sur `ui.gd`** (domaine « menus ») : **une valeur**, le seuil
+du F3, sur décision d'Adrien. La session DA4, qui avait posé cette grille, me l'a
+signalé avant de s'arrêter et a explicitement refusé de le corriger elle-même
+faute de mesure — c'était le bon réflexe.
+
+**La découverte qui a changé le lot, et elle n'était dans aucune de nos
+discussions : `PORT` dans `run_duo.sh` ne pilotait que les CONTRÔLES.** `lsof`, le
+message de refus, l'alerte orphelin. **Il n'était jamais transmis à Godot**, qui
+ouvrait son salon sur `DEFAULT_PORT := 7777`, en dur. Changer la variable du
+script aurait déplacé la surveillance sans déplacer le salon — un garde qui
+regarde un port pendant que le jeu en ouvre un autre. **C'est le même motif que
+le trou `push_error` trouvé le même jour par DA2 : un garde qui a l'air de
+surveiller quelque chose, et qui surveille autre chose.** Deux occurrences dans
+la journée, sur le même fichier.
+
+**Ce qui est fait.** Le port est **dérivé du chemin de l'arbre de travail** — trois
+arbres, trois ports (28290, 33790, 39414) — dérivé **une seule fois** dans
+`run_duo.sh` puis exporté, jamais recalculé en aval. `NetworkManager.DEFAULT_PORT`
+le lit dans l'environnement et alimente `host_game()` et `join_game()`, qui
+l'acceptaient déjà : **`ui.gd` n'a pas eu à bouger pour ça.**
+
+**Les trois conditions posées par DA2 sont tenues, et la troisième était la plus
+importante :**
+
+1. **dériver une fois et transmettre** — sinon hôte et client, lancés depuis deux
+   dossiers, ouvriraient deux ports et ne se verraient jamais, avec un « aucun
+   adversaire n'a rejoint » qui n'apprend rien ;
+2. **plage 20000-39999**, à l'écart des ports éphémères de macOS (49152+) ;
+3. **honoré en DÉBOGAGE SEULEMENT.** Un `CANDELA_PORT` oublié dans
+   l'environnement d'un joueur ferait échouer sa partie LAN sans rien dire. Le
+   dépôt a le précédent exact avec `--eos-ephemeral`.
+
+**Vérifié plutôt que supposé** : `hôte prêt : CODE: 33790` — le jeu ouvre bien son
+salon sur le port dérivé, hôte et client se voient. Et j'ai pu lancer mon lot
+**sans attendre que l'arbre principal se libère**, ce qui est tout le gain.
+
+**Piège rencontré en chemin, et il mérite d'être dit parce que je le connaissais :**
+mon premier essai a échoué sur une police non importée et une erreur d'analyse
+dans le plugin EOS. J'avais lancé `--import` en tâche de fond juste après avoir
+créé le worktree, et il s'était terminé en annonçant zéro problème — **le cache
+était incomplet quand même**. Relancé en avant-plan, tout passe. *Un import lancé
+en parallèle de la première ouverture du projet ne suffit pas ; le lot suivant
+paie l'illusion.*
+
+**Ce que je n'ai pas fait :** rien dans `run_suites.sh` (DA2 venait d'y livrer sa
+garde `push_error`, on a séquencé), et rien de R6 — l'obstacle `_poser_sprite()`
+est chez DA2, Adrien a validé la densité ×2 et elle lui remonte le coût.
+
 ### ✅ PARTIELLEMENT SERVIE — brancher le brouillage de l'éblouissement (2026-08-25)
 
 **Points 1, 2 et le voile : branchés le 2026-08-25 (commit ci-dessous).** Le
