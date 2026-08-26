@@ -7969,10 +7969,36 @@ un fait de jeu, pas à un rythme d'interface.
   Reste ouvert, et c'est un choix d'Adrien, pas un manque technique : une
   variation de membres peinte par-dessus ce roulis. Elle demanderait quatre
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
-  ce que trois tentatives n'ont pas obtenu. Les seize PNG `*_marche_*.png` qui
-  traînent dans `assets/sprites/` sont ceux de la mauvaise caméra : ils ne sont
-  suivis par git ni chargés par quoi que ce soit, mais ils portent un nom
-  crédible — **ne pas les câbler.**
+  ce que trois tentatives n'ont pas obtenu.
+
+  **Les PNG `*_marche_*.png` d'`assets/sprites/` sont VERSIONNÉS depuis le
+  2026-08-27 (décision d'Adrien) et restent ceux de la mauvaise caméra.** Les
+  deux moitiés de cette phrase comptent, et la seconde plus que la première :
+  ils sont au dépôt pour ne plus pouvoir disparaître d'un disque, **pas parce
+  qu'ils sont bons**. Trois faits mesurés avant de les verser, qui disent
+  lesquels ils sont :
+
+  - **vue oblique de trois-quarts**, jambes visibles, là où le sprite statique
+    est une vue de dessus stricte — on voit le dessus du crâne sur l'un, le dos
+    sur l'autre ;
+  - **bavures magenta et flou de mouvement** cuits dans l'image, visibles à
+    l'œil nu sur les quatre poses du fusil ;
+  - **la mauvaise échelle**, et c'est le fait le plus dur : `fusil.png` fait
+    82×82, `fusil_marche_1.png` fait 48×48. Les câbler rétrécirait le joueur de
+    41 % — `test_sprites` bâtit l'empreinte en monde depuis `texture.get_width()`,
+    et rougirait, ce qui est la bonne nouvelle de l'affaire.
+
+  **Ne pas les câbler.** Ils portent un nom crédible et suivent exactement la
+  convention que `player.gd` attend (`<arme>_marche_<n>.png` et son
+  `_silhouette`) : c'est précisément ce qui les rend dangereux. Une entrée de
+  dette datée vaut mieux qu'un fichier orphelin sur un disque — mais un fichier
+  versionné se lit comme un fichier approuvé, et cette entrée est le seul endroit
+  qui dit le contraire.
+
+  Ils sont **trente-deux** et non seize : cette entrée a longtemps écrit
+  « seize », en ne comptant que les peints et en oubliant les silhouettes.
+  Quatre armes × quatre poses × deux versions. Encore un effectif écrit à la
+  main, dans un document qui en a corrigé quatre autres le même jour.
 
   **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
