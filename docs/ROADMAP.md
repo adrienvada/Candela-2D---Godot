@@ -7810,7 +7810,12 @@ un fait de jeu, pas à un rythme d'interface.
   « sombres et contrastés », donnée à cause du fondu additif des murs,
   contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
   rien n'a été regénéré. *(C, avec DA2.8)*
-- **DA2.10 Le key art du titre** 🟡 **ASSET PRÊT, PAS POSÉ le 2026-08-25** —
+- **DA2.10 Le key art du titre** ✅ **livrée le 2026-08-25** — ⚠️ **cet
+  en-tête a annoncé « asset prêt, pas posé » jusqu'au 2026-08-26**, alors que
+  le corps de cette même entrée disait « ✅ POSÉE » quinze lignes plus bas, et
+  que `_poser_le_key_art()` était appelée dans `ui.gd`. Un en-tête se lit, un
+  corps se parcourt : c'est l'en-tête qui a fait foi pour trois relectures.
+  **Corriger l'état d'un item sans corriger son titre ne corrige rien.**
   ⚠️ **DEUX planches cuites, pas trois.** Cette entrée a annoncé trois planches
   « retouchées et ramenées sur la charte » ; `assets/keyart/` n'en a jamais
   contenu que deux, et git n'en a jamais connu d'autres. La troisième source,
