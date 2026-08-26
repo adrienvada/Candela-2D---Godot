@@ -37,8 +37,34 @@ ATTENTE_HOTE=60
 # pour toujours, et c'est le lanceur entier qui devient inutilisable.
 PLAFOND=180
 
-# Le port du salon ENet. Un seul lot peut l'occuper à la fois sur cette machine.
-PORT=7777
+# Le port du salon ENet, **DÉRIVÉ DE L'ARBRE DE TRAVAIL**.
+#
+# Un port fixe pour six sessions qui partagent la machine, c'est une file
+# d'attente que personne n'a demandée : le refus ci-dessous protège du faux
+# diagnostic, mais il ne rend pas la mesure possible pour autant. Deux worktrees
+# doivent pouvoir mesurer EN MÊME TEMPS.
+#
+# La journée du 2026-08-25 a tranché la forme : quatre diagnostics faux à trois
+# sessions, et la conclusion unanime que **l'outil qui évite bat la discipline
+# qui se souvient**. Un `CANDELA_PORT` qu'il faudrait penser à exporter aurait
+# été de la discipline ; le dériver n'en demande aucune.
+#
+# **Dérivé ICI et exporté, jamais recalculé en aval** — c'est la condition posée
+# par DA2, et elle évite une panne muette : si l'hôte et le client dérivaient
+# chacun de leur propre chemin, deux processus lancés depuis des dossiers
+# différents ouvriraient deux ports et ne se verraient jamais. L'échec dirait
+# « aucun adversaire n'a rejoint », c'est-à-dire rien.
+#
+# **Plage 20000-39999**, à l'écart des ports éphémères de macOS (49152+) : un
+# hash qui y tomberait entrerait en conflit avec ce que l'OS vient d'attribuer,
+# de façon intermittente et irreproductible — le pire mode de panne pour un banc.
+if [ -n "${CANDELA_PORT:-}" ]; then
+  PORT="$CANDELA_PORT"
+else
+  PORT=$(( 20000 + $(pwd -P | cksum | cut -d' ' -f1) % 20000 ))
+fi
+# Godot le lit dans `NetworkManager.DEFAULT_PORT`, en debug seulement.
+export CANDELA_PORT="$PORT"
 
 ## Qui tient le port, s'il est tenu ? Rend les PID, une par ligne.
 tenants_du_port() {
@@ -151,7 +177,7 @@ else
   TITRE="Match en ligne à deux instances (ENet, 127.0.0.1)"
 fi
 
-echo "── $TITRE ──"
+echo "── $TITRE ──  (port $PORT)"
 
 # **Code 3 et non 1, et c'est tout l'objet de ce garde-fou.** « Je n'ai pas pu
 # m'exécuter » n'est pas « le jeu est cassé ». Confondre les deux est la faute
@@ -159,7 +185,18 @@ echo "── $TITRE ──"
 # gonflé par de la contention envoie chercher une panne réseau qui n'existe pas.
 verifier_port_libre || exit 3
 
-"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet >"$HOTE_LOG" 2>&1 &
+# ⚠️ **`--no-eos` : ces scenarios tournent en ENet, EOS n'y sert a rien.**
+#
+# Sans lui, chaque instance ouvre une session Epic — un aller-retour reseau
+# reel, douze fois par lot complet. Mesure le 2026-08-26 : 17 s le scenario
+# avec, 15 s sans, soit ~12 s sur le lot.
+#
+# Le gain de temps n'est pas le meilleur argument. Le vrai est qu'un lot LOCAL
+# ne doit pas dependre d'internet ni de la disponibilite d'Epic : un banc qui
+# rougit parce qu'Epic est lent est un FAUX ROUGE, et un faux rouge se fait
+# debrancher. Le drapeau existait deja dans network_manager.gd, personne ne
+# s'en servait.
+"$GODOT" --headless --path . "$BANC" -- $MODE_HOTE --transport enet --no-eos >"$HOTE_LOG" 2>&1 &
 hote_pid=$!
 
 # Attendre une CONDITION, pas une durée : l'hôte annonce son salon par « CODE: ».
@@ -184,7 +221,7 @@ if ! grep -q '^CODE:' "$HOTE_LOG"; then
 fi
 echo "hôte prêt : $(grep -m1 '^CODE:' "$HOTE_LOG")"
 
-"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet \
+"$GODOT" --headless --path . "$BANC" -- $MODE_CLIENT 127.0.0.1 --transport enet --no-eos \
   >"$CLIENT_LOG" 2>&1 &
 client_pid=$!
 
@@ -199,7 +236,7 @@ if [ "${1:-}" = "--reconnexion" ]; then
   # tous les lots suivants. Avec `exec`, le sous-shell est REMPLACÉ par Godot :
   # `$!` désigne le processus qu'on croit tuer.
   ( sleep 18
-    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet \
+    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet --no-eos \
       >"$TMP/client2.log" 2>&1 ) &
   client2_pid=$!
 fi

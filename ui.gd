@@ -1111,10 +1111,25 @@ func _update_debug(_delta: float) -> void:
 	# et 120 ms sont exactement les paliers que `_update_ping_label()` emploie déjà
 	# pour le HUD. Un panneau de diagnostic qui aurait ses propres seuils dirait
 	# « ça va » pendant que le HUD dit « attention ».
+	# **Vert à 60, ambre à 30** — décision d'Adrien le 2026-08-25.
+	#
+	# Ce seuil était à 120, en citant la cible du banc. La citation était le bon
+	# réflexe ; **c'est la cible qui était fausse**. Mesurée fenêtre au premier
+	# plan, focus stable, la cadence réelle du duel donne un 1 % bas de 61 — la
+	# barre du banc est passée à 60 le même jour (chantier R, étape R5), et un
+	# F3 resté à 120 aurait affiché de l'ambre en permanence sur une machine qui
+	# va très bien.
+	#
+	# La nuance qui a décidé du second seuil, relevée par la session DA4 qui a
+	# posé cette grille : **le F3 affiche la cadence INSTANTANÉE, le banc mesure
+	# le 1 % bas.** Les deux ne se lisent pas au même endroit de la distribution,
+	# donc les copier l'un sur l'autre serait une facilité. 30 dit « dégradé »,
+	# en dessous dit « cassé » — la bande ambre garde ainsi un sens propre au
+	# lieu de se coller au rouge.
 	var fps: int = Engine.get_frames_per_second()
 	fps_label.text = str(fps)
 	fps_label.add_theme_color_override("font_color",
-		_teinte_de_mesure(float(fps), 120.0, 60.0))
+		_teinte_de_mesure(float(fps), 60.0, 30.0))
 
 	if NetworkManager.has_rtt:
 		var rtt: float = round(NetworkManager.rtt_ms)
@@ -4754,7 +4769,6 @@ func _on_map_chosen(_map_id: String) -> void:
 const BINDABLE := [
 	["Tirer", "shoot", "Le tir. Un flash qui révèle votre position à tout le monde."],
 	["Torche", "torch", "L'allumage de la torche : elle montre, et elle trahit."],
-	["Courir", "sprint", "Le sprint. Rapide, bruyant, et la torche décroche."],
 ]
 
 ## Les trois actions et leurs deux colonnes de joueurs, d'un seul bloc.

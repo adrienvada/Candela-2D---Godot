@@ -419,7 +419,12 @@ func _audit_personnalisation() -> void:
 	# règlent au curseur et l'audio au bouton ; exiger des boutons partout aurait
 	# fait passer une rubrique entière pour vide alors qu'elle est complète.
 	var attendus := {
-		"CONTRÔLES": 6,  # trois actions × deux joueurs
+		# **4 et non 6 depuis le 2026-08-26** : le sprint supprimé, « Courir »
+		# quitte la grille de touches. Ce seuil comptait les actions RÉELLES ;
+		# le baisser n'affaiblit pas le contrôle, il le remet en phase avec ce
+		# que la rubrique doit montrer. Le laisser à 6 aurait rendu ce lot rouge
+		# en permanence, et un rouge permanent se fait débrancher.
+		"CONTRÔLES": 4,  # deux actions × deux joueurs
 		"AFFICHAGE": 9,  # 3 résolutions + 2 vsync + 5 cadences, au moins
 		"EFFETS": 4,
 		"AUDIO": 4,

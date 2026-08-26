@@ -888,7 +888,6 @@ func _run_host_pause() -> void:
 	# reçoit des entrées neutres, pas l'absence d'entrées.
 	_check("l'adversaire en pause ne se déplace plus",
 		_main.p2.velocity.length() < 1.0, str(_main.p2.velocity))
-	_check("et ne sprinte pas non plus", not _main.p2.is_sprinting)
 	# **L'hôte part en DERNIER.** Sortir maintenant couperait le lien pendant que
 	# le client mesure encore, et son « la manche tourne toujours » tomberait —
 	# non parce que la pause gèle quoi que ce soit, mais parce que l'hôte a
@@ -964,8 +963,8 @@ func _run_host_coupure() -> void:
 		not _main.p1_ready_for_rematch and not _main.p2_ready_for_rematch
 		and not _main.local_ready_for_rematch)
 	_check("la série de session tombe avec lui", _main.serie_longueur == 0)
-	_check("le joueur 2 cesse de courir sur sa dernière commande",
-		_main.p2.velocity == Vector2.ZERO and not _main.p2.is_sprinting)
+	_check("le joueur 2 cesse de bouger sur sa dernière commande",
+		_main.p2.velocity == Vector2.ZERO)
 	# Sa torche aussi : une lumière orpheline resterait allumée dans l'arène.
 	_check("sa torche est éteinte", not _main.p2.flashlight_on)
 	_quit(0)
@@ -1049,7 +1048,7 @@ func _verify_round() -> void:
 	var start_p2: Vector2 = _main.p2.global_position
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		var stub := NetworkInputProvider.new()
-		stub.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false, false)
+		stub.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false)
 		_main._set_player_input_provider(_main.p2, stub, 0)
 		print("DEPLACEMENT: le client pousse une commande vers la droite")
 

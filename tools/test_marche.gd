@@ -22,12 +22,16 @@ extends SceneTree
 ##
 ## ## 2. Le roulis se dérive du compteur de PAS, pas d'une horloge
 ##
-## ⚠️ Le détecteur de pas compte une **distance** — 45 px, 60 en sprint — et non
+## ⚠️ Le détecteur de pas compte une **distance** — 45 px — et non
 ## un temps. Le son du pas, l'empreinte au sol et la bosse de rétrodiffusion
 ## tombent déjà ensemble sur ce compteur. Une démarche cadencée par le temps
-## dériverait de tout ça dès qu'on change d'allure, et le sprint la ferait
-## mentir en permanence. C'est aussi la raison pour laquelle quatre images fixes
-## ne pouvaient pas convenir : rien à quoi les accrocher.
+## dériverait de tout ça dès qu'on change d'allure. C'est aussi la raison pour
+## laquelle quatre images fixes ne pouvaient pas convenir : rien à quoi les
+## accrocher.
+##
+## *(Le sprint a été supprimé le 2026-08-26 ; il n'y a donc plus qu'une allure.
+## Le contrôle qui exigeait que le roulis en tienne compte est retiré, mais
+## l'ancrage sur la DISTANCE reste ce qui rend la démarche juste.)*
 ##
 ## ## Pourquoi lire le TEXTE
 ##
@@ -84,7 +88,6 @@ func _init() -> void:
 	# ⚠️ **L'ancrage.** Sans le compteur de pas, la démarche dérive du son.
 	_vrai("le roulis se dérive du compteur de pas",
 		corps.contains("step_distance_accumulated"))
-	_vrai("le roulis tient compte du sprint", corps.contains("is_sprinting"))
 	_vrai("le roulis alterne les pieds", corps.contains("_foot_side"))
 
 	# ⚠️ **L'appel, pas la déclaration** — piège consigné le 2026-08-25 : un
