@@ -33,6 +33,20 @@ var _rows: Array[Dictionary] = []
 func screen_title() -> String:
 	return "Historique"
 
+## L'historique prend toute la largeur, et c'est le seul panneau qui la demande.
+##
+## Six colonnes — date, verdict, durée, mode, adversaire, arme. Ce n'est pas de
+## la prose : personne ne lit une ligne de tableau de gauche à droite, on y
+## descend une colonne. La mesure de lecture, qui existe pour empêcher l'œil de
+## perdre le début de la ligne suivante, n'a donc rien à y protéger — elle ne
+## ferait que serrer six colonnes dans la moitié du cadre.
+##
+## C'est aussi ce qui a justifié le déménagement de cet écran dans le cadre de
+## droite (DA4.18) : il vivait dans une colonne de 430 px, et le cadre est le
+## seul endroit où ce contenu tient.
+func pleine_largeur() -> bool:
+	return true
+
 func build(body: VBoxContainer) -> void:
 	body.add_theme_constant_override("separation", MenuTheme.GAP_S)
 

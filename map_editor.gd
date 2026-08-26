@@ -784,10 +784,14 @@ func _spawn_tile_pop(cell: Vector2i, colour: Color) -> void:
 
 	var tween := quad.create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(quad, "scale", Vector2.ONE, Charte.D_LONG) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(quad, "modulate:a", 0.0, Charte.D_LONG) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	# DA4.13 — le déclic de l'éditeur est le même que celui d'une tuile de
+	# galerie ou du décompte. Les départs se lisent sur le `quad` plutôt que
+	# d'être recopiés : `Charte.animer()` fige la valeur à l'appel, donc juste
+	# après les deux lignes qui viennent de la poser.
+	Charte.animer(tween, quad, "scale", quad.scale, Vector2.ONE,
+		Charte.D_LONG, Charte.Courbe.REBOND)
+	Charte.animer(tween, quad, "modulate:a", quad.modulate.a, 0.0,
+		Charte.D_LONG, Charte.Courbe.SORTIE)
 	tween.chain().tween_callback(quad.queue_free)
 
 # ---------------------------------------------------------------------------

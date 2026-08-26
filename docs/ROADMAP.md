@@ -8240,15 +8240,23 @@ d'enseigne posée sur le chrono → `tremble : 9.0 px d'écart` ; fonte d'interf
 posée sur le décompte → `rend « VICTOIRE » exactement comme la fonte d'interface
 (598.0 px) : elle n'est pas habillée`.
 
-##### Ce qui est livré, et ce qui ne l'est pas
+##### Ce qui était livré au soir du 2026-08-24 — instantané périmé, gardé comme trace
 
-Livrés : **DA4.2** et **DA4.9**, plus l'entrée de la fonte d'enseigne dans
-l'interface (le socle typographique dont DA4.7 dépendait).
+> ⚠️ **Ce paragraphe décrivait un état, pas une propriété, et il a vieilli en
+> deux jours.** Il est conservé parce qu'il date une séance, mais **il ne dit
+> plus l'état du chantier** : au 2026-08-26, quatorze des dix-neuf items sont
+> livrés. **La liste qui fait foi est celle des items eux-mêmes, plus bas** — un
+> item porte sa propre date de livraison, un récapitulatif ne porte que celle du
+> jour où on l'a écrit. Ne jamais relire un décompte global sans regarder à quand
+> il remonte.
 
-**Non commencés, et ils sont nombreux :** DA4.1 (9-slice), DA4.3 (le contour
-dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
-DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
-tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
+Livrés *ce soir-là* : **DA4.2** et **DA4.9**, plus l'entrée de la fonte
+d'enseigne dans l'interface (le socle typographique dont DA4.7 dépendait).
+
+Non commencés *ce soir-là* : DA4.1, DA4.3, DA4.4 à DA4.8, DA4.10 à DA4.17.
+`ui.gd` n'avait été libéré qu'en fin de séance ; tout ce qui demandait des
+textures dessinées attendait en outre le procédé DA1.5 — **tranché depuis**
+(Gemini, voir DA4.18).
 
 #### DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
 
@@ -8256,8 +8264,10 @@ tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
 l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montrait
 rien la plupart du temps.
 
-**🟡 Premier lot livré le 2026-08-25 — les promesses sont tenues, le lit
-d'ambiance reste à faire.**
+**✅ Fermée le 2026-08-26, en deux lots.** Premier lot le 2026-08-25 : les
+promesses des libellés sont tenues, le contenu descend d'un étage. Second lot le
+2026-08-26 : **le cadre porte une illustration au survol de chaque entrée**, et
+un audit exécuté prouve qu'aucune ne le laisse noir.
 
 - ✅ **`MON RANG` et `TOP 10` affichent enfin.** Elles passent par un verbe qui
   dit où va le texte, `MenuHub.montrer_texte()`, au lieu de `show_detail()` qui
@@ -8316,11 +8326,50 @@ la largeur du cadre**. Il était jusqu'ici derrière une navigation, dans une
 colonne de gauche large de 430 px. Ce n'est plus un rangement plus logique, c'est
 le seul endroit où ce contenu tient.
 
-**Ce qui reste faible, et c'est de la composition, pas du branchement :** les
-trois panneaux se collent en haut d'un cadre qui fait plus de mille pixels de
-haut, et le profil centre ses lignes sur toute la largeur — une phrase
-d'explication court sur 900 px, ce qui se lit mal. C'est le travail de DA4.7
-(hiérarchiser au lieu d'empiler), et ça vient après le lit d'ambiance.
+**Ce qui restait faible, et c'était de la composition, pas du branchement :** le
+profil centrait ses lignes sur toute la largeur — une phrase d'explication
+courant sur des centaines de pixels, ce qui se lit mal.
+
+##### ✅ La colonne de lecture, posée le 2026-08-26
+
+**Le cadre fait 1 290 px de large**, mesuré au banc — et non 900 comme
+l'estimait le paragraphe ci-dessus. Une colonne de texte y est maintenant
+plafonnée à `Charte.MESURE` **signes**, centrée.
+
+**66 signes** : le milieu de la fourchette que la typographie tient depuis le
+plomb (55 à 75). En deçà l'œil saute de ligne trop souvent ; au delà il retrouve
+mal le début de la suivante, parce que le retour chariot devient un saut à
+l'aveugle.
+
+⚠️ **En signes, jamais en pixels** — et `mesure_px()` relève la chasse sur la
+**fonte réelle** au lieu d'appliquer un facteur en dur. Une largeur en pixels
+est juste pour une taille de fonte et fausse pour les cinq autres : c'est la
+sixième occurrence du motif *une valeur absolue là où il fallait un rapport*, et
+la première où on l'a vue venir avant de la commettre.
+
+⚠️ **C'est un plafond d'ÉTIREMENT, pas un corset.** La colonne est posée en
+taille minimale : un enfant qui exige davantage l'élargit. C'est ce qui permet
+de l'appliquer à tous les panneaux d'un coup sans vérifier chacun — le seul cas
+à trancher est celui qui veut vraiment les bords, et il le dit lui-même par
+`HubScreen.pleine_largeur()`. Un écran décrit ce qu'il est ; il ne sait toujours
+pas où il est, exactement comme pour `screen_title()` et `focus_seed()`.
+
+**Un seul écran le demande** : l'historique. Six colonnes — date, verdict, durée,
+mode, adversaire, arme. Ce n'est pas de la prose : personne ne lit une ligne de
+tableau de gauche à droite, on y descend une colonne. La mesure n'y protège
+rien et ne ferait que serrer six colonnes dans la moitié du cadre.
+
+⚠️ **Et le banc de ce correctif a été décoratif — quatrième fois du chantier.**
+Il demandait à l'écran `pleine_largeur()`, puis vérifiait que la largeur rendue
+correspondait à cette réponse. **Mettre le défaut du contrat à `true` le laissait
+entièrement vert** : les quatre panneaux s'étalaient, et l'attendu s'étalait avec
+eux. Vérifié en le sabotant — quatre ✓ franchement faux.
+
+**Un banc dont l'oracle sort du code testé ne teste rien : il paraphrase.** La
+table des largeurs attendues est maintenant écrite **dans le banc**, et c'est
+elle qui porte la décision de DA4.18. Un écran qui change de camp doit faire
+rougir ce fichier ; c'est le but, pas une gêne. Sous sabotage, le banc dit
+désormais `1290 px sur 1290 (plafond visé 518)`.
 
 ⚠️ **Observation hors périmètre, signalée à Adrien : l'historique local est
 pollué par les bancs.** La planche affiche « ce soir : 200 matchs · 98V 57D 0N ·
@@ -8383,13 +8432,115 @@ réglages le font déjà ; les quatre écrans de méta ne le font pas. Rien ne
 justifie la différence — `HubScreen` interdit par contrat à un écran de connaître
 sa position dans l'arborescence, **précisément pour qu'on puisse le déplacer**.
 
-##### Ce qui reste à trancher : que met-on dans ce cadre au survol ?
+##### Tranché le 2026-08-26 : une illustration par entrée, générée
 
-Vider le défaut ne suffit pas — il faut **quelque chose qui donne envie**.
-Demande d'Adrien : « peut-être un screenshot du jeu ? du mode actuel ? Faut que
-ce soit sexy. » Propositions faites le 2026-08-24, **arbitrage en attente**, voir
-le chat de la session DA4. À vérifier une fois posé : les quatre écrans de méta
-et le parcours `1v1 compétitif` en entier.
+**Arbitrage d'Adrien** — DA1.5 est décidé, ce sera Gemini ; et la règle est
+« une image par bouton sélectionné », pour *toute* entrée survolée, parce que le
+cadre doit « donner envie et plonger dans l'univers ». Dix illustrations vivent
+donc dans `assets/ui/ill_*.png`, enregistrées en panneaux par une boucle sur la
+table `ILLUSTRATIONS` de `ui.gd`.
+
+**Le lit d'ambiance a été construit, corrigé trois fois, puis écarté sur
+jugement** — « je n'aime pas l'écran sur le menu principal, on annule cette
+idée ». `menu_arene.gd` reste au dépôt, plus instancié. Le motif mérite d'être
+retenu : l'arène en fond répondait à la question *comment remplir le cadre ?*
+alors que la vraie question était *que veut voir quelqu'un qui hésite entre cinq
+modes ?* — et la réponse à celle-là n'est pas la carte du prochain match.
+
+**La distinction qui a émergé, et elle survit à l'arbitrage :** le menu principal
+montre des **illustrations** — on n'y choisit pas une partie, on y choisit une
+envie ; les écrans de mode montreraient des **captures** du jeu réel — on y
+prépare un match, et ce qu'on veut alors savoir c'est à quoi il ressemble
+vraiment. Elle est écrite en tête de `ui.gd`.
+
+##### Le texte descriptif déménage dans le cadre, et il répète le titre
+
+Demande d'Adrien, posée « avant toute chose » : la description de **tous** les
+boutons de **tous** les menus quittait le dessous du titre du jeu pour aller
+**dans le cadre de droite, en bas**, en reprenant le libellé du bouton
+sélectionné.
+
+Le cadre est donc à **deux étages** : `_detail_host` occupe tout le haut et
+reçoit le panneau, `_pied` est ancré en bas sous un filet. Ce n'est pas un
+rangement — c'est ce qui permet à une illustration de remplir le cadre **sans
+chasser l'explication**, les deux ayant chacun leur territoire au lieu de se
+disputer le même.
+
+⚠️ **Répéter le titre n'est pas une redondance.** L'œil qui vient de traverser
+l'écran vers l'image a perdu de vue ce qu'il survolait ; le titre répété est ce
+qui referme la boucle. C'est la même raison qui avait fait monter la description
+dans l'en-tête le 2026-08-18 — sauf qu'on sait maintenant que déplacer ne suffit
+pas, il faut **doubler**.
+
+##### L'audit a trouvé dix cadres noirs, et aucun n'était exotique
+
+Une fois les six premières illustrations posées, la question d'Adrien était la
+bonne : *« vérifie L'ENSEMBLE de tous les menus, et indique-moi ceux qui
+n'affichent rien à droite »*. Réponse mesurée, pas estimée : **dix entrées**,
+dont les **cinq « RETOUR »** et les **deux gestes de salon** (créer, rejoindre).
+
+Les cinq RETOUR ont été servis par **un seul changement** — un troisième
+paramètre à `add_back_entry()` — parce qu'ils passaient déjà tous par le même
+verbe. Une entrée qu'on a pris la peine de factoriser une fois se répare une
+fois ; c'est le dividende tardif d'un travail fait en son temps.
+
+⚠️ **`ill_retour` est volontairement DISCRÈTE**, et c'est une décision de
+composition, pas une économie. Elle sert cinq écrans : si elle attirait l'œil
+autant qu'une entrée de mode, elle serait ratée. Mesurée à **3,6 % de pixels
+clairs contre 27,5 % pour `ill_creer`**. Et `creer`/`rejoindre` ont été générées
+**ensemble dans une seule planche puis découpées** — la même porte vue des deux
+côtés, plutôt que deux tirages indépendants qui auraient divergé : c'est leur
+parenté qui dit au joueur, sans un mot, que ce sont deux faces du même geste.
+
+##### Trois captures étaient câblées et ne se sont jamais affichées une seule fois
+
+La table `APERCUS` posait une capture en panneau par défaut sur huit écrans de
+préparation. **Ces huit écrans ont déjà le salon posé en défaut**, et le défaut
+d'écran gagne toujours : le code était mort depuis son écriture, sans erreur et
+sans trace. Retiré.
+
+C'est la **quatrième occurrence** du motif *ce qu'on voit n'a pas de nom, donc
+rien ne le tient* — et la première où le symptôme était l'inverse de l'habituel :
+non pas un cadre vide qu'aucun banc ne voyait, mais un contenu chargé, valide, et
+que personne n'a jamais regardé.
+
+##### Deux défauts trouvés en cours de route, dont un corrigé deux fois
+
+- **Le bouton « lancer la recherche » était grisé.** Corrigé une première fois
+  sur la seule branche signalée ; le défaut est réapparu ailleurs le lendemain.
+  Cause réelle : `_refresh_lobby_block()` porte **trois retours anticipés**, et
+  l'état du lanceur était posé après eux. Il est désormais accordé **en tête**,
+  par `_accorder_l_etat_du_lanceur()`. ⚠️ **Et il a d'abord été déplacé du mauvais
+  endroit** — le code vivait dans `_refresh_player_list()`, appelée *par signal* :
+  le déplacer rendait le bouton insensible à l'arrivée d'un pair. Il est donc
+  appelé **des deux**. Corriger un défaut de rafraîchissement demande de savoir
+  *qui appelle quoi et quand*, pas seulement *où est la ligne fautive*.
+- **Le curseur de la souris disparaissait sous les menus.** Le curseur-torche
+  devait s'ajouter au curseur système, pas le remplacer. La règle est maintenant
+  dérivée à chaque appel — `_un_menu_attend_un_clic()` — au lieu d'être posée et
+  restaurée par paires.
+
+⚠️ **Mes bancs de ces deux correctifs ont été décoratifs trois fois de suite**,
+et toujours pour la même raison : ils reproduisaient l'état *au repos* plutôt que
+l'état *fautif*. Au repos le mode réseau est `LOCAL_SPLITSCREEN`, où le bouton
+doit être cliquable — le banc passait donc au vert avec la règle cassée. Un banc
+de non-régression qu'on n'a pas vu rougir **n'est pas un banc**, c'est une
+formalité ; tous ceux de cette séance ont été sabotés volontairement avant
+livraison.
+
+##### Ce que les suites tiennent désormais
+
+`tools/test_audit_menus.gd` a gagné trois contrôles qui montent une scène réelle
+au lieu de lire un dictionnaire :
+
+| Contrôle | Ce qu'il empêche de revenir |
+|---|---|
+| `_audit_le_cadre_montre_vraiment()` | un panneau alimenté mais invisible |
+| `_audit_aucun_cadre_vide()` | une entrée sans panneau **ni** texte |
+| `_audit_on_peut_lancer_une_recherche()` | un lanceur grisé quand il ne doit pas l'être |
+
+Et `tools/test_viseur.gd` ouvre pour de vrai la pause, un dialogue et une fenêtre
+de choix, au lieu de supposer l'état de l'écran.
 
 ##### Pourquoi aucune suite ne l'a vu, et c'est la partie qui doit changer
 
@@ -8480,6 +8631,74 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Le timecode était déjà réglé** par DA4.2 : il est en registre appareil, donc
   tabulaire par construction. C'est ce que « fonte mono » demandait — la propriété
   voulue est la chasse fixe, pas la famille. *(C — généré, procédé DA1.5)*
+- ✅ **DA4.4 (suite) — le bandeau FATAL débordait de l'écran. Relevé par Adrien
+  le 2026-08-26 en écran scindé, mesuré et CORRIGÉ le jour même.**
+
+  `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
+  l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
+  visibles de chaque côté du joueur** : le bandeau s'étale de −150 à **+507 px**
+  et sort du cadre à droite.
+
+  ⚠️ **Et il déborde le plus au moment précis où il apparaît.** La caméra zoome
+  jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
+  tombe alors à 171 px de monde pour un bandeau qui en fait 657.
+
+  **La cause est structurelle, pas un réglage à retoucher.** Le rect du `Label`
+  **épouse son texte** — `Control.size` est borné par la taille minimale — donc
+  centrer *dans* ce rect ne déplace rien : le texte part de `position` et grandit
+  vers la droite uniquement. L'offset `-100` avait été calibré pour le mot
+  « FATAL » seul (130 px) ; avec le nom de l'arme le texte triple, et tout part
+  du même côté.
+
+  > *Formulation corrigée par DA2 le 2026-08-26 : ce paragraphe disait « le Label
+  > n'a pas de largeur ». Il en a une, et c'est le fait d'épouser le texte qui
+  > rend le centrage inopérant. Conclusion et correctif inchangés — mais une
+  > feuille de route est relue par des gens qui n'iront pas vérifier, et un
+  > mécanisme faux y survit plus longtemps qu'un chiffre faux.*
+
+  Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
+  que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et
+  **le cartouche `300 × 150`**. Ce dernier est donc **plus étroit que son propre
+  texte pour trois armes sur quatre**, alors que le commentaire au-dessus promet
+  qu'il déborde du mot. C'est la **sixième occurrence** du motif *une valeur
+  absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
+  elle-même, en 2026-08-25, sans que rien ne la mesure.
+
+  **Correctif livré** : `Player.geometrie_du_bandeau()`, un `static func` qui rend
+  `mot`, `marge`, `plaque` et `enfle`. Aucune image à refaire.
+
+  ⚠️ **La vraie correction est que le calcul a un NOM.** Il vivait dispersé dans
+  `die()` : aucun banc ne pouvait l'atteindre sans tuer un joueur. C'est la
+  quatrième occurrence du motif du 2026-08-19 — *ce qu'on voit n'a pas de nom,
+  donc rien ne le tient* — et l'extraction vaut autant que les rapports qu'elle
+  contient.
+
+  **La marge est constante, la plaque non.** C'est ce qui distingue un cartouche
+  d'un surlignage : la même plaque autour de « FATAL » et de « FATAL — ARBALÈTE »
+  doit montrer la même **bordure**, pas la même proportion. Les deux coefficients
+  rendent exactement les 300 × 150 d'origine sur le mot seul — la correction ne
+  redessine pas ce qui avait été validé, elle le fait tenir sur le reste.
+
+  ⚠️ **Et le banc a attrapé une faute dans la correction elle-même.** Le premier
+  jet bornait l'agrandissement sur la largeur du **texte** : un libellé très long
+  ressortait à 518 px de chaque côté pour 478 disponibles, la plaque étant plus
+  large de deux marges. **C'est l'erreur d'origine — mesurer le mot alors que
+  c'est la plaque qui est dessinée — commise un cran plus loin, par celui qui
+  venait de la diagnostiquer.** Un correctif n'est pas immunisé contre le motif
+  qu'il corrige.
+
+  **Deux pièges de banc, dont un inédit, consignés dans `tools/test_bandeau_fatal.gd` :**
+
+  1. **Nommer une classe dans un banc `--script` en fait une dépendance de
+     COMPILATION.** Godot compile `player.gd` pendant qu'il compile le banc, donc
+     avant qu'aucun autoload existe — et `player.gd` nomme `NetworkManager`.
+     Différer `_init()` n'y change rien : la faute est commise à la compilation.
+     Le piège cousin déjà consigné porte sur l'ordre d'**exécution** ; celui-ci
+     porte sur l'ordre de **compilation** et se répare autrement — charger le
+     script par son chemin, à l'exécution.
+  2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
+     de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
+     confond avec « ça travaille ». *(S)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
@@ -8506,11 +8725,39 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Déplacer une donnée déplace tout ce qui la regarde**, et rien dans le
   langage ne le signale.
 
-  ⬜ **Reste : « effleuré : 13 px ».** La donnée existe (`player.gd`,
-  `last_fatal_perp`) mais elle est consommée sur place, en espace-monde, pour un
-  label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
-  `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
-  feel ». **À demander avant de le faire.** *(S)*
+  ✅ **« Effleuré : 13 px » livré le 2026-08-26**, sur autorisation d'Adrien de
+  toucher les deux fichiers de « game feel ». Le chemin
+  `player` → `game_state` → `ui` tient en **quatre lignes de logique** : un appel
+  de groupe dans `die()`, un champ et un verbe dans `game_state`, un paramètre de
+  plus à `poser_bilan()`.
+
+  **La donnée existait depuis V2.9 et mourait dans l'arène.** Elle s'affichait
+  deux secondes au-dessus d'un cadavre, puis `last_fatal_perp` retombait à `-1`.
+  Or le moment où « j'y étais presque » travaille n'est pas celui-là : c'est
+  **celui où le joueur décide de rejouer ou de partir**. Un moteur de rematch
+  affiché pendant qu'on regarde encore sa propre mort arrive trop tôt.
+
+  ⚠️ **L'ordre des deux lignes est tout le correctif.** Le report est fait
+  **avant** la remise à `-1` qui suit — cette remise est ce qui garantit qu'un
+  effleurement ne resserve pas à la manche d'après, et l'inverser donnerait « la
+  marge d'un tir d'il y a trois manches » sans qu'aucune erreur ne le dise.
+
+  ⚠️ **L'absence est le cas ORDINAIRE, pas le cas d'erreur.** V2.9 ne connaît
+  cette valeur que sur la machine qui a **simulé** la balle fatale : en ligne, le
+  vainqueur ne l'a le plus souvent pas. La colonne entière disparaît alors —
+  afficher « -1 PX », ou même un tiret poli, ferait passer un silence normal pour
+  une anomalie à chaque match. Même règle que la série, et pour la même raison.
+
+  **Trois registres, trois natures**, ce qui était le fond de l'item : le score
+  est un **compteur** (appareil, tabulaire, teinté par joueur), la série un
+  **cri** (enseigne, ambre), la marge une **mesure** — appareil, mais en lumière
+  et non en couleur de camp : elle n'appartient à personne, elle dit de combien
+  le tir a failli manquer, pas qui l'a tiré.
+
+  **Et elle n'est passée qu'à la fin du match.** L'appel d'entre-deux-manches la
+  laisse volontairement inconnue : l'arène vient d'écrire « à N px du centre »
+  au-dessus du corps, et la répéter trois secondes plus tard dirait deux fois la
+  même chose au même moment. *(S)*
 - **DA4.8 Les vignettes de la galerie encadrées** ✅ **livrée le 2026-08-25** —
   et elle a fait tomber une infraction à une décision actée.
 
@@ -8613,10 +8860,49 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   durées posées à la main (0,06 / 0,45 / 0,9 s) passent aux trois crans de
   l'échelle.
 
-  ⬜ **Reste cinq sites** — `menu_title.gd` (2), `map_editor.gd` (2),
-  `audio_manager.gd` (1), plus deux dans `ui.gd`. Aucun n'est difficile ; ils
-  demandent seulement de connaître la valeur de départ, `Charte.animer()`
-  passant par `tween_method` et non par `tween_property`.
+  ✅ **Fermée le 2026-08-26 pour tout le domaine de l'interface.** Recompté au
+  passage : le texte disait « cinq sites » et en listait sept — un décompte
+  écrit à la main dans la même phrase que la liste qui le contredit. Six ont été
+  convertis, `menu_title.gd` (2), `map_editor.gd` (2), `ui.gd` (2) ; **plus un
+  seul `set_trans` ne subsiste dans un fichier d'écran.**
+
+  ⚠️ **Une partie des sites n'avait aucun moyen de se convertir, et le constat
+  d'origine ne le disait pas.** `Charte.animer()` écrit par `set_indexed` : elle
+  exige un chemin de propriété. Les deux grandeurs de `menu_title.gd` se posent
+  par `_poser_embrasement()` et `_poser_flambee()`, qui alimentent un shader —
+  aucune propriété à nommer. Le chiffre « 7 contre 31 » se lisait comme une
+  négligence des sites d'appel ; il mesurait en partie **un trou dans le point
+  d'entrée**. `Charte.animer_via()` le comble, et le comptage redevient honnête.
+
+  ⚠️ **`ENTREE` sert une extinction, et il ne faut pas le « corriger ».** Le nom
+  des courbes dit leur emploi ordinaire, pas leur forme : `ENTREE` chute vite
+  puis s'attarde — la rémanence exacte d'une flambée. `SORTIE` tiendrait la
+  pleine lumière puis couperait net, c'est-à-dire une flambée qu'on éteint à
+  l'interrupteur. Le commentaire est posé sur place, parce qu'un lecteur qui
+  n'irait qu'au nom retomberait dans le piège.
+
+  ⚠️ **Une différence de comportement, sous un délai.** `tween_property` relève
+  la valeur de départ quand le tweener DÉMARRE ; `Charte.animer()` la fige à
+  l'appel. Sur le réveil des surfaces de M10, qui porte un délai par bloc, les
+  deux coïncident — rien ne touche la silhouette entre-temps. Ailleurs, ils
+  divergeraient sans la moindre erreur. Écrit sur place.
+
+  **La durée de 0,55 s du pouls des lanceurs passe au cran long** (0,30) : un
+  geste qui dure deux fois plus que tout le reste de l'écran ne se lit pas comme
+  la même main, et c'était le point de l'item.
+
+  ⬜ **Reste un site, et il n'est pas à moi** — `audio_manager.gd`, domaine
+  « game feel », **titulaire : la session DA3 depuis le 2026-08-26**. Il est
+  explicitement exclu par le banc, qui porte la liste : le retirer de
+  `_HORS_PERIMETRE` suffira le jour où cette session le décide. Les quatre
+  fichiers d'arène (`player.gd` 11, `bullet.gd` 7, `game_state.gd` 2) sont hors
+  périmètre pour la même raison.
+
+  **Un banc tient désormais l'écart**, dans `tools/test_charte.gd` : aucun
+  fichier d'écran n'emploie plus les courbes de Godot, et `animer_via()` fait
+  bien suivre la COURBE — contrôlé au quart du parcours, où `ENTREE` a déjà
+  dépassé la moitié de sa course là où une interpolation linéaire vaudrait 0,25.
+  Vérifié rouge avant livraison, sur les deux versants. *(S)*
 
   **Et l'item demandait autre chose que ce qu'il dit.** « Un seul motif de
   fondu » suppose que le problème est le fondu ; il est plus large — c'est
@@ -8703,6 +8989,50 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   - **Le bouton ne prend jamais la couleur du registre.** Il ne détruit rien, il
     ferme. Un « OK » rouge se lit comme une action dangereuse alors qu'il n'y a
     plus rien à décider. *(S)*
+- **DA4.19 Les icônes dessinées, et la mort du dernier emoji** ✅ **livrée le
+  2026-08-26** — *item ouvert après coup, sur demande d'Adrien : « remplace tous
+  les icônes dans les barres de menu par des vraies images ». Le travail existait
+  sans ligne pour le porter ; c'est le motif consigné en DA4.13, corrigé ici.*
+
+  **Le dépôt portait cinq emojis** — 🔫 🏹 ☄️ 💥 🔦 — dans les boutons d'arme et
+  l'indicateur de torche. Ils paraissent inoffensifs et ils étaient le marqueur
+  amateur le plus visible qui restait, pour trois raisons **cumulées** :
+
+  1. **Ils sont rendus par la fonte emoji du SYSTÈME.** Tout le travail de DA1.2
+     — deux fontes choisies, licences, axe variable — les contourne. C'étaient
+     les seuls glyphes du jeu que la charte n'atteignait pas.
+  2. **Ils arrivent en couleur pleine.** La règle 1 plafonne la saturation à
+     75 % parce que le 100 % est « la signature du personne n'a choisi » ; un
+     emoji est à 100 % par construction, et il porte en plus des teintes que la
+     charte réserve à des sens précis.
+  3. **Ils diffèrent d'une machine à l'autre.** Le même code montrait un
+     pistolet gris sur macOS, un autre sur Windows, une case vide sur un Linux
+     sans fonte emoji. **Une identité visuelle ne peut pas dépendre du système
+     d'exploitation du joueur.**
+
+  `menu_icones.gd` rend une texture pour un nom, et rien d'autre : aucune mise en
+  page, aucune couleur, aucune taille — ce sont des décisions de site d'appel.
+  La teinte est posée par l'appelant sur un **masque gris**, donc **un seul
+  fichier sert les deux joueurs**, bleu d'un côté rouge de l'autre. Discipline
+  DA1.5 : l'image fournit la matière, le code garde la couleur.
+
+  ⚠️ **Indexé sur le slug, jamais sur le nom affiché.** « Arbalète » porte un
+  accent et une majuscule ; dériver un chemin de fichier d'un libellé
+  traduisible garantit qu'un jour le renommage d'un bouton fera disparaître une
+  icône, sans erreur et sans que le lien soit visible. `weapon_data.gd` avait
+  déjà payé cette leçon.
+
+  ⚠️ **`icon_max_width`, et non une taille de contrôle.** Un `Button` ne
+  redimensionne pas son icône : sans ce réglage il l'affiche à sa taille native —
+  128 px dans un bouton haut de 40. **C'est le cousin exact du piège
+  `EXPAND_KEEP_SIZE`** payé par DA1 le 2026-08-24 : on pose une taille, elle est
+  ignorée, et l'écran affiche autre chose.
+
+  **Le libellé perd son emoji dans tous les cas**, icône cuite ou non : le garder
+  « en attendant » aurait laissé le dépôt dans l'état qu'on corrigeait. Le repli
+  est la moitié du travail — une icône absente retombe sur le texte, et
+  `manquantes()` la nomme dans le panneau F3. Câbler, taire, diagnostiquer.
+  *(C — généré, procédé DA1.5)*
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 
