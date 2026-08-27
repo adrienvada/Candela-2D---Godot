@@ -9449,8 +9449,73 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
   les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
-- **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
-  noms de touches. *(S + G)*
+- **DA4.11 Le rebinding visuel** ✅ **livrée le 2026-08-27** — un clavier dessiné
+  par le code, aux positions physiques, et deux postes plutôt qu'une grille.
+
+  **L'item disait « plutôt qu'une liste de noms de touches ». Il n'y avait pas de
+  liste de noms de touches** — il y avait une liste de noms **faux** : la
+  rubrique annonçait « R1 » pour un clic gauche et « Gâchette L2 » pour un clic
+  droit. Réparé d'abord, séparément, avant de redessiner quoi que ce soit ; le
+  détail est dans le piège consigné à part.
+
+  ### Trois propositions, une arbitrée
+
+  Adrien a tranché sur maquettes le 2026-08-27 : **B augmentée de l'idée de A.**
+  Deux colonnes, une par joueur — la structure règle le choix d'appareil sans
+  arbitrage, chacun le sien, ce que l'écran scindé permet — mais chaque clavier
+  est dessiné **aux positions d'un clavier entier**, celles de l'adversaire
+  comprises, en creux.
+
+  ⚠️ **Effacer les touches d'en face aurait rendu invisible la seule question que
+  les joueurs se posent.** Devant un clavier partagé, on ne demande pas « quelle
+  touche tire ? » — on demande *si les deux mains vont se gêner*. Seize touches
+  vivent sur ce clavier ; la rubrique en montrait quatre. Les douze autres, tout
+  le déplacement et toute la visée de J2, n'y figuraient pas.
+
+  ### La propriété centrale : positionnel au dessin, localisé au libellé
+
+  ⚠️ **Le jeu lie par `physical_keycode`, donc le dessin doit être positionnel.**
+  La touche « haut » de J1 est le `W` d'un QWERTY, qui est **physiquement le Z**
+  d'un AZERTY. Les capuchons sont donc posés aux positions physiques —
+  invariantes — et chacun demande son libellé à
+  `DisplayServer.keyboard_get_keycode_from_physical()`.
+
+  **Le même dessin montre `ZQSD` à Adrien et `WASD` à un joueur américain, sans
+  qu'une ligne ne change**, et les deux voient la vérité de leurs propres doigts.
+  Une planche générée n'aurait pu montrer qu'une disposition — c'est l'argument
+  qui a fait basculer l'item de *(S + G)* à *(S)* seul.
+
+  ### Ce qui est lu, jamais recopié
+
+  Les touches allumées viennent de l'`InputMap`. Une table écrite dans le fichier
+  de dessin serait juste le jour de son écriture et mentirait à la première
+  réassignation — **sur l'écran même qui sert à réassigner.** Le dessin se repose
+  après chaque changement, et un contrôle du banc l'exige en réassignant pour de
+  bon puis en vérifiant que la lumière a bougé.
+
+  ### Une collision est nommée
+
+  Deux joueurs sur la même touche, c'est deux joueurs qui ne peuvent pas jouer
+  ensemble. `collisions()` les rend, et le capuchon fautif passe en **ambre** —
+  la couleur de ce qui appelle. Ce n'est pas un détail d'affichage : c'est la
+  question à laquelle toute la rubrique existe pour répondre.
+
+  ### Deux pièges consignés
+
+  ⚠️ **Un banc qui imprime des erreurs apprend à les ignorer.**
+  `keyboard_get_keycode_from_physical()` n'existe pas sous le serveur headless :
+  appelée quand même, elle rend zéro **et journalise une erreur par touche**. Six
+  lignes rouges par lancement pour une situation parfaitement normale. La
+  traduction demande donc d'abord s'il y a un clavier à interroger.
+
+  ⚠️ **Un contrôle relie les deux fichiers**, et c'est le plus utile du banc : une
+  action liée à une touche que le clavier ne dessine pas ne s'allumerait nulle
+  part, et le joueur la chercherait sans qu'aucune erreur ne le dise. Vérifié
+  rouge en retirant deux touches de la disposition — il nomme `p2_shoot` et
+  `p2_torch`.
+
+  `tools/test_carte_appareil.gd`, 119 contrôles. *(S — plus de (G) : le clavier
+  est dessiné, pas généré.)*
 - **DA4.12 Les états vides illustrés** ✅ **livrée le 2026-08-25** — historique
   sans match, galerie sans carte. Une phrase seule au milieu d'un grand vide se
   lit comme **un écran qui a échoué à charger** ; la même phrase sous une image

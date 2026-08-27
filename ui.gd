@@ -4814,38 +4814,52 @@ const BINDABLE := [
 ##
 ## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
 ## P1 ne peut pas réassigner la manette de P2.
+## Toutes les actions d'un joueur, dans l'ordre où une main les rencontre.
+##
+## ⚠️ **Bien plus que les réassignables.** `BINDABLE` en compte deux ; un joueur
+## en emploie six (J1) ou dix (J2). Les douze autres — tout le déplacement, toute
+## la visée de J2 — n'apparaissaient nulle part dans les options, alors que ce
+## sont elles qui décident si deux mains tiennent sur un clavier.
+const TOUTES_ACTIONS := {
+	0: ["p1_move_up", "p1_move_left", "p1_move_down", "p1_move_right",
+		"p1_shoot", "p1_torch"],
+	1: ["p2_move_up", "p2_move_left", "p2_move_down", "p2_move_right",
+		"p2_aim_up", "p2_aim_left", "p2_aim_down", "p2_aim_right",
+		"p2_shoot", "p2_torch"],
+}
+
+## L'appareil choisi par chaque joueur dans la rubrique. Purement d'affichage :
+## les deux liaisons existent toujours, c'est la vue qui change.
+var _appareil_du_joueur := [CarteAppareil.Appareil.CLAVIER,
+	CarteAppareil.Appareil.CLAVIER]
+var _cartes: Array[CarteAppareil] = []
+
+
+## La rubrique CONTRÔLES — DA4.11, arbitrée par Adrien le 2026-08-27.
+##
+## **Deux colonnes, une par joueur, et les deux mains sur le même plan.** C'est
+## la proposition B augmentée de l'idée de A : la structure en deux postes règle
+## le choix d'appareil sans arbitrage — chacun le sien, et l'écran scindé permet
+## qu'ils diffèrent — mais chaque clavier est dessiné **aux positions d'un
+## clavier entier**, celles de l'adversaire comprises, en creux.
+##
+## ⚠️ **Effacer les touches d'en face aurait rendu invisible la seule question
+## que les joueurs se posent.** Devant un clavier partagé, on ne demande pas
+## « quelle touche tire ? » — on demande si les deux mains vont se gêner. Les
+## deux jeux de touches doivent donc apparaître sur le même plan, faute de quoi
+## la rubrique répond à côté.
 func _build_controls_panel() -> Control:
 	var block := VBoxContainer.new()
 	block.add_theme_constant_override("separation", GAP_S)
 
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", GAP_L)
-	grid.add_theme_constant_override("v_separation", GAP_XS)
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	block.add_child(grid)
+	var colonnes := HBoxContainer.new()
+	colonnes.add_theme_constant_override("separation", GAP_M)
+	colonnes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	block.add_child(colonnes)
 
-	grid.add_child(_make_grid_header("", COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
-	grid.add_child(_make_grid_header("JOUEUR 1", COLOR_P1, HORIZONTAL_ALIGNMENT_CENTER))
-	grid.add_child(_make_grid_header("JOUEUR 2", COLOR_P2, HORIZONTAL_ALIGNMENT_CENTER))
-
-	for rang in BINDABLE.size():
-		var spec: Array = BINDABLE[rang]
-		var nom := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
-			HORIZONTAL_ALIGNMENT_RIGHT)
-		nom.add_theme_font_size_override("font_size", T_COURANT)
-		nom.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		grid.add_child(nom)
-		for player in 2:
-			var btn := _make_rebind_button("p%d_%s" % [player + 1, String(spec[1])], player)
-			# La graine ne se pose que sur la PREMIÈRE ligne : elle dit où le
-			# curseur d'un joueur atterrit en entrant dans le cadre, et trois
-			# réponses valides pour une question en font une réponse au hasard.
-			if rang == 0:
-				btn.set_meta(META_NAV_SEED, player)
-			var holder := CenterContainer.new()
-			holder.add_child(btn)
-			grid.add_child(holder)
+	_cartes.clear()
+	for joueur in 2:
+		colonnes.add_child(_build_poste_du_joueur(joueur))
 
 	var hint := Label.new()
 	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
@@ -4855,7 +4869,92 @@ func _build_controls_panel() -> Control:
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
+	_rafraichir_les_cartes()
 	return block
+
+
+## Le poste d'un joueur : son titre, sa bascule d'appareil, son dessin, ses
+## réassignations.
+func _build_poste_du_joueur(joueur: int) -> Control:
+	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
+	var colonne := VBoxContainer.new()
+	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonne.add_theme_constant_override("separation", GAP_XS)
+
+	var tete := HBoxContainer.new()
+	tete.add_theme_constant_override("separation", GAP_XS)
+	colonne.add_child(tete)
+
+	var nom := _make_grid_header("JOUEUR %d" % (joueur + 1), teinte,
+		HORIZONTAL_ALIGNMENT_LEFT)
+	nom.add_theme_font_size_override("font_size", T_COURANT)
+	nom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tete.add_child(nom)
+
+	# ⚠️ **Deux boutons, pas un `OptionButton`.** Son popup est impraticable à la
+	# manette — c'est la même raison que pour les bascules d'affichage, et elle
+	# vaut ici deux fois : la rubrique sert précisément à qui tient une manette.
+	for quel in [CarteAppareil.Appareil.CLAVIER, CarteAppareil.Appareil.MANETTE]:
+		var b := _make_button("CLAVIER" if quel == CarteAppareil.Appareil.CLAVIER
+			else "MANETTE", teinte)
+		b.custom_minimum_size = Vector2(104, 30)
+		b.add_theme_font_size_override("font_size", T_MENTION)
+		b.set_meta(META_NAV_OWNER, joueur)
+		b.pressed.connect(_on_appareil_choisi.bind(joueur, quel))
+		tete.add_child(b)
+
+	var carte := CarteAppareil.new()
+	carte.custom_minimum_size = Vector2(0, 168)
+	carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonne.add_child(carte)
+	_cartes.append(carte)
+
+	# Les réassignables, sous le dessin : le libellé dit l'action, le bouton dit
+	# la touche, et le dessin dit où elle est.
+	var grille := GridContainer.new()
+	grille.columns = 2
+	grille.add_theme_constant_override("h_separation", GAP_S)
+	grille.add_theme_constant_override("v_separation", GAP_XXS)
+	colonne.add_child(grille)
+
+	for rang in BINDABLE.size():
+		var spec: Array = BINDABLE[rang]
+		var etiquette := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
+			HORIZONTAL_ALIGNMENT_RIGHT)
+		etiquette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		etiquette.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grille.add_child(etiquette)
+		var btn := _make_rebind_button("p%d_%s" % [joueur + 1, String(spec[1])],
+			joueur)
+		# La graine ne se pose que sur la PREMIÈRE ligne : elle dit où le
+		# curseur d'un joueur atterrit en entrant dans le cadre, et deux
+		# réponses valides pour une question en font une réponse au hasard.
+		if rang == 0:
+			btn.set_meta(META_NAV_SEED, joueur)
+		grille.add_child(btn)
+
+	return colonne
+
+
+func _on_appareil_choisi(joueur: int, quel: int) -> void:
+	_appareil_du_joueur[joueur] = quel
+	_rafraichir_les_cartes()
+
+
+## Repose les deux dessins depuis l'`InputMap`.
+##
+## ⚠️ **Appelée à chaque réassignation, et c'est la moitié du travail.** Un
+## clavier dessiné une fois serait juste à l'ouverture et faux dès la première
+## touche changée — sur l'écran même qui sert à la changer.
+func _rafraichir_les_cartes() -> void:
+	var reassignables := PackedStringArray()
+	for joueur in 2:
+		for spec: Array in BINDABLE:
+			reassignables.append("p%d_%s" % [joueur + 1, String(spec[1])])
+	for i in _cartes.size():
+		if is_instance_valid(_cartes[i]):
+			_cartes[i].poser(i, _appareil_du_joueur[i], TOUTES_ACTIONS,
+				reassignables)
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE
@@ -5354,6 +5453,10 @@ func _handle_rebind_input(event: InputEvent) -> void:
 	_apply_btn_info(_button_to_update, display_info)
 	_button_to_update.remove_theme_color_override("font_color")
 	_is_rebinding = false
+	# DA4.11 — **le dessin suit la réassignation.** Sans cette ligne, le clavier
+	# resterait juste à l'ouverture et faux dès la première touche changée, sur
+	# l'écran même qui sert à la changer : le pire endroit possible pour mentir.
+	_rafraichir_les_cartes()
 	get_viewport().set_input_as_handled()
 
 ## Le gel de l'arbre n'a de sens qu'en local : en ligne il figerait la

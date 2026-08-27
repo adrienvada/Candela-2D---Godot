@@ -76,7 +76,7 @@ if [ "${1:-}" = "--rapide" ]; then RAPIDE=1; fi
 DEBUT=$SECONDS
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
-SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
+SUITES=(test_carte_appareil test_map_codec test_map_geometry test_arena_build test_editor_tools
 	test_icones_editeur
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
