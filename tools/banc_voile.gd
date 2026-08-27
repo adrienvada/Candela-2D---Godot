@@ -311,6 +311,10 @@ func _ready() -> void:
 ## exactement ce qui annule les erreurs qu'on cherche. D'où 0°, 145° et −65°.
 func _planche() -> void:
 	_planche_active = true
+	# Le panneau et l'aide sont du mobilier de banc : sur une planche ils ne font
+	# que masquer un coin de ce qu'on vient regarder. Le nom du fichier porte
+	# déjà le mode et le relèvement.
+	_couche_texte.visible = false
 	var dossier := "user://planches_voile"
 	DirAccess.make_dir_recursive_absolute(dossier)
 	_orbite = false
@@ -326,12 +330,30 @@ func _planche() -> void:
 			_bouger_eblouisseur(0.0)
 			_integrer(0.0)
 			_rendre()
+			# ⚠️ **Trois images, et la troisième n'est pas de la superstition.**
+			# Le flou du brouillage lit une photocopie d'écran ; la première
+			# image après un changement de mode en porte encore la trace du mode
+			# précédent. Deux images suffisaient à poser les paramètres, pas à
+			# purger ce que le tampon gardait.
+			await RenderingServer.frame_post_draw
 			await RenderingServer.frame_post_draw
 			await RenderingServer.frame_post_draw
 			var img := get_viewport().get_texture().get_image()
 			var nom := "%s/voile-mode%d-%+04d.png" % [dossier, m, int(a)]
 			img.save_png(nom)
 			releves.append(nom)
+			# ⚠️ **On imprime la GÉOMÉTRIE avec l'image.** Une planche se juge à
+			# l'œil, et l'œil ne sait pas dire « l'éblouisseur est à 145° » : il
+			# dit « la lumière est à gauche ». Sans ces trois nombres, une erreur
+			# de repère se lit comme un choix esthétique.
+			var vers_ecran := get_viewport().get_canvas_transform()
+			print("  mode %d  demandé %+7.1f°  relèvement %+7.1f°  "
+				% [m, a, rad_to_deg((_porteur.global_position
+					- _regardeur.global_position).angle())]
+				+ "monde %s  écran %s (centre %s)" % [
+					_porteur.global_position,
+					vers_ecran * _porteur.global_position,
+					get_viewport().get_visible_rect().size * 0.5])
 	print("--- planche du voile : %d images ---" % releves.size())
 	print("  ", ProjectSettings.globalize_path(dossier))
 	for m in 4:
@@ -372,6 +394,23 @@ func _batir_monde() -> void:
 	_camera = Camera2D.new()
 	_camera.name = "Camera"
 	add_child(_camera)
+
+	# ⚠️ **LA NUIT. Sans elle, le banc ment sur la seule chose qui compte.**
+	#
+	# `arena.tscn` porte un `CanvasModulate` à `Charte.NOIR` : dans le jeu, rien
+	# n'est visible hors des lumières. Sans lui, le sol se dessine à pleine
+	# valeur partout et les torches ne font que l'éclaircir — on juge alors un
+	# voile blanc posé sur du gris, quand le jeu le pose sur du noir. Le
+	# contraste n'est pas le même, donc l'opacité jugée ne l'est pas non plus.
+	#
+	# ⚠️ **`tools/banc_brouillage.gd` n'en a PAS**, constaté le 2026-08-27 —
+	# signalé, pas corrigé : il appartient à un autre chantier, et le corriger
+	# rendrait discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à
+	# 150 px, voile à 0,3, gain à 2,0), tous rendus sur ce sol-là.
+	var nuit := CanvasModulate.new()
+	nuit.name = "Nuit"
+	nuit.color = Charte.NOIR
+	_monde.add_child(nuit)
 
 	# Le sol. Il ne sert qu'à une chose, et elle est essentielle : sans texture au
 	# sol, un faisceau qui balaie ne se VOIT pas balayer, et l'éblouissement
@@ -485,13 +524,16 @@ func _bloc(centre: Vector2, taille: Vector2) -> void:
 	_monde.add_child(occ)
 
 
+## Le sol, aux deux gris de la charte — et non à deux gris inventés ici. Sous la
+## nuit, on ne le voit que là où une lumière tombe : c'est tout son intérêt,
+## puisqu'un faisceau qui balaie ne se VOIT balayer que s'il a une matière à
+## révéler.
 func _damier() -> ImageTexture:
-	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0.16, 0.16, 0.17))
-	for x in 32:
-		for y in 32:
-			img.set_pixel(x, y, Color(0.21, 0.21, 0.22))
-			img.set_pixel(x + 32, y + 32, Color(0.21, 0.21, 0.22))
+	var img := Image.create(128, 128, false, Image.FORMAT_RGBA8)
+	for y in 128:
+		for x in 128:
+			var pair := ((x < 64) == (y < 64))
+			img.set_pixel(x, y, Charte.SOL_A if pair else Charte.SOL_A_ARETE)
 	return ImageTexture.create_from_image(img)
 
 
@@ -581,7 +623,16 @@ func _process(delta: float) -> void:
 ## l'éblouisseur à droite et en regardant — pas en attendant qu'une orbite
 ## repasse par là.
 func _bouger_eblouisseur(delta: float) -> void:
-	if _orbite:
+	# ⚠️ **`_planche_active` d'abord, et l'oubli a produit douze images
+	# identiques.** Couper l'orbite ne veut pas dire « ne bouge plus » : ça veut
+	# dire « suis la souris ». La planche posait donc son relèvement, et la
+	# ligne suivante l'écrasait aussitôt par la position du curseur — les
+	# quatre modes, aux trois angles, tous rendus au même endroit, et rien dans
+	# les images ne le disait. C'est le prix imprimé avec chaque capture depuis
+	# (relèvement demandé contre relèvement obtenu) qui l'a montré en une ligne.
+	if _planche_active:
+		pass
+	elif _orbite:
 		_angle += delta * 0.35
 	else:
 		var vers := get_global_mouse_position()

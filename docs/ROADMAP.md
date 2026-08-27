@@ -10241,6 +10241,43 @@ Le banc **ne compte aucun tir**, contrairement à `banc_brouillage`. Le voile ne
 cache pas l'adversaire — c'est une répartition actée le 2026-08-25 —, et compter
 des tirs ici mesurerait le halo en croyant mesurer le voile.
 
+### La planche de contact — `-- --planche`
+
+`godot --path . res://tools/banc_voile.tscn -- --planche` écrit douze images
+(quatre modes × trois relèvements) dans
+`user://planches_voile/`. Elle ne remplace pas le banc — trois des quatre
+candidats ne sont que du mouvement — et répond à une question préalable : **est-ce
+que ça dessine seulement quelque chose ?**
+
+**Les trois relèvements sont 0°, 145° et −65°, et ce n'est pas un hasard.** Le
+halo du chantier brouillage s'est posé cent pixels à côté de sa cible pendant une
+journée parce que son unique capture de contrôle plaçait l'émetteur pile
+au-dessus du canon — le seul point où l'erreur horizontale s'annule. Une capture
+de contrôle ne se prend pas sur un cas symétrique.
+
+⚠️ **Chaque capture imprime sa géométrie : relèvement demandé, relèvement obtenu,
+position monde, position écran.** Ce n'est pas du confort. La première planche a
+sorti douze images rendues au MÊME relèvement — couper l'orbite ne veut pas dire
+« ne bouge plus », ça veut dire « suis la souris », et la souris écrasait l'angle
+demandé à chaque image. **Rien dans les images ne le disait** ; l'œil lit « la
+lumière est à gauche », jamais « l'éblouisseur est à 145° ». Les deux colonnes
+côte à côte l'ont montré en une ligne.
+
+### ⚠️ Les deux bancs jugeaient sans la nuit
+
+`arena.tscn` porte un `CanvasModulate` à `Charte.NOIR` : dans le jeu, rien n'est
+visible hors des lumières. **`tools/banc_brouillage.gd` n'en a aucun** (constaté
+le 2026-08-27), et `banc_voile` n'en avait pas non plus à son premier jet — le
+sol s'y dessine à pleine valeur partout et les torches ne font que l'éclaircir.
+
+On juge alors un voile blanc posé sur du **gris**, quand le jeu le pose sur du
+**noir**. Le contraste n'est pas le même, donc l'opacité jugée ne l'est pas non
+plus. `banc_voile` a sa nuit depuis ; **`banc_brouillage` est signalé et non
+corrigé** — il appartient à un autre chantier, et le corriger rendrait
+discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile à
+0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
+décider si ces nombres méritent d'être rejugés dans le noir.
+
 ### État — rien n'est branché
 
 `voile_eblouissement.gdshader` n'a **aucun lecteur en production**, exactement

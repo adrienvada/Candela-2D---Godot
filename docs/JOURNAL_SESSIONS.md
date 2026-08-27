@@ -288,6 +288,20 @@ fichiers tenus par d'autres) — détail et raisonnement dans la ROADMAP :
 **Les deux viennent d'une lecture de code, pas d'un relevé.** Ils sont à
 vérifier à l'écran avant d'être traités comme des faits.
 
+**Un troisième, celui-là MESURÉ, et il s'adresse à la session « brouillage » :
+`tools/banc_brouillage.gd` n'a aucun `CanvasModulate`.** `arena.tscn` en porte un
+à `Charte.NOIR` — dans le jeu, rien n'est visible hors des lumières. Sans lui, le
+sol du banc se dessine à pleine valeur partout et les torches ne font que
+l'éclaircir : on juge des effets posés sur du **gris** alors que le jeu les pose
+sur du **noir**. `banc_voile` avait le même défaut à son premier jet ; je l'ai vu
+sur ma propre planche de contact et corrigé chez moi.
+
+**Je ne touche pas au vôtre**, et pas seulement par politesse de domaine : les
+quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile à 0,3, gain à 2,0)
+ont tous été rendus sur ce sol-là. Corriger le banc rendrait ces nombres
+discutables, et c'est à vous de décider s'ils méritent d'être rejugés dans le
+noir.
+
 ### 2026-08-25 — session « affichage » (5) : le port cesse d'être une file d'attente
 
 **Adrien m'a confié le lanceur (option A) et le seuil du F3.** Branche
