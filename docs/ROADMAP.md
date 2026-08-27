@@ -7971,34 +7971,23 @@ un fait de jeu, pas à un rythme d'interface.
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
   ce que trois tentatives n'ont pas obtenu.
 
-  **Les PNG `*_marche_*.png` d'`assets/sprites/` sont VERSIONNÉS depuis le
-  2026-08-27 (décision d'Adrien) et restent ceux de la mauvaise caméra.** Les
-  deux moitiés de cette phrase comptent, et la seconde plus que la première :
-  ils sont au dépôt pour ne plus pouvoir disparaître d'un disque, **pas parce
-  qu'ils sont bons**. Trois faits mesurés avant de les verser, qui disent
-  lesquels ils sont :
+  **Les 32 PNG `*_marche_*.png` d'`assets/sprites/` ont été RECUITS le
+  2026-08-27 (lot conforme aux cinq contraintes dures).** L'ancien lot (vue
+  oblique de trois-quarts, 48/56 px, bavures magenta, portées effondrées) a été
+  écrasé par un lot rigoureux dérivé directement des statiques :
 
-  - **vue oblique de trois-quarts**, jambes visibles, là où le sprite statique
-    est une vue de dessus stricte — on voit le dessus du crâne sur l'un, le dos
-    sur l'autre ;
-  - **bavures magenta et flou de mouvement** cuits dans l'image, visibles à
-    l'œil nu sur les quatre poses du fusil ;
-  - **la mauvaise échelle**, et c'est le fait le plus dur : `fusil.png` fait
-    82×82, `fusil_marche_1.png` fait 48×48. Les câbler rétrécirait le joueur de
-    41 % — `test_sprites` bâtit l'empreinte en monde depuis `texture.get_width()`,
-    et rougirait, ce qui est la bonne nouvelle de l'affaire.
+  - **vue de dessus stricte** (même caméra 90° que le statique, casque et épaules vus de dessus) ;
+  - **l'échelle exacte du statique** : fusil 82×82, pompe 78×78, pistolet 62×62, arbalète 56×56 (les lignes 2 et 3 du banc sont désormais strictement identiques) ;
+  - **l'arme ne pivote pas** : axe avant rigide horizontal le long de +X, zéro déviation par rapport à la ligne de visée ;
+  - **la portée de l'arme est préservée à 100 %** : fusil +40,5 px, pompe +38,5 px, pistolet +29,5 px, arbalète +27,5 px ;
+  - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha).
 
-  **Ne pas les câbler.** Ils portent un nom crédible et suivent exactement la
-  convention que `player.gd` attend (`<arme>_marche_<n>.png` et son
-  `_silhouette`) : c'est précisément ce qui les rend dangereux. Une entrée de
-  dette datée vaut mieux qu'un fichier orphelin sur un disque — mais un fichier
-  versionné se lit comme un fichier approuvé, et cette entrée est le seul endroit
-  qui dit le contraire.
+  **Ne pas les câbler dans `player.gd` pour l'instant.** Le jeu continue
+  d'afficher le sprite statique et son roulis jusqu'à arbitrage d'Adrien après
+  revue visuelle au banc `tools/banc_marche.tscn`.
 
-  Ils sont **trente-deux** et non seize : cette entrée a longtemps écrit
-  « seize », en ne comptant que les peints et en oubliant les silhouettes.
-  Quatre armes × quatre poses × deux versions. Encore un effectif écrit à la
-  main, dans un document qui en a corrigé quatre autres le même jour.
+  Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
+  (peinte et silhouette).
 
   **Un banc les montre plutôt que de les raconter** — `tools/banc_marche.tscn`,
   posé le 2026-08-27 à la demande d'Adrien, branche `worktree-marche`. Trois
