@@ -3287,13 +3287,36 @@ session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt
 elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
 rien à voir. Le retrait lui-même suit dans le commit d'après.
 
-**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
-partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
-bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
-add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
-de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
-— il est bien versionné — c'est le **lien** entre une décision et son code,
-c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
+**Le geste qui l'évite n'est PAS celui que ce paragraphe a d'abord écrit**, et
+la correction vaut plus que l'erreur. Il disait : « on met en index les CHEMINS
+qu'on a touchés, jamais le fichier commun en bloc ». C'est insuffisant, et la
+même session l'a reprouvé trois heures plus tard en emportant à son tour le
+paragraphe d'une autre — **avec un `git add docs/ROADMAP.md`, donc un chemin
+nommé, exactement ce que cette phrase prescrivait.**
+
+⚠️ **Parce que l'unité que git met en index est le FICHIER, jamais la
+modification.** Nommer le chemin ne protège de rien quand le voisin écrit dans ce
+même fichier : on emporte son texte avec le sien, sans avertissement, et le
+message de commit ment alors sur son propre contenu.
+
+Deux gestes protègent vraiment, et le second est le filet du premier :
+
+1. **Fabriquer le blob à partir de `HEAD`**, y appliquer sa seule modification,
+   et le mettre en index par plumbing (`git hash-object -w` puis `git
+   update-index --cacheinfo`). L'arbre de travail garde ce que le voisin y écrit,
+   l'index ne reçoit que le sien. C'est ce qui a été fait le même jour pour
+   `project.godot`, qui portait une réécriture de l'éditeur appartenant à une
+   autre session — **le geste était donc connu et disponible ; il n'a simplement
+   pas été appliqué au fichier partagé le plus écrit du dépôt.**
+2. **Lire `git diff --cached` AVANT de commiter**, systématiquement, et refuser
+   ce qu'on ne reconnaît pas. Trente secondes, et c'est le seul contrôle qui
+   attrape le cas qu'on n'avait pas prévu.
+
+Ce qui se perd n'est pas le travail — il est bien versionné — c'est le **lien**
+entre une décision et son code, c'est-à-dire tout ce que ce document sert à
+retrouver six mois plus tard. Et il se perd deux fois : l'auteur croit avoir
+encore à commiter ce qui est déjà parti, et le commit qui l'emporte n'en dit
+rien.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
