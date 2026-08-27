@@ -1670,9 +1670,13 @@ func _suivre_le_releve() -> void:
 
 
 func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
-		weapon: WeaponData, _fatal: bool = false):
+		weapon: WeaponData, fatal: bool = false):
 	var b = bullet_scene.instantiate()
 	b.is_replay = true
+	# DA4.6 — seul le tir fatal laisse sa traînée. Les tirs manqués gardent leur
+	# lumière et leur traçante, mais plus de pointillé : deux traits presque
+	# parallèles font croire qu'on lit le bon.
+	b.est_le_tir_fatal = fatal
 	b.global_position = pos
 	b.rotation = rot
 	b.direction = Vector2(cos(rot), sin(rot))

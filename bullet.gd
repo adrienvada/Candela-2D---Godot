@@ -6,6 +6,18 @@ const Charte := preload("res://charte.gd")
 var weapon: WeaponData
 var bounces_left: int = 0
 var is_replay: bool = false
+## Cette balle est-elle le tir fatal du rejeu ?
+##
+## ⚠️ **Seule elle laisse sa traînée pointillée en killcam.** Une killcam rejoue
+## TOUT ce qui a été tiré dans sa fenêtre : les tirs manqués laissaient chacun
+## leur trait, et l'écran montrait plusieurs lignes presque parallèles dont une
+## seule était la bonne. Relevé par Adrien à l'écran le 2026-08-27 — *« la balle
+## ne suit pas la trajectoire tracée par les pointillés »* : elle la suivait,
+## mais ce n'était pas SA trajectoire qu'on lui comparait.
+##
+## **Deux traits qui se ressemblent sont pires qu'un seul faux** : on ne se
+## demande pas lequel lire, on croit lire le bon.
+var est_le_tir_fatal: bool = false
 
 var source_player: Node2D
 var direction: Vector2 = Vector2.ZERO
@@ -213,7 +225,7 @@ func _physics_process(delta):
 const TRACE_COLOR := Color(Charte.HALOGENE, 0.35)
 
 func _draw() -> void:
-	if not is_replay:
+	if not is_replay or not est_le_tir_fatal:
 		return
 	var back := global_position.distance_to(spawn_pos)
 	if back < 8.0:

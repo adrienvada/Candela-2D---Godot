@@ -8896,6 +8896,31 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   l'état de départ et la distinction des trois moments ; vérifié rouge en
   remettant le booléen.
 
+  ⚠️ **Plusieurs traits presque parallèles, et un seul était le bon.** Relevé par
+  Adrien à l'écran le 2026-08-27 — *« la balle ne suit pas la trajectoire tracée
+  par les pointillés »*. Elle la suivait ; ce n'était pas **sa** trajectoire
+  qu'on lui comparait. Une killcam rejoue tout ce qui a été tiré dans sa
+  fenêtre, et chaque tir manqué laissait sa propre traînée V6.2. **Deux traits
+  qui se ressemblent sont pires qu'un seul faux** : on ne se demande pas lequel
+  lire, on croit lire le bon. Seul le tir fatal laisse désormais un pointillé ;
+  les autres gardent leur lumière et leur traçante.
+
+  ⚠️ **Deux causes d'écart RESTENT, et ne sont pas corrigées.** Le relevé va de
+  l'origine du tir au **centre de la victime**, alors que la balle suit sa
+  direction propre :
+
+  1. **Un impact hors axe.** La chute de dégâts accepte un passage jusqu'à ~18 px
+     du centre : sur un tir de 400 px, la balle finit visiblement à côté du point
+     coté — environ 2,6° d'écart angulaire.
+  2. **Un rebond.** `trajectoire_fatale()` rend un segment droit ; si le tir
+     fatal a rebondi, le relevé annonce une ligne que la balle ne peut pas
+     suivre. C'est l'écart le plus grand, et le plus trompeur puisque le relevé
+     *promet*.
+
+  Les deux demanderaient que le rejeu enregistre le **trajet** et non ses deux
+  bouts. Signalé, non corrigé : c'est un changement de ce qu'on enregistre, hors
+  du périmètre de cet item.
+
   ⚠️ **Le piège de l'immobilisation : `Engine.time_scale = 0` gèle aussi le
   compte à rebours.** Le `delta` d'un `_process` arrive déjà multiplié par
   l'échelle ; à zéro, le décompte du pré-tracé ne descend jamais et **la killcam

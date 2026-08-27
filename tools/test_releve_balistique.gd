@@ -260,7 +260,21 @@ func _test_le_releve_ne_vit_pas_dans_la_balle() -> void:
 	_check(not balle.contains("geometrie_du_releve"),
 		"bullet.gd redessine le relevé : il ne peut pas le tracer AVANT lui-même")
 	_check(balle.contains("draw_dashed_line"),
-		"bullet.gd a perdu sa traînée V6.2, qui doit rester sur toutes les balles")
+		"bullet.gd a perdu sa traînée V6.2")
+
+	# ⚠️ **Une seule balle laisse un trait.** Les tirs manqués du rejeu en
+	# laissaient chacun un, et l'écran montrait plusieurs lignes presque
+	# parallèles dont une seule était la bonne — au point qu'Adrien a cru, à
+	# raison de ce qu'il voyait, que « la balle ne suit pas la trajectoire ».
+	# Deux traits qui se ressemblent sont pires qu'un seul faux.
+	var b: Node2D = load("res://bullet.gd").new()
+	_check(not bool(b.get("est_le_tir_fatal")),
+		"une balle se croit fatale par défaut : toutes laisseraient un trait")
+	b.free()
+	var dessin := balle.split("func _draw()")
+	_check(dessin.size() == 2
+			and dessin[1].split("draw_dashed_line")[0].contains("est_le_tir_fatal"),
+		"le tracé de bullet.gd ne se réserve pas au tir fatal")
 
 	var rejeu := FileAccess.get_file_as_string("res://replay_system.gd")
 	_check(rejeu.contains("func index_du_tir_fatal"),
