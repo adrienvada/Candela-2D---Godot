@@ -2796,18 +2796,20 @@ func _build_hub_screens() -> void:
 	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_creer")
 	hub.set_screen_panel(SCREEN_RANKED, "ill_competitif")
 
-	# Fonds illustrés floutés sous les panneaux interactifs et informatifs
-	hub.set_panel_background(PANEL_SALON, "res://assets/ui/ill_amical.png")
-	hub.set_panel_background(PANEL_MAPS, "res://assets/ui/ill_amical.png")
-	hub.set_panel_background(PANEL_CONTROLS, "res://assets/ui/apercu_personnalisation.png")
-	hub.set_panel_background(PANEL_DISPLAY, "res://assets/ui/apercu_personnalisation.png")
-	hub.set_panel_background(PANEL_EFFECTS, "res://assets/ui/apercu_personnalisation.png")
-	hub.set_panel_background(PANEL_AUDIO, "res://assets/ui/apercu_personnalisation.png")
-	hub.set_panel_background(PANEL_PROFILE, "res://assets/ui/ill_competitif.png")
-	hub.set_panel_background(PANEL_HISTORY, "res://assets/ui/ill_competitif.png")
-	hub.set_panel_background(MenuHub.PANNEAU_TEXTE, "res://assets/ui/ill_competitif.png")
+	# Fonds illustrés floutés de chaque catégorie d'écran (Adrien, 2026-08-27) :
+	# Tout bouton ou panneau d'une catégorie hérite en fond flou de l'illustration de sa catégorie.
 	hub.set_screen_background(SCREEN_LOCAL, "res://assets/ui/ill_ecran_scinde.png")
+	hub.set_screen_background(SCREEN_FRIENDLY, "res://assets/ui/ill_amical.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_ONLINE, "res://assets/ui/ill_amical.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_LOCAL, "res://assets/ui/ill_amical.png")
+	hub.set_screen_background(SCREEN_HOST, "res://assets/ui/ill_creer.png")
+	hub.set_screen_background(SCREEN_JOIN, "res://assets/ui/ill_rejoindre.png")
+	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer.png")
+	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre.png")
+	hub.set_screen_background(SCREEN_RANKED, "res://assets/ui/ill_competitif.png")
 	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
+	hub.set_screen_background(SCREEN_CUSTOM, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_screen_background(SCREEN_UPDATE, "res://assets/ui/ill_mise_a_jour.png")
 
 	# Le classement vit hors de l'arborescence : il se lit dans le panneau de droite
 	# depuis l'écran compétitif.

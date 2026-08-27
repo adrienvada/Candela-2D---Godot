@@ -391,9 +391,12 @@ func _build_blur_material() -> ShaderMaterial:
 	var shader := load("res://menu_bg_blur.gdshader") as Shader
 	if shader != null:
 		mat.shader = shader
-		mat.set_shader_parameter("blur_amount", 4.0)
+		mat.set_shader_parameter("blur_amount", 5.0)
 		mat.set_shader_parameter("darken", 0.70)
-		mat.set_shader_parameter("tint", Color(0.04, 0.04, 0.06, 1.0))
+		mat.set_shader_parameter("tint", Color(0.03, 0.03, 0.05, 1.0))
+		mat.set_shader_parameter("mode_flou_total", 1.0)
+		mat.set_shader_parameter("pied_debut", 0.55)
+		mat.set_shader_parameter("pied_fin", 0.88)
 	return mat
 
 ## Le panneau par défaut d'un écran, ou une chaîne vide s'il n'en a pas.
@@ -668,19 +671,34 @@ func _apply_panel(key: String) -> void:
 func _update_background(key: String, content: Control) -> void:
 	if _bg_image == null:
 		return
-	# Si c'est un aperçu direct d'image (MenuApercu), elle se montre déjà nette en plein cadre
+	var mat := _bg_image.material as ShaderMaterial
+	
+	# Cas 1 : Aperçu direct d'illustration (MenuApercu) — affichage pleine hauteur
 	if content is MenuApercu:
-		_bg_image.hide()
+		var tex := (content as MenuApercu).texture()
+		if tex != null:
+			if mat != null:
+				mat.set_shader_parameter("mode_flou_total", 0.0)
+			_bg_image.texture = tex
+			_bg_image.show()
+		else:
+			_bg_image.hide()
 		return
-	# Sinon, récupérer le fond assigné au panneau ou à l'écran
-	var bg_res: Variant = _panel_backgrounds.get(key, null)
+	
+	# Cas 2 : Panneau interactif / texte posé sur l'illustration floutée de la catégorie
+	# Règle d'Adrien (2026-08-27) : l'illustration de fond flou hérite en priorité de la catégorie/écran courant
+	var bg_res: Variant = _screen_backgrounds.get(current_id(), null)
 	if bg_res == null or (bg_res is String and (bg_res as String) == ""):
-		bg_res = _screen_backgrounds.get(current_id(), null)
+		bg_res = _panel_backgrounds.get(key, null)
 	
 	if bg_res is Texture2D:
+		if mat != null:
+			mat.set_shader_parameter("mode_flou_total", 1.0)
 		_bg_image.texture = bg_res
 		_bg_image.show()
 	elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
+		if mat != null:
+			mat.set_shader_parameter("mode_flou_total", 1.0)
 		_bg_image.texture = load(bg_res as String)
 		_bg_image.show()
 	else:
