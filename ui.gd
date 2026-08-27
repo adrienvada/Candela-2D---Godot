@@ -4833,6 +4833,8 @@ const TOUTES_ACTIONS := {
 var _appareil_du_joueur := [CarteAppareil.Appareil.CLAVIER,
 	CarteAppareil.Appareil.CLAVIER]
 var _cartes: Array[CarteAppareil] = []
+## Les deux boutons d'appareil de chaque joueur, pour montrer lequel est actif.
+var _boutons_appareil := [[], []]
 
 
 ## La rubrique CONTRÔLES — DA4.11, arbitrée par Adrien le 2026-08-27.
@@ -4869,48 +4871,57 @@ func _build_controls_panel() -> Control:
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
+	for joueur in 2:
+		_marquer_l_appareil_actif(joueur)
 	_rafraichir_les_cartes()
 	return block
 
 
 ## Le poste d'un joueur : son titre, sa bascule d'appareil, son dessin, ses
-## réassignations.
+## réassignations. Chaque chose sur sa ligne.
+##
+## ⚠️ **Le premier jet mettait le titre et les deux bascules sur la MÊME ligne**,
+## le titre en `EXPAND_FILL` poussant les boutons au bord droit de la colonne —
+## où ils tombaient juste au-dessus du dessin du voisin. Vu à l'écran par Adrien
+## le 2026-08-27. Une ligne qui contient un titre et des commandes n'a pas de
+## bord : les commandes dérivent jusqu'à toucher ce qui n'est pas à elles.
 func _build_poste_du_joueur(joueur: int) -> Control:
 	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
 	var colonne := VBoxContainer.new()
 	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	colonne.add_theme_constant_override("separation", GAP_XS)
 
-	var tete := HBoxContainer.new()
-	tete.add_theme_constant_override("separation", GAP_XS)
-	colonne.add_child(tete)
-
 	var nom := _make_grid_header("JOUEUR %d" % (joueur + 1), teinte,
 		HORIZONTAL_ALIGNMENT_LEFT)
 	nom.add_theme_font_size_override("font_size", T_COURANT)
-	nom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tete.add_child(nom)
+	colonne.add_child(nom)
 
 	# ⚠️ **Deux boutons, pas un `OptionButton`.** Son popup est impraticable à la
 	# manette — c'est la même raison que pour les bascules d'affichage, et elle
 	# vaut ici deux fois : la rubrique sert précisément à qui tient une manette.
+	var bascule := HBoxContainer.new()
+	bascule.add_theme_constant_override("separation", GAP_XS)
+	colonne.add_child(bascule)
+
+	_boutons_appareil[joueur] = []
 	for quel in [CarteAppareil.Appareil.CLAVIER, CarteAppareil.Appareil.MANETTE]:
 		var b := _make_button("CLAVIER" if quel == CarteAppareil.Appareil.CLAVIER
 			else "MANETTE", teinte)
-		b.custom_minimum_size = Vector2(104, 30)
+		b.custom_minimum_size = Vector2(112, 32)
 		b.add_theme_font_size_override("font_size", T_MENTION)
 		b.set_meta(META_NAV_OWNER, joueur)
 		b.pressed.connect(_on_appareil_choisi.bind(joueur, quel))
-		tete.add_child(b)
+		bascule.add_child(b)
+		_boutons_appareil[joueur].append(b)
 
 	var carte := CarteAppareil.new()
-	carte.custom_minimum_size = Vector2(0, 168)
+	carte.custom_minimum_size = Vector2(0, 132)
 	carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	colonne.add_child(carte)
 	_cartes.append(carte)
 
 	# Les réassignables, sous le dessin : le libellé dit l'action, le bouton dit
-	# la touche, et le dessin dit où elle est.
+	# la touche, et le dessin dit où elle se trouve sous les doigts.
 	var grille := GridContainer.new()
 	grille.columns = 2
 	grille.add_theme_constant_override("h_separation", GAP_S)
@@ -4936,9 +4947,43 @@ func _build_poste_du_joueur(joueur: int) -> Control:
 	return colonne
 
 
+## ⚠️ **Un choix qui ne se voit pas n'est pas un choix.** Le premier jet laissait
+## les deux boutons rigoureusement identiques : rien à l'écran ne disait quel
+## appareil la colonne montrait, et la bascule paraissait sans effet — alors
+## qu'elle marchait.
 func _on_appareil_choisi(joueur: int, quel: int) -> void:
 	_appareil_du_joueur[joueur] = quel
+	_marquer_l_appareil_actif(joueur)
 	_rafraichir_les_cartes()
+
+
+func _marquer_l_appareil_actif(joueur: int) -> void:
+	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
+	var boutons: Array = _boutons_appareil[joueur]
+	for i in boutons.size():
+		var b: Button = boutons[i]
+		if not is_instance_valid(b):
+			continue
+		var actif: bool = i == _appareil_du_joueur[joueur]
+		b.add_theme_color_override("font_color",
+			teinte if actif else COLOR_DIM)
+		_style_bouton_appareil(b, teinte, actif)
+
+
+func _style_bouton_appareil(b: Button, teinte: Color, actif: bool) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(teinte.r, teinte.g, teinte.b, 0.18 if actif else 0.0)
+	normal.border_color = Color(teinte.r, teinte.g, teinte.b,
+		0.9 if actif else 0.28)
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(4)
+	normal.set_content_margin_all(6)
+	b.add_theme_stylebox_override("normal", normal)
+	var survol := normal.duplicate() as StyleBoxFlat
+	survol.bg_color = Color(teinte.r, teinte.g, teinte.b, 0.30)
+	b.add_theme_stylebox_override("hover", survol)
+	b.add_theme_stylebox_override("pressed", survol)
+	b.add_theme_stylebox_override("focus", survol)
 
 
 ## Repose les deux dessins depuis l'`InputMap`.
@@ -5291,9 +5336,15 @@ func _get_keyboard_action_info(action: String) -> Dictionary:
 	for ev in InputMap.action_get_events(action):
 		if ev is InputEventKey:
 			var touche: InputEventKey = ev
+			# ⚠️ **Une seule traduction dans le dépôt, donc un seul garde-fou.**
+			# `keyboard_get_keycode_from_physical()` n'existe pas sous le serveur
+			# headless et journalise une erreur à chaque appel : la version de
+			# DA4.11 porte la garde, celle-ci l'appelait en direct et remplissait
+			# les bancs de six lignes rouges. Deux copies d'une même conversion,
+			# c'est une seule qui reçoit les corrections.
 			var code := touche.physical_keycode
 			if code != 0:
-				code = DisplayServer.keyboard_get_keycode_from_physical(code)
+				code = CarteAppareil.dans_la_disposition(code)
 			else:
 				code = touche.keycode
 			return {"text": OS.get_keycode_string(code).to_upper(), "icon": ""}

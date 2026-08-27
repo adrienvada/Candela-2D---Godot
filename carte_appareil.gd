@@ -69,9 +69,16 @@ const TEINTES := [Charte.BLEU, Charte.ROUGE]
 var joueur: int = 0
 ## Les actions à éclairer, par joueur : `{0: PackedStringArray, 1: ...}`.
 ##
-## **Les deux joueurs, même dans la colonne d'un seul.** C'est ce qui reste de la
-## proposition A dans la B : les touches de l'adversaire s'affichent en creux, à
-## leur vraie place, pour qu'un chevauchement se voie sans changer d'écran.
+## ⚠️ **Seules celles du joueur de la colonne sont DESSINÉES.** Le premier jet
+## montrait le clavier entier avec les deux jeux de touches allumés dessus —
+## l'idée de la proposition A gardée dans la B. Vu à l'écran par Adrien le
+## 2026-08-27 : *« c'est beaucoup trop le bordel »*. Il a raison, et la raison
+## est instructive : **vingt-six capuchons dont quatre comptent, ce n'est pas
+## montrer un contexte, c'est enfouir l'information dans du décor.** Le
+## chevauchement gagné ne payait pas la lisibilité perdue.
+##
+## Les deux joueurs restent transmis — `collisions()` en a besoin, et une touche
+## partagée se signale toujours en ambre. Mais on ne dessine que la sienne.
 var actions: Dictionary = {}
 ## Les actions réassignables, marquées d'un point ambre.
 var reassignables: PackedStringArray = []
@@ -159,7 +166,7 @@ static func libelle_de(code_physique: int) -> String:
 		KEY_LEFT: return "◀"
 		KEY_RIGHT: return "▶"
 		KEY_SPACE: return "ESPACE"
-	return OS.get_keycode_string(_dans_la_disposition(code_physique))
+	return OS.get_keycode_string(dans_la_disposition(code_physique))
 
 
 ## Le code tel que la disposition du joueur l'imprime sur son capuchon.
@@ -171,7 +178,7 @@ static func libelle_de(code_physique: int) -> String:
 ## et un banc qui imprime des erreurs apprend à les ignorer, ce qui coûte le
 ## jour où l'une d'elles compte. On demande donc d'abord s'il y a un clavier à
 ## interroger.
-static func _dans_la_disposition(code_physique: int) -> int:
+static func dans_la_disposition(code_physique: int) -> int:
 	if DisplayServer.get_name() == "headless":
 		return code_physique
 	var local := DisplayServer.keyboard_get_keycode_from_physical(code_physique)
@@ -218,9 +225,115 @@ static func disposition_clavier() -> Dictionary:
 	}
 
 
+## Écart entre deux groupes de touches, une fois le clavier recadré.
+const ECART_GROUPES := 0.6
+## Au-delà de cet écart, deux touches appartiennent à deux groupes distincts.
+const SEUIL_GROUPE := 1.6
+
+
+## Les seules touches d'un joueur, recadrées et regroupées.
+##
+## ⚠️ **Recadré, pas filtré.** Garder les positions absolues laisserait un grand
+## vide là où l'adversaire jouait ; les écraser toutes à gauche détruirait la
+## forme de la main, qui est justement ce qu'on vient montrer. On conserve donc
+## la forme INTERNE de chaque groupe — `ZQSD` garde son T renversé, les flèches
+## leur croix — et on rapproche les groupes entre eux.
+##
+## Les groupes se détectent par les trous : au-delà de `SEUIL_GROUPE` unités sans
+## rien, c'est un autre endroit du clavier et donc une autre main.
+static func disposition_du_joueur(codes: Array) -> Dictionary:
+	var pleines := disposition_clavier()["touches"] as Array
+	var siennes: Array[Dictionary] = []
+	for t: Dictionary in pleines:
+		if codes.has(t["code"]):
+			siennes.append(t)
+	if siennes.is_empty():
+		return {"touches": [], "largeur": 0.0, "hauteur": 0.0}
+
+	siennes.sort_custom(func(a, b):
+		return (a["r"] as Rect2).position.x < (b["r"] as Rect2).position.x)
+
+	# Découpe en groupes sur les trous horizontaux.
+	var groupes: Array = []
+	var courant: Array[Dictionary] = [siennes[0]]
+	var bord: float = (siennes[0]["r"] as Rect2).end.x
+	for i in range(1, siennes.size()):
+		var r: Rect2 = siennes[i]["r"]
+		if r.position.x - bord > SEUIL_GROUPE:
+			groupes.append(courant)
+			courant = []
+		courant.append(siennes[i])
+		bord = maxf(bord, r.end.x)
+	groupes.append(courant)
+
+	# Chaque groupe est ramené à son propre bord gauche, puis posé à la suite.
+	var out: Array[Dictionary] = []
+	var x := 0.0
+	var haut := INF
+	var bas := -INF
+	for g: Array in groupes:
+		var mini := INF
+		for t: Dictionary in g:
+			mini = minf(mini, (t["r"] as Rect2).position.x)
+		var maxi := -INF
+		for t: Dictionary in g:
+			var r: Rect2 = t["r"]
+			out.append({"code": t["code"],
+				"r": Rect2(r.position.x - mini + x, r.position.y, r.size.x, r.size.y)})
+			maxi = maxf(maxi, r.end.x - mini + x)
+			haut = minf(haut, r.position.y)
+			bas = maxf(bas, r.end.y)
+		x = maxi + ECART_GROUPES
+
+	# Remonté au ras du haut : une rangée vide en tête serait du vide dessiné.
+	for t: Dictionary in out:
+		var r: Rect2 = t["r"]
+		t["r"] = Rect2(r.position.x, r.position.y - haut, r.size.x, r.size.y)
+
+	return {
+		"touches": out,
+		"largeur": maxf(x - ECART_GROUPES, 0.0),
+		"hauteur": bas - haut,
+	}
+
+
 # ---------------------------------------------------------------------------
 # LE DESSIN
 # ---------------------------------------------------------------------------
+
+
+## Un polygone au coin arrondi. Godot n'en a pas : `draw_rect` fait des angles
+## droits, et un angle droit ne ressemble à aucun appareil réel.
+##
+## ⚠️ **C'est ce qui manquait au premier jet, et ça se voyait.** La souris et la
+## manette y étaient des rectangles à barres — relevé par Adrien : *« assez
+## laid »*. Une silhouette se reconnaît à son contour avant tout le reste ; un
+## rectangle ne dit ni souris ni manette, il dit rectangle.
+static func _arrondi(r: Rect2, rayon: float, pas: int = 5) -> PackedVector2Array:
+	var q := minf(rayon, minf(r.size.x, r.size.y) * 0.5)
+	var pts := PackedVector2Array()
+	var coins := [
+		[Vector2(r.end.x - q, r.position.y + q), -PI * 0.5, 0.0],
+		[Vector2(r.end.x - q, r.end.y - q), 0.0, PI * 0.5],
+		[Vector2(r.position.x + q, r.end.y - q), PI * 0.5, PI],
+		[Vector2(r.position.x + q, r.position.y + q), PI, PI * 1.5],
+	]
+	for c: Array in coins:
+		for i in pas + 1:
+			var a: float = lerpf(c[1], c[2], float(i) / float(pas))
+			pts.append((c[0] as Vector2) + Vector2(cos(a), sin(a)) * q)
+	return pts
+
+
+static func _forme(cv: CanvasItem, pts: PackedVector2Array, fond: Color,
+		contour: Color, e: float) -> void:
+	if pts.size() < 3:
+		return
+	cv.draw_colored_polygon(pts, fond)
+	var ferme := pts.duplicate()
+	ferme.append(pts[0])
+	cv.draw_polyline(ferme, contour, e, true)
+
 
 func _draw() -> void:
 	if appareil == Appareil.MANETTE:
@@ -230,17 +343,31 @@ func _draw() -> void:
 
 
 func _dessiner_clavier() -> void:
-	var d := disposition_clavier()
-	var lu: float = d["largeur"]
-	var hu: float = d["hauteur"]
-	# La souris tient à droite du clavier : on lui réserve sa part avant de
-	# choisir l'unité, sinon elle déborderait du cadre.
-	var largeur_totale: float = lu + 2.2
-	_u = minf(size.x / maxf(largeur_totale, 1.0), size.y / maxf(hu + 0.6, 1.0))
-	var ox := (size.x - largeur_totale * _u) * 0.5
+	# ⚠️ **Seules les touches de CE joueur.** Voir la note de `actions` : le
+	# clavier entier avec les deux jeux allumés dessus enfouissait les quatre
+	# touches qui comptent sous vingt-deux qui ne comptent pas.
+	var miennes: Array = actions.get(joueur, [])
+	var codes: Array[int] = []
+	for a: String in miennes:
+		var c := code_physique_de(a)
+		if c != 0 and not codes.has(c):
+			codes.append(c)
+
+	var d := disposition_du_joueur(codes)
+	var touches: Array = d["touches"]
+	if touches.is_empty():
+		return
+	var lu: float = maxf(float(d["largeur"]), 1.0)
+	var hu: float = maxf(float(d["hauteur"]), 1.0)
+	# La souris tient à droite : sa part est réservée avant de choisir l'unité.
+	var avec_souris := joueur == 0
+	var reserve := 2.4 if avec_souris else 0.0
+	_u = minf(size.x / (lu + reserve), size.y / (hu + 0.4))
+	_u = minf(_u, 46.0)
+	var largeur := (lu + reserve) * _u
+	var ox := (size.x - largeur) * 0.5
 	var oy := (size.y - hu * _u) * 0.5
 
-	var occupe := occupation(actions)
 	var heurts := collisions(actions)
 	var marques := {}
 	for a: String in reassignables:
@@ -249,123 +376,144 @@ func _dessiner_clavier() -> void:
 			marques[c] = true
 	var bat := code_physique_de(en_attente) if en_attente != "" else 0
 
-	for t: Dictionary in d["touches"]:
+	for t: Dictionary in touches:
 		var r: Rect2 = t["r"]
 		var code: int = t["code"]
-		var boite := Rect2(Vector2(ox, oy) + r.position * _u, r.size * _u)
-		var qui: int = occupe.get(code, -1)
-		_capuchon(boite, code, qui, heurts.has(code), marques.has(code),
-			code == bat)
+		_capuchon(Rect2(Vector2(ox, oy) + r.position * _u, r.size * _u),
+			code, heurts.has(code), marques.has(code), code == bat)
 
-	_souris(Vector2(ox + (lu + 0.35) * _u, oy + 0.1 * _u), _u)
+	if avec_souris:
+		_souris(Vector2(ox + (lu + 0.5) * _u, oy), hu * _u)
 
 
-## Un capuchon de touche.
-##
-## ⚠️ **Les touches de l'ADVERSAIRE restent visibles, en creux.** C'est ce qui
-## reste de la proposition A : une colonne par joueur pour la structure, mais les
-## deux mains sur le même plan pour que le chevauchement se voie. Les effacer
-## aurait rendu la question invisible — et c'est la seule que le joueur se pose.
-func _capuchon(boite: Rect2, code: int, qui: int, heurte: bool, marquee: bool,
+## Un capuchon de touche. Il appartient toujours au joueur de la colonne.
+func _capuchon(boite: Rect2, code: int, heurte: bool, marquee: bool,
 		bat: bool) -> void:
-	var sien := qui == joueur
-	var teinte: Color = Charte.LINE
-	var encre: Color = Charte.DIM
-	var fond := 0.0
-
+	var teinte: Color = TEINTES[joueur]
+	var fond := 0.14
 	if heurte:
 		# Deux joueurs sur la même touche : ambre, la couleur de ce qui appelle.
 		teinte = Charte.AMBRE
-		encre = Charte.AMBRE
-		fond = 0.22
-	elif qui >= 0:
-		teinte = TEINTES[qui]
-		encre = teinte
-		# Le sien plein, celui d'en face en creux — même place, deux poids.
-		fond = 0.16 if sien else 0.05
-		if not sien:
-			encre = Color(teinte, 0.45)
+		fond = 0.26
 	if bat:
-		fond = 0.30
 		teinte = Charte.AMBRE
-		encre = Charte.AMBRE
+		fond = 0.34
 
-	if fond > 0.0:
-		draw_rect(boite, Color(teinte, fond), true)
-	else:
-		draw_rect(boite, Color(Charte.SOL_A, 0.6), true)
-	draw_rect(boite, Color(teinte, 1.0 if qui >= 0 else 0.75), false,
-		maxf(1.0, _u * 0.035))
+	var e := maxf(1.0, _u * 0.045)
+	var pts := _arrondi(boite, _u * 0.16)
+	_forme(self, pts, Color(teinte, fond), Color(teinte, 0.95), e)
 
-	var f := Charte.police_ui(Charte.POIDS_APPUI if qui >= 0
-		else Charte.POIDS_COURANT)
+	var f := Charte.police_ui(Charte.POIDS_APPUI)
 	if f == null:
 		return
 	var mot := "…" if bat else libelle_de(code)
-	var taille := int(maxf(8.0, _u * 0.38))
-	var l := f.get_string_size(mot, HORIZONTAL_ALIGNMENT_LEFT, -1, taille)
-	draw_string(f, boite.position + Vector2((boite.size.x - l.x) * 0.5,
+	var taille := int(maxf(9.0, _u * 0.40))
+	# Un libellé trop long pour son capuchon rétrécit plutôt que de déborder.
+	var l := f.get_string_size(mot, HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x
+	while l > boite.size.x * 0.82 and taille > 7:
+		taille -= 1
+		l = f.get_string_size(mot, HORIZONTAL_ALIGNMENT_LEFT, -1, taille).x
+	draw_string(f, boite.position + Vector2((boite.size.x - l) * 0.5,
 		boite.size.y * 0.5 + taille * 0.36), mot,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, taille, encre)
+		HORIZONTAL_ALIGNMENT_LEFT, -1, taille, teinte)
 
 	if marquee:
-		var p := boite.position + Vector2(boite.size.x - _u * 0.17, _u * 0.10)
-		draw_circle(p, maxf(2.0, _u * 0.055), Charte.AMBRE)
+		draw_circle(boite.position + Vector2(boite.size.x - _u * 0.19, _u * 0.19),
+			maxf(2.0, _u * 0.06), Charte.AMBRE)
 
 
 ## La souris de J1 : il vise avec, et tire avec ses deux boutons.
-func _souris(coin: Vector2, u: float) -> void:
-	var l := u * 1.35
-	var h := u * 2.1
-	var corps := Rect2(coin, Vector2(l, h))
-	var mienne := joueur == 0
-	var teinte: Color = TEINTES[0] if mienne else Charte.LINE
-	draw_rect(corps, Color(Charte.SOL_A, 0.6), true)
-	# Le contour, en quatre segments : `draw_rect` ne sait pas arrondir.
-	draw_rect(corps, Color(teinte, 0.9), false, maxf(1.0, u * 0.035))
-	# Les deux boutons, séparés — c'est eux que le joueur cherche.
-	var mi := coin + Vector2(l * 0.5, 0.0)
-	draw_line(mi, mi + Vector2(0.0, h * 0.42), Color(teinte, 0.55),
-		maxf(1.0, u * 0.03))
-	draw_line(coin + Vector2(0.0, h * 0.42), coin + Vector2(l, h * 0.42),
-		Color(teinte, 0.55), maxf(1.0, u * 0.03))
-	if mienne:
-		draw_rect(Rect2(coin, Vector2(l * 0.5, h * 0.42)),
-			Color(teinte, 0.18), true)
-		draw_rect(Rect2(coin + Vector2(l * 0.5, 0.0), Vector2(l * 0.5, h * 0.42)),
-			Color(teinte, 0.10), true)
+##
+## Une silhouette, pas un rectangle : corps très arrondi en haut, deux boutons
+## séparés par la molette. C'est le contour qui la fait reconnaître.
+func _souris(coin: Vector2, hauteur: float) -> void:
+	var teinte: Color = TEINTES[0]
+	var h := minf(hauteur, _u * 3.0)
+	var l := h * 0.62
+	var corps := Rect2(coin + Vector2(0.0, (hauteur - h) * 0.5), Vector2(l, h))
+	var e := maxf(1.0, _u * 0.045)
+
+	# Le haut plus rond que le bas : c'est ce galbe qui dit « souris ».
+	var pts := _arrondi(corps, l * 0.46, 7)
+	_forme(self, pts, Color(teinte, 0.10), Color(teinte, 0.9), e)
+
+	# Les deux boutons, pleins : ce sont eux, l'information.
+	var hb := h * 0.40
+	var gauche := Rect2(corps.position + Vector2(l * 0.06, h * 0.05),
+		Vector2(l * 0.36, hb))
+	var droite := Rect2(corps.position + Vector2(l * 0.58, h * 0.05),
+		Vector2(l * 0.36, hb))
+	_forme(self, _arrondi(gauche, l * 0.22, 5), Color(teinte, 0.30),
+		Color(teinte, 0.8), e * 0.8)
+	_forme(self, _arrondi(droite, l * 0.22, 5), Color(teinte, 0.30),
+		Color(teinte, 0.8), e * 0.8)
+
+	# La molette, entre les deux.
+	var mol := Rect2(corps.position + Vector2(l * 0.44, h * 0.10),
+		Vector2(l * 0.12, hb * 0.55))
+	_forme(self, _arrondi(mol, l * 0.06, 3), Color(teinte, 0.55),
+		Color(teinte, 0.85), e * 0.7)
 
 
 ## La manette, quand le joueur en tient une.
+##
+## Un corps arrondi et deux poignées qui descendent en oblique : sans elles, la
+## silhouette est un rectangle et ne dit rien.
 func _dessiner_manette() -> void:
 	var teinte: Color = TEINTES[joueur]
-	var u := minf(size.x / 7.4, size.y / 3.4)
+	var u := minf(size.x / 7.2, size.y / 4.0)
 	var c := size * 0.5
-	var l := u * 6.0
-	var h := u * 2.6
-	var corps := Rect2(c - Vector2(l, h) * 0.5, Vector2(l, h))
-	draw_rect(corps, Color(Charte.SOL_A, 0.6), true)
-	draw_rect(corps, Color(teinte, 0.9), false, maxf(1.0, u * 0.04))
+	var e := maxf(1.0, u * 0.05)
+	var l := u * 5.4
+	var h := u * 2.0
 
-	var e := maxf(1.0, u * 0.035)
-	# Les deux sticks.
+	# Les deux poignées d'abord : le corps se pose par-dessus, et la jonction
+	# disparaît sans qu'on ait à découper un polygone.
 	for s in [-1.0, 1.0]:
-		draw_arc(c + Vector2(s * l * 0.19, h * 0.16), u * 0.44, 0.0, TAU, 28,
-			Color(teinte, 0.7), e)
-	# Les quatre boutons de face — celui du tir plein.
-	var bc := c + Vector2(l * 0.30, -h * 0.12)
-	var d := u * 0.42
+		var g := Rect2(c + Vector2(s * l * 0.30 - u * 0.62, h * 0.10),
+			Vector2(u * 1.24, h * 1.15))
+		var pts := _arrondi(g, u * 0.58, 7)
+		var pivot := g.position + g.size * 0.5
+		var tournes := PackedVector2Array()
+		for p in pts:
+			tournes.append(pivot + (p - pivot).rotated(s * 0.30))
+		_forme(self, tournes, Color(teinte, 0.10), Color(teinte, 0.9), e)
+
+	var corps := Rect2(c - Vector2(l, h) * 0.5, Vector2(l, h))
+	_forme(self, _arrondi(corps, h * 0.42, 7), Color(teinte, 0.12),
+		Color(teinte, 0.95), e)
+
+	# La croix directionnelle, à gauche.
+	var dc := c + Vector2(-l * 0.30, -h * 0.04)
+	var br := u * 0.46
+	var croix := PackedVector2Array([
+		Vector2(-br * 0.32, -br), Vector2(br * 0.32, -br),
+		Vector2(br * 0.32, -br * 0.32), Vector2(br, -br * 0.32),
+		Vector2(br, br * 0.32), Vector2(br * 0.32, br * 0.32),
+		Vector2(br * 0.32, br), Vector2(-br * 0.32, br),
+		Vector2(-br * 0.32, br * 0.32), Vector2(-br, br * 0.32),
+		Vector2(-br, -br * 0.32), Vector2(-br * 0.32, -br * 0.32),
+	])
+	var pose := PackedVector2Array()
+	for p in croix:
+		pose.append(dc + p)
+	_forme(self, pose, Color(teinte, 0.16), Color(teinte, 0.6), e * 0.8)
+
+	# Les quatre boutons de face, à droite. Celui du tir est plein.
+	var bc := c + Vector2(l * 0.30, -h * 0.04)
+	var d := u * 0.40
 	var places := [Vector2(0, -d), Vector2(d, 0), Vector2(0, d), Vector2(-d, 0)]
 	for i in places.size():
-		draw_arc(bc + places[i], u * 0.18, 0.0, TAU, 18, Color(teinte, 0.5), e)
-	# La croix directionnelle, en deux barres.
-	var dc := c + Vector2(-l * 0.30, -h * 0.12)
-	var br := u * 0.55
-	draw_rect(Rect2(dc - Vector2(br, br * 0.32), Vector2(br * 2.0, br * 0.64)),
-		Color(teinte, 0.4), false, e)
-	draw_rect(Rect2(dc - Vector2(br * 0.32, br), Vector2(br * 0.64, br * 2.0)),
-		Color(teinte, 0.4), false, e)
-	# R1, la gâchette du tir : la seule chose pleine du dessin.
-	var g := Rect2(c + Vector2(l * 0.16, -h * 0.72), Vector2(u * 1.1, u * 0.34))
-	draw_rect(g, Color(teinte, 0.26), true)
-	draw_rect(g, Color(teinte, 0.85), false, e)
+		draw_circle(bc + places[i], u * 0.17, Color(teinte, 0.16))
+		draw_arc(bc + places[i], u * 0.17, 0.0, TAU, 16, Color(teinte, 0.6), e * 0.8)
+
+	# Les deux sticks, au centre-bas — là où les pouces tombent.
+	for s in [-1.0, 1.0]:
+		var p := c + Vector2(s * l * 0.13, h * 0.30)
+		draw_circle(p, u * 0.36, Color(teinte, 0.10))
+		draw_arc(p, u * 0.36, 0.0, TAU, 22, Color(teinte, 0.65), e)
+
+	# R1, la gâchette du tir : posée SUR le bord haut, pas flottante au-dessus.
+	var g := Rect2(c + Vector2(l * 0.14, -h * 0.62), Vector2(u * 1.05, u * 0.34))
+	_forme(self, _arrondi(g, u * 0.16, 4), Color(teinte, 0.26),
+		Color(teinte, 0.85), e * 0.8)
