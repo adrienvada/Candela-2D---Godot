@@ -74,14 +74,35 @@ func _test_effleurement() -> void:
 	_ui.poser_bilan(2, 1, "", 13.0)
 	_check("la colonne se montre quand la marge est connue",
 		_ui.bilan_effleure != null and _ui.bilan_effleure.visible)
-	_check("elle dit la marge en pixels",
-		_ui.bilan_marge.text == "13 PX", _ui.bilan_marge.text)
+	# ⚠️ **En mètres depuis le 2026-08-27, sur demande d'Adrien.** « 13 PX » était
+	# exact et ne se racontait pas : personne ne sait ce que vaut un pixel, et le
+	# nombre ne se comparait pas d'une partie à l'autre. L'échelle vient de la
+	# taille du sprite d'un joueur — 36 px pour un demi-mètre d'épaules, donc
+	# 72 px/m. 13 px font 18 cm : la balle est passée à une largeur de main.
+	#
+	# **L'oracle est écrit ici, converti à la main.** Appeler `Echelle.ecrire()`
+	# pour vérifier ce que `poser_bilan` affiche reviendrait à comparer le code à
+	# lui-même — le motif du banc décoratif, payé quatre fois dans ce dépôt.
+	_check("elle dit la marge en mètres, pas en pixels",
+		_ui.bilan_marge.text == "18 CM", _ui.bilan_marge.text)
 
-	# La marge arrive en flottant depuis la simulation : elle s'arrondit, elle
-	# ne se tronque pas. 12,6 px sont 13, pas 12.
-	_ui.poser_bilan(2, 1, "", 12.6)
-	_check("la marge s'arrondit au pixel le plus proche",
-		_ui.bilan_marge.text == "13 PX", _ui.bilan_marge.text)
+	# Une marge franchement plus large doit se lire différemment, sinon le
+	# contrôle ci-dessus passerait sur une fonction qui rend toujours la même
+	# chose. 100 px = 1,39 m, donc « 1,4 M ».
+	#
+	# ⚠️ **Le premier jet posait 90 px, et c'est l'ORACLE qui avait tort** :
+	# 90 px font exactement 1,25 m, pile sur une frontière d'arrondi, où
+	# `%.1f` peut rendre 1,2 comme 1,3 selon la règle de la bibliothèque. Un banc
+	# ne se choisit jamais une valeur d'entrée qui tombe sur une frontière —
+	# il mesurerait la convention d'arrondi et la ferait passer pour un défaut.
+	_ui.poser_bilan(2, 1, "", 100.0)
+	_check("une marge plus large se lit autrement",
+		_ui.bilan_marge.text == "1,4 M", _ui.bilan_marge.text)
+
+	# ⚠️ **La virgule, pas le point** : le jeu est en français, et un « 1.3 M »
+	# est le genre de détail qui trahit la machine sous le vernis.
+	_check("la décimale est une virgule",
+		_ui.bilan_marge.text.contains(","), _ui.bilan_marge.text)
 
 	# Et le cas ordinaire en ligne : personne n'a simulé la balle ici.
 	_ui.poser_bilan(2, 1, "", -1.0)

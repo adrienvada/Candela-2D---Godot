@@ -8852,8 +8852,70 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   `index_du_tir_fatal()`, **extrait** et non réécrit, dont `trajectoire_fatale()`
   se sert désormais. Un contrôle du banc lit la source pour l'exiger.
 
-  `tools/test_releve_balistique.gd`, 94 contrôles, verts, vérifiés **rouges** sur
-  les deux versants qui portent le lot. Le zoom est lu sur le viewport
+  ### Le tracé PRÉCÈDE l'action — et c'est ce qui l'a fait sortir de la balle
+
+  ⚠️ **Demandé par Adrien le 2026-08-27, et le geste change l'architecture.**
+  *« Comme au foot, on retrace la trajectoire juste avant, et après on joue
+  l'action pour voir effectivement la balle suivre cette trajectoire. »*
+
+  **Un tracé qui suit la balle CONSTATE ; un tracé qui la précède ANNONCE**, et
+  l'action qui suit devient une vérification. C'est la différence entre montrer
+  ce qui s'est passé et faire comprendre pourquoi c'était imparable — la
+  « killcam-professeur » que l'item nomme sans dire comment l'obtenir.
+
+  ⚠️ **Et le relevé ne pouvait donc PAS rester dans `bullet.gd`.** Une balle ne
+  sait pas où elle va : elle connaît son départ et sa direction, jamais son
+  impact. Seul le rejeu le sait. Le relevé est devenu `releve_balistique.gd`, un
+  objet qui **existe avant la balle et reste après elle** — deux propriétés
+  qu'un dessin porté par le projectile ne pouvait pas avoir. La balle garde sa
+  traînée pointillée de V6.2, celle qui suit, et qui n'a jamais prétendu
+  annoncer quoi que ce soit.
+
+  Deux temps : le trait pousse de l'origine vers l'impact en `D_LONG`, la cote
+  grandissant avec lui ; puis la ligne reste entière, atténuée, pendant que la
+  balle la parcourt au ralenti.
+
+  ⚠️ **Le piège de l'immobilisation : `Engine.time_scale = 0` gèle aussi le
+  compte à rebours.** Le `delta` d'un `_process` arrive déjà multiplié par
+  l'échelle ; à zéro, le décompte du pré-tracé ne descend jamais et **la killcam
+  reste suspendue pour toujours** — sans erreur, sans trace, sans rien à l'écran
+  qui l'explique. L'échelle est donc posée à 0,05 : le temps réel se retrouve par
+  division et l'action est immobile à l'œil. Le banc l'exige explicitement.
+
+  ### L'échelle : le jeu affichait des pixels
+
+  ⚠️ **« EFFLEURÉ — 13 PX » et une cote en pixels sont exacts et ne se racontent
+  pas.** Personne ne sait ce que vaut un pixel : le nombre ne se compare pas
+  d'une partie à l'autre et ne veut rien dire hors de l'écran qui l'affiche.
+  Adrien a tranché l'ancre le 2026-08-27 — *« l'échelle qu'on a c'est la taille
+  du sprite d'un joueur »*.
+
+  `echelle.gd` : le joueur fait 36 px (2 × le rayon de 18 écrit dans
+  `player.gd`), un adulte vu de dessus occupe la largeur de ses épaules, un demi-
+  mètre. **72 px par mètre, dérivés et jamais posés** — écrire `72.0` marcherait
+  et perdrait le raisonnement.
+
+  **C'est un jugé, assumé comme tel** : aucune mesure ne sort d'un dessin. Ce qui
+  compte n'est pas la justesse au centimètre mais **l'unicité** — deux
+  conversions dans deux écrans donneraient deux distances pour le même tir, et
+  c'est *ça* qui serait faux. La fin de match suit donc la même règle que la
+  killcam, et « 13 PX » se lit maintenant « 18 CM ».
+
+  Trois vérifications que la convention n'a PAS servi à choisir, et qui auraient
+  pu la réfuter : une tuile fait 48 cm (une case large comme un joueur, ce qu'on
+  lit à l'écran) ; une carte de 32×32 fait 15,5 m de côté ; la portée du pompe
+  tombe à 2,5 m — très court, mais c'est un choix de jeu, pas un artefact.
+
+  `tools/test_releve_balistique.gd`, 116 contrôles, verts, vérifiés **rouges** sur
+  les deux versants qui portent le lot.
+
+  ⚠️ **Deux fautes de méthode dans ce second lot, à ne pas refaire.** Un
+  remplacement global de `Engine.time_scale = 1.0` a posé six appels de
+  libération, dont **trois à la mauvaise indentation** — `game_state.gd` ne
+  parsait plus, et une demi-douzaine de bancs se sont mis à tourner en boucle
+  sans sortir. Et un nouveau `class_name` n'existe pour les bancs qu'après un
+  `--import` : sans lui, `ReleveBalistique` est introuvable et l'erreur ne dit
+  pas que c'est le cache qui manque. Le zoom est lu sur le viewport
   (`get_camera_2d()`) et jamais demandé à `GameState` : en écran scindé chaque
   vue a sa propre caméra, et « le » zoom n'aurait pas de sens. *(S)*
 - **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le

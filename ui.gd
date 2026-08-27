@@ -40,6 +40,7 @@ signal pick_window_cancelled
 # domicile.
 
 const Charte := preload("res://charte.gd")
+const Echelle := preload("res://echelle.gd")
 ## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
 ## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
 ## `preload` plutôt que de les déclarer globalement. Oublier ce `preload` ne
@@ -4080,7 +4081,11 @@ func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 	# lieu d'afficher une absence. Un tiret dans une case laisse croire qu'on a
 	# raté quelque chose ; rien du tout ne pose aucune question.
 	if bilan_effleure != null:
-		bilan_marge.text = "%d PX" % int(roundf(effleurement))
+		# ⚠️ **En mètres, pas en pixels.** « 13 PX » est exact et ne se raconte
+		# pas : personne ne sait ce que vaut un pixel. Même conversion que la
+		# cote de killcam — voir `echelle.gd`. Les deux écrans doivent parler la
+		# même langue, sinon la même distance porte deux noms.
+		bilan_marge.text = Echelle.ecrire(effleurement)
 		bilan_effleure.visible = effleurement >= 0.0
 	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
 	game_over_score.text = ""
