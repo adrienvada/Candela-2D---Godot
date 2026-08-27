@@ -281,8 +281,21 @@ modifié, donc sans conflit possible — et il n'a **aucun lecteur en production
 `ui.gd` n'a pas été touché, et ne le sera pas sans demande : le branchement du
 voile passe par lui, donc par la session « menus ».
 
-**Rien n'est branché, et c'est délibéré.** Le jeu se comporte exactement comme
-avant ce lot. Le banc existe pour qu'Adrien tranche entre trois candidats à
+**✅ VALIDÉ par Adrien le 2026-08-27** — « on valide ». L'apparence est arrêtée,
+les vingt-cinq réglages sont transcrits dans le shader, l'étalonnage est fait
+(moyenne 0,330 contre 0,300 pour l'aplat : la mécanique est très légèrement
+appuyée, pas allégée).
+
+**Rien n'est branché pour autant, et c'est délibéré.** Le jeu se comporte
+exactement comme avant ce lot.
+
+📌 **DEMANDE À LA SESSION « MENUS » — le branchement passe par `ui.gd`.** Il
+demande trois choses : poser le shader sur les deux `ColorRect` de voile et lui
+passer `niveau` / `relevement` / `aspect` / `temps` ; cesser de multiplier par
+`GameSettings.current_effect("eblouissement")` (décision du 2026-08-25, le voile
+n'est plus réglable) ; et régler le `p2_dazzle` de la vue unique décrit
+ci-dessous — il n'existe aucune version propre du voile qui le laisse en place.
+Je ne le fais pas d'office. Le banc existe pour qu'Adrien tranche entre trois candidats à
 l'œil, dans le noir, au-dessus d'un vrai faisceau — la méthode qui a tranché
 B1 à B4 du chantier brouillage.
 

@@ -10446,16 +10446,30 @@ discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile 
 0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
 décider si ces nombres méritent d'être rejugés dans le noir.
 
-### État — rien n'est branché
+### ✅ VALIDÉ par Adrien le 2026-08-27 — et toujours pas branché
 
-`voile_eblouissement.gdshader` n'a **aucun lecteur en production**, exactement
-comme `brouillage.gd` à son inscription. Le jeu se comporte comme avant.
+**« On valide. »** L'apparence du voile est arrêtée : les vingt-cinq réglages
+vivent dans `voile_eblouissement.gdshader`, l'étalonnage est fait, le chantier
+n'attend plus aucun arbitrage de goût.
 
-**Ce qui attend Adrien :** lancer le banc, régler `PLANCHER` et `CIME` d'abord —
-ce sont les deux qui décident de « à quel point on est aveuglé » —, puis les
-lueurs et les flares. **Ce qui attend ensuite une autre session :** le
-branchement, qui passe par `ui.gd` — domaine « menus » — et qui ne se fait pas
-d'office.
+⚠️ **Validé ne veut pas dire branché.** `voile_eblouissement.gdshader` n'a
+toujours **aucun lecteur en production** — exactement la position où
+`brouillage.gd` est resté du 2026-08-25 au branchement. Le jeu se comporte comme
+avant ce chantier.
+
+**Ce qu'il reste, et ce n'est pas une formalité :**
+
+1. **`ui.gd` doit poser le shader sur les deux `ColorRect` de voile**, lui passer
+   `niveau`, `relevement`, `aspect` et `temps`, et cesser de multiplier par
+   `GameSettings.current_effect("eblouissement")` — décision du 2026-08-25, le
+   voile n'est plus réglable.
+2. **Et il doit régler le `p2_dazzle` de la vue unique** (voir ci-dessous). Il
+   n'existe aucune version propre du voile qui laisse ce comportement en place :
+   en ligne, la moitié droite de l'écran local blanchit quand l'ADVERSAIRE est
+   ébloui.
+3. **`ui.gd` appartient à la session « menus ».** La modification se demande,
+   elle ne se fait pas d'office — c'est la règle du journal des sessions, et
+   c'est elle qui a évité que V6.2 soit implémentée deux fois.
 
 ### ⚠️ MESURÉ — la photocopie d'écran du flou laisse un polygone à l'écran
 
