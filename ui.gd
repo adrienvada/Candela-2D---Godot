@@ -182,6 +182,9 @@ const PANEL_HISTORY := "panneau_historique"
 ## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
 ##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
 const ILLUSTRATIONS := {
+	"ill_accueil": "res://assets/ui/ill_accueil.png",
+	"ill_amical_ligne": "res://assets/ui/ill_amical_ligne.png",
+	"ill_amical_local": "res://assets/ui/ill_amical_local.png",
 	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
 	"ill_amical": "res://assets/ui/ill_amical.png",
 	"ill_competitif": "res://assets/ui/ill_competitif.png",
@@ -2572,7 +2575,7 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
+	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_accueil"))
 
 	# --- 1v1 amical -----------------------------------------------------------
 	# **« PRÉPARER » décrivait le panneau, pas le geste.** Corrigé par Adrien le
@@ -2587,11 +2590,11 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
-		SCREEN_FRIENDLY_ONLINE, COLOR_ACCENT, "", "", false, "ill_creer"))
+		SCREEN_FRIENDLY_ONLINE, COLOR_ACCENT, "", "", false, "ill_amical_ligne"))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
 		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
-		SCREEN_FRIENDLY_LOCAL, COLOR_ACCENT, "", "", false, "ill_amical"))
-	hub.add_back_entry(SCREEN_FRIENDLY)
+		SCREEN_FRIENDLY_LOCAL, COLOR_ACCENT, "", "", false, "ill_amical_local"))
+	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_accueil")
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
 	# choix, et entrer dans l'un des deux écrans le pose. Même raisonnement que
@@ -2609,7 +2612,7 @@ func _build_hub_screens() -> void:
 			COLOR_ACCENT, "", "", false, "ill_creer"))
 		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3]),
 			COLOR_ACCENT, "", "", false, "ill_rejoindre"))
-		hub.add_back_entry(String(spec[1]))
+		hub.add_back_entry(String(spec[1]), "", "ill_amical")
 
 	# --- Les quatre salons ----------------------------------------------------
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
@@ -2629,10 +2632,14 @@ func _build_hub_screens() -> void:
 			+ "quand les deux joueurs se sont déclarés, et la carte est celle de "
 			+ "l'hôte.",
 			"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
+	for id in [SCREEN_HOST, SCREEN_JOIN]:
 		_wire_salon_back(hub.add_back_entry(id,
 			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
-			"ill_retour"))
+			"ill_amical_ligne"))
+	for id in [SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
+		_wire_salon_back(hub.add_back_entry(id,
+			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
+			"ill_amical_local"))
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
@@ -2652,7 +2659,7 @@ func _build_hub_screens() -> void:
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
 		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
-	hub.add_back_entry(SCREEN_RANKED)
+	hub.add_back_entry(SCREEN_RANKED, "", "ill_accueil")
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
 		+ "se recalcule, les rangs existent. Ce qui manque est l'appariement — de "
@@ -2672,7 +2679,7 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	hub.add_back_entry(SCREEN_TRAINING)
+	hub.add_back_entry(SCREEN_TRAINING, "", "ill_accueil")
 
 	# --- Personnalisation -----------------------------------------------------
 	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
@@ -2690,7 +2697,7 @@ func _build_hub_screens() -> void:
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
 		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
-	hub.add_back_entry(SCREEN_CUSTOM)
+	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_accueil")
 	hub.set_screen_panel(SCREEN_CUSTOM, "ill_personnalisation")
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
@@ -2716,7 +2723,7 @@ func _build_hub_screens() -> void:
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
-	hub.add_back_entry(SCREEN_UPDATE)
+	hub.add_back_entry(SCREEN_UPDATE, "", "ill_accueil")
 	# ⚠️ **Un défaut d'écran, et non un panneau par entrée.** Cet écran construit
 	# ses propres boutons — `ScreenUpdate.build()` les ajoute directement, sans
 	# passer par `make_entry()` — donc ils n'ont pas de panneau et n'en auront
@@ -2784,17 +2791,19 @@ func _build_hub_screens() -> void:
 			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
 		hub.set_screen_panel(id, PANEL_SALON)
 	# Les écrans de sélection de mode ou de sous-menu ont leur illustration dédiée.
+	hub.set_screen_panel(MenuHub.ROOT, "ill_accueil")
 	hub.set_screen_panel(SCREEN_FRIENDLY, "ill_amical")
-	hub.set_screen_panel(SCREEN_FRIENDLY_ONLINE, "ill_creer")
-	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_creer")
+	hub.set_screen_panel(SCREEN_FRIENDLY_ONLINE, "ill_amical_ligne")
+	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_amical_local")
 	hub.set_screen_panel(SCREEN_RANKED, "ill_competitif")
 
 	# Fonds illustrés floutés de chaque catégorie d'écran (Adrien, 2026-08-27) :
 	# Tout bouton ou panneau d'une catégorie hérite en fond flou de l'illustration de sa catégorie.
+	hub.set_screen_background(MenuHub.ROOT, "res://assets/ui/ill_accueil.png")
 	hub.set_screen_background(SCREEN_LOCAL, "res://assets/ui/ill_ecran_scinde.png")
 	hub.set_screen_background(SCREEN_FRIENDLY, "res://assets/ui/ill_amical.png")
-	hub.set_screen_background(SCREEN_FRIENDLY_ONLINE, "res://assets/ui/ill_amical.png")
-	hub.set_screen_background(SCREEN_FRIENDLY_LOCAL, "res://assets/ui/ill_amical.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_ONLINE, "res://assets/ui/ill_amical_ligne.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_LOCAL, "res://assets/ui/ill_amical_local.png")
 	hub.set_screen_background(SCREEN_HOST, "res://assets/ui/ill_creer.png")
 	hub.set_screen_background(SCREEN_JOIN, "res://assets/ui/ill_rejoindre.png")
 	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer.png")
