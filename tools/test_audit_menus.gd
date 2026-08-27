@@ -59,6 +59,7 @@ func _run() -> void:
 	await _audit_le_cadre_montre_vraiment()
 	await _audit_on_peut_lancer_une_recherche()
 	_audit_aucun_cadre_vide()
+	_audit_les_libelles_de_touches_disent_le_bon_appareil()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -66,6 +67,65 @@ func _run() -> void:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	main.queue_free()
 	quit(1 if _failures > 0 else 0)
+
+
+
+## **La rubrique CONTRÔLES nomme-t-elle le bon appareil ?**
+##
+## ⚠️ **Elle annonçait des boutons de manette pour des touches de clavier et des
+## clics de souris.** Relevé le 2026-08-27 en instanciant l'interface : le clic
+## gauche de J1 s'affichait « R1 », son clic droit « Gâchette L2 », et la touche
+## **O** de J2 « R1 » aussi. `_get_action_btn_info()` ne connaissait que les
+## événements de manette, et `InputSetup` en ajoute un à chaque action : c'est
+## toujours celui-là qui était trouvé.
+##
+## **Aucune suite ne pouvait le voir, et c'est le fait à retenir : un libellé
+## faux reste un libellé valide.** Rien dans le langage, rien dans le rendu, rien
+## dans les bancs existants ne distingue « CLIC GAUCHE » de « R1 » — les deux
+## sont des chaînes non vides posées sur un bouton visible.
+##
+## ⚠️ **L'oracle est l'INPUT MAP, pas la fonction de libellé.** On lit le type
+## réel de l'événement lié à l'action, puis on exige que le texte affiché en
+## porte la trace. Demander à la fonction ce qu'elle affiche et vérifier qu'elle
+## affiche bien ça serait le banc décoratif, payé quatre fois dans ce dépôt.
+func _audit_les_libelles_de_touches_disent_le_bon_appareil() -> void:
+	print("\n[La rubrique CONTRÔLES nomme le bon appareil]")
+	var vus := 0
+	for spec: Array in _ui.BINDABLE:
+		for joueur in 2:
+			var action := "p%d_%s" % [joueur + 1, String(spec[1])]
+			var info: Dictionary = _ui.call("_get_action_btn_info", action)
+			var texte := String(info.get("text", ""))
+			var a_clavier := false
+			var a_manette := false
+			for ev in InputMap.action_get_events(action):
+				if ev is InputEventKey or ev is InputEventMouseButton:
+					a_clavier = true
+				elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+					a_manette = true
+			vus += 1
+
+			if a_clavier:
+				var clavier: Dictionary = _ui.call("_get_keyboard_action_info", action)
+				_check("%s : le clavier ou la souris est nommé" % action,
+					not clavier.is_empty()
+						and texte.contains(String(clavier.get("text", "\u0000"))),
+					texte)
+			if a_manette:
+				var manette: Dictionary = _ui.call("_get_joypad_action_info", action)
+				_check("%s : la manette est nommée aussi" % action,
+					not manette.is_empty()
+						and texte.contains(String(manette.get("text", "\u0000"))),
+					texte)
+			# ⚠️ Le contre-contrôle : une action SANS manette ne doit pas en
+			# inventer une. C'est la faute d'origine, dans l'autre sens.
+			if not a_manette:
+				_check("%s : aucune manette inventée" % action,
+					not texte.contains("R1") and not texte.contains("Gâchette"),
+					texte)
+
+	_check("des liaisons ont bien été examinées", vus >= 4, str(vus))
+
 
 ## **Peut-on cliquer sur ce qui cherche un adversaire ?**
 ##

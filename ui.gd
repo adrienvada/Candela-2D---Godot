@@ -5156,7 +5156,8 @@ func _apply_btn_info(btn: Button, info: Dictionary) -> void:
 	btn.icon = null
 	btn.text = String(info.get("text", ""))
 
-func _get_action_btn_info(action: String) -> Dictionary:
+## Le libellé d'une action, pour la MANETTE seulement. Vide si elle n'en a pas.
+func _get_joypad_action_info(action: String) -> Dictionary:
 	for ev in InputMap.action_get_events(action):
 		if ev is InputEventJoypadButton:
 			return _get_joypad_btn_info(ev.button_index)
@@ -5165,9 +5166,91 @@ func _get_action_btn_info(action: String) -> Dictionary:
 				return {"text": "Gâchette L2", "icon": "l2.svg"}
 			elif ev.axis == JOY_AXIS_TRIGGER_RIGHT:
 				return {"text": "Gâchette R2", "icon": "r2.svg"}
+			# ⚠️ **« Axe 1 » ne veut rien dire pour un joueur.** Le repli d'origine
+			# rendait le numéro brut de l'axe ; personne ne sait que l'axe 1 est
+			# la verticale du stick gauche. Un libellé qu'il faut décoder est un
+			# libellé qui n'informe pas.
+			match ev.axis:
+				JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y:
+					return {"text": "Stick gauche", "icon": ""}
+				JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y:
+					return {"text": "Stick droit", "icon": ""}
+				_:
+					return {"text": "Axe " + str(ev.axis), "icon": ""}
+	return {}
+
+
+## Le libellé d'une action au CLAVIER ou à la SOURIS. Vide si elle n'en a pas.
+##
+## ⚠️ **La touche se nomme par sa POSITION, traduite dans la disposition du
+## joueur.** Le jeu lie par `physical_keycode` : la touche de « haut » de J1 est
+## le `W` d'un QWERTY, qui est physiquement le **Z** d'un AZERTY. Afficher « W »
+## à Adrien serait exact du point de vue du code et faux du point de vue de sa
+## main. `keyboard_get_keycode_from_physical()` fait la traduction — sans elle,
+## l'écran nommerait une touche que personne n'a sous les doigts.
+func _get_keyboard_action_info(action: String) -> Dictionary:
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventKey:
+			var touche: InputEventKey = ev
+			var code := touche.physical_keycode
+			if code != 0:
+				code = DisplayServer.keyboard_get_keycode_from_physical(code)
 			else:
-				return {"text": "Axe " + str(ev.axis), "icon": ""}
-	return {"text": "Non assigné", "icon": ""}
+				code = touche.keycode
+			return {"text": OS.get_keycode_string(code).to_upper(), "icon": ""}
+		elif ev is InputEventMouseButton:
+			var clic: InputEventMouseButton = ev
+			match clic.button_index:
+				MOUSE_BUTTON_LEFT: return {"text": "CLIC GAUCHE", "icon": ""}
+				MOUSE_BUTTON_RIGHT: return {"text": "CLIC DROIT", "icon": ""}
+				MOUSE_BUTTON_MIDDLE: return {"text": "CLIC MOLETTE", "icon": ""}
+				# ⚠️ « MOLETTE HAUT » et pas « MOLETTE ↑ » : le premier jet portait
+				# les deux flèches, et la garde des pictogrammes de DA4.15 les a
+				# refusées — à raison. Les mots disent la même chose sans dépendre
+				# d'une fonte, et ils sont cohérents avec « CLIC GAUCHE » juste
+				# au-dessus. La garde a attrapé son auteur.
+				MOUSE_BUTTON_WHEEL_UP: return {"text": "MOLETTE HAUT", "icon": ""}
+				MOUSE_BUTTON_WHEEL_DOWN: return {"text": "MOLETTE BAS", "icon": ""}
+				_: return {"text": "BOUTON %d" % clic.button_index, "icon": ""}
+	return {}
+
+
+## Ce que le bouton de réassignation affiche.
+##
+## ⚠️ **Il annonçait des boutons de manette pour des touches de clavier.** Relevé
+## le 2026-08-27 en instanciant l'interface : le clic gauche de J1 s'affichait
+## « R1 », son clic droit « Gâchette L2 », et la touche **O** de J2 « R1 » aussi.
+## La boucle ne connaissait que `InputEventJoypadButton` et
+## `InputEventJoypadMotion` ; `InputSetup` ajoutant une liaison manette à chaque
+## action, c'est toujours elle qui était trouvée — **le clavier et la souris
+## n'existaient nulle part dans ce fichier.**
+##
+## **Aucune suite ne pouvait le voir : un libellé faux reste un libellé valide.**
+## C'est la deuxième fois que cette rubrique ment à l'écran de cette façon
+## exacte, après les « trois actions » annoncées au-dessus de deux.
+##
+## ⚠️ **Les deux périphériques sont montrés, pas arbitrés.** L'action EST liée aux
+## deux : n'en afficher qu'un obligerait à deviner lequel le joueur tient, et se
+## tromperait la moitié du temps en écran scindé — où l'un peut être au clavier
+## pendant que l'autre est à la manette.
+func _get_action_btn_info(action: String) -> Dictionary:
+	var clavier := _get_keyboard_action_info(action)
+	var manette := _get_joypad_action_info(action)
+	if clavier.is_empty() and manette.is_empty():
+		return {"text": "Non assigné", "icon": ""}
+	if clavier.is_empty():
+		return manette
+	if manette.is_empty():
+		return clavier
+	# Le clavier d'abord : c'est le périphérique que le jeu suppose par défaut,
+	# et la manette est une alternative — pas l'inverse.
+	return {
+		"text": "%s  ·  %s" % [clavier["text"], manette["text"]],
+		"icon": "",
+		"clavier": clavier["text"],
+		"manette": manette["text"],
+		"icone_manette": manette.get("icon", ""),
+	}
 
 func _on_rebind_btn_pressed(btn: Button, action: String) -> void:
 	if _is_rebinding:
