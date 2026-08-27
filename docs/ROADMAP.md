@@ -2361,7 +2361,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
-| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les six scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot**, pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
+| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
@@ -2444,56 +2444,152 @@ pour laquelle la seconde moitié de la famille 2 a été retirée.
 
 ---
 
-## ⚠️ À ÉTABLIR — la reconnexion pendant une killcam ne rend pas la main
+## ✅ Famille 4.1 — CLOSE le 2026-08-26 (banc refait, cause établie, correctif posé)
 
-**Banc écrit, rouge, et volontairement HORS du lanceur** (`./tools/run_duo.sh
---reconnexion`, famille 4.1). Il exerce le seul scénario à trois processus : le
-client meurt, quitte pendant la killcam de l'hôte, **et revient**.
+**L'entrée qui occupait cette place affirmait trois choses. Les trois étaient
+fausses au moment où on les lisait, et la troisième depuis huit heures quand
+elle a été écrite.** Le récit vaut mieux que la correction seule, parce que la
+faute est de méthode et qu'elle est reproductible.
 
-**Ce qu'il montre, reproduit à chaque exécution :**
+### Ce qui était écrit, et ce qui est mesuré
 
-- l'hôte voit bien le retour (`ADVERSAIRE: revenu`) et sa killcam va à son terme ;
-- mais **aucune entrée `PRÊT` n'est visible ensuite** sur l'écran `local_hote` —
-  le salon est là, la porte ne s'ouvre pas ;
-- et **le client revenu perd le lien** (« Trying to call an RPC while no
-  multiplayer peer is active »).
+| L'entrée disait | Mesuré le 2026-08-26 |
+|---|---|
+| « aucune entrée `PRÊT` n'est visible ensuite » | **Corrigé.** `le salon rouvert accepte le retour` passe dans tous les cas, killcam en cours comprise. |
+| « le client revenu perd le lien » | **Artefact d'instrument.** Voir plus bas : le troisième processus jouait le mauvais rôle. |
+| « deux modifications… aucune n'était la cause » | **Faux : elles l'étaient.** `git log` date cette entrée du 2026-08-19 **00:57** (`6b2d811`) et le câblage de `ui.rouvrir_le_salon()` du même jour **09:28** (`0a651ca`), dont le message dit lui-même « Rouvrir ET ne pas refermer : vert ». |
 
-**La cause n'est pas établie, et c'est pour ça que rien n'est corrigé.** Deux
-modifications ont été faites au code de production en poursuivant ce symptôme
-avant de comprendre qu'elles n'en étaient pas la cause. Elles se défendent
-séparément et restent — ne pas annoncer une déconnexion à quelqu'un dont
-l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais **il faut
-les lire comme des améliorations indépendantes, pas comme un correctif de ce
-défaut-ci**.
+L'entrée a donc été rédigée **huit heures avant son propre correctif**, et elle a
+survécu une semaine parce que **le banc était hors du lanceur** — il était hors
+du lanceur parce qu'il était rouge, et il est resté rouge dans la feuille de
+route parce que personne ne le relançait. La boucle se referme sur elle-même.
 
-**La leçon de méthode, sous une forme neuve :** « on croit débuguer, on est en
-train de renoncer » a un cousin — **on croit corriger, on est en train de
-déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
-le code a été modifié quand même.
+> **La leçon, et elle a déjà un cousin dans ce fichier** (« un constat daté
+> vieillit sans prévenir ») : **un banc qu'on sort du lanceur parce qu'il est
+> rouge cesse d'être un banc.** Il devient une phrase. Le geste juste, quand on
+> assume un rouge, est de le laisser dans le lot et de le marquer, jamais de
+> l'en retirer.
 
-**Deux pistes examinées, deux écartées — et c'est le plus utile de cette entrée.**
+### Le banc était vert, et il l'était pour la mauvaise raison
 
-1. ~~« `client_peer_id` n'est pas reposé pour le second client »~~ — **faux** :
-   `_on_peer_connected` le pose (ligne 332). Vérifié par lecture.
-2. ~~« le chemin différé parque le jeu en solo alors qu'un pair est là » —
-   J2 caché, sans collision, remplacé par la cible d'entraînement~~. Cette
-   incohérence **est réelle**, mais la corriger **ne fait pas passer le banc** :
-   ce n'est donc pas la cause. Le correctif a été **retiré**.
+Relancé tel quel le 2026-08-26 : **vert, quatre fois de suite.** Sauf qu'il
+n'exerçait pas le scénario de son titre.
 
-**Ce qui reste vrai et candidat, sans preuve** : parquer en solo alors qu'un pair
-est connecté est incohérent, et mérite d'être corrigé un jour — mais **comme une
-amélioration propre, pas comme le correctif de ce défaut-ci**.
+Le retour du second client était ordonnancé par un **`sleep 18` fixe** du
+lanceur, contre une séquence de fin qui dure une douzaine de secondes et qui
+démarre elle-même après un lancement de Godot, un décompte et un tir. Horodaté :
+mort à T, killcam close vers T+11 s, **retour à T+15 s**. C'est la ligne **4.2**
+de la checklist — « B rejoint alors que A est déjà sur l'écran de fin » —, pas la
+4.1.
 
-⚠️ **Trois modifications du code de production ont été faites en poursuivant ce
-symptôme, aucune n'était la cause, et la troisième l'a été après avoir écrit la
-règle qui l'interdit.** Le geste juste, appliqué à la troisième : revenir en
-arrière. Un chemin de netcode ne se répare pas par tâtonnements — chaque essai
-non concluant y laisse un changement dont personne ne saura dire pourquoi il est
-là.
+Il a suffi de déplacer ce seul délai pour que le tableau se lise :
 
-**Pour qui reprendra :** commencer par instrumenter ce que voit le bloc salon
-(`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
-deviner ce qui manque en amont.
+| retour relâché à | placement réel | verdict |
+|---|---|---|
+| 18 s (le lanceur) | après la killcam | vert, ×4 |
+| 14 s | pendant la killcam | **`✗ la reconnexion produit exactement une manche → 0 démarrage(s)`** |
+| 12 s | pendant la killcam | idem, ×2 |
+| 8 s | départ et retour à ~0,1 s d'écart | le banc se casse seul : `ECHEC: le premier client n'est jamais parti`, pendant que son propre journal montre le départ — le sondage à 0,25 s manquait la fenêtre |
+
+> **Un délai fixe opposé à une durée variable n'est pas une attente, c'est un
+> tirage au sort** — et ce lanceur écrit lui-même, quinze lignes plus haut,
+> qu'il faut « attendre une CONDITION, pas une durée ». La règle était posée, à
+> un endroit, et pas à l'autre.
+
+### Le vrai défaut de la 4.1, et il n'a rien à voir avec le menu
+
+Quand le retour tombe **pendant** la killcam : le salon rouvre, `PRÊT` est
+visible et cliquable, et **aucune manche ne démarre — jamais.** Les deux joueurs
+voient chacun un « prêt » qui ne produit rien ; l'hôte peut appuyer soixante
+fois. Récupérable à la main — le client appuie deux fois de plus — et rien ne le
+dit.
+
+Mécanisme, lu dans le code et cohérent avec tous les relevés :
+
+1. le revenant appuie sur `PRÊT` pendant la killcam ; `rpc_client_ready` pose
+   `p2_ready_for_rematch = true`, retient l'arme et sort, parce que
+   `_end_sequence_active` ;
+2. à la fin de la killcam, `_do_end_round` voit `_deconnexion_differee`, appelle
+   `_annoncer_deconnexion()` **et `return`** — `_apply_deferred_rematch()` n'est
+   jamais atteint ;
+3. `_annoncer_deconnexion()` joue le script « l'adversaire est parti » sur un
+   adversaire **qui est là** : `_pending_client_start = false`,
+   `_pending_p2_weapon_idx = -1`, `p2_ready_for_rematch = false` ;
+4. le revenant, lui, croit être prêt — son bouton affiche « ✓ PRÊT » — et ne
+   réémettra jamais.
+
+**Le fond : `_annoncer_deconnexion()` fait deux métiers** — solder le match, et
+signaler une absence. Le drapeau `revenu` avait été ajouté pour taire le premier
+symptôme, le **dialogue** ; tout le reste du script « parti » continuait de
+s'appliquer au revenant.
+
+### Ce que le banc sait faire maintenant
+
+- **le retour se déclenche sur une condition** : l'hôte imprime `RETOUR:`, le
+  lanceur pose un jeton, et le revenant — démarré depuis le début, en attente
+  sur ce fichier — rejoint dans la demi-seconde ;
+- **il refuse de juger ce qu'il n'a pas exercé** : il relève
+  `_end_sequence_active` à l'instant exact du retour et sort en **3**, « mesure
+  non faite », si le placement n'est pas celui du scénario ;
+- **départ et retour s'observent par signal**, plus par sondage ;
+- **`--reconnexion` (4.1) et `--reconnexion-tardive` (4.2) sont deux scénarios**,
+  la checklist les distinguant déjà ;
+- **le troisième journal est noté.** Il était écrit et jamais lu : le revenant
+  jouait `--join`, le scénario NOMINAL, face à un hôte qui sort une quinzaine de
+  secondes après son arrivée. Ses « Trying to call an RPC while no multiplayer
+  peer is active » étaient en aval de cette sortie et de rien d'autre — et ils
+  ont été consignés ici comme un défaut du jeu. **Un journal produit sans être
+  lu est pire qu'un journal absent : il a l'air d'une preuve.**
+
+### Le correctif — une fonction qui faisait deux métiers
+
+`_annoncer_deconnexion()` *soldait le match* **et** *signalait une absence*, sous
+un seul nom. Le drapeau `revenu` avait été ajouté pour taire le **dialogue**, et
+le dialogue seulement ; tout le reste du script « parti » continuait de
+s'appliquer à quelqu'un qui venait de revenir.
+
+> **Un drapeau posé à l'entrée d'une fonction ne protège que la ligne qu'on a
+> pensé à garder.** Ce que la fonction fait d'autre le traverse en silence. C'est
+> le cousin exact de « un état posé dans une branche est un état que chaque
+> `return` peut sauter », déjà consigné ici : la même faute, prise par l'autre
+> bout.
+
+Le partage en trois rend le tri visible, et il n'y a plus de « reste » :
+
+| fonction | quand | ce qu'elle fait |
+|---|---|---|
+| `_solder_le_match()` | **toujours** | jeton, killcam soldée, chrono, vues, score à zéro (checklist 4.3), engagement de l'hôte désarmé, retour au salon |
+| `_signaler_adversaire_parti()` | personne en face | dialogue, écran d'attente, `p2_ready_for_rematch` désarmé, P2 caché et sans collision, cible d'entraînement |
+| `_accueillir_le_revenant()` | quelqu'un est là | l'arme retenue se pose, le « PRÊT » du revenant **survit**, et `_check_rematch_start()` décide |
+
+**Le départ automatique sans `PRÊT` est retiré** — arbitrage d'Adrien du
+2026-08-26. `_pending_client_start` armait un `rpc_start_round` que la fin de la
+séquence tirait toute seule : une manche partait sans qu'aucun des deux camps
+n'ait rien déclaré, reste d'avant la porte PRÊT. Le champ n'avait plus de
+lecteur, il a donc disparu — un état mort se fait relire par quelqu'un qui le
+croit vivant.
+
+**Et le bac à sable cesse de se poser sur un salon peuplé.** L'incohérence était
+déjà notée ici comme « réelle, mais pas la cause », et une session l'avait
+corrigée puis retirée à juste titre : elle ne faisait pas passer le banc. Elle
+n'est pas revenue comme un correctif — elle est **tombée du partage** : cacher P2
+et allumer la cible d'entraînement veut dire « il n'y a personne », donc ces
+lignes vivent sous ce nom-là. `sandbox_mode`, lui, reste des deux côtés : il ne
+parle pas de l'adversaire mais de l'absence de manche, et sans lui `player.gd`
+cesse de traiter les commandes — l'hôte immobile derrière son menu, ce que la
+ligne 4.4 de la checklist interdit.
+
+### Ce qui reste, et qui n'est pas de ce lot
+
+- **`p2_ready_for_rematch` est un booléen qui ne dit pas QUI.** Effacé à tort
+  jusqu'ici ; le jour où on cesse de l'effacer, il peut au contraire être
+  **transféré** — un pair héritant du « prêt » d'un autre, parti entre-temps. Les
+  deux fautes ont la même racine, et la porter par identifiant de pair les
+  supprime ensemble. Item propre, non ouvert.
+- **La ligne 4.4 de la checklist n'est pas couverte par un banc** : « aucun
+  panneau résiduel, vitesse normale, A peut se déplacer et tirer » pendant
+  l'attente. Le partage ci-dessus la rend probablement vraie ; personne ne l'a
+  mesurée.
 
 ### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
 
@@ -3026,6 +3122,38 @@ qui rend.
 annoncé une heure plus tôt.** Une information sur l'état des sessions vieillit
 en minutes, et une session ne peut pas annoncer sa propre fin.
 
+### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
+
+Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
+trouver un trousseau pour stocker "ad4842…9388" ». Je l'ai attribuée à **VLC**,
+sur deux faits vrais : VLC démarré à 21:38:12, trousseau écrit à 21:38, et VLC
+livré en binaire Intel sur un Mac arm64 — un candidat crédible pour une API
+dépréciée. Adrien a fermé le sujet sur cette base.
+
+**C'était faux.** La chaîne de 32 hexadécimaux **est le `PRODUCT_ID` EOS de
+Candela** : la boîte venait du SDK Epic à l'intérieur de Godot, par
+`create_device_id`. L'identifiant était lisible dès la première capture d'écran,
+et il désignait le coupable sans ambiguïté — pendant que je corrélais des
+horodatages sur une machine qui fait vingt choses à la fois.
+
+> **Quand une panne porte un identifiant, on l'identifie ; on ne le corrèle pas.**
+> Une corrélation temporelle répond à « qu'est-ce qui s'est passé au même
+> moment », qui n'est pas la question. C'est la même famille que le voleur de
+> port et que `cam1` à `Nil` : le symptôme accuse un innocent, et l'innocent est
+> plausible — c'est ce qui rend l'accusation coûteuse. Ici elle a en plus obtenu
+> l'assentiment d'Adrien, ce qui l'a presque close.
+
+**Ce que la mesure a ensuite établi**, et qui vaut d'être su : le PUID est
+**stable** d'un lancement à l'autre (`0002…21ef` deux fois), aucun fichier n'est
+écrit localement, aucune entrée de trousseau ne porte le `PRODUCT_ID`. L'ancre du
+PUID n'est donc pas locale — elle est tenue du côté d'Epic, rattachée à la
+machine, ce que le dépôt disait déjà sans le formuler ainsi (« deux instances
+locales partagent le même Device ID », d'où `--eos-ephemeral`). **Le refus du
+trousseau ne menace pas l'identité classée, et ne coûte rien de mesurable.**
+
+Carte complète des clés du projet, et protocole pour refaire cette mesure :
+[CLES_ET_IDENTIFIANTS.md](CLES_ET_IDENTIFIANTS.md).
+
 ### Une branche finie ne se signale pas toute seule (2026-08-26)
 
 `worktree-lanceur-port` portait deux commits **écrits, éprouvés et complets** —
@@ -3107,6 +3235,131 @@ deux phrases de `ui.gd` ont **perdu leur compte** au lieu de le voir corrigé �
 « les actions réassignables », sans nombre. Un effectif en toutes lettres
 redevient faux à la prochaine action ajoutée, et rougit alors au nom d'un
 innocent : ici la rubrique des contrôles, qui n'avait rien fait.
+
+### Une mécanique retirée laisse des résidus que le grep TROUVE (2026-08-27)
+
+Le piège juste au-dessus dit qu'une dépendance survit à la disparition du mot
+qui la désigne, et qu'il faut donc chercher autre chose que le nom retiré. Le
+lendemain de la suppression du sprint, un simple `grep -i sprint` a rendu
+**trois résidus de plus** — et il les a rendus tous les trois, sans effort. Le
+mécanisme est donc l'inverse du précédent, et il est plus banal : **ce n'est pas
+la recherche qui a manqué, c'est de la relancer.** Le lot était vert, le sujet
+paraissait clos.
+
+Les trois, par gravité croissante :
+
+1. **`p1_sprint` et `p2_sprint` étaient encore déclarés dans l'Input Map**
+   (`project.godot`), liés à Maj et à M, lus par personne. Deux touches
+   réservées par des actions fantômes — et **aucune suite ne pouvait le voir** :
+   rien ne vérifie la liste des actions déclarées. Sans effet, jusqu'au jour où
+   quelqu'un veut lier Maj.
+2. **`input_setup.gd` annonçait deux fois `# Carré = Courir`.** La liaison
+   manette était partie, son commentaire non : il a continué d'annoncer une
+   ligne absente. Un commentaire orphelin ne ment pas seulement sur le passé —
+   il fait croire qu'un bouton est pris.
+3. **`brouillage.gd` justifiait deux réglages par une vitesse de sprint.** C'est
+   le seul des trois qui ait changé un EFFET. `RETARD_REMANENCE` valait 0,18 s,
+   posé pour « à 520 px/s en sprint, 94 px d'avance à prendre, soit cinq rayons
+   de joueur ». Le sprint parti, la seule vitesse est 260 px/s : les mêmes
+   0,18 s n'achetaient plus que **47 px, la moitié**. Le nombre n'avait pas
+   bougé ; le monde autour de lui, si.
+
+**Ce que le troisième apprend, et qui vaut bien au-delà du sprint : un réglage
+dérivé d'une grandeur doit nommer cette grandeur DANS LE CODE.** Écrite dans le
+commentaire, elle ne tient rien — elle raconte, au présent, un présent qui
+passe. C'est la même famille que le constat daté de `CLAUDE.md`, à ceci près
+qu'ici ce n'est pas une phrase qui vieillit, c'est **le chiffrage d'une
+constante**. `brouillage.gd` porte donc `VITESSE_MARCHE` et `AVANCE_REMANENCE`,
+et `RETARD_REMANENCE` s'en déduit — 0,36 s. Le réglage est l'avance en pixels ;
+le temps n'en est que la conversion, et il suivra si la vitesse rebouge.
+
+**La recopie est tenue par une suite, et c'est la moitié qui compte.**
+`brouillage.gd` n'a aucune dépendance — c'est ce qui lui permet de tourner sous
+`--script` là où `game_state.gd` ne compile pas — donc il ne peut pas lire
+`player.gd`, seulement le recopier. `test_brouillage._test_vitesse_de_reference`
+relit le **littéral** de `player.gd` et rougit si les deux divergent, en nommant
+les deux valeurs. Contrôle **éprouvé à l'envers avant d'être retenu** (260 → 259 :
+rouge, message juste) : un garde-fou qu'on n'a jamais vu échouer ne garde rien,
+c'est le défaut du 2026-08-18 — trente suites vertes sur une mécanique inerte.
+
+**Portée du redosage, mesurée avant de toucher :** `derive()` et `retard()` ne
+sont appelés que depuis `tools/`. Les modes TREMBLEMENT et RÉMANENCE ne sont pas
+branchés — le jeu tourne sur halo + contraste + flou. Doubler le retard ne change
+donc rien à une partie ; ça change ce que le **banc** montre, c'est-à-dire ce sur
+quoi Adrien tranchera. Un banc qui montre un mode à la moitié de son réglage
+prévu fait juger autre chose que ce qu'on croit juger.
+
+### Le code dit ce qu'il fait, la documentation dit ce qui a eu lieu (2026-08-27)
+
+**Décision d'Adrien**, le jour où les trois résidus ont été refermés : *« supprime
+les occurrences de sprint dans le code »*. Il en restait vingt-neuf, toutes en
+commentaire, aucune dans du code exécuté — des post-mortem accrochés aux lignes
+qu'ils avaient jadis expliquées.
+
+C'est l'application directe de la leçon que `CLAUDE.md` porte déjà : **ce fichier
+décrit ce que le code FAIT, pas ce qui lui manque.** Un commentaire qui raconte
+une mécanique disparue fait deux dégâts. Il envoie chercher quelque chose qui
+n'existe plus, et il vieillit sans prévenir — il était vrai le jour où on l'a
+écrit, il se lit comme une propriété du projet. Le second est le plus cher : une
+session s'y fie sans aller voir le code.
+
+**Et la règle qu'Adrien a énoncée dans le même souffle, parce qu'elle est la
+condition de la première : la documentation est DOUBLÉE, le suivi de projet est
+COMPLÉMENTAIRE.** Un delta envoyé au tableau de bord ne dispense jamais de
+l'écrire ici. Le tableau de bord n'est pas versionné et **rien ne signale qu'il
+est périmé** ; la ROADMAP, elle, voyage dans le commit qui la justifie. L'artefact
+ajoute une lecture pour un humain — il ne remplace aucune trace. Corollaire
+opérationnel : on n'allège jamais un document en comptant sur l'autre.
+
+**Ce que les commentaires portaient et que ce document ne portait pas.** Quatre
+faits, écrits ici AVANT d'être retirés du code — sans quoi la suppression les
+aurait détruits au lieu de les déplacer :
+
+1. **Courir éteignait la torche, et cette règle est tombée avec l'allure.**
+   C'était une contrepartie : la vitesse se payait en cécité. Il n'y a plus rien
+   à payer, donc la torche n'obéit plus qu'au bouton. **C'est un choix de game
+   design, pas un nettoyage** — si une seconde allure revient un jour, la
+   contrepartie ne revient pas toute seule avec elle.
+2. **On ne pouvait pas tirer en courant.** La condition de tir portait un
+   `not is_sprinting` ; elle ne le porte plus. Même remarque : la règle a disparu
+   avec la mécanique, elle n'a pas été arbitrée pour elle-même.
+3. **Un effet éteint qui rastérise encore n'est pas éteint, il est invisible — ce
+   n'est pas la même chose.** Les traits de vitesse (V5.9) ont d'abord été
+   « éteints » en figeant leur intensité à zéro. Mais le `ColorRect` couvrait tout
+   l'écran et restait visible : son fragment shader s'exécutait sur chaque pixel,
+   à intensité nulle comme à un — une passe plein écran par joueur, pour un effet
+   qui ne pouvait plus se déclencher, sur un jeu qui dispose de 3,4 ms de marge
+   sur ses pires images. **Cette leçon vaut pour tout effet qu'on désactivera à
+   l'avenir** : couper l'intensité ne coupe pas le coût, seul le retrait du nœud
+   le fait.
+4. **Un facteur qui ne varie jamais suggère une modulation qui n'existe pas.** La
+   hauteur du son de pas passait par un multiplicateur qui valait autre chose que
+   1 dans un seul cas ; ce cas parti, le facteur ne modulait plus rien mais
+   continuait d'annoncer qu'il modulait. La fourchette est fixe et le dit.
+
+**Un quatrième effectif écrit à la main a été trouvé au passage**, et il était
+dans le commentaire même qui interdit d'en écrire : `ui.gd` annonçait « une
+grille de trois lignes » pour une table qui en produit deux. Il n'a pas été
+corrigé, il a été **retiré** — c'est le geste que ce document prescrit depuis les
+trois premiers. La même phrase existe encore ici, plus haut, dans le compte rendu
+daté de la refonte des menus : là elle décrit un état passé, et une archive datée
+a le droit de dire ce qui était vrai ce jour-là. C'est toute la différence entre
+les deux documents.
+
+⚠️ **Cette entrée et le code qu'elle justifie ne voyagent pas dans le même
+commit, contre la règle du `CLAUDE.md`, et ce n'est pas un choix.** Elle a été
+écrite ici d'abord — exprès, pour que le retrait ne détruise rien —, et une autre
+session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt :
+elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
+rien à voir. Le retrait lui-même suit dans le commit d'après.
+
+**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
+partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
+bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
+add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
+de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
+— il est bien versionné — c'est le **lien** entre une décision et son code,
+c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -4620,7 +4873,7 @@ un **second** verrou, jamais le premier.
 
 **Sonder, pas raisonner, dès qu'un commentaire tient lieu de preuve.**
 
-### Famille 4.1 — le vrai fond n'est pas le menu (2026-08-19, OUVERT)
+### ~~Famille 4.1 — le vrai fond n'est pas le menu~~ — **CLOS le 2026-08-26**
 
 Le menu réparé, le banc reste rouge pour une **autre** cause, mesurée : sur
 l'hôte, `multiplayer.multiplayer_peer` est **null immédiatement après le départ
@@ -4631,6 +4884,14 @@ un artefact de banc, c'est le jeu.
 Piste, non confirmée : `_close_lobby_if_left()` dans `ui.gd` coupe le salon dès
 qu'un changement d'écran survient alors que `get_peers()` est vide. Fichier
 d'une autre session, qui a été prévenue.
+
+**Corrigé, et la piste était la bonne.** `_close_lobby_if_left()` garde désormais
+le salon tant qu'un pair est là, et `rouvrir_le_salon()` s'interdit
+explicitement `hub.reset()` pour ne pas la déclencher — le commentaire de cette
+fonction le dit en toutes lettres. Mesuré le 2026-08-26 : le second client
+rejoint, `peer connected` apparaît chez l'hôte à chaque exécution, le serveur
+n'est plus démonté. **Ce qui restait rouge dans la famille 4.1 est ailleurs**, et
+vit désormais dans sa propre entrée en tête de fichier.
 
 
 ### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)
@@ -7776,10 +8037,36 @@ un fait de jeu, pas à un rythme d'interface.
   Reste ouvert, et c'est un choix d'Adrien, pas un manque technique : une
   variation de membres peinte par-dessus ce roulis. Elle demanderait quatre
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
-  ce que trois tentatives n'ont pas obtenu. Les seize PNG `*_marche_*.png` qui
-  traînent dans `assets/sprites/` sont ceux de la mauvaise caméra : ils ne sont
-  suivis par git ni chargés par quoi que ce soit, mais ils portent un nom
-  crédible — **ne pas les câbler.**
+  ce que trois tentatives n'ont pas obtenu.
+
+  **Les PNG `*_marche_*.png` d'`assets/sprites/` sont VERSIONNÉS depuis le
+  2026-08-27 (décision d'Adrien) et restent ceux de la mauvaise caméra.** Les
+  deux moitiés de cette phrase comptent, et la seconde plus que la première :
+  ils sont au dépôt pour ne plus pouvoir disparaître d'un disque, **pas parce
+  qu'ils sont bons**. Trois faits mesurés avant de les verser, qui disent
+  lesquels ils sont :
+
+  - **vue oblique de trois-quarts**, jambes visibles, là où le sprite statique
+    est une vue de dessus stricte — on voit le dessus du crâne sur l'un, le dos
+    sur l'autre ;
+  - **bavures magenta et flou de mouvement** cuits dans l'image, visibles à
+    l'œil nu sur les quatre poses du fusil ;
+  - **la mauvaise échelle**, et c'est le fait le plus dur : `fusil.png` fait
+    82×82, `fusil_marche_1.png` fait 48×48. Les câbler rétrécirait le joueur de
+    41 % — `test_sprites` bâtit l'empreinte en monde depuis `texture.get_width()`,
+    et rougirait, ce qui est la bonne nouvelle de l'affaire.
+
+  **Ne pas les câbler.** Ils portent un nom crédible et suivent exactement la
+  convention que `player.gd` attend (`<arme>_marche_<n>.png` et son
+  `_silhouette`) : c'est précisément ce qui les rend dangereux. Une entrée de
+  dette datée vaut mieux qu'un fichier orphelin sur un disque — mais un fichier
+  versionné se lit comme un fichier approuvé, et cette entrée est le seul endroit
+  qui dit le contraire.
+
+  Ils sont **trente-deux** et non seize : cette entrée a longtemps écrit
+  « seize », en ne comptant que les peints et en oubliant les silhouettes.
+  Quatre armes × quatre poses × deux versions. Encore un effectif écrit à la
+  main, dans un document qui en a corrigé quatre autres le même jour.
 
   **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
@@ -7878,7 +8165,12 @@ un fait de jeu, pas à un rythme d'interface.
   « sombres et contrastés », donnée à cause du fondu additif des murs,
   contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
   rien n'a été regénéré. *(C, avec DA2.8)*
-- **DA2.10 Le key art du titre** 🟡 **ASSET PRÊT, PAS POSÉ le 2026-08-25** —
+- **DA2.10 Le key art du titre** ✅ **livrée le 2026-08-25** — ⚠️ **cet
+  en-tête a annoncé « asset prêt, pas posé » jusqu'au 2026-08-26**, alors que
+  le corps de cette même entrée disait « ✅ POSÉE » quinze lignes plus bas, et
+  que `_poser_le_key_art()` était appelée dans `ui.gd`. Un en-tête se lit, un
+  corps se parcourt : c'est l'en-tête qui a fait foi pour trois relectures.
+  **Corriger l'état d'un item sans corriger son titre ne corrige rien.**
   ⚠️ **DEUX planches cuites, pas trois.** Cette entrée a annoncé trois planches
   « retouchées et ramenées sur la charte » ; `assets/keyart/` n'en a jamais
   contenu que deux, et git n'en a jamais connu d'autres. La troisième source,
@@ -9319,6 +9611,19 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
     `false` et relèvent de DA4.19, close : **signalé, pas corrigé.** *(S)*
   - `✕` et `☐` restent dans la ligne d'aide manette : ce sont les touches
     **telles qu'elles sont gravées sur la manette**, pas des décorations.
+
+  **La matière, livrée le 2026-08-26 par la session qui l'a générée** : quatorze
+  masques en niveaux de gris, fond transparent, 128×128, la teinte posée par le
+  code — même procédé DA1.5 que les icônes d'armes. La famille symétrie et la
+  paire annuler/refaire ont été **générées ensemble puis découpées**, pour la
+  même raison que `creer`/`rejoindre` en DA4.13 : des variantes d'un même geste
+  divergeraient si elles étaient tirées séparément.
+
+  ⚠️ **Cette entrée a existé en DEUX exemplaires**, écrits le même jour par deux
+  sessions — l'une décrivant la matière (« reste : le câblage »), l'autre le
+  câblage. Ni l'une ni l'autre ne mentait ; **elles décrivaient deux moments du
+  même item et se seraient contredites au premier lecteur**. Fusionnées ici le
+  2026-08-27.
 
   27 contrôles, verts, vérifiés rouges sur trois versants — le reflet non
   retourné, un emoji réintroduit, une taille hors échelle. *(S + G)*

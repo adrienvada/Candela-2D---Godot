@@ -418,17 +418,17 @@ func _audit_personnalisation() -> void:
 	# Ce qu'on compte : des commandes ACTIONNABLES, pas des boutons. Les effets se
 	# règlent au curseur et l'audio au bouton ; exiger des boutons partout aurait
 	# fait passer une rubrique entière pour vide alors qu'elle est complète.
-	# ⚠️ **CONTRÔLES se DÉDUIT, il ne se chiffre plus.** Ce seuil valait `6` avec
-	# le commentaire « trois actions × deux joueurs » — les trois étant Tirer,
-	# Torche et Courir. Le sprint supprimé le 2026-08-26, la rubrique est tombée
-	# à 4 et ce banc a rougi **en accusant la rubrique des contrôles**, un écran
-	# qui n'avait rien fait. DA2 l'a remis à `4`, ce qui était juste.
+	# ⚠️ **CONTRÔLES se DÉDUIT, il ne se chiffre plus.** Ce seuil a valu `6`,
+	# écrit à la main sous le commentaire « trois actions × deux joueurs ». Une
+	# action a quitté le jeu : la rubrique est tombée à 4 et ce banc a rougi **en
+	# accusant la rubrique des contrôles**, un écran qui n'avait rien fait.
 	#
-	# **Mais un nombre écrit à la main redeviendra faux à la prochaine action
-	# ajoutée ou retirée**, et il rougira encore au nom d'un innocent. Pire :
-	# `grep sprint` ne pouvait pas trouver ce `6`. Le seuil COMPTAIT le sprint
-	# sans jamais le NOMMER — même piège qu'un argument passé en littéral, qui
-	# ne porte plus le nom de ce qu'il transmet.
+	# Le remettre à `4` aurait été juste, et faux le lendemain. **Un nombre écrit
+	# à la main redevient faux à la prochaine action ajoutée ou retirée**, et il
+	# rougit alors au nom d'un innocent. Pire : aucune recherche textuelle ne
+	# pouvait trouver ce `6` — le seuil COMPTAIT une action sans jamais la
+	# NOMMER, même piège qu'un argument passé en littéral, qui ne porte plus le
+	# nom de ce qu'il transmet.
 	#
 	# Dérivé de `BINDABLE`, il suit tout seul. Et il vérifie une propriété plus
 	# forte que « au moins quatre commandes » : **chaque action déclarée produit

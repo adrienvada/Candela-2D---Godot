@@ -41,9 +41,8 @@ class_name Protocol
 ## 2 — la poignée de main elle-même : `rpc_hello` et l'attribut de salon `PROTO`.
 ##     Un build v1 n'a pas `rpc_hello` ; il ne répond donc jamais, et c'est
 ##     `_check_hello_arrived` qui le refuse — le silence est un refus.
-## 5 — la suppression du SPRINT (2026-08-26, décision d'Adrien). `rpc_send_inputs`
-##     perd son sixième argument : un client v4 enverrait six valeurs à un hôte
-##     v5 qui en attend cinq. **Rupture franche, donc le numéro monte** — c'est
+## 5 — `rpc_send_inputs` perd son sixième argument (2026-08-26) : un client v4
+##     enverrait six valeurs à un hôte v5 qui en attend cinq. **Rupture franche, donc le numéro monte** — c'est
 ##     exactement le cas que ce carnet existe pour attraper, et le témoin du fil
 ##     l'a signalé avant qu'on y pense.
 const VERSION := 5

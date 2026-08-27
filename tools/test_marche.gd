@@ -29,9 +29,9 @@ extends SceneTree
 ## laquelle quatre images fixes ne pouvaient pas convenir : rien à quoi les
 ## accrocher.
 ##
-## *(Le sprint a été supprimé le 2026-08-26 ; il n'y a donc plus qu'une allure.
-## Le contrôle qui exigeait que le roulis en tienne compte est retiré, mais
-## l'ancrage sur la DISTANCE reste ce qui rend la démarche juste.)*
+## *(Il n'y a qu'une allure, donc aucun contrôle n'exige du roulis qu'il en
+## change avec elle. L'ancrage sur la DISTANCE, lui, ne dépend pas de ce
+## nombre : c'est ce qui rend la démarche juste, et le resterait à deux.)*
 ##
 ## ## Pourquoi lire le TEXTE
 ##
