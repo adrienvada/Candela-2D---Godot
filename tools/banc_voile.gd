@@ -85,7 +85,7 @@ const NOMS_MODE := [
 
 ## Les uniformes entiers. Le banc range tout en `float` — un seul type, une
 ## seule boucle de poussée — et ne reconvertit qu'ici, au moment d'écrire.
-const ENTIERS := ["mode", "lueurs_n", "flares_n"]
+const ENTIERS := ["mode", "lueurs_n", "flares_n", "fantomes_n"]
 
 ## Les réglages, dans l'ordre où l'on veut les toucher : d'abord le voile
 ## lui-même — c'est lui qu'Adrien décrit comme « une caméra éblouie » —, puis ce
@@ -111,8 +111,15 @@ const REGLAGES := [
 	["longueur des flares", "flares_longueur", 0.2, 6.0, 0.1],
 	["largeur des flares", "flares_largeur", 0.02, 1.0, 0.02],
 	["INCLINAISON des flares", "flares_penche", 0.0, 1.0, 0.05],
-	["rotation de la rosette", "flares_rotation", 0.0, 0.3, 0.002],
 	["scintillement des flares", "flares_scintille", 0.0, 1.0, 0.02],
+	["TREMBLEMENT (la main)", "tremble_ampl", 0.0, 0.6, 0.005],
+	["tremblement — lent (Hz)", "tremble_hz_a", 0.0, 4.0, 0.05],
+	["tremblement — rapide (Hz)", "tremble_hz_b", 0.0, 8.0, 0.05],
+	["nombre de fantômes", "fantomes_n", 0.0, 6.0, 1.0],
+	["intensité des fantômes", "fantomes_intensite", 0.0, 1.5, 0.02],
+	["écart des fantômes", "fantomes_ecart", 0.05, 1.5, 0.02],
+	["taille des fantômes", "fantomes_taille", 0.02, 1.0, 0.01],
+	["CÔTÉ des fantômes (−1 = réel)", "fantomes_cote", -1.0, 1.0, 2.0],
 	["force du grain", "grain_force", 0.0, 0.5, 0.005],
 	["rafraîchissement du grain", "grain_hz", 0.0, 60.0, 2.0],
 ]
@@ -153,8 +160,10 @@ var _arme: WeaponData
 ## de l'écran.
 const CHEMIN_LUEUR := "res://assets/sprites/voile_lueur.png"
 const CHEMIN_FLARE := "res://assets/sprites/voile_flare.png"
+const CHEMIN_FANTOME := "res://assets/sprites/voile_fantome.png"
 var _lueur_tex: Texture2D
 var _flare_tex: Texture2D
+var _fantome_tex: Texture2D
 var _textures_fournies: bool = false
 
 # --- état vivant ------------------------------------------------------------
@@ -244,7 +253,7 @@ static func preconditions_manquantes(
 		for u in shader.get_shader_uniform_list(true):
 			connus[String(u["name"])] = true
 		var attendus := ["mode", "niveau", "teinte", "relevement", "aspect",
-			"temps", "lueur_tex", "flare_tex"]
+			"temps", "lueur_tex", "flare_tex", "fantome_tex"]
 		for r in REGLAGES:
 			attendus.append(String(r[1]))
 		for nom in attendus:
@@ -398,14 +407,18 @@ func _lire_defauts() -> void:
 
 ## Les deux textures : celles du disque si elles y sont, sinon fabriquées.
 func _forger_textures() -> void:
-	if ResourceLoader.exists(CHEMIN_LUEUR) and ResourceLoader.exists(CHEMIN_FLARE):
+	if ResourceLoader.exists(CHEMIN_LUEUR) and ResourceLoader.exists(CHEMIN_FLARE) \
+			and ResourceLoader.exists(CHEMIN_FANTOME):
 		_lueur_tex = load(CHEMIN_LUEUR)
 		_flare_tex = load(CHEMIN_FLARE)
-		_textures_fournies = _lueur_tex != null and _flare_tex != null
+		_fantome_tex = load(CHEMIN_FANTOME)
+		_textures_fournies = _lueur_tex != null and _flare_tex != null \
+			and _fantome_tex != null
 		if _textures_fournies:
 			return
 	_lueur_tex = _forger_lueur()
 	_flare_tex = _forger_flare()
+	_fantome_tex = _forger_fantome()
 
 
 ## Une lueur ronde : blanche au centre, rigoureusement noire au bord.
@@ -423,7 +436,7 @@ func _forger_lueur(taille: int = 256) -> ImageTexture:
 			var t := clampf(1.0 - r, 0.0, 1.0)
 			var v := pow(t, 4.0) * 0.75 + pow(t, 1.4) * 0.35
 			img.set_pixel(x, y, Color(1, 1, 1, 1) * minf(v, 1.0))
-	return ImageTexture.create_from_image(img)
+	return ImageTexture.create_from_image(_border_noir(img))
 
 
 ## Une traînée horizontale : vive sur l'axe, éteinte partout ailleurs.
@@ -447,7 +460,82 @@ func _forger_flare(larg: int = 512, haut: int = 64) -> ImageTexture:
 			var long := pow(clampf(1.0 - absf(u), 0.0, 1.0), 1.8)
 			var peigne := 0.72 + 0.28 * sin(u * 37.0) * sin(u * 11.3 + 1.7)
 			img.set_pixel(x, y, Color(1, 1, 1, 1) * clampf(long * travers * peigne, 0.0, 1.0))
-	return ImageTexture.create_from_image(img)
+	return ImageTexture.create_from_image(_border_noir(img))
+
+
+## Un fantôme d'objectif : le disque à IRIS, avec son liseré.
+##
+## ⚠️ **Il est HEXAGONAL, et ce n'est pas de la coquetterie.** Un fantôme rond
+## est une bulle ; un fantôme à six côtés est le diaphragme de l'objectif qu'on
+## regarde à travers. C'est le détail qui fait dire « photo » plutôt que
+## « effet » — et c'est précisément ce qu'Adrien demande aux fantômes
+## d'apporter (2026-08-27).
+##
+## Trois termes : un intérieur presque plat et faible, un liseré vif au bord, et
+## une chute franche au-delà. Le liseré est le plus important des trois : sans
+## lui on obtient une tache, et une tache de plus ne fait pas un objectif.
+func _forger_fantome(taille: int = 256) -> ImageTexture:
+	var img := Image.create(taille, taille, false, Image.FORMAT_RGBA8)
+	var c := float(taille - 1) * 0.5
+	for y in taille:
+		for x in taille:
+			var p := Vector2(float(x) - c, float(y) - c) / c
+			# Rayon HEXAGONAL : on ramène l'angle dans un sixième de tour et on
+			# divise par l'apothème. `r = 1` est alors le bord de l'hexagone,
+			# quel que soit l'angle.
+			var ang := fposmod(p.angle(), PI / 3.0) - PI / 6.0
+			# ⚠️ **Le `/ 0,78` est ce qui garde le pourtour NOIR, et son absence a
+			# blanchi tout l'écran.** Sans lui, les côtés plats de l'hexagone
+			# tombent pile sur le bord de la texture : le liseré y vaut encore
+			# 0,27, et `repeat_disable` étire ce texel à l'infini — quatre
+			# fantômes ajoutaient donc 0,27 chacun SUR TOUTE L'IMAGE.
+			#
+			# Le shader porte l'avertissement en toutes lettres (« les textures
+			# DOIVENT être noires sur tout leur pourtour »). Je l'ai écrit pour
+			# les deux premières et violé sur la troisième — un avertissement ne
+			# protège que ce qu'on pense à relire.
+			var r := p.length() * cos(ang) / cos(PI / 6.0) / 0.78
+			# ⚠️ **Un fantôme est un disque REMPLI à liseré, pas un fil de fer.**
+			# Le premier jet donnait 0,22 d'intérieur contre 0,85 de liseré : à
+			# l'écran, une chaîne de contours hexagonaux nets, qui se lit comme
+			# du dessin vectoriel et non comme une photo. C'est l'inverse du but,
+			# puisque les fantômes n'ont été ajoutés que pour « augmenter le
+			# réalisme » (Adrien, 2026-08-27).
+			#
+			# Trois termes désormais, et l'ordre de leurs poids est le réglage :
+			# un intérieur franc, un liseré plus discret que lui, et un léger
+			# dégradé qui empêche l'intérieur d'être un aplat — un aplat parfait
+			# est aussi peu photographique qu'un contour parfait.
+			var interieur := 0.34 * (1.0 - smoothstep(0.72, 1.0, r))
+			var degrade := 0.10 * clampf(1.0 - r, 0.0, 1.0)
+			var lisere := 0.46 * exp(-pow((r - 0.95) / 0.055, 2.0))
+			var v := clampf(interieur + degrade + lisere, 0.0, 1.0) \
+				* (1.0 - smoothstep(1.0, 1.08, r))
+			img.set_pixel(x, y, Color(1, 1, 1, 1) * v)
+	return ImageTexture.create_from_image(_border_noir(img))
+
+
+
+## La CEINTURE : le pourtour d'une texture, forcé à noir.
+##
+## ⚠️ **Ce n'est pas de la prudence, c'est un garde-fou payé.** Le shader
+## échantillonne les trois textures largement hors de leurs bornes, et
+## `repeat_disable` y étire le texel du bord. Un seul texel non nul sur un bord
+## se répand donc sur une moitié d'écran — c'est arrivé au fantôme, et l'image
+## est sortie ENTIÈREMENT BLANCHE, ce qui ne ressemble à aucun défaut de forme et
+## n'oriente donc vers rien.
+##
+## Une formule peut oublier de s'annuler au bord ; deux pixels de ceinture, non.
+func _border_noir(img: Image) -> Image:
+	var l := img.get_width()
+	var h := img.get_height()
+	for x in l:
+		for y in [0, 1, h - 2, h - 1]:
+			img.set_pixel(x, y, Color(0, 0, 0, 0))
+	for y in h:
+		for x in [0, 1, l - 2, l - 1]:
+			img.set_pixel(x, y, Color(0, 0, 0, 0))
+	return img
 
 
 func _batir_monde() -> void:
@@ -759,6 +847,7 @@ func _rendre() -> void:
 		taille.x / maxf(taille.y, 1.0))
 	_mat.set_shader_parameter("lueur_tex", _lueur_tex)
 	_mat.set_shader_parameter("flare_tex", _flare_tex)
+	_mat.set_shader_parameter("fantome_tex", _fantome_tex)
 	for nom in _val.keys():
 		if nom in ENTIERS:
 			_mat.set_shader_parameter(nom, int(round(float(_val[nom]))))

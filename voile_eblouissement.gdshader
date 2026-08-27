@@ -18,7 +18,7 @@ shader_type canvas_item;
 //
 // ## D'où la structure : un SOL, et ce qui se pose dessus
 //
-//     alpha = niveau × [ mélange(plancher, cime, creux)  +  lueurs + flares ]
+//     alpha = niveau × [ mélange(plancher, cime, creux) + lueurs + flares + fantômes ]
 //
 // `plancher` est l'aplat d'aujourd'hui — 0,30, arbitré par Adrien le
 // 2026-08-25. **Il ne descend jamais en dessous**, nulle part sur l'écran. Le
@@ -29,11 +29,16 @@ shader_type canvas_item;
 // ## Pourquoi des TEXTURES et non des formules
 //
 // « Ne peut-on pas prendre une texture qui génère comme une lumière, et
-// l'animer d'une façon maline et pas chère » (Adrien). Deux textures suffisent —
-// une lueur ronde, une traînée — et tout le reste n'est que des matrices : on
-// les échantillonne à des échelles, des angles et des décalages qui dérivent
-// lentement. Sept lectures de texture pour toute la gerbe, contre une trentaine
-// d'opérations trigonométriques par pixel dans la version précédente.
+// l'animer d'une façon maline et pas chère » (Adrien). Trois textures — une
+// lueur ronde, une traînée, un fantôme d'objectif — et tout le reste n'est que
+// des matrices : on les échantillonne à des échelles, des angles et des
+// décalages qui dérivent lentement. Une douzaine de lectures de texture pour
+// toute la gerbe, contre une trentaine d'opérations trigonométriques par pixel
+// dans la première version.
+//
+// Les fantômes sont ce qui fait basculer l'image de « effet » à « photo » : un
+// ŒIL n'a pas de fantômes, un OBJECTIF en a — et c'est l'objectif qu'on demande
+// au joueur de croire.
 //
 // Et surtout : **une texture se remplace.** Le jour où une vraie photo de flare
 // arrive, elle se substitue à celle qu'on fabrique, sans toucher au shader.
@@ -71,7 +76,12 @@ uniform float niveau : hint_range(0.0, 1.0) = 0.0;
 uniform float plancher : hint_range(0.0, 1.0) = 0.30;
 
 /// Ce que vaut le voile au CENTRE. L'écart avec le plancher est tout l'effet.
-uniform float cime : hint_range(0.0, 1.0) = 0.88;
+/// **0,34, relevé au banc par Adrien le 2026-08-27** — « les valeurs de plancher
+/// et de cime me semblent pas mal là ». Elle valait 0,88 à l'ouverture, et
+/// l'écart dit quelque chose : à 0,34 le lavis est presque PLAT (0,30 aux bords,
+/// 0,34 au centre), et toute la structure visible vient des lueurs et des flares
+/// qui s'y ajoutent. Le voile blanchit ; ce sont les lueurs qui le sculptent.
+uniform float cime : hint_range(0.0, 1.0) = 0.34;
 
 /// Sur quelle distance le lavis descend de `cime` vers `plancher`, en fractions
 /// de la DEMI-HAUTEUR. **1,9 : le lavis est encore à mi-course dans les coins**
@@ -141,13 +151,65 @@ uniform float flares_largeur : hint_range(0.02, 1.0) = 0.20;
 /// poignée de l'inclinaison : `1 + penche · cos(θ − relèvement)`.
 uniform float flares_penche : hint_range(0.0, 1.0) = 0.55;
 
-/// Tours par seconde de la rosette entière. Très lent : les traînées doivent
-/// RAMPER. Même leçon que `Brouillage.DERIVE_HZ_*` — ce qui tremble vite est
-/// intégré par l'œil et cesse d'exister.
-uniform float flares_rotation : hint_range(0.0, 0.3) = 0.022;
+/// **LE TREMBLEMENT — l'amplitude, en radians, dont toute la gerbe vacille.**
+///
+/// ⚠️ **Ceci a d'abord été une ROTATION CONTINUE, et c'était le mauvais geste.**
+/// « La rotation continue de l'effet d'éblouissement, je ne suis pas sûr […] on
+/// remplace le mouvement de rotation continue par un léger wiggle, comme si la
+/// torche de celui qui nous éblouit n'est pas stable » (Adrien, 2026-08-27).
+///
+/// Une rosette qui tourne n'a aucune cause dans le monde : rien ne tourne, ni la
+/// lampe, ni la tête. Elle se lit comme un effet de moteur. **Un vacillement, si :
+/// c'est une main qui tient une torche.** Le mouvement est du même ordre de
+/// grandeur, il coûte le même prix, et il raconte quelque chose au lieu de ne
+/// rien raconter.
+///
+/// Il fait vaciller le RELÈVEMENT, donc tout ce qui en dépend d'un bloc — les
+/// lueurs, les flares, l'axe des fantômes. Faire trembler chaque couche
+/// séparément aurait donné trois choses qui bougent, pas une lampe qui tremble.
+uniform float tremble_ampl : hint_range(0.0, 0.6) = 0.085;
+
+/// Les deux fréquences du tremblement, en hertz. Deux et pas une, et le rapport
+/// est volontairement bancal : une sinusoïde seule est un balancier, et un
+/// balancier s'anticipe en trois secondes. Même raison que
+/// `Brouillage.DERIVE_HZ_LENTE` / `_RAPIDE`.
+uniform float tremble_hz_a : hint_range(0.0, 4.0) = 0.41;
+uniform float tremble_hz_b : hint_range(0.0, 8.0) = 1.13;
 
 /// Amplitude du scintillement de chaque traînée.
 uniform float flares_scintille : hint_range(0.0, 1.0) = 0.32;
+
+// --- les fantômes ----------------------------------------------------------
+
+/// Un fantôme d'objectif : le disque a iris, avec son liseré.
+uniform sampler2D fantome_tex : hint_default_black, filter_linear, repeat_disable;
+
+/// « Il faudrait vraiment une texture qui fasse réel par-dessus tout, avec des
+/// fantômes, qui augmentent le réalisme » (Adrien, 2026-08-27).
+///
+/// Ce sont eux qui font qu'une image se lit comme une PHOTO plutôt que comme un
+/// effet : un œil n'a pas de fantômes, un objectif en a, et c'est justement
+/// l'objectif qu'on demande au joueur de croire — « notre vue, notre UI, c'est
+/// entièrement une caméra éblouie ».
+uniform int fantomes_n : hint_range(0, 6) = 4;
+uniform float fantomes_intensite : hint_range(0.0, 1.5) = 0.24;
+
+/// Écart entre deux fantômes le long de l'axe, en demi-hauteurs.
+uniform float fantomes_ecart : hint_range(0.05, 1.5) = 0.42;
+uniform float fantomes_taille : hint_range(0.02, 1.0) = 0.22;
+
+/// ⚠️ **`−1` = du côté OPPOSÉ à l'éblouisseur, `+1` = de son côté.**
+///
+/// L'optique dit `−1` : dans un vrai flare, les fantômes tombent de l'autre côté
+/// du centre par rapport à la source, parce qu'ils sont les reflets internes de
+/// l'objectif. C'est ce que veut « augmenter le réalisme ».
+///
+/// **Le prix, et il faut le connaître avant de juger :** ça se lit à l'envers
+/// pour qui l'ignore — « le flare est à gauche, donc il est à gauche » devient
+/// faux. Le voile ne ment pas pour autant : les LUEURS et les FLARES, eux,
+/// penchent du bon côté et sont beaucoup plus lisibles. Les fantômes ne portent
+/// pas la direction, ils portent la matière.
+uniform float fantomes_cote : hint_range(-1.0, 1.0) = -1.0;
 
 // --- le grain --------------------------------------------------------------
 
@@ -166,6 +228,7 @@ uniform float grain_force : hint_range(0.0, 0.5) = 0.055;
 uniform float grain_hz : hint_range(0.0, 60.0) = 12.0;
 
 const float PI_ = 3.14159265359;
+const float TAU_ = 6.28318530718;
 
 
 float hash21(vec2 p) {
@@ -179,7 +242,16 @@ void fragment() {
 	// Coordonnées centrées, en fractions de la DEMI-HAUTEUR. L'aspect est
 	// corrigé ici, une fois, pour que tout ce qui suit raisonne en unités rondes.
 	vec2 d = (UV - vec2(0.5)) * vec2(aspect, 1.0) * 2.0;
-	vec2 vers = vec2(cos(relevement), sin(relevement));
+
+	// ⚠️ **LE TREMBLEMENT S'APPLIQUE AU RELÈVEMENT, UNE SEULE FOIS.** Tout ce qui
+	// suit en dépend — les lueurs, les flares, l'axe des fantômes —, et c'est ce
+	// qui fait qu'on lit UNE lampe qui vacille et non trois couches qui bougent
+	// chacune dans son coin. Faire trembler chaque couche séparément aurait coûté
+	// le même prix pour un résultat qui ne raconte rien.
+	float rel = relevement + tremble_ampl
+		* (0.62 * sin(temps * TAU_ * tremble_hz_a)
+			+ 0.38 * sin(temps * TAU_ * tremble_hz_b + 1.7));
+	vec2 vers = vec2(cos(rel), sin(rel));
 
 	if (mode == 0) {
 		// Le témoin : l'aplat d'aujourd'hui, sans grain et sans rien. C'est la
@@ -215,8 +287,12 @@ void fragment() {
 			float fi = float(i);
 			// Réparties sur un demi-tour, pas un tour : une traînée est
 			// symétrique, elle sort des deux côtés du centre.
-			float ang = PI_ * fi / float(max(flares_n, 1))
-				+ temps * flares_rotation * PI_ * 2.0;
+			// Les traînées sont solidaires du relèvement : c'est ainsi qu'elles
+			// vacillent AVEC lui. Le petit déphasage par traînée empêche la
+			// rosette de bouger comme un bloc rigide — une main qui tremble ne
+			// déplace pas une figure, elle la déforme.
+			float ang = rel + PI_ * fi / float(max(flares_n, 1))
+				+ tremble_ampl * 0.5 * sin(temps * (0.7 + 0.23 * fi) + fi * 1.9);
 			float co = cos(-ang);
 			float si = sin(-ang);
 			vec2 q = vec2(d.x * co - d.y * si, d.x * si + d.y * co);
@@ -224,11 +300,38 @@ void fragment() {
 			// parce qu'une traînée n'a pas de sens — celle qui pointe vers
 			// l'éblouisseur pointe aussi à l'opposé, et les deux doivent
 			// s'allonger ensemble, sinon la rosette se déchire.
-			float pente = 1.0 + flares_penche * abs(cos(ang - relevement));
+			float pente = 1.0 + flares_penche * abs(cos(ang - rel));
 			vec2 uv = vec2(q.x / max(flares_longueur * pente, 1e-3),
 				q.y / max(flares_largeur, 1e-3)) * 0.5 + vec2(0.5);
 			float sc = 1.0 + flares_scintille * sin(temps * (1.7 + 0.53 * fi) + fi * 2.7);
 			ajout += texture(flare_tex, uv).r * flares_intensite * sc;
+		}
+
+		// ── LES FANTÔMES. Alignés sur l'axe du relèvement, du côté que dit
+		// `fantomes_cote`. Ils ne portent pas la direction — les lueurs et les
+		// flares s'en chargent, et bien mieux — ils portent la MATIÈRE.
+		for (int i = 0; i < 6; i++) {
+			if (i >= fantomes_n) { break; }
+			float fi = float(i) + 1.0;
+			vec2 centre = vers * (fantomes_ecart * fi * fantomes_cote);
+			// Des tailles irrégulières : six disques identiques se lisent comme
+			// une règle graduée, donc comme une mesure — et une mesure est un
+			// repère de plus à lire.
+			float taille = fantomes_taille * (0.55 + 0.5 * abs(sin(fi * 2.31)));
+			// ⚠️ **Et une ROTATION propre à chacun.** Sans elle, six hexagones
+			// partagent la même orientation : l'œil lit alors un motif répété,
+			// c'est-à-dire un dessin. Un objectif empile des éléments qui n'ont
+			// aucune raison d'être alignés. Deux multiplications pour ça.
+			float ga = fi * 1.13 + rel * 0.25;
+			float gc = cos(ga);
+			float gs = sin(ga);
+			vec2 q = d - centre;
+			q = vec2(q.x * gc - q.y * gs, q.x * gs + q.y * gc);
+			vec2 uv = q / max(taille, 1e-3) * 0.5 + vec2(0.5);
+			// L'intensité tombe vite et irrégulièrement : les fantômes lointains
+			// sont des restes, pas des copies.
+			ajout += texture(fantome_tex, uv).r * fantomes_intensite
+				* (0.45 + 0.55 * abs(sin(fi * 1.77))) / sqrt(fi);
 		}
 
 		a += ajout;

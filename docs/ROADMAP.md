@@ -10175,10 +10175,11 @@ recopiée d'un objet à l'autre, y était bonne et ici absurde.
 
 ### La structure : un SOL, et ce qui se pose dessus
 
-    alpha = niveau × [ mélange(plancher, cime, creux) + lueurs + flares ]
+    alpha = niveau × [ mélange(plancher, cime, creux) + lueurs + flares + fantômes ]
 
 `plancher` **est l'aplat d'aujourd'hui** — 0,30, arbitré par Adrien le
 2026-08-25 — et le voile ne descend jamais en dessous, nulle part sur l'écran.
+`cime` vaut **0,34**, transcrit du banc le 2026-08-27.
 Le voile actuel est donc littéralement le plancher du nouveau : **la refonte ne
 peut pas alléger la mécanique par accident**, elle ne peut que l'appuyer.
 `cime` dit jusqu'où le centre monte (0,88 au départ).
@@ -10258,6 +10259,70 @@ reçoit. `B` les coupe.
 Il **ne compte aucun tir**, contrairement à `banc_brouillage` : le voile ne cache
 pas l'adversaire — répartition actée le 2026-08-25 —, et compter des tirs ici
 mesurerait le halo en croyant mesurer le voile.
+
+### Le tremblement, les fantômes, et une valeur transcrite (2026-08-27, second passage)
+
+**Adrien au banc, deuxième passage : « c'est pas mal du tout », « j'aime beaucoup
+l'étoile et la lueur qui bouge avec le joueur ».** Trois demandes en sont
+sorties, et une valeur.
+
+**`CIME` passe de 0,88 à 0,34 — transcrit du banc.** « Les valeurs de plancher et
+de cime me semblent pas mal là. » L'écart dit quelque chose : à 0,34 le lavis est
+presque PLAT (0,30 aux bords, 0,34 au centre), et toute la structure visible
+vient des lueurs et des flares qui s'y ajoutent. **Le voile blanchit ; ce sont
+les lueurs qui le sculptent.**
+
+**La rotation continue devient un TREMBLEMENT.** « La rotation continue de
+l'effet d'éblouissement, je ne suis pas sûr […] on remplace le mouvement de
+rotation continue par un léger wiggle, comme si la torche de celui qui nous
+éblouit n'est pas stable. »
+
+Une rosette qui tourne n'a **aucune cause dans le monde** : rien ne tourne, ni la
+lampe, ni la tête. Elle se lit comme un effet de moteur. Un vacillement, si :
+c'est une main qui tient une torche. Même ordre de grandeur, même prix, et il
+raconte quelque chose au lieu de ne rien raconter.
+
+⚠️ **Le tremblement s'applique au RELÈVEMENT, une seule fois.** Tout en dépend —
+lueurs, flares, axe des fantômes —, et c'est ce qui fait lire UNE lampe qui
+vacille plutôt que trois couches qui bougent chacune dans son coin. Un petit
+déphasage par traînée empêche seulement la rosette de bouger comme un bloc
+rigide : une main qui tremble ne déplace pas une figure, elle la déforme.
+
+**Les FANTÔMES, troisième texture.** « Il faudrait vraiment une texture qui fasse
+réel par-dessus tout, avec des fantômes, qui augmentent le réalisme. » Ce sont
+eux qui font basculer l'image de « effet » à « photo » : **un œil n'a pas de
+fantômes, un objectif en a** — et c'est l'objectif qu'on demande au joueur de
+croire.
+
+Ils sont hexagonaux (le diaphragme), remplis avec un liseré plus discret que leur
+intérieur, tournés chacun de son propre angle, et d'intensité irrégulière.
+`fantomes_cote` vaut −1 : du côté OPPOSÉ à l'éblouisseur, ce que dit l'optique.
+**Ils ne portent pas la direction** — les lueurs et les flares s'en chargent, et
+bien mieux ; ils portent la matière.
+
+### Trois pièges payés dans la même heure
+
+Aucun n'était nouveau, et c'est ce qui les rend instructifs.
+
+1. **La texture de fantôme n'était pas noire sur son pourtour.** Les côtés plats
+   de l'hexagone tombaient pile sur le bord de la texture, où le liseré valait
+   encore 0,27 — et `repeat_disable` étire le texel du bord à l'infini. Quatre
+   fantômes ajoutaient donc 0,27 chacun **sur toute l'image**, qui est sortie
+   entièrement blanche. **Le shader porte l'avertissement en toutes lettres**, je
+   l'avais écrit pour les deux premières textures et violé sur la troisième : un
+   avertissement ne protège que ce qu'on pense à relire. Il y a désormais une
+   **ceinture** de deux pixels noirs forcés sur les trois textures — une formule
+   peut oublier de s'annuler au bord, deux pixels de ceinture, non.
+2. **`TAU_` avait disparu du shader** en le réécrivant, et le tremblement
+   l'utilisait : compilation en échec, donc matériau blanc. **Les
+   `preconditions_manquantes()` du banc ont crié les trente-quatre uniformes
+   manquants** — la garde a parfaitement fonctionné, et c'est mon `grep` qui
+   filtrait `SCRIPT ERROR` sans `SHADER ERROR`. *Une garde ne sert qu'à qui lit
+   sa sortie en entier.*
+3. **Un blanc total n'oriente vers rien.** Contrairement à un défaut de forme, il
+   ne dit ni où ni pourquoi — et il a deux causes possibles très différentes (une
+   texture qui déborde, un shader qui ne compile pas). Le réflexe utile est
+   d'aller lire le journal AVANT de regarder l'image.
 
 ### Le seul nombre qui compte pour la suite : l'opacité MOYENNE
 
