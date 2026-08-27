@@ -10324,6 +10324,54 @@ Aucun n'était nouveau, et c'est ce qui les rend instructifs.
    texture qui déborde, un shader qui ne compile pas). Le réflexe utile est
    d'aller lire le journal AVANT de regarder l'image.
 
+### ✅ Les réglages retenus par Adrien, le 2026-08-27 — et le voile est ÉTALONNÉ
+
+Troisième passage au banc, transcrit dans `voile_eblouissement.gdshader`.
+
+| | valeur | |
+|---|---|---|
+| plancher · cime | **0,18** · **0,48** | le lavis |
+| largeur · courbe | 2,1 · 3,7 | |
+| lueurs | 2, intensité 0,40, échelle 1,2 | inclinaison **0,16**, souffle 0,36 |
+| flares | 5, intensité 0,16 | longueur 1,4, largeur 0,66, inclinaison 0,45 |
+| tremblement | **0,005 rad**, 0,45 et 3,68 Hz | soit 0,29° — un frémissement |
+| fantômes | 5, intensité 0,12 | écart 0,20, taille 0,31, côté −1 |
+| grain | 0,015 à 10 Hz | |
+
+**L'étalonnage, enfin fait — et il tranche la seule question quantitative du
+chantier :**
+
+| | moyenne | pointe |
+|---|---|---|
+| l'aplat d'aujourd'hui | 0,300 | 0,300 |
+| **le voile retenu** | **0,330** | **1,000** |
+
+**La mécanique n'est pas allégée : elle est très légèrement appuyée** (+10 % en
+moyenne), et surtout **redistribuée**. Le voile sature au centre là où l'aplat
+plafonnait à 0,30, et il descend à 0,18 dans les coins. C'est précisément
+l'inverse du risque que ce relevé existait pour attraper.
+
+⚠️ **Noter que `plancher` est passé SOUS `Brouillage.VOILE_FACTEUR`** (0,18
+contre 0,30). Pris isolément, ce nombre dit « les coins de l'écran sont moins
+voilés qu'avant ». C'est vrai, et c'est sans conséquence : la moyenne, elle,
+monte. **Un réglage ne se juge pas seul quand un autre le compense.**
+
+### ⚠️ Le témoin avait cessé d'être un témoin
+
+L'étalonnage a d'abord rendu **« mode 0 · moyenne 0,180 »** — alors que l'aplat
+vaut 0,300 par définition. Le mode témoin lisait `plancher`, devenu un curseur :
+il descendait avec lui. **On comparait donc le nouveau voile non pas à ce que le
+jeu FAIT, mais à une version affaiblie de lui-même.**
+
+Le shader écrit pourtant, deux paragraphes plus haut, que le témoin « doit rester
+pur ». **Un principe écrit ne se défend pas tout seul** : il était juste, il était
+à sa place, et le témoin a quand même été branché sur un curseur. Ce qui l'a
+attrapé n'est pas la phrase, c'est la mesure — et elle ne l'a attrapé que parce
+que la planche étalonne désormais **les deux modes**, pas seulement le nouveau.
+
+`temoin` est un uniforme à part, posé depuis `Brouillage.VOILE_FACTEUR` et absent
+de la liste des réglages.
+
 ### Le seul nombre qui compte pour la suite : l'opacité MOYENNE
 
 ⚠️ **Sans ce relevé, une refonte du voile peut alléger une pénalité sans le

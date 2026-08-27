@@ -253,7 +253,7 @@ static func preconditions_manquantes(
 		for u in shader.get_shader_uniform_list(true):
 			connus[String(u["name"])] = true
 		var attendus := ["mode", "niveau", "teinte", "relevement", "aspect",
-			"temps", "lueur_tex", "flare_tex", "fantome_tex"]
+			"temps", "lueur_tex", "flare_tex", "fantome_tex", "temoin"]
 		for r in REGLAGES:
 			attendus.append(String(r[1]))
 		for nom in attendus:
@@ -375,6 +375,20 @@ func _planche() -> void:
 						_porteur.global_position,
 						vers_ecran * _porteur.global_position,
 						get_viewport().get_visible_rect().size * 0.5])
+	# ⚠️ **La planche étalonne AUSSI, et les deux modes.** Le banc réclame ce
+	# nombre à chaque sortie ; une planche qui tire douze images sans jamais le
+	# donner laisse la seule question quantitative du chantier ouverte. Les deux
+	# modes parce que c'est leur ÉCART qui compte : « 0,21 » ne dit rien, « 0,21
+	# contre 0,30 » dit que le voile pèse un tiers de moins qu'avant.
+	_brouillage_actif = false
+	_planche_active = false
+	for m in 2:
+		_mode = m
+		_rendre()
+		await _etalonner()
+		_planche_active = false
+	_planche_active = true
+
 	print("--- planche du voile : %d images ---" % releves.size())
 	print("  ", ProjectSettings.globalize_path(dossier))
 	for m in 2:
@@ -845,6 +859,9 @@ func _rendre() -> void:
 		(_porteur.global_position - _regardeur.global_position).angle())
 	_mat.set_shader_parameter("aspect",
 		taille.x / maxf(taille.y, 1.0))
+	# Le témoin est posé depuis le MODÈLE, jamais depuis un réglage du banc :
+	# c'est ce qui le rend comparable à ce que le jeu fait vraiment.
+	_mat.set_shader_parameter("temoin", Brouillage.VOILE_FACTEUR)
 	_mat.set_shader_parameter("lueur_tex", _lueur_tex)
 	_mat.set_shader_parameter("flare_tex", _flare_tex)
 	_mat.set_shader_parameter("fantome_tex", _fantome_tex)

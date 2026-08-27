@@ -73,7 +73,7 @@ uniform float niveau : hint_range(0.0, 1.0) = 0.0;
 /// **Le SOL du voile : ce qu'il vaut partout, même dans les coins.** 0,30, et
 /// c'est exactement l'aplat d'aujourd'hui (`Brouillage.VOILE_FACTEUR`, arbitré
 /// par Adrien au banc le 2026-08-25). Le nouveau voile part de l'ancien.
-uniform float plancher : hint_range(0.0, 1.0) = 0.30;
+uniform float plancher : hint_range(0.0, 1.0) = 0.18;
 
 /// Ce que vaut le voile au CENTRE. L'écart avec le plancher est tout l'effet.
 /// **0,34, relevé au banc par Adrien le 2026-08-27** — « les valeurs de plancher
@@ -81,19 +81,34 @@ uniform float plancher : hint_range(0.0, 1.0) = 0.30;
 /// l'écart dit quelque chose : à 0,34 le lavis est presque PLAT (0,30 aux bords,
 /// 0,34 au centre), et toute la structure visible vient des lueurs et des flares
 /// qui s'y ajoutent. Le voile blanchit ; ce sont les lueurs qui le sculptent.
-uniform float cime : hint_range(0.0, 1.0) = 0.34;
+uniform float cime : hint_range(0.0, 1.0) = 0.48;
 
 /// Sur quelle distance le lavis descend de `cime` vers `plancher`, en fractions
 /// de la DEMI-HAUTEUR. **1,9 : le lavis est encore à mi-course dans les coins**
 /// d'un 16/9. C'est ce qui fait un aveuglement plutôt qu'une tache.
-uniform float largeur : hint_range(0.2, 5.0) = 1.9;
+uniform float largeur : hint_range(0.2, 5.0) = 2.1;
 
 /// La courbe du lavis. Sous 1, le centre s'aplatit et l'écran blanchit presque
 /// uniformément ; au-dessus, le centre se creuse.
-uniform float courbe : hint_range(0.2, 4.0) = 1.5;
+uniform float courbe : hint_range(0.2, 4.0) = 3.7;
 
 /// La teinte du voile — `Charte.HALOGENE`.
 uniform vec3 teinte = vec3(0.98, 0.91, 0.80);
+
+/// **L'opacité du TÉMOIN, et elle n'est PAS réglable.** C'est
+/// `Brouillage.VOILE_FACTEUR`, 0,30, l'aplat que le jeu affiche aujourd'hui.
+///
+/// ⚠️ **Le témoin lisait `plancher`, et il a donc cessé d'être un témoin à la
+/// seconde où Adrien a bougé ce curseur** (2026-08-27). Il descendait à 0,18
+/// avec lui : on comparait le nouveau voile non pas à ce que le jeu FAIT, mais à
+/// une version affaiblie de lui-même. L'étalonnage l'a dit en une ligne —
+/// « mode 0 · moyenne 0,180 » alors que l'aplat vaut 0,300 par définition.
+///
+/// Ce fichier écrit pourtant, deux paragraphes plus haut, que le témoin « doit
+/// rester pur ». **Un principe écrit ne se défend pas tout seul** : il était
+/// juste, il était à sa place, et j'ai quand même branché le témoin sur un
+/// curseur. Ce qui l'attrape n'est pas la phrase, c'est la mesure.
+uniform float temoin : hint_range(0.0, 1.0) = 0.30;
 
 uniform float relevement = 0.0;
 
@@ -122,34 +137,34 @@ uniform sampler2D flare_tex : hint_default_black, filter_linear, repeat_disable;
 
 // --- les lueurs ------------------------------------------------------------
 
-uniform int lueurs_n : hint_range(0, 4) = 3;
-uniform float lueurs_intensite : hint_range(0.0, 1.5) = 0.42;
+uniform int lueurs_n : hint_range(0, 4) = 2;
+uniform float lueurs_intensite : hint_range(0.0, 1.5) = 0.40;
 
 /// Taille de la première lueur, en demi-hauteurs. Les suivantes sont plus
 /// grandes et plus faibles.
-uniform float lueurs_echelle : hint_range(0.1, 4.0) = 1.25;
+uniform float lueurs_echelle : hint_range(0.1, 4.0) = 1.2;
 
 /// **De combien les lueurs glissent VERS l'éblouisseur**, en demi-hauteurs.
 /// C'est l'une des deux poignées de l'inclinaison. À zéro, elles restent
 /// centrées et ne disent plus rien de personne.
-uniform float lueurs_derive : hint_range(0.0, 1.5) = 0.34;
+uniform float lueurs_derive : hint_range(0.0, 1.5) = 0.16;
 
 /// Amplitude de leur respiration, en fraction de leur taille.
-uniform float lueurs_souffle : hint_range(0.0, 0.6) = 0.14;
+uniform float lueurs_souffle : hint_range(0.0, 0.6) = 0.36;
 
 // --- les flares ------------------------------------------------------------
 
 uniform int flares_n : hint_range(0, 8) = 5;
-uniform float flares_intensite : hint_range(0.0, 1.5) = 0.38;
+uniform float flares_intensite : hint_range(0.0, 1.5) = 0.16;
 
 /// Longueur d'une traînée, en demi-hauteurs — bien au-delà de l'écran : une
 /// traînée qui s'arrête dans le cadre a un BOUT, donc une forme.
-uniform float flares_longueur : hint_range(0.2, 6.0) = 2.6;
-uniform float flares_largeur : hint_range(0.02, 1.0) = 0.20;
+uniform float flares_longueur : hint_range(0.2, 6.0) = 1.4;
+uniform float flares_largeur : hint_range(0.02, 1.0) = 0.66;
 
 /// **De combien les traînées du côté de l'éblouisseur s'allongent.** Seconde
 /// poignée de l'inclinaison : `1 + penche · cos(θ − relèvement)`.
-uniform float flares_penche : hint_range(0.0, 1.0) = 0.55;
+uniform float flares_penche : hint_range(0.0, 1.0) = 0.45;
 
 /// **LE TREMBLEMENT — l'amplitude, en radians, dont toute la gerbe vacille.**
 ///
@@ -167,17 +182,17 @@ uniform float flares_penche : hint_range(0.0, 1.0) = 0.55;
 /// Il fait vaciller le RELÈVEMENT, donc tout ce qui en dépend d'un bloc — les
 /// lueurs, les flares, l'axe des fantômes. Faire trembler chaque couche
 /// séparément aurait donné trois choses qui bougent, pas une lampe qui tremble.
-uniform float tremble_ampl : hint_range(0.0, 0.6) = 0.085;
+uniform float tremble_ampl : hint_range(0.0, 0.6) = 0.005;
 
 /// Les deux fréquences du tremblement, en hertz. Deux et pas une, et le rapport
 /// est volontairement bancal : une sinusoïde seule est un balancier, et un
 /// balancier s'anticipe en trois secondes. Même raison que
 /// `Brouillage.DERIVE_HZ_LENTE` / `_RAPIDE`.
-uniform float tremble_hz_a : hint_range(0.0, 4.0) = 0.41;
-uniform float tremble_hz_b : hint_range(0.0, 8.0) = 1.13;
+uniform float tremble_hz_a : hint_range(0.0, 4.0) = 0.45;
+uniform float tremble_hz_b : hint_range(0.0, 8.0) = 3.68;
 
 /// Amplitude du scintillement de chaque traînée.
-uniform float flares_scintille : hint_range(0.0, 1.0) = 0.32;
+uniform float flares_scintille : hint_range(0.0, 1.0) = 0.14;
 
 // --- les fantômes ----------------------------------------------------------
 
@@ -191,12 +206,12 @@ uniform sampler2D fantome_tex : hint_default_black, filter_linear, repeat_disabl
 /// effet : un œil n'a pas de fantômes, un objectif en a, et c'est justement
 /// l'objectif qu'on demande au joueur de croire — « notre vue, notre UI, c'est
 /// entièrement une caméra éblouie ».
-uniform int fantomes_n : hint_range(0, 6) = 4;
-uniform float fantomes_intensite : hint_range(0.0, 1.5) = 0.24;
+uniform int fantomes_n : hint_range(0, 6) = 5;
+uniform float fantomes_intensite : hint_range(0.0, 1.5) = 0.12;
 
 /// Écart entre deux fantômes le long de l'axe, en demi-hauteurs.
-uniform float fantomes_ecart : hint_range(0.05, 1.5) = 0.42;
-uniform float fantomes_taille : hint_range(0.02, 1.0) = 0.22;
+uniform float fantomes_ecart : hint_range(0.05, 1.5) = 0.20;
+uniform float fantomes_taille : hint_range(0.02, 1.0) = 0.31;
 
 /// ⚠️ **`−1` = du côté OPPOSÉ à l'éblouisseur, `+1` = de son côté.**
 ///
@@ -221,11 +236,11 @@ uniform float fantomes_cote : hint_range(-1.0, 1.0) = -1.0;
 /// Le grain d'une photo est **par pixel**, pas par blob, et il est **faible**.
 /// Il est ici multiplicatif et proportionnel à ce qui est déjà peint : il
 /// n'existe pas là où le voile n'existe pas.
-uniform float grain_force : hint_range(0.0, 0.5) = 0.055;
+uniform float grain_force : hint_range(0.0, 0.5) = 0.015;
 
 /// Rafraîchissements du grain par seconde. 12 : le grain d'une pellicule, pas
 /// le scintillement d'un écran cassé. À 60 il papillote.
-uniform float grain_hz : hint_range(0.0, 60.0) = 12.0;
+uniform float grain_hz : hint_range(0.0, 60.0) = 10.0;
 
 const float PI_ = 3.14159265359;
 const float TAU_ = 6.28318530718;
@@ -256,7 +271,7 @@ void fragment() {
 	if (mode == 0) {
 		// Le témoin : l'aplat d'aujourd'hui, sans grain et sans rien. C'est la
 		// touche qui permet de répondre « non », et elle doit rester pure.
-		COLOR = vec4(teinte, clamp(niveau, 0.0, 1.0) * plancher);
+		COLOR = vec4(teinte, clamp(niveau, 0.0, 1.0) * temoin);
 	} else {
 		// ── LE LAVIS. Il couvre TOUT l'écran et ne descend jamais sous
 		// `plancher` — c'est ce qui fait un aveuglement et non une tache.
