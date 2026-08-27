@@ -7971,8 +7971,8 @@ un fait de jeu, pas à un rythme d'interface.
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
   ce que trois tentatives n'ont pas obtenu.
 
-  **Les 32 PNG `*_marche_*.png` d'`assets/sprites/` ont été RECUITS le
-  2026-08-27 (lot conforme aux cinq contraintes dures).** L'ancien lot (vue
+  **Les 32 PNG `*_marche_*.png` d'`assets/sprites/` ont été RECUITS et
+  VALIDÉS le 2026-08-27 (Adrien, après revue au banc).** L'ancien lot (vue
   oblique de trois-quarts, 48/56 px, bavures magenta, portées effondrées) a été
   écrasé par un lot rigoureux dérivé directement des statiques :
 
@@ -7980,11 +7980,11 @@ un fait de jeu, pas à un rythme d'interface.
   - **l'échelle exacte du statique** : fusil 82×82, pompe 78×78, pistolet 62×62, arbalète 56×56 (les lignes 2 et 3 du banc sont désormais strictement identiques) ;
   - **l'arme ne pivote pas** : axe avant rigide horizontal le long de +X, zéro déviation par rapport à la ligne de visée ;
   - **la portée de l'arme est préservée à 100 %** : fusil +40,5 px, pompe +38,5 px, pistolet +29,5 px, arbalète +27,5 px ;
-  - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha).
+  - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
+  - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
 
-  **Ne pas les câbler dans `player.gd` pour l'instant.** Le jeu continue
-  d'afficher le sprite statique et son roulis jusqu'à arbitrage d'Adrien après
-  revue visuelle au banc `tools/banc_marche.tscn`.
+  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
+  l'objet de son propre arbitrage / chantier d'intégration dédié.
 
   Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
   (peinte et silhouette).
