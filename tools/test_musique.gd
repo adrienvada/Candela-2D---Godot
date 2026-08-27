@@ -53,6 +53,7 @@ func _run() -> void:
 	_test_armes()
 	_test_filet_de_sortie()
 	_test_aucun_fichier_muet()
+	_test_aucun_son_orphelin()
 	_test_dosage()
 	_test_percuteur()
 	_test_annonceur()
@@ -427,6 +428,72 @@ func _test_filet_de_sortie() -> void:
 	# Un seul filet, et sur Master. Un limiteur sur SFX mordrait sur les tirs,
 	# donc baisserait les pas qui partagent ce bus : le défaut déplacé d'un cran.
 	_check("le filet vit sur Master", AM.BUS_MASTER == "Master")
+
+## AUCUN FICHIER DU DEPOT NE DOIT ETRE SANS DECLENCHEUR.
+##
+## **Le garde-fou qui manquait, et qui a coute deux mois.** Un `.wav` depose
+## dans `assets/audio/` sans cle ni famille ne produit aucune erreur, aucun
+## avertissement, aucune trace : il dort. C'est ainsi que huit sons de pas,
+## sept sons d'interface, huit ambiances et cinq autres familles ont attendu
+## dans le depot sans que rien ne le signale — et ainsi que le manifeste
+## lui-meme a ignore `music_match_heartbeat.ogg` assez longtemps pour qu'un
+## bouche-trou de 1,41 s passe pour la musique du jeu.
+##
+## Ce controle rend « tous les sons sont cables » VERIFIABLE au lieu
+## qu'affirme. Il rougira le jour ou Adrien deposera un fichier de plus, ce qui
+## est exactement le moment ou quelqu'un doit decider de ce qu'il raconte.
+func _test_aucun_son_orphelin() -> void:
+	print("\n[Aucun son du depot n'est sans declencheur]")
+
+	# Les couches du flux interactif ne passent pas par `SOUNDS` : elles sont
+	# referencees par `main_stream_interactive.tres`. On les reconnait a leur nom
+	# plutot que d'ouvrir la ressource — le `.tres` est deja teste plus haut.
+	var couches := ["music_intro.ogg", "music_menu.ogg", "music_match_base.ogg",
+		"music_match_drums.ogg", "music_match_arp.ogg",
+		"music_match_heartbeat.ogg", "music_victory.ogg"]
+
+	var declares := {}
+	for cle in AM.SOUNDS:
+		declares[String(AM.SOUNDS[cle]).get_file()] = true
+	for arme in ["pistolet", "fusil", "pompe", "arbalete"]:
+		declares[AM.chemin_percuteur(arme).get_file()] = true
+		for i in AM.VARIANTES_TIR:
+			declares[AM.chemin_tir(arme, i + 1).get_file()] = true
+	for famille in AM.VARIANTES_SFX:
+		for i in int(AM.VARIANTES_SFX[famille]):
+			declares[AM.chemin_variante(famille, i + 1).get_file()] = true
+	for c in couches:
+		declares[c] = true
+
+	var orphelins: Array[String] = []
+	for dossier in ["res://assets/audio/sfx/", "res://assets/audio/music/",
+			"res://assets/audio/voice/", "res://assets/audio/weapons/"]:
+		var d := DirAccess.open(dossier)
+		if d == null:
+			continue
+		for f in d.get_files():
+			# A l'export, la source est remplacee par son import : on juge sur le
+			# nom sans `.import`, jamais sur la presence du fichier source.
+			var nom := f.trim_suffix(".import")
+			if not (nom.ends_with(".wav") or nom.ends_with(".ogg")):
+				continue
+			if not declares.has(nom):
+				orphelins.append(nom)
+
+	_check("aucun fichier audio sans cle ni famille", orphelins.is_empty(),
+		"orphelins : %s" % ", ".join(orphelins))
+
+	# Le miroir : une famille declaree dont un fichier manque est aussi grave —
+	# `chemin_variante` tirerait un numero qui ne se charge pas, et un son absent
+	# ne leve aucune erreur.
+	var manquants: Array[String] = []
+	for famille in AM.VARIANTES_SFX:
+		for i in int(AM.VARIANTES_SFX[famille]):
+			var chemin := AM.chemin_variante(famille, i + 1)
+			if not ResourceLoader.exists(chemin):
+				manquants.append(chemin.get_file())
+	_check("chaque variante annoncee existe", manquants.is_empty(),
+		"manquants : %s" % ", ".join(manquants))
 
 func _test_aucun_fichier_muet() -> void:
 	print("\n[Aucun fichier du barème n'est muet]")

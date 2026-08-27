@@ -1462,6 +1462,17 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 		if p2_cursor != null:
 			p2_cursor.aim(control.get_global_rect(), snap)
 
+	# V3.4 — le tic de navigation. **Ici et pas dans le survol souris** :
+	# `_set_focus` est le point de passage unique de la sélection, manette et
+	# souris confondues, pour les deux joueurs. Le câbler sur `mouse_entered`
+	# aurait rendu le menu muet à la manette, ce qui ne se remarque que le jour
+	# où quelqu'un joue sans souris.
+	#
+	# Seulement quand la sélection CHANGE : un survol qui redésigne le même
+	# bouton n'est pas une navigation, et il crépiterait à chaque frame de
+	# mouvement de souris.
+	if control != precedent:
+		AudioManager.play_ui("ui_tick")
 	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
 	# curseur est un signe de vie, et c'est le même signe pour les deux.
 	var centre := control.get_global_rect().get_center()
@@ -3841,7 +3852,20 @@ func _refresh_weapon_locks() -> void:
 ## Le titre du menu porte tantôt le nom du jeu, tantôt un verdict. Un seul
 ## endroit tranche, sinon un chemin oublié laisserait le logo sur « DÉFAITE ».
 ## `self_modulate` et non `modulate` : le second effacerait aussi l'enfant.
+## V3.5 — le titre de fin FRAPPE.
+##
+## ⚠️ **Un seul impact, pas un par lettre — et c'est une limite assumee, pas un
+## choix.** L'item demande « les lettres qui tombent une a une » ; ce titre est
+## un `Label` simple, sans animation par caractere. Cabler un son par lettre
+## exigerait d'abord la moitie VISUELLE de V3.5, qui n'existe pas. Le jour ou
+## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
+## l'animation, jamais sur un minuteur parallele qui derivera.
+##
+## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
+	if texte != "CANDELA 2D" and game_over_title != null \
+			and game_over_title.text != texte:
+		AudioManager.play_ui("ui_type_impact")
 	game_over_title.text = texte
 	if menu_enseigne == null or not is_instance_valid(menu_enseigne):
 		return
@@ -4068,13 +4092,33 @@ func _make_chiffre_de_bilan(teinte: Color) -> Label:
 ##
 ## `serie` vide = pas de série en cours, et la ligne disparaît **entièrement**
 ## plutôt que d'afficher une absence.
+## V3.6 / V3.9 — l'etat d'ou se deduisent les deux sons du bilan. Un son de
+## TRANSITION a besoin de ce qui precede ; sans memoire, il ne peut que sonner a
+## chaque affichage.
+var _bilan_total_precedent: int = 0
+var _serie_precedente: String = ""
+
 func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 		effleurement: float = -1.0) -> void:
 	if bilan == null:
 		return
+	# V3.6 — le pion de score, quand la SESSION gagne une unite. Pas a chaque
+	# affichage du bilan : ce panneau se repose a l'identique en revenant au
+	# menu, et un son sur le simple affichage sonnerait une victoire qui n'a pas
+	# eu lieu.
+	if p1_wins + p2_wins > _bilan_total_precedent:
+		AudioManager.play_ui("ui_score_pawn")
+	_bilan_total_precedent = p1_wins + p2_wins
 	bilan_p1.text = str(p1_wins)
 	bilan_p2.text = str(p2_wins)
 	var mot := serie.strip_edges()
+	# V3.9 — **le verre casse quand la serie MEURT, pas quand elle avance.** Une
+	# serie en cours puis vide : quelqu'un vient de la briser. C'est la seule
+	# transition qui merite ce son ; le jouer a l'apparition en ferait une
+	# recompense, soit l'inverse exact de ce qu'il raconte.
+	if _serie_precedente != "" and mot == "":
+		AudioManager.play_ui("ui_glass_break")
+	_serie_precedente = mot
 	bilan_serie.text = mot.to_upper()
 	bilan_serie.visible = mot != ""
 	# Même règle que la série : inconnue, la colonne disparaît entièrement au
@@ -4512,7 +4556,23 @@ func _refresh_lobby_block() -> void:
 		lobby_status_label.text = "Réseau local — entrez l'IP de l'hôte"
 
 func _on_lobby_code_ready(_code: String) -> void:
+	# V6.7 — les six cases se gravent. Une frappe par caractere, echelonnee :
+	# un code qui apparait d'un bloc ne se lit pas, il se subit. Le decalage est
+	# ce qui laisse l'oeil suivre.
+	_frapper_le_code(_code)
 	_update_lobby_code_label()
+
+## V6.7 — la frappe des six cases, une par une.
+##
+## `await` par caractere plutot qu'un `Timer` : la sequence n'a pas d'etat a
+## porter et ne se rejoue pas. La garde `is_inside_tree` est necessaire — un
+## code peut arriver au moment ou l'on quitte l'ecran.
+func _frapper_le_code(code: String) -> void:
+	for i in code.length():
+		if not is_inside_tree():
+			return
+		AudioManager.play_ui("ui_keystroke")
+		await get_tree().create_timer(0.07).timeout
 	# Le code peut arriver alors qu'on est encore au menu — c'est même désormais
 	# le cas ordinaire, « CRÉER LE SALON » ouvrant le salon sans lancer la manche.
 	if _is_main_menu:
@@ -6055,6 +6115,10 @@ func reinitialiser_killcam() -> void:
 	_killcam_derniere_image = -1
 
 func show_killcam() -> void:
+	# V6.4 — la bande se rembobine. La killcam EST un retour en arriere : le son
+	# le dit avant que l'image ne le montre, ce qui evite la demi-seconde ou le
+	# joueur croit a un bug d'affichage.
+	AudioManager.play_ui("ui_vhs_rewind")
 	reinitialiser_killcam()
 	killcam_overlay.show()
 	killcam_container.show()

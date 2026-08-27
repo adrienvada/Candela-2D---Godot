@@ -173,6 +173,15 @@ func _physics_process(delta):
 			_spawn_wall_effects(hit_point)
 			
 			if bounces_left > 0:
+				# V4.3 — **le son du rebond dit qu'une balle VIT ENCORE.**
+				# `_spawn_wall_effects` vient de jouer `wall_impact`, qui dit
+				# l'inverse : une balle finie. Les deux se superposent ici à
+				# dessein — l'impact est le choc, le ricochet est le départ. Ce
+				# qu'on ne peut pas faire, c'est laisser le seul `wall_impact` :
+				# dans le noir, une balle qui repart et une balle qui meurt
+				# doivent s'entendre différemment, sans quoi le joueur ne sait
+				# pas s'il doit encore bouger.
+				AudioManager.play_ricochet(hit_point)
 				bounces_left -= 1
 				var normal = shape_cast.get_collision_normal(0)
 				direction = direction.bounce(normal)
@@ -260,7 +269,7 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 	if not is_replay:
 		target.take_damage(opp_hit_damage, source_player)
 
-	_spawn_hit_effects(hit_point)
+	_spawn_hit_effects(hit_point, normalized_dist)
 	if not is_replay:
 		_spawn_damage_number(hit_point, int(opp_hit_damage))
 	_fade_and_destroy(hit_point)
@@ -291,7 +300,11 @@ func _hit_training_target(target: TrainingTarget, hit_point: Vector2) -> void:
 	# ne saigne pas. C'est le SON qui change de camp, parce que c'est lui qui
 	# porte l'information dans un mode où l'on ne regarde pas le décor.
 	_spawn_wall_effects(hit_point, false)
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", hit_point, 0.92, 1.08)
+	# V4.2 — la cible entend le centre et le bord comme un corps. Elle calcule
+	# deja ses degats avec `damage_center`/`damage_edge` : le son suit le meme
+	# nombre. C'est le seul mode dont le sujet EST de viser, donc celui ou la
+	# difference compte le plus.
+	AudioManager.play_hit(hit_point, normalized_dist)
 	if not is_replay:
 		_spawn_damage_number(hit_point, dmg)
 	_fade_and_destroy(hit_point)
@@ -391,8 +404,16 @@ func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: 
 	if pool == null: return
 	pool.emit(ParticlePool.Kind.SPARK, pos, color, amount, speed_min, speed_max, base_dir, spread_deg)
 
-func _spawn_hit_effects(pos: Vector2):
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
+## `proximite_bord` : 0 au centre du corps, 1 au bord — **le nombre meme qui
+## calcule les degats**, jamais une seconde mesure. V4.2 rend audible un modele
+## qui existait, muet, depuis toujours : le tireur entend s'il a bien centre son
+## coup, ce qui est la seule facon de progresser au tir dans le noir.
+##
+## ⚠️ Le derive du MEME `normalized_dist` que `opp_hit_damage`. Un second calcul
+## « equivalent » finirait par diverger — ce depot a paye trois fois cette
+## lecon le 2026-08-24 sur l'echelle de la torche.
+func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0):
+	AudioManager.play_hit(pos, proximite_bord)
 	# Pure blood red
 	var blood_color = Charte.CARMIN
 	# Exit wound: large splatter forward

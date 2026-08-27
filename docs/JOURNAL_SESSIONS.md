@@ -1814,6 +1814,31 @@ La feuille de route décrivait encore DA3.4 et DA3.5 comme à faire : corrigé d
 le même commit. **Un item livré qui reste marqué à faire envoie quelqu'un
 refaire le travail** — c'est le coût que ce journal existe pour éviter.
 
+#### Lot du 2026-08-27 — quarante sons sortent du silence
+
+Le dépôt passe de 45 à 89 fichiers audio ; **quarante n'avaient aucun
+déclencheur**. Tous sont câblés : pas par matériau du damier, ricochet distinct
+de l'impact mortel, douille retardée, frôlement de mur, coup au centre ou au
+bord dérivé du **même nombre que les dégâts**, carreau d'arbalète, décompte,
+acouphène de mort avec le monde étouffé, présence de la salle, et sept sons
+d'interface posés sur des **transitions** et non des affichages.
+
+**Trois défauts trouvés en câblant** : le duck des pas de V4.15 serait devenu
+une branche morte dès que les pas jouent par chemin ; l'impact au but jouait
+deux fois, dont une depuis le centre du corps ; `$HitSound` ne jouait rien
+depuis toujours.
+
+**La classification portée/niveau/priorité vivait en trois exemplaires** ; elle
+passe par une seule `famille_de()`.
+
+**Garde-fou** : `_test_aucun_son_orphelin` rend « tous les sons sont câblés »
+vérifiable. Il a rougi immédiatement — les quarante fichiers n'étaient pas
+commités.
+
+**Reste à Adrien** : le heartbeat de 64 beats (le fichier en place fait 4 beats
+et date du 28 juillet, désormais inscrit au manifeste), et les six
+`breath_hit_*` de V4.9. Puis le mixage, qui est l'objet du lot suivant.
+
 #### Lot du 2026-08-26 (soir) — le filet de sortie, et un fichier vide
 
 **DA3.9 est tranchée en deux par Adrien** : pas d'alignement de loudness — les
