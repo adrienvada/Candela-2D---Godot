@@ -246,6 +246,48 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-27 — session « retouche éblouissement » : un banc, trois candidats, rien de branché
+
+**Demande d'Adrien : que le voile d'éblouissement cesse d'être un aplat blanc**
+et devienne un flare de lampe torche — **centré sur sa caméra**, plus intense au
+centre, animé, et penchant du côté de l'éblouisseur. Il a écarté explicitement
+la lecture forte (« l'effet doit rester centré ») après une première série de
+propositions : ce qui penche est le *caractère* du flare, jamais son cœur.
+
+**Travail en worktree** (`.claude/worktrees/retouche-eblouissement`, branche
+`retouche-eblouissement`), **jamais dans l'arbre principal**.
+
+**Fichiers créés :**
+
+- `voile_eblouissement.gdshader` (racine) — les trois candidats dans un seul
+  shader, plus le témoin (l'aplat d'aujourd'hui) ;
+- `tools/banc_voile.gd` + `.tscn` — le banc de visualisation.
+
+**Fichiers modifiés : `tools/test_banc.gd`** (les appuis du nouveau banc, plus
+son contre-test), **`docs/ROADMAP.md`**, ce journal.
+
+**⚠️ Un `*.gdshader` créé, donc le glob du domaine « game feel ».** Même cas que
+`brouillage_flou.gdshader` le 2026-08-25 : c'est un fichier **créé**, pas
+modifié, donc sans conflit possible — et il n'a **aucun lecteur en production**.
+`ui.gd` n'a pas été touché, et ne le sera pas sans demande : le branchement du
+voile passe par lui, donc par la session « menus ».
+
+**Rien n'est branché, et c'est délibéré.** Le jeu se comporte exactement comme
+avant ce lot. Le banc existe pour qu'Adrien tranche entre trois candidats à
+l'œil, dans le noir, au-dessus d'un vrai faisceau — la méthode qui a tranché
+B1 à B4 du chantier brouillage.
+
+**Deux défauts SIGNALÉS et non corrigés** (hors périmètre, et tous deux dans des
+fichiers tenus par d'autres) — détail et raisonnement dans la ROADMAP :
+
+1. `ui.gd` — en vue unique, `p2_dazzle` blanchit la moitié droite de l'écran
+   local quand l'ADVERSAIRE est ébloui ;
+2. `game_state.gd` / `brouillage_vue.gd` — en rendu racine, les couches du
+   brouillage passeraient au-dessus du HUD.
+
+**Les deux viennent d'une lecture de code, pas d'un relevé.** Ils sont à
+vérifier à l'écran avant d'être traités comme des faits.
+
 ### 2026-08-25 — session « affichage » (5) : le port cesse d'être une file d'attente
 
 **Adrien m'a confié le lanceur (option A) et le seuil du F3.** Branche

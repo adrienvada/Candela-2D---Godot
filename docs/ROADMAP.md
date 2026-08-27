@@ -10143,6 +10143,145 @@ aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
 `game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
 manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
 et ils vivent dans `brouillage.gd`.
+## Chantier — le voile d'éblouissement texturé (inscrit le 2026-08-27)
+
+**Le problème, en une phrase : le voile est un aplat blanc, et il n'a plus de
+raison de l'être.**
+
+Deux `ColorRect` de `ui.gd`, couleur `HALOGENE`, alpha `dazzle × 0,3`, plat et
+non pulsé. **Ce choix était juste quand il a été fait** (2026-08-18) : le voile
+faisait alors DEUX métiers — dire « tu es ébloui » ET cacher l'adversaire —, et
+faire battre son alpha aurait brouillé la lecture du NIVEAU d'éblouissement, qui
+est une information de duel. Le chantier brouillage lui a retiré le second métier
+le 2026-08-25 ; le voile est passé de 0,8 à 0,3, et l'argument qui interdisait de
+le texturer est tombé avec.
+
+**Demande d'Adrien (2026-08-27) :** que le voile soit texturé par un flare de
+lampe torche, plus intense au centre, animé, et « animé d'une certaine manière —
+idéalement légèrement avec la position du joueur qui éblouit par rapport à soi ».
+
+### L'invariant, et il a été posé par Adrien contre une première lecture
+
+Une première série de propositions offrait un couplage fort : le cœur du flare
+placé à la position écran de l'éblouisseur. **Adrien l'a écarté explicitement :**
+« il faut que le halo, le voile, soit centré sur l'écran du joueur ébloui […]
+l'effet doit rester centré, comme un voile au centre de la caméra du joueur, mais
+dont la source arrive sur les côtés ».
+
+**Le cœur ne bouge donc jamais.** Ce qui penche du côté de l'éblouisseur est le
+CARACTÈRE du flare : la longueur des aigrettes, l'axe des fantômes, le côté d'où
+vient le lavis. Un cœur déplacé aurait fait du voile une boussole, et rendu en
+grand l'information que `ALLONGEMENT_HALO` passe son temps à effacer — le cœur du
+halo a été étiré exprès, le 2026-08-25, pour cesser de désigner un point.
+
+`anisotropie` est le seul réglage qui porte l'inclinaison. **À zéro, le voile
+redevient rigoureusement non directionnel** sans que rien d'autre ne bouge :
+c'est la porte de sortie si le couplage se révèle trop bavard en duel.
+
+### Ce qui simplifie tout, et qui n'était pas su
+
+**Les `Camera2D` du duel ne tournent jamais** (`game_state.gd`). Le relèvement de
+l'éblouisseur dans le MONDE est donc exactement son relèvement à l'ÉCRAN. Le
+voile n'a besoin que d'un **scalaire** — un angle — et du niveau d'éblouissement.
+
+Conséquence : il ne peut pas se tromper de caméra. C'est le défaut nommé en tête
+de `brouillage_vue.gd` (« un appareil global doit convertir monde → écran avec la
+caméra de la BONNE moitié », défaut qu'aucun test automatique ne peut voir), et
+il ne s'applique pas ici. Le voile peut donc rester dans `ui.gd`.
+
+### Les trois candidats — `tools/banc_voile.tscn`
+
+Un seul shader, `voile_eblouissement.gdshader`, quatre modes. Un shader par
+candidat aurait fait diverger le socle commun — le cœur, le grain, la dose — et
+l'on aurait comparé trois socles au lieu de trois idées.
+
+| touche | candidat | comment la direction se lit |
+|---|---|---|
+| `1` | **la gerbe penchée + les éclats** | les aigrettes du côté de l'éblouisseur s'étirent (`1 + K·cos(θ − relèvement)`) ; des traînées fines naissent au bord de son côté et balaient vers le centre |
+| `2` | **la chaîne de fantômes** | le cœur reste centré, l'AXE de la chaîne de fantômes porte la direction |
+| `3` | **le ressac** | un lavis qui bave du bord, de son côté, et qui respire |
+| `0` | **l'aplat d'aujourd'hui** | le témoin |
+
+⚠️ **Le témoin est la touche qui compte le plus.** Sans aller-retour immédiat
+vers ce qui existe, on compare trois nouveautés entre elles et l'on retient la
+moins pire. Le `0` est ce qui permet de répondre « aucune des trois », qui est
+une réponse.
+
+⚠️ **Le piège de lecture du candidat `2`, à trancher à l'œil.** En optique, les
+fantômes tombent du côté OPPOSÉ à la source. C'est juste, c'est joli, **et ça se
+lit à l'envers** : « le flare est à gauche, donc il est à gauche » devient faux.
+`fantomes_cote` bascule entre les deux ; il n'a pas de bonne valeur *a priori*.
+
+### Le seul nombre qui compte pour la suite : l'opacité MOYENNE
+
+⚠️ **Sans ce relevé, la refonte allégerait une pénalité sans le dire.** L'aplat
+vaut 0,3 PARTOUT, donc sa moyenne EST 0,3. Un voile creusé qui culminerait à 0,3
+en son centre vaudrait peut-être 0,08 en moyenne — soit un quart de ce qu'Adrien
+a jugé au banc le 2026-08-25. À l'œil, les deux « se ressemblent » ; en jeu, l'un
+gêne et l'autre non, et rien ne le dirait.
+
+La touche `E` du banc rend le voile seul sur du noir pur, relit l'image et
+imprime moyenne et pointe. Le fond est noir et la teinte connue : l'alpha se
+retrouve par une division, **sans réécrire aucune formule du shader** — même
+principe que `Vision.intensite_texture`, qui lit le pixel du faisceau au lieu de
+recopier sa courbe. La sortie du banc (`Échap`) refuse de se taire quand aucun
+étalonnage n'a eu lieu.
+
+`gain` vaut 2,5 par défaut. **C'est un point de départ, pas une mesure**, et le
+shader le dit à cet endroit précis.
+
+### Ce que le banc montre en plus du voile, et pourquoi c'est nécessaire
+
+Le halo et le flou, par leur appareil de PRODUCTION (`brouillage_vue.gd`),
+instancié tel quel. **Un voile jugé seul serait jugé faux** : il vit désormais
+au-dessus d'un halo qui éclaire et d'une ellipse qui floute, et c'est leur somme
+que le joueur reçoit. La touche `B` les coupe, pour savoir ce qui vient de qui.
+
+Le banc **ne compte aucun tir**, contrairement à `banc_brouillage`. Le voile ne
+cache pas l'adversaire — c'est une répartition actée le 2026-08-25 —, et compter
+des tirs ici mesurerait le halo en croyant mesurer le voile.
+
+### État — rien n'est branché
+
+`voile_eblouissement.gdshader` n'a **aucun lecteur en production**, exactement
+comme `brouillage.gd` à son inscription. Le jeu se comporte comme avant.
+
+**Ce qui attend Adrien :** lancer `godot --path . res://tools/banc_voile.tscn`,
+choisir (ou refuser) un candidat, et étalonner. **Ce qui attend ensuite une autre
+session :** le branchement, qui passe par `ui.gd` — domaine « menus » — et qui ne
+se fait pas d'office.
+
+### ⚠️ Deux défauts signalés, non corrigés, et NON VÉRIFIÉS
+
+Les deux viennent d'une lecture de code faite en instruisant ce chantier. **Aucun
+n'a été observé à l'écran** ; ils sont à confirmer avant d'être traités comme des
+faits. Ils vivent tous deux dans des fichiers tenus par d'autres sessions.
+
+1. **`ui.gd` — le voile de l'adversaire s'affiche chez soi en vue unique.**
+   `update_hud(local, distant, …)` pose `p2_dazzle` sur la moitié droite de
+   l'écran quel que soit le mode, et `dazzle_amount` de l'adversaire est répliqué
+   (`net_dazzle`). En ligne, la moitié droite de l'écran local devrait donc
+   blanchir quand l'ADVERSAIRE est ébloui. Rien ne masque ces rectangles hors
+   écran scindé. En entraînement le cas est bénin — personne n'éblouit J2.
+
+   *Il n'existe aucune version propre du voile qui laisse ce comportement en
+   place : le branchement devra le régler.*
+
+2. **`game_state.gd` / `brouillage_vue.gd` — le brouillage au-dessus du HUD en
+   rendu racine.** `UI` est un `CanvasLayer` de couche 1 déclaré dans
+   `main.tscn` ; en vue unique, `_accorder_brouillage_aux_vues()` reparente
+   l'appareil dans la RACINE, où ses couches 1 (flou) et 2 (halo) sont ajoutées
+   après. Le halo passerait donc par-dessus la barre de vie, le cooldown et le
+   chrono. En écran scindé le problème n'existe pas — l'appareil est dans le
+   `SubViewport`.
+
+   Si c'est confirmé, cela contredit une décision actée du 2026-08-24 :
+   l'éblouissement doit coûter la lecture du MONDE, jamais celle de sa propre
+   fiche. C'est le raisonnement qui a fait passer le voile SOUS le HUD.
+
+3. Accessoire : les deux `ColorRect` de voile restent `visible` à alpha 0, donc
+   mélangés plein écran à chaque image d'un match. Gain gratuit au branchement.
+
 ## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
 
 **Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus
