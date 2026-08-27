@@ -1,23 +1,26 @@
 extends Node2D
 
-## Le banc du VOILE d'éblouissement — trois candidats, un seul écran.
+## Le banc du VOILE d'éblouissement — le régler, pas en choisir un.
 ##
 ## ## À quoi il sert
 ##
-## Le voile est aujourd'hui un aplat blanc. Adrien veut qu'il devienne un flare
-## de lampe torche : **centré sur sa caméra**, plus intense au centre, animé, et
-## penchant du côté de l'éblouisseur. Trois façons de faire pencher un voile
-## sans le déplacer ont été proposées ; ce banc existe pour qu'elles se jugent à
-## l'œil, côte à côte, dans le noir, au-dessus d'un vrai faisceau — et non sur
-## une description.
+## « Imagine que notre vue, notre UI, c'est entièrement une caméra éblouie par
+## une lampe. C'était ça le voile blanc » (Adrien, 2026-08-27). Le voile est
+## aujourd'hui un aplat ; il doit devenir cette caméra-là — **tout le cadre qui
+## blanchit**, plus fort au centre, avec des lueurs et des flares qui bougent
+## dedans et qui penchent du côté de l'éblouisseur.
 ##
-##   `1` la gerbe penchée + les éclats   `2` la chaîne de fantômes
-##   `3` le ressac                       `0` l'aplat d'aujourd'hui, le témoin
+##   `1` le voile          `0` l'aplat d'aujourd'hui, le témoin
 ##
-## ⚠️ **Le témoin est la touche qui compte le plus.** Sans un aller-retour
-## immédiat vers ce qui existe déjà, on compare trois nouveautés entre elles et
-## l'on retient la moins pire. Le `0` est ce qui permet de répondre « aucune des
-## trois », qui est une réponse.
+## ⚠️ **Ce banc a d'abord proposé TROIS candidats, et c'était une erreur de
+## lecture.** « Je voulais juste remplacer le voile d'éblouissement » : la
+## demande était un réglage, pas un choix. Trois propositions côte à côte
+## répondaient à une question que personne n'avait posée, et le banc y perdait
+## sa lisibilité — on ne savait plus ce qu'on regardait.
+##
+## **Le témoin, lui, reste et compte.** Sans aller-retour immédiat vers ce qui
+## existe déjà, on juge une nouveauté contre le souvenir qu'on a de l'ancienne.
+## Le `0` est aussi ce qui permet de répondre « non », qui est une réponse.
 ##
 ## ## Ce qu'il montre EN PLUS du voile, et pourquoi c'est nécessaire
 ##
@@ -77,55 +80,42 @@ static var CORPS: PackedVector2Array = PackedVector2Array([
 
 const NOMS_MODE := [
 	"0 · aplat (témoin — ce que le jeu fait aujourd'hui)",
-	"1 · la gerbe penchée + les éclats",
-	"2 · la chaîne de fantômes",
-	"3 · le ressac",
+	"1 · le voile — lavis plein écran + lueurs + flares",
 ]
 
 ## Les uniformes entiers. Le banc range tout en `float` — un seul type, une
 ## seule boucle de poussée — et ne reconvertit qu'ici, au moment d'écrire.
-const ENTIERS := ["mode", "fantomes_nombre"]
+const ENTIERS := ["mode", "lueurs_n", "flares_n"]
 
-## Les réglages, par mode. `Tab` circule dans ceux du mode COURANT.
+## Les réglages, dans l'ordre où l'on veut les toucher : d'abord le voile
+## lui-même — c'est lui qu'Adrien décrit comme « une caméra éblouie » —, puis ce
+## qui se pose dessus.
 ##
-## Un seul tableau commun aurait fait défiler les fantômes pendant qu'on règle
-## les aigrettes : vingt crans pour atteindre le suivant, et l'on cesse de
-## régler. Chaque mode ne montre que ses propres poignées, plus le socle.
-const REGLAGES_SOCLE := [
-	["gain de forme", "gain", 0.0, 6.0, 0.1],
-	["rayon du cœur", "rayon_coeur", 0.1, 3.0, 0.05],
-	["netteté du cœur", "nettete_coeur", 0.5, 6.0, 0.1],
-	["force du grain", "grain_force", 0.0, 1.0, 0.05],
-	["échelle du grain", "grain_echelle", 1.0, 400.0, 10.0],
-	["opacité du voile", "facteur", 0.0, 1.0, 0.05],
+## ⚠️ **Une seule liste, et c'est un retour en arrière assumé.** Elle était
+## découpée par candidat, parce qu'il y avait trois candidats. Il n'y en a plus
+## qu'un : « je voulais juste remplacer le voile d'éblouissement » (Adrien,
+## 2026-08-27). Trois propositions côte à côte répondaient à une question que
+## personne n'avait posée, et elles coûtaient la lisibilité du banc.
+const REGLAGES := [
+	["PLANCHER (le voile partout)", "plancher", 0.0, 1.0, 0.02],
+	["CIME (le voile au centre)", "cime", 0.0, 1.0, 0.02],
+	["largeur du lavis", "largeur", 0.2, 5.0, 0.1],
+	["courbe du lavis", "courbe", 0.2, 4.0, 0.1],
+	["nombre de lueurs", "lueurs_n", 0.0, 4.0, 1.0],
+	["intensité des lueurs", "lueurs_intensite", 0.0, 1.5, 0.02],
+	["échelle des lueurs", "lueurs_echelle", 0.1, 4.0, 0.05],
+	["INCLINAISON des lueurs", "lueurs_derive", 0.0, 1.5, 0.02],
+	["souffle des lueurs", "lueurs_souffle", 0.0, 0.6, 0.02],
+	["nombre de flares", "flares_n", 0.0, 8.0, 1.0],
+	["intensité des flares", "flares_intensite", 0.0, 1.5, 0.02],
+	["longueur des flares", "flares_longueur", 0.2, 6.0, 0.1],
+	["largeur des flares", "flares_largeur", 0.02, 1.0, 0.02],
+	["INCLINAISON des flares", "flares_penche", 0.0, 1.0, 0.05],
+	["rotation de la rosette", "flares_rotation", 0.0, 0.3, 0.002],
+	["scintillement des flares", "flares_scintille", 0.0, 1.0, 0.02],
+	["force du grain", "grain_force", 0.0, 0.5, 0.005],
+	["rafraîchissement du grain", "grain_hz", 0.0, 60.0, 2.0],
 ]
-const REGLAGES_PAR_MODE := {
-	1: [
-		["portée des aigrettes", "portee_aigrettes", 0.0, 3.0, 0.05],
-		["INCLINAISON (0 = neutre)", "anisotropie", 0.0, 1.0, 0.05],
-		["intensité des aigrettes", "intensite_aigrettes", 0.0, 2.0, 0.05],
-		["rotation de la rosette", "rotation_rosette", 0.0, 0.5, 0.005],
-		["scintillement", "scintillement", 0.0, 1.0, 0.05],
-		["période des éclats", "eclats_periode", 0.05, 4.0, 0.05],
-		["longueur d'un éclat", "eclats_longueur", 0.01, 1.5, 0.02],
-		["largeur d'un éclat", "eclats_largeur", 0.002, 0.4, 0.004],
-		["départ des éclats", "eclats_depart", 0.5, 3.0, 0.1],
-		["dispersion des éclats", "eclats_dispersion", 0.0, 3.14, 0.05],
-		["intensité des éclats", "eclats_intensite", 0.0, 2.0, 0.05],
-	],
-	2: [
-		["nombre de fantômes", "fantomes_nombre", 0.0, 6.0, 1.0],
-		["écart entre fantômes", "fantomes_ecart", 0.05, 1.5, 0.02],
-		["rayon des fantômes", "fantomes_rayon", 0.02, 1.0, 0.02],
-		["intensité des fantômes", "fantomes_intensite", 0.0, 2.0, 0.05],
-		["CÔTÉ (+1 source, −1 opposé)", "fantomes_cote", -1.0, 1.0, 2.0],
-	],
-	3: [
-		["seuil du ressac", "ressac_seuil", 0.0, 2.0, 0.05],
-		["intensité du ressac", "ressac_intensite", 0.0, 2.0, 0.05],
-		["respiration", "ressac_respiration", 0.0, 0.5, 0.01],
-	],
-}
 
 ## Portée du faisceau du banc, en pixels. Le banc **ne recopie pas l'arsenal** —
 ## `game_state.gd` et `banc_brouillage.gd` le font déjà tous les deux, et une
@@ -149,20 +139,23 @@ var _echelle_torche: float = 1.6
 ## uniquement au changement de netteté et jamais dans `_rendre`.
 var _arme: WeaponData
 
-## La texture de salissure d'objectif, si quelqu'un en a fourni une.
+## Les deux textures du voile. **Fabriquées ici si elles n'existent pas sur
+## disque, et remplacées sans une ligne de shader si elles y sont.**
 ##
-## Le grain est procédural par défaut, et il suffit à juger les trois candidats.
-## Mais une vraie salissure — fibres, poussières, micro-rayures — est ce qui, sur
-## la référence d'Adrien, fait la moitié de l'impression « photo » : un bruit de
-## valeur est trop régulier pour ça, quelle qu'en soit l'échelle.
+## C'est tout l'intérêt d'être passé par des textures plutôt que par des
+## formules : le jour où une vraie photo de flare arrive — d'une session
+## d'assets, ou d'un cliché d'Adrien —, elle se substitue à celle qu'on
+## fabrique. Le shader ne sait pas d'où elles viennent.
 ##
-## **Le banc marche sans, et la touche `S` compare les deux quand elle est là.**
-## Un banc qui exigerait un asset qui n'existe pas encore serait un banc qu'on ne
-## peut pas lancer — c'est-à-dire un banc qui ne sert à rien le jour où il faut
-## trancher.
-const CHEMIN_SALISSURE := "res://assets/sprites/voile_salissure.png"
-var _salissure: Texture2D = null
-var _utiliser_salissure: bool = false
+## ⚠️ **Elles doivent être NOIRES sur tout leur pourtour.** Le shader les
+## échantillonne hors de leurs bornes en permanence, et `repeat_disable` étire le
+## texel du bord à l'infini : un bord non nul peindrait une bande sur la moitié
+## de l'écran.
+const CHEMIN_LUEUR := "res://assets/sprites/voile_lueur.png"
+const CHEMIN_FLARE := "res://assets/sprites/voile_flare.png"
+var _lueur_tex: Texture2D
+var _flare_tex: Texture2D
+var _textures_fournies: bool = false
 
 # --- état vivant ------------------------------------------------------------
 var _mode: int = 1
@@ -237,11 +230,10 @@ static func preconditions_manquantes(
 		var connus := {}
 		for u in shader.get_shader_uniform_list(true):
 			connus[String(u["name"])] = true
-		var attendus := ["mode", "niveau", "facteur", "gain", "teinte",
-			"relevement", "aspect", "temps", "a_salissure", "salissure"]
-		for liste in [REGLAGES_SOCLE] + REGLAGES_PAR_MODE.values():
-			for r in liste:
-				attendus.append(String(r[1]))
+		var attendus := ["mode", "niveau", "teinte", "relevement", "aspect",
+			"temps", "lueur_tex", "flare_tex"]
+		for r in REGLAGES:
+			attendus.append(String(r[1]))
 		for nom in attendus:
 			if not connus.has(nom):
 				absents.append("uniforme « %s » absent du shader du voile" % nom)
@@ -275,9 +267,7 @@ func _ready() -> void:
 	if not manquants.is_empty():
 		push_error("banc_voile : appuis manquants — %s" % "; ".join(manquants))
 	RenderingServer.set_default_clear_color(Charte.NOIR)
-	if ResourceLoader.exists(CHEMIN_SALISSURE):
-		_salissure = load(CHEMIN_SALISSURE)
-		_utiliser_salissure = _salissure != null
+	_forger_textures()
 	_lire_defauts()
 	_batir_monde()
 	_batir_ecran()
@@ -321,9 +311,9 @@ func _planche() -> void:
 	_auto = false
 	_niveau_manuel = 0.85
 	_fige = true
-	_temps = 4.37  # Un instant quelconque, mais le MÊME pour les quatre modes.
+	_temps = 4.37  # Un instant quelconque, mais le MÊME pour les deux modes.
 	var releves: Array[String] = []
-	for m in 4:
+	for m in 2:
 		for a in [0.0, 145.0, -65.0]:
 			_mode = m
 			_angle = deg_to_rad(a)
@@ -356,7 +346,7 @@ func _planche() -> void:
 					get_viewport().get_visible_rect().size * 0.5])
 	print("--- planche du voile : %d images ---" % releves.size())
 	print("  ", ProjectSettings.globalize_path(dossier))
-	for m in 4:
+	for m in 2:
 		print("  mode %d — %s" % [m, NOMS_MODE[m]])
 	get_tree().quit()
 
@@ -370,11 +360,9 @@ func _planche() -> void:
 ## sur son point de départ fait rejuger un réglage qu'on croyait connaître.
 func _lire_defauts() -> void:
 	var rid := SHADER_VOILE.get_rid()
-	var noms: Array = ["gain", "facteur", "grain_force", "grain_echelle",
-		"rayon_coeur", "nettete_coeur"]
-	for liste in REGLAGES_PAR_MODE.values():
-		for r in liste:
-			noms.append(String(r[1]))
+	var noms: Array = []
+	for r in REGLAGES:
+		noms.append(String(r[1]))
 	for nom in noms:
 		var defaut = RenderingServer.shader_get_parameter_default(rid, nom)
 		if defaut == null:
@@ -384,6 +372,60 @@ func _lire_defauts() -> void:
 			_val[nom] = 0.0
 		else:
 			_val[nom] = float(defaut)
+
+
+## Les deux textures : celles du disque si elles y sont, sinon fabriquées.
+func _forger_textures() -> void:
+	if ResourceLoader.exists(CHEMIN_LUEUR) and ResourceLoader.exists(CHEMIN_FLARE):
+		_lueur_tex = load(CHEMIN_LUEUR)
+		_flare_tex = load(CHEMIN_FLARE)
+		_textures_fournies = _lueur_tex != null and _flare_tex != null
+		if _textures_fournies:
+			return
+	_lueur_tex = _forger_lueur()
+	_flare_tex = _forger_flare()
+
+
+## Une lueur ronde : blanche au centre, rigoureusement noire au bord.
+##
+## Deux termes et non un : un cœur serré `(1−r)^4` pour la brûlure, et un halo
+## large `(1−r)^1,4` pour ce qui bave autour. Une seule puissance donne soit une
+## bille dure, soit une tache molle — jamais les deux, et c'est les deux qu'on
+## voit d'une lampe braquée dans un objectif.
+func _forger_lueur(taille: int = 256) -> ImageTexture:
+	var img := Image.create(taille, taille, false, Image.FORMAT_RGBA8)
+	var c := float(taille - 1) * 0.5
+	for y in taille:
+		for x in taille:
+			var r := Vector2(float(x) - c, float(y) - c).length() / c
+			var t := clampf(1.0 - r, 0.0, 1.0)
+			var v := pow(t, 4.0) * 0.75 + pow(t, 1.4) * 0.35
+			img.set_pixel(x, y, Color(1, 1, 1, 1) * minf(v, 1.0))
+	return ImageTexture.create_from_image(img)
+
+
+## Une traînée horizontale : vive sur l'axe, éteinte partout ailleurs.
+##
+## ⚠️ **Le profil EN TRAVERS est beaucoup plus creusé que le profil EN
+## LONG** — `^6` contre `^1,8`. C'est ce rapport qui fait une traînée plutôt
+## qu'une ellipse : l'œil lit une traînée à sa finesse, pas à sa longueur.
+##
+## L'irrégularité vient d'un peigne de sinus le long de l'axe. Sans elle, la
+## traînée est un trait parfait — donc un trait DESSINÉ, pas une aberration
+## d'optique. C'est le même défaut de fond que le halo qui était un cercle
+## parfait : ce qui est trop régulier se lit comme une forme, et une forme est
+## une chose de plus à lire.
+func _forger_flare(larg: int = 512, haut: int = 64) -> ImageTexture:
+	var img := Image.create(larg, haut, false, Image.FORMAT_RGBA8)
+	for y in haut:
+		var v := absf(float(y) / float(haut - 1) * 2.0 - 1.0)
+		var travers := pow(clampf(1.0 - v, 0.0, 1.0), 6.0)
+		for x in larg:
+			var u := float(x) / float(larg - 1) * 2.0 - 1.0
+			var long := pow(clampf(1.0 - absf(u), 0.0, 1.0), 1.8)
+			var peigne := 0.72 + 0.28 * sin(u * 37.0) * sin(u * 11.3 + 1.7)
+			img.set_pixel(x, y, Color(1, 1, 1, 1) * clampf(long * travers * peigne, 0.0, 1.0))
+	return ImageTexture.create_from_image(img)
 
 
 func _batir_monde() -> void:
@@ -635,9 +677,16 @@ func _bouger_eblouisseur(delta: float) -> void:
 	elif _orbite:
 		_angle += delta * 0.35
 	else:
+		# ⚠️ **La souris pilote la POSITION, pas seulement l'angle.** Elle ne
+		# donnait que le cap, et la distance restait clouée sur `Z/X` : on
+		# promenait le curseur, l'éblouisseur tournait sur son rail, la lumière
+		# reçue ne bougeait pas d'un pouce — donc ni l'éblouissement, ni le flou,
+		# ni le halo. Adrien l'a dit d'un mot : « le flou ne varie même plus en
+		# fonction de ma distance ». Il ne l'avait jamais fait.
 		var vers := get_global_mouse_position()
 		if vers.length() > 1.0:
 			_angle = vers.angle()
+			_distance = clampf(vers.length(), 60.0, 900.0)
 	_porteur.global_position = Vector2.RIGHT.rotated(_angle) * _distance
 	# Il braque toujours sa torche sur le joueur : c'est la situation à juger,
 	# pas une situation moyenne.
@@ -681,10 +730,8 @@ func _rendre() -> void:
 		(_porteur.global_position - _regardeur.global_position).angle())
 	_mat.set_shader_parameter("aspect",
 		taille.x / maxf(taille.y, 1.0))
-	_mat.set_shader_parameter("a_salissure",
-		_utiliser_salissure and _salissure != null)
-	if _salissure != null:
-		_mat.set_shader_parameter("salissure", _salissure)
+	_mat.set_shader_parameter("lueur_tex", _lueur_tex)
+	_mat.set_shader_parameter("flare_tex", _flare_tex)
 	for nom in _val.keys():
 		if nom in ENTIERS:
 			_mat.set_shader_parameter(nom, int(round(float(_val[nom]))))
@@ -764,15 +811,14 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 	# d'un AZERTY est un `KEY_Q` physique, et lire le physique ferait mentir
 	# l'aide affichée à l'écran.
 	var phys: int = evenement.physical_keycode
-	if phys >= KEY_0 and phys <= KEY_3:
+	if phys >= KEY_0 and phys <= KEY_1:
 		_mode = phys - KEY_0
-		_reglage = 0
 		_touche_inconnue = ""
 		return
 
 	match evenement.keycode:
 		KEY_TAB:
-			var n := _reglages().size()
+			var n := REGLAGES.size()
 			var sens := -1 if evenement.shift_pressed else 1
 			_reglage = posmod(_reglage + sens, n)
 		KEY_LEFT: _bouger_reglage(-1)
@@ -795,11 +841,6 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_V:
 			_cone_deg = clampf(_cone_deg + 5.0, 5.0, 80.0)
 			_poser_arme()
-		KEY_S:
-			if _salissure == null:
-				_touche_inconnue = "aucune texture de salissure (%s)" % CHEMIN_SALISSURE
-				return
-			_utiliser_salissure = not _utiliser_salissure
 		KEY_E: _etalonner()
 		KEY_R: _lire_defauts()
 		KEY_ESCAPE:
@@ -816,25 +857,15 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 	_touche_inconnue = ""
 
 
-func _reglages() -> Array:
-	if _mode == 0:
-		return REGLAGES_SOCLE
-	return REGLAGES_SOCLE + REGLAGES_PAR_MODE.get(_mode, [])
-
-
 func _bouger_reglage(sens: int) -> void:
-	var liste := _reglages()
-	if liste.is_empty():
-		return
-	var r: Array = liste[_reglage % liste.size()]
+	var r: Array = REGLAGES[_reglage % REGLAGES.size()]
 	var nom := String(r[1])
 	_val[nom] = clampf(float(_val.get(nom, 0.0)) + float(r[4]) * float(sens),
 		float(r[2]), float(r[3]))
 
 
 func _maj_panneau() -> void:
-	var liste := _reglages()
-	var r: Array = liste[_reglage % liste.size()]
+	var r: Array = REGLAGES[_reglage % REGLAGES.size()]
 	var lignes := [
 		NOMS_MODE[_mode],
 		"RÉGLAGE  ‹ %s  %.3f ›   (Tab / Maj+Tab)" % [r[0], float(_val.get(String(r[1]), 0.0))],
@@ -845,8 +876,7 @@ func _maj_panneau() -> void:
 			"orbite" if _orbite else "à la souris", _distance, rad_to_deg(_angle)],
 		"faisceau       cône ±%.0f°" % _cone_deg,
 		"halo et flou   %s" % ("oui" if _brouillage_actif else "COUPÉS"),
-		"grain          %s" % ("salissure (S)" if (_utiliser_salissure and _salissure != null)
-			else ("procédural — texture absente" if _salissure == null else "procédural (S)")),
+		"textures       %s" % ("fournies (assets)" if _textures_fournies else "fabriquées ici"),
 	]
 	if _dernier_releve != "":
 		lignes += ["", "étalonnage : " + _dernier_releve]
@@ -878,10 +908,9 @@ func _transcrire() -> void:
 
 
 func _texte_aide() -> String:
-	return "0 témoin (aplat)   1 gerbe+éclats   2 fantômes   3 ressac   " \
+	return "0 témoin (l'aplat d'aujourd'hui)   1 le voile   " \
 		+ "Tab choisir un réglage   ←/→ le régler\n" \
-		+ "A auto/forcé   ↑/↓ niveau   O orbite / souris   Espace figer le temps   " \
-		+ "Z/X distance   C/V cône\n" \
-		+ "B couper halo et flou   S grain procédural / salissure   " \
-		+ "E étalonner (opacité moyenne)   R remettre les défauts   " \
-		+ "Échap transcrire et sortir"
+		+ "A auto/forcé   ↑/↓ niveau   O orbite / souris (la souris pose la " \
+		+ "POSITION)   Espace figer le temps   Z/X distance   C/V cône\n" \
+		+ "B couper halo et flou   E étalonner (opacité moyenne)   " \
+		+ "R remettre les défauts   Échap transcrire et sortir"

@@ -266,6 +266,15 @@ propositions : ce qui penche est le *caractère* du flare, jamais son cœur.
 **Fichiers modifiés : `tools/test_banc.gd`** (les appuis du nouveau banc, plus
 son contre-test), **`docs/ROADMAP.md`**, ce journal.
 
+**⚠️ Le banc a été REFAIT le même jour, après le premier passage d'Adrien.** Il
+proposait trois candidats ; la demande était un réglage, pas un choix — « je
+voulais juste remplacer le voile d'éblouissement ». Et le voile qu'il proposait
+mourait avant les bords de l'écran, ce qui en faisait une décoration centrée au
+lieu d'un aveuglement. Il est désormais bâti sur l'image qu'Adrien a donnée :
+« notre vue, notre UI, c'est entièrement une caméra éblouie par une lampe ». Un
+lavis plein écran dont le PLANCHER est l'aplat d'aujourd'hui, plus des lueurs et
+des flares échantillonnés dans deux textures.
+
 **⚠️ Un `*.gdshader` créé, donc le glob du domaine « game feel ».** Même cas que
 `brouillage_flou.gdshader` le 2026-08-25 : c'est un fichier **créé**, pas
 modifié, donc sans conflit possible — et il n'a **aucun lecteur en production**.

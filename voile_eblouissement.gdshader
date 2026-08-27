@@ -1,89 +1,95 @@
 shader_type canvas_item;
 
-// Le VOILE d'éblouissement — le flare de lampe torche qui arrive dans l'œil.
+// Le VOILE d'éblouissement — une caméra qui prend une lampe dans l'objectif.
 //
-// ## Ce que ce shader remplace
+// ## L'image de départ, et elle décide de toute la construction
 //
-// Un aplat blanc. `ui.gd` pose aujourd'hui deux `ColorRect` de couleur
-// `HALOGENE` et d'alpha `dazzle × 0,3`, plat et non pulsé — décision du
-// 2026-08-18, prise quand le voile faisait DEUX métiers (dire « tu es ébloui »
-// et cacher l'adversaire). Le halo et le flou de `brouillage.gd` lui ont pris le
-// second, et **localement** ; il ne lui reste que le premier. C'est ce qui
-// rouvre la question de son apparence : un aplat était le bon choix pour un
-// voile qui devait rester lisible en tant que JAUGE ; il n'a plus à l'être.
+// « Imagine que notre vue, notre UI, c'est entièrement une caméra éblouie par
+// une lampe » (Adrien, 2026-08-27). Ce n'est pas une forme posée sur du noir :
+// c'est **tout le cadre qui blanchit**, plus fort au centre, avec des lueurs et
+// des flares qui bougent dedans.
 //
-// ## L'invariant qui tient tout : le voile reste CENTRÉ
+// ⚠️ **Un premier jet a fabriqué l'inverse**, et l'erreur est instructive : un
+// cœur en `(1 − r)^n` qui tombe à zéro laissait les tiers gauche et droit de
+// l'écran **rigoureusement noirs**. Le résultat se lisait comme une décoration
+// centrée, pas comme un aveuglement. La borne « nul au bord » est juste pour un
+// halo — un halo est un objet DANS le monde et doit cesser quelque part. Elle
+// est fausse pour un voile, qui est l'état de l'ŒIL et n'a pas de bord.
 //
-// ⚠️ **Le cœur ne se déplace jamais vers l'éblouisseur.** Le voile est posé sur
-// la caméra du joueur ébloui, point. Ce qui penche du côté de l'éblouisseur,
-// c'est le CARACTÈRE du flare — la longueur des aigrettes, l'axe des fantômes,
-// le côté d'où vient le ressac. Un cœur déplacé ferait du voile une boussole, et
-// rendrait en grand l'information que le halo de `brouillage.gd` passe son temps
-// à effacer (voir `ALLONGEMENT_HALO` : le cœur du halo a été étiré exprès pour
-// cesser de désigner un point).
+// ## D'où la structure : un SOL, et ce qui se pose dessus
 //
-// `anisotropie` est le seul réglage qui porte cette inclinaison. **Le mettre à
-// zéro rend le voile rigoureusement non directionnel**, sans rien défaire
-// d'autre : c'est la porte de sortie si le couplage se révèle trop bavard.
+//     alpha = niveau × [ mélange(plancher, cime, creux)  +  lueurs + flares ]
+//
+// `plancher` est l'aplat d'aujourd'hui — 0,30, arbitré par Adrien le
+// 2026-08-25. **Il ne descend jamais en dessous**, nulle part sur l'écran. Le
+// voile actuel est donc le plancher du nouveau, littéralement : la refonte ne
+// peut pas alléger la mécanique par accident, elle ne peut que l'appuyer.
+// `cime` dit jusqu'où le centre monte au-dessus.
+//
+// ## Pourquoi des TEXTURES et non des formules
+//
+// « Ne peut-on pas prendre une texture qui génère comme une lumière, et
+// l'animer d'une façon maline et pas chère » (Adrien). Deux textures suffisent —
+// une lueur ronde, une traînée — et tout le reste n'est que des matrices : on
+// les échantillonne à des échelles, des angles et des décalages qui dérivent
+// lentement. Sept lectures de texture pour toute la gerbe, contre une trentaine
+// d'opérations trigonométriques par pixel dans la version précédente.
+//
+// Et surtout : **une texture se remplace.** Le jour où une vraie photo de flare
+// arrive, elle se substitue à celle qu'on fabrique, sans toucher au shader.
+//
+// ## L'invariant, posé par Adrien contre une première lecture
+//
+// ⚠️ **Le voile reste CENTRÉ sur la caméra du joueur.** Le cœur ne se déplace
+// jamais vers l'éblouisseur. Ce qui penche est le CARACTÈRE — les lueurs
+// glissent de son côté, les flares s'y étirent. Un cœur déplacé ferait du voile
+// une boussole et rendrait en grand l'information que `ALLONGEMENT_HALO` passe
+// son temps à effacer.
+//
+// `flares_penche` et `lueurs_derive` portent seuls cette inclinaison : à zéro,
+// le voile redevient rigoureusement non directionnel sans rien défaire d'autre.
 //
 // ## Le repère
 //
-// `relevement` est l'angle de l'éblouisseur vu du joueur ébloui, en radians,
-// `0` = à droite, et il croît dans le sens des aiguilles d'une montre parce que
-// l'axe Y descend — en UV comme dans le monde 2D de Godot. **Les deux
-// descendent, donc il n'y a AUCUN retournement de signe à faire**, et c'est
-// exactement le genre d'évidence qui se paie deux heures quand elle est fausse.
-//
-// Les `Camera2D` du duel ne tournent jamais (`game_state.gd`), donc le
-// relèvement du monde EST le relèvement de l'écran. C'est ce qui permet à ce
-// shader de ne recevoir qu'un scalaire au lieu d'une transformée de vue — et
-// donc de ne pas pouvoir se tromper de caméra, qui est le défaut nommé en tête
-// de `brouillage_vue.gd`.
-//
-// ## Les trois candidats
-//
-// Trois propositions vivent dans un seul shader, choisies par `mode`. Un shader
-// par candidat aurait fait diverger le socle commun — le cœur, le grain, la
-// dose — et on aurait comparé trois socles au lieu de trois idées.
-//
-//   1 = « la gerbe penchée » + « les éclats »  (P1+P4)
-//   2 = « la chaîne de fantômes »              (P2)
-//   3 = « le ressac »                          (P3)
-//   0 = rien : l'aplat d'aujourd'hui, le témoin contre lequel les trois se jugent.
+// `relevement` = l'angle de l'éblouisseur vu du joueur, en radians, `0` = à
+// droite, croissant dans le sens des aiguilles d'une montre — l'axe Y descend
+// en UV **comme** dans le monde 2D de Godot, donc **aucun retournement de signe
+// à faire**. Les `Camera2D` du duel ne tournant jamais (`game_state.gd`), le
+// relèvement du monde EST celui de l'écran : ce shader ne reçoit qu'un scalaire,
+// et ne peut donc pas se tromper de caméra.
 
-uniform int mode : hint_range(0, 3) = 1;
+uniform int mode : hint_range(0, 1) = 1;
 
 // --- la dose ---------------------------------------------------------------
 
-/// L'éblouissement du joueur, `0` à `1`. C'est `player.dazzle_amount`.
+/// L'éblouissement du joueur, `0` à `1` — c'est `player.dazzle_amount`.
 uniform float niveau : hint_range(0.0, 1.0) = 0.0;
 
-/// `Brouillage.VOILE_FACTEUR` — l'opacité du voile à saturation. **0,3, arbitré
-/// par Adrien au banc le 2026-08-25**, et ce shader n'a pas à le rejuger.
-uniform float facteur : hint_range(0.0, 1.0) = 0.3;
+/// **Le SOL du voile : ce qu'il vaut partout, même dans les coins.** 0,30, et
+/// c'est exactement l'aplat d'aujourd'hui (`Brouillage.VOILE_FACTEUR`, arbitré
+/// par Adrien au banc le 2026-08-25). Le nouveau voile part de l'ancien.
+uniform float plancher : hint_range(0.0, 1.0) = 0.30;
 
-/// Le gain de forme. L'aplat de 0,3 valait 0,3 PARTOUT ; un voile creusé qui
-/// culminerait à 0,3 en son centre serait, en moyenne, beaucoup plus faible que
-/// ce qui a été jugé. Le gain rattrape cet écart.
-///
-/// ⚠️ **2,5 est un point de départ, pas une mesure.** La valeur qui rend au
-/// voile son opacité MOYENNE de 0,3 se relève au banc (touche `E`), qui rend le
-/// voile sur du noir pur et lit l'image. Tant que ce relevé n'a pas eu lieu,
-/// personne ne sait si le nouveau voile pèse plus ou moins lourd que l'ancien —
-/// et « il a l'air pareil » n'est pas une réponse pour une mécanique qui coûte
-/// 40 % de vitesse.
-uniform float gain : hint_range(0.0, 6.0) = 2.5;
+/// Ce que vaut le voile au CENTRE. L'écart avec le plancher est tout l'effet.
+uniform float cime : hint_range(0.0, 1.0) = 0.88;
+
+/// Sur quelle distance le lavis descend de `cime` vers `plancher`, en fractions
+/// de la DEMI-HAUTEUR. **1,9 : le lavis est encore à mi-course dans les coins**
+/// d'un 16/9. C'est ce qui fait un aveuglement plutôt qu'une tache.
+uniform float largeur : hint_range(0.2, 5.0) = 1.9;
+
+/// La courbe du lavis. Sous 1, le centre s'aplatit et l'écran blanchit presque
+/// uniformément ; au-dessus, le centre se creuse.
+uniform float courbe : hint_range(0.2, 4.0) = 1.5;
 
 /// La teinte du voile — `Charte.HALOGENE`.
 uniform vec3 teinte = vec3(0.98, 0.91, 0.80);
 
-/// Le relèvement de l'éblouisseur, en radians. `0` = à droite.
 uniform float relevement = 0.0;
 
-/// Largeur / hauteur du rectangle. **Sans lui le cœur est un OVALE**, et un
-/// ovale différent en écran scindé (957×1080, donc écrasé) et en vue unique
-/// (1916×1080, donc étiré). Le défaut ne se voit que sur une capture des deux
-/// modes côte à côte, c'est-à-dire jamais.
+/// Largeur / hauteur du rectangle. **Sans lui le voile est un OVALE**, et un
+/// ovale différent en écran scindé (957×1080) et en vue unique (1916×1080) —
+/// un défaut qui ne se voit que sur une capture des deux modes côte à côte.
 uniform float aspect = 1.0;
 
 /// Le temps, en secondes. Un uniforme et non `TIME` : le banc doit pouvoir
@@ -91,112 +97,76 @@ uniform float aspect = 1.0;
 /// un instant précis. `TIME` ne se pilote pas.
 uniform float temps = 0.0;
 
-// --- le cœur, commun aux trois ---------------------------------------------
+// --- les deux textures -----------------------------------------------------
 
-/// Rayon du cœur, en fraction de la DEMI-HAUTEUR de l'écran. 1,0 = le cœur
-/// meurt pile en haut et en bas de l'écran.
-uniform float rayon_coeur : hint_range(0.1, 3.0) = 1.15;
+/// Une lueur ronde, blanche au centre et noire au bord.
+uniform sampler2D lueur_tex : hint_default_black, filter_linear, repeat_disable;
 
-/// L'exposant qui creuse le cœur : `(1 − r) ^ nettete`. Même famille que
-/// `Brouillage.NETTETE_HALO` et `Eblouissement.COURBURE_LUMIERE`, et pour la
-/// même raison — **les deux bornes ne bougent pas** (plein au centre,
-/// rigoureusement nul au bord) quel que soit l'exposant. Un seuil ou un décalage
-/// casserait l'une des deux, et celle du bord est la seule chose qui empêche le
-/// voile d'avoir un CONTOUR. Un contour est une forme de plus à lire.
-uniform float nettete_coeur : hint_range(0.5, 6.0) = 2.2;
-
-// --- P1 : la gerbe penchée -------------------------------------------------
-
-/// Portée des aigrettes, en fraction de la demi-hauteur.
-uniform float portee_aigrettes : hint_range(0.0, 3.0) = 1.6;
-
-/// **Le seul réglage qui fait pencher le voile.** La longueur d'une aigrette est
-/// multipliée par `1 + anisotropie · cos(θ − relevement)` : du côté de
-/// l'éblouisseur elles s'étirent, du côté opposé elles se rétractent. À 0, la
-/// gerbe est parfaitement symétrique et le voile ne dit plus rien de personne.
-uniform float anisotropie : hint_range(0.0, 1.0) = 0.55;
-
-/// Tours par seconde de la rosette. Très lent à dessein : les pointes doivent
-/// RAMPER. Même leçon que `Brouillage.DERIVE_HZ_*` — ce qui tremble vite est
-/// intégré par l'œil et cesse d'exister ; ce qui rampe reste visible.
-uniform float rotation_rosette : hint_range(0.0, 0.5) = 0.035;
-
-/// Amplitude du scintillement de chaque aigrette, en fraction.
-uniform float scintillement : hint_range(0.0, 1.0) = 0.30;
-
-/// Le poids de la gerbe par rapport au cœur.
-uniform float intensite_aigrettes : hint_range(0.0, 2.0) = 0.55;
-
-// --- P4 : les éclats -------------------------------------------------------
-
-/// Secondes entre deux éclats. Trois éclats se partagent la période, donc un
-/// éclat naît toutes les `periode / 3` secondes.
-uniform float eclats_periode : hint_range(0.05, 4.0) = 1.1;
-
-/// Longueur et largeur d'un éclat, en fraction de la demi-hauteur. L'un très
-/// supérieur à l'autre : un éclat est une traînée, pas une tache.
-uniform float eclats_longueur : hint_range(0.01, 1.5) = 0.42;
-uniform float eclats_largeur : hint_range(0.002, 0.4) = 0.030;
-
-/// D'où l'éclat part, en fraction de la demi-hauteur. Au-delà de ~1,4 il naît
-/// hors champ et l'on ne voit que sa fin.
-uniform float eclats_depart : hint_range(0.5, 3.0) = 1.7;
-
-/// L'ouverture, en radians, du secteur d'où les éclats arrivent. Zéro les
-/// aligne tous sur le relèvement exact, ce qui se lit comme un rail.
-uniform float eclats_dispersion : hint_range(0.0, 3.14) = 0.75;
-
-uniform float eclats_intensite : hint_range(0.0, 2.0) = 0.65;
-
-// --- P2 : la chaîne de fantômes --------------------------------------------
-
-uniform int fantomes_nombre : hint_range(0, 6) = 4;
-
-/// Écart entre deux fantômes, en fraction de la demi-hauteur.
-uniform float fantomes_ecart : hint_range(0.05, 1.5) = 0.34;
-
-uniform float fantomes_rayon : hint_range(0.02, 1.0) = 0.20;
-uniform float fantomes_intensite : hint_range(0.0, 2.0) = 0.55;
-
-/// ⚠️ **`+1` = du côté de l'éblouisseur, `−1` = du côté opposé.**
+/// Une traînée horizontale, vive sur l'axe et éteinte partout ailleurs.
 ///
-/// L'optique dit `−1` : dans un vrai flare, les fantômes tombent de l'autre côté
-/// du centre par rapport à la source. C'est juste, c'est joli, **et ça se lit à
-/// l'envers** — « le flare est à gauche, donc il est à gauche » est faux dans ce
-/// cas-là. Le réglage existe pour que ce compromis soit tranché à l'œil et non
-/// sur le papier ; il n'a pas de bonne valeur *a priori*.
-uniform float fantomes_cote : hint_range(-1.0, 1.0) = -1.0;
+/// ⚠️ **Les deux textures DOIVENT être noires sur tout leur pourtour.** On les
+/// échantillonne hors de leurs bornes en permanence, et `repeat_disable` étire
+/// le texel du bord à l'infini : un bord non nul peindrait une bande sur la
+/// moitié de l'écran.
+uniform sampler2D flare_tex : hint_default_black, filter_linear, repeat_disable;
 
-// --- P3 : le ressac --------------------------------------------------------
+// --- les lueurs ------------------------------------------------------------
 
-/// Où commence le lavis, en fraction de la demi-hauteur mesurée le long de
-/// l'axe du relèvement. Plus c'est haut, plus le lavis se serre contre le bord.
-uniform float ressac_seuil : hint_range(0.0, 2.0) = 0.35;
+uniform int lueurs_n : hint_range(0, 4) = 3;
+uniform float lueurs_intensite : hint_range(0.0, 1.5) = 0.42;
 
-uniform float ressac_intensite : hint_range(0.0, 2.0) = 0.85;
+/// Taille de la première lueur, en demi-hauteurs. Les suivantes sont plus
+/// grandes et plus faibles.
+uniform float lueurs_echelle : hint_range(0.1, 4.0) = 1.25;
 
-/// Amplitude de la respiration du seuil, en fraction de la demi-hauteur. Deux
-/// fréquences bancales, comme la dérive du brouillage : une sinusoïde seule est
-/// un balancier, et un balancier s'anticipe.
-uniform float ressac_respiration : hint_range(0.0, 0.5) = 0.10;
+/// **De combien les lueurs glissent VERS l'éblouisseur**, en demi-hauteurs.
+/// C'est l'une des deux poignées de l'inclinaison. À zéro, elles restent
+/// centrées et ne disent plus rien de personne.
+uniform float lueurs_derive : hint_range(0.0, 1.5) = 0.34;
 
-// --- le grain, commun aux trois --------------------------------------------
+/// Amplitude de leur respiration, en fraction de leur taille.
+uniform float lueurs_souffle : hint_range(0.0, 0.6) = 0.14;
 
-/// Le grain d'optique sale. **C'est lui qui fera la différence entre « propre »
-/// et « photographique »** : sur la référence d'Adrien, la moitié de ce qui se
-/// lit comme une vraie photo est du bruit dans les demi-tons.
-uniform float grain_force : hint_range(0.0, 1.0) = 0.35;
-uniform float grain_echelle : hint_range(1.0, 400.0) = 90.0;
+// --- les flares ------------------------------------------------------------
 
-/// Une texture de salissure d'objectif, si on en a une. À défaut, un bruit de
-/// valeur procédural — moins irrégulier, mais il ne manque jamais.
-uniform sampler2D salissure : hint_default_black, filter_linear_mipmap,
-	repeat_enable;
-uniform bool a_salissure = false;
+uniform int flares_n : hint_range(0, 8) = 5;
+uniform float flares_intensite : hint_range(0.0, 1.5) = 0.38;
 
-const float TAU_ = 6.28318530718;
+/// Longueur d'une traînée, en demi-hauteurs — bien au-delà de l'écran : une
+/// traînée qui s'arrête dans le cadre a un BOUT, donc une forme.
+uniform float flares_longueur : hint_range(0.2, 6.0) = 2.6;
+uniform float flares_largeur : hint_range(0.02, 1.0) = 0.20;
 
-// --- outils ----------------------------------------------------------------
+/// **De combien les traînées du côté de l'éblouisseur s'allongent.** Seconde
+/// poignée de l'inclinaison : `1 + penche · cos(θ − relèvement)`.
+uniform float flares_penche : hint_range(0.0, 1.0) = 0.55;
+
+/// Tours par seconde de la rosette entière. Très lent : les traînées doivent
+/// RAMPER. Même leçon que `Brouillage.DERIVE_HZ_*` — ce qui tremble vite est
+/// intégré par l'œil et cesse d'exister.
+uniform float flares_rotation : hint_range(0.0, 0.3) = 0.022;
+
+/// Amplitude du scintillement de chaque traînée.
+uniform float flares_scintille : hint_range(0.0, 1.0) = 0.32;
+
+// --- le grain --------------------------------------------------------------
+
+/// ⚠️ **Ce grain valait 0,35 sur un bruit de valeur à basse fréquence, et
+/// Adrien l'a vu comme « un gros paquet pixellisé dans les sombres ».** Il
+/// l'était : des blobs de seize pixels, appliqués le plus fort là où l'image est
+/// sombre — c'est-à-dire exactement là où l'œil les isole.
+///
+/// Le grain d'une photo est **par pixel**, pas par blob, et il est **faible**.
+/// Il est ici multiplicatif et proportionnel à ce qui est déjà peint : il
+/// n'existe pas là où le voile n'existe pas.
+uniform float grain_force : hint_range(0.0, 0.5) = 0.055;
+
+/// Rafraîchissements du grain par seconde. 12 : le grain d'une pellicule, pas
+/// le scintillement d'un écran cassé. À 60 il papillote.
+uniform float grain_hz : hint_range(0.0, 60.0) = 12.0;
+
+const float PI_ = 3.14159265359;
+
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -204,152 +174,73 @@ float hash21(vec2 p) {
 	return fract(p.x * p.y);
 }
 
-float bruit(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	float a = hash21(i);
-	float b = hash21(i + vec2(1.0, 0.0));
-	float c = hash21(i + vec2(0.0, 1.0));
-	float d = hash21(i + vec2(1.0, 1.0));
-	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
-
-/// Le profil radial commun : plein au centre, rigoureusement nul au-delà de
-/// `rayon`. Une seule forme pour le cœur, les aigrettes et les fantômes — trois
-/// profils différents auraient donné trois familles de bord à régler séparément.
-float profil(float r, float rayon, float nettete) {
-	return pow(max(1.0 - r / max(rayon, 1e-4), 0.0), nettete);
-}
-
-/// La longueur d'aigrette dans la direction `ang`, entre 0 et 1.
-///
-/// Somme d'harmoniques à fréquences premières entre elles : la rosette ne se
-/// referme pas avant très longtemps, alors que l'effet dure moins de deux
-/// secondes. Même principe que `Brouillage.derive` — déterministe, sans état,
-/// donc reproductible d'une machine à l'autre et jugeable au banc.
-float rosette(float ang) {
-	float a = ang - temps * rotation_rosette * TAU_;
-	float s = 0.50 * sin(a * 7.0);
-	s += 0.30 * sin(a * 13.0 + 1.7);
-	s += 0.20 * sin(a * 23.0 + 4.1);
-	s += 0.12 * sin(a * 41.0 + 2.3);
-	return smoothstep(-0.25, 0.95, s);
-}
 
 void fragment() {
-	// Coordonnées centrées, en fraction de la DEMI-HAUTEUR. L'aspect est corrigé
-	// ici, une fois, pour que tout ce qui suit raisonne en unités rondes.
+	// Coordonnées centrées, en fractions de la DEMI-HAUTEUR. L'aspect est
+	// corrigé ici, une fois, pour que tout ce qui suit raisonne en unités rondes.
 	vec2 d = (UV - vec2(0.5)) * vec2(aspect, 1.0) * 2.0;
-	float r = length(d);
-	float ang = atan(d.y, d.x);
 	vec2 vers = vec2(cos(relevement), sin(relevement));
 
-	float v = 0.0;
-
 	if (mode == 0) {
-		// Le témoin : l'aplat d'aujourd'hui. Il ne passe ni par `gain` ni par le
-		// grain — sinon ce ne serait plus le témoin, ce serait un quatrième
-		// candidat déguisé en référence.
-		COLOR = vec4(teinte, clamp(niveau, 0.0, 1.0) * facteur);
+		// Le témoin : l'aplat d'aujourd'hui, sans grain et sans rien. C'est la
+		// touche qui permet de répondre « non », et elle doit rester pure.
+		COLOR = vec4(teinte, clamp(niveau, 0.0, 1.0) * plancher);
 	} else {
-		float coeur = profil(r, rayon_coeur, nettete_coeur);
-		v = coeur;
+		// ── LE LAVIS. Il couvre TOUT l'écran et ne descend jamais sous
+		// `plancher` — c'est ce qui fait un aveuglement et non une tache.
+		float creux = pow(clamp(1.0 - length(d) / max(largeur, 1e-3), 0.0, 1.0),
+			max(courbe, 0.01));
+		float a = mix(plancher, cime, creux);
 
-		if (mode == 1) {
-			// ── P1 — la gerbe penchée.
-			float l = rosette(ang);
-			// L'inclinaison, et c'est tout ce qui dit où est l'éblouisseur : les
-			// aigrettes de son côté s'étirent, celles d'en face se rétractent.
-			float pente = 1.0 + anisotropie * cos(ang - relevement);
-			float portee = portee_aigrettes * l * pente;
-			// Le scintillement est propre à chaque direction : une pulsation
-			// commune se lirait comme un clignotement de l'écran entier.
-			float sc = 1.0 + scintillement
-				* sin(temps * (3.1 + 1.7 * sin(ang * 11.0)) + ang * 17.0);
-			v += profil(r, portee, 1.4) * l * sc * intensite_aigrettes;
-
-			// ── P4 — les éclats qui traversent.
-			//
-			// Trois traînées se partagent la période, chacune décalée d'un tiers.
-			// Toute la vie d'un éclat tient dans `fract()` : aucune variable
-			// d'état, donc rien à réinitialiser entre deux manches et rien qui
-			// puisse diverger entre deux machines.
-			float somme = 0.0;
-			for (int i = 0; i < 3; i++) {
-				float fi = float(i);
-				float ph = fract(temps / max(eclats_periode, 1e-3) + fi / 3.0);
-				// Un cap tiré au sort par éclat ET par tour : sans le numéro de
-				// tour dans le hachage, les trois mêmes éclats repasseraient
-				// indéfiniment sur les trois mêmes rails.
-				float tour = floor(temps / max(eclats_periode, 1e-3) + fi / 3.0);
-				float tirage = hash21(vec2(fi * 7.13, tour)) - 0.5;
-				float a = relevement + tirage * eclats_dispersion;
-				vec2 u = vec2(cos(a), sin(a));
-				vec2 centre = u * mix(eclats_depart, 0.0, ph);
-				vec2 rel = d - centre;
-				float le = dot(rel, u);
-				float tr = dot(rel, vec2(-u.y, u.x));
-				float g = exp(-(le * le) / (2.0 * eclats_longueur * eclats_longueur)
-					- (tr * tr) / (2.0 * eclats_largeur * eclats_largeur));
-				// Naît de rien, meurt de rien : un éclat qui apparaît à pleine
-				// intensité se lit comme un défaut d'affichage.
-				somme += g * sin(ph * 3.14159265);
-			}
-			v += somme * eclats_intensite;
-
-		} else if (mode == 2) {
-			// ── P2 — la chaîne de fantômes.
-			//
-			// Le cœur reste au centre ; c'est l'AXE de la chaîne qui porte la
-			// direction. Voir `fantomes_cote` pour le piège de lecture.
-			for (int i = 0; i < 6; i++) {
-				if (i >= fantomes_nombre) { break; }
-				float fi = float(i) + 1.0;
-				vec2 centre = vers * (fantomes_ecart * fi) * fantomes_cote;
-				// Des rayons irréguliers : quatre disques identiques se lisent
-				// comme une règle graduée, donc comme une mesure.
-				float rayon = fantomes_rayon * (0.55 + 0.45 * sin(fi * 2.31));
-				rayon *= 1.0 + 0.12 * sin(temps * 0.9 + fi * 1.7);
-				float dd = length(d - centre) / max(rayon, 1e-4);
-				float disque = profil(dd, 1.0, 2.0) * 0.55;
-				// L'anneau : c'est lui qui fait « optique » plutôt que « tache ».
-				//
-				// ⚠️ **`t * t` et non `pow(t, 2.0)`.** `t` passe par des valeurs
-				// NÉGATIVES en deçà du rayon de l'anneau, et `pow()` d'une base
-				// négative est *undefined* en GLSL : selon le pilote on obtient
-				// zéro, un NaN, ou le bon résultat. Un défaut qui dépend de la
-				// machine ne se reproduit pas sur celle où on le cherche.
-				float t = (dd - 0.78) / 0.13;
-				float anneau = exp(-t * t) * 0.45;
-				v += (disque + anneau) * fantomes_intensite / fi;
-			}
-
-		} else {
-			// ── P3 — le ressac.
-			//
-			// Aucune forme, aucune pointe : un lavis qui bave du bord, du côté de
-			// l'éblouisseur, et qui respire. Deux fréquences bancales pour que la
-			// respiration ne s'anticipe pas.
-			float souffle = ressac_respiration
-				* (0.6 * sin(temps * TAU_ * 0.19) + 0.4 * sin(temps * TAU_ * 0.31 + 1.3));
-			float proj = dot(d, vers);
-			v += smoothstep(ressac_seuil + souffle, ressac_seuil + souffle + 1.0,
-				proj) * ressac_intensite;
+		// ── LES LUEURS. Une seule texture, lue à trois échelles, décalées vers
+		// l'éblouisseur et respirant chacune à son rythme.
+		float ajout = 0.0;
+		for (int i = 0; i < 4; i++) {
+			if (i >= lueurs_n) { break; }
+			float fi = float(i) + 1.0;
+			float ech = lueurs_echelle * (0.75 + 0.55 * fi)
+				* (1.0 + lueurs_souffle * sin(temps * (0.31 + 0.17 * fi) + fi * 2.1));
+			// Le glissement vers l'éblouisseur, plus une errance lente : sans
+			// elle les trois lueurs restent empilées et ne font qu'une.
+			vec2 centre = vers * (lueurs_derive * (0.45 + 0.35 * fi))
+				+ vec2(sin(temps * 0.13 * fi + fi), cos(temps * 0.11 * fi + fi * 2.3)) * 0.09;
+			vec2 uv = (d - centre) / max(ech, 1e-3) * 0.5 + vec2(0.5);
+			ajout += texture(lueur_tex, uv).r * lueurs_intensite / fi;
 		}
 
-		// ── Le grain. Multiplicatif, et il épargne le cœur saturé : une salissure
-		// qui mordrait le blanc plein se lirait comme du bruit de compression.
+		// ── LES FLARES. La même traînée, tournée, et plus longue du côté de
+		// l'éblouisseur.
+		for (int i = 0; i < 8; i++) {
+			if (i >= flares_n) { break; }
+			float fi = float(i);
+			// Réparties sur un demi-tour, pas un tour : une traînée est
+			// symétrique, elle sort des deux côtés du centre.
+			float ang = PI_ * fi / float(max(flares_n, 1))
+				+ temps * flares_rotation * PI_ * 2.0;
+			float co = cos(-ang);
+			float si = sin(-ang);
+			vec2 q = vec2(d.x * co - d.y * si, d.x * si + d.y * co);
+			// L'inclinaison : `cos` de l'écart d'angle. Le `abs` est nécessaire
+			// parce qu'une traînée n'a pas de sens — celle qui pointe vers
+			// l'éblouisseur pointe aussi à l'opposé, et les deux doivent
+			// s'allonger ensemble, sinon la rosette se déchire.
+			float pente = 1.0 + flares_penche * abs(cos(ang - relevement));
+			vec2 uv = vec2(q.x / max(flares_longueur * pente, 1e-3),
+				q.y / max(flares_largeur, 1e-3)) * 0.5 + vec2(0.5);
+			float sc = 1.0 + flares_scintille * sin(temps * (1.7 + 0.53 * fi) + fi * 2.7);
+			ajout += texture(flare_tex, uv).r * flares_intensite * sc;
+		}
+
+		a += ajout;
+
+		// ── LE GRAIN. Par pixel, faible, et PROPORTIONNEL à ce qui est déjà
+		// peint : il n'existe pas là où le voile n'existe pas.
 		if (grain_force > 0.001) {
-			vec2 p = UV * vec2(aspect, 1.0) * grain_echelle
-				+ vec2(temps * 0.9, temps * -0.6);
-			float n = a_salissure
-				? texture(salissure, p / grain_echelle * 1.4).r
-				: bruit(p);
-			v *= mix(1.0, 0.45 + 1.1 * n, grain_force * (1.0 - min(v, 1.0)));
+			float pas = floor(temps * max(grain_hz, 0.001));
+			float n = hash21(floor(FRAGCOORD.xy) + vec2(pas, pas * 1.7));
+			a *= 1.0 + (n - 0.5) * grain_force;
 		}
 
-		COLOR = vec4(teinte,
-			clamp(v * gain, 0.0, 1.0) * clamp(niveau, 0.0, 1.0) * facteur);
+		COLOR = vec4(teinte, clamp(a, 0.0, 1.0) * clamp(niveau, 0.0, 1.0));
 	}
 }

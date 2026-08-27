@@ -10156,27 +10156,73 @@ est une information de duel. Le chantier brouillage lui a retiré le second mét
 le 2026-08-25 ; le voile est passé de 0,8 à 0,3, et l'argument qui interdisait de
 le texturer est tombé avec.
 
-**Demande d'Adrien (2026-08-27) :** que le voile soit texturé par un flare de
-lampe torche, plus intense au centre, animé, et « animé d'une certaine manière —
-idéalement légèrement avec la position du joueur qui éblouit par rapport à soi ».
+### L'image qui décide de tout : une caméra éblouie
 
-### L'invariant, et il a été posé par Adrien contre une première lecture
+**Adrien, 2026-08-27 :** « Imagine que notre vue, notre UI, c'est entièrement une
+caméra éblouie par une lampe. C'était ça le voile blanc. Il faut donc que cela
+reproduise un effet d'éblouissement très large. »
+
+Ce n'est pas une forme posée sur du noir : c'est **tout le cadre qui blanchit**,
+plus fort au centre, avec des lueurs et des flares qui bougent dedans.
+
+⚠️ **Un premier jet a fabriqué exactement l'inverse, et l'erreur mérite d'être
+gardée.** Un cœur en `(1 − r)^n` tombant à zéro laissait les tiers gauche et
+droit de l'écran **rigoureusement noirs** : une décoration centrée, pas un
+aveuglement. La borne « nul au bord » est juste pour un HALO — un halo est un
+objet DANS le monde, il doit cesser quelque part. **Elle est fausse pour un
+voile**, qui est l'état de l'ŒIL et n'a pas de bord. La même règle de forme,
+recopiée d'un objet à l'autre, y était bonne et ici absurde.
+
+### La structure : un SOL, et ce qui se pose dessus
+
+    alpha = niveau × [ mélange(plancher, cime, creux) + lueurs + flares ]
+
+`plancher` **est l'aplat d'aujourd'hui** — 0,30, arbitré par Adrien le
+2026-08-25 — et le voile ne descend jamais en dessous, nulle part sur l'écran.
+Le voile actuel est donc littéralement le plancher du nouveau : **la refonte ne
+peut pas alléger la mécanique par accident**, elle ne peut que l'appuyer.
+`cime` dit jusqu'où le centre monte (0,88 au départ).
+
+C'est ce qui remplace le `gain` de la première version, et le remplace
+avantageusement : `gain` était un nombre sans signification physique qu'il
+fallait étalonner pour savoir ce qu'il valait. `plancher` et `cime` sont deux
+opacités, lisibles telles quelles.
+
+### Des textures, pas des formules
+
+« Ne peut-on pas prendre une texture qui génère comme une lumière, et l'animer
+d'une façon maline et pas chère » (Adrien). Deux textures — une lueur ronde, une
+traînée —, et tout le reste n'est que des matrices : on les échantillonne à des
+échelles, des angles et des décalages qui dérivent lentement. **Sept lectures de
+texture** pour toute la gerbe, contre une trentaine d'opérations
+trigonométriques par pixel dans la version précédente.
+
+Et surtout : **une texture se remplace.** Le banc les fabrique s'il ne les trouve
+pas (`assets/sprites/voile_lueur.png`, `voile_flare.png`) ; le jour où une vraie
+photo de flare arrive, elle se substitue sans une ligne de shader.
+
+⚠️ **Les deux textures doivent être NOIRES sur tout leur pourtour.** Le shader
+les échantillonne hors de leurs bornes en permanence, et `repeat_disable` étire
+le texel du bord à l'infini : un bord non nul peindrait une bande sur la moitié
+de l'écran.
+
+### L'invariant, posé par Adrien contre une première lecture
 
 Une première série de propositions offrait un couplage fort : le cœur du flare
-placé à la position écran de l'éblouisseur. **Adrien l'a écarté explicitement :**
-« il faut que le halo, le voile, soit centré sur l'écran du joueur ébloui […]
-l'effet doit rester centré, comme un voile au centre de la caméra du joueur, mais
-dont la source arrive sur les côtés ».
+placé à la position écran de l'éblouisseur. **Adrien l'a écarté :** « il faut que
+le halo, le voile, soit centré sur l'écran du joueur ébloui […] l'effet doit
+rester centré, comme un voile au centre de la caméra du joueur, mais dont la
+source arrive sur les côtés ».
 
-**Le cœur ne bouge donc jamais.** Ce qui penche du côté de l'éblouisseur est le
-CARACTÈRE du flare : la longueur des aigrettes, l'axe des fantômes, le côté d'où
-vient le lavis. Un cœur déplacé aurait fait du voile une boussole, et rendu en
+**Le cœur ne bouge donc jamais.** Ce qui penche est le CARACTÈRE : les lueurs
+glissent du côté de l'éblouisseur (`lueurs_derive`), les flares s'y allongent
+(`flares_penche`). Un cœur déplacé aurait fait du voile une boussole, et rendu en
 grand l'information que `ALLONGEMENT_HALO` passe son temps à effacer — le cœur du
 halo a été étiré exprès, le 2026-08-25, pour cesser de désigner un point.
 
-`anisotropie` est le seul réglage qui porte l'inclinaison. **À zéro, le voile
-redevient rigoureusement non directionnel** sans que rien d'autre ne bouge :
-c'est la porte de sortie si le couplage se révèle trop bavard en duel.
+**Les deux réglages à zéro rendent le voile rigoureusement non directionnel**,
+sans rien défaire d'autre. C'est la porte de sortie si le couplage se révèle trop
+bavard en duel.
 
 ### Ce qui simplifie tout, et qui n'était pas su
 
@@ -10189,65 +10235,54 @@ de `brouillage_vue.gd` (« un appareil global doit convertir monde → écran av
 caméra de la BONNE moitié », défaut qu'aucun test automatique ne peut voir), et
 il ne s'applique pas ici. Le voile peut donc rester dans `ui.gd`.
 
-### Les trois candidats — `tools/banc_voile.tscn`
+### Le banc — `tools/banc_voile.tscn`
 
-Un seul shader, `voile_eblouissement.gdshader`, quatre modes. Un shader par
-candidat aurait fait diverger le socle commun — le cœur, le grain, la dose — et
-l'on aurait comparé trois socles au lieu de trois idées.
+`1` le voile · `0` l'aplat d'aujourd'hui, le témoin · `Tab` et `←/→` régler ·
+`A` mesuré ou forcé · `↑/↓` niveau · `O` orbite ou souris · `Espace` figer ·
+`Z/X` distance · `C/V` cône · `B` couper halo et flou · `E` étalonner ·
+`R` défauts · `Échap` transcrire et sortir.
 
-| touche | candidat | comment la direction se lit |
-|---|---|---|
-| `1` | **la gerbe penchée + les éclats** | les aigrettes du côté de l'éblouisseur s'étirent (`1 + K·cos(θ − relèvement)`) ; des traînées fines naissent au bord de son côté et balaient vers le centre |
-| `2` | **la chaîne de fantômes** | le cœur reste centré, l'AXE de la chaîne de fantômes porte la direction |
-| `3` | **le ressac** | un lavis qui bave du bord, de son côté, et qui respire |
-| `0` | **l'aplat d'aujourd'hui** | le témoin |
+⚠️ **Le banc a d'abord proposé TROIS candidats, et c'était une erreur de
+lecture.** « Je voulais juste remplacer le voile d'éblouissement » : la demande
+était un **réglage**, pas un choix. Trois propositions côte à côte répondaient à
+une question que personne n'avait posée, et le banc y perdait sa lisibilité — on
+ne savait plus ce qu'on regardait. **Le témoin, lui, reste** : sans aller-retour
+immédiat vers ce qui existe, on juge une nouveauté contre le souvenir qu'on a de
+l'ancienne.
 
-⚠️ **Le témoin est la touche qui compte le plus.** Sans aller-retour immédiat
-vers ce qui existe, on compare trois nouveautés entre elles et l'on retient la
-moins pire. Le `0` est ce qui permet de répondre « aucune des trois », qui est
-une réponse.
+Le banc montre **le halo et le flou de production** (`brouillage_vue.gd`,
+instancié tel quel). Un voile jugé seul serait jugé faux : il vit au-dessus d'un
+halo qui éclaire et d'une ellipse qui floute, et c'est leur somme que le joueur
+reçoit. `B` les coupe.
 
-⚠️ **Le piège de lecture du candidat `2`, à trancher à l'œil.** En optique, les
-fantômes tombent du côté OPPOSÉ à la source. C'est juste, c'est joli, **et ça se
-lit à l'envers** : « le flare est à gauche, donc il est à gauche » devient faux.
-`fantomes_cote` bascule entre les deux ; il n'a pas de bonne valeur *a priori*.
+Il **ne compte aucun tir**, contrairement à `banc_brouillage` : le voile ne cache
+pas l'adversaire — répartition actée le 2026-08-25 —, et compter des tirs ici
+mesurerait le halo en croyant mesurer le voile.
 
 ### Le seul nombre qui compte pour la suite : l'opacité MOYENNE
 
-⚠️ **Sans ce relevé, la refonte allégerait une pénalité sans le dire.** L'aplat
-vaut 0,3 PARTOUT, donc sa moyenne EST 0,3. Un voile creusé qui culminerait à 0,3
-en son centre vaudrait peut-être 0,08 en moyenne — soit un quart de ce qu'Adrien
-a jugé au banc le 2026-08-25. À l'œil, les deux « se ressemblent » ; en jeu, l'un
-gêne et l'autre non, et rien ne le dirait.
+⚠️ **Sans ce relevé, une refonte du voile peut alléger une pénalité sans le
+dire.** L'aplat vaut 0,3 PARTOUT, donc sa moyenne EST 0,3. À l'œil, deux voiles
+d'opacités moyennes très différentes « se ressemblent » ; en jeu, l'un gêne et
+l'autre non.
 
-La touche `E` du banc rend le voile seul sur du noir pur, relit l'image et
-imprime moyenne et pointe. Le fond est noir et la teinte connue : l'alpha se
-retrouve par une division, **sans réécrire aucune formule du shader** — même
-principe que `Vision.intensite_texture`, qui lit le pixel du faisceau au lieu de
-recopier sa courbe. La sortie du banc (`Échap`) refuse de se taire quand aucun
-étalonnage n'a eu lieu.
+La touche `E` rend le voile seul sur du noir pur, relit l'image et imprime
+moyenne et pointe. Le fond est noir et la teinte connue : l'alpha se retrouve par
+une division, **sans réécrire aucune formule du shader** — même principe que
+`Vision.intensite_texture`, qui lit le pixel du faisceau au lieu de recopier sa
+courbe. La sortie du banc (`Échap`) refuse de se taire quand aucun étalonnage
+n'a eu lieu.
 
-`gain` vaut 2,5 par défaut. **C'est un point de départ, pas une mesure**, et le
-shader le dit à cet endroit précis.
-
-### Ce que le banc montre en plus du voile, et pourquoi c'est nécessaire
-
-Le halo et le flou, par leur appareil de PRODUCTION (`brouillage_vue.gd`),
-instancié tel quel. **Un voile jugé seul serait jugé faux** : il vit désormais
-au-dessus d'un halo qui éclaire et d'une ellipse qui floute, et c'est leur somme
-que le joueur reçoit. La touche `B` les coupe, pour savoir ce qui vient de qui.
-
-Le banc **ne compte aucun tir**, contrairement à `banc_brouillage`. Le voile ne
-cache pas l'adversaire — c'est une répartition actée le 2026-08-25 —, et compter
-des tirs ici mesurerait le halo en croyant mesurer le voile.
+*Le `plancher` rend ce relevé moins critique qu'il ne l'était — le voile ne peut
+plus passer sous l'ancien — mais il reste le seul moyen de savoir de combien il
+passe au-dessus.*
 
 ### La planche de contact — `-- --planche`
 
-`godot --path . res://tools/banc_voile.tscn -- --planche` écrit douze images
-(quatre modes × trois relèvements) dans
-`user://planches_voile/`. Elle ne remplace pas le banc — trois des quatre
-candidats ne sont que du mouvement — et répond à une question préalable : **est-ce
-que ça dessine seulement quelque chose ?**
+`godot --path . res://tools/banc_voile.tscn -- --planche` écrit six images (deux
+modes × trois relèvements) dans `user://planches_voile/`. Elle ne remplace pas le
+banc — le voile est animé — et répond à une question préalable : **est-ce que ça
+dessine seulement quelque chose ?**
 
 **Les trois relèvements sont 0°, 145° et −65°, et ce n'est pas un hasard.** Le
 halo du chantier brouillage s'est posé cent pixels à côté de sa cible pendant une
@@ -10262,6 +10297,26 @@ sorti douze images rendues au MÊME relèvement — couper l'orbite ne veut pas 
 demandé à chaque image. **Rien dans les images ne le disait** ; l'œil lit « la
 lumière est à gauche », jamais « l'éblouisseur est à 145° ». Les deux colonnes
 côte à côte l'ont montré en une ligne.
+
+### Trois défauts du banc, trouvés en le vérifiant
+
+Aucun ne se voyait sans aller chercher, et deux ont été nommés par Adrien.
+
+1. **Le grain était « un gros paquet pixellisé dans les sombres ».** Il l'était :
+   un bruit de valeur à basse fréquence — des blobs de seize pixels — appliqué le
+   plus fort là où l'image est sombre, c'est-à-dire là où l'œil les isole. Le
+   grain d'une photo est **par pixel** et **faible** ; il est désormais
+   multiplicatif et proportionnel à ce qui est déjà peint, donc inexistant là où
+   le voile n'existe pas.
+2. **« Le flou ne varie même plus en fonction de ma distance. »** Il ne l'avait
+   jamais fait : la souris ne donnait que le CAP, la distance restait clouée sur
+   `Z/X`. On promenait le curseur, l'éblouisseur tournait sur son rail, la
+   lumière reçue ne bougeait pas — donc ni l'éblouissement, ni le flou, ni le
+   halo. La souris pose maintenant la POSITION.
+3. **L'arme se refabriquait à chaque image.** `get_torch_texture()` refait le
+   cookie du faisceau et `lumiere_recue()` relit son image dans la foulée : le
+   banc se serait mis à ramer précisément quand on lui demande de juger une
+   animation — il aurait fait passer son propre coût pour un défaut du voile.
 
 ### ⚠️ Les deux bancs jugeaient sans la nuit
 
@@ -10283,10 +10338,11 @@ décider si ces nombres méritent d'être rejugés dans le noir.
 `voile_eblouissement.gdshader` n'a **aucun lecteur en production**, exactement
 comme `brouillage.gd` à son inscription. Le jeu se comporte comme avant.
 
-**Ce qui attend Adrien :** lancer `godot --path . res://tools/banc_voile.tscn`,
-choisir (ou refuser) un candidat, et étalonner. **Ce qui attend ensuite une autre
-session :** le branchement, qui passe par `ui.gd` — domaine « menus » — et qui ne
-se fait pas d'office.
+**Ce qui attend Adrien :** lancer le banc, régler `PLANCHER` et `CIME` d'abord —
+ce sont les deux qui décident de « à quel point on est aveuglé » —, puis les
+lueurs et les flares. **Ce qui attend ensuite une autre session :** le
+branchement, qui passe par `ui.gd` — domaine « menus » — et qui ne se fait pas
+d'office.
 
 ### ⚠️ Deux défauts signalés, non corrigés, et NON VÉRIFIÉS
 
@@ -10318,7 +10374,6 @@ faits. Ils vivent tous deux dans des fichiers tenus par d'autres sessions.
 
 3. Accessoire : les deux `ColorRect` de voile restent `visible` à alpha 0, donc
    mélangés plein écran à chaque image d'un match. Gain gratuit au branchement.
-
 ## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
 
 **Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus
