@@ -2594,10 +2594,10 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
-		SCREEN_FRIENDLY_ONLINE))
+		SCREEN_FRIENDLY_ONLINE, COLOR_ACCENT, "", "", false, "ill_creer"))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
 		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
-		SCREEN_FRIENDLY_LOCAL))
+		SCREEN_FRIENDLY_LOCAL, COLOR_ACCENT, "", "", false, "ill_amical"))
 	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_retour")
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
@@ -2649,10 +2649,10 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
-		"mon_rang"))
+		"mon_rang", "", false, "ill_competitif"))
 	classe.add_child(hub.make_entry("TOP 10",
 		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
-		COLOR_GOLD, "top10"))
+		COLOR_GOLD, "top10", "", false, "ill_competitif"))
 	classe.add_child(hub.make_entry("INFORMATIONS PROFIL",
 		"Identité, code de récupération, pseudo — affichés à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_PROFILE))
@@ -2675,7 +2675,7 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
-		+ "réglages viendront avec la cible mouvante."))
+		+ "réglages viendront avec la cible mouvante.", false, "ill_entrainement"))
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
@@ -2698,6 +2698,7 @@ func _build_hub_screens() -> void:
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
 		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
 	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_retour")
+	hub.set_screen_panel(SCREEN_CUSTOM, "ill_personnalisation")
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
 	# La galerie n'est plus un écran : elle est le panneau de droite d'une entrée
@@ -2785,13 +2786,28 @@ func _build_hub_screens() -> void:
 	# Le même panneau sert les cinq écrans de préparation : ce qui s'y voit dépend
 	# du mode et du transport retenus, pas de l'écran.
 	hub.register_panel(PANEL_SALON, _build_salon_aside())
-	# Les deux écrans qui lancent une recherche l'utilisent aussi, mais n'en gardent
-	# que le râtelier : ni carte à choisir (elle est tirée au sort), ni code à
-	# transmettre (c'est la file qui trouve l'adversaire). Le choix d'arme, lui,
-	# doit être fait AVANT d'appuyer — après, le match part tout seul.
+	# Les écrans de préparation de match ont le salon en panneau par défaut.
 	for id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_TRAINING, SCREEN_FRIENDLY, SCREEN_RANKED]:
+			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
 		hub.set_screen_panel(id, PANEL_SALON)
+	# Les écrans de sélection de mode ou de sous-menu ont leur illustration dédiée.
+	hub.set_screen_panel(SCREEN_FRIENDLY, "ill_amical")
+	hub.set_screen_panel(SCREEN_FRIENDLY_ONLINE, "ill_creer")
+	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_creer")
+	hub.set_screen_panel(SCREEN_RANKED, "ill_competitif")
+
+	# Fonds illustrés floutés sous les panneaux interactifs et informatifs
+	hub.set_panel_background(PANEL_SALON, "res://assets/ui/ill_amical.png")
+	hub.set_panel_background(PANEL_MAPS, "res://assets/ui/ill_amical.png")
+	hub.set_panel_background(PANEL_CONTROLS, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_panel_background(PANEL_DISPLAY, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_panel_background(PANEL_EFFECTS, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_panel_background(PANEL_AUDIO, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_panel_background(PANEL_PROFILE, "res://assets/ui/ill_competitif.png")
+	hub.set_panel_background(PANEL_HISTORY, "res://assets/ui/ill_competitif.png")
+	hub.set_panel_background(MenuHub.PANNEAU_TEXTE, "res://assets/ui/ill_competitif.png")
+	hub.set_screen_background(SCREEN_LOCAL, "res://assets/ui/ill_ecran_scinde.png")
+	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
 
 	# Le classement vit hors de l'arborescence : il se lit dans le panneau de droite
 	# depuis l'écran compétitif.

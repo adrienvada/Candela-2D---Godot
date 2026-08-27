@@ -131,6 +131,11 @@ var _detail_text: RichTextLabel
 var _texte_panneau: VBoxContainer
 var _tween: Tween
 
+## Arrière-plan illustré flouté sous le contenu interactif du cadre droit
+var _bg_image: TextureRect
+var _panel_backgrounds: Dictionary = {}
+var _screen_backgrounds: Dictionary = {}
+
 func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
@@ -170,6 +175,7 @@ func _build() -> void:
 	# --- Colonne de droite : ce que l'entrée sous le curseur raconte ----------
 	var right := PanelContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.clip_contents = true
 	var style := StyleBoxFlat.new()
 	style.bg_color = MenuTheme.SURFACE
 	style.set_border_width_all(1)
@@ -182,6 +188,16 @@ func _build() -> void:
 	right.add_theme_stylebox_override("panel", style)
 	columns.add_child(right)
 	_right = right
+
+	_bg_image = TextureRect.new()
+	_bg_image.name = "FondFlou"
+	_bg_image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bg_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_bg_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bg_image.material = _build_blur_material()
+	_bg_image.hide()
+	right.add_child(_bg_image)
 
 	# **Le cadre a deux étages, et le second est un pied de page.**
 	#
@@ -361,6 +377,24 @@ func panneau(key: String) -> Control:
 ## Panneau montré à l'entrée dans un écran, tant qu'aucune entrée ne parle.
 func set_screen_panel(id: String, key: String) -> void:
 	_screen_panels[id] = key
+
+## Associe une illustration de fond flouté à un panneau interactif (ex: salon, réglages).
+func set_panel_background(panel_key: String, path_or_tex: Variant) -> void:
+	_panel_backgrounds[panel_key] = path_or_tex
+
+## Associe une illustration de fond flouté par défaut à un écran.
+func set_screen_background(screen_id: String, path_or_tex: Variant) -> void:
+	_screen_backgrounds[screen_id] = path_or_tex
+
+func _build_blur_material() -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	var shader := load("res://menu_bg_blur.gdshader") as Shader
+	if shader != null:
+		mat.shader = shader
+		mat.set_shader_parameter("blur_amount", 4.0)
+		mat.set_shader_parameter("darken", 0.70)
+		mat.set_shader_parameter("tint", Color(0.04, 0.04, 0.06, 1.0))
+	return mat
 
 ## Le panneau par défaut d'un écran, ou une chaîne vide s'il n'en a pas.
 ##
@@ -620,11 +654,37 @@ func _apply_panel(key: String) -> void:
 	if wanted == _shown_panel:
 		return
 	_shown_panel = wanted
+	var active_content: Control = null
 	for k in _panels.keys():
 		var content: Control = _panels[k]
 		if content != null:
-			content.visible = k == wanted
+			var est_voulu: bool = (k == wanted)
+			content.visible = est_voulu
+			if est_voulu:
+				active_content = content
+	_update_background(wanted, active_content)
 	panel_changed.emit(wanted)
+
+func _update_background(key: String, content: Control) -> void:
+	if _bg_image == null:
+		return
+	# Si c'est un aperçu direct d'image (MenuApercu), elle se montre déjà nette en plein cadre
+	if content is MenuApercu:
+		_bg_image.hide()
+		return
+	# Sinon, récupérer le fond assigné au panneau ou à l'écran
+	var bg_res: Variant = _panel_backgrounds.get(key, null)
+	if bg_res == null or (bg_res is String and (bg_res as String) == ""):
+		bg_res = _screen_backgrounds.get(current_id(), null)
+	
+	if bg_res is Texture2D:
+		_bg_image.texture = bg_res
+		_bg_image.show()
+	elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
+		_bg_image.texture = load(bg_res as String)
+		_bg_image.show()
+	else:
+		_bg_image.hide()
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
