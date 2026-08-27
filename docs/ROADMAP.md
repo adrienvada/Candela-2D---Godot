@@ -8762,8 +8762,13 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
      de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
      confond avec « ça travaille ». *(S)*
-- **DA4.6 Le trait balistique en schéma** ✅ **livrée le 2026-08-27** — le
-  pointillé V6.2 devient un relevé coté.
+- **DA4.6 Le trait balistique en schéma** ✅ **livrée ET VALIDÉE À L'ÉCRAN le
+  2026-08-27** — le pointillé V6.2 devient un relevé d'écart au tir parfait.
+
+  *Adrien, après quatre passes de relecture en jeu : « ouais c'est cool, on
+  valide ». Les quatre corrections qui ont mené là sont consignées ci-dessous ;
+  **aucune n'aurait été trouvée sans regarder l'écran**, et les bancs étaient
+  verts à chaque fois.*
 
   **V6.2 tenait en une ligne** : `draw_dashed_line(depart, balle, …)`. Elle
   montrait *où* la balle était passée et laissait ouvertes les deux questions
