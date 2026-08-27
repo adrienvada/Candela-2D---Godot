@@ -431,6 +431,10 @@ var bilan: HBoxContainer
 var bilan_p1: Label
 var bilan_p2: Label
 var bilan_serie: Label
+## DA4.7 — la marge du tir décisif. La colonne entière se cache quand la valeur
+## est inconnue : afficher « — » dirait qu'il y a une case à remplir.
+var bilan_effleure: VBoxContainer
+var bilan_marge: Label
 
 ## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
 ## un écran, un sujet.
@@ -593,6 +597,20 @@ const LANCEURS := {
 
 ## La respiration V3.1, vivante seulement sur l'écran de fin.
 var _souffle_relance: Tween = null
+## Les éclats de « l'adversaire est prêt », un par lanceur visible.
+##
+## ⚠️ **Ils étaient anonymes, et leur extinction tenait à un ACCIDENT.**
+## `_respirer_relance(false)` repeint les lanceurs en blanc sans toucher aux
+## tweens ; avec `tween_property`, l'éclat relevait sa valeur de départ **au
+## démarrage du tweener**, donc APRÈS ce blanc — il animait blanc vers blanc et
+## ne se voyait pas. Passer aux courbes maison, qui figent le départ à l'appel,
+## a rendu l'éclat survivant à la fermeture. Le défaut était là depuis toujours,
+## masqué par un ordre de capture que rien n'écrivait.
+##
+## On les tient donc pour les éteindre franchement. **La correction n'est pas de
+## revenir en arrière** : un état qui s'éteint parce qu'un autre mécanisme l'a
+## repeint au bon moment est un état qu'on ne contrôle pas.
+var _eclats_pret: Array[Tween] = []
 ## L'annonce du score V3.6. Retenue pour la même raison que la respiration : une
 ## animation qui survit à son écran se bat avec la suivante, et c'est la première
 ## qui gagne — le score restait teinté du vainqueur précédent.
@@ -3303,8 +3321,14 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 		# exactement à la fin de l'étalement, au lieu d'un cran avant — sans quoi
 		# la durée réelle dépendrait du nombre de blocs de l'écran.
 		var part := float(i) / float(maxi(n - 1, 1))
-		tw.tween_property(surfaces[i], "modulate", Color.WHITE, t_surface) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT) \
+		# ⚠️ **Le départ est écrit, pas lu — et la nuance compte SOUS UN DÉLAI.**
+		# `tween_property` relève la valeur quand le tweener démarre, donc après
+		# le délai ; `Charte.animer()` la fige à l'appel. Ici les deux coïncident
+		# — la boucle ci-dessus vient de poser la silhouette noire et rien n'y
+		# touche entre-temps — mais un site où quelque chose bouge pendant le
+		# délai verrait les deux formes diverger sans la moindre erreur.
+		Charte.animer(tw, surfaces[i], "modulate", Color(Charte.NOIR, 1.0),
+				Color.WHITE, t_surface, Charte.Courbe.ENTREE) \
 			.set_delay(ancre + etalement * part)
 	# Le titre reprend vie en dernier — mais c'est M11 qui s'en charge, pas M10.
 	#
@@ -3549,6 +3573,18 @@ func _attach_screen(id: String, title: String, screen: HubScreen) -> void:
 func _attach_panel(key: String, screen: HubScreen) -> void:
 	var boite := VBoxContainer.new()
 	boite.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# DA4.18 — **la colonne de lecture.** Le cadre de droite fait près de 900 px
+	# de large ; un paragraphe qui les occupe tous ne se lit pas, il se subit.
+	# La colonne s'y pose centrée, large de `Charte.MESURE` signes.
+	#
+	# ⚠️ **Une taille MINIMALE, pas une taille.** Un écran dont un enfant réclame
+	# davantage l'obtient — le plafond retire l'étirement, pas la place. C'est ce
+	# qui permet de l'appliquer à tous les panneaux d'un coup sans avoir à
+	# vérifier chacun : le seul cas qu'il fallait trancher est celui qui veut
+	# explicitement les bords, et il le dit lui-même.
+	if not screen.pleine_largeur():
+		boite.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		boite.custom_minimum_size.x = Charte.mesure_px()
 	screen.name = "Panneau" + key.capitalize()
 	boite.add_child(screen)
 	screen.build(boite)
@@ -3967,6 +4003,38 @@ func _build_bilan() -> Control:
 	bilan_serie.hide()
 	bilan.add_child(bilan_serie)
 
+	# DA4.7 — **« effleuré : 13 px »**, le troisième registre du bilan.
+	#
+	# Les trois choses affichées ici sont de natures différentes, et c'est tout
+	# le propos de l'item : le score est un **compteur** (appareil, tabulaire,
+	# teinté par joueur), la série est un **cri** (enseigne, ambre), la marge est
+	# une **mesure** — appareil elle aussi, mais en lumière et non en couleur de
+	# camp, parce qu'elle n'appartient à personne : elle dit de combien le tir a
+	# failli manquer, pas qui l'a tiré.
+	#
+	# ⚠️ **Elle échoit au perdant, et ce n'est pas un oubli.** La valeur naît sur
+	# la machine qui a simulé la balle fatale ; « j'y étais presque » est le
+	# moteur du rematch, et il n'a de sens que pour celui qui est tombé.
+	bilan_effleure = VBoxContainer.new()
+	bilan_effleure.name = "Effleurement"
+	bilan_effleure.alignment = BoxContainer.ALIGNMENT_CENTER
+	bilan_effleure.add_theme_constant_override("separation", 0)
+	bilan_effleure.hide()
+	bilan.add_child(bilan_effleure)
+
+	var legende_marge := Label.new()
+	legende_marge.text = "EFFLEURÉ"
+	legende_marge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(legende_marge, T_MENTION)
+	legende_marge.add_theme_color_override("font_color", COLOR_DIM)
+	bilan_effleure.add_child(legende_marge)
+
+	bilan_marge = Label.new()
+	bilan_marge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Charte.appareil(bilan_marge, T_TITRE)
+	bilan_marge.add_theme_color_override("font_color", COLOR_LUMIERE)
+	bilan_effleure.add_child(bilan_marge)
+
 	return bilan
 
 
@@ -3985,7 +4053,8 @@ func _make_chiffre_de_bilan(teinte: Color) -> Label:
 ##
 ## `serie` vide = pas de série en cours, et la ligne disparaît **entièrement**
 ## plutôt que d'afficher une absence.
-func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "") -> void:
+func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
+		effleurement: float = -1.0) -> void:
 	if bilan == null:
 		return
 	bilan_p1.text = str(p1_wins)
@@ -3993,6 +4062,12 @@ func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "") -> void:
 	var mot := serie.strip_edges()
 	bilan_serie.text = mot.to_upper()
 	bilan_serie.visible = mot != ""
+	# Même règle que la série : inconnue, la colonne disparaît entièrement au
+	# lieu d'afficher une absence. Un tiret dans une case laisse croire qu'on a
+	# raté quelque chose ; rien du tout ne pose aucune question.
+	if bilan_effleure != null:
+		bilan_marge.text = "%d PX" % int(roundf(effleurement))
+		bilan_effleure.visible = effleurement >= 0.0
 	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
 	game_over_score.text = ""
 	bilan.show()
@@ -4697,14 +4772,26 @@ const BINDABLE := [
 ]
 
 ## Les actions réassignables et leurs deux colonnes de joueurs, d'un seul
-## bloc. **Aucun effectif écrit ici** : il valait « trois » jusqu'au retrait
-## du sprint le 2026-08-26, et un nombre en toutes lettres redevient faux à
-## la prochaine action ajoutée ou retirée. `BINDABLE` fait foi, seul.
+## bloc. **Aucun effectif écrit ici** : un nombre en toutes lettres redevient
+## faux à la prochaine action ajoutée ou retirée. `BINDABLE` fait foi, seul.
+##
+## ⚠️ **La même faute existait sous trois formes le même jour, et la troisième
+## est la seule qui ait menti au JOUEUR.** Un seuil de banc (`6`, « trois
+## actions × deux joueurs »), ce commentaire, et — la pire — **la description
+## affichée dans la rubrique CONTRÔLES**, qui annonçait trois actions au-dessus
+## de deux. Les deux premières coûtaient un rouge à un agent ; celle-ci était à
+## l'écran, et **aucune suite ne pouvait la voir : un libellé faux reste un
+## libellé valide.** Elle n'est sortie que d'une relecture du rendu.
+##
+## Aucune recherche textuelle n'atteignait les trois : **elles comptaient une
+## action sans jamais la nommer**, et ce qu'on ne nomme pas, on ne le trouve pas.
 ##
 ## Chaque action avait son entrée et son panneau : la configuration complète
 ## n'était jamais visible d'un coup, et un doublon entre deux actions — la même
-## touche pour tirer et pour sprinter — ne se repérait qu'en faisant l'aller-retour
-## de mémoire. Une grille de trois lignes le montre.
+## touche liée deux fois — ne se repérait qu'en faisant l'aller-retour de
+## mémoire. La grille le montre d'un coup. **Sans compter ses lignes** : cette
+## phrase-ci en annonçait trois pour une table qui en produit deux, dans le
+## commentaire même qui interdit d'écrire un effectif.
 ##
 ## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
 ## P1 ne peut pas réassigner la manette de P2.
@@ -5710,6 +5797,7 @@ func _respirer_relance(actif: bool) -> void:
 	if _souffle_relance != null and _souffle_relance.is_valid():
 		_souffle_relance.kill()
 	_souffle_relance = null
+	_eteindre_les_eclats()
 	for btn in _lanceurs_vivants():
 		btn.scale = Vector2.ONE
 		btn.self_modulate = Color.WHITE
@@ -5752,23 +5840,40 @@ func _appliquer_souffle(t: float) -> void:
 ## déclarer », pas « il est prêt ». La seconde est déjà écrite en toutes lettres
 ## au-dessus du chrono, et deux façons de dire la même chose se contredisent le
 ## jour où l'une se désynchronise.
+## Coupe les éclats en cours. Idempotente : appelée à chaque ouverture comme à
+## chaque fermeture du bandeau, et sur une liste déjà vide.
+func _eteindre_les_eclats() -> void:
+	for tw: Tween in _eclats_pret:
+		if tw != null and tw.is_valid():
+			tw.kill()
+	_eclats_pret.clear()
+
+
 func signaler_adversaire_pret() -> void:
 	var audio := get_node_or_null(^"/root/AudioManager")
 	if audio != null and audio.has_method("play_sfx"):
 		# La clé existe, le fichier pas encore : `play_sfx` rend null en silence.
 		# Le geste est câblé, il s'entendra le jour où le son arrive.
 		audio.play_sfx("ui_ready_ping")
+	# Un second « prêt » ne doit pas empiler un éclat sur le précédent : deux
+	# tweens qui écrivent la même propriété se disputent image par image.
+	_eteindre_les_eclats()
 	for btn in _lanceurs_vivants():
 		if not btn.is_visible_in_tree():
 			continue
 		var tw := create_tween()
+		_eclats_pret.append(tw)
 		# Surexposition passagère, pas une teinte : `self_modulate` multiplie ce qui
 		# est déjà peint. Comme `Color.WHITE` employé plus bas pour « aucune
 		# teinte », ces valeurs échappent à la règle « pas de valeur pure » — elles
 		# sont l'unité d'un produit, pas une couleur que le joueur lit.
 		btn.self_modulate = Color(1.9, 1.9, 1.9)
-		tw.tween_property(btn, "self_modulate", Color.WHITE, 0.55) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		# 0,55 s posée à la main passe au cran long de l'échelle — même geste que
+		# le décompte, la tuile de galerie et l'annonce du score. C'est plus vif
+		# de moitié, et c'est le point de l'item : un pouls qui dure deux fois
+		# plus que tout le reste de l'écran ne se lit pas comme la même main.
+		Charte.animer(tw, btn, "self_modulate", btn.self_modulate, Color.WHITE,
+			Charte.D_LONG, Charte.Courbe.ENTREE)
 
 ## V3.6 — le score de session se remplit au lieu d'apparaître.
 ##

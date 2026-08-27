@@ -68,3 +68,22 @@ func refresh() -> void:
 ## `null` pour laisser le hub choisir le premier venu.
 func focus_seed() -> Control:
 	return null
+
+## Cet écran veut-il TOUTE la largeur du cadre, ou une colonne de lecture ?
+##
+## Par défaut, non : le hub le pose dans une colonne large de `Charte.MESURE`
+## signes, centrée. Sans cette limite, une phrase d'explication s'étale sur les
+## 900 px du cadre de droite et devient pénible à lire — défaut relevé par DA4.18
+## sur l'écran de profil.
+##
+## ⚠️ **La colonne est un PLAFOND D'ÉTIREMENT, pas un corset.** Elle est posée
+## en taille minimale : un enfant qui exige davantage l'élargit. Un écran n'a
+## donc à redéfinir ceci que s'il veut vraiment s'étendre jusqu'aux bords —
+## typiquement un tableau, dont les colonnes doivent respirer et dont personne
+## ne lit les cellules comme de la prose.
+##
+## C'est l'écran qui répond, et non le hub qui devine : la même règle que
+## `screen_title()` et `focus_seed()`. Un écran décrit ce qu'il est ; il ne sait
+## toujours pas où il est.
+func pleine_largeur() -> bool:
+	return false

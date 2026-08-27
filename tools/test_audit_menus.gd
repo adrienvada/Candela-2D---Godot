@@ -55,6 +55,7 @@ func _run() -> void:
 	_audit_panneaux_declares()
 	_audit_personnalisation()
 	_audit_carte_appartient_a_l_hote()
+	await _audit_la_colonne_de_lecture()
 	await _audit_le_cadre_montre_vraiment()
 	await _audit_on_peut_lancer_une_recherche()
 	_audit_aucun_cadre_vide()
@@ -221,6 +222,96 @@ func _audit_on_peut_lancer_une_recherche() -> void:
 ## La largeur est vérifiée autant que la visibilité : au moment du diagnostic, le
 ## `RichTextLabel` naissait à **un pixel** de large dans son panneau caché. Visible
 ## mais large d'un pixel, il aurait produit exactement le même écran noir.
+## **La colonne de lecture tient-elle, et l'exception est-elle une exception ?**
+##
+## Le cadre de droite fait près de 900 px. DA4.18 y a posé une colonne large de
+## `Charte.MESURE` signes pour que les paragraphes cessent de s'étaler — mais un
+## plafond d'étirement est **invisible tant qu'on ne le mesure pas** : rien à
+## l'écran ne dit qu'une colonne aurait pu être plus large. Il disparaîtrait
+## sous n'importe quel `SIZE_EXPAND_FILL` posé demain dans un écran, sans une
+## erreur ni un pixel de différence ailleurs.
+##
+## ⚠️ **On mesure le nœud RENDU, jamais le réglage.** `size_flags_horizontal`
+## dit ce qu'on a demandé ; `size.x` dit ce qu'on a obtenu. Le dépôt a déjà payé
+## trois fois la différence — `EXPAND_KEEP_SIZE`, `icon_max_width`, et le
+## `RichTextLabel` large d'un pixel qui rendait le même écran noir qu'un nœud
+## caché.
+##
+## Les deux versants comptent. Sans le second, mettre `pleine_largeur()` à `true`
+## partout ferait passer le contrôle au vert en supprimant ce qu'il protège.
+func _audit_la_colonne_de_lecture() -> void:
+	print("\n[La colonne de lecture plafonne l'étirement, sauf là où c'est dit]")
+	var hub = _ui.hub
+	var large: float = hub._detail_host.size.x
+	if large <= 0.0:
+		_check("le cadre de droite a une largeur mesurable", false,
+			"%.0f px" % large)
+		return
+
+	# La mesure attendue, relevée sur la fonte réelle comme le fait le code.
+	var plafond: float = Charte.mesure_px()
+
+	# ⚠️ **L'attendu est écrit ICI, et surtout pas demandé à l'écran.**
+	#
+	# Le premier jet de ce contrôle lisait `ecran.pleine_largeur()` puis
+	# vérifiait que la largeur rendue correspondait. **Il passait au vert avec
+	# la règle entièrement désactivée** — mettre le défaut du contrat à `true`
+	# faisait s'étaler les quatre panneaux ET changeait l'attendu avec eux.
+	# Vérifié en le sabotant : quatre ✓ franchement faux.
+	#
+	# C'est la quatrième fois de ce chantier qu'un banc mesure la cohérence d'un
+	# objet avec lui-même au lieu de le confronter à une décision. Un banc dont
+	# l'oracle sort du code testé ne teste rien : il paraphrase.
+	#
+	# Cette table EST la décision de DA4.18. Un écran qui change de camp doit
+	# faire rougir ce fichier — c'est le but, pas une gêne.
+	var attendu := {
+		_ui.PANEL_PROFILE: false,
+		_ui.PANEL_AUDIO: false,
+		_ui.PANEL_EFFECTS: false,
+		_ui.PANEL_HISTORY: true,
+	}
+	for cle: String in attendu.keys():
+		var boite: Control = hub.panneau(cle)
+		if boite == null:
+			_check("le panneau %s existe" % cle, false)
+			continue
+		hub._apply_panel(cle)
+		await process_frame
+		await process_frame
+		var veut_tout: bool = bool(attendu[cle])
+		# Et le contrat doit dire la même chose que la table : sans ce contrôle,
+		# on pourrait satisfaire la largeur par accident — un enfant assez
+		# exigeant remplit le cadre sans que personne l'ait décidé.
+		var ecran: HubScreen = _ui._screens.get(cle)
+		_check("%s déclare ce que la charte attend de lui" % cle,
+			ecran != null and ecran.pleine_largeur() == veut_tout,
+			"déclaré %s, attendu %s" % [
+				"plein" if ecran != null and ecran.pleine_largeur() else "colonne",
+				"plein" if veut_tout else "colonne"])
+		if veut_tout:
+			# L'historique est un tableau : il doit atteindre les bords.
+			_check("%s prend bien toute la largeur" % cle,
+				boite.size.x >= large - 1.0,
+				"%.0f px sur %.0f" % [boite.size.x, large])
+		else:
+			# Le plafond retire l'étirement, pas la place : un enfant plus
+			# exigeant a le droit d'élargir la colonne. Ce qu'on interdit, c'est
+			# de remplir le cadre faute d'avoir été bridé.
+			_check("%s ne s'étale pas sur tout le cadre" % cle,
+				boite.size.x < large - 1.0,
+				"%.0f px sur %.0f (plafond visé %.0f)"
+					% [boite.size.x, large, plafond])
+
+	# Et la mesure elle-même doit rester un rapport, pas un nombre : elle grandit
+	# avec la taille de fonte. Une valeur figée serait juste pour un seul cran de
+	# l'échelle typographique et fausse pour les cinq autres.
+	_check("la mesure suit la taille de fonte",
+		Charte.mesure_px(Charte.T_APPUI) > Charte.mesure_px(Charte.T_COURANT),
+		"%.0f px puis %.0f px" % [Charte.mesure_px(Charte.T_COURANT),
+			Charte.mesure_px(Charte.T_APPUI)])
+
+
 func _audit_le_cadre_montre_vraiment() -> void:
 	print("\n[Le cadre de droite montre, il n'a pas seulement de quoi montrer]")
 	var hub = _ui.hub
@@ -327,13 +418,28 @@ func _audit_personnalisation() -> void:
 	# Ce qu'on compte : des commandes ACTIONNABLES, pas des boutons. Les effets se
 	# règlent au curseur et l'audio au bouton ; exiger des boutons partout aurait
 	# fait passer une rubrique entière pour vide alors qu'elle est complète.
+	# ⚠️ **CONTRÔLES se DÉDUIT, il ne se chiffre plus.** Ce seuil a valu `6`,
+	# écrit à la main sous le commentaire « trois actions × deux joueurs ». Une
+	# action a quitté le jeu : la rubrique est tombée à 4 et ce banc a rougi **en
+	# accusant la rubrique des contrôles**, un écran qui n'avait rien fait.
+	#
+	# Le remettre à `4` aurait été juste, et faux le lendemain. **Un nombre écrit
+	# à la main redevient faux à la prochaine action ajoutée ou retirée**, et il
+	# rougit alors au nom d'un innocent. Pire : aucune recherche textuelle ne
+	# pouvait trouver ce `6` — le seuil COMPTAIT une action sans jamais la
+	# NOMMER, même piège qu'un argument passé en littéral, qui ne porte plus le
+	# nom de ce qu'il transmet.
+	#
+	# Dérivé de `BINDABLE`, il suit tout seul. Et il vérifie une propriété plus
+	# forte que « au moins quatre commandes » : **chaque action déclarée produit
+	# bien ses deux colonnes de joueur.** Une action ajoutée sans ligne d'écran,
+	# ou une colonne perdue, le fait rougir — ce qu'un nombre figé ne voyait pas.
+	#
+	# Ce n'est pas l'oracle-tiré-du-code-testé de la colonne de lecture : la
+	# table déclare, l'écran construit, et ce sont deux chemins distincts. On
+	# vérifie que le second honore la première.
 	var attendus := {
-		# **4 et non 6 depuis le 2026-08-26** : le sprint supprimé, « Courir »
-		# quitte la grille de touches. Ce seuil comptait les actions RÉELLES ;
-		# le baisser n'affaiblit pas le contrôle, il le remet en phase avec ce
-		# que la rubrique doit montrer. Le laisser à 6 aurait rendu ce lot rouge
-		# en permanence, et un rouge permanent se fait débrancher.
-		"CONTRÔLES": 4,  # deux actions × deux joueurs
+		"CONTRÔLES": _ui.BINDABLE.size() * 2,
 		"AFFICHAGE": 9,  # 3 résolutions + 2 vsync + 5 cadences, au moins
 		"EFFETS": 4,
 		"AUDIO": 4,

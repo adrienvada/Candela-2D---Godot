@@ -43,6 +43,7 @@ func _run() -> void:
 	_test_continuite()
 	_test_noms()
 	_test_emprise_de_copie()
+	_test_vitesse_de_reference()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -298,8 +299,9 @@ func _test_continuite() -> void:
 		var t := float(i) * pas
 		saut = maxf(saut, (Brouillage.derive(1.0, 1.0, t + pas)
 			- Brouillage.derive(1.0, 1.0, t)).length())
-	# **Le plafond est la vitesse de MARCHE d'un joueur** (`player.speed`, 260
-	# px/s), pas une fraction de l'amplitude. Un seuil relatif ne veut rien dire
+	# **Le plafond est la vitesse d'un joueur** (`Brouillage.VITESSE_MARCHE`, la
+	# recopie de `player.speed` que `_test_vitesse_de_reference` tient à jour),
+	# pas une fraction de l'amplitude. Un seuil relatif ne veut rien dire
 	# ici ; celui-ci dit quelque chose : ce qui se déplace comme un joueur se lit
 	# comme un joueur. Au-dessus, on ne lit plus une dérive mais une vibration —
 	# donc un défaut d'affichage, et surtout un brouillage qui s'annule tout
@@ -309,8 +311,9 @@ func _test_continuite() -> void:
 	# Ce contrôle a servi dès sa première exécution : la dérive filait à
 	# 322 px/s, et les deux fréquences ont été divisées par deux et demi.
 	var vitesse := saut / pas
-	_check("la dérive ne va jamais plus vite qu'un joueur qui marche (260 px/s)",
-		vitesse < 260.0, "%.0f px/s" % vitesse)
+	_check("la dérive ne va jamais plus vite qu'un joueur (%.0f px/s)"
+			% Brouillage.VITESSE_MARCHE,
+		vitesse < Brouillage.VITESSE_MARCHE, "%.0f px/s" % vitesse)
 
 	var saut_f := 0.0
 	for i in 3000:
@@ -333,3 +336,41 @@ func _test_noms() -> void:
 		if not Brouillage.NOMS.has(m) or String(Brouillage.NOMS[m]).is_empty():
 			complet = false
 	_check("les %d modes sont tous nommés" % Brouillage.Mode.size(), complet)
+
+
+# ---------------------------------------------------------------------------
+# LA RECOPIE — `VITESSE_MARCHE` doit rester celle de `player.gd`
+# ---------------------------------------------------------------------------
+
+## `brouillage.gd` n'a aucune dépendance, et c'est ce qui lui permet de tourner
+## sous `--script` : il ne peut donc pas LIRE `player.gd`, seulement le recopier.
+##
+## ⚠️ **Une recopie non tenue se périme en silence.** Deux réglages de
+## `brouillage.gd` se sont justifiés par une vitesse que le jeu n'avait plus, et
+## l'un d'eux — `RETARD_REMANENCE` — n'achetait plus que la moitié de l'effet
+## pour lequel il avait été posé. **Aucune suite ne
+## pouvait le voir** : une suite lit des nombres, elle ne lit pas les raisons
+## qu'on leur a données. Celle-ci lit la raison.
+##
+## Elle relit le LITTÉRAL de `player.gd` plutôt que d'instancier la classe : le
+## fichier nomme des autoloads, donc ne compile pas sous `--script` (piège du
+## 2026-08-18, consigné dans la ROADMAP). Si la déclaration change de forme, ce
+## contrôle rougit lui aussi — c'est voulu. Mieux vaut un rouge à relire qu'un
+## lien qu'on croit tenu et qui ne tient plus.
+func _test_vitesse_de_reference() -> void:
+	print("\n-- la vitesse recopiée de player.gd --")
+	var src := FileAccess.get_file_as_string("res://player.gd")
+	if src.is_empty():
+		_check("player.gd est lisible", false)
+		return
+	var rx := RegEx.new()
+	rx.compile("@export var speed: float = ([0-9]+(?:\\.[0-9]+)?)")
+	var trouve := rx.search(src)
+	if trouve == null:
+		_check("la déclaration de `speed` se reconnaît dans player.gd", false,
+			"la forme a changé — remettre d'accord l'expression et la recopie")
+		return
+	var vraie := float(trouve.get_string(1))
+	_check("`Brouillage.VITESSE_MARCHE` vaut la vitesse de player.gd",
+		is_equal_approx(vraie, Brouillage.VITESSE_MARCHE),
+		"player.gd = %.1f, brouillage.gd = %.1f" % [vraie, Brouillage.VITESSE_MARCHE])

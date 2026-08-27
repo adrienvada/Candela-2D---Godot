@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-26
+> Dernière mise à jour : 2026-08-27
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2362,7 +2362,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | Décision | Raison |
 |---|---|
 | **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — le lot passe 68/68 dans un arbre sans `eos_credentials.gd`, donc avec EOS jamais initialisé ; aucune suite n'exerce Epic. Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. |
-| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les six scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot**, pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
+| **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
 | **Le champ de vision ne dépend plus du ratio de l'écran** (2026-08-25, Adrien) | `window/stretch/aspect` passe de `expand` à **`keep`**. En `expand`, l'aire 2D grandit dans l'axe excédentaire dès que la fenêtre n'est pas en 16:9 : mesuré, un plein écran sur l'écran de développement donnait **1920×1173 au lieu de 1920×1080**, soit **+8,6 % de hauteur vue** — et un ultra-large aurait vu davantage encore. Dans un jeu dont la règle est « la seule information est la lumière », voir plus de carte parce qu'on possède un autre écran est une asymétrie que personne n'a payée en s'éclairant. En `keep`, l'aire 2D reste **1920×1080 quel que soit le ratio** (vérifié à 16:9, 3:2 et 2,4:1) ; le prix est le retour des bandes noires, assumé. `default_clear_color` est passé au noir dans la foulée : les bandes sont peintes avec lui, et son défaut Godot est un gris qui n'a rien à faire autour d'un jeu noir. |
@@ -2445,56 +2445,152 @@ pour laquelle la seconde moitié de la famille 2 a été retirée.
 
 ---
 
-## ⚠️ À ÉTABLIR — la reconnexion pendant une killcam ne rend pas la main
+## ✅ Famille 4.1 — CLOSE le 2026-08-26 (banc refait, cause établie, correctif posé)
 
-**Banc écrit, rouge, et volontairement HORS du lanceur** (`./tools/run_duo.sh
---reconnexion`, famille 4.1). Il exerce le seul scénario à trois processus : le
-client meurt, quitte pendant la killcam de l'hôte, **et revient**.
+**L'entrée qui occupait cette place affirmait trois choses. Les trois étaient
+fausses au moment où on les lisait, et la troisième depuis huit heures quand
+elle a été écrite.** Le récit vaut mieux que la correction seule, parce que la
+faute est de méthode et qu'elle est reproductible.
 
-**Ce qu'il montre, reproduit à chaque exécution :**
+### Ce qui était écrit, et ce qui est mesuré
 
-- l'hôte voit bien le retour (`ADVERSAIRE: revenu`) et sa killcam va à son terme ;
-- mais **aucune entrée `PRÊT` n'est visible ensuite** sur l'écran `local_hote` —
-  le salon est là, la porte ne s'ouvre pas ;
-- et **le client revenu perd le lien** (« Trying to call an RPC while no
-  multiplayer peer is active »).
+| L'entrée disait | Mesuré le 2026-08-26 |
+|---|---|
+| « aucune entrée `PRÊT` n'est visible ensuite » | **Corrigé.** `le salon rouvert accepte le retour` passe dans tous les cas, killcam en cours comprise. |
+| « le client revenu perd le lien » | **Artefact d'instrument.** Voir plus bas : le troisième processus jouait le mauvais rôle. |
+| « deux modifications… aucune n'était la cause » | **Faux : elles l'étaient.** `git log` date cette entrée du 2026-08-19 **00:57** (`6b2d811`) et le câblage de `ui.rouvrir_le_salon()` du même jour **09:28** (`0a651ca`), dont le message dit lui-même « Rouvrir ET ne pas refermer : vert ». |
 
-**La cause n'est pas établie, et c'est pour ça que rien n'est corrigé.** Deux
-modifications ont été faites au code de production en poursuivant ce symptôme
-avant de comprendre qu'elles n'en étaient pas la cause. Elles se défendent
-séparément et restent — ne pas annoncer une déconnexion à quelqu'un dont
-l'adversaire est revenu, et rouvrir le salon dans tous les cas — mais **il faut
-les lire comme des améliorations indépendantes, pas comme un correctif de ce
-défaut-ci**.
+L'entrée a donc été rédigée **huit heures avant son propre correctif**, et elle a
+survécu une semaine parce que **le banc était hors du lanceur** — il était hors
+du lanceur parce qu'il était rouge, et il est resté rouge dans la feuille de
+route parce que personne ne le relançait. La boucle se referme sur elle-même.
 
-**La leçon de méthode, sous une forme neuve :** « on croit débuguer, on est en
-train de renoncer » a un cousin — **on croit corriger, on est en train de
-déplacer la faute vers le code testé**. Deux fois de suite, le banc avait tort et
-le code a été modifié quand même.
+> **La leçon, et elle a déjà un cousin dans ce fichier** (« un constat daté
+> vieillit sans prévenir ») : **un banc qu'on sort du lanceur parce qu'il est
+> rouge cesse d'être un banc.** Il devient une phrase. Le geste juste, quand on
+> assume un rouge, est de le laisser dans le lot et de le marquer, jamais de
+> l'en retirer.
 
-**Deux pistes examinées, deux écartées — et c'est le plus utile de cette entrée.**
+### Le banc était vert, et il l'était pour la mauvaise raison
 
-1. ~~« `client_peer_id` n'est pas reposé pour le second client »~~ — **faux** :
-   `_on_peer_connected` le pose (ligne 332). Vérifié par lecture.
-2. ~~« le chemin différé parque le jeu en solo alors qu'un pair est là » —
-   J2 caché, sans collision, remplacé par la cible d'entraînement~~. Cette
-   incohérence **est réelle**, mais la corriger **ne fait pas passer le banc** :
-   ce n'est donc pas la cause. Le correctif a été **retiré**.
+Relancé tel quel le 2026-08-26 : **vert, quatre fois de suite.** Sauf qu'il
+n'exerçait pas le scénario de son titre.
 
-**Ce qui reste vrai et candidat, sans preuve** : parquer en solo alors qu'un pair
-est connecté est incohérent, et mérite d'être corrigé un jour — mais **comme une
-amélioration propre, pas comme le correctif de ce défaut-ci**.
+Le retour du second client était ordonnancé par un **`sleep 18` fixe** du
+lanceur, contre une séquence de fin qui dure une douzaine de secondes et qui
+démarre elle-même après un lancement de Godot, un décompte et un tir. Horodaté :
+mort à T, killcam close vers T+11 s, **retour à T+15 s**. C'est la ligne **4.2**
+de la checklist — « B rejoint alors que A est déjà sur l'écran de fin » —, pas la
+4.1.
 
-⚠️ **Trois modifications du code de production ont été faites en poursuivant ce
-symptôme, aucune n'était la cause, et la troisième l'a été après avoir écrit la
-règle qui l'interdit.** Le geste juste, appliqué à la troisième : revenir en
-arrière. Un chemin de netcode ne se répare pas par tâtonnements — chaque essai
-non concluant y laisse un changement dont personne ne saura dire pourquoi il est
-là.
+Il a suffi de déplacer ce seul délai pour que le tableau se lise :
 
-**Pour qui reprendra :** commencer par instrumenter ce que voit le bloc salon
-(`_refresh_lobby_block`) au moment où il refuse d'afficher `PRÊT`, plutôt que de
-deviner ce qui manque en amont.
+| retour relâché à | placement réel | verdict |
+|---|---|---|
+| 18 s (le lanceur) | après la killcam | vert, ×4 |
+| 14 s | pendant la killcam | **`✗ la reconnexion produit exactement une manche → 0 démarrage(s)`** |
+| 12 s | pendant la killcam | idem, ×2 |
+| 8 s | départ et retour à ~0,1 s d'écart | le banc se casse seul : `ECHEC: le premier client n'est jamais parti`, pendant que son propre journal montre le départ — le sondage à 0,25 s manquait la fenêtre |
+
+> **Un délai fixe opposé à une durée variable n'est pas une attente, c'est un
+> tirage au sort** — et ce lanceur écrit lui-même, quinze lignes plus haut,
+> qu'il faut « attendre une CONDITION, pas une durée ». La règle était posée, à
+> un endroit, et pas à l'autre.
+
+### Le vrai défaut de la 4.1, et il n'a rien à voir avec le menu
+
+Quand le retour tombe **pendant** la killcam : le salon rouvre, `PRÊT` est
+visible et cliquable, et **aucune manche ne démarre — jamais.** Les deux joueurs
+voient chacun un « prêt » qui ne produit rien ; l'hôte peut appuyer soixante
+fois. Récupérable à la main — le client appuie deux fois de plus — et rien ne le
+dit.
+
+Mécanisme, lu dans le code et cohérent avec tous les relevés :
+
+1. le revenant appuie sur `PRÊT` pendant la killcam ; `rpc_client_ready` pose
+   `p2_ready_for_rematch = true`, retient l'arme et sort, parce que
+   `_end_sequence_active` ;
+2. à la fin de la killcam, `_do_end_round` voit `_deconnexion_differee`, appelle
+   `_annoncer_deconnexion()` **et `return`** — `_apply_deferred_rematch()` n'est
+   jamais atteint ;
+3. `_annoncer_deconnexion()` joue le script « l'adversaire est parti » sur un
+   adversaire **qui est là** : `_pending_client_start = false`,
+   `_pending_p2_weapon_idx = -1`, `p2_ready_for_rematch = false` ;
+4. le revenant, lui, croit être prêt — son bouton affiche « ✓ PRÊT » — et ne
+   réémettra jamais.
+
+**Le fond : `_annoncer_deconnexion()` fait deux métiers** — solder le match, et
+signaler une absence. Le drapeau `revenu` avait été ajouté pour taire le premier
+symptôme, le **dialogue** ; tout le reste du script « parti » continuait de
+s'appliquer au revenant.
+
+### Ce que le banc sait faire maintenant
+
+- **le retour se déclenche sur une condition** : l'hôte imprime `RETOUR:`, le
+  lanceur pose un jeton, et le revenant — démarré depuis le début, en attente
+  sur ce fichier — rejoint dans la demi-seconde ;
+- **il refuse de juger ce qu'il n'a pas exercé** : il relève
+  `_end_sequence_active` à l'instant exact du retour et sort en **3**, « mesure
+  non faite », si le placement n'est pas celui du scénario ;
+- **départ et retour s'observent par signal**, plus par sondage ;
+- **`--reconnexion` (4.1) et `--reconnexion-tardive` (4.2) sont deux scénarios**,
+  la checklist les distinguant déjà ;
+- **le troisième journal est noté.** Il était écrit et jamais lu : le revenant
+  jouait `--join`, le scénario NOMINAL, face à un hôte qui sort une quinzaine de
+  secondes après son arrivée. Ses « Trying to call an RPC while no multiplayer
+  peer is active » étaient en aval de cette sortie et de rien d'autre — et ils
+  ont été consignés ici comme un défaut du jeu. **Un journal produit sans être
+  lu est pire qu'un journal absent : il a l'air d'une preuve.**
+
+### Le correctif — une fonction qui faisait deux métiers
+
+`_annoncer_deconnexion()` *soldait le match* **et** *signalait une absence*, sous
+un seul nom. Le drapeau `revenu` avait été ajouté pour taire le **dialogue**, et
+le dialogue seulement ; tout le reste du script « parti » continuait de
+s'appliquer à quelqu'un qui venait de revenir.
+
+> **Un drapeau posé à l'entrée d'une fonction ne protège que la ligne qu'on a
+> pensé à garder.** Ce que la fonction fait d'autre le traverse en silence. C'est
+> le cousin exact de « un état posé dans une branche est un état que chaque
+> `return` peut sauter », déjà consigné ici : la même faute, prise par l'autre
+> bout.
+
+Le partage en trois rend le tri visible, et il n'y a plus de « reste » :
+
+| fonction | quand | ce qu'elle fait |
+|---|---|---|
+| `_solder_le_match()` | **toujours** | jeton, killcam soldée, chrono, vues, score à zéro (checklist 4.3), engagement de l'hôte désarmé, retour au salon |
+| `_signaler_adversaire_parti()` | personne en face | dialogue, écran d'attente, `p2_ready_for_rematch` désarmé, P2 caché et sans collision, cible d'entraînement |
+| `_accueillir_le_revenant()` | quelqu'un est là | l'arme retenue se pose, le « PRÊT » du revenant **survit**, et `_check_rematch_start()` décide |
+
+**Le départ automatique sans `PRÊT` est retiré** — arbitrage d'Adrien du
+2026-08-26. `_pending_client_start` armait un `rpc_start_round` que la fin de la
+séquence tirait toute seule : une manche partait sans qu'aucun des deux camps
+n'ait rien déclaré, reste d'avant la porte PRÊT. Le champ n'avait plus de
+lecteur, il a donc disparu — un état mort se fait relire par quelqu'un qui le
+croit vivant.
+
+**Et le bac à sable cesse de se poser sur un salon peuplé.** L'incohérence était
+déjà notée ici comme « réelle, mais pas la cause », et une session l'avait
+corrigée puis retirée à juste titre : elle ne faisait pas passer le banc. Elle
+n'est pas revenue comme un correctif — elle est **tombée du partage** : cacher P2
+et allumer la cible d'entraînement veut dire « il n'y a personne », donc ces
+lignes vivent sous ce nom-là. `sandbox_mode`, lui, reste des deux côtés : il ne
+parle pas de l'adversaire mais de l'absence de manche, et sans lui `player.gd`
+cesse de traiter les commandes — l'hôte immobile derrière son menu, ce que la
+ligne 4.4 de la checklist interdit.
+
+### Ce qui reste, et qui n'est pas de ce lot
+
+- **`p2_ready_for_rematch` est un booléen qui ne dit pas QUI.** Effacé à tort
+  jusqu'ici ; le jour où on cesse de l'effacer, il peut au contraire être
+  **transféré** — un pair héritant du « prêt » d'un autre, parti entre-temps. Les
+  deux fautes ont la même racine, et la porter par identifiant de pair les
+  supprime ensemble. Item propre, non ouvert.
+- **La ligne 4.4 de la checklist n'est pas couverte par un banc** : « aucun
+  panneau résiduel, vitesse normale, A peut se déplacer et tirer » pendant
+  l'attente. Le partage ci-dessus la rend probablement vraie ; personne ne l'a
+  mesurée.
 
 ### La ressource musicale RÉFÉRENCE ses flux, elle ne les embarque plus (2026-08-24)
 
@@ -2959,6 +3055,38 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
+
+Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
+trouver un trousseau pour stocker "ad4842…9388" ». Je l'ai attribuée à **VLC**,
+sur deux faits vrais : VLC démarré à 21:38:12, trousseau écrit à 21:38, et VLC
+livré en binaire Intel sur un Mac arm64 — un candidat crédible pour une API
+dépréciée. Adrien a fermé le sujet sur cette base.
+
+**C'était faux.** La chaîne de 32 hexadécimaux **est le `PRODUCT_ID` EOS de
+Candela** : la boîte venait du SDK Epic à l'intérieur de Godot, par
+`create_device_id`. L'identifiant était lisible dès la première capture d'écran,
+et il désignait le coupable sans ambiguïté — pendant que je corrélais des
+horodatages sur une machine qui fait vingt choses à la fois.
+
+> **Quand une panne porte un identifiant, on l'identifie ; on ne le corrèle pas.**
+> Une corrélation temporelle répond à « qu'est-ce qui s'est passé au même
+> moment », qui n'est pas la question. C'est la même famille que le voleur de
+> port et que `cam1` à `Nil` : le symptôme accuse un innocent, et l'innocent est
+> plausible — c'est ce qui rend l'accusation coûteuse. Ici elle a en plus obtenu
+> l'assentiment d'Adrien, ce qui l'a presque close.
+
+**Ce que la mesure a ensuite établi**, et qui vaut d'être su : le PUID est
+**stable** d'un lancement à l'autre (`0002…21ef` deux fois), aucun fichier n'est
+écrit localement, aucune entrée de trousseau ne porte le `PRODUCT_ID`. L'ancre du
+PUID n'est donc pas locale — elle est tenue du côté d'Epic, rattachée à la
+machine, ce que le dépôt disait déjà sans le formuler ainsi (« deux instances
+locales partagent le même Device ID », d'où `--eos-ephemeral`). **Le refus du
+trousseau ne menace pas l'identité classée, et ne coûte rien de mesurable.**
+
+Carte complète des clés du projet, et protocole pour refaire cette mesure :
+[CLES_ET_IDENTIFIANTS.md](CLES_ET_IDENTIFIANTS.md).
+
 ### Une branche finie ne se signale pas toute seule (2026-08-26)
 
 `worktree-lanceur-port` portait deux commits **écrits, éprouvés et complets** —
@@ -3040,6 +3168,131 @@ deux phrases de `ui.gd` ont **perdu leur compte** au lieu de le voir corrigé �
 « les actions réassignables », sans nombre. Un effectif en toutes lettres
 redevient faux à la prochaine action ajoutée, et rougit alors au nom d'un
 innocent : ici la rubrique des contrôles, qui n'avait rien fait.
+
+### Une mécanique retirée laisse des résidus que le grep TROUVE (2026-08-27)
+
+Le piège juste au-dessus dit qu'une dépendance survit à la disparition du mot
+qui la désigne, et qu'il faut donc chercher autre chose que le nom retiré. Le
+lendemain de la suppression du sprint, un simple `grep -i sprint` a rendu
+**trois résidus de plus** — et il les a rendus tous les trois, sans effort. Le
+mécanisme est donc l'inverse du précédent, et il est plus banal : **ce n'est pas
+la recherche qui a manqué, c'est de la relancer.** Le lot était vert, le sujet
+paraissait clos.
+
+Les trois, par gravité croissante :
+
+1. **`p1_sprint` et `p2_sprint` étaient encore déclarés dans l'Input Map**
+   (`project.godot`), liés à Maj et à M, lus par personne. Deux touches
+   réservées par des actions fantômes — et **aucune suite ne pouvait le voir** :
+   rien ne vérifie la liste des actions déclarées. Sans effet, jusqu'au jour où
+   quelqu'un veut lier Maj.
+2. **`input_setup.gd` annonçait deux fois `# Carré = Courir`.** La liaison
+   manette était partie, son commentaire non : il a continué d'annoncer une
+   ligne absente. Un commentaire orphelin ne ment pas seulement sur le passé —
+   il fait croire qu'un bouton est pris.
+3. **`brouillage.gd` justifiait deux réglages par une vitesse de sprint.** C'est
+   le seul des trois qui ait changé un EFFET. `RETARD_REMANENCE` valait 0,18 s,
+   posé pour « à 520 px/s en sprint, 94 px d'avance à prendre, soit cinq rayons
+   de joueur ». Le sprint parti, la seule vitesse est 260 px/s : les mêmes
+   0,18 s n'achetaient plus que **47 px, la moitié**. Le nombre n'avait pas
+   bougé ; le monde autour de lui, si.
+
+**Ce que le troisième apprend, et qui vaut bien au-delà du sprint : un réglage
+dérivé d'une grandeur doit nommer cette grandeur DANS LE CODE.** Écrite dans le
+commentaire, elle ne tient rien — elle raconte, au présent, un présent qui
+passe. C'est la même famille que le constat daté de `CLAUDE.md`, à ceci près
+qu'ici ce n'est pas une phrase qui vieillit, c'est **le chiffrage d'une
+constante**. `brouillage.gd` porte donc `VITESSE_MARCHE` et `AVANCE_REMANENCE`,
+et `RETARD_REMANENCE` s'en déduit — 0,36 s. Le réglage est l'avance en pixels ;
+le temps n'en est que la conversion, et il suivra si la vitesse rebouge.
+
+**La recopie est tenue par une suite, et c'est la moitié qui compte.**
+`brouillage.gd` n'a aucune dépendance — c'est ce qui lui permet de tourner sous
+`--script` là où `game_state.gd` ne compile pas — donc il ne peut pas lire
+`player.gd`, seulement le recopier. `test_brouillage._test_vitesse_de_reference`
+relit le **littéral** de `player.gd` et rougit si les deux divergent, en nommant
+les deux valeurs. Contrôle **éprouvé à l'envers avant d'être retenu** (260 → 259 :
+rouge, message juste) : un garde-fou qu'on n'a jamais vu échouer ne garde rien,
+c'est le défaut du 2026-08-18 — trente suites vertes sur une mécanique inerte.
+
+**Portée du redosage, mesurée avant de toucher :** `derive()` et `retard()` ne
+sont appelés que depuis `tools/`. Les modes TREMBLEMENT et RÉMANENCE ne sont pas
+branchés — le jeu tourne sur halo + contraste + flou. Doubler le retard ne change
+donc rien à une partie ; ça change ce que le **banc** montre, c'est-à-dire ce sur
+quoi Adrien tranchera. Un banc qui montre un mode à la moitié de son réglage
+prévu fait juger autre chose que ce qu'on croit juger.
+
+### Le code dit ce qu'il fait, la documentation dit ce qui a eu lieu (2026-08-27)
+
+**Décision d'Adrien**, le jour où les trois résidus ont été refermés : *« supprime
+les occurrences de sprint dans le code »*. Il en restait vingt-neuf, toutes en
+commentaire, aucune dans du code exécuté — des post-mortem accrochés aux lignes
+qu'ils avaient jadis expliquées.
+
+C'est l'application directe de la leçon que `CLAUDE.md` porte déjà : **ce fichier
+décrit ce que le code FAIT, pas ce qui lui manque.** Un commentaire qui raconte
+une mécanique disparue fait deux dégâts. Il envoie chercher quelque chose qui
+n'existe plus, et il vieillit sans prévenir — il était vrai le jour où on l'a
+écrit, il se lit comme une propriété du projet. Le second est le plus cher : une
+session s'y fie sans aller voir le code.
+
+**Et la règle qu'Adrien a énoncée dans le même souffle, parce qu'elle est la
+condition de la première : la documentation est DOUBLÉE, le suivi de projet est
+COMPLÉMENTAIRE.** Un delta envoyé au tableau de bord ne dispense jamais de
+l'écrire ici. Le tableau de bord n'est pas versionné et **rien ne signale qu'il
+est périmé** ; la ROADMAP, elle, voyage dans le commit qui la justifie. L'artefact
+ajoute une lecture pour un humain — il ne remplace aucune trace. Corollaire
+opérationnel : on n'allège jamais un document en comptant sur l'autre.
+
+**Ce que les commentaires portaient et que ce document ne portait pas.** Quatre
+faits, écrits ici AVANT d'être retirés du code — sans quoi la suppression les
+aurait détruits au lieu de les déplacer :
+
+1. **Courir éteignait la torche, et cette règle est tombée avec l'allure.**
+   C'était une contrepartie : la vitesse se payait en cécité. Il n'y a plus rien
+   à payer, donc la torche n'obéit plus qu'au bouton. **C'est un choix de game
+   design, pas un nettoyage** — si une seconde allure revient un jour, la
+   contrepartie ne revient pas toute seule avec elle.
+2. **On ne pouvait pas tirer en courant.** La condition de tir portait un
+   `not is_sprinting` ; elle ne le porte plus. Même remarque : la règle a disparu
+   avec la mécanique, elle n'a pas été arbitrée pour elle-même.
+3. **Un effet éteint qui rastérise encore n'est pas éteint, il est invisible — ce
+   n'est pas la même chose.** Les traits de vitesse (V5.9) ont d'abord été
+   « éteints » en figeant leur intensité à zéro. Mais le `ColorRect` couvrait tout
+   l'écran et restait visible : son fragment shader s'exécutait sur chaque pixel,
+   à intensité nulle comme à un — une passe plein écran par joueur, pour un effet
+   qui ne pouvait plus se déclencher, sur un jeu qui dispose de 3,4 ms de marge
+   sur ses pires images. **Cette leçon vaut pour tout effet qu'on désactivera à
+   l'avenir** : couper l'intensité ne coupe pas le coût, seul le retrait du nœud
+   le fait.
+4. **Un facteur qui ne varie jamais suggère une modulation qui n'existe pas.** La
+   hauteur du son de pas passait par un multiplicateur qui valait autre chose que
+   1 dans un seul cas ; ce cas parti, le facteur ne modulait plus rien mais
+   continuait d'annoncer qu'il modulait. La fourchette est fixe et le dit.
+
+**Un quatrième effectif écrit à la main a été trouvé au passage**, et il était
+dans le commentaire même qui interdit d'en écrire : `ui.gd` annonçait « une
+grille de trois lignes » pour une table qui en produit deux. Il n'a pas été
+corrigé, il a été **retiré** — c'est le geste que ce document prescrit depuis les
+trois premiers. La même phrase existe encore ici, plus haut, dans le compte rendu
+daté de la refonte des menus : là elle décrit un état passé, et une archive datée
+a le droit de dire ce qui était vrai ce jour-là. C'est toute la différence entre
+les deux documents.
+
+⚠️ **Cette entrée et le code qu'elle justifie ne voyagent pas dans le même
+commit, contre la règle du `CLAUDE.md`, et ce n'est pas un choix.** Elle a été
+écrite ici d'abord — exprès, pour que le retrait ne détruise rien —, et une autre
+session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt :
+elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
+rien à voir. Le retrait lui-même suit dans le commit d'après.
+
+**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
+partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
+bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
+add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
+de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
+— il est bien versionné — c'est le **lien** entre une décision et son code,
+c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -4553,7 +4806,7 @@ un **second** verrou, jamais le premier.
 
 **Sonder, pas raisonner, dès qu'un commentaire tient lieu de preuve.**
 
-### Famille 4.1 — le vrai fond n'est pas le menu (2026-08-19, OUVERT)
+### ~~Famille 4.1 — le vrai fond n'est pas le menu~~ — **CLOS le 2026-08-26**
 
 Le menu réparé, le banc reste rouge pour une **autre** cause, mesurée : sur
 l'hôte, `multiplayer.multiplayer_peer` est **null immédiatement après le départ
@@ -4564,6 +4817,14 @@ un artefact de banc, c'est le jeu.
 Piste, non confirmée : `_close_lobby_if_left()` dans `ui.gd` coupe le salon dès
 qu'un changement d'écran survient alors que `get_peers()` est vide. Fichier
 d'une autre session, qui a été prévenue.
+
+**Corrigé, et la piste était la bonne.** `_close_lobby_if_left()` garde désormais
+le salon tant qu'un pair est là, et `rouvrir_le_salon()` s'interdit
+explicitement `hub.reset()` pour ne pas la déclencher — le commentaire de cette
+fonction le dit en toutes lettres. Mesuré le 2026-08-26 : le second client
+rejoint, `peer connected` apparaît chez l'hôte à chaque exécution, le serveur
+n'est plus démonté. **Ce qui restait rouge dans la famille 4.1 est ailleurs**, et
+vit désormais dans sa propre entrée en tête de fichier.
 
 
 ### Un lanceur lent ne dit rien du code, il dit qui d'autre travaille (2026-08-19)
@@ -7818,7 +8079,12 @@ un fait de jeu, pas à un rythme d'interface.
   « sombres et contrastés », donnée à cause du fondu additif des murs,
   contredisait la règle de polarité sans que personne le voie. Douze suffisent ;
   rien n'a été regénéré. *(C, avec DA2.8)*
-- **DA2.10 Le key art du titre** 🟡 **ASSET PRÊT, PAS POSÉ le 2026-08-25** —
+- **DA2.10 Le key art du titre** ✅ **livrée le 2026-08-25** — ⚠️ **cet
+  en-tête a annoncé « asset prêt, pas posé » jusqu'au 2026-08-26**, alors que
+  le corps de cette même entrée disait « ✅ POSÉE » quinze lignes plus bas, et
+  que `_poser_le_key_art()` était appelée dans `ui.gd`. Un en-tête se lit, un
+  corps se parcourt : c'est l'en-tête qui a fait foi pour trois relectures.
+  **Corriger l'état d'un item sans corriger son titre ne corrige rien.**
   ⚠️ **DEUX planches cuites, pas trois.** Cette entrée a annoncé trois planches
   « retouchées et ramenées sur la charte » ; `assets/keyart/` n'en a jamais
   contenu que deux, et git n'en a jamais connu d'autres. La troisième source,
@@ -8243,15 +8509,23 @@ d'enseigne posée sur le chrono → `tremble : 9.0 px d'écart` ; fonte d'interf
 posée sur le décompte → `rend « VICTOIRE » exactement comme la fonte d'interface
 (598.0 px) : elle n'est pas habillée`.
 
-##### Ce qui est livré, et ce qui ne l'est pas
+##### Ce qui était livré au soir du 2026-08-24 — instantané périmé, gardé comme trace
 
-Livrés : **DA4.2** et **DA4.9**, plus l'entrée de la fonte d'enseigne dans
-l'interface (le socle typographique dont DA4.7 dépendait).
+> ⚠️ **Ce paragraphe décrivait un état, pas une propriété, et il a vieilli en
+> deux jours.** Il est conservé parce qu'il date une séance, mais **il ne dit
+> plus l'état du chantier** : au 2026-08-26, quatorze des dix-neuf items sont
+> livrés. **La liste qui fait foi est celle des items eux-mêmes, plus bas** — un
+> item porte sa propre date de livraison, un récapitulatif ne porte que celle du
+> jour où on l'a écrit. Ne jamais relire un décompte global sans regarder à quand
+> il remonte.
 
-**Non commencés, et ils sont nombreux :** DA4.1 (9-slice), DA4.3 (le contour
-dessiné des chiffres de dégâts — la moitié « fonte » était déjà faite par DA1),
-DA4.4 à DA4.8, DA4.10 à DA4.17. `ui.gd` n'a été libéré qu'en fin de séance ;
-tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
+Livrés *ce soir-là* : **DA4.2** et **DA4.9**, plus l'entrée de la fonte
+d'enseigne dans l'interface (le socle typographique dont DA4.7 dépendait).
+
+Non commencés *ce soir-là* : DA4.1, DA4.3, DA4.4 à DA4.8, DA4.10 à DA4.17.
+`ui.gd` n'avait été libéré qu'en fin de séance ; tout ce qui demandait des
+textures dessinées attendait en outre le procédé DA1.5 — **tranché depuis**
+(Gemini, voir DA4.18).
 
 #### DA4.18 — Le cadre de droite est vide, et c'est un défaut (relevé par Adrien, 2026-08-24)
 
@@ -8259,8 +8533,10 @@ tout ce qui demande des textures dessinées attend en outre le procédé DA1.5.
 l'interface, il occupe les deux tiers de chaque écran de menu, et il ne montrait
 rien la plupart du temps.
 
-**🟡 Premier lot livré le 2026-08-25 — les promesses sont tenues, le lit
-d'ambiance reste à faire.**
+**✅ Fermée le 2026-08-26, en deux lots.** Premier lot le 2026-08-25 : les
+promesses des libellés sont tenues, le contenu descend d'un étage. Second lot le
+2026-08-26 : **le cadre porte une illustration au survol de chaque entrée**, et
+un audit exécuté prouve qu'aucune ne le laisse noir.
 
 - ✅ **`MON RANG` et `TOP 10` affichent enfin.** Elles passent par un verbe qui
   dit où va le texte, `MenuHub.montrer_texte()`, au lieu de `show_detail()` qui
@@ -8319,11 +8595,50 @@ la largeur du cadre**. Il était jusqu'ici derrière une navigation, dans une
 colonne de gauche large de 430 px. Ce n'est plus un rangement plus logique, c'est
 le seul endroit où ce contenu tient.
 
-**Ce qui reste faible, et c'est de la composition, pas du branchement :** les
-trois panneaux se collent en haut d'un cadre qui fait plus de mille pixels de
-haut, et le profil centre ses lignes sur toute la largeur — une phrase
-d'explication court sur 900 px, ce qui se lit mal. C'est le travail de DA4.7
-(hiérarchiser au lieu d'empiler), et ça vient après le lit d'ambiance.
+**Ce qui restait faible, et c'était de la composition, pas du branchement :** le
+profil centrait ses lignes sur toute la largeur — une phrase d'explication
+courant sur des centaines de pixels, ce qui se lit mal.
+
+##### ✅ La colonne de lecture, posée le 2026-08-26
+
+**Le cadre fait 1 290 px de large**, mesuré au banc — et non 900 comme
+l'estimait le paragraphe ci-dessus. Une colonne de texte y est maintenant
+plafonnée à `Charte.MESURE` **signes**, centrée.
+
+**66 signes** : le milieu de la fourchette que la typographie tient depuis le
+plomb (55 à 75). En deçà l'œil saute de ligne trop souvent ; au delà il retrouve
+mal le début de la suivante, parce que le retour chariot devient un saut à
+l'aveugle.
+
+⚠️ **En signes, jamais en pixels** — et `mesure_px()` relève la chasse sur la
+**fonte réelle** au lieu d'appliquer un facteur en dur. Une largeur en pixels
+est juste pour une taille de fonte et fausse pour les cinq autres : c'est la
+sixième occurrence du motif *une valeur absolue là où il fallait un rapport*, et
+la première où on l'a vue venir avant de la commettre.
+
+⚠️ **C'est un plafond d'ÉTIREMENT, pas un corset.** La colonne est posée en
+taille minimale : un enfant qui exige davantage l'élargit. C'est ce qui permet
+de l'appliquer à tous les panneaux d'un coup sans vérifier chacun — le seul cas
+à trancher est celui qui veut vraiment les bords, et il le dit lui-même par
+`HubScreen.pleine_largeur()`. Un écran décrit ce qu'il est ; il ne sait toujours
+pas où il est, exactement comme pour `screen_title()` et `focus_seed()`.
+
+**Un seul écran le demande** : l'historique. Six colonnes — date, verdict, durée,
+mode, adversaire, arme. Ce n'est pas de la prose : personne ne lit une ligne de
+tableau de gauche à droite, on y descend une colonne. La mesure n'y protège
+rien et ne ferait que serrer six colonnes dans la moitié du cadre.
+
+⚠️ **Et le banc de ce correctif a été décoratif — quatrième fois du chantier.**
+Il demandait à l'écran `pleine_largeur()`, puis vérifiait que la largeur rendue
+correspondait à cette réponse. **Mettre le défaut du contrat à `true` le laissait
+entièrement vert** : les quatre panneaux s'étalaient, et l'attendu s'étalait avec
+eux. Vérifié en le sabotant — quatre ✓ franchement faux.
+
+**Un banc dont l'oracle sort du code testé ne teste rien : il paraphrase.** La
+table des largeurs attendues est maintenant écrite **dans le banc**, et c'est
+elle qui porte la décision de DA4.18. Un écran qui change de camp doit faire
+rougir ce fichier ; c'est le but, pas une gêne. Sous sabotage, le banc dit
+désormais `1290 px sur 1290 (plafond visé 518)`.
 
 ⚠️ **Observation hors périmètre, signalée à Adrien : l'historique local est
 pollué par les bancs.** La planche affiche « ce soir : 200 matchs · 98V 57D 0N ·
@@ -8386,13 +8701,115 @@ réglages le font déjà ; les quatre écrans de méta ne le font pas. Rien ne
 justifie la différence — `HubScreen` interdit par contrat à un écran de connaître
 sa position dans l'arborescence, **précisément pour qu'on puisse le déplacer**.
 
-##### Ce qui reste à trancher : que met-on dans ce cadre au survol ?
+##### Tranché le 2026-08-26 : une illustration par entrée, générée
 
-Vider le défaut ne suffit pas — il faut **quelque chose qui donne envie**.
-Demande d'Adrien : « peut-être un screenshot du jeu ? du mode actuel ? Faut que
-ce soit sexy. » Propositions faites le 2026-08-24, **arbitrage en attente**, voir
-le chat de la session DA4. À vérifier une fois posé : les quatre écrans de méta
-et le parcours `1v1 compétitif` en entier.
+**Arbitrage d'Adrien** — DA1.5 est décidé, ce sera Gemini ; et la règle est
+« une image par bouton sélectionné », pour *toute* entrée survolée, parce que le
+cadre doit « donner envie et plonger dans l'univers ». Dix illustrations vivent
+donc dans `assets/ui/ill_*.png`, enregistrées en panneaux par une boucle sur la
+table `ILLUSTRATIONS` de `ui.gd`.
+
+**Le lit d'ambiance a été construit, corrigé trois fois, puis écarté sur
+jugement** — « je n'aime pas l'écran sur le menu principal, on annule cette
+idée ». `menu_arene.gd` reste au dépôt, plus instancié. Le motif mérite d'être
+retenu : l'arène en fond répondait à la question *comment remplir le cadre ?*
+alors que la vraie question était *que veut voir quelqu'un qui hésite entre cinq
+modes ?* — et la réponse à celle-là n'est pas la carte du prochain match.
+
+**La distinction qui a émergé, et elle survit à l'arbitrage :** le menu principal
+montre des **illustrations** — on n'y choisit pas une partie, on y choisit une
+envie ; les écrans de mode montreraient des **captures** du jeu réel — on y
+prépare un match, et ce qu'on veut alors savoir c'est à quoi il ressemble
+vraiment. Elle est écrite en tête de `ui.gd`.
+
+##### Le texte descriptif déménage dans le cadre, et il répète le titre
+
+Demande d'Adrien, posée « avant toute chose » : la description de **tous** les
+boutons de **tous** les menus quittait le dessous du titre du jeu pour aller
+**dans le cadre de droite, en bas**, en reprenant le libellé du bouton
+sélectionné.
+
+Le cadre est donc à **deux étages** : `_detail_host` occupe tout le haut et
+reçoit le panneau, `_pied` est ancré en bas sous un filet. Ce n'est pas un
+rangement — c'est ce qui permet à une illustration de remplir le cadre **sans
+chasser l'explication**, les deux ayant chacun leur territoire au lieu de se
+disputer le même.
+
+⚠️ **Répéter le titre n'est pas une redondance.** L'œil qui vient de traverser
+l'écran vers l'image a perdu de vue ce qu'il survolait ; le titre répété est ce
+qui referme la boucle. C'est la même raison qui avait fait monter la description
+dans l'en-tête le 2026-08-18 — sauf qu'on sait maintenant que déplacer ne suffit
+pas, il faut **doubler**.
+
+##### L'audit a trouvé dix cadres noirs, et aucun n'était exotique
+
+Une fois les six premières illustrations posées, la question d'Adrien était la
+bonne : *« vérifie L'ENSEMBLE de tous les menus, et indique-moi ceux qui
+n'affichent rien à droite »*. Réponse mesurée, pas estimée : **dix entrées**,
+dont les **cinq « RETOUR »** et les **deux gestes de salon** (créer, rejoindre).
+
+Les cinq RETOUR ont été servis par **un seul changement** — un troisième
+paramètre à `add_back_entry()` — parce qu'ils passaient déjà tous par le même
+verbe. Une entrée qu'on a pris la peine de factoriser une fois se répare une
+fois ; c'est le dividende tardif d'un travail fait en son temps.
+
+⚠️ **`ill_retour` est volontairement DISCRÈTE**, et c'est une décision de
+composition, pas une économie. Elle sert cinq écrans : si elle attirait l'œil
+autant qu'une entrée de mode, elle serait ratée. Mesurée à **3,6 % de pixels
+clairs contre 27,5 % pour `ill_creer`**. Et `creer`/`rejoindre` ont été générées
+**ensemble dans une seule planche puis découpées** — la même porte vue des deux
+côtés, plutôt que deux tirages indépendants qui auraient divergé : c'est leur
+parenté qui dit au joueur, sans un mot, que ce sont deux faces du même geste.
+
+##### Trois captures étaient câblées et ne se sont jamais affichées une seule fois
+
+La table `APERCUS` posait une capture en panneau par défaut sur huit écrans de
+préparation. **Ces huit écrans ont déjà le salon posé en défaut**, et le défaut
+d'écran gagne toujours : le code était mort depuis son écriture, sans erreur et
+sans trace. Retiré.
+
+C'est la **quatrième occurrence** du motif *ce qu'on voit n'a pas de nom, donc
+rien ne le tient* — et la première où le symptôme était l'inverse de l'habituel :
+non pas un cadre vide qu'aucun banc ne voyait, mais un contenu chargé, valide, et
+que personne n'a jamais regardé.
+
+##### Deux défauts trouvés en cours de route, dont un corrigé deux fois
+
+- **Le bouton « lancer la recherche » était grisé.** Corrigé une première fois
+  sur la seule branche signalée ; le défaut est réapparu ailleurs le lendemain.
+  Cause réelle : `_refresh_lobby_block()` porte **trois retours anticipés**, et
+  l'état du lanceur était posé après eux. Il est désormais accordé **en tête**,
+  par `_accorder_l_etat_du_lanceur()`. ⚠️ **Et il a d'abord été déplacé du mauvais
+  endroit** — le code vivait dans `_refresh_player_list()`, appelée *par signal* :
+  le déplacer rendait le bouton insensible à l'arrivée d'un pair. Il est donc
+  appelé **des deux**. Corriger un défaut de rafraîchissement demande de savoir
+  *qui appelle quoi et quand*, pas seulement *où est la ligne fautive*.
+- **Le curseur de la souris disparaissait sous les menus.** Le curseur-torche
+  devait s'ajouter au curseur système, pas le remplacer. La règle est maintenant
+  dérivée à chaque appel — `_un_menu_attend_un_clic()` — au lieu d'être posée et
+  restaurée par paires.
+
+⚠️ **Mes bancs de ces deux correctifs ont été décoratifs trois fois de suite**,
+et toujours pour la même raison : ils reproduisaient l'état *au repos* plutôt que
+l'état *fautif*. Au repos le mode réseau est `LOCAL_SPLITSCREEN`, où le bouton
+doit être cliquable — le banc passait donc au vert avec la règle cassée. Un banc
+de non-régression qu'on n'a pas vu rougir **n'est pas un banc**, c'est une
+formalité ; tous ceux de cette séance ont été sabotés volontairement avant
+livraison.
+
+##### Ce que les suites tiennent désormais
+
+`tools/test_audit_menus.gd` a gagné trois contrôles qui montent une scène réelle
+au lieu de lire un dictionnaire :
+
+| Contrôle | Ce qu'il empêche de revenir |
+|---|---|
+| `_audit_le_cadre_montre_vraiment()` | un panneau alimenté mais invisible |
+| `_audit_aucun_cadre_vide()` | une entrée sans panneau **ni** texte |
+| `_audit_on_peut_lancer_une_recherche()` | un lanceur grisé quand il ne doit pas l'être |
+
+Et `tools/test_viseur.gd` ouvre pour de vrai la pause, un dialogue et une fenêtre
+de choix, au lieu de supposer l'état de l'écran.
 
 ##### Pourquoi aucune suite ne l'a vu, et c'est la partie qui doit changer
 
@@ -8483,6 +8900,74 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Le timecode était déjà réglé** par DA4.2 : il est en registre appareil, donc
   tabulaire par construction. C'est ce que « fonte mono » demandait — la propriété
   voulue est la chasse fixe, pas la famille. *(C — généré, procédé DA1.5)*
+- ✅ **DA4.4 (suite) — le bandeau FATAL débordait de l'écran. Relevé par Adrien
+  le 2026-08-26 en écran scindé, mesuré et CORRIGÉ le jour même.**
+
+  `FATAL — ARBALÈTE` fait **438 px de texte**, porté à **657 px d'étendue** par
+  l'agrandissement de 1,5×. Une vue en écran scindé fait 957 px, soit **478 px
+  visibles de chaque côté du joueur** : le bandeau s'étale de −150 à **+507 px**
+  et sort du cadre à droite.
+
+  ⚠️ **Et il déborde le plus au moment précis où il apparaît.** La caméra zoome
+  jusqu'à **2,8×** pendant le ralenti de la killcam — la demi-largeur visible
+  tombe alors à 171 px de monde pour un bandeau qui en fait 657.
+
+  **La cause est structurelle, pas un réglage à retoucher.** Le rect du `Label`
+  **épouse son texte** — `Control.size` est borné par la taille minimale — donc
+  centrer *dans* ce rect ne déplace rien : le texte part de `position` et grandit
+  vers la droite uniquement. L'offset `-100` avait été calibré pour le mot
+  « FATAL » seul (130 px) ; avec le nom de l'arme le texte triple, et tout part
+  du même côté.
+
+  > *Formulation corrigée par DA2 le 2026-08-26 : ce paragraphe disait « le Label
+  > n'a pas de largeur ». Il en a une, et c'est le fait d'épouser le texte qui
+  > rend le centrage inopérant. Conclusion et correctif inchangés — mais une
+  > feuille de route est relue par des gens qui n'iront pas vérifier, et un
+  > mécanisme faux y survit plus longtemps qu'un chiffre faux.*
+
+  Trois valeurs en dur, toutes calibrées pour un bandeau de 200 px qui n'existe
+  que sans arme : l'offset `Vector2(100, 100)`, le pivot `Vector2(100, 50)`, et
+  **le cartouche `300 × 150`**. Ce dernier est donc **plus étroit que son propre
+  texte pour trois armes sur quatre**, alors que le commentaire au-dessus promet
+  qu'il déborde du mot. C'est la **sixième occurrence** du motif *une valeur
+  absolue là où il fallait un rapport* — et celle-ci a été introduite par DA4.4
+  elle-même, en 2026-08-25, sans que rien ne la mesure.
+
+  **Correctif livré** : `Player.geometrie_du_bandeau()`, un `static func` qui rend
+  `mot`, `marge`, `plaque` et `enfle`. Aucune image à refaire.
+
+  ⚠️ **La vraie correction est que le calcul a un NOM.** Il vivait dispersé dans
+  `die()` : aucun banc ne pouvait l'atteindre sans tuer un joueur. C'est la
+  quatrième occurrence du motif du 2026-08-19 — *ce qu'on voit n'a pas de nom,
+  donc rien ne le tient* — et l'extraction vaut autant que les rapports qu'elle
+  contient.
+
+  **La marge est constante, la plaque non.** C'est ce qui distingue un cartouche
+  d'un surlignage : la même plaque autour de « FATAL » et de « FATAL — ARBALÈTE »
+  doit montrer la même **bordure**, pas la même proportion. Les deux coefficients
+  rendent exactement les 300 × 150 d'origine sur le mot seul — la correction ne
+  redessine pas ce qui avait été validé, elle le fait tenir sur le reste.
+
+  ⚠️ **Et le banc a attrapé une faute dans la correction elle-même.** Le premier
+  jet bornait l'agrandissement sur la largeur du **texte** : un libellé très long
+  ressortait à 518 px de chaque côté pour 478 disponibles, la plaque étant plus
+  large de deux marges. **C'est l'erreur d'origine — mesurer le mot alors que
+  c'est la plaque qui est dessinée — commise un cran plus loin, par celui qui
+  venait de la diagnostiquer.** Un correctif n'est pas immunisé contre le motif
+  qu'il corrige.
+
+  **Deux pièges de banc, dont un inédit, consignés dans `tools/test_bandeau_fatal.gd` :**
+
+  1. **Nommer une classe dans un banc `--script` en fait une dépendance de
+     COMPILATION.** Godot compile `player.gd` pendant qu'il compile le banc, donc
+     avant qu'aucun autoload existe — et `player.gd` nomme `NetworkManager`.
+     Différer `_init()` n'y change rien : la faute est commise à la compilation.
+     Le piège cousin déjà consigné porte sur l'ordre d'**exécution** ; celui-ci
+     porte sur l'ordre de **compilation** et se répare autrement — charger le
+     script par son chemin, à l'exécution.
+  2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
+     de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
+     confond avec « ça travaille ». *(S)*
 - **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
   d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
   devient une pièce signature. *(S)*
@@ -8509,11 +8994,39 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   **Déplacer une donnée déplace tout ce qui la regarde**, et rien dans le
   langage ne le signale.
 
-  ⬜ **Reste : « effleuré : 13 px ».** La donnée existe (`player.gd`,
-  `last_fatal_perp`) mais elle est consommée sur place, en espace-monde, pour un
-  label de l'arène. L'amener jusqu'à l'écran de fin demande un chemin
-  `player` → `game_state` → `ui`, c'est-à-dire deux fichiers du domaine « game
-  feel ». **À demander avant de le faire.** *(S)*
+  ✅ **« Effleuré : 13 px » livré le 2026-08-26**, sur autorisation d'Adrien de
+  toucher les deux fichiers de « game feel ». Le chemin
+  `player` → `game_state` → `ui` tient en **quatre lignes de logique** : un appel
+  de groupe dans `die()`, un champ et un verbe dans `game_state`, un paramètre de
+  plus à `poser_bilan()`.
+
+  **La donnée existait depuis V2.9 et mourait dans l'arène.** Elle s'affichait
+  deux secondes au-dessus d'un cadavre, puis `last_fatal_perp` retombait à `-1`.
+  Or le moment où « j'y étais presque » travaille n'est pas celui-là : c'est
+  **celui où le joueur décide de rejouer ou de partir**. Un moteur de rematch
+  affiché pendant qu'on regarde encore sa propre mort arrive trop tôt.
+
+  ⚠️ **L'ordre des deux lignes est tout le correctif.** Le report est fait
+  **avant** la remise à `-1` qui suit — cette remise est ce qui garantit qu'un
+  effleurement ne resserve pas à la manche d'après, et l'inverser donnerait « la
+  marge d'un tir d'il y a trois manches » sans qu'aucune erreur ne le dise.
+
+  ⚠️ **L'absence est le cas ORDINAIRE, pas le cas d'erreur.** V2.9 ne connaît
+  cette valeur que sur la machine qui a **simulé** la balle fatale : en ligne, le
+  vainqueur ne l'a le plus souvent pas. La colonne entière disparaît alors —
+  afficher « -1 PX », ou même un tiret poli, ferait passer un silence normal pour
+  une anomalie à chaque match. Même règle que la série, et pour la même raison.
+
+  **Trois registres, trois natures**, ce qui était le fond de l'item : le score
+  est un **compteur** (appareil, tabulaire, teinté par joueur), la série un
+  **cri** (enseigne, ambre), la marge une **mesure** — appareil, mais en lumière
+  et non en couleur de camp : elle n'appartient à personne, elle dit de combien
+  le tir a failli manquer, pas qui l'a tiré.
+
+  **Et elle n'est passée qu'à la fin du match.** L'appel d'entre-deux-manches la
+  laisse volontairement inconnue : l'arène vient d'écrire « à N px du centre »
+  au-dessus du corps, et la répéter trois secondes plus tard dirait deux fois la
+  même chose au même moment. *(S)*
 - **DA4.8 Les vignettes de la galerie encadrées** ✅ **livrée le 2026-08-25** —
   et elle a fait tomber une infraction à une décision actée.
 
@@ -8616,10 +9129,49 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   durées posées à la main (0,06 / 0,45 / 0,9 s) passent aux trois crans de
   l'échelle.
 
-  ⬜ **Reste cinq sites** — `menu_title.gd` (2), `map_editor.gd` (2),
-  `audio_manager.gd` (1), plus deux dans `ui.gd`. Aucun n'est difficile ; ils
-  demandent seulement de connaître la valeur de départ, `Charte.animer()`
-  passant par `tween_method` et non par `tween_property`.
+  ✅ **Fermée le 2026-08-26 pour tout le domaine de l'interface.** Recompté au
+  passage : le texte disait « cinq sites » et en listait sept — un décompte
+  écrit à la main dans la même phrase que la liste qui le contredit. Six ont été
+  convertis, `menu_title.gd` (2), `map_editor.gd` (2), `ui.gd` (2) ; **plus un
+  seul `set_trans` ne subsiste dans un fichier d'écran.**
+
+  ⚠️ **Une partie des sites n'avait aucun moyen de se convertir, et le constat
+  d'origine ne le disait pas.** `Charte.animer()` écrit par `set_indexed` : elle
+  exige un chemin de propriété. Les deux grandeurs de `menu_title.gd` se posent
+  par `_poser_embrasement()` et `_poser_flambee()`, qui alimentent un shader —
+  aucune propriété à nommer. Le chiffre « 7 contre 31 » se lisait comme une
+  négligence des sites d'appel ; il mesurait en partie **un trou dans le point
+  d'entrée**. `Charte.animer_via()` le comble, et le comptage redevient honnête.
+
+  ⚠️ **`ENTREE` sert une extinction, et il ne faut pas le « corriger ».** Le nom
+  des courbes dit leur emploi ordinaire, pas leur forme : `ENTREE` chute vite
+  puis s'attarde — la rémanence exacte d'une flambée. `SORTIE` tiendrait la
+  pleine lumière puis couperait net, c'est-à-dire une flambée qu'on éteint à
+  l'interrupteur. Le commentaire est posé sur place, parce qu'un lecteur qui
+  n'irait qu'au nom retomberait dans le piège.
+
+  ⚠️ **Une différence de comportement, sous un délai.** `tween_property` relève
+  la valeur de départ quand le tweener DÉMARRE ; `Charte.animer()` la fige à
+  l'appel. Sur le réveil des surfaces de M10, qui porte un délai par bloc, les
+  deux coïncident — rien ne touche la silhouette entre-temps. Ailleurs, ils
+  divergeraient sans la moindre erreur. Écrit sur place.
+
+  **La durée de 0,55 s du pouls des lanceurs passe au cran long** (0,30) : un
+  geste qui dure deux fois plus que tout le reste de l'écran ne se lit pas comme
+  la même main, et c'était le point de l'item.
+
+  ⬜ **Reste un site, et il n'est pas à moi** — `audio_manager.gd`, domaine
+  « game feel », **titulaire : la session DA3 depuis le 2026-08-26**. Il est
+  explicitement exclu par le banc, qui porte la liste : le retirer de
+  `_HORS_PERIMETRE` suffira le jour où cette session le décide. Les quatre
+  fichiers d'arène (`player.gd` 11, `bullet.gd` 7, `game_state.gd` 2) sont hors
+  périmètre pour la même raison.
+
+  **Un banc tient désormais l'écart**, dans `tools/test_charte.gd` : aucun
+  fichier d'écran n'emploie plus les courbes de Godot, et `animer_via()` fait
+  bien suivre la COURBE — contrôlé au quart du parcours, où `ENTREE` a déjà
+  dépassé la moitié de sa course là où une interpolation linéaire vaudrait 0,25.
+  Vérifié rouge avant livraison, sur les deux versants. *(S)*
 
   **Et l'item demandait autre chose que ce qu'il dit.** « Un seul motif de
   fondu » suppose que le problème est le fondu ; il est plus large — c'est
@@ -8636,8 +9188,15 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
   lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
   généré, procédé DA1.5)*
-- **DA4.15 L'éditeur de cartes aligné** — icônes d'outils dessinées, palette de
-  l'éditeur sous la bible. *(S + G)*
+- **DA4.15 L'éditeur de cartes aligné** 🟡 **matière livrée le 2026-08-26** —
+  quatorze icônes d'outils (`assets/ui/icones/outil_*.png`), même procédé que
+  les icônes d'armes déjà livrées : masques en niveaux de gris, fond
+  transparent, 128×128, la teinte posée par le code. La famille symétrie
+  (miroir horizontal/vertical/diagonal, rotation) et la paire annuler/refaire
+  générées ensemble puis découpées — même raison que `creer`/`rejoindre` en
+  DA4.13 : des variantes d'un même geste divergeraient si tirées séparément.
+  Reste : câblage dans l'éditeur et vérification de lisibilité à 20 px par
+  DA4. Palette de l'éditeur sous la bible pas encore traitée. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
   quelque chose, en effet : le contraire de ce qu'on voulait.
 
@@ -8699,6 +9258,50 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   - **Le bouton ne prend jamais la couleur du registre.** Il ne détruit rien, il
     ferme. Un « OK » rouge se lit comme une action dangereuse alors qu'il n'y a
     plus rien à décider. *(S)*
+- **DA4.19 Les icônes dessinées, et la mort du dernier emoji** ✅ **livrée le
+  2026-08-26** — *item ouvert après coup, sur demande d'Adrien : « remplace tous
+  les icônes dans les barres de menu par des vraies images ». Le travail existait
+  sans ligne pour le porter ; c'est le motif consigné en DA4.13, corrigé ici.*
+
+  **Le dépôt portait cinq emojis** — 🔫 🏹 ☄️ 💥 🔦 — dans les boutons d'arme et
+  l'indicateur de torche. Ils paraissent inoffensifs et ils étaient le marqueur
+  amateur le plus visible qui restait, pour trois raisons **cumulées** :
+
+  1. **Ils sont rendus par la fonte emoji du SYSTÈME.** Tout le travail de DA1.2
+     — deux fontes choisies, licences, axe variable — les contourne. C'étaient
+     les seuls glyphes du jeu que la charte n'atteignait pas.
+  2. **Ils arrivent en couleur pleine.** La règle 1 plafonne la saturation à
+     75 % parce que le 100 % est « la signature du personne n'a choisi » ; un
+     emoji est à 100 % par construction, et il porte en plus des teintes que la
+     charte réserve à des sens précis.
+  3. **Ils diffèrent d'une machine à l'autre.** Le même code montrait un
+     pistolet gris sur macOS, un autre sur Windows, une case vide sur un Linux
+     sans fonte emoji. **Une identité visuelle ne peut pas dépendre du système
+     d'exploitation du joueur.**
+
+  `menu_icones.gd` rend une texture pour un nom, et rien d'autre : aucune mise en
+  page, aucune couleur, aucune taille — ce sont des décisions de site d'appel.
+  La teinte est posée par l'appelant sur un **masque gris**, donc **un seul
+  fichier sert les deux joueurs**, bleu d'un côté rouge de l'autre. Discipline
+  DA1.5 : l'image fournit la matière, le code garde la couleur.
+
+  ⚠️ **Indexé sur le slug, jamais sur le nom affiché.** « Arbalète » porte un
+  accent et une majuscule ; dériver un chemin de fichier d'un libellé
+  traduisible garantit qu'un jour le renommage d'un bouton fera disparaître une
+  icône, sans erreur et sans que le lien soit visible. `weapon_data.gd` avait
+  déjà payé cette leçon.
+
+  ⚠️ **`icon_max_width`, et non une taille de contrôle.** Un `Button` ne
+  redimensionne pas son icône : sans ce réglage il l'affiche à sa taille native —
+  128 px dans un bouton haut de 40. **C'est le cousin exact du piège
+  `EXPAND_KEEP_SIZE`** payé par DA1 le 2026-08-24 : on pose une taille, elle est
+  ignorée, et l'écran affiche autre chose.
+
+  **Le libellé perd son emoji dans tous les cas**, icône cuite ou non : le garder
+  « en attendant » aurait laissé le dépôt dans l'état qu'on corrigeait. Le repli
+  est la moitié du travail — une icône absente retombe sur le texte, et
+  `manquantes()` la nomme dans le panneau F3. Câbler, taire, diagnostiquer.
+  *(C — généré, procédé DA1.5)*
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 

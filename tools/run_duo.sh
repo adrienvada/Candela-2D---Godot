@@ -114,7 +114,7 @@ hote_pid=""
 client_pid=""
 
 nettoyer() {
-  for pid in "$hote_pid" "$client_pid" "${client2_pid:-}"; do
+  for pid in "$hote_pid" "$client_pid" "${client2_pid:-}" "${guetteur_pid:-}"; do
     [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null
   done
   # **Vérifier que le nettoyage a nettoyé.** Un `kill -9` sur le mauvais PID
@@ -154,7 +154,15 @@ if [ "${1:-}" = "--coupure" ]; then
 elif [ "${1:-}" = "--reconnexion" ]; then
   MODE_HOTE="--host-reconnexion"
   MODE_CLIENT="--join-ralenti"
-  TITRE="L'adversaire quitte pendant la killcam et revient (famille 4.1)"
+  TITRE="Il quitte pendant la killcam et revient PENDANT (famille 4.1)"
+elif [ "${1:-}" = "--reconnexion-tardive" ]; then
+  # La 4.2 de la checklist : « B rejoint alors que A est déjà sur l'écran de
+  # fin ». Elle n'était pas un scénario — elle était ce que la 4.1 exerçait sans
+  # le savoir, un `sleep 18` fixe la faisant tomber quatre secondes APRÈS la fin
+  # de la killcam. La séparer coûte trois lignes et rend son vert honnête.
+  MODE_HOTE="--host-reconnexion-tardive"
+  MODE_CLIENT="--join-ralenti"
+  TITRE="Il quitte pendant la killcam et revient APRÈS (famille 4.2)"
 elif [ "${1:-}" = "--spam" ]; then
   MODE_HOTE="--host-spam"
   MODE_CLIENT="--join-spam"
@@ -176,6 +184,11 @@ else
   MODE_CLIENT="--join"
   TITRE="Match en ligne à deux instances (ENet, 127.0.0.1)"
 fi
+
+# Les deux variantes partagent tout sauf l'instant du retour : un seul prédicat,
+# plutôt que trois comparaisons de chaîne qui finiront par diverger.
+RECO=0
+case "${1:-}" in --reconnexion|--reconnexion-tardive) RECO=1 ;; esac
 
 echo "── $TITRE ──  (port $PORT)"
 
@@ -225,29 +238,49 @@ echo "hôte prêt : $(grep -m1 '^CODE:' "$HOTE_LOG")"
   >"$CLIENT_LOG" 2>&1 &
 client_pid=$!
 
-# Famille 4.1 : le premier client se tue pendant la killcam, un SECOND revient.
-# C'est le seul scénario à trois processus, et le retour doit être tenté pendant
-# que l'hôte est encore dans sa séquence de fin — sinon on testerait une simple
-# jointure sur un salon au repos, pas une reconnexion.
-if [ "${1:-}" = "--reconnexion" ]; then
-  # `exec` n'est PAS un détail de style : sans lui, `$!` capture le PID du
-  # SOUS-SHELL, pas celui de Godot. Le nettoyage tuait donc le sous-shell et
-  # laissait Godot vivant — un orphelin qui garde le port 7777 et empoisonne
-  # tous les lots suivants. Avec `exec`, le sous-shell est REMPLACÉ par Godot :
-  # `$!` désigne le processus qu'on croit tuer.
-  ( sleep 18
-    exec "$GODOT" --headless --path . "$BANC" -- --join 127.0.0.1 --transport enet --no-eos \
-      >"$TMP/client2.log" 2>&1 ) &
+# Familles 4.1 et 4.2 : le premier client se tue pendant la killcam, un SECOND
+# revient. Seul scénario à trois processus, et **l'instant du retour EST le
+# scénario** — c'est lui, et lui seul, qui sépare la 4.1 de la 4.2.
+#
+# ⚠️ **Il était ordonnancé par `sleep 18`, et ce délai fixe a fait mesurer à ce
+# banc autre chose que son titre pendant une semaine.** La séquence de fin de
+# l'hôte dure une douzaine de secondes et démarre elle-même après un lancement de
+# Godot, un décompte et un tir : horodaté le 2026-08-26, le revenant arrivait
+# **quatre secondes après** la fin de la killcam. Le banc était vert, sur la 4.2.
+# Ramené à douze secondes, il rougissait deux fois sur deux.
+#
+# La forme juste est celle que ce fichier applique déjà à `CODE:` quinze lignes
+# plus haut : **attendre une CONDITION**. L'hôte imprime `RETOUR:` quand il veut
+# le revenant, un guetteur pose le jeton, et le revenant — DÉJÀ DÉMARRÉ, en
+# attente sur ce fichier — rejoint dans la demi-seconde.
+#
+# Le démarrer tout de suite est ce qui retire du chemin critique les deux à
+# quatre secondes de lancement de Godot, lesquelles suffisaient à faire glisser
+# le retour hors de la killcam. Et comme il n'y a plus de `sleep`, il n'y a plus
+# de sous-shell : `$!` désigne Godot directement, et le piège de l'orphelin qui
+# gardait le port — celui qui imposait `exec` ici — n'a plus d'objet.
+if [ "$RECO" -eq 1 ]; then
+  JETON="$TMP/retour"
+  "$GODOT" --headless --path . "$BANC" -- --join-retour 127.0.0.1 --jeton "$JETON" \
+    --transport enet --no-eos >"$TMP/revenant.log" 2>&1 &
   client2_pid=$!
+  ( while kill -0 "$hote_pid" 2>/dev/null; do
+      if grep -q '^RETOUR:' "$HOTE_LOG" 2>/dev/null; then : > "$JETON"; exit 0; fi
+      sleep 0.2
+    done ) &
+  guetteur_pid=$!
 fi
 
-# Attendre les deux, sans dépasser le plafond. `wait` seul n'a pas de délai.
+# Attendre TOUS les processus du lot, sans dépasser le plafond. `wait` seul n'a
+# pas de délai. Le revenant en fait partie : ne pas l'attendre, c'était noter un
+# lot dont un tiers travaillait encore.
 fini=0
 while [ "$fini" -lt "$PLAFOND" ]; do
-  hote_vivant=0; client_vivant=0
-  kill -0 "$hote_pid" 2>/dev/null && hote_vivant=1
-  kill -0 "$client_pid" 2>/dev/null && client_vivant=1
-  [ "$hote_vivant" -eq 0 ] && [ "$client_vivant" -eq 0 ] && break
+  vivants=0
+  for pid in "$hote_pid" "$client_pid" "${client2_pid:-}"; do
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && vivants=$((vivants + 1))
+  done
+  [ "$vivants" -eq 0 ] && break
   sleep 1
   fini=$((fini + 1))
 done
@@ -256,23 +289,52 @@ if [ "$fini" -ge "$PLAFOND" ]; then
   echo "ÉCHEC — un processus n'est jamais sorti (plafond ${PLAFOND}s)"
   kill -0 "$hote_pid" 2>/dev/null && echo "  · l'hôte pend encore"
   kill -0 "$client_pid" 2>/dev/null && echo "  · le client pend encore"
+  [ -n "${client2_pid:-}" ] && kill -0 "$client2_pid" 2>/dev/null \
+    && echo "  · le revenant pend encore"
   exit 1
 fi
 
 wait "$hote_pid"; code_hote=$?
 wait "$client_pid"; code_client=$?
+code_revenant=0
+[ -n "${client2_pid:-}" ] && { wait "$client2_pid"; code_revenant=$?; }
+
+# **« Je n'ai pas pu mesurer » n'est pas « le jeu est cassé », et le banc le dit
+# maintenant lui aussi.** Le code 3 servait au port occupé ; il sert désormais
+# aussi au placement du retour, qui dépend du tempo de la machine et non du code.
+# Un vert emprunté à la famille d'à côté serait pire qu'un rouge — et un rouge
+# dû à la charge se ferait débrancher.
+if [ "$code_hote" -eq 3 ]; then
+  echo "REPORTÉ — la mesure n'a pas eu lieu :"
+  grep -m1 'MESURE NON FAITE' "$HOTE_LOG" | sed 's/^/    /'
+  echo "    Ce n'est pas une panne : le scénario n'a pas pu être exercé."
+  exit 3
+fi
+
+# Le troisième journal est NOTÉ comme les deux autres.
+#
+# ⚠️ Il était produit et jamais lu, et ça a coûté une entrée fausse dans la
+# feuille de route : le revenant jouait alors `--join`, le scénario NOMINAL, face
+# à un hôte qui sort une quinzaine de secondes après son arrivée. Son journal se
+# remplissait de « Trying to call an RPC while no multiplayer peer is active » —
+# en aval de cette sortie et de rien d'autre — et ce symptôme a été consigné
+# comme un défaut du jeu. **Un journal qu'on écrit sans le lire est pire qu'un
+# journal absent : il a l'air d'une preuve.**
+cotes="hote client"
+[ -n "${client2_pid:-}" ] && cotes="$cotes revenant"
 
 echec=0
-for cote in hote client; do
+for cote in $cotes; do
   if [ "$cote" = "hote" ]; then log="$HOTE_LOG"; code="$code_hote"; nom="HÔTE"
-  else log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"; fi
+  elif [ "$cote" = "client" ]; then log="$CLIENT_LOG"; code="$code_client"; nom="CLIENT"
+  else log="$TMP/revenant.log"; code="$code_revenant"; nom="REVENANT"; fi
 
   erreurs="$(grep -c 'SCRIPT ERROR' "$log" || true)"
   cris="$(grep -c 'at: push_error (' "$log" || true)"
   # Le client de la coupure se tue lui-même : sortir en 0 signifierait qu'il
   # est parti proprement, donc que le test n'a PAS exercé la perte de pair.
   if [ "$cote" = "client" ] && { [ "${1:-}" = "--coupure" ] || [ "${1:-}" = "--ralenti" ] \
-      || [ "${1:-}" = "--reconnexion" ]; }; then
+      || [ "$RECO" -eq 1 ]; }; then
     if [ "$code" -eq 0 ]; then
       printf '%-8s ÉCHEC — sorti proprement, la coupure n'"'"'a pas eu lieu\n' "$nom"
       echec=1

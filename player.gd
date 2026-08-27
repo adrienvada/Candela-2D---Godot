@@ -49,6 +49,60 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+## DA4.4 — la géométrie du bandeau FATAL, **nommée pour être vérifiable**.
+##
+## Elle vivait dispersée dans `die()` sous forme de quatre littéraux — offset
+## `(100, 100)`, pivot `(100, 50)`, plaque `300 × 150`, agrandissement `1,5`.
+## Tous calibrés pour le mot « FATAL » seul, tous faux dès qu'une arme signe le
+## kill : `FATAL — ARBALÈTE` sortait de l'écran en écran scindé.
+##
+## ⚠️ **Le défaut a survécu parce que ce calcul n'avait pas de nom.** Aucun banc
+## ne pouvait l'atteindre : il fallait tuer un joueur pour l'exécuter. C'est la
+## quatrième occurrence du motif consigné le 2026-08-19 — *ce qu'on voit n'a pas
+## de nom, donc rien ne le tient*. La correction est autant ce `static func` que
+## les rapports qu'il contient.
+##
+## Rend `mot` (le rect du texte), `marge`, `plaque` et `enfle`.
+static func geometrie_du_bandeau(texte: String, fonte: Font,
+		corps: int) -> Dictionary:
+	var largeur := 1.0
+	var hauteur := float(corps)
+	if fonte != null:
+		largeur = fonte.get_string_size(texte, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			corps).x
+		hauteur = fonte.get_height(corps)
+	var mot := Vector2(largeur, hauteur)
+	# ⚠️ **Une MARGE constante, pas un rapport.** Un cartouche se reconnaît à
+	# l'épaisseur de sa bordure : la même plaque autour de « FATAL » et de
+	# « FATAL — ARBALÈTE » doit montrer la même marge, pas la même proportion.
+	# Les deux coefficients rendent exactement les 300 × 150 d'origine sur le mot
+	# seul — la correction ne change rien à ce qui a été validé, elle le fait
+	# seulement tenir sur le reste.
+	var marge := Vector2(corps * 1.2, corps * 0.45)
+	var plaque := mot + marge * 2.0
+	# ⚠️ **L'agrandissement se borne sur la PLAQUE, pas sur le mot.**
+	#
+	# Premier jet : la borne divisait `LARGEUR_UTILE_BANDEAU` par la largeur du
+	# TEXTE. Le banc l'a attrapée aussitôt — un libellé très long ressortait à
+	# 518 px de chaque côté pour 478 disponibles. La raison est exactement celle
+	# du défaut d'origine, un cran plus loin : **on mesurait le mot alors que
+	# c'est la plaque qui est dessinée.** Elle est plus large de deux marges, et
+	# ces deux marges suffisent à sortir du cadre.
+	#
+	# 1,5× reste la valeur voulue ; c'est l'ABSENCE de cette borne qui a laissé
+	# le défaut invisible jusqu'à ce qu'une arme au nom long le révèle.
+	return {
+		"mot": mot,
+		"marge": marge,
+		"plaque": plaque,
+		"enfle": minf(1.5, LARGEUR_UTILE_BANDEAU / maxf(plaque.x, 1.0)),
+	}
+
+
+## La largeur d'une vue en écran scindé, le cas le plus étroit du jeu (957 px),
+## moins une marge de respiration. Le bandeau ne la dépasse jamais.
+const LARGEUR_UTILE_BANDEAU := 900.0
+
 ## V2.9 — Distance à l'axe du dernier tir jugé fatal, écrite par la balle qui
 ## l'a simulé ici, consommée (et remise à -1) par die(). Cosmétique : chez le
 ## client c'est la simulation locale qui parle, pas l'arbitrage de l'hôte.
@@ -479,16 +533,6 @@ func _ready():
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 
-	# ⚠️ **Les streaks de vitesse (V5.9) sont RETIRÉS avec le sprint** (Adrien,
-	# 2026-08-26), et pas seulement éteints. Le premier jet se contentait de
-	# figer leur intensité à zéro — mais le rect couvre tout l'écran et reste
-	# visible : son fragment shader s'exécute sur chaque pixel, à intensité
-	# nulle comme à un. C'était donc une passe plein écran par joueur pour un
-	# effet qui ne peut plus se déclencher, sur un jeu qui dispose de 3,4 ms de
-	# marge sur ses pires images. **Un effet éteint qui rastérise encore n'est
-	# pas éteint, il est invisible — ce n'est pas la même chose.**
-	
-	
 	# Configuration de la Lampe Torche Principale (Faisceau Avant)
 	flashlight.enabled = false
 	flashlight.shadow_enabled = true
@@ -1149,10 +1193,11 @@ func _physics_process(delta):
 		
 	if can_move:
 		var input_dir = input_provider.get_movement_vector()
-		# ⚠️ **Plus de multiplicateur : le sprint est supprimé** (Adrien,
-		# 2026-08-26). La vitesse ne dépend plus que de l'arme et de
-		# l'éblouissement — deux causes qui se lisent, là où le sprint doublait
-		# la vitesse sans que l'adversaire puisse le voir venir.
+		# ⚠️ **La vitesse ne dépend que de deux causes, et toutes deux se
+		# LISENT** : l'arme qu'on porte et l'éblouissement qu'on subit. Rien ne
+		# doit accélérer un joueur sans que l'adversaire puisse le voir venir —
+		# dans un jeu dont la seule information est la lumière, une accélération
+		# muette est une information retirée à l'autre.
 		var current_speed = speed
 		if shoot_cooldown > 0 and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
@@ -1169,10 +1214,9 @@ func _physics_process(delta):
 			var aim_lerp_speed = 18.0 * (1.0 - dazzle_amount * 0.6)
 			rotation = lerp_angle(rotation, target_angle, min(1.0, delta * aim_lerp_speed))
 			
-		# ⚠️ **Courir éteignait la torche ; le sprint parti, la règle disparaît
-		# avec lui** (Adrien, 2026-08-26). C'était une contrepartie : la vitesse
-		# se payait en cécité. Sans sprint, il n'y a plus rien à payer, et la
-		# torche n'obéit plus qu'au bouton.
+		# La torche n'obéit qu'au bouton : **aucun autre état du joueur ne
+		# l'éteint.** Elle montre et elle trahit ; le moment est un choix, et il
+		# reste entier.
 		flashlight_on = input_provider.is_flashlight_pressed()
 
 		if role == NetRole.PREDICTED:
@@ -1194,16 +1238,16 @@ func _physics_process(delta):
 	# > 100 px en un tick : téléportation (spawn, correction sèche), pas un pas.
 	if step_moved > 0.5 and step_moved < 100.0:
 		step_distance_accumulated += step_moved
-		# ⚠️ **Une seule distance depuis la suppression du sprint (2026-08-26).**
-		# Elle valait 60 px en sprint, 45 en marche — et l'état n'étant pas
-		# répliqué, l'adversaire interpolé retombait de toute façon sur 45. Le
-		# sprint parti, la valeur cesse d'être une branche.
+		# ⚠️ **Une seule distance, et surtout pas une branche.** Le seuil doit
+		# être le même pour le joueur simulé et pour l'adversaire interpolé : un
+		# pas qui se déclenche plus tôt d'un côté que de l'autre rend
+		# l'information asymétrique — l'un entend et piste, l'autre pas.
 		var step_dist := 45.0
 		if step_distance_accumulated >= step_dist:
 			step_distance_accumulated = 0.0
-			# Fourchette fixe. Elle passait par un facteur qui valait plus que 1
-			# en sprint ; le sprint parti, ce facteur ne variait plus et ne
-			# faisait plus que suggérer une modulation inexistante.
+			# Fourchette fixe : rien ne module la hauteur du pas. **Un facteur
+			# qui ne varie jamais suggère une modulation qui n'existe pas** — il
+			# coûte une relecture à chaque passage, et il en promet une.
 			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.95, 1.05)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
@@ -1238,10 +1282,10 @@ func _physics_process(delta):
 	# ⚠️ **Ce n'est pas une animation de remplacement, c'est la bonne réponse à
 	# la contrainte.** L'item demandait quatre images de marche ; quatre images
 	# FIXES ne peuvent pas rester en phase avec un détecteur de pas qui compte
-	# une DISTANCE (45 px, 60 en sprint) et non un temps. Le son du pas,
+	# une DISTANCE (45 px) et non un temps. Le son du pas,
 	# l'empreinte au sol et la bosse de rétrodiffusion tombent déjà ensemble
 	# juste au-dessus ; le roulis se dérive du même accumulateur, donc il tombe
-	# avec eux — à toutes les vitesses, sprint compris, et sans un réglage.
+	# avec eux — à toutes les vitesses, et sans un réglage.
 	#
 	# ⚠️ **Et il ne peut pas mentir sur la visée.** Un roulis se fait en
 	# TRANSLATION le long de l'axe local Y, jamais en rotation : `rotation` dit
@@ -1320,8 +1364,6 @@ func _physics_process(delta):
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	# `not is_sprinting` retiré avec le sprint : on ne pouvait pas tirer en
-	# courant, il n'y a plus de course.
 	if can_move and presse and shoot_cooldown <= 0:
 		shoot()
 	elif can_move and presse and not _detente_pressee and _percu_ici():
@@ -1598,7 +1640,24 @@ func die(killer: Node2D):
 	settings.outline_color = Charte.NOIR
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.position = global_position - Vector2(100, 100)
+	# DA4.4 (corrigé le 2026-08-26) — **le bandeau se MESURE au lieu d'être
+	# supposé.** Il sortait de l'écran en écran scindé, relevé par Adrien.
+	#
+	# Trois littéraux — l'offset, le pivot, la taille du cartouche — avaient été
+	# calibrés pour le mot « FATAL » seul, 130 px de large. Avec le nom de l'arme,
+	# `FATAL — ARBALÈTE` fait 438 px : le texte triplait et **partait entièrement
+	# vers la droite**, jusqu'à +507 px pour 478 px visibles de chaque côté du
+	# joueur en écran scindé.
+	#
+	# ⚠️ **Le centrage n'était pas absent, il était INOPÉRANT.** Le rect d'un
+	# `Label` épouse son texte — `Control.size` est borné par la taille minimale —
+	# donc `HORIZONTAL_ALIGNMENT_CENTER` centre le texte dans une boîte qui a
+	# exactement sa largeur : il ne déplace rien. Ce qu'il fallait centrer, c'est
+	# la boîte sur le joueur, et cela demande de connaître sa largeur.
+	var geo := geometrie_du_bandeau(lbl.text, settings.font, settings.font_size)
+	var mot: Vector2 = geo["mot"]
+	# Au-dessus du joueur et centré sur lui, quelle que soit la longueur du mot.
+	lbl.position = global_position - Vector2(mot.x * 0.5, mot.y + 30.0)
 	lbl.z_index = 200
 
 	
@@ -1625,9 +1684,20 @@ func die(killer: Node2D):
 		plaque.show_behind_parent = true
 		plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Débordant du mot : une plaque au ras du texte se lit comme un surlignage.
-		# Les proportions suivent celles du fichier (512 × 256).
-		plaque.size = Vector2(300.0, 150.0)
-		plaque.position = Vector2(-50.0, -34.0)
+		#
+		# ⚠️ **La marge est constante, la taille non — et c'est l'inverse qui était
+		# écrit.** La plaque valait `300 × 150` quel que soit le texte : elle était
+		# donc **plus étroite que son propre mot pour trois armes sur quatre**,
+		# alors que le commentaire ci-dessus promet qu'elle déborde. Un cartouche
+		# se reconnaît à l'épaisseur de sa bordure, pas à un rapport : la même
+		# plaque autour de « FATAL » et de « FATAL — ARBALÈTE » doit montrer la
+		# même marge, pas la même proportion.
+		#
+		# Les deux coefficients sont réglés pour rendre EXACTEMENT les 300 × 150
+		# d'origine sur le mot seul — la correction ne change donc rien à ce
+		# qu'Adrien a validé hier, elle le fait seulement tenir sur les autres.
+		plaque.size = geo["plaque"]
+		plaque.position = -geo["marge"]
 		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
 		# `CARMIN` et non `ROUGE` : c'est le rouge vu à l'intensité d'une chose qui
 		# ne s'éclaire plus elle-même, et le mot en `ROUGE` doit ressortir dessus.
@@ -1641,8 +1711,18 @@ func die(killer: Node2D):
 	
 	var txt_tw = create_tween().set_parallel(true)
 	lbl.scale = Vector2.ZERO
-	lbl.pivot_offset = Vector2(100, 50)
-	txt_tw.tween_property(lbl, "scale", Vector2(1.5, 1.5), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Le pivot au MILIEU : un pivot fixe à 100 px faisait grandir le bandeau
+	# depuis un point situé quelque part dans le mot, donc toujours vers la
+	# droite. Au centre, il enfle autour du joueur.
+	lbl.pivot_offset = mot * 0.5
+	# ⚠️ **L'agrandissement se borne à ce que la vue peut montrer.** 1,5× reste la
+	# valeur voulue ; `LARGEUR_UTILE` est la largeur d'une vue en écran scindé, le
+	# cas le plus étroit du jeu. Une arme au nom plus long que tout ce qui existe
+	# aujourd'hui rétrécirait le bandeau au lieu de le faire sortir du cadre —
+	# c'est le garde-fou qui manquait, et son absence est ce qui a rendu le défaut
+	# invisible jusqu'à ce qu'une arme au nom long le révèle.
+	var enfle: float = geo["enfle"]
+	txt_tw.tween_property(lbl, "scale", Vector2(enfle, enfle), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	txt_tw.tween_property(lbl, "position", lbl.position + Vector2(0, -100), 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
 	txt_tw.chain().tween_callback(lbl.queue_free)
@@ -1673,6 +1753,18 @@ func die(killer: Node2D):
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
 		sub_tw.chain().tween_callback(sub.queue_free)
+	# DA4.7 — **la marge survit à la manche.** Elle criait « j'y étais presque »
+	# pendant deux secondes au-dessus d'un cadavre, puis disparaissait ; or le
+	# moment où ce chiffre pèse le plus est celui où le joueur décide de rejouer
+	# ou de partir, et c'est l'écran de fin. On le confie à `game_state`, seul à
+	# savoir quand un match s'arrête.
+	#
+	# ⚠️ **Avant la remise à -1, et pas après.** La ligne suivante consomme la
+	# valeur ; c'est elle qui garantit qu'un effleurement ne resserve pas à la
+	# manche d'après, et l'ordre des deux lignes est tout ce qui sépare « la
+	# marge du tir décisif » de « la marge d'un tir d'il y a trois manches ».
+	if last_fatal_perp >= 0.0:
+		get_tree().call_group("game_state", "noter_effleurement", last_fatal_perp)
 	last_fatal_perp = -1.0
 
 	# V1.5 — le vainqueur sent le kill : double coup dans SA manette.

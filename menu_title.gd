@@ -102,8 +102,8 @@ func embraser() -> void:
 	_materiau.set_shader_parameter("depassement", DEPASSEMENT)
 	_tween = _label.create_tween()
 	_tween.set_parallel(true)
-	_tween.tween_method(_poser_embrasement, 0.0, 1.0, EMBRASEMENT) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	Charte.animer_via(_tween, _poser_embrasement, 0.0, 1.0, EMBRASEMENT,
+		Charte.Courbe.ENTREE)
 	_tween.tween_method(_poser_depassement, DEPASSEMENT, 0.0, DEPASSEMENT_CHUTE) \
 		.set_delay(EMBRASEMENT * 0.5)
 
@@ -126,8 +126,13 @@ func verdict(victoire: bool) -> void:
 		return
 	_tween = _label.create_tween()
 	_tween.tween_method(_poser_flambee, 0.0, 1.0, 0.12)
-	_tween.tween_method(_poser_flambee, 1.0, 0.0, FLAMBEE) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# ⚠️ **ENTREE pour une extinction, et c'est volontaire.** Le nom des courbes
+	# dit leur emploi ordinaire, pas leur forme : `ENTREE` chute vite puis
+	# s'attarde, ce qui est exactement la rémanence d'une flambée. `SORTIE`
+	# tiendrait la pleine lumière puis couperait net — une flambée qu'on éteint
+	# à l'interrupteur. Ne pas « corriger » ce choix sur la foi du nom.
+	Charte.animer_via(_tween, _poser_flambee, 1.0, 0.0, FLAMBEE,
+		Charte.Courbe.ENTREE)
 
 func _mesurer() -> void:
 	if _label != null and is_instance_valid(_label):

@@ -37,10 +37,33 @@ var p2_ready_for_rematch: bool = false
 var local_ready_for_rematch: bool = false
 var _hosted_weapon_1_idx: int = 0
 
+## DA4.7 — la marge du dernier tir fatal **connue sur cette machine**, en pixels.
+##
+## `-1` = inconnue, et l'écran de fin se tait alors plutôt que d'inventer un
+## nombre. Ce n'est pas un cas rare ni un défaut : V2.9 pose cette valeur sur la
+## machine qui a SIMULÉ la balle fatale. En ligne, le vainqueur ne l'a donc
+## souvent pas — et c'est cohérent, puisque c'est au perdant que « j'y étais
+## presque » s'adresse.
+##
+## ⚠️ **Cosmétique, jamais arbitrale.** Chez le client c'est la prédiction locale
+## qui parle et non l'hôte : deux machines peuvent afficher deux marges
+## légèrement différentes pour le même tir, exactement comme les deux killcams
+## peuvent légitimement différer. Rien de ce qui compte au score n'en dépend.
+var dernier_effleurement: float = -1.0
+
 # Score de session : nombre de matchs gagnés depuis le lancement de la série.
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
+##
+## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
+## écrase sans condition : c'est **la dernière** qui compte, celle du tir qui
+## vient de clore la manche.
+func noter_effleurement(px: float) -> void:
+	dernier_effleurement = maxf(px, 0.0)
+
+
 ## V3.9 — la série de victoires consécutives de la session, et qui la porte.
 ##
 ## Le score de session dit déjà « 3 - 2 », mais pas dans quel ORDRE : trois
@@ -176,10 +199,14 @@ var _forfeit_pending: bool = false
 # implémenté. Un BO3 devra le tirer à l'ouverture du MATCH, pas de la manche.
 var _match_id: String = ""
 
-# [Hôte] Effets différés jusqu'à la fin de la séquence : la killcam de chaque
-# machine a sa propre durée, le client peut donc être prêt — ou arriver — alors
-# que l'hôte est encore au ralenti.
-var _pending_client_start: bool = false
+# [Hôte] Arme choisie par le client pendant la séquence de fin, retenue jusqu'à
+# sa fin : la killcam de chaque machine a sa propre durée, le client peut donc se
+# déclarer alors que l'hôte est encore au ralenti.
+#
+# Ce commentaire couvrait aussi `_pending_client_start` — « ou arriver » —, qui
+# armait un départ de manche sans PRÊT. Le champ a été retiré le 2026-08-26 ; la
+# phrase qui le décrivait part avec lui, sous peine de faire chercher un
+# mécanisme qui n'existe plus.
 var _pending_p2_weapon_idx: int = -1
 
 var weapon_pistolet: WeaponData
@@ -399,11 +426,14 @@ func _on_peer_connected(id: int):
 		# `_enter_hosted_game()` au moment du départ, et lui seul sait quand il a
 		# vraiment lieu.
 
-		# Arrivée pendant une killcam ou l'écran de fin : lancer la manche ici
-		# couperait la séquence en cours des deux côtés.
-		if _end_sequence_active:
-			_pending_client_start = true
-			return
+		# **Une arrivée pendant une killcam ne prépare plus rien non plus.**
+		#
+		# Elle armait `_pending_client_start`, que la fin de la séquence
+		# consommait en lançant `rpc_start_round` — une manche qui partait donc
+		# sans qu'aucun « PRÊT » ait été échangé. Reste d'avant la porte PRÊT, et
+		# **Adrien a tranché le 2026-08-26 : ce départ automatique n'est pas
+		# voulu.** Le seul chemin de départ est celui des deux engagements.
+		#
 		# La manche n'est PAS lancée ici : elle attend rpc_client_weapon. Partir
 		# avant l'arrivée de ce paquet imposait le pistolet à P2 pour tout le
 		# match — en BO1 aucun rematch ne vient rattraper le choix.
@@ -450,25 +480,44 @@ func _on_peer_disconnected(id: int):
 		_on_main_menu_requested()
 
 ## La partie « écran » de la déconnexion, différée si une killcam la couvrait.
+##
+## ⚠️ **Cette fonction faisait DEUX MÉTIERS sous un seul nom**, et c'est ce qui a
+## tenu la famille 4.1 rouge : *solder le match* — killcam soldée, score à zéro,
+## retour au salon — et *signaler une absence* — dialogue, écran d'attente, et
+## désarmement de ce que l'adversaire avait engagé.
+##
+## Le premier vaut toujours. Le second ne vaut que si personne n'est là. Un
+## drapeau `revenu` avait été ajouté pour taire le **dialogue**, et le dialogue
+## seulement ; tout le reste du script « parti » continuait de s'appliquer à
+## quelqu'un qui venait de revenir — dont son « PRÊT », effacé sans que rien ne
+## le lui dise. Les deux joueurs se retrouvaient devant un « prêt » qui ne
+## produisait rien, pour toujours.
+##
+## **Un drapeau posé à l'entrée d'une fonction ne protège que la ligne qu'on a
+## pensé à garder.** Ce que la fonction fait d'autre le traverse en silence. Le
+## partage en trois est ce qui rend le tri visible : chaque geste vit désormais
+## sous le nom de la situation qui le justifie, et il n'y a plus de « reste ».
 func _annoncer_deconnexion() -> void:
 	_deconnexion_differee = false
-	# **Quelqu'un a pu revenir pendant la killcam.** L'annonce est différée
-	# jusqu'à sa fin ; entre-temps, le joueur peut avoir relancé son jeu et
-	# rejoint — c'est le scénario 4.1 de la checklist. Annoncer alors « le
-	# Joueur 2 s'est déconnecté » et repasser en attente **coupe le lien qu'on
-	# vient d'accepter** : le nouveau venu se retrouve sans pair, et son premier
-	# RPC échoue.
-	#
-	# Défaut introduit par le report lui-même, et trouvé par le banc de la
-	# famille 4.1 — le report a créé une fenêtre où le monde peut changer, et le
-	# code différé la traversait sans regarder.
+	# **Quelqu'un a pu revenir pendant la killcam**, et c'est la seule question
+	# posée ici. Le report a créé une fenêtre où le monde change ; le code
+	# différé la traversait sans regarder, et jouait le script « parti » sur
+	# quelqu'un qui venait précisément de revenir.
 	var revenu := not multiplayer.get_peers().is_empty()
+	_solder_le_match()
+	if revenu:
+		_accueillir_le_revenant()
+	else:
+		_signaler_adversaire_parti()
+
+
+## Le match est fini : on rend l'écran au salon. **Inconditionnel** — c'est la
+## moitié qui vaut que l'adversaire soit parti, revenu, ou remplacé par un autre.
+func _solder_le_match() -> void:
 	# Toute séquence de fin en vol devient caduque : sans ce jeton elle
 	# reviendrait afficher un écran de victoire par-dessus l'attente.
 	_round_token += 1
 	_end_sequence_active = false
-	_pending_client_start = false
-	_pending_p2_weapon_idx = -1
 	# Un départ interrompu en plein 3-2-1 laisserait countdown_left figé, donc
 	# l'hôte immobile pour toujours dans son bac à sable.
 	countdown_left = 0.0
@@ -476,48 +525,90 @@ func _annoncer_deconnexion() -> void:
 	ui.force_close_pause()
 	_abort_killcam()
 	_restore_viewports()
-	if not revenu:
-		ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.",
-			UI.Registre.ATTENTION)
 	round_active = false
+	# `sandbox_mode` ne parle PAS de l'adversaire, il parle de l'absence de
+	# manche : sans lui, `player.gd` cesse de traiter les commandes et l'hôte se
+	# retrouve immobile derrière son menu. Il reste donc des deux côtés du
+	# partage — c'est ce que demande la ligne 4.4 de la checklist.
 	sandbox_mode = true
-	p2_ready_for_rematch = false
-	# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
+	# L'engagement de l'HÔTE ne franchit pas la fin du match : le score vient
+	# d'être remis à zéro, ce qui commence n'est plus une revanche. Un « ✓ PRÊT »
+	# resté armé engagerait pour un match auquel personne n'a redit oui.
 	p1_ready_for_rematch = false
 	_hote_pret = false
 	local_ready_for_rematch = false
 	ui.btn_replay.text = "REJOUER"
 	ui.btn_replay.remove_theme_color_override("font_color")
+	# La déconnexion remet le match à zéro — ligne 4.3 de la checklist, « aucun
+	# double comptage, le score repart de 0-0 ».
 	p1_session_wins = 0
 	p2_session_wins = 0
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
+	dernier_effleurement = -1.0
 	p1_round_wins = 0
 	p2_round_wins = 0
+	# **C'est CETTE ligne qui ramène le menu.** Un commentaire a longtemps
+	# affirmé que `show_waiting_for_opponent()` s'en chargeait ; elle n'allume
+	# qu'un label du HUD de match, et le panneau restait éteint — l'hôte se
+	# retrouvait dans son arène sans aucun moyen de se déclarer prêt. Trois
+	# sondes ont été nécessaires pour l'établir, contre un mécanisme concurrent
+	# parfaitement cohérent et faux.
+	ui.rouvrir_le_salon()
+	game_over = false
+
+
+## Personne en face : on le dit, et on désarme ce que l'absent avait engagé.
+##
+## **Rien de ce qui suit ne doit atteindre quelqu'un qui est là** — c'est toute
+## la raison d'être de cette fonction séparée, et le défaut qu'elle referme.
+func _signaler_adversaire_parti() -> void:
+	ui.show_dialog_message("Déconnexion", "Le Joueur 2 s'est déconnecté.",
+		UI.Registre.ATTENTION)
+	# Un « ✓ PRÊT » resté armé attendrait un adversaire qui n'existe plus.
+	p2_ready_for_rematch = false
+	_pending_p2_weapon_idx = -1
+	# L'hôte simule P2 : le laisser dans l'arène y planterait le corps solide
+	# d'un joueur qui n'est plus connecté.
 	p2.hide()
 	p2.set_collision_layer_value(1, false)
 	p2.set_collision_mask_value(1, false)
 	_set_training_target_active(true)
-	# **Le retour au salon a lieu dans TOUS les cas.** C'est lui qui ramène le
-	# menu ; le sauter laissait l'hôte dans l'arène sans salon, donc sans aucun
-	# moyen de se déclarer prêt — un joueur revenu trouvait la porte fermée.
-	# Défaut introduit en voulant justement épargner l'attente à qui n'attendait
-	# plus, et attrapé par le banc de la famille 4.1.
-	#
-	# Seul le MESSAGE dépend de la situation : on n'annonce pas une attente à
-	# quelqu'un dont l'adversaire est déjà là.
 	ui.show_waiting_for_opponent()
-	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..." if not revenu else "PRÊT ?"
-	# **Et c'est CETTE ligne qui ramène le menu, pas celle du dessus.** Le
-	# commentaire ci-dessus a longtemps affirmé que `show_waiting_for_opponent()`
-	# s'en chargeait ; elle n'allume qu'un label du HUD de match, et le panneau
-	# restait éteint — l'hôte se retrouvait dans son arène sans aucun moyen de se
-	# déclarer prêt. Trois sondes ont été nécessaires pour l'établir, contre un
-	# mécanisme concurrent parfaitement cohérent et faux.
-	ui.rouvrir_le_salon()
-	game_over = false
+	ui.time_label.text = "EN ATTENTE DU JOUEUR 2..."
 
+
+## Quelqu'un est arrivé pendant la killcam : le salon l'accueille avec ce qu'il a
+## déjà engagé.
+##
+## **Son « PRÊT » survit à la fin de la killcam d'en face, et c'est la propriété
+## que vérifie la famille 4.1.** L'effacer laissait les deux joueurs devant un
+## « prêt » qui ne produisait rien : lui croyait s'être déclaré — son bouton
+## affichait « ✓ PRÊT » —, l'hôte ne le voyait plus, aucune manche ne démarrait
+## plus jamais, et rien ne le disait à personne. Mesuré au banc le 2026-08-26 :
+## soixante appuis de l'hôte, zéro départ.
+##
+## L'arme retenue pendant le ralenti se pose ici : c'est le seul instant où la
+## séquence de fin est close ET où l'on sait qu'il y a quelqu'un pour la porter.
+##
+## ⚠️ **Aucune manche ne part d'ici.** `_check_rematch_start()` exige les deux
+## engagements — le départ automatique sans PRÊT a été retiré le même jour, sur
+## décision d'Adrien. Ce qui est rendu au revenant, c'est son tour de parole, pas
+## le match.
+func _accueillir_le_revenant() -> void:
+	if _pending_p2_weapon_idx >= 0:
+		_set_p2_weapon_button(_pending_p2_weapon_idx)
+		_pending_p2_weapon_idx = -1
+	# Ni dialogue ni écran d'attente : on n'annonce pas une absence à quelqu'un
+	# dont l'adversaire est déjà là.
+	ui.time_label.text = "PRÊT ?"
+	# Sous condition, parce que la branche « personne n'est prêt » de
+	# `_check_rematch_start()` écrit « EN ATTENTE D'UN ADVERSAIRE… » — vrai quand
+	# il n'y a personne, faux ici, et c'est le message qui disait déjà l'inverse
+	# de la vérité une fois dans ce fichier.
+	if p2_ready_for_rematch:
+		_check_rematch_start()
 
 
 ## Entraînement solitaire : une arène, une cible, aucun adversaire.
@@ -1004,7 +1095,6 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# Toute séquence de fin encore en vol doit lâcher la main ici.
 	_round_token += 1
 	_end_sequence_active = false
-	_pending_client_start = false
 	_pending_p2_weapon_idx = -1
 	_abort_killcam()
 	ui.force_close_pause()
@@ -1812,7 +1902,15 @@ func _do_end_round(winner_id: int):
 	# `game_state` reste la seule source des deux valeurs — il est le seul à
 	# connaître le score de session et la série — mais il ne décide plus de leur
 	# mise en forme.
-	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie)
+	# DA4.7 — la marge n'est passée QU'ICI, à la fin du match.
+	#
+	# L'appel d'entre-deux-manches (plus haut) la laisse à `-1` volontairement :
+	# l'arène vient d'écrire « à N px du centre » au-dessus du corps, et la
+	# répéter trois secondes plus tard dans le bandeau ferait dire deux fois la
+	# même chose au même moment. À la fin du match, la scène est effacée et le
+	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
+	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
+		dernier_effleurement)
 	_apply_deferred_rematch()
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
@@ -2004,12 +2102,6 @@ func _apply_deferred_rematch() -> void:
 		if p2_ready_for_rematch and not p1_ready_for_rematch:
 			ui.time_label.text = "L'ADVERSAIRE EST PRÊT"
 			ui.signaler_adversaire_pret()
-	if _pending_client_start:
-		_pending_client_start = false
-		if client_peer_id != 0:
-			rpc_start_round.rpc(_hosted_weapon_1_idx, _local_p2_weapon_idx(), _host_map_code(),
-				_new_match_id())
-			return
 	if p2_ready_for_rematch:
 		_check_rematch_start()
 
@@ -2591,7 +2683,6 @@ func _on_main_menu_requested():
 	# une séquence de fin en vol reviendrait afficher un écran de victoire.
 	_round_token += 1
 	_end_sequence_active = false
-	_pending_client_start = false
 	_pending_p2_weapon_idx = -1
 	_abort_killcam()
 	ui.force_close_pause()
@@ -2632,6 +2723,7 @@ func _on_main_menu_requested():
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
+	dernier_effleurement = -1.0
 	p1_round_wins = 0
 	p2_round_wins = 0
 	_set_training_target_active(false)
