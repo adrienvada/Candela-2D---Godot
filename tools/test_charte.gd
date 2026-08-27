@@ -190,8 +190,83 @@ func _test_pas_de_vert_dans_l_arene() -> void:
 
 # --- Les courbes -------------------------------------------------------------
 
+## L'extinction rend-elle bien ce que le dépôt faisait AVANT d'être converti ?
+##
+## ⚠️ **Le contrôle décisif de DA4.13, et il ne porte pas sur la charte.** Il
+## compare `EXTINCTION` à `TRANS_EXPO`+`EASE_OUT` **de Godot**, c'est-à-dire à ce
+## que les sept animations d'extinction faisaient avant la conversion. Un
+## chantier dont le but est de passer par le vocabulaire de la maison doit être
+## **neutre en sensation par construction** : s'il change ce qu'on voit, ce n'est
+## plus un chantier de vocabulaire, et personne ne reliera jamais « le flash de
+## coup est devenu mou » à une migration de tweens trois semaines plus tard.
+##
+## L'oracle est donc EXTÉRIEUR à ce qu'on vérifie — c'est Godot lui-même. Un
+## contrôle qui comparerait `EXTINCTION` à ses propres points de Bézier ne
+## dirait rien.
+func _test_l_extinction_ne_change_pas_ce_qu_on_voyait() -> void:
+	var tw := create_tween()
+	var pire := 0.0
+	var ou := 0.0
+	var t := 0.0
+	while t <= 1.0:
+		var maison: float = C.courbe(C.Courbe.EXTINCTION, t)
+		var godot: float = tw.interpolate_value(0.0, 1.0, t, 1.0,
+			Tween.TRANS_EXPO, Tween.EASE_OUT)
+		var ecart := absf(maison - godot)
+		if ecart > pire:
+			pire = ecart
+			ou = t
+		t += 0.02
+	tw.kill()
+	var tw2 := create_tween()
+
+	# 4 % : l'écart d'une approximation de Bézier à une exponentielle vraie. Au
+	# delà, ce n'est plus la même courbe et la conversion changerait la sensation.
+	_check(pire < 0.04,
+		"EXTINCTION s'écarte de %.3f de `expo out` en t=%.2f : la conversion "
+		% [pire, ou] + "de DA4.13 ne serait plus neutre")
+
+	# ⚠️ **La quatrième courbe doit GAGNER son existence, en chiffres.** Le premier
+	# jet de ce contrôle exigeait qu'elle soit « assez différente » d'`ENTREE`, et
+	# il rougissait à 0,042 d'écart. C'était la mauvaise question : deux sens
+	# distincts ont le droit de partager une forme voisine, et l'exiger différente
+	# aurait poussé à la déformer POUR le banc. La bonne question est : colle-t-elle
+	# mieux à ce qu'elle remplace ?
+	#
+	# Mesuré : `ENTREE` s'écarte de 0,048 d'`expo out`, `EXTINCTION` de 0,012 —
+	# quatre fois plus près. C'est ce rapport qui la justifie, pas un écart.
+	var ecart_entree := 0.0
+	t = 0.0
+	while t <= 1.0:
+		var g: float = tw2.interpolate_value(0.0, 1.0, t, 1.0,
+			Tween.TRANS_EXPO, Tween.EASE_OUT)
+		ecart_entree = maxf(ecart_entree, absf(C.courbe(C.Courbe.ENTREE, t) - g))
+		t += 0.02
+	_check(pire < ecart_entree * 0.5,
+		("EXTINCTION (%.4f d'expo out) ne colle pas nettement mieux qu'ENTREE " +
+		"(%.4f) : elle ne gagne pas son existence") % [pire, ecart_entree])
+
+	# ⚠️ **Et le contre-exemple, qui est le fait le plus utile de ce contrôle.**
+	# `SORTIE` s'écarte de 0,87 d'`expo out`. C'est l'ordre de grandeur de ce
+	# qu'aurait coûté la conversion « par le sens du mot » : une extinction posée
+	# sur `SORTIE` ne se serait pas éteinte, elle serait restée pleine puis aurait
+	# disparu d'un coup. Le nombre est ici pour qu'on n'ait plus à en discuter.
+	var ecart_sortie := 0.0
+	t = 0.0
+	while t <= 1.0:
+		var g: float = tw2.interpolate_value(0.0, 1.0, t, 1.0,
+			Tween.TRANS_EXPO, Tween.EASE_OUT)
+		ecart_sortie = maxf(ecart_sortie, absf(C.courbe(C.Courbe.SORTIE, t) - g))
+		t += 0.02
+	_check(ecart_sortie > 0.5,
+		"SORTIE ne s'écarte que de %.3f d'expo out : si les deux se ressemblent, "
+		% ecart_sortie + "la quatrième courbe n'avait pas lieu d'être")
+	tw2.kill()
+
+
 func _test_courbes() -> void:
-	for q in [C.Courbe.ENTREE, C.Courbe.SORTIE, C.Courbe.REBOND]:
+	for q in [C.Courbe.ENTREE, C.Courbe.SORTIE, C.Courbe.REBOND,
+			C.Courbe.EXTINCTION]:
 		_proche(C.courbe(q, 0.0), 0.0, "courbe %d part de 0" % q)
 		_proche(C.courbe(q, 1.0), 1.0, "courbe %d arrive à 1" % q)
 
@@ -340,8 +415,18 @@ func _test_animer_via_atteint_l_appel() -> void:
 ## à une autre session (voir `docs/JOURNAL_SESSIONS.md`) : les convertir serait
 ## une refonte opportuniste sur des fichiers qu'on ne tient pas. Le jour où cette
 ## session le décide, il suffit de les retirer de la liste ci-dessous.
-const _HORS_PERIMETRE := ["player.gd", "bullet.gd", "game_state.gd",
-	"audio_manager.gd"]
+## ⚠️ **Vide depuis le 2026-08-27, et c'est la fin de DA4.13.**
+##
+## Elle a porté quatre noms — `player.gd`, `bullet.gd`, `game_state.gd`,
+## `audio_manager.gd` — non par oubli mais par **frontière de domaine** : ce sont
+## les fichiers de « game feel », et un chantier d'interface n'y entre pas de sa
+## propre initiative. Les vingt et une dernières courbes de Godot y vivaient.
+##
+## Adrien a levé la frontière le 2026-08-27 (« finalise 4.13 »). La liste reste
+## déclarée plutôt que supprimée : **elle est le point d'entrée du jour où une
+## exception redeviendra nécessaire**, et un tableau vide qui porte son
+## explication vaut mieux qu'une exception réinventée sans elle.
+const _HORS_PERIMETRE: Array[String] = []
 
 func _test_les_ecrans_parlent_la_langue_de_la_maison() -> void:
 	var fautifs: Array[String] = []
@@ -445,6 +530,7 @@ func _init() -> void:
 	_test_equite_de_l_adversaire()
 	_test_pas_de_vert_dans_l_arene()
 	_test_courbes()
+	_test_l_extinction_ne_change_pas_ce_qu_on_voyait()
 	await _test_animer_atteint_un_sous_chemin()
 	await _test_animer_via_atteint_l_appel()
 	_test_les_ecrans_parlent_la_langue_de_la_maison()

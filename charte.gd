@@ -521,6 +521,34 @@ enum Courbe {
 	SORTIE,
 	## Le déclic — un seul dépassement, net, sans oscillation. Ce qu'on presse.
 	REBOND,
+	## L'extinction — chute franche, longue traîne. Ce qui **s'éteint**.
+	##
+	## ⚠️ **Quatrième courbe, et le nombre comptait : voici pourquoi elle existe.**
+	## DA4.13 a buté dessus le 2026-08-27 en convertissant les quatre fichiers de
+	## « game feel ». Sept animations y font retomber une grandeur physique à
+	## zéro — l'énergie d'une lumière, l'alpha d'une révélation, l'intensité d'un
+	## shader de flash — et **aucune des trois premières courbes ne les dit**.
+	##
+	## `SORTIE` veut dire « un élément quitte l'interface » : il part quelque
+	## part, et sa forme le montre — il s'attarde puis file. **Une lumière ne
+	## part pas, elle décroît**, et une décroissance est rapide puis traîne :
+	## c'est l'inverse exact. Leur poser `SORTIE` aurait été le mensonge de
+	## vocabulaire *et* une régression de sensation — payer les deux au lieu de
+	## l'un des deux.
+	##
+	## **Et c'est le sens le plus central que le vocabulaire n'avait pas.** Ce
+	## jeu n'a pour matière que de la lumière qui s'éteint ; nommer l'extinction
+	## n'allonge pas l'échelle « juste pour ce cas-là », ça comble un trou que
+	## les trois premières laissaient à l'endroit le plus fréquenté du jeu.
+	##
+	## ⚠️ **Ses points approchent `TRANS_EXPO`+`EASE_OUT` DÉLIBÉRÉMENT**, et
+	## `tools/test_charte.gd` mesure l'écart contre la courbe de Godot elle-même.
+	## C'est ce qui rend la conversion **neutre en sensation par construction**
+	## plutôt que par vigilance : un chantier de vocabulaire qui changerait ce
+	## qu'on voit ne serait plus un chantier de vocabulaire, et personne ne
+	## relierait « le flash de coup est devenu mou » à une migration de tweens
+	## trois semaines plus tard. Formulé par la session DA3, qui tient ce domaine.
+	EXTINCTION,
 }
 
 ## 90 ms — le retour d'un appui. En dessous, le geste paraît ignoré ; au-dessus,
@@ -560,6 +588,10 @@ const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],
 	Courbe.REBOND: [0.34, 1.56, 0.44, 1.0],
+	# L'approximation Bézier usuelle de `expo out` — celle que le CSS emploie
+	# sous le nom `ease-out-expo`. Choisie pour être NEUTRE contre ce que le
+	# dépôt faisait déjà, pas pour un effet nouveau.
+	Courbe.EXTINCTION: [0.16, 1.0, 0.3, 1.0],
 }
 
 

@@ -281,7 +281,9 @@ func camera_hit_kick(pid: int) -> void:
 	if cam == null: return
 	var tw := create_tween()
 	tw.tween_property(cam, "zoom", Vector2(0.98, 0.98), 0.04)
-	tw.tween_property(cam, "zoom", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# DA4.13 — la caméra revient à sa place : ENTREE, ce qui s'installe.
+	Charte.animer(tw, cam, "zoom", Vector2(0.98, 0.98), Vector2.ONE, 0.12,
+		Charte.Courbe.ENTREE)
 
 func _ready():
 	add_to_group("game_state")
@@ -2141,8 +2143,11 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	lbl.modulate.a = 0.0
 	var tw := lbl.create_tween()
 	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
-	tw.parallel().tween_property(lbl, "scale", Vector2.ONE, 0.12) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# DA4.13 — le claquement du tampon : REBOND, avec son dépassement. C'était
+	# déjà `BACK_OUT`, la conversion ne change rien à l'œil.
+	tw.parallel()
+	Charte.animer(tw, lbl, "scale", Vector2(2.6, 2.6), Vector2.ONE, 0.12,
+		Charte.Courbe.REBOND)
 	tw.tween_interval(1.7)
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
 	tw.tween_callback(_clear_kill_stamp)

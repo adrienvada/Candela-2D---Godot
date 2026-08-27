@@ -9461,8 +9461,79 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   Les deux dessins sont teintés en `LINE` et non `DIM` : une illustration
   d'absence doit rester **en retrait de la phrase qu'elle accompagne**, sinon
   elle devient le sujet. *(C — généré, procédé DA1.5)*
-- **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
-  le constat est le même que pour les fontes.
+- **DA4.13 Les transitions d'écran signature** ✅ **close le 2026-08-27** — plus
+  une seule courbe de Godot dans le dépôt, et une quatrième courbe est née de la
+  conversion.
+
+  ### Ce que la conversion a appris, et qui valait plus que la conversion
+
+  ⚠️ **Sept des vingt et un sites restants n'étaient traduisibles par aucune des
+  trois courbes**, et s'en apercevoir a demandé la session DA3. Ils animent une
+  grandeur physique vers zéro — énergie d'une lumière, alpha d'une révélation,
+  intensité d'un shader de flash.
+
+  **Ce ne sont pas des choses qui s'en vont, ce sont des choses qui s'éteignent.**
+  `SORTIE` veut dire « un élément quitte l'interface » : il part quelque part, et
+  sa forme le montre — il s'attarde puis file. Une lumière ne part pas, elle
+  décroît, et une décroissance est franche puis traîne : **l'inverse exact**.
+
+  Mesuré plutôt que débattu : **0,868 d'écart** entre `SORTIE` et l'`expo out`
+  qu'elle aurait remplacé. Les révélations seraient restées pleines deux secondes
+  avant de disparaître d'un coup. Leur poser `SORTIE` aurait été le mensonge de
+  vocabulaire **et** la régression de sensation — payer les deux au lieu de l'un.
+
+  ### La quatrième courbe, et pourquoi le nombre a cédé
+
+  `Courbe.EXTINCTION` — « chute franche, longue traîne ». La charte disait
+  « trois courbes utilisées partout donnent une signature » ; le nombre a cédé
+  parce qu'il **manquait un sens, pas parce qu'un cas particulier réclamait son
+  exception**. Ce jeu n'a pour matière que de la lumière qui s'éteint : c'était
+  le verbe le plus fréquenté du jeu, et le vocabulaire ne l'avait pas.
+
+  ⚠️ **Elle gagne son existence en chiffres, et le banc l'exige.** `ENTREE`
+  s'écarte de **0,048** d'`expo out`, `EXTINCTION` de **0,012** — quatre fois
+  plus près. Le contrôle ne demande pas qu'elle soit « assez différente »
+  d'`ENTREE` (premier jet, rougissant à 0,042) : cette question-là aurait poussé
+  à la **déformer pour le banc**. Il demande qu'elle colle mieux à ce qu'elle
+  remplace. **Deux sens distincts ont le droit de partager une forme voisine.**
+
+  ⚠️ **L'oracle est Godot lui-même**, via `Tween.interpolate_value()`. Un contrôle
+  qui comparerait `EXTINCTION` à ses propres points de Bézier ne dirait rien.
+
+  ### La règle de mapping, écrite pour la prochaine fois
+
+  Ni par la forme (le code mentirait sur son vocabulaire), ni par le mot seul
+  (`SORTIE` sur une extinction) :
+
+  | Ce que faisait le site | Courbe |
+  |---|---|
+  | `EASE_IN` — l'élément part | `SORTIE` |
+  | `EASE_OUT` vers **zéro** sur une énergie, un alpha, une intensité | `EXTINCTION` |
+  | `EASE_OUT` autrement — l'élément arrive et se pose | `ENTREE` |
+  | `BACK` + `EASE_OUT` — le déclic | `REBOND` |
+
+  ⚠️ **La conversion n'est PAS neutre partout, et il faut le dire.** Elle l'est
+  aux sites en `expo out` — les quatre révélations et le flash de coup, les plus
+  longs et les plus regardés. Elle ne l'est pas aux sites en `quad out` et
+  `sine out` : le fondu de la balle, la vignette, la lumière d'impact s'écartent
+  d'environ **0,39** de ce qu'ils faisaient. **C'est le prix de l'unification, et
+  c'est le but de l'item** — « cinq transitions différentes » ne se ramènent pas à
+  quatre sans que quelque chose bouge. Ces trois-là sont brèves (0,6 à 1 s) et
+  secondaires ; **elles restent à juger à l'écran**, et rien ne remplace cet œil.
+
+  ### Frontière de domaine
+
+  `_HORS_PERIMETRE` est désormais **vide**, et déclarée plutôt que supprimée :
+  elle est le point d'entrée du jour où une exception redeviendra nécessaire.
+  Elle portait quatre noms non par oubli mais par **domaine** — un chantier
+  d'interface n'entre pas dans « game feel » de sa propre initiative. Adrien a
+  levé la frontière le 2026-08-27 ; DA3, prévenue avant qu'une ligne soit
+  écrite, a répondu qu'elle n'avait rien de non commité — **et c'est elle qui a
+  vu ce que la conversion allait casser.** *(S)*
+
+  ---
+
+  *Constat d'origine, conservé :*
 
   **DA1.8 a livré trois courbes maison** (`ENTREE`, `SORTIE`, `REBOND`) et un
   point d'entrée unique, `Charte.animer()`, précisément pour remplacer les
