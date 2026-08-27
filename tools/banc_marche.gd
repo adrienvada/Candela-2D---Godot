@@ -77,6 +77,7 @@ var _silhouette := false
 var _eclairage_jeu := false
 var _visee_libre := false
 var _facteur_vitesse := 1.0
+var _roulis_sur_planche := true
 
 var _t := 0.0
 var _distance := 0.0          ## accumulateur de distance, comme dans player.gd
@@ -238,8 +239,8 @@ func _monter_le_bandeau() -> void:
 	_legende.position = Vector2(18, 14)
 	_legende.add_theme_font_size_override("font_size", 13)
 	_legende.add_theme_color_override("font_color", Charte.DIM)
-	_legende.text = ("ESPACE marche/arrêt   M motif   1-4 arme   S peint/silhouette   "
-		+ "L éclairage du jeu   A visée libre (souris)   +/- vitesse   R remise à zéro   ÉCHAP quitter")
+	_legende.text = ("ESPACE marche/arrêt   M motif   TAB / 1-4 arme   O roulis planche   S peint/silhouette   "
+		+ "L éclairage du jeu   A visée libre   +/- vitesse   R reset   ÉCHAP quitter")
 	couche.add_child(_legende)
 
 	_releve = Label.new()
@@ -288,10 +289,8 @@ func _process(delta: float) -> void:
 		var img: Sprite2D = m["image"]
 		racine.position = Vector2(pos.x, LIGNES_Y[int(m["mode"])] + pos.y)
 		racine.rotation = _visee
-		# Le roulis est une TRANSLATION le long de l'axe local Y. Jamais une
-		# rotation : `rotation` dit où l'on vise, et rien d'autre n'a le droit
-		# d'y toucher.
-		img.position.y = _roulis if m["mode"] == 0 else 0.0
+		# Le roulis est une TRANSLATION le long de l'axe local Y.
+		img.position.y = _roulis if (m["mode"] == 0 or _roulis_sur_planche) else 0.0
 		if m["mode"] != 0 and _poses.size() == POSES:
 			var t: Texture2D = _poses[pose - 1]
 			if t != null:
@@ -334,11 +333,12 @@ func _rafraichir_le_releve(pose: int) -> void:
 	var source := "lus dans player.gd" if _lecture_ok else "⚠ " + _lecture_detail
 	_releve.add_theme_color_override("font_color",
 		Charte.HALOGENE if _lecture_ok else Charte.ROUGE)
-	_releve.text = ("%s · %s · %s · %s%s · %.0f px/s (×%.2f)"
+	_releve.text = ("%s · %s · %s · %s%s · %.0f px/s (×%.2f) · roulis planche: %s"
 		% [etat, NOMS_MOTIF[_motif], ARMES[_arme],
 			"silhouette" if _silhouette else "peint",
 			" · éclairage du jeu" if _eclairage_jeu else "",
-			_vitesse * _facteur_vitesse, _facteur_vitesse]
+			_vitesse * _facteur_vitesse, _facteur_vitesse,
+			"OUI" if _roulis_sur_planche else "NON (planches pures)"]
 		+ "\nseuil %0.0f px (%s) · pas n°%d · pied %s · accumulé %5.1f px · roulis %+.2f · image %d/%d"
 		% [_seuil_pas, source, _pas, "gauche" if _cote > 0 else "droit",
 			_distance, _roulis, pose, POSES])
@@ -349,17 +349,9 @@ func _rafraichir_le_releve(pose: int) -> void:
 # ---------------------------------------------------------------------------
 
 func _draw() -> void:
-	# ⚠️ **`SOL_B` et non `SOL_A` : le banc n'est pas l'arène.** Les sprites du
-	# joueur sont sombres — sur le sol le plus foncé du damier ils se devinent au
-	# lieu de se voir, et un banc où l'on devine ne sert à rien. C'est la demande
-	# d'Adrien à la lettre : « lumières allumées que je voie quelque chose ».
 	var demi := Vector2(RAYON_TRAJET + 160.0, 330.0)
 	draw_rect(Rect2(-demi, demi * 2.0), Charte.SOL_B)
 
-	# ⚠️ La grille vaut UN PAS de côté, pas huit ou seize pixels. Elle sert à
-	# vérifier d'un coup d'œil que la démarche tombe bien sur le compteur de
-	# distance : une case franchie doit valoir exactement un pas, à toutes les
-	# vitesses. Une grille décorative ne dirait rien de ce genre.
 	var x := -demi.x
 	while x <= demi.x:
 		var fort := absf(fmod(x, _seuil_pas * 4.0)) < 0.5
@@ -377,7 +369,11 @@ func _draw() -> void:
 func _unhandled_input(evt: InputEvent) -> void:
 	if not (evt is InputEventKey) or not evt.pressed or evt.echo:
 		return
-	match (evt as InputEventKey).keycode:
+	var key_ev := evt as InputEventKey
+	var kc := key_ev.keycode
+	var pk := key_ev.physical_keycode
+	
+	match kc:
 		KEY_ESCAPE:
 			get_tree().quit()
 		KEY_SPACE:
@@ -388,19 +384,38 @@ func _unhandled_input(evt: InputEvent) -> void:
 		KEY_S:
 			_silhouette = not _silhouette
 			_charger_les_textures()
+		KEY_O:
+			_roulis_sur_planche = not _roulis_sur_planche
 		KEY_L:
 			_basculer_eclairage()
 		KEY_A:
 			_visee_libre = not _visee_libre
 		KEY_R:
 			_remettre_a_zero()
+		KEY_TAB:
+			_arme = (_arme + 1) % ARMES.size()
+			_charger_les_textures()
 		KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
 			_facteur_vitesse = minf(_facteur_vitesse + 0.25, 3.0)
 		KEY_MINUS, KEY_KP_SUBTRACT:
 			_facteur_vitesse = maxf(_facteur_vitesse - 0.25, 0.25)
-		KEY_1, KEY_2, KEY_3, KEY_4:
-			_arme = (evt as InputEventKey).keycode - KEY_1
+		KEY_1, KEY_KP_1, KEY_AMPERSAND:
+			_arme = 0
 			_charger_les_textures()
+		KEY_2, KEY_KP_2, KEY_EACUTE:
+			_arme = 1
+			_charger_les_textures()
+		KEY_3, KEY_KP_3, KEY_QUOTEDBL:
+			_arme = 2
+			_charger_les_textures()
+		KEY_4, KEY_KP_4, KEY_APOSTROPHE:
+			_arme = 3
+			_charger_les_textures()
+		_:
+			# Fallback sur physical_keycode pour tout autre disposition de clavier
+			if pk >= KEY_1 and pk <= KEY_4:
+				_arme = pk - KEY_1
+				_charger_les_textures()
 
 
 func _remettre_a_zero() -> void:
