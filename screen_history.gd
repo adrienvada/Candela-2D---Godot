@@ -20,6 +20,10 @@ extends HubScreen
 ## silencieusement incomplet, ce qui est la seule chose qu'un historique ne doit
 ## jamais être.
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 ## Nombre de matchs affichés. Au-delà, la page devient un mur qu'on ne lit plus ;
 ## le journal, lui, garde tout.
 const SHOWN := 12
@@ -51,12 +55,12 @@ func build(body: VBoxContainer) -> void:
 	body.add_theme_constant_override("separation", MenuTheme.GAP_S)
 
 	_summary = Label.new()
-	_summary.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
+	Charte.enseigne(_summary, MenuTheme.T_APPUI)
 	_summary.add_theme_color_override("font_color", MenuTheme.GOLD)
 	body.add_child(_summary)
 
 	_detail = Label.new()
-	_detail.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_detail, MenuTheme.T_COURANT)
 	_detail.add_theme_color_override("font_color", MenuTheme.DIM)
 	_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_detail)
@@ -107,7 +111,7 @@ func build(body: VBoxContainer) -> void:
 		_rows.append(_build_row(body, i))
 
 	_warning = Label.new()
-	_warning.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_warning, MenuTheme.T_MENTION)
 	_warning.add_theme_color_override("font_color", MenuTheme.WARN)
 	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(_warning)
@@ -124,24 +128,24 @@ func _build_row(body: VBoxContainer, index: int) -> Dictionary:
 
 	var date := Label.new()
 	date.custom_minimum_size = Vector2(150, 0)
-	date.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(date, MenuTheme.T_COURANT)
 	date.add_theme_color_override("font_color", MenuTheme.DIM)
 	ligne.add_child(date)
 
 	var issue := Label.new()
 	issue.custom_minimum_size = Vector2(110, 0)
-	issue.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(issue, MenuTheme.T_COURANT)
 	ligne.add_child(issue)
 
 	var duree := Label.new()
 	duree.custom_minimum_size = Vector2(70, 0)
-	duree.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(duree, MenuTheme.T_COURANT)
 	duree.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ligne.add_child(duree)
 
 	var reste := Label.new()
 	reste.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	reste.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(reste, MenuTheme.T_COURANT)
 	reste.add_theme_color_override("font_color", MenuTheme.DIM)
 	ligne.add_child(reste)
 
