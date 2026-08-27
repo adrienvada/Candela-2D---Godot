@@ -9301,9 +9301,18 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   pas que c'est le cache qui manque. Le zoom est lu sur le viewport
   (`get_camera_2d()`) et jamais demandé à `GameState` : en écran scindé chaque
   vue a sa propre caméra, et « le » zoom n'aurait pas de sens. *(S)*
-- **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le
-  2026-08-25** — verdict, score de session et série sont désormais hiérarchisés
-  au lieu d'être aplatis. Ce qui manque : « effleuré : 13 px », voir ci-dessous.
+- **DA4.7 La bannière de fin composée** ✅ **livrée le 2026-08-25, complétée le
+  2026-08-26** — verdict, score de session, série et marge du tir décisif, tous
+  hiérarchisés au lieu d'être aplatis.
+
+  ⚠️ **Cette entrée s'est contredite elle-même pendant deux jours**, et c'est le
+  premier fait à en retenir. L'en-tête a porté « 🟡 en grande partie livrée — ce
+  qui manque : *effleuré : 13 px* » alors que le corps, quinze lignes plus bas,
+  disait « ✅ livré le 2026-08-26 ». **Fermer un sous-item sans remonter à
+  l'en-tête laisse l'item ouvert pour quiconque ne lit que la ligne de tête** —
+  et la ligne de tête est précisément ce qu'on lit quand on cherche ce qu'il
+  reste à faire. Relevé le 2026-08-27 sur la question d'Adrien : *« que manque-t-il
+  à DA4.7 ? »* La réponse était : rien, sauf que l'entrée ne le disait pas.
 
   **Ce qu'affichait la fin de match : `SESSION : 2 - 1   ·   3 D'AFFILÉE`.**
   Trois informations de natures différentes, séparées par des points médians,
@@ -9344,8 +9353,16 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   ⚠️ **L'absence est le cas ORDINAIRE, pas le cas d'erreur.** V2.9 ne connaît
   cette valeur que sur la machine qui a **simulé** la balle fatale : en ligne, le
   vainqueur ne l'a le plus souvent pas. La colonne entière disparaît alors —
-  afficher « -1 PX », ou même un tiret poli, ferait passer un silence normal pour
-  une anomalie à chaque match. Même règle que la série, et pour la même raison.
+  afficher une valeur négative, ou même un tiret poli, ferait passer un silence
+  normal pour une anomalie à chaque match. Même règle que la série, et pour la
+  même raison.
+
+  ⚠️ **Le chiffre n'est plus en pixels depuis le 2026-08-27** (DA4.6, décision
+  d'Adrien) : « 13 PX » se lit maintenant « 18 CM ». Les mentions de pixels
+  ci-dessus décrivent l'état d'avant et sont conservées parce qu'elles expliquent
+  d'où vient la donnée — mais **ce que le joueur voit est métrique**, à la même
+  échelle que la cote de killcam. Une distance dite dans deux unités selon
+  l'écran serait deux distances.
 
   **Trois registres, trois natures**, ce qui était le fond de l'item : le score
   est un **compteur** (appareil, tabulaire, teinté par joueur), la série un
