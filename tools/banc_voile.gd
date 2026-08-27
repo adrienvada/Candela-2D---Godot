@@ -168,6 +168,19 @@ var _orbite: bool = true         ## L'éblouisseur tourne-t-il tout seul ?
 var _distance: float = 320.0
 var _angle: float = -1.2         ## Relèvement de l'éblouisseur, en radians.
 var _brouillage_actif: bool = true
+
+## La photocopie d'écran du flou : `RECT` (ce que fait la production) ou plein
+## cadre. **Touche `M`, et c'est un instrument de diagnostic, pas un réglage.**
+##
+## ⚠️ **`RECT` produit un polygone à arêtes franches près du joueur**, signalé
+## par Adrien le 2026-08-27 et reproduit ici : le flou lit des texels que la
+## photocopie n'a pas rafraîchis, donc l'image d'une position PRÉCÉDENTE, et la
+## frontière de la zone recopiée se dessine en dur. En plein cadre il disparaît.
+##
+## Le banc démarre sur `RECT` **exprès** : c'est ce que le jeu fait, et un banc
+## qui corrigerait silencieusement un défaut de production le rendrait
+## invisible. `M` sert à répondre « ça vient de là » en une touche.
+var _copie_plein_cadre: bool = false
 var _etalonnage: bool = false    ## En cours de relevé : le monde est caché.
 ## En train de tirer la planche de contact. **Sans ce drapeau, `_process`
 ## repasserait derrière la planche à chaque image** — il rappellerait `_rendre()`
@@ -313,37 +326,46 @@ func _planche() -> void:
 	_fige = true
 	_temps = 4.37  # Un instant quelconque, mais le MÊME pour les deux modes.
 	var releves: Array[String] = []
-	for m in 2:
-		for a in [0.0, 145.0, -65.0]:
-			_mode = m
-			_angle = deg_to_rad(a)
-			_bouger_eblouisseur(0.0)
-			_integrer(0.0)
-			_rendre()
+	# ⚠️ **Chaque cas est tiré DEUX FOIS : avec le halo et le flou, puis sans.**
+	# C'est la seule façon de répondre à « ça vient d'où ? » sur une image fixe.
+	# Adrien a signalé un polygone à arêtes franches près du joueur ; il était
+	# visible en mode TÉMOIN, donc pas dans le voile — et sans cette paire, on ne
+	# peut que le supposer.
+	for b in [true, false]:
+		_brouillage_actif = b
+		for m in 2:
+			for a in [0.0, 145.0, -65.0]:
+				_mode = m
+				_angle = deg_to_rad(a)
+				_bouger_eblouisseur(0.0)
+				_integrer(0.0)
+				_rendre()
 			# ⚠️ **Trois images, et la troisième n'est pas de la superstition.**
 			# Le flou du brouillage lit une photocopie d'écran ; la première
 			# image après un changement de mode en porte encore la trace du mode
 			# précédent. Deux images suffisaient à poser les paramètres, pas à
 			# purger ce que le tampon gardait.
-			await RenderingServer.frame_post_draw
-			await RenderingServer.frame_post_draw
-			await RenderingServer.frame_post_draw
-			var img := get_viewport().get_texture().get_image()
-			var nom := "%s/voile-mode%d-%+04d.png" % [dossier, m, int(a)]
-			img.save_png(nom)
-			releves.append(nom)
+				await RenderingServer.frame_post_draw
+				await RenderingServer.frame_post_draw
+				await RenderingServer.frame_post_draw
+				var img := get_viewport().get_texture().get_image()
+				var nom := "%s/voile-mode%d-%+04d-%s.png" % [dossier, m, int(a),
+					"avec-brouillage" if b else "voile-seul"]
+				img.save_png(nom)
+				releves.append(nom)
 			# ⚠️ **On imprime la GÉOMÉTRIE avec l'image.** Une planche se juge à
 			# l'œil, et l'œil ne sait pas dire « l'éblouisseur est à 145° » : il
 			# dit « la lumière est à gauche ». Sans ces trois nombres, une erreur
 			# de repère se lit comme un choix esthétique.
-			var vers_ecran := get_viewport().get_canvas_transform()
-			print("  mode %d  demandé %+7.1f°  relèvement %+7.1f°  "
-				% [m, a, rad_to_deg((_porteur.global_position
-					- _regardeur.global_position).angle())]
-				+ "monde %s  écran %s (centre %s)" % [
-					_porteur.global_position,
-					vers_ecran * _porteur.global_position,
-					get_viewport().get_visible_rect().size * 0.5])
+				var vers_ecran := get_viewport().get_canvas_transform()
+				print("  mode %d  %-16s demandé %+7.1f°  relèvement %+7.1f°  "
+					% [m, "avec brouillage" if b else "voile seul", a,
+						rad_to_deg((_porteur.global_position
+							- _regardeur.global_position).angle())]
+					+ "monde %s  écran %s (centre %s)" % [
+						_porteur.global_position,
+						vers_ecran * _porteur.global_position,
+						get_viewport().get_visible_rect().size * 0.5])
 	print("--- planche du voile : %d images ---" % releves.size())
 	print("  ", ProjectSettings.globalize_path(dossier))
 	for m in 2:
@@ -715,6 +737,11 @@ func _rendre() -> void:
 		_appareil.maj(_regardeur, _porteur)
 	else:
 		_appareil.eteindre()
+	# Après `maj`, qui repose le `rect` à chaque image.
+	var copie := _appareil.get_node_or_null("CoucheFlou/CopieEcran") as BackBufferCopy
+	if copie != null:
+		copie.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT if _copie_plein_cadre \
+			else BackBufferCopy.COPY_MODE_RECT
 
 	var taille := get_viewport().get_visible_rect().size
 	_mat.set_shader_parameter("mode", _mode)
@@ -841,11 +868,19 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_V:
 			_cone_deg = clampf(_cone_deg + 5.0, 5.0, 80.0)
 			_poser_arme()
+		KEY_M: _copie_plein_cadre = not _copie_plein_cadre
 		KEY_E: _etalonner()
 		KEY_R: _lire_defauts()
 		KEY_ESCAPE:
 			_transcrire()
 			get_tree().quit()
+		KEY_SHIFT, KEY_CTRL, KEY_META, KEY_ALT, KEY_CAPSLOCK:
+			# ⚠️ **Un modificateur SEUL n'est pas une touche sans effet.** Le
+			# panneau annonçait « touche sans effet — étiquette 4194327 » quand
+			# Adrien appuyait sur Cmd pour capturer son écran : un avertissement
+			# qui se déclenche sur un geste normal apprend à ignorer les
+			# avertissements.
+			return
 		_:
 			# **Une touche qui ne fait rien ne doit pas se taire.** Le banc voisin
 			# a été livré avec quatre touches muettes, et le rapport ne pouvait
@@ -872,10 +907,17 @@ func _maj_panneau() -> void:
 		"",
 		"éblouissement  %.2f  (%s)        temps  %s" % [
 			_dazzle, "mesuré" if _auto else "forcé", "FIGÉ" if _fige else "court"],
+		# ⚠️ **`wrapf` et non `rad_to_deg` nu.** L'orbite ajoute sans jamais
+		# retrancher : le panneau annonçait « +2949° », qui n'est pas faux mais
+		# qu'aucun œil ne convertit en « en haut à gauche ». Un banc se lit d'un
+		# coup d'œil ou ne se lit pas.
 		"éblouisseur    %s   à %.0f px, %+.0f°" % [
-			"orbite" if _orbite else "à la souris", _distance, rad_to_deg(_angle)],
+			"orbite" if _orbite else "à la souris", _distance,
+			wrapf(rad_to_deg(_angle), -180.0, 180.0)],
 		"faisceau       cône ±%.0f°" % _cone_deg,
-		"halo et flou   %s" % ("oui" if _brouillage_actif else "COUPÉS"),
+		"halo et flou   %s%s" % ["oui" if _brouillage_actif else "COUPÉS",
+			"   ⚠ photocopie PLEIN CADRE (M) — pas ce que fait le jeu"
+			if _copie_plein_cadre else "   photocopie RECT (M) — comme le jeu"],
 		"textures       %s" % ("fournies (assets)" if _textures_fournies else "fabriquées ici"),
 	]
 	if _dernier_releve != "":
@@ -912,5 +954,6 @@ func _texte_aide() -> String:
 		+ "Tab choisir un réglage   ←/→ le régler\n" \
 		+ "A auto/forcé   ↑/↓ niveau   O orbite / souris (la souris pose la " \
 		+ "POSITION)   Espace figer le temps   Z/X distance   C/V cône\n" \
-		+ "B couper halo et flou   E étalonner (opacité moyenne)   " \
-		+ "R remettre les défauts   Échap transcrire et sortir"
+		+ "B couper halo et flou   M photocopie RECT / plein cadre   " \
+		+ "E étalonner (opacité moyenne)   R remettre les défauts   " \
+		+ "Échap transcrire et sortir"

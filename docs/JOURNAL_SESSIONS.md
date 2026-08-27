@@ -297,6 +297,32 @@ fichiers tenus par d'autres) — détail et raisonnement dans la ROADMAP :
 **Les deux viennent d'une lecture de code, pas d'un relevé.** Ils sont à
 vérifier à l'écran avant d'être traités comme des faits.
 
+**Un QUATRIÈME, mesuré, et il s'adresse lui aussi à la session « brouillage » —
+c'est le plus sérieux des quatre.**
+
+Adrien a vu « des effets bizarres au centre, dans la zone de flou », et il les
+voyait **voile coupé**, donc hors de mon chantier. Reproduit et isolé à la
+planche de contact : un polygone à arêtes franches près du joueur, présent avec
+`COPY_MODE_RECT` (la production), **absent en `COPY_MODE_VIEWPORT`**, absent
+aussi quand on coupe le brouillage. Le flou lit donc des texels que la
+photocopie n'a pas rafraîchis — précisément ce que `Brouillage.emprise_copie()`
+existe pour empêcher, et que son propre avertissement décrit mot pour mot.
+
+**Deux causes possibles, et je n'ai PAS tranché entre elles :** soit la marge
+d'emprise est ajoutée en pixels de canevas quand le shader l'utilise en pixels de
+framebuffer (les deux divergent dès que la fenêtre n'est pas à 1920×1080, à cause
+de `stretch/mode = canvas_items`), soit le `rect` de la photocopie n'est pas posé
+dans l'espace qu'on croit sous une racine étirée.
+
+⚠️ **Si ça se confirme, le chemin touché est celui de la VUE UNIQUE** — en ligne
+et à l'entraînement, les deux modes où l'on joue vraiment. En écran scindé
+l'appareil vit dans un `SubViewport`, où canevas et framebuffer coïncident.
+
+Je n'ai touché à aucun de vos trois fichiers. Le banc du voile a une touche `M`
+qui bascule entre les deux modes de photocopie, et **il démarre sur celui de la
+production** : un banc qui corrigerait en silence un défaut de production le
+rendrait invisible. Détail complet dans la section ROADMAP du chantier.
+
 **Un troisième, celui-là MESURÉ, et il s'adresse à la session « brouillage » :
 `tools/banc_brouillage.gd` n'a aucun `CanvasModulate`.** `arena.tscn` en porte un
 à `Charte.NOIR` — dans le jeu, rien n'est visible hors des lumières. Sans lui, le

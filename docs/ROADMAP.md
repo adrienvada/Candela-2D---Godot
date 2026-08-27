@@ -10344,6 +10344,58 @@ lueurs et les flares. **Ce qui attend ensuite une autre session :** le
 branchement, qui passe par `ui.gd` — domaine « menus » — et qui ne se fait pas
 d'office.
 
+### ⚠️ MESURÉ — la photocopie d'écran du flou laisse un polygone à l'écran
+
+**Signalé par Adrien le 2026-08-27, reproduit et isolé le jour même.** « J'ai des
+effets bizarres au centre, j'ai l'impression que c'est dans la zone de flou […]
+j'ai carrément enlevé le voile et j'ai quand même un effet très étrange. »
+
+**Ce n'est pas le voile.** Le défaut est visible en mode TÉMOIN, c'est-à-dire
+avec l'aplat d'aujourd'hui : un **polygone à arêtes franches**, translucide et
+plus clair que son entourage, posé près du joueur.
+
+Les deux relevés qui l'ont isolé, tous deux à la planche de contact :
+
+| photocopie | résultat |
+|---|---|
+| `COPY_MODE_RECT` (ce que fait la production) | le polygone est là |
+| `COPY_MODE_VIEWPORT` (plein cadre) | il disparaît, l'image est propre |
+| brouillage coupé entièrement | il disparaît aussi |
+
+**Le flou lit donc des texels que la photocopie n'a pas rafraîchis** — l'image
+d'une position précédente de l'éblouisseur —, et la frontière de la zone recopiée
+se dessine en dur. C'est exactement le symptôme que `Brouillage.emprise_copie()`
+existe pour empêcher, et son avertissement le décrit mot pour mot : « hors de la
+zone copiée, la texture d'écran garde ce qu'une copie précédente y avait
+laissé ».
+
+⚠️ **Ce que ce relevé NE prouve pas, et il ne faut pas le lui faire dire.** Il ne
+dit pas OÙ est l'erreur. Deux candidats, et il faudrait mesurer pour trancher :
+
+1. **Une unité qui change de sens en chemin.** `NOYAU_FLOU` est ajouté à
+   l'emprise en pixels de CANEVAS (`emprise_copie(..., NOYAU_FLOU + 2.0)`), mais
+   le shader l'utilise en pixels de FRAMEBUFFER (`rayon_noyau * k *
+   SCREEN_PIXEL_SIZE`). Les deux ne coïncident que si le canevas et le
+   framebuffer ont la même taille — or `window/stretch/mode` vaut
+   `canvas_items`, et une fenêtre plus petite que 1920×1080 rend le pixel de
+   framebuffer PLUS GROS que le pixel de canevas. La marge devient alors trop
+   courte, et d'autant plus courte que la fenêtre est petite.
+2. **Un `rect` posé dans le mauvais espace.** `BackBufferCopy.rect` est en
+   coordonnées locales ; sous une racine étirée par `canvas_items`, rien ne
+   garantit que la conversion vers le framebuffer soit celle qu'on croit.
+
+**La conséquence de portée, si elle se confirme : ce chemin est celui de la VUE
+UNIQUE**, donc en ligne et à l'entraînement — les deux modes où l'on joue
+vraiment. En écran scindé l'appareil vit dans un `SubViewport`, où canevas et
+framebuffer coïncident, et le défaut ne devrait pas apparaître.
+
+**Non corrigé, et délibérément.** `brouillage_vue.gd`, `brouillage.gd` et
+`brouillage_flou.gdshader` appartiennent au chantier brouillage. Le banc du voile
+a désormais la touche `M` pour basculer entre les deux modes de photocopie —
+c'est un instrument de diagnostic, pas un réglage, et **le banc démarre sur
+`RECT`, celui de la production** : un banc qui corrigerait silencieusement un
+défaut de production le rendrait invisible.
+
 ### ⚠️ Deux défauts signalés, non corrigés, et NON VÉRIFIÉS
 
 Les deux viennent d'une lecture de code faite en instruisant ce chantier. **Aucun
