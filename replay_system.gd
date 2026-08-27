@@ -248,10 +248,29 @@ var pretrace_t: float = 0.0
 var _pretrace_reste: float = -1.0
 var _pretrace_fait: bool = false
 
-## Le pré-tracé est-il en cours ? `game_state` le lit pour suspendre ce qui ne
-## doit pas tourner pendant.
-func pretrace_en_cours() -> bool:
-	return _pretrace_reste > 0.0
+## Les trois moments du pré-tracé.
+##
+## ⚠️ **Trois, et pas deux — un booléen a déjà menti ici.** Le premier jet
+## exposait `pretrace_en_cours()`, qui répond « non » aussi bien AVANT
+## qu'APRÈS. L'appelant prenait donc la branche « c'est fini » dès la première
+## image de la killcam et posait la ligne **entière**, trois secondes trop tôt ;
+## le pré-tracé la redessinait ensuite au bon moment. Relevé par Adrien à
+## l'écran le 2026-08-27 — *« il est tracé dès le début de la killcam, puis se
+## redessine ensuite »*.
+##
+## **Un état à trois valeurs ne se range pas dans un booléen**, et le défaut
+## n'est pas que l'appelant se soit trompé : c'est que la question posée n'avait
+## pas assez de réponses. L'énumération rend l'oubli impossible plutôt
+## qu'improbable.
+enum Pretrace { AVANT, PENDANT, APRES }
+
+## Où en est le pré-tracé. `game_state` s'y branche pour dessiner le relevé.
+func pretrace_etat() -> Pretrace:
+	if _pretrace_fait:
+		return Pretrace.APRES
+	if _pretrace_reste > 0.0:
+		return Pretrace.PENDANT
+	return Pretrace.AVANT
 
 
 ## Nombre d'images montrées avant l'impact — trois secondes de contexte.

@@ -1650,13 +1650,23 @@ func _liberer_le_releve() -> void:
 
 
 ## Fait avancer le pré-tracé, puis le laisse en arrière-plan pendant l'action.
+##
+## ⚠️ **Trois branches, pas deux.** AVANT le pré-tracé, le relevé ne doit rien
+## montrer : la killcam s'ouvre trois secondes avant le tir fatal, et une ligne
+## posée dès la première image annoncerait la trajectoire pendant tout le
+## contexte, puis se redessinerait par-dessus elle-même au moment prévu. C'est
+## exactement ce qu'un `else` produisait — voir `ReplaySystem.Pretrace`.
 func _suivre_le_releve() -> void:
 	if not is_instance_valid(_releve):
 		return
-	if ReplaySystem.pretrace_en_cours():
-		_releve.avancer(ReplaySystem.pretrace_t)
-	else:
-		_releve.passer_derriere()
+	match ReplaySystem.pretrace_etat():
+		ReplaySystem.Pretrace.PENDANT:
+			_releve.avancer(ReplaySystem.pretrace_t)
+		ReplaySystem.Pretrace.APRES:
+			_releve.passer_derriere()
+		_:
+			# AVANT : rien. Le relevé existe, armé, et reste invisible.
+			_releve.avancer(0.0)
 
 
 func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,

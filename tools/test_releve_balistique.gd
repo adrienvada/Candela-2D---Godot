@@ -315,6 +315,51 @@ func _test_le_pretrace_pousse_vers_l_impact(releve: GDScript) -> void:
 	n.queue_free()
 
 
+## Le relevé reste-t-il INVISIBLE avant que le pré-tracé commence ?
+##
+## ⚠️ **Le défaut qui a échappé au premier banc, et pourquoi.** Les contrôles
+## ci-dessus éprouvent des GESTES isolés — poser, avancer, passer derrière — et
+## chacun était juste. Le défaut vivait dans la SÉQUENCE : `pretrace_en_cours()`
+## rendait `false` aussi bien avant qu'après, l'appelant prenait donc la branche
+## « c'est fini » dès la première image de la killcam et posait la ligne entière
+## trois secondes trop tôt. Relevé par Adrien à l'écran le 2026-08-27.
+##
+## **Un banc qui vérifie chaque geste ne vérifie pas leur ordre.** Celui-ci
+## exige les trois moments, et surtout qu'ils soient TROIS : un état à trois
+## valeurs rangé dans un booléen perd celui du milieu ou celui du bord, et rien
+## dans le langage ne le signale.
+func _test_le_releve_ne_se_montre_pas_avant_l_heure(releve: GDScript) -> void:
+	var script: GDScript = load("res://replay_system.gd")
+	var r: Node = script.new()
+
+	# L'état de départ, avant toute lecture, doit être AVANT — ni PENDANT ni
+	# APRÈS. C'est le contrôle qui aurait attrapé le défaut.
+	_check(r.pretrace_etat() == r.Pretrace.AVANT,
+		"le pré-tracé se croit terminé avant d'avoir commencé : le relevé "
+		+ "s'affichera entier dès la première image de la killcam")
+
+	# Et les trois valeurs doivent être distinctes, sinon l'énumération ne
+	# distingue rien de plus qu'un booléen.
+	var valeurs := [r.Pretrace.AVANT, r.Pretrace.PENDANT, r.Pretrace.APRES]
+	var uniques := {}
+	for v: int in valeurs:
+		uniques[v] = true
+	_check(uniques.size() == 3,
+		"les trois moments du pré-tracé ne sont pas distincts")
+	r.free()
+
+	# Côté relevé : armé mais pas encore tracé, il ne montre rien. `progression`
+	# à zéro est la seule chose qui l'en empêche.
+	var n: Node2D = releve.new()
+	root.add_child(n)
+	n.poser(Vector2(100.0, 100.0), Vector2(500.0, 100.0))
+	_check(is_equal_approx(n.progression, 0.0),
+		"un relevé fraîchement posé a déjà une progression : il se verrait")
+	_check(not n.en_arriere_plan,
+		"un relevé fraîchement posé se croit déjà derrière")
+	n.queue_free()
+
+
 ## Le pré-tracé dure-t-il en temps RÉEL, indépendamment du ralenti ?
 ##
 ## ⚠️ **Le piège est `Engine.time_scale = 0`.** Il gèlerait l'action — et
@@ -385,6 +430,7 @@ func _run() -> void:
 
 	_test_le_releve_ne_vit_pas_dans_la_balle()
 	_test_le_pretrace_pousse_vers_l_impact(releve)
+	_test_le_releve_ne_se_montre_pas_avant_l_heure(releve)
 	_test_le_pretrace_est_en_temps_reel()
 	_test_l_echelle_metrique()
 	_test_l_annotation_tient_sa_taille_ecran(releve)

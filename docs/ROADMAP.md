@@ -8875,6 +8875,27 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   grandissant avec lui ; puis la ligne reste entière, atténuée, pendant que la
   balle la parcourt au ralenti.
 
+  ⚠️ **Le relevé s'affichait dès la première image de la killcam.** Relevé par
+  Adrien à l'écran — *« il est tracé dès le début, puis se redessine ensuite au
+  bon moment »*. La cause n'est pas une erreur d'appel : **`pretrace_en_cours()`
+  était un booléen là où il y avait TROIS états.** Il répondait « non » aussi
+  bien avant qu'après, l'appelant prenait donc la branche « c'est fini » dès
+  l'ouverture et posait la ligne entière trois secondes trop tôt — annonçant la
+  trajectoire pendant tout le contexte, puis la redessinant par-dessus.
+
+  **La question posée n'avait pas assez de réponses**, et c'est ça le défaut :
+  l'appelant ne s'est pas trompé, il a répondu correctement à une question mal
+  formée. Remplacé par une énumération `Pretrace { AVANT, PENDANT, APRES }`, qui
+  rend l'oubli impossible plutôt qu'improbable. *Cousin du motif du 2026-08-19 —
+  une valeur absolue là où il fallait un rapport ; ici, deux valeurs là où il en
+  fallait trois.*
+
+  ⚠️ **Et le premier banc ne pouvait pas l'attraper : il éprouvait des GESTES,
+  pas leur SÉQUENCE.** Poser, avancer, passer derrière — chacun était juste
+  isolément, et le défaut vivait dans l'ordre. Un contrôle exige désormais
+  l'état de départ et la distinction des trois moments ; vérifié rouge en
+  remettant le booléen.
+
   ⚠️ **Le piège de l'immobilisation : `Engine.time_scale = 0` gèle aussi le
   compte à rebours.** Le `delta` d'un `_process` arrive déjà multiplié par
   l'échelle ; à zéro, le décompte du pré-tracé ne descend jamais et **la killcam
