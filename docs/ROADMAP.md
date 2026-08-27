@@ -2361,6 +2361,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
+| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
@@ -3054,6 +3056,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Deux mesures qui divergent parlent peut-être de deux bases (2026-08-27)
+
+Deux sessions ont passé une nuit à s'opposer sur quatre points qui semblaient
+tous techniques : un lot vert chez l'une et bloqué chez l'autre sur EOS ; 47
+suites contre 48 ; 58 verdicts contre 61 ; un lot à 200 s contre 789 s.
+
+**C'était un seul désaccord, et il n'était pas technique : une branche avait
+quinze commits de retard.** Chaque camp mesurait honnêtement, avec de bons
+outils, et décrivait un dépôt différent.
+
+Trois formes, parce que la base n'est pas seulement le commit :
+
+- **le commit** — `git rev-list --left-right --count HEAD...origin/main` avant
+  de comparer quoi que ce soit ; c'est une seconde et ça a coûté une nuit ;
+- **les fichiers non versionnés** — un arbre sans `eos_credentials.gd`
+  n'initialise jamais EOS. Trois lots verts n'y prouvent RIEN de la machine
+  d'Adrien, et le vert ne dit pas lequel des deux mondes il décrit ;
+- **la question posée** — chercher « quand `test_dosage_audio` est-il arrivé »
+  au lieu de « laquelle est arrivée en dernier », c'est substituer à la question
+  une autre dont on connaît déjà la moitié de la réponse. Un `comm` sur les deux
+  listes n'exige de deviner aucun nom.
+
+**La règle est plus retorse qu'elle n'en a l'air**, et le savoir n'a pas suffi :
+la session qui l'énonçait a supposé que l'écart venait de l'arbre le plus
+avancé — il venait du plus ancien, le sien. Une règle appliquée en devinant de
+quel côté penche l'erreur ne protège pas. **Interroger la référence partagée,
+jamais son propre plan de travail** : `git show origin/main:<fichier>` répond du
+dépôt, `${#SUITES[@]}` ne répond que de soi.
+
+Corollaire pour tout ce qui s'écrit ici : **un compte se dérive, une durée porte
+sa date ET son arbre.** Sans quoi deux mesures ne sont pas comparables, et l'on
+croit débattre du code.
+
 ### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
 
 Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
@@ -3285,13 +3320,36 @@ session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt
 elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
 rien à voir. Le retrait lui-même suit dans le commit d'après.
 
-**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
-partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
-bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
-add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
-de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
-— il est bien versionné — c'est le **lien** entre une décision et son code,
-c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
+**Le geste qui l'évite n'est PAS celui que ce paragraphe a d'abord écrit**, et
+la correction vaut plus que l'erreur. Il disait : « on met en index les CHEMINS
+qu'on a touchés, jamais le fichier commun en bloc ». C'est insuffisant, et la
+même session l'a reprouvé trois heures plus tard en emportant à son tour le
+paragraphe d'une autre — **avec un `git add docs/ROADMAP.md`, donc un chemin
+nommé, exactement ce que cette phrase prescrivait.**
+
+⚠️ **Parce que l'unité que git met en index est le FICHIER, jamais la
+modification.** Nommer le chemin ne protège de rien quand le voisin écrit dans ce
+même fichier : on emporte son texte avec le sien, sans avertissement, et le
+message de commit ment alors sur son propre contenu.
+
+Deux gestes protègent vraiment, et le second est le filet du premier :
+
+1. **Fabriquer le blob à partir de `HEAD`**, y appliquer sa seule modification,
+   et le mettre en index par plumbing (`git hash-object -w` puis `git
+   update-index --cacheinfo`). L'arbre de travail garde ce que le voisin y écrit,
+   l'index ne reçoit que le sien. C'est ce qui a été fait le même jour pour
+   `project.godot`, qui portait une réécriture de l'éditeur appartenant à une
+   autre session — **le geste était donc connu et disponible ; il n'a simplement
+   pas été appliqué au fichier partagé le plus écrit du dépôt.**
+2. **Lire `git diff --cached` AVANT de commiter**, systématiquement, et refuser
+   ce qu'on ne reconnaît pas. Trente secondes, et c'est le seul contrôle qui
+   attrape le cas qu'on n'avait pas prévu.
+
+Ce qui se perd n'est pas le travail — il est bien versionné — c'est le **lien**
+entre une décision et son code, c'est-à-dire tout ce que ce document sert à
+retrouver six mois plus tard. Et il se perd deux fois : l'auteur croit avoir
+encore à commiter ce qui est déjà parti, et le commit qui l'emporte n'en dit
+rien.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -5611,6 +5669,13 @@ quoi : le message liste des chaînes vides. Passer par
   appelle un setter réécrit les vraies préférences du joueur. Prévoir un point de
   dérivation du chemin (`var _settings_path := SETTINGS_PATH` plutôt que la
   constante en dur) et vérifier en fin de parcours que le fichier réel est intact.
+  **Depuis le 2026-08-26, `run_suites.sh` pose un `HOME` temporaire** : un lot
+  complet n'écrit donc plus chez le joueur, et le chemin de son `user://` est
+  annoncé en fin de lot. La consigne ci-dessus reste entière — elle protège la
+  suite lancée **à la main**, hors du lanceur, qui elle vise toujours le vrai
+  `user://`. Ce que l'isolation ajoute, la discipline ne pouvait pas le donner :
+  **deux lots simultanés ne se rendent plus faussement rouges** (voir « Décisions
+  actées » pour la mesure — 6 suites sur 12 tombaient).
 - **Un test qui instancie une scène ne peut pas charger celle-ci depuis `_init`.**
   Les autoloads ne sont pas encore enregistrés à ce moment : `ui.gd`, qui
   référence `MapData`, échoue à la compilation. Godot rend alors un nœud **nu**,
@@ -7969,10 +8034,50 @@ un fait de jeu, pas à un rythme d'interface.
   Reste ouvert, et c'est un choix d'Adrien, pas un manque technique : une
   variation de membres peinte par-dessus ce roulis. Elle demanderait quatre
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
-  ce que trois tentatives n'ont pas obtenu. Les seize PNG `*_marche_*.png` qui
-  traînent dans `assets/sprites/` sont ceux de la mauvaise caméra : ils ne sont
-  suivis par git ni chargés par quoi que ce soit, mais ils portent un nom
-  crédible — **ne pas les câbler.**
+  ce que trois tentatives n'ont pas obtenu.
+
+  **Les 32 PNG `*_marche_*.png` d'`assets/sprites/` ont été RECUITS et
+  VALIDÉS le 2026-08-27 (Adrien, après revue au banc).** L'ancien lot (vue
+  oblique de trois-quarts, 48/56 px, bavures magenta, portées effondrées) a été
+  écrasé par un lot rigoureux dérivé directement des statiques :
+
+  - **vue de dessus stricte** (même caméra 90° que le statique, casque et épaules vus de dessus) ;
+  - **l'échelle exacte du statique** : fusil 82×82, pompe 78×78, pistolet 62×62, arbalète 56×56 (les lignes 2 et 3 du banc sont désormais strictement identiques) ;
+  - **l'arme ne pivote pas** : axe avant rigide horizontal le long de +X, zéro déviation par rapport à la ligne de visée ;
+  - **la portée de l'arme est préservée à 100 %** : fusil +40,5 px, pompe +38,5 px, pistolet +29,5 px, arbalète +27,5 px ;
+  - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
+  - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
+
+  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
+  l'objet de son propre arbitrage / chantier d'intégration dédié.
+
+  Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
+  (peinte et silhouette).
+
+  **Un banc les montre plutôt que de les raconter** — `tools/banc_marche.tscn`,
+  posé le 2026-08-27 à la demande d'Adrien, branche `worktree-marche`. Trois
+  marcheurs sur la même trajectoire, à la même vitesse, sur le même compteur de
+  distance : le jeu d'aujourd'hui (sprite statique + roulis), la planche peinte à
+  sa taille native, et la planche **remise à l'échelle** du sprite statique. La
+  troisième ligne n'est pas un ornement : elle **sépare les deux reproches**, la
+  cuisson d'un côté et la caméra de l'autre. Ce qui reste faux une fois
+  l'échelle corrigée ne peut plus être mis sur le compte du générateur.
+
+  ⚠️ **La ligne de visée est le seul juge de l'obstacle n°2**, et c'est pour elle
+  que le banc existe. Elle part du centre dans la direction de `rotation`. Si
+  l'arme peinte pointe ailleurs, le sprite ment sur la visée douze fois par
+  seconde — un argument qui ne se tranche pas au raisonnement, seulement à l'œil.
+  Le banc est **éclairé** par défaut, contre l'usage du jeu : on ne juge pas une
+  démarche à travers le cône d'une torche. `L` rend l'obscurité quand on veut
+  vérifier que le réglage y survit.
+
+  Le banc **ne recopie aucun nombre** : le seuil de pas et la vitesse sont lus
+  dans le TEXTE de `player.gd` au démarrage, et le bandeau affiche lesquels il a
+  lus — en rouge si la lecture échoue, plutôt qu'un repli silencieux sur un
+  défaut. Un banc qui montrerait une cadence que le jeu n'a plus ferait juger
+  autre chose que ce qu'on croit juger ; c'est le défaut qui a coûté la moitié de
+  son effet à `RETARD_REMANENCE` la veille. Et sa grille vaut **un pas** de côté,
+  non huit pixels : une case franchie doit valoir exactement un pas.
 
   **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
@@ -8708,11 +8813,20 @@ retenu : l'arène en fond répondait à la question *comment remplir le cadre ?*
 alors que la vraie question était *que veut voir quelqu'un qui hésite entre cinq
 modes ?* — et la réponse à celle-là n'est pas la carte du prochain match.
 
-**La distinction qui a émergé, et elle survit à l'arbitrage :** le menu principal
-montre des **illustrations** — on n'y choisit pas une partie, on y choisit une
-envie ; les écrans de mode montreraient des **captures** du jeu réel — on y
-prépare un match, et ce qu'on veut alors savoir c'est à quoi il ressemble
-vraiment. Elle est écrite en tête de `ui.gd`.
+**La distinction qui avait émergé ici n'a pas survécu, et deux revirements l'ont
+suivie — corrigé le 2026-08-27, cette entrée était périmée depuis le premier.**
+
+D'abord en code, sans jamais passer par ce document : les trois captures
+(écran scindé, duel en ligne, entraînement) ont été retirées (`ui.gd`, tête de
+fichier) — câblées en panneau par défaut, elles ne se sont **jamais affichées**,
+le salon posé en défaut sur ces huit écrans les rendait inatteignables sans
+erreur ni avertissement. Le râtelier d'armes a repris cet étage : *« on y
+choisit son arme, pas son envie »*.
+
+**Puis Adrien tranche à nouveau, le 2026-08-27 : le râtelier par défaut n'est
+pas non plus la bonne réponse. Tout le menu — écrans de mode compris — passera
+par des images générées**, au même procédé que les dix illustrations du menu
+principal (DA1.5, Gemini). Voir la décision actée correspondante.
 
 ##### Le texte descriptif déménage dans le cadre, et il répète le titre
 

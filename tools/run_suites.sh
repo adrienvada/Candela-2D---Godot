@@ -49,12 +49,26 @@
 # l'égalité exigée de `test_torches.gd`.
 set -uo pipefail
 
-# `--rapide` saute les six scénarios à DEUX INSTANCES.
+# `--rapide` saute les scénarios à DEUX INSTANCES.
 #
-# ⚠️ **Ce commentaire affirmait qu'ils coûtaient « l'essentiel » du temps. Mesuré :
-# c'est faux.** Une suite headless prend **2,6 s** lancée seule, les 36 en font
-# donc ~90 s ; les six scénarios à deux instances ~5 min. Le `--rapide` fait
-# gagner ces cinq minutes, pas davantage.
+# ⚠️ **Ce paragraphe a menti deux fois, et pas de la même façon.** Il a d'abord
+# affirmé que ces scénarios coûtaient « l'essentiel » du temps : c'était faux, et
+# une mesure l'a corrigé. Puis **les chiffres correcteurs ont vieilli sans
+# prévenir** — « 2,6 s par suite », « 36 suites », « les 46 suites », « six
+# scénarios », « ~5 min ». Aucun n'était un mensonge à l'écriture ; tous étaient
+# faux dix jours plus tard, et une session a bâti tout un plan de travail dessus
+# avant d'aller mesurer. Corriger un chiffre ne suffit donc pas : il faut se
+# demander pourquoi il était écrit là.
+#
+# Deux natures, deux parades, et c'est pour ça que les COMPTES ont disparu d'ici.
+# Un compte se DÉRIVE — `${#SUITES[@]}` dans le message de fin ne peut pas se
+# tromper, là où « 46 suites » ne se contredit jamais tout seul. Une durée, elle,
+# ne se dérive pas : elle porte donc sa date ET son arbre, sans quoi deux mesures
+# ne sont même pas comparables.
+#
+#   **Mesuré le 2026-08-27, sur `main` à `3577b1b`, machine au calme :** médiane
+#   d'une suite lancée seule **0,53 s** ; toute la part headless **64 s** ; le lot
+#   complet **241 s**. `--rapide` fait donc gagner ~177 s, et rien d'autre.
 #
 # **Et la vraie cause des lots interminables n'est aucune des deux : c'est la
 # CONTENTION.** Un lot complet a pris **61 minutes** le 2026-08-19 avec une charge
@@ -69,13 +83,80 @@ set -uo pipefail
 # faut demander à en faire moins, jamais l'obtenir sans le savoir.
 #
 # Quand utiliser lequel :
-#   • `--rapide` pendant qu'on itère — les 46 suites headless, ~1 min ;
+#   • `--rapide` pendant qu'on itère — toute la part headless, ~1 min ;
 #   • le lot complet **avant de commiter**, comme l'exige `CLAUDE.md`.
 RAPIDE=0
 if [ "${1:-}" = "--rapide" ]; then RAPIDE=1; fi
 DEBUT=$SECONDS
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+
+# ---------------------------------------------------------------------------
+# UN `user://` PAR LOT
+# ---------------------------------------------------------------------------
+#
+# Godot dérive `user://` de `HOME`. Sans les deux lignes ci-dessous, TOUS les
+# lots — quel que soit l'arbre de travail d'où on les lance — écrivent dans le
+# même `~/Library/Application Support/Godot/app_userdata/Candela 2D` : celui du
+# jeu installé, avec ses cartes, ses réglages et son journal de matchs.
+#
+# Deux dégâts, et le second est le plus cher.
+#
+# **Le lot écrit chez le joueur.** La ROADMAP le dit déjà — « un test qui appelle
+# un setter réécrit les vraies préférences du joueur » — et les suites s'en
+# protègent une par une, par des chemins temporaires et un contrôle final que le
+# vrai `settings.cfg` est intact. Cette discipline tient tant qu'UN SEUL lot
+# tourne.
+#
+# **Deux lots simultanés se rendent FAUSSEMENT ROUGES.** Six sessions partagent
+# cette machine ; deux `run_suites.sh` en même temps, ce sont deux processus qui
+# écrivent le même fichier temporaire, au même nom, dans le même `user://`.
+# Mesuré le 2026-08-26 en lançant chaque suite qui touche `user://` en six copies
+# simultanées : `test_match_history_view` **6/6 en échec**, `test_audio_settings`
+# 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy`
+# 2/6, `test_rejeu_journal` 2/6 — les six autres tiennent. Avec un `user://` par
+# copie, les mêmes 36 exécutions passent **36/36**.
+#
+# Ce qui rend ce défaut coûteux n'est pas qu'il fasse échouer : c'est **ce que
+# disent ses messages**. « les cinq matchs sont rendus → 0 », « journal tronqué →
+# liste vide » accusent le code, jamais la voisine. C'est exactement le faux
+# diagnostic que le port dérivé a supprimé côté réseau, et il restait armé ici, à
+# chaque lot.
+#
+# **Ce script ne supprime jamais ce répertoire, ni rien d'autre.** Il vit sous
+# `mktemp -d`, donc dans le dossier temporaire que macOS purge de lui-même. Un
+# lanceur de tests n'a aucune raison d'effacer quoi que ce soit ; la journée du
+# 2026-08-26 a rappelé ce que coûte l'inverse. Le chemin est annoncé en fin de
+# lot — c'est là que vivent les `logs/godot.log` de ses processus.
+#
+# `run_duo.sh`, appelé plus bas, hérite de cet environnement. Lancé seul, à la
+# main, il continue d'utiliser le `user://` du jeu : ce n'est pas un oubli, c'est
+# un outil de mise au point qu'on veut parfois voir écrire pour de vrai.
+#
+# ⚠️ **`mktemp -d` est gardé, et ce garde n'est pas de la politesse.** Ce script
+# n'a pas `set -e` : une affectation qui échoue ne l'arrête pas. Un `mktemp -d`
+# qui rate — `/tmp` plein, quota, `TMPDIR` inutilisable — laisserait donc
+# `HOME` **vide**, et à partir de cette ligne tout ce qui est relatif au foyer
+# viserait la RACINE : `"$HOME/x"` devient `/x`, pour ce script comme pour tout
+# ce qu'il lance, Godot compris. Reproduit le 2026-08-26 en faisant échouer
+# `mktemp` : `HOME=[]`, `"$HOME/x"` → `/x`. Le lot doit REFUSER de partir dans
+# cet état, pas s'y engager en silence.
+#
+# Code 3, comme `run_duo.sh` : « je n'ai pas pu m'exécuter » n'est pas « le jeu
+# est cassé », et un compte d'échecs gonflé envoie chercher une panne qui
+# n'existe pas.
+#
+# Signalé par la session DA2, qui a lu cette ligne pendant que je l'écrivais.
+MAISON_DU_LOT="$(mktemp -d)" || {
+  echo "REFUS — 'mktemp -d' a échoué : impossible d'isoler le user:// du lot." >&2
+  exit 3
+}
+if [ -z "$MAISON_DU_LOT" ] || [ ! -d "$MAISON_DU_LOT" ]; then
+  echo "REFUS — foyer de lot invalide ([$MAISON_DU_LOT]) : lot non lancé." >&2
+  exit 3
+fi
+export HOME="$MAISON_DU_LOT"
+
 SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
@@ -103,8 +184,59 @@ reportes=0
 run() {
   local nom="$1"; shift
   local sortie tmp chien code
+
+  # ------------------------------------------------------------------------
+  # `--no-eos` POUR TOUS — et posé ICI, pas à chaque appel
+  # ------------------------------------------------------------------------
+  #
+  # C'est le corollaire obligatoire du `user://` par lot, et il ne se devine
+  # pas. **L'identité Epic — le Device ID — vit sous `HOME`.** Un foyer neuf
+  # n'en contient aucune : le SDK part donc en créer une PAR LE RÉSEAU, à
+  # chaque suite et à chaque lot. `create_device_id()` puis un `await` sur le
+  # rappel d'Epic, dans `network_manager.gd`.
+  #
+  # Mesuré le 2026-08-27 sur `test_matchmaking`, identifiants présents, foyer
+  # isolé : **15 s** au lieu de 4, le temps du dialogue avec Epic. Chez la
+  # session DA2, deux fois de suite, la même suite **ne revenait pas** — quatre
+  # suites tuées par le chien de garde et un lot de 789 s au lieu de 200. La
+  # différence entre les deux mesures n'est pas dans le code, elle est chez
+  # Epic : c'est dire si l'on ne veut pas de cette dépendance ici. **Un vert
+  # obtenu le jour où Epic répond n'est pas un vert.**
+  #
+  # Et le prix silencieux serait pire que la lenteur : chaque lot frapperait une
+  # identité Epic NEUVE, ce que tout le dépôt s'interdit (« ne JAMAIS appeler
+  # `delete_device_id()` : PUID différent à chaque lancement »).
+  #
+  # Ce n'est donc pas une optimisation, c'est la décision `cdefb7b` du
+  # 2026-08-26 — « un lot de tests local ne dépend jamais d'Epic » — appliquée à
+  # l'endroit qui l'avait manquée : elle n'était descendue que dans
+  # `run_duo.sh`. Coût en couverture : **aucun**, et ce n'est pas une opinion —
+  # **aucune suite n'exerce Epic**, et chaque lot le prouve de lui-même :
+  # `grep -c 'init EOS'` sur sa sortie rend zéro.
+  #
+  # ⚠️ **Cette phrase s'appuyait sur un total de verdicts — « le lot passe à
+  # 68 OK ».** Il était faux (mon grep comptait aussi les lignes internes de
+  # `run_duo.sh`), je l'ai corrigé partout ailleurs le soir même, et il a survécu
+  # ICI à trois relectures : **un chiffre qu'on a soi-même produit puis réparé
+  # ailleurs devient invisible à sa propre relecture.** On relit ce qu'on
+  # soupçonne, et on ne soupçonne pas ce qu'on croit déjà réparé.
+  #
+  # D'où la forme retenue, qui vaut au-delà de ce cas : **une justification
+  # s'appuie sur un invariant, pas sur un compte.** « Aucune suite n'exerce
+  # Epic » reste vrai indéfiniment ; « 61 verdicts » cesse de l'être à la
+  # prochaine suite ajoutée — et personne ne pense à relire une justification.
+  #
+  # **Posé dans `run()` et non aux six appels** parce qu'un banc ajouté demain
+  # hériterait sinon du blocage sans que personne y pense — même raison que le
+  # reste de ce fichier : un garde-fou ne doit pas dépendre de la vigilance.
+  # `--` d'abord si l'appelant n'en a pas : au-delà, Godot passe tout au jeu.
+  local args=("$@") a separateur=0
+  for a in "${args[@]}"; do [ "$a" = "--" ] && separateur=1; done
+  [ "$separateur" -eq 0 ] && args+=("--")
+  args+=("--no-eos")
+
   tmp="$(mktemp)"
-  "$GODOT" --headless --path . "$@" >"$tmp" 2>&1 &
+  "$GODOT" --headless --path . "${args[@]}" >"$tmp" 2>&1 &
   local gpid=$!
   # `disown` puis redirection : sans eux, le shell annonce « Terminated: 15 »
   # pour CHAQUE chien de garde abattu, soit une ligne de bruit par suite — et
@@ -195,9 +327,17 @@ run test_eblouissement_en_jeu res://tools/test_online_match.tscn -- --eblouissem
 ## Un scénario à deux instances : OK, REPORTÉ, ou ÉCHEC.
 ##
 ## **Trois issues et non deux, parce que deux mentaient.** `run_duo.sh` rend
-## désormais **3** quand il refuse de démarrer — le port UDP 7777 est tenu par
-## un autre lot, souvent celui d'une session voisine sur le même arbre. Ce n'est
-## pas un échec : c'est une mesure qui n'a pas eu lieu.
+## désormais **3** quand il refuse de démarrer — son port UDP est tenu par un
+## autre lot, aujourd'hui forcément un lot lancé du MÊME arbre, puisque le port
+## se dérive du chemin. Ce n'est pas un échec : c'est une mesure qui n'a pas eu
+## lieu.
+##
+## ⚠️ **Ce passage a nommé « 7777 » longtemps après que le port a cessé d'être
+## 7777** (`aa57a33` le dérive de l'arbre). Le lanceur ne connaît pas ce port et
+## ne doit surtout pas le recalculer : `run_duo.sh` le dérive UNE fois et
+## l'exporte, et le refaire ici rouvrirait le défaut que cette règle ferme —
+## deux dérivations, deux ports, aucun rendez-vous. D'où un message qui renvoie
+## à `run_duo.sh` au lieu d'écrire un numéro qu'il ne peut pas connaître.
 ##
 ## Les compter ensemble a coûté quatre diagnostics à trois sessions le
 ## 2026-08-25. Le lanceur annonçait « au moins une suite a échoué », quelqu'un
@@ -294,19 +434,29 @@ duo duo_reconnexion --reconnexion
 duo duo_reconnexion_tardive --reconnexion-tardive
 
 DUREE=$((SECONDS - DEBUT))
+# **Annoncé à chaque lot, et pas seulement en cas d'échec.** Ce lanceur ne joue
+# plus dans le `user://` du jeu : c'est un changement de comportement, et un
+# changement de comportement silencieux est précisément ce que ce fichier
+# reproche ailleurs à `--rapide`. La ligne dit aussi où lire les journaux.
+# Avant le verdict, jamais après : la DERNIÈRE ligne appartient au résultat.
+echo "user:// de ce lot : $MAISON_DU_LOT (ce script n'y supprime rien)"
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1
 fi
 if [ "$RAPIDE" -eq 1 ]; then
-  echo "--- suites headless vertes en ${DUREE}s — SCÉNARIOS À DEUX INSTANCES NON JOUÉS ---"
+  # `${#SUITES[@]}` et non un chiffre : c'est la seule façon qu'un compte reste
+  # vrai quand la liste grandit. L'en-tête de ce fichier a annoncé « 46 suites »
+  # jusqu'à ce qu'il y en ait 48, sans que rien ne le contredise.
+  echo "--- les ${#SUITES[@]} suites headless sont vertes en ${DUREE}s — SCÉNARIOS À DEUX INSTANCES NON JOUÉS ---"
   echo "    (relancer sans --rapide avant de commiter)"
 elif [ "$reportes" -ne 0 ]; then
   # **Vert, mais incomplet — et il faut que la DERNIÈRE ligne le dise.** C'est
   # elle qu'on lit ; un « tout passe » sur un lot amputé de ses scénarios réseau
   # ferait commiter du netcode que personne n'a exercé.
   echo "--- tout passe, MAIS ${reportes} scénario(s) à deux instances REPORTÉ(S) (${DUREE}s) ---"
-  echo "    Port 7777 occupé : ce n'est pas une panne, c'est une mesure qui n'a pas eu lieu."
-  echo "    Relancer quand le champ est libre :  lsof -nP -iUDP:7777"
+  echo "    Le port du lot était occupé : ce n'est pas une panne, c'est une mesure qui n'a pas eu lieu."
+  echo "    Le port se dérive de l'arbre ; run_duo.sh l'imprime en tête de chaque scénario."
+  echo "    Relancer quand le champ est libre :  lsof -nP -iUDP:<le port annoncé>"
 else
   echo "--- tout passe, sans erreur de script (${DUREE}s) ---"
 fi
