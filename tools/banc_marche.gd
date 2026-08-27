@@ -399,23 +399,33 @@ func _unhandled_input(evt: InputEvent) -> void:
 			_facteur_vitesse = minf(_facteur_vitesse + 0.25, 3.0)
 		KEY_MINUS, KEY_KP_SUBTRACT:
 			_facteur_vitesse = maxf(_facteur_vitesse - 0.25, 0.25)
-		KEY_1, KEY_KP_1, KEY_AMPERSAND:
-			_arme = 0
-			_charger_les_textures()
-		KEY_2, KEY_KP_2, KEY_EACUTE:
-			_arme = 1
-			_charger_les_textures()
-		KEY_3, KEY_KP_3, KEY_QUOTEDBL:
-			_arme = 2
-			_charger_les_textures()
-		KEY_4, KEY_KP_4, KEY_APOSTROPHE:
-			_arme = 3
-			_charger_les_textures()
 		_:
-			# Fallback sur physical_keycode pour tout autre disposition de clavier
 			if pk >= KEY_1 and pk <= KEY_4:
 				_arme = pk - KEY_1
 				_charger_les_textures()
+			elif pk >= KEY_KP_1 and pk <= KEY_KP_4:
+				_arme = pk - KEY_KP_1
+				_charger_les_textures()
+			elif kc >= KEY_1 and kc <= KEY_4:
+				_arme = kc - KEY_1
+				_charger_les_textures()
+			elif kc >= KEY_KP_1 and kc <= KEY_KP_4:
+				_arme = kc - KEY_KP_1
+				_charger_les_textures()
+			else:
+				var txt := key_ev.as_text()
+				if txt == "1" or txt == "&":
+					_arme = 0
+					_charger_les_textures()
+				elif txt == "2" or txt == "é" or txt == "É":
+					_arme = 1
+					_charger_les_textures()
+				elif txt == "3" or txt == '"':
+					_arme = 2
+					_charger_les_textures()
+				elif txt == "4" or txt == "'":
+					_arme = 3
+					_charger_les_textures()
 
 
 func _remettre_a_zero() -> void:
