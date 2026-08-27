@@ -2579,7 +2579,7 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_retour"))
+	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL))
 
 	# --- 1v1 amical -----------------------------------------------------------
 	# **« PRÉPARER » décrivait le panneau, pas le geste.** Corrigé par Adrien le
@@ -2598,7 +2598,7 @@ func _build_hub_screens() -> void:
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
 		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
 		SCREEN_FRIENDLY_LOCAL, COLOR_ACCENT, "", "", false, "ill_amical"))
-	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_retour")
+	hub.add_back_entry(SCREEN_FRIENDLY)
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
 	# choix, et entrer dans l'un des deux écrans le pose. Même raisonnement que
@@ -2616,7 +2616,7 @@ func _build_hub_screens() -> void:
 			COLOR_ACCENT, "", "", false, "ill_creer"))
 		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3]),
 			COLOR_ACCENT, "", "", false, "ill_rejoindre"))
-		hub.add_back_entry(String(spec[1]), "", "ill_retour")
+		hub.add_back_entry(String(spec[1]))
 
 	# --- Les quatre salons ----------------------------------------------------
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
@@ -2659,7 +2659,7 @@ func _build_hub_screens() -> void:
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
 		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
-	hub.add_back_entry(SCREEN_RANKED, "", "ill_retour")
+	hub.add_back_entry(SCREEN_RANKED)
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
 		+ "se recalcule, les rangs existent. Ce qui manque est l'appariement — de "
@@ -2679,7 +2679,7 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	hub.add_back_entry(SCREEN_TRAINING, "", "ill_retour")
+	hub.add_back_entry(SCREEN_TRAINING)
 
 	# --- Personnalisation -----------------------------------------------------
 	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
@@ -2697,7 +2697,7 @@ func _build_hub_screens() -> void:
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
 		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
-	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_retour")
+	hub.add_back_entry(SCREEN_CUSTOM)
 	hub.set_screen_panel(SCREEN_CUSTOM, "ill_personnalisation")
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
@@ -2723,7 +2723,7 @@ func _build_hub_screens() -> void:
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
-	hub.add_back_entry(SCREEN_UPDATE, "", "ill_retour")
+	hub.add_back_entry(SCREEN_UPDATE)
 	# ⚠️ **Un défaut d'écran, et non un panneau par entrée.** Cet écran construit
 	# ses propres boutons — `ScreenUpdate.build()` les ajoute directement, sans
 	# passer par `make_entry()` — donc ils n'ont pas de panneau et n'en auront
