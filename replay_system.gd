@@ -195,6 +195,31 @@ func trajectoire_fatale() -> PackedVector2Array:
 	return PackedVector2Array([bullet_events[i]["pos"], impact])
 
 
+## Tout ce qu'il faut pour relever le tir fatal. Vide s'il n'y en a pas.
+##
+## ⚠️ **Le relevé DA4.6 a besoin de l'angle RÉEL du tir, et pas seulement de ses
+## deux bouts.** Ce qu'il montre est l'écart entre la trajectoire suivie et celle
+## qui aurait fait le maximum de dégâts : sans `rot`, l'écart ne se calcule pas,
+## et le relevé retomberait à coter une distance de tir — ce qu'Adrien a
+## justement écarté le 2026-08-27.
+##
+## Une seule fonction pour tout donner, plutôt que trois accesseurs : le relevé
+## et la trajectoire doivent parler du **même** tir, et trois appels séparés,
+## c'est trois occasions de n'en désigner pas le même.
+func releve_du_tir_fatal() -> Dictionary:
+	var i := index_du_tir_fatal()
+	if i < 0:
+		return {}
+	var snap = snapshots[impact_frame]
+	var ev: Dictionary = bullet_events[i]
+	return {
+		"origine": ev["pos"],
+		"cible": snap.p1_pos if snap.p1_hp <= 0.0 else snap.p2_pos,
+		"angle": ev["rot"],
+		"arme": ev["weapon"],
+	}
+
+
 ## L'indice, dans `bullet_events`, du tir qui a tué. `-1` s'il n'y en a pas.
 ##
 ## ⚠️ **Extrait de `trajectoire_fatale()` plutôt que réécrit à côté**, et le

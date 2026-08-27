@@ -75,11 +75,10 @@ func _test_l_annotation_tient_sa_taille_ecran(releve: GDScript) -> void:
 	var epaisseurs: Array[float] = []
 	for z: float in ZOOMS:
 		var g: Dictionary = releve.geometrie_du_releve(400.0, z, 0.0)
-		var trace: Array = g["trace"]
 		var cote: Array = g["cote"]
 		# L'écart local, ramené en pixels d'écran : c'est lui qui doit être
 		# constant, pas l'écart local.
-		var ecart_local: float = absf(cote[0].y - trace[0].y)
+		var ecart_local: float = absf(cote[0].y)
 		ecarts.append(ecart_local * z)
 		epaisseurs.append(float(g["epaisseur"]) * z)
 
@@ -162,10 +161,9 @@ func _test_la_cote_ne_se_retourne_jamais(releve: GDScript) -> void:
 		var angle := TAU * float(pas) / 36.0
 		var g: Dictionary = releve.geometrie_du_releve(400.0, 1.0, angle)
 		var cote: Array = g["cote"]
-		var trace: Array = g["trace"]
 		# Le décalage local, vu du monde : sa composante Y doit être négative
 		# (l'écran a son Y vers le bas), donc la cote est au-dessus du trait.
-		var decalage: Vector2 = (cote[0] - trace[0]).rotated(angle)
+		var decalage: Vector2 = (cote[0] as Vector2).rotated(angle)
 		if absf(decalage.y) < 0.001:
 			# Tir vertical : la cote est de côté, ni haut ni bas. Le cas existe,
 			# il n'est pas fautif — mais il doit rester RARE, sinon la formule
@@ -204,7 +202,7 @@ func _test_les_chevrons_disent_le_sens(releve: GDScript) -> void:
 	var h: float = g["chevron_h"]
 	_check(l > 0.0 and h > 0.0, "un chevron sans dimensions ne se voit pas")
 
-	# La balle est en (0,0) et le départ en -X : les ailes doivent donc être en
+	# Le tireur est en (0,0) et la cible en +X : les ailes doivent donc être en
 	# ARRIÈRE de la pointe, c'est-à-dire à un x plus petit.
 	_check(l > 0.0,
 		"les ailes du chevron ne sont pas en arrière de sa pointe")
@@ -213,7 +211,7 @@ func _test_les_chevrons_disent_le_sens(releve: GDScript) -> void:
 	var chevrons: Array = g["chevrons"]
 	_check(not chevrons.is_empty(), "aucun chevron sur un tir de 400 px")
 	for p: Vector2 in chevrons:
-		_check(p.x >= -400.0 and p.x <= 0.0,
+		_check(p.x >= 0.0 and p.x <= 400.0,
 			"un chevron est hors du segment parcouru (x = %.1f)" % p.x)
 		_proche(p.y, 0.0, "un chevron n'est pas sur le trait")
 
@@ -299,11 +297,12 @@ func _test_le_pretrace_pousse_vers_l_impact(releve: GDScript) -> void:
 	root.add_child(n)
 	var depart := Vector2(100.0, 100.0)
 	var arrivee := Vector2(500.0, 100.0)
-	_check(n.poser(depart, arrivee), "le relevé refuse une trajectoire valide")
-	_check(not n.poser(depart, depart + Vector2(0.2, 0.0)),
+	_check(n.poser(depart, arrivee, 0.0, "PISTOLET", 0.5),
+		"le relevé refuse une trajectoire valide")
+	_check(not n.poser(depart, depart + Vector2(0.2, 0.0), 0.0),
 		"le relevé accepte une trajectoire de longueur nulle")
 
-	n.poser(depart, arrivee)
+	n.poser(depart, arrivee, 0.0, "PISTOLET", 0.5)
 	_check(is_equal_approx(n.progression, 0.0),
 		"le pré-tracé ne commence pas à zéro")
 
@@ -366,7 +365,7 @@ func _test_le_releve_ne_se_montre_pas_avant_l_heure(releve: GDScript) -> void:
 	# à zéro est la seule chose qui l'en empêche.
 	var n: Node2D = releve.new()
 	root.add_child(n)
-	n.poser(Vector2(100.0, 100.0), Vector2(500.0, 100.0))
+	n.poser(Vector2(100.0, 100.0), Vector2(500.0, 100.0), 0.0, "", 0.5)
 	_check(is_equal_approx(n.progression, 0.0),
 		"un relevé fraîchement posé a déjà une progression : il se verrait")
 	_check(not n.en_arriere_plan,
@@ -429,6 +428,88 @@ func _test_l_echelle_metrique() -> void:
 		"au-delà de 10 m, aucune décimale : %s" % e.ecrire(2000.0))
 
 
+# ---------------------------------------------------------------------------
+# 7. CE QUE LE RELEVÉ MESURE : L'ÉCART AU TIR PARFAIT
+# ---------------------------------------------------------------------------
+
+## ⚠️ **Le relevé cotait la distance de tir, et c'était hors sujet.** Relevé par
+## Adrien le 2026-08-27 : une killcam n'existe pas pour dire de combien de mètres
+## on s'est fait tuer, mais pour montrer *pourquoi c'était imparable*. Le sujet
+## est donc l'écart entre la trajectoire suivie et celle qui aurait fait le
+## maximum de dégâts — celle qui passe pile par le centre de la victime.
+##
+## Les contrôles portent sur les **invariants** de cette analyse, pas sur des
+## valeurs choisies : un tir parfait a un écart nul et 100 % des dégâts ; un tir
+## dévié perd des dégâts ; au-delà du rayon létal, on est au plancher de l'arme.
+func _test_l_ecart_au_tir_parfait(releve: GDScript) -> void:
+	var depart := Vector2.ZERO
+	var cible := Vector2(400.0, 0.0)
+
+	# Le tir parfait : aligné sur la cible.
+	var parfait: Dictionary = releve.analyse(depart, cible, 0.0, 0.5)
+	_proche(parfait["ecart_angle"], 0.0, "un tir aligné a un écart d'angle")
+	_proche(parfait["ecart_perp"], 0.0, "un tir aligné rate le centre")
+	_proche(parfait["part_degats"], 1.0,
+		"un tir parfait ne fait pas 100 % des dégâts")
+	_proche(parfait["portee"], 400.0, "la portée n'est pas la distance au centre")
+
+	# Un tir dévié : l'écart perpendiculaire vaut portée × sin(angle).
+	var devie: Dictionary = releve.analyse(depart, cible, deg_to_rad(1.0), 0.5)
+	_proche(devie["ecart_perp"], 400.0 * sin(deg_to_rad(1.0)),
+		"l'écart perpendiculaire ne suit pas la géométrie", 0.01)
+	_check(float(devie["part_degats"]) < 1.0,
+		"un tir dévié fait autant de dégâts qu'un tir parfait")
+
+	# ⚠️ Au-delà du rayon létal, on est au PLANCHER de l'arme — pas en dessous.
+	# Sans borne, un tir très dévié afficherait des dégâts négatifs.
+	var loin: Dictionary = releve.analyse(depart, cible, deg_to_rad(30.0), 0.5)
+	_proche(loin["part_degats"], 0.5,
+		"au-delà du rayon létal, la part de dégâts quitte le plancher de l'arme")
+
+	# Le signe de l'écart doit distinguer les deux côtés : l'arc se dessine dans
+	# un sens ou dans l'autre, et un écart non signé le ferait toujours du même.
+	var gauche: Dictionary = releve.analyse(depart, cible, deg_to_rad(-2.0), 0.5)
+	var droite: Dictionary = releve.analyse(depart, cible, deg_to_rad(2.0), 0.5)
+	_check(signf(gauche["ecart_angle"]) != signf(droite["ecart_angle"]),
+		"l'écart d'angle n'est pas signé : l'arc partirait toujours du même côté")
+
+	# Et le passage : le point de l'axe réel le plus proche du centre. Sur un tir
+	# aligné, c'est la cible elle-même.
+	_proche((parfait["passage"] as Vector2).distance_to(cible), 0.0,
+		"le point de passage d'un tir parfait n'est pas la cible", 0.01)
+
+	# ⚠️ **Le rayon létal doit rester celui de `bullet.gd`.** Deux valeurs
+	# donneraient un relevé qui annonce une part de dégâts que le jeu n'applique
+	# pas — un document faux, et personne ne le saurait.
+	var balle := FileAccess.get_file_as_string("res://bullet.gd")
+	_check(balle.contains("15.0"),
+		"bullet.gd n'emploie plus 15.0 : le rayon létal du relevé a divergé")
+
+
+## Le relevé se construit-il dans l'ordre, ou d'un bloc ?
+##
+## **Un plan se lit dans l'ordre où il se construit.** Tout faire apparaître
+## ensemble donnerait une image ; le tracé progressif donne un raisonnement.
+func _test_les_phases_s_enchainent(releve: GDScript) -> void:
+	# Chaque phase est vide avant son début, pleine après sa fin.
+	_proche(releve.phase(0.0, 0.5, 0.8), 0.0, "une phase a commencé trop tôt")
+	_proche(releve.phase(0.5, 0.5, 0.8), 0.0, "une phase n'est pas nulle à son début")
+	_proche(releve.phase(0.8, 0.5, 0.8), 1.0, "une phase n'est pas pleine à sa fin")
+	_proche(releve.phase(1.0, 0.5, 0.8), 1.0, "une phase repasse sous un après sa fin")
+	_proche(releve.phase(0.65, 0.5, 0.8), 0.5, "une phase n'est pas linéaire")
+
+	# Une phase dégénérée ne doit pas diviser par zéro.
+	_proche(releve.phase(0.4, 0.5, 0.5), 0.0, "phase dégénérée avant le seuil")
+	_proche(releve.phase(0.6, 0.5, 0.5), 1.0, "phase dégénérée après le seuil")
+
+	# ⚠️ Les axes doivent partir EN PREMIER : c'est eux qui portent le sujet.
+	# Un cartouche qui s'écrirait avant que la ligne existe n'annoncerait rien.
+	_check(releve.phase(0.2, 0.0, 0.40) > 0.0,
+		"les axes n'ont pas commencé au premier cinquième")
+	_check(releve.phase(0.2, 0.72, 1.0) <= 0.0,
+		"le cartouche s'écrit avant que les axes existent")
+
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -447,6 +528,8 @@ func _run() -> void:
 	_test_le_releve_ne_se_montre_pas_avant_l_heure(releve)
 	_test_le_pretrace_est_en_temps_reel()
 	_test_l_echelle_metrique()
+	_test_l_ecart_au_tir_parfait(releve)
+	_test_les_phases_s_enchainent(releve)
 	_test_l_annotation_tient_sa_taille_ecran(releve)
 	_test_les_chevrons_sont_en_pixels_monde(releve)
 	_test_la_cote_ne_se_retourne_jamais(releve)

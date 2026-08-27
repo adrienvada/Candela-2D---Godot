@@ -1633,13 +1633,26 @@ var _releve: ReleveBalistique = null
 ## la façon dont on est mort.
 func _armer_le_releve() -> void:
 	_liberer_le_releve()
-	var t := ReplaySystem.trajectoire_fatale()
-	if t.size() < 2:
+	var d := ReplaySystem.releve_du_tir_fatal()
+	if d.is_empty():
 		return
+
+	# ⚠️ **La part de dégâts de bord se calcule ICI**, et pas dans le relevé :
+	# `releve_balistique.gd` n'a aucune raison de connaître `WeaponData`, et le
+	# jour où la chute de dégâts changera, elle changera dans `bullet.gd` et dans
+	# cette ligne — pas dans un fichier de dessin.
+	var arme: WeaponData = d["arme"]
+	var nom := ""
+	var part_bord := 0.5
+	if arme != null:
+		nom = arme.name
+		if arme.damage_center > 0.0:
+			part_bord = arme.damage_edge / arme.damage_center
+
 	_releve = ReleveBalistique.new()
 	_releve.name = "ReleveBalistique"
 	arena.add_child(_releve)
-	if not _releve.poser(t[0], t[1]):
+	if not _releve.poser(d["origine"], d["cible"], d["angle"], nom, part_bord):
 		_liberer_le_releve()
 
 

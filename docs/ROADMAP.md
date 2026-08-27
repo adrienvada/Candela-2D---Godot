@@ -8896,6 +8896,46 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   l'état de départ et la distinction des trois moments ; vérifié rouge en
   remettant le booléen.
 
+  ### Ce que le relevé MESURE a changé — et c'est le vrai lot
+
+  ⚠️ **Il cotait la distance de tir. Exact, et hors sujet.** Relevé par Adrien
+  le 2026-08-27 : *« je comprenais que ça mesurait la distance de tir. Ça doit
+  montrer la trajectoire parfaite de la balle pour faire le max de dégâts. »*
+
+  **Une killcam n'existe pas pour dire de combien de mètres on s'est fait
+  tuer**, mais pour montrer *pourquoi c'était imparable*. Or la chute de dégâts
+  de `bullet.gd` ne dépend que d'une grandeur : la distance perpendiculaire de
+  l'axe de la balle au centre de la victime. Il existe donc, pour chaque tir,
+  **une trajectoire idéale** — celle qui passe pile par ce centre — et le tir
+  réel s'en écarte d'un angle. C'est ce couple que le relevé dessine.
+
+  ⚠️ **La différence n'est pas cosmétique, elle décide de tout le dessin.** Coter
+  une distance demande une ligne de cote ; coter un ÉCART demande deux axes, un
+  arc, et une lecture qui dit *« il s'en est fallu de tant »*. Le premier se lit
+  en un chiffre, le second se comprend en une image.
+
+  **Le registre est le dessin d'exécution, pas l'infographie.** Les traits sont
+  très déportés — 78 px au lieu de 26 : *« il faut que les traits de cote soient
+  beaucoup moins ramassés »*. **Une cote collée à son objet se lit comme une
+  étiquette ; c'est le déport qui la fait lire comme une mesure.** S'y ajoute
+  l'appareillage qui fait qu'un plan ressemble à un plan : axes en **trait
+  mixte** (jamais pointillé — le pointillé appartient à la balle, c'est le trajet
+  parcouru), lignes d'attache qui débordent, obliques ISO, mire de calage sur la
+  cible, et un cartouche.
+
+  ⚠️ **« Inutile » ne veut pas dire « faux ».** Adrien a demandé « des infos
+  supplémentaires inutiles » ; chaque ligne du cartouche est une valeur réellement
+  calculée — arme, portée, écart perpendiculaire, part des dégâts maximaux
+  atteinte. **Un relevé qui afficherait des nombres décoratifs serait un faux
+  document**, et le jour où quelqu'un s'y fierait il aurait raison de le faire.
+  La part de dégâts reprend la formule de `bullet.gd` au lieu de la paraphraser :
+  une seconde formule « équivalente » ferait afficher une part que le jeu
+  n'applique pas.
+
+  **Cinq phases qui s'enchaînent** — axes, arc d'écart, cote, mire, cartouche.
+  *Un plan se lit dans l'ordre où il se construit* ; tout faire apparaître
+  ensemble donnerait une image, le tracé progressif donne un raisonnement.
+
   ⚠️ **Plusieurs traits presque parallèles, et un seul était le bon.** Relevé par
   Adrien à l'écran le 2026-08-27 — *« la balle ne suit pas la trajectoire tracée
   par les pointillés »*. Elle la suivait ; ce n'était pas **sa** trajectoire
