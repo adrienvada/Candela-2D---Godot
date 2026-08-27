@@ -3056,6 +3056,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Deux mesures qui divergent parlent peut-être de deux bases (2026-08-27)
+
+Deux sessions ont passé une nuit à s'opposer sur quatre points qui semblaient
+tous techniques : un lot vert chez l'une et bloqué chez l'autre sur EOS ; 47
+suites contre 48 ; 58 verdicts contre 61 ; un lot à 200 s contre 789 s.
+
+**C'était un seul désaccord, et il n'était pas technique : une branche avait
+quinze commits de retard.** Chaque camp mesurait honnêtement, avec de bons
+outils, et décrivait un dépôt différent.
+
+Trois formes, parce que la base n'est pas seulement le commit :
+
+- **le commit** — `git rev-list --left-right --count HEAD...origin/main` avant
+  de comparer quoi que ce soit ; c'est une seconde et ça a coûté une nuit ;
+- **les fichiers non versionnés** — un arbre sans `eos_credentials.gd`
+  n'initialise jamais EOS. Trois lots verts n'y prouvent RIEN de la machine
+  d'Adrien, et le vert ne dit pas lequel des deux mondes il décrit ;
+- **la question posée** — chercher « quand `test_dosage_audio` est-il arrivé »
+  au lieu de « laquelle est arrivée en dernier », c'est substituer à la question
+  une autre dont on connaît déjà la moitié de la réponse. Un `comm` sur les deux
+  listes n'exige de deviner aucun nom.
+
+**La règle est plus retorse qu'elle n'en a l'air**, et le savoir n'a pas suffi :
+la session qui l'énonçait a supposé que l'écart venait de l'arbre le plus
+avancé — il venait du plus ancien, le sien. Une règle appliquée en devinant de
+quel côté penche l'erreur ne protège pas. **Interroger la référence partagée,
+jamais son propre plan de travail** : `git show origin/main:<fichier>` répond du
+dépôt, `${#SUITES[@]}` ne répond que de soi.
+
+Corollaire pour tout ce qui s'écrit ici : **un compte se dérive, une durée porte
+sa date ET son arbre.** Sans quoi deux mesures ne sont pas comparables, et l'on
+croit débattre du code.
+
 ### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
 
 Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
