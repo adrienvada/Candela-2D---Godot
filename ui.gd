@@ -40,6 +40,7 @@ signal pick_window_cancelled
 # domicile.
 
 const Charte := preload("res://charte.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 ## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
 ## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
 ## `preload` plutôt que de les déclarer globalement. Oublier ce `preload` ne
@@ -508,8 +509,8 @@ var map_card_meta: Label
 
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
-var p1_vbox: VBoxContainer
-var p2_vbox: VBoxContainer
+var p1_vbox: Control
+var p2_vbox: Control
 var weapon_hbox: HBoxContainer
 
 var p1_btn1: Button
@@ -2176,15 +2177,7 @@ func _build_dialog() -> void:
 
 	# DA4.17 — **le cadre porte le registre du message.** Sa teinte est posée par
 	# `show_dialog_message()`, pas ici : elle change à chaque ouverture.
-	_dialog_style = StyleBoxFlat.new()
-	_dialog_style.bg_color = Color(Charte.SURFACE, 0.97)
-	_dialog_style.set_border_width_all(2)
-	_dialog_style.border_color = COLOR_ACCENT
-	_dialog_style.set_corner_radius_all(12)
-	_dialog_style.content_margin_left = GAP_L
-	_dialog_style.content_margin_right = GAP_L
-	_dialog_style.content_margin_top = GAP_M
-	_dialog_style.content_margin_bottom = GAP_M
+	_dialog_style = MenuWidgets.make_modal_style(COLOR_ACCENT)
 	dialog_panel.add_theme_stylebox_override("panel", _dialog_style)
 
 	var vbox := VBoxContainer.new()
@@ -2868,7 +2861,9 @@ func _build_salon_aside() -> Control:
 ## curseur ; dans le cadre, rien ne le lui dispute.
 func _build_launch_row() -> Control:
 	panel_launch = _make_button("JOUER", COLOR_GOLD, true)
-	panel_launch.size_flags_horizontal = Control.SIZE_SHRINK_END
+	panel_launch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel_launch.custom_minimum_size = Vector2(0, 52)
+	Charte.enseigne(panel_launch, T_APPUI)
 	panel_launch.pressed.connect(func() -> void:
 		var action := String(panel_launch.get_meta(META_LAUNCH_ACTION, ""))
 		if action != "":
@@ -4100,82 +4095,11 @@ func effacer_bilan() -> void:
 
 ## Bouton générique du menu. `primary` remplit le fond avec la teinte donnée.
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.add_theme_font_size_override("font_size", T_APPUI)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.85) if primary else COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = accent if primary else Color(accent.r, accent.g, accent.b, 0.4)
-	normal.set_corner_radius_all(10)
-	normal.content_margin_left = GAP_M
-	normal.content_margin_right = GAP_M
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Charte.HALOGENE
-	hover.bg_color = accent if primary else Color(accent.r, accent.g, accent.b, 0.16)
-	hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.35)
-	hover.shadow_size = 8
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = accent
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("hover_pressed", pressed)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(Charte.SURFACE, 0.8)
-	disabled.border_color = COLOR_LINE
-	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Charte.DIM * 0.68)
-
-	if primary:
-		btn.add_theme_color_override("font_color", Charte.NOIR)
-		btn.add_theme_color_override("font_hover_color", Charte.NOIR)
-		btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
-		btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
-		btn.add_theme_color_override("font_focus_color", Charte.NOIR)
-
-	return btn
+	return MenuWidgets.make_button(label, accent, primary, T_APPUI)
 
 ## Bouton à bascule d'un groupe de choix (mode de jeu, résolution…).
 func _make_choice_button(label: String, accent: Color, group: ButtonGroup) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.toggle_mode = true
-	btn.button_group = group
-	btn.custom_minimum_size = Vector2(200, 48)
-	btn.add_theme_font_size_override("font_size", T_COURANT)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = COLOR_LINE
-	normal.set_corner_radius_all(10)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(accent.r, accent.g, accent.b, 0.7)
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.1)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-
-	var active := normal.duplicate() as StyleBoxFlat
-	active.bg_color = Color(accent.r, accent.g, accent.b, 0.9)
-	active.border_color = Charte.HALOGENE
-	active.shadow_color = Color(accent.r, accent.g, accent.b, 0.4)
-	active.shadow_size = 10
-	btn.add_theme_stylebox_override("pressed", active)
-	btn.add_theme_stylebox_override("hover_pressed", active)
-
-	btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
-	btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
-	return btn
+	return MenuWidgets.make_choice_button(label, accent, group, T_COURANT, Vector2(200, 48))
 
 func _make_section_label(text: String, tint: Color) -> Label:
 	var label := Label.new()
@@ -4195,35 +4119,31 @@ func _make_section_label(text: String, tint: Color) -> Label:
 ## Il redevient donc ce qu'il annonce, un état, et sort du parcours du curseur.
 func _build_map_card() -> Control:
 	map_card = PanelContainer.new()
-	map_card.custom_minimum_size = Vector2(400, 104)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = COLOR_LINE
-	normal.set_corner_radius_all(12)
-	normal.content_margin_left = 12
-	normal.content_margin_right = 12
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	map_card.add_theme_stylebox_override("panel", normal)
+	map_card.custom_minimum_size = Vector2(0, 116)
+	map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_card.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_LINE, MenuWidgets.CORNER_PANEL, 2))
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", GAP_S)
+	row.add_theme_constant_override("separation", GAP_M)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_card.add_child(row)
 
+	var thumb_panel := PanelContainer.new()
+	thumb_panel.custom_minimum_size = Vector2(96, 96)
+	thumb_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var thumb_style := StyleBoxFlat.new()
+	thumb_style.bg_color = Charte.NOIR
+	thumb_style.set_border_width_all(1)
+	thumb_style.border_color = Charte.LINE
+	thumb_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
+	thumb_panel.add_theme_stylebox_override("panel", thumb_style)
+	row.add_child(thumb_panel)
+
 	map_card_thumb = TextureRect.new()
-	map_card_thumb.custom_minimum_size = Vector2(80, 80)
 	map_card_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_card_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	# **Plus de `NEAREST` ici non plus.** DA5.6 est tranchée — « filtrage linéaire
-	# et mipmaps, aucune texture en `nearest` » — et la vignette de 80 px l'était
-	# pour la même raison que celle de la galerie : elle était agrandie. Le remède
-	# est le même, et il est celui que la décision indiquait : rendre à la densité
-	# de texels de l'écran plutôt que contourner le filtrage.
 	map_card_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(map_card_thumb)
+	thumb_panel.add_child(map_card_thumb)
 
 	var texts := VBoxContainer.new()
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -4233,15 +4153,16 @@ func _build_map_card() -> Control:
 	row.add_child(texts)
 
 	var kicker := Label.new()
-	kicker.text = "CARTE"
-	kicker.add_theme_font_size_override("font_size", T_MENTION)
+	kicker.text = "ARÈNE SÉLECTIONNÉE"
+	Charte.appareil(kicker, T_MENTION)
 	kicker.add_theme_color_override("font_color", COLOR_DIM)
 	kicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(kicker)
 
 	map_card_name = Label.new()
 	map_card_name.text = "—"
-	map_card_name.add_theme_font_size_override("font_size", T_APPUI)
+	Charte.enseigne(map_card_name, T_APPUI)
+	map_card_name.add_theme_color_override("font_color", COLOR_GOLD)
 	map_card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	map_card_name.clip_text = true
 	map_card_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4249,7 +4170,7 @@ func _build_map_card() -> Control:
 
 	map_card_meta = Label.new()
 	map_card_meta.text = ""
-	map_card_meta.add_theme_font_size_override("font_size", T_MENTION)
+	Charte.appareil(map_card_meta, T_MENTION)
 	map_card_meta.add_theme_color_override("font_color", COLOR_DIM)
 	map_card_meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(map_card_meta)
@@ -4539,19 +4460,26 @@ func _copy_lobby_code() -> void:
 func _build_weapon_block() -> Control:
 	weapon_hbox = HBoxContainer.new()
 	weapon_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	weapon_hbox.add_theme_constant_override("separation", GAP_L + GAP_XS)
+	weapon_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	weapon_hbox.add_theme_constant_override("separation", GAP_M)
 
 	p1_weapon_group = ButtonGroup.new()
 	p2_weapon_group = ButtonGroup.new()
 
-	p1_vbox = VBoxContainer.new()
-	p1_vbox.add_theme_constant_override("separation", GAP_XS)
-	p1_vbox.add_child(_make_section_label("ARME — JOUEUR 1", COLOR_P1))
+	# Station Joueur 1 (Pod J1)
+	p1_vbox = PanelContainer.new()
+	p1_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p1_vbox.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_P1 * 0.8, MenuWidgets.CORNER_PANEL, 2))
+	var p1_inner := VBoxContainer.new()
+	p1_inner.add_theme_constant_override("separation", GAP_S)
+	p1_inner.add_child(_make_section_label("ARME — JOUEUR 1", COLOR_P1))
 
 	# Contrat : l'index de l'arme est l'index du bouton dans son conteneur.
-	# Ce HBox ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
-	var p1_row := HBoxContainer.new()
-	p1_row.add_theme_constant_override("separation", GAP_XS)
+	# Ce conteneur ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
+	var p1_grid := GridContainer.new()
+	p1_grid.columns = 2
+	p1_grid.add_theme_constant_override("h_separation", GAP_XS)
+	p1_grid.add_theme_constant_override("v_separation", GAP_XS)
 	p1_btn1 = _create_weapon_btn("Pistolet", p1_weapon_group, COLOR_P1, 0,
 		"pistolet")
 	p1_btn2 = _create_weapon_btn("Fusil", p1_weapon_group, COLOR_P1, 0,
@@ -4562,19 +4490,26 @@ func _build_weapon_block() -> Control:
 		"arbalete")
 	p1_btn1.button_pressed = true
 	p1_btn1.set_meta(META_NAV_SEED, 0)
-	p1_row.add_child(p1_btn1)
-	p1_row.add_child(p1_btn2)
-	p1_row.add_child(p1_btn3)
-	p1_row.add_child(p1_btn4)
-	p1_vbox.add_child(p1_row)
+	p1_grid.add_child(p1_btn1)
+	p1_grid.add_child(p1_btn2)
+	p1_grid.add_child(p1_btn3)
+	p1_grid.add_child(p1_btn4)
+	p1_inner.add_child(p1_grid)
+	p1_vbox.add_child(p1_inner)
 	weapon_hbox.add_child(p1_vbox)
 
-	p2_vbox = VBoxContainer.new()
-	p2_vbox.add_theme_constant_override("separation", GAP_XS)
-	p2_vbox.add_child(_make_section_label("ARME — JOUEUR 2", COLOR_P2))
+	# Station Joueur 2 (Pod J2)
+	p2_vbox = PanelContainer.new()
+	p2_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p2_vbox.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_P2 * 0.8, MenuWidgets.CORNER_PANEL, 2))
+	var p2_inner := VBoxContainer.new()
+	p2_inner.add_theme_constant_override("separation", GAP_S)
+	p2_inner.add_child(_make_section_label("ARME — JOUEUR 2", COLOR_P2))
 
-	var p2_row := HBoxContainer.new()
-	p2_row.add_theme_constant_override("separation", GAP_XS)
+	var p2_grid := GridContainer.new()
+	p2_grid.columns = 2
+	p2_grid.add_theme_constant_override("h_separation", GAP_XS)
+	p2_grid.add_theme_constant_override("v_separation", GAP_XS)
 	p2_btn1 = _create_weapon_btn("Pistolet", p2_weapon_group, COLOR_P2, 1,
 		"pistolet")
 	p2_btn2 = _create_weapon_btn("Fusil", p2_weapon_group, COLOR_P2, 1,
@@ -4585,11 +4520,12 @@ func _build_weapon_block() -> Control:
 		"arbalete")
 	p2_btn1.button_pressed = true
 	p2_btn1.set_meta(META_NAV_SEED, 1)
-	p2_row.add_child(p2_btn1)
-	p2_row.add_child(p2_btn2)
-	p2_row.add_child(p2_btn3)
-	p2_row.add_child(p2_btn4)
-	p2_vbox.add_child(p2_row)
+	p2_grid.add_child(p2_btn1)
+	p2_grid.add_child(p2_btn2)
+	p2_grid.add_child(p2_btn3)
+	p2_grid.add_child(p2_btn4)
+	p2_inner.add_child(p2_grid)
+	p2_vbox.add_child(p2_inner)
 	weapon_hbox.add_child(p2_vbox)
 
 	return weapon_hbox
@@ -4611,12 +4547,12 @@ func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color,
 		owner_id: int, slug: String = "") -> Button:
 	var btn := _make_choice_button(text, tint, group)
 	btn.text = text
-	btn.custom_minimum_size = Vector2(136, 80)
+	btn.custom_minimum_size = Vector2(170, 56)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", T_COURANT)
+	btn.add_theme_constant_override("h_separation", GAP_S)
 	btn.set_meta(META_NAV_OWNER, owner_id)
-	# Rien si l'icône n'est pas cuite : le libellé seul reste lisible. Câbler,
-	# taire, diagnostiquer.
-	MenuIcones.poser_sur(btn, slug, tint)
+	MenuIcones.poser_sur(btn, slug, tint, 32.0)
 	return btn
 
 # ---------------------------------------------------------------------------
@@ -4659,20 +4595,20 @@ func _build_pause_menu() -> void:
 	pause_title = Label.new()
 	pause_title.text = "PAUSE"
 	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_title.add_theme_font_size_override("font_size", T_VERDICT)
+	Charte.enseigne(pause_title, T_VERDICT)
 	column.add_child(pause_title)
 
 	pause_score_label = Label.new()
 	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_score_label.add_theme_font_size_override("font_size", T_TITRE)
+	Charte.appareil(pause_score_label, T_TITRE)
 	pause_score_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_score_label)
 
 	pause_time_label = Label.new()
 	pause_time_label.text = "TEMPS RESTANT : 00:00"
 	pause_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_time_label.add_theme_font_size_override("font_size", T_TITRE)
+	Charte.appareil(pause_time_label, T_TITRE)
 	pause_time_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_time_label)
 
@@ -4705,10 +4641,7 @@ func _build_pause_menu() -> void:
 	column.add_child(btn_pause_quit)
 
 func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
-	var btn := _make_button(label, accent, primary)
-	btn.custom_minimum_size = Vector2(320, 56)
-	btn.add_theme_font_size_override("font_size", T_APPUI)
-	return btn
+	return MenuWidgets.make_button(label, accent, primary, T_APPUI, Vector2(320, 56))
 
 ## Ouvre la pause. `_pause_freezes_world` décide du gel : en ligne il figerait la
 ## simulation des deux joueurs, ce panneau se superpose donc à un monde qui court.
@@ -5352,13 +5285,7 @@ func _build_pick_panel() -> void:
 	pick_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	pick_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	pick_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var fond := StyleBoxFlat.new()
-	fond.bg_color = COLOR_SURFACE
-	fond.set_border_width_all(2)
-	fond.border_color = COLOR_P1
-	fond.set_corner_radius_all(12)
-	fond.set_content_margin_all(GAP_M)
-	pick_panel.add_theme_stylebox_override("panel", fond)
+	pick_panel.add_theme_stylebox_override("panel", MenuWidgets.make_modal_style(COLOR_P1))
 	pick_panel.hide()
 	add_child(pick_panel)
 
@@ -5378,7 +5305,7 @@ func _build_pick_panel() -> void:
 
 	_pick_reason = Label.new()
 	_pick_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pick_reason.add_theme_font_size_override("font_size", T_MENTION)
+	Charte.appareil(_pick_reason, T_MENTION)
 	_pick_reason.add_theme_color_override("font_color", COLOR_GOLD)
 	_pick_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pick_reason.custom_minimum_size = Vector2(420, 0)
@@ -5407,6 +5334,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 		var i := int(idx)
 		var btn := _make_choice_button(_weapon_label(i), COLOR_P1, groupe)
 		btn.custom_minimum_size = Vector2(150, 84)
+		MenuIcones.poser_sur(btn, _weapon_slug(i), COLOR_P1, 32.0)
 		btn.pressed.connect(func() -> void: _on_pick_weapon(i))
 		_pick_row.add_child(btn)
 		_pick_buttons.append(btn)
@@ -5438,6 +5366,13 @@ func _weapon_label(idx: int) -> String:
 		RankLoadout.POMPE: return "Pompe"
 		RankLoadout.FUSIL: return "Fusil"
 		_: return "Pistolet"
+
+func _weapon_slug(idx: int) -> String:
+	match idx:
+		RankLoadout.ARBALETE: return "arbalete"
+		RankLoadout.POMPE: return "pompe"
+		RankLoadout.FUSIL: return "fusil"
+		_: return "pistolet"
 
 func _on_pick_weapon(idx: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")
