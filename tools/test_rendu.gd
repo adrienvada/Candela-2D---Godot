@@ -35,6 +35,11 @@ const Commun := preload("res://tools/rendu_commun.gd")
 const CONTRASTE_MIN := 0.010
 ## L'arène est un jeu dans le noir. Au-delà, ce n'est plus le même jeu.
 const LUMINANCE_ARENE_MAX := 0.10
+## Le sol du damier, noir du `CanvasModulate` levé. Le seuil est posé ENTRE deux
+## ordres de grandeur, jamais calibré sur l'un d'eux : mesuré le 2026-08-27,
+## 0,00098 recouvert contre 0,29545 peint, à l'entraînement ; 0,036 contre 0,280
+## côté hôte et 0,033 contre 0,278 côté client dans un duel ENet.
+const LUMINANCE_SOL_MIN := 0.05
 ## Le joueur doit tenir dans la moitié centrale de sa vue.
 const ECART_CENTRE_MAX := 0.25
 
@@ -73,6 +78,7 @@ func _ready() -> void:
 
 	await _cadre_de_droite()
 	await _entrainement_centre()
+	await _entrainement_sol_peint()
 	await _arene_reste_noire()
 
 	if _failures == 0:
@@ -146,10 +152,70 @@ func _mesurer_centrage(quand: String) -> void:
 		"écart (%.2f, %.2f) de la demi-vue" % [ecart.x, ecart.y])
 
 
-## **La promesse du jeu, et le seul de ces trois contrôles qui ne vienne pas d'un
+## **Le défaut du 2026-08-27 : en vue unique, le duel était dessiné PUIS
+## RECOUVERT.** Le `Background` noir plein cadre et les deux conteneurs de vue —
+## qui peignent la texture GELÉE de leur `SubViewport` — rejoignent le canvas du
+## duel quand la racine en adopte le `World2D`, et se dessinent par-dessus
+## l'arène. Écran entièrement noir à l'entraînement ET en ligne, des deux côtés
+## du lien ; seul l'écran scindé y échappait.
+##
+## **Aucun état ne le trahissait.** `test_rendu_racine.gd` est resté vert de bout
+## en bout — mondes, masques de cull, caméras, `update_mode` : tout était juste.
+## `_entrainement_centre()`, deux fonctions plus haut, aussi : la caméra était
+## parfaitement placée sur un écran où l'on ne voyait rien. Il fallait un pixel.
+##
+## **Et il fallait un PLANCHER.** `_arene_reste_noire()` est la seule assertion en
+## pixels qui regarde l'arène, et c'est un plafond : 0,00098 le passait cent fois.
+## C'est la forme exacte du trou — on savait dire « pas trop clair », jamais
+## « quelque chose est là ».
+##
+## On lève le noir du `CanvasModulate` pour mesurer : sinon on mesure un halo de
+## torche, donc l'orientation du joueur et son éblouissement, au lieu de mesurer
+## si le sol arrive à l'écran. Levé, la question devient binaire.
+##
+## **Contre-testé le 2026-08-28** — c'est ce qui donne sa valeur au contrôle du
+## cadre de droite, et ce contrôle-ci ne vaut pas moins cher : en neutralisant
+## `_accorder_la_peinture_de_la_racine()`, il tombe à 0,00098 contre un plancher
+## à 0,05. Il attrape donc le défaut réel, pas seulement son absence.
+func _entrainement_sol_peint() -> void:
+	print("\n[En vue unique, le sol arrive vraiment à l'écran]")
+	if not _main._rendu_racine:
+		_check("l'entraînement rend bien par la racine", false,
+			"ce contrôle n'a plus de sujet — le duel repasse par son SubViewport")
+		return
+	var mod: CanvasModulate = _main.arena.get_node_or_null("CanvasModulate")
+	if mod == null:
+		_check("le CanvasModulate de l'arène est atteignable", false)
+		return
+	# On cherche des TUILES, pas un halo : un sol dessiné devient évident, un sol
+	# recouvert reste invisible.
+	var noir: Color = mod.color
+	mod.color = Color.WHITE
+	await _reposer(0.6)
+	var img: Image = await Commun.capturer(get_tree())
+	# Rendu AVANT `_arene_reste_noire()`, qui affirme l'inverse sur la même arène.
+	mod.color = noir
+	if img == null:
+		_check("une image est lisible", false, "la fenêtre est-elle au premier plan ?")
+		return
+	# Zone dérivée de l'image et non écrite en dur : la fenêtre change de taille,
+	# et un rectangle fixe mentirait en silence.
+	var centre := img.get_size() / 2
+	var zone := Rect2i(centre - Vector2i(250, 250), Vector2i(500, 500))
+	var lum := Commun.luminance_moyenne(img, zone, 2)
+	_check("le sol du duel n'est pas recouvert", lum >= LUMINANCE_SOL_MIN,
+		"luminance moyenne %.5f au centre (recouvert : ~0,001)" % lum)
+	await _reposer(0.4)
+
+
+## **La promesse du jeu, et le seul de ces contrôles qui ne vienne pas d'un
 ## défaut : « le noir reste noir ».** Toute la conception en dépend — un effet
 ## qui éclaircirait le fond ne casserait aucun test, ne lèverait aucune erreur,
 ## et changerait le jeu.
+##
+## ⚠️ **Il ne se suffit pas, et il a fallu un écran noir pour s'en apercevoir.**
+## C'est un plafond ; `_entrainement_sol_peint()` est son plancher. Les deux
+## disent ensemble ce qu'aucun ne dit seul : sombre, mais pas vide.
 func _arene_reste_noire() -> void:
 	print("\n[Le noir reste noir]")
 	await _reposer(0.4)

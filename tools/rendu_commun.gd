@@ -47,7 +47,7 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for methode in ["show_main_menu"]:
 		if not ui.has_method(methode):
 			absents.append("UI.%s() a disparu" % methode)
-	for prop in ["p1", "cam1", "training_mode"]:
+	for prop in ["p1", "cam1", "training_mode", "arena", "_rendu_racine"]:
 		if not prop in main:
 			absents.append("GameState.%s a disparu" % prop)
 	if not main.has_method("_on_training_requested"):
