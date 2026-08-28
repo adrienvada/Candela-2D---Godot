@@ -192,11 +192,13 @@ const ILLUSTRATIONS := {
 	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
 	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
 	"ill_quitter": "res://assets/ui/ill_quitter.png",
-	# Trouvées par l'audit du 2026-08-26 : dix entrées laissaient le cadre noir,
-	# dont les cinq « RETOUR » et les deux gestes de salon.
 	"ill_retour": "res://assets/ui/ill_retour.png",
-	"ill_creer": "res://assets/ui/ill_creer.png",
-	"ill_rejoindre": "res://assets/ui/ill_rejoindre.png",
+	"ill_creer_ligne": "res://assets/ui/ill_creer_ligne.png",
+	"ill_rejoindre_ligne": "res://assets/ui/ill_rejoindre_ligne.png",
+	"ill_creer_local": "res://assets/ui/ill_creer_local.png",
+	"ill_rejoindre_local": "res://assets/ui/ill_rejoindre_local.png",
+	"ill_creer": "res://assets/ui/ill_creer_ligne.png",
+	"ill_rejoindre": "res://assets/ui/ill_rejoindre_ligne.png",
 }
 
 ## ⚠️ **Les captures de jeu ont été RETIRÉES le 2026-08-26, et le motif vaut
@@ -2603,15 +2605,17 @@ func _build_hub_screens() -> void:
 	for spec in [
 			[prive_ligne, SCREEN_FRIENDLY_ONLINE, SCREEN_HOST, SCREEN_JOIN,
 				"Un code à six caractères, à transmettre à votre adversaire.",
-				"Le code que votre adversaire vous a donné."],
+				"Le code que votre adversaire vous a donné.",
+				"ill_creer_ligne", "ill_rejoindre_ligne"],
 			[prive_local, SCREEN_FRIENDLY_LOCAL, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN,
 				"Votre adresse IP, à transmettre à votre adversaire.",
-				"L'adresse IP de l'hôte."]]:
+				"L'adresse IP de l'hôte.",
+				"ill_creer_local", "ill_rejoindre_local"]]:
 		var liste: VBoxContainer = spec[0]
 		liste.add_child(hub.make_entry("CRÉER", String(spec[4]), String(spec[2]),
-			COLOR_ACCENT, "", "", false, "ill_creer"))
+			COLOR_ACCENT, "", "", false, String(spec[6])))
 		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3]),
-			COLOR_ACCENT, "", "", false, "ill_rejoindre"))
+			COLOR_ACCENT, "", "", false, String(spec[7])))
 		hub.add_back_entry(String(spec[1]), "", "ill_amical")
 
 	# --- Les quatre salons ----------------------------------------------------
@@ -2804,10 +2808,10 @@ func _build_hub_screens() -> void:
 	hub.set_screen_background(SCREEN_FRIENDLY, "res://assets/ui/ill_amical.png")
 	hub.set_screen_background(SCREEN_FRIENDLY_ONLINE, "res://assets/ui/ill_amical_ligne.png")
 	hub.set_screen_background(SCREEN_FRIENDLY_LOCAL, "res://assets/ui/ill_amical_local.png")
-	hub.set_screen_background(SCREEN_HOST, "res://assets/ui/ill_creer.png")
-	hub.set_screen_background(SCREEN_JOIN, "res://assets/ui/ill_rejoindre.png")
-	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer.png")
-	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre.png")
+	hub.set_screen_background(SCREEN_HOST, "res://assets/ui/ill_creer_ligne.png")
+	hub.set_screen_background(SCREEN_JOIN, "res://assets/ui/ill_rejoindre_ligne.png")
+	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer_local.png")
+	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre_local.png")
 	hub.set_screen_background(SCREEN_RANKED, "res://assets/ui/ill_competitif.png")
 	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
 	hub.set_screen_background(SCREEN_CUSTOM, "res://assets/ui/apercu_personnalisation.png")
