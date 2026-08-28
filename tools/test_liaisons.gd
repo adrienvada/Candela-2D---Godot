@@ -271,6 +271,92 @@ func _test_chaque_bloc_n_accepte_que_son_appareil() -> void:
 	_ui.set("_button_to_update", null)
 
 
+# ---------------------------------------------------------------------------
+# 4. LA MISE EN PAGE, MESURÉE APRÈS COUP
+# ---------------------------------------------------------------------------
+
+## ⚠️ **Les deux défauts qu'Adrien a vus et qu'aucun banc ne pouvait voir.**
+##
+## 1. **La rubrique ne défilait pas.** Douze lignes pour J2 débordent d'une
+##    fenêtre en 720, et un `VBoxContainer` plus haut que sa place **écrase ses
+##    enfants les uns sur les autres** au lieu de les couper. Ce qu'on lit alors
+##    n'est pas « il en manque » mais des lignes qui se contredisent — un libellé
+##    posé sur la valeur d'un autre. La donnée était juste ; la mise en page
+##    mentait, ce qui est plus difficile à démêler qu'une donnée fausse.
+##
+## 2. **Les commandes étaient plaquées au bord droit**, à un demi-écran de leur
+##    libellé. Dans une grille à deux colonnes, une colonne en `EXPAND_FILL`
+##    absorbe toute la largeur et pousse l'autre au bord.
+##
+## Aucun des deux ne pouvait rougir : les nœuds existaient, leurs textes étaient
+## justes, et rien dans l'arbre ne dit qu'une chose en recouvre une autre. **On
+## mesure donc la GÉOMÉTRIE après la passe de mise en page**, ce qui est la seule
+## façon de voir un défaut qui ne vit que dans les rectangles.
+func _test_la_mise_en_page_tient() -> void:
+	var panneau: Control = _ui.call("_build_controls_panel")
+	var cadre := Control.new()
+	cadre.custom_minimum_size = Vector2(1180, 620)
+	cadre.size = Vector2(1180, 620)
+	root.add_child(cadre)
+	panneau.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cadre.add_child(panneau)
+	for _i in 4:
+		await process_frame
+
+	_check(panneau is ScrollContainer,
+		"la rubrique n'est pas dans un ScrollContainer : au-delà de sa hauteur, "
+		+ "ses lignes se recouvrent au lieu de défiler")
+
+	# Le contenu réel dépasse-t-il ? Si oui, le défilement est indispensable et
+	# ce contrôle prouve que le cas se produit vraiment.
+	var contenu: Control = null
+	for e in panneau.get_children():
+		if e is Control:
+			contenu = e
+	_check(contenu != null, "la rubrique n'a pas de contenu")
+
+	# ⚠️ **Mon premier oracle mesurait le mauvais écart, et il est resté vert sous
+	# sabotage.** J'ai mesuré le trou entre le libellé et sa commande : il vaut
+	# la séparation de la grille, 16 px, **que la colonne s'étende ou non**. Ce
+	# qui enfle n'est pas le trou, c'est le LIBELLÉ — 132 px sain, 406 sabordé —
+	# et c'est lui qui pousse la commande au bord de l'écran.
+	#
+	# *Un contrôle qu'on n'a pas vu échouer ne garde rien* : celui-ci a été
+	# éprouvé à l'envers avant d'être gardé, et c'est ce qui a montré qu'il ne
+	# mesurait pas ce que je croyais.
+	var pires := 0.0
+	var quoi := ""
+	var grilles: Array[Node] = []
+	var pile: Array[Node] = [panneau]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		for e in n.get_children():
+			pile.append(e)
+		if n is GridContainer:
+			grilles.append(n)
+	_check(not grilles.is_empty(), "aucune grille de commandes trouvée")
+
+	# ⚠️ **C'est la GRILLE qu'il faut mesurer, pas ses cellules.** Deuxième
+	# correction de cet oracle : un libellé rendu extensible dans une grille qui
+	# se serre ne grandit pas — les deux réglages doivent se combiner pour que le
+	# défaut apparaisse. La cause unique est donc en amont : une grille qui
+	# s'étend répartit sa largeur entre ses colonnes et sépare le libellé de sa
+	# valeur. Une grille à sa taille propre les garde côte à côte.
+	var attendu: float = _ui.LARGEUR_LIBELLE + _ui.TAILLE_COMMANDE.x + 16.0
+	for g: GridContainer in grilles:
+		if g.size.x > pires:
+			pires = g.size.x
+			quoi = "%d lignes" % (g.get_child_count() / 2)
+
+	_check(pires <= attendu + 40.0,
+		"une grille de commandes fait %.0f px pour %.0f nécessaires (%s) : elle "
+		% [pires, attendu, quoi]
+		+ "s'étend et plaque les commandes au bord de l'écran")
+
+	cadre.queue_free()
+	await process_frame
+
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -310,6 +396,7 @@ func _run() -> void:
 	_test_la_visee_souris_est_dite()
 	_test_reassigner_une_touche_epargne_la_manette()
 	_test_chaque_bloc_n_accepte_que_son_appareil()
+	await _test_la_mise_en_page_tient()
 
 	print("--- %d contrôles, %d échec(s) ---" % [_ok + _ko, _ko])
 	main.queue_free()

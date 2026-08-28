@@ -4806,29 +4806,62 @@ const ORDRE := ["move_up", "move_down", "move_left", "move_right",
 const VISEE_SOURIS := "Souris"
 
 
-## La rubrique CONTRÔLES — DA4.11, troisième et dernier dessin.
+## Largeur du libellé d'une ligne. Fixe, et c'est ce qui aligne la colonne.
 ##
-## **Une liste, J1 au-dessus de J2.** Arbitré par Adrien le 2026-08-28, après
-## deux tentatives vues à l'écran et rejetées : un clavier entier aux deux jeux
-## de touches allumés (« beaucoup trop le bordel »), puis deux colonnes aux
-## claviers recadrés (« ni beau ni clair »).
+## ⚠️ **Le premier jet laissait le libellé s'étendre** (`SIZE_EXPAND_FILL`) : dans
+## une grille à deux colonnes, la colonne qui s'étend absorbe toute la largeur
+## disponible et **plaque l'autre contre le bord**. Vu à l'écran par Adrien le
+## 2026-08-28 — les touches étaient toutes collées à droite, à un demi-écran de
+## leur libellé. Une largeur fixe les tient à distance de lecture.
+const LARGEUR_LIBELLE := 132.0
+## Un bouton de commande dans une liste : large pour « CLIC GAUCHE », bas pour
+## qu'une douzaine de lignes tiennent sans défilement.
+const TAILLE_COMMANDE := Vector2(148, 34)
+
+
+## La rubrique CONTRÔLES — DA4.11, quatrième et dernier dessin.
 ##
-## ⚠️ **Ce que ces deux essais ont coûté vaut d'être écrit.** L'argument du
+## **Deux colonnes, J1 et J2, chacune une simple liste.** Arbitré par Adrien le
+## 2026-08-28 après trois essais vus à l'écran : un clavier entier aux deux jeux
+## de touches allumés (« beaucoup trop le bordel »), deux colonnes aux claviers
+## recadrés (« ni beau ni clair »), une liste verticale J1 au-dessus de J2 (« la
+## mise en page est très étrange »).
+##
+## ⚠️ **Ce que les trois essais ont coûté vaut d'être écrit.** L'argument du
 ## dessin était juste en théorie — *voir où tombe le doigt vaut mieux que lire un
 ## nom* — et il est resté juste jusqu'au bout. Ce qui l'a tué n'est pas
 ## l'argument, c'est **l'encombrement** : dessiner un appareil demande de la
 ## place, et cette place ne vient pas gratuitement dans une rubrique qui doit
-## aussi porter dix lignes réglables par joueur. **Un raisonnement correct sur
+## aussi porter douze lignes réglables par joueur. **Un raisonnement correct sur
 ## une contrainte oubliée donne une réponse fausse**, et seul l'écran le dit.
 ##
-## Deux blocs par joueur — clavier/souris, puis manette — parce qu'un joueur
-## tient l'un OU l'autre, et que la rubrique doit répondre à celui qui cherche.
+## ⚠️ **Et la rubrique ne défilait pas.** Douze lignes pour J2 débordent d'une
+## fenêtre en 720 ; sans `ScrollContainer`, un `VBoxContainer` plus haut que sa
+## place **écrase ses enfants les uns sur les autres** au lieu de les couper. Ce
+## qu'on lit alors n'est pas « il en manque » mais des lignes qui se contredisent
+## — un libellé sur la valeur d'un autre. C'est ce qui a fait croire que J2
+## avançait au clic gauche : la donnée était juste, la mise en page mentait.
 func _build_controls_panel() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# `follow_focus` : sans lui, une commande hors du champ serait atteignable au
+	# curseur sans être visible — pire que de ne pas l'atteindre.
+	scroll.follow_focus = true
+
 	var block := VBoxContainer.new()
-	block.add_theme_constant_override("separation", GAP_M)
+	block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	block.add_theme_constant_override("separation", GAP_S)
+	scroll.add_child(block)
+
+	var colonnes := HBoxContainer.new()
+	colonnes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonnes.add_theme_constant_override("separation", GAP_L)
+	block.add_child(colonnes)
 
 	for joueur in 2:
-		block.add_child(_build_bloc_du_joueur(joueur))
+		colonnes.add_child(_build_bloc_du_joueur(joueur))
 
 	var hint := Label.new()
 	hint.text = "Activez une commande, puis appuyez sur la nouvelle. Échap annule."
@@ -4838,7 +4871,7 @@ func _build_controls_panel() -> Control:
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
-	return block
+	return scroll
 
 
 ## Les suffixes que le bloc d'un appareil doit montrer, pour un joueur.
@@ -4879,6 +4912,7 @@ func _lignes_du_bloc(joueur: int, appareil: String) -> Array:
 func _build_bloc_du_joueur(joueur: int) -> Control:
 	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
 	var colonne := VBoxContainer.new()
+	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	colonne.add_theme_constant_override("separation", GAP_XS)
 
 	var nom := _make_grid_header("JOUEUR %d" % (joueur + 1), teinte,
@@ -4891,14 +4925,20 @@ func _build_bloc_du_joueur(joueur: int) -> Control:
 		var suffixes := _lignes_du_bloc(joueur, appareil)
 		if suffixes.is_empty():
 			continue
-		colonne.add_child(_make_grid_header(
+		var titre := _make_grid_header(
 			"CLAVIER ET SOURIS" if appareil == "clavier" else "MANETTE",
-			COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
+			COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT)
+		colonne.add_child(titre)
 
 		var grille := GridContainer.new()
 		grille.columns = 2
 		grille.add_theme_constant_override("h_separation", GAP_S)
 		grille.add_theme_constant_override("v_separation", GAP_XXS)
+		# ⚠️ **`SHRINK_BEGIN`, jamais `EXPAND_FILL`.** Une grille qui s'étend
+		# répartit sa largeur entre ses colonnes et sépare le libellé de sa
+		# valeur ; une grille qui se serre les garde côte à côte, ce qui est la
+		# seule chose qu'on demande à une ligne de liste.
+		grille.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		colonne.add_child(grille)
 
 		# ⚠️ **La visée à la souris s'écrit, faute de quoi elle manque.** J1 vise
@@ -4906,8 +4946,10 @@ func _build_bloc_du_joueur(joueur: int) -> Control:
 		# ligne ne se dérive pour le bloc clavier. Ne rien afficher enverrait le
 		# joueur chercher ailleurs une commande qu'il emploie pourtant.
 		if appareil == "clavier" and not _bloc_a_une_visee(suffixes):
-			_poser_ligne(grille, "Viser", _make_grid_header(
-				VISEE_SOURIS.to_upper(), COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
+			var souris := _make_grid_header(VISEE_SOURIS.to_upper(), COLOR_DIM,
+				HORIZONTAL_ALIGNMENT_LEFT)
+			souris.custom_minimum_size = Vector2(TAILLE_COMMANDE.x, 0)
+			_poser_ligne(grille, "Viser", souris)
 
 		for suffixe: String in suffixes:
 			var action := "p%d_%s" % [joueur + 1, suffixe]
@@ -4936,7 +4978,7 @@ func _poser_ligne(grille: GridContainer, libelle: String,
 	var etiquette := _make_grid_header(libelle.to_upper(), COLOR_GOLD,
 		HORIZONTAL_ALIGNMENT_RIGHT)
 	etiquette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	etiquette.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	etiquette.custom_minimum_size = Vector2(LARGEUR_LIBELLE, 0)
 	grille.add_child(etiquette)
 	commande.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	grille.add_child(commande)
@@ -5093,7 +5135,7 @@ func _make_rebind_button(action: String, player: int,
 	var btn := _make_button("", COLOR_P1 if player == 0 else COLOR_P2)
 	if appareil != "":
 		btn.set_meta(META_APPAREIL, appareil)
-	btn.custom_minimum_size = Vector2(72, 64)
+	btn.custom_minimum_size = TAILLE_COMMANDE
 	btn.set_meta(META_NAV_OWNER, player)
 	_apply_btn_info(btn, _info_de_ligne(action, appareil))
 	btn.pressed.connect(_on_rebind_btn_pressed.bind(btn, action))
