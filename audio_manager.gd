@@ -1367,6 +1367,18 @@ func play_footstep(pos: Vector2, cellule: Vector2i) -> AudioStreamPlayer2D:
 ## qu'on fait dans la seconde qui suit. Leur donner le meme son effacerait
 ## exactement cette difference — meme faute que la cible d'echauffement, qui
 ## sonnait comme un mur alors qu'elle disait « touche ».
+##
+## ⚠️ **ARBITRAGE NON TRANCHE : aujourd'hui les deux sons se SUPERPOSENT.**
+## `bullet.gd` joue `wall_impact` a chaque contact, puis ce ricochet quand la
+## balle repart — donc un rebond s'entend « choc + depart », et une balle finie
+## « choc » seul. L'autre option est de REMPLACER : le rebond ne jouerait que le
+## ricochet, et les deux evenements auraient chacun leur son propre.
+##
+## L'enjeu est reel et il tient au fusil, seule arme qui rebondit
+## (`max_bounces = 2`) et **dont la balle peut tuer son propre tireur**
+## (`damages_shooter = true`). « Cette balle vit encore » est donc une
+## information sur laquelle on AGIT, parfois contre soi-meme : elle doit se
+## reconnaitre a l'instant, sans comparer deux epaisseurs de son.
 func play_ricochet(pos: Vector2) -> AudioStreamPlayer2D:
 	var chemin := chemin_variante_au_hasard("ricochet")
 	if chemin == "" or get_audio_stream(chemin) == null:
@@ -1407,13 +1419,23 @@ func play_hit(pos: Vector2, proximite_bord: float) -> AudioStreamPlayer2D:
 
 ## V4.10 — le carreau d'arbalete en vol.
 ##
-## ⚠️ **C'est un arbitrage de jeu, pas un habillage.** L'arbalete est la seule
-## arme qui n'emet aucune lumiere (`emits_light = false`) : elle ne se trahit ni
-## par sa lueur de bouche, ni par son faisceau. Lui donner un son de vol lui rend
-## un tell — c'est peut-etre exactement ce qu'il faut pour qu'elle reste jouable
-## contre, et c'est peut-etre ce qui lui retire sa raison d'exister. **A trancher
-## au banc, pas ici.** Le carreau vole a 12 000 px/s : le son est un depart, pas
-## une trajectoire.
+## **Tel qu'appele aujourd'hui, ce n'est PAS un indice de plus : c'est du
+## timbre.** `player.gd` le joue au canon, a l'instant du tir, par-dessus
+## `weapon_arbalete_NN`. Le carreau vole a 12 000 px/s — il traverse la carte en
+## moins d'un dixieme de seconde —, donc il n'y a aucune trajectoire a suivre a
+## l'oreille : le son est un depart, et il se confond avec le coup.
+##
+## ⚠️ **L'ARBITRAGE NON TRANCHE est le lieu de l'appel, pas son existence.**
+## Joue pres de la CIBLE plutot qu'au canon, le meme fichier deviendrait un
+## avertissement de frolement : « un carreau vient de passer pres de toi ».
+## Ce serait une information neuve, et precisement celle que l'arbalete est
+## concue pour ne pas donner — seule arme sans lueur de bouche
+## (`muzzle_flash_intensity = 0.1`), sans lumiere de projectile
+## (`bullet_light_energy = 0.0`), et qui tue en un coup au centre comme au bord.
+## Le rendre audible pres de sa cible lui retirerait une part de ce qui la
+## definit ; ne pas le faire laisse une arme dont on ne sait jamais qu'on l'a
+## evitee. **Aucune des deux reponses n'est evidente, et c'est pourquoi elle
+## revient a Adrien.**
 func play_bolt_flight(pos: Vector2) -> AudioStreamPlayer2D:
 	if get_audio_stream("bolt_flight") == null:
 		return null

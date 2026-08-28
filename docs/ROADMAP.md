@@ -6120,15 +6120,54 @@ deux réponses* — leçon déjà payée sur l'échelle de la torche.
 
 #### Deux arbitrages posés, non tranchés
 
-**Le carreau d'arbalète** (V4.10) : c'est la seule arme sans lueur de bouche ni
-faisceau. Lui donner un son de vol lui **rend un tell** — ce qui est peut-être ce
-qu'il faut pour qu'elle reste jouable contre, et peut-être ce qui lui retire sa
-raison d'exister. Câblé, à juger au banc.
+**Le carreau d'arbalète** (V4.10) — ⚠️ **ce paragraphe a d'abord dit que le son
+« rend un tell » à l'arbalète, et c'était faux.** Joué au canon et à l'instant du
+tir, par-dessus `weapon_arbalete_NN`, il n'apprend rien que le coup n'ait déjà
+dit : c'est une couche de **timbre**.
 
-**Le ricochet** (V4.3) se superpose à `wall_impact` à dessein : l'impact est le
-choc, le ricochet est le départ. Une balle qui repart et une balle qui meurt
-doivent s'entendre différemment — sinon le joueur ne sait pas s'il doit encore
-bouger.
+**✅ TRANCHÉ par Adrien le 2026-08-28 : le frôlement se joue**, et sa raison
+reformule l'item mieux que ne le faisait la question — *« c'est une info de TIR,
+pas de position. Ça ajoute du suspens mais ça ne donne pas d'info. »*
+
+C'est cette phrase qui décide de l'implémentation, pas un dosage :
+
+- le son naît **au point le plus proche de celui qui est frôlé**, jamais au
+  canon. Une source ponctuelle posée à côté de la victime dit qu'un tir a eu
+  lieu ; elle ne dit rien d'**où** il vient ;
+- le jouer **au canon** — ce que faisait la première version — le confondait avec
+  le coup et n'apprenait rien ;
+- le jouer **le long de la trajectoire** en aurait fait une flèche vers le
+  tireur, soit exactement l'information que l'arbalète est conçue à ne pas
+  donner.
+
+Le tireur l'entend aussi, de loin et faiblement : « j'ai failli toucher ». C'est
+du retour, pas du renseignement.
+
+⚠️ **Réservé à l'arbalète.** Les autres armes ont une lueur de bouche qui les
+trahit déjà ; leur ajouter un frôlement doublerait une information existante. Et
+un verrou par carreau (`_frolement_joue`) : sans lui, un carreau rasant émettrait
+à chaque pas de simulation — un crépitement là où il faut un événement.
+
+Le rayon (90 px) n'est **pas jugé** : c'est la seule chose qui reste au banc.
+
+**Le ricochet** (V4.3) — **✅ TRANCHÉ par Adrien le 2026-08-28 : le rebond
+REMPLACE l'impact**, il ne s'y ajoute pas. *« Pour le fusil on peut distinguer le
+rebond de l'impact au son. »*
+
+⚠️ **La superposition, essayée d'abord, mourait avec la distance.** Empilés, les
+deux événements ne diffèrent que par la **présence** d'une couche de plus ; or
+cette couche s'atténue et s'occulte comme le reste. Au loin — ou derrière un mur
+— un rebond et une balle finie redevenaient identiques : **la distinction
+disparaissait exactement là où elle sert**, dans le noir, quand on ne voit pas la
+balle. Remplacés, les deux sons ont chacun leur niveau et leur portée.
+
+Les **étincelles et l'éclat restent** dans les deux cas : ce qui se voit est le
+même choc, c'est ce qui s'entend qui doit trancher. Le drapeau `avec_son`
+existait déjà pour la cible d'échauffement — même geste, même raison.
+
+L'enjeu tient au **fusil**, seule arme qui rebondit et **dont la balle peut tuer
+son propre tireur**. « Cette balle vit encore » est une information sur laquelle
+on agit dans la seconde, parfois contre soi-même.
 
 ---
 

@@ -1524,12 +1524,11 @@ func trigger_shoot_visuals():
 	
 	var _slug := current_weapon.slug() if current_weapon else "pistolet"
 	AudioManager.play_weapon_shot(_slug, muzzle.global_position)
-	# V4.10 — l'arbalete est la SEULE arme sans lueur de bouche : son carreau est
-	# le seul indice qu'elle laisse. Voir `AudioManager.play_bolt_flight`, ou
-	# l'arbitrage est pose — ce son lui rend un tell, et c'est peut-etre trop.
-	if _slug == "arbalete":
-		AudioManager.play_bolt_flight(muzzle.global_position)
-	else:
+	# V4.10 — **le carreau ne sonne PAS au canon**, et c'est une decision
+	# d'Adrien (2026-08-28) : joue ici, il se confondrait avec le coup et
+	# n'apprendrait rien. Il sonne la ou il FROLE sa cible — voir
+	# `bullet._guetter_le_frolement`. « Une info de TIR, pas de position. »
+	if _slug != "arbalete":
 		# V4.8 — la douille retombe APRES le coup, jamais avec lui. Le retard
 		# est ce qui la rend lisible : jouee sur le tir, elle disparaitrait
 		# dedans. Elle tombe aux pieds du tireur, pas au bout du canon.
