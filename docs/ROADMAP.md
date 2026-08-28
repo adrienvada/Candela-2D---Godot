@@ -2361,6 +2361,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
+| **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
+| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
@@ -3122,6 +3125,39 @@ qui rend.
 annoncé une heure plus tôt.** Une information sur l'état des sessions vieillit
 en minutes, et une session ne peut pas annoncer sa propre fin.
 
+### Deux mesures qui divergent parlent peut-être de deux bases (2026-08-27)
+
+Deux sessions ont passé une nuit à s'opposer sur quatre points qui semblaient
+tous techniques : un lot vert chez l'une et bloqué chez l'autre sur EOS ; 47
+suites contre 48 ; 58 verdicts contre 61 ; un lot à 200 s contre 789 s.
+
+**C'était un seul désaccord, et il n'était pas technique : une branche avait
+quinze commits de retard.** Chaque camp mesurait honnêtement, avec de bons
+outils, et décrivait un dépôt différent.
+
+Trois formes, parce que la base n'est pas seulement le commit :
+
+- **le commit** — `git rev-list --left-right --count HEAD...origin/main` avant
+  de comparer quoi que ce soit ; c'est une seconde et ça a coûté une nuit ;
+- **les fichiers non versionnés** — un arbre sans `eos_credentials.gd`
+  n'initialise jamais EOS. Trois lots verts n'y prouvent RIEN de la machine
+  d'Adrien, et le vert ne dit pas lequel des deux mondes il décrit ;
+- **la question posée** — chercher « quand `test_dosage_audio` est-il arrivé »
+  au lieu de « laquelle est arrivée en dernier », c'est substituer à la question
+  une autre dont on connaît déjà la moitié de la réponse. Un `comm` sur les deux
+  listes n'exige de deviner aucun nom.
+
+**La règle est plus retorse qu'elle n'en a l'air**, et le savoir n'a pas suffi :
+la session qui l'énonçait a supposé que l'écart venait de l'arbre le plus
+avancé — il venait du plus ancien, le sien. Une règle appliquée en devinant de
+quel côté penche l'erreur ne protège pas. **Interroger la référence partagée,
+jamais son propre plan de travail** : `git show origin/main:<fichier>` répond du
+dépôt, `${#SUITES[@]}` ne répond que de soi.
+
+Corollaire pour tout ce qui s'écrit ici : **un compte se dérive, une durée porte
+sa date ET son arbre.** Sans quoi deux mesures ne sont pas comparables, et l'on
+croit débattre du code.
+
 ### Une coïncidence à la minute près n'est pas une preuve (2026-08-27)
 
 Une boîte macOS revenait en boucle : « Trousseau introuvable — impossible de
@@ -3353,13 +3389,36 @@ session a mis `docs/ROADMAP.md` en index en bloc avant que le code ne soit prêt
 elle est partie dans `5d46479`, un commit sur les clés et identifiants qui n'a
 rien à voir. Le retrait lui-même suit dans le commit d'après.
 
-**Le geste qui l'évite est déjà connu et n'a pas été tenu ici : sur un arbre
-partagé, on met en index les CHEMINS qu'on a touchés, jamais le fichier commun en
-bloc.** `docs/ROADMAP.md` est écrit par toutes les sessions à la fois ; un `git
-add docs/` emporte le brouillon du voisin sans que rien ne le dise, et le message
-de commit ment alors sur son propre contenu. Ce qui se perd n'est pas le travail
-— il est bien versionné — c'est le **lien** entre une décision et son code,
-c'est-à-dire tout ce que ce document sert à retrouver six mois plus tard.
+**Le geste qui l'évite n'est PAS celui que ce paragraphe a d'abord écrit**, et
+la correction vaut plus que l'erreur. Il disait : « on met en index les CHEMINS
+qu'on a touchés, jamais le fichier commun en bloc ». C'est insuffisant, et la
+même session l'a reprouvé trois heures plus tard en emportant à son tour le
+paragraphe d'une autre — **avec un `git add docs/ROADMAP.md`, donc un chemin
+nommé, exactement ce que cette phrase prescrivait.**
+
+⚠️ **Parce que l'unité que git met en index est le FICHIER, jamais la
+modification.** Nommer le chemin ne protège de rien quand le voisin écrit dans ce
+même fichier : on emporte son texte avec le sien, sans avertissement, et le
+message de commit ment alors sur son propre contenu.
+
+Deux gestes protègent vraiment, et le second est le filet du premier :
+
+1. **Fabriquer le blob à partir de `HEAD`**, y appliquer sa seule modification,
+   et le mettre en index par plumbing (`git hash-object -w` puis `git
+   update-index --cacheinfo`). L'arbre de travail garde ce que le voisin y écrit,
+   l'index ne reçoit que le sien. C'est ce qui a été fait le même jour pour
+   `project.godot`, qui portait une réécriture de l'éditeur appartenant à une
+   autre session — **le geste était donc connu et disponible ; il n'a simplement
+   pas été appliqué au fichier partagé le plus écrit du dépôt.**
+2. **Lire `git diff --cached` AVANT de commiter**, systématiquement, et refuser
+   ce qu'on ne reconnaît pas. Trente secondes, et c'est le seul contrôle qui
+   attrape le cas qu'on n'avait pas prévu.
+
+Ce qui se perd n'est pas le travail — il est bien versionné — c'est le **lien**
+entre une décision et son code, c'est-à-dire tout ce que ce document sert à
+retrouver six mois plus tard. Et il se perd deux fois : l'auteur croit avoir
+encore à commiter ce qui est déjà parti, et le commit qui l'emporte n'en dit
+rien.
 
 ### Une fusion qui apporte des assets périme le cache d'import (2026-08-25)
 
@@ -5679,6 +5738,13 @@ quoi : le message liste des chaînes vides. Passer par
   appelle un setter réécrit les vraies préférences du joueur. Prévoir un point de
   dérivation du chemin (`var _settings_path := SETTINGS_PATH` plutôt que la
   constante en dur) et vérifier en fin de parcours que le fichier réel est intact.
+  **Depuis le 2026-08-26, `run_suites.sh` pose un `HOME` temporaire** : un lot
+  complet n'écrit donc plus chez le joueur, et le chemin de son `user://` est
+  annoncé en fin de lot. La consigne ci-dessus reste entière — elle protège la
+  suite lancée **à la main**, hors du lanceur, qui elle vise toujours le vrai
+  `user://`. Ce que l'isolation ajoute, la discipline ne pouvait pas le donner :
+  **deux lots simultanés ne se rendent plus faussement rouges** (voir « Décisions
+  actées » pour la mesure — 6 suites sur 12 tombaient).
 - **Un test qui instancie une scène ne peut pas charger celle-ci depuis `_init`.**
   Les autoloads ne sont pas encore enregistrés à ce moment : `ui.gd`, qui
   référence `MapData`, échoue à la compilation. Godot rend alors un nœud **nu**,
@@ -8039,34 +8105,48 @@ un fait de jeu, pas à un rythme d'interface.
   planches tenant l'échelle **et** la longueur d'arme de la planche statique,
   ce que trois tentatives n'ont pas obtenu.
 
-  **Les PNG `*_marche_*.png` d'`assets/sprites/` sont VERSIONNÉS depuis le
-  2026-08-27 (décision d'Adrien) et restent ceux de la mauvaise caméra.** Les
-  deux moitiés de cette phrase comptent, et la seconde plus que la première :
-  ils sont au dépôt pour ne plus pouvoir disparaître d'un disque, **pas parce
-  qu'ils sont bons**. Trois faits mesurés avant de les verser, qui disent
-  lesquels ils sont :
+  **Les 32 PNG `*_marche_*.png` d'`assets/sprites/` ont été RECUITS et
+  VALIDÉS le 2026-08-27 (Adrien, après revue au banc).** L'ancien lot (vue
+  oblique de trois-quarts, 48/56 px, bavures magenta, portées effondrées) a été
+  écrasé par un lot rigoureux dérivé directement des statiques :
 
-  - **vue oblique de trois-quarts**, jambes visibles, là où le sprite statique
-    est une vue de dessus stricte — on voit le dessus du crâne sur l'un, le dos
-    sur l'autre ;
-  - **bavures magenta et flou de mouvement** cuits dans l'image, visibles à
-    l'œil nu sur les quatre poses du fusil ;
-  - **la mauvaise échelle**, et c'est le fait le plus dur : `fusil.png` fait
-    82×82, `fusil_marche_1.png` fait 48×48. Les câbler rétrécirait le joueur de
-    41 % — `test_sprites` bâtit l'empreinte en monde depuis `texture.get_width()`,
-    et rougirait, ce qui est la bonne nouvelle de l'affaire.
+  - **vue de dessus stricte** (même caméra 90° que le statique, casque et épaules vus de dessus) ;
+  - **l'échelle exacte du statique** : fusil 82×82, pompe 78×78, pistolet 62×62, arbalète 56×56 (les lignes 2 et 3 du banc sont désormais strictement identiques) ;
+  - **l'arme ne pivote pas** : axe avant rigide horizontal le long de +X, zéro déviation par rapport à la ligne de visée ;
+  - **la portée de l'arme est préservée à 100 %** : fusil +40,5 px, pompe +38,5 px, pistolet +29,5 px, arbalète +27,5 px ;
+  - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
+  - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
 
-  **Ne pas les câbler.** Ils portent un nom crédible et suivent exactement la
-  convention que `player.gd` attend (`<arme>_marche_<n>.png` et son
-  `_silhouette`) : c'est précisément ce qui les rend dangereux. Une entrée de
-  dette datée vaut mieux qu'un fichier orphelin sur un disque — mais un fichier
-  versionné se lit comme un fichier approuvé, et cette entrée est le seul endroit
-  qui dit le contraire.
+  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
+  l'objet de son propre arbitrage / chantier d'intégration dédié.
 
-  Ils sont **trente-deux** et non seize : cette entrée a longtemps écrit
-  « seize », en ne comptant que les peints et en oubliant les silhouettes.
-  Quatre armes × quatre poses × deux versions. Encore un effectif écrit à la
-  main, dans un document qui en a corrigé quatre autres le même jour.
+  Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
+  (peinte et silhouette).
+
+  **Un banc les montre plutôt que de les raconter** — `tools/banc_marche.tscn`,
+  posé le 2026-08-27 à la demande d'Adrien, branche `worktree-marche`. Trois
+  marcheurs sur la même trajectoire, à la même vitesse, sur le même compteur de
+  distance : le jeu d'aujourd'hui (sprite statique + roulis), la planche peinte à
+  sa taille native, et la planche **remise à l'échelle** du sprite statique. La
+  troisième ligne n'est pas un ornement : elle **sépare les deux reproches**, la
+  cuisson d'un côté et la caméra de l'autre. Ce qui reste faux une fois
+  l'échelle corrigée ne peut plus être mis sur le compte du générateur.
+
+  ⚠️ **La ligne de visée est le seul juge de l'obstacle n°2**, et c'est pour elle
+  que le banc existe. Elle part du centre dans la direction de `rotation`. Si
+  l'arme peinte pointe ailleurs, le sprite ment sur la visée douze fois par
+  seconde — un argument qui ne se tranche pas au raisonnement, seulement à l'œil.
+  Le banc est **éclairé** par défaut, contre l'usage du jeu : on ne juge pas une
+  démarche à travers le cône d'une torche. `L` rend l'obscurité quand on veut
+  vérifier que le réglage y survit.
+
+  Le banc **ne recopie aucun nombre** : le seuil de pas et la vitesse sont lus
+  dans le TEXTE de `player.gd` au démarrage, et le bandeau affiche lesquels il a
+  lus — en rouge si la lecture échoue, plutôt qu'un repli silencieux sur un
+  défaut. Un banc qui montrerait une cadence que le jeu n'a plus ferait juger
+  autre chose que ce qu'on croit juger ; c'est le défaut qui a coûté la moitié de
+  son effet à `RETARD_REMANENCE` la veille. Et sa grille vaut **un pas** de côté,
+  non huit pixels : une case franchie doit valoir exactement un pas.
 
   **DA2.4 et DA2.5 ont été FUSIONNÉES** par Adrien : en vue de dessus une
   arme n'est pas un objet séparé, c'est une forme qui dépasse des épaules — on
@@ -8802,11 +8882,25 @@ retenu : l'arène en fond répondait à la question *comment remplir le cadre ?*
 alors que la vraie question était *que veut voir quelqu'un qui hésite entre cinq
 modes ?* — et la réponse à celle-là n'est pas la carte du prochain match.
 
-**La distinction qui a émergé, et elle survit à l'arbitrage :** le menu principal
-montre des **illustrations** — on n'y choisit pas une partie, on y choisit une
-envie ; les écrans de mode montreraient des **captures** du jeu réel — on y
-prépare un match, et ce qu'on veut alors savoir c'est à quoi il ressemble
-vraiment. Elle est écrite en tête de `ui.gd`.
+**La distinction qui avait émergé ici n'a pas survécu, et deux revirements l'ont
+suivie — corrigé le 2026-08-27, cette entrée était périmée depuis le premier.**
+
+D'abord en code, sans jamais passer par ce document : les trois captures
+(écran scindé, duel en ligne, entraînement) ont été retirées (`ui.gd`, tête de
+fichier) — câblées en panneau par défaut, elles ne se sont **jamais affichées**,
+le salon posé en défaut sur ces huit écrans les rendait inatteignables sans
+erreur ni avertissement. Le râtelier d'armes a repris cet étage : *« on y
+choisit son arme, pas son envie »*.
+
+**Puis Adrien tranche à nouveau, le 2026-08-27 : le râtelier par défaut n'est
+pas non plus la bonne réponse. Tout le menu — écrans de mode compris — passera
+par des images générées**, au même procédé que les dix illustrations du menu
+principal (DA1.5, Gemini).
+
+✅ **Fait, le jour même** (`819f112`, `1a3ca7b`, `5e7ce2f`) : le râtelier reste
+l'objet qu'on manipule, mais une illustration régénérée, floutée et assombrie
+par `menu_bg_blur.gdshader`, l'habille en fond. Voir la décision actée
+correspondante pour le détail des trois commits.
 
 ##### Le texte descriptif déménage dans le cadre, et il répète le titre
 
@@ -9449,73 +9543,83 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
   les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
-- **DA4.11 Le rebinding visuel** ✅ **livrée le 2026-08-27** — un clavier dessiné
-  par le code, aux positions physiques, et deux postes plutôt qu'une grille.
+- **DA4.11 Le rebinding visuel** ✅ **livrée le 2026-08-28** — et le mot
+  « visuel » est ce que l'item a perdu en route.
 
-  **L'item disait « plutôt qu'une liste de noms de touches ». Il n'y avait pas de
-  liste de noms de touches** — il y avait une liste de noms **faux** : la
-  rubrique annonçait « R1 » pour un clic gauche et « Gâchette L2 » pour un clic
-  droit. Réparé d'abord, séparément, avant de redessiner quoi que ce soit ; le
-  détail est dans le piège consigné à part.
+  ### Trois dessins, deux rejetés à l'écran
 
-  ### Trois propositions, une arbitrée
+  L'item demandait « un clavier dessiné plutôt qu'une liste de noms de touches ».
+  Trois tentatives, arbitrées par Adrien devant le rendu :
 
-  Adrien a tranché sur maquettes le 2026-08-27 : **B augmentée de l'idée de A.**
-  Deux colonnes, une par joueur — la structure règle le choix d'appareil sans
-  arbitrage, chacun le sien, ce que l'écran scindé permet — mais chaque clavier
-  est dessiné **aux positions d'un clavier entier**, celles de l'adversaire
-  comprises, en creux.
+  1. **Un clavier entier**, les deux jeux de touches allumés dessus — *« beaucoup
+     trop le bordel »*. Vingt-six capuchons dont quatre comptent : ce n'est pas
+     montrer un contexte, c'est enfouir l'information dans du décor.
+  2. **Deux colonnes**, chaque clavier recadré sur son joueur, plus une souris et
+     une manette dessinées — *« ni beau ni clair »*.
+  3. **Une liste**, J1 au-dessus de J2, deux blocs par joueur. Retenue.
 
-  ⚠️ **Effacer les touches d'en face aurait rendu invisible la seule question que
-  les joueurs se posent.** Devant un clavier partagé, on ne demande pas « quelle
-  touche tire ? » — on demande *si les deux mains vont se gêner*. Seize touches
-  vivent sur ce clavier ; la rubrique en montrait quatre. Les douze autres, tout
-  le déplacement et toute la visée de J2, n'y figuraient pas.
+  ⚠️ **L'argument du dessin était juste, et il l'est resté jusqu'au bout.** Voir
+  où tombe le doigt vaut mieux que lire un nom. Ce qui l'a tué n'est pas
+  l'argument, c'est **l'encombrement** : dessiner un appareil demande de la
+  place, et cette place ne vient pas gratuitement dans une rubrique qui doit
+  aussi porter dix lignes réglables par joueur. **Un raisonnement correct sur une
+  contrainte oubliée donne une réponse fausse**, et seul l'écran le dit — deux
+  fois de suite ici.
 
-  ### La propriété centrale : positionnel au dessin, localisé au libellé
+  ### Deux défauts que la refonte a fait apparaître, et qui étaient anciens
 
-  ⚠️ **Le jeu lie par `physical_keycode`, donc le dessin doit être positionnel.**
-  La touche « haut » de J1 est le `W` d'un QWERTY, qui est **physiquement le Z**
-  d'un AZERTY. Les capuchons sont donc posés aux positions physiques —
-  invariantes — et chacun demande son libellé à
-  `DisplayServer.keyboard_get_keycode_from_physical()`.
+  ⚠️ **La réassignation au clavier n'avait jamais fonctionné.**
+  `_handle_rebind_input` ne testait que `InputEventJoypadButton` et
+  `InputEventJoypadMotion` : appuyer sur une touche pendant « Appuyez… » ne
+  faisait **rien**, le bouton restait en attente, et le joueur en concluait que
+  la rubrique était cassée. Elle l'était — pour le clavier et la souris,
+  c'est-à-dire pour la plupart des joueurs. Même angle mort que les libellés
+  réparés la veille : le fichier traitait la manette et rien d'autre, **aux deux
+  bouts de la chaîne**.
 
-  **Le même dessin montre `ZQSD` à Adrien et `WASD` à un joueur américain, sans
-  qu'une ligne ne change**, et les deux voient la vérité de leurs propres doigts.
-  Une planche générée n'aurait pu montrer qu'une disposition — c'est l'argument
-  qui a fait basculer l'item de *(S + G)* à *(S)* seul.
+  ⚠️ **Réassigner une touche détruisait la liaison manette.** La boucle
+  d'effacement visait toujours les événements de manette, quel que soit ce qu'on
+  venait de presser — et laissait l'ancienne touche en place. Deux liaisons
+  clavier pour une action, plus de manette. **Personne ne pouvait le voir : les
+  deux appareils étaient affichés ensemble sur un seul bouton.** On n'efface
+  désormais que la **même famille** que la nouvelle liaison.
 
-  ### Ce qui est lu, jamais recopié
+  ### Les lignes se dérivent, elles ne s'écrivent pas
 
-  Les touches allumées viennent de l'`InputMap`. Une table écrite dans le fichier
-  de dessin serait juste le jour de son écriture et mentirait à la première
-  réassignation — **sur l'écran même qui sert à réassigner.** Le dessin se repose
-  après chaque changement, et un contrôle du banc l'exige en réassignant pour de
-  bon puis en vérifiant que la lumière a bougé.
+  ⚠️ **Le premier jet listait les lignes en dur, et le banc l'a pris en défaut.**
+  Il avait oublié les quatre commandes de visée de J2 — pourtant sur IJKL et
+  bien réassignables. `_lignes_du_bloc()` interroge donc l'`InputMap` : une
+  action liée au clavier apparaît dans le bloc clavier, une action réassignable
+  à la manette dans le bloc manette. Rien à tenir à jour, donc rien qui puisse
+  diverger.
 
-  ### Une collision est nommée
+  **La manette n'y montre que le tir et la torche**, et ce n'est pas arbitraire :
+  déplacement et visée y sont sur les sticks, que la capture ne sait pas — et ne
+  doit pas — prendre. Une ligne inerte à côté de lignes cliquables ferait croire
+  à un réglage bloqué. Le banc l'exige dans les deux sens.
 
-  Deux joueurs sur la même touche, c'est deux joueurs qui ne peuvent pas jouer
-  ensemble. `collisions()` les rend, et le capuchon fautif passe en **ambre** —
-  la couleur de ce qui appelle. Ce n'est pas un détail d'affichage : c'est la
-  question à laquelle toute la rubrique existe pour répondre.
+  **Et la visée à la souris s'écrit en clair.** J1 vise à la souris : ses
+  `p1_aim_*` n'ont que le stick droit, donc aucune ligne ne se dérive pour son
+  bloc clavier. Ne rien afficher enverrait le joueur chercher ailleurs la
+  commande qu'il emploie le plus — et il n'y a pas d'ailleurs. C'est la seule
+  ligne de la rubrique qui ne se clique pas, et elle se lit comme une réponse et
+  non comme une panne.
 
-  ### Deux pièges consignés
+  ### Ce qui survit des deux dessins
 
-  ⚠️ **Un banc qui imprime des erreurs apprend à les ignorer.**
-  `keyboard_get_keycode_from_physical()` n'existe pas sous le serveur headless :
-  appelée quand même, elle rend zéro **et journalise une erreur par touche**. Six
-  lignes rouges par lancement pour une situation parfaitement normale. La
-  traduction demande donc d'abord s'il y a un clavier à interroger.
+  `liaisons.gd` : la lecture de l'`InputMap`, la détection de collisions, et la
+  traduction position → disposition. **Ce ne sont pas des restes de dessin, ce
+  sont les mesures qu'il avait fallu écrire pour dessiner juste**, et elles
+  restent vraies sans lui. `carte_appareil.gd` est supprimé.
 
-  ⚠️ **Un contrôle relie les deux fichiers**, et c'est le plus utile du banc : une
-  action liée à une touche que le clavier ne dessine pas ne s'allumerait nulle
-  part, et le joueur la chercherait sans qu'aucune erreur ne le dise. Vérifié
-  rouge en retirant deux touches de la disposition — il nomme `p2_shoot` et
-  `p2_torch`.
+  ⚠️ **Une seule traduction dans le dépôt, donc un seul garde-fou.**
+  `keyboard_get_keycode_from_physical()` était appelée à deux endroits : la
+  version de DA4.11 portait la garde headless, celle de la veille l'appelait en
+  direct et remplissait les bancs de six lignes rouges par lancement. **Un banc
+  qui imprime des erreurs apprend à les ignorer.**
 
-  `tools/test_carte_appareil.gd`, 119 contrôles. *(S — plus de (G) : le clavier
-  est dessiné, pas généré.)*
+  `tools/test_liaisons.gd`, 26 contrôles, vérifiés rouges sur les deux défauts
+  de réassignation. *(S — plus de (G) : il n'y a plus rien à générer.)*
 - **DA4.12 Les états vides illustrés** ✅ **livrée le 2026-08-25** — historique
   sans match, galerie sans carte. Une phrase seule au milieu d'un grand vide se
   lit comme **un écran qui a échoué à charger** ; la même phrase sous une image
@@ -10742,6 +10846,416 @@ aucun lecteur en production : le branchement touche `player.gd`, `ui.gd` et
 `game_state.gd`, tenus par la session « game feel ». **Les nombres, eux, ne
 manquent plus** — les quatre essais d'Adrien du 2026-08-25 les ont tous posés,
 et ils vivent dans `brouillage.gd`.
+## Chantier — le voile d'éblouissement texturé (inscrit le 2026-08-27)
+
+**Le problème, en une phrase : le voile est un aplat blanc, et il n'a plus de
+raison de l'être.**
+
+Deux `ColorRect` de `ui.gd`, couleur `HALOGENE`, alpha `dazzle × 0,3`, plat et
+non pulsé. **Ce choix était juste quand il a été fait** (2026-08-18) : le voile
+faisait alors DEUX métiers — dire « tu es ébloui » ET cacher l'adversaire —, et
+faire battre son alpha aurait brouillé la lecture du NIVEAU d'éblouissement, qui
+est une information de duel. Le chantier brouillage lui a retiré le second métier
+le 2026-08-25 ; le voile est passé de 0,8 à 0,3, et l'argument qui interdisait de
+le texturer est tombé avec.
+
+### L'image qui décide de tout : une caméra éblouie
+
+**Adrien, 2026-08-27 :** « Imagine que notre vue, notre UI, c'est entièrement une
+caméra éblouie par une lampe. C'était ça le voile blanc. Il faut donc que cela
+reproduise un effet d'éblouissement très large. »
+
+Ce n'est pas une forme posée sur du noir : c'est **tout le cadre qui blanchit**,
+plus fort au centre, avec des lueurs et des flares qui bougent dedans.
+
+⚠️ **Un premier jet a fabriqué exactement l'inverse, et l'erreur mérite d'être
+gardée.** Un cœur en `(1 − r)^n` tombant à zéro laissait les tiers gauche et
+droit de l'écran **rigoureusement noirs** : une décoration centrée, pas un
+aveuglement. La borne « nul au bord » est juste pour un HALO — un halo est un
+objet DANS le monde, il doit cesser quelque part. **Elle est fausse pour un
+voile**, qui est l'état de l'ŒIL et n'a pas de bord. La même règle de forme,
+recopiée d'un objet à l'autre, y était bonne et ici absurde.
+
+### La structure : un SOL, et ce qui se pose dessus
+
+    alpha = niveau × [ mélange(plancher, cime, creux) + lueurs + flares + fantômes ]
+
+`plancher` **est l'aplat d'aujourd'hui** — 0,30, arbitré par Adrien le
+2026-08-25 — et le voile ne descend jamais en dessous, nulle part sur l'écran.
+`cime` vaut **0,34**, transcrit du banc le 2026-08-27.
+Le voile actuel est donc littéralement le plancher du nouveau : **la refonte ne
+peut pas alléger la mécanique par accident**, elle ne peut que l'appuyer.
+`cime` dit jusqu'où le centre monte (0,88 au départ).
+
+C'est ce qui remplace le `gain` de la première version, et le remplace
+avantageusement : `gain` était un nombre sans signification physique qu'il
+fallait étalonner pour savoir ce qu'il valait. `plancher` et `cime` sont deux
+opacités, lisibles telles quelles.
+
+### Des textures, pas des formules
+
+« Ne peut-on pas prendre une texture qui génère comme une lumière, et l'animer
+d'une façon maline et pas chère » (Adrien). Deux textures — une lueur ronde, une
+traînée —, et tout le reste n'est que des matrices : on les échantillonne à des
+échelles, des angles et des décalages qui dérivent lentement. **Sept lectures de
+texture** pour toute la gerbe, contre une trentaine d'opérations
+trigonométriques par pixel dans la version précédente.
+
+Et surtout : **une texture se remplace.** Le banc les fabrique s'il ne les trouve
+pas (`assets/sprites/voile_lueur.png`, `voile_flare.png`) ; le jour où une vraie
+photo de flare arrive, elle se substitue sans une ligne de shader.
+
+⚠️ **Les deux textures doivent être NOIRES sur tout leur pourtour.** Le shader
+les échantillonne hors de leurs bornes en permanence, et `repeat_disable` étire
+le texel du bord à l'infini : un bord non nul peindrait une bande sur la moitié
+de l'écran.
+
+### L'invariant, posé par Adrien contre une première lecture
+
+Une première série de propositions offrait un couplage fort : le cœur du flare
+placé à la position écran de l'éblouisseur. **Adrien l'a écarté :** « il faut que
+le halo, le voile, soit centré sur l'écran du joueur ébloui […] l'effet doit
+rester centré, comme un voile au centre de la caméra du joueur, mais dont la
+source arrive sur les côtés ».
+
+**Le cœur ne bouge donc jamais.** Ce qui penche est le CARACTÈRE : les lueurs
+glissent du côté de l'éblouisseur (`lueurs_derive`), les flares s'y allongent
+(`flares_penche`). Un cœur déplacé aurait fait du voile une boussole, et rendu en
+grand l'information que `ALLONGEMENT_HALO` passe son temps à effacer — le cœur du
+halo a été étiré exprès, le 2026-08-25, pour cesser de désigner un point.
+
+**Les deux réglages à zéro rendent le voile rigoureusement non directionnel**,
+sans rien défaire d'autre. C'est la porte de sortie si le couplage se révèle trop
+bavard en duel.
+
+### Ce qui simplifie tout, et qui n'était pas su
+
+**Les `Camera2D` du duel ne tournent jamais** (`game_state.gd`). Le relèvement de
+l'éblouisseur dans le MONDE est donc exactement son relèvement à l'ÉCRAN. Le
+voile n'a besoin que d'un **scalaire** — un angle — et du niveau d'éblouissement.
+
+Conséquence : il ne peut pas se tromper de caméra. C'est le défaut nommé en tête
+de `brouillage_vue.gd` (« un appareil global doit convertir monde → écran avec la
+caméra de la BONNE moitié », défaut qu'aucun test automatique ne peut voir), et
+il ne s'applique pas ici. Le voile peut donc rester dans `ui.gd`.
+
+### Le banc — `tools/banc_voile.tscn`
+
+`1` le voile · `0` l'aplat d'aujourd'hui, le témoin · `Tab` et `←/→` régler ·
+`A` mesuré ou forcé · `↑/↓` niveau · `O` orbite ou souris · `Espace` figer ·
+`Z/X` distance · `C/V` cône · `B` couper halo et flou · `E` étalonner ·
+`R` défauts · `Échap` transcrire et sortir.
+
+⚠️ **Le banc a d'abord proposé TROIS candidats, et c'était une erreur de
+lecture.** « Je voulais juste remplacer le voile d'éblouissement » : la demande
+était un **réglage**, pas un choix. Trois propositions côte à côte répondaient à
+une question que personne n'avait posée, et le banc y perdait sa lisibilité — on
+ne savait plus ce qu'on regardait. **Le témoin, lui, reste** : sans aller-retour
+immédiat vers ce qui existe, on juge une nouveauté contre le souvenir qu'on a de
+l'ancienne.
+
+Le banc montre **le halo et le flou de production** (`brouillage_vue.gd`,
+instancié tel quel). Un voile jugé seul serait jugé faux : il vit au-dessus d'un
+halo qui éclaire et d'une ellipse qui floute, et c'est leur somme que le joueur
+reçoit. `B` les coupe.
+
+Il **ne compte aucun tir**, contrairement à `banc_brouillage` : le voile ne cache
+pas l'adversaire — répartition actée le 2026-08-25 —, et compter des tirs ici
+mesurerait le halo en croyant mesurer le voile.
+
+### Le tremblement, les fantômes, et une valeur transcrite (2026-08-27, second passage)
+
+**Adrien au banc, deuxième passage : « c'est pas mal du tout », « j'aime beaucoup
+l'étoile et la lueur qui bouge avec le joueur ».** Trois demandes en sont
+sorties, et une valeur.
+
+**`CIME` passe de 0,88 à 0,34 — transcrit du banc.** « Les valeurs de plancher et
+de cime me semblent pas mal là. » L'écart dit quelque chose : à 0,34 le lavis est
+presque PLAT (0,30 aux bords, 0,34 au centre), et toute la structure visible
+vient des lueurs et des flares qui s'y ajoutent. **Le voile blanchit ; ce sont
+les lueurs qui le sculptent.**
+
+**La rotation continue devient un TREMBLEMENT.** « La rotation continue de
+l'effet d'éblouissement, je ne suis pas sûr […] on remplace le mouvement de
+rotation continue par un léger wiggle, comme si la torche de celui qui nous
+éblouit n'est pas stable. »
+
+Une rosette qui tourne n'a **aucune cause dans le monde** : rien ne tourne, ni la
+lampe, ni la tête. Elle se lit comme un effet de moteur. Un vacillement, si :
+c'est une main qui tient une torche. Même ordre de grandeur, même prix, et il
+raconte quelque chose au lieu de ne rien raconter.
+
+⚠️ **Le tremblement s'applique au RELÈVEMENT, une seule fois.** Tout en dépend —
+lueurs, flares, axe des fantômes —, et c'est ce qui fait lire UNE lampe qui
+vacille plutôt que trois couches qui bougent chacune dans son coin. Un petit
+déphasage par traînée empêche seulement la rosette de bouger comme un bloc
+rigide : une main qui tremble ne déplace pas une figure, elle la déforme.
+
+**Les FANTÔMES, troisième texture.** « Il faudrait vraiment une texture qui fasse
+réel par-dessus tout, avec des fantômes, qui augmentent le réalisme. » Ce sont
+eux qui font basculer l'image de « effet » à « photo » : **un œil n'a pas de
+fantômes, un objectif en a** — et c'est l'objectif qu'on demande au joueur de
+croire.
+
+Ils sont hexagonaux (le diaphragme), remplis avec un liseré plus discret que leur
+intérieur, tournés chacun de son propre angle, et d'intensité irrégulière.
+`fantomes_cote` vaut −1 : du côté OPPOSÉ à l'éblouisseur, ce que dit l'optique.
+**Ils ne portent pas la direction** — les lueurs et les flares s'en chargent, et
+bien mieux ; ils portent la matière.
+
+### Trois pièges payés dans la même heure
+
+Aucun n'était nouveau, et c'est ce qui les rend instructifs.
+
+1. **La texture de fantôme n'était pas noire sur son pourtour.** Les côtés plats
+   de l'hexagone tombaient pile sur le bord de la texture, où le liseré valait
+   encore 0,27 — et `repeat_disable` étire le texel du bord à l'infini. Quatre
+   fantômes ajoutaient donc 0,27 chacun **sur toute l'image**, qui est sortie
+   entièrement blanche. **Le shader porte l'avertissement en toutes lettres**, je
+   l'avais écrit pour les deux premières textures et violé sur la troisième : un
+   avertissement ne protège que ce qu'on pense à relire. Il y a désormais une
+   **ceinture** de deux pixels noirs forcés sur les trois textures — une formule
+   peut oublier de s'annuler au bord, deux pixels de ceinture, non.
+2. **`TAU_` avait disparu du shader** en le réécrivant, et le tremblement
+   l'utilisait : compilation en échec, donc matériau blanc. **Les
+   `preconditions_manquantes()` du banc ont crié les trente-quatre uniformes
+   manquants** — la garde a parfaitement fonctionné, et c'est mon `grep` qui
+   filtrait `SCRIPT ERROR` sans `SHADER ERROR`. *Une garde ne sert qu'à qui lit
+   sa sortie en entier.*
+3. **Un blanc total n'oriente vers rien.** Contrairement à un défaut de forme, il
+   ne dit ni où ni pourquoi — et il a deux causes possibles très différentes (une
+   texture qui déborde, un shader qui ne compile pas). Le réflexe utile est
+   d'aller lire le journal AVANT de regarder l'image.
+
+### ✅ Les réglages retenus par Adrien, le 2026-08-27 — et le voile est ÉTALONNÉ
+
+Troisième passage au banc, transcrit dans `voile_eblouissement.gdshader`.
+
+| | valeur | |
+|---|---|---|
+| plancher · cime | **0,18** · **0,48** | le lavis |
+| largeur · courbe | 2,1 · 3,7 | |
+| lueurs | 2, intensité 0,40, échelle 1,2 | inclinaison **0,16**, souffle 0,36 |
+| flares | 5, intensité 0,16 | longueur 1,4, largeur 0,66, inclinaison 0,45 |
+| tremblement | **0,005 rad**, 0,45 et 3,68 Hz | soit 0,29° — un frémissement |
+| fantômes | 5, intensité 0,12 | écart 0,20, taille 0,31, côté −1 |
+| grain | 0,015 à 10 Hz | |
+
+**L'étalonnage, enfin fait — et il tranche la seule question quantitative du
+chantier :**
+
+| | moyenne | pointe |
+|---|---|---|
+| l'aplat d'aujourd'hui | 0,300 | 0,300 |
+| **le voile retenu** | **0,330** | **1,000** |
+
+**La mécanique n'est pas allégée : elle est très légèrement appuyée** (+10 % en
+moyenne), et surtout **redistribuée**. Le voile sature au centre là où l'aplat
+plafonnait à 0,30, et il descend à 0,18 dans les coins. C'est précisément
+l'inverse du risque que ce relevé existait pour attraper.
+
+⚠️ **Noter que `plancher` est passé SOUS `Brouillage.VOILE_FACTEUR`** (0,18
+contre 0,30). Pris isolément, ce nombre dit « les coins de l'écran sont moins
+voilés qu'avant ». C'est vrai, et c'est sans conséquence : la moyenne, elle,
+monte. **Un réglage ne se juge pas seul quand un autre le compense.**
+
+### ⚠️ Le témoin avait cessé d'être un témoin
+
+L'étalonnage a d'abord rendu **« mode 0 · moyenne 0,180 »** — alors que l'aplat
+vaut 0,300 par définition. Le mode témoin lisait `plancher`, devenu un curseur :
+il descendait avec lui. **On comparait donc le nouveau voile non pas à ce que le
+jeu FAIT, mais à une version affaiblie de lui-même.**
+
+Le shader écrit pourtant, deux paragraphes plus haut, que le témoin « doit rester
+pur ». **Un principe écrit ne se défend pas tout seul** : il était juste, il était
+à sa place, et le témoin a quand même été branché sur un curseur. Ce qui l'a
+attrapé n'est pas la phrase, c'est la mesure — et elle ne l'a attrapé que parce
+que la planche étalonne désormais **les deux modes**, pas seulement le nouveau.
+
+`temoin` est un uniforme à part, posé depuis `Brouillage.VOILE_FACTEUR` et absent
+de la liste des réglages.
+
+### Le seul nombre qui compte pour la suite : l'opacité MOYENNE
+
+⚠️ **Sans ce relevé, une refonte du voile peut alléger une pénalité sans le
+dire.** L'aplat vaut 0,3 PARTOUT, donc sa moyenne EST 0,3. À l'œil, deux voiles
+d'opacités moyennes très différentes « se ressemblent » ; en jeu, l'un gêne et
+l'autre non.
+
+La touche `E` rend le voile seul sur du noir pur, relit l'image et imprime
+moyenne et pointe. Le fond est noir et la teinte connue : l'alpha se retrouve par
+une division, **sans réécrire aucune formule du shader** — même principe que
+`Vision.intensite_texture`, qui lit le pixel du faisceau au lieu de recopier sa
+courbe. La sortie du banc (`Échap`) refuse de se taire quand aucun étalonnage
+n'a eu lieu.
+
+*Le `plancher` rend ce relevé moins critique qu'il ne l'était — le voile ne peut
+plus passer sous l'ancien — mais il reste le seul moyen de savoir de combien il
+passe au-dessus.*
+
+### La planche de contact — `-- --planche`
+
+`godot --path . res://tools/banc_voile.tscn -- --planche` écrit six images (deux
+modes × trois relèvements) dans `user://planches_voile/`. Elle ne remplace pas le
+banc — le voile est animé — et répond à une question préalable : **est-ce que ça
+dessine seulement quelque chose ?**
+
+**Les trois relèvements sont 0°, 145° et −65°, et ce n'est pas un hasard.** Le
+halo du chantier brouillage s'est posé cent pixels à côté de sa cible pendant une
+journée parce que son unique capture de contrôle plaçait l'émetteur pile
+au-dessus du canon — le seul point où l'erreur horizontale s'annule. Une capture
+de contrôle ne se prend pas sur un cas symétrique.
+
+⚠️ **Chaque capture imprime sa géométrie : relèvement demandé, relèvement obtenu,
+position monde, position écran.** Ce n'est pas du confort. La première planche a
+sorti douze images rendues au MÊME relèvement — couper l'orbite ne veut pas dire
+« ne bouge plus », ça veut dire « suis la souris », et la souris écrasait l'angle
+demandé à chaque image. **Rien dans les images ne le disait** ; l'œil lit « la
+lumière est à gauche », jamais « l'éblouisseur est à 145° ». Les deux colonnes
+côte à côte l'ont montré en une ligne.
+
+### Trois défauts du banc, trouvés en le vérifiant
+
+Aucun ne se voyait sans aller chercher, et deux ont été nommés par Adrien.
+
+1. **Le grain était « un gros paquet pixellisé dans les sombres ».** Il l'était :
+   un bruit de valeur à basse fréquence — des blobs de seize pixels — appliqué le
+   plus fort là où l'image est sombre, c'est-à-dire là où l'œil les isole. Le
+   grain d'une photo est **par pixel** et **faible** ; il est désormais
+   multiplicatif et proportionnel à ce qui est déjà peint, donc inexistant là où
+   le voile n'existe pas.
+2. **« Le flou ne varie même plus en fonction de ma distance. »** Il ne l'avait
+   jamais fait : la souris ne donnait que le CAP, la distance restait clouée sur
+   `Z/X`. On promenait le curseur, l'éblouisseur tournait sur son rail, la
+   lumière reçue ne bougeait pas — donc ni l'éblouissement, ni le flou, ni le
+   halo. La souris pose maintenant la POSITION.
+3. **L'arme se refabriquait à chaque image.** `get_torch_texture()` refait le
+   cookie du faisceau et `lumiere_recue()` relit son image dans la foulée : le
+   banc se serait mis à ramer précisément quand on lui demande de juger une
+   animation — il aurait fait passer son propre coût pour un défaut du voile.
+
+### ⚠️ Les deux bancs jugeaient sans la nuit
+
+`arena.tscn` porte un `CanvasModulate` à `Charte.NOIR` : dans le jeu, rien n'est
+visible hors des lumières. **`tools/banc_brouillage.gd` n'en a aucun** (constaté
+le 2026-08-27), et `banc_voile` n'en avait pas non plus à son premier jet — le
+sol s'y dessine à pleine valeur partout et les torches ne font que l'éclaircir.
+
+On juge alors un voile blanc posé sur du **gris**, quand le jeu le pose sur du
+**noir**. Le contraste n'est pas le même, donc l'opacité jugée ne l'est pas non
+plus. `banc_voile` a sa nuit depuis ; **`banc_brouillage` est signalé et non
+corrigé** — il appartient à un autre chantier, et le corriger rendrait
+discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile à
+0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
+décider si ces nombres méritent d'être rejugés dans le noir.
+
+### ✅ VALIDÉ par Adrien le 2026-08-27 — et toujours pas branché
+
+**« On valide. »** L'apparence du voile est arrêtée : les vingt-cinq réglages
+vivent dans `voile_eblouissement.gdshader`, l'étalonnage est fait, le chantier
+n'attend plus aucun arbitrage de goût.
+
+⚠️ **Validé ne veut pas dire branché.** `voile_eblouissement.gdshader` n'a
+toujours **aucun lecteur en production** — exactement la position où
+`brouillage.gd` est resté du 2026-08-25 au branchement. Le jeu se comporte comme
+avant ce chantier.
+
+**Ce qu'il reste, et ce n'est pas une formalité :**
+
+1. **`ui.gd` doit poser le shader sur les deux `ColorRect` de voile**, lui passer
+   `niveau`, `relevement`, `aspect` et `temps`, et cesser de multiplier par
+   `GameSettings.current_effect("eblouissement")` — décision du 2026-08-25, le
+   voile n'est plus réglable.
+2. **Et il doit régler le `p2_dazzle` de la vue unique** (voir ci-dessous). Il
+   n'existe aucune version propre du voile qui laisse ce comportement en place :
+   en ligne, la moitié droite de l'écran local blanchit quand l'ADVERSAIRE est
+   ébloui.
+3. **`ui.gd` appartient à la session « menus ».** La modification se demande,
+   elle ne se fait pas d'office — c'est la règle du journal des sessions, et
+   c'est elle qui a évité que V6.2 soit implémentée deux fois.
+
+### ⚠️ MESURÉ — la photocopie d'écran du flou laisse un polygone à l'écran
+
+**Signalé par Adrien le 2026-08-27, reproduit et isolé le jour même.** « J'ai des
+effets bizarres au centre, j'ai l'impression que c'est dans la zone de flou […]
+j'ai carrément enlevé le voile et j'ai quand même un effet très étrange. »
+
+**Ce n'est pas le voile.** Le défaut est visible en mode TÉMOIN, c'est-à-dire
+avec l'aplat d'aujourd'hui : un **polygone à arêtes franches**, translucide et
+plus clair que son entourage, posé près du joueur.
+
+Les deux relevés qui l'ont isolé, tous deux à la planche de contact :
+
+| photocopie | résultat |
+|---|---|
+| `COPY_MODE_RECT` (ce que fait la production) | le polygone est là |
+| `COPY_MODE_VIEWPORT` (plein cadre) | il disparaît, l'image est propre |
+| brouillage coupé entièrement | il disparaît aussi |
+
+**Le flou lit donc des texels que la photocopie n'a pas rafraîchis** — l'image
+d'une position précédente de l'éblouisseur —, et la frontière de la zone recopiée
+se dessine en dur. C'est exactement le symptôme que `Brouillage.emprise_copie()`
+existe pour empêcher, et son avertissement le décrit mot pour mot : « hors de la
+zone copiée, la texture d'écran garde ce qu'une copie précédente y avait
+laissé ».
+
+⚠️ **Ce que ce relevé NE prouve pas, et il ne faut pas le lui faire dire.** Il ne
+dit pas OÙ est l'erreur. Deux candidats, et il faudrait mesurer pour trancher :
+
+1. **Une unité qui change de sens en chemin.** `NOYAU_FLOU` est ajouté à
+   l'emprise en pixels de CANEVAS (`emprise_copie(..., NOYAU_FLOU + 2.0)`), mais
+   le shader l'utilise en pixels de FRAMEBUFFER (`rayon_noyau * k *
+   SCREEN_PIXEL_SIZE`). Les deux ne coïncident que si le canevas et le
+   framebuffer ont la même taille — or `window/stretch/mode` vaut
+   `canvas_items`, et une fenêtre plus petite que 1920×1080 rend le pixel de
+   framebuffer PLUS GROS que le pixel de canevas. La marge devient alors trop
+   courte, et d'autant plus courte que la fenêtre est petite.
+2. **Un `rect` posé dans le mauvais espace.** `BackBufferCopy.rect` est en
+   coordonnées locales ; sous une racine étirée par `canvas_items`, rien ne
+   garantit que la conversion vers le framebuffer soit celle qu'on croit.
+
+**La conséquence de portée, si elle se confirme : ce chemin est celui de la VUE
+UNIQUE**, donc en ligne et à l'entraînement — les deux modes où l'on joue
+vraiment. En écran scindé l'appareil vit dans un `SubViewport`, où canevas et
+framebuffer coïncident, et le défaut ne devrait pas apparaître.
+
+**Non corrigé, et délibérément.** `brouillage_vue.gd`, `brouillage.gd` et
+`brouillage_flou.gdshader` appartiennent au chantier brouillage. Le banc du voile
+a désormais la touche `M` pour basculer entre les deux modes de photocopie —
+c'est un instrument de diagnostic, pas un réglage, et **le banc démarre sur
+`RECT`, celui de la production** : un banc qui corrigerait silencieusement un
+défaut de production le rendrait invisible.
+
+### ⚠️ Deux défauts signalés, non corrigés, et NON VÉRIFIÉS
+
+Les deux viennent d'une lecture de code faite en instruisant ce chantier. **Aucun
+n'a été observé à l'écran** ; ils sont à confirmer avant d'être traités comme des
+faits. Ils vivent tous deux dans des fichiers tenus par d'autres sessions.
+
+1. **`ui.gd` — le voile de l'adversaire s'affiche chez soi en vue unique.**
+   `update_hud(local, distant, …)` pose `p2_dazzle` sur la moitié droite de
+   l'écran quel que soit le mode, et `dazzle_amount` de l'adversaire est répliqué
+   (`net_dazzle`). En ligne, la moitié droite de l'écran local devrait donc
+   blanchir quand l'ADVERSAIRE est ébloui. Rien ne masque ces rectangles hors
+   écran scindé. En entraînement le cas est bénin — personne n'éblouit J2.
+
+   *Il n'existe aucune version propre du voile qui laisse ce comportement en
+   place : le branchement devra le régler.*
+
+2. **`game_state.gd` / `brouillage_vue.gd` — le brouillage au-dessus du HUD en
+   rendu racine.** `UI` est un `CanvasLayer` de couche 1 déclaré dans
+   `main.tscn` ; en vue unique, `_accorder_brouillage_aux_vues()` reparente
+   l'appareil dans la RACINE, où ses couches 1 (flou) et 2 (halo) sont ajoutées
+   après. Le halo passerait donc par-dessus la barre de vie, le cooldown et le
+   chrono. En écran scindé le problème n'existe pas — l'appareil est dans le
+   `SubViewport`.
+
+   Si c'est confirmé, cela contredit une décision actée du 2026-08-24 :
+   l'éblouissement doit coûter la lecture du MONDE, jamais celle de sa propre
+   fiche. C'est le raisonnement qui a fait passer le voile SOUS le HUD.
+
+3. Accessoire : les deux `ColorRect` de voile restent `visible` à alpha 0, donc
+   mélangés plein écran à chaque image d'un match. Gain gratuit au branchement.
 ## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
 
 **Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus

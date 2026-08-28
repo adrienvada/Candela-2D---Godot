@@ -57,6 +57,7 @@ func _init(chemin: String = "") -> void:
 	_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_image.clip_contents = true
+	_image.hide()
 	add_child(_image)
 
 	# Règle du dépôt — câbler, taire, diagnostiquer : une capture pas encore cuite
@@ -80,7 +81,7 @@ func _init(chemin: String = "") -> void:
 func poser(chemin: String) -> void:
 	if chemin != "" and ResourceLoader.exists(chemin):
 		_image.texture = load(chemin)
-		_image.show()
+		_image.hide()
 		_absent.hide()
 		return
 	_image.texture = null

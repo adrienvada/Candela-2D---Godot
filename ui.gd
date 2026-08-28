@@ -41,6 +41,7 @@ signal pick_window_cancelled
 
 const Charte := preload("res://charte.gd")
 const Echelle := preload("res://echelle.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 ## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
 ## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
 ## `preload` plutôt que de les déclarer globalement. Oublier ce `preload` ne
@@ -91,6 +92,13 @@ const TAB_SLIDE := 32.0
 ## Métadonnées de navigation posées sur les contrôles.
 const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
+## L'appareil d'une ligne de la rubrique CONTRÔLES : `"clavier"` ou `"manette"`.
+##
+## ⚠️ **Il décide de ce que la ligne AFFICHE et de ce qu'elle ACCEPTE.** Sans
+## lui, une ligne du bloc manette montrerait la touche du clavier et se
+## laisserait réassigner par une touche — deux blocs qui font la même chose ne
+## sont pas deux blocs, c'est le même écrit deux fois.
+const META_APPAREIL := "appareil_de_la_ligne"
 ## Valeur de `nav_seed` qui attire les deux curseurs sur la même entrée, au lieu
 ## d'un joueur nommé. Négative à dessein : un indice de joueur est un entier
 ## positif, et l'écrire 2 aurait fait d'un troisième joueur imaginaire une
@@ -182,6 +190,9 @@ const PANEL_HISTORY := "panneau_historique"
 ## - **les écrans de mode montrent des CAPTURES** du jeu réel — on y prépare un
 ##   match, et ce qu'on veut alors savoir c'est à quoi il ressemble vraiment.
 const ILLUSTRATIONS := {
+	"ill_accueil": "res://assets/ui/ill_accueil.png",
+	"ill_amical_ligne": "res://assets/ui/ill_amical_ligne.png",
+	"ill_amical_local": "res://assets/ui/ill_amical_local.png",
 	"ill_scinde": "res://assets/ui/ill_ecran_scinde.png",
 	"ill_amical": "res://assets/ui/ill_amical.png",
 	"ill_competitif": "res://assets/ui/ill_competitif.png",
@@ -509,8 +520,8 @@ var map_card_meta: Label
 
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
-var p1_vbox: VBoxContainer
-var p2_vbox: VBoxContainer
+var p1_vbox: Control
+var p2_vbox: Control
 var weapon_hbox: HBoxContainer
 
 var p1_btn1: Button
@@ -2191,15 +2202,7 @@ func _build_dialog() -> void:
 
 	# DA4.17 — **le cadre porte le registre du message.** Sa teinte est posée par
 	# `show_dialog_message()`, pas ici : elle change à chaque ouverture.
-	_dialog_style = StyleBoxFlat.new()
-	_dialog_style.bg_color = Color(Charte.SURFACE, 0.97)
-	_dialog_style.set_border_width_all(2)
-	_dialog_style.border_color = COLOR_ACCENT
-	_dialog_style.set_corner_radius_all(12)
-	_dialog_style.content_margin_left = GAP_L
-	_dialog_style.content_margin_right = GAP_L
-	_dialog_style.content_margin_top = GAP_M
-	_dialog_style.content_margin_bottom = GAP_M
+	_dialog_style = MenuWidgets.make_modal_style(COLOR_ACCENT)
 	dialog_panel.add_theme_stylebox_override("panel", _dialog_style)
 
 	var vbox := VBoxContainer.new()
@@ -2594,7 +2597,7 @@ func _build_hub_screens() -> void:
 	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_retour"))
+	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_accueil"))
 
 	# --- 1v1 amical -----------------------------------------------------------
 	# **« PRÉPARER » décrivait le panneau, pas le geste.** Corrigé par Adrien le
@@ -2609,11 +2612,11 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
-		SCREEN_FRIENDLY_ONLINE))
+		SCREEN_FRIENDLY_ONLINE, COLOR_ACCENT, "", "", false, "ill_amical_ligne"))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LOCAL",
 		"Par le réseau local, avec l'IP de l'hôte — marche même sans Epic.",
-		SCREEN_FRIENDLY_LOCAL))
-	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_retour")
+		SCREEN_FRIENDLY_LOCAL, COLOR_ACCENT, "", "", false, "ill_amical_local"))
+	hub.add_back_entry(SCREEN_FRIENDLY, "", "ill_accueil")
 
 	# Le transport n'est plus une bascule : « en ligne » et « en local » SONT le
 	# choix, et entrer dans l'un des deux écrans le pose. Même raisonnement que
@@ -2631,7 +2634,7 @@ func _build_hub_screens() -> void:
 			COLOR_ACCENT, "", "", false, "ill_creer"))
 		liste.add_child(hub.make_entry("REJOINDRE", String(spec[5]), String(spec[3]),
 			COLOR_ACCENT, "", "", false, "ill_rejoindre"))
-		hub.add_back_entry(String(spec[1]), "", "ill_retour")
+		hub.add_back_entry(String(spec[1]), "", "ill_amical")
 
 	# --- Les quatre salons ----------------------------------------------------
 	# L'hôte choisit la carte des deux joueurs ; laisser l'invité en choisir une lui
@@ -2651,10 +2654,14 @@ func _build_hub_screens() -> void:
 			+ "quand les deux joueurs se sont déclarés, et la carte est celle de "
 			+ "l'hôte.",
 			"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	for id in [SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
+	for id in [SCREEN_HOST, SCREEN_JOIN]:
 		_wire_salon_back(hub.add_back_entry(id,
 			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
-			"ill_retour"))
+			"ill_amical_ligne"))
+	for id in [SCREEN_LOCAL_HOST, SCREEN_LOCAL_JOIN]:
+		_wire_salon_back(hub.add_back_entry(id,
+			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
+			"ill_amical_local"))
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
@@ -2664,17 +2671,17 @@ func _build_hub_screens() -> void:
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
-		"mon_rang"))
+		"mon_rang", "", false, "ill_competitif"))
 	classe.add_child(hub.make_entry("TOP 10",
 		"Le haut du tableau, affiché à droite — sans quitter cet écran.", "",
-		COLOR_GOLD, "top10"))
+		COLOR_GOLD, "top10", "", false, "ill_competitif"))
 	classe.add_child(hub.make_entry("INFORMATIONS PROFIL",
 		"Identité, code de récupération, pseudo — affichés à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_PROFILE))
 	classe.add_child(hub.make_entry("HISTORIQUE DES MATCHS",
 		"Vos derniers matchs, et le bilan de la soirée en cours, à droite.",
 		"", COLOR_GOLD, "", "", false, PANEL_HISTORY))
-	hub.add_back_entry(SCREEN_RANKED, "", "ill_retour")
+	hub.add_back_entry(SCREEN_RANKED, "", "ill_accueil")
 	hub.set_aside(SCREEN_RANKED, "1v1 compétitif",
 		"Le classement est [b]déployé et vérifié[/b] : les matchs remontent, l'ELO "
 		+ "se recalcule, les rangs existent. Ce qui manque est l'appariement — de "
@@ -2690,11 +2697,11 @@ func _build_hub_screens() -> void:
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
-		+ "réglages viendront avec la cible mouvante."))
+		+ "réglages viendront avec la cible mouvante.", false, "ill_entrainement"))
 	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS))
-	hub.add_back_entry(SCREEN_TRAINING, "", "ill_retour")
+	hub.add_back_entry(SCREEN_TRAINING, "", "ill_accueil")
 
 	# --- Personnalisation -----------------------------------------------------
 	# Aucune de ces quatre entrées n'est une destination : pas de chevron, pas de
@@ -2712,7 +2719,8 @@ func _build_hub_screens() -> void:
 	custom.add_child(hub.make_entry("AUDIO",
 		"Général, musique, effets, annonceur — chaque réglage s'entend en le faisant.",
 		"", COLOR_GOLD, "", "", false, PANEL_AUDIO))
-	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_retour")
+	hub.add_back_entry(SCREEN_CUSTOM, "", "ill_accueil")
+	hub.set_screen_panel(SCREEN_CUSTOM, "ill_personnalisation")
 
 	# --- Cartes, contrôles, affichage, effets ---------------------------------
 	# La galerie n'est plus un écran : elle est le panneau de droite d'une entrée
@@ -2737,7 +2745,7 @@ func _build_hub_screens() -> void:
 	hub.panel_changed.connect(func(_k: String) -> void: _refresh_calibration_guard())
 
 	_attach_screen(SCREEN_UPDATE, "Mise à jour", ScreenUpdate.new())
-	hub.add_back_entry(SCREEN_UPDATE, "", "ill_retour")
+	hub.add_back_entry(SCREEN_UPDATE, "", "ill_accueil")
 	# ⚠️ **Un défaut d'écran, et non un panneau par entrée.** Cet écran construit
 	# ses propres boutons — `ScreenUpdate.build()` les ajoute directement, sans
 	# passer par `make_entry()` — donc ils n'ont pas de panneau et n'en auront
@@ -2800,13 +2808,32 @@ func _build_hub_screens() -> void:
 	# Le même panneau sert les cinq écrans de préparation : ce qui s'y voit dépend
 	# du mode et du transport retenus, pas de l'écran.
 	hub.register_panel(PANEL_SALON, _build_salon_aside())
-	# Les deux écrans qui lancent une recherche l'utilisent aussi, mais n'en gardent
-	# que le râtelier : ni carte à choisir (elle est tirée au sort), ni code à
-	# transmettre (c'est la file qui trouve l'adversaire). Le choix d'arme, lui,
-	# doit être fait AVANT d'appuyer — après, le match part tout seul.
+	# Les écrans de préparation de match ont le salon en panneau par défaut.
 	for id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_TRAINING, SCREEN_FRIENDLY, SCREEN_RANKED]:
+			SCREEN_LOCAL_JOIN, SCREEN_TRAINING]:
 		hub.set_screen_panel(id, PANEL_SALON)
+	# Les écrans de sélection de mode ou de sous-menu ont leur illustration dédiée.
+	hub.set_screen_panel(MenuHub.ROOT, "ill_accueil")
+	hub.set_screen_panel(SCREEN_FRIENDLY, "ill_amical")
+	hub.set_screen_panel(SCREEN_FRIENDLY_ONLINE, "ill_amical_ligne")
+	hub.set_screen_panel(SCREEN_FRIENDLY_LOCAL, "ill_amical_local")
+	hub.set_screen_panel(SCREEN_RANKED, "ill_competitif")
+
+	# Fonds illustrés floutés de chaque catégorie d'écran (Adrien, 2026-08-27) :
+	# Tout bouton ou panneau d'une catégorie hérite en fond flou de l'illustration de sa catégorie.
+	hub.set_screen_background(MenuHub.ROOT, "res://assets/ui/ill_accueil.png")
+	hub.set_screen_background(SCREEN_LOCAL, "res://assets/ui/ill_ecran_scinde.png")
+	hub.set_screen_background(SCREEN_FRIENDLY, "res://assets/ui/ill_amical.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_ONLINE, "res://assets/ui/ill_amical_ligne.png")
+	hub.set_screen_background(SCREEN_FRIENDLY_LOCAL, "res://assets/ui/ill_amical_local.png")
+	hub.set_screen_background(SCREEN_HOST, "res://assets/ui/ill_creer.png")
+	hub.set_screen_background(SCREEN_JOIN, "res://assets/ui/ill_rejoindre.png")
+	hub.set_screen_background(SCREEN_LOCAL_HOST, "res://assets/ui/ill_creer.png")
+	hub.set_screen_background(SCREEN_LOCAL_JOIN, "res://assets/ui/ill_rejoindre.png")
+	hub.set_screen_background(SCREEN_RANKED, "res://assets/ui/ill_competitif.png")
+	hub.set_screen_background(SCREEN_TRAINING, "res://assets/ui/ill_entrainement.png")
+	hub.set_screen_background(SCREEN_CUSTOM, "res://assets/ui/apercu_personnalisation.png")
+	hub.set_screen_background(SCREEN_UPDATE, "res://assets/ui/ill_mise_a_jour.png")
 
 	# Le classement vit hors de l'arborescence : il se lit dans le panneau de droite
 	# depuis l'écran compétitif.
@@ -2865,7 +2892,9 @@ func _build_salon_aside() -> Control:
 ## curseur ; dans le cadre, rien ne le lui dispute.
 func _build_launch_row() -> Control:
 	panel_launch = _make_button("JOUER", COLOR_GOLD, true)
-	panel_launch.size_flags_horizontal = Control.SIZE_SHRINK_END
+	panel_launch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel_launch.custom_minimum_size = Vector2(0, 52)
+	Charte.enseigne(panel_launch, T_APPUI)
 	panel_launch.pressed.connect(func() -> void:
 		var action := String(panel_launch.get_meta(META_LAUNCH_ACTION, ""))
 		if action != "":
@@ -4101,82 +4130,11 @@ func effacer_bilan() -> void:
 
 ## Bouton générique du menu. `primary` remplit le fond avec la teinte donnée.
 func _make_button(label: String, accent: Color, primary: bool = false) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.add_theme_font_size_override("font_size", T_APPUI)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.85) if primary else COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = accent if primary else Color(accent.r, accent.g, accent.b, 0.4)
-	normal.set_corner_radius_all(10)
-	normal.content_margin_left = GAP_M
-	normal.content_margin_right = GAP_M
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Charte.HALOGENE
-	hover.bg_color = accent if primary else Color(accent.r, accent.g, accent.b, 0.16)
-	hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.35)
-	hover.shadow_size = 8
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = accent
-	btn.add_theme_stylebox_override("pressed", pressed)
-	btn.add_theme_stylebox_override("hover_pressed", pressed)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(Charte.SURFACE, 0.8)
-	disabled.border_color = COLOR_LINE
-	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Charte.DIM * 0.68)
-
-	if primary:
-		btn.add_theme_color_override("font_color", Charte.NOIR)
-		btn.add_theme_color_override("font_hover_color", Charte.NOIR)
-		btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
-		btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
-		btn.add_theme_color_override("font_focus_color", Charte.NOIR)
-
-	return btn
+	return MenuWidgets.make_button(label, accent, primary, T_APPUI)
 
 ## Bouton à bascule d'un groupe de choix (mode de jeu, résolution…).
 func _make_choice_button(label: String, accent: Color, group: ButtonGroup) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.toggle_mode = true
-	btn.button_group = group
-	btn.custom_minimum_size = Vector2(200, 48)
-	btn.add_theme_font_size_override("font_size", T_COURANT)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = COLOR_LINE
-	normal.set_corner_radius_all(10)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(accent.r, accent.g, accent.b, 0.7)
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.1)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-
-	var active := normal.duplicate() as StyleBoxFlat
-	active.bg_color = Color(accent.r, accent.g, accent.b, 0.9)
-	active.border_color = Charte.HALOGENE
-	active.shadow_color = Color(accent.r, accent.g, accent.b, 0.4)
-	active.shadow_size = 10
-	btn.add_theme_stylebox_override("pressed", active)
-	btn.add_theme_stylebox_override("hover_pressed", active)
-
-	btn.add_theme_color_override("font_pressed_color", Charte.NOIR)
-	btn.add_theme_color_override("font_hover_pressed_color", Charte.NOIR)
-	return btn
+	return MenuWidgets.make_choice_button(label, accent, group, T_COURANT, Vector2(200, 48))
 
 func _make_section_label(text: String, tint: Color) -> Label:
 	var label := Label.new()
@@ -4196,35 +4154,31 @@ func _make_section_label(text: String, tint: Color) -> Label:
 ## Il redevient donc ce qu'il annonce, un état, et sort du parcours du curseur.
 func _build_map_card() -> Control:
 	map_card = PanelContainer.new()
-	map_card.custom_minimum_size = Vector2(400, 104)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = COLOR_SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = COLOR_LINE
-	normal.set_corner_radius_all(12)
-	normal.content_margin_left = 12
-	normal.content_margin_right = 12
-	normal.content_margin_top = 12
-	normal.content_margin_bottom = 12
-	map_card.add_theme_stylebox_override("panel", normal)
+	map_card.custom_minimum_size = Vector2(0, 116)
+	map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_card.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_LINE, MenuWidgets.CORNER_PANEL, 2))
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", GAP_S)
+	row.add_theme_constant_override("separation", GAP_M)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_card.add_child(row)
 
+	var thumb_panel := PanelContainer.new()
+	thumb_panel.custom_minimum_size = Vector2(96, 96)
+	thumb_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var thumb_style := StyleBoxFlat.new()
+	thumb_style.bg_color = Charte.NOIR
+	thumb_style.set_border_width_all(1)
+	thumb_style.border_color = Charte.LINE
+	thumb_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
+	thumb_panel.add_theme_stylebox_override("panel", thumb_style)
+	row.add_child(thumb_panel)
+
 	map_card_thumb = TextureRect.new()
-	map_card_thumb.custom_minimum_size = Vector2(80, 80)
 	map_card_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_card_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	# **Plus de `NEAREST` ici non plus.** DA5.6 est tranchée — « filtrage linéaire
-	# et mipmaps, aucune texture en `nearest` » — et la vignette de 80 px l'était
-	# pour la même raison que celle de la galerie : elle était agrandie. Le remède
-	# est le même, et il est celui que la décision indiquait : rendre à la densité
-	# de texels de l'écran plutôt que contourner le filtrage.
 	map_card_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(map_card_thumb)
+	thumb_panel.add_child(map_card_thumb)
 
 	var texts := VBoxContainer.new()
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -4234,15 +4188,16 @@ func _build_map_card() -> Control:
 	row.add_child(texts)
 
 	var kicker := Label.new()
-	kicker.text = "CARTE"
-	kicker.add_theme_font_size_override("font_size", T_MENTION)
+	kicker.text = "ARÈNE SÉLECTIONNÉE"
+	Charte.appareil(kicker, T_MENTION)
 	kicker.add_theme_color_override("font_color", COLOR_DIM)
 	kicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(kicker)
 
 	map_card_name = Label.new()
 	map_card_name.text = "—"
-	map_card_name.add_theme_font_size_override("font_size", T_APPUI)
+	Charte.enseigne(map_card_name, T_APPUI)
+	map_card_name.add_theme_color_override("font_color", COLOR_GOLD)
 	map_card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	map_card_name.clip_text = true
 	map_card_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4250,7 +4205,7 @@ func _build_map_card() -> Control:
 
 	map_card_meta = Label.new()
 	map_card_meta.text = ""
-	map_card_meta.add_theme_font_size_override("font_size", T_MENTION)
+	Charte.appareil(map_card_meta, T_MENTION)
 	map_card_meta.add_theme_color_override("font_color", COLOR_DIM)
 	map_card_meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(map_card_meta)
@@ -4540,19 +4495,26 @@ func _copy_lobby_code() -> void:
 func _build_weapon_block() -> Control:
 	weapon_hbox = HBoxContainer.new()
 	weapon_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	weapon_hbox.add_theme_constant_override("separation", GAP_L + GAP_XS)
+	weapon_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	weapon_hbox.add_theme_constant_override("separation", GAP_M)
 
 	p1_weapon_group = ButtonGroup.new()
 	p2_weapon_group = ButtonGroup.new()
 
-	p1_vbox = VBoxContainer.new()
-	p1_vbox.add_theme_constant_override("separation", GAP_XS)
-	p1_vbox.add_child(_make_section_label("ARME — JOUEUR 1", COLOR_P1))
+	# Station Joueur 1 (Pod J1)
+	p1_vbox = PanelContainer.new()
+	p1_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p1_vbox.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_P1 * 0.8, MenuWidgets.CORNER_PANEL, 2))
+	var p1_inner := VBoxContainer.new()
+	p1_inner.add_theme_constant_override("separation", GAP_S)
+	p1_inner.add_child(_make_section_label("ARME — JOUEUR 1", COLOR_P1))
 
 	# Contrat : l'index de l'arme est l'index du bouton dans son conteneur.
-	# Ce HBox ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
-	var p1_row := HBoxContainer.new()
-	p1_row.add_theme_constant_override("separation", GAP_XS)
+	# Ce conteneur ne doit donc contenir QUE les quatre boutons d'arme, dans l'ordre.
+	var p1_grid := GridContainer.new()
+	p1_grid.columns = 2
+	p1_grid.add_theme_constant_override("h_separation", GAP_XS)
+	p1_grid.add_theme_constant_override("v_separation", GAP_XS)
 	p1_btn1 = _create_weapon_btn("Pistolet", p1_weapon_group, COLOR_P1, 0,
 		"pistolet")
 	p1_btn2 = _create_weapon_btn("Fusil", p1_weapon_group, COLOR_P1, 0,
@@ -4563,19 +4525,26 @@ func _build_weapon_block() -> Control:
 		"arbalete")
 	p1_btn1.button_pressed = true
 	p1_btn1.set_meta(META_NAV_SEED, 0)
-	p1_row.add_child(p1_btn1)
-	p1_row.add_child(p1_btn2)
-	p1_row.add_child(p1_btn3)
-	p1_row.add_child(p1_btn4)
-	p1_vbox.add_child(p1_row)
+	p1_grid.add_child(p1_btn1)
+	p1_grid.add_child(p1_btn2)
+	p1_grid.add_child(p1_btn3)
+	p1_grid.add_child(p1_btn4)
+	p1_inner.add_child(p1_grid)
+	p1_vbox.add_child(p1_inner)
 	weapon_hbox.add_child(p1_vbox)
 
-	p2_vbox = VBoxContainer.new()
-	p2_vbox.add_theme_constant_override("separation", GAP_XS)
-	p2_vbox.add_child(_make_section_label("ARME — JOUEUR 2", COLOR_P2))
+	# Station Joueur 2 (Pod J2)
+	p2_vbox = PanelContainer.new()
+	p2_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p2_vbox.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_P2 * 0.8, MenuWidgets.CORNER_PANEL, 2))
+	var p2_inner := VBoxContainer.new()
+	p2_inner.add_theme_constant_override("separation", GAP_S)
+	p2_inner.add_child(_make_section_label("ARME — JOUEUR 2", COLOR_P2))
 
-	var p2_row := HBoxContainer.new()
-	p2_row.add_theme_constant_override("separation", GAP_XS)
+	var p2_grid := GridContainer.new()
+	p2_grid.columns = 2
+	p2_grid.add_theme_constant_override("h_separation", GAP_XS)
+	p2_grid.add_theme_constant_override("v_separation", GAP_XS)
 	p2_btn1 = _create_weapon_btn("Pistolet", p2_weapon_group, COLOR_P2, 1,
 		"pistolet")
 	p2_btn2 = _create_weapon_btn("Fusil", p2_weapon_group, COLOR_P2, 1,
@@ -4586,11 +4555,12 @@ func _build_weapon_block() -> Control:
 		"arbalete")
 	p2_btn1.button_pressed = true
 	p2_btn1.set_meta(META_NAV_SEED, 1)
-	p2_row.add_child(p2_btn1)
-	p2_row.add_child(p2_btn2)
-	p2_row.add_child(p2_btn3)
-	p2_row.add_child(p2_btn4)
-	p2_vbox.add_child(p2_row)
+	p2_grid.add_child(p2_btn1)
+	p2_grid.add_child(p2_btn2)
+	p2_grid.add_child(p2_btn3)
+	p2_grid.add_child(p2_btn4)
+	p2_inner.add_child(p2_grid)
+	p2_vbox.add_child(p2_inner)
 	weapon_hbox.add_child(p2_vbox)
 
 	return weapon_hbox
@@ -4612,12 +4582,12 @@ func _create_weapon_btn(text: String, group: ButtonGroup, tint: Color,
 		owner_id: int, slug: String = "") -> Button:
 	var btn := _make_choice_button(text, tint, group)
 	btn.text = text
-	btn.custom_minimum_size = Vector2(136, 80)
+	btn.custom_minimum_size = Vector2(170, 56)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", T_COURANT)
+	btn.add_theme_constant_override("h_separation", GAP_S)
 	btn.set_meta(META_NAV_OWNER, owner_id)
-	# Rien si l'icône n'est pas cuite : le libellé seul reste lisible. Câbler,
-	# taire, diagnostiquer.
-	MenuIcones.poser_sur(btn, slug, tint)
+	MenuIcones.poser_sur(btn, slug, tint, 32.0)
 	return btn
 
 # ---------------------------------------------------------------------------
@@ -4660,20 +4630,20 @@ func _build_pause_menu() -> void:
 	pause_title = Label.new()
 	pause_title.text = "PAUSE"
 	pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_title.add_theme_font_size_override("font_size", T_VERDICT)
+	Charte.enseigne(pause_title, T_VERDICT)
 	column.add_child(pause_title)
 
 	pause_score_label = Label.new()
 	pause_score_label.text = "SESSION : 0 - 0"
 	pause_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_score_label.add_theme_font_size_override("font_size", T_TITRE)
+	Charte.appareil(pause_score_label, T_TITRE)
 	pause_score_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_score_label)
 
 	pause_time_label = Label.new()
 	pause_time_label.text = "TEMPS RESTANT : 00:00"
 	pause_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pause_time_label.add_theme_font_size_override("font_size", T_TITRE)
+	Charte.appareil(pause_time_label, T_TITRE)
 	pause_time_label.add_theme_color_override("font_color", COLOR_DIM)
 	column.add_child(pause_time_label)
 
@@ -4706,10 +4676,7 @@ func _build_pause_menu() -> void:
 	column.add_child(btn_pause_quit)
 
 func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
-	var btn := _make_button(label, accent, primary)
-	btn.custom_minimum_size = Vector2(320, 56)
-	btn.add_theme_font_size_override("font_size", T_APPUI)
-	return btn
+	return MenuWidgets.make_button(label, accent, primary, T_APPUI, Vector2(320, 56))
 
 ## Ouvre la pause. `_pause_freezes_world` décide du gel : en ligne il figerait la
 ## simulation des deux joueurs, ce panneau se superpose donc à un monde qui court.
@@ -4814,192 +4781,186 @@ const BINDABLE := [
 ##
 ## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
 ## P1 ne peut pas réassigner la manette de P2.
-## Toutes les actions d'un joueur, dans l'ordre où une main les rencontre.
+## Le libellé de chaque commande, par suffixe d'action.
 ##
-## ⚠️ **Bien plus que les réassignables.** `BINDABLE` en compte deux ; un joueur
-## en emploie six (J1) ou dix (J2). Les douze autres — tout le déplacement, toute
-## la visée de J2 — n'apparaissaient nulle part dans les options, alors que ce
-## sont elles qui décident si deux mains tiennent sur un clavier.
-const TOUTES_ACTIONS := {
-	0: ["p1_move_up", "p1_move_left", "p1_move_down", "p1_move_right",
-		"p1_shoot", "p1_torch"],
-	1: ["p2_move_up", "p2_move_left", "p2_move_down", "p2_move_right",
-		"p2_aim_up", "p2_aim_left", "p2_aim_down", "p2_aim_right",
-		"p2_shoot", "p2_torch"],
+## ⚠️ **Une table de LIBELLÉS, pas une table de lignes.** Quelles lignes
+## s'affichent se déduit de l'`InputMap` — voir `_lignes_du_bloc()`. Le premier
+## jet listait les lignes en dur et le banc l'a pris en défaut le 2026-08-28 :
+## il avait oublié les quatre commandes de visée de J2, qui sont pourtant sur
+## IJKL et bien réassignables. **Une commande absente de la rubrique se cherche
+## ailleurs, et il n'y a pas d'ailleurs.**
+const LIBELLES := {
+	"move_up": "Avancer", "move_down": "Reculer",
+	"move_left": "Gauche", "move_right": "Droite",
+	"aim_up": "Viser haut", "aim_down": "Viser bas",
+	"aim_left": "Viser à gauche", "aim_right": "Viser à droite",
+	"shoot": "Tirer", "torch": "Torche",
 }
 
-## L'appareil choisi par chaque joueur dans la rubrique. Purement d'affichage :
-## les deux liaisons existent toujours, c'est la vue qui change.
-var _appareil_du_joueur := [CarteAppareil.Appareil.CLAVIER,
-	CarteAppareil.Appareil.CLAVIER]
-var _cartes: Array[CarteAppareil] = []
-## Les deux boutons d'appareil de chaque joueur, pour montrer lequel est actif.
-var _boutons_appareil := [[], []]
+## L'ordre d'apparition : on se déplace, on vise, on tire, on s'éclaire.
+const ORDRE := ["move_up", "move_down", "move_left", "move_right",
+	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch"]
+
+## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
+## Elle s'écrit quand même — voir `_lignes_du_bloc()`.
+const VISEE_SOURIS := "Souris"
 
 
-## La rubrique CONTRÔLES — DA4.11, arbitrée par Adrien le 2026-08-27.
+## La rubrique CONTRÔLES — DA4.11, troisième et dernier dessin.
 ##
-## **Deux colonnes, une par joueur, et les deux mains sur le même plan.** C'est
-## la proposition B augmentée de l'idée de A : la structure en deux postes règle
-## le choix d'appareil sans arbitrage — chacun le sien, et l'écran scindé permet
-## qu'ils diffèrent — mais chaque clavier est dessiné **aux positions d'un
-## clavier entier**, celles de l'adversaire comprises, en creux.
+## **Une liste, J1 au-dessus de J2.** Arbitré par Adrien le 2026-08-28, après
+## deux tentatives vues à l'écran et rejetées : un clavier entier aux deux jeux
+## de touches allumés (« beaucoup trop le bordel »), puis deux colonnes aux
+## claviers recadrés (« ni beau ni clair »).
 ##
-## ⚠️ **Effacer les touches d'en face aurait rendu invisible la seule question
-## que les joueurs se posent.** Devant un clavier partagé, on ne demande pas
-## « quelle touche tire ? » — on demande si les deux mains vont se gêner. Les
-## deux jeux de touches doivent donc apparaître sur le même plan, faute de quoi
-## la rubrique répond à côté.
+## ⚠️ **Ce que ces deux essais ont coûté vaut d'être écrit.** L'argument du
+## dessin était juste en théorie — *voir où tombe le doigt vaut mieux que lire un
+## nom* — et il est resté juste jusqu'au bout. Ce qui l'a tué n'est pas
+## l'argument, c'est **l'encombrement** : dessiner un appareil demande de la
+## place, et cette place ne vient pas gratuitement dans une rubrique qui doit
+## aussi porter dix lignes réglables par joueur. **Un raisonnement correct sur
+## une contrainte oubliée donne une réponse fausse**, et seul l'écran le dit.
+##
+## Deux blocs par joueur — clavier/souris, puis manette — parce qu'un joueur
+## tient l'un OU l'autre, et que la rubrique doit répondre à celui qui cherche.
 func _build_controls_panel() -> Control:
 	var block := VBoxContainer.new()
-	block.add_theme_constant_override("separation", GAP_S)
+	block.add_theme_constant_override("separation", GAP_M)
 
-	var colonnes := HBoxContainer.new()
-	colonnes.add_theme_constant_override("separation", GAP_M)
-	colonnes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	block.add_child(colonnes)
-
-	_cartes.clear()
 	for joueur in 2:
-		colonnes.add_child(_build_poste_du_joueur(joueur))
+		block.add_child(_build_bloc_du_joueur(joueur))
 
 	var hint := Label.new()
-	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
+	hint.text = "Activez une commande, puis appuyez sur la nouvelle. Échap annule."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", T_MENTION)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
-	for joueur in 2:
-		_marquer_l_appareil_actif(joueur)
-	_rafraichir_les_cartes()
 	return block
 
 
-## Le poste d'un joueur : son titre, sa bascule d'appareil, son dessin, ses
-## réassignations. Chaque chose sur sa ligne.
+## Les suffixes que le bloc d'un appareil doit montrer, pour un joueur.
 ##
-## ⚠️ **Le premier jet mettait le titre et les deux bascules sur la MÊME ligne**,
-## le titre en `EXPAND_FILL` poussant les boutons au bord droit de la colonne —
-## où ils tombaient juste au-dessus du dessin du voisin. Vu à l'écran par Adrien
-## le 2026-08-27. Une ligne qui contient un titre et des commandes n'a pas de
-## bord : les commandes dérivent jusqu'à toucher ce qui n'est pas à elles.
-func _build_poste_du_joueur(joueur: int) -> Control:
+## ⚠️ **Dérivé de l'`InputMap`, jamais écrit.** Une action liée au clavier
+## apparaît dans le bloc clavier ; une action réassignable à la manette apparaît
+## dans le bloc manette. Rien à tenir à jour, donc rien qui puisse diverger.
+##
+## **La manette n'y montre que le tir et la torche, et ce n'est pas un choix
+## arbitraire** : déplacement et visée y sont sur les sticks, que
+## `_handle_rebind_input` ne sait pas — et ne doit pas — capturer. Une ligne
+## inerte à côté de lignes cliquables ferait croire à un réglage bloqué.
+func _lignes_du_bloc(joueur: int, appareil: String) -> Array:
+	var out: Array = []
+	for suffixe: String in ORDRE:
+		var action := "p%d_%s" % [joueur + 1, suffixe]
+		if not InputMap.has_action(action):
+			continue
+		var convient := false
+		for ev in InputMap.action_get_events(action):
+			if appareil == "clavier":
+				convient = convient or ev is InputEventKey \
+					or ev is InputEventMouseButton
+			else:
+				# Un stick ne se réassigne pas : seuls un bouton et une gâchette
+				# passent par la capture, donc seuls eux méritent une ligne.
+				if ev is InputEventJoypadButton:
+					convient = true
+				elif ev is InputEventJoypadMotion:
+					var ax := (ev as InputEventJoypadMotion).axis
+					convient = convient or ax == JOY_AXIS_TRIGGER_LEFT \
+						or ax == JOY_AXIS_TRIGGER_RIGHT
+		if convient:
+			out.append(suffixe)
+	return out
+
+
+func _build_bloc_du_joueur(joueur: int) -> Control:
 	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
 	var colonne := VBoxContainer.new()
-	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	colonne.add_theme_constant_override("separation", GAP_XS)
 
 	var nom := _make_grid_header("JOUEUR %d" % (joueur + 1), teinte,
 		HORIZONTAL_ALIGNMENT_LEFT)
-	nom.add_theme_font_size_override("font_size", T_COURANT)
+	nom.add_theme_font_size_override("font_size", T_APPUI)
 	colonne.add_child(nom)
 
-	# ⚠️ **Deux boutons, pas un `OptionButton`.** Son popup est impraticable à la
-	# manette — c'est la même raison que pour les bascules d'affichage, et elle
-	# vaut ici deux fois : la rubrique sert précisément à qui tient une manette.
-	var bascule := HBoxContainer.new()
-	bascule.add_theme_constant_override("separation", GAP_XS)
-	colonne.add_child(bascule)
+	var premier := true
+	for appareil in ["clavier", "manette"]:
+		var suffixes := _lignes_du_bloc(joueur, appareil)
+		if suffixes.is_empty():
+			continue
+		colonne.add_child(_make_grid_header(
+			"CLAVIER ET SOURIS" if appareil == "clavier" else "MANETTE",
+			COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
 
-	_boutons_appareil[joueur] = []
-	for quel in [CarteAppareil.Appareil.CLAVIER, CarteAppareil.Appareil.MANETTE]:
-		var b := _make_button("CLAVIER" if quel == CarteAppareil.Appareil.CLAVIER
-			else "MANETTE", teinte)
-		b.custom_minimum_size = Vector2(112, 32)
-		b.add_theme_font_size_override("font_size", T_MENTION)
-		b.set_meta(META_NAV_OWNER, joueur)
-		b.pressed.connect(_on_appareil_choisi.bind(joueur, quel))
-		bascule.add_child(b)
-		_boutons_appareil[joueur].append(b)
+		var grille := GridContainer.new()
+		grille.columns = 2
+		grille.add_theme_constant_override("h_separation", GAP_S)
+		grille.add_theme_constant_override("v_separation", GAP_XXS)
+		colonne.add_child(grille)
 
-	var carte := CarteAppareil.new()
-	carte.custom_minimum_size = Vector2(0, 132)
-	carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	colonne.add_child(carte)
-	_cartes.append(carte)
+		# ⚠️ **La visée à la souris s'écrit, faute de quoi elle manque.** J1 vise
+		# à la souris : ses `p1_aim_*` n'ont que le stick droit, donc aucune
+		# ligne ne se dérive pour le bloc clavier. Ne rien afficher enverrait le
+		# joueur chercher ailleurs une commande qu'il emploie pourtant.
+		if appareil == "clavier" and not _bloc_a_une_visee(suffixes):
+			_poser_ligne(grille, "Viser", _make_grid_header(
+				VISEE_SOURIS.to_upper(), COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
 
-	# Les réassignables, sous le dessin : le libellé dit l'action, le bouton dit
-	# la touche, et le dessin dit où elle se trouve sous les doigts.
-	var grille := GridContainer.new()
-	grille.columns = 2
-	grille.add_theme_constant_override("h_separation", GAP_S)
-	grille.add_theme_constant_override("v_separation", GAP_XXS)
-	colonne.add_child(grille)
-
-	for rang in BINDABLE.size():
-		var spec: Array = BINDABLE[rang]
-		var etiquette := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
-			HORIZONTAL_ALIGNMENT_RIGHT)
-		etiquette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		etiquette.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grille.add_child(etiquette)
-		var btn := _make_rebind_button("p%d_%s" % [joueur + 1, String(spec[1])],
-			joueur)
-		# La graine ne se pose que sur la PREMIÈRE ligne : elle dit où le
-		# curseur d'un joueur atterrit en entrant dans le cadre, et deux
-		# réponses valides pour une question en font une réponse au hasard.
-		if rang == 0:
-			btn.set_meta(META_NAV_SEED, joueur)
-		grille.add_child(btn)
+		for suffixe: String in suffixes:
+			var action := "p%d_%s" % [joueur + 1, suffixe]
+			var btn := _make_rebind_button(action, joueur, appareil)
+			if premier:
+				# La graine ne se pose que sur la PREMIÈRE ligne du joueur : elle
+				# dit où son curseur atterrit en entrant dans le cadre, et
+				# plusieurs réponses valides pour une question en font une
+				# réponse au hasard.
+				btn.set_meta(META_NAV_SEED, joueur)
+				premier = false
+			_poser_ligne(grille, String(LIBELLES.get(suffixe, suffixe)), btn)
 
 	return colonne
 
 
-## ⚠️ **Un choix qui ne se voit pas n'est pas un choix.** Le premier jet laissait
-## les deux boutons rigoureusement identiques : rien à l'écran ne disait quel
-## appareil la colonne montrait, et la bascule paraissait sans effet — alors
-## qu'elle marchait.
-func _on_appareil_choisi(joueur: int, quel: int) -> void:
-	_appareil_du_joueur[joueur] = quel
-	_marquer_l_appareil_actif(joueur)
-	_rafraichir_les_cartes()
+static func _bloc_a_une_visee(suffixes: Array) -> bool:
+	for s: String in suffixes:
+		if s.begins_with("aim_"):
+			return true
+	return false
 
 
-func _marquer_l_appareil_actif(joueur: int) -> void:
-	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
-	var boutons: Array = _boutons_appareil[joueur]
-	for i in boutons.size():
-		var b: Button = boutons[i]
-		if not is_instance_valid(b):
-			continue
-		var actif: bool = i == _appareil_du_joueur[joueur]
-		b.add_theme_color_override("font_color",
-			teinte if actif else COLOR_DIM)
-		_style_bouton_appareil(b, teinte, actif)
+func _poser_ligne(grille: GridContainer, libelle: String,
+		commande: Control) -> void:
+	var etiquette := _make_grid_header(libelle.to_upper(), COLOR_GOLD,
+		HORIZONTAL_ALIGNMENT_RIGHT)
+	etiquette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	etiquette.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grille.add_child(etiquette)
+	commande.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grille.add_child(commande)
 
 
-func _style_bouton_appareil(b: Button, teinte: Color, actif: bool) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(teinte.r, teinte.g, teinte.b, 0.18 if actif else 0.0)
-	normal.border_color = Color(teinte.r, teinte.g, teinte.b,
-		0.9 if actif else 0.28)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(4)
-	normal.set_content_margin_all(6)
-	b.add_theme_stylebox_override("normal", normal)
-	var survol := normal.duplicate() as StyleBoxFlat
-	survol.bg_color = Color(teinte.r, teinte.g, teinte.b, 0.30)
-	b.add_theme_stylebox_override("hover", survol)
-	b.add_theme_stylebox_override("pressed", survol)
-	b.add_theme_stylebox_override("focus", survol)
-
-
-## Repose les deux dessins depuis l'`InputMap`.
+## La commande d'une ligne : un bouton si elle se réassigne, un texte sinon.
 ##
-## ⚠️ **Appelée à chaque réassignation, et c'est la moitié du travail.** Un
-## clavier dessiné une fois serait juste à l'ouverture et faux dès la première
-## touche changée — sur l'écran même qui sert à la changer.
-func _rafraichir_les_cartes() -> void:
-	var reassignables := PackedStringArray()
-	for joueur in 2:
-		for spec: Array in BINDABLE:
-			reassignables.append("p%d_%s" % [joueur + 1, String(spec[1])])
-	for i in _cartes.size():
-		if is_instance_valid(_cartes[i]):
-			_cartes[i].poser(i, _appareil_du_joueur[i], TOUTES_ACTIONS,
-				reassignables)
+## ⚠️ **`p1_aim` n'existe pas : J1 vise à la souris.** Rendre un bouton mort
+## laisserait croire à un réglage cassé ; ne rien afficher enverrait le joueur
+## chercher ailleurs. On l'écrit donc en clair, sans bouton — la seule ligne de
+## la rubrique qui ne se clique pas, et elle se lit comme une réponse et non
+## comme une panne.
+func _make_ligne_de_commande(action: String, joueur: int, appareil: String,
+		graine: bool) -> Control:
+	if not InputMap.has_action(action):
+		var texte := _make_grid_header(VISEE_SOURIS.to_upper(), COLOR_DIM,
+			HORIZONTAL_ALIGNMENT_LEFT)
+		texte.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		return texte
+
+	var btn := _make_rebind_button(action, joueur, appareil)
+	if graine:
+		btn.set_meta(META_NAV_SEED, joueur)
+	return btn
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE
@@ -5127,11 +5088,14 @@ func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	label.add_theme_color_override("font_color", tint)
 	return label
 
-func _make_rebind_button(action: String, player: int) -> Button:
+func _make_rebind_button(action: String, player: int,
+		appareil: String = "") -> Button:
 	var btn := _make_button("", COLOR_P1 if player == 0 else COLOR_P2)
+	if appareil != "":
+		btn.set_meta(META_APPAREIL, appareil)
 	btn.custom_minimum_size = Vector2(72, 64)
 	btn.set_meta(META_NAV_OWNER, player)
-	_apply_btn_info(btn, _get_action_btn_info(action))
+	_apply_btn_info(btn, _info_de_ligne(action, appareil))
 	btn.pressed.connect(_on_rebind_btn_pressed.bind(btn, action))
 	return btn
 
@@ -5344,7 +5308,7 @@ func _get_keyboard_action_info(action: String) -> Dictionary:
 			# c'est une seule qui reçoit les corrections.
 			var code := touche.physical_keycode
 			if code != 0:
-				code = CarteAppareil.dans_la_disposition(code)
+				code = Liaisons.dans_la_disposition(code)
 			else:
 				code = touche.keycode
 			return {"text": OS.get_keycode_string(code).to_upper(), "icon": ""}
@@ -5401,6 +5365,53 @@ func _get_action_btn_info(action: String) -> Dictionary:
 		"manette": manette["text"],
 		"icone_manette": manette.get("icon", ""),
 	}
+
+## Deux événements pilotent-ils le même appareil ?
+##
+## C'est cette question, et pas « sont-ils identiques », qui décide de ce qu'une
+## réassignation remplace : on veut chasser l'ancienne touche quand on en pose
+## une neuve, et laisser la manette tranquille.
+static func _meme_famille(a: InputEvent, b: InputEvent) -> bool:
+	var a_pad := a is InputEventJoypadButton or a is InputEventJoypadMotion
+	var b_pad := b is InputEventJoypadButton or b is InputEventJoypadMotion
+	return a_pad == b_pad
+
+
+static func _libelle_de_clic(bouton: int) -> Dictionary:
+	match bouton:
+		MOUSE_BUTTON_LEFT: return {"text": "CLIC GAUCHE", "icon": ""}
+		MOUSE_BUTTON_RIGHT: return {"text": "CLIC DROIT", "icon": ""}
+		MOUSE_BUTTON_MIDDLE: return {"text": "CLIC MOLETTE", "icon": ""}
+		MOUSE_BUTTON_WHEEL_UP: return {"text": "MOLETTE HAUT", "icon": ""}
+		MOUSE_BUTTON_WHEEL_DOWN: return {"text": "MOLETTE BAS", "icon": ""}
+		_: return {"text": "BOUTON %d" % bouton, "icon": ""}
+
+
+## Sortir du mode d'attente sans rien changer.
+func _annuler_la_reassignation() -> void:
+	if is_instance_valid(_button_to_update):
+		var appareil := ""
+		if _button_to_update.has_meta(META_APPAREIL):
+			appareil = String(_button_to_update.get_meta(META_APPAREIL))
+		_apply_btn_info(_button_to_update, _info_de_ligne(_action_to_rebind,
+			appareil))
+		_button_to_update.remove_theme_color_override("font_color")
+	_is_rebinding = false
+	get_viewport().set_input_as_handled()
+
+
+## Ce qu'une ligne affiche, selon le bloc où elle est rangée.
+##
+## Sans appareil, on retombe sur les deux — c'est le comportement d'avant les
+## deux blocs, et il reste juste partout où l'appel ne sait pas trancher.
+func _info_de_ligne(action: String, appareil: String) -> Dictionary:
+	var info := {}
+	match appareil:
+		"clavier": info = _get_keyboard_action_info(action)
+		"manette": info = _get_joypad_action_info(action)
+		_: return _get_action_btn_info(action)
+	return info if not info.is_empty() else {"text": "Non assigné", "icon": ""}
+
 
 func _on_rebind_btn_pressed(btn: Button, action: String) -> void:
 	if _is_rebinding:
@@ -5465,16 +5476,35 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed(prefix + "select"):
 			_activate(player)
 
+## ⚠️ **La capture ne connaissait QUE la manette.** Relevé le 2026-08-28 en
+## refondant la rubrique : `_handle_rebind_input` ne testait que
+## `InputEventJoypadButton` et `InputEventJoypadMotion`. Appuyer sur une touche
+## pendant « Appuyez… » ne faisait donc **rien** — le bouton restait en attente,
+## et le joueur en concluait que la réassignation était cassée. Elle l'était,
+## pour le clavier et la souris, c'est-à-dire pour la plupart des joueurs.
+##
+## C'est le même angle mort que les libellés réparés la veille : le fichier
+## traitait la manette et rien d'autre, aux deux bouts de la chaîne.
 func _handle_rebind_input(event: InputEvent) -> void:
 	var new_event: InputEvent = null
 	var display_info := {}
+	# L'appareil de la ligne qu'on est en train de réassigner : une ligne du
+	# bloc manette n'accepte qu'un bouton de manette, et l'inverse.
+	var attendu := ""
+	if is_instance_valid(_button_to_update) \
+			and _button_to_update.has_meta(META_APPAREIL):
+		attendu = String(_button_to_update.get_meta(META_APPAREIL))
 
 	if event is InputEventJoypadButton and event.is_pressed():
+		if attendu == "clavier":
+			return
 		var joy_btn := InputEventJoypadButton.new()
 		joy_btn.button_index = (event as InputEventJoypadButton).button_index
 		new_event = joy_btn
 		display_info = _get_joypad_btn_info(joy_btn.button_index)
 	elif event is InputEventJoypadMotion and (event as InputEventJoypadMotion).axis_value > 0.5:
+		if attendu == "clavier":
+			return
 		var motion := event as InputEventJoypadMotion
 		if motion.axis == JOY_AXIS_TRIGGER_LEFT or motion.axis == JOY_AXIS_TRIGGER_RIGHT:
 			var joy_axis := InputEventJoypadMotion.new()
@@ -5484,19 +5514,48 @@ func _handle_rebind_input(event: InputEvent) -> void:
 			display_info = {"text": "Gâchette L2", "icon": "l2.svg"} \
 				if motion.axis == JOY_AXIS_TRIGGER_LEFT \
 				else {"text": "Gâchette R2", "icon": "r2.svg"}
+	elif event is InputEventKey and event.is_pressed() \
+			and not (event as InputEventKey).echo:
+		if attendu == "manette":
+			return
+		var touche := event as InputEventKey
+		# ⚠️ **Échap ne se lie pas** : c'est la sortie du mode d'attente, et une
+		# rubrique où l'on ne peut plus renoncer est un piège.
+		if touche.physical_keycode == KEY_ESCAPE or touche.keycode == KEY_ESCAPE:
+			_annuler_la_reassignation()
+			return
+		var neuve := InputEventKey.new()
+		# ⚠️ **Le code PHYSIQUE, comme tout le reste du jeu.** `project.godot` lie
+		# par position ; poser un `keycode` ici ferait une liaison d'un autre
+		# genre que les autres, qui suivrait la lettre au lieu de la place.
+		neuve.physical_keycode = touche.physical_keycode if touche.physical_keycode != 0 \
+			else touche.keycode
+		new_event = neuve
+		display_info = {"text": OS.get_keycode_string(
+			Liaisons.dans_la_disposition(neuve.physical_keycode)).to_upper(),
+			"icon": ""}
+	elif event is InputEventMouseButton and event.is_pressed():
+		if attendu == "manette":
+			return
+		var clic := event as InputEventMouseButton
+		var neuf := InputEventMouseButton.new()
+		neuf.button_index = clic.button_index
+		new_event = neuf
+		display_info = _libelle_de_clic(clic.button_index)
 
 	if new_event == null:
 		return
 
-	var old_events := InputMap.action_get_events(_action_to_rebind)
-	for ev in old_events:
-		var is_trigger := ev is InputEventJoypadMotion \
-			and ((ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_LEFT
-				or (ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_RIGHT)
-		if ev is InputEventJoypadButton or is_trigger:
+	# ⚠️ **On n'efface que la MÊME FAMILLE que la nouvelle liaison.** L'ancien
+	# code effaçait toujours les événements de manette, quel que soit ce qu'on
+	# venait de presser : réassigner une touche détruisait donc la liaison
+	# manette **et** laissait l'ancienne touche en place — deux liaisons clavier
+	# pour une action, et plus de manette. Personne ne pouvait le voir : les deux
+	# appareils étaient affichés ensemble sur un seul bouton.
+	for ev in InputMap.action_get_events(_action_to_rebind):
+		if _meme_famille(ev, new_event):
 			InputMap.action_erase_event(_action_to_rebind, ev)
 
-	new_event.device = old_events[0].device if old_events.size() > 0 else 0
 	InputMap.action_add_event(_action_to_rebind, new_event)
 	# Sans ça, le joueur retrouvait les touches par défaut au lancement suivant.
 	GameSettings.set_binding(_action_to_rebind, new_event)
@@ -5504,10 +5563,6 @@ func _handle_rebind_input(event: InputEvent) -> void:
 	_apply_btn_info(_button_to_update, display_info)
 	_button_to_update.remove_theme_color_override("font_color")
 	_is_rebinding = false
-	# DA4.11 — **le dessin suit la réassignation.** Sans cette ligne, le clavier
-	# resterait juste à l'ouverture et faux dès la première touche changée, sur
-	# l'écran même qui sert à la changer : le pire endroit possible pour mentir.
-	_rafraichir_les_cartes()
 	get_viewport().set_input_as_handled()
 
 ## Le gel de l'arbre n'a de sens qu'en local : en ligne il figerait la
@@ -5590,13 +5645,7 @@ func _build_pick_panel() -> void:
 	pick_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	pick_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	pick_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	var fond := StyleBoxFlat.new()
-	fond.bg_color = COLOR_SURFACE
-	fond.set_border_width_all(2)
-	fond.border_color = COLOR_P1
-	fond.set_corner_radius_all(12)
-	fond.set_content_margin_all(GAP_M)
-	pick_panel.add_theme_stylebox_override("panel", fond)
+	pick_panel.add_theme_stylebox_override("panel", MenuWidgets.make_modal_style(COLOR_P1))
 	pick_panel.hide()
 	add_child(pick_panel)
 
@@ -5616,7 +5665,7 @@ func _build_pick_panel() -> void:
 
 	_pick_reason = Label.new()
 	_pick_reason.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pick_reason.add_theme_font_size_override("font_size", T_MENTION)
+	Charte.appareil(_pick_reason, T_MENTION)
 	_pick_reason.add_theme_color_override("font_color", COLOR_GOLD)
 	_pick_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pick_reason.custom_minimum_size = Vector2(420, 0)
@@ -5645,6 +5694,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 		var i := int(idx)
 		var btn := _make_choice_button(_weapon_label(i), COLOR_P1, groupe)
 		btn.custom_minimum_size = Vector2(150, 84)
+		MenuIcones.poser_sur(btn, _weapon_slug(i), COLOR_P1, 32.0)
 		btn.pressed.connect(func() -> void: _on_pick_weapon(i))
 		_pick_row.add_child(btn)
 		_pick_buttons.append(btn)
@@ -5676,6 +5726,13 @@ func _weapon_label(idx: int) -> String:
 		RankLoadout.POMPE: return "Pompe"
 		RankLoadout.FUSIL: return "Fusil"
 		_: return "Pistolet"
+
+func _weapon_slug(idx: int) -> String:
+	match idx:
+		RankLoadout.ARBALETE: return "arbalete"
+		RankLoadout.POMPE: return "pompe"
+		RankLoadout.FUSIL: return "fusil"
+		_: return "pistolet"
 
 func _on_pick_weapon(idx: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")

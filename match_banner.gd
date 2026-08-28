@@ -24,6 +24,10 @@ extends PanelContainer
 ## Le joueur a demandé à sortir de la file, ou à confirmer. L'appelant tranche.
 signal action_requested(action: String)
 
+const Charte := preload("res://charte.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+
 const MATCHMAKER_PATH := ^"/root/Matchmaker"
 
 ## Prises réelles de `matchmaking.gd`. Prises toutes ou pas du tout : un bandeau
@@ -67,13 +71,13 @@ func _init() -> void:
 func _build() -> void:
 	var style := StyleBoxFlat.new()
 	style.bg_color = MenuTheme.SURFACE
-	style.set_border_width_all(1)
+	style.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
 	style.border_width_top = 0
 	style.border_color = MenuTheme.P1
 	# Coins arrondis en bas seulement : le bandeau pend du bord de l'écran, il n'y
 	# est pas posé.
-	style.corner_radius_bottom_left = 12
-	style.corner_radius_bottom_right = 12
+	style.corner_radius_bottom_left = MenuWidgets.CORNER_PANEL
+	style.corner_radius_bottom_right = MenuWidgets.CORNER_PANEL
 	style.content_margin_left = MenuTheme.GAP_M
 	style.content_margin_right = MenuTheme.GAP_M
 	style.content_margin_top = MenuTheme.GAP_S
@@ -86,12 +90,12 @@ func _build() -> void:
 
 	_titre = Label.new()
 	_titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titre.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_titre, MenuTheme.T_COURANT, Charte.POIDS_APPUI)
 	colonne.add_child(_titre)
 
 	_detail = Label.new()
 	_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_detail.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_detail, MenuTheme.T_MENTION)
 	_detail.add_theme_color_override("font_color", MenuTheme.DIM)
 	colonne.add_child(_detail)
 
@@ -113,24 +117,8 @@ func _build() -> void:
 	_boutons.add_child(_btn_retrait)
 
 func _make_button(accent: Color) -> Button:
-	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(160, 38)
-	btn.focus_mode = Control.FOCUS_ALL
-	btn.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	var btn := MenuWidgets.make_button("", accent, false, MenuTheme.T_COURANT, Vector2(160, 38))
 	btn.hide()
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent.r, accent.g, accent.b, 0.16)
-	normal.set_border_width_all(1)
-	normal.border_color = accent
-	normal.set_corner_radius_all(8)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.32)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-	btn.add_theme_stylebox_override("pressed", hover)
 	return btn
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,10 @@ extends HubScreen
 ## ressemble exactement à un défaut. Les deux boutons sont donc rangés par
 ## intention plutôt que par importance — voir `_apply_buttons()`.
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 # ===========================================================================
 # LE POINT DE CONTACT — et c'est le seul
 # ===========================================================================
@@ -359,7 +363,7 @@ func _make_line(font_size: int, color: Color) -> Label:
 	var line := Label.new()
 	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	line.add_theme_font_size_override("font_size", font_size)
+	Charte.appareil(line, font_size)
 	line.add_theme_color_override("font_color", color)
 	return line
 
@@ -382,13 +386,7 @@ func _build_card(role: String, accent: Color) -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.name = "Carte" + role.capitalize()
 	panel.custom_minimum_size = Vector2(240, 0)
-
-	var box := StyleBoxFlat.new()
-	box.bg_color = MenuTheme.SURFACE
-	box.set_border_width_all(2)
-	box.border_color = accent
-	box.set_corner_radius_all(10)
-	panel.add_theme_stylebox_override("panel", box)
+	panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(accent, MenuWidgets.CORNER_BUTTON, 2))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_top", MenuTheme.GAP_XS)
@@ -415,25 +413,9 @@ func _build_card(role: String, accent: Color) -> Dictionary:
 	return {"panel": panel, "nickname": nickname, "stats": stats}
 
 func _make_button(node_name: String, accent: Color) -> Button:
-	var btn := Button.new()
+	var btn := MenuWidgets.make_button(node_name, accent, false, MenuTheme.T_COURANT, BUTTON_SIZE)
 	btn.name = node_name
-	btn.focus_mode = Control.FOCUS_ALL
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	btn.custom_minimum_size = BUTTON_SIZE
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = accent
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.08)
-	for state in ["hover", "focus", "pressed"]:
-		btn.add_theme_stylebox_override(state, hover)
-
 	return btn
 
 # ===========================================================================

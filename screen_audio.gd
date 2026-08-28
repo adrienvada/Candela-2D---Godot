@@ -44,8 +44,9 @@ extends HubScreen
 ## poignée à la souris, sans jamais attirer un curseur qui ne pourrait pas le
 ## bouger.
 
-## Le catalogue des volumes est lu sur `settings_manager.gd` plutôt que recopié :
-## un bus renommé là-bas doit casser ici visiblement, pas diverger en silence.
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 const Settings := preload("res://settings_manager.gd")
 
 const ID_MASTER := "master"
@@ -197,7 +198,7 @@ func _build_row(spec: Dictionary) -> Control:
 	var name_label := Label.new()
 	name_label.text = String(spec["label"])
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(name_label, MenuTheme.T_COURANT)
 	line.add_child(name_label)
 
 	var minus := _step_button("‹", id, -1)
@@ -206,17 +207,8 @@ func _build_row(spec: Dictionary) -> Control:
 	# Non focusable, et c'est délibéré : le curseur de menu ne doit jamais se
 	# poser sur un contrôle qu'il ne sait pas actionner. La souris, elle, garde
 	# le glissement — `Slider` traite la souris sans avoir le focus.
-	var slider := HSlider.new()
+	var slider := MenuWidgets.make_slider(SLIDER_MIN, SLIDER_MAX, SLIDER_STEP, SLIDER_WIDTH, MenuTheme.P1)
 	slider.name = "Slider_" + id
-	slider.min_value = SLIDER_MIN
-	slider.max_value = SLIDER_MAX
-	slider.step = SLIDER_STEP
-	slider.custom_minimum_size = Vector2(SLIDER_WIDTH, 24)
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slider.focus_mode = Control.FOCUS_NONE
-	slider.add_theme_stylebox_override("slider", _track_style())
-	slider.add_theme_stylebox_override("grabber_area", _fill_style())
-	slider.add_theme_stylebox_override("grabber_area_highlight", _fill_style())
 	line.add_child(slider)
 
 	var plus := _step_button("›", id, 1)
@@ -225,12 +217,12 @@ func _build_row(spec: Dictionary) -> Control:
 	var value_label := Label.new()
 	value_label.custom_minimum_size = Vector2(78, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(value_label, MenuTheme.T_COURANT)
 	line.add_child(value_label)
 
 	var notice := Label.new()
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(notice, MenuTheme.T_MENTION)
 	notice.add_theme_color_override("font_color", MenuTheme.DIM)
 	column.add_child(notice)
 
@@ -260,38 +252,14 @@ func _build_row(spec: Dictionary) -> Control:
 	return panel
 
 func _step_button(text: String, id: String, direction: int) -> Button:
-	var btn := Button.new()
+	var btn := MenuWidgets.make_step_button(text, Vector2(40, 30))
 	btn.name = ("Moins_" if direction < 0 else "Plus_") + id
-	btn.text = text
-	btn.custom_minimum_size = Vector2(40, 30)
-	btn.focus_mode = Control.FOCUS_ALL
 	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	btn.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(1)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(8)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var lit := normal.duplicate() as StyleBoxFlat
-	lit.border_color = MenuTheme.P1
-	lit.bg_color = Color(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b, 0.09)
-	btn.add_theme_stylebox_override("hover", lit)
-	btn.add_theme_stylebox_override("focus", lit)
-	btn.add_theme_stylebox_override("pressed", lit)
-
 	btn.pressed.connect(func() -> void: nudge(id, direction))
 	return btn
 
 func _row_style(focused: bool) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = MenuTheme.SURFACE
-	box.set_border_width_all(2)
-	box.border_color = MenuTheme.P1 if focused else MenuTheme.LINE
-	box.set_corner_radius_all(10)
-	return box
+	return MenuWidgets.make_panel_style(MenuTheme.P1 if focused else MenuTheme.LINE, MenuWidgets.CORNER_BUTTON, 2)
 
 func _track_style() -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()

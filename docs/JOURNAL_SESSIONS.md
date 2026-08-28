@@ -246,6 +246,110 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-08-27 — session « retouche éblouissement » : un banc, trois candidats, rien de branché
+
+**Demande d'Adrien : que le voile d'éblouissement cesse d'être un aplat blanc**
+et devienne un flare de lampe torche — **centré sur sa caméra**, plus intense au
+centre, animé, et penchant du côté de l'éblouisseur. Il a écarté explicitement
+la lecture forte (« l'effet doit rester centré ») après une première série de
+propositions : ce qui penche est le *caractère* du flare, jamais son cœur.
+
+**Travail en worktree** (`.claude/worktrees/retouche-eblouissement`, branche
+`retouche-eblouissement`), **jamais dans l'arbre principal**.
+
+**Fichiers créés :**
+
+- `voile_eblouissement.gdshader` (racine) — les trois candidats dans un seul
+  shader, plus le témoin (l'aplat d'aujourd'hui) ;
+- `tools/banc_voile.gd` + `.tscn` — le banc de visualisation.
+
+**Fichiers modifiés : `tools/test_banc.gd`** (les appuis du nouveau banc, plus
+son contre-test), **`docs/ROADMAP.md`**, ce journal.
+
+**⚠️ Le banc a été REFAIT le même jour, après le premier passage d'Adrien.** Il
+proposait trois candidats ; la demande était un réglage, pas un choix — « je
+voulais juste remplacer le voile d'éblouissement ». Et le voile qu'il proposait
+mourait avant les bords de l'écran, ce qui en faisait une décoration centrée au
+lieu d'un aveuglement. Il est désormais bâti sur l'image qu'Adrien a donnée :
+« notre vue, notre UI, c'est entièrement une caméra éblouie par une lampe ». Un
+lavis plein écran dont le PLANCHER est l'aplat d'aujourd'hui, plus des lueurs et
+des flares échantillonnés dans deux textures.
+
+**⚠️ Un `*.gdshader` créé, donc le glob du domaine « game feel ».** Même cas que
+`brouillage_flou.gdshader` le 2026-08-25 : c'est un fichier **créé**, pas
+modifié, donc sans conflit possible — et il n'a **aucun lecteur en production**.
+`ui.gd` n'a pas été touché, et ne le sera pas sans demande : le branchement du
+voile passe par lui, donc par la session « menus ».
+
+**✅ VALIDÉ par Adrien le 2026-08-27** — « on valide ». L'apparence est arrêtée,
+les vingt-cinq réglages sont transcrits dans le shader, l'étalonnage est fait
+(moyenne 0,330 contre 0,300 pour l'aplat : la mécanique est très légèrement
+appuyée, pas allégée).
+
+**Rien n'est branché pour autant, et c'est délibéré.** Le jeu se comporte
+exactement comme avant ce lot.
+
+📌 **DEMANDE À LA SESSION « MENUS » — le branchement passe par `ui.gd`.** Il
+demande trois choses : poser le shader sur les deux `ColorRect` de voile et lui
+passer `niveau` / `relevement` / `aspect` / `temps` ; cesser de multiplier par
+`GameSettings.current_effect("eblouissement")` (décision du 2026-08-25, le voile
+n'est plus réglable) ; et régler le `p2_dazzle` de la vue unique décrit
+ci-dessous — il n'existe aucune version propre du voile qui le laisse en place.
+Je ne le fais pas d'office. Le banc existe pour qu'Adrien tranche entre trois candidats à
+l'œil, dans le noir, au-dessus d'un vrai faisceau — la méthode qui a tranché
+B1 à B4 du chantier brouillage.
+
+**Deux défauts SIGNALÉS et non corrigés** (hors périmètre, et tous deux dans des
+fichiers tenus par d'autres) — détail et raisonnement dans la ROADMAP :
+
+1. `ui.gd` — en vue unique, `p2_dazzle` blanchit la moitié droite de l'écran
+   local quand l'ADVERSAIRE est ébloui ;
+2. `game_state.gd` / `brouillage_vue.gd` — en rendu racine, les couches du
+   brouillage passeraient au-dessus du HUD.
+
+**Les deux viennent d'une lecture de code, pas d'un relevé.** Ils sont à
+vérifier à l'écran avant d'être traités comme des faits.
+
+**Un QUATRIÈME, mesuré, et il s'adresse lui aussi à la session « brouillage » —
+c'est le plus sérieux des quatre.**
+
+Adrien a vu « des effets bizarres au centre, dans la zone de flou », et il les
+voyait **voile coupé**, donc hors de mon chantier. Reproduit et isolé à la
+planche de contact : un polygone à arêtes franches près du joueur, présent avec
+`COPY_MODE_RECT` (la production), **absent en `COPY_MODE_VIEWPORT`**, absent
+aussi quand on coupe le brouillage. Le flou lit donc des texels que la
+photocopie n'a pas rafraîchis — précisément ce que `Brouillage.emprise_copie()`
+existe pour empêcher, et que son propre avertissement décrit mot pour mot.
+
+**Deux causes possibles, et je n'ai PAS tranché entre elles :** soit la marge
+d'emprise est ajoutée en pixels de canevas quand le shader l'utilise en pixels de
+framebuffer (les deux divergent dès que la fenêtre n'est pas à 1920×1080, à cause
+de `stretch/mode = canvas_items`), soit le `rect` de la photocopie n'est pas posé
+dans l'espace qu'on croit sous une racine étirée.
+
+⚠️ **Si ça se confirme, le chemin touché est celui de la VUE UNIQUE** — en ligne
+et à l'entraînement, les deux modes où l'on joue vraiment. En écran scindé
+l'appareil vit dans un `SubViewport`, où canevas et framebuffer coïncident.
+
+Je n'ai touché à aucun de vos trois fichiers. Le banc du voile a une touche `M`
+qui bascule entre les deux modes de photocopie, et **il démarre sur celui de la
+production** : un banc qui corrigerait en silence un défaut de production le
+rendrait invisible. Détail complet dans la section ROADMAP du chantier.
+
+**Un troisième, celui-là MESURÉ, et il s'adresse à la session « brouillage » :
+`tools/banc_brouillage.gd` n'a aucun `CanvasModulate`.** `arena.tscn` en porte un
+à `Charte.NOIR` — dans le jeu, rien n'est visible hors des lumières. Sans lui, le
+sol du banc se dessine à pleine valeur partout et les torches ne font que
+l'éclaircir : on juge des effets posés sur du **gris** alors que le jeu les pose
+sur du **noir**. `banc_voile` avait le même défaut à son premier jet ; je l'ai vu
+sur ma propre planche de contact et corrigé chez moi.
+
+**Je ne touche pas au vôtre**, et pas seulement par politesse de domaine : les
+quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile à 0,3, gain à 2,0)
+ont tous été rendus sur ce sol-là. Corriger le banc rendrait ces nombres
+discutables, et c'est à vous de décider s'ils méritent d'être rejugés dans le
+noir.
+
 ### 2026-08-25 — session « affichage » (5) : le port cesse d'être une file d'attente
 
 **Adrien m'a confié le lanceur (option A) et le seuil du F3.** Branche

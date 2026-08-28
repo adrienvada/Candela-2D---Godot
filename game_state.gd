@@ -1260,17 +1260,19 @@ func _process(delta):
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
 	_cam_kick[1] = _cam_kick[1].move_toward(Vector2.ZERO, delta * 60.0)
 
-	if cam1_shake_time > 0:
-		cam1_shake_time -= delta
-		cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[0]
-	else:
-		cam1.offset = _cam_kick[0]
+	if cam1 != null:
+		if cam1_shake_time > 0:
+			cam1_shake_time -= delta
+			cam1.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[0]
+		else:
+			cam1.offset = _cam_kick[0]
 
-	if cam2_shake_time > 0:
-		cam2_shake_time -= delta
-		cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[1]
-	else:
-		cam2.offset = _cam_kick[1]
+	if cam2 != null:
+		if cam2_shake_time > 0:
+			cam2_shake_time -= delta
+			cam2.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 15.0 + _cam_kick[1]
+		else:
+			cam2.offset = _cam_kick[1]
 		
 	if ReplaySystem.recording:
 		ReplaySystem.record_frame(p1, p2, bullet_container, delta)
