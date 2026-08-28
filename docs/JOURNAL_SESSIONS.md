@@ -2045,3 +2045,43 @@ non poussé) — import Godot en avant-plan d'abord, comme recommandé. Les cinq
 icônes n'ont pas été re-commitées : identiques byte à byte à la version de
 DA4 déjà sur `origin/main`, les recommiter aurait dupliqué une entrée déjà
 saine plutôt que de combler un vrai manque.
+
+#### Lot du 2026-08-28 — session « debug entraînement », périmètre rendu
+
+**Je prends le périmètre que la session « affichage » avait réservé le
+2026-08-25** — `_accorder_rendu_aux_vues()` et le montage des vues dans
+`game_state.gd` — parce que c'est là qu'est le défaut, et sur demande explicite
+d'Adrien : « c'est critique : corrige en premier le problème du sol ». Cette
+session n'a plus donné signe depuis trois jours. Si elle reprend, ce paragraphe
+est ce qu'il faut lire d'abord.
+
+**Le défaut, en une phrase.** R3 (b) rendait le duel par la racine en vue unique,
+et les propres `CanvasItem` de la racine — `Background`, les deux conteneurs de
+vue — le recouvraient. **Écran entièrement noir à l'entraînement ET en ligne,
+des deux côtés du lien**, du 2026-08-25 au 2026-08-28. Seul l'écran scindé y
+échappait. Récit, mesures et leçon : ROADMAP, Pièges connus, « Prêter son
+`World2D` à la racine y fait entrer ce qu'elle peignait déjà ».
+
+**Fichiers touchés, tous dans ce périmètre :**
+
+- `game_state.gd` — `_accorder_la_peinture_de_la_racine()`, appelée par
+  `_accorder_rendu_aux_vues()` ; et `_on_main_menu_requested()`, qui ne repassait
+  par aucun accord de rendu et laissait `_rendu_racine` vrai sous les menus.
+- `tools/test_rendu.gd` — un quatrième contrôle, `_entrainement_sol_peint()`, en
+  PIXELS. C'est le seul qui ait du sens ici : la suite dédiée est restée verte
+  tout du long parce qu'elle ne vérifie que des états.
+- `tools/test_rendu_racine.gd` — l'invariant du correctif et celui du retour au
+  menu. Des états, donc une valeur limitée, et c'est écrit dans le fichier.
+- `tools/rendu_commun.gd` — deux appuis nommés de plus (`arena`, `_rendu_racine`).
+
+**Ce que je n'ai PAS touché, et qui reste ouvert.** Le second défaut trouvé dans
+la même séance : `AudioManager.part_occultee()` lance ses rayons sur
+`MapGeometry.WALL_LAYER`, qui vaut 1 — la couche des murs, mais aussi celle des
+joueurs et de la cible d'entraînement. **Le rayon bouche-du-canon → oreille
+traverse le tireur lui-même, sur 16 angles de visée sur 16** : tout tir part sur
+`SFX_Occlus`, direct retiré, ~35 dB sous un tir dégagé. Invisible en écran
+scindé, où `part_occultee` rend `0.0` d'entrée. Domaine « audio », pas le mien ;
+Adrien a demandé le sol d'abord.
+
+**Republication du suivi :** je ne l'ai pas prise et je n'ai identifié aucune
+session qui la porte aujourd'hui. Mon delta est dans ce paragraphe.
