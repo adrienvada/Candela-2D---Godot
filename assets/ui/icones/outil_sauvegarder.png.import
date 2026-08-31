@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c4cc0tkacbntf"
-path="res://.godot/imported/outil_miroir_ad.png-51e19b471861d3add63c3619c00d23ac.ctex"
+uid="uid://dh56jrs2d0b1j"
+path="res://.godot/imported/outil_sauvegarder.png-d274ba8dfd06dc91970a719d7f022b6d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/icones/outil_miroir_ad.png"
-dest_files=["res://.godot/imported/outil_miroir_ad.png-51e19b471861d3add63c3619c00d23ac.ctex"]
+source_file="res://assets/ui/icones/outil_sauvegarder.png"
+dest_files=["res://.godot/imported/outil_sauvegarder.png-d274ba8dfd06dc91970a719d7f022b6d.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

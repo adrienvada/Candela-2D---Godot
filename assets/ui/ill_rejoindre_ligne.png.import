@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c4cc0tkacbntf"
-path="res://.godot/imported/outil_miroir_ad.png-51e19b471861d3add63c3619c00d23ac.ctex"
+uid="uid://ccemcmbqxbj2r"
+path="res://.godot/imported/ill_rejoindre_ligne.png-cb96b72757b0c907056c9540dd9c063f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/icones/outil_miroir_ad.png"
-dest_files=["res://.godot/imported/outil_miroir_ad.png-51e19b471861d3add63c3619c00d23ac.ctex"]
+source_file="res://assets/ui/ill_rejoindre_ligne.png"
+dest_files=["res://.godot/imported/ill_rejoindre_ligne.png-cb96b72757b0c907056c9540dd9c063f.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

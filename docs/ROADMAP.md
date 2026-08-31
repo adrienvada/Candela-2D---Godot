@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-27
+> Dernière mise à jour : 2026-08-28
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3124,6 +3124,75 @@ qui rend.
 **C'est la liste des sessions vivantes qui tranche, jamais ce qu'une session a
 annoncé une heure plus tôt.** Une information sur l'état des sessions vieillit
 en minutes, et une session ne peut pas annoncer sa propre fin.
+
+### Prêter son `World2D` à la racine y fait entrer ce qu'elle peignait déjà (2026-08-28)
+
+Le chantier R, étape R3 (b), sort le duel du `SubViewport` en vue unique : la
+racine adopte le `World2D` du duel, son masque de cull et sa caméra. Le lot a été
+livré le 2026-08-25 sur la foi d'un relevé de cadence — +15 % pour 3,6 fois plus
+de pixels — et la ROADMAP a écrit « aucun nœud ne bouge ».
+
+**Aucun nœud du duel ne bougeait. Ceux de la RACINE, si.** Échanger le `world_2d`
+d'un viewport réattache ses propres `CanvasItem` au nouveau canvas : ils quittent
+les coordonnées d'écran pour celles du monde, sous la transformation de la
+caméra. Deux d'entre eux sont opaques et pleins cadre — le `Background` noir de
+`main.tscn` et les deux `SubViewportContainer`, qui peignent la texture **gelée**
+de vues que ce même chemin vient d'arrêter. Ils tombaient donc pile sur la carte.
+
+Trois jours durant, **l'entraînement et le jeu en ligne ont affiché un écran
+entièrement noir**, des deux côtés du lien. Seul l'écran scindé, qui garde ses
+deux vues, y échappait. Mesuré le 2026-08-27, noir du `CanvasModulate` levé pour
+chercher des tuiles et non un halo :
+
+| état | luminance au centre |
+|---|---|
+| entraînement, tel quel | 0,00098 |
+| conteneur de vue éteint seul | 0,00098 |
+| fond noir éteint seul | 0,042 |
+| **les deux éteints** | **0,29545** |
+| témoin en rendu sous-vue | 0,29543 |
+
+En duel ENet le même jour : 0,036 → 0,280 chez l'hôte, 0,033 → 0,278 chez le
+client. Rien ne manquait ; tout était masqué.
+
+**La règle, en deux gestes.** Ce que la racine peint POUR ELLE-MÊME se tait
+pendant qu'elle peint le duel — par l'alpha, jamais par `visible` : le `visible`
+d'un conteneur est la source de vérité de « quelle vue est regardée », et
+`hide()` puis `show()` ne rend pas l'écran d'avant (un `SubViewportContainer`
+rafraîchit sa texture au retour — 0,048 au lieu des 0,001 de départ, quand
+l'aller-retour par l'alpha revient exactement). Et **quitter le duel doit quitter
+le rendu racine** : `_on_main_menu_requested()` ne repassait par aucun accord de
+rendu, si bien que la racine gardait le monde du duel sous les menus. Personne ne
+l'avait vu — le fond noir opaque le cachait, c'est-à-dire l'autre défaut.
+
+**C'est la jumelle exacte de « L'écoute suit le viewport du listener, pas celui
+qui rend ».** Même ligne — `racine.world_2d = vue.world_2d` —, deux conséquences
+qu'aucune lecture de code ne donne : les sons sortent deux fois, et les
+`CanvasItem` de la racine entrent dans le canvas du duel. Quand une seule
+instruction a déjà surpris une fois, la question n'est pas « est-elle corrigée »
+mais **« qu'est-ce qu'elle déplace d'autre »**.
+
+> **La leçon de méthode, et elle est plus chère que le correctif.** Le lot a été
+> jugé sur un compteur. Le banc de cadence **ouvre une vraie fenêtre** et exécute
+> le geste exact de la production : le défaut était affiché en grand, au premier
+> plan, pendant les quinze secondes du jalon H10 — et ce qui a été lu, c'est le
+> nombre d'images par seconde. La planche de contact l'a photographié deux fois
+> (`10-entrainement`, `11-entrainement-apres-deplacement`) sans que personne
+> ouvre les images. **L'instrument n'a pas manqué : le regard a manqué.**
+>
+> Et la suite dédiée, `tools/test_rendu_racine.gd`, est restée verte de bout en
+> bout — mondes, masques, caméras, `update_mode` : chaque état qu'elle contrôle
+> était juste. Le défaut vivait en aval de tout ce qu'un graphe de scène peut
+> dire. Quant au seul contrôle en pixels qui regardait l'arène, c'était un
+> **plafond** (« l'arène reste sombre », ≤ 0,10) et ce défaut est un **plancher** :
+> 0,00098 le passait cent fois. C'est la forme exacte du trou — on savait dire
+> « pas trop clair », jamais « quelque chose est là ». D'où
+> `_entrainement_sol_peint()` dans `tools/test_rendu.gd`, contre-testé le
+> 2026-08-28 : correctif neutralisé, il tombe à 0,0066 contre un plancher à 0,05,
+> pendant que les trois autres restent verts.
+
+*Trouvé parce qu'Adrien a signalé « mon entraînement n'a aucun sol ». Le mode
+solo, encore : troisième fois qu'il révèle ce que les autres modes cachent.*
 
 ### Deux mesures qui divergent parlent peut-être de deux bases (2026-08-27)
 
@@ -9543,8 +9612,13 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
   les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
-- **DA4.11 Le rebinding visuel** ✅ **livrée le 2026-08-28** — et le mot
-  « visuel » est ce que l'item a perdu en route.
+- **DA4.11 Le rebinding visuel** ✅ **livrée ET VALIDÉE À L'ÉCRAN le 2026-08-28**
+  — et le mot « visuel » est ce que l'item a perdu en route.
+
+  *Adrien, après quatre passes de relecture en jeu : « parfait ». Les quatre
+  dessins successifs sont consignés ci-dessous ; **aucun des défauts qui les ont
+  fait tomber n'était visible autrement qu'à l'écran**, et les bancs étaient
+  verts à chaque fois.*
 
   ### Trois dessins, deux rejetés à l'écran
 
@@ -11331,6 +11405,22 @@ masque de cull de la vue regardée, et sa caméra (`custom_viewport`) ; les deux
 `SubViewport` passent en `UPDATE_DISABLED`. L'écran scindé local est inchangé —
 il a besoin de ses deux vues, deux masques, deux caméras. Tout tient dans
 `_accorder_rendu_aux_vues()`, qui savait déjà quelle vue est regardée.
+
+> ⚠️ **Ce paragraphe a été exact et catastrophique pendant trois jours, corrigé
+> le 2026-08-28.** « Aucun nœud ne bouge » parlait du duel ; ce sont les nœuds
+> de la RACINE qui bougeaient. Échanger un `world_2d` réattache les `CanvasItem`
+> du viewport au nouveau canvas — le `Background` noir plein cadre et les deux
+> conteneurs de vue, qui peignaient la texture que la ligne d'à côté venait de
+> geler. **Le duel était rasterisé à la résolution de la fenêtre, puis
+> recouvert : écran entièrement noir à l'entraînement comme en ligne, des deux
+> côtés du lien.** Le lot a donc livré des pixels plus fins que personne ne
+> voyait, dans les deux seuls modes où l'on joue vraiment.
+>
+> « Tout tient dans `_accorder_rendu_aux_vues()` » était faux de ce qui manquait
+> précisément : ce que la racine peint pour elle-même. Il y tient maintenant, par
+> `_accorder_la_peinture_de_la_racine()`. Récit complet, mesures et leçon de
+> méthode : « Prêter son `World2D` à la racine y fait entrer ce qu'elle peignait
+> déjà », aux Pièges connus.
 
 **L'interrupteur `rendu_racine_autorise`** ramène la vue unique à son
 `SubViewport`. Il existe pour que le banc mesure les deux chemins dans la même

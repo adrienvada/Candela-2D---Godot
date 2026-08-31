@@ -2593,7 +2593,62 @@ func _accorder_rendu_aux_vues() -> void:
 		vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS if vu \
 			else SubViewport.UPDATE_DISABLED
 
+	_accorder_la_peinture_de_la_racine()
 	_accorder_brouillage_aux_vues()
+
+
+## Ce que la racine peint POUR ELLE-MÊME s'efface pendant qu'elle peint le duel.
+##
+## **Sans ça, R3 (b) livrait un écran entièrement noir**, et pas seulement à
+## l'entraînement : en ligne aussi, des deux côtés du lien. Le duel était bien
+## dessiné — puis recouvert.
+##
+## Prêter le `World2D` du duel à la racine y fait entrer ses PROPRES `CanvasItem`,
+## qui cessent d'être en coordonnées d'écran pour passer en coordonnées de monde,
+## sous la transformation de la caméra. Deux d'entre eux sont opaques et pleins
+## cadre : le `Background` noir de `main.tscn`, et les deux `SubViewportContainer`
+## qui peignent la texture **gelée** de vues que ce même chemin vient d'arrêter.
+## Ils tombent donc pile sur la carte.
+##
+## Mesuré le 2026-08-27, noir du `CanvasModulate` levé pour chercher des tuiles
+## et non un halo : luminance au centre **0,00098** telle quelle, **0,29545** ces
+## trois nœuds éteints — soit exactement le rendu sous-vue (0,29543). Rien ne
+## manquait, tout était masqué. En duel ENet le même jour : 0,036 → 0,280 chez
+## l'hôte, 0,033 → 0,278 chez le client.
+##
+## ⚠️ **`modulate` et non `visible`, pour DEUX raisons mesurées.**
+##
+## La première est une question de propriété : le `visible` d'un conteneur de vue
+## est la source de vérité de « quelle vue est regardée ». `_accorder_rendu_aux_vues()`
+## y compte les vues, `_accorder_brouillage_aux_vues()` y lit où loger l'appareil
+## de brouillage. Le cacher ferait basculer le rendu à chaque image et retirerait
+## le brouillage.
+##
+## La seconde ne se devine pas : **`hide()` puis `show()` ne rend pas l'écran
+## d'avant.** Montrer de nouveau un `SubViewportContainer` rafraîchit sa texture,
+## et l'aller-retour laisse à l'écran une image que personne n'a demandée —
+## relevé 0,048 au lieu des 0,001 de départ. L'aller-retour par l'alpha, lui,
+## revient exactement (0,00129 → 0,29665 → 0,00134, mesuré le 2026-08-28). On
+## retire donc la peinture, jamais l'existence.
+##
+## ⚠️ **Une RÈGLE, pas une liste de trois noms.** Le premier jet nommait le fond
+## et les deux conteneurs. C'était juste et ça pourrissait : `SplitScreen` rejoint
+## le même canvas et ne peint rien **aujourd'hui** — il n'a ni `_draw()` ni
+## `StyleBox` —, mais le jour où quelqu'un lui pose un fond, il recouvre le duel
+## et la liste ne l'attrape pas. On parcourt donc les enfants directs qui peignent,
+## et `modulate` plutôt que `self_modulate` pour que la consigne descende aussi
+## à ce qu'on ajoutera dessous.
+##
+## `UI` s'exclut tout seul, et c'est la raison de fond : c'est un `CanvasLayer`,
+## pas un `CanvasItem`. Une couche s'attache au VIEWPORT et non au canvas du
+## monde — elle ignore l'échange de `World2D`, reste en coordonnées d'écran, et
+## doit continuer de peindre. Le HUD n'a jamais été en cause.
+func _accorder_la_peinture_de_la_racine() -> void:
+	var alpha := 0.0 if _rendu_racine else 1.0
+	for enfant in get_children():
+		var peintre := enfant as CanvasItem
+		if peintre != null:
+			peintre.modulate.a = alpha
 
 
 ## Chaque appareil de brouillage rejoint la vue qui le rend.
@@ -2824,7 +2879,25 @@ func _on_main_menu_requested():
 		if child is CanvasModulate or child is BackBufferCopy or child is Camera2D:
 			continue
 		child.queue_free()
-	
+
+	# **Quitter le duel, c'est aussi le rendre à ses vues.** Ce chemin ne repassait
+	# par aucun accord de rendu : `_rendu_racine` restait VRAI sous les menus, la
+	# racine gardant le `World2D` du duel — vérifié le 2026-08-28, au retour de
+	# l'entraînement comme d'une partie en ligne. Personne ne le voyait parce que
+	# le `Background` noir opaque recouvrait l'arène ; c'était juste par accident,
+	# et l'accident vient de tomber : ce fond s'efface désormais pendant le rendu
+	# racine, donc l'oubli montrerait l'arène sous les menus.
+	#
+	# `training_mode` tombe ici pour la même raison que `sandbox_mode` et
+	# `round_active` plus haut : cette fonction a déjà démonté la session
+	# d'entraînement — la cible est retirée, l'arène purgée. Le laisser vrai
+	# enverrait l'accord ci-dessous dans la branche « une seule vue », donc
+	# aussitôt de retour dans le rendu racine.
+	training_mode = false
+	vp1.get_parent().show()
+	vp2.get_parent().show()
+	_accorder_rendu_aux_vues()
+
 	ui.show_main_menu()
 	AudioManager.play_music("music_menu")
 
