@@ -322,6 +322,35 @@ var _roulis := 0.0
 ## D1 — alternance pied gauche/droit des empreintes : +1/-1, inversé à chaque
 ## pas. État PAR JOUEUR, tenu ici et non dans Footprint.
 var _foot_side := 1
+
+## ## La planche de marche peinte (DA2.4, câblée le 2026-09-01)
+##
+## Quatre poses par arme, jouées **sur le compteur de distance** et jamais sur
+## une horloge : la pose change au même instant que le son du pas, l'empreinte au
+## sol et la bosse de rétrodiffusion, parce que tous les quatre lisent
+## `step_distance_accumulated`. Une planche cadencée par le temps dériverait de
+## tout ça à la première variation de vitesse.
+##
+## ⚠️ **Rien n'a besoin de passer sur le fil.** La pose se dérive d'un compteur
+## que les DEUX côtés calculent déjà : le bloc du pas vit hors de `can_move`
+## exprès, pour que l'adversaire interpolé produise les mêmes traces que le
+## joueur simulé. Ajouter la pose aux RPC serait payer un octet par tick pour une
+## valeur qui tombe juste toute seule — et créer une divergence possible là où il
+## n'y en a aucune.
+const MARCHE_PEINTE := true
+## Les quatre poses de l'arme courante, préchargées. Vides si la planche manque :
+## le jeu retombe alors sur le sprite statique, ce qu'il faisait avant ce câblage.
+var _poses_peintes: Array[Texture2D] = []
+var _poses_silhouettes: Array[Texture2D] = []
+## Compteur de pas. `_foot_side` alterne déjà, mais il ne compte que modulo 2 —
+## une planche de quatre poses a besoin de savoir lequel des quatre.
+var _pas := 0
+## Quelle pose est POSÉE sur les polygones en ce moment : -1 pour le statique.
+## Sans cet état on réaffecterait cinq textures à chaque image pour rien.
+var _pose_posee := -1
+## Les deux textures du repos, gardées au changement d'arme.
+var _sprite_peint_statique: Texture2D = null
+var _sprite_sil_statique: Texture2D = null
 ## Dernière position vue par le détecteur de pas (voir _physics_process).
 var _last_step_pos := Vector2.ZERO
 
@@ -711,6 +740,9 @@ func _poser_sprite(slug: String) -> bool:
 		return false
 	var t_peint: Texture2D = load(peint)
 	var t_sil: Texture2D = load(silhouette)
+	# Gardées : le retour au repos y revient, et il ne doit pas relire le disque.
+	_sprite_peint_statique = t_peint
+	_sprite_sil_statique = t_sil
 	# ⚠️ Passe par `empreinte_sprite()` — voir `DENSITE_SPRITES`. Bâtir le quad
 	# sur `get_width()` brut est le piège que R6 a levé : la recuisson d'un asset
 	# redimensionnerait le joueur.
@@ -731,8 +763,70 @@ func _poser_sprite(slug: String) -> bool:
 
 	# Le nez de direction ne se cache pas ici : il n'a plus de sommets du tout.
 	# Voir `narrow_nose` — un masquage se défait, un polygone vide non.
+	#
+	# ⚠️ **L'occluder reste sur la silhouette STATIQUE, et ce n'est pas un
+	# raccourci.** Le recalculer à chaque pose coûterait un décodage d'image et
+	# 32 rayons balayant les pixels, plusieurs fois par seconde — mais surtout
+	# **l'ombre portée changerait de forme quatre fois par cycle**. L'écart entre
+	# poses vaut au plus 4 px, à l'arrière du corps : invisible dans une ombre,
+	# cher à calculer, et une ombre qui respire se lit comme un défaut.
 	_accorder_occluder_a_la_silhouette(t_sil)
+
+	_precharger_la_planche(slug)
 	return true
+
+
+## Les quatre poses de marche, chargées d'un coup au changement d'arme.
+##
+## ⚠️ **Préchargées, jamais à la volée.** C'est le même geste que les shaders
+## quelques lignes plus haut, et pour la même raison : un `load()` au premier pas
+## d'une manche compilerait et décompresserait pile au moment où le joueur bouge,
+## c'est-à-dire pile sur l'action. Huit textures par arme, une seule fois.
+##
+## L'absence n'est pas une erreur : sans planche, le jeu garde le sprite statique
+## et son roulis — exactement ce qu'il faisait avant le 2026-09-01. Mais elle se
+## DIT, parce qu'un repli muet ne se distingue pas d'un câblage qui ne marche pas.
+func _precharger_la_planche(slug: String) -> void:
+	_poses_peintes.clear()
+	_poses_silhouettes.clear()
+	_pose_posee = -1
+	if not MARCHE_PEINTE:
+		return
+	var peintes: Array[Texture2D] = []
+	var silhouettes: Array[Texture2D] = []
+	for n in range(1, 5):
+		var a := SPRITES + "%s_marche_%d.png" % [slug, n]
+		var b := SPRITES + "%s_marche_%d_silhouette.png" % [slug, n]
+		if not ResourceLoader.exists(a) or not ResourceLoader.exists(b):
+			push_warning("player : planche de marche incomplète pour « %s » — "
+				% slug + "le sprite statique est conservé")
+			return
+		peintes.append(load(a))
+		silhouettes.append(load(b))
+	_poses_peintes = peintes
+	_poses_silhouettes = silhouettes
+
+
+## Pose l'image d'une pose sur les cinq vues. `idx` vaut -1 pour le statique.
+##
+## ⚠️ **Aucun quad n'est reconstruit et aucune UV n'est recalculée**, et c'est ce
+## qui rend ce câblage bon marché. `_calculate_uvs()` dérive les UV des bornes du
+## POLYGONE, en pixels de texture : tant que la pose a exactement les dimensions
+## du statique — ce que `test_planche_marche` exige et vérifie — échanger la
+## texture suffit. C'est très précisément ce que la contrainte d'échelle a acheté.
+func _poser_pose(idx: int) -> void:
+	if idx == _pose_posee or _poses_peintes.is_empty():
+		return
+	var t_peint: Texture2D = _sprite_peint_statique if idx < 0 else _poses_peintes[idx]
+	var t_sil: Texture2D = _sprite_sil_statique if idx < 0 else _poses_silhouettes[idx]
+	if t_peint == null or t_sil == null:
+		return
+	for paire in [[visual, t_peint], [visual_dim, t_peint], [visual_reveal, t_sil],
+			[visual_enemy, t_sil], [visual_reveal_enemy, t_sil]]:
+		var poly: Polygon2D = paire[0]
+		if poly != null:
+			poly.texture = paire[1]
+	_pose_posee = idx
 
 
 ## Le disque de torse qui arrête la rétrodiffusion.
@@ -1252,6 +1346,7 @@ func _physics_process(delta):
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
+			_pas += 1
 			if state and state.arena:
 				Footprint.spawn(state.arena, global_position, rotation, _foot_side)
 			# V5.6 — le halo de rétrodiffusion respire au même pas.
@@ -1306,6 +1401,19 @@ func _physics_process(delta):
 			# `player.tscn`, donc vrai par défaut, et les deux vues « ennemi »
 			# sont des `duplicate()` des autres.
 			poly.position.y = _roulis
+
+	# La pose peinte, sur le MÊME compteur que tout le reste du pas.
+	#
+	# ⚠️ **Le retour au repos est accroché à celui du roulis, et pas à l'arrêt du
+	# mouvement.** Une pose ne s'interpole pas : revenir au sprite statique dès
+	# que le joueur s'immobilise ferait un saut visible, en plein milieu du retour
+	# lissé du corps. En attendant que `_roulis` ait fini, les deux mécanismes se
+	# posent au même instant et l'arrêt devient une seule chose au lieu de deux.
+	if not _poses_peintes.is_empty():
+		if step_moved > 0.5 and step_moved < 100.0:
+			_poser_pose(_pas % _poses_peintes.size())
+		elif is_zero_approx(_roulis):
+			_poser_pose(-1)
 
 	# Visuals update for all clients
 	# D3 — extinction traînée (décision actée) : le noir « avale » le faisceau

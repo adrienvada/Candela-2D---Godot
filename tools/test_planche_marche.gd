@@ -75,6 +75,7 @@ var _total := 0
 
 
 func _init() -> void:
+	_juger_le_cablage()
 	for arme in ARMES:
 		var statique := _image(SPRITES + arme + ".png")
 		var statique_sil := _image(SPRITES + arme + "_silhouette.png")
@@ -155,6 +156,63 @@ func _juger(arme: String, n: int, statique: Image, ref: Dictionary) -> void:
 	var ecart := _ecart_de_masque(peint, sil)
 	_vrai("%s : %d pixel(s) d'écart entre la silhouette et le peint" % [nom, ecart],
 		ecart == 0)
+
+
+## Le câblage, lu dans le TEXTE de `player.gd`.
+##
+## ⚠️ **Par le texte, parce qu'il n'y a pas d'autre chemin.** `player.gd` nomme
+## des autoloads : le charger ici sortirait « Identifier not found:
+## NetworkManager », piège consigné le 2026-08-18 et déjà contourné de la même
+## façon par `test_sprites` et `test_torches`. Et surtout : **le lot ne rend
+## rien**. Aucune suite ne dessine, donc rien d'autre ne peut dire que la planche
+## est effectivement posée sur les cinq vues — un câblage retiré passerait tous
+## les contrôles du dépôt en silence.
+func _juger_le_cablage() -> void:
+	var src := FileAccess.get_file_as_string("res://player.gd")
+	if src.is_empty():
+		_vrai("player.gd lisible", false)
+		return
+
+	# 1 — La planche est bien chargée. Sans ce contrôle, câbler puis décâbler ne
+	# se verrait nulle part : les 32 images resteraient vertes, inutilisées.
+	_vrai("player.gd charge les quatre poses de la planche",
+		src.contains("_marche_%d.png") and src.contains("_marche_%d_silhouette.png"))
+
+	# 2 — ⚠️ **L'occluder ne se recalcule PAS par pose**, et c'est la décision du
+	# chantier. Le refaire à chaque pas coûterait un décodage d'image et 32 rayons
+	# plusieurs fois par seconde — mais surtout l'ombre portée changerait de forme
+	# quatre fois par cycle, ce qui se lirait comme un défaut. Un seul appel dans
+	# tout le fichier : celui du changement d'arme.
+	_vrai("l'occluder n'est accordé qu'une fois, au changement d'arme (%d appel(s))"
+			% src.count("_accorder_occluder_a_la_silhouette("),
+		src.count("_accorder_occluder_a_la_silhouette(") == 2)
+
+	# 3 — ⚠️ **L'échange de pose ne reconstruit ni quad ni UV**, et c'est ce qui
+	# rend le câblage bon marché : `_calculate_uvs()` dérive les UV des bornes du
+	# POLYGONE, donc tant que la pose a les dimensions du statique — ce que cette
+	# suite exige par ailleurs — poser la texture suffit. Quelqu'un qui
+	# « réparerait » ça en rajoutant un recalcul paierait cinq recalculs par pas,
+	# pour rien, et personne ne relierait la perte de cadence à ce geste.
+	var corps := _corps_de(src, "func _poser_pose(")
+	_vrai("`_poser_pose` existe dans player.gd", corps != "")
+	if corps != "":
+		_vrai("`_poser_pose` ne recalcule ni quad ni UV",
+			not corps.contains("_calculate_uvs") and not corps.contains(".polygon ="))
+
+
+## Le corps d'une fonction : de sa signature à la prochaine ligne non indentée.
+func _corps_de(src: String, signature: String) -> String:
+	var d := src.find(signature)
+	if d < 0:
+		return ""
+	var sortie := ""
+	var lignes := src.substr(d).split("\n")
+	for i in lignes.size():
+		var l: String = lignes[i]
+		if i > 0 and l != "" and not l.begins_with("\t"):
+			break
+		sortie += l + "\n"
+	return sortie
 
 
 ## Le pixel opaque le plus avant, et le centre vertical de la colonne qu'il occupe.

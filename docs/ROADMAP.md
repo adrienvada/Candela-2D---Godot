@@ -8118,8 +8118,49 @@ un fait de jeu, pas à un rythme d'interface.
   - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
   - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
 
-  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
-  l'objet de son propre arbitrage / chantier d'intégration dédié.
+  **Câblées dans `player.gd` le 2026-09-01, sur instruction d'Adrien** — l'entrée
+  disait jusque-là « ne pas les câbler dans cette session », et c'était juste : le
+  câblage était un arbitrage à part, rendu depuis. Le jeu joue donc la planche.
+
+  Quatre décisions de câblage, et chacune se paierait si on la défaisait :
+
+  - **la pose se dérive du compteur de DISTANCE**, jamais d'une horloge. Elle
+    change au même instant que le son du pas, l'empreinte au sol et la bosse de
+    rétrodiffusion, parce que tous les quatre lisent `step_distance_accumulated`.
+    Une planche cadencée par le temps dériverait de tout ça à la première
+    variation de vitesse.
+  - **rien ne passe sur le fil, et il ne faut rien y mettre.** Le compteur est
+    calculé des DEUX côtés — le bloc du pas vit hors de `can_move` exprès, pour
+    que l'adversaire interpolé produise les mêmes traces. Ajouter la pose aux RPC
+    serait payer un octet par tick pour une valeur qui tombe juste toute seule,
+    et créer une divergence possible là où il n'y en a aucune.
+  - **l'occluder de lumière ne suit PAS les poses.** Le recalculer coûterait un
+    décodage d'image et 32 rayons balayant les pixels, plusieurs fois par seconde
+    — mais surtout **l'ombre portée changerait de forme quatre fois par cycle**.
+    L'écart entre poses vaut au plus 4 px, à l'arrière du corps : invisible dans
+    une ombre, cher à calculer, et une ombre qui respire se lit comme un défaut.
+  - **le retour au repos est accroché à celui du ROULIS**, pas à l'arrêt du
+    mouvement. Une pose ne s'interpole pas : revenir au statique dès
+    l'immobilisation ferait un saut visible en plein milieu du retour lissé du
+    corps. En attendant que `_roulis` ait fini, les deux se posent au même
+    instant et l'arrêt devient une seule chose au lieu de deux.
+
+  **Le câblage n'a rien coûté, et c'est la contrainte d'échelle qui l'a payé
+  d'avance.** `_calculate_uvs()` dérive les UV des bornes du POLYGONE : tant que
+  la pose a exactement les dimensions du statique, échanger la texture suffit —
+  aucun quad reconstruit, aucune UV recalculée. La contrainte n°2 imposée à la
+  session Gemini, qui ressemblait à de la rigueur d'atelier, est ce qui rend
+  l'animation gratuite à l'exécution.
+
+  ⚠️ **Le lot ne rend rien, donc rien n'aurait vu un décâblage.** Aucune suite ne
+  dessine : les 32 images seraient restées vertes, simplement inutilisées.
+  `test_planche_marche` lit donc aussi le TEXTE de `player.gd` — les quatre poses
+  chargées, l'occluder accordé une seule fois, et `_poser_pose` qui ne recalcule
+  ni quad ni UV. Les trois éprouvés à l'envers avant d'être retenus.
+
+  **Ce qui reste à l'œil et à personne d'autre : le rendu en match.** Le lot dit
+  que le câblage est en place et conforme ; il ne dit pas qu'il est beau en
+  mouvement, à la torche, dans le noir. Ça se regarde en jouant.
 
   ⚠️ **Ces quatre garanties ont été vérifiées À LA MAIN, une seule fois, dans une
   session qui s'est terminée — et rien ne les tenait.** Une régénération, une
