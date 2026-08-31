@@ -54,6 +54,7 @@ func _run() -> void:
 	_test_filet_de_sortie()
 	_test_aucun_fichier_muet()
 	_test_aucun_son_orphelin()
+	_test_banc_de_mixage()
 	_test_dosage()
 	_test_percuteur()
 	_test_annonceur()
@@ -442,6 +443,72 @@ func _test_filet_de_sortie() -> void:
 ## Ce controle rend « tous les sons sont cables » VERIFIABLE au lieu
 ## qu'affirme. Il rougira le jour ou Adrien deposera un fichier de plus, ce qui
 ## est exactement le moment ou quelqu'un doit decider de ce qu'il raconte.
+## LE BANC DOSE SOUS LE MEME NOM QUE LE JEU RESOUT.
+##
+## **C'est l'invariant sans lequel le banc de mixage ment.** Il ecrit son
+## reglage sous un nom de famille ; le jeu, en jouant un son, demande a
+## `famille_de()` sous quel nom chercher. Si les deux different d'une lettre, la
+## molette ne fait rien — **et rien ne le dit** : pas d'erreur, pas de rouge,
+## juste un reglage sans effet qu'on finit par attribuer au fichier.
+##
+## Le defaut a existe : jusqu'au 2026-08-28, le dosage se cherchait sous le
+## CHEMIN du fichier. Un reglage pose sous `ricochet` n'etait jamais trouve par
+## `ricochet_02.wav`, et depuis V4.1 un reglage pose sous `shoot` ne touchait
+## deja plus aucune des seize prises d'armes.
+func _test_banc_de_mixage() -> void:
+	print("\n[Le banc dose sous le nom que le jeu resout]")
+	var banc := load("res://tools/banc_mixage.gd")
+	_check("le banc de mixage se charge", banc != null)
+	if banc == null:
+		return
+
+	var au_banc := {}
+	var mauvaise_famille: Array[String] = []
+	var introuvables: Array[String] = []
+	for entree in banc.FAMILLES:
+		var fam: String = entree["f"]
+		au_banc[fam] = true
+		var sons: Array = banc.sons_de(fam)
+		if sons.is_empty():
+			mauvaise_famille.append("%s : aucun son" % fam)
+			continue
+		for s in sons:
+			# L'invariant.
+			if AM.famille_de(s) != fam:
+				mauvaise_famille.append("%s -> %s" % [s, AM.famille_de(s)])
+			# Et le son doit exister : une famille qui ne joue rien est une
+			# molette qu'on tourne dans le vide.
+			var chemin: String = s if String(s).begins_with("res://") \
+				else String(AM.SOUNDS.get(s, ""))
+			if chemin == "" or not ResourceLoader.exists(chemin):
+				introuvables.append(String(s))
+
+	_check("chaque son du banc se resout dans SA famille",
+		mauvaise_famille.is_empty(), ", ".join(mauvaise_famille))
+	_check("chaque son du banc existe", introuvables.is_empty(),
+		", ".join(introuvables))
+
+	# Le miroir : une famille dosee dans les tables mais absente du banc serait
+	# un reglage que personne ne peut plus juger a l'oreille.
+	var hors_banc: Array[String] = []
+	for cle in AM.NIVEAU_RELATIF:
+		if not au_banc.has(cle):
+			hors_banc.append(String(cle))
+	for cle in AM.PORTEE_RELATIVE:
+		if not au_banc.has(cle) and not hors_banc.has(String(cle)):
+			hors_banc.append(String(cle))
+	_check("aucune famille dosee n'echappe au banc", hors_banc.is_empty(),
+		", ".join(hors_banc))
+
+	# Les trois salles existent et aucune n'est vide : une salle vide serait une
+	# touche qui ne mene nulle part.
+	for salle in [1, 2, 3]:
+		var n := 0
+		for entree in banc.FAMILLES:
+			if int(entree["salle"]) == salle:
+				n += 1
+		_check("la salle %d porte des familles" % salle, n > 0, "%d" % n)
+
 func _test_aucun_son_orphelin() -> void:
 	print("\n[Aucun son du depot n'est sans declencheur]")
 

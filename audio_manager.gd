@@ -301,6 +301,35 @@ func chemin_variante_au_hasard(famille: String) -> String:
 ## Elle repond en NOM DE FAMILLE, ce que les trois tables prennent en cle. Un
 ## son inconnu se rend lui-meme : les tables retombent alors sur leur defaut,
 ## exactement comme avant.
+##
+## ⚠️ **Certaines familles ne se reconnaissent pas a leur nom de fichier.** Les
+## huit voix d'annonceur, les trois notes du decompte et les quatre ponctuations
+## de fin sont chacune un GROUPE qui se regle d'un seul geste — decision
+## d'Adrien du 2026-08-28, « on fait par famille de sons » —, mais leurs cles
+## n'ont pas de prefixe commun (`win`, `defeat`, `spk_fight`...). D'ou cette
+## table explicite, qui est la seule facon de les nommer sans renommer les
+## fichiers.
+##
+## Sans elle, le banc de mixage aurait dose sous « voix » pendant que le jeu
+## resolvait sous « spk_fight » : la molette aurait paru cassee.
+const FAMILLES_DE_CLES: Dictionary = {
+	"voix": ["spk_fight", "spk_draw", "spk_p1_wins", "spk_p2_wins", "win",
+		"defeat", "spk_perfect", "spk_close_call"],
+	"count": ["count_1", "count_2", "count_3"],
+	"sting": ["sting_kill", "sting_kill_match", "sting_defeat", "sting_draw"],
+}
+
+## L'index inverse, construit une fois. Ecrire les deux sens a la main
+## garantirait qu'ils divergent — lecon deja payee sur l'echelle de la torche.
+static var _famille_par_cle: Dictionary = {}
+
+static func _index_des_familles() -> Dictionary:
+	if _famille_par_cle.is_empty():
+		for fam in FAMILLES_DE_CLES:
+			for c in FAMILLES_DE_CLES[fam]:
+				_famille_par_cle[String(c)] = fam
+	return _famille_par_cle
+
 static func famille_de(stream_or_key: Variant) -> String:
 	if not (stream_or_key is String):
 		return ""
@@ -315,6 +344,9 @@ static func famille_de(stream_or_key: Variant) -> String:
 	if coupe.size() == 2 and coupe[1].length() == 2 and coupe[1].is_valid_int() \
 			and VARIANTES_SFX.has(coupe[0]):
 		return coupe[0]
+	var groupes := _index_des_familles()
+	if groupes.has(s):
+		return String(groupes[s])
 	return s
 
 ## Ce son est-il un coup de feu ?
@@ -549,10 +581,10 @@ func doser_niveau(cle: String, valeur: float) -> void:
 	_niveau_dose[cle] = clampf(valeur, -40.0, 12.0)
 
 func portee_dosee(cle: String) -> float:
-	return float(_portee_dosee.get(cle, portee_relative_de(cle)))
+	return float(_portee_dosee.get(famille_de(cle), portee_relative_de(cle)))
 
 func niveau_dose(cle: String) -> float:
-	return float(_niveau_dose.get(cle, niveau_relatif_de(cle)))
+	return float(_niveau_dose.get(famille_de(cle), niveau_relatif_de(cle)))
 
 ## Grille de la carte par defaut. C'est la SEULE valeur recopiee ici, et elle est
 ## une propriete de `assets/maps/default.json` — pas une constante d'audio.
@@ -639,9 +671,19 @@ static func portee_absolue(stream_or_key: Variant, portee_carte: float,
 ## La meme, mais en tenant compte d'un dosage en cours au banc. Non statique :
 ## elle lit l'etat de la seance. En jeu, sans seance, elle rend exactement
 ## `portee_absolue` — le banc ne peut donc pas faire diverger le jeu de sa table.
+## ⚠️ **Le dosage se cherche sous la FAMILLE, pas sous le chemin du fichier.**
+## Cette ligne lisait `_portee_dosee[chemin]` : un reglage pose au banc sous
+## `ricochet` n'aurait jamais ete trouve par `ricochet_02.wav`, et la molette
+## n'aurait rien fait entendre. Le banc aurait paru casse — ou pire, le reglage
+## aurait paru sans effet et Adrien aurait cherche la faute dans le fichier.
+##
+## Le defaut precede les familles de 2026-08-27 : depuis V4.1, un dosage pose
+## sous `shoot` ne s'appliquait deja plus aux seize prises d'armes, qui arrivent
+## en chemin. Les TABLES, elles, ont toujours resolu par famille — d'ou un banc
+## qui dosait `weapon_shoot.wav` pendant que le jeu jouait `weapon_fusil_02`.
 func portee_courante(stream_or_key: Variant) -> float:
-	var cle := String(stream_or_key) if stream_or_key is String else ""
-	var relative := float(_portee_dosee.get(cle, portee_relative_de(stream_or_key)))
+	var relative := float(_portee_dosee.get(famille_de(stream_or_key),
+		portee_relative_de(stream_or_key)))
 	return maxf(1.0, _portee_carte * relative * facteur_portee)
 
 ## ============================================================================
@@ -1301,9 +1343,12 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.attenuation = courbe_distance
 	# Le niveau par son s'AJOUTE au volume demande, il ne le remplace pas : le
 	# duck des pas sous le tir (V4.15) reste un ecart, pas une valeur absolue.
-	var cle_niveau := String(stream_or_key) if stream_or_key is String else ""
+	# Meme correction que `portee_courante` : la SEANCE se cherche sous la
+	# famille, sinon la molette du banc reste muette sur tout son joue par
+	# chemin — c'est-a-dire sur la moitie du jeu depuis V4.1.
 	player.volume_db = volume_final + float(
-		_niveau_dose.get(cle_niveau, niveau_relatif_de(stream_or_key)))
+		_niveau_dose.get(famille_de(stream_or_key),
+			niveau_relatif_de(stream_or_key)))
 	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
 	# position du son et celle de l'oreille. La PART occultee adoucit en plus le
 	# bord : un son occulte au tiers part sur le bus etouffe, mais n'y perd qu'un
