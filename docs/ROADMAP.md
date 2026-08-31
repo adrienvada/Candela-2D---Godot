@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-28
+> Dernière mise à jour : 2026-09-01
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -8120,6 +8120,51 @@ un fait de jeu, pas à un rythme d'interface.
 
   **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
   l'objet de son propre arbitrage / chantier d'intégration dédié.
+
+  ⚠️ **Ces quatre garanties ont été vérifiées À LA MAIN, une seule fois, dans une
+  session qui s'est terminée — et rien ne les tenait.** Une régénération, une
+  retouche, une recuisson : elles tombaient toutes les quatre sans qu'une ligne
+  ne rougisse, et la validation d'Adrien reposait alors sur des mesures qui
+  n'existaient nulle part dans le dépôt. Les trois tentatives précédentes ayant
+  toutes été **rendues comme des succès**, c'est exactement le trou par lequel
+  la quatrième aurait pu repartir.
+
+  **`tools/test_planche_marche.gd` les tient depuis le 2026-09-01** (96 contrôles,
+  dans le lanceur). Trois choix de fabrication valent d'être retenus, parce que
+  les trois viennent d'un défaut évité :
+
+  - **la référence est le SPRITE STATIQUE, jamais un nombre.** Aucune dimension
+    n'est écrite dans la suite : chaque pose est comparée au `<arme>.png` relu à
+    l'exécution. C'est ce qui la fera survivre à la recuisson ×2 décidée le
+    2026-08-25 — le jour où les statiques doubleront, elle exigera que les
+    planches doublent avec eux, sans qu'on réécrive une ligne. Un nombre figé
+    ici aurait été la faute du seuil `6` de `test_audit_menus`.
+  - **les images sont lues sur le DISQUE, pas à travers le cache d'import.**
+    Premier jet écarté par son contre-exemple : le cache ne rend que ce qui a été
+    importé la dernière fois, donc quelqu'un qui régénère les 32 planches et
+    lance la suite sans réimporter obtiendrait **un vert sur les anciennes
+    images** — la suite validerait avec aplomb le lot qu'elle est censée refuser.
+    Ni `Image.load_from_file()` non plus, qui lit bien le disque mais émet un
+    avertissement par appel : 96 lignes de bruit pour un lot vert, et **un
+    contrôle qui hurle en réussissant apprend à ne plus lire sa sortie.**
+  - **un contrôle rend tout ce qu'il peut voir en une passe.** Seule la
+    comparaison d'abscisses se saute quand la taille est fausse — comparer deux
+    positions sur deux toiles différentes ne veut rien dire. Le magenta et la
+    silhouette, eux, ne dépendent pas de la taille : les sauter aussi
+    transformait une correction en série de manches. Mesuré, et ce n'est pas
+    théorique : l'épreuve à l'envers rendait **1 défaut magenta avant, 4 après**.
+
+  **Éprouvée à l'envers avant d'être retenue, et par le meilleur cobaye possible :
+  le lot REJETÉ lui-même**, remis en place depuis `5267693`. La suite le refuse
+  sur les quatre familles à la fois — douze échecs d'échelle, quatre de portée,
+  quatre de pivot, quatre de magenta. Et elle attrape **l'arbalète, dont la
+  taille était pourtant juste** (56×56 des deux côtés) : seuls les contrôles de
+  portée et de pivot pouvaient la voir. C'est très exactement le contrôle qui
+  remplace un œil, pris en flagrant délit de servir.
+
+  **Ce qu'elle ne vérifie pas, et ne peut pas vérifier : la caméra et la beauté.**
+  Elles se jugent au banc, à l'œil d'Adrien. La suite ne remplace pas ce regard —
+  elle empêche qu'il soit annulé en silence.
 
   Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
   (peinte et silhouette).
