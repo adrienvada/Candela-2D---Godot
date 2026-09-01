@@ -2338,17 +2338,31 @@ que de l'avoir vu marcher. C'est le jalon H9.
 
 ### Ce qui reste
 
-1. **H8 — la paire de clés.** ✅ Moitié publique posée le 2026-08-26. Reste le
-   secret GitHub `CANDELA_MAJ_CLE_PRIVEE` — la clé privée ne passe par aucun
-   agent, par aucun message, par aucun commit.
-   **Piège vécu le même jour, et il vaut d'être écrit :** un tag `v0.1.0` a été
-   posé avant que la clé publique ne soit dans le fichier et avant que le secret
-   n'existe. Le tag est parti seul (une poussée de tag emporte ses objets même
-   quand la poussée de `main` est refusée) et a désigné un commit que `main` ne
-   connaissait pas. La publication a échoué là où elle devait : à la signature.
-   **Poser le tag après que le commit visé est sur GitHub**, jamais avant.
-2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
-   installer et mettre à jour sur une vraie machine.
+1. **H8 — la paire de clés.** ✅ **Fait, les deux moitiés.** Publique posée le
+   2026-08-26 (`0af06e1`, `update_manager.gd`) ; secret GitHub
+   `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25 (vérifié : `gh secret list`) —
+   la clé privée n'est jamais passée par un agent, par un message, ni par un
+   commit.
+   **Deux pièges vécus le même week-end, tous deux à écrire :**
+   - un tag `v0.1.0` a été posé avant que la clé publique ne soit dans le
+     fichier. Le tag est parti seul (une poussée de tag emporte ses objets
+     même quand la poussée de `main` est refusée) et a désigné un commit que
+     `main` ne connaissait pas. Le workflow `Publication` a pourtant tourné
+     jusqu'au bout ce jour-là (`32912720779`, le 2026-08-25 23:53 UTC, onze
+     étapes vertes, deux exports, manifeste signé, Release créée) : rien dans
+     la CI ne vérifie que le commit tagué contient la clé, seulement que la
+     signature qu'il produit est valide. La Release a dû être retirée après
+     coup — le garde-fou qui manquait est humain, pas dans la CI. **Poser le
+     tag après que le commit visé est sur GitHub**, jamais avant.
+   - supprimer le tag d'une Release déjà publiée ne supprime pas la Release :
+     elle redevient un **brouillon non tagué**, qu'il faut effacer à la main,
+     sans quoi reposer le même nom de tag entre en conflit avec elle. Celui du
+     25 août (« Candela v0.1.0 ») est **encore là au 2026-08-31**, vérifié par
+     `gh release list` — à supprimer avant de reposer `v0.1.0` pour de bon.
+2. **H9 — la première publication.** Supprimer le brouillon orphelin du
+   25 août, poser `v0.1.0` sur un commit déjà poussé qui contient la clé
+   publique, laisser la CI publier, puis installer et mettre à jour sur une
+   vraie machine.
 3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
    Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
    pas de translocation, un dossier et un `.exe`.
@@ -11242,8 +11256,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
-| H8 | **Paire de clés de mise à jour** | ✅ **Clé publique en place le 2026-08-26** — paire RSA-4096 fabriquée par Adrien, publique dans `update_manager.gd` (relue par `openssl`, chargée par `Crypto` de Godot). **Reste la moitié qu'aucun agent ne doit toucher** : le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`, à créer depuis `~/candela_maj_privee.pem`. Sans lui, la CI refuse de publier plutôt que d'annoncer une version non signée. | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
+| H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
+| H9 | **Première publication, et première mise à jour réelle** | Supprimer le brouillon orphelin du 25 août, poser `v0.1.0` sur un commit qui contient la clé, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---
