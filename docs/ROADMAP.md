@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-28
+> Dernière mise à jour : 2026-09-01
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2377,7 +2377,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 |---|---|
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
-| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. |
+| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
@@ -8132,8 +8132,94 @@ un fait de jeu, pas à un rythme d'interface.
   - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
   - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
 
-  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
-  l'objet de son propre arbitrage / chantier d'intégration dédié.
+  **Câblées dans `player.gd` le 2026-09-01, sur instruction d'Adrien** — l'entrée
+  disait jusque-là « ne pas les câbler dans cette session », et c'était juste : le
+  câblage était un arbitrage à part, rendu depuis. Le jeu joue donc la planche.
+
+  Quatre décisions de câblage, et chacune se paierait si on la défaisait :
+
+  - **la pose se dérive du compteur de DISTANCE**, jamais d'une horloge. Elle
+    change au même instant que le son du pas, l'empreinte au sol et la bosse de
+    rétrodiffusion, parce que tous les quatre lisent `step_distance_accumulated`.
+    Une planche cadencée par le temps dériverait de tout ça à la première
+    variation de vitesse.
+  - **rien ne passe sur le fil, et il ne faut rien y mettre.** Le compteur est
+    calculé des DEUX côtés — le bloc du pas vit hors de `can_move` exprès, pour
+    que l'adversaire interpolé produise les mêmes traces. Ajouter la pose aux RPC
+    serait payer un octet par tick pour une valeur qui tombe juste toute seule,
+    et créer une divergence possible là où il n'y en a aucune.
+  - **l'occluder de lumière ne suit PAS les poses.** Le recalculer coûterait un
+    décodage d'image et 32 rayons balayant les pixels, plusieurs fois par seconde
+    — mais surtout **l'ombre portée changerait de forme quatre fois par cycle**.
+    L'écart entre poses vaut au plus 4 px, à l'arrière du corps : invisible dans
+    une ombre, cher à calculer, et une ombre qui respire se lit comme un défaut.
+  - **le retour au repos est accroché à celui du ROULIS**, pas à l'arrêt du
+    mouvement. Une pose ne s'interpole pas : revenir au statique dès
+    l'immobilisation ferait un saut visible en plein milieu du retour lissé du
+    corps. En attendant que `_roulis` ait fini, les deux se posent au même
+    instant et l'arrêt devient une seule chose au lieu de deux.
+
+  **Le câblage n'a rien coûté, et c'est la contrainte d'échelle qui l'a payé
+  d'avance.** `_calculate_uvs()` dérive les UV des bornes du POLYGONE : tant que
+  la pose a exactement les dimensions du statique, échanger la texture suffit —
+  aucun quad reconstruit, aucune UV recalculée. La contrainte n°2 imposée à la
+  session Gemini, qui ressemblait à de la rigueur d'atelier, est ce qui rend
+  l'animation gratuite à l'exécution.
+
+  ⚠️ **Le lot ne rend rien, donc rien n'aurait vu un décâblage.** Aucune suite ne
+  dessine : les 32 images seraient restées vertes, simplement inutilisées.
+  `test_planche_marche` lit donc aussi le TEXTE de `player.gd` — les quatre poses
+  chargées, l'occluder accordé une seule fois, et `_poser_pose` qui ne recalcule
+  ni quad ni UV. Les trois éprouvés à l'envers avant d'être retenus.
+
+  **Ce qui reste à l'œil et à personne d'autre : le rendu en match.** Le lot dit
+  que le câblage est en place et conforme ; il ne dit pas qu'il est beau en
+  mouvement, à la torche, dans le noir. Ça se regarde en jouant.
+
+  ⚠️ **Ces quatre garanties ont été vérifiées À LA MAIN, une seule fois, dans une
+  session qui s'est terminée — et rien ne les tenait.** Une régénération, une
+  retouche, une recuisson : elles tombaient toutes les quatre sans qu'une ligne
+  ne rougisse, et la validation d'Adrien reposait alors sur des mesures qui
+  n'existaient nulle part dans le dépôt. Les trois tentatives précédentes ayant
+  toutes été **rendues comme des succès**, c'est exactement le trou par lequel
+  la quatrième aurait pu repartir.
+
+  **`tools/test_planche_marche.gd` les tient depuis le 2026-09-01** (96 contrôles,
+  dans le lanceur). Trois choix de fabrication valent d'être retenus, parce que
+  les trois viennent d'un défaut évité :
+
+  - **la référence est le SPRITE STATIQUE, jamais un nombre.** Aucune dimension
+    n'est écrite dans la suite : chaque pose est comparée au `<arme>.png` relu à
+    l'exécution. C'est ce qui la fera survivre à la recuisson ×2 décidée le
+    2026-08-25 — le jour où les statiques doubleront, elle exigera que les
+    planches doublent avec eux, sans qu'on réécrive une ligne. Un nombre figé
+    ici aurait été la faute du seuil `6` de `test_audit_menus`.
+  - **les images sont lues sur le DISQUE, pas à travers le cache d'import.**
+    Premier jet écarté par son contre-exemple : le cache ne rend que ce qui a été
+    importé la dernière fois, donc quelqu'un qui régénère les 32 planches et
+    lance la suite sans réimporter obtiendrait **un vert sur les anciennes
+    images** — la suite validerait avec aplomb le lot qu'elle est censée refuser.
+    Ni `Image.load_from_file()` non plus, qui lit bien le disque mais émet un
+    avertissement par appel : 96 lignes de bruit pour un lot vert, et **un
+    contrôle qui hurle en réussissant apprend à ne plus lire sa sortie.**
+  - **un contrôle rend tout ce qu'il peut voir en une passe.** Seule la
+    comparaison d'abscisses se saute quand la taille est fausse — comparer deux
+    positions sur deux toiles différentes ne veut rien dire. Le magenta et la
+    silhouette, eux, ne dépendent pas de la taille : les sauter aussi
+    transformait une correction en série de manches. Mesuré, et ce n'est pas
+    théorique : l'épreuve à l'envers rendait **1 défaut magenta avant, 4 après**.
+
+  **Éprouvée à l'envers avant d'être retenue, et par le meilleur cobaye possible :
+  le lot REJETÉ lui-même**, remis en place depuis `5267693`. La suite le refuse
+  sur les quatre familles à la fois — douze échecs d'échelle, quatre de portée,
+  quatre de pivot, quatre de magenta. Et elle attrape **l'arbalète, dont la
+  taille était pourtant juste** (56×56 des deux côtés) : seuls les contrôles de
+  portée et de pivot pouvaient la voir. C'est très exactement le contrôle qui
+  remplace un œil, pris en flagrant délit de servir.
+
+  **Ce qu'elle ne vérifie pas, et ne peut pas vérifier : la caméra et la beauté.**
+  Elles se jugent au banc, à l'œil d'Adrien. La suite ne remplace pas ce regard —
+  elle empêche qu'il soit annulé en silence.
 
   Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
   (peinte et silhouette).

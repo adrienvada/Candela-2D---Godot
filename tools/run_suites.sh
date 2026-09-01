@@ -157,6 +157,44 @@ if [ -z "$MAISON_DU_LOT" ] || [ ! -d "$MAISON_DU_LOT" ]; then
 fi
 export HOME="$MAISON_DU_LOT"
 
+# ---------------------------------------------------------------------------
+# UN PORT PAR LOT
+# ---------------------------------------------------------------------------
+#
+# Même défaut que le `user://` ci-dessus, autre ressource, et il restait ouvert.
+# `run_duo.sh` dérive son port de `pwd -P` : c'est un port **par arbre**. Deux
+# lots lancés depuis le MÊME arbre — le cas courant, une session qui relance
+# après un correctif pendant qu'une autre finit le sien — ouvrent donc le même
+# port UDP. Le second trouve le champ occupé et rend `REPORTÉ`.
+#
+# Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème :
+# **c'est une mesure qui n'a pas eu lieu, présentée comme un lot vert.** Huit
+# scénarios à deux instances peuvent disparaître d'un lot sans que son verdict
+# final change de couleur.
+#
+# ⚠️ **Le port se dérive du FOYER du lot, et pas d'un tirage.** Le foyer est déjà
+# unique par lot — c'est `mktemp -d` qui le garantit, pas nous — donc il n'y a
+# rien de neuf à inventer : la même unicité sert deux fois. Un `RANDOM` aurait
+# fait la même chose en apparence, mais sans rien garantir et sans se reproduire
+# à la relecture d'un journal.
+#
+# Plage 20000-39999, à l'écart des ports éphémères de macOS (49152+) : la même
+# que `run_duo.sh`, et pour la même raison — un port qui tomberait dans la plage
+# de l'OS entrerait en conflit de façon intermittente, le pire mode de panne pour
+# un banc.
+#
+# ⚠️ **Dérivé UNE FOIS et exporté**, jamais recalculé en aval. `run_duo.sh` honore
+# `CANDELA_PORT` s'il le trouve. Le piège est déjà consigné : une seconde
+# dérivation, faite ailleurs, rouvre très exactement le défaut que la première
+# ferme — hôte et client ouvriraient deux ports et ne se verraient jamais, et
+# l'échec dirait « aucun adversaire n'a rejoint », c'est-à-dire rien.
+#
+# `verifier_port_libre` reste dans `run_duo.sh` : ce port-ci est improbable, pas
+# impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet
+# qu'on regrette.
+CANDELA_PORT=$(( 20000 + $(printf '%s' "$MAISON_DU_LOT" | cksum | cut -d' ' -f1) % 20000 ))
+export CANDELA_PORT
+
 SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
@@ -164,7 +202,7 @@ SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
         test_vitrine_menus test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_banc test_rendu_racine test_prediction_tir
         test_mise_a_jour test_charte test_habillage test_bandeau_fatal test_autoloads test_torches test_lumieres test_viseur test_marche test_sprites
-        test_dosage_audio)
+        test_dosage_audio test_planche_marche)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.
@@ -440,6 +478,10 @@ DUREE=$((SECONDS - DEBUT))
 # reproche ailleurs à `--rapide`. La ligne dit aussi où lire les journaux.
 # Avant le verdict, jamais après : la DERNIÈRE ligne appartient au résultat.
 echo "user:// de ce lot : $MAISON_DU_LOT (ce script n'y supprime rien)"
+# Annoncé pour la même raison que le foyer : c'est un changement de
+# comportement, et un changement silencieux est ce que ce fichier reproche
+# ailleurs. Le port sert aussi à lire un journal de duo après coup.
+echo "port UDP de ce lot : $CANDELA_PORT (dérivé du foyer, jamais recalculé)"
 if [ "$fail" -ne 0 ]; then
   echo "--- au moins une suite a échoué (${DUREE}s) ---"; exit 1
 fi
