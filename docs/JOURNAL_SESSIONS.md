@@ -246,6 +246,30 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-01 — session « retouche éblouissement » : le voile est BRANCHÉ
+
+**Adrien : « j'aimerais voir le voile. »** La demande de branchement inscrite ici
+le 2026-08-27 n'avait été prise par personne en cinq jours ; il a demandé que je
+la fasse moi-même, en worktree puis fusion.
+
+**⚠️ EMPIÈTEMENT DÉCLARÉ SUR `ui.gd`** (domaine « menus »), sur demande explicite
+d'Adrien. Branche `branchement-voile`, worktree
+`.claude/worktrees/branchement-voile`.
+
+**Ce qui est touché dans `ui.gd`, et c'est tout :** le préchargement du shader,
+un `ShaderMaterial` par rectangle de voile, une fonction `_poser_voile()`, un
+accumulateur de temps dans `_process`, et un drapeau `_voile_scinde` posé par
+`disposer_hud()`. Aucun menu, aucun écran, aucune navigation.
+
+**Deux défauts réglés au passage**, tous deux signalés le 2026-08-27 : le voile
+de l'adversaire ne s'affiche plus chez soi en vue unique, et les rectangles ne se
+dessinent plus au repos.
+
+**Toujours ouverts, et je n'y touche pas** : les couches du brouillage au-dessus
+du HUD en rendu racine, le défaut du flou en `COPY_MODE_RECT`, et l'absence de
+`CanvasModulate` au banc du brouillage. Les trois appartiennent au chantier
+brouillage.
+
 ### 2026-08-27 — session « retouche éblouissement » : un banc, trois candidats, rien de branché
 
 **Demande d'Adrien : que le voile d'éblouissement cesse d'être un aplat blanc**

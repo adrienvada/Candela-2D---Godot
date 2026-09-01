@@ -10735,7 +10735,48 @@ discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile 
 0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
 décider si ces nombres méritent d'être rejugés dans le noir.
 
-### ✅ VALIDÉ par Adrien le 2026-08-27 — et toujours pas branché
+### ✅ BRANCHÉ le 2026-09-01 — le jeu affiche enfin le voile
+
+**« J'aimerais voir le voile. »** Cinq jours après la validation, la demande
+inscrite au journal des sessions n'avait été prise par personne : le shader
+vivait dans `main` sans aucun lecteur, et le jeu montrait toujours l'aplat.
+Adrien a demandé de le brancher directement — en worktree, puis fusion.
+
+**Ce que `ui.gd` fait désormais**, et rien de plus :
+
+- chaque `ColorRect` de voile porte **son propre `ShaderMaterial`**. ⚠️ Jamais
+  partagé : les deux moitiés d'un écran scindé reçoivent des niveaux, des
+  relèvements et des largeurs différents, et un matériau commun ferait gagner la
+  dernière écriture — le voile de J2 s'afficherait chez J1 une image sur deux,
+  sans qu'aucune erreur ne le dise ;
+- `_poser_voile(rect, victime, source)` pose `niveau`, `temps`, `aspect` et
+  `relevement`. ⚠️ **`victime` subit, `source` éblouit**, et les intervertir
+  donne un effet cohérent et faux — même famille que « l'intensité vient du
+  regardeur, la position de l'émetteur », qui a coûté une soirée au chantier
+  brouillage ;
+- le relèvement se prend dans le **monde** et sert tel quel à l'écran, les
+  caméras du duel ne tournant jamais.
+
+**Le shader est préchargé**, comme les shaders de mort de `player.gd` : compilé
+à la volée, il produirait un hoquet pile sur l'action décisive.
+
+**Deux défauts réglés au passage**, tous deux signalés le 2026-08-27 :
+
+1. **`p2_dazzle` ne s'affiche plus qu'en écran scindé.** Il s'affichait partout :
+   en ligne, la moitié droite de l'écran LOCAL blanchissait quand c'était
+   l'ADVERSAIRE qui était ébloui — une information qu'il n'avait pas payée, dans
+   un jeu dont la règle est que la seule information est la lumière. Caché,
+   l'`HBoxContainer` donne toute la largeur au voile local, qui retrouve du même
+   coup le bon rapport d'aspect.
+2. **Les rectangles sont cachés au repos.** Un `ColorRect` d'alpha nul se dessine
+   quand même : l'ancien voile payait un mélange plein écran à chaque image d'un
+   match, pour rien.
+
+**Reste ouvert et NON traité ici :** les couches du brouillage au-dessus du HUD
+en rendu racine (`ui.tscn` ne déclare aucune `layer`), et le défaut du flou en
+`COPY_MODE_RECT`. Les deux appartiennent au chantier brouillage.
+
+### ✅ VALIDÉ par Adrien le 2026-08-27 — et le branchement a attendu cinq jours
 
 **« On valide. »** L'apparence du voile est arrêtée : les vingt-cinq réglages
 vivent dans `voile_eblouissement.gdshader`, l'étalonnage est fait, le chantier
