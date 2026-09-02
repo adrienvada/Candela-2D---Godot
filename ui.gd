@@ -57,6 +57,12 @@ const Brouillage := preload("res://brouillage.gd")
 ## payée par les shaders de mort de `player.gd`.
 const SHADER_VOILE := preload("res://voile_eblouissement.gdshader")
 
+## ⚠️ **Les trois textures du voile, et leur absence était le défaut.** Sans
+## elles, `hint_default_black` rend du NOIR sans une erreur : le jeu affichait le
+## lavis seul, sans lueurs, sans flares, sans fantômes. Elles vivaient dans le
+## banc, qui montrait donc un effet que la production ne pouvait pas produire.
+const VoileTextures := preload("res://voile_textures.gd")
+
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
 const COLOR_GOLD := Charte.AMBRE
@@ -1615,6 +1621,10 @@ func _forger_voile(parent: Control, nom: String) -> ColorRect:
 	mat.set_shader_parameter("mode", 1)
 	mat.set_shader_parameter("teinte", Vector3(
 		Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b))
+	var tex := VoileTextures.toutes()
+	mat.set_shader_parameter("lueur_tex", tex["lueur"])
+	mat.set_shader_parameter("flare_tex", tex["flare"])
+	mat.set_shader_parameter("fantome_tex", tex["fantome"])
 	rect.material = mat
 	parent.add_child(rect)
 	return rect
