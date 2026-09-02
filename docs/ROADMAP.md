@@ -10735,6 +10735,52 @@ discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile 
 0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
 décider si ces nombres méritent d'être rejugés dans le noir.
 
+### ⚠️ Le jeu a d'abord affiché un voile AMPUTÉ — les textures manquaient
+
+**Adrien, écran scindé en main, juste après le branchement : « où est passé le
+flare central ? les fantômes ? je ne vois que le flou. »** Il avait raison, et la
+cause est entièrement dans le branchement.
+
+**Les trois textures — lueur, traînée, fantôme — étaient fabriquées DANS LE
+BANC.** `ui.gd` ne les fournissait pas, et `hint_default_black` fait qu'un
+`sampler2D` non fourni rend du **noir**, sans une erreur, sans un avertissement.
+Le jeu affichait donc le lavis seul : pas de lueurs, pas de flares, pas de
+fantômes. Exactement « le flou ».
+
+**Le banc montrait un effet que la production ne pouvait pas produire**, et rien
+ne pouvait le révéler depuis le banc — il fabriquait lui-même ce qui manquait
+ailleurs. *Un banc ment d'autant mieux qu'il est joli.*
+
+C'est la règle que ce dépôt a payée trois fois : **une formule qui sert à deux
+endroits vit dans UN fichier, et les deux la lisent.** Les fabriques ont donc
+déménagé dans `voile_textures.gd`, que la production et le banc lisent tous les
+deux ; le banc n'en possède plus aucune copie.
+
+### ⚠️ Et un second écart, réel mais SECONDAIRE : le rapport d'écran
+
+Mesuré en cherchant la cause, et corrigé au passage — mais **ce n'était pas ce
+qu'Adrien voyait**, et il faut que ce document le dise, sans quoi la prochaine
+session croira que c'était l'explication.
+
+Les motifs sont dimensionnés en **demi-hauteurs**, ce qui garde le cœur rond mais
+fait dépendre leur emprise du rapport de la vue. Le jeu en a deux : **1,78 en vue
+unique, 0,889 en écran scindé** (960×1080, mesuré). Les vingt-cinq réglages
+validés à 16/9 débordaient donc du rectangle en écran scindé — une traînée de
+longueur 1,4 y couvrait 157 % de la demi-largeur au lieu de 79 %.
+
+Le shader ramène désormais la demi-diagonale à celle de la vue de référence
+(16/9). **Les cercles restent des cercles** — le facteur est isotrope — et à 16/9
+il vaut exactement 1 : rien de ce qu'Adrien a validé ne bouge.
+
+⚠️ **On ne peut pas avoir les deux à la fois**, cercles ronds et emprise
+constante, et il fallait choisir : un voile d'éblouissement est un phénomène
+optique, un cœur ovale se lirait comme un défaut.
+
+**Et le banc n'a jamais montré qu'un seul rapport d'écran** — c'est ce qui a
+laissé passer l'écart. Touche `É` désormais : demi-écran ou plein écran. Un banc
+qui ne montre qu'un cas fait juger ce cas-là, et laisse croire qu'on a jugé
+l'effet.
+
 ### ✅ BRANCHÉ le 2026-09-01 — le jeu affiche enfin le voile
 
 **« J'aimerais voir le voile. »** Cinq jours après la validation, la demande
