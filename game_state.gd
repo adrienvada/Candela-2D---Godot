@@ -281,7 +281,9 @@ func camera_hit_kick(pid: int) -> void:
 	if cam == null: return
 	var tw := create_tween()
 	tw.tween_property(cam, "zoom", Vector2(0.98, 0.98), 0.04)
-	tw.tween_property(cam, "zoom", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# DA4.13 — la caméra revient à sa place : ENTREE, ce qui s'installe.
+	Charte.animer(tw, cam, "zoom", Vector2(0.98, 0.98), Vector2.ONE, 0.12,
+		Charte.Courbe.ENTREE)
 
 func _ready():
 	add_to_group("game_state")
@@ -1164,6 +1166,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# seuil — soit pendant ses quatre premières minutes.
 	ui.reinitialiser_chrono()
 	Engine.time_scale = 1.0
+	_liberer_le_releve()
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
 	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
 	_countdown_ready_local = false
@@ -1276,6 +1279,7 @@ func _process(delta):
 			
 	if ReplaySystem.playing_back:
 		current_snap = ReplaySystem.get_next_frame(delta)
+		_suivre_le_releve()
 		if current_snap:
 			ghost_p1.show()
 			ghost_p2.show()
@@ -1357,10 +1361,12 @@ func _process(delta):
 			if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
+				_liberer_le_releve()
 		if Input.is_action_just_pressed("p2_skip_killcam"):
 			if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
+				_liberer_le_releve()
 			
 	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
 	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
@@ -1682,9 +1688,78 @@ func _lag_comp_delay() -> float:
 func rpc_sync_time(value: float) -> void:
 	time_left = value
 
-func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData):
+## DA4.6 — le relevé balistique de la killcam, ou `null` s'il n'y a rien à
+## relever.
+var _releve: ReleveBalistique = null
+
+## Arme le relevé sur la trajectoire fatale, avant que la lecture commence.
+##
+## ⚠️ **Rien quand la trajectoire est vide, et c'est voulu.** Mort par chrono, tir
+## sorti de la fenêtre d'enregistrement, impact inconnu : `trajectoire_fatale()`
+## rend un tableau vide *plutôt qu'approximatif*, et un relevé faux enseignerait
+## une leçon fausse — pire que de ne rien enseigner. Le pré-tracé de
+## `ReplaySystem` a lieu quand même : il suspend l'action une demi-seconde, sans
+## rien dessiner. Le supprimer dans ce cas ferait deux rythmes de killcam selon
+## la façon dont on est mort.
+func _armer_le_releve() -> void:
+	_liberer_le_releve()
+	var d := ReplaySystem.releve_du_tir_fatal()
+	if d.is_empty():
+		return
+
+	# ⚠️ **La part de dégâts de bord se calcule ICI**, et pas dans le relevé :
+	# `releve_balistique.gd` n'a aucune raison de connaître `WeaponData`, et le
+	# jour où la chute de dégâts changera, elle changera dans `bullet.gd` et dans
+	# cette ligne — pas dans un fichier de dessin.
+	var arme: WeaponData = d["arme"]
+	var nom := ""
+	var part_bord := 0.5
+	if arme != null:
+		nom = arme.name
+		if arme.damage_center > 0.0:
+			part_bord = arme.damage_edge / arme.damage_center
+
+	_releve = ReleveBalistique.new()
+	_releve.name = "ReleveBalistique"
+	arena.add_child(_releve)
+	if not _releve.poser(d["origine"], d["cible"], d["angle"], nom, part_bord):
+		_liberer_le_releve()
+
+
+func _liberer_le_releve() -> void:
+	if is_instance_valid(_releve):
+		_releve.queue_free()
+	_releve = null
+
+
+## Fait avancer le pré-tracé, puis le laisse en arrière-plan pendant l'action.
+##
+## ⚠️ **Trois branches, pas deux.** AVANT le pré-tracé, le relevé ne doit rien
+## montrer : la killcam s'ouvre trois secondes avant le tir fatal, et une ligne
+## posée dès la première image annoncerait la trajectoire pendant tout le
+## contexte, puis se redessinerait par-dessus elle-même au moment prévu. C'est
+## exactement ce qu'un `else` produisait — voir `ReplaySystem.Pretrace`.
+func _suivre_le_releve() -> void:
+	if not is_instance_valid(_releve):
+		return
+	match ReplaySystem.pretrace_etat():
+		ReplaySystem.Pretrace.PENDANT:
+			_releve.avancer(ReplaySystem.pretrace_t)
+		ReplaySystem.Pretrace.APRES:
+			_releve.passer_derriere()
+		_:
+			# AVANT : rien. Le relevé existe, armé, et reste invisible.
+			_releve.avancer(0.0)
+
+
+func _on_replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float,
+		weapon: WeaponData, fatal: bool = false):
 	var b = bullet_scene.instantiate()
 	b.is_replay = true
+	# DA4.6 — seul le tir fatal laisse sa traînée. Les tirs manqués gardent leur
+	# lumière et leur traçante, mais plus de pointillé : deux traits presque
+	# parallèles font croire qu'on lit le bon.
+	b.est_le_tir_fatal = fatal
 	b.global_position = pos
 	b.rotation = rot
 	b.direction = Vector2(cos(rot), sin(rot))
@@ -1852,6 +1927,7 @@ func _do_end_round(winner_id: int):
 		ui.show_killcam()
 		
 		_first_replay_frame = true
+		_armer_le_releve()
 		ReplaySystem.start_playback()
 		
 		# Wait for replay to finish or be skipped
@@ -1862,6 +1938,7 @@ func _do_end_round(winner_id: int):
 		# Le ralenti est global : quelle que soit la façon dont la lecture s'est
 		# arrêtée, la vitesse normale doit être rétablie ici.
 		Engine.time_scale = 1.0
+		_liberer_le_releve()
 
 		# Hide killcam UI but KEEP the freeze frame
 		ui.hide_killcam()
@@ -2068,8 +2145,11 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	lbl.modulate.a = 0.0
 	var tw := lbl.create_tween()
 	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
-	tw.parallel().tween_property(lbl, "scale", Vector2.ONE, 0.12) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# DA4.13 — le claquement du tampon : REBOND, avec son dépassement. C'était
+	# déjà `BACK_OUT`, la conversion ne change rien à l'œil.
+	tw.parallel()
+	Charte.animer(tw, lbl, "scale", Vector2(2.6, 2.6), Vector2.ONE, 0.12,
+		Charte.Courbe.REBOND)
 	tw.tween_interval(1.7)
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
 	tw.tween_callback(_clear_kill_stamp)
@@ -2085,6 +2165,7 @@ func _clear_kill_stamp() -> void:
 func _abort_killcam() -> void:
 	ReplaySystem.playing_back = false
 	Engine.time_scale = 1.0
+	_liberer_le_releve()
 	# Ceinture V2.1 : aucun chemin de sortie ne doit laisser un viewport gelé —
 	# mais on rétablit l'état réel des vues, pas les deux d'office.
 	_accorder_rendu_aux_vues()
@@ -2829,6 +2910,7 @@ func _on_quit_requested():
 	# quit() ne prend effet qu'en fin de frame : sortir depuis une killcam
 	# étirerait ces dernières frames au ralenti.
 	Engine.time_scale = 1.0
+	_liberer_le_releve()
 	# Passe par NetworkManager : la plateforme EOS doit être relâchée avant que
 	# l'arbre se termine, sous peine de segfault à la fermeture.
 	NetworkManager.quit_game()

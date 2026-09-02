@@ -1010,8 +1010,10 @@ func _process(delta):
 				if vignette_mat:
 					vignette_mat.set_shader_parameter("intensity", 0.55)
 					var tw_v = create_tween()
-					tw_v.tween_method(func(v): vignette_mat.set_shader_parameter("intensity", v),
-						0.55, 0.0, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+					# DA4.13 — une intensité de shader qui retombe : EXTINCTION.
+					Charte.animer_via(tw_v,
+						func(v): vignette_mat.set_shader_parameter("intensity", v),
+						0.55, 0.0, 0.45, Charte.Courbe.EXTINCTION)
 	else:
 		_low_hp_pulse_accum = 0.0
 
@@ -1594,16 +1596,23 @@ func trigger_shoot_visuals():
 		tw_reveal.kill()
 		
 	tw_reveal = create_tween().set_parallel(true)
-	tw_reveal.tween_property(visual_reveal, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-	tw_reveal.tween_property(visual_reveal_ptr, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	# DA4.13 — la révélation s'éteint : EXTINCTION, à 0,012 d'écart de l'`expo
+	# out` qu'elle remplace. Ces quatre-là sont les plus longues du jeu (2 s) et
+	# les plus regardées : c'est là qu'un changement de courbe se serait vu.
+	Charte.animer(tw_reveal, visual_reveal, "color:a", visual_reveal.color.a,
+		0.0, 2.0, Charte.Courbe.EXTINCTION)
+	Charte.animer(tw_reveal, visual_reveal_ptr, "color:a",
+		visual_reveal_ptr.color.a, 0.0, 2.0, Charte.Courbe.EXTINCTION)
 	
 	if has_node("VisualRevealEnemy"):
 		var vre = get_node("VisualRevealEnemy")
 		var vrep = get_node("VisualRevealEnemyPtr")
 		vre.color = Color(Charte.HALOGENE, 1.0)
 		vrep.color = Color(Charte.HALOGENE, 1.0)
-		tw_reveal.tween_property(vre, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
-		tw_reveal.tween_property(vrep, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		Charte.animer(tw_reveal, vre, "color:a", vre.color.a, 0.0, 2.0,
+			Charte.Courbe.EXTINCTION)
+		Charte.animer(tw_reveal, vrep, "color:a", vrep.color.a, 0.0, 2.0,
+			Charte.Courbe.EXTINCTION)
 	
 	AudioManager.play_weapon_shot(current_weapon.slug() if current_weapon else "pistolet", muzzle.global_position)
 
@@ -1651,7 +1660,10 @@ func take_damage(amount: float, source_player: Node2D):
 	if vignette_mat:
 		vignette_mat.set_shader_parameter("intensity", 1.5)
 		var tw = create_tween()
-		tw.tween_method(func(val): vignette_mat.set_shader_parameter("intensity", val), 1.5, 0.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		# DA4.13 — EXTINCTION : une intensité qui retombe à zéro.
+		Charte.animer_via(tw,
+			func(val): vignette_mat.set_shader_parameter("intensity", val),
+			1.5, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 
 @rpc("authority", "call_local", "reliable")
 func rpc_update_hp(new_hp: float, source_id: int):
@@ -1689,7 +1701,11 @@ func rpc_update_hp(new_hp: float, source_id: int):
 	
 	var tw_l = create_tween()
 	# Perfectly smooth, lingering fade out
-	tw_l.tween_property(hit_light, "energy", 0.0, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# DA4.13 — EXTINCTION. C'était un `SINE_IN_OUT`, symétrique : la charte n'a
+	# pas de courbe symétrique et n'en veut pas, une lumière qui meurt n'ayant
+	# aucune raison de s'éteindre aussi lentement qu'elle s'est allumée.
+	Charte.animer(tw_l, hit_light, "energy", hit_light.energy, 0.0, 1.0,
+		Charte.Courbe.EXTINCTION)
 	tw_l.tween_callback(hit_light.queue_free)
 
 func die(killer: Node2D):
@@ -1731,7 +1747,10 @@ func die(killer: Node2D):
 	ui_layer.add_child(flash_rect)
 	
 	var tw = create_tween()
-	tw.tween_method(func(val): mat.set_shader_parameter("flash_intensity", val), 1.0, 0.0, 0.6).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	# DA4.13 — EXTINCTION, à 0,012 de l'`expo out` d'origine.
+	Charte.animer_via(tw,
+		func(val): mat.set_shader_parameter("flash_intensity", val),
+		1.0, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 	tw.tween_callback(ui_layer.queue_free)
 	
 	# Floating FATAL Text
@@ -1830,8 +1849,12 @@ func die(killer: Node2D):
 	# c'est le garde-fou qui manquait, et son absence est ce qui a rendu le défaut
 	# invisible jusqu'à ce qu'une arme au nom long le révèle.
 	var enfle: float = geo["enfle"]
-	txt_tw.tween_property(lbl, "scale", Vector2(enfle, enfle), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	txt_tw.tween_property(lbl, "position", lbl.position + Vector2(0, -100), 1.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# DA4.13 — le claquement puis la montée. REBOND était déjà `BACK_OUT` et
+	# ENTREE déjà `CUBIC_OUT` : deux conversions invisibles à l'œil.
+	Charte.animer(txt_tw, lbl, "scale", lbl.scale, Vector2(enfle, enfle),
+		Charte.D_MOYEN, Charte.Courbe.REBOND)
+	Charte.animer(txt_tw, lbl, "position", lbl.position,
+		lbl.position + Vector2(0, -100), 1.5, Charte.Courbe.ENTREE)
 	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
 	txt_tw.chain().tween_callback(lbl.queue_free)
 
@@ -1857,8 +1880,8 @@ func die(killer: Node2D):
 		var sub_tw = create_tween().set_parallel(true)
 		sub.modulate.a = 0.0
 		sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
-		sub_tw.tween_property(sub, "position", sub.position + Vector2(0, -60), 1.5) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		Charte.animer(sub_tw, sub, "position", sub.position,
+			sub.position + Vector2(0, -60), 1.5, Charte.Courbe.ENTREE)
 		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
 		sub_tw.chain().tween_callback(sub.queue_free)
 	# DA4.7 — **la marge survit à la manche.** Elle criait « j'y étais presque »

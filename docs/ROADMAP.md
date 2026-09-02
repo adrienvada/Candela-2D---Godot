@@ -2969,6 +2969,28 @@ correctif.** Quiconque remplaçait le prédicat cassait le test, et se serait
 demandé s'il avait tort. Un banc peut donc être pire que muet : il peut monter
 la garde devant l'erreur.
 
+⚠️ **TROISIÈME OCCURRENCE, le 2026-08-27 : l'écran de fin de match manquait
+encore.** Relevé par Adrien à l'écran — *« après un match mon curseur ne
+réapparaît pas »*. `show_game_over()` pose `_is_main_menu = false` **puis** allume
+`game_over_panel` : aucun des quatre cas de `_un_menu_attend_un_clic()` ne
+correspondait, et le joueur restait devant REJOUER et MENU PRINCIPAL sans
+pointeur.
+
+**Le correctif du 2026-08-25 avait remplacé un prédicat faux par une
+énumération incomplète**, ce qui déplace le défaut sans le supprimer : la liste
+de quatre *paraît* délibérée, donc aucune relecture ne la remet en cause. C'est
+le motif « la mesure répond, mais pas à la question posée » — et son quatrième
+membre, celui qui montre que **corriger un cas ne prouve rien sur les autres.**
+
+**Un banc tient enfin la propriété** — `tools/test_curseur_systeme.gd`. Il
+n'interroge pas la condition, il **ouvre chaque panneau et compte ses boutons
+cliquables** : un panneau qui porte des `Button` visibles attend un clic, que la
+condition le sache ou non. La source de vérité est donc indépendante de ce
+qu'on vérifie, ce qui manquait aux trois tentatives précédentes. Il tient aussi
+le versant inverse — en manche, la flèche disparaît — sans quoi rendre la
+condition toujours vraie passerait au vert en remettant la flèche de macOS
+par-dessus le jeu, le défaut d'origine de DA2.11.
+
 #### Ce qui distingue les trois membres de la famille
 
 | forme | ce qu'elle mesure | comment elle ment |
@@ -3128,6 +3150,52 @@ l'écran — un voile, un vignettage, un flare d'objectif —, il est exposé et
 être jugé aux deux rapports. *Un piège qui ne dit pas à qui il s'applique envoie
 chercher là où il n'y a rien, ce qui coûte plus cher qu'un silence.*
 
+
+### La mesure répond, mais pas à la question posée (2026-08-27)
+
+**Quatre défauts distincts, un seul mécanisme**, dégagé avec la session DA2 en
+rapprochant des trouvailles qu'on croyait sans rapport. Dans les quatre cas on
+avait mesuré quelque chose, obtenu un résultat franc, et conclu — sur une
+mesure qui ne portait pas sur ce qu'on croyait.
+
+1. **`git status` replie un répertoire entièrement non suivi en UNE ligne.** Un
+   `git status --porcelain | grep '\.jpg$'` rend `0`. Ce `0` se lit « rien ne
+   manque » et veut dire « je n'ai pas regardé dedans ».
+2. **Un seuil comptait le sprint sans le nommer** (`574b961`) : le nombre était
+   juste, l'action qu'il comptait n'était nulle part écrite.
+3. **Un `grep` d'audit ne cherchait pas ce qu'il croyait chercher** — les
+   tailles fautives n'étaient pas au site de l'appel qu'il inspectait, mais dans
+   les arguments passés à la fabrique. Vert sur seize boutons fautifs.
+4. **Une garde d'assets énumérait trois sous-dossiers sur quatorze** — dont pas
+   `assets/sprites/`, où dorment trente-deux images non versionnées.
+
+**Le trait commun : une énumération partielle se lit comme une liste complète,
+et un silence se lit comme une absence.** Aucun de ces quatre contrôles n'a
+menti ; chacun a répondu exactement à la question qu'on lui posait, et personne
+n'a vérifié que c'était la bonne.
+
+**La parade est un contrôle à l'envers**, pas une relecture. Un fichier témoin
+déposé dans `assets/sprites/` a montré en une commande que l'ancienne garde ne
+disait rien — ce qu'aucune relecture du code n'avait vu, parce que la liste des
+trois dossiers *paraît* délibérée. **Une garde qu'on n'a pas vue échouer ne
+garde rien**, et c'est la seule façon connue de distinguer « vert parce que tout
+va bien » de « vert parce que je regarde ailleurs ».
+
+⚠️ **Le corollaire de méthode.** Quand un contrôle rend zéro, la question à se
+poser n'est pas « est-ce vrai ? » mais **« ce zéro peut-il seulement être autre
+chose que zéro ? »**. S'il ne peut pas, ce n'est pas une mesure.
+
+### Un rôle annoncé ne survit pas à la session qui l'annonce (2026-08-27)
+
+La republication centralisée du suivi a coûté un aller-retour à trois sessions
+en une soirée : l'une s'était déclarée titulaire, une autre la croyait encore
+en charge, et **la première s'était éteinte entre-temps**. Le protocole
+centralisé du README n'a **aucun mécanisme de relève** — il dit qui prend, pas
+qui rend.
+
+**C'est la liste des sessions vivantes qui tranche, jamais ce qu'une session a
+annoncé une heure plus tôt.** Une information sur l'état des sessions vieillit
+en minutes, et une session ne peut pas annoncer sa propre fin.
 
 ### Prêter son `World2D` à la racine y fait entrer ce qu'elle peignait déjà (2026-08-28)
 
@@ -9307,12 +9375,265 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   2. **Un banc qui échoue avant `quit()` ne se termine jamais.** Deux instances
      de Godot ont tourné en boucle en silence. Un rouge se voit ; un silence se
      confond avec « ça travaille ». *(S)*
-- **DA4.6 Le trait balistique en schéma** — le pointillé V6.2 stylé relevé
-  d'expert : flèches, cote de distance, fonte mono. La killcam-professeur
-  devient une pièce signature. *(S)*
-- **DA4.7 La bannière de fin composée** 🟡 **en grande partie livrée le
-  2026-08-25** — verdict, score de session et série sont désormais hiérarchisés
-  au lieu d'être aplatis. Ce qui manque : « effleuré : 13 px », voir ci-dessous.
+- **DA4.6 Le trait balistique en schéma** ✅ **livrée ET VALIDÉE À L'ÉCRAN le
+  2026-08-27** — le pointillé V6.2 devient un relevé d'écart au tir parfait.
+
+  *Adrien, après quatre passes de relecture en jeu : « ouais c'est cool, on
+  valide ». Les quatre corrections qui ont mené là sont consignées ci-dessous ;
+  **aucune n'aurait été trouvée sans regarder l'écran**, et les bancs étaient
+  verts à chaque fois.*
+
+  **V6.2 tenait en une ligne** : `draw_dashed_line(depart, balle, …)`. Elle
+  montrait *où* la balle était passée et laissait ouvertes les deux questions
+  qu'on se pose en regardant une killcam.
+
+  1. **D'où venait-elle ?** Un segment n'a pas d'orientation — deux joueurs face
+     à face laissent le même trait. Des **chevrons** le disent maintenant.
+  2. **De quelle distance ?** « Il m'a eu de loin » devient un nombre : une
+     **ligne de cote** avec ses lignes d'attache et ses obliques ISO, et la
+     valeur **à l'horizontale** quel que soit l'angle du tir. Ce n'est pas une
+     coquetterie mais la convention du dessin technique : une cote qu'il faut
+     pencher la tête pour lire n'est pas une cote.
+
+  Le format est celui d'« EFFLEURÉ — N PX » livré en DA4.7 : la killcam et le
+  bilan de fin parlent du même monde, ils doivent le dire dans la même unité.
+
+  ### La règle qui gouverne tout le lot
+
+  ⚠️ **Ce qui est ANNOTATION se compense du zoom ; ce qui est GÉOMÉTRIE suit le
+  monde.** La caméra de killcam va de 0,7× à 2,8× (`game_state.gd`) — un facteur
+  **quatre**. Une cote posée en pixels locaux ferait 18 px d'écart au dézoom et
+  73 au serré, **sur le même tir** : illisible d'un côté, envahissante de
+  l'autre. Sixième occurrence du motif du 2026-08-19 — *une valeur absolue là où
+  il fallait un rapport* — et la première où il est attrapé avant d'être livré.
+
+  **L'écart des chevrons, lui, reste en pixels monde, et le banc l'EXIGE.** Ce
+  n'est pas une exception oubliée : leur densité à l'écran devient alors
+  proportionnelle à la distance réellement parcourue, ce qu'un relevé doit dire.
+  Sans ce contrôle, « tout compenser » se lirait comme une correction.
+
+  ### Deux fautes que seul un banc pouvait voir
+
+  ⚠️ **La cote se retournait à tout tir vers la gauche.** En repère local,
+  « au-dessus du trait » désigne deux côtés opposés selon le sens du tir : la
+  cote serait passée sous le trait et le texte se serait lu à l'envers sur
+  **dix-sept angles sur trente-six**. Le côté se décide donc en interrogeant le
+  monde, pas le repère local. Vérifié en sabotant la formule : le banc nomme les
+  dix-sept angles.
+
+  ⚠️ **Le texte serait passé en escalier.** Godot rastérise un glyphe à la taille
+  entière demandée : `T_MENTION / zoom` donne **4 px** à 2,8×, agrandis ensuite
+  par la caméra. La contre-rotation et la contre-échelle passent donc toutes deux
+  par `draw_set_transform`, le glyphe étant gravé à sa taille finale d'écran —
+  les deux facteurs s'annulent et le rendu est net à tous les zooms.
+
+  ### L'item demandait une fonte que la charte a refusée
+
+  ⚠️ **« Fonte mono » n'existe pas dans ce dépôt, et ne doit pas y entrer.**
+  DA1.2 a choisi **deux** fontes, leurs licences et leur axe variable ; en
+  ajouter une troisième pour une seule cote défait ce travail. Et ce que « mono »
+  cherchait ici — un chiffre qui ne tremble pas quand il change — **Oxanium le
+  fait déjà par construction**, ses dix chiffres à 11 px pile, propriété mesurée
+  et consignée en DA1.2. C'était le nom qui manquait, pas la fonte. *(Même motif
+  qu'en DA4.13 et DA4.17 : l'item nomme un moyen là où il visait une propriété.)*
+
+  ### Le calcul a un nom
+
+  `Bullet.geometrie_du_releve(portee, zoom, angle)`, un `static func` qui rend
+  chevrons, cote, attaches, obliques et ancre de texte. **Rien ne peut mesurer
+  une cote dessinée** : il faudrait tuer un joueur, lancer une killcam et lire
+  des pixels au bon instant. Cinquième occurrence du motif du 2026-08-19 — *ce
+  qu'on voit n'a pas de nom, donc rien ne le tient* —, et c'est l'extraction qui
+  rend les 91 contrôles possibles.
+
+  ### Un seul tir porte le relevé
+
+  ⚠️ **Une killcam rejoue TOUT ce qui a été tiré dans sa fenêtre**, et le premier
+  jet cotait chaque balle. Relevé par Adrien avant même d'avoir vu l'écran :
+  *« il faut que ce soit seulement le dernier tir au ralenti »*. Il a raison, et
+  la raison porte plus loin que l'encombrement — **ce qui annote partout n'annote
+  plus rien** : une cote sur un tir manqué met au même rang ce qui a tué et ce
+  qui a raté, c'est-à-dire exactement la distinction que la killcam existe pour
+  faire voir.
+
+  Les autres balles gardent leur traînée pointillée : elles sont le contexte, pas
+  la leçon. *(Si le pointillé lui-même doit disparaître des tirs manqués, c'est
+  une ligne à changer — la question est posée à Adrien, pas tranchée ici.)*
+
+  **Qui est le tir fatal se décide en UN endroit.** `trajectoire_fatale()`
+  portait déjà la règle — la victime est celle dont les points de vie tombent à
+  l'image d'impact, le tueur est l'autre, et on remonte **ses** tirs, un tir de
+  la victime juste avant sa mort n'étant pas le coup fatal. La tentation était
+  d'ajouter une seconde boucle qui redescende les tirs pour en tirer un indice ;
+  le commentaire de V6.2 disait déjà pourquoi c'eût été une faute — *deux façons
+  de désigner le tir fatal finiraient par désigner deux tirs différents*. D'où
+  `index_du_tir_fatal()`, **extrait** et non réécrit, dont `trajectoire_fatale()`
+  se sert désormais. Un contrôle du banc lit la source pour l'exiger.
+
+  ### Le tracé PRÉCÈDE l'action — et c'est ce qui l'a fait sortir de la balle
+
+  ⚠️ **Demandé par Adrien le 2026-08-27, et le geste change l'architecture.**
+  *« Comme au foot, on retrace la trajectoire juste avant, et après on joue
+  l'action pour voir effectivement la balle suivre cette trajectoire. »*
+
+  **Un tracé qui suit la balle CONSTATE ; un tracé qui la précède ANNONCE**, et
+  l'action qui suit devient une vérification. C'est la différence entre montrer
+  ce qui s'est passé et faire comprendre pourquoi c'était imparable — la
+  « killcam-professeur » que l'item nomme sans dire comment l'obtenir.
+
+  ⚠️ **Et le relevé ne pouvait donc PAS rester dans `bullet.gd`.** Une balle ne
+  sait pas où elle va : elle connaît son départ et sa direction, jamais son
+  impact. Seul le rejeu le sait. Le relevé est devenu `releve_balistique.gd`, un
+  objet qui **existe avant la balle et reste après elle** — deux propriétés
+  qu'un dessin porté par le projectile ne pouvait pas avoir. La balle garde sa
+  traînée pointillée de V6.2, celle qui suit, et qui n'a jamais prétendu
+  annoncer quoi que ce soit.
+
+  Deux temps : le trait pousse de l'origine vers l'impact en `D_LONG`, la cote
+  grandissant avec lui ; puis la ligne reste entière, atténuée, pendant que la
+  balle la parcourt au ralenti.
+
+  ⚠️ **Le relevé s'affichait dès la première image de la killcam.** Relevé par
+  Adrien à l'écran — *« il est tracé dès le début, puis se redessine ensuite au
+  bon moment »*. La cause n'est pas une erreur d'appel : **`pretrace_en_cours()`
+  était un booléen là où il y avait TROIS états.** Il répondait « non » aussi
+  bien avant qu'après, l'appelant prenait donc la branche « c'est fini » dès
+  l'ouverture et posait la ligne entière trois secondes trop tôt — annonçant la
+  trajectoire pendant tout le contexte, puis la redessinant par-dessus.
+
+  **La question posée n'avait pas assez de réponses**, et c'est ça le défaut :
+  l'appelant ne s'est pas trompé, il a répondu correctement à une question mal
+  formée. Remplacé par une énumération `Pretrace { AVANT, PENDANT, APRES }`, qui
+  rend l'oubli impossible plutôt qu'improbable. *Cousin du motif du 2026-08-19 —
+  une valeur absolue là où il fallait un rapport ; ici, deux valeurs là où il en
+  fallait trois.*
+
+  ⚠️ **Et le premier banc ne pouvait pas l'attraper : il éprouvait des GESTES,
+  pas leur SÉQUENCE.** Poser, avancer, passer derrière — chacun était juste
+  isolément, et le défaut vivait dans l'ordre. Un contrôle exige désormais
+  l'état de départ et la distinction des trois moments ; vérifié rouge en
+  remettant le booléen.
+
+  ### Ce que le relevé MESURE a changé — et c'est le vrai lot
+
+  ⚠️ **Il cotait la distance de tir. Exact, et hors sujet.** Relevé par Adrien
+  le 2026-08-27 : *« je comprenais que ça mesurait la distance de tir. Ça doit
+  montrer la trajectoire parfaite de la balle pour faire le max de dégâts. »*
+
+  **Une killcam n'existe pas pour dire de combien de mètres on s'est fait
+  tuer**, mais pour montrer *pourquoi c'était imparable*. Or la chute de dégâts
+  de `bullet.gd` ne dépend que d'une grandeur : la distance perpendiculaire de
+  l'axe de la balle au centre de la victime. Il existe donc, pour chaque tir,
+  **une trajectoire idéale** — celle qui passe pile par ce centre — et le tir
+  réel s'en écarte d'un angle. C'est ce couple que le relevé dessine.
+
+  ⚠️ **La différence n'est pas cosmétique, elle décide de tout le dessin.** Coter
+  une distance demande une ligne de cote ; coter un ÉCART demande deux axes, un
+  arc, et une lecture qui dit *« il s'en est fallu de tant »*. Le premier se lit
+  en un chiffre, le second se comprend en une image.
+
+  **Le registre est le dessin d'exécution, pas l'infographie.** Les traits sont
+  très déportés — 78 px au lieu de 26 : *« il faut que les traits de cote soient
+  beaucoup moins ramassés »*. **Une cote collée à son objet se lit comme une
+  étiquette ; c'est le déport qui la fait lire comme une mesure.** S'y ajoute
+  l'appareillage qui fait qu'un plan ressemble à un plan : axes en **trait
+  mixte** (jamais pointillé — le pointillé appartient à la balle, c'est le trajet
+  parcouru), lignes d'attache qui débordent, obliques ISO, mire de calage sur la
+  cible, et un cartouche.
+
+  ⚠️ **« Inutile » ne veut pas dire « faux ».** Adrien a demandé « des infos
+  supplémentaires inutiles » ; chaque ligne du cartouche est une valeur réellement
+  calculée — arme, portée, écart perpendiculaire, part des dégâts maximaux
+  atteinte. **Un relevé qui afficherait des nombres décoratifs serait un faux
+  document**, et le jour où quelqu'un s'y fierait il aurait raison de le faire.
+  La part de dégâts reprend la formule de `bullet.gd` au lieu de la paraphraser :
+  une seconde formule « équivalente » ferait afficher une part que le jeu
+  n'applique pas.
+
+  **Cinq phases qui s'enchaînent** — axes, arc d'écart, cote, mire, cartouche.
+  *Un plan se lit dans l'ordre où il se construit* ; tout faire apparaître
+  ensemble donnerait une image, le tracé progressif donne un raisonnement.
+
+  ⚠️ **Plusieurs traits presque parallèles, et un seul était le bon.** Relevé par
+  Adrien à l'écran le 2026-08-27 — *« la balle ne suit pas la trajectoire tracée
+  par les pointillés »*. Elle la suivait ; ce n'était pas **sa** trajectoire
+  qu'on lui comparait. Une killcam rejoue tout ce qui a été tiré dans sa
+  fenêtre, et chaque tir manqué laissait sa propre traînée V6.2. **Deux traits
+  qui se ressemblent sont pires qu'un seul faux** : on ne se demande pas lequel
+  lire, on croit lire le bon. Seul le tir fatal laisse désormais un pointillé ;
+  les autres gardent leur lumière et leur traçante.
+
+  ⚠️ **Deux causes d'écart RESTENT, et ne sont pas corrigées.** Le relevé va de
+  l'origine du tir au **centre de la victime**, alors que la balle suit sa
+  direction propre :
+
+  1. **Un impact hors axe.** La chute de dégâts accepte un passage jusqu'à ~18 px
+     du centre : sur un tir de 400 px, la balle finit visiblement à côté du point
+     coté — environ 2,6° d'écart angulaire.
+  2. **Un rebond.** `trajectoire_fatale()` rend un segment droit ; si le tir
+     fatal a rebondi, le relevé annonce une ligne que la balle ne peut pas
+     suivre. C'est l'écart le plus grand, et le plus trompeur puisque le relevé
+     *promet*.
+
+  Les deux demanderaient que le rejeu enregistre le **trajet** et non ses deux
+  bouts. Signalé, non corrigé : c'est un changement de ce qu'on enregistre, hors
+  du périmètre de cet item.
+
+  ⚠️ **Le piège de l'immobilisation : `Engine.time_scale = 0` gèle aussi le
+  compte à rebours.** Le `delta` d'un `_process` arrive déjà multiplié par
+  l'échelle ; à zéro, le décompte du pré-tracé ne descend jamais et **la killcam
+  reste suspendue pour toujours** — sans erreur, sans trace, sans rien à l'écran
+  qui l'explique. L'échelle est donc posée à 0,05 : le temps réel se retrouve par
+  division et l'action est immobile à l'œil. Le banc l'exige explicitement.
+
+  ### L'échelle : le jeu affichait des pixels
+
+  ⚠️ **« EFFLEURÉ — 13 PX » et une cote en pixels sont exacts et ne se racontent
+  pas.** Personne ne sait ce que vaut un pixel : le nombre ne se compare pas
+  d'une partie à l'autre et ne veut rien dire hors de l'écran qui l'affiche.
+  Adrien a tranché l'ancre le 2026-08-27 — *« l'échelle qu'on a c'est la taille
+  du sprite d'un joueur »*.
+
+  `echelle.gd` : le joueur fait 36 px (2 × le rayon de 18 écrit dans
+  `player.gd`), un adulte vu de dessus occupe la largeur de ses épaules, un demi-
+  mètre. **72 px par mètre, dérivés et jamais posés** — écrire `72.0` marcherait
+  et perdrait le raisonnement.
+
+  **C'est un jugé, assumé comme tel** : aucune mesure ne sort d'un dessin. Ce qui
+  compte n'est pas la justesse au centimètre mais **l'unicité** — deux
+  conversions dans deux écrans donneraient deux distances pour le même tir, et
+  c'est *ça* qui serait faux. La fin de match suit donc la même règle que la
+  killcam, et « 13 PX » se lit maintenant « 18 CM ».
+
+  Trois vérifications que la convention n'a PAS servi à choisir, et qui auraient
+  pu la réfuter : une tuile fait 48 cm (une case large comme un joueur, ce qu'on
+  lit à l'écran) ; une carte de 32×32 fait 15,5 m de côté ; la portée du pompe
+  tombe à 2,5 m — très court, mais c'est un choix de jeu, pas un artefact.
+
+  `tools/test_releve_balistique.gd`, 116 contrôles, verts, vérifiés **rouges** sur
+  les deux versants qui portent le lot.
+
+  ⚠️ **Deux fautes de méthode dans ce second lot, à ne pas refaire.** Un
+  remplacement global de `Engine.time_scale = 1.0` a posé six appels de
+  libération, dont **trois à la mauvaise indentation** — `game_state.gd` ne
+  parsait plus, et une demi-douzaine de bancs se sont mis à tourner en boucle
+  sans sortir. Et un nouveau `class_name` n'existe pour les bancs qu'après un
+  `--import` : sans lui, `ReleveBalistique` est introuvable et l'erreur ne dit
+  pas que c'est le cache qui manque. Le zoom est lu sur le viewport
+  (`get_camera_2d()`) et jamais demandé à `GameState` : en écran scindé chaque
+  vue a sa propre caméra, et « le » zoom n'aurait pas de sens. *(S)*
+- **DA4.7 La bannière de fin composée** ✅ **livrée le 2026-08-25, complétée le
+  2026-08-26** — verdict, score de session, série et marge du tir décisif, tous
+  hiérarchisés au lieu d'être aplatis.
+
+  ⚠️ **Cette entrée s'est contredite elle-même pendant deux jours**, et c'est le
+  premier fait à en retenir. L'en-tête a porté « 🟡 en grande partie livrée — ce
+  qui manque : *effleuré : 13 px* » alors que le corps, quinze lignes plus bas,
+  disait « ✅ livré le 2026-08-26 ». **Fermer un sous-item sans remonter à
+  l'en-tête laisse l'item ouvert pour quiconque ne lit que la ligne de tête** —
+  et la ligne de tête est précisément ce qu'on lit quand on cherche ce qu'il
+  reste à faire. Relevé le 2026-08-27 sur la question d'Adrien : *« que manque-t-il
+  à DA4.7 ? »* La réponse était : rien, sauf que l'entrée ne le disait pas.
 
   **Ce qu'affichait la fin de match : `SESSION : 2 - 1   ·   3 D'AFFILÉE`.**
   Trois informations de natures différentes, séparées par des points médians,
@@ -9353,8 +9674,16 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   ⚠️ **L'absence est le cas ORDINAIRE, pas le cas d'erreur.** V2.9 ne connaît
   cette valeur que sur la machine qui a **simulé** la balle fatale : en ligne, le
   vainqueur ne l'a le plus souvent pas. La colonne entière disparaît alors —
-  afficher « -1 PX », ou même un tiret poli, ferait passer un silence normal pour
-  une anomalie à chaque match. Même règle que la série, et pour la même raison.
+  afficher une valeur négative, ou même un tiret poli, ferait passer un silence
+  normal pour une anomalie à chaque match. Même règle que la série, et pour la
+  même raison.
+
+  ⚠️ **Le chiffre n'est plus en pixels depuis le 2026-08-27** (DA4.6, décision
+  d'Adrien) : « 13 PX » se lit maintenant « 18 CM ». Les mentions de pixels
+  ci-dessus décrivent l'état d'avant et sont conservées parce qu'elles expliquent
+  d'où vient la donnée — mais **ce que le joueur voit est métrique**, à la même
+  échelle que la cote de killcam. Une distance dite dans deux unités selon
+  l'écran serait deux distances.
 
   **Trois registres, trois natures**, ce qui était le fond de l'item : le score
   est un **compteur** (appareil, tabulaire, teinté par joueur), la série un
@@ -9441,8 +9770,88 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   sans que la feuille de route le sache** — après la fonte d'affichage (DA4) et
   les quatre stingers (DA3.4). Une liste d'items ne mesure pas l'état du dépôt ;
   elle mesure ce que quelqu'un a pensé à y écrire. *(G)*
-- **DA4.11 Le rebinding visuel** — un clavier dessiné plutôt qu'une liste de
-  noms de touches. *(S + G)*
+- **DA4.11 Le rebinding visuel** ✅ **livrée ET VALIDÉE À L'ÉCRAN le 2026-08-28**
+  — et le mot « visuel » est ce que l'item a perdu en route.
+
+  *Adrien, après quatre passes de relecture en jeu : « parfait ». Les quatre
+  dessins successifs sont consignés ci-dessous ; **aucun des défauts qui les ont
+  fait tomber n'était visible autrement qu'à l'écran**, et les bancs étaient
+  verts à chaque fois.*
+
+  ### Trois dessins, deux rejetés à l'écran
+
+  L'item demandait « un clavier dessiné plutôt qu'une liste de noms de touches ».
+  Trois tentatives, arbitrées par Adrien devant le rendu :
+
+  1. **Un clavier entier**, les deux jeux de touches allumés dessus — *« beaucoup
+     trop le bordel »*. Vingt-six capuchons dont quatre comptent : ce n'est pas
+     montrer un contexte, c'est enfouir l'information dans du décor.
+  2. **Deux colonnes**, chaque clavier recadré sur son joueur, plus une souris et
+     une manette dessinées — *« ni beau ni clair »*.
+  3. **Une liste**, J1 au-dessus de J2, deux blocs par joueur. Retenue.
+
+  ⚠️ **L'argument du dessin était juste, et il l'est resté jusqu'au bout.** Voir
+  où tombe le doigt vaut mieux que lire un nom. Ce qui l'a tué n'est pas
+  l'argument, c'est **l'encombrement** : dessiner un appareil demande de la
+  place, et cette place ne vient pas gratuitement dans une rubrique qui doit
+  aussi porter dix lignes réglables par joueur. **Un raisonnement correct sur une
+  contrainte oubliée donne une réponse fausse**, et seul l'écran le dit — deux
+  fois de suite ici.
+
+  ### Deux défauts que la refonte a fait apparaître, et qui étaient anciens
+
+  ⚠️ **La réassignation au clavier n'avait jamais fonctionné.**
+  `_handle_rebind_input` ne testait que `InputEventJoypadButton` et
+  `InputEventJoypadMotion` : appuyer sur une touche pendant « Appuyez… » ne
+  faisait **rien**, le bouton restait en attente, et le joueur en concluait que
+  la rubrique était cassée. Elle l'était — pour le clavier et la souris,
+  c'est-à-dire pour la plupart des joueurs. Même angle mort que les libellés
+  réparés la veille : le fichier traitait la manette et rien d'autre, **aux deux
+  bouts de la chaîne**.
+
+  ⚠️ **Réassigner une touche détruisait la liaison manette.** La boucle
+  d'effacement visait toujours les événements de manette, quel que soit ce qu'on
+  venait de presser — et laissait l'ancienne touche en place. Deux liaisons
+  clavier pour une action, plus de manette. **Personne ne pouvait le voir : les
+  deux appareils étaient affichés ensemble sur un seul bouton.** On n'efface
+  désormais que la **même famille** que la nouvelle liaison.
+
+  ### Les lignes se dérivent, elles ne s'écrivent pas
+
+  ⚠️ **Le premier jet listait les lignes en dur, et le banc l'a pris en défaut.**
+  Il avait oublié les quatre commandes de visée de J2 — pourtant sur IJKL et
+  bien réassignables. `_lignes_du_bloc()` interroge donc l'`InputMap` : une
+  action liée au clavier apparaît dans le bloc clavier, une action réassignable
+  à la manette dans le bloc manette. Rien à tenir à jour, donc rien qui puisse
+  diverger.
+
+  **La manette n'y montre que le tir et la torche**, et ce n'est pas arbitraire :
+  déplacement et visée y sont sur les sticks, que la capture ne sait pas — et ne
+  doit pas — prendre. Une ligne inerte à côté de lignes cliquables ferait croire
+  à un réglage bloqué. Le banc l'exige dans les deux sens.
+
+  **Et la visée à la souris s'écrit en clair.** J1 vise à la souris : ses
+  `p1_aim_*` n'ont que le stick droit, donc aucune ligne ne se dérive pour son
+  bloc clavier. Ne rien afficher enverrait le joueur chercher ailleurs la
+  commande qu'il emploie le plus — et il n'y a pas d'ailleurs. C'est la seule
+  ligne de la rubrique qui ne se clique pas, et elle se lit comme une réponse et
+  non comme une panne.
+
+  ### Ce qui survit des deux dessins
+
+  `liaisons.gd` : la lecture de l'`InputMap`, la détection de collisions, et la
+  traduction position → disposition. **Ce ne sont pas des restes de dessin, ce
+  sont les mesures qu'il avait fallu écrire pour dessiner juste**, et elles
+  restent vraies sans lui. `carte_appareil.gd` est supprimé.
+
+  ⚠️ **Une seule traduction dans le dépôt, donc un seul garde-fou.**
+  `keyboard_get_keycode_from_physical()` était appelée à deux endroits : la
+  version de DA4.11 portait la garde headless, celle de la veille l'appelait en
+  direct et remplissait les bancs de six lignes rouges par lancement. **Un banc
+  qui imprime des erreurs apprend à les ignorer.**
+
+  `tools/test_liaisons.gd`, 26 contrôles, vérifiés rouges sur les deux défauts
+  de réassignation. *(S — plus de (G) : il n'y a plus rien à générer.)*
 - **DA4.12 Les états vides illustrés** ✅ **livrée le 2026-08-25** — historique
   sans match, galerie sans carte. Une phrase seule au milieu d'un grand vide se
   lit comme **un écran qui a échoué à charger** ; la même phrase sous une image
@@ -9453,8 +9862,79 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   Les deux dessins sont teintés en `LINE` et non `DIM` : une illustration
   d'absence doit rester **en retrait de la phrase qu'elle accompagne**, sinon
   elle devient le sujet. *(C — généré, procédé DA1.5)*
-- **DA4.13 Les transitions d'écran signature** 🟡 **entamée le 2026-08-25** — et
-  le constat est le même que pour les fontes.
+- **DA4.13 Les transitions d'écran signature** ✅ **close le 2026-08-27** — plus
+  une seule courbe de Godot dans le dépôt, et une quatrième courbe est née de la
+  conversion.
+
+  ### Ce que la conversion a appris, et qui valait plus que la conversion
+
+  ⚠️ **Sept des vingt et un sites restants n'étaient traduisibles par aucune des
+  trois courbes**, et s'en apercevoir a demandé la session DA3. Ils animent une
+  grandeur physique vers zéro — énergie d'une lumière, alpha d'une révélation,
+  intensité d'un shader de flash.
+
+  **Ce ne sont pas des choses qui s'en vont, ce sont des choses qui s'éteignent.**
+  `SORTIE` veut dire « un élément quitte l'interface » : il part quelque part, et
+  sa forme le montre — il s'attarde puis file. Une lumière ne part pas, elle
+  décroît, et une décroissance est franche puis traîne : **l'inverse exact**.
+
+  Mesuré plutôt que débattu : **0,868 d'écart** entre `SORTIE` et l'`expo out`
+  qu'elle aurait remplacé. Les révélations seraient restées pleines deux secondes
+  avant de disparaître d'un coup. Leur poser `SORTIE` aurait été le mensonge de
+  vocabulaire **et** la régression de sensation — payer les deux au lieu de l'un.
+
+  ### La quatrième courbe, et pourquoi le nombre a cédé
+
+  `Courbe.EXTINCTION` — « chute franche, longue traîne ». La charte disait
+  « trois courbes utilisées partout donnent une signature » ; le nombre a cédé
+  parce qu'il **manquait un sens, pas parce qu'un cas particulier réclamait son
+  exception**. Ce jeu n'a pour matière que de la lumière qui s'éteint : c'était
+  le verbe le plus fréquenté du jeu, et le vocabulaire ne l'avait pas.
+
+  ⚠️ **Elle gagne son existence en chiffres, et le banc l'exige.** `ENTREE`
+  s'écarte de **0,048** d'`expo out`, `EXTINCTION` de **0,012** — quatre fois
+  plus près. Le contrôle ne demande pas qu'elle soit « assez différente »
+  d'`ENTREE` (premier jet, rougissant à 0,042) : cette question-là aurait poussé
+  à la **déformer pour le banc**. Il demande qu'elle colle mieux à ce qu'elle
+  remplace. **Deux sens distincts ont le droit de partager une forme voisine.**
+
+  ⚠️ **L'oracle est Godot lui-même**, via `Tween.interpolate_value()`. Un contrôle
+  qui comparerait `EXTINCTION` à ses propres points de Bézier ne dirait rien.
+
+  ### La règle de mapping, écrite pour la prochaine fois
+
+  Ni par la forme (le code mentirait sur son vocabulaire), ni par le mot seul
+  (`SORTIE` sur une extinction) :
+
+  | Ce que faisait le site | Courbe |
+  |---|---|
+  | `EASE_IN` — l'élément part | `SORTIE` |
+  | `EASE_OUT` vers **zéro** sur une énergie, un alpha, une intensité | `EXTINCTION` |
+  | `EASE_OUT` autrement — l'élément arrive et se pose | `ENTREE` |
+  | `BACK` + `EASE_OUT` — le déclic | `REBOND` |
+
+  ⚠️ **La conversion n'est PAS neutre partout, et il faut le dire.** Elle l'est
+  aux sites en `expo out` — les quatre révélations et le flash de coup, les plus
+  longs et les plus regardés. Elle ne l'est pas aux sites en `quad out` et
+  `sine out` : le fondu de la balle, la vignette, la lumière d'impact s'écartent
+  d'environ **0,39** de ce qu'ils faisaient. **C'est le prix de l'unification, et
+  c'est le but de l'item** — « cinq transitions différentes » ne se ramènent pas à
+  quatre sans que quelque chose bouge. Ces trois-là sont brèves (0,6 à 1 s) et
+  secondaires ; **elles restent à juger à l'écran**, et rien ne remplace cet œil.
+
+  ### Frontière de domaine
+
+  `_HORS_PERIMETRE` est désormais **vide**, et déclarée plutôt que supprimée :
+  elle est le point d'entrée du jour où une exception redeviendra nécessaire.
+  Elle portait quatre noms non par oubli mais par **domaine** — un chantier
+  d'interface n'entre pas dans « game feel » de sa propre initiative. Adrien a
+  levé la frontière le 2026-08-27 ; DA3, prévenue avant qu'une ligne soit
+  écrite, a répondu qu'elle n'avait rien de non commité — **et c'est elle qui a
+  vu ce que la conversion allait casser.** *(S)*
+
+  ---
+
+  *Constat d'origine, conservé :*
 
   **DA1.8 a livré trois courbes maison** (`ENTREE`, `SORTIE`, `REBOND`) et un
   point d'entrée unique, `Charte.animer()`, précisément pour remplacer les
@@ -9527,15 +10007,115 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   supprimer ni l'un ni l'autre. La torche se pose **à côté** du cadre, hors de
   lui : un signe de propriété ne se superpose pas à ce qu'il désigne. *(C —
   généré, procédé DA1.5)*
-- **DA4.15 L'éditeur de cartes aligné** 🟡 **matière livrée le 2026-08-26** —
-  quatorze icônes d'outils (`assets/ui/icones/outil_*.png`), même procédé que
-  les icônes d'armes déjà livrées : masques en niveaux de gris, fond
-  transparent, 128×128, la teinte posée par le code. La famille symétrie
-  (miroir horizontal/vertical/diagonal, rotation) et la paire annuler/refaire
-  générées ensemble puis découpées — même raison que `creer`/`rejoindre` en
-  DA4.13 : des variantes d'un même geste divergeraient si tirées séparément.
-  Reste : câblage dans l'éditeur et vérification de lisibilité à 20 px par
-  DA4. Palette de l'éditeur sous la bible pas encore traitée. *(S + G)*
+- **DA4.15 L'éditeur de cartes aligné** ✅ **livrée le 2026-08-27** — quatorze
+  icônes câblées, dix-neuf tailles rangées, dix-neuf glyphes retirés.
+
+  **Le panneau parlait par rébus.** Seize boutons portaient chacun un caractère
+  Unicode rare en tête de libellé — `▭ ⌗ ⇔ ⇕ ⟳ ⤡ ⤢ ↶ ↷ ◎ ⧉ ⤓ ✦ ⌫ ▶ ✕` — plus
+  un emoji, `💾`, sur SAUVEGARDER. **DA4.19 avait déclaré la chasse aux emojis
+  terminée sur cinq ; il y en avait six.** Le sixième vivait dans le seul écran
+  que l'inventaire n'avait pas ouvert.
+
+  ⚠️ **Un nettoyage annoncé complet empêche le suivant** : on ne recompte pas ce
+  qu'on croit fini. Le compte se tient désormais dans un banc et non dans une
+  phrase — `tools/test_icones_editeur.gd` lit les **chaînes littérales** des
+  fichiers d'écran, commentaires exclus, et refuse tout pictogramme qui n'est
+  pas nommé dans sa liste `TOLERES`. Réintroduire `⌗` demandera de l'y écrire,
+  donc de le décider.
+
+  ### L'icône livrée disait le contraire de son bouton
+
+  ⚠️ **Le fichier `outil_miroir_d.png` portait l'axe ↗ — l'anti-diagonale.**
+  Câblé sous son nom, le bouton « DIAGONALE ↘ » aurait montré la flèche inverse
+  de ce qu'il fait : le joueur aurait plié sa carte sur le mauvais axe sans
+  aucun moyen de comprendre pourquoi. Vérifié à la **mesure** et non à l'œil —
+  couverture alpha le long des deux diagonales, 58 % contre 35 % — parce qu'une
+  icône de symétrie inversée est indétectable en relecture.
+
+  **Un glyphe faux se voit ; une image fausse se croit.** Personne ne relit une
+  icône, on la reconnaît — et reconnaître, c'est justement cesser de regarder.
+  C'est le risque propre au remplacement d'un texte par un dessin, et il ne
+  s'annule pas en dessinant mieux.
+
+  Le fichier est renommé `outil_miroir_ad.png`, et **la diagonale est son reflet
+  calculé** : `MenuIcones.REFLET_DE`. Un seul fichier, deux boutons, l'exactitude
+  de la paire devenue propriété du code plutôt qu'accord entre deux dessins —
+  même geste que la torche de DA4.14 qui sert les deux joueurs par `modulate`.
+  Le banc mesure le reflet pixel par pixel **dans les deux sens** : il est bien
+  le miroir, et il n'est **pas** l'original — sans ce second contrôle, une
+  dérivation qui ne ferait rien resterait verte sur toute image symétrique.
+
+  ### Le repli silencieux cachait l'absence qu'il amortit
+
+  ⚠️ **Les quatorze icônes étaient posées sur le disque et importées nulle
+  part.** `.godot/imported/` n'en contenait aucune. Le câblage était complet,
+  chaque bouton appelait `poser_outil()`, chaque appel rendait `false`, et
+  l'éditeur s'affichait exactement comme avant.
+
+  **Un repli qui marche rend l'absence indistinguable de la présence.** La règle
+  « câbler, taire, diagnostiquer » reste juste — mais elle exige un contrôle qui,
+  lui, ne se replie pas. C'est le premier du banc : il échoue si un seul fichier
+  catalogué ne se charge pas, et il vérifie en plus que la texture n'est pas de
+  taille nulle, parce qu'une image vide se charge sans erreur.
+
+  ### Le panneau avait sa propre échelle typographique
+
+  Sept tailles pour seize boutons — 13, 15, 16, 17, 18, 19, 20 — plus 14, 21, 24
+  et 26 dans les modales et l'en-tête. **C'est la maladie exacte que la bible a
+  été écrite pour soigner** (« le dépôt portait 25 tailles distinctes, aucune
+  issue d'une règle ») : l'éditeur y avait échappé. Dix-neuf littéraux rangés
+  dans les six crans, **par le sens que la bible donne à chacun** et non par
+  arrondi au plus proche : un libellé de bouton est du texte courant, une mention
+  DIM est une mention, un titre de modale est un titre.
+
+  La primauté de SAUVEGARDER et d'AUTO-MUR se disait déjà par la couleur et la
+  hauteur ; la taille était un troisième canal pour la même chose, et **une
+  troisième voie ne hiérarchise pas, elle brouille.**
+
+  ⚠️ **Et le banc qui tient cette règle ne pouvait pas être un grep.** Pas une
+  de ces sept tailles n'apparaissait au site du `add_theme_font_size_override` :
+  elles étaient des **arguments** passés à `_make_label()` et `_make_button()`,
+  qui les posaient ensuite. Une règle textuelle cherchant `font_size", <nombre>`
+  serait restée verte sur les seize boutons fautifs — elle aurait nommé le défaut
+  sans jamais le voir. Le contrôle construit donc le HUD et demande à chaque
+  `Control` la taille qu'il **rend**, peu importe par où elle est arrivée.
+
+  ### Ce qui n'a pas été fait, et pourquoi
+
+  - **Huit actions restent sans icône** — les quatre boutons de grille, NOUVELLE,
+    IMPORTER, SAUVEGARDER, TESTER, RETOUR. Ce n'est pas un oubli mais un état
+    déclaré : `MenuIcones.SANS_ICONE` les nomme, et le banc exige que **toute**
+    action figure dans l'une des quatre listes. Ajouter un bouton demain sans
+    trancher la question fera rougir le banc, ce qui est le meilleur moment pour
+    qu'elle se pose. *(G — cinq icônes à générer, procédé DA1.5)*
+  - **Les deux flèches ↘ ↗ restent dans les libellés** des diagonales, seule
+    redondance conservée. Sans elles, une icône absente laisserait deux boutons
+    voisins lisant tous deux « DIAGONALE » : **un repli doit rester
+    discriminant, sinon ce n'est pas un repli.**
+  - **Mipmaps activés sur les quatorze icônes d'outils, pas sur les cinq
+    d'armes.** Une icône de 128 px rendue à 22 échantillonne 4 texels sur 41 sans
+    mipmap : les traits fins se brisent et *changent* quand le bouton bouge.
+    DA5.6 a déjà tranché (« filtrage linéaire, mipmaps ») — appliquer la décision
+    n'est pas en prendre une. Les cinq icônes d'armes ont le même réglage à
+    `false` et relèvent de DA4.19, close : **signalé, pas corrigé.** *(S)*
+  - `✕` et `☐` restent dans la ligne d'aide manette : ce sont les touches
+    **telles qu'elles sont gravées sur la manette**, pas des décorations.
+
+  **La matière, livrée le 2026-08-26 par la session qui l'a générée** : quatorze
+  masques en niveaux de gris, fond transparent, 128×128, la teinte posée par le
+  code — même procédé DA1.5 que les icônes d'armes. La famille symétrie et la
+  paire annuler/refaire ont été **générées ensemble puis découpées**, pour la
+  même raison que `creer`/`rejoindre` en DA4.13 : des variantes d'un même geste
+  divergeraient si elles étaient tirées séparément.
+
+  ⚠️ **Cette entrée a existé en DEUX exemplaires**, écrits le même jour par deux
+  sessions — l'une décrivant la matière (« reste : le câblage »), l'autre le
+  câblage. Ni l'une ni l'autre ne mentait ; **elles décrivaient deux moments du
+  même item et se seraient contredites au premier lecteur**. Fusionnées ici le
+  2026-08-27.
+
+  27 contrôles, verts, vérifiés rouges sur trois versants — le reflet non
+  retourné, un emoji réintroduit, une taille hors échelle. *(S + G)*
 - **DA4.16 Le panneau F3 lui-même** ✅ **livrée le 2026-08-25** — et il disait
   quelque chose, en effet : le contraire de ce qu'on voulait.
 
@@ -9601,6 +10181,14 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   2026-08-26** — *item ouvert après coup, sur demande d'Adrien : « remplace tous
   les icônes dans les barres de menu par des vraies images ». Le travail existait
   sans ligne pour le porter ; c'est le motif consigné en DA4.13, corrigé ici.*
+
+  ⚠️ **« Le dernier emoji » était faux, et l'a été un jour entier.** Il y en
+  avait un sixième — `💾` sur SAUVEGARDER dans l'éditeur de cartes — plus
+  dix-huit glyphes Unicode rares dans le même panneau. Relevé et corrigé par
+  DA4.15 le 2026-08-27. Le titre de cet item disait *le dernier* parce que
+  l'inventaire n'avait ouvert que les écrans de `ui.gd` ; **un nettoyage annoncé
+  complet empêche le suivant**, puisqu'on ne recompte pas ce qu'on croit fini.
+  Le compte vit maintenant dans `tools/test_icones_editeur.gd`.
 
   **Le dépôt portait cinq emojis** — 🔫 🏹 ☄️ 💥 🔦 — dans les boutons d'arme et
   l'indicateur de torche. Ils paraissent inoffensifs et ils étaient le marqueur
@@ -11368,6 +11956,54 @@ Reste donc :
    sources sont versionnées précisément pour ça (`assets/sources/*/.gitignore` :
    *« sans elles, l'asset devient irreproductible »*) — mais une planche sans sa
    recette ne l'est qu'à moitié.
+
+   > ⚠️ **Cette phrase a été fausse pendant deux jours, et personne ne pouvait le
+   > voir.** Relevé par la session DA2 le 2026-08-26 : `ui_illustrations/` avait
+   > son `.gitignore` versionné, la doctrine y était écrite noir sur blanc, et
+   > **aucune de ses huit planches n'avait suivi.** `ui_outils/` n'avait même pas
+   > de doctrine. Les neuf `ill_*.png` livrées et les quatorze icônes d'outils
+   > étaient donc irreproductibles, et les icônes n'existaient **que sur le poste
+   > d'Adrien** — le jour même où un incident a effacé sa session.
+   >
+   > **Une doctrine appliquée à moitié protège moins qu'une doctrine absente**,
+   > parce qu'on la croit tenue : ce paragraphe la citait comme une garantie
+   > acquise. Corrigé le 2026-08-26 — les treize planches sont au dépôt, nommées
+   > une à une comme la règle l'exige.
+   >
+   > Et la façon dont l'écart a échappé aux deux sessions mérite d'être notée :
+   > **`git status` replie un répertoire entièrement non suivi en UNE ligne.**
+   > Un `git status --porcelain | grep '\.jpg$'` rend `0`, et ce `0` se lit comme
+   > « rien ne manque » alors qu'il veut dire « je n'ai pas regardé dedans ».
+   > S'y ajoute un piège de worktree : un worktree ne contient que les fichiers
+   > SUIVIS plus ce qu'on y crée, donc **compter des fichiers non suivis depuis un
+   > worktree rend toujours zéro**. Deux sessions ont mesuré deux arbres
+   > différents et se sont crues en désaccord.
+   >
+   > **Une garde est posée dans `tools/run_suites.sh`, et elle est en bash — pas
+   > en GDScript.** Ce n'est pas un rangement : les bancs Godot répondent à « le
+   > fichier est-il sur le disque ? », et cette question-là a répondu OUI tout du
+   > long. La bonne question est « git le connaît-il ? », et seul git peut y
+   > répondre. Un asset déposé dans `assets/` et jamais ajouté s'affiche à
+   > l'écran, laisse toutes les suites vertes, et meurt avec la machine — la
+   > garde échoue désormais dessus.
+   >
+   > ⚠️ **Et la garde portait la faute qu'elle attrape.** Son premier jet
+   > n'énumérait que trois sous-dossiers — `assets/ui`, `assets/audio`,
+   > `assets/maps` — sur les **quatorze** que le dépôt porte. Les onze autres,
+   > dont `assets/sprites/`, n'étaient pas surveillés : **les trente-deux images
+   > de la démarche, cuites le 2026-08-25 et toujours dans aucun commit, seraient
+   > restées invisibles à la garde écrite pour les trouver.** Relevé par la
+   > session DA2 le 2026-08-27, vérifié en posant un fichier témoin dans
+   > `assets/sprites/` — l'ancienne garde ne dit rien, la nouvelle le nomme.
+   >
+   > **Une énumération partielle se lit comme une liste complète.** C'est le même
+   > mécanisme que le `git status` replié deux paragraphes plus haut : dans les
+   > deux cas on obtient un silence, et dans les deux cas ce silence veut dire
+   > « je n'ai pas regardé » alors qu'il se lit « il n'y a rien ». La garde
+   > surveille maintenant `assets` en entier, ce qui est à la fois plus simple et
+   > plus juste — les planches sources non retenues restent muettes puisque
+   > `--exclude-standard` honore leur doctrine, et **un fichier ignoré est un
+   > fichier dont l'absence a été décidée.**
 
 1bis. ⚠️ **LES DÉCALS, non listés jusqu'ici et pourtant couplés.** Trouvé le
    2026-08-25 en relisant avec la lunette de DA4, après le viseur.

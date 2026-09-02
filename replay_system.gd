@@ -1,6 +1,6 @@
 extends Node
 
-signal replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData)
+signal replay_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon: WeaponData, fatal: bool)
 
 var recording: bool = false
 var playing_back: bool = false
@@ -187,19 +187,116 @@ func record_bullet_fired(shooter_id: int, pos: Vector2, rot: float, weapon: Weap
 ## elle doit le rester : deux façons de désigner le tir fatal finiraient par
 ## désigner deux tirs différents.
 func trajectoire_fatale() -> PackedVector2Array:
-	if impact_frame < 0 or impact_frame >= snapshots.size():
+	var i := index_du_tir_fatal()
+	if i < 0:
 		return PackedVector2Array()
+	var snap = snapshots[impact_frame]
+	var impact: Vector2 = snap.p1_pos if snap.p1_hp <= 0.0 else snap.p2_pos
+	return PackedVector2Array([bullet_events[i]["pos"], impact])
+
+
+## Tout ce qu'il faut pour relever le tir fatal. Vide s'il n'y en a pas.
+##
+## ⚠️ **Le relevé DA4.6 a besoin de l'angle RÉEL du tir, et pas seulement de ses
+## deux bouts.** Ce qu'il montre est l'écart entre la trajectoire suivie et celle
+## qui aurait fait le maximum de dégâts : sans `rot`, l'écart ne se calcule pas,
+## et le relevé retomberait à coter une distance de tir — ce qu'Adrien a
+## justement écarté le 2026-08-27.
+##
+## Une seule fonction pour tout donner, plutôt que trois accesseurs : le relevé
+## et la trajectoire doivent parler du **même** tir, et trois appels séparés,
+## c'est trois occasions de n'en désigner pas le même.
+func releve_du_tir_fatal() -> Dictionary:
+	var i := index_du_tir_fatal()
+	if i < 0:
+		return {}
+	var snap = snapshots[impact_frame]
+	var ev: Dictionary = bullet_events[i]
+	return {
+		"origine": ev["pos"],
+		"cible": snap.p1_pos if snap.p1_hp <= 0.0 else snap.p2_pos,
+		"angle": ev["rot"],
+		"arme": ev["weapon"],
+	}
+
+
+## L'indice, dans `bullet_events`, du tir qui a tué. `-1` s'il n'y en a pas.
+##
+## ⚠️ **Extrait de `trajectoire_fatale()` plutôt que réécrit à côté**, et le
+## commentaire ci-dessus disait déjà pourquoi : *deux façons de désigner le tir
+## fatal finiraient par désigner deux tirs différents*. Le relevé DA4.6 avait
+## besoin de savoir QUEL tir, pas seulement d'où à où — la tentation était
+## d'ajouter une seconde boucle qui remonte les tirs. Elle aurait été juste le
+## jour de son écriture.
+##
+## La victime est celle dont les points de vie sont tombés à l'image d'impact ;
+## le tueur est l'autre. On remonte alors ses tirs jusqu'au dernier qui précède
+## l'impact — **le dernier tir tout court ne convient pas** : un tir de la
+## victime juste avant sa mort n'est pas le coup fatal, et
+## `tools/test_rejeu.gd` tient cette distinction depuis V6.1.
+func index_du_tir_fatal() -> int:
+	if impact_frame < 0 or impact_frame >= snapshots.size():
+		return -1
 	var snap = snapshots[impact_frame]
 	var victime_p1: bool = snap.p1_hp <= 0.0
 	if not victime_p1 and snap.p2_hp > 0.0:
-		return PackedVector2Array()
-	var impact: Vector2 = snap.p1_pos if victime_p1 else snap.p2_pos
+		return -1
 	var tueur := 1 if victime_p1 else 0
 	for i in range(bullet_events.size() - 1, -1, -1):
 		var ev: Dictionary = bullet_events[i]
 		if int(ev["shooter"]) == tueur and int(ev["frame"]) <= impact_frame:
-			return PackedVector2Array([ev["pos"], impact])
-	return PackedVector2Array()
+			return i
+	return -1
+
+## DA4.6 — durée du pré-tracé, en secondes de temps RÉEL.
+##
+## **Avant que le ralenti reprenne, la trajectoire se dessine.** Comme l'analyse
+## d'une action de football : on retrace le trajet, puis on rejoue le geste et
+## l'on voit le ballon suivre la ligne annoncée. Un tracé qui suit la balle
+## *constate* ; un tracé qui la précède **annonce**, et l'action devient une
+## vérification.
+##
+## Deux temps, pris à la charte plutôt qu'inventés : `D_LONG` pour la pousse du
+## trait, `D_MOYEN` pour le temps de lecture avant que ça reparte.
+const PRETRACE_POUSSE := 0.30
+const PRETRACE_LECTURE := 0.18
+
+## ⚠️ **Le monde rampe, il ne s'arrête pas.** `Engine.time_scale = 0` gèlerait
+## bien l'action — et gèlerait aussi le `delta` qui fait avancer le pré-tracé,
+## puisque celui-ci arrive déjà multiplié par l'échelle. Le compte à rebours ne
+## descendrait jamais et la killcam resterait suspendue pour toujours. À 0,05, le
+## temps réel se retrouve par division et l'action est immobile à l'œil.
+const PRETRACE_ECHELLE := 0.05
+
+## Progression du pré-tracé, de 0 à 1. Vaut 1 dès qu'il est terminé.
+var pretrace_t: float = 0.0
+var _pretrace_reste: float = -1.0
+var _pretrace_fait: bool = false
+
+## Les trois moments du pré-tracé.
+##
+## ⚠️ **Trois, et pas deux — un booléen a déjà menti ici.** Le premier jet
+## exposait `pretrace_en_cours()`, qui répond « non » aussi bien AVANT
+## qu'APRÈS. L'appelant prenait donc la branche « c'est fini » dès la première
+## image de la killcam et posait la ligne **entière**, trois secondes trop tôt ;
+## le pré-tracé la redessinait ensuite au bon moment. Relevé par Adrien à
+## l'écran le 2026-08-27 — *« il est tracé dès le début de la killcam, puis se
+## redessine ensuite »*.
+##
+## **Un état à trois valeurs ne se range pas dans un booléen**, et le défaut
+## n'est pas que l'appelant se soit trompé : c'est que la question posée n'avait
+## pas assez de réponses. L'énumération rend l'oubli impossible plutôt
+## qu'improbable.
+enum Pretrace { AVANT, PENDANT, APRES }
+
+## Où en est le pré-tracé. `game_state` s'y branche pour dessiner le relevé.
+func pretrace_etat() -> Pretrace:
+	if _pretrace_fait:
+		return Pretrace.APRES
+	if _pretrace_reste > 0.0:
+		return Pretrace.PENDANT
+	return Pretrace.AVANT
+
 
 ## Nombre d'images montrées avant l'impact — trois secondes de contexte.
 const PRE_IMPACT_FRAMES := 180.0
@@ -227,6 +324,9 @@ func start_playback():
 	last_played_frame = floori(playback_index) - 1
 	freeze_time_remaining = 2.0
 	time_since_impact_real = 0.0
+	pretrace_t = 0.0
+	_pretrace_reste = -1.0
+	_pretrace_fait = false
 
 func get_next_frame(delta: float):
 	if not playing_back or snapshots.is_empty(): return null
@@ -236,7 +336,27 @@ func get_next_frame(delta: float):
 	var t = playback_index - idx1
 	
 	var unscaled_delta = delta / Engine.time_scale if Engine.time_scale > 0 else delta
-	
+
+	# DA4.6 — le pré-tracé, juste avant que le ralenti commence.
+	#
+	# ⚠️ **On n'avance PAS `playback_index` pendant ce temps.** Les joueurs sont
+	# posés depuis l'instantané courant : ne pas bouger l'indice les fige
+	# exactement, sans avoir à les toucher. Seul le trait avance.
+	if not _pretrace_fait and impact_frame != -1 and slow_mo_start_frame != -1 \
+			and idx1 >= slow_mo_start_frame and idx1 < impact_frame:
+		if _pretrace_reste < 0.0:
+			_pretrace_reste = PRETRACE_POUSSE + PRETRACE_LECTURE
+		_pretrace_reste -= unscaled_delta
+		var ecoule := (PRETRACE_POUSSE + PRETRACE_LECTURE) - _pretrace_reste
+		pretrace_t = clampf(ecoule / PRETRACE_POUSSE, 0.0, 1.0)
+		if _pretrace_reste > 0.0:
+			Engine.time_scale = PRETRACE_ECHELLE
+			var fige = Snapshot.new()
+			_melanger(fige, snapshots[idx1], snapshots[idx2], t)
+			return fige
+		_pretrace_fait = true
+		pretrace_t = 1.0
+
 	if idx1 >= snapshots.size() - 1:
 		idx1 = snapshots.size() - 1
 		idx2 = idx1
@@ -300,31 +420,43 @@ func get_next_frame(delta: float):
 	playback_index += delta * 60.0
 	
 	var current_frame = floori(playback_index)
-	for ev in bullet_events:
+	# DA4.6 — un seul tir porte le relevé coté : celui qui a tué. Une killcam
+	# rejoue tout ce qui a été tiré dans la fenêtre ; coter chaque balle
+	# empilerait des cotes sur des tirs manqués, et **ce qui compte partout ne
+	# désigne plus rien**.
+	var fatal := index_du_tir_fatal()
+	for i in bullet_events.size():
+		var ev: Dictionary = bullet_events[i]
 		if ev.frame > last_played_frame and ev.frame <= current_frame:
-			replay_spawn_bullet.emit(ev.shooter, ev.pos, ev.rot, ev.weapon)
+			replay_spawn_bullet.emit(ev.shooter, ev.pos, ev.rot, ev.weapon,
+				i == fatal)
 	last_played_frame = current_frame
 	
 	# INTERPOLATE SNAPSHOTS for perfectly smooth slow motion
-	var s1 = snapshots[idx1]
-	var s2 = snapshots[idx2]
 	var interp = Snapshot.new()
-	
-	interp.p1_pos = s1.p1_pos.lerp(s2.p1_pos, t)
-	interp.p1_rot = lerp_angle(s1.p1_rot, s2.p1_rot, t)
-	interp.p1_hp = s1.p1_hp
-	interp.p1_visible = s1.p1_visible
-	interp.p1_light = s1.p1_light
-	interp.p1_flash = lerp(s1.p1_flash, s2.p1_flash, t)
-	
-	interp.p2_pos = s1.p2_pos.lerp(s2.p2_pos, t)
-	interp.p2_rot = lerp_angle(s1.p2_rot, s2.p2_rot, t)
-	interp.p2_hp = s1.p2_hp
-	interp.p2_visible = s1.p2_visible
-	interp.p2_light = s1.p2_light
-	interp.p2_flash = lerp(s1.p2_flash, s2.p2_flash, t)
-	
-	interp.p1_weapon = s1.p1_weapon
-	interp.p2_weapon = s1.p2_weapon
-	
+	_melanger(interp, snapshots[idx1], snapshots[idx2], t)
 	return interp
+
+
+## Pose dans `sortie` l'etat interpole entre deux instantanes.
+##
+## Extrait de `get_next_frame` pour que le pre-trace de DA4.6 puisse rendre
+## exactement le meme etat sans avancer la lecture. Une seconde copie de ces
+## quatorze lignes aurait derive au premier champ ajoute a `Snapshot`.
+func _melanger(sortie: Snapshot, s1: Snapshot, s2: Snapshot, t: float) -> void:
+	sortie.p1_pos = s1.p1_pos.lerp(s2.p1_pos, t)
+	sortie.p1_rot = lerp_angle(s1.p1_rot, s2.p1_rot, t)
+	sortie.p1_hp = s1.p1_hp
+	sortie.p1_visible = s1.p1_visible
+	sortie.p1_light = s1.p1_light
+	sortie.p1_flash = lerp(s1.p1_flash, s2.p1_flash, t)
+
+	sortie.p2_pos = s1.p2_pos.lerp(s2.p2_pos, t)
+	sortie.p2_rot = lerp_angle(s1.p2_rot, s2.p2_rot, t)
+	sortie.p2_hp = s1.p2_hp
+	sortie.p2_visible = s1.p2_visible
+	sortie.p2_light = s1.p2_light
+	sortie.p2_flash = lerp(s1.p2_flash, s2.p2_flash, t)
+
+	sortie.p1_weapon = s1.p1_weapon
+	sortie.p2_weapon = s1.p2_weapon

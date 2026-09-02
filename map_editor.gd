@@ -555,16 +555,28 @@ func _cycle_brush() -> void:
 		Brush.FREE: _brush_mode = Brush.FILL
 		_: _brush_mode = Brush.RECT
 	hud.show_toast(_brush_label(_brush_mode), MapEditorHUD.Toast.INFO)
-	hud.set_brush(_brush_button_label(), _brush_mode == Brush.RECT)
+	hud.set_brush(_brush_slug(), _brush_button_label(), _brush_mode == Brush.RECT)
 	_refresh_tool_hint(true)
 	cursor.queue_redraw()
 
 ## Libellé compact pour le bouton du panneau d'outils.
 func _brush_button_label() -> String:
 	match _brush_mode:
-		Brush.RECT: return "▭  PINCEAU : RECTANGLE"
-		Brush.FILL: return "◆  PINCEAU : POT"
-		_: return "✎  PINCEAU : LIBRE"
+		Brush.RECT: return "PINCEAU : RECTANGLE"
+		Brush.FILL: return "PINCEAU : POT"
+		_: return "PINCEAU : LIBRE"
+
+## Le slug d'icône du pinceau courant — clé de `MenuIcones.PAR_OUTIL`.
+##
+## ⚠️ **Une table, pas un `str(_brush_mode)`.** Les valeurs de l'enum `Brush`
+## sont des entiers dont l'ordre n'engage personne : y adosser un nom de fichier
+## ferait disparaître trois icônes le jour où quelqu'un insère un quatrième
+## pinceau au milieu, sans erreur et sans que le lien soit visible.
+func _brush_slug() -> String:
+	match _brush_mode:
+		Brush.RECT: return "pinceau_rect"
+		Brush.FILL: return "pinceau_pot"
+		_: return "pinceau_libre"
 
 func _brush_label(brush: Brush) -> String:
 	match brush:
@@ -964,6 +976,11 @@ func _load_map(data: Dictionary) -> void:
 	grid_backdrop.queue_redraw()
 	hud.set_map_name(String(_map_meta.get("name", "Carte sans nom")))
 	hud.set_step(int(current_step), _step_colour())
+	# ⚠️ **Le pinceau se pousse ici, et non à la construction du HUD.** Le
+	# panneau écrivait son propre « PINCEAU : RECTANGLE » en dur, ce qui tenait
+	# tant que le mode par défaut était RECT — un accord que rien ne vérifiait.
+	# Le mode a un seul propriétaire ; c'est lui qui le dit.
+	hud.set_brush(_brush_slug(), _brush_button_label(), _brush_mode == Brush.RECT)
 	_refresh_tool_hint(true)
 	_on_history_changed()
 	_run_validation()

@@ -195,12 +195,13 @@ export HOME="$MAISON_DU_LOT"
 CANDELA_PORT=$(( 20000 + $(printf '%s' "$MAISON_DU_LOT" | cksum | cut -d' ' -f1) % 20000 ))
 export CANDELA_PORT
 
-SUITES=(test_map_codec test_map_geometry test_arena_build test_editor_tools
+SUITES=(test_liaisons test_icones_editeur
+	test_map_codec test_map_geometry test_arena_build test_editor_tools
         test_match_format test_pause_menu test_menu_hub test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
-        test_vitrine_menus test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_banc test_rendu_racine test_prediction_tir
+        test_vitrine_menus test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_releve_balistique test_curseur_systeme test_banc test_rendu_racine test_prediction_tir
         test_mise_a_jour test_charte test_habillage test_bandeau_fatal test_autoloads test_torches test_lumieres test_viseur test_marche test_sprites
         test_dosage_audio test_planche_marche)
 
@@ -470,6 +471,39 @@ duo duo_spam --spam
 # banc qu'on finit par débrancher.
 duo duo_reconnexion --reconnexion
 duo duo_reconnexion_tardive --reconnexion-tardive
+
+# --- Aucun asset livré ne vit hors du dépôt ---------------------------------
+#
+# ⚠️ **Ce contrôle est en bash et pas en GDScript, et c'est la raison d'être du
+# placement.** La question n'est pas « le fichier est-il sur le disque ? » — les
+# bancs Godot répondent déjà à celle-là, et elle a répondu OUI le 2026-08-26
+# pendant que quatorze icônes livrées n'existaient QUE sur le poste d'Adrien, le
+# jour même où un incident effaçait sa session. La question est « git le
+# connaît-il ? », et seul git peut y répondre.
+#
+# Ce que ça attrape : un asset déposé dans `assets/` et jamais ajouté. Il se voit
+# à l'écran, tous les bancs sont verts, et il disparaît avec la machine.
+#
+# ⚠️ **`assets/` en entier, et surtout PAS une liste de sous-dossiers.** Le
+# premier jet en nommait trois — `ui`, `audio`, `maps` — sur les quatorze que le
+# dépôt porte. Les onze autres, dont `sprites/`, n'étaient pas surveillés : les
+# trente-deux images de la démarche, cuites le 2026-08-25, seraient restées
+# invisibles à la garde écrite pour les trouver. **Une énumération partielle se
+# lit comme une liste complète** — c'est exactement la faute que ce contrôle
+# existe pour attraper, commise dans le contrôle lui-même. Relevé par la session
+# DA2 le 2026-08-27.
+#
+# Les planches sources non retenues restent muettes : `--exclude-standard` honore
+# les `.gitignore` de `assets/sources/`, et c'est voulu — leur doctrine les exclut
+# nommément. Un fichier ignoré est un fichier dont l'absence a été DÉCIDÉE.
+hors_depot=$(git ls-files --others --exclude-standard -- assets 2>/dev/null | wc -l | tr -d ' ')
+if [ "${hors_depot:-0}" -ne 0 ]; then
+  echo "--- ${hors_depot} asset(s) présent(s) mais HORS DU DÉPÔT ---"
+  git ls-files --others --exclude-standard -- assets | sed 's/^/    /'
+  echo "    Ils s'affichent, les bancs sont verts, et ils meurent avec la machine."
+  echo "    git add les fichiers ci-dessus, ou explique leur exclusion dans un .gitignore."
+  fail=1
+fi
 
 DUREE=$((SECONDS - DEBUT))
 # **Annoncé à chaque lot, et pas seulement en cas d'échec.** Ce lanceur ne joue

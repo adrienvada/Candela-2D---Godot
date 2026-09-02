@@ -1,5 +1,7 @@
 extends Node
 
+const Charte := preload("res://charte.gd")
+
 # Cartographie des sons vers leurs chemins d'accès
 const SOUNDS: Dictionary = {
 	"shoot": "res://assets/audio/sfx/weapon_shoot.wav",
@@ -1644,9 +1646,12 @@ func set_music_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
 	if filter_tween and filter_tween.is_valid():
 		filter_tween.kill()
 		
+	# DA4.13 — le filtre glisse vers sa nouvelle coupure : ENTREE, ce qui
+	# s'installe. Le départ est lu à l'appel, ce qui est ici la bonne valeur :
+	# le tween précédent vient d'être tué, `cutoff_hz` porte donc l'état réel.
 	filter_tween = create_tween()
-	filter_tween.tween_property(filter, "cutoff_hz", cutoff_hz, duration)\
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	Charte.animer(filter_tween, filter, "cutoff_hz", filter.cutoff_hz,
+		cutoff_hz, duration, Charte.Courbe.ENTREE)
 
 # --- SPEAKER & UI ---
 func play_speaker(stream_or_key: Variant, volume_db: float = 0.0) -> void:

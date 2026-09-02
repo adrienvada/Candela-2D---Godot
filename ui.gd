@@ -40,6 +40,7 @@ signal pick_window_cancelled
 # domicile.
 
 const Charte := preload("res://charte.gd")
+const Echelle := preload("res://echelle.gd")
 const MenuWidgets := preload("res://menu_widgets.gd")
 ## ⚠️ **`brouillage.gd` n'a pas de `class_name`** — c'est un fichier sans
 ## dépendance, comme `vision.gd` et `eblouissement.gd`, et la maison les
@@ -105,6 +106,13 @@ const TAB_SLIDE := 32.0
 ## Métadonnées de navigation posées sur les contrôles.
 const META_NAV_OWNER := "nav_owner"
 const META_NAV_SEED := "nav_seed"
+## L'appareil d'une ligne de la rubrique CONTRÔLES : `"clavier"` ou `"manette"`.
+##
+## ⚠️ **Il décide de ce que la ligne AFFICHE et de ce qu'elle ACCEPTE.** Sans
+## lui, une ligne du bloc manette montrerait la touche du clavier et se
+## laisserait réassigner par une touche — deux blocs qui font la même chose ne
+## sont pas deux blocs, c'est le même écrit deux fois.
+const META_APPAREIL := "appareil_de_la_ligne"
 ## Valeur de `nav_seed` qui attire les deux curseurs sur la même entrée, au lieu
 ## d'un joueur nommé. Négative à dessein : un indice de joueur est un entier
 ## positif, et l'écrire 2 aurait fait d'un troisième joueur imaginaire une
@@ -901,6 +909,20 @@ func _process(delta: float) -> void:
 ## que celle décrite plus haut : il suffit d'un chemin de sortie oublié.
 func _un_menu_attend_un_clic() -> bool:
 	if _is_main_menu:
+		return true
+	# ⚠️ **L'écran de fin de match, oublié des quatre cas ci-dessus** — relevé par
+	# Adrien à l'écran le 2026-08-27 : « après un match mon curseur ne réapparaît
+	# pas ». `show_game_over()` pose `_is_main_menu = false` PUIS allume
+	# `game_over_panel` : aucune des quatre conditions ne correspondait, et le
+	# joueur se retrouvait devant REJOUER et MENU PRINCIPAL sans pointeur.
+	#
+	# **C'est la troisième fois que cette liste se révèle incomplète**, et la
+	# deuxième pour la même raison : elle *paraît* délibérée. Le commentaire du
+	# 2026-08-25 décrit déjà le défaut — « sans plus aucun moyen de cliquer
+	# *Quitter* » — corrige trois cas, et en laisse un. Une énumération partielle
+	# se lit comme une liste complète ; voir « la mesure répond, mais pas à la
+	# question posée » dans les pièges connus de la ROADMAP.
+	if _panneau_ouvert(game_over_panel):
 		return true
 	if is_pause_menu_open():
 		return true
@@ -4185,7 +4207,11 @@ func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 	# lieu d'afficher une absence. Un tiret dans une case laisse croire qu'on a
 	# raté quelque chose ; rien du tout ne pose aucune question.
 	if bilan_effleure != null:
-		bilan_marge.text = "%d PX" % int(roundf(effleurement))
+		# ⚠️ **En mètres, pas en pixels.** « 13 PX » est exact et ne se raconte
+		# pas : personne ne sait ce que vaut un pixel. Même conversion que la
+		# cote de killcam — voir `echelle.gd`. Les deux écrans doivent parler la
+		# même langue, sinon la même distance porte deux noms.
+		bilan_marge.text = Echelle.ecrire(effleurement)
 		bilan_effleure.visible = effleurement >= 0.0
 	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
 	game_over_score.text = ""
@@ -4852,48 +4878,228 @@ const BINDABLE := [
 ##
 ## Chaque bouton reste réservé à son joueur par `META_NAV_OWNER` : le curseur de
 ## P1 ne peut pas réassigner la manette de P2.
+## Le libellé de chaque commande, par suffixe d'action.
+##
+## ⚠️ **Une table de LIBELLÉS, pas une table de lignes.** Quelles lignes
+## s'affichent se déduit de l'`InputMap` — voir `_lignes_du_bloc()`. Le premier
+## jet listait les lignes en dur et le banc l'a pris en défaut le 2026-08-28 :
+## il avait oublié les quatre commandes de visée de J2, qui sont pourtant sur
+## IJKL et bien réassignables. **Une commande absente de la rubrique se cherche
+## ailleurs, et il n'y a pas d'ailleurs.**
+const LIBELLES := {
+	"move_up": "Avancer", "move_down": "Reculer",
+	"move_left": "Gauche", "move_right": "Droite",
+	"aim_up": "Viser haut", "aim_down": "Viser bas",
+	"aim_left": "Viser à gauche", "aim_right": "Viser à droite",
+	"shoot": "Tirer", "torch": "Torche",
+}
+
+## L'ordre d'apparition : on se déplace, on vise, on tire, on s'éclaire.
+const ORDRE := ["move_up", "move_down", "move_left", "move_right",
+	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch"]
+
+## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
+## Elle s'écrit quand même — voir `_lignes_du_bloc()`.
+const VISEE_SOURIS := "Souris"
+
+
+## Largeur du libellé d'une ligne. Fixe, et c'est ce qui aligne la colonne.
+##
+## ⚠️ **Le premier jet laissait le libellé s'étendre** (`SIZE_EXPAND_FILL`) : dans
+## une grille à deux colonnes, la colonne qui s'étend absorbe toute la largeur
+## disponible et **plaque l'autre contre le bord**. Vu à l'écran par Adrien le
+## 2026-08-28 — les touches étaient toutes collées à droite, à un demi-écran de
+## leur libellé. Une largeur fixe les tient à distance de lecture.
+const LARGEUR_LIBELLE := 132.0
+## Un bouton de commande dans une liste : large pour « CLIC GAUCHE », bas pour
+## qu'une douzaine de lignes tiennent sans défilement.
+const TAILLE_COMMANDE := Vector2(148, 34)
+
+
+## La rubrique CONTRÔLES — DA4.11, quatrième et dernier dessin.
+##
+## **Deux colonnes, J1 et J2, chacune une simple liste.** Arbitré par Adrien le
+## 2026-08-28 après trois essais vus à l'écran : un clavier entier aux deux jeux
+## de touches allumés (« beaucoup trop le bordel »), deux colonnes aux claviers
+## recadrés (« ni beau ni clair »), une liste verticale J1 au-dessus de J2 (« la
+## mise en page est très étrange »).
+##
+## ⚠️ **Ce que les trois essais ont coûté vaut d'être écrit.** L'argument du
+## dessin était juste en théorie — *voir où tombe le doigt vaut mieux que lire un
+## nom* — et il est resté juste jusqu'au bout. Ce qui l'a tué n'est pas
+## l'argument, c'est **l'encombrement** : dessiner un appareil demande de la
+## place, et cette place ne vient pas gratuitement dans une rubrique qui doit
+## aussi porter douze lignes réglables par joueur. **Un raisonnement correct sur
+## une contrainte oubliée donne une réponse fausse**, et seul l'écran le dit.
+##
+## ⚠️ **Et la rubrique ne défilait pas.** Douze lignes pour J2 débordent d'une
+## fenêtre en 720 ; sans `ScrollContainer`, un `VBoxContainer` plus haut que sa
+## place **écrase ses enfants les uns sur les autres** au lieu de les couper. Ce
+## qu'on lit alors n'est pas « il en manque » mais des lignes qui se contredisent
+## — un libellé sur la valeur d'un autre. C'est ce qui a fait croire que J2
+## avançait au clic gauche : la donnée était juste, la mise en page mentait.
 func _build_controls_panel() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# `follow_focus` : sans lui, une commande hors du champ serait atteignable au
+	# curseur sans être visible — pire que de ne pas l'atteindre.
+	scroll.follow_focus = true
+
 	var block := VBoxContainer.new()
+	block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	block.add_theme_constant_override("separation", GAP_S)
+	scroll.add_child(block)
 
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", GAP_L)
-	grid.add_theme_constant_override("v_separation", GAP_XS)
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	block.add_child(grid)
+	var colonnes := HBoxContainer.new()
+	colonnes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonnes.add_theme_constant_override("separation", GAP_L)
+	block.add_child(colonnes)
 
-	grid.add_child(_make_grid_header("", COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT))
-	grid.add_child(_make_grid_header("JOUEUR 1", COLOR_P1, HORIZONTAL_ALIGNMENT_CENTER))
-	grid.add_child(_make_grid_header("JOUEUR 2", COLOR_P2, HORIZONTAL_ALIGNMENT_CENTER))
-
-	for rang in BINDABLE.size():
-		var spec: Array = BINDABLE[rang]
-		var nom := _make_grid_header(String(spec[0]).to_upper(), COLOR_GOLD,
-			HORIZONTAL_ALIGNMENT_RIGHT)
-		nom.add_theme_font_size_override("font_size", T_COURANT)
-		nom.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		grid.add_child(nom)
-		for player in 2:
-			var btn := _make_rebind_button("p%d_%s" % [player + 1, String(spec[1])], player)
-			# La graine ne se pose que sur la PREMIÈRE ligne : elle dit où le
-			# curseur d'un joueur atterrit en entrant dans le cadre, et trois
-			# réponses valides pour une question en font une réponse au hasard.
-			if rang == 0:
-				btn.set_meta(META_NAV_SEED, player)
-			var holder := CenterContainer.new()
-			holder.add_child(btn)
-			grid.add_child(holder)
+	for joueur in 2:
+		colonnes.add_child(_build_bloc_du_joueur(joueur))
 
 	var hint := Label.new()
-	hint.text = "Activez une touche, puis appuyez sur la nouvelle."
+	hint.text = "Activez une commande, puis appuyez sur la nouvelle. Échap annule."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", T_MENTION)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
 	block.add_child(hint)
 
-	return block
+	return scroll
+
+
+## Les suffixes que le bloc d'un appareil doit montrer, pour un joueur.
+##
+## ⚠️ **Dérivé de l'`InputMap`, jamais écrit.** Une action liée au clavier
+## apparaît dans le bloc clavier ; une action réassignable à la manette apparaît
+## dans le bloc manette. Rien à tenir à jour, donc rien qui puisse diverger.
+##
+## **La manette n'y montre que le tir et la torche, et ce n'est pas un choix
+## arbitraire** : déplacement et visée y sont sur les sticks, que
+## `_handle_rebind_input` ne sait pas — et ne doit pas — capturer. Une ligne
+## inerte à côté de lignes cliquables ferait croire à un réglage bloqué.
+func _lignes_du_bloc(joueur: int, appareil: String) -> Array:
+	var out: Array = []
+	for suffixe: String in ORDRE:
+		var action := "p%d_%s" % [joueur + 1, suffixe]
+		if not InputMap.has_action(action):
+			continue
+		var convient := false
+		for ev in InputMap.action_get_events(action):
+			if appareil == "clavier":
+				convient = convient or ev is InputEventKey \
+					or ev is InputEventMouseButton
+			else:
+				# Un stick ne se réassigne pas : seuls un bouton et une gâchette
+				# passent par la capture, donc seuls eux méritent une ligne.
+				if ev is InputEventJoypadButton:
+					convient = true
+				elif ev is InputEventJoypadMotion:
+					var ax := (ev as InputEventJoypadMotion).axis
+					convient = convient or ax == JOY_AXIS_TRIGGER_LEFT \
+						or ax == JOY_AXIS_TRIGGER_RIGHT
+		if convient:
+			out.append(suffixe)
+	return out
+
+
+func _build_bloc_du_joueur(joueur: int) -> Control:
+	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
+	var colonne := VBoxContainer.new()
+	colonne.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	colonne.add_theme_constant_override("separation", GAP_XS)
+
+	var nom := _make_grid_header("JOUEUR %d" % (joueur + 1), teinte,
+		HORIZONTAL_ALIGNMENT_LEFT)
+	nom.add_theme_font_size_override("font_size", T_APPUI)
+	colonne.add_child(nom)
+
+	var premier := true
+	for appareil in ["clavier", "manette"]:
+		var suffixes := _lignes_du_bloc(joueur, appareil)
+		if suffixes.is_empty():
+			continue
+		var titre := _make_grid_header(
+			"CLAVIER ET SOURIS" if appareil == "clavier" else "MANETTE",
+			COLOR_DIM, HORIZONTAL_ALIGNMENT_LEFT)
+		colonne.add_child(titre)
+
+		var grille := GridContainer.new()
+		grille.columns = 2
+		grille.add_theme_constant_override("h_separation", GAP_S)
+		grille.add_theme_constant_override("v_separation", GAP_XXS)
+		# ⚠️ **`SHRINK_BEGIN`, jamais `EXPAND_FILL`.** Une grille qui s'étend
+		# répartit sa largeur entre ses colonnes et sépare le libellé de sa
+		# valeur ; une grille qui se serre les garde côte à côte, ce qui est la
+		# seule chose qu'on demande à une ligne de liste.
+		grille.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		colonne.add_child(grille)
+
+		# ⚠️ **La visée à la souris s'écrit, faute de quoi elle manque.** J1 vise
+		# à la souris : ses `p1_aim_*` n'ont que le stick droit, donc aucune
+		# ligne ne se dérive pour le bloc clavier. Ne rien afficher enverrait le
+		# joueur chercher ailleurs une commande qu'il emploie pourtant.
+		if appareil == "clavier" and not _bloc_a_une_visee(suffixes):
+			var souris := _make_grid_header(VISEE_SOURIS.to_upper(), COLOR_DIM,
+				HORIZONTAL_ALIGNMENT_LEFT)
+			souris.custom_minimum_size = Vector2(TAILLE_COMMANDE.x, 0)
+			_poser_ligne(grille, "Viser", souris)
+
+		for suffixe: String in suffixes:
+			var action := "p%d_%s" % [joueur + 1, suffixe]
+			var btn := _make_rebind_button(action, joueur, appareil)
+			if premier:
+				# La graine ne se pose que sur la PREMIÈRE ligne du joueur : elle
+				# dit où son curseur atterrit en entrant dans le cadre, et
+				# plusieurs réponses valides pour une question en font une
+				# réponse au hasard.
+				btn.set_meta(META_NAV_SEED, joueur)
+				premier = false
+			_poser_ligne(grille, String(LIBELLES.get(suffixe, suffixe)), btn)
+
+	return colonne
+
+
+static func _bloc_a_une_visee(suffixes: Array) -> bool:
+	for s: String in suffixes:
+		if s.begins_with("aim_"):
+			return true
+	return false
+
+
+func _poser_ligne(grille: GridContainer, libelle: String,
+		commande: Control) -> void:
+	var etiquette := _make_grid_header(libelle.to_upper(), COLOR_GOLD,
+		HORIZONTAL_ALIGNMENT_RIGHT)
+	etiquette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	etiquette.custom_minimum_size = Vector2(LARGEUR_LIBELLE, 0)
+	grille.add_child(etiquette)
+	commande.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grille.add_child(commande)
+
+
+## La commande d'une ligne : un bouton si elle se réassigne, un texte sinon.
+##
+## ⚠️ **`p1_aim` n'existe pas : J1 vise à la souris.** Rendre un bouton mort
+## laisserait croire à un réglage cassé ; ne rien afficher enverrait le joueur
+## chercher ailleurs. On l'écrit donc en clair, sans bouton — la seule ligne de
+## la rubrique qui ne se clique pas, et elle se lit comme une réponse et non
+## comme une panne.
+func _make_ligne_de_commande(action: String, joueur: int, appareil: String,
+		graine: bool) -> Control:
+	if not InputMap.has_action(action):
+		var texte := _make_grid_header(VISEE_SOURIS.to_upper(), COLOR_DIM,
+			HORIZONTAL_ALIGNMENT_LEFT)
+		texte.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		return texte
+
+	var btn := _make_rebind_button(action, joueur, appareil)
+	if graine:
+		btn.set_meta(META_NAV_SEED, joueur)
+	return btn
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE
@@ -5021,11 +5227,14 @@ func _make_grid_header(text: String, tint: Color, align: int) -> Label:
 	label.add_theme_color_override("font_color", tint)
 	return label
 
-func _make_rebind_button(action: String, player: int) -> Button:
+func _make_rebind_button(action: String, player: int,
+		appareil: String = "") -> Button:
 	var btn := _make_button("", COLOR_P1 if player == 0 else COLOR_P2)
-	btn.custom_minimum_size = Vector2(72, 64)
+	if appareil != "":
+		btn.set_meta(META_APPAREIL, appareil)
+	btn.custom_minimum_size = TAILLE_COMMANDE
 	btn.set_meta(META_NAV_OWNER, player)
-	_apply_btn_info(btn, _get_action_btn_info(action))
+	_apply_btn_info(btn, _info_de_ligne(action, appareil))
 	btn.pressed.connect(_on_rebind_btn_pressed.bind(btn, action))
 	return btn
 
@@ -5194,7 +5403,8 @@ func _apply_btn_info(btn: Button, info: Dictionary) -> void:
 	btn.icon = null
 	btn.text = String(info.get("text", ""))
 
-func _get_action_btn_info(action: String) -> Dictionary:
+## Le libellé d'une action, pour la MANETTE seulement. Vide si elle n'en a pas.
+func _get_joypad_action_info(action: String) -> Dictionary:
 	for ev in InputMap.action_get_events(action):
 		if ev is InputEventJoypadButton:
 			return _get_joypad_btn_info(ev.button_index)
@@ -5203,9 +5413,144 @@ func _get_action_btn_info(action: String) -> Dictionary:
 				return {"text": "Gâchette L2", "icon": "l2.svg"}
 			elif ev.axis == JOY_AXIS_TRIGGER_RIGHT:
 				return {"text": "Gâchette R2", "icon": "r2.svg"}
+			# ⚠️ **« Axe 1 » ne veut rien dire pour un joueur.** Le repli d'origine
+			# rendait le numéro brut de l'axe ; personne ne sait que l'axe 1 est
+			# la verticale du stick gauche. Un libellé qu'il faut décoder est un
+			# libellé qui n'informe pas.
+			match ev.axis:
+				JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y:
+					return {"text": "Stick gauche", "icon": ""}
+				JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y:
+					return {"text": "Stick droit", "icon": ""}
+				_:
+					return {"text": "Axe " + str(ev.axis), "icon": ""}
+	return {}
+
+
+## Le libellé d'une action au CLAVIER ou à la SOURIS. Vide si elle n'en a pas.
+##
+## ⚠️ **La touche se nomme par sa POSITION, traduite dans la disposition du
+## joueur.** Le jeu lie par `physical_keycode` : la touche de « haut » de J1 est
+## le `W` d'un QWERTY, qui est physiquement le **Z** d'un AZERTY. Afficher « W »
+## à Adrien serait exact du point de vue du code et faux du point de vue de sa
+## main. `keyboard_get_keycode_from_physical()` fait la traduction — sans elle,
+## l'écran nommerait une touche que personne n'a sous les doigts.
+func _get_keyboard_action_info(action: String) -> Dictionary:
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventKey:
+			var touche: InputEventKey = ev
+			# ⚠️ **Une seule traduction dans le dépôt, donc un seul garde-fou.**
+			# `keyboard_get_keycode_from_physical()` n'existe pas sous le serveur
+			# headless et journalise une erreur à chaque appel : la version de
+			# DA4.11 porte la garde, celle-ci l'appelait en direct et remplissait
+			# les bancs de six lignes rouges. Deux copies d'une même conversion,
+			# c'est une seule qui reçoit les corrections.
+			var code := touche.physical_keycode
+			if code != 0:
+				code = Liaisons.dans_la_disposition(code)
 			else:
-				return {"text": "Axe " + str(ev.axis), "icon": ""}
-	return {"text": "Non assigné", "icon": ""}
+				code = touche.keycode
+			return {"text": OS.get_keycode_string(code).to_upper(), "icon": ""}
+		elif ev is InputEventMouseButton:
+			var clic: InputEventMouseButton = ev
+			match clic.button_index:
+				MOUSE_BUTTON_LEFT: return {"text": "CLIC GAUCHE", "icon": ""}
+				MOUSE_BUTTON_RIGHT: return {"text": "CLIC DROIT", "icon": ""}
+				MOUSE_BUTTON_MIDDLE: return {"text": "CLIC MOLETTE", "icon": ""}
+				# ⚠️ « MOLETTE HAUT » et pas « MOLETTE ↑ » : le premier jet portait
+				# les deux flèches, et la garde des pictogrammes de DA4.15 les a
+				# refusées — à raison. Les mots disent la même chose sans dépendre
+				# d'une fonte, et ils sont cohérents avec « CLIC GAUCHE » juste
+				# au-dessus. La garde a attrapé son auteur.
+				MOUSE_BUTTON_WHEEL_UP: return {"text": "MOLETTE HAUT", "icon": ""}
+				MOUSE_BUTTON_WHEEL_DOWN: return {"text": "MOLETTE BAS", "icon": ""}
+				_: return {"text": "BOUTON %d" % clic.button_index, "icon": ""}
+	return {}
+
+
+## Ce que le bouton de réassignation affiche.
+##
+## ⚠️ **Il annonçait des boutons de manette pour des touches de clavier.** Relevé
+## le 2026-08-27 en instanciant l'interface : le clic gauche de J1 s'affichait
+## « R1 », son clic droit « Gâchette L2 », et la touche **O** de J2 « R1 » aussi.
+## La boucle ne connaissait que `InputEventJoypadButton` et
+## `InputEventJoypadMotion` ; `InputSetup` ajoutant une liaison manette à chaque
+## action, c'est toujours elle qui était trouvée — **le clavier et la souris
+## n'existaient nulle part dans ce fichier.**
+##
+## **Aucune suite ne pouvait le voir : un libellé faux reste un libellé valide.**
+## C'est la deuxième fois que cette rubrique ment à l'écran de cette façon
+## exacte, après les « trois actions » annoncées au-dessus de deux.
+##
+## ⚠️ **Les deux périphériques sont montrés, pas arbitrés.** L'action EST liée aux
+## deux : n'en afficher qu'un obligerait à deviner lequel le joueur tient, et se
+## tromperait la moitié du temps en écran scindé — où l'un peut être au clavier
+## pendant que l'autre est à la manette.
+func _get_action_btn_info(action: String) -> Dictionary:
+	var clavier := _get_keyboard_action_info(action)
+	var manette := _get_joypad_action_info(action)
+	if clavier.is_empty() and manette.is_empty():
+		return {"text": "Non assigné", "icon": ""}
+	if clavier.is_empty():
+		return manette
+	if manette.is_empty():
+		return clavier
+	# Le clavier d'abord : c'est le périphérique que le jeu suppose par défaut,
+	# et la manette est une alternative — pas l'inverse.
+	return {
+		"text": "%s  ·  %s" % [clavier["text"], manette["text"]],
+		"icon": "",
+		"clavier": clavier["text"],
+		"manette": manette["text"],
+		"icone_manette": manette.get("icon", ""),
+	}
+
+## Deux événements pilotent-ils le même appareil ?
+##
+## C'est cette question, et pas « sont-ils identiques », qui décide de ce qu'une
+## réassignation remplace : on veut chasser l'ancienne touche quand on en pose
+## une neuve, et laisser la manette tranquille.
+static func _meme_famille(a: InputEvent, b: InputEvent) -> bool:
+	var a_pad := a is InputEventJoypadButton or a is InputEventJoypadMotion
+	var b_pad := b is InputEventJoypadButton or b is InputEventJoypadMotion
+	return a_pad == b_pad
+
+
+static func _libelle_de_clic(bouton: int) -> Dictionary:
+	match bouton:
+		MOUSE_BUTTON_LEFT: return {"text": "CLIC GAUCHE", "icon": ""}
+		MOUSE_BUTTON_RIGHT: return {"text": "CLIC DROIT", "icon": ""}
+		MOUSE_BUTTON_MIDDLE: return {"text": "CLIC MOLETTE", "icon": ""}
+		MOUSE_BUTTON_WHEEL_UP: return {"text": "MOLETTE HAUT", "icon": ""}
+		MOUSE_BUTTON_WHEEL_DOWN: return {"text": "MOLETTE BAS", "icon": ""}
+		_: return {"text": "BOUTON %d" % bouton, "icon": ""}
+
+
+## Sortir du mode d'attente sans rien changer.
+func _annuler_la_reassignation() -> void:
+	if is_instance_valid(_button_to_update):
+		var appareil := ""
+		if _button_to_update.has_meta(META_APPAREIL):
+			appareil = String(_button_to_update.get_meta(META_APPAREIL))
+		_apply_btn_info(_button_to_update, _info_de_ligne(_action_to_rebind,
+			appareil))
+		_button_to_update.remove_theme_color_override("font_color")
+	_is_rebinding = false
+	get_viewport().set_input_as_handled()
+
+
+## Ce qu'une ligne affiche, selon le bloc où elle est rangée.
+##
+## Sans appareil, on retombe sur les deux — c'est le comportement d'avant les
+## deux blocs, et il reste juste partout où l'appel ne sait pas trancher.
+func _info_de_ligne(action: String, appareil: String) -> Dictionary:
+	var info := {}
+	match appareil:
+		"clavier": info = _get_keyboard_action_info(action)
+		"manette": info = _get_joypad_action_info(action)
+		_: return _get_action_btn_info(action)
+	return info if not info.is_empty() else {"text": "Non assigné", "icon": ""}
+
 
 func _on_rebind_btn_pressed(btn: Button, action: String) -> void:
 	if _is_rebinding:
@@ -5270,16 +5615,35 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed(prefix + "select"):
 			_activate(player)
 
+## ⚠️ **La capture ne connaissait QUE la manette.** Relevé le 2026-08-28 en
+## refondant la rubrique : `_handle_rebind_input` ne testait que
+## `InputEventJoypadButton` et `InputEventJoypadMotion`. Appuyer sur une touche
+## pendant « Appuyez… » ne faisait donc **rien** — le bouton restait en attente,
+## et le joueur en concluait que la réassignation était cassée. Elle l'était,
+## pour le clavier et la souris, c'est-à-dire pour la plupart des joueurs.
+##
+## C'est le même angle mort que les libellés réparés la veille : le fichier
+## traitait la manette et rien d'autre, aux deux bouts de la chaîne.
 func _handle_rebind_input(event: InputEvent) -> void:
 	var new_event: InputEvent = null
 	var display_info := {}
+	# L'appareil de la ligne qu'on est en train de réassigner : une ligne du
+	# bloc manette n'accepte qu'un bouton de manette, et l'inverse.
+	var attendu := ""
+	if is_instance_valid(_button_to_update) \
+			and _button_to_update.has_meta(META_APPAREIL):
+		attendu = String(_button_to_update.get_meta(META_APPAREIL))
 
 	if event is InputEventJoypadButton and event.is_pressed():
+		if attendu == "clavier":
+			return
 		var joy_btn := InputEventJoypadButton.new()
 		joy_btn.button_index = (event as InputEventJoypadButton).button_index
 		new_event = joy_btn
 		display_info = _get_joypad_btn_info(joy_btn.button_index)
 	elif event is InputEventJoypadMotion and (event as InputEventJoypadMotion).axis_value > 0.5:
+		if attendu == "clavier":
+			return
 		var motion := event as InputEventJoypadMotion
 		if motion.axis == JOY_AXIS_TRIGGER_LEFT or motion.axis == JOY_AXIS_TRIGGER_RIGHT:
 			var joy_axis := InputEventJoypadMotion.new()
@@ -5289,19 +5653,48 @@ func _handle_rebind_input(event: InputEvent) -> void:
 			display_info = {"text": "Gâchette L2", "icon": "l2.svg"} \
 				if motion.axis == JOY_AXIS_TRIGGER_LEFT \
 				else {"text": "Gâchette R2", "icon": "r2.svg"}
+	elif event is InputEventKey and event.is_pressed() \
+			and not (event as InputEventKey).echo:
+		if attendu == "manette":
+			return
+		var touche := event as InputEventKey
+		# ⚠️ **Échap ne se lie pas** : c'est la sortie du mode d'attente, et une
+		# rubrique où l'on ne peut plus renoncer est un piège.
+		if touche.physical_keycode == KEY_ESCAPE or touche.keycode == KEY_ESCAPE:
+			_annuler_la_reassignation()
+			return
+		var neuve := InputEventKey.new()
+		# ⚠️ **Le code PHYSIQUE, comme tout le reste du jeu.** `project.godot` lie
+		# par position ; poser un `keycode` ici ferait une liaison d'un autre
+		# genre que les autres, qui suivrait la lettre au lieu de la place.
+		neuve.physical_keycode = touche.physical_keycode if touche.physical_keycode != 0 \
+			else touche.keycode
+		new_event = neuve
+		display_info = {"text": OS.get_keycode_string(
+			Liaisons.dans_la_disposition(neuve.physical_keycode)).to_upper(),
+			"icon": ""}
+	elif event is InputEventMouseButton and event.is_pressed():
+		if attendu == "manette":
+			return
+		var clic := event as InputEventMouseButton
+		var neuf := InputEventMouseButton.new()
+		neuf.button_index = clic.button_index
+		new_event = neuf
+		display_info = _libelle_de_clic(clic.button_index)
 
 	if new_event == null:
 		return
 
-	var old_events := InputMap.action_get_events(_action_to_rebind)
-	for ev in old_events:
-		var is_trigger := ev is InputEventJoypadMotion \
-			and ((ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_LEFT
-				or (ev as InputEventJoypadMotion).axis == JOY_AXIS_TRIGGER_RIGHT)
-		if ev is InputEventJoypadButton or is_trigger:
+	# ⚠️ **On n'efface que la MÊME FAMILLE que la nouvelle liaison.** L'ancien
+	# code effaçait toujours les événements de manette, quel que soit ce qu'on
+	# venait de presser : réassigner une touche détruisait donc la liaison
+	# manette **et** laissait l'ancienne touche en place — deux liaisons clavier
+	# pour une action, et plus de manette. Personne ne pouvait le voir : les deux
+	# appareils étaient affichés ensemble sur un seul bouton.
+	for ev in InputMap.action_get_events(_action_to_rebind):
+		if _meme_famille(ev, new_event):
 			InputMap.action_erase_event(_action_to_rebind, ev)
 
-	new_event.device = old_events[0].device if old_events.size() > 0 else 0
 	InputMap.action_add_event(_action_to_rebind, new_event)
 	# Sans ça, le joueur retrouvait les touches par défaut au lancement suivant.
 	GameSettings.set_binding(_action_to_rebind, new_event)

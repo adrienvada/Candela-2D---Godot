@@ -1,4 +1,4 @@
-# Sources brutes de génération — même règle que `torche/`.
+# Sources brutes de génération — même règle que `ui_illustrations/` et `torche/`.
 #
 # **Seules les planches qui ont produit un asset livré sont versionnées.** Elles
 # sont la seule façon de le recuire : sans elles, l'asset devient irreproductible.
@@ -9,3 +9,21 @@
 *
 !.gitignore
 !.gdignore
+
+# Retenues le 2026-08-26 — les quatorze icônes d'outils de l'éditeur (DA4.15).
+#
+# ⚠️ **Quatre des cinq planches portent PLUSIEURS icônes**, et c'est un choix, pas
+# une économie : `mirroir_rotation_sheet_01` tient les quatre symétries et la
+# rotation d'un seul tirage. Des tirages indépendants n'auraient pas produit des
+# variantes du même geste mais cinq dessins voisins — la leçon de
+# `creer_rejoindre_01`, appliquée d'emblée.
+#
+# ⚠️ **Ce fichier a été écrit DEUX FOIS, par deux sessions, le même jour.** Les
+# deux versions disaient la même doctrine ; une seule nommait les planches. La
+# fusion garde celle qui les nomme — une doctrine appliquée à moitié protège
+# moins qu'une doctrine absente, parce qu'on la croit tenue.
+!annuler_refaire_01.jpg
+!effacer_partager_01.jpg
+!mirroir_rotation_sheet_01.jpg
+!murs_lumiere_cadre_01.jpg
+!pinceau_rect_pot_01.jpg

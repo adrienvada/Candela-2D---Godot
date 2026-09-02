@@ -6,6 +6,18 @@ const Charte := preload("res://charte.gd")
 var weapon: WeaponData
 var bounces_left: int = 0
 var is_replay: bool = false
+## Cette balle est-elle le tir fatal du rejeu ?
+##
+## ⚠️ **Seule elle laisse sa traînée pointillée en killcam.** Une killcam rejoue
+## TOUT ce qui a été tiré dans sa fenêtre : les tirs manqués laissaient chacun
+## leur trait, et l'écran montrait plusieurs lignes presque parallèles dont une
+## seule était la bonne. Relevé par Adrien à l'écran le 2026-08-27 — *« la balle
+## ne suit pas la trajectoire tracée par les pointillés »* : elle la suivait,
+## mais ce n'était pas SA trajectoire qu'on lui comparait.
+##
+## **Deux traits qui se ressemblent sont pires qu'un seul faux** : on ne se
+## demande pas lequel lire, on croit lire le bon.
+var est_le_tir_fatal: bool = false
 
 var source_player: Node2D
 var direction: Vector2 = Vector2.ZERO
@@ -195,15 +207,25 @@ func _physics_process(delta):
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
 
-## V6.2 — Trajectoire au trait (killcam) : pendant le rejeu, la balle dessine
-## en pointillé le segment déjà parcouru, comme un schéma balistique. Le tracé
-## est en espace local (-X = derrière, la rotation suit `direction`) et repart
-## de zéro à chaque rebond, puisque `spawn_pos` est réarmé — fidèle au trajet.
+## V6.2 — Trajectoire au trait (killcam) : pendant le rejeu, la balle laisse
+## derrière elle, en pointillé, le segment déjà parcouru. Le tracé est en espace
+## local (-X = derrière, la rotation suit `direction`) et repart de zéro à chaque
+## rebond, puisque `spawn_pos` est réarmé — fidèle au trajet.
 ## En manche réelle (`is_replay` faux) : rien, aucune information gratuite.
+##
+## ⚠️ **Le relevé coté de DA4.6 n'est PAS ici, et il ne peut pas y être.** Il se
+## trace AVANT que l'action reprenne, comme l'analyse d'une action de football —
+## or **une balle ne sait pas où elle va**. Elle connaît son départ et sa
+## direction, jamais son impact : seul le rejeu le sait. Le relevé vit donc dans
+## `releve_balistique.gd`, un objet qui existe avant la balle et reste après elle.
+##
+## Ce qui suit est la traînée qui SUIT — celle qui constate. Elle n'a jamais
+## prétendu annoncer quoi que ce soit, et c'est pour ça qu'elle reste sur toutes
+## les balles rejouées, pas seulement sur le tir fatal.
 const TRACE_COLOR := Color(Charte.HALOGENE, 0.35)
 
 func _draw() -> void:
-	if not is_replay:
+	if not is_replay or not est_le_tir_fatal:
 		return
 	var back := global_position.distance_to(spawn_pos)
 	if back < 8.0:
@@ -328,12 +350,30 @@ func _fade_and_destroy(hit_point: Vector2):
 	if has_node("Core"):
 		get_node("Core").points = PackedVector2Array([Vector2.ZERO, Vector2(-trail_length, 0)])
 	
+	# DA4.13 — la balle s'éteint : EXTINCTION, et surtout PAS `SORTIE`.
+	#
+	# ⚠️ **`SORTIE` veut dire « un élément quitte l'interface » — il part quelque
+	# part.** Une lumière ne part pas, elle décroît, et une décroissance est
+	# franche puis traîne : l'inverse exact de `SORTIE`, qui s'attarde puis file.
+	# Mesuré : 0,87 d'écart entre les deux courbes. La lumière serait restée
+	# pleine puis aurait disparu d'un coup. Distinction due à la session DA3.
+	#
+	# ⚠️ **Le départ est figé à l'appel, pas lu au démarrage du tweener.**
+	# `Charte.animer()` prend la valeur de départ en paramètre ; `tween_property`
+	# la lisait au moment où le tweener démarre. Ici les trois partent ensemble et
+	# rien ne repeint entre-temps, donc les deux se valent — mais la différence a
+	# déjà éteint un effet en silence le 2026-08-26, et elle mérite d'être lue.
 	var tween = create_tween().set_parallel(true)
-	tween.tween_property(light, "energy", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	Charte.animer(tween, light, "energy", light.energy, 0.0, _fade_duration,
+		Charte.Courbe.EXTINCTION)
 	if has_node("Core"):
-		tween.tween_property(get_node("Core"), "modulate:a", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		var noyau := get_node("Core") as CanvasItem
+		Charte.animer(tween, noyau, "modulate:a", noyau.modulate.a, 0.0,
+			_fade_duration, Charte.Courbe.EXTINCTION)
 	if has_node("Aura"):
-		tween.tween_property(get_node("Aura"), "modulate:a", 0.0, _fade_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		var aura := get_node("Aura") as CanvasItem
+		Charte.animer(tween, aura, "modulate:a", aura.modulate.a, 0.0,
+			_fade_duration, Charte.Courbe.EXTINCTION)
 	tween.chain().tween_callback(queue_free)
 
 ## Le pool est créé par GameState ; sans lui (tests headless isolés) les impacts
@@ -461,13 +501,24 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 	
 	get_parent().add_child(lbl)
 	
+	# DA4.13 — quatre gestes, et chacune de leurs courbes dit ce qu'elle fait.
 	var tw = lbl.create_tween().set_parallel(true)
 	lbl.scale = Vector2.ZERO
-	tw.tween_property(lbl, "scale", Vector2(1.5, 1.5), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(lbl, "scale", Vector2(1.0, 1.0), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT).set_delay(0.2)
-	
+	# Le surgissement : REBOND, avec son dépassement. C'était déjà `BACK_OUT`,
+	# la conversion ne change rien à l'œil.
+	Charte.animer(tw, lbl, "scale", Vector2.ZERO, Vector2(1.5, 1.5),
+		Charte.D_MOYEN, Charte.Courbe.REBOND)
+	# Le retour au calme : le chiffre s'installe. ENTREE.
+	Charte.animer(tw, lbl, "scale", Vector2(1.5, 1.5), Vector2.ONE,
+		Charte.D_MOYEN, Charte.Courbe.ENTREE).set_delay(Charte.D_MOYEN)
+
 	var float_offset = Vector2(randf_range(-30, 30), -70 - randf_range(0, 30))
-	tw.tween_property(lbl, "position", lbl.position + float_offset, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN).set_delay(0.4)
+	# La dérive vers le haut : elle arrive et se pose. ENTREE.
+	Charte.animer(tw, lbl, "position", lbl.position, lbl.position + float_offset,
+		0.7, Charte.Courbe.ENTREE)
+
+	# L'effacement du libellé : SORTIE. Lui part VRAIMENT — c'était déjà un
+	# `EASE_IN`, donc forme et sens coïncident.
+	Charte.animer(tw, lbl, "modulate:a", 1.0, 0.0, Charte.D_LONG,
+		Charte.Courbe.SORTIE).set_delay(0.4)
 	tw.chain().tween_callback(lbl.queue_free)
