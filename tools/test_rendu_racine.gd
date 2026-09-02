@@ -75,6 +75,31 @@ func _run() -> void:
 		_check("vue unique : %s est arrêté" % vue.name,
 			vue.render_target_update_mode == SubViewport.UPDATE_DISABLED)
 
+	# **Ce que la racine peint POUR ELLE-MÊME doit s'effacer.** Prêter le `World2D`
+	# du duel à la racine y fait entrer ses propres `CanvasItem` : le `Background`
+	# noir plein cadre et les conteneurs de vue, qui peignent la texture GELÉE de
+	# vues que ce chemin vient d'arrêter. Livrés tels quels par R3 (b), ils
+	# recouvraient l'arène — écran entièrement noir à l'entraînement comme en
+	# ligne, des deux côtés du lien, du 2026-08-25 au 2026-08-28.
+	#
+	# ⚠️ **Cette suite est restée VERTE tout du long, et c'est sa leçon.** Chacun
+	# des états qu'elle contrôle — mondes, masques, caméras, `update_mode` — était
+	# juste. Ce qui manquait n'était pas un état mais une IMAGE, et elle n'en lit
+	# aucune. Les deux contrôles ci-dessous ne réparent pas ça : ils verrouillent
+	# l'invariant du correctif, pas son effet. **Ce qui a du sens vit ailleurs**,
+	# dans `tools/test_rendu.gd` — « le sol du duel n'est pas recouvert », en
+	# pixels, à fenêtre, hors de ce lot.
+	# On interroge la RÈGLE — « aucun enfant peintre de la racine ne peint » — et
+	# non trois noms : c'est ce que `_accorder_la_peinture_de_la_racine()` promet,
+	# et un contrôle qui nommerait `Background` laisserait passer le fond que
+	# quelqu'un poserait demain sur `SplitScreen`.
+	_check("vue unique : plus aucun enfant de la racine ne peint",
+		_peintres_bruyants(main).is_empty(),
+		"peignent encore : %s" % str(_peintres_bruyants(main)))
+	_check("vue unique : `UI` continue de peindre, c'est une CanvasLayer",
+		main.get_node_or_null(^"UI") is CanvasLayer,
+		"si le HUD devenait un Control, il suivrait la caméra")
+
 	# **Le piège que la bascule du `world_2d` ouvre sur l'AUDIO, signalé par la
 	# session « spatialisation du son » et mesuré par elle avant d'être écrit.**
 	#
@@ -135,6 +160,9 @@ func _run() -> void:
 	for vue in [main.vp1, main.vp2]:
 		_check("retour : %s dessine de nouveau" % vue.name,
 			vue.render_target_update_mode == SubViewport.UPDATE_ALWAYS)
+	_check("retour : tous les enfants peintres de la racine repeignent",
+		_peintres_muets(main).is_empty(),
+		"restent muets : %s" % str(_peintres_muets(main)))
 
 	# --- L'interrupteur de recours doit vraiment ramener l'ancien chemin ---
 	main.rendu_racine_autorise = false
@@ -145,7 +173,57 @@ func _run() -> void:
 	_check("interrupteur à false : la vue regardée dessine encore",
 		main.vp1.render_target_update_mode == SubViewport.UPDATE_ALWAYS)
 
+	# --- QUITTER LE DUEL DOIT QUITTER LA RACINE ---
+	#
+	# **Ce chemin ne repassait par aucun accord de rendu**, et rien ne le disait :
+	# `_rendu_racine` restait vrai sous les menus, la racine gardant le `World2D`
+	# du duel — vérifié le 2026-08-28, au retour de l'entraînement comme d'une
+	# partie en ligne. Personne ne le voyait parce que le `Background` noir opaque
+	# recouvrait l'arène, c'est-à-dire par le défaut d'à côté.
+	#
+	# **C'est le retour qui est dangereux, encore une fois.** Le fond s'efface
+	# désormais pendant le rendu racine : un oubli ici ne se paierait plus par un
+	# invariant théorique mais par l'arène affichée sous les menus.
+	main.rendu_racine_autorise = true
+	main.vp2.get_parent().hide()
+	main._accorder_rendu_aux_vues()
+	_check("préalable : on est bien reparti dans le rendu racine", main._rendu_racine)
+
+	main._on_main_menu_requested()
+
+	_check("retour au menu : le duel a quitté la racine", not main._rendu_racine)
+	_check("retour au menu : la racine a retrouvé SON monde",
+		racine.world_2d == monde_racine_avant)
+	_check("retour au menu : les deux vues sont de nouveau montrées",
+		main.vp1.get_parent().visible and main.vp2.get_parent().visible)
+	_check("retour au menu : les enfants peintres de la racine repeignent",
+		_peintres_muets(main).is_empty(),
+		"restent muets sous les menus : %s" % str(_peintres_muets(main)))
+	# Sans quoi le prochain accord repartirait aussitôt dans la branche « une
+	# seule vue » — donc dans le rendu racine, sous les menus.
+	_check("retour au menu : l'entraînement est refermé", not main.training_mode)
+
 	_sortir()
+
+## Les enfants directs de la racine qui peignent encore, nommés pour que l'échec
+## soit lisible. Un `CanvasLayer` n'en est pas : il s'attache au viewport et non
+## au canvas du monde, donc l'échange de `World2D` ne le concerne pas.
+func _peintres_bruyants(main: Node) -> Array[String]:
+	var noms: Array[String] = []
+	for enfant in main.get_children():
+		var peintre := enfant as CanvasItem
+		if peintre != null and not is_zero_approx(peintre.modulate.a):
+			noms.append("%s (alpha %.2f)" % [peintre.name, peintre.modulate.a])
+	return noms
+
+## L'inverse : ceux qu'on a laissés muets alors qu'ils devraient peindre.
+func _peintres_muets(main: Node) -> Array[String]:
+	var noms: Array[String] = []
+	for enfant in main.get_children():
+		var peintre := enfant as CanvasItem
+		if peintre != null and not is_equal_approx(peintre.modulate.a, 1.0):
+			noms.append("%s (alpha %.2f)" % [peintre.name, peintre.modulate.a])
+	return noms
 
 ## Les viewports qui ÉCOUTENT le monde du duel, nommés pour que l'échec soit
 ## lisible. Trois candidats seulement : la racine et les deux vues partagent ce

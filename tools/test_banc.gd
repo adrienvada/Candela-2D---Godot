@@ -80,6 +80,20 @@ func _run() -> void:
 	var vides_eb: Array[String] = Planche.preconditions_manquantes(null, null)
 	_check("et elle sait dire quand ils manquent", not vides_eb.is_empty())
 
+	# Le banc du voile, même raison et même remède. Ses appuis ne sont pas ceux
+	# des deux autres : il ne traverse aucun écran et ne pilote aucune manche —
+	# il ne dépend que du shader du voile, de l'appareil de brouillage et de la
+	# lumière reçue. **Ce sont les uniformes du shader qui sont fragiles** : un
+	# réglage renommé laisserait le banc partir de zéro sur ce réglage-là,
+	# c'est-à-dire juger un effet éteint en croyant juger un défaut.
+	var Voile: GDScript = load("res://tools/banc_voile.gd")
+	var manquants_voile: Array[String] = Voile.preconditions_manquantes()
+	_check("tous les appuis du banc du voile existent encore",
+		manquants_voile.is_empty(), "; ".join(manquants_voile))
+	var vides_voile: Array[String] = Voile.preconditions_manquantes(
+		"res://un_shader_qui_n_existe_pas.gdshader")
+	_check("et il sait dire quand ils manquent", not vides_voile.is_empty())
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")

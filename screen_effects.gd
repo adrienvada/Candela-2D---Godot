@@ -25,12 +25,16 @@ extends HubScreen
 ## **la plus stricte** : un écran qui promettrait un zéro que le match refusera
 ## ensuite serait un mensonge plus coûteux qu'un minimum affiché en trop.
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 ## Course des curseurs. Le pas de 5 % évite qu'un réglage se joue au pixel et
 ## rend la course franchissable au stick en une vingtaine de crans.
 const SLIDER_MIN := 0.0
 const SLIDER_MAX := 100.0
 const SLIDER_STEP := 5.0
-const SLIDER_WIDTH := 280.0
+const SLIDER_WIDTH := 240.0
 
 ## Écrit par les tests, qui construisent l'écran sans autoload. En jeu, il reste
 ## nul et l'écran s'adresse à `/root/GameSettings`.
@@ -39,9 +43,9 @@ var settings_override: Node = null
 var _ranked: bool = true
 var _list: VBoxContainer
 var _context_label: Label
-## identifiant -> { "panel", "slider", "value", "notice" }
+## identifiant -> { "panel", "slider", "value", "notice", "minus", "plus" }
 var _rows: Dictionary = {}
-var _first_slider: HSlider
+var _first_control: Control
 ## Vrai pendant `refresh()` : les curseurs qu'on repositionne émettent
 ## `value_changed` comme si le joueur les avait bougés. Sans ce garde-fou, un
 ## simple affichage en classé réécrirait la préférence brute au plancher, et le
@@ -52,7 +56,7 @@ func screen_title() -> String:
 	return "Effets"
 
 func focus_seed() -> Control:
-	return _first_slider
+	return _first_control
 
 ## Dit à l'écran s'il parle d'un match classé. Idempotent : le rappeler avec la
 ## même valeur ne coûte qu'un rafraîchissement.
@@ -74,7 +78,7 @@ func build(body: VBoxContainer) -> void:
 	_context_label = Label.new()
 	_context_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_context_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_context_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_context_label, MenuTheme.T_COURANT)
 	body.add_child(_context_label)
 
 	# La table est plus haute que le corps d'un écran de hub, et elle grandira.
@@ -104,14 +108,14 @@ func _build_family_header(family: int) -> Control:
 
 	var title := Label.new()
 	title.text = EffectPolicy.family_label(family).to_upper()
-	title.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
+	Charte.enseigne(title, MenuTheme.T_APPUI)
 	title.add_theme_color_override("font_color", MenuTheme.GOLD)
 	box.add_child(title)
 
 	var rule := Label.new()
 	rule.text = EffectPolicy.family_rule(family)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rule.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(rule, MenuTheme.T_MENTION)
 	rule.add_theme_color_override("font_color", MenuTheme.DIM)
 	box.add_child(rule)
 
@@ -120,7 +124,7 @@ func _build_family_header(family: int) -> Control:
 func _build_row(id: String) -> Control:
 	var panel := PanelContainer.new()
 	panel.name = "Row_" + id
-	panel.add_theme_stylebox_override("panel", _row_style(false))
+	panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(MenuTheme.LINE, MenuWidgets.CORNER_BUTTON, 2))
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_top", MenuTheme.GAP_XS)
@@ -134,77 +138,73 @@ func _build_row(id: String) -> Control:
 	margin.add_child(column)
 
 	var line := HBoxContainer.new()
-	line.add_theme_constant_override("separation", MenuTheme.GAP_S)
+	line.add_theme_constant_override("separation", MenuTheme.GAP_XS)
 	column.add_child(line)
 
 	var name_label := Label.new()
 	name_label.text = EffectPolicy.label_of(id)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(name_label, MenuTheme.T_COURANT)
 	line.add_child(name_label)
 
-	var slider := HSlider.new()
+	var minus := MenuWidgets.make_step_button("‹")
+	line.add_child(minus)
+
+	var slider := MenuWidgets.make_slider(SLIDER_MIN, SLIDER_MAX, SLIDER_STEP, SLIDER_WIDTH, MenuTheme.P1)
 	slider.name = "Slider_" + id
-	slider.min_value = SLIDER_MIN
-	slider.max_value = SLIDER_MAX
-	slider.step = SLIDER_STEP
-	slider.custom_minimum_size = Vector2(SLIDER_WIDTH, 24)
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	slider.focus_mode = Control.FOCUS_ALL
-	slider.add_theme_stylebox_override("slider", _track_style())
-	slider.add_theme_stylebox_override("grabber_area", _fill_style())
-	slider.add_theme_stylebox_override("grabber_area_highlight", _fill_style())
 	line.add_child(slider)
+
+	var plus := MenuWidgets.make_step_button("›")
+	line.add_child(plus)
 
 	var value_label := Label.new()
 	value_label.custom_minimum_size = Vector2(64, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(value_label, MenuTheme.T_COURANT)
 	line.add_child(value_label)
 
 	var notice := Label.new()
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(notice, MenuTheme.T_MENTION)
 	notice.add_theme_color_override("font_color", MenuTheme.DIM)
 	column.add_child(notice)
 
 	slider.value_changed.connect(_on_slider_changed.bind(id))
-	# Un curseur n'a pas de cadre de focus dans le thème par défaut : c'est la
-	# ligne entière qui s'allume, sans quoi on perd le curseur de vue au stick.
-	slider.focus_entered.connect(func() -> void:
-		panel.add_theme_stylebox_override("panel", _row_style(true)))
-	slider.focus_exited.connect(func() -> void:
-		panel.add_theme_stylebox_override("panel", _row_style(false)))
 
-	if _first_slider == null:
-		_first_slider = slider
+	minus.pressed.connect(func() -> void:
+		_step_slider(id, -SLIDER_STEP)
+	)
+	plus.pressed.connect(func() -> void:
+		_step_slider(id, SLIDER_STEP)
+	)
 
-	_rows[id] = {"panel": panel, "slider": slider, "value": value_label, "notice": notice}
+	# Éclairer la ligne au focus
+	for btn in [minus, plus]:
+		btn.focus_entered.connect(func() -> void:
+			panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(MenuTheme.P1, MenuWidgets.CORNER_BUTTON, 2)))
+		btn.focus_exited.connect(func() -> void:
+			panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(MenuTheme.LINE, MenuWidgets.CORNER_BUTTON, 2)))
+
+	if _first_control == null:
+		_first_control = minus
+
+	_rows[id] = {
+		"panel": panel,
+		"slider": slider,
+		"value": value_label,
+		"notice": notice,
+		"minus": minus,
+		"plus": plus
+	}
 	return panel
 
-func _row_style(focused: bool) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = MenuTheme.SURFACE
-	box.set_border_width_all(2)
-	box.border_color = MenuTheme.P1 if focused else MenuTheme.LINE
-	box.set_corner_radius_all(10)
-	return box
-
-func _track_style() -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = MenuTheme.LINE
-	box.set_corner_radius_all(3)
-	box.content_margin_top = 3
-	box.content_margin_bottom = 3
-	return box
-
-func _fill_style() -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = MenuTheme.P1
-	box.set_corner_radius_all(3)
-	box.content_margin_top = 3
-	box.content_margin_bottom = 3
-	return box
+func _step_slider(id: String, delta: float) -> void:
+	if not _rows.has(id):
+		return
+	var slider: HSlider = _rows[id]["slider"]
+	var nouv: float = clampf(slider.value + delta, slider.min_value, slider.max_value)
+	if not is_equal_approx(nouv, slider.value):
+		slider.value = nouv
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE

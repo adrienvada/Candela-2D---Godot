@@ -193,7 +193,7 @@ static func _reflet(source: String) -> Texture2D:
 ## « pas encore cuite » de « cuite et non affichée », deux états qui se
 ## ressemblent trop à l'œil.
 static func poser_sur(bouton: Button, slug: String, teinte: Color,
-		cote: float = 20.0) -> bool:
+		cote: float = 32.0) -> bool:
 	return poser_texture(bouton, arme(slug), teinte, cote)
 
 

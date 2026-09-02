@@ -31,6 +31,10 @@ extends HubScreen
 ## C'est une décision d'Adrien (2026-08-24) : ce qui a cessé de fonctionner a
 ## cessé tout seul, et une gêne annoncée vaut mieux qu'une panne organisée.
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 const TITRE := "Mise à jour"
 
 ## Injectable pour les tests : sans doublure, l'écran prend l'autoload.
@@ -86,27 +90,15 @@ func build(body: VBoxContainer) -> void:
 func _ligne(body: VBoxContainer, taille: int, couleur: Color) -> Label:
 	var l := Label.new()
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.add_theme_font_size_override("font_size", taille)
+	Charte.appareil(l, taille)
 	l.add_theme_color_override("font_color", couleur)
 	l.visible = false
 	body.add_child(l)
 	return l
 
 func _build_bouton() -> Button:
-	var btn := Button.new()
+	var btn := MenuWidgets.make_button("Action", MenuTheme.P1, false, MenuTheme.T_COURANT, Vector2(260, 44))
 	btn.name = "Action"
-	btn.focus_mode = Control.FOCUS_ALL
-	btn.custom_minimum_size = Vector2(260, 44)
-	btn.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
-	btn.add_theme_color_override("font_color", MenuTheme.P1)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
-	normal.content_margin_left = MenuTheme.GAP_S
-	normal.content_margin_right = MenuTheme.GAP_S
-	btn.add_theme_stylebox_override("normal", normal)
 	btn.pressed.connect(_on_appui)
 	return btn
 

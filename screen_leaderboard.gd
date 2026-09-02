@@ -60,6 +60,10 @@ extends HubScreen
 # Une seule méthode plutôt que trois propriétés : l'écran n'a qu'un point de
 # contact à sonder, et les tests un seul point à simuler.
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 ## Méthode attendue de l'autoload. Absente, l'écran se rabat sur ma seule ligne.
 const SNAPSHOT_METHOD := "standing_snapshot"
 
@@ -295,7 +299,7 @@ func _make_cell(width: int, align: int, font_size: int) -> Label:
 	cell.horizontal_alignment = align
 	cell.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cell.clip_text = true
-	cell.add_theme_font_size_override("font_size", font_size)
+	Charte.appareil(cell, font_size)
 	if width > 0:
 		cell.custom_minimum_size = Vector2(width, 0)
 	else:
@@ -310,39 +314,15 @@ func _build_separator() -> Control:
 	return rule
 
 func _build_refresh_button() -> Button:
-	var btn := Button.new()
+	var btn := MenuWidgets.make_button("RAFRAÎCHIR", MenuTheme.P1, false, MenuTheme.T_COURANT, Vector2(240, 40))
 	btn.name = "Rafraichir"
-	btn.text = "RAFRAÎCHIR"
-	btn.focus_mode = Control.FOCUS_ALL
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	btn.custom_minimum_size = Vector2(240, 40)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = MenuTheme.P1
-	hover.bg_color = Color(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b, 0.08)
-	for state in ["hover", "focus", "pressed"]:
-		btn.add_theme_stylebox_override(state, hover)
-
 	btn.pressed.connect(refresh)
 	return btn
 
 func _row_style(mine: bool) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	# Ma ligne s'allume ; les autres restent au fond du panneau. C'est la seule
-	# façon de se retrouver dans dix lignes sans les lire une à une.
-	box.bg_color = Color(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b, 0.10) \
-		if mine else MenuTheme.SURFACE
-	box.set_border_width_all(1)
-	box.border_color = MenuTheme.P1 if mine else MenuTheme.LINE
-	box.set_corner_radius_all(6)
-	return box
+	var bg := Color(MenuTheme.P1.r, MenuTheme.P1.g, MenuTheme.P1.b, 0.10) if mine else MenuTheme.SURFACE
+	return MenuWidgets.make_panel_style(MenuTheme.P1 if mine else MenuTheme.LINE, 8, 1, bg)
 
 # ===========================================================================
 # AFFICHAGE

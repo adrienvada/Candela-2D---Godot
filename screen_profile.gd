@@ -33,10 +33,9 @@ extends HubScreen
 ## d'où deux registres séparés, la couleur d'alerte étant réservée aux échecs
 ## (voir `is_alarming()`).
 
-## Grammaire d'états empruntée telle quelle à `RankedIdentity` plutôt que
-## recopiée : deux énumérations jumelles finissent toujours par diverger, et
-## c'est l'écran qui mentirait. On passe par le chemin et non par un
-## `class_name` — cet autoload n'en a pas.
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 const RANKED := preload("res://ranked_identity.gd")
 
 const COPY_LABEL := "COPIER"
@@ -137,7 +136,7 @@ func build(body: VBoxContainer) -> void:
 func _build_identity_block(body: VBoxContainer) -> void:
 	_status = Label.new()
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_status, MenuTheme.T_COURANT)
 	body.add_child(_status)
 
 	# La ligne qui empêche « non configuré » de passer pour une panne : elle dit
@@ -145,7 +144,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_explain = Label.new()
 	_explain.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_explain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_explain.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_explain, MenuTheme.T_MENTION)
 	_explain.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_explain)
 
@@ -155,7 +154,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	body.add_child(name_row)
 
 	_nickname = Label.new()
-	_nickname.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
+	Charte.enseigne(_nickname, MenuTheme.T_TITRE)
 	_nickname.add_theme_color_override("font_color", MenuTheme.P1)
 	name_row.add_child(_nickname)
 
@@ -181,6 +180,9 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_rename_input.custom_minimum_size = Vector2(300, 40)
 	_rename_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rename_input.max_length = RecoveryCode.NICKNAME_MAX
+	_rename_input.add_theme_stylebox_override("normal", MenuWidgets.make_line_edit_style(false))
+	_rename_input.add_theme_stylebox_override("focus", MenuWidgets.make_line_edit_style(true))
+	Charte.appareil(_rename_input, MenuTheme.T_COURANT)
 	_rename_input.text_submitted.connect(func(_t: String) -> void: _request_rename())
 	_rename_row.add_child(_rename_input)
 
@@ -195,7 +197,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	_rename_feedback = Label.new()
 	_rename_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rename_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rename_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_rename_feedback, MenuTheme.T_MENTION)
 	_rename_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_rename_feedback)
 
@@ -204,7 +206,7 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	# chiffre inventé.
 	_standing = Label.new()
 	_standing.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_standing.add_theme_font_size_override("font_size", MenuTheme.T_APPUI)
+	Charte.appareil(_standing, MenuTheme.T_APPUI)
 	body.add_child(_standing)
 
 func _build_code_block(body: VBoxContainer) -> void:
@@ -216,7 +218,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	body.add_child(code_row)
 
 	_code = Label.new()
-	_code.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
+	Charte.enseigne(_code, MenuTheme.T_TITRE)
 	_code.add_theme_color_override("font_color", MenuTheme.GOLD)
 	code_row.add_child(_code)
 
@@ -229,7 +231,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	# du joueur au moment précis où il recopie douze caractères à la main.
 	_copy_feedback = Label.new()
 	_copy_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_copy_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_copy_feedback, MenuTheme.T_MENTION)
 	_copy_feedback.add_theme_color_override("font_color", MenuTheme.GOLD)
 	body.add_child(_copy_feedback)
 
@@ -237,7 +239,7 @@ func _build_code_block(body: VBoxContainer) -> void:
 	_hint.text = "Sans ce code, un changement d'ordinateur repart d'un profil vierge."
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hint.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_hint, MenuTheme.T_MENTION)
 	_hint.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_hint)
 
@@ -253,10 +255,9 @@ func _build_link_block(body: VBoxContainer) -> void:
 	_link_input.custom_minimum_size = Vector2(300, 40)
 	_link_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_link_input.placeholder_text = "CODE À %d CARACTÈRES" % RecoveryCode.LENGTH
-	# Volontairement pas de `max_length` : la longueur se règle au nettoyage.
-	# Un plafond de caractères s'appliquerait AVANT `sanitize`, donc à un collage
-	# encore truffé d'espaces et de tirets — il en tronquerait la fin, et le
-	# joueur verrait disparaître les derniers caractères d'un code pourtant bon.
+	_link_input.add_theme_stylebox_override("normal", MenuWidgets.make_line_edit_style(false))
+	_link_input.add_theme_stylebox_override("focus", MenuWidgets.make_line_edit_style(true))
+	Charte.appareil(_link_input, MenuTheme.T_COURANT)
 	_link_input.text_changed.connect(_on_link_text_changed)
 	link_row.add_child(_link_input)
 
@@ -266,14 +267,14 @@ func _build_link_block(body: VBoxContainer) -> void:
 
 	_link_progress = Label.new()
 	_link_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_link_progress.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_link_progress, MenuTheme.T_MENTION)
 	_link_progress.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_link_progress)
 
 	_link_feedback = Label.new()
 	_link_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_link_feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_link_feedback.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_link_feedback, MenuTheme.T_MENTION)
 	_link_feedback.add_theme_color_override("font_color", MenuTheme.DIM)
 	body.add_child(_link_feedback)
 
@@ -281,41 +282,12 @@ func _make_section(text: String, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(label, MenuTheme.T_COURANT, Charte.POIDS_APPUI)
 	label.add_theme_color_override("font_color", color)
 	return label
 
 func _make_button(text: String, accent: Color) -> Button:
-	var btn := Button.new()
-	btn.text = text
-	btn.focus_mode = Control.FOCUS_ALL
-	btn.custom_minimum_size = Vector2(150, 40)
-	btn.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
-	btn.add_theme_color_override("font_color", accent)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
-	normal.content_margin_left = MenuTheme.GAP_S
-	normal.content_margin_right = MenuTheme.GAP_S
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var lit := normal.duplicate() as StyleBoxFlat
-	lit.border_color = accent
-	lit.bg_color = Color(accent.r, accent.g, accent.b, 0.08)
-	for key in ["hover", "focus", "pressed"]:
-		btn.add_theme_stylebox_override(key, lit)
-
-	# Un bouton désactivé est déjà hors d'atteinte du curseur ; encore faut-il
-	# qu'il en ait l'air, sinon on croit à un appui perdu.
-	var off := normal.duplicate() as StyleBoxFlat
-	off.bg_color = Color(MenuTheme.SURFACE.r, MenuTheme.SURFACE.g,
-		MenuTheme.SURFACE.b, MenuTheme.SURFACE.a * 0.5)
-	btn.add_theme_stylebox_override("disabled", off)
-	btn.add_theme_color_override("font_disabled_color", MenuTheme.DIM)
-	return btn
+	return MenuWidgets.make_button(text, accent, false, MenuTheme.T_COURANT, Vector2(150, 40))
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE

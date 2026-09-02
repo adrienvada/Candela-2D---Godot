@@ -17,13 +17,14 @@ class_name MapGallery
 extends Control
 
 const Charte := preload("res://charte.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 
 ## Émis quand le joueur choisit une carte (la sélection est déjà appliquée à MapData).
 signal map_chosen(map_id: String)
 ## Émis juste avant de basculer vers l'éditeur de cartes.
 signal editor_requested
 
-const TILE_SIZE := Vector2(160, 160)
+const TILE_SIZE := Vector2(340, 108)
 ## ⚠️ **96 px, et la vignette s'affichait sur ~124 : elle était AGRANDIE.**
 ##
 ## C'est ce qui avait justifié un `texture_filter = NEAREST` — « pixels francs,
@@ -112,7 +113,7 @@ func _build() -> void:
 	root.add_child(_scroll)
 
 	_grid = GridContainer.new()
-	_grid.columns = 4
+	_grid.columns = 2
 	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_grid.add_theme_constant_override("h_separation", TILE_GAP)
 	_grid.add_theme_constant_override("v_separation", TILE_GAP)
@@ -155,17 +156,24 @@ func _build() -> void:
 	root.add_child(_build_actions())
 	root.add_child(_build_toast())
 
-## La galerie vit dans le panneau de droite du hub, en face de l'entrée « CHANGER
-## DE CARTE » qui la fait apparaître. Le grand titre « C A R T E S » qu'elle
-## portait redisait ce que l'entrée sous le curseur annonce déjà, et il coûtait
-## une rangée de vignettes en hauteur.
+## En-tête standardisé de la galerie.
 func _build_header() -> Control:
+	var head := VBoxContainer.new()
+	head.add_theme_constant_override("separation", Charte.GAP_XXS)
+
+	var title := Label.new()
+	title.text = "GALERIE DES ARÈNES"
+	Charte.enseigne(title, Charte.T_TITRE)
+	head.add_child(title)
+
 	var hint := Label.new()
-	hint.text = "La carte choisie reste active toute la session"
+	hint.text = "La carte choisie reste active pour tous les duels de la session."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", Charte.T_MENTION)
+	Charte.appareil(hint, Charte.T_MENTION)
 	hint.add_theme_color_override("font_color", COLOR_DIM)
-	return hint
+	head.add_child(hint)
+
+	return head
 
 func _build_import_row() -> Control:
 	_import_row = HBoxContainer.new()
@@ -176,6 +184,9 @@ func _build_import_row() -> Control:
 	_import_field.placeholder_text = "Collez un code CANDELA-…"
 	_import_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_import_field.custom_minimum_size = Vector2(0, 40)
+	_import_field.add_theme_stylebox_override("normal", MenuWidgets.make_line_edit_style(false))
+	_import_field.add_theme_stylebox_override("focus", MenuWidgets.make_line_edit_style(true))
+	Charte.appareil(_import_field, Charte.T_COURANT)
 	_import_field.text_submitted.connect(func(_t: String) -> void: _confirm_import())
 	_import_row.add_child(_import_field)
 
@@ -190,9 +201,13 @@ func _build_import_row() -> Control:
 	return _import_row
 
 func _build_actions() -> Control:
+	var toolbar := PanelContainer.new()
+	toolbar.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 1))
+
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", Charte.GAP_S)
+	toolbar.add_child(actions)
 
 	_btn_import = _make_action_button("IMPORTER UN CODE", COLOR_P1)
 	_btn_import.pressed.connect(_open_import)
@@ -213,27 +228,18 @@ func _build_actions() -> Control:
 	_btn_editor.pressed.connect(_open_editor)
 	actions.add_child(_btn_editor)
 
-	return actions
+	return toolbar
 
 func _build_toast() -> Control:
 	_toast_panel = PanelContainer.new()
 	_toast_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_toast_panel.modulate.a = 0.0
 	_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE, 0.96)
-	style.set_border_width_all(1)
-	style.border_color = Charte.ACIER * 0.5
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	_toast_panel.add_theme_stylebox_override("panel", style)
+	_toast_panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(
+		Charte.ACIER * 0.5, MenuWidgets.CORNER_BADGE, 1, Color(Charte.SURFACE, 0.96)))
 
 	_toast_label = Label.new()
-	_toast_label.add_theme_font_size_override("font_size", Charte.T_MENTION)
+	Charte.appareil(_toast_label, Charte.T_MENTION)
 	_toast_panel.add_child(_toast_label)
 
 	return _toast_panel
@@ -243,59 +249,14 @@ func _build_toast() -> Control:
 # ---------------------------------------------------------------------------
 
 func _build_styles() -> void:
-	_style_normal = StyleBoxFlat.new()
-	_style_normal.bg_color = Charte.SURFACE
-	_style_normal.set_border_width_all(2)
-	_style_normal.border_color = Charte.LINE
-	_style_normal.set_corner_radius_all(10)
-	_style_normal.content_margin_left = 8
-	_style_normal.content_margin_right = 8
-	_style_normal.content_margin_top = 8
-	_style_normal.content_margin_bottom = 8
-
-	_style_hover = _style_normal.duplicate() as StyleBoxFlat
-	_style_hover.border_color = Charte.ACIER * 0.8
-	_style_hover.bg_color = Color(Charte.SURFACE * 1.5, 0.96)
-
-	_style_selected = _style_normal.duplicate() as StyleBoxFlat
-	_style_selected.border_color = COLOR_P1
-	_style_selected.bg_color = Color(Charte.BLEU * 0.13, 0.96)
-	_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.35)
-	_style_selected.shadow_size = 8
+	_style_normal = MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 2)
+	_style_hover = MenuWidgets.make_panel_style(Charte.ACIER, MenuWidgets.CORNER_PANEL, 2)
+	_style_selected = MenuWidgets.make_panel_style(COLOR_P1, MenuWidgets.CORNER_PANEL, 2)
+	_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.4)
+	_style_selected.shadow_size = MenuWidgets.SHADOW_SIZE
 
 func _make_action_button(label: String, accent: Color) -> Button:
-	var btn := Button.new()
-	btn.text = label
-	btn.custom_minimum_size = Vector2(0, 40)
-	btn.add_theme_font_size_override("font_size", Charte.T_COURANT)
-
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Charte.SURFACE
-	normal.set_border_width_all(2)
-	normal.border_color = Color(accent.r, accent.g, accent.b, 0.45)
-	normal.set_corner_radius_all(8)
-	normal.content_margin_left = 20
-	normal.content_margin_right = 20
-	normal.content_margin_top = 8
-	normal.content_margin_bottom = 8
-	btn.add_theme_stylebox_override("normal", normal)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = accent
-	hover.bg_color = Color(accent.r, accent.g, accent.b, 0.14)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_stylebox_override("focus", hover)
-
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(accent.r, accent.g, accent.b, 0.3)
-	pressed.border_color = Charte.HALOGENE
-	btn.add_theme_stylebox_override("pressed", pressed)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.border_color = Charte.LINE * 0.85
-	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Charte.DIM * 0.68)
-
+	var btn := MenuWidgets.make_button(label, accent, false, Charte.T_COURANT, Vector2(0, 40))
 	btn.pressed.connect(_press_feedback.bind(btn))
 	return btn
 
@@ -348,6 +309,7 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	tile.toggle_mode = true
 	tile.button_group = _tile_group
 	tile.custom_minimum_size = TILE_SIZE
+	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tile.focus_mode = Control.FOCUS_ALL
 	tile.tooltip_text = "%s — %d×%d, %d murs" % [
 		String(entry["name"]), grid_size.x, grid_size.y, int(entry["wall_count"]),
@@ -361,28 +323,23 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	tile.add_theme_stylebox_override("hover_pressed", _style_selected)
 	tile.pressed.connect(_on_tile_pressed.bind(map_id))
 
-	var box := VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", Charte.GAP_XXS)
-	tile.add_child(box)
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", Charte.GAP_S)
+	tile.add_child(row)
 
-	# DA4.8 — **la vignette est MONTÉE dans un cadre**, elle ne flotte plus.
-	#
-	# Une image posée sur un fond se lit comme une image ; la même image dans un
-	# cadre qui la serre se lit comme un **objet** — une plaque, une pièce qu'on
-	# choisit. C'est le mot exact de l'item : « cadre, ombre, titre composé ».
-	# Le fond du cadre est le noir du monde : ce qu'on regarde est une arène.
+	# Cadre vitré de la miniature à gauche
 	var cadre := PanelContainer.new()
-	cadre.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cadre.custom_minimum_size = Vector2(88, 88)
 	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var cadre_style := StyleBoxFlat.new()
 	cadre_style.bg_color = Charte.NOIR
 	cadre_style.set_border_width_all(1)
 	cadre_style.border_color = Charte.LINE
-	cadre_style.set_corner_radius_all(4)
+	cadre_style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
 	cadre.add_theme_stylebox_override("panel", cadre_style)
-	box.add_child(cadre)
+	row.add_child(cadre)
 
 	var thumb := TextureRect.new()
 	thumb.texture = MapThumbnail.render_fit(entry["data"], THUMB_PX)
@@ -391,73 +348,76 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cadre.add_child(thumb)
 
-	# **La provenance quitte la pile de texte pour devenir une pastille sur le
-	# cadre.** Elle y gagne deux fois : le bloc de texte passe de trois lignes
-	# centrées à deux — un titre et sa légende, donc une hiérarchie — et la
-	# mention se lit sans quitter l'image qu'elle qualifie.
-	var pastille := Label.new()
-	pastille.text = "OFFICIELLE" if source == "builtin" else "PERSO"
-	pastille.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT,
-		Control.PRESET_MODE_MINSIZE, Charte.GAP_XXS)
-	pastille.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	Charte.appareil(pastille, Charte.T_MENTION)
-	pastille.add_theme_color_override("font_color",
-		Charte.AMBRE if source == "builtin" else COLOR_P2)
-	pastille.add_theme_color_override("font_outline_color", Charte.NOIR)
-	# Sans contour, une pastille claire posée sur une arène claire disparaît :
-	# la vignette n'a pas de zone calme réservée, elle montre ce qu'elle montre.
-	pastille.add_theme_constant_override("outline_size", 4)
-	pastille.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cadre.add_child(pastille)
+	# Colonne de textes et badge à droite
+	var texts := VBoxContainer.new()
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	texts.add_theme_constant_override("separation", Charte.GAP_XXS)
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(texts)
+
+	var top_row := HBoxContainer.new()
+	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_row.add_theme_constant_override("separation", Charte.GAP_XS)
+	texts.add_child(top_row)
 
 	var name_label := Label.new()
 	name_label.text = String(entry["name"])
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Le titre monte d'une graisse : c'est ce qui le distingue de sa légende sans
-	# lui donner une taille de plus, l'échelle n'ayant que six crans.
-	Charte.appareil(name_label, Charte.T_COURANT, Charte.POIDS_APPUI)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Charte.enseigne(name_label, Charte.T_APPUI)
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_label.clip_text = true
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(name_label)
+	top_row.add_child(name_label)
+
+	# Pastille d'origine en badge vitré
+	var badge_panel := PanelContainer.new()
+	badge_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var badge_col: Color = Charte.AMBRE if source == "builtin" else COLOR_P2
+	badge_panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(
+		badge_col * 0.8, MenuWidgets.CORNER_BADGE, 1, Color(Charte.SURFACE, 0.88)))
+
+	var pastille := Label.new()
+	pastille.text = "OFFICIELLE" if source == "builtin" else "PERSO"
+	Charte.appareil(pastille, Charte.T_MENTION)
+	pastille.add_theme_color_override("font_color", badge_col)
+	pastille.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_panel.add_child(pastille)
+	top_row.add_child(badge_panel)
 
 	var meta := Label.new()
 	meta.text = "%d × %d · %d murs" % [grid_size.x, grid_size.y,
 		int(entry["wall_count"])]
-	meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Appareil : ces nombres changent d'une vignette à l'autre, et une colonne de
-	# chiffres qui ne s'aligne pas se lit comme un alignement raté.
 	Charte.appareil(meta, Charte.T_MENTION)
 	meta.add_theme_color_override("font_color", COLOR_DIM)
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(meta)
+	texts.add_child(meta)
 
 	return tile
 
 func _make_create_tile() -> Button:
 	var tile := Button.new()
 	tile.custom_minimum_size = TILE_SIZE
+	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tile.focus_mode = Control.FOCUS_ALL
 	tile.tooltip_text = "Créer une nouvelle carte dans l'éditeur"
 
-	var dashed := _style_normal.duplicate() as StyleBoxFlat
+	var dashed := MenuWidgets.make_panel_style(Charte.LINE * 0.7, MenuWidgets.CORNER_PANEL, 2)
 	dashed.bg_color = Color(Charte.SURFACE * 0.6, 0.7)
-	dashed.border_color = Charte.ACIER * 0.5
 	tile.add_theme_stylebox_override("normal", dashed)
 	tile.add_theme_stylebox_override("focus", dashed)
 
-	var hover := dashed.duplicate() as StyleBoxFlat
-	hover.border_color = Charte.AMBRE
+	var hover := MenuWidgets.make_panel_style(Charte.AMBRE, MenuWidgets.CORNER_PANEL, 2)
 	hover.bg_color = Color(Charte.AMBRE * 0.1, 0.9)
 	tile.add_theme_stylebox_override("hover", hover)
 	tile.add_theme_stylebox_override("pressed", hover)
 
-	var box := VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", Charte.GAP_XS)
-	tile.add_child(box)
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", Charte.GAP_S)
+	tile.add_child(row)
 
 	var plus := Label.new()
 	plus.text = "+"
@@ -465,14 +425,15 @@ func _make_create_tile() -> Button:
 	plus.add_theme_font_size_override("font_size", Charte.T_VERDICT)
 	plus.add_theme_color_override("font_color", Charte.AMBRE)
 	plus.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(plus)
+	row.add_child(plus)
 
 	var label := Label.new()
-	label.text = "CRÉER"
+	label.text = "CRÉER UNE NOUVELLE ARÈNE"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", Charte.T_COURANT)
+	Charte.enseigne(label, Charte.T_COURANT)
+	label.add_theme_color_override("font_color", Charte.AMBRE)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(label)
+	row.add_child(label)
 
 	tile.pressed.connect(_open_editor)
 	return tile

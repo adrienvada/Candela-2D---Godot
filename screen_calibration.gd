@@ -63,6 +63,10 @@ extends HubScreen
 ## n'en saura jamais rien. Un réglage hors fenêtre reste dans le jeu, visible,
 ## annoncé au joueur et signalé dans la charge utile (`dans_la_fenetre`).
 
+const Charte := preload("res://charte.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
+
 # ---------------------------------------------------------------------------
 # CE QUI SORT DE L'ÉCRAN
 # ---------------------------------------------------------------------------
@@ -370,7 +374,7 @@ func build(body: VBoxContainer) -> void:
 	var protocole := Label.new()
 	protocole.name = "Protocole"
 	protocole.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	protocole.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(protocole, MenuTheme.T_COURANT)
 	protocole.add_theme_color_override("font_color", MenuTheme.DIM)
 	protocole.text = PROTOCOLE
 	body.add_child(protocole)
@@ -393,16 +397,7 @@ func build(body: VBoxContainer) -> void:
 func _build_field() -> Control:
 	var panel := PanelContainer.new()
 	panel.name = "Champ"
-	var style := StyleBoxFlat.new()
-	style.bg_color = field_black()
-	style.set_border_width_all(2)
-	style.border_color = MenuTheme.LINE
-	style.set_corner_radius_all(10)
-	style.content_margin_top = MenuTheme.GAP_S
-	style.content_margin_bottom = MenuTheme.GAP_XS
-	style.content_margin_left = MenuTheme.GAP_S
-	style.content_margin_right = MenuTheme.GAP_S
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(MenuTheme.LINE, MenuWidgets.CORNER_PANEL, 2, field_black()))
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", MenuTheme.GAP_XS)
@@ -425,7 +420,7 @@ func _build_field() -> Control:
 		var mark := Label.new()
 		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		mark.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+		Charte.appareil(mark, MenuTheme.T_MENTION)
 		match i:
 			INDEX_REVEAL:
 				mark.text = MARK_REVEAL
@@ -446,7 +441,7 @@ func _build_verdict() -> Control:
 	_verdict_label.name = "Verdict"
 	_verdict_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_verdict_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_verdict_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_verdict_label, MenuTheme.T_COURANT)
 	return _verdict_label
 
 ## La course, et la réponse à la question « que fait gauche/droite ? ».
@@ -477,25 +472,15 @@ func _build_course() -> Control:
 	middle.add_theme_constant_override("separation", MenuTheme.GAP_XXS)
 	row.add_child(middle)
 
-	_gauge = HSlider.new()
+	_gauge = MenuWidgets.make_slider(0.0, 100.0, NOTCH * 100.0, 300, MenuTheme.P1)
 	_gauge.name = "Jauge"
-	_gauge.min_value = 0.0
-	_gauge.max_value = 100.0
-	# Le pas de la jauge est celui des boutons : si quelqu'un lui rendait un jour
-	# le focus, gauche/droite tomberait exactement sur les mêmes crans.
-	_gauge.step = NOTCH * 100.0
-	_gauge.custom_minimum_size = Vector2(300, 24)
-	_gauge.focus_mode = Control.FOCUS_NONE
-	_gauge.add_theme_stylebox_override("slider", _track_style(MenuTheme.LINE))
-	_gauge.add_theme_stylebox_override("grabber_area", _track_style(MenuTheme.P1))
-	_gauge.add_theme_stylebox_override("grabber_area_highlight", _track_style(MenuTheme.P1))
 	_gauge.value_changed.connect(_on_gauge_changed)
 	middle.add_child(_gauge)
 
 	_value_label = Label.new()
 	_value_label.name = "Valeur"
 	_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_value_label.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
+	Charte.appareil(_value_label, MenuTheme.T_COURANT)
 	middle.add_child(_value_label)
 
 	_btn_brighter = _make_button("BoutonClair", LABEL_BRIGHTER)
@@ -513,7 +498,7 @@ func _build_footer() -> Control:
 	_bound_notice.name = "BoutDeCourse"
 	_bound_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_bound_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bound_notice.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(_bound_notice, MenuTheme.T_MENTION)
 	_bound_notice.add_theme_color_override("font_color", MenuTheme.WARN)
 	_bound_notice.text = BOUND_NOTICE
 	column.add_child(_bound_notice)
@@ -532,7 +517,7 @@ func _build_footer() -> Control:
 	footer.name = "Note"
 	footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	footer.add_theme_font_size_override("font_size", MenuTheme.T_MENTION)
+	Charte.appareil(footer, MenuTheme.T_MENTION)
 	footer.add_theme_color_override("font_color", MenuTheme.DIM)
 	footer.text = FOOTER
 	column.add_child(footer)
@@ -540,21 +525,9 @@ func _build_footer() -> Control:
 	return column
 
 func _make_button(node_name: String, text: String) -> Button:
-	var button := Button.new()
+	var button := MenuWidgets.make_button(text, MenuTheme.ACCENT, false, MenuTheme.T_COURANT, Vector2(180, 40))
 	button.name = node_name
-	button.text = text
-	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_size_override("font_size", MenuTheme.T_COURANT)
-	button.custom_minimum_size = Vector2(180, 40)
 	return button
-
-func _track_style(color: Color) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.set_corner_radius_all(3)
-	box.content_margin_top = 3
-	box.content_margin_bottom = 3
-	return box
 
 # ---------------------------------------------------------------------------
 # AFFICHAGE
