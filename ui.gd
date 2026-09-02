@@ -49,6 +49,14 @@ const MenuWidgets := preload("res://menu_widgets.gd")
 ## fait. Payé le 2026-08-25.
 const Brouillage := preload("res://brouillage.gd")
 
+## Le voile d'éblouissement — validé, étalonné et fusionné le 2026-08-27, branché
+## ici le 2026-09-01 sur demande d'Adrien (« j'aimerais voir le voile »).
+##
+## **Préchargé et non chargé à la volée** : un `Shader.new()` compilé au premier
+## éblouissement produirait un hoquet pile sur l'action décisive — la faute déjà
+## payée par les shaders de mort de `player.gd`.
+const SHADER_VOILE := preload("res://voile_eblouissement.gdshader")
+
 const COLOR_P1 := Charte.BLEU
 const COLOR_P2 := Charte.ROUGE
 const COLOR_GOLD := Charte.AMBRE
@@ -373,6 +381,15 @@ var p1_hp_bg: ProgressBar
 var p1_cd: CircularCooldown
 var p1_cd_label: Label
 var p1_torch: PanelContainer
+## Le temps du voile, en secondes. Le shader le reçoit en uniforme plutôt que
+## d'utiliser `TIME`, pour que le banc puisse figer l'animation et qu'une suite
+## puisse poser un instant précis.
+var _voile_temps: float = 0.0
+
+## Écran scindé ? **Défaut à `true`** : avant le premier `disposer_hud()`, mieux
+## vaut supposer deux vues et n'en montrer qu'une de trop que l'inverse.
+var _voile_scinde: bool = true
+
 var p1_dazzle: ColorRect
 
 var p2_hp: ProgressBar
@@ -823,6 +840,7 @@ func _pulse_press(control: Control) -> void:
 # ===========================================================================
 
 func _process(delta: float) -> void:
+	_voile_temps += delta
 	_suivre_le_curseur_systeme()
 	_update_network_status()
 	_sync_launch_entries()
@@ -1560,6 +1578,80 @@ func _activate(player: int) -> void:
 # CONSTRUCTION — HUD
 # ===========================================================================
 
+## Un rectangle de voile, avec son propre `ShaderMaterial`.
+##
+## ⚠️ **Un matériau PAR rectangle, jamais partagé.** Les deux moitiés d'un écran
+## scindé reçoivent des niveaux, des relèvements et des largeurs différents ; un
+## matériau commun ferait gagner la dernière écriture, donc le voile de J2
+## s'afficherait chez J1 une image sur deux, sans qu'aucune erreur ne le dise.
+##
+## `color` reste blanc et ne sert plus : le shader écrit `COLOR` en entier, teinte
+## comprise. On le laisse à blanc plutôt qu'à `HALOGENE` pour que personne ne
+## croie que cette ligne décide encore de quelque chose.
+func _forger_voile(parent: Control, nom: String) -> ColorRect:
+	var rect := ColorRect.new()
+	rect.name = nom
+	rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rect.color = Color.WHITE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# ⚠️ **Il reste VISIBLE au repos, et l'optimisation évidente est un piège.**
+	#
+	# Un `ColorRect` d'alpha nul se dessine quand même : le cacher hors
+	# éblouissement paraît gratuit. Ça ne l'est pas. Les deux voiles sont les
+	# enfants d'un `HBoxContainer` en `SIZE_EXPAND_FILL` : **cacher l'un donne
+	# TOUTE la largeur à l'autre.** En écran scindé, dès que J1 n'était pas
+	# ébloui, le voile de J2 débordait sur la moitié de J1.
+	#
+	# Attrapé par `planche_eblouissement` — « ✗ la vue de J1 blanchit quand J2
+	# est ébloui (+0,12) » —, c'est-à-dire par le contrôle d'ÉQUITÉ que ce banc
+	# porte exprès, et pas par un test de rendu. La propriété violée n'était pas
+	# esthétique : un joueur voyait sa moitié blanchir pour une lumière qu'il ne
+	# recevait pas.
+	#
+	# La visibilité ne sert donc qu'à distinguer écran scindé et vue unique —
+	# une fois par manche, jamais par image.
+	var mat := ShaderMaterial.new()
+	mat.shader = SHADER_VOILE
+	mat.set_shader_parameter("mode", 1)
+	mat.set_shader_parameter("teinte", Vector3(
+		Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b))
+	rect.material = mat
+	parent.add_child(rect)
+	return rect
+
+
+## Pose le voile d'un joueur pour cette image, ou l'éteint.
+##
+## ⚠️ **`victime` subit, `source` éblouit — et les intervertir donne un effet
+## cohérent et faux.** Le niveau vient de celui qui prend la lumière, le
+## relèvement de celui qui la tient : on pencherait sinon du côté opposé, ce qui
+## est la même famille d'erreur que « l'intensité vient du regardeur, la position
+## de l'émetteur » qui a coûté une soirée au chantier brouillage.
+##
+## Le relèvement se prend dans le MONDE et sert tel quel à l'écran : les caméras
+## du duel ne tournent jamais (`game_state.gd`), donc les deux angles sont le
+## même. C'est ce qui permet au shader de ne recevoir qu'un scalaire — et de ne
+## pas pouvoir se tromper de caméra.
+func _poser_voile(rect: ColorRect, victime, source) -> void:
+	if rect == null:
+		return
+	var mat := rect.material as ShaderMaterial
+	if mat == null:
+		return
+	var niveau: float = 0.0
+	if victime != null:
+		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
+	mat.set_shader_parameter("niveau", niveau)
+	if niveau <= 0.001:
+		return
+	mat.set_shader_parameter("temps", _voile_temps)
+	var taille := rect.size
+	mat.set_shader_parameter("aspect", taille.x / maxf(taille.y, 1.0))
+	if source != null and victime != null:
+		mat.set_shader_parameter("relevement",
+			(source.global_position - victime.global_position).angle())
+
+
 func _build_hud() -> void:
 	var scanline := ColorRect.new()
 	scanline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1605,17 +1697,8 @@ func _build_hud() -> void:
 	dazzle_hbox.add_theme_constant_override("separation", 0)
 	add_child(dazzle_hbox)
 
-	p1_dazzle = ColorRect.new()
-	p1_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p1_dazzle.color = Color(Charte.HALOGENE, 0.0)
-	p1_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dazzle_hbox.add_child(p1_dazzle)
-
-	p2_dazzle = ColorRect.new()
-	p2_dazzle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p2_dazzle.color = Color(Charte.HALOGENE, 0.0)
-	p2_dazzle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dazzle_hbox.add_child(p2_dazzle)
+	p1_dazzle = _forger_voile(dazzle_hbox, "VoileP1")
+	p2_dazzle = _forger_voile(dazzle_hbox, "VoileP2")
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -5253,6 +5336,7 @@ func disposer_hud(entrainement: bool = false) -> void:
 	if entrainement:
 		hud_panneau_p1.visible = true
 		hud_panneau_p2.visible = false
+		_voile_scinde = false
 		hud_panneau_p1.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		if hud_rangee.get_child(0) != hud_panneau_p1:
 			hud_rangee.move_child(hud_panneau_p1, 0)
@@ -5273,6 +5357,7 @@ func disposer_hud(entrainement: bool = false) -> void:
 		hud_rangee.move_child(hud_panneau_p1, 0)
 	hud_panneau_p1.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	hud_panneau_p2.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_voile_scinde = not en_ligne
 
 func _pause_freezes_world() -> bool:
 	return NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN
@@ -5481,8 +5566,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		p1_dazzle.color = Color(Charte.HALOGENE,
-			p1.dazzle_amount * Brouillage.VOILE_FACTEUR)
+		_poser_voile(p1_dazzle, p1, p2)
 
 	if p2:
 		if p2.hp < p2_target_hp:
@@ -5500,8 +5584,27 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		p2_dazzle.color = Color(Charte.HALOGENE,
-			p2.dazzle_amount * Brouillage.VOILE_FACTEUR)
+		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
+		#
+		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le
+		# joueur local puis l'adversaire, et `dazzle_amount` de l'adversaire est
+		# répliqué (`net_dazzle`). En ligne, la moitié droite de l'écran LOCAL
+		# blanchissait donc quand c'était l'ADVERSAIRE qui était ébloui — une
+		# information qu'il n'avait pas payée, dans un jeu dont la règle est que
+		# la seule information est la lumière.
+		#
+		# Signalé le 2026-08-27 à la lecture du code, réglé ici au branchement :
+		# il n'existe aucune version propre du voile qui laisse ce comportement.
+		# Caché, l'`HBoxContainer` donne toute la largeur au voile local, qui
+		# retrouve du même coup le bon rapport d'aspect.
+		# ⚠️ **Le `= _voile_scinde` est écrit dans les DEUX sens exprès.** Un
+		# `if` qui ne cache que dans un cas laisse le rectangle éteint pour
+		# toujours dès qu'on revient d'une partie en ligne à un écran scindé,
+		# dans la même session — et le voile de J2 disparaît sans que rien ne le
+		# signale. Poser l'état complet à chaque image coûte une affectation.
+		p2_dazzle.visible = _voile_scinde
+		if _voile_scinde:
+			_poser_voile(p2_dazzle, p2, p1)
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé
