@@ -256,6 +256,17 @@ const EFFECTS := {
 		"nom": "Poussière dans le faisceau",
 		"phrase": "La poussière rend un faisceau visible de côté : une torche se repère sans être pointée sur vous. L'effacer rendrait les torches plus discrètes.",
 	},
+	# Chantier FUSÉE (FU1). Le strobe d'agonie est une information de match (qui
+	# a bougé entre deux flashs se lit par différence) : MONDE, avec un plancher.
+	# À intensité réduite, les flashs s'aplatissent sur un fondu continu — le
+	# TEMPO reste porté par le son, identique pour tous, pour que la variante
+	# photosensibilité ne retire aucune information de timing (fusee_modele.gd).
+	"fusee_agonie": {
+		"famille": Family.MONDE,
+		"plancher": 0.5,
+		"nom": "Agonie de la fusée",
+		"phrase": "Les derniers flashs d'une fusée photographient la pièce pour les deux joueurs. Les aplatir n'éteint que l'image : le rythme reste dans le son.",
+	},
 }
 
 # ---------------------------------------------------------------------------

@@ -957,7 +957,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -979,7 +979,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -997,13 +997,14 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
-		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed())
+		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
+		input_provider.is_flare_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1384,6 +1385,21 @@ func _physics_process(delta):
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
 
+	# Le lancer de fusée suit la même autorité que le tir. Front montant sur un
+	# bit MAINTENU dans la commande réseau : un « just_pressed » d'un seul tick
+	# se perd en unreliable — c'est le patron `_detente_pressee`. Un front pris
+	# pendant le rechargement reste EN ATTENTE (le drapeau ne se pose qu'au
+	# lancer ou au relâchement) : bouton tenu, la fusée part dès la fin du
+	# cooldown, chez l'hôte comme dans la prédiction — jamais tir et lancer
+	# dans la même image, le tir arme son cooldown en premier.
+	var fusee_presse := input_provider.is_flare_pressed()
+	if not fusee_presse:
+		_fusee_pressee = false
+	elif can_move and not _fusee_pressee and shoot_cooldown <= 0 \
+			and state and state.fusee_disponible(player_id):
+		lancer_fusee()
+		_fusee_pressee = true
+
 ## V4.4 — presser la détente pendant le rechargement ne produisait RIEN.
 ##
 ## Ni son, ni image, ni vibration : le joueur ne pouvait pas distinguer « j'ai
@@ -1411,12 +1427,22 @@ func _update_aim_line() -> void:
 var tir_a_sec: float = 0.0
 ## État précédent de la détente, pour ne réagir qu'au front montant.
 var _detente_pressee: bool = false
+## Même chose pour le bouton de fusée.
+var _fusee_pressee: bool = false
 
 func shoot():
 	shoot_cooldown = current_weapon.cooldown
 	# V1.5 — coup ferme et bref dans la manette du tireur.
 	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
 	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
+
+## Le lancer désarme : pas de tir pendant l'animation (FuseeModele.DESARMEMENT).
+## Le cooldown de tir existant porte ce désarmement — non répliqué, simulé
+## identiquement chez l'hôte et dans la prédiction client, comme pour le tir.
+## L'arbitrage du stock et le spawn restent chez `game_state` (l'hôte).
+func lancer_fusee():
+	shoot_cooldown = maxf(shoot_cooldown, FuseeModele.DESARMEMENT)
+	get_tree().call_group("game_state", "spawn_fusee", self, global_position, rotation)
 
 # ---------------------------------------------------------------------------
 # V1.5 — Retour haptique. Quatre signaux : tir (fort, bref), impact reçu

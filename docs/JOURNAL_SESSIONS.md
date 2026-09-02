@@ -2085,3 +2085,38 @@ Adrien a demandé le sol d'abord.
 
 **Republication du suivi :** je ne l'ai pas prise et je n'ai identifié aucune
 session qui la porte aujourd'hui. Mon delta est dans ce paragraphe.
+
+#### Lot du 2026-09-01 — session « fusée éclairante » (candela-2d-5c), worktree `fusee-eclairante`
+
+**Chantier FUSÉE, étapes FU1-FU2** (voir la section dédiée de la ROADMAP),
+demandé par Adrien après brainstorm. Travail entièrement dans le worktree
+`.claude/worktrees/fusee-eclairante`, branche `worktree-fusee-eclairante` —
+**rien n'est fusionné dans `main` à l'heure où j'écris**, précisément parce que
+l'arbre partagé porte des modifications non commitées d'autres sessions
+(`project.godot` entre autres, que ce lot ne touche PAS : les liaisons de la
+nouvelle action `p*_lance_fusee` sont posées par code dans `input_setup.gd`).
+
+**Fichiers créés** : `fusee_modele.gd`, `fusee.gd`, `fumee_fusee.gdshader`,
+`tools/test_fusee.gd`, `tools/banc_fusee.tscn`, `tools/banc_fusee.gd`.
+
+**Fichiers partagés touchés** (domaine « game feel » pour la plupart — table
+d'en-tête ; la session « game feel » n'a plus donné signe dans ce journal
+depuis plusieurs jours, et aucun de ces fichiers n'était modifié non commité
+dans l'arbre au moment du lot) : `player.gd` (bit fusée dans la commande
+réseau, front montant, `lancer_fusee()`), `game_state.gd` (triptyque
+spawn/RPC/do, stock par manche, fusées de killcam), `replay_system.gd`
+(instantanés portant les fusées), `audio_manager.gd` (trois clés + tables,
+propositions non dosées), `effect_policy.gd` (entrée `fusee_agonie`),
+`input_provider.gd` + `local_input_provider.gd` + `network_input_provider.gd`
++ `input_setup.gd` (action nouvelle), `tools/run_suites.sh` (+ `test_fusee`),
+`tools/bench_framerate.gd` (variante `--fusee`).
+
+⚠️ **La signature de `rpc_send_inputs` a changé** (un booléen de plus) : un
+hôte et un client de versions différentes ne se comprendront plus. Le témoin du
+fil (`test_protocole`) l'a attrapé comme prévu — **`Protocol.VERSION` est monté
+à 6**, témoin recopié (`protocol.gd` rejoint donc les fichiers touchés, avec
+`tools/test_online_match.gd` dont un bouchon appelait `update_input_state` à
+quatre arguments).
+
+**Republication du suivi :** je ne l'ai pas prise — la session `candela-2d-b6`
+l'a annoncée par message inter-session le 2026-08-31 et recevra mon delta.

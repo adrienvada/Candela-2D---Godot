@@ -1154,7 +1154,7 @@ func _verify_round() -> void:
 	var start_p2: Vector2 = _main.p2.global_position
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		var stub := NetworkInputProvider.new()
-		stub.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false)
+		stub.update_input_state(Vector2.RIGHT, Vector2.RIGHT, false, false, false)
 		_main._set_player_input_provider(_main.p2, stub, 0)
 		print("DEPLACEMENT: le client pousse une commande vers la droite")
 
