@@ -3115,6 +3115,19 @@ constante à travers les rapports d'écran. Il faut choisir, et le choix se
 documente : pour un voile d'éblouissement, un cœur ovale se lirait comme un
 défaut de rendu.
 
+**Et ce piège ne mord QUE dans l'espace ÉCRAN.** Précision apportée par la
+session « fusée éclairante » le 2026-09-01, après vérification de son propre
+chantier : ses nappes, son voile, ses masses sombres et son sillage sont tous des
+`CanvasItem` en espace **monde**, enfants du nœud fusée. Le 0,889 de l'écran
+scindé ne les déforme donc pas — un cercle de fumée y reste rond dans les deux
+vues, sans rien faire.
+
+**Le critère est là, et il évite d'aller chercher pour rien :** si l'effet est
+peint dans le monde, il est immunisé par construction ; s'il est peint sur
+l'écran — un voile, un vignettage, un flare d'objectif —, il est exposé et doit
+être jugé aux deux rapports. *Un piège qui ne dit pas à qui il s'applique envoie
+chercher là où il n'y a rien, ce qui coûte plus cher qu'un silence.*
+
 
 ### Prêter son `World2D` à la racine y fait entrer ce qu'elle peignait déjà (2026-08-28)
 
