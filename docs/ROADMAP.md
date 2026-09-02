@@ -3071,6 +3071,51 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un banc ment d'autant mieux qu'il est joli (2026-09-01)
+
+**Le banc du voile fabriquait lui-même les trois textures que le shader
+échantillonne. La production, elle, ne les fournissait pas** — et
+`hint_default_black` fait qu'un `sampler2D` non fourni rend du **noir** : sans une
+erreur, sans un avertissement, sans une ligne de journal. Le jeu affichait donc le
+voile amputé de ses lueurs, de ses flares et de ses fantômes, quand le banc
+montrait la gerbe entière.
+
+**Le défaut est structurellement invisible depuis le banc**, puisque c'est le banc
+qui fabrique ce qui manque ailleurs. Plus il est complet, mieux il masque
+l'absence. C'est Adrien qui l'a vu, en jouant : « où est passé le flare central ?
+les fantômes ? je ne vois que le flou ».
+
+**La parade est la règle que ce dépôt a déjà payée trois fois**, appliquée aux
+ressources et non plus seulement aux formules : *ce qui sert à deux endroits vit
+dans UN fichier, et les deux le lisent.* Un banc ne fabrique jamais ce dont la
+production a besoin — il le lit au même endroit qu'elle. Les fabriques du voile
+vivent depuis dans `voile_textures.gd`.
+
+**Le contrôle qui l'aurait attrapé plus tôt n'existe pas encore** et vaut d'être
+noté : aucune suite ne vérifie qu'un `sampler2D` déclaré par un shader de
+production est effectivement fourni par son appelant. Un `null` y est légal.
+
+### Un banc qui ne montre qu'un rapport d'écran fait juger ce rapport-là (2026-09-01)
+
+Le jeu a **deux** rapports très différents : `1,78` en vue unique, **`0,889` en
+écran scindé** (960 × 1080, mesuré). Le banc du voile n'affichait que le premier.
+
+Les vingt-cinq réglages du voile ont donc été validés à 16/9 et débordaient du
+rectangle en écran scindé — une traînée de longueur 1,4 y couvrait 157 % de la
+demi-largeur au lieu de 79 %. **Personne n'avait rien jugé de faux : on avait
+jugé un cas en croyant juger l'effet.**
+
+Deux conséquences retenues. Le shader normalise désormais par la demi-diagonale
+d'une vue de **référence**, ce qui garde les cercles ronds et rend la composition
+comparable entre les deux modes. Et le banc bascule entre demi-écran et plein
+écran (touche `É`).
+
+⚠️ **On ne peut pas avoir les deux à la fois** — cercles ronds et emprise
+constante à travers les rapports d'écran. Il faut choisir, et le choix se
+documente : pour un voile d'éblouissement, un cœur ovale se lirait comme un
+défaut de rendu.
+
+
 ### Prêter son `World2D` à la racine y fait entrer ce qu'elle peignait déjà (2026-08-28)
 
 Le chantier R, étape R3 (b), sort le duel du `SubViewport` en vue unique : la
