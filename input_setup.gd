@@ -33,13 +33,15 @@ func _setup_all_inputs():
 
 	# Fusée éclairante — liaisons par défaut posées ici et non dans project.godot,
 	# pour que la déclaration de l'action et ses touches vivent au même endroit.
-	# J1 vise à la souris : la molette-clic complète le trio bouton gauche (tir) /
-	# bouton droit (torche). J2 est sur O/P : le I est la touche voisine libre.
-	var fusee_p1 = InputEventMouseButton.new()
-	fusee_p1.button_index = MOUSE_BUTTON_MIDDLE
+	# Positions PHYSIQUES, comme tout le reste de l'Input Map. J1 a la main
+	# gauche sur WASD : le F est adjacent. J2 vise sur IJKL et agit sur O/P : le
+	# U est la voisine libre — PAS le I, qui est déjà p2_aim_up (collision réelle,
+	# attrapée avant l'écoute : viser vers le haut aurait lancé la fusée).
+	var fusee_p1 = InputEventKey.new()
+	fusee_p1.physical_keycode = KEY_F
 	InputMap.action_add_event("p1_lance_fusee", fusee_p1)
 	var fusee_p2 = InputEventKey.new()
-	fusee_p2.physical_keycode = KEY_I
+	fusee_p2.physical_keycode = KEY_U
 	InputMap.action_add_event("p2_lance_fusee", fusee_p2)
 	
 	# Helper for joy axis

@@ -12133,7 +12133,10 @@ l'âge. C'est ce qui rend la synchro et la killcam gratuites.
 
 - **Le lancer** : cloche par-dessus les murs (aucun test de collision en vol ;
   l'atterrissage recule hors des murs, calculé côté autorité AVANT le RPC).
-  Molette-clic (J1), touche I (J2), **Carré** sur manette — l'emplacement que
+  Touche **F** (J1, adjacente au WASD — demandé par Adrien : une touche clavier
+  plutôt que la molette-clic d'origine), touche **U** (J2 — et PAS le I du
+  premier jet : I est `p2_aim_up`, viser en haut aurait lancé la fusée,
+  collision attrapée avant l'écoute), **Carré** sur manette — l'emplacement que
   `input_setup.gd` réservait à « la prochaine action de jeu ». Le lancer
   désarme 0,6 s (pas de lance-et-tire) via le cooldown de tir existant.
 - **La vie en actes, horloge publique** : blanc magnésium 2 s (le scan, la
