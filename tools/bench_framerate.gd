@@ -361,10 +361,9 @@ func _stress(duration: float, sampling: bool) -> void:
 		# produirait aucune particule — il mesurerait une charge imaginaire.
 		_main.p2.global_position = _main.p1.global_position + Vector2(DUEL_DISTANCE, 0.0)
 		if _fusee and is_instance_valid(_fusee_banc):
-			# L'âge boucle DANS la braise : fumée à pleine densité en continu, et
-			# les joueurs du duel traversent le nuage — le sillage travaille aussi.
-			var duree_vol: float = _fusee_banc._duree_vol
-			_fusee_banc.appliquer_age(duree_vol + FuseeModele.FUMEE_MONTEE
+			# L'âge (de COMBUSTION, depuis FU2.1) boucle DANS la braise : fumée à
+			# pleine densité en continu pendant toute la mesure.
+			_fusee_banc.appliquer_age(FuseeModele.FUMEE_MONTEE
 				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5))
 		for p in [_main.p1, _main.p2]:
 			p.hp = 100.0
@@ -458,8 +457,7 @@ func _appliquer_variante() -> void:
 		_fusee_banc = Fusee.new()
 		_fusee_banc.is_replay = true
 		_fusee_banc.name = "FuseeBanc"
-		_fusee_banc.depart = _main.p1.global_position
-		_fusee_banc.cible = _main.p1.global_position + Vector2(DUEL_DISTANCE * 0.5, 0.0)
+		_fusee_banc.depart = _main.p1.global_position + Vector2(DUEL_DISTANCE * 0.5, 0.0)
 		_fusee_banc.graine = 12345
 		_fusee_banc.joueurs = [_main.p1, _main.p2]
 		_main.bullet_container.add_child(_fusee_banc)

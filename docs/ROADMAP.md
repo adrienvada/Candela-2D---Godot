@@ -12131,8 +12131,8 @@ Tout l'état — position de vol, actes, strobe, fumée, sillage — se dérive 
 quatre paramètres transmis une seule fois (départ, cible, graine, tireur) plus
 l'âge. C'est ce qui rend la synchro et la killcam gratuites.
 
-- **Le lancer** : cloche par-dessus les murs (aucun test de collision en vol ;
-  l'atterrissage recule hors des murs, calculé côté autorité AVANT le RPC).
+- **Le lancer** : ~~cloche par-dessus les murs~~ **superseded par FU2.1** — la
+  fusée rebondit sur les murs, voir la sous-section des retouches.
   Touche **F** (J1, adjacente au WASD — demandé par Adrien : une touche clavier
   plutôt que la molette-clic d'origine), touche **U** (J2 — et PAS le I du
   premier jet : I est `p2_aim_up`, viser en haut aurait lancé la fusée,
@@ -12194,6 +12194,42 @@ l'âge. C'est ce qui rend la synchro et la killcam gratuites.
   (`Identifier "Fusee" not declared`) tant que `--headless --import` n'a pas
   reconstruit le cache global des classes — même famille que le piège du
   `.godot` périmé, déclinaison « fichier neuf » plutôt que « fusion ».
+
+### FU2.1 — les retouches du premier essai d'Adrien (2026-09-03)
+
+**Adrien a joué, a aimé LE RYTHME de la mécanique, et a rendu cinq retours.
+Tous actés et implémentés le jour même** — c'est le premier contact du chantier
+avec son juge réel, et il a renversé une décision de conception :
+
+1. **La fusée REBONDIT sur les murs** — ~~la cloche qui les survolait~~ est
+   abandonnée (screen à l'appui : elle se lisait comme une traversée). Vol
+   tendu, frottement, rebonds amortis (patron des ricochets de `bullet.gd`),
+   simulation locale déterministe. Conséquences : plus de cible pré-calculée
+   (le RPC porte un angle — `Protocol.VERSION` → **7**, le témoin a sonné),
+   et la killcam transporte la POSITION dans l'instantané (les rebonds ne se
+   dérivent pas de l'âge). Le mind game « lancer par-dessus un mur » disparaît ;
+   celui du rebond calculé (banquer une fusée dans un angle) le remplace.
+2. **Dans la fumée, le sprite S'EFFACE.** La masse sombre seule ne suffisait
+   pas : le sprite restait lisible dessous, donc l'information de position
+   était intacte. `player.gd` efface désormais ses visuels à proportion de la
+   profondeur dans le nuage (`Fusee.occultation_pour`, groupe `fusees`) — même
+   immobile, même éclairé : on est vu (la masse) sans être lu (le sprite).
+   Positions répliquées seulement : les deux machines effacent au même endroit.
+3. **Rouge de détresse, puis orange.** Plus de « blanc magnésium » : c'est une
+   fusée de marine. `COULEUR_DETRESSE` (CARMIN porté à la valeur de l'AMBRE,
+   formule en commentaire) → glissement vers AMBRE. L'acte renommé
+   `PLEIN_FEU` — un acte nommé BLANC qui éclaire rouge aurait menti.
+4. **L'agonie n'est plus un strobe.** « Trop informatique » : chaque sursaut
+   est une enveloppe (attaque 0,05 s, retombée 0,30 s) — des rallumages
+   sporadiques. La suite tient un contrôle de CONTINUITÉ (aucun saut > 0,06
+   par milliseconde), qui a attrapé du premier coup les frontières d'acte
+   elles-mêmes : l'effondrement vers le quasi-noir se fond en rampe
+   (`RAMPE_AGONIE`), et les centres de sursaut prennent des marges dérivées
+   des enveloppes.
+5. **Textures « réalistes »** : Adrien les génère (filière Gemini). Le code
+   charge `assets/sprites/fusee_volute_1..3.png` et `fusee_corps.png` s'ils
+   existent, repli procédural sinon — la planche se substitue sans une ligne
+   de code. Spécification donnée à Adrien dans la conversation du chantier.
 
 ### Les nombres sont des VALEURS DE DÉPART, pas des décisions
 

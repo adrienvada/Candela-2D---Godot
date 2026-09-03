@@ -2144,3 +2144,16 @@ quatre arguments).
 
 **Republication du suivi :** je ne l'ai pas prise — la session `candela-2d-b6`
 l'a annoncée par message inter-session le 2026-08-31 et recevra mon delta.
+
+#### Lot du 2026-09-03 — session « fusée éclairante », FU2.1 (retouches du premier essai)
+
+Adrien a essayé la fusée et rendu cinq retours, tous actés le jour même —
+détail dans la ROADMAP, sous-section FU2.1 du chantier. Fichiers touchés en
+plus du périmètre déjà déclaré : les mêmes (`fusee_modele.gd`, `fusee.gd`,
+`game_state.gd`, `replay_system.gd`, `player.gd`, `protocol.gd`, bancs et
+suite), aucun nouveau fichier partagé. ⚠️ **`Protocol.VERSION` monte à 7**
+(`rpc_spawn_fusee` : la cible Vector2 devient un angle float — la fusée
+rebondit au lieu de survoler). Textures peintes attendues d'Adrien
+(`assets/sprites/fusee_volute_1..3.png`, `fusee_corps.png`) : le code les
+charge si présentes, repli procédural sinon — les livrer ne demande AUCUN
+geste de code, juste l'import.

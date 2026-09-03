@@ -11,7 +11,7 @@
 ## en séance avec Adrien, pas en éditant une constante à l'aveugle.
 ##
 ## Touches : clic gauche = lancer · clic droit tenu = déplacer le mannequin
-## mobile · 1/2/3/4 = sauter au blanc / à la braise / à l'agonie / au résidu ·
+## mobile · 1/2/3/4 = sauter au plein feu / à la braise / à l'agonie / au résidu ·
 ## Espace = figer l'âge · R = tout relancer · A = lumière d'inspection ·
 ## Échap = quitter.
 extends Node2D
@@ -19,7 +19,6 @@ extends Node2D
 const RenduCommun := preload("res://tools/rendu_commun.gd")
 
 var _fusee: Fusee
-var _age: float = 0.0
 var _fige: bool = false
 var _mannequin_fixe: Sprite2D
 var _mannequin_mobile: Sprite2D
@@ -124,11 +123,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_1:
 				_sauter(0.1)
 			KEY_2:
-				_sauter(FuseeModele.DUREE_BLANC + FuseeModele.RACCORD_BLANC_BRAISE + 0.1)
+				_sauter(FuseeModele.DUREE_PLEIN_FEU + FuseeModele.RACCORD_PLEIN_FEU_BRAISE + 0.1)
 			KEY_3:
-				_sauter(FuseeModele.DUREE_BLANC + FuseeModele.DUREE_BRAISE + 0.1)
+				_sauter(FuseeModele.DUREE_PLEIN_FEU + FuseeModele.DUREE_BRAISE + 0.1)
 			KEY_4:
-				_sauter(FuseeModele.DUREE_BLANC + FuseeModele.DUREE_BRAISE
+				_sauter(FuseeModele.DUREE_PLEIN_FEU + FuseeModele.DUREE_BRAISE
 					+ FuseeModele.DUREE_AGONIE + 0.1)
 
 
@@ -136,34 +135,31 @@ func _lancer(cible: Vector2) -> void:
 	if is_instance_valid(_fusee):
 		_fusee.queue_free()
 	_fusee = Fusee.new()
-	# Pilotée à la main (patron killcam) : le banc possède l'horloge, ce qui
-	# permet de figer un acte ou d'y sauter — et coupe l'audio, encore muet.
-	_fusee.is_replay = true
+	# VIVANTE depuis FU2.1 : le vol rebondit sur les murs du banc — c'est
+	# précisément ce qu'on vient juger. L'audio reste muet (fichiers absents).
 	_fusee.depart = Vector2(80.0, 660.0)
-	_fusee.cible = FuseeModele.borner_cible(_fusee.depart, cible)
+	_fusee.direction = (cible - _fusee.depart).normalized()
 	_fusee.graine = randi()
 	_fusee.joueurs = [_mannequin_fixe, _mannequin_mobile]
 	_fusee.name = "FuseeBanc"
 	add_child(_fusee)
-	_age = 0.0
 	_fige = false
 
 
-## Saute à un âge de COMBUSTION donné (le vol est déjà consommé).
+## Saute à un âge de COMBUSTION donné : la fusée se pose là où elle est.
 func _sauter(age_combustion: float) -> void:
 	if not is_instance_valid(_fusee):
 		_lancer(Vector2(640.0, 360.0))
-	_age = _fusee._duree_vol + age_combustion
+	_fusee.forcer_age(age_combustion)
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		_mannequin_mobile.global_position = get_global_mouse_position()
 
 	if is_instance_valid(_fusee):
-		if not _fige:
-			_age += delta
-		_fusee.appliquer_age(_age)
+		# Figer = suspendre la physique de la fusée, l'horloge est la sienne.
+		_fusee.set_physics_process(not _fige)
 
 	_maj_panneau()
 
@@ -171,9 +167,9 @@ func _process(delta: float) -> void:
 func _maj_panneau() -> void:
 	var etat := "aucune fusée — clic gauche pour lancer"
 	if is_instance_valid(_fusee):
-		var age_combustion: float = _age - _fusee._duree_vol
+		var age_combustion: float = _fusee.age_combustion()
 		var noms := {
-			FuseeModele.Acte.VOL: "VOL", FuseeModele.Acte.BLANC: "BLANC",
+			FuseeModele.Acte.VOL: "VOL", FuseeModele.Acte.PLEIN_FEU: "PLEIN FEU",
 			FuseeModele.Acte.BRAISE: "BRAISE", FuseeModele.Acte.AGONIE: "AGONIE",
 			FuseeModele.Acte.RESIDU: "RÉSIDU", FuseeModele.Acte.MORTE: "MORTE",
 		}

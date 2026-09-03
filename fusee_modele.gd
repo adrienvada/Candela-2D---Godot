@@ -3,56 +3,68 @@ class_name FuseeModele
 ##
 ## Ce fichier est SANS DÉPENDANCE (ni autoload, ni nœud), comme `brouillage.gd`
 ## et `vision.gd`, et pour la même raison : être chargeable par une suite en
-## `--script`. Tout l'état d'une fusée se dérive de trois données qui transitent
-## dans le RPC de spawn — départ, cible, graine — plus l'âge local. C'est ce qui
-## rend la simulation identique chez les deux pairs sans aucune synchro en vol,
-## et la killcam capable de reconstruire une fusée à un âge arbitraire.
+## `--script`. Trois données transitent dans le RPC de spawn — départ, angle,
+## graine — et tout le reste se simule localement à l'identique chez les deux
+## pairs (le vol rebondit sur des murs identiques, à pas de physique fixes) ;
+## la combustion, elle, se dérive entièrement de l'âge, ce qui laisse la
+## killcam reconstruire lumière et fumée à un instant arbitraire.
 ##
 ## Les nombres ci-dessous sont des VALEURS DE DÉPART, à doser au banc
 ## `tools/banc_fusee.tscn` — jamais en les éditant à l'aveugle.
 
 # ── Le vol ──────────────────────────────────────────────────────────────────
-# La fusée se lance en cloche : elle survole les murs (aucun test de collision
-# pendant le vol) et atterrit en un point calculé AVANT le RPC de spawn, donc
-# identique partout. La vitesse borne la durée du vol, pas l'inverse.
-const VITESSE_VOL := 700.0        # px/s
-const PORTEE_MAX := 450.0         # px — portée fixe v1, pas de charge à l'appui
-const PORTEE_MIN := 80.0          # px — en dessous, on se la jette dans les pieds
-const DUREE_VOL_MIN := 0.25       # s — même un lancer court doit se LIRE en vol
-const DUREE_VOL_MAX := 0.90       # s
+# La fusée REBONDIT sur les murs (décision d'Adrien au premier essai, FU2.1 —
+# elle les survolait, et ça se lisait comme une traversée). Elle part tendue,
+# le frottement la freine, chaque rebond l'amortit, et elle s'allume au sol
+# quand elle n'a plus d'élan. La simulation est locale et déterministe chez les
+# deux pairs : mêmes murs, mêmes pas de physique, mêmes rebonds — le patron des
+# ricochets de `bullet.gd`.
+const VITESSE_LANCER := 900.0     # px/s au départ
+const FROTTEMENT_VOL := 900.0     # px/s² — v²/2f donne ~450 px de portée libre
+const REBOND_AMORTI := 0.55       # part de vitesse conservée à chaque rebond
+const VITESSE_ARRET := 60.0       # px/s — en dessous, elle se pose et s'allume
 
 # ── La vie en actes ─────────────────────────────────────────────────────────
-# Blanc magnésium (scan honnête) → braise (l'ère de l'ambiguïté, la fumée
-# règne) → agonie (strobe : chaque flash est une photo de la pièce) → braise
+# Rouge de détresse à plein feu (le scan honnête — une fusée de marine,
+# Adrien FU2.1) → braise orange (l'ère de l'ambiguïté, la fumée règne) →
+# agonie (rallumages sporadiques, chacun une photo de la pièce) → braise
 # résiduelle (un repère, plus une information). L'horloge est publique : les
 # deux joueurs lisent le même acte au même instant.
-enum Acte { VOL, BLANC, BRAISE, AGONIE, RESIDU, MORTE }
+enum Acte { VOL, PLEIN_FEU, BRAISE, AGONIE, RESIDU, MORTE }
 
-const DUREE_BLANC := 2.0          # s
+const DUREE_PLEIN_FEU := 2.0          # s
 const DUREE_BRAISE := 10.0        # s
 const DUREE_AGONIE := 3.0         # s
 const DUREE_RESIDU := 5.0         # s
 
-const ENERGIE_BLANC := 3.0
+const ENERGIE_PLEIN_FEU := 3.0
 const ENERGIE_BRAISE := 1.2
 const ENERGIE_RESIDU := 0.25
 const ENERGIE_VOL := 0.8          # la comète : assez pour tracer l'arc, pas pour lire
-const RACCORD_BLANC_BRAISE := 1.5 # s de glissement blanc → braise (dans l'acte braise)
+const RACCORD_PLEIN_FEU_BRAISE := 1.5 # s de glissement plein feu → braise (dans l'acte braise)
 
-# ── L'agonie stroboscopique ─────────────────────────────────────────────────
-# Les instants de flash sont tirés d'une graine transmise au spawn : la liste
+# ── L'agonie : des rallumages, pas un strobe ────────────────────────────────
+# Les instants de sursaut sont tirés d'une graine transmise au spawn : la liste
 # entière se régénère à l'identique n'importe où, n'importe quand — c'est ce
-# qui permet à la killcam d'afficher le bon flash à un âge arbitraire.
+# qui permet à la killcam d'afficher le bon état à un âge arbitraire.
+#
+# Le premier jet était un créneau on/off — « trop informatique » (Adrien, au
+# premier essai, FU2.1). Chaque sursaut est désormais une ENVELOPPE : montée
+# vive, retombée lente — un rallumage spontané de la combustion, pas un
+# clignotement de diode.
 const AGONIE_FLASHS_MIN := 3
 const AGONIE_FLASHS_MAX := 5
-const FLASH_DUREE_MIN := 0.08     # s
+const FLASH_DUREE_MIN := 0.08     # s — sert à étaler les centres dans l'agonie
 const FLASH_DUREE_MAX := 0.12     # s
+const FLASH_MONTEE := 0.05        # s — l'attaque du rallumage
+const FLASH_DESCENTE := 0.30      # s — la braise qui retombe
 const ENERGIE_FLASH := 2.5
-const ENERGIE_CREUX := 0.15       # le quasi-noir entre deux flashs
+const ENERGIE_CREUX := 0.15       # le quasi-noir entre deux sursauts
+const RAMPE_AGONIE := 0.25        # s — l'effondrement vers le quasi-noir se fond
 
 # ── La fumée ────────────────────────────────────────────────────────────────
 # Dense au centre, claire aux bords : la cachette a un gradient spatial. La
-# fumée met du temps à s'épaissir (l'acte blanc reste un scan) et meurt avec
+# fumée met du temps à s'épaissir (le plein feu reste un scan) et meurt avec
 # le résidu — la « fumée orpheline » de sa lumière est une décision d'identité
 # non actée, elle n'existe pas en v1.
 const RAYON_FUMEE := 200.0        # px
@@ -84,21 +96,23 @@ const STOCK_PAR_MANCHE := 1
 const DESARMEMENT := 0.6          # s sans tir après le lancer — pas de lance-et-tire
 
 
-static func duree_vol(distance: float) -> float:
-	return clampf(distance / VITESSE_VOL, DUREE_VOL_MIN, DUREE_VOL_MAX)
+## La vitesse restante après `delta` secondes de frottement — jamais négative.
+static func vitesse_apres(vitesse: float, delta: float) -> float:
+	return maxf(vitesse - FROTTEMENT_VOL * delta, 0.0)
 
 
-## Borne la cible demandée entre PORTEE_MIN et PORTEE_MAX du départ.
-static func borner_cible(depart: Vector2, cible: Vector2) -> Vector2:
-	var delta := cible - depart
-	var distance := delta.length()
-	if distance < 0.001:
-		return depart + Vector2.RIGHT * PORTEE_MIN
-	return depart + delta / distance * clampf(distance, PORTEE_MIN, PORTEE_MAX)
+## Le rebond sur un mur : réflexion sur la normale, puis amortissement.
+static func rebondir(velocite: Vector2, normale: Vector2) -> Vector2:
+	return velocite.bounce(normale) * REBOND_AMORTI
+
+
+## La portée d'un lancer sans obstacle — dérivée, jamais recopiée.
+static func portee_libre() -> float:
+	return VITESSE_LANCER * VITESSE_LANCER / (2.0 * FROTTEMENT_VOL)
 
 
 static func duree_combustion() -> float:
-	return DUREE_BLANC + DUREE_BRAISE + DUREE_AGONIE + DUREE_RESIDU
+	return DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE + DUREE_RESIDU
 
 
 ## L'acte à un âge de COMBUSTION donné (0 = l'atterrissage ; le vol est géré
@@ -106,11 +120,11 @@ static func duree_combustion() -> float:
 static func acte_a(age: float) -> Acte:
 	if age < 0.0:
 		return Acte.VOL
-	if age < DUREE_BLANC:
-		return Acte.BLANC
-	if age < DUREE_BLANC + DUREE_BRAISE:
+	if age < DUREE_PLEIN_FEU:
+		return Acte.PLEIN_FEU
+	if age < DUREE_PLEIN_FEU + DUREE_BRAISE:
 		return Acte.BRAISE
-	if age < DUREE_BLANC + DUREE_BRAISE + DUREE_AGONIE:
+	if age < DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE:
 		return Acte.AGONIE
 	if age < duree_combustion():
 		return Acte.RESIDU
@@ -127,26 +141,42 @@ static func fenetres_agonie(graine: int) -> Array:
 	# Répartition : l'agonie est découpée en nb tranches égales, chaque flash
 	# tombe à un instant tiré dans sa tranche — irrégulier à l'oreille et à
 	# l'œil, mais jamais deux flashs collés ni un trou de deux secondes.
-	var tranche := DUREE_AGONIE / float(nb)
+	# Marges DÉRIVÉES des enveloppes : l'attaque doit être éteinte à la
+	# frontière de la braise, la retombée à celle du résidu — sans quoi le bord
+	# d'acte tranche un sursaut en plein vol et redevient exactement le créneau
+	# que FU2.1 supprime (attrapé par le contrôle de continuité de la suite).
+	var debut_min := FLASH_MONTEE * 5.0
+	var fin_max := DUREE_AGONIE - FLASH_DESCENTE * 3.0
+	var tranche := (fin_max - debut_min) / float(nb)
 	for i in nb:
 		var duree := rng.randf_range(FLASH_DUREE_MIN, FLASH_DUREE_MAX)
 		var marge := maxf(tranche - duree, 0.0)
-		var debut := float(i) * tranche + rng.randf_range(0.0, marge)
+		var debut := debut_min + float(i) * tranche + rng.randf_range(0.0, marge)
 		fenetres.append([debut, debut + duree])
 	return fenetres
 
 
-## Un flash est-il allumé à cet âge de combustion ? Les fenêtres se précalculent
-## UNE fois par fusée (`fenetres_agonie`) : les recalculer chaque image
-## allouerait un générateur aléatoire par appel.
-static func flash_actif(age: float, fenetres: Array) -> bool:
+## La lueur des rallumages à cet âge, dans [0, 1] : enveloppe asymétrique
+## autour du centre de chaque fenêtre — attaque en FLASH_MONTEE, retombée en
+## FLASH_DESCENTE. Continue partout : rien ne « clignote », tout se rallume.
+## Les fenêtres se précalculent UNE fois par fusée (`fenetres_agonie`).
+static func lueur_agonie(age: float, fenetres: Array) -> float:
 	if acte_a(age) != Acte.AGONIE:
-		return false
-	var t := age - DUREE_BLANC - DUREE_BRAISE
+		return 0.0
+	var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE
+	var lueur := 0.0
 	for f in fenetres:
-		if t >= f[0] and t < f[1]:
-			return true
-	return false
+		var centre: float = (f[0] + f[1]) * 0.5
+		var ecart := t - centre
+		var sigma := FLASH_MONTEE if ecart < 0.0 else FLASH_DESCENTE
+		lueur = maxf(lueur, exp(-(ecart * ecart) / (2.0 * sigma * sigma)))
+	return lueur
+
+
+## Un sursaut est-il « allumé » à cet âge ? Seuil sur la lueur — sert aux tests
+## et à tout code qui veut un booléen plutôt qu'une enveloppe.
+static func flash_actif(age: float, fenetres: Array) -> bool:
+	return lueur_agonie(age, fenetres) > 0.5
 
 
 ## L'énergie lumineuse à un âge de combustion donné. `intensite_agonie` vient
@@ -157,21 +187,28 @@ static func energie_a(age: float, fenetres: Array, intensite_agonie: float = 1.0
 	match acte_a(age):
 		Acte.VOL:
 			return ENERGIE_VOL
-		Acte.BLANC:
-			return ENERGIE_BLANC
+		Acte.PLEIN_FEU:
+			return ENERGIE_PLEIN_FEU
 		Acte.BRAISE:
-			var t := age - DUREE_BLANC
-			if t < RACCORD_BLANC_BRAISE:
-				return lerpf(ENERGIE_BLANC, ENERGIE_BRAISE, t / RACCORD_BLANC_BRAISE)
+			var t := age - DUREE_PLEIN_FEU
+			if t < RACCORD_PLEIN_FEU_BRAISE:
+				return lerpf(ENERGIE_PLEIN_FEU, ENERGIE_BRAISE, t / RACCORD_PLEIN_FEU_BRAISE)
 			return ENERGIE_BRAISE
 		Acte.AGONIE:
 			# Le fondu continu que verrait un joueur à intensité 0.
-			var t := age - DUREE_BLANC - DUREE_BRAISE
+			var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE
 			var fondu := lerpf(ENERGIE_BRAISE, ENERGIE_RESIDU, t / DUREE_AGONIE)
-			var strobe := ENERGIE_FLASH if flash_actif(age, fenetres) else ENERGIE_CREUX
-			return lerpf(fondu, strobe, clampf(intensite_agonie, 0.0, 1.0))
+			# Le plancher s'effondre vers le quasi-noir en RAMPE_AGONIE et en
+			# remonte autant avant le résidu : les FRONTIÈRES d'acte aussi sont
+			# des fondus, jamais des créneaux (contrôle de continuité de la suite).
+			var creux := lerpf(fondu, ENERGIE_CREUX,
+				minf(smoothstep(0.0, RAMPE_AGONIE, t),
+					smoothstep(0.0, RAMPE_AGONIE, DUREE_AGONIE - t)))
+			var sursaut := maxf(creux, lerpf(ENERGIE_CREUX, ENERGIE_FLASH,
+				lueur_agonie(age, fenetres)))
+			return lerpf(fondu, sursaut, clampf(intensite_agonie, 0.0, 1.0))
 		Acte.RESIDU:
-			var t := age - DUREE_BLANC - DUREE_BRAISE - DUREE_AGONIE
+			var t := age - DUREE_PLEIN_FEU - DUREE_BRAISE - DUREE_AGONIE
 			return lerpf(ENERGIE_RESIDU, 0.0, t / DUREE_RESIDU)
 		_:
 			return 0.0
@@ -182,11 +219,11 @@ static func energie_a(age: float, fenetres: Array, intensite_agonie: float = 1.0
 ## charte, il doit rester sans dépendance.
 static func temperature_a(age: float) -> float:
 	match acte_a(age):
-		Acte.VOL, Acte.BLANC:
+		Acte.VOL, Acte.PLEIN_FEU:
 			return 0.0
 		Acte.BRAISE:
-			var t := age - DUREE_BLANC
-			return clampf(t / RACCORD_BLANC_BRAISE, 0.0, 1.0)
+			var t := age - DUREE_PLEIN_FEU
+			return clampf(t / RACCORD_PLEIN_FEU_BRAISE, 0.0, 1.0)
 		_:
 			return 1.0
 
@@ -201,7 +238,7 @@ static func alpha_fumee_a(age: float) -> float:
 		return 0.0
 	var montee := clampf(age / FUMEE_MONTEE, 0.0, 1.0)
 	# La fumée meurt avec le résidu, en fondu sur la durée du résidu.
-	var debut_residu := DUREE_BLANC + DUREE_BRAISE + DUREE_AGONIE
+	var debut_residu := DUREE_PLEIN_FEU + DUREE_BRAISE + DUREE_AGONIE
 	if age >= debut_residu:
 		return lerpf(montee, 0.0, (age - debut_residu) / DUREE_RESIDU)
 	return montee
@@ -211,17 +248,6 @@ static func alpha_fumee_a(age: float) -> float:
 static func echelle_fumee_a(age: float) -> float:
 	var t := clampf(age / duree_combustion(), 0.0, 1.0)
 	return lerpf(1.0, FUMEE_GONFLE, t)
-
-
-## Position en vol : interpolation directe départ → cible (la cloche est un
-## habillage visuel — hauteur factice — pas une trajectoire physique).
-static func position_vol(depart: Vector2, cible: Vector2, t01: float) -> Vector2:
-	return depart.lerp(cible, clampf(t01, 0.0, 1.0))
-
-
-## Hauteur factice de la cloche dans [0, 1] (0 au départ et à l'arrivée).
-static func hauteur_vol(t01: float) -> float:
-	return sin(clampf(t01, 0.0, 1.0) * PI)
 
 
 ## Filtre un sillage : ne garde que les points plus récents que SILLAGE_DUREE,

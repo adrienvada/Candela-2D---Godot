@@ -1,25 +1,25 @@
 class_name Fusee
 extends Node2D
-## La fusée éclairante — chantier FUSÉE, étapes FU1 (objet, lancer, trois actes)
-## et FU2 (fumée : nappes, silhouette, sillage).
+## La fusée éclairante — chantier FUSÉE, étapes FU1-FU2, retouches FU2.1
+## (premier essai d'Adrien : rebonds, rouge de détresse, sprites effacés dans
+## la fumée, agonie organique, textures substituables).
 ##
 ## Même famille que `Bullet` : nœud NON répliqué, instancié localement chez les
-## deux pairs par le RPC de spawn de `game_state.gd`. Tout l'état se dérive de
-## quatre paramètres transmis une fois — départ, cible, graine, tireur — plus
-## l'âge : aucune synchro en vol, et la killcam reconstruit une fusée à un âge
-## arbitraire en appelant `appliquer_age()` (voir `ReplaySystem.Snapshot`).
+## deux pairs par le RPC de spawn de `game_state.gd`. Le vol REBONDIT sur les
+## murs — simulation locale déterministe (mêmes murs, mêmes pas de physique,
+## patron des ricochets de `bullet.gd`), aucune synchro en vol. La killcam ne
+## rejoue pas le vol : elle lit la position dans l'instantané et reconstruit
+## lumière et fumée depuis l'âge de combustion (`appliquer_age`).
 ##
-## Le vol est une cloche : il SURVOLE les murs (aucun test de collision — la
-## cible a été validée au spawn par l'hôte), la hauteur est un habillage. La
-## lumière ne prend ses ombres qu'au sol : en vol, elle traverserait mal les
-## occluders qu'elle est censée survoler.
+## Rouge de détresse d'abord — une fusée de marine — puis l'orange de la
+## braise, puis des rallumages sporadiques avant le noir.
 
 const VOILE_SHADER := preload("res://fumee_fusee.gdshader")
 
-## Blanc « magnésium » : la seule lumière chimique du jeu. Dérivée :
-## HALOGENE (0.98, 0.91, 0.80) refroidi — les canaux rouge/bleu échangés autour
-## du gris, pour jurer volontairement avec tout ce que la charte éclaire.
-const COULEUR_MAGNESIUM := Color(0.90, 0.93, 0.99)
+## Le rouge de détresse. Dérivé : CARMIN (0.551, 0.168, 0.191) porté à la
+## valeur de l'AMBRE (× 0.96/0.551 ≈ 1.74) — même rouge, mais assez lumineux
+## pour être une LUMIÈRE et non une matière.
+const COULEUR_DETRESSE := Color(0.96, 0.293, 0.334)
 
 ## Empreinte de la lumière au sol, en pixels de diamètre utile. Légèrement plus
 ## large que la fumée : la lumière déborde du nuage, la cachette vit DANS la
@@ -27,30 +27,44 @@ const COULEUR_MAGNESIUM := Color(0.90, 0.93, 0.99)
 const EMPREINTE_LUMIERE := 440.0
 const EMPREINTE_VOL := 160.0
 
-## Hauteur factice de la cloche, en pixels d'écran au sommet.
-const HAUTEUR_CLOCHE_PX := 26.0
+## Hauteur factice du vol, en pixels au départ — elle suit l'élan restant.
+const HAUTEUR_VOL_PX := 18.0
+
+## Deux rebonds dans la même seconde s'entendent ; vingt dans un angle, non.
+const REBOND_SON_ESPACEMENT := 0.09
 
 # Paramètres du spawn — posés AVANT add_child, comme pour Bullet.
 var depart := Vector2.ZERO
-var cible := Vector2.ZERO
+var direction := Vector2.RIGHT
 var graine: int = 0
 var shooter_id: int = 0
 var is_replay: bool = false
-## Les corps à silhouetter et à faire creuser le sillage : [p1, p2] en jeu,
-## [ghost_p1, ghost_p2] en killcam. Posé par game_state au spawn.
+## Les corps à silhouetter, à effacer dans la fumée et à faire creuser le
+## sillage : [p1, p2] en jeu, [ghost_p1, ghost_p2] en killcam.
 var joueurs: Array = []
 
-var _age: float = 0.0
-var _duree_vol: float = 0.0
+## L'âge de COMBUSTION : négatif en vol, 0 à l'atterrissage. C'est LUI que
+## l'instantané transporte — le vol, non dérivable de l'âge depuis les rebonds,
+## voyage par sa position.
+var _age_combustion: float = -1.0
+var _velocite := Vector2.ZERO
 var _fenetres: Array = []
 var _atterrie: bool = false
+var _dernier_son_rebond: float = -1.0
+var _exclusions: Array[RID] = []
 
 var _lumiere: PointLight2D
 var _coeur: Sprite2D
+var _corps: Sprite2D
 var _nappes: Array = []
 var _voile: Sprite2D
 var _voile_mat: ShaderMaterial
 var _combustion: AudioStreamPlayer2D
+
+# Occultation : ce que la fumée cache aux sprites — lu par player.gd via le
+# groupe « fusees », recalculé à chaque application d'âge.
+var _alpha_fumee_courant: float = 0.0
+var _rayon_courant: float = FuseeModele.RAYON_FUMEE
 
 # Sillage : par joueur, la position du dernier échantillon et l'instant du
 # prochain ; les points vivants sont partagés (un seul tampon d'uniforms).
@@ -73,14 +87,21 @@ static func _texture_blanche() -> ImageTexture:
 	return tex
 
 
-## Une nappe de volutes : bruit FBM sous un masque radial, blanche + alpha —
-## la teinte vient des lumières qui l'éclairent (même règle que les masques de
-## `light_textures.gd`). Générée une fois, partagée entre toutes les fusées.
-## Le jour où une planche peinte arrive, elle se substitue ici sans autre geste.
-static func _texture_volute(graine_tex: int) -> ImageTexture:
+## Une nappe de volutes. Une planche PEINTE (`assets/sprites/fusee_volute_N.png`,
+## la filière Gemini d'Adrien) prime dès qu'elle existe ; sinon, repli
+## procédural — bruit FBM sous un masque radial, blanc + alpha, la teinte
+## venant des lumières (même règle que les masques de `light_textures.gd`).
+## L'absence du fichier n'est pas un défaut : c'est l'état ATTENDU tant que la
+## planche n'est pas livrée — d'où l'absence de cri, contrairement à `masque()`.
+static func _texture_volute(graine_tex: int) -> Texture2D:
 	var cle := "volute_%d" % graine_tex
 	if _cache_textures.has(cle):
 		return _cache_textures[cle]
+	var chemin := "res://assets/sprites/fusee_volute_%d.png" % graine_tex
+	if ResourceLoader.exists(chemin, "Texture2D"):
+		var peinte: Texture2D = load(chemin)
+		_cache_textures[cle] = peinte
+		return peinte
 	var taille := 128
 	var bruit := FastNoiseLite.new()
 	bruit.noise_type = FastNoiseLite.TYPE_VALUE
@@ -105,18 +126,20 @@ func _ready() -> void:
 	# Comme Bullet : le conteneur parent ne doit imposer ni transform ni ordre.
 	set_as_top_level(true)
 	global_position = depart
-	_duree_vol = FuseeModele.duree_vol(depart.distance_to(cible))
 	_fenetres = FuseeModele.fenetres_agonie(graine)
+	add_to_group("fusees")
 
 	_lumiere = PointLight2D.new()
 	_lumiere.name = "Halo"
 	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_VOL)
-	_lumiere.color = COULEUR_MAGNESIUM
+	_lumiere.color = COULEUR_DETRESSE
 	_lumiere.energy = FuseeModele.ENERGIE_VOL
 	# 1 = décor, 2 = sprites ennemis, 4 = sprites du joueur local : la fusée est
 	# une lumière NEUTRE, elle éclaire tout le monde dans les deux vues.
 	_lumiere.range_item_cull_mask = 1 | 2 | 4
-	_lumiere.shadow_enabled = false # en vol, elle survole les murs
+	# Les ombres dès le départ : la fusée rebondit sur les murs, elle ne les
+	# survole plus — une lumière qui les traverserait mentirait sur sa physique.
+	_lumiere.shadow_enabled = true
 	_lumiere.shadow_item_cull_mask = 1 # murs seuls : un corps ne bouche pas sa propre lumière
 	_lumiere.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
 	add_child(_lumiere)
@@ -125,9 +148,20 @@ func _ready() -> void:
 	_coeur.name = "Coeur"
 	_coeur.texture = LightTextures.radial(16)
 	_coeur.material = _materiau_additif()
-	_coeur.modulate = COULEUR_MAGNESIUM
+	_coeur.modulate = COULEUR_DETRESSE
 	_coeur.z_index = 12
 	add_child(_coeur)
+
+	# Le corps physique de la fusée — seulement si la planche peinte existe
+	# (filière Gemini). Sans elle, le cœur incandescent suffit.
+	var chemin_corps := "res://assets/sprites/fusee_corps.png"
+	if ResourceLoader.exists(chemin_corps, "Texture2D"):
+		_corps = Sprite2D.new()
+		_corps.name = "Corps"
+		_corps.texture = load(chemin_corps)
+		_corps.light_mask = 2
+		_corps.z_index = 11
+		add_child(_corps)
 
 	# En écran scindé, tout se dessine deux fois : une nappe de moins.
 	var nb_nappes := FuseeModele.NAPPES_PAR_DEFAUT
@@ -157,6 +191,7 @@ func _ready() -> void:
 	add_child(_voile)
 
 	if not is_replay:
+		_velocite = direction.normalized() * FuseeModele.VITESSE_LANCER
 		_combustion = AudioStreamPlayer2D.new()
 		_combustion.name = "Combustion"
 		# Câblée, muette tant que le fichier manque (règle « câbler, taire »).
@@ -170,10 +205,12 @@ func _ready() -> void:
 		add_child(_combustion)
 		AudioManager.play_sfx_2d_random_pitch("fusee_lancer", depart)
 	else:
-		# La killcam pilote l'âge elle-même, image par image.
+		# La killcam pilote l'âge et la position elle-même, image par image.
+		_atterrie = true
+		_age_combustion = 0.0
 		set_physics_process(false)
 
-	_appliquer_age(_age)
+	_appliquer_age(_age_combustion)
 
 
 static var _materiau_additif_partage: CanvasItemMaterial
@@ -214,57 +251,127 @@ static func prechauffer(parent: Node) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	_age += delta
-	_appliquer_age(_age)
-	if FuseeModele.acte_a(_age - _duree_vol) == FuseeModele.Acte.MORTE:
+	if not _atterrie:
+		_voler(delta)
+	else:
+		_age_combustion += delta
+	_appliquer_age(_age_combustion)
+	if FuseeModele.acte_a(_age_combustion) == FuseeModele.Acte.MORTE:
 		queue_free()
 
 
-## L'âge depuis le LANCER (vol compris) — lu par ReplaySystem pour l'instantané.
-func age_depuis_lancer() -> float:
-	return _age
+## Un pas de vol : avance, rebondit sur les murs, se freine, se pose à bout
+## d'élan. Rayon contre la couche 1 (murs) en excluant les corps des joueurs —
+## eux aussi couche 1 (map_geometry), et une fusée ne rebondit pas sur un torse.
+func _voler(delta: float) -> void:
+	var espace := get_world_2d().direct_space_state
+	if espace == null:
+		return
+	if _exclusions.is_empty():
+		for j in joueurs:
+			if is_instance_valid(j) and j is CollisionObject2D:
+				_exclusions.append(j.get_rid())
+	var restant := delta
+	# Deux rebonds peuvent tomber dans le même tick (un angle serré) : on
+	# consomme le pas en morceaux, quatre réflexions au plus.
+	for _i in 4:
+		if restant <= 0.0:
+			break
+		var pas := _velocite * restant
+		var q := PhysicsRayQueryParameters2D.create(global_position,
+			global_position + pas, 1)
+		q.exclude = _exclusions
+		var hit := espace.intersect_ray(q)
+		if hit.is_empty():
+			global_position += pas
+			break
+		var avant := global_position.distance_to(hit["position"])
+		restant -= restant * (avant / maxf(pas.length(), 0.001))
+		global_position = (hit["position"] as Vector2) + (hit["normal"] as Vector2) * 2.0
+		_velocite = FuseeModele.rebondir(_velocite, hit["normal"])
+		_jouer_rebond()
+	var vitesse := FuseeModele.vitesse_apres(_velocite.length(), delta)
+	_velocite = _velocite.normalized() * vitesse if vitesse > 0.0 else Vector2.ZERO
+	# L'élan restant porte la hauteur factice et l'orientation du corps.
+	var elan := vitesse / FuseeModele.VITESSE_LANCER
+	_coeur.position = Vector2(0.0, -HAUTEUR_VOL_PX * elan)
+	if _corps:
+		_corps.position = _coeur.position
+		_corps.rotation = _velocite.angle() if vitesse > 0.0 else _corps.rotation
+	if vitesse < FuseeModele.VITESSE_ARRET:
+		_atterrir()
 
 
-## Applique l'état dérivé d'un âge : la killcam appelle ceci directement avec
-## l'âge lu dans l'instantané, le vivant l'appelle depuis `_physics_process`.
+func _jouer_rebond() -> void:
+	if is_replay:
+		return
+	var maintenant := Time.get_ticks_msec() / 1000.0
+	if maintenant - _dernier_son_rebond < REBOND_SON_ESPACEMENT:
+		return
+	_dernier_son_rebond = maintenant
+	AudioManager.play_sfx_2d_random_pitch("fusee_rebond", global_position)
+
+
+## L'âge de combustion (négatif en vol) — lu par ReplaySystem pour l'instantané.
+func age_combustion() -> float:
+	return _age_combustion
+
+
+## La killcam applique l'âge lu dans l'instantané (la position, elle, vient
+## aussi de l'instantané : les rebonds ne se dérivent pas de l'âge).
 func appliquer_age(age: float) -> void:
-	_age = age
+	_age_combustion = age
 	_appliquer_age(age)
 
 
-func _appliquer_age(age: float) -> void:
-	var age_combustion := age - _duree_vol
+## Le banc saute d'acte en acte : la fusée se pose là où elle est et prend
+## l'âge demandé. Sans effet en killcam (l'instantané fait foi).
+func forcer_age(age: float) -> void:
+	_atterrie = true
+	_velocite = Vector2.ZERO
+	_coeur.position = Vector2.ZERO
+	appliquer_age(age)
 
-	# --- Le vol : cloche au-dessus des murs, hauteur factice sur le cœur. ---
-	if age_combustion < 0.0:
-		var t01 := age / _duree_vol if _duree_vol > 0.0 else 1.0
-		global_position = FuseeModele.position_vol(depart, cible, t01)
-		var hauteur := FuseeModele.hauteur_vol(t01)
-		_coeur.position = Vector2(0.0, -hauteur * HAUTEUR_CLOCHE_PX)
-		_coeur.scale = Vector2.ONE * (1.0 + hauteur * 0.6)
-	else:
-		global_position = cible
-		_coeur.position = Vector2.ZERO
-		_coeur.scale = Vector2.ONE
-		if not _atterrie:
-			_atterrir()
 
+## Ce que la fumée cache d'un corps posé à `pos`, dans [0, 1] : profond au cœur
+## du nuage, rien au bord — le même gradient que le voile peint. player.gd
+## l'applique à ses sprites : dans la fumée, on est vu (masse sombre) sans être
+## LU (le sprite s'efface) — retour d'Adrien au premier essai, FU2.1.
+func occultation_pour(pos: Vector2) -> float:
+	if _alpha_fumee_courant <= 0.0:
+		return 0.0
+	var d := pos.distance_to(global_position) / maxf(_rayon_courant, 1.0)
+	if d >= 1.0:
+		return 0.0
+	return _alpha_fumee_courant * (1.0 - smoothstep(0.55, 1.0, d))
+
+
+func _appliquer_age(age_combustion: float) -> void:
 	# --- La lumière : énergie et température dérivées de l'âge. ---
 	var intensite: float = GameSettings.current_effect("fusee_agonie")
 	var energie := FuseeModele.energie_a(age_combustion, _fenetres, intensite)
 	var temperature := FuseeModele.temperature_a(age_combustion)
-	var couleur := COULEUR_MAGNESIUM.lerp(Charte.AMBRE, temperature)
+	# Rouge de détresse au départ, orange de braise ensuite — jamais de blanc :
+	# c'est une fusée de marine, pas un projecteur (Adrien, FU2.1).
+	var couleur := COULEUR_DETRESSE.lerp(Charte.AMBRE, temperature)
 	_lumiere.energy = energie
 	_lumiere.color = couleur
 	_lumiere.enabled = energie > 0.005
 	_coeur.modulate = Color(couleur.r, couleur.g, couleur.b,
 		clampf(energie / FuseeModele.ENERGIE_BRAISE, 0.0, 1.0))
+	if not _atterrie:
+		return # en vol : pas de fumée, la suite ne concerne que le sol
+
+	if _coeur.position != Vector2.ZERO and _velocite == Vector2.ZERO:
+		_coeur.position = Vector2.ZERO
 
 	# --- La fumée : nappes tournantes + voile à trous. ---
 	var alpha_fumee := FuseeModele.alpha_fumee_a(age_combustion)
 	var echelle := FuseeModele.echelle_fumee_a(maxf(age_combustion, 0.0))
 	var diametre := FuseeModele.RAYON_FUMEE * 2.0 * echelle
-	# Sans fumée (vol, fusée éteinte), rien à peindre ni à pousser au shader.
+	_alpha_fumee_courant = alpha_fumee
+	_rayon_courant = diametre * 0.5
+	# Sans fumée (fusée éteinte), rien à peindre ni à pousser au shader.
 	var fumee_active := alpha_fumee > 0.0
 	_voile.visible = fumee_active
 	for i in _nappes.size():
@@ -360,19 +467,19 @@ func _maj_sillage_et_masses(age_combustion: float, diametre: float) -> void:
 
 func _atterrir() -> void:
 	_atterrie = true
-	# Au sol, la lumière reprend ses ombres : sans occlusion, la torche — et la
-	# fusée — traverseraient les murs, et la mécanique centrale disparaît.
-	_lumiere.shadow_enabled = true
+	_age_combustion = 0.0
+	_velocite = Vector2.ZERO
+	_coeur.position = Vector2.ZERO
 	LightTextures.poser(_lumiere, LightTextures.RETRODIFFUSION, EMPREINTE_LUMIERE)
 	if is_replay:
 		return
-	AudioManager.play_sfx_2d_random_pitch("fusee_atterrit", cible)
+	AudioManager.play_sfx_2d_random_pitch("fusee_atterrit", global_position)
 	if _combustion and _combustion.stream:
 		# Le bus (occlusion par les murs) se choisit une fois, à l'atterrissage —
 		# c'est le contrat des one-shots du pool, assumé ici pour une boucle en
 		# attendant l'étape audio (FU4) : la position de la fusée ne bouge plus,
 		# seule l'oreille bouge encore.
-		var part: float = AudioManager.part_occultee(cible)
+		var part: float = AudioManager.part_occultee(global_position)
 		_combustion.bus = AudioManager.bus_pour("SFX", part > 0.0)
 		if part > 0.0:
 			_combustion.volume_db += AudioManager.OCCLUSION_PENTE_DB * part

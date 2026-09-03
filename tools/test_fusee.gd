@@ -24,7 +24,7 @@ func _init() -> void:
 func _run() -> void:
 	print("=== LA FUSÉE ÉCLAIRANTE ===")
 	_test_vol()
-	_test_cible()
+	_test_rebond()
 	_test_actes()
 	_test_agonie_deterministe()
 	_test_agonie_bornee()
@@ -41,37 +41,42 @@ func _run() -> void:
 
 
 # ---------------------------------------------------------------------------
-# LE VOL — durée bornée, trajectoire qui part et qui arrive
+# LE VOL — frottement qui freine, rebond qui amortit (FU2.1 : la fusée
+# rebondit sur les murs, elle ne les survole plus — décision d'Adrien)
 # ---------------------------------------------------------------------------
 func _test_vol() -> void:
 	print("\n— le vol —")
-	_check("un jet dans ses pieds vole quand même un instant",
-		is_equal_approx(Modele.duree_vol(1.0), Modele.DUREE_VOL_MIN))
-	_check("la durée croît avec la distance",
-		Modele.duree_vol(400.0) > Modele.duree_vol(150.0))
-	_check("la durée plafonne",
-		Modele.duree_vol(100000.0) <= Modele.DUREE_VOL_MAX + 0.0001)
-	var a := Vector2(100, 100)
-	var b := Vector2(400, 250)
-	_check("t=0 part du départ", Modele.position_vol(a, b, 0.0).is_equal_approx(a))
-	_check("t=1 arrive à la cible", Modele.position_vol(a, b, 1.0).is_equal_approx(b))
-	_check("la cloche est au sol aux deux bouts",
-		is_zero_approx(Modele.hauteur_vol(0.0)) and is_zero_approx(Modele.hauteur_vol(1.0)))
-	_check("et culmine au milieu", is_equal_approx(Modele.hauteur_vol(0.5), 1.0))
+	_check("le frottement freine",
+		Modele.vitesse_apres(Modele.VITESSE_LANCER, 0.2) < Modele.VITESSE_LANCER)
+	_check("et ne rend jamais une vitesse négative",
+		is_zero_approx(Modele.vitesse_apres(10.0, 100.0)))
+	_check("la vitesse décroît linéairement",
+		is_equal_approx(Modele.vitesse_apres(900.0, 0.1),
+			900.0 - Modele.FROTTEMENT_VOL * 0.1))
+	# Intégration discrète à 60 Hz : la distance parcourue doit retrouver la
+	# portée dérivée, à l'épaisseur d'un pas près.
+	var vitesse := Modele.VITESSE_LANCER
+	var distance := 0.0
+	while vitesse > 0.0:
+		distance += vitesse / 60.0
+		vitesse = Modele.vitesse_apres(vitesse, 1.0 / 60.0)
+	_check("la portée intégrée retrouve la portée dérivée (~%.0f px)" % Modele.portee_libre(),
+		absf(distance - Modele.portee_libre()) < Modele.VITESSE_LANCER / 60.0 + 1.0,
+		"intégrée %.1f" % distance)
 
 
-func _test_cible() -> void:
-	print("\n— la cible —")
-	var d := Vector2(500, 500)
-	var trop_pres := Modele.borner_cible(d, d + Vector2(10, 0))
-	_check("une cible trop proche est repoussée à la portée minimale",
-		is_equal_approx(trop_pres.distance_to(d), Modele.PORTEE_MIN))
-	var trop_loin := Modele.borner_cible(d, d + Vector2(9999, 0))
-	_check("une cible trop lointaine est ramenée à la portée maximale",
-		is_equal_approx(trop_loin.distance_to(d), Modele.PORTEE_MAX))
-	var sur_place := Modele.borner_cible(d, d)
-	_check("une cible confondue avec le départ ne rend pas le départ",
-		sur_place.distance_to(d) >= Modele.PORTEE_MIN - 0.001)
+func _test_rebond() -> void:
+	print("\n— le rebond —")
+	var v := Vector2(300.0, 100.0)
+	var r := Modele.rebondir(v, Vector2(-1.0, 0.0))
+	_check("un mur vertical inverse la composante horizontale",
+		r.x < 0.0 and is_equal_approx(r.y, v.y * Modele.REBOND_AMORTI))
+	_check("chaque rebond amortit",
+		r.length() < v.length())
+	_check("de la part déclarée exactement",
+		is_equal_approx(r.length(), v.length() * Modele.REBOND_AMORTI))
+	_check("le rebond est pur : deux appels, même réponse",
+		Modele.rebondir(v, Vector2(0.0, 1.0)) == Modele.rebondir(v, Vector2(0.0, 1.0)))
 
 
 # ---------------------------------------------------------------------------
@@ -80,11 +85,11 @@ func _test_cible() -> void:
 func _test_actes() -> void:
 	print("\n— les actes —")
 	_check("avant l'atterrissage : le vol", Modele.acte_a(-0.1) == Modele.Acte.VOL)
-	_check("0 s : le blanc", Modele.acte_a(0.0) == Modele.Acte.BLANC)
-	_check("la frontière blanc→braise est à DUREE_BLANC",
-		Modele.acte_a(Modele.DUREE_BLANC - 0.001) == Modele.Acte.BLANC
-		and Modele.acte_a(Modele.DUREE_BLANC) == Modele.Acte.BRAISE)
-	var debut_agonie := Modele.DUREE_BLANC + Modele.DUREE_BRAISE
+	_check("0 s : le plein feu", Modele.acte_a(0.0) == Modele.Acte.PLEIN_FEU)
+	_check("la frontière plein feu→braise est à DUREE_PLEIN_FEU",
+		Modele.acte_a(Modele.DUREE_PLEIN_FEU - 0.001) == Modele.Acte.PLEIN_FEU
+		and Modele.acte_a(Modele.DUREE_PLEIN_FEU) == Modele.Acte.BRAISE)
+	var debut_agonie := Modele.DUREE_PLEIN_FEU + Modele.DUREE_BRAISE
 	_check("la frontière braise→agonie",
 		Modele.acte_a(debut_agonie - 0.001) == Modele.Acte.BRAISE
 		and Modele.acte_a(debut_agonie) == Modele.Acte.AGONIE)
@@ -92,7 +97,7 @@ func _test_actes() -> void:
 		Modele.acte_a(Modele.duree_combustion()) == Modele.Acte.MORTE)
 	_check("la durée totale est la somme des actes",
 		is_equal_approx(Modele.duree_combustion(),
-			Modele.DUREE_BLANC + Modele.DUREE_BRAISE + Modele.DUREE_AGONIE + Modele.DUREE_RESIDU))
+			Modele.DUREE_PLEIN_FEU + Modele.DUREE_BRAISE + Modele.DUREE_AGONIE + Modele.DUREE_RESIDU))
 
 
 # ---------------------------------------------------------------------------
@@ -127,11 +132,27 @@ func _test_agonie_bornee() -> void:
 			ok_nb and ok_bornes and ok_ordre,
 			str(fen))
 	var fen := Modele.fenetres_agonie(42)
-	var debut_agonie := Modele.DUREE_BLANC + Modele.DUREE_BRAISE
-	_check("un flash est bien vu allumé pendant sa fenêtre",
-		Modele.flash_actif(debut_agonie + fen[0][0] + 0.001, fen))
-	_check("hors agonie, jamais de flash",
+	var debut_agonie := Modele.DUREE_PLEIN_FEU + Modele.DUREE_BRAISE
+	var centre_0: float = (fen[0][0] + fen[0][1]) * 0.5
+	_check("un sursaut culmine au centre de sa fenêtre",
+		Modele.flash_actif(debut_agonie + centre_0, fen)
+		and is_equal_approx(Modele.lueur_agonie(debut_agonie + centre_0, fen), 1.0))
+	_check("hors agonie, jamais de sursaut",
 		not Modele.flash_actif(1.0, fen) and not Modele.flash_actif(debut_agonie - 0.5, fen))
+	# L'enveloppe est un RALLUMAGE, pas un créneau (retour d'Adrien, FU2.1) :
+	# continue partout — d'un millième de seconde à l'autre, jamais de saut.
+	var lisse := true
+	var t := 0.0
+	var precedent := Modele.energie_a(debut_agonie, fen, 1.0)
+	while t < Modele.DUREE_AGONIE:
+		t += 0.001
+		var e := Modele.energie_a(debut_agonie + t, fen, 1.0)
+		if absf(e - precedent) > 0.06:
+			lisse = false
+			break
+		precedent = e
+	_check("l'agonie est continue : pas un créneau, des rallumages", lisse,
+		"saut à t=%.3f" % t)
 
 
 # ---------------------------------------------------------------------------
@@ -141,12 +162,12 @@ func _test_energie() -> void:
 	print("\n— l'énergie —")
 	var fen := Modele.fenetres_agonie(7)
 	_check("en vol : la comète", is_equal_approx(Modele.energie_a(-0.2, fen), Modele.ENERGIE_VOL))
-	_check("le blanc éclaire à pleine énergie",
-		is_equal_approx(Modele.energie_a(1.0, fen), Modele.ENERGIE_BLANC))
-	_check("le raccord part de l'énergie du blanc",
-		is_equal_approx(Modele.energie_a(Modele.DUREE_BLANC, fen), Modele.ENERGIE_BLANC))
+	_check("le plein feu éclaire à pleine énergie",
+		is_equal_approx(Modele.energie_a(1.0, fen), Modele.ENERGIE_PLEIN_FEU))
+	_check("le raccord part de l'énergie du plein feu",
+		is_equal_approx(Modele.energie_a(Modele.DUREE_PLEIN_FEU, fen), Modele.ENERGIE_PLEIN_FEU))
 	_check("et atteint celle de la braise",
-		is_equal_approx(Modele.energie_a(Modele.DUREE_BLANC + Modele.RACCORD_BLANC_BRAISE, fen),
+		is_equal_approx(Modele.energie_a(Modele.DUREE_PLEIN_FEU + Modele.RACCORD_PLEIN_FEU_BRAISE, fen),
 			Modele.ENERGIE_BRAISE))
 	_check("morte : plus rien",
 		is_zero_approx(Modele.energie_a(Modele.duree_combustion() + 1.0, fen)))
@@ -162,35 +183,39 @@ func _test_energie() -> void:
 func _test_photosensibilite() -> void:
 	print("\n— la variante photosensibilité —")
 	var fen := Modele.fenetres_agonie(99)
-	var debut_agonie := Modele.DUREE_BLANC + Modele.DUREE_BRAISE
-	var t_flash: float = debut_agonie + fen[0][0] + 0.001
-	var t_creux: float = debut_agonie + fen[0][1] + 0.001
-	_check("à pleine intensité, le flash saute au-dessus du creux",
-		Modele.energie_a(t_flash, fen, 1.0) > Modele.energie_a(t_creux, fen, 1.0) + 1.0)
-	var saut: float = abs(Modele.energie_a(t_flash, fen, 0.0) - Modele.energie_a(t_creux, fen, 0.0))
-	_check("à intensité nulle, flash et creux se confondent (fondu continu)",
-		saut < 0.05, "saut résiduel %f" % saut)
+	var debut_agonie := Modele.DUREE_PLEIN_FEU + Modele.DUREE_BRAISE
+	var t_sursaut: float = debut_agonie + (fen[0][0] + fen[0][1]) * 0.5
+	_check("à pleine intensité, le sursaut domine largement le fondu",
+		Modele.energie_a(t_sursaut, fen, 1.0) > Modele.energie_a(t_sursaut, fen, 0.0) + 1.0)
+	# À intensité nulle, l'agonie EST le fondu : la même valeur au sursaut et
+	# loin de lui, à la pente du fondu près.
+	var fondu_a: float = Modele.energie_a(t_sursaut, fen, 0.0)
+	var t_rel: float = t_sursaut - debut_agonie
+	var fondu_attendu := lerpf(Modele.ENERGIE_BRAISE, Modele.ENERGIE_RESIDU,
+		t_rel / Modele.DUREE_AGONIE)
+	_check("à intensité nulle, le sursaut s'aplatit sur le fondu",
+		absf(fondu_a - fondu_attendu) < 0.01, "écart %f" % absf(fondu_a - fondu_attendu))
 
 
 func _test_temperature() -> void:
 	print("\n— la température —")
-	_check("blanc magnésium au début", is_zero_approx(Modele.temperature_a(0.5)))
+	_check("rouge de détresse au début (température 0)", is_zero_approx(Modele.temperature_a(0.5)))
 	_check("braise une fois le raccord passé",
-		is_equal_approx(Modele.temperature_a(Modele.DUREE_BLANC + Modele.RACCORD_BLANC_BRAISE + 0.1), 1.0))
+		is_equal_approx(Modele.temperature_a(Modele.DUREE_PLEIN_FEU + Modele.RACCORD_PLEIN_FEU_BRAISE + 0.1), 1.0))
 	_check("le raccord est progressif",
-		Modele.temperature_a(Modele.DUREE_BLANC + Modele.RACCORD_BLANC_BRAISE * 0.5) > 0.0
-		and Modele.temperature_a(Modele.DUREE_BLANC + Modele.RACCORD_BLANC_BRAISE * 0.5) < 1.0)
+		Modele.temperature_a(Modele.DUREE_PLEIN_FEU + Modele.RACCORD_PLEIN_FEU_BRAISE * 0.5) > 0.0
+		and Modele.temperature_a(Modele.DUREE_PLEIN_FEU + Modele.RACCORD_PLEIN_FEU_BRAISE * 0.5) < 1.0)
 
 
 # ---------------------------------------------------------------------------
-# LA FUMÉE — elle s'épaissit (le blanc reste un scan), règne, et meurt AVEC la
+# LA FUMÉE — elle s'épaissit (le plein feu reste un scan), règne, et meurt AVEC la
 # lumière : pas de nuage orphelin en v1, c'est une décision non actée
 # ---------------------------------------------------------------------------
 func _test_fumee() -> void:
 	print("\n— la fumée —")
 	_check("rien pendant le vol", is_zero_approx(Modele.alpha_fumee_a(-0.5)))
-	_check("elle monte pendant le blanc : le scan reste un scan",
-		Modele.alpha_fumee_a(Modele.DUREE_BLANC * 0.5) < 1.0)
+	_check("elle monte pendant le plein feu : le scan reste un scan",
+		Modele.alpha_fumee_a(Modele.DUREE_PLEIN_FEU * 0.5) < 1.0)
 	_check("pleine densité en croisière",
 		is_equal_approx(Modele.alpha_fumee_a(Modele.FUMEE_MONTEE + 1.0), 1.0))
 	_check("morte avec la lumière",
