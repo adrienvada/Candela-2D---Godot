@@ -12,3 +12,6 @@ func is_shoot_pressed() -> bool:
 
 func is_flashlight_pressed() -> bool:
 	return false
+
+func is_flare_pressed() -> bool:
+	return false

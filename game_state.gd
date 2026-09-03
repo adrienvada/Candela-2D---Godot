@@ -765,6 +765,11 @@ func rebuild_arena() -> void:
 	wall_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	walls_layer.material = wall_mat
 
+	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
+	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
+	# défaut de la texture de torche, weapon_data.gd).
+	Fusee.prechauffer(arena)
+
 ## Duplique un calque pour un seul viewport, avec son masque de lumière propre.
 func _duplicate_layer_for_player(layer: TileMapLayer, visibility: int, light_mask: int) -> void:
 	var copy := layer.duplicate() as TileMapLayer
@@ -1182,6 +1187,10 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_time_sync_accum = 0.0
 	_predicted_shots.clear()
 	_pos_history.clear()
+	# Le stock de fusées repart avec la manche — exécuté chez les deux pairs,
+	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
+	_fusees_restantes = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+	_purger_fusees_killcam()
 	ghost_p1.hide()
 	ghost_p2.hide()
 	for c in bullet_container.get_children():
@@ -1313,6 +1322,9 @@ func _process(delta):
 			p1.rotation = current_snap.p1_rot
 			p2.global_position = current_snap.p2_pos
 			p2.rotation = current_snap.p2_rot
+
+			# Les fusées du passé, reconstruites à l'âge lu dans l'instantané.
+			_maj_fusees_killcam(current_snap)
 			
 			# Dynamic Camera Zoom & Tracking
 			# Cinematic smooth tracking throughout the entire killcam
@@ -1367,7 +1379,14 @@ func _process(delta):
 				ReplaySystem.playing_back = false
 				Engine.time_scale = 1.0
 				_liberer_le_releve()
-			
+
+	elif not _end_sequence_active and not _fusees_killcam.is_empty():
+		# Le rejeu vient de finir (ou d'être passé) : ses fusées partent avec
+		# lui — mais PAS pendant l'arrêt sur image de fin, qui prolonge la
+		# dernière image du rejeu : une fusée qui s'y évapore d'une image se
+		# lirait comme un bug d'affichage.
+		_purger_fusees_killcam()
+
 	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
 	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
 	# Décision d'Adrien (2026-08-19) — « le client devient bleu, c'est l'adversaire
@@ -1546,6 +1565,121 @@ func _update_music_intensity() -> void:
 		elif time_left <= MUSIC_LAST_MINUTE:
 			level = 1
 	AudioManager.set_music_intensity(level)
+
+# ── Fusée éclairante — chantier FUSÉE, étape FU1 ───────────────────────────
+# Même architecture que la balle : l'objet n'est pas répliqué, seul le spawn
+# transite (RPC fiable de l'hôte), et chaque machine simule localement une
+# trajectoire déterministe. PAS de prédiction client : un objet utilitaire à
+# une charge tolère un demi-RTT de latence, contrairement au tir — le bit de
+# fusée voyage dans la commande numérotée et c'est l'hôte, en simulant P2, qui
+# détecte le front et spawne pour tout le monde.
+
+## Une fusée par joueur et par manche ; illimitées en bac à sable.
+var _fusees_restantes: Array[int] = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+## Fusées reconstruites par la killcam, par graine.
+var _fusees_killcam: Dictionary = {}
+
+func fusee_disponible(pid: int) -> bool:
+	if sandbox_mode:
+		return true
+	return pid >= 0 and pid < _fusees_restantes.size() and _fusees_restantes[pid] > 0
+
+func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
+	if not round_active and not sandbox_mode: return
+	# Le client ne demande rien : son appui voyage déjà dans sa commande
+	# numérotée, et l'hôte détecte le front en simulant P2. Le désarmement,
+	# lui, est prédit localement par player.gd — comme le cooldown de tir.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if not fusee_disponible(shooter.player_id): return
+	var cible := _cible_de_fusee(pos, rot)
+	var graine := randi()
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_spawn_fusee.rpc(shooter.player_id, pos, cible, graine)
+	else:
+		_do_spawn_fusee(shooter.player_id, pos, cible, graine)
+
+## Où atterrit une fusée lancée de `pos` vers `rot` : portée bornée, puis le
+## point de chute recule le long du vol jusqu'à sortir des murs. Calculé UNE
+## fois, côté autorité, avant le RPC — c'est ce qui le rend identique partout.
+## La cloche SURVOLE les murs pendant le vol : seul l'atterrissage est testé.
+func _cible_de_fusee(pos: Vector2, rot: float) -> Vector2:
+	var dir := Vector2(cos(rot), sin(rot))
+	var cible := FuseeModele.borner_cible(pos, pos + dir * FuseeModele.PORTEE_MAX)
+	if not is_instance_valid(p1):
+		return cible
+	var espace := p1.get_world_2d().direct_space_state
+	if espace == null:
+		return cible
+	var exclus: Array[RID] = []
+	if is_instance_valid(p1): exclus.append(p1.get_rid())
+	if is_instance_valid(p2): exclus.append(p2.get_rid())
+	var q := PhysicsPointQueryParameters2D.new()
+	q.collision_mask = 1 # les murs — les joueurs, aussi couche 1, sont exclus par RID
+	q.exclude = exclus
+	for i in 40:
+		q.position = cible
+		if espace.intersect_point(q, 1).is_empty():
+			return cible
+		cible = cible.move_toward(pos, 12.0)
+	return pos
+
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_fusee(shooter_id: int, pos: Vector2, cible: Vector2, graine: int):
+	_do_spawn_fusee(shooter_id, pos, cible, graine)
+
+func _do_spawn_fusee(shooter_id: int, pos: Vector2, cible: Vector2, graine: int):
+	if not round_active and not sandbox_mode: return
+	if not sandbox_mode and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
+		_fusees_restantes[shooter_id] = maxi(0, _fusees_restantes[shooter_id] - 1)
+	var f := Fusee.new()
+	# Nom explicite ET unique : la graine, partagée par le RPC, l'est aussi —
+	# deux fusées en bac à sable ne se disputent jamais un nom auto-généré.
+	f.name = "FuseeJ%d_%d" % [shooter_id + 1, graine]
+	f.depart = pos
+	f.cible = cible
+	f.graine = graine
+	f.shooter_id = shooter_id
+	f.joueurs = [p1, p2]
+	bullet_container.add_child(f)
+
+## La killcam reconstruit les fusées depuis les instantanés — un événement de
+## lancer ne suffirait pas : la fusée vit ~20 s, le tampon de rejeu 7,5.
+func _maj_fusees_killcam(snap) -> void:
+	# Les fusées vivantes se taisent pendant le rejeu : l'état visible vient
+	# des instantanés, pas du présent.
+	for c in bullet_container.get_children():
+		if c is Fusee and not c.is_replay:
+			c.queue_free()
+	var vus: Dictionary = {}
+	for d in snap.fusees:
+		var cle: int = d["graine"]
+		vus[cle] = true
+		var f: Fusee = _fusees_killcam.get(cle)
+		if f == null or not is_instance_valid(f):
+			f = Fusee.new()
+			f.is_replay = true
+			f.name = "FuseeKillcam_%d" % cle
+			f.depart = d["depart"]
+			f.cible = d["cible"]
+			f.graine = cle
+			f.shooter_id = d["shooter"]
+			f.joueurs = [ghost_p1, ghost_p2]
+			bullet_container.add_child(f)
+			_fusees_killcam[cle] = f
+		f.appliquer_age(d["age"])
+	for cle in _fusees_killcam.keys():
+		if not vus.has(cle):
+			var f = _fusees_killcam[cle]
+			if is_instance_valid(f):
+				f.queue_free()
+			_fusees_killcam.erase(cle)
+
+func _purger_fusees_killcam() -> void:
+	for f in _fusees_killcam.values():
+		if is_instance_valid(f):
+			f.queue_free()
+	_fusees_killcam.clear()
 
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):

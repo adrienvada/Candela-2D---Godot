@@ -43,6 +43,14 @@ const SOUNDS: Dictionary = {
 	"torch_off": "res://assets/audio/sfx/torch_off.wav",
 	# V5.3 — l'acouphène d'éblouissement, boucle dont le volume suit dazzle_amount.
 	"dazzle_ringing": "res://assets/audio/sfx/tinnitus_dazzle.wav",
+	# Chantier FUSÉE (FU1) — câblés, muets tant que les fichiers manquent. PAS de
+	# préfixe `weapon_` : `est_un_tir()` prendrait le lancer pour un coup de feu
+	# et ferait reculer les pas (piège du percuteur, déjà payé). La combustion
+	# est une BOUCLE jouée par une voix dédiée, enfant de la fusée — pas par le
+	# pool de seize, qui la ferait voler (voir fusee.gd).
+	"fusee_lancer": "res://assets/audio/sfx/fusee_lancer.wav",
+	"fusee_atterrit": "res://assets/audio/sfx/fusee_atterrit.wav",
+	"fusee_combustion": "res://assets/audio/sfx/fusee_combustion.wav",
 	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
 	# laquelle sort est `stinger_de_fin`, plus bas.
 	#
@@ -361,6 +369,13 @@ const PORTEE_RELATIVE: Dictionary = {
 	# seule.** Elle vit dans un produit, et le facteur qui la multiplie a ete
 	# regle par quelqu'un d'autre, un autre jour.
 	"weapon_dry": 0.65,
+	# Chantier FUSÉE — PROPOSITIONS, jamais passées au banc (à doser comme les
+	# autres, molette par molette). Le lancer trahit comme un clic à vide ;
+	# l'atterrissage annonce un peu plus loin (l'événement concerne les deux) ;
+	# la combustion est une balise continue, elle porte comme un pas.
+	"fusee_lancer": 0.65,
+	"fusee_atterrit": 0.70,
+	"fusee_combustion": 0.60,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -391,6 +406,11 @@ const NIVEAU_RELATIF: Dictionary = {
 	"flesh_impact": -2.0,
 	"shoot": 0.0,
 	"weapon_dry": -9.0,
+	# Chantier FUSÉE — propositions à doser au banc : événements nets mais pas
+	# des coups de feu ; le grésillement continu pèse peu, comme les pas.
+	"fusee_lancer": -6.0,
+	"fusee_atterrit": -4.0,
+	"fusee_combustion": -11.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
 
@@ -867,6 +887,10 @@ const SFX_PRIORITE: Dictionary = {
 	"ui_ready_ping": 1,
 	"shoot": 2,
 	"flesh_impact": 3,
+	# Chantier FUSÉE — au-dessus des pas, en dessous du récit. La combustion ne
+	# passe pas par le pool (voix dédiée), sa priorité ne sert qu'aux one-shots.
+	"fusee_lancer": 1,
+	"fusee_atterrit": 1,
 }
 ## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
 ## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier

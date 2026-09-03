@@ -12110,6 +12110,127 @@ l'avait écrite.** C'est un motif qui se transmet mieux qu'il ne s'auto-détecte
 
 ---
 
+## Chantier — la fusée éclairante (inscrit le 2026-09-01)
+
+**Demande d'Adrien, brainstormée le 2026-08-31 puis lancée le 2026-09-01 :**
+« qu'on puisse lancer quelque chose qui éclaire une partie de la pièce — mais
+que dans cette lumière il y ait de la fumée, qu'on ne distingue pas forcément
+très clairement ». La ligne de conception retenue par le brainstorm (panel de
+cinq angles + critique à la double aune) : **la fusée doit approfondir le
+paradoxe fondateur, pas le contourner** — grâce à la fumée, la lumière devient
+le seul endroit du jeu où l'on est *vu sans être lu*. Jamais d'invisibilité
+dans la lumière : l'échelle va de « révélé net » à « révélé flou », c'est tout.
+Adrien a confirmé ce point explicitement : la fusée doit toujours révéler la
+position, même amoindrie.
+
+### FU1 + FU2 — livrées le 2026-09-01 (cette session, worktree `fusee-eclairante`)
+
+**L'objet.** `fusee_modele.gd` (modèle PUR, sans dépendance, patron
+`brouillage.gd`) + `fusee.gd` (le nœud) + `fumee_fusee.gdshader` (le voile).
+Tout l'état — position de vol, actes, strobe, fumée, sillage — se dérive de
+quatre paramètres transmis une seule fois (départ, cible, graine, tireur) plus
+l'âge. C'est ce qui rend la synchro et la killcam gratuites.
+
+- **Le lancer** : cloche par-dessus les murs (aucun test de collision en vol ;
+  l'atterrissage recule hors des murs, calculé côté autorité AVANT le RPC).
+  Molette-clic (J1), touche I (J2), **Carré** sur manette — l'emplacement que
+  `input_setup.gd` réservait à « la prochaine action de jeu ». Le lancer
+  désarme 0,6 s (pas de lance-et-tire) via le cooldown de tir existant.
+- **La vie en actes, horloge publique** : blanc magnésium 2 s (le scan, la
+  fumée n'a pas fini de monter) → braise ambre 10 s (l'ère de l'ambiguïté) →
+  agonie 3 s (strobe seedé : chaque flash photographie la pièce) → braise
+  résiduelle 5 s. La fumée **meurt avec la lumière** — la « fumée orpheline »
+  (cachette pure) est une décision d'identité NON actée, hors v1.
+- **La fumée** : trois nappes tournantes ÉCLAIRÉES (elles reçoivent lumières
+  ET ombres des murs par le pipeline Light2D existant — la découpe des ombres
+  dans la fumée est gratuite) + un voile shader UNSHADED au-dessus qui porte la
+  densité FBM, la **masse sombre** à la place d'un joueur dans le nuage, et le
+  **sillage** qui se referme en 2 s (l'immobilité ne creuse rien). Textures de
+  volutes générées et mises en cache — remplaçables par des planches peintes
+  sans toucher au code.
+- **Réseau** : patron `Bullet` exactement — RPC de spawn fiable
+  (`authority`/`call_local`), simulation locale déterministe, **pas de
+  prédiction client du lancer** (une utilitaire à une charge tolère un
+  demi-RTT ; le bit voyage dans la commande numérotée, l'hôte détecte le front
+  en simulant P2). Une fusée par joueur et par manche, stock remis dans
+  `_do_start_round`, illimité en bac à sable.
+- **Killcam par INSTANTANÉS, pas par événement** — le point qui ne se devine
+  pas : la fusée vit ~20 s, le tampon de rejeu 7,5 s. Un événement « fusée
+  lancée » sortirait de la fenêtre pendant qu'elle brûle encore. `Snapshot`
+  porte donc `{graine, tireur, départ, cible, âge}` par fusée vivante, et le
+  nœud sait se reconstruire à un âge arbitraire (`appliquer_age`), strobe
+  compris (la graine régénère la liste des flashs).
+- **Photosensibilité** : entrée `fusee_agonie` (famille MONDE, plancher 0,5)
+  dans `effect_policy.gd`. À intensité réduite, les flashs s'aplatissent sur un
+  fondu — le TEMPO reste dans le son, identique pour tous.
+- **Audio** : clés `fusee_lancer` / `fusee_atterrit` / `fusee_combustion`
+  câblées, muettes tant que les fichiers manquent (règle « câbler, taire »).
+  PAS de préfixe `weapon_` (le duck des pas prendrait le lancer pour un tir —
+  piège du percuteur). La combustion boucle sur une **voix dédiée** enfant de
+  la fusée, hors du pool de seize qui la ferait voler. Son occlusion est
+  choisie UNE fois à l'atterrissage — contrat des one-shots assumé pour une
+  boucle en attendant FU4, la fusée ne bougeant plus.
+- **Bancs et suites** : `tools/test_fusee.gd` (52 contrôles du modèle, dans
+  `run_suites.sh`) ; `tools/banc_fusee.tscn` (observation : lancer au clic,
+  mannequins, sauts d'acte, âge figeable) ; `bench_framerate --fusee` (fusée
+  en braise ENTRETENUE pendant toute la mesure — la charge ne meurt pas au
+  premier tiers du relevé).
+
+### Trois choses que le lot a payées, à ne pas repayer
+
+- **Le témoin du fil a fonctionné exactement comme prévu.** Le bit de fusée
+  ajouté à `rpc_send_inputs` a fait rougir `test_protocole` avant qu'on pense
+  au numéro : `Protocol.VERSION` est monté à **6** (rupture franche, symétrique
+  de la v5 qui retirait un argument au même RPC), témoin recopié.
+- **`is Fusee` dans un fichier chargé par une suite `--script` est interdit.**
+  `replay_system.gd` nommait la classe → dépendance sur `fusee.gd` → qui nomme
+  `AudioManager` → `test_rejeu` ne compilait plus. Typage canard
+  (`has_method("age_depuis_lancer")`) à la place. La même règle vaut pour tout
+  futur fichier « pur » qui voudrait regarder une fusée.
+- **Un `class_name` créé après l'import n'existe pas pour les bancs headless**
+  (`Identifier "Fusee" not declared`) tant que `--headless --import` n'a pas
+  reconstruit le cache global des classes — même famille que le piège du
+  `.godot` périmé, déclinaison « fichier neuf » plutôt que « fusion ».
+
+### Les nombres sont des VALEURS DE DÉPART, pas des décisions
+
+Durées d'actes, énergies, rayon de fumée (200 px), opacité de la masse (0,55),
+refermeture du sillage (2 s), portée du lancer (450 px), portées/niveaux audio :
+tout est constantes de `fusee_modele.gd` et propositions dans les tables —
+**rien n'est passé au banc devant Adrien.** Le dosage est l'étape FU6.
+
+### Ce qui reste — étapes numérotées, à ne pas anticiper
+
+- **FU3 — le tir et la fumée** : flash de bouche diffusé dans tout le nuage
+  (la fumée pardonne UN tir), tunnel incandescent de la balle qui accuse le
+  tireur, tunnel SOMBRE du carreau d'arbalète (l'arme sans lumière obtient sa
+  niche et son premier contre).
+- **FU4 — l'audio complet** : sifflement de vol suivi (voix positionnelle qui
+  suit le projectile — extension du pool identifiée), et UN SEUL des deux
+  modèles sonores (grésillement qui masque les pas + silence-couperet, OU
+  étouffement par la fumée) — les deux cumulés seraient illisibles, à trancher
+  par Adrien.
+- **FU5 — l'extinction** : piétiner la fusée (0,7 s immobile À CONTRE-JOUR)
+  ou l'éteindre d'une balle. Le hitcheck de piétinement DOIT passer par la
+  compensation de latence hôte, sinon injuste à 100 ms.
+- **FU6 — le dosage** : paramétrer le modèle pour donner des molettes au banc,
+  puis séance avec Adrien (visuel + audio), et seulement alors les nombres
+  deviennent des décisions. Relevé `bench_framerate --fusee` au calme, vue
+  unique ET écran scindé, avant de considérer FU2 close côté perf.
+- **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
+  de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
+  de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
+  ~~`p*_lance_fusee` n'est pas dans la liste `BINDABLE` de `ui.gd`~~ — **fait
+  à la fusion dans `main`, et c'est le garde `test_liaisons` (DA4.11) qui l'a
+  exigé** : toute commande clavier doit avoir sa ligne dans CONTRÔLES, la
+  rubrique suit l'InputMap. Deux entrées (`ORDRE` + `LIBELLES`), la machinerie
+  de réassignation fait le reste ; pas
+  de son dans la killcam pour la fusée ; le sillage de killcam repart vide si
+  la fenêtre commence après des traversées ; `asset_manifest.gd` n'attend pas
+  encore les trois fichiers audio (ils n'ont pas de durée cible arrêtée).
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.

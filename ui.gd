@@ -4892,11 +4892,13 @@ const LIBELLES := {
 	"aim_up": "Viser haut", "aim_down": "Viser bas",
 	"aim_left": "Viser à gauche", "aim_right": "Viser à droite",
 	"shoot": "Tirer", "torch": "Torche",
+	"lance_fusee": "Fusée éclairante",
 }
 
 ## L'ordre d'apparition : on se déplace, on vise, on tire, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
-	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch"]
+	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch",
+	"lance_fusee"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
 ## Elle s'écrit quand même — voir `_lignes_du_bloc()`.

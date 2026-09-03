@@ -45,7 +45,11 @@ class_name Protocol
 ##     enverrait six valeurs à un hôte v5 qui en attend cinq. **Rupture franche, donc le numéro monte** — c'est
 ##     exactement le cas que ce carnet existe pour attraper, et le témoin du fil
 ##     l'a signalé avant qu'on y pense.
-const VERSION := 5
+## 6 — `rpc_send_inputs` regagne un sixième argument, le bit de fusée éclairante
+##     (chantier FUSÉE, 2026-09-01), et `rpc_spawn_fusee` apparaît. Même rupture
+##     franche que la v5, dans l'autre sens — et le témoin l'a encore signalée
+##     avant qu'on y pense.
+const VERSION := 6
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -53,7 +57,7 @@ const VERSION := 5
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "7995a5689978147a"
+const WIRE_WITNESS := "8d5799fafae7d13f"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

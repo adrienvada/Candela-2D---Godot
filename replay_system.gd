@@ -61,6 +61,13 @@ class Snapshot:
 	var p1_weapon: WeaponData
 	var p2_weapon: WeaponData
 
+	## Les fusées éclairantes en vie à cette image. Un ÉVÉNEMENT de lancer ne
+	## suffirait pas : une fusée vit ~20 s, le tampon 7,5 — l'événement sortirait
+	## de la fenêtre pendant qu'elle brûle encore. Tout l'état visuel se dérive
+	## de (départ, cible, graine, âge) : c'est tout ce que l'instantané porte.
+	## Chaque entrée : { graine, shooter, depart, cible, age }.
+	var fusees: Array = []
+
 func start_recording():
 	snapshots.clear()
 	bullet_events.clear()
@@ -144,7 +151,22 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p2_light = p2.flashlight_on
 		snap.p2_flash = p2.get_node("MuzzleFlash").energy if p2.get_node("MuzzleFlash").enabled else 0.0
 		snap.p2_weapon = p2.current_weapon
-		
+
+	if bullets_node:
+		for c in bullets_node.get_children():
+			# Typage canard, PAS `c is Fusee` : nommer la classe ferait dépendre ce
+			# fichier de fusee.gd, qui nomme des autoloads — et test_rejeu, lancé en
+			# `--script` sans autoloads, ne compilerait plus (piège payé le 2026-09-01).
+			if c.has_method("age_depuis_lancer") and not c.is_replay \
+					and not c.is_queued_for_deletion():
+				snap.fusees.append({
+					"graine": c.graine,
+					"shooter": c.shooter_id,
+					"depart": c.depart,
+					"cible": c.cible,
+					"age": c.age_depuis_lancer(),
+				})
+
 	snapshots.append(snap)
 	if snapshots.size() > max_snapshots:
 		snapshots.pop_front()
@@ -460,3 +482,25 @@ func _melanger(sortie: Snapshot, s1: Snapshot, s2: Snapshot, t: float) -> void:
 
 	sortie.p1_weapon = s1.p1_weapon
 	sortie.p2_weapon = s1.p2_weapon
+
+	# L'âge suffit : position (vol compris), lumière, strobe et fumée se
+	# dérivent tous de lui, la fraction d'image s'ajoute donc à l'âge seul.
+	#
+	# ⚠️ **Ici, et pas au site d'appel** — c'est toute la résolution du conflit
+	# du 2026-09-03. Le lot « fusée » interpolait les fusées dans
+	# `get_next_frame()`, à l'endroit même que `_melanger()` venait de remplacer :
+	# git a donc vu deux versions du même bloc et n'a pas pu trancher.
+	#
+	# Les poser au site d'appel aurait compilé et **perdu les fusées sur l'autre
+	# chemin** : le pré-tracé de DA4.6 appelle `_melanger()` directement pour
+	# figer une image sans avancer la lecture. Il aurait rendu une image sans
+	# fusées, pendant une demi-seconde, sans erreur — exactement le genre
+	# d'absence qu'on ne relie jamais à sa cause.
+	#
+	# `_melanger()` existe pour qu'il y ait UN seul endroit qui mélange deux
+	# instantanés. Tout champ ajouté à `Snapshot` se mélange donc ici.
+	sortie.fusees.clear()
+	for d in s1.fusees:
+		var copie: Dictionary = d.duplicate()
+		copie["age"] = float(d["age"]) + t * RECORD_PERIOD
+		sortie.fusees.append(copie)

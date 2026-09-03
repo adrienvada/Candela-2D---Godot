@@ -98,6 +98,11 @@ var _peak_bullets := 0
 var _sans_vue := false
 var _sans_torches := false
 var _sans_shaders := false
+## Poste AJOUTÉ à la charge (chantier FUSÉE, FU2) : une fusée en pleine braise,
+## fumée dense, entretenue pendant toute la mesure — c'est le banc qui décide
+## si les nappes + voile tiennent le 1 % bas, jamais l'intuition.
+var _fusee := false
+var _fusee_banc: Fusee
 ## Mode menus (session voisine), qui n'est pas une variante du duel.
 var _variante := ""
 ## Mesure la charge des MENUS au lieu du duel. Voir `_stress_menus()`.
@@ -156,6 +161,7 @@ func _ready() -> void:
 	_sans_vue = args.has("--une-vue")
 	_sans_torches = args.has("--sans-torches")
 	_sans_shaders = args.has("--sans-shaders")
+	_fusee = args.has("--fusee")
 	_vue_unique = args.has("--vue-unique")
 	_sans_racine = args.has("--sans-racine")
 	if args.has("--menus"):
@@ -354,6 +360,12 @@ func _stress(duration: float, sampling: bool) -> void:
 		# distance les plombs de pompe expirent avant de toucher, et le banc ne
 		# produirait aucune particule — il mesurerait une charge imaginaire.
 		_main.p2.global_position = _main.p1.global_position + Vector2(DUEL_DISTANCE, 0.0)
+		if _fusee and is_instance_valid(_fusee_banc):
+			# L'âge boucle DANS la braise : fumée à pleine densité en continu, et
+			# les joueurs du duel traversent le nuage — le sillage travaille aussi.
+			var duree_vol: float = _fusee_banc._duree_vol
+			_fusee_banc.appliquer_age(duree_vol + FuseeModele.FUMEE_MONTEE
+				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5))
 		for p in [_main.p1, _main.p2]:
 			p.hp = 100.0
 			# Torches éteintes : c'est le seul geste du duel qu'on retire, et il
@@ -397,11 +409,14 @@ func _libelle_charge() -> String:
 	if _sans_shaders: retires.append("sans shaders")
 	if _vue_unique:
 		retires.append("vue unique" + (" AVANT chantier R" if _sans_racine else " rendue par la racine"))
-	if retires.is_empty():
-		return "duel complet"
+	var libelle := "duel complet"
 	if retires.size() == 3:
-		return "socle nu (tout retiré)"
-	return "duel " + ", ".join(retires)
+		libelle = "socle nu (tout retiré)"
+	elif not retires.is_empty():
+		libelle = "duel " + ", ".join(retires)
+	if _fusee:
+		libelle += " + fusée éclairante"
+	return libelle
 
 func _appliquer_variante() -> void:
 	# **La vue unique se pose en cachant le conteneur, pas en arretant le rendu.**
@@ -435,6 +450,20 @@ func _appliquer_variante() -> void:
 		print("RETIRÉ: %d matériaux des joueurs" % retires)
 	if _sans_torches:
 		print("RETIRÉ: torches maintenues éteintes")
+	if _fusee:
+		# Pilotée à la main (patron killcam) plutôt que vivante : sa combustion
+		# dure ~20 s, la mesure 60 — l'entretien de l'âge est dans `_stress()`,
+		# pour que la charge (fumée dense + lumière) soit CONSTANTE d'un bout à
+		# l'autre du relevé au lieu de mourir au premier tiers.
+		_fusee_banc = Fusee.new()
+		_fusee_banc.is_replay = true
+		_fusee_banc.name = "FuseeBanc"
+		_fusee_banc.depart = _main.p1.global_position
+		_fusee_banc.cible = _main.p1.global_position + Vector2(DUEL_DISTANCE * 0.5, 0.0)
+		_fusee_banc.graine = 12345
+		_fusee_banc.joueurs = [_main.p1, _main.p2]
+		_main.bullet_container.add_child(_fusee_banc)
+		print("AJOUTÉ: fusée éclairante en braise entretenue (fumée + lumière à ombres)")
 
 ## Retire tous les `.material` d'un sous-arbre. Rend le compte — un zéro dirait
 ## que la variante n'a rien changé, et le banc mesurerait le duel complet sous
@@ -584,6 +613,8 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 			absents.append("GameState.%s a disparu" % prop)
 	if not main.has_method("_on_replay_requested"):
 		absents.append("GameState._on_replay_requested() a disparu")
+	if not main.has_method("spawn_fusee"):
+		absents.append("GameState.spawn_fusee() a disparu (variante --fusee)")
 	for groupe in ["p1_weapon_group", "p2_weapon_group"]:
 		if groupe in ui:
 			var g: ButtonGroup = ui.get(groupe)
