@@ -49,7 +49,11 @@ class_name Protocol
 ##     (chantier FUSÉE, 2026-09-01), et `rpc_spawn_fusee` apparaît. Même rupture
 ##     franche que la v5, dans l'autre sens — et le témoin l'a encore signalée
 ##     avant qu'on y pense.
-const VERSION := 6
+## 7 — `rpc_spawn_fusee` troque sa cible (Vector2) contre un angle (float) :
+##     la fusée REBONDIT sur les murs au lieu de les survoler (FU2.1, décision
+##     d'Adrien au premier essai), le vol se simule localement des deux côtés.
+##     Un hôte v6 enverrait une cible qu'un client v7 lirait comme un angle.
+const VERSION := 7
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -57,7 +61,7 @@ const VERSION := 6
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "8d5799fafae7d13f"
+const WIRE_WITNESS := "e9b2d3bb6c72218c"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

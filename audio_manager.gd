@@ -50,6 +50,11 @@ const SOUNDS: Dictionary = {
 	# pool de seize, qui la ferait voler (voir fusee.gd).
 	"fusee_lancer": "res://assets/audio/sfx/fusee_lancer.wav",
 	"fusee_atterrit": "res://assets/audio/sfx/fusee_atterrit.wav",
+	# Rebond ≠ atterrissage, et c'est la décision déjà prise pour la balle
+	# (ricochet REMPLACE wall_impact, 193c849) : le rebond dit « la lumière va
+	# encore bouger », l'atterrissage dit « c'est ici, définitivement ». Nom NU,
+	# sans suffixe numérique — `famille_de()` traiterait _NN comme une variante.
+	"fusee_rebond": "res://assets/audio/sfx/fusee_rebond.wav",
 	"fusee_combustion": "res://assets/audio/sfx/fusee_combustion.wav",
 	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
 	# laquelle sort est `stinger_de_fin`, plus bas.
@@ -375,6 +380,7 @@ const PORTEE_RELATIVE: Dictionary = {
 	# la combustion est une balise continue, elle porte comme un pas.
 	"fusee_lancer": 0.65,
 	"fusee_atterrit": 0.70,
+	"fusee_rebond": 0.65,
 	"fusee_combustion": 0.60,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
@@ -410,6 +416,7 @@ const NIVEAU_RELATIF: Dictionary = {
 	# des coups de feu ; le grésillement continu pèse peu, comme les pas.
 	"fusee_lancer": -6.0,
 	"fusee_atterrit": -4.0,
+	"fusee_rebond": -6.0,
 	"fusee_combustion": -11.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
@@ -891,6 +898,7 @@ const SFX_PRIORITE: Dictionary = {
 	# passe pas par le pool (voix dédiée), sa priorité ne sert qu'aux one-shots.
 	"fusee_lancer": 1,
 	"fusee_atterrit": 1,
+	"fusee_rebond": 1,
 }
 ## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
 ## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier

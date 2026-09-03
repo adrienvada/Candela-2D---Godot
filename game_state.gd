@@ -1592,43 +1592,21 @@ func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
 	if not fusee_disponible(shooter.player_id): return
-	var cible := _cible_de_fusee(pos, rot)
 	var graine := randi()
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_spawn_fusee.rpc(shooter.player_id, pos, cible, graine)
+		rpc_spawn_fusee.rpc(shooter.player_id, pos, rot, graine)
 	else:
-		_do_spawn_fusee(shooter.player_id, pos, cible, graine)
+		_do_spawn_fusee(shooter.player_id, pos, rot, graine)
 
-## Où atterrit une fusée lancée de `pos` vers `rot` : portée bornée, puis le
-## point de chute recule le long du vol jusqu'à sortir des murs. Calculé UNE
-## fois, côté autorité, avant le RPC — c'est ce qui le rend identique partout.
-## La cloche SURVOLE les murs pendant le vol : seul l'atterrissage est testé.
-func _cible_de_fusee(pos: Vector2, rot: float) -> Vector2:
-	var dir := Vector2(cos(rot), sin(rot))
-	var cible := FuseeModele.borner_cible(pos, pos + dir * FuseeModele.PORTEE_MAX)
-	if not is_instance_valid(p1):
-		return cible
-	var espace := p1.get_world_2d().direct_space_state
-	if espace == null:
-		return cible
-	var exclus: Array[RID] = []
-	if is_instance_valid(p1): exclus.append(p1.get_rid())
-	if is_instance_valid(p2): exclus.append(p2.get_rid())
-	var q := PhysicsPointQueryParameters2D.new()
-	q.collision_mask = 1 # les murs — les joueurs, aussi couche 1, sont exclus par RID
-	q.exclude = exclus
-	for i in 40:
-		q.position = cible
-		if espace.intersect_point(q, 1).is_empty():
-			return cible
-		cible = cible.move_toward(pos, 12.0)
-	return pos
-
+# FU2.1 : plus aucune cible pré-calculée — la fusée REBONDIT sur les murs
+# (décision d'Adrien au premier essai, elle les survolait). Le vol se simule
+# localement chez les deux pairs, à l'identique : mêmes murs, mêmes pas de
+# physique — le patron des ricochets de bullet.gd.
 @rpc("authority", "call_local", "reliable")
-func rpc_spawn_fusee(shooter_id: int, pos: Vector2, cible: Vector2, graine: int):
-	_do_spawn_fusee(shooter_id, pos, cible, graine)
+func rpc_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
+	_do_spawn_fusee(shooter_id, pos, rot, graine)
 
-func _do_spawn_fusee(shooter_id: int, pos: Vector2, cible: Vector2, graine: int):
+func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	if not round_active and not sandbox_mode: return
 	if not sandbox_mode and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
 		_fusees_restantes[shooter_id] = maxi(0, _fusees_restantes[shooter_id] - 1)
@@ -1637,7 +1615,7 @@ func _do_spawn_fusee(shooter_id: int, pos: Vector2, cible: Vector2, graine: int)
 	# deux fusées en bac à sable ne se disputent jamais un nom auto-généré.
 	f.name = "FuseeJ%d_%d" % [shooter_id + 1, graine]
 	f.depart = pos
-	f.cible = cible
+	f.direction = Vector2(cos(rot), sin(rot))
 	f.graine = graine
 	f.shooter_id = shooter_id
 	f.joueurs = [p1, p2]
@@ -1660,13 +1638,15 @@ func _maj_fusees_killcam(snap) -> void:
 			f = Fusee.new()
 			f.is_replay = true
 			f.name = "FuseeKillcam_%d" % cle
-			f.depart = d["depart"]
-			f.cible = d["cible"]
+			f.depart = d["pos"]
 			f.graine = cle
 			f.shooter_id = d["shooter"]
 			f.joueurs = [ghost_p1, ghost_p2]
 			bullet_container.add_child(f)
 			_fusees_killcam[cle] = f
+		# Le vol rebondit : sa position ne se dérive pas de l'âge, elle voyage
+		# dans l'instantané — l'âge, lui, reconstruit lumière et fumée.
+		f.global_position = d["pos"]
 		f.appliquer_age(d["age"])
 	for cle in _fusees_killcam.keys():
 		if not vus.has(cle):

@@ -1022,7 +1022,19 @@ func _process(delta):
 		if shoot_cooldown <= 0:
 			shoot_cooldown = 0
 			# Play ready sound here if desired
-	
+
+	# Chantier FUSÉE (FU2.1) — dans la fumée, le sprite S'EFFACE : la masse
+	# sombre du voile porte seule la présence. La masse seule ne suffisait pas,
+	# le sprite restait lisible dessous (retour d'Adrien au premier essai).
+	# Calculé ici, côté joueur — lui seul connaît tous ses visuels — depuis des
+	# positions déjà répliquées : les deux machines effacent au même endroit.
+	var occultation := 0.0
+	for fusee in get_tree().get_nodes_in_group("fusees"):
+		occultation = maxf(occultation, fusee.occultation_pour(global_position))
+	for v in [visual, visual_dim, visual_reveal, visual_enemy]:
+		if v:
+			v.modulate.a = 1.0 - occultation
+
 	# L'éblouissement n'est PAS intégré ici. `game_state` s'en charge, pour les
 	# deux joueurs et en un seul endroit — c'est cette ligne-ci qui, jusqu'au
 	# 2026-08-18, rabotait sans condition (−2,0/s) ce que `_check_dazzle`

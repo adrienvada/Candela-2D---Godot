@@ -63,9 +63,10 @@ class Snapshot:
 
 	## Les fusées éclairantes en vie à cette image. Un ÉVÉNEMENT de lancer ne
 	## suffirait pas : une fusée vit ~20 s, le tampon 7,5 — l'événement sortirait
-	## de la fenêtre pendant qu'elle brûle encore. Tout l'état visuel se dérive
-	## de (départ, cible, graine, âge) : c'est tout ce que l'instantané porte.
-	## Chaque entrée : { graine, shooter, depart, cible, age }.
+	## de la fenêtre pendant qu'elle brûle encore. Lumière et fumée se dérivent
+	## de (graine, âge de combustion) ; la POSITION, elle, voyage dans chaque
+	## image — le vol rebondit sur les murs (FU2.1), il ne se dérive plus.
+	## Chaque entrée : { graine, shooter, pos, age }.
 	var fusees: Array = []
 
 func start_recording():
@@ -157,14 +158,13 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 			# Typage canard, PAS `c is Fusee` : nommer la classe ferait dépendre ce
 			# fichier de fusee.gd, qui nomme des autoloads — et test_rejeu, lancé en
 			# `--script` sans autoloads, ne compilerait plus (piège payé le 2026-09-01).
-			if c.has_method("age_depuis_lancer") and not c.is_replay \
+			if c.has_method("age_combustion") and not c.is_replay \
 					and not c.is_queued_for_deletion():
 				snap.fusees.append({
 					"graine": c.graine,
 					"shooter": c.shooter_id,
-					"depart": c.depart,
-					"cible": c.cible,
-					"age": c.age_depuis_lancer(),
+					"pos": c.global_position,
+					"age": c.age_combustion(),
 				})
 
 	snapshots.append(snap)
@@ -503,4 +503,10 @@ func _melanger(sortie: Snapshot, s1: Snapshot, s2: Snapshot, t: float) -> void:
 	for d in s1.fusees:
 		var copie: Dictionary = d.duplicate()
 		copie["age"] = float(d["age"]) + t * RECORD_PERIOD
+		# La position s'interpole quand la même fusée existe dans s2 (elle vole,
+		# rebonds compris) ; posée, les deux images portent le même point.
+		for d2 in s2.fusees:
+			if d2["graine"] == d["graine"]:
+				copie["pos"] = (d["pos"] as Vector2).lerp(d2["pos"], t)
+				break
 		sortie.fusees.append(copie)
