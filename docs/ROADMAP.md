@@ -6376,6 +6376,37 @@ L'enjeu tient au **fusil**, seule arme qui rebondit et **dont la balle peut tuer
 son propre tireur**. « Cette balle vit encore » est une information sur laquelle
 on agit dans la seconde, parfois contre soi-même.
 
+### Trois façons de dire vrai et d'être compris de travers (2026-09-03)
+
+Trois défauts de la même famille en trois jours, entre sessions parallèles.
+Aucun n'est un mensonge : chaque fois l'énoncé est **exact chez son auteur** et
+faux chez son lecteur, parce qu'il tait le référentiel qui le rend vrai.
+
+- **Le constat daté.** « L'oreille ne suit pas le joueur, mesuré le 2026-08-25 »
+  — vrai à l'écriture, faux dès la fusion suivante. Une session s'y est fiée
+  sans ouvrir le code et a bâti une contrainte inter-chantiers sur un état
+  périmé. *Un constat vieillit sans prévenir.*
+- **La poignée éphémère.** « `candela-2d-b6` n'existe plus, donc la
+  republication est vacante » — les noms `candela-2d-XX` sont fabriqués par
+  `ListAgents` à chaque écoute et changent. La session visée était vivante ;
+  le tableau de bord a été republié deux fois, et il n'est pas versionné.
+  *Une absence dans un annuaire n'est pas une absence.*
+- **Le référentiel implicite.** « La fusée est dans `main` (29b17ac) » — vrai
+  dans le `main` local du poste, faux sur `origin`. Un dépôt partagé par sept
+  sessions **en a deux**, et ils divergent en permanence. J'avais déjà écrit
+  dans un message de commit que je reprenais trois clés qui n'existaient pas
+  chez moi ; seul un `git merge-base --is-ancestor` l'a arrêté.
+
+**La règle qui les couvre toutes les trois : dire d'où l'on parle.** « Poussé
+sur `origin` » ou « dans mon `main` local », jamais « dans main ». Le titre
+d'une session, jamais sa poignée. Ce que le code FAIT, jamais ce qu'on a mesuré
+un jour.
+
+**Et le corollaire, qui coûte moins cher que la confiance :** entre sessions, un
+fait vérifiable se vérifie. `git merge-base --is-ancestor`, `list_sessions`, un
+`grep` dans le fichier — trois secondes, contre une demi-journée de travail bâti
+sur un état qui n'existe pas.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
