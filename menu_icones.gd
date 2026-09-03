@@ -88,6 +88,11 @@ const PAR_OUTIL := {
 	"frame": "outil_cadre.png",
 	"share": "outil_partager.png",
 	"clear": "outil_effacer.png",
+	"save": "outil_sauvegarder.png",
+	"test": "outil_tester.png",
+	"back": "outil_retour.png",
+	"new": "outil_nouvelle.png",
+	"import": "outil_importer.png",
 }
 
 
@@ -129,8 +134,7 @@ const ICONE_D_ETAT := ["brush"]
 ## dessiner une ? Les confondre envoie chercher un fichier que personne n'a
 ## jamais commandé. Cette liste existe pour que la seconde question ait un
 ## endroit où se poser.
-const SANS_ICONE := ["grid_wider", "grid_narrower", "grid_taller",
-	"grid_shorter", "new", "import", "save", "test", "back"]
+const SANS_ICONE := ["grid_wider", "grid_narrower", "grid_taller", "grid_shorter"]
 
 
 ## La texture d'un nom de fichier, ou `null` s'il n'est pas encore cuit.
@@ -193,7 +197,7 @@ static func _reflet(source: String) -> Texture2D:
 ## « pas encore cuite » de « cuite et non affichée », deux états qui se
 ## ressemblent trop à l'œil.
 static func poser_sur(bouton: Button, slug: String, teinte: Color,
-		cote: float = 32.0) -> bool:
+		cote: float = 20.0) -> bool:
 	return poser_texture(bouton, arme(slug), teinte, cote)
 
 

@@ -50,6 +50,7 @@ const Brouillage := preload("res://brouillage.gd")
 const Eblouissement := preload("res://eblouissement.gd")
 const SHADER_VOILE := preload("res://voile_eblouissement.gdshader")
 const APPAREIL_BROUILLAGE := preload("res://brouillage_vue.gd")
+const VoileTextures := preload("res://voile_textures.gd")
 
 ## Le joueur ébloui. Une classe et non un `Node2D` nu : `brouillage_vue.maj()`
 ## lit `regardeur.dazzle_amount`, et un nœud qui ne porte pas la propriété rend
@@ -190,6 +191,21 @@ var _brouillage_actif: bool = true
 ## qui corrigerait silencieusement un défaut de production le rendrait
 ## invisible. `M` sert à répondre « ça vient de là » en une touche.
 var _copie_plein_cadre: bool = false
+
+## Le voile occupe-t-il toute la fenêtre, ou une MOITIÉ, comme en écran scindé ?
+## **Touche `É`**, et ce n'est pas un confort : c'est le défaut que ce banc a
+## laissé passer.
+##
+## ⚠️ **Le banc n'a longtemps montré qu'un seul rapport d'écran**, celui de sa
+## fenêtre (16/9). Le jeu en a deux : 1,78 en vue unique, **0,889 en écran
+## scindé** (960×1080, mesuré). Les vingt-cinq réglages validés par Adrien le
+## 2026-08-27 l'ont donc été à un rapport, et lui les a essayés à l'autre — où
+## toute la gerbe débordait du rectangle. « Où est passé le flare central ? les
+## fantômes ? je ne vois que le flou. »
+##
+## Un banc qui ne montre qu'un cas fait juger ce cas-là, et laisse croire qu'on a
+## jugé l'effet.
+var _demi_largeur: bool = false
 var _etalonnage: bool = false    ## En cours de relevé : le monde est caché.
 ## En train de tirer la planche de contact. **Sans ce drapeau, `_process`
 ## repasserait derrière la planche à chaque image** — il rappellerait `_rendre()`
@@ -430,126 +446,14 @@ func _forger_textures() -> void:
 			and _fantome_tex != null
 		if _textures_fournies:
 			return
-	_lueur_tex = _forger_lueur()
-	_flare_tex = _forger_flare()
-	_fantome_tex = _forger_fantome()
-
-
-## Une lueur ronde : blanche au centre, rigoureusement noire au bord.
-##
-## Deux termes et non un : un cœur serré `(1−r)^4` pour la brûlure, et un halo
-## large `(1−r)^1,4` pour ce qui bave autour. Une seule puissance donne soit une
-## bille dure, soit une tache molle — jamais les deux, et c'est les deux qu'on
-## voit d'une lampe braquée dans un objectif.
-func _forger_lueur(taille: int = 256) -> ImageTexture:
-	var img := Image.create(taille, taille, false, Image.FORMAT_RGBA8)
-	var c := float(taille - 1) * 0.5
-	for y in taille:
-		for x in taille:
-			var r := Vector2(float(x) - c, float(y) - c).length() / c
-			var t := clampf(1.0 - r, 0.0, 1.0)
-			var v := pow(t, 4.0) * 0.75 + pow(t, 1.4) * 0.35
-			img.set_pixel(x, y, Color(1, 1, 1, 1) * minf(v, 1.0))
-	return ImageTexture.create_from_image(_border_noir(img))
-
-
-## Une traînée horizontale : vive sur l'axe, éteinte partout ailleurs.
-##
-## ⚠️ **Le profil EN TRAVERS est beaucoup plus creusé que le profil EN
-## LONG** — `^6` contre `^1,8`. C'est ce rapport qui fait une traînée plutôt
-## qu'une ellipse : l'œil lit une traînée à sa finesse, pas à sa longueur.
-##
-## L'irrégularité vient d'un peigne de sinus le long de l'axe. Sans elle, la
-## traînée est un trait parfait — donc un trait DESSINÉ, pas une aberration
-## d'optique. C'est le même défaut de fond que le halo qui était un cercle
-## parfait : ce qui est trop régulier se lit comme une forme, et une forme est
-## une chose de plus à lire.
-func _forger_flare(larg: int = 512, haut: int = 64) -> ImageTexture:
-	var img := Image.create(larg, haut, false, Image.FORMAT_RGBA8)
-	for y in haut:
-		var v := absf(float(y) / float(haut - 1) * 2.0 - 1.0)
-		var travers := pow(clampf(1.0 - v, 0.0, 1.0), 6.0)
-		for x in larg:
-			var u := float(x) / float(larg - 1) * 2.0 - 1.0
-			var long := pow(clampf(1.0 - absf(u), 0.0, 1.0), 1.8)
-			var peigne := 0.72 + 0.28 * sin(u * 37.0) * sin(u * 11.3 + 1.7)
-			img.set_pixel(x, y, Color(1, 1, 1, 1) * clampf(long * travers * peigne, 0.0, 1.0))
-	return ImageTexture.create_from_image(_border_noir(img))
-
-
-## Un fantôme d'objectif : le disque à IRIS, avec son liseré.
-##
-## ⚠️ **Il est HEXAGONAL, et ce n'est pas de la coquetterie.** Un fantôme rond
-## est une bulle ; un fantôme à six côtés est le diaphragme de l'objectif qu'on
-## regarde à travers. C'est le détail qui fait dire « photo » plutôt que
-## « effet » — et c'est précisément ce qu'Adrien demande aux fantômes
-## d'apporter (2026-08-27).
-##
-## Trois termes : un intérieur presque plat et faible, un liseré vif au bord, et
-## une chute franche au-delà. Le liseré est le plus important des trois : sans
-## lui on obtient une tache, et une tache de plus ne fait pas un objectif.
-func _forger_fantome(taille: int = 256) -> ImageTexture:
-	var img := Image.create(taille, taille, false, Image.FORMAT_RGBA8)
-	var c := float(taille - 1) * 0.5
-	for y in taille:
-		for x in taille:
-			var p := Vector2(float(x) - c, float(y) - c) / c
-			# Rayon HEXAGONAL : on ramène l'angle dans un sixième de tour et on
-			# divise par l'apothème. `r = 1` est alors le bord de l'hexagone,
-			# quel que soit l'angle.
-			var ang := fposmod(p.angle(), PI / 3.0) - PI / 6.0
-			# ⚠️ **Le `/ 0,78` est ce qui garde le pourtour NOIR, et son absence a
-			# blanchi tout l'écran.** Sans lui, les côtés plats de l'hexagone
-			# tombent pile sur le bord de la texture : le liseré y vaut encore
-			# 0,27, et `repeat_disable` étire ce texel à l'infini — quatre
-			# fantômes ajoutaient donc 0,27 chacun SUR TOUTE L'IMAGE.
-			#
-			# Le shader porte l'avertissement en toutes lettres (« les textures
-			# DOIVENT être noires sur tout leur pourtour »). Je l'ai écrit pour
-			# les deux premières et violé sur la troisième — un avertissement ne
-			# protège que ce qu'on pense à relire.
-			var r := p.length() * cos(ang) / cos(PI / 6.0) / 0.78
-			# ⚠️ **Un fantôme est un disque REMPLI à liseré, pas un fil de fer.**
-			# Le premier jet donnait 0,22 d'intérieur contre 0,85 de liseré : à
-			# l'écran, une chaîne de contours hexagonaux nets, qui se lit comme
-			# du dessin vectoriel et non comme une photo. C'est l'inverse du but,
-			# puisque les fantômes n'ont été ajoutés que pour « augmenter le
-			# réalisme » (Adrien, 2026-08-27).
-			#
-			# Trois termes désormais, et l'ordre de leurs poids est le réglage :
-			# un intérieur franc, un liseré plus discret que lui, et un léger
-			# dégradé qui empêche l'intérieur d'être un aplat — un aplat parfait
-			# est aussi peu photographique qu'un contour parfait.
-			var interieur := 0.34 * (1.0 - smoothstep(0.72, 1.0, r))
-			var degrade := 0.10 * clampf(1.0 - r, 0.0, 1.0)
-			var lisere := 0.46 * exp(-pow((r - 0.95) / 0.055, 2.0))
-			var v := clampf(interieur + degrade + lisere, 0.0, 1.0) \
-				* (1.0 - smoothstep(1.0, 1.08, r))
-			img.set_pixel(x, y, Color(1, 1, 1, 1) * v)
-	return ImageTexture.create_from_image(_border_noir(img))
-
-
-
-## La CEINTURE : le pourtour d'une texture, forcé à noir.
-##
-## ⚠️ **Ce n'est pas de la prudence, c'est un garde-fou payé.** Le shader
-## échantillonne les trois textures largement hors de leurs bornes, et
-## `repeat_disable` y étire le texel du bord. Un seul texel non nul sur un bord
-## se répand donc sur une moitié d'écran — c'est arrivé au fantôme, et l'image
-## est sortie ENTIÈREMENT BLANCHE, ce qui ne ressemble à aucun défaut de forme et
-## n'oriente donc vers rien.
-##
-## Une formule peut oublier de s'annuler au bord ; deux pixels de ceinture, non.
-func _border_noir(img: Image) -> Image:
-	var l := img.get_width()
-	var h := img.get_height()
-	for x in l:
-		for y in [0, 1, h - 2, h - 1]:
-			img.set_pixel(x, y, Color(0, 0, 0, 0))
-	for y in h:
-		for x in [0, 1, l - 2, l - 1]:
-			img.set_pixel(x, y, Color(0, 0, 0, 0))
-	return img
+	# ⚠️ **Le banc lit la MÊME source que la production, et il ne les fabrique
+	# plus lui-même.** Il les fabriquait, `ui.gd` non — le banc montrait donc une
+	# gerbe que le jeu ne pouvait pas produire, et personne ne pouvait le voir
+	# ici. Une formule qui sert à deux endroits vit dans un seul fichier.
+	var tex := VoileTextures.toutes()
+	_lueur_tex = tex["lueur"]
+	_flare_tex = tex["flare"]
+	_fantome_tex = tex["fantome"]
 
 
 func _batir_monde() -> void:
@@ -727,6 +631,7 @@ func _batir_ecran() -> void:
 	_voile = ColorRect.new()
 	_voile.name = "Voile"
 	_voile.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_voile.anchor_right = 0.5 if _demi_largeur else 1.0
 	_voile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mat = ShaderMaterial.new()
 	_mat.shader = SHADER_VOILE
@@ -975,6 +880,12 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 			_cone_deg = clampf(_cone_deg + 5.0, 5.0, 80.0)
 			_poser_arme()
 		KEY_M: _copie_plein_cadre = not _copie_plein_cadre
+		KEY_QUOTELEFT, KEY_SEMICOLON:
+			# `É` d'un AZERTY : selon la disposition, l'étiquette tombe sur l'une
+			# ou l'autre. Les deux sont câblées plutôt qu'une seule qui marcherait
+			# chez moi et pas chez Adrien — le banc voisin a déjà payé ça.
+			_demi_largeur = not _demi_largeur
+			_voile.anchor_right = 0.5 if _demi_largeur else 1.0
 		KEY_E: _etalonner()
 		KEY_R: _lire_defauts()
 		KEY_ESCAPE:
@@ -1025,6 +936,8 @@ func _maj_panneau() -> void:
 			"   ⚠ photocopie PLEIN CADRE (M) — pas ce que fait le jeu"
 			if _copie_plein_cadre else "   photocopie RECT (M) — comme le jeu"],
 		"textures       %s" % ("fournies (assets)" if _textures_fournies else "fabriquées ici"),
+		"vue            %s" % ("MOITIÉ d'écran — comme en écran scindé (É)"
+			if _demi_largeur else "plein écran — comme en vue unique (É)"),
 	]
 	if _dernier_releve != "":
 		lignes += ["", "étalonnage : " + _dernier_releve]
@@ -1061,5 +974,5 @@ func _texte_aide() -> String:
 		+ "A auto/forcé   ↑/↓ niveau   O orbite / souris (la souris pose la " \
 		+ "POSITION)   Espace figer le temps   Z/X distance   C/V cône\n" \
 		+ "B couper halo et flou   M photocopie RECT / plein cadre   " \
-		+ "E étalonner (opacité moyenne)   R remettre les défauts   " \
+		+ "É demi-écran / plein écran   E étalonner   R remettre les défauts   " \
 		+ "Échap transcrire et sortir"

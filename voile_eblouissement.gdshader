@@ -245,6 +245,10 @@ uniform float grain_hz : hint_range(0.0, 60.0) = 10.0;
 const float PI_ = 3.14159265359;
 const float TAU_ = 6.28318530718;
 
+/// La demi-diagonale de la vue de RÉFÉRENCE — 16/9, celle du banc, celle où les
+/// vingt-cinq réglages ont été jugés le 2026-08-27. `sqrt(1,778² + 1²)`.
+const float DIAG_REF = 2.0393;
+
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -256,7 +260,31 @@ float hash21(vec2 p) {
 void fragment() {
 	// Coordonnées centrées, en fractions de la DEMI-HAUTEUR. L'aspect est
 	// corrigé ici, une fois, pour que tout ce qui suit raisonne en unités rondes.
-	vec2 d = (UV - vec2(0.5)) * vec2(aspect, 1.0) * 2.0;
+	// ⚠️ **La normalisation par la DIAGONALE, et son absence a fait disparaître
+	// la gerbe en écran scindé.**
+	//
+	// Les motifs sont dimensionnés en demi-hauteurs. C'est ce qui garde le cœur
+	// ROND — mais leur emprise dépend alors du rapport de la vue, et le jeu en a
+	// deux très différents : **1,78 en vue unique, 0,889 en écran scindé**
+	// (960×1080, mesuré). Les réglages jugés au banc à 16/9 débordaient donc du
+	// rectangle en écran scindé : une traînée de longueur 1,4 y couvrait 157 % de
+	// la demi-largeur au lieu de 79 %, ses pointes tombaient hors cadre, et il ne
+	// restait visible que son milieu large. Adrien : « où est passé le flare
+	// central ? les fantômes ? je ne vois que le flou ».
+	//
+	// On ramène donc la demi-diagonale à celle de la vue de RÉFÉRENCE, 16/9 —
+	// celle où les réglages ont été jugés. **Les cercles restent des cercles** (le
+	// facteur est isotrope), et la composition occupe la même part de la diagonale
+	// dans les deux modes. À 16/9 le facteur vaut exactement 1 : rien de ce
+	// qu'Adrien a validé ne bouge.
+	//
+	// ⚠️ **On ne peut PAS avoir les deux à la fois** — cercles ronds et emprise
+	// constante — et il fallait choisir : un voile d'éblouissement est un
+	// phénomène optique, un cœur ovale se verrait comme un défaut. La diagonale
+	// est le compromis qui préserve la forme et corrige l'essentiel de l'écart.
+	float demi_diag = sqrt(aspect * aspect + 1.0);
+	float echelle_vue = DIAG_REF / max(demi_diag, 0.001);
+	vec2 d = (UV - vec2(0.5)) * vec2(aspect, 1.0) * 2.0 * echelle_vue;
 
 	// ⚠️ **LE TREMBLEMENT S'APPLIQUE AU RELÈVEMENT, UNE SEULE FOIS.** Tout ce qui
 	// suit en dépend — les lueurs, les flares, l'axe des fantômes —, et c'est ce

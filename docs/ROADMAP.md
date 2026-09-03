@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-08-28
+> Dernière mise à jour : 2026-09-01
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2338,17 +2338,31 @@ que de l'avoir vu marcher. C'est le jalon H9.
 
 ### Ce qui reste
 
-1. **H8 — la paire de clés.** ✅ Moitié publique posée le 2026-08-26. Reste le
-   secret GitHub `CANDELA_MAJ_CLE_PRIVEE` — la clé privée ne passe par aucun
-   agent, par aucun message, par aucun commit.
-   **Piège vécu le même jour, et il vaut d'être écrit :** un tag `v0.1.0` a été
-   posé avant que la clé publique ne soit dans le fichier et avant que le secret
-   n'existe. Le tag est parti seul (une poussée de tag emporte ses objets même
-   quand la poussée de `main` est refusée) et a désigné un commit que `main` ne
-   connaissait pas. La publication a échoué là où elle devait : à la signature.
-   **Poser le tag après que le commit visé est sur GitHub**, jamais avant.
-2. **H9 — la première publication.** Poser `v0.1.0`, laisser la CI publier, puis
-   installer et mettre à jour sur une vraie machine.
+1. **H8 — la paire de clés.** ✅ **Fait, les deux moitiés.** Publique posée le
+   2026-08-26 (`0af06e1`, `update_manager.gd`) ; secret GitHub
+   `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25 (vérifié : `gh secret list`) —
+   la clé privée n'est jamais passée par un agent, par un message, ni par un
+   commit.
+   **Deux pièges vécus le même week-end, tous deux à écrire :**
+   - un tag `v0.1.0` a été posé avant que la clé publique ne soit dans le
+     fichier. Le tag est parti seul (une poussée de tag emporte ses objets
+     même quand la poussée de `main` est refusée) et a désigné un commit que
+     `main` ne connaissait pas. Le workflow `Publication` a pourtant tourné
+     jusqu'au bout ce jour-là (`32912720779`, le 2026-08-25 23:53 UTC, onze
+     étapes vertes, deux exports, manifeste signé, Release créée) : rien dans
+     la CI ne vérifie que le commit tagué contient la clé, seulement que la
+     signature qu'il produit est valide. La Release a dû être retirée après
+     coup — le garde-fou qui manquait est humain, pas dans la CI. **Poser le
+     tag après que le commit visé est sur GitHub**, jamais avant.
+   - supprimer le tag d'une Release déjà publiée ne supprime pas la Release :
+     elle redevient un **brouillon non tagué**, qu'il faut effacer à la main,
+     sans quoi reposer le même nom de tag entre en conflit avec elle. Celui du
+     25 août (« Candela v0.1.0 ») est **encore là au 2026-08-31**, vérifié par
+     `gh release list` — à supprimer avant de reposer `v0.1.0` pour de bon.
+2. **H9 — la première publication.** Supprimer le brouillon orphelin du
+   25 août, poser `v0.1.0` sur un commit déjà poussé qui contient la clé
+   publique, laisser la CI publier, puis installer et mettre à jour sur une
+   vraie machine.
 3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
    Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
    pas de translocation, un dossier et un `.exe`.
@@ -2363,7 +2377,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 |---|---|
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
-| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. |
+| **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
 | **Le port des bancs est dérivé de l'arbre de travail** (2026-08-25, Adrien) | Six sessions partagent la machine, et un port fixe en faisait une **file d'attente que personne n'avait demandée** : le refus de démarrer protégeait du faux diagnostic, il ne rendait pas la mesure possible pour autant. `run_duo.sh` dérive un port du chemin de l'arbre (plage 20000-39999, à l'écart des éphémères de macOS) et l'exporte ; `NetworkManager.DEFAULT_PORT` le lit et alimente `host_game()`/`join_game()`, qui l'acceptaient déjà — `ui.gd` n'a pas bougé. **Trois conditions, toutes de la session DA2, et la troisième est la plus importante** : dériver UNE fois et transmettre (sinon hôte et client, lancés de deux dossiers, ouvrent deux ports et ne se voient jamais) ; borner la plage ; et **n'honorer l'environnement qu'en build debug**, un `CANDELA_PORT` oublié chez un joueur ferait échouer sa partie LAN sans rien dire — même précaution que `--eos-ephemeral`. Le choix de fond a été énoncé par les six sessions le même jour : **l'outil qui évite bat la discipline qui se souvient** ; `CANDELA_PORT` seul aurait demandé qu'on pense à l'exporter. |
@@ -3078,6 +3092,64 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un banc ment d'autant mieux qu'il est joli (2026-09-01)
+
+**Le banc du voile fabriquait lui-même les trois textures que le shader
+échantillonne. La production, elle, ne les fournissait pas** — et
+`hint_default_black` fait qu'un `sampler2D` non fourni rend du **noir** : sans une
+erreur, sans un avertissement, sans une ligne de journal. Le jeu affichait donc le
+voile amputé de ses lueurs, de ses flares et de ses fantômes, quand le banc
+montrait la gerbe entière.
+
+**Le défaut est structurellement invisible depuis le banc**, puisque c'est le banc
+qui fabrique ce qui manque ailleurs. Plus il est complet, mieux il masque
+l'absence. C'est Adrien qui l'a vu, en jouant : « où est passé le flare central ?
+les fantômes ? je ne vois que le flou ».
+
+**La parade est la règle que ce dépôt a déjà payée trois fois**, appliquée aux
+ressources et non plus seulement aux formules : *ce qui sert à deux endroits vit
+dans UN fichier, et les deux le lisent.* Un banc ne fabrique jamais ce dont la
+production a besoin — il le lit au même endroit qu'elle. Les fabriques du voile
+vivent depuis dans `voile_textures.gd`.
+
+**Le contrôle qui l'aurait attrapé plus tôt n'existe pas encore** et vaut d'être
+noté : aucune suite ne vérifie qu'un `sampler2D` déclaré par un shader de
+production est effectivement fourni par son appelant. Un `null` y est légal.
+
+### Un banc qui ne montre qu'un rapport d'écran fait juger ce rapport-là (2026-09-01)
+
+Le jeu a **deux** rapports très différents : `1,78` en vue unique, **`0,889` en
+écran scindé** (960 × 1080, mesuré). Le banc du voile n'affichait que le premier.
+
+Les vingt-cinq réglages du voile ont donc été validés à 16/9 et débordaient du
+rectangle en écran scindé — une traînée de longueur 1,4 y couvrait 157 % de la
+demi-largeur au lieu de 79 %. **Personne n'avait rien jugé de faux : on avait
+jugé un cas en croyant juger l'effet.**
+
+Deux conséquences retenues. Le shader normalise désormais par la demi-diagonale
+d'une vue de **référence**, ce qui garde les cercles ronds et rend la composition
+comparable entre les deux modes. Et le banc bascule entre demi-écran et plein
+écran (touche `É`).
+
+⚠️ **On ne peut pas avoir les deux à la fois** — cercles ronds et emprise
+constante à travers les rapports d'écran. Il faut choisir, et le choix se
+documente : pour un voile d'éblouissement, un cœur ovale se lirait comme un
+défaut de rendu.
+
+**Et ce piège ne mord QUE dans l'espace ÉCRAN.** Précision apportée par la
+session « fusée éclairante » le 2026-09-01, après vérification de son propre
+chantier : ses nappes, son voile, ses masses sombres et son sillage sont tous des
+`CanvasItem` en espace **monde**, enfants du nœud fusée. Le 0,889 de l'écran
+scindé ne les déforme donc pas — un cercle de fumée y reste rond dans les deux
+vues, sans rien faire.
+
+**Le critère est là, et il évite d'aller chercher pour rien :** si l'effet est
+peint dans le monde, il est immunisé par construction ; s'il est peint sur
+l'écran — un voile, un vignettage, un flare d'objectif —, il est exposé et doit
+être jugé aux deux rapports. *Un piège qui ne dit pas à qui il s'applique envoie
+chercher là où il n'y a rien, ce qui coûte plus cher qu'un silence.*
+
 
 ### La mesure répond, mais pas à la question posée (2026-08-27)
 
@@ -8290,8 +8362,94 @@ un fait de jeu, pas à un rythme d'interface.
   - **pureté totale** : zéro bavure magenta, fond alpha propre, et silhouettes accordées au pixel près (0 pixel d'écart alpha) ;
   - **roulis combiné** : la planche s'associe au roulis latéral dynamique (`ROULIS_MARCHE`) sur le pied porteur.
 
-  **Ne pas les câbler dans `player.gd` dans cette session** : le câblage fera
-  l'objet de son propre arbitrage / chantier d'intégration dédié.
+  **Câblées dans `player.gd` le 2026-09-01, sur instruction d'Adrien** — l'entrée
+  disait jusque-là « ne pas les câbler dans cette session », et c'était juste : le
+  câblage était un arbitrage à part, rendu depuis. Le jeu joue donc la planche.
+
+  Quatre décisions de câblage, et chacune se paierait si on la défaisait :
+
+  - **la pose se dérive du compteur de DISTANCE**, jamais d'une horloge. Elle
+    change au même instant que le son du pas, l'empreinte au sol et la bosse de
+    rétrodiffusion, parce que tous les quatre lisent `step_distance_accumulated`.
+    Une planche cadencée par le temps dériverait de tout ça à la première
+    variation de vitesse.
+  - **rien ne passe sur le fil, et il ne faut rien y mettre.** Le compteur est
+    calculé des DEUX côtés — le bloc du pas vit hors de `can_move` exprès, pour
+    que l'adversaire interpolé produise les mêmes traces. Ajouter la pose aux RPC
+    serait payer un octet par tick pour une valeur qui tombe juste toute seule,
+    et créer une divergence possible là où il n'y en a aucune.
+  - **l'occluder de lumière ne suit PAS les poses.** Le recalculer coûterait un
+    décodage d'image et 32 rayons balayant les pixels, plusieurs fois par seconde
+    — mais surtout **l'ombre portée changerait de forme quatre fois par cycle**.
+    L'écart entre poses vaut au plus 4 px, à l'arrière du corps : invisible dans
+    une ombre, cher à calculer, et une ombre qui respire se lit comme un défaut.
+  - **le retour au repos est accroché à celui du ROULIS**, pas à l'arrêt du
+    mouvement. Une pose ne s'interpole pas : revenir au statique dès
+    l'immobilisation ferait un saut visible en plein milieu du retour lissé du
+    corps. En attendant que `_roulis` ait fini, les deux se posent au même
+    instant et l'arrêt devient une seule chose au lieu de deux.
+
+  **Le câblage n'a rien coûté, et c'est la contrainte d'échelle qui l'a payé
+  d'avance.** `_calculate_uvs()` dérive les UV des bornes du POLYGONE : tant que
+  la pose a exactement les dimensions du statique, échanger la texture suffit —
+  aucun quad reconstruit, aucune UV recalculée. La contrainte n°2 imposée à la
+  session Gemini, qui ressemblait à de la rigueur d'atelier, est ce qui rend
+  l'animation gratuite à l'exécution.
+
+  ⚠️ **Le lot ne rend rien, donc rien n'aurait vu un décâblage.** Aucune suite ne
+  dessine : les 32 images seraient restées vertes, simplement inutilisées.
+  `test_planche_marche` lit donc aussi le TEXTE de `player.gd` — les quatre poses
+  chargées, l'occluder accordé une seule fois, et `_poser_pose` qui ne recalcule
+  ni quad ni UV. Les trois éprouvés à l'envers avant d'être retenus.
+
+  **Ce qui reste à l'œil et à personne d'autre : le rendu en match.** Le lot dit
+  que le câblage est en place et conforme ; il ne dit pas qu'il est beau en
+  mouvement, à la torche, dans le noir. Ça se regarde en jouant.
+
+  ⚠️ **Ces quatre garanties ont été vérifiées À LA MAIN, une seule fois, dans une
+  session qui s'est terminée — et rien ne les tenait.** Une régénération, une
+  retouche, une recuisson : elles tombaient toutes les quatre sans qu'une ligne
+  ne rougisse, et la validation d'Adrien reposait alors sur des mesures qui
+  n'existaient nulle part dans le dépôt. Les trois tentatives précédentes ayant
+  toutes été **rendues comme des succès**, c'est exactement le trou par lequel
+  la quatrième aurait pu repartir.
+
+  **`tools/test_planche_marche.gd` les tient depuis le 2026-09-01** (96 contrôles,
+  dans le lanceur). Trois choix de fabrication valent d'être retenus, parce que
+  les trois viennent d'un défaut évité :
+
+  - **la référence est le SPRITE STATIQUE, jamais un nombre.** Aucune dimension
+    n'est écrite dans la suite : chaque pose est comparée au `<arme>.png` relu à
+    l'exécution. C'est ce qui la fera survivre à la recuisson ×2 décidée le
+    2026-08-25 — le jour où les statiques doubleront, elle exigera que les
+    planches doublent avec eux, sans qu'on réécrive une ligne. Un nombre figé
+    ici aurait été la faute du seuil `6` de `test_audit_menus`.
+  - **les images sont lues sur le DISQUE, pas à travers le cache d'import.**
+    Premier jet écarté par son contre-exemple : le cache ne rend que ce qui a été
+    importé la dernière fois, donc quelqu'un qui régénère les 32 planches et
+    lance la suite sans réimporter obtiendrait **un vert sur les anciennes
+    images** — la suite validerait avec aplomb le lot qu'elle est censée refuser.
+    Ni `Image.load_from_file()` non plus, qui lit bien le disque mais émet un
+    avertissement par appel : 96 lignes de bruit pour un lot vert, et **un
+    contrôle qui hurle en réussissant apprend à ne plus lire sa sortie.**
+  - **un contrôle rend tout ce qu'il peut voir en une passe.** Seule la
+    comparaison d'abscisses se saute quand la taille est fausse — comparer deux
+    positions sur deux toiles différentes ne veut rien dire. Le magenta et la
+    silhouette, eux, ne dépendent pas de la taille : les sauter aussi
+    transformait une correction en série de manches. Mesuré, et ce n'est pas
+    théorique : l'épreuve à l'envers rendait **1 défaut magenta avant, 4 après**.
+
+  **Éprouvée à l'envers avant d'être retenue, et par le meilleur cobaye possible :
+  le lot REJETÉ lui-même**, remis en place depuis `5267693`. La suite le refuse
+  sur les quatre familles à la fois — douze échecs d'échelle, quatre de portée,
+  quatre de pivot, quatre de magenta. Et elle attrape **l'arbalète, dont la
+  taille était pourtant juste** (56×56 des deux côtés) : seuls les contrôles de
+  portée et de pivot pouvaient la voir. C'est très exactement le contrôle qui
+  remplace un œil, pris en flagrant délit de servir.
+
+  **Ce qu'elle ne vérifie pas, et ne peut pas vérifier : la caméra et la beauté.**
+  Elles se jugent au banc, à l'œil d'Adrien. La suite ne remplace pas ce regard —
+  elle empêche qu'il soit annulé en silence.
 
   Ils sont **trente-deux** : quatre armes × quatre poses × deux versions
   (peinte et silhouette).
@@ -11362,7 +11520,94 @@ discutables les quatre arbitrages d'Adrien du 2026-08-25 (halo à 150 px, voile 
 0,3, gain à 2,0), tous rendus sur ce sol-là. C'est à la session qui le tient de
 décider si ces nombres méritent d'être rejugés dans le noir.
 
-### ✅ VALIDÉ par Adrien le 2026-08-27 — et toujours pas branché
+### ⚠️ Le jeu a d'abord affiché un voile AMPUTÉ — les textures manquaient
+
+**Adrien, écran scindé en main, juste après le branchement : « où est passé le
+flare central ? les fantômes ? je ne vois que le flou. »** Il avait raison, et la
+cause est entièrement dans le branchement.
+
+**Les trois textures — lueur, traînée, fantôme — étaient fabriquées DANS LE
+BANC.** `ui.gd` ne les fournissait pas, et `hint_default_black` fait qu'un
+`sampler2D` non fourni rend du **noir**, sans une erreur, sans un avertissement.
+Le jeu affichait donc le lavis seul : pas de lueurs, pas de flares, pas de
+fantômes. Exactement « le flou ».
+
+**Le banc montrait un effet que la production ne pouvait pas produire**, et rien
+ne pouvait le révéler depuis le banc — il fabriquait lui-même ce qui manquait
+ailleurs. *Un banc ment d'autant mieux qu'il est joli.*
+
+C'est la règle que ce dépôt a payée trois fois : **une formule qui sert à deux
+endroits vit dans UN fichier, et les deux la lisent.** Les fabriques ont donc
+déménagé dans `voile_textures.gd`, que la production et le banc lisent tous les
+deux ; le banc n'en possède plus aucune copie.
+
+### ⚠️ Et un second écart, réel mais SECONDAIRE : le rapport d'écran
+
+Mesuré en cherchant la cause, et corrigé au passage — mais **ce n'était pas ce
+qu'Adrien voyait**, et il faut que ce document le dise, sans quoi la prochaine
+session croira que c'était l'explication.
+
+Les motifs sont dimensionnés en **demi-hauteurs**, ce qui garde le cœur rond mais
+fait dépendre leur emprise du rapport de la vue. Le jeu en a deux : **1,78 en vue
+unique, 0,889 en écran scindé** (960×1080, mesuré). Les vingt-cinq réglages
+validés à 16/9 débordaient donc du rectangle en écran scindé — une traînée de
+longueur 1,4 y couvrait 157 % de la demi-largeur au lieu de 79 %.
+
+Le shader ramène désormais la demi-diagonale à celle de la vue de référence
+(16/9). **Les cercles restent des cercles** — le facteur est isotrope — et à 16/9
+il vaut exactement 1 : rien de ce qu'Adrien a validé ne bouge.
+
+⚠️ **On ne peut pas avoir les deux à la fois**, cercles ronds et emprise
+constante, et il fallait choisir : un voile d'éblouissement est un phénomène
+optique, un cœur ovale se lirait comme un défaut.
+
+**Et le banc n'a jamais montré qu'un seul rapport d'écran** — c'est ce qui a
+laissé passer l'écart. Touche `É` désormais : demi-écran ou plein écran. Un banc
+qui ne montre qu'un cas fait juger ce cas-là, et laisse croire qu'on a jugé
+l'effet.
+
+### ✅ BRANCHÉ le 2026-09-01 — le jeu affiche enfin le voile
+
+**« J'aimerais voir le voile. »** Cinq jours après la validation, la demande
+inscrite au journal des sessions n'avait été prise par personne : le shader
+vivait dans `main` sans aucun lecteur, et le jeu montrait toujours l'aplat.
+Adrien a demandé de le brancher directement — en worktree, puis fusion.
+
+**Ce que `ui.gd` fait désormais**, et rien de plus :
+
+- chaque `ColorRect` de voile porte **son propre `ShaderMaterial`**. ⚠️ Jamais
+  partagé : les deux moitiés d'un écran scindé reçoivent des niveaux, des
+  relèvements et des largeurs différents, et un matériau commun ferait gagner la
+  dernière écriture — le voile de J2 s'afficherait chez J1 une image sur deux,
+  sans qu'aucune erreur ne le dise ;
+- `_poser_voile(rect, victime, source)` pose `niveau`, `temps`, `aspect` et
+  `relevement`. ⚠️ **`victime` subit, `source` éblouit**, et les intervertir
+  donne un effet cohérent et faux — même famille que « l'intensité vient du
+  regardeur, la position de l'émetteur », qui a coûté une soirée au chantier
+  brouillage ;
+- le relèvement se prend dans le **monde** et sert tel quel à l'écran, les
+  caméras du duel ne tournant jamais.
+
+**Le shader est préchargé**, comme les shaders de mort de `player.gd` : compilé
+à la volée, il produirait un hoquet pile sur l'action décisive.
+
+**Deux défauts réglés au passage**, tous deux signalés le 2026-08-27 :
+
+1. **`p2_dazzle` ne s'affiche plus qu'en écran scindé.** Il s'affichait partout :
+   en ligne, la moitié droite de l'écran LOCAL blanchissait quand c'était
+   l'ADVERSAIRE qui était ébloui — une information qu'il n'avait pas payée, dans
+   un jeu dont la règle est que la seule information est la lumière. Caché,
+   l'`HBoxContainer` donne toute la largeur au voile local, qui retrouve du même
+   coup le bon rapport d'aspect.
+2. **Les rectangles sont cachés au repos.** Un `ColorRect` d'alpha nul se dessine
+   quand même : l'ancien voile payait un mélange plein écran à chaque image d'un
+   match, pour rien.
+
+**Reste ouvert et NON traité ici :** les couches du brouillage au-dessus du HUD
+en rendu racine (`ui.tscn` ne déclare aucune `layer`), et le défaut du flou en
+`COPY_MODE_RECT`. Les deux appartiennent au chantier brouillage.
+
+### ✅ VALIDÉ par Adrien le 2026-08-27 — et le branchement a attendu cinq jours
 
 **« On valide. »** L'apparence du voile est arrêtée : les vingt-cinq réglages
 vivent dans `voile_eblouissement.gdshader`, l'étalonnage est fait, le chantier
@@ -12017,8 +12262,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H5 | Création du projet Supabase et de ses clés | Compte à créer, région à choisir, décisions de coût. | ✅ Fait le 2026-08-16 |
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
-| H8 | **Paire de clés de mise à jour** | ✅ **Clé publique en place le 2026-08-26** — paire RSA-4096 fabriquée par Adrien, publique dans `update_manager.gd` (relue par `openssl`, chargée par `Crypto` de Godot). **Reste la moitié qu'aucun agent ne doit toucher** : le secret GitHub `CANDELA_MAJ_CLE_PRIVEE`, à créer depuis `~/candela_maj_privee.pem`. Sans lui, la CI refuse de publier plutôt que d'annoncer une version non signée. | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | Poser `v0.1.0`, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
+| H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
+| H9 | **Première publication, et première mise à jour réelle** | Supprimer le brouillon orphelin du 25 août, poser `v0.1.0` sur un commit qui contient la clé, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---
