@@ -3,7 +3,7 @@ extends SceneTree
 const MenuArtwork := preload("res://menu_artwork.gd")
 const MenuHub := preload("res://menu_hub.gd")
 
-## Suite de tests pour les artworks de menu, les POI, les embrasements et les effets vivants.
+## Suite de tests pour les artworks de menu, les POI et les effets vivants d'ambiance.
 
 var _failures: int = 0
 
@@ -40,12 +40,12 @@ func _test_pois() -> void:
 func _test_effects() -> void:
 	for cle: String in MenuArtwork.EFFECTS.keys():
 		var effet: int = MenuArtwork.effet_pour(cle)
-		_check("Effet valide [0, 13] : " + cle, effet >= 0 and effet <= 13, str(effet))
+		_check("Effet valide [0, 15] : " + cle, effet >= 0 and effet <= 15, str(effet))
 
 func _test_flame_colors() -> void:
 	for cle: String in MenuArtwork.POIS.keys():
 		var col: Color = MenuArtwork.couleur_flamme_pour(cle)
-		_check("Couleur flamme valide : " + cle, col.r > 0.0 and col.a > 0.0, str(col))
+		_check("Couleur d'ambiance valide : " + cle, col.r > 0.0 and col.a > 0.0, str(col))
 
 func _test_shader_load() -> void:
 	var shader := load("res://menu_artwork.gdshader") as Shader
@@ -55,7 +55,7 @@ func _test_shader_load() -> void:
 		mat.shader = shader
 		mat.set_shader_parameter("effect_mode", 1)
 		mat.set_shader_parameter("reveal_progress", 0.5)
-		mat.set_shader_parameter("poi_pos", Vector2(0.66, 0.72))
+		mat.set_shader_parameter("torch_pos", Vector2(0.66, 0.72))
 		mat.set_shader_parameter("ambient_exposure", 0.28)
 		_check("Parametres du shader appliques", true)
 

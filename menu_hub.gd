@@ -412,9 +412,6 @@ func _build_blur_material() -> ShaderMaterial:
 		mat.set_shader_parameter("ambient_exposure", 0.28)
 		mat.set_shader_parameter("torch_radius", 0.45)
 		mat.set_shader_parameter("torch_intensity", 1.0)
-		mat.set_shader_parameter("flame_width", 0.08)
-		mat.set_shader_parameter("flame_intensity", 1.5)
-		mat.set_shader_parameter("flame_color", Vector3(2.496, 1.794, 0.624))
 		mat.set_shader_parameter("reveal_progress", 1.0)
 		mat.set_shader_parameter("effect_mode", 0)
 		mat.set_shader_parameter("effect_time", 0.0)
@@ -695,13 +692,13 @@ func _declencher_embrasement(mat: ShaderMaterial) -> void:
 		return
 	if _reveal_tween != null and _reveal_tween.is_valid():
 		_reveal_tween.kill()
-	mat.set_shader_parameter("reveal_progress", 0.0)
+	mat.set_shader_parameter("reveal_progress", 0.3)
 	_reveal_tween = create_tween()
 	_reveal_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	var appliquer := func(val: float) -> void:
 		if is_instance_valid(_bg_image) and _bg_image.material != null:
 			(_bg_image.material as ShaderMaterial).set_shader_parameter("reveal_progress", val)
-	Charte.animer_via(_reveal_tween, appliquer, 0.0, 1.0, 0.35, Charte.Courbe.ENTREE)
+	Charte.animer_via(_reveal_tween, appliquer, 0.3, 1.0, 0.35, Charte.Courbe.SORTIE)
 
 func set_torch_position_global(global_pos: Vector2) -> void:
 	if _bg_image == null or not _bg_image.is_inside_tree():
@@ -751,11 +748,9 @@ func _update_background(key: String, content: Control) -> void:
 				mat.set_shader_parameter("mode_flou_total", 0.0)
 				var poi := MenuArtwork.poi_pour(nouvelle_cle)
 				var effet := MenuArtwork.effet_pour(nouvelle_cle)
-				var col_flamme := MenuArtwork.couleur_flamme_pour(nouvelle_cle)
 				
-				mat.set_shader_parameter("poi_pos", poi)
+				mat.set_shader_parameter("torch_pos", poi)
 				mat.set_shader_parameter("effect_mode", effet)
-				mat.set_shader_parameter("flame_color", Vector3(col_flamme.r, col_flamme.g, col_flamme.b))
 				
 				if est_nouveau:
 					_declencher_embrasement(mat)
@@ -789,11 +784,9 @@ func _update_background(key: String, content: Control) -> void:
 			mat.set_shader_parameter("mode_flou_total", 1.0)
 			var poi := MenuArtwork.poi_pour(nouvelle_cle)
 			var effet := MenuArtwork.effet_pour(nouvelle_cle)
-			var col_flamme := MenuArtwork.couleur_flamme_pour(nouvelle_cle)
 			
-			mat.set_shader_parameter("poi_pos", poi)
+			mat.set_shader_parameter("torch_pos", poi)
 			mat.set_shader_parameter("effect_mode", effet)
-			mat.set_shader_parameter("flame_color", Vector3(col_flamme.r, col_flamme.g, col_flamme.b))
 			
 			if est_nouveau:
 				_declencher_embrasement(mat)

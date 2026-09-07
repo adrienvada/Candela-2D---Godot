@@ -12644,35 +12644,33 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
   au shader (`set_torch_position_global`) pour projeter un halo de torche
   révélateur (`torch_uv`, rayon doux) sur l'illustration de fond au survol.
 
-### MV2 — Transition d'embrasement par Point d'Intérêt (POI)
-- **Origine organique des flammes** : chaque illustration dispose de coordonnées
-  normalisées `POIS` dans `menu_artwork.gd` ciblant précisément la source de
-  chaleur ou de tir (bout de torche, bouche de pistolet, tête de fusée).
-- **Propagation shader** : transition par front d'onde bruité (`flame_progress`,
-  bruit multi-octave, liseré d'ignition thermique coloré selon `couleur_flamme_pour()`).
-  Lors d'un changement de menu ou d'onglet, l'illustration s'embrase depuis son
-  foyer avant de se stabiliser.
+### MV2 — Fondu organique et suppression de l'embrasement agressif
+- **Fondu doux et progressif** (`reveal_progress`) : suppression des fronts d'onde
+  de flamme et des cercles de feu artificiels. Les changements d'écrans et d'artworks
+  s'effectuent par un fondu d'apparition doux et organique sur Tween `SORTIE`.
 
-### MV3 — 12 effets « vivants » uniques par artwork
-Chaque artwork reçoit un shader d'ambiance animé (`_process()` avec `time`) :
-1. *Bataille / Ruines* : `FLICKER` (vacillement organique de braises et torches).
-2. *Crypte / Sépulcre* : `PULSE` (pulsation spectrale lente).
-3. *Complexe / Labo* : `GLITCH` (distorsions parasites et sauts de trame).
-4. *Écrans de surveillance* : `CRT` (lignes de balayage cathodique et rolling bar).
-5. *Générateur / Réacteur* : `SPARK` (arcs électriques et étincelles brèves).
-6. *Brume / Marais* : `MIST` (vapeur ondulatoire et voiles atmosphériques).
-7. *Radar / Scan* : `SCANNER` (balayage périodique d'analyse tactique).
-8. *Cœur corrompu* : `HEARTBEAT` (double pulsation artérielle).
-9. *Égouts / Plafond suintant* : `DRIP` (condensation et gouttes descendantes).
-10. *Matrice de serveurs* : `NETWORK` (matrice de points / LEDs clignotantes).
-11. *Détresse / Évacuation* : `SMOKE` (volutes de fumée montante).
-12. *Zone irradiée* : `CORROSION` (aberration chromatique et onde toxique).
+### MV3 — Calage précis des écrans / diodes et lueurs diffuses
+- **Élimination des effets ponctuels factices** : suppression du pointeur laser
+  rouge, des étincelles brutales et des fausses grilles de diodes flottantes.
+- **Calage géométrique au pixel près** :
+  - *Terminaux CRT (`ill_amical_local`, `ill_creer_local`, `ill_rejoindre_local`)* :
+    phosphore vert feutré et scanlines douces confinés dans le verre des écrans
+    cathodiques (écrans gauche, fond et droite, kiosques).
+  - *Diodes et câbles (`ill_amical_ligne`, `ill_rejoindre_ligne`)* : lueurs vertes
+    et ambres douces pulsant sur les 4 boîtiers de brassage réels et le long des câbles.
+  - *Cadrans et voltmètres (`apercu_personnalisation`)* : rétro-éclairage ambre
+    doux des cadrans et voyant 440V.
+  - *Fusées de détresse (`ill_creer_*`, `ill_rejoindre_*`)* : halos carmin
+    vaporeux et fumées rouges lentes et diffuses.
+  - *Atmosphères & poussières (`ill_accueil`, `ill_competitif`, `ill_ecran_scinde`, `ill_entrainement`, `ill_mise_a_jour`, `ill_quitter`, `ill_retour`)* :
+    faisceaux volumétriques chauds ou glacés avec suspension de particules lentes.
 
-### MV4 — Validation et couverture
+### MV4 — Validation par captures d'écran et couverture
+- Outil de capture dédié (`tools/capturer_artworks.gd`) générant les 15 rendus en jeu
+  pour contrôle visuel direct.
 - `tools/test_menu_artworks.gd` : validation systématique des coordonnées POI,
-  de l'affectation des 12 effets, de la résilience aux textures inconnues et de la
-  bonne instanciation des shaders du hub.
-- Intégré dans `tools/run_suites.sh` (55 suites solo + 7 duo, 100 % succès).
+  de l'affectation des 15 modes d'effets et de l'instanciation des shaders du hub.
+- Intégré dans `tools/run_suites.sh` (56 suites solo + 7 duo, 100 % succès).
 
 ---
 

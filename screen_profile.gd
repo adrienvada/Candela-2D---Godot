@@ -36,6 +36,7 @@ extends HubScreen
 const Charte := preload("res://charte.gd")
 const MenuTheme := preload("res://menu_theme.gd")
 const MenuWidgets := preload("res://menu_widgets.gd")
+const MenuIcones := preload("res://menu_icones.gd")
 const RANKED := preload("res://ranked_identity.gd")
 
 const COPY_LABEL := "COPIER"
@@ -56,6 +57,8 @@ var _rename_input: LineEdit
 var _btn_rename_ok: Button
 var _btn_rename_cancel: Button
 var _rename_feedback: Label
+var _standing_row: HBoxContainer
+var _rank_icon: TextureRect
 var _standing: Label
 var _code: Label
 var _btn_copy: Button
@@ -204,10 +207,18 @@ func _build_identity_block(body: VBoxContainer) -> void:
 	# Le classement lui-même reste vide tant qu'aucun match en ligne n'a été
 	# joué : afficher « 1000 points » à quelqu'un qui n'a jamais joué serait un
 	# chiffre inventé.
+	_standing_row = HBoxContainer.new()
+	_standing_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_standing_row.add_theme_constant_override("separation", MenuTheme.GAP_S)
+	body.add_child(_standing_row)
+
+	_rank_icon = TextureRect.new()
+	_standing_row.add_child(_rank_icon)
+
 	_standing = Label.new()
 	_standing.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Charte.appareil(_standing, MenuTheme.T_APPUI)
-	body.add_child(_standing)
+	_standing_row.add_child(_standing)
 
 func _build_code_block(body: VBoxContainer) -> void:
 	body.add_child(_make_section("CODE DE RÉCUPÉRATION — À NOTER", MenuTheme.GOLD))
@@ -323,6 +334,14 @@ func refresh() -> void:
 	_standing.visible = not standing.is_empty()
 	_standing.add_theme_color_override("font_color",
 		MenuTheme.P1 if _is_ranked() else MenuTheme.DIM)
+
+	var identity := _identity()
+	var tier_val: Variant = identity.rank_tier if identity != null and "rank_tier" in identity else ""
+	if _is_ranked() and str(tier_val) != "":
+		MenuIcones.poser_rang(_rank_icon, tier_val, 32.0)
+	else:
+		_rank_icon.visible = false
+	_standing_row.visible = _standing.visible or _rank_icon.visible
 
 	_refresh_code()
 
