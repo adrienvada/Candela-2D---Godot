@@ -3094,6 +3094,60 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
+
+**Deux citations écrites ce jour-là sont devenues fausses en moins de deux
+heures.** `game_state.gd:2836` désignait `var parent: Node = self if
+_rendu_racine else vue` ; après un rebase, la ligne était 2824.
+`player.gd:1832` désignait le `ColorRect` du flash d'agonie ; à la base de la
+branche, c'était 1774. Entre les deux, **`main` avait avancé de seize commits
+dans la journée** — cinq sessions travaillant en parallèle, ce qui est le régime
+normal de ce dépôt et non un accident.
+
+⚠️ **Ce qui rend le piège coûteux, c'est qu'un numéro périmé ne casse pas.** Il ne
+lève aucune erreur, ne disparaît pas, ne se signale pas : **il désigne
+simplement une autre ligne**, et le lecteur la croit. Une référence morte se
+remarque ; une référence déplacée se suit. C'est la forme la plus douce de ce que
+ce fichier reproche déjà aux constats datés — sauf qu'un constat daté porte au
+moins sa date, et qu'un numéro de ligne ne porte rien.
+
+**La règle : citer par SYMBOLE, pas par ligne.** Un nom qu'un `grep` retrouve —
+`_accorder_brouillage_aux_vues`, `SHADER_DEATH_FLASH`, `_voile_scinde`,
+`canvas_cull_mask` — survit au rebase, à la fusion, et au voisin qui insère
+soixante lignes plus haut. Quand le symbole ne suffit pas, écrire ce qu'on
+cherche (« le bloc *Satisfying Death Effect* de `player.gd` »), jamais où il se
+trouvait un mardi.
+
+*Vérifié après coup : la section « fusée éclairante » de ce document ne cite que
+des symboles, et n'a donc rien eu à corriger. La règle décrit une pratique qui
+existait déjà chez d'autres ; elle ne fait que la rendre opposable.*
+
+### Le tampon d'écran n'a pas de propriétaire (2026-09-07)
+
+**Six shaders déclarent `hint_screen_texture` ; trois `BackBufferCopy`
+l'alimentent.** Le tampon est une ressource de VIEWPORT : partagée entre tous les
+lecteurs, **persistante d'une image à l'autre**, et rafraîchie seulement là où le
+dernier écrivain a écrit. Rien dans le code ne dit qui est responsable de sa
+fraîcheur, et rien ne le dira : un lecteur qui lit un texel périmé ne lève aucune
+erreur, il rend simplement une image d'avant.
+
+Le passage du flou en `COPY_MODE_RECT` a été jugé sur son prix — 0,375 Mpx au
+lieu de 3,69 — et le raisonnement était juste **pour le flou**, qui ne lit que ce
+qu'il a copié. Il ne l'était pas pour le viewport : depuis ce jour, tout autre
+lecteur trouve un tampon frais dans une ellipse et périmé partout ailleurs.
+`death_flash.gdshader` est dans ce cas, et il repeint l'écran ENTIER.
+
+**La règle : un `COPY_MODE_RECT` est une optimisation LOCALE dont la portée est
+GLOBALE.** Avant d'en poser un, chercher qui d'autre déclare
+`hint_screen_texture` dans le même viewport. Le grep coûte trois secondes ; le
+défaut a coûté deux signalements d'Adrien à dix jours d'écart et n'est toujours
+pas corrigé.
+
+⚠️ **Et la marge ne rattrape rien.** `Brouillage.emprise_copie()` élargit la copie
+au rayon du noyau du flou — elle protège la lecture DU FLOU, pas celle des
+autres. Une marge répond à « ce shader lit-il hors de sa copie ? », jamais à
+« qui d'autre lit ce tampon ? ».
+
 ### Un banc ment d'autant mieux qu'il est joli (2026-09-01)
 
 **Le banc du voile fabriquait lui-même les trois textures que le shader
@@ -3587,6 +3641,37 @@ le cache sans qu'on ait rien fait soi-même.
 coupable que le sien », après le port volé et l'autoload qui ne compile pas.
 C'est un motif, pas une série de coïncidences : **un outil de mesure qui
 dépend d'un état invisible accuse toujours ce qu'il mesure.***
+
+⚠️ **Forme la plus brutale, payée le 2026-09-07 : un worktree NEUF n'a pas un
+cache périmé, il n'en a AUCUN.** `git worktree add` ne copie pas `.godot/`, qui
+est ignoré par git — donc pas de `global_script_class_cache.cfg`, donc **plus un
+seul `class_name` ne se résout**. Le lot part rouge de bout en bout : 20 suites
+en échec, `replay_system.gd` en « Parse error », `CandelaTileSet` « not declared
+in the current scope ». Rien de tout cela ne parle du cache, et **la première
+lecture accuse la fusion qu'on vient de rebaser**.
+
+Le même `godot --headless --path . --import` règle tout, et le lot repasse vert
+(264 s).
+
+**La famille compte donc QUATRE déclinaisons, et c'est ici qu'elles sont
+énumérées** — le chantier fusée en avait consigné une de son côté le 2026-09-01,
+qui renvoyait déjà « à la même famille » :
+
+| déclinaison | ce qui périme le cache |
+|---|---|
+| checkout | on change de commit sous les pieds de Godot |
+| fusion | `git merge` apporte des `.png`, des `.wav`, leurs `.import` |
+| fichier neuf | un `class_name` créé après l'import n'existe pour personne |
+| **worktree neuf** | il n'y a **aucun** cache — `git worktree add` ne copie pas `.godot/` |
+
+**La dernière est la plus traître**, parce qu'on vient précisément d'y créer une
+branche et qu'on a donc une explication toute prête sous la main : on croit avoir
+cassé la fusion qu'on vient de rebaser.
+
+⚠️ **`tools/run_suites.sh` ne fait aucun import et n'avertit de rien** — vérifié.
+Le garde-fou qui manque tiendrait en trois lignes : si
+`.godot/global_script_class_cache.cfg` est absent, importer avant de commencer,
+ou au minimum le dire. Signalé, non corrigé : le script appartient à qui le tient.
 
 
 ### Certifier la moitié d'une affirmation la fait passer tout entière (2026-08-25)
@@ -11690,7 +11775,9 @@ zone copiée, la texture d'écran garde ce qu'une copie précédente y avait
 laissé ».
 
 ⚠️ **Ce que ce relevé NE prouve pas, et il ne faut pas le lui faire dire.** Il ne
-dit pas OÙ est l'erreur. Deux candidats, et il faudrait mesurer pour trancher :
+dit pas OÙ est l'erreur. **Trois candidats.** Les deux premiers datent du
+2026-08-27 ; le troisième a été ajouté le 2026-09-07, quand une observation
+d'Adrien a mis les deux premiers en difficulté.
 
 1. **Une unité qui change de sens en chemin.** `NOYAU_FLOU` est ajouté à
    l'emprise en pixels de CANEVAS (`emprise_copie(..., NOYAU_FLOU + 2.0)`), mais
@@ -11703,11 +11790,205 @@ dit pas OÙ est l'erreur. Deux candidats, et il faudrait mesurer pour trancher :
 2. **Un `rect` posé dans le mauvais espace.** `BackBufferCopy.rect` est en
    coordonnées locales ; sous une racine étirée par `canvas_items`, rien ne
    garantit que la conversion vers le framebuffer soit celle qu'on croit.
+3. **Le tampon d'écran a six lecteurs pour trois écrivains, et personne ne tient
+   le compte.** Relevé le 2026-09-07 en cherchant ce qui pourrait produire le
+   défaut dans les DEUX types de viewport.
 
-**La conséquence de portée, si elle se confirme : ce chemin est celui de la VUE
-UNIQUE**, donc en ligne et à l'entraînement — les deux modes où l'on joue
-vraiment. En écran scindé l'appareil vit dans un `SubViewport`, où canevas et
-framebuffer coïncident, et le défaut ne devrait pas apparaître.
+   Six shaders déclarent `hint_screen_texture` — `menu_glass`, `menu_veil`,
+   `killcam_overlay`, `brouillage_flou`, `pump_shockwave`, `death_flash` — pour
+   trois `BackBufferCopy` en production : celui du flou (`COPY_MODE_RECT`), celui
+   de l'onde de pompe et celui de la killcam (`COPY_MODE_VIEWPORT` tous deux).
+   Le tampon est une ressource de VIEWPORT, partagée, persistante d'une image à
+   l'autre — et aucun de ces six lecteurs ne sait ce que les cinq autres y ont
+   laissé.
+
+   **`death_flash.gdshader` n'a aucune copie à lui.** Le bloc « Satisfying Death
+   Effect » de `player.gd` (chercher `SHADER_DEATH_FLASH`, pas un numéro de
+   ligne : le fichier est réécrit par la session « bandeau fatal » pendant que
+   ceci s'écrit) pose un `ColorRect` en `PRESET_FULL_RECT` sur une couche **100** —
+   au-dessus des couches 1 et 2 du brouillage —, et son fragment réécrit **tout
+   l'écran** depuis le tampon, en opaque (`COLOR = vec4(…, 1.0)`), pendant les
+   600 ms de l'agonie.
+
+   Or à cet instant le tampon n'est frais que là où la dernière copie l'a écrit,
+   c'est-à-dire **dans la seule boîte de l'ellipse du flou** : on meurt d'un coup
+   de feu, le coup de feu éblouit, donc l'appareil de flou était allumé. Partout
+   ailleurs, le tampon garde ce qu'une `COPY_MODE_VIEWPORT` y a laissé — la
+   dernière onde de pompe, peut-être plusieurs images plus tôt.
+
+   Ce que cela doit donner à l'écran est mot pour mot ce qu'Adrien décrit : **un
+   rectangle à arêtes franches d'image juste, posé dans une mer d'image
+   périmée** — près du joueur, puisque la boîte suit l'éblouisseur ; plus clair
+   que son entourage, puisque le flash mélange vers le blanc.
+
+   ⚠️ **Et ce mécanisme se moque du type de viewport.** Une couche 100 vit dans
+   le `SubViewport` en écran scindé et dans la racine en vue unique, à
+   l'identique. C'est la seule des trois hypothèses qui ait cette propriété, et
+   c'est exactement celle que l'observation d'Adrien exige.
+
+   ⚠️ **Ce candidat vient de la LECTURE du code, pas de l'écran.** Il n'a pas été
+   observé. Il est ici parce qu'il est le seul des trois à survivre à
+   l'observation, pas parce qu'il est prouvé. Le contrôle qui trancherait coûte
+   peu : mourir une fois brouillage coupé, une fois brouillage allumé, comparer.
+
+#### ⚠️ La prédiction « pas en écran scindé » était fausse
+
+**Ce passage affirmait :** « En écran scindé l'appareil vit dans un
+`SubViewport`, où canevas et framebuffer coïncident, et le défaut ne devrait pas
+apparaître. » **Le 2026-09-07, la session « fusée éclairante » rapporte le défaut
+en écran scindé, dans les DEUX vues, sur des captures envoyées par Adrien.**
+
+**Le raisonnement tient, c'est la conclusion qui ne tenait pas.** Vérifié le
+2026-09-07 : `main.tscn` pose deux `SubViewportContainer` en `stretch = true`,
+donc les `SubViewport` mesurent 957×1080 et 958×1080 **quelle que soit la taille
+de la fenêtre** ; et le `rect` comme la `position` sont posés en coordonnées de
+viewport, via un `CanvasLayer` sans transformation. Dans un `SubViewport`, une
+unité de canevas EST un texel de framebuffer. Le candidat 1 ne peut donc pas s'y
+déclencher — ni le candidat 2, qui invoque lui aussi l'étirement de la racine.
+
+**Et l'appareil est bien DANS le `SubViewport` en écran scindé** — établi par la
+session « fusée éclairante » sur le code plutôt que par déduction :
+`_accorder_brouillage_aux_vues()` fait `var parent: Node = self if _rendu_racine
+else vue`. C'était la dernière échappatoire — si l'appareil avait vécu sur la
+racine en écran scindé, tout se réconciliait d'un coup. Il n'y vit pas.
+
+**Ce n'est donc pas la déduction qui était fausse, c'est d'en avoir fait une
+propriété du jeu.** Une phrase qui commence par « le défaut ne devrait pas
+apparaître » se lit comme un constat et se cite comme un constat ; celle-ci
+n'était que le candidat 1 prolongé. Elle envoyait chercher au mauvais endroit et
+dispensait de regarder au bon.
+
+⚠️ **Et le banc ne pouvait pas la démentir.** `tools/banc_voile.tscn` a une racine
+`Node2D` : la touche `M` a comparé `RECT` et `VIEWPORT` **au rendu racine
+uniquement**. L'écran scindé n'a jamais été instrumenté. Le relevé de la planche
+de contact ne portait aucune information sur ce mode — et la phrase laissait
+croire le contraire.
+
+**La fusée éclairante révèle, elle ne cause pas.** La session « fusée éclairante »
+l'affirme et la lecture le corrobore : aucun shader de la fusée ne déclare
+`hint_screen_texture`, elle ne touche donc pas au tampon. C'est en revanche le
+bon protocole de reproduction, parce qu'elle est la première grande nappe à la
+fois **lumineuse et changeante** — une copie périmée est invisible sur du noir et
+saute aux yeux sur une lumière qui varie à chaque image. Protocole : lancer une
+fusée (touche `F`), se tenir dans sa lumière, tirer.
+
+#### ⚠️ Et le candidat 3 est tombé le jour même, sur un fait de code
+
+**Le flash d'agonie ne peut rendre que dans UNE vue.** Relevé par la session
+« fusée éclairante » et vérifié ici : le `ColorRect` du flash porte
+`visibility_layer = 2 if player_id == 0 else 4`, et `game_state.gd` pose
+`vp1.canvas_cull_mask = ~4` et `vp2.canvas_cull_mask = ~2` (chercher
+`canvas_cull_mask` — ces deux lignes ont bougé de 827 à 842 pendant la rédaction
+de ce paragraphe, ce qui suffit à dire ce que vaut un numéro de ligne ici). Le
+flash de J1 ne
+rend donc que dans la vue de J1, celui de J2 que dans celle de J2 — c'est
+délibéré, et le commentaire le dit : « le tueur se prenait 600 ms de blanc dans
+les yeux ».
+
+**Or l'artefact est dans les DEUX vues à la fois**, deux bandes distinctes.
+Deux joueurs ne meurent pas simultanément. **Le candidat 3 n'explique donc pas
+ce qu'Adrien a vu** — au mieux une partie, et rien ne dit qu'il en soit une.
+
+⚠️ **Trois hypothèses, trois réfutations, et toutes nées de la lecture.** Les
+candidats 1 et 2 tombent sur la géométrie du `SubViewport` ; le candidat 3 sur un
+masque de cull. Aucun n'a été réfuté par une mesure — tous par une autre lecture,
+ce qui veut dire qu'un quatrième raisonnement plausible aurait coûté dix minutes
+sans rien valoir de plus. **La sortie n'est pas venue d'un raisonnement de plus,
+elle est venue de deux questions posées à Adrien** ; voir plus bas.
+
+#### La question à laquelle personne n'a répondu
+
+Elle est la même dans les trois cas et elle n'a jamais été posée franchement :
+**QUI lit le tampon de part et d'autre de la frontière ?**
+
+Une couture entre frais et périmé n'est visible que si un lecteur unique
+l'enjambe. Le flou n'enjambe rien — il ne lit que dans sa propre copie, élargie
+au rayon du noyau. `pump_shockwave` non plus : son `BackBufferCopy` plein cadre
+est son propre enfant et se dessine AVANT son `DistortRect`, donc il lit toujours
+frais. **Une piste proposée le 2026-09-07 — « une `COPY_MODE_VIEWPORT` a laissé
+un fond périmé » — ne tient pas pour cette raison :** une copie plein cadre
+rafraîchit avant de lire, elle ne peut pas se laisser à elle-même un fond périmé.
+
+Tant que ce lecteur n'est pas nommé, il n'y a pas de diagnostic — il y a des
+hypothèses qui se réfutent l'une l'autre.
+
+#### ✅ Adrien a répondu, et ses deux réponses ferment le problème (2026-09-07)
+
+Le contrôle le moins cher n'était pas un banc, c'était **deux questions à celui
+qui tenait la manette**. Ses réponses :
+
+| question | réponse |
+|---|---|
+| quelqu'un venait-il de mourir ? | **non, personne au sol** |
+| avec quelle arme tirait-il ? | **le pistolet** |
+
+**Ce ne sont pas des lectures, ce sont des constats**, et ils éliminent deux
+choses d'un coup :
+
+1. **Le flash d'agonie est hors de cause pour de bon** — pas seulement improbable
+   au vu du masque de cull, absent de la scène.
+2. **Aucune onde de choc n'a tourné.** Le pistolet n'en crée pas ; la killcam non
+   plus, hors killcam. **Donc pas une seule `COPY_MODE_VIEWPORT` pendant la
+   séquence.**
+
+⚠️ **Et c'est le point 2 qui referme tout.** Sans copie plein cadre, le
+`COPY_MODE_RECT` du flou est **le seul écrivain du tampon**, et le flou en est
+**le seul lecteur**. Le tampon ne contient rien d'autre qu'une mosaïque de boîtes
+d'ellipse laissées par les images précédentes.
+
+**Il n'y a donc plus qu'une possibilité : le flou lit hors de sa propre copie.**
+C'est-à-dire les candidats 1 et 2 — ceux qu'on venait de démontrer impossibles
+dans un `SubViewport`, là où Adrien a vu le défaut. **C'est le bon endroit où
+être coincé** : ce qui restait « impossible » est devenu la seule possibilité,
+donc l'une des prémisses est fausse et il n'y en a plus que deux à départager.
+
+#### Ce qu'il reste à faire : trouver laquelle de ces trois affirmations est fausse
+
+Elles ne peuvent pas être vraies toutes les trois. **Chacune se teste seule, et
+aucune ne demande de jouer :**
+
+1. **« Dans un `SubViewport`, une unité de canevas est un texel de
+   framebuffer. »** Déduit de `stretch = true` et de la taille 957×1080. Contrôle
+   : imprimer `get_visible_rect().size` du `SubViewport` et le `SCREEN_PIXEL_SIZE`
+   vu par le shader, dans la même image.
+2. ✅ **« `Brouillage.emprise_copie()` calcule bien la boîte englobante du
+   rectangle tourné, plus la marge. » — VÉRIFIÉE VRAIE le 2026-09-07.** La
+   fonction est pure ; elle a été rejouée à l'identique contre la boîte des
+   quatre coins effectivement tournés, sur 200 000 tirages d'angle, de taille et
+   de marge. **Écart maximal : 0,000.** Elle n'est pas approximativement juste,
+   elle est exacte. **Cette affirmation sort de la liste : il n'en reste que
+   deux.**
+3. **« `BackBufferCopy` en `COPY_MODE_RECT` recopie exactement le `rect` qu'on
+   lui donne. »** **C'est la moins vérifiée des trois, et la seule qui ne soit
+   pas de nous** — arrondi, alignement, découpe aux bords du viewport : rien ne
+   dit que le rectangle obtenu soit le rectangle demandé. Contrôle : copier un
+   rect connu sur un damier, relire la texture, mesurer où passe la frontière.
+
+**Le n° 3 en premier**, et pour une raison qui vaut au-delà de ce défaut : les
+n° 1 et 2 sont des affirmations que NOUS avons écrites et que nous pouvons
+relire ; **la n° 3 est une affirmation sur ce que Godot fait**, et personne dans
+ce dépôt ne l'a jamais ouverte. C'est le profil exact des défauts qui survivent
+longtemps — « Le produit promettait par écrit ce qu'il ne faisait pas » est déjà
+un piège consigné ici. C'est aussi la seule qui expliquerait pourquoi une marge
+de `NOYAU_FLOU + 2` ne suffit pas là où elle devrait suffire.
+
+⚠️ **Le n° 1 demandera Adrien**, et pas seulement du code : imprimer le
+`SCREEN_PIXEL_SIZE` tel que le shader le voit suppose un vrai rendu, donc une
+fenêtre sur son poste. Le n° 3 se fait sans lui, au banc, en comparant deux
+captures. **S'il faut le solliciter, lui demander les deux d'un coup.**
+
+#### Une quatrième hypothèse, morte avant d'avoir coûté quoi que ce soit
+
+**« Et si la bande n'était pas une couture, mais le `ColorRect` du flou peint en
+entier ? »** Un masque d'ellipse qui échoue donnerait exactement un rectangle à
+arêtes franches, sans qu'aucun tampon soit en cause — et dissoudrait la question
+au lieu d'y répondre. Vérifié par la session « fusée éclairante » :
+`brouillage_flou.gdshader` fait `float d = length(UV - vec2(0.5)) * 2.0; if (d >=
+1.0) { discard; }`. Le disque est franc. **Le rectangle ne peut pas venir de là.**
+
+**La conséquence de portée, révisée.** Le constat d'Adrien du 2026-08-27 était en
+vue unique, celui du 2026-09-07 en écran scindé : **les deux modes sont
+atteints.** Ce n'est plus « le chemin de la vue unique » — c'est le flou, partout.
 
 **Non corrigé, et délibérément.** `brouillage_vue.gd`, `brouillage.gd` et
 `brouillage_flou.gdshader` appartiennent au chantier brouillage. Le banc du voile
@@ -11716,21 +11997,28 @@ c'est un instrument de diagnostic, pas un réglage, et **le banc démarre sur
 `RECT`, celui de la production** : un banc qui corrigerait silencieusement un
 défaut de production le rendrait invisible.
 
-### ⚠️ Deux défauts signalés, non corrigés, et NON VÉRIFIÉS
+### ⚠️ Défauts signalés à la lecture — un réglé, deux ouverts
 
-Les deux viennent d'une lecture de code faite en instruisant ce chantier. **Aucun
-n'a été observé à l'écran** ; ils sont à confirmer avant d'être traités comme des
-faits. Ils vivent tous deux dans des fichiers tenus par d'autres sessions.
+Ils viennent d'une lecture de code faite en instruisant ce chantier. **Aucun
+n'avait été observé à l'écran** ; ils étaient à confirmer avant d'être traités
+comme des faits. Ils vivent dans des fichiers tenus par d'autres sessions.
 
-1. **`ui.gd` — le voile de l'adversaire s'affiche chez soi en vue unique.**
-   `update_hud(local, distant, …)` pose `p2_dazzle` sur la moitié droite de
-   l'écran quel que soit le mode, et `dazzle_amount` de l'adversaire est répliqué
-   (`net_dazzle`). En ligne, la moitié droite de l'écran local devrait donc
-   blanchir quand l'ADVERSAIRE est ébloui. Rien ne masque ces rectangles hors
-   écran scindé. En entraînement le cas est bénin — personne n'éblouit J2.
+1. ✅ **RÉGLÉ le 2026-09-06 — `ui.gd`, le voile de l'adversaire s'affichait chez
+   soi en vue unique.** `update_hud(local, distant, …)` posait `p2_dazzle` sur la
+   moitié droite de l'écran quel que soit le mode, et `dazzle_amount` de
+   l'adversaire est répliqué (`net_dazzle`) : en ligne, la moitié droite de
+   l'écran LOCAL blanchissait quand c'était l'ADVERSAIRE qui était ébloui — une
+   information non payée, dans un jeu dont la règle est que la seule information
+   est la lumière.
 
-   *Il n'existe aucune version propre du voile qui laisse ce comportement en
-   place : le branchement devra le régler.*
+   Réglé au branchement du voile texturé (`ui.gd:6010`, `p2_dazzle.visible =
+   _voile_scinde`), parce qu'il n'existait aucune version propre du voile qui
+   laisse ce comportement en place. **Deux effets de bord valent d'être connus :**
+   caché, l'`HBoxContainer` donne toute la largeur au voile local, qui retrouve
+   du même coup le bon rapport d'aspect ; et l'affectation est écrite dans les
+   DEUX sens exprès — un `if` qui ne cache que dans un cas laisse le rectangle
+   éteint pour toujours dès qu'on revient d'une partie en ligne à un écran
+   scindé dans la même session.
 
 2. **`game_state.gd` / `brouillage_vue.gd` — le brouillage au-dessus du HUD en
    rendu racine.** `UI` est un `CanvasLayer` de couche 1 déclaré dans
@@ -11744,8 +12032,15 @@ faits. Ils vivent tous deux dans des fichiers tenus par d'autres sessions.
    l'éblouissement doit coûter la lecture du MONDE, jamais celle de sa propre
    fiche. C'est le raisonnement qui a fait passer le voile SOUS le HUD.
 
-3. Accessoire : les deux `ColorRect` de voile restent `visible` à alpha 0, donc
-   mélangés plein écran à chaque image d'un match. Gain gratuit au branchement.
+3. **`ui.gd` — `p1_dazzle` reste `visible` à alpha 0**, donc mélangé plein écran
+   à chaque image d'un match, éblouissement ou non. Le branchement n'a réglé que
+   `p2_dazzle`, et pour une autre raison que le coût (l'équité). **Ce défaut a
+   grossi en même temps que le voile** : ce n'était qu'un aplat, c'est désormais
+   un shader à lueurs, flares et fantômes. `_poser_voile()` sort tôt quand le
+   niveau est nul (`ui.gd:1677`) et évite donc les uniformes, mais **pas le
+   fragment** — le rectangle est toujours dessiné. Un `rect.visible = niveau >
+   0.001` suffirait, à condition de ne pas rejouer la régression d'équité du
+   point 1 : cacher un enfant d'`HBoxContainer` donne toute la largeur à l'autre.
 ## Chantier — la résolution de rendu du duel (inscrit le 2026-08-25)
 
 **Le problème, en une phrase : le duel est rendu à 1080p et affiché en plus

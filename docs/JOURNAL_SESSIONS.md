@@ -285,6 +285,75 @@ elle ne déborde dans le mur que d'une dizaine de pixels ; et sa rotation est
 amont ni aval, elle ne peut donc pas mentir sur la provenance du coup. Le sang,
 lui, est tourné dans l'axe : c'est exactement ce qui rend son centrage fautif.
 
+### 2026-09-07 — session « retouche éblouissement » : une prédiction fausse retirée de la feuille de route
+
+**Rien d'autre que `docs/ROADMAP.md` et ce fichier.** Branche
+`diagnostic-photocopie`, worktree `.claude/worktrees/diagnostic-photocopie`,
+rebasée deux fois pendant la rédaction — `main` a avancé de seize commits en une
+journée. **Aucun fichier de code touché, et surtout pas `brouillage_vue.gd`** — le défaut décrit
+ci-dessous appartient au chantier brouillage, cette session ne fait que le
+signaler mieux qu'elle ne l'avait fait.
+
+**Ce qui l'a déclenché :** la session « fusée éclairante » rapporte le polygone
+de photocopie **en écran scindé, dans les deux vues**, sur des captures d'Adrien.
+La feuille de route affirmait le contraire — et cette affirmation était de moi.
+
+**Ce qui a été corrigé, et pourquoi ça valait un commit :**
+
+1. La phrase « en écran scindé […] le défaut ne devrait pas apparaître » était
+   une **déduction du candidat 1 rédigée comme un constat**. Vérification faite,
+   le raisonnement tient (`stretch = true`, `SubViewport` 957×1080 et 958×1080,
+   `rect` et `position` en coordonnées de viewport) — donc si le défaut est là,
+   ce sont les candidats 1 ET 2 qui tombent, pas le raisonnement. La phrase
+   envoyait chercher au mauvais endroit **et** dispensait de regarder au bon.
+2. Un **troisième candidat** a été inscrit — le tampon d'écran a six lecteurs
+   pour trois `BackBufferCopy`, et `death_flash.gdshader` n'en a aucun alors
+   qu'il repeint l'écran entier depuis ce tampon — **puis réfuté le jour même**
+   par la session « fusée éclairante » : le flash d'agonie porte un
+   `visibility_layer` qui le confine à la vue du mort, or l'artefact est dans les
+   deux vues. Les deux entrées sont dans la feuille de route, hypothèse ET
+   réfutation, parce que la réfutation vaut plus que l'hypothèse.
+
+   ⚠️ **Quatre hypothèses, quatre réfutations, aucune mesure.** La quatrième —
+   « le masque d'ellipse échoue, et la bande est simplement le `ColorRect` du
+   flou peint en entier » — a été tuée par la session « fusée éclairante » sur le
+   `discard` du shader, avant d'avoir coûté dix minutes à quiconque. Toutes nées
+   de la lecture, toutes mortes de la lecture.
+
+3. **La sortie n'est pas venue d'un cinquième raisonnement, elle est venue de
+   deux questions à Adrien.** Personne ne venait de mourir, et il tirait au
+   **pistolet** — donc aucune onde de choc, donc **aucune `COPY_MODE_VIEWPORT`**.
+   Le `COPY_MODE_RECT` du flou était le seul écrivain du tampon et le flou son
+   seul lecteur. **Il ne reste qu'une possibilité : le flou lit hors de sa propre
+   copie**, dans un `SubViewport` où c'est censé être impossible.
+
+   Restaient **trois affirmations dont une est fausse**, chacune testable seule.
+   ✅ **`emprise_copie()` en est sortie le jour même** : fonction pure, rejouée à
+   l'identique contre la boîte des quatre coins effectivement tournés sur 200 000
+   tirages — **écart maximal 0,000**, elle est exacte et non approximativement
+   juste. Il n'en reste que deux, et le pari est sur « `BackBufferCopy` recopie
+   exactement le `rect` qu'on lui donne » : **la seule qui porte sur ce que fait
+   GODOT et non sur ce que nous avons écrit.**
+
+4. **Le piège du cache d'import réuni en UNE entrée**, parce que je l'ai payé :
+   un worktree NEUF n'a pas un cache périmé, il n'en a **aucun** — `git worktree
+   add` ne copie pas `.godot/`, plus un `class_name` ne se résout, et le lot part
+   rouge de bout en bout en accusant la fusion qu'on vient de rebaser. La
+   déclinaison « fichier neuf », consignée de son côté par le chantier fusée le
+   2026-09-01, y est désormais énumérée avec les trois autres : **une famille de
+   quatre, à un seul endroit.** ⚠️ **`run_suites.sh` ne fait aucun import et
+   n'avertit de rien** — signalé, non corrigé : le script appartient à qui le
+   tient.
+5. Un piège : **« Le tampon d'écran n'a pas de propriétaire »**. Un
+   `COPY_MODE_RECT` est une optimisation locale dont la portée est globale.
+6. Deux entrées périmées de la liste « défauts signalés » remises à jour : le
+   voile de l'adversaire chez soi est **réglé** depuis le branchement du
+   2026-09-06 (`ui.gd`, chercher `_voile_scinde`) ; en revanche `p1_dazzle` reste dessiné plein écran
+   au repos, et **ce défaut-là a grossi avec le voile**.
+
+⚠️ **`ui.gd` reste au domaine « menus ».** Le point 6 ne fait que constater
+l'état du fichier, il ne le modifie pas.
+
 ### 2026-09-07 — session « corrections de positionnement » : deux chantiers inscrits, AUCUN code touché
 
 **Adrien a relevé deux défauts en jouant et a demandé qu'ils soient préparés
