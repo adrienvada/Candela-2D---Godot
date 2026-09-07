@@ -12630,6 +12630,52 @@ le journal plutôt que l'écrire.
 
 ---
 
+## Chantier — Dynamisation visuelle des menus et artworks (inscrit le 2026-09-07)
+
+**Demande d'Adrien :** plonger le joueur dans l'ambiance dès les menus avec des
+illustrations sombres par défaut, des transitions d'embrasement issues des points
+d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artwork.
+
+### MV1 — Exposition sombre et révélation interactive
+- **Ambiance sombre par défaut** (`ambient_exposure = 0.28`) dans le shader
+  `menu_artwork.gdshader` : les illustrations restent ténébreuses et mystérieuses,
+  dans le ton du jeu, tout en restant lisibles.
+- **Suivi de torche interactive** : la position du curseur P1 est transmise
+  au shader (`set_torch_position_global`) pour projeter un halo de torche
+  révélateur (`torch_uv`, rayon doux) sur l'illustration de fond au survol.
+
+### MV2 — Transition d'embrasement par Point d'Intérêt (POI)
+- **Origine organique des flammes** : chaque illustration dispose de coordonnées
+  normalisées `POIS` dans `menu_artwork.gd` ciblant précisément la source de
+  chaleur ou de tir (bout de torche, bouche de pistolet, tête de fusée).
+- **Propagation shader** : transition par front d'onde bruité (`flame_progress`,
+  bruit multi-octave, liseré d'ignition thermique coloré selon `couleur_flamme_pour()`).
+  Lors d'un changement de menu ou d'onglet, l'illustration s'embrase depuis son
+  foyer avant de se stabiliser.
+
+### MV3 — 12 effets « vivants » uniques par artwork
+Chaque artwork reçoit un shader d'ambiance animé (`_process()` avec `time`) :
+1. *Bataille / Ruines* : `FLICKER` (vacillement organique de braises et torches).
+2. *Crypte / Sépulcre* : `PULSE` (pulsation spectrale lente).
+3. *Complexe / Labo* : `GLITCH` (distorsions parasites et sauts de trame).
+4. *Écrans de surveillance* : `CRT` (lignes de balayage cathodique et rolling bar).
+5. *Générateur / Réacteur* : `SPARK` (arcs électriques et étincelles brèves).
+6. *Brume / Marais* : `MIST` (vapeur ondulatoire et voiles atmosphériques).
+7. *Radar / Scan* : `SCANNER` (balayage périodique d'analyse tactique).
+8. *Cœur corrompu* : `HEARTBEAT` (double pulsation artérielle).
+9. *Égouts / Plafond suintant* : `DRIP` (condensation et gouttes descendantes).
+10. *Matrice de serveurs* : `NETWORK` (matrice de points / LEDs clignotantes).
+11. *Détresse / Évacuation* : `SMOKE` (volutes de fumée montante).
+12. *Zone irradiée* : `CORROSION` (aberration chromatique et onde toxique).
+
+### MV4 — Validation et couverture
+- `tools/test_menu_artworks.gd` : validation systématique des coordonnées POI,
+  de l'affectation des 12 effets, de la résilience aux textures inconnues et de la
+  bonne instanciation des shaders du hub.
+- Intégré dans `tools/run_suites.sh` (55 suites solo + 7 duo, 100 % succès).
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.

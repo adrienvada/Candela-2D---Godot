@@ -1517,6 +1517,8 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 	var centre := control.get_global_rect().get_center()
 	if menu_torch != null:
 		menu_torch.viser(player, centre, COLOR_P1 if player == 0 else COLOR_P2)
+	if player == 0 and hub != null:
+		hub.set_torch_position_global(centre)
 	# M5 borde la lumière de M9 : il lui faut donc SON rayon, pas un autre. Le
 	# déduire ailleurs décrocherait le grain du halo qu'il est censé ourler.
 	if menu_backdrop != null:

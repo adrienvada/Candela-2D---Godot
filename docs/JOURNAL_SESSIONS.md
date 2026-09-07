@@ -2233,3 +2233,20 @@ Changement de la mécanique de tir et d'armement demandé par Adrien :
 - HUD : affichage du compteur de munitions, jauge de cadence et progression de recharge.
 - Netcode & Protocole : `rpc_send_inputs` transporte `reload: bool`. ⚠️ **`Protocol.VERSION` monte à 8**, témoin `WIRE_WITNESS` mis à jour dans `protocol.gd`.
 - Banc de tests : `tools/test_munitions_recharge.gd` intégré au lanceur `tools/run_suites.sh` (55 suites vertes).
+
+#### Lot du 2026-09-07 — session « menu artworks & effets », worktree `menu-artworks-effets`
+
+**Chantier Menus — Dynamisation visuelle des illustrations** (voir la section dédiée de la ROADMAP).
+Travail réalisé dans le worktree `.claude/worktrees/menu-artworks-effets`, branche `menu-artworks-effets`.
+
+**Fichiers créés :**
+- `menu_artwork.gd` — référentiel statique des points d'intérêt (POI), mapping des effets (1..12) et couleurs d'ignition thématiques par illustration.
+- `menu_artwork.gdshader` — shader complet combinant flou d'arrière-plan, exposition sombre de base (`0.28`), transition d'embrasement POI avec front bruité et 12 effets visuels animés (flicker, pulse, glitch, CRT, spark, mist, scanner, heartbeat, drip, network, smoke, corrosion) avec halo de torche interactif.
+- `tools/test_menu_artworks.gd` — suite de tests automatisés vérifiant l'intégrité des 12 POI, la validité des 12 shaders associés, le comportement par défaut et la gestion d'erreurs/cas limites.
+
+**Fichiers partagés touchés :**
+- `menu_hub.gd` — branchement du shader `menu_artwork.gdshader`, transition d'embrasement au changement de texture (`_declencher_embrasement`), mise à jour du temps d'animation (`_process`) et projection de la torche interactive (`set_torch_position_global`).
+- `ui.gd` — transmission continue de la position de la torche du joueur 1 (`hub.set_torch_position_global`).
+- `tools/run_suites.sh` — enregistrement de `test_menu_artworks` (56 tests solo + 7 duo au vert).
+- `docs/ROADMAP.md` — inscription du chantier et de ses 4 étapes.
+
