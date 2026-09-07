@@ -18,6 +18,19 @@ extends SceneTree
 ## supprimant précisément ce qu'il protège. Leçon payée deux fois aujourd'hui.
 
 const VUE_SCINDEE := 957.0
+## BF1 (2026-09-07) — les deux autres cotes de l'écran, relevées de la même
+## façon : `main.tscn` pour la hauteur des vues, `project.godot` pour l'aire 2D
+## de la fenêtre en `keep`, que la racine adopte depuis le chantier R. **Toutes
+## trois écrites ici et jamais lues sur le code** — un banc qui lit la constante
+## qu'il surveille passe au vert le jour où on supprime ce qu'il protège.
+const HAUTEUR_VUE := 1080.0
+const VUE_RACINE := 1920.0
+
+## L'élévation de la plaque au-dessus du cadavre, montée comprise, telle que
+## `die()` la calcule pour le corps de fonte du jeu : 30 px de garde + 100 px de
+## montée + la moitié des 82 px du mot. Écrite en clair : le banc dicte la
+## valeur, il ne la demande pas.
+const ELEVATION_ORACLE := 171.0
 
 var _ok := 0
 var _ko := 0
@@ -60,7 +73,15 @@ func _run() -> void:
 	await process_frame
 	# Par chemin, jamais par nom de classe — voir la note ci-dessus.
 	var joueur: GDScript = load("res://player.gd")
-	if joueur == null:
+	# ⚠️ **Un script qui ne compile PAS n'est pas `null`.** Relevé le 2026-09-07
+	# en travaillant sur BF2 : une erreur d'inférence dans `player.gd` a rendu un
+	# `GDScript` bien vivant mais vide, le garde `== null` n'a rien vu, et l'appel
+	# suivant a levé « Nonexistent function » — **au milieu de `_run()`, donc
+	# avant `quit()`**. Le banc a tourné en boucle sans jamais sortir. C'est le
+	# piège que ce fichier décrit vingt lignes plus haut, resté ouvert parce que
+	# le garde ne testait qu'une des deux façons d'échouer. `can_instantiate()`
+	# est faux dès que la compilation a échoué, et c'est celle-là qui manquait.
+	if joueur == null or not joueur.can_instantiate():
 		printerr("✗ player.gd introuvable ou ne compile pas")
 		quit(1)
 		return
@@ -132,6 +153,137 @@ func _run() -> void:
 		enorme["plaque"].x * float(enorme["enfle"]) * 0.5 <= VUE_SCINDEE * 0.5,
 		"%.0f px de chaque côté"
 			% (enorme["plaque"].x * float(enorme["enfle"]) * 0.5))
+
+	# ==================================================================
+	# BF1 (2026-09-07) — LE CADRAGE : la plaque tient-elle dans la vue de
+	# celui qui REGARDE, et non dans celle de celui qui meurt ?
+	#
+	# DA4.4 avait réglé la largeur du bandeau ; sa position n'a jamais été mise
+	# en cause. Le code posait le mot à l'aplomb du cadavre et supposait qu'on
+	# meurt là où l'on regarde — vrai du mourant, faux de celui qui tue à 900 px.
+	# ==================================================================
+
+	# La vue la plus étroite du jeu, centrée sur l'origine. C'est le décor de
+	# tous les contrôles qui suivent, sauf mention contraire.
+	var scindee := Rect2(-VUE_SCINDEE * 0.5, -HAUTEUR_VUE * 0.5,
+		VUE_SCINDEE, HAUTEUR_VUE)
+
+	print("\n[La plaque FINALE tient dans la vue, d'où que vienne le cadavre]")
+	# ⚠️ **La plaque finale, pas celle de la naissance.** Le bandeau enfle et
+	# monte de 100 px en 1,5 s : un cadrage juste au départ sort du cadre une
+	# seconde plus tard, et c'est précisément le piège que ce bloc surveille.
+	var directions := [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1),
+		Vector2(0, -1), Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1),
+		Vector2(-1, -1)]
+	for texte: String in libelles:
+		var g: Dictionary = joueur.geometrie_du_bandeau(texte, fonte, corps)
+		var finale: Vector2 = g["plaque"] * float(g["enfle"])
+		var tout_dedans := true
+		var pire := ""
+		for d: Vector2 in directions:
+			var mort: Vector2 = d.normalized() * 2000.0
+			var c: Dictionary = joueur.cadrage_du_bandeau(mort, scindee,
+				finale, ELEVATION_ORACLE)
+			var plaque_rect := Rect2(c["centre"] - finale * 0.5, finale)
+			if not scindee.encloses(plaque_rect):
+				tout_dedans = false
+				pire = "cadavre en %s → plaque %s hors de %s" \
+					% [str(d), str(plaque_rect), str(scindee)]
+		_check("« %s » : la plaque finale reste dans la vue scindée" % texte,
+			tout_dedans, pire)
+
+	print("\n[Dans la vue du MORT, le cadrage ne déplace rien]")
+	# La caméra du mourant est sur lui : l'ancre est déjà au milieu de sa vue.
+	# C'est la garantie de non-régression du chantier — ce qu'Adrien a validé de
+	# ce côté-là doit rester au pixel près.
+	for texte: String in libelles:
+		var g: Dictionary = joueur.geometrie_du_bandeau(texte, fonte, corps)
+		var finale: Vector2 = g["plaque"] * float(g["enfle"])
+		var c: Dictionary = joueur.cadrage_du_bandeau(Vector2.ZERO, scindee,
+			finale, ELEVATION_ORACLE)
+		var attendu := Vector2(0.0, -ELEVATION_ORACLE)
+		_check("« %s » : le mort voit son bandeau à sa place d'avant" % texte,
+			c["centre"].is_equal_approx(attendu) and c["bord"] == Vector2i.ZERO
+				and not c["hors_champ"],
+			"centre %s au lieu de %s, bord %s"
+				% [str(c["centre"]), str(attendu), str(c["bord"])])
+
+	print("\n[Le cadavre hors champ : la boîte s'accroche, la flèche pointe]")
+	var geo_court: Dictionary = joueur.geometrie_du_bandeau("FATAL", fonte, corps)
+	var finale_court: Vector2 = geo_court["plaque"] * float(geo_court["enfle"])
+	var loin := Vector2(2000.0, 0.0)
+	var cd: Dictionary = joueur.cadrage_du_bandeau(loin, scindee, finale_court,
+		ELEVATION_ORACLE)
+	_check("un cadavre à 2000 px est déclaré hors champ", bool(cd["hors_champ"]))
+	_check("la boîte s'accroche au bord DROIT", cd["bord"].x == 1,
+		"bord %s" % str(cd["bord"]))
+	_check("la flèche est unitaire",
+		is_equal_approx(cd["direction"].length(), 1.0),
+		"%.4f" % cd["direction"].length())
+	_check("et elle pointe le cadavre depuis la boîte",
+		cd["direction"].dot((loin - cd["centre"]).normalized()) > 0.999,
+		"produit scalaire %.4f"
+			% cd["direction"].dot((loin - cd["centre"]).normalized()))
+	# L'inverse, et il compte autant : un cadavre visible ne mérite pas qu'on le
+	# désigne du doigt. Pointer ce qu'on voit déjà, c'est du bruit.
+	var proche: Dictionary = joueur.cadrage_du_bandeau(Vector2(300.0, 200.0),
+		scindee, finale_court, ELEVATION_ORACLE)
+	_check("un cadavre visible n'a AUCUNE flèche",
+		not proche["hors_champ"] and proche["direction"] == Vector2.ZERO)
+
+	print("\n[Le cadrage lit la vue qu'on lui donne, pas une constante]")
+	# ⚠️ **Les deux modes n'ont pas la même vue** : 957 px par vue en écran
+	# scindé, 1920 px d'aire 2D quand le chantier R rend le duel dans la racine.
+	# Un cadavre à 700 px du regard tient dans la seconde et pas dans la
+	# première ; si les deux appels répondaient pareil, le cadrage aurait une
+	# largeur en dur quelque part.
+	var racine := Rect2(-VUE_RACINE * 0.5, -HAUTEUR_VUE * 0.5,
+		VUE_RACINE, HAUTEUR_VUE)
+	var a_700 := Vector2(700.0, 0.0)
+	var en_racine: Dictionary = joueur.cadrage_du_bandeau(a_700, racine,
+		finale_court, ELEVATION_ORACLE)
+	var en_scinde: Dictionary = joueur.cadrage_du_bandeau(a_700, scindee,
+		finale_court, ELEVATION_ORACLE)
+	_check("en vue unique (1920), un cadavre à 700 px ne fait rien bouger",
+		en_racine["bord"].x == 0 and is_equal_approx(en_racine["centre"].x, 700.0),
+		"bord %s, centre %s" % [str(en_racine["bord"]), str(en_racine["centre"])])
+	_check("en écran scindé (957), le MÊME cadavre accroche le bord",
+		en_scinde["bord"].x == 1 and en_scinde["centre"].x < 700.0,
+		"bord %s, centre %s" % [str(en_scinde["bord"]), str(en_scinde["centre"])])
+
+	print("\n[Le cadrage vise l'ARRIVÉE : il tient quelle que soit l'élévation]")
+	# Le bandeau monte pendant sa vie. Si le cadrage ne comptait que le départ,
+	# une élévation plus grande le ferait sortir par le haut — et une seconde
+	# plus tard, quand plus personne ne regarde le banc.
+	for elev: float in [ELEVATION_ORACLE, 271.0, 520.0]:
+		var c: Dictionary = joueur.cadrage_du_bandeau(Vector2(0.0, 400.0),
+			scindee, finale_court, elev)
+		var r := Rect2(c["centre"] - finale_court * 0.5, finale_court)
+		_check("à %.0f px d'élévation, la plaque tient encore" % elev,
+			scindee.encloses(r), str(r))
+	# Et la constante que `die()` emploie doit bien être celle du tween : 100 px,
+	# écrits ici à la main. Les deux ne peuvent plus diverger sans rougir.
+	_check("la montée du bandeau vaut les 100 px de son tween",
+		is_equal_approx(float(joueur.MONTEE_BANDEAU), 100.0),
+		"%.1f" % float(joueur.MONTEE_BANDEAU))
+
+	print("\n[Les deux dégénérescences, qu'aucun essai à la main ne rencontre]")
+	# Une vue de taille nulle vaut « je ne sais pas cadrer » : c'est le filet de
+	# `die()` quand les caméras ne sont pas encore debout, pas un cas d'erreur.
+	var vide: Dictionary = joueur.cadrage_du_bandeau(Vector2(500.0, 500.0),
+		Rect2(), finale_court, ELEVATION_ORACLE)
+	_check("une vue de taille nulle rend l'ancre telle quelle",
+		vide["centre"].is_equal_approx(Vector2(500.0, 500.0 - ELEVATION_ORACLE))
+			and not vide["hors_champ"], str(vide["centre"]))
+	# Une vue plus étroite que la plaque renverserait les bornes du `clampf` :
+	# on recentre, la plaque déborde des deux côtés à parts égales.
+	var etroite := Rect2(-100.0, -HAUTEUR_VUE * 0.5, 200.0, HAUTEUR_VUE)
+	var serre: Dictionary = joueur.cadrage_du_bandeau(Vector2(900.0, 0.0),
+		etroite, finale_court, ELEVATION_ORACLE)
+	_check("une vue plus étroite que la plaque la recentre",
+		is_equal_approx(serre["centre"].x, 0.0)
+			and is_finite(serre["centre"].x) and is_finite(serre["centre"].y),
+		str(serre["centre"]))
 
 	if _ko == 0:
 		print("\n✓ %d contrôles passent" % _ok)

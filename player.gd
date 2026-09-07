@@ -103,6 +103,99 @@ static func geometrie_du_bandeau(texte: String, fonte: Font,
 ## moins une marge de respiration. Le bandeau ne la dépasse jamais.
 const LARGEUR_UTILE_BANDEAU := 900.0
 
+## BF1 (2026-09-07) — les trois cotes du bandeau qui vivaient en littéraux dans
+## `die()`. Elles n'y étaient pas fausses ; elles y étaient **inatteignables**,
+## et c'est ce qui a laissé le cadrage sans banc pendant des semaines.
+##
+## `ELEVATION` : ce que la plaque flotte au-dessus du cadavre à sa naissance.
+## `MONTEE` : ce qu'elle gagne pendant ses 1,5 s de vie — **la même valeur que
+## le tween plus bas, et c'est tout l'objet de la constante** : le cadrage doit
+## viser l'arrivée, pas le départ.
+## `MARGE_CADRE` : la respiration entre la plaque et le bord de la vue, assez
+## large pour que la pointe de la flèche (`DEBORD_FLECHE` × `enfle`) y tienne.
+const ELEVATION_BANDEAU := 30.0
+const MONTEE_BANDEAU := 100.0
+const MARGE_CADRE_BANDEAU := 24.0
+
+## La flèche de BF3, en unités du bandeau (donc multipliées par `enfle` à
+## l'écran). `TAILLE` va de la base à la pointe, `DEBORD` dit de combien la
+## pointe dépasse le bord de la plaque : le reste du triangle chevauche le
+## cartouche, ce qui le fait lire comme une languette et non comme un satellite.
+const TAILLE_FLECHE := 34.0
+const DEBORD_FLECHE := 10.0
+
+
+## BF1 — **où la plaque doit se poser pour tenir dans une vue.**
+##
+## `geometrie_du_bandeau()` juste au-dessus dit la TAILLE du bandeau ; celle-ci
+## dit sa PLACE. Les deux manquaient pour la même raison — le calcul vivait
+## dispersé dans `die()`, donc il fallait tuer un joueur pour l'exécuter — et le
+## second défaut a survécu à la correction du premier : **DA4.4 a réglé la
+## largeur, jamais la position.** Le code supposait depuis toujours qu'on meurt
+## là où l'on regarde ; c'est vrai du mourant, jamais de celui qui tue à 900 px.
+##
+## ⚠️ **C'est la plaque FINALE qui doit tenir, pas celle de la naissance.** Le
+## bandeau enfle jusqu'à `enfle` et monte de `MONTEE_BANDEAU` en 1,5 s. Un
+## cadrage calculé sur la position de départ et sur la taille du mot ressort du
+## cadre une seconde plus tard, et rien au banc ne le dirait. `plaque_finale`
+## vaut donc `plaque * enfle`, et `elevation` compte déjà la montée.
+##
+## ⚠️ **`vue` est le rectangle du MONDE que la caméra montre, et il n'a pas la
+## même taille selon le mode** : 957×1080 par vue en écran scindé, mais
+## 1920×1080 quand le chantier R rend le duel dans la racine — l'aire 2D de la
+## fenêtre en `keep`, pas les 1916 du `SubViewport`. Il se **mesure** sur la
+## cible réelle de la caméra (`_rect_monde_de_la_vue()`), il ne se suppose pas.
+##
+## Un rectangle de taille nulle vaut « je ne sais pas cadrer » : l'ancre est
+## rendue telle quelle, sans flèche. C'est le filet de `die()`, pas un cas
+## d'erreur.
+##
+## Rend `centre` (où la plaque finale doit être centrée), `bord` (de quel côté
+## elle s'est accrochée, -1/0/+1 par axe), `hors_champ` (le cadavre est-il
+## invisible dans cette vue) et `direction` (unitaire, vers le cadavre ;
+## `Vector2.ZERO` quand aucune flèche n'a de sens).
+static func cadrage_du_bandeau(point_mort: Vector2, vue: Rect2,
+		plaque_finale: Vector2, elevation: float) -> Dictionary:
+	var ancre := point_mort + Vector2(0.0, -elevation)
+	if vue.size.x <= 0.0 or vue.size.y <= 0.0:
+		return {"centre": ancre, "bord": Vector2i.ZERO,
+			"hors_champ": false, "direction": Vector2.ZERO}
+
+	var utile := vue.grow(-MARGE_CADRE_BANDEAU)
+	var demi := plaque_finale * 0.5
+	var bas := utile.position + demi
+	var haut := utile.end - demi
+	# ⚠️ **Une vue plus étroite que la plaque rendrait `bas > haut`**, et
+	# `clampf()` y répondrait par n'importe quoi — c'est le genre de renversement
+	# qu'aucun essai à la main ne rencontre et qu'un nom d'arme un peu long
+	# provoque. On recentre alors : la plaque déborde des deux côtés à parts
+	# égales, ce qui est le moins faux des débordements.
+	var centre := Vector2(
+		utile.get_center().x if bas.x > haut.x else clampf(ancre.x, bas.x, haut.x),
+		utile.get_center().y if bas.y > haut.y else clampf(ancre.y, bas.y, haut.y))
+
+	# De quel côté le cadrage a-t-il retenu la boîte. Le seuil d'un demi-pixel
+	# évite qu'un arrondi fasse dire « accroché » à une boîte qui n'a pas bougé.
+	var ecart := ancre - centre
+	var bord := Vector2i(
+		0 if absf(ecart.x) < 0.5 else int(signf(ecart.x)),
+		0 if absf(ecart.y) < 0.5 else int(signf(ecart.y)))
+
+	# ⚠️ **La flèche se décide sur le CADAVRE, pas sur la boîte.** Le cadrage
+	# retient la plaque bien avant que le mort sorte du champ — sinon elle
+	# dépasserait — et pointer du doigt un corps que l'on voit très bien est du
+	# bruit. Le critère est donc « le point de mort est-il hors de la vue ».
+	var hors_champ := not vue.has_point(point_mort)
+	var direction := Vector2.ZERO
+	if hors_champ:
+		var v := point_mort - centre
+		if v.length_squared() > 0.0001:
+			direction = v.normalized()
+		else:
+			hors_champ = false
+	return {"centre": centre, "bord": bord,
+		"hors_champ": hors_champ, "direction": direction}
+
 ## V2.9 — Distance à l'axe du dernier tir jugé fatal, écrite par la balle qui
 ## l'a simulé ici, consommée (et remise à -1) par die(). Cosmétique : chez le
 ## client c'est la simulation locale qui parle, pas l'arbitrage de l'hôte.
@@ -1792,136 +1885,56 @@ func die(killer: Node2D):
 	tw.tween_callback(ui_layer.queue_free)
 	
 	# Floating FATAL Text
-	var lbl = Label.new()
+	#
+	# BF2 (2026-09-07) — **un bandeau par vue AFFICHÉE, et non un nœud partagé.**
+	#
+	# Relevé par Adrien au deuxième essai : le mot le plus fort du jeu s'affichait
+	# là où celui qui l'avait mérité ne le voyait pas. Le nœud était unique et
+	# n'avait **aucun `visibility_layer`** ; la valeur par défaut est le bit 1, que
+	# les DEUX masques de cull contiennent — `~4` pour la vue de J1, `~2` pour
+	# celle de J2, relevés à l'exécution le 2026-09-07. Les deux écrans dessinaient
+	# donc le même nœud au même endroit, à l'aplomb du cadavre. Celui qui tue à
+	# 900 px ne voyait rien du tout.
+	#
+	# ⚠️ **Ce n'est pas ce que DA4.4 a corrigé le 2026-08-26.** Elle a réglé la
+	# LARGEUR du bandeau, qui sortait du cadre ; la POSITION n'a jamais été mise en
+	# cause, parce que le code suppose depuis toujours qu'on meurt là où l'on
+	# regarde. C'est vrai du mourant, jamais du tueur.
+	#
+	# `die()` tourne sur les deux machines (`rpc_update_hp` est `call_local`) :
+	# rien à répliquer, le même code produit partout les mêmes bandeaux.
 	# V2.5 — l'arme du tueur signe le kill.
-	lbl.text = "FATAL"
+	var texte_fatal := "FATAL"
 	if killer and killer != self and killer.current_weapon:
-		lbl.text = "FATAL — %s" % killer.current_weapon.name.to_upper()
+		texte_fatal = "FATAL — %s" % killer.current_weapon.name.to_upper()
 	var settings = LabelSettings.new()
 	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
 	settings.font_size = Charte.T_ENSEIGNE
 	settings.font_color = Charte.ROUGE
 	settings.outline_size = 12
 	settings.outline_color = Charte.NOIR
-	lbl.label_settings = settings
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# DA4.4 (corrigé le 2026-08-26) — **le bandeau se MESURE au lieu d'être
-	# supposé.** Il sortait de l'écran en écran scindé, relevé par Adrien.
-	#
-	# Trois littéraux — l'offset, le pivot, la taille du cartouche — avaient été
-	# calibrés pour le mot « FATAL » seul, 130 px de large. Avec le nom de l'arme,
-	# `FATAL — ARBALÈTE` fait 438 px : le texte triplait et **partait entièrement
-	# vers la droite**, jusqu'à +507 px pour 478 px visibles de chaque côté du
-	# joueur en écran scindé.
-	#
-	# ⚠️ **Le centrage n'était pas absent, il était INOPÉRANT.** Le rect d'un
-	# `Label` épouse son texte — `Control.size` est borné par la taille minimale —
-	# donc `HORIZONTAL_ALIGNMENT_CENTER` centre le texte dans une boîte qui a
-	# exactement sa largeur : il ne déplace rien. Ce qu'il fallait centrer, c'est
-	# la boîte sur le joueur, et cela demande de connaître sa largeur.
-	var geo := geometrie_du_bandeau(lbl.text, settings.font, settings.font_size)
-	var mot: Vector2 = geo["mot"]
-	# Au-dessus du joueur et centré sur lui, quelle que soit la longueur du mot.
-	lbl.position = global_position - Vector2(mot.x * 0.5, mot.y + 30.0)
-	lbl.z_index = 200
+	var geo := geometrie_du_bandeau(texte_fatal, settings.font, settings.font_size)
 
-	
-	var lbl_mat = CanvasItemMaterial.new()
-	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-	lbl.material = lbl_mat
-	# DA4.4 — **le cartouche peint derrière le mot.**
-	#
-	# FATAL était un label sur le noir : le mot le plus fort du jeu, posé sur
-	# rien. Il a maintenant un support — une plaque de tôle frappée, bords rongés,
-	# l'encre a bavé.
-	#
-	# **Le mot reste du TEXTE**, dans la fonte d'enseigne, et la texture ne porte
-	# que le support : c'est ce qui laisse « FATAL — POMPE » s'allonger avec le nom
-	# de l'arme sans qu'aucune image soit à refaire. Enfant du `Label` et dessiné
-	# dessous (`show_behind_parent`), donc il suit le mot dans son envol et sa
-	# disparition sans qu'on ait à animer deux nœuds.
-	var chemin_cartouche := "res://assets/ui/cartouche_fatal.png"
-	if ResourceLoader.exists(chemin_cartouche):
-		var plaque := TextureRect.new()
-		plaque.texture = load(chemin_cartouche)
-		plaque.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		plaque.stretch_mode = TextureRect.STRETCH_SCALE
-		plaque.show_behind_parent = true
-		plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# Débordant du mot : une plaque au ras du texte se lit comme un surlignage.
-		#
-		# ⚠️ **La marge est constante, la taille non — et c'est l'inverse qui était
-		# écrit.** La plaque valait `300 × 150` quel que soit le texte : elle était
-		# donc **plus étroite que son propre mot pour trois armes sur quatre**,
-		# alors que le commentaire ci-dessus promet qu'elle déborde. Un cartouche
-		# se reconnaît à l'épaisseur de sa bordure, pas à un rapport : la même
-		# plaque autour de « FATAL » et de « FATAL — ARBALÈTE » doit montrer la
-		# même marge, pas la même proportion.
-		#
-		# Les deux coefficients sont réglés pour rendre EXACTEMENT les 300 × 150
-		# d'origine sur le mot seul — la correction ne change donc rien à ce
-		# qu'Adrien a validé hier, elle le fait seulement tenir sur les autres.
-		plaque.size = geo["plaque"]
-		plaque.position = -geo["marge"]
-		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
-		# `CARMIN` et non `ROUGE` : c'est le rouge vu à l'intensité d'une chose qui
-		# ne s'éclaire plus elle-même, et le mot en `ROUGE` doit ressortir dessus.
-		plaque.modulate = Charte.CARMIN
-		# Non éclairé, comme le mot qu'il porte : un support de texte qui
-		# s'assombrirait hors de la torche disparaîtrait au pire moment.
-		plaque.material = lbl_mat
-		lbl.add_child(plaque)
-	
-	get_parent().add_child(lbl)
-	
-	var txt_tw = create_tween().set_parallel(true)
-	lbl.scale = Vector2.ZERO
-	# Le pivot au MILIEU : un pivot fixe à 100 px faisait grandir le bandeau
-	# depuis un point situé quelque part dans le mot, donc toujours vers la
-	# droite. Au centre, il enfle autour du joueur.
-	lbl.pivot_offset = mot * 0.5
-	# ⚠️ **L'agrandissement se borne à ce que la vue peut montrer.** 1,5× reste la
-	# valeur voulue ; `LARGEUR_UTILE` est la largeur d'une vue en écran scindé, le
-	# cas le plus étroit du jeu. Une arme au nom plus long que tout ce qui existe
-	# aujourd'hui rétrécirait le bandeau au lieu de le faire sortir du cadre —
-	# c'est le garde-fou qui manquait, et son absence est ce qui a rendu le défaut
-	# invisible jusqu'à ce qu'une arme au nom long le révèle.
-	var enfle: float = geo["enfle"]
-	# DA4.13 — le claquement puis la montée. REBOND était déjà `BACK_OUT` et
-	# ENTREE déjà `CUBIC_OUT` : deux conversions invisibles à l'œil.
-	Charte.animer(txt_tw, lbl, "scale", lbl.scale, Vector2(enfle, enfle),
-		Charte.D_MOYEN, Charte.Courbe.REBOND)
-	Charte.animer(txt_tw, lbl, "position", lbl.position,
-		lbl.position + Vector2(0, -100), 1.5, Charte.Courbe.ENTREE)
-	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
-	txt_tw.chain().tween_callback(lbl.queue_free)
+	# V2.9 — la marge du tir fatal, lue AVANT la boucle pour que chaque vue en
+	# reçoive une copie. Sa consommation, elle, ne bouge pas : elle reste plus bas.
+	var perp := last_fatal_perp
 
-	# V2.9 — « à N px du centre » : le tir fatal raconté au perdant. Le « j'y
-	# étais presque » est le moteur du rematch. Connue seulement si la balle
-	# fatale a été simulée sur cette machine ; consommée pour ne jamais resservir.
-	if last_fatal_perp >= 0.0:
-		var sub = Label.new()
-		sub.text = "à %d px du centre" % int(roundf(last_fatal_perp))
-		var sub_settings = LabelSettings.new()
-		sub_settings.font = Charte.police_display(Charte.POIDS_DISPLAY)
-		sub_settings.font_size = Charte.T_TITRE
-		sub_settings.font_color = Charte.HALOGENE
-		sub_settings.outline_size = 8
-		sub_settings.outline_color = Charte.NOIR
-		sub.label_settings = sub_settings
-		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sub.position = global_position + Vector2(-100, -20)
-		sub.custom_minimum_size = Vector2(200, 0)
-		sub.z_index = 200
-		sub.material = lbl_mat
-		get_parent().add_child(sub)
-		var sub_tw = create_tween().set_parallel(true)
-		sub.modulate.a = 0.0
-		sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
-		Charte.animer(sub_tw, sub, "position", sub.position,
-			sub.position + Vector2(0, -60), 1.5, Charte.Courbe.ENTREE)
-		sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
-		sub_tw.chain().tween_callback(sub.queue_free)
+	var vues := [_rect_monde_de_la_vue(0), _rect_monde_de_la_vue(1)]
+	# ⚠️ **Le filet, et il compte plus qu'il n'en a l'air.** Une vue que personne
+	# ne regarde rend un rectangle vide et ne reçoit pas de bandeau. Mais si
+	# AUCUNE des deux n'a pu être mesurée — caméras pas encore debout, chemin
+	# d'appel imprévu —, n'afficher aucun bandeau serait pire que le défaut qu'on
+	# corrige. On sert alors les deux vues sans cadrage : c'est l'affichage
+	# d'avant, mais chacune dans SA vue, donc le défaut d'Adrien ne peut pas
+	# revenir par cette porte-là.
+	var aucune: bool = vues[0].size == Vector2.ZERO and vues[1].size == Vector2.ZERO
+	for idx in 2:
+		var vue: Rect2 = vues[idx]
+		if vue.size == Vector2.ZERO and not aucune:
+			continue
+		# Bit 2 pour la vue de J1, bit 4 pour celle de J2 : les deux seuls bits que
+		# les masques de cull séparent.
+		_poser_bandeau_fatal(texte_fatal, settings, geo, vue, 2 << idx, perp)
 	# DA4.7 — **la marge survit à la manche.** Elle criait « j'y étais presque »
 	# pendant deux secondes au-dessus d'un cadavre, puis disparaissait ; or le
 	# moment où ce chiffre pèse le plus est celui où le joueur décide de rejouer
@@ -1941,6 +1954,237 @@ func die(killer: Node2D):
 		killer.rumble_kill()
 
 	get_tree().call_group("game_state", "player_died", player_id, killer.player_id if killer else -1)
+
+## BF2 — le rectangle du MONDE que montre la vue `idx`, ou un rectangle vide
+## quand personne ne la regarde.
+##
+## ⚠️ **La taille se mesure sur la cible réelle de la caméra, elle ne se suppose
+## pas.** Depuis le chantier R (2026-08-25), une vue unique n'est plus rendue par
+## un `SubViewport` du tout : `_rendre_dans_la_racine()` pointe la caméra sur la
+## fenêtre, dont l'aire 2D en `keep` vaut **1920×1080** — et non les 957 d'une
+## vue scindée ni les 1916 du `SubViewport` étiré d'avant. Relevé le 2026-09-07 :
+## racine 1920×1080, vues scindées 957×1080 et 958×1080.
+##
+## ⚠️ **`game_state.gd` est en lecture seule ici, et il n'a besoin d'aucun
+## accesseur neuf** — c'est pourquoi le journal n'en demande pas. `cam1` / `cam2`
+## sont publiques, et « cette vue est-elle affichée » se lit entièrement sur la
+## caméra, en deux cas qui couvrent les cinq configurations du jeu :
+##
+## - la caméra vise la **fenêtre** → le chantier R l'a détournée, donc c'est
+##   celle qu'on regarde ;
+## - la caméra vise un `SubViewport` → il est affiché si et seulement s'il
+##   dessine encore. C'est le `render_target_update_mode` qui fait foi et **non
+##   le `visible` du conteneur** : en rendu racine le conteneur reste visible
+##   alors que sa vue est arrêtée, et lire le mauvais des deux donnerait ici un
+##   bandeau dans une texture que personne n'affiche.
+##
+## Le script de `game_state` n'est pas nommé non plus : on passe par le groupe et
+## par `Object.get()`. Nommer un script en fait une dépendance de **compilation**,
+## et c'est ce qui a empêché `tools/test_bandeau_fatal.gd` de compiler.
+func _rect_monde_de_la_vue(idx: int) -> Rect2:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs == null:
+		return Rect2()
+	var cam := gs.get("cam1" if idx == 0 else "cam2") as Camera2D
+	if cam == null or not is_instance_valid(cam):
+		return Rect2()
+	# ⚠️ `custom_viewport` est déclaré `Node` et non `Viewport` : sans ce
+	# transtypage, l'inférence de `taille` échoue et **player.gd cesse de
+	# compiler** — pour tout le jeu, pas seulement pour ici.
+	var cible := cam.custom_viewport as Viewport
+	if cible == null:
+		return Rect2()
+	var sous_vue := cible as SubViewport
+	if sous_vue != null \
+			and sous_vue.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+		return Rect2()
+	var zoom := cam.zoom
+	if zoom.x <= 0.0 or zoom.y <= 0.0:
+		return Rect2()
+	# `get_screen_center_position()` tient compte du zoom, du décalage de secousse
+	# et des limites : c'est le centre du monde effectivement montré, pas la
+	# position nominale de la caméra.
+	var taille := cible.get_visible_rect().size / zoom
+	return Rect2(cam.get_screen_center_position() - taille * 0.5, taille)
+
+
+## BF2 — pose un bandeau FATAL complet dans UNE vue, et dans elle seule.
+##
+## ⚠️ **`visibility_layer` se pose sur CHAQUE `CanvasItem`, jamais sur un
+## sous-arbre.** Ils sont quatre ici — le mot, sa plaque enfant, la flèche
+## enfant, le sous-titre frère — et un seul oublié le fait ressortir dans les
+## deux vues, à l'ancienne place : le défaut qu'on corrige, reproduit par
+## distraction.
+##
+## ⚠️ **Le cadrage n'agit que par un DÉCALAGE ajouté aux positions d'origine.**
+## Dans la vue du mort la caméra est sur lui, l'ancre tombe donc au milieu du
+## cadre et ce décalage vaut exactement zéro : tout ce qu'Adrien a validé le
+## 2026-08-26 y reste au pixel près. C'est la forme la plus courte de la
+## garantie de non-régression, et elle se lit dans le code plutôt que dans un
+## commentaire.
+func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
+		geo: Dictionary, vue: Rect2, couche: int, perp: float) -> void:
+	var mot: Vector2 = geo["mot"]
+	var enfle: float = geo["enfle"]
+	# ⚠️ **La plaque FINALE** : celle du départ mesure `enfle` fois moins et se
+	# trouve 100 px plus bas. C'est l'arrivée qui doit tenir dans le cadre.
+	var plaque_finale: Vector2 = geo["plaque"] * enfle
+	var elevation := ELEVATION_BANDEAU + MONTEE_BANDEAU + mot.y * 0.5
+	var cadrage := cadrage_du_bandeau(global_position, vue, plaque_finale,
+		elevation)
+	var decalage: Vector2 = cadrage["centre"] \
+		- (global_position + Vector2(0.0, -elevation))
+
+	var lbl := Label.new()
+	# Nommé explicitement : la règle du dépôt ne souffre pas d'exception locale,
+	# même là où rien n'est répliqué.
+	lbl.name = "BandeauFatal%d" % couche
+	lbl.text = texte
+	lbl.label_settings = settings
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# DA4.4 — **le centrage n'était pas absent, il était INOPÉRANT.** Le rect d'un
+	# `Label` épouse son texte, donc `HORIZONTAL_ALIGNMENT_CENTER` centre le texte
+	# dans une boîte qui a exactement sa largeur : il ne déplace rien. Ce qu'il
+	# faut centrer, c'est la boîte, et cela demande de connaître sa largeur.
+	lbl.position = global_position \
+		- Vector2(mot.x * 0.5, mot.y + ELEVATION_BANDEAU) + decalage
+	lbl.z_index = 200
+	lbl.visibility_layer = couche
+
+	var lbl_mat := CanvasItemMaterial.new()
+	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	lbl.material = lbl_mat
+
+	# DA4.4 — **le cartouche peint derrière le mot.** FATAL était un label sur le
+	# noir : le mot le plus fort du jeu, posé sur rien. Il a maintenant un
+	# support — une plaque de tôle frappée, bords rongés, l'encre a bavé.
+	#
+	# **Le mot reste du TEXTE**, dans la fonte d'enseigne, et la texture ne porte
+	# que le support : c'est ce qui laisse « FATAL — POMPE » s'allonger avec le
+	# nom de l'arme sans qu'aucune image soit à refaire. Enfant du `Label` et
+	# dessiné dessous (`show_behind_parent`), donc il suit le mot dans son envol
+	# et sa disparition sans qu'on ait à animer deux nœuds.
+	var chemin_cartouche := "res://assets/ui/cartouche_fatal.png"
+	if ResourceLoader.exists(chemin_cartouche):
+		var plaque := TextureRect.new()
+		plaque.name = "Cartouche"
+		plaque.texture = load(chemin_cartouche)
+		plaque.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		plaque.stretch_mode = TextureRect.STRETCH_SCALE
+		plaque.show_behind_parent = true
+		plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# ⚠️ **La marge est constante, la taille non.** Un cartouche se reconnaît
+		# à l'épaisseur de sa bordure, pas à un rapport : la même plaque autour de
+		# « FATAL » et de « FATAL — ARBALÈTE » doit montrer la même marge.
+		plaque.size = geo["plaque"]
+		plaque.position = -geo["marge"]
+		# `CARMIN` et non `ROUGE` : le rouge vu à l'intensité d'une chose qui ne
+		# s'éclaire plus elle-même, pour que le mot en `ROUGE` ressorte dessus.
+		plaque.modulate = Charte.CARMIN
+		# Non éclairé, comme le mot qu'il porte : un support qui s'assombrirait
+		# hors de la torche disparaîtrait au pire moment.
+		plaque.material = lbl_mat
+		# ⚠️ Troisième `CanvasItem`, troisième `visibility_layer`. L'enfant
+		# n'hérite de rien.
+		plaque.visibility_layer = couche
+		lbl.add_child(plaque)
+
+	# BF3 (2026-09-07) — **la flèche : où est le corps qu'on ne voit pas.**
+	#
+	# Elle ne paraît que si le cadavre est hors de la vue. Le cadrage, lui,
+	# retient la plaque bien avant — sinon elle dépasserait —, et désigner du
+	# doigt un corps que l'on voit très bien serait du bruit : les deux critères
+	# sont donc distincts, et c'est `cadrage_du_bandeau()` qui les sépare.
+	#
+	# Enfant du `Label`, comme le cartouche : elle hérite ainsi de l'envol, de
+	# l'agrandissement et de la disparition sans qu'on ait un troisième nœud à
+	# animer. Toutes ses cotes sont donc en unités de bandeau, avant `enfle`.
+	if cadrage["hors_champ"]:
+		var d: Vector2 = cadrage["direction"]
+		var demi_plaque: Vector2 = geo["plaque"] * 0.5
+		# Le point où la direction perce le bord du cartouche : on met à l'échelle
+		# `d` jusqu'à ce qu'il touche le premier des deux côtés. Sans ça, une
+		# flèche en diagonale flotterait loin d'un coin.
+		var t := 1.0 / maxf(absf(d.x) / demi_plaque.x, absf(d.y) / demi_plaque.y)
+		var perce: Vector2 = mot * 0.5 + d * t
+		# La pointe dépasse de `DEBORD_FLECHE`, le reste du triangle chevauche la
+		# plaque : elle se lit comme une languette du cartouche, pas comme un
+		# satellite qui flotte à côté. C'est aussi ce qui la garde dans le cadre —
+		# `MARGE_CADRE_BANDEAU` est dimensionnée pour ce seul débord.
+		var pointe: Vector2 = perce + d * DEBORD_FLECHE
+		var base: Vector2 = perce - d * (TAILLE_FLECHE - DEBORD_FLECHE)
+		var cote: Vector2 = d.orthogonal() * TAILLE_FLECHE * 0.5
+		var fleche := Polygon2D.new()
+		fleche.name = "FlecheFatal"
+		fleche.polygon = PackedVector2Array([pointe, base + cote, base - cote])
+		# `ROUGE`, celui du mot : la flèche appartient au bandeau, pas au décor.
+		fleche.color = Charte.ROUGE
+		# ⚠️ **Non éclairée, comme le mot et sa plaque.** Un support qui
+		# s'assombrit hors de la torche disparaît au pire moment — et la flèche
+		# pointe justement vers là où il n'y a pas de lumière.
+		fleche.material = lbl_mat
+		# ⚠️ Quatrième `CanvasItem`, quatrième `visibility_layer`. Une flèche qui
+		# ressort dans les deux vues montre au mort une direction qui n'est pas la
+		# sienne : pire que pas de flèche du tout.
+		fleche.visibility_layer = couche
+		fleche.z_index = 200
+		fleche.z_as_relative = false
+		lbl.add_child(fleche)
+
+	get_parent().add_child(lbl)
+
+	var txt_tw = create_tween().set_parallel(true)
+	lbl.scale = Vector2.ZERO
+	# Le pivot au MILIEU : un pivot fixe à 100 px faisait grandir le bandeau
+	# depuis un point situé quelque part dans le mot, donc toujours vers la
+	# droite. Au centre, il enfle autour de sa propre place.
+	lbl.pivot_offset = mot * 0.5
+	# DA4.13 — le claquement puis la montée.
+	Charte.animer(txt_tw, lbl, "scale", lbl.scale, Vector2(enfle, enfle),
+		Charte.D_MOYEN, Charte.Courbe.REBOND)
+	Charte.animer(txt_tw, lbl, "position", lbl.position,
+		lbl.position + Vector2(0, -MONTEE_BANDEAU), 1.5, Charte.Courbe.ENTREE)
+	txt_tw.tween_property(lbl, "modulate:a", 0.0, 0.5).set_delay(1.0)
+	txt_tw.chain().tween_callback(lbl.queue_free)
+
+	# V2.9 — « à N px du centre » : le tir fatal raconté au perdant. Le « j'y
+	# étais presque » est le moteur du rematch. Connue seulement si la balle
+	# fatale a été simulée sur cette machine.
+	#
+	# BF5 — **il suit le bandeau de SA vue, et rien de plus.** Le même `decalage`
+	# lui est appliqué : il garde donc sa place relative au mot, où que le cadrage
+	# ait dû poser celui-ci. À qui ce chiffre s'adresse — au seul perdant, ou aux
+	# deux — reste un arbitrage d'Adrien, pas une correction ; l'audience ne
+	# change pas ici.
+	if perp < 0.0:
+		return
+	var sub = Label.new()
+	sub.name = "MargeFatal%d" % couche
+	sub.text = "à %d px du centre" % int(roundf(perp))
+	var sub_settings = LabelSettings.new()
+	sub_settings.font = Charte.police_display(Charte.POIDS_DISPLAY)
+	sub_settings.font_size = Charte.T_TITRE
+	sub_settings.font_color = Charte.HALOGENE
+	sub_settings.outline_size = 8
+	sub_settings.outline_color = Charte.NOIR
+	sub.label_settings = sub_settings
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.position = global_position + Vector2(-100, -20) + decalage
+	sub.custom_minimum_size = Vector2(200, 0)
+	sub.z_index = 200
+	sub.material = lbl_mat
+	# ⚠️ Nœud FRÈRE du bandeau, donc quatrième `visibility_layer` à poser à la
+	# main. C'est celui qu'on oublie.
+	sub.visibility_layer = couche
+	get_parent().add_child(sub)
+	var sub_tw = create_tween().set_parallel(true)
+	sub.modulate.a = 0.0
+	sub_tw.tween_property(sub, "modulate:a", 1.0, 0.2).set_delay(0.25)
+	Charte.animer(sub_tw, sub, "position", sub.position,
+		sub.position + Vector2(0, -60), 1.5, Charte.Courbe.ENTREE)
+	sub_tw.tween_property(sub, "modulate:a", 0.0, 0.5).set_delay(1.2)
+	sub_tw.chain().tween_callback(sub.queue_free)
+
 
 func add_camera_shake(intensity: float, decay: float = 5.0):
 	if intensity > shake_intensity:
