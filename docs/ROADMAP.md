@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-01
+> Dernière mise à jour : 2026-09-07
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -12267,6 +12267,149 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   de son dans la killcam pour la fusée ; le sillage de killcam repart vide si
   la fenêtre commence après des traversées ; `asset_manifest.gd` n'attend pas
   encore les trois fichiers audio (ils n'ont pas de durée cible arrêtée).
+
+## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
+
+**Deux défauts relevés en jouant, tous deux d'information et non de décor** :
+une trace qui ment sur l'endroit où le coup a porté, et le mot le plus fort du
+jeu affiché là où celui qui l'a mérité ne le voit pas. Ils sont indépendants,
+vivent dans des fichiers disjoints, et **se traitent en parallèle, chacun dans
+son worktree** — SG dans `blood_stain.gd`, BF dans `player.gd`.
+
+### SG — la tache de sang démarre AVANT le joueur touché
+
+**Le constat d'Adrien :** « les taches de sang au sol sont mal positionnées :
+elles démarrent souvent AVANT le sprite du joueur touché. »
+
+**Le diagnostic, mesuré et non supposé** — trois faits qui se composent :
+
+1. `bullet.gd::_hit_player()` passe à l'effet le `hit_point` du `ShapeCast`,
+   c'est-à-dire le point d'**entrée** : le bord de la boîte du joueur **du côté
+   du tireur**. Le corps fait 18 px de rayon (`player.tscn`) ; le point d'impact
+   est donc déjà 18 px en amont du centre.
+2. `blood_stain.gd::setup()` pose le nœud **à** ce point et le tourne de
+   `direction.angle()`, puis `_draw()` dessine la texture **centrée sur
+   l'origine** : `draw_texture_rect(_texture, Rect2(-t * 0.5, t), …)`.
+3. `sang_1.png` fait 160×130 px et `Charte.DENSITE_ASSETS` vaut **1,0** : la
+   tache s'étend donc de ±80 px autour du point d'entrée, ×0,75 à 1,25 de
+   variation aléatoire. **Jusqu'à 100 px remontent vers le tireur, pour un
+   joueur qui en fait 18 de rayon.** La moitié de l'éclaboussure est peinte
+   entre le tireur et sa victime.
+
+Et un quatrième, qui explique le « souvent » plutôt que « toujours » : le
+centre de masse alpha des deux planches n'est pas au même endroit —
+`sang_1` à 0,54 de sa largeur (centré), **`sang_2` à 0,32** (la masse est du
+côté tête, donc en amont une fois la rotation appliquée). Une tache sur deux
+est donc franchement pire que l'autre.
+
+**Ce que le défaut coûte, et pourquoi ce n'est pas cosmétique :** une tache de
+sang est le seul témoignage persistant d'un échange de tirs, et le commentaire
+de `blood_stain.gd` le dit lui-même — « une tache raconte d'où le coup
+venait ». Aujourd'hui elle raconte l'inverse : elle désigne comme lieu de
+l'impact un point où personne n'a jamais été.
+
+**Les étapes, à ne pas anticiper :**
+
+- **SG1 — nommer l'ancrage.** Le calcul n'a pas de nom, donc rien ne le tient :
+  c'est le motif consigné depuis le 2026-08-19, et c'est exactement celui qui a
+  laissé passer le bandeau FATAL hors cadre pendant des semaines. Un
+  `static func` pur dans `blood_stain.gd` qui rend le rectangle dessiné à partir
+  du point d'impact, de la direction et de la taille de la planche, plus une
+  suite `--script` dans `tools/` inscrite dans `run_suites.sh`. ⚠️ **Ne jamais
+  nommer la classe** dans la suite : la charger par son chemin à l'exécution,
+  comme `tools/test_bandeau_fatal.gd` a dû le faire (nommer un script qui nomme
+  un autoload en fait une dépendance de **compilation**, et le banc ne compile
+  plus). L'oracle s'écrit à la main : « aucun pixel de la tache ne remonte de
+  plus de N px en amont du point d'impact ».
+- **SG2 — le correctif.** Ancrer la planche à partir du point d'impact au lieu
+  de la centrer dessus, de sorte que l'éclaboussure parte vers l'**aval** — là
+  où le corps a encaissé, pas là d'où la balle venait. Un décalage de départ
+  vers la sortie (l'ordre de grandeur : le diamètre du corps) est une **valeur
+  de départ, pas une décision** ; voir SG4.
+- **SG3 — la copie J2.** ⚠️ `duplicate()` **ne recopie pas les variables de
+  script** : toute nouvelle variable lue par `_draw()` doit être reportée à la
+  main dans `_create_p2_duplicate()`. Ce piège a déjà coûté cher exactement
+  ici — sous le dessin procédural, la copie J2 naissait avec zéro goutte et
+  **le joueur 2 n'a jamais vu une seule tache**, sans que rien ne le signale.
+- **SG4 — le dosage devant Adrien.** Le décalage et l'échelle ne deviennent des
+  décisions qu'à l'écran, avec lui. Avant ça, ce sont des propositions.
+
+**Hors périmètre, à signaler et non à corriger :** les particules de sang
+(`bullet.gd::_spawn_hit_effects`, deux gerbes déjà orientées, l'une vers l'aval
+l'autre vers l'amont — elles, c'est voulu), le shader, le plafond `MAX_STAINS`,
+et `wall_impact.gd` qui duplique la machinerie sciemment : sur un mur, le point
+d'impact **est** la surface, le centrage y est probablement juste — le vérifier
+et le dire, pas le changer.
+
+### BF — le bandeau FATAL doit tenir dans l'écran de celui qui a tué
+
+**La demande d'Adrien :** que le texte « FATAL — … » soit **entièrement affiché
+dans l'écran du joueur victorieux**, en écran scindé comme sur deux machines ;
+et que **si le mort est hors de l'écran, une flèche indique sa direction
+approximative**, la boîte se plaçant au bord de l'écran de ce côté-là.
+
+**Le diagnostic :** `player.gd::die()` crée **un seul** `Label` en espace-monde,
+posé à l'aplomb du cadavre, **sans `visibility_layer`**. Le défaut est là :
+la valeur par défaut est le bit 1, et les deux masques de cull des vues
+(`~4` et `~2`) le contiennent tous les deux — les deux écrans dessinent donc
+**le même nœud, au même endroit**, c'est-à-dire sur le mort. Celui qui tue à
+900 px de distance ne voit rien du tout.
+
+**Ce que DA4.4 a corrigé le 2026-08-26, et ce qu'elle n'a pas vu :** elle a
+réglé la **largeur** du bandeau, qui sortait du cadre en écran scindé. La
+**position**, elle, n'a jamais été mise en cause — le code suppose depuis
+toujours que l'on meurt là où l'on regarde. C'est vrai pour le mourant, jamais
+pour le tueur.
+
+**Trois pièges à ne pas payer :**
+
+- **Le bandeau bouge après sa naissance.** Il enfle jusqu'à `enfle` (≤ 1,5) et
+  **monte de 100 px en 1,5 s**. Un cadrage calculé sur la position initiale et
+  sur la taille du mot ressortirait du cadre par le haut une seconde plus tard.
+  C'est la même faute que celle déjà consignée à un cran près : *on mesurait le
+  mot alors que c'est la plaque qui est dessinée* — ici, on mesurerait le départ
+  alors que c'est l'arrivée qui doit tenir.
+- **La vue n'a pas la même taille selon le mode.** Écran scindé : 957×1080 par
+  vue. Vue unique : le duel est rendu **dans la racine** depuis le chantier R,
+  donc l'aire 2D est celle de la fenêtre en `keep` (1920×1080), pas les
+  1916×1080 du `SubViewport`. Prendre le rectangle sur la cible réelle de la
+  caméra (`cam1`/`cam2` de `game_state.gd`, `custom_viewport` détourné par
+  `_rendre_dans_la_racine`) et **le vérifier par la mesure**, sans le supposer.
+- **`visibility_layer` se pose sur chaque `CanvasItem`, pas sur un sous-arbre.**
+  Le bandeau a un enfant — la plaque `TextureRect` — et le sous-titre « à N px
+  du centre » est un nœud frère. Un seul oublié et il s'affiche dans les deux
+  vues, à l'ancienne place.
+
+**Les étapes, à ne pas anticiper :**
+
+- **BF1 — nommer le cadrage**, à côté de `geometrie_du_bandeau()` : une fonction
+  pure qui, du point de mort, du rectangle visible et de la taille finale de la
+  plaque, rend la position à tenir, le bord accroché et la direction de la
+  flèche. Contrôles ajoutés à `tools/test_bandeau_fatal.gd`, qui existe déjà et
+  porte l'oracle à la main (957 px relevés sur `main.tscn`, **jamais lus sur la
+  constante que le code utilise** — sinon élargir la constante fait passer le
+  banc au vert en supprimant ce qu'il protège ; leçon déjà payée deux fois dans
+  ce fichier).
+- **BF2 — un bandeau par vue affichée**, chacun à son `visibility_layer`, au
+  lieu d'un nœud partagé au bit 1. **Dans la vue du mort, la caméra est sur lui :
+  le cadrage ne déplace donc rien et l'existant est conservé tel quel** — il n'y
+  a pas de régression à juger de ce côté. `die()` s'exécute sur les deux
+  machines (`rpc_update_hp` est `call_local`) : rien à répliquer, le même code
+  tourne partout.
+- **BF3 — la flèche.** Quand le point de mort sort du rectangle rétréci, la
+  boîte s'accroche au bord de ce côté et un triangle pointe le cadavre. Couleurs
+  de la charte, matériau **non éclairé** comme le mot et sa plaque — un support
+  qui s'assombrit hors de la torche disparaît au pire moment —, `z_index` 200.
+- **BF4 — l'essai réel**, trois configurations : écran scindé avec un kill à
+  distance, en ligne côté hôte, et l'entraînement (une seule vue, rendu racine).
+- **BF5 — signaler sans élargir** : le sous-titre « à N px du centre » suit le
+  bandeau de sa vue et rien de plus ; s'il faut décider à qui il s'adresse,
+  c'est un arbitrage d'Adrien, pas une correction. Idem pour une éventuelle
+  entrée de `effect_policy.gd`.
+
+**Hors périmètre :** `ui.gd` (le HUD ne bouge pas), `game_state.gd` en écriture
+— la lecture des caméras suffit ; s'il faut un accesseur, le **demander** dans
+le journal plutôt que l'écrire.
 
 ---
 

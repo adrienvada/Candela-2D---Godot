@@ -246,6 +246,45 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-07 — session « corrections de positionnement » : deux chantiers inscrits, AUCUN code touché
+
+**Adrien a relevé deux défauts en jouant et a demandé qu'ils soient préparés
+pour deux sessions distinctes, chacune dans son worktree.** Cette session-ci a
+**écrit les deux chantiers dans la feuille de route et rien d'autre** : aucun
+fichier de code modifié, aucune branche créée. Les deux prompts lui ont été
+rendus, il les lancera lui-même.
+
+**Domaines réservés, et ils sont disjoints** — c'est ce qui rend le parallèle
+possible. Les deux appartiennent au domaine « game feel », mais pas aux mêmes
+fichiers :
+
+| Chantier | Worktree proposé | Fichiers réservés |
+|---|---|---|
+| **SG** — la tache de sang démarre avant le joueur touché | `.claude/worktrees/sang-au-sol`, branche `worktree-sang-au-sol` | `blood_stain.gd`, une suite neuve dans `tools/`, la ligne correspondante de `tools/run_suites.sh` |
+| **BF** — le bandeau FATAL hors de l'écran du tueur | `.claude/worktrees/bandeau-fatal`, branche `worktree-bandeau-fatal` | `player.gd`, `tools/test_bandeau_fatal.gd` |
+
+**Ce que ni l'une ni l'autre ne touche :** `ui.gd` (domaine « menus »),
+`game_state.gd` (lecture seule des caméras pour BF — un accesseur, s'il en faut
+un, se **demande ici** avant d'être écrit), `bullet.gd` (SG peut avoir à y poser
+le point de départ ; si c'est le cas, qu'elle le déclare ici, le fichier est
+sinon libre), et `audio_manager.gd`.
+
+⚠️ **L'arbre partagé porte du travail non commité au moment où ceci s'écrit** —
+`fusee.gd`, `project.godot`, `default_bus_layout.tres` et une trentaine de
+`.wav` neufs, qui appartiennent au câblage des sons. Les deux worktrees partent
+de `c4bbeb1` et ne l'emportent pas. **Aucun `git checkout` dans l'arbre
+partagé.**
+
+**Rappel qui vaut pour les deux :** un worktree neuf n'a pas de cache d'import,
+donc `godot --headless --path . --import` **avant** la première suite, sans quoi
+`test_charte` rougit pour une raison qui n'a rien à voir avec le travail. Et
+`pgrep -f run_suites` avant de lancer les suites : le port 7777 est en dur et
+deux lanceurs simultanés produisent un faux échec réseau.
+
+**Suivi de projet :** cette session a transmis les deux chantiers à la session
+« Can2d - Mise à jour artefact de suivi », qui porte la republication. Les deux
+sessions de correctif **ne republient pas** : elles lui envoient leur delta.
+
 ### 2026-09-01 — session « retouche éblouissement » : le voile est BRANCHÉ
 
 **Adrien : « j'aimerais voir le voile. »** La demande de branchement inscrite ici
