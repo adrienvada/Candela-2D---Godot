@@ -246,6 +246,35 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-07 — session « SG · sang au sol » : je prends `blood_stain.gd`
+
+**Déclaration d'ouverture.** Je tiens le chantier SG inscrit ce jour dans la
+feuille de route — la tache de sang qui démarre en amont du joueur touché.
+Périmètre exact, et il est fermé : **`blood_stain.gd`**, **`tools/test_sang_au_sol.gd`**
+(suite neuve) et **sa ligne dans `tools/run_suites.sh`**. Rien d'autre.
+
+**Le worktree n'est pas celui que la table propose** : il a été ouvert par
+l'outillage sous `.claude/worktrees/sang-au-sol-sg-d395d3`, branche
+`claude/sang-au-sol-sg-d395d3`, partie de `070a0c6` et non de `c4bbeb1`. Le
+travail non commité de l'arbre partagé n'y est pas et n'a pas été touché ;
+aucun `git checkout` n'a eu lieu ailleurs qu'ici.
+
+**`bullet.gd` : je n'y touche pas, et je dis pourquoi.** La ROADMAP m'autorisait
+à y poser le point de départ si nécessaire. Ce ne l'est pas : le point d'entrée
+que `_hit_player()` transmet est **la bonne donnée** — c'est l'endroit où la
+balle a rencontré le corps, et les particules d'entrée s'en servent
+légitimement. Le défaut est entièrement dans la façon dont `blood_stain` s'en
+sert, donc la correction y reste. `bullet.gd` demeure libre pour qui le veut.
+
+**Ce que je signale sans le corriger**, comme la ROADMAP le demande :
+`wall_impact.gd` centre lui aussi sa marque sur le point d'impact, **et le
+centrage y est légitime** — vérifié, non modifié. Deux raisons, mesurées : sa
+planche de 96 px est réduite à ×0,22-0,34, soit **21 à 33 px** à l'écran, donc
+elle ne déborde dans le mur que d'une dizaine de pixels ; et sa rotation est
+**tirée au sort**, pas prise dans l'axe du tir — une étoile de fissure n'a ni
+amont ni aval, elle ne peut donc pas mentir sur la provenance du coup. Le sang,
+lui, est tourné dans l'axe : c'est exactement ce qui rend son centrage fautif.
+
 ### 2026-09-07 — session « corrections de positionnement » : deux chantiers inscrits, AUCUN code touché
 
 **Adrien a relevé deux défauts en jouant et a demandé qu'ils soient préparés

@@ -62,6 +62,78 @@ var _order := 0
 ## Copie J2, tenue par l'original pour être libérée d'un seul geste.
 var _p2_copy: Node2D = null
 
+
+## ## L'ancrage de la planche — SG1, nommé le 2026-09-07
+##
+## ⚠️ **Ce calcul n'avait pas de nom, donc rien ne le tenait.** Il vivait en deux
+## morceaux — la pose dans `setup()`, le rectangle dans `_draw()` — qu'aucun banc
+## ne pouvait exercer sans déposer une vraie tache dans une vraie arène. C'est le
+## motif exact qui a laissé passer le bandeau FATAL hors cadre pendant des
+## semaines, et c'est lui qu'Adrien a fini par relever à l'œil : « les taches de
+## sang démarrent souvent AVANT le sprite du joueur touché ».
+##
+## Les deux fonctions ci-dessous sont **pures et statiques** : elles ne lisent
+## aucun état d'instance, et `tools/test_sang_au_sol.gd` les appelle sans monter
+## de partie.
+
+## Diamètre du corps du joueur, en pixels.
+##
+## ⚠️ **Relevé sur `player.tscn`** (le polygone de collision va de -18 à +18),
+## et non lu sur `bullet.gd::PLAYER_BODY_RADIUS` : le jour où cette constante-là
+## dérive, on veut que le sang le dise, pas qu'il suive en silence.
+const DIAMETRE_CORPS := 36.0
+
+
+## Où la tache se place et comment elle s'oriente, d'un seul geste.
+##
+## `impact` est le point d'**entrée** — le bord de la boîte du joueur du côté du
+## tireur, ce que `bullet.gd::_hit_player()` transmet — et l'axe X du repère rendu
+## pointe donc vers l'**aval**, dans le sens de la balle.
+##
+## Une seule vérité : `setup()` s'en sert pour poser le nœud, le banc s'en sert
+## pour savoir où les pixels atterrissent. Les deux ne peuvent plus diverger.
+static func pose(impact: Vector2, direction: Vector2) -> Transform2D:
+	return Transform2D(direction.angle(), impact)
+
+
+## Où le bord AMONT de la planche se pose, en aval du point d'impact.
+##
+## ⚠️ **Valeur de départ, pas une décision** — SG4 la tranche avec Adrien, à
+## l'écran. Le raisonnement qui la propose : `bullet.gd` transmet le point
+## d'**entrée**, donc le corps s'étend de là jusqu'à un diamètre plus loin. Poser
+## le bord amont à `DIAMETRE_CORPS`, c'est faire partir l'éclaboussure du bord de
+## **sortie** — là où le corps a encaissé, et non entre le tireur et sa victime.
+##
+## ⚠️ **C'est aussi exactement la borne que `tools/test_sang_au_sol.gd` protège**
+## (« la tache commence à moins d'un diamètre de corps de l'impact »), et c'est
+## voulu : tout dosage ultérieur ne pourra que ramener la tache VERS le corps.
+## L'éloigner davantage fera rougir le banc, ce qui obligera à rediscuter la
+## borne au lieu de la franchir en silence.
+const ANCRAGE_AVAL := DIAMETRE_CORPS
+
+
+## Le rectangle que `_draw()` remet à `draw_texture_rect`, exprimé dans le repère
+## rendu par `pose()` : X positif vers l'aval, origine au point d'impact.
+##
+## `taille` est la taille FINALE de la planche, densité et variation aléatoire
+## déjà appliquées — c'est le `t` de `_draw()`.
+##
+## ⚠️ **Ancré par son bord amont, PAS centré** (SG2, le 2026-09-07). Centrer une
+## planche de 160 px agrandie jusqu'à ×1,25 sur le point d'entrée en envoyait
+## **100 px vers le tireur**, pour un corps qui en fait 18 de rayon : la tache
+## désignait comme lieu de l'impact un point où personne n'avait jamais été. Le
+## commentaire de ce fichier promet qu'« une tache raconte d'où le coup venait » ;
+## elle racontait l'inverse.
+##
+## ⚠️ **La taille n'a PAS été réduite pour compenser.** Rapetisser les planches
+## aurait masqué le symptôme en changeant un dosage — et le dosage appartient à
+## Adrien (SG4), pas à la correction d'un défaut de position.
+static func rectangle_de_la_tache(taille: Vector2) -> Rect2:
+	# Seul le X bouge : la planche reste centrée en TRAVERS du tir, une
+	# éclaboussure ne penchant pas d'un côté sans raison.
+	return Rect2(Vector2(ANCRAGE_AVAL, -taille.y * 0.5), taille)
+
+
 func setup(base_pos: Vector2, direction: Vector2):
 	position = base_pos
 	z_index = 1 # Au-dessus du sol (0), sous la killcam (2) et les joueurs (10)
@@ -82,7 +154,11 @@ func setup(base_pos: Vector2, direction: Vector2):
 	# scène de crime d'un semis de losanges.
 	_choisir_eclaboussure()
 	if _texture != null:
-		rotation = direction.angle()
+		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
+		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
+		# calculent déjà leur angle depuis `direction`, et le tourner en plus
+		# appliquerait la rotation deux fois.
+		transform = pose(base_pos, direction)
 		_echelle = randf_range(0.75, 1.25)
 		queue_redraw()
 		return
@@ -145,10 +221,10 @@ func _draw():
 		# de son FICHIER, et une recuisson à ×2 la doublerait à l'écran. Voir
 		# `Charte.DENSITE_ASSETS` — même geste que pour les sprites du joueur.
 		var t := _texture.get_size() * _echelle / Charte.DENSITE_ASSETS
-		draw_texture_rect(_texture, Rect2(-t * 0.5, t), false,
+		draw_texture_rect(_texture, rectangle_de_la_tache(t), false,
 			Color(Charte.CARMIN, 0.8))
 		var c := _coeur.get_size() * _echelle / Charte.DENSITE_ASSETS
-		draw_texture_rect(_coeur, Rect2(-c * 0.5, c), false,
+		draw_texture_rect(_coeur, rectangle_de_la_tache(c), false,
 			Color(Charte.CARMIN * 0.16, 0.95))
 		return
 	for d in _drops:
