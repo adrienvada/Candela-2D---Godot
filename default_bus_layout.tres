@@ -37,6 +37,10 @@ wet = 0.525
 pre_gain_db = -4.5
 ceiling_db = -0.5
 
+[sub_resource type="AudioEffectFilter" id="AudioEffectFilter_monde"]
+resource_name = "EtouffementMonde"
+cutoff_hz = 20500.0
+
 [resource]
 bus/0/effect/0/effect = SubResource("AudioEffectHardLimiter_filet")
 bus/0/effect/0/enabled = true
@@ -58,6 +62,8 @@ bus/2/volume_db = 0.0
 bus/2/send = &"Master"
 bus/2/effect/0/effect = SubResource("AudioEffectReverb_j3pel")
 bus/2/effect/0/enabled = true
+bus/2/effect/1/effect = SubResource("AudioEffectFilter_monde")
+bus/2/effect/1/enabled = true
 bus/3/name = &"Speaker"
 bus/3/solo = false
 bus/3/mute = false

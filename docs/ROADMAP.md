@@ -6272,6 +6272,141 @@ l'importeur a bien travaillé.
 
 Cycle complet vérifié : rouge sur le fichier vide, vert sur le réexport.
 
+### Quarante sons dormaient dans le dépôt (2026-08-27)
+
+Livraison d'Adrien : le dépôt passe de 45 à 89 fichiers audio. **Quarante
+d'entre eux n'avaient ni clé, ni famille, ni appel** — ils étaient présents,
+importés, inventoriés, et parfaitement silencieux.
+
+**Aucune erreur ne pouvait le dire.** Un `.wav` déposé dans `assets/audio/` sans
+déclencheur ne lève rien : il dort. C'est la même famille que le dossier
+`speaker/` qui n'existait pas et que `defeat.wav` livré vide — *ce qui manque ne
+se plaint jamais.*
+
+D'où le garde-fou `_test_aucun_son_orphelin`, qui rend « tous les sons sont
+câblés » **vérifiable au lieu qu'affirmé** : tout fichier des quatre dossiers
+audio doit avoir une clé ou une famille, et réciproquement toute variante
+annoncée doit exister. Il rougira le jour du prochain dépôt de fichier — soit
+exactement le moment où quelqu'un doit décider de ce que ce son raconte.
+
+**Il a rougi tout de suite, et pas comme prévu.** Les quarante fichiers étaient
+**non commités** : ils vivaient en fichiers non suivis de l'arbre principal, donc
+absents de tout worktree parti d'`origin/main`. Une suite du dépôt le dit déjà —
+« ils s'affichent, les bancs sont verts, et ils meurent avec la machine ».
+
+#### Trois défauts trouvés en câblant, qu'aucun test ne cherchait
+
+**Le duck des pas serait mort en silence.** V4.15 fait reculer les pas de six
+décibels après un tir ; la condition comparait à la **clé littérale**
+`"footstep"`. Les pas jouant désormais par **chemin** (`footstep_a_02.wav`), la
+branche devenait morte : les pas seraient restés au premier plan pendant les
+fusillades, sans qu'aucune erreur ne le dise. **Mot pour mot le défaut
+qu'`est_un_tir` avait déjà payé en V4.1** — une question posée à une CLÉ alors
+que le son arrive en CHEMIN. Trouvé en relisant avant d'écrire, pas en testant.
+
+**Un impact au but jouait DEUX fois.** `bullet.gd` le joue au point d'impact
+exact ; `player.take_damage` le rejouait depuis le **centre du corps**. Deux
+échantillons à quelques millisecondes ne s'entendent pas comme un doublon mais
+comme un son **plus épais** — donc indosable : aucun niveau n'aurait jamais paru
+juste au banc de mixage, et on aurait cherché la faute dans le fichier. Il
+jouait en outre de façon **incohérente**, `take_damage` étant gardé par
+`if not is_replay` : la killcam entendait un impact quand le direct en entendait
+deux.
+
+**`$HitSound` ne jouait rien depuis toujours** — un `AudioStreamPlayer` sans flux
+dans `player.tscn`, appelé à chaque coup encaissé. Le nœud reste à la main de qui
+tient la scène ; l'appel est parti.
+
+#### La classification vivait en trois exemplaires
+
+Portée, niveau et priorité posaient la même question — « de quelle famille relève
+ce son ? » — chacune avec sa cascade de `if`. Trois copies, donc trois endroits
+où l'ajout d'une famille peut n'être fait que deux fois. Elles passent par une
+seule `famille_de()`. *La même question posée par deux chemins finit par recevoir
+deux réponses* — leçon déjà payée sur l'échelle de la torche.
+
+#### Deux arbitrages posés, non tranchés
+
+**Le carreau d'arbalète** (V4.10) — ⚠️ **ce paragraphe a d'abord dit que le son
+« rend un tell » à l'arbalète, et c'était faux.** Joué au canon et à l'instant du
+tir, par-dessus `weapon_arbalete_NN`, il n'apprend rien que le coup n'ait déjà
+dit : c'est une couche de **timbre**.
+
+**✅ TRANCHÉ par Adrien le 2026-08-28 : le frôlement se joue**, et sa raison
+reformule l'item mieux que ne le faisait la question — *« c'est une info de TIR,
+pas de position. Ça ajoute du suspens mais ça ne donne pas d'info. »*
+
+C'est cette phrase qui décide de l'implémentation, pas un dosage :
+
+- le son naît **au point le plus proche de celui qui est frôlé**, jamais au
+  canon. Une source ponctuelle posée à côté de la victime dit qu'un tir a eu
+  lieu ; elle ne dit rien d'**où** il vient ;
+- le jouer **au canon** — ce que faisait la première version — le confondait avec
+  le coup et n'apprenait rien ;
+- le jouer **le long de la trajectoire** en aurait fait une flèche vers le
+  tireur, soit exactement l'information que l'arbalète est conçue à ne pas
+  donner.
+
+Le tireur l'entend aussi, de loin et faiblement : « j'ai failli toucher ». C'est
+du retour, pas du renseignement.
+
+⚠️ **Réservé à l'arbalète.** Les autres armes ont une lueur de bouche qui les
+trahit déjà ; leur ajouter un frôlement doublerait une information existante. Et
+un verrou par carreau (`_frolement_joue`) : sans lui, un carreau rasant émettrait
+à chaque pas de simulation — un crépitement là où il faut un événement.
+
+Le rayon (90 px) n'est **pas jugé** : c'est la seule chose qui reste au banc.
+
+**Le ricochet** (V4.3) — **✅ TRANCHÉ par Adrien le 2026-08-28 : le rebond
+REMPLACE l'impact**, il ne s'y ajoute pas. *« Pour le fusil on peut distinguer le
+rebond de l'impact au son. »*
+
+⚠️ **La superposition, essayée d'abord, mourait avec la distance.** Empilés, les
+deux événements ne diffèrent que par la **présence** d'une couche de plus ; or
+cette couche s'atténue et s'occulte comme le reste. Au loin — ou derrière un mur
+— un rebond et une balle finie redevenaient identiques : **la distinction
+disparaissait exactement là où elle sert**, dans le noir, quand on ne voit pas la
+balle. Remplacés, les deux sons ont chacun leur niveau et leur portée.
+
+Les **étincelles et l'éclat restent** dans les deux cas : ce qui se voit est le
+même choc, c'est ce qui s'entend qui doit trancher. Le drapeau `avec_son`
+existait déjà pour la cible d'échauffement — même geste, même raison.
+
+L'enjeu tient au **fusil**, seule arme qui rebondit et **dont la balle peut tuer
+son propre tireur**. « Cette balle vit encore » est une information sur laquelle
+on agit dans la seconde, parfois contre soi-même.
+
+### Trois façons de dire vrai et d'être compris de travers (2026-09-03)
+
+Trois défauts de la même famille en trois jours, entre sessions parallèles.
+Aucun n'est un mensonge : chaque fois l'énoncé est **exact chez son auteur** et
+faux chez son lecteur, parce qu'il tait le référentiel qui le rend vrai.
+
+- **Le constat daté.** « L'oreille ne suit pas le joueur, mesuré le 2026-08-25 »
+  — vrai à l'écriture, faux dès la fusion suivante. Une session s'y est fiée
+  sans ouvrir le code et a bâti une contrainte inter-chantiers sur un état
+  périmé. *Un constat vieillit sans prévenir.*
+- **La poignée éphémère.** « `candela-2d-b6` n'existe plus, donc la
+  republication est vacante » — les noms `candela-2d-XX` sont fabriqués par
+  `ListAgents` à chaque écoute et changent. La session visée était vivante ;
+  le tableau de bord a été republié deux fois, et il n'est pas versionné.
+  *Une absence dans un annuaire n'est pas une absence.*
+- **Le référentiel implicite.** « La fusée est dans `main` (29b17ac) » — vrai
+  dans le `main` local du poste, faux sur `origin`. Un dépôt partagé par sept
+  sessions **en a deux**, et ils divergent en permanence. J'avais déjà écrit
+  dans un message de commit que je reprenais trois clés qui n'existaient pas
+  chez moi ; seul un `git merge-base --is-ancestor` l'a arrêté.
+
+**La règle qui les couvre toutes les trois : dire d'où l'on parle.** « Poussé
+sur `origin` » ou « dans mon `main` local », jamais « dans main ». Le titre
+d'une session, jamais sa poignée. Ce que le code FAIT, jamais ce qu'on a mesuré
+un jour.
+
+**Et le corollaire, qui coûte moins cher que la confiance :** entre sessions, un
+fait vérifiable se vérifie. `git merge-base --is-ancestor`, `list_sessions`, un
+`grep` dans le fichier — trois secondes, contre une demi-journée de travail bâti
+sur un état qui n'existe pas.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -8657,9 +8792,11 @@ un fait de jeu, pas à un rythme d'interface.
   entendu est le premier jugé, et il ne se répète plus.
 - ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
   2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
-- **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
-  `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
-  dépôt des fichiers. *(C : 3 samples)*
+- ~~**DA3.3 Les trois fichiers câblés-muets du 2026-08-18**~~ — **✅ close le
+  2026-08-27 : les trois fichiers sont arrivés.** `torch_on`, `torch_off` et
+  `tinnitus_dazzle` jouent enfin ce que le code leur demandait depuis neuf
+  jours, sans qu'une ligne ait eu besoin de changer — ce qui est exactement ce
+  que la règle « câbler, taire, diagnostiquer » promettait.
 
   ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION — et le câblage y a
   déjà répondu sans que personne ne la pose.** Ce paragraphe a dit pendant huit
@@ -8701,11 +8838,44 @@ un fait de jeu, pas à un rythme d'interface.
   ⚠️ Les chemins pointaient vers `assets/audio/speaker/`, **un dossier qui n'a
   jamais existé** : les voix étaient muettes en silence depuis des mois. Le mot
   `speaker` ne désigne plus qu'un **bus** — une sortie, pas un rangement.
-- **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
-- **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
-  même matière sonore pour tous les menus. *(C : 5-6 samples)*
-- **DA3.8 Le room tone** (= V5.10) — un lit de silence habité sous la manche.
-  *(C)*
+- ~~**DA3.6 Les pas par matériau**~~ (= V5.7) — **✅ livrée le 2026-08-27.** La
+  case se dérive de la position par **la même parité que
+  `CandelaTileSet.get_floor_atlas`** : traverser le damier s'entend alterner
+  comme il se voit alterner. L'origine de la grille n'est volontairement pas
+  corrigée du décalage d'arène — une erreur d'origine échangerait A et B
+  *globalement*, ce qui ne s'entend pas, les deux étant des sols. Ce qui compte
+  est que deux cases voisines diffèrent.
+- ~~**DA3.7 La famille de sons UI**~~ — **✅ livrée le 2026-08-27**, sept sons
+  câblés sur des **transitions**, jamais sur des affichages. La distinction est
+  tout l'item : `poser_bilan` se repose à l'identique en revenant au menu, et un
+  son posé sur l'appel sonnerait une victoire qui n'a pas eu lieu. D'où deux
+  états mémorisés (`_bilan_total_precedent`, `_serie_precedente`) — *un son de
+  transition a besoin de ce qui précède.*
+
+  ⚠️ **Le tic de navigation est sur `_set_focus`, pas sur `mouse_entered`.**
+  C'est le point de passage unique de la sélection, manette et souris
+  confondues, pour les deux joueurs. Le câbler sur le survol aurait rendu le
+  menu **muet à la manette** — ce qui ne se remarque que le jour où quelqu'un
+  joue sans souris.
+
+  ⚠️ **`ui_type_impact` frappe une fois, pas une fois par lettre**, et c'est une
+  limite assumée : V3.5 demande « les lettres qui tombent une à une », or le
+  titre est un `Label` simple. Le son par lettre exige d'abord la moitié
+  **visuelle** de V3.5, qui n'existe pas. Le jour où elle existera, le son se
+  séquencera **sur l'animation**, jamais sur un minuteur parallèle qui dérivera.
+- ~~**DA3.8 Le room tone**~~ (= V5.10) — **✅ livrée le 2026-08-27.**
+
+  ⚠️ **Ce n'est PAS une nappe, et c'en est la définition.** Une nappe continue
+  masquerait les pas, et les pas sont la seule information du jeu. Des ponctuels
+  très espacés (7 à 18 s) occupent l'oreille une demi-seconde puis lui rendent
+  le silence — celui où l'adversaire se trahit. **Le silence entre deux est la
+  vraie valeur à doser, plus que leur niveau.**
+
+  La zone se pose au même endroit que `accorder_a_la_carte`, sur la même source
+  de vérité : une zone écrite en dur enverrait les ambiances derrière les murs à
+  la première carte d'une autre taille — audible comme un défaut de
+  panoramique, introuvable comme une constante. Et elle s'**arrête** en fin de
+  manche : le minuteur vit dans l'autoload, qui survit à l'arène.
 - **DA3.9 Le mastering global** — **✅ la moitié qui compte est faite le
   2026-08-26 ; l'autre moitié est ANNULÉE par décision d'Adrien.**
 

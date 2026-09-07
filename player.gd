@@ -302,7 +302,6 @@ var ambient_light: PointLight2D
 var aim_cast: RayCast2D
 var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
-@onready var hit_sound = $HitSound
 var step_distance_accumulated: float = 0.0
 
 ## ## Le roulis de marche (DA2.4)
@@ -1357,7 +1356,24 @@ func _physics_process(delta):
 			# Fourchette fixe : rien ne module la hauteur du pas. **Un facteur
 			# qui ne varie jamais suggère une modulation qui n'existe pas** — il
 			# coûte une relecture à chaque passage, et il en promet une.
-			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.95, 1.05)
+			# V5.7 — **le son du pas suit le DAMIER, pas le hasard.** La case
+			# se derive de la position par la meme parite que
+			# `CandelaTileSet.get_floor_atlas` : traverser le damier doit
+			# s'entendre alterner comme il se voit alterner.
+			#
+			# L'origine exacte de la grille n'est volontairement pas corrigee du
+			# decalage d'arene : une erreur d'origine echangerait A et B
+			# GLOBALEMENT, ce qui ne s'entend pas — les deux sont des sols. Ce
+			# qui compte, et que ce calcul garantit, c'est que deux cases
+			# voisines different.
+			var case := Vector2i((global_position / float(CandelaTileSet.TILE_SIZE.x)).floor())
+			AudioManager.play_footstep(global_position, case)
+			# V5.11 — le frolement, au meme rythme que le pas et jamais seul :
+			# on ne frole un mur qu'en s'y deplacant. Le lier au pas plutot qu'a
+			# un minuteur evite le crepitement d'un joueur immobile colle a une
+			# paroi, qui trahirait une position sans qu'aucun geste soit fait.
+			if get_slide_collision_count() > 0:
+				AudioManager.play_wall_brush(global_position)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
@@ -1652,7 +1668,17 @@ func trigger_shoot_visuals():
 		Charte.animer(tw_reveal, vrep, "color:a", vrep.color.a, 0.0, 2.0,
 			Charte.Courbe.EXTINCTION)
 	
-	AudioManager.play_weapon_shot(current_weapon.slug() if current_weapon else "pistolet", muzzle.global_position)
+	var _slug := current_weapon.slug() if current_weapon else "pistolet"
+	AudioManager.play_weapon_shot(_slug, muzzle.global_position)
+	# V4.10 — **le carreau ne sonne PAS au canon**, et c'est une decision
+	# d'Adrien (2026-08-28) : joue ici, il se confondrait avec le coup et
+	# n'apprendrait rien. Il sonne la ou il FROLE sa cible — voir
+	# `bullet._guetter_le_frolement`. « Une info de TIR, pas de position. »
+	if _slug != "arbalete":
+		# V4.8 — la douille retombe APRES le coup, jamais avec lui. Le retard
+		# est ce qui la rend lisible : jouee sur le tir, elle disparaitrait
+		# dedans. Elle tombe aux pieds du tireur, pas au bout du canon.
+		_tinter_la_douille()
 
 	# V4.13 — fumée de bouche : trois grains gris qui dérivent après le flash.
 	var pool := get_tree().get_first_node_in_group("particle_pool") as ParticlePool
@@ -1686,8 +1712,22 @@ func take_damage(amount: float, source_player: Node2D):
 		else:
 			rpc_update_hp(new_hp, sid)
 			
-	hit_sound.play()
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", global_position, 0.92, 1.08)
+	# ⚠️ **Le son de l'impact n'est PLUS joue ici, et c'etait un doublon reel.**
+	# `bullet.gd` joue deja `play_hit` sur le meme evenement, au point d'impact
+	# exact et avec la precision du coup ; cette ligne-ci le rejouait depuis le
+	# CENTRE du corps, une seconde fois. Deux echantillons superposes a quelques
+	# millisecondes, ce qui ne s'entend pas comme un doublon mais comme un son
+	# plus epais — donc indosable : aucun niveau n'aurait jamais paru juste au
+	# banc de mixage.
+	#
+	# Il jouait aussi de facon INCOHERENTE : `take_damage` n'est appele que
+	# `if not is_replay`, si bien que la killcam n'entendait qu'un impact quand
+	# le direct en entendait deux. La balle est la seule a savoir ou et comment
+	# elle a touche ; c'est elle qui parle.
+	#
+	# `hit_sound.play()` est parti avec : `$HitSound` est un `AudioStreamPlayer`
+	# SANS FLUX dans `player.tscn` — il ne jouait rien depuis toujours. Le noeud
+	# lui-meme reste dans la scene, a la main de qui la tient.
 	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
 
 	
@@ -1746,10 +1786,28 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		Charte.Courbe.EXTINCTION)
 	tw_l.tween_callback(hit_light.queue_free)
 
+## V4.8 — le tintement de la douille, 300 a 500 ms apres le coup.
+##
+## `await` plutot qu'un `Timer` : le son n'a aucun etat a porter, et un minuteur
+## par tir encombrerait l'arbre pendant une fusillade. La garde
+## `is_instance_valid` est obligatoire — un joueur peut mourir entre le coup et
+## la chute de sa douille, et c'est meme un cas frequent.
+func _tinter_la_douille() -> void:
+	await get_tree().create_timer(randf_range(0.30, 0.50)).timeout
+	if is_instance_valid(self) and not dead:
+		AudioManager.play_shell(global_position)
+
 func die(killer: Node2D):
 	if dead: return
 	dead = true
 	AudioManager.update_low_health(player_id, false)
+	# V2.8 — le sifflement et le monde etouffe, **sur la machine du perdant
+	# seulement**. `_is_locally_piloted` est la meme garde que l'acouphene
+	# d'eblouissement : c'est SON oreille qui siffle, pas celle de l'adversaire
+	# qui vient de gagner. En ecran scindé les deux joueurs partagent la sortie —
+	# le perdant y est bien le pilote local de ce corps-la.
+	if _is_locally_piloted():
+		AudioManager.jouer_acouphene_mort()
 
 	visual.visible = false
 	visual_ptr.visible = false

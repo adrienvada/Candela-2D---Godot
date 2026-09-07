@@ -133,6 +133,8 @@ const COUNTDOWN_MATCHMADE := 10.0
 ## Les deux camps peuvent abréger cette fenêtre en se déclarant prêts — c'est ce
 ## qui évite d'imposer dix secondes à qui a déjà choisi. Un seul « prêt » ne
 ## suffit pas : l'autre choisit peut-être encore.
+## V3.3 — la derniere seconde entiere annoncee. -1 tant qu'aucune ne l'a ete.
+var _dernier_tic_decompte: int = -1
 var _countdown_ready_local: bool = false
 var _countdown_ready_peer: bool = false
 ## Ce match vient-il de l'appariement automatique ? C'est la seule question qui
@@ -404,7 +406,11 @@ func _ready():
 	
 	ui.show_main_menu()
 
+## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
+## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que
+## c'est l'EVENEMENT qui compte, pas l'effet.
 func _on_peer_connected(id: int):
+	AudioManager.play_ui("ui_power_on")
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		client_peer_id = id
 		p2.reset_network_input()
@@ -702,6 +708,15 @@ func rebuild_arena() -> void:
 	# carte d'une autre taille, et rien ne le dirait.
 	AudioManager.accorder_a_la_carte(MapCodec.get_grid_size(data),
 		CandelaTileSet.TILE_SIZE)
+	# V5.10 — la presence de la salle se pose sur la MEME carte, au meme endroit
+	# et pour la meme raison : les ponctuels doivent tomber DANS l'arene, et
+	# c'est ici qu'on sait ou elle commence et ou elle finit. Une zone ecrite en
+	# dur enverrait les sons d'ambiance derriere les murs a la premiere carte
+	# d'une autre taille — audible comme un defaut de panoramique, introuvable
+	# comme une constante.
+	var _grille := MapCodec.get_grid_size(data)
+	AudioManager.demarrer_ambiance(Rect2(Vector2.ZERO,
+		Vector2(_grille) * Vector2(CandelaTileSet.TILE_SIZE)))
 
 	# La géométrie historique de arena.tscn ne sert plus qu'à documenter le
 	# format ; elle est neutralisée pour ne pas doubler la carte JSON.
@@ -1174,6 +1189,12 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_liberer_le_releve()
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
 	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
+	# V3.3 — le suivi des secondes entieres. **Le sentinelle -1 n'est pas une
+	# precaution, il est necessaire** : un decompte arme a 3,0 est DEJA a trois
+	# des la premiere image, il n'y a donc aucune transition « vers 3 » a
+	# attraper. Sans lui, `count_3` ne sortirait jamais — et son absence
+	# passerait pour une intention.
+	_dernier_tic_decompte = -1
 	_countdown_ready_local = false
 	_countdown_ready_peer = false
 	# La fenêtre de choix s'ouvre avec le décompte, et seulement pour un match
@@ -1217,6 +1238,14 @@ func _process(delta):
 				countdown_left = 0.0
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
+			# V3.3 — une note par seconde entiere, et seulement les trois
+			# dernieres : un depart apparie ouvre a dix secondes, et compter de
+			# dix a un ferait du decompte une attente au lieu d'un depart.
+			var _tic := int(ceil(countdown_left))
+			if _tic != _dernier_tic_decompte:
+				_dernier_tic_decompte = _tic
+				if _tic >= 1 and _tic <= 3:
+					AudioManager.play_count(_tic)
 			if countdown_left <= 0.0:
 				# Le décompte fini, l'arme est celle avec laquelle on joue : la
 				# fenêtre se referme d'elle-même, sans rien demander.
@@ -1949,6 +1978,11 @@ func _do_end_round(winner_id: int):
 	_predicted_shots.clear()
 	AudioManager.set_in_match(false)
 	AudioManager.rendre_oreille()
+	# V5.10 — la salle se tait avec la manche. Elle vit dans un Timer de
+	# l'autoload, qui survit a l'arene : sans cet arret, des ponctuels
+	# continueraient de tomber aux coordonnees d'une carte qui n'existe plus,
+	# par-dessus la killcam et le menu.
+	AudioManager.arreter_ambiance()
 	AudioManager.play_music("music_victory")
 
 	# V2.3 / V3.7 / V3.8 — la ponctuation de fin. `_do_end_round` tourne sur les
