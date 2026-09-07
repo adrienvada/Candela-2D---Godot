@@ -5,7 +5,7 @@ const Charte := preload("res://charte.gd")
 const Vision := preload("res://vision.gd")
 
 @export var name: String = "Pistolet"
-@export var cooldown: float = 1.0
+@export var cooldown: float = 0.16
 @export var bullet_speed: float = 12000.0
 @export var bullet_max_distance: float = 10000.0
 @export var damage_center: float = 50.0
@@ -15,6 +15,13 @@ const Vision := preload("res://vision.gd")
 @export var projectile_count: int = 1
 @export var spread_angles_deg: Array[float] = [0.0]
 @export var emits_light: bool = true
+
+@export_group("Ammo & Reload")
+@export var max_ammo: int = 10
+@export var reload_time: float = 1.1
+@export var spread_bloom_per_shot_deg: float = 4.5
+@export var max_spread_bloom_deg: float = 25.0
+@export var spread_recovery_speed_deg: float = 50.0
 
 @export_group("Flashlight")
 ## Nom du cookie cuit, sans chemin ni extension : `res://assets/torche/cookie_<x>.png`.

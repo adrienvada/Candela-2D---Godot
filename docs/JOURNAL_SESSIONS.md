@@ -2221,3 +2221,15 @@ rebondit au lieu de survoler). Textures peintes attendues d'Adrien
 (`assets/sprites/fusee_volute_1..3.png`, `fusee_corps.png`) : le code les
 charge si présentes, repli procédural sinon — les livrer ne demande AUCUN
 geste de code, juste l'import.
+
+#### Lot du 2026-09-07 — session « munitions et rechargement » (mécanique de tir)
+
+Changement de la mécanique de tir et d'armement demandé par Adrien :
+- Pistolet : 10 munitions, cadence élevée (cooldown 0.16s), recharge 1.1s, dispersion dynamique (bloom +4.5°/tir max 25°).
+- Fusil : 24 munitions, cadence plus lente (cooldown 0.24s), recharge 1.7s, bloom +3.5°/tir max 20°.
+- Arbalète : 1 munition (recharge auto 2.2s).
+- Pompe : 6 munitions (cooldown 0.9s, recharge 2.8s).
+- Touche recharger : Carré (`JOY_BUTTON_X`) sur PlayStation, R sur clavier (J1) / K (J2). Fusée déplacée sur Triangle (`JOY_BUTTON_Y`).
+- HUD : affichage du compteur de munitions, jauge de cadence et progression de recharge.
+- Netcode & Protocole : `rpc_send_inputs` transporte `reload: bool`. ⚠️ **`Protocol.VERSION` monte à 8**, témoin `WIRE_WITNESS` mis à jour dans `protocol.gd`.
+- Banc de tests : `tools/test_munitions_recharge.gd` intégré au lanceur `tools/run_suites.sh` (55 suites vertes).

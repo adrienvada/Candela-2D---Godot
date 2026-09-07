@@ -8,13 +8,13 @@ func _setup_all_inputs():
 	var actions = [
 		"p1_move_up", "p1_move_down", "p1_move_left", "p1_move_right",
 		"p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
-		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_skip_killcam",
+		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_skip_killcam",
 		"p1_weapon_prev", "p1_weapon_next", "p1_menu_select",
 		"p1_menu_up", "p1_menu_down", "p1_menu_left", "p1_menu_right",
 		"p1_menu_prev_tab", "p1_menu_next_tab",
 		"p2_move_up", "p2_move_down", "p2_move_left", "p2_move_right",
 		"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right",
-		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_skip_killcam",
+		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_skip_killcam",
 		"p2_weapon_prev", "p2_weapon_next", "p2_menu_select",
 		"p2_menu_up", "p2_menu_down", "p2_menu_left", "p2_menu_right",
 		"p2_menu_prev_tab", "p2_menu_next_tab",
@@ -31,18 +31,21 @@ func _setup_all_inputs():
 	esc.keycode = KEY_ESCAPE
 	InputMap.action_add_event("sys_pause", esc)
 
-	# Fusée éclairante — liaisons par défaut posées ici et non dans project.godot,
-	# pour que la déclaration de l'action et ses touches vivent au même endroit.
-	# Positions PHYSIQUES, comme tout le reste de l'Input Map. J1 a la main
-	# gauche sur WASD : le F est adjacent. J2 vise sur IJKL et agit sur O/P : le
-	# U est la voisine libre — PAS le I, qui est déjà p2_aim_up (collision réelle,
-	# attrapée avant l'écoute : viser vers le haut aurait lancé la fusée).
+	# Fusée éclairante & Rechargement — liaisons par défaut posées ici.
+	# Positions PHYSIQUES, comme tout le reste de l'Input Map.
 	var fusee_p1 = InputEventKey.new()
 	fusee_p1.physical_keycode = KEY_F
 	InputMap.action_add_event("p1_lance_fusee", fusee_p1)
 	var fusee_p2 = InputEventKey.new()
 	fusee_p2.physical_keycode = KEY_U
 	InputMap.action_add_event("p2_lance_fusee", fusee_p2)
+
+	var reload_p1 = InputEventKey.new()
+	reload_p1.physical_keycode = KEY_R
+	InputMap.action_add_event("p1_reload", reload_p1)
+	var reload_p2 = InputEventKey.new()
+	reload_p2.physical_keycode = KEY_K
+	InputMap.action_add_event("p2_reload", reload_p2)
 	
 	# Helper for joy axis
 	var add_joy_axis = func(action: String, device: int, axis: int, val: float):
@@ -86,9 +89,9 @@ func _setup_all_inputs():
 	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	add_joy_axis.call("p1_torch", p1_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Fusée éclairante (c'était l'un des deux boutons de face libres ;
-	# Triangle reste le dernier). L'éditeur de cartes garde ses actions editor_*.
-	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_X) # Carré
+	# Carré = Recharger, Triangle = Fusée éclairante
+	add_joy_btn.call("p1_reload", p1_device, JOY_BUTTON_X) # Carré
+	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_Y) # Triangle
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -130,9 +133,9 @@ func _setup_all_inputs():
 	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 	add_joy_axis.call("p2_torch", p2_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Fusée éclairante (c'était l'un des deux boutons de face libres ;
-	# Triangle reste le dernier). L'éditeur de cartes garde ses actions editor_*.
-	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_X) # Carré
+	# Carré = Recharger, Triangle = Fusée éclairante
+	add_joy_btn.call("p2_reload", p2_device, JOY_BUTTON_X) # Carré
+	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_Y) # Triangle
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix

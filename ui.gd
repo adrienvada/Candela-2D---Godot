@@ -394,6 +394,7 @@ var p1_hp: ProgressBar
 var p1_hp_bg: ProgressBar
 var p1_cd: CircularCooldown
 var p1_cd_label: Label
+var p1_ammo_label: Label
 var p1_torch: PanelContainer
 ## Le temps du voile, en secondes. Le shader le reçoit en uniforme plutôt que
 ## d'utiliser `TIME`, pour que le banc puisse figer l'animation et qu'une suite
@@ -410,6 +411,7 @@ var p2_hp: ProgressBar
 var p2_hp_bg: ProgressBar
 var p2_cd: CircularCooldown
 var p2_cd_label: Label
+var p2_ammo_label: Label
 var p2_torch: PanelContainer
 var p2_dazzle: ColorRect
 
@@ -1824,6 +1826,7 @@ func _build_player_hud(player: int) -> Control:
 		p1_hp_bg = bars["bg"]
 		p1_cd = weapon["circle"]
 		p1_cd_label = weapon["label"]
+		p1_ammo_label = weapon.get("ammo", null)
 		p1_torch = torch
 	else:
 		bottom.add_child(torch)
@@ -1834,6 +1837,7 @@ func _build_player_hud(player: int) -> Control:
 		p2_hp_bg = bars["bg"]
 		p2_cd = weapon["circle"]
 		p2_cd_label = weapon["label"]
+		p2_ammo_label = weapon.get("ammo", null)
 		p2_torch = torch
 
 	return wrapper
@@ -2000,16 +2004,26 @@ func _create_weapon_indicator(color: Color) -> Dictionary:
 	label.add_theme_font_size_override("font_size", T_MENTION)
 	circle_container.add_child(label)
 
+	var info_box := VBoxContainer.new()
+	info_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	info_box.add_theme_constant_override("separation", 0)
+
 	var title := Label.new()
 	title.text = "ARME"
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", T_MENTION)
 	title.add_theme_color_override("font_color", Charte.ACIER)
+	info_box.add_child(title)
+
+	var ammo_label := Label.new()
+	ammo_label.text = "--"
+	ammo_label.add_theme_font_size_override("font_size", T_MENTION)
+	ammo_label.add_theme_color_override("font_color", Charte.HALOGENE)
+	info_box.add_child(ammo_label)
 
 	container.add_child(circle_container)
-	container.add_child(title)
+	container.add_child(info_box)
 
-	return {"container": container, "circle": circle, "label": label}
+	return {"container": container, "circle": circle, "label": label, "ammo": ammo_label}
 
 func _create_torch_indicator() -> PanelContainer:
 	var panel := PanelContainer.new()
@@ -4953,11 +4967,12 @@ const LIBELLES := {
 	"aim_left": "Viser à gauche", "aim_right": "Viser à droite",
 	"shoot": "Tirer", "torch": "Torche",
 	"lance_fusee": "Fusée éclairante",
+	"reload": "Recharger",
 }
 
-## L'ordre d'apparition : on se déplace, on vise, on tire, on s'éclaire.
+## L'ordre d'apparition : on se déplace, on vise, on tire, on recharge, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
-	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch",
+	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "reload", "torch",
 	"lance_fusee"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
@@ -6021,12 +6036,28 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p1_target_hp = p1.hp
 		p1_hp.value = p1.hp
 
-		var p1_max_cd = p1.current_weapon.cooldown if p1.current_weapon else 1.0
-		p1_cd.set_progress(1.0 - (p1.shoot_cooldown / p1_max_cd))
-		if p1.shoot_cooldown <= 0:
-			p1_cd_label.text = "PRÊT"
+		var p1_reloading: bool = bool(p1.get("is_reloading")) if p1 else false
+		var p1_ammo: int = int(p1.get("current_ammo")) if p1 else 0
+		var p1_max_ammo: int = p1.current_weapon.max_ammo if (p1 and p1.current_weapon) else 10
+		var p1_reload_time_left: float = float(p1.get("reload_time_left")) if p1 else 0.0
+		var p1_max_reload_time: float = p1.current_weapon.reload_time if (p1 and p1.current_weapon) else 1.1
+
+		if p1_reloading:
+			p1_cd.set_progress(1.0 - (p1_reload_time_left / maxf(0.001, p1_max_reload_time)))
+			p1_cd_label.text = "%.1fs" % p1_reload_time_left
 		else:
-			p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
+			var p1_max_cd = p1.current_weapon.cooldown if p1.current_weapon else 1.0
+			p1_cd.set_progress(1.0 - (p1.shoot_cooldown / maxf(0.001, p1_max_cd)))
+			if p1.shoot_cooldown <= 0:
+				p1_cd_label.text = "PRÊT" if p1_ammo > 0 else "VIDE"
+			else:
+				p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
+
+		if p1_ammo_label:
+			if p1_reloading:
+				p1_ammo_label.text = "RECHARGE"
+			else:
+				p1_ammo_label.text = "%d / %d" % [p1_ammo, p1_max_ammo]
 
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
@@ -6039,12 +6070,28 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p2_target_hp = p2.hp
 		p2_hp.value = p2.hp
 
-		var p2_max_cd = p2.current_weapon.cooldown if p2.current_weapon else 1.0
-		p2_cd.set_progress(1.0 - (p2.shoot_cooldown / p2_max_cd))
-		if p2.shoot_cooldown <= 0:
-			p2_cd_label.text = "PRÊT"
+		var p2_reloading: bool = bool(p2.get("is_reloading")) if p2 else false
+		var p2_ammo: int = int(p2.get("current_ammo")) if p2 else 0
+		var p2_max_ammo: int = p2.current_weapon.max_ammo if (p2 and p2.current_weapon) else 10
+		var p2_reload_time_left: float = float(p2.get("reload_time_left")) if p2 else 0.0
+		var p2_max_reload_time: float = p2.current_weapon.reload_time if (p2 and p2.current_weapon) else 1.1
+
+		if p2_reloading:
+			p2_cd.set_progress(1.0 - (p2_reload_time_left / maxf(0.001, p2_max_reload_time)))
+			p2_cd_label.text = "%.1fs" % p2_reload_time_left
 		else:
-			p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
+			var p2_max_cd = p2.current_weapon.cooldown if p2.current_weapon else 1.0
+			p2_cd.set_progress(1.0 - (p2.shoot_cooldown / maxf(0.001, p2_max_cd)))
+			if p2.shoot_cooldown <= 0:
+				p2_cd_label.text = "PRÊT" if p2_ammo > 0 else "VIDE"
+			else:
+				p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
+
+		if p2_ammo_label:
+			if p2_reloading:
+				p2_ammo_label.text = "RECHARGE"
+			else:
+				p2_ammo_label.text = "%d / %d" % [p2_ammo, p2_max_ammo]
 
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
