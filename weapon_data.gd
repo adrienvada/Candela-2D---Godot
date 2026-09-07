@@ -18,7 +18,7 @@ const Vision := preload("res://vision.gd")
 
 @export_group("Ammo & Reload")
 @export var max_ammo: int = 10
-@export var reload_time: float = 1.1
+@export var reload_time: float = 2.2
 @export var spread_bloom_per_shot_deg: float = 4.5
 @export var max_spread_bloom_deg: float = 25.0
 @export var spread_recovery_speed_deg: float = 50.0

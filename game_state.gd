@@ -295,14 +295,14 @@ func _ready():
 
 	
 	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
-	# « pistolet », 35° de demi-angle, échelle 1,6, 10 munitions, 1,1s recharge.
+	# « pistolet », 35° de demi-angle, échelle 1,6, 10 munitions, 2,2s recharge.
 	weapon_pistolet = WeaponData.new()
 	
 	weapon_fusil = WeaponData.new()
 	weapon_fusil.name = "Fusil"
 	weapon_fusil.cooldown = 0.24
 	weapon_fusil.max_ammo = 24
-	weapon_fusil.reload_time = 1.7
+	weapon_fusil.reload_time = 3.5
 	weapon_fusil.spread_bloom_per_shot_deg = 3.5
 	weapon_fusil.max_spread_bloom_deg = 20.0
 	weapon_fusil.spread_recovery_speed_deg = 40.0
@@ -323,7 +323,7 @@ func _ready():
 	weapon_pompe.name = "Pompe"
 	weapon_pompe.cooldown = 0.9
 	weapon_pompe.max_ammo = 6
-	weapon_pompe.reload_time = 2.8
+	weapon_pompe.reload_time = 5.6
 	weapon_pompe.spread_bloom_per_shot_deg = 0.0
 	weapon_pompe.max_spread_bloom_deg = 0.0
 	weapon_pompe.bullet_speed = 10000.0
@@ -341,7 +341,7 @@ func _ready():
 	weapon_arbalete.name = "Arbalète"
 	weapon_arbalete.cooldown = 0.3
 	weapon_arbalete.max_ammo = 1
-	weapon_arbalete.reload_time = 2.2
+	weapon_arbalete.reload_time = 4.5
 	weapon_arbalete.spread_bloom_per_shot_deg = 0.0
 	weapon_arbalete.max_spread_bloom_deg = 0.0
 	weapon_arbalete.bullet_speed = 12000.0

@@ -49,7 +49,7 @@ func _creer_armes() -> Dictionary:
 	fusil.name = "Fusil"
 	fusil.cooldown = 0.24
 	fusil.max_ammo = 24
-	fusil.reload_time = 1.7
+	fusil.reload_time = 3.5
 	fusil.spread_bloom_per_shot_deg = 3.5
 	fusil.max_spread_bloom_deg = 20.0
 	fusil.spread_recovery_speed_deg = 40.0
@@ -58,7 +58,7 @@ func _creer_armes() -> Dictionary:
 	pompe.name = "Pompe"
 	pompe.cooldown = 0.9
 	pompe.max_ammo = 6
-	pompe.reload_time = 2.8
+	pompe.reload_time = 5.6
 	pompe.spread_bloom_per_shot_deg = 0.0
 	pompe.max_spread_bloom_deg = 0.0
 	
@@ -66,7 +66,7 @@ func _creer_armes() -> Dictionary:
 	arbalete.name = "Arbalète"
 	arbalete.cooldown = 0.3
 	arbalete.max_ammo = 1
-	arbalete.reload_time = 2.2
+	arbalete.reload_time = 4.5
 	arbalete.spread_bloom_per_shot_deg = 0.0
 	arbalete.max_spread_bloom_deg = 0.0
 	
@@ -115,9 +115,9 @@ func _test_cadences_et_hierarchie_recharge() -> void:
 	_check("Fusil recharge plus lentement que le Pistolet (%.2fs > %.2fs)" % [t_fusil, t_pistolet],
 		t_fusil > t_pistolet)
 
-	_check("game_state.gd configure reload_time fusil (1.7s)", gs_src.contains("weapon_fusil.reload_time = 1.7"))
-	_check("game_state.gd configure reload_time pompe (2.8s)", gs_src.contains("weapon_pompe.reload_time = 2.8"))
-	_check("game_state.gd configure reload_time arbalète (2.2s)", gs_src.contains("weapon_arbalete.reload_time = 2.2"))
+	_check("game_state.gd configure reload_time fusil (3.5s)", gs_src.contains("weapon_fusil.reload_time = 3.5"))
+	_check("game_state.gd configure reload_time pompe (5.6s)", gs_src.contains("weapon_pompe.reload_time = 5.6"))
+	_check("game_state.gd configure reload_time arbalète (4.5s)", gs_src.contains("weapon_arbalete.reload_time = 4.5"))
 
 func _test_dispersion_bloom_modele() -> void:
 	print("\n[Dispersion dynamique / Recoil Bloom]")

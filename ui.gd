@@ -6042,7 +6042,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		var p1_ammo: int = int(p1.get("current_ammo")) if p1 else 0
 		var p1_max_ammo: int = p1.current_weapon.max_ammo if (p1 and p1.current_weapon) else 10
 		var p1_reload_time_left: float = float(p1.get("reload_time_left")) if p1 else 0.0
-		var p1_max_reload_time: float = p1.current_weapon.reload_time if (p1 and p1.current_weapon) else 1.1
+		var p1_max_reload_time: float = p1.current_weapon.reload_time if (p1 and p1.current_weapon) else 2.2
 
 		if p1_reloading:
 			p1_cd.set_progress(1.0 - (p1_reload_time_left / maxf(0.001, p1_max_reload_time)))
@@ -6076,7 +6076,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		var p2_ammo: int = int(p2.get("current_ammo")) if p2 else 0
 		var p2_max_ammo: int = p2.current_weapon.max_ammo if (p2 and p2.current_weapon) else 10
 		var p2_reload_time_left: float = float(p2.get("reload_time_left")) if p2 else 0.0
-		var p2_max_reload_time: float = p2.current_weapon.reload_time if (p2 and p2.current_weapon) else 1.1
+		var p2_max_reload_time: float = p2.current_weapon.reload_time if (p2 and p2.current_weapon) else 2.2
 
 		if p2_reloading:
 			p2_cd.set_progress(1.0 - (p2_reload_time_left / maxf(0.001, p2_max_reload_time)))
