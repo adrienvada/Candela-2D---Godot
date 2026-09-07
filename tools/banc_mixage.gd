@@ -63,6 +63,15 @@ const FAMILLES: Array[Dictionary] = [
 	{"f": "shell", "salle": 1, "titre": "Douille"},
 	{"f": "wall_brush", "salle": 1, "titre": "Frôlement de mur"},
 	{"f": "bolt_flight", "salle": 1, "titre": "Frôlement du carreau"},
+	# La fusée éclairante (FU1-FU2.1). **Le rebond et l'atterrissage sont deux
+	# familles et non une**, pour la raison même qui sépare `ricochet` de
+	# `wall_impact` : le rebond dit « la lumière va encore bouger », l'atterrissage
+	# dit « c'est ici, définitivement ». Dans un jeu dont la seule information est
+	# la lumière, savoir si l'éclairage est stabilisé change ce qu'on fait dans la
+	# seconde.
+	{"f": "fusee_lancer", "salle": 1, "titre": "Fusée — mise à feu"},
+	{"f": "fusee_rebond", "salle": 1, "titre": "Fusée — rebond (elle bouge encore)"},
+	{"f": "fusee_atterrit", "salle": 1, "titre": "Fusée — elle se pose (définitif)"},
 	# ---- Salle 2 : l'interface. Niveau seul. ------------------------------
 	{"f": "button_click", "salle": 2, "titre": "Validation"},
 	{"f": "ui_tick", "salle": 2, "titre": "Navigation"},
@@ -80,6 +89,12 @@ const FAMILLES: Array[Dictionary] = [
 	{"f": "ambience", "salle": 3, "titre": "Présence de la salle"},
 	{"f": "dazzle_ringing", "salle": 3, "titre": "Acouphène d'éblouissement"},
 	{"f": "tinnitus_death", "salle": 3, "titre": "Acouphène de mort"},
+	# En salle 3 et pas en salle 1 : la combustion est une NAPPE continue, jouée
+	# sur une voix dédiée hors du pool. Elle ne se juge donc pas à son niveau mais
+	# à ce qu'elle MASQUE — et une fusée qui couvre les pas de l'adversaire n'est
+	# pas un habillage, c'est une arme. C'est un arbitrage d'équilibrage, et le
+	# banc est l'instrument qui le tranche.
+	{"f": "fusee_combustion", "salle": 3, "titre": "Fusée — combustion (nappe)"},
 ]
 
 const NOMS_SALLES := {
