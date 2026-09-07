@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-07
+> Dernière mise à jour : 2026-09-08
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -12380,74 +12380,95 @@ l'impact un point où personne n'a jamais été.
 - **SG4 — le dosage devant Adrien.** Le décalage et l'échelle ne deviennent des
   décisions qu'à l'écran, avec lui. Avant ça, ce sont des propositions.
 
-**État au 2026-09-07, fin de session SG : SG1, SG2 et SG3 sont faits ; SG4
-attend Adrien.** Branche `claude/sang-au-sol-sg-d395d3`, worktree du même nom —
-et non ceux que la table proposait, l'outillage les ayant ouverts lui-même.
+**État au 2026-09-08 : SG est clos, SG4 tranché par Adrien lui-même — et sa
+règle a remplacé la mienne.** Branche `claude/sang-au-sol-sg-d395d3`, worktree du
+même nom, et non ceux que la table proposait : l'outillage les a ouverts.
 
-- **SG1 — fait.** `blood_stain.gd` porte deux `static func` pures : `pose()`
-  (où la tache se place et comment elle s'oriente) et `rectangle_de_la_tache()`
-  (ce que `_draw()` remet à `draw_texture_rect`). La suite neuve est
-  `tools/test_sang_au_sol.gd`, inscrite dans `run_suites.sh`, chargeant le script
-  **par son chemin**.
+### La correction, et le détour qu'elle a fait
 
-  ⚠️ **Écrite AVANT le correctif, elle a rendu exactement le diagnostic** :
-  100,0 px en amont pour les huit directions d'essai, et `sang_2` dont la masse
-  tombe à 32 % — soit 35,9 px du mauvais côté. Le diagnostic n'était donc pas
-  une hypothèse à vérifier mais un fait déjà mesuré, et le banc l'a confirmé au
-  dixième de pixel avant qu'une seule ligne de correction soit écrite.
+Premier jet : la planche était ancrée **par son bord amont**, à un diamètre de
+corps en aval du point d'impact — un décalage unique, le même pour toutes les
+taches. Le banc était vert, le défaut mesuré avait disparu.
 
-- **SG2 — fait.** `ANCRAGE_AVAL` pose le **bord amont** de la planche à un
-  diamètre de corps en aval du point d'impact, au lieu de centrer la planche
-  dessus. La taille n'a pas été touchée — c'eût été un dosage, il appartient à
-  Adrien.
+**Adrien a regardé les images et donné la vraie règle** : « il faut que le centre
+de la plus grosse tache — la plus grosse forme rouge assez ronde sur chacune —
+soit sous le personnage, et que la tache soit orientée, surtout la longue, de
+sorte que la traînée soit dans la direction du tir. »
 
-- **SG3 — fait, et il n'y avait rien à reporter.** C'était l'inquiétude
-  légitime : `duplicate()` ne recopie pas les variables de script, et ce piège a
-  déjà rendu le joueur 2 aveugle au sang pendant des semaines. **Mais la
-  correction est portée par une fonction `static` qui ne prend que la taille en
-  argument : elle n'introduit aucune variable d'instance**, donc les quatre
-  reports existants (`_texture`, `_coeur`, `_echelle`, `_drops`) restent
-  exactement suffisants. Ce n'est pas une chance : c'est ce que le choix d'une
-  fonction pure achète, et c'est une raison de plus de nommer un calcul plutôt
-  que de le disperser. Sept contrôles du banc montent malgré tout une vraie copie
-  J2 et vérifient ses masques, sa pose et ses quatre variables — pour que le
-  prochain qui ajoutera un état d'instance l'apprenne du banc, pas d'Adrien.
+⚠️ **Un décalage unique ne pouvait PAS y arriver, et c'est le fait qui manquait
+au diagnostic.** Les deux planches ne portent pas leur flaque au même endroit :
+mesuré par transformée de distance sur le masque alpha, `sang_1` a la sienne à
+**52,2 %** de sa largeur (rayon 21 px), `sang_2` à **13,4 %** (rayon 12,4 px).
+Tout réglage commun met donc forcément l'une des deux à côté — et c'est
+exactement ce qui faisait dire « SOUVENT » et non « toujours ». Le diagnostic
+avait vu le symptôme (le centre de masse alpha diverge d'une planche à l'autre)
+sans en tirer la conséquence : **l'ancrage est une propriété de la planche, pas
+une constante du jeu.** `FLAQUES` porte donc une entrée par éclaboussure, et
+`rectangle_de_la_tache()` cale ce point-là sur le centre du corps.
 
-- **SG4 — pas tranché, et ce n'est pas un oubli.** `ANCRAGE_AVAL = 36` est une
-  proposition. Une planche comparative a été rendue à Adrien avec les **trois**
-  valeurs candidates — 0 (la tache couvre tout le corps), 18 (elle mord sur sa
-  moitié aval), 36 (elle part de la sortie, le corps reste sec). La question qui
-  se pose à l'œil et pas au banc : **veut-on du sang SOUS le mort, ou seulement
-  derrière lui ?** À 36, `sang_1` laisse le corps entièrement propre — défendable
-  comme gerbe de sortie, discutable comme scène de crime.
+### Ce que le premier oracle m'a appris, et qui vaut plus que la correction
 
-**Ce que le banc protège, et pourquoi il a deux mâchoires.** Un oracle qui
-dirait seulement « rien ne remonte vers le tireur » serait passé au vert en
-poussant la tache à 500 px derrière le mort. Le contre-test — « la tache
-commence à moins d'un diamètre de corps de l'impact » — ferme cette sortie, et
-`ANCRAGE_AVAL` est posé **pile sur cette borne** : tout dosage ne pourra que
-ramener la tache vers le corps. L'en éloigner fera rougir le banc, donc
-rediscuter la borne au lieu de la franchir en silence.
+Le banc portait d'abord : « aucun pixel ne remonte de plus de 18 px en amont du
+point d'impact ». Plausible, mesurable, dérivé du corps et pas d'une constante du
+code, rouge avant et vert après — **et faux comme spécification.** Une
+éclaboussure projette dans toutes les directions, l'arrière compris ; borner
+l'enveloppe interdisait de poser la flaque là où elle doit être. Ce qui doit
+tomber sur le corps, c'est la **masse**, pas le rectangle.
 
-**Et une troisième mâchoire, qui ne regarde pas le rectangle mais l'encre.** Le
-centre de masse alpha de chaque planche est mesuré et doit tomber en aval du
-point d'impact. Sans lui, une planche dont la peinture serait groupée du côté
-amont passerait tous les contrôles géométriques — c'est très exactement le cas
-de `sang_2`, le quatrième fait du diagnostic, celui qui expliquait « souvent »
-plutôt que « toujours ».
+**Un oracle qui décrit un symptôme mesurable au lieu de la propriété voulue ne se
+contente pas d'être incomplet : il verrouille la mauvaise correction.** Celui-ci
+serait resté vert pour toujours, et la deuxième version — la bonne — l'aurait
+fait rougir. C'est le pendant exact du piège déjà consigné (« ne pas lire
+l'oracle sur la constante que le code utilise ») : ici la constante était
+honnête, c'est la **propriété** qui était mal choisie. Seul l'œil d'Adrien
+pouvait le dire, et c'est une raison de plus de montrer avant de clore.
 
-**`bullet.gd` n'a pas été touché**, alors que le chantier l'autorisait. Le point
-d'entrée qu'il transmet est la **bonne donnée** — c'est là que la balle a
-rencontré le corps, et les particules d'entrée s'en servent légitimement. Le
-défaut était entièrement dans l'usage qu'en faisait `blood_stain.gd`.
+### Ce que le banc garde, et pourquoi il n'est pas complaisant
 
-**`wall_impact.gd` : vérifié, non modifié**, comme demandé. Il centre lui aussi
-sa marque sur le point d'impact, et **le centrage y est légitime** : sa planche
-de 96 px est réduite à ×0,22-0,34 — 21 à 33 px à l'écran, une dizaine de pixels
-de débord dans le mur — et sa rotation est **tirée au sort**, pas prise dans
-l'axe du tir. Une étoile de fissure n'a ni amont ni aval : elle ne peut pas
-mentir sur la provenance du coup. Le sang, lui, est tourné dans l'axe, et c'est
-précisément ce qui rendait son centrage fautif.
+`tools/test_sang_au_sol.gd` (27 contrôles) **re-mesure la flaque sur les vraies
+planches**, par transformée de distance en GDScript, et ne lit jamais la table
+`FLAQUES` comme référence — il la compare. Recuire un décal en changeant sa
+composition fait donc rougir le banc au lieu de déplacer les taches en silence.
+Il monte de **vraies** taches et laisse `setup()` tirer sa planche au sort : ce
+qui est éprouvé est le chemin complet, pas l'arithmétique. Contre-test passé :
+remis à un ancrage naïf au milieu de chaque planche, il rougit en annonçant
+« flaque à -45,8 px, attendue à 18,0 » — le défaut d'origine, nommé.
+
+Il contrôle aussi le **sens** : la masse d'encre doit être en aval de la flaque,
+sans quoi la traînée pointe vers le tireur. Les deux planches livrées sont dans
+le bon sens ; une planche ajoutée à l'envers échouera.
+
+### SG3 — le piège a bel et bien été payé, à la deuxième version
+
+Première version : rien à reporter dans `_create_p2_duplicate()`, la correction
+étant portée par une fonction `static`. **Deuxième version : `_ancre` est une
+variable d'instance, lue par `_draw()`** — donc exactement le genre de variable
+que ce bloc oublie. Sans sa ligne de report, J2 aurait vu toutes ses taches
+ancrées au milieu de la planche : le défaut d'origine, à moitié, et **pour lui
+seul**. La ligne est écrite, et sept contrôles du banc la surveillent sur une
+vraie copie J2.
+
+### Deux fichiers vérifiés et laissés tels quels
+
+**`bullet.gd` n'a pas été touché**, alors que le chantier l'autorisait : le point
+d'entrée qu'il transmet est la **bonne donnée**, et les particules d'entrée s'en
+servent légitimement. Le défaut était entièrement dans l'usage qu'en faisait
+`blood_stain.gd`.
+
+**`wall_impact.gd`** centre lui aussi sa marque sur le point d'impact, et **le
+centrage y est légitime** : sa planche de 96 px est réduite à ×0,22-0,34 — 21 à
+33 px à l'écran — et sa rotation est **tirée au sort**, pas prise dans l'axe du
+tir. Une étoile de fissure n'a ni amont ni aval : elle ne peut pas mentir sur la
+provenance du coup. Le sang, lui, est tourné dans l'axe, et c'est précisément ce
+qui rendait son centrage fautif.
+
+### Ce qui reste ouvert
+
+La taille des taches n'a **pas** été touchée : la réduire aurait masqué un défaut
+de position par un dosage, et le dosage appartient à Adrien. À voir en jeu, pas
+au banc : `sang_1` est une étoile presque symétrique, donc sa « direction » se
+lit mal — si l'orientation doit se voir davantage, c'est une planche à recuire,
+pas un ancrage à régler.
 
 **Hors périmètre, à signaler et non à corriger :** les particules de sang
 (`bullet.gd::_spawn_hit_effects`, deux gerbes déjà orientées, l'une vers l'aval

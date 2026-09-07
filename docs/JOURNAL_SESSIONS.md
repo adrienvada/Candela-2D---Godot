@@ -266,6 +266,16 @@ balle a rencontré le corps, et les particules d'entrée s'en servent
 légitimement. Le défaut est entièrement dans la façon dont `blood_stain` s'en
 sert, donc la correction y reste. `bullet.gd` demeure libre pour qui le veut.
 
+**Clos le 2026-09-08.** Adrien a regardé les images et **remplacé la règle** :
+le centre de la plus grosse flaque doit tomber sous le personnage, la traînée
+partir dans la direction du tir. L'ancrage est donc une propriété **de chaque
+planche** (`FLAQUES`, une entrée par éclaboussure) et non un décalage commun —
+`sang_1` porte sa flaque à 52 % de sa largeur, `sang_2` à 13 %, ce qui explique
+le « souvent » du constat d'origine. `_ancre` est une variable d'instance neuve,
+donc **reportée à la main** dans `_create_p2_duplicate()` : sans cette ligne, J2
+seul aurait gardé le défaut. Banc à 27 contrôles, qui re-mesure les planches au
+lieu de croire la table.
+
 **Ce que je signale sans le corriger**, comme la ROADMAP le demande :
 `wall_impact.gd` centre lui aussi sa marque sur le point d'impact, **et le
 centrage y est légitime** — vérifié, non modifié. Deux raisons, mesurées : sa
