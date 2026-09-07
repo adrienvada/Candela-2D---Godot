@@ -1,5 +1,9 @@
 [gd_resource type="AudioBusLayout" format=3 uid="uid://c66ft6i7qo6dq"]
 
+[sub_resource type="AudioEffectHardLimiter" id="AudioEffectHardLimiter_filet"]
+pre_gain_db = -4.5
+ceiling_db = -0.5
+
 [sub_resource type="AudioEffectFilter" id="AudioEffectFilter_j3pel"]
 resource_name = "Filter"
 cutoff_hz = 20500.0
@@ -19,6 +23,10 @@ damping = 0.16
 hipass = 0.26
 wet = 0.38
 
+[sub_resource type="AudioEffectFilter" id="AudioEffectFilter_monde"]
+resource_name = "EtouffementMonde"
+cutoff_hz = 20500.0
+
 [sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_occlus"]
 resource_name = "MurPasseBas"
 cutoff_hz = 2700.0
@@ -32,14 +40,6 @@ damping = 0.16
 hipass = 0.26
 dry = 0.75
 wet = 0.525
-
-[sub_resource type="AudioEffectHardLimiter" id="AudioEffectHardLimiter_filet"]
-pre_gain_db = -4.5
-ceiling_db = -0.5
-
-[sub_resource type="AudioEffectFilter" id="AudioEffectFilter_monde"]
-resource_name = "EtouffementMonde"
-cutoff_hz = 20500.0
 
 [resource]
 bus/0/effect/0/effect = SubResource("AudioEffectHardLimiter_filet")
