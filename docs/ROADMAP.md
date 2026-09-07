@@ -12231,6 +12231,52 @@ avec son juge réel, et il a renversé une décision de conception :
    existent, repli procédural sinon — la planche se substitue sans une ligne
    de code. Spécification donnée à Adrien dans la conversation du chantier.
 
+### FU2.2 — les planches peintes arrivent, et elles trouvent deux défauts (2026-09-07)
+
+Adrien a livré `fusee_corps.png` et deux volutes. **Aucune n'a été utilisable du
+premier coup, et les deux causes valent d'être consignées** — ni l'une ni
+l'autre n'est un défaut des images.
+
+**1. Le premier jet n'avait AUCUNE transparence.** Le générateur avait *peint*
+le damier de transparence dans les pixels (gris 74 et 127, opaque à 100 %).
+Invisible dans un visualiseur, qui affiche un damier pour dire « transparent » —
+donc indiscernable à l'œil du résultat attendu. Trois méthodes de récupération
+ont été essayées et aucune n'était propre : modéliser le damier laisse des
+marches (ses niveaux dérivent avec la compression), et l'estimer par contraste
+local troue le nuage (la fumée a son PROPRE contraste — ses volutes). **La
+leçon est en amont** : demander « fond transparent » à un générateur est un
+pari ; demander **un fond noir uni** pour un sujet blanc rend la transparence
+dérivable exactement de la luminance, et un **fond magenta uni** fait de même
+pour un sujet coloré. C'est ce qui a produit les planches finales.
+
+**2. L'échelle des sprites était câblée sur la taille des textures
+procédurales** (`diametre / 128.0`), et le corps n'avait aucune échelle du
+tout. Une planche de 1024 px serait sortie 8× trop grande, une de 1456 px
+30×. **C'est le piège d'`EMPREINTE_VISEUR` re-payé** — « l'empreinte commande,
+pas le fichier » — et il rendait fausse la promesse « une planche se substitue
+sans une ligne de code ». Tous les sprites de la fusée passent désormais par
+`Fusee._echelle_pour(texture, empreinte)` ; les deux volutes livrées font 1024
+et 2048 px et rendent la même taille, ce qui est la preuve du correctif.
+
+**3. La densité d'une planche détourée vit dans sa LUMINANCE, pas dans son
+alpha** — et c'est structurel, pas accidentel : un détourage sait séparer le
+sujet du fond, il ne sait pas dire qu'une volute est plus mince qu'une autre.
+L'alpha livré est donc quasi binaire, et la fumée serait un disque à bord franc
+au lieu du dégradé centre/bords dont dépend toute la cachette.
+`nappe_fusee.gdshader` réconcilie les deux (`alpha ×= luminance`). **La règle
+est IDEMPOTENTE** : une planche correctement peinte (blanche, densité dans
+l'alpha) a une luminance de 1 et n'est pas touchée — on ne paie ce shader que
+quand on en a besoin, et aucune convention nouvelle n'est imposée au fournisseur
+d'assets.
+
+**Un quatrième défaut, plus bête et plus instructif :** la volute détourée est
+arrivée sous `fusee_volute.png` quand le code cherchait `fusee_volute_1.png`,
+et l'ancienne planche au damier portait encore ce nom. **Le jeu a donc continué
+de charger la version périmée sans que rien ne le signale** — un asset
+remplacé « au bon endroit » ne l'est que si le nom concorde. La chaîne de repli
+accepte désormais la planche sans numéro, et les intermédiaires à fond noir
+sont rangés dans `assets/sources/fusee/` avec leur `.gdignore`.
+
 ### Les nombres sont des VALEURS DE DÉPART, pas des décisions
 
 Durées d'actes, énergies, rayon de fumée (200 px), opacité de la masse (0,55),

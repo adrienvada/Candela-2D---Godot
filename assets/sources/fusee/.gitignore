@@ -1,0 +1,13 @@
+# Sources brutes des planches de la fusée éclairante.
+#
+# **Ce qui entre au dépôt : les planches à FOND NOIR.** Elles sont la seule
+# façon de refaire un détourage — un fond noir uni rend la transparence d'un
+# sujet blanc dérivable exactement de sa luminance, ce que « fond transparent »
+# n'a pas donné (voir ROADMAP, FU2.2 : le générateur avait PEINT le damier).
+# Sans elles, les planches livrées dans `assets/sprites/` seraient
+# irreproductibles.
+#
+# Ce qui n'y entre pas : la planche au damier, gardée sur le disque le temps
+# qu'Adrien confirme qu'elle ne sert plus. Elle ne peut rien régénérer — c'est
+# un export raté, pas une source.
+fusee_volute_damier_PERIME.png

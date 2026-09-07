@@ -15,6 +15,9 @@ extends Node2D
 ## braise, puis des rallumages sporadiques avant le noir.
 
 const VOILE_SHADER := preload("res://fumee_fusee.gdshader")
+## Préchargé comme tous les shaders du jeu : un `Shader.new()` à la volée
+## compile au premier usage, donc pile sur l'action (règle de `player.gd`).
+const NAPPE_SHADER := preload("res://nappe_fusee.gdshader")
 
 ## Le rouge de détresse. Dérivé : CARMIN (0.551, 0.168, 0.191) porté à la
 ## valeur de l'AMBRE (× 0.96/0.551 ≈ 1.74) — même rouge, mais assez lumineux
@@ -29,6 +32,19 @@ const EMPREINTE_VOL := 160.0
 
 ## Hauteur factice du vol, en pixels au départ — elle suit l'élan restant.
 const HAUTEUR_VOL_PX := 18.0
+
+## Largeur de la PLANCHE du corps à l'écran, en pixels de monde — **l'empreinte
+## commande, jamais le fichier** (même règle que `EMPREINTE_VISEUR` et que les
+## masques de lumière) : recuire la planche à une autre résolution ne doit RIEN
+## changer à sa taille en jeu.
+##
+## L'empreinte porte la planche ENTIÈRE, marges comprises, et la fusée n'en
+## occupe que ~62 % — elle mesure donc ~19 px à l'écran, un peu plus de la
+## moitié d'un joueur (36 px de large). C'est déjà généreux pour un objet de
+## 25 cm : à l'échelle du jeu il vaudrait 5 px, et il serait illisible. La
+## lisibilité l'emporte, mais pas au point d'en faire une poutre. Valeur de
+## départ, à doser en FU6.
+const EMPREINTE_CORPS := 30.0
 
 ## Deux rebonds dans la même seconde s'entendent ; vingt dans un angle, non.
 const REBOND_SON_ESPACEMENT := 0.09
@@ -76,6 +92,19 @@ var _trous_pousses: bool = false
 static var _cache_textures: Dictionary = {}
 
 
+## L'échelle qui donne à une texture l'empreinte voulue, quelle que soit sa
+## résolution. **Personne ici n'écrit un `scale` autrement qu'en passant par
+## elle** : le dépôt a déjà payé deux fois qu'une planche recuite à une autre
+## résolution change de taille en jeu sans que rien ne le relie à la recuisson
+## (les masques de lumière, puis le viseur à 48 px — voir « Pièges connus »).
+## C'est ce qui rend la substitution d'une texture VRAIMENT sans effet de bord :
+## la planche 1024 d'Adrien et le repli procédural 128 rendent la même taille.
+static func _echelle_pour(tex: Texture2D, empreinte: float) -> float:
+	if tex == null or tex.get_width() <= 0:
+		return 1.0
+	return empreinte / float(tex.get_width())
+
+
 ## Un blanc uni : le voile n'échantillonne pas sa texture, tout vient du shader.
 static func _texture_blanche() -> ImageTexture:
 	if _cache_textures.has("blanc"):
@@ -97,11 +126,25 @@ static func _texture_volute(graine_tex: int) -> Texture2D:
 	var cle := "volute_%d" % graine_tex
 	if _cache_textures.has(cle):
 		return _cache_textures[cle]
-	var chemin := "res://assets/sprites/fusee_volute_%d.png" % graine_tex
-	if ResourceLoader.exists(chemin, "Texture2D"):
-		var peinte: Texture2D = load(chemin)
-		_cache_textures[cle] = peinte
-		return peinte
+	# La planche numérotée d'abord, puis la première, puis la planche SANS
+	# numéro — une seule volute livrée est le cas courant, et l'exiger numérotée
+	# ferait échouer la substitution en silence (payé le 2026-09-07 : la planche
+	# détourée est arrivée sous `fusee_volute.png` et le code a continué de
+	# charger l'ancienne, au damier, sans que rien ne le dise).
+	# Repli procédural en dernier seulement : mêler une volute peinte à des
+	# nappes de bruit donnerait un nuage qui se contredit d'une couche à
+	# l'autre, alors que la même planche à trois rotations différentes EST
+	# l'effet recherché — c'est déjà ce que font les trois vitesses de rotation.
+	var candidats := [
+		"res://assets/sprites/fusee_volute_%d.png" % graine_tex,
+		"res://assets/sprites/fusee_volute_1.png",
+		"res://assets/sprites/fusee_volute.png",
+	]
+	for chemin in candidats:
+		if ResourceLoader.exists(chemin, "Texture2D"):
+			var peinte: Texture2D = load(chemin)
+			_cache_textures[cle] = peinte
+			return peinte
 	var taille := 128
 	var bruit := FastNoiseLite.new()
 	bruit.noise_type = FastNoiseLite.TYPE_VALUE
@@ -158,7 +201,9 @@ func _ready() -> void:
 	if ResourceLoader.exists(chemin_corps, "Texture2D"):
 		_corps = Sprite2D.new()
 		_corps.name = "Corps"
-		_corps.texture = load(chemin_corps)
+		var tex_corps: Texture2D = load(chemin_corps)
+		_corps.texture = tex_corps
+		_corps.scale = Vector2.ONE * _echelle_pour(tex_corps, EMPREINTE_CORPS)
 		_corps.light_mask = 2
 		_corps.z_index = 11
 		add_child(_corps)
@@ -167,10 +212,15 @@ func _ready() -> void:
 	var nb_nappes := FuseeModele.NAPPES_PAR_DEFAUT
 	if NetworkManager.current_mode == NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		nb_nappes -= 1
+	var mat_nappe := ShaderMaterial.new()
+	mat_nappe.shader = NAPPE_SHADER
 	for i in nb_nappes:
 		var nappe := Sprite2D.new()
 		nappe.name = "Nappe%d" % (i + 1)
 		nappe.texture = _texture_volute(i + 1)
+		# Un seul matériau pour les trois : elles ne diffèrent que par leur
+		# transform et leur modulate, rien qui vive dans le shader.
+		nappe.material = mat_nappe
 		nappe.modulate = Color(0.72, 0.70, 0.68, 0.0)
 		nappe.z_index = 10
 		add_child(nappe)
@@ -382,10 +432,10 @@ func _appliquer_age(age_combustion: float) -> void:
 		# Rotation dérivée de l'âge (jamais d'un timer) : identique chez les
 		# deux pairs et dans la killcam, avance rapide comprise.
 		nappe.rotation = float(FuseeModele.NAPPE_VITESSES[i]) * maxf(age_combustion, 0.0) * TAU
-		nappe.scale = Vector2.ONE * (diametre / 128.0) * (1.0 - 0.12 * i)
+		nappe.scale = Vector2.ONE * _echelle_pour(nappe.texture, diametre) * (1.0 - 0.12 * i)
 		nappe.modulate.a = FuseeModele.NAPPE_ALPHA * alpha_fumee
 	if fumee_active:
-		_voile.scale = Vector2.ONE * (diametre / 4.0)
+		_voile.scale = Vector2.ONE * _echelle_pour(_voile.texture, diametre)
 		_voile_mat.set_shader_parameter("alpha_globale", alpha_fumee * 0.8)
 		# L'âge nourrit la dérive des volutes DANS le shader — jamais TIME, que
 		# la killcam ne saurait pas rembobiner.
