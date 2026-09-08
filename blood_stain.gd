@@ -52,8 +52,33 @@ static var _next_order := 0
 ## petit. Les deux textures reproduisent exactement ce geste.
 const ECLABOUSSURES := ["res://assets/decals/sang_1.png", "res://assets/decals/sang_2.png"]
 
+## Où se trouve, DANS CHAQUE PLANCHE, le centre de sa plus grosse flaque — en
+## fraction de la taille du fichier. Même ordre qu'`ECLABOUSSURES`.
+##
+## **La règle est d'Adrien, le 2026-09-07 :** « il faut que le centre de la plus
+## grosse tache (la plus grosse forme rouge assez ronde sur chacune) soit sous le
+## personnage ». Ce point-là n'est ni le centre du fichier ni le centre de masse
+## de l'encre : c'est le centre du plus grand disque qui tient dans la matière.
+##
+## ⚠️ **Une constante par planche, parce qu'un décalage unique ne peut pas
+## marcher.** Les deux planches ne se ressemblent pas : `sang_1` porte sa flaque
+## à peu près au milieu, `sang_2` la porte à **13 %** de sa largeur, tout au bord.
+## Un ancrage commun met donc forcément l'une des deux à côté — et c'est
+## exactement ce qui faisait qu'« une tache sur deux » était franchement pire.
+##
+## ⚠️ **Mesuré, pas estimé, et RE-mesuré par le banc.** Ces valeurs sortent d'une
+## transformée de distance sur le masque alpha des fichiers (2026-09-07) :
+## `sang_1` flaque de 21 px de rayon, `sang_2` de 12,4 px.
+## `tools/test_sang_au_sol.gd` refait ce calcul sur les vraies planches à chaque
+## lot : recuire un décal sans corriger cette table fait rougir le banc, au lieu
+## de déplacer les taches en silence.
+const FLAQUES := [Vector2(0.522, 0.565), Vector2(0.134, 0.539)]
+
 var _texture: Texture2D = null
 var _coeur: Texture2D = null
+## Centre de la flaque de LA planche tirée au sort, en fraction (voir FLAQUES).
+## ⚠️ Lue par `_draw()`, donc à reporter à la main dans `_create_p2_duplicate()`.
+var _ancre := Vector2(0.5, 0.5)
 var _echelle := 1.0
 var _drops = []
 var color = Color(Charte.CARMIN, 0.9) # Sang séché, sombre
@@ -61,6 +86,80 @@ var color = Color(Charte.CARMIN, 0.9) # Sang séché, sombre
 var _order := 0
 ## Copie J2, tenue par l'original pour être libérée d'un seul geste.
 var _p2_copy: Node2D = null
+
+
+## ## L'ancrage de la planche — SG1, nommé le 2026-09-07
+##
+## ⚠️ **Ce calcul n'avait pas de nom, donc rien ne le tenait.** Il vivait en deux
+## morceaux — la pose dans `setup()`, le rectangle dans `_draw()` — qu'aucun banc
+## ne pouvait exercer sans déposer une vraie tache dans une vraie arène. C'est le
+## motif exact qui a laissé passer le bandeau FATAL hors cadre pendant des
+## semaines, et c'est lui qu'Adrien a fini par relever à l'œil : « les taches de
+## sang démarrent souvent AVANT le sprite du joueur touché ».
+##
+## Les deux fonctions ci-dessous sont **pures et statiques** : elles ne lisent
+## aucun état d'instance, et `tools/test_sang_au_sol.gd` les appelle sans monter
+## de partie.
+
+## Diamètre du corps du joueur, en pixels.
+##
+## ⚠️ **Relevé sur `player.tscn`** (le polygone de collision va de -18 à +18),
+## et non lu sur `bullet.gd::PLAYER_BODY_RADIUS` : le jour où cette constante-là
+## dérive, on veut que le sang le dise, pas qu'il suive en silence.
+const DIAMETRE_CORPS := 36.0
+
+
+## Où la tache se place et comment elle s'oriente, d'un seul geste.
+##
+## `impact` est le point d'**entrée** — le bord de la boîte du joueur du côté du
+## tireur, ce que `bullet.gd::_hit_player()` transmet — et l'axe X du repère rendu
+## pointe donc vers l'**aval**, dans le sens de la balle.
+##
+## Une seule vérité : `setup()` s'en sert pour poser le nœud, le banc s'en sert
+## pour savoir où les pixels atterrissent. Les deux ne peuvent plus diverger.
+static func pose(impact: Vector2, direction: Vector2) -> Transform2D:
+	return Transform2D(direction.angle(), impact)
+
+
+## Le centre du corps du joueur touché, dans le repère rendu par `pose()`.
+##
+## `bullet.gd` transmet le point d'**entrée** — le bord de la boîte du côté du
+## tireur — donc le centre du corps est un rayon plus loin, vers l'aval.
+const CENTRE_DU_CORPS := DIAMETRE_CORPS * 0.5
+
+
+## Le rectangle que `_draw()` remet à `draw_texture_rect`, exprimé dans le repère
+## rendu par `pose()` : X positif vers l'aval, origine au point d'impact.
+##
+## `taille` est la taille FINALE de la planche, densité et variation aléatoire
+## déjà appliquées — c'est le `t` de `_draw()`. `ancre` dit où se trouve, dans
+## cette planche-là, le centre de sa plus grosse flaque (voir `FLAQUES`).
+##
+## ## La règle, et pourquoi ce n'est pas un décalage
+##
+## **Adrien, le 2026-09-07 : « le centre de la plus grosse tache doit être sous
+## le personnage, et la traînée dans la direction du tir. »** C'est la planche
+## qu'on cale sur le corps, par le point qui compte à l'œil — pas un rectangle
+## qu'on pousse d'un nombre de pixels.
+##
+## ⚠️ **Un décalage uniforme ne pouvait pas y arriver, et c'est ce qui a été
+## essayé d'abord.** Les deux planches ne portent pas leur flaque au même
+## endroit — 52 % de la largeur pour `sang_1`, **13 %** pour `sang_2` — donc tout
+## réglage commun met l'une des deux à côté. Cela explique le constat d'origine :
+## les taches démarraient « SOUVENT » avant le joueur, pas toujours.
+##
+## ⚠️ **Ce que ce calcul n'essaie PAS de faire : empêcher toute encre de remonter
+## vers le tireur.** Une éclaboussure projette dans toutes les directions, y
+## compris en arrière, et une première version de cette fonction bornait cette
+## remontée — un proxy plausible qui aurait interdit de poser la flaque là où
+## elle doit être. Ce qui doit tomber sur le corps, c'est la MASSE ; les
+## projections, elles, ont le droit de dépasser des deux côtés.
+static func rectangle_de_la_tache(taille: Vector2, ancre: Vector2) -> Rect2:
+	# On place le rectangle pour que son point `ancre` — le cœur de la flaque —
+	# tombe sur le centre du corps. Le Y suit la même logique : la flaque se
+	# centre EN TRAVERS du tir, elle ne se contente pas d'un milieu de fichier.
+	return Rect2(Vector2(CENTRE_DU_CORPS, 0.0) - taille * ancre, taille)
+
 
 func setup(base_pos: Vector2, direction: Vector2):
 	position = base_pos
@@ -82,7 +181,11 @@ func setup(base_pos: Vector2, direction: Vector2):
 	# scène de crime d'un semis de losanges.
 	_choisir_eclaboussure()
 	if _texture != null:
-		rotation = direction.angle()
+		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
+		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
+		# calculent déjà leur angle depuis `direction`, et le tourner en plus
+		# appliquerait la rotation deux fois.
+		transform = pose(base_pos, direction)
 		_echelle = randf_range(0.75, 1.25)
 		queue_redraw()
 		return
@@ -133,6 +236,7 @@ func _choisir_eclaboussure() -> void:
 		return
 	_texture = load(chemin)
 	_coeur = load(coeur)
+	_ancre = FLAQUES[i]
 
 
 func _draw():
@@ -145,10 +249,12 @@ func _draw():
 		# de son FICHIER, et une recuisson à ×2 la doublerait à l'écran. Voir
 		# `Charte.DENSITE_ASSETS` — même geste que pour les sprites du joueur.
 		var t := _texture.get_size() * _echelle / Charte.DENSITE_ASSETS
-		draw_texture_rect(_texture, Rect2(-t * 0.5, t), false,
+		draw_texture_rect(_texture, rectangle_de_la_tache(t, _ancre), false,
 			Color(Charte.CARMIN, 0.8))
 		var c := _coeur.get_size() * _echelle / Charte.DENSITE_ASSETS
-		draw_texture_rect(_coeur, Rect2(-c * 0.5, c), false,
+		# Le cœur est cuit du même dessin, à la même taille : même ancre, donc
+		# les deux passes restent superposées au pixel près.
+		draw_texture_rect(_coeur, rectangle_de_la_tache(c, _ancre), false,
 			Color(Charte.CARMIN * 0.16, 0.95))
 		return
 	for d in _drops:
@@ -227,6 +333,11 @@ func _create_p2_duplicate():
 		stain_p2.set("_texture", _texture)
 		stain_p2.set("_coeur", _coeur)
 		stain_p2.set("_echelle", _echelle)
+		# `_ancre` est arrivée avec la règle d'Adrien du 2026-09-07 : c'est
+		# précisément le genre de variable neuve que ce bloc oublie. Sans cette
+		# ligne, J2 verrait toutes ses taches ancrées au milieu de la planche —
+		# le défaut d'origine, à moitié, et pour lui seul.
+		stain_p2.set("_ancre", _ancre)
 		stain_p2.set("_drops", _drops)
 		stain_p2.queue_redraw()
 		get_parent().add_child(stain_p2)
