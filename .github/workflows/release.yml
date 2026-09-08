@@ -142,7 +142,8 @@ jobs:
           echo "Binaire Godot macOS : $GODOT_EXEC"
 
       - name: Import des ressources
-        run: "$GODOT_BIN" --headless --path . --import
+        run: |
+          "$GODOT_BIN" --headless --path . --import
 
       - name: Export macOS et signature ad-hoc
         run: |
