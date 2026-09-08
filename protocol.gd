@@ -53,7 +53,9 @@ class_name Protocol
 ##     la fusée REBONDIT sur les murs au lieu de les survoler (FU2.1, décision
 ##     d'Adrien au premier essai), le vol se simule localement des deux côtés.
 ##     Un hôte v6 enverrait une cible qu'un client v7 lirait comme un angle.
-const VERSION := 7
+## 8 — `rpc_send_inputs` gagne un septième argument, le bit de rechargement
+##     (chantier MUNITIONS & RECHARGE, 2026-09-07).
+const VERSION := 8
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -61,7 +63,7 @@ const VERSION := 7
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "e9b2d3bb6c72218c"
+const WIRE_WITNESS := "83a9cb89a060aa31"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

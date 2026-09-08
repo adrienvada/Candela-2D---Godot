@@ -36,6 +36,30 @@ const SOUNDS: Dictionary = {
 	# sans erreur — plutôt qu'un bouche-trou qu'on finirait par prendre pour une
 	# intention.
 	"ui_ready_ping": "res://assets/audio/sfx/ui_ready_ping.wav",
+	# V3.3 — le decompte. Trois echantillons distincts et non un seul repitche :
+	# la note monte, et c'est la montee qui dit que le depart approche.
+	"count_3": "res://assets/audio/sfx/count_3.wav",
+	"count_2": "res://assets/audio/sfx/count_2.wav",
+	"count_1": "res://assets/audio/sfx/count_1.wav",
+	# V4.2 — les deux qualites de coup au but. Le jeu calcule DEJA `damage_center`
+	# et `damage_edge` : ces deux sons ne font que rendre audible un modele qui
+	# existait, muet, depuis toujours.
+	"hit_center": "res://assets/audio/sfx/hit_center.wav",
+	"hit_edge": "res://assets/audio/sfx/hit_edge.wav",
+	# V4.10 — le carreau d'arbalete. Voir `play_bolt_flight` : ce son est un
+	# arbitrage de jeu deguise en effet.
+	"bolt_flight": "res://assets/audio/sfx/bolt_flight.wav",
+	# V2.8 — l'acouphene de mort, cote perdant seulement.
+	"tinnitus_death": "res://assets/audio/sfx/tinnitus_death.wav",
+	# Interface (V3.4, V3.5, V3.6, V3.9, V6.4, V6.7, V6.8). Non positionnels : un
+	# menu n'a pas de lieu.
+	"ui_tick": "res://assets/audio/sfx/ui_tick.wav",
+	"ui_type_impact": "res://assets/audio/sfx/ui_type_impact.wav",
+	"ui_score_pawn": "res://assets/audio/sfx/ui_score_pawn.wav",
+	"ui_glass_break": "res://assets/audio/sfx/ui_glass_break.wav",
+	"ui_vhs_rewind": "res://assets/audio/sfx/ui_vhs_rewind.wav",
+	"ui_keystroke": "res://assets/audio/sfx/ui_keystroke.wav",
+	"ui_power_on": "res://assets/audio/sfx/ui_power_on.wav",
 	# V5.1 — le claquement de torche, LE son entendu cinq cents fois par soirée.
 	# Câblés, muets tant que les fichiers manquent (règle « câbler, taire,
 	# diagnostiquer ») ; entrées à ajouter au manifeste (domaine « menus »).
@@ -233,6 +257,111 @@ static func chemin_percuteur(slug: String) -> String:
 static func chemin_tir(slug: String, variante: int) -> String:
 	return "%sweapon_%s_%02d.wav" % [DIR_ARMES, slug, variante]
 
+## ============================================================================
+## LES FAMILLES A VARIANTES DE `sfx/` (V4.3, V4.8, V5.7, V5.10, V5.11)
+## ============================================================================
+##
+## Meme patron que les tirs, et pour la meme raison : un echantillon unique se
+## reconnait en une poignee d'ecoutes, et ces sons-la reviennent des dizaines de
+## fois par manche. Le tirage remplace le pitch aleatoire, qui ne fait que
+## deguiser le meme son.
+##
+## ⚠️ **La table dit combien de variantes existent, et elle fait foi.** Tirer un
+## numero hors de ce qui est livre rend un chemin qui ne se charge pas — et un
+## son absent ne leve aucune erreur. Meme classe de silence que le dossier
+## `speaker/` qui n'a jamais existe.
+const DIR_SFX := "res://assets/audio/sfx/"
+const VARIANTES_SFX: Dictionary = {
+	# V5.7 — les deux sols du damier. `footstep_a` est la case paire, celle que
+	# `CandelaTileSet.get_floor_atlas` peint avec `FLOOR_ATLAS_A`.
+	"footstep_a": 4,
+	"footstep_b": 4,
+	# V4.3 — le projectile qui REBONDIT et repart. A ne pas confondre avec
+	# `wall_impact`, qui est le projectile qui MEURT sur le mur : le premier dit
+	# qu'une balle vit encore, le second qu'elle est finie. Deux informations
+	# opposees, et c'est pour ca qu'elles ne partagent pas un echantillon.
+	"ricochet": 3,
+	# V4.8 — la douille qui retombe, apres le tir.
+	"shell": 4,
+	# V5.11 — le frolement d'un mur, tissu et poussiere.
+	"wall_brush": 3,
+	# V5.10 — la presence de la salle : ponctuels, tres espaces.
+	"ambience": 8,
+}
+
+## Le chemin d'une variante de `sfx/`. Pure, comme `chemin_tir`.
+static func chemin_variante(famille: String, variante: int) -> String:
+	return "%s%s_%02d.wav" % [DIR_SFX, famille, variante]
+
+## Une variante au hasard, ou "" si la famille est inconnue.
+func chemin_variante_au_hasard(famille: String) -> String:
+	var n: int = int(VARIANTES_SFX.get(famille, 0))
+	if n <= 0:
+		return ""
+	return chemin_variante(famille, randi_range(1, n))
+
+## ============================================================================
+## LA FAMILLE DE DOSAGE D'UN SON — UNE SEULE VERITE
+## ============================================================================
+##
+## Portee, niveau et priorite posaient la MEME question — « de quelle famille
+## releve ce son ? » — chacune avec sa propre cascade de `if`. Trois copies
+## d'une classification, donc trois endroits ou l'ajout d'une famille peut
+## n'etre fait que deux fois. Ce fichier a deja paye cette lecon sur l'echelle
+## de la torche : *la meme question posee par deux chemins finit par recevoir
+## deux reponses.*
+##
+## Elle repond en NOM DE FAMILLE, ce que les trois tables prennent en cle. Un
+## son inconnu se rend lui-meme : les tables retombent alors sur leur defaut,
+## exactement comme avant.
+##
+## ⚠️ **Certaines familles ne se reconnaissent pas a leur nom de fichier.** Les
+## huit voix d'annonceur, les trois notes du decompte et les quatre ponctuations
+## de fin sont chacune un GROUPE qui se regle d'un seul geste — decision
+## d'Adrien du 2026-08-28, « on fait par famille de sons » —, mais leurs cles
+## n'ont pas de prefixe commun (`win`, `defeat`, `spk_fight`...). D'ou cette
+## table explicite, qui est la seule facon de les nommer sans renommer les
+## fichiers.
+##
+## Sans elle, le banc de mixage aurait dose sous « voix » pendant que le jeu
+## resolvait sous « spk_fight » : la molette aurait paru cassee.
+const FAMILLES_DE_CLES: Dictionary = {
+	"voix": ["spk_fight", "spk_draw", "spk_p1_wins", "spk_p2_wins", "win",
+		"defeat", "spk_perfect", "spk_close_call"],
+	"count": ["count_1", "count_2", "count_3"],
+	"sting": ["sting_kill", "sting_kill_match", "sting_defeat", "sting_draw"],
+}
+
+## L'index inverse, construit une fois. Ecrire les deux sens a la main
+## garantirait qu'ils divergent — lecon deja payee sur l'echelle de la torche.
+static var _famille_par_cle: Dictionary = {}
+
+static func _index_des_familles() -> Dictionary:
+	if _famille_par_cle.is_empty():
+		for fam in FAMILLES_DE_CLES:
+			for c in FAMILLES_DE_CLES[fam]:
+				_famille_par_cle[String(c)] = fam
+	return _famille_par_cle
+
+static func famille_de(stream_or_key: Variant) -> String:
+	if not (stream_or_key is String):
+		return ""
+	var s: String = stream_or_key
+	if est_un_percuteur(s):
+		return "weapon_dry"
+	if est_un_tir(s):
+		return "shoot"
+	# `ricochet_02` -> `ricochet`, mais SEULEMENT si la famille est declaree :
+	# sans cette garde, `count_1` deviendrait la famille « count ».
+	var coupe := s.get_file().get_basename().rsplit("_", true, 1)
+	if coupe.size() == 2 and coupe[1].length() == 2 and coupe[1].is_valid_int() \
+			and VARIANTES_SFX.has(coupe[0]):
+		return coupe[0]
+	var groupes := _index_des_familles()
+	if groupes.has(s):
+		return String(groupes[s])
+	return s
+
 ## Ce son est-il un coup de feu ?
 ##
 ## V4.15 en dépend — les pas reculent de six décibels juste après un tir. La
@@ -374,6 +503,30 @@ const PORTEE_RELATIVE: Dictionary = {
 	# seule.** Elle vit dans un produit, et le facteur qui la multiplie a ete
 	# regle par quelqu'un d'autre, un autre jour.
 	"weapon_dry": 0.65,
+	# --- Familles arrivees avec la livraison du 2026-08-27. Ces valeurs sont des
+	# POINTS DE DEPART, pas des jugements : aucune n'a encore ete entendue contre
+	# les autres. Elles sont posees par analogie avec la famille la plus proche
+	# deja jugee au banc, ce qui les rend defendables sans les rendre vraies.
+	"footstep_a": 0.60,   # = footstep, dont elles prennent la place
+	"footstep_b": 0.60,
+	# La balle qui REBOND porte plus loin que celle qui meurt : elle vit encore,
+	# et savoir qu'un projectile traverse encore la piece est une information.
+	"ricochet": 0.85,
+	# La douille tombe a ses propres pieds. Elle ne doit rien apprendre a
+	# personne d'autre — sinon tirer trahirait deux fois.
+	"shell": 0.40,
+	# Le frolement est l'aveu de proximite : il ne vaut que pour qui est deja
+	# assez pres pour etre trouve. Meme raisonnement que le percuteur.
+	"wall_brush": 0.50,
+	# La salle est partout par definition.
+	"ambience": 1.00,
+	# Les deux qualites de coup au but heritent de `flesh_impact` : etre touche
+	# ne doit pas trahir plus que marcher (decision d'Adrien, 2026-08-26).
+	"hit_center": 0.60,
+	"hit_edge": 0.60,
+	# Le carreau est le SEUL indice que laisse l'arbalete, qui n'emet pas de
+	# lumiere. Sa portee est donc un arbitrage de jeu, pas un dosage.
+	"bolt_flight": 0.55,
 	# Chantier FUSÉE — PROPOSITIONS, jamais passées au banc (à doser comme les
 	# autres, molette par molette). Le lancer trahit comme un clic à vide ;
 	# l'atterrissage annonce un peu plus loin (l'événement concerne les deux) ;
@@ -412,6 +565,21 @@ const NIVEAU_RELATIF: Dictionary = {
 	"flesh_impact": -2.0,
 	"shoot": 0.0,
 	"weapon_dry": -9.0,
+	# --- Livraison du 2026-08-27. Points de depart, non juges. Voir la note de
+	# `PORTEE_RELATIVE` : ces nombres attendent le banc de mixage.
+	"footstep_a": -13.0,
+	"footstep_b": -13.0,
+	"ricochet": -4.0,
+	"shell": -16.0,
+	"wall_brush": -15.0,
+	# La salle se tient SOUS tout le reste : elle se remarque quand elle
+	# s'arrete, jamais quand elle joue.
+	"ambience": -20.0,
+	# Le centre claque, le bord tique — c'est l'ecart entre les deux qui porte
+	# l'information, pas leur niveau absolu (V4.2).
+	"hit_center": -2.0,
+	"hit_edge": -7.0,
+	"bolt_flight": -10.0,
 	# Chantier FUSÉE — propositions à doser au banc : événements nets mais pas
 	# des coups de feu ; le grésillement continu pèse peu, comme les pas.
 	"fusee_lancer": -6.0,
@@ -424,13 +592,7 @@ const NIVEAU_RELATIF_DEFAUT: float = 0.0
 ## Le niveau d'un son, d'apres sa cle. Meme precaution que pour la portee : un
 ## tir arrive aussi sous forme de chemin depuis V4.1.
 static func niveau_relatif_de(stream_or_key: Variant) -> float:
-	if est_un_percuteur(stream_or_key):
-		return float(NIVEAU_RELATIF.get("weapon_dry", NIVEAU_RELATIF_DEFAUT))
-	if est_un_tir(stream_or_key):
-		return float(NIVEAU_RELATIF.get("shoot", NIVEAU_RELATIF_DEFAUT))
-	if stream_or_key is String:
-		return float(NIVEAU_RELATIF.get(stream_or_key, NIVEAU_RELATIF_DEFAUT))
-	return NIVEAU_RELATIF_DEFAUT
+	return float(NIVEAU_RELATIF.get(famille_de(stream_or_key), NIVEAU_RELATIF_DEFAUT))
 
 ## Ecarts de dosage poses par le banc, par cle de son. Vides en jeu : ils
 ## n'existent que le temps d'une seance d'ecoute, et ce qui en sort se recopie
@@ -446,10 +608,10 @@ func doser_niveau(cle: String, valeur: float) -> void:
 	_niveau_dose[cle] = clampf(valeur, -40.0, 12.0)
 
 func portee_dosee(cle: String) -> float:
-	return float(_portee_dosee.get(cle, portee_relative_de(cle)))
+	return float(_portee_dosee.get(famille_de(cle), portee_relative_de(cle)))
 
 func niveau_dose(cle: String) -> float:
-	return float(_niveau_dose.get(cle, niveau_relatif_de(cle)))
+	return float(_niveau_dose.get(famille_de(cle), niveau_relatif_de(cle)))
 
 ## Grille de la carte par defaut. C'est la SEULE valeur recopiee ici, et elle est
 ## une propriete de `assets/maps/default.json` — pas une constante d'audio.
@@ -526,13 +688,7 @@ static func diagonale_carte(grille: Vector2i, tuile: Vector2i) -> float:
 ## `priorite_de`, et pour la meme raison : depuis V4.1 le tir arrive sous les
 ## deux formes, et une comparaison qui ne repond qu'a l'une echoue en silence.
 static func portee_relative_de(stream_or_key: Variant) -> float:
-	if est_un_percuteur(stream_or_key):
-		return float(PORTEE_RELATIVE.get("weapon_dry", PORTEE_RELATIVE_DEFAUT))
-	if est_un_tir(stream_or_key):
-		return float(PORTEE_RELATIVE.get("shoot", PORTEE_RELATIVE_DEFAUT))
-	if stream_or_key is String:
-		return float(PORTEE_RELATIVE.get(stream_or_key, PORTEE_RELATIVE_DEFAUT))
-	return PORTEE_RELATIVE_DEFAUT
+	return float(PORTEE_RELATIVE.get(famille_de(stream_or_key), PORTEE_RELATIVE_DEFAUT))
 
 ## La portee absolue d'un son, en pixels. Pure, et c'est elle que la suite tient.
 static func portee_absolue(stream_or_key: Variant, portee_carte: float,
@@ -542,9 +698,19 @@ static func portee_absolue(stream_or_key: Variant, portee_carte: float,
 ## La meme, mais en tenant compte d'un dosage en cours au banc. Non statique :
 ## elle lit l'etat de la seance. En jeu, sans seance, elle rend exactement
 ## `portee_absolue` — le banc ne peut donc pas faire diverger le jeu de sa table.
+## ⚠️ **Le dosage se cherche sous la FAMILLE, pas sous le chemin du fichier.**
+## Cette ligne lisait `_portee_dosee[chemin]` : un reglage pose au banc sous
+## `ricochet` n'aurait jamais ete trouve par `ricochet_02.wav`, et la molette
+## n'aurait rien fait entendre. Le banc aurait paru casse — ou pire, le reglage
+## aurait paru sans effet et Adrien aurait cherche la faute dans le fichier.
+##
+## Le defaut precede les familles de 2026-08-27 : depuis V4.1, un dosage pose
+## sous `shoot` ne s'appliquait deja plus aux seize prises d'armes, qui arrivent
+## en chemin. Les TABLES, elles, ont toujours resolu par famille — d'ou un banc
+## qui dosait `weapon_shoot.wav` pendant que le jeu jouait `weapon_fusil_02`.
 func portee_courante(stream_or_key: Variant) -> float:
-	var cle := String(stream_or_key) if stream_or_key is String else ""
-	var relative := float(_portee_dosee.get(cle, portee_relative_de(stream_or_key)))
+	var relative := float(_portee_dosee.get(famille_de(stream_or_key),
+		portee_relative_de(stream_or_key)))
 	return maxf(1.0, _portee_carte * relative * facteur_portee)
 
 ## ============================================================================
@@ -894,6 +1060,22 @@ const SFX_PRIORITE: Dictionary = {
 	"ui_ready_ping": 1,
 	"shoot": 2,
 	"flesh_impact": 3,
+	# --- Livraison du 2026-08-27, classee par ce que le son APPREND.
+	# Les pas par materiau prennent exactement le rang des pas.
+	"footstep_a": 0,
+	"footstep_b": 0,
+	# La douille, le frolement et la salle n'apprennent rien qui ne soit deja
+	# dit ailleurs : ils cedent leur voix a tout le reste.
+	"shell": 0,
+	"wall_brush": 0,
+	"ambience": 0,
+	# Un ricochet dit qu'une balle VIT ENCORE — au rang du tir qui l'a lancee.
+	"ricochet": 2,
+	"bolt_flight": 2,
+	# Toucher reste l'information la plus chere du jeu (voir le commentaire de
+	# `flesh_impact` plus haut) : les deux qualites de coup en heritent.
+	"hit_center": 3,
+	"hit_edge": 3,
 	# Chantier FUSÉE — au-dessus des pas, en dessous du récit. La combustion ne
 	# passe pas par le pool (voix dédiée), sa priorité ne sert qu'aux one-shots.
 	"fusee_lancer": 1,
@@ -1100,11 +1282,7 @@ static func priorite_de(stream_or_key: Variant) -> int:
 	# Un tir joué par son chemin vaut un tir joué par sa clé. Le défaut donnait
 	# déjà la même valeur, mais par coïncidence : l'écrire rend le classement
 	# vrai plutôt que chanceux, et il le restera si le défaut change.
-	if est_un_tir(stream_or_key):
-		return int(SFX_PRIORITE.get("shoot", SFX_PRIORITE_DEFAUT))
-	if stream_or_key is String:
-		return int(SFX_PRIORITE.get(stream_or_key, SFX_PRIORITE_DEFAUT))
-	return SFX_PRIORITE_DEFAUT
+	return int(SFX_PRIORITE.get(famille_de(stream_or_key), SFX_PRIORITE_DEFAUT))
 
 func _occupations(pool: Array) -> Array[bool]:
 	var occupees: Array[bool] = []
@@ -1167,7 +1345,13 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	var volume_final := volume_db
 	if est_un_tir(stream_or_key):
 		_dernier_tir = maintenant
-	elif stream_or_key is String and stream_or_key == "footstep" \
+	# ⚠️ **Cette comparaison portait sur la cle litterale `"footstep"`.** Depuis
+	# V5.7 les pas jouent par CHEMIN (`footstep_a_02.wav`), et la branche serait
+	# devenue morte : le duck aurait disparu sans qu'aucune erreur ne le dise, et
+	# les pas seraient restes au premier plan pendant les fusillades. Meme
+	# defaut, mot pour mot, que celui qu'`est_un_tir` a paye en V4.1 — une
+	# question posee a une CLE alors que le son arrive en CHEMIN.
+	elif famille_de(stream_or_key).begins_with("footstep") \
 			and maintenant - _dernier_tir < DUCK_TIR_S:
 		volume_final += DUCK_TIR_DB
 	
@@ -1191,9 +1375,12 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.attenuation = courbe_distance
 	# Le niveau par son s'AJOUTE au volume demande, il ne le remplace pas : le
 	# duck des pas sous le tir (V4.15) reste un ecart, pas une valeur absolue.
-	var cle_niveau := String(stream_or_key) if stream_or_key is String else ""
+	# Meme correction que `portee_courante` : la SEANCE se cherche sous la
+	# famille, sinon la molette du banc reste muette sur tout son joue par
+	# chemin — c'est-a-dire sur la moitie du jeu depuis V4.1.
 	player.volume_db = volume_final + float(
-		_niveau_dose.get(cle_niveau, niveau_relatif_de(stream_or_key)))
+		_niveau_dose.get(famille_de(stream_or_key),
+			niveau_relatif_de(stream_or_key)))
 	# S3 — le bus se choisit ici, au seul instant ou l'on connait a la fois la
 	# position du son et celle de l'oreille. La PART occultee adoucit en plus le
 	# bord : un son occulte au tiers part sur le bus etouffe, mais n'y perd qu'un
@@ -1222,6 +1409,221 @@ func play_weapon_shot(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
 	if get_audio_stream(chemin) == null:
 		return play_sfx_2d_random_pitch("shoot", pos, 0.92, 1.08)
 	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
+
+## ============================================================================
+## LES SONS DE LA LIVRAISON DU 2026-08-27
+## ============================================================================
+##
+## Un point d'entree par EVENEMENT DE JEU, jamais par fichier. Les appelants
+## disent ce qui vient de se passer — « un pas sur cette case », « une balle a
+## rebondi ici » — et ce fichier seul sait quel echantillon le raconte. C'est ce
+## qui a permis de passer les tirs d'un echantillon a seize sans toucher a
+## `player.gd`, et c'est la meme raison ici.
+
+## V5.7 — le pas, sur le materiau de la case foulee.
+##
+## ⚠️ **La parite vient du damier, pas d'un tirage.** `CandelaTileSet` peint la
+## case avec `FLOOR_ATLAS_A` quand `(x + y)` est pair : le son doit suivre la
+## MEME regle, sans quoi ce qu'on entend contredit ce qu'on voit. Un joueur qui
+## traverse le damier doit entendre alterner, pas entendre au hasard.
+##
+## Repli sur `footstep`, le son unique d'avant V5.7 — meme geste que les tirs,
+## dont la cle `"shoot"` sert encore quand les variantes manquent.
+func play_footstep(pos: Vector2, cellule: Vector2i) -> AudioStreamPlayer2D:
+	var famille := "footstep_a" if (cellule.x + cellule.y) % 2 == 0 else "footstep_b"
+	var chemin := chemin_variante_au_hasard(famille)
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return play_sfx_2d_random_pitch("footstep", pos, 0.95, 1.05)
+	return play_sfx_2d_random_pitch(chemin, pos, 0.96, 1.04)
+
+## V4.3 — le projectile qui rebondit et REPART.
+##
+## ⚠️ **Ce n'est pas `wall_impact`, et la difference est une information de jeu.**
+## `wall_impact` dit qu'une balle est finie ; un ricochet dit qu'elle traverse
+## encore la piece. Dans le noir, savoir qu'un projectile vit encore change ce
+## qu'on fait dans la seconde qui suit. Leur donner le meme son effacerait
+## exactement cette difference — meme faute que la cible d'echauffement, qui
+## sonnait comme un mur alors qu'elle disait « touche ».
+##
+## ⚠️ **ARBITRAGE NON TRANCHE : aujourd'hui les deux sons se SUPERPOSENT.**
+## `bullet.gd` joue `wall_impact` a chaque contact, puis ce ricochet quand la
+## balle repart — donc un rebond s'entend « choc + depart », et une balle finie
+## « choc » seul. L'autre option est de REMPLACER : le rebond ne jouerait que le
+## ricochet, et les deux evenements auraient chacun leur son propre.
+##
+## L'enjeu est reel et il tient au fusil, seule arme qui rebondit
+## (`max_bounces = 2`) et **dont la balle peut tuer son propre tireur**
+## (`damages_shooter = true`). « Cette balle vit encore » est donc une
+## information sur laquelle on AGIT, parfois contre soi-meme : elle doit se
+## reconnaitre a l'instant, sans comparer deux epaisseurs de son.
+func play_ricochet(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("ricochet")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.94, 1.06)
+
+## V4.8 — la douille, apres le tir. Le retard est dans l'appelant : c'est un
+## fait de mise en scene, pas de mixage.
+func play_shell(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("shell")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.92, 1.08)
+
+## V5.11 — le frolement d'un mur.
+func play_wall_brush(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("wall_brush")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.94, 1.06)
+
+## V4.2 — le coup au but, selon qu'il touche au centre ou au bord.
+##
+## `proximite_bord` est le `normalized_dist` que `bullet.gd` calcule deja pour
+## les degats : 0 au centre, 1 au bord. **Le son se derive du meme nombre que les
+## degats**, ce qui garantit qu'il ne pourra jamais mentir sur ce qui vient
+## d'etre inflige. Un seuil et non un fondu : l'oreille doit trancher, pas
+## interpoler.
+##
+## Repli sur `flesh_impact`, le claquement unique d'avant V4.2.
+const SEUIL_COUP_AU_CENTRE: float = 0.5
+
+func play_hit(pos: Vector2, proximite_bord: float) -> AudioStreamPlayer2D:
+	var cle := "hit_center" if proximite_bord <= SEUIL_COUP_AU_CENTRE else "hit_edge"
+	if get_audio_stream(cle) == null:
+		return play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
+	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+
+## V4.10 — le carreau d'arbalete en vol.
+##
+## **Tel qu'appele aujourd'hui, ce n'est PAS un indice de plus : c'est du
+## timbre.** `player.gd` le joue au canon, a l'instant du tir, par-dessus
+## `weapon_arbalete_NN`. Le carreau vole a 12 000 px/s — il traverse la carte en
+## moins d'un dixieme de seconde —, donc il n'y a aucune trajectoire a suivre a
+## l'oreille : le son est un depart, et il se confond avec le coup.
+##
+## ⚠️ **L'ARBITRAGE NON TRANCHE est le lieu de l'appel, pas son existence.**
+## Joue pres de la CIBLE plutot qu'au canon, le meme fichier deviendrait un
+## avertissement de frolement : « un carreau vient de passer pres de toi ».
+## Ce serait une information neuve, et precisement celle que l'arbalete est
+## concue pour ne pas donner — seule arme sans lueur de bouche
+## (`muzzle_flash_intensity = 0.1`), sans lumiere de projectile
+## (`bullet_light_energy = 0.0`), et qui tue en un coup au centre comme au bord.
+## Le rendre audible pres de sa cible lui retirerait une part de ce qui la
+## definit ; ne pas le faire laisse une arme dont on ne sait jamais qu'on l'a
+## evitee. **Aucune des deux reponses n'est evidente, et c'est pourquoi elle
+## revient a Adrien.**
+func play_bolt_flight(pos: Vector2) -> AudioStreamPlayer2D:
+	if get_audio_stream("bolt_flight") == null:
+		return null
+	return play_sfx_2d_random_pitch("bolt_flight", pos, 0.97, 1.03)
+
+## V3.3 — le decompte. Non positionnel : il s'adresse au joueur, pas au monde.
+func play_count(seconde: int) -> AudioStreamPlayer:
+	if seconde < 1 or seconde > 3:
+		return null
+	return play_sfx("count_%d" % seconde)
+
+## Un son d'interface, non positionnel. Passe par la meme porte que le reste
+## pour que le pool et les priorites s'appliquent.
+func play_ui(cle: String, volume_db: float = 0.0) -> AudioStreamPlayer:
+	if get_audio_stream(cle) == null:
+		return null
+	return play_sfx(cle, 1.0, volume_db)
+
+## ============================================================================
+## V5.10 — LA PRESENCE DE LA SALLE
+## ============================================================================
+##
+## Des ponctuels tres espaces, poses au hasard dans l'arene. **Ce n'est pas une
+## nappe** : une nappe continue masquerait les pas, et les pas sont la seule
+## information du jeu. Un ponctuel occupe l'oreille une demi-seconde puis lui
+## rend le silence, ou l'adversaire se trahit.
+##
+## Le silence entre deux est la vraie valeur a doser, plus que leur niveau.
+const AMBIANCE_ATTENTE_MIN: float = 7.0
+const AMBIANCE_ATTENTE_MAX: float = 18.0
+
+var _ambiance_timer: Timer
+var _ambiance_zone: Rect2 = Rect2()
+
+func demarrer_ambiance(zone: Rect2) -> void:
+	_ambiance_zone = zone
+	if _ambiance_timer == null:
+		_ambiance_timer = Timer.new()
+		_ambiance_timer.name = "MinuteurAmbiance"
+		_ambiance_timer.one_shot = true
+		_ambiance_timer.timeout.connect(_tic_ambiance)
+		add_child(_ambiance_timer)
+	_rearmer_ambiance()
+
+func arreter_ambiance() -> void:
+	_ambiance_zone = Rect2()
+	if _ambiance_timer != null:
+		_ambiance_timer.stop()
+
+func _rearmer_ambiance() -> void:
+	if _ambiance_timer == null:
+		return
+	_ambiance_timer.start(randf_range(AMBIANCE_ATTENTE_MIN, AMBIANCE_ATTENTE_MAX))
+
+func _tic_ambiance() -> void:
+	if _ambiance_zone.size.x <= 0.0 or _ambiance_zone.size.y <= 0.0:
+		return
+	var chemin := chemin_variante_au_hasard("ambience")
+	if chemin != "" and get_audio_stream(chemin) != null:
+		var pos := _ambiance_zone.position + Vector2(
+			randf() * _ambiance_zone.size.x, randf() * _ambiance_zone.size.y)
+		play_sfx_2d_random_pitch(chemin, pos, 0.97, 1.03)
+	_rearmer_ambiance()
+
+## ============================================================================
+## V2.8 — L'ACOUPHENE DE MORT
+## ============================================================================
+##
+## Sifflement, et le monde ETOUFFE une seconde — cote perdant seulement.
+##
+## ⚠️ **Etouffe, pas baisse.** Un passe-bas et non une reduction de volume : on
+## veut l'effet d'une detonation trop proche, pas celui d'un bouton qu'on
+## tourne. Et surtout, baisser le bus `SFX` se battrait avec le curseur du
+## panneau de reglages, qui ecrit sur ce meme bus — deux mains sur la meme
+## molette finissent par se contredire.
+const ETOUFFEMENT_MORT_HZ: float = 700.0
+const ETOUFFEMENT_MORT_S: float = 1.0
+const SFX_COUPURE_OUVERTE_HZ: float = 20500.0
+
+var _filtre_sfx: AudioEffectFilter
+var _tween_etouffement: Tween
+
+func _filtre_du_monde() -> AudioEffectFilter:
+	if _filtre_sfx != null:
+		return _filtre_sfx
+	var idx := AudioServer.get_bus_index("SFX")
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var e := AudioServer.get_bus_effect(idx, i)
+		if e is AudioEffectFilter:
+			_filtre_sfx = e
+			return _filtre_sfx
+	var f := AudioEffectFilter.new()
+	f.cutoff_hz = SFX_COUPURE_OUVERTE_HZ
+	AudioServer.add_bus_effect(idx, f)
+	_filtre_sfx = f
+	return _filtre_sfx
+
+## A n'appeler que sur la machine du perdant : c'est SON oreille qui siffle.
+func jouer_acouphene_mort() -> void:
+	play_ui("tinnitus_death")
+	var f := _filtre_du_monde()
+	if f == null:
+		return
+	if _tween_etouffement != null and _tween_etouffement.is_valid():
+		_tween_etouffement.kill()
+	f.cutoff_hz = ETOUFFEMENT_MORT_HZ
+	_tween_etouffement = create_tween()
+	_tween_etouffement.tween_property(f, "cutoff_hz", SFX_COUPURE_OUVERTE_HZ,
+		ETOUFFEMENT_MORT_S).set_ease(Tween.EASE_OUT)
 
 func play_sfx_2d_random_pitch(stream_or_key: Variant, pos: Vector2, min_pitch: float = 0.92, max_pitch: float = 1.08, volume_db: float = 0.0, bus_name: String = "SFX") -> AudioStreamPlayer2D:
 	var pitch = randf_range(min_pitch, max_pitch)

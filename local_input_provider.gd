@@ -17,6 +17,7 @@ var action_aim_right := ""
 var action_shoot := ""
 var action_torch := ""
 var action_flare := ""
+var action_reload := ""
 
 func _ready() -> void:
 	_setup_inputs()
@@ -36,6 +37,7 @@ func _setup_inputs() -> void:
 	action_shoot = prefix + "shoot"
 	action_torch = prefix + "torch"
 	action_flare = prefix + "lance_fusee"
+	action_reload = prefix + "reload"
 
 func get_movement_vector() -> Vector2:
 	return Input.get_vector(action_left, action_right, action_up, action_down)
@@ -58,3 +60,6 @@ func is_flashlight_pressed() -> bool:
 
 func is_flare_pressed() -> bool:
 	return Input.is_action_pressed(action_flare)
+
+func is_reload_pressed() -> bool:
+	return Input.is_action_pressed(action_reload)

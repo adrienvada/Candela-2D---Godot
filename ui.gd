@@ -394,6 +394,7 @@ var p1_hp: ProgressBar
 var p1_hp_bg: ProgressBar
 var p1_cd: CircularCooldown
 var p1_cd_label: Label
+var p1_ammo_label: Label
 var p1_torch: PanelContainer
 ## Le temps du voile, en secondes. Le shader le reçoit en uniforme plutôt que
 ## d'utiliser `TIME`, pour que le banc puisse figer l'animation et qu'une suite
@@ -410,6 +411,7 @@ var p2_hp: ProgressBar
 var p2_hp_bg: ProgressBar
 var p2_cd: CircularCooldown
 var p2_cd_label: Label
+var p2_ammo_label: Label
 var p2_torch: PanelContainer
 var p2_dazzle: ColorRect
 
@@ -1499,11 +1501,24 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 		if p2_cursor != null:
 			p2_cursor.aim(control.get_global_rect(), snap)
 
+	# V3.4 — le tic de navigation. **Ici et pas dans le survol souris** :
+	# `_set_focus` est le point de passage unique de la sélection, manette et
+	# souris confondues, pour les deux joueurs. Le câbler sur `mouse_entered`
+	# aurait rendu le menu muet à la manette, ce qui ne se remarque que le jour
+	# où quelqu'un joue sans souris.
+	#
+	# Seulement quand la sélection CHANGE : un survol qui redésigne le même
+	# bouton n'est pas une navigation, et il crépiterait à chaque frame de
+	# mouvement de souris.
+	if control != precedent:
+		AudioManager.play_ui("ui_tick")
 	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
 	# curseur est un signe de vie, et c'est le même signe pour les deux.
 	var centre := control.get_global_rect().get_center()
 	if menu_torch != null:
 		menu_torch.viser(player, centre, COLOR_P1 if player == 0 else COLOR_P2)
+	if player == 0 and hub != null:
+		hub.set_torch_position_global(centre)
 	# M5 borde la lumière de M9 : il lui faut donc SON rayon, pas un autre. Le
 	# déduire ailleurs décrocherait le grain du halo qu'il est censé ourler.
 	if menu_backdrop != null:
@@ -1813,6 +1828,7 @@ func _build_player_hud(player: int) -> Control:
 		p1_hp_bg = bars["bg"]
 		p1_cd = weapon["circle"]
 		p1_cd_label = weapon["label"]
+		p1_ammo_label = weapon.get("ammo", null)
 		p1_torch = torch
 	else:
 		bottom.add_child(torch)
@@ -1823,6 +1839,7 @@ func _build_player_hud(player: int) -> Control:
 		p2_hp_bg = bars["bg"]
 		p2_cd = weapon["circle"]
 		p2_cd_label = weapon["label"]
+		p2_ammo_label = weapon.get("ammo", null)
 		p2_torch = torch
 
 	return wrapper
@@ -1989,16 +2006,26 @@ func _create_weapon_indicator(color: Color) -> Dictionary:
 	label.add_theme_font_size_override("font_size", T_MENTION)
 	circle_container.add_child(label)
 
+	var info_box := VBoxContainer.new()
+	info_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	info_box.add_theme_constant_override("separation", 0)
+
 	var title := Label.new()
 	title.text = "ARME"
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", T_MENTION)
 	title.add_theme_color_override("font_color", Charte.ACIER)
+	info_box.add_child(title)
+
+	var ammo_label := Label.new()
+	ammo_label.text = "--"
+	ammo_label.add_theme_font_size_override("font_size", T_MENTION)
+	ammo_label.add_theme_color_override("font_color", Charte.HALOGENE)
+	info_box.add_child(ammo_label)
 
 	container.add_child(circle_container)
-	container.add_child(title)
+	container.add_child(info_box)
 
-	return {"container": container, "circle": circle, "label": label}
+	return {"container": container, "circle": circle, "label": label, "ammo": ammo_label}
 
 func _create_torch_indicator() -> PanelContainer:
 	var panel := PanelContainer.new()
@@ -3967,7 +3994,20 @@ func _refresh_weapon_locks() -> void:
 ## Le titre du menu porte tantôt le nom du jeu, tantôt un verdict. Un seul
 ## endroit tranche, sinon un chemin oublié laisserait le logo sur « DÉFAITE ».
 ## `self_modulate` et non `modulate` : le second effacerait aussi l'enfant.
+## V3.5 — le titre de fin FRAPPE.
+##
+## ⚠️ **Un seul impact, pas un par lettre — et c'est une limite assumee, pas un
+## choix.** L'item demande « les lettres qui tombent une a une » ; ce titre est
+## un `Label` simple, sans animation par caractere. Cabler un son par lettre
+## exigerait d'abord la moitie VISUELLE de V3.5, qui n'existe pas. Le jour ou
+## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
+## l'animation, jamais sur un minuteur parallele qui derivera.
+##
+## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
+	if texte != "CANDELA 2D" and game_over_title != null \
+			and game_over_title.text != texte:
+		AudioManager.play_ui("ui_type_impact")
 	game_over_title.text = texte
 	if menu_enseigne == null or not is_instance_valid(menu_enseigne):
 		return
@@ -4194,13 +4234,33 @@ func _make_chiffre_de_bilan(teinte: Color) -> Label:
 ##
 ## `serie` vide = pas de série en cours, et la ligne disparaît **entièrement**
 ## plutôt que d'afficher une absence.
+## V3.6 / V3.9 — l'etat d'ou se deduisent les deux sons du bilan. Un son de
+## TRANSITION a besoin de ce qui precede ; sans memoire, il ne peut que sonner a
+## chaque affichage.
+var _bilan_total_precedent: int = 0
+var _serie_precedente: String = ""
+
 func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 		effleurement: float = -1.0) -> void:
 	if bilan == null:
 		return
+	# V3.6 — le pion de score, quand la SESSION gagne une unite. Pas a chaque
+	# affichage du bilan : ce panneau se repose a l'identique en revenant au
+	# menu, et un son sur le simple affichage sonnerait une victoire qui n'a pas
+	# eu lieu.
+	if p1_wins + p2_wins > _bilan_total_precedent:
+		AudioManager.play_ui("ui_score_pawn")
+	_bilan_total_precedent = p1_wins + p2_wins
 	bilan_p1.text = str(p1_wins)
 	bilan_p2.text = str(p2_wins)
 	var mot := serie.strip_edges()
+	# V3.9 — **le verre casse quand la serie MEURT, pas quand elle avance.** Une
+	# serie en cours puis vide : quelqu'un vient de la briser. C'est la seule
+	# transition qui merite ce son ; le jouer a l'apparition en ferait une
+	# recompense, soit l'inverse exact de ce qu'il raconte.
+	if _serie_precedente != "" and mot == "":
+		AudioManager.play_ui("ui_glass_break")
+	_serie_precedente = mot
 	bilan_serie.text = mot.to_upper()
 	bilan_serie.visible = mot != ""
 	# Même règle que la série : inconnue, la colonne disparaît entièrement au
@@ -4564,7 +4624,23 @@ func _refresh_lobby_block() -> void:
 		lobby_status_label.text = "Réseau local — entrez l'IP de l'hôte"
 
 func _on_lobby_code_ready(_code: String) -> void:
+	# V6.7 — les six cases se gravent. Une frappe par caractere, echelonnee :
+	# un code qui apparait d'un bloc ne se lit pas, il se subit. Le decalage est
+	# ce qui laisse l'oeil suivre.
+	_frapper_le_code(_code)
 	_update_lobby_code_label()
+
+## V6.7 — la frappe des six cases, une par une.
+##
+## `await` par caractere plutot qu'un `Timer` : la sequence n'a pas d'etat a
+## porter et ne se rejoue pas. La garde `is_inside_tree` est necessaire — un
+## code peut arriver au moment ou l'on quitte l'ecran.
+func _frapper_le_code(code: String) -> void:
+	for i in code.length():
+		if not is_inside_tree():
+			return
+		AudioManager.play_ui("ui_keystroke")
+		await get_tree().create_timer(0.07).timeout
 	# Le code peut arriver alors qu'on est encore au menu — c'est même désormais
 	# le cas ordinaire, « CRÉER LE SALON » ouvrant le salon sans lancer la manche.
 	if _is_main_menu:
@@ -4893,11 +4969,12 @@ const LIBELLES := {
 	"aim_left": "Viser à gauche", "aim_right": "Viser à droite",
 	"shoot": "Tirer", "torch": "Torche",
 	"lance_fusee": "Fusée éclairante",
+	"reload": "Recharger",
 }
 
-## L'ordre d'apparition : on se déplace, on vise, on tire, on s'éclaire.
+## L'ordre d'apparition : on se déplace, on vise, on tire, on recharge, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
-	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "torch",
+	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "reload", "torch",
 	"lance_fusee"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
@@ -5961,12 +6038,28 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p1_target_hp = p1.hp
 		p1_hp.value = p1.hp
 
-		var p1_max_cd = p1.current_weapon.cooldown if p1.current_weapon else 1.0
-		p1_cd.set_progress(1.0 - (p1.shoot_cooldown / p1_max_cd))
-		if p1.shoot_cooldown <= 0:
-			p1_cd_label.text = "PRÊT"
+		var p1_reloading: bool = bool(p1.get("is_reloading")) if p1 else false
+		var p1_ammo: int = int(p1.get("current_ammo")) if p1 else 0
+		var p1_max_ammo: int = p1.current_weapon.max_ammo if (p1 and p1.current_weapon) else 10
+		var p1_reload_time_left: float = float(p1.get("reload_time_left")) if p1 else 0.0
+		var p1_max_reload_time: float = p1.current_weapon.reload_time if (p1 and p1.current_weapon) else 2.2
+
+		if p1_reloading:
+			p1_cd.set_progress(1.0 - (p1_reload_time_left / maxf(0.001, p1_max_reload_time)))
+			p1_cd_label.text = "%.1fs" % p1_reload_time_left
 		else:
-			p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
+			var p1_max_cd = p1.current_weapon.cooldown if p1.current_weapon else 1.0
+			p1_cd.set_progress(1.0 - (p1.shoot_cooldown / maxf(0.001, p1_max_cd)))
+			if p1.shoot_cooldown <= 0:
+				p1_cd_label.text = "PRÊT" if p1_ammo > 0 else "VIDE"
+			else:
+				p1_cd_label.text = "%.1fs" % p1.shoot_cooldown
+
+		if p1_ammo_label:
+			if p1_reloading:
+				p1_ammo_label.text = "RECHARGE"
+			else:
+				p1_ammo_label.text = "%d / %d" % [p1_ammo, p1_max_ammo]
 
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
@@ -5979,12 +6072,28 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p2_target_hp = p2.hp
 		p2_hp.value = p2.hp
 
-		var p2_max_cd = p2.current_weapon.cooldown if p2.current_weapon else 1.0
-		p2_cd.set_progress(1.0 - (p2.shoot_cooldown / p2_max_cd))
-		if p2.shoot_cooldown <= 0:
-			p2_cd_label.text = "PRÊT"
+		var p2_reloading: bool = bool(p2.get("is_reloading")) if p2 else false
+		var p2_ammo: int = int(p2.get("current_ammo")) if p2 else 0
+		var p2_max_ammo: int = p2.current_weapon.max_ammo if (p2 and p2.current_weapon) else 10
+		var p2_reload_time_left: float = float(p2.get("reload_time_left")) if p2 else 0.0
+		var p2_max_reload_time: float = p2.current_weapon.reload_time if (p2 and p2.current_weapon) else 2.2
+
+		if p2_reloading:
+			p2_cd.set_progress(1.0 - (p2_reload_time_left / maxf(0.001, p2_max_reload_time)))
+			p2_cd_label.text = "%.1fs" % p2_reload_time_left
 		else:
-			p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
+			var p2_max_cd = p2.current_weapon.cooldown if p2.current_weapon else 1.0
+			p2_cd.set_progress(1.0 - (p2.shoot_cooldown / maxf(0.001, p2_max_cd)))
+			if p2.shoot_cooldown <= 0:
+				p2_cd_label.text = "PRÊT" if p2_ammo > 0 else "VIDE"
+			else:
+				p2_cd_label.text = "%.1fs" % p2.shoot_cooldown
+
+		if p2_ammo_label:
+			if p2_reloading:
+				p2_ammo_label.text = "RECHARGE"
+			else:
+				p2_ammo_label.text = "%d / %d" % [p2_ammo, p2_max_ammo]
 
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
@@ -6427,6 +6536,10 @@ func reinitialiser_killcam() -> void:
 	_killcam_derniere_image = -1
 
 func show_killcam() -> void:
+	# V6.4 — la bande se rembobine. La killcam EST un retour en arriere : le son
+	# le dit avant que l'image ne le montre, ce qui evite la demi-seconde ou le
+	# joueur croit a un bug d'affichage.
+	AudioManager.play_ui("ui_vhs_rewind")
 	reinitialiser_killcam()
 	killcam_overlay.show()
 	killcam_container.show()

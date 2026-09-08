@@ -2375,6 +2375,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. |
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
 | **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
@@ -6272,6 +6273,141 @@ l'importeur a bien travaillé.
 
 Cycle complet vérifié : rouge sur le fichier vide, vert sur le réexport.
 
+### Quarante sons dormaient dans le dépôt (2026-08-27)
+
+Livraison d'Adrien : le dépôt passe de 45 à 89 fichiers audio. **Quarante
+d'entre eux n'avaient ni clé, ni famille, ni appel** — ils étaient présents,
+importés, inventoriés, et parfaitement silencieux.
+
+**Aucune erreur ne pouvait le dire.** Un `.wav` déposé dans `assets/audio/` sans
+déclencheur ne lève rien : il dort. C'est la même famille que le dossier
+`speaker/` qui n'existait pas et que `defeat.wav` livré vide — *ce qui manque ne
+se plaint jamais.*
+
+D'où le garde-fou `_test_aucun_son_orphelin`, qui rend « tous les sons sont
+câblés » **vérifiable au lieu qu'affirmé** : tout fichier des quatre dossiers
+audio doit avoir une clé ou une famille, et réciproquement toute variante
+annoncée doit exister. Il rougira le jour du prochain dépôt de fichier — soit
+exactement le moment où quelqu'un doit décider de ce que ce son raconte.
+
+**Il a rougi tout de suite, et pas comme prévu.** Les quarante fichiers étaient
+**non commités** : ils vivaient en fichiers non suivis de l'arbre principal, donc
+absents de tout worktree parti d'`origin/main`. Une suite du dépôt le dit déjà —
+« ils s'affichent, les bancs sont verts, et ils meurent avec la machine ».
+
+#### Trois défauts trouvés en câblant, qu'aucun test ne cherchait
+
+**Le duck des pas serait mort en silence.** V4.15 fait reculer les pas de six
+décibels après un tir ; la condition comparait à la **clé littérale**
+`"footstep"`. Les pas jouant désormais par **chemin** (`footstep_a_02.wav`), la
+branche devenait morte : les pas seraient restés au premier plan pendant les
+fusillades, sans qu'aucune erreur ne le dise. **Mot pour mot le défaut
+qu'`est_un_tir` avait déjà payé en V4.1** — une question posée à une CLÉ alors
+que le son arrive en CHEMIN. Trouvé en relisant avant d'écrire, pas en testant.
+
+**Un impact au but jouait DEUX fois.** `bullet.gd` le joue au point d'impact
+exact ; `player.take_damage` le rejouait depuis le **centre du corps**. Deux
+échantillons à quelques millisecondes ne s'entendent pas comme un doublon mais
+comme un son **plus épais** — donc indosable : aucun niveau n'aurait jamais paru
+juste au banc de mixage, et on aurait cherché la faute dans le fichier. Il
+jouait en outre de façon **incohérente**, `take_damage` étant gardé par
+`if not is_replay` : la killcam entendait un impact quand le direct en entendait
+deux.
+
+**`$HitSound` ne jouait rien depuis toujours** — un `AudioStreamPlayer` sans flux
+dans `player.tscn`, appelé à chaque coup encaissé. Le nœud reste à la main de qui
+tient la scène ; l'appel est parti.
+
+#### La classification vivait en trois exemplaires
+
+Portée, niveau et priorité posaient la même question — « de quelle famille relève
+ce son ? » — chacune avec sa cascade de `if`. Trois copies, donc trois endroits
+où l'ajout d'une famille peut n'être fait que deux fois. Elles passent par une
+seule `famille_de()`. *La même question posée par deux chemins finit par recevoir
+deux réponses* — leçon déjà payée sur l'échelle de la torche.
+
+#### Deux arbitrages posés, non tranchés
+
+**Le carreau d'arbalète** (V4.10) — ⚠️ **ce paragraphe a d'abord dit que le son
+« rend un tell » à l'arbalète, et c'était faux.** Joué au canon et à l'instant du
+tir, par-dessus `weapon_arbalete_NN`, il n'apprend rien que le coup n'ait déjà
+dit : c'est une couche de **timbre**.
+
+**✅ TRANCHÉ par Adrien le 2026-08-28 : le frôlement se joue**, et sa raison
+reformule l'item mieux que ne le faisait la question — *« c'est une info de TIR,
+pas de position. Ça ajoute du suspens mais ça ne donne pas d'info. »*
+
+C'est cette phrase qui décide de l'implémentation, pas un dosage :
+
+- le son naît **au point le plus proche de celui qui est frôlé**, jamais au
+  canon. Une source ponctuelle posée à côté de la victime dit qu'un tir a eu
+  lieu ; elle ne dit rien d'**où** il vient ;
+- le jouer **au canon** — ce que faisait la première version — le confondait avec
+  le coup et n'apprenait rien ;
+- le jouer **le long de la trajectoire** en aurait fait une flèche vers le
+  tireur, soit exactement l'information que l'arbalète est conçue à ne pas
+  donner.
+
+Le tireur l'entend aussi, de loin et faiblement : « j'ai failli toucher ». C'est
+du retour, pas du renseignement.
+
+⚠️ **Réservé à l'arbalète.** Les autres armes ont une lueur de bouche qui les
+trahit déjà ; leur ajouter un frôlement doublerait une information existante. Et
+un verrou par carreau (`_frolement_joue`) : sans lui, un carreau rasant émettrait
+à chaque pas de simulation — un crépitement là où il faut un événement.
+
+Le rayon (90 px) n'est **pas jugé** : c'est la seule chose qui reste au banc.
+
+**Le ricochet** (V4.3) — **✅ TRANCHÉ par Adrien le 2026-08-28 : le rebond
+REMPLACE l'impact**, il ne s'y ajoute pas. *« Pour le fusil on peut distinguer le
+rebond de l'impact au son. »*
+
+⚠️ **La superposition, essayée d'abord, mourait avec la distance.** Empilés, les
+deux événements ne diffèrent que par la **présence** d'une couche de plus ; or
+cette couche s'atténue et s'occulte comme le reste. Au loin — ou derrière un mur
+— un rebond et une balle finie redevenaient identiques : **la distinction
+disparaissait exactement là où elle sert**, dans le noir, quand on ne voit pas la
+balle. Remplacés, les deux sons ont chacun leur niveau et leur portée.
+
+Les **étincelles et l'éclat restent** dans les deux cas : ce qui se voit est le
+même choc, c'est ce qui s'entend qui doit trancher. Le drapeau `avec_son`
+existait déjà pour la cible d'échauffement — même geste, même raison.
+
+L'enjeu tient au **fusil**, seule arme qui rebondit et **dont la balle peut tuer
+son propre tireur**. « Cette balle vit encore » est une information sur laquelle
+on agit dans la seconde, parfois contre soi-même.
+
+### Trois façons de dire vrai et d'être compris de travers (2026-09-03)
+
+Trois défauts de la même famille en trois jours, entre sessions parallèles.
+Aucun n'est un mensonge : chaque fois l'énoncé est **exact chez son auteur** et
+faux chez son lecteur, parce qu'il tait le référentiel qui le rend vrai.
+
+- **Le constat daté.** « L'oreille ne suit pas le joueur, mesuré le 2026-08-25 »
+  — vrai à l'écriture, faux dès la fusion suivante. Une session s'y est fiée
+  sans ouvrir le code et a bâti une contrainte inter-chantiers sur un état
+  périmé. *Un constat vieillit sans prévenir.*
+- **La poignée éphémère.** « `candela-2d-b6` n'existe plus, donc la
+  republication est vacante » — les noms `candela-2d-XX` sont fabriqués par
+  `ListAgents` à chaque écoute et changent. La session visée était vivante ;
+  le tableau de bord a été republié deux fois, et il n'est pas versionné.
+  *Une absence dans un annuaire n'est pas une absence.*
+- **Le référentiel implicite.** « La fusée est dans `main` (29b17ac) » — vrai
+  dans le `main` local du poste, faux sur `origin`. Un dépôt partagé par sept
+  sessions **en a deux**, et ils divergent en permanence. J'avais déjà écrit
+  dans un message de commit que je reprenais trois clés qui n'existaient pas
+  chez moi ; seul un `git merge-base --is-ancestor` l'a arrêté.
+
+**La règle qui les couvre toutes les trois : dire d'où l'on parle.** « Poussé
+sur `origin` » ou « dans mon `main` local », jamais « dans main ». Le titre
+d'une session, jamais sa poignée. Ce que le code FAIT, jamais ce qu'on a mesuré
+un jour.
+
+**Et le corollaire, qui coûte moins cher que la confiance :** entre sessions, un
+fait vérifiable se vérifie. `git merge-base --is-ancestor`, `list_sessions`, un
+`grep` dans le fichier — trois secondes, contre une demi-journée de travail bâti
+sur un état qui n'existe pas.
+
 ---
 
 ## Chantiers de robustesse — étude du 2026-08-16
@@ -8657,9 +8793,11 @@ un fait de jeu, pas à un rythme d'interface.
   entendu est le premier jugé, et il ne se répète plus.
 - ~~**DA3.2 Les stems produits à 170 BPM**~~ (= V1.1) — **✅ livrée le
   2026-08-24.** La musique adaptative joue enfin ce qu'elle orchestrait.
-- **DA3.3 Les trois fichiers câblés-muets du 2026-08-18** — `torch_on.wav`,
-  `torch_off.wav`, `tinnitus_dazzle.wav` (V5.1, V5.3) : ils vivent dès le
-  dépôt des fichiers. *(C : 3 samples)*
+- ~~**DA3.3 Les trois fichiers câblés-muets du 2026-08-18**~~ — **✅ close le
+  2026-08-27 : les trois fichiers sont arrivés.** `torch_on`, `torch_off` et
+  `tinnitus_dazzle` jouent enfin ce que le code leur demandait depuis neuf
+  jours, sans qu'une ligne ait eu besoin de changer — ce qui est exactement ce
+  que la règle « câbler, taire, diagnostiquer » promettait.
 
   ⚠️ **`tinnitus_dazzle` porte une question de CONCEPTION — et le câblage y a
   déjà répondu sans que personne ne la pose.** Ce paragraphe a dit pendant huit
@@ -8701,11 +8839,44 @@ un fait de jeu, pas à un rythme d'interface.
   ⚠️ Les chemins pointaient vers `assets/audio/speaker/`, **un dossier qui n'a
   jamais existé** : les voix étaient muettes en silence depuis des mois. Le mot
   `speaker` ne désigne plus qu'un **bus** — une sortie, pas un rangement.
-- **DA3.6 Les pas par matériau** (= V5.7) — deux sols, deux jeux de pas. *(C)*
-- **DA3.7 La famille de sons UI** — survol, validation, retour, erreur : une
-  même matière sonore pour tous les menus. *(C : 5-6 samples)*
-- **DA3.8 Le room tone** (= V5.10) — un lit de silence habité sous la manche.
-  *(C)*
+- ~~**DA3.6 Les pas par matériau**~~ (= V5.7) — **✅ livrée le 2026-08-27.** La
+  case se dérive de la position par **la même parité que
+  `CandelaTileSet.get_floor_atlas`** : traverser le damier s'entend alterner
+  comme il se voit alterner. L'origine de la grille n'est volontairement pas
+  corrigée du décalage d'arène — une erreur d'origine échangerait A et B
+  *globalement*, ce qui ne s'entend pas, les deux étant des sols. Ce qui compte
+  est que deux cases voisines diffèrent.
+- ~~**DA3.7 La famille de sons UI**~~ — **✅ livrée le 2026-08-27**, sept sons
+  câblés sur des **transitions**, jamais sur des affichages. La distinction est
+  tout l'item : `poser_bilan` se repose à l'identique en revenant au menu, et un
+  son posé sur l'appel sonnerait une victoire qui n'a pas eu lieu. D'où deux
+  états mémorisés (`_bilan_total_precedent`, `_serie_precedente`) — *un son de
+  transition a besoin de ce qui précède.*
+
+  ⚠️ **Le tic de navigation est sur `_set_focus`, pas sur `mouse_entered`.**
+  C'est le point de passage unique de la sélection, manette et souris
+  confondues, pour les deux joueurs. Le câbler sur le survol aurait rendu le
+  menu **muet à la manette** — ce qui ne se remarque que le jour où quelqu'un
+  joue sans souris.
+
+  ⚠️ **`ui_type_impact` frappe une fois, pas une fois par lettre**, et c'est une
+  limite assumée : V3.5 demande « les lettres qui tombent une à une », or le
+  titre est un `Label` simple. Le son par lettre exige d'abord la moitié
+  **visuelle** de V3.5, qui n'existe pas. Le jour où elle existera, le son se
+  séquencera **sur l'animation**, jamais sur un minuteur parallèle qui dérivera.
+- ~~**DA3.8 Le room tone**~~ (= V5.10) — **✅ livrée le 2026-08-27.**
+
+  ⚠️ **Ce n'est PAS une nappe, et c'en est la définition.** Une nappe continue
+  masquerait les pas, et les pas sont la seule information du jeu. Des ponctuels
+  très espacés (7 à 18 s) occupent l'oreille une demi-seconde puis lui rendent
+  le silence — celui où l'adversaire se trahit. **Le silence entre deux est la
+  vraie valeur à doser, plus que leur niveau.**
+
+  La zone se pose au même endroit que `accorder_a_la_carte`, sur la même source
+  de vérité : une zone écrite en dur enverrait les ambiances derrière les murs à
+  la première carte d'une autre taille — audible comme un défaut de
+  panoramique, introuvable comme une constante. Et elle s'**arrête** en fin de
+  manche : le minuteur vit dans l'autoload, qui survit à l'arène.
 - **DA3.9 Le mastering global** — **✅ la moitié qui compte est faite le
   2026-08-26 ; l'autre moitié est ANNULÉE par décision d'Adrien.**
 
@@ -12538,6 +12709,50 @@ donc établi, c'est le **chemin d'affichage** — celui qui décide du cadrage. 
 qui ne l'est pas : rien, en réalité, puisque `die()` s'exécute localement des
 deux côtés (`rpc_update_hp` est `call_local`) et qu'aucun bandeau n'est
 répliqué. Le noter quand même plutôt que d'écrire « testé en ligne ».
+
+---
+
+## Chantier — Dynamisation visuelle des menus et artworks (inscrit le 2026-09-07)
+
+**Demande d'Adrien :** plonger le joueur dans l'ambiance dès les menus avec des
+illustrations sombres par défaut, des transitions d'embrasement issues des points
+d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artwork.
+
+### MV1 — Exposition sombre et révélation interactive
+- **Ambiance sombre par défaut** (`ambient_exposure = 0.28`) dans le shader
+  `menu_artwork.gdshader` : les illustrations restent ténébreuses et mystérieuses,
+  dans le ton du jeu, tout en restant lisibles.
+- **Suivi de torche interactive** : la position du curseur P1 est transmise
+  au shader (`set_torch_position_global`) pour projeter un halo de torche
+  révélateur (`torch_uv`, rayon doux) sur l'illustration de fond au survol.
+
+### MV2 — Fondu organique et suppression de l'embrasement agressif
+- **Fondu doux et progressif** (`reveal_progress`) : suppression des fronts d'onde
+  de flamme et des cercles de feu artificiels. Les changements d'écrans et d'artworks
+  s'effectuent par un fondu d'apparition doux et organique sur Tween `SORTIE`.
+
+### MV3 — Calage précis des écrans / diodes et lueurs diffuses
+- **Élimination des effets ponctuels factices** : suppression du pointeur laser
+  rouge, des étincelles brutales et des fausses grilles de diodes flottantes.
+- **Calage géométrique au pixel près** :
+  - *Terminaux CRT (`ill_amical_local`, `ill_creer_local`, `ill_rejoindre_local`)* :
+    phosphore vert feutré et scanlines douces confinés dans le verre des écrans
+    cathodiques (écrans gauche, fond et droite, kiosques).
+  - *Diodes et câbles (`ill_amical_ligne`, `ill_rejoindre_ligne`)* : lueurs vertes
+    et ambres douces pulsant sur les 4 boîtiers de brassage réels et le long des câbles.
+  - *Cadrans et voltmètres (`apercu_personnalisation`)* : rétro-éclairage ambre
+    doux des cadrans et voyant 440V.
+  - *Fusées de détresse (`ill_creer_*`, `ill_rejoindre_*`)* : halos carmin
+    vaporeux et fumées rouges lentes et diffuses.
+  - *Atmosphères & poussières (`ill_accueil`, `ill_competitif`, `ill_ecran_scinde`, `ill_entrainement`, `ill_mise_a_jour`, `ill_quitter`, `ill_retour`)* :
+    faisceaux volumétriques chauds ou glacés avec suspension de particules lentes.
+
+### MV4 — Validation par captures d'écran et couverture
+- Outil de capture dédié (`tools/capturer_artworks.gd`) générant les 15 rendus en jeu
+  pour contrôle visuel direct.
+- `tools/test_menu_artworks.gd` : validation systématique des coordonnées POI,
+  de l'affectation des 15 modes d'effets et de l'instanciation des shaders du hub.
+- Intégré dans `tools/run_suites.sh` (56 suites solo + 7 duo, 100 % succès).
 
 ---
 

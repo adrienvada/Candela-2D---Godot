@@ -53,6 +53,8 @@ func _run() -> void:
 	_test_armes()
 	_test_filet_de_sortie()
 	_test_aucun_fichier_muet()
+	_test_aucun_son_orphelin()
+	_test_banc_de_mixage()
 	_test_dosage()
 	_test_percuteur()
 	_test_annonceur()
@@ -427,6 +429,157 @@ func _test_filet_de_sortie() -> void:
 	# Un seul filet, et sur Master. Un limiteur sur SFX mordrait sur les tirs,
 	# donc baisserait les pas qui partagent ce bus : le défaut déplacé d'un cran.
 	_check("le filet vit sur Master", AM.BUS_MASTER == "Master")
+
+## AUCUN FICHIER DU DEPOT NE DOIT ETRE SANS DECLENCHEUR.
+##
+## **Le garde-fou qui manquait, et qui a coute deux mois.** Un `.wav` depose
+## dans `assets/audio/` sans cle ni famille ne produit aucune erreur, aucun
+## avertissement, aucune trace : il dort. C'est ainsi que huit sons de pas,
+## sept sons d'interface, huit ambiances et cinq autres familles ont attendu
+## dans le depot sans que rien ne le signale — et ainsi que le manifeste
+## lui-meme a ignore `music_match_heartbeat.ogg` assez longtemps pour qu'un
+## bouche-trou de 1,41 s passe pour la musique du jeu.
+##
+## Ce controle rend « tous les sons sont cables » VERIFIABLE au lieu
+## qu'affirme. Il rougira le jour ou Adrien deposera un fichier de plus, ce qui
+## est exactement le moment ou quelqu'un doit decider de ce qu'il raconte.
+## LE BANC DOSE SOUS LE MEME NOM QUE LE JEU RESOUT.
+##
+## **C'est l'invariant sans lequel le banc de mixage ment.** Il ecrit son
+## reglage sous un nom de famille ; le jeu, en jouant un son, demande a
+## `famille_de()` sous quel nom chercher. Si les deux different d'une lettre, la
+## molette ne fait rien — **et rien ne le dit** : pas d'erreur, pas de rouge,
+## juste un reglage sans effet qu'on finit par attribuer au fichier.
+##
+## Le defaut a existe : jusqu'au 2026-08-28, le dosage se cherchait sous le
+## CHEMIN du fichier. Un reglage pose sous `ricochet` n'etait jamais trouve par
+## `ricochet_02.wav`, et depuis V4.1 un reglage pose sous `shoot` ne touchait
+## deja plus aucune des seize prises d'armes.
+func _test_banc_de_mixage() -> void:
+	print("\n[Le banc dose sous le nom que le jeu resout]")
+	var banc := load("res://tools/banc_mixage.gd")
+	_check("le banc de mixage se charge", banc != null)
+	if banc == null:
+		return
+
+	var au_banc := {}
+	var mauvaise_famille: Array[String] = []
+	var introuvables: Array[String] = []
+	var muets: Array[String] = []
+	for entree in banc.FAMILLES:
+		var fam: String = entree["f"]
+		au_banc[fam] = true
+		var sons: Array = banc.sons_de(fam)
+		if sons.is_empty():
+			mauvaise_famille.append("%s : aucun son" % fam)
+			continue
+		for s in sons:
+			# L'invariant.
+			if AM.famille_de(s) != fam:
+				mauvaise_famille.append("%s -> %s" % [s, AM.famille_de(s)])
+			# ⚠️ **Ce controle exigeait que le FICHIER existe, et il avait tort.**
+			# Le depot cable volontairement des cles avant que leurs sons soient
+			# produits — « cabler, taire, diagnostiquer » — et le manifeste est
+			# deja l'inventaire qui suit les assets manquants. Exiger le fichier
+			# ici mettait la suite en contradiction avec la convention du projet :
+			# la fusee eclairante, cablee-muette selon les regles, rendait le lot
+			# rouge des deux cotes de sa fusion, et **chaque session attendait
+			# que l'autre bouge d'abord**.
+			#
+			# Ce qui reste un defaut, c'est une famille que rien ne DECLARE : elle
+			# ne pourra jamais rien jouer, c'est une faute de frappe. Un chemin
+			# declare dont le fichier manque est un son a produire, pas un defaut.
+			var chemin: String = s if String(s).begins_with("res://") \
+				else String(AM.SOUNDS.get(s, ""))
+			if chemin == "":
+				introuvables.append(String(s))
+			elif not ResourceLoader.exists(chemin):
+				muets.append(String(s))
+
+	_check("chaque son du banc se resout dans SA famille",
+		mauvaise_famille.is_empty(), ", ".join(mauvaise_famille))
+	_check("chaque famille du banc est DECLAREE quelque part",
+		introuvables.is_empty(), ", ".join(introuvables))
+	# Pas un controle : un compte rendu. Ces sons sont cables et attendent leur
+	# fichier ; le banc les presentera muets, ce qui est exact. Le manifeste dit
+	# lesquels manquent, c'est son role et pas celui-ci.
+	if not muets.is_empty():
+		print("  · cables, muets tant que le fichier manque : %s"
+			% ", ".join(muets))
+
+	# Le miroir : une famille dosee dans les tables mais absente du banc serait
+	# un reglage que personne ne peut plus juger a l'oreille.
+	var hors_banc: Array[String] = []
+	for cle in AM.NIVEAU_RELATIF:
+		if not au_banc.has(cle):
+			hors_banc.append(String(cle))
+	for cle in AM.PORTEE_RELATIVE:
+		if not au_banc.has(cle) and not hors_banc.has(String(cle)):
+			hors_banc.append(String(cle))
+	_check("aucune famille dosee n'echappe au banc", hors_banc.is_empty(),
+		", ".join(hors_banc))
+
+	# Les trois salles existent et aucune n'est vide : une salle vide serait une
+	# touche qui ne mene nulle part.
+	for salle in [1, 2, 3]:
+		var n := 0
+		for entree in banc.FAMILLES:
+			if int(entree["salle"]) == salle:
+				n += 1
+		_check("la salle %d porte des familles" % salle, n > 0, "%d" % n)
+
+func _test_aucun_son_orphelin() -> void:
+	print("\n[Aucun son du depot n'est sans declencheur]")
+
+	# Les couches du flux interactif ne passent pas par `SOUNDS` : elles sont
+	# referencees par `main_stream_interactive.tres`. On les reconnait a leur nom
+	# plutot que d'ouvrir la ressource — le `.tres` est deja teste plus haut.
+	var couches := ["music_intro.ogg", "music_menu.ogg", "music_match_base.ogg",
+		"music_match_drums.ogg", "music_match_arp.ogg",
+		"music_match_heartbeat.ogg", "music_victory.ogg"]
+
+	var declares := {}
+	for cle in AM.SOUNDS:
+		declares[String(AM.SOUNDS[cle]).get_file()] = true
+	for arme in ["pistolet", "fusil", "pompe", "arbalete"]:
+		declares[AM.chemin_percuteur(arme).get_file()] = true
+		for i in AM.VARIANTES_TIR:
+			declares[AM.chemin_tir(arme, i + 1).get_file()] = true
+	for famille in AM.VARIANTES_SFX:
+		for i in int(AM.VARIANTES_SFX[famille]):
+			declares[AM.chemin_variante(famille, i + 1).get_file()] = true
+	for c in couches:
+		declares[c] = true
+
+	var orphelins: Array[String] = []
+	for dossier in ["res://assets/audio/sfx/", "res://assets/audio/music/",
+			"res://assets/audio/voice/", "res://assets/audio/weapons/"]:
+		var d := DirAccess.open(dossier)
+		if d == null:
+			continue
+		for f in d.get_files():
+			# A l'export, la source est remplacee par son import : on juge sur le
+			# nom sans `.import`, jamais sur la presence du fichier source.
+			var nom := f.trim_suffix(".import")
+			if not (nom.ends_with(".wav") or nom.ends_with(".ogg")):
+				continue
+			if not declares.has(nom):
+				orphelins.append(nom)
+
+	_check("aucun fichier audio sans cle ni famille", orphelins.is_empty(),
+		"orphelins : %s" % ", ".join(orphelins))
+
+	# Le miroir : une famille declaree dont un fichier manque est aussi grave —
+	# `chemin_variante` tirerait un numero qui ne se charge pas, et un son absent
+	# ne leve aucune erreur.
+	var manquants: Array[String] = []
+	for famille in AM.VARIANTES_SFX:
+		for i in int(AM.VARIANTES_SFX[famille]):
+			var chemin := AM.chemin_variante(famille, i + 1)
+			if not ResourceLoader.exists(chemin):
+				manquants.append(chemin.get_file())
+	_check("chaque variante annoncee existe", manquants.is_empty(),
+		"manquants : %s" % ", ".join(manquants))
 
 func _test_aucun_fichier_muet() -> void:
 	print("\n[Aucun fichier du barème n'est muet]")

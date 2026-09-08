@@ -73,6 +73,12 @@ const EXPECTED: Array = [
 	{"f": "music_match_base.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_match_drums.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_match_arp.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
+	# ⚠️ **La quatrieme couche manquait a ce manifeste, et c'est pour ca que son
+	# bouche-trou a survecu deux mois.** Les trois autres y figuraient ; celle-ci
+	# etait la seule invisible, donc la seule dont personne ne pouvait constater
+	# qu'elle durait 1,41 s au lieu de 22,588. Un inventaire incomplet ne se
+	# trompe pas : il se TAIT, ce qui est pire.
+	{"f": "music_match_heartbeat.ogg", "d": DIR_MUSIC, "s": 22.588, "w": "V1.1", "p": false},
 	{"f": "music_victory.ogg", "d": DIR_MUSIC, "s": 5.647, "w": "V1.1", "p": false},
 	{"f": "music_intro.ogg", "d": DIR_MUSIC, "s": 5.647, "w": "V1.1", "p": false},
 

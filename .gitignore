@@ -27,3 +27,11 @@
 
 # Worktrees des sous-agents : arbres de travail temporaires, jamais versionnés.
 /.claude/worktrees/
+
+# Analyses d'Ableton Live, posées à côté de chaque .wav qu'Adrien ouvre dans son
+# DAW. Elles sont RECRÉÉES à l'ouverture et changent sans que le son change :
+# les versionner ferait apparaître une modification à chaque écoute, pour zéro
+# information. Repéré le 2026-09-03, quand un garde a compté 119 fichiers hors
+# du dépôt dont une bonne part n'étaient que ces analyses — le nombre alarmait,
+# la cause était bénigne.
+*.asd

@@ -170,9 +170,33 @@ func _physics_process(delta):
 			_hit_training_target(collider, hit_point)
 			return
 		else:
-			_spawn_wall_effects(hit_point)
+			# V4.3 — **le mur ne sonne pas quand la balle va REPARTIR.** Les
+			# etincelles et l'eclat restent : ce qui se voit est le meme choc,
+			# c'est ce qui s'ENTEND qui doit trancher. Le drapeau existait deja
+			# pour la cible d'echauffement, qui gardait les etincelles du mur
+			# sans en prendre le bruit — meme geste, meme raison.
+			_spawn_wall_effects(hit_point, bounces_left <= 0)
 			
 			if bounces_left > 0:
+				# V4.3 — **le rebond REMPLACE l'impact, il ne s'y ajoute pas.**
+				# Decision d'Adrien, 2026-08-28 : « on peut distinguer le rebond
+				# de l'impact au son ».
+				#
+				# ⚠️ **La superposition, essayee d'abord, mourait avec la
+				# distance.** Empiles, les deux evenements ne different que par
+				# la PRESENCE d'une couche de plus ; or cette couche s'attenue
+				# et s'occulte comme le reste, si bien qu'au loin — ou dans une
+				# autre piece — un rebond et une balle finie redeviennent
+				# identiques. C'est-a-dire que la distinction disparaissait
+				# exactement la ou elle sert : loin, dans le noir, quand on ne
+				# voit pas la balle. Remplaces, les deux sons ont chacun leur
+				# niveau et leur portee, et restent distincts jusqu'au bout.
+				#
+				# Ce que ca dit au joueur : le fusil est la seule arme qui
+				# rebondit, et **sa balle peut tuer son propre tireur**. « Elle
+				# vit encore » est donc une information sur laquelle on agit
+				# dans la seconde, parfois contre soi-meme.
+				AudioManager.play_ricochet(hit_point)
 				bounces_left -= 1
 				var normal = shape_cast.get_collision_normal(0)
 				direction = direction.bounce(normal)
@@ -192,6 +216,11 @@ func _physics_process(delta):
 				_fade_and_destroy(hit_point)
 				return
 		
+	# V4.10 — le frolement se guette APRES les tests d'impact : un carreau qui
+	# touche ne frole pas, et les branches ci-dessus rendent la main avant
+	# d'arriver ici.
+	_guetter_le_frolement(travel_step)
+
 	global_position += step
 
 	if is_replay:
@@ -260,7 +289,7 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 	if not is_replay:
 		target.take_damage(opp_hit_damage, source_player)
 
-	_spawn_hit_effects(hit_point)
+	_spawn_hit_effects(hit_point, normalized_dist)
 	if not is_replay:
 		_spawn_damage_number(hit_point, int(opp_hit_damage))
 	_fade_and_destroy(hit_point)
@@ -291,13 +320,71 @@ func _hit_training_target(target: TrainingTarget, hit_point: Vector2) -> void:
 	# ne saigne pas. C'est le SON qui change de camp, parce que c'est lui qui
 	# porte l'information dans un mode où l'on ne regarde pas le décor.
 	_spawn_wall_effects(hit_point, false)
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", hit_point, 0.92, 1.08)
+	# V4.2 — la cible entend le centre et le bord comme un corps. Elle calcule
+	# deja ses degats avec `damage_center`/`damage_edge` : le son suit le meme
+	# nombre. C'est le seul mode dont le sujet EST de viser, donc celui ou la
+	# difference compte le plus.
+	AudioManager.play_hit(hit_point, normalized_dist)
 	if not is_replay:
 		_spawn_damage_number(hit_point, dmg)
 	_fade_and_destroy(hit_point)
 
 ## Distance parcourue le long du pas avant d'entrer dans le cercle, -1 s'il
 ## n'est pas atteint pendant ce pas.
+## ============================================================================
+## V4.10 — LE FROLEMENT DU CARREAU
+## ============================================================================
+##
+## **« Une info de TIR, pas de position »** (Adrien, 2026-08-28). C'est la phrase
+## qui decide de tout ce qui suit, et elle merite d'etre relue avant d'y toucher.
+##
+## L'arbalete ne se trahit presque pas : pas de lueur de bouche, pas de lumiere
+## sur le projectile, et elle tue en un coup au centre comme au bord. Jusqu'ici,
+## se faire manquer de dix pixels par un carreau ne s'apprenait JAMAIS. Ce son le
+## dit — et il ajoute du suspens sans rien donner, parce que :
+##
+## ⚠️ **il sonne au point le plus proche de CELUI QUI EST FROLE, jamais au
+## canon.** Une source ponctuelle posee a cote de la victime ne dit rien de l'ou
+## vient le tir : elle dit qu'il y en a eu un. Le jouer au canon — ce qu'une
+## premiere version faisait — l'aurait rendu inutile (confondu avec le coup) ; le
+## jouer le long de la trajectoire en aurait fait une fleche vers le tireur.
+##
+## Le tireur l'entend aussi, de loin et faiblement : « j'ai failli toucher ».
+## C'est du retour, pas du renseignement.
+##
+## ⚠️ Reserve a l'arbalete. Les autres armes ont une lueur de bouche qui les
+## trahit deja ; leur ajouter un frolement doublerait une information qui existe.
+const FROLEMENT_RAYON := 90.0
+
+## Un seul frolement par carreau. Sans ce verrou, un carreau rasant emettrait a
+## chaque pas de simulation — un crepitement, la ou il faut un evenement.
+var _frolement_joue: bool = false
+
+func _guetter_le_frolement(longueur_pas: float) -> void:
+	if _frolement_joue or is_replay or weapon == null:
+		return
+	if weapon.slug() != "arbalete":
+		return
+	for n in get_tree().get_nodes_in_group("players"):
+		if n == source_player or not is_instance_valid(n):
+			continue
+		var cible := n as Node2D
+		if cible == null:
+			continue
+		var vers := cible.global_position - global_position
+		var proj := vers.dot(direction)
+		# Le point le plus proche doit tomber SUR ce pas : sinon le carreau
+		# n'est pas encore arrive a sa hauteur, ou l'a deja depassee lors d'un
+		# pas precedent — ou il aurait deja sonne.
+		if proj < 0.0 or proj > longueur_pas:
+			continue
+		var perp := sqrt(maxf(0.0, vers.length_squared() - proj * proj))
+		if perp > FROLEMENT_RAYON:
+			continue
+		_frolement_joue = true
+		AudioManager.play_bolt_flight(global_position + direction * proj)
+		return
+
 static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		center: Vector2, r: float) -> float:
 	var to_center := center - origin
@@ -391,8 +478,16 @@ func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: 
 	if pool == null: return
 	pool.emit(ParticlePool.Kind.SPARK, pos, color, amount, speed_min, speed_max, base_dir, spread_deg)
 
-func _spawn_hit_effects(pos: Vector2):
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
+## `proximite_bord` : 0 au centre du corps, 1 au bord — **le nombre meme qui
+## calcule les degats**, jamais une seconde mesure. V4.2 rend audible un modele
+## qui existait, muet, depuis toujours : le tireur entend s'il a bien centre son
+## coup, ce qui est la seule facon de progresser au tir dans le noir.
+##
+## ⚠️ Le derive du MEME `normalized_dist` que `opp_hit_damage`. Un second calcul
+## « equivalent » finirait par diverger — ce depot a paye trois fois cette
+## lecon le 2026-08-24 sur l'echelle de la torche.
+func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0):
+	AudioManager.play_hit(pos, proximite_bord)
 	# Pure blood red
 	var blood_color = Charte.CARMIN
 	# Exit wound: large splatter forward
