@@ -35,6 +35,12 @@ var shape_cast: ShapeCast2D
 var light: PointLight2D
 var spawn_pos: Vector2
 
+# FU3 — le tunnel que cette balle creuse dans une fumée de fusée, s'il y en a
+# une sur son chemin. Purement local et éphémère : jamais répliqué (dérivé
+# d'un tir déjà arbitré ailleurs), jamais en killcam (`is_replay` le tait).
+var _fumee_traversee: Fusee = null
+var _fumee_entree: Vector2 = Vector2.ZERO
+
 # Matériau additif non éclairé, identique pour toutes les balles.
 static var _shared_additive: CanvasItemMaterial
 
@@ -203,7 +209,13 @@ func _physics_process(delta):
 				rotation = direction.angle()
 				global_position = hit_point + normal * (radius + 2.0)
 				spawn_pos = global_position # Reset trail origin
-				
+
+				# FU3 — un rebond casse le tunnel en cours au point d'impact et en
+				# rouvre un neuf si l'angle rebondi reste dans la même fumée : sinon
+				# un tunnel kinké se dessinerait comme UN trait droit à travers le
+				# coin, au lieu de suivre le trajet réellement plié.
+				_rompre_tunnel(hit_point)
+
 				# Allow damaging the shooter after a bounce
 				if weapon.damages_shooter:
 					shape_cast.clear_exceptions()
@@ -216,12 +228,32 @@ func _physics_process(delta):
 				_fade_and_destroy(hit_point)
 				return
 		
+	# FU5 — une balle éteint une fusée POSÉE (pas en vol) qu'elle croise. Testé
+	# ICI, après tous les tests d'impact ci-dessus (mur, joueur direct, joueur
+	# compensé) : une fusée est un objet secondaire, jamais prioritaire sur le
+	# combat. Elle consomme la balle, comme un mur.
+	if not is_replay:
+		var f := _fusee_touchee_ce_pas(travel_step)
+		if f != null:
+			var point := global_position + direction * maxf(0.0, travel_step)
+			var gs := get_tree().get_first_node_in_group("game_state")
+			if gs and gs.has_method("demander_extinction_fusee"):
+				gs.demander_extinction_fusee(f.graine)
+			_maj_tunnel(point) # ferme le tunnel en cours, s'il y en avait un
+			_spawn_wall_effects(point, true)
+			_fade_and_destroy(point)
+			return
+
 	# V4.10 — le frolement se guette APRES les tests d'impact : un carreau qui
 	# touche ne frole pas, et les branches ci-dessus rendent la main avant
 	# d'arriver ici.
 	_guetter_le_frolement(travel_step)
 
 	global_position += step
+
+	# FU3 — appartenance à une fumée réévaluée APRÈS le mouvement : c'est la
+	# position d'arrivée du pas qui décide si un tunnel s'ouvre ou se referme.
+	_maj_tunnel(global_position)
 
 	if is_replay:
 		queue_redraw()
@@ -385,6 +417,72 @@ func _guetter_le_frolement(longueur_pas: float) -> void:
 		AudioManager.play_bolt_flight(global_position + direction * proj)
 		return
 
+## ============================================================================
+## FU3 — LES TUNNELS DE BALLE DANS LA FUMÉE
+## ============================================================================
+##
+## Une balle qui traverse le nuage d'une fusée y creuse une trace : incandes-
+## cente pour une arme qui émet de la lumière (elle accuse le tireur), SOMBRE
+## pour l'arbalète (la seule trace au monde de l'arme sans lumière). Purement
+## local à cette balle et à la fusée qu'elle traverse : aucun RPC, aucune
+## trace en killcam — un effet cosmétique dérivé d'un tir déjà arbitré ailleurs.
+
+## La fusée dont le nuage contient `pos`, ou `null`. Une seule à la fois compte
+## (les nuages de deux fusées ne se recouvrent presque jamais en pratique, et
+## rien dans le jeu n'interdit d'en ignorer une seconde superposée).
+func _fumee_sous(pos: Vector2) -> Fusee:
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if f is Fusee and f.occultation_pour(pos) > 0.0:
+			return f
+	return null
+
+## Compare l'appartenance à une fumée à `pos` contre celle du pas précédent :
+## sur un changement, ferme le tunnel en cours (s'il y en avait un) et en
+## ouvre un nouveau si `pos` entre dans une fumée.
+func _maj_tunnel(pos: Vector2) -> void:
+	var courante := _fumee_sous(pos)
+	if courante == _fumee_traversee:
+		return
+	if _fumee_traversee != null and is_instance_valid(_fumee_traversee):
+		_fumee_traversee.ajouter_tunnel(_fumee_entree, pos,
+			weapon != null and not weapon.emits_light)
+	_fumee_traversee = courante
+	if courante != null:
+		_fumee_entree = pos
+
+## Version « rebond » : ferme et rouvre INCONDITIONNELLEMENT à `pos`, même si
+## la fusée traversée est la même avant et après — un rebond plie la
+## trajectoire, et un tunnel droit d'un bout à l'autre mentirait sur sa forme.
+func _rompre_tunnel(pos: Vector2) -> void:
+	if _fumee_traversee != null and is_instance_valid(_fumee_traversee):
+		_fumee_traversee.ajouter_tunnel(_fumee_entree, pos,
+			weapon != null and not weapon.emits_light)
+	_fumee_traversee = _fumee_sous(pos)
+	if _fumee_traversee != null:
+		_fumee_entree = pos
+
+## ============================================================================
+## FU5 — LA BALLE QUI ÉTEINT UNE FUSÉE POSÉE
+## ============================================================================
+
+## La fusée POSÉE (pas en vol) la plus proche que ce pas croise, ou `null`.
+## Même patron que `_circle_entry_distance`, déjà utilisé pour la cible
+## compensée : ni collision physique (une fusée n'a pas de forme), ni
+## priorité sur un mur ou un joueur — appelé seulement quand ni l'un ni
+## l'autre n'a répondu ce pas (voir le site d'appel).
+func _fusee_touchee_ce_pas(travel_step: float) -> Fusee:
+	var meilleure: Fusee = null
+	var meilleure_dist := travel_step + 1.0
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if not (f is Fusee) or not f.est_allumee_au_sol():
+			continue
+		var d := _circle_entry_distance(global_position, direction, travel_step,
+			f.global_position, FuseeModele.EXTINCTION_RAYON_BALLE + radius)
+		if d >= 0.0 and d < meilleure_dist:
+			meilleure = f
+			meilleure_dist = d
+	return meilleure
+
 static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		center: Vector2, r: float) -> float:
 	var to_center := center - origin
@@ -422,6 +520,11 @@ func _flare_trail() -> void:
 		get_node("Aura").modulate.a = 1.0
 
 func _fade_and_destroy(hit_point: Vector2):
+	# FU3 — ferme tout tunnel en cours au point de mort EXACT, quelle que soit
+	# la cause (mur, joueur, cible, fusée, portée max) : les quatre sites
+	# d'appel de cette fonction couvrent toutes les morts d'une balle.
+	if not is_replay:
+		_maj_tunnel(hit_point)
 	set_physics_process(false)
 	var final_step = hit_point - global_position
 	var dist = final_step.length()

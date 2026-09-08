@@ -89,6 +89,24 @@ var _sillage_precedent: Dictionary = {}
 var _sillage_prochain: float = 0.0
 var _trous_pousses: bool = false
 
+# FU3 — diffusion du flash de tir dans la fumée : un pouls, jamais répliqué
+# (dérivé localement d'un tir déjà arbitré ailleurs). `_diffusion_debut` est
+# hors de portée (duree_combustion() + PANACHE_DUREE la dépasse toujours) tant
+# qu'aucun tir n'a eu lieu, pour que la fusée naisse sans pouls résiduel.
+var _diffusion_debut: float = -1000.0
+
+# FU3 — tunnels de balle : { entree: Vector2, sortie: Vector2, sombre: bool,
+# age_debut: float }, en âge de COMBUSTION. Purement local, jamais répliqué ni
+# rejoué en killcam — un effet cosmétique dérivé d'un tir déjà arbitré ailleurs.
+var _tunnels: Array = []
+const TUNNELS_MAX := 6 # une volée de pompe peut en ouvrir jusqu'à cinq
+var _tunnels_pousses: bool = false
+
+# FU5 — l'extinction. Une fois `_eteinte`, la fusée ne suit plus l'horloge de
+# combustion : elle suit celle, indépendante, de son propre panache.
+var _eteinte: bool = false
+var _age_extinction: float = 0.0
+
 static var _cache_textures: Dictionary = {}
 
 
@@ -301,6 +319,12 @@ static func prechauffer(parent: Node) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _eteinte:
+		_age_extinction += delta
+		_appliquer_extinction()
+		if _age_extinction >= FuseeModele.PANACHE_DUREE:
+			queue_free()
+		return
 	if not _atterrie:
 		_voler(delta)
 	else:
@@ -396,7 +420,106 @@ func occultation_pour(pos: Vector2) -> float:
 	return _alpha_fumee_courant * (1.0 - smoothstep(0.55, 1.0, d))
 
 
+## FU5 — cette fusée est-elle posée, allumée, et pas déjà en train de s'éteindre ?
+## C'est la condition d'existence des DEUX moyens de l'éteindre : le piétinement
+## (game_state.gd, host-only) et la balle (bullet.gd, tous pairs).
+func est_allumee_au_sol() -> bool:
+	return _atterrie and not _eteinte
+
+
+## FU3 — un tir est parti DE L'INTÉRIEUR du nuage : toute la fumée pulse au
+## lieu du seul canon, pour diluer la position du tireur. Appelé depuis
+## `game_state._do_spawn_bullet`, une fois par volée, sur toute fusée dont
+## `occultation_pour(muzzle_pos)` est positive — jamais en killcam (le site
+## d'appel n'existe pas sur le chemin de rejeu).
+func diffuser_flash() -> void:
+	if not _atterrie or _eteinte:
+		return
+	_diffusion_debut = _age_combustion
+
+
+## FU3 — une balle a creusé ce segment dans la fumée. `sombre` = l'arme
+## n'émettait pas de lumière (l'arbalète) : la seule trace au monde qu'elle
+## laisse. Appelé depuis `bullet.gd`, sur SON propre nœud de fusée local —
+## jamais répliqué, jamais rejoué en killcam.
+func ajouter_tunnel(entree: Vector2, sortie: Vector2, sombre: bool) -> void:
+	if not _atterrie or _eteinte:
+		return
+	if entree.distance_to(sortie) < FuseeModele.TUNNEL_ENTREE_MIN:
+		return # un tunnel trop court ne se lit pas, et un segment nul ferait planter distance_segment
+	_tunnels.append({
+		"entree": entree, "sortie": sortie, "sombre": sombre,
+		"age_debut": _age_combustion,
+	})
+	if _tunnels.size() > TUNNELS_MAX:
+		_tunnels.pop_front()
+
+
+## FU5 — éteint la fusée : c'est un geste, pas une manche d'existence.
+## Idempotent : appelé indépendamment par chaque machine sur son propre nœud
+## local (piétinement via game_state, hôte seul ; balle via bullet.gd, tous
+## pairs) — un second appel ne fait rien.
+func eteindre() -> void:
+	if _eteinte or not _atterrie:
+		return
+	_eteinte = true
+	_age_extinction = 0.0
+	_tunnels.clear()
+	_sillage_points.clear()
+	if not is_replay:
+		AudioManager.play_sfx_2d_random_pitch("fusee_eteinte", global_position)
+
+
+## FU5 — une fois éteinte, la fusée suit l'horloge de son propre panache, plus
+## celle de la combustion : la lumière coupe net, seule reste une fumée NOIRE
+## qui couvre la fuite de l'éteigneur puis se dissipe.
+func _appliquer_extinction() -> void:
+	_lumiere.enabled = false
+	_coeur.modulate.a = 0.0
+	if _corps:
+		_corps.visible = false
+
+	var alpha_panache := FuseeModele.alpha_panache_a(_age_extinction)
+	var diametre := FuseeModele.RAYON_FUMEE * 2.0 \
+		* FuseeModele.echelle_fumee_a(FuseeModele.duree_combustion())
+	_alpha_fumee_courant = alpha_panache
+	_rayon_courant = diametre * 0.5
+
+	var actif := alpha_panache > 0.0
+	_voile.visible = actif
+	for i in _nappes.size():
+		var nappe: Sprite2D = _nappes[i]
+		nappe.visible = actif
+	if not actif:
+		return
+	# Les nappes tournent encore — elles donnent sa forme au panache — mais
+	# leur teinte plonge au noir : même mécanique que la fumée normale, une
+	# seule variable change. L'âge continue de dériver depuis où il s'est
+	# arrêté, pour que la rotation ne saute pas au moment de l'extinction.
+	for i in _nappes.size():
+		var nappe: Sprite2D = _nappes[i]
+		var age_visuel := FuseeModele.duree_combustion() + _age_extinction
+		nappe.rotation = float(FuseeModele.NAPPE_VITESSES[i]) * age_visuel * TAU
+		nappe.scale = Vector2.ONE * _echelle_pour(nappe.texture, diametre) * (1.0 - 0.12 * i)
+		nappe.modulate = Color(0.02, 0.02, 0.02,
+			clampf(FuseeModele.NAPPE_ALPHA * alpha_panache * 1.3, 0.0, 1.0))
+	_voile.scale = Vector2.ONE * _echelle_pour(_voile.texture, diametre)
+	_voile_mat.set_shader_parameter("teinte", Color(0.02, 0.02, 0.02, 1.0))
+	_voile_mat.set_shader_parameter("alpha_globale", alpha_panache)
+	_voile_mat.set_shader_parameter("age", FuseeModele.duree_combustion() + _age_extinction)
+	# Pas de sillage ni de tunnels dans le panache : il ne dure que quelques
+	# secondes, et sa seule fonction est de couvrir — pas d'y lire un passage.
+	if _tunnels_pousses:
+		_voile_mat.set_shader_parameter("nb_tunnels", 0)
+		_tunnels_pousses = false
+
+
 func _appliquer_age(age_combustion: float) -> void:
+	if _eteinte:
+		# Défensif : `appliquer_age()`/`forcer_age()` sont publiques (killcam,
+		# banc). Une fusée éteinte suit sa propre horloge, jamais celle-ci.
+		_appliquer_extinction()
+		return
 	# --- La lumière : énergie et température dérivées de l'âge. ---
 	var intensite: float = GameSettings.current_effect("fusee_agonie")
 	var energie := FuseeModele.energie_a(age_combustion, _fenetres, intensite)
@@ -423,6 +546,16 @@ func _appliquer_age(age_combustion: float) -> void:
 	_rayon_courant = diametre * 0.5
 	# Sans fumée (fusée éteinte), rien à peindre ni à pousser au shader.
 	var fumee_active := alpha_fumee > 0.0
+
+	# FU3 — le pouls de diffusion : un tir depuis l'intérieur du nuage fait
+	# pulser TOUTE la fumée au lieu du seul canon, pour diluer la position du
+	# tireur. `diffuser_flash()` pose `_diffusion_debut` ; ce n'est qu'un
+	# BOOST d'opacité — jamais une teinte, la couleur reste celle des lumières.
+	var intensite_diffusion: float = GameSettings.current_effect("fusee_diffusion")
+	var diffusion := FuseeModele.diffusion_a(age_combustion - _diffusion_debut) \
+		* intensite_diffusion
+	var boost := 1.0 + diffusion * 1.6
+
 	_voile.visible = fumee_active
 	for i in _nappes.size():
 		var nappe: Sprite2D = _nappes[i]
@@ -433,10 +566,10 @@ func _appliquer_age(age_combustion: float) -> void:
 		# deux pairs et dans la killcam, avance rapide comprise.
 		nappe.rotation = float(FuseeModele.NAPPE_VITESSES[i]) * maxf(age_combustion, 0.0) * TAU
 		nappe.scale = Vector2.ONE * _echelle_pour(nappe.texture, diametre) * (1.0 - 0.12 * i)
-		nappe.modulate.a = FuseeModele.NAPPE_ALPHA * alpha_fumee
+		nappe.modulate.a = clampf(FuseeModele.NAPPE_ALPHA * alpha_fumee * boost, 0.0, 1.0)
 	if fumee_active:
 		_voile.scale = Vector2.ONE * _echelle_pour(_voile.texture, diametre)
-		_voile_mat.set_shader_parameter("alpha_globale", alpha_fumee * 0.8)
+		_voile_mat.set_shader_parameter("alpha_globale", clampf(alpha_fumee * 0.8 * boost, 0.0, 1.0))
 		# L'âge nourrit la dérive des volutes DANS le shader — jamais TIME, que
 		# la killcam ne saurait pas rembobiner.
 		_voile_mat.set_shader_parameter("age", maxf(age_combustion, 0.0))
@@ -449,6 +582,7 @@ func _appliquer_age(age_combustion: float) -> void:
 
 	if fumee_active:
 		_maj_sillage_et_masses(age_combustion, diametre)
+		_maj_tunnels(age_combustion, diametre)
 
 
 ## Échantillonne le sillage et pousse masses + trous au shader. Tout se calcule
@@ -513,6 +647,46 @@ func _maj_sillage_et_masses(age_combustion: float, diametre: float) -> void:
 	_voile_mat.set_shader_parameter("nb_masses", nb_masses)
 	_voile_mat.set_shader_parameter("masses", masses)
 	_voile_mat.set_shader_parameter("masse_rayon_uv", FuseeModele.MASSE_RAYON * 2.0 / diametre)
+
+
+## FU3 — purge les tunnels expirés (leur enveloppe est retombée à zéro) et
+## pousse les survivants au shader. Séparé de `_maj_sillage_et_masses` : ce
+## sont deux familles différentes — le sillage EFFACE tant qu'un corps y est,
+## un tunnel s'ÉTEINT tout seul en 0,4 s quoi qu'il arrive ; les mêler dans le
+## même tampon aurait fait d'un tunnel un trou permanent.
+func _maj_tunnels(age_combustion: float, diametre: float) -> void:
+	var vivants: Array = []
+	for tun in _tunnels:
+		if FuseeModele.tunnel_force_a(age_combustion - float(tun["age_debut"])) > 0.0:
+			vivants.append(tun)
+	_tunnels = vivants
+
+	if _tunnels.is_empty() and not _tunnels_pousses:
+		return # cas courant : rien à pousser, et rien n'a jamais été poussé
+	var entrees := PackedVector2Array()
+	var sorties := PackedVector2Array()
+	var forces := PackedFloat32Array()
+	var sombres := PackedFloat32Array()
+	for tun in _tunnels:
+		var e: Vector2 = (tun["entree"] - global_position) / diametre + Vector2(0.5, 0.5)
+		var s: Vector2 = (tun["sortie"] - global_position) / diametre + Vector2(0.5, 0.5)
+		entrees.append(e)
+		sorties.append(s)
+		forces.append(FuseeModele.tunnel_force_a(age_combustion - float(tun["age_debut"])))
+		sombres.append(1.0 if tun["sombre"] else 0.0)
+	var nb := mini(entrees.size(), 6)
+	while entrees.size() < 6:
+		entrees.append(Vector2.ZERO)
+		sorties.append(Vector2.ZERO)
+		forces.append(0.0)
+		sombres.append(0.0)
+	_voile_mat.set_shader_parameter("nb_tunnels", nb)
+	_voile_mat.set_shader_parameter("tunnels_entree", entrees)
+	_voile_mat.set_shader_parameter("tunnels_sortie", sorties)
+	_voile_mat.set_shader_parameter("tunnel_force", forces)
+	_voile_mat.set_shader_parameter("tunnel_sombre", sombres)
+	_voile_mat.set_shader_parameter("tunnel_largeur_uv", FuseeModele.TUNNEL_LARGEUR / diametre)
+	_tunnels_pousses = nb > 0
 
 
 func _atterrir() -> void:

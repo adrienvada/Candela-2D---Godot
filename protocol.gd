@@ -55,7 +55,10 @@ class_name Protocol
 ##     Un hôte v6 enverrait une cible qu'un client v7 lirait comme un angle.
 ## 8 — `rpc_send_inputs` gagne un septième argument, le bit de rechargement
 ##     (chantier MUNITIONS & RECHARGE, 2026-09-07).
-const VERSION := 8
+## 9 — `rpc_eteindre_fusee` apparaît (chantier FUSÉE, étape FU5, 2026-09-08) :
+##     un hôte qui l'appelle parle à un client v8 qui n'a jamais entendu ce nom
+##     et ne répond donc jamais — le silence est un refus, comme pour `rpc_hello`.
+const VERSION := 9
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -63,7 +66,7 @@ const VERSION := 8
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "83a9cb89a060aa31"
+const WIRE_WITNESS := "0425314ac249f8a0"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

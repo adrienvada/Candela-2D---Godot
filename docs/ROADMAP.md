@@ -12455,24 +12455,35 @@ refermeture du sillage (2 s), portée du lancer (450 px), portées/niveaux audio
 tout est constantes de `fusee_modele.gd` et propositions dans les tables —
 **rien n'est passé au banc devant Adrien.** Le dosage est l'étape FU6.
 
+### Le témoin du fil, encore : `rpc_eteindre_fusee` fait monter VERSION à 9
+
+Confirmé le motif : ajouter un RPC — pas seulement en modifier un existant —
+bouge le fil. `Protocol.VERSION` était déjà à 8 en arrivant sur `main`
+(chantier MUNITIONS & RECHARGE, sans rapport), monté à **9** pour ce nouveau
+RPC de FU5. Le carnet documente pourquoi : un hôte v9 qui appelle
+`rpc_eteindre_fusee` sur un client v8 ne serait jamais entendu, et le silence
+serait pris pour un bug plutôt que pour une incompatibilité.
+
 ### Ce qui reste — étapes numérotées, à ne pas anticiper
 
-- **FU3 — le tir et la fumée** : flash de bouche diffusé dans tout le nuage
-  (la fumée pardonne UN tir), tunnel incandescent de la balle qui accuse le
-  tireur, tunnel SOMBRE du carreau d'arbalète (l'arme sans lumière obtient sa
-  niche et son premier contre).
-- **FU4 — l'audio complet** : sifflement de vol suivi (voix positionnelle qui
-  suit le projectile — extension du pool identifiée), et UN SEUL des deux
-  modèles sonores (grésillement qui masque les pas + silence-couperet, OU
-  étouffement par la fumée) — les deux cumulés seraient illisibles, à trancher
-  par Adrien.
-- **FU5 — l'extinction** : piétiner la fusée (0,7 s immobile À CONTRE-JOUR)
-  ou l'éteindre d'une balle. Le hitcheck de piétinement DOIT passer par la
-  compensation de latence hôte, sinon injuste à 100 ms.
+- ~~**FU3 — le tir et la fumée**~~ — **écrite le 2026-09-08**, voir sous-section
+  dédiée : flash de bouche diffusé, tunnels clairs et sombres.
+- **FU4 — l'audio complet** : **tranchée par Adrien le 2026-09-08 — étouffement
+  PAR LA FUMÉE** (pas de grésillement masquant les pas ; « la fumée étouffe
+  juste un peu les sons »). Reste à câbler : sifflement de vol suivi (voix
+  positionnelle qui suit le projectile — extension du pool identifiée), et
+  l'étouffement lui-même — `Fusee.occultation_pour(pos)` rend déjà, sans rien
+  savoir de l'audio, exactement la quantité qu'il lui faut (dense au cœur, nul
+  au bord, pondérée par la densité du moment). Domaine DA3.
+- ~~**FU5 — l'extinction**~~ — **écrite le 2026-09-08**, voir sous-section dédiée :
+  piétinement (hôte seul) et balle, panache noir commun aux deux.
 - **FU6 — le dosage** : paramétrer le modèle pour donner des molettes au banc,
   puis séance avec Adrien (visuel + audio), et seulement alors les nombres
   deviennent des décisions. Relevé `bench_framerate --fusee` au calme, vue
-  unique ET écran scindé, avant de considérer FU2 close côté perf.
+  unique ET écran scindé, avant de considérer FU2 close côté perf. **FU3/FU5
+  ajoutent leurs propres nombres à doser** : durée et largeur du tunnel, force
+  du pouls de diffusion, rayon et tolérance de vitesse du piétinement, durée du
+  panache — tous des valeurs de départ, aucun jugé.
 - **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
   de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
   de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
@@ -12481,9 +12492,76 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   exigé** : toute commande clavier doit avoir sa ligne dans CONTRÔLES, la
   rubrique suit l'InputMap. Deux entrées (`ORDRE` + `LIBELLES`), la machinerie
   de réassignation fait le reste ; pas
-  de son dans la killcam pour la fusée ; le sillage de killcam repart vide si
-  la fenêtre commence après des traversées ; `asset_manifest.gd` n'attend pas
-  encore les trois fichiers audio (ils n'ont pas de durée cible arrêtée).
+  de son dans la killcam pour la fusée (FU3 non plus : ni pouls de diffusion ni
+  tunnel n'y sont rejoués) ; le sillage de killcam repart vide si la fenêtre
+  commence après des traversées ; `asset_manifest.gd` n'attend pas encore les
+  quatre fichiers audio (`fusee_lancer`/`atterrit`/`rebond`/`eteinte` — pas de
+  durée cible arrêtée) ; l'extinction par balle est TOUJOURS la priorité la
+  plus basse d'une balle sur un pas donné (un mur ou un joueur, compensé ou
+  non, l'emportent) — décision par défaut, pas mesurée sous charge.
+
+### FU3 — le tir dans la fumée (écrite le 2026-09-08)
+
+**La diffusion du flash.** Un tir parti DE L'INTÉRIEUR d'un nuage fait pulser
+TOUTE la fumée au lieu du seul canon (`Fusee.diffuser_flash()`, un simple
+boost d'opacité qui décroît sur `DIFFUSION_DUREE` — jamais une teinte, la
+couleur reste celle des lumières). Appelé depuis `game_state._do_spawn_bullet`,
+au même site que `_flash_de_tir` : une fois par volée, jamais pour un tir déjà
+rendu, jamais en killcam. **Purement local, aucun RPC** — chaque machine décide
+depuis sa propre simulation de la fusée, la même confiance que FU1-FU2
+accordent déjà à tout le reste de son état. Effet déclaré dans `effect_policy`
+(`fusee_diffusion`, famille MONDE, plancher 0,5) : un joueur photosensible
+l'aplatit, jamais à zéro en classé — même garde-fou que `fusee_agonie`.
+
+**Les tunnels.** Une balle qui traverse le nuage y creuse un trait — incandes-
+cent pour une arme qui émet de la lumière, SOMBRE pour l'arbalète (la seule
+trace au monde de l'arme sans lumière). Suivi par `bullet.gd`
+(`_fumee_traversee`/`_fumee_entree`, comparaison d'appartenance à chaque pas,
+rupture forcée à chaque rebond pour qu'un tir plié ne se dessine pas comme un
+trait droit à travers le coin), rendu par `Fusee.ajouter_tunnel()` +
+`fumee_fusee.gdshader` (deux tableaux `PackedVector2Array`/`PackedFloat32Array`
+— **jamais de `vec4[]`**, non vérifiable par des suites headless qui ne
+rendent rien). Visible ~0,4 s puis s'efface tout seul, quoi qu'il arrive.
+
+⚠️ **Point non vérifié par construction : le rendu GPU du shader.**
+`run_suites.sh` ne compile aucun shader (aucune suite headless ne rend d'image)
+— seul un vrai lancement (`banc_fusee.tscn`, touches 7/8, ou un vrai tir dans
+la fumée) prouve que les tunnels s'affichent. Le modèle pur (`tunnel_force_a`)
+et le suivi d'appartenance (`bullet.gd`) sont, eux, testés.
+
+### FU5 — éteindre la fusée (écrite le 2026-09-08)
+
+**Deux façons, un seul geste côté état :** piétiner 0,7 s immobile SUR une
+fusée posée (`EXTINCTION_RAYON` 24 px, pas tout son nuage), ou la toucher d'une
+balle. Les deux appellent `GameState.demander_extinction_fusee(graine)`, qui
+route vers `rpc_eteindre_fusee` — **même arbitrage que le lancer : l'hôte
+tranche, le client demande.**
+
+**Pourquoi le piétinement l'exige, contrairement aux dégâts d'une balle.** Ce
+n'est PAS une histoire de perspective du tireur à compenser (l'hôte simule déjà
+les deux joueurs en direct, sans délai à rattraper pour lui-même) — c'est
+l'inverse : SANS arbitrage unique, chaque machine jugerait son propre
+piétinement à travers le délai d'interpolation de l'AUTRE joueur (100 ms), et
+les deux écrans pourraient éteindre la fusée à des instants différents. D'où
+la note de FU5 dans ce document, à l'origine formulée de façon ambiguë
+(« compensation de latence hôte ») — la clarification tient en une phrase :
+**un seul juge, comme partout ailleurs dans `game_state.gd`.**
+
+**L'extinction par balle**, elle, ne DEMANDE pas techniquement cet arbitrage
+(chaque machine simule sa propre balle déterministiquement, comme tout le
+reste de FU1-FU2) mais l'emprunte quand même, par le MÊME chemin — un seul
+état répliqué, un seul arbitre, pas deux logiques à maintenir en accord.
+
+**Le panache.** Une fois éteinte, la fusée quitte l'horloge de combustion pour
+celle, indépendante, de son extinction (`_appliquer_extinction`) : lumière
+coupée net, fumée NOIRE (`alpha_panache_a`, montée quasi instantanée puis
+dissipation sur `PANACHE_DUREE` = 3 s) qui continue d'occulter — elle couvre la
+fuite de l'éteigneur — puis le nœud se libère.
+
+**Non vérifié :** aucun signal visuel supplémentaire pour « à contre-jour » —
+c'est une propriété ÉMERGENTE (rester dans la lumière d'une fusée allumée
+expose déjà, comme n'importe quelle lumière du jeu), pas un effet ajouté ; à
+confirmer au banc que ça se LIT vraiment comme tel.
 
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
