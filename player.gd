@@ -1601,8 +1601,14 @@ func _physics_process(delta):
 				var demi_angle: float = current_weapon.demi_angle_torche() if current_weapon \
 					else deg_to_rad(30.0)
 				var ecart := faisceau.orthogonal() * portee * tan(demi_angle) * randf_range(-0.6, 0.6)
+				var poussiere_mod := 1.0
+				var gs := get_node_or_null(^"/root/GameSettings")
+				if gs and gs.has_method("current_effect"):
+					poussiere_mod = gs.current_effect("poussiere_faisceau")
+				# Grain contrasté style roman graphique : vivement révélé sous le faisceau
+				var alpha_grain := randf_range(0.60, 0.85) * poussiere_mod
 				pool.emit(ParticlePool.Kind.DUST, muzzle.global_position + faisceau * portee + ecart,
-					Color(Charte.HALOGENE, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
+					Color(Charte.HALOGENE, alpha_grain), 1, 4.0, 14.0, faisceau, 160.0)
 	elif flashlight.enabled:
 		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
 		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))

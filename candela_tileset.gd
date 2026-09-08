@@ -145,3 +145,20 @@ static func orientation(cell: Vector2i) -> int:
 ## Retourne la coordonnée atlas du sol selon la position (damier).
 static func get_floor_atlas(pos: Vector2i) -> Vector2i:
 	return FLOOR_ATLAS_A if (pos.x + pos.y) % 2 == 0 else FLOOR_ATLAS_B
+
+
+const SHADER_SHIMMER_MURS := preload("res://shimmer_murs.gdshader")
+
+## Crée le matériau Shader pour les murs (V5.8 — Chantier 2).
+## Anime les arêtes halogènes sous le balayage de la torche avec micro-aspérités
+## et spécularité en lumière rasante, tout en garantissant un noir pur absolu (Charte.NOIR)
+## pour le corps du mur.
+static func creer_materiau_mur() -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = SHADER_SHIMMER_MURS
+	mat.set_shader_parameter("intensite_shimmer", 0.85)
+	mat.set_shader_parameter("frequence_scintillement", 4.5)
+	mat.set_shader_parameter("rugosite_arete", 8.0)
+	mat.set_shader_parameter("couleur_lisere", Charte.HALOGENE)
+	mat.set_shader_parameter("couleur_reflet", Charte.AMBRE)
+	return mat
