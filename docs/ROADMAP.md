@@ -13244,28 +13244,37 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
   de flamme et des cercles de feu artificiels. Les changements d'écrans et d'artworks
   s'effectuent par un fondu d'apparition doux et organique sur Tween `SORTIE`.
 
-### MV3 — Calage précis des écrans / diodes et lueurs diffuses
-- **Élimination des effets ponctuels factices** : suppression du pointeur laser
-  rouge, des étincelles brutales et des fausses grilles de diodes flottantes.
-- **Calage géométrique au pixel près** :
-  - *Terminaux CRT (`ill_amical_local`, `ill_creer_local`, `ill_rejoindre_local`)* :
-    phosphore vert feutré et scanlines douces confinés dans le verre des écrans
-    cathodiques (écrans gauche, fond et droite, kiosques).
-  - *Diodes et câbles (`ill_amical_ligne`, `ill_rejoindre_ligne`)* : lueurs vertes
-    et ambres douces pulsant sur les 4 boîtiers de brassage réels et le long des câbles.
-  - *Cadrans et voltmètres (`apercu_personnalisation`)* : rétro-éclairage ambre
-    doux des cadrans et voyant 440V.
-  - *Fusées de détresse (`ill_creer_*`, `ill_rejoindre_*`)* : halos carmin
-    vaporeux et fumées rouges lentes et diffuses.
-  - *Atmosphères & poussières (`ill_accueil`, `ill_competitif`, `ill_ecran_scinde`, `ill_entrainement`, `ill_mise_a_jour`, `ill_quitter`, `ill_retour`)* :
-    faisceaux volumétriques chauds ou glacés avec suspension de particules lentes.
+### MV3 — Refonte Roman Graphique Brutaliste & Pleine Luminosité (Adrien, 2026-09-08)
+- **Esthétique :** Roman graphique sombre, encrage noir franc, arêtes géométriques vives du béton brut, sans cadre blanc (pleine page).
+- **Pleine luminosité des zones claires :** Remplacement de l'assombrissement plat par une courbe de percée des hautes lumières (`highlight_breakthrough` via `smoothstep(0.35, 0.78, luma)`) dans `menu_artwork.gdshader` : les faisceaux, étincelles, néons et écrans percent à 100 % de luminosité réelle tandis que les ombres restent dans un noir d'encre pur.
+- **Lore et simplicité des combattants :**
+  - Pas de camp, pas de zombies ni de créatures.
+  - Combattants contraints dans un match à mort clandestin, vêtus de tenues noires sobres et simples (sweats/pantalons sombres sans sophistications, pas de casques ni d'armures intégrales high-tech).
+  - Équipement minimaliste : uniquement un pistolet standard et une lampe torche.
+  - Traces d'arène mortelle : béton ébréché, douilles au sol, sang séché des précédents affrontements.
+- **Fidélité stricte aux 15 thèmes et codes couleurs originaux :**
+  1. `ill_accueil` (Ambre) : Hall de l'arène, poteau indicateur *ARENA / SECTORS*, douilles et sang, faisceau rasant.
+  2. `ill_competitif` (Rouge carmin) : Armoire électrique/disjoncteurs sur le mur gauche, tension d'un duel au pistolet-torche dans le couloir.
+  3. `ill_amical` (Ambre) : Deux silhouettes en tenue noire autour du pilier central de l'arène.
+  4. `ill_amical_ligne` (Bleu cyan) : Salle des serveurs et câbles réseau tressés, boîtiers aux diodes scintillantes.
+  5. `ill_amical_local` (Vert phosphore) : Terminaux de surveillance CRT vert et pistolets dans une pièce fermée.
+  6. `ill_ecran_scinde` (Bi-ton Ambre/Bleu) : Arène divisée par une cloison centrale, deux tireurs dos à dos avec faisceaux opposés.
+  7. `ill_entrainement` (Orange industriel) : Stand de tir souterrain, cible d'entraînement criblée d'impacts de balles.
+  8. `ill_personnalisation` (Ambre / Or) : Établi d'armurier et panneau de cadrans voltmètre/ampèremètre 440V.
+  9. `ill_mise_a_jour` (Or éclatant) : Porte monumentale de chambre forte entrouverte, rayon d'or pur tranchant les ténèbres.
+  10. `ill_quitter` (Bleu nuit / Braise) : Couloir plongeant dans l'obscurité avec torche au sol à la lumière mourante.
+  11. `ill_creer_ligne` (Rouge magenta) : Combattant au sol craquant une fusée éclairante qui projette une vive lumière rouge.
+  12. `ill_rejoindre_ligne` (Bleu balise) : Balise de transmission pulsante et câbles réseau au fond d'un couloir obscur.
+  13. `ill_creer_local` (Ambre & Vert) : Borne d'arène locale avec écran CRT et voyants sous une table de commande.
+  14. `ill_rejoindre_local` (Vert émeraude) : Sas d'accès fermé avec voyant vert d'autorisation éclatant.
+  15. `ill_retour` (Bleu pétrole) : Escalier en colimaçon descendant dans le noir absolu de l'arène.
 
 ### MV4 — Validation par captures d'écran et couverture
 - Outil de capture dédié (`tools/capturer_artworks.gd`) générant les 15 rendus en jeu
   pour contrôle visuel direct.
 - `tools/test_menu_artworks.gd` : validation systématique des coordonnées POI,
   de l'affectation des 15 modes d'effets et de l'instanciation des shaders du hub.
-- Intégré dans `tools/run_suites.sh` (56 suites solo + 7 duo, 100 % succès).
+- Intégré dans `tools/run_suites.sh` (57 suites solo au vert, 0 échec).
 
 ---
 
