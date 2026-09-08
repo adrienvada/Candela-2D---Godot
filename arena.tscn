@@ -1,5 +1,7 @@
 [gd_scene format=3 uid="uid://dw2n6wu737u1l"]
 
+[ext_resource type="Script" path="res://colonne_atelier.gd" id="2_colonne"]
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_WallH"]
 size = Vector2(700, 40)
 
@@ -76,7 +78,10 @@ occluder = SubResource("OccluderPolygon2D_Right")
 position = Vector2(350, 350)
 
 [node name="Polygon2D" type="Polygon2D" parent="StaticGeometry/Obstacle1" unique_id=209272148]
-color = Color(0.1, 0.1, 0.1, 1)
+color = Color(0, 0, 0, 1)
+
+[node name="Habillage" type="Node2D" parent="StaticGeometry/Obstacle1"]
+script = ExtResource("2_colonne")
 polygon = PackedVector2Array(85, 0, 83.4, 16.6, 78.5, 32.5, 70.7, 47.2, 60.1, 60.1, 47.2, 70.7, 32.5, 78.5, 16.6, 83.4, 0, 85, -16.6, 83.4, -32.5, 78.5, -47.2, 70.7, -60.1, 60.1, -70.7, 47.2, -78.5, 32.5, -83.4, 16.6, -85, 0, -83.4, -16.6, -78.5, -32.5, -70.7, -47.2, -60.1, -60.1, -47.2, -70.7, -32.5, -78.5, -16.6, -83.4, 0, -85, 16.6, -83.4, 32.5, -78.5, 47.2, -70.7, 60.1, -60.1, 70.7, -47.2, 78.5, -32.5, 83.4, -16.6)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticGeometry/Obstacle1" unique_id=456010153]

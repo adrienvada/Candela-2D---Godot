@@ -19,6 +19,7 @@ const Eblouissement := preload("res://eblouissement.gd")
 ## **quatre suites de menus échouent** en désignant des écrans qui n'ont rien
 ## fait. Payé le 2026-08-25.
 const Brouillage := preload("res://brouillage.gd")
+const BulletCasingScript := preload("res://bullet_casing.gd")
 
 @export var player_id: int = 0
 
@@ -1082,6 +1083,12 @@ func start_reload() -> void:
 	if current_ammo >= current_weapon.max_ammo: return
 	is_reloading = true
 	reload_time_left = current_weapon.reload_time
+	# Éjection de douille d'atelier au sol lors du rechargement
+	if current_weapon.slug() != "arbalete":
+		var gs = get_tree().get_first_node_in_group("game_state")
+		if gs and gs.arena:
+			var shoot_dir := Vector2.from_angle(rotation)
+			BulletCasingScript.eject(gs.arena, global_position, shoot_dir, current_weapon.slug())
 
 
 func _process(delta):

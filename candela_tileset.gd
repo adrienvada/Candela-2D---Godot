@@ -48,41 +48,17 @@ static func create_tileset() -> TileSet:
 	# Atlas : 2 tiles large × 2 tiles haut = 70×70 px
 	var img := Image.create_empty(TILE_SIZE.x * 2, TILE_SIZE.y * 2, false, Image.FORMAT_RGBA8)
 
-	# --- Tiles (0,0) et (0,1) : les deux cases du damier ---
+	# --- Tiles (0,0) et (0,1) : les deux cases du damier béton brut ---
 	var peint_a := _tuile_peinte(SOL_A_PEINT)
 	var peint_b := _tuile_peinte(SOL_B_PEINT)
-	if peint_a != null and peint_b != null:
-		img.blit_rect(peint_a, Rect2i(Vector2i.ZERO, TILE_SIZE), Vector2i(0, 0))
-		img.blit_rect(peint_b, Rect2i(Vector2i.ZERO, TILE_SIZE), Vector2i(0, TILE_SIZE.y))
-	else:
-		var floor_a_bg     := Charte.SOL_A
-		var floor_a_border := Charte.SOL_A_ARETE
-		for y in range(TILE_SIZE.y):
-			for x in range(TILE_SIZE.x):
-				var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
-				img.set_pixel(x, y, floor_a_border if on_edge else floor_a_bg)
-		var floor_b_bg     := Charte.SOL_B
-		var floor_b_border := Charte.SOL_B_ARETE
-		var oy := TILE_SIZE.y
-		for y in range(TILE_SIZE.y):
-			for x in range(TILE_SIZE.x):
-				var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
-				img.set_pixel(x, oy + y, floor_b_border if on_edge else floor_b_bg)
+	_generer_dalle_beton(img, 0, Charte.SOL_A, Charte.SOL_A_ARETE, 101, peint_a)
+	_generer_dalle_beton(img, TILE_SIZE.y, Charte.SOL_B, Charte.SOL_B_ARETE, 203, peint_b)
 
-	# --- Tile (1,0) : Mur (le noir du monde + une arête que la torche accroche) ---
-	#
-	# **L'arête était `Color(1, 1, 1)`, et c'était le blanc pur le plus visible du
-	# jeu** : on ne voit presque rien d'autre que ces bordures pendant une manche.
-	# Un blanc pur ne dit pas « lumière », il dit « aucune décision n'a été prise
-	# ici » — et il donnait au décor une température de néon dans un jeu éclairé à
-	# la lampe torche. `HALOGENE` rend l'arête au filament qui l'éclaire.
-	var wall_bg     := Charte.NOIR
-	var wall_border := Charte.HALOGENE
-	var ox := TILE_SIZE.x
-	for y in range(TILE_SIZE.y):
-		for x in range(TILE_SIZE.x):
-			var on_edge := (x <= 1 or x >= TILE_SIZE.x - 2 or y <= 1 or y >= TILE_SIZE.y - 2)
-			img.set_pixel(ox + x, y, wall_border if on_edge else wall_bg)
+	# --- Tile (1,0) : Mur atelier (le noir du monde + arête halogène + mobilier riveté) ---
+	# Liséré halogène franc de 2 px préservé pour l'accroche de la torche,
+	# intérieur sombre respectant le fondu additif, enrichi d'un dessin de
+	# caisse rivetée et cornières d'acier d'atelier lourd.
+	_generer_mur_atelier(img, TILE_SIZE.x, 0)
 
 	var tex := ImageTexture.create_from_image(img)
 	source.texture = tex
@@ -94,6 +70,93 @@ static func create_tileset() -> TileSet:
 
 	ts.add_source(source, 0)
 	return ts
+
+
+## Génère une dalle de béton brut aux micro-aspérités d'encre contrastée.
+static func _generer_dalle_beton(img: Image, oy: int, bg: Color, border: Color,
+		graine: int, base_peinte: Image = null) -> void:
+	if base_peinte != null:
+		img.blit_rect(base_peinte, Rect2i(Vector2i.ZERO, TILE_SIZE), Vector2i(0, oy))
+	else:
+		for y in range(TILE_SIZE.y):
+			for x in range(TILE_SIZE.x):
+				var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
+				img.set_pixel(x, oy + y, border if on_edge else bg)
+
+	# Micro-aspérités d'encre contrastée et grain brut de béton industriel.
+	# Déterministe pour que les deux écrans et toutes les machines rendent l'identique.
+	for y in range(1, TILE_SIZE.y - 1):
+		for x in range(1, TILE_SIZE.x - 1):
+			var h := (x * 374761393 + y * 668265263 + graine * 912345671) ^ ((x * 127) + (y * 311))
+			h = (h ^ (h >> 13)) & 0x7fffffff
+			var pix := img.get_pixel(x, oy + y)
+
+			# Aspérités d'encre sombre (pores du béton coulé, micro-impacts)
+			if (h % 17) == 0:
+				var assombri := pix.lerp(Charte.NOIR, 0.40)
+				img.set_pixel(x, oy + y, assombri)
+			# Micro-particules minérales claires (reflets d'aspérité sous la torche)
+			elif (h % 23) == 0:
+				var eclairci := pix.lerp(Charte.HALOGENE, 0.10)
+				img.set_pixel(x, oy + y, eclairci)
+
+	# Micro-fissures d'atelier discrètes (2 courtes lignes d'encre sombre par dalle)
+	var f1_y := 8 + (graine % 7)
+	for dx in range(4):
+		var fx := 7 + dx
+		var fy := oy + f1_y + (1 if dx >= 2 else 0)
+		if fx < TILE_SIZE.x - 2 and fy < oy + TILE_SIZE.y - 2:
+			var c := img.get_pixel(fx, fy).lerp(Charte.NOIR, 0.55)
+			img.set_pixel(fx, fy, c)
+
+	var f2_y := 20 + ((graine >> 3) % 7)
+	for dx in range(5):
+		var fx := 20 + dx
+		var fy := oy + f2_y - (1 if dx >= 3 else 0)
+		if fx < TILE_SIZE.x - 2 and fy < oy + TILE_SIZE.y - 2:
+			var c := img.get_pixel(fx, fy).lerp(Charte.NOIR, 0.50)
+			img.set_pixel(fx, fy, c)
+
+
+## Dessine la tuile de mur d'atelier : liséré halogène franc, intérieur sombre
+## avec rivets d'acier et cornières de caisse industrielle.
+static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
+	var wall_bg     := Charte.NOIR
+	var wall_border := Charte.HALOGENE
+	var acier_discret := Charte.LINE * 0.65
+	var rivet_color   := Charte.ACIER * 0.40
+
+	for y in range(TILE_SIZE.y):
+		for x in range(TILE_SIZE.x):
+			var on_outer_edge := (x <= 1 or x >= TILE_SIZE.x - 2 or y <= 1 or y >= TILE_SIZE.y - 2)
+			if on_outer_edge:
+				img.set_pixel(ox + x, oy + y, wall_border)
+			else:
+				img.set_pixel(ox + x, oy + y, wall_bg)
+
+	# Cornières intérieures à 4 px du bord extérieur
+	for y in range(4, TILE_SIZE.y - 4):
+		img.set_pixel(ox + 4, oy + y, acier_discret)
+		img.set_pixel(ox + TILE_SIZE.x - 5, oy + y, acier_discret)
+	for x in range(4, TILE_SIZE.x - 4):
+		img.set_pixel(ox + x, oy + 4, acier_discret)
+		img.set_pixel(ox + x, oy + TILE_SIZE.y - 5, acier_discret)
+
+	# 4 rivets d'acier d'atelier aux 4 angles de la cornière
+	var rivets := [
+		Vector2i(5, 5),
+		Vector2i(TILE_SIZE.x - 6, 5),
+		Vector2i(5, TILE_SIZE.y - 6),
+		Vector2i(TILE_SIZE.x - 6, TILE_SIZE.y - 6)
+	]
+	for r in rivets:
+		img.set_pixel(ox + r.x, oy + r.y, rivet_color)
+
+	# Fines traverses diagonales en croix d'armature sombre
+	for d in range(6, TILE_SIZE.x - 6):
+		if d % 2 == 0:
+			img.set_pixel(ox + d, oy + d, Charte.LINE * 0.35)
+			img.set_pixel(ox + d, oy + (TILE_SIZE.y - 1 - d), Charte.LINE * 0.35)
 
 ## Charge une tuile peinte, ou rend `null` si elle n'a pas été cuite ou importée.
 static func _tuile_peinte(chemin: String) -> Image:
