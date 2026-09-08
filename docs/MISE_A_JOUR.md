@@ -156,8 +156,12 @@ d'autre ne change.
   vérifié par lecture (il attend la fermeture, garde l'ancienne installation,
   sait revenir en arrière) ; l'exécution réelle demande un jeu exporté, installé,
   et une version publiée. C'est un jalon humain ;
-- **la première installation macOS reste non signée et non notarisée** (H4).
-  Elle passe par « Ouvrir quand même » dans les Réglages Système. Les mises à
-  jour suivantes, elles, ne repassent pas devant Gatekeeper ;
-- **l'export macOS depuis un runner Linux** est écrit dans la CI mais n'a pas
-  encore produit de `.app` ouvert sur un Mac.
+- **la première installation macOS reste ad-hoc et non notarisée Apple** (sans compte
+  développeur payant, H4). L'export macOS est désormais réalisé sur un runner
+  `macos-14` avec signature ad-hoc récursive (`codesign --force --deep --sign -`).
+  La première ouverture passe par « Ouvrir quand même » dans les Réglages Système
+  (ou `xattr -cr`). Les mises à jour suivantes, elles, ne repassent pas devant
+  Gatekeeper ;
+- **l'export macOS depuis un runner Linux** (testé lors de la v0.1.0) produisait un
+  bundle à la signature d'origine corrompue (« application endommagée » sur macOS) :
+  la CI a été migrée vers un runner natif `macos-14` pour appliquer une signature ad-hoc valide.

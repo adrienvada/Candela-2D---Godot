@@ -60,6 +60,11 @@ const SOUNDS: Dictionary = {
 	"ui_vhs_rewind": "res://assets/audio/sfx/ui_vhs_rewind.wav",
 	"ui_keystroke": "res://assets/audio/sfx/ui_keystroke.wav",
 	"ui_power_on": "res://assets/audio/sfx/ui_power_on.wav",
+	# Étape 4 — Direction Roman Graphique Brutaliste (presse, massicot, tampon, refus)
+	"ui_presse": "res://assets/audio/sfx/ui_presse.wav",
+	"ui_tampon": "res://assets/audio/sfx/ui_tampon.wav",
+	"ui_massicot": "res://assets/audio/sfx/ui_massicot.wav",
+	"ui_refus": "res://assets/audio/sfx/ui_refus.wav",
 	# V5.1 — le claquement de torche, LE son entendu cinq cents fois par soirée.
 	# Câblés, muets tant que les fichiers manquent (règle « câbler, taire,
 	# diagnostiquer ») ; entrées à ajouter au manifeste (domaine « menus »).
@@ -80,6 +85,10 @@ const SOUNDS: Dictionary = {
 	# sans suffixe numérique — `famille_de()` traiterait _NN comme une variante.
 	"fusee_rebond": "res://assets/audio/sfx/fusee_rebond.wav",
 	"fusee_combustion": "res://assets/audio/sfx/fusee_combustion.wav",
+	# FU5 — UN SEUL evenement pour les deux causes d'extinction (pietinement ou
+	# balle), a dessein : distinguer viendra si le dosage le reclame un jour, pas
+	# avant. Nom nu, meme regle que `fusee_rebond`.
+	"fusee_eteinte": "res://assets/audio/sfx/fusee_eteinte.wav",
 	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
 	# laquelle sort est `stinger_de_fin`, plus bas.
 	#
@@ -535,6 +544,9 @@ const PORTEE_RELATIVE: Dictionary = {
 	"fusee_atterrit": 0.70,
 	"fusee_rebond": 0.65,
 	"fusee_combustion": 0.60,
+	# Eteindre la fusee d'un rival est une information tactique, pas une
+	# ambiance : elle merite de porter au moins autant que le lancer.
+	"fusee_eteinte": 0.65,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -586,6 +598,7 @@ const NIVEAU_RELATIF: Dictionary = {
 	"fusee_atterrit": -4.0,
 	"fusee_rebond": -6.0,
 	"fusee_combustion": -11.0,
+	"fusee_eteinte": -6.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
 
@@ -1038,6 +1051,63 @@ func est_occulte(pos: Vector2) -> bool:
 		MapGeometry.WALL_LAYER)
 	return not espace.intersect_ray(q).is_empty()
 
+## ============================================================================
+## FU4 — LA FUMEE ETOUFFE UN PEU (decision d'Adrien, 2026-09-08)
+## ============================================================================
+##
+## « Non, la fumee etouffe juste un peu les sons. » Ecarte au passage le modele
+## qu'on avait envisage — un gresillement qui masque les pas de l'adversaire :
+## la fusee reste un objet qui BROUILLE, elle ne devient pas une arme qui rend
+## sourd. « Juste un peu » est le dosage autant que le principe.
+##
+## ⚠️ **Une attenuation de VOLUME qui s'AJOUTE, pas une reoccupation du bus
+## `SFX_Occlus`.** Ce bus existe pour dire « un mur bloque le direct, ce qui
+## reste est le champ reverbere d'une autre piece » — un changement d'ESPACE.
+## La fumee ne change pas de piece : l'air est le meme, juste charge. Router les
+## sons de fumee vers `SFX_Occlus` les ferait dependre de `force_occlusion`, un
+## reglage tenu et juge au banc pour les MURS seuls — une retouche de mur
+## deplacerait alors la fumee sans que personne ne l'ait demande. Et un son a la
+## fois occulte par un mur ET dans la fumee doit perdre les DEUX penalites, pas
+## une choisie par un `if` : deux causes independantes s'additionnent en dB,
+## elles ne se remplacent pas — meme geste que le duck des pas sous le tir, qui
+## s'ajoute au niveau plutot que de l'ecraser.
+##
+## ⚠️ **Au POINT source, pas le long du trajet.** Meme idiome que
+## `Fusee.occultation_pour`, deja repris par `player.gd` pour l'effacement des
+## sprites : la fumee cache ce qui est DEDANS, elle ne feutre pas ce qui passe
+## simplement devant. Un tir qui longe un nuage sans y entrer arrive donc
+## intact — coherent avec ce qu'on VOIT deja : un corps juste a cote du nuage
+## sans y etre ne s'efface pas non plus. Une occultation le long du SEGMENT
+## emetteur-oreille donnerait un resultat plus juste dans le cas rare d'un tir
+## qui traverse un nuage sans y naitre ni y mourir, mais introduirait un second
+## modele de fumee la ou le jeu n'en a qu'un pour la vue — deux modeles pour un
+## meme nuage finiraient par diverger.
+##
+## `FUSEE_ETOUFFEMENT_MAX_DB` est un POINT DE DEPART, pas un jugement : aucune
+## oreille ne l'a encore entendu contre les autres sons. Meme statut que les
+## familles livrees le 2026-08-27.
+const FUSEE_ETOUFFEMENT_MAX_DB: float = -3.0
+
+## Pure — verifiable sans scene ni groupe. `occultation` est deja bornee par
+## `Fusee.occultation_pour` mais le clamp est repete ici a dessein : cette
+## fonction ne doit RIEN supposer sur qui l'appelle.
+static func etouffement_fumee_db(occultation: float) -> float:
+	return FUSEE_ETOUFFEMENT_MAX_DB * clampf(occultation, 0.0, 1.0)
+
+## L'occultation par la fumee au point `pos`, agregee sur tous les nuages en
+## vol. Par le PIRE des nuages, jamais en les additionnant : deux nuages
+## superposes ne rendent pas un corps plus invisible qu'un seul, au coeur du
+## sien — meme regle que `part_occultee` avec l'ecran partage plus haut.
+##
+## N'importe quel noeud du groupe « fusees » qui expose `occultation_pour` fait
+## l'affaire : `AudioManager` ne connait pas `Fusee`, il lit une INTERFACE.
+func occultation_fumee(pos: Vector2) -> float:
+	var occ := 0.0
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if f.has_method("occultation_pour"):
+			occ = maxf(occ, f.occultation_pour(pos))
+	return occ
+
 const SFX_POOL_SIZE: int = 16
 
 ## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.
@@ -1058,6 +1128,10 @@ const SFX_PRIORITE: Dictionary = {
 	"wall_impact": 1,
 	"button_click": 1,
 	"ui_ready_ping": 1,
+	"ui_presse": 1,
+	"ui_tampon": 1,
+	"ui_massicot": 1,
+	"ui_refus": 1,
 	"shoot": 2,
 	"flesh_impact": 3,
 	# --- Livraison du 2026-08-27, classee par ce que le son APPREND.
@@ -1081,6 +1155,7 @@ const SFX_PRIORITE: Dictionary = {
 	"fusee_lancer": 1,
 	"fusee_atterrit": 1,
 	"fusee_rebond": 1,
+	"fusee_eteinte": 1,
 }
 ## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
 ## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier
@@ -1389,6 +1464,9 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_pour(bus_name, part > 0.0)
 	if part > 0.0:
 		player.volume_db += OCCLUSION_PENTE_DB * part
+	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
+	# plus haut sur pourquoi ce n'est pas le meme bus.
+	player.volume_db += etouffement_fumee_db(occultation_fumee(pos))
 	player.play()
 	return player
 
@@ -1527,9 +1605,33 @@ func play_count(seconde: int) -> AudioStreamPlayer:
 ## Un son d'interface, non positionnel. Passe par la meme porte que le reste
 ## pour que le pool et les priorites s'appliquent.
 func play_ui(cle: String, volume_db: float = 0.0) -> AudioStreamPlayer:
-	if get_audio_stream(cle) == null:
-		return null
+	var stream = get_audio_stream(cle)
+	if not stream:
+		match cle:
+			"ui_presse":
+				return play_sfx("ui_type_impact", 0.9, volume_db + 1.0)
+			"ui_tampon":
+				return play_sfx("button_click", 1.15, volume_db)
+			"ui_massicot":
+				return play_sfx("ui_tick", 1.4, volume_db)
+			"ui_refus":
+				return play_sfx("button_click", 0.65, volume_db)
+			_:
+				return null
 	return play_sfx(cle, 1.0, volume_db)
+
+## Étape 4 — Déclencheurs dédiés Roman Graphique Brutaliste
+func play_ui_presse(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_presse", volume_db)
+
+func play_ui_tampon(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_tampon", volume_db)
+
+func play_ui_massicot(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_massicot", volume_db)
+
+func play_ui_refus(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_refus", volume_db)
 
 ## ============================================================================
 ## V5.10 — LA PRESENCE DE LA SALLE

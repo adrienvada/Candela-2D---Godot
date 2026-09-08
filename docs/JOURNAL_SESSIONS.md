@@ -26,6 +26,7 @@ par sujet impraticable.
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
+| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | `eblouissement.gd`, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
@@ -245,6 +246,201 @@ démarre en Bougie et aurait trois armes d'emblée), **rejouer** après chaque v
 game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
+
+### 2026-09-07 — session « bandeau FATAL » (chantier BF) : LIVRÉ, BF1 à BF5
+
+**Je tiens `player.gd` et `tools/test_bandeau_fatal.gd`**, et rien d'autre.
+Worktree `.claude/worktrees/bandeau-fatal-candela-2ee18c`, branche
+`claude/bandeau-fatal-candela-2ee18c`, partie de `070a0c6` — c'est le worktree
+que l'outillage m'a donné, pas celui nommé dans le chantier ; le nom diffère,
+le périmètre non.
+
+⚠️ **`player.gd` appartient au domaine « game feel ».** Si une session y
+travaille en ce moment, qu'elle le dise ici : je ne touche que `die()`, la
+`static func` de cadrage posée à côté de `geometrie_du_bandeau()`, et les
+constantes qu'elles se partagent.
+
+**`game_state.gd` en lecture seule**, et je n'ai finalement **besoin d'aucun
+accesseur** : les caméras `cam1` / `cam2` sont déjà publiques, et savoir quelle
+vue est affichée se lit sur leur `custom_viewport` — la fenêtre racine quand le
+chantier R a détourné le rendu, sinon un `SubViewport` dont le
+`render_target_update_mode` dit s'il dessine encore. Rien à ajouter côté
+`game_state`, donc rien à demander.
+
+**Ce que je ne touche pas :** `ui.gd`, `blood_stain.gd` et `bullet.gd` (tenus
+par la session « sang au sol », chantier SG), `effect_policy.gd`.
+
+**Ce que je republie :** rien. Mon delta part par message à la session
+« Can2d - Mise à jour artefact de suivi ».
+
+**Livré.** `player.gd` (`cadrage_du_bandeau()` et ses cinq constantes,
+`_rect_monde_de_la_vue()`, `_poser_bandeau_fatal()`, `die()` allégée d'autant)
+et `tools/test_bandeau_fatal.gd` (39 contrôles, contre-testés par mutation).
+Toutes les suites passent. **Je lâche les deux fichiers.**
+
+⚠️ **Deux avertissements pour qui reprendra `player.gd`.**
+`Camera2D.custom_viewport` est déclaré `Node` et non `Viewport` : sans
+transtypage explicite, l'inférence échoue et **le fichier entier cesse de
+compiler**. Et dans un banc lancé par `--script`, un `load()` qui échoue à
+compiler rend un `GDScript` **vivant mais vide**, pas `null` — le garde doit
+tester `can_instantiate()`, faute de quoi le banc tourne en boucle sans sortir.
+
+**Rien à demander à `game_state.gd`** : la lecture de `cam1` / `cam2` a suffi,
+aucun accesseur n'est nécessaire. La demande envisagée par le chantier est donc
+sans objet.
+
+### 2026-09-07 (suite) — session « retouche éblouissement » : le polygone de photocopie est RÉSOLU, chantier brouillage repris avec l'accord d'Adrien
+
+**Adrien a confié le chantier brouillage à cette session** (« oui tu récupères
+et te charges du chantier brouillage aussi »), donc `brouillage.gd`,
+`brouillage_vue.gd`, `brouillage_flou.gdshader` et `tools/banc_brouillage.*`
+changent de main : ils étaient réservés à un autre domaine, ils ne le sont
+plus. Toujours branche `diagnostic-photocopie`, worktree du même nom.
+
+**La cause : `BackBufferCopy.rect` s'exprime en texels de framebuffer, et
+l'appareil le calculait en unités de canevas.** Godot n'applique aucune
+conversion, et rien dans son API ne rapporte la vérité — `get_final_transform`,
+`get_screen_transform` et `get_stretch_transform` rendent toutes 1,333 à la
+racine pendant que le facteur réel est 1,778 (l'étirement `canvas_items` et la
+densité Retina s'empilent, et seule la seconde échappe à ces trois appels). La
+feuille de route porte le détail complet, y compris pourquoi le candidat n° 1
+du 2026-08-27 accusait le bon coupable pour la mauvaise raison.
+
+**Le correctif :** `Brouillage.rect_photocopie()` (géométrie pure, convertit
+avant d'appeler `emprise_copie()`, absorbe aussi la troncature à l'entier du
+moteur — jusqu'à 1,37 texel mesuré) ; `brouillage_vue.gd` lui passe l'échelle
+lue sur `get_texture().get_size()`, seule source qui ne ment pas.
+
+**Deux instruments neufs, parce que les anciens ne pouvaient pas voir ce
+défaut :**
+- `tools/test_brouillage.gd` — contrôle géométrique headless, cinq échelles,
+  **avec contre-test** : l'ancienne façon doit échouer, sinon rien n'est mesuré.
+- `tools/banc_photocopie.gd/.tscn` — acte I : caractérise `BackBufferCopy`
+  lui-même (pas notre code) sur des cas fractionnaires, entiers, à cheval sur
+  les bords ; acte II : rejoue le vrai appareil dans les **trois** vues
+  réellement rendues par `main.tscn`. C'est le manque exact de
+  `banc_voile.tscn`, qui a une racine `Node2D` et n'a donc jamais parlé de
+  l'écran scindé.
+
+**`tools/banc_brouillage.gd` avait le même bogue** — trouvé en cherchant tout
+appelant de `emprise_copie()`, c'était le seul autre. Corrigé à l'identique dans
+le même commit : même mesure, même fonction de conversion. Pas une extension de
+périmètre, le même bogue dans un fichier de la même famille.
+
+⚠️ **Ce qui reste ouvert, et ce n'est pas refermé par confort.** En écran scindé
+le facteur mesuré est 1,000 dans les deux vues : ce correctif ne peut donc pas
+expliquer la bande que la session « fusée éclairante » a lue sur des captures
+d'Adrien en écran scindé. Cette lecture n'a pas été confirmée à la manette. La
+feuille de route le dit noir sur blanc plutôt que de laisser croire que « le
+polygone » recouvrait un seul défaut.
+
+### 2026-09-07 — session « SG · sang au sol » : je prends `blood_stain.gd`
+
+**Déclaration d'ouverture.** Je tiens le chantier SG inscrit ce jour dans la
+feuille de route — la tache de sang qui démarre en amont du joueur touché.
+Périmètre exact, et il est fermé : **`blood_stain.gd`**, **`tools/test_sang_au_sol.gd`**
+(suite neuve) et **sa ligne dans `tools/run_suites.sh`**. Rien d'autre.
+
+**Le worktree n'est pas celui que la table propose** : il a été ouvert par
+l'outillage sous `.claude/worktrees/sang-au-sol-sg-d395d3`, branche
+`claude/sang-au-sol-sg-d395d3`, partie de `070a0c6` et non de `c4bbeb1`. Le
+travail non commité de l'arbre partagé n'y est pas et n'a pas été touché ;
+aucun `git checkout` n'a eu lieu ailleurs qu'ici.
+
+**`bullet.gd` : je n'y touche pas, et je dis pourquoi.** La ROADMAP m'autorisait
+à y poser le point de départ si nécessaire. Ce ne l'est pas : le point d'entrée
+que `_hit_player()` transmet est **la bonne donnée** — c'est l'endroit où la
+balle a rencontré le corps, et les particules d'entrée s'en servent
+légitimement. Le défaut est entièrement dans la façon dont `blood_stain` s'en
+sert, donc la correction y reste. `bullet.gd` demeure libre pour qui le veut.
+
+**Clos le 2026-09-08.** Adrien a regardé les images et **remplacé la règle** :
+le centre de la plus grosse flaque doit tomber sous le personnage, la traînée
+partir dans la direction du tir. L'ancrage est donc une propriété **de chaque
+planche** (`FLAQUES`, une entrée par éclaboussure) et non un décalage commun —
+`sang_1` porte sa flaque à 52 % de sa largeur, `sang_2` à 13 %, ce qui explique
+le « souvent » du constat d'origine. `_ancre` est une variable d'instance neuve,
+donc **reportée à la main** dans `_create_p2_duplicate()` : sans cette ligne, J2
+seul aurait gardé le défaut. Banc à 27 contrôles, qui re-mesure les planches au
+lieu de croire la table.
+
+**Ce que je signale sans le corriger**, comme la ROADMAP le demande :
+`wall_impact.gd` centre lui aussi sa marque sur le point d'impact, **et le
+centrage y est légitime** — vérifié, non modifié. Deux raisons, mesurées : sa
+planche de 96 px est réduite à ×0,22-0,34, soit **21 à 33 px** à l'écran, donc
+elle ne déborde dans le mur que d'une dizaine de pixels ; et sa rotation est
+**tirée au sort**, pas prise dans l'axe du tir — une étoile de fissure n'a ni
+amont ni aval, elle ne peut donc pas mentir sur la provenance du coup. Le sang,
+lui, est tourné dans l'axe : c'est exactement ce qui rend son centrage fautif.
+
+### 2026-09-07 — session « retouche éblouissement » : une prédiction fausse retirée de la feuille de route
+
+**Rien d'autre que `docs/ROADMAP.md` et ce fichier.** Branche
+`diagnostic-photocopie`, worktree `.claude/worktrees/diagnostic-photocopie`,
+rebasée deux fois pendant la rédaction — `main` a avancé de seize commits en une
+journée. **Aucun fichier de code touché, et surtout pas `brouillage_vue.gd`** — le défaut décrit
+ci-dessous appartient au chantier brouillage, cette session ne fait que le
+signaler mieux qu'elle ne l'avait fait.
+
+**Ce qui l'a déclenché :** la session « fusée éclairante » rapporte le polygone
+de photocopie **en écran scindé, dans les deux vues**, sur des captures d'Adrien.
+La feuille de route affirmait le contraire — et cette affirmation était de moi.
+
+**Ce qui a été corrigé, et pourquoi ça valait un commit :**
+
+1. La phrase « en écran scindé […] le défaut ne devrait pas apparaître » était
+   une **déduction du candidat 1 rédigée comme un constat**. Vérification faite,
+   le raisonnement tient (`stretch = true`, `SubViewport` 957×1080 et 958×1080,
+   `rect` et `position` en coordonnées de viewport) — donc si le défaut est là,
+   ce sont les candidats 1 ET 2 qui tombent, pas le raisonnement. La phrase
+   envoyait chercher au mauvais endroit **et** dispensait de regarder au bon.
+2. Un **troisième candidat** a été inscrit — le tampon d'écran a six lecteurs
+   pour trois `BackBufferCopy`, et `death_flash.gdshader` n'en a aucun alors
+   qu'il repeint l'écran entier depuis ce tampon — **puis réfuté le jour même**
+   par la session « fusée éclairante » : le flash d'agonie porte un
+   `visibility_layer` qui le confine à la vue du mort, or l'artefact est dans les
+   deux vues. Les deux entrées sont dans la feuille de route, hypothèse ET
+   réfutation, parce que la réfutation vaut plus que l'hypothèse.
+
+   ⚠️ **Quatre hypothèses, quatre réfutations, aucune mesure.** La quatrième —
+   « le masque d'ellipse échoue, et la bande est simplement le `ColorRect` du
+   flou peint en entier » — a été tuée par la session « fusée éclairante » sur le
+   `discard` du shader, avant d'avoir coûté dix minutes à quiconque. Toutes nées
+   de la lecture, toutes mortes de la lecture.
+
+3. **La sortie n'est pas venue d'un cinquième raisonnement, elle est venue de
+   deux questions à Adrien.** Personne ne venait de mourir, et il tirait au
+   **pistolet** — donc aucune onde de choc, donc **aucune `COPY_MODE_VIEWPORT`**.
+   Le `COPY_MODE_RECT` du flou était le seul écrivain du tampon et le flou son
+   seul lecteur. **Il ne reste qu'une possibilité : le flou lit hors de sa propre
+   copie**, dans un `SubViewport` où c'est censé être impossible.
+
+   Restaient **trois affirmations dont une est fausse**, chacune testable seule.
+   ✅ **`emprise_copie()` en est sortie le jour même** : fonction pure, rejouée à
+   l'identique contre la boîte des quatre coins effectivement tournés sur 200 000
+   tirages — **écart maximal 0,000**, elle est exacte et non approximativement
+   juste. Il n'en reste que deux, et le pari est sur « `BackBufferCopy` recopie
+   exactement le `rect` qu'on lui donne » : **la seule qui porte sur ce que fait
+   GODOT et non sur ce que nous avons écrit.**
+
+4. **Le piège du cache d'import réuni en UNE entrée**, parce que je l'ai payé :
+   un worktree NEUF n'a pas un cache périmé, il n'en a **aucun** — `git worktree
+   add` ne copie pas `.godot/`, plus un `class_name` ne se résout, et le lot part
+   rouge de bout en bout en accusant la fusion qu'on vient de rebaser. La
+   déclinaison « fichier neuf », consignée de son côté par le chantier fusée le
+   2026-09-01, y est désormais énumérée avec les trois autres : **une famille de
+   quatre, à un seul endroit.** ⚠️ **`run_suites.sh` ne fait aucun import et
+   n'avertit de rien** — signalé, non corrigé : le script appartient à qui le
+   tient.
+5. Un piège : **« Le tampon d'écran n'a pas de propriétaire »**. Un
+   `COPY_MODE_RECT` est une optimisation locale dont la portée est globale.
+6. Deux entrées périmées de la liste « défauts signalés » remises à jour : le
+   voile de l'adversaire chez soi est **réglé** depuis le branchement du
+   2026-09-06 (`ui.gd`, chercher `_voile_scinde`) ; en revanche `p1_dazzle` reste dessiné plein écran
+   au repos, et **ce défaut-là a grossi avec le voile**.
+
+⚠️ **`ui.gd` reste au domaine « menus ».** Le point 6 ne fait que constater
+l'état du fichier, il ne le modifie pas.
 
 ### 2026-09-07 — session « corrections de positionnement » : deux chantiers inscrits, AUCUN code touché
 
@@ -2249,6 +2445,20 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
 - `menu_hub.gd` — branchement du shader `menu_artwork.gdshader`, transition de fondu organique sur Tween `SORTIE` (`_declencher_embrasement`), mise à jour du temps d'animation (`_process`) et projection de la torche interactive (`set_torch_position_global`).
 - `ui.gd` — transmission continue de la position de la torche du joueur 1 (`hub.set_torch_position_global`).
 - `tools/run_suites.sh` — enregistrement de `test_menu_artworks` (56 tests solo + 7 duo au vert).
-- `docs/ROADMAP.md` — inscription du chantier et de ses 4 étapes (MV1 à MV4).
+#### Lot du 2026-09-07 — session « navigation manette hybride (D-Pad case par case & curseur joystick) »
 
+**Navigation manette hybride dans les menus** :
+- **D-Pad / flèches clavier** : navigation discrète case par case (sauts nets avec liseré néon). Le curseur virtuel est masqué.
+- **Joystick analogique** : fait apparaître un curseur virtuel fluide et stylisé (`VirtualGamepadCursor`, halo `Charte.AMBRE`, ombre portée, accélération progressive) qui se déplace comme une souris, survole les contrôles (`_nav_candidates(0)`), met à jour le focus, le son `ui_tick` et le panneau d'aperçu, et s'active au clic de sélection (`p1_menu_select`).
+- **Bascule dynamique** : dès qu'une entrée D-Pad ou directionnelle est pressée, le curseur virtuel de souris disparaît immédiatement. De même, un mouvement de la souris physique désactive le curseur virtuel pour éviter tout conflit.
+- **Entrées** : découplage des axes analogiques sur `p1_menu_*` / `p2_menu_*` dans `input_setup.gd` pour éviter les sauts discrets parasites lors des mouvements de stick.
+- **Banc de tests** : suite automatisée `tools/test_curseur_joystick.gd` ajoutée à `tools/run_suites.sh` (57 suites de tests au vert).
 
+#### Lot du 2026-09-08 — session « refonte Roman Graphique Brutaliste & pleine luminosité »
+
+**Chantier Menus — Refonte intégrale au style Roman Graphique Brutaliste** (validé par Adrien).
+- **Style artistique :** Encrage noir pur et dur, découpes géométriques acérées, lore d'arène de mort clandestine (gladiateurs/survivants contraints armés d'un simple pistolet et d'une torche, zéro zombies, zéro armures intégrales, sol et murs marqués par le sang des précédents affrontements et douilles au sol).
+- **Pleine luminosité des sources de lumière :** Réécriture de la courbe d'exposition dans `menu_artwork.gdshader` (`highlight_breakthrough` via `smoothstep(0.35, 0.78, luma)`) pour que les faisceaux, étincelles, néons et écrans percent à 100 % de luminosité éclatante au lieu d'être aplatis par l'exposition ambiante sombre, tout en conservant des ombres d'encre profondes.
+- **Teintes dominantes par sous-menu :** Ambre pour l'accueil et le hub amical, Rouge carmin pour le duel compétitif, Bleu cyan pour la baie réseau, Or éclatant pour le coffre-fort.
+- **Calage des POIs et effets :** Mise à jour des coordonnées normalisées de focalisation dans `menu_artwork.gd` et des masques de poussières/brumes animées dans `menu_artwork.gdshader`.
+- **Validation :** 57/57 suites de tests automatisées vertes dans `tools/run_suites.sh --rapide` (77s, 0 échec), captures haute résolution générées et vérifiées via `tools/capturer_artworks.tscn`.
