@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candela 2D — Étape 4 : Découpage en Cases Dynamiques & Scénographie Brutaliste</title>
+<style>
+  :root {
+    --noir: #000000;
+    --halogene: #fae8cc;
+    --ambre: #f5b03d;
+    --acier: #b2c2d1;
+    --dim: #7d8892;
+    --line: #303438;
+    --surface: rgba(14, 15, 17, 0.95);
+    --backdrop: #040405;
+    --p1-bleu: #4ab8f8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Oxanium', monospace, sans-serif; }
+  body {
+    background: var(--backdrop);
+    color: var(--halogene);
+    min-height: 100vh;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+  header {
+    width: 100%;
+    max-width: 1100px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .title-group h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--ambre);
+    text-transform: uppercase;
+  }
+  .title-group p {
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+  .badge-tag {
+    background: rgba(245, 176, 61, 0.15);
+    color: var(--ambre);
+    border: 1px solid var(--ambre);
+    padding: 4px 10px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+
+  /* Stage interactif simulant l'arène et le hub */
+  #stage {
+    width: 1060px;
+    height: 600px;
+    background: #060709;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid var(--line);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+    cursor: crosshair;
+  }
+
+  /* Lampe torche interactive qui suit la souris */
+  #torch-glow {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 176, 61, 0.14) 0%, rgba(245, 176, 61, 0.04) 40%, transparent 70%);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: width 0.1s, height 0.1s;
+    z-index: 2;
+  }
+
+  /* Conteneur des deux panneaux de BD */
+  .panels-layout {
+    position: absolute;
+    inset: 40px;
+    display: flex;
+    gap: 30px;
+    z-index: 10;
+  }
+
+  /* Case de BD Brutaliste commune */
+  .comic-panel {
+    background: var(--surface);
+    position: relative;
+    transition: box-shadow 0.08s ease-out;
+  }
+
+  /* Repères d'imprimerie / coins de massicot */
+  .corner-mark {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--acier);
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  .cm-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+  .cm-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+  .cm-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+  .cm-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+  /* Volet de transition d'encre (Massicot) */
+  .comic-reveal-shutter {
+    position: absolute;
+    inset: 0;
+    background: var(--noir);
+    pointer-events: none;
+    z-index: 20;
+    transform: scaleX(0);
+    transform-origin: right;
+    border-left: 2px solid var(--halogene);
+    box-shadow: -2px 0 6px var(--ambre);
+  }
+
+  /* Colonne de gauche (Navigation) */
+  #left-panel {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border: 2px solid var(--line);
+  }
+  .panel-header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ambre);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+  }
+  .menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .menu-btn {
+    background: rgba(18, 20, 24, 0.9);
+    border: 1px solid var(--line);
+    color: var(--halogene);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .menu-btn:hover {
+    border-color: var(--acier);
+    background: rgba(178, 194, 209, 0.08);
+  }
+  .menu-btn.active {
+    border: 2px solid var(--ambre);
+    background: rgba(245, 176, 61, 0.12);
+    color: #fff;
+  }
+  .menu-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #222;
+  }
+  .menu-btn .chevron {
+    color: var(--p1-bleu);
+    font-size: 16px;
+  }
+
+  /* Panneau de droite (Détails & Scène) */
+  #right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    border: 2px solid var(--line);
+    justify-content: space-between;
+    position: relative;
+    background: #090b0e;
+  }
+  .right-artwork-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 65% 70%, rgba(245,176,61,0.18) 0%, rgba(20,25,35,0.85) 60%, rgba(5,6,8,0.98) 100%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.15) 0, rgba(0,0,0,0.15) 2px, transparent 2px, transparent 6px);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .right-content {
+    position: relative;
+    z-index: 5;
+  }
+  .comic-panel-headline {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--halogene);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .comic-panel-text {
+    font-size: 14px;
+    color: var(--dim);
+    line-height: 1.6;
+    max-width: 500px;
+  }
+  .comic-panel-footer {
+    position: relative;
+    z-index: 5;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .comic-footer-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ambre);
+    margin-bottom: 6px;
+  }
+  .comic-footer-desc {
+    font-size: 13px;
+    color: var(--acier);
+  }
+
+  /* Barre de contrôles et tests sous le stage */
+  .controls-bar {
+    width: 1060px;
+    margin-top: 20px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .btn-group {
+    display: flex;
+    gap: 10px;
+  }
+  .control-btn {
+    background: #15181e;
+    border: 1px solid var(--line);
+    color: var(--halogene);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .control-btn:hover {
+    border-color: var(--ambre);
+    color: var(--ambre);
+  }
+  .status-text {
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .legend-box {
+    width: 1060px;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .legend-card {
+    background: #0d1014;
+    border: 1px solid var(--line);
+    padding: 14px;
+  }
+  .legend-card h3 {
+    font-size: 13px;
+    color: var(--ambre);
+    margin-bottom: 6px;
+  }
+  .legend-card p {
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-group">
+    <h1>Candela 2D — Scénographie & Cases de BD</h1>
+    <p>Étape 4 : Direction Artistique « Roman Graphique Brutaliste » — Découpage dynamique & Torche interactive</p>
+  </div>
+  <div class="badge-tag">BANC INTERACTIF ÉTAPE 4</div>
+</header>
+
+<div id="stage">
+  <!-- Torche dynamique qui suit le curseur -->
+  <div id="torch-glow"></div>
+
+  <div class="panels-layout">
+    <!-- Panneau Gauche (Case Menu) -->
+    <div id="left-panel" class="comic-panel">
+      <div class="corner-mark cm-tl"></div>
+      <div class="corner-mark cm-tr"></div>
+      <div class="corner-mark cm-bl"></div>
+      <div class="corner-mark cm-br"></div>
+      <div id="left-shutter" class="comic-reveal-shutter"></div>
+
+      <div class="panel-header-title">SECTEURS CLANDESTINS</div>
+      <div class="menu-list">
+        <button class="menu-btn active" onclick="naviguer('1V1 AMICAL', 'Affrontement amical direct sans enjeu de classement. Visibilité standard et choix d\'armes libre.', false)">
+          <span>1V1 AMICAL</span>
+          <span class="chevron">›</span>
+        </button>
+        <button class="menu-btn" onclick="naviguer('1V1 COMPÉTITIF', 'Match officiel classé. Les victoires forgent le rang Candela de l\'opérateur. Balle létale en 1 coup.', false)">
+          <span>1V1 COMPÉTITIF</span>
+          <span class="chevron">›</span>
+        </button>
+        <button class="menu-btn" onclick="naviguer('SALON PRIVÉ', 'Génération d\'un code d\'impact à 6 caractères pour inviter un rival sur le réseau.', false)">
+          <span>CRÉER UN SALON</span>
+          <span class="chevron">›</span>
+        </button>
+        <button class="menu-btn disabled" onclick="declencherRefus()">
+          <span>ÉDITEUR D\'ARÈNE</span>
+          <span>—</span>
+        </button>
+        <button class="menu-btn" onclick="declencherRetour()">
+          <span>RETOUR</span>
+          <span style="color:var(--dim)">ESC</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Panneau Droit (Case Détail & Artwork) -->
+    <div id="right-panel" class="comic-panel">
+      <div class="corner-mark cm-tl"></div>
+      <div class="corner-mark cm-tr"></div>
+      <div class="corner-mark cm-bl"></div>
+      <div class="corner-mark cm-br"></div>
+      <div class="right-artwork-bg"></div>
+      <div id="right-shutter" class="comic-reveal-shutter"></div>
+
+      <div class="right-content">
+        <div class="comic-panel-headline" id="detail-title">1V1 AMICAL</div>
+        <div class="comic-panel-text" id="detail-desc">
+          Affrontement tactique dans le noir intégral de l'entrepôt abandonné. Deux tireurs, une seule torche chacun, et la lumière comme unique vecteur de détection et de danger.
+        </div>
+      </div>
+
+      <div class="comic-panel-footer">
+        <div class="comic-footer-title" id="footer-title">PARAMÈTRES D'ENGAGEMENT</div>
+        <div class="comic-footer-desc" id="footer-desc">Durée : 3 manches gagnantes • Éblouissement : 100% • Recul des pas sous le feu actif.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls-bar">
+  <div class="btn-group">
+    <button class="control-btn" onclick="simulerReveal(1)">MASSICOT DROITE (PUSH)</button>
+    <button class="control-btn" onclick="simulerReveal(-1)">MASSICOT GAUCHE (BACK)</button>
+    <button class="control-btn" onclick="sonPresse()">SON PRESSE</button>
+    <button class="control-btn" onclick="sonTampon()">SON TAMPON</button>
+    <button class="control-btn" onclick="sonMassicot()">SON MASSICOT</button>
+    <button class="control-btn" onclick="sonRefus()">SON REFUS</button>
+  </div>
+  <div class="status-text" id="status-log">Déplacez la souris sur le stage pour observer le relief et l'ombrage dynamique.</div>
+</div>
+
+<div class="legend-box">
+  <div class="legend-card">
+    <h3>1. COMIC PANEL REVEAL</h3>
+    <p>Découpe instantanée au massicot plutôt qu'un glissement mou. Le volet d'encre noir franc tranche la case en 180 ms (Charte.D_MOYEN).</p>
+  </div>
+  <div class="legend-card">
+    <h3>2. OMBRAGE PROJETÉ</h3>
+    <p>Les panneaux projettent une ombre portée qui fuit continuellement la position de la torche, donnant l'impression de plaques physiques surélevées.</p>
+  </div>
+  <div class="legend-card">
+    <h3>3. LISERÉ SPÉCULAIRE</h3>
+    <p>Les arêtes des cadres tournées vers la lampe torche s'illuminent en or/ambre chaud (rim-light), simulant le relief d'une gravure d'imprimerie.</p>
+  </div>
+  <div class="legend-card">
+    <h3>4. SOUND DESIGN BRUTALISTE</h3>
+    <p>Sonorités métalliques et d'atelier clandestin : presse mécanique, frappe de tampon d'encre, cisaille de massicot et butoir de refus.</p>
+  </div>
+</div>
+
+<script>
+  // Web Audio Synthétiseur pour simulation réaliste des 4 sonorités
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let actx = null;
+
+  function initAudio() {
+    if (!actx) actx = new AudioContext();
+  }
+
+  // 1. Son Presse Mécanique (Impact lourd, cliquetis de vérin)
+  function sonPresse() {
+    initAudio();
+    const t = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(35, t + 0.16);
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(gain);
+    gain.connect(actx.destination);
+    osc.start(t);
+    osc.stop(t + 0.18);
+    logStatus("Son déclenché : Presse Mécanique (Validation action majeure)");
+  }
+
+  // 2. Son Tampon d'encre (Frappe d'encre franche et nette)
+  function sonTampon() {
+    initAudio();
+    const t = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(260, t);
+    osc.frequency.exponentialRampToValueAtTime(60, t + 0.09);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    osc.connect(gain);
+    gain.connect(actx.destination);
+    osc.start(t);
+    osc.stop(t + 0.09);
+    logStatus("Son déclenché : Tampon d'encre (Sélection / Frappe)");
+  }
+
+  // 3. Son Massicot (Tranchant métallique + glissement de papier)
+  function sonMassicot() {
+    initAudio();
+    const t = actx.currentTime;
+    // Bruit blanc filtré pour la lame
+    const bufferSize = actx.sampleRate * 0.14;
+    const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = actx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = actx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, t);
+    filter.frequency.exponentialRampToValueAtTime(400, t + 0.14);
+    const gain = actx.createGain();
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(actx.destination);
+    noise.start(t);
+    logStatus("Son déclenché : Massicot / Coupe-papier (Découpe de case)");
+  }
+
+  // 4. Son Refus (Butoir mécanique métallique bloqué)
+  function sonRefus() {
+    initAudio();
+    const t = actx.currentTime;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(85, t);
+    osc.frequency.setValueAtTime(65, t + 0.04);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(gain);
+    gain.connect(actx.destination);
+    osc.start(t);
+    osc.stop(t + 0.12);
+    logStatus("Son déclenché : Butée / Refus (Action bloquée)");
+  }
+
+  function logStatus(msg) {
+    document.getElementById('status-log').innerText = msg;
+  }
+
+  // Gestion de la torche et du relief dynamique
+  const stage = document.getElementById('stage');
+  const torch = document.getElementById('torch-glow');
+  const leftP = document.getElementById('left-panel');
+  const rightP = document.getElementById('right-panel');
+
+  stage.addEventListener('mousemove', (e) => {
+    const rect = stage.getBoundingClientRect();
+    const tx = e.clientX - rect.left;
+    const ty = e.clientY - rect.top;
+
+    torch.style.left = tx + 'px';
+    torch.style.top = ty + 'px';
+
+    modulerRelief(leftP, tx, ty);
+    modulerRelief(rightP, tx, ty);
+  });
+
+  function modulerRelief(panel, tx, ty) {
+    const r = panel.getBoundingClientRect();
+    const sRect = stage.getBoundingClientRect();
+    const px = r.left - sRect.left + r.width / 2;
+    const py = r.top - sRect.top + r.height / 2;
+
+    const dx = px - tx;
+    const dy = py - ty;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const angle = Math.atan2(dy, dx);
+
+    // Ombre projetée déportée en sens opposé
+    const shadowDist = Math.min(Math.max(dist * 0.05, 4), 16);
+    const sx = Math.cos(angle) * shadowDist;
+    const sy = Math.sin(angle) * shadowDist;
+    panel.style.boxShadow = `${sx}px ${sy}px 18px rgba(0,0,0,0.85)`;
+
+    // Liseré spéculaire (arêtes tournées vers la torche)
+    const pLeft = r.left - sRect.left;
+    const pRight = pLeft + r.width;
+    const pTop = r.top - sRect.top;
+    const pBottom = pTop + r.height;
+
+    const distL = Math.abs(tx - pLeft);
+    const distR = Math.abs(tx - pRight);
+    const distT = Math.abs(ty - pTop);
+    const distB = Math.abs(ty - pBottom);
+
+    const bL = (tx < pLeft) ? Math.max(0, 1 - distL / 450) : 0.1;
+    const bR = (tx > pRight) ? Math.max(0, 1 - distR / 450) : 0.1;
+    const bT = (ty < pTop) ? Math.max(0, 1 - distT / 450) : 0.1;
+    const bB = (ty > pBottom) ? Math.max(0, 1 - distB / 450) : 0.1;
+
+    panel.style.borderLeftColor = `rgba(245, 176, 61, ${0.2 + bL * 0.8})`;
+    panel.style.borderRightColor = `rgba(245, 176, 61, ${0.2 + bR * 0.8})`;
+    panel.style.borderTopColor = `rgba(245, 176, 61, ${0.2 + bT * 0.8})`;
+    panel.style.borderBottomColor = `rgba(245, 176, 61, ${0.2 + bB * 0.8})`;
+  }
+
+  // Animation de volet massicot (Comic Panel Reveal)
+  function simulerReveal(dir) {
+    sonMassicot();
+    const lShutter = document.getElementById('left-shutter');
+    const rShutter = document.getElementById('right-shutter');
+
+    [lShutter, rShutter].forEach(shutter => {
+      shutter.style.transformOrigin = dir > 0 ? 'left' : 'right';
+      shutter.style.transition = 'none';
+      shutter.style.transform = 'scaleX(1)';
+      setTimeout(() => {
+        shutter.style.transition = 'transform 0.18s cubic-bezier(0.16, 0.84, 0.24, 1.0)';
+        shutter.style.transform = 'scaleX(0)';
+      }, 20);
+    });
+    logStatus(`Comic Panel Reveal déclenché — Direction : ${dir > 0 ? 'Aller (Push)' : 'Retour (Back)'}`);
+  }
+
+  function naviguer(titre, desc, isLauncher) {
+    if (isLauncher) sonPresse(); else sonTampon();
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById('detail-title').innerText = titre;
+    document.getElementById('detail-desc').innerText = desc;
+    simulerReveal(1);
+  }
+
+  function declencherRefus() {
+    sonRefus();
+    logStatus("Action refusée : Entrée désactivée ou butoir de menu.");
+  }
+
+  function declencherRetour() {
+    sonMassicot();
+    simulerReveal(-1);
+    logStatus("Retour exécuté : Coupe de massicot vers l'accueil.");
+  }
+</script>
+
+</body>
+</html>

@@ -887,13 +887,17 @@ func _on_any_button_pressed(btn: BaseButton) -> void:
 	# M8 — seul le geste qui engage une partie tire. Si tout tirait, plus rien ne
 	# serait décisif : c'est la marque posée par `make_entry`, pas le hasard du
 	# bouton, qui décide.
-	if menu_tracer != null and bool(btn.get_meta(MenuHub.META_LAUNCHER, false)):
+	var est_lanceur := bool(btn.get_meta(MenuHub.META_LAUNCHER, false))
+	if menu_tracer != null and est_lanceur:
 		var zone := (btn as Control).get_global_rect()
 		# Au bord droit, là où les entrées de destination portent leur chevron :
 		# le lanceur n'en a pas, mais c'est de là que part le mouvement.
 		menu_tracer.tirer(Vector2(zone.end.x - GAP_S, zone.get_center().y),
 			1.0, COLOR_P1)
-	AudioManager.play_button_click()
+	if est_lanceur:
+		AudioManager.play_ui_presse()
+	else:
+		AudioManager.play_ui_tampon()
 	_pulse_press(btn)
 
 ## La souris pilote toujours la sélection principale (J1), jamais celle de J2 —

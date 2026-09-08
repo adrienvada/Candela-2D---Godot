@@ -3,6 +3,7 @@ extends Control
 
 const Charte := preload("res://charte.gd")
 const MenuArtwork := preload("res://menu_artwork.gd")
+const MenuComicPanel := preload("res://menu_comic_panel.gd")
 
 ## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
@@ -177,6 +178,11 @@ func _build() -> void:
 	left.add_child(host)
 	_host = host
 
+	# Étape 4 — Cadre et découpage en cases de BD pour la colonne gauche
+	_left_comic = MenuComicPanel.new()
+	_left_comic.name = "ComicPanelGauche"
+	host.add_child(_left_comic)
+
 	# Dernier enfant de `_host`, donc dessinée par-dessus les colonnes : un
 	# ménisque passant sous les entrées qu'il allume ne s'expliquerait pas.
 	_ink = MenuInk.new()
@@ -188,9 +194,9 @@ func _build() -> void:
 	right.clip_contents = true
 	var style := StyleBoxFlat.new()
 	style.bg_color = MenuTheme.SURFACE
-	style.set_border_width_all(1)
+	style.set_border_width_all(2)
 	style.border_color = MenuTheme.LINE
-	style.set_corner_radius_all(12)
+	style.set_corner_radius_all(0)
 	style.content_margin_left = MenuTheme.GAP_M
 	style.content_margin_right = MenuTheme.GAP_M
 	style.content_margin_top = MenuTheme.GAP_M
@@ -198,6 +204,12 @@ func _build() -> void:
 	right.add_theme_stylebox_override("panel", style)
 	columns.add_child(right)
 	_right = right
+
+	# Étape 4 — Cadre et découpage en cases de BD pour le panneau droit
+	_right_comic = MenuComicPanel.new()
+	_right_comic.name = "ComicPanelDroite"
+	right.add_child(_right_comic)
+	_right_comic.associer_stylebox(style)
 
 	_bg_image = TextureRect.new()
 	_bg_image.name = "FondFlou"
@@ -317,6 +329,8 @@ func _build() -> void:
 
 var _host: Control
 var _right: PanelContainer
+var _left_comic: MenuComicPanel
+var _right_comic: MenuComicPanel
 
 ## M6 — l'encre qui écrit l'écran entrant. Vit dans `_host`, donc clippée comme
 ## les colonnes qu'elle balaie.
@@ -509,16 +523,13 @@ func _slide(body: Control, direction: float) -> void:
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
 
-	var offset := MenuTheme.SLIDE * direction
+	# Étape 4 — Découpage en cases de BD (« Comic Panel Reveal »)
+	# Remplacement du glissement flottant par une ouverture au massicot d'encre noir franc
+	var offset := 12.0 * direction
 	body.modulate.a = 0.0
 	body.offset_left = offset
 	body.offset_right = offset
 
-	# La traversée d'écran prend la courbe d'ENTRÉE de la charte — la même que
-	# tout ce qui arrive à l'écran dans ce jeu. Elle remplace un `TRANS_CUBIC`
-	# choisi ici et nulle part ailleurs : c'est ce genre de réglage local, répété
-	# cinq fois avec cinq valeurs différentes, qui fait qu'un jeu paraît « tweené »
-	# plutôt qu'animé.
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	MenuTheme.C.animer(_tween, body, "modulate:a", 0.0, 1.0, MenuTheme.FADE,
@@ -528,20 +539,27 @@ func _slide(body: Control, direction: float) -> void:
 	MenuTheme.C.animer(_tween, body, "offset_right", offset, 0.0, MenuTheme.FADE,
 		MenuTheme.C.Courbe.ENTREE)
 
-	# L'encre est un second animateur, pas un remplaçant : le glissement reste ce
-	# qu'il était, l'encre ne touche qu'aux alphas des entrées et à son ménisque.
-	#
-	# **Et elle ne coule QUE sur un geste connu.** Sans doigt posé, il n'y a pas
-	# de lumière à faire couler — mais surtout, une navigation appelée par du code
-	# accompagne presque toujours l'ouverture du menu, et M10 est alors en train
-	# d'allumer le panneau qui contient cette colonne. Deux effets qui animent des
-	# `modulate` imbriqués sur les mêmes pixels ne se composent pas : ils se
-	# marchent dessus, et ça se voit comme un défaut d'affichage. Ils ont chacun
-	# leur domaine — M10 la traversée arène ↔ menu, M6 la navigation à l'intérieur.
+	# Déclenchement du Comic Panel Reveal sur les cases gauche et droite
+	if _left_comic != null:
+		_host.move_child(_left_comic, -1)
+		_left_comic.reveler(direction, MenuTheme.FADE)
+	if _right_comic != null:
+		_right.move_child(_right_comic, -1)
+		_right_comic.reveler(direction, MenuTheme.FADE)
+
+	# Son de coupe de case / massicot
+	_jouer_ui("ui_massicot")
+
+	# L'encre (M6) coule en synergie si le geste joueur est connu
 	if _ink != null and _geste_y >= 0.0:
 		_host.move_child(_ink, -1)
 		_ink.couler(list_of(current_id()), _geste_y, MenuTheme.P1)
 	_geste_y = -1.0
+
+func _jouer_ui(cle: String) -> void:
+	var audio := get_node_or_null(^"/root/AudioManager")
+	if audio != null:
+		audio.call("play_ui", cle)
 
 func _reset_transform(body: Control) -> void:
 	if _tween != null and _tween.is_valid():
@@ -549,6 +567,10 @@ func _reset_transform(body: Control) -> void:
 	body.modulate.a = 1.0
 	body.offset_left = 0.0
 	body.offset_right = 0.0
+	if _left_comic != null:
+		_left_comic.arret_immediat()
+	if _right_comic != null:
+		_right_comic.arret_immediat()
 
 # ---------------------------------------------------------------------------
 # PANNEAU DE DROITE
@@ -685,6 +707,9 @@ func _apply_panel(key: String) -> void:
 			if est_voulu:
 				active_content = content
 	_update_background(wanted, active_content)
+	if _right_comic != null:
+		_right.move_child(_right_comic, -1)
+		_right_comic.reveler(1.0, MenuTheme.FADE)
 	panel_changed.emit(wanted)
 
 func _declencher_embrasement(mat: ShaderMaterial) -> void:
@@ -701,6 +726,10 @@ func _declencher_embrasement(mat: ShaderMaterial) -> void:
 	Charte.animer_via(_reveal_tween, appliquer, 0.3, 1.0, 0.35, Charte.Courbe.SORTIE)
 
 func set_torch_position_global(global_pos: Vector2) -> void:
+	if _left_comic != null and is_instance_valid(_left_comic):
+		_left_comic.set_torch_position_global(global_pos)
+	if _right_comic != null and is_instance_valid(_right_comic):
+		_right_comic.set_torch_position_global(global_pos)
 	if _bg_image == null or not _bg_image.is_inside_tree():
 		return
 	var local := _bg_image.get_global_transform().affine_inverse() * global_pos
@@ -729,6 +758,11 @@ func _process(delta: float) -> void:
 				clampf(local_mouse.x / size.x, 0.0, 1.0),
 				clampf(local_mouse.y / size.y, 0.0, 1.0)
 			)
+			var gpos := _bg_image.get_global_mouse_position()
+			if _right_comic != null:
+				_right_comic.set_torch_position_global(gpos)
+			if _left_comic != null:
+				_left_comic.set_torch_position_global(gpos)
 		mat.set_shader_parameter("torch_pos", _torch_pos_uv)
 
 func _update_background(key: String, content: Control) -> void:
@@ -1065,3 +1099,9 @@ func add_back_entry(id: String, detail: String = "",
 		back())
 	list.add_child(btn)
 	return btn
+
+func left_comic() -> MenuComicPanel:
+	return _left_comic
+
+func right_comic() -> MenuComicPanel:
+	return _right_comic

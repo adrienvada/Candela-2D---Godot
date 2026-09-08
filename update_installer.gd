@@ -177,19 +177,21 @@ func preparer_bundle(archive: String, racine: String, nom_racine: String) -> Dic
 ## l'erreur ne ressemble en rien à sa cause. `ditto` sous macOS et `tar` sous
 ## Windows (livré depuis Windows 10 1803) font le travail correctement.
 func _decompresser(archive: String, vers: String) -> Error:
+	var chemin_archive := ProjectSettings.globalize_path(archive)
+	var chemin_vers := ProjectSettings.globalize_path(vers)
 	var sortie: Array = []
 	var code := -1
 	match plateforme():
 		PLATEFORME_MACOS:
-			code = OS.execute("/usr/bin/ditto", ["-x", "-k", archive, vers], sortie, true)
+			code = OS.execute("/usr/bin/ditto", ["-x", "-k", chemin_archive, chemin_vers], sortie, true)
 		PLATEFORME_WINDOWS:
-			code = OS.execute("tar.exe", ["-xf", archive, "-C", vers], sortie, true)
+			code = OS.execute("tar.exe", ["-xf", chemin_archive, "-C", chemin_vers], sortie, true)
 			if code != 0:
 				code = OS.execute("powershell.exe", ["-NoProfile", "-Command",
 					"Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force"
-						% [archive, vers]], sortie, true)
+						% [chemin_archive, chemin_vers]], sortie, true)
 		_:
-			code = OS.execute("unzip", ["-q", "-o", archive, "-d", vers], sortie, true)
+			code = OS.execute("unzip", ["-q", "-o", chemin_archive, "-d", chemin_vers], sortie, true)
 	if code != 0:
 		push_warning("UpdateInstaller: décompression en échec (%d) : %s" % [code, str(sortie)])
 		return FAILED

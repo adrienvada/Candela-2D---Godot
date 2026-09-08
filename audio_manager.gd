@@ -60,6 +60,11 @@ const SOUNDS: Dictionary = {
 	"ui_vhs_rewind": "res://assets/audio/sfx/ui_vhs_rewind.wav",
 	"ui_keystroke": "res://assets/audio/sfx/ui_keystroke.wav",
 	"ui_power_on": "res://assets/audio/sfx/ui_power_on.wav",
+	# Étape 4 — Direction Roman Graphique Brutaliste (presse, massicot, tampon, refus)
+	"ui_presse": "res://assets/audio/sfx/ui_presse.wav",
+	"ui_tampon": "res://assets/audio/sfx/ui_tampon.wav",
+	"ui_massicot": "res://assets/audio/sfx/ui_massicot.wav",
+	"ui_refus": "res://assets/audio/sfx/ui_refus.wav",
 	# V5.1 — le claquement de torche, LE son entendu cinq cents fois par soirée.
 	# Câblés, muets tant que les fichiers manquent (règle « câbler, taire,
 	# diagnostiquer ») ; entrées à ajouter au manifeste (domaine « menus »).
@@ -1123,6 +1128,10 @@ const SFX_PRIORITE: Dictionary = {
 	"wall_impact": 1,
 	"button_click": 1,
 	"ui_ready_ping": 1,
+	"ui_presse": 1,
+	"ui_tampon": 1,
+	"ui_massicot": 1,
+	"ui_refus": 1,
 	"shoot": 2,
 	"flesh_impact": 3,
 	# --- Livraison du 2026-08-27, classee par ce que le son APPREND.
@@ -1596,9 +1605,33 @@ func play_count(seconde: int) -> AudioStreamPlayer:
 ## Un son d'interface, non positionnel. Passe par la meme porte que le reste
 ## pour que le pool et les priorites s'appliquent.
 func play_ui(cle: String, volume_db: float = 0.0) -> AudioStreamPlayer:
-	if get_audio_stream(cle) == null:
-		return null
+	var stream = get_audio_stream(cle)
+	if not stream:
+		match cle:
+			"ui_presse":
+				return play_sfx("ui_type_impact", 0.9, volume_db + 1.0)
+			"ui_tampon":
+				return play_sfx("button_click", 1.15, volume_db)
+			"ui_massicot":
+				return play_sfx("ui_tick", 1.4, volume_db)
+			"ui_refus":
+				return play_sfx("button_click", 0.65, volume_db)
+			_:
+				return null
 	return play_sfx(cle, 1.0, volume_db)
+
+## Étape 4 — Déclencheurs dédiés Roman Graphique Brutaliste
+func play_ui_presse(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_presse", volume_db)
+
+func play_ui_tampon(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_tampon", volume_db)
+
+func play_ui_massicot(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_massicot", volume_db)
+
+func play_ui_refus(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_refus", volume_db)
 
 ## ============================================================================
 ## V5.10 — LA PRESENCE DE LA SALLE
