@@ -13246,6 +13246,7 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
 
 ### MV3 — Refonte Roman Graphique Brutaliste & Pleine Luminosité (Adrien, 2026-09-08)
 - **Esthétique :** Roman graphique sombre, encrage noir franc, arêtes géométriques vives du béton brut, sans cadre blanc (pleine page).
+- **Clair-obscur radical & Obscurité profonde :** La majorité du cadre (au moins 75-85 %) est plongée dans un noir d'encre profond (luminosité inférieure à 10 %), créant une pénombre claustrophobe absolue d'où émergent violemment des sources lumineuses nettes et tranchées.
 - **Pleine luminosité des zones claires :** Remplacement de l'assombrissement plat par une courbe de percée des hautes lumières (`highlight_breakthrough` via `smoothstep(0.35, 0.78, luma)`) dans `menu_artwork.gdshader` : les faisceaux, étincelles, néons et écrans percent à 100 % de luminosité réelle tandis que les ombres restent dans un noir d'encre pur.
 - **Lore et simplicité des combattants :**
   - Pas de camp, pas de zombies ni de créatures.
@@ -13253,7 +13254,7 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
   - Équipement minimaliste : uniquement un pistolet standard et une lampe torche.
   - Traces d'arène mortelle : béton ébréché, douilles au sol, sang séché des précédents affrontements.
 - **Fidélité stricte aux 15 thèmes et codes couleurs originaux :**
-  1. `ill_accueil` (Ambre) : Hall de l'arène, poteau indicateur *ARENA / SECTORS*, douilles et sang, faisceau rasant.
+  1. `ill_accueil` (Ambre) : Hall de l'arène, panneau indicateur où **seul *ARENA* est distinctement lisible** (les autres panneaux sont brisés, rouillés ou effacés dans le noir total), douilles et sang au sol, faisceau rasant.
   2. `ill_competitif` (Rouge carmin) : Armoire électrique/disjoncteurs sur le mur gauche, tension d'un duel au pistolet-torche dans le couloir.
   3. `ill_amical` (Ambre) : Deux silhouettes en tenue noire autour du pilier central de l'arène.
   4. `ill_amical_ligne` (Bleu cyan) : Salle des serveurs et câbles réseau tressés, boîtiers aux diodes scintillantes.
