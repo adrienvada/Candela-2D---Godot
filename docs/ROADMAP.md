@@ -11749,7 +11749,110 @@ avant ce chantier.
    elle ne se fait pas d'office — c'est la règle du journal des sessions, et
    c'est elle qui a évité que V6.2 soit implémentée deux fois.
 
-### ⚠️ MESURÉ — la photocopie d'écran du flou laisse un polygone à l'écran
+### ✅ RÉSOLU — la photocopie d'écran du flou laissait un polygone à l'écran
+
+> **Trouvé et corrigé le 2026-09-07**, après qu'Adrien a confié le chantier
+> brouillage à la session du voile. **La cause n'était aucun des quatre candidats
+> instruits ce jour-là**, et le récit de leur mort est conservé plus bas : il dit
+> mieux que la solution pourquoi le défaut a tenu un mois.
+
+#### La cause, en une phrase
+
+**`BackBufferCopy.rect` s'exprime en TEXELS DE FRAMEBUFFER, et l'appareil le
+calculait en unités de canevas.** Godot n'applique aucune conversion. Tant que
+les deux coïncident, personne ne voit rien. Mesuré sur la scène réelle :
+
+| vue | canevas | framebuffer | facteur |
+|---|---|---|---|
+| **racine** — en ligne, entraînement | 1920×1080 | **3414×1920** | **1,778** |
+| écran scindé — vue J1 | 957×1080 | 957×1080 | 1,000 |
+| écran scindé — vue J2 | 958×1080 | 958×1080 | 1,000 |
+
+En vue unique, l'emprise couvrait donc **56 % de sa largeur et de sa hauteur
+voulues** : près de la moitié de la zone n'était jamais recopiée, et le flou y
+lisait des texels laissés par une image précédente. Le polygone, c'est la
+frontière de ce qui avait été rafraîchi.
+
+#### ⚠️ Pourquoi il a fallu un mois : aucune API ne dit la vérité
+
+Le candidat n° 1 accusait le bon coupable **pour la mauvaise raison** — il
+écrivait « une fenêtre plus petite que 1920×1080 rend le pixel de framebuffer
+plus gros ». C'est faux, et c'est ce qui a égaré tout le monde : le canevas est
+**figé** à 1920×1080 par `stretch/mode = canvas_items`, et le framebuffer suit
+les pixels **natifs** de l'écran. **Deux mises à l'échelle s'empilent** —
+l'étirement (1,333) puis la densité Retina (1,333) — et voici ce que Godot en
+rapporte, mesuré à la racine pendant que la texture faisait 3414×1920 :
+
+| appel | rend | vérité |
+|---|---|---|
+| `get_final_transform()` | 1,333 | 1,778 |
+| `get_screen_transform()` | 1,333 | 1,778 |
+| `get_stretch_transform()` | 1,333 | 1,778 |
+| `get_canvas_transform()` | 1,000 | 1,778 |
+
+**Les quatre mentent, et de la même façon** : elles ne connaissent que
+l'étirement. La densité native s'applique par-dessus et n'apparaît nulle part.
+On vérifiait donc les réglages d'étirement, on les trouvait justes, et on
+concluait qu'il n'y avait pas de mise à l'échelle. **La seule source honnête est
+`get_texture().get_size() / get_visible_rect().size`** — littéralement le tampon
+dans lequel la photocopie écrit.
+
+Le dépôt savait déjà la moitié de ceci — piège « Une fenêtre Godot se compte en
+pixels NATIFS, pas en points », 2026-08-25. **Personne ne l'avait relié au
+tampon d'écran.**
+
+#### Le second défaut, mineur et réel : le moteur tronque
+
+`COPY_MODE_RECT` **tronque le `rect` à l'entier, position ET taille** : jusqu'à
+**1,37 texel perdu** sur les bords droit et bas, mesuré. La production ne demande
+jamais un rectangle aligné — `emprise_copie()` rend des flottants —, donc ce
+défaut-là était permanent, y compris en écran scindé. Il ne se corrige pas, il se
+compense : plancher sur le coin, plafond sur l'étendue, plus `MARGE_COPIE`.
+
+#### Le correctif, et les deux contrôles qui manquaient
+
+- **`Brouillage.rect_photocopie()`** — géométrie pure : convertit en texels,
+  absorbe la troncature, et convertit la marge de noyau (qui est en texels)
+  avant de la donner à `emprise_copie()`.
+- **`brouillage_vue.gd`** lui passe l'échelle mesurée sur la texture.
+- **`tools/test_brouillage.gd`** vérifie désormais, en headless et sans rendu,
+  que tout texel atteignable par le noyau tombe dans le `rect` — à cinq échelles,
+  **avec son contre-test** : l'ancienne façon doit échouer, sinon le contrôle ne
+  mesure rien.
+- **`tools/banc_photocopie.tscn`** — acte I : caractérise le moteur, et rougit
+  si une version de Godot se mettait à perdre plus que `MARGE_COPIE`. Acte II :
+  rejoue le vrai appareil dans les **trois** vues du jeu.
+
+⚠️ **`emprise_copie()` était juste, vérifiée, et n'a jamais été en cause.** Le
+défaut vivait à l'étape SUIVANTE — la conversion vers les texels, qui n'existait
+pas. **Un contrôle qui s'arrête une étape trop tôt donne toutes les apparences de
+la rigueur**, et c'est ce qui a fait chercher ailleurs pendant un mois.
+
+#### Le banc de tuning portait le même défaut, et il est corrigé aussi
+
+**`tools/banc_brouillage.gd` calculait son `_copie_ecran.rect` en unités de
+canevas, exactement comme la production avant ce jour.** Trouvé en cherchant
+tout appelant de `emprise_copie()` : c'est le seul autre. Le banc tourne dans
+une fenêtre — donc avec la même densité native que la production en vue
+unique — et pouvait donc montrer le même polygone, sans qu'aucune session ne
+l'ait jamais rapproché du défaut de production. **Corrigé à l'identique** :
+`_texels_par_unite()` ajoutée (même mesure que `brouillage_vue.gd`), le `rect`
+passe par `Brouillage.rect_photocopie()`. Ce n'est pas une extension de
+périmètre — c'est le même bogue, dans le même fichier de famille, réparé de la
+même main qui vient de le comprendre.
+
+#### ⚠️ Ce qui reste ouvert, et il ne faut pas le refermer par confort
+
+**En écran scindé le facteur vaut 1,000, mesuré dans les deux vues.** Le défaut
+corrigé ici **n'explique donc pas** la bande rapportée en écran scindé le
+2026-09-07. Cette observation venait d'une lecture de captures, pas d'une
+manette ; il reste à la confirmer, et si elle se confirme, à lui chercher sa
+propre cause. **Ne pas conclure que tout est réglé parce que la vue unique
+l'est.**
+
+---
+
+#### Le récit, conservé — quatre hypothèses, quatre réfutations, aucune mesure
 
 **Signalé par Adrien le 2026-08-27, reproduit et isolé le jour même.** « J'ai des
 effets bizarres au centre, j'ai l'impression que c'est dans la zone de flou […]

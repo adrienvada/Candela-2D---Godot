@@ -26,6 +26,7 @@ par sujet impraticable.
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
+| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | `eblouissement.gd`, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
@@ -245,6 +246,51 @@ démarre en Bougie et aurait trois armes d'emblée), **rejouer** après chaque v
 game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
+
+### 2026-09-07 (suite) — session « retouche éblouissement » : le polygone de photocopie est RÉSOLU, chantier brouillage repris avec l'accord d'Adrien
+
+**Adrien a confié le chantier brouillage à cette session** (« oui tu récupères
+et te charges du chantier brouillage aussi »), donc `brouillage.gd`,
+`brouillage_vue.gd`, `brouillage_flou.gdshader` et `tools/banc_brouillage.*`
+changent de main : ils étaient réservés à un autre domaine, ils ne le sont
+plus. Toujours branche `diagnostic-photocopie`, worktree du même nom.
+
+**La cause : `BackBufferCopy.rect` s'exprime en texels de framebuffer, et
+l'appareil le calculait en unités de canevas.** Godot n'applique aucune
+conversion, et rien dans son API ne rapporte la vérité — `get_final_transform`,
+`get_screen_transform` et `get_stretch_transform` rendent toutes 1,333 à la
+racine pendant que le facteur réel est 1,778 (l'étirement `canvas_items` et la
+densité Retina s'empilent, et seule la seconde échappe à ces trois appels). La
+feuille de route porte le détail complet, y compris pourquoi le candidat n° 1
+du 2026-08-27 accusait le bon coupable pour la mauvaise raison.
+
+**Le correctif :** `Brouillage.rect_photocopie()` (géométrie pure, convertit
+avant d'appeler `emprise_copie()`, absorbe aussi la troncature à l'entier du
+moteur — jusqu'à 1,37 texel mesuré) ; `brouillage_vue.gd` lui passe l'échelle
+lue sur `get_texture().get_size()`, seule source qui ne ment pas.
+
+**Deux instruments neufs, parce que les anciens ne pouvaient pas voir ce
+défaut :**
+- `tools/test_brouillage.gd` — contrôle géométrique headless, cinq échelles,
+  **avec contre-test** : l'ancienne façon doit échouer, sinon rien n'est mesuré.
+- `tools/banc_photocopie.gd/.tscn` — acte I : caractérise `BackBufferCopy`
+  lui-même (pas notre code) sur des cas fractionnaires, entiers, à cheval sur
+  les bords ; acte II : rejoue le vrai appareil dans les **trois** vues
+  réellement rendues par `main.tscn`. C'est le manque exact de
+  `banc_voile.tscn`, qui a une racine `Node2D` et n'a donc jamais parlé de
+  l'écran scindé.
+
+**`tools/banc_brouillage.gd` avait le même bogue** — trouvé en cherchant tout
+appelant de `emprise_copie()`, c'était le seul autre. Corrigé à l'identique dans
+le même commit : même mesure, même fonction de conversion. Pas une extension de
+périmètre, le même bogue dans un fichier de la même famille.
+
+⚠️ **Ce qui reste ouvert, et ce n'est pas refermé par confort.** En écran scindé
+le facteur mesuré est 1,000 dans les deux vues : ce correctif ne peut donc pas
+expliquer la bande que la session « fusée éclairante » a lue sur des captures
+d'Adrien en écran scindé. Cette lecture n'a pas été confirmée à la manette. La
+feuille de route le dit noir sur blanc plutôt que de laisser croire que « le
+polygone » recouvrait un seul défaut.
 
 ### 2026-09-07 — session « SG · sang au sol » : je prends `blood_stain.gd`
 

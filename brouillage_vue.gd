@@ -96,6 +96,28 @@ func _ready() -> void:
 	_couche_halo.add_child(_halo)
 
 
+## Combien de texels de framebuffer vaut UNE unité de canevas, dans cette vue.
+##
+## ⚠️ **Aucune API de transformation ne répond à cette question.** Mesuré le
+## 2026-09-07 sur la scène réelle : à la racine, `get_final_transform()`,
+## `get_screen_transform()` et `get_stretch_transform()` rendent toutes 1,333
+## pendant que la texture du viewport fait 3414×1920 pour un canevas de
+## 1920×1080 — soit 1,778. Elles ne rapportent que l'étirement `canvas_items` ;
+## **la densité native de l'écran s'applique par-dessus et n'apparaît nulle
+## part.** Les croire fait poser une emprise 25 % trop petite.
+##
+## La taille de la texture est la seule source qui ne mente pas : c'est
+## littéralement le tampon dans lequel la photocopie écrit.
+func _texels_par_unite(vue: Viewport) -> Vector2:
+	var canevas := vue.get_visible_rect().size
+	if canevas.x < 1.0 or canevas.y < 1.0:
+		return Vector2.ONE
+	var tex := vue.get_texture()
+	if tex == null:
+		return Vector2.ONE
+	return Vector2(tex.get_size()) / canevas
+
+
 ## Rien à montrer : ni flou, ni halo, ni photocopie.
 ##
 ## ⚠️ **La photocopie s'éteint AVEC le flou.** Un `BackBufferCopy` visible
@@ -153,10 +175,11 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		_flou.rotation = axe
 		_flou.position = centre - taille * 0.5
 		# L'emprise couvre ce que le shader LIT — le dessin plus le rayon de
-		# noyau —, pas ce qu'il peint. Voir `Brouillage.emprise_copie()`.
-		var demi_emprise := Brouillage.emprise_copie(taille, axe,
-			Brouillage.NOYAU_FLOU + 2.0)
-		_copie.rect = Rect2(centre - demi_emprise, demi_emprise * 2.0)
+		# noyau —, pas ce qu'il peint. Et elle se pose en TEXELS de framebuffer,
+		# jamais en unités de canevas : voir `Brouillage.rect_photocopie()`,
+		# c'est là que vivent la mesure et la raison.
+		_copie.rect = Brouillage.rect_photocopie(centre, taille, axe,
+			Brouillage.NOYAU_FLOU, _texels_par_unite(vue))
 		_mat_flou.set_shader_parameter("rayon_noyau", Brouillage.NOYAU_FLOU)
 		_mat_flou.set_shader_parameter("force", force)
 		# ⚠️ **Le trou autour de soi : son centre est SA PROPRE position.**

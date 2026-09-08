@@ -512,6 +512,69 @@ static func emprise_copie(taille: Vector2, rotation: float,
 		demi.x * si + demi.y * co + marge)
 
 
+## Le `rect` à donner au `BackBufferCopy`, **en texels de framebuffer**.
+##
+## ## Pourquoi cette fonction existe — le défaut qu'elle corrige
+##
+## **`BackBufferCopy.rect` n'est PAS en unités de canevas. Il est en texels de
+## framebuffer, et Godot n'applique aucune conversion.** Mesuré le 2026-09-07 au
+## banc `tools/banc_photocopie.tscn`, à la racine comme dans un `SubViewport`.
+##
+## Tant que les deux coïncident, personne ne s'en aperçoit. Ils ne coïncident pas
+## à la racine :
+##
+## | vue | canevas | framebuffer | facteur |
+## |---|---|---|---|
+## | racine (en ligne, entraînement) | 1920×1080 | 3414×1920 | **1,778** |
+## | écran scindé, chaque vue | 957×1080 | 957×1080 | 1,000 |
+##
+## Une emprise calculée en canevas couvrait donc **56 % de sa largeur voulue** en
+## vue unique : près de la moitié de la zone n'était jamais recopiée, et le flou
+## y lisait des texels périmés. C'est le « polygone à arêtes franches » signalé
+## par Adrien le 2026-08-27.
+##
+## ⚠️ **Et ce n'est pas l'étirement de la fenêtre, contrairement à ce que la
+## feuille de route a longtemps dit.** Le canevas est FIGÉ à 1920×1080 par
+## `stretch/mode = canvas_items` ; le framebuffer suit les pixels **natifs** de
+## l'écran. Deux mises à l'échelle s'empilent — l'étirement (1,333) puis la
+## densité Retina (1,333) — et **aucune API de transformation ne rapporte la
+## seconde** : `get_final_transform`, `get_screen_transform` et
+## `get_stretch_transform` disent toutes 1,333 quand la vérité est 1,778. Voilà
+## pourquoi le défaut a survécu à quatre diagnostics : on vérifiait les réglages
+## d'étirement, on les trouvait justes, et on concluait qu'il n'y avait pas de
+## mise à l'échelle.
+##
+## **La seule source honnête est `get_texture().get_size() / get_visible_rect()
+## .size`** — c'est ce que `brouillage_vue.gd` passe en `texels_par_unite`.
+##
+## ## Les deux élargissements, et aucun n'est décoratif
+##
+## `noyau_texels` est le rayon du noyau du flou, qui se mesure en TEXELS (le
+## shader fait `rayon_noyau * SCREEN_PIXEL_SIZE`). La marge doit donc être
+## convertie en unités de canevas AVANT d'entrer dans `emprise_copie()`, sans
+## quoi on ajoute des texels à des unités de canevas.
+##
+## Et `COPY_MODE_RECT` **tronque à l'entier**, position et taille : mesuré au
+## même banc, jusqu'à deux texels perdus sur les bords droit et bas. D'où le
+## plancher sur le coin et le plafond sur l'étendue, plus un texel de garde.
+static func rect_photocopie(centre: Vector2, taille: Vector2, rotation: float,
+		noyau_texels: float, texels_par_unite: Vector2) -> Rect2:
+	var ech := Vector2(maxf(texels_par_unite.x, 0.001),
+		maxf(texels_par_unite.y, 0.001))
+	# La marge se prend sur le facteur le PLUS PETIT : c'est l'axe où un texel
+	# de noyau coûte le plus d'unités de canevas, donc celui qui décide.
+	var marge := (noyau_texels + MARGE_COPIE) / minf(ech.x, ech.y)
+	var demi := emprise_copie(taille, rotation, marge)
+	var coin := (centre - demi) * ech
+	var etendue := demi * 2.0 * ech
+	return Rect2(coin.floor(), etendue.ceil() + Vector2.ONE * 2.0)
+
+
+## Le texel de garde ajouté au rayon du noyau. Il absorbe l'arrondi du filtrage
+## bilinéaire du `sampler2D` d'écran, qui prélève entre deux texels.
+const MARGE_COPIE := 2.0
+
+
 static func opacite(dazzle: float, force: float = GAIN,
 		courbe: float = COURBE_CONTRASTE) -> float:
 	var t := _dose(dazzle, force)
