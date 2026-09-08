@@ -18,6 +18,7 @@ extends Control
 
 const Charte := preload("res://charte.gd")
 const MenuWidgets := preload("res://menu_widgets.gd")
+const MenuRivetsOverlay := preload("res://menu_rivets_overlay.gd")
 
 ## Émis quand le joueur choisit une carte (la sélection est déjà appliquée à MapData).
 signal map_chosen(map_id: String)
@@ -347,6 +348,12 @@ func _make_map_tile(entry: Dictionary) -> Button:
 	thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cadre.add_child(thumb)
+
+	var rivets := MenuRivetsOverlay.new()
+	rivets.style = MenuRivetsOverlay.Style.RIVETS_SEULS
+	rivets.rivet_size = 3.0
+	rivets.rivet_margin = 3.0
+	cadre.add_child(rivets)
 
 	# Colonne de textes et badge à droite
 	var texts := VBoxContainer.new()

@@ -35,3 +35,4 @@
 # du dépôt dont une bonne part n'étaient que ces analyses — le nombre alarmait,
 # la cause était bénigne.
 *.asd
+.DS_Store

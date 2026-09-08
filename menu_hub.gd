@@ -4,6 +4,8 @@ extends Control
 const Charte := preload("res://charte.gd")
 const MenuArtwork := preload("res://menu_artwork.gd")
 const MenuComicPanel := preload("res://menu_comic_panel.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 
 ## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
@@ -889,9 +891,12 @@ func make_entry(label: String, detail: String, target: String = "",
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(1)
+	normal.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
 	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
+	normal.set_corner_radius_all(MenuWidgets.CORNER_BUTTON)
+	normal.shadow_size = 0
+	normal.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	normal.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	normal.content_margin_left = MenuTheme.GAP_S
 	normal.content_margin_right = MenuTheme.GAP_S
 	btn.add_theme_stylebox_override("normal", normal)
@@ -899,62 +904,35 @@ func make_entry(label: String, detail: String, target: String = "",
 
 	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
-	# **Le survol et la sélection ne portaient pas des états, ils portaient des
-	# SUJETS.** Chaque entrée teintait ses deux styles avec son propre accent :
-	# rien que sur l'accueil, quatre couleurs — bleu pour les modes, ambre pour le
-	# compétitif, gris pour les réglages, rouge pour quitter. Survoler le
-	# compétitif donnait donc de l'ambre et survoler sa voisine du bleu pâle sur
-	# du noir, c'est-à-dire presque rien. « Ambre » ne voulait pas dire
-	# « sélectionné », il voulait dire « cette entrée-là est dorée ».
-	#
-	# Et les deux états ne différaient que par l'opacité — 6 % contre 12 % — et un
-	# pixel de bordure. À la souris, indiscernables.
-	#
-	# Trois signaux, trois couleurs, et elles ne dépendent plus du sujet :
-	#   · **acier** — le curseur de la souris passe ici ;
-	#   · **ambre** — c'est cette entrée que le cadre de droite montre ;
-	#   · **bleu / rouge** — le liseré d'un des deux curseurs du jeu.
-	#
-	# L'accent propre à l'entrée survit là où il dit quelque chose de vrai : le
-	# chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur
-	# la lecture de l'état.
+	# Direction Roman Graphique Brutaliste : contraste franc au survol et ombre nette.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(MenuTheme.ACCENT, 0.55)
-	hover.bg_color = Color(MenuTheme.ACCENT, 0.07)
+	hover.border_color = Charte.HALOGENE
+	hover.bg_color = Color(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b, 0.15)
+	hover.shadow_size = 0
+	hover.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	hover.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	btn.add_theme_stylebox_override("hover", hover)
 
 	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
-	#
-	# **Discrète, et voulue telle** (arbitrage d'Adrien, 2026-08-24) : bleu autour,
-	# ambre dedans.
-	#
-	# C'est la BORDURE qui identifie — deux pixels d'ambre plein, lisibles d'un
-	# coup d'œil dans une colonne — et le fond ne fait que réchauffer. Un premier
-	# essai à un quart d'opacité donnait un aplat : l'entrée cessait d'être choisie
-	# pour devenir un bouton d'une autre couleur, et le libellé y perdait son
-	# contraste. À un huitième, l'ambre se voit sans couvrir, et le liseré bleu du
-	# curseur reste le premier lu — ce qu'il doit être, puisqu'il dit où l'on est.
+	# Bordure ambre énergique et ombre dure Roman Graphique.
 	var choisie := normal.duplicate() as StyleBoxFlat
 	choisie.border_color = MenuTheme.GOLD
-	choisie.set_border_width_all(2)
-	choisie.bg_color = Color(MenuTheme.GOLD, 0.12)
+	choisie.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
+	choisie.bg_color = Color(MenuTheme.GOLD.r, MenuTheme.GOLD.g, MenuTheme.GOLD.b, 0.22)
+	choisie.shadow_size = 0
+	choisie.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	choisie.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	_entry_styles[btn] = {"repos": normal, "survol": hover, "choisie": choisie}
 
-	# **Le focus de Godot ne peint plus rien**, et c'est le correctif du défaut
-	# qu'Adrien a vu : il portait l'apparence choisie, en plus de la peinture
-	# explicite de `_peindre()`. Deux mécanismes pour un même signal, sur deux
-	# déclencheurs différents — un clic donne le focus Godot, qui survit à la
-	# sélection suivante. Une entrée s'allumait donc sans être choisie, et se
-	# rallumait au survol.
-	#
-	# La sélection est désormais peinte à un seul endroit. Le focus de Godot n'est
-	# de toute façon pas le curseur du joueur : le jeu a les siens, qui dessinent
-	# leur liseré par-dessus.
 	btn.add_theme_stylebox_override("focus", normal)
 	btn.add_theme_stylebox_override("focus_hover", hover)
-	# L'appui, lui, montre déjà ce que l'entrée est sur le point de devenir.
-	btn.add_theme_stylebox_override("pressed", choisie)
-	btn.add_theme_stylebox_override("hover_pressed", choisie)
+	# L'appui, lui, montre un enfoncement mécanique de la plaque.
+	var pressed := choisie.duplicate() as StyleBoxFlat
+	pressed.shadow_size = 0
+	pressed.shadow_offset = MenuWidgets.SHADOW_OFFSET_PRESSED
+	pressed.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("hover_pressed", pressed)
 
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT,

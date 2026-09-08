@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candela 2D — Showcase Étape 2 : Matière, Trames & Hachures d Encrage</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@800;900&family=Oxanium:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap");
+
+  :root {
+    --c-fond: #0b0c0e;
+    --c-surface: #14171c;
+    --c-surface-elevated: #1a1e24;
+    --c-line: #2e3440;
+    --c-halogene: #fae8cc;
+    --c-ambre: #f5b03e;
+    --c-rouge: #e04434;
+    --c-carmin: #9e1f2a;
+    --c-acier: #707a87;
+    --ombre-dure: 4px 4px 0px #000000;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--c-fond);
+    color: var(--c-halogene);
+    font-family: "Oxanium", sans-serif;
+    padding: 32px 24px;
+    background-image: 
+      radial-gradient(var(--c-line) 1px, transparent 1px),
+      radial-gradient(var(--c-line) 1px, var(--c-fond) 1px);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+  }
+
+  header {
+    border-bottom: 2px solid var(--c-line);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  h1 {
+    font-family: "Cabinet Grotesk", sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--c-halogene);
+  }
+
+  .badge {
+    background: var(--c-ambre);
+    color: #000;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid #000;
+    box-shadow: var(--ombre-dure);
+    display: inline-block;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 36px;
+  }
+
+  .card {
+    background: var(--c-surface);
+    border: 2px solid var(--c-line);
+    box-shadow: var(--ombre-dure);
+    padding: 20px;
+    position: relative;
+  }
+
+  .card h2 {
+    font-size: 17px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #000;
+    border: 2px solid var(--c-line);
+    overflow: hidden;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .controls {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .slider-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  input[type=range] {
+    accent-color: var(--c-ambre);
+    width: 140px;
+  }
+
+  /* HUD Showcase */
+  .hud-section {
+    background: var(--c-surface);
+    border: 2px solid var(--c-line);
+    box-shadow: var(--ombre-dure);
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .hud-preview-area {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    background: #000;
+    padding: 28px;
+    border: 2px solid var(--c-line);
+    margin-top: 16px;
+  }
+
+  .hud-cartouche {
+    width: 320px;
+    background: rgba(20, 23, 28, 0.95);
+    border: 2px solid var(--c-ambre);
+    box-shadow: var(--ombre-dure);
+    padding: 14px;
+  }
+
+  .hud-cartouche.critical {
+    border-color: var(--c-rouge);
+  }
+
+  .hud-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .hp-bar-outer {
+    width: 100%;
+    height: 22px;
+    background: var(--c-line);
+    border: 1px solid var(--c-line);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hp-bar-fill {
+    height: 100%;
+    width: 85%;
+    background: var(--c-ambre);
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .hp-bar-fill.critical {
+    width: 25%;
+    background: var(--c-carmin);
+  }
+
+  .hp-bar-hatch-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .hp-bar-hatch-overlay.pulse {
+    opacity: 0.85;
+    animation: alertBlink 0.6s infinite alternate ease-in-out;
+  }
+
+  @keyframes alertBlink {
+    from { opacity: 0.25; }
+    to { opacity: 0.95; }
+  }
+
+  .hud-btn {
+    background: var(--c-surface-elevated);
+    border: 2px solid var(--c-ambre);
+    color: var(--c-ambre);
+    padding: 8px 16px;
+    font-family: "Oxanium", sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px #000;
+    transition: transform 0.05s;
+  }
+
+  .hud-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Candela 2D — Étape 2 : Matière & Trames d Encrage</h1>
+    <p style="color: var(--c-acier); font-size: 14px; margin-top: 4px;">
+      Shaders de demi-teintes sérigraphiques, hachures manuelles et cartouches d alerte brutalistes.
+    </p>
+  </div>
+  <span class="badge">Étape 2 Validée</span>
+</header>
+
+<div class="grid">
+  <!-- 1. Hachures Simples 45° -->
+  <div class="card">
+    <h2>1. Hachures 45° (Single)</h2>
+    <div class="canvas-wrapper">
+      <canvas id="cvSingle" width="360" height="180"></canvas>
+    </div>
+    <div class="controls">
+      <div class="slider-row">
+        <span>Espacement</span>
+        <input type="range" id="spSingle" min="6" max="28" value="12">
+      </div>
+      <div class="slider-row">
+        <span>Épaisseur trait</span>
+        <input type="range" id="wSingle" min="1" max="4" value="2" step="0.5">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Hachures Croisées -->
+  <div class="card">
+    <h2>2. Hachures Croisées (Cross)</h2>
+    <div class="canvas-wrapper">
+      <canvas id="cvCross" width="360" height="180"></canvas>
+    </div>
+    <div class="controls">
+      <div class="slider-row">
+        <span>Espacement</span>
+        <input type="range" id="spCross" min="6" max="28" value="14">
+      </div>
+      <div class="slider-row">
+        <span>Densité</span>
+        <input type="range" id="denCross" min="1" max="5" value="3">
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Demi-Teinte Halftone -->
+  <div class="card">
+    <h2>3. Sérigraphie Halftone</h2>
+    <div class="canvas-wrapper">
+      <canvas id="cvHalf" width="360" height="180"></canvas>
+    </div>
+    <div class="controls">
+      <div class="slider-row">
+        <span>Pas de trame</span>
+        <input type="range" id="spHalf" min="8" max="24" value="12">
+      </div>
+      <div class="slider-row">
+        <span>Rayon de point</span>
+        <input type="range" id="rHalf" min="1" max="8" value="3.5" step="0.5">
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Trait Rotring Papier Canson -->
+  <div class="card">
+    <h2>4. Rotring & Grain Papier</h2>
+    <div class="canvas-wrapper">
+      <canvas id="cvRot" width="360" height="180"></canvas>
+    </div>
+    <div class="controls">
+      <div class="slider-row">
+        <span>Rugosité papier</span>
+        <input type="range" id="rRot" min="0" max="100" value="45">
+      </div>
+      <div class="slider-row">
+        <span>Bordure d encre</span>
+        <input type="range" id="bRot" min="1" max="6" value="3">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION HUD -->
+<div class="hud-section">
+  <h2>Intégration au HUD en Jeu : Cartouches & Alerte Hachurée</h2>
+  <p style="color: var(--c-acier); font-size: 14px; margin-top: 4px;">
+    Angles à 90° stricts, ombres portées dures 4x4, et passage dynamique en hachures rouges pulsantes sous le seuil critique (30% PV).
+  </p>
+
+  <div class="hud-preview-area">
+    <!-- P1 Normal -->
+    <div class="hud-cartouche" id="p1Cartouche">
+      <div class="hud-header">
+        <span style="color: var(--c-ambre);">JOUEUR 1 — NORMAL</span>
+        <span id="p1HpText">85 / 100 PV</span>
+      </div>
+      <div class="hp-bar-outer">
+        <div class="hp-bar-fill" id="p1BarFill"></div>
+        <canvas class="hp-bar-hatch-overlay" id="p1HatchOverlay" width="300" height="22"></canvas>
+      </div>
+      <div style="margin-top: 10px; font-size: 12px; color: var(--c-acier); display: flex; justify-content: space-between;">
+        <span>FUSIL À POMPE</span>
+        <span>TORCHE 100%</span>
+      </div>
+    </div>
+
+    <!-- P2 Alerte Critique -->
+    <div class="hud-cartouche critical" id="p2Cartouche">
+      <div class="hud-header">
+        <span style="color: var(--c-rouge);">JOUEUR 2 — CRITIQUE</span>
+        <span id="p2HpText" style="color: var(--c-rouge);">20 / 100 PV</span>
+      </div>
+      <div class="hp-bar-outer">
+        <div class="hp-bar-fill critical" id="p2BarFill"></div>
+        <canvas class="hp-bar-hatch-overlay pulse" id="p2HatchOverlay" width="300" height="22"></canvas>
+      </div>
+      <div style="margin-top: 10px; font-size: 12px; color: var(--c-rouge); display: flex; justify-content: space-between; font-weight: 700;">
+        <span>⚠ ALERTE HACHURÉE ACTIVE</span>
+        <span>TORCHE 15%</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 18px; text-align: center;">
+    <button class="hud-btn" id="btnToggleDmg">Simuler Dégâts / Soin</button>
+  </div>
+</div>
+
+<script>
+  // Rendu Canvas simulant les algorithmes du shader menu_hatch.gdshader
+  function drawSingleHatch(canvas, spacing, lineWidth) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = "#14171c";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = "#2e3440";
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    for (let x = -h; x < w + h; x += spacing) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + h, h);
+    }
+    ctx.stroke();
+
+    // Bordure
+    ctx.strokeStyle = "#2e3440";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, w, h);
+  }
+
+  function drawCrossHatch(canvas, spacing, lineWidth) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = "#14171c";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = "#f5b03e";
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    for (let x = -h; x < w + h; x += spacing) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + h, h);
+    }
+    for (let x = 0; x < w + h * 2; x += spacing) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x - h, h);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    ctx.strokeStyle = "#2e3440";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, w, h);
+  }
+
+  function drawHalftone(canvas, spacing, radius) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = "#0b0c0e";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = "#fae8cc";
+    for (let y = spacing / 2; y < h; y += spacing) {
+      for (let x = spacing / 2; x < w; x += spacing) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.strokeStyle = "#2e3440";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, w, h);
+  }
+
+  function drawRotring(canvas, roughness, borderW) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = "#14171c";
+    ctx.fillRect(0, 0, w, h);
+
+    // Aspérités papier
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const rFactor = roughness / 100;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 35 * rFactor;
+      data[i] = Math.min(255, Math.max(0, data[i] + noise));
+      data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise));
+      data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Bordure manuelle au rotring
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = borderW;
+    ctx.strokeRect(2, 2, w - 4, h - 4);
+    ctx.strokeStyle = "#fae8cc";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(borderW + 2, borderW + 2, w - (borderW * 2 + 4), h - (borderW * 2 + 4));
+  }
+
+  function drawBarHatch(canvas, color) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const spacing = 8;
+    for (let x = -h; x < w + h; x += spacing) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + h, h);
+    }
+    ctx.stroke();
+  }
+
+  // Initialisation des canvas
+  const cvSingle = document.getElementById("cvSingle");
+  const cvCross = document.getElementById("cvCross");
+  const cvHalf = document.getElementById("cvHalf");
+  const cvRot = document.getElementById("cvRot");
+  const p1HatchOverlay = document.getElementById("p1HatchOverlay");
+  const p2HatchOverlay = document.getElementById("p2HatchOverlay");
+
+  function renderAll() {
+    drawSingleHatch(cvSingle, parseFloat(document.getElementById("spSingle").value), parseFloat(document.getElementById("wSingle").value));
+    drawCrossHatch(cvCross, parseFloat(document.getElementById("spCross").value), parseFloat(document.getElementById("denCross").value));
+    drawHalftone(cvHalf, parseFloat(document.getElementById("spHalf").value), parseFloat(document.getElementById("rHalf").value));
+    drawRotring(cvRot, parseFloat(document.getElementById("rRot").value), parseFloat(document.getElementById("bRot").value));
+    drawBarHatch(p1HatchOverlay, "#f5b03e");
+    drawBarHatch(p2HatchOverlay, "#e04434");
+  }
+
+  document.querySelectorAll("input[type=range]").forEach(el => el.addEventListener("input", renderAll));
+  renderAll();
+
+  // Interaction démo Dégâts / Soin
+  let p1Critical = false;
+  document.getElementById("btnToggleDmg").addEventListener("click", () => {
+    p1Critical = !p1Critical;
+    const cartouche = document.getElementById("p1Cartouche");
+    const fill = document.getElementById("p1BarFill");
+    const text = document.getElementById("p1HpText");
+    const overlay = document.getElementById("p1HatchOverlay");
+
+    if (p1Critical) {
+      cartouche.classList.add("critical");
+      fill.classList.add("critical");
+      text.innerText = "20 / 100 PV (CRITIQUE)";
+      text.style.color = "var(--c-rouge)";
+      overlay.classList.add("pulse");
+    } else {
+      cartouche.classList.remove("critical");
+      fill.classList.remove("critical");
+      text.innerText = "85 / 100 PV";
+      text.style.color = "var(--c-halogene)";
+      overlay.classList.remove("pulse");
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -101,25 +101,25 @@ void fragment() {
 	float t = effect_time;
 	
 	if (effect_mode == 1) {
-		// Accueil : Lueur ambre diffuse sur le pilier central + poussières flottantes
-		float pillar_glow = smoothstep(0.45, 0.0, length((UV - vec2(0.50, 0.45)) * vec2(aspect * 0.6, 1.0)));
+		// Accueil : Lueur ambre diffuse sur le panneau ARENA (0.62, 0.25) et poussières flottantes
+		float sign_glow = smoothstep(0.40, 0.0, length((UV - vec2(0.62, 0.25)) * vec2(aspect * 0.7, 1.0)));
 		float dust = noise2d(UV * 25.0 + vec2(t * 0.03, -t * 0.05)) * noise2d(UV * 50.0 - vec2(t * 0.02, t * 0.04));
-		dust = smoothstep(0.45, 0.80, dust) * pillar_glow * 0.18;
+		dust = smoothstep(0.45, 0.80, dust) * sign_glow * 0.18;
 		float breathe = 0.85 + 0.15 * sin(t * 1.8);
-		effect_add += vec3(0.96, 0.75, 0.35) * (pillar_glow * 0.08 * breathe + dust);
+		effect_add += vec3(0.96, 0.75, 0.35) * (sign_glow * 0.08 * breathe + dust);
 	}
 	else if (effect_mode == 2) {
-		// Compétitif : Tableau électrique froid à gauche (0.29, 0.42) & brume couloir
-		float panel_mask = smooth_box(UV, vec2(0.295, 0.425), vec2(0.105, 0.275), 0.04);
-		float meters_glow = smooth_box(UV, vec2(0.370, 0.320), vec2(0.025, 0.080), 0.015);
+		// Compétitif : Tableau électrique froid à gauche (0.18, 0.35) & brume couloir
+		float panel_mask = smooth_box(UV, vec2(0.18, 0.35), vec2(0.11, 0.28), 0.04);
+		float meters_glow = smooth_box(UV, vec2(0.18, 0.32), vec2(0.08, 0.18), 0.015);
 		float meter_pulse = 0.8 + 0.2 * sin(t * 2.2 + sin(t * 5.0) * 0.3);
-		float mist = noise2d(UV * 5.0 + vec2(t * 0.04, -t * 0.02)) * smoothstep(0.6, 0.0, length(UV - vec2(0.63, 0.48)));
+		float mist = noise2d(UV * 5.0 + vec2(t * 0.04, -t * 0.02)) * smoothstep(0.6, 0.0, length(UV - vec2(0.65, 0.55)));
 		effect_add += vec3(0.25, 0.65, 0.95) * (panel_mask * 0.06 + meters_glow * 0.25 * meter_pulse + mist * 0.10);
 	}
 	else if (effect_mode == 3) {
-		// Écran scindé : Faisceaux croisés gauche (0.28, 0.41) et droite (0.72, 0.43)
-		vec2 p_left = UV - vec2(0.28, 0.41);
-		vec2 p_right = UV - vec2(0.72, 0.43);
+		// Écran scindé : Faisceaux croisés gauche (0.20, 0.55) et droite (0.75, 0.45)
+		vec2 p_left = UV - vec2(0.20, 0.55);
+		vec2 p_right = UV - vec2(0.75, 0.45);
 		float beam_l = smoothstep(0.35, 0.0, length(p_left * vec2(aspect * 0.7, 1.0)));
 		float beam_r = smoothstep(0.35, 0.0, length(p_right * vec2(aspect * 0.7, 1.0)));
 		float dust_l = noise2d(UV * 20.0 + vec2(t * 0.03, -t * 0.04)) * beam_l;
@@ -129,22 +129,22 @@ void fragment() {
 		effect_add += vec3(0.96, 0.78, 0.40) * (beam_l * 0.08 * breathe_l + beam_r * 0.08 * breathe_r + (dust_l + dust_r) * 0.12);
 	}
 	else if (effect_mode == 4) {
-		// Amical : Brume volumétrique chaude et poussières dans le faisceau
-		float center_haze = smoothstep(0.7, 0.1, length((UV - vec2(0.50, 0.50)) * vec2(aspect * 0.8, 1.0)));
+		// Amical : Brume volumétrique chaude et poussières autour du pilier ZONE 4 (0.48, 0.40)
+		float center_haze = smoothstep(0.65, 0.1, length((UV - vec2(0.48, 0.40)) * vec2(aspect * 0.8, 1.0)));
 		float mist = noise2d(UV * 7.0 + vec2(t * 0.04, -t * 0.02)) * center_haze;
 		float slow_pulse = 0.85 + 0.15 * sin(t * 1.4);
 		effect_add += vec3(0.95, 0.70, 0.28) * (mist * 0.15 * slow_pulse);
 	}
-	else if (effect_mode == 5 || effect_mode == 8) {
-		// Baies Serveurs / Personnalisation : Diodes cyan scintillantes et poussières dans le faisceau
-		float led_racks_r = smooth_box(UV, vec2(0.85, 0.45), vec2(0.12, 0.35), 0.05);
-		float led_racks_l = smooth_box(UV, vec2(0.10, 0.45), vec2(0.08, 0.35), 0.05);
+	else if (effect_mode == 5) {
+		// Amical Ligne : Baies serveurs (gauche 0.12, droite 0.88), diodes cyan scintillantes
+		float led_racks_r = smooth_box(UV, vec2(0.88, 0.45), vec2(0.10, 0.40), 0.05);
+		float led_racks_l = smooth_box(UV, vec2(0.12, 0.45), vec2(0.10, 0.40), 0.05);
 		float spark_r = noise2d(UV * 40.0 + vec2(0.0, t * 2.0));
 		float spark_l = noise2d(UV * 40.0 - vec2(0.0, t * 2.5));
 		float led_pulse_r = smoothstep(0.60, 0.90, spark_r) * (0.7 + 0.3 * sin(t * 5.0));
 		float led_pulse_l = smoothstep(0.60, 0.90, spark_l) * (0.7 + 0.3 * sin(t * 6.0 + 1.5));
 		
-		vec2 to_uv = UV - vec2(0.55, 0.42);
+		vec2 to_uv = UV - vec2(0.55, 0.50);
 		float beam_mask = smoothstep(0.55, 0.0, length(to_uv * vec2(aspect * 0.7, 1.0)));
 		float dust = noise2d(UV * 30.0 + vec2(t * 0.03, -t * 0.05)) * beam_mask * 0.16;
 		
@@ -152,33 +152,61 @@ void fragment() {
 		effect_add += col_cyan * (led_racks_r * 0.25 * led_pulse_r + led_racks_l * 0.25 * led_pulse_l + dust);
 	}
 	else if (effect_mode == 6) {
-		// Amical Local : Poussières ambrées dans l'arène Zone 4
-		float beam_spot = smoothstep(0.40, 0.0, length((UV - vec2(0.70, 0.60)) * vec2(aspect * 0.8, 1.0)));
-		float dust = noise2d(UV * 28.0 + vec2(t * 0.03, -t * 0.05)) * beam_spot * 0.16;
-		float slow_pulse = 0.88 + 0.12 * sin(t * 1.6);
-		effect_add += vec3(0.98, 0.78, 0.35) * (beam_spot * 0.06 * slow_pulse + dust);
+		// Amical Local : Phosphore vert des écrans CRT (0.25, 0.40) & balayage
+		float crt_bank = smooth_box(UV, vec2(0.25, 0.40), vec2(0.20, 0.25), 0.05);
+		float crt_scan = 0.85 + 0.15 * sin(UV.y * 300.0 + t * 15.0);
+		float crt_flicker = 0.92 + 0.08 * sin(t * 4.5 + sin(t * 12.0));
+		float green_glow = smoothstep(0.55, 0.0, length((UV - vec2(0.25, 0.40)) * vec2(aspect * 0.8, 1.0)));
+		
+		vec3 col_green = vec3(0.25, 0.95, 0.40);
+		effect_add += col_green * (crt_bank * 0.22 * crt_scan * crt_flicker + green_glow * 0.08);
 	}
 	else if (effect_mode == 7) {
-		// Entraînement : Faisceau de torche blanc-or découpant la pénombre
-		vec2 to_uv = UV - vec2(0.42, 0.58);
-		float beam_mask = smoothstep(0.45, 0.0, length(to_uv * vec2(aspect * 0.7, 1.0)));
+		// Entraînement : Projecteur au plafond (0.80, 0.08) éclairant la cible (0.82, 0.50)
+		vec2 to_target = UV - vec2(0.82, 0.50);
+		float beam_mask = smoothstep(0.45, 0.0, length(to_target * vec2(aspect * 0.7, 1.0)));
 		float dust = noise2d(UV * 30.0 + vec2(t * 0.03, -t * 0.05)) * beam_mask * 0.18;
-		effect_add += vec3(0.98, 0.88, 0.65) * dust;
+		float spot_pulse = 0.90 + 0.10 * sin(t * 1.5);
+		effect_add += vec3(0.98, 0.88, 0.65) * (beam_mask * 0.08 * spot_pulse + dust);
+	}
+	else if (effect_mode == 8) {
+		// Personnalisation : Lampe d'établi ambrée (0.45, 0.20) & cadrans (0.22, 0.25)
+		float lamp_cone = smoothstep(0.50, 0.0, length((UV - vec2(0.55, 0.60)) * vec2(aspect * 0.8, 1.0)));
+		float dials_glow = smooth_box(UV, vec2(0.22, 0.25), vec2(0.12, 0.15), 0.03);
+		float filament_flicker = 0.94 + 0.06 * sin(t * 6.0 + sin(t * 17.0));
+		float dust = noise2d(UV * 35.0 + vec2(t * 0.02, -t * 0.04)) * lamp_cone * 0.15;
+		
+		effect_add += vec3(0.98, 0.75, 0.30) * (lamp_cone * 0.10 * filament_flicker + dials_glow * 0.08 + dust);
 	}
 	else if (effect_mode == 9) {
-		// Mise à jour : Rayon d'or éclatant sortant de la chambre forte (0.46, 0.50)
-		float breach = smoothstep(0.50, 0.0, length((UV - vec2(0.46, 0.50)) * vec2(aspect * 0.5, 1.0)));
+		// Mise à jour : Rayon d'or éclatant sortant de la chambre forte (0.62, 0.45)
+		float breach = smoothstep(0.50, 0.0, length((UV - vec2(0.62, 0.45)) * vec2(aspect * 0.5, 1.0)));
 		float rays = noise2d(UV * 8.0 + vec2(t * 0.05, -t * 0.03)) * breach;
 		float slow_glow = 0.88 + 0.12 * sin(t * 1.5);
-		effect_add += vec3(0.98, 0.82, 0.35) * (breach * 0.10 * slow_glow + rays * 0.15);
+		effect_add += vec3(0.98, 0.82, 0.35) * (breach * 0.12 * slow_glow + rays * 0.16);
 	}
 	else if (effect_mode == 10) {
-		// Quitter : Braise mourante dans le hall
-		float lamp_ground = smoothstep(0.45, 0.0, length((UV - vec2(0.35, 0.65)) * vec2(aspect, 1.0)));
-		float dying_pulse = 0.85 + 0.15 * sin(t * 1.2);
-		effect_add += vec3(0.90, 0.60, 0.25) * (lamp_ground * 0.08 * dying_pulse);
+		// Quitter : Lampe au sol (0.35, 0.80) & faisceau rasant la flaque de sang (0.65, 0.80)
+		float lamp_ground = smoothstep(0.40, 0.0, length((UV - vec2(0.45, 0.78)) * vec2(aspect * 0.8, 1.0)));
+		float dying_pulse = 0.82 + 0.18 * sin(t * 1.2 + sin(t * 7.0) * 0.2);
+		effect_add += vec3(0.92, 0.65, 0.30) * (lamp_ground * 0.10 * dying_pulse);
 	}
-	else if (effect_mode >= 11) {
+	else if (effect_mode == 11) {
+		// Créer Ligne : Fusée de détresse rouge au sol (0.42, 0.65) & fumée dense
+		float flare_center = smoothstep(0.45, 0.0, length((UV - vec2(0.42, 0.65)) * vec2(aspect * 0.8, 1.0)));
+		float smoke = noise2d(UV * 6.0 + vec2(t * 0.06, -t * 0.08)) * smoothstep(0.6, 0.1, length(UV - vec2(0.65, 0.40)));
+		float flare_pulse = 0.85 + 0.15 * sin(t * 8.0 + sin(t * 19.0));
+		effect_add += vec3(0.98, 0.20, 0.15) * (flare_center * 0.18 * flare_pulse + smoke * 0.14);
+	}
+	else if (effect_mode == 13) {
+		// Rejoindre Ligne : Balise radio bleue au fond du couloir (0.41, 0.35)
+		float beacon_pt = smoothstep(0.35, 0.0, length((UV - vec2(0.41, 0.35)) * vec2(aspect, 1.0)));
+		float beacon_flash = pow(max(0.0, sin(t * 3.0)), 4.0);
+		float mist = noise2d(UV * 8.0 + vec2(t * 0.03, -t * 0.02)) * beacon_pt;
+		vec3 col_blue = vec3(0.15, 0.65, 0.98);
+		effect_add += col_blue * (beacon_pt * 0.25 * (0.5 + 0.5 * beacon_flash) + mist * 0.10);
+	}
+	else if (effect_mode >= 12) {
 		// Autres sous-menus : Ambiance douce adaptée
 		float center_haze = smoothstep(0.65, 0.1, length((UV - vec2(0.50, 0.50)) * vec2(aspect * 0.8, 1.0)));
 		float dust = noise2d(UV * 25.0 + vec2(t * 0.03, -t * 0.04)) * center_haze * 0.12;
