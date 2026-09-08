@@ -139,10 +139,11 @@ var _tween: Tween
 
 ## Arrière-plan illustré flouté sous le contenu interactif du cadre droit
 var _bg_image: TextureRect
+var _bg_image_prev: TextureRect
 var _panel_backgrounds: Dictionary = {}
 var _screen_backgrounds: Dictionary = {}
 var _current_artwork_key: String = ""
-var _reveal_tween: Tween
+var _crossfade_tween: Tween
 var _effect_time: float = 0.0
 var _torch_pos_uv: Vector2 = Vector2(0.5, 0.5)
 
@@ -212,6 +213,17 @@ func _build() -> void:
 	_right_comic.name = "ComicPanelDroite"
 	right.add_child(_right_comic)
 	_right_comic.associer_stylebox(style)
+
+	# Sous-couche de fondu enchaîné pour transitions douces
+	_bg_image_prev = TextureRect.new()
+	_bg_image_prev.name = "FondFlouPrev"
+	_bg_image_prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bg_image_prev.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg_image_prev.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_bg_image_prev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bg_image_prev.material = _build_blur_material()
+	_bg_image_prev.hide()
+	right.add_child(_bg_image_prev)
 
 	_bg_image = TextureRect.new()
 	_bg_image.name = "FondFlou"
@@ -709,23 +721,12 @@ func _apply_panel(key: String) -> void:
 			if est_voulu:
 				active_content = content
 	_update_background(wanted, active_content)
-	if _right_comic != null:
-		_right.move_child(_right_comic, -1)
-		_right_comic.reveler(1.0, MenuTheme.FADE)
 	panel_changed.emit(wanted)
 
-func _declencher_embrasement(mat: ShaderMaterial) -> void:
-	if mat == null:
-		return
-	if _reveal_tween != null and _reveal_tween.is_valid():
-		_reveal_tween.kill()
-	mat.set_shader_parameter("reveal_progress", 0.3)
-	_reveal_tween = create_tween()
-	_reveal_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	var appliquer := func(val: float) -> void:
-		if is_instance_valid(_bg_image) and _bg_image.material != null:
-			(_bg_image.material as ShaderMaterial).set_shader_parameter("reveal_progress", val)
-	Charte.animer_via(_reveal_tween, appliquer, 0.3, 1.0, 0.35, Charte.Courbe.SORTIE)
+func _declencher_embrasement(_mat: ShaderMaterial) -> void:
+	# Conservé pour compatibilité, les transitions d'images passent désormais
+	# par le fondu enchaîné doux et organique (cross-fade).
+	pass
 
 func set_torch_position_global(global_pos: Vector2) -> void:
 	if _left_comic != null and is_instance_valid(_left_comic):
@@ -751,6 +752,8 @@ func _process(delta: float) -> void:
 	
 	_effect_time += delta
 	mat.set_shader_parameter("effect_time", _effect_time)
+	if _bg_image_prev != null and _bg_image_prev.visible and _bg_image_prev.material != null:
+		(_bg_image_prev.material as ShaderMaterial).set_shader_parameter("effect_time", _effect_time)
 	
 	var size := _bg_image.size
 	if size.x > 0.0 and size.y > 0.0:
@@ -766,71 +769,123 @@ func _process(delta: float) -> void:
 			if _left_comic != null:
 				_left_comic.set_torch_position_global(gpos)
 		mat.set_shader_parameter("torch_pos", _torch_pos_uv)
+		if _bg_image_prev != null and _bg_image_prev.visible and _bg_image_prev.material != null:
+			(_bg_image_prev.material as ShaderMaterial).set_shader_parameter("torch_pos", _torch_pos_uv)
 
 func _update_background(key: String, content: Control) -> void:
 	if _bg_image == null:
 		return
-	var mat := _bg_image.material as ShaderMaterial
 	
+	var texture_cible: Texture2D = null
+	var cle_cible := ""
+	var flou_total := 1.0
+
 	# Cas 1 : Aperçu direct d'illustration (MenuApercu) — affichage pleine hauteur
 	if content is MenuApercu:
 		var tex := (content as MenuApercu).texture()
 		if tex != null:
-			var nouvelle_cle := MenuArtwork.cle_canonique(key)
-			var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != tex)
-			_current_artwork_key = nouvelle_cle
-			
-			if mat != null:
-				mat.set_shader_parameter("mode_flou_total", 0.0)
-				var poi := MenuArtwork.poi_pour(nouvelle_cle)
-				var effet := MenuArtwork.effet_pour(nouvelle_cle)
-				
-				mat.set_shader_parameter("torch_pos", poi)
-				mat.set_shader_parameter("effect_mode", effet)
-				
-				if est_nouveau:
-					_declencher_embrasement(mat)
-			
-			_bg_image.texture = tex
-			_bg_image.show()
-		else:
-			_bg_image.hide()
-		return
-	
+			texture_cible = tex
+			cle_cible = MenuArtwork.cle_canonique(key)
+			flou_total = 0.0
+
 	# Cas 2 : Panneau interactif / texte posé sur l'illustration floutée de la catégorie
-	# Règle d'Adrien (2026-08-27) : l'illustration de fond flou hérite en priorité de la catégorie/écran courant
-	var bg_res: Variant = _screen_backgrounds.get(current_id(), null)
-	if bg_res == null or (bg_res is String and (bg_res as String) == ""):
-		bg_res = _panel_backgrounds.get(key, null)
-	
-	var texture_a_poser: Texture2D = null
-	var cle_fond := ""
-	if bg_res is Texture2D:
-		texture_a_poser = bg_res
-	elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
-		texture_a_poser = load(bg_res as String)
-		cle_fond = bg_res as String
-	
-	if texture_a_poser != null:
-		var nouvelle_cle := MenuArtwork.cle_canonique(cle_fond if cle_fond != "" else current_id())
-		var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != texture_a_poser)
-		_current_artwork_key = nouvelle_cle
+	if texture_cible == null:
+		var bg_res: Variant = _screen_backgrounds.get(current_id(), null)
+		if bg_res == null or (bg_res is String and (bg_res as String) == ""):
+			bg_res = _panel_backgrounds.get(key, null)
 		
-		if mat != null:
-			mat.set_shader_parameter("mode_flou_total", 1.0)
-			var poi := MenuArtwork.poi_pour(nouvelle_cle)
-			var effet := MenuArtwork.effet_pour(nouvelle_cle)
-			
-			mat.set_shader_parameter("torch_pos", poi)
-			mat.set_shader_parameter("effect_mode", effet)
-			
-			if est_nouveau:
-				_declencher_embrasement(mat)
-				
-		_bg_image.texture = texture_a_poser
-		_bg_image.show()
+		if bg_res is Texture2D:
+			texture_cible = bg_res
+		elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
+			texture_cible = load(bg_res as String)
+			cle_cible = bg_res as String
+		
+		if texture_cible != null:
+			cle_cible = MenuArtwork.cle_canonique(cle_cible if cle_cible != "" else current_id())
+			flou_total = 1.0
+
+	if texture_cible != null:
+		_transition_vers_texture(texture_cible, cle_cible, flou_total)
 	else:
-		_bg_image.hide()
+		_effacer_arriere_plan()
+
+func _transition_vers_texture(nouvelle_tex: Texture2D, nouvelle_cle: String, flou_total: float) -> void:
+	if nouvelle_tex == null or _bg_image == null:
+		return
+
+	var est_meme := (_bg_image.texture == nouvelle_tex and _current_artwork_key == nouvelle_cle and _bg_image.visible and _bg_image.modulate.a >= 0.99)
+	if est_meme:
+		var mat := _bg_image.material as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("mode_flou_total", flou_total)
+		return
+
+	if _crossfade_tween != null and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+
+	var ancienne_tex := _bg_image.texture if (_bg_image.visible and _bg_image.modulate.a > 0.0) else null
+	_current_artwork_key = nouvelle_cle
+
+	# Si une ancienne image était affichée, elle passe en couche inférieure pour le cross-fade doux
+	if ancienne_tex != null and ancienne_tex != nouvelle_tex and _bg_image_prev != null:
+		_bg_image_prev.texture = ancienne_tex
+		var mat_prev := _bg_image_prev.material as ShaderMaterial
+		var mat_cur := _bg_image.material as ShaderMaterial
+		if mat_prev != null and mat_cur != null:
+			mat_prev.set_shader_parameter("mode_flou_total", mat_cur.get_shader_parameter("mode_flou_total"))
+			mat_prev.set_shader_parameter("torch_pos", mat_cur.get_shader_parameter("torch_pos"))
+			mat_prev.set_shader_parameter("effect_mode", mat_cur.get_shader_parameter("effect_mode"))
+		_bg_image_prev.modulate.a = _bg_image.modulate.a
+		_bg_image_prev.show()
+
+	# Configuration de la nouvelle image sur la couche active
+	_bg_image.texture = nouvelle_tex
+	var mat_nouveau := _bg_image.material as ShaderMaterial
+	if mat_nouveau != null:
+		mat_nouveau.set_shader_parameter("mode_flou_total", flou_total)
+		var poi := MenuArtwork.poi_pour(nouvelle_cle)
+		var effet := MenuArtwork.effet_pour(nouvelle_cle)
+		mat_nouveau.set_shader_parameter("torch_pos", poi)
+		mat_nouveau.set_shader_parameter("effect_mode", effet)
+		mat_nouveau.set_shader_parameter("reveal_progress", 1.0)
+
+	_bg_image.modulate.a = 0.0
+	_bg_image.show()
+
+	# Transition soyeuse de fondu enchaîné (0.45s avec la courbe douce d'entrée)
+	_crossfade_tween = create_tween()
+	_crossfade_tween.set_parallel(true)
+	_crossfade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	
+	# La nouvelle image monte doucement
+	Charte.animer(_crossfade_tween, _bg_image, "modulate:a", 0.0, 1.0, 0.45, Charte.Courbe.ENTREE)
+	
+	# L'ancienne image s'estompe en parallèle
+	if _bg_image_prev != null and _bg_image_prev.visible:
+		Charte.animer(_crossfade_tween, _bg_image_prev, "modulate:a", _bg_image_prev.modulate.a, 0.0, 0.40, Charte.Courbe.SORTIE)
+
+	_crossfade_tween.finished.connect(func() -> void:
+		if _bg_image_prev != null and is_instance_valid(_bg_image_prev):
+			_bg_image_prev.hide()
+			_bg_image_prev.texture = null
+	)
+
+func _effacer_arriere_plan() -> void:
+	if _crossfade_tween != null and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+	if _bg_image != null and _bg_image.visible:
+		_crossfade_tween = create_tween()
+		_crossfade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		Charte.animer(_crossfade_tween, _bg_image, "modulate:a", _bg_image.modulate.a, 0.0, 0.30, Charte.Courbe.SORTIE)
+		_crossfade_tween.finished.connect(func() -> void:
+			if _bg_image != null and is_instance_valid(_bg_image):
+				_bg_image.hide()
+				_bg_image.texture = null
+		)
+	if _bg_image_prev != null:
+		_bg_image_prev.hide()
+		_bg_image_prev.texture = null
+	_current_artwork_key = ""
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
