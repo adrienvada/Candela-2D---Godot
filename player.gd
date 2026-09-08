@@ -49,6 +49,12 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+var current_ammo: int = 10
+var is_reloading: bool = false
+var reload_time_left: float = 0.0
+var current_spread_bloom: float = 0.0
+var _reload_presse: bool = false
+
 ## DA4.4 — la géométrie du bandeau FATAL, **nommée pour être vérifiable**.
 ##
 ## Elle vivait dispersée dans `die()` sous forme de quatre littéraux — offset
@@ -302,7 +308,6 @@ var ambient_light: PointLight2D
 var aim_cast: RayCast2D
 var aim_line: Line2D
 @onready var shoot_sound = $ShootSound
-@onready var hit_sound = $HitSound
 var step_distance_accumulated: float = 0.0
 
 ## ## Le roulis de marche (DA2.4)
@@ -963,6 +968,11 @@ func _monter_viseur() -> void:
 
 func equip_weapon(weapon: WeaponData):
 	current_weapon = weapon
+	if current_weapon:
+		current_ammo = current_weapon.max_ammo
+		is_reloading = false
+		reload_time_left = 0.0
+		current_spread_bloom = 0.0
 	# DA2.4 + DA2.5 — la silhouette du joueur change avec son arme.
 	_poser_sprite(weapon.slug() if weapon.has_method("slug") else "pistolet")
 	
@@ -971,6 +981,14 @@ func equip_weapon(weapon: WeaponData):
 	# La teinte n'est pas touchée ici : elle est posée une fois à la construction
 	# de la torche, et une arme n'en change pas.
 	flashlight.texture_scale = weapon.echelle_torche()
+
+
+func start_reload() -> void:
+	if current_weapon == null: return
+	if is_reloading: return
+	if current_ammo >= current_weapon.max_ammo: return
+	is_reloading = true
+	reload_time_left = current_weapon.reload_time
 
 
 func _process(delta):
@@ -1065,7 +1083,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1087,7 +1105,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, flare)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -1105,14 +1123,14 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
-		input_provider.is_flare_pressed())
+		input_provider.is_flare_pressed(), input_provider.is_reload_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1308,7 +1326,7 @@ func _physics_process(delta):
 		# dans un jeu dont la seule information est la lumière, une accélération
 		# muette est une information retirée à l'autre.
 		var current_speed = speed
-		if shoot_cooldown > 0 and current_weapon:
+		if (shoot_cooldown > 0 or is_reloading) and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
 		if dazzle_amount > 0:
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
@@ -1357,7 +1375,24 @@ func _physics_process(delta):
 			# Fourchette fixe : rien ne module la hauteur du pas. **Un facteur
 			# qui ne varie jamais suggère une modulation qui n'existe pas** — il
 			# coûte une relecture à chaque passage, et il en promet une.
-			AudioManager.play_sfx_2d_random_pitch("footstep", global_position, 0.95, 1.05)
+			# V5.7 — **le son du pas suit le DAMIER, pas le hasard.** La case
+			# se derive de la position par la meme parite que
+			# `CandelaTileSet.get_floor_atlas` : traverser le damier doit
+			# s'entendre alterner comme il se voit alterner.
+			#
+			# L'origine exacte de la grille n'est volontairement pas corrigee du
+			# decalage d'arene : une erreur d'origine echangerait A et B
+			# GLOBALEMENT, ce qui ne s'entend pas — les deux sont des sols. Ce
+			# qui compte, et que ce calcul garantit, c'est que deux cases
+			# voisines different.
+			var case := Vector2i((global_position / float(CandelaTileSet.TILE_SIZE.x)).floor())
+			AudioManager.play_footstep(global_position, case)
+			# V5.11 — le frolement, au meme rythme que le pas et jamais seul :
+			# on ne frole un mur qu'en s'y deplacant. Le lier au pas plutot qu'a
+			# un minuteur evite le crepitement d'un joueur immobile colle a une
+			# paroi, qui trahirait une position sans qu'aucun geste soit fait.
+			if get_slide_collision_count() > 0:
+				AudioManager.play_wall_brush(global_position)
 			# D1 — l'empreinte au rythme exact du pas sonore : le son et la
 			# trace racontent le même événement, sandbox compris.
 			_foot_side = -_foot_side
@@ -1484,15 +1519,46 @@ func _physics_process(delta):
 	
 	_update_aim_line()
 
+	# Récupération de la précision (dispersion bloom)
+	if current_weapon and current_spread_bloom > 0.0:
+		current_spread_bloom = maxf(0.0, current_spread_bloom - current_weapon.spread_recovery_speed_deg * delta)
+
+	# Progression du rechargement
+	if is_reloading:
+		reload_time_left -= delta
+		if reload_time_left <= 0.0:
+			reload_time_left = 0.0
+			is_reloading = false
+			if current_weapon:
+				current_ammo = current_weapon.max_ammo
+
+	# Détection de l'ordre de recharger
+	var reload_presse := input_provider.is_reload_pressed()
+	if not reload_presse:
+		_reload_presse = false
+	elif can_move and not _reload_presse and not is_reloading and current_weapon \
+			and current_ammo < current_weapon.max_ammo:
+		start_reload()
+		_reload_presse = true
+
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	if can_move and presse and shoot_cooldown <= 0:
-		shoot()
+	if can_move and presse and shoot_cooldown <= 0 and not is_reloading:
+		if current_ammo > 0:
+			shoot()
+		else:
+			# Plus de munitions : tir à sec + rechargement automatique
+			if not _detente_pressee and _percu_ici():
+				tir_a_sec = 0.22
+				if current_weapon:
+					AudioManager.play_sfx_2d(
+						AudioManager.chemin_percuteur(current_weapon.slug()),
+						muzzle.global_position)
+			start_reload()
 	elif can_move and presse and not _detente_pressee and _percu_ici():
-		# Front montant seulement : détente maintenue pendant une seconde de
-		# rechargement, le tremblement doit dire « trop tôt » une fois, pas vibrer
-		# en continu comme une panne.
+		# Front montant seulement : détente maintenue pendant rechargement / cooldown,
+		# le tremblement doit dire « trop tôt » une fois, pas vibrer en continu.
 		tir_a_sec = 0.22
 		# V4.4 — le percuteur. Positionnel a la bouche : un clic a vide est un
 		# evenement du monde, et dans ce jeu il RACONTE quelque chose de cher —
@@ -1553,10 +1619,29 @@ var _detente_pressee: bool = false
 var _fusee_pressee: bool = false
 
 func shoot():
+	if current_weapon == null: return
+	if current_ammo <= 0 or is_reloading: return
+	
+	current_ammo -= 1
 	shoot_cooldown = current_weapon.cooldown
 	# V1.5 — coup ferme et bref dans la manette du tireur.
 	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
-	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, rotation, current_weapon)
+	
+	var final_rot := rotation
+	if current_spread_bloom > 0.001:
+		var dev := deg_to_rad(randf_range(-current_spread_bloom, current_spread_bloom))
+		final_rot += dev
+	
+	if current_weapon.spread_bloom_per_shot_deg > 0.0:
+		current_spread_bloom = minf(
+			current_spread_bloom + current_weapon.spread_bloom_per_shot_deg,
+			current_weapon.max_spread_bloom_deg
+		)
+	
+	get_tree().call_group("game_state", "spawn_bullet", self, muzzle.global_position, final_rot, current_weapon)
+	
+	if current_ammo == 0 and current_weapon.max_ammo == 1:
+		start_reload()
 
 ## Le lancer désarme : pas de tir pendant l'animation (FuseeModele.DESARMEMENT).
 ## Le cooldown de tir existant porte ce désarmement — non répliqué, simulé
@@ -1652,7 +1737,17 @@ func trigger_shoot_visuals():
 		Charte.animer(tw_reveal, vrep, "color:a", vrep.color.a, 0.0, 2.0,
 			Charte.Courbe.EXTINCTION)
 	
-	AudioManager.play_weapon_shot(current_weapon.slug() if current_weapon else "pistolet", muzzle.global_position)
+	var _slug := current_weapon.slug() if current_weapon else "pistolet"
+	AudioManager.play_weapon_shot(_slug, muzzle.global_position)
+	# V4.10 — **le carreau ne sonne PAS au canon**, et c'est une decision
+	# d'Adrien (2026-08-28) : joue ici, il se confondrait avec le coup et
+	# n'apprendrait rien. Il sonne la ou il FROLE sa cible — voir
+	# `bullet._guetter_le_frolement`. « Une info de TIR, pas de position. »
+	if _slug != "arbalete":
+		# V4.8 — la douille retombe APRES le coup, jamais avec lui. Le retard
+		# est ce qui la rend lisible : jouee sur le tir, elle disparaitrait
+		# dedans. Elle tombe aux pieds du tireur, pas au bout du canon.
+		_tinter_la_douille()
 
 	# V4.13 — fumée de bouche : trois grains gris qui dérivent après le flash.
 	var pool := get_tree().get_first_node_in_group("particle_pool") as ParticlePool
@@ -1686,8 +1781,22 @@ func take_damage(amount: float, source_player: Node2D):
 		else:
 			rpc_update_hp(new_hp, sid)
 			
-	hit_sound.play()
-	AudioManager.play_sfx_2d_random_pitch("flesh_impact", global_position, 0.92, 1.08)
+	# ⚠️ **Le son de l'impact n'est PLUS joue ici, et c'etait un doublon reel.**
+	# `bullet.gd` joue deja `play_hit` sur le meme evenement, au point d'impact
+	# exact et avec la precision du coup ; cette ligne-ci le rejouait depuis le
+	# CENTRE du corps, une seconde fois. Deux echantillons superposes a quelques
+	# millisecondes, ce qui ne s'entend pas comme un doublon mais comme un son
+	# plus epais — donc indosable : aucun niveau n'aurait jamais paru juste au
+	# banc de mixage.
+	#
+	# Il jouait aussi de facon INCOHERENTE : `take_damage` n'est appele que
+	# `if not is_replay`, si bien que la killcam n'entendait qu'un impact quand
+	# le direct en entendait deux. La balle est la seule a savoir ou et comment
+	# elle a touche ; c'est elle qui parle.
+	#
+	# `hit_sound.play()` est parti avec : `$HitSound` est un `AudioStreamPlayer`
+	# SANS FLUX dans `player.tscn` — il ne jouait rien depuis toujours. Le noeud
+	# lui-meme reste dans la scene, a la main de qui la tient.
 	AudioManager.update_low_health(player_id, hp <= 30.0 and not dead)
 
 	
@@ -1746,10 +1855,28 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		Charte.Courbe.EXTINCTION)
 	tw_l.tween_callback(hit_light.queue_free)
 
+## V4.8 — le tintement de la douille, 300 a 500 ms apres le coup.
+##
+## `await` plutot qu'un `Timer` : le son n'a aucun etat a porter, et un minuteur
+## par tir encombrerait l'arbre pendant une fusillade. La garde
+## `is_instance_valid` est obligatoire — un joueur peut mourir entre le coup et
+## la chute de sa douille, et c'est meme un cas frequent.
+func _tinter_la_douille() -> void:
+	await get_tree().create_timer(randf_range(0.30, 0.50)).timeout
+	if is_instance_valid(self) and not dead:
+		AudioManager.play_shell(global_position)
+
 func die(killer: Node2D):
 	if dead: return
 	dead = true
 	AudioManager.update_low_health(player_id, false)
+	# V2.8 — le sifflement et le monde etouffe, **sur la machine du perdant
+	# seulement**. `_is_locally_piloted` est la meme garde que l'acouphene
+	# d'eblouissement : c'est SON oreille qui siffle, pas celle de l'adversaire
+	# qui vient de gagner. En ecran scindé les deux joueurs partagent la sortie —
+	# le perdant y est bien le pilote local de ce corps-la.
+	if _is_locally_piloted():
+		AudioManager.jouer_acouphene_mort()
 
 	visual.visible = false
 	visual_ptr.visible = false

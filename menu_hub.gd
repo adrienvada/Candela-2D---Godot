@@ -1,6 +1,9 @@
 class_name MenuHub
 extends Control
 
+const Charte := preload("res://charte.gd")
+const MenuArtwork := preload("res://menu_artwork.gd")
+
 ## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
 ## À gauche la liste des entrées, à droite ce que l'entrée sous le curseur
@@ -135,10 +138,17 @@ var _tween: Tween
 var _bg_image: TextureRect
 var _panel_backgrounds: Dictionary = {}
 var _screen_backgrounds: Dictionary = {}
+var _current_artwork_key: String = ""
+var _reveal_tween: Tween
+var _effect_time: float = 0.0
+var _torch_pos_uv: Vector2 = Vector2(0.5, 0.5)
 
 func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _build() -> void:
 	var columns := HBoxContainer.new()
@@ -388,7 +398,9 @@ func set_screen_background(screen_id: String, path_or_tex: Variant) -> void:
 
 func _build_blur_material() -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
-	var shader := load("res://menu_bg_blur.gdshader") as Shader
+	var shader := load("res://menu_artwork.gdshader") as Shader
+	if shader == null:
+		shader = load("res://menu_bg_blur.gdshader") as Shader
 	if shader != null:
 		mat.shader = shader
 		mat.set_shader_parameter("blur_amount", 5.0)
@@ -397,6 +409,13 @@ func _build_blur_material() -> ShaderMaterial:
 		mat.set_shader_parameter("mode_flou_total", 1.0)
 		mat.set_shader_parameter("pied_debut", 0.55)
 		mat.set_shader_parameter("pied_fin", 0.88)
+		mat.set_shader_parameter("ambient_exposure", 0.28)
+		mat.set_shader_parameter("torch_radius", 0.45)
+		mat.set_shader_parameter("torch_intensity", 1.0)
+		mat.set_shader_parameter("reveal_progress", 1.0)
+		mat.set_shader_parameter("effect_mode", 0)
+		mat.set_shader_parameter("effect_time", 0.0)
+		mat.set_shader_parameter("effect_strength", 1.0)
 	return mat
 
 ## Le panneau par défaut d'un écran, ou une chaîne vide s'il n'en a pas.
@@ -668,6 +687,50 @@ func _apply_panel(key: String) -> void:
 	_update_background(wanted, active_content)
 	panel_changed.emit(wanted)
 
+func _declencher_embrasement(mat: ShaderMaterial) -> void:
+	if mat == null:
+		return
+	if _reveal_tween != null and _reveal_tween.is_valid():
+		_reveal_tween.kill()
+	mat.set_shader_parameter("reveal_progress", 0.3)
+	_reveal_tween = create_tween()
+	_reveal_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	var appliquer := func(val: float) -> void:
+		if is_instance_valid(_bg_image) and _bg_image.material != null:
+			(_bg_image.material as ShaderMaterial).set_shader_parameter("reveal_progress", val)
+	Charte.animer_via(_reveal_tween, appliquer, 0.3, 1.0, 0.35, Charte.Courbe.SORTIE)
+
+func set_torch_position_global(global_pos: Vector2) -> void:
+	if _bg_image == null or not _bg_image.is_inside_tree():
+		return
+	var local := _bg_image.get_global_transform().affine_inverse() * global_pos
+	var size := _bg_image.size
+	if size.x > 0.0 and size.y > 0.0:
+		_torch_pos_uv = Vector2(
+			clampf(local.x / size.x, -0.2, 1.2),
+			clampf(local.y / size.y, -0.2, 1.2)
+		)
+
+func _process(delta: float) -> void:
+	if _bg_image == null or not _bg_image.is_visible_in_tree():
+		return
+	var mat := _bg_image.material as ShaderMaterial
+	if mat == null:
+		return
+	
+	_effect_time += delta
+	mat.set_shader_parameter("effect_time", _effect_time)
+	
+	var size := _bg_image.size
+	if size.x > 0.0 and size.y > 0.0:
+		var local_mouse := _bg_image.get_local_mouse_position()
+		if _bg_image.get_rect().has_point(local_mouse):
+			_torch_pos_uv = Vector2(
+				clampf(local_mouse.x / size.x, 0.0, 1.0),
+				clampf(local_mouse.y / size.y, 0.0, 1.0)
+			)
+		mat.set_shader_parameter("torch_pos", _torch_pos_uv)
+
 func _update_background(key: String, content: Control) -> void:
 	if _bg_image == null:
 		return
@@ -677,8 +740,21 @@ func _update_background(key: String, content: Control) -> void:
 	if content is MenuApercu:
 		var tex := (content as MenuApercu).texture()
 		if tex != null:
+			var nouvelle_cle := MenuArtwork.cle_canonique(key)
+			var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != tex)
+			_current_artwork_key = nouvelle_cle
+			
 			if mat != null:
 				mat.set_shader_parameter("mode_flou_total", 0.0)
+				var poi := MenuArtwork.poi_pour(nouvelle_cle)
+				var effet := MenuArtwork.effet_pour(nouvelle_cle)
+				
+				mat.set_shader_parameter("torch_pos", poi)
+				mat.set_shader_parameter("effect_mode", effet)
+				
+				if est_nouveau:
+					_declencher_embrasement(mat)
+			
 			_bg_image.texture = tex
 			_bg_image.show()
 		else:
@@ -691,15 +767,31 @@ func _update_background(key: String, content: Control) -> void:
 	if bg_res == null or (bg_res is String and (bg_res as String) == ""):
 		bg_res = _panel_backgrounds.get(key, null)
 	
+	var texture_a_poser: Texture2D = null
+	var cle_fond := ""
 	if bg_res is Texture2D:
-		if mat != null:
-			mat.set_shader_parameter("mode_flou_total", 1.0)
-		_bg_image.texture = bg_res
-		_bg_image.show()
+		texture_a_poser = bg_res
 	elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
+		texture_a_poser = load(bg_res as String)
+		cle_fond = bg_res as String
+	
+	if texture_a_poser != null:
+		var nouvelle_cle := MenuArtwork.cle_canonique(cle_fond if cle_fond != "" else current_id())
+		var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != texture_a_poser)
+		_current_artwork_key = nouvelle_cle
+		
 		if mat != null:
 			mat.set_shader_parameter("mode_flou_total", 1.0)
-		_bg_image.texture = load(bg_res as String)
+			var poi := MenuArtwork.poi_pour(nouvelle_cle)
+			var effet := MenuArtwork.effet_pour(nouvelle_cle)
+			
+			mat.set_shader_parameter("torch_pos", poi)
+			mat.set_shader_parameter("effect_mode", effet)
+			
+			if est_nouveau:
+				_declencher_embrasement(mat)
+				
+		_bg_image.texture = texture_a_poser
 		_bg_image.show()
 	else:
 		_bg_image.hide()

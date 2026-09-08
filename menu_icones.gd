@@ -59,7 +59,30 @@ const PAR_ARME := {
 	"fusil": "arme_fusil.png",
 	"pompe": "arme_pompe.png",
 	"arbalete": "arme_arbalete.png",
+	"revolver": "arme_revolver.png",
+	"carabine": "arme_carabine.png",
+	"pompe_scie": "arme_pompe_scie.png",
+	"arbalete_lourde": "arme_arbalete_lourde.png",
 }
+
+## Les badges de rangs compétitifs (Phases 6 & 7).
+const PAR_RANG := {
+	"aveugle": "rang_01_aveugle.png",
+	"braise": "rang_02_braise.png",
+	"bougie": "rang_03_bougie.png",
+	"lanterne": "rang_04_lanterne.png",
+	"torche": "rang_05_torche.png",
+	"brasier": "rang_06_brasier.png",
+	"phare": "rang_07_phare.png",
+	"aurore": "rang_08_aurore.png",
+	"zenith": "rang_09_zenith.png",
+	"candela": "rang_10_candela.png",
+}
+
+const RANGS_ORDRE: Array[String] = [
+	"aveugle", "braise", "bougie", "lanterne", "torche",
+	"brasier", "phare", "aurore", "zenith", "candela"
+]
 
 ## La lampe torche, dans l'indicateur du HUD.
 const TORCHE := "torche.png"
@@ -233,6 +256,34 @@ static func poser_texture(bouton: Button, tex: Texture2D, teinte: Color,
 	return true
 
 
+## L'icône d'un rang compétitif, par son slug, son libellé ou son index (1..10).
+static func rang(tier_ident: Variant) -> Texture2D:
+	if typeof(tier_ident) == TYPE_INT:
+		var idx := int(tier_ident)
+		if idx >= 1 and idx <= RANGS_ORDRE.size():
+			return icone(String(PAR_RANG.get(RANGS_ORDRE[idx - 1], "")))
+		return null
+	var s := String(tier_ident).to_lower().strip_edges()
+	for k: String in PAR_RANG:
+		if s.begins_with(k):
+			return icone(String(PAR_RANG[k]))
+	return icone(String(PAR_RANG.get(s, "")))
+
+
+## Configure un TextureRect pour afficher le badge d'un rang.
+static func poser_rang(rect: TextureRect, tier_ident: Variant, cote: float = 32.0) -> bool:
+	if rect == null:
+		return false
+	var tex := rang(tier_ident)
+	rect.texture = tex
+	rect.visible = (tex != null)
+	if tex != null:
+		rect.custom_minimum_size = Vector2(cote, cote)
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	return tex != null
+
+
 ## Les icônes attendues et absentes. Vide = tout est cuit.
 ##
 ## Le panneau F3 le lit : une absence se diagnostique, elle ne se devine pas.
@@ -240,6 +291,9 @@ static func poser_texture(bouton: Button, tex: Texture2D, teinte: Color,
 static func manquantes() -> Array[String]:
 	var out: Array[String] = []
 	for f: String in PAR_ARME.values():
+		if not ResourceLoader.exists(DOSSIER + f):
+			out.append(f)
+	for f: String in PAR_RANG.values():
 		if not ResourceLoader.exists(DOSSIER + f):
 			out.append(f)
 	if not ResourceLoader.exists(DOSSIER + TORCHE):

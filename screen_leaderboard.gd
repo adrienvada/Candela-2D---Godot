@@ -63,6 +63,7 @@ extends HubScreen
 const Charte := preload("res://charte.gd")
 const MenuTheme := preload("res://menu_theme.gd")
 const MenuWidgets := preload("res://menu_widgets.gd")
+const MenuIcones := preload("res://menu_icones.gd")
 
 ## Méthode attendue de l'autoload. Absente, l'écran se rabat sur ma seule ligne.
 const SNAPSHOT_METHOD := "standing_snapshot"
@@ -279,15 +280,32 @@ func _build_row(node_name: String) -> Dictionary:
 	line.add_theme_constant_override("separation", MenuTheme.GAP_S)
 	margin.add_child(line)
 
+	var tier_box := HBoxContainer.new()
+	tier_box.custom_minimum_size = Vector2(COL_TIER, 0)
+	tier_box.add_theme_constant_override("separation", MenuTheme.GAP_XS)
+
+	var tier_icon := TextureRect.new()
+	tier_icon.custom_minimum_size = Vector2(20, 20)
+	tier_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tier_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tier_icon.visible = false
+	tier_box.add_child(tier_icon)
+
+	var tier_label := _make_cell(0, HORIZONTAL_ALIGNMENT_LEFT, FONT_ROW)
+	tier_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tier_box.add_child(tier_label)
+
 	var cells := {
 		"rank": _make_cell(COL_RANK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_ROW),
 		"nickname": _make_cell(0, HORIZONTAL_ALIGNMENT_LEFT, FONT_ROW),
-		"tier": _make_cell(COL_TIER, HORIZONTAL_ALIGNMENT_LEFT, FONT_ROW),
+		"tier": tier_label,
+		"tier_icon": tier_icon,
+		"tier_box": tier_box,
 		"rating": _make_cell(COL_RATING, HORIZONTAL_ALIGNMENT_RIGHT, FONT_ROW),
 		"matches": _make_cell(COL_MATCHES, HORIZONTAL_ALIGNMENT_RIGHT, FONT_ROW),
 		"record": _make_cell(COL_RECORD, HORIZONTAL_ALIGNMENT_RIGHT, FONT_ROW),
 	}
-	for key in ["rank", "nickname", "tier", "rating", "matches", "record"]:
+	for key in ["rank", "nickname", "tier_box", "rating", "matches", "record"]:
 		line.add_child(cells[key])
 
 	var row := cells.duplicate()
@@ -549,6 +567,8 @@ func _attendre_le_reseau(cherche: bool) -> void:
 	for row in _rows:
 		for cle in ["rank", "nickname", "tier", "rating", "matches", "record"]:
 			(row[cle] as Label).text = ""
+		if row.has("tier_icon"):
+			(row["tier_icon"] as TextureRect).visible = false
 		(row["panel"] as Control).visible = true
 	_head.visible = true
 	_table_notice.visible = false
@@ -584,6 +604,7 @@ func _mine_as_row(identity: Node) -> Dictionary:
 		"nickname": String(identity.nickname),
 		"rating": int(identity.rating),
 		"rank": int(identity.rank),
+		"rank_label": String(identity.rank_label if "rank_label" in identity else ""),
 		"matches": int(identity.matches_played),
 		"wins": int(identity.wins),
 		"losses": int(identity.losses),
@@ -596,7 +617,13 @@ func _fill_row(row: Dictionary, data: Dictionary, mine: bool) -> void:
 	# Vide tant que le serveur n'enrichit pas ses lignes : une colonne vide se
 	# lit comme une colonne vide, un libellé recalculé ici se lirait comme une
 	# vérité.
-	(row["tier"] as Label).text = String(data.get(TIER_KEY, ""))
+	var tier_txt := String(data.get(TIER_KEY, ""))
+	(row["tier"] as Label).text = tier_txt
+	if row.has("tier_icon"):
+		if tier_txt != "":
+			MenuIcones.poser_rang(row["tier_icon"] as TextureRect, tier_txt, 18.0)
+		else:
+			(row["tier_icon"] as TextureRect).visible = false
 	(row["rating"] as Label).text = _number(data, "rating")
 	(row["matches"] as Label).text = _number(data, "matches")
 	(row["record"] as Label).text = _record(data)
