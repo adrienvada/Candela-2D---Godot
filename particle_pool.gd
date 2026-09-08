@@ -1,6 +1,8 @@
 extends Node2D
 class_name ParticlePool
 
+const Charte := preload("res://charte.gd")
+
 ## Réserve de particules physiques réutilisables (sang, étincelles).
 ##
 ## Chaque impact allouait auparavant jusqu'à 25 RigidBody2D neufs, chacun avec
@@ -39,6 +41,7 @@ var _active: Array[Dictionary] = []
 
 var _mat_mix: CanvasItemMaterial
 var _mat_add: CanvasItemMaterial
+var _mat_dust: CanvasItemMaterial
 var _phys_blood: PhysicsMaterial
 var _phys_spark: PhysicsMaterial
 
@@ -65,6 +68,12 @@ func _build_shared_resources() -> void:
 	_mat_add = CanvasItemMaterial.new()
 	_mat_add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	_mat_add.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+
+	# V5.5 — Poussières dans le faisceau : matériau additif SOUMIS À LA LUMIÈRE (LIGHT_MODE_NORMAL).
+	# Dans le noir hors du faisceau, elles reçoivent 0 lumière et restent noir pur sans bruit gris diffus.
+	_mat_dust = CanvasItemMaterial.new()
+	_mat_dust.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_mat_dust.light_mode = CanvasItemMaterial.LIGHT_MODE_NORMAL
 
 	_phys_blood = PhysicsMaterial.new()
 	_phys_blood.bounce = 0.2
@@ -172,18 +181,22 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		rb.angular_velocity = randf_range(-6.0, 6.0)
 		rb.physics_material_override = _phys_blood
 	elif kind == Kind.DUST:
-		# V5.5 — poussière de faisceau : grain ténu, additif, presque immobile.
-		# Aucune lumière propre : il n'existe que révélé par la torche — et le
-		# matériau additif le laisse deviner en fantôme dans le cône.
+		# V5.5 — poussière de faisceau : grain contrasté roman graphique, révélé par la torche.
+		# Aucune lumière propre : elle n'existe que révélée par la torche (LIGHT_MODE_NORMAL).
+		# Dans le noir hors du faisceau, elle ne reçoit aucune lumière et reste un noir d'encre pur.
 		circle.radius = 1.0
-		var s := randf_range(0.5, 1.0)
+		var s := randf_range(0.8, 1.6)
 		poly.polygon = PackedVector2Array([
-			Vector2(-1 * s, 0), Vector2(0, -1 * s), Vector2(1 * s, 0), Vector2(0, 1 * s)])
-		poly.material = _mat_add
+			Vector2(-1.2 * s, 0.2 * s),
+			Vector2(0.1 * s, -1.0 * s),
+			Vector2(1.1 * s, -0.1 * s),
+			Vector2(-0.2 * s, 0.9 * s)
+		])
+		poly.material = _mat_dust
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
-		rb.linear_damp = randf_range(2.0, 3.0)
-		rb.angular_velocity = randf_range(-2.0, 2.0)
+		rb.linear_damp = randf_range(2.5, 4.0)
+		rb.angular_velocity = randf_range(-4.0, 4.0)
 		rb.physics_material_override = _phys_blood
 	else:
 		circle.radius = 1.0
@@ -230,8 +243,8 @@ func advance(delta: float) -> void:
 		if t >= 1.0:
 			_retire(i)
 			continue
-		# TRANS_QUAD / EASE_IN, comme les tweens d'origine.
-		var eased := 1.0 - t * t
+		# Respect de la charte visuelle (Charte.Courbe.EXTINCTION) pour la décroissance.
+		var eased: float = 1.0 - Charte.courbe(Charte.Courbe.EXTINCTION, t)
 		var rb: RigidBody2D = entry["rb"]
 		(rb.get_node("Poly") as Polygon2D).scale = (entry["scale"] as Vector2) * eased
 		var energie := float(entry["energy"]) * eased
