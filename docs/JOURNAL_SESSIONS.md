@@ -247,6 +247,48 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-07 — session « bandeau FATAL » (chantier BF) : LIVRÉ, BF1 à BF5
+
+**Je tiens `player.gd` et `tools/test_bandeau_fatal.gd`**, et rien d'autre.
+Worktree `.claude/worktrees/bandeau-fatal-candela-2ee18c`, branche
+`claude/bandeau-fatal-candela-2ee18c`, partie de `070a0c6` — c'est le worktree
+que l'outillage m'a donné, pas celui nommé dans le chantier ; le nom diffère,
+le périmètre non.
+
+⚠️ **`player.gd` appartient au domaine « game feel ».** Si une session y
+travaille en ce moment, qu'elle le dise ici : je ne touche que `die()`, la
+`static func` de cadrage posée à côté de `geometrie_du_bandeau()`, et les
+constantes qu'elles se partagent.
+
+**`game_state.gd` en lecture seule**, et je n'ai finalement **besoin d'aucun
+accesseur** : les caméras `cam1` / `cam2` sont déjà publiques, et savoir quelle
+vue est affichée se lit sur leur `custom_viewport` — la fenêtre racine quand le
+chantier R a détourné le rendu, sinon un `SubViewport` dont le
+`render_target_update_mode` dit s'il dessine encore. Rien à ajouter côté
+`game_state`, donc rien à demander.
+
+**Ce que je ne touche pas :** `ui.gd`, `blood_stain.gd` et `bullet.gd` (tenus
+par la session « sang au sol », chantier SG), `effect_policy.gd`.
+
+**Ce que je republie :** rien. Mon delta part par message à la session
+« Can2d - Mise à jour artefact de suivi ».
+
+**Livré.** `player.gd` (`cadrage_du_bandeau()` et ses cinq constantes,
+`_rect_monde_de_la_vue()`, `_poser_bandeau_fatal()`, `die()` allégée d'autant)
+et `tools/test_bandeau_fatal.gd` (39 contrôles, contre-testés par mutation).
+Toutes les suites passent. **Je lâche les deux fichiers.**
+
+⚠️ **Deux avertissements pour qui reprendra `player.gd`.**
+`Camera2D.custom_viewport` est déclaré `Node` et non `Viewport` : sans
+transtypage explicite, l'inférence échoue et **le fichier entier cesse de
+compiler**. Et dans un banc lancé par `--script`, un `load()` qui échoue à
+compiler rend un `GDScript` **vivant mais vide**, pas `null` — le garde doit
+tester `can_instantiate()`, faute de quoi le banc tourne en boucle sans sortir.
+
+**Rien à demander à `game_state.gd`** : la lecture de `cam1` / `cam2` a suffi,
+aucun accesseur n'est nécessaire. La demande envisagée par le chantier est donc
+sans objet.
+
 ### 2026-09-07 (suite) — session « retouche éblouissement » : le polygone de photocopie est RÉSOLU, chantier brouillage repris avec l'accord d'Adrien
 
 **Adrien a confié le chantier brouillage à cette session** (« oui tu récupères
@@ -2405,4 +2447,11 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
 - `tools/run_suites.sh` — enregistrement de `test_menu_artworks` (56 tests solo + 7 duo au vert).
 - `docs/ROADMAP.md` — inscription du chantier et de ses 4 étapes (MV1 à MV4).
 
+#### Lot du 2026-09-08 — session « refonte Roman Graphique Brutaliste & pleine luminosité »
 
+**Chantier Menus — Refonte intégrale au style Roman Graphique Brutaliste** (validé par Adrien).
+- **Style artistique :** Encrage noir pur et dur, découpes géométriques acérées, lore d'arène de mort clandestine (gladiateurs/survivants contraints armés d'un simple pistolet et d'une torche, zéro zombies, zéro armures intégrales, sol et murs marqués par le sang des précédents affrontements et douilles au sol).
+- **Pleine luminosité des sources de lumière :** Réécriture de la courbe d'exposition dans `menu_artwork.gdshader` (`highlight_breakthrough` via `smoothstep(0.35, 0.78, luma)`) pour que les faisceaux, étincelles, néons et écrans percent à 100 % de luminosité éclatante au lieu d'être aplatis par l'exposition ambiante sombre, tout en conservant des ombres d'encre profondes.
+- **Teintes dominantes par sous-menu :** Ambre pour l'accueil et le hub amical, Rouge carmin pour le duel compétitif, Bleu cyan pour la baie réseau, Or éclatant pour le coffre-fort.
+- **Calage des POIs et effets :** Mise à jour des coordonnées normalisées de focalisation dans `menu_artwork.gd` et des masques de poussières/brumes animées dans `menu_artwork.gdshader`.
+- **Validation :** 57/57 suites de tests automatisées vertes dans `tools/run_suites.sh --rapide` (77s, 0 échec), captures haute résolution générées et vérifiées via `tools/capturer_artworks.tscn`.

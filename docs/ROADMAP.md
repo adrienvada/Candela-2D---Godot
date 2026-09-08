@@ -13140,6 +13140,88 @@ pour le tueur.
 — la lecture des caméras suffit ; s'il faut un accesseur, le **demander** dans
 le journal plutôt que l'écrire.
 
+#### ✅ BF est FAIT — BF1 à BF5, le 2026-09-07
+
+**Le mot le plus fort du jeu s'affiche désormais chez celui qui l'a mérité.**
+Vérifié à l'œil sur le rendu réel dans les trois configurations, pas seulement
+au banc : c'était un défaut de cadrage, il se voit.
+
+**Le pourquoi de la forme retenue, en trois points qui ne se devinent pas :**
+
+- **Le cadrage n'agit que par un DÉCALAGE ajouté aux positions d'origine.** Ce
+  n'est pas une élégance : dans la vue du mort la caméra est sur lui, l'ancre
+  tombe donc au milieu du cadre et ce décalage vaut **exactement zéro**. Tout ce
+  qu'Adrien a validé le 2026-08-26 y reste au pixel près, et la garantie de
+  non-régression se lit dans le code au lieu d'être promise en commentaire.
+  Mesuré : dans la vue de J2 mort, le bandeau naît en `x = 915,5`, c'est-à-dire
+  `x du cadavre − largeur du mot / 2`, la formule d'avant.
+- **`game_state.gd` n'a eu besoin d'AUCUN accesseur neuf**, contrairement à ce
+  que le chantier envisageait. `cam1` / `cam2` sont publiques, et « cette vue
+  est-elle affichée » se lit entièrement sur la caméra : soit elle vise la
+  **fenêtre** — le chantier R l'a détournée, c'est donc celle qu'on regarde —,
+  soit elle vise un `SubViewport`, et c'est son `render_target_update_mode` qui
+  fait foi. ⚠️ **Surtout pas le `visible` du conteneur** : en rendu racine il
+  reste vrai alors que la vue est arrêtée, et lire le mauvais des deux mettrait
+  le bandeau dans une texture que personne n'affiche.
+- **Les tailles de vue ont été MESURÉES, pas supposées** (2026-09-07, à
+  l'exécution) : racine **1920×1080**, vues scindées **957×1080** et
+  **958×1080**, masques de cull `~4` et `~2`. C'est ce qui confirme le piège du
+  chantier R — en vue unique l'aire 2D est celle de la fenêtre en `keep`, pas
+  les 1916 du `SubViewport`.
+
+**Deux défauts trouvés en chemin, tous deux hors du sujet annoncé :**
+
+1. ⚠️ **`Camera2D.custom_viewport` est déclaré `Node`, pas `Viewport`.** Sans
+   transtypage explicite, l'inférence de la taille échoue et **`player.gd` cesse
+   de compiler** — pour tout le jeu, pas seulement pour le bandeau.
+2. ⚠️ **Un script qui ne compile pas n'est pas `null`, et le garde de
+   `tools/test_bandeau_fatal.gd` ne testait que `null`.** Le `load()` a rendu un
+   `GDScript` vivant mais vide, l'appel suivant a levé « Nonexistent function »
+   **au milieu de `_run()`, donc avant `quit()`** — et le banc a tourné en
+   boucle sans jamais sortir. C'est le piège que ce même fichier décrit vingt
+   lignes plus haut, resté ouvert parce que le garde ne couvrait qu'une des deux
+   façons d'échouer. `can_instantiate()` couvre l'autre.
+
+**Ce que le banc protège vraiment** — 39 contrôles, contre-testés par mutation
+le 2026-09-07, et les deux mutations rougissent : cadrer le **départ** au lieu
+de l'arrivée (6 échecs), et mettre une **largeur de vue en dur** au lieu de lire
+le rectangle reçu (2 échecs). L'oracle reste écrit à la main — 957, 1080, 1920,
+171 — et jamais lu sur les constantes qu'il surveille.
+
+#### BF5 — ce qui est SIGNALÉ et n'a pas été corrigé
+
+Trois points qui demandent l'arbitrage d'Adrien, pas une correction :
+
+- **Le bandeau peut se poser sur le HUD.** En vue unique, un cadavre en haut de
+  l'écran accroche la boîte au bord haut, où vivent le chronomètre et le badge
+  « ENTRAÎNEMENT » : le bandeau les recouvre pendant sa seconde et demie. C'est
+  **nouveau, et c'est moi qui l'introduis** — avant, la boîte ne montait jamais
+  là. La faire éviter le HUD demanderait de coder dans `player.gd` la hauteur du
+  bandeau de `ui.gd` : un couplage muet entre deux fichiers, exactement ce que
+  ce dépôt paie cher. À trancher : le bandeau doit-il esquiver le HUD, et à quel
+  prix.
+- **Le sous-titre « à N px du centre » suit maintenant le bandeau de sa vue**, et
+  rien de plus. Son audience n'a **pas** changé — il s'affichait déjà dans les
+  deux vues — mais il est pour la première fois **lisible par le tueur**, à qui
+  il raconte la marge de son propre tir. À qui ce chiffre s'adresse reste un
+  arbitrage, pas une correction.
+- **La flèche paraît détachée du cartouche.** Elle est posée sur le bord de la
+  boîte du `TextureRect` ; la planche `cartouche_fatal.png` a des bords rongés
+  et transparents, donc l'encre s'arrête avant. L'écart se voit, il se lit
+  comme un pointeur et non comme un défaut — mais il vient de l'image, pas du
+  calcul, et le corriger supposerait de mesurer l'alpha de la planche.
+
+#### Ce qui n'a PAS été prouvé, et il faut le dire
+
+**« En ligne côté hôte » a été vérifié par sa TOPOLOGIE, pas par un vrai match à
+deux instances.** La vue a été montée par le chemin du mode réseau
+(`ONLINE_HOST` + `_restore_viewports()`), et le rendu capturé : une seule vue,
+1920×1080, un seul bandeau, cadré, flèche à gauche vers le cadavre. Ce qui est
+donc établi, c'est le **chemin d'affichage** — celui qui décide du cadrage. Ce
+qui ne l'est pas : rien, en réalité, puisque `die()` s'exécute localement des
+deux côtés (`rpc_update_hp` est `call_local`) et qu'aucun bandeau n'est
+répliqué. Le noter quand même plutôt que d'écrire « testé en ligne ».
+
 ---
 
 ## Chantier — Dynamisation visuelle des menus et artworks (inscrit le 2026-09-07)
