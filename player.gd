@@ -1082,6 +1082,8 @@ func start_reload() -> void:
 	if current_ammo >= current_weapon.max_ammo: return
 	is_reloading = true
 	reload_time_left = current_weapon.reload_time
+	var slug: String = current_weapon.slug() if current_weapon.has_method("slug") else "pistolet"
+	AudioManager.play_weapon_reload(slug, global_position)
 
 
 func _process(delta):
@@ -1915,6 +1917,7 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		var gs = get_tree().get_first_node_in_group("game_state")
 		if gs and gs.has_method("camera_hit_kick"):
 			gs.camera_hit_kick(player_id)
+		AudioManager.play_breath_hit(global_position)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0

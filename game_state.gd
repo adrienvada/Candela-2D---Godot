@@ -719,7 +719,7 @@ func rebuild_arena() -> void:
 	# depuis le menu. Une portée écrite en dur redeviendrait fausse à la première
 	# carte d'une autre taille, et rien ne le dirait.
 	AudioManager.accorder_a_la_carte(MapCodec.get_grid_size(data),
-		CandelaTileSet.TILE_SIZE)
+		CandelaTileSet.TILE_SIZE, data)
 	# V5.10 — la presence de la salle se pose sur la MEME carte, au meme endroit
 	# et pour la meme raison : les ponctuels doivent tomber DANS l'arene, et
 	# c'est ici qu'on sait ou elle commence et ou elle finit. Une zone ecrite en

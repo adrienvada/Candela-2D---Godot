@@ -34,12 +34,15 @@ const POIS: Dictionary = {
 	"ill_accueil": Vector2(0.62, 0.25),
 	"ill_competitif": Vector2(0.65, 0.65),
 	"ill_ecran_scinde": Vector2(0.50, 0.45),
+	"ill_scinde": Vector2(0.50, 0.45),
 	"ill_amical": Vector2(0.48, 0.40),
 	"ill_amical_ligne": Vector2(0.55, 0.50),
 	"ill_amical_local": Vector2(0.35, 0.45),
 	"ill_entrainement": Vector2(0.82, 0.48),
 	"ill_personnalisation": Vector2(0.55, 0.62),
+	"apercu_personnalisation": Vector2(0.55, 0.62),
 	"ill_mise_a_jour": Vector2(0.62, 0.45),
+	"ill_maj": Vector2(0.62, 0.45),
 	"ill_quitter": Vector2(0.40, 0.78),
 	"ill_creer_ligne": Vector2(0.42, 0.65),
 	"ill_rejoindre_ligne": Vector2(0.41, 0.35),
@@ -55,12 +58,15 @@ const EFFECTS: Dictionary = {
 	"ill_accueil": EffectMode.FLICKER_DUST,
 	"ill_competitif": EffectMode.HEARTBEAT_FLARE,
 	"ill_ecran_scinde": EffectMode.BEAM_CLASH,
+	"ill_scinde": EffectMode.BEAM_CLASH,
 	"ill_amical": EffectMode.BREATHING_HALO,
 	"ill_amical_ligne": EffectMode.NETWORK_LEDS,
 	"ill_amical_local": EffectMode.CRT_SCAN,
 	"ill_entrainement": EffectMode.TARGET_PULSE,
 	"ill_personnalisation": EffectMode.ELECTRICAL_ARC,
+	"apercu_personnalisation": EffectMode.ELECTRICAL_ARC,
 	"ill_mise_a_jour": EffectMode.VAULT_BEAMS,
+	"ill_maj": EffectMode.VAULT_BEAMS,
 	"ill_quitter": EffectMode.DYING_EMBER,
 	"ill_creer_ligne": EffectMode.FLARE_SMOKE_LINE,
 	"ill_creer_local": EffectMode.FLARE_LOCAL_CRTS,
@@ -76,9 +82,17 @@ static func cle_canonique(identifiant: String) -> String:
 	if identifiant == "":
 		return "ill_accueil"
 	var nom := identifiant.get_file().get_basename()
-	if nom.begins_with("ill_") or nom.begins_with("apercu_"):
-		if nom == "apercu_personnalisation":
-			return "ill_personnalisation"
+	if nom == "ill_maj" or nom == "mise_a_jour" or nom == "ill_mise_a_jour":
+		return "ill_mise_a_jour"
+	if nom == "ill_scinde" or nom == "ecran_scinde" or nom == "ill_ecran_scinde":
+		return "ill_ecran_scinde"
+	if nom == "apercu_personnalisation" or nom == "ill_personnalisation" or nom == "personnalisation":
+		return "ill_personnalisation"
+	if nom == "ill_creer":
+		return "ill_creer_ligne"
+	if nom == "ill_rejoindre":
+		return "ill_rejoindre_ligne"
+	if POIS.has(nom):
 		return nom
 	if POIS.has(identifiant):
 		return identifiant

@@ -346,6 +346,8 @@ const FAMILLES_DE_CLES: Dictionary = {
 		"defeat", "spk_perfect", "spk_close_call"],
 	"count": ["count_1", "count_2", "count_3"],
 	"sting": ["sting_kill", "sting_kill_match", "sting_defeat", "sting_draw"],
+	"weapon_reload": ["weapon_reload_pistolet", "weapon_reload_fusil",
+		"weapon_reload_pompe", "weapon_reload_arbalete"],
 }
 
 ## L'index inverse, construit une fois. Ecrire les deux sens a la main
@@ -543,6 +545,13 @@ const PORTEE_RELATIVE: Dictionary = {
 	# Le carreau est le SEUL indice que laisse l'arbalete, qui n'emet pas de
 	# lumiere. Sa portee est donc un arbitrage de jeu, pas un dosage.
 	"bolt_flight": 0.55,
+	# V4.9 — l'impact corporel organique et le souffle coupé : intime, chair.
+	"breath_hit": 0.55,
+	# 0.2.1 — le rechargement mécanique d'arme : manipulation proche.
+	"weapon_reload": 0.50,
+	# V5.1 — le clic de bascule de torche : clic local.
+	"torch_on": 0.45,
+	"torch_off": 0.45,
 	# Chantier FUSÉE — PROPOSITIONS, jamais passées au banc (à doser comme les
 	# autres, molette par molette). Le lancer trahit comme un clic à vide ;
 	# l'atterrissage annonce un peu plus loin (l'événement concerne les deux) ;
@@ -599,6 +608,13 @@ const NIVEAU_RELATIF: Dictionary = {
 	"hit_center": -2.0,
 	"hit_edge": -7.0,
 	"bolt_flight": -10.0,
+	# V4.9 — souffle coupé / impact corporel organique : viscéral sans surpasser le tir
+	"breath_hit": -5.0,
+	# 0.2.1 — rechargement d'arme : cliquetis métallique net à courte distance
+	"weapon_reload": -8.0,
+	# V5.1 — claquement sec de torche
+	"torch_on": -6.0,
+	"torch_off": -8.0,
 	# Chantier FUSÉE — propositions à doser au banc : événements nets mais pas
 	# des coups de feu ; le grésillement continu pèse peu, comme les pas.
 	"fusee_lancer": -6.0,
@@ -926,9 +942,107 @@ func appliquer_force_occlusion(force: float) -> void:
 static func coupure_occlusion_pour(force: float) -> float:
 	return lerpf(OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, clampf(force, 0.0, 1.0))
 
-## Accorde le son a la carte qu'on vient de poser. Appelee par `rebuild_arena`.
-func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i) -> void:
+## ============================================================================
+## V5.12 / S5 — LA RÉVERB DIT LA SALLE (acoustique minérale brutaliste)
+## ============================================================================
+##
+## L'arène est un hangar clandestin de béton armé et d'arêtes d'acier. Le son ne
+## s'y amortit pas comme dans un salon feutré : les surfaces dures renvoient des
+## transitoires aiguës nettes (`damping` bas ~0.20-0.28) et la taille de la pièce
+## dicte l'ampleur du volume réverbéré (`room_size`).
+##
+## Dans un sas confiné (15×15), le son est sec, serré et claustrophobe
+## (`room_size` ~0.07, `wet` ~0.25). Dans un grand hangar (45×45), les réflexions
+## s'étalent (`room_size` ~0.32, `wet` ~0.40).
+const REVERB_ROOM_SIZE_MIN: float = 0.06
+const REVERB_ROOM_SIZE_MAX: float = 0.35
+const REVERB_DAMPING_DEFAUT: float = 0.22
+const REVERB_HIPASS_DEFAUT: float = 0.25
+const REVERB_WET_MIN: float = 0.24
+const REVERB_WET_MAX: float = 0.42
+
+## Dérive les caractéristiques acoustiques de la salle à partir de la carte. Pure.
+static func calculer_reverb_carte(grille: Vector2i, tuile: Vector2i,
+		ratio_murs: float = 0.0) -> Dictionary:
+	var diag := diagonale_carte(grille, tuile)
+	# Interpolation basée sur la diagonale : de 700 px (15×15) à 2200 px (45×45)
+	var t := clampf((diag - 700.0) / 1500.0, 0.0, 1.0)
+	var room := lerpf(REVERB_ROOM_SIZE_MIN, REVERB_ROOM_SIZE_MAX, t)
+	var damp := clampf(REVERB_DAMPING_DEFAUT + ratio_murs * 0.08, 0.18, 0.35)
+	var wet := lerpf(REVERB_WET_MIN, REVERB_WET_MAX, t)
+	return {
+		"room_size": room,
+		"damping": damp,
+		"hipass": REVERB_HIPASS_DEFAUT,
+		"wet": wet,
+		"dry": 1.0,
+	}
+
+var _reverb_courante: Dictionary = {}
+
+func reverb_courante() -> Dictionary:
+	return _reverb_courante
+
+func _get_sfx_reverb() -> AudioEffectReverb:
+	var idx := AudioServer.get_bus_index(BUS_SFX)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectReverb:
+			return ef as AudioEffectReverb
+	return null
+
+func _get_sfx_monde_filter() -> AudioEffectFilter:
+	var idx := AudioServer.get_bus_index(BUS_SFX)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectFilter and ef.resource_name == "EtouffementMonde":
+			return ef as AudioEffectFilter
+	# Repli si nom absent : tout filtre sur SFX
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectFilter:
+			return ef as AudioEffectFilter
+	return null
+
+func _get_sfx_occlus_reverb() -> AudioEffectReverb:
+	var idx := AudioServer.get_bus_index(BUS_SFX_OCCLUS)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectReverb:
+			return ef as AudioEffectReverb
+	return null
+
+func appliquer_reverb_carte(params: Dictionary) -> void:
+	_reverb_courante = params
+	var rev := _get_sfx_reverb()
+	if rev != null:
+		rev.room_size = float(params.get("room_size", 0.15))
+		rev.damping = float(params.get("damping", REVERB_DAMPING_DEFAUT))
+		rev.hipass = float(params.get("hipass", REVERB_HIPASS_DEFAUT))
+		rev.wet = float(params.get("wet", 0.34))
+		rev.dry = float(params.get("dry", 1.0))
+	var rev_occ := _get_sfx_occlus_reverb()
+	if rev_occ != null:
+		rev_occ.room_size = float(params.get("room_size", 0.15))
+		rev_occ.damping = float(params.get("damping", REVERB_DAMPING_DEFAUT))
+		rev_occ.hipass = float(params.get("hipass", REVERB_HIPASS_DEFAUT))
+
+## Accorde le son et la réverbération à la carte qu'on vient de poser. Appelee par `rebuild_arena`.
+func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i, data: Dictionary = {}) -> void:
 	_portee_carte = maxf(1.0, diagonale_carte(grille, tuile))
+	var ratio_murs := 0.0
+	if not data.is_empty():
+		var total := grille.x * grille.y
+		if total > 0:
+			ratio_murs = float(MapCodec.get_wall_cells(data).size()) / float(total)
+	var params := calculer_reverb_carte(grille, tuile, ratio_murs)
+	appliquer_reverb_carte(params)
 
 func portee_carte() -> float:
 	return _portee_carte
@@ -1153,6 +1267,10 @@ const SFX_PRIORITE: Dictionary = {
 	# Un ricochet dit qu'une balle VIT ENCORE — au rang du tir qui l'a lancee.
 	"ricochet": 2,
 	"bolt_flight": 2,
+	"breath_hit": 2,
+	"weapon_reload": 1,
+	"torch_on": 1,
+	"torch_off": 1,
 	# Toucher reste l'information la plus chere du jeu (voir le commentaire de
 	# `flesh_impact` plus haut) : les deux qualites de coup en heritent.
 	"hit_center": 3,
@@ -1269,6 +1387,9 @@ func _ready() -> void:
 	# c'est la leçon de la force d'occlusion, où le banc dosait une valeur que le
 	# jeu n'appliquait pas.
 	poser_limiteur()
+
+	# V5.12 / S5 — accorder la réverbération minérale à la carte par défaut
+	accorder_a_la_carte(GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)
 
 	# S3 — poser la force d'occlusion dès le démarrage. **Sans cette ligne, la
 	# molette du banc ne pilote que le banc** : le jeu garderait les valeurs
@@ -1578,6 +1699,24 @@ func play_hit(pos: Vector2, proximite_bord: float) -> AudioStreamPlayer2D:
 	if get_audio_stream(cle) == null:
 		return play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
 	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+
+## V2.9 — l'impact d'une balle sur un mur plein (béton brut).
+func play_wall_impact(pos: Vector2) -> AudioStreamPlayer2D:
+	return play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
+
+## 0.2.1 — le rechargement mécanique d'une arme.
+func play_weapon_reload(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+	var cle := "weapon_reload_" + slug
+	if get_audio_stream(cle) == null:
+		return null
+	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+
+## V4.9 — souffle coupé et compression d'impact corporel organique (6 variantes).
+func play_breath_hit(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("breath_hit")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.95, 1.05)
 
 ## V4.10 — le carreau d'arbalete en vol.
 ##
@@ -2124,6 +2263,7 @@ func set_in_match(in_match: bool) -> void:
 		update_torch_cutoff()
 	else:
 		set_music_cutoff(20000.0, 1)
+		set_sfx_monde_cutoff(SFX_MONDE_COUPURE_OUVERT, 0.1)
 
 ## La torche de ce joueur a-t-elle le droit d'être entendue ici ?
 ##
@@ -2149,6 +2289,37 @@ static func torche_comptee(player_id: int, local_idx: int) -> bool:
 static func coupure_pour(torches: int) -> float:
 	return 200.0 + float(maxi(torches, 0)) * 320.0
 
+## ============================================================================
+## CONTRASTE PSYCHOACOUSTIQUE TORCHE / NOIR ABSOLU (EtouffementMonde)
+## ============================================================================
+##
+## Dans le noir total (80-85 % de l'image), le son est étouffé : les transitoires
+## aiguës du monde s'assourdissent (passe-bas à 5000 Hz) et la réverbération
+## devient plus mate (`damping` accru de 0.10). Le joueur perçoit sa fragilité.
+##
+## Dès que la torche s'allume, l'espace sonore s'ouvre vivement à 20500 Hz : le
+## claquement sec sur le béton et les arêtes d'acier métalliques réapparaissent.
+const SFX_MONDE_COUPURE_NOIR: float = 5000.0
+const SFX_MONDE_COUPURE_OUVERT: float = 20500.0
+
+static func coupure_sfx_monde_pour(torches: int) -> float:
+	return SFX_MONDE_COUPURE_OUVERT if torches > 0 else SFX_MONDE_COUPURE_NOIR
+
+static func damping_sfx_monde_pour(torches: int, base_damping: float) -> float:
+	return base_damping if torches > 0 else clampf(base_damping + 0.10, 0.0, 1.0)
+
+var sfx_monde_tween: Tween
+
+func set_sfx_monde_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
+	var filter := _get_sfx_monde_filter()
+	if not filter:
+		return
+	if sfx_monde_tween and sfx_monde_tween.is_valid():
+		sfx_monde_tween.kill()
+	sfx_monde_tween = create_tween()
+	Charte.animer(sfx_monde_tween, filter, "cutoff_hz", filter.cutoff_hz,
+		cutoff_hz, duration, Charte.Courbe.ENTREE)
+
 func set_player_torch(player_id: int, is_on: bool) -> void:
 	# V5.1 — le claquement d'allumage/extinction, sur la transition seulement.
 	# Sans fuite par construction : le site d'appel (player.gd) filtre déjà par
@@ -2167,6 +2338,14 @@ func update_torch_cutoff() -> void:
 			active_count += 1
 
 	var cible := coupure_pour(active_count)
+	var cible_sfx := coupure_sfx_monde_pour(active_count)
+	var base_damp: float = float(_reverb_courante.get("damping", REVERB_DAMPING_DEFAUT))
+	var damp_cible := damping_sfx_monde_pour(active_count, base_damp)
+
+	var rev := _get_sfx_reverb()
+	if rev != null:
+		rev.damping = damp_cible
+
 	# V5.2 — le balayage. Une torche qui s'allume dépasse sa cible puis y
 	# retombe : c'est ce dépassement qu'on ENTEND, un filtre qui s'ouvre. Sans
 	# lui, le changement est réel mais passe pour un hasard du mixage.
@@ -2174,12 +2353,14 @@ func update_torch_cutoff() -> void:
 	if active_count > _torches_allumees:
 		_torches_allumees = active_count
 		set_music_cutoff(cible * 1.7, 0.09)
+		set_sfx_monde_cutoff(cible_sfx, 0.08)
 		var retombee := create_tween()
 		retombee.tween_interval(0.09)
 		retombee.tween_callback(func() -> void: set_music_cutoff(cible, 0.45))
 		return
 	_torches_allumees = active_count
 	set_music_cutoff(cible, 0.25)
+	set_sfx_monde_cutoff(cible_sfx, 0.35)
 
 func set_music_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
 	var filter = _ensure_music_lowpass_effect()
