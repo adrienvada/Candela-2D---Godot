@@ -374,6 +374,67 @@ class NeonFocusRing extends Panel:
 		global_position = global_position.lerp(target_rect.position, t)
 		size = size.lerp(target_rect.size, t)
 
+
+## Curseur virtuel piloté au joystick analogique dans les menus.
+## Apparaît dès qu'on oriente le stick, se déplace librement comme une souris,
+## survole les éléments d'interface et disparaît dès qu'on reprend la navigation
+## case par case aux flèches / au D-pad.
+class VirtualGamepadCursor extends Control:
+	var neon: Color = Charte.AMBRE
+	var _time: float = 0.0
+
+	func _init(tint: Color = Charte.AMBRE) -> void:
+		neon = tint
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = Vector2(24, 24)
+		size = Vector2(24, 24)
+
+	func _ready() -> void:
+		set_as_top_level(true)
+		z_index = 100
+
+	func aim(pos: Vector2) -> void:
+		global_position = pos
+
+	func _process(delta: float) -> void:
+		if not visible:
+			return
+		_time += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var wave := 0.5 + 0.5 * sin(_time * 6.0)
+		# Halo doux centré sur la pointe
+		var halo_color := Color(neon.r, neon.g, neon.b, 0.18 + 0.12 * wave)
+		draw_circle(Vector2(2, 2), 11.0 + 3.0 * wave, halo_color)
+
+		# Forme de flèche de curseur stylisée
+		var points := PackedVector2Array([
+			Vector2(0, 0),        # Pointe
+			Vector2(0, 19),       # Bord gauche
+			Vector2(4.5, 14.5),   # Encoche gauche
+			Vector2(9.5, 22),     # Queue bas-droite
+			Vector2(13.5, 20.0),  # Queue droite
+			Vector2(8.5, 13.0),   # Queue haut-gauche
+			Vector2(14.5, 13.0),  # Aile droite
+		])
+
+		# Ombre portée
+		var shadow_points := PackedVector2Array()
+		for pt in points:
+			shadow_points.append(pt + Vector2(1.5, 1.5))
+		draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.5))
+
+		# Corps de la flèche
+		var fill_color := neon.lerp(Charte.HALOGENE, 0.35 * wave)
+		draw_colored_polygon(points, fill_color)
+
+		# Liseré extérieur
+		draw_polyline(points, Charte.HALOGENE, 1.5, true)
+
+		# Point lumineux sur la pointe
+		draw_circle(Vector2(0, 0), 2.0, Charte.HALOGENE)
+
 # ---------------------------------------------------------------------------
 # HUD DE MATCH
 # ---------------------------------------------------------------------------
@@ -757,6 +818,10 @@ var p2_focus: Control
 var p1_cursor: NeonFocusRing
 var p2_cursor: NeonFocusRing
 
+var _joystick_cursor: VirtualGamepadCursor
+var _joystick_cursor_active: bool = false
+var _joystick_cursor_pos: Vector2 = Vector2.ZERO
+
 
 # ===========================================================================
 # CYCLE DE VIE
@@ -779,6 +844,11 @@ func _ready() -> void:
 	add_child(p1_cursor)
 	p2_cursor = NeonFocusRing.new(COLOR_P2)
 	add_child(p2_cursor)
+
+	_joystick_cursor = VirtualGamepadCursor.new(COLOR_P1)
+	_joystick_cursor.name = "VirtualGamepadCursor"
+	_joystick_cursor.visible = false
+	add_child(_joystick_cursor)
 
 	MapData.map_selected.connect(func(_id: String) -> void: _refresh_map_card())
 	MapData.catalog_changed.connect(_refresh_map_card)
@@ -858,6 +928,7 @@ func _pulse_press(control: Control) -> void:
 func _process(delta: float) -> void:
 	_voile_temps += delta
 	_suivre_le_curseur_systeme()
+	_update_joystick_cursor(delta)
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
@@ -943,6 +1014,78 @@ func _suivre_le_curseur_systeme() -> void:
 		else Input.MOUSE_MODE_HIDDEN)
 	if Input.mouse_mode != voulu:
 		Input.mouse_mode = voulu
+
+
+## Pilote le curseur virtuel de joystick lorsque le joueur utilise le stick
+## analogique dans les menus.
+func _update_joystick_cursor(delta: float) -> void:
+	if not _un_menu_attend_un_clic():
+		if _joystick_cursor_active:
+			_desactiver_curseur_joystick()
+		return
+
+	# Lecture du stick gauche (et du stick droit en relais)
+	var stick := Vector2(
+		Input.get_joy_axis(0, JOY_AXIS_LEFT_X),
+		Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
+	)
+	if stick.length() < 0.18:
+		var stick_r := Vector2(
+			Input.get_joy_axis(0, JOY_AXIS_RIGHT_X),
+			Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+		)
+		if stick_r.length() >= 0.18:
+			stick = stick_r
+
+	var stick_len := stick.length()
+	const ZONE_MORTE := 0.18
+	const VITESSE_MAX := 1100.0 # px/s
+
+	if stick_len > ZONE_MORTE:
+		var vue := get_viewport()
+		if vue == null:
+			return
+		var vrect := vue.get_visible_rect()
+
+		if not _joystick_cursor_active:
+			_joystick_cursor_active = true
+			if _joystick_cursor != null:
+				_joystick_cursor.show()
+			if p1_focus != null and is_instance_valid(p1_focus) and p1_focus.is_visible_in_tree():
+				_joystick_cursor_pos = p1_focus.get_global_rect().get_center()
+			else:
+				_joystick_cursor_pos = vrect.size * 0.5
+
+		var fraction := inverse_lerp(ZONE_MORTE, 1.0, clampf(stick_len, ZONE_MORTE, 1.0))
+		var vitesse := pow(fraction, 1.25) * VITESSE_MAX
+		_joystick_cursor_pos += stick.normalized() * (vitesse * delta)
+		_joystick_cursor_pos.x = clampf(_joystick_cursor_pos.x, 0.0, vrect.size.x)
+		_joystick_cursor_pos.y = clampf(_joystick_cursor_pos.y, 0.0, vrect.size.y)
+
+		if _joystick_cursor != null:
+			_joystick_cursor.aim(_joystick_cursor_pos)
+
+		_actualiser_survol_curseur_joystick(_joystick_cursor_pos)
+
+
+## Détecte si le curseur joystick survole un élément interactif et met à jour le focus.
+func _actualiser_survol_curseur_joystick(pos: Vector2) -> void:
+	var candidates := _nav_candidates(0)
+	for candidate in candidates:
+		if not _is_focus_usable(candidate):
+			continue
+		var rect := candidate.get_global_rect()
+		if rect.has_point(pos):
+			if p1_focus != candidate:
+				_set_focus(0, candidate)
+			return
+
+
+## Masque le curseur virtuel de joystick lorsqu'on revient aux flèches ou à la souris.
+func _desactiver_curseur_joystick() -> void:
+	_joystick_cursor_active = false
+	if _joystick_cursor != null and is_instance_valid(_joystick_cursor):
+		_joystick_cursor.hide()
 
 
 func _update_network_status() -> void:
@@ -5662,6 +5805,10 @@ func _input(event: InputEvent) -> void:
 		if _handle_pause_input():
 			return
 
+	if event is InputEventMouseMotion:
+		if _joystick_cursor_active:
+			_desactiver_curseur_joystick()
+
 	var pause_open: bool = _panneau_ouvert(pause_panel)
 	if not _panneau_ouvert(game_over_panel) and not pause_open:
 		return
@@ -5684,12 +5831,20 @@ func _input(event: InputEvent) -> void:
 	for player in 2:
 		var prefix := "p1_menu_" if player == 0 else "p2_menu_"
 		if event.is_action_pressed(prefix + "right"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.RIGHT)
 		elif event.is_action_pressed(prefix + "left"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.LEFT)
 		elif event.is_action_pressed(prefix + "up"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.UP)
 		elif event.is_action_pressed(prefix + "down"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.DOWN)
 		elif event.is_action_pressed(prefix + "select"):
 			_activate(player)

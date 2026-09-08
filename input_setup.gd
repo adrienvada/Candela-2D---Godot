@@ -107,16 +107,11 @@ func _setup_all_inputs():
 	add_joy_btn.call("p1_weapon_prev", p1_device, JOY_BUTTON_DPAD_LEFT)
 	add_joy_btn.call("p1_weapon_next", p1_device, JOY_BUTTON_DPAD_RIGHT)
 	
-	# Menu Navigation
+	# Menu Navigation (D-Pad case par case)
 	add_joy_btn.call("p1_menu_up", p1_device, JOY_BUTTON_DPAD_UP)
 	add_joy_btn.call("p1_menu_down", p1_device, JOY_BUTTON_DPAD_DOWN)
 	add_joy_btn.call("p1_menu_left", p1_device, JOY_BUTTON_DPAD_LEFT)
 	add_joy_btn.call("p1_menu_right", p1_device, JOY_BUTTON_DPAD_RIGHT)
-	
-	add_joy_axis.call("p1_menu_up", p1_device, JOY_AXIS_LEFT_Y, -1.0)
-	add_joy_axis.call("p1_menu_down", p1_device, JOY_AXIS_LEFT_Y, 1.0)
-	add_joy_axis.call("p1_menu_left", p1_device, JOY_AXIS_LEFT_X, -1.0)
-	add_joy_axis.call("p1_menu_right", p1_device, JOY_AXIS_LEFT_X, 1.0)
 	
 	# P2
 	add_joy_axis.call("p2_move_left", p2_device, JOY_AXIS_LEFT_X, -1.0)
@@ -151,16 +146,11 @@ func _setup_all_inputs():
 	add_joy_btn.call("p2_weapon_prev", p2_device, JOY_BUTTON_DPAD_LEFT)
 	add_joy_btn.call("p2_weapon_next", p2_device, JOY_BUTTON_DPAD_RIGHT)
 
-	# Menu Navigation
+	# Menu Navigation (D-Pad case par case)
 	add_joy_btn.call("p2_menu_up", p2_device, JOY_BUTTON_DPAD_UP)
 	add_joy_btn.call("p2_menu_down", p2_device, JOY_BUTTON_DPAD_DOWN)
 	add_joy_btn.call("p2_menu_left", p2_device, JOY_BUTTON_DPAD_LEFT)
 	add_joy_btn.call("p2_menu_right", p2_device, JOY_BUTTON_DPAD_RIGHT)
-	
-	add_joy_axis.call("p2_menu_up", p2_device, JOY_AXIS_LEFT_Y, -1.0)
-	add_joy_axis.call("p2_menu_down", p2_device, JOY_AXIS_LEFT_Y, 1.0)
-	add_joy_axis.call("p2_menu_left", p2_device, JOY_AXIS_LEFT_X, -1.0)
-	add_joy_axis.call("p2_menu_right", p2_device, JOY_AXIS_LEFT_X, 1.0)
 	
 	# Start / Menu button for pause
 	add_joy_btn.call("sys_pause", p1_device, JOY_BUTTON_START)
