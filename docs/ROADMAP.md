@@ -12859,11 +12859,33 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   (la fumée pardonne UN tir), tunnel incandescent de la balle qui accuse le
   tireur, tunnel SOMBRE du carreau d'arbalète (l'arme sans lumière obtient sa
   niche et son premier contre).
-- **FU4 — l'audio complet** : sifflement de vol suivi (voix positionnelle qui
-  suit le projectile — extension du pool identifiée), et UN SEUL des deux
-  modèles sonores (grésillement qui masque les pas + silence-couperet, OU
-  étouffement par la fumée) — les deux cumulés seraient illisibles, à trancher
-  par Adrien.
+- **FU4 — l'audio complet.** ⚠️ **Le choix de modèle est TRANCHÉ par Adrien
+  le 2026-09-08 : « Non, la fumée étouffe juste un peu les sons. »** Écarte le
+  grésillement qui masque les pas — la fusée reste un objet qui BROUILLE, elle
+  ne devient pas une arme qui rend sourd.
+
+  **Implémenté, côté `AudioManager` :** `etouffement_fumee_db` /
+  `occultation_fumee` dans `audio_manager.gd`, appliqués dans `play_sfx_2d`.
+  Une atténuation en dB qui **s'ajoute** à l'occlusion des murs plutôt que de
+  router vers `SFX_Occlus` — ce bus dit « un mur a changé de PIÈCE l'espace
+  qu'on entend », la fumée ne change pas de pièce, elle charge le même air.
+  Router par ce bus aurait couplé la fumée à `force_occlusion`, un réglage
+  tenu et jugé pour les murs seuls : une retouche de mur aurait alors déplacé
+  la fumée sans que personne ne l'ait demandé.
+
+  Évaluée **au point d'émission**, pas le long du trajet émetteur→oreille —
+  même idiome que `Fusee.occultation_pour` déjà repris par `player.gd` pour
+  l'effacement des sprites : la fumée cache ce qui est DEDANS, elle ne feutre
+  pas ce qui passe simplement devant.
+
+  `FUSEE_ETOUFFEMENT_MAX_DB = -3.0 dB` est un **point de départ, non jugé** —
+  aucune oreille ne l'a encore entendu contre les autres sons. Il attend une
+  façon de le doser au banc, qui n'existe pas encore (`banc_audio.gd` n'a pas
+  de fumée à faire naître). *(C : Fusee.occultation_pour, déjà fait)*
+
+  **Reste ouvert :** le sifflement de vol suivi — voix positionnelle qui suit
+  le projectile ; patron déjà identifié (`_dazzle_player`/la voix dédiée de la
+  combustion), à poser côté `fusee.gd`.
 - **FU5 — l'extinction** : piétiner la fusée (0,7 s immobile À CONTRE-JOUR)
   ou l'éteindre d'une balle. Le hitcheck de piétinement DOIT passer par la
   compensation de latence hôte, sinon injuste à 100 ms.

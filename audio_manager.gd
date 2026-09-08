@@ -1038,6 +1038,63 @@ func est_occulte(pos: Vector2) -> bool:
 		MapGeometry.WALL_LAYER)
 	return not espace.intersect_ray(q).is_empty()
 
+## ============================================================================
+## FU4 — LA FUMEE ETOUFFE UN PEU (decision d'Adrien, 2026-09-08)
+## ============================================================================
+##
+## « Non, la fumee etouffe juste un peu les sons. » Ecarte au passage le modele
+## qu'on avait envisage — un gresillement qui masque les pas de l'adversaire :
+## la fusee reste un objet qui BROUILLE, elle ne devient pas une arme qui rend
+## sourd. « Juste un peu » est le dosage autant que le principe.
+##
+## ⚠️ **Une attenuation de VOLUME qui s'AJOUTE, pas une reoccupation du bus
+## `SFX_Occlus`.** Ce bus existe pour dire « un mur bloque le direct, ce qui
+## reste est le champ reverbere d'une autre piece » — un changement d'ESPACE.
+## La fumee ne change pas de piece : l'air est le meme, juste charge. Router les
+## sons de fumee vers `SFX_Occlus` les ferait dependre de `force_occlusion`, un
+## reglage tenu et juge au banc pour les MURS seuls — une retouche de mur
+## deplacerait alors la fumee sans que personne ne l'ait demande. Et un son a la
+## fois occulte par un mur ET dans la fumee doit perdre les DEUX penalites, pas
+## une choisie par un `if` : deux causes independantes s'additionnent en dB,
+## elles ne se remplacent pas — meme geste que le duck des pas sous le tir, qui
+## s'ajoute au niveau plutot que de l'ecraser.
+##
+## ⚠️ **Au POINT source, pas le long du trajet.** Meme idiome que
+## `Fusee.occultation_pour`, deja repris par `player.gd` pour l'effacement des
+## sprites : la fumee cache ce qui est DEDANS, elle ne feutre pas ce qui passe
+## simplement devant. Un tir qui longe un nuage sans y entrer arrive donc
+## intact — coherent avec ce qu'on VOIT deja : un corps juste a cote du nuage
+## sans y etre ne s'efface pas non plus. Une occultation le long du SEGMENT
+## emetteur-oreille donnerait un resultat plus juste dans le cas rare d'un tir
+## qui traverse un nuage sans y naitre ni y mourir, mais introduirait un second
+## modele de fumee la ou le jeu n'en a qu'un pour la vue — deux modeles pour un
+## meme nuage finiraient par diverger.
+##
+## `FUSEE_ETOUFFEMENT_MAX_DB` est un POINT DE DEPART, pas un jugement : aucune
+## oreille ne l'a encore entendu contre les autres sons. Meme statut que les
+## familles livrees le 2026-08-27.
+const FUSEE_ETOUFFEMENT_MAX_DB: float = -3.0
+
+## Pure — verifiable sans scene ni groupe. `occultation` est deja bornee par
+## `Fusee.occultation_pour` mais le clamp est repete ici a dessein : cette
+## fonction ne doit RIEN supposer sur qui l'appelle.
+static func etouffement_fumee_db(occultation: float) -> float:
+	return FUSEE_ETOUFFEMENT_MAX_DB * clampf(occultation, 0.0, 1.0)
+
+## L'occultation par la fumee au point `pos`, agregee sur tous les nuages en
+## vol. Par le PIRE des nuages, jamais en les additionnant : deux nuages
+## superposes ne rendent pas un corps plus invisible qu'un seul, au coeur du
+## sien — meme regle que `part_occultee` avec l'ecran partage plus haut.
+##
+## N'importe quel noeud du groupe « fusees » qui expose `occultation_pour` fait
+## l'affaire : `AudioManager` ne connait pas `Fusee`, il lit une INTERFACE.
+func occultation_fumee(pos: Vector2) -> float:
+	var occ := 0.0
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if f.has_method("occultation_pour"):
+			occ = maxf(occ, f.occultation_pour(pos))
+	return occ
+
 const SFX_POOL_SIZE: int = 16
 
 ## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.
@@ -1389,6 +1446,9 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_pour(bus_name, part > 0.0)
 	if part > 0.0:
 		player.volume_db += OCCLUSION_PENTE_DB * part
+	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
+	# plus haut sur pourquoi ce n'est pas le meme bus.
+	player.volume_db += etouffement_fumee_db(occultation_fumee(pos))
 	player.play()
 	return player
 
