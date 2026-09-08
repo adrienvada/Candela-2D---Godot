@@ -80,6 +80,10 @@ const SOUNDS: Dictionary = {
 	# sans suffixe numérique — `famille_de()` traiterait _NN comme une variante.
 	"fusee_rebond": "res://assets/audio/sfx/fusee_rebond.wav",
 	"fusee_combustion": "res://assets/audio/sfx/fusee_combustion.wav",
+	# FU5 — UN SEUL evenement pour les deux causes d'extinction (pietinement ou
+	# balle), a dessein : distinguer viendra si le dosage le reclame un jour, pas
+	# avant. Nom nu, meme regle que `fusee_rebond`.
+	"fusee_eteinte": "res://assets/audio/sfx/fusee_eteinte.wav",
 	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
 	# laquelle sort est `stinger_de_fin`, plus bas.
 	#
@@ -535,6 +539,9 @@ const PORTEE_RELATIVE: Dictionary = {
 	"fusee_atterrit": 0.70,
 	"fusee_rebond": 0.65,
 	"fusee_combustion": 0.60,
+	# Eteindre la fusee d'un rival est une information tactique, pas une
+	# ambiance : elle merite de porter au moins autant que le lancer.
+	"fusee_eteinte": 0.65,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -586,6 +593,7 @@ const NIVEAU_RELATIF: Dictionary = {
 	"fusee_atterrit": -4.0,
 	"fusee_rebond": -6.0,
 	"fusee_combustion": -11.0,
+	"fusee_eteinte": -6.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
 
@@ -1138,6 +1146,7 @@ const SFX_PRIORITE: Dictionary = {
 	"fusee_lancer": 1,
 	"fusee_atterrit": 1,
 	"fusee_rebond": 1,
+	"fusee_eteinte": 1,
 }
 ## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
 ## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier

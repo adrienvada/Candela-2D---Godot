@@ -12888,7 +12888,9 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   combustion), à poser côté `fusee.gd`.
 - **FU5 — l'extinction** : piétiner la fusée (0,7 s immobile À CONTRE-JOUR)
   ou l'éteindre d'une balle. Le hitcheck de piétinement DOIT passer par la
-  compensation de latence hôte, sinon injuste à 100 ms.
+  compensation de latence hôte, sinon injuste à 100 ms. *(C : `fusee_eteinte`
+  câblée côté `AudioManager` — un seul événement pour les deux causes,
+  distinguer viendra si le dosage le réclame, pas avant.)*
 - **FU6 — le dosage** : paramétrer le modèle pour donner des molettes au banc,
   puis séance avec Adrien (visuel + audio), et seulement alors les nombres
   deviennent des décisions. Relevé `bench_framerate --fusee` au calme, vue
