@@ -2445,7 +2445,14 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
 - `menu_hub.gd` — branchement du shader `menu_artwork.gdshader`, transition de fondu organique sur Tween `SORTIE` (`_declencher_embrasement`), mise à jour du temps d'animation (`_process`) et projection de la torche interactive (`set_torch_position_global`).
 - `ui.gd` — transmission continue de la position de la torche du joueur 1 (`hub.set_torch_position_global`).
 - `tools/run_suites.sh` — enregistrement de `test_menu_artworks` (56 tests solo + 7 duo au vert).
-- `docs/ROADMAP.md` — inscription du chantier et de ses 4 étapes (MV1 à MV4).
+#### Lot du 2026-09-07 — session « navigation manette hybride (D-Pad case par case & curseur joystick) »
+
+**Navigation manette hybride dans les menus** :
+- **D-Pad / flèches clavier** : navigation discrète case par case (sauts nets avec liseré néon). Le curseur virtuel est masqué.
+- **Joystick analogique** : fait apparaître un curseur virtuel fluide et stylisé (`VirtualGamepadCursor`, halo `Charte.AMBRE`, ombre portée, accélération progressive) qui se déplace comme une souris, survole les contrôles (`_nav_candidates(0)`), met à jour le focus, le son `ui_tick` et le panneau d'aperçu, et s'active au clic de sélection (`p1_menu_select`).
+- **Bascule dynamique** : dès qu'une entrée D-Pad ou directionnelle est pressée, le curseur virtuel de souris disparaît immédiatement. De même, un mouvement de la souris physique désactive le curseur virtuel pour éviter tout conflit.
+- **Entrées** : découplage des axes analogiques sur `p1_menu_*` / `p2_menu_*` dans `input_setup.gd` pour éviter les sauts discrets parasites lors des mouvements de stick.
+- **Banc de tests** : suite automatisée `tools/test_curseur_joystick.gd` ajoutée à `tools/run_suites.sh` (57 suites de tests au vert).
 
 #### Lot du 2026-09-08 — session « refonte Roman Graphique Brutaliste & pleine luminosité »
 
