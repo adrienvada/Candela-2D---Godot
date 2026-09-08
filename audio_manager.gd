@@ -102,6 +102,11 @@ const SOUNDS: Dictionary = {
 	"sting_kill_match": "res://assets/audio/music/sting_kill_match.ogg",
 	"sting_defeat": "res://assets/audio/music/sting_defeat.ogg",
 	"sting_draw": "res://assets/audio/music/sting_draw.ogg",
+	# Rechargement des armes (0.2.1)
+	"weapon_reload_pistolet": "res://assets/audio/weapons/weapon_reload_pistolet.wav",
+	"weapon_reload_fusil": "res://assets/audio/weapons/weapon_reload_fusil.wav",
+	"weapon_reload_pompe": "res://assets/audio/weapons/weapon_reload_pompe.wav",
+	"weapon_reload_arbalete": "res://assets/audio/weapons/weapon_reload_arbalete.wav",
 }
 
 ## Quelle ponctuation clot cette manche, vue depuis CETTE machine ?
@@ -296,6 +301,8 @@ const VARIANTES_SFX: Dictionary = {
 	"wall_brush": 3,
 	# V5.10 — la presence de la salle : ponctuels, tres espaces.
 	"ambience": 8,
+	# V4.9 — le corps qui encaisse : 6 variantes de souffle coupé / impact corporel.
+	"breath_hit": 6,
 }
 
 ## Le chemin d'une variante de `sfx/`. Pure, comme `chemin_tir`.

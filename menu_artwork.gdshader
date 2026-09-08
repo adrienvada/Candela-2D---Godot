@@ -198,6 +198,16 @@ void fragment() {
 		float flare_pulse = 0.85 + 0.15 * sin(t * 8.0 + sin(t * 19.0));
 		effect_add += vec3(0.98, 0.20, 0.15) * (flare_center * 0.18 * flare_pulse + smoke * 0.14);
 	}
+	else if (effect_mode == 12) {
+		// Créer Local : Écran CRT ambre-vert de la console (0.78, 0.35) & balayage
+		float crt_box = smooth_box(UV, vec2(0.78, 0.35), vec2(0.12, 0.12), 0.03);
+		float crt_scan = 0.88 + 0.12 * sin(UV.y * 320.0 + t * 14.0);
+		float crt_pulse = 0.90 + 0.10 * sin(t * 3.5 + sin(t * 11.0));
+		float crt_halo = smoothstep(0.40, 0.0, length((UV - vec2(0.78, 0.35)) * vec2(aspect * 0.8, 1.0)));
+		
+		vec3 col_amber_green = vec3(0.85, 0.92, 0.30);
+		effect_add += col_amber_green * (crt_box * 0.25 * crt_scan * crt_pulse + crt_halo * 0.08);
+	}
 	else if (effect_mode == 13) {
 		// Rejoindre Ligne : Balise radio bleue au fond du couloir (0.41, 0.35)
 		float beacon_pt = smoothstep(0.35, 0.0, length((UV - vec2(0.41, 0.35)) * vec2(aspect, 1.0)));
@@ -206,8 +216,24 @@ void fragment() {
 		vec3 col_blue = vec3(0.15, 0.65, 0.98);
 		effect_add += col_blue * (beacon_pt * 0.25 * (0.5 + 0.5 * beacon_flash) + mist * 0.10);
 	}
-	else if (effect_mode >= 12) {
-		// Autres sous-menus : Ambiance douce adaptée
+	else if (effect_mode == 14) {
+		// Rejoindre Local : Voyant d'autorisation vert émeraude au-dessus du sas (0.72, 0.10)
+		float green_lamp = smoothstep(0.30, 0.0, length((UV - vec2(0.72, 0.10)) * vec2(aspect * 0.8, 1.0)));
+		float lamp_pulse = 0.90 + 0.10 * sin(t * 2.5);
+		float green_cone = smoothstep(0.55, 0.0, length((UV - vec2(0.72, 0.35)) * vec2(aspect * 0.7, 1.0)));
+		
+		vec3 col_emerald = vec3(0.20, 0.98, 0.45);
+		effect_add += col_emerald * (green_lamp * 0.30 * lamp_pulse + green_cone * 0.08);
+	}
+	else if (effect_mode == 15) {
+		// Retour : Faisceau plongeant dans l'abysse de l'escalier en colimaçon (0.50, 0.50)
+		float abyss_cone = smoothstep(0.50, 0.0, length((UV - vec2(0.50, 0.50)) * vec2(aspect * 0.8, 1.0)));
+		float dust = noise2d(UV * 30.0 + vec2(t * 0.02, t * 0.05)) * abyss_cone * 0.16;
+		float slow_glow = 0.88 + 0.12 * sin(t * 1.6);
+		effect_add += vec3(0.96, 0.78, 0.38) * (abyss_cone * 0.08 * slow_glow + dust);
+	}
+	else {
+		// Ambiance douce par défaut
 		float center_haze = smoothstep(0.65, 0.1, length((UV - vec2(0.50, 0.50)) * vec2(aspect * 0.8, 1.0)));
 		float dust = noise2d(UV * 25.0 + vec2(t * 0.03, -t * 0.04)) * center_haze * 0.12;
 		effect_add += vec3(0.90, 0.75, 0.40) * dust;

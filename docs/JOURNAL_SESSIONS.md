@@ -2462,3 +2462,27 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
 - **Teintes dominantes par sous-menu :** Ambre pour l'accueil et le hub amical, Rouge carmin pour le duel compétitif, Bleu cyan pour la baie réseau, Or éclatant pour le coffre-fort.
 - **Calage des POIs et effets :** Mise à jour des coordonnées normalisées de focalisation dans `menu_artwork.gd` et des masques de poussières/brumes animées dans `menu_artwork.gdshader`.
 - **Validation :** 57/57 suites de tests automatisées vertes dans `tools/run_suites.sh --rapide` (77s, 0 échec), captures haute résolution générées et vérifiées via `tools/capturer_artworks.tscn`.
+
+#### Lot du 2026-09-08 — session « intégration foley organique & bruitages réels (fusée, interface brutaliste, arsenal, impacts) »
+
+**Chantier Audio — Sons manquants et foley physique grunge** (validé par Adrien).
+- **Fusée éclairante (FU1 à FU5) :**
+  - `fusee_lancer.wav` : Variante 1 retenue par Adrien — départ manuel physique : arrachage sec d'une languette de protection (*rip* net), étincelle d'amorce au phosphore, mèche sous pression qui s'embrase (*pshhht*) et jaillissement de flamme.
+  - `fusee_rebond.wav` : Choc métallique chaud et dur contre béton/tôle.
+  - `fusee_atterrit.wav` : Chute finale et stabilisation sur les gravillons de l'arène.
+  - `fusee_combustion.wav` : Boucle continue de véritable combustion pyrotechnique au magnésium chimique (rugissement thermique agressif et crépitements).
+  - `fusee_eteinte.wav` : Étouffement chimique soudain (*psssht*) sous une botte ou après impact de balle (FU5).
+- **Interface Roman Graphique Brutaliste :**
+  - `ui_presse.wav` : Presse typographique lourde et rouleau d'acier.
+  - `ui_tampon.wav` : Frappe sourde de tampon d'encrage manuel sur papier kraft épais.
+  - `ui_massicot.wav` : Tranchant mécanique net d'une lourde lame d'acier de massicot guillotinant du papier.
+  - `ui_refus.wav` : Butée métallique dure d'un verrou bloqué sans composante synthétique.
+- **Le corps qui encaisse (Manifeste V4.9) :**
+  - `breath_hit_01.wav` à `06.wav` : 6 variantes de souffle coupé et d'impacts corporels organiques réels (râles étouffés, coups dans le plexus, compression sous armure).
+- **Rechargement d'arsenal (Mécanique de tir 0.2.1) :**
+  - 4 sons mécaniques complets : `weapon_reload_pistolet.wav` (2.2s), `weapon_reload_fusil.wav` (3.5s), `weapon_reload_pompe.wav` (5.6s), `weapon_reload_arbalete.wav` (4.5s).
+- **Norme technique & intégration :**
+  - 100 % des fichiers encodés en PCM WAV 48 000 Hz, 16-bit, Stéréo (2 canaux), domaine public CC0.
+  - Déclaration de `breath_hit` (6 variantes) dans `VARIANTES_SFX` et des recharges d'armes dans `SOUNDS` de `audio_manager.gd`.
+  - **Validation :** 61/61 suites solo + 7/7 scénarios duo au vert dans `tools/run_suites.sh` (268s, 0 échec).
+
