@@ -2624,3 +2624,34 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
 **Écart de contenu signalé, non appliqué :** la spécification demande un pistolet
 à 6 balles et cadence doublée, le jeu en a 10. C'est de l'équilibrage, pas de la
 structure — à soumettre à Adrien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 4, la touche et le fil)
+
+**Le bit de gadget circule de bout en bout.** `input_provider.gd`,
+`local_input_provider.gd`, `network_input_provider.gd`, et `rpc_send_inputs` qui
+gagne un huitième argument. `Protocol.VERSION` passe de **9 à 10**, avec son
+entrée de carnet ; le témoin du fil a signalé la rupture, et l'empreinte n'a été
+recopiée qu'APRÈS avoir tranché que le numéro devait monter.
+
+⚠️ **Le témoin est ici plus qu'une formalité** : l'argument porte une valeur par
+défaut, donc GDScript n'aurait rien dit d'un client v9 parlant à un hôte v10.
+C'est exactement le mode de défaillance que ce garde-fou existe pour attraper.
+
+**Touches** : E (J1) et O (J2) au clavier — les seules déjà liées étaient Échap,
+F, K, R et U, relevé et non supposé — et L1 à la manette, qui ne portait que la
+navigation d'onglets de MENU. La superposition contextuelle est déjà la règle du
+dépôt : R1 est à la fois « tirer » et « onglet suivant ».
+
+**⚠️ J'AI TOUCHÉ `ui.gd`, DEUX ENTRÉES, ET JE LE DÉCLARE.**
+`LIBELLES["gadget"] = "Gadget"` et `"gadget"` ajouté à `ORDRE`. Ce n'est pas une
+incursion de confort : **c'est la garde de `tools/test_liaisons.gd` qui l'exige**,
+et elle a raison — une commande absente de la rubrique de réglage « se cherche
+ailleurs, et il n'y a pas d'ailleurs ». Le lot était rouge sans ça, et la seule
+alternative aurait été de priver le gadget de clavier.
+Session « menus » : si tu préfères une autre formulation du libellé ou une autre
+place dans l'ordre, change-la, je ne la défendrai pas. Ce qui compte est que la
+ligne existe.
+
+**Relevé au passage, non corrigé** : `tools/test_arena_matter.gd` a échoué une
+fois en lot et passe seule, deux fois de suite. Instable en lot, pas cassée par
+ce chantier — signalé, pas touché.

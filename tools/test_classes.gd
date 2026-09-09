@@ -53,6 +53,7 @@ func _run() -> void:
 	_test_class_data()
 	_test_catalogue_declare()
 	_test_cablage_root()
+	_test_bit_gadget()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -315,3 +316,58 @@ func _test_cablage_root() -> void:
 		t.contains("move_and_collide(step)"))
 	_check("le téléport de correction a bien disparu",
 		not t.contains("global_position += step"))
+
+
+func _test_bit_gadget() -> void:
+	print("\n[Le bit de gadget : de la touche jusqu'au fil]")
+
+	# Les actions doivent EXISTER dans l'Input Map. Un `Input.is_action_pressed`
+	# sur une action absente ne lève rien et rend toujours faux : la touche ne
+	# marcherait jamais, et le seul diagnostic possible depuis l'écran serait
+	# « le gadget ne se pose pas ».
+	_check("l'action p1_gadget existe", InputMap.has_action("p1_gadget"))
+	_check("l'action p2_gadget existe", InputMap.has_action("p2_gadget"))
+	_check("p1_gadget porte au moins une liaison",
+		not InputMap.action_get_events("p1_gadget").is_empty())
+	_check("p2_gadget porte au moins une liaison",
+		not InputMap.action_get_events("p2_gadget").is_empty())
+
+	# Le contrat du fournisseur, des trois côtés.
+	var lu := func(chemin: String) -> String:
+		var f := FileAccess.open(chemin, FileAccess.READ)
+		if f == null:
+			return ""
+		var t := f.get_as_text()
+		f.close()
+		return t
+
+	var base: String = lu.call("res://input_provider.gd")
+	var local: String = lu.call("res://local_input_provider.gd")
+	var reseau: String = lu.call("res://network_input_provider.gd")
+	var joueur: String = lu.call("res://player.gd")
+
+	_check("le contrat de base déclare is_gadget_pressed",
+		base.contains("func is_gadget_pressed()"))
+	_check("le fournisseur local lit l'action", local.contains("action_gadget"))
+	_check("le fournisseur réseau porte le bit", reseau.contains("gadget_pressed"))
+
+	# ⚠️ Le contrôle qui compte : le bit doit être remis au NEUTRE quand le
+	# client disparaît. Un `gadget_pressed` resté à vrai ferait poser des gadgets
+	# par un joueur qui n'est plus là — le paquet ne vient plus, mais le dernier
+	# reçu survit. C'est le même défaut que `reset_input_state` répare déjà pour
+	# le tir et la torche.
+	var i := reseau.find("func reset_input_state()")
+	_check("le bit est remis au neutre à la déconnexion",
+		i >= 0 and reseau.substr(i).contains("gadget_pressed = false"))
+
+	# Le fil.
+	_check("rpc_send_inputs porte le huitième argument",
+		joueur.contains("reload: bool = false, gadget: bool = false"))
+	_check("le client l'envoie depuis son fournisseur",
+		joueur.contains("input_provider.is_gadget_pressed()"))
+	_check("l'hôte le transmet au fournisseur réseau",
+		joueur.contains("update_input_state(mov, aim, shoot, torch, flare, reload, gadget)"))
+
+	# Et le numéro de version, qui est une décision humaine mécanisée par le
+	# témoin : le fil a changé, donc il doit avoir bougé.
+	_check("Protocol.VERSION a été monté avec le fil", Protocol.VERSION >= 10)

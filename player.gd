@@ -1207,7 +1207,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1229,7 +1229,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -1247,14 +1247,15 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
-		input_provider.is_flare_pressed(), input_provider.is_reload_pressed())
+		input_provider.is_flare_pressed(), input_provider.is_reload_pressed(),
+		input_provider.is_gadget_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.

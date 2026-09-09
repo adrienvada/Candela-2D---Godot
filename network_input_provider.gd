@@ -8,6 +8,7 @@ var shoot_pressed := false
 var flashlight_pressed := false
 var flare_pressed := false
 var reload_pressed := false
+var gadget_pressed := false
 
 func get_movement_vector() -> Vector2:
 	return current_movement
@@ -27,14 +28,18 @@ func is_flare_pressed() -> bool:
 func is_reload_pressed() -> bool:
 	return reload_pressed
 
+func is_gadget_pressed() -> bool:
+	return gadget_pressed
+
 ## Alimenté par les paquets d'input du client, consommé par la simulation hôte.
-func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false) -> void:
+func update_input_state(movement: Vector2, aim: Vector2, shoot: bool, flashlight: bool, flare: bool, reload: bool = false, gadget: bool = false) -> void:
 	current_movement = movement
 	current_aim = aim
 	shoot_pressed = shoot
 	flashlight_pressed = flashlight
 	flare_pressed = flare
 	reload_pressed = reload
+	gadget_pressed = gadget
 
 ## Remet les commandes au neutre : le dernier paquet reçu ne doit pas survivre
 ## à la déconnexion de son émetteur.
@@ -45,3 +50,4 @@ func reset_input_state() -> void:
 	flashlight_pressed = false
 	flare_pressed = false
 	reload_pressed = false
+	gadget_pressed = false

@@ -58,7 +58,12 @@ class_name Protocol
 ## 9 — `rpc_eteindre_fusee` apparaît (chantier FUSÉE, étape FU5, 2026-09-08) :
 ##     un hôte qui l'appelle parle à un client v8 qui n'a jamais entendu ce nom
 ##     et ne répond donc jamais — le silence est un refus, comme pour `rpc_hello`.
-const VERSION := 9
+## 10 — `rpc_send_inputs` gagne un huitième argument, le bit de GADGET (chantier
+##      CLASSES, 2026-09-09). Rupture franche, comme les v5 et v6 : un client v9
+##      enverrait sept valeurs à un hôte v10 qui en attend huit. L'argument porte
+##      une valeur par défaut, donc GDScript ne dirait rien — c'est le témoin du
+##      fil qui l'attrape, et c'est exactement ce pour quoi il existe.
+const VERSION := 10
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -66,7 +71,7 @@ const VERSION := 9
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "0425314ac249f8a0"
+const WIRE_WITNESS := "97575f1880edfab3"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

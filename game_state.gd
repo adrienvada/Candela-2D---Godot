@@ -2763,8 +2763,23 @@ func matchmade_arsenal() -> Array[int]:
 func matchmade_arsenal_reason() -> String:
 	if not _matchmade_round or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
 		return ""
-	return RankLoadout.reason_for(RankLoadout.ARBALETE, true,
-		_mirror_local_tier, _mirror_opponent_tier)
+	# ⚠️ **L'index n'est plus l'arbalète en dur.** Il l'était parce qu'elle est la
+	# dernière du socle, donc la première écartée — vrai tant que l'arsenal
+	# comptait quatre armes rangées par rang croissant, faux dès qu'il en compte
+	# dix. On demande donc la raison sur une arme EFFECTIVEMENT écartée : la
+	# première du socle absente de l'arsenal commun.
+	#
+	# Sans ce changement, la phrase affichée au joueur — la mesure d'atténuation
+	# que la règle du miroir EXIGE, faute de quoi le rétrécissement « sera vécu
+	# comme un bug » — parlerait d'une arme qu'il a peut-être encore.
+	var commun := matchmade_arsenal()
+	for idx in RankLoadout.SOCLE:
+		if not idx in commun:
+			return RankLoadout.reason_for(idx, true,
+				_mirror_local_tier, _mirror_opponent_tier)
+	# Rien d'écarté : le premier test l'a déjà dit, mais un chemin muet vaut
+	# mieux qu'un index inventé.
+	return ""
 
 ## Le joueur local change d'arme pendant la fenêtre de choix.
 ##

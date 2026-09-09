@@ -5224,12 +5224,13 @@ const LIBELLES := {
 	"shoot": "Tirer", "torch": "Torche",
 	"lance_fusee": "Fusée éclairante",
 	"reload": "Recharger",
+	"gadget": "Gadget",
 }
 
 ## L'ordre d'apparition : on se déplace, on vise, on tire, on recharge, on s'éclaire.
 const ORDRE := ["move_up", "move_down", "move_left", "move_right",
 	"aim_up", "aim_down", "aim_left", "aim_right", "shoot", "reload", "torch",
-	"lance_fusee"]
+	"lance_fusee", "gadget"]
 
 ## La visée de J1 est à la souris : aucune action, donc aucune ligne dérivée.
 ## Elle s'écrit quand même — voir `_lignes_du_bloc()`.
