@@ -10729,7 +10729,9 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   du monde — tout passe au blanc cassé et au noir de la bible. Détail
   ci-dessous. *(S)*
 - **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)*
+  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
+  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
+  peinte finale, reste dû à Adrien. Détail ci-dessous.
 - **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
   qui « colle » tous les éléments entre eux, l'arme n°1 contre l'effet
   collage. *(S)*
@@ -10905,6 +10907,38 @@ au texte du code.
 
 **Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
 ratio commun.
+
+#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+
+**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
+(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
+reste due à Adrien, signalée et non bloquante.
+
+**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+disque analytique (`smoothstep` sur une distance). Un second hash
+(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+plus, aucune texture, aucun coût mesurable.
+
+**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+brume — aucun nouveau bruit importé.
+
+**Cas examinés et gardés tels quels**, listés ici pour que personne ne les
+refasse :
+
+| Où | Pourquoi le cercle reste un cercle |
+|---|---|
+| `voile_eblouissement.gdshader:276` | isotropie voulue — un cœur ovale se lirait comme un défaut sur un phénomène optique, raisonnement déjà écrit sur place |
+| `brouillage_flou.gdshader` (trou d'exclusion) | un rayon unique aurait remplacé un cercle par un autre |
+| `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
+| `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
+
+Aucune suite headless ne teste la forme d'un cercle — jugement par
+`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
+vérifier que `poussiere_faisceau.gdshader` compile.
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

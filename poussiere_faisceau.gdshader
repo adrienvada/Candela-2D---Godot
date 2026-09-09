@@ -33,7 +33,13 @@ void fragment() {
 	) * 0.25;
 	
 	float d = length(gv - offset);
-	
+	// DA5.3 — chaque particule était un cercle analytique parfait. Un second
+	// hash (décorrélé de `h`, qui pilote déjà la dérive et le scintillement)
+	// casse la rondeur sans changer le coût : une lecture de plus, aucune
+	// texture. `id * 7.0` évite que la déformation ne suive le même rythme que
+	// le mouvement brownien.
+	d *= 1.0 + 0.4 * (hash21(id * 7.0) - 0.5);
+
 	// Particule douce
 	float spark = smoothstep(0.18, 0.0, d);
 	

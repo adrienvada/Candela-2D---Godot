@@ -93,7 +93,13 @@ void fragment() {
 		// Une torche lointaine derrière un verre dépoli, décentrée vers le haut,
 		// qui respire sur neuf secondes.
 		vec2 vers = (uv - vec2(0.5, 0.34)) * vec2(ratio, 1.0);
-		float halo = 1.0 - smoothstep(0.0, 0.85, length(vers));
+		// DA5.3 — le halo était un cercle analytique. `valeur()` (déjà écrite
+		// plus haut pour la brume) perturbe le RAYON avant le smoothstep : le
+		// bord reste doux mais cesse d'être un cercle parfait, sans texture ni
+		// second bruit à écrire.
+		float halo_bruit = valeur(vers * 2.0);
+		float halo = 1.0 - smoothstep(0.0, 0.85,
+			length(vers) * (1.0 + 0.15 * (halo_bruit - 0.5)));
 		float souffle = 1.0 + 0.02 * sin(TIME * (6.2831853 / 9.0));
 		brume *= (0.75 + 0.45 * halo) * souffle;
 
@@ -111,12 +117,20 @@ void fragment() {
 		// bruit de capteur.
 		float anneau = 0.0;
 		vec2 p = uv * vec2(ratio, 1.0);
+		// DA5.3 — même geste que le halo ci-dessus : le rayon normalisé `d` est
+		// perturbé par `valeur()` avant les deux `smoothstep` qui dessinent
+		// l'anneau, donc l'anneau cesse d'être un cercle parfait sans changer
+		// sa largeur ni son coût.
 		if (torche_p1.w > 0.0) {
-			float d = length(p - torche_p1.xy * vec2(ratio, 1.0)) / torche_p1.w;
+			vec2 rel = p - torche_p1.xy * vec2(ratio, 1.0);
+			float d = length(rel) / torche_p1.w
+				* (1.0 + 0.10 * (valeur(rel * 4.0) - 0.5));
 			anneau = max(anneau, smoothstep(0.45, 0.80, d) * (1.0 - smoothstep(0.80, 1.20, d)));
 		}
 		if (torche_p2.w > 0.0) {
-			float d = length(p - torche_p2.xy * vec2(ratio, 1.0)) / torche_p2.w;
+			vec2 rel = p - torche_p2.xy * vec2(ratio, 1.0);
+			float d = length(rel) / torche_p2.w
+				* (1.0 + 0.10 * (valeur(rel * 4.0) - 0.5));
 			anneau = max(anneau, smoothstep(0.45, 0.80, d) * (1.0 - smoothstep(0.80, 1.20, d)));
 		}
 		if (anneau > 0.0) {
