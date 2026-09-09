@@ -77,6 +77,13 @@ Le banc refuse désormais un relevé pris pendant que la fenêtre change de
 focus : ce sont ces transitions, et non le second plan, qui décident du
 1 % bas.
 
+Pour les images — captures de jeu, menus, illustrations, écrans de fin —
+`./tools/run_photos.sh` (le photographe, DA6) : il ouvre le jeu, le met en scène
+plan par plan et écrit un dossier + un manifeste + une planche HTML dans
+`user://photos/`. `--liste` imprime son catalogue sans rien ouvrir. Comme
+`run_visuel.sh`, il exige une **vraie fenêtre** et ne peut donc rejoindre aucune
+suite headless ; ses appuis sur le jeu sont vérifiés par `tools/test_banc.gd`.
+
 En jeu, **F3** ouvre le panneau de diagnostic (fps, ping, transport, lien
 direct/relayé, NAT, lumières, particules). Pas de linter ni de CI : la barre
 de qualité est « tous les tests headless passent » plus les checklists

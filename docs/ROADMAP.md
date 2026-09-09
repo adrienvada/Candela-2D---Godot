@@ -3128,35 +3128,38 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
-### Un `class_name` neuf empêche le jeu de démarrer, et aucune suite ne le voit (2026-09-09)
+### Une fusion sans conflit peut faire jouer deux cérémonies à la fois (2026-09-09)
 
-`intro_planches.gd` déclare `class_name IntroPlanches`. `game_state.gd`
-l'appelait par ce nom. **Le jeu ne démarrait plus du tout** :
+`git merge` a réuni sans broncher deux ajouts au démarrage du jeu, écrits le
+même jour sur deux branches : la séquence power-on de DA6.5 (`power_on.gd`) et
+l'intro en planches de DA6.6 (`intro_planches.gd`). **Aucun conflit textuel,
+aucune suite rouge, et un premier lancement où deux séquences plein écran se
+jouent en même temps** — chacune se sautant à la première touche, donc l'une
+mangeant l'événement de l'autre.
 
-```
-SCRIPT ERROR: Parse Error: Identifier "IntroPlanches" not declared in the current scope.
-ERROR: Failed to load script "res://game_state.gd" with error "Parse error".
-```
+Le mécanisme est plus général que ce cas : **deux ajouts corrects au même
+POINT D'ENTRÉE ne se contredisent nulle part dans le texte.** Git compare des
+lignes ; ni lui, ni le compilateur, ni le lot n'ont d'opinion sur le fait que
+deux fonctions appelées à la suite occupent la même ressource — ici l'écran et
+le premier appui de touche. C'est le pendant exact du corollaire déjà écrit
+dans `CLAUDE.md` (« une fusion sans conflit textuel n'est pas une fusion sans
+perte ») : ici on ne perd rien, on **superpose**.
 
-Les noms de classe globaux ne sont résolus que via
-`.godot/global_script_class_cache.cfg`, **écrit par un scan de l'éditeur et non
-versionné**. Sur un arbre de travail neuf — le cas de toute session — le nom
-n'existe pas encore, et le fichier qui l'emploie échoue au *parse*. Pas à
-l'exécution : au parse, donc `game_state.gd` entier ne charge pas.
+**Ce qui l'a trouvé n'est pas un test.** C'est d'avoir relu la ligne « elle
+ferme DA6.5 » de sa propre fiche après la fusion et constaté que DA6.5 venait
+d'être fermée par quelqu'un d'autre. Une contradiction dans la DOCUMENTATION a
+révélé une collision dans le CODE.
 
-⚠️ **Et la suite dédiée était VERTE pendant ce temps.** `test_intro_planches.gd`
-fait `preload("res://intro_planches.gd")` — un `preload` résout par le CHEMIN et
-n'a jamais besoin du registre. La suite exerçait donc le script à fond, et
-validait un jeu qui ne démarrait pas. C'est le pire cas de figure : non pas une
-absence de test, mais **un test vert sur du code mort**.
+**L'arbitrage retenu** (session DA7, à la résolution) : au tout premier
+lancement, l'intro joue et le power-on ne joue pas ; à tous les lancements
+suivants, le power-on joue comme prévu. L'intro se termine déjà sur le wordmark
+en braise — c'est-à-dire sur un allumage — et enchaîner deux cérémonies ferait
+de la découverte du jeu une attente. Chacune est à son meilleur moment :
+l'histoire une fois, l'allumage toutes les autres fois.
 
-Ce qui l'a trouvé n'est pas une suite mais un lancement :
-`--headless --quit-after 2000`, quinze secondes. À faire après tout ajout de
-fichier référencé depuis un autoload ou depuis `game_state.gd`.
-
-**La règle : entre deux scripts du dépôt, `preload` par le chemin, jamais le
-`class_name`.** Le dépôt le fait déjà partout (`const Charte := preload(...)`) ;
-ce qui manquait, c'était la raison écrite quelque part. La voici.
+**Le réflexe à garder :** après toute fusion, relire ce que les DEUX branches
+ont ajouté au même `_ready()`, au même point d'entrée, au même écran. Le fait
+que rien ne soit rouge n'est pas une information.
 
 
 ### « Au moins une suite a échoué » quand aucune suite n'a échoué (2026-09-09)
@@ -3215,6 +3218,112 @@ ce que le jeu charge.
 dossier dérivé se relit à sa date, ou se régénère, ou ne se lit pas. Et un
 dossier de sortie qui survit à l'outil qui l'a produit devrait être supprimé
 avec lui — celui-ci ne l'a pas été.
+### V6.10 a été écrite deux fois, et c'est la deuxième fois que ça arrive (2026-09-09)
+
+Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
+soir : 7 matchs, 4-3, arme favorite : pompe » — et l'ont livrée le même jour, de
+deux façons correctes, sur deux branches. Aucune ne savait que l'autre
+travaillait dessus. **C'est trait pour trait ce qui s'était produit sur V6.2 le
+2026-08-18**, et la cause est la même : le journal des sessions partage par
+FICHIER, or ces deux implémentations ne se touchaient pas — l'une vit dans
+`serie_de_session.gd`, l'autre dans cinq fichiers neufs.
+
+| | `main` (`carte_de_soiree()`) | branche photographe (`BilanDeSoiree`) |
+|---|---|---|
+| forme | une LIGNE de texte | une CARTE plein écran, exportable en PNG |
+| où | l'écran de fin de match | le retour au menu |
+| source | le score de session en mémoire | `match_history.json`, filtré sur la séance |
+| couvre | V6.10 | V6.10 + DA6.3 + DA6.4 |
+
+⚠️ **Les deux comptes peuvent diverger dans la même soirée** : la ligne compte
+tout match dont la manche s'est terminée, la carte écarte les matchs de moins de
+cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut lire
+« 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
+l'explique.
+
+**La fusion a gardé les deux**, et la note est dans `game_state.gd` au-dessus de
+`carte_de_soiree()`. Une fusion se résout en choisissant, donc en pouvant
+détruire ; ce choix-ci n'est pas technique. Trois issues : garder la ligne pour
+l'écran de fin et la carte pour le menu (redondant, mais jamais simultané),
+retirer la ligne au profit de la carte, ou faire lire à la ligne le calcul de la
+carte pour qu'au moins les deux chiffres s'accordent.
+
+**Ce que la répétition apprend, au-delà du cas :** le partage par fichier ne
+protège pas d'un doublon quand la seconde implémentation arrive dans des
+fichiers neufs. Ce qui l'aurait évité, c'est une ligne dans le journal des
+sessions **au moment de commencer** — « je prends V6.10 » — et non au moment de
+livrer. Le journal dit qui tient quels FICHIERS ; il ne dit pas qui tient quelles
+FICHES.
+
+
+### `parallel()` juste après `chain()` ANNULE le `chain()` (2026-09-09)
+
+Un `Tween` en mode `set_parallel(true)` global, dans lequel on écrit ensuite des
+`chain()` pour séparer les étapes et des `parallel()` pour regrouper : les trois
+mécaniques se contredisent, et **la contradiction ne se lit pas.**
+
+```gdscript
+tw.chain()                                    # « ce qui suit vient après »
+for n in [cadre, pied, tampon]:
+    tw.parallel().tween_property(n, ...)      # annule le chain() ci-dessus
+```
+
+Le groupe de sortie s'exécutait **en même temps que la tenue** au lieu de la
+suivre. Symptôme observé sur DA6.2 : le HUD s'éteignait pour la photo, puis
+**remontait à 1 en trois dixièmes de seconde**, un dixième après la prise. Mesuré
+à l'image par une sonde jetable : `0,565 → 0,000 → 0,132 → 0,934 → 1,000`, et
+plus rien ensuite.
+
+⚠️ **Le défaut est du genre qu'on n'attrape qu'en mesurant.** À l'œil, l'image
+était « presque bonne » — le HUD paraissait estompé, ce qui est exactement ce
+qu'on voulait. C'est une capture, comparée à la précédente, qui a montré qu'il
+restait à mi-course ; et c'est une sonde de vingt lignes qui a dit pourquoi.
+
+**Le remède est une règle d'écriture, pas un correctif** : ne jamais poser
+`set_parallel(true)` en mode global. Le séquentiel est le défaut de Godot, et
+`parallel()` nommé un par un se lit comme il s'exécute. Quand deux choses n'ont
+rien à se dire — ici l'image d'un côté, ce qu'on efface pour elle de l'autre —
+**deux tweens séparés valent mieux qu'un ordre d'exécution qu'on croit lire.**
+
+Appliqué aux cinq fichiers de DA6 ; les autres tweens du dépôt n'ont pas été
+revus (hors périmètre, signalé).
+
+
+### La texture d'une vue ne contient pas l'interface (2026-09-09)
+
+`SubViewport.get_texture()` rend **le monde**, et rien d'autre. Tout ce que le
+jeu peint dans un `CanvasLayer` — le HUD, le voile de l'éblouissement, le tampon
+du kill, la killcam — est attaché au *viewport* et non au canvas du monde : il
+n'entre dans aucune texture de sous-vue.
+
+C'est la même propriété qui sauve le HUD au chantier R (« `UI` s'exclut tout
+seul, c'est un `CanvasLayer` ») ; vue depuis un outil de capture, elle mord dans
+l'autre sens. **Le photographe a rendu un éblouissement sans voile** : un duel
+parfaitement normal, sous une fiche qui annonçait le contraire.
+
+⚠️ **La panne est muette et vraisemblable.** Une image noire se remarque ; une
+image *correcte mais amputée de l'effet qu'elle prétend montrer* se range dans
+un dossier et sert de référence. Tout plan qui vise un effet d'interface se
+capture donc à l'**écran**, jamais dans la vue — et la règle vaut d'avance pour
+tout ce que la vague M peindra dans une couche.
+
+### Deux fichiers pour une seule clé canonique (2026-09-09)
+
+`MenuArtwork.cle_canonique()` replie les alias : `ill_creer.png` et
+`ill_creer_ligne.png` rendent tous deux `ill_creer_ligne`, comme `ill_rejoindre`
+et `ill_rejoindre_ligne`. C'est voulu — le jeu veut une clé par illustration, pas
+par fichier.
+
+**Une boucle qui écrit un fichier de sortie PAR ENTRÉE écrase donc en silence.**
+Le photographe produisait dix-huit lignes de manifeste pour seize images, deux
+d'entre elles décrivant un fichier qui ne les montrait pas. Aucune erreur, aucun
+avertissement : la seconde planche avait simplement gagné.
+
+La leçon générale, et elle dépasse les illustrations : **dès qu'un nom de sortie
+est dérivé d'une fonction de normalisation, deux entrées peuvent viser le même
+nom.** Ou bien on déduplique sur la clé de sortie, ou bien on garde le nom de la
+source. Ne rien faire produit un résultat plausible et faux.
+
 
 ### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
 
@@ -4039,6 +4148,40 @@ qui renvoyait déjà « à la même famille » :
 **La dernière est la plus traître**, parce qu'on vient précisément d'y créer une
 branche et qu'on a donc une explication toute prête sous la main : on croit avoir
 cassé la fusion qu'on vient de rebaser.
+
+⚠️ **Cinquième constat, ajouté le 2026-09-09, et il ne périme rien de ce qui
+précède : LA SUITE DÉDIÉE PEUT ÊTRE VERTE PENDANT QUE LE JEU EST MORT.**
+
+En ajoutant `intro_planches.gd` (`class_name IntroPlanches`), `game_state.gd` ne
+chargeait plus — « Identifier not declared », la déclinaison « fichier neuf » du
+tableau. Mais `tools/test_intro_planches.gd` **passait**, et exerçait le script
+de bout en bout : il fait `preload("res://intro_planches.gd")`, et **un `preload`
+résout par le CHEMIN, sans jamais consulter le registre des classes**. La suite
+et le jeu n'empruntaient pas le même chemin d'accès au même fichier.
+
+Ce n'est donc pas « il manquait un test » : c'était **un test vert sur du code
+injoignable**, ce qui est strictement pire — un test absent laisse méfiant, un
+test vert rassure. Et le tableau ci-dessus n'aidait pas, parce qu'il décrit un
+lot ROUGE : ici le lot était vert.
+
+**Le contrôle qui manquait, et il coûte quinze secondes :**
+
+```bash
+godot --headless --path . --no-eos --quit-after 2000
+```
+
+Il monte le jeu pour de vrai, autoloads et `_ready()` compris. À faire après
+tout ajout d'un script référencé depuis un autoload ou depuis `game_state.gd` —
+et après toute fusion qui en apporte : celle du même jour arrivait avec **cinq**
+`class_name` neufs (`PowerOn`, `AfficheDeFin`, `BilanDeSoiree`,
+`PanneauDeSoiree`, `EstampeDeKill`), tous injoignables jusqu'au réimport, chez
+qui fusionne et pas chez qui a écrit.
+
+*(Cette fiche a failli être écrite une cinquième fois, en double de ce
+paragraphe-ci : la session qui l'a rencontrée avait rédigé une entrée complète
+avant de chercher si le dépôt la connaissait déjà. Il la connaissait, avec ses
+quatre déclinaisons. **Chercher AVANT d'écrire coûte une minute ; une fiche en
+double coûte à tous ceux qui liront les deux.**)*
 
 ⚠️ **`tools/run_suites.sh` ne fait aucun import et n'avertit de rien** — vérifié.
 Le garde-fou qui manque tiendrait en trois lignes : si
@@ -7961,6 +8104,12 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   `tools/test_serie_de_session.gd`, et affiché dans le bilan et au retour menu
   via `GameState.carte_de_soiree()`.
 
+  ⚠️ **ET IMPLÉMENTÉ UNE SECONDE FOIS LE MÊME JOUR, par la session photographe**
+  — `bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`, au
+  titre de DA6.3 et DA6.4. Découvert à la fusion, le 2026-09-09. **La fusion n'a
+  supprimé ni l'une ni l'autre : le choix est un choix de produit, et il revient
+  à Adrien.** Voir « Pièges connus », *V6.10 a été écrite deux fois*.
+
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
 > **État au 2026-08-18 : LES QUINZE SONT LIVRÉS.** M1 le cadran de titre, M2 la
@@ -11412,22 +11561,51 @@ Ce qui n'est **pas** établi : la cause exacte — je n'ai pas poussé plus loin
 que les rangées sont là, pas qu'on les voit. Troisième occurrence de ce motif
 dans la même journée.
 
-### DA6 — Les moments qu'on screenshote
+### DA6 — Les moments qu'on screenshote ✅ **DA6.1 à DA6.5 : la moitié *(S)* est livrée le 2026-09-09**
+
+> **Ces cinq fiches-là sont faites pour ce que des sessions peuvent faire.** Ce
+> qui reste sur elles est nommé item par item ci-dessous, et c'est du *(C)* : un
+> son, une illustration, une direction. Rien n'y attend une session.
+>
+> ⚠️ **Le titre nomme les cinq fiches, et pas « DA6 ».** Une **DA6.6** — l'intro
+> en planches — a été inscrite au chantier le 2026-09-09 par la session DA7, sur
+> sa propre branche. Un titre qui aurait dit « DA6 est fait » serait devenu faux
+> à cette fusion-là, sans que rien ne le signale — et un chantier annoncé clos
+> est un chantier que personne ne rouvre. **On ne revendique que ce qu'on a
+> fait :** cette section parle de DA6.1 à DA6.5, DA6.6 a son propre auteur et son
+> propre état.
 
 - **DA6.1 L'écran de victoire en affiche** — composé comme un poster, pas comme
-  un menu. *(S + C)*
+  un menu. *(S + C)* — ✅ **`affiche_de_fin.gd`**. Reste *(C)* : la direction
+  d'une image de fond, si on en veut une.
 - **DA6.2 La photo du gel fatal signée** — le gel V2.1 existe ; le cadrer, le
-  titrer, le dater : chaque kill produit une image montrable. *(S)*
-- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)*
+  titrer, le dater : chaque kill produit une image montrable. *(S)* —
+  ✅ **`estampe_de_kill.gd`**.
+- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)* —
+  ✅ **`bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`**.
+  **V6.10 est close par la même occasion.** Reste *(C)* : l'illustration —
+  l'emplacement est câblé et vide (`assets/ui/carte_soiree_fond.png`).
 - **DA6.4 Le bilan de session partageable** — la même carte exportée en image.
-  *(S)*
+  *(S)* — ✅ **`exporteur.gd`**, PNG 1080×1350 dans le dossier Images du système.
 - **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
-  l'esquisse) : logo, souffle, lumière. *(S + C)*
+  l'esquisse) : logo, souffle, lumière. *(S + C)* — ✅ **`power_on.gd`** pour le
+  logo et la lumière. Reste *(C)* : **le souffle** — un tube qui s'amorce. Le
+  crochet est posé (`AudioManager.play_ui("ui_power_on")`, muet tant que le
+  fichier n'existe pas) ; sans lui la séquence est complète et silencieuse.
+
 - **DA6.6 L'intro en planches** — six cases de bande dessinée qui racontent
   l'arrivée d'un homme dans le noir. Storyboard complet, prompts de génération
   et règles : **[docs/INTRO_PLANCHES.md](INTRO_PLANCHES.md)**. *(S + C)*
   **Demandée par Adrien le 2026-09-09**, et inscrite ici plutôt que dans DA7
-  parce qu'elle ferme DA6.5 au passage : la planche 4 *est* l'allumage.
+  parce qu'elle occupe le même moment que DA6.5 : l'allumage.
+
+  > ⚠️ **Cette ligne a d'abord annoncé qu'elle FERMAIT DA6.5.** C'était vrai à
+  > l'écriture et faux à la fusion : `power_on.gd` avait livré la séquence
+  > entre-temps, depuis une autre branche, sans que ni l'une ni l'autre session
+  > le sache. Les deux ne se recouvrent pas — power-on est l'allumage de
+  > l'**appareil** (enseigne, lumière, au lancement), l'intro est l'allumage de
+  > la **torche** (planche 4, dans le récit) — mais elles se disputaient
+  > l'écran.
 
 #### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
 
@@ -11506,6 +11684,192 @@ Trois décisions d'implémentation qui ne se devinent pas :
 **Reste à faire :** trancher les trois questions ouvertes en fin de
 `INTRO_PLANCHES.md` — la formule exacte, l'anonymat du visage, la cadence
 sonore. Et juger les six images à l'œil.
+#### Ce que ces cinq fiches ont en commun, et qui a décidé de l'architecture
+
+**Aucune ligne de `ui.gd` n'a changé.** Les cinq compositions vivent dans leurs
+propres fichiers et sont posées par `game_state` sur des `CanvasLayer` à elles.
+C'est d'abord le précédent du tampon de kill — « `ui.gd` est à l'autre session » —
+mais c'est surtout le bon découpage : **une affiche et un salon n'ont ni la même
+durée de vie, ni le même travail.** Le salon reste vivant sous l'affiche, prêt
+pour le geste suivant ; l'affiche meurt quand on la congédie.
+
+Corollaire vérifiable : le verdict de l'affiche est **lu** sur le titre que le
+menu vient de poser, jamais recalculé. Le mot dépend du mode (« VICTOIRE » en
+ligne, « JOUEUR 1 GAGNE » en écran partagé) et d'un arbitrage d'Adrien sur
+l'égalité grise ; deux calculs auraient fini par se contredire à l'écran, l'un
+sur l'affiche et l'autre sur le menu dessous.
+
+#### Trois choses que seules les images ont dites
+
+**Un voile ne compose pas, il superpose.** L'affiche laissait d'abord passer 6 %
+du salon, pour garder l'arrêt sur image du kill en fond. Six pour cent d'une
+barre ambre saturée, ce n'est pas six pour cent d'une image : le bouton REJOUER
+traversait le mot. Le fond est devenu opaque, et les deux images se partagent le
+travail — **la photo du gel montre le monde deux secondes plus tôt, l'affiche
+montre le mot.**
+
+**La bande haute de l'écran appartient au HUD.** La signature de la photo de kill
+y était posée : « CANDELA » se retrouvait derrière le panneau de vie de J1, la
+date derrière le chronomètre. Tout est descendu en pied de cadre — où une légende
+de photo se met de toute façon. Et le HUD lui-même **s'efface** le temps de la
+photo : une jauge de vie figée sur un mort n'informe plus personne.
+
+**Un préréglage d'ancre et une position se contredisent.** La carte de fin de
+soirée partait à moitié hors cadre, en bas à droite : `PRESET_CENTER` posait les
+ancres à 0,5, puis la position centrée s'ajoutait par-dessus. Une seule des deux
+mécaniques, jamais les deux.
+
+#### V6.10, close en passant, et ce qui la rendait fragile
+
+La fiche promettait « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». Le calcul
+vit dans `bilan_de_soiree.gd`, **sans autoload, sans scène, entièrement testé à
+froid** (`tools/test_bilan_de_soiree.gd`, 22 contrôles) — même discipline que
+`serie_de_session.gd`, et pour la même raison déjà payée : un fichier qui nomme
+un autoload ne compile pas en `--script`, l'erreur avorte la fonction de test
+**sans incrémenter le compteur**, et la suite annonce « tous les tests passent »
+sur des appels morts.
+
+Deux décisions y sont moins évidentes qu'elles n'en ont l'air :
+
+- **« Ce soir » n'est pas « aujourd'hui ».** L'historique persiste entre deux
+  lancements ; une soirée est une séance devant l'écran. Le repère est
+  l'horodatage du démarrage du jeu — une date rangerait dans la même soirée deux
+  séances séparées de dix heures, et couperait en deux celle qui passe minuit.
+- **Le favori se départage par le nom.** Un `Dictionary` de Godot conserve
+  l'ordre d'insertion : sans départage, deux armes jouées trois fois donnent un
+  favori qui dépend de l'ordre des matchs — donc une carte qui change de réponse
+  sur la même soirée selon qu'on l'ouvre avant ou après avoir rejoué.
+
+#### Les identifiants de plan sont devenus un contrat (2026-09-09)
+
+La session DA7 nomme ses plans de trailer et ses instructions de presskit par
+les identifiants du catalogue — `duel`, `gel-fatal`, `retrodiffusion` — pour
+qu'ils soient **directement commandables** à `run_photos.sh` plutôt qu'à
+réinterpréter. Bonne idée, et elle crée une dépendance que rien ne tenait :
+`--plan=duel` écrit dans un découpage de trailer et `"id": "duel"` écrit dans le
+catalogue sont la même chaîne, aux deux bouts de deux branches différentes.
+
+⚠️ **Renommer un plan n'aurait rien cassé de visible.** L'outil aurait rendu une
+image de moins, et le document d'en face aurait désigné un plan qui n'existe
+plus. `tools/test_banc.gd` épingle donc la liste — **présence, pas égalité** :
+ajouter un plan reste libre, retirer ou renommer fait rougir la suite et oblige
+à prévenir. Contre-test vérifié : un identifiant renommé sort bien en rouge.
+
+#### Et le photographe a servi le jour même
+
+Les trois écrans neufs sont entrés à son catalogue (`power-on`, `affiche`,
+`soiree`) avant d'être jugés. Il a fallu lui apprendre deux choses au passage,
+et les deux disent quelque chose du jeu : **l'allumage part tout seul au
+démarrage** et se serait invité sur la première image des menus ; **l'affiche se
+pose par-dessus le salon** et aurait rendu trois verdicts identiques sous trois
+noms. Un outil qui photographie un jeu doit savoir congédier ce que le jeu
+affiche de lui-même.
+
+#### L'outil qui sort les images — `tools/photographe.gd` (posé le 2026-09-09)
+
+**Les cinq fiches de DA6 demandent toutes de JUGER une image, et rien ne
+permettait de les regarder ensemble.** L'écran de victoire, le gel fatal, la
+carte de fin de soirée existent déjà dans le jeu ; les composer suppose de les
+avoir sous les yeux, côte à côte, hors du jeu. Ce chantier commence donc par un
+outil, comme DA5.8 avait commencé par une planche.
+
+`./tools/run_photos.sh` ouvre le jeu, le met en scène état par état, et écrit un
+dossier d'images nommées, un **manifeste** (ce que montre chacune, à quoi elle
+sert, de quel commit elle sort) et une **planche HTML** qu'on ouvre d'un
+double-clic. Cinq familles : `menus`, `illustrations`, `cartes`, `jeu`, `fins` —
+sélectionnables une par une, ou plan par plan. **Cinquante-six images en une
+minute et demie**, mesuré, dont les trois verdicts, le gel signé, les quatre
+cônes d'arme, les sept plans de carte et les quinze illustrations éclairées par
+leur shader.
+
+Trois choses qu'il fait et qu'aucun outil existant ne faisait :
+
+- **Le duel sans le HUD** (source `vue` : la texture de `SubViewport1` seule),
+  au même cadrage et à la même résolution que ce que voit le joueur.
+- **Une taille choisie** (`--taille=3840x2160` mesuré possible sur le poste
+  d'Adrien) et, en option, les **découpes carrée et 9:16** pour les réseaux —
+  un recadrage, jamais un rendu à un autre rapport : le jeu s'étire depuis une
+  référence 16:9 et lui demander un carré ajouterait des bandes.
+- **Un cadrage serré facultatif** (`--zoom`), **inscrit au manifeste et sur la
+  planche**. Une image serrée n'est plus tout à fait une capture, et rien
+  d'autre ne le signalerait. Par défaut il vaut 1,0 : ce que voit le joueur.
+
+⚠️ **Et une limite silencieuse, trouvée en fournissant des images à la session
+DA7 le 2026-09-09 — puis levée.** `--taille=3840x2160` rendait les plans `vue`
+en **1920×1080**, et rien ne le disait : la console annonçait « fenêtre :
+3840x2160 » et le manifeste portait les deux tailles sans que personne les
+compare. Ni faux, ni dit — le pire des trois états.
+
+La cause est le mode d'étirement du jeu. En `canvas_items`, la mise en page vit
+à la résolution de RÉFÉRENCE et la fenêtre n'est qu'un facteur appliqué au
+dessin : un `SubViewportContainer` en `stretch` accorde sa sous-vue à sa taille
+de *Control*, soit 1920×1080, quelle que soit la fenêtre. Seule la racine
+rastérise vraiment à 3840×2160.
+
+Le remède est celui d'un photographe qui change d'objectif : couper l'accord
+automatique, agrandir la sous-vue du facteur manquant, **et multiplier le zoom
+de la caméra d'autant** — sans quoi on ne gagne pas de définition, on voit
+seulement plus de monde. Vérifié en comparant la même prise en 1920 et en 3840 :
+cadrage identique, définition doublée. Le lanceur imprime désormais le facteur.
+
+⚠️ **`rendu_racine_autorise` est mis à faux pendant la séance.** Depuis le
+chantier R, une vue unique se rend dans la racine et les deux `SubViewport`
+s'arrêtent — `vp1` n'aurait alors plus de texture à donner. Ce que voit le joueur
+est identique ; seul le coût change, et il n'a aucune importance ici.
+
+**Il ne compose rien.** DA6.1 à DA6.5 restent entièrement à faire : l'outil rend
+possible de les juger, il ne les traite pas.
+
+#### Ce que le premier passage a trouvé, et qui n'était visible qu'en image
+
+Quatre défauts, tous dans l'outil lui-même, tous invisibles à l'écriture :
+
+| ce qu'on croyait | ce que l'image a montré |
+|---|---|
+| le voile de l'éblouissement pris en source `vue` | un duel parfaitement normal : le voile est peint par l'**interface** |
+| l'écran scindé photographié avant d'allumer les torches | deux HUD, un trait, et du noir entre les deux |
+| le tampon du gel, tiré à la première image | `KILL — 00:00`, qui se lit comme une panne d'affichage |
+| cacher une vue suffit à passer en vue unique | un HUD à deux panneaux et **un voile large d'une demi-fenêtre au milieu du cadre** : l'interface se range sur le mode réseau, pas sur le nombre de vues |
+| deux joueurs face à face, torches allumées | les deux à saturation, un écran laiteux : du jeu authentique et une image illisible |
+| deux passages donnent la même image | **le cadrage suivait la souris** — J1 vise le curseur, J2 un stick absent : deux séances, deux compositions, aucune choisie |
+
+Deux autres, silencieux ceux-là : les rubriques de réglage sortaient toutes
+sous le nom `sans-nom` (le libellé d'une entrée n'est pas dans `Button.text`), et
+deux illustrations en écrasaient deux autres sans rien dire (voir « Pièges
+connus », *deux fichiers pour une seule clé*).
+
+La dernière ligne a une réponse, et elle était déjà dans le jeu : les deux
+joueurs reçoivent le temps de la séance un `InputProvider` tenu par l'outil.
+C'est le patron qui le permet — `player.gd` ne sait pas d'où viennent ses
+commandes — et c'est la première fois qu'on s'en sert depuis l'extérieur.
+
+#### ⚠️ Et une contre-vérité qui a failli entrer dans ce document
+
+Ce paragraphe a annoncé, images à l'appui, que **« le jeu ne montre jamais deux
+faisceaux »** — que `canvas_cull_mask` filtre la torche d'en face et qu'une
+communication promettant deux cônes promettrait autre chose que Candela.
+
+**C'est faux, et le code le dit sans ambiguïté.** L'arène est bien dupliquée par
+joueur (`_duplicate_layer_for_player`), mais les deux copies portent la couche de
+lumière **1** — `1 | 16` et `1 | 32` —, et le faisceau éclaire `1 | 2 | 4`. Toute
+torche allume donc les deux copies. **Voir le faisceau d'en face balayer le sol
+est précisément la moitié « trahit » de la mécanique**, et la retirer viderait le
+jeu. Ce qui est séparé, c'est le CORPS : le sprite d'écran ennemi n'est allumé
+que par nos propres lumières — d'où la silhouette qui n'apparaît que dans notre
+cône.
+
+L'origine de l'erreur mérite d'être dite, parce qu'elle est le revers exact de ce
+que cet outil sert à faire : **une image montre un ÉTAT, jamais une propriété.**
+La première photographie du duel n'avait qu'un cône — les deux joueurs se
+faisaient face, le second faisceau pointait vers l'objectif et se confondait avec
+le premier. On en a tiré une règle. Deux images plus tard, sous un autre
+cadrage, il y en avait deux.
+
+Le contre-test qui a tranché tient en une comparaison, et il était à portée de
+main dès le début : le plan `torche` (J2 écarté, torche éteinte) n'a **qu'un**
+cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
+
+**Regarder ne dispense pas de vérifier ; ça dispense de deviner.**
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 

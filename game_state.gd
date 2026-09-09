@@ -57,6 +57,22 @@ var dernier_effleurement: float = -1.0
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+
+## DA6.3 — le repère de « ce soir ». L'historique persiste entre deux
+## lancements ; une soirée est une séance devant l'écran, pas une date. Posé une
+## fois, à la construction, et jamais recalculé : le relire à chaque fin de match
+## ferait glisser la fenêtre et la carte oublierait le début de la soirée.
+var _debut_de_seance: String = Time.get_datetime_string_from_system(true, true)
+
+## La carte de fin de soirée ne se pose qu'UNE fois par séance. Le retour au menu
+## arrive après chaque match : reposée à chaque fois, elle cesserait d'être une
+## fin de soirée pour devenir un écran de plus à congédier.
+var _soiree_montree: bool = false
+
+## ⚠️ **Ces deux-là viennent de `main` et comptent la MÊME chose que le bilan de
+## soirée, autrement.** Voir la note au-dessus de `carte_de_soiree()` : V6.10 a
+## été implémentée deux fois, et la fusion garde les deux plutôt que d'en
+## supprimer une. Décision d'Adrien attendue.
 var session_ties: int = 0
 var _session_weapons: Dictionary = {}
 ## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
@@ -439,7 +455,12 @@ func _ready():
 	ui.killcam_overlay.position = Vector2(-10000, -10000)
 	arena.add_child(ui.killcam_overlay)
 	
-	_ouvrir_sur_intro_ou_menu()
+	# ⚠️ L'intro (DA6.6) et la séquence power-on (DA6.5) occupent toutes deux
+	# l'écran entier au démarrage, et se passent toutes deux à la première
+	# touche. Les jouer ensemble — ce que la fusion a produit sans le moindre
+	# conflit textuel — donne un premier lancement illisible. L'une OU l'autre.
+	if not _ouvrir_sur_intro_ou_menu():
+		_allumage()
 
 ## DA6.6 — l'intro en planches précède le menu, au premier lancement seulement.
 ##
@@ -451,16 +472,19 @@ func _ready():
 ## ⚠️ **Le drapeau s'écrit au démarrage de l'intro, pas à sa fin.** Fermer le jeu
 ## pendant les quinze secondes la ferait revenir au lancement suivant, et
 ## indéfiniment pour qui n'a pas la patience de la voir en entier.
-func _ouvrir_sur_intro_ou_menu() -> void:
-	# ⚠️ `preload` et NON le `class_name` global. Les noms de classe ne sont
-	# résolus qu'après un scan de l'éditeur (`.godot/global_script_class_cache.cfg`,
-	# non versionné) : sur un arbre de travail neuf, un `IntroPlanches.new()` fait
-	# échouer le PARSE de ce fichier, et le jeu ne démarre plus du tout. Mesuré
-	# le 2026-09-09, et invisible pour toute suite qui `preload` elle-même.
+## Ouvre sur l'intro si elle a lieu d'être, sinon sur le menu.
+##
+## Rend **vrai si l'intro joue** — c'est ce qui décide si la séquence power-on
+## doit se jouer aussi. Voir `_allumage()` pour le partage entre les deux.
+func _ouvrir_sur_intro_ou_menu() -> bool:
+	# `preload` plutôt que le `class_name` : il résout par le CHEMIN et ne dépend
+	# donc pas de `.godot/global_script_class_cache.cfg`, qui n'est pas versionné
+	# et qu'un arbre neuf n'a pas encore. La vraie parade reste `--import` (voir
+	# « Pièges connus ») ; ceci n'est qu'une ceinture, et elle ne coûte rien.
 	var Intro := preload("res://intro_planches.gd")
 	if GameSettings.intro_vue or not Intro.disponible():
 		ui.show_main_menu()
-		return
+		return false
 	GameSettings.marquer_intro_vue()
 	var intro: CanvasLayer = Intro.new()
 	add_child(intro)
@@ -468,6 +492,21 @@ func _ouvrir_sur_intro_ou_menu() -> void:
 		ui.show_main_menu()
 		intro.queue_free())
 	intro.jouer()
+	return true
+
+## DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`, et
+## c'est la décision d'origine : le menu est monté, vivant et prêt sous le voile
+## pendant toute la séquence. Le faire attendre l'aurait fait apparaître d'un
+## bloc à la fin — un à-coup, juste après une animation soignée. Elle se saute à
+## la première touche ; voir `power_on.gd`.
+##
+## ⚠️ **Ne se joue PAS au tout premier lancement**, où l'intro en planches prend
+## sa place. Deux cérémonies plein écran à la suite feraient de la découverte du
+## jeu une attente, et l'intro se termine déjà sur le wordmark en braise —
+## c'est-à-dire sur un allumage. Chacune est ainsi à son meilleur moment :
+## l'histoire une fois, l'allumage toutes les autres fois.
+func _allumage() -> void:
+	PowerOn.lancer(self)
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que
@@ -2363,7 +2402,40 @@ func _do_end_round(winner_id: int):
 	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
 	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
 		dernier_effleurement, carte_de_soiree())
+	# DA6.1 — l'affiche, par-dessus le salon que ces deux lignes viennent de
+	# poser. Elle LIT le verdict sur le titre du menu plutôt que de le
+	# recalculer : le mot dépend du mode et d'un arbitrage sur l'égalité, et deux
+	# calculs finiraient par se contredire à l'écran. Voir `affiche_de_fin.gd`.
+	_poser_affiche_de_fin(winner_id)
 	_apply_deferred_rematch()
+
+# ---------------------------------------------------------------------------
+# ⚠️ V6.10 EXISTE EN DEUX EXEMPLAIRES, ET LA FUSION N'EN A SUPPRIMÉ AUCUN
+#
+# Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
+# soir : 7 matchs, 4-3, arme favorite : pompe » — et l'ont livrée deux fois, de
+# deux façons correctes. C'est le motif déjà consigné pour V6.2 le 2026-08-18.
+#
+# | | sur `main` (`carte_de_soiree()`) | sur la branche photographe (`BilanDeSoiree`) |
+# |---|---|---|
+# | forme | une LIGNE de texte | une CARTE plein écran, exportable en PNG |
+# | où | l'écran de fin de match | le retour au menu |
+# | source | le score de session en mémoire | `match_history.json`, filtré sur la séance |
+# | couvre | V6.10 | V6.10 + DA6.3 + DA6.4 |
+#
+# ⚠️ **Les deux comptes peuvent diverger dans la même soirée** : celui-ci compte
+# tout match dont la manche s'est terminée, l'autre écarte les matchs de moins de
+# cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut donc lire
+# « 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
+# l'explique.
+#
+# **Rien n'est supprimé ici : une fusion se résout en choisissant, donc en
+# pouvant détruire, et ce choix-là est un choix de produit.** Adrien tranche.
+# Trois issues possibles : garder la ligne pour l'écran de fin et la carte pour le
+# menu (redondant mais pas simultané), retirer la ligne au profit de la carte, ou
+# faire lire à la ligne le même calcul que la carte (`BilanDeSoiree`) pour qu'au
+# moins les deux chiffres s'accordent.
+# ---------------------------------------------------------------------------
 
 func favorite_session_weapon() -> String:
 	var fav := ""
@@ -2379,6 +2451,49 @@ func carte_de_soiree() -> String:
 	var v := p1_session_wins if local_idx <= 0 else p2_session_wins
 	var d := p2_session_wins if local_idx <= 0 else p1_session_wins
 	return SerieDeSession.carte_soiree(v, d, session_ties, favorite_session_weapon())
+
+
+## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
+##
+## Rassemblés ici parce que `game_state` est le seul à tous les avoir : la carte
+## vient de `MapData`, les armes des joueurs, la durée du chrono, le score de
+## session et la série de cet objet, la marge du dernier coup de `V2.9`.
+func _poser_affiche_de_fin(winner_id: int) -> void:
+	var carte: Dictionary = MapData.get_selected()
+	AfficheDeFin.poser(self, {
+		"vainqueur": winner_id,
+		"local_idx": _local_player_index(),
+		"carte": String(carte.get("name", "")),
+		"duree": round_time - time_left,
+		"arme_j1": p1.current_weapon.name if is_instance_valid(p1) and p1.current_weapon else "",
+		"arme_j2": p2.current_weapon.name if is_instance_valid(p2) and p2.current_weapon else "",
+		"mode": _mode_label(),
+		"session_j1": p1_session_wins,
+		"session_j2": p2_session_wins,
+		"serie": _mot_de_serie,
+		"marge_px": dernier_effleurement,
+	}, ui.game_over_title if "game_over_title" in ui else null)
+
+
+## DA6.3 — la carte de fin de soirée, au retour au menu.
+##
+## Le seuil et le calcul sont dans `BilanDeSoiree` ; ce qui est décidé ici est le
+## MOMENT. Pas pendant un match, pas après un forfait subi en pleine manche —
+## au retour au menu, quand la soirée s'arrête vraiment.
+##
+## ⚠️ **Une seule fois par séance.** Le retour au menu arrive après chaque
+## match : reposée à chaque fois, la carte deviendrait un écran de plus à
+## congédier, et à la quatrième on ne la lirait plus.
+func _peut_etre_la_soiree() -> void:
+	if _soiree_montree:
+		return
+	var bilan := BilanDeSoiree.de_la_soiree(MatchRecord.load_history(),
+		_local_player_index(), _debut_de_seance)
+	if not bool(bilan.get("assez", false)):
+		return
+	_soiree_montree = true
+	PanneauDeSoiree.poser(self, bilan)
+
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
 ## chaque machine journalise le match qu'elle vient de jouer, y compris le
@@ -2506,40 +2621,36 @@ func _mode_label() -> String:
 ## tampon vit exactement le temps de l'arrêt sur image.
 var _kill_stamp: CanvasLayer
 
+## V2.7 + DA6.2 — le tampon du kill, devenu une PHOTO.
+##
+## La composition (cadre, ligne de tête, légende, tampon) vit dans
+## `estampe_de_kill.gd`. Ce qui reste ici est ce que `game_state` est seul à
+## savoir : quand poser l'image, et avec quels faits.
 func _spawn_kill_stamp(elapsed: float) -> void:
 	_clear_kill_stamp()
-	_kill_stamp = CanvasLayer.new()
-	_kill_stamp.layer = 95
-	add_child(_kill_stamp)
+	var carte: Dictionary = MapData.get_selected()
+	_kill_stamp = EstampeDeKill.poser(self, {
+		"temps": elapsed,
+		"carte": String(carte.get("name", "")),
+		# L'arme du VAINQUEUR : c'est elle qui a fait l'image.
+		"arme": _arme_du_vainqueur(),
+		"mode": _mode_label(),
+	}, [ui.match_hud] if "match_hud" in ui else [])
 
-	var lbl := Label.new()
-	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
-	var settings := LabelSettings.new()
-	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
-	settings.font_size = Charte.T_ENSEIGNE
-	settings.font_color = Charte.ROUGE
-	Charte.contourer_settings(settings, settings.font_size) # DA5.7
-	lbl.label_settings = settings
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	lbl.pivot_offset = get_viewport().get_visible_rect().size / 2.0
-	lbl.rotation = -0.06
-	_kill_stamp.add_child(lbl)
-
-	# Le claquement : gros, puis en place — l'inertie d'un tampon encreur.
-	lbl.scale = Vector2(2.6, 2.6)
-	lbl.modulate.a = 0.0
-	var tw := lbl.create_tween()
-	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
-	# DA4.13 — le claquement du tampon : REBOND, avec son dépassement. C'était
-	# déjà `BACK_OUT`, la conversion ne change rien à l'œil.
-	tw.parallel()
-	Charte.animer(tw, lbl, "scale", Vector2(2.6, 2.6), Vector2.ONE, 0.12,
-		Charte.Courbe.REBOND)
-	tw.tween_interval(1.7)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
-	tw.tween_callback(_clear_kill_stamp)
+## Le nom de l'arme qui vient de tuer. La victime est morte, le survivant est
+## celui dont la lumière est encore allumée une demi-seconde plus tôt — mais on
+## ne devine pas : `player_died` a déjà décidé du vainqueur, et `p1_round_wins`
+## vient d'être incrémenté par `_do_end_round`. On lit donc les points de vie,
+## seule information qui ne dépend d'aucun ordre d'appel.
+func _arme_du_vainqueur() -> String:
+	var vivant: Player = null
+	if is_instance_valid(p1) and not p1.dead:
+		vivant = p1
+	elif is_instance_valid(p2) and not p2.dead:
+		vivant = p2
+	if vivant == null or vivant.current_weapon == null:
+		return ""
+	return String(vivant.current_weapon.name)
 
 func _clear_kill_stamp() -> void:
 	if is_instance_valid(_kill_stamp):
@@ -3330,6 +3441,12 @@ func _on_main_menu_requested():
 		_archive_forfeit(1 - local_idx)
 
 	NetworkManager.disconnect_from_game()
+
+	# DA6.3 — la soirée s'arrête ici, et nulle part ailleurs. Après le
+	# désabonnement du transport : la carte lit l'historique, pas le réseau, et
+	# la poser avant ferait apparaître une carte de bilan par-dessus une
+	# déconnexion en cours.
+	_peut_etre_la_soiree()
 
 	client_peer_id = 0
 	_join_deadline_active = false

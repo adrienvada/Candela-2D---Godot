@@ -102,6 +102,9 @@ else:
     # par un souligné. Rien n'en porte aujourd'hui ; c'est une garantie, pas un
     # correctif.
     (sortie / ".nojekyll").write_text("", encoding="utf-8")
-    poids = sum(f.stat().st_size for f in sortie.rglob("*") if f.is_file())
+    # `.git` exclu : le dossier de sortie est un dépôt, et compter ses objets
+    # ferait annoncer un poids de page qui double à chaque génération.
+    poids = sum(f.stat().st_size for f in sortie.rglob("*")
+                if f.is_file() and ".git" not in f.parts)
     print(f"fichiers : {sortie} — {poids//1024} Ko au total, "
           f"icônes posées : {', '.join(poses) or 'aucune'}")
