@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-08
+> Dernière mise à jour : 2026-09-09
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -13076,12 +13076,7 @@ ancrées au milieu de la planche : le défaut d'origine, à moitié, et **pour l
 seul**. La ligne est écrite, et sept contrôles du banc la surveillent sur une
 vraie copie J2.
 
-### Deux fichiers vérifiés et laissés tels quels
-
-**`bullet.gd` n'a pas été touché**, alors que le chantier l'autorisait : le point
-d'entrée qu'il transmet est la **bonne donnée**, et les particules d'entrée s'en
-servent légitimement. Le défaut était entièrement dans l'usage qu'en faisait
-`blood_stain.gd`.
+### Un fichier vérifié et laissé tel quel
 
 **`wall_impact.gd`** centre lui aussi sa marque sur le point d'impact, et **le
 centrage y est légitime** : sa planche de 96 px est réduite à ×0,22-0,34 — 21 à
@@ -13093,17 +13088,71 @@ qui rendait son centrage fautif.
 ### Ce qui reste ouvert
 
 La taille des taches n'a **pas** été touchée : la réduire aurait masqué un défaut
-de position par un dosage, et le dosage appartient à Adrien. À voir en jeu, pas
-au banc : `sang_1` est une étoile presque symétrique, donc sa « direction » se
-lit mal — si l'orientation doit se voir davantage, c'est une planche à recuire,
-pas un ancrage à régler.
+de position par un dosage, et le dosage appartient à Adrien.
 
-**Hors périmètre, à signaler et non à corriger :** les particules de sang
-(`bullet.gd::_spawn_hit_effects`, deux gerbes déjà orientées, l'une vers l'aval
-l'autre vers l'amont — elles, c'est voulu), le shader, le plafond `MAX_STAINS`,
-et `wall_impact.gd` qui duplique la machinerie sciemment : sur un mur, le point
-d'impact **est** la surface, le centrage y est probablement juste — le vérifier
-et le dire, pas le changer.
+**Hors périmètre, à signaler et non à corriger :** le shader, le plafond
+`MAX_STAINS`, et `wall_impact.gd` qui duplique la machinerie sciemment : sur un
+mur, le point d'impact **est** la surface, le centrage y est probablement juste
+— vérifié et laissé tel quel ci-dessus.
+
+### SG (addendum, 2026-09-09) — l'étoile centrée n'apparaît qu'au centre
+
+**Troisième règle d'Adrien, sur le CHOIX de planche cette fois — pas sur sa
+pose :** « il faut que la tache en étoile centrée n'apparaisse que quand on
+tape très proche du centre (0-2 px), sinon ce sont les taches directionnelles. »
+`sang_1` (l'étoile presque symétrique, notée « direction illisible » ci-dessus)
+sortait jusqu'ici du même tirage 50/50 que `sang_2`, quel que soit le point
+touché — un tir tangent au bord du corps pouvait recevoir la même étoile
+centrée qu'un tir en plein cœur.
+
+**`bullet.gd` EST touché cette fois, et c'est la donnée qui l'imposait.** La
+distance qui décide n'est pas le point d'impact — toujours à un rayon du corps,
+donc jamais « proche du centre » — mais la distance **perpendiculaire entre
+l'axe du tir et le centre réel du joueur**. Cette distance existait déjà :
+`_hit_player()` la calcule sous le nom `dist_to_axis` pour l'atténuation des
+dégâts, et V4.2 s'en sert déjà pour le retour audio (`proximite_bord`, sa
+version normalisée). ⚠️ **Jamais une troisième mesure** — `bullet.gd` porte
+déjà l'avertissement contre un second calcul « équivalent » qui finirait par
+diverger (payé trois fois le 2026-08-24 sur l'échelle de la torche) ;
+`distance_axe_centre` est le même `dist_to_axis`, non normalisé, transmis un
+cran plus loin — jusqu'à `blood_stain.gd::setup()`.
+
+**`EST_ETOILE_CENTREE`** classe chaque planche d'`ECLABOUSSURES` (même ordre,
+même taille) ; `_choisir_eclaboussure()` restreint désormais le tirage à la
+catégorie que désigne `distance_axe_centre <= SEUIL_ETOILE_CENTREE` (2,0 px, la
+valeur d'Adrien). Un seul candidat par catégorie aujourd'hui rend le tirage
+déterministe en pratique — la structure reste écrite pour accueillir d'autres
+planches directionnelles sans qu'il faille y retoucher.
+
+**Défaut sûr :** `setup()` accepte `distance_axe_centre` en dernier paramètre,
+par défaut `INF` — un appelant qui ne la connaît pas obtient toujours une
+planche directionnelle, jamais l'étoile par accident.
+
+**Le banc** (11 contrôles neufs, `tools/test_sang_au_sol.gd`) éprouve les deux
+bords du seuil (2,00 px passe, 2,01 px ne passe plus) — pas seulement loin de
+lui, leçon déjà payée pour `test_bandeau_fatal.gd` — et le défaut de `setup()`.
+Deux contre-tests passés : seuil élargi à 50 px → rougit sur la valeur attendue
+(0-2 px) ; les deux planches reclassées « directionnelle » → rougit sur les
+trois tirs proches du centre. La boucle plus ancienne qui monte 30 taches au
+hasard alterne désormais 0 px et 999 px : un tirage resté purement aléatoire
+n'aurait plus jamais vu l'étoile, puisque son appel par défaut tombe sur `INF`.
+
+Lot complet vert (271 s).
+
+⚠️ **Un piège trouvé en route, à retenir pour tout worktree existant qui reçoit
+du nouveau code — pas seulement un worktree neuf.** Entre l'ouverture de ce
+worktree et ce commit, `main` a été fusionné dans la branche à plusieurs
+reprises (mécanisme non élucidé, hors du périmètre de cette note). Le lot est
+devenu rouge en masse (`ui.gd` : `Could not find type "MenuHatchRect"`, puis
+« Failed to compile depended scripts » sur `game_state.gd`, qui en dépend) —
+symptôme trompeur en surface (`update_hud` introuvable, comme si un vrai défaut
+de jeu cassait les reconnexions), mais la cause tenait en une ligne : le cache
+`.godot/global_script_class_cache.cfg` datait d'avant l'arrivée de
+`menu_hatch_rect.gd` (`class_name MenuHatchRect`) dans l'arbre. Un second
+`godot --headless --path . --import` l'a régénéré et tout est repassé au vert.
+**La consigne « un worktree neuf n'a pas de cache d'import » doit donc se lire
+plus largement : un worktree qui a reçu de nouveaux fichiers depuis son dernier
+`--import`, par une fusion ou non, en a de nouveau besoin.**
 
 ### BF — le bandeau FATAL doit tenir dans l'écran de celui qui a tué
 

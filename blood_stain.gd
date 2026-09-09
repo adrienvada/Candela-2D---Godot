@@ -78,7 +78,7 @@ const FLAQUES := [Vector2(0.522, 0.565), Vector2(0.134, 0.539)]
 ## sans direction lisible — par opposition aux planches DIRECTIONNELLES, dont
 ## la traînée se voit. Même ordre et même taille qu'`ECLABOUSSURES`.
 ##
-## **Règle d'Adrien, le 2026-09-08 :** l'étoile centrée ne doit apparaître que
+## **Règle d'Adrien, le 2026-09-09 :** l'étoile centrée ne doit apparaître que
 ## pour un tir qui passe très près du centre réel du joueur ; sinon, ce sont
 ## les planches directionnelles qui doivent sortir. Voir `SEUIL_ETOILE_CENTREE`
 ## et `_choisir_eclaboussure()`.

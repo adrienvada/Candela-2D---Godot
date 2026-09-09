@@ -487,7 +487,7 @@ func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: 
 ## « equivalent » finirait par diverger — ce depot a paye trois fois cette
 ## lecon le 2026-08-24 sur l'echelle de la torche.
 ##
-## `distance_axe_centre` (2026-09-08) : le MEME `dist_to_axis`, avant sa
+## `distance_axe_centre` (2026-09-09) : le MEME `dist_to_axis`, avant sa
 ## division par `player_radius` — pas une troisieme mesure, l'etape d'avant
 ## dans le meme calcul. `blood_stain.gd` s'en sert pour choisir entre la tache
 ## en etoile centree et les taches directionnelles (regle d'Adrien : l'etoile

@@ -32,7 +32,7 @@ extends SceneTree
 ## enregistré, et le banc ne compile plus. Même piège, même parade que
 ## `tools/test_bandeau_fatal.gd`.
 ##
-## **2026-09-08 — troisième règle, sur le CHOIX de planche cette fois, pas sur
+## **2026-09-09 — troisième règle, sur le CHOIX de planche cette fois, pas sur
 ## sa pose :** « il faut que la tache en étoile centrée n'apparaisse que quand
 ## on tape très proche du centre (0-2 px), sinon ce sont les taches
 ## directionnelles. » `_choisir_eclaboussure()` reçoit désormais la distance
@@ -196,7 +196,7 @@ func _run() -> void:
 	var direction := Vector2.RIGHT.rotated(deg_to_rad(30.0))
 	var vues := {}
 	var derniere: Node2D = null
-	# ⚠️ **Alterné, pas tiré au sort.** Depuis SG-suite (2026-09-08), le choix de
+	# ⚠️ **Alterné, pas tiré au sort.** Depuis SG-suite (2026-09-09), le choix de
 	# planche est restreint par catégorie (`EST_ETOILE_CENTREE`) : un appel sans
 	# troisième argument tombe sur `INF`, donc TOUJOURS une directionnelle. Un
 	# tirage purement aléatoire ne verrait donc plus jamais l'étoile centrée, et
