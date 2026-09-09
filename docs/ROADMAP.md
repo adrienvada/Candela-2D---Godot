@@ -2404,6 +2404,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
 | **Navigation manette hybride : D-Pad case par case et joystick curseur virtuel avec bascule instantanée** (2026-09-07, Adrien) | Deux modes de contrôle complémentaires à la manette dans les menus : le D-Pad (`JOY_BUTTON_DPAD_*`) et les flèches clavier naviguent de manière discrète case par case (curseur virtuel masqué). Le stick analogique fait apparaître un curseur virtuel fluide (`VirtualGamepadCursor`, halo `Charte.AMBRE`, accélération progressive) qui se dirige comme une souris, survole les contrôles interactifs, met à jour le focus/panneau d'aperçu et active au bouton de sélection (`p1_menu_select`). Dès qu'une flèche/D-Pad est pressée ou que la souris physique bouge, le curseur virtuel de joystick s'efface immédiatement. Découplage des axes analogiques dans `input_setup.gd` sur `p1_menu_*` / `p2_menu_*` pour prévenir les sauts de focus involontaires. |
 | **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. |
@@ -11013,20 +11014,21 @@ posée juste après `"eblouissement"` par proximité de sujet bien qu'elle soit
 d'une famille différente :
 
 ```
-"famille": Family.CONFORT, "plancher": 0.0,
+"famille": Family.MONDE, "plancher": 0.5,
 "nom": "Frange de l'éblouissement"
 ```
 
-⚠️ **Famille CONFORT choisie sur la recommandation du plan, PAS encore
-confirmée par Adrien — seule décision de ce chantier qui reste ouverte.**
-Raisonnement retenu : même motif que `flash_mort` (« n'obstrue que votre
-écran, rien ne vous oblige à la garder ») — la direction de l'éblouisseur
-passe déjà par `lueurs_derive`/`flares_penche`, non réglables, donc
-l'aberration ne porte aucune information de duel. Lecture alternative
-possible : « tout ce qui touche à l'éblouissement est Monde » →
-`Family.MONDE`, plancher ~0,5 (aligné sur `trait_de_balle`/`fusee_agonie`,
-pas sur le 0,8 de l'entrée `"eblouissement"` qui couvrait toute la
-pénalité). **À trancher avec Adrien avant de considérer ce point clos.**
+✅ **Tranché par Adrien le 2026-09-09 : `Family.MONDE`.** Deux lectures
+étaient possibles. CONFORT (recommandation initiale du plan) : même motif que
+`flash_mort` (« n'obstrue que votre écran, rien ne vous oblige à la
+garder ») — la direction de l'éblouisseur passe déjà par
+`lueurs_derive`/`flares_penche`, non réglables, donc l'aberration ne
+porterait aucune information de duel. MONDE (retenue) : « tout ce qui touche
+à l'éblouissement fait partie de ce qu'il montre, pas un habillage à part » —
+un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son
+adversaire. Plancher fixé à 0,5, aligné sur `trait_de_balle`/`fusee_agonie` —
+pas sur le 0,8 de l'ancienne entrée `"eblouissement"`, qui couvrait toute la
+pénalité et pas seulement son rendu.
 
 **Câblage**, dans `ui.gd::_poser_voile` : `0,015 × GameSettings.current_effect
 ("aberration_eblouissement")` — 0,015 est le défaut calibré du shader,
