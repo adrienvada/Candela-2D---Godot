@@ -3128,6 +3128,40 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Soixante et onze suites vertes ne disent pas que le jeu démarre (2026-09-09)
+
+La session DA7 fusionne, et **cinq classes deviennent injoignables** —
+« Identifier not declared » — parce que le registre des noms de classe est en
+retard sur les fichiers neufs. Le jeu ne démarre plus. **Sa suite dédiée, elle,
+était verte** : elle chargeait ses fichiers par `preload` sur un CHEMIN, ce qui
+ne consulte jamais ce registre. Le code était bon des deux côtés ; seul le
+registre manquait. Un `--import` réglait tout — encore fallait-il savoir qu'il y
+avait quelque chose à régler.
+
+C'était une déclinaison de plus d'un piège que ce document connaissait déjà. Ce
+qui est neuf, et ce qui vaut d'être gardé, c'est **le trou de couverture** : le
+lanceur n'a jamais démarré le jeu. Il l'a fait pendant des mois sans que ça se
+voie, parce que quelqu'un lançait toujours le jeu à la main dans la journée.
+
+⚠️ **Et le contrôle évident ne marche pas.** `godot --headless --quit-after 2000`
+paraît suffire ; il ne suffit pas. **Mesuré le 2026-09-09, cache de classes
+vidé : 771 `SCRIPT ERROR` imprimées, et le processus sort en 0.** Un contrôle
+adossé au code de sortie **certifierait un jeu mort** — pire que pas de contrôle,
+parce qu'il rassure. On lit donc la SORTIE et on y cherche `SCRIPT ERROR`,
+exactement comme ce lanceur le fait déjà pour chacune de ses suites et comme
+`run_visuel.sh` le fait pour les erreurs d'analyse.
+
+Posé en TÊTE de `run_suites.sh` : si le jeu ne démarre pas, tout ce qui suit est
+du bruit. Contre-test vérifié dans les deux sens — vert sur un arbre sain, rouge
+avec le registre vidé, et il nomme le remède (`--import`) dans son message
+d'échec.
+
+**La leçon qui dépasse le cas :** une suite qui atteint son sujet par un chemin
+que la production n'emprunte pas ne teste pas la production. `preload("res://x.gd")`
+et `X` sont deux façons d'atteindre le même fichier, et **une seule des deux peut
+échouer**.
+
+
 ### V6.10 a été écrite deux fois, et c'est la deuxième fois que ça arrive (2026-09-09)
 
 Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
