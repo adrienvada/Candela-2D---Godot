@@ -3285,12 +3285,25 @@ sur le décompte ordinaire de trois secondes, lancé identiquement des deux
 côtés par le même `rpc_start_round` que tout le reste du jeu emprunte déjà —
 il n'y a plus rien qui s'abrège localement, donc plus rien à désynchroniser.
 
-⚠️ **Ce que ce correctif NE fait PAS : réparer le classé.** Le même défaut
-existe, verbatim, sur le chemin `_matchmade_ranked = true` — personne ne l'a
-touché, parce que rien ne l'a demandé et qu'aucun essai à deux machines
-n'existe encore sur ce chemin pour vérifier un correctif. Le jour où
-l'appariement classé sera exercé pour de vrai, « prêt côté hôte, invité
-planté sur son décompte » attend toujours dans `_process()`.
+⚠️ **Mise à jour du 2026-09-09 (suite) : le classé aussi, finalement.** Ce
+paragraphe disait le défaut laissé tel quel — verbatim, personne n'avait
+touché le chemin `_matchmade_ranked = true`, faute de demande. Adrien a
+ensuite testé un match classé sur le build 0.3.1 (donc *avant* le correctif
+amical ci-dessus) et cru y retrouver le même symptôme ; le vrai coupable
+était le build non à jour, mais l'occasion a suffi à fermer le défaut côté
+classé aussi, plutôt que de le laisser attendre un essai à deux machines qui
+l'aurait révélé pour de vrai. **Le correctif est le canal qui manquait, pas
+un contournement** : `_process()` collapse déjà `countdown_left` côté hôte
+quand les deux « prêt » sont posés ; il envoie désormais aussi
+`rpc_countdown_launch` au client (`@rpc("authority", "call_remote",
+"reliable")`, symétrique de `rpc_countdown_ready` qui informait déjà l'hôte
+dans l'autre sens), qui l'applique chez lui. `client_peer_id != 0` garde la
+ligne d'envoi : en écran partagé (`_run_fenetre()`, sans réseau ni
+appariement) ce champ reste à 0, donc rien n'est câblé en trop sur ce banc.
+⚠️ **Non vérifié à deux machines ni par un banc à deux instances** — seul
+`--fenetre` (écran partagé, un seul processus) couvre la mécanique
+d'abrègement elle-même ; le trajet réseau réel du nouveau `rpc_countdown_launch`
+reste à prouver, comme l'était le correctif amical avant `duo_apparie`.
 
 **Deux décisions annexes, prises à la même occasion.** `_lancer_match_apparie()`
 tire désormais la carte par défaut (`MapData.DEFAULT_MAP_ID`) pour un match
