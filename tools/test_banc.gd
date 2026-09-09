@@ -138,6 +138,37 @@ func _run() -> void:
 	_check("chaque plan nomme une source connue", sources_inconnues.is_empty(),
 		", ".join(sources_inconnues))
 
+	# ⚠️ **Les identifiants de plan sont devenus un CONTRAT, le 2026-09-09.**
+	#
+	# La session DA7 nomme ses plans de trailer et ses instructions de presskit
+	# par ces identifiants-là, pour qu'ils soient directement commandables à
+	# `run_photos.sh` plutôt qu'à réinterpréter. Un `--plan=duel` écrit dans un
+	# découpage de trailer et un `"id": "duel"` écrit dans ce catalogue sont
+	# désormais la même chaîne, tenue aux deux bouts par personne.
+	#
+	# **Renommer un plan ne casserait rien de visible ici** : l'outil rendrait
+	# simplement une image de moins, et le document d'en face désignerait un plan
+	# qui n'existe plus. C'est le motif que ce dépôt appelle « se périme en
+	# silence », et c'est exactement ce que cette suite existe pour attraper.
+	#
+	# Le contrôle porte sur la PRÉSENCE, pas sur l'égalité : ajouter un plan reste
+	# libre — c'est retirer ou renommer qui doit faire rougir une suite et obliger
+	# celui qui le fait à prévenir.
+	var promis: Array[String] = ["accueil", "salon-local", "personnalisation",
+		"reglages", "cadre-rang", "cadre-profil", "cadre-historique", "power-on",
+		"code-de-salon", "artworks", "plans", "decompte", "duel", "torche",
+		"retrodiffusion", "flash-de-tir", "eblouissement", "fusee", "sang",
+		"armes", "hud", "ecran-scinde", "entrainement", "killcam", "gel-fatal",
+		"affiche", "soiree", "verdict-victoire", "verdict-defaite",
+		"verdict-egalite", "bilan"]
+	var disparus: Array[String] = []
+	for id in promis:
+		if not vus.has(id):
+			disparus.append(id)
+	_check("aucun identifiant de plan promis au-dehors n'a disparu",
+		disparus.is_empty(), ", ".join(disparus)
+		+ " — prévenir la session qui les nomme avant de renommer")
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")

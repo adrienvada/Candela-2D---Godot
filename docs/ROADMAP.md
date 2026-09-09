@@ -11427,6 +11427,21 @@ Deux décisions y sont moins évidentes qu'elles n'en ont l'air :
   favori qui dépend de l'ordre des matchs — donc une carte qui change de réponse
   sur la même soirée selon qu'on l'ouvre avant ou après avoir rejoué.
 
+#### Les identifiants de plan sont devenus un contrat (2026-09-09)
+
+La session DA7 nomme ses plans de trailer et ses instructions de presskit par
+les identifiants du catalogue — `duel`, `gel-fatal`, `retrodiffusion` — pour
+qu'ils soient **directement commandables** à `run_photos.sh` plutôt qu'à
+réinterpréter. Bonne idée, et elle crée une dépendance que rien ne tenait :
+`--plan=duel` écrit dans un découpage de trailer et `"id": "duel"` écrit dans le
+catalogue sont la même chaîne, aux deux bouts de deux branches différentes.
+
+⚠️ **Renommer un plan n'aurait rien cassé de visible.** L'outil aurait rendu une
+image de moins, et le document d'en face aurait désigné un plan qui n'existe
+plus. `tools/test_banc.gd` épingle donc la liste — **présence, pas égalité** :
+ajouter un plan reste libre, retirer ou renommer fait rougir la suite et oblige
+à prévenir. Contre-test vérifié : un identifiant renommé sort bien en rouge.
+
 #### Et le photographe a servi le jour même
 
 Les trois écrans neufs sont entrés à son catalogue (`power-on`, `affiche`,
