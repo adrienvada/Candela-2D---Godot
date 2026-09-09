@@ -3153,6 +3153,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
+
+Deux sessions travaillaient sur les deux moitiés d'un même défaut : l'une avait
+fait passer le tir d'un bouton à une gâchette (`9f79e58`), l'autre écrit le garde
+qui absorbe le tremblement de zone morte (`6d4023b`). La seconde a fusionné, a
+constaté que la première était **déjà sur `main`**, et en a conclu que l'ordre
+s'était réglé tout seul — « pas de fenêtre où l'exposition a existé sans le
+remède ».
+
+Mesuré, c'était faux, et de deux versions :
+
+```
+9f79e58 (l'exposition)  dans v0.4.1 → OUI    dans v0.4.2 → OUI
+9732d48 (le remède)     dans v0.4.1 → NON    dans v0.4.2 → NON
+```
+
+Le remède est arrivé sur `main` quelques minutes après `cf6b883`, qui est
+précisément le commit que le tag `v0.4.2` désigne. Publication et fusion se
+croisaient.
+
+**La règle : l'ordre qui compte pour un joueur est celui des TAGS, jamais celui
+de `main`.** `main` est un état de travail partagé qui avance en continu ; une
+version est un instantané figé, et c'est lui que les gens installent. Deux
+commits peuvent se suivre d'une minute sur `main` et se retrouver à deux
+versions d'écart pour qui joue.
+
+⚠️ **Et le contrôle est mécanique, il ne se déduit pas** :
+`git merge-base --is-ancestor <commit> $(git rev-list -n1 <tag>)`. Dans un dépôt
+à vingt-sept worktrees où plusieurs sessions poussent le même jour, c'est la
+seule réponse fiable à « est-ce que c'est parti ? ». La déduction, elle, a déjà
+coûté une erreur d'attribution publiée ce même jour — voir « La fusion qui
+APPORTE un code n'est pas celle qui l'a écrit ».
+
 ### Une liste qui décrit le dépôt du jour où on l'a écrite (2026-09-09)
 
 `test_planche_marche` portait `const ARMES := ["pistolet", "pompe", "fusil",
