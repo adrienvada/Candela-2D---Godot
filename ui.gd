@@ -17,6 +17,9 @@ const SHADER_KILLCAM := preload("res://killcam_overlay.gdshader")
 signal replay_requested
 signal quit_requested
 signal main_menu_requested
+## Départ demandé depuis la pause, en plein match, vers l'écran du hub d'où
+## le match a été lancé — pas l'accueil. Voir `match_origin_screen()`.
+signal quit_match_requested
 ## Rejoindre un salon n'est plus lancer un match : les deux gestes sont
 ## séparés depuis que le départ attend les deux « PRÊT ».
 signal join_requested
@@ -970,7 +973,7 @@ var pause_time_label: Label
 var btn_pause_resume: Button
 var btn_pause_options: Button
 var btn_pause_menu: Button
-var btn_pause_quit: Button
+var btn_pause_quit_match: Button
 
 ## Les réglages restent joignables en cours de match : la pause emprunte l'onglet
 ## CONTRÔLES du menu, seul onglet montré dans ce cas. Ce détour disparaît à
@@ -1010,6 +1013,18 @@ var _debug_arena_nodes: int = 0
 var _assets_summary: String = ""
 
 var _is_main_menu: bool = true
+
+## Écran du hub d'où est parti le dernier match — capturé dans `hide_game_over()`,
+## le seul des quatre points de bascule de `_is_main_menu` qui marque une vraie
+## sortie du menu vers une manche vivante (les trois autres reviennent AU menu ou
+## rouvrent le même salon). Sert « QUITTER LE MATCH » de la pause : `main_menu_requested`
+## ramène toujours à `MenuHub.ROOT` via `hub.reset()`, ce champ permet de redescendre
+## ensuite au bon écran plutôt que d'y rester.
+var _match_origin_screen: String = MenuHub.ROOT
+
+## L'écran du hub d'où le match en cours (ou le dernier joué) a été lancé.
+func match_origin_screen() -> String:
+	return _match_origin_screen
 
 # ---------------------------------------------------------------------------
 # KILLCAM
@@ -2242,7 +2257,7 @@ func _build_player_hud(player: int) -> Control:
 
 	var weapon := _create_weapon_indicator(tint)
 	var torch := _create_torch_indicator()
-	var reserves := _create_reserves_indicator()
+	var reserves := _create_reserves_indicator(player)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -2462,92 +2477,158 @@ func _create_torch_indicator() -> PanelContainer:
 
 ## Les réserves de la classe : fusées et gadget, deux nombres qu'on ne pouvait
 ## pas compter avant l'étape 18.
-##
-## ⚠️ **Deux libellés écrits, pas deux pictogrammes.** Les icônes de gadget
-## n'existent pas — et une icône par classe en demanderait dix, à tenir d'accord
-## avec dix gadgets. Le mot ne se périme pas.
-func _create_reserves_indicator() -> Dictionary:
-	var panel := PanelContainer.new()
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# ⚠️ **Le style vient de `_set_flare_style()`, écrit par le chantier GAME FEEL**
-	# (commit `b9a7d08`) pour SON témoin de fusée. Deux chantiers ont ajouté un
-	# indicateur de fusée au HUD à quelques jours d'intervalle, chacun de son côté :
-	# le sien allumait un cadre quand une fusée était disponible, celui des CLASSES
-	# comptait la réserve et le gadget. Aucun des deux ne contenait l'autre — la
-	# fusion garde **le cadre qui s'allume ET les nombres**.
-	#
-	# ⚠️ **Ce commentaire a d'abord attribué ce geste au mauvais chantier.**
-	# L'erreur ne venait pas du champ auteur — le dépôt sait qu'il dit toujours
-	# « Adrien » — mais d'une déduction encore plus faible : *la fusion qui a
-	# apporté le code n'est pas celle qui l'a écrit*. Établi par
-	# `git log -S"_set_flare_style"`, seule source qui réponde à cette question.
-	#
-	# ⚠️ Le style se pose À LA FIN, une fois les enfants montés :
-	# `_set_flare_style()` rend la main sans rien faire sur un panneau vide
-	# (`get_child_count() == 0`), et le cadre serait resté nu jusqu'à la première
-	# mise à jour du HUD.
-	var marge := MarginContainer.new()
-	marge.add_theme_constant_override("margin_left", GAP_XS)
-	marge.add_theme_constant_override("margin_right", GAP_XS)
-	marge.add_theme_constant_override("margin_top", GAP_XXS)
-	marge.add_theme_constant_override("margin_bottom", GAP_XXS)
-	panel.add_child(marge)
+## Les noms courts brutalisés des dix gadgets pour le cartouche du HUD de match.
+const NOMS_GADGETS_COURTS := {
+	"voile": "VOILE",
+	"mine_magnesium": "MINE",
+	"nappe_braises": "BRAISES",
+	"torche_fantome": "TORCHE F.",
+	"gresillement": "GRÉSILLEMENT",
+	"leurre": "LEURRE",
+	"cartouche_suie": "SUIE",
+	"poussiere": "POUSSIÈRE",
+	"ombre_habitee": "OMBRE",
+	"poudre_contact": "POUDRE",
+}
 
-	var rangee := HBoxContainer.new()
-	rangee.add_theme_constant_override("separation", GAP_XS)
-	marge.add_child(rangee)
+static func _nom_court_gadget(slug: String, defaut: String = "") -> String:
+	if NOMS_GADGETS_COURTS.has(slug):
+		return NOMS_GADGETS_COURTS[slug]
+	if defaut != "":
+		var s := defaut.to_upper()
+		for p in ["LE ", "LA ", "L'", "L’"]:
+			if s.begins_with(p):
+				return s.substr(p.length())
+		return s
+	return "GADGET"
 
-	# L'icône de fusée, reprise du témoin du chantier GAME FEEL. Absente si la
-	# planche ne l'est pas : les mots à côté portent déjà le sens, et un
-	# pictogramme de secours serait un défaut de plus.
+
+## Les réserves de la classe : fusées et gadget, séparés en deux cartouches
+## dédiés pour que l'état du gadget ne dépende pas de celui des fusées.
+func _create_reserves_indicator(player: int = 0) -> Dictionary:
+	var conteneur := HBoxContainer.new()
+	conteneur.add_theme_constant_override("separation", GAP_XS)
+	conteneur.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	# 1. Le panneau des Fusées éclairantes
+	var panel_fusees := PanelContainer.new()
+	panel_fusees.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var marge_f := MarginContainer.new()
+	marge_f.add_theme_constant_override("margin_left", GAP_XS)
+	marge_f.add_theme_constant_override("margin_right", GAP_XS)
+	marge_f.add_theme_constant_override("margin_top", GAP_XXS)
+	marge_f.add_theme_constant_override("margin_bottom", GAP_XXS)
+	panel_fusees.add_child(marge_f)
+
+	var rangee_f := HBoxContainer.new()
+	rangee_f.add_theme_constant_override("separation", GAP_XS)
+	marge_f.add_child(rangee_f)
+
 	var chemin_fusee := "res://assets/sprites/fusee_corps.png"
 	if ResourceLoader.exists(chemin_fusee):
 		var icone := TextureRect.new()
-		icone.name = "Icone"
+		icone.name = "Icon"
 		icone.texture = load(chemin_fusee)
 		icone.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icone.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icone.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
 		icone.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		rangee.add_child(icone)
+		rangee_f.add_child(icone)
 
 	var fusees := Label.new()
+	fusees.name = "Label"
 	fusees.text = "FUSÉES —"
 	Charte.appareil(fusees, T_MENTION)
-	rangee.add_child(fusees)
+	rangee_f.add_child(fusees)
+	_set_flare_style(panel_fusees, false, Charte.HALOGENE)
+
+	# 2. Le panneau du Gadget de classe
+	var panel_gadget := PanelContainer.new()
+	panel_gadget.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var marge_g := MarginContainer.new()
+	marge_g.add_theme_constant_override("margin_left", GAP_XS)
+	marge_g.add_theme_constant_override("margin_right", GAP_XS)
+	marge_g.add_theme_constant_override("margin_top", GAP_XXS)
+	marge_g.add_theme_constant_override("margin_bottom", GAP_XXS)
+	panel_gadget.add_child(marge_g)
+
+	var vbox_g := VBoxContainer.new()
+	vbox_g.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox_g.add_theme_constant_override("separation", 0)
+	marge_g.add_child(vbox_g)
+
+	var gadget_titre := Label.new()
+	gadget_titre.name = "Titre"
+	gadget_titre.text = "GADGET"
+	gadget_titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gadget_titre.add_theme_font_size_override("font_size", T_MENTION - 2)
+	gadget_titre.add_theme_color_override("font_color", Charte.ACIER)
+	vbox_g.add_child(gadget_titre)
 
 	var gadget := Label.new()
-	gadget.text = "GADGET —"
+	gadget.name = "Label"
+	gadget.text = "—"
+	gadget.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Charte.appareil(gadget, T_MENTION)
-	rangee.add_child(gadget)
+	vbox_g.add_child(gadget)
+	_set_gadget_style(panel_gadget, false, Charte.HALOGENE)
 
-	_set_flare_style(panel, false, Charte.HALOGENE)
-	return {"panel": panel, "fusees": fusees, "gadget": gadget}
+	# Agencement selon le joueur pour la symétrie du HUD
+	if player == 0:
+		conteneur.add_child(panel_fusees)
+		conteneur.add_child(panel_gadget)
+	else:
+		conteneur.add_child(panel_gadget)
+		conteneur.add_child(panel_fusees)
+
+	return {
+		"panel": conteneur,
+		"panel_fusees": panel_fusees,
+		"panel_gadget": panel_gadget,
+		"fusees": fusees,
+		"gadget": gadget,
+		"gadget_titre": gadget_titre,
+	}
 
 
-## Écrit les deux réserves d'un joueur. Vide dit « rien à ce nom » — le Spectre
-## n'a AUCUNE fusée, et c'est sa classe, pas un chargement en cours.
+## Écrit les réserves d'un joueur en match : fusées restantes et gadget de classe.
 func _maj_reserves(res: Dictionary, joueur: int) -> void:
 	if res.is_empty():
 		return
 	var gs := get_tree().get_first_node_in_group("game_state")
 	if gs == null:
 		return
+
+	var teinte: Color = COLOR_P1 if joueur == 0 else COLOR_P2
+
+	# ── 1. Les fusées éclairantes ──────────────────────────────────────────
 	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
 	var lbl_f: Label = res["fusees"]
 	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
-	# Le cadre s'allume tant qu'il reste une fusée — l'affordance du chantier
-	# GAME FEEL, conservée telle quelle : dans le noir, un cadre allumé se lit du
-	# coin de l'œil là où un nombre demande de regarder.
-	_set_flare_style(res["panel"], n > 0, COLOR_P1 if joueur == 0 else COLOR_P2)
 
-	var dispo := bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+	var p_f = res.get("panel_fusees", res.get("panel"))
+	if p_f is PanelContainer:
+		_set_flare_style(p_f, n > 0, teinte)
+
+	# ── 2. Le gadget de classe ─────────────────────────────────────────────
+	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
+	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
+	var nom_gadget := "—"
+	var dispo := false
+	if classe != null and classe.gadget != null and classe.gadget.est_livre():
+		nom_gadget = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
+		dispo = bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+
 	var lbl_g: Label = res["gadget"]
-	lbl_g.text = "GADGET ✓" if dispo else "GADGET —"
+	lbl_g.text = nom_gadget if dispo else ("%s —" % nom_gadget if nom_gadget != "—" else "—")
 	lbl_g.add_theme_color_override("font_color",
 		Charte.HALOGENE if dispo else COLOR_DIM)
+
+	var p_g: PanelContainer = res.get("panel_gadget", null)
+	if p_g != null:
+		_set_gadget_style(p_g, dispo, teinte)
 
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
@@ -2613,6 +2694,39 @@ func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) 
 	var icon: TextureRect = hbox.get_node_or_null("Icon")
 	if icon != null:
 		icon.modulate = Color.WHITE if active else Color(1, 1, 1, 0.3)
+
+func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+	if panel == null or panel.get_child_count() == 0:
+		return
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(0)
+	style.set_border_width_all(2)
+
+	if active:
+		style.bg_color = Color(Charte.LINE, 0.9)
+		style.border_color = player_color
+		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2(3, 3)
+	else:
+		style.bg_color = Color(Charte.SURFACE, 0.8)
+		style.border_color = Color(Charte.LINE, 1.0)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2.ZERO
+
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin = panel.get_child(0)
+	if margin.get_child_count() == 0:
+		return
+	var vbox = margin.get_child(0)
+	var titre: Label = vbox.get_node_or_null("Titre")
+	if titre != null:
+		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.5))
+	var label: Label = vbox.get_node_or_null("Label")
+	if label != null:
+		label.add_theme_color_override("font_color", Charte.HALOGENE if active else COLOR_DIM)
+
 
 # ===========================================================================
 # CONSTRUCTION — ANNEXES
@@ -5787,6 +5901,14 @@ func _build_pause_menu() -> void:
 
 	# Colonne plutôt que rangée : c'est la forme qui se parcourt le plus
 	# naturellement au curseur, et la pause n'a que quatre issues.
+	#
+	# ⚠️ **QUITTER (l'application) n'est plus une issue de la pause** (demande
+	# d'Adrien, 2026-09-09) : quitter le jeu entier depuis un match en cours n'a
+	# plus de bouton dédié ici, cette action reste réservée à l'accueil. Ce
+	# quatrième bouton devient « QUITTER LE MATCH », qui ne quitte PAS
+	# l'application : il ramène au salon d'où le match a été lancé (voir
+	# `quit_match_requested` / `match_origin_screen()`). MENU PRINCIPAL, qui
+	# ramène toujours à l'accueil du hub, prend sa place en bas — et sa couleur.
 	btn_pause_resume = _make_pause_button("REPRENDRE", COLOR_P1, true)
 	btn_pause_resume.pressed.connect(_resume_game)
 	column.add_child(btn_pause_resume)
@@ -5795,19 +5917,19 @@ func _build_pause_menu() -> void:
 	btn_pause_options.pressed.connect(_open_pause_options)
 	column.add_child(btn_pause_options)
 
-	btn_pause_menu = _make_pause_button("MENU PRINCIPAL", COLOR_DIM)
+	btn_pause_quit_match = _make_pause_button("QUITTER LE MATCH", COLOR_DIM)
+	btn_pause_quit_match.pressed.connect(func() -> void:
+		get_tree().paused = false
+		quit_match_requested.emit()
+	)
+	column.add_child(btn_pause_quit_match)
+
+	btn_pause_menu = _make_pause_button("MENU PRINCIPAL", COLOR_P2)
 	btn_pause_menu.pressed.connect(func() -> void:
 		get_tree().paused = false
 		main_menu_requested.emit()
 	)
 	column.add_child(btn_pause_menu)
-
-	btn_pause_quit = _make_pause_button("QUITTER", COLOR_P2)
-	btn_pause_quit.pressed.connect(func() -> void:
-		get_tree().paused = false
-		quit_requested.emit()
-	)
-	column.add_child(btn_pause_quit)
 
 func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
 	return MenuWidgets.make_button(label, accent, primary, T_APPUI, Vector2(320, 56))
@@ -7605,6 +7727,14 @@ func _arreter_annonce_score() -> void:
 		bilan.modulate = Color.WHITE
 
 func hide_game_over() -> void:
+	# Capturé AVANT la bascule, et seulement si on partait vraiment du menu :
+	# une manche relancée dans le même salon (`rouvrir_le_salon()` a déjà remis
+	# `_is_main_menu` à vrai) repasse par ici sans qu'on ait bougé dans le hub,
+	# donc écraser avec `hub.current_id()` à chaque manche resterait correct —
+	# mais un appel qui suivrait un `show_game_over()` (déjà à faux) ne doit
+	# rien changer : l'écran d'origine reste celui du dernier vrai départ.
+	if _is_main_menu and hub != null:
+		_match_origin_screen = hub.current_id()
 	_is_main_menu = false
 	_respirer_relance(false)
 	_arreter_annonce_score()

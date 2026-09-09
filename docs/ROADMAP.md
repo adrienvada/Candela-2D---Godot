@@ -16792,6 +16792,72 @@ de clôture serait un échec différé de dix étapes.
 
 ---
 
+## Chantier — Menu de pause en match : retirer QUITTER, ajouter QUITTER LE MATCH (inscrit et fait le 2026-09-09)
+
+**Demandé par Adrien.** Avant ce chantier, `ui.gd::_build_pause_menu()` posait
+quatre boutons dans cet ordre : REPRENDRE, OPTIONS, MENU PRINCIPAL (gris),
+QUITTER (rouge — quittait l'**application entière** via
+`NetworkManager.quit_game()`, comptant comme un abandon en match classé).
+**QUITTER (l'application) n'a plus de bouton dans la pause** — il ne reste
+disponible que depuis l'accueil du hub. Sa place est prise par **QUITTER LE
+MATCH**, juste au-dessus de MENU PRINCIPAL qui descend au bas de la colonne et
+devient rouge à sa place.
+
+**Ce qui n'existait pas pour l'écrire, et qu'il a fallu construire :**
+`main_menu_requested` ramène toujours au hub racine (`hub.reset()` dans
+`ui.show_main_menu()`) — aucune mémoire de « d'où vient ce match » n'existait.
+« Quitter le match » devait donc ramener à l'écran du hub d'où le match a été
+lancé (écran scindé, salon hôte/invité, entraînement…), pas à l'accueil.
+
+**La mémoire retenue : un seul point de capture, pas un par chemin de
+lancement.** Quatre chemins mènent à une manche vivante (écran scindé, hôte +
+client tous deux prêts, appariement) et ils ne partagent presque aucun code —
+sauf UN appel commun, systématique juste avant que le HUD de match remplace le
+hub : `ui.hide_game_over()`. C'est l'un des quatre seuls endroits où
+`_is_main_menu` bascule (documenté dans `ui.gd` juste au-dessus de
+`_un_menu_attend_un_clic()`), et le seul des quatre qui marque une **sortie**
+du hub vers une manche (les trois autres y ramènent, ou rouvrent le même
+salon). `hide_game_over()` retient donc `hub.current_id()` dans
+`_match_origin_screen`, mais seulement `if _is_main_menu` **avant** de le
+faire basculer à faux — sans quoi un round suivant dans la même série
+(`rouvrir_le_salon()` remet `_is_main_menu` à vrai) écraserait la mémoire à
+chaque manche au lieu de ne la poser qu'au premier départ depuis le menu.
+Exposé par `ui.match_origin_screen()`.
+
+**Le nouveau signal `quit_match_requested` réutilise tout le ménage de
+`_on_main_menu_requested()`** (forfait compris — c'était déjà la question
+posée par Adrien : l'abandon devait suivre le nouveau bouton, pas rester
+accroché à l'app-quit qui disparaît de la pause) plutôt que de le dupliquer :
+`_on_main_menu_requested()` prend un `target_screen` optionnel, vide pour tous
+les appelants existants (comportement inchangé), et
+`_on_quit_match_requested()` lui passe `ui.match_origin_screen()`. Le retour
+au menu se fait donc TOUJOURS par `hub.reset()` (accueil), et un écran voulu
+redescend d'un cran par-dessus via `hub.push()` — qui refuse déjà
+silencieusement un identifiant absent ou déjà courant, donc un écran d'origine
+manquant (pause ouverte hors match, cas qui ne devrait pas arriver) retombe
+simplement sur l'accueil, comme MENU PRINCIPAL.
+
+**Piège à ne pas rouvrir** : `hub.push()` sur un salon réseau (SCREEN_HOST /
+SCREEN_JOIN / leurs variantes LAN) ne fait que reposer l'**intention** de mode
+et de transport (`_on_hub_screen_changed()` → `_apply_lobby_intent()`) — la
+même chose qu'une navigation normale vers cet écran. Ça ne réhéberge ni ne
+rejoint rien tout seul ; le joueur retrouve l'écran tel qu'il l'aurait laissé,
+pas un salon rouvert dans son dos.
+
+**Validation :**
+- `tools/test_pause_menu.gd` : `btn_pause_quit` → `btn_pause_quit_match`
+  partout, `_test_signaux_de_sortie` vérifie `quit_match_requested` (et non
+  plus `quit_requested`, qui ne part plus de la pause), nouvelle
+  `_test_ecran_d_origine_du_match` sur la capture par `hide_game_over()` et sa
+  non-réécriture hors transition.
+- `docs/CHECKLIST_TESTS_EN_LIGNE.md` : §1.9/1.10 (retour au bon salon, hôte et
+  client) et §5.7 (remise à vitesse normale sur ce nouveau chemin de sortie),
+  à dérouler à deux machines — non exécuté ici, aucune fenêtre interactive
+  dans cet environnement.
+- `./tools/run_suites.sh` intégralement vert, duos ENet compris.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
