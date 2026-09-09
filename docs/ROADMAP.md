@@ -2404,6 +2404,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
 | **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
 | **Navigation manette hybride : D-Pad case par case et joystick curseur virtuel avec bascule instantanée** (2026-09-07, Adrien) | Deux modes de contrôle complémentaires à la manette dans les menus : le D-Pad (`JOY_BUTTON_DPAD_*`) et les flèches clavier naviguent de manière discrète case par case (curseur virtuel masqué). Le stick analogique fait apparaître un curseur virtuel fluide (`VirtualGamepadCursor`, halo `Charte.AMBRE`, accélération progressive) qui se dirige comme une souris, survole les contrôles interactifs, met à jour le focus/panneau d'aperçu et active au bouton de sélection (`p1_menu_select`). Dès qu'une flèche/D-Pad est pressée ou que la souris physique bouge, le curseur virtuel de joystick s'efface immédiatement. Découplage des axes analogiques dans `input_setup.gd` sur `p1_menu_*` / `p2_menu_*` pour prévenir les sauts de focus involontaires. |
@@ -3127,6 +3128,44 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### V6.10 a été écrite deux fois, et c'est la deuxième fois que ça arrive (2026-09-09)
+
+Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
+soir : 7 matchs, 4-3, arme favorite : pompe » — et l'ont livrée le même jour, de
+deux façons correctes, sur deux branches. Aucune ne savait que l'autre
+travaillait dessus. **C'est trait pour trait ce qui s'était produit sur V6.2 le
+2026-08-18**, et la cause est la même : le journal des sessions partage par
+FICHIER, or ces deux implémentations ne se touchaient pas — l'une vit dans
+`serie_de_session.gd`, l'autre dans cinq fichiers neufs.
+
+| | `main` (`carte_de_soiree()`) | branche photographe (`BilanDeSoiree`) |
+|---|---|---|
+| forme | une LIGNE de texte | une CARTE plein écran, exportable en PNG |
+| où | l'écran de fin de match | le retour au menu |
+| source | le score de session en mémoire | `match_history.json`, filtré sur la séance |
+| couvre | V6.10 | V6.10 + DA6.3 + DA6.4 |
+
+⚠️ **Les deux comptes peuvent diverger dans la même soirée** : la ligne compte
+tout match dont la manche s'est terminée, la carte écarte les matchs de moins de
+cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut lire
+« 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
+l'explique.
+
+**La fusion a gardé les deux**, et la note est dans `game_state.gd` au-dessus de
+`carte_de_soiree()`. Une fusion se résout en choisissant, donc en pouvant
+détruire ; ce choix-ci n'est pas technique. Trois issues : garder la ligne pour
+l'écran de fin et la carte pour le menu (redondant, mais jamais simultané),
+retirer la ligne au profit de la carte, ou faire lire à la ligne le calcul de la
+carte pour qu'au moins les deux chiffres s'accordent.
+
+**Ce que la répétition apprend, au-delà du cas :** le partage par fichier ne
+protège pas d'un doublon quand la seconde implémentation arrive dans des
+fichiers neufs. Ce qui l'aurait évité, c'est une ligne dans le journal des
+sessions **au moment de commencer** — « je prends V6.10 » — et non au moment de
+livrer. Le journal dit qui tient quels FICHIERS ; il ne dit pas qui tient quelles
+FICHES.
+
+
 ### `parallel()` juste après `chain()` ANNULE le `chain()` (2026-09-09)
 
 Un `Tween` en mode `set_parallel(true)` global, dans lequel on écrit ensuite des
@@ -3354,12 +3393,25 @@ sur le décompte ordinaire de trois secondes, lancé identiquement des deux
 côtés par le même `rpc_start_round` que tout le reste du jeu emprunte déjà —
 il n'y a plus rien qui s'abrège localement, donc plus rien à désynchroniser.
 
-⚠️ **Ce que ce correctif NE fait PAS : réparer le classé.** Le même défaut
-existe, verbatim, sur le chemin `_matchmade_ranked = true` — personne ne l'a
-touché, parce que rien ne l'a demandé et qu'aucun essai à deux machines
-n'existe encore sur ce chemin pour vérifier un correctif. Le jour où
-l'appariement classé sera exercé pour de vrai, « prêt côté hôte, invité
-planté sur son décompte » attend toujours dans `_process()`.
+⚠️ **Mise à jour du 2026-09-09 (suite) : le classé aussi, finalement.** Ce
+paragraphe disait le défaut laissé tel quel — verbatim, personne n'avait
+touché le chemin `_matchmade_ranked = true`, faute de demande. Adrien a
+ensuite testé un match classé sur le build 0.3.1 (donc *avant* le correctif
+amical ci-dessus) et cru y retrouver le même symptôme ; le vrai coupable
+était le build non à jour, mais l'occasion a suffi à fermer le défaut côté
+classé aussi, plutôt que de le laisser attendre un essai à deux machines qui
+l'aurait révélé pour de vrai. **Le correctif est le canal qui manquait, pas
+un contournement** : `_process()` collapse déjà `countdown_left` côté hôte
+quand les deux « prêt » sont posés ; il envoie désormais aussi
+`rpc_countdown_launch` au client (`@rpc("authority", "call_remote",
+"reliable")`, symétrique de `rpc_countdown_ready` qui informait déjà l'hôte
+dans l'autre sens), qui l'applique chez lui. `client_peer_id != 0` garde la
+ligne d'envoi : en écran partagé (`_run_fenetre()`, sans réseau ni
+appariement) ce champ reste à 0, donc rien n'est câblé en trop sur ce banc.
+⚠️ **Non vérifié à deux machines ni par un banc à deux instances** — seul
+`--fenetre` (écran partagé, un seul processus) couvre la mécanique
+d'abrègement elle-même ; le trajet réseau réel du nouveau `rpc_countdown_launch`
+reste à prouver, comme l'était le correctif amical avant `duo_apparie`.
 
 **Deux décisions annexes, prises à la même occasion.** `_lancer_match_apparie()`
 tire désormais la carte par défaut (`MapData.DEFAULT_MAP_ID`) pour un match
@@ -7440,6 +7492,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   seulement s'il est branché). Impact branché sur `rpc_update_hp`
   (autoritaire), pas sur la balle prédite ; pouls à mi-temps de 170 BPM.
   Le réglage on/off attendra les Options de la Phase 5.
+  - **✅ Chantier vibrations manettes — étendu et branché le 2026-09-09**, la
+    Phase 5 étant close. Le réglage CONFORT `vibration_manette` (curseur déjà
+    présent dans Options depuis DA4, jamais raccordé — repéré mort par l'audit
+    DA5.1 ci-dessous) pilote maintenant `_rumble()` : multiplie weak/strong,
+    coupe net à 0 %. Quatre signaux ajoutés, plan validé par Adrien avant
+    implémentation : tir à sec (`RUMBLE_DRY_FIRE`, distinct du tir réel),
+    rechargement terminé (`RUMBLE_RELOAD_READY`), lancer de fusée
+    (`RUMBLE_FLARE_*`, plus sourd et plus long qu'un tir pour ne pas confondre
+    les deux gestes), et `rumble_death()` — la victime ne ressentait jusqu'ici
+    **rien** à sa propre mort, contrairement au tueur (`rumble_kill`) ; trois
+    pulsations décroissantes sur le moteur grave, symétriques au double coup
+    du vainqueur.
+  - ⚠️ **Défaut trouvé en câblant, pas cherché : `_is_locally_piloted()`
+    coupait les QUATRE vibrations d'origine en écran partagé.** Le `match` de
+    cette fonction ne couvre que `ONLINE_HOST`/`ONLINE_CLIENT` et retombe sur
+    `return false` — donc toujours faux en `LOCAL_SPLITSCREEN`, le mode dont
+    ce fichier dit qu'il est l'identité du jeu. V1.5 n'avait donc jamais vibré
+    en écran partagé depuis sa fermeture, et rien ne le signalait : pas
+    d'erreur, pas de test (aucune suite ne peut lire un moteur de manette).
+    Corrigé en retirant ce garde de `_rumble()` seul, pas de la fonction
+    partagée : les deux lignes suivantes (`LocalInputProvider` + pad connecté)
+    couvrent déjà exactement le même besoin, et correctement dans les trois
+    modes — `_is_locally_piloted()` reste inchangée pour l'acouphène et le
+    pouls d'éblouissement, hors périmètre de ce chantier.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -7468,7 +7544,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   **✅ Fait** — CanvasLayer propre à GameState (ui.gd est à l'autre session),
   nettoyé par `_abort_killcam` sur tous les chemins de sortie.
 - **V2.8 Acouphène de mort** — sifflement + monde étouffé 1 s côté perdant. —
-  *assets : 1 sample.*
+  *assets : 1 sample.* **✅ Fait le 2026-09-09** — câblé dans `player.gd:die()`
+  via `AudioManager.jouer_acouphene_mort()`, avec repli propre silencieux si
+  le sample d'acouphène est absent.
 - **V2.9 « Effleuré : 13 px »** — afficher au perdant la distance
   perpendiculaire du tir fatal (la formule de dégâts la connaît). Le « j'y
   étais presque » est le moteur du rematch. **✅ Fait** — écrit par la balle
@@ -7524,8 +7602,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     `Protocol.VERSION`, ce qui dépasse un item de game feel.
 - **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par
   chiffre ; le CanvasModulate remonte du noir absolu au noir de jeu sur le
-  « 1 ». — *assets : 3 notes courtes.* **Le pop est fait** (`ui.set_countdown`,
-  TRANS_BACK depuis 1,7). Les notes attendent leurs samples. ⚠️ **La clause du
+  « 1 ». — *assets : 3 notes courtes.* **✅ Fait** — le pop est fait (`ui.set_countdown`,
+  TRANS_BACK depuis 1,7) et les 3 notes montantes sont câblées dans
+  `game_state.gd:_process()` via `AudioManager.play_count(_tic)`. ⚠️ **La clause du
   CanvasModulate n'a pas de cible :** celui de l'arène est déjà `Color(0,0,0)`,
   et la calibration règle un **gamma**, pas cette couleur — il n'existe donc
   aucun « noir de jeu » au-dessus du noir absolu vers lequel remonter. Rendre
@@ -7533,8 +7612,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   aux lumières des joueurs pendant le décompte, donc à ce qui est visible au
   départ d'une manche : c'est une décision de jeu, pas de finition.
 - **V3.4 Dernière minute** — chrono or, stem batterie (V1.2), tic-tac sous
-  10 s. — *assets : 1 tic-tac.* **✅ Fait côté image** : or sous 60 s, rouge
-  d'alerte sous 10 s, et le chrono **bat à la seconde** sous ce dernier seuil.
+  10 s. — *assets : 1 tic-tac.* **✅ Fait** : or sous 60 s, rouge
+  d'alerte sous 10 s, pulsation métronomique et battement sonore
+  `AudioManager.play_ui("ui_tick", -4.0)` sous 10 s câblé dans `game_state.gd`.
   - Le battement naît du **temps lui-même** (`fmod(time_left, 1.0)`), pas d'un
     tween. Un tween relancé à chaque frame ne bat pas, il tremble — et un chrono
     resynchronisé par le réseau saute d'une fraction de seconde sans casser la
@@ -7655,9 +7735,13 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   panoramique — la source cesse d'être un point.
 - **V4.2 Hitmarker centre/bord** — « thock » à pleins dégâts, « tick » en
   effleurement, branché sur `rpc_update_hp` (autoritaire), pas sur la balle
-  prédite. — *assets : 2 samples.*
+  prédite. — *assets : 2 samples.* **✅ Fait le 2026-09-09** — différenciation
+  selon `proximite_bord` (< 0.45 = coup net au centre, >= 0.45 = effleurement
+  tangentiel) via `AudioManager.play_hit(pos, proximite_bord)`.
 - **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
-  le geste le plus stylé du jeu. — *assets : 3 samples.*
+  le geste le plus stylé du jeu. — *assets : 3 samples.* **✅ Fait le 2026-09-09** —
+  foley mécanique physique (choc balistique, balayage Doppler, flutter de vrille et
+  résonance d'acier) sur `ricochet_01.wav`, `ricochet_02.wav`, `ricochet_03.wav`.
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
   presse pendant le rechargement. — *assets : 1 sample.* **✅ Fait côté image.**
   Presser la détente pendant le rechargement ne produisait **rien** : ni son, ni
@@ -7680,14 +7764,17 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   synchrone du stem heartbeat. **✅ Fait** — même battement que le pouls
   haptique V1.5 : un seul cœur pilote l'image, la main et le stem.
 - **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
-  *assets : 3-4 samples.*
+  *assets : 3-4 samples.* **✅ Fait le 2026-09-09** — tintement métallique
+  différé dans `player.gd:_tinter_la_douille()` via `AudioManager.play_shell()`.
 - **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact.
   **✅ Fait le 2026-09-08** — 6 variantes organiques réelles de compression
   corporelle et souffle coupé (`breath_hit_01.wav` à `06.wav`), inscrites au
   manifeste, câblées dans `player.gd:rpc_update_hp()` et jouées via
   `AudioManager.play_breath_hit()`. Portée calée sur celle d'un pas (-13.0 dB).
 - **V4.10 Vol de l'arbalète** — chuintement doppler discret du carreau sans
-  lumière. — *assets : 1 boucle courte.*
+  lumière. — *assets : 1 boucle courte.* **✅ Fait le 2026-09-09** — souffle
+  discret en vol câblé dans `bullet.gd:_physics_process()` via
+  `AudioManager.play_bolt_flight()`.
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
   (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
   de la lumière déjà portée par la goutte, décroissance linéaire dans
@@ -7888,7 +7975,16 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.9 Écran HISTORIQUE** — lire `match_history.json` (armes, cartes,
   durées) dans un onglet : contempler ses matchs, c'est revenir.
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
-  « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
+  « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». **✅ Fait le 2026-09-09**
+  — implémenté dans `serie_de_session.gd:carte_soiree()`, testé dans
+  `tools/test_serie_de_session.gd`, et affiché dans le bilan et au retour menu
+  via `GameState.carte_de_soiree()`.
+
+  ⚠️ **ET IMPLÉMENTÉ UNE SECONDE FOIS LE MÊME JOUR, par la session photographe**
+  — `bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`, au
+  titre de DA6.3 et DA6.4. Découvert à la fusion, le 2026-09-09. **La fusion n'a
+  supprimé ni l'une ni l'autre : le choix est un choix de produit, et il revient
+  à Adrien.** Voir « Pièges connus », *V6.10 a été écrite deux fois*.
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
@@ -10965,11 +11061,13 @@ de DA5.2/DA5.7/DA5.5 ci-dessous — leur vérification visuelle passe par
 avec l'identifiant en **littéral**, hors `effect_policy.gd`, `settings_manager.gd`
 et `tools/` (qui liste tout génériquement pour construire l'écran des réglages
 et ne prouve donc rien sur l'application réelle). Seize identifiants sur
-trente-quatre — 47 % — n'ont **aucun** site d'appel en production :
+trente-quatre — 47 % — n'avaient **aucun** site d'appel en production à
+l'audit du 2026-09-09 ; `vibration_manette` en est sorti le jour même, câblé
+par le chantier vibrations manettes ci-dessus (quinze restants, 44 %) :
 
 | Famille | Identifiants sans aucun appel de production |
 |---|---|
-| CONFORT (8/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `vibration_manette`, `arene_au_repos` |
+| CONFORT (7/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `arene_au_repos` |
 | MONDE (8/12) | `eblouissement`, `silhouette_revelee`, `flash_de_tir`, `trait_de_balle`, `lumiere_impact`, `particules_sang`, `eclats_impact`, `traces_de_sang` |
 
 Les dix-huit restants sont bien branchés — les quinze effets de la vague M via

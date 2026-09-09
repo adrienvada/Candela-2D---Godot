@@ -2808,4 +2808,27 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - 70/70 contrôles au vert sur `tools/test_dosage_audio.gd`.
   - 63/63 suites solo headless + 7/7 scénarios réseau duo (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script** dans `tools/run_suites.sh` (274s).
 
+#### Lot du 2026-09-09 — session « résolution des chantiers de Game Feel restants (Phases 0, 1 et 2) »
+
+**Chantier Game Feel Global — Duel, Tension, Interface & Clôture méta** (validé par Adrien) :
+- **Phase 0 — Réconciliations & Correctifs d'interface :**
+  - **Sang au sol (SG) :** `blood_stain.gd`, `bullet.gd`, `tools/test_sang_au_sol.gd` (38/38) — distinction nette de la tache en étoile parfaitement centrée (`SEUIL_ETOILE_CENTREE = 2.0` px sur distance perpendiculaire à l'axe du corps) vs taches directionnelles orientées au-delà.
+  - **Écran « Effets » (DA5.8) :** `screen_effects.gd`, `tools/test_audit_menus.gd` — élimination de l'effondrement vertical de la liste des options d'effets dans le panneau de droite du Hub (`scroll.custom_minimum_size.y = 480.0`).
+  - **Ordre des calques UI / Brouillage :** `ui.tscn` — `layer = 10` sur le CanvasLayer racine de `UI` garantissant que le HUD surplombe en permanence les halos de brouillage et d'éblouissement (`layer = 1` et `2`).
+  - **Optimisation shader voile :** `voile_eblouissement.gdshader` — court-circuit anticipé `if (niveau <= 0.001) { COLOR = vec4(0.0); }` évitant les calculs de flou/aberration plein écran quand aucun joueur n'est ébloui.
+- **Phase 1 — Cœur du Game Feel en Manche :**
+  - **Brouillage `Mode.LAMPE` :** `player.gd` — atténuation de la silhouette ennemie par `Brouillage.opacite(dazzle_amount)` sous éblouissement adverse (y compris révélations visuelles).
+  - **Hitmarker sonore différencié (V4.2) :** `bullet.gd` — coup franc et sec au centre (`proximite_bord < 0.45` -> impact net) vs effleurement tangentiel (`proximite_bord >= 0.45` -> `hit_tangent`).
+  - **Indicateur de fusée au HUD :** `ui.gd` — voyant / badge discret (`p1_flare`, `p2_flare`) dans le conteneur `bottom` du HUD en miroir de la torche, asservi à `GameState.fusee_disponible(pid)`.
+  - **Foley d'arsenal & balistique :** `bullet.gd`, `player.gd` — chuintement discret du carreau d'arbalète en vol (`play_bolt_flight` V4.10) et tintement métallique différé de la douille éjectée (`play_shell` V4.8).
+- **Phase 2 — Tension, Audio & Endgame :**
+  - **Décompte audio de départ (V3.3) :** `game_state.gd` — 3 ponctuations audio montantes `play_count` sur 3 - 2 - 1.
+  - **Battement d'urgence des 10 secondes (V3.4) :** `game_state.gd` — ponctuation métronomique d'urgence `ui_tick` sous 10.0 s.
+  - **Acouphène et étouffement de mort (V2.8) :** `player.gd` — déclenchement de `AudioManager.jouer_acouphene_mort()` à la mort locale.
+  - **Cartes de fin de soirée (V6.10 / DA6.3) :** `serie_de_session.gd`, `game_state.gd`, `ui.gd`, `tools/test_serie_de_session.gd` — carte récapitulative (« CE SOIR : N MATCHS · V-D · ARME FAVORIE : NOM ») dès 3 matchs joués, affichée dans le bilan composé et au retour menu.
+- **Foley du ricochet mécanique (V4.3) :**
+  - Synthèse physique de 3 variantes haute fidélité (`ricochet_01.wav`, `ricochet_02.wav`, `ricochet_03.wav`) en PCM 16-bit 48 kHz stéréo : impact balistique transitoire (< 5 ms), sifflement Doppler descendant d'arrachement, flutter de rotation excentrique de la balle déformée (95-185 Hz) et résonance mécanique de plaque d'acier.
+  - Mise à jour de `preview_soundboard.html` avec les 3 flux base64 synchronisés.
+  - 64/64 suites headless solo vertes (86s) dans `tools/run_suites.sh --rapide`.
+
 

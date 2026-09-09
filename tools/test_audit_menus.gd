@@ -53,7 +53,7 @@ func _run() -> void:
 
 	_audit_entrees()
 	_audit_panneaux_declares()
-	_audit_personnalisation()
+	await _audit_personnalisation()
 	_audit_carte_appartient_a_l_hote()
 	await _audit_la_colonne_de_lecture()
 	await _audit_le_cadre_montre_vraiment()
@@ -527,6 +527,12 @@ func _audit_personnalisation() -> void:
 		_check("%s montre ses réglages dans le cadre (%d commandes)" % [libelle, commandes],
 			commandes >= int(attendus[libelle]),
 			"attendu au moins %d" % int(attendus[libelle]))
+		_ui.hub._apply_panel(cle)
+		await process_frame
+		await process_frame
+		_check("%s a une hauteur utile dans le cadre" % libelle,
+			contenu != null and contenu.size.y > 100.0,
+			"%.0f px" % (contenu.size.y if contenu != null else 0.0))
 	for libelle: String in attendus.keys():
 		_check("la rubrique %s est présente" % libelle, vus.has(libelle))
 

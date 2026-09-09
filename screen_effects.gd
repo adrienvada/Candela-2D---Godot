@@ -84,6 +84,7 @@ func build(body: VBoxContainer) -> void:
 	# La table est plus haute que le corps d'un écran de hub, et elle grandira.
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size.y = 480.0
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(scroll)
 

@@ -20,7 +20,10 @@ humains/agents est dans [README.md](README.md). Règles non négociables :
   **La republication est centralisée** (décidé le 2026-08-18, avec Adrien) :
   une seule session s'en charge à la fois ; les autres ne republient pas
   elles-mêmes, elles lui transmettent leur delta par message inter-session
-  (`ListAgents` / `SendMessage`). Aucune session déjà chargée de la
+  (`ListAgents` / `SendMessage`). **Le delta commence par le nom de la session
+  qui l'envoie** (tel que `ListAgents` l'affiche), sa branche et le chantier
+  concerné : le suivi affiche quelle session tient quel chantier (décidé le
+  2026-09-09, avec Adrien). Aucune session déjà chargée de la
   republication ? La première qui le constate en devient responsable et le dit
   aux autres. Détail du protocole : [README.md](README.md#republier-le-suivi).
   S'il faut republier soi-même : l'outil `Artifact` **en passant cette URL** —

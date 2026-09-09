@@ -127,6 +127,8 @@ var _entry_styles: Dictionary = {}
 var _stack: PackedStringArray = PackedStringArray([ROOT])
 
 var _title_label: Label
+var _title_texture: TextureRect
+var _title_cache: Dictionary = {}
 var _detail_host: VBoxContainer
 ## Le pied du cadre : le nom de l'entrée sélectionnée, et ce qu'elle explique.
 var _pied: VBoxContainer
@@ -168,6 +170,16 @@ func _build() -> void:
 	left.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	left.add_theme_constant_override("separation", MenuTheme.GAP_S)
 	columns.add_child(left)
+
+	_title_texture = TextureRect.new()
+	_title_texture.name = "TitleTexture"
+	_title_texture.custom_minimum_size = Vector2(0, 48)
+	_title_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_title_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	_title_texture.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_title_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title_texture.hide()
+	left.add_child(_title_texture)
 
 	_title_label = Label.new()
 	_title_label.add_theme_font_size_override("font_size", MenuTheme.T_TITRE)
@@ -524,6 +536,19 @@ func _apply(direction: float) -> void:
 	target.show()
 
 	_title_label.text = String(_titles.get(id, id)).to_upper()
+	var title_tex: Texture2D = _get_title_texture(id)
+	if title_tex != null:
+		_title_texture.texture = title_tex
+		var aspect: float = float(title_tex.get_width()) / float(maxi(1, title_tex.get_height()))
+		var target_w: float = minf(430.0, 48.0 * aspect)
+		_title_texture.custom_minimum_size = Vector2(target_w, 48.0)
+		_title_texture.show()
+		_title_label.hide()
+	else:
+		_title_texture.texture = null
+		_title_texture.hide()
+		_title_label.show()
+
 	# La sélection ne survit pas au changement d'écran : elle désignerait une
 	# entrée d'un autre écran, et le cadre montrerait ce qu'on vient de quitter.
 	# **On l'éteint avant de l'oublier** — sinon elle reste allumée derrière soi,
@@ -538,6 +563,21 @@ func _apply(direction: float) -> void:
 		_reset_transform(target)
 
 	screen_changed.emit(id)
+
+func _get_title_texture(id: String) -> Texture2D:
+	if _title_cache.has(id):
+		return _title_cache[id]
+	var candidates: PackedStringArray = []
+	if id == ROOT or id == "accueil":
+		candidates.append("res://assets/ui/titres/titre_accueil.png")
+	candidates.append("res://assets/ui/titres/titre_" + id + ".png")
+	var tex: Texture2D = null
+	for path in candidates:
+		if ResourceLoader.exists(path):
+			tex = load(path)
+			break
+	_title_cache[id] = tex
+	return tex
 
 func _slide(body: Control, direction: float) -> void:
 	if _tween != null and _tween.is_valid():
@@ -558,6 +598,15 @@ func _slide(body: Control, direction: float) -> void:
 		MenuTheme.C.Courbe.ENTREE)
 	MenuTheme.C.animer(_tween, body, "offset_right", offset, 0.0, MenuTheme.FADE,
 		MenuTheme.C.Courbe.ENTREE)
+
+	if _title_texture != null and _title_texture.visible:
+		_title_texture.modulate.a = 0.0
+		MenuTheme.C.animer(_tween, _title_texture, "modulate:a", 0.0, 1.0, MenuTheme.FADE,
+			MenuTheme.C.Courbe.ENTREE)
+	if _title_label != null and _title_label.visible:
+		_title_label.modulate.a = 0.0
+		MenuTheme.C.animer(_tween, _title_label, "modulate:a", 0.0, 1.0, MenuTheme.FADE,
+			MenuTheme.C.Courbe.ENTREE)
 
 	# Déclenchement du Comic Panel Reveal sur les cases gauche et droite
 	if _left_comic != null:
@@ -587,6 +636,10 @@ func _reset_transform(body: Control) -> void:
 	body.modulate.a = 1.0
 	body.offset_left = 0.0
 	body.offset_right = 0.0
+	if _title_texture != null:
+		_title_texture.modulate.a = 1.0
+	if _title_label != null:
+		_title_label.modulate.a = 1.0
 	if _left_comic != null:
 		_left_comic.arret_immediat()
 	if _right_comic != null:

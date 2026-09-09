@@ -68,6 +68,13 @@ var _debut_de_seance: String = Time.get_datetime_string_from_system(true, true)
 ## arrive après chaque match : reposée à chaque fois, elle cesserait d'être une
 ## fin de soirée pour devenir un écran de plus à congédier.
 var _soiree_montree: bool = false
+
+## ⚠️ **Ces deux-là viennent de `main` et comptent la MÊME chose que le bilan de
+## soirée, autrement.** Voir la note au-dessus de `carte_de_soiree()` : V6.10 a
+## été implémentée deux fois, et la fusion garde les deux plutôt que d'en
+## supprimer une. Décision d'Adrien attendue.
+var session_ties: int = 0
+var _session_weapons: Dictionary = {}
 ## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
 ##
 ## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
@@ -148,6 +155,8 @@ const COUNTDOWN_MATCHMADE := 10.0
 ## suffit pas : l'autre choisit peut-être encore.
 ## V3.3 — la derniere seconde entiere annoncee. -1 tant qu'aucune ne l'a ete.
 var _dernier_tic_decompte: int = -1
+## V3.4 — le tic-tac sous 10 s : la dernière seconde entière pour laquelle le tic a joué.
+var _dernier_tic_chrono: int = -1
 var _countdown_ready_local: bool = false
 var _countdown_ready_peer: bool = false
 ## Ce match vient-il de l'appariement automatique (amical ou classé) ? Décide du
@@ -600,6 +609,8 @@ func _solder_le_match() -> void:
 	# double comptage, le score repart de 0-0 ».
 	p1_session_wins = 0
 	p2_session_wins = 0
+	session_ties = 0
+	_session_weapons.clear()
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
@@ -1255,6 +1266,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# attraper. Sans lui, `count_3` ne sortirait jamais — et son absence
 	# passerait pour une intention.
 	_dernier_tic_decompte = -1
+	_dernier_tic_chrono = -1
 	_countdown_ready_local = false
 	_countdown_ready_peer = false
 	# La fenêtre de choix s'ouvre avec le décompte, et seulement pour un match
@@ -1300,10 +1312,24 @@ func _process(delta):
 			# décalés d'un aller-retour. N'existe qu'en classé — un match amical
 			# n'ouvre plus cette fenêtre du tout (`_matchmade_ranked`), donc ces
 			# drapeaux y restent à `false` et cette branche ne s'y déclenche jamais.
+			#
+			# ⚠️ **Longtemps vrai à moitié seulement.** L'hôte collapsait bien SON
+			# propre décompte ici, mais rien n'en informait le client — measured
+			# à deux machines le 2026-09-09 (v0.3.1) : la manche partait pour
+			# l'hôte seul, le client restant planté sur ses dix secondes. Le
+			# `rpc_id` ci-dessous est le canal qui manquait, symétrique de
+			# `rpc_countdown_ready` (qui informe déjà l'hôte que le CLIENT est
+			# prêt) — voir « Deux prêts, un seul départ » aux Pièges connus, qui
+			# documentait le défaut sans le fermer côté classé.
 			if _matchmade_round and _matchmade_ranked and _countdown_ready_local \
 					and _countdown_ready_peer \
 					and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				countdown_left = 0.0
+				# `client_peer_id` reste à 0 en écran partagé — pas de pair à
+				# prévenir, et c'est ce qui laisse `_run_fenetre()` exercer ce
+				# chemin sans réseau ni appariement, comme conçu.
+				if client_peer_id != 0:
+					rpc_id(client_peer_id, "rpc_countdown_launch")
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
 			# V3.3 — une note par seconde entiere, et seulement les trois
@@ -1326,6 +1352,13 @@ func _process(delta):
 					rpc_sync_time.rpc(time_left)
 		else:
 			time_left -= delta
+			# V3.4 — le tic-tac sous 10 s : un tic sec par seconde entière quand le
+			# chrono passe en rouge et bat.
+			if time_left < 10.0 and time_left > 0.0:
+				var tic_chrono := int(ceil(time_left))
+				if tic_chrono != _dernier_tic_chrono:
+					_dernier_tic_chrono = tic_chrono
+					AudioManager.play_ui("ui_tick", -4.0)
 			if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 				_time_sync_accum += delta
 				if _time_sync_accum >= TIME_SYNC_INTERVAL:
@@ -2137,6 +2170,14 @@ func _do_end_round(winner_id: int):
 			p1_session_wins += 1
 		elif winner_id == 1:
 			p2_session_wins += 1
+		elif winner_id == -1:
+			session_ties += 1
+
+		var _local_idx := _local_player_index()
+		var _local_p = p2 if _local_idx == 1 else p1
+		if _local_p and _local_p.current_weapon:
+			var _nom_arme: String = _local_p.current_weapon.name
+			_session_weapons[_nom_arme] = _session_weapons.get(_nom_arme, 0) + 1
 		# Le mot de la série est calculé AVANT que l'état n'avance : il compare
 		# ce qui vient de tomber à ce qui commence.
 		_mot_de_serie = SerieDeSession.mot(serie_porteur, serie_longueur,
@@ -2316,13 +2357,57 @@ func _do_end_round(winner_id: int):
 	# même chose au même moment. À la fin du match, la scène est effacée et le
 	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
 	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
-		dernier_effleurement)
+		dernier_effleurement, carte_de_soiree())
 	# DA6.1 — l'affiche, par-dessus le salon que ces deux lignes viennent de
 	# poser. Elle LIT le verdict sur le titre du menu plutôt que de le
 	# recalculer : le mot dépend du mode et d'un arbitrage sur l'égalité, et deux
 	# calculs finiraient par se contredire à l'écran. Voir `affiche_de_fin.gd`.
 	_poser_affiche_de_fin(winner_id)
 	_apply_deferred_rematch()
+
+# ---------------------------------------------------------------------------
+# ⚠️ V6.10 EXISTE EN DEUX EXEMPLAIRES, ET LA FUSION N'EN A SUPPRIMÉ AUCUN
+#
+# Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
+# soir : 7 matchs, 4-3, arme favorite : pompe » — et l'ont livrée deux fois, de
+# deux façons correctes. C'est le motif déjà consigné pour V6.2 le 2026-08-18.
+#
+# | | sur `main` (`carte_de_soiree()`) | sur la branche photographe (`BilanDeSoiree`) |
+# |---|---|---|
+# | forme | une LIGNE de texte | une CARTE plein écran, exportable en PNG |
+# | où | l'écran de fin de match | le retour au menu |
+# | source | le score de session en mémoire | `match_history.json`, filtré sur la séance |
+# | couvre | V6.10 | V6.10 + DA6.3 + DA6.4 |
+#
+# ⚠️ **Les deux comptes peuvent diverger dans la même soirée** : celui-ci compte
+# tout match dont la manche s'est terminée, l'autre écarte les matchs de moins de
+# cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut donc lire
+# « 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
+# l'explique.
+#
+# **Rien n'est supprimé ici : une fusion se résout en choisissant, donc en
+# pouvant détruire, et ce choix-là est un choix de produit.** Adrien tranche.
+# Trois issues possibles : garder la ligne pour l'écran de fin et la carte pour le
+# menu (redondant mais pas simultané), retirer la ligne au profit de la carte, ou
+# faire lire à la ligne le même calcul que la carte (`BilanDeSoiree`) pour qu'au
+# moins les deux chiffres s'accordent.
+# ---------------------------------------------------------------------------
+
+func favorite_session_weapon() -> String:
+	var fav := ""
+	var max_count := 0
+	for w in _session_weapons:
+		if _session_weapons[w] > max_count:
+			max_count = _session_weapons[w]
+			fav = str(w)
+	return fav
+
+func carte_de_soiree() -> String:
+	var local_idx := _local_player_index()
+	var v := p1_session_wins if local_idx <= 0 else p2_session_wins
+	var d := p2_session_wins if local_idx <= 0 else p1_session_wins
+	return SerieDeSession.carte_soiree(v, d, session_ties, favorite_session_weapon())
+
 
 ## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
 ##
@@ -2937,6 +3022,20 @@ func rpc_countdown_ready() -> void:
 		return
 	_countdown_ready_peer = true
 
+## [Client] L'hôte a vu les deux « prêt » et abrège la fenêtre — ce paquet est
+## ce qui manquait pour que le client suive. Sans lui, `_process()` ne
+## collapse le décompte QUE côté hôte : la manche partait pour lui seul
+## pendant que le client comptait ses dix secondes jusqu'au bout, mesuré à
+## deux machines le 2026-09-09. `call_remote` et non `call_local` : l'hôte a
+## déjà collapsé le sien juste avant d'envoyer ce paquet.
+@rpc("authority", "call_remote", "reliable")
+func rpc_countdown_launch() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	countdown_left = 0.0
+
 ## L'hôte annonce au client s'il est prêt, ou s'il ne l'est plus.
 ##
 ## **Il n'existait aucun chemin pour cette information.** Le client pressait
@@ -3351,8 +3450,11 @@ func _on_main_menu_requested():
 		
 	# Le score de session ne survit pas au retour au menu : une nouvelle série
 	# repart de 0 - 0.
+	var carte := carte_de_soiree()
 	p1_session_wins = 0
 	p2_session_wins = 0
+	session_ties = 0
+	_session_weapons.clear()
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
@@ -3394,6 +3496,8 @@ func _on_main_menu_requested():
 	_accorder_rendu_aux_vues()
 
 	ui.show_main_menu()
+	if carte != "":
+		ui.game_over_score.text = carte
 	AudioManager.play_music("music_menu")
 
 func _on_quit_requested():
