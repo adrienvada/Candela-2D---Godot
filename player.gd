@@ -2296,9 +2296,12 @@ func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
 	#
 	# BF5 — **il suit le bandeau de SA vue, et rien de plus.** Le même `decalage`
 	# lui est appliqué : il garde donc sa place relative au mot, où que le cadrage
-	# ait dû poser celui-ci. À qui ce chiffre s'adresse — au seul perdant, ou aux
-	# deux — reste un arbitrage d'Adrien, pas une correction ; l'audience ne
-	# change pas ici.
+	# ait dû poser celui-ci.
+	#
+	# **Les deux joueurs le voient, tranché par Adrien le 2026-09-09.** La
+	# question était réelle : le commentaire ci-dessus le destine au perdant, et
+	# le cadrage l'a rendu lisible par le tueur pour la première fois. La réponse
+	# est de le laisser aux deux — ne pas restreindre son audience ici.
 	if perp < 0.0:
 		return
 	var sub = Label.new()

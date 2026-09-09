@@ -13719,9 +13719,13 @@ de l'arrivée (6 échecs), et mettre une **largeur de vue en dur** au lieu de li
 le rectangle reçu (2 échecs). L'oracle reste écrit à la main — 957, 1080, 1920,
 171 — et jamais lu sur les constantes qu'il surveille.
 
-#### BF5 — ce qui est SIGNALÉ et n'a pas été corrigé
+#### BF5 — les trois points signalés, TRANCHÉS le 2026-09-09
 
-Trois points qui demandent l'arbitrage d'Adrien, pas une correction :
+**Adrien a répondu aux trois : on ne touche à rien.** Aucun code n'a changé, et
+c'est la décision elle-même qui est la livraison — sans elle, chacun de ces
+points serait rouvert par la prochaine session qui les verrait à l'écran. Le
+détail de ce qui a été soumis reste ci-dessous, parce qu'une décision sans sa
+question ne se relit pas ; chaque point porte désormais sa réponse.
 
 - **Le bandeau peut se poser sur le HUD.** En vue unique, un cadavre en haut de
   l'écran accroche la boîte au bord haut, où vivent le chronomètre et le badge
@@ -13729,18 +13733,26 @@ Trois points qui demandent l'arbitrage d'Adrien, pas une correction :
   **nouveau, et c'est moi qui l'introduis** — avant, la boîte ne montait jamais
   là. La faire éviter le HUD demanderait de coder dans `player.gd` la hauteur du
   bandeau de `ui.gd` : un couplage muet entre deux fichiers, exactement ce que
-  ce dépôt paie cher. À trancher : le bandeau doit-il esquiver le HUD, et à quel
-  prix.
+  ce dépôt paie cher. **Tranché : on ne fait rien.** Le bandeau garde le droit
+  de monter sur le chronomètre pendant sa seconde et demie — le couplage entre
+  `player.gd` et `ui.gd` coûterait plus que le recouvrement, et la constante de
+  bande haute qui l'éviterait sans lire `ui.gd` serait un nombre deviné, périmé
+  au premier HUD qui change de hauteur.
 - **Le sous-titre « à N px du centre » suit maintenant le bandeau de sa vue**, et
   rien de plus. Son audience n'a **pas** changé — il s'affichait déjà dans les
   deux vues — mais il est pour la première fois **lisible par le tueur**, à qui
-  il raconte la marge de son propre tir. À qui ce chiffre s'adresse reste un
-  arbitrage, pas une correction.
+  il raconte la marge de son propre tir. **Tranché : les deux le voient.** Le
+  commentaire de `V2.9` le destinait au seul perdant ; cette destination n'est
+  plus la règle, et le code porte la décision là où la question se posait, pour
+  qu'aucune session ne « corrige » l'audience en croyant lire une intention.
 - **La flèche paraît détachée du cartouche.** Elle est posée sur le bord de la
   boîte du `TextureRect` ; la planche `cartouche_fatal.png` a des bords rongés
   et transparents, donc l'encre s'arrête avant. L'écart se voit, il se lit
   comme un pointeur et non comme un défaut — mais il vient de l'image, pas du
   calcul, et le corriger supposerait de mesurer l'alpha de la planche.
+  **Tranché : on laisse.** L'écart lit juste ; la rentrée de flèche mesurée sur
+  l'alpha ne vaudrait que pour cette planche-là et se casserait au premier
+  cartouche redessiné.
 
 #### Ce qui n'a PAS été prouvé, et il faut le dire
 
