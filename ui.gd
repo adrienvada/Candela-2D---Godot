@@ -17,6 +17,9 @@ const SHADER_KILLCAM := preload("res://killcam_overlay.gdshader")
 signal replay_requested
 signal quit_requested
 signal main_menu_requested
+## Départ demandé depuis la pause, en plein match, vers l'écran du hub d'où
+## le match a été lancé — pas l'accueil. Voir `match_origin_screen()`.
+signal quit_match_requested
 ## Rejoindre un salon n'est plus lancer un match : les deux gestes sont
 ## séparés depuis que le départ attend les deux « PRÊT ».
 signal join_requested
@@ -970,7 +973,7 @@ var pause_time_label: Label
 var btn_pause_resume: Button
 var btn_pause_options: Button
 var btn_pause_menu: Button
-var btn_pause_quit: Button
+var btn_pause_quit_match: Button
 
 ## Les réglages restent joignables en cours de match : la pause emprunte l'onglet
 ## CONTRÔLES du menu, seul onglet montré dans ce cas. Ce détour disparaît à
@@ -1010,6 +1013,18 @@ var _debug_arena_nodes: int = 0
 var _assets_summary: String = ""
 
 var _is_main_menu: bool = true
+
+## Écran du hub d'où est parti le dernier match — capturé dans `hide_game_over()`,
+## le seul des quatre points de bascule de `_is_main_menu` qui marque une vraie
+## sortie du menu vers une manche vivante (les trois autres reviennent AU menu ou
+## rouvrent le même salon). Sert « QUITTER LE MATCH » de la pause : `main_menu_requested`
+## ramène toujours à `MenuHub.ROOT` via `hub.reset()`, ce champ permet de redescendre
+## ensuite au bon écran plutôt que d'y rester.
+var _match_origin_screen: String = MenuHub.ROOT
+
+## L'écran du hub d'où le match en cours (ou le dernier joué) a été lancé.
+func match_origin_screen() -> String:
+	return _match_origin_screen
 
 # ---------------------------------------------------------------------------
 # KILLCAM
@@ -5886,6 +5901,14 @@ func _build_pause_menu() -> void:
 
 	# Colonne plutôt que rangée : c'est la forme qui se parcourt le plus
 	# naturellement au curseur, et la pause n'a que quatre issues.
+	#
+	# ⚠️ **QUITTER (l'application) n'est plus une issue de la pause** (demande
+	# d'Adrien, 2026-09-09) : quitter le jeu entier depuis un match en cours n'a
+	# plus de bouton dédié ici, cette action reste réservée à l'accueil. Ce
+	# quatrième bouton devient « QUITTER LE MATCH », qui ne quitte PAS
+	# l'application : il ramène au salon d'où le match a été lancé (voir
+	# `quit_match_requested` / `match_origin_screen()`). MENU PRINCIPAL, qui
+	# ramène toujours à l'accueil du hub, prend sa place en bas — et sa couleur.
 	btn_pause_resume = _make_pause_button("REPRENDRE", COLOR_P1, true)
 	btn_pause_resume.pressed.connect(_resume_game)
 	column.add_child(btn_pause_resume)
@@ -5894,19 +5917,19 @@ func _build_pause_menu() -> void:
 	btn_pause_options.pressed.connect(_open_pause_options)
 	column.add_child(btn_pause_options)
 
-	btn_pause_menu = _make_pause_button("MENU PRINCIPAL", COLOR_DIM)
+	btn_pause_quit_match = _make_pause_button("QUITTER LE MATCH", COLOR_DIM)
+	btn_pause_quit_match.pressed.connect(func() -> void:
+		get_tree().paused = false
+		quit_match_requested.emit()
+	)
+	column.add_child(btn_pause_quit_match)
+
+	btn_pause_menu = _make_pause_button("MENU PRINCIPAL", COLOR_P2)
 	btn_pause_menu.pressed.connect(func() -> void:
 		get_tree().paused = false
 		main_menu_requested.emit()
 	)
 	column.add_child(btn_pause_menu)
-
-	btn_pause_quit = _make_pause_button("QUITTER", COLOR_P2)
-	btn_pause_quit.pressed.connect(func() -> void:
-		get_tree().paused = false
-		quit_requested.emit()
-	)
-	column.add_child(btn_pause_quit)
 
 func _make_pause_button(label: String, accent: Color, primary: bool = false) -> Button:
 	return MenuWidgets.make_button(label, accent, primary, T_APPUI, Vector2(320, 56))
@@ -7704,6 +7727,14 @@ func _arreter_annonce_score() -> void:
 		bilan.modulate = Color.WHITE
 
 func hide_game_over() -> void:
+	# Capturé AVANT la bascule, et seulement si on partait vraiment du menu :
+	# une manche relancée dans le même salon (`rouvrir_le_salon()` a déjà remis
+	# `_is_main_menu` à vrai) repasse par ici sans qu'on ait bougé dans le hub,
+	# donc écraser avec `hub.current_id()` à chaque manche resterait correct —
+	# mais un appel qui suivrait un `show_game_over()` (déjà à faux) ne doit
+	# rien changer : l'écran d'origine reste celui du dernier vrai départ.
+	if _is_main_menu and hub != null:
+		_match_origin_screen = hub.current_id()
 	_is_main_menu = false
 	_respirer_relance(false)
 	_arreter_annonce_score()
