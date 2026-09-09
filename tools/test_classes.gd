@@ -114,6 +114,35 @@ func _test_root() -> void:
 	rafale.apres_rafale = true
 	_check("le drapeau « après rafale » existe et se lit", rafale.apres_rafale)
 
+	# ⚠️ **Le plafond de l'échelle, arbitré par Adrien le 2026-09-09** : 0,60 s
+	# pour l'arbalète, et personne au-dessus. C'est une borne de conception — un
+	# root plus long rendrait une arme injouable pour une raison que le joueur ne
+	# peut pas lire à l'écran.
+	#
+	# Le contrôle lit le TEXTE de `game_state.gd` plutôt que le catalogue, qui
+	# demande la scène et les autoloads. Il attrape donc un `_root(0.75)` écrit à
+	# la main, ce qui est le geste qu'on veut empêcher.
+	var f2 := FileAccess.open("res://game_state.gd", FileAccess.READ)
+	if f2 != null:
+		var t2 := f2.get_as_text()
+		f2.close()
+		var trop_longs: Array[String] = []
+		var i := 0
+		while true:
+			i = t2.find("_root(", i)
+			if i < 0:
+				break
+			var j := t2.find(")", i)
+			var args := t2.substr(i + 6, j - i - 6)
+			var duree := float(args.split(",")[0])
+			if duree > RootProfile.PLAFOND + 0.0001:
+				trop_longs.append(args)
+			i = j
+		_check("aucun root ne dépasse le plafond de 0,60 s",
+			trop_longs.is_empty(), str(trop_longs))
+		_check("le plafond est bien celui qu'Adrien a arrêté",
+			is_equal_approx(RootProfile.PLAFOND, 0.60), str(RootProfile.PLAFOND))
+
 
 func _test_fusees() -> void:
 	print("\n[Les fusées : une réserve, et une recharge qui ne triche pas]")

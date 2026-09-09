@@ -1965,6 +1965,27 @@ func _forger_voile(parent: Control, nom: String) -> ColorRect:
 ## du duel ne tournent jamais (`game_state.gd`), donc les deux angles sont le
 ## même. C'est ce qui permet au shader de ne recevoir qu'un scalaire — et de ne
 ## pas pouvoir se tromper de caméra.
+## Ce vers quoi le voile doit pencher : la source qui éblouit RÉELLEMENT.
+##
+## ⚠️ **Les deux sites d'appel passaient l'adversaire EN DUR**, et c'était juste
+## tant que l'éblouissement n'avait que deux sources croisées — l'autre joueur
+## était forcément la cause. Depuis que `game_state` boucle sur des sources
+## déclarées (chantier CLASSES, étape 6), la cause peut être une fusée ou un
+## gadget posé : le voile pencherait alors vers l'adversaire pendant que la
+## lumière brûle DERRIÈRE la victime.
+##
+## ⚠️ **Et rien ne l'aurait vu.** Aucune suite ne teste le relèvement du voile ;
+## le défaut est purement directionnel, donc « cohérent et faux » — la valeur
+## serait juste, la direction fausse, et l'écran resterait plausible.
+##
+## Le repli sur l'adversaire n'est pas un bouche-trou : c'est le comportement
+## d'avant, conservé pour l'instant où l'hôte n'a pas encore désigné de source
+## (première image d'une manche, ou éblouissement nul).
+func _source_du_voile(victime, defaut):
+	var s = victime.get("source_eblouissante")
+	return s if s != null and is_instance_valid(s) else defaut
+
+
 func _poser_voile(rect: ColorRect, victime, source) -> void:
 	if rect == null:
 		return
@@ -6338,7 +6359,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		_poser_voile(p1_dazzle, p1, p2)
+		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
 	if p2:
 		if p2.hp < p2_target_hp:
@@ -6399,7 +6420,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		# signale. Poser l'état complet à chaque image coûte une affectation.
 		p2_dazzle.visible = _voile_scinde
 		if _voile_scinde:
-			_poser_voile(p2_dazzle, p2, p1)
+			_poser_voile(p2_dazzle, p2, _source_du_voile(p2, p1))
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé

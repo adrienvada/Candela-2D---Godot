@@ -1569,7 +1569,48 @@ func _sources_eblouissantes() -> Array:
 				"dirigee": true,
 				"rayon": j.current_weapon.portee_torche() if j.current_weapon else 0.0,
 			})
+
+	# ── Les fusées éclairantes ───────────────────────────────────────────────
+	#
+	# Elles referment la ligne « la fusée n'alimente pas l'éblouissement » : la
+	# lumière la plus violente du jeu n'aveuglait personne.
+	#
+	# ⚠️ **Régime de PROXIMITÉ, sans axe** : une fusée au sol crache dans toutes
+	# les directions. Et **pas de porteur** — on s'éblouit avec sa propre fusée,
+	# décision d'Adrien : on ne la lance pas à ses pieds impunément.
+	#
+	# ⚠️ **Rayon d'ÉBLOUISSEMENT ≠ empreinte de RENDU.** La fusée posée éclaire
+	# sur 440 px, mais la torche cesse d'éblouir au-delà de ~400 px (mesuré :
+	# 0,81 à 140 px dans l'axe, 0,00 à 460). Lui donner une portée d'aveuglement
+	# plus grande que la torche ferait que le MAX la choisit presque toujours, et
+	# la torche cesserait d'être une menace. On la borne donc sur la torche.
+	#
+	# ⚠️ **Un rejeu n'éblouit personne** — règle déjà écrite pour le flash de
+	# tir. Les fusées de killcam sont dans le même groupe que les vraies ; le
+	# filtre est ici, jamais dans `Fusee`, dont le groupe doit rester non filtré
+	# pour l'occultation des sprites et des sons.
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if not is_instance_valid(f) or not (f is Node2D):
+			continue
+		if f.get("is_replay"):
+			continue
+		if f.has_method("est_allumee_au_sol") and not f.est_allumee_au_sol():
+			continue
+		out.append({
+			"noeud": f,
+			"porteur": null,
+			"dirigee": false,
+			"rayon": RAYON_EBLOUISSEMENT_FUSEE,
+		})
 	return out
+
+
+## Jusqu'où une fusée posée peut aveugler, en pixels de monde.
+##
+## Volontairement PLUS PETIT que son empreinte de rendu (440 px) : elle éclaire
+## plus loin qu'elle n'aveugle, ce qui est vrai d'une vraie fusée de détresse et
+## ce qui la garde comparable à la torche. À doser au banc, jamais à l'aveugle.
+const RAYON_EBLOUISSEMENT_FUSEE := 400.0
 
 
 ## Ce qu'une source verse dans les yeux d'une cible, entre 0 et 1.

@@ -49,6 +49,16 @@ extends Resource
 ## distingueraient pas à l'œil tout en rendant chaque root incomparable.
 const RECUPERATION := 0.08
 
+## Le PLAFOND de l'échelle des roots, en secondes — décision d'Adrien du
+## 2026-09-09 : « on garde 0,6 sec pour l'arbalète comme limite haute de temps
+## entre deux tirs ».
+##
+## ⚠️ **C'est une borne de conception, pas un réglage.** Le Braconnier est
+## l'extrême haut de la grille et il y reste ; aucune classe ne doit le dépasser,
+## sous peine de rendre une arme injouable pour une raison que le joueur ne peut
+## pas lire à l'écran. `tools/test_classes.gd` le vérifie sur les dix.
+const PLAFOND := 0.60
+
 
 ## Le facteur à appliquer à la vitesse, selon ce qu'il reste de root.
 ##
