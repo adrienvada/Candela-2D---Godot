@@ -8183,6 +8183,17 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
       aussi bien le son et le tremblement HUD préexistants que le clic
       haptique ajouté par ce chantier ; rien touché côté zone morte ou
       remappage, qui restent au chantier racine.
+      - ⚠️ **Correction du 2026-09-09, mesurée par la session du chantier
+        racine et non déduite comme la phrase ci-dessus le laissait croire.**
+        « Le tir passe sur un axe » (`9f79e58`) et ce correctif (`9732d48`)
+        étaient bien tous deux sur `main` au moment de la fusion — mais
+        `main` n'est pas ce qu'un joueur reçoit. Le tag `v0.4.2` avait été
+        posé quelques minutes plus tôt, sur le commit exact qui précède ce
+        correctif : `9f79e58` est parti dans `v0.4.1` ET `v0.4.2`, `9732d48`
+        dans aucun des deux. Rien d'urgent — un clic de percuteur à vide qui
+        peut bégayer près de la zone morte, pas une faute de jeu —, corrigé à
+        la version suivante. Voir « Pièges connus » pour la leçon qui dépasse
+        ce défaut.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
