@@ -15120,6 +15120,61 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
 
 ---
 
+## Chantier — Bouton mécanique de la torche (inscrit et fait le 2026-09-09)
+
+**Objectif :** faire sentir l'allumage/extinction de la torche comme un vrai
+bouton de lampe qu'on actionne, pas comme un seuil binaire sur une gâchette
+analogique.
+
+**Deux pistes étudiées :**
+- **Gâchettes adaptatives** (simuler la résistance d'un vrai ressort) —
+  **écartée.** Godot 4.7 n'a aucune API pour ça ; la résistance programmable
+  n'existe que via le protocole propriétaire du DualSense (rapport HID 0x05),
+  hors de portée de l'`Input` singleton. Il faudrait un GDExtension natif
+  parlant directement au périphérique (type `hidapi`), DualSense
+  uniquement — rien pour Xbox ni les autres manettes. Pas un socle commun ;
+  à rouvrir seulement si une version PS5-exclusive a un jour un sens.
+- **Bouton mécanique à deux crans** (retenue) : `p1_torch`/`p2_torch` est déjà
+  une gâchette analogique (L2, `JOY_AXIS_TRIGGER_LEFT`), donc la profondeur
+  d'appui existait déjà sans rien ajouter au matériel — seul
+  `is_flashlight_pressed()` ne la lisait pas.
+
+**Implémentation, entièrement dans `LocalInputProvider`** (rien d'autre ne
+change : `flashlight_on` reste un booléen, donc le réseau, le replay et les
+fantômes de killcam ne voient rien de différent) :
+- Appui léger (au-dessus de la zone morte 0.2, sous 0.9 de la course) :
+  éclaire tant que tenu — comportement inchangé.
+- Appui à ≥ 90 % de la course (`TORCH_CRAN_FOND`) : clic qui bascule un état
+  enclenché, détecté sur le FRONT montant pour ne pas rebasculer à chaque
+  image d'un appui tenu à fond.
+- Une manette rebindée sur un simple bouton (pas une gâchette) n'a que 0 ou 1 :
+  elle saute donc directement au clic, ce qui est le comportement voulu d'un
+  bouton sans course.
+
+**Piège fermé avant qu'il morde :** un clic laissé enclenché avant une mort
+aurait rallumé la torche tout seul à la manche suivante, sans qu'aucune
+gâchette n'ait bougé — la mémoire du clic survivait au `flashlight_on = false`
+forcé par la fin de manche. `reset_flashlight_state()` (base no-op sur
+`InputProvider`, implémentée dans `LocalInputProvider`) est appelée par
+`Player.reset_flashlight_latch()`, câblée aux deux points où `_start_round()`/
+`_do_start_round()` appellent déjà `reset_step_tracker()` dans `game_state.gd`.
+
+**Validation :**
+- `tools/test_torche_bouton.gd` (nouvelle suite, ajoutée à `run_suites.sh`) :
+  appui léger, clic qui reste enclenché, second clic qui débascule, et hygiène
+  du reset de manche.
+- `tools/test_online_match.gd` : ses `Input.action_press("p1_torch")`
+  simulaient un appui plein, qui aurait maintenant engagé le clic et laissé la
+  torche allumée après le `action_release` qui suit. Passés à un appui léger
+  explicite (`TORCH_CRAN_FOND * 0.5`) pour garder l'intention du test — un
+  simple maintien, pas la mécanique du clic.
+- `tools/run_suites.sh` : toutes les suites passent (seul `fail=1` restant à
+  la fin du lot est un défaut préexistant et sans rapport — 17 `.import`
+  d'illustrations de menu présents mais hors dépôt, signalé sans être touché
+  ici, hors périmètre de ce chantier).
+
+---
+
 ## Chantier — les dix classes asymétriques (inscrit le 2026-09-09)
 
 **Ce que ce chantier remplace.** Les quatre armes du jeu deviennent dix
@@ -16208,7 +16263,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
@@ -16639,6 +16694,61 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 > des relevés répétés et une dispersion, ou la réécrire sur la médiane. Les deux
 > formulations ne disent pas la même chose, et c'est pour ça qu'on ne l'a pas
 > tranché à sa place.
+
+### Quatre défauts relevés après l'arrivée des dix classes (2026-09-09)
+
+Adrien a joué sur `v0.4.0` fraîchement publiée et rapporté quatre points, tous
+corrigés le même jour.
+
+**1. L'affiche de victoire/défaite (`affiche_de_fin.gd`, chantier DA6) n'était
+pas la dernière porte devant REJOUER.** Elle est opaque et censée avaler ses
+propres clics, mais elle se congédie sur N'IMPORTE QUEL geste — donc un joueur
+pressé la fait disparaître ET presse REJOUER dans le même clic, avant d'avoir
+rien lu. `AfficheDeFin.est_active()` (nouveau) et `UI.set_launch_locked()`
+grisent désormais le bouton tant qu'elle vit, en plus du filtre de clic déjà
+là — deux portes, pas une. `_poser_affiche_de_fin()` connecte son
+`tree_exited` pour relâcher le verrou, quel que soit le chemin de sortie
+(délai de six secondes ou geste). ⚠️ Le banc `test_online_match.gd` appelait
+`_on_replay_requested()` directement, sans passer par un clic : il a fallu lui
+faire congédier l'affiche d'abord, sans quoi le verrou — tout neuf et
+parfaitement fondé — bloquait un rematch légitime. Rien à en tirer contre le
+correctif : le banc simulait un geste qu'aucun joueur ne fait.
+
+**2. Le menu pause héritait du ralenti de la killcam.** `replay_system.gd`
+porte `Engine.time_scale` à 0,03-0,05 pour l'effet bullet-time, et un `Tween`
+suit ce temps par défaut : ouvrir la pause pendant une killcam l'allumait donc
+au ralenti. **Même défaut, même remède qu'un cas déjà payé sur l'audio**
+(`audio_manager.gd`, `_tween_etouffement`, l'étouffement de la mort qui durait
+vingt secondes réelles) : `Tween.set_ignore_time_scale(true)` sur les deux
+tweens de `_allumer()`/`_eteindre()` — le mécanisme M10 partagé par tous les
+panneaux de menu, pause comprise. Une pièce d'interface n'a aucune raison de
+ralentir avec l'image ; le second cas de cette forme confirme que c'est une
+règle du dépôt, pas un raccommodage.
+
+**3 et 4. Deux ajouts au salon, une fois le chantier CLASSES posé.** La
+session « 10 classes » a délibérément sorti le râtelier complet du panneau de
+salon par défaut — sa fiche fait trois fois la hauteur de la colonne, qui
+loge déjà la carte, la liste des joueurs et PRÊT (voir le commentaire de
+`_build_weapon_block()`). Adrien confirme cet arbitrage mais veut un
+sélecteur compact EN PLUS de la carte déjà là, sans ouvrir la fiche : les
+deux cartes de classe du salon (`_cartes_classe`, jusque-là de simples
+résumés en lecture seule) deviennent cliquables — clic gauche pour avancer,
+clic droit pour reculer dans la liste ordonnée par rang, en sautant les
+classes verrouillées par le rang (`.disabled`). Une carte visible EST une
+carte qu'on a le droit de changer : `_montrer_rateliers()` cache déjà celle
+qu'on ne pilote pas depuis cette machine, donc aucun contrôle d'autorisation
+de plus à écrire. Et la vignette de carte (`map_card`) devient elle-même
+cliquable, renvoyant vers l'entrée « CHANGER DE CARTE » déjà présente dans la
+liste — mais seulement sur les écrans qui en ont une (l'hôte d'un salon, pas
+l'invité ; l'écran partagé et l'entraînement, où il n'y a que de l'hôte). Le
+« si on est l'hôte » demandé se lit donc dans un dictionnaire vide plutôt que
+dans un contrôle explicite : un écran sans entrée mappée ne fait simplement
+rien au clic.
+
+⚠️ **Ces quatre correctifs touchent `ui.gd` et `game_state.gd`, que la session
+« 10 classes » modifie activement au même moment** — coordination confirmée
+avec elle avant de pousser (voir plus haut, échange sur `v0.4.0`) : elle sait
+que ces deux fichiers ont bougé sur `main` avant son prochain rebase.
 
 ---
 

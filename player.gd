@@ -2041,6 +2041,16 @@ func reset_step_tracker() -> void:
 	step_distance_accumulated = 0.0
 	last_fatal_perp = -1.0
 
+## À appeler avec `reset_step_tracker()` à chaque nouvelle manche : le cran
+## plein d'un bouton mécanique à deux crans (voir `LocalInputProvider`) est une
+## mémoire, et une mémoire qui survit à la mort rallumerait la torche au spawn
+## sans qu'on ait touché la gâchette. `has_method` serait ici une fausse
+## prudence — `InputProvider` porte cette méthode par défaut en no-op, tout
+## fournisseur en hérite déjà.
+func reset_flashlight_latch() -> void:
+	if input_provider:
+		input_provider.reset_flashlight_state()
+
 ## Ressenti lourd du tir : un claquement (les deux moteurs, bref) puis un
 ## grave qui traîne (moteur grave seul) — pas un pouls plat. Le second temps
 ## tient dans le cooldown de l'arme la plus rapide (Pistolet, 0,16 s) ; en
