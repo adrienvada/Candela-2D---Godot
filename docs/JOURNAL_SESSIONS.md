@@ -3085,3 +3085,30 @@ confronte désormais le facteur annoncé au framebuffer relu par `get_image()`.
 et `tools/test_brouillage.gd` — fichiers du chantier éblouissement. Adrien a
 demandé le correctif ; le seuil du contre-test de `test_brouillage` est passé de
 0,75 à 0,85 parce qu'il avait été calibré sur le facteur au carré, lui aussi.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (déblocage CUMULATIF en classé)
+
+**Demande d'Adrien** : « les classes se débloquent de façon cumulative en classé :
+au premier rang on peut jouer en pistolet, au deuxième rang pistolet et fusil,
+etc. » Un Lanterne a désormais quatre classes ; un Candela les dix.
+
+**⚠️ Ça renverse une décision actée du 2026-08-18** — « ce n'est pas un déblocage
+qui s'accumule » — et le contrôle qui la gardait était écrit *« pour qu'une
+relecture ne la corrige pas »*. Il a fait son travail : ce n'est pas une relecture
+qui l'a changée, c'est le propriétaire du jeu. Le garde-fou garde maintenant la
+propriété INVERSE, et de la même façon — en propriété, jamais en valeurs.
+
+**Ce que le cumul répare au passage** : la règle du miroir ne prête plus. Elle
+retirait au mieux classé sa propre classe pour lui en donner une autre — un
+Candela contre un Lanterne partait à l'arbalète, qu'il n'avait jamais jouée. La
+sélection du moins bien classé est désormais un sous-ensemble de celle de l'autre,
+et un contrôle balaie les 45 paires pour le garantir.
+
+**Vérifié à l'image** : un joueur Torche voit cinq classes dans la fenêtre de
+choix, rangées par rang, avec leur fiche. L'écran de sélection a enfin quelque
+chose à sélectionner.
+
+**⚠️ Signalé à Adrien** : son exemple disait « au deuxième rang pistolet et
+fusil », or l'échelle de lumière qu'il a lui-même posée met le Fumiste au rang 2
+et le fusil au rang 3. Je n'ai **pas** touché à l'ordre — s'il voulait aussi le
+remanier, c'est une seconde décision.
