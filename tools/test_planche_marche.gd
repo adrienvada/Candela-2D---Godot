@@ -60,7 +60,21 @@ extends SceneTree
 ## suite tient ce qui est mesurable ; elle ne remplace pas le regard d'Adrien,
 ## elle l'empêche d'être annulé en silence.
 
-const ARMES := ["pistolet", "pompe", "fusil", "arbalete"]
+## Les DIX classes jouables, et non les quatre d'origine.
+##
+## ⚠️ **Cette liste a valu vingt planches non vérifiées.** Elle disait quatre
+## noms depuis le jour où quatre armes existaient ; le 2026-09-09, six classes
+## neuves ont reçu leurs planches de marche et la suite est restée à 116/116 —
+## exactement le même chiffre qu'avant. Rien n'était faux, rien ne rougissait,
+## et rien ne regardait les nouveaux fichiers.
+##
+## C'est la forme du « seuil 6 de `test_audit_menus` » déjà consignée plus haut :
+## un nombre — ici une liste — qui décrit l'état du dépôt au jour où on l'a
+## écrit, et qui cesse silencieusement de le décrire ensuite. La liste dit
+## maintenant le ROSTER du jeu, pas l'inventaire du dossier : une classe sans
+## planche fait rougir, ce qui est le comportement voulu.
+const ARMES := ["pistolet", "pompe", "fusil", "arbalete",
+	"fumiste", "incendiaire", "sentinelle", "occulteur", "allumeur", "spectre"]
 const POSES := 4
 const SPRITES := "res://assets/sprites/"
 
@@ -76,15 +90,45 @@ var _total := 0
 
 func _init() -> void:
 	_juger_le_cablage()
+	var glissent: Array[String] = []
 	for arme in ARMES:
 		var statique := _image(SPRITES + arme + ".png")
 		var statique_sil := _image(SPRITES + arme + "_silhouette.png")
 		if statique == null or statique_sil == null:
 			_vrai("%s : sprite statique lisible (la référence de tout le reste)" % arme, false)
 			continue
+
+		# ⚠️ **TOUT ou RIEN, et l'absence n'est pas une faute.**
+		#
+		# `player.gd` l'écrit au-dessus de `_precharger_la_planche` : « L'absence
+		# n'est pas une erreur : sans planche, le jeu garde le sprite statique et
+		# son roulis. » Une classe qui glisse est donc un état SUPPORTÉ, décidé
+		# par Adrien le 2026-09-09 pour le Spectre. Exiger dix planches ferait
+		# rougir la suite au nom d'une décision, ce qui la rendrait mensongère.
+		#
+		# Ce qui reste une faute, c'est le DEMI-LOT : sept fichiers sur huit, ou
+		# des poses sans leurs silhouettes. `_precharger_la_planche` le refuse en
+		# bloc et retombe sur le statique — donc le travail est perdu en silence,
+		# et c'est exactement ce qu'une suite doit dire.
+		var presents := 0
+		for n in range(1, POSES + 1):
+			if _image(SPRITES + "%s_marche_%d.png" % [arme, n]) != null:
+				presents += 1
+			if _image(SPRITES + "%s_marche_%d_silhouette.png" % [arme, n]) != null:
+				presents += 1
+		if presents == 0:
+			glissent.append(arme)
+			continue
+		_vrai("%s : la planche est complète (%d fichiers sur %d) — un demi-lot est perdu en silence"
+				% [arme, presents, POSES * 2], presents == POSES * 2)
+		if presents != POSES * 2:
+			continue
+
 		var ref := _bout_de_canon(statique)
 		for n in range(1, POSES + 1):
 			_juger(arme, n, statique, ref)
+	if not glissent.is_empty():
+		print("   (sans planche, elles glissent — état supporté : %s)" % ", ".join(glissent))
 	_verdict()
 
 

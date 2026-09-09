@@ -3153,6 +3153,26 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une liste qui décrit le dépôt du jour où on l'a écrite (2026-09-09)
+
+`test_planche_marche` portait `const ARMES := ["pistolet", "pompe", "fusil",
+"arbalete"]`. Vingt planches de marche neuves ont été posées pour cinq classes,
+et la suite a rendu **116/116 — exactement le même chiffre qu'avant**. Rien
+n'était faux, rien ne rougissait, et rien ne regardait les nouveaux fichiers.
+
+C'est la forme du « seuil 6 de `test_audit_menus` », déjà consignée : un nombre,
+ou ici une liste, qui décrit l'ÉTAT du dépôt au moment où on l'écrit, et qui
+cesse silencieusement de le décrire ensuite. **Le symptôme est un total qui ne
+bouge pas quand le travail, lui, a bougé** — et un total stable se lit comme une
+bonne nouvelle.
+
+La liste dit maintenant le ROSTER du jeu (les dix classes), pas l'inventaire du
+dossier. Corollaire nécessaire : puisque toutes les classes n'ont pas de
+planche, la règle est devenue **tout ou rien**. Zéro fichier = la classe glisse,
+état supporté que `player.gd` documente (« l'absence n'est pas une erreur »).
+Sept fichiers sur huit = faute, parce que `_precharger_la_planche` refuse le
+demi-lot en bloc et retombe sur le statique : le travail est perdu en silence.
+
 ### Un masque juste, d'une couleur fausse — publié (2026-09-09)
 
 **Les seize silhouettes de marche étaient NOIRES.** Elles ont été publiées ainsi
@@ -16720,6 +16740,40 @@ le compteur restant par le total, ce qui aurait affiché une jauge bloquée prè
 100 %. La description de la classe le dit, sans quoi la règle serait invisible à
 la sélection.
 
+### Étape 21 — cinq classes marchent, une glisse ✅
+
+Cinq des six classes neuves ont désormais leur planche de marche : le Fumiste,
+l'Incendiaire, la Sentinelle, l'Occulteur et l'Allumeur. **Le Spectre glisse**,
+et c'est une décision d'Adrien après trois passes de génération infructueuses —
+« laisse tomber, on fait glisser les autres classes ».
+
+**Ce qui a été GÉNÉRÉ n'est presque pas ce qui a été POSÉ.** Les planches
+viennent de Gemini, mais l'intégration ne garde de ses images que les pixels de
+MEMBRES qui débordent de la silhouette statique. La tête, l'arme, la palette et
+le cadrage viennent du sprite du dépôt.
+
+⚠️ **Ce n'était pas un choix esthétique mais une contrainte.** Le contrôle 3 de
+`test_planche_marche` exige le bout du canon au pixel exact, en x ET en y —
+mesuré : dans les seize planches d'origine, la zone de l'arme est recopiée à
+l'identique. Aucune image générée ne satisfait ça spontanément. La règle qui en
+sort vaut pour toute génération future : **on ne génère pas un sprite, on génère
+un DELTA, et on le composite sur l'existant.**
+
+Deux réglages ont demandé une mesure, pas une intuition :
+
+- **Le halo JPEG était le vrai piège**, pas le fond. Entre le sprite sombre et le
+  fond blanc, la compression étale un dégradé de 150 à 250 : sous le seuil de
+  fond, donc pris pour du personnage, et composité en **liseré blanc** sur une
+  figure charbon. Vu à l'écran au premier jet. Le plafond est venu de la mesure
+  de la palette du dépôt — p99 de luminance à 128, maximum 151 sur les dix
+  statiques —, jamais d'un nombre choisi.
+- **Le découpage des planches** se fait sur les colonnes de fond pur, pas sur un
+  espacement supposé.
+
+Et une géométrie qui simplifie toute reprise future : **le personnage fait la
+même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
+les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -16752,7 +16806,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
