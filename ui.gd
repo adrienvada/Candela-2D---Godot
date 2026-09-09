@@ -2318,9 +2318,12 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 	if active:
 		style.bg_color = Color(Charte.LINE, 0.9)
 		style.border_color = player_color
-		style.shadow_color = Color(0, 0, 0, 0.95)
+		# DA5.7c — portait Vector2(3, 3) en dur, sans raison retrouvée pour cet
+		# écart d'1 px avec le reste du dépôt : aligné sur la constante la plus
+		# proche plutôt que de garder un troisième offset ad hoc.
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 		style.shadow_size = 0
-		style.shadow_offset = Vector2(3, 3)
+		style.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
 	else:
 		style.bg_color = Color(Charte.SURFACE, 0.8)
 		style.border_color = Color(Charte.LINE, 1.0)
@@ -2346,16 +2349,14 @@ func _build_status_bar() -> void:
 	network_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	network_status_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	network_status_label.add_theme_font_size_override("font_size", T_COURANT)
-	network_status_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	network_status_label.add_theme_constant_override("outline_size", 4)
+	Charte.contourer_control(network_status_label, T_COURANT) # DA5.7
 
 	ping_label = Label.new()
 	# DA4.2 — l'appareil, explicitement. Un compteur : il se réécrit à chaque
 	# relevé de RTT, au milieu d'une rangée centrée dont il déplacerait les
 	# voisins en changeant de largeur.
 	Charte.appareil(ping_label, T_COURANT)
-	ping_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	ping_label.add_theme_constant_override("outline_size", 4)
+	Charte.contourer_control(ping_label, T_COURANT) # DA5.7
 	ping_label.hide()
 
 	var status_row := HBoxContainer.new()
@@ -2390,8 +2391,7 @@ func _build_countdown() -> void:
 	# jamais, ils se succèdent au même endroit.
 	Charte.enseigne(countdown_label, T_DECOMPTE)
 	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
-	countdown_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	countdown_label.add_theme_constant_override("outline_size", 16)
+	Charte.contourer_control(countdown_label, T_DECOMPTE) # DA5.7
 	countdown_label.z_index = 120
 	countdown_label.hide()
 	add_child(countdown_label)

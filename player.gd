@@ -2060,8 +2060,7 @@ func die(killer: Node2D):
 	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
 	settings.font_size = Charte.T_ENSEIGNE
 	settings.font_color = Charte.ROUGE
-	settings.outline_size = 12
-	settings.outline_color = Charte.NOIR
+	Charte.contourer_settings(settings, settings.font_size) # DA5.7
 	var geo := geometrie_du_bandeau(texte_fatal, settings.font, settings.font_size)
 
 	# V2.9 — la marge du tir fatal, lue AVANT la boucle pour que chaque vue en
@@ -2314,8 +2313,7 @@ func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
 	sub_settings.font = Charte.police_display(Charte.POIDS_DISPLAY)
 	sub_settings.font_size = Charte.T_TITRE
 	sub_settings.font_color = Charte.HALOGENE
-	sub_settings.outline_size = 8
-	sub_settings.outline_color = Charte.NOIR
+	Charte.contourer_settings(sub_settings, sub_settings.font_size) # DA5.7
 	sub.label_settings = sub_settings
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.position = global_position + Vector2(-100, -20) + decalage

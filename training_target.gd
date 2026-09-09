@@ -57,8 +57,7 @@ func _ready() -> void:
 	_label.position = Vector2(-80, -70)
 	_label.add_theme_font_size_override("font_size", Charte.T_APPUI)
 	_label.add_theme_color_override("font_color", Charte.AMBRE)
-	_label.add_theme_constant_override("outline_size", 6)
-	_label.add_theme_color_override("font_outline_color", Charte.NOIR)
+	Charte.contourer_control(_label, Charte.T_APPUI) # DA5.7
 	var lbl_mat := CanvasItemMaterial.new()
 	lbl_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	_label.material = lbl_mat

@@ -10854,6 +10854,58 @@ au mot près. Une surexposition photographique n'a pas de teinte à choisir : la
 gagner serait la seule exception à la règle 2 qui ne soit pas déjà `NOIR`, et
 ce chantier n'a pas mandat pour la trancher — signalé, pas touché.
 
+#### DA5.7 — un contour, généralisé plutôt qu'inventé
+
+**`bullet.gd:677` (DA4.3) portait déjà la meilleure formule du dépôt** —
+`outline_size = max(2, round(taille × 0,11))`, une ombre au même ratio — et
+elle ne servait qu'à un seul site. `charte.gd` lui donne un second domicile :
+`contour_taille()`/`ombre_taille()` (pures, testées), et deux façons de les
+poser — `contourer_settings()` pour les labels à `LabelSettings` dédié,
+`contourer_control()` pour les overrides de thème.
+
+**Neuf sites migrés, huit d'entre eux changent de taille** — les ratios
+implicites allaient de 0,11 à 0,32, donc faux partout sauf la référence :
+
+| Site | Taille de police | Contour avant | Contour après |
+|---|---|---|---|
+| `bullet.gd` (référence, inchangé) | 19 à 42 | 0,11 × taille | — |
+| `player.gd` — bandeau FATAL | `T_ENSEIGNE` (68) | 12 | **7** |
+| `player.gd` — marge fatale | `T_TITRE` (25) | 8 | **3** |
+| `game_state.gd` — tampon KILL | `T_ENSEIGNE` (68) | 10 | **7** |
+| `training_target.gd` | `T_APPUI` (19) | 6 | **2** |
+| `ui.gd` — réseau/ping | `T_COURANT` (15) | 4 | **2** |
+| `ui.gd` — décompte | `T_DECOMPTE` (136) | 16 | **15** |
+| `map_editor_hud.gd` | variable (`_make_label`) | 3, fixe, alpha 0,85 | proportionnel, alpha 1,0 |
+
+**`map_editor_hud.gd` perd son alpha 0,85** — seul site du dépôt à réduire
+l'opacité de son contour, et aucune raison n'a été retrouvée dans l'historique
+ni dans le code. Un contour à demi-opaque n'a de sens que contre un fond
+changeant ; celui-ci n'en a pas. Si le passage visuel le juge nécessaire, il
+se rajoute comme un second paramètre de `contourer_control()` — pas comme un
+troisième mécanisme ad hoc.
+
+**Une troisième famille, découverte au passage : les ombres de `StyleBoxFlat`
+de `ui.gd`.** `_set_torch_style()` portait `Vector2(3, 3)` en dur, sans raison
+retrouvée pour l'écart d'1 px avec `MenuWidgets.SHADOW_OFFSET_BUTTON` (4, 4) —
+aligné dessus, `shadow_color` migré vers `MenuWidgets.SHADOW_COLOR_DEFAULT`
+(valeur strictement identique, seule la référence change). L'unique second
+site cité par le plan initial de ce chantier (`ui.gd`, une ombre à
+`Vector2(4, 4)`) n'existe plus dans le dépôt — déjà corrigé ou déplacé par une
+session antérieure, sans trace à corriger ici.
+
+**Nouveau contrôle pur** dans `tools/test_charte.gd` : `contour_taille()` et
+`ombre_taille()` contre leur formule, leur plancher, et ce que
+`contourer_settings()`/`contourer_control()` posent réellement sur un objet
+construit — pas seulement l'appel, la valeur obtenue (même discipline que le
+reste de ce fichier). ⚠️ **A trouvé un piège au premier lancement** : le test
+supposait `LabelSettings.shadow_size == 0` par défaut ; Godot le pose à `1`.
+Corrigé en comparant à un `LabelSettings.new()` vierge plutôt qu'à une valeur
+supposée — la même leçon que `test_torches`/`test_lumieres` appliquent déjà
+au texte du code.
+
+**Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
+ratio commun.
+
 #### DA5.8 — ce que le recalibrage a trouvé
 
 **Trois shaders portaient l'ancienne palette, et la passe DA1.4 ne les avait pas

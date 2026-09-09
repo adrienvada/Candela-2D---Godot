@@ -2422,8 +2422,7 @@ func _spawn_kill_stamp(elapsed: float) -> void:
 	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
 	settings.font_size = Charte.T_ENSEIGNE
 	settings.font_color = Charte.ROUGE
-	settings.outline_size = 10
-	settings.outline_color = Charte.NOIR
+	Charte.contourer_settings(settings, settings.font_size) # DA5.7
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

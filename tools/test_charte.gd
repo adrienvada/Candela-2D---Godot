@@ -522,6 +522,58 @@ func _test_echelle_typographique() -> void:
 		"T_DECOMPTE doit valoir exactement deux fois l'enseigne")
 
 
+# --- Contour et ombre de texte (DA5.7) ---------------------------------------
+
+## **Le ratio, et son plancher.** `contour_taille(10)` doit tomber sous le
+## plancher — 10 × 0,11 = 1,1, arrondi à 1 — et donc être RATTRAPÉ à
+## `CONTOUR_MIN_PX` plutôt que de rendre un contour d'un seul pixel. Une
+## taille plus grande (`T_ENSEIGNE`, 68) doit au contraire suivre le ratio SANS
+## toucher le plancher : c'est ce qui distingue « la formule marche » de
+## « le plancher masque une formule cassée ».
+func _test_contour_ombre() -> void:
+	_check(C.contour_taille(10) == C.CONTOUR_MIN_PX,
+		"contour_taille(10) devrait être rattrapé par le plancher (%d), obtenu %d"
+			% [C.CONTOUR_MIN_PX, C.contour_taille(10)])
+	var attendu_enseigne := int(round(C.T_ENSEIGNE * C.CONTOUR_RATIO))
+	_check(attendu_enseigne > C.CONTOUR_MIN_PX,
+		"le contour à T_ENSEIGNE doit dépasser le plancher pour que ce contrôle prouve la formule")
+	_check(C.contour_taille(C.T_ENSEIGNE) == attendu_enseigne,
+		"contour_taille(T_ENSEIGNE) : %d attendu (formule), %d obtenu"
+			% [attendu_enseigne, C.contour_taille(C.T_ENSEIGNE)])
+	_check(C.ombre_taille(C.T_ENSEIGNE) == int(round(C.T_ENSEIGNE * C.OMBRE_RATIO)),
+		"ombre_taille(T_ENSEIGNE) ne suit pas OMBRE_RATIO")
+
+	# `contourer_settings()` pose-t-il vraiment ce que les deux fonctions rendent,
+	# et rien d'autre par défaut ? Comparé au défaut RÉEL d'un `LabelSettings`
+	# fraîchement construit plutôt qu'à une valeur supposée : Godot pose
+	# `shadow_size` à 1 par défaut, pas à 0 — un piège qui a fait échouer ce
+	# contrôle à son premier lancement.
+	var vierge := LabelSettings.new()
+	var settings := LabelSettings.new()
+	C.contourer_settings(settings, C.T_ENSEIGNE)
+	_check(settings.outline_size == C.contour_taille(C.T_ENSEIGNE),
+		"contourer_settings() ne pose pas outline_size")
+	_couleur_egale(settings.outline_color, C.CONTOUR_COULEUR, "contourer_settings() : outline_color")
+	_check(settings.shadow_size == vierge.shadow_size,
+		"contourer_settings() sans avec_ombre ne devrait pas toucher shadow_size (%d attendu, %d obtenu)"
+			% [vierge.shadow_size, settings.shadow_size])
+
+	var avec_ombre := LabelSettings.new()
+	C.contourer_settings(avec_ombre, C.T_ENSEIGNE, true)
+	_check(avec_ombre.shadow_size == C.ombre_taille(C.T_ENSEIGNE),
+		"contourer_settings(avec_ombre=true) ne pose pas shadow_size")
+	_couleur_egale(avec_ombre.shadow_color, C.OMBRE_COULEUR, "contourer_settings() : shadow_color")
+
+	# `contourer_control()` — le mécanisme par overrides de thème.
+	var ctrl := Control.new()
+	C.contourer_control(ctrl, C.T_APPUI)
+	_check(ctrl.get_theme_constant("outline_size") == C.contour_taille(C.T_APPUI),
+		"contourer_control() ne pose pas l'override outline_size")
+	_couleur_egale(ctrl.get_theme_color("font_outline_color"), C.CONTOUR_COULEUR,
+		"contourer_control() : font_outline_color")
+	ctrl.queue_free()
+
+
 func _init() -> void:
 	print("=== Charte visuelle ===")
 	_test_saturation_plafonnee()
@@ -540,6 +592,7 @@ func _init() -> void:
 	_test_axe_de_graisse_agit()
 	_test_chiffres_tabulaires()
 	_test_echelle_typographique()
+	_test_contour_ombre()
 	if _ko == 0:
 		print("✓ %d contrôles passent" % _ok)
 		quit(0)
