@@ -11339,11 +11339,19 @@ Ce qui n'est **pas** établi : la cause exacte — je n'ai pas poussé plus loin
 que les rangées sont là, pas qu'on les voit. Troisième occurrence de ce motif
 dans la même journée.
 
-### DA6 — Les moments qu'on screenshote ✅ **la moitié *(S)* est livrée le 2026-09-09**
+### DA6 — Les moments qu'on screenshote ✅ **DA6.1 à DA6.5 : la moitié *(S)* est livrée le 2026-09-09**
 
-> **Les cinq fiches sont faites pour ce que des sessions peuvent faire.** Ce qui
-> reste est nommé item par item ci-dessous, et c'est du *(C)* : un son, une
-> illustration, une direction. Rien n'attend une session.
+> **Ces cinq fiches-là sont faites pour ce que des sessions peuvent faire.** Ce
+> qui reste sur elles est nommé item par item ci-dessous, et c'est du *(C)* : un
+> son, une illustration, une direction. Rien n'y attend une session.
+>
+> ⚠️ **Le titre nomme les cinq fiches, et pas « DA6 ».** Une **DA6.6** — l'intro
+> en planches — a été inscrite au chantier le 2026-09-09 par la session DA7, sur
+> sa propre branche. Un titre qui aurait dit « DA6 est fait » serait devenu faux
+> à cette fusion-là, sans que rien ne le signale — et un chantier annoncé clos
+> est un chantier que personne ne rouvre. **On ne revendique que ce qu'on a
+> fait :** cette section parle de DA6.1 à DA6.5, DA6.6 a son propre auteur et son
+> propre état.
 
 - **DA6.1 L'écran de victoire en affiche** — composé comme un poster, pas comme
   un menu. *(S + C)* — ✅ **`affiche_de_fin.gd`**. Reste *(C)* : la direction
