@@ -123,6 +123,9 @@ const REGLAGES := [
 	["CÔTÉ des fantômes (−1 = réel)", "fantomes_cote", -1.0, 1.0, 2.0],
 	["force du grain", "grain_force", 0.0, 0.5, 0.005],
 	["rafraîchissement du grain", "grain_hz", 0.0, 60.0, 2.0],
+	# DA5.5 — le tableau est déjà générique : Tab/flèches/R/E le lisent sans
+	# rien savoir de ce paramètre en particulier.
+	["aberration chromatique", "aberration_chromatique", 0.0, 0.05, 0.002],
 ]
 
 ## Portée du faisceau du banc, en pixels. Le banc **ne recopie pas l'arsenal** —

@@ -10735,8 +10735,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
   (décision d'Adrien : le grain de match existant reste), documentation des
   trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
-- **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
-  les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
+- **DA5.5 L'aberration chromatique réservée** ✅ **FAIT le 2026-09-09** — sur
+  l'éblouissement ; le kill a déjà le sien (le bandeau FATAL). Vérification
+  visuelle et de cadence (bench_framerate, H10) encore dues — voir détail.
+  *(S)*
 - **DA5.6 La résolution assumée** ✅ **TRANCHÉ le 2026-08-24 : smooth.**
   Filtrage linéaire, mipmaps, aucune texture en `nearest` ; la résolution se
   choisit sur la densité de texels à l'écran. Raison en « Décisions actées ».
@@ -10963,6 +10965,95 @@ Documenté directement dans `voile_eblouissement.gdshader`, à côté du bloc
 `grain_force`/`grain_hz`, plutôt que seulement ici : un commentaire dans un
 fichier regénéré se perd (piège déjà payé sur `project.godot`), mais un
 `.gdshader` n'est pas regénéré — le commentaire y survit.
+
+#### DA5.5 — l'aberration chromatique de l'éblouissement
+
+**Le seul item du chantier avec du code neuf**, et le seul qui touche la
+performance. Design vérifié par lecture complète de
+`voile_eblouissement.gdshader` (392 lignes avant ce chantier),
+`distorsion_eblouissement.gdshader` (33 lignes, prototype orphelin — chargé
+nulle part dans le jeu), `effect_policy.gd` et `ui.gd::_poser_voile`.
+
+**Ce qui est porté du prototype, ce qui est jeté.**
+`distorsion_eblouissement.gdshader` faisait trois choses : (a) séparation RGB
+radiale — **portée** ; (b) ondulation thermique UV — hors périmètre, DA5.5 ne
+parle que de couleur ; (c) bloom chaud additif — jeté, `voile_eblouissement`
+fait déjà ce métier, en mieux (texturé, calibré au banc).
+
+**Le point précis qui évite de recréer un bug déjà payé sur ce même
+shader** : l'aberration réutilise `d`, le vecteur déjà corrigé pour l'aspect
+et la demi-diagonale de référence (calculé en tête de `fragment()`) — pas un
+`SCREEN_UV - 0.5` naïf comme le prototype. Un `SCREEN_UV - 0.5` naïf est
+exactement le bug de « où est passé le flare central ? » entre écran scindé
+et vue unique, déjà consigné dans ce fichier. La branche témoin (`mode == 0`)
+n'est pas touchée — la règle « le témoin doit rester pur », déjà écrite après
+l'incident du 2026-08-27, tient toujours.
+
+**Écart au plan initial, trouvé en implémentant, et corrigé plutôt que
+signalé : le tampon d'écran n'avait pas de propriétaire.** Le plan prévoyait
+de lire `hint_screen_texture` sans poser de `BackBufferCopy` dédié, en
+s'appuyant sur le mécanisme partagé. Ce dépôt a déjà payé exactement ce
+défaut — voir « Pièges connus » : *« Le tampon d'écran n'a pas de
+propriétaire »* — `death_flash.gdshader` lit un tampon périmé, cadré sur
+l'ellipse laissée par le flou de `brouillage_vue.gd` (`COPY_MODE_RECT`),
+**signalé le 2026-09-07 et toujours pas corrigé**. Poser l'aberration sans sa
+propre copie aurait ajouté un SEPTIÈME lecteur au même piège, avec un risque
+réel de collision : le brouillage (aim uncertainty) et l'éblouissement
+peuvent être actifs à la fois dans un vrai match. Correctif : `ui.gd` pose
+désormais `_voile_bb`, un `BackBufferCopy` dédié en `COPY_MODE_VIEWPORT`, sur
+le modèle de `KillcamBB`/`ShockBB` — sa propre copie, juste avant sa propre
+lecture, visible seulement pendant un éblouissement réel (`p1_ebloui or
+p2_ebloui`, pour couvrir les deux voiles à la fois en écran scindé) pour ne
+pas payer une copie plein cadre à vide entre deux manches.
+
+**L'entrée `EffectPolicy` — neuve, PAS une réutilisation de `"eblouissement"`.**
+DA5.1 a établi que `"eblouissement"` (Monde, plancher 0,8) est inerte en
+production. `effect_policy.gd` porte désormais `"aberration_eblouissement"`,
+posée juste après `"eblouissement"` par proximité de sujet bien qu'elle soit
+d'une famille différente :
+
+```
+"famille": Family.CONFORT, "plancher": 0.0,
+"nom": "Frange de l'éblouissement"
+```
+
+⚠️ **Famille CONFORT choisie sur la recommandation du plan, PAS encore
+confirmée par Adrien — seule décision de ce chantier qui reste ouverte.**
+Raisonnement retenu : même motif que `flash_mort` (« n'obstrue que votre
+écran, rien ne vous oblige à la garder ») — la direction de l'éblouisseur
+passe déjà par `lueurs_derive`/`flares_penche`, non réglables, donc
+l'aberration ne porte aucune information de duel. Lecture alternative
+possible : « tout ce qui touche à l'éblouissement est Monde » →
+`Family.MONDE`, plancher ~0,5 (aligné sur `trait_de_balle`/`fusee_agonie`,
+pas sur le 0,8 de l'entrée `"eblouissement"` qui couvrait toute la
+pénalité). **À trancher avec Adrien avant de considérer ce point clos.**
+
+**Câblage**, dans `ui.gd::_poser_voile` : `0,015 × GameSettings.current_effect
+("aberration_eblouissement")` — 0,015 est le défaut calibré du shader,
+dupliqué ici comme ce fichier le fait déjà pour `teinte`/`HALOGENE`. Rien
+côté réseau : `niveau` (= `victime.dazzle_amount`) existe déjà côté client,
+l'aberration en dérive localement comme tout le reste du voile.
+
+**Le banc** — une ligne dans `tools/banc_voile.gd::REGLAGES`, après
+`grain_hz` : `["aberration chromatique", "aberration_chromatique", 0.0, 0.05,
+0.002]`. Le tableau est déjà générique (Tab/flèches/R/E le lisent sans rien
+savoir de ce paramètre) — aucune autre modification du banc n'était
+nécessaire.
+
+**Vérification.** `test_effect_policy` valide automatiquement la nouvelle
+entrée (table-driven : la table est passée de 34 à 35 effets, aucune
+modification de suite nécessaire) — confirmé, tous les contrôles passent.
+`test_eblouissement` (le modèle) et `test_arena_lighting`/les suites de
+shaders restent verts. Restent dus, hors du périmètre headless de cette
+session : `tools/banc_voile.tscn` (réglage manuel contre le témoin),
+`./tools/run_visuel.sh --eblouissement` (propriété d'équité déjà automatisée),
+et surtout **`tools/bench_framerate.tscn`, obligatoire pour tout shader plein
+écran touché** — ce changement fait passer `voile_eblouissement.gdshader` de
+zéro lecture d'écran à trois lectures de `screen_texture` par pixel couvert
+PLUS une copie plein cadre du viewport, à chaque éblouissement actif. Mesure
+au premier plan requise (H10) ; non exécutée dans cette session (pas de
+fenêtre interactive disponible) — **due avant toute publication**, avec un
+éblouissement forcé en continu via le banc pour mesurer le pire cas.
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

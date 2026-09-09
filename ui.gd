@@ -604,6 +604,17 @@ var _voile_temps: float = 0.0
 ## vaut supposer deux vues et n'en montrer qu'une de trop que l'inverse.
 var _voile_scinde: bool = true
 
+## DA5.5 — copie plein cadre dédiée pour `aberration_chromatique`, sur le
+## modèle de `KillcamBB`/`ShockBB` : le tampon d'écran est une ressource de
+## VIEWPORT PARTAGÉE, rafraîchie seulement là où le dernier écrivain a écrit
+## (piège déjà payé sur `death_flash.gdshader`, jamais corrigé — voir
+## « Pièges connus »). Une copie à SOI, juste avant sa propre lecture, évite
+## d'hériter du recadrage `COPY_MODE_RECT` du flou de `brouillage_vue.gd` ou
+## de tout autre écrivain de passage. Visible seulement pendant un
+## éblouissement réel — une copie plein cadre a un coût, elle ne tourne pas
+## à vide entre deux manches.
+var _voile_bb: BackBufferCopy
+
 var p1_dazzle: ColorRect
 
 var p2_hp: ProgressBar
@@ -1980,6 +1991,11 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 	mat.set_shader_parameter("temps", _voile_temps)
 	var taille := rect.size
 	mat.set_shader_parameter("aspect", taille.x / maxf(taille.y, 1.0))
+	# DA5.5 — 0,015 = le défaut calibré du shader, dupliqué ici comme ce
+	# fichier le fait déjà pour `teinte`/`HALOGENE` : la réglabilité vient du
+	# curseur CONFORT, jamais d'une pénalité de jeu.
+	mat.set_shader_parameter("aberration_chromatique",
+		0.015 * GameSettings.current_effect("aberration_eblouissement"))
 	if source != null and victime != null:
 		mat.set_shader_parameter("relevement",
 			(source.global_position - victime.global_position).angle())
@@ -2019,6 +2035,16 @@ func _build_hud() -> void:
 	# se voit n'a pas de nom dans le code (piège consigné le 2026-08-19). Ce
 	# commentaire est donc le seul garde-fou — le voile doit rester au-dessus
 	# de l'arène et au-dessous du HUD.
+	#
+	# DA5.5 — la copie du tampon d'écran est ajoutée ICI, juste avant : elle
+	# doit capturer l'arène (et rien du HUD, qui vient après), pour la même
+	# raison que le voile lui-même est monté avant le HUD.
+	_voile_bb = BackBufferCopy.new()
+	_voile_bb.name = "VoileBB"
+	_voile_bb.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	_voile_bb.hide()
+	add_child(_voile_bb)
+
 	var dazzle_hbox := HBoxContainer.new()
 	dazzle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dazzle_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -6399,6 +6425,15 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p2_dazzle.visible = _voile_scinde
 		if _voile_scinde:
 			_poser_voile(p2_dazzle, p2, p1)
+
+	# DA5.5 — la copie plein cadre ne tourne que si au moins un voile est
+	# effectivement visible. Un `or` : les deux joueurs peuvent être éblouis
+	# à la fois, et l'écran scindé peut afficher les deux voiles ensemble.
+	if _voile_bb != null:
+		var p1_ebloui := p1 != null and float(p1.get("dazzle_amount")) > 0.001
+		var p2_ebloui := p2 != null and _voile_scinde \
+			and float(p2.get("dazzle_amount")) > 0.001
+		_voile_bb.visible = p1_ebloui or p2_ebloui
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé
