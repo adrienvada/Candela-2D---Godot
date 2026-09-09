@@ -4164,13 +4164,33 @@ injoignable**, ce qui est strictement pire — un test absent laisse méfiant, u
 test vert rassure. Et le tableau ci-dessus n'aidait pas, parce qu'il décrit un
 lot ROUGE : ici le lot était vert.
 
-**Le contrôle qui manquait, et il coûte quinze secondes :**
+**Le contrôle qui manquait, et il coûte quinze secondes — mais il DOIT lire la
+sortie :**
 
 ```bash
-godot --headless --path . --no-eos --quit-after 2000
+"$GODOT" --headless --path . --no-eos --quit-after 2000 > "$journal" 2>&1
+grep -q "SCRIPT ERROR" "$journal" && fail=1
 ```
 
-Il monte le jeu pour de vrai, autoloads et `_ready()` compris. À faire après
+Il monte le jeu pour de vrai, autoloads et `_ready()` compris.
+
+⚠️ **La première rédaction de ce paragraphe donnait la commande SANS le `grep`,
+et elle était dangereuse.** Vérifié par la session DA6, registre de classes vidé
+et arbre volontairement cassé : **771 `SCRIPT ERROR` imprimées, code de sortie
+0**. Un contrôle adossé au code de sortie certifierait donc un jeu mort — pire
+que pas de contrôle, puisqu'il rassure. Godot ne fait pas échouer un processus
+parce qu'un script n'a pas compilé, et c'est précisément la propriété qui rend
+tout ce piège possible.
+
+C'est la même leçon deux fois de suite, sur deux objets différents : **la suite
+lisait le fichier par un chemin que la production n'emprunte pas ; le contrôle
+lisait un verdict que le moteur n'écrit pas.** Dans les deux cas, un vert
+obtenu sans avoir posé la question.
+
+✅ **Le contrôle est désormais DANS `tools/run_suites.sh`, en tête du lot** (DA6,
+2026-09-09) : si le jeu ne démarre pas, tout ce qui suit est du bruit. Son
+message d'échec nomme le remède — `--import`. Contre-test fait dans les deux
+sens. À faire après
 tout ajout d'un script référencé depuis un autoload ou depuis `game_state.gd` —
 et après toute fusion qui en apporte : celle du même jour arrivait avec **cinq**
 `class_name` neufs (`PowerOn`, `AfficheDeFin`, `BilanDeSoiree`,
