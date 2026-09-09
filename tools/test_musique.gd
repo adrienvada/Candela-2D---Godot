@@ -54,6 +54,7 @@ func _run() -> void:
 	_test_filet_de_sortie()
 	_test_aucun_fichier_muet()
 	_test_aucun_son_orphelin()
+	_test_etouffement_fumee()
 	_test_banc_de_mixage()
 	_test_dosage()
 	_test_percuteur()
@@ -443,6 +444,36 @@ func _test_filet_de_sortie() -> void:
 ## Ce controle rend « tous les sons sont cables » VERIFIABLE au lieu
 ## qu'affirme. Il rougira le jour ou Adrien deposera un fichier de plus, ce qui
 ## est exactement le moment ou quelqu'un doit decider de ce qu'il raconte.
+## FU4 — LA FUMEE ETOUFFE, ELLE NE REMPLACE PAS LE MUR.
+##
+## Verifie la partie PURE du mecanisme : `etouffement_fumee_db` ne depend
+## d'aucune scene, aucun groupe, aucun Fusee instancie — donc verifiable ici
+## sans banc ni carte.
+func _test_etouffement_fumee() -> void:
+	print("\n[FU4 : la fumee etouffe un peu, jamais plus qu'un mur]")
+
+	_check("hors de la fumee, aucune attenuation",
+		is_zero_approx(AM.etouffement_fumee_db(0.0)))
+	_check("au coeur de la fumee, l'attenuation maximale",
+		is_equal_approx(AM.etouffement_fumee_db(1.0), AM.FUSEE_ETOUFFEMENT_MAX_DB))
+	_check("l'attenuation croit avec l'occultation (monotone)",
+		AM.etouffement_fumee_db(0.25) >= AM.etouffement_fumee_db(0.75),
+		"%.2f devrait etre >= %.2f (les deux sont des DB, donc negatifs)" % [
+			AM.etouffement_fumee_db(0.25), AM.etouffement_fumee_db(0.75)])
+	# ⚠️ « Juste un peu » n'est pas une formule vague : c'est une borne. Une
+	# fumee qui attenuerait plus qu'un mur plein (`OCCLUSION_PENTE_DB`) aurait
+	# fait de la fusee une arme qui assourdit — precisement ce qu'Adrien a
+	# ecarte le 2026-09-08 en choisissant l'etouffement plutot que le masquage
+	# des pas.
+	_check("la fumee attenue MOINS qu'un mur plein",
+		AM.FUSEE_ETOUFFEMENT_MAX_DB > AM.OCCLUSION_PENTE_DB,
+		"fumee %.1f dB, mur %.1f dB" % [AM.FUSEE_ETOUFFEMENT_MAX_DB, AM.OCCLUSION_PENTE_DB])
+	# Une entree hors [0,1] (garde d'appel malformé) ne doit ni amplifier ni
+	# inverser le signe : le clamp doit tenir aux deux bornes.
+	_check("une occultation hors bornes reste bornee",
+		is_equal_approx(AM.etouffement_fumee_db(2.0), AM.FUSEE_ETOUFFEMENT_MAX_DB)
+		and is_zero_approx(AM.etouffement_fumee_db(-1.0)))
+
 ## LE BANC DOSE SOUS LE MEME NOM QUE LE JEU RESOUT.
 ##
 ## **C'est l'invariant sans lequel le banc de mixage ment.** Il ecrit son

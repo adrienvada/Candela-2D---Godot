@@ -4,6 +4,8 @@ class_name GameState
 const Charte := preload("res://charte.gd")
 
 const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
+const BulletCasingScript := preload("res://bullet_casing.gd")
+const ArenaDecorScript := preload("res://arena_decor.gd")
 
 ## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
 ## transite par MatchRecord.Format pour qu'un BO3/BO5 puisse s'ajouter sans
@@ -719,7 +721,7 @@ func rebuild_arena() -> void:
 	# depuis le menu. Une portée écrite en dur redeviendrait fausse à la première
 	# carte d'une autre taille, et rien ne le dirait.
 	AudioManager.accorder_a_la_carte(MapCodec.get_grid_size(data),
-		CandelaTileSet.TILE_SIZE)
+		CandelaTileSet.TILE_SIZE, data)
 	# V5.10 — la presence de la salle se pose sur la MEME carte, au meme endroit
 	# et pour la meme raison : les ponctuels doivent tomber DANS l'arene, et
 	# c'est ici qu'on sait ou elle commence et ou elle finit. Une zone ecrite en
@@ -745,7 +747,8 @@ func rebuild_arena() -> void:
 
 	# Purge de la construction précédente (rematch, changement de carte).
 	for node_name in ["CustomFloor", "CustomWalls", "CustomFloor_P1", "CustomFloor_P2",
-			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies"]:
+			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies",
+			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2"]:
 		var previous := arena.get_node_or_null(node_name)
 		if previous:
 			arena.remove_child(previous)
@@ -779,6 +782,10 @@ func rebuild_arena() -> void:
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
 
+	# V5.8 — Rendu Shimmer et spécularité du liseré des murs sous la torche.
+	var wall_mat := CandelaTileSet.creer_materiau_mur()
+	walls_layer.material = wall_mat
+
 	# Écran partagé : chaque joueur reçoit sa copie des calques, éclairée par
 	# sa seule lumière ambiante. Sans ça, le halo d'un joueur révélerait sa
 	# position sur l'écran de l'autre.
@@ -786,11 +793,8 @@ func rebuild_arena() -> void:
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
-
-	# Rendu néon des murs (l'original reste visible des deux viewports).
-	var wall_mat := CanvasItemMaterial.new()
-	wall_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	walls_layer.material = wall_mat
+	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
+	ArenaDecorScript.build(data, arena)
 
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
@@ -803,9 +807,12 @@ func _duplicate_layer_for_player(layer: TileMapLayer, visibility: int, light_mas
 	copy.name = "%s_P%d" % [layer.name, 1 if visibility == 2 else 2]
 	copy.visibility_layer = visibility
 	copy.light_mask = light_mask
-	var mat := CanvasItemMaterial.new()
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	copy.material = mat
+	if layer.material is ShaderMaterial:
+		copy.material = layer.material.duplicate()
+	else:
+		var mat := CanvasItemMaterial.new()
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		copy.material = mat
 	arena.add_child(copy)
 
 func _ensure_spawn_marker(spawns: Node2D, marker_name: String) -> void:
@@ -1777,6 +1784,11 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	# _on_replay_spawn_bullet, jamais ici. Hors drapeau, l'appel ne fait rien.
 	if count > 1:
 		PumpShockwave.spawn_if_enabled(arena, pos)
+
+	# Éjection de douille d'atelier persistante au sol (DA Roman Graphique Brutaliste)
+	if weapon and weapon.slug() != "arbalete" and arena:
+		var shoot_dir := Vector2(cos(rot), sin(rot))
+		BulletCasingScript.eject(arena, pos, shoot_dir, weapon.slug())
 
 	if shooter == p1:
 		cam1_shake_time = 0.1

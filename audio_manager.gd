@@ -60,6 +60,11 @@ const SOUNDS: Dictionary = {
 	"ui_vhs_rewind": "res://assets/audio/sfx/ui_vhs_rewind.wav",
 	"ui_keystroke": "res://assets/audio/sfx/ui_keystroke.wav",
 	"ui_power_on": "res://assets/audio/sfx/ui_power_on.wav",
+	# Étape 4 — Direction Roman Graphique Brutaliste (presse, massicot, tampon, refus)
+	"ui_presse": "res://assets/audio/sfx/ui_presse.wav",
+	"ui_tampon": "res://assets/audio/sfx/ui_tampon.wav",
+	"ui_massicot": "res://assets/audio/sfx/ui_massicot.wav",
+	"ui_refus": "res://assets/audio/sfx/ui_refus.wav",
 	# V5.1 — le claquement de torche, LE son entendu cinq cents fois par soirée.
 	# Câblés, muets tant que les fichiers manquent (règle « câbler, taire,
 	# diagnostiquer ») ; entrées à ajouter au manifeste (domaine « menus »).
@@ -80,6 +85,10 @@ const SOUNDS: Dictionary = {
 	# sans suffixe numérique — `famille_de()` traiterait _NN comme une variante.
 	"fusee_rebond": "res://assets/audio/sfx/fusee_rebond.wav",
 	"fusee_combustion": "res://assets/audio/sfx/fusee_combustion.wav",
+	# FU5 — UN SEUL evenement pour les deux causes d'extinction (pietinement ou
+	# balle), a dessein : distinguer viendra si le dosage le reclame un jour, pas
+	# avant. Nom nu, meme regle que `fusee_rebond`.
+	"fusee_eteinte": "res://assets/audio/sfx/fusee_eteinte.wav",
 	# V2.3 / V3.7 / V3.8 — les ponctuations de fin de manche. La regle qui decide
 	# laquelle sort est `stinger_de_fin`, plus bas.
 	#
@@ -93,6 +102,11 @@ const SOUNDS: Dictionary = {
 	"sting_kill_match": "res://assets/audio/music/sting_kill_match.ogg",
 	"sting_defeat": "res://assets/audio/music/sting_defeat.ogg",
 	"sting_draw": "res://assets/audio/music/sting_draw.ogg",
+	# Rechargement des armes (0.2.1)
+	"weapon_reload_pistolet": "res://assets/audio/weapons/weapon_reload_pistolet.wav",
+	"weapon_reload_fusil": "res://assets/audio/weapons/weapon_reload_fusil.wav",
+	"weapon_reload_pompe": "res://assets/audio/weapons/weapon_reload_pompe.wav",
+	"weapon_reload_arbalete": "res://assets/audio/weapons/weapon_reload_arbalete.wav",
 }
 
 ## Quelle ponctuation clot cette manche, vue depuis CETTE machine ?
@@ -287,6 +301,8 @@ const VARIANTES_SFX: Dictionary = {
 	"wall_brush": 3,
 	# V5.10 — la presence de la salle : ponctuels, tres espaces.
 	"ambience": 8,
+	# V4.9 — le corps qui encaisse : 6 variantes de souffle coupé / impact corporel.
+	"breath_hit": 6,
 }
 
 ## Le chemin d'une variante de `sfx/`. Pure, comme `chemin_tir`.
@@ -330,6 +346,8 @@ const FAMILLES_DE_CLES: Dictionary = {
 		"defeat", "spk_perfect", "spk_close_call"],
 	"count": ["count_1", "count_2", "count_3"],
 	"sting": ["sting_kill", "sting_kill_match", "sting_defeat", "sting_draw"],
+	"weapon_reload": ["weapon_reload_pistolet", "weapon_reload_fusil",
+		"weapon_reload_pompe", "weapon_reload_arbalete"],
 }
 
 ## L'index inverse, construit une fois. Ecrire les deux sens a la main
@@ -527,6 +545,13 @@ const PORTEE_RELATIVE: Dictionary = {
 	# Le carreau est le SEUL indice que laisse l'arbalete, qui n'emet pas de
 	# lumiere. Sa portee est donc un arbitrage de jeu, pas un dosage.
 	"bolt_flight": 0.55,
+	# V4.9 — l'impact corporel organique et le souffle coupé : intime, chair.
+	"breath_hit": 0.55,
+	# 0.2.1 — le rechargement mécanique d'arme : manipulation proche.
+	"weapon_reload": 0.50,
+	# V5.1 — le clic de bascule de torche : clic local.
+	"torch_on": 0.45,
+	"torch_off": 0.45,
 	# Chantier FUSÉE — PROPOSITIONS, jamais passées au banc (à doser comme les
 	# autres, molette par molette). Le lancer trahit comme un clic à vide ;
 	# l'atterrissage annonce un peu plus loin (l'événement concerne les deux) ;
@@ -535,6 +560,9 @@ const PORTEE_RELATIVE: Dictionary = {
 	"fusee_atterrit": 0.70,
 	"fusee_rebond": 0.65,
 	"fusee_combustion": 0.60,
+	# Eteindre la fusee d'un rival est une information tactique, pas une
+	# ambiance : elle merite de porter au moins autant que le lancer.
+	"fusee_eteinte": 0.65,
 }
 const PORTEE_RELATIVE_DEFAUT: float = 1.0
 
@@ -580,12 +608,20 @@ const NIVEAU_RELATIF: Dictionary = {
 	"hit_center": -2.0,
 	"hit_edge": -7.0,
 	"bolt_flight": -10.0,
+	# V4.9 — souffle coupé / impact corporel organique : viscéral sans surpasser le tir
+	"breath_hit": -5.0,
+	# 0.2.1 — rechargement d'arme : cliquetis métallique net à courte distance
+	"weapon_reload": -8.0,
+	# V5.1 — claquement sec de torche
+	"torch_on": -6.0,
+	"torch_off": -8.0,
 	# Chantier FUSÉE — propositions à doser au banc : événements nets mais pas
 	# des coups de feu ; le grésillement continu pèse peu, comme les pas.
 	"fusee_lancer": -6.0,
 	"fusee_atterrit": -4.0,
 	"fusee_rebond": -6.0,
 	"fusee_combustion": -11.0,
+	"fusee_eteinte": -6.0,
 }
 const NIVEAU_RELATIF_DEFAUT: float = 0.0
 
@@ -906,9 +942,107 @@ func appliquer_force_occlusion(force: float) -> void:
 static func coupure_occlusion_pour(force: float) -> float:
 	return lerpf(OCCLUSION_COUPURE_MAX, OCCLUSION_COUPURE_MIN, clampf(force, 0.0, 1.0))
 
-## Accorde le son a la carte qu'on vient de poser. Appelee par `rebuild_arena`.
-func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i) -> void:
+## ============================================================================
+## V5.12 / S5 — LA RÉVERB DIT LA SALLE (acoustique minérale brutaliste)
+## ============================================================================
+##
+## L'arène est un hangar clandestin de béton armé et d'arêtes d'acier. Le son ne
+## s'y amortit pas comme dans un salon feutré : les surfaces dures renvoient des
+## transitoires aiguës nettes (`damping` bas ~0.20-0.28) et la taille de la pièce
+## dicte l'ampleur du volume réverbéré (`room_size`).
+##
+## Dans un sas confiné (15×15), le son est sec, serré et claustrophobe
+## (`room_size` ~0.07, `wet` ~0.25). Dans un grand hangar (45×45), les réflexions
+## s'étalent (`room_size` ~0.32, `wet` ~0.40).
+const REVERB_ROOM_SIZE_MIN: float = 0.06
+const REVERB_ROOM_SIZE_MAX: float = 0.35
+const REVERB_DAMPING_DEFAUT: float = 0.22
+const REVERB_HIPASS_DEFAUT: float = 0.25
+const REVERB_WET_MIN: float = 0.24
+const REVERB_WET_MAX: float = 0.42
+
+## Dérive les caractéristiques acoustiques de la salle à partir de la carte. Pure.
+static func calculer_reverb_carte(grille: Vector2i, tuile: Vector2i,
+		ratio_murs: float = 0.0) -> Dictionary:
+	var diag := diagonale_carte(grille, tuile)
+	# Interpolation basée sur la diagonale : de 700 px (15×15) à 2200 px (45×45)
+	var t := clampf((diag - 700.0) / 1500.0, 0.0, 1.0)
+	var room := lerpf(REVERB_ROOM_SIZE_MIN, REVERB_ROOM_SIZE_MAX, t)
+	var damp := clampf(REVERB_DAMPING_DEFAUT + ratio_murs * 0.08, 0.18, 0.35)
+	var wet := lerpf(REVERB_WET_MIN, REVERB_WET_MAX, t)
+	return {
+		"room_size": room,
+		"damping": damp,
+		"hipass": REVERB_HIPASS_DEFAUT,
+		"wet": wet,
+		"dry": 1.0,
+	}
+
+var _reverb_courante: Dictionary = {}
+
+func reverb_courante() -> Dictionary:
+	return _reverb_courante
+
+func _get_sfx_reverb() -> AudioEffectReverb:
+	var idx := AudioServer.get_bus_index(BUS_SFX)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectReverb:
+			return ef as AudioEffectReverb
+	return null
+
+func _get_sfx_monde_filter() -> AudioEffectFilter:
+	var idx := AudioServer.get_bus_index(BUS_SFX)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectFilter and ef.resource_name == "EtouffementMonde":
+			return ef as AudioEffectFilter
+	# Repli si nom absent : tout filtre sur SFX
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectFilter:
+			return ef as AudioEffectFilter
+	return null
+
+func _get_sfx_occlus_reverb() -> AudioEffectReverb:
+	var idx := AudioServer.get_bus_index(BUS_SFX_OCCLUS)
+	if idx == -1:
+		return null
+	for i in AudioServer.get_bus_effect_count(idx):
+		var ef := AudioServer.get_bus_effect(idx, i)
+		if ef is AudioEffectReverb:
+			return ef as AudioEffectReverb
+	return null
+
+func appliquer_reverb_carte(params: Dictionary) -> void:
+	_reverb_courante = params
+	var rev := _get_sfx_reverb()
+	if rev != null:
+		rev.room_size = float(params.get("room_size", 0.15))
+		rev.damping = float(params.get("damping", REVERB_DAMPING_DEFAUT))
+		rev.hipass = float(params.get("hipass", REVERB_HIPASS_DEFAUT))
+		rev.wet = float(params.get("wet", 0.34))
+		rev.dry = float(params.get("dry", 1.0))
+	var rev_occ := _get_sfx_occlus_reverb()
+	if rev_occ != null:
+		rev_occ.room_size = float(params.get("room_size", 0.15))
+		rev_occ.damping = float(params.get("damping", REVERB_DAMPING_DEFAUT))
+		rev_occ.hipass = float(params.get("hipass", REVERB_HIPASS_DEFAUT))
+
+## Accorde le son et la réverbération à la carte qu'on vient de poser. Appelee par `rebuild_arena`.
+func accorder_a_la_carte(grille: Vector2i, tuile: Vector2i, data: Dictionary = {}) -> void:
 	_portee_carte = maxf(1.0, diagonale_carte(grille, tuile))
+	var ratio_murs := 0.0
+	if not data.is_empty():
+		var total := grille.x * grille.y
+		if total > 0:
+			ratio_murs = float(MapCodec.get_wall_cells(data).size()) / float(total)
+	var params := calculer_reverb_carte(grille, tuile, ratio_murs)
+	appliquer_reverb_carte(params)
 
 func portee_carte() -> float:
 	return _portee_carte
@@ -1038,6 +1172,63 @@ func est_occulte(pos: Vector2) -> bool:
 		MapGeometry.WALL_LAYER)
 	return not espace.intersect_ray(q).is_empty()
 
+## ============================================================================
+## FU4 — LA FUMEE ETOUFFE UN PEU (decision d'Adrien, 2026-09-08)
+## ============================================================================
+##
+## « Non, la fumee etouffe juste un peu les sons. » Ecarte au passage le modele
+## qu'on avait envisage — un gresillement qui masque les pas de l'adversaire :
+## la fusee reste un objet qui BROUILLE, elle ne devient pas une arme qui rend
+## sourd. « Juste un peu » est le dosage autant que le principe.
+##
+## ⚠️ **Une attenuation de VOLUME qui s'AJOUTE, pas une reoccupation du bus
+## `SFX_Occlus`.** Ce bus existe pour dire « un mur bloque le direct, ce qui
+## reste est le champ reverbere d'une autre piece » — un changement d'ESPACE.
+## La fumee ne change pas de piece : l'air est le meme, juste charge. Router les
+## sons de fumee vers `SFX_Occlus` les ferait dependre de `force_occlusion`, un
+## reglage tenu et juge au banc pour les MURS seuls — une retouche de mur
+## deplacerait alors la fumee sans que personne ne l'ait demande. Et un son a la
+## fois occulte par un mur ET dans la fumee doit perdre les DEUX penalites, pas
+## une choisie par un `if` : deux causes independantes s'additionnent en dB,
+## elles ne se remplacent pas — meme geste que le duck des pas sous le tir, qui
+## s'ajoute au niveau plutot que de l'ecraser.
+##
+## ⚠️ **Au POINT source, pas le long du trajet.** Meme idiome que
+## `Fusee.occultation_pour`, deja repris par `player.gd` pour l'effacement des
+## sprites : la fumee cache ce qui est DEDANS, elle ne feutre pas ce qui passe
+## simplement devant. Un tir qui longe un nuage sans y entrer arrive donc
+## intact — coherent avec ce qu'on VOIT deja : un corps juste a cote du nuage
+## sans y etre ne s'efface pas non plus. Une occultation le long du SEGMENT
+## emetteur-oreille donnerait un resultat plus juste dans le cas rare d'un tir
+## qui traverse un nuage sans y naitre ni y mourir, mais introduirait un second
+## modele de fumee la ou le jeu n'en a qu'un pour la vue — deux modeles pour un
+## meme nuage finiraient par diverger.
+##
+## `FUSEE_ETOUFFEMENT_MAX_DB` est un POINT DE DEPART, pas un jugement : aucune
+## oreille ne l'a encore entendu contre les autres sons. Meme statut que les
+## familles livrees le 2026-08-27.
+const FUSEE_ETOUFFEMENT_MAX_DB: float = -3.0
+
+## Pure — verifiable sans scene ni groupe. `occultation` est deja bornee par
+## `Fusee.occultation_pour` mais le clamp est repete ici a dessein : cette
+## fonction ne doit RIEN supposer sur qui l'appelle.
+static func etouffement_fumee_db(occultation: float) -> float:
+	return FUSEE_ETOUFFEMENT_MAX_DB * clampf(occultation, 0.0, 1.0)
+
+## L'occultation par la fumee au point `pos`, agregee sur tous les nuages en
+## vol. Par le PIRE des nuages, jamais en les additionnant : deux nuages
+## superposes ne rendent pas un corps plus invisible qu'un seul, au coeur du
+## sien — meme regle que `part_occultee` avec l'ecran partage plus haut.
+##
+## N'importe quel noeud du groupe « fusees » qui expose `occultation_pour` fait
+## l'affaire : `AudioManager` ne connait pas `Fusee`, il lit une INTERFACE.
+func occultation_fumee(pos: Vector2) -> float:
+	var occ := 0.0
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if f.has_method("occultation_pour"):
+			occ = maxf(occ, f.occultation_pour(pos))
+	return occ
+
 const SFX_POOL_SIZE: int = 16
 
 ## V4.16 — priorité d'un son dans le pool. Plus haut, mieux protégé.
@@ -1058,6 +1249,10 @@ const SFX_PRIORITE: Dictionary = {
 	"wall_impact": 1,
 	"button_click": 1,
 	"ui_ready_ping": 1,
+	"ui_presse": 1,
+	"ui_tampon": 1,
+	"ui_massicot": 1,
+	"ui_refus": 1,
 	"shoot": 2,
 	"flesh_impact": 3,
 	# --- Livraison du 2026-08-27, classee par ce que le son APPREND.
@@ -1072,6 +1267,10 @@ const SFX_PRIORITE: Dictionary = {
 	# Un ricochet dit qu'une balle VIT ENCORE — au rang du tir qui l'a lancee.
 	"ricochet": 2,
 	"bolt_flight": 2,
+	"breath_hit": 2,
+	"weapon_reload": 1,
+	"torch_on": 1,
+	"torch_off": 1,
 	# Toucher reste l'information la plus chere du jeu (voir le commentaire de
 	# `flesh_impact` plus haut) : les deux qualites de coup en heritent.
 	"hit_center": 3,
@@ -1081,6 +1280,7 @@ const SFX_PRIORITE: Dictionary = {
 	"fusee_lancer": 1,
 	"fusee_atterrit": 1,
 	"fusee_rebond": 1,
+	"fusee_eteinte": 1,
 }
 ## Un son inconnu du barème — ou joué depuis un flux et non depuis une clé — se
 ## place au-dessus des pas et en dessous du récit. Le défaut ne doit privilégier
@@ -1187,6 +1387,9 @@ func _ready() -> void:
 	# c'est la leçon de la force d'occlusion, où le banc dosait une valeur que le
 	# jeu n'appliquait pas.
 	poser_limiteur()
+
+	# V5.12 / S5 — accorder la réverbération minérale à la carte par défaut
+	accorder_a_la_carte(GRILLE_DEFAUT, CandelaTileSet.TILE_SIZE)
 
 	# S3 — poser la force d'occlusion dès le démarrage. **Sans cette ligne, la
 	# molette du banc ne pilote que le banc** : le jeu garderait les valeurs
@@ -1389,6 +1592,9 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	player.bus = bus_pour(bus_name, part > 0.0)
 	if part > 0.0:
 		player.volume_db += OCCLUSION_PENTE_DB * part
+	# FU4 — s'ajoute a l'occlusion des murs, ne la remplace pas : voir la section
+	# plus haut sur pourquoi ce n'est pas le meme bus.
+	player.volume_db += etouffement_fumee_db(occultation_fumee(pos))
 	player.play()
 	return player
 
@@ -1494,6 +1700,24 @@ func play_hit(pos: Vector2, proximite_bord: float) -> AudioStreamPlayer2D:
 		return play_sfx_2d_random_pitch("flesh_impact", pos, 0.92, 1.08)
 	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
 
+## V2.9 — l'impact d'une balle sur un mur plein (béton brut).
+func play_wall_impact(pos: Vector2) -> AudioStreamPlayer2D:
+	return play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
+
+## 0.2.1 — le rechargement mécanique d'une arme.
+func play_weapon_reload(slug: String, pos: Vector2) -> AudioStreamPlayer2D:
+	var cle := "weapon_reload_" + slug
+	if get_audio_stream(cle) == null:
+		return null
+	return play_sfx_2d_random_pitch(cle, pos, 0.96, 1.04)
+
+## V4.9 — souffle coupé et compression d'impact corporel organique (6 variantes).
+func play_breath_hit(pos: Vector2) -> AudioStreamPlayer2D:
+	var chemin := chemin_variante_au_hasard("breath_hit")
+	if chemin == "" or get_audio_stream(chemin) == null:
+		return null
+	return play_sfx_2d_random_pitch(chemin, pos, 0.95, 1.05)
+
 ## V4.10 — le carreau d'arbalete en vol.
 ##
 ## **Tel qu'appele aujourd'hui, ce n'est PAS un indice de plus : c'est du
@@ -1527,9 +1751,33 @@ func play_count(seconde: int) -> AudioStreamPlayer:
 ## Un son d'interface, non positionnel. Passe par la meme porte que le reste
 ## pour que le pool et les priorites s'appliquent.
 func play_ui(cle: String, volume_db: float = 0.0) -> AudioStreamPlayer:
-	if get_audio_stream(cle) == null:
-		return null
+	var stream = get_audio_stream(cle)
+	if not stream:
+		match cle:
+			"ui_presse":
+				return play_sfx("ui_type_impact", 0.9, volume_db + 1.0)
+			"ui_tampon":
+				return play_sfx("button_click", 1.15, volume_db)
+			"ui_massicot":
+				return play_sfx("ui_tick", 1.4, volume_db)
+			"ui_refus":
+				return play_sfx("button_click", 0.65, volume_db)
+			_:
+				return null
 	return play_sfx(cle, 1.0, volume_db)
+
+## Étape 4 — Déclencheurs dédiés Roman Graphique Brutaliste
+func play_ui_presse(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_presse", volume_db)
+
+func play_ui_tampon(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_tampon", volume_db)
+
+func play_ui_massicot(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_massicot", volume_db)
+
+func play_ui_refus(volume_db: float = 0.0) -> AudioStreamPlayer:
+	return play_ui("ui_refus", volume_db)
 
 ## ============================================================================
 ## V5.10 — LA PRESENCE DE LA SALLE
@@ -1764,6 +2012,10 @@ var _oreille: AudioListener2D = null
 var _oreille2: AudioListener2D = null
 var _relais: Node2D = null
 var _suivi: Node2D = null
+
+## Le porteur de l'oreille principale, retenu pour pouvoir REPOSER l'oreille si
+## le mode de rendu change apres la pose. Voir la garde dans `_process`.
+var _porteur: Node2D = null
 var _vues_ecoutantes: Array = []
 
 ## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
@@ -1796,7 +2048,35 @@ func poser_oreille(porteur: Node2D) -> void:
 	for p in sfx_players_2d:
 		if is_instance_valid(p) and p.is_inside_tree():
 			p.reparent(hote, false)
+	_porteur = porteur
 	var vue := porteur.get_viewport()
+	var racine := get_tree().root
+
+	# ⚠️ **LE DUEL EST-IL RENDU DANS LA RACINE ?** (chantier R, vue unique.)
+	#
+	# Dans ce cas la racine a adopte le `World2D` du duel et les deux
+	# `SubViewport` sont ARRETES (`UPDATE_DISABLED`). Declarer oreille la vue qui
+	# porte le joueur revient alors a confier l'ecoute a une vue MORTE, et a
+	# couper la seule qui soit vivante. **C'est le silence complet, et il a tenu
+	# de la mi-aout au 2026-09-09** : plus un son en ligne ni a l'entrainement,
+	# y compris ses PROPRES tirs — seul l'ecran partage entendait encore, parce
+	# qu'il garde ses deux vues allumees.
+	#
+	# Le garde precedent (`if vue != racine`) ne couvrait que deux cas sur trois :
+	# l'oreille dans un `SubViewport` vivant, et l'oreille dans la racine. Le
+	# chantier R en a cree un troisieme — **l'oreille dans un `SubViewport`
+	# arrete pendant que la racine peint** — et rien ne l'a signale : `auditeurs
+	# = 1` restait vrai, `test_rendu_racine` comptait cette vue morte comme un
+	# auditeur valide et passait au vert.
+	#
+	# *Un graphe correct n'est pas un son qui sort* — quatrieme fois. Le predicat
+	# qui manquait n'est pas « combien de vues ecoutent » mais **« celle qui
+	# ecoute est-elle celle qui rend »**.
+	var duel_dans_la_racine := vue != null and vue != racine \
+		and racine.world_2d == vue.world_2d
+	if duel_dans_la_racine:
+		_poser_oreille_dans_la_racine(porteur, vue, racine)
+		return
 	if vue != null:
 		vue.audio_listener_enable_2d = true
 		# ⚠️ **ET COUPER LA RACINE, sans quoi il y a DEUX auditeurs.**
@@ -1835,6 +2115,37 @@ func poser_oreille(porteur: Node2D) -> void:
 	if not hote.tree_exiting.is_connected(rendre_oreille):
 		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
 	_tracer_ecoute("une oreille posee sur %s" % porteur.name)
+
+## L'oreille quand le duel est peint par la RACINE : un relais, comme pour J2.
+##
+## ⚠️ **Elle ne peut pas etre l'enfant du joueur, et c'est tout le probleme.**
+## `make_current()` enregistre le listener sur SON viewport ; le joueur vit sous
+## le `SubViewport`, donc une oreille posee sur lui ecouterait toujours la vue
+## arretee. On reprend donc le montage deja eprouve pour J2 en ecran partage :
+## un noeud sous la vue qui ecoute, dont la position recopie celle du porteur a
+## chaque frame (`_suivi`, boucle plus bas).
+##
+## La position se recopie des la pose et pas seulement a la frame suivante :
+## sans ca le premier son de la manche — souvent « FIGHT » ou un pas — partirait
+## depuis l'origine de la carte.
+func _poser_oreille_dans_la_racine(porteur: Node2D, vue: Viewport, racine: Viewport) -> void:
+	racine.audio_listener_enable_2d = true
+	vue.audio_listener_enable_2d = false
+	_vues_ecoutantes = [racine]
+	_relais = Node2D.new()
+	_relais.name = "RelaisOreilleRacine"
+	racine.add_child(_relais)
+	_relais.global_position = porteur.global_position
+	_oreille = AudioListener2D.new()
+	_oreille.name = "OreilleLocale"
+	_relais.add_child(_oreille)
+	_oreille.make_current()
+	_suivi = porteur
+	var hote := _hote_positionnel
+	if hote != null and is_instance_valid(hote) \
+			and not hote.tree_exiting.is_connected(rendre_oreille):
+		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+	_tracer_ecoute("une oreille posee sur %s, par relais dans la racine" % porteur.name)
 
 ## Pose UNE oreille par joueur, chacune dans sa propre vue — le mode « canapé ».
 ##
@@ -1985,6 +2296,7 @@ func rendre_oreille() -> void:
 		_relais.queue_free()
 	_relais = null
 	_suivi = null
+	_porteur = null
 	for v in _vues_ecoutantes:
 		if v != null and is_instance_valid(v):
 			(v as Viewport).audio_listener_enable_2d = false
@@ -2015,6 +2327,7 @@ func set_in_match(in_match: bool) -> void:
 		update_torch_cutoff()
 	else:
 		set_music_cutoff(20000.0, 1)
+		set_sfx_monde_cutoff(SFX_MONDE_COUPURE_OUVERT, 0.1)
 
 ## La torche de ce joueur a-t-elle le droit d'être entendue ici ?
 ##
@@ -2040,6 +2353,37 @@ static func torche_comptee(player_id: int, local_idx: int) -> bool:
 static func coupure_pour(torches: int) -> float:
 	return 200.0 + float(maxi(torches, 0)) * 320.0
 
+## ============================================================================
+## CONTRASTE PSYCHOACOUSTIQUE TORCHE / NOIR ABSOLU (EtouffementMonde)
+## ============================================================================
+##
+## Dans le noir total (80-85 % de l'image), le son est étouffé : les transitoires
+## aiguës du monde s'assourdissent (passe-bas à 5000 Hz) et la réverbération
+## devient plus mate (`damping` accru de 0.10). Le joueur perçoit sa fragilité.
+##
+## Dès que la torche s'allume, l'espace sonore s'ouvre vivement à 20500 Hz : le
+## claquement sec sur le béton et les arêtes d'acier métalliques réapparaissent.
+const SFX_MONDE_COUPURE_NOIR: float = 5000.0
+const SFX_MONDE_COUPURE_OUVERT: float = 20500.0
+
+static func coupure_sfx_monde_pour(torches: int) -> float:
+	return SFX_MONDE_COUPURE_OUVERT if torches > 0 else SFX_MONDE_COUPURE_NOIR
+
+static func damping_sfx_monde_pour(torches: int, base_damping: float) -> float:
+	return base_damping if torches > 0 else clampf(base_damping + 0.10, 0.0, 1.0)
+
+var sfx_monde_tween: Tween
+
+func set_sfx_monde_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
+	var filter := _get_sfx_monde_filter()
+	if not filter:
+		return
+	if sfx_monde_tween and sfx_monde_tween.is_valid():
+		sfx_monde_tween.kill()
+	sfx_monde_tween = create_tween()
+	Charte.animer(sfx_monde_tween, filter, "cutoff_hz", filter.cutoff_hz,
+		cutoff_hz, duration, Charte.Courbe.ENTREE)
+
 func set_player_torch(player_id: int, is_on: bool) -> void:
 	# V5.1 — le claquement d'allumage/extinction, sur la transition seulement.
 	# Sans fuite par construction : le site d'appel (player.gd) filtre déjà par
@@ -2058,6 +2402,14 @@ func update_torch_cutoff() -> void:
 			active_count += 1
 
 	var cible := coupure_pour(active_count)
+	var cible_sfx := coupure_sfx_monde_pour(active_count)
+	var base_damp: float = float(_reverb_courante.get("damping", REVERB_DAMPING_DEFAUT))
+	var damp_cible := damping_sfx_monde_pour(active_count, base_damp)
+
+	var rev := _get_sfx_reverb()
+	if rev != null:
+		rev.damping = damp_cible
+
 	# V5.2 — le balayage. Une torche qui s'allume dépasse sa cible puis y
 	# retombe : c'est ce dépassement qu'on ENTEND, un filtre qui s'ouvre. Sans
 	# lui, le changement est réel mais passe pour un hasard du mixage.
@@ -2065,12 +2417,14 @@ func update_torch_cutoff() -> void:
 	if active_count > _torches_allumees:
 		_torches_allumees = active_count
 		set_music_cutoff(cible * 1.7, 0.09)
+		set_sfx_monde_cutoff(cible_sfx, 0.08)
 		var retombee := create_tween()
 		retombee.tween_interval(0.09)
 		retombee.tween_callback(func() -> void: set_music_cutoff(cible, 0.45))
 		return
 	_torches_allumees = active_count
 	set_music_cutoff(cible, 0.25)
+	set_sfx_monde_cutoff(cible_sfx, 0.35)
 
 func set_music_cutoff(cutoff_hz: float, duration: float = 0.1) -> void:
 	var filter = _ensure_music_lowpass_effect()
@@ -2155,6 +2509,30 @@ func _process(_delta: float) -> void:
 	if _relais != null and is_instance_valid(_relais) \
 			and _suivi != null and is_instance_valid(_suivi):
 		_relais.global_position = _suivi.global_position
+
+	# ⚠️ **L'invariant se tient ICI, en continu, et pas au bon ordre d'appels.**
+	#
+	# Le mode de rendu bascule ailleurs (`_accorder_rendu_aux_vues`), et trois
+	# chemins de `game_state.gd` le changent SANS raccorder l'oreille derriere.
+	# Compter sur l'ordre des appels d'un fichier qui ne m'appartient pas, c'est
+	# reintroduire le silence au premier chemin qu'on ajoutera.
+	#
+	# La verification coute deux comparaisons par frame et ne repose l'oreille
+	# que sur un vrai changement — donc jamais, en regime etabli.
+	if _oreille != null and is_instance_valid(_oreille) \
+			and _porteur != null and is_instance_valid(_porteur) \
+			and _porteur.is_inside_tree() and get_tree() != null:
+		var racine := get_tree().root
+		var vue_du_porteur := _porteur.get_viewport()
+		var doit_ecouter_la_racine: bool = (vue_du_porteur != null \
+			and vue_du_porteur != racine \
+			and racine.world_2d == vue_du_porteur.world_2d)
+		var ecoute_la_racine: bool = false
+		if _vues_ecoutantes.size() == 1:
+			var premiere_vue: Variant = _vues_ecoutantes[0]
+			ecoute_la_racine = (premiere_vue == racine)
+		if doit_ecouter_la_racine != ecoute_la_racine:
+			poser_oreille(_porteur)
 
 	var bt := Engine.time_scale < 0.5 and match_sync_stream != null
 	if bt == _bullet_time_duck:

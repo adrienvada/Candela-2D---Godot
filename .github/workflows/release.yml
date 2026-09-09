@@ -30,7 +30,7 @@ permissions:
   contents: write
 
 jobs:
-  publier:
+  valider_et_exporter_windows:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -78,6 +78,7 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/${GODOT_TEMPLATES}
           unzip -o -q /tmp/modeles.tpz -d /tmp/modeles
           mv /tmp/modeles/templates/* ~/.local/share/godot/export_templates/${GODOT_TEMPLATES}/
+          rm -rf /tmp/modeles.tpz /tmp/modeles
 
       - name: Import des ressources
         run: ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
@@ -92,21 +93,107 @@ jobs:
             --export-release "Windows Desktop" build/windows/Candela/Candela.exe
           # L'archive porte le dossier `Candela` à sa racine : c'est le nom que le
           # jeu vérifie avant de remplacer quoi que ce soit (champ `racine`).
-          # Côté macOS, Godot nomme le bundle d'après `config/name` : c'est
-          # « Candela 2D.app », avec l'espace — vérifié sur un export réel, et
-          # une racine annoncée à tort ferait échouer l'installation après la
-          # fermeture du jeu, au seul moment où plus rien ne peut le dire.
           (cd build/windows && zip -qr Candela-windows.zip Candela)
 
-      - name: Export macOS
+      - name: Téléversement de l'archive Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: candela-windows
+          path: build/windows/Candela-windows.zip
+          if-no-files-found: error
+
+  exporter_macos:
+    runs-on: macos-14
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache du binaire et des modèles Godot macOS
+        id: cache-godot-macos
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-macos-bin
+            ~/Library/Application Support/Godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-macos-avec-modeles
+
+      - name: Téléchargement de Godot macOS et des modèles d'exportation
+        if: steps.cache-godot-macos.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-macos-bin
+          curl -sSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_macos.universal.zip"
+          unzip -o -q /tmp/godot.zip -d ~/godot-macos-bin
+          curl -sSL -o /tmp/modeles.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_TEMPLATES}"
+          unzip -o -q /tmp/modeles.tpz -d /tmp/modeles
+          mv /tmp/modeles/templates/* "$HOME/Library/Application Support/Godot/export_templates/${GODOT_TEMPLATES}/"
+          rm -rf /tmp/godot.zip /tmp/modeles.tpz /tmp/modeles
+
+      - name: Définition de l'exécutable Godot
+        run: |
+          GODOT_EXEC="$(find "$HOME/godot-macos-bin" -name "Godot" -type f -perm +111 | head -n 1)"
+          if [ -z "$GODOT_EXEC" ]; then
+            echo "::error::Binaire Godot introuvable dans ~/godot-macos-bin"
+            exit 1
+          fi
+          echo "GODOT_BIN=$GODOT_EXEC" >> $GITHUB_ENV
+          echo "Binaire Godot macOS : $GODOT_EXEC"
+
+      - name: Import des ressources
+        run: |
+          "$GODOT_BIN" --headless --path . --import
+
+      - name: Export macOS et signature ad-hoc
         run: |
           mkdir -p build/macos
-          ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . \
-            --export-release "macOS" build/macos/Candela-macos.zip
-          # Non signé et non notarisé : la première installation passera par
-          # « Ouvrir quand même » dans les Réglages Système. Les mises à jour
-          # suivantes, elles, ne repassent pas devant Gatekeeper — un fichier
-          # écrit par le jeu ne porte pas l'attribut de quarantaine.
+          rm -rf "build/macos/Candela 2D.app" "build/macos/Candela-macos.zip"
+          "$GODOT_BIN" --headless --path . \
+            --export-release "macOS" "build/macos/Candela 2D.app"
+
+          # Signature ad-hoc native récursive avec codesign
+          echo "--- Signature ad-hoc du bundle et de ses bibliothèques dynamiques"
+          codesign --force --deep --sign - "build/macos/Candela 2D.app"
+
+          # Vérification de l'intégrité de la signature
+          echo "--- Vérification de la signature du bundle"
+          codesign --verify --deep --strict "build/macos/Candela 2D.app"
+
+          # Emballage de Candela 2D.app en préservant les liens symboliques (-y)
+          echo "--- Création de l'archive Candela-macos.zip"
+          (cd build/macos && zip -qry Candela-macos.zip "Candela 2D.app")
+
+      - name: Téléversement de l'archive macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: candela-macos
+          path: build/macos/Candela-macos.zip
+          if-no-files-found: error
+
+  publier:
+    needs: [valider_et_exporter_windows, exporter_macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Téléchargement de l'archive Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: candela-windows
+          path: build/windows
+
+      - name: Téléchargement de l'archive macOS
+        uses: actions/download-artifact@v4
+        with:
+          name: candela-macos
+          path: build/macos
+
+      - name: Vérification des archives construites
+        run: |
+          ls -lh build/windows/Candela-windows.zip
+          ls -lh build/macos/Candela-macos.zip
 
       - name: Manifeste signé
         env:

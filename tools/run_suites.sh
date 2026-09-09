@@ -197,13 +197,14 @@ export CANDELA_PORT
 
 SUITES=(test_liaisons test_icones_editeur
 	test_map_codec test_map_geometry test_arena_build test_editor_tools
-        test_match_format test_pause_menu test_menu_hub test_audio_settings
+        test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio
         test_screen_calibration test_match_banner test_carte_partagee test_rejeu_journal test_pseudo test_protocole
-        test_vitrine_menus test_menu_artworks test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_releve_balistique test_curseur_systeme test_banc test_rendu_racine test_prediction_tir
+        test_vitrine_menus test_menu_artworks test_audit_menus test_pool_sfx test_musique test_oreille test_ecran_de_fin test_serie_de_session test_vision test_eblouissement test_brouillage test_rejeu test_releve_balistique test_curseur_systeme test_curseur_joystick test_banc test_rendu_racine test_prediction_tir
         test_mise_a_jour test_charte test_habillage test_bandeau_fatal test_autoloads test_torches test_lumieres test_viseur test_marche test_sprites
-        test_dosage_audio test_planche_marche test_fusee test_munitions_recharge test_sang_au_sol)
+        test_dosage_audio test_planche_marche test_fusee test_munitions_recharge test_sang_au_sol
+        test_hatch_shader test_inked_icons test_arena_matter test_arena_lighting)
 
 # Plafond de vie d'une suite. Aucune ne dépasse quelques secondes ; ce plafond
 # n'est pas là pour les lentes mais pour celles qui NE SORTENT PAS.

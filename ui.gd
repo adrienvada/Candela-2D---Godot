@@ -334,9 +334,8 @@ class NeonFocusRing extends Panel:
 		_style.draw_center = false
 		_style.set_border_width_all(3)
 		_style.border_color = tint
-		_style.set_corner_radius_all(10)
-		_style.shadow_size = 10
-		_style.shadow_color = Color(tint.r, tint.g, tint.b, 0.4)
+		_style.set_corner_radius_all(0)
+		_style.shadow_size = 0
 		add_theme_stylebox_override("panel", _style)
 
 	func _ready() -> void:
@@ -374,6 +373,67 @@ class NeonFocusRing extends Panel:
 		global_position = global_position.lerp(target_rect.position, t)
 		size = size.lerp(target_rect.size, t)
 
+
+## Curseur virtuel piloté au joystick analogique dans les menus.
+## Apparaît dès qu'on oriente le stick, se déplace librement comme une souris,
+## survole les éléments d'interface et disparaît dès qu'on reprend la navigation
+## case par case aux flèches / au D-pad.
+class VirtualGamepadCursor extends Control:
+	var neon: Color = Charte.AMBRE
+	var _time: float = 0.0
+
+	func _init(tint: Color = Charte.AMBRE) -> void:
+		neon = tint
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = Vector2(24, 24)
+		size = Vector2(24, 24)
+
+	func _ready() -> void:
+		set_as_top_level(true)
+		z_index = 100
+
+	func aim(pos: Vector2) -> void:
+		global_position = pos
+
+	func _process(delta: float) -> void:
+		if not visible:
+			return
+		_time += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var wave := 0.5 + 0.5 * sin(_time * 6.0)
+		# Halo doux centré sur la pointe
+		var halo_color := Color(neon.r, neon.g, neon.b, 0.18 + 0.12 * wave)
+		draw_circle(Vector2(2, 2), 11.0 + 3.0 * wave, halo_color)
+
+		# Forme de flèche de curseur stylisée
+		var points := PackedVector2Array([
+			Vector2(0, 0),        # Pointe
+			Vector2(0, 19),       # Bord gauche
+			Vector2(4.5, 14.5),   # Encoche gauche
+			Vector2(9.5, 22),     # Queue bas-droite
+			Vector2(13.5, 20.0),  # Queue droite
+			Vector2(8.5, 13.0),   # Queue haut-gauche
+			Vector2(14.5, 13.0),  # Aile droite
+		])
+
+		# Ombre portée
+		var shadow_points := PackedVector2Array()
+		for pt in points:
+			shadow_points.append(pt + Vector2(1.5, 1.5))
+		draw_colored_polygon(shadow_points, Color(0, 0, 0, 0.5))
+
+		# Corps de la flèche
+		var fill_color := neon.lerp(Charte.HALOGENE, 0.35 * wave)
+		draw_colored_polygon(points, fill_color)
+
+		# Liseré extérieur
+		draw_polyline(points, Charte.HALOGENE, 1.5, true)
+
+		# Point lumineux sur la pointe
+		draw_circle(Vector2(0, 0), 2.0, Charte.HALOGENE)
+
 # ---------------------------------------------------------------------------
 # HUD DE MATCH
 # ---------------------------------------------------------------------------
@@ -392,6 +452,7 @@ var p2_panel: PanelContainer
 
 var p1_hp: ProgressBar
 var p1_hp_bg: ProgressBar
+var p1_hp_hatch: MenuHatchRect
 var p1_cd: CircularCooldown
 var p1_cd_label: Label
 var p1_ammo_label: Label
@@ -409,6 +470,7 @@ var p1_dazzle: ColorRect
 
 var p2_hp: ProgressBar
 var p2_hp_bg: ProgressBar
+var p2_hp_hatch: MenuHatchRect
 var p2_cd: CircularCooldown
 var p2_cd_label: Label
 var p2_ammo_label: Label
@@ -757,6 +819,10 @@ var p2_focus: Control
 var p1_cursor: NeonFocusRing
 var p2_cursor: NeonFocusRing
 
+var _joystick_cursor: VirtualGamepadCursor
+var _joystick_cursor_active: bool = false
+var _joystick_cursor_pos: Vector2 = Vector2.ZERO
+
 
 # ===========================================================================
 # CYCLE DE VIE
@@ -779,6 +845,11 @@ func _ready() -> void:
 	add_child(p1_cursor)
 	p2_cursor = NeonFocusRing.new(COLOR_P2)
 	add_child(p2_cursor)
+
+	_joystick_cursor = VirtualGamepadCursor.new(COLOR_P1)
+	_joystick_cursor.name = "VirtualGamepadCursor"
+	_joystick_cursor.visible = false
+	add_child(_joystick_cursor)
 
 	MapData.map_selected.connect(func(_id: String) -> void: _refresh_map_card())
 	MapData.catalog_changed.connect(_refresh_map_card)
@@ -817,13 +888,17 @@ func _on_any_button_pressed(btn: BaseButton) -> void:
 	# M8 — seul le geste qui engage une partie tire. Si tout tirait, plus rien ne
 	# serait décisif : c'est la marque posée par `make_entry`, pas le hasard du
 	# bouton, qui décide.
-	if menu_tracer != null and bool(btn.get_meta(MenuHub.META_LAUNCHER, false)):
+	var est_lanceur := bool(btn.get_meta(MenuHub.META_LAUNCHER, false))
+	if menu_tracer != null and est_lanceur:
 		var zone := (btn as Control).get_global_rect()
 		# Au bord droit, là où les entrées de destination portent leur chevron :
 		# le lanceur n'en a pas, mais c'est de là que part le mouvement.
 		menu_tracer.tirer(Vector2(zone.end.x - GAP_S, zone.get_center().y),
 			1.0, COLOR_P1)
-	AudioManager.play_button_click()
+	if est_lanceur:
+		AudioManager.play_ui_presse()
+	else:
+		AudioManager.play_ui_tampon()
 	_pulse_press(btn)
 
 ## La souris pilote toujours la sélection principale (J1), jamais celle de J2 —
@@ -858,6 +933,7 @@ func _pulse_press(control: Control) -> void:
 func _process(delta: float) -> void:
 	_voile_temps += delta
 	_suivre_le_curseur_systeme()
+	_update_joystick_cursor(delta)
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
@@ -943,6 +1019,78 @@ func _suivre_le_curseur_systeme() -> void:
 		else Input.MOUSE_MODE_HIDDEN)
 	if Input.mouse_mode != voulu:
 		Input.mouse_mode = voulu
+
+
+## Pilote le curseur virtuel de joystick lorsque le joueur utilise le stick
+## analogique dans les menus.
+func _update_joystick_cursor(delta: float) -> void:
+	if not _un_menu_attend_un_clic():
+		if _joystick_cursor_active:
+			_desactiver_curseur_joystick()
+		return
+
+	# Lecture du stick gauche (et du stick droit en relais)
+	var stick := Vector2(
+		Input.get_joy_axis(0, JOY_AXIS_LEFT_X),
+		Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
+	)
+	if stick.length() < 0.18:
+		var stick_r := Vector2(
+			Input.get_joy_axis(0, JOY_AXIS_RIGHT_X),
+			Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
+		)
+		if stick_r.length() >= 0.18:
+			stick = stick_r
+
+	var stick_len := stick.length()
+	const ZONE_MORTE := 0.18
+	const VITESSE_MAX := 1100.0 # px/s
+
+	if stick_len > ZONE_MORTE:
+		var vue := get_viewport()
+		if vue == null:
+			return
+		var vrect := vue.get_visible_rect()
+
+		if not _joystick_cursor_active:
+			_joystick_cursor_active = true
+			if _joystick_cursor != null:
+				_joystick_cursor.show()
+			if p1_focus != null and is_instance_valid(p1_focus) and p1_focus.is_visible_in_tree():
+				_joystick_cursor_pos = p1_focus.get_global_rect().get_center()
+			else:
+				_joystick_cursor_pos = vrect.size * 0.5
+
+		var fraction := inverse_lerp(ZONE_MORTE, 1.0, clampf(stick_len, ZONE_MORTE, 1.0))
+		var vitesse := pow(fraction, 1.25) * VITESSE_MAX
+		_joystick_cursor_pos += stick.normalized() * (vitesse * delta)
+		_joystick_cursor_pos.x = clampf(_joystick_cursor_pos.x, 0.0, vrect.size.x)
+		_joystick_cursor_pos.y = clampf(_joystick_cursor_pos.y, 0.0, vrect.size.y)
+
+		if _joystick_cursor != null:
+			_joystick_cursor.aim(_joystick_cursor_pos)
+
+		_actualiser_survol_curseur_joystick(_joystick_cursor_pos)
+
+
+## Détecte si le curseur joystick survole un élément interactif et met à jour le focus.
+func _actualiser_survol_curseur_joystick(pos: Vector2) -> void:
+	var candidates := _nav_candidates(0)
+	for candidate in candidates:
+		if not _is_focus_usable(candidate):
+			continue
+		var rect := candidate.get_global_rect()
+		if rect.has_point(pos):
+			if p1_focus != candidate:
+				_set_focus(0, candidate)
+			return
+
+
+## Masque le curseur virtuel de joystick lorsqu'on revient aux flèches ou à la souris.
+func _desactiver_curseur_joystick() -> void:
+	_joystick_cursor_active = false
+	if _joystick_cursor != null and is_instance_valid(_joystick_cursor):
+		_joystick_cursor.hide()
 
 
 func _update_network_status() -> void:
@@ -1826,6 +1974,7 @@ func _build_player_hud(player: int) -> Control:
 		p1_panel = panel
 		p1_hp = bars["fg"]
 		p1_hp_bg = bars["bg"]
+		p1_hp_hatch = bars.get("hatch", null)
 		p1_cd = weapon["circle"]
 		p1_cd_label = weapon["label"]
 		p1_ammo_label = weapon.get("ammo", null)
@@ -1837,6 +1986,7 @@ func _build_player_hud(player: int) -> Control:
 		p2_panel = panel
 		p2_hp = bars["fg"]
 		p2_hp_bg = bars["bg"]
+		p2_hp_hatch = bars.get("hatch", null)
 		p2_cd = weapon["circle"]
 		p2_cd_label = weapon["label"]
 		p2_ammo_label = weapon.get("ammo", null)
@@ -1939,12 +2089,13 @@ func _create_glow_panel(color: Color) -> PanelContainer:
 		return panel
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE, 0.9)
+	style.bg_color = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.95)
 	style.set_border_width_all(2)
 	style.border_color = color
-	style.set_corner_radius_all(12)
-	style.shadow_color = color
-	style.shadow_size = 15
+	style.set_corner_radius_all(0)
+	style.shadow_size = 0
+	style.shadow_offset = Vector2(4, 4)
+	style.shadow_color = Color(0, 0, 0, 0.95)
 	panel.add_theme_stylebox_override("panel", style)
 	return panel
 
@@ -1959,13 +2110,15 @@ func _create_health_bars(color: Color) -> Dictionary:
 	bg_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Color(Charte.LINE, 0.5)
-	bg_style.set_corner_radius_all(6)
+	bg_style.bg_color = Charte.SURFACE
+	bg_style.set_border_width_all(1)
+	bg_style.border_color = Charte.LINE
+	bg_style.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("background", bg_style)
 
 	var bg_fill := StyleBoxFlat.new()
-	bg_fill.bg_color = Charte.ROUGE
-	bg_fill.set_corner_radius_all(6)
+	bg_fill.bg_color = Charte.CARMIN
+	bg_fill.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("fill", bg_fill)
 
 	var fg_bar := ProgressBar.new()
@@ -1977,15 +2130,27 @@ func _create_health_bars(color: Color) -> Dictionary:
 
 	var fg_fill := StyleBoxFlat.new()
 	fg_fill.bg_color = color
-	fg_fill.set_corner_radius_all(6)
-	fg_fill.shadow_color = color
-	fg_fill.shadow_size = 8
+	fg_fill.set_corner_radius_all(0)
+	fg_fill.shadow_size = 0
 	fg_bar.add_theme_stylebox_override("fill", fg_fill)
+
+	var hatch := MenuHatchRect.new()
+	hatch.name = "HatchAlerte"
+	hatch.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
+	hatch.color_ink = Color(0, 0, 0, 0.0)
+	hatch.color_line = Charte.ROUGE
+	hatch.spacing = 8.0
+	hatch.line_width = 1.8
+	hatch.alpha_mix = 0.0
+	hatch.alert_pulse = 0.0
+	hatch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	container.add_child(bg_bar)
 	container.add_child(fg_bar)
+	container.add_child(hatch)
 
-	return {"container": container, "fg": fg_bar, "bg": bg_bar}
+	return {"container": container, "fg": fg_bar, "bg": bg_bar, "hatch": hatch}
 
 func _create_weapon_indicator(color: Color) -> Dictionary:
 	var container := HBoxContainer.new()
@@ -2065,18 +2230,20 @@ func _create_torch_indicator() -> PanelContainer:
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(12)
+	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
 
 	if active:
 		style.bg_color = Color(Charte.LINE, 0.9)
 		style.border_color = player_color
-		style.shadow_color = player_color
-		style.shadow_size = 5
+		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2(3, 3)
 	else:
 		style.bg_color = Color(Charte.SURFACE, 0.8)
 		style.border_color = Color(Charte.LINE, 1.0)
 		style.shadow_size = 0
+		style.shadow_offset = Vector2.ZERO
 
 	panel.add_theme_stylebox_override("panel", style)
 
@@ -2225,7 +2392,7 @@ func _build_debug_panel() -> void:
 	style.bg_color = Color(Charte.NOIR, 0.75)
 	style.set_border_width_all(1)
 	style.border_color = COLOR_LINE
-	style.set_corner_radius_all(6)
+	style.set_corner_radius_all(0)
 	style.content_margin_left = GAP_S
 	style.content_margin_right = GAP_S
 	style.content_margin_top = GAP_XS
@@ -5662,6 +5829,10 @@ func _input(event: InputEvent) -> void:
 		if _handle_pause_input():
 			return
 
+	if event is InputEventMouseMotion:
+		if _joystick_cursor_active:
+			_desactiver_curseur_joystick()
+
 	var pause_open: bool = _panneau_ouvert(pause_panel)
 	if not _panneau_ouvert(game_over_panel) and not pause_open:
 		return
@@ -5684,12 +5855,20 @@ func _input(event: InputEvent) -> void:
 	for player in 2:
 		var prefix := "p1_menu_" if player == 0 else "p2_menu_"
 		if event.is_action_pressed(prefix + "right"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.RIGHT)
 		elif event.is_action_pressed(prefix + "left"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.LEFT)
 		elif event.is_action_pressed(prefix + "up"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.UP)
 		elif event.is_action_pressed(prefix + "down"):
+			if player == 0 and _joystick_cursor_active:
+				_desactiver_curseur_joystick()
 			_navigate(player, Vector2.DOWN)
 		elif event.is_action_pressed(prefix + "select"):
 			_activate(player)
@@ -6037,6 +6216,13 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p1_shake_time = 0.2
 		p1_target_hp = p1.hp
 		p1_hp.value = p1.hp
+		if p1_hp_hatch:
+			if p1.hp <= 30.0 and p1.hp > 0.0:
+				p1_hp_hatch.set_alert(true, Charte.ROUGE, 3.5)
+				p1_hp_hatch.alpha_mix = 0.70
+			else:
+				p1_hp_hatch.set_alert(false)
+				p1_hp_hatch.alpha_mix = 0.0
 
 		var p1_reloading: bool = bool(p1.get("is_reloading")) if p1 else false
 		var p1_ammo: int = int(p1.get("current_ammo")) if p1 else 0
@@ -6071,6 +6257,13 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p2_shake_time = 0.2
 		p2_target_hp = p2.hp
 		p2_hp.value = p2.hp
+		if p2_hp_hatch:
+			if p2.hp <= 30.0 and p2.hp > 0.0:
+				p2_hp_hatch.set_alert(true, Charte.ROUGE, 3.5)
+				p2_hp_hatch.alpha_mix = 0.70
+			else:
+				p2_hp_hatch.set_alert(false)
+				p2_hp_hatch.alpha_mix = 0.0
 
 		var p2_reloading: bool = bool(p2.get("is_reloading")) if p2 else false
 		var p2_ammo: int = int(p2.get("current_ammo")) if p2 else 0

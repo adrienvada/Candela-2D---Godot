@@ -95,6 +95,67 @@ func _test_emprise_de_copie() -> void:
 			_check("emprise %dx%d à %.0f° contient ses coins lus (marge %.1f px)"
 				% [taille.x, taille.y, rad_to_deg(a2), -pire], pire <= 0.0)
 
+	_test_rect_photocopie()
+
+
+## Le `rect` remis au `BackBufferCopy` couvre-t-il tout ce que le shader lira ?
+##
+## **C'est le contrôle qui manquait, et son absence a coûté un défaut d'un mois.**
+## `emprise_copie()` était vérifiée — exacte à 0,000 sur 200 000 tirages — et le
+## polygone était quand même là, parce que personne ne vérifiait l'étape
+## SUIVANTE : la conversion vers les texels de framebuffer, qui n'existait pas.
+##
+## La vérification se fait en TEXELS, puisque c'est l'unité du `rect` et celle du
+## noyau du shader (`rayon_noyau * SCREEN_PIXEL_SIZE`). Pour chaque coin du
+## rectangle tourné, on pousse d'un rayon de noyau vers l'extérieur — le texel le
+## plus lointain que le flou puisse aller chercher — et on exige qu'il tombe
+## dans le `rect`.
+func _test_rect_photocopie() -> void:
+	print("\n[Le rect de photocopie couvre ce que le shader lira, EN TEXELS]")
+	var noyau := 48.0
+	# Les facteurs mesurés le 2026-09-07 sur le poste d'Adrien, plus deux bornes.
+	var echelles := [Vector2.ONE, Vector2(1.7781, 1.7778), Vector2(1.3333, 1.3333),
+		Vector2(2.0, 2.0), Vector2(1.5, 2.5)]
+	for brut in echelles:
+		# ⚠️ Le type doit être ANNONCÉ : sorti d'un `Array` non typé, `ech` est un
+		# Variant, et `(centre + coin) * ech` ne s'infère pas — le script ne
+		# compile pas, et la scène s'exécute alors sans lui, sans erreur visible.
+		var ech: Vector2 = brut
+		var pire := 0.0
+		for taille in [Vector2(220, 90), Vector2(64, 64), Vector2(410, 137)]:
+			for a2 in [0.0, PI / 6.0, PI / 4.0, 2.3, -1.1]:
+				# Un centre volontairement fractionnaire : la production n'en
+				# produit jamais d'autre, et c'est là que la troncature mord.
+				var centre := Vector2(613.37, 402.62)
+				var r: Rect2 = Brouillage.rect_photocopie(centre, taille, a2,
+					noyau, ech)
+				var demi_t: Vector2 = taille * 0.5
+				for sx in [-1.0, 1.0]:
+					for sy in [-1.0, 1.0]:
+						var coin := Vector2(demi_t.x * sx, demi_t.y * sy).rotated(a2)
+						# En texels : le coin est en canevas, le noyau en texels.
+						var lu: Vector2 = (centre + coin) * ech \
+							+ coin.normalized() * noyau
+						pire = maxf(pire, r.position.x - lu.x)
+						pire = maxf(pire, r.position.y - lu.y)
+						pire = maxf(pire, lu.x - r.end.x)
+						pire = maxf(pire, lu.y - r.end.y)
+		_check("échelle %.3f×%.3f : tout texel lu tombe dans le rect (marge %.1f)"
+			% [ech.x, ech.y, -pire], pire <= 0.0)
+
+	# ⚠️ **Le contre-test, sans quoi le précédent passerait toujours.** Un rect
+	# posé en unités de CANEVAS — ce que faisait la production — doit ÉCHOUER dès
+	# que l'échelle s'écarte de 1. S'il passait, c'est que le contrôle ne mesure
+	# rien.
+	var ech_racine := Vector2(1.7781, 1.7778)
+	var faux: Rect2 = Brouillage.rect_photocopie(Vector2(613.37, 402.62),
+		Vector2(220, 90), 0.4, 48.0, Vector2.ONE)
+	var vrai: Rect2 = Brouillage.rect_photocopie(Vector2(613.37, 402.62),
+		Vector2(220, 90), 0.4, 48.0, ech_racine)
+	_check("et l'ancienne façon (rect en canevas) serait bien trop petite",
+		faux.size.x < vrai.size.x * 0.75,
+		"%s contre %s" % [str(faux.size), str(vrai.size)])
+
 
 func _test_identite_a_zero() -> void:
 	print("\n[À éblouissement nul, tout mode est l'identité]")

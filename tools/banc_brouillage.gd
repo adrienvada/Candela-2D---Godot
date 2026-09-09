@@ -600,6 +600,20 @@ func _texture_halo() -> GradientTexture2D:
 	return tex
 
 
+## Combien de texels de framebuffer vaut UNE unité de canevas — voir
+## `brouillage_vue.gd` pour la même fonction en production et la mesure qui l'a
+## rendue nécessaire (aucune API de transformation ne dit la vérité).
+func _texels_par_unite() -> Vector2:
+	var vue := get_viewport()
+	var canevas := vue.get_visible_rect().size
+	if canevas.x < 1.0 or canevas.y < 1.0:
+		return Vector2.ONE
+	var tex := vue.get_texture()
+	if tex == null:
+		return Vector2.ONE
+	return Vector2(tex.get_size()) / canevas
+
+
 func _process(delta: float) -> void:
 	_temps += delta
 	_repos = maxf(0.0, _repos - delta)
@@ -790,12 +804,17 @@ func _rendre() -> void:
 		# boîte trop petite dès que l'angle n'est pas droit, et le coin de
 		# l'ellipse lirait du périmé. Pour un rectangle (l, h) tourné de θ,
 		# la demi-emprise vaut (l/2·|cos| + h/2·|sin|, l/2·|sin| + h/2·|cos|).
-		var demi_emprise := Brouillage.emprise_copie(
-			taille, _rot_vraie, _noyau_flou + 2.0)
-		# Le `rect` est en coordonnées LOCALES du `BackBufferCopy`, qui est posé
-		# à l'origine de sa `CanvasLayer` — donc en coordonnées d'écran, comme
-		# le flou lui-même.
-		_copie_ecran.rect = Rect2(centre_flou - demi_emprise, demi_emprise * 2.0)
+		# ⚠️ **En unités de CANEVAS ici, converties en TEXELS par
+		# `rect_photocopie()`.** Ce banc portait le même défaut que la
+		# production avant le 2026-09-07 : `BackBufferCopy.rect` s'exprime en
+		# texels de framebuffer, jamais en canevas, et Godot ne convertit rien.
+		# Le banc tourne dans une fenêtre — donc avec la même densité native
+		# que la production en vue unique — et aurait donc pu montrer le
+		# polygone à qui l'aurait cherché. Voir `Brouillage.rect_photocopie()`
+		# pour la mesure et le pourquoi ; le `rect` reste en coordonnées
+		# d'écran, comme le flou lui-même.
+		_copie_ecran.rect = Brouillage.rect_photocopie(centre_flou, taille,
+			_rot_vraie, _noyau_flou, _texels_par_unite())
 		_mat_flou.set_shader_parameter("rayon_noyau", _noyau_flou)
 		_mat_flou.set_shader_parameter("force", float(f["force"]))
 		# Le trou autour de soi, en UV d'écran. **En jeu, ce point est le centre

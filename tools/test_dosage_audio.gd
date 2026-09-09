@@ -29,7 +29,7 @@ var _failures: int = 0
 ## nombre affiché ne peut pas dépasser ce qui a tourné.
 var _checks: int = 0
 ## Un contrôle qui n'a pas pu s'exécuter est un ÉCHEC, pas une absence.
-var _attendus: int = 57
+var _attendus: int = 70
 
 func _check(label: String, ok: bool, detail: String = "") -> void:
 	_checks += 1
@@ -45,6 +45,8 @@ func _init() -> void:
 func _run() -> void:
 	print("test_dosage_audio")
 	_test_diagonale()
+	_test_reverb_carte()
+	_test_etouffement_torche()
 	_test_portee_par_son()
 	_test_portee_suit_la_carte()
 	_test_bus()
@@ -99,6 +101,45 @@ func _test_diagonale() -> void:
 	var carree := AM.diagonale_carte(Vector2i(20, 20), Vector2i(35, 35))
 	_check("à surface égale, la carte plate porte plus loin", plate > carree,
 		"%f vs %f" % [plate, carree])
+
+## V5.12 / S5 — la réverbération s'adapte à la géométrie et la taille de la carte.
+func _test_reverb_carte() -> void:
+	print(" réverbération minérale par carte (V5.12 / S5)")
+	var p_petite := AM.calculer_reverb_carte(Vector2i(15, 15), CandelaTileSet.TILE_SIZE)
+	var p_defaut := AM.calculer_reverb_carte(Vector2i(30, 30), CandelaTileSet.TILE_SIZE)
+	var p_grande := AM.calculer_reverb_carte(Vector2i(45, 45), CandelaTileSet.TILE_SIZE)
+
+	_check("petite carte → volume de pièce plus resserré",
+		float(p_petite["room_size"]) < float(p_defaut["room_size"]),
+		"%.3f vs %.3f" % [p_petite["room_size"], p_defaut["room_size"]])
+	_check("grande carte → volume de pièce plus vaste",
+		float(p_grande["room_size"]) > float(p_defaut["room_size"]),
+		"%.3f vs %.3f" % [p_grande["room_size"], p_defaut["room_size"]])
+	_check("room_size reste bornée entre min et max",
+		float(p_petite["room_size"]) >= AM.REVERB_ROOM_SIZE_MIN
+		and float(p_grande["room_size"]) <= AM.REVERB_ROOM_SIZE_MAX)
+	_check("l'amortissement (damping) reflète des surfaces minérales dures",
+		float(p_defaut["damping"]) >= 0.18 and float(p_defaut["damping"]) <= 0.35,
+		"damping %.2f" % p_defaut["damping"])
+	_check("la présence de wet grandit avec l'ampleur de la salle",
+		float(p_grande["wet"]) > float(p_petite["wet"]),
+		"%.2f vs %.2f" % [p_grande["wet"], p_petite["wet"]])
+
+## Contraste psychoacoustique torche / obscurité totale (EtouffementMonde sur SFX).
+func _test_etouffement_torche() -> void:
+	print(" contraste psychoacoustique torche / pénombre")
+	var noir_hz := AM.coupure_sfx_monde_pour(0)
+	var ouvert_hz := AM.coupure_sfx_monde_pour(1)
+	_check("dans le noir complet : monde étouffé vers 5000 Hz",
+		absf(noir_hz - 5000.0) < 1.0, "%.0f Hz" % noir_hz)
+	_check("torche allumée : monde ouvert à 20500 Hz",
+		absf(ouvert_hz - 20500.0) < 1.0, "%.0f Hz" % ouvert_hz)
+	_check("la torche ouvre les réflexions aiguës", ouvert_hz > noir_hz * 3.0)
+	var base_d := 0.22
+	_check("noir complet : réverbération plus mate (damping accru)",
+		AM.damping_sfx_monde_pour(0, base_d) > AM.damping_sfx_monde_pour(1, base_d))
+	_check("torche allumée : restitution du damping minéral de base",
+		absf(AM.damping_sfx_monde_pour(1, base_d) - base_d) < 0.001)
 
 ## Le classement des portées dit ce que le son APPREND, comme celui des
 ## priorités.
@@ -181,6 +222,17 @@ func _test_portee_par_son() -> void:
 			toutes = false
 	_check("les quatre variantes que chemin_tir fabrique sont des tirs", toutes)
 	_check("la clé générique d'avant V4.1 reste un tir", AM.est_un_tir("shoot"))
+
+	# breath_hit et weapon_reload
+	_check("le souffle coupé (breath_hit) ne trahit pas plus qu'un pas",
+		AM.portee_relative_de("breath_hit") <= AM.portee_relative_de("footstep"))
+	_check("le rechargement (weapon_reload) porte moins qu'un tir",
+		AM.portee_relative_de("weapon_reload") < AM.portee_relative_de("shoot"))
+	_check("les 4 rechargements d'armes relèvent de la famille weapon_reload",
+		AM.famille_de("weapon_reload_pistolet") == "weapon_reload"
+		and AM.famille_de("weapon_reload_fusil") == "weapon_reload"
+		and AM.famille_de("weapon_reload_pompe") == "weapon_reload"
+		and AM.famille_de("weapon_reload_arbalete") == "weapon_reload")
 
 	_check("un flux sans clé prend le défaut",
 		is_equal_approx(AM.portee_relative_de(AudioStreamWAV.new()),
@@ -411,8 +463,10 @@ func _test_l_entrainement_entend_vraiment() -> void:
 	_check("une oreille est posée en entraînement",
 		am != null and am._oreille != null and is_instance_valid(am._oreille))
 	if am != null and am._oreille != null and is_instance_valid(am._oreille):
+		var porteur_suivi: bool = (am._oreille.get_parent() == principal.p1) \
+			or (am._relais != null and am._oreille.get_parent() == am._relais and am._suivi == principal.p1)
 		_check("elle est sur le joueur que l'on regarde",
-			am._oreille.get_parent() == principal.p1,
+			porteur_suivi,
 			String(am._oreille.get_parent().name))
 		_check("et elle est courante dans sa vue", am._oreille.is_current())
 	# L'invariant du doublement : la racine ne doit PAS rester auditrice en plus
