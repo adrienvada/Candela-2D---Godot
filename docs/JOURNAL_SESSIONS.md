@@ -26,7 +26,9 @@ par sujet impraticable.
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
-| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | `eblouissement.gd`, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
+| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | ~~`eblouissement.gd`~~ **cédé au chantier CLASSES le 2026-09-09**, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
+| **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `menu_fiche_classe.gd`, `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
+
 
 ### Session « photographe » — ajoutée le 2026-09-09
 
@@ -2832,3 +2834,560 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - 64/64 suites headless solo vertes (86s) dans `tools/run_suites.sh --rapide`.
 
 
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 1, le socle de données)
+
+**Ce que le lot ajoute, et ce qu'il ne touche pas.**
+- Quatre fichiers neufs, **sans aucune dépendance** : `root_profile.gd`,
+  `flare_profile.gd`, `gadget_profile.gd`, `class_data.gd`. Plus
+  `tools/test_classes.gd` (40 contrôles), inscrit dans `SUITES`.
+- `game_state.gd` : les quatre déclarations d'arme passent à `ClassData`, les
+  quatre `WeaponData.new()` deviennent `ClassData.new()`, et `_batir_catalogue()`
+  monte les dix classes en fin de `_ready()`.
+- ⚠️ **Les quatre blocs impératifs d'arme n'ont PAS été touchés**, pas une
+  valeur. Ils portent des décisions actées — temps de recharge du chantier
+  MUNITIONS, portées de torche du 2026-08-24. Les profils leur sont attachés
+  par-derrière ; recopier leurs nombres dans un catalogue neuf aurait garanti que
+  deux jeux de valeurs restent égaux, jamais qu'ils veuillent dire la même chose.
+- ⚠️ **Étape délibérément INERTE** : les index 0 à 3 gardent leur sens, les six
+  neufs s'ajoutent de 4 à 9. `RankLoadout`, les râteliers et `rpc_spawn_bullet`
+  ne changent pas. La table rang → classe sera un lot à part.
+
+**Ce qui est repris et ce qui est demandé.**
+- `eblouissement.gd` est **cédé par la session « retouche éblouissement »**
+  (chantier clos, cession par message le 2026-09-09). La table de répartition est
+  mise à jour ici, par moi, comme convenu entre nous deux — pas par elle.
+- `player.gd`, `bullet.gd` (domaine « game feel ») et `ui.gd` (domaine « menus »)
+  seront **demandés avant écriture**, étape par étape. En particulier l'uniforme
+  de taille du voile dans `voile_eblouissement.gdshader` et la ligne
+  correspondante dans `_poser_voile` : ça se demande, ça ne se fait pas d'office.
+
+**Ce que ce lot a appris, et qui est consigné en « Pièges connus ».**
+- `class_data.gd` déclarait ses membres avec les identifiants globaux
+  (`@export var root: RootProfile`). En `--script`, le cache des classes globales
+  n'existe pas encore : ni le fichier ni sa suite ne compilent. Les trois types
+  passent par `preload`. Même piège que celui contourné par `tools/test_arsenal.gd`.
+- Une entrée neuve, « **La phrase doit porter la PORTÉE de la commande** », écrite
+  à deux sessions : huit occurrences relevées en une journée, dont deux de moi.
+
+**Écart de contenu signalé, non appliqué :** la spécification demande un pistolet
+à 6 balles et cadence doublée, le jeu en a 10. C'est de l'équilibrage, pas de la
+structure — à soumettre à Adrien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 4, la touche et le fil)
+
+**Le bit de gadget circule de bout en bout.** `input_provider.gd`,
+`local_input_provider.gd`, `network_input_provider.gd`, et `rpc_send_inputs` qui
+gagne un huitième argument. `Protocol.VERSION` passe de **9 à 10**, avec son
+entrée de carnet ; le témoin du fil a signalé la rupture, et l'empreinte n'a été
+recopiée qu'APRÈS avoir tranché que le numéro devait monter.
+
+⚠️ **Le témoin est ici plus qu'une formalité** : l'argument porte une valeur par
+défaut, donc GDScript n'aurait rien dit d'un client v9 parlant à un hôte v10.
+C'est exactement le mode de défaillance que ce garde-fou existe pour attraper.
+
+**Touches** : E (J1) et O (J2) au clavier — les seules déjà liées étaient Échap,
+F, K, R et U, relevé et non supposé — et L1 à la manette, qui ne portait que la
+navigation d'onglets de MENU. La superposition contextuelle est déjà la règle du
+dépôt : R1 est à la fois « tirer » et « onglet suivant ».
+
+**⚠️ J'AI TOUCHÉ `ui.gd`, DEUX ENTRÉES, ET JE LE DÉCLARE.**
+`LIBELLES["gadget"] = "Gadget"` et `"gadget"` ajouté à `ORDRE`. Ce n'est pas une
+incursion de confort : **c'est la garde de `tools/test_liaisons.gd` qui l'exige**,
+et elle a raison — une commande absente de la rubrique de réglage « se cherche
+ailleurs, et il n'y a pas d'ailleurs ». Le lot était rouge sans ça, et la seule
+alternative aurait été de priver le gadget de clavier.
+Session « menus » : si tu préfères une autre formulation du libellé ou une autre
+place dans l'ordre, change-la, je ne la défendrai pas. Ce qui compte est que la
+ligne existe.
+
+**Relevé au passage, non corrigé** : `tools/test_arena_matter.gd` a échoué une
+fois en lot et passe seule, deux fois de suite. Instable en lot, pas cassée par
+ce chantier — signalé, pas touché.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 9, l'écran de sélection de classe)
+
+**Le choix d'arme devient un écran de classe.** Demande d'Adrien : description,
+gadget, dégâts et caractéristiques, « en style Roman Graphique/RPG ». Le râtelier
+quitte le salon pour un panneau du cadre de droite (`PANEL_CLASSES`), même chemin
+que la galerie de cartes — deux colonnes de dix noms rangés par rang, une fiche à
+droite. Le salon garde une **carte d'état** par joueur. La fenêtre de décompte
+reçoit la même fiche, en colonne.
+
+Nouveau fichier : `menu_fiche_classe.gd` (`MenuFicheClasse`). Six jauges crantées
+dont l'échelle est **mesurée sur le catalogue à chaque affichage** — écrire un
+maximum ici aurait créé une seconde vérité qui se périme sans bruit. Les barres
+disent « plus », jamais « mieux » ; la couleur seule sépare puissance et coût.
+
+**⚠️ Le vrai défaut n'était pas dans la fiche.** L'index de l'arme était la
+POSITION du bouton dans son râtelier — sept lectures dans `game_state.gd`. Juste
+tant que les quatre armes naissaient dans l'ordre du catalogue ; **faux dès que la
+liste s'ordonne par rang**, et faux en silence : on serait parti avec une autre
+classe que celle cochée. L'index voyage en métadonnée, et il n'y a plus qu'un
+chemin, `ui.selected_weapon_index()`. Nouvelle entrée aux « Pièges connus ».
+
+**`SOCLE` passe de quatre à dix** — assumé et signalé. Il voulait dire « tout ce
+qui existe » ; le laisser à quatre aurait fait d'une non-restriction une
+restriction, en silence, et aurait grisé six classes jusque dans l'entraînement.
+Si Adrien voulait réserver les six neuves au compétitif, c'est une ligne à
+remettre dans `rank_loadout.gd` — je ne la défendrai pas, mais elle doit être
+décidée, pas héritée.
+
+**⚠️ `ui.gd` largement remanié**, avec l'autorisation d'Adrien du jour (« tu peux
+toucher ui.gd, je n'ai plus de session menus active »). Les huit variables
+`p1_btn1`…`p2_btn4` deviennent deux tableaux, trois fonctions qui les énuméraient
+à la main suivent, et six entrées de menu « CHOISIR SA CLASSE » sont ajoutées.
+
+**Vérifié à l'œil, une fois** : capture de l'écran et de la fenêtre à 1600×900,
+un seul tour de retouches (fond de vignette en béton — les silhouettes noires ne
+se voyaient pas sur du noir ; icône de la classe cochée passée à l'encre — elle
+disparaissait teinte sur teinte ; le bandeau porte le nom du palier).
+
+**Sabotage de contrôle** : tri par index au lieu du rang → deux ✗ francs, verts
+une fois rétabli.
+
+**Deux pièges payés** : `trait` est un mot réservé de GDScript (le message dit
+seulement « Expected variable name after "var" ») ; et `make_panel_style()` pose
+déjà GAP_M de marge intérieure — un `MarginContainer` par-dessus double la
+respiration et ne laisse que 40 px d'image dans une vignette de 88.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 10, poser un gadget)
+
+**Le bit circulait depuis l'étape 4, les nœuds existaient depuis la 5, et rien ne
+posait quoi que ce soit.** C'est fait : le voile du Spectre et l'ombre habitée de
+l'Occulteur se plantent devant le poseur, occultent, et s'abattent à la balle.
+Même autorité que la fusée, mot pour mot — bit dans la commande numérotée, front
+détecté par l'hôte, aucune prédiction client, désarmement porté par le cooldown
+de tir existant donc non répliqué.
+
+**⚠️ On compte les poses, on ne décompte pas un stock.** Un « restant » se sème à
+l'ouverture de la manche ; or la fenêtre de choix d'un match apparié s'ouvre
+*après* `_do_start_round` et change l'arme équipée. Un stock semé avant le choix
+aurait donné à qui change de classe le stock de la classe quittée — sans erreur,
+et invisible tant que les deux en ont autant. Trouvé en écrivant le code, pas en
+jouant.
+
+**Deux mesures prises en capture** : `PORTEE_POSE` passe de 44 à 96 px (à 44, le
+voile coupe le faisceau au ras du canon — on s'aveugle soi-même) ; et
+l'occultation a été constatée à l'image, le cône de torche s'arrêtant net sur une
+arête verticale.
+
+**⚠️ Renversement assumé d'une décision de l'étape 5** : ces deux gadgets sont
+**dessinés**, ils n'attendent plus de sprite. La note de tête de `gadget_voile.gd`
+dit depuis le premier jour qu'une bâche vue de dessus *est* une ligne et qu'un
+sprite lisible serait un défaut de conception ; peindre une image pour obtenir
+deux segments serait payer un asset pour rien, et livrer une pose qui n'affiche
+rien serait livrer une touche morte. La règle du dépôt tient toujours, et
+`gadget_base.gd` l'écrit : ce qui reste interdit est de dessiner *en attendant*
+un sprite. **Adrien : ces deux-là sortent donc de ta liste d'assets à générer.**
+
+**`GadgetProfile.scene` devient `implementation`** — ces nœuds se montent en code
+comme la fusée, il n'y a pas de `.tscn` à charger et il n'y en aura pas.
+
+**`Protocol.VERSION` passe à 12** — `rpc_spawn_gadget` apparaît. Signalé par le
+témoin du fil, cinquième fois du chantier. Ce qui rend la rupture coûteuse est ce
+qu'elle laisse derrière : l'hôte aurait un occluder que le client n'a pas, donc
+la lumière traverserait chez l'un une bâche opaque chez l'autre.
+
+**Sabotage de contrôle** : décompte neutralisé → trois ✗ francs, verts au retour.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 11, la torche fantôme)
+
+**La première des trois lumières posées**, et celle pour laquelle l'éblouissement
+généralisé de l'étape 6a avait été fait. Une lampe sur trépied qui balaie (±36°,
+3,6 s) avec le cookie de la classe qui l'a posée, et qui aveugle comme une vraie —
+sans quoi il suffirait de la regarder en face pour savoir que c'est un faux.
+
+**`_lumiere_recue()` coupée en deux** : les préconditions qui ne valent que pour
+un joueur d'un côté, l'échantillonnage du cookie de l'autre (`_lumiere_du_faisceau`).
+Recopier les cinq lignes du milieu aurait donné une seconde définition du même
+faisceau — la faute que le commentaire de cette fonction passe vingt lignes à
+raconter.
+
+**⚠️ Un défaut créé à l'étape 10 et trouvé ici** : les gadgets n'arrêtaient pas
+l'éblouissement. Le voile coupait le faisceau à l'écran pendant que le rayon de
+ligne de vue traversait la bâche — on voyait le noir et on prenait la lumière. Le
+masque contient désormais `GADGET_LAYER`.
+
+**Le halo n'est pas de l'ornement**, et je ne l'avais pas prévu : constaté en
+capture, un faisceau sans halo à sa racine ne ressemble à aucune torche du jeu, et
+le leurre se démasque à distance en une manche.
+
+**Deux pièges de banc, tous deux ressemblant à de vrais défauts** : un rayon de
+physique ne voit pas un corps déplacé à la même image (`physics_frame`, pas
+`process_frame` — le premier jet relevait 0,000 partout) ; et deux corps au même
+point font que le second n'est jamais « en vue », le rayon touchant le premier.
+
+**Sabotage** : gadgets retirés des sources d'éblouissement → contrôle rouge,
+vert au retour.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (amendement de l'étape 9 : une fiche par joueur)
+
+**Relevé par Adrien dans la foulée** : en écran partagé, J2 ne voyait pas le
+descriptif de SA sélection. La fiche était unique et suivait le dernier survol,
+donc le moindre mouvement de J1 l'écrasait. Mon raisonnement d'origine était
+incomplet : j'avais écrit que les deux râteliers devaient rester côte à côte
+parce que les deux curseurs vivent en même temps, sans en tirer la conséquence
+pour la fiche.
+
+Deux fiches empilées, chacune à la teinte de son joueur, J2 sous J1 comme
+demandé. Le routage passe par le **râtelier** du bouton et jamais par le curseur
+qui l'atteint — chez le client, le curseur 0 pilote le râtelier de J2. Métriques
+resserrées des deux côtés : deux fiches pleine taille débordent en 720p, et un
+gabarit qui changerait selon le mode obligerait à reconstruire la fiche à chaque
+bascule.
+
+Contrôle ajouté : un survol chez J2 n'écrit pas dans la fiche de J1 — et le banc
+choisit exprès un bouton dont la classe DIFFÈRE de ce que J1 affiche, sans quoi
+il passerait au vert sans rien prouver.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 12, la mine au magnésium)
+
+**Elle n'explose pas, elle allume.** L'Allumeur est celui qui fait de la lumière :
+lui donner des dégâts en ferait un piégeur ordinaire, jouable dans n'importe quel
+jeu de tir ; en faire un flash la rend jouable seulement dans celui-ci. Elle ne
+distingue pas son poseur — même règle que la fusée. Abattue, elle ne se désamorce
+pas : elle part.
+
+**Le partage décision / autorité** : `veut_s_allumer()` vit dans le gadget, où le
+rayon et l'armement se lisent avec ce qu'ils signifient ; `GameState` envoie
+l'ordre, sur l'hôte seul. Un gadget qui s'allumerait de lui-même s'allumerait deux
+fois, à deux instants différents. `Protocol.VERSION` → **13**
+(`rpc_allumer_gadget`).
+
+**⚠️ Un défaut que seule une CAPTURE pouvait montrer.** Ombres activées, le flash
+rendait un voile gris plat au lieu d'un disque net : la flamme se trouvait à
+l'intérieur de l'occluder que le socle monte pour tout gadget — « ni ombre ni
+lumière mais du hasard », phrase de `player.gd` qui avait payé la même leçon sur
+`body_light` le 2026-08-26. **Aucune suite ne pouvait l'attraper** : nœud monté,
+occluder présent, lumière allumée, éblouissement juste. Tout ce qui se mesure sans
+rendre était vert.
+
+Le remède est une propriété, pas un réglage : un boîtier posé à plat n'a rien à
+masquer. Pas d'occluder — et `occulte_la_lumiere = false`, que
+`_ligne_de_vue_depuis()` lit pour l'exclure du rayon d'éblouissement. Sans cette
+seconde moitié, elle arrêtait l'aveuglement sans arrêter le faisceau.
+
+**Relevé au passage, non corrigé** : l'Allumeur n'a pas de planche de marche
+(`allumeur_marche_*`), donc `_precharger_la_planche` avertit à l'équipement. Vrai
+pour les six classes neuves, connu, hors périmètre de cette étape.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 13, la nappe de braises)
+
+**La dernière lumière posée, et le seul gadget qui fasse des dégâts.** La
+différence avec la mine est de nature : la mine punit un instant, la nappe punit
+une durée. Elle ne tue pas qui la traverse — quatre points de vie — elle interdit
+d'y rester : trente-deux points en deux secondes. Le banc dérive la traversée de
+la **vitesse réelle du joueur** et non d'un nombre écrit à côté ; un contrôle qui
+poserait sa propre hypothèse ne mesurerait que lui-même.
+
+Elle ne connaît pas son poseur non plus — troisième écriture de la règle des
+choses posées, après la fusée et la mine.
+
+**⚠️ Deuxième défaut de rendu d'affilée qu'aucune suite ne pouvait voir.** Les
+charbons sortaient NOIRS au milieu du sol qu'ils éclairaient : `light_mask = 0`
+ôte les lumières mais ne dit rien du `CanvasModulate` de l'arène, qui éteint tout
+ce qui passe. Ce qui émet doit être `UNSHADED` et additif — ce que `fusee.gd`
+écrit depuis toujours pour son cœur. `GadgetBase.materiau_incandescent()` porte
+maintenant ce matériau, et **la lentille de la torche fantôme**, qui souffrait du
+même mal depuis l'étape 11, est corrigée du même geste.
+
+Les deux défauts ont la même forme : *l'objet existe, ses propriétés sont justes,
+et il ne se voit pas.* Un lot headless ne rend rien ; la seule garde possible est
+de regarder.
+
+**Pas de montée de protocole** : les dégâts passent par `take_damage()`, qui fait
+déjà son propre partage hôte/client.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 14, les volumes)
+
+**La suie du Fumiste et la poussière du Terrassier.** Un volume efface les sprites
+qui sont dedans et pose une masse au sol ; il n'arrête ni les balles, ni la
+lumière, ni l'éblouissement. Ce n'est pas une simplification : c'est le mécanisme
+que la fumée de la fusée porte depuis le chantier FUSÉE (`occultation_pour`), et
+le rejoindre évite d'avoir deux façons de s'effacer.
+
+**Les deux ne disent pas la même chose**, et c'est ce que le banc protège : la
+suie est dense et petite (on voit qu'il y a quelqu'un, pas qui), la poussière
+large et mince (personne ne voit loin). Le contrôle porte sur la conséquence, pas
+sur les nombres — un équilibrage qui les rapprocherait donnerait à deux classes le
+même gadget sous deux noms.
+
+**⚠️ `super()` n'est pas optionnel dans un `_init` dérivé.** Les deux nuages
+étaient des **murs opaques** : GDScript n'appelle le constructeur parent que si la
+sous-classe n'en déclare aucun, donc `arrete_les_balles` et `occulte_la_lumiere`
+gardaient les valeurs du socle. Attrapé par la suite au premier lancement — pas à
+la lecture, le code se lit juste.
+
+**⚠️ Troisième défaut de rendu du chantier qu'aucune suite ne pouvait voir** : une
+masse noire (0,03) est indiscernable d'une ombre dans un jeu dont le fond est le
+noir absolu. On ne voyait pas un nuage, on voyait le faisceau commencer plus loin
+— l'information d'un mur, pas celle d'un volume. Diagnostiqué en peignant la masse
+en rouge : elle était bien là, elle ne disait rien. Relevée à 0,09, elle reste
+invisible dans le noir (on ne voit pas de la suie sans lumière) et devient de la
+matière sous une torche.
+
+**En cours par ailleurs** : Adrien a repéré un « flou elliptique » parasite dans
+l'arène, visible seulement quand une large lumière éclaire le sol. Un sous-agent
+enquête ; il a consigne de ne toucher à aucun des fichiers de ce chantier et de ne
+faire aucune commande git.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 15, le leurre inerte)
+
+**Le gadget préféré d'Adrien, et celui qui avait le moins à inventer.** Dans ce
+jeu on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière : le leurre
+fait donc le même trou (disque de 18 px, valeur reprise de `player.gd`) et porte
+la même silhouette — celle de la classe qui l'a posé, empruntée, jamais peinte à
+part. Deux images à tenir d'accord finiraient par diverger, et c'est le leurre qui
+aurait tort. Une balle le démasque, et c'est ce qui l'équilibre : savoir coûte un
+tir, donc un flash, donc sa position.
+
+**⚠️ `empreinte_sprite()` déménage de `player.gd` vers `charte.gd`, et ce n'est pas
+du rangement.** Nommer `Player` depuis un gadget faisait cesser `test_classes` de
+compiler — `player.gd` nomme `AudioManager`, et une suite en `--script` n'a aucun
+autoload. Piège déjà payé par `fusee_modele.gd` le 2026-09-01. La fonction ne
+dépendait que de `Charte.DENSITE_ASSETS` ; **aucun alias n'est laissé sur
+`Player`**, deux noms pour une vérité ne disent pas lequel fait foi.
+⚠️ `charte.gd` est un fichier partagé : incursion déclarée, une fonction déplacée,
+rien d'autre touché, `test_charte` vert (230 contrôles).
+
+**⚠️ Quatrième défaut de rendu trouvé en regardant** — et le premier dont la
+conséquence soit une inéquité : le leurre sortait BLANC sous la torche. La
+silhouette est blanche et `Polygon2D.color` la multiplie ; sans la teinte
+d'adversaire, il était plus lumineux qu'un vrai corps, donc reconnaissable du
+premier coup d'œil.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 16, le grésillement + l'ellipse d'Adrien)
+
+**Le grésillement du Parasite** : une bobine qui fait sauter les lampes torches
+autour d'elle. Perturbation de RENDU seulement — l'éblouissement échantillonne le
+cookie et non l'énergie de la lampe, donc rien ne bouge dans la simulation. C'est
+la frontière que `brouillage.gd` s'est donnée. Il ne s'éteint jamais franchement :
+une lampe coupée est une information nette, ce qu'on vend est le doute.
+
+**⚠️ Un défaut de CADENCE qu'aucun contrôle ne pouvait voir.** Le facteur du
+gadget était juste, le câblage aussi, les deux étaient vérifiés — et l'effet
+valait six fois ce qu'il annonçait (0,094 au lieu de 0,565), parce que
+l'atténuation était appliquée à `flashlight.energy`, l'état LISSÉ, et se
+réinjectait d'image en image. Et la valeur dépendait de la cadence de la machine.
+C'est le nombre imprimé par une capture qui l'a montré. L'état
+(`_energie_torche`) est désormais séparé de sa présentation, et un banc mesure
+l'énergie RENDUE après trente images de physique.
+
+**L'ELLIPSE D'ADRIEN, trouvée par sous-agent.** C'était le brouillage
+(`brouillage_vue.gd`) **ancré sur l'adversaire passé en dur** dans
+`game_state._maj_brouillage()` : dès qu'une lumière posée éblouissait, le flou
+allait se dessiner sur l'autre joueur, à l'autre bout de la carte. **En ligne, un
+effet dont le métier est de masquer désignait la position de l'adversaire.**
+
+⚠️ C'était le **jumeau exact** du défaut corrigé le matin même sur le voile : la
+source d'éblouissement a deux consommateurs, le lot en a réparé un. Nouveau piège
+connu — *« corriger un défaut de direction sans chercher son jumeau »*. La règle
+vit maintenant dans `GameState.source_eblouissante_ou()`, publique, et `ui.gd` s'y
+branche : ⚠️ **incursion déclarée dans `ui.gd`**, une fonction privée devenue un
+relais de deux lignes.
+
+**⚠️ Signalé, NON corrigé** : une fois l'ancrage réparé, le flou reste décalé le
+long de `emetteur.rotation` — pertinent pour une torche, arbitraire pour un gadget
+posé dont la rotation ne veut rien dire. Le correctif serait dans
+`brouillage_vue.gd`, qui appartient au chantier éblouissement, et le dosage
+appartient à Adrien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 17, la poudre de contact — DIX gadgets sur dix)
+
+**Un sol qui écrit.** Qui traverse la nappe y laisse une piste, et la piste reste
+après lui. ⚠️ Les traces ne sont visibles **que sous une lumière** : dans le noir
+elles n'existent pas, il faut revenir et éclairer. C'est le geste de la
+Sentinelle, et c'est ce qui sépare ce gadget d'une alarme — le banc l'exige
+nommément, `light_mask = 0` en ferait une. ⚠️ Et elles vivent dans l'ARÈNE, pas
+dans le gadget : abattre la poudre ne doit pas effacer ce qu'elle a écrit, sinon
+une balle suffirait à nier son passage.
+
+**Une piste identique chez les deux pairs sans rien répliquer** : la marque se
+déclenche à la DISTANCE parcourue, jamais au temps. Le client voit l'adversaire
+interpolé, donc à d'autres instants — mais sur le même chemin. Une règle au temps
+aurait donné deux pistes différentes et obligé à répliquer chaque pas.
+
+**Les dix gadgets sont livrés**, et aucun n'a demandé d'asset peint : tous
+procéduraux, ou empruntant l'asset d'autre chose (le cookie de la classe pour la
+torche fantôme, la silhouette du joueur pour le leurre). Ce n'était pas un
+objectif, c'est venu de ce qu'ils décrivent des formes que le trait rend mieux
+qu'une image.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (l'ellipse, seconde moitié)
+
+**Adrien a tranché** : avance nulle pour une source non directionnelle. Fait, et
+l'allongement avec — c'est le même critère. Le flou et le halo se couchaient sur
+`emetteur.rotation` et se poussaient devant lui ; sans axe, la forme redevient un
+**disque centré sur la source**, ce qu'elle décrit.
+
+`brouillage_vue.gd` demande si la source a un axe **par ce qu'elle expose**
+(`eblouissement_dirige`, puis `flashlight_on` à défaut), jamais par son type :
+nommer `Player` ici le rendrait inchargeable en `--script`.
+
+⚠️ **Incursion déclarée dans `brouillage_vue.gd`**, fichier du chantier
+éblouissement : une fonction ajoutée, quatre expressions rendues conditionnelles.
+`tools/test_brouillage.gd` reste vert. Session éblouissement : si tu préfères une
+autre formulation du critère, elle est à toi — ce qui compte est qu'une lumière
+posée ne se voie plus attribuer une direction qu'elle n'a pas.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 18, les fusées par classe)
+
+**Les profils portaient `stock` et `periode_recharge` depuis l'étape 1 et personne
+ne les lisait.** Le Spectre n'a plus aucune fusée, le Terrassier en a trois qui se
+rechargent toutes les 18 s, l'Allumeur deux toutes les 12 s.
+
+**⚠️ Zéro reste zéro, y compris à l'entraînement** : `fusee_disponible()` rendait
+`true` sans condition en bac à sable, donc le Spectre y aurait eu des fusées
+illimitées là où il n'en a aucune en match — l'entraînement lui aurait appris un
+geste qui n'existe pas.
+
+**L'arithmétique chez l'hôte, le résultat sur le fil.** `flare_profile.gd`
+interdit deux accumulateurs locaux (dérive d'un demi-RTT par consommation), mais
+le client a besoin du compte pour prédire son désarmement. `rpc_stock_fusees` est
+émis **seulement quand le compte change** — `Protocol.VERSION` → **14**.
+
+**Le HUD compte enfin les réserves** (`FUSÉES n · GADGET ✓`) : elles n'étaient
+nulle part, ce qui était sans conséquence tant qu'elles étaient les mêmes pour
+tous. Il dit « — » et non « 0 » : *aucune* et *plus aucune* ne sont pas la même
+information.
+
+⚠️ **Signalé** : l'attente avant la prochaine fusée n'est pas affichée chez le
+client, l'accumulateur n'étant pas répliqué. Un manque, pas un mensonge.
+
+**En cours par ailleurs** : un workflow à trois agents diagnostique le disque gris
+à bord franc du brouillage (photocopie d'écran, arithmétique de `rect_photocopie`,
+atténuation de bord) — Adrien l'a signalé comme « laid ».
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 19, l'archive — CHANTIER CLOS)
+
+**Le journal ne disait pas quelle classe avait été jouée** : `arme_j1` porte le nom
+de l'ARME, qui ne désigne plus le joueur depuis que dix classes se partagent dix
+armes. `MatchRecord.SCHEMA_VERSION` → **4**, avec `classe_j1` / `classe_j2` qui
+portent le slug.
+
+**⚠️ Un piège de LECTURE, pas de code** : la clé `classe` (schéma 3) est le booléen
+« ce match comptait au classement ». Les trois clés vivent dans le même
+dictionnaire ; les confondre ferait remonter des matchs amicaux au classement, ou
+l'inverse. Un contrôle veille à ce que `classe` reste un booléen.
+
+**Vide plutôt qu'un repli** : une entrée d'avant les classes ne se voit pas
+attribuer « pistolet ». Sabotage vérifié.
+
+**La classe favorite s'ajoute À CÔTÉ de l'arme favorite**, jamais à sa place : les
+journaux d'avant le schéma 4 n'ont pas de classe, et remplacer la statistique
+effacerait l'historique au lieu de l'enrichir.
+
+**⚠️ Un contrôle qui ne pouvait pas échouer, attrapé dans mon propre banc** :
+`summarize()` recevait des enregistrements bruts au lieu de lignes. L'appel
+invalide **interrompt la fonction**, donc les six contrôles suivants ne tournaient
+plus — en silence. Seule l'erreur de script l'a dit.
+
+**Le chantier est clos** : dix classes, dix roots, dix réserves, dix gadgets, un
+écran de sélection, un HUD qui compte, une archive qui nomme. `Protocol.VERSION`
+de 9 à 14 en dix-neuf étapes.
+
+**Ce qu'il a appris, et qui vaut au-delà** : cinq des défauts les plus coûteux
+n'étaient visibles **qu'à l'écran**, tous de la même forme — *l'objet existe, ses
+propriétés sont justes, et il ne se voit pas comme annoncé*. Un lot headless ne
+rend rien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (le disque gris d'Adrien : la photocopie et l'alpha)
+
+**Adrien : « le cercle reste laid, il faut que ses bordures soient atténuées ».**
+Trois agents lancés en parallèle sur trois angles ; deux ont établi la même cause
+racine séparément, avec des nombres.
+
+**Ce n'était pas un flou.** Le disque était **un aplat gris** : la photocopie
+d'écran (`BackBufferCopy`) et la zone à flouter n'avaient **pas un seul texel en
+commun** — intersection nulle, mesurée dans les deux angles. Le shader prélevait
+dans un tampon jamais écrit.
+
+**⚠️ La cause est une phrase que le dépôt affirmait à trois endroits.**
+`brouillage_vue.gd`, `brouillage.gd` et la ROADMAP disaient que les quatre API de
+transformation de Godot « mentaient ». Elles disaient juste : c'est
+`get_texture().get_size()` qui rend `fenêtre × étirement`, soit le facteur **au
+carré** (1,333² = 1,778). Nouveau piège connu — *une source unique qu'on croit sur
+parole contre quatre qui s'accordent*.
+
+**Deux correctifs indépendants, tous deux nécessaires** :
+1. `_texels_par_unite()` passe par `get_final_transform().get_scale()` — le
+   facteur mesuré redevient 0,667 et la photocopie recouvre la zone ;
+2. le shader **peint l'alpha du flou** au lieu d'écrire opaque jusqu'au bord :
+   au-delà de d ≈ 0,90 le noyau est sous-pixel, la bande stérile ne faisait que
+   recopier l'écran par-dessus lui-même et fabriquait un cercle net — *centré sur
+   l'émetteur*, c'est-à-dire une mire sur le point que l'effet existe pour
+   effacer. Durcir la courbe du noyau ne changeait rien (mesuré) : seul l'alpha
+   pouvait le défaire.
+
+**Effet de bord découvert au passage** : l'alpha à 1 recouvrait le corps du joueur
+d'une copie rééchantillonnée de lui-même — entorse silencieuse à la décision actée
+« l'éblouissement coûte la lecture du monde, jamais celle de sa propre fiche ».
+
+**⚠️ `tools/banc_photocopie.gd` ne pouvait pas échouer** : il dérivait son échelle
+de la source à éprouver puis s'en servait des deux côtés de sa comparaison. Il a
+certifié la photocopie pendant qu'elle tombait entièrement à côté. Corrigé : il
+confronte désormais le facteur annoncé au framebuffer relu par `get_image()`.
+
+⚠️ **Incursions déclarées** dans `brouillage_vue.gd`, `brouillage.gd`,
+`brouillage_flou.gdshader`, `tools/banc_brouillage.gd`, `tools/banc_photocopie.gd`
+et `tools/test_brouillage.gd` — fichiers du chantier éblouissement. Adrien a
+demandé le correctif ; le seuil du contre-test de `test_brouillage` est passé de
+0,75 à 0,85 parce qu'il avait été calibré sur le facteur au carré, lui aussi.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (déblocage CUMULATIF en classé)
+
+**Demande d'Adrien** : « les classes se débloquent de façon cumulative en classé :
+au premier rang on peut jouer en pistolet, au deuxième rang pistolet et fusil,
+etc. » Un Lanterne a désormais quatre classes ; un Candela les dix.
+
+**⚠️ Ça renverse une décision actée du 2026-08-18** — « ce n'est pas un déblocage
+qui s'accumule » — et le contrôle qui la gardait était écrit *« pour qu'une
+relecture ne la corrige pas »*. Il a fait son travail : ce n'est pas une relecture
+qui l'a changée, c'est le propriétaire du jeu. Le garde-fou garde maintenant la
+propriété INVERSE, et de la même façon — en propriété, jamais en valeurs.
+
+**Ce que le cumul répare au passage** : la règle du miroir ne prête plus. Elle
+retirait au mieux classé sa propre classe pour lui en donner une autre — un
+Candela contre un Lanterne partait à l'arbalète, qu'il n'avait jamais jouée. La
+sélection du moins bien classé est désormais un sous-ensemble de celle de l'autre,
+et un contrôle balaie les 45 paires pour le garantir.
+
+**Vérifié à l'image** : un joueur Torche voit cinq classes dans la fenêtre de
+choix, rangées par rang, avec leur fiche. L'écran de sélection a enfin quelque
+chose à sélectionner.
+
+**⚠️ Signalé à Adrien** : son exemple disait « au deuxième rang pistolet et
+fusil », or l'échelle de lumière qu'il a lui-même posée met le Fumiste au rang 2
+et le fusil au rang 3. Je n'ai **pas** touché à l'ordre — s'il voulait aussi le
+remanier, c'est une seconde décision.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (fusion de `main`, protocole 11→15)
+
+**Adrien a éprouvé l'arbalète manette en main et ordonné la fusion.** ⚠️ Il n'a
+demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le 0,60 s** :
+ce qui est établi est que le root ne l'a pas arrêté, pas que le chiffre soit juste.
+Le jalon humain H11 passe en « commencé », neuf classes restent à essayer.
+
+**`main` avait 47 commits d'avance**, dont la v0.4.0 et son protocole 10. La
+session « appariement amical » a publié devant nous **comme convenu par message**,
+et j'ai renuméroté : mes cinq entrées de carnet passent de 10-14 à **11-15**,
+`Protocol.VERSION` à **15**. ⚠️ Le témoin du fil a été **recalculé**, jamais
+recopié d'une des deux branches : le fil d'après fusion n'est celui d'aucune des
+deux. Numéro tranché d'abord, empreinte ensuite.
+
+**Trois conflits, et un seul demandait un vrai arbitrage.** `protocol.gd` (la
+renumérotation), `docs/ROADMAP.md` (deux sessions ajoutant au même tableau : les
+deux jeux gardés), et `ui.gd` — où **les deux chantiers avaient ajouté un témoin
+de fusée au HUD le même jour, chacun de son côté**. Le leur allumait un cadre
+quand une fusée était disponible ; le mien comptait la réserve et le gadget.
+Aucun ne contenait l'autre : la fusion garde **le cadre qui s'allume ET les
+nombres**, et `_create_flare_indicator()` devenu orphelin est retiré plutôt que
+laissé mort.
+
+**⚠️ Le piège que `main` venait justement de consigner s'est produit chez moi.**
+« Soixante et onze suites vertes ne disent pas que le jeu démarre » : après la
+fusion, les décals de sang arrivés de `main` n'étaient pas importés, et deux
+suites échouaient sur des tailles à 0 px. Deux passes de `--import` en avant-plan,
+et tout redevient vert. Les points d'ancrage du chantier ont été vérifiés un par
+un après la fusion, comme le corollaire de `CLAUDE.md` l'exige — les seize sont là.

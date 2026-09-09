@@ -22,13 +22,24 @@ shader_type canvas_item;
 //
 // ## Le seul piège, et il est dans le fondu
 //
-// Le rayon du noyau **doit tomber à zéro sur le bord du disque**. À rayon
-// constant, la bordure du rectangle mélangerait des pixels flous et nets côte à
-// côte : on verrait un disque de flou POSÉ sur l'image, c'est-à-dire une forme
-// nette de plus — exactement l'inverse du but, et un repère aussi bon que celui
-// qu'on efface. Le `smoothstep` ci-dessous fait tendre le pas vers 0 ; au bord,
-// les dix-sept prélèvements retombent tous sur le même texel et le shader rend
-// l'image d'origine, à l'identique.
+// Le rayon du noyau doit tomber à zéro sur le bord du disque : à rayon
+// constant, la bordure mélangerait des pixels flous et nets côte à côte, et on
+// verrait un disque de flou POSÉ sur l'image — une forme nette de plus, un
+// repère aussi bon que celui qu'on efface.
+//
+// ⚠️ **Mais annuler le noyau ne SUFFIT PAS, et ce paragraphe a affirmé le
+// contraire.** Il disait qu'au bord « les dix-sept prélèvements retombent tous
+// sur le même texel et le shader rend l'image d'origine, à l'identique ».
+// Mesuré faux le 2026-09-09 : à `rayon_noyau = 0` — le contrôle que cette
+// phrase propose elle-même — le disque reste entièrement visible, à 0,047 de
+// luminance de la référence sur le dernier anneau, soit l'écart relevé à plein
+// flou à 0,0002 près.
+//
+// L'affirmation supposait que la texture d'écran COÏNCIDE avec ce qu'il y a
+// derrière. Elle n'a aucune raison de coïncider : c'est une photocopie, et la
+// couture qu'elle laisse était peinte à alpha 1 jusqu'au bord franc. Le fondu
+// du bord ne peut donc pas reposer sur le noyau. Il repose sur l'ALPHA — voir
+// la fin du fragment.
 
 uniform sampler2D ecran : hint_screen_texture, repeat_disable, filter_linear;
 
@@ -119,5 +130,33 @@ void fragment() {
 	// « marche à peu près » est le meilleur moyen de cimenter un défaut
 	// ailleurs.** Sans la mesure contre une référence, le 2,2 serait resté —
 	// plausible, documenté, et faux.
-	COLOR = vec4(somme / 17.0, 1.0);
+	// ── L'OPACITÉ SUIT LE FLOU : on ne peint que là où l'on floute vraiment.
+	//
+	// Au-delà de d ≈ 0,90 le pas du noyau passe sous le demi-pixel — 0,56 px
+	// mesuré, 0,28 à d = 0,93. Il n'y a plus rien à flouter, et le rectangle ne
+	// fait plus que recopier l'écran par-dessus lui-même. La recopie étant
+	// imparfaite, cette bande stérile devenait un cercle net : gradient radial
+	// 0,042 au bord contre 0,020 pour la scène nue, soit un contour deux fois
+	// plus marqué que tout ce qui l'entoure.
+	//
+	// ⚠️ **Et ce cercle est CENTRÉ SUR L'ÉMETTEUR** : une mire posée sur le point
+	// exact que cet effet existe pour rendre introuvable. Le fondu ne le rend pas
+	// joli, il lui retire son centre.
+	//
+	// ⚠️ **Durcir la courbe du noyau ne remplace pas ce fondu.** Éprouvé en
+	// `pow(1.0 - d, 3.0)` : le gradient au bord reste à 0,042, inchangé au
+	// millième. Le bord n'est pas fait par le flou, il est fait par la peinture
+	// opaque — seul l'alpha peut le défaire.
+	//
+	// Le seuil est en PIXELS, comme `rayon_noyau`, et pas en fraction de rayon :
+	// une fraction ne veut rien dire quand la zone change de taille. Et parce que
+	// `k` porte déjà la force ET le trou autour de soi, l'alpha les suit tous les
+	// deux — à faible éblouissement le disque devient translucide au lieu de
+	// plaquer une recopie inutile, et il **cesse net de peindre sur le corps du
+	// joueur**, que l'alpha à 1 recouvrait d'une copie rééchantillonnée de
+	// lui-même (0,161 d'écart à 35 px, ramené à 0,000). C'était une entorse
+	// silencieuse à une décision actée : l'éblouissement coûte la lecture du
+	// MONDE, jamais celle de sa propre fiche.
+	float couverture = smoothstep(0.0, 2.0, rayon_noyau * k);
+	COLOR = vec4(somme / 17.0, couverture);
 }

@@ -114,7 +114,12 @@ func _test_rect_photocopie() -> void:
 	print("\n[Le rect de photocopie couvre ce que le shader lira, EN TEXELS]")
 	var noyau := 48.0
 	# Les facteurs mesurés le 2026-09-07 sur le poste d'Adrien, plus deux bornes.
-	var echelles := [Vector2.ONE, Vector2(1.7781, 1.7778), Vector2(1.3333, 1.3333),
+	# ⚠️ **1,3333 et non 1,7781.** Le second était consigné ici comme une valeur
+	# MESURÉE ; c'était 1,3333², le carré du facteur — `get_texture().get_size()`
+	# comptait l'étirement deux fois. Le laisser aurait gardé au dépôt la trace
+	# d'une mesure fausse sous une forme qui inspire confiance : un nombre à
+	# quatre décimales dans un banc vert.
+	var echelles := [Vector2.ONE, Vector2(1.3333, 1.3333), Vector2(0.6667, 0.6667),
 		Vector2(2.0, 2.0), Vector2(1.5, 2.5)]
 	for brut in echelles:
 		# ⚠️ Le type doit être ANNONCÉ : sorti d'un `Array` non typé, `ech` est un
@@ -147,13 +152,22 @@ func _test_rect_photocopie() -> void:
 	# posé en unités de CANEVAS — ce que faisait la production — doit ÉCHOUER dès
 	# que l'échelle s'écarte de 1. S'il passait, c'est que le contrôle ne mesure
 	# rien.
-	var ech_racine := Vector2(1.7781, 1.7778)
+	# Le facteur réel d'une fenêtre 2560×1440 sur un canevas 1920×1080, mesuré au
+	# framebuffer le 2026-09-09. Il valait 1,7781 ici — le carré, voir plus haut.
+	var ech_racine := Vector2(1.3333, 1.3333)
 	var faux: Rect2 = Brouillage.rect_photocopie(Vector2(613.37, 402.62),
 		Vector2(220, 90), 0.4, 48.0, Vector2.ONE)
 	var vrai: Rect2 = Brouillage.rect_photocopie(Vector2(613.37, 402.62),
 		Vector2(220, 90), 0.4, 48.0, ech_racine)
+	# ⚠️ **Le seuil est passé de 0,75 à 0,85, et ce n'est pas un assouplissement.**
+	# Il était calibré sur le facteur 1,7781 — qui était le CARRÉ du vrai, voir
+	# plus haut. À 1,3333, la boîte fausse fait 0,81 de la vraie et non 0,57 : le
+	# contrôle rougissait parce que son seuil, lui aussi, avait été réglé sur la
+	# mesure erronée. Le rapport n'est pas exactement 1/1,3333 parce que
+	# l'élargissement du noyau, constant, s'ajoute des deux côtés et adoucit
+	# l'écart.
 	_check("et l'ancienne façon (rect en canevas) serait bien trop petite",
-		faux.size.x < vrai.size.x * 0.75,
+		faux.size.x < vrai.size.x * 0.85,
 		"%s contre %s" % [str(faux.size), str(vrai.size)])
 
 

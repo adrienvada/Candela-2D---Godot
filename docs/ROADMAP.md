@@ -1358,10 +1358,28 @@ rien**, et c'est un trou à combler avec du contenu, pas avec une règle — les
 réservées au compétitif et la mécanique de changement en cours de match (voir plus
 bas) sont deux façons de le combler.
 
-**Ce n'est pas un déblocage qui s'accumule** (précision d'Adrien, 2026-08-18).
-Un joueur reçoit **la sélection attribuée à son rang**, et rien d'autre : un
-Lanterne n'a pas quatre armes, il a l'Arbalète. La table associe un rang à une
-**sélection**, pas à un cran franchi.
+~~**Ce n'est pas un déblocage qui s'accumule**~~ (précision d'Adrien,
+2026-08-18) — **RENVERSÉ par Adrien le 2026-09-09** : *« les classes se
+débloquent de façon cumulative en classé : au premier rang on peut jouer en
+pistolet, au deuxième rang pistolet et fusil, etc. »*
+
+Un joueur reçoit désormais **sa classe et toutes celles d'en dessous** : un
+Lanterne en a quatre. La table dit ce que chaque rang **AJOUTE** ;
+`RankLoadout.for_tier()` cumule.
+
+⚠️ **La garde qui protégeait la décision d'origine a fait son travail, et il a
+fallu la retourner.** `tools/test_arsenal.gd` exigeait la non-monotonie, avec un
+commentaire disant « pour qu'une relecture ne la corrige pas ». Ce n'est pas une
+relecture qui l'a changée : c'est le propriétaire du jeu. Un garde-fou existe
+pour empêcher une *correction* non demandée, jamais pour opposer un veto — il
+garde maintenant la propriété inverse, et de la même façon : en propriété, pas
+en valeurs.
+
+**Ce que le cumul répare au passage** : la règle du miroir ne PRÊTE plus. Elle
+retirait au mieux classé sa propre classe pour lui en donner une autre — un
+Candela contre un Lanterne se retrouvait à l'arbalète, qu'il n'avait jamais
+jouée. La sélection du moins bien classé est désormais un sous-ensemble de celle
+de l'autre, et le banc le garde.
 
 | Catégorie | Sélection attribuée |
 |---|---|
@@ -2404,6 +2422,13 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
+| **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
+| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
+| **La table rang → classe suit l'échelle de LUMIÈRE, pas celle de puissance** (2026-09-09, Adrien) | Deux ancrages d'Adrien : le rang 1 est celui du pistolet, et **Brasier est le pyrotechnicien**. Le second dit tout — Brasier n'est pas « le sixième palier de puissance », c'est *un feu*, et on y met celui qui fait du feu. L'échelle des catégories se lit donc littéralement, d'Aveugle à Candela : 1 Parasite, 2 Fumiste, 3 Illusionniste, 4 Braconnier, 5 Terrassier, 6 Incendiaire, 7 Sentinelle, 8 Occulteur, 9 Allumeur, 10 Spectre. Les trois derniers paliers basculent en **opposition** plutôt qu'en correspondance, et c'est le renversement que l'échelle appelait : au sommet de l'échelle de la lumière on trouve **la seule classe qui n'en émet aucune** — zéro fusée, zéro flash, arme silencieuse. Deux des quatre armes historiques ne changent pas de rang (pistolet à Aveugle, arbalète à Lanterne) ; le fusil passe de 2 à 3, le pompe de 3 à 5. ⚠️ **L'ORDRE reste celui de la lumière, mais le déblocage est devenu CUMULATIF le 2026-09-09** (décision d'Adrien) : chaque entrée dit ce que son rang ajoute, et un joueur a tout ce qui précède. Ce qui croît avec le rang est donc le CHOIX et non la puissance — un Zénith a neuf classes de plus qu'un Aveugle, pas une classe plus forte, et c'est la seule lecture qui rende une échelle de lumière compatible avec un déblocage. ⚠️ Une conséquence à connaître : l'exemple d'Adrien disait « au deuxième rang pistolet et fusil », or l'échelle qu'il a lui-même posée met le Fumiste au rang 2 et le fusil au rang 3. L'ordre n'a pas été touché — s'il voulait aussi le remanier, c'est une seconde décision. ⚠️ Les paliers du milieu sont justifiés par le THÈME et par rien d'autre : un Braconnier à 0,60 s de root au rang 4 est peut-être trop dur pour un quatrième palier, et ça se tranchera au banc, pas sur le papier. |
+| **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
+| **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
+| **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
 | **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
 | **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
@@ -3128,6 +3153,34 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### L'image d'amorce débordait de l'écran, et le réglage ne se devine pas (2026-09-09)
+
+Signalé par Adrien : « l'écran titre dépasse au chargement du jeu ».
+
+`application/boot_splash/stretch_mode` valait **0**, et 0 ne veut pas dire
+« pas d'étirement particulier » — il vaut **Disabled**, c'est-à-dire *dessinée à
+sa taille native*. L'image fait 1600 px de large, la fenêtre s'ouvre à 1280 :
+l'enseigne dépassait des deux côtés.
+
+**Ce qui a permis de trancher sans supposer**, et qui sert pour tout réglage de
+projet dont on ignore la sémantique — une sonde de trois lignes :
+
+```gdscript
+for p in ProjectSettings.get_property_list():
+    if String(p.name).begins_with("application/boot_splash"):
+        print(p.name, " | ", p.hint_string, " | ", ProjectSettings.get_setting(p.name))
+```
+
+Elle rend l'énumération exacte : `Disabled, Keep, Keep Width, Keep Height,
+Cover, Ignore`. La bonne valeur est **1 = Keep** — mise à l'échelle de la
+fenêtre en gardant les proportions.
+
+**La leçon générale : un entier dans `project.godot` ne dit pas ce qu'il
+signifie.** Godot n'écrit que l'index ; le sens vit dans le `hint_string`, que
+seul le moteur connaît. Deviner « 0 = neutre » est une erreur naturelle et
+fausse, et elle produit un défaut visible par tous les joueurs au lancement.
+
+
 ### Une animation ratée n'abîme pas la page : elle l'efface (2026-09-09)
 
 Le site de DA7.4 s'est affiché **en ligne, sur le domaine d'Adrien, avec ses
@@ -3259,6 +3312,199 @@ ce que le jeu charge.
 dossier dérivé se relit à sa date, ou se régénère, ou ne se lit pas. Et un
 dossier de sortie qui survit à l'outil qui l'a produit devrait être supprimé
 avec lui — celui-ci ne l'a pas été.
+### Corriger un défaut de direction sans chercher son JUMEAU (2026-09-09)
+
+`ui._source_du_voile()` a été écrit le 2026-09-09 pour réparer un défaut précis :
+le voile d'éblouissement penchait vers **l'adversaire passé en dur**, alors que
+depuis l'étape 6 du chantier CLASSES la cause peut être une lumière posée. La
+correction était juste, documentée, et **incomplète** : la source d'éblouissement
+alimente **deux** consommateurs — le voile et le brouillage — et le second gardait
+son adversaire en dur.
+
+Conséquence : dès qu'un gadget lumineux éblouissait, l'appareil de brouillage
+allait dessiner son flou **sur l'autre joueur**, à l'autre bout de la carte. À
+l'entraînement, une grande ellipse grise flottait dans le noir sur un J2
+invisible. **En ligne, c'est pire qu'un artefact : un effet dont le métier est de
+MASQUER désignait la position de l'adversaire.**
+
+⚠️ **Personne ne l'a vu venir, et il a fallu un œil humain.** Adrien l'a signalé,
+et une session antérieure l'avait déjà cherché sans le trouver. Aucune suite ne
+pouvait le voir : `tools/test_brouillage.gd` n'éprouve que l'arithmétique de
+`brouillage.gd`, jamais l'ancrage — même angle mort que le relèvement du voile.
+Les deux versions restaient **plausibles à l'écran**, ce qui est la signature de
+ce genre de défaut.
+
+**La règle qui en sort** : quand on corrige la direction, la portée ou la source
+d'un effet, chercher **qui d'autre lit la même donnée**. Ici,
+`source_eblouissante` était écrite à un endroit et lue à deux ; une seule lecture
+a été réparée. La règle vit désormais dans `GameState.source_eblouissante_ou()`,
+publique, et les deux consommateurs y passent — deux copies ne restent d'accord
+que par chance.
+
+### Une source unique qu'on croit sur parole contre quatre qui s'accordent (2026-09-09)
+
+`brouillage_vue.gd` convertissait des unités de canevas en texels de framebuffer
+avec `get_texture().get_size() / get_visible_rect().size`. Le fichier, la
+feuille de route et un banc affirmaient tous les trois que **les quatre API de
+transformation de Godot « mentaient »**, parce qu'elles rendaient 1,333 quand
+cette division rendait 1,778.
+
+Les quatre disaient juste. `Viewport.get_texture().get_size()` rend
+`fenêtre × étirement` — le facteur **au carré**, 1,333² = 1,778. Il suffisait de
+relire le tampon par `get_texture().get_image().get_size()` pour le voir : trois
+lignes, jamais écrites, parce que la conclusion était déjà tirée.
+
+**Ce que ça a coûté** : l'emprise de la photocopie d'écran partait à 0,667 fois
+sa place et sa taille. Elle ne recouvrait plus du tout la zone à flouter —
+intersection **nulle**, mesurée — donc le shader lisait un tampon jamais écrit
+et peignait un aplat gris à bord franc. Adrien l'a signalé le 2026-09-09 ; une
+session antérieure l'avait cherché sans le trouver.
+
+**La règle** : quand une mesure isolée contredit plusieurs sources indépendantes
+qui s'accordent entre elles, **c'est la mesure qu'il faut aller vérifier**, pas
+les sources. Et surtout : ne jamais écrire « telle API ment » sans avoir
+confronté la sienne à une troisième chose.
+
+⚠️ **Corollaire, et c'est le plus vicieux** : un banc qui dérive son attendu de
+la source à éprouver ne peut pas échouer. `tools/banc_photocopie.gd` calculait
+son échelle depuis `get_texture().get_size()` **puis s'en servait des deux côtés
+de sa comparaison** — critère invariant d'échelle, vert pour n'importe quelle
+valeur. Il a certifié « tout texel lu tombe dans la photocopie » pendant que
+l'intersection était nulle. C'est la même faute que le dépôt a déjà consignée
+pour `test_audit_menus` : *un banc dont l'oracle sort du code testé ne teste
+rien, il paraphrase.*
+
+### Un index qui est en fait une POSITION (2026-09-09)
+
+`game_state.gd` lisait l'arme choisie par `get_pressed_button().get_index()` :
+l'index de l'arme était la **place du bouton dans son conteneur**. Sept lectures,
+toutes justes pendant des mois — parce que les quatre boutons étaient créés dans
+l'ordre du catalogue.
+
+**Ce qui rend ce piège coûteux, c'est qu'il n'a aucun symptôme.** Le jour où la
+liste s'ordonne autrement — par rang, ce que l'écran de sélection de classe
+demande —, la place et l'index cessent d'être le même nombre : aucune erreur,
+aucun avertissement, le joueur part simplement avec une autre classe que celle
+qu'il a cochée. Un `ButtonGroup.get_buttons()` porte la même illusion en pire :
+son ordre est celui de l'**inscription**, qu'aucune ligne de code ne montre.
+
+`menu_hub.gd` avait déjà payé la leçon sur ses panneaux — des bancs comptaient
+`get_children()[2]`, un panneau intégré les a tous décalés d'un cran, et ils sont
+sortis avec **deux erreurs de script et un code 0**. La phrase y est écrite :
+*une position n'est pas une identité.*
+
+**La règle :** ce qui identifie voyage en métadonnée ou en clé, jamais en rang de
+naissance. Et le contrôle qui en découle est contre-intuitif — il faut exiger que
+la position et l'identité **diffèrent** quelque part dans le jeu de données de
+test, sinon la lecture fautive passe au vert et le garde-fou ne garde rien.
+
+### La phrase doit porter la PORTÉE de la commande (2026-09-09)
+
+#### Cas d'école : une consigne d'outil que personne n'avait jamais EXÉCUTÉE (2026-09-09)
+
+`tools/fabrique_sprites.gd` portait dans sa docstring, en gras et longuement
+argumenté, la valeur `--epaules 17.1` — reprise telle quelle dans cette feuille
+de route. **Elle est fausse depuis au moins deux semaines.** Vérifié par
+CUISSON, pas par lecture : avec 36, `S_pistol_01.jpg` rend une toile de 62², qui
+est exactement le `pistolet.png` livré ; avec 17,1, elle rend 30².
+
+Ce qui rend le cas exemplaire, ce n'est pas l'erreur, c'est **sa forme** :
+
+- le raisonnement écrit à côté de 17,1 **se tient** — il décrit un état antérieur
+  du code, quand la mesure d'épaules ne portait pas sur la même grandeur ;
+- il était **daté à l'écriture et lu comme une propriété du script** ;
+- il a été **recopié dans la ROADMAP**, ce qui l'a rendu deux fois plus crédible ;
+- et il aurait coûté **six sprites deux fois trop petits, sans qu'une seule suite
+  ne rougisse** — `tools/test_sprites.gd` et `tools/test_planche_marche.gd`
+  n'énumèrent que les quatre slugs historiques.
+
+**La règle qui en sort, et elle est plus étroite que « vérifiez » :** une consigne
+d'OUTIL — une valeur d'argument, une commande, un ordre d'étapes — ne se vérifie
+qu'en l'EXÉCUTANT. La relire ne prouve rien, parce qu'elle a été écrite par
+quelqu'un qui, lui, l'avait exécutée — dans un état du code qui n'existe plus.
+
+
+**Sept fois, dont six en une seule journée et sur trois sessions, la même chose
+s'est produite : une vérification juste, et une phrase plus large qu'elle.**
+Aucune commande n'était fausse. Aucun relevé n'était bâclé. Le défaut n'est
+jamais dans le contrôle, il est **dans le trajet du contrôle à la phrase** — et
+c'est ce qui le rend invisible, parce qu'on se souvient d'avoir vérifié.
+
+| Ce qui a été vérifié | Ce qui a été affirmé | Ce que ça cachait |
+|---|---|---|
+| « le lot complet passe » | « le commit ne casse rien » | supprimer un banc et deux sections de doc ne fait échouer aucune suite |
+| ancrages comptés sur `main` **local** | « rien ne manque » | `origin/main` avait perdu trois lots |
+| image du banc (rapport 1,78) contre image du jeu (0,889) | « le jeu rend fade » | le shader normalise par la demi-diagonale : facteur 1,52 entre les deux |
+| `git log --since=2026-09-08 -- eblouissement.gd` → 0 | « aucun commit de moi sur ce fichier » | trois existent, des 18 et 24 août |
+| deux appelants du groupe `"fusees"` ouverts sur cinq | « le groupe est interrogé par trois systèmes aux critères différents » | `player.gd` n'a **aucune** garde — un nœud sans `occultation_pour` y ferait planter le jeu à chaque image, et `replay_system.gd` n'utilise pas le groupe du tout |
+| ancrages `fichier:ligne` relevés sur `360a85f` | « vérifié dans le code » | `main` était 36 commits plus loin, dont `ui.gd` +224 lignes |
+| une phrase se souvenait d'avoir été écrite | « la formule du correctif est : *c'est d'en avoir fait une propriété du jeu* » | elle n'existe pas dans le dépôt ; le texte réel dit « **le raisonnement tient, c'est la conclusion qui ne tenait pas** » (l. 12202) |
+
+Les quatre premières sont relevées par la session « retouche éblouissement », les
+deux suivantes par la session « 10 classes ». **Aucune des deux n'a remarqué la
+sienne ; chacune a vu celle de l'autre.** C'est la seule raison pour laquelle ce
+piège est écrit — un défaut qu'on ne voit que chez le voisin ne se corrige pas
+par l'attention.
+
+La septième est arrivée **pendant la rédaction de cette entrée**, et par la même
+porte : une session proposait une citation à reprendre, de mémoire, sans la
+relire. Elle a été attrapée parce que citer sans vérifier aurait commis le piège
+dans le texte qui le documente. On la garde : c'est la meilleure preuve que le
+motif ne se corrige pas en le connaissant.
+
+### La règle, et elle est actionnable
+
+**Une phrase de vérification doit dire ce qui a été REGARDÉ, pas seulement ce
+qu'on en conclut.**
+
+- « `git log --since=2026-09-08` ne rend rien » — se relit, se conteste, et le
+  lecteur voit immédiatement la fenêtre.
+- « aucun commit de moi » — ne se relit pas. Rien dans la phrase ne dit sur quoi
+  elle repose, donc rien ne permet de la mettre en doute, **pas même à son
+  auteur.**
+
+⚠️ **Mais la règle ne vaut PAS pour toute phrase, et c'est important.** Appliquée
+partout, elle produit une prose entièrement sous réserve où chaque affirmation
+traîne son périmètre : illisible, et surtout **quand tout est nuancé, plus rien
+ne signale ce qui est fragile.** On aurait remplacé un défaut discret par un
+bruit permanent.
+
+**Le périmètre s'écrit quand la phrase engage un geste chez celui qui la lit.**
+Une phrase de contexte n'en a pas besoin. « `origin/main` contient ton travail »
+en a besoin, parce que quelqu'un va pousser en s'y fiant.
+
+### Une occurrence plus ancienne, et plus chère : celle qui est ÉCRITE
+
+Le 2026-08-27, ce document affirmait : « En écran scindé l'appareil vit dans un
+`SubViewport`, où canevas et framebuffer coïncident, et le défaut ne devrait pas
+apparaître. » **Le raisonnement était juste — il a été revérifié le 2026-09-07 et
+il tient.** C'était une déduction d'une hypothèse, rédigée comme une propriété du
+jeu. Elle a tenu **onze jours**, et le défaut a fini par être rapporté en écran
+scindé, dans les deux vues, sur des captures d'Adrien.
+
+Ce que cette occurrence ajoute aux sept autres : celles-ci sont des phrases
+**dites à quelqu'un**, elles se périment avec la conversation. Celle-là est
+**écrite dans le dépôt** — elle ne se périme pas, elle attend le lecteur suivant,
+et elle dispense d'aller voir. Personne n'a instrumenté l'écran scindé pendant
+onze jours, puisque le document disait qu'il n'y avait rien à y voir.
+
+**Une affirmation trop large voyage, et elle voyage d'autant mieux qu'elle est
+écrite.** Le 2026-08-25 en porte déjà la preuve, à propos d'un paragraphe périmé
+de `CLAUDE.md` : *« une session s'y est fiée sans aller voir le code et a bâti une
+contrainte inter-chantiers sur un état périmé. »*
+
+### Famille
+
+Même famille que « **un contrôle textuel épingle un IDENTIFIANT, jamais un SENS** »
+(2026-08-25) et « **certifier la moitié d'une affirmation la fait passer tout
+entière** » (2026-08-25) : dans les trois cas la mesure est bonne et la conclusion
+déborde. La sous-section « un contrôle juste, mais braqué à côté » de « **Un
+répertoire de travail en retard MENT** » (2026-09-09) dit la même chose sous un
+troisième angle.
+
+⚠️ **Ce piège ne dit PAS « vérifiez mieux ».** Ce serait passer à côté : les huit
+vérifications étaient bonnes. Il dit **« écrivez ce que vous avez regardé »**, et
+seulement là où quelqu'un va agir dessus.
 ### Soixante et onze suites vertes ne disent pas que le jeu démarre (2026-09-09)
 
 La session DA7 fusionne, et **cinq classes deviennent injoignables** —
@@ -4808,6 +5054,36 @@ de l'affichage, l'assertion finale doit lire une propriété **du nœud rendu** 
 alimenté. Les deux sont à un appel de distance, et un seul dit la vérité.
 
 ### Un worktree neuf n'a pas de cache d'import, et le banc rougit ailleurs (2026-08-24)
+
+#### Corollaire : un `class_name` NEUF exige un réimport, et l'erreur ne le dit pas (2026-09-09)
+
+Le cache d'import ne porte pas que les `.import` : il porte aussi
+`.godot/global_script_class_cache.cfg`, **la table des classes globales**. Un
+fichier neuf qui déclare `class_name` n'y entre qu'au réimport suivant.
+
+Vécu le 2026-09-09, chantier CLASSES, étape 1 : quatre scripts neufs
+(`ClassData`, `RootProfile`, `FlareProfile`, `GadgetProfile`), `game_state.gd`
+qui les nomme, et un lot qui part **rouge de bout en bout** —
+`Could not find type "ClassData" in the current scope`, répété, plus
+`test_eblouissement_en_jeu` **bloqué 120 s puis tué** parce que la scène
+principale ne compilait plus. Coût : quinze minutes de lot, pour un cache.
+
+⚠️ **Et le piège n'est pas d'avoir oublié le réimport — je l'avais fait.** Je
+l'avais fait *avant* d'écrire les fichiers. « J'ai réimporté » était donc vrai,
+et sans valeur : la commande avait répondu à une question (« le cache existe ? »)
+dont je tirais une autre réponse (« le cache est à jour ? »). C'est très
+exactement le piège de la section « **La phrase doit porter la PORTÉE de la
+commande** », rencontré une heure après l'avoir écrit — et par son auteur.
+
+**La règle** : après toute création ou suppression d'un fichier portant
+`class_name`, `godot --headless --path . --import` **en avant-plan**, avant le
+lot. Le contrôle qui le prouve ne coûte rien :
+
+    grep -c "ClassData" .godot/global_script_class_cache.cfg
+
+Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suite
+qui charge la scène, jamais sur le fichier fautif.
+
 
 Premier lancement des suites depuis un `git worktree` fraîchement créé :
 **`test_charte` échoue**, seul, sans qu'une ligne de code soit en cause. Le même
@@ -7746,6 +8022,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     couvrent déjà exactement le même besoin, et correctement dans les trois
     modes — `_is_locally_piloted()` reste inchangée pour l'acouphène et le
     pouls d'éblouissement, hors périmètre de ce chantier.
+  - **Ressenti lourd du tir — demandé le 2026-09-09, à la suite du chantier
+    racine des 10 classes.** Ce chantier (`candela-10-classes-system`, en
+    cours ailleurs — gel après tir dépendant de la classe, pistolet 0,10 s à
+    arbalète 0,60 s) voulait en plus que le tir se **sente** lourd, pas
+    seulement qu'il immobilise. Deux volets demandés :
+    - **Vibration renforcée** ✅ **faite** — `_rumble_shoot()` remplace le
+      pouls plat par deux temps : un claquement (les deux moteurs, presque au
+      plafond, 70 ms) puis un grave qui traîne (moteur grave seul, 80 ms).
+      **Volontairement uniforme entre armes pour l'instant** : le poids par
+      classe vit dans le chantier racine, non fusionné, et le dupliquer ici
+      créerait deux sources de vérité sur la même notion. À moduler par arme
+      le jour où ce chantier fusionne et expose un poids exploitable.
+    - **Gâchettes adaptatives** ❌ **abandonnées — tranché par Adrien le
+      2026-09-09, posé avant d'être tenté.** L'API `Input` de Godot n'expose
+      que le rumble double-moteur standard (`start_joy_vibration`, SDL2) ; la
+      résistance dynamique des gâchettes est un protocole propriétaire Sony,
+      réservé au DualSense (PS5) — ni DualShock 4, ni manette Xbox, ni
+      générique. L'obtenir aurait demandé un plugin natif dédié, parlant HID
+      directement au pad (formats différents en USB et en Bluetooth,
+      protocole non documenté officiellement pour les moteurs tiers), pour un
+      public restreint à qui joue précisément avec ce pad-là — jugé
+      disproportionné face à la vibration déjà universelle. Si le besoin
+      revient, repartir de ce constat plutôt que de re-découvrir la même
+      contrainte.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -11986,6 +12286,38 @@ cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 
+#### L'audit des assets passifs (2026-09-09, demandé par Adrien)
+
+Passés en revue : tout ce que le jeu affiche sans qu'un outil l'ait fabriqué —
+`assets/ui/`, `assets/logos/`, `assets/keyart/`, `assets/viseur/`. **La date de
+fichier suffit à faire le tri**, et c'est le résultat le plus utile de l'audit :
+la refonte Roman Graphique Brutaliste date du 2026-09-08 au soir. Tout ce qui
+est antérieur appartient à l'ancienne direction, sans exception.
+
+| asset | date | verdict |
+|---|---|---|
+| `logos/icone.png` | 24/08 | ❌ tracé vectoriel lisse — **remplacée** par `icone_roman.png` |
+| `keyart/keyart_rasants.png` | 25/08 | ❌ facture photographique — **régénérée** en encre |
+| `viseur/viseur.png`, `ui/cadre_hud.png`, `ui/curseur_torche.png`, `ui/grain_video.png`, `ui/vide_*.png` | 25/08 | ✅ **gardés** — ce sont des masques monochromes teintés par le code, pas des illustrations : ils ne portent aucun style à trahir |
+| les 15 illustrations, `cadre_vhs`, `cartouche_fatal`, `titres/` | 08-09/09 | ✅ à jour |
+
+⚠️ **Trois assets ne sont référencés par AUCUN fichier du dépôt** — vérifié par
+recherche sur `.gd`, `.tscn`, `.godot`, `.tres` :
+
+- `logos/Wordmark_candela.jpg` — 1,5 Mo
+- `logos/icone_bootsplash.jpg` — 1,2 Mo
+- `keyart/keyart_convergents.png` — le second key art, jamais choisi
+
+**Non supprimés** : ce sont peut-être des sources qu'Adrien garde à dessein, et
+le dépôt a un dossier `assets/sources/` pour ça — s'ils y ont leur place, c'est
+là qu'ils devraient vivre. Signalé, pas tranché. Environ 3,5 Mo.
+
+**La règle qui ressort de l'audit**, et qui vaut pour la prochaine refonte : un
+masque monochrome n'a pas de style, une illustration en a un. Seuls les seconds
+vieillissent quand la direction change — les premiers traversent, parce que
+c'est le code qui les colore.
+
+
 - **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)* — 🟡 **gabarits
   et commande écrits le 2026-09-09** : [docs/CAPSULE.md](CAPSULE.md). **Rien
   n'est généré, délibérément** : les rapports de forme dépendent de la boutique,
@@ -12063,8 +12395,30 @@ cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
   *(C)*
 - **DA7.7 Le thème du menu réinterprété** — variante saisonnière ou de rang du
   stem de menu. *(C)*
-- **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
-  reste trop longtemps sans jouer. *(S, après DA1.6)*
+- **DA7.8 L'easter egg du logo** ✅ **LIVRÉ le 2026-09-09** —
+  `enseigne_qui_meurt.gd` + `tools/test_enseigne.gd`. Après 40 s sans un geste
+  l'enseigne du menu **bat**, à 58 s elle **sursaute**, puis elle s'éteint en
+  3,4 s jusqu'à une braise, et se rallume en trébuchant au premier mouvement.
+
+  **La fiche demandait « la bougie du wordmark ». Il n'y avait pas de bougie à
+  ajouter : elle était déjà là.** Le wordmark est un pochoir rétroéclairé — les
+  lettres sont pleines, et c'est la lumière DERRIÈRE elles qui les dessine. Il
+  n'y avait qu'à la laisser mourir. Un menu abandonné qui s'éteint tout seul dit
+  la règle du jeu — *toute lumière se paie* — avant la première partie et sans
+  une ligne de texte.
+
+  Quatre décisions qui ne se devinent pas, toutes tenues par la suite :
+
+  1. **Elle ne descend JAMAIS à zéro** (braise à 0,07). Un logo qui disparaît
+     complètement ne se lit pas comme une intention mais comme une panne.
+  2. **Un mouvement de souris compte comme un geste.** Ne réveiller que sur une
+     touche donnerait une enseigne qui meurt pendant qu'on lit le menu.
+  3. **Le sursaut avant l'extinction n'est pas un ornement.** Une bougie flambe
+     avant de mourir ; sans ce temps, la disparition ressemble à un fondu
+     d'interface.
+  4. **Relâcher l'enseigne lui rend sa pleine lumière.** Sans ça, un verdict de
+     fin de match hérité d'une extinction en cours s'afficherait à moitié
+     transparent, sans que rien ne l'explique.
 
 **DA7.5, DA7.6, DA7.7 et DA7.1 sont écartées** (2026-09-09, Adrien) — les trois
 premières « pour l'instant », **DA7.1 parce qu'il n'y aura pas de boutique**.
@@ -13245,44 +13599,59 @@ au lieu de les traverser par pas de 20 px.
 calculait en unités de canevas.** Godot n'applique aucune conversion. Tant que
 les deux coïncident, personne ne voit rien. Mesuré sur la scène réelle :
 
-| vue | canevas | framebuffer | facteur |
+| vue | canevas | framebuffer réel | facteur |
 |---|---|---|---|
-| **racine** — en ligne, entraînement | 1920×1080 | **3414×1920** | **1,778** |
+| **racine** — fenêtre 1280×720 | 1920×1080 | 1280×720 | **0,667** |
+| **racine** — fenêtre 2560×1440 | 1920×1080 | 2560×1440 | **1,333** |
 | écran scindé — vue J1 | 957×1080 | 957×1080 | 1,000 |
 | écran scindé — vue J2 | 958×1080 | 958×1080 | 1,000 |
 
-En vue unique, l'emprise couvrait donc **56 % de sa largeur et de sa hauteur
-voulues** : près de la moitié de la zone n'était jamais recopiée, et le flou y
-lisait des texels laissés par une image précédente. Le polygone, c'est la
-frontière de ce qui avait été rafraîchi.
+> ⚠️ **CETTE TABLE A ÉTÉ FAUSSE PENDANT DEUX JOURS, et sa fausseté a fabriqué
+> un second défaut.** Elle annonçait un framebuffer de 3414×1920 et un facteur
+> de 1,778 « mesurés ». Réfuté le 2026-09-09 : le tampon relu par
+> `get_texture().get_image().get_size()` vaut **exactement la taille de la
+> fenêtre**, et 3414 = 2560 × (2560/1920) — c'est-à-dire **l'étirement appliqué
+> deux fois**. Le paragraphe conservé ci-dessous en garde la trace, parce que
+> l'erreur de raisonnement vaut plus cher que le nombre.
 
-#### ⚠️ Pourquoi il a fallu un mois : aucune API ne dit la vérité
+#### ⚠️ Pourquoi il a fallu un mois — et pourquoi la réponse trouvée était fausse
 
-Le candidat n° 1 accusait le bon coupable **pour la mauvaise raison** — il
-écrivait « une fenêtre plus petite que 1920×1080 rend le pixel de framebuffer
-plus gros ». C'est faux, et c'est ce qui a égaré tout le monde : le canevas est
-**figé** à 1920×1080 par `stretch/mode = canvas_items`, et le framebuffer suit
-les pixels **natifs** de l'écran. **Deux mises à l'échelle s'empilent** —
-l'étirement (1,333) puis la densité Retina (1,333) — et voici ce que Godot en
-rapporte, mesuré à la racine pendant que la texture faisait 3414×1920 :
+Le candidat n° 1 accusait le bon coupable **pour la mauvaise raison**. La
+correction du 2026-09-07 a accusé le bon coupable pour une **autre** mauvaise
+raison, et il a fallu un troisième passage pour le voir.
 
-| appel | rend | vérité |
+Elle concluait ceci : le canevas est figé à 1920×1080, le framebuffer suit les
+pixels natifs, **deux mises à l'échelle s'empilent**, et les quatre API de
+transformation « mentent » parce qu'elles n'en rapportent qu'une :
+
+| appel | rendait | « vérité » supposée |
 |---|---|---|
 | `get_final_transform()` | 1,333 | 1,778 |
 | `get_screen_transform()` | 1,333 | 1,778 |
 | `get_stretch_transform()` | 1,333 | 1,778 |
 | `get_canvas_transform()` | 1,000 | 1,778 |
 
-**Les quatre mentent, et de la même façon** : elles ne connaissent que
-l'étirement. La densité native s'applique par-dessus et n'apparaît nulle part.
-On vérifiait donc les réglages d'étirement, on les trouvait justes, et on
-concluait qu'il n'y avait pas de mise à l'échelle. **La seule source honnête est
-`get_texture().get_size() / get_visible_rect().size`** — littéralement le tampon
-dans lequel la photocopie écrit.
+**Rien de tout cela n'était vrai.** Il n'y a pas de seconde mise à l'échelle. Les
+quatre disaient juste ; c'est `get_texture().get_size()` qui rend
+`fenêtre × étirement`, donc le facteur au carré. 1,778 = 1,333².
+
+⚠️ **La faute de méthode, et c'est elle qu'il faut retenir : les quatre API
+s'accordaient entre elles, et on les a toutes déclarées fausses au nom d'une
+cinquième source qu'on n'avait pas vérifiée.** Un désaccord entre une mesure
+isolée et quatre appels qui concordent désigne la mesure, pas les appels. Il
+suffisait de relire le tampon par `get_image()` — trois lignes — pour trancher.
+
+Ce qu'a coûté l'erreur : l'emprise partait à 0,667 fois sa place ET sa taille,
+donc elle ne recouvrait **plus du tout** le disque de flou. Intersection nulle,
+mesurée. Le shader lisait un tampon jamais écrit et rendait un aplat gris à bord
+franc — le « cercle laid » signalé par Adrien le 2026-09-09, qu'une session
+antérieure avait déjà cherché sans le trouver.
+
+**La source honnête est `get_final_transform().get_scale()`.**
 
 Le dépôt savait déjà la moitié de ceci — piège « Une fenêtre Godot se compte en
-pixels NATIFS, pas en points », 2026-08-25. **Personne ne l'avait relié au
-tampon d'écran.**
+pixels NATIFS, pas en points », 2026-08-25. La moitié qui manquait n'était pas
+celle qu'on croyait.
 
 #### Le second défaut, mineur et réel : le moteur tronque
 
@@ -13972,7 +14341,9 @@ Reste donc :
 
 1ter. ⚠️ **Et les RÉGLAGES qui ont produit les assets validés ne sont consignés
    nulle part.** Les outils documentent des invocations d'exemple
-   (`--epaules 17.1` pour les sprites, `--taille 160` pour le sang), mais pas les
+   (⚠️ `--epaules` vaut **36** et non 17,1 — corrigé le 2026-09-09, vérifié par
+   cuisson : 36 reproduit `pistolet.png` à 62², 17,1 rend 30² ; `--taille 160`
+   pour le sang), mais pas les
    curseurs fins de chaque cuisson retenue : quelle `--luminance` a donné le sol
    « faible » qu'Adrien a validé, quels `--matiere` et `--profil` ont donné les
    cookies. **Recuire à l'aveugle rejouerait ses arbitrages au hasard.**
@@ -15134,6 +15505,1019 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
 
 ---
 
+## Chantier — les dix classes asymétriques (inscrit le 2026-09-09)
+
+**Ce que ce chantier remplace.** Les quatre armes du jeu deviennent dix
+**classes**, chacune portant une arme, un *root* (immobilisation calibrée après
+le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde
+et destructible à la balle. Les cinq décisions d'Adrien du jour sont dans
+« Décisions actées » ; ce qui suit est l'état d'avancement.
+
+### Ce que le choix des gadgets a révélé
+
+Adrien a choisi les dix gadgets un par un. Sa sélection a une propriété qu'il ne
+visait pas : **les dix gadgets ne font que six objets techniques**, et deux
+d'entre eux sont littéralement le même nœud avec un polygone différent (le voile
+du Spectre et l'ombre habitée de l'Occulteur sont un `StaticBody2D` plus un
+`LightOccluder2D`, l'un en bâche tendue, l'autre en découpe de torse). Les étapes
+sont donc regroupées par **famille technique**, et non classe par classe.
+
+**Et un gadget justifie à lui seul l'éblouissement généralisé, mieux que
+l'équilibrage ne le faisait.** La torche fantôme du Braconnier est une lumière
+posée qui porte le cookie de sa classe : si elle n'éblouit pas, il suffit à
+l'adversaire de la regarder en face pour savoir que c'est un faux. *Le mensonge
+n'est complet que si elle aveugle comme une vraie.* Ce n'est pas une question de
+puissance, c'est une question de cohérence de l'information.
+
+### Étape 1 — le socle de données ✅
+
+Quatre fichiers neufs, tous **sans aucune dépendance** — ni autoload, ni nœud, ni
+`preload` d'un fichier qui en nomme un — parce que c'est la condition pour qu'une
+suite les charge en `--script` : `root_profile.gd`, `flare_profile.gd`,
+`gadget_profile.gd` et `class_data.gd`. Plus `tools/test_classes.gd` (40
+contrôles), inscrit dans le lanceur.
+
+**`ClassData` HÉRITE de `WeaponData` au lieu d'en porter une**, et c'est le choix
+qui a évité une recopie. Les quatre blocs impératifs de `game_state._ready()`
+sont restés **mot pour mot** ; seul `WeaponData.new()` est devenu
+`ClassData.new()`, et un catalogue leur attache trois profils par-derrière. Une
+copie garantit que deux jeux de nombres restent égaux, jamais qu'ils veuillent
+dire la même chose — et ces blocs portent des décisions actées (les temps de
+recharge du chantier MUNITIONS, les portées de torche arbitrées le 2026-08-24).
+
+⚠️ **L'étape est délibérément INERTE.** Les quatre premiers index gardent
+exactement le sens qu'ils avaient — 0 pistolet, 1 fusil, 2 pompe, 3 arbalète — et
+les six neufs s'ajoutent de 4 à 9. Rien de ce qui circule ne change de sens : ni
+`RankLoadout`, ni les râteliers de l'interface, ni `rpc_spawn_bullet`. La table
+rang → classe entrera en vigueur dans un lot à part, avec sa montée de version de
+protocole.
+
+⚠️ **Les six classes neuves n'ont pas leurs assets, et elles le disent.** Ni
+cookie de torche, ni sprite. `ClassData.assets_presents()` répond ; rien ne les
+équipe tant que l'étape 3 n'a pas rebranché la table, donc rien ne crie — et rien
+ne se tait non plus. Aucun repli n'est prévu : un cookie manquant rend un carré
+lumineux, un sprite manquant rend `false` et crie, ce qui est exactement le
+comportement voulu.
+
+⚠️ **Un écart de contenu à soumettre à Adrien** : la spécification des classes
+demande un pistolet à 6 balles et cadence doublée là où le jeu en a 10. Les
+chiffres des quatre armes existantes n'ont **pas** été retouchés — c'est de
+l'équilibrage, pas de la structure.
+
+#### Le piège qui a coûté deux passes
+
+`class_data.gd` déclarait ses membres avec les identifiants globaux
+(`@export var root: RootProfile`). En mode `--script` le cache des classes
+globales n'existe pas encore : le fichier ne compile pas, et
+`tools/test_classes.gd` non plus — « Could not resolve external class member ».
+Les trois types passent donc par `preload`, et le commentaire sur place le dit.
+C'est le même piège que `tools/test_arsenal.gd` contourne déjà de son côté, et il
+mord ici parce que ces fichiers sont **faits** pour être chargés par des suites.
+
+### Étape 2 — le root ✅
+
+Sept modifications de `player.gd`, et **rien sur le fil**. Le patron est celui
+que `lancer_fusee()` portait déjà : « le cooldown de tir existant porte ce
+désarmement — non répliqué, simulé identiquement chez l'hôte et dans la
+prédiction client, comme pour le tir ». `shoot()` tourne des deux côtés, donc les
+deux pairs arment le même compteur au même tir.
+
+⚠️ **Le root est VIVANT sur les quatre armes jouables dès ce lot** : pistolet
+0,10 s, fusil 0,25 s, pompe 0,35 s, arbalète 0,60 s. Ce n'est pas un ajout
+silencieux — c'est le jalon d'Adrien, et l'arbalète est précisément l'extrême
+haut de l'échelle. **S'il est injouable à 0,60 s, toute la grille bouge**, et
+c'est le genre de chose qu'on veut savoir maintenant plutôt qu'à la dixième
+classe.
+
+Trois propriétés écrites plutôt que supposées : le compteur ne bat que pendant le
+jeu actif (le bloc vit après deux `return` anticipés, il gèle pendant le décompte
+et la séquence de fin, comme le rechargement) ; `equip_weapon` le remet à zéro ;
+et l'Occulteur, seul à porter `apres_rafale`, s'immobilise au **relâchement de la
+détente** et non coup par coup — un pistolet-mitrailleur ne peut pas s'arrêter
+huit fois de suite.
+
+#### Le correctif qui n'était pas pour le root, et qui a demandé deux avis
+
+`_consume_prediction_error()` résorbait l'écart de prédiction par un
+`global_position += step` — **un téléport, qui traverse les murs**. Tant que le
+joueur bouge il se dégage seul au tick suivant, ce qui a masqué le défaut jusqu'à
+aujourd'hui. **Un joueur rooté ne bouge plus** : il s'y encastre et y reste.
+
+Mes deux premières idées étaient mauvaises, et la session « bandeau fatal » les a
+démolies l'une après l'autre :
+
+- appeler `move_and_slide()` à vitesse nulle ne répare rien — le mur est déjà
+  traversé quand il tournerait, et la vitesse n'entre pas dans un téléport ;
+- suspendre la consommation pendant le root ne fait que DIFFÉRER : l'écart se
+  rattrape d'un coup à la fin, c'est-à-dire un à-coup posé pile au moment où le
+  joueur redevient mobile — exactement ce que le commentaire de la fonction dit
+  vouloir éviter.
+
+La correction tient en un mot : **`move_and_collide(step)`**. Elle garde la
+courbe de lissage et s'arrête au mur.
+
+⚠️ Et le détail qui la rend sûre, vérifié avant d'être cru : **`_predict_error`
+n'est pas intégré, il est RE-MESURÉ à chaque paquet** (`_predict_error = err`,
+depuis `net_position`). Donc `_predict_error -= step` reste juste même quand le
+mur mange une partie du pas — la portion perdue revient dans la mesure suivante,
+ce qui dispense de calculer le trajet réel. **Le défaut préexistait au root ; le
+root ne fait que le rendre visible.**
+
+#### Ce que la suite tient, et ce qu'elle ne tient pas
+
+`tools/test_classes.gd` gagne dix contrôles TEXTUELS sur `player.gd`, pour la
+raison que `tools/test_planche_marche.gd` a déjà écrite : **le lot ne rend rien,
+donc rien n'aurait vu un décâblage.** Les sept modifications pourraient être
+défaites une à une sans qu'une ligne ne rougisse.
+
+Le contrôle qui compte le plus : **`_root_restant` ne doit apparaître ni dans la
+config de réplication ni dans `rpc_send_inputs`**. Le jour où quelqu'un
+« corrigerait » ça en répliquant le compteur, il paierait un octet par tick pour
+une valeur déjà juste et créerait une divergence là où il n'y en a aucune.
+
+Les gardes ont été **sabotées pour vérifier qu'elles rougissent** — deux
+contrôles au rouge en remettant le téléport, verts au retour. Une garde qu'on n'a
+pas vue échouer n'est pas une garde.
+
+✅ **Éprouvé par Adrien le 2026-09-09, manette en main.** Il a essayé l'arbalète
+— l'extrême haut de la grille, 0,60 s — et a ordonné la fusion dans la foulée.
+⚠️ **Il n'a demandé aucun changement de valeur, et il n'a pas non plus prononcé
+de verdict sur le chiffre.** Ce qui est établi est donc : *le root ne l'a pas
+arrêté*. Ce qui ne l'est pas : que 0,60 s soit le bon plafond. La question reste
+ouverte, elle a simplement cessé de bloquer.
+
+Ce qu'aucune suite ne dit : **si le root est jouable.** Ça se juge manette en
+main.
+
+### Étapes 4 et 5 — la touche, le fil, et le socle des gadgets ✅
+
+**Étape 4.** Le bit de gadget circule de bout en bout ; `Protocol.VERSION` passe
+de 9 à 10. Le témoin du fil a signalé la rupture — et il valait plus qu'une
+formalité : **l'argument porte une valeur par défaut, donc GDScript n'aurait rien
+dit** d'un client v9 parlant à un hôte v10. Les deux auraient joué, chacun dans
+sa réalité. Touches E et O au clavier, L1 à la manette.
+
+⚠️ `tools/test_liaisons.gd` a fait rougir le lot : « ces commandes du clavier ne
+figurent nulle part : p1_gadget ». Une commande ajoutée à l'`InputMap` sans ligne
+dans la rubrique de réglage — et la garde a raison, *« une commande absente de la
+rubrique se cherche ailleurs, et il n'y a pas d'ailleurs »*. D'où deux entrées
+dans `ui.gd`, fichier de la session « menus », incursion déclarée au journal.
+
+**Étape 5 — et le point de conception qui décide de tout le reste.**
+
+Un gadget doit être **abîmé par une balle sans être un obstacle au joueur**. Sur
+`WALL_LAYER` il aurait bloqué les deux, et le voile du Spectre — « elle arrête la
+lumière, les balles la traversent » — serait devenu un mur ordinaire. ⚠️ **Sans
+qu'aucune erreur ne se lève** : le jeu serait resté parfaitement jouable, et le
+gadget aurait simplement cessé de vouloir dire ce qu'il veut dire.
+
+D'où `MapGeometry.GADGET_LAYER`, une couche à part, et `BULLET_MASK` qui la
+contient là où `PLAYER_MASK` ne la contient pas. **Ce qui arrête ou non une balle
+est un drapeau du gadget (`arrete_les_balles`), jamais la couche physique** :
+l'ombre habitée est une plaque d'acier et l'arrête, le voile est une bâche et la
+laisse passer. La traversée est bornée à deux gadgets par pas de physique — une
+image qui ne rend pas la main est pire qu'une balle qui s'arrête.
+
+`wall_first` devient `obstacle_avant` dans `bullet.gd`. Depuis que le masque
+contient les gadgets, le premier collider n'est plus forcément un mur : le nom
+disait « mur » et décidait « obstacle ».
+
+Les deux gadgets de la famille A sont livrés ensemble parce qu'ils sont **le même
+nœud** — seul le polygone d'ombre change.
+
+#### Trois défauts trouvés dans mes propres contrôles
+
+1. **Un `await` non attendu.** `_test_socle_gadgets()` monte des nœuds, donc elle
+   attend des images ; `_run()` imprimait son verdict et sortait avant. Le lot
+   annonçait « tous les tests passent » pendant que la moitié de la section
+   n'avait pas tourné, et l'autre moitié ne l'a jamais fait. **Un garde-fou qui
+   ne peut pas échouer est pire qu'absent — on le croit tenu.**
+2. **Un contrôle textuel qui épinglait la chaîne.** Il interdisait `wall_first`
+   *y compris dans le commentaire qui explique le renommage*. C'est le piège du
+   2026-08-25 commis dans le contrôle lui-même ; il teste désormais
+   `var wall_first`.
+3. **Le cri légitime d'un sprite absent faisait rougir le lot.** Instancier un
+   gadget déclenche son `push_error` — comportement voulu en jeu, et
+   `run_suites.sh` traite tout `push_error` comme un échec. Les sous-classes ne
+   sont donc plus montées dans l'arbre par la suite : on éprouve ce qui se décide
+   à la construction. ⚠️ **Ce que ça ne couvre pas : le montage du visuel.** Il
+   se verra à l'écran le jour où les planches existeront, pas avant.
+
+### Étape 6a — l'éblouissement accepte des sources déclarées ✅
+
+`_maj_eblouissement` n'est plus un calcul à deux termes : **une boucle sur des
+sources déclarées, en deux passes strictes.** La passe 1 retient, pour chaque
+cible, la source **gagnante** — pas seulement sa valeur.
+
+⚠️ **Le MAX doit faire remonter la SOURCE.** `ui._poser_voile(rect, victime,
+source)` dérive le penchant du voile de la POSITION de la source ; le shader ne
+reçoit qu'un scalaire de relèvement. Un max qui ne retiendrait qu'un niveau
+laisserait le voile pencher vers l'adversaire pendant qu'une lumière posée brûle
+derrière — et **aucune suite ne le verrait**, rien ne teste le relèvement. Relevé
+par la session « retouche éblouissement ». Le joueur porte désormais
+`source_eblouissante`.
+
+**Le cas de soi, réglé par une règle et non par un coefficient.** Adrien :
+« très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien
+d'allumer sa torche ». Ce n'est pas un dosage — c'est un cas **dégénéré** : le
+modèle échantillonne le cookie à la position de la cible, or pour sa propre
+torche source et cible sont le même point, c'est-à-dire le centre du cookie et sa
+valeur maximale. D'où le partage : une source **portée** (torche, flash de
+bouche) n'éblouit son porteur que par `RETRODIFFUSION` — on ne se tient pas dans
+son faisceau, on reçoit ce qui revient des murs ; une source **posée** éblouit
+tout le monde pareil, poseur compris.
+
+Deux exclusions **écrites avec leur raison**, parce qu'une exclusion subie par
+oubli est un défaut et qu'une exclusion écrite est une décision : les particules
+(tirées au sort localement donc absentes chez l'autre pair, et ~1,3 ms par image,
+dix fois la marge) et l'ambiance personnelle (masques 16/32, elle n'existe pas
+dans le monde partagé).
+
+#### Ce que 6a ne fait PAS, et pourquoi c'est délibéré
+
+**La fusée n'est pas branchée comme source, et le gain de taille vaut zéro.**
+L'ordre imposé par la session éblouissement est : *la source circule d'abord, la
+fusée ensuite*. Or la circulation n'est complète que quand `ui.gd` lit
+`source_eblouissante` pour orienter le voile — et `ui.gd` appartient à la session
+« menus ». Brancher la fusée maintenant produirait exactement le mensonge
+directionnel qu'on m'a dit d'éviter.
+
+Il manque donc **une lecture dans `ui.gd`**, et c'est une demande, pas un geste.
+
+#### Une garde qui a attrapé un changement de DÉCISION
+
+`test_online_match --eblouissement` vérifiait « celui qui éclaire n'est pas
+ébloui ». C'était vrai **par construction** — la boucle à deux termes ne formait
+que les paires croisées, l'auto-éblouissement était impossible. La décision
+d'Adrien l'a rendu possible, et la garde a rougi : c'est son travail.
+
+Elle vérifie désormais **les deux moitiés** : que le porteur soit ébloui, et
+qu'il le soit au moins cinq fois moins que sa cible. Une seule des deux ne dirait
+rien — « supérieur à zéro » laisserait passer une rétrodiffusion à 0,5 (la torche
+redevenue inutile), « faible » laisserait passer le retour à zéro et perdrait la
+décision.
+
+### Étape 7 — les dix classes ont leurs assets ✅
+
+Adrien a généré **une seule planche** par ChatGPT (1536×1024, 3×2) pour les six
+classes qui manquaient. Les dix sont désormais complètes : sprite, silhouette et
+cookie de torche.
+
+#### Deux mensonges du dépôt, trouvés en cuisant
+
+**1. `--epaules 17.1` était faux.** La docstring de `tools/fabrique_sprites.gd`
+l'affirmait en gras, longuement argumenté, et cette feuille de route le
+recopiait. Vérifié **par cuisson** et non par lecture : avec 36,
+`S_pistol_01.jpg` rend une toile de 62² — exactement le `pistolet.png` livré ;
+avec 17,1, elle rend 30². Les six sprites seraient sortis **deux fois trop
+petits**, et aucune suite ne l'aurait vu. Corrigé aux deux endroits, et consigné
+en « Pièges connus » : *une consigne d'OUTIL ne se vérifie qu'en l'exécutant.*
+
+**2. `EMPREINTES` n'énumérait que quatre slugs.** Les contrôles d'image de
+`tools/test_sprites.gd` ne s'appliquent qu'aux slugs qu'elle nomme : les six
+neufs seraient entrés au dépôt **sans qu'une seule taille ne soit vérifiée**, et
+la suite serait restée VERTE en les ignorant. La table en compte dix.
+
+#### Le mode `--frames` est inutilisable pour une planche multi-classes
+
+Il impose une **toile commune** dimensionnée sur la case la plus encombrante, et
+mesure l'échelle et le pivot sur la **seule case 1**. Mesuré sur les quatre
+sources : les six seraient sortis à 82 px, l'arbalète gagnant 46 %, cinq cases
+sur six décentrées. C'est le motif de rejet documenté d'un lot précédent —
+« l'échelonnement des armes disparaît, et lire l'arme adverse décide du duel ».
+
+La découpe se fait donc **hors du script**, puis six passes en mode simple, où
+chacune calcule sa propre échelle, son propre pivot et sa propre toile.
+
+⚠️ **Et pas à la grille.** Sur la planche générée, **quatre figures sur six
+touchaient le bord de leur case** et débordaient chez la voisine. Couper à 512
+aurait mis un fragment du voisin dans quatre sprites — ce qui fausse d'un coup
+l'échelle, le pivot et la toile, sans erreur ni avertissement. Chaque carré a été
+taillé autour de la **boîte englobante réelle**, borné aux gouttières mesurées.
+
+#### La normalisation se fait sur la TÊTE, pas sur les épaules
+
+`_largeur_epaules()` mesure la ligne opaque la plus large du tiers HAUT de la
+figure — que l'**équipement porté aux épaules élargit**. Sur cette planche elle
+donnait 263 à 363 px selon la classe (38 % d'écart) alors que les têtes tenaient
+dans 142-150 px (5 %). La génération était bonne ; c'est le proxy qui est faux.
+
+Sans correction, le Spectre sortait à **110 px de toile** contre 82 pour la plus
+grande arme existante. ⚠️ **Ce n'est pas cosmétique** : l'occluder du joueur épouse
+la silhouette entière, et cet occluder est vu par la torche ADVERSE. Un sprite
+34 % plus grand découpe un trou 34 % plus grand dans le faisceau d'en face —
+*« on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière »*. Une
+classe involontairement grossie est mécaniquement plus facile à repérer.
+
+Après normalisation : corps de **24 à 25 px** pour les six, contre 21 à 26 pour
+les quatre historiques. Les neuves sont plus homogènes entre elles que les
+anciennes ne le sont. Les toiles vont de 50 à 90 px, et cet écart-là vient de la
+**longueur d'arme**, ce qui est l'intention.
+
+#### Les cookies : une crainte annoncée trop fort
+
+J'avais prévenu que recuire réécrirait les quatre cookies validés, dont les
+réglages ne sont consignés nulle part. Empreintes relevées avant, cuisson,
+empreintes après : **identiques au bit près**. Les paramètres par défaut sont bien
+ceux qui les ont produits. La ligne « lumière 63 % de l'actuel » qu'affiche
+l'outil compare autre chose que le fichier sur disque — je l'avais lue comme une
+comparaison au fichier, ce qu'elle n'est pas.
+
+#### `test_torches` épinglait une FORME, pas un sens
+
+Elle vérifie que `torches.gd` et `game_state.gd` ne divergent pas — l'angle étant
+cuit dans le cookie, une divergence produirait un faisceau dont l'ouverture n'est
+pas celle que l'arme annonce. Mais elle cherchait **une seule écriture**,
+`weapon_<slug>.torch_angle_deg = <n>`, et les six classes sont bâties par un
+constructeur. Elle rougissait alors que rien ne divergeait.
+
+Elle lit désormais les deux formes, la seconde par un **parsing exact des
+arguments** et non par un `contains` approximatif — sinon on échange un faux
+positif contre un faux négatif. Sabotée pour vérifier : angle du Fumiste passé de
+30 à 33, elle dit « torches.gd dit 33.0, la source dit 30.0 ». Restaurée, 84/84.
+
+### Étape 8 — la table rang → classe entre en vigueur ✅
+
+Les dix rangs donnent dix classes distinctes. `Protocol.VERSION` passe à **11** :
+la FORME du fil ne bouge pas — `weapon_idx` reste un entier — c'est son SENS qui
+change, l'intervalle passant de 0-3 à 0-9. ⚠️ **C'est le cas de la v7**, où
+`rpc_spawn_fusee` troquait une cible contre un angle : rien ne casse à la
+lecture, les deux jeux s'entendent, et chacun équipe une classe différente.
+
+Le témoin du fil, lui, ne bouge PAS — et c'est juste : il mécanise l'oubli d'un
+changement de forme, pas le jugement sur un changement de sens.
+
+#### Trois branches par défaut qui seraient devenues le chemin normal
+
+Toutes les trois étaient inoffensives tant que l'arsenal comptait quatre armes,
+et toutes les trois auraient servi six classes sur dix **sans lever la moindre
+erreur** :
+
+1. **`weapon_for_index()`** était un `match` sur 0 à 3 rendant le pistolet par
+   défaut. Un Spectre aurait tiré avec la balistique du pistolet, porté son
+   cookie et joué ses sons. Elle lit le catalogue, et crie hors bornes.
+2. **`ui._weapon_label()`** rendait « Pistolet » par défaut : six boutons
+   identiques dans l'écran qui sert précisément à choisir.
+3. **`ui._weapon_slug()`** rendait « pistolet » : six icônes identiques.
+
+⚠️ **Et le repli ne redit plus le nom d'une vraie classe.** Rendre « Pistolet »
+quand on ne sait pas répondre est ce qui a caché le défaut : un mauvais nom
+*plausible* se prend pour une intention. Le repli rend « Classe 7 » — laid, et
+c'est sa vertu.
+
+#### La non-monotonie a changé de RAISON, pas de valeur
+
+`tools/test_arsenal.gd` protégeait « les rangs au-dessus de Lanterne redescendent
+au pistolet, faute d'armes ». Ce n'est plus un trou de contenu, c'est une
+intention : l'échelle des rangs est une échelle de LUMIÈRE, pas de puissance — le
+Braconnier et ses 0,60 s de root est au rang 4, l'Allumeur et ses 0,20 s au
+rang 9. Le contrôle vérifie désormais la **propriété** plutôt que des valeurs, et
+survit donc à un remaniement saisonnier. Un contrôle neuf s'ajoute : les dix
+catégories donnent dix classes **distinctes**.
+
+### Étape 9 — l'écran de SÉLECTION DE CLASSE ✅
+
+Demandé par Adrien le 2026-09-09 : « le menu de sélection d'armes évolue pour
+donner lieu à un menu de sélection de classe, qui décline également une
+description, le gadget, les dégâts et caractéristiques de l'arme. Tout ça dans
+une interface ultra stylisée en style Roman Graphique/RPG. »
+
+Le choix quitte le salon pour devenir un **panneau du cadre de droite**
+(`PANEL_CLASSES`), exactement comme la galerie de cartes — deux colonnes de dix
+noms, une fiche. Le salon garde une **carte d'état** par joueur, du même geste que
+la carte d'arène. La raison est de place : dix classes et leur fiche font trois
+fois la hauteur de la colonne du salon, laquelle porte encore l'arène, la liste
+des joueurs, le code et le bouton qui lance. La fenêtre de décompte reçoit la
+même fiche.
+
+#### Trois décisions qui portent la fiche
+
+1. **Les jauges disent « plus », jamais « mieux ».** Barre de RECHARGE pleine =
+   recharge longue. L'inverse — retourner les lignes où « moins vaut mieux » —
+   obligerait le joueur à retenir quelles lignes mentent, et le premier
+   équilibrage qui change le sens d'une ligne le ferait en silence. Ce qui
+   distingue les deux familles est la **couleur** (teinte du joueur / ambre), pas
+   le sens de la barre.
+2. **L'échelle vient du catalogue, à chaque affichage.** Écrire « 100 dégâts =
+   plein » aurait créé une seconde vérité, périmée au premier équilibrage et
+   périmée *sans bruit* : la barre n'aurait pas été fausse, juste mal remplie. Les
+   bornes se mesurent sur les dix ; la jauge répond « où cette classe se situe
+   parmi les dix », qui est la question qu'on se pose devant un écran de choix.
+3. **Le portrait est le sprite de jeu**, pas une illustration. C'est la
+   silhouette que l'adversaire découpera dans le faisceau ; une image séparée
+   promettrait une allure que le jeu ne rend pas.
+
+#### ⚠️ Amendé le même jour : UNE FICHE PAR JOUEUR
+
+Le premier jet n'en avait qu'une, qui suivait le dernier survol. Adrien l'a
+relevé aussitôt : *« en écran partagé lors de la sélection d'arme, le joueur 2
+doit pouvoir voir aussi le descriptif de sa sélection, en dessous de celle du
+joueur 1 »*. Il a raison, et le raisonnement d'origine était incomplet — j'avais
+écrit que les deux râteliers devaient rester côte à côte *parce que les deux
+curseurs vivent en même temps*, sans en tirer la conséquence évidente pour la
+fiche : **une fiche unique est écrasée par le moindre mouvement de l'autre
+joueur**, et J2 ne voyait donc jamais ce qu'il était en train de prendre.
+
+Deux fiches, empilées, chacune à la teinte de son joueur. Le routage passe par le
+**râtelier** du bouton (`META_RATELIER`) et jamais par le curseur qui l'atteint :
+chez le client, le curseur 0 pilote le râtelier de J2, et router sur le curseur
+aurait écrit dans la fiche de J1 ce que J2 choisit.
+
+Les métriques se resserrent — deux fiches pleine taille débordent le cadre en
+720p — et **des deux côtés, même quand une seule s'affiche** : une fiche qui
+changerait de gabarit selon le mode devrait être reconstruite à chaque bascule,
+or elle porte des connexions et un état. Le gabarit resserré tient dans les deux
+cas ; le grand ne tient que dans l'un.
+
+#### Le défaut le plus cher n'était pas dans la fiche
+
+**L'index de l'arme était la POSITION du bouton dans son râtelier.** Six endroits
+de `game_state.gd` lisaient `get_pressed_button().get_index()`, et un septième
+indexait `get_buttons()`. C'était juste tant que les quatre armes étaient créées
+dans l'ordre du catalogue. La liste de classes s'ordonne par **rang** — la
+progression que le joueur connaît —, et l'ordre des rangs n'est pas celui du
+catalogue : Parasite 1, Fumiste 2, Illusionniste 3… **Les deux nombres ont cessé
+d'être le même, sans qu'une seule erreur ne se lève** — on serait simplement parti
+avec une autre classe que celle affichée.
+
+L'index voyage désormais en métadonnée (`META_CLASSE_INDEX`), et il n'y a plus
+qu'un chemin de lecture, `ui.selected_weapon_index()`. `menu_hub.gd` avait déjà
+écrit la leçon pour ses panneaux : **une position n'est pas une identité.**
+
+`tools/test_classes.gd` exige que la place et l'index **diffèrent** quelque part —
+sans quoi la lecture positionnelle marcherait encore, et personne ne verrait le
+jour où elle cesse de marcher. Vérifié en sabotant le tri : deux ✗ franchement
+faux, verts une fois rétabli.
+
+#### `SOCLE` vaut les dix, et ce n'est pas un élargissement
+
+Il a toujours voulu dire « tout ce qui existe » : quatre entrées parce que le jeu
+comptait quatre armes, pas parce qu'on en retenait six. Le laisser à quatre
+pendant que le catalogue en compte dix aurait transformé une **non-restriction en
+restriction**, en silence — et l'écran aurait montré six classes grisées jusque
+dans l'entraînement, c'est-à-dire là où l'on va précisément essayer une classe.
+Ce qui se mérite reste ce qui se mérite : la table compétitive ne bouge pas.
+
+#### Deux pièges payés ici
+
+- **`trait` est un mot réservé de GDScript**, et le message ne le dit pas :
+  « Expected variable name after "var" ».
+- **`make_panel_style()` pose déjà GAP_M de marge intérieure** sur les quatre
+  côtés. Un `MarginContainer` par-dessus double la respiration ; et sur une
+  vignette de 88 px, il ne laisserait que 40 px d'image.
+
+### Étape 10 — poser un gadget ✅
+
+Le bit circulait depuis l'étape 4, `GadgetBase` et ses deux sous-classes
+existaient depuis la 5, et **rien ne posait quoi que ce soit dans le monde.**
+C'est fait : le voile du Spectre et l'ombre habitée de l'Occulteur se plantent,
+occultent, et se laissent abattre.
+
+**Même autorité que la fusée, mot pour mot** : le bit voyage dans la commande
+numérotée, l'hôte détecte le front en simulant P2, et c'est lui qui spawne pour
+tout le monde. Aucune prédiction client — un objet posé, immobile, à une charge
+par manche, tolère un demi-RTT ; le tir non. Le désarmement (0,30 s) passe par le
+cooldown de tir existant, donc il n'est pas répliqué : il est simulé à l'identique
+des deux côtés, comme le tir lui-même.
+
+⚠️ **La position finale voyage dans le RPC.** Le gadget se plante devant le
+poseur, et « devant » peut tomber dans un mur ; la rectification demande une
+requête de physique, donc l'état de la carte, donc deux mondes qui pourraient
+répondre différemment. L'hôte tranche une fois et envoie le point.
+
+#### On compte les poses, on ne décompte pas un stock
+
+Un « restant » se sème à l'ouverture de la manche. Or la fenêtre de choix d'un
+match apparié s'ouvre **avec le décompte**, donc *après* `_do_start_round`, et
+`pick_countdown_weapon()` change l'arme équipée pendant ces dix secondes. Un
+stock semé avant le choix aurait donné à qui change de classe le stock de la
+classe qu'il vient de quitter — **sans erreur, et invisible tant que les deux
+classes en ont autant.** En comptant les poses, le plafond se relit à chaque
+appui sur la classe réellement équipée, et il n'y a plus rien à resemer.
+
+#### Deux mesures prises en capture, pas au jugé
+
+- **`PORTEE_POSE` vaut 96 px, et la première valeur était 44.** Vérifié torche
+  allumée : à 44 le voile coupe le faisceau au ras du canon — le poseur
+  s'aveugle et l'objet cesse d'être un écran pour devenir un mur qu'on se prend.
+  À 96, la bâche tombe hors du premier pas et masque ce qu'il y a derrière elle.
+- **L'occultation fonctionne**, constaté à l'image : le cône de torche s'arrête
+  net sur une arête verticale et tout ce qui est au-delà est noir.
+
+#### Un renversement assumé : ces deux gadgets sont DESSINÉS
+
+L'étape 5 les faisait crier « sprite absent » et ne rien montrer. Cette décision
+supposait qu'une planche viendrait ; la note de tête de `gadget_voile.gd` dit
+l'inverse depuis le premier jour — *« vue strictement de dessus, une bâche
+verticale est une ligne »*, *« un sprite bien lisible de dessus serait un défaut
+de conception »*. Peindre une image pour obtenir deux segments serait payer un
+asset pour rien, et livrer une pose qui n'affiche rien serait livrer une touche
+morte.
+
+Ce n'est donc pas un repli en attendant mieux, et la règle du dépôt tient
+toujours : **ce qui reste interdit est de dessiner *en attendant* un sprite.**
+`gadget_base.gd` porte désormais les deux voies légitimes et leur condition —
+que le choix soit écrit.
+
+⚠️ `GadgetProfile.scene` devient `implementation` : ces nœuds se montent en code
+comme la fusée, il n'y a pas de `.tscn` à charger et il n'y en aura pas. Le nom
+promettait un fichier qui n'existe pas.
+
+#### `Protocol.VERSION` passe à 12
+
+`rpc_spawn_gadget` apparaît : même famille que la v9, un hôte appelle un nom que
+l'ancien client n'a jamais entendu. Ce qui rend cette rupture coûteuse est ce
+qu'elle laisse derrière — **l'hôte aurait un occluder que le client n'a pas.** Le
+client verrait la lumière traverser une bâche que l'hôte considère opaque, et
+chacun jouerait sa propre carte sans qu'une ligne d'erreur ne le dise. Le témoin
+du fil l'a signalé avant qu'on y pense, pour la cinquième fois du chantier.
+
+#### Ce que les contrôles tiennent
+
+Dix contrôles textuels sur le câblage — même raison que pour le root, *le lot ne
+rend rien, donc rien n'aurait vu un décâblage* —, et une section qui monte une
+vraie manche : le gadget apparaît, porte un nom explicite, se plante devant le
+poseur en travers de son regard, consomme sa charge, et une classe dont le gadget
+n'est pas écrit ne pose rien **sans crier** (le bouton reste sans effet, ce qui
+est la vérité). Sabotage vérifié en neutralisant le décompte : trois ✗ francs.
+
+### Étape 11 — la torche fantôme ✅
+
+La première des trois **lumières posées**, et celle dont ce chantier attendait
+l'éblouissement généralisé depuis son ouverture : *« si elle n'éblouit pas, il
+suffit à l'adversaire de la regarder en face pour savoir que c'est un faux. Le
+mensonge n'est complet que si elle aveugle comme une vraie. »*
+
+Une lampe sur trépied qui **balaie** (±36°, aller-retour en 3,6 s) avec le cookie
+de la classe qui l'a posée. Vue d'en face, elle est indiscernable d'un adversaire
+qui fouille la pièce : même faisceau, même température, même découpe des corps
+dans la lumière — et même prix pour les yeux.
+
+#### Elle LIT son faisceau, elle ne le recalcule pas
+
+`_lumiere_recue()` avait besoin d'être coupée en deux : les préconditions qui ne
+valent que pour un joueur (`_en_jeu`, `flashlight_on`) d'un côté, l'
+échantillonnage du cookie de l'autre. Le second est devenu
+`_lumiere_du_faisceau()`, que les deux chemins appellent. Recopier les cinq
+lignes du milieu aurait donné **une seconde définition du même faisceau** — la
+faute exacte que le commentaire de cette fonction passe vingt lignes à raconter,
+avec ses trois divergences en une journée.
+
+#### Un défaut créé à l'étape 10, trouvé ici
+
+**Les gadgets n'arrêtaient pas l'éblouissement.** Le voile du Spectre coupait le
+faisceau à l'écran — son occluder le fait — pendant que le rayon de ligne de vue,
+masqué sur les seuls murs, traversait la bâche comme si elle n'existait pas : on
+voyait le noir et on prenait la lumière. Le masque contient désormais
+`GADGET_LAYER`, et il repose sur un invariant qu'il faut garder : **tout gadget
+porte un occluder**, `_monter_occluder()` étant appelé sans condition.
+
+#### Le halo, qui n'est pas de l'ornement
+
+Constaté en capture avant d'être écrit : un faisceau **sans halo à sa racine** ne
+ressemble à aucune torche du jeu. Le porteur d'une vraie lampe baigne dans la
+rétrodiffusion de sa lentille, et de loin c'est même la seule chose qu'on
+distingue de lui. Sans ce halo, le leurre se démasque à distance en une manche.
+Il reste plus pauvre que celui d'un joueur — pas d'occluder de torse, parce qu'il
+n'y a pas de torse : ce qu'il imite est la lumière, pas l'homme.
+
+#### Trois choses qui ne sont PAS répliquées, et pourquoi
+
+Le balayage, le halo et le visuel vivent chez chaque pair depuis l'instant de la
+pose. Les deux horloges ne démarrent pas au même tick, donc les faisceaux peuvent
+se déphaser de quelques dizaines de millisecondes — sans conséquence :
+**l'éblouissement est calculé par l'hôte seul et répliqué**, et ce que le client
+voit est un décor. Répliquer l'angle coûterait un flottant par tick pour corriger
+un écart que personne ne peut mesurer. C'est le patron de la fusée.
+
+#### Deux pièges de banc, tous deux ressemblant à de vrais défauts
+
+- **Un rayon de physique ne voit pas un corps déplacé à la même image.** Le
+  premier jet attendait `process_frame` et relevait 0,000 partout : la ligne de
+  vue était fausse parce que le serveur de physique n'avait pas encore vu les
+  joueurs à leur nouvelle place. Il faut `physics_frame`.
+- **Deux corps au même point : le second n'est jamais « en vue ».** Le rayon
+  touche le premier rencontré, et `res.collider == cible` est alors faux pour
+  l'autre. Le banc mesurait donc « le poseur n'est pas ébloui » — un résultat
+  qui a exactement la forme d'un vrai défaut de conception.
+
+Sabotage vérifié : gadgets retirés de la liste des sources → le contrôle rougit.
+
+### Étape 12 — la mine au magnésium ✅
+
+La deuxième lumière posée. **Elle n'explose pas, elle allume** — et c'est le
+point de conception, pas une économie : l'Allumeur est celui qui fait de la
+lumière, *« la lumière maximale, celle qui ne laisse aucune ombre où se
+mettre »*. Lui donner des dégâts en ferait un piégeur ordinaire, jouable dans
+n'importe quel jeu de tir ; en faire un flash la rend jouable seulement dans
+celui-ci, où être vu est déjà être mort.
+
+Elle ne blesse personne, elle prend les yeux et elle révèle. Elle ne distingue
+pas non plus son poseur — même règle que la fusée, arbitrée par Adrien : *« on
+ne la lance pas à ses pieds impunément »*. Une mine posée est un endroit où l'on
+ne repasse pas.
+
+**L'armement (1,2 s) n'est pas un délai de confort.** Sans lui, il faudrait un
+rayon de déclenchement inférieur à `PORTEE_POSE` — c'est-à-dire une mine qu'on
+enjambe. L'armement permet un rayon large ET un poseur qui s'en va.
+
+**Abattue, elle part.** `encaisser()` ne la tue pas : elle demande à s'allumer.
+Sans ça, une balle serait un désamorçage gratuit, et une mine qu'on désamorce à
+distance ne menace personne.
+
+#### Le partage décision / autorité
+
+`GadgetBase.veut_s_allumer()` est appelé par `GameState._maj_gadgets()` **sur
+l'hôte seul**, qui envoie l'ordre par `rpc_allumer_gadget`. La DÉCISION vit dans
+le gadget, où son rayon et son armement se lisent avec ce qu'ils veulent dire ;
+l'AUTORITÉ reste chez `GameState`, parce qu'elle appartient au réseau. Un gadget
+qui s'allumerait tout seul s'allumerait **deux fois**, une chez chaque pair, à
+deux instants différents — et l'éblouissement, calculé par l'hôte, ne
+correspondrait plus à ce que le client voit brûler.
+
+`Protocol.VERSION` passe à **13**.
+
+#### Le défaut trouvé À LA CAPTURE, et pas autrement
+
+Ombres activées, le flash rendait **un voile gris plat** au lieu d'un disque net.
+Cause : le socle monte un occluder pour tout gadget, et la flamme se retrouvait
+**à l'intérieur de son propre occluder** — ce qui « ne produit ni ombre ni
+lumière mais du hasard ». La phrase est de `player.gd`, qui a payé exactement la
+même leçon sur `body_light` le 2026-08-26 ; je l'ai relue après coup.
+
+⚠️ **Aucune suite ne pouvait l'attraper** : le nœud était monté, l'occluder
+présent, la lumière allumée, l'éblouissement juste. Tout ce qui se mesure sans
+rendre était vert. Diagnostiqué en retirant l'occluder et en recomparant deux
+captures.
+
+**Le remède tient en une propriété, pas en un réglage** : un boîtier posé à plat
+sur le sol, vu de dessus, n'a rien à masquer. La mine ne porte donc pas
+d'occluder — et elle se déclare `occulte_la_lumiere = false`, ce que
+`_ligne_de_vue_depuis()` lit pour l'exclure du rayon d'éblouissement. Sans cette
+seconde moitié, elle aurait arrêté l'aveuglement sans arrêter le faisceau :
+l'inverse exact du défaut de l'étape 11, et tout aussi muet. Le banc vérifie les
+deux moitiés, parce que vérifier l'une laisse passer l'autre.
+
+### Étape 13 — la nappe de braises ✅
+
+La dernière lumière posée, et **le seul gadget du chantier qui fasse des
+dégâts**. La différence avec la mine est de nature : la mine punit un instant —
+on l'a déclenchée, c'est fini — la nappe punit une DURÉE. Elle ne tue personne
+qui la traverse ; elle interdit d'y rester, ce qui n'est pas la même chose et
+vaut bien plus cher dans un couloir.
+
+**Le dosage est le contrôle, pas les dégâts.** Traverser en courant coûte
+environ quatre points de vie — négligeable, et c'est le but : l'Incendiaire ne
+gagne pas parce qu'on a marché dessus. Y rester deux secondes en coûte
+trente-deux. Le banc dérive la traversée de la **vitesse réelle du joueur**, et
+non d'un nombre écrit à côté : un contrôle qui poserait sa propre hypothèse ne
+mesurerait que lui-même.
+
+Elle ne connaît pas son poseur non plus. C'est la règle des choses posées, écrite
+trois fois maintenant — fusée, mine, braises : *un feu qui épargnerait celui qui
+l'a allumé serait la seule chose du jeu à savoir qui est qui.*
+
+#### Ni les balles ni la lumière, et les deux ensemble
+
+Des charbons répandus au sol, vus de dessus, n'arrêtent rien.
+`arrete_les_balles = false` **et** `occulte_la_lumiere = false`, le second tenant
+la ligne de vue d'éblouissement d'accord avec le premier. C'est le motif que la
+mine a introduit une étape plus tôt, et il commence à porter : une chose qui
+n'assombrit pas ne doit pas arrêter l'aveuglement.
+
+#### `light_mask = 0` n'éteint pas le `CanvasModulate` — deuxième défaut de rendu
+
+Les charbons sortaient **noirs** au milieu du sol qu'ils éclairaient eux-mêmes.
+`light_mask = 0` ôte les lumières ; il ne dit rien du `CanvasModulate` de
+l'arène, qui éteint tout ce qui passe. Ce qui ÉMET doit être `UNSHADED` et
+additif — ce que `fusee.gd` écrit depuis toujours pour son cœur, dans les mêmes
+termes : *« le cœur EST une source, il doit se voir dans le noir complet ;
+éclairé, il serait avalé hors de son halo »*.
+
+`GadgetBase.materiau_incandescent()` porte désormais ce matériau pour tous, et la
+**lentille de la torche fantôme**, qui souffrait du même mal depuis l'étape 11,
+est corrigée du même geste.
+
+⚠️ **Deuxième défaut de rendu d'affilée qu'aucune suite ne pouvait voir** — après
+la flamme de la mine allumée dans son propre occluder. Les deux ont la même
+forme : *l'objet existe, ses propriétés sont justes, et il ne se voit pas.* Un
+lot headless ne rend rien ; la seule garde possible est de regarder.
+
+#### Les charbons sont déterministes
+
+Placés par une spirale d'angle d'or, jamais tirés au sort. Un tirage local
+donnerait deux nappes différentes chez les deux pairs — c'est exactement la
+raison pour laquelle les particules sont exclues du modèle d'éblouissement,
+*« tirées au sort à chaque émission, donc absentes chez l'autre pair »*. Une
+suite d'or coûte une ligne et ne ment jamais.
+
+**Pas de montée de protocole** : rien de neuf ne circule, les dégâts passant par
+`take_damage()`, qui fait déjà son propre partage hôte/client.
+
+### Étape 14 — les volumes ✅
+
+La suie du Fumiste et la poussière du Terrassier. Un volume **efface les
+sprites** qui sont dedans et pose une masse sur le sol ; il n'arrête ni les
+balles, ni la lumière, ni l'éblouissement.
+
+⚠️ **Ce n'est pas une simplification, c'est le mécanisme qui existait déjà.** La
+fumée de la fusée fait exactement cela depuis le chantier FUSÉE, et sa note dit
+pourquoi, avec le retour d'Adrien au premier essai : *« dans la fumée, le sprite
+S'EFFACE : la masse sombre du voile porte seule la présence. La masse seule ne
+suffisait pas, le sprite restait lisible dessous. »* Un volume de gadget rejoint
+ce mécanisme au lieu d'en inventer un second.
+
+Un occluder 2D est binaire : un nuage qui bloquerait totalement serait un mur de
+plus — nous en avons déjà un, franc, le voile du Spectre — et un nuage qui ne
+bloquerait rien serait invisible à la mécanique. Effacer ce qu'on VOIT dedans est
+ce que le moteur permet entre les deux, et c'est exactement l'information que ces
+deux gadgets veulent retirer.
+
+#### Les deux ne disent pas la même chose, et c'est le contrôle
+
+La suie est **dense et petite** : on voit qu'il y a quelqu'un, on ne voit pas qui.
+La poussière est **large et mince** : personne ne voit loin, tout le monde voit un
+peu. Ce sont les deux seules façons de retirer de la vue, et chaque classe en a
+une. Le banc vérifie la conséquence — au cœur de la suie un corps a presque
+disparu, au cœur de la poussière il se devine encore — et non les nombres : un
+équilibrage qui les rapprocherait donnerait à deux classes le même gadget sous
+deux noms, sans que rien ne le signale.
+
+#### `super()` n'est pas optionnel dans un `_init` dérivé
+
+**Les deux nuages étaient des murs opaques.** GDScript n'appelle le constructeur
+parent automatiquement que si la sous-classe n'en déclare aucun ; `GadgetSuie` et
+`GadgetPoussiere` en déclarent un, donc `arrete_les_balles` et
+`occulte_la_lumiere` gardaient les valeurs du socle — vrai, vrai. **Attrapé par
+la suite au premier lancement**, ce qui est exactement son travail, et pas à la
+lecture : le code se lit juste.
+
+#### Une masse noire est indiscernable d'une ombre
+
+Le premier jet peignait la suie à 0,03 de luminance. Dans un jeu dont le fond est
+le noir absolu, on ne voyait pas un nuage : **on voyait le faisceau commencer plus
+loin**, ce qui est l'information d'un mur et non celle d'un volume. Diagnostiqué
+en peignant la masse en rouge — elle était bien là, elle ne disait rien.
+
+Relevée à 0,09, elle reste invisible dans le noir — on ne voit pas de la suie sans
+lumière, et c'est juste — mais **sous une torche elle devient de la matière**.
+C'est le troisième défaut de rendu du chantier qu'aucune suite ne pouvait voir.
+
+### Étape 15 — le leurre inerte ✅
+
+Le gadget préféré d'Adrien au brainstorm, et **celui qui avait le moins à
+inventer**. Dans ce jeu on ne voit jamais l'homme : on voit le trou qu'il fait
+dans la lumière. Un leurre convaincant n'a donc pas à *ressembler* à un joueur,
+il doit faire **le même trou** et porter **la même silhouette**. C'est
+littéralement ce qu'il fait : le disque d'occlusion de 18 px du joueur — valeur
+reprise de `player.gd`, qui écrit à côté du sien *« 18.0 is exactly the player
+radius »* — et la texture de silhouette de la classe qui l'a posé.
+
+⚠️ **Rien n'est peint pour lui.** Un sprite de leurre dessiné à part serait un
+asset de plus à tenir d'accord avec celui du joueur ; le jour où l'un des deux
+changerait, le leurre cesserait de tromper **sans qu'une seule erreur ne se
+lève**. Il emprunte l'asset du joueur, comme la torche fantôme emprunte le cookie
+de sa classe.
+
+Il ne bouge pas, n'éclaire pas, ne tire pas, ne fait aucun bruit et ne coûte rien
+au fil — c'est un leurre *inerte*, le nom que le catalogue lui donne depuis le
+premier jour. **Une balle suffit à le démasquer**, et c'est ce qui l'équilibre :
+le prix de savoir est un tir, donc un flash, donc sa propre position.
+
+#### `empreinte_sprite()` DÉMÉNAGE de `Player` vers `Charte`
+
+Le leurre a besoin de la même mesure que le joueur pour faire la même taille. Or
+**nommer `Player` depuis un gadget faisait cesser `tools/test_classes.gd` de
+compiler** : `player.gd` nomme `AudioManager`, qui est un autoload, et une suite
+lancée en `--script` n'en a aucun. C'est le piège déjà payé le 2026-09-01 par
+`fusee_modele.gd`, et il mord ici pour la même raison.
+
+La fonction ne dépendait que de `Charte.DENSITE_ASSETS` : c'était une fonction de
+la charte posée ailleurs. **Aucun alias n'est laissé sur `Player`** — deux noms
+pour une vérité, et rien n'aurait dit lequel fait foi. La garde textuelle de
+`tools/test_sprites.gd` continue de passer, elle cherche le nom de la fonction.
+
+#### La teinte n'était pas décorative
+
+Le leurre sortait **blanc** sous la torche : la silhouette est blanche et
+`Polygon2D.color` la MULTIPLIE. Sans `Charte.ADVERSAIRE` il était plus lumineux
+qu'un vrai corps, donc reconnaissable du premier coup d'œil — l'inverse exact de
+son métier. `player.gd` calibre cette teinte *« en luminance pour l'équité »* ;
+le leurre la reprend. **Quatrième défaut de rendu du chantier trouvé en
+regardant**, et le premier dont la conséquence soit une inéquité et non une
+laideur.
+
+### Étape 16 — le grésillement, et l'ellipse d'Adrien ✅
+
+**Le grésillement du Parasite.** *« Il ne prend rien : il corrompt ce que l'autre
+reçoit. »* Une bobine posée qui fait **sauter les lampes torches** autour d'elle :
+le faisceau papillote, faiblit, revient. On ne sait plus si l'arène est vide ou si
+la lampe lâche.
+
+⚠️ **Une perturbation de RENDU, jamais de simulation.** Il ne touche que
+`flashlight.energy` : l'éblouissement échantillonne le pixel du COOKIE et non
+l'énergie de la lampe, donc rien ne change à la simulation, aux trajectoires ni
+aux dégâts. C'est mot pour mot la frontière que `brouillage.gd` s'est donnée —
+*« dégrader la lecture est un coût de perception, déplacer une hitbox serait un
+mensonge »*. Le coût reste réel : un faisceau à moitié éteint éclaire à moitié, et
+ce qui est retiré est de l'information, la seule monnaie du jeu.
+
+Il ne s'éteint **jamais franchement** (plancher à 0,22) : une lampe coupée est une
+information nette, donc utilisable ; ce qu'on vend est le doute.
+
+#### Un défaut de cadence qu'aucun contrôle ne pouvait voir
+
+Le facteur du gadget était juste. Le câblage était juste. Les deux étaient
+vérifiés. Et l'effet réel valait **six fois** ce qu'il annonçait — 0,094 au lieu
+de 0,565 — parce que l'atténuation était appliquée à `flashlight.energy`, qui est
+l'ÉTAT LISSÉ : elle se réinjectait dans le lissage de l'image suivante et se
+composait sans fin. ⚠️ **Et la valeur dépendait de la CADENCE** : plus la machine
+est rapide, plus le `lerp` par image est petit, plus la composition l'emporte. Une
+mécanique dont la force dépend du matériel n'a pas sa place dans un jeu qui se
+veut honnête en compétition.
+
+C'est **le nombre imprimé par une capture** qui l'a montré. Le remède sépare
+l'état (`_energie_torche`, lissé et soufflé) de sa présentation
+(`flashlight.energy`, atténuée) — et un banc mesure désormais l'énergie RENDUE
+après trente images de physique, ce qui est la seule façon de fermer la porte.
+
+#### L'ellipse d'Adrien : le jumeau du voile
+
+Adrien a signalé un « flou elliptique » parasite, déjà cherché sans succès lors
+d'une session antérieure. C'était **le brouillage ancré sur l'adversaire en dur** —
+voir le nouveau piège connu, *« corriger un défaut de direction sans chercher son
+jumeau »*. Prouvé par l'expérience : déplacer l'adversaire invisible de 250 px
+déplace l'ellipse d'autant.
+
+⚠️ **La seconde moitié a été tranchée par Adrien le jour même** : une fois
+l'ancrage réparé, le flou restait couché sur `emetteur.rotation` et poussé devant
+lui. Pertinent pour une torche, qui a un faisceau ; arbitraire pour une lumière
+posée, dont la rotation vaut ce que le hasard de la pose lui a laissé.
+
+`brouillage_vue.gd` demande désormais si la source **a un axe**, et sans axe la
+forme redevient ce qu'elle décrit : un **disque centré sur la source**. Ni
+allongement, ni avance. La question se pose à ce que la source EXPOSE
+(`eblouissement_dirige`, puis `flashlight_on` à défaut) et **jamais à son type** :
+nommer `Player` depuis ce fichier le rendrait inchargeable par toute suite lancée
+en `--script`, `player.gd` nommant des autoloads — le piège de `fusee_modele.gd`.
+
+⚠️ **Incursion déclarée** : `brouillage_vue.gd` appartient au chantier
+éblouissement. Une fonction ajoutée, quatre expressions rendues conditionnelles,
+rien d'autre touché ; `tools/test_brouillage.gd` reste vert.
+
+### Étape 17 — la poudre de contact, et le dixième gadget ✅
+
+**Un sol qui écrit.** *« Elle ne cherche pas : elle veille. Une poudre qui écrit
+les pas de qui passe. »* Qui traverse la nappe y laisse une piste, et la piste
+reste après lui.
+
+⚠️ **Les traces ne sont visibles QUE sous une lumière** (`light_mask` du sol) :
+dans le noir, elles n'existent pas. Il faut revenir, éclairer, et lire. C'est
+exactement le geste de la classe — on ne surveille pas en direct, on relève après
+coup — et c'est ce qui sépare ce gadget d'une alarme, qui est le métier d'une
+autre classe. Le banc l'exige nommément : `light_mask = 0` ferait de la poudre
+une alarme, et rien d'autre ne le dirait.
+
+⚠️ **Les traces vivent dans l'ARÈNE, pas dans le gadget.** Abattre la poudre ne
+doit pas effacer ce qu'elle a déjà écrit, sans quoi une balle suffirait à nier
+son passage. C'est la leçon que `bullet.gd` a écrite pour ses éclats.
+
+#### Une piste identique chez les deux pairs, sans rien répliquer
+
+La marque se déclenche à la **DISTANCE parcourue**, jamais au temps. Le client
+voit l'adversaire interpolé — 100 ms de retard et un lissage — donc à des instants
+différents de l'hôte, **mais sur le même chemin**. Une marque tous les 26 px
+donne la même piste des deux côtés. Une règle au temps aurait produit deux pistes
+différentes et obligé à répliquer chaque pas.
+
+Le banc protège précisément ça : il fait traverser la nappe par pas de 10 px —
+plus court que l'espacement — et refuse une marque par appel.
+
+### Le chantier a ses DIX gadgets
+
+| Classe | Gadget | Ce qu'il retire à l'autre |
+|---|---|---|
+| Le Parasite | le grésillement | la confiance dans sa propre lampe |
+| Le Fumiste | la cartouche de suie | l'identité de qui est là |
+| L'Illusionniste | le leurre inerte | la certitude que c'est un corps |
+| Le Braconnier | la torche fantôme | la certitude que c'est un joueur |
+| Le Terrassier | la poussière | la portée du regard |
+| L'Incendiaire | la nappe de braises | le droit de rester |
+| La Sentinelle | la poudre de contact | le secret du passage |
+| L'Occulteur | l'ombre habitée | la fiabilité des ombres |
+| L'Allumeur | la mine au magnésium | les yeux, d'un coup |
+| Le Spectre | le voile | la lumière, sans arrêter les balles |
+
+**Aucun n'a demandé d'asset peint** : les dix sont procéduraux, ou empruntent
+l'asset d'autre chose — la torche fantôme prend le cookie de sa classe, le leurre
+prend la silhouette du joueur. Ce n'était pas un objectif ; c'est venu de ce
+qu'ils décrivent tous des formes que le trait rend mieux qu'une image.
+
+### Étape 18 — les fusées par classe ✅
+
+Les profils portaient `stock` et `periode_recharge` depuis l'étape 1, et
+**personne ne les lisait** : `FuseeModele.STOCK_PAR_MANCHE` donnait une fusée à
+tout le monde. Désormais le Spectre n'en a **aucune** — « la seule classe qui
+n'éclaire jamais » —, le Terrassier en a **trois** qui se rechargent toutes les
+18 s, l'Allumeur **deux** toutes les 12 s, et les sept autres une.
+
+#### Zéro reste zéro, y compris à l'entraînement
+
+`fusee_disponible()` rendait `true` **sans condition** en bac à sable. Le Spectre
+y aurait donc eu des fusées illimitées là où il n'en a aucune en match :
+l'entraînement lui aurait appris un geste qui n'existe pas. Le bac à sable rend
+maintenant « illimité **de ce que la classe possède** ».
+
+#### L'arithmétique chez l'hôte, le RÉSULTAT sur le fil
+
+`flare_profile.gd` interdit deux accumulateurs locaux — ils dérivent d'un
+demi-RTT à chaque consommation, *« inoffensif tant que le stock vaut 1, mordant
+dès qu'il en vaut trois »*. La recharge tourne donc chez l'hôte seul.
+
+Mais le client a besoin du COMPTE : sans lui, sa prédiction du désarmement se
+tromperait au premier lancer d'une fusée regagnée. D'où `rpc_stock_fusees`, émis
+**seulement quand le compte change** — un paquet toutes les douze à dix-huit
+secondes, et pour les deux classes qui rechargent uniquement.
+`Protocol.VERSION` passe à **14**, et le SENS change avec la forme : la réserve
+valait un pour tout le monde, elle vaut désormais de zéro à trois.
+
+#### Le HUD compte enfin les réserves
+
+⚠️ **Elles n'étaient nulle part**, et c'est devenu un défaut le jour où elles ont
+cessé d'être les mêmes pour tout le monde. `flare_profile.gd` l'écrit pour sa
+propre recharge — *« une réserve cachée, invisible à l'écran, est exactement le
+genre d'avantage que ce jeu refuse »* — et la phrase vaut autant pour une réserve
+qu'on possède et qu'on ne peut pas compter. Un bandeau `FUSÉES n · GADGET ✓`
+rejoint la torche, et dit « — » plutôt que « 0 » : *aucune* et *plus aucune* ne
+sont pas la même information.
+
+⚠️ **L'attente avant la prochaine fusée n'est PAS affichée chez le client** :
+l'accumulateur n'est pas répliqué, seul le résultat l'est. Le client voit donc le
+compte monter sans le décompte qui l'annonce — un manque, pas un mensonge, et le
+prix d'un octet par tick économisé. À reprendre si Adrien juge l'attente illisible.
+
+### Étape 19 — l'archive dit quelle classe ✅ — LE CHANTIER EST CLOS
+
+`MatchRecord.SCHEMA_VERSION` passe à **4** : `classe_j1` et `classe_j2` portent le
+**slug** de la classe jouée. Le journal ne le disait pas — `arme_j1` porte le nom
+de l'ARME (« Pistolet silencieux »), et depuis que dix classes se partagent dix
+armes, ce nom ne désigne plus le joueur qu'on cherche à retrouver.
+
+⚠️ **`classe_j1` n'a RIEN à voir avec `classe`.** Cette dernière, arrivée en v3,
+est un booléen qui veut dire « ce match comptait au classement ». Les trois clés
+vivent dans le même dictionnaire, et le rapprochement est un piège de **lecture**,
+pas de code : confondre les deux ferait remonter au classement des matchs
+amicaux, ou l'inverse. Le nom `classe` était mal choisi ; il est publié, donc il
+reste — et un contrôle veille désormais à ce qu'il ne se mette pas à porter un
+slug.
+
+**Vide plutôt qu'un repli**, comme partout dans ce chantier : une entrée d'avant
+les classes ne se voit pas attribuer « pistolet ». Ce serait fausser la seule
+statistique que ces clés existent pour porter.
+
+La vue d'historique fait traverser `classe_moi` / `classe_adverse` et gagne une
+**classe favorite — à côté de l'arme favorite, jamais à sa place** : les journaux
+d'avant le schéma 4 n'ont pas de classe, et remplacer la statistique effacerait
+tout l'historique d'un joueur au lieu de l'enrichir. Les deux cohabiteront le
+temps que les vieilles entrées sortent du plafond de 200.
+
+⚠️ **Ce qui n'est PAS fait, et qui n'appartient pas à ce chantier** : le rapport
+ELO n'emporte pas la classe. La charge utile est décidée côté serveur (Supabase),
+et l'ajouter demanderait une migration de schéma là-bas.
+
+### Le chantier des dix classes est clos
+
+Dix classes, dix armes, dix roots, dix réserves de fusées, dix gadgets. Un écran
+de sélection, un HUD qui compte les réserves, une archive qui dit qui a joué quoi.
+`Protocol.VERSION` est passé de 9 à 14 en dix-neuf étapes.
+
+**Ce que ce chantier a appris, et qui vaut au-delà de lui** : cinq défauts sur les
+plus coûteux n'étaient visibles **qu'en regardant l'écran** — la flamme allumée
+dans son propre occluder, les charbons noirs, la masse de suie indiscernable d'une
+ombre, le leurre blanc, et le grésillement six fois trop fort dont la valeur
+dépendait de la cadence. Tous avaient la même forme : *l'objet existe, ses
+propriétés sont justes, et il ne se voit pas — ou pas comme annoncé.* Un lot
+headless ne rend rien ; sur tout ce qui touche au rendu, la seule garde est de
+prendre une capture et de lire les nombres qu'elle imprime.
+
+### Ce qui reste, dans l'ordre
+
+**Fait** : le socle de données, le root, la purge des armes en dur, la touche et
+le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
+assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
+
+**Reste** : rien de ce chantier. ✅ Adrien a éprouvé **l'arbalète** manette en
+main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et
+l'équilibrage que seuls des matchs révèlent — dont les dix gadgets, tous livrés
+et **aucun joué en match réel**.
+
+⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
+La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit
+139 µs par image. Renvoyer « dix gadgets simultanés en écran scindé » à la recette
+de clôture serait un échec différé de dix étapes.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -15148,7 +16532,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. | ✅ **Fait le 2026-09-08** |
+| H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---

@@ -182,6 +182,11 @@ static func row_from(record: Variant,
 	var side := int(LOCAL_SIDE.get(mode, -1))
 	var duration := maxf(_as_float(rec.get("duree"), 0.0), 0.0)
 	var weapons := [_as_text(rec.get("arme_j1")), _as_text(rec.get("arme_j2"))]
+	# Schéma 4. ⚠️ **`classe_j1` n'a rien à voir avec `classe`**, qui est le
+	# booléen « ce match comptait au classement » — voir le carnet de
+	# `match_record.gd`. Vide pour toute entrée d'avant les classes, et vide veut
+	# dire vide : on ne devine pas une classe depuis un nom d'arme.
+	var classes := [_as_text(rec.get("classe_j1")), _as_text(rec.get("classe_j2"))]
 	var stamp := _as_text(rec.get("horodatage"))
 	var epoch := epoch_of(stamp)
 	var outcome := outcome_of(winner, side)
@@ -198,6 +203,10 @@ static func row_from(record: Variant,
 		"arme_j2": weapons[1],
 		"arme_moi": weapons[side] if side >= 0 else "",
 		"arme_adverse": weapons[1 - side] if side >= 0 else "",
+		"classe_j1": classes[0],
+		"classe_j2": classes[1],
+		"classe_moi": classes[side] if side >= 0 else "",
+		"classe_adverse": classes[1 - side] if side >= 0 else "",
 		"carte": _as_text(rec.get("carte")),
 		"mode": mode,
 		"mode_texte": mode_label(mode),
@@ -280,6 +289,7 @@ static func summarize(lines: Array) -> Dictionary:
 		"victoires_j1": 0, "victoires_j2": 0, "forfaits": 0}
 	var total_time := 0.0
 	var weapon_counts := {}
+	var class_counts := {}
 
 	for entry in lines:
 		if not (entry is Dictionary):
@@ -305,14 +315,24 @@ static func summarize(lines: Array) -> Dictionary:
 		var side := _as_int(line.get("moi"), -1)
 		if side >= 0:
 			_tally(weapon_counts, _as_text(line.get("arme_moi")))
+			_tally(class_counts, _as_text(line.get("classe_moi")))
 		else:
 			_tally(weapon_counts, _as_text(line.get("arme_j1")))
 			_tally(weapon_counts, _as_text(line.get("arme_j2")))
+			_tally(class_counts, _as_text(line.get("classe_j1")))
+			_tally(class_counts, _as_text(line.get("classe_j2")))
 
 	var favourite := _most_played(weapon_counts)
 	var summary := counts.duplicate()
 	summary["arme_favorite"] = favourite
 	summary["arme_favorite_matchs"] = int(weapon_counts.get(favourite, 0))
+	# ⚠️ **Ajoutée À CÔTÉ de l'arme favorite, jamais à sa place.** Les journaux
+	# d'avant le schéma 4 n'ont pas de classe : remplacer la statistique
+	# effacerait tout l'historique d'un joueur au lieu de l'enrichir. Les deux
+	# cohabiteront le temps que les vieilles entrées sortent du plafond de 200.
+	var classe_favorite := _most_played(class_counts)
+	summary["classe_favorite"] = classe_favorite
+	summary["classe_favorite_matchs"] = int(class_counts.get(classe_favorite, 0))
 	summary["duree_totale"] = snappedf(total_time, 0.01)
 	summary["duree_totale_texte"] = format_span(total_time)
 	summary["bilan_texte"] = ""

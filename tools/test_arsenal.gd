@@ -57,9 +57,13 @@ func _run() -> void:
 func _test_socle() -> void:
 	print("\n[Hors compétitif : le socle, asymétrique]")
 	var libre: Array = _L.available(false)
-	_check("les quatre armes sont proposées", libre.size() == 4, str(libre))
+	# ⚠️ **Dix, et pas quatre.** Le socle veut dire « tout ce qui existe » ; le
+	# laisser à quatre pendant que le catalogue en compte dix aurait fait d'une
+	# non-restriction une restriction, sans que personne ne l'ait décidé.
+	_check("les dix classes sont proposées", libre.size() == 10, str(libre))
 	_check("le pistolet en fait partie", _L.PISTOLET in libre)
 	_check("l'arbalète aussi", _L.ARBALETE in libre)
+	_check("le Spectre aussi", _L.SPECTRE in libre)
 	# Le rang ne doit rien changer hors compétitif : c'est ce qui distingue
 	# l'amical du classé, et le confondre verrouillerait des armes entre amis.
 	_check("le rang n'y change rien",
@@ -69,14 +73,54 @@ func _test_socle() -> void:
 
 func _test_table() -> void:
 	print("\n[La table compétitive]")
-	_check("Aveugle prend le pistolet", _L.for_tier(1) == [_L.PISTOLET], str(_L.for_tier(1)))
-	_check("Braise le fusil", _L.for_tier(2) == [_L.FUSIL])
-	_check("Bougie la pompe", _L.for_tier(3) == [_L.POMPE])
-	_check("Lanterne l'arbalète", _L.for_tier(4) == [_L.ARBALETE])
-	# LE point qu'une relecture distraite « corrigerait » : au-delà de Lanterne,
-	# on redescend. Ce n'est pas une erreur de saisie, c'est un trou de contenu.
-	_check("Torche redescend au pistolet, faute d'arme", _L.for_tier(5) == [_L.PISTOLET])
-	_check("Candela aussi", _L.for_tier(10) == [_L.PISTOLET])
+	# ⚠️ **Ce que chaque rang AJOUTE**, et non ce qu'il donne : le déblocage est
+	# cumulatif depuis le 2026-09-09 (décision d'Adrien). `COMPETITIF` porte
+	# l'apport, `for_tier()` cumule.
+	_check("Aveugle apporte le pistolet", _L.COMPETITIF[0] == [_L.PISTOLET])
+	_check("Braise le Fumiste", _L.COMPETITIF[1] == [_L.FUMISTE])
+	_check("Bougie l'Illusionniste (fusil)", _L.COMPETITIF[2] == [_L.FUSIL])
+	_check("Lanterne le Braconnier (arbalète)", _L.COMPETITIF[3] == [_L.ARBALETE])
+	_check("Torche le Terrassier (pompe)", _L.COMPETITIF[4] == [_L.POMPE])
+	_check("Brasier l'Incendiaire", _L.COMPETITIF[5] == [_L.INCENDIAIRE])
+	_check("Phare la Sentinelle", _L.COMPETITIF[6] == [_L.SENTINELLE])
+	_check("Aurore l'Occulteur", _L.COMPETITIF[7] == [_L.OCCULTEUR])
+	_check("Zénith l'Allumeur", _L.COMPETITIF[8] == [_L.ALLUMEUR])
+	_check("Candela le Spectre", _L.COMPETITIF[9] == [_L.SPECTRE])
+
+	# ── Et ce que chaque rang DONNE : tout ce qui précède ────────────────────
+	_check("Aveugle n'a que le pistolet", _L.for_tier(1) == [_L.PISTOLET],
+		str(_L.for_tier(1)))
+	_check("Bougie a les trois premières",
+		_L.for_tier(3) == [_L.PISTOLET, _L.FUMISTE, _L.FUSIL], str(_L.for_tier(3)))
+	_check("Candela les a toutes les dix", _L.for_tier(10).size() == 10,
+		str(_L.for_tier(10).size()))
+
+	# ⚠️ **Ce contrôle a été RETOURNÉ le 2026-09-09.** Il exigeait que la table ne
+	# soit PAS monotone, et il était écrit « pour qu'une relecture ne le corrige
+	# pas ». Adrien a demandé le déblocage cumulatif : le garde-fou existait pour
+	# empêcher une correction non demandée, jamais pour opposer un veto au
+	# propriétaire du jeu. Il garde donc maintenant la propriété INVERSE — et la
+	# garde de la même façon, en propriété plutôt qu'en valeurs.
+	#
+	# ⚠️ Ce qui croît avec le rang est le CHOIX, pas la puissance : le Braconnier
+	# et ses 0,60 s de root est toujours au rang 4, l'Allumeur et ses 0,20 s au
+	# rang 9. Un Zénith a neuf classes de plus qu'un Aveugle, pas une classe plus
+	# forte — et c'est la seule lecture qui rende l'échelle de lumière compatible
+	# avec un déblocage.
+	var croissant := true
+	var strict := true
+	for tier in range(2, 11):
+		var avant: Array = _L.for_tier(tier - 1)
+		var apres: Array = _L.for_tier(tier)
+		for idx in avant:
+			if not idx in apres:
+				croissant = false
+		if apres.size() <= avant.size():
+			strict = false
+	_check("chaque rang garde tout ce que le précédent avait", croissant)
+	_check("et en ajoute au moins une", strict)
+	_check("les dix catégories apportent dix classes DISTINCTES",
+		_classes_distinctes())
 	_check("la table couvre les dix catégories", _L.COMPETITIF.size() == 10)
 
 	# Une sélection, jamais une arme — même quand elle n'en contient qu'une.
@@ -107,12 +151,30 @@ func _test_miroir() -> void:
 		_L.mirrored(4, 1) == [_L.PISTOLET], str(_L.mirrored(4, 1)))
 	_check("et l'ordre des arguments n'y change rien",
 		_L.mirrored(1, 4) == _L.mirrored(4, 1))
-	_check("deux Bougie gardent la pompe", _L.mirrored(3, 3) == [_L.POMPE])
-	# Non-monotonie : un Candela contre un Lanterne descend à l'arbalète, alors
-	# que sa propre sélection est le pistolet. Le miroir suit le RANG, pas la
-	# richesse de l'arsenal.
-	_check("Candela contre Lanterne prend l'arbalète",
-		_L.mirrored(10, 4) == [_L.ARBALETE], str(_L.mirrored(10, 4)))
+	_check("deux Bougie gardent leur sélection",
+		_L.mirrored(3, 3) == _L.for_tier(3), str(_L.mirrored(3, 3)))
+
+	# ⚠️ **Depuis le déblocage cumulatif, le miroir ne PRÊTE plus rien.** Il
+	# retirait autrefois au mieux classé sa propre classe pour lui en donner une
+	# autre — un Candela contre un Lanterne se retrouvait à l'arbalète, qu'il
+	# n'avait jamais jouée. Il ne fait plus que RÉDUIRE : la sélection du moins
+	# bien classé est un sous-ensemble stricte de celle de l'autre.
+	#
+	# C'est la propriété qui rend la règle acceptable, et elle mérite d'être
+	# gardée : sans elle, « aligner sur le moins bien classé » pourrait redevenir
+	# « échanger deux arsenals disjoints » au premier remaniement de la table.
+	var reduit := true
+	for haut in range(2, 11):
+		for bas in range(1, haut):
+			var commun: Array = _L.mirrored(haut, bas)
+			if commun != _L.for_tier(bas):
+				reduit = false
+			for idx in commun:
+				if not idx in _L.for_tier(haut):
+					reduit = false
+	_check("le miroir ne fait que retirer, jamais prêter", reduit)
+	_check("Candela contre Lanterne garde les quatre premières",
+		_L.mirrored(10, 4) == _L.for_tier(4), str(_L.mirrored(10, 4)))
 	_check("un rang inconnu compte comme la première catégorie",
 		_L.mirrored(0, 5) == [_L.PISTOLET])
 
@@ -128,7 +190,13 @@ func _test_disponibilite() -> void:
 	# Adversaire inconnu : on montre sa propre sélection. Elle ne peut que
 	# rétrécir ensuite, donc rien d'annoncé ici ne sera repris à tort.
 	_check("adversaire inconnu : sa propre sélection",
-		_L.available(true, 4) == [_L.ARBALETE])
+		_L.available(true, 4) == _L.for_tier(4), str(_L.available(true, 4)))
+	# ⚠️ Et l'annonce ne peut que RÉTRÉCIR à l'arrivée de l'autre, jamais
+	# s'élargir : c'est ce qui rend honnête de montrer sa sélection avant de
+	# connaître l'adversaire. Le déblocage cumulatif le garantit désormais par
+	# construction, là où c'était une propriété de la table.
+	_check("et elle ne peut que rétrécir ensuite",
+		_L.available(true, 4, 1).size() <= _L.available(true, 4).size())
 
 func _test_raisons() -> void:
 	print("\n[Pourquoi une arme est refusée]")
@@ -142,3 +210,27 @@ func _test_raisons() -> void:
 	var r_anonyme: String = _L.reason_for(_L.ARBALETE, true, 4, 1)
 	_check("sans pseudo, la phrase reste lisible",
 		r_anonyme.contains("adversaire"), r_anonyme)
+
+
+## Les dix catégories donnent-elles dix classes différentes ?
+##
+## ⚠️ **Ce contrôle n'aurait rien dit avant le 2026-09-09**, où six rangs sur dix
+## rendaient le pistolet faute de contenu. Il dit maintenant quelque chose de
+## fort : chaque palier de l'échelle a sa propre classe. Le jour où une saison
+## fera partager une classe à deux rangs, il rougira — et c'est bien : ce sera
+## une décision, elle mérite d'être vue.
+## Les dix rangs APPORTENT-ils dix classes distinctes ?
+##
+## ⚠️ Lit `COMPETITIF` et non `for_tier()` : depuis le déblocage cumulatif, ce
+## dernier rend des sélections qui se contiennent, et la distinction porte sur ce
+## que chaque rang ajoute — c'est elle qui garantit qu'aucune classe n'est
+## inaccessible et qu'aucune n'est débloquée deux fois.
+func _classes_distinctes() -> bool:
+	var vues := {}
+	for apport in _L.COMPETITIF:
+		if apport.size() != 1:
+			return false
+		if vues.has(apport[0]):
+			return false
+		vues[apport[0]] = true
+	return vues.size() == 10

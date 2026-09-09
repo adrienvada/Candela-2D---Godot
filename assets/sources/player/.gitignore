@@ -17,3 +17,21 @@
 !S_shotgun_01.jpg
 !S_rifle_01.jpg
 !S_crossbow_01.jpg
+
+# Retenues le 2026-09-09 — les six cases extraites de la planche unique générée
+# par Adrien (`planche sprites.png`, 1536x1024, 3x2). Elles ont produit les six
+# sprites du chantier CLASSES.
+#
+# ⚠️ **Ce ne sont PAS les cases d'une grille régulière.** Quatre figures sur six
+# touchaient le bord de leur case sur la planche d'origine et débordaient chez
+# la voisine ; découper à 512 aurait mis un fragment du voisin dans quatre
+# sprites, ce qui fausse d'un coup l'échelle, le pivot et la toile — sans erreur
+# et sans avertissement. Chaque carré a donc été taillé autour de la BOÎTE
+# ENGLOBANTE réelle de sa figure, avec 24 px de marge, borné aux gouttières
+# mesurées. Les tailles diffèrent d'une case à l'autre, et c'est normal.
+!C_fumiste_01.png
+!C_incendiaire_01.png
+!C_sentinelle_01.png
+!C_occulteur_01.png
+!C_allumeur_01.png
+!C_spectre_01.png

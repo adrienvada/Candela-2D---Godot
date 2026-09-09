@@ -30,6 +30,24 @@ const WALL_LAYER := 1
 const PIT_LAYER := 2
 ## Masque à donner aux joueurs pour qu'ils soient arrêtés par les deux.
 const PLAYER_MASK := WALL_LAYER | PIT_LAYER
+
+## La couche des GADGETS posés — chantier CLASSES, étape 5.
+##
+## Une couche à part, et non `WALL_LAYER`, pour une raison de conception : un
+## gadget doit être **touchable par une balle sans être un obstacle au joueur**.
+## Sur la couche des murs il aurait bloqué les deux, et le voile du Spectre —
+## « elle arrête la lumière, les balles la traversent » — serait devenu un mur
+## ordinaire, c'est-à-dire exactement ce qu'il prétend ne pas être.
+##
+## ⚠️ **`PLAYER_MASK` ne la contient PAS, et ne doit pas la contenir.** C'est
+## cette absence qui laisse les joueurs traverser. Ce qui décide de bloquer ou
+## non une BALLE est un drapeau du gadget (`GadgetProfile.arrete_les_balles`),
+## jamais la couche physique.
+const GADGET_LAYER := 4
+
+## Ce que voit une balle : les murs et les gadgets. Le joueur compensé, lui, est
+## testé à la main — voir `bullet.gd`.
+const BULLET_MASK := WALL_LAYER | GADGET_LAYER
 ## Retrait, en pixels, de l'occluder par rapport à la forme de collision.
 ## Laisse la face éclairée du mur capter la lumière — sans lui, le mur est
 ## dans sa propre ombre et reste invisible. La collision, elle, couvre

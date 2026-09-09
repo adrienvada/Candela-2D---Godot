@@ -1,0 +1,486 @@
+class_name MenuFicheClasse
+extends PanelContainer
+
+## La fiche d'une classe — chantier CLASSES, étape 7.
+##
+## ## Ce que cette fiche est censée régler
+##
+## Le râtelier disait « Pistolet ». Il ne disait ni ce que la classe fait, ni ce
+## qu'elle coûte, ni ce qu'elle pose au sol — et depuis que le catalogue en
+## compte dix, quatre libellés en dur ne suffisaient même plus à les nommer.
+## Demandé par Adrien le 2026-09-09 : « une description, le gadget, les dégâts et
+## caractéristiques de l'arme », dans une interface de roman graphique.
+##
+## ## Les jauges ne disent pas « mieux », elles disent « plus »
+##
+## ⚠️ **Règle de lecture, et elle vaut pour les six lignes** : un cran allumé de
+## plus veut dire *davantage de la chose nommée*, jamais *meilleur*. La barre de
+## RECHARGE pleine est un défaut, celle de DÉGÂTS une qualité, et les deux se
+## dessinent pareil. L'alternative — inverser les barres « où moins vaut mieux »
+## — obligerait le joueur à se souvenir de quelles lignes mentent, et le premier
+## réglage d'équilibrage qui changerait le sens d'une ligne le ferait en silence.
+##
+## Ce qui distingue les deux familles est la **couleur** : la puissance porte la
+## teinte du joueur, le coût porte l'ambre. C'est une information, pas un
+## ornement — et elle survit au daltonisme parce que le libellé est écrit à côté.
+##
+## ## L'échelle vient du CATALOGUE, jamais d'une constante
+##
+## Une jauge a besoin d'un maximum. L'écrire ici — « 100 dégâts = plein » —
+## aurait créé une seconde vérité, périmée au premier équilibrage, et périmée
+## **sans bruit** : la barre ne serait pas fausse à l'écran, elle serait juste
+## mal remplie. Les bornes se mesurent donc sur les dix classes à chaque
+## affichage : la jauge répond « où cette classe se situe parmi les dix », qui
+## est exactement la question qu'on se pose devant un écran de sélection.
+##
+## ## Rien n'est inventé quand une donnée manque
+##
+## Pas de sprite ? La vignette reste vide et le cadre se voit. Pas de gadget
+## livré ? La ligne le dit. C'est la règle « câbler, taire, diagnostiquer » du
+## dépôt : un repli plausible se prend pour une intention.
+
+const ClassDataT := preload("res://class_data.gd")
+
+## Les six lignes de caractéristiques, dans l'ordre d'affichage.
+##
+## `cout` marque celles où la barre pleine est une mauvaise nouvelle. `champ` est
+## purement documentaire : le calcul vit dans `_mesure()`, en un seul endroit,
+## pour que la valeur affichée et la part de barre ne puissent pas diverger.
+const LIGNES: Array[Dictionary] = [
+	{"cle": "degats", "libelle": "DÉGÂTS", "cout": false},
+	{"cle": "cadence", "libelle": "CADENCE", "cout": false},
+	{"cle": "chargeur", "libelle": "CHARGEUR", "cout": false},
+	{"cle": "faisceau", "libelle": "FAISCEAU", "cout": false},
+	{"cle": "recharge", "libelle": "RECHARGE", "cout": true},
+	{"cle": "immobilisation", "libelle": "IMMOBILISATION", "cout": true},
+]
+
+const COTE_PORTRAIT := 88.0
+## La vignette resserrée, quand deux fiches s'empilent.
+const COTE_PORTRAIT_COMPACT := 60.0
+
+var _teinte: Color = Charte.BLEU
+
+## Deux fiches empilées ne tiennent pas dans la hauteur d'une seule.
+##
+## ⚠️ **Ce n'est pas un « petit mode » de confort.** En écran partagé, les deux
+## joueurs choisissent EN MÊME TEMPS — chacun son curseur —, et Adrien l'a
+## demandé le 2026-09-09 : *« le joueur 2 doit voir aussi le descriptif de sa
+## sélection, en dessous de celle du joueur 1 »*. Une fiche unique qui suivait le
+## dernier survol ne montrait donc jamais à J2 ce qu'il était en train de
+## prendre. Deux fiches pleine taille débordent le cadre en 720p ; les métriques
+## se resserrent, rien ne disparaît.
+var _compact: bool = false
+
+var _titre: Label
+var _rang: Label
+var _nom: Label
+var _arme: Label
+var _description: Label
+var _portrait: TextureRect
+var _gadget: Label
+var _gadget_tag: Label
+var _fusees: Label
+var _jauges: Dictionary = {}     # cle -> Jauge
+var _valeurs: Dictionary = {}    # cle -> Label
+
+
+## Une barre crantée. Douze crans pleins ou creux, pas de dégradé, pas d'arrondi :
+## c'est la même grammaire que le reste des menus — encre franche, arêtes dures.
+##
+## ⚠️ **Aucune couleur n'est lue depuis la charte ici.** La teinte arrive par
+## `regler()`. Une classe interne qui irait chercher sa propre palette donnerait
+## deux endroits où décider de la couleur d'une même barre.
+class Jauge extends Control:
+	const CRANS := 12
+
+	var part: float = 0.0
+	var teinte: Color = Color.WHITE
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(132, 11)
+		size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func regler(nouvelle_part: float, nouvelle_teinte: Color) -> void:
+		part = clampf(nouvelle_part, 0.0, 1.0)
+		teinte = nouvelle_teinte
+		queue_redraw()
+
+	func _draw() -> void:
+		var pas := size.x / float(CRANS)
+		var large := maxf(2.0, pas - 3.0)
+		# ⚠️ `ceil` et non `round` : une classe qui a la plus petite valeur des dix
+		# garde UN cran allumé. Un zéro absolu se réserve aux vrais zéros — le
+		# Spectre n'a pas « aucun flash arrondi », il n'a aucun flash.
+		var pleins := 0 if part <= 0.0 else int(ceil(part * CRANS))
+		var creux := Color(teinte.r, teinte.g, teinte.b, 0.18)
+		for i in CRANS:
+			var r := Rect2(i * pas, 0.0, large, size.y)
+			if i < pleins:
+				draw_rect(r, teinte)
+			else:
+				draw_rect(r, creux, false, 1.0)
+
+
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _ready() -> void:
+	if _nom != null:
+		return
+	_batir()
+
+
+## Monte la fiche. Appelable avant l'entrée dans l'arbre — `_ready()` ne la
+## remonte pas deux fois.
+##
+## `titre` nomme le joueur à qui la fiche appartient. Vide pour une fiche seule :
+## dire « JOUEUR 1 » quand il n'y en a qu'un ajoute un mot sans ajouter de sens.
+func batir(teinte: Color, compact: bool = false, titre: String = "") -> void:
+	_teinte = teinte
+	_compact = compact
+	if _nom == null:
+		_batir()
+	if _titre != null:
+		_titre.text = titre
+		_titre.visible = not titre.is_empty()
+
+
+func _batir() -> void:
+	add_theme_stylebox_override("panel",
+		MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 2))
+
+	# La trame d'encre, DERRIÈRE le contenu (`show_behind_parent`) : c'est le
+	# fond de case de bande dessinée, pas un voile posé sur le texte.
+	var trame := MenuHatchRect.new()
+	trame.name = "Trame"
+	trame.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
+	trame.color_ink = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.94)
+	trame.color_line = Color(_teinte.r, _teinte.g, _teinte.b, 0.10)
+	trame.spacing = 13.0
+	trame.density = 0.22
+	trame.roughness = 0.12
+	trame.border_width = 0.0
+	trame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	trame.show_behind_parent = true
+	trame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(trame)
+
+	# ⚠️ **Pas de `MarginContainer` ici** : `make_panel_style` pose déjà des marges
+	# de contenu de GAP_M sur les quatre côtés. En ajouter un second jeu doublerait
+	# la respiration sans que personne ne voie d'où vient l'écart.
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", Charte.GAP_XS)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(col)
+
+	# --- L'en-tête : à qui, quel rang, puis le nom --------------------------
+	var bandeau := HBoxContainer.new()
+	bandeau.add_theme_constant_override("separation", Charte.GAP_XS)
+	bandeau.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(bandeau)
+
+	_titre = Label.new()
+	Charte.appareil(_titre, Charte.T_MENTION, Charte.POIDS_APPUI)
+	_titre.add_theme_color_override("font_color", _teinte)
+	_titre.hide()
+	bandeau.add_child(_titre)
+
+	_rang = Label.new()
+	Charte.appareil(_rang, Charte.T_MENTION)
+	_rang.add_theme_color_override("font_color", Charte.AMBRE)
+	bandeau.add_child(_rang)
+
+	_nom = Label.new()
+	Charte.enseigne(_nom, Charte.T_APPUI if _compact else Charte.T_TITRE)
+	_nom.add_theme_color_override("font_color", Charte.HALOGENE)
+	col.add_child(_nom)
+
+	col.add_child(_filet(Color(_teinte.r, _teinte.g, _teinte.b, 0.55), 2))
+
+	# --- Le portrait et la prose --------------------------------------------
+	var haut := HBoxContainer.new()
+	haut.add_theme_constant_override("separation", Charte.GAP_S)
+	haut.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(haut)
+
+	var cote := COTE_PORTRAIT_COMPACT if _compact else COTE_PORTRAIT
+	var cadre := PanelContainer.new()
+	cadre.custom_minimum_size = Vector2(cote, cote)
+	cadre.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# ⚠️ Style monté à la main, et pas `make_panel_style` : celui-là pose GAP_M de
+	# marge intérieure sur les quatre côtés, ce qui ne laisserait à une vignette de
+	# 88 px que 40 px de sprite — la moitié du cadre en respiration.
+	var style_cadre := StyleBoxFlat.new()
+	# ⚠️ **Un fond de béton, pas du noir.** Les sprites sont des silhouettes
+	# encrées en noir : posées sur un fond noir, elles ne se voyaient pas — vérifié
+	# à la capture, le Parasite était un carré vide. Un gris désaturé de la charte
+	# rend la découpe lisible sans rien peindre sur la figure.
+	style_cadre.bg_color = Color(0.28, 0.30, 0.33)
+	style_cadre.set_border_width_all(1)
+	style_cadre.border_color = Color(_teinte.r, _teinte.g, _teinte.b, 0.45)
+	style_cadre.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
+	style_cadre.content_margin_left = 4
+	style_cadre.content_margin_right = 4
+	style_cadre.content_margin_top = 4
+	style_cadre.content_margin_bottom = 4
+	cadre.add_theme_stylebox_override("panel", style_cadre)
+	haut.add_child(cadre)
+
+	_portrait = TextureRect.new()
+	# ⚠️ `EXPAND_IGNORE_SIZE` : sans lui un `TextureRect` impose la taille NATIVE
+	# de sa texture — la vignette ferait la largeur du sprite, pas celle du cadre.
+	# Même piège que `icon_max_width` sur les boutons, payé le 2026-08-24.
+	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cadre.add_child(_portrait)
+
+	var prose := VBoxContainer.new()
+	prose.add_theme_constant_override("separation", Charte.GAP_XXS)
+	prose.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prose.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	haut.add_child(prose)
+
+	_arme = Label.new()
+	Charte.appareil(_arme, Charte.T_APPUI, Charte.POIDS_APPUI)
+	_arme.add_theme_color_override("font_color", _teinte)
+	prose.add_child(_arme)
+
+	_description = Label.new()
+	Charte.appareil(_description, Charte.T_MENTION if _compact else Charte.T_COURANT)
+	_description.add_theme_color_override("font_color", Charte.DIM)
+	_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Quatre lignes réservées : sans plancher, la fiche change de hauteur d'une
+	# classe à l'autre et tout ce qui est dessous respire à chaque survol.
+	_description.custom_minimum_size = Vector2(0, 44 if _compact else 62)
+	prose.add_child(_description)
+
+	col.add_child(_filet(Charte.LINE, 1))
+
+	# --- Les six jauges ------------------------------------------------------
+	var grille := GridContainer.new()
+	grille.columns = 3
+	grille.add_theme_constant_override("h_separation", Charte.GAP_XS)
+	grille.add_theme_constant_override("v_separation", 2 if _compact else 5)
+	grille.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(grille)
+
+	for ligne in LIGNES:
+		var cle := String(ligne["cle"])
+
+		var etiquette := Label.new()
+		etiquette.text = String(ligne["libelle"])
+		Charte.appareil(etiquette, Charte.T_MENTION)
+		etiquette.add_theme_color_override("font_color", Charte.DIM)
+		etiquette.custom_minimum_size = Vector2(118, 0)
+		grille.add_child(etiquette)
+
+		var jauge := Jauge.new()
+		if _compact:
+			jauge.custom_minimum_size = Vector2(120, 9)
+		grille.add_child(jauge)
+		_jauges[cle] = jauge
+
+		var valeur := Label.new()
+		Charte.appareil(valeur, Charte.T_MENTION, Charte.POIDS_APPUI)
+		valeur.add_theme_color_override("font_color", Charte.HALOGENE)
+		valeur.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		valeur.custom_minimum_size = Vector2(76, 0)
+		grille.add_child(valeur)
+		_valeurs[cle] = valeur
+
+	col.add_child(_filet(Charte.LINE, 1))
+
+	# --- Le pied : ce que la classe pose au sol, et ce qu'elle éclaire -------
+	var pied := GridContainer.new()
+	pied.columns = 2
+	pied.add_theme_constant_override("h_separation", Charte.GAP_XS)
+	pied.add_theme_constant_override("v_separation", 2 if _compact else 5)
+	pied.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(pied)
+
+	pied.add_child(_etiquette_pied("GADGET"))
+	var boite_gadget := HBoxContainer.new()
+	boite_gadget.add_theme_constant_override("separation", Charte.GAP_XS)
+	boite_gadget.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pied.add_child(boite_gadget)
+
+	_gadget = Label.new()
+	Charte.appareil(_gadget, Charte.T_COURANT, Charte.POIDS_APPUI)
+	_gadget.add_theme_color_override("font_color", Charte.HALOGENE)
+	boite_gadget.add_child(_gadget)
+
+	# Le seul marqueur de la fiche, et il porte une vraie règle du jeu : un gadget
+	# qui éblouit change ce que l'adversaire voit, pas seulement ce qu'il heurte.
+	_gadget_tag = Label.new()
+	_gadget_tag.text = "ÉBLOUIT"
+	Charte.appareil(_gadget_tag, Charte.T_MENTION, Charte.POIDS_APPUI)
+	_gadget_tag.add_theme_color_override("font_color", Charte.AMBRE)
+	boite_gadget.add_child(_gadget_tag)
+
+	pied.add_child(_etiquette_pied("FUSÉES"))
+	_fusees = Label.new()
+	Charte.appareil(_fusees, Charte.T_COURANT)
+	_fusees.add_theme_color_override("font_color", Charte.ACIER)
+	pied.add_child(_fusees)
+
+
+func _etiquette_pied(texte: String) -> Label:
+	var l := Label.new()
+	l.text = texte
+	Charte.appareil(l, Charte.T_MENTION)
+	l.add_theme_color_override("font_color", Charte.DIM)
+	l.custom_minimum_size = Vector2(118, 0)
+	return l
+
+
+func _filet(couleur: Color, epaisseur: int) -> Control:
+	# ⚠️ Pas `trait` : c'est un mot réservé de GDScript, et le message d'erreur
+	# — « Expected variable name after "var" » — ne le dit pas.
+	var filet := ColorRect.new()
+	filet.color = couleur
+	filet.custom_minimum_size = Vector2(0, epaisseur)
+	filet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return filet
+
+
+## Remplit la fiche. `catalogue` sert d'échelle aux jauges — sans lui, une barre
+## n'aurait aucun maximum honnête à afficher.
+func montrer(classe: ClassDataT, catalogue: Array) -> void:
+	if _nom == null:
+		_batir()
+	if classe == null:
+		_vider()
+		return
+
+	_rang.text = _texte_rang(int(classe.rang))
+	_nom.text = String(classe.libelle).to_upper()
+	_arme.text = String(classe.name)
+	_description.text = String(classe.description)
+
+	# Le sprite du joueur SERT de portrait : c'est exactement la silhouette que
+	# l'adversaire découpera dans le faisceau. Une illustration séparée aurait
+	# promis une allure que le jeu ne rend pas.
+	var chemin := classe.chemin_sprite()
+	_portrait.texture = load(chemin) as Texture2D if ResourceLoader.exists(chemin) \
+		else null
+
+	for ligne in LIGNES:
+		var cle := String(ligne["cle"])
+		var mesure := _mesure(classe, cle)
+		var part := _part(catalogue, cle, float(mesure["valeur"]))
+		var teinte: Color = Charte.AMBRE if bool(ligne["cout"]) else _teinte
+		(_jauges[cle] as Jauge).regler(part, teinte)
+		(_valeurs[cle] as Label).text = String(mesure["texte"])
+
+	if classe.gadget != null:
+		_gadget.text = String(classe.gadget.libelle)
+		_gadget_tag.visible = classe.gadget.eblouit
+	else:
+		_gadget.text = "—"
+		_gadget_tag.visible = false
+
+	_fusees.text = _texte_fusees(classe)
+
+
+func _vider() -> void:
+	_rang.text = ""
+	_nom.text = ""
+	_arme.text = ""
+	_description.text = ""
+	_portrait.texture = null
+	for cle in _jauges:
+		(_jauges[cle] as Jauge).regler(0.0, Charte.DIM)
+		(_valeurs[cle] as Label).text = "—"
+	_gadget.text = "—"
+	_gadget_tag.visible = false
+	_fusees.text = "—"
+
+
+## « RANG 04 · LANTERNE ». Le numéro seul ne dit rien à qui joue ; c'est le NOM
+## du palier que le joueur voit dans son profil et sur les cartes de classement.
+##
+## Le nom vient de `MenuIcones.RANGS_ORDRE`, qui porte déjà les dix, plutôt que
+## d'une table recopiée ici — deux échelles de lumière finiraient par différer.
+func _texte_rang(rang: int) -> String:
+	if rang <= 0 or rang > MenuIcones.RANGS_ORDRE.size():
+		return "HORS ÉCHELLE"
+	return "RANG %02d · %s" % [rang, String(MenuIcones.RANGS_ORDRE[rang - 1]).to_upper()]
+
+
+func _texte_fusees(classe: ClassDataT) -> String:
+	if classe.fusees == null:
+		return "—"
+	if classe.fusees.stock <= 0:
+		return "aucune"
+	var texte := "%d en réserve" % classe.fusees.stock
+	if classe.fusees.recharge_active():
+		texte += " · une toutes les %s s" % _nombre(classe.fusees.periode_recharge, 0)
+	return texte
+
+
+## La valeur brute d'une ligne, et son texte. **Un seul endroit** : si le calcul
+## et l'affichage vivaient séparément, une barre finirait par contredire le
+## nombre écrit juste à côté d'elle.
+func _mesure(classe: ClassDataT, cle: String) -> Dictionary:
+	match cle:
+		"degats":
+			var texte := "%d / %d" % [int(round(classe.damage_center)),
+				int(round(classe.damage_edge))]
+			if classe.projectile_count > 1:
+				texte = "%d × %s" % [classe.projectile_count, texte]
+			return {"valeur": classe.damage_center * classe.projectile_count,
+				"texte": texte}
+		"cadence":
+			var par_seconde := 0.0 if classe.cooldown <= 0.0 else 1.0 / classe.cooldown
+			return {"valeur": par_seconde, "texte": "%s /s" % _nombre(par_seconde, 1)}
+		"chargeur":
+			return {"valeur": float(classe.max_ammo), "texte": str(classe.max_ammo)}
+		"faisceau":
+			# Le demi-angle est ce que porte la donnée ; l'ouverture est ce que le
+			# joueur voit. On affiche donc le cône entier, pas la moitié.
+			var cone := classe.torch_angle_deg * 2.0
+			return {"valeur": cone, "texte": "%d°" % int(round(cone))}
+		"recharge":
+			return {"valeur": classe.reload_time,
+				"texte": "%s s" % _nombre(classe.reload_time, 1)}
+		"immobilisation":
+			var duree := 0.0 if classe.root == null else classe.root.duree
+			return {"valeur": duree, "texte": "%s s" % _nombre(duree, 2)}
+	return {"valeur": 0.0, "texte": "—"}
+
+
+## Où cette valeur se situe entre la plus faible et la plus forte des dix.
+##
+## Le bas de l'échelle n'est pas zéro mais le **minimum du catalogue** : sur
+## quatre secondes de recharge dont la plus courte fait deux, une barre partant
+## de zéro dirait « moitié moins » là où l'écart réel est du simple au double.
+## Un catalogue à valeur unique rend une barre pleine — il n'y a rien à comparer.
+func _part(catalogue: Array, cle: String, valeur: float) -> float:
+	var plancher := INF
+	var plafond := -INF
+	for c in catalogue:
+		if c == null:
+			continue
+		var v := float(_mesure(c, cle)["valeur"])
+		plancher = minf(plancher, v)
+		plafond = maxf(plafond, v)
+	if plancher == INF or plafond <= plancher:
+		return 1.0
+	# Le plancher visuel : la plus faible des dix garde un cran, sauf si elle vaut
+	# vraiment zéro. « Zéro fusée » et « la plus courte des dix » ne sont pas la
+	# même information et ne doivent pas se dessiner pareil.
+	if valeur <= 0.0:
+		return 0.0
+	return clampf(0.08 + 0.92 * (valeur - plancher) / (plafond - plancher), 0.0, 1.0)
+
+
+## Un nombre en français : la virgule décimale, et pas de zéro inutile.
+func _nombre(valeur: float, decimales: int) -> String:
+	var texte := String.num(valeur, decimales)
+	return texte.replace(".", ",")

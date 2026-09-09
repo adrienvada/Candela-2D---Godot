@@ -232,7 +232,10 @@ const CHEMIN_ENSEIGNE := "res://assets/logos/wordmark.png"
 ## L'icône d'application et l'écran de démarrage vivent à côté ; ils sont
 ## déclarés dans `project.godot` et ne se chargent pas d'ici — Godot lit
 ## l'écran de démarrage **avant** le système de ressources.
-const CHEMIN_ICONE := "res://assets/logos/icone.png"
+## ⚠️ Doit rester égal à `config/icon` de `project.godot`. Elle a divergé une
+## fois — l'icône a changé côté projet, pas ici — et rien ne l'aurait dit :
+## personne ne lit cette constante, elle ne sert qu'à documenter.
+const CHEMIN_ICONE := "res://assets/logos/icone_roman.png"
 ## Tout le reste : *Oxanium*, linéale anguleuse à chanfreins, variable elle
 ## aussi. C'est l'appareil.
 ##
@@ -648,6 +651,27 @@ const D_LONG := 0.30
 ## le jour de la recuisson, et pas avant** — `tools/test_sprites.gd` rougit si
 ## la densité et les fichiers ne bougent pas ensemble.
 const DENSITE_ASSETS := 1.0
+
+
+## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
+## texture.
+##
+## ⚠️ **Elle vivait sur `Player`, et elle a DÉMÉNAGÉ ici le 2026-09-09.** Deux
+## raisons, et la seconde décide :
+##
+## 1. elle ne dépend que de `DENSITE_ASSETS`, qui est juste au-dessus — c'était
+##    une fonction de la charte posée ailleurs ;
+## 2. surtout : le leurre de l'Illusionniste en a besoin, et **nommer `Player`
+##    depuis un gadget faisait cesser `tools/test_classes.gd` de compiler.**
+##    `player.gd` nomme `AudioManager`, qui est un autoload, et une suite lancée
+##    en `--script` n'en a aucun. C'est le piège déjà payé le 2026-09-01 par
+##    `fusee_modele.gd` — un fichier qui nomme un autoload devient inchargeable
+##    par tout banc qui le préchargerait.
+##
+## `Player.empreinte_sprite()` n'existe plus : un alias aurait laissé deux noms
+## pour une seule vérité, et rien n'aurait dit lequel fait foi.
+static func empreinte_sprite(largeur_texture: int) -> float:
+	return float(largeur_texture) / DENSITE_ASSETS
 
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],

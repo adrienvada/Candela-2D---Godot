@@ -53,6 +53,45 @@ const ARMES := [
 		"angle": 5.0, "echelle": 3.5, "brillance": 0.3,
 		"origine": "inchangée — la seule qui porte hors champ",
 	},
+	# ── Les six classes du chantier CLASSES, ajoutées le 2026-09-09 ──────────
+	#
+	# ⚠️ **Ces angles et ces échelles sont RECOPIÉS du catalogue de
+	# `game_state._batir_catalogue()`, pas choisis ici.** L'en-tête de ce fichier
+	# dit que ses valeurs divergent volontairement de celles du jeu — c'est vrai
+	# des quatre historiques, où l'on essaie une portée avant de l'acter. Ce n'est
+	# PAS vrai de ces six-là : l'angle est CUIT dans le cookie, donc une
+	# divergence produirait un faisceau dont l'ouverture ne serait pas celle que
+	# l'arme annonce, et rien ne le signalerait.
+	{
+		"nom": "fumiste", "fichier": "fumiste",
+		"angle": 30.0, "echelle": 1.5, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09",
+	},
+	{
+		"nom": "incendiaire", "fichier": "incendiaire",
+		"angle": 40.0, "echelle": 1.4, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09",
+	},
+	{
+		"nom": "sentinelle", "fichier": "sentinelle",
+		"angle": 8.0, "echelle": 2.6, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09 — la plus longue portée après l'arbalète",
+	},
+	{
+		"nom": "occulteur", "fichier": "occulteur",
+		"angle": 25.0, "echelle": 1.3, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09",
+	},
+	{
+		"nom": "allumeur", "fichier": "allumeur",
+		"angle": 45.0, "echelle": 1.2, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09 — le faisceau le plus large après le pompe",
+	},
+	{
+		"nom": "spectre", "fichier": "spectre",
+		"angle": 20.0, "echelle": 1.4, "brillance": 1.0,
+		"origine": "recopié du catalogue, 2026-09-09",
+	},
 ]
 
 
