@@ -3162,6 +3162,39 @@ a été réparée. La règle vit désormais dans `GameState.source_eblouissante_
 publique, et les deux consommateurs y passent — deux copies ne restent d'accord
 que par chance.
 
+### Une source unique qu'on croit sur parole contre quatre qui s'accordent (2026-09-09)
+
+`brouillage_vue.gd` convertissait des unités de canevas en texels de framebuffer
+avec `get_texture().get_size() / get_visible_rect().size`. Le fichier, la
+feuille de route et un banc affirmaient tous les trois que **les quatre API de
+transformation de Godot « mentaient »**, parce qu'elles rendaient 1,333 quand
+cette division rendait 1,778.
+
+Les quatre disaient juste. `Viewport.get_texture().get_size()` rend
+`fenêtre × étirement` — le facteur **au carré**, 1,333² = 1,778. Il suffisait de
+relire le tampon par `get_texture().get_image().get_size()` pour le voir : trois
+lignes, jamais écrites, parce que la conclusion était déjà tirée.
+
+**Ce que ça a coûté** : l'emprise de la photocopie d'écran partait à 0,667 fois
+sa place et sa taille. Elle ne recouvrait plus du tout la zone à flouter —
+intersection **nulle**, mesurée — donc le shader lisait un tampon jamais écrit
+et peignait un aplat gris à bord franc. Adrien l'a signalé le 2026-09-09 ; une
+session antérieure l'avait cherché sans le trouver.
+
+**La règle** : quand une mesure isolée contredit plusieurs sources indépendantes
+qui s'accordent entre elles, **c'est la mesure qu'il faut aller vérifier**, pas
+les sources. Et surtout : ne jamais écrire « telle API ment » sans avoir
+confronté la sienne à une troisième chose.
+
+⚠️ **Corollaire, et c'est le plus vicieux** : un banc qui dérive son attendu de
+la source à éprouver ne peut pas échouer. `tools/banc_photocopie.gd` calculait
+son échelle depuis `get_texture().get_size()` **puis s'en servait des deux côtés
+de sa comparaison** — critère invariant d'échelle, vert pour n'importe quelle
+valeur. Il a certifié « tout texel lu tombe dans la photocopie » pendant que
+l'intersection était nulle. C'est la même faute que le dépôt a déjà consignée
+pour `test_audit_menus` : *un banc dont l'oracle sort du code testé ne teste
+rien, il paraphrase.*
+
 ### Un index qui est en fait une POSITION (2026-09-09)
 
 `game_state.gd` lisait l'arme choisie par `get_pressed_button().get_index()` :
@@ -12218,44 +12251,59 @@ au lieu de les traverser par pas de 20 px.
 calculait en unités de canevas.** Godot n'applique aucune conversion. Tant que
 les deux coïncident, personne ne voit rien. Mesuré sur la scène réelle :
 
-| vue | canevas | framebuffer | facteur |
+| vue | canevas | framebuffer réel | facteur |
 |---|---|---|---|
-| **racine** — en ligne, entraînement | 1920×1080 | **3414×1920** | **1,778** |
+| **racine** — fenêtre 1280×720 | 1920×1080 | 1280×720 | **0,667** |
+| **racine** — fenêtre 2560×1440 | 1920×1080 | 2560×1440 | **1,333** |
 | écran scindé — vue J1 | 957×1080 | 957×1080 | 1,000 |
 | écran scindé — vue J2 | 958×1080 | 958×1080 | 1,000 |
 
-En vue unique, l'emprise couvrait donc **56 % de sa largeur et de sa hauteur
-voulues** : près de la moitié de la zone n'était jamais recopiée, et le flou y
-lisait des texels laissés par une image précédente. Le polygone, c'est la
-frontière de ce qui avait été rafraîchi.
+> ⚠️ **CETTE TABLE A ÉTÉ FAUSSE PENDANT DEUX JOURS, et sa fausseté a fabriqué
+> un second défaut.** Elle annonçait un framebuffer de 3414×1920 et un facteur
+> de 1,778 « mesurés ». Réfuté le 2026-09-09 : le tampon relu par
+> `get_texture().get_image().get_size()` vaut **exactement la taille de la
+> fenêtre**, et 3414 = 2560 × (2560/1920) — c'est-à-dire **l'étirement appliqué
+> deux fois**. Le paragraphe conservé ci-dessous en garde la trace, parce que
+> l'erreur de raisonnement vaut plus cher que le nombre.
 
-#### ⚠️ Pourquoi il a fallu un mois : aucune API ne dit la vérité
+#### ⚠️ Pourquoi il a fallu un mois — et pourquoi la réponse trouvée était fausse
 
-Le candidat n° 1 accusait le bon coupable **pour la mauvaise raison** — il
-écrivait « une fenêtre plus petite que 1920×1080 rend le pixel de framebuffer
-plus gros ». C'est faux, et c'est ce qui a égaré tout le monde : le canevas est
-**figé** à 1920×1080 par `stretch/mode = canvas_items`, et le framebuffer suit
-les pixels **natifs** de l'écran. **Deux mises à l'échelle s'empilent** —
-l'étirement (1,333) puis la densité Retina (1,333) — et voici ce que Godot en
-rapporte, mesuré à la racine pendant que la texture faisait 3414×1920 :
+Le candidat n° 1 accusait le bon coupable **pour la mauvaise raison**. La
+correction du 2026-09-07 a accusé le bon coupable pour une **autre** mauvaise
+raison, et il a fallu un troisième passage pour le voir.
 
-| appel | rend | vérité |
+Elle concluait ceci : le canevas est figé à 1920×1080, le framebuffer suit les
+pixels natifs, **deux mises à l'échelle s'empilent**, et les quatre API de
+transformation « mentent » parce qu'elles n'en rapportent qu'une :
+
+| appel | rendait | « vérité » supposée |
 |---|---|---|
 | `get_final_transform()` | 1,333 | 1,778 |
 | `get_screen_transform()` | 1,333 | 1,778 |
 | `get_stretch_transform()` | 1,333 | 1,778 |
 | `get_canvas_transform()` | 1,000 | 1,778 |
 
-**Les quatre mentent, et de la même façon** : elles ne connaissent que
-l'étirement. La densité native s'applique par-dessus et n'apparaît nulle part.
-On vérifiait donc les réglages d'étirement, on les trouvait justes, et on
-concluait qu'il n'y avait pas de mise à l'échelle. **La seule source honnête est
-`get_texture().get_size() / get_visible_rect().size`** — littéralement le tampon
-dans lequel la photocopie écrit.
+**Rien de tout cela n'était vrai.** Il n'y a pas de seconde mise à l'échelle. Les
+quatre disaient juste ; c'est `get_texture().get_size()` qui rend
+`fenêtre × étirement`, donc le facteur au carré. 1,778 = 1,333².
+
+⚠️ **La faute de méthode, et c'est elle qu'il faut retenir : les quatre API
+s'accordaient entre elles, et on les a toutes déclarées fausses au nom d'une
+cinquième source qu'on n'avait pas vérifiée.** Un désaccord entre une mesure
+isolée et quatre appels qui concordent désigne la mesure, pas les appels. Il
+suffisait de relire le tampon par `get_image()` — trois lignes — pour trancher.
+
+Ce qu'a coûté l'erreur : l'emprise partait à 0,667 fois sa place ET sa taille,
+donc elle ne recouvrait **plus du tout** le disque de flou. Intersection nulle,
+mesurée. Le shader lisait un tampon jamais écrit et rendait un aplat gris à bord
+franc — le « cercle laid » signalé par Adrien le 2026-09-09, qu'une session
+antérieure avait déjà cherché sans le trouver.
+
+**La source honnête est `get_final_transform().get_scale()`.**
 
 Le dépôt savait déjà la moitié de ceci — piège « Une fenêtre Godot se compte en
-pixels NATIFS, pas en points », 2026-08-25. **Personne ne l'avait relié au
-tampon d'écran.**
+pixels NATIFS, pas en points », 2026-08-25. La moitié qui manquait n'était pas
+celle qu'on croyait.
 
 #### Le second défaut, mineur et réel : le moteur tronque
 
@@ -14905,14 +14953,59 @@ l'accumulateur n'est pas répliqué, seul le résultat l'est. Le client voit don
 compte monter sans le décompte qui l'annonce — un manque, pas un mensonge, et le
 prix d'un octet par tick économisé. À reprendre si Adrien juge l'attente illisible.
 
+### Étape 19 — l'archive dit quelle classe ✅ — LE CHANTIER EST CLOS
+
+`MatchRecord.SCHEMA_VERSION` passe à **4** : `classe_j1` et `classe_j2` portent le
+**slug** de la classe jouée. Le journal ne le disait pas — `arme_j1` porte le nom
+de l'ARME (« Pistolet silencieux »), et depuis que dix classes se partagent dix
+armes, ce nom ne désigne plus le joueur qu'on cherche à retrouver.
+
+⚠️ **`classe_j1` n'a RIEN à voir avec `classe`.** Cette dernière, arrivée en v3,
+est un booléen qui veut dire « ce match comptait au classement ». Les trois clés
+vivent dans le même dictionnaire, et le rapprochement est un piège de **lecture**,
+pas de code : confondre les deux ferait remonter au classement des matchs
+amicaux, ou l'inverse. Le nom `classe` était mal choisi ; il est publié, donc il
+reste — et un contrôle veille désormais à ce qu'il ne se mette pas à porter un
+slug.
+
+**Vide plutôt qu'un repli**, comme partout dans ce chantier : une entrée d'avant
+les classes ne se voit pas attribuer « pistolet ». Ce serait fausser la seule
+statistique que ces clés existent pour porter.
+
+La vue d'historique fait traverser `classe_moi` / `classe_adverse` et gagne une
+**classe favorite — à côté de l'arme favorite, jamais à sa place** : les journaux
+d'avant le schéma 4 n'ont pas de classe, et remplacer la statistique effacerait
+tout l'historique d'un joueur au lieu de l'enrichir. Les deux cohabiteront le
+temps que les vieilles entrées sortent du plafond de 200.
+
+⚠️ **Ce qui n'est PAS fait, et qui n'appartient pas à ce chantier** : le rapport
+ELO n'emporte pas la classe. La charge utile est décidée côté serveur (Supabase),
+et l'ajouter demanderait une migration de schéma là-bas.
+
+### Le chantier des dix classes est clos
+
+Dix classes, dix armes, dix roots, dix réserves de fusées, dix gadgets. Un écran
+de sélection, un HUD qui compte les réserves, une archive qui dit qui a joué quoi.
+`Protocol.VERSION` est passé de 9 à 14 en dix-neuf étapes.
+
+**Ce que ce chantier a appris, et qui vaut au-delà de lui** : cinq défauts sur les
+plus coûteux n'étaient visibles **qu'en regardant l'écran** — la flamme allumée
+dans son propre occluder, les charbons noirs, la masse de suie indiscernable d'une
+ombre, le leurre blanc, et le grésillement six fois trop fort dont la valeur
+dépendait de la cadence. Tous avaient la même forme : *l'objet existe, ses
+propriétés sont justes, et il ne se voit pas — ou pas comme annoncé.* Un lot
+headless ne rend rien ; sur tout ce qui touche au rendu, la seule garde est de
+prendre une capture et de lire les nombres qu'elle imprime.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
-clé `classe` existante, qui veut dire « classé »).
+**Reste** : rien de ce chantier. Les suites suivantes sont des jalons humains —
+éprouver les dix classes manette en main (le root de l'arbalète à 0,60 s n'a
+jamais été jugé en jeu), et arbitrer l'équilibrage que seuls des matchs révèlent.
 
 ⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
 La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit

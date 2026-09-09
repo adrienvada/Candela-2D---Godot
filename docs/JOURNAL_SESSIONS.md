@@ -3009,3 +3009,79 @@ client, l'accumulateur n'étant pas répliqué. Un manque, pas un mensonge.
 **En cours par ailleurs** : un workflow à trois agents diagnostique le disque gris
 à bord franc du brouillage (photocopie d'écran, arithmétique de `rect_photocopie`,
 atténuation de bord) — Adrien l'a signalé comme « laid ».
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 19, l'archive — CHANTIER CLOS)
+
+**Le journal ne disait pas quelle classe avait été jouée** : `arme_j1` porte le nom
+de l'ARME, qui ne désigne plus le joueur depuis que dix classes se partagent dix
+armes. `MatchRecord.SCHEMA_VERSION` → **4**, avec `classe_j1` / `classe_j2` qui
+portent le slug.
+
+**⚠️ Un piège de LECTURE, pas de code** : la clé `classe` (schéma 3) est le booléen
+« ce match comptait au classement ». Les trois clés vivent dans le même
+dictionnaire ; les confondre ferait remonter des matchs amicaux au classement, ou
+l'inverse. Un contrôle veille à ce que `classe` reste un booléen.
+
+**Vide plutôt qu'un repli** : une entrée d'avant les classes ne se voit pas
+attribuer « pistolet ». Sabotage vérifié.
+
+**La classe favorite s'ajoute À CÔTÉ de l'arme favorite**, jamais à sa place : les
+journaux d'avant le schéma 4 n'ont pas de classe, et remplacer la statistique
+effacerait l'historique au lieu de l'enrichir.
+
+**⚠️ Un contrôle qui ne pouvait pas échouer, attrapé dans mon propre banc** :
+`summarize()` recevait des enregistrements bruts au lieu de lignes. L'appel
+invalide **interrompt la fonction**, donc les six contrôles suivants ne tournaient
+plus — en silence. Seule l'erreur de script l'a dit.
+
+**Le chantier est clos** : dix classes, dix roots, dix réserves, dix gadgets, un
+écran de sélection, un HUD qui compte, une archive qui nomme. `Protocol.VERSION`
+de 9 à 14 en dix-neuf étapes.
+
+**Ce qu'il a appris, et qui vaut au-delà** : cinq des défauts les plus coûteux
+n'étaient visibles **qu'à l'écran**, tous de la même forme — *l'objet existe, ses
+propriétés sont justes, et il ne se voit pas comme annoncé*. Un lot headless ne
+rend rien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (le disque gris d'Adrien : la photocopie et l'alpha)
+
+**Adrien : « le cercle reste laid, il faut que ses bordures soient atténuées ».**
+Trois agents lancés en parallèle sur trois angles ; deux ont établi la même cause
+racine séparément, avec des nombres.
+
+**Ce n'était pas un flou.** Le disque était **un aplat gris** : la photocopie
+d'écran (`BackBufferCopy`) et la zone à flouter n'avaient **pas un seul texel en
+commun** — intersection nulle, mesurée dans les deux angles. Le shader prélevait
+dans un tampon jamais écrit.
+
+**⚠️ La cause est une phrase que le dépôt affirmait à trois endroits.**
+`brouillage_vue.gd`, `brouillage.gd` et la ROADMAP disaient que les quatre API de
+transformation de Godot « mentaient ». Elles disaient juste : c'est
+`get_texture().get_size()` qui rend `fenêtre × étirement`, soit le facteur **au
+carré** (1,333² = 1,778). Nouveau piège connu — *une source unique qu'on croit sur
+parole contre quatre qui s'accordent*.
+
+**Deux correctifs indépendants, tous deux nécessaires** :
+1. `_texels_par_unite()` passe par `get_final_transform().get_scale()` — le
+   facteur mesuré redevient 0,667 et la photocopie recouvre la zone ;
+2. le shader **peint l'alpha du flou** au lieu d'écrire opaque jusqu'au bord :
+   au-delà de d ≈ 0,90 le noyau est sous-pixel, la bande stérile ne faisait que
+   recopier l'écran par-dessus lui-même et fabriquait un cercle net — *centré sur
+   l'émetteur*, c'est-à-dire une mire sur le point que l'effet existe pour
+   effacer. Durcir la courbe du noyau ne changeait rien (mesuré) : seul l'alpha
+   pouvait le défaire.
+
+**Effet de bord découvert au passage** : l'alpha à 1 recouvrait le corps du joueur
+d'une copie rééchantillonnée de lui-même — entorse silencieuse à la décision actée
+« l'éblouissement coûte la lecture du monde, jamais celle de sa propre fiche ».
+
+**⚠️ `tools/banc_photocopie.gd` ne pouvait pas échouer** : il dérivait son échelle
+de la source à éprouver puis s'en servait des deux côtés de sa comparaison. Il a
+certifié la photocopie pendant qu'elle tombait entièrement à côté. Corrigé : il
+confronte désormais le facteur annoncé au framebuffer relu par `get_image()`.
+
+⚠️ **Incursions déclarées** dans `brouillage_vue.gd`, `brouillage.gd`,
+`brouillage_flou.gdshader`, `tools/banc_brouillage.gd`, `tools/banc_photocopie.gd`
+et `tools/test_brouillage.gd` — fichiers du chantier éblouissement. Adrien a
+demandé le correctif ; le seuil du contre-test de `test_brouillage` est passé de
+0,75 à 0,85 parce qu'il avait été calibré sur le facteur au carré, lui aussi.

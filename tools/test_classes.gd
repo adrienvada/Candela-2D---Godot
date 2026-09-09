@@ -83,6 +83,7 @@ func _run() -> void:
 	_test_ancrage_des_effets()
 	await _test_poudre()
 	await _test_fusees_par_classe()
+	_test_archive()
 	await _test_gresillement_en_jeu()
 
 	if _failures == 0:
@@ -1809,3 +1810,72 @@ func _test_fusees_par_classe() -> void:
 
 	gs.queue_free()
 	await process_frame
+
+
+## L'archive du match — chantier CLASSES, étape 19.
+##
+## ⚠️ **Le piège que ce contrôle garde est un piège de LECTURE, pas de code.** La
+## clé `classe`, arrivée au schéma 3, est un booléen qui veut dire « ce match
+## comptait au classement ». `classe_j1` et `classe_j2`, arrivées au schéma 4,
+## portent le slug de la classe jouée. Les trois vivent dans le même
+## dictionnaire ; confondre les deux premières avec la troisième ferait remonter
+## au classement des matchs amicaux, ou l'inverse.
+func _test_archive() -> void:
+	print("\n[L'archive dit QUELLE CLASSE a été jouée]")
+	var MR := load("res://match_record.gd")
+	var MHV := load("res://match_history_view.gd")
+
+	_check("le schéma est passé à 4", MR.SCHEMA_VERSION == 4,
+		str(MR.SCHEMA_VERSION))
+
+	var rec: Dictionary = MR.build(0, 42.0, "Pistolet silencieux", "Carabine double",
+		"default", "local", MR.Format.BO1, false, "m-1", true, "victoire",
+		"spectre", "allumeur")
+	_check("l'enregistrement porte les deux classes",
+		rec.get("classe_j1") == "spectre" and rec.get("classe_j2") == "allumeur",
+		"%s / %s" % [rec.get("classe_j1"), rec.get("classe_j2")])
+	# ⚠️ Le contrôle qui garde le piège de lecture : `classe` reste le booléen du
+	# classement, et il ne doit surtout pas se mettre à porter un slug.
+	_check("et `classe` reste le booléen du classement",
+		rec.get("classe") is bool and bool(rec["classe"]))
+	_check("le slug, jamais le libellé",
+		String(rec.get("classe_j1")) == String(rec.get("classe_j1")).to_lower())
+
+	# ⚠️ **Vide plutôt qu'un repli plausible.** Un journal d'avant les classes ne
+	# doit pas se voir attribuer « pistolet » : ce serait fausser la seule
+	# statistique que ces clés existent pour porter.
+	var vieux: Dictionary = MR.build(0, 42.0, "Pompe", "Fusil", "default", "local")
+	_check("sans classe déclarée, la clé reste vide",
+		vieux.get("classe_j1") == "" and vieux.get("classe_j2") == "")
+
+	# ── La vue la fait traverser, et n'invente rien ─────────────────────────
+	var ligne: Dictionary = MHV.row_from(rec, 0)
+	_check("la vue porte la classe des deux joueurs",
+		ligne.get("classe_j1") == "spectre" and ligne.get("classe_j2") == "allumeur")
+	_check("et celle du poste, comme pour l'arme",
+		ligne.has("classe_moi") and ligne.has("classe_adverse"))
+	var ligne_vieille: Dictionary = MHV.row_from(vieux, 0)
+	_check("une entrée d'avant les classes n'en invente pas",
+		ligne_vieille.get("classe_j1") == "" and ligne_vieille.get("classe_moi") == "")
+
+	# ── Le bilan compte les classes SANS remplacer les armes ────────────────
+	#
+	# ⚠️ Remplacer la statistique effacerait tout l'historique d'un joueur au lieu
+	# de l'enrichir : les journaux d'avant le schéma 4 n'ont pas de classe.
+	# ⚠️ `summarize()` prend des LIGNES (`row_from`), pas des enregistrements
+	# bruts : ce sont elles qui portent `moi` et `classe_moi`. Le premier jet lui
+	# passait les enregistrements, et l'appel invalide **interrompait la fonction**
+	# — les six contrôles suivants ne tournaient plus, en silence.
+	var bilan: Dictionary = MHV.summarize([ligne, MHV.row_from(rec, 0), ligne_vieille])
+	_check("le bilan garde l'arme favorite", bilan.has("arme_favorite"))
+	_check("et gagne la classe favorite", bilan.has("classe_favorite"))
+	_check("qui compte les matchs où elle est connue",
+		int(bilan.get("classe_favorite_matchs", 0)) == 2,
+		str(bilan.get("classe_favorite_matchs")))
+
+	# ── Et le jeu la passe vraiment ────────────────────────────────────────
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("game_state archive le slug de classe des deux joueurs",
+		gs.contains("_slug_de_classe(p1),") and gs.contains("_slug_de_classe(p2))"))
+	_check("et il rend vide plutôt qu'un repli",
+		gs.contains('return String(classe.slug()) if classe != null else ""'))

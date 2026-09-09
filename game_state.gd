@@ -2862,11 +2862,28 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# pouvoir le rapporter — ce que le journal prétendait déjà faire.
 		_match_id,
 		RankedIdentity.is_ranked_context() if is_instance_valid(RankedIdentity) else false,
-		_local_outcome(winner_id))
+		_local_outcome(winner_id),
+		# Schéma 4 : QUELLE CLASSE, et pas seulement quelle arme. `arme_j1` porte
+		# le nom de l'arme — « Pistolet silencieux » — qui ne désigne plus le
+		# joueur depuis que dix classes se partagent dix armes.
+		_slug_de_classe(p1),
+		_slug_de_classe(p2))
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
 	_report_to_ranking(winner_id, forfeit)
+
+## Le slug de la classe d'un joueur, ou une chaîne vide.
+##
+## ⚠️ **Vide plutôt qu'un repli**, comme partout dans ce chantier : un journal qui
+## inventerait « pistolet » pour un joueur sans classe fausserait la seule
+## statistique que ces clés existent pour porter.
+func _slug_de_classe(joueur: Node) -> String:
+	if joueur == null:
+		return ""
+	var classe := joueur.current_weapon as ClassData
+	return String(classe.slug()) if classe != null else ""
+
 
 ## L'issue du match du point de vue de CETTE machine, dans le vocabulaire du
 ## serveur.

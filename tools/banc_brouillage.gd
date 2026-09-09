@@ -603,15 +603,16 @@ func _texture_halo() -> GradientTexture2D:
 ## Combien de texels de framebuffer vaut UNE unité de canevas — voir
 ## `brouillage_vue.gd` pour la même fonction en production et la mesure qui l'a
 ## rendue nécessaire (aucune API de transformation ne dit la vérité).
+## ⚠️ **La MÊME formule que `brouillage_vue.gd`, et elle portait la même
+## erreur.** `get_texture().get_size()` rend l'étirement appliqué deux fois ;
+## voir la note complète là-bas. Une formule recopiée dans deux fichiers a été
+## fausse dans les deux, et le banc — dont le métier est de trouver ce genre de
+## chose — reproduisait le défaut qu'il aurait dû montrer.
 func _texels_par_unite() -> Vector2:
-	var vue := get_viewport()
-	var canevas := vue.get_visible_rect().size
-	if canevas.x < 1.0 or canevas.y < 1.0:
+	var ech := get_viewport().get_final_transform().get_scale()
+	if ech.x < 0.001 or ech.y < 0.001:
 		return Vector2.ONE
-	var tex := vue.get_texture()
-	if tex == null:
-		return Vector2.ONE
-	return Vector2(tex.get_size()) / canevas
+	return ech
 
 
 func _process(delta: float) -> void:
