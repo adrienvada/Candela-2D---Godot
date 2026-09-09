@@ -3807,6 +3807,7 @@ func _abandon_search(raison: String) -> void:
 ## Un refus se dit. Sans Epic configuré, l'appariement est simplement impossible,
 ## et une entrée qui n'aurait rien fait passerait pour un bouton cassé.
 func _start_search() -> void:
+	NetworkManager.transport = NetworkManager.Transport.EOS
 	var classe := hub.current_id() == SCREEN_RANKED
 	_apply_queue_kind(classe)
 
@@ -4016,6 +4017,10 @@ func _on_hub_screen_changed(id: String) -> void:
 		SCREEN_JOIN:
 			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_CLIENT,
 				NetworkManager.Transport.EOS)
+		SCREEN_FRIENDLY, SCREEN_RANKED:
+			# L'appariement automatique s'appuie sur Epic : réinitialise le
+			# transport si l'on revient d'un salon réseau local (ENet).
+			NetworkManager.transport = NetworkManager.Transport.EOS
 
 	# La nature du match se décide au menu, pas en jeu : entrer dans « 1V1
 	# compétitif » est la seule façon de jouer classé. Tout le reste — écran
