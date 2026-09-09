@@ -56,3 +56,21 @@ static func mot(porteur_avant: int, longueur_avant: int, vainqueur: int,
 		return "SÉRIE J%d : %d" % [suite.x + 1, suite.y]
 	return "SÉRIE : %d" % suite.y if suite.x == local_idx \
 		else "SÉRIE ADVERSE : %d" % suite.y
+
+## V6.10 / DA6.3 — Carte de fin de soirée.
+##
+## Rend un texte récapitulatif de la session quand au moins 3 matchs ont été joués,
+## ou une chaîne vide sinon.
+## Formats attendus :
+## « CE SOIR : N MATCHS · V-D · ARME FAVORIE : NOM »
+static func carte_soiree(victoires: int, defaites: int, egalites: int = 0, arme_fav: String = "") -> String:
+	var total := victoires + defaites + egalites
+	if total < 3:
+		return ""
+	var bilan := "%d-%d" % [victoires, defaites]
+	if egalites > 0:
+		bilan += "-%d" % egalites
+	var msg := "CE SOIR : %d MATCHS · %s" % [total, bilan]
+	if arme_fav != "":
+		msg += " · ARME FAVORIE : %s" % arme_fav.to_upper()
+	return msg
