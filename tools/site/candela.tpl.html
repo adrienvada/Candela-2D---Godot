@@ -224,6 +224,13 @@ p { margin: 0; }
 .rang-num { font-family: var(--data); font-size: 0.78rem; color: var(--dim); font-variant-numeric: tabular-nums; }
 .rang-nom { font-family: var(--display); font-weight: 600; font-size: 1.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .rang-arme { font-family: var(--data); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+/* Ce qui n'est pas encore là se signale, il ne se devine pas : trait pointillé
+   et teinte à part. Le lecteur doit savoir ce qu'il télécharge sans lire les
+   petits caractères. */
+.rang-arme.attente {
+  color: #8d7855; border-bottom: 1px dotted #8d7855; padding-bottom: 1px;
+}
+.note-echelle { margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim); max-width: 58ch; }
 
 /* --- Fiche technique ---------------------------------------------------------- */
 .fiche { margin-top: 2.5rem; border-top: 1px solid var(--trait-bas); }
@@ -373,13 +380,14 @@ p { margin: 0; }
       <div class="rang"><span class="rang-num">02</span><span class="rang-nom" style="color: #6e6a60">Braise</span><span class="rang-arme">Fusil</span></div>
       <div class="rang"><span class="rang-num">03</span><span class="rang-nom" style="color: #7d7059">Bougie</span><span class="rang-arme">Pompe</span></div>
       <div class="rang"><span class="rang-num">04</span><span class="rang-nom" style="color: #8d7855">Lanterne</span><span class="rang-arme">Arbalète</span></div>
-      <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color: #9d8153">Torche</span><span class="rang-arme">—</span></div>
-      <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color: #ae8a52">Brasier</span><span class="rang-arme">—</span></div>
-      <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color: #bf9450">Phare</span><span class="rang-arme">—</span></div>
-      <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color: #d09e4c">Aurore</span><span class="rang-arme">—</span></div>
-      <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color: #e2a745">Zénith</span><span class="rang-arme">—</span></div>
-      <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color: var(--ambre)">Candela</span><span class="rang-arme">—</span></div>
+      <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color: #9d8153">Torche</span><span class="rang-arme attente">à venir</span></div>
+      <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color: #ae8a52">Brasier</span><span class="rang-arme attente">à venir</span></div>
+      <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color: #bf9450">Phare</span><span class="rang-arme attente">à venir</span></div>
+      <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color: #d09e4c">Aurore</span><span class="rang-arme attente">à venir</span></div>
+      <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color: #e2a745">Zénith</span><span class="rang-arme attente">à venir</span></div>
+      <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color: var(--ambre)">Candela</span><span class="rang-arme attente">à venir</span></div>
     </div>
+    <p class="note-echelle">Les quatre premiers rangs ouvrent chacun une arme. <strong>Les six suivants n’ouvrent encore rien</strong> — le contenu qui les remplira est en chantier, et l’annoncer vaut mieux que de faire croire qu’un palier vide est un choix de conception.</p>
   </section>
 
   <!-- ============ CASE 9 — image ============ -->
