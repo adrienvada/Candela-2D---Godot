@@ -636,6 +636,15 @@ var p1_cd: CircularCooldown
 var p1_cd_label: Label
 var p1_ammo_label: Label
 var p1_torch: PanelContainer
+## Les RÉSERVES du HUD — fusées et gadget. Chantier CLASSES, étape 18.
+##
+## ⚠️ **Elles n'étaient nulle part**, et c'est devenu un défaut le jour où elles
+## ont cessé d'être les mêmes pour tout le monde. `flare_profile.gd` l'écrit pour
+## sa propre recharge : *« une réserve cachée, invisible à l'écran, est exactement
+## le genre d'avantage que ce jeu refuse »* — la phrase vaut autant pour une
+## réserve qu'on possède et qu'on ne peut pas compter.
+var p1_reserves: Dictionary = {}
+var p2_reserves: Dictionary = {}
 ## Le temps du voile, en secondes. Le shader le reçoit en uniforme plutôt que
 ## d'utiliser `TIME`, pour que le banc puisse figer l'animation et qu'une suite
 ## puisse poser un instant précis.
@@ -2195,13 +2204,16 @@ func _build_player_hud(player: int) -> Control:
 
 	var weapon := _create_weapon_indicator(tint)
 	var torch := _create_torch_indicator()
+	var reserves := _create_reserves_indicator()
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	if player == 0:
 		bottom.add_child(weapon["container"])
 		bottom.add_child(spacer)
+		bottom.add_child(reserves["panel"])
 		bottom.add_child(torch)
+		p1_reserves = reserves
 		p1_panel = panel
 		p1_hp = bars["fg"]
 		p1_hp_bg = bars["bg"]
@@ -2212,8 +2224,10 @@ func _build_player_hud(player: int) -> Control:
 		p1_torch = torch
 	else:
 		bottom.add_child(torch)
+		bottom.add_child(reserves["panel"])
 		bottom.add_child(spacer)
 		bottom.add_child(weapon["container"])
+		p2_reserves = reserves
 		p2_panel = panel
 		p2_hp = bars["fg"]
 		p2_hp_bg = bars["bg"]
@@ -2407,6 +2421,67 @@ func _create_torch_indicator() -> PanelContainer:
 
 	_set_torch_style(panel, false, Charte.HALOGENE)
 	return panel
+
+## Les réserves de la classe : fusées et gadget, deux nombres qu'on ne pouvait
+## pas compter avant l'étape 18.
+##
+## ⚠️ **Deux libellés écrits, pas deux pictogrammes.** Les icônes de gadget
+## n'existent pas — et une icône par classe en demanderait dix, à tenir d'accord
+## avec dix gadgets. Le mot ne se périme pas.
+func _create_reserves_indicator() -> Dictionary:
+	var panel := PanelContainer.new()
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(0)
+	style.set_border_width_all(2)
+	style.bg_color = Color(Charte.SURFACE, 0.8)
+	style.border_color = Color(Charte.LINE, 1.0)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var marge := MarginContainer.new()
+	marge.add_theme_constant_override("margin_left", GAP_XS)
+	marge.add_theme_constant_override("margin_right", GAP_XS)
+	marge.add_theme_constant_override("margin_top", GAP_XXS)
+	marge.add_theme_constant_override("margin_bottom", GAP_XXS)
+	panel.add_child(marge)
+
+	var rangee := HBoxContainer.new()
+	rangee.add_theme_constant_override("separation", GAP_XS)
+	marge.add_child(rangee)
+
+	var fusees := Label.new()
+	fusees.text = "FUSÉES —"
+	Charte.appareil(fusees, T_MENTION)
+	rangee.add_child(fusees)
+
+	var gadget := Label.new()
+	gadget.text = "GADGET —"
+	Charte.appareil(gadget, T_MENTION)
+	rangee.add_child(gadget)
+
+	return {"panel": panel, "fusees": fusees, "gadget": gadget}
+
+
+## Écrit les deux réserves d'un joueur. Vide dit « rien à ce nom » — le Spectre
+## n'a AUCUNE fusée, et c'est sa classe, pas un chargement en cours.
+func _maj_reserves(res: Dictionary, joueur: int) -> void:
+	if res.is_empty():
+		return
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs == null:
+		return
+	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
+	var lbl_f: Label = res["fusees"]
+	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
+	lbl_f.add_theme_color_override("font_color",
+		Charte.HALOGENE if n > 0 else COLOR_DIM)
+
+	var dispo := bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+	var lbl_g: Label = res["gadget"]
+	lbl_g.text = "GADGET ✓" if dispo else "GADGET —"
+	lbl_g.add_theme_color_override("font_color",
+		Charte.HALOGENE if dispo else COLOR_DIM)
+
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	var style := StyleBoxFlat.new()
@@ -6800,6 +6875,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
+		_maj_reserves(p1_reserves, 0)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
 	if p2:
@@ -6841,6 +6917,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
+		_maj_reserves(p2_reserves, 1)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#
 		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le

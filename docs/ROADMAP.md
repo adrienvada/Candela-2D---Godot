@@ -14862,14 +14862,56 @@ l'asset d'autre chose — la torche fantôme prend le cookie de sa classe, le le
 prend la silhouette du joueur. Ce n'était pas un objectif ; c'est venu de ce
 qu'ils décrivent tous des formes que le trait rend mieux qu'une image.
 
+### Étape 18 — les fusées par classe ✅
+
+Les profils portaient `stock` et `periode_recharge` depuis l'étape 1, et
+**personne ne les lisait** : `FuseeModele.STOCK_PAR_MANCHE` donnait une fusée à
+tout le monde. Désormais le Spectre n'en a **aucune** — « la seule classe qui
+n'éclaire jamais » —, le Terrassier en a **trois** qui se rechargent toutes les
+18 s, l'Allumeur **deux** toutes les 12 s, et les sept autres une.
+
+#### Zéro reste zéro, y compris à l'entraînement
+
+`fusee_disponible()` rendait `true` **sans condition** en bac à sable. Le Spectre
+y aurait donc eu des fusées illimitées là où il n'en a aucune en match :
+l'entraînement lui aurait appris un geste qui n'existe pas. Le bac à sable rend
+maintenant « illimité **de ce que la classe possède** ».
+
+#### L'arithmétique chez l'hôte, le RÉSULTAT sur le fil
+
+`flare_profile.gd` interdit deux accumulateurs locaux — ils dérivent d'un
+demi-RTT à chaque consommation, *« inoffensif tant que le stock vaut 1, mordant
+dès qu'il en vaut trois »*. La recharge tourne donc chez l'hôte seul.
+
+Mais le client a besoin du COMPTE : sans lui, sa prédiction du désarmement se
+tromperait au premier lancer d'une fusée regagnée. D'où `rpc_stock_fusees`, émis
+**seulement quand le compte change** — un paquet toutes les douze à dix-huit
+secondes, et pour les deux classes qui rechargent uniquement.
+`Protocol.VERSION` passe à **14**, et le SENS change avec la forme : la réserve
+valait un pour tout le monde, elle vaut désormais de zéro à trois.
+
+#### Le HUD compte enfin les réserves
+
+⚠️ **Elles n'étaient nulle part**, et c'est devenu un défaut le jour où elles ont
+cessé d'être les mêmes pour tout le monde. `flare_profile.gd` l'écrit pour sa
+propre recharge — *« une réserve cachée, invisible à l'écran, est exactement le
+genre d'avantage que ce jeu refuse »* — et la phrase vaut autant pour une réserve
+qu'on possède et qu'on ne peut pas compter. Un bandeau `FUSÉES n · GADGET ✓`
+rejoint la torche, et dit « — » plutôt que « 0 » : *aucune* et *plus aucune* ne
+sont pas la même information.
+
+⚠️ **L'attente avant la prochaine fusée n'est PAS affichée chez le client** :
+l'accumulateur n'est pas répliqué, seul le résultat l'est. Le client voit donc le
+compte monter sans le décompte qui l'annonce — un manque, pas un mensonge, et le
+prix d'un octet par tick économisé. À reprendre si Adrien juge l'attente illisible.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : les fusées par classe (stock et recharge), et
-l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
+**Reste** : l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).
 
 ⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**

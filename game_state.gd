@@ -1251,7 +1251,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_pos_history.clear()
 	# Le stock de fusées repart avec la manche — exécuté chez les deux pairs,
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
-	_fusees_restantes = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+	_fusees_restantes = [_stock_fusees(p1), _stock_fusees(p2)]
+	_fusees_accumulateur = [0.0, 0.0]
+	_fusees_profil = [_profil_fusees(p1), _profil_fusees(p2)]
 	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
 	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
 	_gadgets_poses_par = [0, 0]
@@ -1353,6 +1355,7 @@ func _process(delta):
 	# `_maj_eblouissement` s'en chargent.
 	_maj_eblouissement(delta)
 	_maj_gadgets(delta)
+	_accorder_fusees(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1879,8 +1882,30 @@ func _update_music_intensity() -> void:
 # fusée voyage dans la commande numérotée et c'est l'hôte, en simulant P2, qui
 # détecte le front et spawne pour tout le monde.
 
-## Une fusée par joueur et par manche ; illimitées en bac à sable.
-var _fusees_restantes: Array[int] = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+## La réserve de fusées de chaque joueur ; illimitée en bac à sable.
+##
+## ⚠️ **Elle ne vient plus d'une constante mais de la CLASSE** — chantier CLASSES,
+## étape 18. `FuseeModele.STOCK_PAR_MANCHE` valait un pour tout le monde ; le
+## Spectre n'en a aucune (« la seule classe qui n'éclaire jamais »), le
+## Terrassier en a trois et l'Allumeur deux qui se rechargent. Les profils
+## portaient ces valeurs depuis l'étape 1 et personne ne les lisait.
+var _fusees_restantes: Array[int] = [0, 0]
+
+## Le temps capitalisé vers la prochaine fusée, par joueur. **Hôte seul** :
+## `FlareProfile.avancer()` dit pourquoi — deux accumulateurs locaux dériveraient
+## d'un demi-RTT à chaque consommation, ce qui est inoffensif à stock 1 et
+## mordant à stock 3.
+var _fusees_accumulateur: Array[float] = [0.0, 0.0]
+
+## Le profil suivi par joueur, pour détecter un CHANGEMENT DE CLASSE.
+##
+## ⚠️ Même piège que le stock de gadgets : la fenêtre de choix d'un match apparié
+## s'ouvre avec le décompte, donc APRÈS `_do_start_round`, et
+## `pick_countdown_weapon()` change l'arme équipée pendant ces dix secondes. Un
+## stock semé avant le choix donnerait à qui change de classe la réserve de celle
+## qu'il vient de quitter — sans erreur, et invisible tant que les deux en ont
+## autant.
+var _fusees_profil: Array = [null, null]
 ## Fusées reconstruites par la killcam, par graine.
 var _fusees_killcam: Dictionary = {}
 
@@ -1894,9 +1919,99 @@ var _pietinement_fusee: Array = [null, null]
 var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
 func fusee_disponible(pid: int) -> bool:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return false
+	# ⚠️ **Le bac à sable ne rend PLUS « toujours vrai » sans condition.** Le
+	# Spectre n'a aucune fusée, et c'est sa classe : lui en donner à
+	# l'entraînement lui ferait éprouver un geste qu'il n'aura jamais en match.
 	if sandbox_mode:
-		return true
-	return pid >= 0 and pid < _fusees_restantes.size() and _fusees_restantes[pid] > 0
+		return _stock_fusees(p1 if pid == 0 else p2) > 0
+	return _fusees_restantes[pid] > 0
+
+
+## Le profil de fusées d'un joueur, ou `null` s'il n'en a pas encore.
+func _profil_fusees(joueur: Node):
+	if joueur == null:
+		return null
+	var classe := joueur.current_weapon as ClassData
+	return classe.fusees if classe != null else null
+
+
+## Ce avec quoi la classe d'un joueur commence la manche.
+##
+## ⚠️ **Zéro quand la classe n'en porte pas, jamais un repli à un.** Le Spectre
+## est à zéro par conception ; un repli plausible lui rendrait la seule chose que
+## sa classe lui retire.
+func _stock_fusees(joueur: Node) -> int:
+	var profil = _profil_fusees(joueur)
+	return maxi(0, profil.stock) if profil != null else 0
+
+
+## La réserve d'un joueur, pour le HUD. Lue par les deux pairs : le stock est
+## répliqué à chaque changement.
+func fusees_restantes(pid: int) -> int:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return 0
+	return _fusees_restantes[pid]
+
+
+## Secondes avant la prochaine fusée, ou -1 s'il n'y en aura pas.
+##
+## ⚠️ **Juste chez l'hôte seul**, l'accumulateur n'étant pas répliqué. Le client
+## voit donc le compte changer sans le décompte qui l'annonce — un manque, pas un
+## mensonge, et le prix d'un octet par tick économisé. À reprendre le jour où
+## Adrien jugera l'attente illisible.
+func attente_fusee(pid: int) -> float:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return -1.0
+	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	if profil == null:
+		return -1.0
+	return profil.attente_restante(_fusees_restantes[pid], _fusees_accumulateur[pid])
+
+
+## [Hôte] La réserve avance, et se resème si la classe a changé.
+##
+## ⚠️ **L'arithmétique est chez l'hôte, le RÉSULTAT est répliqué.** Le client ne
+## recharge rien de lui-même : `FlareProfile.avancer()` explique pourquoi — deux
+## accumulateurs locaux dérivent d'un demi-RTT à chaque consommation. Mais il a
+## besoin du compte, sans quoi sa prédiction du désarmement se tromperait au
+## premier lancer d'une fusée regagnée. Un paquet toutes les douze à dix-huit
+## secondes, et seulement pour les deux classes qui rechargent.
+func _accorder_fusees(delta: float) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	for pid in 2:
+		var joueur: Node = p1 if pid == 0 else p2
+		var profil = _profil_fusees(joueur)
+		if profil != _fusees_profil[pid]:
+			# Changement de classe : on resème, y compris pendant le décompte.
+			_fusees_profil[pid] = profil
+			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
+			_fusees_accumulateur[pid] = 0.0
+			continue
+		if profil == null or not profil.recharge_active():
+			continue
+		if not round_active and not sandbox_mode:
+			continue
+		var avance: Array = profil.avancer(_fusees_restantes[pid],
+			_fusees_accumulateur[pid], delta)
+		_fusees_accumulateur[pid] = float(avance[1])
+		if int(avance[0]) != _fusees_restantes[pid]:
+			_annoncer_stock_fusees(pid, int(avance[0]))
+
+
+func _annoncer_stock_fusees(pid: int, stock: int) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_stock_fusees.rpc(pid, stock)
+	else:
+		rpc_stock_fusees(pid, stock)
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_stock_fusees(pid: int, stock: int) -> void:
+	if pid >= 0 and pid < _fusees_restantes.size():
+		_fusees_restantes[pid] = maxi(0, stock)
 
 func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	if not round_active and not sandbox_mode: return

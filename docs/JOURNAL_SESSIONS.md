@@ -2981,3 +2981,31 @@ nommer `Player` ici le rendrait inchargeable en `--script`.
 `tools/test_brouillage.gd` reste vert. Session éblouissement : si tu préfères une
 autre formulation du critère, elle est à toi — ce qui compte est qu'une lumière
 posée ne se voie plus attribuer une direction qu'elle n'a pas.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 18, les fusées par classe)
+
+**Les profils portaient `stock` et `periode_recharge` depuis l'étape 1 et personne
+ne les lisait.** Le Spectre n'a plus aucune fusée, le Terrassier en a trois qui se
+rechargent toutes les 18 s, l'Allumeur deux toutes les 12 s.
+
+**⚠️ Zéro reste zéro, y compris à l'entraînement** : `fusee_disponible()` rendait
+`true` sans condition en bac à sable, donc le Spectre y aurait eu des fusées
+illimitées là où il n'en a aucune en match — l'entraînement lui aurait appris un
+geste qui n'existe pas.
+
+**L'arithmétique chez l'hôte, le résultat sur le fil.** `flare_profile.gd`
+interdit deux accumulateurs locaux (dérive d'un demi-RTT par consommation), mais
+le client a besoin du compte pour prédire son désarmement. `rpc_stock_fusees` est
+émis **seulement quand le compte change** — `Protocol.VERSION` → **14**.
+
+**Le HUD compte enfin les réserves** (`FUSÉES n · GADGET ✓`) : elles n'étaient
+nulle part, ce qui était sans conséquence tant qu'elles étaient les mêmes pour
+tous. Il dit « — » et non « 0 » : *aucune* et *plus aucune* ne sont pas la même
+information.
+
+⚠️ **Signalé** : l'attente avant la prochaine fusée n'est pas affichée chez le
+client, l'accumulateur n'étant pas répliqué. Un manque, pas un mensonge.
+
+**En cours par ailleurs** : un workflow à trois agents diagnostique le disque gris
+à bord franc du brouillage (photocopie d'écran, arithmétique de `rect_photocopie`,
+atténuation de bord) — Adrien l'a signalé comme « laid ».

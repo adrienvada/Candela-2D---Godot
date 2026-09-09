@@ -82,6 +82,7 @@ func _run() -> void:
 	_test_gresillement()
 	_test_ancrage_des_effets()
 	await _test_poudre()
+	await _test_fusees_par_classe()
 	await _test_gresillement_en_jeu()
 
 	if _failures == 0:
@@ -1687,6 +1688,124 @@ func _test_poudre() -> void:
 	_check("un joueur hors nappe n'a pas de dernier pas",
 		p2._dernier[0] == Vector2.INF)
 	p2.free()
+
+	gs.queue_free()
+	await process_frame
+
+
+## Les fusées par classe — chantier CLASSES, étape 18.
+##
+## ⚠️ **Ce qu'on protège est que ZÉRO reste zéro.** Le Spectre n'a aucune fusée,
+## et c'est sa classe — « la seule qui n'éclaire jamais ». Un repli plausible,
+## en jeu ou à l'entraînement, lui rendrait exactement la chose que sa classe lui
+## retire, et rien à l'écran ne le dirait.
+func _test_fusees_par_classe() -> void:
+	print("\n[Les fusées viennent de la classe, pas d'une constante]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	var catalogue: Array = gs.classes()
+
+	# ── Le catalogue dit des choses DIFFÉRENTES, sinon l'étape n'a rien fait ─
+	var stocks: Array[int] = []
+	for c in catalogue:
+		stocks.append(int(c.fusees.stock) if c.fusees != null else -1)
+	_check("les dix classes ne partent pas toutes avec le même stock",
+		stocks.min() != stocks.max(), str(stocks))
+	_check("au moins une classe n'en a aucune", stocks.has(0), str(stocks))
+	var rechargent := 0
+	for c in catalogue:
+		if c.fusees != null and c.fusees.recharge_active():
+			rechargent += 1
+	_check("et au moins une recharge", rechargent > 0, str(rechargent))
+
+	# ── La réserve suit la classe équipée ───────────────────────────────────
+	gs.round_active = true
+	gs.sandbox_mode = false
+	# ⚠️ GDScript n'a pas de `for ... else` : le drapeau n'est pas de la
+	# maladresse, c'est la seule forme disponible.
+	var toutes_justes := true
+	var faute := ""
+	for idx in catalogue.size():
+		gs.p1.equip_weapon(gs.weapon_for_index(idx))
+		gs._accorder_fusees(0.0)
+		var attendu := int(catalogue[idx].fusees.stock)
+		var lu := int(gs.fusees_restantes(0))
+		if lu != attendu:
+			toutes_justes = false
+			faute = "%s : %d au lieu de %d" % [String(catalogue[idx].slug()), lu, attendu]
+			break
+	_check("la réserve suit la classe équipée, pour les dix", toutes_justes, faute)
+
+	# ── ZÉRO reste zéro, y compris en bac à sable ───────────────────────────
+	#
+	# ⚠️ `fusee_disponible()` rendait « toujours vrai » sans condition en bac à
+	# sable. Le Spectre y aurait donc eu des fusées illimitées là où il n'en a
+	# aucune en match : l'entraînement lui aurait appris un geste qui n'existe pas.
+	var spectre_idx := -1
+	for i in catalogue.size():
+		if String(catalogue[i].slug()) == "spectre":
+			spectre_idx = i
+	gs.p1.equip_weapon(gs.weapon_for_index(spectre_idx))
+	gs._accorder_fusees(0.0)
+	_check("le Spectre part sans fusée", gs.fusees_restantes(0) == 0,
+		str(gs.fusees_restantes(0)))
+	_check("et il n'en a pas davantage en match", not gs.fusee_disponible(0))
+	gs.sandbox_mode = true
+	_check("ni à l'entraînement", not gs.fusee_disponible(0))
+	gs.sandbox_mode = false
+
+	# ── La RECHARGE avance, et s'arrête au plafond ──────────────────────────
+	var terrassier := -1
+	for i in catalogue.size():
+		if catalogue[i].fusees != null and catalogue[i].fusees.recharge_active():
+			terrassier = i
+			break
+	gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
+	gs._accorder_fusees(0.0)
+	var profil = catalogue[terrassier].fusees
+	var plein := int(gs.fusees_restantes(0))
+	# On en consomme une, puis on laisse passer une période entière.
+	gs.rpc_stock_fusees(0, plein - 1)
+	_check("une fusée consommée manque", gs.fusees_restantes(0) == plein - 1)
+	gs._accorder_fusees(profil.periode_recharge + 0.01)
+	_check("elle revient après une période",
+		gs.fusees_restantes(0) == plein, str(gs.fusees_restantes(0)))
+	# ⚠️ Et rien ne se capitalise contre le plafond : laisser courir
+	# l'accumulateur à réserve pleine offrirait une fusée instantanée au premier
+	# tir suivant — une réserve cachée, que `flare_profile.gd` refuse nommément.
+	gs._accorder_fusees(profil.periode_recharge * 3.0)
+	_check("et la réserve ne dépasse jamais son plafond",
+		gs.fusees_restantes(0) == plein, str(gs.fusees_restantes(0)))
+	gs.rpc_stock_fusees(0, plein - 1)
+	gs._accorder_fusees(0.01)
+	_check("aucun temps n'a été capitalisé contre le plafond",
+		gs.fusees_restantes(0) == plein - 1, str(gs.fusees_restantes(0)))
+
+	# ── Le HUD les MONTRE ───────────────────────────────────────────────────
+	#
+	# ⚠️ Une réserve qui varie de zéro à trois selon la classe et qui se recharge
+	# doit se compter à l'écran. `flare_profile.gd` le dit pour sa recharge : une
+	# réserve cachée est le genre d'avantage que ce jeu refuse.
+	var ui: Node = gs.get_node_or_null("UI")
+	_check("le HUD porte un indicateur de réserves",
+		ui != null and not ui.p1_reserves.is_empty())
+	if ui != null and not ui.p1_reserves.is_empty():
+		gs.p1.equip_weapon(gs.weapon_for_index(spectre_idx))
+		gs._accorder_fusees(0.0)
+		ui._maj_reserves(ui.p1_reserves, 0)
+		_check("et il dit « aucune » plutôt que zéro",
+			String(ui.p1_reserves["fusees"].text) == "FUSÉES —",
+			String(ui.p1_reserves["fusees"].text))
+		gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
+		gs._accorder_fusees(0.0)
+		ui._maj_reserves(ui.p1_reserves, 0)
+		_check("et il compte celles qu'on a",
+			String(ui.p1_reserves["fusees"].text) == "FUSÉES %d" % plein,
+			String(ui.p1_reserves["fusees"].text))
 
 	gs.queue_free()
 	await process_frame

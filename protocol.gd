@@ -87,7 +87,19 @@ class_name Protocol
 ##      ⚠️ Et ce qu'elle laisse derrière est pire que pour un gadget posé : la
 ##      mine BRÛLE chez l'hôte, donc elle aveugle — l'éblouissement étant
 ##      répliqué, le client verrait sa vue blanchir devant un boîtier éteint.
-const VERSION := 13
+## 14 — `rpc_stock_fusees` apparaît (chantier CLASSES, étape 18, 2026-09-09) : la
+##      réserve de fusées devient PROPRE À LA CLASSE, et deux d'entre elles la
+##      rechargent. L'arithmétique reste chez l'hôte — deux accumulateurs locaux
+##      dérivent d'un demi-RTT à chaque consommation, voir `flare_profile.gd` —,
+##      mais le résultat doit voyager : sans lui, le client garderait un compte
+##      figé et sa prédiction du désarmement se tromperait au premier lancer
+##      d'une fusée regagnée.
+##
+##      ⚠️ Le SENS de la réserve change aussi, comme à la v11 : elle valait un
+##      pour tout le monde, elle vaut désormais de zéro (le Spectre) à trois (le
+##      Terrassier). Un hôte v14 et un client v13 s'entendraient sur le fil et
+##      compteraient deux réserves différentes.
+const VERSION := 14
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -95,7 +107,7 @@ const VERSION := 13
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "6e89262d2758e6f9"
+const WIRE_WITNESS := "f6ca3b6c48ac55bf"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est
