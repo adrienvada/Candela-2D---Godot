@@ -247,6 +247,32 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 (suite) — session « SG · sang au sol » : DA2.8 complétée, `particle_pool.gd` touché
+
+**Déclaration : j'ai touché `particle_pool.gd`, hors de mon périmètre initial.**
+Adrien a demandé directement, dans la continuité de cette session, que « les
+particules de sang luminescentes ne soient plus des vieux polygones tout
+pourris ». Le fichier est dans le même groupe que `blood_stain.gd` au tableau
+de répartition (domaine « game feel »), et rien n'indique qu'une autre session
+le tienne en ce moment — vérifié avant d'y toucher.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, section « DA2.8 (suite) ») :
+- 7 planches Gemini cuites en décalques (`sang_3` à `sang_9`), portant DA2.8 de
+  2 à 9 formes — 6 directionnelles, 3 étoiles. Un 8ᵉ prompt généré mais écarté
+  (flaque rognée par le bord du cadre).
+- `sang_4` et `sang_8` réorientées après détection automatique par le banc
+  (masse d'encre du mauvais côté).
+- `tools/test_sang_au_sol.gd` : boucle de tirage portée de 30 à 200 essais pour
+  ne pas devenir flaky avec six planches dans la même catégorie. 115 contrôles.
+- `particle_pool.gd::Kind.BLOOD` : le losange codé en dur cède la place à six
+  gouttes peintes (`gouttes_sang_1` à `_6`), tirées au sort, préchargées.
+
+**Sources versionnées** sous `assets/sources/blood_decals/B3_*.jpg`,
+allowlistées dans le `.gitignore` du dossier.
+
+Lot complet relancé après ces changements — voir le commit pour le temps
+mesuré.
+
 ### 2026-09-09 (note) — session « SG · sang au sol » : cache d'import périmé après des fusions automatiques
 
 **Sur le coup, j'ai cru à un vrai défaut sur `main`.** Le lot rougissait en

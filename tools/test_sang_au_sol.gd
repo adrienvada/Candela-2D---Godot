@@ -202,7 +202,14 @@ func _run() -> void:
 	# tirage purement aléatoire ne verrait donc plus jamais l'étoile centrée, et
 	# la vérification qui suit se serait mise à échouer pour une raison étrangère
 	# à ce qu'elle teste. On force les deux catégories, une itération sur deux.
-	for essai in range(30):
+	#
+	# ⚠️ **200, pas 30 : DA2.8 est passée de 2 à 9 planches (2026-09-09).** Avec
+	# 6 directionnelles dans la même catégorie, un tirage au sort qui n'en
+	# verrait que 15 (l'ancien compte, une itération sur deux d'une boucle de
+	# 30) manquerait l'une d'elles environ une fois sur quatre — un banc flaky,
+	# pas un banc rouge pour une vraie raison. Cent tirages par catégorie
+	# ramènent ce risque sous le milliardième.
+	for essai in range(200):
 		var t := Node2D.new()
 		t.name = "TacheDeBanc%d" % essai
 		t.set_script(sang)
@@ -249,8 +256,8 @@ func _run() -> void:
 			absf(monde - RAYON_CORPS) <= TOLERANCE,
 			"%.1f px en aval de l'impact au lieu de %.1f" % [monde, RAYON_CORPS])
 
-	_check("les deux planches ont été exercées", vues.size() == planches.size(),
-		"%d sur %d vues en 30 essais" % [vues.size(), planches.size()])
+	_check("toutes les planches ont été exercées", vues.size() == planches.size(),
+		"%d sur %d vues en 200 essais" % [vues.size(), planches.size()])
 
 	print("\n[L'étoile centrée n'apparaît que très près du centre]")
 	# Relevé par Adrien, le 2026-09-08 : « il faut que le centre de la plus

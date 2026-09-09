@@ -13154,6 +13154,57 @@ de jeu cassait les reconnexions), mais la cause tenait en une ligne : le cache
 plus largement : un worktree qui a reçu de nouveaux fichiers depuis son dernier
 `--import`, par une fusion ou non, en a de nouveau besoin.**
 
+### DA2.8 (suite, 2026-09-09) — 9 formes, et les particules cessent d'être des losanges
+
+**Adrien, en jouant : « je n'avais pas fourni suffisamment de tâches de sang »**
+— exactement ce que disait déjà le suivi de projet (« DA2.8 · 2 formes sur 6-8
+demandées »). Deux planches (`sang_1`, `sang_2`) portaient toute la variété du
+jeu depuis le 25 août. Sept planches Gemini rejoignent la liste : `sang_3` à
+`sang_7` (cinq directionnelles — éraflure fine, coulure lourde, éventail,
+double bras, traînée espacée) et `sang_8`/`sang_9` (deux étoiles supplémentaires,
+utiles depuis que l'étoile centrée est devenue rare — voir l'addendum
+ci-dessus). Un huitième prompt (jet traversant) a été généré mais **écarté** :
+sa flaque touchait le bord du cadre, coupée à angle droit — un défaut de
+composition qui aurait laissé un bord plat non naturel sur le décalque, repéré
+en mesurant si l'alpha touche les bords de l'image avant de cuire quoi que ce
+soit.
+
+**Deux planches livrées mal orientées, détectées par le banc lui-même, pas à
+l'œil.** `sang_4` sortait du générateur avec sa flaque en HAUT et sa coulure
+vers le BAS ; `sang_8` avait sa masse d'encre infinitésimalement du mauvais
+côté. Le contrôle « la traînée s'étire vers l'aval » (celui-là même que le banc
+applique à chaque lot) les a signalées immédiatement — `sang_4` tournée de
++90°, `sang_8` retournée en miroir, toutes deux re-mesurées jusqu'à passer.
+
+**`tools/test_sang_au_sol.gd` généralisé, pas seulement étendu.** Le tirage
+« 30 essais, une catégorie sur deux » qui suffisait à voir 2 planches sur 2
+serait devenu **flaky** avec 6 directionnelles dans la même catégorie — la
+probabilité mathématique de manquer l'une des six sur 15 tirages avoisine 25 %.
+Porté à 200 essais (100 par catégorie), le risque tombe sous le milliardième.
+115 contrôles passent, contre-test toujours vérifié (seuil élargi à 50 px →
+rougit sur la ligne exacte).
+
+**Les particules de sang cessent d'être un losange codé en dur.**
+`particle_pool.gd::_configure()` dessinait la goutte qui vole à la main
+(`Kind.BLOOD`) depuis toujours — le même geste procédural que DA2.8 remplaçait
+pour les taches au sol, resté ici sans qu'on y touche. Six gouttes peintes
+(`gouttes_sang_1` à `_6`, cuites en un coup depuis une seule planche via
+`fabrique_decals.gd -- --panneaux 3x2`) remplacent le losange, préchargées en
+`const` pour la même raison que `BLOOD_SHADER` : compiler à la volée
+provoquerait un hoquet pile à l'impact. ⚠️ **Les `_coeur.png` que l'outil
+génère systématiquement ont été supprimés, pas versionnés** : le contraste
+liseré/cœur sert le shader liquide des taches au sol, une particule volante ne
+passe pas par `blood_shader.gdshader` et n'en a aucun usage — les garder
+aurait été du déchet, pas de la parité de convention. `Polygon2D.texture` sans UV explicite
+mappe automatiquement sur la boîte englobante du polygone — un simple quad
+suffit, pas de UV à la main. Les trois autres natures de particules (fumée,
+poussière, étincelle) remettent `poly.texture = null` : une particule recyclée
+depuis un impact de sang ne doit pas garder sa texture au tour suivant.
+
+**Sources versionnées** sous `assets/sources/blood_decals/B3_*.jpg`, allowlistées
+nommément dans le `.gitignore` du dossier — même discipline que `B2_01`/`B2_02` :
+sans la source, un décalque recuit devient irreproductible.
+
 ### BF — le bandeau FATAL doit tenir dans l'écran de celui qui a tué
 
 **La demande d'Adrien :** que le texte « FATAL — … » soit **entièrement affiché
