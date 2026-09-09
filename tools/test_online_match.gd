@@ -1410,6 +1410,15 @@ func _verify_kill_to_rematch() -> void:
 	_check("le lien tient après la killcam", not multiplayer.get_peers().is_empty())
 
 	# Rematch : les deux camps se déclarent prêts, la manche doit repartir.
+	#
+	# L'affiche de victoire/défaite avale le clic tant qu'elle vit (2026-09-09,
+	# suite au rapport d'Adrien « un menu bizarre en attendant » sur le vrai
+	# jeu) : `_on_replay_requested()` appelé directement, sans la congédier
+	# d'abord, ne ferait donc plus rien — ce que ce banc prenait pour un
+	# raccourci équivalait en réalité au clic qu'un joueur pressé aurait fait
+	# À TRAVERS elle. On la congédie comme le ferait n'importe quel geste.
+	if is_instance_valid(_main._affiche_de_fin):
+		_main._affiche_de_fin.congedier()
 	print("REMATCH: on se déclare prêt (%s)" % _ui.btn_replay.text)
 	_main._on_replay_requested()
 	_check("le rematch relance une manche", await _await(func(): return _main.round_active, 25.0))

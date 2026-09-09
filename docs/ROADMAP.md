@@ -16513,6 +16513,61 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 > formulations ne disent pas la même chose, et c'est pour ça qu'on ne l'a pas
 > tranché à sa place.
 
+### Quatre défauts relevés après l'arrivée des dix classes (2026-09-09)
+
+Adrien a joué sur `v0.4.0` fraîchement publiée et rapporté quatre points, tous
+corrigés le même jour.
+
+**1. L'affiche de victoire/défaite (`affiche_de_fin.gd`, chantier DA6) n'était
+pas la dernière porte devant REJOUER.** Elle est opaque et censée avaler ses
+propres clics, mais elle se congédie sur N'IMPORTE QUEL geste — donc un joueur
+pressé la fait disparaître ET presse REJOUER dans le même clic, avant d'avoir
+rien lu. `AfficheDeFin.est_active()` (nouveau) et `UI.set_launch_locked()`
+grisent désormais le bouton tant qu'elle vit, en plus du filtre de clic déjà
+là — deux portes, pas une. `_poser_affiche_de_fin()` connecte son
+`tree_exited` pour relâcher le verrou, quel que soit le chemin de sortie
+(délai de six secondes ou geste). ⚠️ Le banc `test_online_match.gd` appelait
+`_on_replay_requested()` directement, sans passer par un clic : il a fallu lui
+faire congédier l'affiche d'abord, sans quoi le verrou — tout neuf et
+parfaitement fondé — bloquait un rematch légitime. Rien à en tirer contre le
+correctif : le banc simulait un geste qu'aucun joueur ne fait.
+
+**2. Le menu pause héritait du ralenti de la killcam.** `replay_system.gd`
+porte `Engine.time_scale` à 0,03-0,05 pour l'effet bullet-time, et un `Tween`
+suit ce temps par défaut : ouvrir la pause pendant une killcam l'allumait donc
+au ralenti. **Même défaut, même remède qu'un cas déjà payé sur l'audio**
+(`audio_manager.gd`, `_tween_etouffement`, l'étouffement de la mort qui durait
+vingt secondes réelles) : `Tween.set_ignore_time_scale(true)` sur les deux
+tweens de `_allumer()`/`_eteindre()` — le mécanisme M10 partagé par tous les
+panneaux de menu, pause comprise. Une pièce d'interface n'a aucune raison de
+ralentir avec l'image ; le second cas de cette forme confirme que c'est une
+règle du dépôt, pas un raccommodage.
+
+**3 et 4. Deux ajouts au salon, une fois le chantier CLASSES posé.** La
+session « 10 classes » a délibérément sorti le râtelier complet du panneau de
+salon par défaut — sa fiche fait trois fois la hauteur de la colonne, qui
+loge déjà la carte, la liste des joueurs et PRÊT (voir le commentaire de
+`_build_weapon_block()`). Adrien confirme cet arbitrage mais veut un
+sélecteur compact EN PLUS de la carte déjà là, sans ouvrir la fiche : les
+deux cartes de classe du salon (`_cartes_classe`, jusque-là de simples
+résumés en lecture seule) deviennent cliquables — clic gauche pour avancer,
+clic droit pour reculer dans la liste ordonnée par rang, en sautant les
+classes verrouillées par le rang (`.disabled`). Une carte visible EST une
+carte qu'on a le droit de changer : `_montrer_rateliers()` cache déjà celle
+qu'on ne pilote pas depuis cette machine, donc aucun contrôle d'autorisation
+de plus à écrire. Et la vignette de carte (`map_card`) devient elle-même
+cliquable, renvoyant vers l'entrée « CHANGER DE CARTE » déjà présente dans la
+liste — mais seulement sur les écrans qui en ont une (l'hôte d'un salon, pas
+l'invité ; l'écran partagé et l'entraînement, où il n'y a que de l'hôte). Le
+« si on est l'hôte » demandé se lit donc dans un dictionnaire vide plutôt que
+dans un contrôle explicite : un écran sans entrée mappée ne fait simplement
+rien au clic.
+
+⚠️ **Ces quatre correctifs touchent `ui.gd` et `game_state.gd`, que la session
+« 10 classes » modifie activement au même moment** — coordination confirmée
+avec elle avant de pousser (voir plus haut, échange sur `v0.4.0`) : elle sait
+que ces deux fichiers ont bougé sur `main` avant son prochain rebase.
+
 ---
 
 ## Journal des tests à deux machines

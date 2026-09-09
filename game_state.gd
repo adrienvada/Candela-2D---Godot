@@ -220,6 +220,10 @@ var _join_deadline_active: bool = false
 var _round_token: int = 0
 var _end_sequence_active: bool = false
 
+## L'affiche de victoire/défaite en cours, tant qu'elle vit — voir
+## `_poser_affiche_de_fin()`. `null` hors de cette fenêtre.
+var _affiche_de_fin: AfficheDeFin = null
+
 # Vrai entre le début d'un match EN LIGNE et son archivage. Décision actée :
 # quitter un match en cours vaut forfait — le joueur resté gagne, celui qui part
 # perd. Ce jeton dit qu'il reste un résultat à écrire, et il n'y en a qu'un :
@@ -2937,7 +2941,7 @@ func _do_end_round(winner_id: int):
 ## session et la série de cet objet, la marge du dernier coup de `V2.9`.
 func _poser_affiche_de_fin(winner_id: int) -> void:
 	var carte: Dictionary = MapData.get_selected()
-	AfficheDeFin.poser(self, {
+	_affiche_de_fin = AfficheDeFin.poser(self, {
 		"vainqueur": winner_id,
 		"local_idx": _local_player_index(),
 		"carte": String(carte.get("name", "")),
@@ -2950,6 +2954,21 @@ func _poser_affiche_de_fin(winner_id: int) -> void:
 		"serie": _mot_de_serie,
 		"marge_px": dernier_effleurement,
 	}, ui.game_over_title if "game_over_title" in ui else null)
+	# L'affiche est opaque et avale ses propres clics, mais REJOUER vit
+	# DESSOUS, dans le salon qu'elle recouvre — un joueur pressé la voit
+	# disparaître (elle se congédie sur tout geste) et presse REJOUER dans la
+	# foulée avant d'avoir rien lu. `set_launch_locked` grise le bouton pendant
+	# que l'affiche vit ; `tree_exited` le relâche à sa disparition, quel que
+	# soit le chemin de sortie (délai écoulé ou geste du joueur).
+	ui.set_launch_locked(true)
+	_affiche_de_fin.tree_exited.connect(_on_affiche_de_fin_partie)
+
+
+## L'affiche de fin a quitté l'arbre — délai écoulé ou geste du joueur, peu
+## importe lequel : une seule porte de sortie, `AfficheDeFin.congedier()`.
+func _on_affiche_de_fin_partie() -> void:
+	_affiche_de_fin = null
+	ui.set_launch_locked(false)
 
 
 ## DA6.3 — la carte de fin de soirée, au retour au menu.
@@ -3716,6 +3735,13 @@ func _enter_hosted_game() -> void:
 	_restore_viewports()
 
 func _on_replay_requested():
+	# L'affiche de victoire/défaite est opaque et devrait déjà avaler le clic —
+	# mais elle se congédie sur N'IMPORTE QUEL geste (`AfficheDeFin._unhandled_input`),
+	# donc un joueur qui clique EN MÊME TEMPS la referme et presse REJOUER dans le
+	# même geste si les deux réagissent au même événement. Ce garde est la
+	# deuxième porte : tant qu'elle est visible, REJOUER ne fait rien.
+	if is_instance_valid(_affiche_de_fin) and _affiche_de_fin.est_active():
+		return
 	if ui._is_main_menu:
 		# Un match lancé depuis le menu n'ouvre pas de fenêtre de choix : l'arme y
 		# est déjà choisie. Sans cette remise à zéro, un salon ouvert après un
