@@ -2048,7 +2048,17 @@ func _forger_voile(parent: Control, nom: String) -> ColorRect:
 ## Le repli sur l'adversaire n'est pas un bouche-trou : c'est le comportement
 ## d'avant, conservé pour l'instant où l'hôte n'a pas encore désigné de source
 ## (première image d'une manche, ou éblouissement nul).
+## ⚠️ **La règle a DÉMÉNAGÉ dans `game_state`, et il ne reste ici qu'un relais.**
+## Elle était privée à ce fichier, et le brouillage — qui en avait exactement
+## autant besoin — ne l'avait pas : son flou se posait sur l'adversaire en dur,
+## ce qui a produit une grande ellipse parasite au milieu de l'arène (signalée
+## par Adrien le 2026-09-09). Deux copies d'une même règle ne restent d'accord
+## que par chance ; celle-ci vit désormais là où `source_eblouissante` est écrite.
 func _source_du_voile(victime, defaut):
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs != null and gs.has_method("source_eblouissante_ou"):
+		return gs.source_eblouissante_ou(victime, defaut)
+	# Sans `game_state` — bancs d'interface montés seuls — le comportement d'avant.
 	var s = victime.get("source_eblouissante")
 	return s if s != null and is_instance_valid(s) else defaut
 

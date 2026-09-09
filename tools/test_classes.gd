@@ -79,6 +79,9 @@ func _run() -> void:
 	await _test_braises()
 	await _test_volumes()
 	await _test_leurre()
+	_test_gresillement()
+	_test_ancrage_des_effets()
+	await _test_gresillement_en_jeu()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -814,7 +817,15 @@ func _test_pose_de_gadget() -> void:
 	# ⚠️ Une classe dont le gadget n'est PAS écrit ne pose rien et ne crie pas :
 	# le bouton reste sans effet, ce qui est la vérité. Un gadget générique posé
 	# à la place se prendrait pour une intention.
-	gs.p1.equip_weapon(gs.weapon_for_index(0))
+	#
+	# ⚠️ **Le cas est FABRIQUÉ, plus emprunté à une classe réelle.** Il l'était,
+	# et il est devenu faux le jour où cette classe-là a reçu son gadget : le
+	# contrôle rougissait alors qu'il n'y avait rien à corriger. Un banc adossé à
+	# l'état d'avancement du chantier se périme AVEC lui.
+	var arme_sans_gadget = gs.weapon_for_index(0)
+	var garde: String = arme_sans_gadget.gadget.implementation
+	arme_sans_gadget.gadget.implementation = ""
+	gs.p1.equip_weapon(arme_sans_gadget)
 	gs._gadgets_poses_par.fill(0)
 	_check("une classe sans gadget écrit ne peut rien poser",
 		not gs.gadget_disponible(0))
@@ -825,6 +836,7 @@ func _test_pose_de_gadget() -> void:
 		if c is GadgetBase:
 			final += 1
 	_check("et rien n'apparaît", final == 1, str(final))
+	arme_sans_gadget.gadget.implementation = garde
 
 	gs.queue_free()
 	await process_frame
@@ -1361,3 +1373,199 @@ func _test_leurre() -> void:
 
 	gs.queue_free()
 	await process_frame
+
+
+## Le grésillement — chantier CLASSES, étape 16.
+##
+## ⚠️ **Les deux contrôles qui comptent sont des NON-effets.** Le grésillement ne
+## touche que ce que l'écran montre : s'il se mettait à modifier l'éblouissement,
+## les trajectoires ou les dégâts, il cesserait d'être un coût de perception pour
+## devenir un mensonge — la frontière que `brouillage.gd` s'est donnée. Et il ne
+## doit **jamais éteindre franchement** : une lampe coupée est une information
+## nette, donc utilisable ; ce qu'on vend est le doute.
+func _test_gresillement() -> void:
+	print("\n[Le grésillement : une lampe qui marche encore, mal]")
+	var g := GadgetGresillement.new()
+	g.global_position = Vector2.ZERO
+
+	_check("il n'éblouit pas", not g.eblouit)
+	_check("il n'efface rien", is_zero_approx(g.occultation_pour(Vector2.ZERO)))
+	_check("il n'occulte pas la lumière", not g.occulte_la_lumiere)
+	_check("il ne fait pas de dégâts et ne s'allume pas",
+		not g.veut_s_allumer([]))
+
+	# ── Hors de portée, RIEN. Exactement un, pas « presque un » ──────────────
+	#
+	# ⚠️ C'est l'invariant que `brouillage.gd` s'impose en premier : *« à
+	# éblouissement nul, tout mode est l'identité. Pas presque : exactement. »*
+	# Un facteur résiduel à distance dégraderait toutes les lampes de l'arène en
+	# permanence, et **ne se verrait jamais dans un relevé**.
+	_check("hors de portée, la lampe est intacte",
+		is_equal_approx(g.facteur_de_lampe(Vector2(GadgetGresillement.RAYON + 1.0, 0.0)), 1.0),
+		str(g.facteur_de_lampe(Vector2(GadgetGresillement.RAYON + 1.0, 0.0))))
+
+	# ── Au cœur, ça papillote — et ça ne s'éteint jamais tout à fait ─────────
+	var mini := 1.0
+	var maxi := 0.0
+	for i in 400:
+		g._age = float(i) * 0.01
+		var f: float = g.facteur_de_lampe(Vector2.ZERO)
+		mini = minf(mini, f)
+		maxi = maxf(maxi, f)
+	_check("au cœur, la lampe faiblit vraiment", mini < 0.5, "%.2f" % mini)
+	_check("mais ne s'éteint jamais franchement",
+		mini >= GadgetGresillement.CREUX - 0.001, "%.3f" % mini)
+	# Elle doit REVENIR : une lampe uniformément affaiblie serait un variateur,
+	# pas un mauvais contact — et le joueur s'y habituerait en trois secondes.
+	_check("et elle revient à sa pleine valeur", maxi > 0.98, "%.2f" % maxi)
+
+	# ⚠️ **Déterministe** : deux pairs qui grésilleraient différemment
+	# produiraient un défaut que personne ne pourrait reproduire.
+	var h := GadgetGresillement.new()
+	h.global_position = Vector2.ZERO
+	var pareil := true
+	for i in 50:
+		g._age = float(i) * 0.037
+		h._age = float(i) * 0.037
+		if not is_equal_approx(g.facteur_de_lampe(Vector2.ZERO),
+				h.facteur_de_lampe(Vector2.ZERO)):
+			pareil = false
+	_check("deux bobines grésillent à l'identique", pareil)
+	h.free()
+	g.free()
+
+	# ── Le câblage, et le MINIMUM ───────────────────────────────────────────
+	var src := FileAccess.get_file_as_string("res://player.gd")
+	_check("player.gd applique le facteur à la torche",
+		src.contains("gadget.facteur_de_lampe(global_position)")
+			and src.contains("flashlight.energy = _energie_torche * lampe"))
+	# ⚠️ **L'atténuation ne doit PAS être réinjectée dans l'état lissé.** C'est
+	# exactement ce que faisait `flashlight.energy *= lampe` : elle se composait
+	# d'image en image, six fois trop fort, et proportionnellement à la cadence.
+	_check("et jamais en multipliant l'état lissé",
+		not src.contains("flashlight.energy *= lampe"))
+	# ⚠️ Le minimum, jamais le produit : deux bobines ne doivent pas éteindre deux
+	# fois. Même règle que le MAX de l'éblouissement — un plafond, pas une somme.
+	_check("il prend le MINIMUM, pas le produit",
+		src.contains("lampe = minf(lampe, gadget.facteur_de_lampe"))
+	# Et il doit s'appliquer AVANT la rétrodiffusion, qui s'en dérive : sinon le
+	# halo du porteur resterait plein pendant que son faisceau s'éteint.
+	var i_lampe := src.find("flashlight.energy = _energie_torche * lampe")
+	var i_halo := src.find("body_light.energy = (flashlight.energy / 2.5)")
+	_check("et avant la rétrodiffusion, qui en dérive",
+		i_lampe > 0 and i_halo > i_lampe, "%d vs %d" % [i_lampe, i_halo])
+
+
+## Le grésillement APPLIQUÉ — chantier CLASSES, étape 16.
+##
+## ⚠️ **Ce contrôle existe parce que le précédent ne suffisait pas.** Le facteur
+## du gadget était juste, le câblage était juste, les deux étaient vérifiés — et
+## l'effet réel valait **six fois** ce qu'il annonçait, parce que l'atténuation
+## était réinjectée dans le lissage de l'image suivante et se composait sans fin.
+## Pire : la valeur dépendait de la CADENCE, donc du matériel.
+##
+## Rien de ce qui se mesure sans jouer ne le voyait ; c'est le nombre imprimé par
+## une capture qui l'a montré. Ce banc-ci fait tourner de vraies images de
+## physique et lit l'énergie rendue, ce qui est la seule façon de fermer la porte.
+func _test_gresillement_en_jeu() -> void:
+	print("\n[Le grésillement, mesuré sur la lampe elle-même]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# Le Parasite, index 0.
+	gs.round_active = true
+	gs.sandbox_mode = true
+	gs.p1.equip_weapon(gs.weapon_for_index(0))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	Input.action_press("p1_torch")
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var bobine = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetGresillement:
+			bobine = c
+	_check("la bobine est posée", bobine != null)
+	if bobine == null:
+		Input.action_release("p1_torch")
+		gs.queue_free()
+		await process_frame
+		return
+
+	# On cherche le creux réel de l'onde, puis on y FIGE l'appareil : sans ça, on
+	# mesurerait un instant quelconque du papillotement.
+	var creux := 1.0
+	var age_creux := 0.0
+	for i in 400:
+		bobine._age = float(i) * 0.01
+		var f: float = bobine.facteur_de_lampe(gs.p1.global_position)
+		if f < creux:
+			creux = f
+			age_creux = bobine._age
+
+	# Trente images de physique : assez pour que toute composition se voie.
+	# C'est précisément ce que le défaut faisait — converger, image après image,
+	# vers une valeur bien plus basse que celle annoncée.
+	for i in 30:
+		bobine._age = age_creux
+		await physics_frame
+	var rendue: float = gs.p1.flashlight.energy
+	var attendue := 2.5 * creux
+
+	_check("la torche du joueur est allumée", gs.p1.flashlight_on)
+	# ±10 % : le souffle de la torche vaut ±3 %, et le `lerp` n'a pas tout à fait
+	# convergé. Ce qu'on refuse est un ORDRE DE GRANDEUR, pas un dixième.
+	_check("l'énergie rendue vaut ce que le gadget annonce",
+		absf(rendue - attendue) < attendue * 0.10,
+		"rendue %.3f, attendue %.3f" % [rendue, attendue])
+	# ⚠️ Le garde-fou explicite contre le défaut d'origine : il rendait 0,094 là
+	# où l'on attend 0,565. Un seuil franc dit *pourquoi* le contrôle existe.
+	_check("elle ne s'effondre pas par composition", rendue > attendue * 0.6,
+		"%.3f" % rendue)
+
+	# Et hors de portée, la lampe revient EXACTEMENT à sa valeur.
+	gs.p1.global_position = Vector2(400.0, 400.0) \
+		+ Vector2(GadgetGresillement.RAYON * 2.0, 0.0)
+	for i in 30:
+		await physics_frame
+	_check("hors de portée, la lampe est pleine",
+		gs.p1.flashlight.energy > 2.2, "%.3f" % gs.p1.flashlight.energy)
+
+	Input.action_release("p1_torch")
+	gs.queue_free()
+	await process_frame
+
+
+## Vers quoi les effets d'éblouissement se tournent — correctif du 2026-09-09.
+##
+## ⚠️ **Le défaut que ce contrôle ferme a été trouvé À L'ŒIL, par Adrien, et il
+## avait déjà été cherché sans succès dans une session précédente.** Le
+## brouillage posait son flou sur l'adversaire EN DUR : dès qu'une lumière posée
+## éblouissait, une grande ellipse allait se dessiner sur l'autre joueur, à
+## l'autre bout de la carte. En ligne, un effet dont le métier est de MASQUER
+## désignait la position de l'adversaire.
+##
+## ⚠️ Et c'était le **jumeau exact** d'un défaut corrigé le même jour sur le
+## voile : la source d'éblouissement a deux consommateurs, le lot en a réparé un
+## et laissé l'autre. Les deux restaient plausibles à l'écran, donc rien n'a
+## parlé. Ce contrôle exige qu'il n'y ait **qu'une seule règle** pour les deux.
+func _test_ancrage_des_effets() -> void:
+	print("\n[Les effets d'éblouissement se tournent vers la VRAIE source]")
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	var ui := FileAccess.get_file_as_string("res://ui.gd")
+
+	_check("la règle est publique et vit dans game_state",
+		gs.contains("func source_eblouissante_ou("))
+	_check("le brouillage la consulte, au lieu de l'adversaire en dur",
+		gs.contains("app.maj(regardeur, source_eblouissante_ou(regardeur,"))
+	# ⚠️ La forme exacte du défaut, interdite nommément : c'est elle qu'une
+	# relecture distraite remettrait en « simplifiant » l'appel.
+	_check("l'adversaire n'est plus passé en dur au brouillage",
+		not gs.contains("app.maj(p1 if i == 0 else p2, p2 if i == 0 else p1)"))
+	_check("et le voile passe par la même règle",
+		ui.contains("gs.source_eblouissante_ou(victime, defaut)"))

@@ -250,6 +250,10 @@ var vignette_mat: ShaderMaterial
 ## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
 const TORCH_BREATH_AMP := 0.03
 var _torch_breath_t: float = 0.0
+## L'énergie de la torche AVANT toute atténuation : l'état lissé, celui que le
+## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
+## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
+var _energie_torche: float = 2.5
 ## V5.6 — la rétrodiffusion « respire » au pas : bosse brève, résorbée seule.
 const BACKSCATTER_STEP_PULSE := 0.35
 var _backscatter_pulse: float = 0.0
@@ -1631,13 +1635,45 @@ func _physics_process(delta):
 		flashlight.enabled = true
 		body_light.enabled = true
 		if shoot_cooldown > 0:
-			flashlight.energy = randf_range(1.5, 2.0)
+			_energie_torche = randf_range(1.5, 2.0)
 		else:
 			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
 			# identique pour les deux joueurs — la lumière vit, sans rien dire.
 			_torch_breath_t += delta
 			var souffle := 1.0 + noise.get_noise_1d(_torch_breath_t * 40.0) * TORCH_BREATH_AMP
-			flashlight.energy = lerp(flashlight.energy, 2.5 * souffle, 8.0 * delta)
+			_energie_torche = lerp(_energie_torche, 2.5 * souffle, 8.0 * delta)
+
+		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
+		# les lampes autour de lui : le faisceau papillote, faiblit, revient.
+		#
+		# ⚠️ **Posé APRÈS le souffle et AVANT la rétrodiffusion**, et les deux
+		# places comptent. Après le souffle, parce que la panne doit s'appliquer à
+		# l'énergie réellement rendue et non se faire écraser par le `lerp` de la
+		# ligne au-dessus. Avant la rétrodiffusion, parce que celle-ci se dérive de
+		# `flashlight.energy` : sans ça, le halo du porteur resterait plein pendant
+		# que son faisceau s'éteint, et il verrait que sa lampe ment.
+		#
+		# ⚠️ **Le MINIMUM, jamais le produit** : deux bobines ne doivent pas
+		# éteindre deux fois. C'est la même règle que le MAX de l'éblouissement —
+		# le modèle est un plafond, pas une intégrale.
+		var lampe := 1.0
+		for gadget in get_tree().get_nodes_in_group("gadgets"):
+			lampe = minf(lampe, gadget.facteur_de_lampe(global_position))
+		# ⚠️ **L'atténuation s'applique à `_energie_torche`, JAMAIS à
+		# `flashlight.energy`**, et la première version faisait l'inverse.
+		#
+		# `flashlight.energy` était l'ÉTAT lissé : le multiplier réinjectait
+		# l'atténuation dans le lissage de l'image suivante, et elle se composait
+		# indéfiniment. Mesuré au creux du grésillement — 0,094 au lieu des 0,57
+		# attendus, soit six fois trop —, **et la valeur dépendait de la cadence** :
+		# plus la machine est rapide, plus le `lerp` par image est petit, plus la
+		# composition l'emporte. Une mécanique dont la force dépend du matériel n'a
+		# pas sa place dans un jeu qui se veut honnête en compétition.
+		#
+		# ⚠️ Aucune suite ne pouvait l'attraper : le facteur du gadget était juste,
+		# le câblage était juste, et le banc mesure les deux. C'est le nombre
+		# IMPRIMÉ par une capture qui l'a montré.
+		flashlight.energy = _energie_torche * lampe
 
 		# V5.6 — la rétrodiffusion gonfle d'un souffle à chaque pas (posé par le
 		# détecteur de pas plus haut) puis se résorbe seule : marcher torche

@@ -257,6 +257,20 @@ func occultation_pour(_pos: Vector2) -> float:
 	return 0.0
 
 
+## Ce par quoi ce gadget multiplie l'énergie d'une lampe torche à `pos`.
+##
+## Un dans le socle — la lampe est intacte. Seul le grésillement du Parasite
+## répond autrement.
+##
+## ⚠️ **Ne touche QUE le rendu.** L'éblouissement échantillonne le pixel du
+## cookie et non l'énergie de la lampe : baisser celle-ci retire de la lumière à
+## l'écran sans rien changer à la simulation. C'est la règle que `brouillage.gd`
+## s'est donnée — dégrader la lecture est un coût de perception, déplacer une
+## hitbox serait un mensonge.
+func facteur_de_lampe(_pos: Vector2) -> float:
+	return 1.0
+
+
 ## L'âge du gadget, en secondes. Public parce que les sous-classes en dérivent
 ## leur apparence — et parce qu'un banc doit pouvoir le forcer.
 func age() -> float:

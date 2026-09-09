@@ -3133,6 +3133,35 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Corriger un défaut de direction sans chercher son JUMEAU (2026-09-09)
+
+`ui._source_du_voile()` a été écrit le 2026-09-09 pour réparer un défaut précis :
+le voile d'éblouissement penchait vers **l'adversaire passé en dur**, alors que
+depuis l'étape 6 du chantier CLASSES la cause peut être une lumière posée. La
+correction était juste, documentée, et **incomplète** : la source d'éblouissement
+alimente **deux** consommateurs — le voile et le brouillage — et le second gardait
+son adversaire en dur.
+
+Conséquence : dès qu'un gadget lumineux éblouissait, l'appareil de brouillage
+allait dessiner son flou **sur l'autre joueur**, à l'autre bout de la carte. À
+l'entraînement, une grande ellipse grise flottait dans le noir sur un J2
+invisible. **En ligne, c'est pire qu'un artefact : un effet dont le métier est de
+MASQUER désignait la position de l'adversaire.**
+
+⚠️ **Personne ne l'a vu venir, et il a fallu un œil humain.** Adrien l'a signalé,
+et une session antérieure l'avait déjà cherché sans le trouver. Aucune suite ne
+pouvait le voir : `tools/test_brouillage.gd` n'éprouve que l'arithmétique de
+`brouillage.gd`, jamais l'ancrage — même angle mort que le relèvement du voile.
+Les deux versions restaient **plausibles à l'écran**, ce qui est la signature de
+ce genre de défaut.
+
+**La règle qui en sort** : quand on corrige la direction, la portée ou la source
+d'un effet, chercher **qui d'autre lit la même donnée**. Ici,
+`source_eblouissante` était écrite à un endroit et lue à deux ; une seule lecture
+a été réparée. La règle vit désormais dans `GameState.source_eblouissante_ou()`,
+publique, et les deux consommateurs y passent — deux copies ne restent d'accord
+que par chance.
+
 ### Un index qui est en fait une POSITION (2026-09-09)
 
 `game_state.gd` lisait l'arme choisie par `get_pressed_button().get_index()` :
@@ -14727,13 +14756,62 @@ le leurre la reprend. **Quatrième défaut de rendu du chantier trouvé en
 regardant**, et le premier dont la conséquence soit une inéquité et non une
 laideur.
 
+### Étape 16 — le grésillement, et l'ellipse d'Adrien ✅
+
+**Le grésillement du Parasite.** *« Il ne prend rien : il corrompt ce que l'autre
+reçoit. »* Une bobine posée qui fait **sauter les lampes torches** autour d'elle :
+le faisceau papillote, faiblit, revient. On ne sait plus si l'arène est vide ou si
+la lampe lâche.
+
+⚠️ **Une perturbation de RENDU, jamais de simulation.** Il ne touche que
+`flashlight.energy` : l'éblouissement échantillonne le pixel du COOKIE et non
+l'énergie de la lampe, donc rien ne change à la simulation, aux trajectoires ni
+aux dégâts. C'est mot pour mot la frontière que `brouillage.gd` s'est donnée —
+*« dégrader la lecture est un coût de perception, déplacer une hitbox serait un
+mensonge »*. Le coût reste réel : un faisceau à moitié éteint éclaire à moitié, et
+ce qui est retiré est de l'information, la seule monnaie du jeu.
+
+Il ne s'éteint **jamais franchement** (plancher à 0,22) : une lampe coupée est une
+information nette, donc utilisable ; ce qu'on vend est le doute.
+
+#### Un défaut de cadence qu'aucun contrôle ne pouvait voir
+
+Le facteur du gadget était juste. Le câblage était juste. Les deux étaient
+vérifiés. Et l'effet réel valait **six fois** ce qu'il annonçait — 0,094 au lieu
+de 0,565 — parce que l'atténuation était appliquée à `flashlight.energy`, qui est
+l'ÉTAT LISSÉ : elle se réinjectait dans le lissage de l'image suivante et se
+composait sans fin. ⚠️ **Et la valeur dépendait de la CADENCE** : plus la machine
+est rapide, plus le `lerp` par image est petit, plus la composition l'emporte. Une
+mécanique dont la force dépend du matériel n'a pas sa place dans un jeu qui se
+veut honnête en compétition.
+
+C'est **le nombre imprimé par une capture** qui l'a montré. Le remède sépare
+l'état (`_energie_torche`, lissé et soufflé) de sa présentation
+(`flashlight.energy`, atténuée) — et un banc mesure désormais l'énergie RENDUE
+après trente images de physique, ce qui est la seule façon de fermer la porte.
+
+#### L'ellipse d'Adrien : le jumeau du voile
+
+Adrien a signalé un « flou elliptique » parasite, déjà cherché sans succès lors
+d'une session antérieure. C'était **le brouillage ancré sur l'adversaire en dur** —
+voir le nouveau piège connu, *« corriger un défaut de direction sans chercher son
+jumeau »*. Prouvé par l'expérience : déplacer l'adversaire invisible de 250 px
+déplace l'ellipse d'autant.
+
+⚠️ **Signalé, non corrigé, et c'est une décision de jeu** : une fois l'ancrage
+réparé, le flou reste décalé le long de `emetteur.rotation`. C'est pertinent pour
+une torche, qui a un faisceau ; arbitraire pour un gadget posé, dont la rotation
+ne veut rien dire. Le correctif tiendrait dans `brouillage_vue.gd` — avance nulle
+pour une source qui déclare `eblouissement_dirige == false`. **Le fichier
+appartient au chantier éblouissement, et le dosage appartient à Adrien.**
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : le sol qui écrit (poudre de contact), le grésillement, les fusées par classe (stock et recharge), et
+**Reste** : le sol qui écrit (poudre de contact), les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).
 

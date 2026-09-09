@@ -2907,3 +2907,39 @@ conséquence soit une inéquité : le leurre sortait BLANC sous la torche. La
 silhouette est blanche et `Polygon2D.color` la multiplie ; sans la teinte
 d'adversaire, il était plus lumineux qu'un vrai corps, donc reconnaissable du
 premier coup d'œil.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 16, le grésillement + l'ellipse d'Adrien)
+
+**Le grésillement du Parasite** : une bobine qui fait sauter les lampes torches
+autour d'elle. Perturbation de RENDU seulement — l'éblouissement échantillonne le
+cookie et non l'énergie de la lampe, donc rien ne bouge dans la simulation. C'est
+la frontière que `brouillage.gd` s'est donnée. Il ne s'éteint jamais franchement :
+une lampe coupée est une information nette, ce qu'on vend est le doute.
+
+**⚠️ Un défaut de CADENCE qu'aucun contrôle ne pouvait voir.** Le facteur du
+gadget était juste, le câblage aussi, les deux étaient vérifiés — et l'effet
+valait six fois ce qu'il annonçait (0,094 au lieu de 0,565), parce que
+l'atténuation était appliquée à `flashlight.energy`, l'état LISSÉ, et se
+réinjectait d'image en image. Et la valeur dépendait de la cadence de la machine.
+C'est le nombre imprimé par une capture qui l'a montré. L'état
+(`_energie_torche`) est désormais séparé de sa présentation, et un banc mesure
+l'énergie RENDUE après trente images de physique.
+
+**L'ELLIPSE D'ADRIEN, trouvée par sous-agent.** C'était le brouillage
+(`brouillage_vue.gd`) **ancré sur l'adversaire passé en dur** dans
+`game_state._maj_brouillage()` : dès qu'une lumière posée éblouissait, le flou
+allait se dessiner sur l'autre joueur, à l'autre bout de la carte. **En ligne, un
+effet dont le métier est de masquer désignait la position de l'adversaire.**
+
+⚠️ C'était le **jumeau exact** du défaut corrigé le matin même sur le voile : la
+source d'éblouissement a deux consommateurs, le lot en a réparé un. Nouveau piège
+connu — *« corriger un défaut de direction sans chercher son jumeau »*. La règle
+vit maintenant dans `GameState.source_eblouissante_ou()`, publique, et `ui.gd` s'y
+branche : ⚠️ **incursion déclarée dans `ui.gd`**, une fonction privée devenue un
+relais de deux lignes.
+
+**⚠️ Signalé, NON corrigé** : une fois l'ancrage réparé, le flou reste décalé le
+long de `emetteur.rotation` — pertinent pour une torche, arbitraire pour un gadget
+posé dont la rotation ne veut rien dire. Le correctif serait dans
+`brouillage_vue.gd`, qui appartient au chantier éblouissement, et le dosage
+appartient à Adrien.

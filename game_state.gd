@@ -3214,6 +3214,9 @@ const IMPLEMENTATIONS := {
 	# 18 s : assez pour qu'un adversaire le croise, hésite, et paie un tir. Un
 	# leurre éternel finirait par être connu et cesserait de tromper.
 	"leurre": {"script": "res://gadget_leurre.gd", "duree_vie": 18.0},
+	# 14 s : le temps de rendre un couloir désagréable, pas celui d'en faire une
+	# zone interdite pour la manche.
+	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 14.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
@@ -3639,7 +3642,42 @@ func _maj_brouillage() -> void:
 		if not actif:
 			app.eteindre()
 			continue
-		app.maj(p1 if i == 0 else p2, p2 if i == 0 else p1)
+		# ⚠️ **L'adversaire N'EST PLUS passé en dur, et il l'était.** Le flou et le
+		# halo du brouillage se posaient sur l'autre joueur quelle que soit la
+		# cause de l'éblouissement — donc, dès qu'une lumière POSÉE éblouissait
+		# (mine, braises, fusée), l'appareil censé masquer allait dessiner une
+		# grande ellipse sur l'adversaire, à l'autre bout de la carte.
+		#
+		# À l'entraînement, ça donnait une ellipse flottant dans le noir sur un
+		# J2 invisible resté à son point d'apparition — c'est ce qu'Adrien a
+		# signalé le 2026-09-09, et qu'une session précédente avait cherché sans
+		# le trouver. **En ligne c'est pire qu'un artefact : un effet dont le
+		# métier est de MASQUER désignait la position de l'autre.**
+		#
+		# ⚠️ **C'est le JUMEAU exact du défaut corrigé le même jour sur le voile**
+		# (`ui._source_du_voile`). La source d'éblouissement alimente deux
+		# consommateurs ; le lot a réparé le premier et laissé le second, et rien
+		# ne l'a dit parce que les deux restent plausibles à l'écran.
+		var regardeur: Node2D = p1 if i == 0 else p2
+		app.maj(regardeur, source_eblouissante_ou(regardeur, p2 if i == 0 else p1))
+
+
+## Vers quoi un effet d'éblouissement doit se tourner : la source qui éblouit
+## RÉELLEMENT cette victime, l'adversaire seulement à défaut.
+##
+## ⚠️ **Publique, et c'est l'objet du geste.** La règle existait déjà, en privé,
+## dans `ui._source_du_voile()` — et le brouillage, qui en avait autant besoin,
+## ne l'avait pas. Deux copies auraient fini par diverger ; il n'y en a plus
+## qu'une, et elle vit là où `source_eblouissante` est ÉCRITE.
+##
+## Le repli sur l'adversaire n'est pas un bouche-trou : c'est le comportement
+## d'avant, conservé pour l'instant où l'hôte n'a pas encore désigné de source —
+## première image d'une manche, ou éblouissement nul.
+func source_eblouissante_ou(victime: Node, defaut: Node) -> Node:
+	if victime == null:
+		return defaut
+	var s = victime.get("source_eblouissante")
+	return s if s != null and is_instance_valid(s) else defaut
 
 
 func _accorder_rendu_aux_vues() -> void:
