@@ -247,6 +247,55 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 (suite) — session « DA5 · chasse aux défauts » : six des neuf étapes livrées
+
+**Livré, six commits, un par étape (ou groupe d'étapes) : DA5.1, DA5.2, DA5.7
+(a+b+c fusionnés — ils ne se comprennent qu'ensemble), DA5.3 (volet S
+seulement), DA5.4, DA5.5.** `./tools/run_suites.sh` intégralement vert après
+chaque commit reconstitué (vérifié par relecture manuelle du diff staged,
+pas seulement par le code de sortie). Je **lâche tous les fichiers** listés
+dans la déclaration d'ouverture ci-dessous.
+
+**Ce qui dépasse le périmètre annoncé, et pourquoi :**
+
+1. **DA5.5 a exigé un `BackBufferCopy` dédié (`_voile_bb` dans `ui.gd`) que le
+   plan d'origine ne prévoyait pas.** Trouvé en implémentant, pas en
+   planifiant : ce dépôt a déjà payé exactement ce défaut sur
+   `death_flash.gdshader` (piège « le tampon d'écran n'a pas de propriétaire »,
+   signalé le 2026-09-07 par la session « retouche éblouissement », jamais
+   corrigé). Sans copie à soi, l'aberration aurait hérité du même risque —
+   pire, avec une collision réelle possible : le flou de brouillage (aim
+   uncertainty) et l'éblouissement peuvent être actifs en même temps dans un
+   vrai match. Posé sur le modèle `KillcamBB`/`ShockBB` déjà établi dans le
+   dépôt (copie plein cadre, visible seulement pendant l'effet).
+2. **DA5.1 a trouvé bien plus que prévu** : le plan citait trois réglages
+   `EffectPolicy` inertes, l'audit systématique en a trouvé seize sur
+   trente-quatre (47 %) — toute la famille CONFORT caméra/killcam/manette et
+   sept des huit dials MONDE. Documenté, aucun retiré (hors périmètre DA5).
+
+**Ce qui reste ouvert :**
+
+- **DA5.3, volet (G)** — la texture peinte finale reste due à Adrien.
+- **La famille `EffectPolicy` de `aberration_eblouissement`** (CONFORT choisi
+  sur la recommandation du plan, jamais confirmé par Adrien) — seule décision
+  de conception encore ouverte, détail dans `docs/ROADMAP.md` (DA5.5).
+- **DA5.6 et DA5.8 restaient déjà faits avant cette session** — la chasse
+  aux défauts est donc **close** dans ses six items actionnables sans Adrien ;
+  seuls les volets qui l'exigent (la texture DA5.3-G, l'arbitrage de famille
+  DA5.5) restent en dehors du périmètre d'une session seule.
+- **`tools/bench_framerate.tscn` — obligatoire avant toute publication (H10)**,
+  non exécuté ici (aucune fenêtre interactive dans cet environnement) : DA5.5
+  fait passer `voile_eblouissement.gdshader` de zéro lecture d'écran à trois
+  lectures de `screen_texture` plus une copie plein cadre par pixel couvert, à
+  chaque éblouissement actif.
+- **`./tools/run_visuel.sh` et `./tools/run_visuel.sh --eblouissement`** — non
+  relancés après le dernier commit (DA5.5) ; à faire avant publication, sur
+  une machine avec fenêtre.
+
+**Suivi de projet :** je ne republie pas — mon delta part par `SendMessage` à
+la session porteuse identifiée via `ListAgents`/`list_sessions`
+(« Can2d - Mise à jour artefact de suivi »).
+
 ### 2026-09-09 — session « DA5 · chasse aux défauts » : déclaration d'ouverture
 
 **Worktree `.claude/worktrees/da5-chasse-defauts-116ef6`, branche
