@@ -7371,6 +7371,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   seulement s'il est branché). Impact branché sur `rpc_update_hp`
   (autoritaire), pas sur la balle prédite ; pouls à mi-temps de 170 BPM.
   Le réglage on/off attendra les Options de la Phase 5.
+  - **✅ Chantier vibrations manettes — étendu et branché le 2026-09-09**, la
+    Phase 5 étant close. Le réglage CONFORT `vibration_manette` (curseur déjà
+    présent dans Options depuis DA4, jamais raccordé — repéré mort par l'audit
+    DA5.1 ci-dessous) pilote maintenant `_rumble()` : multiplie weak/strong,
+    coupe net à 0 %. Quatre signaux ajoutés, plan validé par Adrien avant
+    implémentation : tir à sec (`RUMBLE_DRY_FIRE`, distinct du tir réel),
+    rechargement terminé (`RUMBLE_RELOAD_READY`), lancer de fusée
+    (`RUMBLE_FLARE_*`, plus sourd et plus long qu'un tir pour ne pas confondre
+    les deux gestes), et `rumble_death()` — la victime ne ressentait jusqu'ici
+    **rien** à sa propre mort, contrairement au tueur (`rumble_kill`) ; trois
+    pulsations décroissantes sur le moteur grave, symétriques au double coup
+    du vainqueur.
+  - ⚠️ **Défaut trouvé en câblant, pas cherché : `_is_locally_piloted()`
+    coupait les QUATRE vibrations d'origine en écran partagé.** Le `match` de
+    cette fonction ne couvre que `ONLINE_HOST`/`ONLINE_CLIENT` et retombe sur
+    `return false` — donc toujours faux en `LOCAL_SPLITSCREEN`, le mode dont
+    ce fichier dit qu'il est l'identité du jeu. V1.5 n'avait donc jamais vibré
+    en écran partagé depuis sa fermeture, et rien ne le signalait : pas
+    d'erreur, pas de test (aucune suite ne peut lire un moteur de manette).
+    Corrigé en retirant ce garde de `_rumble()` seul, pas de la fonction
+    partagée : les deux lignes suivantes (`LocalInputProvider` + pad connecté)
+    couvrent déjà exactement le même besoin, et correctement dans les trois
+    modes — `_is_locally_piloted()` reste inchangée pour l'acouphène et le
+    pouls d'éblouissement, hors périmètre de ce chantier.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -10908,11 +10932,13 @@ de DA5.2/DA5.7/DA5.5 ci-dessous — leur vérification visuelle passe par
 avec l'identifiant en **littéral**, hors `effect_policy.gd`, `settings_manager.gd`
 et `tools/` (qui liste tout génériquement pour construire l'écran des réglages
 et ne prouve donc rien sur l'application réelle). Seize identifiants sur
-trente-quatre — 47 % — n'ont **aucun** site d'appel en production :
+trente-quatre — 47 % — n'avaient **aucun** site d'appel en production à
+l'audit du 2026-09-09 ; `vibration_manette` en est sorti le jour même, câblé
+par le chantier vibrations manettes ci-dessus (quinze restants, 44 %) :
 
 | Famille | Identifiants sans aucun appel de production |
 |---|---|
-| CONFORT (8/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `vibration_manette`, `arene_au_repos` |
+| CONFORT (7/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `arene_au_repos` |
 | MONDE (8/12) | `eblouissement`, `silhouette_revelee`, `flash_de_tir`, `trait_de_balle`, `lumiere_impact`, `particules_sang`, `eclats_impact`, `traces_de_sang` |
 
 Les dix-huit restants sont bien branchés — les quinze effets de la vague M via
