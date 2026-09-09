@@ -155,15 +155,29 @@ p { margin: 0; }
 .plateforme-fichier { font-family: var(--data); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--dim); overflow-wrap: anywhere; }
 .dl-note { margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim); max-width: 60ch; }
 
-/* --- Les trois signaux ------------------------------------------------------ */
-.signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--gap); margin-top: 2.5rem; }
-.signal { border: 2px solid var(--trait-bas); display: flex; flex-direction: column; }
-.signal-vue { aspect-ratio: 4 / 5; overflow: hidden; background: var(--noir); border-bottom: 2px solid var(--trait-bas); }
-.signal-vue img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 72% 52%; }
-.signal-texte { padding: 1.1rem 1.2rem 1.35rem; display: flex; flex-direction: column; gap: 0.6rem; }
+/* --- Les trois signaux, en texte seul ---------------------------------------- */
+.signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 2.25rem var(--gap); margin-top: 2.5rem; }
+.signal { display: flex; flex-direction: column; gap: 0.65rem; padding-top: 1.1rem; border-top: 2px solid var(--ambre); }
+.signal:nth-child(2) { border-top-color: var(--halogene); }
+.signal:nth-child(3) { border-top-color: #8c2b31; }
 .signal h3 { font-size: 1.15rem; }
 .signal p { color: var(--dim); font-size: 0.95rem; }
-.legende-vues { font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); margin-top: 2.25rem; }
+
+/* --- La vitrine : une planche dans la planche -------------------------------- */
+/* Les captures sont noires à 90 %. Serrées en grille, leurs noirs se confondent
+   avec la gouttière et il ne reste que les cônes : c'est le sujet du jeu qui
+   compose la page, pas une mise en page appliquée par-dessus. Aucune légende —
+   une capture de Candela se regarde, elle ne se commente pas. */
+.vitrine { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: clamp(6rem, 11vw, 9.5rem); gap: var(--gap); }
+.vue { overflow: hidden; background: var(--noir); border: 2px solid var(--trait-bas); }
+.vue img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.c2 { grid-column: span 2; } .c3 { grid-column: span 3; } .c4 { grid-column: span 4; }
+.r2 { grid-row: span 2; }
+@media (max-width: 52rem) {
+  .vitrine { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  .vue { aspect-ratio: 16 / 9; }
+  .c2, .c3, .c4, .r2 { grid-column: auto; grid-row: auto; }
+}
 
 /* --- La case de lettrage ---------------------------------------------------- */
 .lettrage p {
@@ -265,39 +279,17 @@ p { margin: 0; }
     <p class="dl-note">Les deux liens pointent vers la <strong>dernière version publiée</strong> : ils restent valables à chaque sortie, sans que cette page change. La version 0.3.1 a été publiée le 9 septembre 2026. Une fois installé, le jeu se met à jour tout seul.</p>
   </section>
 
-  <!-- ============ CASE 3 — la règle ============ -->
+  <!-- ============ LA VITRINE ============ -->
   <section class="case">
-    <div class="tete">
-      <p class="recitatif">La règle</p>
-      <h2>La seule information<br>est la lumière</h2>
-    </div>
-    <div class="prose large">
-      <p>Il n’y a pas de mini-carte, pas de marqueur d’ennemi, pas de contour rouge dans le noir. Un mur bloque la lumière comme il bloque une balle : la torche s’arrête où le décor s’arrête, et ce que vous n’éclairez pas n’existe pas.</p>
-      <p class="retrait">Trois signaux, et rien d’autre.</p>
-    </div>
-    <p class="legende-vues">Captures de jeu, sans interface.</p>
-    <div class="signaux">
-      <div class="signal">
-        <div class="signal-vue"><img src="{{SIG_TORCHE}}" alt="Un cône de lumière balaie un sol de béton carrelé ; tout le reste de l’image est noir."></div>
-        <div class="signal-texte">
-          <h3>La torche</h3>
-          <p>Le faisceau que vous tenez. Il révèle le sol, les murs, et la silhouette de l’autre s’il entre dedans. Il vous désigne aussi, de très loin.</p>
-        </div>
-      </div>
-      <div class="signal">
-        <div class="signal-vue"><img src="{{SIG_RETRO}}" alt="Deux cônes de lumière se recouvrent en partie : celui du joueur, et celui d’un adversaire hors champ."></div>
-        <div class="signal-texte">
-          <h3>La rétrodiffusion</h3>
-          <p>Ce que la lumière de l’autre laisse sur les murs autour de vous. On sait qu’il est là avant de le voir — parfois.</p>
-        </div>
-      </div>
-      <div class="signal">
-        <div class="signal-vue"><img src="{{SIG_FLASH}}" alt="Un flash de tir illumine brièvement le décor autour du tireur."></div>
-        <div class="signal-texte">
-          <h3>Le flash de tir</h3>
-          <p>Une image de votre position, imprimée dans le noir pendant une fraction de seconde. Tirer, c’est parler.</p>
-        </div>
-      </div>
+    <div class="vitrine">
+      <div class="vue c4 r2"><img src="{{G_DUEL}}" style="object-position: 58% 52%" alt="Un cône de torche traverse le noir et révèle une silhouette sur un sol de béton."></div>
+      <div class="vue c2"><img src="{{G_TORCHE}}" style="object-position: 62% 52%" alt="Un faisceau de torche seul, ouvert sur du carrelage de béton."></div>
+      <div class="vue c2"><img src="{{G_RETRO}}" style="object-position: 62% 52%" alt="Deux cônes de lumière se recouvrent en partie dans l’obscurité."></div>
+      <div class="vue c3 r2"><img src="{{G_SCINDE}}" style="object-position: 50% 45%" alt="Écran scindé : deux joueurs, trois faisceaux, une cloison centrale."></div>
+      <div class="vue c3"><img src="{{G_FUSEE}}" style="object-position: 56% 52%" alt="Une fusée éclairante rouge brûle au sol et colore une moitié du couloir."></div>
+      <div class="vue c2"><img src="{{G_FLASH}}" style="object-position: 62% 52%" alt="Un tir touche : un nombre rouge apparaît près de la silhouette éclairée."></div>
+      <div class="vue c2"><img src="{{G_EBLOUI}}" style="object-position: 52% 50%" alt="Un éblouissement blanc envahit presque tout l’écran."></div>
+      <div class="vue c2"><img src="{{G_GEL}}" style="object-position: 66% 50%" alt="L’image gelée du moment de la mort, tamponnée KILL et de son horodatage."></div>
     </div>
   </section>
 
@@ -305,7 +297,6 @@ p { margin: 0; }
   <section class="case case-image">
     <figure>
       <img src="{{IMG_SCINDE}}" alt="Deux tireurs dos à dos de part et d’autre d’une cloison de béton, chacun balayant le sol avec sa torche.">
-      <figcaption class="legende-image">Écran scindé — ambre et bleu, une couleur par joueur</figcaption>
     </figure>
   </section>
 
@@ -368,7 +359,6 @@ p { margin: 0; }
   <section class="case case-image">
     <figure>
       <img src="{{IMG_COMPETITIF}}" alt="Deux combattants en tenue sombre se font face dans un couloir de béton, torche et pistolet levés.">
-      <figcaption class="legende-image">Duel au pistolet-torche</figcaption>
     </figure>
   </section>
 
@@ -399,7 +389,6 @@ p { margin: 0; }
   <section class="case case-image">
     <figure>
       <img src="{{IMG_QUITTER}}" alt="Un couloir qui s’enfonce dans l’obscurité, une torche abandonnée au sol dont la lumière meurt.">
-      <figcaption class="legende-image">La lumière qui meurt</figcaption>
     </figure>
   </section>
 
@@ -418,7 +407,33 @@ p { margin: 0; }
       <div class="fiche-ligne"><span class="fiche-cle">Réseau</span><span>Hôte-autoritaire, Epic Online Services (code de salon, traversée de NAT)</span></div>
       <div class="fiche-ligne"><span class="fiche-cle">Manettes</span><span>Clavier-souris et manette, entièrement reconfigurables</span></div>
       <div class="fiche-ligne"><span class="fiche-cle">Langue</span><span>Français</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Version</span><span>0.3.1 — en développement</span></div>
+      <div class="fiche-ligne"><span class="fiche-cle">Version</span><span>0.3.1 publiée · 0.4.0 en développement</span></div>
+    </div>
+  </section>
+
+  <!-- ============ LA RÈGLE — tout en bas ============ -->
+  <section class="case">
+    <div class="tete">
+      <p class="recitatif">La règle</p>
+      <h2>La seule information<br>est la lumière</h2>
+    </div>
+    <div class="prose large">
+      <p>Il n’y a pas de mini-carte, pas de marqueur d’ennemi, pas de contour rouge dans le noir. Un mur bloque la lumière comme il bloque une balle : la torche s’arrête où le décor s’arrête, et ce que vous n’éclairez pas n’existe pas.</p>
+      <p class="retrait">Trois signaux, et rien d’autre.</p>
+    </div>
+    <div class="signaux large">
+      <div class="signal">
+        <h3>La torche</h3>
+        <p>Le faisceau que vous tenez. Il révèle le sol, les murs, et la silhouette de l’autre s’il entre dedans. Il vous désigne aussi, de très loin.</p>
+      </div>
+      <div class="signal">
+        <h3>La rétrodiffusion</h3>
+        <p>Ce que la lumière de l’autre laisse sur les murs autour de vous. On sait qu’il est là avant de le voir — parfois.</p>
+      </div>
+      <div class="signal">
+        <h3>Le flash de tir</h3>
+        <p>Une image de votre position, imprimée dans le noir pendant une fraction de seconde. Tirer, c’est parler.</p>
+      </div>
     </div>
   </section>
 

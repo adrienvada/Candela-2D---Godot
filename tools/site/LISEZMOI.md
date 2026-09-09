@@ -41,3 +41,16 @@ Les liens de téléchargement passent par `releases/latest/download/`, donc ils
 suivent les sorties tout seuls. En revanche le **tampon de version** (`v0.3.1`)
 et sa date sont dans le gabarit : à changer à chaque sortie. La date est là
 exprès — un numéro daté vieillit honnêtement, un numéro nu finit par mentir.
+
+⚠️ **Le tampon est la dernière version PUBLIÉE, pas `config/version` de
+`project.godot`.** Les deux divergent en permanence : le 2026-09-09, le dépôt
+était en 0.4.0 alors que la dernière *release* était la 0.3.1. Recopier
+`project.godot` dans le tampon ferait annoncer une version que le lien ne peut
+pas livrer. La commande qui dit vrai :
+
+```bash
+gh release list --repo adrienvada/Candela-2D---Godot --limit 1
+```
+
+La fiche technique, elle, porte les deux — « publiée » et « en développement »
+— parce que c'est une fiche et que l'écart y est une information.

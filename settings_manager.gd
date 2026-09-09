@@ -66,6 +66,14 @@ const SILENCE_LINEAR := 0.0001
 signal effect_changed(id: String, intensity: float)
 
 var vsync_enabled := false
+
+## DA6.6 — l'intro en planches n'est jouée qu'au PREMIER lancement.
+##
+## Elle est passable à tout moment, mais ça ne suffit pas : une intro qu'il faut
+## passer à chaque fois est une taxe, pas une introduction. Le drapeau est écrit
+## dès qu'elle DÉMARRE, jamais à sa fin — sans quoi un joueur qui ferme le jeu
+## pendant l'intro la reverrait au lancement suivant, et ainsi de suite.
+var intro_vue := false
 var fps_cap := 0
 var resolution_index := 0
 
@@ -115,6 +123,20 @@ func _ready() -> void:
 # ---------------------------------------------------------------------------
 # API publique
 # ---------------------------------------------------------------------------
+
+## Retient que l'intro a été jouée. Appelé à son DÉMARRAGE — voir `intro_vue`.
+func marquer_intro_vue() -> void:
+	if intro_vue:
+		return
+	intro_vue = true
+	_save()
+
+## Refait jouer l'intro au prochain lancement. Pour le menu, et pour les bancs.
+func oublier_intro() -> void:
+	if not intro_vue:
+		return
+	intro_vue = false
+	_save()
 
 func set_vsync(enabled: bool) -> void:
 	vsync_enabled = enabled
@@ -401,6 +423,7 @@ func _load() -> void:
 		return
 
 	vsync_enabled = cfg.get_value(SECTION_VIDEO, "vsync_enabled", false)
+	intro_vue = cfg.get_value(SECTION_DISPLAY, "intro_vue", false)
 	var loaded_cap: int = cfg.get_value(SECTION_VIDEO, "fps_cap", 0)
 	fps_cap = loaded_cap if FPS_CAPS.has(loaded_cap) else 0
 
@@ -451,6 +474,7 @@ static func _sanitize_intensity(value: Variant) -> float:
 func _save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value(SECTION_VIDEO, "vsync_enabled", vsync_enabled)
+	cfg.set_value(SECTION_DISPLAY, "intro_vue", intro_vue)
 	cfg.set_value(SECTION_VIDEO, "fps_cap", fps_cap)
 	if _has_saved_resolution:
 		cfg.set_value(SECTION_DISPLAY, "resolution_index", resolution_index)

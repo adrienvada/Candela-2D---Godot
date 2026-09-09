@@ -439,7 +439,35 @@ func _ready():
 	ui.killcam_overlay.position = Vector2(-10000, -10000)
 	arena.add_child(ui.killcam_overlay)
 	
-	ui.show_main_menu()
+	_ouvrir_sur_intro_ou_menu()
+
+## DA6.6 — l'intro en planches précède le menu, au premier lancement seulement.
+##
+## Le menu n'est PAS monté derrière : il s'affiche quand l'intro rend la main.
+## Sinon le joueur verrait le hub une fraction de seconde avant que les planches
+## le recouvrent, et une introduction qui commence par montrer la fin
+## n'introduit rien.
+##
+## ⚠️ **Le drapeau s'écrit au démarrage de l'intro, pas à sa fin.** Fermer le jeu
+## pendant les quinze secondes la ferait revenir au lancement suivant, et
+## indéfiniment pour qui n'a pas la patience de la voir en entier.
+func _ouvrir_sur_intro_ou_menu() -> void:
+	# ⚠️ `preload` et NON le `class_name` global. Les noms de classe ne sont
+	# résolus qu'après un scan de l'éditeur (`.godot/global_script_class_cache.cfg`,
+	# non versionné) : sur un arbre de travail neuf, un `IntroPlanches.new()` fait
+	# échouer le PARSE de ce fichier, et le jeu ne démarre plus du tout. Mesuré
+	# le 2026-09-09, et invisible pour toute suite qui `preload` elle-même.
+	var Intro := preload("res://intro_planches.gd")
+	if GameSettings.intro_vue or not Intro.disponible():
+		ui.show_main_menu()
+		return
+	GameSettings.marquer_intro_vue()
+	var intro: CanvasLayer = Intro.new()
+	add_child(intro)
+	intro.terminee.connect(func() -> void:
+		ui.show_main_menu()
+		intro.queue_free())
+	intro.jouer()
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que

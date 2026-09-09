@@ -3128,6 +3128,37 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un `class_name` neuf empêche le jeu de démarrer, et aucune suite ne le voit (2026-09-09)
+
+`intro_planches.gd` déclare `class_name IntroPlanches`. `game_state.gd`
+l'appelait par ce nom. **Le jeu ne démarrait plus du tout** :
+
+```
+SCRIPT ERROR: Parse Error: Identifier "IntroPlanches" not declared in the current scope.
+ERROR: Failed to load script "res://game_state.gd" with error "Parse error".
+```
+
+Les noms de classe globaux ne sont résolus que via
+`.godot/global_script_class_cache.cfg`, **écrit par un scan de l'éditeur et non
+versionné**. Sur un arbre de travail neuf — le cas de toute session — le nom
+n'existe pas encore, et le fichier qui l'emploie échoue au *parse*. Pas à
+l'exécution : au parse, donc `game_state.gd` entier ne charge pas.
+
+⚠️ **Et la suite dédiée était VERTE pendant ce temps.** `test_intro_planches.gd`
+fait `preload("res://intro_planches.gd")` — un `preload` résout par le CHEMIN et
+n'a jamais besoin du registre. La suite exerçait donc le script à fond, et
+validait un jeu qui ne démarrait pas. C'est le pire cas de figure : non pas une
+absence de test, mais **un test vert sur du code mort**.
+
+Ce qui l'a trouvé n'est pas une suite mais un lancement :
+`--headless --quit-after 2000`, quinze secondes. À faire après tout ajout de
+fichier référencé depuis un autoload ou depuis `game_state.gd`.
+
+**La règle : entre deux scripts du dépôt, `preload` par le chemin, jamais le
+`class_name`.** Le dépôt le fait déjà partout (`const Charte := preload(...)`) ;
+ce qui manquait, c'était la raison écrite quelque part. La voici.
+
+
 ### « Au moins une suite a échoué » quand aucune suite n'a échoué (2026-09-09)
 
 Le lot peut rendre ce verdict avec **95 verdicts verts et zéro `SCRIPT ERROR`**.
@@ -11451,9 +11482,30 @@ La planche 5 a demandé trois tentatives, et c'était prévu : c'est la seule qu
 doive porter deux informations à la fois. Elle les porte — l'ombre démesurée sur
 le mur de gauche **et** la silhouette unique debout au bout du cône.
 
-**Reste à faire :** câbler les six (douze lignes de dictionnaire), et trancher
-les trois questions ouvertes en fin de `INTRO_PLANCHES.md` — la formule exacte,
-l'anonymat du visage, la cadence sonore.
+✅ **CÂBLÉE le 2026-09-09** — `intro_planches.gd`, plus douze lignes dans
+`menu_artwork.gd` et six dans `menu_particles_ambiance.gd`. Le compte annoncé a
+été tenu : **aucun `EffectMode` neuf**, et `tools/test_intro_planches.gd` le
+vérifie en épinglant la liste des quinze modes préexistants — écrire un effet
+pour six images ferait désormais rougir le lot.
+
+Trois décisions d'implémentation qui ne se devinent pas :
+
+- **N'importe quelle touche passe l'intro** (demande d'Adrien), mais **un
+  mouvement de souris ne la passe pas** : la souris est la torche avec laquelle
+  on éclaire les planches, et la passer en la regardant serait le contraire de
+  ce qui est voulu. Le filtre porte sur les APPUIS — touche, bouton de souris,
+  bouton de manette. Les deux moitiés sont testées.
+- **Le drapeau `intro_vue` s'écrit au DÉMARRAGE de l'intro, pas à sa fin.**
+  Sinon, fermer le jeu pendant les quinze secondes la ferait revenir au
+  lancement suivant, et indéfiniment pour qui n'a pas la patience de la voir en
+  entier. Vérifié de bout en bout : un foyer neuf lancé une fois ressort avec
+  `intro_vue=true` dans `settings.cfg`.
+- **`IntroPlanches.disponible()` garde le démarrage.** Une installation sans les
+  six images ouvre sur le menu, jamais sur quinze secondes de noir.
+
+**Reste à faire :** trancher les trois questions ouvertes en fin de
+`INTRO_PLANCHES.md` — la formule exacte, l'anonymat du visage, la cadence
+sonore. Et juger les six images à l'œil.
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 
@@ -11522,10 +11574,18 @@ l'anonymat du visage, la cadence sonore.
 - **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
   reste trop longtemps sans jouer. *(S, après DA1.6)*
 
-**DA7.5, DA7.6 et DA7.7 sont écartées pour l'instant** (2026-09-09, Adrien).
-L'ordre de marche est : l'intro (DA6.6), puis le presskit (DA7.3), le trailer
-(DA7.2), la capsule (DA7.1) et le site (DA7.4) — les quatre que les images de
-l'intro alimentent.
+**DA7.5, DA7.6, DA7.7 et DA7.1 sont écartées** (2026-09-09, Adrien) — les trois
+premières « pour l'instant », **DA7.1 parce qu'il n'y aura pas de boutique**.
+L'abandon de la boutique se propage : cinq des six champs `À TRANCHER` du
+presskit (éditeur, prix, date, plateformes annoncées, licence) n'ont plus
+d'arbitre à attendre, et `docs/CAPSULE.md` ne décrit plus qu'un travail qui
+n'aura pas lieu. Le document est gardé plutôt que supprimé pour la seule règle
+de composition qu'il a produite, et qui vaut hors boutique : **le noir se
+recadre, un décor ne se recadre pas.**
+
+Reste donc DA7.4 (le site, livré) et DA7.2 (le trailer, bloqué sur l'absence de
+capture vidéo). **La distribution passe par le site et les *releases* GitHub**,
+ce que le bloc de téléchargement de DA7.4 fait déjà.
 
 ⚠️ **Et si les deux premières reviennent un jour, elles reviennent bornées.** La
 charte pose que la couleur PORTE l'information : bleu = soi (convention *blue

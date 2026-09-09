@@ -51,6 +51,14 @@ const POIS: Dictionary = {
 	"ill_creer": Vector2(0.42, 0.65),
 	"ill_rejoindre": Vector2(0.41, 0.35),
 	"ill_retour": Vector2(0.50, 0.50),
+	# DA6.6 — les six planches de l'intro. Le POI est la source de lumière de
+	# la case, pas son centre géométrique : c'est ce point que la torche cherche.
+	"ill_intro_descente": Vector2(0.38, 0.18),
+	"ill_intro_seuil": Vector2(0.55, 0.45),
+	"ill_intro_dotation": Vector2(0.46, 0.62),
+	"ill_intro_allumage": Vector2(0.34, 0.50),
+	"ill_intro_prix": Vector2(0.74, 0.44),
+	"ill_intro_extinction": Vector2(0.50, 0.52),
 }
 
 ## Effets vivants spécifiques par clé d'illustration.
@@ -75,6 +83,14 @@ const EFFECTS: Dictionary = {
 	"ill_creer": EffectMode.FLARE_SMOKE_LINE,
 	"ill_rejoindre": EffectMode.BEACON_LINE,
 	"ill_retour": EffectMode.ABYSS_VORTEX,
+	# DA6.6 — aucun mode neuf, délibérément : un effet taillé pour six images
+	# vues quinze secondes serait du code que personne ne rejuge jamais.
+	"ill_intro_descente": EffectMode.FLICKER_DUST,
+	"ill_intro_seuil": EffectMode.ABYSS_VORTEX,
+	"ill_intro_dotation": EffectMode.BREATHING_HALO,
+	"ill_intro_allumage": EffectMode.VAULT_BEAMS,
+	"ill_intro_prix": EffectMode.HEARTBEAT_FLARE,
+	"ill_intro_extinction": EffectMode.DYING_EMBER,
 }
 
 ## Déduit la clé canonique à partir d'un chemin d'asset ou d'une clé brute.
