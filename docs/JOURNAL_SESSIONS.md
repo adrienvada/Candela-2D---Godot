@@ -2701,3 +2701,43 @@ une fois rétabli.
 seulement « Expected variable name after "var" ») ; et `make_panel_style()` pose
 déjà GAP_M de marge intérieure — un `MarginContainer` par-dessus double la
 respiration et ne laisse que 40 px d'image dans une vignette de 88.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 10, poser un gadget)
+
+**Le bit circulait depuis l'étape 4, les nœuds existaient depuis la 5, et rien ne
+posait quoi que ce soit.** C'est fait : le voile du Spectre et l'ombre habitée de
+l'Occulteur se plantent devant le poseur, occultent, et s'abattent à la balle.
+Même autorité que la fusée, mot pour mot — bit dans la commande numérotée, front
+détecté par l'hôte, aucune prédiction client, désarmement porté par le cooldown
+de tir existant donc non répliqué.
+
+**⚠️ On compte les poses, on ne décompte pas un stock.** Un « restant » se sème à
+l'ouverture de la manche ; or la fenêtre de choix d'un match apparié s'ouvre
+*après* `_do_start_round` et change l'arme équipée. Un stock semé avant le choix
+aurait donné à qui change de classe le stock de la classe quittée — sans erreur,
+et invisible tant que les deux en ont autant. Trouvé en écrivant le code, pas en
+jouant.
+
+**Deux mesures prises en capture** : `PORTEE_POSE` passe de 44 à 96 px (à 44, le
+voile coupe le faisceau au ras du canon — on s'aveugle soi-même) ; et
+l'occultation a été constatée à l'image, le cône de torche s'arrêtant net sur une
+arête verticale.
+
+**⚠️ Renversement assumé d'une décision de l'étape 5** : ces deux gadgets sont
+**dessinés**, ils n'attendent plus de sprite. La note de tête de `gadget_voile.gd`
+dit depuis le premier jour qu'une bâche vue de dessus *est* une ligne et qu'un
+sprite lisible serait un défaut de conception ; peindre une image pour obtenir
+deux segments serait payer un asset pour rien, et livrer une pose qui n'affiche
+rien serait livrer une touche morte. La règle du dépôt tient toujours, et
+`gadget_base.gd` l'écrit : ce qui reste interdit est de dessiner *en attendant*
+un sprite. **Adrien : ces deux-là sortent donc de ta liste d'assets à générer.**
+
+**`GadgetProfile.scene` devient `implementation`** — ces nœuds se montent en code
+comme la fusée, il n'y a pas de `.tscn` à charger et il n'y en aura pas.
+
+**`Protocol.VERSION` passe à 12** — `rpc_spawn_gadget` apparaît. Signalé par le
+témoin du fil, cinquième fois du chantier. Ce qui rend la rupture coûteuse est ce
+qu'elle laisse derrière : l'hôte aurait un occluder que le client n'a pas, donc
+la lumière traverserait chez l'un une bâche opaque chez l'autre.
+
+**Sabotage de contrôle** : décompte neutralisé → trois ✗ francs, verts au retour.

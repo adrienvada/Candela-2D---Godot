@@ -71,7 +71,9 @@ func _run() -> void:
 	# ne peut pas échouer est pire qu'un garde-fou absent — on le croit tenu.
 	await _test_socle_gadgets()
 	_test_lecture_de_l_arme()
+	_test_cablage_pose()
 	await _test_ecran_de_classes()
+	await _test_pose_de_gadget()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -228,9 +230,9 @@ func _test_gadget() -> void:
 	g.slug = "voile"
 	g.libelle = "Le voile"
 
-	_check("sans scène, le gadget n'est pas livré", not g.est_livre())
-	g.scene = "res://gadget_voile.tscn"
-	_check("avec une scène, le gadget est livré", g.est_livre())
+	_check("sans implémentation, le gadget n'est pas livré", not g.est_livre())
+	g.implementation = "res://gadget_voile.gd"
+	_check("avec une implémentation, le gadget est livré", g.est_livre())
 
 	_check("le sprite se dérive du slug",
 		g.chemin_sprite() == "res://assets/sprites/gadget_voile.png", g.chemin_sprite())
@@ -679,3 +681,115 @@ func _test_lecture_de_l_arme() -> void:
 		if ligne.strip_edges().begins_with("") and ligne.contains(".description = \""):
 			lignes += 1
 	_check("les dix classes portent une description", lignes == 10, str(lignes))
+
+
+## Le câblage de la POSE, en texte — chantier CLASSES, étape 10.
+##
+## Aucune suite ne joue de manche complète : les sept lignes qui font exister la
+## pose pourraient être défaites une à une sans qu'une seule rougisse. Même
+## raison que pour le root, et même remède.
+func _test_cablage_pose() -> void:
+	print("\n[Le câblage de la pose de gadget]")
+	var pl := FileAccess.get_file_as_string("res://player.gd")
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+
+	_check("player.gd lit le bit de gadget", pl.contains("is_gadget_pressed()"))
+	_check("il ne réagit qu'au FRONT montant", pl.contains("_gadget_pressee"))
+	_check("il appelle poser_gadget()", pl.contains("poser_gadget()"))
+	_check("la pose désarme, par le cooldown de tir",
+		pl.contains("GadgetProfile.DESARMEMENT"))
+	_check("l'arbitrage part chez game_state",
+		pl.contains('call_group("game_state", "spawn_gadget"'))
+
+	# ⚠️ Le contrôle qui protège l'autorité. Sans ce retour anticipé, le client
+	# poserait son propre gadget EN PLUS de celui que l'hôte spawne pour lui —
+	# deux objets là où le joueur en a posé un, et seulement chez lui.
+	_check("le client ne spawne rien de lui-même",
+		gs.contains("if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:\n\t\treturn\n\tvar pid: int = poseur.player_id"))
+	_check("le RPC est autoritaire, local et fiable",
+		gs.contains('@rpc("authority", "call_local", "reliable")\nfunc rpc_spawn_gadget'))
+	# Un nom auto-généré diverge entre machines et les RPC de scène sont alors
+	# jetés SANS erreur console — trois manches d'instrumentation en 2026-08-16.
+	_check("le nœud posé porte un nom explicite et unique",
+		gs.contains('g.name = "GadgetJ%d_%d"'))
+	# La position finale voyage : elle ne se recalcule pas chez le client, sous
+	# peine de deux mondes qui pourraient répondre différemment à la même requête.
+	_check("la position rectifiée voyage dans le RPC",
+		gs.contains("rpc_spawn_gadget.rpc(pid, point,"))
+	_check("le plafond se relit au lieu de se semer",
+		gs.contains("_gadgets_poses_par") and not gs.contains("_gadgets_restants"))
+
+
+## La pose, éprouvée sur une vraie manche — chantier CLASSES, étape 10.
+func _test_pose_de_gadget() -> void:
+	print("\n[Poser un gadget]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# Le Spectre est la classe dont le gadget est écrit : le voile.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(9))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+
+	_check("avec une classe dont le gadget est écrit, la pose est possible",
+		gs.gadget_disponible(0))
+
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var poses: Array = []
+	for c in gs.bullet_container.get_children():
+		if c is GadgetBase:
+			poses.append(c)
+	_check("un gadget est apparu", poses.size() == 1, str(poses.size()))
+
+	if poses.size() == 1:
+		var g = poses[0]
+		_check("c'est le voile du Spectre", g is GadgetVoile)
+		_check("son nom est explicite", String(g.name) == "GadgetJ1_1", String(g.name))
+		_check("il connaît son poseur", g.poseur_id == 0)
+		# ⚠️ DEVANT, jamais sous les pieds : un objet posé à l'endroit exact où
+		# l'on se tient se confondrait avec le joueur — y compris dans l'ombre
+		# qu'il découpe, qui est justement ce que ce gadget fabrique.
+		var ecart: float = g.global_position.distance_to(gs.p1.global_position)
+		_check("il est planté devant le poseur",
+			is_equal_approx(ecart, GadgetBase.PORTEE_POSE), "%.1f px" % ecart)
+		# En travers du regard : une bâche dans l'axe où l'on vise ne masque rien.
+		_check("il est en travers du regard",
+			is_equal_approx(g.rotation, PI / 2.0), str(g.rotation))
+		_check("il porte un visuel — la pose se VOIT",
+			g.get_node_or_null("Visuel") != null)
+
+	# Le stock : une charge par manche, et le compteur la retient.
+	_check("la charge est consommée", not gs.gadget_disponible(0))
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+	var apres := 0
+	for c in gs.bullet_container.get_children():
+		if c is GadgetBase:
+			apres += 1
+	_check("un second appui ne pose rien", apres == 1, str(apres))
+
+	# ⚠️ Une classe dont le gadget n'est PAS écrit ne pose rien et ne crie pas :
+	# le bouton reste sans effet, ce qui est la vérité. Un gadget générique posé
+	# à la place se prendrait pour une intention.
+	gs.p1.equip_weapon(gs.weapon_for_index(0))
+	gs._gadgets_poses_par.fill(0)
+	_check("une classe sans gadget écrit ne peut rien poser",
+		not gs.gadget_disponible(0))
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+	var final := 0
+	for c in gs.bullet_container.get_children():
+		if c is GadgetBase:
+			final += 1
+	_check("et rien n'apparaît", final == 1, str(final))
+
+	gs.queue_free()
+	await process_frame

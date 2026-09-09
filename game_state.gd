@@ -1252,6 +1252,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# Le stock de fusées repart avec la manche — exécuté chez les deux pairs,
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
 	_fusees_restantes = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
+	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
+	_gadgets_poses_par = [0, 0]
 	_purger_fusees_killcam()
 	# FU5 — le piétinement ne doit rien hériter de la manche précédente : un
 	# joueur déjà immobile au dernier « FIGHT ! » ne doit pas repartir avec
@@ -1862,6 +1865,162 @@ func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	f.shooter_id = shooter_id
 	f.joueurs = [p1, p2]
 	bullet_container.add_child(f)
+
+# ---------------------------------------------------------------------------
+# LES GADGETS DE CLASSE — chantier CLASSES, étape 10
+#
+# Même autorité que la fusée, et pour la même raison : le bit de pose voyage
+# dans la commande numérotée, l'hôte en détecte le front en simulant P2, et
+# c'est lui qui spawne pour tout le monde. **Aucune prédiction client** — un
+# objet posé, immobile, à une charge par manche, tolère un demi-RTT ; le tir
+# non.
+#
+# ⚠️ **La POSITION FINALE voyage dans le RPC, elle ne se recalcule pas.** Le
+# gadget se plante devant le poseur, et « devant » peut tomber dans un mur : la
+# rectification demande une requête de physique, donc l'état de la carte, donc
+# deux mondes qui pourraient répondre différemment. L'hôte tranche une fois et
+# envoie le point. C'est plus court que le raisonnement qui justifierait de
+# refaire le calcul des deux côtés, et ça ne peut pas diverger.
+# ---------------------------------------------------------------------------
+
+## Gadgets déjà posés par joueur dans la manche en cours.
+##
+## ⚠️ **On compte les poses, on ne décompte pas un stock — et la nuance a une
+## cause précise.** Un « restant » se sème à l'ouverture de la manche ; or la
+## fenêtre de choix d'un match apparié s'ouvre AVEC le décompte, donc *après*
+## `_do_start_round`, et `pick_countdown_weapon()` change l'arme équipée pendant
+## ces dix secondes. Un stock semé avant le choix aurait donné à qui change de
+## classe le stock de la classe qu'il vient de quitter — sans erreur, et
+## invisible tant que les deux classes en ont autant.
+##
+## En comptant les poses, le plafond se relit à chaque appui sur la classe
+## RÉELLEMENT équipée. Il n'y a plus rien à resemer.
+var _gadgets_poses_par: Array[int] = [0, 0]
+
+## Compteur de poses, pour donner un nom UNIQUE à chaque nœud.
+##
+## ⚠️ Ce n'est pas du rangement : un RPC de scène se route par le chemin du nœud,
+## et un nom auto-généré diverge entre machines — les RPC sont alors jetés sans
+## aucune erreur console. Le compteur voyage dans le RPC, comme la graine de la
+## fusée, pour que les deux pairs nomment le même objet pareil.
+var _gadgets_poses: int = 0
+
+
+## Le stock de gadgets que la classe d'un joueur lui donne, 0 si elle n'en a pas
+## ou si son gadget n'est pas encore écrit.
+func _stock_gadget(joueur: Node) -> int:
+	if joueur == null:
+		return 0
+	var classe := joueur.current_weapon as ClassData
+	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
+		return 0
+	return maxi(0, classe.gadget.stock)
+
+
+## Ce joueur peut-il poser un gadget maintenant ?
+##
+## ⚠️ **Illimité en bac à sable, comme la fusée.** L'entraînement sert à éprouver
+## un geste ; le rationner y transformerait l'essai en attente.
+func gadget_disponible(pid: int) -> bool:
+	if pid < 0 or pid >= _gadgets_poses_par.size():
+		return false
+	var stock := _stock_gadget(p1 if pid == 0 else p2)
+	if stock <= 0:
+		return false
+	if sandbox_mode:
+		return true
+	return _gadgets_poses_par[pid] < stock
+
+
+## [Hôte] Le joueur pose son gadget. Le client ne demande rien : son appui est
+## déjà dans sa commande numérotée.
+func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	var pid: int = poseur.player_id
+	if not gadget_disponible(pid):
+		return
+	var classe := poseur.current_weapon as ClassData
+	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
+		return
+
+	_gadgets_poses += 1
+	var point := _point_de_pose(pos, rot)
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_spawn_gadget.rpc(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+	else:
+		_do_spawn_gadget(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+
+
+## Où le gadget se plante réellement : devant le poseur, ramené en deçà du
+## premier mur rencontré.
+##
+## Sans cette rectification, un joueur dos au mur planterait son gadget DANS la
+## pierre : le nœud existerait, son occluder aussi, et rien à l'écran ne dirait
+## pourquoi la manche vient de consommer une charge sans rien produire.
+func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
+	var direction := Vector2(cos(rot), sin(rot))
+	var cible := depuis + direction * GadgetBase.PORTEE_POSE
+	# ⚠️ `p1.get_world_2d()` et non `get_world_2d()` : `GameState` étend `Node`,
+	# il n'a pas de monde 2D à lui. C'est la forme que les deux autres requêtes de
+	# ce fichier emploient déjà.
+	if p1 == null:
+		return cible
+	var espace := p1.get_world_2d().direct_space_state
+	if espace == null:
+		return cible
+	var requete := PhysicsRayQueryParameters2D.create(depuis, cible)
+	requete.collision_mask = MapGeometry.WALL_LAYER
+	requete.collide_with_areas = false
+	var touche := espace.intersect_ray(requete)
+	if touche.is_empty():
+		return cible
+	# Une marge, sinon le gadget naît exactement sur la surface et son occluder
+	# se confond avec celui du mur.
+	return Vector2(touche["position"]) - direction * 6.0
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
+	_do_spawn_gadget(pid, pos, rot, slug, numero)
+
+
+func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	var chemin := String(IMPLEMENTATIONS.get(slug, ""))
+	if chemin.is_empty():
+		# ⚠️ On CRIE, on ne se rabat pas. Poser un gadget générique à la place
+		# d'un gadget inconnu donnerait un objet plausible — et un objet plausible
+		# se prend pour une intention.
+		push_error("GameState : gadget « %s » sans implémentation" % slug)
+		return
+	var script: GDScript = load(chemin)
+	if script == null:
+		push_error("GameState : implémentation illisible — %s" % chemin)
+		return
+	var g: GadgetBase = script.new()
+	g.name = "GadgetJ%d_%d" % [pid + 1, numero]
+	g.poseur_id = pid
+	g.global_position = pos
+	# `angle_pose` est posé par le constructeur de la sous-classe : on lit donc
+	# l'objet, on ne redit pas ici ce qu'il sait déjà de lui-même.
+	g.rotation = rot + g.angle_pose
+	var classe := (p1 if pid == 0 else p2).current_weapon as ClassData
+	if classe != null and classe.gadget != null:
+		# Le drapeau d'éblouissement et la durée de vie viennent du PROFIL, par
+		# instance — décision d'Adrien du 2026-09-09 : on doit pouvoir éteindre
+		# l'éblouissement d'un gadget sans toucher aux autres.
+		g.eblouit = classe.gadget.eblouit
+		g.duree_vie = classe.gadget.duree_vie
+	# Le même conteneur que les balles et les fusées : c'est lui que la manche
+	# purge, et le rejoindre suffit donc à ne pas survivre à la manche.
+	bullet_container.add_child(g)
+	if pid >= 0 and pid < _gadgets_poses_par.size():
+		_gadgets_poses_par[pid] += 1
+
 
 ## La killcam reconstruit les fusées depuis les instantanés — un événement de
 ## lancer ne suffirait pas : la fusée vit ~20 s, le tampon de rejeu 7,5.
@@ -2899,11 +3058,25 @@ func _fusees(stock: int, periode: float) -> FlareProfile:
 	return f
 
 
+## Les gadgets DÉJÀ ÉCRITS, par slug. Les autres n'ont pas d'entrée, donc pas
+## d'implémentation, donc `est_livre()` rend faux et la touche ne pose rien.
+##
+## ⚠️ **Une table, et non un argument de plus à `_gadget()`.** Écrire le chemin à
+## la main sur chaque ligne du catalogue en ferait dix occasions de se tromper de
+## slug — et un chemin qui ne correspond pas au slug est exactement le genre
+## d'erreur que ce dépôt paie en silence : le gadget d'une classe se poserait
+## sous le nom d'une autre.
+const IMPLEMENTATIONS := {
+	"voile": "res://gadget_voile.gd",
+	"ombre_habitee": "res://gadget_ombre.gd",
+}
+
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
 	var g := GadgetProfile.new()
 	g.slug = slug
 	g.libelle = libelle
 	g.eblouit = eblouit
+	g.implementation = String(IMPLEMENTATIONS.get(slug, ""))
 	return g
 
 

@@ -1762,6 +1762,24 @@ func _physics_process(delta):
 		lancer_fusee()
 		_fusee_pressee = true
 
+	# La pose de gadget suit EXACTEMENT le même patron, et c'est délibéré : deux
+	# gestes qui font la même chose — un bit maintenu, un front, un désarmement
+	# porté par le cooldown de tir, un arbitrage chez l'hôte — doivent s'écrire
+	# pareil, sinon l'un des deux dérivera.
+	#
+	# ⚠️ L'ordre compte : le gadget est examiné APRÈS la fusée. Les deux touches
+	# tenues ensemble, la fusée part d'abord et arme le cooldown, donc le gadget
+	# attend le tick suivant. Jamais les deux dans la même image — et l'ordre est
+	# le même chez l'hôte et dans la prédiction du client, puisque c'est ce bloc
+	# qui tourne des deux côtés.
+	var gadget_presse := input_provider.is_gadget_pressed()
+	if not gadget_presse:
+		_gadget_pressee = false
+	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
+			and state and state.gadget_disponible(player_id):
+		poser_gadget()
+		_gadget_pressee = true
+
 ## V4.4 — presser la détente pendant le rechargement ne produisait RIEN.
 ##
 ## Ni son, ni image, ni vibration : le joueur ne pouvait pas distinguer « j'ai
@@ -1791,6 +1809,8 @@ var tir_a_sec: float = 0.0
 var _detente_pressee: bool = false
 ## Même chose pour le bouton de fusée.
 var _fusee_pressee: bool = false
+## Et pour celui du gadget.
+var _gadget_pressee: bool = false
 
 func shoot():
 	if current_weapon == null: return
@@ -1834,6 +1854,18 @@ func shoot():
 func lancer_fusee():
 	shoot_cooldown = maxf(shoot_cooldown, FuseeModele.DESARMEMENT)
 	get_tree().call_group("game_state", "spawn_fusee", self, global_position, rotation)
+
+## Poser un gadget désarme aussi : on a les mains prises. Même mécanique que le
+## lancer de fusée — cooldown de tir non répliqué, arbitrage du stock et spawn
+## chez `game_state`.
+##
+## ⚠️ **La position envoyée est celle du JOUEUR, pas celle du gadget.** C'est
+## l'hôte qui décide où l'objet se plante réellement — il faut une requête de
+## physique pour ne pas le planter dans un mur, et deux mondes pourraient y
+## répondre différemment. Voir `GameState._point_de_pose()`.
+func poser_gadget():
+	shoot_cooldown = maxf(shoot_cooldown, GadgetProfile.DESARMEMENT)
+	get_tree().call_group("game_state", "spawn_gadget", self, global_position, rotation)
 
 # ---------------------------------------------------------------------------
 # V1.5 — Retour haptique. Quatre signaux : tir (fort, bref), impact reçu

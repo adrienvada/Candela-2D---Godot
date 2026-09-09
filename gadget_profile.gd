@@ -33,10 +33,28 @@ extends Resource
 ## renomme, l'autre nomme des fichiers.
 @export var libelle: String = ""
 
-## Chemin de la `PackedScene`. Vide tant que le gadget n'est pas écrit — ce qui
-## est l'état normal des premières étapes, et qui doit se voir plutôt que se
-## deviner. `est_livre()` répond à la question.
-@export var scene: String = ""
+## Chemin du **script** du nœud posé. Vide tant que le gadget n'est pas écrit —
+## ce qui est l'état normal des premières étapes, et qui doit se voir plutôt que
+## se deviner. `est_livre()` répond à la question.
+##
+## ⚠️ **Un script, pas une `PackedScene`, et ce champ s'appelait `scene`.** Les
+## gadgets se montent en code comme la fusée (`Fusee.new()`, puis les champs, puis
+## `add_child`) — il n'y a pas de `.tscn` à charger, et il n'y en aura pas : une
+## scène pour un `StaticBody2D` dont tous les enfants sont créés par `_ready()`
+## n'aurait rien à décrire. Le nom `scene` promettait un fichier qui n'existe pas.
+@export var implementation: String = ""
+
+## Le désarmement qui suit la pose, en secondes.
+##
+## Même geste que `FuseeModele.DESARMEMENT` et pour la même raison : poser un
+## objet occupe les mains. Il passe par le **cooldown de tir existant**, donc il
+## n'est pas répliqué — il est simulé à l'identique chez l'hôte et dans la
+## prédiction du client, comme le tir lui-même.
+##
+## ⚠️ **Constant, et non réglable par gadget.** Dix désarmements différents ne se
+## distingueraient pas à la main tout en rendant chaque gadget incomparable —
+## c'est l'argument qui a déjà fixé `RootProfile.RECUPERATION`.
+const DESARMEMENT := 0.30
 
 ## Combien on peut en poser par manche.
 @export var stock: int = 1
@@ -60,7 +78,7 @@ extends Resource
 ## pas ; c'est la règle « câbler, taire, diagnostiquer » du dépôt, et c'est
 ## l'appelant qui doit crier, pas ce fichier qui doit inventer.
 func est_livre() -> bool:
-	return not scene.is_empty()
+	return not implementation.is_empty()
 
 
 ## Le chemin du sprite du gadget posé, dérivé du slug — une seule vérité.

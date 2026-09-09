@@ -14364,13 +14364,92 @@ Ce qui se mérite reste ce qui se mérite : la table compétitive ne bouge pas.
   côtés. Un `MarginContainer` par-dessus double la respiration ; et sur une
   vignette de 88 px, il ne laisserait que 40 px d'image.
 
+### Étape 10 — poser un gadget ✅
+
+Le bit circulait depuis l'étape 4, `GadgetBase` et ses deux sous-classes
+existaient depuis la 5, et **rien ne posait quoi que ce soit dans le monde.**
+C'est fait : le voile du Spectre et l'ombre habitée de l'Occulteur se plantent,
+occultent, et se laissent abattre.
+
+**Même autorité que la fusée, mot pour mot** : le bit voyage dans la commande
+numérotée, l'hôte détecte le front en simulant P2, et c'est lui qui spawne pour
+tout le monde. Aucune prédiction client — un objet posé, immobile, à une charge
+par manche, tolère un demi-RTT ; le tir non. Le désarmement (0,30 s) passe par le
+cooldown de tir existant, donc il n'est pas répliqué : il est simulé à l'identique
+des deux côtés, comme le tir lui-même.
+
+⚠️ **La position finale voyage dans le RPC.** Le gadget se plante devant le
+poseur, et « devant » peut tomber dans un mur ; la rectification demande une
+requête de physique, donc l'état de la carte, donc deux mondes qui pourraient
+répondre différemment. L'hôte tranche une fois et envoie le point.
+
+#### On compte les poses, on ne décompte pas un stock
+
+Un « restant » se sème à l'ouverture de la manche. Or la fenêtre de choix d'un
+match apparié s'ouvre **avec le décompte**, donc *après* `_do_start_round`, et
+`pick_countdown_weapon()` change l'arme équipée pendant ces dix secondes. Un
+stock semé avant le choix aurait donné à qui change de classe le stock de la
+classe qu'il vient de quitter — **sans erreur, et invisible tant que les deux
+classes en ont autant.** En comptant les poses, le plafond se relit à chaque
+appui sur la classe réellement équipée, et il n'y a plus rien à resemer.
+
+#### Deux mesures prises en capture, pas au jugé
+
+- **`PORTEE_POSE` vaut 96 px, et la première valeur était 44.** Vérifié torche
+  allumée : à 44 le voile coupe le faisceau au ras du canon — le poseur
+  s'aveugle et l'objet cesse d'être un écran pour devenir un mur qu'on se prend.
+  À 96, la bâche tombe hors du premier pas et masque ce qu'il y a derrière elle.
+- **L'occultation fonctionne**, constaté à l'image : le cône de torche s'arrête
+  net sur une arête verticale et tout ce qui est au-delà est noir.
+
+#### Un renversement assumé : ces deux gadgets sont DESSINÉS
+
+L'étape 5 les faisait crier « sprite absent » et ne rien montrer. Cette décision
+supposait qu'une planche viendrait ; la note de tête de `gadget_voile.gd` dit
+l'inverse depuis le premier jour — *« vue strictement de dessus, une bâche
+verticale est une ligne »*, *« un sprite bien lisible de dessus serait un défaut
+de conception »*. Peindre une image pour obtenir deux segments serait payer un
+asset pour rien, et livrer une pose qui n'affiche rien serait livrer une touche
+morte.
+
+Ce n'est donc pas un repli en attendant mieux, et la règle du dépôt tient
+toujours : **ce qui reste interdit est de dessiner *en attendant* un sprite.**
+`gadget_base.gd` porte désormais les deux voies légitimes et leur condition —
+que le choix soit écrit.
+
+⚠️ `GadgetProfile.scene` devient `implementation` : ces nœuds se montent en code
+comme la fusée, il n'y a pas de `.tscn` à charger et il n'y en aura pas. Le nom
+promettait un fichier qui n'existe pas.
+
+#### `Protocol.VERSION` passe à 12
+
+`rpc_spawn_gadget` apparaît : même famille que la v9, un hôte appelle un nom que
+l'ancien client n'a jamais entendu. Ce qui rend cette rupture coûteuse est ce
+qu'elle laisse derrière — **l'hôte aurait un occluder que le client n'a pas.** Le
+client verrait la lumière traverser une bâche que l'hôte considère opaque, et
+chacun jouerait sa propre carte sans qu'une ligne d'erreur ne le dise. Le témoin
+du fil l'a signalé avant qu'on y pense, pour la cinquième fois du chantier.
+
+#### Ce que les contrôles tiennent
+
+Dix contrôles textuels sur le câblage — même raison que pour le root, *le lot ne
+rend rien, donc rien n'aurait vu un décâblage* —, et une section qui monte une
+vraie manche : le gadget apparaît, porte un nom explicite, se plante devant le
+poseur en travers de son regard, consomme sa charge, et une classe dont le gadget
+n'est pas écrit ne pose rien **sans crier** (le bouton reste sans effet, ce qui
+est la vérité). Sabotage vérifié en neutralisant le décompte : trois ✗ francs.
+
 ### Ce qui reste, dans l'ordre
 
-Étape 3 la purge des armes codées en dur et la table,
-4 la touche et le fil (`Protocol.VERSION` 9 → 10), 5 `GadgetBase` et les deux
-occluders avec la mesure de cadence immédiate, 6 l'éblouissement généralisé,
-7 les lumières posées, 8 les volumes, 9 le sol qui écrit, 10 le leurre,
-11 le grésillement, 12 les fusées par classe, 13 l'interface et la clôture.
+**Fait** : le socle de données, le root, la purge des armes en dur, la touche et
+le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
+assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
+
+**Reste** : les lumières posées (torche fantôme, mine au magnésium, nappe de
+braises), les volumes (suie, poussière), le sol qui écrit (poudre de contact),
+le leurre, le grésillement, les fusées par classe (stock et recharge), et
+l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
+clé `classe` existante, qui veut dire « classé »).
 
 ⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
 La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit

@@ -56,6 +56,33 @@ var duree_vie: float = 0.0
 ## `_ready()`.
 var rayon: float = 12.0
 
+## L'angle du gadget posé, RELATIF à la direction de visée du poseur.
+##
+## Un quart de tour par défaut : on plante l'objet **en travers** de son regard,
+## pas dans son axe. C'est ce qui compte pour les deux gadgets de la famille A —
+## une bâche dans l'axe du regard ne masque rien, et une plaque vue par la
+## tranche ne projette pas de torse.
+##
+## ⚠️ **Une variable et non une constante** : les gadgets à symétrie de
+## révolution qui viendront — mine, nappe de braises — la mettront à zéro, et
+## une constante ne se surcharge pas.
+var angle_pose: float = PI / 2.0
+
+## À quelle distance du poseur le gadget se plante, en pixels.
+##
+## Devant, jamais sous les pieds : un objet posé à l'endroit exact où l'on se
+## tient se confondrait avec le joueur pour toute la durée de la manche — y
+## compris dans l'ombre qu'il découpe, qui est précisément l'information que ces
+## deux gadgets fabriquent.
+##
+## ⚠️ **96 px, et la première valeur était 44.** Vérifié en capture, torche
+## allumée : à 44 px le voile coupe le faisceau au ras du canon — le poseur
+## s'aveugle lui-même et l'objet n'est plus un écran, c'est un mur qu'on se
+## prend. À 96, soit une longueur et demie de corps, la bâche tombe hors du
+## premier pas et masque ce qu'il y a DERRIÈRE elle, qui est ce qu'on lui
+## demande. Le chiffre est une mesure, pas un goût.
+const PORTEE_POSE := 96.0
+
 var _age: float = 0.0
 
 signal detruit(gadget: GadgetBase)
@@ -110,7 +137,13 @@ func _monter_occluder() -> void:
 ## redonnerait un objet crédible, et un objet crédible se prend pour une
 ## intention — c'est la règle « câbler, taire, diagnostiquer » du dépôt, la même
 ## qui fait crier `WeaponData.get_torch_texture()` plutôt que fabriquer un
-## dégradé. Les sous-classes chargent leur sprite et crient s'il manque.
+## dégradé.
+##
+## Chaque sous-classe décide donc de son visuel, et les deux façons sont
+## légitimes tant que le choix est ÉCRIT : charger un sprite et crier s'il manque,
+## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — c'est le
+## cas du voile et de l'ombre habitée, qui sont des lignes vues de dessus. Ce qui
+## reste interdit est le troisième chemin : dessiner *en attendant* un sprite.
 func _monter_visuel() -> void:
 	pass
 

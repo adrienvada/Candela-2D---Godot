@@ -72,7 +72,14 @@ class_name Protocol
 ##      cible contre un angle : rien ne casse à la lecture, les deux jeux
 ##      s'entendent, et chacun équipe une classe différente. Le pire défaut du
 ##      netcode est celui qui ne lève rien.
-const VERSION := 11
+## 12 — `rpc_spawn_gadget` apparaît (chantier CLASSES, étape 10, 2026-09-09).
+##      Même famille que la v9 : un hôte v12 appelle un nom qu'un client v11 n'a
+##      jamais entendu. Ce qui rend cette rupture-là coûteuse est ce qu'elle
+##      laisse derrière — **l'hôte aurait un occluder que le client n'a pas.**
+##      Le client verrait donc la lumière traverser une bâche que l'hôte
+##      considère opaque, et chacun jouerait sa propre carte sans qu'une seule
+##      ligne d'erreur ne le dise.
+const VERSION := 12
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -80,7 +87,7 @@ const VERSION := 11
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "97575f1880edfab3"
+const WIRE_WITNESS := "2f831388eff58a67"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est
