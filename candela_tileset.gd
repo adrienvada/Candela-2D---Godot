@@ -118,45 +118,15 @@ static func _generer_dalle_beton(img: Image, oy: int, bg: Color, border: Color,
 			img.set_pixel(fx, fy, c)
 
 
-## Dessine la tuile de mur d'atelier : liséré halogène franc, intérieur sombre
-## avec rivets d'acier et cornières de caisse industrielle.
+## Dessine la tuile de mur d'atelier : liséré halogène franc et intérieur en noir d'encre pur.
 static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
 	var wall_bg     := Charte.NOIR
 	var wall_border := Charte.HALOGENE
-	var acier_discret := Charte.LINE * 0.65
-	var rivet_color   := Charte.ACIER * 0.40
 
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			var on_outer_edge := (x <= 1 or x >= TILE_SIZE.x - 2 or y <= 1 or y >= TILE_SIZE.y - 2)
-			if on_outer_edge:
-				img.set_pixel(ox + x, oy + y, wall_border)
-			else:
-				img.set_pixel(ox + x, oy + y, wall_bg)
-
-	# Cornières intérieures à 4 px du bord extérieur
-	for y in range(4, TILE_SIZE.y - 4):
-		img.set_pixel(ox + 4, oy + y, acier_discret)
-		img.set_pixel(ox + TILE_SIZE.x - 5, oy + y, acier_discret)
-	for x in range(4, TILE_SIZE.x - 4):
-		img.set_pixel(ox + x, oy + 4, acier_discret)
-		img.set_pixel(ox + x, oy + TILE_SIZE.y - 5, acier_discret)
-
-	# 4 rivets d'acier d'atelier aux 4 angles de la cornière
-	var rivets := [
-		Vector2i(5, 5),
-		Vector2i(TILE_SIZE.x - 6, 5),
-		Vector2i(5, TILE_SIZE.y - 6),
-		Vector2i(TILE_SIZE.x - 6, TILE_SIZE.y - 6)
-	]
-	for r in rivets:
-		img.set_pixel(ox + r.x, oy + r.y, rivet_color)
-
-	# Fines traverses diagonales en croix d'armature sombre
-	for d in range(6, TILE_SIZE.x - 6):
-		if d % 2 == 0:
-			img.set_pixel(ox + d, oy + d, Charte.LINE * 0.35)
-			img.set_pixel(ox + d, oy + (TILE_SIZE.y - 1 - d), Charte.LINE * 0.35)
+			img.set_pixel(ox + x, oy + y, wall_border if on_outer_edge else wall_bg)
 
 ## Charge une tuile peinte, ou rend `null` si elle n'a pas été cuite ou importée.
 static func _tuile_peinte(chemin: String) -> Image:
