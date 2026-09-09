@@ -3153,6 +3153,44 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un masque juste, d'une couleur fausse — publié (2026-09-09)
+
+**Les seize silhouettes de marche étaient NOIRES.** Elles ont été publiées ainsi
+jusqu'en v0.4.1 incluse, et l'effet est le contraire de la mécanique du jeu :
+`Polygon2D.color` MULTIPLIE la texture, un RVB nul multiplie tout à zéro, et
+`player_enemy_light.gdshader` en tire alors `LIGHT = vec4(0.0)`. **L'adversaire
+devenait donc noir — invisible — PENDANT QU'IL MARCHAIT**, et redevenait gris
+dès qu'il s'arrêtait. Dans un duel dont toute l'information est la lumière,
+bouger rendait moins repérable qu'être immobile.
+
+Le contrat était pourtant écrit, au-dessus de `SPRITES` dans `player.gd` : « la
+silhouette **blanche** pour la vue adverse et pour les révélations, parce que
+`Polygon2D.color` MULTIPLIE la texture ». Les quatre silhouettes STATIQUES le
+respectent (255,255,255). Les seize de marche ne l'ont jamais respecté.
+
+⚠️ **Ce qui rend le cas instructif, c'est que `test_planche_marche` existait,
+qu'il avait cent contrôles, et qu'il ne pouvait pas l'attraper.** Il compare les
+MASQUES — donc les canaux alpha — et ceux-là s'accordaient au pixel près. La
+COULEUR n'était regardée nulle part. Le commit de régénération (`77466a7`)
+annonce d'ailleurs « silhouettes accordées au pixel près » en toute bonne foi :
+c'était vrai, et insuffisant.
+
+**La règle : un masque a deux propriétés indépendantes — sa FORME et sa VALEUR.**
+Vérifier l'une ne dit rien de l'autre. Partout où une texture sert de masque
+multiplicatif, la valeur est aussi un contrat que la forme.
+
+⚠️ Et la découverte n'est pas venue d'une suite : elle est venue d'avoir mesuré
+les images avant de commander leurs six sœurs manquantes. C'est la cinquième
+fois du dépôt qu'un défaut de rendu se tient hors de portée du headless — mais
+la première où le regarder ne suffisait pas non plus. **Il a fallu mesurer les
+pixels.** Un lot headless ne rend rien ; l'œil, lui, ne distingue pas un
+adversaire noir dans le noir d'un adversaire absent.
+
+Corrigé le 2026-09-09 : les seize silhouettes redérivées du canal alpha de leur
+peint, en blanc plein — ce qu'une silhouette EST (vérifié : alpha identique à
+100 % entre chaque peint et sa silhouette). Contrôle 6 ajouté à
+`test_planche_marche`, sabotage vérifié.
+
 ### Une constante partagée par des durées de 1 à 7,5 (2026-09-09)
 
 `RootProfile.RECUPERATION` valait 80 ms pour les dix classes : la rampe de reprise
