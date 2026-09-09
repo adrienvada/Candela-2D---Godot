@@ -96,18 +96,29 @@ func _setup_all_inputs():
 	add_joy_axis.call("p1_aim_up", p1_device, JOY_AXIS_RIGHT_Y, -1.0)
 	add_joy_axis.call("p1_aim_down", p1_device, JOY_AXIS_RIGHT_Y, 1.0)
 	
-	# L2 = Torche, R1 = Tir
-	add_joy_btn.call("p1_shoot", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	# Les quatre gestes de combat, rangés par MAIN et par NATURE — décision
+	# d'Adrien du 2026-09-09. Main droite : ce qu'on envoie (tir, gadget). Main
+	# gauche : ce qui éclaire (torche, fusée). Et sur chaque main, la GÂCHETTE
+	# porte le geste tenu, la TRANCHE le geste sec.
+	#
+	#     L2 torche (tenu)   │   R2 tir (tenu)
+	#     L1 fusée  (sec)    │   R1 gadget (sec)
+	#
+	# ⚠️ Le tir passe d'un bouton à un AXE. `is_action_pressed()` continue de
+	# répondre — la zone morte de l'action tranche —, mais une gâchette n'a plus
+	# de front franc : elle se presse progressivement. C'est déjà le cas de la
+	# torche depuis toujours, sur la même gâchette symétrique.
+	add_joy_axis.call("p1_shoot", p1_device, JOY_AXIS_TRIGGER_RIGHT, 1.0) # R2
 	add_joy_axis.call("p1_torch", p1_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Recharger, Triangle = Fusée éclairante
+	# Carré = Recharger
 	add_joy_btn.call("p1_reload", p1_device, JOY_BUTTON_X) # Carré
-	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_Y) # Triangle
-	# L1 en jeu : il ne sert qu'aux onglets de MENU, comme R1 sert à la fois
-	# à tirer et à changer d'onglet. La superposition est contextuelle, et elle
-	# est déjà la règle ici. ⚠️ `Liaisons.collisions()` ne détecte que
-	# l'inter-joueur : cette vérification intra-joueur est manuelle.
-	add_joy_btn.call("p1_gadget", p1_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	# ⚠️ L1 et R1 servent AUSSI aux onglets de MENU. La superposition est
+	# contextuelle, et elle était déjà la règle ici du temps où R1 tirait ; elle
+	# porte simplement sur deux tranches au lieu d'une. `Liaisons.collisions()`
+	# ne détecte que l'inter-joueur : cette vérification intra-joueur est manuelle.
+	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	add_joy_btn.call("p1_gadget", p1_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -140,18 +151,29 @@ func _setup_all_inputs():
 	add_joy_axis.call("p2_aim_up", p2_device, JOY_AXIS_RIGHT_Y, -1.0)
 	add_joy_axis.call("p2_aim_down", p2_device, JOY_AXIS_RIGHT_Y, 1.0)
 	
-	# L2 = Torche, R1 = Tir
-	add_joy_btn.call("p2_shoot", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
+	# Les quatre gestes de combat, rangés par MAIN et par NATURE — décision
+	# d'Adrien du 2026-09-09. Main droite : ce qu'on envoie (tir, gadget). Main
+	# gauche : ce qui éclaire (torche, fusée). Et sur chaque main, la GÂCHETTE
+	# porte le geste tenu, la TRANCHE le geste sec.
+	#
+	#     L2 torche (tenu)   │   R2 tir (tenu)
+	#     L1 fusée  (sec)    │   R1 gadget (sec)
+	#
+	# ⚠️ Le tir passe d'un bouton à un AXE. `is_action_pressed()` continue de
+	# répondre — la zone morte de l'action tranche —, mais une gâchette n'a plus
+	# de front franc : elle se presse progressivement. C'est déjà le cas de la
+	# torche depuis toujours, sur la même gâchette symétrique.
+	add_joy_axis.call("p2_shoot", p2_device, JOY_AXIS_TRIGGER_RIGHT, 1.0) # R2
 	add_joy_axis.call("p2_torch", p2_device, JOY_AXIS_TRIGGER_LEFT, 1.0) # L2
 	
-	# Carré = Recharger, Triangle = Fusée éclairante
+	# Carré = Recharger
 	add_joy_btn.call("p2_reload", p2_device, JOY_BUTTON_X) # Carré
-	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_Y) # Triangle
-	# L1 en jeu : il ne sert qu'aux onglets de MENU, comme R1 sert à la fois
-	# à tirer et à changer d'onglet. La superposition est contextuelle, et elle
-	# est déjà la règle ici. ⚠️ `Liaisons.collisions()` ne détecte que
-	# l'inter-joueur : cette vérification intra-joueur est manuelle.
-	add_joy_btn.call("p2_gadget", p2_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	# ⚠️ L1 et R1 servent AUSSI aux onglets de MENU. La superposition est
+	# contextuelle, et elle était déjà la règle ici du temps où R1 tirait ; elle
+	# porte simplement sur deux tranches au lieu d'une. `Liaisons.collisions()`
+	# ne détecte que l'inter-joueur : cette vérification intra-joueur est manuelle.
+	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_LEFT_SHOULDER) # L1
+	add_joy_btn.call("p2_gadget", p2_device, JOY_BUTTON_RIGHT_SHOULDER) # R1
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix

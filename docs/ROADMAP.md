@@ -2433,7 +2433,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
 | **Navigation manette hybride : D-Pad case par case et joystick curseur virtuel avec bascule instantanée** (2026-09-07, Adrien) | Deux modes de contrôle complémentaires à la manette dans les menus : le D-Pad (`JOY_BUTTON_DPAD_*`) et les flèches clavier naviguent de manière discrète case par case (curseur virtuel masqué). Le stick analogique fait apparaître un curseur virtuel fluide (`VirtualGamepadCursor`, halo `Charte.AMBRE`, accélération progressive) qui se dirige comme une souris, survole les contrôles interactifs, met à jour le focus/panneau d'aperçu et active au bouton de sélection (`p1_menu_select`). Dès qu'une flèche/D-Pad est pressée ou que la souris physique bouge, le curseur virtuel de joystick s'efface immédiatement. Découplage des axes analogiques dans `input_setup.gd` sur `p1_menu_*` / `p2_menu_*` pour prévenir les sauts de focus involontaires. |
-| **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. |
+| **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. ⚠️ **DÉPASSÉ EN PARTIE le 2026-09-09** — voir « Étape 20 — le réglage d'Adrien, manette en main ». Les chargeurs (Pistolet 6, Fusil 4), les dégâts du Fusil (60/25), les cadences sous 3 tirs/s (doublées) et la touche de fusée (Triangle → L1) ont changé ; le Terrassier recharge désormais cartouche par cartouche. La hiérarchie des temps de recharge, elle, tient toujours. *La décision ci-dessus reste vraie de sa date : elle n'est plus vraie du code.* |
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
 | **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
@@ -3153,6 +3153,141 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
+
+Deux sessions travaillaient sur les deux moitiés d'un même défaut : l'une avait
+fait passer le tir d'un bouton à une gâchette (`9f79e58`), l'autre écrit le garde
+qui absorbe le tremblement de zone morte (`6d4023b`). La seconde a fusionné, a
+constaté que la première était **déjà sur `main`**, et en a conclu que l'ordre
+s'était réglé tout seul — « pas de fenêtre où l'exposition a existé sans le
+remède ».
+
+Mesuré, c'était faux, et de deux versions :
+
+```
+9f79e58 (l'exposition)  dans v0.4.1 → OUI    dans v0.4.2 → OUI
+9732d48 (le remède)     dans v0.4.1 → NON    dans v0.4.2 → NON
+```
+
+Le remède est arrivé sur `main` quelques minutes après `cf6b883`, qui est
+précisément le commit que le tag `v0.4.2` désigne. Publication et fusion se
+croisaient.
+
+**La règle : l'ordre qui compte pour un joueur est celui des TAGS, jamais celui
+de `main`.** `main` est un état de travail partagé qui avance en continu ; une
+version est un instantané figé, et c'est lui que les gens installent. Deux
+commits peuvent se suivre d'une minute sur `main` et se retrouver à deux
+versions d'écart pour qui joue.
+
+⚠️ **Et le contrôle est mécanique, il ne se déduit pas** :
+`git merge-base --is-ancestor <commit> $(git rev-list -n1 <tag>)`. Dans un dépôt
+à vingt-sept worktrees où plusieurs sessions poussent le même jour, c'est la
+seule réponse fiable à « est-ce que c'est parti ? ». La déduction, elle, a déjà
+coûté une erreur d'attribution publiée ce même jour — voir « La fusion qui
+APPORTE un code n'est pas celle qui l'a écrit ».
+
+### Une liste qui décrit le dépôt du jour où on l'a écrite (2026-09-09)
+
+`test_planche_marche` portait `const ARMES := ["pistolet", "pompe", "fusil",
+"arbalete"]`. Vingt planches de marche neuves ont été posées pour cinq classes,
+et la suite a rendu **116/116 — exactement le même chiffre qu'avant**. Rien
+n'était faux, rien ne rougissait, et rien ne regardait les nouveaux fichiers.
+
+C'est la forme du « seuil 6 de `test_audit_menus` », déjà consignée : un nombre,
+ou ici une liste, qui décrit l'ÉTAT du dépôt au moment où on l'écrit, et qui
+cesse silencieusement de le décrire ensuite. **Le symptôme est un total qui ne
+bouge pas quand le travail, lui, a bougé** — et un total stable se lit comme une
+bonne nouvelle.
+
+La liste dit maintenant le ROSTER du jeu (les dix classes), pas l'inventaire du
+dossier. Corollaire nécessaire : puisque toutes les classes n'ont pas de
+planche, la règle est devenue **tout ou rien**. Zéro fichier = la classe glisse,
+état supporté que `player.gd` documente (« l'absence n'est pas une erreur »).
+Sept fichiers sur huit = faute, parce que `_precharger_la_planche` refuse le
+demi-lot en bloc et retombe sur le statique : le travail est perdu en silence.
+
+### Un masque juste, d'une couleur fausse — publié (2026-09-09)
+
+**Les seize silhouettes de marche étaient NOIRES.** Elles ont été publiées ainsi
+jusqu'en v0.4.1 incluse, et l'effet est le contraire de la mécanique du jeu :
+`Polygon2D.color` MULTIPLIE la texture, un RVB nul multiplie tout à zéro, et
+`player_enemy_light.gdshader` en tire alors `LIGHT = vec4(0.0)`. **L'adversaire
+devenait donc noir — invisible — PENDANT QU'IL MARCHAIT**, et redevenait gris
+dès qu'il s'arrêtait. Dans un duel dont toute l'information est la lumière,
+bouger rendait moins repérable qu'être immobile.
+
+Le contrat était pourtant écrit, au-dessus de `SPRITES` dans `player.gd` : « la
+silhouette **blanche** pour la vue adverse et pour les révélations, parce que
+`Polygon2D.color` MULTIPLIE la texture ». Les quatre silhouettes STATIQUES le
+respectent (255,255,255). Les seize de marche ne l'ont jamais respecté.
+
+⚠️ **Ce qui rend le cas instructif, c'est que `test_planche_marche` existait,
+qu'il avait cent contrôles, et qu'il ne pouvait pas l'attraper.** Il compare les
+MASQUES — donc les canaux alpha — et ceux-là s'accordaient au pixel près. La
+COULEUR n'était regardée nulle part. Le commit de régénération (`77466a7`)
+annonce d'ailleurs « silhouettes accordées au pixel près » en toute bonne foi :
+c'était vrai, et insuffisant.
+
+**La règle : un masque a deux propriétés indépendantes — sa FORME et sa VALEUR.**
+Vérifier l'une ne dit rien de l'autre. Partout où une texture sert de masque
+multiplicatif, la valeur est aussi un contrat que la forme.
+
+⚠️ Et la découverte n'est pas venue d'une suite : elle est venue d'avoir mesuré
+les images avant de commander leurs six sœurs manquantes. C'est la cinquième
+fois du dépôt qu'un défaut de rendu se tient hors de portée du headless — mais
+la première où le regarder ne suffisait pas non plus. **Il a fallu mesurer les
+pixels.** Un lot headless ne rend rien ; l'œil, lui, ne distingue pas un
+adversaire noir dans le noir d'un adversaire absent.
+
+Corrigé le 2026-09-09 : les seize silhouettes redérivées du canal alpha de leur
+peint, en blanc plein — ce qu'une silhouette EST (vérifié : alpha identique à
+100 % entre chaque peint et sa silhouette). Contrôle 6 ajouté à
+`test_planche_marche`, sabotage vérifié.
+
+### Une constante partagée par des durées de 1 à 7,5 (2026-09-09)
+
+`RootProfile.RECUPERATION` valait 80 ms pour les dix classes : la rampe de reprise
+après un tir. Elle a paru raisonnable parce qu'on l'a jugée sur l'arbalète, dont
+le root dure 600 ms — 80 ms y sont un raccord. Sur le pistolet, dont le root dure
+100 ms, **les mêmes 80 ms SONT le root** : il restait 20 ms d'arrêt franc, et le
+joueur gardait 66 % de sa vitesse en tirant. Adrien l'a dit d'un mot : « quand on
+tire, on soit immobile, ça marche pas. »
+
+Le défaut n'est pas la valeur, c'est sa NATURE. Une constante absolue partagée par
+des grandeurs qui vont de 1 à 7,5 ne peut pas vouloir dire la même chose aux deux
+bouts de l'échelle : elle est un détail d'un côté et le mécanisme entier de
+l'autre. La correction n'a pas été de baisser le nombre — elle a été d'en changer
+l'espèce : une **part** (un quart), plafonnée par l'ancienne constante. Une part
+dit la même chose partout.
+
+⚠️ **Et rien ne pouvait rougir.** Les six contrôles du root vérifiaient le facteur
+à un instant — hors fenêtre il rend 1, en plein arrêt il rend 0, la rampe est
+monotone. Tous justes, tous verts, et aucun ne regardait ce que le joueur
+ressent : la DISTANCE parcourue sur toute la fenêtre. Le contrôle ajouté intègre
+le facteur au pas de la physique sur les dix durées de la grille et exige que
+la part conservée reste sous 15 %. Il aurait crié le premier jour.
+
+⚠️ **Corollaire de méthode** : le premier jet de ce contrôle accusait le code à
+tort (19 % là où le jeu en fait 5). Six soustractions de 1/60 à 0,10 ne rendent
+pas zéro mais un résidu de 1e-17, pour lequel `facteur()` rend ~1,0 — ce qui est
+juste, le root est fini. La boucle comptait cette image comme une image pleine
+DANS la fenêtre. Encore un artefact de banc taillé exactement comme un vrai
+défaut ; le seuil est désormais 1e-6 et non zéro.
+
+### Une clé de collision tirée de la valeur ATTENDUE (2026-09-09)
+
+Le contrôle des quatre gestes de combat (L2/L1/R2/R1) devait aussi vérifier
+qu'aucun n'en partage la touche d'un autre — c'est le seul garde-fou intra-manette,
+`Liaisons.collisions()` ne voyant que l'inter-joueur. Le premier jet indexait les
+touches occupées **par la valeur attendue** : deux actions ne s'y percutaient que
+si on l'avait écrit soi-même dans le test. Le contrôle ne pouvait pas échouer.
+
+Le sabotage l'a montré : gadget remis sur L1, où siège déjà la fusée — une seule
+ligne rouge (« pas sur la tranche attendue »), la collision muette. Deuxième
+occurrence de la forme, après l'acte II du banc photocopie qui tirait son échelle
+de la source même qu'il mesurait. **L'oracle d'un contrôle ne peut jamais être sa
+propre attente** : ici, les empreintes se lisent dans l'`InputMap`.
+
 ### L'image d'amorce débordait de l'écran, et le réglage ne se devine pas (2026-09-09)
 
 Signalé par Adrien : « l'écran titre dépasse au chargement du jeu ».
@@ -3340,6 +3475,28 @@ d'un effet, chercher **qui d'autre lit la même donnée**. Ici,
 a été réparée. La règle vit désormais dans `GameState.source_eblouissante_ou()`,
 publique, et les deux consommateurs y passent — deux copies ne restent d'accord
 que par chance.
+
+### La fusion qui APPORTE un code n'est pas celle qui l'a écrit (2026-09-09)
+
+En fusionnant `main` dans le chantier des dix classes, j'ai trouvé qu'un autre
+chantier avait ajouté au HUD un témoin de fusée, et j'ai écrit trois commentaires
+l'attribuant à **la session dont la fusion me l'avait apporté**. C'était faux :
+le geste venait du chantier *game feel* (`b9a7d08`), deux chantiers plus tôt.
+
+Le dépôt connaît déjà le piège voisin — *le champ auteur git dit toujours
+« Adrien », toutes les sessions commitent sous son identité, donc il faut lire le
+corps du message*. Celui-ci est **plus faible encore** : je n'avais même pas lu un
+champ, j'avais déduit d'un ordre d'arrivée. Dans un dépôt à vingt-sept worktrees,
+un code traverse plusieurs fusions avant d'arriver ; **l'ordre d'arrivée ne dit
+rien de l'origine.**
+
+⚠️ **Et l'erreur avait déjà été publiée** dans la v0.4.0 — un commentaire qui
+envoie le prochain lecteur poser sa question à la mauvaise session. Relevée par
+la session accusée à tort, qui a vérifié avant de répondre plutôt que d'accepter
+le crédit.
+
+**La seule réponse à « qui a écrit ceci » est `git log -S"<le symbole>"`.** Ni
+l'auteur, ni le message de fusion, ni le chantier voisin dans le temps.
 
 ### Une source unique qu'on croit sur parole contre quatre qui s'accordent (2026-09-09)
 
@@ -8046,6 +8203,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
       disproportionné face à la vibration déjà universelle. Si le besoin
       revient, repartir de ce constat plutôt que de re-découvrir la même
       contrainte.
+    - **Signalé par la session du chantier racine, corrigé le jour même** :
+      le tir passe d'un bouton (R1) à un axe (gâchette R2), donc sans front
+      franc. Vérifié que `_rumble_shoot()` ne dépend d'aucun front — le
+      cooldown de l'arme suffit à cadencer les tirs, chatter ou pas. Le seul
+      point réellement exposé était le clic du percuteur à vide (V4.4,
+      `tir_a_sec`/`_detente_pressee`) : un bruit d'axe proche de la zone
+      morte peut agiter un booléen `is_action_pressed()` sur plusieurs
+      images, ce qu'un vrai bouton ne fait pas. Ajouté `tir_a_sec <= 0.0`
+      comme second garde, en plus du front montant — absorbe ce bruit sans
+      changer le geste (une vraie répétition reste possible dès 220 ms). Sert
+      aussi bien le son et le tremblement HUD préexistants que le clic
+      haptique ajouté par ce chantier ; rien touché côté zone morte ou
+      remappage, qui restent au chantier racine.
+      - ⚠️ **Correction du 2026-09-09, mesurée par la session du chantier
+        racine et non déduite comme la phrase ci-dessus le laissait croire.**
+        « Le tir passe sur un axe » (`9f79e58`) et ce correctif (`9732d48`)
+        étaient bien tous deux sur `main` au moment de la fusion — mais
+        `main` n'est pas ce qu'un joueur reçoit. Le tag `v0.4.2` avait été
+        posé quelques minutes plus tôt, sur le commit exact qui précède ce
+        correctif : `9f79e58` est parti dans `v0.4.1` ET `v0.4.2`, `9732d48`
+        dans aucun des deux. Rien d'urgent — un clic de percuteur à vide qui
+        peut bégayer près de la zone morte, pas une faute de jeu —, corrigé à
+        la version suivante. Voir « Pièges connus » pour la leçon qui dépasse
+        ce défaut.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -16574,6 +16755,101 @@ propriétés sont justes, et il ne se voit pas — ou pas comme annoncé.* Un lo
 headless ne rend rien ; sur tout ce qui touche au rendu, la seule garde est de
 prendre une capture et de lire les nombres qu'elle imprime.
 
+### Étape 20 — le réglage d'Adrien, manette en main ✅
+
+Le chantier était clos ; Adrien a joué, et rapporté cinq choses. Elles sont
+traitées ensemble parce qu'elles sortent toutes de la même séance.
+
+**Le root ne se sentait pas.** Voir le piège « Une constante partagée par des
+durées de 1 à 7,5 ». Mesuré au banc sur le vrai joueur, avant et après : le
+Parasite gardait 66 % de sa vitesse sur 200 ms, il en garde 22 % sur la fenêtre
+de son root ; les dix classes tiennent maintenant entre 7 % et 27 %.
+
+**Les quatre gestes de combat changent de touche.** L2 torche, L1 fusée, R2 tir,
+R1 gadget. La main droite agit, la main gauche éclaire ; sur chaque main, la
+gâchette porte le geste tenu et la tranche le geste sec. ⚠️ Les quatre commandes
+d'épaule sont désormais **toutes prises** : il n'y a plus de place pour un
+cinquième geste sans en déloger un.
+
+⚠️ **Une gâchette n'a pas de front franc, et un chemin du code en dépendait.** Le
+tir passant d'un bouton à un AXE, `is_action_pressed()` peut osciller sur
+plusieurs images quand la gâchette effleure la zone morte (0,2) — ce qu'un bouton
+ne fait jamais. Les deux chemins du **clic de percuteur à vide** (V4.4) ne sont
+gardés que par le front montant : ils pouvaient donc bégayer. Trouvé par la
+session « Plan des vibrations de manettes », qui a ajouté `tir_a_sec <= 0.0`
+comme second garde (`6d4023b`, sur sa branche). **Le défaut est sur la branche
+des DIX CLASSES, le remède sur la sienne** : les deux doivent atterrir ensemble,
+ou la sienne d'abord. Rien ne le signalerait — un clic qui bégaie ne lève aucune
+erreur et ne rougit dans aucune suite.
+
+⚠️ **Et cet ordre est sûr, pas seulement préférable** : sa garde est *inerte*
+tant que le tir est un bouton — un bouton ne rebondit jamais à ce seuil, donc
+elle ne se déclenche pas — et ne devient utile qu'une fois le tir passé sur un
+axe. Elle peut donc partir seule sur `main` sans rien changer au jeu actuel.
+C'est l'inverse qui est risqué : le tir sur axe fusionné sans elle.
+
+*Note de provenance, pour la ROADMAP* : `_rumble_shoot()` vient de `18dce6d`
+(« Ressenti lourd du tir »), demandé par Adrien **à la suite du chantier racine**
+— le gel après tir par classe. Le geste haptique et le root sont donc nés de la
+même intention, ce qui explique qu'ils s'arment au même endroit dans `shoot()`.
+
+**La grille est arbitrée.** Le commentaire de `_batir_catalogue()` signalait
+depuis l'étape 1 un écart de contenu « à soumettre à Adrien » — un pistolet à
+6 balles là où le jeu en avait 10. Il a tranché, et plus largement : Parasite à
+6 munitions, Illusionniste à 4 et 60/25, Occulteur à 10-15 (il tue par rafale et
+non au coup), et **toutes les cadences sous 3 tirs/s doublées, sans dépasser ce
+plafond** — quatre classes concernées, les six autres y étaient déjà.
+
+⚠️ **Effet de bord à connaître : deux classes ont un root plus long que leur
+cadence.** La Sentinelle tire toutes les 0,425 s pour un root de 0,50 s,
+l'Incendiaire toutes les 0,333 s pour 0,40 s. Détente tenue, on y reste immobile
+en continu. C'est cohérent avec « tirer coûte sa mobilité », mais c'est la
+rencontre de deux décisions prises séparément, et personne ne l'a voulue comme
+telle. **À juger en jouant.**
+
+**Le Terrassier recharge cartouche par cartouche.** Une balle, puis deux, puis
+trois, et le tir passe dès la première — il interrompt alors le remplissage, et
+la cartouche en cours est perdue. Le total reste ce qu'il annonçait (5,6 s en six
+fois), il est seulement payable par tranches. `WeaponData.duree_etape_recharge()`
+est le seul endroit où cette division a le droit d'être écrite : le HUD divisait
+le compteur restant par le total, ce qui aurait affiché une jauge bloquée près de
+100 %. La description de la classe le dit, sans quoi la règle serait invisible à
+la sélection.
+
+### Étape 21 — cinq classes marchent, une glisse ✅
+
+Cinq des six classes neuves ont désormais leur planche de marche : le Fumiste,
+l'Incendiaire, la Sentinelle, l'Occulteur et l'Allumeur. **Le Spectre glisse**,
+et c'est une décision d'Adrien après trois passes de génération infructueuses —
+« laisse tomber, on fait glisser les autres classes ».
+
+**Ce qui a été GÉNÉRÉ n'est presque pas ce qui a été POSÉ.** Les planches
+viennent de Gemini, mais l'intégration ne garde de ses images que les pixels de
+MEMBRES qui débordent de la silhouette statique. La tête, l'arme, la palette et
+le cadrage viennent du sprite du dépôt.
+
+⚠️ **Ce n'était pas un choix esthétique mais une contrainte.** Le contrôle 3 de
+`test_planche_marche` exige le bout du canon au pixel exact, en x ET en y —
+mesuré : dans les seize planches d'origine, la zone de l'arme est recopiée à
+l'identique. Aucune image générée ne satisfait ça spontanément. La règle qui en
+sort vaut pour toute génération future : **on ne génère pas un sprite, on génère
+un DELTA, et on le composite sur l'existant.**
+
+Deux réglages ont demandé une mesure, pas une intuition :
+
+- **Le halo JPEG était le vrai piège**, pas le fond. Entre le sprite sombre et le
+  fond blanc, la compression étale un dégradé de 150 à 250 : sous le seuil de
+  fond, donc pris pour du personnage, et composité en **liseré blanc** sur une
+  figure charbon. Vu à l'écran au premier jet. Le plafond est venu de la mesure
+  de la palette du dépôt — p99 de luminance à 128, maximum 151 sur les dix
+  statiques —, jamais d'un nombre choisi.
+- **Le découpage des planches** se fait sur les colonnes de fond pur, pas sur un
+  espacement supposé.
+
+Et une géométrie qui simplifie toute reprise future : **le personnage fait la
+même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
+les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -16592,6 +16868,72 @@ de clôture serait un échec différé de dix étapes.
 
 ---
 
+## Chantier — Menu de pause en match : retirer QUITTER, ajouter QUITTER LE MATCH (inscrit et fait le 2026-09-09)
+
+**Demandé par Adrien.** Avant ce chantier, `ui.gd::_build_pause_menu()` posait
+quatre boutons dans cet ordre : REPRENDRE, OPTIONS, MENU PRINCIPAL (gris),
+QUITTER (rouge — quittait l'**application entière** via
+`NetworkManager.quit_game()`, comptant comme un abandon en match classé).
+**QUITTER (l'application) n'a plus de bouton dans la pause** — il ne reste
+disponible que depuis l'accueil du hub. Sa place est prise par **QUITTER LE
+MATCH**, juste au-dessus de MENU PRINCIPAL qui descend au bas de la colonne et
+devient rouge à sa place.
+
+**Ce qui n'existait pas pour l'écrire, et qu'il a fallu construire :**
+`main_menu_requested` ramène toujours au hub racine (`hub.reset()` dans
+`ui.show_main_menu()`) — aucune mémoire de « d'où vient ce match » n'existait.
+« Quitter le match » devait donc ramener à l'écran du hub d'où le match a été
+lancé (écran scindé, salon hôte/invité, entraînement…), pas à l'accueil.
+
+**La mémoire retenue : un seul point de capture, pas un par chemin de
+lancement.** Quatre chemins mènent à une manche vivante (écran scindé, hôte +
+client tous deux prêts, appariement) et ils ne partagent presque aucun code —
+sauf UN appel commun, systématique juste avant que le HUD de match remplace le
+hub : `ui.hide_game_over()`. C'est l'un des quatre seuls endroits où
+`_is_main_menu` bascule (documenté dans `ui.gd` juste au-dessus de
+`_un_menu_attend_un_clic()`), et le seul des quatre qui marque une **sortie**
+du hub vers une manche (les trois autres y ramènent, ou rouvrent le même
+salon). `hide_game_over()` retient donc `hub.current_id()` dans
+`_match_origin_screen`, mais seulement `if _is_main_menu` **avant** de le
+faire basculer à faux — sans quoi un round suivant dans la même série
+(`rouvrir_le_salon()` remet `_is_main_menu` à vrai) écraserait la mémoire à
+chaque manche au lieu de ne la poser qu'au premier départ depuis le menu.
+Exposé par `ui.match_origin_screen()`.
+
+**Le nouveau signal `quit_match_requested` réutilise tout le ménage de
+`_on_main_menu_requested()`** (forfait compris — c'était déjà la question
+posée par Adrien : l'abandon devait suivre le nouveau bouton, pas rester
+accroché à l'app-quit qui disparaît de la pause) plutôt que de le dupliquer :
+`_on_main_menu_requested()` prend un `target_screen` optionnel, vide pour tous
+les appelants existants (comportement inchangé), et
+`_on_quit_match_requested()` lui passe `ui.match_origin_screen()`. Le retour
+au menu se fait donc TOUJOURS par `hub.reset()` (accueil), et un écran voulu
+redescend d'un cran par-dessus via `hub.push()` — qui refuse déjà
+silencieusement un identifiant absent ou déjà courant, donc un écran d'origine
+manquant (pause ouverte hors match, cas qui ne devrait pas arriver) retombe
+simplement sur l'accueil, comme MENU PRINCIPAL.
+
+**Piège à ne pas rouvrir** : `hub.push()` sur un salon réseau (SCREEN_HOST /
+SCREEN_JOIN / leurs variantes LAN) ne fait que reposer l'**intention** de mode
+et de transport (`_on_hub_screen_changed()` → `_apply_lobby_intent()`) — la
+même chose qu'une navigation normale vers cet écran. Ça ne réhéberge ni ne
+rejoint rien tout seul ; le joueur retrouve l'écran tel qu'il l'aurait laissé,
+pas un salon rouvert dans son dos.
+
+**Validation :**
+- `tools/test_pause_menu.gd` : `btn_pause_quit` → `btn_pause_quit_match`
+  partout, `_test_signaux_de_sortie` vérifie `quit_match_requested` (et non
+  plus `quit_requested`, qui ne part plus de la pause), nouvelle
+  `_test_ecran_d_origine_du_match` sur la capture par `hide_game_over()` et sa
+  non-réécriture hors transition.
+- `docs/CHECKLIST_TESTS_EN_LIGNE.md` : §1.9/1.10 (retour au bon salon, hôte et
+  client) et §5.7 (remise à vitesse normale sur ce nouveau chemin de sortie),
+  à dérouler à deux machines — non exécuté ici, aucune fenêtre interactive
+  dans cet environnement.
+- `./tools/run_suites.sh` intégralement vert, duos ENet compris.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -16606,7 +16948,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 

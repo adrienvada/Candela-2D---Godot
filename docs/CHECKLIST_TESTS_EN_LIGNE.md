@@ -56,6 +56,8 @@ proche de 120 ms une fois la partie lancée.)
 | 1.6 | Pendant la pause de B, observer B sur l'écran de A | B reste immobile (l'hôte reçoit des commandes neutres, il ne court pas sur la dernière touche) |
 | 1.7 | A ouvre la pause, puis B tue A | La killcam démarre et le menu de pause a disparu de l'écran de A (aucun panneau « PAUSE » par-dessus la killcam) |
 | 1.8 | **Non-régression local** : partie ÉCRAN PARTAGÉ, ÉCHAP | Le jeu se **fige** réellement (chrono arrêté, aucun mouvement), reprise à l'identique |
+| 1.9 | Manche en cours, **A** (hôte) ouvre la pause puis `QUITTER LE MATCH` (chantier « menu de pause en match », 2026-09-09 — le bouton ne quitte plus l'application) | Forfait archivé pour B ; A revient à l'écran **HÔTE** (le salon qu'il avait ouvert), pas à l'accueil — code de salon réaffiché, pas l'écran-titre |
+| 1.10 | Même geste depuis **B** (client) | Forfait archivé pour A ; B revient à l'écran **REJOINDRE**, pas à l'accueil |
 
 ## 2. RPC pendant la killcam
 
@@ -118,6 +120,7 @@ onglets, regarder le chrono).
 | 5.4 | `MENU PRINCIPAL` pendant le ralenti (ouvrir la pause pendant la killcam n'est pas possible : passer par l'écran de fin, ou couper la connexion) | Menu principal fluide, animations d'onglets à vitesse normale |
 | 5.5 | Depuis le menu principal atteint en 5.4, relancer une partie locale | Le jeu tourne à vitesse normale du début à la fin |
 | 5.6 | `QUITTER` pendant un ralenti | L'application se ferme sans traîner |
+| 5.7 | `QUITTER LE MATCH` (pause) pendant un ralenti — même détour que 5.4 : passer par l'écran de fin ou couper la connexion, relancer, rouvrir la pause pendant le ralenti suivant | Vitesse normale immédiate ; retour au salon de départ (§1.9/1.10), pas à l'accueil |
 
 ## 6. Spam prêt / pas prêt pendant les transitions
 

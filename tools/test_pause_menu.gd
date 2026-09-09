@@ -38,7 +38,8 @@ func _run() -> void:
 	# barre d'onglets. Une erreur de script n'échoue pas un test — seul un `_check`
 	# le fait. Le harnais doit donc vérifier son propre contrat avant de conclure.
 	for m in ["_handle_pause_input", "_resume_game", "force_close_pause",
-			"is_pause_menu_open", "_open_pause_options", "_nav_candidates"]:
+			"is_pause_menu_open", "_open_pause_options", "_nav_candidates",
+			"match_origin_screen"]:
 		if not _ui.has_method(m):
 			printerr("\n✗ ui.gd n'expose pas %s : le test ne prouverait rien." % m)
 			quit(1)
@@ -57,6 +58,7 @@ func _run() -> void:
 	_test_parenthese_options()
 	_test_fermeture_forcee()
 	_test_retour_menu_principal()
+	_test_ecran_d_origine_du_match()
 
 	# Libéré explicitement : sinon Godot signale des fuites à la sortie, et ce
 	# bruit noierait une vraie fuite le jour où il y en aura une.
@@ -93,7 +95,7 @@ func _test_construction() -> void:
 		_ui.pause_panel != null and not _ui.pause_panel.visible)
 	_check("il porte ses quatre issues et rien d'autre",
 		_ui.btn_pause_resume != null and _ui.btn_pause_options != null \
-		and _ui.btn_pause_menu != null and _ui.btn_pause_quit != null)
+		and _ui.btn_pause_menu != null and _ui.btn_pause_quit_match != null)
 	# Le menu à onglets ne doit plus proposer de reprise : il ne s'affiche plus
 	# jamais par-dessus un match, sauf pour les options, qui ont leur retour.
 	_check("la barre d'actions du menu offre un RETOUR, caché par défaut",
@@ -161,7 +163,7 @@ func _test_navigation_captive() -> void:
 	# La pause est modale : le curseur ne doit pas filer dans les onglets, qui
 	# sont cachés mais toujours présents dans l'arbre.
 	var attendus := [_ui.btn_pause_resume, _ui.btn_pause_options,
-		_ui.btn_pause_menu, _ui.btn_pause_quit]
+		_ui.btn_pause_menu, _ui.btn_pause_quit_match]
 	for player in 2:
 		var candidats: Array = _ui._nav_candidates(player)
 		_check("joueur %d : les quatre boutons de pause sont atteignables" % (player + 1),
@@ -178,17 +180,21 @@ func _test_navigation_captive() -> void:
 	_ui._resume_game()
 
 ## Le point qui compte : un abandon en ligne vaut forfait, et il est archivé par
-## `game_state.gd` en réponse à ces deux signaux. Si un bouton cesse de les
-## émettre, le forfait disparaît sans le moindre message d'erreur.
+## `game_state.gd` en réponse à ces deux signaux — ni l'un ni l'autre ne quitte
+## plus l'application depuis la pause (chantier « menu de pause en match »,
+## 2026-09-09) : QUITTER (app) est retiré, `quit_match_requested` prend sa
+## place et ramène au salon de départ plutôt qu'à l'accueil. Si un bouton
+## cesse d'émettre le sien, le forfait disparaît sans le moindre message
+## d'erreur.
 func _test_signaux_de_sortie() -> void:
 	print("\n[Sorties — la chaîne du forfait]")
 	_en_match()
 	_ui._handle_pause_input()
 
 	var vu_menu := [false]
-	var vu_quit := [false]
+	var vu_quit_match := [false]
 	_ui.main_menu_requested.connect(func() -> void: vu_menu[0] = true)
-	_ui.quit_requested.connect(func() -> void: vu_quit[0] = true)
+	_ui.quit_match_requested.connect(func() -> void: vu_quit_match[0] = true)
 
 	_ui.btn_pause_menu.pressed.emit()
 	_check("MENU PRINCIPAL émet main_menu_requested", vu_menu[0])
@@ -196,10 +202,39 @@ func _test_signaux_de_sortie() -> void:
 
 	_en_match()
 	_ui._handle_pause_input()
-	_ui.btn_pause_quit.pressed.emit()
-	_check("QUITTER émet quit_requested", vu_quit[0])
+	_ui.btn_pause_quit_match.pressed.emit()
+	_check("QUITTER LE MATCH émet quit_match_requested", vu_quit_match[0])
 	_check("il dégèle l'arbre avant de partir", not paused)
 	_ui._resume_game()
+
+## Ce que `_on_quit_match_requested()` (`game_state.gd`) lit pour savoir où
+## revenir : le dernier écran du hub actif au moment où `hide_game_over()` a
+## fait franchir au joueur la porte du menu vers une manche vivante. La pièce
+## qui n'existait pas avant ce chantier — voir docs/ROADMAP.md, « Menu de
+## pause en match ».
+func _test_ecran_d_origine_du_match() -> void:
+	print("\n[Écran d'origine du match]")
+	_ui.show_main_menu()
+	_ui.hub.push(_ui.SCREEN_TRAINING)
+	_check("le hub est bien sur l'entraînement avant le départ en manche",
+		_ui.hub.current_id() == _ui.SCREEN_TRAINING, _ui.hub.current_id())
+
+	_ui.hide_game_over()
+	_check("hide_game_over() retient l'écran quitté",
+		_ui.match_origin_screen() == _ui.SCREEN_TRAINING, _ui.match_origin_screen())
+
+	# Un second appel en pleine manche (round suivant, killcam...) ne doit RIEN
+	# changer : `_is_main_menu` est déjà à faux, donc `hub.current_id()` — qui
+	# vaudrait toujours SCREEN_TRAINING ici, mais rien ne le garantit en jeu, la
+	# pause pouvant elle-même pousser le hub vers SCREEN_CUSTOM — ne doit plus
+	# être relu.
+	_ui.hub.push(_ui.SCREEN_CUSTOM)
+	_ui.hide_game_over()
+	_check("un appel hors transition ne réécrit pas l'écran d'origine",
+		_ui.match_origin_screen() == _ui.SCREEN_TRAINING, _ui.match_origin_screen())
+
+	_ui.hub.reset()
+	_ui.show_main_menu()
 
 func _test_parenthese_options() -> void:
 	print("\n[Options depuis la pause]")
