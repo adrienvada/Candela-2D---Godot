@@ -12329,25 +12329,44 @@ c'est le code qui les colore.
   les planches 4 et 5 de l'intro survivent au recadrage, parce que leur sujet
   tient dans une bande étroite et que le reste est noir. **Le noir se recadre ;
   un décor ne se recadre pas.**
-- **DA7.2 Le trailer de 60 secondes.** *(C)* — 🟡 **découpage écrit le
-  2026-09-09** : [docs/TRAILER.md](TRAILER.md). Cinq phrases de 8 mesures plus
-  une queue, chaque plan nommé par l'identifiant du catalogue de
-  `tools/photographe.gd` — donc directement commandable, et **tenu par une suite
-  depuis `5c4040f`** : renommer un plan fait rougir le lot au lieu de périmer ce
-  document en silence. La grille n'a pas été choisie, elle se dérive du stem de
-  menu à 170 BPM (une mesure = 1,412 s ; 60 s = 42,5 mesures), et la densité de
-  coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
-  manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
-  photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
-- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
-  écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
-  longueurs de description, points saillants, et la sélection d'images par nom
-  de catalogue du photographe (DA6), dont les cinq à envoyer si on n'en envoie
-  que cinq. **Six champs restent `À TRANCHER` et n'appartiennent pas à une
-  session** — éditeur, contact presse, prix, date, plateformes annoncées,
-  licence des images. Ils sont marqués comme tels plutôt que devinés : un
-  presskit dont un champ est inventé fait perdre la confiance sur tous les
-  autres.
+- **DA7.2 Le trailer.** ✅ **LIVRÉ le 2026-09-09** — `tools/cineaste.gd`,
+  `tools/run_trailer.sh`, et un film de 42 s **publié en bas du site**. Détail
+  dans [docs/TRAILER.md](TRAILER.md).
+
+  ⚠️ **CETTE FICHE A ANNONCÉ UN BLOCAGE QUI N'EXISTAIT PAS**, et c'est le fait
+  le plus utile à retenir. Elle disait « bloqué : il n'existe aucune capture
+  vidéo ». Godot filme depuis toujours (`--write-movie`) — **personne n'avait
+  tapé `godot --help`**. Il ne manquait pas un outil, il manquait la mise en
+  scène, et elle existait déjà chez le photographe de DA6.
+
+  Le coût réel n'est pas l'erreur mais son statut : **le document a servi de
+  preuve à son propre blocage.** L'item est resté « bloqué » ici et dans le
+  suivi pendant des heures parce que l'affirmation était écrite. C'est le pendant
+  exact de l'avertissement déjà porté par `CLAUDE.md` — *un défaut annoncé envoie
+  chercher un travail déjà fait, ce qui coûte plus qu'un silence* — appliqué
+  cette fois à une capacité déclarée absente.
+
+  Le cinéaste **hérite** du photographe et ne surcharge qu'une fonction : là où
+  celui-ci tient l'état puis déclenche, celui-là tient l'état et ne déclenche
+  jamais. Tout le reste — sélection, préconditions, éclairage, cadrage — est
+  repris tel quel.
+- ~~**DA7.3 Presskit et screenshots composés.**~~ ❌ **ABANDONNÉE le 2026-09-09**
+  (Adrien), et `docs/PRESSKIT.md` **supprimé**.
+
+  La fiche est morte de la même cause que DA7.1 : **l'abandon de la boutique lui
+  a retiré son destinataire.** Un presskit s'adresse à une presse qu'on démarche
+  pour une sortie qu'on annonce ; sans boutique, il ne restait qu'un document
+  bien écrit sans personne à qui l'envoyer — et cinq de ses six champs
+  `À TRANCHER` n'avaient plus d'arbitre.
+
+  Ce qu'il portait de vivant a survécu ailleurs, et c'est pour ça qu'il peut
+  partir sans regret : ses descriptions sont devenues le texte du site (DA7.4),
+  et sa sélection d'images est devenue la vitrine de la même page. **La
+  distribution passe désormais par le site et les *releases* GitHub**, pas par
+  un dossier de presse.
+
+  *(Le document reste dans l'historique git si un jour une sortie se prépare
+  pour de bon.)*
 - **DA7.4 Un site d'une page.** *(S)* — ✅ **LIVRÉ le 2026-09-09, en ligne sur
   le domaine d'Adrien** : **https://adrienvada.fr/candela-2d/** — dépôt séparé
   `adrienvada/candela-2d`, GitHub Pages, source versionnée dans `tools/site/`
