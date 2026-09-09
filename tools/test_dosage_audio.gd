@@ -463,8 +463,10 @@ func _test_l_entrainement_entend_vraiment() -> void:
 	_check("une oreille est posée en entraînement",
 		am != null and am._oreille != null and is_instance_valid(am._oreille))
 	if am != null and am._oreille != null and is_instance_valid(am._oreille):
+		var porteur_suivi: bool = (am._oreille.get_parent() == principal.p1) \
+			or (am._relais != null and am._oreille.get_parent() == am._relais and am._suivi == principal.p1)
 		_check("elle est sur le joueur que l'on regarde",
-			am._oreille.get_parent() == principal.p1,
+			porteur_suivi,
 			String(am._oreille.get_parent().name))
 		_check("et elle est courante dans sa vue", am._oreille.is_current())
 	# L'invariant du doublement : la racine ne doit PAS rester auditrice en plus

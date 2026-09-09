@@ -93,7 +93,75 @@ func _run() -> void:
 		porteur.get_node_or_null("OreilleLocale") == null)
 	_check("rendre_oreille est idempotente", _rendre_deux_fois(am, lecteur))
 
+	await _test_vue_unique(am, scene)
+
 	_conclure()
+
+## LA VUE QUI ECOUTE DOIT ETRE CELLE QUI REND.
+##
+## ⚠️ **Le controle qui manquait, et son absence a rendu le jeu MUET en ligne et
+## a l'entrainement pendant trois semaines** — y compris ses propres tirs.
+##
+## Le chantier R fait peindre le duel par la RACINE des qu'une seule vue est
+## regardee : les deux `SubViewport` sont alors ARRETES. Poser l'oreille sur le
+## `SubViewport` qui porte le joueur confiait donc l'ecoute a une vue morte, et
+## coupait la racine — la seule vivante.
+##
+## Rien ne le signalait. `auditeurs = 1` restait vrai, le pool etait dans le bon
+## monde, l'oreille etait courante : **trois faits justes et un silence total.**
+## C'est la quatrieme fois que cette famille frappe, d'ou un predicat plus dur
+## que « combien de vues ecoutent » : **celle qui ecoute rend-elle ?**
+func _test_vue_unique(am, scene) -> void:
+	var nm = get_root().get_node_or_null("/root/NetworkManager")
+	if nm == null:
+		_check("NetworkManager est la", false)
+		return
+	var vp1 = scene.get_node_or_null("SplitScreen/ViewportContainer1/SubViewport1")
+	var vp2 = scene.get_node_or_null("SplitScreen/ViewportContainer2/SubViewport2")
+	var mode_avant = nm.current_mode
+
+	# 1 = ONLINE_HOST, 2 = ONLINE_CLIENT. Ecrits en clair plutot qu'en
+	# `GameMode.X` : un `--script` ne voit pas les autoloads a la compilation.
+	for cas in [{"mode": 1, "nom": "hote en ligne"},
+			{"mode": 2, "nom": "client en ligne"}]:
+		print("\n[Vue unique — %s]" % cas["nom"])
+		nm.current_mode = cas["mode"]
+		am.rendre_oreille()
+		await process_frame
+		scene._restore_viewports()
+		await process_frame
+		scene._accorder_oreille()
+		await process_frame
+		await process_frame
+
+		var monde = am.sfx_players_2d[0].get_world_2d()
+		var vivants: Array[String] = []
+		var morts: Array[String] = []
+		for v in [get_root(), vp1, vp2]:
+			if not (v.audio_listener_enable_2d and v.world_2d == monde):
+				continue
+			var vivant: bool = (v == get_root()) \
+				or v.render_target_update_mode != SubViewport.UPDATE_DISABLED
+			if vivant:
+				vivants.append(String(v.name))
+			else:
+				morts.append(String(v.name))
+
+		# LE controle. Zero auditeur vivant = silence complet, et c'est
+		# exactement ce qu'Adrien a rapporte le 2026-09-09.
+		_check("une vue VIVANTE ecoute le duel", vivants.size() == 1,
+			"vivants=%s morts=%s" % [str(vivants), str(morts)])
+		# Et pas deux : chaque son sortirait en double.
+		_check("une seule, pas deux", vivants.size() <= 1, str(vivants))
+		# Une vue arretee declaree auditrice ne casse rien par elle-meme, mais
+		# elle ment au diagnostic — et c'est ce mensonge qui a masque le defaut.
+		_check("aucune vue ARRETEE ne se declare auditrice", morts.is_empty(),
+			str(morts))
+		_check("l'oreille existe", am._oreille != null and is_instance_valid(am._oreille))
+
+	nm.current_mode = mode_avant
+	am.rendre_oreille()
+	await process_frame
 
 func _rendre_deux_fois(am, lecteur) -> bool:
 	am.rendre_oreille()

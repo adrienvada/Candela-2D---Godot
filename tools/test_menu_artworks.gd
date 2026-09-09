@@ -2,8 +2,9 @@ extends SceneTree
 
 const MenuArtwork := preload("res://menu_artwork.gd")
 const MenuHub := preload("res://menu_hub.gd")
+const MenuParticlesAmbiance := preload("res://menu_particles_ambiance.gd")
 
-## Suite de tests pour les artworks de menu, les POI et les effets vivants d'ambiance.
+## Suite de tests pour les artworks de menu, les POI, les shaders et les particules d'ambiance.
 
 var _failures: int = 0
 
@@ -17,6 +18,7 @@ func _run() -> void:
 	_test_effects()
 	_test_flame_colors()
 	_test_shader_load()
+	_test_particles_ambiance()
 	await _test_hub_artworks()
 	
 	if _failures == 0:
@@ -58,6 +60,18 @@ func _test_shader_load() -> void:
 		mat.set_shader_parameter("torch_pos", Vector2(0.66, 0.72))
 		mat.set_shader_parameter("ambient_exposure", 0.28)
 		_check("Parametres du shader appliques", true)
+
+func _test_particles_ambiance() -> void:
+	var particles_ambiance := MenuParticlesAmbiance.new()
+	_check("MenuParticlesAmbiance s'instancie", particles_ambiance != null)
+	if particles_ambiance != null:
+		particles_ambiance.size = Vector2(800, 600)
+		for cle: String in MenuArtwork.POIS.keys():
+			particles_ambiance.definir_illustration(cle)
+			_check("Particules configurees pour : " + cle, true)
+		particles_ambiance.masquer_doux()
+		_check("Particules masquees sans erreur", true)
+		particles_ambiance.free()
 
 func _test_hub_artworks() -> void:
 	var hub := MenuHub.new()

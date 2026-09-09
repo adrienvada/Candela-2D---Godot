@@ -118,45 +118,15 @@ static func _generer_dalle_beton(img: Image, oy: int, bg: Color, border: Color,
 			img.set_pixel(fx, fy, c)
 
 
-## Dessine la tuile de mur d'atelier : liséré halogène franc, intérieur sombre
-## avec rivets d'acier et cornières de caisse industrielle.
+## Dessine la tuile de mur d'atelier : liséré halogène franc et intérieur en noir d'encre pur.
 static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
 	var wall_bg     := Charte.NOIR
 	var wall_border := Charte.HALOGENE
-	var acier_discret := Charte.LINE * 0.65
-	var rivet_color   := Charte.ACIER * 0.40
 
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			var on_outer_edge := (x <= 1 or x >= TILE_SIZE.x - 2 or y <= 1 or y >= TILE_SIZE.y - 2)
-			if on_outer_edge:
-				img.set_pixel(ox + x, oy + y, wall_border)
-			else:
-				img.set_pixel(ox + x, oy + y, wall_bg)
-
-	# Cornières intérieures à 4 px du bord extérieur
-	for y in range(4, TILE_SIZE.y - 4):
-		img.set_pixel(ox + 4, oy + y, acier_discret)
-		img.set_pixel(ox + TILE_SIZE.x - 5, oy + y, acier_discret)
-	for x in range(4, TILE_SIZE.x - 4):
-		img.set_pixel(ox + x, oy + 4, acier_discret)
-		img.set_pixel(ox + x, oy + TILE_SIZE.y - 5, acier_discret)
-
-	# 4 rivets d'acier d'atelier aux 4 angles de la cornière
-	var rivets := [
-		Vector2i(5, 5),
-		Vector2i(TILE_SIZE.x - 6, 5),
-		Vector2i(5, TILE_SIZE.y - 6),
-		Vector2i(TILE_SIZE.x - 6, TILE_SIZE.y - 6)
-	]
-	for r in rivets:
-		img.set_pixel(ox + r.x, oy + r.y, rivet_color)
-
-	# Fines traverses diagonales en croix d'armature sombre
-	for d in range(6, TILE_SIZE.x - 6):
-		if d % 2 == 0:
-			img.set_pixel(ox + d, oy + d, Charte.LINE * 0.35)
-			img.set_pixel(ox + d, oy + (TILE_SIZE.y - 1 - d), Charte.LINE * 0.35)
+			img.set_pixel(ox + x, oy + y, wall_border if on_outer_edge else wall_bg)
 
 ## Charge une tuile peinte, ou rend `null` si elle n'a pas été cuite ou importée.
 static func _tuile_peinte(chemin: String) -> Image:
@@ -208,3 +178,20 @@ static func orientation(cell: Vector2i) -> int:
 ## Retourne la coordonnée atlas du sol selon la position (damier).
 static func get_floor_atlas(pos: Vector2i) -> Vector2i:
 	return FLOOR_ATLAS_A if (pos.x + pos.y) % 2 == 0 else FLOOR_ATLAS_B
+
+
+const SHADER_SHIMMER_MURS := preload("res://shimmer_murs.gdshader")
+
+## Crée le matériau Shader pour les murs (V5.8 — Chantier 2).
+## Anime les arêtes halogènes sous le balayage de la torche avec micro-aspérités
+## et spécularité en lumière rasante, tout en garantissant un noir pur absolu (Charte.NOIR)
+## pour le corps du mur.
+static func creer_materiau_mur() -> ShaderMaterial:
+	var mat := ShaderMaterial.new()
+	mat.shader = SHADER_SHIMMER_MURS
+	mat.set_shader_parameter("intensite_shimmer", 0.85)
+	mat.set_shader_parameter("frequence_scintillement", 4.5)
+	mat.set_shader_parameter("rugosite_arete", 8.0)
+	mat.set_shader_parameter("couleur_lisere", Charte.HALOGENE)
+	mat.set_shader_parameter("couleur_reflet", Charte.AMBRE)
+	return mat

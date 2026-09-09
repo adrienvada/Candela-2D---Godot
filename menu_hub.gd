@@ -6,6 +6,7 @@ const MenuArtwork := preload("res://menu_artwork.gd")
 const MenuComicPanel := preload("res://menu_comic_panel.gd")
 const MenuTheme := preload("res://menu_theme.gd")
 const MenuWidgets := preload("res://menu_widgets.gd")
+const MenuParticlesAmbiance := preload("res://menu_particles_ambiance.gd")
 
 ## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
@@ -140,6 +141,7 @@ var _tween: Tween
 ## Arrière-plan illustré flouté sous le contenu interactif du cadre droit
 var _bg_image: TextureRect
 var _bg_image_prev: TextureRect
+var _bg_particles: MenuParticlesAmbiance
 var _panel_backgrounds: Dictionary = {}
 var _screen_backgrounds: Dictionary = {}
 var _current_artwork_key: String = ""
@@ -234,6 +236,10 @@ func _build() -> void:
 	_bg_image.material = _build_blur_material()
 	_bg_image.hide()
 	right.add_child(_bg_image)
+
+	_bg_particles = MenuParticlesAmbiance.new()
+	_bg_particles.name = "ParticulesAmbiance"
+	right.add_child(_bg_particles)
 
 	# **Le cadre a deux étages, et le second est un pied de page.**
 	#
@@ -849,6 +855,9 @@ func _transition_vers_texture(nouvelle_tex: Texture2D, nouvelle_cle: String, flo
 		mat_nouveau.set_shader_parameter("effect_mode", effet)
 		mat_nouveau.set_shader_parameter("reveal_progress", 1.0)
 
+	if _bg_particles != null:
+		_bg_particles.definir_illustration(nouvelle_cle)
+
 	_bg_image.modulate.a = 0.0
 	_bg_image.show()
 
@@ -885,6 +894,8 @@ func _effacer_arriere_plan() -> void:
 	if _bg_image_prev != null:
 		_bg_image_prev.hide()
 		_bg_image_prev.texture = null
+	if _bg_particles != null:
+		_bg_particles.masquer_doux()
 	_current_artwork_key = ""
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche

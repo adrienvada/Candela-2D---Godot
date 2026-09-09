@@ -244,9 +244,7 @@ func _monter_arene() -> void:
 	# murs et il n'y a plus rien à juger.
 	MapGeometry.build_collisions(data, self)
 
-	var mat := CanvasItemMaterial.new()
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	murs.material = mat
+	murs.material = CandelaTileSet.creer_materiau_mur()
 
 
 func _monter_porteur() -> void:

@@ -2012,6 +2012,10 @@ var _oreille: AudioListener2D = null
 var _oreille2: AudioListener2D = null
 var _relais: Node2D = null
 var _suivi: Node2D = null
+
+## Le porteur de l'oreille principale, retenu pour pouvoir REPOSER l'oreille si
+## le mode de rendu change apres la pose. Voir la garde dans `_process`.
+var _porteur: Node2D = null
 var _vues_ecoutantes: Array = []
 
 ## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
@@ -2044,7 +2048,35 @@ func poser_oreille(porteur: Node2D) -> void:
 	for p in sfx_players_2d:
 		if is_instance_valid(p) and p.is_inside_tree():
 			p.reparent(hote, false)
+	_porteur = porteur
 	var vue := porteur.get_viewport()
+	var racine := get_tree().root
+
+	# ⚠️ **LE DUEL EST-IL RENDU DANS LA RACINE ?** (chantier R, vue unique.)
+	#
+	# Dans ce cas la racine a adopte le `World2D` du duel et les deux
+	# `SubViewport` sont ARRETES (`UPDATE_DISABLED`). Declarer oreille la vue qui
+	# porte le joueur revient alors a confier l'ecoute a une vue MORTE, et a
+	# couper la seule qui soit vivante. **C'est le silence complet, et il a tenu
+	# de la mi-aout au 2026-09-09** : plus un son en ligne ni a l'entrainement,
+	# y compris ses PROPRES tirs — seul l'ecran partage entendait encore, parce
+	# qu'il garde ses deux vues allumees.
+	#
+	# Le garde precedent (`if vue != racine`) ne couvrait que deux cas sur trois :
+	# l'oreille dans un `SubViewport` vivant, et l'oreille dans la racine. Le
+	# chantier R en a cree un troisieme — **l'oreille dans un `SubViewport`
+	# arrete pendant que la racine peint** — et rien ne l'a signale : `auditeurs
+	# = 1` restait vrai, `test_rendu_racine` comptait cette vue morte comme un
+	# auditeur valide et passait au vert.
+	#
+	# *Un graphe correct n'est pas un son qui sort* — quatrieme fois. Le predicat
+	# qui manquait n'est pas « combien de vues ecoutent » mais **« celle qui
+	# ecoute est-elle celle qui rend »**.
+	var duel_dans_la_racine := vue != null and vue != racine \
+		and racine.world_2d == vue.world_2d
+	if duel_dans_la_racine:
+		_poser_oreille_dans_la_racine(porteur, vue, racine)
+		return
 	if vue != null:
 		vue.audio_listener_enable_2d = true
 		# ⚠️ **ET COUPER LA RACINE, sans quoi il y a DEUX auditeurs.**
@@ -2083,6 +2115,37 @@ func poser_oreille(porteur: Node2D) -> void:
 	if not hote.tree_exiting.is_connected(rendre_oreille):
 		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
 	_tracer_ecoute("une oreille posee sur %s" % porteur.name)
+
+## L'oreille quand le duel est peint par la RACINE : un relais, comme pour J2.
+##
+## ⚠️ **Elle ne peut pas etre l'enfant du joueur, et c'est tout le probleme.**
+## `make_current()` enregistre le listener sur SON viewport ; le joueur vit sous
+## le `SubViewport`, donc une oreille posee sur lui ecouterait toujours la vue
+## arretee. On reprend donc le montage deja eprouve pour J2 en ecran partage :
+## un noeud sous la vue qui ecoute, dont la position recopie celle du porteur a
+## chaque frame (`_suivi`, boucle plus bas).
+##
+## La position se recopie des la pose et pas seulement a la frame suivante :
+## sans ca le premier son de la manche — souvent « FIGHT » ou un pas — partirait
+## depuis l'origine de la carte.
+func _poser_oreille_dans_la_racine(porteur: Node2D, vue: Viewport, racine: Viewport) -> void:
+	racine.audio_listener_enable_2d = true
+	vue.audio_listener_enable_2d = false
+	_vues_ecoutantes = [racine]
+	_relais = Node2D.new()
+	_relais.name = "RelaisOreilleRacine"
+	racine.add_child(_relais)
+	_relais.global_position = porteur.global_position
+	_oreille = AudioListener2D.new()
+	_oreille.name = "OreilleLocale"
+	_relais.add_child(_oreille)
+	_oreille.make_current()
+	_suivi = porteur
+	var hote := _hote_positionnel
+	if hote != null and is_instance_valid(hote) \
+			and not hote.tree_exiting.is_connected(rendre_oreille):
+		hote.tree_exiting.connect(rendre_oreille, CONNECT_ONE_SHOT)
+	_tracer_ecoute("une oreille posee sur %s, par relais dans la racine" % porteur.name)
 
 ## Pose UNE oreille par joueur, chacune dans sa propre vue — le mode « canapé ».
 ##
@@ -2233,6 +2296,7 @@ func rendre_oreille() -> void:
 		_relais.queue_free()
 	_relais = null
 	_suivi = null
+	_porteur = null
 	for v in _vues_ecoutantes:
 		if v != null and is_instance_valid(v):
 			(v as Viewport).audio_listener_enable_2d = false
@@ -2445,6 +2509,30 @@ func _process(_delta: float) -> void:
 	if _relais != null and is_instance_valid(_relais) \
 			and _suivi != null and is_instance_valid(_suivi):
 		_relais.global_position = _suivi.global_position
+
+	# ⚠️ **L'invariant se tient ICI, en continu, et pas au bon ordre d'appels.**
+	#
+	# Le mode de rendu bascule ailleurs (`_accorder_rendu_aux_vues`), et trois
+	# chemins de `game_state.gd` le changent SANS raccorder l'oreille derriere.
+	# Compter sur l'ordre des appels d'un fichier qui ne m'appartient pas, c'est
+	# reintroduire le silence au premier chemin qu'on ajoutera.
+	#
+	# La verification coute deux comparaisons par frame et ne repose l'oreille
+	# que sur un vrai changement — donc jamais, en regime etabli.
+	if _oreille != null and is_instance_valid(_oreille) \
+			and _porteur != null and is_instance_valid(_porteur) \
+			and _porteur.is_inside_tree() and get_tree() != null:
+		var racine := get_tree().root
+		var vue_du_porteur := _porteur.get_viewport()
+		var doit_ecouter_la_racine: bool = (vue_du_porteur != null \
+			and vue_du_porteur != racine \
+			and racine.world_2d == vue_du_porteur.world_2d)
+		var ecoute_la_racine: bool = false
+		if _vues_ecoutantes.size() == 1:
+			var premiere_vue: Variant = _vues_ecoutantes[0]
+			ecoute_la_racine = (premiere_vue == racine)
+		if doit_ecouter_la_racine != ecoute_la_racine:
+			poser_oreille(_porteur)
 
 	var bt := Engine.time_scale < 0.5 and match_sync_stream != null
 	if bt == _bullet_time_duck:
