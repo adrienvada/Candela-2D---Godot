@@ -636,6 +636,15 @@ func _test_ecran_de_classes() -> void:
 				muettes.append(String(catalogue[idx].slug()))
 		_check("les dix fiches sont remplies", muettes.is_empty(), str(muettes))
 
+		# Les dix boutons du râtelier portent tous leur icône d'arme
+		var sans_icones: Array[String] = []
+		for btn: Button in ui.p1_weapon_buttons:
+			var idx := int(btn.get_meta(ui.META_CLASSE_INDEX, -1))
+			if btn.icon == null:
+				sans_icones.append(String(catalogue[idx].slug()) if idx >= 0 else "?")
+		_check("les dix boutons de classe portent leur icône d'arme",
+			sans_icones.is_empty(), str(sans_icones))
+
 		# Le zéro absolu se distingue de « la plus faible des dix » : le Spectre
 		# n'a pas peu de fusées, il n'en a aucune, et sa ligne le dit.
 		var spectre = null

@@ -1083,6 +1083,8 @@ func _start_round():
 	cam2.global_position = p2.global_position
 	p1.reset_step_tracker()
 	p2.reset_step_tracker()
+	p1.reset_flashlight_latch()
+	p2.reset_flashlight_latch()
 
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		if multiplayer.get_peers().size() == 0:
@@ -1251,9 +1253,13 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	p1.rotation = 0
 	p2.rotation = PI
 	# Après la téléportation au spawn : le détecteur de pas et la distance du
-	# tir fatal repartent de zéro (pas fantôme et « à N px » périmé sinon).
+	# tir fatal repartent de zéro (pas fantôme et « à N px » périmé sinon), et
+	# le cran plein d'un bouton à deux crans ne doit pas rallumer la torche
+	# tout seul (voir `Player.reset_flashlight_latch()`).
 	p1.reset_step_tracker()
 	p2.reset_step_tracker()
+	p1.reset_flashlight_latch()
+	p2.reset_flashlight_latch()
 	time_left = round_time
 	round_active = true
 	game_over = false
