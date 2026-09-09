@@ -70,9 +70,8 @@ func _capturer_tout() -> void:
 		mat.set_shader_parameter("effect_strength", 1.0)
 		mat.set_shader_parameter("mode_flou_total", 0.0)
 		
-		# Attente explicite du rendu complet de la frame
-		await RenderingServer.frame_post_draw
-		await RenderingServer.frame_post_draw
+		await get_tree().process_frame
+		await get_tree().process_frame
 		
 		var img := sub_viewport.get_texture().get_image()
 		if img != null:

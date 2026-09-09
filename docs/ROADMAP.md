@@ -2369,6 +2369,21 @@ arrière) ; c'est désormais vu marcher, pas seulement lu. Jalon H9 fait.
    Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
    pas de translocation, un dossier et un `.exe`.
 
+### Ce qui a été éprouvé le 2026-09-07, sur la vraie publication
+
+`v0.1.0` est publiée. La chaîne entière a tourné : suites en CI, exports Windows
+et macOS, manifeste signé par la clé privée d'Adrien, Release créée. Vérifié
+ensuite **sur les fichiers réellement publiés** : la signature du manifeste est
+acceptée par la clé publique du jeu (`Verified OK`), l'empreinte du zip Windows
+est exactement celle qu'annonce le manifeste, et la racine de l'archive est bien
+celle que l'installateur ira chercher.
+
+**Ce que la CI ne peut pas prouver, et qu'il fallait donc vérifier autrement :**
+elle signe avec n'importe quelle clé privée et passe au vert même si la paire ne
+correspond pas. Seul le jeu installé — ou cette vérification à la main — le dit.
+
+Reste la moitié « installer et cliquer » de H9.
+
 Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 ---
@@ -2427,6 +2442,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Code de récupération à 12 caractères**, pas 6 | Décision du 2026-08-16. L'alphabet est celui de `LobbyCode`, la longueur non. Un code de salon (6 caractères, 30 bits) désigne un salon qui vit dix minutes ; un code de récupération est un secret au porteur qui ouvre un profil classé à vie. 12 caractères sur 32 font 60 bits, ce qui met une attaque par essais hors de portée. Affiché par groupes de quatre (`ABCD-EFGH-JKLM`), stocké et envoyé sans séparateur. |
 | **Code de récupération stocké en clair** | Décision du 2026-08-16. Un condensat serait plus sûr, mais le jeu réaffiche le code à chaque lancement — c'est tout son intérêt, le joueur peut le noter quand il y pense. Le compromis « secret au porteur » était déjà acté ; le stockage en clair en est la conséquence, pas une négligence. |
 | **Edge Functions sans jeton Supabase** (`verify_jwt = false`) | Décision du 2026-08-16. Leur authentification est le jeton signé par Epic, qu'elles vérifient elles-mêmes. Exiger en plus un jeton Supabase n'ajouterait rien — la clé publiable est embarquée dans le jeu, donc connue de tous — et ferait dépendre l'accès du format des clés, qui a justement changé (publiable / secrète). |
+| **La mineure de la version dit la compatibilité en ligne** (2026-09-08, Adrien) | `Protocol.accepts()` refuse symétriquement : dès que le fil bouge, la population se coupe en deux moitiés qui ne se voient pas. Le numéro doit donc le dire — **même chiffre du milieu = vous pouvez jouer ensemble**, et toute montée de `Protocol.VERSION` oblige à monter la mineure ET à publier. C'est la seule question qui compte dans un 1v1, et la seule que le joueur puisse lire sans rien connaître du protocole. L'inverse n'est pas interdit (une refonte peut mériter une mineure neuve sans toucher au réseau) : `tools/verifier_publication.sh` ne refuse que le cas dangereux, la mineure figée alors que le fil a bougé — un contrôle qui interdit le mouvement deviendrait un carcan. |
 | **Mise à jour : refus poli, jamais forcée** (2026-08-24, Adrien) | Une version de retard ne bloque rien. Ce qui cesse de fonctionner a déjà cessé tout seul — `Protocol.accepts()` refuse symétriquement — et l'écran le nomme au lieu de le contraindre. Une mise à jour obligatoire transformerait une gêne en panne, et un jeu compétitif qui se met à jour tout seul changerait le comportement d'une arme entre deux manches d'une même soirée. |
 | **Rien ne s'installe sans signature valide** (2026-08-24) | Un fichier écrit par `HTTPRequest` ne porte pas l'attribut de quarantaine de macOS : les mises à jour ne repassent jamais devant Gatekeeper. C'est confortable, et cela veut dire que **plus personne d'autre que nous ne vérifie ce qui s'exécute**. Sans clé publique renseignée, le jeu se déclare « non configuré » et ne télécharge rien — même dégradation franche que sans `eos_credentials.gd`. |
 | **Publier est un geste humain** (2026-08-24) | La CI ne publie que sur un tag `vX.Y.Z` posé à la main, et refuse un tag qui ne corresponde pas à `config/version`. Une version partie ne se rattrape pas : les jeux installés la trouveront encore dans deux ans. |
@@ -6065,6 +6081,13 @@ quoi : le message liste des chaînes vides. Passer par
 ---
 
 **Mise à jour du jeu installé**
+- **Le fil qui bouge sans que la version le dise est le seul défaut de ce système
+  que personne ne voit.** Ni celui qui développe — il tourne toujours sur le
+  dernier code — ni les suites, qui n'ont pas de population. Il ne se manifeste
+  que chez un joueur installé, sous la forme d'une recherche en ligne qui
+  n'aboutit jamais, sans erreur ni message. Constaté pour de vrai le 2026-09-08 :
+  la `v0.1.0` publiée portait le protocole 7 pendant que `main` était au 8.
+  `tools/verifier_publication.sh` refuse désormais cette publication-là.
 - **Le bundle macOS ne s'appelle pas comme l'exécutable.** Godot le nomme d'après
   `config/name` : c'est « Candela 2D.app », avec l'espace, alors que l'export
   Windows produit `Candela.exe` dans un dossier `Candela`. Le manifeste annonce

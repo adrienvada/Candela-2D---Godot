@@ -30,6 +30,7 @@ pour que cette phrase soit vraie sans jamais casser l'installation de personne.
 | `.github/workflows/release.yml` | Sur tag : vérifie, teste, exporte, signe, publie. |
 | `tools/test_mise_a_jour.gd` | La suite : 110 contrôles, dont la chaîne de signature et le script d'échange. |
 | `tools/test_autoloads.gd` | L'ordre des autoloads, que `project.godot` ne peut pas expliquer lui-même. |
+| `tools/verifier_publication.sh` | Le numéro de version est-il publiable ? Lit la publication précédente dans les tags. |
 
 ## Deux réglages de `project.godot`, et pourquoi ils sont expliqués ici
 
@@ -78,15 +79,62 @@ La chaîne `openssl` → `Crypto.verify()` de Godot a été **vérifiée en exé
 produite par la commande ci-dessus est acceptée, un octet modifié dans le
 manifeste est refusé.
 
+## Quand publier — la règle, et la seule
+
+**Toute montée de `Protocol.VERSION` oblige à publier. Le reste est facultatif.**
+
+`Protocol.accepts()` refuse symétriquement : dès que le fil change, la population
+se coupe en deux moitiés qui ne se voient pas. Un joueur resté sur l'ancienne
+version ne trouve plus personne en ligne — le jeu ne plante pas, ne dit rien de
+faux, il refuse poliment. **C'est le seul défaut de ce système qui ne se voit
+chez personne** : ni chez celui qui développe, toujours sur le dernier code, ni
+dans les suites, qui n'ont pas de population. Publier n'est alors pas du
+confort : c'est la seule façon de recoller les joueurs.
+
+Entre deux changements de fil, publier reste un choix — quand il y a quelque
+chose qui vaut le téléchargement, pas « chaque vendredi ».
+
+### Le numéro dit la compatibilité
+
+| | Quand | Ce que le joueur comprend |
+|---|---|---|
+| `0.2.0` → `0.3.0` | `Protocol.VERSION` a bougé | « vous ne pouvez plus jouer avec l'ancienne » |
+| `0.2.0` → `0.2.1` | tout le reste | « c'est mieux, mais vous pouvez rester » |
+
+**Même chiffre du milieu = vous pouvez jouer ensemble.** C'est la seule question
+qui compte dans un 1v1, et elle se lit d'un coup d'œil sans rien connaître du
+protocole.
+
+L'inverse n'est pas interdit : une refonte peut mériter une mineure neuve sans
+toucher au réseau. `tools/verifier_publication.sh` ne refuse que le cas
+dangereux — la mineure **inchangée** alors que le fil a bougé.
+
+### Le rappel
+
+```bash
+tools/verifier_publication.sh          # avant de taguer : « puis-je publier ? »
+```
+
+Il lit la publication précédente **dans les tags** — le seul registre qui ne
+puisse pas se périmer, puisque c'est lui qui a produit ce qui tourne chez les
+joueurs. Il refuse un numéro déjà publié, un numéro qui recule, et une mineure
+figée alors que le protocole a changé. La CI le relance en second rideau, mais
+l'erreur y coûte un tag à retirer : mieux vaut le lancer avant.
+
 ## Publier une version complète
 
-1. Monter `config/version` dans `project.godot`.
+1. `./tools/run_suites.sh` vert, et sans mention « REPORTÉ » — un report n'est
+   pas un vert.
 2. Si le fil a bougé, monter `Protocol.VERSION` — c'est un jugement, pas un
    calcul ; `tools/test_protocole.gd` ne fait que rappeler qu'il faut le porter.
-3. Commiter, puis poser le tag : `git tag v0.2.0 && git push origin v0.2.0`.
-4. La CI vérifie que le tag et `config/version` disent la même chose, passe
-   **toutes** les suites, exporte Windows et macOS, fabrique le manifeste, le
-   signe et publie.
+3. Monter `config/version` dans `project.godot` : la **mineure** si le fil a
+   bougé, le **correctif** sinon.
+4. `tools/verifier_publication.sh` — il tranche entre les deux.
+5. Commiter, **pousser `main` d'abord**, puis seulement poser le tag :
+   `git tag v0.2.0 && git push origin v0.2.0`. Jamais l'inverse : un tag emporte
+   ses objets et peut désigner un commit que `main` ignore.
+6. La CI refait le contrôle de version, passe **toutes** les suites, exporte
+   Windows et macOS, fabrique le manifeste, le signe et publie.
 
 Le jeu installé lit toujours la même adresse :
 `…/releases/latest/download/manifeste.json`. GitHub la redirige vers la dernière
