@@ -12919,6 +12919,13 @@ refermeture du sillage (2 s), portée du lancer (450 px), portées/niveaux audio
 tout est constantes de `fusee_modele.gd` et propositions dans les tables —
 **rien n'est passé au banc devant Adrien.** Le dosage est l'étape FU6.
 
+> ✅ **Tranché par Adrien le 2026-09-09 : « le dosage est validé ».** Les
+> nombres ci-dessus cessent donc d'être des propositions — ils sont les
+> valeurs du jeu, y compris ceux que FU3 et FU5 ont ajoutés. **Ce qui change
+> vraiment, c'est le statut, pas les chiffres** : les toucher désormais est
+> une décision à reprendre avec lui, plus un réglage libre. Le relevé
+> `bench_framerate --fusee` reste dû — Adrien a jugé le RENDU, pas le coût.
+
 ### Le témoin du fil, encore : `rpc_eteindre_fusee` fait monter VERSION à 9
 
 Confirmé le motif : ajouter un RPC — pas seulement en modifier un existant —
@@ -12964,13 +12971,15 @@ serait pris pour un bug plutôt que pour une incompatibilité.
   *(C : `fusee_eteinte` câblée côté `AudioManager` par DA3 — un seul événement
   pour les deux causes, distinguer viendra si le dosage le réclame, pas
   avant. Le son est donc en place ; il attend son fichier.)*
-- **FU6 — le dosage** : paramétrer le modèle pour donner des molettes au banc,
-  puis séance avec Adrien (visuel + audio), et seulement alors les nombres
-  deviennent des décisions. Relevé `bench_framerate --fusee` au calme, vue
-  unique ET écran scindé, avant de considérer FU2 close côté perf. **FU3/FU5
-  ajoutent leurs propres nombres à doser** : durée et largeur du tunnel, force
-  du pouls de diffusion, rayon et tolérance de vitesse du piétinement, durée du
-  panache — tous des valeurs de départ, aucun jugé.
+- ~~**FU6 — le dosage**~~ — ✅ **validé par Adrien le 2026-09-09**, sans
+  séance de molettes : il a jugé la mécanique en jouant et a validé les valeurs
+  telles quelles, celles de FU3/FU5 comprises (durée et largeur du tunnel,
+  force du pouls de diffusion, rayon et tolérance de vitesse du piétinement,
+  durée du panache). **Les molettes de banc n'ont donc jamais été écrites, et
+  n'ont plus lieu de l'être** — c'est un outil pour trancher, pas un livrable ;
+  la question qu'il servait à poser a reçu sa réponse. **Reste dû** : le relevé
+  `bench_framerate --fusee` au calme, vue unique ET écran scindé, avant de
+  considérer FU2 close côté perf — juger le rendu ne dit rien de son coût.
 - **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
   de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
   de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
@@ -13115,8 +13124,15 @@ chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
   (`_combustion`) et l'appelle **une seule fois**, à l'atterrissage (`play()`),
   avant de le couper à l'acte RÉSIDU. Rien ne le relance entre les deux : la
   fusée brûle une quinzaine de secondes en silence après les trois premières.
-  Le correctif tient probablement dans l'import (`loop_mode=1`) plutôt que dans
-  le code, mais c'est un choix de dosage sonore — donc d'Adrien, au banc.
+  ✅ **Corrigé le 2026-09-09 sur instruction d'Adrien** (« boucle le son de la
+  fusée pour l'instant ») : `edit/loop_mode=1` dans le `.import`, pas une ligne
+  de code — le lecteur dédié rejoue de lui-même tant que `stop()` n'est pas
+  appelé, et `_appliquer_age` le coupe déjà à l'acte RÉSIDU. **Le « pour
+  l'instant » est du texte, pas une précaution de forme** : on boucle 2,98 s
+  sur une quinzaine de secondes, donc l'oreille entendra le motif revenir cinq
+  fois. C'est mieux que le silence, ce n'est pas la même chose qu'une nappe
+  longue. Si la répétition s'entend en jeu, le remède est un enregistrement
+  plus long, pas un réglage.
 - **`fusee_combustion` est absent de `SFX_PRIORITE`**, là où les quatre autres
   sons de fusée y figurent. **Probablement légitime** : ce son ne passe pas par
   le pool à seize voix, il a son propre lecteur, et l'arbitrage par priorité ne
