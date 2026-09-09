@@ -69,12 +69,6 @@ var _debut_de_seance: String = Time.get_datetime_string_from_system(true, true)
 ## fin de soirée pour devenir un écran de plus à congédier.
 var _soiree_montree: bool = false
 
-## ⚠️ **Ces deux-là viennent de `main` et comptent la MÊME chose que le bilan de
-## soirée, autrement.** Voir la note au-dessus de `carte_de_soiree()` : V6.10 a
-## été implémentée deux fois, et la fusion garde les deux plutôt que d'en
-## supprimer une. Décision d'Adrien attendue.
-var session_ties: int = 0
-var _session_weapons: Dictionary = {}
 ## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
 ##
 ## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
@@ -609,8 +603,6 @@ func _solder_le_match() -> void:
 	# double comptage, le score repart de 0-0 ».
 	p1_session_wins = 0
 	p2_session_wins = 0
-	session_ties = 0
-	_session_weapons.clear()
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
@@ -2170,14 +2162,6 @@ func _do_end_round(winner_id: int):
 			p1_session_wins += 1
 		elif winner_id == 1:
 			p2_session_wins += 1
-		elif winner_id == -1:
-			session_ties += 1
-
-		var _local_idx := _local_player_index()
-		var _local_p = p2 if _local_idx == 1 else p1
-		if _local_p and _local_p.current_weapon:
-			var _nom_arme: String = _local_p.current_weapon.name
-			_session_weapons[_nom_arme] = _session_weapons.get(_nom_arme, 0) + 1
 		# Le mot de la série est calculé AVANT que l'état n'avance : il compare
 		# ce qui vient de tomber à ce qui commence.
 		_mot_de_serie = SerieDeSession.mot(serie_porteur, serie_longueur,
@@ -2357,7 +2341,7 @@ func _do_end_round(winner_id: int):
 	# même chose au même moment. À la fin du match, la scène est effacée et le
 	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
 	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
-		dernier_effleurement, carte_de_soiree())
+		dernier_effleurement)
 	# DA6.1 — l'affiche, par-dessus le salon que ces deux lignes viennent de
 	# poser. Elle LIT le verdict sur le titre du menu plutôt que de le
 	# recalculer : le mot dépend du mode et d'un arbitrage sur l'égalité, et deux
@@ -2366,48 +2350,28 @@ func _do_end_round(winner_id: int):
 	_apply_deferred_rematch()
 
 # ---------------------------------------------------------------------------
-# ⚠️ V6.10 EXISTE EN DEUX EXEMPLAIRES, ET LA FUSION N'EN A SUPPRIMÉ AUCUN
+# V6.10 A ÉTÉ ÉCRITE DEUX FOIS, ET ADRIEN A TRANCHÉ LE 2026-09-09
 #
-# Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
-# soir : 7 matchs, 4-3, arme favorite : pompe » — et l'ont livrée deux fois, de
-# deux façons correctes. C'est le motif déjà consigné pour V6.2 le 2026-08-18.
+# Deux sessions ont lu la même fiche le même jour, sur deux branches, et l'ont
+# livrée deux fois : une LIGNE de texte sur l'écran de fin
+# (`SerieDeSession.carte_soiree()`, comptée sur le score de session en mémoire)
+# et une CARTE au retour au menu (`BilanDeSoiree`, comptée sur
+# `match_history.json`). C'est la deuxième fois que ce motif se produit ici —
+# V6.2, le 2026-08-18. Détail et leçon aux « Pièges connus ».
 #
-# | | sur `main` (`carte_de_soiree()`) | sur la branche photographe (`BilanDeSoiree`) |
-# |---|---|---|
-# | forme | une LIGNE de texte | une CARTE plein écran, exportable en PNG |
-# | où | l'écran de fin de match | le retour au menu |
-# | source | le score de session en mémoire | `match_history.json`, filtré sur la séance |
-# | couvre | V6.10 | V6.10 + DA6.3 + DA6.4 |
+# **La carte l'emporte, parce qu'elle couvre aussi DA6.3 et DA6.4** : illustrée
+# et exportable en image, ce qu'une ligne de texte ne peut pas être. La ligne est
+# retirée d'ici, de `serie_de_session.gd` et de sa suite. Ce qui disparaît avec
+# elle : `session_ties` et `_session_weapons`, qui ne servaient qu'à la nourrir —
+# le décompte des égalités et des armes vit désormais dans `BilanDeSoiree`, lu
+# depuis le journal des matchs.
 #
-# ⚠️ **Les deux comptes peuvent diverger dans la même soirée** : celui-ci compte
-# tout match dont la manche s'est terminée, l'autre écarte les matchs de moins de
-# cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut donc lire
-# « 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
-# l'explique.
-#
-# **Rien n'est supprimé ici : une fusion se résout en choisissant, donc en
-# pouvant détruire, et ce choix-là est un choix de produit.** Adrien tranche.
-# Trois issues possibles : garder la ligne pour l'écran de fin et la carte pour le
-# menu (redondant mais pas simultané), retirer la ligne au profit de la carte, ou
-# faire lire à la ligne le même calcul que la carte (`BilanDeSoiree`) pour qu'au
-# moins les deux chiffres s'accordent.
+# ⚠️ **Il reste une moitié dans `ui.gd`** : le paramètre `carte_soiree` de
+# `poser_bilan()` et le label `bilan_soiree` qu'il alimentait. Plus personne ne
+# les nourrit, le paramètre a un défaut vide, rien ne s'affiche. **Signalé et non
+# retiré : `ui.gd` appartient à la session « menus »**, et sept mille lignes ne
+# se touchent pas pour retirer trois des siennes.
 # ---------------------------------------------------------------------------
-
-func favorite_session_weapon() -> String:
-	var fav := ""
-	var max_count := 0
-	for w in _session_weapons:
-		if _session_weapons[w] > max_count:
-			max_count = _session_weapons[w]
-			fav = str(w)
-	return fav
-
-func carte_de_soiree() -> String:
-	var local_idx := _local_player_index()
-	var v := p1_session_wins if local_idx <= 0 else p2_session_wins
-	var d := p2_session_wins if local_idx <= 0 else p1_session_wins
-	return SerieDeSession.carte_soiree(v, d, session_ties, favorite_session_weapon())
-
 
 ## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
 ##
@@ -3450,11 +3414,8 @@ func _on_main_menu_requested():
 		
 	# Le score de session ne survit pas au retour au menu : une nouvelle série
 	# repart de 0 - 0.
-	var carte := carte_de_soiree()
 	p1_session_wins = 0
 	p2_session_wins = 0
-	session_ties = 0
-	_session_weapons.clear()
 	serie_porteur = -1
 	serie_longueur = 0
 	_mot_de_serie = ""
@@ -3496,8 +3457,6 @@ func _on_main_menu_requested():
 	_accorder_rendu_aux_vues()
 
 	ui.show_main_menu()
-	if carte != "":
-		ui.game_over_score.text = carte
 	AudioManager.play_music("music_menu")
 
 func _on_quit_requested():

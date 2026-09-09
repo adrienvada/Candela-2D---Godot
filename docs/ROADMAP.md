@@ -3151,12 +3151,23 @@ cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut lire
 « 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
 l'explique.
 
-**La fusion a gardé les deux**, et la note est dans `game_state.gd` au-dessus de
-`carte_de_soiree()`. Une fusion se résout en choisissant, donc en pouvant
-détruire ; ce choix-ci n'est pas technique. Trois issues : garder la ligne pour
-l'écran de fin et la carte pour le menu (redondant, mais jamais simultané),
-retirer la ligne au profit de la carte, ou faire lire à la ligne le calcul de la
-carte pour qu'au moins les deux chiffres s'accordent.
+**La fusion a gardé les deux** plutôt que d'en supprimer une : une fusion se
+résout en choisissant, donc en pouvant détruire, et ce choix-là n'était pas
+technique. **Adrien a tranché le jour même : la carte l'emporte**, parce qu'elle
+couvre aussi DA6.3 et DA6.4 — illustrée et exportable en image, ce qu'une ligne
+de texte ne peut pas être. La ligne a été retirée de `serie_de_session.gd`, de
+`game_state.gd` (avec `session_ties` et `_session_weapons`, qui ne servaient
+qu'à la nourrir) et de `tools/test_serie_de_session.gd`.
+
+⚠️ **Une moitié survit dans `ui.gd`** — le paramètre `carte_soiree` de
+`poser_bilan()` et le label `bilan_soiree` — parce que ce fichier appartient à
+une autre session. Plus rien ne les alimente : le paramètre a un défaut vide,
+rien ne s'affiche. Sept mille lignes ne se touchent pas pour en retirer trois.
+
+**Aux deux endroits d'où la ligne a disparu, une note dit qu'elle a existé.** Un
+fichier d'où l'on a retiré quelque chose ne le dit pas tout seul, et la prochaine
+session qui cherchera « où est la carte de soirée » commencera par là où elle
+était.
 
 **Ce que la répétition apprend, au-delà du cas :** le partage par fichier ne
 protège pas d'un doublon quand la seconde implémentation arrive dans des
@@ -7976,15 +7987,22 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   durées) dans un onglet : contempler ses matchs, c'est revenir.
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». **✅ Fait le 2026-09-09**
-  — implémenté dans `serie_de_session.gd:carte_soiree()`, testé dans
-  `tools/test_serie_de_session.gd`, et affiché dans le bilan et au retour menu
-  via `GameState.carte_de_soiree()`.
+  — `bilan_de_soiree.gd` (le calcul, pur et testé à froid), `carte_de_soiree.gd`
+  (la composition), `panneau_de_soiree.gd` (le moment), `exporteur.gd` (l'image).
+  Suite : `tools/test_bilan_de_soiree.gd`.
 
-  ⚠️ **ET IMPLÉMENTÉ UNE SECONDE FOIS LE MÊME JOUR, par la session photographe**
-  — `bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`, au
-  titre de DA6.3 et DA6.4. Découvert à la fusion, le 2026-09-09. **La fusion n'a
-  supprimé ni l'une ni l'autre : le choix est un choix de produit, et il revient
-  à Adrien.** Voir « Pièges connus », *V6.10 a été écrite deux fois*.
+  ⚠️ **Elle a été écrite DEUX FOIS le même jour, et Adrien a tranché le
+  2026-09-09 : la carte l'emporte sur la ligne.** L'autre version —
+  `SerieDeSession.carte_soiree()`, une ligne de texte sur l'écran de fin — a été
+  retirée de `serie_de_session.gd`, de `game_state.gd` et de sa suite. **Raison
+  de l'arbitrage : la carte couvre aussi DA6.3 (illustrée) et DA6.4 (exportable
+  en image), ce qu'une ligne de texte ne peut pas être.** Voir « Pièges connus »,
+  *V6.10 a été écrite deux fois* — c'était la deuxième récidive du motif.
+
+  **Il reste une moitié dans `ui.gd`** : le paramètre `carte_soiree` de
+  `poser_bilan()` et le label `bilan_soiree`. Plus rien ne les nourrit, le
+  paramètre a un défaut vide, rien ne s'affiche. **Signalé et non retiré** —
+  `ui.gd` appartient à la session « menus ».
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 
