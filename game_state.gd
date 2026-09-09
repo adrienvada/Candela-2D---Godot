@@ -432,6 +432,7 @@ func _ready():
 	ui.pick_window_cancelled.connect(_on_pick_window_cancelled)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
+	ui.quit_match_requested.connect(_on_quit_match_requested)
 	
 	# Set global clear color to black to fix gray areas
 	RenderingServer.set_default_clear_color(Charte.NOIR)
@@ -4349,7 +4350,13 @@ func _restore_viewports():
 		mod.color = Charte.NOIR
 
 
-func _on_main_menu_requested():
+## `target_screen` : écran du hub à rouvrir une fois de retour à l'accueil,
+## par-dessus le `hub.reset()` de `ui.show_main_menu()` — vide pour rester à
+## l'accueil (le cas de tous les appelants existants, MENU PRINCIPAL compris).
+## Seul `_on_quit_match_requested()` en passe un : c'est lui qui distingue
+## « quitter le match » (retour au salon de départ) de « menu principal »
+## (retour à l'accueil), les deux partageant sinon exactement le même ménage.
+func _on_main_menu_requested(target_screen: String = ""):
 	# Départ volontaire en plein match : c'est un abandon, et il se paie. Le
 	# vainqueur est l'adversaire — celui qui reste. Archivé AVANT la déconnexion,
 	# qui repasse le mode en local et rendrait l'enregistrement muet sur son
@@ -4456,7 +4463,24 @@ func _on_main_menu_requested():
 	_accorder_rendu_aux_vues()
 
 	ui.show_main_menu()
+	# `show_main_menu()` vient de remettre le hub à l'accueil (`hub.reset()`) —
+	# un écran voulu descend d'un cran par-dessus, APRÈS coup : `hub.push()`
+	# refuse silencieusement un identifiant inconnu ou déjà courant, donc un
+	# `target_screen` vide (tous les appelants sauf « quitter le match ») ne
+	# change rien ici.
+	if target_screen != "":
+		ui.hub.push(target_screen)
 	AudioManager.play_music("music_menu")
+
+## Retour à la pause vers « QUITTER LE MATCH » : le même abandon que MENU
+## PRINCIPAL (forfait compris — c'est `_on_main_menu_requested()` qui le
+## paie), mais qui rouvre le salon d'où le match est parti au lieu de
+## l'accueil du hub. Cet écran n'est encore qu'une mémoire best-effort
+## (`ui.match_origin_screen()`) : rien ne garantissait avant ce chantier
+## qu'il existe un « salon de départ » à retrouver, donc un identifiant
+## absent ou périmé retombe simplement sur l'accueil, comme MENU PRINCIPAL.
+func _on_quit_match_requested():
+	_on_main_menu_requested(ui.match_origin_screen())
 
 func _on_quit_requested():
 	# Quitter le jeu en plein match est un abandon comme un autre : il se paie.
