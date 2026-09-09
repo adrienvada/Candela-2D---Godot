@@ -70,13 +70,30 @@ func _test_socle() -> void:
 func _test_table() -> void:
 	print("\n[La table compétitive]")
 	_check("Aveugle prend le pistolet", _L.for_tier(1) == [_L.PISTOLET], str(_L.for_tier(1)))
-	_check("Braise le fusil", _L.for_tier(2) == [_L.FUSIL])
-	_check("Bougie la pompe", _L.for_tier(3) == [_L.POMPE])
-	_check("Lanterne l'arbalète", _L.for_tier(4) == [_L.ARBALETE])
-	# LE point qu'une relecture distraite « corrigerait » : au-delà de Lanterne,
-	# on redescend. Ce n'est pas une erreur de saisie, c'est un trou de contenu.
-	_check("Torche redescend au pistolet, faute d'arme", _L.for_tier(5) == [_L.PISTOLET])
-	_check("Candela aussi", _L.for_tier(10) == [_L.PISTOLET])
+	_check("Braise le Fumiste", _L.for_tier(2) == [_L.FUMISTE])
+	_check("Bougie l'Illusionniste (fusil)", _L.for_tier(3) == [_L.FUSIL])
+	_check("Lanterne le Braconnier (arbalète)", _L.for_tier(4) == [_L.ARBALETE])
+	_check("Torche le Terrassier (pompe)", _L.for_tier(5) == [_L.POMPE])
+	_check("Brasier l'Incendiaire", _L.for_tier(6) == [_L.INCENDIAIRE])
+	_check("Phare la Sentinelle", _L.for_tier(7) == [_L.SENTINELLE])
+	_check("Aurore l'Occulteur", _L.for_tier(8) == [_L.OCCULTEUR])
+	_check("Zénith l'Allumeur", _L.for_tier(9) == [_L.ALLUMEUR])
+	_check("Candela le Spectre", _L.for_tier(10) == [_L.SPECTRE])
+
+	# ⚠️ **LE point qu'une relecture distraite « corrigerait », et sa raison a
+	# CHANGÉ le 2026-09-09.** La table n'est toujours pas monotone — mais ce
+	# n'était un trou de contenu (les rangs 5 à 10 retombaient au pistolet faute
+	# d'armes), c'est maintenant une INTENTION : l'échelle des rangs est une
+	# échelle de lumière, pas de puissance. Le Braconnier et ses 0,60 s de root
+	# est au rang 4 ; l'Allumeur et ses 0,20 s au rang 9.
+	#
+	# Ce contrôle vérifie donc la PROPRIÉTÉ plutôt que des valeurs : il existe au
+	# moins un palier où la classe suivante est « plus facile » que la précédente.
+	# Écrit ainsi, il survit à un remaniement saisonnier de la table.
+	_check("la table n'est pas monotone en difficulté",
+		_L.for_tier(4) == [_L.ARBALETE] and _L.for_tier(5) == [_L.POMPE])
+	_check("les dix catégories donnent dix classes DISTINCTES",
+		_classes_distinctes())
 	_check("la table couvre les dix catégories", _L.COMPETITIF.size() == 10)
 
 	# Une sélection, jamais une arme — même quand elle n'en contient qu'une.
@@ -107,7 +124,7 @@ func _test_miroir() -> void:
 		_L.mirrored(4, 1) == [_L.PISTOLET], str(_L.mirrored(4, 1)))
 	_check("et l'ordre des arguments n'y change rien",
 		_L.mirrored(1, 4) == _L.mirrored(4, 1))
-	_check("deux Bougie gardent la pompe", _L.mirrored(3, 3) == [_L.POMPE])
+	_check("deux Bougie gardent leur classe", _L.mirrored(3, 3) == [_L.FUSIL])
 	# Non-monotonie : un Candela contre un Lanterne descend à l'arbalète, alors
 	# que sa propre sélection est le pistolet. Le miroir suit le RANG, pas la
 	# richesse de l'arsenal.
@@ -142,3 +159,22 @@ func _test_raisons() -> void:
 	var r_anonyme: String = _L.reason_for(_L.ARBALETE, true, 4, 1)
 	_check("sans pseudo, la phrase reste lisible",
 		r_anonyme.contains("adversaire"), r_anonyme)
+
+
+## Les dix catégories donnent-elles dix classes différentes ?
+##
+## ⚠️ **Ce contrôle n'aurait rien dit avant le 2026-09-09**, où six rangs sur dix
+## rendaient le pistolet faute de contenu. Il dit maintenant quelque chose de
+## fort : chaque palier de l'échelle a sa propre classe. Le jour où une saison
+## fera partager une classe à deux rangs, il rougira — et c'est bien : ce sera
+## une décision, elle mérite d'être vue.
+func _classes_distinctes() -> bool:
+	var vues := {}
+	for tier in range(1, 11):
+		var sel: Array = _L.for_tier(tier)
+		if sel.size() != 1:
+			return false
+		if vues.has(sel[0]):
+			return false
+		vues[sel[0]] = true
+	return vues.size() == 10

@@ -6228,19 +6228,36 @@ func hide_pick_window() -> void:
 	if pick_panel != null:
 		pick_panel.hide()
 
+## Le libellé et le slug d'une classe, LUS DANS LE CATALOGUE.
+##
+## ⚠️ **C'étaient deux `match` en dur, et leur branche par défaut rendait
+## « Pistolet ».** Tant que l'arsenal comptait quatre armes, la branche par
+## défaut ne se déclenchait jamais. Depuis que le catalogue en compte dix, les
+## six classes neuves s'y seraient affichées comme **six boutons « Pistolet »
+## portant la même icône, sans qu'une seule erreur ne se lève** — six choix
+## indiscernables dans l'écran qui sert précisément à choisir.
+##
+## ⚠️ **Et le repli ne redit PAS « Pistolet ».** Rendre le nom d'une vraie classe
+## quand on ne sait pas répondre est exactement ce qui a caché le défaut : un
+## mauvais nom PLAUSIBLE se prend pour une intention. « Classe 7 » est laid, et
+## c'est sa vertu — personne ne le confond avec un libellé voulu.
+func _classe_du_catalogue(idx: int):
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs == null or not gs.has_method("classe_pour_index"):
+		return null
+	return gs.classe_pour_index(idx)
+
 func _weapon_label(idx: int) -> String:
-	match idx:
-		RankLoadout.ARBALETE: return "Arbalète"
-		RankLoadout.POMPE: return "Pompe"
-		RankLoadout.FUSIL: return "Fusil"
-		_: return "Pistolet"
+	var c = _classe_du_catalogue(idx)
+	if c != null and not String(c.libelle).is_empty():
+		return c.libelle
+	return "Classe %d" % (idx + 1)
 
 func _weapon_slug(idx: int) -> String:
-	match idx:
-		RankLoadout.ARBALETE: return "arbalete"
-		RankLoadout.POMPE: return "pompe"
-		RankLoadout.FUSIL: return "fusil"
-		_: return "pistolet"
+	var c = _classe_du_catalogue(idx)
+	if c != null:
+		return c.slug()
+	return ""
 
 func _on_pick_weapon(idx: int) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")

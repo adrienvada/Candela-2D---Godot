@@ -14232,6 +14232,45 @@ arguments** et non par un `contains` approximatif — sinon on échange un faux
 positif contre un faux négatif. Sabotée pour vérifier : angle du Fumiste passé de
 30 à 33, elle dit « torches.gd dit 33.0, la source dit 30.0 ». Restaurée, 84/84.
 
+### Étape 8 — la table rang → classe entre en vigueur ✅
+
+Les dix rangs donnent dix classes distinctes. `Protocol.VERSION` passe à **11** :
+la FORME du fil ne bouge pas — `weapon_idx` reste un entier — c'est son SENS qui
+change, l'intervalle passant de 0-3 à 0-9. ⚠️ **C'est le cas de la v7**, où
+`rpc_spawn_fusee` troquait une cible contre un angle : rien ne casse à la
+lecture, les deux jeux s'entendent, et chacun équipe une classe différente.
+
+Le témoin du fil, lui, ne bouge PAS — et c'est juste : il mécanise l'oubli d'un
+changement de forme, pas le jugement sur un changement de sens.
+
+#### Trois branches par défaut qui seraient devenues le chemin normal
+
+Toutes les trois étaient inoffensives tant que l'arsenal comptait quatre armes,
+et toutes les trois auraient servi six classes sur dix **sans lever la moindre
+erreur** :
+
+1. **`weapon_for_index()`** était un `match` sur 0 à 3 rendant le pistolet par
+   défaut. Un Spectre aurait tiré avec la balistique du pistolet, porté son
+   cookie et joué ses sons. Elle lit le catalogue, et crie hors bornes.
+2. **`ui._weapon_label()`** rendait « Pistolet » par défaut : six boutons
+   identiques dans l'écran qui sert précisément à choisir.
+3. **`ui._weapon_slug()`** rendait « pistolet » : six icônes identiques.
+
+⚠️ **Et le repli ne redit plus le nom d'une vraie classe.** Rendre « Pistolet »
+quand on ne sait pas répondre est ce qui a caché le défaut : un mauvais nom
+*plausible* se prend pour une intention. Le repli rend « Classe 7 » — laid, et
+c'est sa vertu.
+
+#### La non-monotonie a changé de RAISON, pas de valeur
+
+`tools/test_arsenal.gd` protégeait « les rangs au-dessus de Lanterne redescendent
+au pistolet, faute d'armes ». Ce n'est plus un trou de contenu, c'est une
+intention : l'échelle des rangs est une échelle de LUMIÈRE, pas de puissance — le
+Braconnier et ses 0,60 s de root est au rang 4, l'Allumeur et ses 0,20 s au
+rang 9. Le contrôle vérifie désormais la **propriété** plutôt que des valeurs, et
+survit donc à un remaniement saisonnier. Un contrôle neuf s'ajoute : les dix
+catégories donnent dix classes **distinctes**.
+
 ### Ce qui reste, dans l'ordre
 
 Étape 3 la purge des armes codées en dur et la table,

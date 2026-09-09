@@ -2693,12 +2693,27 @@ func _on_pick_window_cancelled() -> void:
 ## L'arme correspondant à un index de râtelier. Une seule table de résolution :
 ## la dupliquer ferait diverger le démarrage de manche et le changement d'arme
 ## pendant le décompte, et la divergence porterait sur ce que le joueur tient.
+## ⚠️ **Ce `match` ne connaissait que 0 à 3, et sa branche par défaut rendait le
+## PISTOLET.** Tant que l'arsenal comptait quatre armes, cette branche ne servait
+## que de garde-fou. Depuis que la table rang → classe rend des index jusqu'à 9,
+## elle serait devenue le chemin normal pour six classes sur dix : un Spectre
+## aurait tiré avec la balistique du pistolet, porté son cookie et joué ses sons,
+## **sans qu'une seule erreur ne se lève** — le jeu restant parfaitement jouable.
+##
+## La résolution passe donc par le catalogue, qui EST la table. Elle reste unique :
+## `classe_pour_index()` lit le même tableau, et c'est cette fonction-ci qui garde
+## le contrat historique — une `WeaponData`, jamais `null`.
+##
+## Le repli sur le pistolet est conservé pour un index hors bornes, et c'est
+## délibéré : « rendre vide donnerait un joueur sans arme, ce qu'aucun appelant ne
+## sait afficher et qu'aucune partie ne peut jouer ». Mais il CRIE désormais,
+## parce qu'un index hors bornes n'est plus un cas de figure attendu.
 func weapon_for_index(idx: int) -> WeaponData:
-	match idx:
-		3: return weapon_arbalete
-		2: return weapon_pompe
-		1: return weapon_fusil
-		_: return weapon_pistolet
+	if idx >= 0 and idx < _classes.size():
+		return _classes[idx]
+	push_error("GameState : index de classe hors bornes — %d (catalogue de %d)"
+		% [idx, _classes.size()])
+	return weapon_pistolet
 
 
 ## Le catalogue des dix classes — chantier CLASSES, étape 1.

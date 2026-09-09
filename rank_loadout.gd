@@ -43,6 +43,15 @@ const PISTOLET := 0
 const FUSIL := 1
 const POMPE := 2
 const ARBALETE := 3
+## Les six classes du chantier CLASSES. Les index 0 à 3 gardent EXACTEMENT le
+## sens qu'ils avaient : le catalogue de `game_state` les a conservés à leur
+## place précisément pour que rien de ce qui circulait ne change de sens.
+const FUMISTE := 4
+const INCENDIAIRE := 5
+const SENTINELLE := 6
+const OCCULTEUR := 7
+const ALLUMEUR := 8
+const SPECTRE := 9
 
 ## Ce que tout le monde peut prendre hors compétitif, sans rien avoir mérité.
 const SOCLE: Array[int] = [PISTOLET, FUSIL, POMPE, ARBALETE]
@@ -53,17 +62,33 @@ const SOCLE: Array[int] = [PISTOLET, FUSIL, POMPE, ARBALETE]
 ## Les six dernières entrées sont au Pistolet **faute de contenu**, pas par
 ## conception : les catégories 5 à 10 ne débloquent encore rien, et c'est un trou
 ## à combler avec des armes, pas avec une règle.
+## ⚠️ **L'échelle des rangs EST une échelle de lumière**, et la table la suit
+## littéralement — décision d'Adrien du 2026-09-09, à partir de deux ancrages :
+## le rang 1 est celui du pistolet, et **Brasier est le pyrotechnicien**. Le
+## second dit tout du principe : Brasier n'est pas « le sixième palier de
+## puissance », c'est *un feu*, et on y met celui qui fait du feu.
+##
+## Les trois derniers paliers basculent en OPPOSITION plutôt qu'en
+## correspondance, et c'est le renversement que l'échelle appelait : au sommet de
+## l'échelle de la lumière on trouve **la seule classe qui n'en émet aucune** —
+## le Spectre, zéro fusée, zéro flash, arme silencieuse.
+##
+## ⚠️ **Elle reste NON MONOTONE**, et pas pour la même raison qu'avant. Ce n'était
+## un trou de contenu ; c'est désormais une intention — le Braconnier (0,60 s de
+## root) est au rang 4, l'Allumeur (0,20 s) au rang 9. « Plus haut » ne veut pas
+## dire « mieux armé », et `tools/test_arsenal.gd` le vérifie pour qu'une
+## relecture ne le « corrige » pas.
 const COMPETITIF: Array[Array] = [
-	[PISTOLET],  # 1 — Aveugle
-	[FUSIL],     # 2 — Braise
-	[POMPE],     # 3 — Bougie
-	[ARBALETE],  # 4 — Lanterne
-	[PISTOLET],  # 5 — Torche
-	[PISTOLET],  # 6 — Brasier
-	[PISTOLET],  # 7 — Phare
-	[PISTOLET],  # 8 — Aurore
-	[PISTOLET],  # 9 — Zénith
-	[PISTOLET],  # 10 — Candela
+	[PISTOLET],     # 1 — Aveugle  · Le Parasite     — il aveugle l'autre
+	[FUMISTE],      # 2 — Braise   · Le Fumiste      — une braise fume
+	[FUSIL],        # 3 — Bougie   · L'Illusionniste — la bougie fait danser les ombres
+	[ARBALETE],     # 4 — Lanterne · Le Braconnier   — on appâte à la lampe
+	[POMPE],        # 5 — Torche   · Le Terrassier   — la torche la plus large du jeu
+	[INCENDIAIRE],  # 6 — Brasier  · L'Incendiaire   — le feu au rang du feu
+	[SENTINELLE],   # 7 — Phare    · La Sentinelle   — un phare veille, et porte loin
+	[OCCULTEUR],    # 8 — Aurore   · L'Occulteur     — à l'aurore répond l'occultation
+	[ALLUMEUR],     # 9 — Zénith   · L'Allumeur      — la lumière maximale, sans ombre
+	[SPECTRE],      # 10 — Candela · Le Spectre      — celui qui n'émet aucune lumière
 ]
 
 ## La sélection d'un joueur en compétitif, d'après sa catégorie (1 à 10).

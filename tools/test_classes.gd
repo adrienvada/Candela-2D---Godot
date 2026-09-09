@@ -295,6 +295,15 @@ func _test_catalogue_declare() -> void:
 	_check("le catalogue crie sur une classe incomplète plutôt que de la réparer",
 		texte.contains("sans profil complet"))
 
+	# ⚠️ **La résolution index → arme doit passer par le CATALOGUE.** Elle était un
+	# `match` sur 0 à 3 dont la branche par défaut rendait le pistolet : avec dix
+	# classes, six d'entre elles auraient tiré avec la balistique du pistolet,
+	# porté son cookie et joué ses sons, sans qu'une seule erreur ne se lève.
+	_check("weapon_for_index lit le catalogue, plus un match sur quatre index",
+		texte.contains("return _classes[idx]"))
+	_check("un index hors bornes crie au lieu de se taire",
+		texte.contains("index de classe hors bornes"))
+
 	# Les slugs doivent être distincts : deux classes qui partagent un slug
 	# partagent leur cookie, leur sprite et leurs sons, sans qu'aucune erreur ne
 	# se lève — le fichier existe, il est juste au mauvais joueur.

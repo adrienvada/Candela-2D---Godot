@@ -63,7 +63,16 @@ class_name Protocol
 ##      enverrait sept valeurs à un hôte v10 qui en attend huit. L'argument porte
 ##      une valeur par défaut, donc GDScript ne dirait rien — c'est le témoin du
 ##      fil qui l'attrape, et c'est exactement ce pour quoi il existe.
-const VERSION := 10
+## 11 — la table rang → classe entre en vigueur (chantier CLASSES, 2026-09-09).
+##      La FORME du fil ne bouge pas : `weapon_idx` reste un entier. C'est son
+##      SENS qui change — l'intervalle passe de 0-3 à 0-9, et un index qui valait
+##      « fusil » en v10 peut valoir autre chose en v11.
+##
+##      ⚠️ **C'est exactement le cas de la v7**, où `rpc_spawn_fusee` troquait une
+##      cible contre un angle : rien ne casse à la lecture, les deux jeux
+##      s'entendent, et chacun équipe une classe différente. Le pire défaut du
+##      netcode est celui qui ne lève rien.
+const VERSION := 11
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
