@@ -11652,10 +11652,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
   du monde — tout passe au blanc cassé et au noir de la bible. Détail
   ci-dessous. *(S)*
-- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
-  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
-  peinte finale, reste dû à Adrien. Détail ci-dessous.
+- **DA5.3 Plus un cercle parfait visible** ✅ **FAIT le 2026-09-09** — toute
+  lumière ou particule circulaire passe en texture. *(S + G)* — volet **(S)**
+  (casser la symétrie procédurale) et volet **(G)** (texture peinte
+  `particule_poussiere.png` cuite et branchée). Détail ci-dessous.
 - **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
   (décision d'Adrien : le grain de match existant reste), documentation des
   trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
@@ -11836,23 +11836,38 @@ au texte du code.
 **Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
 ratio commun.
 
-#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+#### DA5.3 — les volets (S + G) : rupture procédurale et texture peinte livrée
 
-**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
-(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
-reste due à Adrien, signalée et non bloquante.
+**Portée : DA5.3 est (S + G) — désormais intégralement clos le 2026-09-09.**
 
-**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
-disque analytique (`smoothstep` sur une distance). Un second hash
-(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
-le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
-plus, aucune texture, aucun coût mesurable.
+**Volet (S) : casser la symétrie procédurale sans texture**
+- **`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+  disque analytique (`smoothstep` sur une distance). Un second hash
+  (`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+  le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+  plus, aucune texture, aucun coût mesurable.
+- **`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+  le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+  torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+  Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+  brume — aucun nouveau bruit importé.
 
-**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
-le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
-torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
-Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
-brume — aucun nouveau bruit importé.
+**Volet (G) : la texture peinte de particule (`particule_poussiere.png`)**
+- **Génération & procédé DA1.5** : planche source
+  (`assets/sources/halo/H5_poussiere.jpg`), convertie en masque RGBA 32×32
+  (`assets/halo/particule_poussiere.png`). Conformité avec la règle d'or de
+  la charte (« l'image ne fournit que la matière, le code garde la
+  géométrie ») : fond noir coupé, luminance vers alpha, RGB blanc pur
+  neutre prêt pour multiplication par `modulate` ou `COLOR`.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule`
+  avec repli `hint_default_black`. La particule échantillonne la texture
+  organique dans sa cellule de grille, tout en conservant son mouvement
+  brownien et son scintillement d'interférence.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle
+  analytique de `_creer_texture_lueur_ronde()` (`GradientTexture2D.FILL_RADIAL`),
+  remplacé par le chargement de `particule_poussiere.png` (avec repli doux
+  sécurisé si absent). Les particules de poussière et d'ambiance des 15 profils
+  de menus prennent ainsi un grain d'encre asymétrique authentique.
 
 **Cas examinés et gardés tels quels**, listés ici pour que personne ne les
 refasse :
@@ -11864,9 +11879,9 @@ refasse :
 | `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
 | `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
 
-Aucune suite headless ne teste la forme d'un cercle — jugement par
-`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
-vérifier que `poussiere_faisceau.gdshader` compile.
+Validé par `test_arena_lighting.gd` (vérification de chargement de la texture
+et assignation du paramètre shader), `test_menu_artworks.gd`, et la suite
+complète `./tools/run_suites.sh`.
 
 #### DA5.4 — trois grains, délibérément distincts
 
