@@ -28,6 +28,12 @@ var radius: float = 4.0
 # arbitrés par l'hôte), ce joueur est testé contre `lag_center` — la position
 # que le tireur voyait — et retiré du ShapeCast, qui ne connaît que le présent.
 const PLAYER_BODY_RADIUS := 18.0
+
+## Combien de gadgets traversants une balle peut percer dans le MÊME pas de
+## physique. Deux suffisent : au-delà, on rend la main plutôt que de dérouler une
+## boucle dont personne n'a mesuré le pire cas.
+const TRAVERSES_MAX := 2
+var _traverses: int = 0
 var lag_target: Player
 var lag_center: Vector2 = Vector2.ZERO
 
@@ -121,6 +127,11 @@ func _ready():
 	shape_cast.shape = circle
 	shape_cast.target_position = Vector2.ZERO
 	shape_cast.max_results = 1
+	# ⚠️ **Le masque était laissé au défaut (la seule couche 1) et il est
+	# désormais EXPLICITE.** Les gadgets posés vivent sur leur propre couche,
+	# hors du masque des joueurs, précisément pour que ceux-ci les traversent.
+	# Sans cette ligne une balle passerait au travers d'une mine sans la voir.
+	shape_cast.collision_mask = MapGeometry.BULLET_MASK
 	add_child(shape_cast)
 	if source_player:
 		shape_cast.add_exception(source_player)
@@ -159,9 +170,15 @@ func _physics_process(delta):
 		var lag_dist := _circle_entry_distance(global_position, direction, travel_step,
 			lag_center, PLAYER_BODY_RADIUS + radius)
 		if lag_dist >= 0.0:
-			var wall_first := shape_cast.is_colliding() \
+			# ⚠️ **Renommé de `wall_first` le 2026-09-09, et ce n'est pas
+			# cosmétique.** Depuis que le masque contient les gadgets, le premier
+			# collider rendu n'est plus forcément un mur : un gadget posé devant
+			# un joueur compensé absorbe le tir. Le nom disait « mur » et
+			# décidait « obstacle » — un identifiant qui ment sur ce qu'il teste
+			# est ce qui rend un défaut indébogable.
+			var obstacle_avant := shape_cast.is_colliding() \
 				and global_position.distance_to(shape_cast.get_collision_point(0)) < lag_dist
-			if not wall_first:
+			if not obstacle_avant:
 				_hit_player(lag_target, lag_center, global_position + direction * lag_dist)
 				return
 
@@ -174,6 +191,41 @@ func _physics_process(delta):
 			return
 		elif collider is TrainingTarget:
 			_hit_training_target(collider, hit_point)
+			return
+		elif collider is GadgetBase:
+			# ⚠️ **Deux comportements, et la distinction est de conception.** Un
+			# objet dur — mine, projecteur — arrête la balle. Une bâche tendue
+			# l'encaisse et la laisse passer : c'est ce qui fait du voile « un mur
+			# qui n'en est pas un » plutôt qu'un mur.
+			var gadget: GadgetBase = collider
+			if not is_replay:
+				gadget.encaisser(weapon.damage_center)
+			if gadget.arrete_les_balles:
+				_spawn_wall_effects(hit_point, true)
+				_fade_and_destroy(hit_point)
+				return
+			# Traversant : on l'exclut et on rejoue le pas. La boucle est BORNÉE —
+			# un gadget qui se réinsérerait dans le cast ferait autrement tourner
+			# cette image à l'infini, et une image qui ne rend pas la main est
+			# pire qu'une balle qui s'arrête.
+			shape_cast.add_exception(gadget)
+			shape_cast.force_shapecast_update()
+			_traverses += 1
+			if _traverses < TRAVERSES_MAX and shape_cast.is_colliding():
+				collider = shape_cast.get_collider(0)
+				hit_point = shape_cast.get_collision_point(0)
+			else:
+				return
+		if collider is Player and (collider.hp > 0 or is_replay):
+			_hit_player(collider, collider.global_position, hit_point)
+			return
+		elif collider is TrainingTarget:
+			_hit_training_target(collider, hit_point)
+			return
+		elif collider is GadgetBase:
+			# Second gadget traversé dans le même pas : on s'arrête là plutôt que
+			# de dérouler une récursion. Le cas est rare et le coût d'y insister
+			# n'est pas justifié.
 			return
 		else:
 			# V4.3 — **le mur ne sonne pas quand la balle va REPARTIR.** Les

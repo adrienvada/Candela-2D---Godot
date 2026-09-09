@@ -32,6 +32,10 @@ const FlareProfile := preload("res://flare_profile.gd")
 const GadgetProfile := preload("res://gadget_profile.gd")
 const ClassData := preload("res://class_data.gd")
 const WeaponData := preload("res://weapon_data.gd")
+const MapGeometry := preload("res://map_geometry.gd")
+const GadgetBase := preload("res://gadget_base.gd")
+const GadgetVoile := preload("res://gadget_voile.gd")
+const GadgetOmbre := preload("res://gadget_ombre.gd")
 
 var _failures: int = 0
 
@@ -54,6 +58,13 @@ func _run() -> void:
 	_test_catalogue_declare()
 	_test_cablage_root()
 	_test_bit_gadget()
+	# ⚠️ **`await`, et il n'est pas décoratif.** Cette section monte des nœuds,
+	# donc elle attend des images. Sans l'attendre ici, `_run()` imprimait son
+	# verdict et sortait AVANT que les contrôles ne tournent : le lot annonçait
+	# « tous les tests passent » pendant que la moitié de la section n'avait pas
+	# encore été exécutée, et l'autre moitié ne l'a jamais été. Un garde-fou qui
+	# ne peut pas échouer est pire qu'un garde-fou absent — on le croit tenu.
+	await _test_socle_gadgets()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -371,3 +382,86 @@ func _test_bit_gadget() -> void:
 	# Et le numéro de version, qui est une décision humaine mécanisée par le
 	# témoin : le fil a changé, donc il doit avoir bougé.
 	_check("Protocol.VERSION a été monté avec le fil", Protocol.VERSION >= 10)
+
+
+func _test_socle_gadgets() -> void:
+	print("\n[Le socle des gadgets : touchable par une balle, traversable par un joueur]")
+
+	# ⚠️ **La propriété qui porte tout le socle.** Un gadget vit sur sa propre
+	# couche, et le masque des JOUEURS ne la contient pas : c'est cette absence,
+	# et rien d'autre, qui les laisse traverser. Si quelqu'un « simplifiait » en
+	# posant les gadgets sur la couche des murs, le voile du Spectre deviendrait
+	# un mur ordinaire — l'inverse exact de ce qu'il raconte — et rien ne le
+	# signalerait, parce que le jeu resterait parfaitement jouable.
+	_check("la couche des gadgets est distincte de celle des murs",
+		MapGeometry.GADGET_LAYER != MapGeometry.WALL_LAYER)
+	_check("le masque des joueurs ne contient PAS les gadgets",
+		(MapGeometry.PLAYER_MASK & MapGeometry.GADGET_LAYER) == 0,
+		str(MapGeometry.PLAYER_MASK))
+	_check("le masque des balles contient les murs ET les gadgets",
+		(MapGeometry.BULLET_MASK & MapGeometry.WALL_LAYER) != 0
+			and (MapGeometry.BULLET_MASK & MapGeometry.GADGET_LAYER) != 0,
+		str(MapGeometry.BULLET_MASK))
+
+	# Le socle, monté pour de vrai.
+	var g: Node2D = GadgetBase.new()
+	g.name = "Gadget_Test"
+	root.add_child(g)
+	await process_frame
+	_check("le gadget est sur la couche des gadgets",
+		g.collision_layer == MapGeometry.GADGET_LAYER, str(g.collision_layer))
+	_check("son masque est nul : il ne heurte personne", g.collision_mask == 0)
+	_check("il rejoint le groupe « gadgets »", g.is_in_group("gadgets"))
+	_check("il porte une forme de collision", g.get_node_or_null("Forme") != null)
+	_check("il porte un occluder : un gadget n'est pas un trou de lumière",
+		g.get_node_or_null("Occluder") != null)
+
+	# Les points de vie : tout gadget est destructible à la balle.
+	g.pv = 2.0
+	_check("un coup insuffisant ne le détruit pas", not g.encaisser(1.0))
+	_check("le coup suivant le détruit", g.encaisser(1.0))
+	await process_frame
+
+	# Les deux gadgets de la famille A : le MÊME nœud, deux polygones.
+	var voile = GadgetVoile.new()
+	var ombre = GadgetOmbre.new()
+	voile._monter_occluder()
+	ombre._monter_occluder()
+
+	# ⚠️ Le contrôle qui distingue le voile d'un mur.
+	_check("le voile n'arrête PAS les balles", not voile.arrete_les_balles)
+	_check("l'ombre habitée, plaque d'acier, les arrête", ombre.arrete_les_balles)
+	_check("ni l'un ni l'autre n'éblouit", not voile.eblouit and not ombre.eblouit)
+
+	# Les ombres portées n'ont pas la même forme, et c'est tout leur intérêt.
+	var occ_v: LightOccluder2D = voile.get_node_or_null("Occluder")
+	var occ_o: LightOccluder2D = ombre.get_node_or_null("Occluder")
+	_check("le voile projette une bande longue",
+		occ_v != null and occ_v.occluder.polygon.size() == 4)
+	_check("l'ombre habitée projette une silhouette de la largeur d'un corps",
+		occ_o != null and absf(occ_o.occluder.polygon[1].x) == GadgetOmbre.DEMI_TORSE,
+		str(occ_o.occluder.polygon[1]) if occ_o != null else "absent")
+	_check("le voile est nettement plus long que l'ombre",
+		GadgetVoile.DEMI_LONGUEUR > GadgetOmbre.DEMI_TORSE * 2.0)
+
+	voile.free()
+	ombre.free()
+
+	# Le câblage dans bullet.gd, en TEXTE : aucune suite ne fait voler de balle.
+	var f := FileAccess.open("res://bullet.gd", FileAccess.READ)
+	if f == null:
+		_check("bullet.gd lisible", false)
+		return
+	var t := f.get_as_text()
+	f.close()
+	_check("la balle voit explicitement les gadgets",
+		t.contains("shape_cast.collision_mask = MapGeometry.BULLET_MASK"))
+	_check("elle a une branche de dispatch pour eux", t.contains("collider is GadgetBase"))
+	_check("elle les abîme avant de décider si elle s'arrête",
+		t.contains("gadget.encaisser("))
+	# ⚠️ Le renommage compte autant que le reste : `wall_first` décidait
+	# « obstacle » en disant « mur », et depuis que le masque contient les
+	# gadgets ce n'est plus la même chose.
+	_check("le test d'antériorité ne s'appelle plus « mur » DANS LE CODE",
+		not t.contains("var wall_first") and t.contains("var obstacle_avant"))
+	_check("la traversée est bornée", t.contains("TRAVERSES_MAX"))

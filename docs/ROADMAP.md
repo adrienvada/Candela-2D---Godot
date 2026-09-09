@@ -14017,6 +14017,60 @@ pas vue échouer n'est pas une garde.
 Ce qu'aucune suite ne dit : **si le root est jouable.** Ça se juge manette en
 main.
 
+### Étapes 4 et 5 — la touche, le fil, et le socle des gadgets ✅
+
+**Étape 4.** Le bit de gadget circule de bout en bout ; `Protocol.VERSION` passe
+de 9 à 10. Le témoin du fil a signalé la rupture — et il valait plus qu'une
+formalité : **l'argument porte une valeur par défaut, donc GDScript n'aurait rien
+dit** d'un client v9 parlant à un hôte v10. Les deux auraient joué, chacun dans
+sa réalité. Touches E et O au clavier, L1 à la manette.
+
+⚠️ `tools/test_liaisons.gd` a fait rougir le lot : « ces commandes du clavier ne
+figurent nulle part : p1_gadget ». Une commande ajoutée à l'`InputMap` sans ligne
+dans la rubrique de réglage — et la garde a raison, *« une commande absente de la
+rubrique se cherche ailleurs, et il n'y a pas d'ailleurs »*. D'où deux entrées
+dans `ui.gd`, fichier de la session « menus », incursion déclarée au journal.
+
+**Étape 5 — et le point de conception qui décide de tout le reste.**
+
+Un gadget doit être **abîmé par une balle sans être un obstacle au joueur**. Sur
+`WALL_LAYER` il aurait bloqué les deux, et le voile du Spectre — « elle arrête la
+lumière, les balles la traversent » — serait devenu un mur ordinaire. ⚠️ **Sans
+qu'aucune erreur ne se lève** : le jeu serait resté parfaitement jouable, et le
+gadget aurait simplement cessé de vouloir dire ce qu'il veut dire.
+
+D'où `MapGeometry.GADGET_LAYER`, une couche à part, et `BULLET_MASK` qui la
+contient là où `PLAYER_MASK` ne la contient pas. **Ce qui arrête ou non une balle
+est un drapeau du gadget (`arrete_les_balles`), jamais la couche physique** :
+l'ombre habitée est une plaque d'acier et l'arrête, le voile est une bâche et la
+laisse passer. La traversée est bornée à deux gadgets par pas de physique — une
+image qui ne rend pas la main est pire qu'une balle qui s'arrête.
+
+`wall_first` devient `obstacle_avant` dans `bullet.gd`. Depuis que le masque
+contient les gadgets, le premier collider n'est plus forcément un mur : le nom
+disait « mur » et décidait « obstacle ».
+
+Les deux gadgets de la famille A sont livrés ensemble parce qu'ils sont **le même
+nœud** — seul le polygone d'ombre change.
+
+#### Trois défauts trouvés dans mes propres contrôles
+
+1. **Un `await` non attendu.** `_test_socle_gadgets()` monte des nœuds, donc elle
+   attend des images ; `_run()` imprimait son verdict et sortait avant. Le lot
+   annonçait « tous les tests passent » pendant que la moitié de la section
+   n'avait pas tourné, et l'autre moitié ne l'a jamais fait. **Un garde-fou qui
+   ne peut pas échouer est pire qu'absent — on le croit tenu.**
+2. **Un contrôle textuel qui épinglait la chaîne.** Il interdisait `wall_first`
+   *y compris dans le commentaire qui explique le renommage*. C'est le piège du
+   2026-08-25 commis dans le contrôle lui-même ; il teste désormais
+   `var wall_first`.
+3. **Le cri légitime d'un sprite absent faisait rougir le lot.** Instancier un
+   gadget déclenche son `push_error` — comportement voulu en jeu, et
+   `run_suites.sh` traite tout `push_error` comme un échec. Les sous-classes ne
+   sont donc plus montées dans l'arbre par la suite : on éprouve ce qui se décide
+   à la construction. ⚠️ **Ce que ça ne couvre pas : le montage du visuel.** Il
+   se verra à l'écran le jour où les planches existeront, pas avant.
+
 ### Ce qui reste, dans l'ordre
 
 Étape 3 la purge des armes codées en dur et la table,
