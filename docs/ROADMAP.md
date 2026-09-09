@@ -13601,6 +13601,42 @@ depuis un impact de sang ne doit pas garder sa texture au tour suivant.
 nommément dans le `.gitignore` du dossier — même discipline que `B2_01`/`B2_02` :
 sans la source, un décalque recuit devient irreproductible.
 
+### DA2.8 (suite 2, 2026-09-09) — aucune flaque ne dépasse le corps du joueur
+
+**Adrien, en jouant en v0.3.0 fraîchement publiée, capture d'écran à l'appui :**
+« il y a une tache de sang beaucoup trop grosse. » Puis, la cause une fois
+identifiée et montrée : « il faut que la tache principale soit au maximum de
+la taille du sprite du joueur. »
+
+**La cause n'était pas une planche mal dimensionnée.** Les 9 planches font
+toutes 160 px de plus grand côté — la normalisation de `fabrique_decals.gd`
+est uniforme. Ce qui diffère, et de loin, c'est le TAUX DE REMPLISSAGE de la
+flaque : `sang_4` (la coupable de la capture) couvre **54 %** de sa boîte
+contre **23 %** pour `sang_1` — à taille de fichier identique, sa flaque est
+visuellement bien plus « lourde ». Le bon signal n'était donc pas la boîte
+(déjà uniforme) mais le RAYON de la flaque — celui-là même que `FLAQUES` et le
+banc mesurent déjà par transformée de distance.
+
+**`POIDS_TAILLE`, un poids par planche, garanti même au pire tirage.** Pour
+qu'une flaque de rayon `r` ne dépasse jamais `DIAMETRE_CORPS` (36 px) une fois
+grossie par le pire tirage d'`_echelle` (`ECHELLE_MAX`, 1,25) :
+`poids <= DIAMETRE_CORPS / (2 * r * ECHELLE_MAX)`, plafonné à 1,0 — jamais
+agrandie, seulement rabattue. Trois planches touchées : `sang_4` (×0,269, la
+pire), `sang_8` (×0,327), `sang_9` (×0,667) et, plus légèrement, `sang_1`
+elle-même (×0,686) et `sang_5` (×0,973) — la règle d'Adrien est générale, elle
+ne visait pas QUE la planche fautive de la capture.
+
+**Un banc qui teste le pire cas, pas la moyenne.** Vérifier seulement à
+`_echelle` = 1,0 aurait laissé passer une flaque encore trop grosse un tir sur
+quatre. `tools/test_sang_au_sol.gd` (19 contrôles neufs, 134 au total)
+re-mesure le rayon de chaque planche et calcule lui-même le diamètre au pire
+cas — il ne lit jamais `POIDS_TAILLE` en confiance. Contre-test passé : `sang_4`
+remise à ×1,0 → rougit avec « 134,0 px de diamètre au pire cas, pour un corps
+de 36,0 px ». Second contrôle : aucun poids ne dépasse 1,0, pour qu'un futur
+correctif ne se transforme pas en second dosage glissé en douce.
+
+Lot complet vert (286 s).
+
 ### BF — le bandeau FATAL doit tenir dans l'écran de celui qui a tué
 
 **La demande d'Adrien :** que le texte « FATAL — … » soit **entièrement affiché

@@ -247,6 +247,26 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
+
+**Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :
+une tache de sang écrasait tout le cône de torche du joueur. Diagnostic : les
+9 planches font toutes 160 px (normalisation uniforme de `fabrique_decals.gd`),
+mais leur TAUX DE REMPLISSAGE diverge énormément — `sang_4` couvre 54 % de sa
+boîte contre 23 % pour `sang_1`. Adrien a ensuite posé la règle générale :
+« la tache principale doit être au maximum de la taille du sprite du joueur. »
+
+`POIDS_TAILLE`, un facteur par planche dans `blood_stain.gd`, rabat le rayon de
+chaque flaque sous `DIAMETRE_CORPS` — garanti même au pire tirage d'`_echelle`,
+pas seulement en moyenne. Jamais agrandi, seulement rabattu : une planche déjà
+sous la limite (`sang_2`, `sang_3`, `sang_6`, `sang_7`) n'est pas touchée.
+19 contrôles neufs (134 au total), contre-test vérifié. Détail dans la
+ROADMAP, section « DA2.8 (suite 2) ».
+
+**Publié sur `main`, pas encore une nouvelle release.** Le correctif est sur
+`main` pour la prochaine publication ; je n'en ai pas déclenché une moi-même —
+Adrien n'a rien demandé de tel cette fois.
+
 ### 2026-09-09 (suite) — session « SG · sang au sol » : DA2.8 complétée, `particle_pool.gd` touché
 
 **Déclaration : j'ai touché `particle_pool.gd`, hors de mon périmètre initial.**

@@ -39,6 +39,13 @@ extends SceneTree
 ## entre l'axe du tir et le centre réel du joueur — la même `dist_to_axis` que
 ## `bullet.gd` calcule déjà pour l'atténuation des dégâts — et restreint le
 ## tirage à la catégorie qu'elle désigne (`EST_ETOILE_CENTREE`).
+##
+## **2026-09-09 (suite) — quatrième règle, sur la TAILLE cette fois.** DA2.8
+## complétée à 9 planches (voir plus bas), Adrien a vu une tache écraser tout
+## le cône de torche du joueur à l'écran, puis posé la règle générale :
+## « la tâche principale doit être au maximum de la taille du sprite du
+## joueur. » `POIDS_TAILLE` rabat, planche par planche, le rayon de la flaque
+## sous `DIAMETRE_CORPS` — même pour le pire tirage d'`_echelle`.
 
 ## Rayon du corps du joueur, en pixels.
 ##
@@ -258,6 +265,43 @@ func _run() -> void:
 
 	_check("toutes les planches ont été exercées", vues.size() == planches.size(),
 		"%d sur %d vues en 200 essais" % [vues.size(), planches.size()])
+
+	print("\n[Aucune flaque ne dépasse le corps du joueur, même au pire tirage]")
+	# Relevé par Adrien à l'écran, le 2026-09-09 : « il y a une tâche de sang
+	# beaucoup trop grosse » — puis, la cause identifiée (sang_4 remplit sa
+	# boîte à 54 % contre 23 % pour sang_1, donc « pèse » bien plus à taille de
+	# fichier égale), la règle générale : « il faut que la tâche principale
+	# soit au maximum de la taille du sprite du joueur ».
+	#
+	# ⚠️ **Testé au PIRE tirage d'`_echelle` (`ECHELLE_MAX`), pas à sa
+	# moyenne.** Un contrôle qui ne regarderait que l'échelle typique (1,0)
+	# laisserait passer une flaque encore trop grosse un tir sur quatre — la
+	# même leçon que « tester les deux bords du seuil », pas seulement loin
+	# de lui.
+	var diametre_corps: float = sang.DIAMETRE_CORPS
+	var echelle_max: float = sang.ECHELLE_MAX
+	var poids_table: Array = sang.POIDS_TAILLE
+	_check("un poids de taille par planche", poids_table.size() == planches.size(),
+		"%d poids pour %d planches" % [poids_table.size(), planches.size()])
+	for i in range(mini(poids_table.size(), planches.size())):
+		var m: Dictionary = mesures.get(planches[i], {})
+		if m.is_empty():
+			continue
+		var rayon_mesure: float = m["rayon"]
+		var poids: float = poids_table[i]
+		var diametre_pire_cas := 2.0 * rayon_mesure * echelle_max * poids
+		_check("%s : sa flaque tient dans le corps même au pire tirage"
+				% (planches[i] as String).get_file(),
+			diametre_pire_cas <= diametre_corps + 0.5,
+			"%.1f px de diamètre au pire cas, pour un corps de %.1f px"
+				% [diametre_pire_cas, diametre_corps])
+		# ⚠️ **Jamais AGRANDIE.** `POIDS_TAILLE` ne sert qu'à rabattre les
+		# flaques trop lourdes vers la taille du corps — l'élargir gonflerait
+		# les éraflures fines (déjà sous la limite) sans que personne ne
+		# l'ait demandé. Un poids supérieur à 1,0 serait un second dosage,
+		# glissé en douce.
+		_check("%s : son poids n'agrandit jamais la planche" % (planches[i] as String).get_file(),
+			poids <= 1.0, "%.3f" % poids)
 
 	print("\n[L'étoile centrée n'apparaît que très près du centre]")
 	# Relevé par Adrien, le 2026-09-08 : « il faut que le centre de la plus

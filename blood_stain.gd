@@ -122,6 +122,54 @@ const FLAQUES := [
 ## là que l'essentiel du lot est allé.
 const EST_ETOILE_CENTREE := [true, false, false, false, false, false, false, true, true]
 
+## Bornes du tirage aléatoire d'`_echelle` — voir `setup()`. Nommées ici, et
+## pas seulement écrites en dur dans `randf_range()`, parce que `POIDS_TAILLE`
+## ci-dessous doit garantir son invariant pour le PIRE tirage possible : sans
+## nom, personne ne saurait dire contre quelle borne il a été calculé.
+const ECHELLE_MIN := 0.75
+const ECHELLE_MAX := 1.25
+
+## Correction de taille, par planche, pour qu'aucune flaque ne dépasse le
+## corps du joueur — même au pire tirage d'`_echelle` (`ECHELLE_MAX`).
+##
+## **Règle d'Adrien, le 2026-09-09, à l'écran :** une tache
+## (`sang_4`) écrasait tout le cône de torche du joueur sur une capture — « il
+## y a une tâche beaucoup trop grosse », puis, la règle générale une fois la
+## cause identifiée : « il faut que la tâche principale soit au maximum de la
+## taille du sprite du joueur ».
+##
+## ⚠️ **La cause n'était pas une planche mal dimensionnée : toutes font 160 px
+## de plus grand côté**, la normalisation de `fabrique_decals.gd`. C'est le
+## TAUX DE REMPLISSAGE de la flaque qui diffère — `sang_4` couvre 54 % de sa
+## boîte contre 23 % pour `sang_1`, donc à taille de fichier égale sa flaque
+## est visuellement bien plus « lourde ». Le bon signal n'est donc pas la
+## boîte (déjà uniforme) mais le RAYON de la flaque, celui-là même que
+## `FLAQUES`/le banc mesurent par transformée de distance.
+##
+## **La formule, écrite pour être vérifiable :** pour qu'une flaque de rayon
+## `r` (mesuré sur la planche à 160 px) ne dépasse jamais `DIAMETRE_CORPS` une
+## fois grossie par le pire tirage (`ECHELLE_MAX`), il faut
+## `poids <= DIAMETRE_CORPS / (2 * r * ECHELLE_MAX)`. Plafonné à 1,0 : une
+## planche déjà sous la limite n'est jamais AGRANDIE par cette table — ce
+## serait un second dosage, non demandé, qui gonflerait les éraflures fines
+## au lieu de seulement rabattre les flaques trop lourdes.
+##
+## `tools/test_sang_au_sol.gd` refait ce calcul sur le rayon RE-mesuré de
+## chaque planche à chaque lot : une planche recuite plus dense sans corriger
+## sa ligne ici fait rougir le banc, au lieu de repousser en silence contre le
+## joueur suivant.
+const POIDS_TAILLE := [
+	0.686, # sang_1 — flaque de 21,0 px de rayon
+	1.000, # sang_2 — flaque de 12,4 px de rayon
+	1.000, # sang_3 — flaque de 6,2 px de rayon
+	0.269, # sang_4 — flaque de 53,6 px de rayon (celle de la capture)
+	0.973, # sang_5 — flaque de 14,8 px de rayon
+	1.000, # sang_6 — flaque de 9,8 px de rayon
+	1.000, # sang_7 — flaque de 8,0 px de rayon
+	0.327, # sang_8 — flaque de 44,0 px de rayon
+	0.667, # sang_9 — flaque de 21,6 px de rayon
+]
+
 ## Distance maximale, en pixels, entre l'AXE du tir et le CENTRE réel du joueur
 ## pour que l'étoile centrée soit éligible au tirage.
 ##
@@ -244,14 +292,17 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 	# la droite, et `direction` la met dans l'axe de la balle. Une tache de sang
 	# raconte d'où le coup venait ; la faire tourner est ce qui distingue une
 	# scène de crime d'un semis de losanges.
-	_choisir_eclaboussure(distance_axe_centre)
+	var i := _choisir_eclaboussure(distance_axe_centre)
 	if _texture != null:
 		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
 		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
 		# calculent déjà leur angle depuis `direction`, et le tourner en plus
 		# appliquerait la rotation deux fois.
 		transform = pose(base_pos, direction)
-		_echelle = randf_range(0.75, 1.25)
+		# `POIDS_TAILLE` corrige la variation aléatoire, il ne la remplace pas :
+		# une planche dense reste avec sa propre part de hasard, juste ramenée
+		# sous le plafond du corps du joueur.
+		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * POIDS_TAILLE[i]
 		queue_redraw()
 		return
 
@@ -267,7 +318,7 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 	})
 	
 	# Projections directionnelles
-	for i in range(num_drops):
+	for _drop_index in range(num_drops):
 		var dist = randf_range(5.0, 70.0)
 		var angle = direction.angle() + randf_range(-PI/5, PI/5)
 		
@@ -297,7 +348,10 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 ## encore importé par Godot est invisible à `ResourceLoader`, et c'est l'état
 ## normal d'un asset frais. Sans ce cri, le jeu retomberait sur les cercles et
 ## personne ne saurait dire pourquoi les éclaboussures n'ont pas changé.
-func _choisir_eclaboussure(distance_axe_centre: float) -> void:
+##
+## Rend l'index choisi dans `ECLABOUSSURES` (`-1` si le repli procédural a été
+## pris) : `setup()` en a besoin pour lire `POIDS_TAILLE`.
+func _choisir_eclaboussure(distance_axe_centre: float) -> int:
 	var centree := distance_axe_centre <= SEUIL_ETOILE_CENTREE
 	var candidats: Array[int] = []
 	for j in range(ECLABOUSSURES.size()):
@@ -316,10 +370,11 @@ func _choisir_eclaboussure(distance_axe_centre: float) -> void:
 		push_error("blood_stain : eclaboussure absente — %s " % chemin
 			+ "(cuire avec tools/fabrique_decals.gd, puis : "
 			+ "godot --headless --path . --import). Repli sur les cercles.")
-		return
+		return -1
 	_texture = load(chemin)
 	_coeur = load(coeur)
 	_ancre = FLAQUES[i]
+	return i
 
 
 func _draw():
