@@ -13019,6 +13019,84 @@ c'est une propriété ÉMERGENTE (rester dans la lumière d'une fusée allumée
 expose déjà, comme n'importe quelle lumière du jeu), pas un effet ajouté ; à
 confirmer au banc que ça se LIT vraiment comme tel.
 
+**Corrigé le 2026-09-09 — le piétinement était mort exactement là où on vient
+l'essayer.** L'appel à `_maj_extinction_fusees` vivait dans `if round_active:`,
+alors que le lancer de fusée s'autorise explicitement hors manche
+(`if not round_active and not sandbox_mode: return`). Or l'entraînement pose
+`round_active = false` AVEC `sandbox_mode = true` : on pouvait donc y allumer
+une fusée et **jamais l'éteindre au pied**, sans la moindre erreur console.
+Muet, dans le seul mode où l'on vient justement essayer une mécanique neuve.
+
+C'est mot pour mot le piège déjà payé quinze lignes plus haut dans le même
+fichier, pour le suivi de caméra — et le commentaire qui l'y raconte était
+sous les yeux de qui écrivait. **Dans `game_state.gd`, `round_active` veut dire
+« une manche COMPTÉE est en cours », jamais « le jeu tourne ».** La garde de
+l'extinction suit désormais celle du LANCER (`round_active or sandbox_mode`),
+pas celle du score : ce qui décide qu'une fusée peut s'allumer doit décider
+qu'elle peut s'éteindre.
+
+### FU3/FU5 — la moitié hôte perdue par une fusion, et retrouvée (2026-09-09)
+
+**Ce qui s'est passé.** Une autre session a fusionné `main` dans la branche
+`worktree-fusee-fu3-fu5` (commit `86d2297`, puis quatre fusions de plus le
+2026-09-09 au matin) et, en résolvant le conflit sur `game_state.gd`, a pris le
+côté `main` en bloc. Les 106 lignes que `0800f60` y avait ajoutées ont disparu :
+`demander_extinction_fusee`, `rpc_eteindre_fusee`, `_maj_extinction_fusees`,
+les tableaux de piétinement et leur remise à zéro, et le déclenchement de
+`diffuser_flash` au site du flash de tir — c'est-à-dire **tout l'arbitrage
+réseau de FU5 et la bouffée de diffusion de FU3**.
+
+**Pourquoi ça n'a rien cassé de visible, et pourquoi c'est le pire cas.**
+`bullet.gd` garde son appel par `has_method()` — une prudence écrite pour les
+tests headless isolés. La balle qui éteint la fusée ne plantait donc pas : elle
+ne faisait plus rien. Aucune erreur, aucune suite rouge côté gameplay. Le seul
+témoin honnête était `protocol.gd`, qui continuait d'annoncer `VERSION := 9`
+« `rpc_eteindre_fusee` apparaît » avec une empreinte calculée AVEC ce RPC — le
+garde-fou du fil disait la vérité pendant que le code mentait par omission.
+
+**Trois leçons, et la troisième est la plus chère.**
+
+1. **Une fusion sans conflit textuel n'est pas une fusion sans perte.** Ici git
+   n'a rien signalé du tout à la seconde fusion : le conflit avait déjà été
+   « résolu » en amont, par suppression.
+2. **Un garde défensif (`has_method`) transforme une erreur bruyante en défaut
+   muet.** Il reste juste — mais il faut savoir qu'il achète le silence, et donc
+   ne jamais s'en remettre aux suites pour détecter une amputation.
+3. **Une branche de chantier n'appartient pas à qui passe.** Fusionner `main`
+   dans le worktree d'une autre session, c'est prendre à sa place une décision
+   de résolution qu'on n'a pas le contexte pour prendre. La règle du dépôt dit
+   déjà « jamais de `git checkout` sans vérifier qu'aucune autre session
+   n'utilise l'arbre » ; **elle vaut aussi pour `git merge`, et il a fallu
+   perdre 106 lignes pour l'écrire noir sur blanc.**
+
+Récupéré par `git diff 0800f60^ 0800f60 -- game_state.gd` réappliqué en fusion à
+trois points sur le `main` du jour : propre, sans conflit.
+
+### Signalés, hors périmètre FU3/FU5 (2026-09-09)
+
+Découverts en vérifiant le câblage audio après l'arrivée du foley (`5657464`).
+**Ni l'un ni l'autre n'est corrigé ici** — ils appartiennent à FU1/FU2 et au
+chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
+
+- **La nappe de combustion s'éteint au bout de 3 s sur 15.**
+  `assets/audio/sfx/fusee_combustion.wav` dure 2,98 s et est importé avec
+  `edit/loop_mode=0`. `fusee.gd` l'installe sur un `AudioStreamPlayer2D` dédié
+  (`_combustion`) et l'appelle **une seule fois**, à l'atterrissage (`play()`),
+  avant de le couper à l'acte RÉSIDU. Rien ne le relance entre les deux : la
+  fusée brûle une quinzaine de secondes en silence après les trois premières.
+  Le correctif tient probablement dans l'import (`loop_mode=1`) plutôt que dans
+  le code, mais c'est un choix de dosage sonore — donc d'Adrien, au banc.
+- **`fusee_combustion` est absent de `SFX_PRIORITE`**, là où les quatre autres
+  sons de fusée y figurent. **Probablement légitime** : ce son ne passe pas par
+  le pool à seize voix, il a son propre lecteur, et l'arbitrage par priorité ne
+  le concerne donc pas. Signalé pour que le prochain qui lira la table ne le
+  prenne pas pour un oubli — ou constate que c'en est un.
+
+**Reçu au passage :** les cinq sons qui manquaient au chantier
+(`fusee_lancer`, `fusee_atterrit`, `fusee_rebond`, `fusee_eteinte`,
+`fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
+audio à produire » de la liste FU6 tombe donc de lui-même.
+
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
 **Deux défauts relevés en jouant, tous deux d'information et non de décor** :
