@@ -13949,9 +13949,77 @@ Les trois types passent donc par `preload`, et le commentaire sur place le dit.
 C'est le même piège que `tools/test_arsenal.gd` contourne déjà de son côté, et il
 mord ici parce que ces fichiers sont **faits** pour être chargés par des suites.
 
+### Étape 2 — le root ✅
+
+Sept modifications de `player.gd`, et **rien sur le fil**. Le patron est celui
+que `lancer_fusee()` portait déjà : « le cooldown de tir existant porte ce
+désarmement — non répliqué, simulé identiquement chez l'hôte et dans la
+prédiction client, comme pour le tir ». `shoot()` tourne des deux côtés, donc les
+deux pairs arment le même compteur au même tir.
+
+⚠️ **Le root est VIVANT sur les quatre armes jouables dès ce lot** : pistolet
+0,10 s, fusil 0,25 s, pompe 0,35 s, arbalète 0,60 s. Ce n'est pas un ajout
+silencieux — c'est le jalon d'Adrien, et l'arbalète est précisément l'extrême
+haut de l'échelle. **S'il est injouable à 0,60 s, toute la grille bouge**, et
+c'est le genre de chose qu'on veut savoir maintenant plutôt qu'à la dixième
+classe.
+
+Trois propriétés écrites plutôt que supposées : le compteur ne bat que pendant le
+jeu actif (le bloc vit après deux `return` anticipés, il gèle pendant le décompte
+et la séquence de fin, comme le rechargement) ; `equip_weapon` le remet à zéro ;
+et l'Occulteur, seul à porter `apres_rafale`, s'immobilise au **relâchement de la
+détente** et non coup par coup — un pistolet-mitrailleur ne peut pas s'arrêter
+huit fois de suite.
+
+#### Le correctif qui n'était pas pour le root, et qui a demandé deux avis
+
+`_consume_prediction_error()` résorbait l'écart de prédiction par un
+`global_position += step` — **un téléport, qui traverse les murs**. Tant que le
+joueur bouge il se dégage seul au tick suivant, ce qui a masqué le défaut jusqu'à
+aujourd'hui. **Un joueur rooté ne bouge plus** : il s'y encastre et y reste.
+
+Mes deux premières idées étaient mauvaises, et la session « bandeau fatal » les a
+démolies l'une après l'autre :
+
+- appeler `move_and_slide()` à vitesse nulle ne répare rien — le mur est déjà
+  traversé quand il tournerait, et la vitesse n'entre pas dans un téléport ;
+- suspendre la consommation pendant le root ne fait que DIFFÉRER : l'écart se
+  rattrape d'un coup à la fin, c'est-à-dire un à-coup posé pile au moment où le
+  joueur redevient mobile — exactement ce que le commentaire de la fonction dit
+  vouloir éviter.
+
+La correction tient en un mot : **`move_and_collide(step)`**. Elle garde la
+courbe de lissage et s'arrête au mur.
+
+⚠️ Et le détail qui la rend sûre, vérifié avant d'être cru : **`_predict_error`
+n'est pas intégré, il est RE-MESURÉ à chaque paquet** (`_predict_error = err`,
+depuis `net_position`). Donc `_predict_error -= step` reste juste même quand le
+mur mange une partie du pas — la portion perdue revient dans la mesure suivante,
+ce qui dispense de calculer le trajet réel. **Le défaut préexistait au root ; le
+root ne fait que le rendre visible.**
+
+#### Ce que la suite tient, et ce qu'elle ne tient pas
+
+`tools/test_classes.gd` gagne dix contrôles TEXTUELS sur `player.gd`, pour la
+raison que `tools/test_planche_marche.gd` a déjà écrite : **le lot ne rend rien,
+donc rien n'aurait vu un décâblage.** Les sept modifications pourraient être
+défaites une à une sans qu'une ligne ne rougisse.
+
+Le contrôle qui compte le plus : **`_root_restant` ne doit apparaître ni dans la
+config de réplication ni dans `rpc_send_inputs`**. Le jour où quelqu'un
+« corrigerait » ça en répliquant le compteur, il paierait un octet par tick pour
+une valeur déjà juste et créerait une divergence là où il n'y en a aucune.
+
+Les gardes ont été **sabotées pour vérifier qu'elles rougissent** — deux
+contrôles au rouge en remettant le téléport, verts au retour. Une garde qu'on n'a
+pas vue échouer n'est pas une garde.
+
+Ce qu'aucune suite ne dit : **si le root est jouable.** Ça se juge manette en
+main.
+
 ### Ce qui reste, dans l'ordre
 
-Étape 2 le root (jalon manette), 3 la purge des armes codées en dur et la table,
+Étape 3 la purge des armes codées en dur et la table,
 4 la touche et le fil (`Protocol.VERSION` 9 → 10), 5 `GadgetBase` et les deux
 occluders avec la mesure de cadence immédiate, 6 l'éblouissement généralisé,
 7 les lumières posées, 8 les volumes, 9 le sol qui écrit, 10 le leurre,

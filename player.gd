@@ -53,6 +53,24 @@ var dazzle_amount: float = 0.0
 var current_ammo: int = 10
 var is_reloading: bool = false
 var reload_time_left: float = 0.0
+
+## Le ROOT — chantier CLASSES, étape 2. Secondes restantes d'immobilisation
+## après un tir. Zéro le reste du temps.
+##
+## ⚠️ **Rien de ceci ne part sur le fil, et il ne faut rien y mettre.** Le patron
+## est celui que `lancer_fusee()` porte déjà quelques centaines de lignes plus
+## bas : « le cooldown de tir existant porte ce désarmement — non répliqué,
+## simulé identiquement chez l'hôte et dans la prédiction client, comme pour le
+## tir ». `shoot()` tourne des DEUX côtés — le client prédit son propre tir —
+## donc le compteur tombe juste chez les deux pairs sans qu'on transmette quoi
+## que ce soit. Y ajouter un octet par tick serait payer pour une valeur qui est
+## déjà bonne, et créer une divergence possible là où il n'y en a aucune.
+##
+## ⚠️ **Il ne bat que pendant le jeu actif.** Le bloc qui le décrémente vit après
+## deux `return` anticipés : rien n'y tourne pendant le décompte de manche ni
+## pendant la séquence de fin. Le rechargement gèle déjà de la même façon, et
+## c'est cohérent — mais il faut le savoir, parce qu'aucune suite ne le dit.
+var _root_restant: float = 0.0
 var current_spread_bloom: float = 0.0
 var _reload_presse: bool = false
 
@@ -1062,6 +1080,10 @@ func _monter_viseur() -> void:
 
 func equip_weapon(weapon: WeaponData):
 	current_weapon = weapon
+	# Changer d'arme annule l'immobilisation de la précédente : garder un root de
+	# 0,60 s après être passé à une classe qui en a 0,08 serait une pénalité que
+	# rien à l'écran n'expliquerait.
+	_root_restant = 0.0
 	if current_weapon:
 		current_ammo = current_weapon.max_ammo
 		is_reloading = false
@@ -1314,7 +1336,16 @@ func _ingest_prediction_correction() -> void:
 func _consume_prediction_error(delta: float) -> void:
 	if _predict_error == Vector2.ZERO: return
 	var step := _predict_error * (1.0 - exp(-PREDICT_CORRECTION_RATE * delta))
-	global_position += step
+	# ⚠️ **`move_and_collide` et non `global_position +=`.** Le second est un
+	# téléport : il traverse les murs. Tant que le joueur bouge il se dégage seul
+	# au tick suivant, ce qui a masqué le défaut jusqu'ici — mais un joueur
+	# immobilisé après un tir ne bouge plus, et il y reste.
+	#
+	# `_predict_error -= step` reste juste même si le mur mange une partie du
+	# pas : l'écart n'est pas intégré, il est RE-MESURÉ à chaque paquet
+	# (`_predict_error = err`, depuis `net_position`). Ce qui est perdu revient
+	# dans la mesure suivante — d'où l'inutilité de calculer le trajet réel.
+	move_and_collide(step)
 	_predict_error -= step
 	if _predict_error.length() < 0.5:
 		_predict_error = Vector2.ZERO
@@ -1430,6 +1461,11 @@ func _physics_process(delta):
 		var current_speed = speed
 		if (shoot_cooldown > 0 or is_reloading) and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
+		# Le ROOT — troisième cause, et elle se LIT comme les deux autres : un
+		# joueur qui vient de tirer ne bouge plus, ce que l'adversaire voit.
+		# `facteur()` rend 1 hors de sa fenêtre, donc la ligne est inconditionnelle.
+		if _root_restant > 0.0:
+			current_speed *= RootProfile.facteur(_root_restant)
 		if dazzle_amount > 0:
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
 			
@@ -1631,6 +1667,13 @@ func _physics_process(delta):
 	if current_weapon and current_spread_bloom > 0.0:
 		current_spread_bloom = maxf(0.0, current_spread_bloom - current_weapon.spread_recovery_speed_deg * delta)
 
+	# Progression du root. Posé ici et pas ailleurs : ce bloc est celui du
+	# rechargement, il ne tourne que pendant le jeu actif, et les deux comptent
+	# le même genre de temps — celui pendant lequel on ne peut pas faire ce qu'on
+	# voudrait.
+	if _root_restant > 0.0:
+		_root_restant = maxf(0.0, _root_restant - delta)
+
 	# Progression du rechargement
 	if is_reloading:
 		reload_time_left -= delta
@@ -1677,6 +1720,14 @@ func _physics_process(delta):
 			AudioManager.play_sfx_2d(
 				AudioManager.chemin_percuteur(current_weapon.slug()),
 				muzzle.global_position)
+	# Le root de RAFALE : il ne tombe pas coup par coup mais au relâchement, ou
+	# quand le chargeur se vide. Sans ce bloc, l'Occulteur n'aurait aucun root du
+	# tout — un manque qui ne lèverait rien et ne se verrait qu'en jouant.
+	var _cl_rafale := current_weapon as ClassData
+	if _cl_rafale != null and _cl_rafale.root != null and _cl_rafale.root.apres_rafale:
+		if _detente_pressee and not presse:
+			_root_restant = maxf(_root_restant, _cl_rafale.root.duree)
+
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
@@ -1732,6 +1783,16 @@ func shoot():
 	
 	current_ammo -= 1
 	shoot_cooldown = current_weapon.cooldown
+	# Le ROOT s'arme ici, du même geste que le cooldown et pour la même raison :
+	# `shoot()` tourne chez l'hôte ET dans la prédiction du client, donc les deux
+	# pairs arment le même compteur au même tir.
+	#
+	# ⚠️ L'Occulteur est le seul à ne pas s'immobiliser coup par coup — son
+	# pistolet-mitrailleur ne peut pas s'arrêter huit fois de suite. Son root
+	# vient à la fin de la rafale, plus bas, au relâchement de la détente.
+	var _cl := current_weapon as ClassData
+	if _cl != null and _cl.root != null and not _cl.root.apres_rafale:
+		_root_restant = _cl.root.duree
 	# V1.5 — coup ferme et bref dans la manette du tireur.
 	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
 	

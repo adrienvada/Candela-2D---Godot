@@ -52,6 +52,7 @@ func _run() -> void:
 	_test_gadget()
 	_test_class_data()
 	_test_catalogue_declare()
+	_test_cablage_root()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -263,3 +264,54 @@ func _test_catalogue_declare() -> void:
 			doublons.append(s)
 		vus[s] = true
 	_check("aucun slug en double", doublons.is_empty(), str(doublons))
+
+
+func _test_cablage_root() -> void:
+	print("\n[Le câblage du root dans player.gd]")
+
+	# ⚠️ **Contrôle TEXTUEL, et il existe parce que le root ne RIEN qui se voie
+	# en headless.** Aucune suite ne simule une manche : les sept modifications
+	# de `player.gd` pourraient être défaites une à une sans qu'une seule ligne
+	# ne rougisse. C'est le même raisonnement que `tools/test_planche_marche.gd`,
+	# qui lit le TEXTE de `player.gd` pour la même raison — « le lot ne rend
+	# rien, donc rien n'aurait vu un décâblage ».
+	#
+	# Ce qu'il ne prouve pas : que le root se COMPORTE bien. Ça se juge manette
+	# en main, et c'est un jalon d'Adrien, pas un contrôle.
+	var f := FileAccess.open("res://player.gd", FileAccess.READ)
+	if f == null:
+		_check("player.gd lisible", false)
+		return
+	var t := f.get_as_text()
+	f.close()
+
+	_check("le compteur de root existe", t.contains("var _root_restant: float"))
+	_check("il se décrémente comme le rechargement",
+		t.contains("_root_restant = maxf(0.0, _root_restant - delta)"))
+	_check("il multiplie la vitesse par le facteur du profil",
+		t.contains("current_speed *= RootProfile.facteur(_root_restant)"))
+	_check("il s'arme dans shoot(), à côté du cooldown",
+		t.contains("_root_restant = _cl.root.duree"))
+	_check("la rafale s'immobilise au relâchement de la détente",
+		t.contains("_root_restant = maxf(_root_restant, _cl_rafale.root.duree)"))
+	_check("changer d'arme remet le root à zéro",
+		t.contains("_root_restant = 0.0"))
+
+	# ⚠️ **Le contrôle qui compte le plus : RIEN ne part sur le fil.** Le root est
+	# simulé identiquement chez les deux pairs parce que `shoot()` tourne des deux
+	# côtés — exactement le patron de `lancer_fusee()`. Le jour où quelqu'un
+	# « corrigerait » ça en répliquant le compteur, il paierait un octet par tick
+	# pour une valeur déjà juste, et créerait une divergence là où il n'y en a
+	# aucune. Ce contrôle est là pour que cette correction-là soit impossible à
+	# faire par inadvertance.
+	_check("le root ne voyage PAS dans la config de réplication",
+		not t.contains('add_property(NodePath(".:_root_restant")'))
+	_check("le root n'est pas un argument de rpc_send_inputs",
+		not t.contains("root: float") and not t.contains("_root_restant: float," ))
+
+	# La parade d'interpénétration. Le défaut préexistait ; le root le rend
+	# visible, parce qu'un joueur immobile ne se dégage plus seul au tick suivant.
+	_check("la correction de prédiction passe par la collision",
+		t.contains("move_and_collide(step)"))
+	_check("le téléport de correction a bien disparu",
+		not t.contains("global_position += step"))
