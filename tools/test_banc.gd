@@ -169,6 +169,37 @@ func _run() -> void:
 		disparus.is_empty(), ", ".join(disparus)
 		+ " — prévenir la session qui les nomme avant de renommer")
 
+	# ⚠️ **Et depuis le 2026-09-09, le photographe a un HÉRITIER.**
+	#
+	# `tools/cineaste.gd` fait `extends "res://tools/photographe.gd"` et ne
+	# surcharge que `_prendre()` : là où le photographe tient l'état puis
+	# déclenche, le cinéaste tient l'état et ne déclenche jamais, le moteur
+	# écrivant chaque image. Rien n'est copié — c'est délibéré, et c'est ce qui
+	# évite deux mises en scène qui divergent.
+	#
+	# **Le prix de ce choix est que des membres PRIVÉS deviennent une interface.**
+	# Un `_valeur` renommé en `_argument` ne casse rien ici, ne rougit nulle part,
+	# et fait tomber le trailer. Le préfixe souligné dit « n'y touchez pas » à un
+	# lecteur ; il ne dit rien à une suite. Celle-ci le dit.
+	var empruntes: Array[String] = ["_prendre", "_valeur", "_drapeau", "_vivants",
+		"_sortir"]
+	var perdus: Array[String] = []
+	var connus := {}
+	for m in Photo.get_script_method_list():
+		connus[m["name"]] = true
+	for nom in empruntes:
+		if not connus.has(nom):
+			perdus.append(nom)
+	# `_pantins` et `Marionnette` ne sont pas des méthodes : l'un est une
+	# variable, l'autre une classe interne. On les interroge autrement.
+	var texte := FileAccess.get_file_as_string("res://tools/photographe.gd")
+	for motif in ["var _pantins", "class Marionnette"]:
+		if not texte.contains(motif):
+			perdus.append(motif)
+	_check("les membres dont hérite tools/cineaste.gd existent encore",
+		perdus.is_empty(), ", ".join(perdus)
+		+ " — prévenir la session DA7 avant de renommer")
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")

@@ -3153,6 +3153,53 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
+
+Signalé par la session DA7, qui l'a rencontré en tournant le trailer sur le
+photographe. L'attente s'écrit comme on la pense :
+
+```gdscript
+await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+```
+
+et elle capture `affiche`. **Quand le nœud est libéré — c'est-à-dire à l'instant
+précis où la condition devient vraie — Godot invalide le `Callable` entier :**
+
+```
+ERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+   at: call (modules/gdscript/gdscript_lambda_callable.cpp:110)
+```
+
+**La condition attendue détruit le moyen de la tester.** L'attente ne rend
+jamais vrai, ne rend jamais faux : elle meurt sur place, et la fonction
+appelante ne reprend pas après son `await`. Pas d'exception à rattraper, pas de
+code de sortie, pas de message de l'outil.
+
+⚠️ **Le symptôme ne ressemble pas à une erreur, il ressemble à un travail
+partiel.** Trois plans du photographe manquaient au dossier — l'affiche de fin
+et deux verdicts — sans un mot ; le repère de début était imprimé, jamais celui
+de fin. Une session voisine a mis un moment à comprendre que ce n'était pas une
+capture perdue par le bridage de fenêtre, qui produit exactement la même
+impression.
+
+**Le remède tient à ce qu'on capture : un identifiant d'instance est un entier,
+et un entier ne se libère pas.**
+
+```gdscript
+var id := noeud.get_instance_id()
+await _attendre(func() -> bool: return not is_instance_id_valid(id), plafond)
+```
+
+Posé dans `photographe.gd::_attendre_disparition()`, et `_attendre()` refuse
+désormais une `Callable` invalide en le DISANT plutôt qu'en mourant — un garde
+qui ne répare rien mais transforme une mort silencieuse en refus visible.
+
+**La règle générale :** une lambda qui surveille un objet doit capturer son
+identifiant, jamais l'objet. Le cas se présente partout où l'on attend une
+disparition — la fin d'une animation qui se libère, un panneau qu'on congédie,
+une scène qu'on décharge.
+
+
 ### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
 
 Deux sessions travaillaient sur les deux moitiés d'un même défaut : l'une avait
