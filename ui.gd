@@ -130,6 +130,13 @@ const META_NAV_SEED := "nav_seed"
 ## `menu_hub.gd` a déjà écrit la leçon noir sur blanc pour ses panneaux : « une
 ## position n'est pas une identité ».
 const META_CLASSE_INDEX := "classe_index"
+## Le râtelier auquel un bouton de classe appartient — 0 pour J1, 1 pour J2.
+##
+## ⚠️ **Ce n'est PAS `META_NAV_OWNER`**, et les confondre était tentant.
+## `META_NAV_OWNER` dit quel CURSEUR peut atteindre le bouton, et il change avec
+## le rôle réseau : chez le client, le râtelier de J2 appartient au curseur 0.
+## Celui-ci dit de quel JOUEUR le bouton décide, ce qui ne change jamais.
+const META_RATELIER := "ratelier_du_bouton"
 ## L'appareil d'une ligne de la rubrique CONTRÔLES : `"clavier"` ou `"manette"`.
 ##
 ## ⚠️ **Il décide de ce que la ligne AFFICHE et de ce qu'elle ACCEPTE.** Sans
@@ -797,8 +804,13 @@ var weapon_hbox: HBoxContainer
 var p1_weapon_buttons: Array[Button] = []
 var p2_weapon_buttons: Array[Button] = []
 
-## La fiche de classe du panneau de sélection, et les deux cartes d'état du salon.
-var _fiche_classe: MenuFicheClasse
+## Les fiches de classe du panneau de sélection — **une par joueur**, empilées.
+##
+## ⚠️ **Il n'y en avait qu'une, et elle suivait le dernier survol.** En écran
+## partagé les deux joueurs choisissent EN MÊME TEMPS, chacun son curseur : J2 ne
+## voyait donc jamais ce qu'il était en train de prendre, sa fiche étant écrasée
+## par le moindre mouvement de J1. Signalé par Adrien le 2026-09-09.
+var _fiches_classe: Array[MenuFicheClasse] = []
 var _cartes_classe: Array[Control] = []
 var _cartes_classe_nom: Array[Label] = []
 var _cartes_classe_meta: Array[Label] = []
@@ -5145,12 +5157,30 @@ func _build_classes_panel() -> Control:
 	weapon_hbox.add_child(p1_vbox)
 	weapon_hbox.add_child(p2_vbox)
 
-	_fiche_classe = MenuFicheClasse.new()
-	_fiche_classe.name = "FicheClasse"
-	_fiche_classe.batir(COLOR_P1)
-	_fiche_classe.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_fiche_classe.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	rangee.add_child(_fiche_classe)
+	# Empilées, et dans l'ordre des joueurs : « en dessous de celle du joueur 1 »,
+	# demande d'Adrien du 2026-09-09.
+	var pile := VBoxContainer.new()
+	pile.name = "Fiches"
+	pile.add_theme_constant_override("separation", GAP_XS)
+	pile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	rangee.add_child(pile)
+
+	_fiches_classe.clear()
+	for joueur in [0, 1]:
+		var fiche := MenuFicheClasse.new()
+		fiche.name = "FicheJ%d" % (joueur + 1)
+		# ⚠️ **Compactes des DEUX côtés, même quand une seule s'affiche.** Une
+		# fiche qui change de gabarit selon le mode obligerait à la reconstruire
+		# à chaque bascule — or elle porte des boutons, des connexions et un
+		# état de sélection. Le gabarit resserré tient dans les deux cas ; le
+		# grand ne tient que dans l'un.
+		fiche.batir(COLOR_P1 if joueur == 0 else COLOR_P2, true,
+			"JOUEUR %d" % (joueur + 1))
+		fiche.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fiche.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		pile.add_child(fiche)
+		_fiches_classe.append(fiche)
 
 	return col
 
@@ -5212,6 +5242,7 @@ func _create_class_btn(place: int, group: ButtonGroup, tint: Color,
 	btn.add_theme_font_size_override("font_size", T_COURANT)
 	btn.add_theme_constant_override("h_separation", GAP_XS)
 	btn.set_meta(META_NAV_OWNER, owner_id)
+	btn.set_meta(META_RATELIER, owner_id)
 	btn.set_meta(META_CLASSE_INDEX, place)
 	# La fiche suit le SURVOL et le FOCUS autant que l'appui : on doit pouvoir
 	# lire une classe avant de la prendre, sinon la seule façon de savoir ce
@@ -5232,11 +5263,17 @@ func _catalogue_classes() -> Array:
 	return gs.classes()
 
 
+## Écrit la classe d'un bouton dans la fiche de SON râtelier.
+##
+## ⚠️ Le râtelier, jamais le curseur : chez le client, le curseur 0 pilote le
+## râtelier de J2, et router sur `META_NAV_OWNER` aurait écrit dans la fiche du
+## joueur 1 ce que le joueur 2 est en train de choisir.
 func _montrer_fiche_de(btn: Button) -> void:
-	if _fiche_classe == null or btn == null:
+	if btn == null or _fiches_classe.size() != 2:
 		return
+	var cote := int(btn.get_meta(META_RATELIER, 0))
 	var idx := int(btn.get_meta(META_CLASSE_INDEX, 0))
-	_fiche_classe.montrer(_classe_du_catalogue(idx), _catalogue_classes())
+	_fiches_classe[cote].montrer(_classe_du_catalogue(idx), _catalogue_classes())
 
 
 ## Écrit les noms sur les dix boutons, dans l'ordre des rangs.
@@ -5286,13 +5323,12 @@ func _refresh_class_labels() -> void:
 			# l'encre qui doit dessiner.
 			btn.add_theme_color_override("icon_pressed_color", Charte.NOIR)
 	_refresh_class_cards()
-	# La fiche s'ouvre sur ce qui est DÉJÀ choisi, du côté qu'on regarde. L'ouvrir
-	# sur la première de la liste montrerait une classe que personne n'a demandée,
-	# juste au-dessus d'un bouton coché ailleurs.
-	var cote_lu := 1 if p1_vbox != null and not p1_vbox.visible else 0
-	var choisis := p1_weapon_group if cote_lu == 0 else p2_weapon_group
-	if choisis != null and choisis.get_pressed_button() != null:
-		_montrer_fiche_de(choisis.get_pressed_button() as Button)
+	# Chaque fiche s'ouvre sur ce qui est DÉJÀ choisi de son côté. L'ouvrir sur la
+	# première de la liste montrerait une classe que personne n'a demandée, juste
+	# au-dessus d'un bouton coché ailleurs.
+	for groupe in [p1_weapon_group, p2_weapon_group]:
+		if groupe != null and groupe.get_pressed_button() != null:
+			_montrer_fiche_de(groupe.get_pressed_button() as Button)
 
 
 ## Reporte sur les cartes du salon ce que les râteliers ont décidé.
@@ -5995,6 +6031,11 @@ func _montrer_rateliers(j1: bool, j2: bool) -> void:
 	if _cartes_classe.size() == 2:
 		_cartes_classe[0].visible = j1
 		_cartes_classe[1].visible = j2
+	# La fiche suit son râtelier : montrer la fiche d'un joueur dont le râtelier
+	# est masqué annoncerait une classe que personne ne peut changer.
+	if _fiches_classe.size() == 2:
+		_fiches_classe[0].visible = j1
+		_fiches_classe[1].visible = j2
 
 ## Reporte le choix d'arme du râtelier de J1 sur celui de J2.
 ##
@@ -6502,6 +6543,8 @@ func _build_pick_panel() -> void:
 
 	_pick_fiche = MenuFicheClasse.new()
 	_pick_fiche.name = "FichePick"
+	# Seule et sans titre : elle ne sert qu'au joueur local, et la fenêtre de
+	# décompte ne s'ouvre jamais en écran partagé.
 	_pick_fiche.batir(COLOR_P1)
 	_pick_fiche.custom_minimum_size = Vector2(360, 0)
 	deux.add_child(_pick_fiche)

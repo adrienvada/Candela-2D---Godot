@@ -2771,3 +2771,23 @@ point font que le second n'est jamais « en vue », le rayon touchant le premier
 
 **Sabotage** : gadgets retirés des sources d'éblouissement → contrôle rouge,
 vert au retour.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (amendement de l'étape 9 : une fiche par joueur)
+
+**Relevé par Adrien dans la foulée** : en écran partagé, J2 ne voyait pas le
+descriptif de SA sélection. La fiche était unique et suivait le dernier survol,
+donc le moindre mouvement de J1 l'écrasait. Mon raisonnement d'origine était
+incomplet : j'avais écrit que les deux râteliers devaient rester côte à côte
+parce que les deux curseurs vivent en même temps, sans en tirer la conséquence
+pour la fiche.
+
+Deux fiches empilées, chacune à la teinte de son joueur, J2 sous J1 comme
+demandé. Le routage passe par le **râtelier** du bouton et jamais par le curseur
+qui l'atteint — chez le client, le curseur 0 pilote le râtelier de J2. Métriques
+resserrées des deux côtés : deux fiches pleine taille débordent en 720p, et un
+gabarit qui changerait selon le mode obligerait à reconstruire la fiche à chaque
+bascule.
+
+Contrôle ajouté : un survol chez J2 n'écrit pas dans la fiche de J1 — et le banc
+choisit exprès un bouton dont la classe DIFFÈRE de ce que J1 affiche, sans quoi
+il passerait au vert sans rien prouver.

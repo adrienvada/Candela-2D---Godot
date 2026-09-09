@@ -56,9 +56,23 @@ const LIGNES: Array[Dictionary] = [
 ]
 
 const COTE_PORTRAIT := 88.0
+## La vignette resserrée, quand deux fiches s'empilent.
+const COTE_PORTRAIT_COMPACT := 60.0
 
 var _teinte: Color = Charte.BLEU
 
+## Deux fiches empilées ne tiennent pas dans la hauteur d'une seule.
+##
+## ⚠️ **Ce n'est pas un « petit mode » de confort.** En écran partagé, les deux
+## joueurs choisissent EN MÊME TEMPS — chacun son curseur —, et Adrien l'a
+## demandé le 2026-09-09 : *« le joueur 2 doit voir aussi le descriptif de sa
+## sélection, en dessous de celle du joueur 1 »*. Une fiche unique qui suivait le
+## dernier survol ne montrait donc jamais à J2 ce qu'il était en train de
+## prendre. Deux fiches pleine taille débordent le cadre en 720p ; les métriques
+## se resserrent, rien ne disparaît.
+var _compact: bool = false
+
+var _titre: Label
 var _rang: Label
 var _nom: Label
 var _arme: Label
@@ -121,10 +135,17 @@ func _ready() -> void:
 
 ## Monte la fiche. Appelable avant l'entrée dans l'arbre — `_ready()` ne la
 ## remonte pas deux fois.
-func batir(teinte: Color) -> void:
+##
+## `titre` nomme le joueur à qui la fiche appartient. Vide pour une fiche seule :
+## dire « JOUEUR 1 » quand il n'y en a qu'un ajoute un mot sans ajouter de sens.
+func batir(teinte: Color, compact: bool = false, titre: String = "") -> void:
 	_teinte = teinte
+	_compact = compact
 	if _nom == null:
 		_batir()
+	if _titre != null:
+		_titre.text = titre
+		_titre.visible = not titre.is_empty()
 
 
 func _batir() -> void:
@@ -155,14 +176,25 @@ func _batir() -> void:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(col)
 
-	# --- L'en-tête : le rang, puis le nom -----------------------------------
+	# --- L'en-tête : à qui, quel rang, puis le nom --------------------------
+	var bandeau := HBoxContainer.new()
+	bandeau.add_theme_constant_override("separation", Charte.GAP_XS)
+	bandeau.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(bandeau)
+
+	_titre = Label.new()
+	Charte.appareil(_titre, Charte.T_MENTION, Charte.POIDS_APPUI)
+	_titre.add_theme_color_override("font_color", _teinte)
+	_titre.hide()
+	bandeau.add_child(_titre)
+
 	_rang = Label.new()
 	Charte.appareil(_rang, Charte.T_MENTION)
 	_rang.add_theme_color_override("font_color", Charte.AMBRE)
-	col.add_child(_rang)
+	bandeau.add_child(_rang)
 
 	_nom = Label.new()
-	Charte.enseigne(_nom, Charte.T_TITRE)
+	Charte.enseigne(_nom, Charte.T_APPUI if _compact else Charte.T_TITRE)
 	_nom.add_theme_color_override("font_color", Charte.HALOGENE)
 	col.add_child(_nom)
 
@@ -174,8 +206,9 @@ func _batir() -> void:
 	haut.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(haut)
 
+	var cote := COTE_PORTRAIT_COMPACT if _compact else COTE_PORTRAIT
 	var cadre := PanelContainer.new()
-	cadre.custom_minimum_size = Vector2(COTE_PORTRAIT, COTE_PORTRAIT)
+	cadre.custom_minimum_size = Vector2(cote, cote)
 	cadre.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# ⚠️ Style monté à la main, et pas `make_panel_style` : celui-là pose GAP_M de
@@ -218,13 +251,13 @@ func _batir() -> void:
 	prose.add_child(_arme)
 
 	_description = Label.new()
-	Charte.appareil(_description, Charte.T_COURANT)
+	Charte.appareil(_description, Charte.T_MENTION if _compact else Charte.T_COURANT)
 	_description.add_theme_color_override("font_color", Charte.DIM)
 	_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Quatre lignes réservées : sans plancher, la fiche change de hauteur d'une
 	# classe à l'autre et tout ce qui est dessous respire à chaque survol.
-	_description.custom_minimum_size = Vector2(0, 62)
+	_description.custom_minimum_size = Vector2(0, 44 if _compact else 62)
 	prose.add_child(_description)
 
 	col.add_child(_filet(Charte.LINE, 1))
@@ -233,7 +266,7 @@ func _batir() -> void:
 	var grille := GridContainer.new()
 	grille.columns = 3
 	grille.add_theme_constant_override("h_separation", Charte.GAP_XS)
-	grille.add_theme_constant_override("v_separation", 5)
+	grille.add_theme_constant_override("v_separation", 2 if _compact else 5)
 	grille.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(grille)
 
@@ -248,6 +281,8 @@ func _batir() -> void:
 		grille.add_child(etiquette)
 
 		var jauge := Jauge.new()
+		if _compact:
+			jauge.custom_minimum_size = Vector2(120, 9)
 		grille.add_child(jauge)
 		_jauges[cle] = jauge
 
@@ -265,7 +300,7 @@ func _batir() -> void:
 	var pied := GridContainer.new()
 	pied.columns = 2
 	pied.add_theme_constant_override("h_separation", Charte.GAP_XS)
-	pied.add_theme_constant_override("v_separation", 5)
+	pied.add_theme_constant_override("v_separation", 2 if _compact else 5)
 	pied.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(pied)
 

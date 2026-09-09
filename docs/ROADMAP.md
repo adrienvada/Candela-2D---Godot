@@ -14327,6 +14327,28 @@ même fiche.
    silhouette que l'adversaire découpera dans le faisceau ; une image séparée
    promettrait une allure que le jeu ne rend pas.
 
+#### ⚠️ Amendé le même jour : UNE FICHE PAR JOUEUR
+
+Le premier jet n'en avait qu'une, qui suivait le dernier survol. Adrien l'a
+relevé aussitôt : *« en écran partagé lors de la sélection d'arme, le joueur 2
+doit pouvoir voir aussi le descriptif de sa sélection, en dessous de celle du
+joueur 1 »*. Il a raison, et le raisonnement d'origine était incomplet — j'avais
+écrit que les deux râteliers devaient rester côte à côte *parce que les deux
+curseurs vivent en même temps*, sans en tirer la conséquence évidente pour la
+fiche : **une fiche unique est écrasée par le moindre mouvement de l'autre
+joueur**, et J2 ne voyait donc jamais ce qu'il était en train de prendre.
+
+Deux fiches, empilées, chacune à la teinte de son joueur. Le routage passe par le
+**râtelier** du bouton (`META_RATELIER`) et jamais par le curseur qui l'atteint :
+chez le client, le curseur 0 pilote le râtelier de J2, et router sur le curseur
+aurait écrit dans la fiche de J1 ce que J2 choisit.
+
+Les métriques se resserrent — deux fiches pleine taille débordent le cadre en
+720p — et **des deux côtés, même quand une seule s'affiche** : une fiche qui
+changerait de gabarit selon le mode devrait être reconstruite à chaque bascule,
+or elle porte des connexions et un état. Le gabarit resserré tient dans les deux
+cas ; le grand ne tient que dans l'un.
+
 #### Le défaut le plus cher n'était pas dans la fiche
 
 **L'index de l'arme était la POSITION du bouton dans son râtelier.** Six endroits

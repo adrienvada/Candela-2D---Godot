@@ -604,7 +604,13 @@ func _test_ecran_de_classes() -> void:
 	ui.set_weapon_selection(1, 0)
 
 	# ── La fiche dit quelque chose de chaque classe ─────────────────────────
-	var fiche = ui._fiche_classe
+	# ⚠️ **Une fiche par JOUEUR, et c'est le contrôle qui porte la demande
+	# d'Adrien du 2026-09-09** : en écran partagé, les deux choisissent en même
+	# temps, chacun son curseur. Une fiche unique était écrasée par le moindre
+	# mouvement de l'autre, et J2 ne voyait jamais ce qu'il prenait.
+	_check("il y a une fiche par joueur", ui._fiches_classe.size() == 2,
+		str(ui._fiches_classe.size()))
+	var fiche = ui._fiches_classe[0] if ui._fiches_classe.size() == 2 else null
 	_check("la fiche est montée", fiche != null)
 	if fiche != null:
 		var muettes: Array[String] = []
@@ -630,6 +636,30 @@ func _test_ecran_de_classes() -> void:
 			fiche.montrer(spectre, catalogue)
 			_check("le Spectre annonce zéro fusée",
 				String(fiche._fusees.text) == "aucune", String(fiche._fusees.text))
+
+	# ── Chaque râtelier écrit dans SA fiche, et pas dans celle de l'autre ───
+	#
+	# Le routage passe par le râtelier du bouton, jamais par le curseur qui
+	# l'atteint : chez le client, le curseur 0 pilote le râtelier de J2, et router
+	# sur le curseur aurait écrit dans la fiche de J1 ce que J2 choisit.
+	if ui._fiches_classe.size() == 2 and not ui.p2_weapon_buttons.is_empty():
+		var avant_j1 := String(ui._fiches_classe[0]._nom.text)
+		# Un bouton de J2 dont la classe DIFFÈRE de ce que J1 affiche, sinon le
+		# contrôle passerait au vert sans rien prouver.
+		var cible: Button = null
+		for btn in ui.p2_weapon_buttons:
+			var c = ui._classe_du_catalogue(int(btn.get_meta(ui.META_CLASSE_INDEX, 0)))
+			if c != null and String(c.libelle).to_upper() != avant_j1:
+				cible = btn
+				break
+		if cible != null:
+			ui._montrer_fiche_de(cible)
+			_check("un survol chez J2 n'écrit pas dans la fiche de J1",
+				String(ui._fiches_classe[0]._nom.text) == avant_j1,
+				"%s → %s" % [avant_j1, String(ui._fiches_classe[0]._nom.text)])
+			_check("il écrit dans celle de J2",
+				String(ui._fiches_classe[1]._nom.text) != avant_j1,
+				String(ui._fiches_classe[1]._nom.text))
 
 	# ── Le panneau existe et l'entrée qui le nomme y mène ───────────────────
 	var hub = ui.hub
