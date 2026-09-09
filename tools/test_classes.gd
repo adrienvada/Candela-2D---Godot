@@ -81,6 +81,7 @@ func _run() -> void:
 	await _test_leurre()
 	_test_gresillement()
 	_test_ancrage_des_effets()
+	await _test_poudre()
 	await _test_gresillement_en_jeu()
 
 	if _failures == 0:
@@ -1569,3 +1570,123 @@ func _test_ancrage_des_effets() -> void:
 		not gs.contains("app.maj(p1 if i == 0 else p2, p2 if i == 0 else p1)"))
 	_check("et le voile passe par la même règle",
 		ui.contains("gs.source_eblouissante_ou(victime, defaut)"))
+
+	# ── Et la FORME du brouillage suit ce que la source est ────────────────
+	#
+	# ⚠️ Seconde moitié du même défaut, corrigée sur demande d'Adrien : le flou et
+	# le halo se couchaient sur `emetteur.rotation` et se poussaient devant lui.
+	# Juste pour une torche, arbitraire pour une lumière POSÉE, dont la rotation
+	# vaut ce que le hasard de la pose lui a laissé.
+	var bv := FileAccess.get_file_as_string("res://brouillage_vue.gd")
+	_check("le brouillage demande si la source a un axe",
+		bv.contains("func _a_un_axe(") and bv.contains("var dirige := _a_un_axe(emetteur)"))
+	_check("sans axe, ni allongement ni avance",
+		bv.contains("if dirige else 1.0") and bv.contains("if dirige else 0.0"))
+	# ⚠️ **Par ce que la source EXPOSE, jamais par son type** : nommer `Player`
+	# depuis ce fichier le rendrait inchargeable par toute suite en `--script`,
+	# `player.gd` nommant des autoloads. Piège payé par `fusee_modele.gd`.
+	_check("et il le demande sans nommer aucune classe",
+		bv.contains('emetteur.get("eblouissement_dirige")')
+			and not bv.contains("is Player") and not bv.contains("is GadgetBase"))
+
+	# Les trois familles répondent, et elles ne répondent pas pareil.
+	var torche := GadgetTorcheFantome.new()
+	var mine := GadgetMine.new()
+	_check("une torche fantôme déclare un axe", torche.eblouissement_dirige)
+	_check("une mine n'en déclare pas", not mine.eblouissement_dirige)
+	torche.free()
+	mine.free()
+
+
+## La poudre de contact — chantier CLASSES, étape 17.
+##
+## ⚠️ **Les deux propriétés qui font le gadget, et elles sont fragiles toutes les
+## deux.** Une trace VISIBLE DANS LE NOIR en ferait une alarme au lieu d'un relevé
+## — le métier d'une autre classe. Et une trace qui disparaîtrait avec la nappe
+## laisserait effacer son passage d'une balle, ce qui vide le gadget de son sens.
+func _test_poudre() -> void:
+	print("\n[La poudre de contact : un sol qui écrit]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# La Sentinelle, index 6.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(6))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.visible = true
+	gs.p2.visible = true
+	gs.p2.global_position = Vector2(400.0, 2000.0)
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var poudre = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetPoudre:
+			poudre = c
+	_check("la poudre est posée", poudre != null)
+	if poudre == null:
+		gs.queue_free()
+		await process_frame
+		return
+
+	_check("les balles la traversent", not poudre.arrete_les_balles)
+	_check("la lumière aussi", not poudre.occulte_la_lumiere)
+	_check("elle n'éblouit pas", not poudre.eblouit)
+	_check("elle reste la manche entière", is_zero_approx(poudre.duree_vie))
+
+	# ── ELLE ÉCRIT ───────────────────────────────────────────────────────────
+	var avant: int = gs.arena.get_child_count()
+	# Un joueur traverse la nappe de part en part, par pas de 10 px : plus court
+	# que l'espacement des marques, donc c'est bien la DISTANCE cumulée qui
+	# déclenche, et non le nombre d'appels.
+	gs.p1.global_position = poudre.global_position - Vector2(GadgetPoudre.RAYON, 0.0)
+	for i in 24:
+		gs.p1.global_position += Vector2(10.0, 0.0)
+		poudre._relever_les_pas()
+	var posees: int = gs.arena.get_child_count() - avant
+	_check("la traversée laisse une piste", posees > 0, str(posees))
+	# ⚠️ Une marque tous les 26 px : 240 px parcourus dont ~220 dans la nappe en
+	# donnent une petite dizaine. Ce qu'on refuse est une marque par APPEL — 24 —
+	# qui trahirait une règle au temps au lieu d'une règle à la distance.
+	_check("et pas une marque par image", posees < 14, str(posees))
+
+	# ── ELLE NE SE LIT QUE SOUS LA LUMIÈRE ──────────────────────────────────
+	var trace: Node2D = null
+	for c in gs.arena.get_children():
+		if String(c.name).begins_with("Trace"):
+			trace = c
+	_check("une trace existe dans l'arène", trace != null)
+	if trace != null:
+		# ⚠️ C'est CE réglage qui fait la classe : dans le noir, la trace n'existe
+		# pas. Il faut revenir et éclairer. `light_mask = 0` en ferait une alarme.
+		_check("elle n'est visible que sous une lumière",
+			(trace as CanvasItem).light_mask == MapGeometry.WALL_LAYER,
+			str((trace as CanvasItem).light_mask))
+		# ⚠️ Enfant de l'ARÈNE : abattre la poudre ne doit pas effacer ce qu'elle
+		# a déjà écrit, sinon une balle suffirait à nier son passage.
+		_check("et elle survit à la nappe, car elle vit dans l'arène",
+			trace.get_parent() == gs.arena)
+
+	var restantes := 0
+	poudre.detruire()
+	await process_frame
+	for c in gs.arena.get_children():
+		if String(c.name).begins_with("Trace"):
+			restantes += 1
+	_check("la nappe abattue, la piste demeure", restantes > 0, str(restantes))
+
+	# ── Sortir efface la mémoire, pas la piste ──────────────────────────────
+	var p2 := GadgetPoudre.new()
+	p2.global_position = Vector2.ZERO
+	_check("un joueur hors nappe n'a pas de dernier pas",
+		p2._dernier[0] == Vector2.INF)
+	p2.free()
+
+	gs.queue_free()
+	await process_frame

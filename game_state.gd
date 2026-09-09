@@ -3217,6 +3217,10 @@ const IMPLEMENTATIONS := {
 	# 14 s : le temps de rendre un couloir désagréable, pas celui d'en faire une
 	# zone interdite pour la manche.
 	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 14.0},
+	# ⚠️ **Pas de durée de vie : la poudre reste la manche entière.** La
+	# Sentinelle « ne cherche pas, elle veille » — un relevé qui s'effacerait tout
+	# seul obligerait à repasser vite, c'est-à-dire à chercher.
+	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:

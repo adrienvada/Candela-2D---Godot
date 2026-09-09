@@ -2943,3 +2943,41 @@ long de `emetteur.rotation` — pertinent pour une torche, arbitraire pour un ga
 posé dont la rotation ne veut rien dire. Le correctif serait dans
 `brouillage_vue.gd`, qui appartient au chantier éblouissement, et le dosage
 appartient à Adrien.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 17, la poudre de contact — DIX gadgets sur dix)
+
+**Un sol qui écrit.** Qui traverse la nappe y laisse une piste, et la piste reste
+après lui. ⚠️ Les traces ne sont visibles **que sous une lumière** : dans le noir
+elles n'existent pas, il faut revenir et éclairer. C'est le geste de la
+Sentinelle, et c'est ce qui sépare ce gadget d'une alarme — le banc l'exige
+nommément, `light_mask = 0` en ferait une. ⚠️ Et elles vivent dans l'ARÈNE, pas
+dans le gadget : abattre la poudre ne doit pas effacer ce qu'elle a écrit, sinon
+une balle suffirait à nier son passage.
+
+**Une piste identique chez les deux pairs sans rien répliquer** : la marque se
+déclenche à la DISTANCE parcourue, jamais au temps. Le client voit l'adversaire
+interpolé, donc à d'autres instants — mais sur le même chemin. Une règle au temps
+aurait donné deux pistes différentes et obligé à répliquer chaque pas.
+
+**Les dix gadgets sont livrés**, et aucun n'a demandé d'asset peint : tous
+procéduraux, ou empruntant l'asset d'autre chose (le cookie de la classe pour la
+torche fantôme, la silhouette du joueur pour le leurre). Ce n'était pas un
+objectif, c'est venu de ce qu'ils décrivent des formes que le trait rend mieux
+qu'une image.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (l'ellipse, seconde moitié)
+
+**Adrien a tranché** : avance nulle pour une source non directionnelle. Fait, et
+l'allongement avec — c'est le même critère. Le flou et le halo se couchaient sur
+`emetteur.rotation` et se poussaient devant lui ; sans axe, la forme redevient un
+**disque centré sur la source**, ce qu'elle décrit.
+
+`brouillage_vue.gd` demande si la source a un axe **par ce qu'elle expose**
+(`eblouissement_dirige`, puis `flashlight_on` à défaut), jamais par son type :
+nommer `Player` ici le rendrait inchargeable en `--script`.
+
+⚠️ **Incursion déclarée dans `brouillage_vue.gd`**, fichier du chantier
+éblouissement : une fonction ajoutée, quatre expressions rendues conditionnelles.
+`tools/test_brouillage.gd` reste vert. Session éblouissement : si tu préfères une
+autre formulation du critère, elle est à toi — ce qui compte est qu'une lumière
+posée ne se voie plus attribuer une direction qu'elle n'a pas.

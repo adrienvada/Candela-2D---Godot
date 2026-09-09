@@ -142,6 +142,28 @@ func eteindre() -> void:
 ## `dazzle_amount` du regardeur ; la POSITION vient de l'émetteur. Les
 ## intervertir donne un effet cohérent et faux : on se cacherait soi-même en
 ## éblouissant quelqu'un.
+## Cette source a-t-elle un AXE qui veuille dire quelque chose ?
+##
+## Trois réponses, dans cet ordre :
+##
+##   • un **gadget** le déclare (`eblouissement_dirige`) — la torche fantôme a un
+##     faisceau, la mine et la nappe de braises n'en ont pas ;
+##   • sinon, seul un **porteur de torche** en a un, et on le reconnaît à ce
+##     qu'il possède `flashlight_on` ;
+##   • tout le reste — une fusée au sol, par exemple — crache dans toutes les
+##     directions.
+##
+## ⚠️ **Par ce que la source EXPOSE, jamais par son type.** Nommer `Player` ou
+## `GadgetBase` ici ferait de ce fichier un dépendant de `player.gd`, qui nomme
+## des autoloads : plus aucune suite lancée en `--script` ne pourrait le charger.
+## C'est le piège payé par `fusee_modele.gd` le 2026-09-01.
+func _a_un_axe(emetteur: Node2D) -> bool:
+	var declare = emetteur.get("eblouissement_dirige")
+	if declare != null:
+		return bool(declare)
+	return emetteur.get("flashlight_on") != null
+
+
 func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 	if _flou == null or regardeur == null or emetteur == null:
 		eteindre()
@@ -152,8 +174,24 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		eteindre()
 		return
 	var vers_ecran := vue.get_canvas_transform()
-	var axe := emetteur.rotation
+	# ⚠️ **Une source POSÉE n'a pas d'axe, et `rotation` ment alors.** Le flou et
+	# le halo se couchaient sur `emetteur.rotation` et se poussaient devant lui —
+	# juste pour une torche, qui a un faisceau ; arbitraire pour une mine, une
+	# nappe de braises ou une fusée, dont la rotation vaut ce que le hasard de la
+	# pose lui a laissé. On obtenait une grande ellipse penchée, décalée d'un côté
+	# sans raison, à côté de la lumière qu'elle était censée couvrir.
+	#
+	# Sans axe, la forme redevient ce qu'elle décrit : un DISQUE centré sur la
+	# source. Correctif demandé par Adrien le 2026-09-09, à la suite de l'ellipse
+	# parasite — dont l'autre moitié était un mauvais ancrage, corrigée dans
+	# `game_state._maj_brouillage()`.
+	var dirige := _a_un_axe(emetteur)
+	var axe := emetteur.rotation if dirige else 0.0
 	var avant := Vector2.RIGHT.rotated(axe)
+	var allonge_flou := Brouillage.ALLONGEMENT_FLOU if dirige else 1.0
+	var allonge_halo := Brouillage.ALLONGEMENT_HALO if dirige else 1.0
+	var avance_flou := Brouillage.AVANCE_FLOU if dirige else 0.0
+	var avance_halo := Brouillage.AVANCE_HALO if dirige else 0.0
 
 	# ── LE FLOU — il empêche le cône de trahir son apex.
 	var f := Brouillage.flou(dazzle)
@@ -166,10 +204,10 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		# rectangle est la boîte de l'ellipse : le masque du shader est un
 		# cercle en UV, donc une ellipse à l'écran dès que le rectangle cesse
 		# d'être carré. C'est la géométrie qui porte la forme, pas le shader.
-		var demi_long := rayon_flou * Brouillage.ALLONGEMENT_FLOU
+		var demi_long := rayon_flou * allonge_flou
 		var taille := Vector2(demi_long, rayon_flou) * 2.0
 		var centre := vers_ecran * emetteur.global_position \
-			+ avant * (demi_long * Brouillage.AVANCE_FLOU)
+			+ avant * (demi_long * avance_flou)
 		_flou.size = taille
 		_flou.pivot_offset = taille * 0.5
 		_flou.rotation = axe
@@ -203,10 +241,10 @@ func maj(regardeur: Node2D, emetteur: Node2D) -> void:
 		# forme, et son cœur lumineux en marque le centre — c'est-à-dire le point
 		# qu'on veut rendre introuvable. Allongé, le cœur devient une traînée :
 		# aussi vif, mais il ne désigne plus.
-		var demi_h := rayon * Brouillage.ALLONGEMENT_HALO
+		var demi_h := rayon * allonge_halo
 		var taille_h := Vector2(demi_h, rayon) * 2.0
 		var centre_h := vers_ecran * emetteur.global_position \
-			+ avant * (demi_h * Brouillage.AVANCE_HALO)
+			+ avant * (demi_h * avance_halo)
 		_halo.size = taille_h
 		_halo.pivot_offset = taille_h * 0.5
 		_halo.rotation = axe

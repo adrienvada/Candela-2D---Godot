@@ -14798,12 +14798,69 @@ voir le nouveau piège connu, *« corriger un défaut de direction sans chercher
 jumeau »*. Prouvé par l'expérience : déplacer l'adversaire invisible de 250 px
 déplace l'ellipse d'autant.
 
-⚠️ **Signalé, non corrigé, et c'est une décision de jeu** : une fois l'ancrage
-réparé, le flou reste décalé le long de `emetteur.rotation`. C'est pertinent pour
-une torche, qui a un faisceau ; arbitraire pour un gadget posé, dont la rotation
-ne veut rien dire. Le correctif tiendrait dans `brouillage_vue.gd` — avance nulle
-pour une source qui déclare `eblouissement_dirige == false`. **Le fichier
-appartient au chantier éblouissement, et le dosage appartient à Adrien.**
+⚠️ **La seconde moitié a été tranchée par Adrien le jour même** : une fois
+l'ancrage réparé, le flou restait couché sur `emetteur.rotation` et poussé devant
+lui. Pertinent pour une torche, qui a un faisceau ; arbitraire pour une lumière
+posée, dont la rotation vaut ce que le hasard de la pose lui a laissé.
+
+`brouillage_vue.gd` demande désormais si la source **a un axe**, et sans axe la
+forme redevient ce qu'elle décrit : un **disque centré sur la source**. Ni
+allongement, ni avance. La question se pose à ce que la source EXPOSE
+(`eblouissement_dirige`, puis `flashlight_on` à défaut) et **jamais à son type** :
+nommer `Player` depuis ce fichier le rendrait inchargeable par toute suite lancée
+en `--script`, `player.gd` nommant des autoloads — le piège de `fusee_modele.gd`.
+
+⚠️ **Incursion déclarée** : `brouillage_vue.gd` appartient au chantier
+éblouissement. Une fonction ajoutée, quatre expressions rendues conditionnelles,
+rien d'autre touché ; `tools/test_brouillage.gd` reste vert.
+
+### Étape 17 — la poudre de contact, et le dixième gadget ✅
+
+**Un sol qui écrit.** *« Elle ne cherche pas : elle veille. Une poudre qui écrit
+les pas de qui passe. »* Qui traverse la nappe y laisse une piste, et la piste
+reste après lui.
+
+⚠️ **Les traces ne sont visibles QUE sous une lumière** (`light_mask` du sol) :
+dans le noir, elles n'existent pas. Il faut revenir, éclairer, et lire. C'est
+exactement le geste de la classe — on ne surveille pas en direct, on relève après
+coup — et c'est ce qui sépare ce gadget d'une alarme, qui est le métier d'une
+autre classe. Le banc l'exige nommément : `light_mask = 0` ferait de la poudre
+une alarme, et rien d'autre ne le dirait.
+
+⚠️ **Les traces vivent dans l'ARÈNE, pas dans le gadget.** Abattre la poudre ne
+doit pas effacer ce qu'elle a déjà écrit, sans quoi une balle suffirait à nier
+son passage. C'est la leçon que `bullet.gd` a écrite pour ses éclats.
+
+#### Une piste identique chez les deux pairs, sans rien répliquer
+
+La marque se déclenche à la **DISTANCE parcourue**, jamais au temps. Le client
+voit l'adversaire interpolé — 100 ms de retard et un lissage — donc à des instants
+différents de l'hôte, **mais sur le même chemin**. Une marque tous les 26 px
+donne la même piste des deux côtés. Une règle au temps aurait produit deux pistes
+différentes et obligé à répliquer chaque pas.
+
+Le banc protège précisément ça : il fait traverser la nappe par pas de 10 px —
+plus court que l'espacement — et refuse une marque par appel.
+
+### Le chantier a ses DIX gadgets
+
+| Classe | Gadget | Ce qu'il retire à l'autre |
+|---|---|---|
+| Le Parasite | le grésillement | la confiance dans sa propre lampe |
+| Le Fumiste | la cartouche de suie | l'identité de qui est là |
+| L'Illusionniste | le leurre inerte | la certitude que c'est un corps |
+| Le Braconnier | la torche fantôme | la certitude que c'est un joueur |
+| Le Terrassier | la poussière | la portée du regard |
+| L'Incendiaire | la nappe de braises | le droit de rester |
+| La Sentinelle | la poudre de contact | le secret du passage |
+| L'Occulteur | l'ombre habitée | la fiabilité des ombres |
+| L'Allumeur | la mine au magnésium | les yeux, d'un coup |
+| Le Spectre | le voile | la lumière, sans arrêter les balles |
+
+**Aucun n'a demandé d'asset peint** : les dix sont procéduraux, ou empruntent
+l'asset d'autre chose — la torche fantôme prend le cookie de sa classe, le leurre
+prend la silhouette du joueur. Ce n'était pas un objectif ; c'est venu de ce
+qu'ils décrivent tous des formes que le trait rend mieux qu'une image.
 
 ### Ce qui reste, dans l'ordre
 
@@ -14811,7 +14868,7 @@ appartient au chantier éblouissement, et le dosage appartient à Adrien.**
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : le sol qui écrit (poudre de contact), les fusées par classe (stock et recharge), et
+**Reste** : les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).
 
