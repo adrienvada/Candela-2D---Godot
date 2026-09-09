@@ -63,6 +63,12 @@ const PAR_ARME := {
 	"carabine": "arme_carabine.png",
 	"pompe_scie": "arme_pompe_scie.png",
 	"arbalete_lourde": "arme_arbalete_lourde.png",
+	"fumiste": "arme_fumiste.png",
+	"incendiaire": "arme_incendiaire.png",
+	"sentinelle": "arme_sentinelle.png",
+	"occulteur": "arme_occulteur.png",
+	"allumeur": "arme_allumeur.png",
+	"spectre": "arme_spectre.png",
 }
 
 ## Les badges de rangs compétitifs (Phases 6 & 7).
