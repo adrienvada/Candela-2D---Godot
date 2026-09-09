@@ -595,6 +595,7 @@ var p1_cd: CircularCooldown
 var p1_cd_label: Label
 var p1_ammo_label: Label
 var p1_torch: PanelContainer
+var p1_flare: PanelContainer
 ## Le temps du voile, en secondes. Le shader le reçoit en uniforme plutôt que
 ## d'utiliser `TIME`, pour que le banc puisse figer l'animation et qu'une suite
 ## puisse poser un instant précis.
@@ -624,6 +625,7 @@ var p2_cd: CircularCooldown
 var p2_cd_label: Label
 var p2_ammo_label: Label
 var p2_torch: PanelContainer
+var p2_flare: PanelContainer
 var p2_dazzle: ColorRect
 
 var time_label: Label
@@ -685,6 +687,7 @@ var bilan_serie: Label
 ## est inconnue : afficher « — » dirait qu'il y a une case à remplir.
 var bilan_effleure: VBoxContainer
 var bilan_marge: Label
+var bilan_soiree: Label
 
 ## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
 ## un écran, un sujet.
@@ -2123,12 +2126,14 @@ func _build_player_hud(player: int) -> Control:
 
 	var weapon := _create_weapon_indicator(tint)
 	var torch := _create_torch_indicator()
+	var flare := _create_flare_indicator()
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	if player == 0:
 		bottom.add_child(weapon["container"])
 		bottom.add_child(spacer)
+		bottom.add_child(flare)
 		bottom.add_child(torch)
 		p1_panel = panel
 		p1_hp = bars["fg"]
@@ -2138,8 +2143,10 @@ func _build_player_hud(player: int) -> Control:
 		p1_cd_label = weapon["label"]
 		p1_ammo_label = weapon.get("ammo", null)
 		p1_torch = torch
+		p1_flare = flare
 	else:
 		bottom.add_child(torch)
+		bottom.add_child(flare)
 		bottom.add_child(spacer)
 		bottom.add_child(weapon["container"])
 		p2_panel = panel
@@ -2150,6 +2157,7 @@ func _build_player_hud(player: int) -> Control:
 		p2_cd_label = weapon["label"]
 		p2_ammo_label = weapon.get("ammo", null)
 		p2_torch = torch
+		p2_flare = flare
 
 	return wrapper
 
@@ -2364,6 +2372,77 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 		label.add_theme_color_override("font_color", Charte.HALOGENE)
 	else:
 		label.add_theme_color_override("font_color", Charte.DIM)
+
+func _create_flare_indicator() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_END
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", GAP_XS)
+	margin.add_theme_constant_override("margin_right", GAP_XS)
+	margin.add_theme_constant_override("margin_top", GAP_XXS)
+	margin.add_theme_constant_override("margin_bottom", GAP_XXS)
+	panel.add_child(margin)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", GAP_XS)
+	margin.add_child(hbox)
+
+	var chemin_fusee := "res://assets/sprites/fusee_corps.png"
+	if ResourceLoader.exists(chemin_fusee):
+		var icon := TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = load(chemin_fusee)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(icon)
+
+	var label := Label.new()
+	label.name = "Label"
+	label.text = "FUSÉE"
+	label.add_theme_font_size_override("font_size", T_MENTION)
+	hbox.add_child(label)
+
+	_set_flare_style(panel, true, Charte.HALOGENE)
+	return panel
+
+func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+	if panel == null or panel.get_child_count() == 0:
+		return
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(0)
+	style.set_border_width_all(2)
+
+	if active:
+		style.bg_color = Color(Charte.LINE, 0.9)
+		style.border_color = player_color
+		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2(3, 3)
+	else:
+		style.bg_color = Color(Charte.SURFACE, 0.8)
+		style.border_color = Color(Charte.LINE, 1.0)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2.ZERO
+
+	panel.add_theme_stylebox_override("panel", style)
+
+	var margin = panel.get_child(0)
+	if margin.get_child_count() == 0:
+		return
+	var hbox = margin.get_child(0)
+	var label: Label = hbox.get_node_or_null("Label")
+	if label != null:
+		if active:
+			label.add_theme_color_override("font_color", Charte.HALOGENE)
+		else:
+			label.add_theme_color_override("font_color", Charte.DIM)
+	var icon: TextureRect = hbox.get_node_or_null("Icon")
+	if icon != null:
+		icon.modulate = Color.WHITE if active else Color(1, 1, 1, 0.3)
 
 # ===========================================================================
 # CONSTRUCTION — ANNEXES
@@ -4519,6 +4598,14 @@ func _build_bilan() -> Control:
 	bilan_marge.add_theme_color_override("font_color", COLOR_LUMIERE)
 	bilan_effleure.add_child(bilan_marge)
 
+	bilan_soiree = Label.new()
+	bilan_soiree.name = "CarteSoiree"
+	bilan_soiree.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	Charte.appareil(bilan_soiree, T_MENTION)
+	bilan_soiree.add_theme_color_override("font_color", COLOR_DIM)
+	bilan_soiree.hide()
+	bilan.add_child(bilan_soiree)
+
 	return bilan
 
 
@@ -4544,7 +4631,7 @@ var _bilan_total_precedent: int = 0
 var _serie_precedente: String = ""
 
 func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
-		effleurement: float = -1.0) -> void:
+		effleurement: float = -1.0, carte_soiree: String = "") -> void:
 	if bilan == null:
 		return
 	# V3.6 — le pion de score, quand la SESSION gagne une unite. Pas a chaque
@@ -4576,6 +4663,9 @@ func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 		# même langue, sinon la même distance porte deux noms.
 		bilan_marge.text = Echelle.ecrire(effleurement)
 		bilan_effleure.visible = effleurement >= 0.0
+	if bilan_soiree != null:
+		bilan_soiree.text = carte_soiree
+		bilan_soiree.visible = carte_soiree != ""
 	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
 	game_over_score.text = ""
 	bilan.show()
@@ -6386,6 +6476,9 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
+		var gs_p1 = get_parent()
+		var p1_fusee_ok: bool = gs_p1.fusee_disponible(p1.player_id) if (gs_p1 is GameState and "player_id" in p1) else true
+		_set_flare_style(p1_flare, p1_fusee_ok, COLOR_P1)
 		_poser_voile(p1_dazzle, p1, p2)
 
 	if p2:
@@ -6427,6 +6520,9 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
+		var gs_p2 = get_parent()
+		var p2_fusee_ok: bool = gs_p2.fusee_disponible(p2.player_id) if (gs_p2 is GameState and "player_id" in p2) else true
+		_set_flare_style(p2_flare, p2_fusee_ok, COLOR_P2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#
 		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le
