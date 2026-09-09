@@ -15,12 +15,15 @@ config/version="0.4.1"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0, 0, 0, 1)
-; 1 = « Keep » : l'image d'amorce est mise à l'échelle de la fenêtre en gardant
-; ses proportions. Elle valait 0 = « Disabled », donc dessinée à sa taille
-; native : 1600 px de large dans une fenêtre de 1280, l'enseigne débordait de
-; l'écran au lancement. Énumération du moteur : Disabled, Keep, Keep Width,
-; Keep Height, Cover, Ignore.
-boot_splash/stretch_mode=1
+; 2 = « Keep Width » : l'image d'amorce est mise à l'échelle sur la largeur de la
+; fenêtre (RenderingServerTypes::SPLASH_STRETCH_MODE_KEEP_WIDTH).
+; Le mode 1 (« Keep ») de Godot présente le comportement de caler la hauteur de l'image
+; sur la hauteur de la fenêtre en mode paysage, ce qui faisait déborder l'enseigne
+; sur les côtés gauche et droit (notamment sur écran 16:10 ou formats larges).
+; Avec le mode 2 et une toile 16:9 (1920×1080) où le wordmark occupe 44 % de la largeur
+; (règle PART_ENSEIGNE de DA6.5), l'amorce ne déborde jamais et s'aligne exactement
+; sur la transition avec la séquence PowerOn.
+boot_splash/stretch_mode=2
 boot_splash/image="res://assets/logos/boot.png"
 ; DA7 — l'icône passe au Roman Graphique Brutaliste. L'ancienne (`icone.png`,
 ; DA1.7, tracé vectoriel à la main sur gabarit) reste dans le dépôt : elle est
