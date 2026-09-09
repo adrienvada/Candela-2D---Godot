@@ -1872,6 +1872,9 @@ func _test_fusees_par_classe() -> void:
 		_check("et il compte celles qu'on a",
 			String(ui.p1_reserves["fusees"].text) == "FUSÉES %d" % plein,
 			String(ui.p1_reserves["fusees"].text))
+		_check("et le gadget affiche son nom de classe",
+			String(ui.p1_reserves["gadget"].text).contains("POUSSIÈRE"),
+			String(ui.p1_reserves["gadget"].text))
 
 	gs.queue_free()
 	await process_frame
