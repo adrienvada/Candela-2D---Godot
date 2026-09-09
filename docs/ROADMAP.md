@@ -11982,71 +11982,30 @@ avant ce chantier.
    elle ne se fait pas d'office — c'est la règle du journal des sessions, et
    c'est elle qui a évité que V6.2 soit implémentée deux fois.
 
-### ⚠️ OUVERT — le voile est somptueux au banc et fade en jeu (2026-09-09)
+### Ce qu'une torche éblouit vraiment, selon la distance (mesuré le 2026-09-09)
 
-**Signalé par Adrien après un match amical en réseau local, hôte, PLEIN ÉCRAN :**
-« l'éblouissement me faisait apparaître une grosse tâche comme ellipse floue, et
-pas les flares qu'on a créés ». La « tâche ramassée au niveau de l'éblouisseur »
-est le brouillage faisant exactement son travail ; **c'est le voile qu'il n'a pas
-vu.**
+Relevé par le chemin exact du jeu — `WeaponData.lumiere_recue()` puis
+`Eblouissement.plafond_pour()` —, parce qu'aucun réglage de rendu ne se juge sans
+savoir dans quelle plage il travaille :
 
-**Le voile n'est pourtant ni éteint ni amputé.** La planche d'éblouissement le
-montre en jeu, chaîne d'hexagones fantômes comprise. Il est simplement **beaucoup
-plus faible qu'au banc**, à réglages identiques et à éblouissement PLUS FORT :
-le banc à 0,85 rend un flare crème avec son étoile radiante, le jeu à 1,00 rend
-un pâté brun.
+| distance | dans l'axe | 15° hors axe | 30° hors axe |
+|---|---|---|---|
+| 140 px | **0,81** | 0,61 | 0,49 |
+| 200 px | 0,71 | 0,55 | 0,43 |
+| 280 px | 0,55 | 0,42 | 0,34 |
+| 360 px | 0,34 | 0,27 | 0,22 |
+| 460 px | **0,00** | 0,00 | 0,00 |
 
-#### Ce qui a été éliminé — ne pas le refaire
+⚠️ **Deux choses qui ne se devinent pas.** La torche cesse d'éblouir au-delà de
+~400 px, donc tout réglage jugé à bout portant est jugé hors du duel ; et le
+brouillage passe cette valeur par `_dose()`, qui la **multiplie par `GAIN`
+(2,0)** et sature donc dès 0,5 — c'est-à-dire dès 300 px — là où le voile la
+prend **brute**. Les deux effets ne montent pas à la même vitesse, et c'est
+délibérément conservé : le halo doit cacher tôt, le voile doit gêner
+progressivement.
 
-| piste | verdict |
-|---|---|
-| mauvaise installation, shader ou textures absents du build | **non** — les 9 uniformes que `ui.gd` pose existent, les 3 textures sont assignées |
-| valeurs divergentes banc / production | **non** — le banc lit les défauts du shader (`shader_get_parameter_default`), il ne peut pas diverger |
-| textures différentes | **non** — le banc démarre sur `_textures_fournies = false`, donc `VoileTextures.toutes()`, comme `ui.gd` |
-| mauvais joueur interrogé en ligne | **non** — hôte ⇒ `update_hud(p1, p2)`, le voile lit bien son propre `dazzle_amount` |
-| atténuation après le shader | **non** — aucun `modulate` sur les rects, et `ui.gd` n'appelle jamais `current_effect` |
-| le curseur « Éblouissement » des options | **non** — plus appliqué nulle part (voir `REGLABLE_PAR_LES_OPTIONS`) |
-| rapport d'écran (moitié contre plein) | **non** — Adrien jouait en PLEIN ÉCRAN, vue unique, 1,78 : le même rapport que le banc |
-| `temps` figé | **non** — `_voile_temps += delta` tourne bien |
-
-#### Ce qui reste, et le seul écart mesuré
-
-**Le voile monte trois fois moins vite que le brouillage, et personne ne les a
-jamais comparés sur la même échelle.** Les deux lisent `dazzle_amount` :
-
-- le brouillage le passe par `_dose()`, qui le **multiplie par `GAIN` (2,0)** — il
-  sature donc dès `dazzle = 0,5`, c'est-à-dire dès 300 px ;
-- le voile le prend **brut**.
-
-Mesuré le 2026-09-09 par le chemin exact du jeu (`lumiere_recue` →
-`plafond_pour`) : 140 px donnent 0,81 d'éblouissement, 280 px 0,55, 360 px 0,34,
-et **au-delà de ~400 px la torche n'éblouit plus du tout**. À mi-portée
-l'ellipse est donc à fond pendant que les flares plafonnent sous 9 % d'opacité.
-
-⚠️ **Cela explique que les flares soient discrets ; cela n'explique PAS l'écart
-d'aspect entre les deux images**, puisque la comparaison ci-dessus se fait à
-éblouissement égal et même supérieur en jeu. **Il manque encore une cause.**
-
-**La piste non explorée, et c'est la prochaine à ouvrir :** le rendu racine. La
-vue unique n'est plus rendue par un `SubViewport` (chantier R) et le framebuffer
-y suit la densité NATIVE de l'écran — facteur 1,778 mesuré le 2026-09-07, celui-là
-même qui a causé le polygone de photocopie. Le shader du voile travaille en `UV`
-et devrait y être indifférent ; **le vérifier plutôt que le supposer** est
-exactement ce que ce chantier a appris à ses dépens.
-
-#### L'instrument, lui, a été réparé
-
-`tools/banc_voile.gd` porte désormais deux ajouts qui rendent l'écart visible au
-lieu de le laisser deviner :
-
-- **une ligne de vérité** dans le panneau, calculée depuis les réglages courants :
-  « voile 0,53 au cœur, flares 0,075 | ellipse 1,00 → flares NOYÉS » ;
-- **la touche `D`**, qui saute entre les quatre distances de duel mesurées
-  (140 / 200 / 280 / 360 px) au lieu de marteler `Z`/`X` par pas de 20 px.
-
-⚠️ **Et un reste périmé à nettoyer :** `tools/planche_eblouissement.gd` imprime
-encore « curseur Éblouissement : 0,80 → voile maximal 64 % d'opacité ». Plus rien
-n'applique ce curseur. La ligne a coûté une fausse piste ce jour-là.
+Ces quatre distances sont celles de la touche `D` du banc du voile, qui y saute
+au lieu de les traverser par pas de 20 px.
 
 ### ✅ RÉSOLU — la photocopie d'écran du flou laissait un polygone à l'écran
 

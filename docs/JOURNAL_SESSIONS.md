@@ -276,6 +276,20 @@ fois — doublon né d'une double application du chantier décors (`f338e38` et
 
 ### 2026-09-09 — session « retouche éblouissement » : le banc réparé, le voile TOUJOURS PAS
 
+> **✅ CLOS le 2026-09-09 par Adrien** — « je n'ai pas revu le bug depuis, je
+> pense que c'est corrigé ». La section correspondante de la feuille de route est
+> supprimée ; seule la mesure de la plage d'éblouissement est conservée, parce
+> qu'elle documente la touche `D` du banc et qu'elle vaut indépendamment du
+> défaut.
+>
+> ⚠️ **Et la comparaison qui fondait ce « toujours pas » était bancale**, je
+> l'inscris parce que c'est la partie utile : l'image du banc était en plein
+> écran (rapport 1,78) et celle du jeu en écran scindé (0,889). Le shader
+> normalise par la demi-diagonale, ce qui multiplie l'échelle interne par 1,52
+> entre les deux — **une bonne part de l'écart constaté venait de là, pas du
+> jeu.** Or Adrien joue en plein écran. Troisième forme du même travers dans la
+> journée : une mesure juste, braquée à côté.
+
 **Adrien a joué en réseau local et n'a pas vu le voile** — seulement « une grosse
 tâche comme ellipse floue » au niveau de l'éblouisseur, ce qui est le brouillage
 faisant son travail. Branche `banc-niveau-reel`.
