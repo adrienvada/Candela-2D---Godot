@@ -1,6 +1,24 @@
 class_name LocalInputProvider
 extends InputProvider
 
+## p1_torch/p2_torch est une gâchette analogique (L2), pas un bouton — voir
+## `input_setup.gd`. Un vrai bouton mécanique à deux crans monnaie cette
+## profondeur : un appui léger n'éclaire que tenu, un appui À FOND clique et
+## reste enclenché jusqu'au clic suivant. En dessous, seule la zone morte de
+## l'Input Map (0.2, posée par `input_setup.gd`) filtre — c'est le premier
+## cran. Une manette qui n'a que des boutons (rebind au clavier exclu, voir
+## `_test_chaque_bloc_n_accepte_que_son_appareil`) ne connaît que 0 ou 1 : elle
+## saute donc directement au second cran, ce qui est le comportement voulu
+## d'un bouton qui n'a pas de course.
+const TORCH_CRAN_FOND := 0.9
+
+## Vrai tant que le cran plein reste enclenché : la torche reste allumée
+## gâchette relâchée, jusqu'au prochain appui à fond qui la débascule.
+var _torch_enclenchee := false
+## Profondeur à l'image précédente, pour ne détecter que le FRONT montant du
+## cran plein — sans lui, un appui tenu à fond re-basculerait à chaque image.
+var _torch_etait_a_fond := false
+
 @export var device_id: int = 0 :
 	set(val):
 		device_id = val
@@ -58,7 +76,22 @@ func is_shoot_pressed() -> bool:
 	return Input.is_action_pressed(action_shoot)
 
 func is_flashlight_pressed() -> bool:
-	return Input.is_action_pressed(action_torch)
+	var profondeur := Input.get_action_strength(action_torch)
+	var a_fond := profondeur >= TORCH_CRAN_FOND
+	if a_fond and not _torch_etait_a_fond:
+		_torch_enclenchee = not _torch_enclenchee
+	_torch_etait_a_fond = a_fond
+	# `profondeur > 0.0` : la zone morte de l'action est déjà passée par
+	# `get_action_strength`, donc équivalent à l'ancien `is_action_pressed` —
+	# c'est le premier cran, qui n'ajoute rien au clic tant qu'il dure.
+	return _torch_enclenchee or profondeur > 0.0
+
+## Appelé à chaque nouvelle manche (voir `Player.reset_flashlight_latch()`) :
+## un clic laissé enclenché avant la mort ne doit pas rallumer la torche tout
+## seul au spawn suivant, sans qu'aucune gâchette n'ait bougé cette manche-là.
+func reset_flashlight_state() -> void:
+	_torch_enclenchee = false
+	_torch_etait_a_fond = false
 
 func is_flare_pressed() -> bool:
 	return Input.is_action_pressed(action_flare)
