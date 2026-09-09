@@ -155,6 +155,33 @@ p { margin: 0; }
 .plateforme-fichier { font-family: var(--data); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--dim); overflow-wrap: anywhere; }
 .dl-note { margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim); max-width: 60ch; }
 
+/* --- La première ouverture sur Mac ------------------------------------------- */
+/* Le jeu est signé ad hoc et non notarisé : macOS le bloque au premier
+   lancement, et demande le mot de passe pour le débloquer. Ce n'est pas un
+   détail à cacher en bas de page — c'est le mur contre lequel butera tout
+   joueur, et il l'atteindra AVANT d'avoir vu une image du jeu. */
+.installe { margin-top: 2rem; border: 2px solid var(--trait-bas); padding: 1.5rem var(--marge) 1.6rem; }
+.installe h3 { font-size: 1.2rem; margin-bottom: 0.4rem; }
+.installe-intro { color: var(--dim); font-size: 0.92rem; margin-bottom: 1.5rem; max-width: 56ch; }
+.etapes { display: flex; flex-direction: column; gap: 1.15rem; counter-reset: etape; }
+.etape { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem; align-items: start; max-width: 62ch; }
+.etape::before {
+  counter-increment: etape; content: counter(etape);
+  font-family: var(--display); font-weight: 800; font-size: 1.9rem; line-height: 0.85;
+  color: var(--ambre); text-align: right;
+}
+.etape p { font-size: 0.98rem; }
+.etape em { color: var(--dim); font-style: normal; }
+.etape strong { color: var(--halogene); font-weight: 600; }
+/* Le seul passage de la page qui parle d'un mot de passe. Il doit être
+   impossible à manquer, et dire QUI le demande. */
+.mdp {
+  margin-top: 0.55rem; padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--ambre); background: #0d0a06;
+  font-size: 0.92rem; color: var(--halogene);
+}
+.installe-fin { margin-top: 1.5rem; font-size: 0.92rem; color: var(--dim); }
+
 /* --- Les trois signaux, en texte seul ---------------------------------------- */
 .signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 2.25rem var(--gap); margin-top: 2.5rem; }
 .signal { display: flex; flex-direction: column; gap: 0.65rem; padding-top: 1.1rem; border-top: 2px solid var(--ambre); }
@@ -294,6 +321,21 @@ p { margin: 0; }
         <svg class="fleche" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 16 M5 10 L12 17 L19 10 M4 21 L20 21"/></svg>
       </a>
     </div>
+    <div class="installe">
+      <h3>Première ouverture sur Mac</h3>
+      <p class="installe-intro">Candela n’est pas distribué par l’App Store, alors macOS demande votre accord une première fois. Quatre gestes, une seule fois dans la vie du jeu.</p>
+      <div class="etapes">
+        <div class="etape"><p>Ouvrez le fichier téléchargé, puis glissez <strong>Candela</strong> dans votre dossier <strong>Applications</strong>.</p></div>
+        <div class="etape"><p>Double-cliquez sur <strong>Candela</strong>. macOS refuse et affiche un avertissement : <em>c’est normal, et c’est ce qu’on va débloquer.</em> Cliquez sur <strong>Terminé</strong>.</p></div>
+        <div class="etape">
+          <p>Ouvrez <strong>Réglages Système → Confidentialité et sécurité</strong>, descendez jusqu’à la section <strong>Sécurité</strong> : une ligne parle de Candela. Cliquez sur <strong>Ouvrir quand même</strong>.</p>
+          <p class="mdp">Votre <strong>mot de passe Mac</strong> — ou Touch ID — vous sera demandé ici. C’est macOS qui le demande pour vous, pas le jeu : Candela ne le voit jamais.</p>
+        </div>
+        <div class="etape"><p>Une dernière fenêtre s’ouvre : cliquez sur <strong>Ouvrir</strong>.</p></div>
+      </div>
+      <p class="installe-fin">C’est fini. Les fois suivantes, Candela s’ouvre d’un simple double-clic, et se met à jour tout seul.</p>
+    </div>
+
     <p class="dl-note">Les deux liens pointent vers la <strong>dernière version publiée</strong> : ils restent valables à chaque sortie, sans que cette page change. La version 0.3.1 a été publiée le 9 septembre 2026. Une fois installé, le jeu se met à jour tout seul.</p>
   </section>
 
