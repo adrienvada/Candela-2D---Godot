@@ -147,6 +147,10 @@ var _matchmade_round: bool = false
 ## l'arrivée de son arme — voir `_on_match_ready()` pour la raison d'être de ce
 ## report.
 var _matchmade_start_pending: bool = false
+## Jeton du départ apparié courant, même idée que `_round_token` : l'échéance d'un
+## appariement abandonné vit encore vingt secondes, et sans lui elle annulerait le
+## SUIVANT si le joueur repart en file entretemps.
+var _matchmade_token: int = 0
 ## Les deux catégories du match apparié, retenues à l'appariement. La règle du
 ## miroir s'applique dessus, et l'écran les relit pour dire pourquoi l'arsenal a
 ## rétréci. Retenues ICI plutôt que relues chez l'appariement : celui-ci retombe
@@ -2514,7 +2518,8 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 	# Le départ appartient donc à `rpc_client_weapon` — le premier instant où
 	# l'hôte a À LA FOIS un pair connecté et l'arme qu'il tient.
 	_matchmade_start_pending = true
-	_armer_echeance_appariement()
+	_matchmade_token += 1
+	_armer_echeance_appariement(_matchmade_token)
 
 ## [Hôte] L'invité apparié ne s'est pas connecté à temps.
 ##
@@ -2529,10 +2534,10 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 ## l'appariement n'a pas à connaître le nom.
 const DELAI_INVITE_APPARIE := 20.0
 
-func _armer_echeance_appariement() -> void:
+func _armer_echeance_appariement(jeton: int) -> void:
 	var timer := get_tree().create_timer(DELAI_INVITE_APPARIE)
 	timer.timeout.connect(func() -> void:
-		if not _matchmade_start_pending:
+		if not _matchmade_start_pending or jeton != _matchmade_token:
 			return
 		_matchmade_start_pending = false
 		_on_main_menu_requested()
