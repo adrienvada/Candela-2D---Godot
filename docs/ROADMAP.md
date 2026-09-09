@@ -3849,6 +3849,43 @@ qui rassurent.
 *Le piège de fond est un cousin : le même code coupait la racine sans regarder
 où vit l'oreille. Voir la section suivante.*
 
+### Un son à bout portant ne peut pas être occulté (2026-09-09)
+
+Adrien : « je n'entends pas les tirs en entraînement ». Mesuré sur sa machine,
+son PROPRE coup de feu, à **28 px de son oreille** : `occlusion = 0,33`, routé
+sur `SFX_Occlus`. Six tirs partis, six tirs étouffés.
+
+**La cause est géométrique.** Les trois rayons de `part_occultee` sont
+**parallèles**, écartés de ±24 px : le couloir qu'ils balayent fait donc **48 px
+de large**. Quand le trajet source→oreille est plus court que ce couloir n'est
+large, les rayons latéraux ne mesurent plus ce qui *sépare* — ils mesurent ce
+qui *borde*. Et dans un jeu où l'on longe les murs en permanence, l'un d'eux
+part de l'intérieur du mur.
+
+**Trois symptômes concordants, une seule cause, et aucune erreur nulle part :**
+
+| observation d'Adrien | ce qu'elle éliminait |
+|---|---|
+| « j'entends la musique » | la chaîne audio, le `Master`, la sortie |
+| « j'entends les douilles » | le bus, l'oreille, le pool — la douille est jouée 300 ms plus tard, **hors frame de physique**, donc elle saute le test |
+| « en écran scindé j'entends tout » | tout le reste — l'occlusion y est **désactivée** (`_oreille2 != null`) |
+
+**Ce sont ces trois phrases qui ont résolu le défaut**, après des heures passées
+à décrire des graphes. Le diagnostic affichait un montage irréprochable ; il ne
+disait rien du chemin d'UN son. La leçon est la même que celle du diagnostic
+muet, un cran plus loin : *pour savoir pourquoi un son ne s'entend pas, il faut
+suivre CE son* — sa distance, son bus, son volume — et non l'état du système.
+
+**Le garde-fou vérifie les deux bords** : que 28 px tombe sous la garde, et
+qu'un adversaire à deux tuiles reste occultable. Une garde trop large aurait
+supprimé l'occlusion utile, c'est-à-dire l'information que les murs donnent.
+
+⚠️ **Ce que la mesure a montré au passage et qui reste ouvert :** l'axe direct
+peut être dégagé pendant qu'un latéral touche. On fabrique alors une occlusion
+là où la ligne droite est libre. Le fan à trois rayons existe pour adoucir le
+bord d'un mur (piège du clignotement) — mais il peut CRÉER de l'occlusion, pas
+seulement l'adoucir. Non tranché.
+
 ### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
 
 La phrase manquait au dépôt et elle a failli coûter un défaut entier. **Un

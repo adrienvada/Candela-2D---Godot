@@ -1123,6 +1123,13 @@ static func bus_pour(bus_demande: String, occulte: bool) -> String:
 ## clignotement, et c'est ce qu'on cherchait.
 const OCCLUSION_ECART_LATERAL: float = 24.0
 
+## En deca de quoi le sondage n'a plus de sens : la LARGEUR du couloir que les
+## trois rayons paralleles balayent. Un trajet plus court que ce couloir n'est
+## large est domine par ce qui borde l'oreille, pas par ce qui la separe du son.
+## Derive de l'ecart lateral plutot qu'ecrit en dur — les deux nombres disent la
+## meme geometrie, et deux nombres independants finissent par se contredire.
+const OCCLUSION_DISTANCE_MIN: float = 2.0 * OCCLUSION_ECART_LATERAL
+
 func part_occultee(pos: Vector2) -> float:
 	# **En mode « canapé », l'occlusion N'EXISTE PAS, et c'est une consequence
 	# assumee de la decision d'Adrien du 2026-08-25, pas un oubli.** Etouffer la
@@ -1145,6 +1152,26 @@ func part_occultee(pos: Vector2) -> float:
 	if espace == null:
 		return 0.0
 	var vers := _oreille.global_position
+	# ⚠️ **UN SON TROP PROCHE NE SE SONDE PAS, ET C'EST GEOMETRIQUE.**
+	#
+	# Les trois rayons sont PARALLELES, ecartes de ±24 px : le couloir sonde fait
+	# donc 48 px de LARGE. Quand le trajet est plus court que ce couloir n'est
+	# large, les rayons lateraux ne mesurent plus ce qui separe la source de
+	# l'oreille — ils mesurent **ce qui est a cote**. Et dans un jeu ou l'on
+	# longe les murs en permanence, l'un d'eux part de l'interieur du mur.
+	#
+	# Mesure d'Adrien, 2026-09-09, entrainement : son PROPRE coup de feu, a
+	# **28 px** de son oreille, rendait `occlusion = 0,33` et partait sur
+	# `SFX_Occlus`. Il n'entendait plus ses tirs — alors que les douilles, jouees
+	# 300 ms plus tard hors frame de physique, echappaient au test et
+	# s'entendaient. En ecran scinde tout revenait, l'occlusion y etant
+	# desactivee. Trois symptomes, une seule cause, et aucune erreur nulle part.
+	#
+	# **Un son emis a bout portant de l'oreille n'a rien qui puisse l'occulter :
+	# il n'y a pas la place pour un mur.** Le repli est donc « degage », qui est
+	# aussi le repli sur : il ne retire aucune information.
+	if pos.distance_to(vers) < OCCLUSION_DISTANCE_MIN:
+		return 0.0
 	var perp := (vers - pos).orthogonal().normalized() * OCCLUSION_ECART_LATERAL
 	var touches := 0
 	for decalage in [Vector2.ZERO, perp, -perp]:
@@ -1606,6 +1633,12 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# s'eteint. Trois nombres qui se comparent, la ou dix drapeaux ne disaient
 	# rien.
 	_sons_2d_lances += 1
+	# Le compte PAR FAMILLE, parce que « 39 sons lances » ne dit pas LESQUELS.
+	# Adrien entend les douilles et pas les tirs : la seule question qui reste
+	# est de savoir si le tir part. Un temoin qui ne garde que le dernier son
+	# repond au hasard de l'instant ou l'on appuie sur F4.
+	var _fam := famille_de(stream_or_key)
+	_sons_par_famille[_fam] = int(_sons_par_famille.get(_fam, 0)) + 1
 	var oreille_pos := Vector2.INF
 	if _oreille != null and is_instance_valid(_oreille):
 		oreille_pos = _oreille.global_position
@@ -1619,6 +1652,20 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 		"bus": player.bus,
 		"joue": player.playing,
 	}
+	# ⚠️ **Le dernier TIR a part, et c'est lui qu'on cherche.** Adrien entend les
+	# douilles et pas les tirs — or la douille est jouee 300 ms plus tard par un
+	# minuteur, donc HORS frame de physique : elle echappe au test d'occlusion,
+	# que le tir subit. Un temoin qui ne garde que « le dernier son » montre donc
+	# presque toujours la douille, jamais le tir. Il fallait les separer.
+	if _fam == "shoot":
+		_dernier_tir_2d = {
+			"cle": String(stream_or_key) if stream_or_key is String else "<flux>",
+			"distance": pos.distance_to(oreille_pos) if oreille_pos != Vector2.INF else -1.0,
+			"portee": player.max_distance,
+			"volume_db": player.volume_db,
+			"bus": player.bus,
+			"part_occultee": part,
+		}
 	return player
 
 ## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
@@ -2062,6 +2109,8 @@ var _porteur: Node2D = null
 ## qui rapporte un son plutot qu'un montage.
 var _sons_2d_lances: int = 0
 var _dernier_son_2d: Dictionary = {}
+var _sons_par_famille: Dictionary = {}
+var _dernier_tir_2d: Dictionary = {}
 var _vues_ecoutantes: Array = []
 
 ## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
@@ -2359,6 +2408,19 @@ func diagnostic_ecoute() -> String:
 			fm.cutoff_hz,
 			"   <<<< FERME, le bus est etouffe" if fm.cutoff_hz < 15000.0 else ""])
 	lignes.append("[audio] sons positionnels lances : %d" % _sons_2d_lances)
+	if not _sons_par_famille.is_empty():
+		var parts := PackedStringArray()
+		for f in _sons_par_famille:
+			parts.append("%s=%d" % [f, _sons_par_famille[f]])
+		lignes.append("[audio]   par famille : %s" % " ".join(parts))
+	if _dernier_tir_2d.is_empty():
+		lignes.append("[audio] dernier TIR : AUCUN — play_weapon_shot n'est jamais passe")
+	else:
+		var s: Dictionary = _dernier_tir_2d
+		lignes.append("[audio] dernier TIR : %s" % s["cle"])
+		lignes.append("[audio]   distance=%.0f portee=%.0f volume=%+.1f dB bus=%s occlusion=%.2f%s" % [
+			s["distance"], s["portee"], s["volume_db"], s["bus"], s["part_occultee"],
+			"   <<<< ROUTE SUR LE BUS ETOUFFE" if s["bus"] != BUS_SFX else ""])
 	if _dernier_son_2d.is_empty():
 		lignes.append("[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance")
 	else:
