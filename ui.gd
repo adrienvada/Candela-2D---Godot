@@ -811,6 +811,12 @@ var map_card: PanelContainer
 var map_card_thumb: TextureRect
 var map_card_name: Label
 var map_card_meta: Label
+## L'entrée « CHANGER DE CARTE » de l'écran courant, par id d'écran — vide sur
+## les écrans où l'arène ne se choisit pas ici (l'invité d'un salon, la
+## recherche automatique). `map_card` est cliquée depuis un seul geste
+## partagé par tous les écrans qui la montrent ; ce dictionnaire lui dit vers
+## quelle entrée du hub se rabattre, ou de ne rien faire.
+var _entree_changer_carte: Dictionary = {}
 
 var p1_weapon_group: ButtonGroup
 var p2_weapon_group: ButtonGroup
@@ -3237,9 +3243,10 @@ func _build_hub_screens() -> void:
 			"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
 			+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
 			"", COLOR_P1, "", "", false, PANEL_CLASSES))
-	scinde.add_child(hub.make_entry("CHANGER DE CARTE",
+	_entree_changer_carte[SCREEN_LOCAL] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
-		"", COLOR_P1, "", "", false, PANEL_MAPS))
+		"", COLOR_P1, "", "", false, PANEL_MAPS)
+	scinde.add_child(_entree_changer_carte[SCREEN_LOCAL])
 	_wire_salon_back(hub.add_back_entry(SCREEN_LOCAL, "", "ill_accueil"))
 
 	# --- 1v1 amical -----------------------------------------------------------
@@ -3299,9 +3306,11 @@ func _build_hub_screens() -> void:
 				"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
 				+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
 				"", COLOR_P1, "", "", false, PANEL_CLASSES))
-		h.add_child(hub.make_entry("CHANGER DE CARTE",
+		var id_h: String = SCREEN_HOST if h == hote else SCREEN_LOCAL_HOST
+		_entree_changer_carte[id_h] = hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
-			"", COLOR_P1, "", "", false, PANEL_MAPS))
+			"", COLOR_P1, "", "", false, PANEL_MAPS)
+		h.add_child(_entree_changer_carte[id_h])
 	for j in [invite, invite_lan]:
 		j.add_child(hub.make_entry("PRÉPARER LE MATCH",
 			"Rejoignez le salon à droite ; le bouton PRÊT y attend. Le match part "
@@ -3364,9 +3373,10 @@ func _build_hub_screens() -> void:
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
 		+ "réglages viendront avec la cible mouvante.", false, "ill_entrainement"))
-	entrainement.add_child(hub.make_entry("CHANGER DE CARTE",
+	_entree_changer_carte[SCREEN_TRAINING] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
-		"", COLOR_P1, "", "", false, PANEL_MAPS))
+		"", COLOR_P1, "", "", false, PANEL_MAPS)
+	entrainement.add_child(_entree_changer_carte[SCREEN_TRAINING])
 	hub.add_back_entry(SCREEN_TRAINING, "", "ill_accueil")
 
 	# --- Personnalisation -----------------------------------------------------
@@ -4037,6 +4047,15 @@ func _allumer(panneau: Control, court: bool = false) -> void:
 	var ancre := battement + t_rideau * M10_ANCRAGE
 
 	var tw := create_tween()
+	# **L'interface n'est pas le monde qu'elle habille.** Une killcam en cours
+	# porte `Engine.time_scale` à 0,03-0,05 pour l'effet bullet-time
+	# (`replay_system.gd`) ; un tween par défaut suit ce temps, et ouvrir la
+	# pause pendant une killcam la faisait donc s'allumer au ralenti — même
+	# défaut, même remède que l'étouffement audio de la mort
+	# (`audio_manager.gd`, `_tween_etouffement`) : ceci est une pièce
+	# d'interface, pas un événement du monde, elle n'a aucune raison de
+	# ralentir avec l'image.
+	tw.set_ignore_time_scale(true)
 	tw.set_parallel(true)
 	if rideau != null:
 		tw.tween_property(rideau, "color:a", nuit, t_rideau).set_delay(battement)
@@ -4084,6 +4103,9 @@ func _eteindre(panneau: Control, court: bool = false) -> void:
 	var duree := M10_FERMETURE * (M10_COURT if court else 1.0)
 	var rideau := _rideau_de(panneau)
 	var tw := create_tween()
+	# Voir `_allumer()` : même raison, même remède — un panneau qui se ferme
+	# pendant une killcam ne doit pas hériter de son ralenti.
+	tw.set_ignore_time_scale(true)
 	tw.set_parallel(true)
 	for s in _surfaces_de(panneau):
 		tw.tween_property(s, "modulate", Color(Charte.NOIR, 1.0), duree * 0.7)
@@ -4138,6 +4160,16 @@ func _accorder_lanceur(id: String) -> void:
 	panel_launch.set_meta(META_LAUNCH_BASE, String(couple[0]))
 	panel_launch.set_meta(META_LAUNCH_ACTION, String(couple[1]))
 	_sync_launch_entries()
+
+## Grise le bouton PRÊT/REJOUER pendant que `game_state` a une raison de
+## refuser le clic — l'affiche de victoire/défaite, aujourd'hui. `panel_launch`
+## est celui que le joueur presse réellement ; `btn_replay` reste grisé avec
+## lui par cohérence, même invisible.
+func set_launch_locked(vrai: bool) -> void:
+	if panel_launch != null and is_instance_valid(panel_launch):
+		panel_launch.disabled = vrai
+	if btn_replay != null and is_instance_valid(btn_replay):
+		btn_replay.disabled = vrai
 
 
 func _on_hub_action(action: String) -> void:
@@ -4952,6 +4984,15 @@ func _build_map_card() -> Control:
 	map_card.custom_minimum_size = Vector2(0, 116)
 	map_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	map_card.add_theme_stylebox_override("panel", MenuWidgets.make_panel_style(COLOR_LINE, MenuWidgets.CORNER_PANEL, 2))
+	# Cliquable pour l'hôte seul : un raccourci vers l'entrée « CHANGER DE
+	# CARTE » de l'écran courant, déjà dans la liste de gauche — la carte n'en
+	# est qu'une image de plus, elle ne choisit rien elle-même.
+	# `MOUSE_FILTER_STOP` : les enfants sont tous en IGNORE (ligne suivante et
+	# au-dessous), le clic leur traverse donc jusqu'ici sans rien y intercepter.
+	map_card.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	map_card.tooltip_text = "Cliquer pour changer de carte"
+	map_card.gui_input.connect(_on_map_card_gui_input)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", GAP_M)
@@ -5027,6 +5068,21 @@ func _refresh_map_card() -> void:
 	# HiDPI. Rendre à 80 revenait à l'agrandir d'un facteur deux — et c'est cet
 	# agrandissement, pas le filtrage, qui la rendait floue.
 	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 160)
+
+## Le clic sur la vignette de carte. Silencieux sur tout écran sans entrée
+## « CHANGER DE CARTE » — l'invité d'un salon, ou une recherche automatique où
+## l'arène ne se choisit pas ici : `_entree_changer_carte` ne contient alors
+## rien pour cet écran, et c'est ce vide qui fait tout le travail du « si on
+## est l'hôte ».
+func _on_map_card_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if hub == null:
+		return
+	var bouton: Variant = _entree_changer_carte.get(hub.current_id(), null)
+	if bouton is Button and is_instance_valid(bouton):
+		hub.reveal_entry(bouton)
 
 ## Construit les pièces du salon, sans les rattacher : ce sont les écrans du hub
 ## qui décident où elles s'affichent.
@@ -5329,7 +5385,16 @@ func _build_weapon_block() -> Control:
 		var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
 		var carte := PanelContainer.new()
 		carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		carte.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Cliquable pour cycler la classe SANS ouvrir la fiche complète — la
+		# fiche reste le seul endroit où comparer les dix, mais changer
+		# d'avis n'a pas à y passer. `_montrer_rateliers()` cache déjà la
+		# carte du côté qu'on ne pilote pas depuis cette machine (l'adversaire
+		# en ligne) : une carte visible EST une carte qu'on a le droit de
+		# changer, aucun contrôle de plus à écrire ici.
+		carte.mouse_filter = Control.MOUSE_FILTER_STOP
+		carte.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		carte.tooltip_text = "Clic gauche : classe suivante — clic droit : précédente"
+		carte.gui_input.connect(_on_carte_classe_gui_input.bind(joueur))
 		carte.add_theme_stylebox_override("panel",
 			MenuWidgets.make_panel_style(teinte * 0.8, MenuWidgets.CORNER_PANEL, 2))
 
@@ -5358,6 +5423,38 @@ func _build_weapon_block() -> Control:
 		_cartes_classe_nom.append(nom)
 		_cartes_classe_meta.append(meta)
 	return rangee
+
+
+func _on_carte_classe_gui_input(event: InputEvent, joueur: int) -> void:
+	if not (event is InputEventMouseButton and event.pressed):
+		return
+	var bouton := event as InputEventMouseButton
+	if bouton.button_index == MOUSE_BUTTON_LEFT:
+		_cycler_classe(joueur, 1)
+	elif bouton.button_index == MOUSE_BUTTON_RIGHT:
+		_cycler_classe(joueur, -1)
+
+## Fait avancer (ou reculer) la classe choisie par `joueur`, d'un cran dans la
+## liste ordonnée par rang — la même liste que la fiche complète, et le même
+## geste qu'y cliquer un bouton : le groupe change, la fiche suit, la carte
+## se met à jour. Boucle sur elle-même, et saute les classes verrouillées par
+## le rang plutôt que de s'y arrêter.
+func _cycler_classe(joueur: int, sens: int) -> void:
+	var groupe := p1_weapon_group if joueur == 0 else p2_weapon_group
+	var boutons := p1_weapon_buttons if joueur == 0 else p2_weapon_buttons
+	if groupe == null or boutons.is_empty():
+		return
+	var actuel := groupe.get_pressed_button()
+	var depart := boutons.find(actuel) if actuel != null else -1
+	var n := boutons.size()
+	for pas in range(1, n + 1):
+		var i := posmod(depart + sens * pas, n)
+		var candidat: Button = boutons[i]
+		if is_instance_valid(candidat) and candidat.visible and not candidat.disabled:
+			candidat.button_pressed = true
+			_montrer_fiche_de(candidat)
+			_refresh_class_cards()
+			return
 
 
 ## Le panneau de SÉLECTION DE CLASSE — chantier CLASSES, étape 7.

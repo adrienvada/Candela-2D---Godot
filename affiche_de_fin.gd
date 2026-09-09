@@ -201,6 +201,14 @@ func _composer(faits: Dictionary, titre: Label) -> void:
 	set_process_unhandled_input(true)
 
 
+## Toujours vraie tant que l'affiche est visible — `game_state` s'en sert pour
+## refuser un « PRÊT » cliqué à travers elle. Fausse dès `congedier()` : rien
+## n'attend `queue_free()`, sous peine de laisser passer un clic pendant le
+## fondu de sortie.
+func est_active() -> bool:
+	return not _congedie
+
+
 ## Congédier : une seule porte, quel que soit le geste. Deux chemins de sortie
 ## laisseraient un jour l'un des deux oublier de rendre la main aux entrées.
 func congedier() -> void:

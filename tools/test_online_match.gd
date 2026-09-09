@@ -141,7 +141,12 @@ func _run_eblouissement() -> void:
 
 	# 80 px : dans la même flaque de lumière et dans la même cellule ouverte,
 	# quelle que soit la carte. Deux corps de 18 px de rayon ne s'y touchent pas.
-	Input.action_press("p1_torch")
+	#
+	# Force à moitié course, sous `LocalInputProvider.TORCH_CRAN_FOND` : ce test
+	# veut un simple maintien, pas le clic du second cran, qui resterait
+	# enclenché après le `action_release` qui suit.
+	var appui_leger := LocalInputProvider.TORCH_CRAN_FOND * 0.5
+	Input.action_press("p1_torch", appui_leger)
 	await _tenir_devant(p1, p2, 1.0)
 	_check("la torche braquée éblouit", p2.dazzle_amount > 0.4, str(p2.dazzle_amount))
 	# ⚠️ **Ce contrôle disait « pas ébloui » et dit désormais « très peu ébloui ».**
@@ -170,7 +175,7 @@ func _run_eblouissement() -> void:
 
 	# Derrière le porteur : hors du cône, donc rien. Sans ce contre-test, un
 	# calcul qui éblouirait TOUT LE MONDE passerait le premier contrôle.
-	Input.action_press("p1_torch")
+	Input.action_press("p1_torch", appui_leger)
 	await _tenir_derriere(p1, p2, 1.0)
 	_check("dans le dos du faisceau, rien", is_zero_approx(p2.dazzle_amount),
 		str(p2.dazzle_amount))
@@ -1410,6 +1415,15 @@ func _verify_kill_to_rematch() -> void:
 	_check("le lien tient après la killcam", not multiplayer.get_peers().is_empty())
 
 	# Rematch : les deux camps se déclarent prêts, la manche doit repartir.
+	#
+	# L'affiche de victoire/défaite avale le clic tant qu'elle vit (2026-09-09,
+	# suite au rapport d'Adrien « un menu bizarre en attendant » sur le vrai
+	# jeu) : `_on_replay_requested()` appelé directement, sans la congédier
+	# d'abord, ne ferait donc plus rien — ce que ce banc prenait pour un
+	# raccourci équivalait en réalité au clic qu'un joueur pressé aurait fait
+	# À TRAVERS elle. On la congédie comme le ferait n'importe quel geste.
+	if is_instance_valid(_main._affiche_de_fin):
+		_main._affiche_de_fin.congedier()
 	print("REMATCH: on se déclare prêt (%s)" % _ui.btn_replay.text)
 	_main._on_replay_requested()
 	_check("le rematch relance une manche", await _await(func(): return _main.round_active, 25.0))
