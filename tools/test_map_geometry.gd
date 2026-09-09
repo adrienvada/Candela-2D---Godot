@@ -32,7 +32,7 @@ func _check(label: String, condition: bool, detail: String = "") -> void:
 # CARTES D'ESSAI
 # ---------------------------------------------------------------------------
 
-## Carte livrée avec le jeu (20×20, 256 sols, 144 murs).
+## Carte livrée avec le jeu (32×32, 676 sols, 348 murs).
 func _default_map() -> Dictionary:
 	var file := FileAccess.open("res://assets/maps/default.json", FileAccess.READ)
 	if file == null:
@@ -399,11 +399,14 @@ func _test_edge_cases() -> void:
 
 	# Dictionnaire vide : aucune donnée, aucun plantage attendu.
 	var empty_solid := MapGeometry.build_solid_grid({})
-	# ⚠️ **32 et non 22 : c'est la grille par défaut du codec, débordée d'une
-	# case de chaque côté pour fermer la carte.** Elle suit `default.json`, passée
-	# de 20×20 à 30×30 le 2026-08-26. Ce contrôle a rougi le jour même — il
-	# vérifie qu'une carte VIDE se remplit quand même de solide, et son chiffre
-	# est donc une copie de la taille livrée. Il l'attrape au lieu de la subir.
+	# ⚠️ **32 et non 22 : c'est le repli de `MapCodec.get_grid_size()` sur une
+	# grille illisible (30×30, `map_codec.gd`), débordé d'une case de chaque
+	# côté pour fermer la carte (30 + 2 = 32).** Ce repli est un générique, PAS
+	# une copie de `assets/maps/default.json` — ce contrôle n'a d'ailleurs pas
+	# bougé quand cette dernière est passée de 20×20 à 30×30 (2026-08-26) puis à
+	# 32×32 (2026-09-09) : leur coïncidence à 30×30 entretemps n'en faisait pas
+	# un lien. Ce qui compte ici, c'est qu'une carte VIDE se remplisse quand
+	# même de solide — le chiffre exact n'est qu'un repère, pas une exigence.
 	_check("carte vide → grille par défaut 32×32", empty_solid.size() == 32,
 		"%d colonnes" % empty_solid.size())
 	var empty_rects := MapGeometry.merge_rects(empty_solid)

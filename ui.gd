@@ -3383,8 +3383,14 @@ func _build_open_lobby_row() -> Control:
 ## En EOS le code arrive plus tard, par `lobby_code_ready` ; en réseau local il
 ## n'y a rien à publier, l'IP était déjà affichée — mais le port, lui, doit être
 ## ouvert pour que l'adversaire puisse se présenter avant le début du match.
+##
+## `!= LOCAL_SPLITSCREEN` et non le seul `== ONLINE_HOST` d'origine : ce dernier
+## empêchait bien le double-clic sur ce bouton, mais laissait passer le cas où
+## `current_mode` vaut `ONLINE_CLIENT` — un lien d'appariement encore en cours
+## d'établissement (voir `_start_search()`), qu'`host_game()` écraserait sans
+## le fermer.
 func _open_lobby() -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		return
 	_abandon_search("salon ouvert")
 	if not NetworkManager.host_game():
@@ -3914,7 +3920,24 @@ func _abandon_search(raison: String) -> void:
 ##
 ## Un refus se dit. Sans Epic configuré, l'appariement est simplement impossible,
 ## et une entrée qui n'aurait rien fait passerait pour un bouton cassé.
+##
+## **Refuse aussi si un lien est déjà là.** `Matchmaker.state` retombe à IDLE dès
+## que `_try_launch()` ouvre le socket du match apparié — avant que la manche
+## parte vraiment (`_matchmade_start_pending` côté hôte, jusqu'à vingt secondes).
+## Ce bouton redevient donc cliquable pendant cette fenêtre alors qu'un lien EOS
+## est déjà ouvert ou en cours d'ouverture ; une seconde recherche qui aboutirait
+## rappellerait `host_matched_game()`/`join_matched_game()` par-dessus lui, sur
+## le même socket. `current_mode` reste `LOCAL_SPLITSCREEN` dans tout usage
+## normal du menu — `_close_lobby_if_left()` s'en assure déjà pour le salon
+## manuel — donc ce contrôle ne coûte rien au chemin sain et ferme précisément
+## ce chemin-là.
 func _start_search() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		show_dialog_message("Recherche impossible",
+			"Un lien réseau est déjà ouvert ou en cours d'établissement. "
+			+ "Patientez qu'il se conclue ou échoue avant d'en lancer un autre.",
+			Registre.ATTENTION)
+		return
 	NetworkManager.transport = NetworkManager.Transport.EOS
 	var classe := hub.current_id() == SCREEN_RANKED
 	_apply_queue_kind(classe)

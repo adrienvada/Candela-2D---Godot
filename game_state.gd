@@ -139,10 +139,19 @@ const COUNTDOWN_MATCHMADE := 10.0
 var _dernier_tic_decompte: int = -1
 var _countdown_ready_local: bool = false
 var _countdown_ready_peer: bool = false
-## Ce match vient-il de l'appariement automatique ? C'est la seule question qui
-## décide de la durée : elle distingue « l'arme n'est pas encore choisie » de
-## « elle l'est depuis le menu ».
+## Ce match vient-il de l'appariement automatique (amical ou classé) ? Décide du
+## tirage de carte — voir `_lancer_match_apparie()`.
 var _matchmade_round: bool = false
+## Le match apparié ci-dessus est-il classé ? C'est CETTE question, et non
+## `_matchmade_round` seul, qui décide de la fenêtre de choix : la règle du
+## miroir n'existe qu'en compétitif (« Absent de l'amical », décision d'Adrien
+## du 2026-08-18), donc l'arsenal commun n'y est inconnu qu'en classé. En
+## amical, l'arme est déjà choisie au menu — Adrien l'a demandé le 2026-09-09,
+## après l'essai à deux machines où la fenêtre de dix secondes ne s'abrégeait
+## que côté hôte : le client restait planté sur son décompte pendant que
+## l'hôte avait déjà lancé la manche. Sans fenêtre à abréger, le défaut ne
+## peut plus se produire en amical — le classé le garde, lui, tel quel.
+var _matchmade_ranked: bool = false
 ## [Hôte] Un match apparié attend son invité. Armé à `match_ready`, consommé à
 ## l'arrivée de son arme — voir `_on_match_ready()` pour la raison d'être de ce
 ## report.
@@ -665,6 +674,7 @@ func _on_training_requested() -> void:
 	_apply_network_mode()
 	MapData.select_map(MapData.DEFAULT_MAP_ID)
 	_matchmade_round = false
+	_matchmade_ranked = false
 	_matchmade_start_pending = false
 
 	game_over = false
@@ -1216,7 +1226,11 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	Engine.time_scale = 1.0
 	_liberer_le_releve()
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
-	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
+	# Les dix secondes sont la fenêtre de choix du classé — voir
+	# `_matchmade_ranked`. Un match apparié amical garde les trois secondes
+	# ordinaires : rien n'y reste à choisir une fois l'adversaire trouvé.
+	countdown_left = COUNTDOWN_MATCHMADE if (_matchmade_round and _matchmade_ranked) \
+		else COUNTDOWN_DURATION
 	# V3.3 — le suivi des secondes entieres. **Le sentinelle -1 n'est pas une
 	# precaution, il est necessaire** : un decompte arme a 3,0 est DEJA a trois
 	# des la premiere image, il n'y a donc aucune transition « vers 3 » a
@@ -1226,9 +1240,9 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_countdown_ready_local = false
 	_countdown_ready_peer = false
 	# La fenêtre de choix s'ouvre avec le décompte, et seulement pour un match
-	# apparié : ailleurs l'arme est déjà choisie, un panneau modal ne ferait
-	# qu'arrêter le joueur devant une question déjà répondue.
-	if _matchmade_round:
+	# apparié CLASSÉ : ailleurs l'arme est déjà choisie, un panneau modal ne
+	# ferait qu'arrêter le joueur devant une question déjà répondue.
+	if _matchmade_round and _matchmade_ranked:
 		ui.show_pick_window(matchmade_arsenal(), matchmade_arsenal_reason())
 	else:
 		ui.hide_pick_window()
@@ -1265,8 +1279,11 @@ func _process(delta):
 		if countdown_left > 0.0:
 			# Les deux prêts abrègent la fenêtre. L'hôte tranche seul : il porte le
 			# chronomètre, et laisser chaque camp décider produirait deux départs
-			# décalés d'un aller-retour.
-			if _matchmade_round and _countdown_ready_local and _countdown_ready_peer \
+			# décalés d'un aller-retour. N'existe qu'en classé — un match amical
+			# n'ouvre plus cette fenêtre du tout (`_matchmade_ranked`), donc ces
+			# drapeaux y restent à `false` et cette branche ne s'y déclenche jamais.
+			if _matchmade_round and _matchmade_ranked and _countdown_ready_local \
+					and _countdown_ready_peer \
 					and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				countdown_left = 0.0
 			countdown_left = maxf(0.0, countdown_left - delta)
@@ -2527,6 +2544,7 @@ func _on_pick_window_cancelled() -> void:
 	if appariement != null and appariement.has_method("cancel"):
 		appariement.cancel()
 	_matchmade_round = false
+	_matchmade_ranked = false
 	_on_main_menu_requested()
 
 ## L'arme correspondant à un index de râtelier. Une seule table de résolution :
@@ -2540,16 +2558,18 @@ func weapon_for_index(idx: int) -> WeaponData:
 		_: return weapon_pistolet
 
 ## L'arsenal commun de ce match, règle du miroir appliquée. Vide hors match
-## apparié : ailleurs, l'arme est choisie au menu et rien n'est à aligner.
+## apparié CLASSÉ : ailleurs — amical compris —, l'arme est choisie au menu et
+## rien n'est à aligner, la règle du miroir n'existant pas en amical.
 func matchmade_arsenal() -> Array[int]:
-	if not _matchmade_round:
+	if not _matchmade_round or not _matchmade_ranked:
 		return []
 	return RankLoadout.mirrored(_mirror_local_tier, _mirror_opponent_tier)
 
 ## Pourquoi l'arsenal est celui-là, en langage joueur — vide s'il n'a pas rétréci.
 ## L'écran ne reconstruit pas le raisonnement : il affiche ce que la table rend.
 func matchmade_arsenal_reason() -> String:
-	if not _matchmade_round or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
+	if not _matchmade_round or not _matchmade_ranked \
+			or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
 		return ""
 	return RankLoadout.reason_for(RankLoadout.ARBALETE, true,
 		_mirror_local_tier, _mirror_opponent_tier)
@@ -2592,12 +2612,17 @@ func rpc_countdown_weapon(idx: int) -> void:
 ## que ce match ouvre une fenêtre de choix d'arme, et les deux catégories de la
 ## règle du miroir. L'hôte, lui, ARME son départ ; il ne part pas.
 func _on_match_ready(_pairing: Dictionary) -> void:
-	# Ce match ouvre une fenêtre de choix : l'arsenal commun n'est connu que
-	# maintenant, la règle du miroir l'alignant sur le moins bien classé. Posé des
-	# DEUX côtés — le client ne passe pas par `_start_round()`, il reçoit
-	# `rpc_start_round`, et sans ce drapeau son décompte durerait trois secondes
-	# pendant que l'hôte en compte dix.
+	# Posé des DEUX côtés — le client ne passe pas par `_start_round()`, il
+	# reçoit `rpc_start_round`, et sans ces deux drapeaux son décompte durerait
+	# trois secondes pendant que l'hôte en compte dix (ou l'inverse).
 	_matchmade_round = true
+	# `Matchmaking.pairing_snapshot()` pose déjà `ranked` — c'est le mode dans
+	# lequel la recherche a été lancée, connu AVANT l'appariement. Seul ce match
+	# classé ouvre une fenêtre de choix : l'arsenal commun n'y est connu qu'une
+	# fois l'adversaire trouvé, la règle du miroir l'alignant sur le moins bien
+	# classé. En amical elle ne s'applique pas (« Absent de l'amical », décision
+	# d'Adrien du 2026-08-18) : l'arme est déjà celle choisie au menu.
+	_matchmade_ranked = bool(_pairing.get("ranked", false))
 	_mirror_local_tier = int(_pairing.get("local_tier", 0))
 	_mirror_opponent_tier = int(_pairing.get("opponent_tier", 0))
 	# Le joueur a choisi son arme sans savoir s'il hébergerait : la désignation
@@ -2605,6 +2630,16 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 	# râteliers, l'hôte lisant celui de J1 et l'invité celui de J2.
 	ui.mirror_weapon_choice()
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		# [Client] Symétrique de l'échéance hôte ci-dessous : `join_matched_game()`
+		# vient de tenter la connexion, mais « tentative engagée » n'est pas
+		# « connexion établie ». Sans échéance ici, un lien P2P qui reste bloqué
+		# (NAT hostile, hôte qui a lui-même expiré sans que le signal de
+		# déconnexion se propage) laisserait le client attendre indéfiniment un
+		# `rpc_start_round` qui ne viendra jamais — le même défaut que
+		# `_on_join_requested()` corrige déjà pour un salon à code, jamais porté
+		# jusqu'ici.
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+			_armer_echeance_connexion_appariee()
 		return
 	# ⚠️ **La manche ne part PAS ici, et c'est tout l'objet du report.**
 	#
@@ -2654,15 +2689,46 @@ func _armer_echeance_appariement(jeton: int) -> void:
 			UI.Registre.ATTENTION)
 	)
 
+## [Client] Le lien vers l'hôte apparié ne s'établit jamais.
+##
+## Réutilise `_join_deadline_active` et `_on_connection_failed()` — le même
+## couple que `_on_join_requested()` arme déjà pour un salon à code, et pour la
+## même raison : « tentative engagée » (`join_matched_game()` a renvoyé vrai)
+## n'est pas « connexion établie », et rien ne garantit que `connection_failed`
+## se déclenche de lui-même sur un P2P qui reste bloqué. Même durée que
+## l'échéance hôte symétrique : c'est le même rendez-vous EOS des deux côtés.
+func _armer_echeance_connexion_appariee() -> void:
+	_join_deadline_active = true
+	var timer := get_tree().create_timer(DELAI_INVITE_APPARIE)
+	timer.timeout.connect(func() -> void:
+		if not _join_deadline_active:
+			return
+		_join_deadline_active = false
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT \
+				and multiplayer.get_peers().is_empty():
+			_on_connection_failed()
+	)
+
 ## [Hôte] Le départ d'un match apparié, une fois l'invité vraiment là.
 ##
-## La carte est tirée au sort **avant** `_start_round()`, parce que c'est cet
-## appel qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
-## départ du client. Tirer après donnerait deux arènes différentes aux deux
+## La carte est choisie **avant** `_start_round()`, parce que c'est cet appel
+## qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
+## départ du client. Choisir après donnerait deux arènes différentes aux deux
 ## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
 ## voyant un monde cohérent.
+##
+## **Classé et amical divergent ici, décision d'Adrien du 2026-09-09.** Le
+## classé garde le tirage au sort dans tout le catalogue — la question
+## d'équité qu'il ouvre (une carte importée par l'adversaire) reste ouverte,
+## « à trancher par Adrien » selon la ROADMAP, et cette session ne la tranche
+## pas. L'amical, lui, prend systématiquement la carte par défaut : même choix
+## que l'entraînement (`_on_training_requested`), pour la même raison — un
+## terrain connu plutôt qu'une arène surprise pour un match sans enjeu.
 func _lancer_match_apparie() -> void:
-	MapData.select_random_map()
+	if _matchmade_ranked:
+		MapData.select_random_map()
+	else:
+		MapData.select_map(MapData.DEFAULT_MAP_ID)
 	_enter_hosted_game()
 	_start_round()
 
@@ -2684,6 +2750,7 @@ func _on_replay_requested():
 		# match apparié hériterait de ses dix secondes — et le décompte durerait
 		# trois fois trop longtemps sans que rien ne l'explique.
 		_matchmade_round = false
+		_matchmade_ranked = false
 		_matchmade_start_pending = false
 		# Le mode lancé est celui qu'affiche le menu. Tester directement
 		# « CRÉER SALON » ne suffit pas : ce bouton appartient à un autre groupe
@@ -2764,6 +2831,12 @@ func _on_replay_requested():
 func _on_join_requested() -> void:
 	if not ui._is_main_menu:
 		return
+	# Un match apparié encore en cours de connexion laisse `_is_main_menu` à
+	# vrai (« l'hôte apparié attend son invité dans le menu ») avec un
+	# `current_mode` déjà engagé : sans ce contrôle, `join_game()` ouvrirait un
+	# second lien par-dessus celui, encore vivant, que l'appariement tient.
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		return
 	if not NetworkManager.join_game(ui.lobby_join_text()):
 		return
 	# L'échéance doit être neutralisée dès que l'issue est connue : sinon elle
@@ -2784,7 +2857,7 @@ func _on_join_requested() -> void:
 ## porte le chronomètre, et laisser chaque camp abréger de son côté produirait
 ## deux départs décalés d'un aller-retour.
 func declare_countdown_ready() -> void:
-	if not _matchmade_round or countdown_left <= 0.0:
+	if not _matchmade_round or not _matchmade_ranked or countdown_left <= 0.0:
 		return
 	_countdown_ready_local = true
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:

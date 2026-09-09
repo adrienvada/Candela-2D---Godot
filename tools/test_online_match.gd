@@ -193,8 +193,14 @@ func _tenir(p1: Node2D, p2: Node2D, duree: float, sens: float) -> void:
 		reste -= get_process_delta_time()
 
 
-## La fenêtre de choix d'un match apparié — dix secondes pendant lesquelles on
-## choisit son arme dans l'arsenal que la règle du miroir a laissé.
+## La fenêtre de choix d'un match apparié CLASSÉ — dix secondes pendant
+## lesquelles on choisit son arme dans l'arsenal que la règle du miroir a
+## laissé.
+##
+## **N'existe qu'en classé depuis le 2026-09-09** (décision d'Adrien) : la
+## règle du miroir ne s'applique pas en amical, qui choisit son arme au menu,
+## avant la recherche. D'où `_matchmade_ranked = true` ci-dessous — sans lui
+## le banc rejouerait un match amical, qui n'ouvre plus cette fenêtre du tout.
 ##
 ## Exercée **en écran partagé**, sans réseau ni appariement : la mécanique est
 ## locale à `game_state`, et la faire dépendre de deux processus et d'Epic la
@@ -219,9 +225,10 @@ func _run_fenetre() -> void:
 		_main.countdown_left <= _main.COUNTDOWN_DURATION + 0.01,
 		"%.1f" % _main.countdown_left)
 
-	# On rejoue ce que l'appariement pose : match apparié, deux catégories.
+	# On rejoue ce que l'appariement pose : match apparié CLASSÉ, deux catégories.
 	# Lanterne (4) contre Braise (2) — le miroir doit retenir l'arsenal de Braise.
 	_main._matchmade_round = true
+	_main._matchmade_ranked = true
 	_main._mirror_local_tier = 4
 	_main._mirror_opponent_tier = 2
 	_main._start_round()
@@ -293,7 +300,11 @@ func _run_appariement() -> void:
 	_poser_appariement(true)
 	await get_tree().process_frame
 
-	_check("l'appariement pose bien sa fenêtre de choix", _main._matchmade_round)
+	# Ce banc pose `ranked = false` (voir `_poser_appariement`) : depuis le
+	# 2026-09-09 un match apparié amical n'ouvre plus de fenêtre de choix, donc
+	# seul `_matchmade_round` — « ce match vient de l'appariement » — se vérifie
+	# ici, pas `_matchmade_ranked`.
+	_check("l'appariement est retenu comme match apparié", _main._matchmade_round)
 	_check("le départ est ARMÉ, pas consommé", _main._matchmade_start_pending)
 	# `round_active` seul ne suffit pas à décrire le défaut : il était déjà faux
 	# pendant qu'Adrien était bloqué. L'hôte était dans l'arène SANS manche — les
@@ -338,6 +349,10 @@ func _poser_appariement(hote: bool) -> void:
 ## En ENet, donc sans Epic : ce qu'on exerce ici est le chemin de `game_state`,
 ## qui ne connaît pas le transport. L'hôte pose son appariement AVANT que l'invité
 ## existe, exactement comme `_try_launch()` le fait.
+##
+## `_poser_appariement()` pose `ranked = false` : ce scénario exerce donc le
+## chemin AMICAL — d'où le décompte ordinaire attendu plus bas, et non les dix
+## secondes de la fenêtre de choix (réservée au classé depuis le 2026-09-09).
 func _run_hote_apparie() -> void:
 	await _select_mode(true)
 	if not NetworkManager.host_game():
@@ -359,8 +374,11 @@ func _run_hote_apparie() -> void:
 	print("MANCHE: décompte restant %.1f s" % _main.countdown_left)
 	_check("l'hôte a quitté son menu", not _ui._is_main_menu)
 	_check("et il n'est pas resté en bac à sable", not _main.sandbox_mode)
-	_check("le décompte est celui d'un match apparié",
-		_main.countdown_left > _main.COUNTDOWN_DURATION + 1.0,
+	# `_poser_appariement()` pose `ranked = false` : depuis le 2026-09-09 un
+	# match amical apparié n'ouvre plus la fenêtre de dix secondes, et compte
+	# normalement — voir « Deux prêts, un seul départ » aux Pièges connus.
+	_check("le décompte est celui d'un match amical ordinaire (trois secondes)",
+		_main.countdown_left <= _main.COUNTDOWN_DURATION + 0.5,
 		"%.1f" % _main.countdown_left)
 	_check("l'invité est dans l'arène, pas caché",
 		_main.p2.visible and _main.p2.get_collision_layer_value(1))
@@ -385,10 +403,12 @@ func _run_invite_apparie() -> void:
 		return
 	print("MANCHE: décompte restant %.1f s" % _main.countdown_left)
 	_check("l'invité a quitté son menu", not _ui._is_main_menu)
-	# Le drapeau posé des deux côtés : sans lui l'invité compterait trois secondes
-	# pendant que l'hôte en compte dix.
-	_check("le décompte apparié vaut dix secondes ici aussi",
-		_main.countdown_left > _main.COUNTDOWN_DURATION + 1.0,
+	# `ranked = false` (voir `_poser_appariement`) : le décompte ordinaire est
+	# le même des deux côtés, lancé par le même `rpc_start_round` — c'est
+	# précisément ce qui manquait à l'ancienne fenêtre de dix secondes,
+	# abrégée localement côté hôte seul (« Deux prêts, un seul départ »).
+	_check("le décompte amical est le même ici aussi (trois secondes)",
+		_main.countdown_left <= _main.COUNTDOWN_DURATION + 0.5,
 		"%.1f" % _main.countdown_left)
 	_check("et les deux joueurs sont dans l'arène",
 		is_instance_valid(_main.p1) and is_instance_valid(_main.p2))

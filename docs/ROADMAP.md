@@ -48,7 +48,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | ✅ **Terminée** le 2026-08-18 — six étapes closes. Ne restent que des vérifications à la main |
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
-| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Le premier essai à deux machines a eu lieu le 2026-09-09 et a trouvé un défaut** : l'hôte partait seul, l'invité restait au menu. Corrigé, deux bancs posés — **reste à rejouer l'essai** |
+| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Deux essais à deux machines ont eu lieu le 2026-09-09.** Le premier a trouvé l'hôte partant seul, l'invité restant au menu — corrigé, deux bancs posés. Le second, rejouant l'essai, a trouvé un match amical qui ne partait que côté hôte, l'invité restant planté sur son décompte — voir « Deux prêts, un seul départ » aux Pièges connus. Adrien a tranché à cette occasion : **l'amical choisit son arme avant la recherche**, plus de fenêtre de choix après appariement (celle-ci reste au classé, seul concerné par la règle du miroir), décompte de trois secondes commun aux deux, carte par défaut plutôt que tirée au sort. **Reste à rejouer l'essai** |
 | 9 | **Mise à jour du jeu installé** | ✅ **Éprouvée le 2026-09-08** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. Les deux jalons humains sont faits : la paire de clés (H8) et la première mise à jour réelle sur machine (H9, testée par Adrien) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
@@ -3246,6 +3246,123 @@ supprimer. Deux bancs le verrouillent, et il faut les deux :
 `run_duo.sh --apparie` (deux instances, ENet) qu'il part quand l'invité arrive.
 Vérifié : sans le correctif, le premier rougit sur trois contrôles et le second
 sur quatre.
+
+### Deux prêts, un seul départ (2026-09-09)
+
+**Le correctif ci-dessus a tenu — l'essai rejoué le même jour a trouvé un
+second défaut, dans la même zone.** Un match amical apparié : les deux se
+trouvent, la fenêtre de choix de dix secondes s'ouvre, les deux joueurs
+appuient sur PRÊT. La manche part **pour l'hôte seul** ; l'invité reste planté
+sur son décompte jusqu'à dix, sans erreur console d'aucun côté.
+
+**Cause, dans `_process()` de `game_state.gd` :** les deux « prêt » abrègent le
+décompte, mais seulement **localement**, et seulement chez l'hôte — la garde
+`NetworkManager.current_mode != ONLINE_CLIENT` existe précisément pour ça. Rien
+n'annonce ensuite au client que l'abrègement a eu lieu : aucun `rpc_*` ne
+porte cette information, alors que le sens inverse (`rpc_countdown_ready`,
+qui informe l'hôte que le CLIENT est prêt) existe depuis l'origine de cette
+fenêtre. Le commentaire du code annonçait pourtant l'intention contraire —
+« l'hôte tranche seul […] et laisser chaque camp décider produirait deux
+départs décalés d'un aller-retour » — sans que le canal qui aurait tenu cette
+promesse ait jamais été écrit. Un `_matchmade_round` vrai des deux côtés
+suffit à armer la manche (`_do_start_round`), donc rien n'empêchait le
+décompte de l'hôte d'atteindre zéro et de lancer le jeu pendant que celui du
+client continuait, imperturbable, sa propre décrémentation locale.
+
+**Le correctif n'ajoute pas le canal manquant : il retire la fenêtre, côté
+amical, plutôt que de la réparer.** Décision d'Adrien, prise à cette occasion :
+la règle du miroir qui justifiait cette fenêtre — l'arsenal commun n'est connu
+qu'une fois l'adversaire trouvé — **« est absente de l'amical »** depuis le
+2026-08-18 ; un match amical n'a donc jamais rien à y découvrir. L'arme s'y
+choisit désormais **avant** la recherche, au même écran `SCREEN_FRIENDLY` qui
+portait déjà le râtelier de J1 (Phase 7/8), et `_on_match_ready()` la reporte
+sur le second râtelier comme avant (`UI.mirror_weapon_choice()`). Un nouveau
+drapeau, `_matchmade_round` **classé** (`_matchmade_ranked`, lu directement
+sur `ranked` dans `Matchmaking.pairing_snapshot()`), conditionne désormais
+`show_pick_window()`, la durée `COUNTDOWN_MATCHMADE` et l'abrègement par
+« prêt » : tout cela reste au classé, exactement tel quel. L'amical retombe
+sur le décompte ordinaire de trois secondes, lancé identiquement des deux
+côtés par le même `rpc_start_round` que tout le reste du jeu emprunte déjà —
+il n'y a plus rien qui s'abrège localement, donc plus rien à désynchroniser.
+
+⚠️ **Ce que ce correctif NE fait PAS : réparer le classé.** Le même défaut
+existe, verbatim, sur le chemin `_matchmade_ranked = true` — personne ne l'a
+touché, parce que rien ne l'a demandé et qu'aucun essai à deux machines
+n'existe encore sur ce chemin pour vérifier un correctif. Le jour où
+l'appariement classé sera exercé pour de vrai, « prêt côté hôte, invité
+planté sur son décompte » attend toujours dans `_process()`.
+
+**Deux décisions annexes, prises à la même occasion.** `_lancer_match_apparie()`
+tire désormais la carte par défaut (`MapData.DEFAULT_MAP_ID`) pour un match
+amical, au lieu du tirage au sort dans tout le catalogue — ce qui tranche,
+mais **seulement côté amical**, la question d'équité laissée ouverte à l'étape
+8.8 (« restreindre le tirage classé aux cartes livrées, ou l'ouvrir » — encore
+non tranchée, elle, côté classé, qui garde `MapData.select_random_map()`). Et
+la carte par défaut elle-même est passée de 30×30 à 32×32
+(`assets/maps/default.json`, spawns repositionnés en symétrie), même geste que
+le passage de 20×20 à 30×30 du 2026-08-26 — `AudioManager.GRILLE_DEFAUT` mis à
+jour en même temps, comme la dernière fois, et pour la même raison : c'est la
+seule valeur qui la recopie.
+
+### Un lien entre-deux ne se voit ni ne se ferme (2026-09-09)
+
+**Audit demandé par Adrien après le correctif ci-dessus** : une recherche
+annulée ou en échec referme-t-elle bien tout salon qu'elle aurait ouvert ? La
+réponse tenait déjà pour le cas direct (`Matchmaking.cancel()`/`_fail()`
+ferment le ticket de file avant qu'aucun lien de partie n'existe). Elle ne
+tenait pas pour une fenêtre plus étroite, entre le moment où le lien s'ouvre et
+celui où la manche part vraiment.
+
+**Le mécanisme** : `Matchmaking._try_launch()` repose `state` à `IDLE`
+**avant** d'ouvrir le lien (`host_matched_game()`/`join_matched_game()`) et
+d'émettre `match_ready` — c'est voulu, `matchmaking.gd` n'a plus rien à faire
+une fois le lien confié à `game_state`. Mais le joueur, lui, reste
+visuellement au menu (`_is_main_menu` vrai) et le bandeau se cache sur `IDLE`
+(`MatchBanner.refresh()`) : **rien à l'écran ne dit qu'un lien EOS est déjà
+ouvert ou en cours d'ouverture.** Pendant cette fenêtre — `_matchmade_start_pending`
+côté hôte, jusqu'à vingt secondes ; une tentative de connexion en cours côté
+invité — trois entrées du menu ne le savaient pas et auraient ouvert un
+**second** lien par-dessus le premier, encore vivant :
+
+- `_start_search()` ne vérifiait que l'état du matchmaker, déjà retombé à
+  `IDLE` — rien n'empêchait de relancer une recherche ;
+- `_open_lobby()` ne bloquait que `current_mode == ONLINE_HOST`, pas
+  `ONLINE_CLIENT` (le cas où CE joueur est l'invité d'un appariement encore en
+  train de se connecter) ;
+- `_on_join_requested()` ne vérifiait rien du tout.
+
+**Et côté invité spécifiquement, une échéance manquante.** `join_matched_game()`
+qui renvoie vrai signifie « tentative engagée », pas « connexion établie » —
+exactement la distinction que `_on_join_requested()` couvre déjà pour un salon
+à code, avec sa propre échéance (`NetworkManager.join_timeout()`). Cette
+échéance n'était jamais armée pour un invité apparié : un lien P2P resté
+bloqué (NAT hostile, ou un hôte qui a lui-même expiré sans que sa déconnexion
+se propage) aurait laissé le client attendre indéfiniment un `rpc_start_round`
+qui ne viendrait jamais — aucun bug rencontré à deux machines à ce jour, mais
+aucun garde-fou non plus.
+
+**Correctif, quatre gestes** :
+
+1. `_start_search()`, `_open_lobby()` et `_on_join_requested()` refusent
+   désormais tous les trois si `NetworkManager.current_mode !=
+   LOCAL_SPLITSCREEN` — le signal fiable qu'un lien existe ou se construit,
+   que `Matchmaking.state` seul ne porte plus une fois `_try_launch()` passé.
+   Sans coût sur le chemin sain : `current_mode` vaut déjà
+   `LOCAL_SPLITSCREEN` dans tout usage normal du menu, `_close_lobby_if_left()`
+   s'en assurant déjà pour le salon manuel.
+2. Le client apparié arme sa propre échéance, symétrique de celle de l'hôte
+   (`_armer_echeance_connexion_appariee()`, vingt secondes, même constante
+   `DELAI_INVITE_APPARIE`), en réutilisant `_join_deadline_active` et
+   `_on_connection_failed()` déjà posés pour le salon à code — pas un
+   mécanisme de plus, le même appliqué à un second chemin qui ne l'avait
+   jamais reçu.
+
+⚠️ **Ce que ce correctif ne fait PAS : ouvrir une fenêtre de renoncement entre
+« trouvé » et « lancé ».** Décision d'Adrien du 2026-08-18, non remise en
+cause ici : un lien en train de s'établir continue sa tentative sans
+interruption. Ces quatre gestes empêchent seulement d'en superposer un second
+par-dessus — ils ne donnent au joueur aucun moyen d'abandonner celui qui est
+déjà en cours.
 
 ### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
 
@@ -14678,3 +14795,4 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 | 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
 | 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |
 | 2026-09-09 | Deux machines, **recherche automatique** (le premier essai de ce chemin) | Elles se trouvent, mais **une seule entre en match** : l'hôte attend un joueur 2 qui reste dans son menu. Aucune erreur console. Cause : `match_ready` est émis avant que le lien soit établi, l'hôte partait donc seul en bac à sable — voir « Ouvrir un lien n'est pas l'établir » dans les Pièges connus. Corrigé, et couvert par deux bancs. **Reste à rejouer à deux machines.** |
+| 2026-09-09 (rejoué) | Deux machines, **match amical apparié** | Les deux se trouvent, la fenêtre de choix de dix secondes s'ouvre, les deux appuient sur PRÊT — **la manche ne part que côté hôte**, l'invité reste planté sur son décompte jusqu'à dix. Aucune erreur console. Cause : l'abrègement par « prêt » ne collapse le décompte que localement, côté hôte (`_process()`) — rien n'en informe le client. Voir « Deux prêts, un seul départ » aux Pièges connus. **Corrigé en retirant la fenêtre du chemin amical** (elle reste au classé) : Adrien a tranché à cette occasion que l'amical choisit son arme avant la recherche, garde un décompte de trois secondes commun aux deux côtés, et joue sur la carte par défaut plutôt qu'une carte tirée au sort. **Reste à rejouer.** |
