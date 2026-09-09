@@ -28,6 +28,21 @@ par sujet impraticable.
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 | **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | `eblouissement.gd`, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
 
+### Session « photographe » — ajoutée le 2026-09-09
+
+**Fichiers tenus :** `tools/photographe.gd`, `tools/photographe.tscn`,
+`tools/run_photos.sh`. Tous **créés**, aucun n'existait.
+
+**Touché ailleurs, et minuscule :** un bloc ajouté à la fin de
+`tools/test_banc.gd` (les appuis du photographe et l'intégrité de son
+catalogue), et la section DA6 de `docs/ROADMAP.md`. `test_banc.gd` n'est
+réservé par personne dans la table ci-dessus ; il est le lieu convenu où
+**tout outil qui ouvre une fenêtre** déclare ses hypothèses, et l'y ajouter est
+donc son usage prévu plutôt qu'une incursion.
+
+**Rien du jeu n'est modifié.** L'outil pilote `main.tscn` de l'extérieur, comme
+`planche_contact.gd` et `planche_eblouissement.gd`.
+
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
 **Le glob `*.gdshader` réserve les shaders au domaine « game feel ». Il a été

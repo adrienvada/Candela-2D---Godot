@@ -3127,6 +3127,42 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### La texture d'une vue ne contient pas l'interface (2026-09-09)
+
+`SubViewport.get_texture()` rend **le monde**, et rien d'autre. Tout ce que le
+jeu peint dans un `CanvasLayer` — le HUD, le voile de l'éblouissement, le tampon
+du kill, la killcam — est attaché au *viewport* et non au canvas du monde : il
+n'entre dans aucune texture de sous-vue.
+
+C'est la même propriété qui sauve le HUD au chantier R (« `UI` s'exclut tout
+seul, c'est un `CanvasLayer` ») ; vue depuis un outil de capture, elle mord dans
+l'autre sens. **Le photographe a rendu un éblouissement sans voile** : un duel
+parfaitement normal, sous une fiche qui annonçait le contraire.
+
+⚠️ **La panne est muette et vraisemblable.** Une image noire se remarque ; une
+image *correcte mais amputée de l'effet qu'elle prétend montrer* se range dans
+un dossier et sert de référence. Tout plan qui vise un effet d'interface se
+capture donc à l'**écran**, jamais dans la vue — et la règle vaut d'avance pour
+tout ce que la vague M peindra dans une couche.
+
+### Deux fichiers pour une seule clé canonique (2026-09-09)
+
+`MenuArtwork.cle_canonique()` replie les alias : `ill_creer.png` et
+`ill_creer_ligne.png` rendent tous deux `ill_creer_ligne`, comme `ill_rejoindre`
+et `ill_rejoindre_ligne`. C'est voulu — le jeu veut une clé par illustration, pas
+par fichier.
+
+**Une boucle qui écrit un fichier de sortie PAR ENTRÉE écrase donc en silence.**
+Le photographe produisait dix-huit lignes de manifeste pour seize images, deux
+d'entre elles décrivant un fichier qui ne les montrait pas. Aucune erreur, aucun
+avertissement : la seconde planche avait simplement gagné.
+
+La leçon générale, et elle dépasse les illustrations : **dès qu'un nom de sortie
+est dérivé d'une fonction de normalisation, deux entrées peuvent viser le même
+nom.** Ou bien on déduplique sur la clé de sortie, ou bien on garde le nom de la
+source. Ne rien faire produit un résultat plausible et faux.
+
+
 ### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
 
 **`git update-ref` sur une branche montée dans un AUTRE arbre de travail déplace
@@ -11281,6 +11317,94 @@ dans la même journée.
   *(S)*
 - **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
   l'esquisse) : logo, souffle, lumière. *(S + C)*
+
+#### L'outil qui sort les images — `tools/photographe.gd` (posé le 2026-09-09)
+
+**Les cinq fiches de DA6 demandent toutes de JUGER une image, et rien ne
+permettait de les regarder ensemble.** L'écran de victoire, le gel fatal, la
+carte de fin de soirée existent déjà dans le jeu ; les composer suppose de les
+avoir sous les yeux, côte à côte, hors du jeu. Ce chantier commence donc par un
+outil, comme DA5.8 avait commencé par une planche.
+
+`./tools/run_photos.sh` ouvre le jeu, le met en scène état par état, et écrit un
+dossier d'images nommées, un **manifeste** (ce que montre chacune, à quoi elle
+sert, de quel commit elle sort) et une **planche HTML** qu'on ouvre d'un
+double-clic. Cinq familles : `menus`, `illustrations`, `cartes`, `jeu`, `fins` —
+sélectionnables une par une, ou plan par plan. **Cinquante-six images en une
+minute et demie**, mesuré, dont les trois verdicts, le gel signé, les quatre
+cônes d'arme, les sept plans de carte et les quinze illustrations éclairées par
+leur shader.
+
+Trois choses qu'il fait et qu'aucun outil existant ne faisait :
+
+- **Le duel sans le HUD** (source `vue` : la texture de `SubViewport1` seule),
+  au même cadrage et à la même résolution que ce que voit le joueur.
+- **Une taille choisie** (`--taille=3840x2160` mesuré possible sur le poste
+  d'Adrien) et, en option, les **découpes carrée et 9:16** pour les réseaux —
+  un recadrage, jamais un rendu à un autre rapport : le jeu s'étire depuis une
+  référence 16:9 et lui demander un carré ajouterait des bandes.
+- **Un cadrage serré facultatif** (`--zoom`), **inscrit au manifeste et sur la
+  planche**. Une image serrée n'est plus tout à fait une capture, et rien
+  d'autre ne le signalerait. Par défaut il vaut 1,0 : ce que voit le joueur.
+
+⚠️ **`rendu_racine_autorise` est mis à faux pendant la séance.** Depuis le
+chantier R, une vue unique se rend dans la racine et les deux `SubViewport`
+s'arrêtent — `vp1` n'aurait alors plus de texture à donner. Ce que voit le joueur
+est identique ; seul le coût change, et il n'a aucune importance ici.
+
+**Il ne compose rien.** DA6.1 à DA6.5 restent entièrement à faire : l'outil rend
+possible de les juger, il ne les traite pas.
+
+#### Ce que le premier passage a trouvé, et qui n'était visible qu'en image
+
+Quatre défauts, tous dans l'outil lui-même, tous invisibles à l'écriture :
+
+| ce qu'on croyait | ce que l'image a montré |
+|---|---|
+| le voile de l'éblouissement pris en source `vue` | un duel parfaitement normal : le voile est peint par l'**interface** |
+| l'écran scindé photographié avant d'allumer les torches | deux HUD, un trait, et du noir entre les deux |
+| le tampon du gel, tiré à la première image | `KILL — 00:00`, qui se lit comme une panne d'affichage |
+| cacher une vue suffit à passer en vue unique | un HUD à deux panneaux et **un voile large d'une demi-fenêtre au milieu du cadre** : l'interface se range sur le mode réseau, pas sur le nombre de vues |
+| deux joueurs face à face, torches allumées | les deux à saturation, un écran laiteux : du jeu authentique et une image illisible |
+| deux passages donnent la même image | **le cadrage suivait la souris** — J1 vise le curseur, J2 un stick absent : deux séances, deux compositions, aucune choisie |
+
+Deux autres, silencieux ceux-là : les rubriques de réglage sortaient toutes
+sous le nom `sans-nom` (le libellé d'une entrée n'est pas dans `Button.text`), et
+deux illustrations en écrasaient deux autres sans rien dire (voir « Pièges
+connus », *deux fichiers pour une seule clé*).
+
+La dernière ligne a une réponse, et elle était déjà dans le jeu : les deux
+joueurs reçoivent le temps de la séance un `InputProvider` tenu par l'outil.
+C'est le patron qui le permet — `player.gd` ne sait pas d'où viennent ses
+commandes — et c'est la première fois qu'on s'en sert depuis l'extérieur.
+
+#### ⚠️ Et une contre-vérité qui a failli entrer dans ce document
+
+Ce paragraphe a annoncé, images à l'appui, que **« le jeu ne montre jamais deux
+faisceaux »** — que `canvas_cull_mask` filtre la torche d'en face et qu'une
+communication promettant deux cônes promettrait autre chose que Candela.
+
+**C'est faux, et le code le dit sans ambiguïté.** L'arène est bien dupliquée par
+joueur (`_duplicate_layer_for_player`), mais les deux copies portent la couche de
+lumière **1** — `1 | 16` et `1 | 32` —, et le faisceau éclaire `1 | 2 | 4`. Toute
+torche allume donc les deux copies. **Voir le faisceau d'en face balayer le sol
+est précisément la moitié « trahit » de la mécanique**, et la retirer viderait le
+jeu. Ce qui est séparé, c'est le CORPS : le sprite d'écran ennemi n'est allumé
+que par nos propres lumières — d'où la silhouette qui n'apparaît que dans notre
+cône.
+
+L'origine de l'erreur mérite d'être dite, parce qu'elle est le revers exact de ce
+que cet outil sert à faire : **une image montre un ÉTAT, jamais une propriété.**
+La première photographie du duel n'avait qu'un cône — les deux joueurs se
+faisaient face, le second faisceau pointait vers l'objectif et se confondait avec
+le premier. On en a tiré une règle. Deux images plus tard, sous un autre
+cadrage, il y en avait deux.
+
+Le contre-test qui a tranché tient en une comparaison, et il était à portée de
+main dès le début : le plan `torche` (J2 écarté, torche éteinte) n'a **qu'un**
+cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
+
+**Regarder ne dispense pas de vérifier ; ça dispense de deviner.**
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 

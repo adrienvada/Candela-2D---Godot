@@ -94,6 +94,50 @@ func _run() -> void:
 		"res://un_shader_qui_n_existe_pas.gdshader")
 	_check("et il sait dire quand ils manquent", not vides_voile.is_empty())
 
+	# LE PHOTOGRAPHE, même raison et même remède : il ouvre une fenêtre, donc
+	# aucune suite ne peut l'exécuter — mais une suite peut lire ses hypothèses.
+	# Il en a plus que les autres parce qu'il touche à tout : les menus, une
+	# manche entière, la mort, le shader des illustrations, les miniatures de
+	# cartes. C'est précisément ce qui le rend fragile — et ce qui rend cette
+	# liste utile.
+	var Photo: GDScript = load("res://tools/photographe.gd")
+	var manquants_photo: Array[String] = Photo.preconditions_manquantes(ui, main)
+	_check("tous les appuis du photographe existent encore",
+		manquants_photo.is_empty(), "; ".join(manquants_photo))
+	var vides_photo: Array[String] = Photo.preconditions_manquantes(null, null)
+	_check("et il sait dire quand ils manquent", not vides_photo.is_empty())
+
+	# Le catalogue lui-même. **Une image dont l'identifiant est en double
+	# écraserait l'autre en silence** : les deux fichiers portent le nom de leur
+	# identifiant, et le manifeste décrirait la survivante sous les deux fiches.
+	# Le reste tient à ce que le manifeste et la planche promettent : un titre et
+	# un `pourquoi` sous chaque vignette — une image de communication dont
+	# personne ne sait plus à quoi elle servait est une image perdue.
+	var vus := {}
+	var doublons: Array[String] = []
+	var muets: Array[String] = []
+	var familles_inconnues: Array[String] = []
+	var sources_inconnues: Array[String] = []
+	for plan in Photo.catalogue():
+		var id := String(plan.get("id", ""))
+		if vus.has(id):
+			doublons.append(id)
+		vus[id] = true
+		if String(plan.get("titre", "")) == "" or String(plan.get("pourquoi", "")) == "":
+			muets.append(id)
+		if not Photo.FAMILLES.has(String(plan.get("famille", ""))):
+			familles_inconnues.append(id)
+		if not ["ecran", "vue", "propre"].has(String(plan.get("source", ""))):
+			sources_inconnues.append(id)
+	_check("aucun identifiant de plan en double", doublons.is_empty(),
+		", ".join(doublons))
+	_check("chaque plan dit son titre et à quoi il sert", muets.is_empty(),
+		", ".join(muets))
+	_check("chaque plan appartient à une famille connue",
+		familles_inconnues.is_empty(), ", ".join(familles_inconnues))
+	_check("chaque plan nomme une source connue", sources_inconnues.is_empty(),
+		", ".join(sources_inconnues))
+
 	main.queue_free()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
