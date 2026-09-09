@@ -4427,14 +4427,13 @@ func _build_menu_header() -> Control:
 	menu_enseigne.name = "Enseigne"
 	menu_enseigne.texture = load(Charte.CHEMIN_ENSEIGNE)
 	# Centrée dans le rectangle du `Label`, à une taille CALCULÉE et non choisie :
-	# l'encre du fichier occupe 482 px sur 508 de haut, on vise 80 px d'encre à
-	# l'écran — la hauteur du titre qu'elle remplace. Ancrer en plein cadre
-	# donnait un logo pleine page, le rectangle du `Label` faisant toute la
-	# largeur de l'en-tête.
+	# on vise 80 px de hauteur d'encre à l'écran — la hauteur du titre qu'elle remplace.
 	const ENCRE_VISEE := 80.0
-	const ENCRE_DU_FICHIER := 482.0 / 508.0
-	var h := ENCRE_VISEE / ENCRE_DU_FICHIER
-	var l := h * 1600.0 / 508.0
+	var tex: Texture2D = menu_enseigne.texture
+	var tex_w := float(tex.get_width()) if tex != null else 1600.0
+	var tex_h := float(tex.get_height()) if tex != null else 638.0
+	var h := ENCRE_VISEE
+	var l := h * (tex_w / tex_h)
 	menu_enseigne.anchor_left = 0.5
 	menu_enseigne.anchor_right = 0.5
 	menu_enseigne.anchor_top = 0.5
