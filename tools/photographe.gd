@@ -1111,21 +1111,85 @@ func _peut_etre(plans: Array[Dictionary], id: String) -> void:
 ## qui détecte une fenêtre bridée par macOS. Une prise manquée est retentée une
 ## fois — la fenêtre remise devant entre les deux — puis abandonnée.
 func _capturer(source: String) -> Image:
+	if source == "vue":
+		return await _capturer_la_vue()
 	_au_premier_plan()
 	var ecran: Image = await Commun.capturer(get_tree(), 3000)
 	if ecran == null:
 		_au_premier_plan()
 		await _attendre_images(4)
 		ecran = await Commun.capturer(get_tree(), 4000)
-	if ecran == null:
-		return null
-	if source == "vue":
-		var t: ViewportTexture = _main.vp1.get_texture()
-		if t != null:
-			var img := t.get_image()
-			if img != null:
-				return img
 	return ecran
+
+
+## La vue seule, SURÉCHANTILLONNÉE pour rendre la même définition que l'écran.
+##
+## ⚠️ **Sans ce détour, `--taille=3840x2160` rendait des plans `vue` en
+## 1920×1080, et rien ne le disait.** Découvert le 2026-09-09 en fournissant des
+## images à la session DA7 : le manifeste portait bien les deux tailles — il
+## n'invente rien — mais la ligne « fenêtre : 3840x2160 » de la console laissait
+## croire que tout sortait en 4K. **Le pire des trois états connus : ni faux, ni
+## dit.**
+##
+## La cause tient au mode d'étirement du jeu. En `canvas_items`, la mise en page
+## vit à la résolution de RÉFÉRENCE (1920×1080) et la fenêtre n'est qu'un facteur
+## d'échelle appliqué au dessin. Un `SubViewportContainer` en `stretch` accorde
+## donc sa sous-vue à sa taille de *Control* — 1920×1080 — quelle que soit la
+## fenêtre. La racine, elle, rastérise pour de bon à 3840×2160.
+##
+## Le remède est celui d'un photographe qui change d'objectif : on coupe
+## l'accord automatique, on agrandit la sous-vue du facteur manquant, **et on
+## multiplie le zoom de la caméra d'autant** — sans quoi on ne gagnerait pas de
+## définition, on verrait seulement plus de monde. Le temps de deux images, puis
+## tout est remis en place.
+func _capturer_la_vue() -> Image:
+	var vue: SubViewport = _main.vp1
+	var conteneur := vue.get_parent() as SubViewportContainer
+	var cam: Camera2D = _main.cam1
+	var facteur := _facteur_de_vue(vue)
+
+	var taille_avant := vue.size
+	var stretch_avant := conteneur.stretch if conteneur != null else true
+	var zoom_avant: Vector2 = cam.zoom if is_instance_valid(cam) else Vector2.ONE
+	if facteur > 1 and conteneur != null:
+		conteneur.stretch = false
+		vue.size = taille_avant * facteur
+		if is_instance_valid(cam):
+			cam.zoom = zoom_avant * float(facteur)
+		await _attendre_images(2)
+
+	_au_premier_plan()
+	var ecran: Image = await Commun.capturer(get_tree(), 3000)
+	if ecran == null:
+		_au_premier_plan()
+		await _attendre_images(4)
+		ecran = await Commun.capturer(get_tree(), 4000)
+
+	var img: Image = null
+	if ecran != null:
+		var t: ViewportTexture = vue.get_texture()
+		img = t.get_image() if t != null else null
+
+	# Rendu AVANT tout retour, y compris sur une prise perdue : une sous-vue
+	# laissée en 4K sans étirement afficherait le quart supérieur gauche du duel
+	# pour tous les plans suivants.
+	if facteur > 1 and conteneur != null:
+		vue.size = taille_avant
+		conteneur.stretch = stretch_avant
+		if is_instance_valid(cam):
+			cam.zoom = zoom_avant
+		await _attendre_images(1)
+	return img if img != null else ecran
+
+
+## De combien la sous-vue est en retard sur la fenêtre. Entier : un facteur
+## fractionnaire rééchantillonnerait la carte au lieu de la rendre plus fin, ce
+## qui est l'inverse du but.
+func _facteur_de_vue(vue: SubViewport) -> int:
+	if vue == null or vue.size.y <= 0:
+		return 1
+	var fenetre := DisplayServer.window_get_size()
+	return clampi(int(round(float(fenetre.y) / float(vue.size.y))), 1, 4)
 
 
 ## macOS bride le rendu d'une fenêtre au second plan, au point que
@@ -1313,6 +1377,16 @@ func _poser_la_fenetre() -> void:
 	DisplayServer.window_set_size(voulue)
 	var reelle := DisplayServer.window_get_size()
 	print("  fenêtre : %dx%d (demandé %dx%d)" % [reelle.x, reelle.y, _taille.x, _taille.y])
+	# La mise en page du jeu vit à la résolution de référence ; au-delà, les
+	# plans `vue` sont suréchantillonnés pour rejoindre l'écran. On le DIT, parce
+	# que c'est le genre d'écart qu'un manifeste porte sans que personne le lise.
+	var reference: Vector2i = Vector2i(
+		int(ProjectSettings.get_setting("display/window/size/viewport_width", 1920)),
+		int(ProjectSettings.get_setting("display/window/size/viewport_height", 1080)))
+	if reelle.y > reference.y:
+		print("  la mise en page vit en %dx%d : les plans `vue` sont suréchantillonnés ×%d"
+			% [reference.x, reference.y,
+			clampi(int(round(float(reelle.y) / float(reference.y))), 1, 4)])
 	_taille = reelle
 
 

@@ -11458,6 +11458,24 @@ Trois choses qu'il fait et qu'aucun outil existant ne faisait :
   planche**. Une image serrée n'est plus tout à fait une capture, et rien
   d'autre ne le signalerait. Par défaut il vaut 1,0 : ce que voit le joueur.
 
+⚠️ **Et une limite silencieuse, trouvée en fournissant des images à la session
+DA7 le 2026-09-09 — puis levée.** `--taille=3840x2160` rendait les plans `vue`
+en **1920×1080**, et rien ne le disait : la console annonçait « fenêtre :
+3840x2160 » et le manifeste portait les deux tailles sans que personne les
+compare. Ni faux, ni dit — le pire des trois états.
+
+La cause est le mode d'étirement du jeu. En `canvas_items`, la mise en page vit
+à la résolution de RÉFÉRENCE et la fenêtre n'est qu'un facteur appliqué au
+dessin : un `SubViewportContainer` en `stretch` accorde sa sous-vue à sa taille
+de *Control*, soit 1920×1080, quelle que soit la fenêtre. Seule la racine
+rastérise vraiment à 3840×2160.
+
+Le remède est celui d'un photographe qui change d'objectif : couper l'accord
+automatique, agrandir la sous-vue du facteur manquant, **et multiplier le zoom
+de la caméra d'autant** — sans quoi on ne gagne pas de définition, on voit
+seulement plus de monde. Vérifié en comparant la même prise en 1920 et en 3840 :
+cadrage identique, définition doublée. Le lanceur imprime désormais le facteur.
+
 ⚠️ **`rendu_racine_autorise` est mis à faux pendant la séance.** Depuis le
 chantier R, une vue unique se rend dans la racine et les deux `SubViewport`
 s'arrêtent — `vp1` n'aurait alors plus de texture à donner. Ce que voit le joueur
