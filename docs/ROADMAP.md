@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-08
+> Dernière mise à jour : 2026-09-09
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -48,7 +48,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | ✅ **Terminée** le 2026-08-18 — six étapes closes. Ne restent que des vérifications à la main |
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
-| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
+| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Le premier essai à deux machines a eu lieu le 2026-09-09 et a trouvé un défaut** : l'hôte partait seul, l'invité restait au menu. Corrigé, deux bancs posés — **reste à rejouer l'essai** |
 | 9 | **Mise à jour du jeu installé** | ✅ **Éprouvée le 2026-09-08** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. Les deux jalons humains sont faits : la paire de clés (H8) et la première mise à jour réelle sur machine (H9, testée par Adrien) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
@@ -1500,8 +1500,20 @@ là où il y aura une sélection.
 
 ## Phase 8 — Appariement ✅ CLOSE CÔTÉ CODE le 2026-08-18
 
-**Une seule inconnue subsiste, et elle est humaine : l'essai à deux fenêtres.**
-Tout le reste est écrit, exercé, et une partie est prouvée contre le vrai service.
+**L'inconnue restante était l'essai à deux machines. Il a eu lieu le 2026-09-09,
+et il a trouvé le défaut que rien ne pouvait voir d'un seul côté** : l'hôte
+lançait sa manche avant que l'invité soit connecté, donc seul, donc en bac à
+sable — pour toujours. Détail dans « Ouvrir un lien n'est pas l'établir », aux
+Pièges connus.
+
+Ce chemin n'était couvert par **aucun** banc : les modes `--host` / `--join`
+entrent tous par le salon à code, où l'hôte attend l'adversaire AVANT de se
+déclarer prêt. L'appariement fait l'inverse — il ouvre le lien puis annonce — et
+c'est précisément cet ordre qui cassait. Deux bancs le tiennent désormais, et il
+faut les deux : `--appariement` (une instance) pour « il ne part pas seul »,
+`run_duo.sh --apparie` (deux instances) pour « il part quand l'autre arrive ».
+
+Le reste est écrit, exercé, et une partie est prouvée contre le vrai service.
 
 Ce qui a été livré au-delà du plan, et pourquoi :
 
@@ -3113,6 +3125,47 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Ouvrir un lien n'est pas l'établir (2026-09-09)
+
+`Matchmaking._try_launch()` appelle `host_matched_game()` puis émet `match_ready`
+**dans la foulée, sans rendre la main**. À cet instant la socket est ouverte et
+`multiplayer.get_peers()` est **vide** — l'invité n'a pas encore eu une seule
+image pour s'y connecter, il ne le peut pas. `game_state._on_match_ready()`
+lançait pourtant `_start_round()` là, lequel prenait donc systématiquement sa
+branche « hôte resté seul » : bac à sable, cible d'entraînement, « EN ATTENTE
+D'UN ADVERSAIRE… ».
+
+**Et plus rien ne l'en sortait.** La porte PRÊT (2026-08-26) avait retiré le
+départ automatique de `_on_peer_connected` et de `rpc_client_weapon` — à juste
+titre pour un salon à code, où deux humains se déclarent — mais l'appariement
+n'a pas de porte PRÊT, Adrien ayant tranché le 2026-08-18 qu'il n'en aurait pas.
+**Aucun des deux changements n'était fautif seul ; c'est leur rencontre**, et
+c'est la troisième fois que ce dépôt paie exactement cette forme-là.
+
+Ce qu'Adrien voyait à deux machines : les deux se trouvent, l'une entre dans
+l'arène et y attend un joueur 2 qui ne vient jamais, l'autre reste dans son menu.
+**Aucune erreur console des deux côtés.** Son journal montre le reste — le client
+se connecte (`connected to server`, `peer connected — id 1`, `protocole 8
+accepté`), puis chacun relance sa recherche, republie des tickets, et chaque
+nouvelle jointure remplace le pair vivant : le symptôme se recouvre lui-même.
+
+⚠️ **`round_active` ne décrivait pas le défaut.** Il valait `false` des deux
+côtés — c'est-à-dire la même chose qu'un menu sain — pendant que l'hôte était
+dans l'arène. Ce qui le décrit, ce sont `sandbox_mode` et `_is_main_menu`
+ensemble : *où le joueur se trouve*, pas *ce que la boucle fait*. Le même piège
+avait déjà été payé le 2026-08-18, et le banc portait déjà le commentaire qui
+l'énonce.
+
+**Correctif** : `_on_match_ready()` **arme** le départ (`_matchmade_start_pending`)
+au lieu de le prendre, et `rpc_client_weapon` le consomme — le premier instant où
+l'hôte a À LA FOIS un pair connecté et l'arme qu'il tient. Une échéance
+(`DELAI_INVITE_APPARIE`) empêche le report de déplacer le blocage au lieu de le
+supprimer. Deux bancs le verrouillent, et il faut les deux :
+`test_online_match --appariement` (une instance) prouve qu'il ne part pas seul,
+`run_duo.sh --apparie` (deux instances, ENet) qu'il part quand l'invité arrive.
+Vérifié : sans le correctif, le premier rougit sur trois contrôles et le second
+sur quatre.
 
 ### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
 
@@ -13917,3 +13970,4 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 | 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
 | 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
 | 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |
+| 2026-09-09 | Deux machines, **recherche automatique** (le premier essai de ce chemin) | Elles se trouvent, mais **une seule entre en match** : l'hôte attend un joueur 2 qui reste dans son menu. Aucune erreur console. Cause : `match_ready` est émis avant que le lien soit établi, l'hôte partait donc seul en bac à sable — voir « Ouvrir un lien n'est pas l'établir » dans les Pièges connus. Corrigé, et couvert par deux bancs. **Reste à rejouer à deux machines.** |

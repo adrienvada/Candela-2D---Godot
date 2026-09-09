@@ -179,6 +179,16 @@ elif [ "${1:-}" = "--pause" ]; then
   MODE_HOTE="--host-pause"
   MODE_CLIENT="--join-pause"
   TITRE="La pause en ligne ne gèle rien (famille 1)"
+elif [ "${1:-}" = "--apparie" ]; then
+  # Le seul scénario qui n'entre PAS par le salon à code : l'appariement ouvre le
+  # lien lui-même et annonce ensuite. C'est cet ordre — annoncer avant que le lien
+  # soit établi — qui a laissé l'hôte seul dans son arène le 2026-09-09, l'invité
+  # restant dans son menu. Le banc single-process `--appariement` verrouille la
+  # moitié « il ne part pas seul » ; celui-ci verrouille l'autre : « il part quand
+  # l'invité arrive ».
+  MODE_HOTE="--host-apparie"
+  MODE_CLIENT="--join-apparie"
+  TITRE="Départ d'un match apparié, sans porte PRÊT"
 else
   MODE_HOTE="--host"
   MODE_CLIENT="--join"
