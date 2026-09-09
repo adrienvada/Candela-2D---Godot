@@ -7594,7 +7594,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   selon `proximite_bord` (< 0.45 = coup net au centre, >= 0.45 = effleurement
   tangentiel) via `AudioManager.play_hit(pos, proximite_bord)`.
 - **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
-  le geste le plus stylé du jeu. — *assets : 3 samples.*
+  le geste le plus stylé du jeu. — *assets : 3 samples.* **✅ Fait le 2026-09-09** —
+  foley mécanique physique (choc balistique, balayage Doppler, flutter de vrille et
+  résonance d'acier) sur `ricochet_01.wav`, `ricochet_02.wav`, `ricochet_03.wav`.
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
   presse pendant le rechargement. — *assets : 1 sample.* **✅ Fait côté image.**
   Presser la détente pendant le rechargement ne produisait **rien** : ni son, ni

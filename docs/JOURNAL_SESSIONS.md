@@ -2789,7 +2789,9 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - **Battement d'urgence des 10 secondes (V3.4) :** `game_state.gd` — ponctuation métronomique d'urgence `ui_tick` sous 10.0 s.
   - **Acouphène et étouffement de mort (V2.8) :** `player.gd` — déclenchement de `AudioManager.jouer_acouphene_mort()` à la mort locale.
   - **Cartes de fin de soirée (V6.10 / DA6.3) :** `serie_de_session.gd`, `game_state.gd`, `ui.gd`, `tools/test_serie_de_session.gd` — carte récapitulative (« CE SOIR : N MATCHS · V-D · ARME FAVORIE : NOM ») dès 3 matchs joués, affichée dans le bilan composé et au retour menu.
-- **Couverture & Validation :**
-  - 63/63 suites headless solo + 9/9 scénarios duo réseau (ENet, départ apparié, coupures, pause, killcam, ralenti, spam de prêt, reconnexions) **100 % au vert sans aucune erreur de script** dans `tools/run_suites.sh` (285s).
+- **Foley du ricochet mécanique (V4.3) :**
+  - Synthèse physique de 3 variantes haute fidélité (`ricochet_01.wav`, `ricochet_02.wav`, `ricochet_03.wav`) en PCM 16-bit 48 kHz stéréo : impact balistique transitoire (< 5 ms), sifflement Doppler descendant d'arrachement, flutter de rotation excentrique de la balle déformée (95-185 Hz) et résonance mécanique de plaque d'acier.
+  - Mise à jour de `preview_soundboard.html` avec les 3 flux base64 synchronisés.
+  - 64/64 suites headless solo vertes (86s) dans `tools/run_suites.sh --rapide`.
 
 
