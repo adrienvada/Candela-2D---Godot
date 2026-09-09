@@ -10721,9 +10721,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 
-- **DA5.1 L'audit zéro-défaut** — une session parcourt chaque écran et liste
-  toute valeur par défaut encore visible : fonte, couleur, easing, curseur,
-  son manquant. Le livrable est la liste, cochée ensuite. *(S)*
+- **DA5.1 L'audit zéro-défaut** ✅ **FAIT le 2026-09-09.** Le livrable est la
+  liste ci-dessous — le vrai résultat n'est pas les défauts visuels (aucun
+  trouvé sur ce que la planche couvre) mais **seize réglages sur trente-quatre
+  qui ne pilotent rien**. Détail ci-dessous. *(S)*
 - **DA5.2 Blanc pur et noir pur interdits** hors fond du monde — tout passe au
   blanc cassé et au noir de la bible. *(S)*
 - **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
@@ -10743,6 +10744,72 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   Les 15 effets de menus sont procéduraux : sous la nouvelle palette et les
   nouvelles fontes ils deviennent un écrin ; sans ça, ils amplifient le look
   actuel. Détail ci-dessous. *(S)*
+
+#### DA5.1 — l'audit zéro-défaut, ce qu'il trouve
+
+**La passe visuelle ne trouve rien de nouveau sur ce que `planche_contact.gd`
+couvre** — dix-neuf images régénérées (`./tools/run_visuel.sh --planche`),
+aucun blanc pur, aucun cadre noir, aucune fonte par défaut. Un constat daté,
+donc à vérifier de nouveau avant livraison plutôt qu'à croire sur pièce : voir
+la mise en garde de ce fichier sur l'audio positionnel.
+
+**Un bug qu'un précédent audit avait signalé sans le corriger est réglé.**
+DA5.8 notait « l'écran des EFFETS est vide » (`ScrollContainer` de hauteur 0).
+Vérifié sur `04-3-reglages.png` : le cadre de droite s'affiche entièrement,
+scrollable, réglages CONFORT visibles jusqu'à « Quelqu'un derrière la vitre ».
+Résolu entre-temps par un autre chantier — pas de commit à en tirer.
+
+**Ce que `planche_contact.gd` ne couvre pas, par construction et pas par
+oubli** — le fichier l'explique lui-même : les écrans de salon/appariement
+(effet de bord réseau) et tout ce qui n'existe qu'en match (vignette de dégâts,
+bandeau FATAL, voile d'éblouissement). Ces trois-là sont exactement les cibles
+de DA5.2/DA5.7/DA5.5 ci-dessous — leur vérification visuelle passe par
+`./tools/run_visuel.sh --eblouissement` et par un jugement à l'œil à chaque
+étape, pas par cet outil.
+
+**La passe mécanique sur `EffectPolicy.EFFECTS` est le vrai résultat de cette
+étape.** Trente-quatre identifiants dans la table ; recherche de
+`current_effect("<id>")` / `effective_effect("<id>")` / `get_effect("<id>")`
+avec l'identifiant en **littéral**, hors `effect_policy.gd`, `settings_manager.gd`
+et `tools/` (qui liste tout génériquement pour construire l'écran des réglages
+et ne prouve donc rien sur l'application réelle). Seize identifiants sur
+trente-quatre — 47 % — n'ont **aucun** site d'appel en production :
+
+| Famille | Identifiants sans aucun appel de production |
+|---|---|
+| CONFORT (8/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `vibration_manette`, `arene_au_repos` |
+| MONDE (8/12) | `eblouissement`, `silhouette_revelee`, `flash_de_tir`, `trait_de_balle`, `lumiere_impact`, `particules_sang`, `eclats_impact`, `traces_de_sang` |
+
+Les dix-huit restants sont bien branchés — les quinze effets de la vague M via
+`UI._intensite_vitrine()` (`ui.gd:3542-3564`), plus `poussiere_faisceau`
+(`player.gd:1616`), `fusee_agonie` et `fusee_diffusion` (`fusee.gd:524,554`).
+
+**Le curseur bouge, l'écran ne change pas.** Vérifié sur `04-3-reglages.png` :
+« Cadran de titre », « Rémanence du curseur » et « Torche du curseur » (bien
+branchés) partagent la même liste, la même présentation à 100 %, que les sept
+CONFORT morts plus bas dans la même colonne — rien ne distingue à l'écran un
+réglage qui agit d'un réglage qui ne fait rien. Un joueur qui descend
+« Vignette de dégâts » à zéro pour le confort continue de voir le rouge plein
+à chaque coup encaissé.
+
+**`eblouissement` mérite une note à part : la table le dit brancher un des deux
+« grands moments » du jeu, et il ne branche rien.** `brouillage.gd:632` porte
+en commentaire « le voile par `GameSettings.current_effect("eblouissement")` »
+— un ancien site d'appel, retiré depuis le passage au voile texturé
+(chantier « le voile d'éblouissement texturé », 2026-08-27), sans que la table
+ni le commentaire n'aient suivi. C'est exactement le motif « un constat daté
+se lit comme une propriété » déjà consigné dans ce fichier. DA5.5 en tire une
+conséquence directe : il pose une entrée **neuve** (`aberration_eblouissement`)
+plutôt que de réactiver celle-ci — voir ce chantier pour le pourquoi.
+
+**Signalé, pas corrigé — hors périmètre des six items DA5** (les sept familles
+CONFORT/MONDE mortes ci-dessus, moins `eblouissement` déjà traité par DA5.5,
+et moins `poussiere_faisceau`/`fusee_*` qui sont vivants) : quinze réglages
+qu'un joueur peut manipuler sans aucun effet mesurable. Retirer un réglage
+touche `effect_policy.gd`, l'écran des effets et une éventuelle valeur
+persistée — un chantier à part, de la même famille que le retrait de
+l'entrée `eblouissement` inerte déjà signalé au 2026-09-07 par la session
+« retouche éblouissement ».
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

@@ -247,6 +247,47 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 — session « DA5 · chasse aux défauts » : déclaration d'ouverture
+
+**Worktree `.claude/worktrees/da5-chasse-defauts-116ef6`, branche
+`claude/da5-chasse-defauts-116ef6`.** Chantier DA5 (docs/ROADMAP.md, section
+« La chasse aux défauts »), neuf étapes, chacune son commit. Périmètre exact,
+et il **traverse trois domaines** parce que le chantier lui-même est
+transversal — signalé ici plutôt que découvert par qui fusionnera :
+
+| Fichier | Domaine habituel | Ce que j'y touche |
+|---|---|---|
+| `charte.gd` | commun, non réservé | ajout de fonctions de contour/ombre (DA5.7a) |
+| `damage_vignette.gdshader`, `player.gd` | game feel | défaut de couleur (DA5.2) |
+| `bullet.gd` | game feel — **libre depuis le 2026-09-07** (session SG) | migration vers `Charte.contourer_settings` (DA5.7b) |
+| `game_state.gd` | game feel, disputé | idem, le tampon KILL (DA5.7b) |
+| `training_target.gd`, `map_editor_hud.gd` | game feel / non réservé | idem (DA5.7b) |
+| `ui.gd` | **menus** | idem (DA5.7b/c), câblage de l'aberration de l'éblouissement (DA5.5) |
+| `poussiere_faisceau.gdshader` | game feel (`*.gdshader`) | bruit sur le cercle (DA5.3a) |
+| `menu_backdrop.gdshader` | **menus** (`menu_*.gdshader`) | bruit sur les cercles (DA5.3b) |
+| `voile_eblouissement.gdshader`, `effect_policy.gd`, `tools/banc_voile.gd` | **retouche éblouissement** | commentaire du grain (DA5.4), aberration chromatique neuve (DA5.5) |
+
+**`bullet.gd` et `game_state.gd` :** la session SG a dit le 2026-09-07 que
+`bullet.gd` « demeure libre pour qui le veut ». `game_state.gd` reste le
+fichier disputé du domaine « game feel » — je n'y touche qu'un bloc isolé (le
+tampon `KILL`), rien à l'orchestration.
+
+**`ui.gd` et `menu_backdrop.gdshader` (domaine « menus ») :** empiètement
+déclaré, sur des points isolés et documentés — un remplacement d'appel pour
+chaque site d'outline (DA5.7), l'ajout d'un uniforme et de deux lignes de
+câblage pour l'aberration (DA5.5). Aucune restructuration des écrans.
+
+**`voile_eblouissement.gdshader` / `effect_policy.gd` (domaine « retouche
+éblouissement ») :** la session qui les tient est visible dans `ListAgents`
+sous « Retouche éblouissement », actuellement inactive. Empiètement déclaré —
+si elle reprend la main pendant que j'y travaille, qu'elle le dise ici, je
+n'y suis que pour DA5.4 (commentaire) et DA5.5 (aberration chromatique,
+décision actée avec Adrien).
+
+**Suivi de projet :** je ne republie pas moi-même — mon delta part par
+`SendMessage` à la session qui porte la republication (recherche en cours via
+`ListAgents`).
+
 ### 2026-09-09 (suite) — session « retouche éblouissement » : un lot qui allait effacer trois sessions
 
 **L'arbre partagé portait un index qui supprimait 141 lignes et n'en ajoutait
