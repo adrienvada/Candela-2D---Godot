@@ -57,9 +57,13 @@ func _run() -> void:
 func _test_socle() -> void:
 	print("\n[Hors compétitif : le socle, asymétrique]")
 	var libre: Array = _L.available(false)
-	_check("les quatre armes sont proposées", libre.size() == 4, str(libre))
+	# ⚠️ **Dix, et pas quatre.** Le socle veut dire « tout ce qui existe » ; le
+	# laisser à quatre pendant que le catalogue en compte dix aurait fait d'une
+	# non-restriction une restriction, sans que personne ne l'ait décidé.
+	_check("les dix classes sont proposées", libre.size() == 10, str(libre))
 	_check("le pistolet en fait partie", _L.PISTOLET in libre)
 	_check("l'arbalète aussi", _L.ARBALETE in libre)
+	_check("le Spectre aussi", _L.SPECTRE in libre)
 	# Le rang ne doit rien changer hors compétitif : c'est ce qui distingue
 	# l'amical du classé, et le confondre verrouillerait des armes entre amis.
 	_check("le rang n'y change rien",

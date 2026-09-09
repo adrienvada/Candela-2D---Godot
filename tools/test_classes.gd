@@ -14,6 +14,11 @@
 ##     tir, c'est-à-dire une réserve cachée, invisible à l'écran ;
 ##   • **zéro fusée est une valeur légitime**, pas un cas dégradé : le Spectre
 ##     n'éclaire jamais, et c'est sa classe ;
+##   • **l'index de classe n'est plus une POSITION** — c'est le contrôle le plus
+##     cher de la section « écran », parce que le défaut qu'il attrape est
+##     silencieux : la liste s'ordonne par rang, `get_pressed_button().get_index()`
+##     rendait la place dans le conteneur, et le joueur serait parti avec une
+##     autre classe que celle affichée, sans une erreur ;
 ##   • **les trois profils n'ont AUCUNE dépendance** — c'est ce qui permet à
 ##     cette suite de tourner en `--script`, et le jour où l'un d'eux nommera un
 ##     autoload, elle cessera de compiler. C'est voulu : voir `fusee_modele.gd`.
@@ -65,6 +70,8 @@ func _run() -> void:
 	# encore été exécutée, et l'autre moitié ne l'a jamais été. Un garde-fou qui
 	# ne peut pas échouer est pire qu'un garde-fou absent — on le croit tenu.
 	await _test_socle_gadgets()
+	_test_lecture_de_l_arme()
+	await _test_ecran_de_classes()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -503,3 +510,172 @@ func _test_socle_gadgets() -> void:
 	_check("le test d'antériorité ne s'appelle plus « mur » DANS LE CODE",
 		not t.contains("var wall_first") and t.contains("var obstacle_avant"))
 	_check("la traversée est bornée", t.contains("TRAVERSES_MAX"))
+
+
+## L'écran de sélection de classe — chantier CLASSES, étape 7.
+##
+## ⚠️ **Cette section monte `main.tscn`.** Elle est donc la seule du fichier à
+## dépendre des autoloads et du catalogue ; tout ce qui précède reste pur, et
+## c'est ce qui permet à la suite de tourner en `--script`.
+func _test_ecran_de_classes() -> void:
+	print("\n[L'écran de sélection de classe]")
+	var scene: PackedScene = load("res://main.tscn")
+	if scene == null:
+		_check("main.tscn se charge", false)
+		return
+	var main: Node = scene.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+
+	var ui: Node = main.get_node_or_null("UI")
+	var gs: Node = main
+	if ui == null or not gs.has_method("classes"):
+		_check("l'interface et le catalogue répondent", false)
+		main.queue_free()
+		return
+
+	var catalogue: Array = gs.classes()
+
+	# ── Le nombre de boutons ne se devine pas, il se compare ────────────────
+	# `NB_CLASSES` est écrit en dur dans `ui.gd` parce que l'interface se monte
+	# avant le catalogue. Sans ce contrôle, ajouter une onzième classe la
+	# laisserait invisible dans l'écran qui sert à choisir — sans une erreur.
+	_check("ui.NB_CLASSES vaut la taille du catalogue",
+		int(ui.NB_CLASSES) == catalogue.size(),
+		"%d vs %d" % [int(ui.NB_CLASSES), catalogue.size()])
+	_check("le râtelier de J1 porte autant de boutons",
+		ui.p1_weapon_buttons.size() == catalogue.size(),
+		str(ui.p1_weapon_buttons.size()))
+	_check("celui de J2 aussi",
+		ui.p2_weapon_buttons.size() == catalogue.size(),
+		str(ui.p2_weapon_buttons.size()))
+
+	if ui.p1_weapon_buttons.is_empty():
+		main.queue_free()
+		return
+
+	# ── L'ordre affiché est celui des RANGS ─────────────────────────────────
+	var rangs: Array[int] = []
+	var index_affiches: Array[int] = []
+	for btn in ui.p1_weapon_buttons:
+		var idx := int(btn.get_meta(ui.META_CLASSE_INDEX, -1))
+		index_affiches.append(idx)
+		rangs.append(int(catalogue[idx].rang) if idx >= 0 and idx < catalogue.size() else -1)
+	var croissant := true
+	for i in range(1, rangs.size()):
+		if rangs[i] < rangs[i - 1]:
+			croissant = false
+	_check("les classes s'affichent par rang croissant", croissant, str(rangs))
+	_check("les dix index sont tous présents une fois",
+		index_affiches.size() == catalogue.size()
+			and _tous_distincts(index_affiches)
+			and index_affiches.min() == 0
+			and index_affiches.max() == catalogue.size() - 1,
+		str(index_affiches))
+
+	# ⚠️ **LE contrôle de la section.** Si la place et l'index coïncidaient, la
+	# lecture positionnelle d'avant marcherait encore et personne ne verrait le
+	# jour où elle cesse de marcher. Il faut donc qu'ils DIFFÈRENT quelque part —
+	# et c'est le cas dès que la table des rangs n'est pas l'ordre du catalogue.
+	var au_moins_un_decale := false
+	for place in index_affiches.size():
+		if index_affiches[place] != place:
+			au_moins_un_decale = true
+	_check("la place d'un bouton n'est PAS son index de classe",
+		au_moins_un_decale, str(index_affiches))
+
+	# ── L'aller-retour de sélection ─────────────────────────────────────────
+	var aller_retour := true
+	var faute := ""
+	for joueur in [0, 1]:
+		for idx in catalogue.size():
+			ui.set_weapon_selection(joueur, idx)
+			var lu: int = ui.selected_weapon_index(joueur)
+			if lu != idx:
+				aller_retour = false
+				faute = "J%d : posé %d, lu %d" % [joueur + 1, idx, lu]
+	_check("ce qui est posé est ce qui est lu, pour les dix et les deux joueurs",
+		aller_retour, faute)
+	ui.set_weapon_selection(0, 0)
+	ui.set_weapon_selection(1, 0)
+
+	# ── La fiche dit quelque chose de chaque classe ─────────────────────────
+	var fiche = ui._fiche_classe
+	_check("la fiche est montée", fiche != null)
+	if fiche != null:
+		var muettes: Array[String] = []
+		for idx in catalogue.size():
+			fiche.montrer(catalogue[idx], catalogue)
+			# Le nom, l'arme, la prose et le gadget : les quatre choses qu'Adrien a
+			# demandées. Une seule vide, et la fiche affiche un trou là où le
+			# joueur attend une réponse.
+			if String(fiche._nom.text).is_empty() \
+					or String(fiche._arme.text).is_empty() \
+					or String(fiche._description.text).is_empty() \
+					or String(fiche._gadget.text) == "—":
+				muettes.append(String(catalogue[idx].slug()))
+		_check("les dix fiches sont remplies", muettes.is_empty(), str(muettes))
+
+		# Le zéro absolu se distingue de « la plus faible des dix » : le Spectre
+		# n'a pas peu de fusées, il n'en a aucune, et sa ligne le dit.
+		var spectre = null
+		for c in catalogue:
+			if String(c.slug()) == "spectre":
+				spectre = c
+		if spectre != null:
+			fiche.montrer(spectre, catalogue)
+			_check("le Spectre annonce zéro fusée",
+				String(fiche._fusees.text) == "aucune", String(fiche._fusees.text))
+
+	# ── Le panneau existe et l'entrée qui le nomme y mène ───────────────────
+	var hub = ui.hub
+	_check("le panneau de classes est enregistré",
+		hub != null and hub.panneau(ui.PANEL_CLASSES) != null)
+
+	main.queue_free()
+	await process_frame
+
+
+func _tous_distincts(valeurs: Array[int]) -> bool:
+	var vus: Dictionary = {}
+	for v in valeurs:
+		if vus.has(v):
+			return false
+		vus[v] = true
+	return true
+
+
+## ⚠️ **Un contrôle TEXTUEL, et il vaut mieux qu'un contrôle de comportement.**
+##
+## Un `get_index()` réintroduit dans `game_state.gd` passerait tous les contrôles
+## ci-dessus tant que l'ordre des rangs coïnciderait par hasard avec celui du
+## catalogue sur la classe testée. Ce qu'on protège n'est pas un résultat, c'est
+## un CHEMIN de lecture : il n'y en a qu'un, et il s'appelle
+## `ui.selected_weapon_index()`.
+func _test_lecture_de_l_arme() -> void:
+	print("\n[L'arme choisie se lit par un seul chemin]")
+	var src := FileAccess.get_file_as_string("res://game_state.gd")
+	# ⚠️ **Les commentaires sont retirés avant de chercher.** La première version
+	# de ce contrôle rougissait sur le commentaire qui EXPLIQUE le remplacement —
+	# la troisième fois de ce chantier qu'un contrôle textuel interdit le mot dans
+	# la phrase qui dit pourquoi il est interdit.
+	var code := ""
+	for ligne in src.split("\n"):
+		if not ligne.strip_edges().begins_with("#"):
+			code += ligne + "\n"
+	_check("game_state.gd ne lit plus de position de bouton",
+		not code.contains("get_pressed_button().get_index()"))
+	_check("il passe par selected_weapon_index",
+		src.contains("ui.selected_weapon_index("))
+	var ui_src := FileAccess.get_file_as_string("res://ui.gd")
+	_check("l'index de classe voyage en métadonnée",
+		ui_src.contains("META_CLASSE_INDEX"))
+	# La description est ce qui remplit la fiche : une classe sans prose afficherait
+	# un bloc vide, et rien ne le signalerait.
+	var gs_src := FileAccess.get_file_as_string("res://game_state.gd")
+	var lignes := 0
+	for ligne in gs_src.split("\n"):
+		if ligne.strip_edges().begins_with("") and ligne.contains(".description = \""):
+			lignes += 1
+	_check("les dix classes portent une description", lignes == 10, str(lignes))

@@ -3133,6 +3133,30 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un index qui est en fait une POSITION (2026-09-09)
+
+`game_state.gd` lisait l'arme choisie par `get_pressed_button().get_index()` :
+l'index de l'arme était la **place du bouton dans son conteneur**. Sept lectures,
+toutes justes pendant des mois — parce que les quatre boutons étaient créés dans
+l'ordre du catalogue.
+
+**Ce qui rend ce piège coûteux, c'est qu'il n'a aucun symptôme.** Le jour où la
+liste s'ordonne autrement — par rang, ce que l'écran de sélection de classe
+demande —, la place et l'index cessent d'être le même nombre : aucune erreur,
+aucun avertissement, le joueur part simplement avec une autre classe que celle
+qu'il a cochée. Un `ButtonGroup.get_buttons()` porte la même illusion en pire :
+son ordre est celui de l'**inscription**, qu'aucune ligne de code ne montre.
+
+`menu_hub.gd` avait déjà payé la leçon sur ses panneaux — des bancs comptaient
+`get_children()[2]`, un panneau intégré les a tous décalés d'un cran, et ils sont
+sortis avec **deux erreurs de script et un code 0**. La phrase y est écrite :
+*une position n'est pas une identité.*
+
+**La règle :** ce qui identifie voyage en métadonnée ou en clé, jamais en rang de
+naissance. Et le contrôle qui en découle est contre-intuitif — il faut exiger que
+la position et l'identité **diffèrent** quelque part dans le jeu de données de
+test, sinon la lecture fautive passe au vert et le garde-fou ne garde rien.
+
 ### La phrase doit porter la PORTÉE de la commande (2026-09-09)
 
 #### Cas d'école : une consigne d'outil que personne n'avait jamais EXÉCUTÉE (2026-09-09)
@@ -14270,6 +14294,75 @@ Braconnier et ses 0,60 s de root est au rang 4, l'Allumeur et ses 0,20 s au
 rang 9. Le contrôle vérifie désormais la **propriété** plutôt que des valeurs, et
 survit donc à un remaniement saisonnier. Un contrôle neuf s'ajoute : les dix
 catégories donnent dix classes **distinctes**.
+
+### Étape 9 — l'écran de SÉLECTION DE CLASSE ✅
+
+Demandé par Adrien le 2026-09-09 : « le menu de sélection d'armes évolue pour
+donner lieu à un menu de sélection de classe, qui décline également une
+description, le gadget, les dégâts et caractéristiques de l'arme. Tout ça dans
+une interface ultra stylisée en style Roman Graphique/RPG. »
+
+Le choix quitte le salon pour devenir un **panneau du cadre de droite**
+(`PANEL_CLASSES`), exactement comme la galerie de cartes — deux colonnes de dix
+noms, une fiche. Le salon garde une **carte d'état** par joueur, du même geste que
+la carte d'arène. La raison est de place : dix classes et leur fiche font trois
+fois la hauteur de la colonne du salon, laquelle porte encore l'arène, la liste
+des joueurs, le code et le bouton qui lance. La fenêtre de décompte reçoit la
+même fiche.
+
+#### Trois décisions qui portent la fiche
+
+1. **Les jauges disent « plus », jamais « mieux ».** Barre de RECHARGE pleine =
+   recharge longue. L'inverse — retourner les lignes où « moins vaut mieux » —
+   obligerait le joueur à retenir quelles lignes mentent, et le premier
+   équilibrage qui change le sens d'une ligne le ferait en silence. Ce qui
+   distingue les deux familles est la **couleur** (teinte du joueur / ambre), pas
+   le sens de la barre.
+2. **L'échelle vient du catalogue, à chaque affichage.** Écrire « 100 dégâts =
+   plein » aurait créé une seconde vérité, périmée au premier équilibrage et
+   périmée *sans bruit* : la barre n'aurait pas été fausse, juste mal remplie. Les
+   bornes se mesurent sur les dix ; la jauge répond « où cette classe se situe
+   parmi les dix », qui est la question qu'on se pose devant un écran de choix.
+3. **Le portrait est le sprite de jeu**, pas une illustration. C'est la
+   silhouette que l'adversaire découpera dans le faisceau ; une image séparée
+   promettrait une allure que le jeu ne rend pas.
+
+#### Le défaut le plus cher n'était pas dans la fiche
+
+**L'index de l'arme était la POSITION du bouton dans son râtelier.** Six endroits
+de `game_state.gd` lisaient `get_pressed_button().get_index()`, et un septième
+indexait `get_buttons()`. C'était juste tant que les quatre armes étaient créées
+dans l'ordre du catalogue. La liste de classes s'ordonne par **rang** — la
+progression que le joueur connaît —, et l'ordre des rangs n'est pas celui du
+catalogue : Parasite 1, Fumiste 2, Illusionniste 3… **Les deux nombres ont cessé
+d'être le même, sans qu'une seule erreur ne se lève** — on serait simplement parti
+avec une autre classe que celle affichée.
+
+L'index voyage désormais en métadonnée (`META_CLASSE_INDEX`), et il n'y a plus
+qu'un chemin de lecture, `ui.selected_weapon_index()`. `menu_hub.gd` avait déjà
+écrit la leçon pour ses panneaux : **une position n'est pas une identité.**
+
+`tools/test_classes.gd` exige que la place et l'index **diffèrent** quelque part —
+sans quoi la lecture positionnelle marcherait encore, et personne ne verrait le
+jour où elle cesse de marcher. Vérifié en sabotant le tri : deux ✗ franchement
+faux, verts une fois rétabli.
+
+#### `SOCLE` vaut les dix, et ce n'est pas un élargissement
+
+Il a toujours voulu dire « tout ce qui existe » : quatre entrées parce que le jeu
+comptait quatre armes, pas parce qu'on en retenait six. Le laisser à quatre
+pendant que le catalogue en compte dix aurait transformé une **non-restriction en
+restriction**, en silence — et l'écran aurait montré six classes grisées jusque
+dans l'entraînement, c'est-à-dire là où l'on va précisément essayer une classe.
+Ce qui se mérite reste ce qui se mérite : la table compétitive ne bouge pas.
+
+#### Deux pièges payés ici
+
+- **`trait` est un mot réservé de GDScript**, et le message ne le dit pas :
+  « Expected variable name after "var" ».
+- **`make_panel_style()` pose déjà GAP_M de marge intérieure** sur les quatre
+  côtés. Un `MarginContainer` par-dessus double la respiration ; et sur une
+  vignette de 88 px, il ne laisserait que 40 px d'image.
 
 ### Ce qui reste, dans l'ordre
 

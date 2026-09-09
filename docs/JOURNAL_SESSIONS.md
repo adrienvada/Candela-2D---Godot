@@ -27,7 +27,7 @@ par sujet impraticable.
 | **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
 | **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | ~~`eblouissement.gd`~~ **cédé au chantier CLASSES le 2026-09-09**, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
-| **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
+| **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `menu_fiche_classe.gd`, `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
 
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
@@ -2655,3 +2655,49 @@ ligne existe.
 **Relevé au passage, non corrigé** : `tools/test_arena_matter.gd` a échoué une
 fois en lot et passe seule, deux fois de suite. Instable en lot, pas cassée par
 ce chantier — signalé, pas touché.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 9, l'écran de sélection de classe)
+
+**Le choix d'arme devient un écran de classe.** Demande d'Adrien : description,
+gadget, dégâts et caractéristiques, « en style Roman Graphique/RPG ». Le râtelier
+quitte le salon pour un panneau du cadre de droite (`PANEL_CLASSES`), même chemin
+que la galerie de cartes — deux colonnes de dix noms rangés par rang, une fiche à
+droite. Le salon garde une **carte d'état** par joueur. La fenêtre de décompte
+reçoit la même fiche, en colonne.
+
+Nouveau fichier : `menu_fiche_classe.gd` (`MenuFicheClasse`). Six jauges crantées
+dont l'échelle est **mesurée sur le catalogue à chaque affichage** — écrire un
+maximum ici aurait créé une seconde vérité qui se périme sans bruit. Les barres
+disent « plus », jamais « mieux » ; la couleur seule sépare puissance et coût.
+
+**⚠️ Le vrai défaut n'était pas dans la fiche.** L'index de l'arme était la
+POSITION du bouton dans son râtelier — sept lectures dans `game_state.gd`. Juste
+tant que les quatre armes naissaient dans l'ordre du catalogue ; **faux dès que la
+liste s'ordonne par rang**, et faux en silence : on serait parti avec une autre
+classe que celle cochée. L'index voyage en métadonnée, et il n'y a plus qu'un
+chemin, `ui.selected_weapon_index()`. Nouvelle entrée aux « Pièges connus ».
+
+**`SOCLE` passe de quatre à dix** — assumé et signalé. Il voulait dire « tout ce
+qui existe » ; le laisser à quatre aurait fait d'une non-restriction une
+restriction, en silence, et aurait grisé six classes jusque dans l'entraînement.
+Si Adrien voulait réserver les six neuves au compétitif, c'est une ligne à
+remettre dans `rank_loadout.gd` — je ne la défendrai pas, mais elle doit être
+décidée, pas héritée.
+
+**⚠️ `ui.gd` largement remanié**, avec l'autorisation d'Adrien du jour (« tu peux
+toucher ui.gd, je n'ai plus de session menus active »). Les huit variables
+`p1_btn1`…`p2_btn4` deviennent deux tableaux, trois fonctions qui les énuméraient
+à la main suivent, et six entrées de menu « CHOISIR SA CLASSE » sont ajoutées.
+
+**Vérifié à l'œil, une fois** : capture de l'écran et de la fenêtre à 1600×900,
+un seul tour de retouches (fond de vignette en béton — les silhouettes noires ne
+se voyaient pas sur du noir ; icône de la classe cochée passée à l'encre — elle
+disparaissait teinte sur teinte ; le bandeau porte le nom du palier).
+
+**Sabotage de contrôle** : tri par index au lieu du rang → deux ✗ francs, verts
+une fois rétabli.
+
+**Deux pièges payés** : `trait` est un mot réservé de GDScript (le message dit
+seulement « Expected variable name after "var" ») ; et `make_panel_style()` pose
+déjà GAP_M de marge intérieure — un `MarginContainer` par-dessus double la
+respiration et ne laisse que 40 px d'image dans une vignette de 88.

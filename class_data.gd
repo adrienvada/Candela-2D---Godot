@@ -37,6 +37,14 @@ extends WeaponData
 ## Le nom affiché. Il se traduit et se renomme ; le slug non.
 @export var libelle: String = ""
 
+## Ce que la classe FAIT, en une ou deux phrases, pour l'écran de sélection.
+##
+## ⚠️ **Elle décrit un geste, pas des chiffres.** Les caractéristiques sont déjà
+## dans les profils et l'écran les affiche à côté ; les redire en prose donnerait
+## deux vérités à maintenir, et celle-ci se périmerait la première — le dépôt a
+## déjà payé ça sur un paragraphe de `CLAUDE.md` daté « mesuré le 2026-08-25 ».
+@export_multiline var description: String = ""
+
 ## La catégorie de rang qui attribue cette classe en compétitif, de 1 (Aveugle)
 ## à 10 (Candela).
 ##

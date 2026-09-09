@@ -1023,12 +1023,13 @@ func _get_spawn_position(player_id: int) -> Vector2:
 	return Vector2(200, 200) if player_id == 0 else Vector2(800, 600)
 
 func _start_round():
-	var w1_idx = 0
-	if ui.p1_weapon_group.get_pressed_button():
-		w1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
-	var w2_idx = 0
-	if ui.p2_weapon_group.get_pressed_button():
-		w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+	# ⚠️ **`selected_weapon_index()` et plus `get_pressed_button().get_index()`.**
+	# L'index de l'arme était la POSITION du bouton dans son râtelier ; depuis que
+	# la liste des classes s'ordonne par rang, la position et l'index ne sont plus
+	# le même nombre — et un désaccord n'aurait levé aucune erreur, il aurait
+	# simplement fait partir le joueur avec une autre classe que celle affichée.
+	var w1_idx = ui.selected_weapon_index(0)
+	var w2_idx = ui.selected_weapon_index(1)
 
 	_restore_viewports()
 	p1.global_position = _get_spawn_position(0)
@@ -2670,14 +2671,17 @@ func rpc_client_weapon(idx: int):
 
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
-	var pressed: BaseButton = ui.p2_weapon_group.get_pressed_button()
-	return pressed.get_index() if pressed else 0
+	return ui.selected_weapon_index(1)
 
 ## Un index hors bornes ferait tomber l'hôte sur un paquet client malformé.
 func _set_p2_weapon_button(idx: int) -> void:
-	var buttons: Array = ui.p2_weapon_group.get_buttons()
-	if idx < 0 or idx >= buttons.size(): return
-	buttons[idx].button_pressed = true
+	# ⚠️ **Par index de classe, plus par position dans `get_buttons()`.** L'ordre
+	# d'un `ButtonGroup` est celui de l'INSCRIPTION des boutons : il coïncidait
+	# avec les index d'armes tant que les quatre étaient créées dans l'ordre du
+	# catalogue, et il n'a plus aucune raison de coïncider depuis que la liste
+	# s'ordonne par rang. L'interface refuse d'elle-même un index qu'elle ne
+	# propose pas — un index reçu du réseau n'est pas un droit.
+	ui.set_weapon_selection(1, idx)
 
 ## Le joueur quitte la fenêtre de choix. Renoncer à choisir son arme, c'est
 ## renoncer au match : on annule l'appariement et la recherche, et on rentre au
@@ -2739,24 +2743,28 @@ func weapon_for_index(idx: int) -> WeaponData:
 func _batir_catalogue() -> void:
 	# ── Les quatre existantes reçoivent leurs profils ────────────────────────
 	weapon_pistolet.libelle = "Le Parasite"
+	weapon_pistolet.description = "Il ne prend rien : il corrompt ce que l'autre reçoit. Cadence doublée, et un grésillement qui fait douter d'une lumière qui marche encore."
 	weapon_pistolet.rang = 1
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, 0.0)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
 
 	weapon_fusil.libelle = "L'Illusionniste"
+	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
 	weapon_fusil.rang = 3
 	weapon_fusil.root = _root(0.25)
 	weapon_fusil.fusees = _fusees(1, 0.0)
 	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
 
 	weapon_pompe.libelle = "Le Terrassier"
+	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin."
 	weapon_pompe.rang = 5
 	weapon_pompe.root = _root(0.35)
 	weapon_pompe.fusees = _fusees(3, 18.0)
 	weapon_pompe.gadget = _gadget("poussiere", "La poussière")
 
 	weapon_arbalete.libelle = "Le Braconnier"
+	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
 	weapon_arbalete.rang = 4
 	weapon_arbalete.root = _root(0.60)
 	weapon_arbalete.fusees = _fusees(1, 0.0)
@@ -2769,6 +2777,7 @@ func _batir_catalogue() -> void:
 	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
 	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
 	fumiste.name = "Pistolet lourd"
+	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un rideau de suie où l'on voit qu'il y a quelqu'un sans voir qui."
 	fumiste.cooldown = 0.42
 	fumiste.max_ammo = 3
 	fumiste.reload_time = 2.8
@@ -2782,6 +2791,7 @@ func _batir_catalogue() -> void:
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
+	incendiaire.description = "Le feu au rang du feu. Deux cartouches paraboliques, deux fusées incendiaires, et un sol qu'on ne traverse plus."
 	incendiaire.cooldown = 0.55
 	incendiaire.max_ammo = 2
 	incendiaire.reload_time = 3.2
@@ -2794,6 +2804,7 @@ func _batir_catalogue() -> void:
 
 	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
 	sentinelle.name = "Fusil à verrou"
+	sentinelle.description = "Elle ne cherche pas : elle veille. Perforant à longue portée, une fusée qui dure, et une poudre qui écrit les pas de qui passe."
 	sentinelle.cooldown = 0.85
 	sentinelle.max_ammo = 2
 	sentinelle.reload_time = 4.0
@@ -2806,6 +2817,7 @@ func _batir_catalogue() -> void:
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
 	occulteur.name = "Pistolet-mitrailleur"
+	occulteur.description = "Il masque la lumière au lieu d'en faire. Rafale courte, et une découpe d'acier qui projette l'ombre d'un homme qui n'existe pas."
 	occulteur.cooldown = 0.09
 	occulteur.max_ammo = 8
 	occulteur.reload_time = 2.6
@@ -2820,6 +2832,7 @@ func _batir_catalogue() -> void:
 
 	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
 	allumeur.name = "Carabine double"
+	allumeur.description = "Il allume — la mine, les cartouches vives, les deux fusées. La lumière maximale, celle qui ne laisse aucune ombre où se mettre."
 	allumeur.cooldown = 0.20
 	allumeur.max_ammo = 2
 	allumeur.reload_time = 2.4
@@ -2832,6 +2845,7 @@ func _batir_catalogue() -> void:
 
 	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
 	spectre.name = "Pistolet silencieux"
+	spectre.description = "Au sommet de l'échelle de la lumière, celui qui n'en émet aucune. Zéro fusée, zéro flash, et une bâche qui arrête les rayons sans arrêter les balles."
 	spectre.cooldown = 0.22
 	spectre.max_ammo = 4
 	spectre.reload_time = 2.6
@@ -3102,8 +3116,7 @@ func _on_replay_requested():
 			# telle quelle — et c'est ce qui supprime le démarrage automatique à
 			# l'arrivée du client, que personne n'avait demandé.
 			p1_ready_for_rematch = true
-			if ui.p1_weapon_group.get_pressed_button():
-				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_hosted_weapon_1_idx = ui.selected_weapon_index(0)
 			_annoncer_etat_hote()
 			_check_rematch_start()
 		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -3129,9 +3142,7 @@ func _on_replay_requested():
 				ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 			return
 
-		var w2_idx = 0
-		if ui.p2_weapon_group.get_pressed_button():
-			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+		var w2_idx = ui.selected_weapon_index(1)
 
 		local_ready_for_rematch = true
 		ui.btn_replay.text = "✓ PRÊT"
@@ -3141,8 +3152,7 @@ func _on_replay_requested():
 			rpc_id(1, "rpc_client_ready", w2_idx)
 		elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 			p1_ready_for_rematch = true
-			if ui.p1_weapon_group.get_pressed_button():
-				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_hosted_weapon_1_idx = ui.selected_weapon_index(0)
 			_annoncer_etat_hote()
 			_check_rematch_start()
 		else:
@@ -3259,9 +3269,7 @@ func _check_rematch_start():
 	if p1_ready_for_rematch and p2_ready_for_rematch:
 		p1_ready_for_rematch = false
 		p2_ready_for_rematch = false
-		var w2_idx = 0
-		if ui.p2_weapon_group.get_pressed_button():
-			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+		var w2_idx = ui.selected_weapon_index(1)
 		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif p2_ready_for_rematch:
 		# **Le message disait l'inverse de la vérité.** Quand le client s'était

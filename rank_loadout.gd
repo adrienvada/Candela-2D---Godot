@@ -54,7 +54,21 @@ const ALLUMEUR := 8
 const SPECTRE := 9
 
 ## Ce que tout le monde peut prendre hors compétitif, sans rien avoir mérité.
-const SOCLE: Array[int] = [PISTOLET, FUSIL, POMPE, ARBALETE]
+##
+## ⚠️ **Il vaut LES DIX depuis le 2026-09-09, et ce n'est pas un élargissement.**
+## Le socle a toujours voulu dire « tout ce qui existe » : il comptait quatre
+## entrées parce que le jeu comptait quatre armes, pas parce qu'on en retenait
+## six. Le laisser à quatre pendant que le catalogue en compte dix aurait
+## transformé une NON-restriction en restriction, en silence — et l'écran de
+## sélection aurait montré six classes grisées jusque dans l'entraînement, c'est-
+## à-dire précisément là où l'on va essayer une classe.
+##
+## Ce qui se mérite reste ce qui se mérite : la table compétitive attribue une
+## classe par rang, et elle, elle ne change pas.
+const SOCLE: Array[int] = [
+	PISTOLET, FUSIL, POMPE, ARBALETE,
+	FUMISTE, INCENDIAIRE, SENTINELLE, OCCULTEUR, ALLUMEUR, SPECTRE,
+]
 
 ## La sélection compétitive, par catégorie de rang — index 0 = Aveugle,
 ## première des dix catégories de l'échelle (`RANK_TIERS` dans `elo.ts`).
