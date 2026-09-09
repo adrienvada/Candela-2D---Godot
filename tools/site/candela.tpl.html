@@ -177,11 +177,6 @@ p { margin: 0; }
 /* =========================================================================
    LES TROIS SIGNAUX
    ========================================================================= */
-.signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.5rem var(--gap); margin-top: 1.9rem; }
-.signal { padding-top: 0.9rem; border-top: 2px solid var(--ambre); display: flex; flex-direction: column; gap: 0.45rem; }
-.signal:nth-child(2) { border-top-color: var(--halogene); }
-.signal:nth-child(3) { border-top-color: #8c2b31; }
-.signal p { color: var(--dim); font-size: 0.92rem; }
 
 /* =========================================================================
    LE GRAPHIQUE DES PORTÉES
@@ -216,6 +211,11 @@ html.js .vu .barre-trait { width: var(--w); }
 .rang-arme { font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .rang-arme.attente { color: #8d7855; border-bottom: 1px dotted #8d7855; }
 .note-echelle { margin-top: 1.1rem; font-size: 0.86rem; color: var(--dim); max-width: 54ch; }
+
+/* --- L'annonce ---------------------------------------------------------------
+   Ce qui n'est pas encore téléchargeable vit dans un bloc qui ne ressemble à
+   aucun autre : trait discontinu, récitatif inversé. Un lecteur doit savoir
+   qu'il lit une promesse sans avoir à lire la phrase qui le dit. */
 
 /* =========================================================================
    TÉLÉCHARGEMENT
@@ -290,15 +290,12 @@ html.js .vu .barre-trait { width: var(--w); }
 
 <div class="fond" aria-hidden="true">
   <div class="plan" data-scene="0" style="background-image:url('{{F_DESCENTE}}')"></div>
-  <div class="plan" data-scene="1" style="background-image:url('{{F_SEUIL}}')"></div>
-  <div class="plan" data-scene="2" style="background-image:url('{{F_DOTATION}}')"></div>
-  <div class="plan" data-scene="3" style="background-image:url('{{F_ALLUMAGE}}')"></div>
-  <div class="plan" data-scene="4" style="background-image:url('{{F_PRIX}}')"></div>
-  <div class="plan" data-scene="5" style="background-image:url('{{F_DUEL}}')"></div>
-  <div class="plan" data-scene="6" style="background-image:url('{{F_ARMES}}')"></div>
-  <div class="plan" data-scene="7" style="background-image:url('{{F_RANGS}}')"></div>
-  <div class="plan" data-scene="8" style="background-image:url('{{F_PORTE}}')"></div>
-  <div class="plan" data-scene="9" style="background-image:url('{{F_EXTINCTION}}')"></div>
+  <div class="plan" data-scene="1" style="background-image:url('{{F_PORTE}}')"></div>
+  <div class="plan" data-scene="2" style="background-image:url('{{F_SEUIL}}')"></div>
+  <div class="plan" data-scene="3" style="background-image:url('{{F_PRIX}}')"></div>
+  <div class="plan" data-scene="4" style="background-image:url('{{F_ARMES}}')"></div>
+  <div class="plan" data-scene="5" style="background-image:url('{{F_RANGS}}')"></div>
+  <div class="plan" data-scene="6" style="background-image:url('{{F_EXTINCTION}}')"></div>
   <div class="voile"></div>
   <div class="trame"></div>
   <div class="torche" id="torche"></div>
@@ -318,114 +315,8 @@ html.js .vu .barre-trait { width: var(--w); }
     </div>
   </section>
 
-  <!-- 1 — LE SEUIL -->
-  <section class="scene" data-scene="1">
-    <div class="dedans">
-      <p class="lettrage anim">On ne sait pas <span class="amb">pourquoi</span> il est là.</p>
-      <p class="sous-lettrage anim d1">Une porte en acier, un panneau rouillé où un seul mot reste lisible, et derrière, le noir. Candela ne raconte rien de plus : tout ce qui compte commence au moment où la porte se referme.</p>
-    </div>
-  </section>
-
-  <!-- 2 — LA DOTATION -->
-  <section class="scene" data-scene="2">
-    <div class="dedans">
-      <div class="case anim">
-        <p class="recitatif">La dotation</p>
-        <h2>Une torche.<br>Une arme.<br>Rien d’autre.</h2>
-        <div class="prose">
-          <p>Pas d’inventaire, pas de compétences, rien à préparer avant la partie. Deux objets, les mêmes pour les deux joueurs — et tout le jeu tient dans la façon dont vous vous servez du premier.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 3 — L'ALLUMAGE -->
-  <section class="scene" data-scene="3">
-    <div class="dedans">
-      <p class="lettrage anim">Éclairer,<br>c’est <span class="amb">voir</span>.</p>
-      <p class="sous-lettrage anim d1">Le faisceau révèle le béton, les douilles au sol, le sang séché des manches précédentes — et la silhouette de l’autre, s’il a le malheur d’entrer dedans.</p>
-    </div>
-  </section>
-
-  <!-- 4 — LE PRIX -->
-  <section class="scene" data-scene="4">
-    <div class="dedans">
-      <p class="lettrage a-droite anim">Éclairer,<br>c’est être <span class="amb">vu</span>.</p>
-      <p class="sous-lettrage a-droite anim d1">Le même cône dessine votre ombre sur le mur derrière vous, et se voit de l’autre bout de la carte. Chaque seconde de lumière est un renseignement que vous prenez et un renseignement que vous donnez. Les bons joueurs éteignent.</p>
-    </div>
-  </section>
-
-  <!-- 5 — LA RÈGLE -->
-  <section class="scene" data-scene="5">
-    <div class="dedans">
-      <div class="case case-large anim">
-        <p class="recitatif">La règle</p>
-        <h2>La seule information<br>est la lumière</h2>
-        <div class="prose">
-          <p>Il n’y a pas de mini-carte, pas de marqueur d’ennemi, pas de contour rouge dans le noir. Un mur bloque la lumière comme il bloque une balle : la torche s’arrête où le décor s’arrête, et ce que vous n’éclairez pas n’existe pas.</p>
-        </div>
-        <div class="signaux">
-          <div class="signal"><h3>La torche</h3><p>Le faisceau que vous tenez. Il vous montre le terrain, et vous désigne de très loin.</p></div>
-          <div class="signal"><h3>La rétrodiffusion</h3><p>Ce que la lumière de l’autre laisse sur les murs autour de vous. On sait qu’il est là avant de le voir — parfois.</p></div>
-          <div class="signal"><h3>Le flash de tir</h3><p>Une image de votre position, imprimée dans le noir une fraction de seconde. Tirer, c’est parler.</p></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 6 — LES ARMES -->
-  <section class="scene" data-scene="6">
-    <div class="dedans">
-      <div class="case case-large anim">
-        <p class="recitatif">Quatre armes</p>
-        <h2>Choisir une arme,<br>c’est choisir<br>comment on se trahit</h2>
-        <div class="prose">
-          <p>Chaque arme porte sa propre torche. Elles ne diffèrent pas seulement par les dégâts : elles diffèrent par la quantité de vous-même qu’elles montrent au reste de la carte.</p>
-        </div>
-        <figure class="figure">
-          <div class="figure-titre">Portée du faisceau, en largeurs d’écran</div>
-          <div class="figure-sous">Chaque joueur voit 480 unités devant lui. Au-delà, la torche allume quelque chose que son porteur ne voit pas.</div>
-          <div class="trace">
-            <div class="seuil" aria-hidden="true"></div>
-            <div class="barre"><div class="barre-nom">Pompe</div><div class="barre-piste"><div class="barre-trait" style="--w:28.3%"></div><div class="barre-val" style="left:28.3%">0,53 <span class="barre-detail">60° · large et court</span></div></div></div>
-            <div class="barre"><div class="barre-nom">Pistolet</div><div class="barre-piste"><div class="barre-trait" style="--w:45.5%"></div><div class="barre-val" style="left:45.5%">0,85 <span class="barre-detail">35° · polyvalent</span></div></div></div>
-            <div class="barre"><div class="barre-nom">Fusil</div><div class="barre-piste"><div class="barre-trait" style="--w:51.3%"></div><div class="barre-val" style="left:51.3%">0,96 <span class="barre-detail">précis</span></div></div></div>
-            <div class="barre"><div class="barre-nom">Arbalète</div><div class="barre-piste"><div class="barre-trait" style="--w:100%"></div><div class="barre-val" style="left:100%; transform:translate(-100%,-50%); padding-right:0.55rem; padding-left:0; color:var(--noir); font-weight:500;">1,87</div></div></div>
-          </div>
-          <p class="figure-note">L’arbalète est la seule à éclairer au-delà de ce que son porteur peut voir : un fil de lumière de 5°, silencieux, qui atteint des endroits dont il ne recevra jamais l’image.</p>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- 7 — LES RANGS -->
-  <section class="scene" data-scene="7">
-    <div class="dedans">
-      <div class="case case-large anim">
-        <p class="recitatif">Compétitif</p>
-        <h2>Dix rangs,<br>de l’aveugle<br>à l’unité de lumière</h2>
-        <div class="prose">
-          <p>Le classement se compte en ELO et se nomme en lumière. On commence sans rien voir ; on finit par porter le nom de l’unité qui mesure l’intensité d’une bougie.</p>
-        </div>
-        <div class="echelle">
-          <div class="rang"><span class="rang-num">01</span><span class="rang-nom" style="color:#5f6468">Aveugle</span><span class="rang-arme">Pistolet</span></div>
-          <div class="rang"><span class="rang-num">02</span><span class="rang-nom" style="color:#6e6a60">Braise</span><span class="rang-arme">Fusil</span></div>
-          <div class="rang"><span class="rang-num">03</span><span class="rang-nom" style="color:#7d7059">Bougie</span><span class="rang-arme">Pompe</span></div>
-          <div class="rang"><span class="rang-num">04</span><span class="rang-nom" style="color:#8d7855">Lanterne</span><span class="rang-arme">Arbalète</span></div>
-          <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color:#9d8153">Torche</span><span class="rang-arme attente">à venir</span></div>
-          <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color:#ae8a52">Brasier</span><span class="rang-arme attente">à venir</span></div>
-          <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color:#bf9450">Phare</span><span class="rang-arme attente">à venir</span></div>
-          <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color:#d09e4c">Aurore</span><span class="rang-arme attente">à venir</span></div>
-          <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color:#e2a745">Zénith</span><span class="rang-arme attente">à venir</span></div>
-          <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color:var(--ambre)">Candela</span><span class="rang-arme attente">à venir</span></div>
-        </div>
-        <p class="note-echelle">Les quatre premiers rangs ouvrent chacun une arme. <strong>Les six suivants n’ouvrent encore rien</strong> — le contenu qui les remplira est en chantier, et l’annoncer vaut mieux que de faire croire qu’un palier vide est un choix de conception.</p>
-      </div>
-    </div>
-  </section>
-
   <!-- 8 — TÉLÉCHARGER -->
-  <section class="scene" data-scene="8">
+  <section class="scene" data-scene="1">
     <div class="dedans">
       <div class="case case-large anim">
         <p class="recitatif">Jouer</p>
@@ -461,8 +352,75 @@ html.js .vu .barre-trait { width: var(--w); }
     </div>
   </section>
 
+  <!-- 1 — LE SEUIL -->
+  <section class="scene" data-scene="2">
+    <div class="dedans">
+      <p class="lettrage anim">On ne sait pas <span class="amb">pourquoi</span> il est là.</p>
+      <p class="sous-lettrage anim d1">Une porte en acier, un panneau rouillé où un seul mot reste lisible, et derrière, le noir. Candela ne raconte rien de plus : tout ce qui compte commence au moment où la porte se referme.</p>
+    </div>
+  </section>
+
+  <!-- LE PACTE — les deux moitiés en une seule planche -->
+  <section class="scene" data-scene="3">
+    <div class="dedans">
+      <p class="lettrage anim">Éclairer,<br>c’est <span class="amb">voir</span>.<br>Éclairer,<br>c’est être <span class="amb">vu</span>.</p>
+      <p class="sous-lettrage anim d1">Le faisceau révèle le béton, les douilles, le sang séché des manches précédentes — et la silhouette de l’autre, s’il a le malheur d’entrer dedans. Mais le même cône dessine votre ombre sur le mur derrière vous, et se voit de l’autre bout de la carte. Chaque seconde de lumière est un renseignement que vous prenez et un renseignement que vous donnez. <strong>Les bons joueurs éteignent.</strong></p>
+    </div>
+  </section>
+
+  <!-- 6 — LES ARMES -->
+  <section class="scene" data-scene="4">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">Quatre armes</p>
+        <h2>Choisir une arme,<br>c’est choisir<br>comment on se trahit</h2>
+        <div class="prose">
+          <p>Chaque arme porte sa propre torche. Elles ne diffèrent pas seulement par les dégâts : elles diffèrent par la quantité de vous-même qu’elles montrent au reste de la carte.</p>
+        </div>
+        <figure class="figure">
+          <div class="figure-titre">Portée du faisceau, en largeurs d’écran</div>
+          <div class="figure-sous">Chaque joueur voit 480 unités devant lui. Au-delà, la torche allume quelque chose que son porteur ne voit pas.</div>
+          <div class="trace">
+            <div class="seuil" aria-hidden="true"></div>
+            <div class="barre"><div class="barre-nom">Pompe</div><div class="barre-piste"><div class="barre-trait" style="--w:28.3%"></div><div class="barre-val" style="left:28.3%">0,53 <span class="barre-detail">60° · large et court</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Pistolet</div><div class="barre-piste"><div class="barre-trait" style="--w:45.5%"></div><div class="barre-val" style="left:45.5%">0,85 <span class="barre-detail">35° · polyvalent</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Fusil</div><div class="barre-piste"><div class="barre-trait" style="--w:51.3%"></div><div class="barre-val" style="left:51.3%">0,96 <span class="barre-detail">précis</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Arbalète</div><div class="barre-piste"><div class="barre-trait" style="--w:100%"></div><div class="barre-val" style="left:100%; transform:translate(-100%,-50%); padding-right:0.55rem; padding-left:0; color:var(--noir); font-weight:500;">1,87</div></div></div>
+          </div>
+          <p class="figure-note">L’arbalète est la seule à éclairer au-delà de ce que son porteur peut voir : un fil de lumière de 5°, silencieux, qui atteint des endroits dont il ne recevra jamais l’image.</p>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — LES RANGS -->
+  <section class="scene" data-scene="5">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">Compétitif</p>
+        <h2>Dix rangs,<br>de l’aveugle<br>à l’unité de lumière</h2>
+        <div class="prose">
+          <p>Le classement se compte en ELO et se nomme en lumière. On commence sans rien voir ; on finit par porter le nom de l’unité qui mesure l’intensité d’une bougie.</p>
+        </div>
+        <div class="echelle">
+          <div class="rang"><span class="rang-num">01</span><span class="rang-nom" style="color:#5f6468">Aveugle</span><span class="rang-arme">Pistolet</span></div>
+          <div class="rang"><span class="rang-num">02</span><span class="rang-nom" style="color:#6e6a60">Braise</span><span class="rang-arme">Fusil</span></div>
+          <div class="rang"><span class="rang-num">03</span><span class="rang-nom" style="color:#7d7059">Bougie</span><span class="rang-arme">Pompe</span></div>
+          <div class="rang"><span class="rang-num">04</span><span class="rang-nom" style="color:#8d7855">Lanterne</span><span class="rang-arme">Arbalète</span></div>
+          <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color:#9d8153">Torche</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color:#ae8a52">Brasier</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color:#bf9450">Phare</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color:#d09e4c">Aurore</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color:#e2a745">Zénith</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color:var(--ambre)">Candela</span><span class="rang-arme attente">à venir</span></div>
+        </div>
+        <p class="note-echelle">Les quatre premiers rangs ouvrent chacun une arme. <strong>Les six suivants n’ouvrent encore rien</strong> — le contenu qui les remplira est en chantier, et l’annoncer vaut mieux que de faire croire qu’un palier vide est un choix de conception.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- 9 — EN JEU, PUIS LA FIN -->
-  <section class="scene" data-scene="9">
+  <section class="scene" data-scene="6">
     <div class="dedans">
       <div class="case anim">
         <p class="recitatif">En jeu</p>
@@ -502,9 +460,27 @@ html.js .vu .barre-trait { width: var(--w); }
 (function () {
   "use strict";
   var doux = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // La classe `js` autorise le masquage. Posée seulement ici : sans script, la
-  // page reste entièrement lisible et le premier fond reste affiché.
-  document.documentElement.classList.add("js");
+  var racine = document.documentElement;
+
+  // ⚠️ `js` autorise le masquage du texte. Elle n'est donc posée QUE si l'on
+  // sait pouvoir le démasquer : sans IntersectionObserver, on n'anime rien
+  // plutôt que de cacher une page qu'on ne saura pas rouvrir.
+  if (typeof IntersectionObserver === "undefined") { return; }
+  racine.classList.add("js");
+
+  // ⚠️ ET UN CHIEN DE GARDE. C'est la leçon la plus chère de cette page : elle
+  // s'est affichée EN LIGNE avec ses sept illustrations et pas une ligne de
+  // texte, parce que l'observateur ne s'était pas déclenché. Un observateur qui
+  // ne part pas — page non rendue, onglet en arrière-plan, cadre imbriqué,
+  // moteur qui diffère la première passe — laissait tout le contenu à
+  // `opacity: 0`, sans la moindre erreur de console.
+  //
+  // Une animation est un ENRICHISSEMENT : son échec ne doit jamais coûter le
+  // contenu. Si rien n'est apparu au bout d'une seconde et demie, on retire
+  // `js` et la page redevient celle de quelqu'un qui n'exécute pas de script.
+  var chienDeGarde = setTimeout(function () {
+    if (!document.querySelector(".anim.vu")) { racine.classList.remove("js"); }
+  }, 1500);
 
   var plans = Array.prototype.slice.call(document.querySelectorAll(".plan"));
   var scenes = Array.prototype.slice.call(document.querySelectorAll(".scene"));
@@ -532,10 +508,27 @@ html.js .vu .barre-trait { width: var(--w); }
   // apparu — une page qui rejoue ses animations en remontant est fatigante.
   var observateurAnim = new IntersectionObserver(function (entrees, obs) {
     entrees.forEach(function (e) {
-      if (e.isIntersecting) { e.target.classList.add("vu"); obs.unobserve(e.target); }
+      if (e.isIntersecting) {
+        clearTimeout(chienDeGarde);
+        e.target.classList.add("vu");
+        obs.unobserve(e.target);
+      }
     });
   }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
-  Array.prototype.forEach.call(document.querySelectorAll(".anim"), function (n) { observateurAnim.observe(n); });
+
+  // Ce qui est DÉJÀ à l'écran ne passe pas par l'observateur : on le révèle
+  // tout de suite, en mesurant. La première scène ne doit rien attendre — c'est
+  // elle que voient une vignette de partage et un lecteur pressé.
+  var animes = Array.prototype.slice.call(document.querySelectorAll(".anim"));
+  animes.forEach(function (n) {
+    var r = n.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) {
+      clearTimeout(chienDeGarde);
+      n.classList.add("vu");
+    } else {
+      observateurAnim.observe(n);
+    }
+  });
 
   // Jauge et dérive du fond, dans une seule boucle d'animation.
   var enAttente = false;

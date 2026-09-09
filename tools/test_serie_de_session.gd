@@ -44,22 +44,16 @@ func _run() -> void:
 	_test_mot_ecran_partage()
 	_test_mot_en_ligne()
 	_test_rupture()
-	_test_carte_soiree()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
 
-func _test_carte_soiree() -> void:
-	print("\n[La carte de fin de soirée (V6.10 / DA6.3)]")
-	_check("moins de 3 matchs ne produit pas de carte",
-		GS.carte_soiree(1, 1) == "")
-	_check("3 matchs produit un bilan clair",
-		GS.carte_soiree(2, 1) == "CE SOIR : 3 MATCHS · 2-1")
-	_check("7 matchs avec égalité et arme favorite",
-		GS.carte_soiree(4, 2, 1, "pompe") == "CE SOIR : 7 MATCHS · 4-2-1 · ARME FAVORIE : POMPE")
-
+# `_test_carte_soiree()` vivait ici. La fonction qu'elle vérifiait a été retirée
+# le 2026-09-09 : V6.10 avait été écrite deux fois le même jour, et Adrien a
+# gardé la carte (`bilan_de_soiree.gd`, testée par `test_bilan_de_soiree.gd`)
+# plutôt que la ligne, parce qu'elle couvre aussi DA6.3 et DA6.4.
 func _test_comptage() -> void:
 	print("\n[Le compte]")
 	_check("une session neuve n'a pas de porteur",

@@ -3128,6 +3128,47 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une animation ratée n'abîme pas la page : elle l'efface (2026-09-09)
+
+Le site de DA7.4 s'est affiché **en ligne, sur le domaine d'Adrien, avec ses
+sept illustrations et pas une ligne de texte**. Aucune erreur de console, aucun
+404, le HTML servi complet et correct.
+
+Le mécanisme : le contenu entrait en scène au défilement, donc il partait à
+`opacity: 0` et `clip-path: inset(0 0 100% 0)`, et un `IntersectionObserver`
+levait le voile. **L'observateur ne s'est pas déclenché** — page non rendue,
+onglet en arrière-plan, cadre imbriqué, moteur qui diffère sa première passe :
+les causes sont nombreuses et aucune n'est une panne. Le voile n'a jamais été
+levé.
+
+**La faute n'était pas dans l'observateur, elle était dans la dépendance.**
+J'avais rendu la LISIBILITÉ d'une page dépendante d'une ANIMATION. Le fichier
+portait pourtant la règle en tête — « tout est lisible sans JavaScript » — et
+elle était respectée pour le cas où le script est ABSENT. Le cas manquant est
+celui où **il s'exécute mais n'aboutit pas**, et c'est le cas fréquent.
+
+⚠️ **Ce défaut n'est pas détectable par le contrôle qu'on croit.** Une lecture
+du HTML servi le dit conforme : le texte y est. Une suite d'intégration dirait
+la même chose. **Il faut regarder la page rendue** — ou mesurer, comme ici :
+`document.querySelectorAll(".anim.vu").length` valait 0 sur 15.
+
+Les trois garde-fous posés, du plus général au plus précis :
+
+1. **Ne pas masquer si l'on ne sait pas démasquer.** La classe qui autorise le
+   masquage n'est posée que si `IntersectionObserver` existe.
+2. **Un chien de garde.** Si rien n'est apparu au bout de 1,5 s, la classe est
+   retirée et la page redevient celle de quelqu'un qui n'exécute pas de script.
+3. **Ce qui est déjà à l'écran est révélé tout de suite**, en mesurant, sans
+   passer par l'observateur : la première vue n'attend jamais rien.
+
+**La règle générale, et elle dépasse le web** : une animation, un effet, un
+enrichissement quel qu'il soit ne doit jamais être sur le chemin critique du
+contenu. Quand il l'est, sa panne ne dégrade pas — elle supprime. C'est le
+même défaut de forme que le garde `has_method()` qui a transformé une fonction
+absente en inaction muette (voir `CLAUDE.md`) : **un mécanisme qui échoue en
+silence produit une absence que personne n'attribue à lui.**
+
+
 ### Une fusion sans conflit peut faire jouer deux cérémonies à la fois (2026-09-09)
 
 `git merge` a réuni sans broncher deux ajouts au démarrage du jeu, écrits le
@@ -3218,6 +3259,40 @@ ce que le jeu charge.
 dossier dérivé se relit à sa date, ou se régénère, ou ne se lit pas. Et un
 dossier de sortie qui survit à l'outil qui l'a produit devrait être supprimé
 avec lui — celui-ci ne l'a pas été.
+### Soixante et onze suites vertes ne disent pas que le jeu démarre (2026-09-09)
+
+La session DA7 fusionne, et **cinq classes deviennent injoignables** —
+« Identifier not declared » — parce que le registre des noms de classe est en
+retard sur les fichiers neufs. Le jeu ne démarre plus. **Sa suite dédiée, elle,
+était verte** : elle chargeait ses fichiers par `preload` sur un CHEMIN, ce qui
+ne consulte jamais ce registre. Le code était bon des deux côtés ; seul le
+registre manquait. Un `--import` réglait tout — encore fallait-il savoir qu'il y
+avait quelque chose à régler.
+
+C'était une déclinaison de plus d'un piège que ce document connaissait déjà. Ce
+qui est neuf, et ce qui vaut d'être gardé, c'est **le trou de couverture** : le
+lanceur n'a jamais démarré le jeu. Il l'a fait pendant des mois sans que ça se
+voie, parce que quelqu'un lançait toujours le jeu à la main dans la journée.
+
+⚠️ **Et le contrôle évident ne marche pas.** `godot --headless --quit-after 2000`
+paraît suffire ; il ne suffit pas. **Mesuré le 2026-09-09, cache de classes
+vidé : 771 `SCRIPT ERROR` imprimées, et le processus sort en 0.** Un contrôle
+adossé au code de sortie **certifierait un jeu mort** — pire que pas de contrôle,
+parce qu'il rassure. On lit donc la SORTIE et on y cherche `SCRIPT ERROR`,
+exactement comme ce lanceur le fait déjà pour chacune de ses suites et comme
+`run_visuel.sh` le fait pour les erreurs d'analyse.
+
+Posé en TÊTE de `run_suites.sh` : si le jeu ne démarre pas, tout ce qui suit est
+du bruit. Contre-test vérifié dans les deux sens — vert sur un arbre sain, rouge
+avec le registre vidé, et il nomme le remède (`--import`) dans son message
+d'échec.
+
+**La leçon qui dépasse le cas :** une suite qui atteint son sujet par un chemin
+que la production n'emprunte pas ne teste pas la production. `preload("res://x.gd")`
+et `X` sont deux façons d'atteindre le même fichier, et **une seule des deux peut
+échouer**.
+
+
 ### V6.10 a été écrite deux fois, et c'est la deuxième fois que ça arrive (2026-09-09)
 
 Deux sessions ont lu la même fiche — « au retour menu après ≥ 3 matchs : Ce
@@ -3241,12 +3316,23 @@ cinq secondes (connexion qui tombe, abandon immédiat). Le joueur peut lire
 « 7 MATCHS » sur l'écran de fin et « 6 » sur la carte, sans que rien ne
 l'explique.
 
-**La fusion a gardé les deux**, et la note est dans `game_state.gd` au-dessus de
-`carte_de_soiree()`. Une fusion se résout en choisissant, donc en pouvant
-détruire ; ce choix-ci n'est pas technique. Trois issues : garder la ligne pour
-l'écran de fin et la carte pour le menu (redondant, mais jamais simultané),
-retirer la ligne au profit de la carte, ou faire lire à la ligne le calcul de la
-carte pour qu'au moins les deux chiffres s'accordent.
+**La fusion a gardé les deux** plutôt que d'en supprimer une : une fusion se
+résout en choisissant, donc en pouvant détruire, et ce choix-là n'était pas
+technique. **Adrien a tranché le jour même : la carte l'emporte**, parce qu'elle
+couvre aussi DA6.3 et DA6.4 — illustrée et exportable en image, ce qu'une ligne
+de texte ne peut pas être. La ligne a été retirée de `serie_de_session.gd`, de
+`game_state.gd` (avec `session_ties` et `_session_weapons`, qui ne servaient
+qu'à la nourrir) et de `tools/test_serie_de_session.gd`.
+
+⚠️ **Une moitié survit dans `ui.gd`** — le paramètre `carte_soiree` de
+`poser_bilan()` et le label `bilan_soiree` — parce que ce fichier appartient à
+une autre session. Plus rien ne les alimente : le paramètre a un défaut vide,
+rien ne s'affiche. Sept mille lignes ne se touchent pas pour en retirer trois.
+
+**Aux deux endroits d'où la ligne a disparu, une note dit qu'elle a existé.** Un
+fichier d'où l'on a retiré quelque chose ne le dit pas tout seul, et la prochaine
+session qui cherchera « où est la carte de soirée » commencera par là où elle
+était.
 
 **Ce que la répétition apprend, au-delà du cas :** le partage par fichier ne
 protège pas d'un doublon quand la seconde implémentation arrive dans des
@@ -8120,15 +8206,22 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   durées) dans un onglet : contempler ses matchs, c'est revenir.
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
   « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». **✅ Fait le 2026-09-09**
-  — implémenté dans `serie_de_session.gd:carte_soiree()`, testé dans
-  `tools/test_serie_de_session.gd`, et affiché dans le bilan et au retour menu
-  via `GameState.carte_de_soiree()`.
+  — `bilan_de_soiree.gd` (le calcul, pur et testé à froid), `carte_de_soiree.gd`
+  (la composition), `panneau_de_soiree.gd` (le moment), `exporteur.gd` (l'image).
+  Suite : `tools/test_bilan_de_soiree.gd`.
 
-  ⚠️ **ET IMPLÉMENTÉ UNE SECONDE FOIS LE MÊME JOUR, par la session photographe**
-  — `bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`, au
-  titre de DA6.3 et DA6.4. Découvert à la fusion, le 2026-09-09. **La fusion n'a
-  supprimé ni l'une ni l'autre : le choix est un choix de produit, et il revient
-  à Adrien.** Voir « Pièges connus », *V6.10 a été écrite deux fois*.
+  ⚠️ **Elle a été écrite DEUX FOIS le même jour, et Adrien a tranché le
+  2026-09-09 : la carte l'emporte sur la ligne.** L'autre version —
+  `SerieDeSession.carte_soiree()`, une ligne de texte sur l'écran de fin — a été
+  retirée de `serie_de_session.gd`, de `game_state.gd` et de sa suite. **Raison
+  de l'arbitrage : la carte couvre aussi DA6.3 (illustrée) et DA6.4 (exportable
+  en image), ce qu'une ligne de texte ne peut pas être.** Voir « Pièges connus »,
+  *V6.10 a été écrite deux fois* — c'était la deuxième récidive du motif.
+
+  **Il reste une moitié dans `ui.gd`** : le paramètre `carte_soiree` de
+  `poser_bilan()` et le label `bilan_soiree`. Plus rien ne les nourrit, le
+  paramètre a un défaut vide, rien ne s'affiche. **Signalé et non retiré** —
+  `ui.gd` appartient à la session « menus ».
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 

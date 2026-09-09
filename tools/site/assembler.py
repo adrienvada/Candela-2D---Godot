@@ -25,10 +25,7 @@ IMAGES = {
     # (DA6.6) ; les autres viennent du jeu ou d'illustrations de menu.
     "{{F_DESCENTE}}":   ["pl-descente.jpg"],
     "{{F_SEUIL}}":      ["pl-seuil.jpg"],
-    "{{F_DOTATION}}":   ["pl-dotation.jpg"],
-    "{{F_ALLUMAGE}}":   ["pl-allumage.jpg"],
     "{{F_PRIX}}":       ["pl-prix.jpg"],
-    "{{F_DUEL}}":       ["bg-duel.jpg"],
     # Trois fonds commandés pour le site. Tant qu'ils n'existent pas, repli sur
     # une illustration de menu : la page ne dépend jamais d'une image en route.
     "{{F_ARMES}}":      ["fond_armes.jpg", "bg-competitif.jpg"],

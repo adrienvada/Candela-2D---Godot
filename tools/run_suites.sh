@@ -221,6 +221,42 @@ fail=0
 # Scénarios qui n'ont pas pu tourner (port occupé). Comptés à part : une mesure
 # qui n'a pas eu lieu n'est pas une mesure ratée.
 reportes=0
+
+# ---------------------------------------------------------------------------
+# LE JEU DÉMARRE-T-IL ? — quinze secondes, et ça manquait
+# ---------------------------------------------------------------------------
+#
+# **Soixante et onze suites vertes n'ont jamais prouvé que le jeu se lance**, et
+# le 2026-09-09 la session DA7 l'a payé : après une fusion, cinq classes
+# nouvelles étaient injoignables (« Identifier not declared »), le jeu ne
+# démarrait plus — **et sa suite dédiée était verte.** Elle chargeait ses
+# fichiers par `preload` sur un CHEMIN, ce qui ne consulte jamais le registre des
+# noms de classe. Le code était bon des deux côtés ; seul le registre était en
+# retard.
+#
+# ⚠️ **Le contrôle ne peut PAS reposer sur le code de sortie, et c'est mesuré.**
+# Contre-test du 2026-09-09 : cache de classes vidé, `--quit-after 2000` imprime
+# **771 `SCRIPT ERROR`** et sort en **0**. Un contrôle qui lirait le code de
+# sortie certifierait donc un jeu mort — pire que pas de contrôle du tout, parce
+# qu'il rassure. On lit la SORTIE, comme le fait déjà chaque suite de ce lanceur
+# et comme `run_visuel.sh` le fait pour les erreurs d'analyse.
+#
+# Il est en TÊTE : si le jeu ne démarre pas, tout ce qui suit est du bruit.
+echo "── Le jeu démarre-t-il ? ──"
+demarrage="$(mktemp)"
+"$GODOT" --headless --path . --no-eos --quit-after 2000 > "$demarrage" 2>&1
+if grep -q "SCRIPT ERROR" "$demarrage"; then
+  echo "demarrage                    ÉCHEC"
+  echo "    Le jeu ne démarre pas. $(grep -c 'SCRIPT ERROR' "$demarrage") erreur(s) de script."
+  grep "SCRIPT ERROR" "$demarrage" | head -3 | sed 's/^/    /'
+  echo "    Si c'est après une fusion ou un ajout de class_name :"
+  echo "    godot --headless --path . --import   (le registre des classes est en retard)"
+  fail=1
+else
+  echo "demarrage                    OK"
+fi
+rm -f "$demarrage"
+echo
 run() {
   local nom="$1"; shift
   local sortie tmp chien code
