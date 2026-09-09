@@ -3172,6 +3172,30 @@ Si `HEAD` répond 4 et l'index 0, le diff n'est pas du travail, c'est une perte.
 juge en cherchant le contenu ailleurs** — formulation de la session fusée, et
 elle vaut pour toute suppression, quelle qu'en soit la cause.
 
+#### Le même contrôle, braqué au mauvais endroit (ajouté le 2026-09-09)
+
+**Le contrôle d'ancrages ci-dessus a failli servir à rien, le jour même.** Après
+la fusion du chantier FUSÉE, deux sessions ont compté leurs ancrages et tout
+trouvé en place — sur le `main` LOCAL. Pendant ce temps `origin/main` était
+reparti d'un commit antérieur par une troisième ligne : le correctif d'arène y
+manquait, le doublon d'habillage y était revenu, et le chantier FUSÉE entier y
+était absent. Le compte était juste, il portait sur la mauvaise ref.
+
+> **Vérifier les ancrages sur la ref qu'on PUBLIE, pas seulement sur celle où
+> l'on a fusionné — sinon on prouve la présence du travail à l'endroit exact où
+> personne ne viendra le chercher.** (session fusée)
+
+C'est la même famille que le garde-fou inopérant : **un contrôle juste, mais
+braqué à côté.** Plus généralement — et c'est la formulation à retenir — *le
+contrôle doit viser la ref qui fait foi POUR LE LECTEUR*, et selon la question ce
+n'est pas toujours celle où l'on vient de travailler. Un `git show origin/main:`
+coûte le même geste qu'un `git show HEAD:` et ne répond pas à la même question.
+
+⚠️ **Et rien de tout cela n'était une perte** : les deux lignes existaient, tous
+les commits étaient atteignables. Une divergence non publiée ne détruit rien —
+elle attend simplement quelqu'un qui tranchera mal. Le nœud est de coordination,
+pas de git, et il ne se referme qu'à la publication.
+
 #### La règle
 
 1. **Après tout `update-ref` sur une branche montée ailleurs, le dire à la
