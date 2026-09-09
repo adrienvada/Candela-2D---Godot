@@ -1352,6 +1352,7 @@ func _process(delta):
 	# « FIGHT ! » suivant. Le faisceau, lui, ne verse plus rien : les gardes de
 	# `_maj_eblouissement` s'en chargent.
 	_maj_eblouissement(delta)
+	_maj_gadgets()
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1797,8 +1798,19 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 	# l'éblouissement sans arrêter la lumière — l'inverse du défaut d'aujourd'hui.
 	var q := PhysicsRayQueryParameters2D.create(depuis, cible.global_position,
 		MapGeometry.WALL_LAYER | MapGeometry.GADGET_LAYER)
+	# ⚠️ **Les gadgets qui n'arrêtent pas la lumière sont retirés du rayon.** Le
+	# masque ne sait pas les distinguer — ils partagent tous la même couche
+	# physique, parce que c'est elle qui décide ce qu'une BALLE touche. Sans cette
+	# exclusion, la mine au magnésium, qui est un boîtier plat sans occluder,
+	# arrêterait l'aveuglement sans arrêter le faisceau : l'inverse exact du
+	# défaut corrigé à l'étape 11, et tout aussi muet.
+	var exclus: Array[RID] = []
 	if exclure.is_valid():
-		q.exclude = [exclure]
+		exclus.append(exclure)
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g is CollisionObject2D and not g.occulte_la_lumiere:
+			exclus.append(g.get_rid())
+	q.exclude = exclus
 	var res := espace.intersect_ray(q)
 	return res and res.collider == cible
 
@@ -2037,6 +2049,49 @@ func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
 	# Une marge, sinon le gadget naît exactement sur la surface et son occluder
 	# se confond avec celui du mur.
 	return Vector2(touche["position"]) - direction * 6.0
+
+
+## [Hôte] Les gadgets qui demandent à s'allumer — la mine, aujourd'hui seule.
+##
+## ⚠️ **La boucle est chez l'hôte et nulle part ailleurs.** Un gadget qui
+## déciderait lui-même s'allumerait deux fois, une chez chaque pair, à deux
+## instants différents — et l'éblouissement, calculé par l'hôte, ne
+## correspondrait alors plus à ce que le client voit brûler.
+func _maj_gadgets() -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if not round_active and not sandbox_mode:
+		return
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not is_instance_valid(g) or g.is_queued_for_deletion():
+			continue
+		if g.veut_s_allumer([p1, p2]):
+			allumer_gadget(g)
+
+
+## [Hôte] Ordonne l'allumage d'un gadget, chez les deux pairs.
+##
+## ⚠️ **Le nom du nœud est la clé, et c'est pour ça qu'il est explicite.** Un RPC
+## de scène se route par le chemin du nœud ; ici c'est le nom lui-même qui
+## voyage, et il ne désigne le même objet des deux côtés que parce que
+## `_do_spawn_gadget()` le construit à partir de données répliquées — le joueur
+## et un compteur — au lieu de le laisser à Godot.
+func allumer_gadget(g: Node) -> void:
+	if g == null or not is_instance_valid(g):
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_allumer_gadget.rpc(String(g.name))
+	else:
+		g.allumer()
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_allumer_gadget(nom: String) -> void:
+	var g := bullet_container.get_node_or_null(NodePath(nom))
+	if g != null and g.has_method("allumer"):
+		g.allumer()
 
 
 @rpc("authority", "call_local", "reliable")
@@ -3140,6 +3195,9 @@ const IMPLEMENTATIONS := {
 	# 16 s : de quoi faire traverser une pièce à un adversaire qui la croit
 	# occupée, sans qu'un couloir reste éclairé toute la manche. À doser en jeu.
 	"torche_fantome": {"script": "res://gadget_torche_fantome.gd", "duree_vie": 16.0},
+	# La mine n'a pas de durée de vie : elle attend. C'est son embrasement qui la
+	# tue, et il pose lui-même son échéance (`GadgetMine.allumer()`).
+	"mine_magnesium": {"script": "res://gadget_mine.gd", "duree_vie": 0.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:

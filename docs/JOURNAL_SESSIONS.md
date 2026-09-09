@@ -2791,3 +2791,34 @@ bascule.
 Contrôle ajouté : un survol chez J2 n'écrit pas dans la fiche de J1 — et le banc
 choisit exprès un bouton dont la classe DIFFÈRE de ce que J1 affiche, sans quoi
 il passerait au vert sans rien prouver.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 12, la mine au magnésium)
+
+**Elle n'explose pas, elle allume.** L'Allumeur est celui qui fait de la lumière :
+lui donner des dégâts en ferait un piégeur ordinaire, jouable dans n'importe quel
+jeu de tir ; en faire un flash la rend jouable seulement dans celui-ci. Elle ne
+distingue pas son poseur — même règle que la fusée. Abattue, elle ne se désamorce
+pas : elle part.
+
+**Le partage décision / autorité** : `veut_s_allumer()` vit dans le gadget, où le
+rayon et l'armement se lisent avec ce qu'ils signifient ; `GameState` envoie
+l'ordre, sur l'hôte seul. Un gadget qui s'allumerait de lui-même s'allumerait deux
+fois, à deux instants différents. `Protocol.VERSION` → **13**
+(`rpc_allumer_gadget`).
+
+**⚠️ Un défaut que seule une CAPTURE pouvait montrer.** Ombres activées, le flash
+rendait un voile gris plat au lieu d'un disque net : la flamme se trouvait à
+l'intérieur de l'occluder que le socle monte pour tout gadget — « ni ombre ni
+lumière mais du hasard », phrase de `player.gd` qui avait payé la même leçon sur
+`body_light` le 2026-08-26. **Aucune suite ne pouvait l'attraper** : nœud monté,
+occluder présent, lumière allumée, éblouissement juste. Tout ce qui se mesure sans
+rendre était vert.
+
+Le remède est une propriété, pas un réglage : un boîtier posé à plat n'a rien à
+masquer. Pas d'occluder — et `occulte_la_lumiere = false`, que
+`_ligne_de_vue_depuis()` lit pour l'exclure du rayon d'éblouissement. Sans cette
+seconde moitié, elle arrêtait l'aveuglement sans arrêter le faisceau.
+
+**Relevé au passage, non corrigé** : l'Allumeur n'a pas de planche de marche
+(`allumeur_marche_*`), donc `_precharger_la_planche` avertit à l'équipement. Vrai
+pour les six classes neuves, connu, hors périmètre de cette étape.

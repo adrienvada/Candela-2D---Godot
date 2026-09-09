@@ -75,6 +75,7 @@ func _run() -> void:
 	await _test_ecran_de_classes()
 	await _test_pose_de_gadget()
 	await _test_torche_fantome()
+	await _test_mine()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -955,6 +956,126 @@ func _test_torche_fantome() -> void:
 		var derriere: float = gs._plafond_de_source(espace, source, gs.p2)
 		_check("un joueur DERRIÈRE elle n'est pas ébloui", derriere <= 0.0,
 			"%.3f" % derriere)
+
+	gs.queue_free()
+	await process_frame
+
+
+
+## La mine au magnésium — chantier CLASSES, étape 12.
+##
+## ⚠️ **Ce qu'on protège ici n'est pas « la mine se déclenche » mais l'ARMEMENT
+## et l'ABSENCE DE DÉGÂTS.** Sans armement, le poseur se déclenche sa propre mine
+## à l'instant où il la pose — il se tient à 96 px du point, le rayon en fait 72,
+## et il suffirait d'un pas. Et une mine qui blesserait ferait de l'Allumeur un
+## piégeur ordinaire au lieu de celui qui fait de la lumière.
+func _test_mine() -> void:
+	print("\n[La mine au magnésium : elle n'explose pas, elle allume]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# L'Allumeur, index 8.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(8))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.visible = true
+	gs.p2.visible = true
+	# L'adversaire au loin : sinon il déclenche la mine avant qu'on l'observe.
+	gs.p2.global_position = Vector2(400.0, 1600.0)
+
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var mine = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetMine:
+			mine = c
+	_check("la mine est posée", mine != null)
+	if mine == null:
+		gs.queue_free()
+		await process_frame
+		return
+
+	_check("elle peut éblouir", mine.eblouit)
+	_check("mais pas en dormant : son rayon d'éblouissement est nul",
+		is_zero_approx(mine.rayon_eblouissement), str(mine.rayon_eblouissement))
+	_check("sans axe : elle crache dans toutes les directions",
+		not mine.eblouissement_dirige)
+	_check("elle n'a pas de durée de vie propre",
+		is_zero_approx(mine.duree_vie), str(mine.duree_vie))
+
+	# ⚠️ **Deux moitiés d'une même vérité, et il faut les deux.** Un boîtier plat
+	# ne masque pas la lumière ; il ne doit donc ni porter d'occluder — sa flamme
+	# se retrouverait à l'intérieur, « ni ombre ni lumière mais du hasard » — ni
+	# arrêter le rayon d'éblouissement, sous peine d'aveugler à travers ce qu'elle
+	# n'assombrit pas. Vérifier l'un sans l'autre laisse passer la moitié.
+	_check("elle ne porte pas d'occluder",
+		mine.get_node_or_null("Occluder") == null)
+	_check("et elle se déclare transparente à la lumière",
+		not mine.occulte_la_lumiere)
+	var voile_ref := GadgetVoile.new()
+	_check("là où le voile, lui, se déclare opaque", voile_ref.occulte_la_lumiere)
+	voile_ref.free()
+
+	# ── L'ARMEMENT ───────────────────────────────────────────────────────────
+	#
+	# Le poseur est à `PORTEE_POSE` du point, donc DANS le rayon... non : 96 > 72.
+	# Mais un seul pas l'y ramène, et c'est l'armement qui rend le geste jouable.
+	_check("le poseur est hors du rayon de déclenchement au moment de poser",
+		GadgetBase.PORTEE_POSE > GadgetMine.RAYON_DECLENCHEMENT,
+		"%.0f vs %.0f" % [GadgetBase.PORTEE_POSE, GadgetMine.RAYON_DECLENCHEMENT])
+	gs.p1.global_position = mine.global_position
+	mine._age = 0.0
+	_check("désarmée, un joueur dessus ne la déclenche pas",
+		not mine.veut_s_allumer([gs.p1, gs.p2]))
+	mine._age = GadgetMine.ARMEMENT + 0.01
+	_check("armée, il la déclenche", mine.veut_s_allumer([gs.p1, gs.p2]))
+
+	# ⚠️ Elle ne fait AUCUNE différence entre le poseur et l'autre. Même règle que
+	# la fusée, arbitrée par Adrien : on ne la pose pas à ses pieds impunément.
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p2.global_position = mine.global_position
+	_check("elle ne distingue pas son poseur de l'adversaire",
+		mine.veut_s_allumer([gs.p1, gs.p2]))
+	gs.p2.global_position = Vector2(400.0, 1600.0)
+
+	# Un mort ne déclenche rien : son corps reste sur le terrain.
+	gs.p2.global_position = mine.global_position
+	gs.p2.dead = true
+	_check("un mort ne la déclenche pas", not mine.veut_s_allumer([gs.p1, gs.p2]))
+	gs.p2.dead = false
+	gs.p2.global_position = Vector2(400.0, 1600.0)
+
+	# ── L'EMBRASEMENT ────────────────────────────────────────────────────────
+	var pv_avant: float = gs.p2.hp
+	mine.allumer()
+	await process_frame
+	_check("allumée, elle aveugle", mine.rayon_eblouissement > 0.0,
+		str(mine.rayon_eblouissement))
+	_check("elle porte une flamme", mine.get_node_or_null("Embrasement") != null)
+	_check("et elle se donne une échéance",
+		mine.duree_vie > 0.0 and mine.duree_vie <= mine.age() + GadgetMine.DUREE_EMBRASEMENT + 0.01,
+		str(mine.duree_vie))
+	# ⚠️ **Aucun dégât, jamais.** C'est la classe : l'Allumeur fait de la lumière,
+	# pas des trous. Une mine qui blesserait se jouerait comme n'importe quel
+	# piège de n'importe quel jeu de tir.
+	_check("elle ne blesse personne", is_equal_approx(gs.p2.hp, pv_avant))
+	_check("un second ordre d'allumage ne la rallume pas",
+		not mine.veut_s_allumer([gs.p1, gs.p2]))
+
+	# ── ABATTUE, elle PART ───────────────────────────────────────────────────
+	var autre := GadgetMine.new()
+	autre.name = "MineTest"
+	autre._age = GadgetMine.ARMEMENT + 0.01
+	_check("une balle ne la désamorce pas : elle demande à s'allumer",
+		autre.encaisser(999.0) and autre.veut_s_allumer([]))
+	autre.free()
 
 	gs.queue_free()
 	await process_frame

@@ -63,6 +63,19 @@ var eblouissement_dirige: bool = false
 ## lui-même qui décide, et un rayon posé à côté serait une seconde vérité.
 var rayon_eblouissement: float = 0.0
 
+## Ce gadget arrête-t-il la LUMIÈRE ?
+##
+## Vrai pour tous ceux qui montent un occluder, c'est-à-dire tous sauf la mine —
+## un boîtier posé à plat sur le sol, vu de dessus, n'a rien à masquer.
+##
+## ⚠️ **Il faut que ce drapeau et `_monter_occluder()` disent la même chose**, et
+## c'est `game_state._ligne_de_vue_depuis()` qui en dépend : le rayon
+## d'éblouissement est masqué sur la couche des gadgets, donc un gadget qui ne
+## bloque pas la lumière doit en être EXCLU — sans quoi il arrêterait
+## l'aveuglement sans arrêter le faisceau, exactement l'inverse du défaut corrigé
+## à l'étape 11.
+var occulte_la_lumiere: bool = true
+
 ## La classe du poseur, pour les gadgets qui portent SA lumière. `null` partout
 ## ailleurs, et c'est le cas ordinaire.
 ##
@@ -195,6 +208,26 @@ func encaisser(degats: float) -> bool:
 func detruire() -> void:
 	detruit.emit(self)
 	queue_free()
+
+
+## Ce gadget demande-t-il à s'allumer, vu où sont les joueurs ?
+##
+## Faux dans le socle : la plupart ne se déclenchent pas. Seule la mine répond
+## vrai aujourd'hui.
+##
+## ⚠️ **L'HÔTE SEUL appelle ceci** (`GameState._maj_gadgets()`), et le partage
+## est délibéré : la DÉCISION vit dans le gadget, parce que c'est là que son
+## rayon et son armement se lisent avec ce qu'ils veulent dire ; l'AUTORITÉ reste
+## chez `GameState`, parce qu'elle appartient au réseau et à rien d'autre. Un
+## gadget qui s'allumerait tout seul s'allumerait deux fois — une chez chaque
+## pair, à deux instants différents.
+func veut_s_allumer(_joueurs: Array) -> bool:
+	return false
+
+
+## L'ordre d'allumage, rejoué à l'identique chez les deux pairs.
+func allumer() -> void:
+	pass
 
 
 ## L'âge du gadget, en secondes. Public parce que les sous-classes en dérivent

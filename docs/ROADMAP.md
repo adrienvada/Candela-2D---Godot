@@ -14523,14 +14523,68 @@ un écart que personne ne peut mesurer. C'est le patron de la fusée.
 
 Sabotage vérifié : gadgets retirés de la liste des sources → le contrôle rougit.
 
+### Étape 12 — la mine au magnésium ✅
+
+La deuxième lumière posée. **Elle n'explose pas, elle allume** — et c'est le
+point de conception, pas une économie : l'Allumeur est celui qui fait de la
+lumière, *« la lumière maximale, celle qui ne laisse aucune ombre où se
+mettre »*. Lui donner des dégâts en ferait un piégeur ordinaire, jouable dans
+n'importe quel jeu de tir ; en faire un flash la rend jouable seulement dans
+celui-ci, où être vu est déjà être mort.
+
+Elle ne blesse personne, elle prend les yeux et elle révèle. Elle ne distingue
+pas non plus son poseur — même règle que la fusée, arbitrée par Adrien : *« on
+ne la lance pas à ses pieds impunément »*. Une mine posée est un endroit où l'on
+ne repasse pas.
+
+**L'armement (1,2 s) n'est pas un délai de confort.** Sans lui, il faudrait un
+rayon de déclenchement inférieur à `PORTEE_POSE` — c'est-à-dire une mine qu'on
+enjambe. L'armement permet un rayon large ET un poseur qui s'en va.
+
+**Abattue, elle part.** `encaisser()` ne la tue pas : elle demande à s'allumer.
+Sans ça, une balle serait un désamorçage gratuit, et une mine qu'on désamorce à
+distance ne menace personne.
+
+#### Le partage décision / autorité
+
+`GadgetBase.veut_s_allumer()` est appelé par `GameState._maj_gadgets()` **sur
+l'hôte seul**, qui envoie l'ordre par `rpc_allumer_gadget`. La DÉCISION vit dans
+le gadget, où son rayon et son armement se lisent avec ce qu'ils veulent dire ;
+l'AUTORITÉ reste chez `GameState`, parce qu'elle appartient au réseau. Un gadget
+qui s'allumerait tout seul s'allumerait **deux fois**, une chez chaque pair, à
+deux instants différents — et l'éblouissement, calculé par l'hôte, ne
+correspondrait plus à ce que le client voit brûler.
+
+`Protocol.VERSION` passe à **13**.
+
+#### Le défaut trouvé À LA CAPTURE, et pas autrement
+
+Ombres activées, le flash rendait **un voile gris plat** au lieu d'un disque net.
+Cause : le socle monte un occluder pour tout gadget, et la flamme se retrouvait
+**à l'intérieur de son propre occluder** — ce qui « ne produit ni ombre ni
+lumière mais du hasard ». La phrase est de `player.gd`, qui a payé exactement la
+même leçon sur `body_light` le 2026-08-26 ; je l'ai relue après coup.
+
+⚠️ **Aucune suite ne pouvait l'attraper** : le nœud était monté, l'occluder
+présent, la lumière allumée, l'éblouissement juste. Tout ce qui se mesure sans
+rendre était vert. Diagnostiqué en retirant l'occluder et en recomparant deux
+captures.
+
+**Le remède tient en une propriété, pas en un réglage** : un boîtier posé à plat
+sur le sol, vu de dessus, n'a rien à masquer. La mine ne porte donc pas
+d'occluder — et elle se déclare `occulte_la_lumiere = false`, ce que
+`_ligne_de_vue_depuis()` lit pour l'exclure du rayon d'éblouissement. Sans cette
+seconde moitié, elle aurait arrêté l'aveuglement sans arrêter le faisceau :
+l'inverse exact du défaut de l'étape 11, et tout aussi muet. Le banc vérifie les
+deux moitiés, parce que vérifier l'une laisse passer l'autre.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : les deux autres lumières posées (mine au magnésium, nappe de
-braises), les volumes (suie, poussière), le sol qui écrit (poudre de contact),
+**Reste** : la dernière lumière posée (nappe de braises), les volumes (suie, poussière), le sol qui écrit (poudre de contact),
 le leurre, le grésillement, les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).

@@ -79,7 +79,15 @@ class_name Protocol
 ##      Le client verrait donc la lumière traverser une bâche que l'hôte
 ##      considère opaque, et chacun jouerait sa propre carte sans qu'une seule
 ##      ligne d'erreur ne le dise.
-const VERSION := 12
+## 13 — `rpc_allumer_gadget` apparaît (chantier CLASSES, étape 12, 2026-09-09) :
+##      la mine au magnésium, déclenchée par l'hôte, que les deux pairs doivent
+##      voir prendre feu au même instant. Même famille que les v9 et v12 — un
+##      hôte v13 appelle un nom qu'un client v12 n'a jamais entendu.
+##
+##      ⚠️ Et ce qu'elle laisse derrière est pire que pour un gadget posé : la
+##      mine BRÛLE chez l'hôte, donc elle aveugle — l'éblouissement étant
+##      répliqué, le client verrait sa vue blanchir devant un boîtier éteint.
+const VERSION := 13
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -87,7 +95,7 @@ const VERSION := 12
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "2f831388eff58a67"
+const WIRE_WITNESS := "6e89262d2758e6f9"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est
