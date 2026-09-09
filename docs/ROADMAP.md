@@ -7271,8 +7271,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   haptique V1.5 : un seul cœur pilote l'image, la main et le stem.
 - **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
   *assets : 3-4 samples.*
-- **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact. —
-  *assets : 4-6 samples.*
+- **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact.
+  **✅ Fait le 2026-09-08** — 6 variantes organiques réelles de compression
+  corporelle et souffle coupé (`breath_hit_01.wav` à `06.wav`), inscrites au
+  manifeste, câblées dans `player.gd:rpc_update_hp()` et jouées via
+  `AudioManager.play_breath_hit()`. Portée calée sur celle d'un pas (-13.0 dB).
 - **V4.10 Vol de l'arbalète** — chuintement doppler discret du carreau sans
   lumière. — *assets : 1 boucle courte.*
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
@@ -7391,7 +7394,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V5.11 Frôlement de mur** — tissu + poussière à < 10 px d'un mur. —
   *assets : 3 samples.*
 - **V5.12 Réverb par carte** — room size dérivée de `grid_size` à l'entrée de
-  manche.
+  manche. **✅ Fait le 2026-09-09 (Chantier 3)** — `calculer_reverb_carte()` et
+  `appliquer_reverb_carte()` dans `audio_manager.gd`, appelées par `accorder_a_la_carte()`.
+  Adapte `room_size` (0.06 à 0.35), `damping` (0.18 à 0.35) et `wet` (0.24 à 0.42)
+  selon la diagonale et la densité de murs. Synchronisé avec `SFX_Occlus`.
 
 ### Vague 6 — Killcam, menu, méta (confort et rétention)
 
@@ -10857,13 +10863,13 @@ ce sont les dosages : la portée de S2 et l'équilibre sec/réverbéré de S3.
   dédié, ou le retour du découpage corps/queue que V4.1 a écarté — et qu'elle a
   écarté en laissant la porte ouverte, mot pour mot : « le jour où l'on voudra un
   rendu par distance […] il se ré-exporte ». Dépend de l'arbitrage S7.
-- **S5 — La réverb dit la salle** (= **V5.12**, déjà inscrite en vague 5, non
-  faite). Aujourd'hui : une réverb unique et figée sur le bus SFX
-  (`room_size` 0,06, wet 0,38), la même sur toutes les cartes. **À raccorder
-  APRÈS S1** : posée sur une spatialisation qui ne pointe sur personne, une
-  réverb dérivée de la carte ne s'entendrait que comme une couleur de plus. Son
-  prix est déjà payé — c'est pour elle que V4.1 a renoncé aux queues cuites dans
-  l'échantillon.
+- **S5 — La réverb dit la salle** (= **V5.12**, déjà inscrite en vague 5).
+  **✅ FAIT le 2026-09-09 (Chantier 3)** : acoustique de hangar en béton armé
+  (`room_size = 0.15`, `damping = 0.22`, `hipass = 0.25`, `wet = 0.34` dans
+  `default_bus_layout.tres`), modulée dynamiquement par carte via
+  `AudioManager.calculer_reverb_carte()` et appliquée lors de `accorder_a_la_carte()`.
+  Couplée au contraste psychoacoustique de torche (`EtouffementMonde` à 5 000 Hz dans
+  le noir absolu, 20 500 Hz sous la torche). Vérifié par `tools/test_dosage_audio.gd` (70/70).
 - **S8 — Le banc de dosage. ✅ FAIT le 2026-08-25** (`tools/banc_audio.tscn`),
   et **il est la condition de S2 et S3, pas leur accessoire.**
 
@@ -12739,8 +12745,10 @@ l'âge. C'est ce qui rend la synchro et la killcam gratuites.
 - **Photosensibilité** : entrée `fusee_agonie` (famille MONDE, plancher 0,5)
   dans `effect_policy.gd`. À intensité réduite, les flashs s'aplatissent sur un
   fondu — le TEMPO reste dans le son, identique pour tous.
-- **Audio** : clés `fusee_lancer` / `fusee_atterrit` / `fusee_combustion`
-  câblées, muettes tant que les fichiers manquent (règle « câbler, taire »).
+- **Audio** : **✅ Fait le 2026-09-08** — 5 sons foley broadcast 48 kHz / 16-bit livrés
+  et validés selon la Variante 1 d'Adrien (languette de protection arrachée + mèche pressurisée
+  qui s'embrase) : `fusee_lancer.wav`, `fusee_rebond.wav`, `fusee_atterrit.wav`,
+  `fusee_combustion.wav` (boucle continue thermique au magnésium) et `fusee_eteinte.wav`.
   PAS de préfixe `weapon_` (le duck des pas prendrait le lancer pour un tir —
   piège du percuteur). La combustion boucle sur une **voix dédiée** enfant de
   la fusée, hors du pool de seize qui la ferait voler. Son occlusion est
@@ -13287,6 +13295,50 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
   - Composant `MenuParticlesAmbiance` superposant des particules physiques légères (`CPUParticles2D`) avec texture radiale douce générée procéduralement.
   - 15 profils d'ambiance adaptés aux illustrations et calés sur les coordonnées POI de `MenuArtwork` (poussières de faisceau, gerbes d'or VAULT 07, étincelles de fusée rouge, diodes électriques cyan, phosphore vert, balise radio, sas d'accès).
 - **Couverture & Tests :** 63/63 suites de tests headless 100 % vertes dans `tools/run_suites.sh --rapide` (90s, 0 échec).
+
+---
+
+## Chantier — Intégration du Foley Physique & Sons Manquants (inscrit le 2026-09-08)
+
+**Objectif :** Clôturer tous les sons manquants de Candela 2D par des bruitages organiques, physiques et grunge au standard broadcast (**PCM WAV 48 000 Hz, 16-bit, Stéréo, 100 % domaine public CC0**).
+
+- **Fusée éclairante (FU1 à FU5) — 5 sons :**
+  - `fusee_lancer.wav` (Variante 1 validée par Adrien) : Arrachage d'une languette de protection (*rip* franc), amorce au phosphore, mèche pressurisée qui s'embrase (*pssshh-fshhh*) et départ de flamme.
+  - `fusee_rebond.wav` : Choc métallique chaud contre béton/acier.
+  - `fusee_atterrit.wav` : Chute finale et stabilisation sur les gravillons de l'arène.
+  - `fusee_combustion.wav` : Boucle continue de vraie combustion pyrotechnique au magnésium (rugissement thermique agressif).
+  - `fusee_eteinte.wav` : Étouffement chimique soudain (*psssht*) sous une botte ou après impact de balle.
+- **Interface Roman Graphique Brutaliste — 4 sons :**
+  - `ui_presse.wav` : Presse typographique lourde et rouleau d'acier.
+  - `ui_tampon.wav` : Frappe sourde d'un tampon encreur manuel sur papier kraft épais.
+  - `ui_massicot.wav` : Tranchant mécanique d'une lourde lame de massicot coupant du papier.
+  - `ui_refus.wav` : Butée métallique dure d'un verrou bloqué, sans composante synthétique.
+- **Le corps qui encaisse (V4.9) — 6 sons :**
+  - `breath_hit_01.wav` à `06.wav` : 6 variantes de souffle coupé et compression corporelle sous impact.
+- **Arsenal & Rechargements (Mécanique de tir 0.2.1) — 4 sons :**
+  - `weapon_reload_pistolet.wav` (2.2s), `weapon_reload_fusil.wav` (3.5s), `weapon_reload_pompe.wav` (5.6s), `weapon_reload_arbalete.wav` (4.5s).
+- **Bilan d'inventaire :** `AssetManifest.gd` passe à **90/90 assets attendus**, 0 manquant, 0 bouche-trou. 123 fichiers audio au total sur le disque.
+
+---
+
+## Chantier — Acoustique, Réverbération & Sound Design de l'arène (inscrit le 2026-09-09)
+
+**Direction artistique :** « Roman Graphique Brutaliste », clair-obscur radical (80-85 % de noir absolu). Restitution acoustique d'un hangar clandestin en béton armé et arêtes d'acier résonnantes.
+
+- **Acoustique minérale & réverbération dynamique (S5 / V5.12) :**
+  - Bus `SFX` et `SFX_Occlus` accordés dans `default_bus_layout.tres` (`room_size = 0.15`, `damping = 0.22`, `hipass = 0.25`, `wet = 0.34`).
+  - Fonctions déterministes `calculer_reverb_carte()` et `appliquer_reverb_carte()` dans `audio_manager.gd` : `room_size` (0.06 à 0.35), `damping` (0.18 à 0.35) et `wet` (0.24 à 0.42) modulés selon la diagonale et la densité de murs de la carte dans `accorder_a_la_carte()`.
+- **Contraste psychoacoustique torche / pénombre :**
+  - Noir absolu : monde feutré, claustrophobique, étouffé à **5 000 Hz** via le passe-bas `EtouffementMonde` et réverbération plus mate (`+0.12 damping`).
+  - Sous la torche : spectre ouvert à **20 500 Hz**, libérant les arêtes cristallines et transitoires du béton.
+  - Fonctions `coupure_sfx_monde_pour()` et `damping_sfx_monde_pour()` asservies en continu dans `update_torch_cutoff()`.
+- **Sound design et matières en jeu :**
+  - Câblage de `wall_impact` dans `bullet.gd:_spawn_wall_effects()` : distingue impact direct dans le béton sec et ricochet métallique.
+  - Câblage de `breath_hit` dans `player.gd:rpc_update_hp()`.
+  - Câblage de `weapon_reload_*` dans `player.gd:start_reload()`.
+- **Validation complète :**
+  - Suite de dosage `tools/test_dosage_audio.gd` : 70 contrôles sur 70 passés au vert.
+  - `tools/run_suites.sh` : **63 suites solo + 7 scénarios duo** réseau (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script**.
 
 ---
 
