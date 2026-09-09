@@ -4,21 +4,23 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;1,400&display=swap">
 <style>
 /* ---------------------------------------------------------------------------
-   Candela — site d'une page (DA7.4)
+   Candela — site d'une page (DA7.4), en défilement narratif.
 
-   La page est une PLANCHE DE BANDE DESSINÉE : des cases encadrées à l'encre,
-   posées sur une gouttière hachurée. Le vocabulaire vient du jeu lui-même —
-   menu_comic_panel.gd dessine déjà un cadre d'encre à repères de massicot, et
-   menu_tampon_verdict.gd tamponne. La palette est celle de charte.gd.
+   La page raconte l'introduction du jeu : les six planches de DA6.6 défilent en
+   fond, plein écran, et le contenu se pose dessus en cases d'encre. Palette de
+   charte.gd, cadres repris de menu_comic_panel.gd.
 
-   Thème unique et assumé : le jeu se passe dans le noir absolu.
+   ⚠️ TOUT EST LISIBLE SANS JAVASCRIPT. Le script pose la classe `js` sur la
+   racine, et c'est elle seule qui autorise à masquer quoi que ce soit. Sans
+   elle, la page s'affiche entière, premier fond compris : une page dont le
+   texte n'existe qu'après un observateur est une page vide pour qui ne
+   l'exécute pas — et pour toute vignette de partage.
    --------------------------------------------------------------------------- */
 :root {
   --noir:      #000000;
-  --gouttiere: #0a0a0b;
   --trait:     #56595c;
   --trait-bas: #303438;
-  --dim:       #7d8892;
+  --dim:       #8d959c;
   --halogene:  #fae8cc;
   --ambre:     #f5b03d;
 
@@ -26,187 +28,242 @@
   --corps:   "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --data:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --marge: clamp(1.5rem, 4.5vw, 3.5rem);
-  --gap: clamp(0.5rem, 1.4vw, 1rem);
+  --marge: clamp(1.5rem, 5vw, 5rem);
+  --gap: clamp(0.5rem, 1.2vw, 0.9rem);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
+  background: var(--noir);
   color: var(--halogene);
   font-family: var(--corps);
   font-weight: 300;
-  font-size: 1.0625rem;
-  line-height: 1.65;
+  font-size: clamp(1rem, 0.95rem + 0.25vw, 1.1rem);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  /* la gouttière : papier encré, hachuré à 45° comme les illustrations */
-  background-color: var(--gouttiere);
-  background-image: repeating-linear-gradient(45deg,
-    rgba(250, 232, 204, 0.035) 0 1px, transparent 1px 7px);
 }
-
 a { color: var(--ambre); text-underline-offset: 3px; }
 a:focus-visible { outline: 2px solid var(--ambre); outline-offset: 4px; }
 
-/* --- La planche et ses cases --------------------------------------------- */
-.planche { display: flex; flex-direction: column; gap: var(--gap); padding: var(--gap); max-width: 78rem; margin-inline: auto; }
-
-.case {
-  position: relative;
-  background: var(--noir);
-  border: 2px solid var(--trait);
-  padding: clamp(2.25rem, 5vw, 4rem) var(--marge);
+/* =========================================================================
+   LE FOND — un seul plan fixe, dont les images se relaient
+   ========================================================================= */
+.fond { position: fixed; inset: 0; z-index: 0; background: var(--noir); overflow: hidden; }
+.plan {
+  position: absolute; inset: -4%;
+  background-size: cover; background-position: center;
+  transform: scale(1.05) translateY(calc(var(--derive, 0) * -20px));
+  transition: opacity 900ms ease, transform 1400ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
 }
-/* repères de massicot, comme menu_comic_panel.gd en pose aux quatre coins */
+/* Sans JS : seul le premier plan s'affiche, les autres sont retirés du flux. */
+.plan + .plan { display: none; }
+html.js .plan { display: block; opacity: 0; }
+html.js .plan.actif { opacity: 1; transform: scale(1) translateY(calc(var(--derive, 0) * -20px)); }
+
+/* Le voile. Les planches sont dessinées clair et la page écrit en clair : sans
+   lui, pas une ligne ne tiendrait. Il assombrit surtout la GAUCHE, où vit le
+   texte, et laisse respirer la droite, où vit le dessin. */
+.voile {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to right, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.78) 38%, rgba(0,0,0,0.34) 70%, rgba(0,0,0,0.58) 100%),
+    linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.22) 45%, rgba(0,0,0,0.5) 100%);
+}
+/* Trame d'impression : c'est ce qui fait « planche » plutôt que « photo ». */
+.trame {
+  position: absolute; inset: 0; opacity: 0.5;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(250,232,204,0.045) 0 1px, transparent 1px 7px);
+}
+/* La torche suit le curseur, comme dans les menus du jeu. */
+.torche {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  transition: opacity 600ms ease;
+  background: radial-gradient(circle 24rem at var(--tx, 50%) var(--ty, 40%),
+    rgba(250,232,204,0.15), rgba(245,176,61,0.06) 45%, transparent 72%);
+}
+
+/* La jauge : un filament qui s'allume à mesure qu'on descend. */
+.progres { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 40; background: rgba(250,232,204,0.08); }
+.progres i { display: block; height: 100%; width: 0%; background: var(--ambre); box-shadow: 0 0 12px rgba(245,176,61,0.85); }
+
+/* =========================================================================
+   LES SCÈNES
+   ========================================================================= */
+main { position: relative; z-index: 10; }
+.scene { min-height: 100svh; display: flex; align-items: center; padding: clamp(5rem, 12vh, 9rem) var(--marge); }
+.dedans { width: 100%; max-width: 74rem; margin-inline: auto; }
+
+/* La case : cadre d'encre et repères de massicot, comme menu_comic_panel.gd. */
+.case {
+  position: relative; max-width: 40rem;
+  background: rgba(0, 0, 0, 0.68);
+  border: 2px solid var(--trait);
+  padding: clamp(1.5rem, 3.2vw, 2.4rem);
+}
 .case::before, .case::after {
-  content: ""; position: absolute; width: 15px; height: 15px;
-  border: 2px solid var(--ambre); pointer-events: none; z-index: 4;
+  content: ""; position: absolute; width: 14px; height: 14px;
+  border: 2px solid var(--ambre); pointer-events: none;
 }
 .case::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
 .case::after { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.case-large { max-width: 56rem; }
 
-.case-image { padding: 0; overflow: hidden; }
-.case-image figure { margin: 0; position: relative; }
-.case-image img { display: block; width: 100%; height: clamp(16rem, 42vw, 27rem); object-fit: cover; }
+/* L'entrée en scène : un volet d'encre qui s'ouvre, jamais un simple fondu. */
+html.js .anim { opacity: 0; transform: translateY(26px); clip-path: inset(0 0 100% 0); }
+html.js .anim.vu {
+  opacity: 1; transform: none; clip-path: inset(0 0 0% 0);
+  transition: opacity 700ms ease, transform 900ms cubic-bezier(0.22,0.61,0.36,1),
+              clip-path 900ms cubic-bezier(0.22,0.61,0.36,1);
+}
+html.js .d1.vu { transition-delay: 130ms; }
+html.js .d2.vu { transition-delay: 260ms; }
+html.js .d3.vu { transition-delay: 390ms; }
 
-.large { max-width: 62rem; }
-
-/* --- Typographie ---------------------------------------------------------- */
-h1, h2, h3 { font-family: var(--display); font-weight: 800; text-wrap: balance; margin: 0; line-height: 0.92; letter-spacing: 0.01em; }
-h2 { font-size: clamp(2.1rem, 5.4vw, 3.25rem); text-transform: uppercase; }
-h3 { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+/* =========================================================================
+   TYPOGRAPHIE
+   ========================================================================= */
+h1, h2, h3 { font-family: var(--display); font-weight: 800; margin: 0; line-height: 0.9; text-wrap: balance; }
+h2 { font-size: clamp(2.1rem, 5.6vw, 3.8rem); text-transform: uppercase; }
+h3 { font-size: 1.12rem; text-transform: uppercase; letter-spacing: 0.05em; }
 p { margin: 0; }
-.prose { display: flex; flex-direction: column; gap: 1.1rem; }
-.prose p { max-width: 62ch; }
+.prose { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.3rem; }
+.prose p { max-width: 60ch; }
 .retrait { color: var(--dim); }
-
-/* le récitatif : la boîte de texte en haut à gauche d'une case */
 .recitatif {
-  display: inline-block;
-  border: 2px solid var(--trait);
-  padding: 0.3rem 0.75rem 0.35rem;
-  font-family: var(--data); font-size: 0.72rem; font-weight: 500;
-  letter-spacing: 0.2em; text-transform: uppercase; color: var(--ambre);
-  margin: 0 0 1.5rem;
+  display: inline-block; border: 2px solid var(--trait); padding: 0.26rem 0.7rem 0.3rem;
+  font-family: var(--data); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ambre); margin-bottom: 1.1rem;
 }
-.tete { margin-bottom: 2.5rem; }
 
-/* --- Case d'ouverture ------------------------------------------------------ */
-.hero { padding: 0; min-height: 32rem; display: flex; align-items: flex-end; overflow: hidden; }
-.hero-fond {
-  position: absolute; inset: 0; z-index: 0;
-  background-image: var(--img-duel); background-size: cover; background-position: 62% 34%;
+/* Le lettrage : les phrases du récit, en grand, sans case autour. */
+.lettrage {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(2.4rem, 7.5vw, 5.5rem); line-height: 0.92;
+  text-transform: uppercase; max-width: 15ch;
+  text-shadow: 0 2px 30px rgba(0,0,0,0.95), 0 0 90px rgba(0,0,0,0.85);
 }
-.hero-voile {
-  position: absolute; inset: 0; z-index: 1;
-  background:
-    linear-gradient(to top, var(--noir) 6%, rgba(0,0,0,0.90) 38%, rgba(0,0,0,0.30) 76%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(to right, var(--noir) 0%, rgba(0,0,0,0.86) 26%, rgba(0,0,0,0.12) 60%, transparent 86%);
-}
-.hero-torche {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0;
-  transition: opacity 420ms ease-out;
-  background: radial-gradient(circle 17rem at var(--tx, 50%) var(--ty, 50%),
-    rgba(250, 232, 204, 0.13), rgba(245, 176, 61, 0.07) 42%, transparent 72%);
-}
-.hero-contenu { position: relative; z-index: 3; width: 100%; padding: clamp(3rem, 8vw, 5rem) var(--marge); }
+.lettrage .amb { color: var(--ambre); }
+.sous-lettrage { margin-top: 1.4rem; max-width: 44ch; text-shadow: 0 1px 16px rgba(0,0,0,0.95); }
+.a-droite { margin-left: auto; text-align: right; }
 
+/* =========================================================================
+   OUVERTURE
+   ========================================================================= */
 .wordmark {
   font-family: var(--display); font-weight: 800;
-  font-size: clamp(4rem, 17vw, 12rem); line-height: 0.8; letter-spacing: 0.06em;
-  margin: 0; color: var(--halogene);
-  text-shadow: 0 0 60px rgba(245, 176, 61, 0.28), 0 2px 28px rgba(0, 0, 0, 0.95);
+  font-size: clamp(4.5rem, 19vw, 14rem); line-height: 0.78; letter-spacing: 0.05em;
+  text-shadow: 0 0 90px rgba(245,176,61,0.3), 0 3px 30px rgba(0,0,0,0.95);
 }
 .devise {
   font-family: var(--display); font-weight: 600;
-  font-size: clamp(1.2rem, 3.4vw, 1.9rem); line-height: 1.05; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--ambre); margin: 1.6rem 0 0; max-width: 22ch;
-  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.95);
+  font-size: clamp(1.15rem, 3.2vw, 1.9rem); line-height: 1.05; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--ambre); margin-top: 1.4rem; max-width: 24ch;
+  text-shadow: 0 1px 18px rgba(0,0,0,0.95);
 }
-.pitch { margin-top: 1.4rem; max-width: 46ch; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.9); }
+.accroche { margin-top: 1.2rem; max-width: 44ch; text-shadow: 0 1px 14px rgba(0,0,0,0.9); }
 .meta {
-  font-family: var(--data); font-size: 0.76rem; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--dim); margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem;
+  font-family: var(--data); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dim); margin-top: 1.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem;
 }
+.invite { margin-top: 2.6rem; font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: 0.7rem; }
+.invite b { display: block; width: 1px; height: 2.2rem; background: linear-gradient(var(--ambre), transparent); animation: filer 2.4s ease-in-out infinite; }
+@keyframes filer { 0%, 100% { opacity: 0.25; transform: scaleY(0.6); } 50% { opacity: 1; transform: scaleY(1); } }
 
-/* --- La case de téléchargement --------------------------------------------- */
-.dl-tete { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1rem 1.75rem; margin-bottom: 2rem; }
-.dl-titre { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 4.6vw, 2.8rem); text-transform: uppercase; }
-.tampon {
-  font-family: var(--display); font-weight: 800; font-size: 1.4rem; letter-spacing: 0.08em;
-  color: var(--ambre); border: 3px solid var(--ambre); padding: 0.15rem 0.7rem 0.2rem;
-  transform: rotate(-4deg); opacity: 0.92;
-}
-.plateformes { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--gap); }
-.plateforme {
-  display: flex; align-items: center; gap: 1.1rem;
-  border: 2px solid var(--trait); padding: 1.25rem 1.4rem;
-  text-decoration: none; color: var(--halogene); background: var(--noir);
-  transition: border-color 160ms ease, background-color 160ms ease;
-}
-.plateforme:hover, .plateforme:focus-visible { border-color: var(--ambre); background: #0a0805; }
-.plateforme .glyphe { width: 3rem; height: 3rem; flex: 0 0 auto; object-fit: contain; }
-.plateforme .fleche { width: 2.2rem; height: 2.2rem; flex: 0 0 auto; margin-left: auto; }
-.plateforme .fleche path { stroke: var(--ambre); stroke-width: 2.2; fill: none; stroke-linecap: square; }
-.plateforme-texte { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.plateforme-nom { font-family: var(--display); font-weight: 800; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; }
-.plateforme-fichier { font-family: var(--data); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--dim); overflow-wrap: anywhere; }
-.dl-note { margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim); max-width: 60ch; }
-
-/* --- La première ouverture sur Mac ------------------------------------------- */
-/* Le jeu est signé ad hoc et non notarisé : macOS le bloque au premier
-   lancement, et demande le mot de passe pour le débloquer. Ce n'est pas un
-   détail à cacher en bas de page — c'est le mur contre lequel butera tout
-   joueur, et il l'atteindra AVANT d'avoir vu une image du jeu. */
-.installe { margin-top: 2rem; border: 2px solid var(--trait-bas); padding: 1.5rem var(--marge) 1.6rem; }
-.installe h3 { font-size: 1.2rem; margin-bottom: 0.4rem; }
-.installe-intro { color: var(--dim); font-size: 0.92rem; margin-bottom: 1.5rem; max-width: 56ch; }
-.etapes { display: flex; flex-direction: column; gap: 1.15rem; counter-reset: etape; }
-.etape { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.9rem; align-items: start; max-width: 62ch; }
-.etape::before {
-  counter-increment: etape; content: counter(etape);
-  font-family: var(--display); font-weight: 800; font-size: 1.9rem; line-height: 0.85;
-  color: var(--ambre); text-align: right;
-}
-.etape p { font-size: 0.98rem; }
-.etape em { color: var(--dim); font-style: normal; }
-.etape strong { color: var(--halogene); font-weight: 600; }
-/* Le seul passage de la page qui parle d'un mot de passe. Il doit être
-   impossible à manquer, et dire QUI le demande. */
-.mdp {
-  margin-top: 0.55rem; padding: 0.6rem 0.85rem;
-  border-left: 3px solid var(--ambre); background: #0d0a06;
-  font-size: 0.92rem; color: var(--halogene);
-}
-.installe-fin { margin-top: 1.5rem; font-size: 0.92rem; color: var(--dim); }
-
-/* --- Les trois signaux, en texte seul ---------------------------------------- */
-.signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 2.25rem var(--gap); margin-top: 2.5rem; }
-.signal { display: flex; flex-direction: column; gap: 0.65rem; padding-top: 1.1rem; border-top: 2px solid var(--ambre); }
+/* =========================================================================
+   LES TROIS SIGNAUX
+   ========================================================================= */
+.signaux { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.5rem var(--gap); margin-top: 1.9rem; }
+.signal { padding-top: 0.9rem; border-top: 2px solid var(--ambre); display: flex; flex-direction: column; gap: 0.45rem; }
 .signal:nth-child(2) { border-top-color: var(--halogene); }
 .signal:nth-child(3) { border-top-color: #8c2b31; }
-.signal h3 { font-size: 1.15rem; }
-.signal p { color: var(--dim); font-size: 0.95rem; }
+.signal p { color: var(--dim); font-size: 0.92rem; }
 
-/* --- La vitrine : une planche dans la planche -------------------------------- */
-/* Les captures sont noires à 90 %. Serrées en grille, leurs noirs se confondent
-   avec la gouttière et il ne reste que les cônes : c'est le sujet du jeu qui
-   compose la page, pas une mise en page appliquée par-dessus. Aucune légende —
-   une capture de Candela se regarde, elle ne se commente pas. */
-.vitrine { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: clamp(7rem, 13.5vw, 12rem); gap: var(--gap); }
-/* Pas de cadre sur les tuiles, et c'est le sujet qui le dicte : ces images sont
-   noires à 90 %. Un liseré autour de chacune dessinerait huit rectangles là où
-   il ne devrait y avoir que des cônes flottant dans le noir. Le seul cadre est
-   celui de la case, qui les contient toutes. */
-.vue { overflow: hidden; background: var(--noir); }
-.vue img {
-  display: block; width: 100%; height: 100%; object-fit: cover;
-  transform: scale(1.001); /* évite un liseré d'un pixel au bord du recadrage */
-  transition: transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1), filter 400ms ease;
+/* =========================================================================
+   LE GRAPHIQUE DES PORTÉES
+   ========================================================================= */
+.figure { margin-top: 1.7rem; }
+.figure-titre { font-weight: 600; font-size: 0.96rem; }
+.figure-sous { font-size: 0.86rem; color: var(--dim); margin-bottom: 1.5rem; max-width: 52ch; }
+.trace { position: relative; display: flex; flex-direction: column; gap: 0.95rem; padding-top: 1.8rem; }
+.seuil { position: absolute; top: 1.3rem; bottom: 0; left: calc(5.5rem + (100% - 5.5rem) * 0.535); width: 1px; background: var(--trait-bas); }
+.seuil::after {
+  content: "bord de l’écran"; position: absolute; top: -1.5rem; left: 50%; transform: translateX(-50%);
+  font-family: var(--data); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--dim); white-space: nowrap;
 }
-.vue:hover img { transform: scale(1.045); filter: brightness(1.18); }
+.barre { display: grid; grid-template-columns: 5rem 1fr; align-items: center; gap: 0.9rem; }
+.barre-nom { font-family: var(--data); font-size: 0.76rem; }
+.barre-piste { position: relative; height: 1.35rem; display: flex; align-items: center; }
+.barre-trait { height: 0.52rem; background: var(--ambre); border-radius: 0 4px 4px 0; width: var(--w); }
+html.js .barre-trait { width: 0; transition: width 1100ms cubic-bezier(0.22,0.61,0.36,1); }
+html.js .vu .barre-trait { width: var(--w); }
+.barre-val { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--data); font-variant-numeric: tabular-nums; font-size: 0.74rem; padding-left: 0.5rem; white-space: nowrap; }
+.barre-detail { font-family: var(--data); font-size: 0.66rem; color: var(--dim); padding-left: 0.45rem; }
+.figure-note { font-size: 0.86rem; color: var(--dim); max-width: 54ch; margin-top: 0.8rem; }
+
+/* =========================================================================
+   L'ÉCHELLE DES RANGS
+   ========================================================================= */
+.echelle { margin-top: 1.6rem; border-top: 1px solid var(--trait-bas); }
+.rang { display: grid; grid-template-columns: 2.1rem 1fr auto; align-items: baseline; gap: 0.85rem; padding: 0.5rem 0; border-bottom: 1px solid var(--trait-bas); }
+.rang-num { font-family: var(--data); font-size: 0.7rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.rang-nom { font-family: var(--display); font-weight: 600; font-size: 1.22rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.rang-arme { font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.rang-arme.attente { color: #8d7855; border-bottom: 1px dotted #8d7855; }
+.note-echelle { margin-top: 1.1rem; font-size: 0.86rem; color: var(--dim); max-width: 54ch; }
+
+/* =========================================================================
+   TÉLÉCHARGEMENT
+   ========================================================================= */
+.dl-tete { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.8rem 1.4rem; }
+.tampon { font-family: var(--display); font-weight: 800; font-size: 1.25rem; letter-spacing: 0.08em; color: var(--ambre); border: 3px solid var(--ambre); padding: 0.08rem 0.55rem 0.14rem; transform: rotate(-4deg); }
+.plateformes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--gap); margin-top: 1.5rem; }
+.plateforme {
+  display: flex; align-items: center; gap: 1rem;
+  border: 2px solid var(--trait); padding: 1rem 1.1rem;
+  text-decoration: none; color: var(--halogene); background: rgba(0,0,0,0.55);
+  transition: border-color 200ms ease, background-color 200ms ease, transform 200ms ease;
+}
+.plateforme:hover { border-color: var(--ambre); background: rgba(14,10,4,0.9); transform: translateY(-2px); }
+.plateforme .glyphe { width: 2.7rem; height: 2.7rem; flex: 0 0 auto; object-fit: contain; }
+.plateforme .fleche { width: 1.9rem; height: 1.9rem; flex: 0 0 auto; margin-left: auto; }
+.plateforme .fleche path { stroke: var(--ambre); stroke-width: 2.2; fill: none; stroke-linecap: square; }
+.plateforme-nom { font-family: var(--display); font-weight: 800; font-size: 1.45rem; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.05; }
+.plateforme-fichier { font-family: var(--data); font-size: 0.66rem; color: var(--dim); }
+.dl-note { margin-top: 1.1rem; font-size: 0.84rem; color: var(--dim); max-width: 56ch; }
+
+/* --- Première ouverture sur Mac -------------------------------------------- */
+.installe { margin-top: 1.5rem; border: 2px solid var(--trait-bas); padding: 1.2rem 1.3rem 1.4rem; }
+.installe-intro { color: var(--dim); font-size: 0.86rem; margin: 0.25rem 0 1.2rem; max-width: 52ch; }
+.etapes { display: flex; flex-direction: column; gap: 0.95rem; counter-reset: etape; }
+.etape { display: grid; grid-template-columns: 2.1rem 1fr; gap: 0.5rem 0.75rem; align-items: start; }
+.etape::before {
+  counter-increment: etape; content: counter(etape); grid-column: 1; grid-row: 1;
+  font-family: var(--display); font-weight: 800; font-size: 1.6rem; line-height: 0.85;
+  color: var(--ambre); text-align: right;
+}
+/* ⚠️ Sans cette ligne, une étape à DEUX enfants envoie le second sous le
+   numéro, dans une colonne large de 2,1 rem : un mot par ligne. Vu en vrai sur
+   l'étape 3, la seule qui porte un encadré en plus de son texte. */
+.etape > * { grid-column: 2; }
+.etape p { font-size: 0.92rem; }
+.etape em { color: var(--dim); font-style: normal; }
+.etape strong { color: var(--halogene); font-weight: 600; }
+.mdp { padding: 0.5rem 0.75rem; border-left: 3px solid var(--ambre); background: rgba(13,10,6,0.92); font-size: 0.88rem; }
+.installe-fin { margin-top: 1.1rem; font-size: 0.86rem; color: var(--dim); }
+
+/* =========================================================================
+   LA VITRINE
+   ========================================================================= */
+.vitrine { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: clamp(6rem, 11.5vw, 10.5rem); gap: var(--gap); margin-top: 1.8rem; }
+.vue { overflow: hidden; background: var(--noir); }
+.vue img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 800ms cubic-bezier(0.22,0.61,0.36,1), filter 400ms ease; }
+.vue:hover img { transform: scale(1.06); filter: brightness(1.2); }
 .c2 { grid-column: span 2; } .c3 { grid-column: span 3; } .c6 { grid-column: span 6; }
 .r2 { grid-row: span 2; }
 @media (max-width: 52rem) {
@@ -214,311 +271,295 @@ p { margin: 0; }
   .vue { aspect-ratio: 16 / 9; }
   .c2, .c3, .c6, .r2 { grid-column: auto; grid-row: auto; }
 }
-/* La case de la vitrine est pleine : les images touchent le trait d'encre. */
-.case-vitrine { padding: var(--gap); }
 
-/* --- La case de lettrage ---------------------------------------------------- */
-.lettrage p {
-  font-family: var(--display); font-weight: 800;
-  font-size: clamp(2rem, 6.2vw, 4rem); line-height: 1.02;
-  text-transform: uppercase; letter-spacing: 0.015em; text-wrap: balance;
-}
-.lettrage footer { margin-top: 1.5rem; color: var(--dim); font-size: 0.95rem; max-width: 54ch; }
-
-/* --- Le graphique des portées ----------------------------------------------- */
-.figure { margin: 2.5rem 0 0; }
-.figure-titre { font-weight: 600; font-size: 1rem; margin-bottom: 0.35rem; }
-.figure-sous { font-size: 0.9rem; color: var(--dim); margin-bottom: 1.9rem; max-width: 58ch; }
-.trace { position: relative; display: flex; flex-direction: column; gap: 1.1rem; padding-top: 2rem; }
-.seuil { position: absolute; top: 1.5rem; bottom: 0; left: calc(7.5rem + (100% - 7.5rem) * 0.535); width: 1px; background: var(--trait-bas); }
-.seuil::after {
-  content: "bord de l’écran"; position: absolute; top: -1.6rem; left: 50%; transform: translateX(-50%);
-  font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--dim); white-space: nowrap;
-}
-.barre { display: grid; grid-template-columns: 6.5rem 1fr; align-items: center; gap: 1rem; }
-.barre-nom { font-family: var(--data); font-size: 0.82rem; letter-spacing: 0.06em; }
-.barre-piste { position: relative; height: 1.5rem; display: flex; align-items: center; }
-.barre-trait { height: 0.6rem; background: var(--ambre); border-radius: 0 4px 4px 0; transition: filter 160ms ease; }
-.barre:hover .barre-trait { filter: brightness(1.25); }
-.barre-val { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--data); font-variant-numeric: tabular-nums; font-size: 0.8rem; padding-left: 0.6rem; white-space: nowrap; }
-.barre-detail { font-family: var(--data); font-size: 0.72rem; color: var(--dim); padding-left: 0.6rem; }
-.figure-note { font-size: 0.9rem; color: var(--dim); max-width: 58ch; margin-top: 0.5rem; }
-
-/* --- L'échelle des rangs ----------------------------------------------------- */
-.echelle { margin-top: 2.5rem; border-top: 1px solid var(--trait-bas); }
-.rang { display: grid; grid-template-columns: 2.5rem 1fr auto; align-items: baseline; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--trait-bas); }
-.rang-num { font-family: var(--data); font-size: 0.78rem; color: var(--dim); font-variant-numeric: tabular-nums; }
-.rang-nom { font-family: var(--display); font-weight: 600; font-size: 1.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
-.rang-arme { font-family: var(--data); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
-/* Ce qui n'est pas encore là se signale, il ne se devine pas : trait pointillé
-   et teinte à part. Le lecteur doit savoir ce qu'il télécharge sans lire les
-   petits caractères. */
-.rang-arme.attente {
-  color: #8d7855; border-bottom: 1px dotted #8d7855; padding-bottom: 1px;
-}
-.note-echelle { margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim); max-width: 58ch; }
-
-/* --- Fiche technique ---------------------------------------------------------- */
-.fiche { margin-top: 2.5rem; border-top: 1px solid var(--trait-bas); }
-.fiche-ligne { display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--trait-bas); }
-.fiche-cle { font-family: var(--data); font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
-
-/* --- La dernière case ---------------------------------------------------------- */
-.pied-mot { font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 7vw, 4rem); letter-spacing: 0.08em; color: #55595d; text-transform: uppercase; }
-.pied-note { margin-top: 1.25rem; color: var(--dim); font-size: 0.88rem; max-width: 56ch; }
-
-.legende-image {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 3rem var(--marge) 1.1rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.94), transparent);
-  font-family: var(--data); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim);
-}
+/* =========================================================================
+   FICHE ET PIED
+   ========================================================================= */
+.fiche { margin-top: 1.5rem; border-top: 1px solid var(--trait-bas); }
+.fiche-ligne { display: grid; grid-template-columns: minmax(7rem, 11rem) 1fr; gap: 0.85rem; padding: 0.65rem 0; border-bottom: 1px solid var(--trait-bas); font-size: 0.92rem; }
+.fiche-cle { font-family: var(--data); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.pied { margin-top: 2rem; color: var(--dim); font-size: 0.84rem; max-width: 56ch; }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
-  .hero-torche { display: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; }
+  html.js .anim { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+  html.js .barre-trait { width: var(--w) !important; }
+  .torche { display: none; }
 }
 </style>
 
-<div class="planche">
-
-  <!-- ============ CASE 1 — ouverture ============ -->
-  <section class="case hero" id="haut">
-    <div class="hero-fond" aria-hidden="true"></div>
-    <div class="hero-voile" aria-hidden="true"></div>
-    <div class="hero-torche" id="torche" aria-hidden="true"></div>
-    <div class="hero-contenu">
-      <h1 class="wordmark">Candela</h1>
-      <p class="devise">Voir sans être vu.<br>Tuer sans être tué.</p>
-      <p class="pitch">Un duel à deux dans le noir absolu. Vous avez une lampe torche et une arme. Votre adversaire aussi. Le faisceau qui vous montre où il est lui montre où vous êtes.</p>
-      <p class="meta"><span>1 v 1</span><span>En ligne ou écran scindé</span><span>macOS · Windows</span><span>Godot 4.7</span></p>
-    </div>
-  </section>
-
-  <!-- ============ CASE 2 — téléchargement ============ -->
-  <section class="case">
-    <p class="recitatif">Jouer</p>
-    <div class="dl-tete">
-      <span class="dl-titre">Télécharger</span>
-      <span class="tampon">v0.3.1</span>
-    </div>
-    <div class="plateformes">
-      <a class="plateforme" href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest/download/Candela-macos.zip">
-        {{ICO_MAC}}
-        <span class="plateforme-texte">
-          <span class="plateforme-nom">macOS</span>
-          <span class="plateforme-fichier">Candela-macos.zip</span>
-        </span>
-        <svg class="fleche" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 16 M5 10 L12 17 L19 10 M4 21 L20 21"/></svg>
-      </a>
-      <a class="plateforme" href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest/download/Candela-windows.zip">
-        {{ICO_WIN}}
-        <span class="plateforme-texte">
-          <span class="plateforme-nom">Windows</span>
-          <span class="plateforme-fichier">Candela-windows.zip</span>
-        </span>
-        <svg class="fleche" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 16 M5 10 L12 17 L19 10 M4 21 L20 21"/></svg>
-      </a>
-    </div>
-    <div class="installe">
-      <h3>Première ouverture sur Mac</h3>
-      <p class="installe-intro">Candela n’est pas distribué par l’App Store, alors macOS demande votre accord une première fois. Quatre gestes, une seule fois dans la vie du jeu.</p>
-      <div class="etapes">
-        <div class="etape"><p>Ouvrez le fichier téléchargé, puis glissez <strong>Candela</strong> dans votre dossier <strong>Applications</strong>.</p></div>
-        <div class="etape"><p>Double-cliquez sur <strong>Candela</strong>. macOS refuse et affiche un avertissement : <em>c’est normal, et c’est ce qu’on va débloquer.</em> Cliquez sur <strong>Terminé</strong>.</p></div>
-        <div class="etape">
-          <p>Ouvrez <strong>Réglages Système → Confidentialité et sécurité</strong>, descendez jusqu’à la section <strong>Sécurité</strong> : une ligne parle de Candela. Cliquez sur <strong>Ouvrir quand même</strong>.</p>
-          <p class="mdp">Votre <strong>mot de passe Mac</strong> — ou Touch ID — vous sera demandé ici. C’est macOS qui le demande pour vous, pas le jeu : Candela ne le voit jamais.</p>
-        </div>
-        <div class="etape"><p>Une dernière fenêtre s’ouvre : cliquez sur <strong>Ouvrir</strong>.</p></div>
-      </div>
-      <p class="installe-fin">C’est fini. Les fois suivantes, Candela s’ouvre d’un simple double-clic, et se met à jour tout seul.</p>
-    </div>
-
-    <p class="dl-note">Les deux liens pointent vers la <strong>dernière version publiée</strong> : ils restent valables à chaque sortie, sans que cette page change. La version 0.3.1 a été publiée le 9 septembre 2026. Une fois installé, le jeu se met à jour tout seul.</p>
-  </section>
-
-  <!-- ============ CASE 4 — image ============ -->
-  <section class="case case-image">
-    <figure>
-      <img src="{{IMG_SCINDE}}" alt="Deux tireurs dos à dos de part et d’autre d’une cloison de béton, chacun balayant le sol avec sa torche.">
-    </figure>
-  </section>
-
-  <!-- ============ CASE 5 — lettrage ============ -->
-  <section class="case lettrage">
-    <div class="large">
-      <p>Éclairer, c’est voir.<br>Éclairer, c’est être vu.</p>
-      <footer>Toute la tension du jeu tient dans cette phrase. Chaque seconde de torche allumée est un renseignement que vous prenez et un renseignement que vous donnez. Les bons joueurs éteignent.</footer>
-    </div>
-  </section>
-
-  <!-- ============ CASE 6 — les armes ============ -->
-  <section class="case">
-    <div class="tete">
-      <p class="recitatif">Quatre armes</p>
-      <h2>Choisir une arme,<br>c’est choisir<br>comment on se trahit</h2>
-    </div>
-    <div class="prose large">
-      <p>Chaque arme porte sa propre torche. Elles ne diffèrent pas seulement par les dégâts : elles diffèrent par la quantité de vous-même qu’elles montrent au reste de la carte.</p>
-    </div>
-    <figure class="figure large">
-      <div class="figure-titre">Portée du faisceau, en largeurs d’écran</div>
-      <div class="figure-sous">Chaque joueur voit 480 unités devant lui. Au-delà, la torche allume quelque chose que son porteur ne voit pas.</div>
-      <div class="trace">
-        <div class="seuil" aria-hidden="true"></div>
-        <div class="barre" title="Pompe — cône de 60°, portée 1,0">
-          <div class="barre-nom">Pompe</div>
-          <div class="barre-piste">
-            <div class="barre-trait" style="width: 28.3%"></div>
-            <div class="barre-val" style="left: 28.3%">0,53 <span class="barre-detail">60° · large et court</span></div>
-          </div>
-        </div>
-        <div class="barre" title="Pistolet — cône de 35°, portée 1,6">
-          <div class="barre-nom">Pistolet</div>
-          <div class="barre-piste">
-            <div class="barre-trait" style="width: 45.5%"></div>
-            <div class="barre-val" style="left: 45.5%">0,85 <span class="barre-detail">35° · polyvalent</span></div>
-          </div>
-        </div>
-        <div class="barre" title="Fusil — portée 1,8">
-          <div class="barre-nom">Fusil</div>
-          <div class="barre-piste">
-            <div class="barre-trait" style="width: 51.3%"></div>
-            <div class="barre-val" style="left: 51.3%">0,96 <span class="barre-detail">précis</span></div>
-          </div>
-        </div>
-        <div class="barre" title="Arbalète — cône de 5°, portée 3,5">
-          <div class="barre-nom">Arbalète</div>
-          <div class="barre-piste">
-            <div class="barre-trait" style="width: 100%"></div>
-            <div class="barre-val" style="left: 100%; transform: translate(-100%, -50%); padding-right: 0.7rem; padding-left: 0; color: var(--noir); font-weight: 500;">1,87</div>
-          </div>
-        </div>
-      </div>
-      <p class="figure-note">L’arbalète est la seule à éclairer au-delà de ce que son porteur peut voir : un fil de lumière de 5°, silencieux, qui atteint des endroits dont il ne recevra jamais l’image. C’est l’arme furtive, et le privilège de porter hors champ lui revient à elle seule.</p>
-    </figure>
-  </section>
-
-  <!-- ============ CASE 7 — image ============ -->
-  <section class="case case-image">
-    <figure>
-      <img src="{{IMG_COMPETITIF}}" alt="Deux combattants en tenue sombre se font face dans un couloir de béton, torche et pistolet levés.">
-    </figure>
-  </section>
-
-  <!-- ============ CASE 8 — les rangs ============ -->
-  <section class="case">
-    <div class="tete">
-      <p class="recitatif">Compétitif</p>
-      <h2>Dix rangs,<br>de l’aveugle<br>à l’unité de lumière</h2>
-    </div>
-    <div class="prose large">
-      <p>Le classement se compte en ELO et se nomme en lumière. On commence sans rien voir ; on finit par porter le nom de l’unité qui mesure l’intensité d’une bougie.</p>
-    </div>
-    <div class="echelle large">
-      <div class="rang"><span class="rang-num">01</span><span class="rang-nom" style="color: #5f6468">Aveugle</span><span class="rang-arme">Pistolet</span></div>
-      <div class="rang"><span class="rang-num">02</span><span class="rang-nom" style="color: #6e6a60">Braise</span><span class="rang-arme">Fusil</span></div>
-      <div class="rang"><span class="rang-num">03</span><span class="rang-nom" style="color: #7d7059">Bougie</span><span class="rang-arme">Pompe</span></div>
-      <div class="rang"><span class="rang-num">04</span><span class="rang-nom" style="color: #8d7855">Lanterne</span><span class="rang-arme">Arbalète</span></div>
-      <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color: #9d8153">Torche</span><span class="rang-arme attente">à venir</span></div>
-      <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color: #ae8a52">Brasier</span><span class="rang-arme attente">à venir</span></div>
-      <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color: #bf9450">Phare</span><span class="rang-arme attente">à venir</span></div>
-      <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color: #d09e4c">Aurore</span><span class="rang-arme attente">à venir</span></div>
-      <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color: #e2a745">Zénith</span><span class="rang-arme attente">à venir</span></div>
-      <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color: var(--ambre)">Candela</span><span class="rang-arme attente">à venir</span></div>
-    </div>
-    <p class="note-echelle">Les quatre premiers rangs ouvrent chacun une arme. <strong>Les six suivants n’ouvrent encore rien</strong> — le contenu qui les remplira est en chantier, et l’annoncer vaut mieux que de faire croire qu’un palier vide est un choix de conception.</p>
-  </section>
-
-  <!-- ============ CASE 9 — image ============ -->
-  <section class="case case-image">
-    <figure>
-      <img src="{{IMG_QUITTER}}" alt="Un couloir qui s’enfonce dans l’obscurité, une torche abandonnée au sol dont la lumière meurt.">
-    </figure>
-  </section>
-
-  <!-- ============ CASE 10 — fiche ============ -->
-  <section class="case">
-    <div class="tete">
-      <p class="recitatif">Fiche</p>
-      <h2>Technique</h2>
-    </div>
-    <div class="fiche large">
-      <div class="fiche-ligne"><span class="fiche-cle">Genre</span><span>Duel en vue de dessus, furtif, à information nulle</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Joueurs</span><span>2 — en ligne, ou à deux sur la même machine</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Format</span><span>Match de 5 minutes, manches enchaînées</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Plateformes</span><span>macOS, Windows</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Moteur</span><span>Godot 4.7 — rendu de compatibilité, images par seconde déplafonnées</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Réseau</span><span>Hôte-autoritaire, Epic Online Services (code de salon, traversée de NAT)</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Manettes</span><span>Clavier-souris et manette, entièrement reconfigurables</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Langue</span><span>Français</span></div>
-      <div class="fiche-ligne"><span class="fiche-cle">Version</span><span>0.3.1 publiée · 0.4.0 en développement</span></div>
-    </div>
-  </section>
-
-  <!-- ============ LA RÈGLE — tout en bas ============ -->
-  <section class="case">
-    <div class="tete">
-      <p class="recitatif">La règle</p>
-      <h2>La seule information<br>est la lumière</h2>
-    </div>
-    <div class="prose large">
-      <p>Il n’y a pas de mini-carte, pas de marqueur d’ennemi, pas de contour rouge dans le noir. Un mur bloque la lumière comme il bloque une balle : la torche s’arrête où le décor s’arrête, et ce que vous n’éclairez pas n’existe pas.</p>
-      <p class="retrait">Trois signaux, et rien d’autre.</p>
-    </div>
-    <div class="signaux large">
-      <div class="signal">
-        <h3>La torche</h3>
-        <p>Le faisceau que vous tenez. Il révèle le sol, les murs, et la silhouette de l’autre s’il entre dedans. Il vous désigne aussi, de très loin.</p>
-      </div>
-      <div class="signal">
-        <h3>La rétrodiffusion</h3>
-        <p>Ce que la lumière de l’autre laisse sur les murs autour de vous. On sait qu’il est là avant de le voir — parfois.</p>
-      </div>
-      <div class="signal">
-        <h3>Le flash de tir</h3>
-        <p>Une image de votre position, imprimée dans le noir pendant une fraction de seconde. Tirer, c’est parler.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ LA VITRINE — en dernier, et sans un mot ============ -->
-  <section class="case case-vitrine">
-    <div class="vitrine">
-      <div class="vue c6 r2"><img src="{{G_DUEL}}" style="object-position: 58% 50%" alt="Un cône de torche traverse le noir et révèle une silhouette sur un sol de béton."></div>
-      <div class="vue c2"><img src="{{G_TORCHE}}" style="object-position: 62% 52%" alt="Un faisceau de torche seul, ouvert sur du carrelage de béton."></div>
-      <div class="vue c2"><img src="{{G_RETRO}}" style="object-position: 62% 52%" alt="Deux cônes de lumière se recouvrent en partie dans l’obscurité."></div>
-      <div class="vue c2"><img src="{{G_FLASH}}" style="object-position: 62% 52%" alt="Un tir touche : un nombre rouge apparaît près de la silhouette éclairée."></div>
-      <div class="vue c3 r2"><img src="{{G_SCINDE}}" style="object-position: 50% 45%" alt="Écran scindé : deux joueurs, trois faisceaux, une cloison centrale."></div>
-      <div class="vue c3 r2"><img src="{{G_FUSEE}}" style="object-position: 56% 52%" alt="Une fusée éclairante rouge brûle au sol et colore une moitié du couloir."></div>
-      <div class="vue c3"><img src="{{G_EBLOUI}}" style="object-position: 52% 50%" alt="Un éblouissement blanc envahit presque tout l’écran."></div>
-      <div class="vue c3"><img src="{{G_GEL}}" style="object-position: 66% 50%" alt="L’image gelée du moment de la mort, tamponnée KILL et de son horodatage."></div>
-    </div>
-  </section>
-
-  <!-- ============ CASE 11 — la dernière case ============ -->
-  <section class="case">
-    <p class="pied-mot">Éteignez.</p>
-    <p class="pied-note">Candela est développé par une personne. Le fond de la première case et les trois vues des signaux sont de véritables captures de partie, prises sans interface ; les cases pleine largeur sont des illustrations. <a href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest">Toutes les versions</a>.</p>
-  </section>
-
+<div class="fond" aria-hidden="true">
+  <div class="plan" data-scene="0" style="background-image:url('{{F_DESCENTE}}')"></div>
+  <div class="plan" data-scene="1" style="background-image:url('{{F_SEUIL}}')"></div>
+  <div class="plan" data-scene="2" style="background-image:url('{{F_DOTATION}}')"></div>
+  <div class="plan" data-scene="3" style="background-image:url('{{F_ALLUMAGE}}')"></div>
+  <div class="plan" data-scene="4" style="background-image:url('{{F_PRIX}}')"></div>
+  <div class="plan" data-scene="5" style="background-image:url('{{F_DUEL}}')"></div>
+  <div class="plan" data-scene="6" style="background-image:url('{{F_ARMES}}')"></div>
+  <div class="plan" data-scene="7" style="background-image:url('{{F_RANGS}}')"></div>
+  <div class="plan" data-scene="8" style="background-image:url('{{F_PORTE}}')"></div>
+  <div class="plan" data-scene="9" style="background-image:url('{{F_EXTINCTION}}')"></div>
+  <div class="voile"></div>
+  <div class="trame"></div>
+  <div class="torche" id="torche"></div>
 </div>
+<div class="progres"><i id="jauge"></i></div>
+
+<main>
+
+  <!-- 0 — OUVERTURE -->
+  <section class="scene" data-scene="0">
+    <div class="dedans">
+      <h1 class="wordmark anim">Candela</h1>
+      <p class="devise anim d1">Voir sans être vu.<br>Tuer sans être tué.</p>
+      <p class="accroche anim d2">Un duel à deux dans le noir absolu. Vous avez une lampe torche et une arme. Votre adversaire aussi. Le faisceau qui vous montre où il est lui montre où vous êtes.</p>
+      <p class="meta anim d2"><span>1 v 1</span><span>En ligne ou écran scindé</span><span>macOS · Windows</span><span>Gratuit</span></p>
+      <p class="invite anim d3"><b></b> Descendez</p>
+    </div>
+  </section>
+
+  <!-- 1 — LE SEUIL -->
+  <section class="scene" data-scene="1">
+    <div class="dedans">
+      <p class="lettrage anim">On ne sait pas <span class="amb">pourquoi</span> il est là.</p>
+      <p class="sous-lettrage anim d1">Une porte en acier, un panneau rouillé où un seul mot reste lisible, et derrière, le noir. Candela ne raconte rien de plus : tout ce qui compte commence au moment où la porte se referme.</p>
+    </div>
+  </section>
+
+  <!-- 2 — LA DOTATION -->
+  <section class="scene" data-scene="2">
+    <div class="dedans">
+      <div class="case anim">
+        <p class="recitatif">La dotation</p>
+        <h2>Une torche.<br>Une arme.<br>Rien d’autre.</h2>
+        <div class="prose">
+          <p>Pas d’inventaire, pas de compétences, rien à préparer avant la partie. Deux objets, les mêmes pour les deux joueurs — et tout le jeu tient dans la façon dont vous vous servez du premier.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — L'ALLUMAGE -->
+  <section class="scene" data-scene="3">
+    <div class="dedans">
+      <p class="lettrage anim">Éclairer,<br>c’est <span class="amb">voir</span>.</p>
+      <p class="sous-lettrage anim d1">Le faisceau révèle le béton, les douilles au sol, le sang séché des manches précédentes — et la silhouette de l’autre, s’il a le malheur d’entrer dedans.</p>
+    </div>
+  </section>
+
+  <!-- 4 — LE PRIX -->
+  <section class="scene" data-scene="4">
+    <div class="dedans">
+      <p class="lettrage a-droite anim">Éclairer,<br>c’est être <span class="amb">vu</span>.</p>
+      <p class="sous-lettrage a-droite anim d1">Le même cône dessine votre ombre sur le mur derrière vous, et se voit de l’autre bout de la carte. Chaque seconde de lumière est un renseignement que vous prenez et un renseignement que vous donnez. Les bons joueurs éteignent.</p>
+    </div>
+  </section>
+
+  <!-- 5 — LA RÈGLE -->
+  <section class="scene" data-scene="5">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">La règle</p>
+        <h2>La seule information<br>est la lumière</h2>
+        <div class="prose">
+          <p>Il n’y a pas de mini-carte, pas de marqueur d’ennemi, pas de contour rouge dans le noir. Un mur bloque la lumière comme il bloque une balle : la torche s’arrête où le décor s’arrête, et ce que vous n’éclairez pas n’existe pas.</p>
+        </div>
+        <div class="signaux">
+          <div class="signal"><h3>La torche</h3><p>Le faisceau que vous tenez. Il vous montre le terrain, et vous désigne de très loin.</p></div>
+          <div class="signal"><h3>La rétrodiffusion</h3><p>Ce que la lumière de l’autre laisse sur les murs autour de vous. On sait qu’il est là avant de le voir — parfois.</p></div>
+          <div class="signal"><h3>Le flash de tir</h3><p>Une image de votre position, imprimée dans le noir une fraction de seconde. Tirer, c’est parler.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 — LES ARMES -->
+  <section class="scene" data-scene="6">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">Quatre armes</p>
+        <h2>Choisir une arme,<br>c’est choisir<br>comment on se trahit</h2>
+        <div class="prose">
+          <p>Chaque arme porte sa propre torche. Elles ne diffèrent pas seulement par les dégâts : elles diffèrent par la quantité de vous-même qu’elles montrent au reste de la carte.</p>
+        </div>
+        <figure class="figure">
+          <div class="figure-titre">Portée du faisceau, en largeurs d’écran</div>
+          <div class="figure-sous">Chaque joueur voit 480 unités devant lui. Au-delà, la torche allume quelque chose que son porteur ne voit pas.</div>
+          <div class="trace">
+            <div class="seuil" aria-hidden="true"></div>
+            <div class="barre"><div class="barre-nom">Pompe</div><div class="barre-piste"><div class="barre-trait" style="--w:28.3%"></div><div class="barre-val" style="left:28.3%">0,53 <span class="barre-detail">60° · large et court</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Pistolet</div><div class="barre-piste"><div class="barre-trait" style="--w:45.5%"></div><div class="barre-val" style="left:45.5%">0,85 <span class="barre-detail">35° · polyvalent</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Fusil</div><div class="barre-piste"><div class="barre-trait" style="--w:51.3%"></div><div class="barre-val" style="left:51.3%">0,96 <span class="barre-detail">précis</span></div></div></div>
+            <div class="barre"><div class="barre-nom">Arbalète</div><div class="barre-piste"><div class="barre-trait" style="--w:100%"></div><div class="barre-val" style="left:100%; transform:translate(-100%,-50%); padding-right:0.55rem; padding-left:0; color:var(--noir); font-weight:500;">1,87</div></div></div>
+          </div>
+          <p class="figure-note">L’arbalète est la seule à éclairer au-delà de ce que son porteur peut voir : un fil de lumière de 5°, silencieux, qui atteint des endroits dont il ne recevra jamais l’image.</p>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — LES RANGS -->
+  <section class="scene" data-scene="7">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">Compétitif</p>
+        <h2>Dix rangs,<br>de l’aveugle<br>à l’unité de lumière</h2>
+        <div class="prose">
+          <p>Le classement se compte en ELO et se nomme en lumière. On commence sans rien voir ; on finit par porter le nom de l’unité qui mesure l’intensité d’une bougie.</p>
+        </div>
+        <div class="echelle">
+          <div class="rang"><span class="rang-num">01</span><span class="rang-nom" style="color:#5f6468">Aveugle</span><span class="rang-arme">Pistolet</span></div>
+          <div class="rang"><span class="rang-num">02</span><span class="rang-nom" style="color:#6e6a60">Braise</span><span class="rang-arme">Fusil</span></div>
+          <div class="rang"><span class="rang-num">03</span><span class="rang-nom" style="color:#7d7059">Bougie</span><span class="rang-arme">Pompe</span></div>
+          <div class="rang"><span class="rang-num">04</span><span class="rang-nom" style="color:#8d7855">Lanterne</span><span class="rang-arme">Arbalète</span></div>
+          <div class="rang"><span class="rang-num">05</span><span class="rang-nom" style="color:#9d8153">Torche</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">06</span><span class="rang-nom" style="color:#ae8a52">Brasier</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">07</span><span class="rang-nom" style="color:#bf9450">Phare</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">08</span><span class="rang-nom" style="color:#d09e4c">Aurore</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">09</span><span class="rang-nom" style="color:#e2a745">Zénith</span><span class="rang-arme attente">à venir</span></div>
+          <div class="rang"><span class="rang-num">10</span><span class="rang-nom" style="color:var(--ambre)">Candela</span><span class="rang-arme attente">à venir</span></div>
+        </div>
+        <p class="note-echelle">Les quatre premiers rangs ouvrent chacun une arme. <strong>Les six suivants n’ouvrent encore rien</strong> — le contenu qui les remplira est en chantier, et l’annoncer vaut mieux que de faire croire qu’un palier vide est un choix de conception.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 — TÉLÉCHARGER -->
+  <section class="scene" data-scene="8">
+    <div class="dedans">
+      <div class="case case-large anim">
+        <p class="recitatif">Jouer</p>
+        <div class="dl-tete"><h2>Télécharger</h2><span class="tampon">v0.3.1</span></div>
+        <div class="plateformes">
+          <a class="plateforme" href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest/download/Candela-macos.zip">
+            {{ICO_MAC}}
+            <span><span class="plateforme-nom">macOS</span><br><span class="plateforme-fichier">Candela-macos.zip</span></span>
+            <svg class="fleche" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 16 M5 10 L12 17 L19 10 M4 21 L20 21"/></svg>
+          </a>
+          <a class="plateforme" href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest/download/Candela-windows.zip">
+            {{ICO_WIN}}
+            <span><span class="plateforme-nom">Windows</span><br><span class="plateforme-fichier">Candela-windows.zip</span></span>
+            <svg class="fleche" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 16 M5 10 L12 17 L19 10 M4 21 L20 21"/></svg>
+          </a>
+        </div>
+        <div class="installe">
+          <h3>Première ouverture sur Mac</h3>
+          <p class="installe-intro">Candela n’est pas distribué par l’App Store, alors macOS demande votre accord une première fois. Quatre gestes, une seule fois dans la vie du jeu.</p>
+          <div class="etapes">
+            <div class="etape"><p>Ouvrez le fichier téléchargé, puis glissez <strong>Candela</strong> dans votre dossier <strong>Applications</strong>.</p></div>
+            <div class="etape"><p>Double-cliquez sur <strong>Candela</strong>. macOS refuse et affiche un avertissement : <em>c’est normal, et c’est ce qu’on va débloquer.</em> Cliquez sur <strong>Terminé</strong>.</p></div>
+            <div class="etape">
+              <p>Ouvrez <strong>Réglages Système → Confidentialité et sécurité</strong>, descendez jusqu’à la section <strong>Sécurité</strong> : une ligne parle de Candela. Cliquez sur <strong>Ouvrir quand même</strong>.</p>
+              <p class="mdp">Votre <strong>mot de passe Mac</strong> — ou Touch ID — vous sera demandé ici. C’est macOS qui le demande pour vous, pas le jeu : Candela ne le voit jamais.</p>
+            </div>
+            <div class="etape"><p>Une dernière fenêtre s’ouvre : cliquez sur <strong>Ouvrir</strong>.</p></div>
+          </div>
+          <p class="installe-fin">C’est fini. Les fois suivantes, Candela s’ouvre d’un simple double-clic, et se met à jour tout seul.</p>
+        </div>
+        <p class="dl-note">Les deux liens pointent vers la <strong>dernière version publiée</strong> : ils restent valables à chaque sortie. La 0.3.1 est sortie le 9 septembre 2026.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 — EN JEU, PUIS LA FIN -->
+  <section class="scene" data-scene="9">
+    <div class="dedans">
+      <div class="case anim">
+        <p class="recitatif">En jeu</p>
+        <h2>Ce que ça donne<br>dans le noir</h2>
+        <div class="prose"><p class="retrait">Captures de partie, sans retouche. La plus grande partie du cadre est vide — c’est le sujet.</p></div>
+      </div>
+      <div class="vitrine anim d1">
+        <div class="vue c6 r2"><img src="{{G_DUEL}}" style="object-position:58% 50%" alt="Un cône de torche traverse le noir et révèle une silhouette sur un sol de béton."></div>
+        <div class="vue c2"><img src="{{G_TORCHE}}" style="object-position:62% 52%" alt="Un faisceau de torche seul, ouvert sur du carrelage de béton."></div>
+        <div class="vue c2"><img src="{{G_RETRO}}" style="object-position:62% 52%" alt="Deux cônes de lumière se recouvrent en partie dans l’obscurité."></div>
+        <div class="vue c2"><img src="{{G_FLASH}}" style="object-position:62% 52%" alt="Un tir touche : un nombre rouge apparaît près de la silhouette éclairée."></div>
+        <div class="vue c3 r2"><img src="{{G_SCINDE}}" style="object-position:50% 45%" alt="Écran scindé : deux joueurs, trois faisceaux, une cloison centrale."></div>
+        <div class="vue c3"><img src="{{G_FUSEE}}" style="object-position:56% 52%" alt="Une fusée éclairante rouge brûle au sol et colore une moitié du couloir."></div>
+        <div class="vue c3"><img src="{{G_EBLOUI}}" style="object-position:52% 50%" alt="Un éblouissement blanc envahit presque tout l’écran."></div>
+      </div>
+
+      <div class="case case-large anim d2" style="margin-top:2.4rem">
+        <p class="recitatif">Fiche</p>
+        <div class="fiche">
+          <div class="fiche-ligne"><span class="fiche-cle">Genre</span><span>Duel en vue de dessus, furtif, à information nulle</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Joueurs</span><span>2 — en ligne, ou à deux sur la même machine</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Format</span><span>Match de 5 minutes, manches enchaînées</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Plateformes</span><span>macOS, Windows</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Moteur</span><span>Godot 4.7 — images par seconde déplafonnées</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Réseau</span><span>Hôte-autoritaire, Epic Online Services — code de salon, traversée de NAT</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Langue</span><span>Français</span></div>
+          <div class="fiche-ligne"><span class="fiche-cle">Version</span><span>0.3.1 publiée · 0.4.0 en développement</span></div>
+        </div>
+        <p class="pied">Candela est développé par une personne. Les fonds de cette page sont les planches de l’introduction du jeu ; les vues ci-dessus sont de véritables captures de partie. <a href="https://github.com/adrienvada/Candela-2D---Godot/releases/latest">Toutes les versions</a>.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
 
 <script>
 (function () {
-  var hero = document.getElementById("haut");
+  "use strict";
+  var doux = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // La classe `js` autorise le masquage. Posée seulement ici : sans script, la
+  // page reste entièrement lisible et le premier fond reste affiché.
+  document.documentElement.classList.add("js");
+
+  var plans = Array.prototype.slice.call(document.querySelectorAll(".plan"));
+  var scenes = Array.prototype.slice.call(document.querySelectorAll(".scene"));
+  var jauge = document.getElementById("jauge");
   var torche = document.getElementById("torche");
-  if (!hero || !torche) { return; }
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { return; }
-  if (window.matchMedia && window.matchMedia("(hover: none)").matches) { return; }
-  hero.addEventListener("pointermove", function (e) {
-    var r = hero.getBoundingClientRect();
-    torche.style.setProperty("--tx", ((e.clientX - r.left) / r.width * 100) + "%");
-    torche.style.setProperty("--ty", ((e.clientY - r.top) / r.height * 100) + "%");
-    torche.style.opacity = "1";
-  });
-  hero.addEventListener("pointerleave", function () { torche.style.opacity = "0"; });
+  var fond = document.querySelector(".fond");
+
+  function allumerPlan(i) {
+    for (var k = 0; k < plans.length; k++) { plans[k].classList.toggle("actif", k === i); }
+  }
+  allumerPlan(0);
+
+  // Le fond suit la scène la PLUS visible, pas la première rencontrée : entre
+  // deux scènes, c'est celle qu'on regarde qui doit décider du décor.
+  var parts = {};
+  var observateurScene = new IntersectionObserver(function (entrees) {
+    entrees.forEach(function (e) { parts[e.target.getAttribute("data-scene")] = e.intersectionRatio; });
+    var meilleur = "0", score = -1;
+    for (var cle in parts) { if (parts[cle] > score) { score = parts[cle]; meilleur = cle; } }
+    allumerPlan(parseInt(meilleur, 10));
+  }, { threshold: [0, 0.2, 0.4, 0.6, 0.8, 1] });
+  scenes.forEach(function (s) { observateurScene.observe(s); });
+
+  // Les entrées en scène. `unobserve` après coup : ce qui est apparu reste
+  // apparu — une page qui rejoue ses animations en remontant est fatigante.
+  var observateurAnim = new IntersectionObserver(function (entrees, obs) {
+    entrees.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add("vu"); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+  Array.prototype.forEach.call(document.querySelectorAll(".anim"), function (n) { observateurAnim.observe(n); });
+
+  // Jauge et dérive du fond, dans une seule boucle d'animation.
+  var enAttente = false;
+  function surDefilement() {
+    if (enAttente) { return; }
+    enAttente = true;
+    requestAnimationFrame(function () {
+      enAttente = false;
+      var h = document.documentElement.scrollHeight - window.innerHeight;
+      var p = h > 0 ? window.scrollY / h : 0;
+      jauge.style.width = (p * 100).toFixed(2) + "%";
+      if (!doux) { fond.style.setProperty("--derive", ((window.scrollY % 1000) / 1000).toFixed(3)); }
+    });
+  }
+  window.addEventListener("scroll", surDefilement, { passive: true });
+  surDefilement();
+
+  if (!doux && !(window.matchMedia && window.matchMedia("(hover: none)").matches)) {
+    window.addEventListener("pointermove", function (e) {
+      torche.style.setProperty("--tx", (e.clientX / window.innerWidth * 100) + "%");
+      torche.style.setProperty("--ty", (e.clientY / window.innerHeight * 100) + "%");
+      torche.style.opacity = "1";
+    }, { passive: true });
+    document.addEventListener("pointerleave", function () { torche.style.opacity = "0"; });
+  }
 })();
 </script>

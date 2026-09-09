@@ -5,44 +5,60 @@
     python3 assembler.py --fichiers <dir>   -> <dir>/index.html + <dir>/images/
 
 **Pourquoi deux modes, et pas un seul.** L'artefact publié n'accepte AUCUNE
-image distante : tout doit voyager dans le fichier, d'où les 3 Mo de base64.
-GitHub Pages n'a pas cette contrainte, et y servir un seul fichier de 3 Mo
-ferait retélécharger toutes les images à chaque visite au lieu de les laisser
-au cache du navigateur. Le gabarit est le même ; seule la résolution des jetons
+image distante : tout doit voyager dans le fichier, d'où les mégaoctets de
+base64. GitHub Pages n'a pas cette contrainte, et y servir un fichier unique
+ferait retélécharger toutes les images à chaque visite au lieu de les laisser au
+cache du navigateur. Le gabarit est le même ; seule la résolution des jetons
 d'image change.
+
+Chaque jeton porte une LISTE de candidats : le premier qui existe gagne. C'est
+ce qui permet d'écrire la page avant que les images commandées n'arrivent —
+elle se replie sur une illustration déjà présente, et l'annonce à la
+génération plutôt que de tomber.
 """
 import base64, io, pathlib, shutil, sys
 
 RACINE = pathlib.Path(__file__).parent
 
-def uri(nom: str) -> str:
-    c = (RACINE / nom).read_bytes()
-    mime = "image/png" if nom.endswith(".png") else "image/jpeg"
-    return f"data:{mime};base64," + base64.b64encode(c).decode("ascii")
-
 IMAGES = {
-    # les trois illustrations pleine largeur
-    "{{IMG_SCINDE}}": "ill_ecran_scinde.jpg",
-    "{{IMG_COMPETITIF}}": "ill_competitif.jpg",
-    "{{IMG_QUITTER}}": "ill_quitter.jpg",
-    # la vitrine : huit captures, sans légende
-    "{{G_DUEL}}": "hero-duel.jpg",
-    "{{G_TORCHE}}": "sig-05-torche.jpg",
-    "{{G_RETRO}}": "sig-06-retrodiffusion.jpg",
-    "{{G_FLASH}}": "sig-07-flash-de-tir.jpg",
-    "{{G_SCINDE}}": "gal-scinde.jpg",
-    "{{G_FUSEE}}": "gal-fusee.jpg",
-    "{{G_EBLOUI}}": "gal-eblouissement.jpg",
-    "{{G_GEL}}": "gal-gel.jpg",
+    # Les dix fonds de scène. Les six premiers sont les planches de l'intro
+    # (DA6.6) ; les autres viennent du jeu ou d'illustrations de menu.
+    "{{F_DESCENTE}}":   ["pl-descente.jpg"],
+    "{{F_SEUIL}}":      ["pl-seuil.jpg"],
+    "{{F_DOTATION}}":   ["pl-dotation.jpg"],
+    "{{F_ALLUMAGE}}":   ["pl-allumage.jpg"],
+    "{{F_PRIX}}":       ["pl-prix.jpg"],
+    "{{F_DUEL}}":       ["bg-duel.jpg"],
+    # Trois fonds commandés pour le site. Tant qu'ils n'existent pas, repli sur
+    # une illustration de menu : la page ne dépend jamais d'une image en route.
+    "{{F_ARMES}}":      ["fond_armes.jpg", "bg-competitif.jpg"],
+    "{{F_RANGS}}":      ["fond_rangs.jpg", "bg-quitter.jpg"],
+    "{{F_PORTE}}":      ["fond_telecharger.jpg", "bg-ecran_scinde.jpg"],
+    "{{F_EXTINCTION}}": ["pl-extinction.jpg"],
+    # La vitrine : sept captures de partie, sans légende.
+    "{{G_DUEL}}":   ["hero-duel.jpg"],
+    "{{G_TORCHE}}": ["sig-05-torche.jpg"],
+    "{{G_RETRO}}":  ["sig-06-retrodiffusion.jpg"],
+    "{{G_FLASH}}":  ["sig-07-flash-de-tir.jpg"],
+    "{{G_SCINDE}}": ["gal-scinde.jpg"],
+    "{{G_FUSEE}}":  ["gal-fusee.jpg"],
+    "{{G_EBLOUI}}": ["gal-eblouissement.jpg"],
 }
-# Les icônes de plateforme sont FACULTATIVES : tant qu'elles n'existent pas,
-# le bouton se lit très bien avec son seul lettrage. Rien ne casse.
+
+# Les icônes de plateforme sont FACULTATIVES : sans elles, le bouton se lit très
+# bien avec son seul lettrage, et rien ne casse.
 ICONES = {
     "{{ICO_MAC}}": ("icone_macos.png", "macOS"),
     "{{ICO_WIN}}": ("icone_windows.png", "Windows"),
 }
 
-# --- Le mode -----------------------------------------------------------------
+
+def uri(nom: str) -> str:
+    contenu = (RACINE / nom).read_bytes()
+    mime = "image/png" if nom.endswith(".png") else "image/jpeg"
+    return f"data:{mime};base64," + base64.b64encode(contenu).decode("ascii")
+
+
 sortie = None
 if "--fichiers" in sys.argv:
     i = sys.argv.index("--fichiers")
@@ -50,8 +66,9 @@ if "--fichiers" in sys.argv:
         sys.exit("--fichiers attend un dossier de sortie")
     sortie = pathlib.Path(sys.argv[i + 1]).expanduser()
 
+
 def lien(nom: str) -> str:
-    """Résout un jeton d'image : data: URI en autonome, chemin relatif en fichiers."""
+    """data: URI en mode autonome, chemin relatif en mode fichiers."""
     if sortie is None:
         return uri(nom)
     dossier = sortie / "images"
@@ -59,37 +76,49 @@ def lien(nom: str) -> str:
     shutil.copyfile(RACINE / nom, dossier / nom)
     return f"images/{nom}"
 
+
 src = (RACINE / "candela.tpl.html").read_text(encoding="utf-8")
-for cle, fic in IMAGES.items():
-    assert cle in src, f"jeton absent du gabarit : {cle}"
-    src = src.replace(cle, lien(fic))
+
+replis = []
+for cle, candidats in IMAGES.items():
+    if cle not in src:
+        sys.exit(f"jeton absent du gabarit : {cle}")
+    choisi = next((c for c in candidats if (RACINE / c).exists()), None)
+    if choisi is None:
+        sys.exit(f"aucun candidat présent pour {cle} : {candidats}")
+    if choisi != candidats[0]:
+        replis.append(f"{candidats[0]} → {choisi}")
+    src = src.replace(cle, lien(choisi))
 
 poses = []
-for cle, (fic, nom) in ICONES.items():
-    assert cle in src, f"jeton absent du gabarit : {cle}"
-    if (RACINE / fic).exists():
-        src = src.replace(cle, f'<img class="glyphe" src="{lien(fic)}" alt="">')
+for cle, (fichier, nom) in ICONES.items():
+    if cle not in src:
+        sys.exit(f"jeton absent du gabarit : {cle}")
+    if (RACINE / fichier).exists():
+        src = src.replace(cle, f'<img class="glyphe" src="{lien(fichier)}" alt="">')
         poses.append(nom)
     else:
         src = src.replace(cle, "")
 
-src = src.replace("  --gap: clamp(0.5rem, 1.4vw, 1rem);",
-                  '  --gap: clamp(0.5rem, 1.4vw, 1rem);\n  --img-duel: url("' + lien("hero-duel.jpg") + '");')
+if "{{" in src:
+    sys.exit("jeton non résolu dans le gabarit")
 
-assert "{{" not in src, "jeton non résolu"
+suffixe = ""
+if replis:
+    suffixe = " — REPLIS : " + " ; ".join(replis)
 
 if sortie is None:
     (RACINE / "candela.html").write_text(src, encoding="utf-8")
-    print(f"autonome : {len(src)//1024} Ko — icônes posées : {', '.join(poses) or 'aucune'}")
+    print(f"autonome : {len(src)//1024} Ko — icônes : {', '.join(poses) or 'aucune'}{suffixe}")
 else:
     # Le gabarit est un FRAGMENT : l'artefact lui pose son propre squelette.
-    # Servi par Pages, il lui faut le sien — et il doit être exact, pas décoratif.
+    # Servi par Pages, il lui faut le sien — et il doit être exact.
     page = (
-        "<!doctype html>\n<html lang=\"fr\">\n<head>\n"
+        '<!doctype html>\n<html lang="fr">\n<head>\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         '<meta name="description" content="Un duel à deux dans le noir absolu. '
-        'Le faisceau qui vous montre l\u2019adversaire lui montre où vous êtes.">\n'
+        'Le faisceau qui vous montre l’adversaire lui montre où vous êtes.">\n'
         '<meta property="og:title" content="Candela">\n'
         '<meta property="og:description" content="Un duel à deux dans le noir absolu.">\n'
         '<meta property="og:image" content="images/hero-duel.jpg">\n'
@@ -99,12 +128,11 @@ else:
     sortie.mkdir(parents=True, exist_ok=True)
     (sortie / "index.html").write_text(page, encoding="utf-8")
     # Sans ce fichier, Jekyll traite le dossier et ignore tout nom commençant
-    # par un souligné. Rien n'en porte aujourd'hui ; c'est une garantie, pas un
-    # correctif.
+    # par un souligné. Rien n'en porte aujourd'hui : c'est une garantie.
     (sortie / ".nojekyll").write_text("", encoding="utf-8")
-    # `.git` exclu : le dossier de sortie est un dépôt, et compter ses objets
-    # ferait annoncer un poids de page qui double à chaque génération.
+    # `.git` exclu du compte : le dossier de sortie est un dépôt, et compter ses
+    # objets ferait annoncer un poids de page qui double à chaque génération.
     poids = sum(f.stat().st_size for f in sortie.rglob("*")
                 if f.is_file() and ".git" not in f.parts)
     print(f"fichiers : {sortie} — {poids//1024} Ko au total, "
-          f"icônes posées : {', '.join(poses) or 'aucune'}")
+          f"icônes : {', '.join(poses) or 'aucune'}{suffixe}")
