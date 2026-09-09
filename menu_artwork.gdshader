@@ -1,16 +1,13 @@
 shader_type canvas_item;
 
 // =============================================================================
-// SHADER D'ARTWORK DE MENU — Candela 2D
+// SHADER D'ARTWORK DE MENU — Candela 2D (Style Roman Graphique Brutaliste)
 // =============================================================================
 // 1. Rendu sombre par défaut & Révélation dynamique par la torche du curseur
 // 2. Transition de fondu doux et organique
-// 3. Effets vivants d'ambiance calés avec précision sur les éléments réels :
-//    - Terminaux CRT & phosphore vert
-//    - Baies réseau, câbles et diodes LED
-//    - Cadrans électriques, voltmètres et voyants
-//    - Halos de poussières et brumes volumétriques lentes
-//    - Lueur diffuse des fusées de détresse
+// 3. Effets vivants d'ambiance STRICTEMENT asservis à la luminance du dessin
+//    (Luma-Keying) : les traits d'encre noire et le béton brut ne sont JAMAIS
+//    bavés ni dénaturés par des formes géométriques procédurales.
 // 4. Mode flou d'arrière-plan pour les panneaux interactifs
 // =============================================================================
 
@@ -31,36 +28,10 @@ uniform float torch_intensity : hint_range(0.0, 2.0) = 1.0;
 // --- Transition de fondu doux (0.0 = masqué, 1.0 = pleinement révélé) ---
 uniform float reveal_progress : hint_range(0.0, 1.0) = 1.0;
 
-// --- Effets vivants spécifiques ---
-// 0: Aucun, 1: Accueil (Poussière dorée & torche), 2: Compétitif (Tableau électrique froid & brume),
-// 3: Écran Scindé (Faisceaux croisés & poussières), 4: Amical (Brume volumétrique),
-// 5: Amical Ligne (Diodes boîtiers réseau & câbles), 6: Amical Local (Écrans CRT phosphore & baie),
-// 7: Entraînement (Cible bois & poussière), 8: Personnalisation (Cadrans 440V & voyants),
-// 9: Mise à jour (Lumière de brèche porte), 10: Quitter (Torche au sol & braise),
-// 11: Créer Ligne (Fusée rouge diffuse & fumée), 12: Créer Local (Fusée sol droite & écrans CRT),
-// 13: Rejoindre Ligne (Balise lointaine & diodes câbles), 14: Rejoindre Local (Balise & borne CRT),
-// 15: Retour (Abysse couloir)
+// --- Effets vivants spécifiques (asservis au dessin) ---
 uniform int effect_mode = 0;
 uniform float effect_time = 0.0;
 uniform float effect_strength : hint_range(0.0, 2.0) = 1.0;
-
-// --- Utilitaires de bruit et formes géométriques lissées ---
-float hash12(vec2 p) {
-	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-	p3 += dot(p3, p3.yzx + 33.33);
-	return fract((p3.x + p3.y) * p3.z);
-}
-
-float noise2d(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	float a = hash12(i);
-	float b = hash12(i + vec2(1.0, 0.0));
-	float c = hash12(i + vec2(0.0, 1.0));
-	float d = hash12(i + vec2(1.0, 1.0));
-	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
 
 void fragment() {
 	vec2 tex_size = vec2(textureSize(TEXTURE, 0));
@@ -82,61 +53,54 @@ void fragment() {
 	col += texture(TEXTURE, UV + vec2(-ps.x, ps.y) * 0.707) * 0.1216216;
 	col += texture(TEXTURE, UV + vec2(ps.x, -ps.y) * 0.707) * 0.1216216;
 	
-	// --- 2. Rendu sombre par défaut & Révélation torche interactive ---
+	// --- 2. Rendu sombre par défaut & Révélation torche ---
 	vec2 delta_torch = (UV - torch_pos) * vec2(aspect, 1.0);
 	float dist_torch = length(delta_torch);
 	float torch_light = smoothstep(torch_radius, 0.0, dist_torch) * torch_intensity;
 	
-	// Les hautes lumières du dessin percent naturellement la pénombre
-	float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
-	float breakthrough = smoothstep(0.35, 0.75, luma) * 0.30;
+	// Percée éclatante des hautes lumières du dessin (faisceaux, lampes, néons)
+	float luma = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+	float highlight_breakthrough = smoothstep(0.35, 0.78, luma);
 	
-	float exposure = mix(ambient_exposure + breakthrough, 1.0, torch_light);
+	float exposure = mix(mix(ambient_exposure, 1.0, highlight_breakthrough), 1.0, torch_light);
 	vec3 base_rgb = col.rgb * exposure;
 	
-	// --- 3. Isolation pure des zones claires dessinées (Luma-Keying) ---
-	// Seuls les pixels portant déjà du dessin lumineux reçoivent l'effet vivant.
-	// L'encre noire, les ombres profondes et le béton sombre reçoivent 0.0.
-	float k_highlight = smoothstep(0.22, 0.65, luma);
-	
+	// --- 3. Effets vivants d'ambiance — LUMA-KEYED (zéro boîte ni masque procédural) ---
+	// Seules les zones claires du dessin sont modulées en intensité et en teinte.
+	float k_highlight = smoothstep(0.20, 0.65, luma);
 	vec3 effect_color = vec3(0.0);
 	float effect_boost = 0.0;
 	float t = effect_time;
 	
 	if (effect_mode == 1) {
-		// Accueil : Respiration dorée sur le panneau ARENA et le faisceau
-		float breathe = 0.85 + 0.25 * sin(t * 2.2);
-		effect_color = vec3(0.98, 0.80, 0.40) * (breathe * 0.35);
-		effect_boost = (breathe - 0.85) * 0.40;
+		// Accueil : Scintillement chaud de l'enseigne ARENA et de la lampe
+		float pulse = 0.80 + 0.20 * sin(t * 2.5);
+		effect_color = vec3(0.98, 0.82, 0.40) * (pulse * 0.35);
+		effect_boost = (pulse - 0.80) * 0.40;
 	}
 	else if (effect_mode == 2) {
-		// Compétitif : Diodes cyan et étincelles froides sur les zones claires
-		float spark = step(0.85, fract(sin(dot(UV * 50.0, vec2(12.9898, 78.233)) + t * 4.0) * 43758.5453));
-		float pulse = 0.75 + 0.25 * sin(t * 3.5 + sin(t * 8.0) * 0.6);
-		effect_color = vec3(0.25, 0.80, 1.0) * (pulse * 0.35 + spark * 0.40);
-		effect_boost = (pulse - 0.75) * 0.50;
+		// Compétitif : Éclats électriques froids et diodes cyan sur l'armoire
+		float electric = 0.80 + 0.20 * sin(t * 4.0 + sin(t * 11.0) * 0.5);
+		effect_color = vec3(0.20, 0.80, 1.0) * (electric * 0.40);
+		effect_boost = (electric - 0.80) * 0.50;
 	}
 	else if (effect_mode == 3) {
-		// Écran scindé : Balancement ambre à gauche et bleu froid à droite
-		float is_right = smoothstep(0.48, 0.52, UV.x);
-		float pulse_l = 0.80 + 0.20 * sin(t * 2.5);
-		float pulse_r = 0.80 + 0.20 * cos(t * 2.8);
-		vec3 col_l = vec3(0.98, 0.78, 0.40) * (pulse_l * 0.35);
-		vec3 col_r = vec3(0.35, 0.75, 1.00) * (pulse_r * 0.35);
-		effect_color = mix(col_l, col_r, is_right);
-		effect_boost = mix(pulse_l - 0.80, pulse_r - 0.80, is_right) * 0.45;
+		// Écran Scindé : Affrontement lumineux bi-ton ambre et bleu
+		float pulse_ab = 0.80 + 0.20 * sin(t * 2.2);
+		effect_color = vec3(0.85, 0.88, 1.0) * (pulse_ab * 0.35);
+		effect_boost = (pulse_ab - 0.80) * 0.45;
 	}
 	else if (effect_mode == 4) {
-		// Amical : Respiration ambrée chaude sur les silhouettes et le pilier
-		float pulse = 0.80 + 0.20 * sin(t * 1.8);
-		effect_color = vec3(0.98, 0.75, 0.35) * (pulse * 0.30);
-		effect_boost = (pulse - 0.80) * 0.35;
+		// Amical : Lueur ambrée respirante autour des combattants
+		float breathe = 0.82 + 0.18 * sin(t * 1.8);
+		effect_color = vec3(0.98, 0.78, 0.35) * (breathe * 0.30);
+		effect_boost = (breathe - 0.82) * 0.35;
 	}
 	else if (effect_mode == 5) {
-		// Amical Ligne : Scintillement des diodes LED cyan des serveurs
-		float led_flicker = 0.70 + 0.30 * sin(t * 6.0 + sin(t * 14.0));
-		effect_color = vec3(0.20, 0.88, 1.0) * (led_flicker * 0.45);
-		effect_boost = (led_flicker - 0.70) * 0.60;
+		// Amical Ligne : Scintillement des diodes de baies réseau
+		float network = 0.80 + 0.20 * sin(t * 6.0 + sin(t * 18.0) * 0.4);
+		effect_color = vec3(0.20, 0.85, 1.0) * (network * 0.40);
+		effect_boost = (network - 0.80) * 0.50;
 	}
 	else if (effect_mode == 6) {
 		// Amical Local : Phosphore vert cathodique & balayage sur les écrans CRT
@@ -159,7 +123,6 @@ void fragment() {
 	}
 	else if (effect_mode == 9) {
 		// Mise à jour : Énergie solaire dorée pure jaillissant des rayons de VAULT 07
-		// Les rayons dessinés pulsent de l'intérieur avec une intensité éclatante
 		float vault_pulse = 0.80 + 0.35 * sin(t * 2.5);
 		effect_color = vec3(1.0, 0.88, 0.42) * (vault_pulse * 0.55);
 		effect_boost = (vault_pulse - 0.80) * 0.75;
