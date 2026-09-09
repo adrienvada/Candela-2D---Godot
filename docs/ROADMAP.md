@@ -13357,6 +13357,14 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
   de l'affectation des 15 modes d'effets et de l'instanciation des shaders du hub.
 - Intégré dans `tools/run_suites.sh` (57 suites solo au vert, 0 échec).
 
+### MV5 — Effets Vivants Organiques & Particules 2D d'Ambiance (Adrien, 2026-09-09)
+- **Élimination des artefacts géométriques :** Remplacement des halos et masques procéduraux circulaires (`smoothstep`) et carrés (`smooth_box`) par une modulation stricte asservie à la luminance naturelle de l'encrage (`k_highlight = smoothstep(0.22, 0.65, luma)` dans `menu_artwork.gdshader`).
+- **Préservation intégrale des traits d'encre et textures de béton :** Les traits noirs et les zones sombres ne reçoivent aucun voile ni bavure, les effets s'expriment uniquement au cœur des zones claires dessinées.
+- **Système de particules physiques 2D (`menu_particles_ambiance.gd`) :**
+  - Composant `MenuParticlesAmbiance` superposant des particules physiques légères (`CPUParticles2D`) avec texture radiale douce générée procéduralement.
+  - 15 profils d'ambiance adaptés aux illustrations et calés sur les coordonnées POI de `MenuArtwork` (poussières de faisceau, gerbes d'or VAULT 07, étincelles de fusée rouge, diodes électriques cyan, phosphore vert, balise radio, sas d'accès).
+- **Couverture & Tests :** 63/63 suites de tests headless 100 % vertes dans `tools/run_suites.sh --rapide` (90s, 0 échec).
+
 ---
 
 ## Jalons humains — ce qui ne peut pas être automatisé

@@ -98,7 +98,7 @@ func _test_wall_darkness_and_contrast() -> void:
 		if img != null:
 			# Case de mur à (1, 0)
 			var ox := CandelaTileSet.TILE_SIZE.x
-			var centre_mur := img.get_pixel(ox + 17, 17)
+			var centre_mur := img.get_pixel(ox + 10, 10)
 			_check("centre du mur en noir pur Charte.NOIR (0, 0, 0)",
 				is_zero_approx(centre_mur.r) and is_zero_approx(centre_mur.g) and is_zero_approx(centre_mur.b),
 				str(centre_mur))

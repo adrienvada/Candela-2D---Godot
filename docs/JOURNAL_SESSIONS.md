@@ -2486,3 +2486,17 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - Déclaration de `breath_hit` (6 variantes) dans `VARIANTES_SFX` et des recharges d'armes dans `SOUNDS` de `audio_manager.gd`.
   - **Validation :** 61/61 suites solo + 7/7 scénarios duo au vert dans `tools/run_suites.sh` (268s, 0 échec).
 
+#### Lot du 2026-09-09 — session « effets vivants des illustrations de menu (luma-keying & particules physiques d'ambiance) »
+
+**Chantier Menus — Effets vivants organiques & particules 2D** (validé par Adrien) :
+- **Suppression des taches et halos géométriques artificiels :** Refonte de `menu_artwork.gdshader` pour éliminer tous les masques procéduraux circulaires (`smoothstep(radius, 0.0, dist)`) et rectangulaires (`smooth_box`) qui dégradaient le dessin du coffre-fort et des arènes.
+- **Modulation asservie à la luminance du dessin (Luma-Keying) :** Les effets vivants (pulsations solaires de VAULT 07, balayage CRT, scintillements d'atelier, incandescence de la fusée) modulent désormais directement les zones claires dessinées par l'artiste (`k_highlight = smoothstep(0.22, 0.65, luma)`), laissant les traits d'encre noire et les ombres de béton 100 % intacts et nets.
+- **Système de particules physiques 2D (`menu_particles_ambiance.gd`) :**
+  - Composant `MenuParticlesAmbiance` instanciant des émetteurs `CPUParticles2D` légers avec texture de lueur radiale douce (`GradientTexture2D` 16x16) et gradient de vie soyeux.
+  - 15 profils d'ambiance adaptés aux illustrations : poussières lentes en suspension (`ATMOSPHERIC_DUST`), gerbes d'or émergeant de la brèche VAULT 07 (`VAULT_GOLD_BURST`), étincelles carmin et fumée de fusée (`FLARE_CRIMSON`), étincelles d'armoire électrique cyan (`CYAN_ELECTRIC`), phosphore cathodique vert (`CRT_PHOSPHOR`), balise radio bleue (`RADIO_BEACON`), voyant vert de sas (`AIRLOCK_EMERALD`), braises mourantes de torche (`DYING_EMBERS`).
+  - Raccordement dans `menu_hub.gd` avec calage sur les coordonnées POI de `MenuArtwork` et masquage doux lors des transitions.
+- **Banc de tests & robustesse :**
+  - Enrichissement de `tools/test_menu_artworks.gd` pour tester l'instanciation, la configuration de l'ensemble des 15 profils et le masquage doux des particules.
+  - Correction de typage explicite dans `audio_manager.gd` et prise en compte du relais d'oreille racine dans `test_dosage_audio.gd`.
+  - **Validation :** 63/63 suites headless au vert dans `tools/run_suites.sh --rapide` (90s, 0 échec).
+

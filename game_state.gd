@@ -793,9 +793,9 @@ func rebuild_arena() -> void:
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
-
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
 	ArenaDecorScript.build(data, arena)
+
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
 	# défaut de la texture de torche, weapon_data.gd).
@@ -1231,11 +1231,6 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
 	_fusees_restantes = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
 	_purger_fusees_killcam()
-	# FU5 — le piétinement ne doit rien hériter de la manche précédente : un
-	# joueur déjà immobile au dernier « FIGHT ! » ne doit pas repartir avec
-	# 0,7 s déjà acquises sur une fusée qui vient d'apparaître.
-	_pietinement_temps = [0.0, 0.0]
-	_pietinement_fusee = [null, null]
 	ghost_p1.hide()
 	ghost_p2.hide()
 	for c in bullet_container.get_children():
@@ -1297,11 +1292,8 @@ func _process(delta):
 					_do_end_round(-1)
 
 		_update_music_intensity()
-		# FU5 — piétinement : après le décompte seulement, comme le reste du
-		# gameplay (mouvement, tir), que le décompte fige déjà côté joueur.
-		_maj_extinction_fusees(delta)
 
-
+		
 	# **Le regard suit le joueur, pas le score.** Ce suivi vivait dans
 	# `if round_active:` — c'est-à-dire « une manche COMPTÉE est en cours ». Or
 	# l'entraînement désarme volontairement cette manche : la caméra n'était donc
@@ -1635,15 +1627,6 @@ var _fusees_restantes: Array[int] = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.S
 ## Fusées reconstruites par la killcam, par graine.
 var _fusees_killcam: Dictionary = {}
 
-# FU5 — piétinement, par joueur (index 0/1 = p1/p2). Hôte seul : voir
-# `_maj_extinction_fusees`. `_pietinement_pos` est réévaluée CHAQUE tick (pas
-# seulement au début du piétinement) : c'est une VITESSE qu'on mesure, comme
-# le sillage de la fusée elle-même (`fusee.gd`), pas une distance à un point
-# fixe — sinon le moindre tremblement d'input humain ne tiendrait jamais 0,7 s.
-var _pietinement_temps: Array[float] = [0.0, 0.0]
-var _pietinement_fusee: Array = [null, null]
-var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
-
 func fusee_disponible(pid: int) -> bool:
 	if sandbox_mode:
 		return true
@@ -1725,84 +1708,6 @@ func _purger_fusees_killcam() -> void:
 		if is_instance_valid(f):
 			f.queue_free()
 	_fusees_killcam.clear()
-
-## FU5 — éteindre une fusée passe par le MÊME arbitrage que son lancer :
-## l'hôte tranche, le client demande. Deux appelants : le piétinement
-## (`_maj_extinction_fusees`, hôte seul — SANS ce détour, chaque machine
-## déciderait de son propre chronomètre d'immobilité, avec l'écart
-## d'interpolation de l'adversaire entre les deux, et les deux écrans
-## diraient une fusée éteinte à des instants différents) ; et une balle qui
-## touche une fusée posée (`bullet.gd`, tous pairs — leur propre simulation
-## déterministe suffirait en principe, mais un seul chemin d'arbitrage pour un
-## même état répliqué évite deux logiques à maintenir en accord).
-func demander_extinction_fusee(graine: int) -> void:
-	match NetworkManager.current_mode:
-		NetworkManager.GameMode.ONLINE_CLIENT:
-			return # la balle du client est une prédiction ; l'officielle, côté hôte, redemandera
-		NetworkManager.GameMode.ONLINE_HOST:
-			rpc_eteindre_fusee.rpc(graine)
-		_:
-			_do_eteindre_fusee(graine)
-
-@rpc("authority", "call_local", "reliable")
-func rpc_eteindre_fusee(graine: int) -> void:
-	_do_eteindre_fusee(graine)
-
-func _do_eteindre_fusee(graine: int) -> void:
-	for c in bullet_container.get_children():
-		if c is Fusee and c.graine == graine and not c.is_replay:
-			c.eteindre()
-
-## FU5 — piétiner une fusée POSÉE l'éteint : 0,7 s immobile dessus. HÔTE SEUL :
-## contrairement aux dégâts (où le SHOOTER doit être compensé pour la latence
-## de sa PROPRE vue de l'adversaire), ici il n'y a pas de perspective à
-## compenser — l'hôte simule déjà les DEUX joueurs en direct depuis leurs
-## commandes, sans délai à rattraper. Ce qu'il faut éviter, c'est l'INVERSE :
-## si chaque machine décidait seule, le client jugerait son propre piétinement
-## à travers le délai d'interpolation de l'AUTRE joueur (100 ms, voir
-## `Player.NetRole.INTERPOLATED`) — deux écrans pourraient alors éteindre la
-## fusée à des instants différents. Un seul juge, comme partout ailleurs dans
-## ce fichier (`_maj_eblouissement`, `_flash_de_tir`) : l'hôte tranche, le
-## résultat se réplique via `demander_extinction_fusee`.
-func _maj_extinction_fusees(delta: float) -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
-		return
-	if not is_instance_valid(p1) or not is_instance_valid(p2):
-		return
-	for i in 2:
-		var joueur: Player = p1 if i == 0 else p2
-		if joueur.dead:
-			_pietinement_temps[i] = 0.0
-			_pietinement_fusee[i] = null
-			continue
-		var sous: Fusee = null
-		for c in bullet_container.get_children():
-			if c is Fusee and not c.is_replay and c.est_allumee_au_sol() \
-					and joueur.global_position.distance_to(c.global_position) \
-						<= FuseeModele.EXTINCTION_RAYON:
-				sous = c
-				break
-		if sous == null:
-			_pietinement_temps[i] = 0.0
-			_pietinement_fusee[i] = null
-			continue
-		if sous != _pietinement_fusee[i]:
-			# On vient d'arriver sur cette fusée (ou sur une autre) : le
-			# chronomètre repart, et la position de référence aussi.
-			_pietinement_fusee[i] = sous
-			_pietinement_temps[i] = 0.0
-			_pietinement_pos[i] = joueur.global_position
-			continue
-		var vitesse := joueur.global_position.distance_to(_pietinement_pos[i]) / delta
-		_pietinement_pos[i] = joueur.global_position
-		if vitesse > FuseeModele.EXTINCTION_VITESSE_MAX:
-			_pietinement_temps[i] = 0.0
-			continue
-		_pietinement_temps[i] += delta
-		if _pietinement_temps[i] >= FuseeModele.EXTINCTION_PIETINEMENT:
-			demander_extinction_fusee(sous.graine)
-			_pietinement_temps[i] = 0.0
-			_pietinement_fusee[i] = null
 
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
@@ -1901,15 +1806,6 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	# que le client a déjà rendu — c'est ce que garde `spawn_nodes`. La killcam,
 	# elle, passe par `_on_replay_spawn_bullet` : un rejeu n'éblouit personne.
 	_flash_de_tir(shooter)
-
-	# FU3 — un tir parti DE L'INTÉRIEUR d'une fumée fait pulser tout le nuage,
-	# pour diluer la position du tireur. Même site que le flash de tir : une
-	# fois par volée, jamais pour un tir déjà rendu, jamais en killcam. Chaque
-	# machine décide localement, depuis sa propre simulation de la fusée — la
-	# même confiance que le reste de FU1-FU2 lui accorde déjà.
-	for f in bullet_container.get_children():
-		if f is Fusee and not f.is_replay and f.occultation_pour(pos) > 0.0:
-			f.diffuser_flash()
 
 ## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
 ## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)

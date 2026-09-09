@@ -232,7 +232,16 @@ func _auditeurs_du_duel(main: Node) -> Array[String]:
 	var noms: Array[String] = []
 	var monde: World2D = main.vp1.world_2d
 	for vue in [root, main.vp1, main.vp2]:
-		if vue.world_2d == monde and vue.is_audio_listener_2d():
+		if not (vue.world_2d == monde and vue.is_audio_listener_2d()):
+			continue
+		# ⚠️ **Une vue ARRETEE ne compte pas, et l'oublier a coute trois semaines
+		# de silence.** Ce compteur repondait « auditeurs = 1 » en designant un
+		# `SubViewport` que `_accorder_rendu_aux_vues` venait d'eteindre : le
+		# controle passait au vert pendant que le jeu n'emettait plus rien.
+		# Compter une vue morte, c'est certifier le defaut qu'on cherche.
+		var vivante: bool = (vue == root) \
+			or vue.render_target_update_mode != SubViewport.UPDATE_DISABLED
+		if vivante:
 			noms.append("racine" if vue == root else String(vue.name))
 	return noms
 
