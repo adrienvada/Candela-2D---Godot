@@ -1649,6 +1649,7 @@ func _physics_process(delta):
 			is_reloading = false
 			if current_weapon:
 				current_ammo = current_weapon.max_ammo
+				_rumble(0.0, RUMBLE_RELOAD_READY, 0.08)
 
 	# Détection de l'ordre de recharger
 	var reload_presse := input_provider.is_reload_pressed()
@@ -1669,6 +1670,7 @@ func _physics_process(delta):
 			# Plus de munitions : tir à sec + rechargement automatique
 			if not _detente_pressee and _percu_ici():
 				tir_a_sec = 0.22
+				_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 				if current_weapon:
 					AudioManager.play_sfx_2d(
 						AudioManager.chemin_percuteur(current_weapon.slug()),
@@ -1683,6 +1685,7 @@ func _physics_process(delta):
 		# « je suis desarme, et je suis la ». Il ne compte pas comme un tir pour
 		# le pool (voir `AudioManager.est_un_tir`), sans quoi il ferait reculer
 		# les pas de l'adversaire au moment ou l'on ne tire justement pas.
+		_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 		if current_weapon:
 			AudioManager.play_sfx_2d(
 				AudioManager.chemin_percuteur(current_weapon.slug()),
@@ -1767,15 +1770,21 @@ func shoot():
 ## L'arbitrage du stock et le spawn restent chez `game_state` (l'hôte).
 func lancer_fusee():
 	shoot_cooldown = maxf(shoot_cooldown, FuseeModele.DESARMEMENT)
+	# Recul plus sourd et plus long qu'un tir : on ne doit pas confondre les
+	# deux gestes rien qu'au ressenti dans la main.
+	_rumble(RUMBLE_FLARE_WEAK, RUMBLE_FLARE_STRONG, 0.18)
 	get_tree().call_group("game_state", "spawn_fusee", self, global_position, rotation)
 
 # ---------------------------------------------------------------------------
-# V1.5 — Retour haptique. Quatre signaux : tir (fort, bref), impact reçu
-# (moyen), pouls sous 30 HP, double coup du vainqueur au kill. Ne vibre que la
-# manette du joueur assis devant CE personnage : le device_id de son
+# V1.5 — Retour haptique. Tir (fort, bref), impact reçu (moyen), pouls sous
+# 30 HP, double coup du vainqueur au kill, tir à sec, rechargement terminé,
+# lancer de fusée, mort du perdant (chantier vibrations manettes). Ne vibre
+# que la manette du joueur assis devant CE personnage : le device_id de son
 # LocalInputProvider, et seulement si ce pad est réellement branché — un
 # joueur clavier a souvent un pad posé sur le bureau, il ne doit pas bourdonner
-# pour l'adversaire.
+# pour l'adversaire. Intensité pilotée par le réglage CONFORT
+# `vibration_manette` (0 à 100 %, pas de plancher en classé : purement local à
+# celui qui la ressent, elle ne porte aucune information sur l'adversaire).
 # ---------------------------------------------------------------------------
 const RUMBLE_SHOOT_STRONG := 0.7
 const RUMBLE_HIT_WEAK := 0.5
@@ -1783,16 +1792,35 @@ const RUMBLE_HIT_STRONG := 0.3
 const RUMBLE_PULSE_WEAK := 0.25
 ## Mi-temps de 170 BPM : 60 / 85 ≈ 0,71 s entre deux battements.
 const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
+## Clic sec du percuteur à vide — plus faible et plus court qu'un tir, pour
+## ne jamais se confondre avec lui.
+const RUMBLE_DRY_FIRE := 0.35
+## L'arme qui redevient prête : un « tac » sur le moteur grave, pas un coup.
+const RUMBLE_RELOAD_READY := 0.45
+const RUMBLE_FLARE_WEAK := 0.4
+const RUMBLE_FLARE_STRONG := 0.25
 ## D3 — durée d'avalement du faisceau à l'extinction de la torche.
 const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
 
+## `_is_locally_piloted()` n'est PAS le bon garde ici : il renvoie toujours
+## faux en écran partagé (aucun `match` pour LOCAL_SPLITSCREEN), ce qui
+## coupait les quatre vibrations de V1.5 dans le mode qui est l'identité du
+## jeu — trouvé en câblant ce chantier, jamais joué manette en main avant.
+## Le filtre qui suit lui est équivalent en ligne (le corps répliqué tourne
+## sur un `NetworkInputProvider`, jamais un `LocalInputProvider`) et, en
+## plus, correct en écran partagé : chaque corps y a bien un pad local, le
+## sien. Voir Pièges connus.
 func _rumble(weak: float, strong: float, duration: float) -> void:
-	if not _is_locally_piloted(): return
 	var lp := input_provider as LocalInputProvider
 	if lp == null: return
 	if not Input.get_connected_joypads().has(lp.device_id): return
-	Input.start_joy_vibration(lp.device_id, weak, strong, duration)
+	var intensite := 1.0
+	var gs := get_node_or_null(^"/root/GameSettings")
+	if gs and gs.has_method("current_effect"):
+		intensite = gs.current_effect("vibration_manette")
+	if intensite <= 0.0: return
+	Input.start_joy_vibration(lp.device_id, weak * intensite, strong * intensite, duration)
 
 ## Remise à zéro du détecteur de pas, à appeler APRÈS toute téléportation
 ## (spawn de manche, bac à sable). Sans elle, le delta de position entre la
@@ -1809,6 +1837,19 @@ func rumble_kill() -> void:
 	await get_tree().create_timer(0.14).timeout
 	if is_instance_valid(self):
 		_rumble(0.2, 0.9, 0.1)
+
+## Mort ressentie par le perdant : un grave qui s'éteint en trois temps sur
+## ~0,5 s, symétrique au double coup du vainqueur (`rumble_kill`) — jusqu'ici
+## la victime ne sentait RIEN à sa propre mort. `_rumble` filtre déjà le bon
+## pad ; pas de garde `_is_locally_piloted` ici, il coupe l'écran partagé.
+func rumble_death() -> void:
+	_rumble(0.05, 0.6, 0.15)
+	await get_tree().create_timer(0.12).timeout
+	if is_instance_valid(self):
+		_rumble(0.03, 0.35, 0.15)
+	await get_tree().create_timer(0.12).timeout
+	if is_instance_valid(self):
+		_rumble(0.0, 0.15, 0.2)
 
 func trigger_shoot_visuals():
 	add_camera_shake(15.0, 15.0)
@@ -1996,6 +2037,7 @@ func die(killer: Node2D):
 	# le perdant y est bien le pilote local de ce corps-la.
 	if _is_locally_piloted():
 		AudioManager.jouer_acouphene_mort()
+	rumble_death()
 
 	visual.visible = false
 	visual_ptr.visible = false
