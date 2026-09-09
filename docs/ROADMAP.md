@@ -14578,13 +14578,69 @@ seconde moitié, elle aurait arrêté l'aveuglement sans arrêter le faisceau :
 l'inverse exact du défaut de l'étape 11, et tout aussi muet. Le banc vérifie les
 deux moitiés, parce que vérifier l'une laisse passer l'autre.
 
+### Étape 13 — la nappe de braises ✅
+
+La dernière lumière posée, et **le seul gadget du chantier qui fasse des
+dégâts**. La différence avec la mine est de nature : la mine punit un instant —
+on l'a déclenchée, c'est fini — la nappe punit une DURÉE. Elle ne tue personne
+qui la traverse ; elle interdit d'y rester, ce qui n'est pas la même chose et
+vaut bien plus cher dans un couloir.
+
+**Le dosage est le contrôle, pas les dégâts.** Traverser en courant coûte
+environ quatre points de vie — négligeable, et c'est le but : l'Incendiaire ne
+gagne pas parce qu'on a marché dessus. Y rester deux secondes en coûte
+trente-deux. Le banc dérive la traversée de la **vitesse réelle du joueur**, et
+non d'un nombre écrit à côté : un contrôle qui poserait sa propre hypothèse ne
+mesurerait que lui-même.
+
+Elle ne connaît pas son poseur non plus. C'est la règle des choses posées, écrite
+trois fois maintenant — fusée, mine, braises : *un feu qui épargnerait celui qui
+l'a allumé serait la seule chose du jeu à savoir qui est qui.*
+
+#### Ni les balles ni la lumière, et les deux ensemble
+
+Des charbons répandus au sol, vus de dessus, n'arrêtent rien.
+`arrete_les_balles = false` **et** `occulte_la_lumiere = false`, le second tenant
+la ligne de vue d'éblouissement d'accord avec le premier. C'est le motif que la
+mine a introduit une étape plus tôt, et il commence à porter : une chose qui
+n'assombrit pas ne doit pas arrêter l'aveuglement.
+
+#### `light_mask = 0` n'éteint pas le `CanvasModulate` — deuxième défaut de rendu
+
+Les charbons sortaient **noirs** au milieu du sol qu'ils éclairaient eux-mêmes.
+`light_mask = 0` ôte les lumières ; il ne dit rien du `CanvasModulate` de
+l'arène, qui éteint tout ce qui passe. Ce qui ÉMET doit être `UNSHADED` et
+additif — ce que `fusee.gd` écrit depuis toujours pour son cœur, dans les mêmes
+termes : *« le cœur EST une source, il doit se voir dans le noir complet ;
+éclairé, il serait avalé hors de son halo »*.
+
+`GadgetBase.materiau_incandescent()` porte désormais ce matériau pour tous, et la
+**lentille de la torche fantôme**, qui souffrait du même mal depuis l'étape 11,
+est corrigée du même geste.
+
+⚠️ **Deuxième défaut de rendu d'affilée qu'aucune suite ne pouvait voir** — après
+la flamme de la mine allumée dans son propre occluder. Les deux ont la même
+forme : *l'objet existe, ses propriétés sont justes, et il ne se voit pas.* Un
+lot headless ne rend rien ; la seule garde possible est de regarder.
+
+#### Les charbons sont déterministes
+
+Placés par une spirale d'angle d'or, jamais tirés au sort. Un tirage local
+donnerait deux nappes différentes chez les deux pairs — c'est exactement la
+raison pour laquelle les particules sont exclues du modèle d'éblouissement,
+*« tirées au sort à chaque émission, donc absentes chez l'autre pair »*. Une
+suite d'or coûte une ligne et ne ment jamais.
+
+**Pas de montée de protocole** : rien de neuf ne circule, les dégâts passant par
+`take_damage()`, qui fait déjà son propre partage hôte/client.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : la dernière lumière posée (nappe de braises), les volumes (suie, poussière), le sol qui écrit (poudre de contact),
+**Reste** : les volumes (suie, poussière), le sol qui écrit (poudre de contact),
 le leurre, le grésillement, les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).

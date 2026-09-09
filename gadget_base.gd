@@ -230,7 +230,41 @@ func allumer() -> void:
 	pass
 
 
+## Ce que ce gadget FAIT aux joueurs, chaque pas de physique.
+##
+## Vide dans le socle : la plupart ne font rien qu'exister et masquer. Seule la
+## nappe de braises répond aujourd'hui.
+##
+## ⚠️ **L'HÔTE SEUL appelle ceci**, comme `veut_s_allumer()`, et pour la même
+## raison. Un gadget qui infligerait des dégâts de lui-même les infligerait deux
+## fois — une chez chaque pair — et le client verrait sa barre descendre deux
+## fois plus vite que l'arbitrage.
+func appliquer_effets(_joueurs: Array, _delta: float) -> void:
+	pass
+
+
 ## L'âge du gadget, en secondes. Public parce que les sous-classes en dérivent
 ## leur apparence — et parce qu'un banc doit pouvoir le forcer.
 func age() -> float:
 	return _age
+
+
+static var _materiau_incandescent: CanvasItemMaterial
+
+## Le matériau de ce qui BRÛLE — braises, lentille allumée, cœur de fusée.
+##
+## ⚠️ **`light_mask = 0` ne suffit PAS, et c'est le piège.** Un `CanvasItem` qui
+## ne reçoit aucune lumière reste soumis au `CanvasModulate` de l'arène, lequel
+## éteint tout : les charbons de la nappe sortaient NOIRS sur un sol qu'ils
+## éclairaient eux-mêmes. Constaté à la capture.
+##
+## Ce qui émet doit être `UNSHADED` et additif, comme le cœur de la fusée le fait
+## déjà — sa note le dit dans les mêmes termes : *« le cœur EST une source, il
+## doit se voir dans le noir complet ; éclairé, il serait avalé hors de son
+## halo »*. Le matériau est partagé, comme là-bas : il n'a pas d'état.
+static func materiau_incandescent() -> CanvasItemMaterial:
+	if _materiau_incandescent == null:
+		_materiau_incandescent = CanvasItemMaterial.new()
+		_materiau_incandescent.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_materiau_incandescent.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	return _materiau_incandescent

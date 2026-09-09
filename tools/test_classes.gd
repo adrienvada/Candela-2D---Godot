@@ -76,6 +76,7 @@ func _run() -> void:
 	await _test_pose_de_gadget()
 	await _test_torche_fantome()
 	await _test_mine()
+	await _test_braises()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -1076,6 +1077,116 @@ func _test_mine() -> void:
 	_check("une balle ne la désamorce pas : elle demande à s'allumer",
 		autre.encaisser(999.0) and autre.veut_s_allumer([]))
 	autre.free()
+
+	gs.queue_free()
+	await process_frame
+
+
+## La nappe de braises — chantier CLASSES, étape 13.
+##
+## ⚠️ **Le contrôle qui compte est le DOSAGE**, pas l'existence des dégâts. Une
+## nappe est calibrée pour *interdire*, pas pour tuer : la traverser en courant
+## doit coûter une paille, y rester doit coûter cher. Un jour où quelqu'un
+## doublera la valeur pour « rendre le gadget plus fort », c'est ce contrôle qui
+## dira que la traversée est devenue mortelle.
+func _test_braises() -> void:
+	print("\n[La nappe de braises : un sol qu'on ne traverse plus]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# L'Incendiaire, index 5.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(5))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.visible = true
+	gs.p2.visible = true
+	gs.p2.global_position = Vector2(400.0, 1600.0)
+
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var nappe = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetBraises:
+			nappe = c
+	_check("la nappe est posée", nappe != null)
+	if nappe == null:
+		gs.queue_free()
+		await process_frame
+		return
+
+	# Les trois propriétés qui font que ce n'est ni un mur ni une mine.
+	_check("les balles la traversent", not nappe.arrete_les_balles)
+	_check("la lumière aussi", not nappe.occulte_la_lumiere)
+	_check("elle ne porte donc pas d'occluder",
+		nappe.get_node_or_null("Occluder") == null)
+	_check("elle éclaire", nappe.get_node_or_null("Lueur") != null)
+	_check("et elle éblouit faiblement, de près",
+		nappe.rayon_eblouissement > 0.0
+			and nappe.rayon_eblouissement < GadgetMine.RAYON_EBLOUISSEMENT,
+		str(nappe.rayon_eblouissement))
+	_check("elle est périssable", nappe.duree_vie > 0.0, str(nappe.duree_vie))
+
+	# ── LE DOSAGE ────────────────────────────────────────────────────────────
+	#
+	# Traverser au pas de course : la vitesse du joueur est celle du jeu, pas une
+	# valeur inventée ici — sinon le contrôle mesurerait sa propre hypothèse.
+	var vitesse: float = gs.p1.speed
+	var traversee: float = (2.0 * GadgetBraises.RAYON) / vitesse
+	var cout_traversee: float = GadgetBraises.DEGATS_PAR_SECONDE * traversee
+	_check("traverser en courant coûte une paille", cout_traversee < 10.0,
+		"%.1f PV" % cout_traversee)
+	_check("y rester deux secondes coûte cher",
+		GadgetBraises.DEGATS_PAR_SECONDE * 2.0 >= 25.0,
+		"%.0f PV" % (GadgetBraises.DEGATS_PAR_SECONDE * 2.0))
+
+	# ── ELLE BRÛLE, ET ELLE NE CONNAÎT PERSONNE ──────────────────────────────
+	var pv_avant: float = gs.p2.hp
+	gs.p2.global_position = nappe.global_position
+	nappe.appliquer_effets([gs.p1, gs.p2], 1.0)
+	await process_frame
+	_check("un joueur dedans brûle",
+		gs.p2.hp < pv_avant, "%.1f → %.1f" % [pv_avant, gs.p2.hp])
+
+	# ⚠️ Le poseur ne fait pas exception : c'est la règle des choses posées, déjà
+	# écrite pour la fusée et la mine.
+	var pv_poseur: float = gs.p1.hp
+	gs.p1.global_position = nappe.global_position
+	nappe.appliquer_effets([gs.p1, gs.p2], 1.0)
+	await process_frame
+	_check("le poseur brûle comme les autres",
+		gs.p1.hp < pv_poseur, "%.1f → %.1f" % [pv_poseur, gs.p1.hp])
+
+	# Dehors, rien.
+	gs.p1.global_position = nappe.global_position + Vector2(GadgetBraises.RAYON * 3.0, 0.0)
+	var pv_dehors: float = gs.p1.hp
+	nappe.appliquer_effets([gs.p1, gs.p2], 1.0)
+	await process_frame
+	_check("hors de la nappe, on ne brûle pas",
+		is_equal_approx(gs.p1.hp, pv_dehors))
+
+	# ── LES CHARBONS SONT DÉTERMINISTES ──────────────────────────────────────
+	#
+	# ⚠️ Un tirage local donnerait deux nappes différentes chez les deux pairs.
+	# C'est la raison même pour laquelle les particules sont exclues du modèle
+	# d'éblouissement — « tirées au sort, donc absentes chez l'autre pair ».
+	var a1 := GadgetBraises.new()
+	var b1 := GadgetBraises.new()
+	a1._monter_visuel()
+	b1._monter_visuel()
+	var identiques := a1._charbons.size() == b1._charbons.size()
+	for i in a1._charbons.size():
+		if not a1._charbons[i].position.is_equal_approx(b1._charbons[i].position):
+			identiques = false
+	_check("deux nappes se dessinent à l'identique", identiques)
+	a1.free()
+	b1.free()
 
 	gs.queue_free()
 	await process_frame

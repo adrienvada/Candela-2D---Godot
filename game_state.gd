@@ -1352,7 +1352,7 @@ func _process(delta):
 	# « FIGHT ! » suivant. Le faisceau, lui, ne verse plus rien : les gardes de
 	# `_maj_eblouissement` s'en chargent.
 	_maj_eblouissement(delta)
-	_maj_gadgets()
+	_maj_gadgets(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -2057,16 +2057,21 @@ func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
 ## déciderait lui-même s'allumerait deux fois, une chez chaque pair, à deux
 ## instants différents — et l'éblouissement, calculé par l'hôte, ne
 ## correspondrait alors plus à ce que le client voit brûler.
-func _maj_gadgets() -> void:
+func _maj_gadgets(delta: float) -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
 	if not round_active and not sandbox_mode:
 		return
+	var joueurs := [p1, p2]
 	for g in get_tree().get_nodes_in_group("gadgets"):
 		if not is_instance_valid(g) or g.is_queued_for_deletion():
 			continue
-		if g.veut_s_allumer([p1, p2]):
+		if g.veut_s_allumer(joueurs):
 			allumer_gadget(g)
+		# ⚠️ **Les effets aussi passent par l'hôte**, et pas seulement
+		# l'allumage : une nappe de braises qui brûlerait de son côté chez le
+		# client ferait descendre sa barre deux fois plus vite que l'arbitrage.
+		g.appliquer_effets(joueurs, delta)
 
 
 ## [Hôte] Ordonne l'allumage d'un gadget, chez les deux pairs.
@@ -3198,6 +3203,9 @@ const IMPLEMENTATIONS := {
 	# La mine n'a pas de durée de vie : elle attend. C'est son embrasement qui la
 	# tue, et il pose lui-même son échéance (`GadgetMine.allumer()`).
 	"mine_magnesium": {"script": "res://gadget_mine.gd", "duree_vie": 0.0},
+	# 10 s : assez pour interdire un passage le temps d'une décision, pas assez
+	# pour qu'un couloir soit fermé toute la manche.
+	"nappe_braises": {"script": "res://gadget_braises.gd", "duree_vie": 10.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:

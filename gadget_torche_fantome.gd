@@ -178,6 +178,9 @@ func _monter_visuel() -> void:
 		pts.append(Vector2(cos(ang), sin(ang)) * 3.0 + Vector2(6.0, 0.0))
 	lentille.polygon = pts
 	lentille.color = Charte.HALOGENE
-	lentille.light_mask = 0
+	# Même correction que les braises : `light_mask = 0` ôte les lumières mais pas
+	# le `CanvasModulate` de l'arène, qui éteignait la lentille avec le reste. Ce
+	# qui émet doit être incandescent.
+	lentille.material = GadgetBase.materiau_incandescent()
 	lentille.z_index = 6
 	add_child(lentille)

@@ -2822,3 +2822,30 @@ seconde moitié, elle arrêtait l'aveuglement sans arrêter le faisceau.
 **Relevé au passage, non corrigé** : l'Allumeur n'a pas de planche de marche
 (`allumeur_marche_*`), donc `_precharger_la_planche` avertit à l'équipement. Vrai
 pour les six classes neuves, connu, hors périmètre de cette étape.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 13, la nappe de braises)
+
+**La dernière lumière posée, et le seul gadget qui fasse des dégâts.** La
+différence avec la mine est de nature : la mine punit un instant, la nappe punit
+une durée. Elle ne tue pas qui la traverse — quatre points de vie — elle interdit
+d'y rester : trente-deux points en deux secondes. Le banc dérive la traversée de
+la **vitesse réelle du joueur** et non d'un nombre écrit à côté ; un contrôle qui
+poserait sa propre hypothèse ne mesurerait que lui-même.
+
+Elle ne connaît pas son poseur non plus — troisième écriture de la règle des
+choses posées, après la fusée et la mine.
+
+**⚠️ Deuxième défaut de rendu d'affilée qu'aucune suite ne pouvait voir.** Les
+charbons sortaient NOIRS au milieu du sol qu'ils éclairaient : `light_mask = 0`
+ôte les lumières mais ne dit rien du `CanvasModulate` de l'arène, qui éteint tout
+ce qui passe. Ce qui émet doit être `UNSHADED` et additif — ce que `fusee.gd`
+écrit depuis toujours pour son cœur. `GadgetBase.materiau_incandescent()` porte
+maintenant ce matériau, et **la lentille de la torche fantôme**, qui souffrait du
+même mal depuis l'étape 11, est corrigée du même geste.
+
+Les deux défauts ont la même forme : *l'objet existe, ses propriétés sont justes,
+et il ne se voit pas.* Un lot headless ne rend rien ; la seule garde possible est
+de regarder.
+
+**Pas de montée de protocole** : les dégâts passent par `take_damage()`, qui fait
+déjà son propre partage hôte/client.
