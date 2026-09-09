@@ -88,6 +88,32 @@ jobs:
           mv /tmp/modeles/templates/* ~/.local/share/godot/export_templates/${GODOT_TEMPLATES}/
           rm -rf /tmp/modeles.tpz /tmp/modeles
 
+      - name: Injection des identifiants EOS et configuration Supabase
+        env:
+          EOS_CREDS: ${{ secrets.EOS_CREDENTIALS }}
+          SUPABASE_CONF: ${{ secrets.SUPABASE_CONFIG }}
+        run: |
+          if [ -n "$EOS_CREDS" ]; then
+            if printf '%s' "$EOS_CREDS" | grep -q "extends Node"; then
+              printf '%s\n' "$EOS_CREDS" > eos_credentials.gd
+            else
+              printf '%s' "$EOS_CREDS" | base64 -d > eos_credentials.gd 2>/dev/null || printf '%s\n' "$EOS_CREDS" > eos_credentials.gd
+            fi
+            echo "eos_credentials.gd injecté depuis les secrets."
+          else
+            echo "::warning::Secret EOS_CREDENTIALS absent — la release sera générée sans Epic."
+          fi
+          if [ -n "$SUPABASE_CONF" ]; then
+            if printf '%s' "$SUPABASE_CONF" | grep -q "extends Node"; then
+              printf '%s\n' "$SUPABASE_CONF" > supabase_config.gd
+            else
+              printf '%s' "$SUPABASE_CONF" | base64 -d > supabase_config.gd 2>/dev/null || printf '%s\n' "$SUPABASE_CONF" > supabase_config.gd
+            fi
+            echo "supabase_config.gd injecté depuis les secrets."
+          else
+            echo "::warning::Secret SUPABASE_CONFIG absent — la release sera générée sans Supabase."
+          fi
+
       - name: Import des ressources
         run: ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 --headless --path . --import
 
@@ -148,6 +174,32 @@ jobs:
           fi
           echo "GODOT_BIN=$GODOT_EXEC" >> $GITHUB_ENV
           echo "Binaire Godot macOS : $GODOT_EXEC"
+
+      - name: Injection des identifiants EOS et configuration Supabase
+        env:
+          EOS_CREDS: ${{ secrets.EOS_CREDENTIALS }}
+          SUPABASE_CONF: ${{ secrets.SUPABASE_CONFIG }}
+        run: |
+          if [ -n "$EOS_CREDS" ]; then
+            if printf '%s' "$EOS_CREDS" | grep -q "extends Node"; then
+              printf '%s\n' "$EOS_CREDS" > eos_credentials.gd
+            else
+              printf '%s' "$EOS_CREDS" | base64 -d > eos_credentials.gd 2>/dev/null || printf '%s\n' "$EOS_CREDS" > eos_credentials.gd
+            fi
+            echo "eos_credentials.gd injecté depuis les secrets."
+          else
+            echo "::warning::Secret EOS_CREDENTIALS absent — la release sera générée sans Epic."
+          fi
+          if [ -n "$SUPABASE_CONF" ]; then
+            if printf '%s' "$SUPABASE_CONF" | grep -q "extends Node"; then
+              printf '%s\n' "$SUPABASE_CONF" > supabase_config.gd
+            else
+              printf '%s' "$SUPABASE_CONF" | base64 -d > supabase_config.gd 2>/dev/null || printf '%s\n' "$SUPABASE_CONF" > supabase_config.gd
+            fi
+            echo "supabase_config.gd injecté depuis les secrets."
+          else
+            echo "::warning::Secret SUPABASE_CONFIG absent — la release sera générée sans Supabase."
+          fi
 
       - name: Import des ressources
         run: |
