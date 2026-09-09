@@ -247,6 +247,30 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 — session « retouche éblouissement » : le banc réparé, le voile TOUJOURS PAS
+
+**Adrien a joué en réseau local et n'a pas vu le voile** — seulement « une grosse
+tâche comme ellipse floue » au niveau de l'éblouisseur, ce qui est le brouillage
+faisant son travail. Branche `banc-niveau-reel`.
+
+⚠️ **Ce qui est poussé ne corrige PAS le jeu.** Deux ajouts au banc seulement :
+une ligne de vérité qui montre, à réglages courants, ce que le niveau fait
+vraiment aux flares comparé à l'ellipse ; et la touche `D` qui saute entre les
+quatre distances de duel mesurées. **Le voile reste fade en jeu et somptueux au
+banc, et la cause n'est pas trouvée.** La feuille de route porte le tableau des
+huit pistes éliminées pour que personne ne les refasse.
+
+**Le seul écart mesuré, insuffisant à lui seul :** le brouillage passe
+`dazzle_amount` par `_dose()` (gain 2,0, saturé dès 0,5) là où le voile le prend
+brut. À mi-portée l'ellipse est à fond et les flares sont sous 9 % d'opacité.
+Cela explique leur discrétion, pas l'écart d'aspect entre banc et jeu à
+éblouissement égal.
+
+**La piste suivante à ouvrir**, et elle se vérifie plutôt qu'elle ne se suppose :
+le rendu racine et son facteur de densité native de 1,778 — celui qui avait causé
+le polygone de photocopie deux jours plus tôt.
+
+
 ### 2026-09-07 — session « bandeau FATAL » (chantier BF) : LIVRÉ, BF1 à BF5
 
 **Je tiens `player.gd` et `tools/test_bandeau_fatal.gd`**, et rien d'autre.
