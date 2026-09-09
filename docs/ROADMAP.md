@@ -8170,6 +8170,19 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
       disproportionné face à la vibration déjà universelle. Si le besoin
       revient, repartir de ce constat plutôt que de re-découvrir la même
       contrainte.
+    - **Signalé par la session du chantier racine, corrigé le jour même** :
+      le tir passe d'un bouton (R1) à un axe (gâchette R2), donc sans front
+      franc. Vérifié que `_rumble_shoot()` ne dépend d'aucun front — le
+      cooldown de l'arme suffit à cadencer les tirs, chatter ou pas. Le seul
+      point réellement exposé était le clic du percuteur à vide (V4.4,
+      `tir_a_sec`/`_detente_pressee`) : un bruit d'axe proche de la zone
+      morte peut agiter un booléen `is_action_pressed()` sur plusieurs
+      images, ce qu'un vrai bouton ne fait pas. Ajouté `tir_a_sec <= 0.0`
+      comme second garde, en plus du front montant — absorbe ce bruit sans
+      changer le geste (une vraie répétition reste possible dès 220 ms). Sert
+      aussi bien le son et le tremblement HUD préexistants que le clic
+      haptique ajouté par ce chantier ; rien touché côté zone morte ou
+      remappage, qui restent au chantier racine.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
