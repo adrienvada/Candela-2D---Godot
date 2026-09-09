@@ -31,6 +31,14 @@ extends SceneTree
 ## **compilation** : Godot la compile avant que le moindre autoload soit
 ## enregistré, et le banc ne compile plus. Même piège, même parade que
 ## `tools/test_bandeau_fatal.gd`.
+##
+## **2026-09-09 — troisième règle, sur le CHOIX de planche cette fois, pas sur
+## sa pose :** « il faut que la tache en étoile centrée n'apparaisse que quand
+## on tape très proche du centre (0-2 px), sinon ce sont les taches
+## directionnelles. » `_choisir_eclaboussure()` reçoit désormais la distance
+## entre l'axe du tir et le centre réel du joueur — la même `dist_to_axis` que
+## `bullet.gd` calcule déjà pour l'atténuation des dégâts — et restreint le
+## tirage à la catégorie qu'elle désigne (`EST_ETOILE_CENTREE`).
 
 ## Rayon du corps du joueur, en pixels.
 ##
@@ -188,16 +196,28 @@ func _run() -> void:
 	var direction := Vector2.RIGHT.rotated(deg_to_rad(30.0))
 	var vues := {}
 	var derniere: Node2D = null
-	# Assez d'essais pour voir les deux planches : la probabilité d'en manquer
-	# une est de 2^-29. Un plafond, pas une boucle infinie.
-	for essai in range(30):
+	# ⚠️ **Alterné, pas tiré au sort.** Depuis SG-suite (2026-09-09), le choix de
+	# planche est restreint par catégorie (`EST_ETOILE_CENTREE`) : un appel sans
+	# troisième argument tombe sur `INF`, donc TOUJOURS une directionnelle. Un
+	# tirage purement aléatoire ne verrait donc plus jamais l'étoile centrée, et
+	# la vérification qui suit se serait mise à échouer pour une raison étrangère
+	# à ce qu'elle teste. On force les deux catégories, une itération sur deux.
+	#
+	# ⚠️ **200, pas 30 : DA2.8 est passée de 2 à 9 planches (2026-09-09).** Avec
+	# 6 directionnelles dans la même catégorie, un tirage au sort qui n'en
+	# verrait que 15 (l'ancien compte, une itération sur deux d'une boucle de
+	# 30) manquerait l'une d'elles environ une fois sur quatre — un banc flaky,
+	# pas un banc rouge pour une vraie raison. Cent tirages par catégorie
+	# ramènent ce risque sous le milliardième.
+	for essai in range(200):
 		var t := Node2D.new()
 		t.name = "TacheDeBanc%d" % essai
 		t.set_script(sang)
 		# Même ordre qu'en jeu (`bullet.gd::_spawn_hit_effects`) : ajouté
 		# d'abord, `setup()` ensuite. `_ready()` tourne donc AVANT `setup()`.
 		arene.add_child(t)
-		t.setup(impact, direction)
+		var distance_essai := 0.0 if essai % 2 == 0 else 999.0
+		t.setup(impact, direction, distance_essai)
 		var tex: Texture2D = t.get("_texture")
 		if tex == null:
 			continue
@@ -236,8 +256,76 @@ func _run() -> void:
 			absf(monde - RAYON_CORPS) <= TOLERANCE,
 			"%.1f px en aval de l'impact au lieu de %.1f" % [monde, RAYON_CORPS])
 
-	_check("les deux planches ont été exercées", vues.size() == planches.size(),
-		"%d sur %d vues en 30 essais" % [vues.size(), planches.size()])
+	_check("toutes les planches ont été exercées", vues.size() == planches.size(),
+		"%d sur %d vues en 200 essais" % [vues.size(), planches.size()])
+
+	print("\n[L'étoile centrée n'apparaît que très près du centre]")
+	# Relevé par Adrien, le 2026-09-08 : « il faut que le centre de la plus
+	# grosse tache soit sous le personnage » a réglé le PLACEMENT (ci-dessus) ;
+	# ceci règle le CHOIX — l'étoile centrée seulement pour un tir qui passe à
+	# 0-2 px de l'axe du centre réel, les planches directionnelles sinon.
+	var index_etoile: Array[int] = []
+	var index_directionnelle: Array[int] = []
+	for j in range(planches.size()):
+		if bool(sang.EST_ETOILE_CENTREE[j]):
+			index_etoile.append(j)
+		else:
+			index_directionnelle.append(j)
+	_check("une catégorie déclarée par planche",
+		(sang.EST_ETOILE_CENTREE as Array).size() == planches.size(),
+		"%d catégories pour %d planches"
+			% [(sang.EST_ETOILE_CENTREE as Array).size(), planches.size()])
+	_check("au moins une planche est l'étoile centrée", not index_etoile.is_empty())
+	_check("au moins une planche est directionnelle", not index_directionnelle.is_empty())
+
+	var seuil: float = sang.SEUIL_ETOILE_CENTREE
+	_check("le seuil vaut ce qu'Adrien a demandé (0-2 px)",
+		is_equal_approx(seuil, 2.0), "%.2f px" % seuil)
+
+	## Monte une tache jetable à `distance`, rend l'index de planche tirée
+	## (-1 si aucune texture, le repli procédural), et la libère aussitôt —
+	## même geste que la boucle ci-dessus quand une planche est déjà vue.
+	var tirer_a := func(distance: float) -> int:
+		var t := Node2D.new()
+		t.set_script(sang)
+		arene.add_child(t)
+		t.setup(impact, direction, distance)
+		var tex: Texture2D = t.get("_texture")
+		var idx := planches.find(tex.resource_path) if tex != null else -1
+		t.release()
+		return idx
+
+	# ⚠️ **Testé aux deux bords du seuil, pas seulement loin de lui.** Un banc
+	# qui ne contrôlerait que 0 px et 999 px passerait avec un seuil à 50 px
+	# comme avec un seuil à 2 — exactement le défaut déjà consigné pour
+	# `test_bandeau_fatal.gd` : mesurer loin du bord ne protège pas le bord.
+	for distance: float in [0.0, seuil * 0.5, seuil]:
+		var idx: int = tirer_a.call(distance)
+		_check("à %.2f px de l'axe (au seuil ou en-deçà) : l'étoile centrée"
+				% distance,
+			idx in index_etoile,
+			"planche tirée : %s" % (planches[idx].get_file() if idx >= 0 else "aucune"))
+
+	for distance: float in [seuil + 0.01, seuil * 2.0, 999.0]:
+		var idx: int = tirer_a.call(distance)
+		_check("à %.2f px de l'axe (au-delà du seuil) : une directionnelle"
+				% distance,
+			idx in index_directionnelle,
+			"planche tirée : %s" % (planches[idx].get_file() if idx >= 0 else "aucune"))
+
+	# Le défaut de `setup()` doit rester sûr : un appelant qui ne connaît pas la
+	# distance au centre ne doit JAMAIS recevoir l'étoile par accident.
+	var t_defaut := Node2D.new()
+	t_defaut.set_script(sang)
+	arene.add_child(t_defaut)
+	t_defaut.setup(impact, direction) # sans troisième argument
+	var tex_defaut: Texture2D = t_defaut.get("_texture")
+	var idx_defaut := planches.find(tex_defaut.resource_path) if tex_defaut != null else -1
+	_check("un appel sans distance retombe sur une directionnelle",
+		idx_defaut in index_directionnelle,
+		"planche tirée : %s"
+			% (planches[idx_defaut].get_file() if idx_defaut >= 0 else "aucune"))
+	t_defaut.release()
 
 	print("\n[Le nœud réel se pose là où `pose()` le dit]")
 	if derniere == null or not is_instance_valid(derniere):

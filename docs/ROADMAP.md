@@ -13783,12 +13783,7 @@ ancrées au milieu de la planche : le défaut d'origine, à moitié, et **pour l
 seul**. La ligne est écrite, et sept contrôles du banc la surveillent sur une
 vraie copie J2.
 
-### Deux fichiers vérifiés et laissés tels quels
-
-**`bullet.gd` n'a pas été touché**, alors que le chantier l'autorisait : le point
-d'entrée qu'il transmet est la **bonne donnée**, et les particules d'entrée s'en
-servent légitimement. Le défaut était entièrement dans l'usage qu'en faisait
-`blood_stain.gd`.
+### Un fichier vérifié et laissé tel quel
 
 **`wall_impact.gd`** centre lui aussi sa marque sur le point d'impact, et **le
 centrage y est légitime** : sa planche de 96 px est réduite à ×0,22-0,34 — 21 à
@@ -13800,17 +13795,122 @@ qui rendait son centrage fautif.
 ### Ce qui reste ouvert
 
 La taille des taches n'a **pas** été touchée : la réduire aurait masqué un défaut
-de position par un dosage, et le dosage appartient à Adrien. À voir en jeu, pas
-au banc : `sang_1` est une étoile presque symétrique, donc sa « direction » se
-lit mal — si l'orientation doit se voir davantage, c'est une planche à recuire,
-pas un ancrage à régler.
+de position par un dosage, et le dosage appartient à Adrien.
 
-**Hors périmètre, à signaler et non à corriger :** les particules de sang
-(`bullet.gd::_spawn_hit_effects`, deux gerbes déjà orientées, l'une vers l'aval
-l'autre vers l'amont — elles, c'est voulu), le shader, le plafond `MAX_STAINS`,
-et `wall_impact.gd` qui duplique la machinerie sciemment : sur un mur, le point
-d'impact **est** la surface, le centrage y est probablement juste — le vérifier
-et le dire, pas le changer.
+**Hors périmètre, à signaler et non à corriger :** le shader, le plafond
+`MAX_STAINS`, et `wall_impact.gd` qui duplique la machinerie sciemment : sur un
+mur, le point d'impact **est** la surface, le centrage y est probablement juste
+— vérifié et laissé tel quel ci-dessus.
+
+### SG (addendum, 2026-09-09) — l'étoile centrée n'apparaît qu'au centre
+
+**Troisième règle d'Adrien, sur le CHOIX de planche cette fois — pas sur sa
+pose :** « il faut que la tache en étoile centrée n'apparaisse que quand on
+tape très proche du centre (0-2 px), sinon ce sont les taches directionnelles. »
+`sang_1` (l'étoile presque symétrique, notée « direction illisible » ci-dessus)
+sortait jusqu'ici du même tirage 50/50 que `sang_2`, quel que soit le point
+touché — un tir tangent au bord du corps pouvait recevoir la même étoile
+centrée qu'un tir en plein cœur.
+
+**`bullet.gd` EST touché cette fois, et c'est la donnée qui l'imposait.** La
+distance qui décide n'est pas le point d'impact — toujours à un rayon du corps,
+donc jamais « proche du centre » — mais la distance **perpendiculaire entre
+l'axe du tir et le centre réel du joueur**. Cette distance existait déjà :
+`_hit_player()` la calcule sous le nom `dist_to_axis` pour l'atténuation des
+dégâts, et V4.2 s'en sert déjà pour le retour audio (`proximite_bord`, sa
+version normalisée). ⚠️ **Jamais une troisième mesure** — `bullet.gd` porte
+déjà l'avertissement contre un second calcul « équivalent » qui finirait par
+diverger (payé trois fois le 2026-08-24 sur l'échelle de la torche) ;
+`distance_axe_centre` est le même `dist_to_axis`, non normalisé, transmis un
+cran plus loin — jusqu'à `blood_stain.gd::setup()`.
+
+**`EST_ETOILE_CENTREE`** classe chaque planche d'`ECLABOUSSURES` (même ordre,
+même taille) ; `_choisir_eclaboussure()` restreint désormais le tirage à la
+catégorie que désigne `distance_axe_centre <= SEUIL_ETOILE_CENTREE` (2,0 px, la
+valeur d'Adrien). Un seul candidat par catégorie aujourd'hui rend le tirage
+déterministe en pratique — la structure reste écrite pour accueillir d'autres
+planches directionnelles sans qu'il faille y retoucher.
+
+**Défaut sûr :** `setup()` accepte `distance_axe_centre` en dernier paramètre,
+par défaut `INF` — un appelant qui ne la connaît pas obtient toujours une
+planche directionnelle, jamais l'étoile par accident.
+
+**Le banc** (11 contrôles neufs, `tools/test_sang_au_sol.gd`) éprouve les deux
+bords du seuil (2,00 px passe, 2,01 px ne passe plus) — pas seulement loin de
+lui, leçon déjà payée pour `test_bandeau_fatal.gd` — et le défaut de `setup()`.
+Deux contre-tests passés : seuil élargi à 50 px → rougit sur la valeur attendue
+(0-2 px) ; les deux planches reclassées « directionnelle » → rougit sur les
+trois tirs proches du centre. La boucle plus ancienne qui monte 30 taches au
+hasard alterne désormais 0 px et 999 px : un tirage resté purement aléatoire
+n'aurait plus jamais vu l'étoile, puisque son appel par défaut tombe sur `INF`.
+
+Lot complet vert (271 s).
+
+⚠️ **Un piège trouvé en route, à retenir pour tout worktree existant qui reçoit
+du nouveau code — pas seulement un worktree neuf.** Entre l'ouverture de ce
+worktree et ce commit, `main` a été fusionné dans la branche à plusieurs
+reprises (mécanisme non élucidé, hors du périmètre de cette note). Le lot est
+devenu rouge en masse (`ui.gd` : `Could not find type "MenuHatchRect"`, puis
+« Failed to compile depended scripts » sur `game_state.gd`, qui en dépend) —
+symptôme trompeur en surface (`update_hud` introuvable, comme si un vrai défaut
+de jeu cassait les reconnexions), mais la cause tenait en une ligne : le cache
+`.godot/global_script_class_cache.cfg` datait d'avant l'arrivée de
+`menu_hatch_rect.gd` (`class_name MenuHatchRect`) dans l'arbre. Un second
+`godot --headless --path . --import` l'a régénéré et tout est repassé au vert.
+**La consigne « un worktree neuf n'a pas de cache d'import » doit donc se lire
+plus largement : un worktree qui a reçu de nouveaux fichiers depuis son dernier
+`--import`, par une fusion ou non, en a de nouveau besoin.**
+
+### DA2.8 (suite, 2026-09-09) — 9 formes, et les particules cessent d'être des losanges
+
+**Adrien, en jouant : « je n'avais pas fourni suffisamment de tâches de sang »**
+— exactement ce que disait déjà le suivi de projet (« DA2.8 · 2 formes sur 6-8
+demandées »). Deux planches (`sang_1`, `sang_2`) portaient toute la variété du
+jeu depuis le 25 août. Sept planches Gemini rejoignent la liste : `sang_3` à
+`sang_7` (cinq directionnelles — éraflure fine, coulure lourde, éventail,
+double bras, traînée espacée) et `sang_8`/`sang_9` (deux étoiles supplémentaires,
+utiles depuis que l'étoile centrée est devenue rare — voir l'addendum
+ci-dessus). Un huitième prompt (jet traversant) a été généré mais **écarté** :
+sa flaque touchait le bord du cadre, coupée à angle droit — un défaut de
+composition qui aurait laissé un bord plat non naturel sur le décalque, repéré
+en mesurant si l'alpha touche les bords de l'image avant de cuire quoi que ce
+soit.
+
+**Deux planches livrées mal orientées, détectées par le banc lui-même, pas à
+l'œil.** `sang_4` sortait du générateur avec sa flaque en HAUT et sa coulure
+vers le BAS ; `sang_8` avait sa masse d'encre infinitésimalement du mauvais
+côté. Le contrôle « la traînée s'étire vers l'aval » (celui-là même que le banc
+applique à chaque lot) les a signalées immédiatement — `sang_4` tournée de
++90°, `sang_8` retournée en miroir, toutes deux re-mesurées jusqu'à passer.
+
+**`tools/test_sang_au_sol.gd` généralisé, pas seulement étendu.** Le tirage
+« 30 essais, une catégorie sur deux » qui suffisait à voir 2 planches sur 2
+serait devenu **flaky** avec 6 directionnelles dans la même catégorie — la
+probabilité mathématique de manquer l'une des six sur 15 tirages avoisine 25 %.
+Porté à 200 essais (100 par catégorie), le risque tombe sous le milliardième.
+115 contrôles passent, contre-test toujours vérifié (seuil élargi à 50 px →
+rougit sur la ligne exacte).
+
+**Les particules de sang cessent d'être un losange codé en dur.**
+`particle_pool.gd::_configure()` dessinait la goutte qui vole à la main
+(`Kind.BLOOD`) depuis toujours — le même geste procédural que DA2.8 remplaçait
+pour les taches au sol, resté ici sans qu'on y touche. Six gouttes peintes
+(`gouttes_sang_1` à `_6`, cuites en un coup depuis une seule planche via
+`fabrique_decals.gd -- --panneaux 3x2`) remplacent le losange, préchargées en
+`const` pour la même raison que `BLOOD_SHADER` : compiler à la volée
+provoquerait un hoquet pile à l'impact. ⚠️ **Les `_coeur.png` que l'outil
+génère systématiquement ont été supprimés, pas versionnés** : le contraste
+liseré/cœur sert le shader liquide des taches au sol, une particule volante ne
+passe pas par `blood_shader.gdshader` et n'en a aucun usage — les garder
+aurait été du déchet, pas de la parité de convention. `Polygon2D.texture` sans UV explicite
+mappe automatiquement sur la boîte englobante du polygone — un simple quad
+suffit, pas de UV à la main. Les trois autres natures de particules (fumée,
+poussière, étincelle) remettent `poly.texture = null` : une particule recyclée
+depuis un impact de sang ne doit pas garder sa texture au tour suivant.
+
+**Sources versionnées** sous `assets/sources/blood_decals/B3_*.jpg`, allowlistées
+nommément dans le `.gitignore` du dossier — même discipline que `B2_01`/`B2_02` :
+sans la source, un décalque recuit devient irreproductible.
 
 ### BF — le bandeau FATAL doit tenir dans l'écran de celui qui a tué
 
@@ -13930,9 +14030,13 @@ de l'arrivée (6 échecs), et mettre une **largeur de vue en dur** au lieu de li
 le rectangle reçu (2 échecs). L'oracle reste écrit à la main — 957, 1080, 1920,
 171 — et jamais lu sur les constantes qu'il surveille.
 
-#### BF5 — ce qui est SIGNALÉ et n'a pas été corrigé
+#### BF5 — les trois points signalés, TRANCHÉS le 2026-09-09
 
-Trois points qui demandent l'arbitrage d'Adrien, pas une correction :
+**Adrien a répondu aux trois : on ne touche à rien.** Aucun code n'a changé, et
+c'est la décision elle-même qui est la livraison — sans elle, chacun de ces
+points serait rouvert par la prochaine session qui les verrait à l'écran. Le
+détail de ce qui a été soumis reste ci-dessous, parce qu'une décision sans sa
+question ne se relit pas ; chaque point porte désormais sa réponse.
 
 - **Le bandeau peut se poser sur le HUD.** En vue unique, un cadavre en haut de
   l'écran accroche la boîte au bord haut, où vivent le chronomètre et le badge
@@ -13940,18 +14044,26 @@ Trois points qui demandent l'arbitrage d'Adrien, pas une correction :
   **nouveau, et c'est moi qui l'introduis** — avant, la boîte ne montait jamais
   là. La faire éviter le HUD demanderait de coder dans `player.gd` la hauteur du
   bandeau de `ui.gd` : un couplage muet entre deux fichiers, exactement ce que
-  ce dépôt paie cher. À trancher : le bandeau doit-il esquiver le HUD, et à quel
-  prix.
+  ce dépôt paie cher. **Tranché : on ne fait rien.** Le bandeau garde le droit
+  de monter sur le chronomètre pendant sa seconde et demie — le couplage entre
+  `player.gd` et `ui.gd` coûterait plus que le recouvrement, et la constante de
+  bande haute qui l'éviterait sans lire `ui.gd` serait un nombre deviné, périmé
+  au premier HUD qui change de hauteur.
 - **Le sous-titre « à N px du centre » suit maintenant le bandeau de sa vue**, et
   rien de plus. Son audience n'a **pas** changé — il s'affichait déjà dans les
   deux vues — mais il est pour la première fois **lisible par le tueur**, à qui
-  il raconte la marge de son propre tir. À qui ce chiffre s'adresse reste un
-  arbitrage, pas une correction.
+  il raconte la marge de son propre tir. **Tranché : les deux le voient.** Le
+  commentaire de `V2.9` le destinait au seul perdant ; cette destination n'est
+  plus la règle, et le code porte la décision là où la question se posait, pour
+  qu'aucune session ne « corrige » l'audience en croyant lire une intention.
 - **La flèche paraît détachée du cartouche.** Elle est posée sur le bord de la
   boîte du `TextureRect` ; la planche `cartouche_fatal.png` a des bords rongés
   et transparents, donc l'encre s'arrête avant. L'écart se voit, il se lit
   comme un pointeur et non comme un défaut — mais il vient de l'image, pas du
   calcul, et le corriger supposerait de mesurer l'alpha de la planche.
+  **Tranché : on laisse.** L'écart lit juste ; la rentrée de flèche mesurée sur
+  l'alpha ne vaudrait que pour cette planche-là et se casserait au premier
+  cartouche redessiné.
 
 #### Ce qui n'a PAS été prouvé, et il faut le dire
 
@@ -14086,7 +14198,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. | ✅ **Fait le 2026-09-08** |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---

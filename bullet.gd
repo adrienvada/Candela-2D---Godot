@@ -321,7 +321,7 @@ func _hit_player(target: Player, center: Vector2, hit_point: Vector2) -> void:
 	if not is_replay:
 		target.take_damage(opp_hit_damage, source_player)
 
-	_spawn_hit_effects(hit_point, normalized_dist)
+	_spawn_hit_effects(hit_point, normalized_dist, dist_to_axis)
 	if not is_replay:
 		_spawn_damage_number(hit_point, int(opp_hit_damage))
 	_fade_and_destroy(hit_point)
@@ -589,7 +589,14 @@ func _spawn_spark_particles(pos: Vector2, color: Color, amount: int, speed_min: 
 ## ⚠️ Le derive du MEME `normalized_dist` que `opp_hit_damage`. Un second calcul
 ## « equivalent » finirait par diverger — ce depot a paye trois fois cette
 ## lecon le 2026-08-24 sur l'echelle de la torche.
-func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0):
+##
+## `distance_axe_centre` (2026-09-09) : le MEME `dist_to_axis`, avant sa
+## division par `player_radius` — pas une troisieme mesure, l'etape d'avant
+## dans le meme calcul. `blood_stain.gd` s'en sert pour choisir entre la tache
+## en etoile centree et les taches directionnelles (regle d'Adrien : l'etoile
+## seulement a 0-2 px du centre reel).
+func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0,
+		distance_axe_centre: float = INF):
 	AudioManager.play_hit(pos, proximite_bord)
 	# Pure blood red
 	var blood_color = Charte.CARMIN
@@ -605,7 +612,7 @@ func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0):
 		var stain = Node2D.new()
 		stain.set_script(preload("res://blood_stain.gd"))
 		arena.add_child(stain)
-		stain.setup(pos, direction)
+		stain.setup(pos, direction, distance_axe_centre)
 
 ## `avec_son` permet à la cible d'échauffement de garder les étincelles du mur
 ## sans en prendre le bruit. Un drapeau plutôt qu'une copie de la fonction : les

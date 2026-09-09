@@ -14,3 +14,16 @@
 # tools/fabrique_decals.gd n'a rien a moudre.
 !B2_01.jpg
 !B2_02.jpg
+
+# Retenues le 2026-09-09 : DA2.8 completee (9 formes, dont 6 directionnelles).
+# sang_4 et sang_8 sont recuites depuis ces planches PUIS reorientees a la main
+# (voir le commentaire sur FLAQUES dans blood_stain.gd) — la source versionnee
+# ici est la planche BRUTE, pas la version tournee.
+!B3_01.jpg
+!B3_02.jpg
+!B3_03.jpg
+!B3_04.jpg
+!B3_05.jpg
+!B3_06.jpg
+!B3_07.jpg
+!B3_particules.jpg

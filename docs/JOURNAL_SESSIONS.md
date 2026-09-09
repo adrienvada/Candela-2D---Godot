@@ -337,6 +337,71 @@ décision actée avec Adrien).
 `SendMessage` à la session qui porte la republication (recherche en cours via
 `ListAgents`).
 
+### 2026-09-09 (suite) — session « SG · sang au sol » : DA2.8 complétée, `particle_pool.gd` touché
+
+**Déclaration : j'ai touché `particle_pool.gd`, hors de mon périmètre initial.**
+Adrien a demandé directement, dans la continuité de cette session, que « les
+particules de sang luminescentes ne soient plus des vieux polygones tout
+pourris ». Le fichier est dans le même groupe que `blood_stain.gd` au tableau
+de répartition (domaine « game feel »), et rien n'indique qu'une autre session
+le tienne en ce moment — vérifié avant d'y toucher.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, section « DA2.8 (suite) ») :
+- 7 planches Gemini cuites en décalques (`sang_3` à `sang_9`), portant DA2.8 de
+  2 à 9 formes — 6 directionnelles, 3 étoiles. Un 8ᵉ prompt généré mais écarté
+  (flaque rognée par le bord du cadre).
+- `sang_4` et `sang_8` réorientées après détection automatique par le banc
+  (masse d'encre du mauvais côté).
+- `tools/test_sang_au_sol.gd` : boucle de tirage portée de 30 à 200 essais pour
+  ne pas devenir flaky avec six planches dans la même catégorie. 115 contrôles.
+- `particle_pool.gd::Kind.BLOOD` : le losange codé en dur cède la place à six
+  gouttes peintes (`gouttes_sang_1` à `_6`), tirées au sort, préchargées.
+
+**Sources versionnées** sous `assets/sources/blood_decals/B3_*.jpg`,
+allowlistées dans le `.gitignore` du dossier.
+
+Lot complet relancé après ces changements — voir le commit pour le temps
+mesuré.
+
+### 2026-09-09 (note) — session « SG · sang au sol » : cache d'import périmé après des fusions automatiques
+
+**Sur le coup, j'ai cru à un vrai défaut sur `main`.** Le lot rougissait en
+masse — `game_state.gd:1447`, `Invalid call. Nonexistent function 'update_hud'
+in base 'CanvasLayer'` — reproduit deux fois, y compris **en isolation stricte**
+(mes propres modifications mises de côté via `git stash`). Ce n'était pas un
+proxy : l'appel `ui.update_hud(...)` existait déjà identique avant, et le fait
+qu'un contrôle purement méthodique (isoler la variable) confirme un symptôme ne
+suffit pas à en identifier la CAUSE — j'ai continué à chercher au lieu de m'arrêter
+à la première preuve qui semblait accuser `main`.
+
+**La vraie cause, trouvée en lisant le lot en entier plutôt que sa fin :**
+```
+SCRIPT ERROR: Parse Error: Could not find type "MenuHatchRect" in the current scope.
+          at: GDScript::reload (res://ui.gd:455)
+...
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://game_state.gd:0)
+```
+`ui.gd` ne compilait plus, donc le nœud restait un `CanvasLayer` nu sans son
+script — d'où `update_hud` introuvable. `MenuHatchRect` (`menu_hatch_rect.gd`,
+`class_name MenuHatchRect`) existe bel et bien dans le dépôt ; le cache
+`.godot/global_script_class_cache.cfg` datait du 8 septembre, **avant** que
+quatre fusions automatiques de `main` (reflog `f2b9bc7`, `f467817`, `c4a49ab`,
+`444e876` — apparues sans que j'aie tapé `git merge`, à élucider séparément)
+n'apportent ce fichier dans mon worktree. `godot --headless --path . --import`
+l'a régénéré ; `MenuHatchRect` y figure désormais, et les échecs disparaissent.
+
+**Ce que ça change pour la suite :** un worktree qui a reçu de nouveaux
+fichiers depuis son dernier `--import` — par une fusion, automatique ou non —
+en a de nouveau besoin, pas seulement un worktree flambant neuf. La ROADMAP ne
+le disait qu'au sujet du premier import ; à corriger si ça se reproduit.
+
+**Ce qui reste vrai et non résolu :** je ne sais toujours pas quel mécanisme a
+fusionné `main` quatre fois dans mon worktree sans que je le demande, ni
+pourquoi un commit (`68ad8d1`, mon propre travail) est apparu sans `git commit`
+explicite de ma part. Signalé à Adrien directement plutôt que dans ce journal
+seul — voir sa réponse.
+
 ### 2026-09-09 (suite) — session « retouche éblouissement » : un lot qui allait effacer trois sessions
 
 **L'arbre partagé portait un index qui supprimait 141 lignes et n'en ajoutait
@@ -527,6 +592,20 @@ elle ne déborde dans le mur que d'une dizaine de pixels ; et sa rotation est
 **tirée au sort**, pas prise dans l'axe du tir — une étoile de fissure n'a ni
 amont ni aval, elle ne peut donc pas mentir sur la provenance du coup. Le sang,
 lui, est tourné dans l'axe : c'est exactement ce qui rend son centrage fautif.
+
+**Rouvert et reclos le 2026-09-09, sur `bullet.gd` cette fois — la déclaration
+ci-dessus ne tient plus.** Adrien, en regardant les taches : « il faut que la
+tache en étoile centrée n'apparaisse que quand on tape très proche du centre
+(0-2 px), sinon ce sont les taches directionnelles ». Le point d'impact que
+`bullet.gd` transmet ne peut pas servir à ça — il est toujours à un rayon du
+corps, jamais « proche du centre » — donc la distance qui décide est ailleurs :
+la distance perpendiculaire entre l'axe du tir et le centre RÉEL du joueur, que
+`_hit_player()` calcule déjà (`dist_to_axis`) pour l'atténuation des dégâts, et
+que V4.2 réutilise déjà pour le retour audio. Une seule ligne ajoutée à
+`_spawn_hit_effects()` la transmet, non normalisée, jusqu'à `blood_stain.setup()`
+— jamais une troisième mesure, l'avertissement était déjà écrit dans ce fichier.
+Détail complet et lot vert (275 s) dans la ROADMAP, section « SG (addendum,
+2026-09-09) ».
 
 ### 2026-09-07 — session « retouche éblouissement » : une prédiction fausse retirée de la feuille de route
 
