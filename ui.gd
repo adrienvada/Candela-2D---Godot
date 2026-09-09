@@ -273,14 +273,152 @@ class CircularCooldown extends Control:
 			var a := secousse * 9.0
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
-		draw_arc(center, radius, 0, TAU, 32, Charte.LINE, 4.0, true)
+		# Cercle d'acier discret (épaisseur 2 px)
+		draw_arc(center, radius, 0, TAU, 32, Charte.LINE, 2.0, true)
+		# Repères cardinaux de précision télémétrique
+		var col_tick := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.50)
+		draw_line(center + Vector2(0, -radius - 2.0), center + Vector2(0, -radius + 2.0), col_tick, 1.0)
+		draw_line(center + Vector2(0, radius - 2.0), center + Vector2(0, radius + 2.0), col_tick, 1.0)
+		draw_line(center + Vector2(-radius - 2.0, 0), center + Vector2(-radius + 2.0, 0), col_tick, 1.0)
+		draw_line(center + Vector2(radius - 2.0, 0), center + Vector2(radius + 2.0, 0), col_tick, 1.0)
 		if progress > 0.0:
-			draw_arc(center, radius, -PI / 2.0, -PI / 2.0 + progress * TAU, 32, color, 4.0, true)
+			draw_arc(center, radius, -PI / 2.0, -PI / 2.0 + progress * TAU, 32, color, 2.5, true)
 
 	func set_progress(p: float) -> void:
 		if p != progress:
 			progress = p
 			queue_redraw()
+
+
+## Gutter de planche de bande dessinée (Proposition 1 — Roman Graphique Brutaliste)
+## Remplace le néon laser bleu par un caniveau d'encre sombre franc et des filets
+## d'acier nets, avec repères de massicot d'imprimerie aux tiers d'écran.
+class SplitGutterDivider extends Panel:
+	const COULEUR_FOND := Charte.NOIR
+	const COULEUR_FILET := Charte.LINE
+	const COULEUR_REPERE := Color(0.70, 0.76, 0.82, 0.45) # Charte.ACIER * 0.45
+	const REPERES_Y := [0.18, 0.38, 0.62, 0.82]
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var empty := StyleBoxEmpty.new()
+		add_theme_stylebox_override("panel", empty)
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		if w <= 0.0 or h <= 0.0:
+			return
+
+		# 1. Fond en noir d'encre absolu (caniveau entre les deux cases)
+		draw_rect(Rect2(0.0, 0.0, w, h), COULEUR_FOND)
+
+		# 2. Filets d'acier latéraux francs (gauche et droite)
+		draw_line(Vector2(0.5, 0.0), Vector2(0.5, h), COULEUR_FILET, 1.0)
+		draw_line(Vector2(w - 0.5, 0.0), Vector2(w - 0.5, h), COULEUR_FILET, 1.0)
+
+		# 3. Repères de massicot d'imprimerie aux tiers d'écran
+		for ratio in REPERES_Y:
+			var ry := h * float(ratio)
+			# Trait transversal débordant
+			draw_line(Vector2(-5.0, ry), Vector2(w + 5.0, ry), COULEUR_REPERE, 1.0)
+			# Encoches de coupe verticales aux extrémités du débord
+			draw_line(Vector2(-5.0, ry - 3.0), Vector2(-5.0, ry + 3.0), COULEUR_REPERE, 1.0)
+			draw_line(Vector2(w + 5.0, ry - 3.0), Vector2(w + 5.0, ry + 3.0), COULEUR_REPERE, 1.0)
+
+
+## Panneau d'encrage franc pour le HUD (Proposition 1 — Roman Graphique Brutaliste)
+## Remplace la texture 9-patch de cadre 3D sci-fi par un cartouche vectoriel net,
+## avec liseré d'accent discret, onglet de coin biseauté et repères de massicot.
+class ComicHudPanel extends PanelContainer:
+	var accent_color: Color = Charte.ACIER
+	var is_player_1: bool = true
+	var is_center_panel: bool = false
+
+	func _init(p_accent: Color, p_is_p1: bool = true, p_is_center: bool = false) -> void:
+		accent_color = p_accent
+		is_player_1 = p_is_p1
+		is_center_panel = p_is_center
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var empty := StyleBoxEmpty.new()
+		add_theme_stylebox_override("panel", empty)
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		if w <= 0.0 or h <= 0.0:
+			return
+
+		# 1. Ombre d'encrage noire pure portée en décalage franc (3 px bas-droite)
+		draw_rect(Rect2(3.0, 3.0, w, h), Color(0.0, 0.0, 0.0, 0.90))
+
+		# 2. Fond de panneau en Charte.SURFACE (96% opaque)
+		draw_rect(Rect2(0.0, 0.0, w, h), Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.96))
+
+		# 3. Filet d'encrage extérieur et d'acier (cadre net de 1 px)
+		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Charte.LINE, false, 1.0)
+
+		# 4. Traitement du liseré d'accent et des repères de massicot
+		if is_center_panel:
+			# Chrono central : cartouche narratif compact
+			draw_line(Vector2(0.0, 1.0), Vector2(w, 1.0), accent_color, 2.0)
+			draw_line(Vector2(0.0, h - 1.0), Vector2(w, h - 1.0), Charte.LINE, 1.0)
+			# Repères d'angles aux 4 coins (équerres de 6 px)
+			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var cr := 6.0
+			draw_line(Vector2(0.0, cr), Vector2(0.0, 0.0), col_c, 1.0)
+			draw_line(Vector2(0.0, 0.0), Vector2(cr, 0.0), col_c, 1.0)
+			draw_line(Vector2(w - cr, 0.0), Vector2(w, 0.0), col_c, 1.0)
+			draw_line(Vector2(w, 0.0), Vector2(w, cr), col_c, 1.0)
+			draw_line(Vector2(0.0, h - cr), Vector2(0.0, h), col_c, 1.0)
+			draw_line(Vector2(0.0, h), Vector2(cr, h), col_c, 1.0)
+			draw_line(Vector2(w - cr, h), Vector2(w, h), col_c, 1.0)
+			draw_line(Vector2(w, h), Vector2(w, h - cr), col_c, 1.0)
+		else:
+			# Fiche Joueur : liseré supérieur franc de 2.5 px portant la couleur du joueur
+			draw_line(Vector2(0.0, 1.25), Vector2(w, 1.25), accent_color, 2.5)
+
+			# Onglet d'identification biseauté de coin (signature Comic Book)
+			var col_onglet := accent_color
+			var tw := 24.0
+			var th := 6.0
+			if is_player_1:
+				# Onglet supérieur gauche pour J1
+				var pts := PackedVector2Array([
+					Vector2(0.0, 0.0),
+					Vector2(tw, 0.0),
+					Vector2(tw - 4.0, th),
+					Vector2(0.0, th)
+				])
+				draw_colored_polygon(pts, Color(col_onglet.r, col_onglet.g, col_onglet.b, 0.50))
+				draw_polyline(pts, col_onglet, 1.0)
+			else:
+				# Onglet symétrique supérieur droit pour J2
+				var pts := PackedVector2Array([
+					Vector2(w, 0.0),
+					Vector2(w - tw, 0.0),
+					Vector2(w - tw + 4.0, th),
+					Vector2(w, th)
+				])
+				draw_colored_polygon(pts, Color(col_onglet.r, col_onglet.g, col_onglet.b, 0.50))
+				draw_polyline(pts, col_onglet, 1.0)
+
+			# Repères de massicot aux 3 coins libres (équerres de 8 px)
+			var col_c := Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.65)
+			var cr := 8.0
+			# Bas-gauche
+			draw_line(Vector2(0.0, h - cr), Vector2(0.0, h), col_c, 1.0)
+			draw_line(Vector2(0.0, h), Vector2(cr, h), col_c, 1.0)
+			# Bas-droite
+			draw_line(Vector2(w - cr, h), Vector2(w, h), col_c, 1.0)
+			draw_line(Vector2(w, h), Vector2(w, h - cr), col_c, 1.0)
+			# Haut libre (côté opposé à l'onglet)
+			if is_player_1:
+				draw_line(Vector2(w - cr, 0.0), Vector2(w, 0.0), col_c, 1.0)
+				draw_line(Vector2(w, 0.0), Vector2(w, cr), col_c, 1.0)
+			else:
+				draw_line(Vector2(cr, 0.0), Vector2(0.0, 0.0), col_c, 1.0)
+				draw_line(Vector2(0.0, 0.0), Vector2(0.0, cr), col_c, 1.0)
 
 
 ## Liseré néon animé qui matérialise le focus d'un joueur.
@@ -1854,15 +1992,10 @@ func _build_hud() -> void:
 	scanline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(scanline)
 
-	center_line = Panel.new()
+	center_line = SplitGutterDivider.new()
 	center_line.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	center_line.size = Vector2(4, 2000)
-	center_line.position = Vector2(-2, 0)
-	var line_style := StyleBoxFlat.new()
-	line_style.bg_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.8)
-	line_style.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.5)
-	line_style.shadow_size = 20
-	center_line.add_theme_stylebox_override("panel", line_style)
+	center_line.size = Vector2(6, 2000)
+	center_line.position = Vector2(-3, 0)
 	add_child(center_line)
 
 	# Le voile d'éblouissement, une moitié d'écran chacun. Blanc plat et pas
@@ -1920,9 +2053,9 @@ func _build_player_hud(player: int) -> Control:
 	var wrapper := Control.new()
 	wrapper.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if player == 0 else Control.SIZE_SHRINK_END
 	wrapper.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	wrapper.custom_minimum_size = Vector2(352, 152)
+	wrapper.custom_minimum_size = Vector2(340, 140)
 
-	var panel := _create_glow_panel(tint)
+	var panel := _create_glow_panel(tint, player == 0, false)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	wrapper.add_child(panel)
 
@@ -1999,9 +2132,9 @@ func _build_center_hud() -> Control:
 	center_hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center_hud.alignment = BoxContainer.ALIGNMENT_BEGIN
 
-	var panel := _create_glow_panel(Charte.ACIER * 0.42)
+	var panel := _create_glow_panel(Charte.ACIER * 0.5, false, true)
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	panel.custom_minimum_size = Vector2(208, 0)
+	panel.custom_minimum_size = Vector2(190, 0)
 	center_hud.add_child(panel)
 
 	var inner := MarginContainer.new()
@@ -2018,7 +2151,7 @@ func _build_center_hud() -> Control:
 	title.text = "CANDELA 2D"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", T_MENTION)
-	title.add_theme_color_override("font_color", COLOR_GOLD)
+	title.add_theme_color_override("font_color", Charte.AMBRE)
 	vbox.add_child(title)
 
 	time_label = Label.new()
@@ -2042,62 +2175,11 @@ func _build_center_hud() -> Control:
 
 	return center_hud
 
-## DA4.1 — **le cadre du HUD est peint, plus tracé.**
-##
-## C'était un rectangle arrondi de 2 px avec une ombre portée : la signature
-## exacte du panneau qu'aucune main n'a dessiné. Il porte désormais une plaque de
-## matériel usée, en 9-slice de marge 32 px — coins renforcés, bord irrégulier.
-##
-## **La texture est un masque gris et `modulate_color` y met la couleur du
-## joueur** : un seul fichier sert les deux HUD, comme la torche des curseurs.
-## C'est la discipline DA1.5 — l'image ne fournit que la matière, le code garde
-## la couleur — et c'est ce qui permet à la charte de retoucher `BLEU` ou `ROUGE`
-## sans qu'aucune texture soit à refaire.
-##
-## **Le repli n'est pas décoratif** : sans le fichier, on retombe sur l'ancien
-## `StyleBoxFlat`. Un HUD sans cadre serait un HUD sans bord — c'est-à-dire deux
-## blocs de texte flottant sur l'arène — alors qu'un cadre tracé reste un cadre.
-## Règle du dépôt : câbler, taire, diagnostiquer.
-func _create_glow_panel(color: Color) -> PanelContainer:
-	var panel := PanelContainer.new()
-	var chemin := "res://assets/ui/cadre_hud.png"
-	if ResourceLoader.exists(chemin):
-		var peint := StyleBoxTexture.new()
-		var tex_cadre := load(chemin) as Texture2D
-		peint.texture = tex_cadre
-		# ⚠️ **La marge se DÉDUIT de la texture, elle n'est pas écrite.**
-		#
-		# Le brief demandait 32 px sur une planche de 128², soit **le quart de la
-		# largeur**. Écrire 32 en dur marche — jusqu'au jour où la planche est
-		# recuite à 256² pour gagner en densité de texels (DA5.6 le prévoit
-		# explicitement, et le chantier R6 le fait pour les sprites). La marge ne
-		# couvrirait alors plus que la moitié de la bordure : **le 9-slice
-		# trancherait en plein dans le dessin**, et le cadre partirait en bouillie
-		# sans qu'aucune erreur ne le signale.
-		#
-		# C'est le même motif que le coefficient de case du code de salon et que le
-		# contour des chiffres de dégâts : une valeur absolue là où il fallait un
-		# rapport. Trois fois suffisent pour cesser d'en écrire.
-		var m_cadre := 32
-		if tex_cadre != null and tex_cadre.get_width() > 0:
-			m_cadre = int(round(tex_cadre.get_width() / 4.0))
-		peint.set_texture_margin_all(m_cadre)
-		peint.modulate_color = color
-		# Le contenu ne colle pas au liseré : la marge intérieure suit la grille.
-		peint.set_content_margin_all(GAP_XS)
-		panel.add_theme_stylebox_override("panel", peint)
-		return panel
-
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.95)
-	style.set_border_width_all(2)
-	style.border_color = color
-	style.set_corner_radius_all(0)
-	style.shadow_size = 0
-	style.shadow_offset = Vector2(4, 4)
-	style.shadow_color = Color(0, 0, 0, 0.95)
-	panel.add_theme_stylebox_override("panel", style)
-	return panel
+## DA4.1 — Cadre du HUD : Panneau d'encrage de bande dessinée (Proposition 1).
+## Remplace la texture 9-patch `cadre_hud.png` par un tracé vectoriel brutaliste net :
+## fond opaque SURFACE, filets d'acier, repères de massicot aux coins et liseré supérieur.
+func _create_glow_panel(color: Color, is_p1: bool = true, is_center: bool = false) -> PanelContainer:
+	return ComicHudPanel.new(color, is_p1, is_center)
 
 func _create_health_bars(color: Color) -> Dictionary:
 	var container := MarginContainer.new()
@@ -3807,6 +3889,7 @@ func _abandon_search(raison: String) -> void:
 ## Un refus se dit. Sans Epic configuré, l'appariement est simplement impossible,
 ## et une entrée qui n'aurait rien fait passerait pour un bouton cassé.
 func _start_search() -> void:
+	NetworkManager.transport = NetworkManager.Transport.EOS
 	var classe := hub.current_id() == SCREEN_RANKED
 	_apply_queue_kind(classe)
 
@@ -4016,6 +4099,10 @@ func _on_hub_screen_changed(id: String) -> void:
 		SCREEN_JOIN:
 			_apply_lobby_intent(NetworkManager.GameMode.ONLINE_CLIENT,
 				NetworkManager.Transport.EOS)
+		SCREEN_FRIENDLY, SCREEN_RANKED:
+			# L'appariement automatique s'appuie sur Epic : réinitialise le
+			# transport si l'on revient d'un salon réseau local (ENet).
+			NetworkManager.transport = NetworkManager.Transport.EOS
 
 	# La nature du match se décide au menu, pas en jeu : entrer dans « 1V1
 	# compétitif » est la seule façon de jouer classé. Tout le reste — écran

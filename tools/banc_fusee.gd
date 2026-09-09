@@ -10,10 +10,17 @@
 ## l'étape FU6 — elles demandent de paramétrer le modèle, et un dosage se fait
 ## en séance avec Adrien, pas en éditant une constante à l'aveugle.
 ##
+## FU3/FU5 — touches 6/7/8/9 : de simples DÉCLENCHEURS directs (`diffuser_flash`,
+## `ajouter_tunnel`, `eteindre`), sans passer par un vrai tir ni par l'arbitrage
+## réseau — ce banc n'a ni balle ni hôte. Elles servent à VOIR l'effet, pas à
+## le doser ; le vrai jeu (touche F, un pistolet ou une arbalète tirés dans le
+## nuage) reste le seul test qui vaille pour juger l'ensemble.
+##
 ## Touches : clic gauche = lancer · clic droit tenu = déplacer le mannequin
 ## mobile · 1/2/3/4 = sauter au plein feu / à la braise / à l'agonie / au résidu ·
-## Espace = figer l'âge · R = tout relancer · A = lumière d'inspection ·
-## Échap = quitter.
+## 6 = pouls de diffusion (FU3) · 7/8 = tunnel incandescent / sombre entre les
+## deux mannequins (FU3) · 9 = éteindre (FU5, panache noir) · Espace = figer
+## l'âge · R = tout relancer · A = lumière d'inspection · Échap = quitter.
 extends Node2D
 
 const RenduCommun := preload("res://tools/rendu_commun.gd")
@@ -129,6 +136,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_4:
 				_sauter(FuseeModele.DUREE_PLEIN_FEU + FuseeModele.DUREE_BRAISE
 					+ FuseeModele.DUREE_AGONIE + 0.1)
+			KEY_6:
+				if is_instance_valid(_fusee):
+					_fusee.diffuser_flash()
+			KEY_7:
+				_tunnel_de_demo(false)
+			KEY_8:
+				_tunnel_de_demo(true)
+			KEY_9:
+				if is_instance_valid(_fusee):
+					_fusee.eteindre()
 
 
 func _lancer(cible: Vector2) -> void:
@@ -153,6 +170,15 @@ func _sauter(age_combustion: float) -> void:
 	_fusee.forcer_age(age_combustion)
 
 
+## FU3 — un tunnel factice entre les deux mannequins, pour voir sa forme et sa
+## couleur sans avoir à viser une vraie balle dans le nuage.
+func _tunnel_de_demo(sombre: bool) -> void:
+	if not is_instance_valid(_fusee):
+		_lancer(Vector2(640.0, 360.0))
+	_fusee.ajouter_tunnel(_mannequin_fixe.global_position,
+		_mannequin_mobile.global_position, sombre)
+
+
 func _process(_delta: float) -> void:
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
 		_mannequin_mobile.global_position = get_global_mouse_position()
@@ -175,5 +201,5 @@ func _maj_panneau() -> void:
 		}
 		etat = "acte %s · âge %.1f s%s" % [noms[FuseeModele.acte_a(age_combustion)],
 			maxf(age_combustion, 0.0), " · FIGÉ" if _fige else ""]
-	_panneau.text = "BANC FUSÉE — %s\n%d img/s · clic G lancer · clic D mannequin · 1-4 actes · Espace figer · R relancer · A inspection · Échap quitter" \
+	_panneau.text = "BANC FUSÉE — %s\n%d img/s · clic G lancer · clic D mannequin · 1-4 actes · 6 diffusion · 7/8 tunnel clair/sombre · 9 éteindre · Espace figer · R relancer · A inspection · Échap quitter" \
 		% [etat, Engine.get_frames_per_second()]

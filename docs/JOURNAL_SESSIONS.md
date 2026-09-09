@@ -312,6 +312,70 @@ pourquoi un commit (`68ad8d1`, mon propre travail) est apparu sans `git commit`
 explicite de ma part. Signalé à Adrien directement plutôt que dans ce journal
 seul — voir sa réponse.
 
+### 2026-09-09 (suite) — session « retouche éblouissement » : un lot qui allait effacer trois sessions
+
+**L'arbre partagé portait un index qui supprimait 141 lignes et n'en ajoutait
+aucune.** Il se présentait comme du travail à committer, et la session fusée —
+relayant une demande d'Adrien de débloquer l'arbre — a proposé de le committer à
+ma place.
+
+**Ce n'était pas du travail, c'était du retard promu en intention.** J'avais
+synchronisé le ref `main` de l'arbre partagé par `update-ref`, deux fois, pour ne
+pas perturber la session qui y travaillait. Le pointeur a bougé, les fichiers
+non ; un `git add -A` a ensuite indexé cet écart. L'index retirait mes ajouts au
+banc, ma section de feuille de route, l'entrée de journal, et **la documentation
+du commit qui était le HEAD de l'arbre** — trois sessions.
+
+**Vérifié sur pièces avant d'agir** (`git show HEAD:<f>` contre `git show :<f>`),
+restauré depuis `HEAD` après sauvegarde dans `/tmp/filet_arbre_partage`.
+
+⚠️ **Le lot complet n'aurait rien attrapé** : supprimer un banc, une section de
+doc et des lignes de journal ne fait échouer aucune suite. Le vert aurait servi
+de caution. Le piège « Un répertoire de travail en retard MENT, et il ment en
+supprimant » porte le mécanisme, le contrôle qui tranche, et la règle.
+
+**Seul contenu unique du lot, conservé :** `game_state.gd` habillait l'arène deux
+fois — doublon né d'une double application du chantier décors (`f338e38` et
+`bad6083`, même message). Committé seul.
+
+
+### 2026-09-09 — session « retouche éblouissement » : le banc réparé, le voile TOUJOURS PAS
+
+> **✅ CLOS le 2026-09-09 par Adrien** — « je n'ai pas revu le bug depuis, je
+> pense que c'est corrigé ». La section correspondante de la feuille de route est
+> supprimée ; seule la mesure de la plage d'éblouissement est conservée, parce
+> qu'elle documente la touche `D` du banc et qu'elle vaut indépendamment du
+> défaut.
+>
+> ⚠️ **Et la comparaison qui fondait ce « toujours pas » était bancale**, je
+> l'inscris parce que c'est la partie utile : l'image du banc était en plein
+> écran (rapport 1,78) et celle du jeu en écran scindé (0,889). Le shader
+> normalise par la demi-diagonale, ce qui multiplie l'échelle interne par 1,52
+> entre les deux — **une bonne part de l'écart constaté venait de là, pas du
+> jeu.** Or Adrien joue en plein écran. Troisième forme du même travers dans la
+> journée : une mesure juste, braquée à côté.
+
+**Adrien a joué en réseau local et n'a pas vu le voile** — seulement « une grosse
+tâche comme ellipse floue » au niveau de l'éblouisseur, ce qui est le brouillage
+faisant son travail. Branche `banc-niveau-reel`.
+
+⚠️ **Ce qui est poussé ne corrige PAS le jeu.** Deux ajouts au banc seulement :
+une ligne de vérité qui montre, à réglages courants, ce que le niveau fait
+vraiment aux flares comparé à l'ellipse ; et la touche `D` qui saute entre les
+quatre distances de duel mesurées. **Le voile reste fade en jeu et somptueux au
+banc, et la cause n'est pas trouvée.** La feuille de route porte le tableau des
+huit pistes éliminées pour que personne ne les refasse.
+
+**Le seul écart mesuré, insuffisant à lui seul :** le brouillage passe
+`dazzle_amount` par `_dose()` (gain 2,0, saturé dès 0,5) là où le voile le prend
+brut. À mi-portée l'ellipse est à fond et les flares sont sous 9 % d'opacité.
+Cela explique leur discrétion, pas l'écart d'aspect entre banc et jeu à
+éblouissement égal.
+
+**La piste suivante à ouvrir**, et elle se vérifie plutôt qu'elle ne se suppose :
+le rendu racine et son facteur de densité native de 1,778 — celui qui avait causé
+le polygone de photocopie deux jours plus tôt.
+
 
 ### 2026-09-07 — session « bandeau FATAL » (chantier BF) : LIVRÉ, BF1 à BF5
 

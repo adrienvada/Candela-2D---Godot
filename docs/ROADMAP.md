@@ -48,7 +48,7 @@ décision se juge à cette double aune.
 | 5 | **Les menus** | ✅ **Terminée** le 2026-08-18 — six étapes closes. Ne restent que des vérifications à la main |
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
-| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
+| 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Le premier essai à deux machines a eu lieu le 2026-09-09 et a trouvé un défaut** : l'hôte partait seul, l'invité restait au menu. Corrigé, deux bancs posés — **reste à rejouer l'essai** |
 | 9 | **Mise à jour du jeu installé** | ✅ **Éprouvée le 2026-09-08** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. Les deux jalons humains sont faits : la paire de clés (H8) et la première mise à jour réelle sur machine (H9, testée par Adrien) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
@@ -1500,8 +1500,20 @@ là où il y aura une sélection.
 
 ## Phase 8 — Appariement ✅ CLOSE CÔTÉ CODE le 2026-08-18
 
-**Une seule inconnue subsiste, et elle est humaine : l'essai à deux fenêtres.**
-Tout le reste est écrit, exercé, et une partie est prouvée contre le vrai service.
+**L'inconnue restante était l'essai à deux machines. Il a eu lieu le 2026-09-09,
+et il a trouvé le défaut que rien ne pouvait voir d'un seul côté** : l'hôte
+lançait sa manche avant que l'invité soit connecté, donc seul, donc en bac à
+sable — pour toujours. Détail dans « Ouvrir un lien n'est pas l'établir », aux
+Pièges connus.
+
+Ce chemin n'était couvert par **aucun** banc : les modes `--host` / `--join`
+entrent tous par le salon à code, où l'hôte attend l'adversaire AVANT de se
+déclarer prêt. L'appariement fait l'inverse — il ouvre le lien puis annonce — et
+c'est précisément cet ordre qui cassait. Deux bancs le tiennent désormais, et il
+faut les deux : `--appariement` (une instance) pour « il ne part pas seul »,
+`run_duo.sh --apparie` (deux instances) pour « il part quand l'autre arrive ».
+
+Le reste est écrit, exercé, et une partie est prouvée contre le vrai service.
 
 Ce qui a été livré au-delà du plan, et pourquoi :
 
@@ -3114,6 +3126,126 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
+
+**`git update-ref` sur une branche montée dans un AUTRE arbre de travail déplace
+le pointeur et ne touche pas aux fichiers.** C'est précisément pourquoi on
+l'emploie — pour synchroniser `main` sans perturber la session qui travaille dans
+l'arbre partagé. Aucun commit n'est perdu, et c'est vrai. **Mais l'arbre reste
+alors sur d'anciens fichiers, et `git status` compare ces anciens fichiers à la
+NOUVELLE pointe.**
+
+⚠️ **Le retard prend donc exactement l'apparence d'un nettoyage volontaire**, et
+un `git add -A` le promeut en intention. C'est la partie vicieuse : un fichier en
+retard ne ressemble pas à une erreur, il ressemble à quelqu'un qui a fait le
+ménage.
+
+**Ce que ça a produit le 2026-09-09.** Deux `update-ref` successifs sur l'arbre
+partagé, puis un `git add -A` par une autre session. L'index contenait alors :
+
+| fichier | ajouts | suppressions | ce qui disparaissait |
+|---|---|---|---|
+| `tools/banc_voile.gd` | 0 | 47 | la ligne de vérité et la touche `D` |
+| `docs/ROADMAP.md` (indexé) | 0 | 47 | le chantier « le voile est fade en jeu » |
+| `docs/ROADMAP.md` (non indexé) | 0 | 29 | « Un son à bout portant », la doc du HEAD lui-même |
+| `docs/JOURNAL_SESSIONS.md` | 0 | 18 | l'entrée de session |
+
+**Trois lots de trois sessions, dans un diff qui se présentait comme du travail à
+committer.** Une session tierce a failli le committer de bonne foi.
+
+#### Le contrôle qui n'attrape RIEN, et celui qui tranche
+
+**Le lot complet de suites ne voit pas ce défaut et ne peut pas le voir.**
+Supprimer une section de feuille de route, un banc et des lignes de journal ne
+fait échouer aucun test — le lot serait passé au vert, et le vert aurait servi de
+caution à la destruction. « J'aurais détruit trois lots avec un lot vert à
+l'appui » (session fusée, qui l'avait proposé et l'a reconnu).
+
+**La question qui tranche est ailleurs, et elle se pose en une ligne :** *ce que
+ce diff enlève existe-t-il en amont ?*
+
+    git show HEAD:<fichier> | grep -c "<un ancrage du contenu supprimé>"
+    git show :<fichier>     | grep -c "<le même ancrage>"
+
+Si `HEAD` répond 4 et l'index 0, le diff n'est pas du travail, c'est une perte.
+**Un diff fait de suppressions pures ne se juge donc pas par les tests, il se
+juge en cherchant le contenu ailleurs** — formulation de la session fusée, et
+elle vaut pour toute suppression, quelle qu'en soit la cause.
+
+#### Le même contrôle, braqué au mauvais endroit (ajouté le 2026-09-09)
+
+**Le contrôle d'ancrages ci-dessus a failli servir à rien, le jour même.** Après
+la fusion du chantier FUSÉE, deux sessions ont compté leurs ancrages et tout
+trouvé en place — sur le `main` LOCAL. Pendant ce temps `origin/main` était
+reparti d'un commit antérieur par une troisième ligne : le correctif d'arène y
+manquait, le doublon d'habillage y était revenu, et le chantier FUSÉE entier y
+était absent. Le compte était juste, il portait sur la mauvaise ref.
+
+> **Vérifier les ancrages sur la ref qu'on PUBLIE, pas seulement sur celle où
+> l'on a fusionné — sinon on prouve la présence du travail à l'endroit exact où
+> personne ne viendra le chercher.** (session fusée)
+
+C'est la même famille que le garde-fou inopérant : **un contrôle juste, mais
+braqué à côté.** Plus généralement — et c'est la formulation à retenir — *le
+contrôle doit viser la ref qui fait foi POUR LE LECTEUR*, et selon la question ce
+n'est pas toujours celle où l'on vient de travailler. Un `git show origin/main:`
+coûte le même geste qu'un `git show HEAD:` et ne répond pas à la même question.
+
+⚠️ **Et rien de tout cela n'était une perte** : les deux lignes existaient, tous
+les commits étaient atteignables. Une divergence non publiée ne détruit rien —
+elle attend simplement quelqu'un qui tranchera mal. Le nœud est de coordination,
+pas de git, et il ne se referme qu'à la publication.
+
+#### La règle
+
+1. **Après tout `update-ref` sur une branche montée ailleurs, le dire à la
+   session qui tient cet arbre** — elle seule peut remettre ses fichiers à jour
+   sans risque. Le silence transforme un geste sûr en piège différé.
+2. **Ne jamais `git add -A` dans un arbre partagé sans avoir regardé le diff.**
+   Ce qu'on y trouve n'a pas forcément été écrit par quelqu'un.
+3. **Et devant un lot de suppressions pures, chercher le contenu en amont avant
+   de committer** — même, et surtout, quand les suites sont vertes.
+### Ouvrir un lien n'est pas l'établir (2026-09-09)
+
+`Matchmaking._try_launch()` appelle `host_matched_game()` puis émet `match_ready`
+**dans la foulée, sans rendre la main**. À cet instant la socket est ouverte et
+`multiplayer.get_peers()` est **vide** — l'invité n'a pas encore eu une seule
+image pour s'y connecter, il ne le peut pas. `game_state._on_match_ready()`
+lançait pourtant `_start_round()` là, lequel prenait donc systématiquement sa
+branche « hôte resté seul » : bac à sable, cible d'entraînement, « EN ATTENTE
+D'UN ADVERSAIRE… ».
+
+**Et plus rien ne l'en sortait.** La porte PRÊT (2026-08-26) avait retiré le
+départ automatique de `_on_peer_connected` et de `rpc_client_weapon` — à juste
+titre pour un salon à code, où deux humains se déclarent — mais l'appariement
+n'a pas de porte PRÊT, Adrien ayant tranché le 2026-08-18 qu'il n'en aurait pas.
+**Aucun des deux changements n'était fautif seul ; c'est leur rencontre**, et
+c'est la troisième fois que ce dépôt paie exactement cette forme-là.
+
+Ce qu'Adrien voyait à deux machines : les deux se trouvent, l'une entre dans
+l'arène et y attend un joueur 2 qui ne vient jamais, l'autre reste dans son menu.
+**Aucune erreur console des deux côtés.** Son journal montre le reste — le client
+se connecte (`connected to server`, `peer connected — id 1`, `protocole 8
+accepté`), puis chacun relance sa recherche, republie des tickets, et chaque
+nouvelle jointure remplace le pair vivant : le symptôme se recouvre lui-même.
+
+⚠️ **`round_active` ne décrivait pas le défaut.** Il valait `false` des deux
+côtés — c'est-à-dire la même chose qu'un menu sain — pendant que l'hôte était
+dans l'arène. Ce qui le décrit, ce sont `sandbox_mode` et `_is_main_menu`
+ensemble : *où le joueur se trouve*, pas *ce que la boucle fait*. Le même piège
+avait déjà été payé le 2026-08-18, et le banc portait déjà le commentaire qui
+l'énonce.
+
+**Correctif** : `_on_match_ready()` **arme** le départ (`_matchmade_start_pending`)
+au lieu de le prendre, et `rpc_client_weapon` le consomme — le premier instant où
+l'hôte a À LA FOIS un pair connecté et l'arme qu'il tient. Une échéance
+(`DELAI_INVITE_APPARIE`) empêche le report de déplacer le blocage au lieu de le
+supprimer. Deux bancs le verrouillent, et il faut les deux :
+`test_online_match --appariement` (une instance) prouve qu'il ne part pas seul,
+`run_duo.sh --apparie` (deux instances, ENet) qu'il part quand l'invité arrive.
+Vérifié : sans le correctif, le premier rougit sur trois contrôles et le second
+sur quatre.
+
 ### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
 
 **Deux citations écrites ce jour-là sont devenues fausses en moins de deux
@@ -3817,6 +3949,74 @@ n'est pas forcément le vôtre : `git status` dit qui a un fichier ouvert.
 trois occurrences et a nommé le motif — les trois autres sessions cherchaient
 chacune une cause différente pour un symptôme unique.*
 
+
+### Un diagnostic qui ne tourne pas là où l'on joue (2026-09-09)
+
+Adrien rapporte un silence complet en match réseau — **y compris ses propres
+tirs**. Le dépôt porte exactement l'outil qu'il faut pour ça,
+`AudioManager.diagnostic_ecoute()`, sur **F4**. Il ne rendait rien.
+
+**Tout le traceur sortait sur `if not OS.is_debug_build(): return`.** Écrit pour
+une bonne raison — en release, `print()` est tamponné et vidé à la fermeture
+propre, donc inutile — la conclusion tirée était la mauvaise : *si la console ne
+sert à rien, écris ailleurs*, et non *renonce*. **Un outil de diagnostic qui ne
+marche que dans l'éditeur ne diagnostique pas le jeu : il diagnostique
+l'éditeur.** Il écrit désormais dans `user://diagnostic_ecoute.txt`, en ajout,
+horodaté, dans tous les builds — et `flush()` explicite, sans quoi un plantage
+emporte le relevé qu'on venait de prendre.
+
+**Il lui manquait aussi le fait qui décide de l'audibilité.** Il affichait
+« auditeurs : racine » sans jamais vérifier que cette racine soit **dans le
+`World2D` où vivent les voix** — or `AudioStreamPlayer2D` ne sort que vers les
+auditeurs de SON monde. Le relevé pouvait donc décrire un état parfait pendant
+que rien ne sortait, et c'est ce qu'il a fait : *j'ai conclu « configuration
+correcte » sur cette foi.* Il ne regardait pas non plus `Master`, qui peut tout
+avaler un étage au-dessus pendant que « bus SFX : actif » reste vrai.
+
+**La leçon, et c'est la cinquième fois de cette famille :** on ne prouve pas
+qu'un son sort en décrivant un graphe. Un diagnostic doit rapporter les faits
+qui DÉCIDENT — le monde de l'auditeur, la chaîne de bus entière — et pas ceux
+qui rassurent.
+
+*Le piège de fond est un cousin : le même code coupait la racine sans regarder
+où vit l'oreille. Voir la section suivante.*
+
+### Un son à bout portant ne peut pas être occulté (2026-09-09)
+
+Adrien : « je n'entends pas les tirs en entraînement ». Mesuré sur sa machine,
+son PROPRE coup de feu, à **28 px de son oreille** : `occlusion = 0,33`, routé
+sur `SFX_Occlus`. Six tirs partis, six tirs étouffés.
+
+**La cause est géométrique.** Les trois rayons de `part_occultee` sont
+**parallèles**, écartés de ±24 px : le couloir qu'ils balayent fait donc **48 px
+de large**. Quand le trajet source→oreille est plus court que ce couloir n'est
+large, les rayons latéraux ne mesurent plus ce qui *sépare* — ils mesurent ce
+qui *borde*. Et dans un jeu où l'on longe les murs en permanence, l'un d'eux
+part de l'intérieur du mur.
+
+**Trois symptômes concordants, une seule cause, et aucune erreur nulle part :**
+
+| observation d'Adrien | ce qu'elle éliminait |
+|---|---|
+| « j'entends la musique » | la chaîne audio, le `Master`, la sortie |
+| « j'entends les douilles » | le bus, l'oreille, le pool — la douille est jouée 300 ms plus tard, **hors frame de physique**, donc elle saute le test |
+| « en écran scindé j'entends tout » | tout le reste — l'occlusion y est **désactivée** (`_oreille2 != null`) |
+
+**Ce sont ces trois phrases qui ont résolu le défaut**, après des heures passées
+à décrire des graphes. Le diagnostic affichait un montage irréprochable ; il ne
+disait rien du chemin d'UN son. La leçon est la même que celle du diagnostic
+muet, un cran plus loin : *pour savoir pourquoi un son ne s'entend pas, il faut
+suivre CE son* — sa distance, son bus, son volume — et non l'état du système.
+
+**Le garde-fou vérifie les deux bords** : que 28 px tombe sous la garde, et
+qu'un adversaire à deux tuiles reste occultable. Une garde trop large aurait
+supprimé l'occlusion utile, c'est-à-dire l'information que les murs donnent.
+
+⚠️ **Ce que la mesure a montré au passage et qui reste ouvert :** l'axe direct
+peut être dégagé pendant qu'un latéral touche. On fabrique alors une occlusion
+là où la ligne droite est libre. Le fan à trois rayons existe pour adoucir le
+bord d'un mur (piège du clignotement) — mais il peut CRÉER de l'occlusion, pas
+seulement l'adoucir. Non tranché.
 
 ### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
 
@@ -11782,6 +11982,31 @@ avant ce chantier.
    elle ne se fait pas d'office — c'est la règle du journal des sessions, et
    c'est elle qui a évité que V6.2 soit implémentée deux fois.
 
+### Ce qu'une torche éblouit vraiment, selon la distance (mesuré le 2026-09-09)
+
+Relevé par le chemin exact du jeu — `WeaponData.lumiere_recue()` puis
+`Eblouissement.plafond_pour()` —, parce qu'aucun réglage de rendu ne se juge sans
+savoir dans quelle plage il travaille :
+
+| distance | dans l'axe | 15° hors axe | 30° hors axe |
+|---|---|---|---|
+| 140 px | **0,81** | 0,61 | 0,49 |
+| 200 px | 0,71 | 0,55 | 0,43 |
+| 280 px | 0,55 | 0,42 | 0,34 |
+| 360 px | 0,34 | 0,27 | 0,22 |
+| 460 px | **0,00** | 0,00 | 0,00 |
+
+⚠️ **Deux choses qui ne se devinent pas.** La torche cesse d'éblouir au-delà de
+~400 px, donc tout réglage jugé à bout portant est jugé hors du duel ; et le
+brouillage passe cette valeur par `_dose()`, qui la **multiplie par `GAIN`
+(2,0)** et sature donc dès 0,5 — c'est-à-dire dès 300 px — là où le voile la
+prend **brute**. Les deux effets ne montent pas à la même vitesse, et c'est
+délibérément conservé : le halo doit cacher tôt, le voile doit gêner
+progressivement.
+
+Ces quatre distances sont celles de la touche `D` du banc du voile, qui y saute
+au lieu de les traverser par pas de 20 px.
+
 ### ✅ RÉSOLU — la photocopie d'écran du flou laissait un polygone à l'écran
 
 > **Trouvé et corrigé le 2026-09-07**, après qu'Adrien a confié le chantier
@@ -12888,12 +13113,26 @@ refermeture du sillage (2 s), portée du lancer (450 px), portées/niveaux audio
 tout est constantes de `fusee_modele.gd` et propositions dans les tables —
 **rien n'est passé au banc devant Adrien.** Le dosage est l'étape FU6.
 
+> ✅ **Tranché par Adrien le 2026-09-09 : « le dosage est validé ».** Les
+> nombres ci-dessus cessent donc d'être des propositions — ils sont les
+> valeurs du jeu, y compris ceux que FU3 et FU5 ont ajoutés. **Ce qui change
+> vraiment, c'est le statut, pas les chiffres** : les toucher désormais est
+> une décision à reprendre avec lui, plus un réglage libre. Le relevé
+> `bench_framerate --fusee` reste dû — Adrien a jugé le RENDU, pas le coût.
+
+### Le témoin du fil, encore : `rpc_eteindre_fusee` fait monter VERSION à 9
+
+Confirmé le motif : ajouter un RPC — pas seulement en modifier un existant —
+bouge le fil. `Protocol.VERSION` était déjà à 8 en arrivant sur `main`
+(chantier MUNITIONS & RECHARGE, sans rapport), monté à **9** pour ce nouveau
+RPC de FU5. Le carnet documente pourquoi : un hôte v9 qui appelle
+`rpc_eteindre_fusee` sur un client v8 ne serait jamais entendu, et le silence
+serait pris pour un bug plutôt que pour une incompatibilité.
+
 ### Ce qui reste — étapes numérotées, à ne pas anticiper
 
-- **FU3 — le tir et la fumée** : flash de bouche diffusé dans tout le nuage
-  (la fumée pardonne UN tir), tunnel incandescent de la balle qui accuse le
-  tireur, tunnel SOMBRE du carreau d'arbalète (l'arme sans lumière obtient sa
-  niche et son premier contre).
+- ~~**FU3 — le tir et la fumée**~~ — **écrite le 2026-09-08**, voir sous-section
+  dédiée : flash de bouche diffusé, tunnels clairs et sombres.
 - **FU4 — l'audio complet.** ⚠️ **Le choix de modèle est TRANCHÉ par Adrien
   le 2026-09-08 : « Non, la fumée étouffe juste un peu les sons. »** Écarte le
   grésillement qui masque les pas — la fusée reste un objet qui BROUILLE, elle
@@ -12921,15 +13160,20 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   **Reste ouvert :** le sifflement de vol suivi — voix positionnelle qui suit
   le projectile ; patron déjà identifié (`_dazzle_player`/la voix dédiée de la
   combustion), à poser côté `fusee.gd`.
-- **FU5 — l'extinction** : piétiner la fusée (0,7 s immobile À CONTRE-JOUR)
-  ou l'éteindre d'une balle. Le hitcheck de piétinement DOIT passer par la
-  compensation de latence hôte, sinon injuste à 100 ms. *(C : `fusee_eteinte`
-  câblée côté `AudioManager` — un seul événement pour les deux causes,
-  distinguer viendra si le dosage le réclame, pas avant.)*
-- **FU6 — le dosage** : paramétrer le modèle pour donner des molettes au banc,
-  puis séance avec Adrien (visuel + audio), et seulement alors les nombres
-  deviennent des décisions. Relevé `bench_framerate --fusee` au calme, vue
-  unique ET écran scindé, avant de considérer FU2 close côté perf.
+- ~~**FU5 — l'extinction**~~ — **écrite le 2026-09-08**, voir sous-section
+  dédiée : piétinement (hôte seul) et balle, panache noir commun aux deux.
+  *(C : `fusee_eteinte` câblée côté `AudioManager` par DA3 — un seul événement
+  pour les deux causes, distinguer viendra si le dosage le réclame, pas
+  avant. Le son est donc en place ; il attend son fichier.)*
+- ~~**FU6 — le dosage**~~ — ✅ **validé par Adrien le 2026-09-09**, sans
+  séance de molettes : il a jugé la mécanique en jouant et a validé les valeurs
+  telles quelles, celles de FU3/FU5 comprises (durée et largeur du tunnel,
+  force du pouls de diffusion, rayon et tolérance de vitesse du piétinement,
+  durée du panache). **Les molettes de banc n'ont donc jamais été écrites, et
+  n'ont plus lieu de l'être** — c'est un outil pour trancher, pas un livrable ;
+  la question qu'il servait à poser a reçu sa réponse. **Reste dû** : le relevé
+  `bench_framerate --fusee` au calme, vue unique ET écran scindé, avant de
+  considérer FU2 close côté perf — juger le rendu ne dit rien de son coût.
 - **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
   de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
   de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
@@ -12938,9 +13182,161 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
   exigé** : toute commande clavier doit avoir sa ligne dans CONTRÔLES, la
   rubrique suit l'InputMap. Deux entrées (`ORDRE` + `LIBELLES`), la machinerie
   de réassignation fait le reste ; pas
-  de son dans la killcam pour la fusée ; le sillage de killcam repart vide si
-  la fenêtre commence après des traversées ; `asset_manifest.gd` n'attend pas
-  encore les trois fichiers audio (ils n'ont pas de durée cible arrêtée).
+  de son dans la killcam pour la fusée (FU3 non plus : ni pouls de diffusion ni
+  tunnel n'y sont rejoués) ; le sillage de killcam repart vide si la fenêtre
+  commence après des traversées ; `asset_manifest.gd` n'attend pas encore les
+  quatre fichiers audio (`fusee_lancer`/`atterrit`/`rebond`/`eteinte` — pas de
+  durée cible arrêtée) ; l'extinction par balle est TOUJOURS la priorité la
+  plus basse d'une balle sur un pas donné (un mur ou un joueur, compensé ou
+  non, l'emportent) — décision par défaut, pas mesurée sous charge.
+
+### FU3 — le tir dans la fumée (écrite le 2026-09-08)
+
+**La diffusion du flash.** Un tir parti DE L'INTÉRIEUR d'un nuage fait pulser
+TOUTE la fumée au lieu du seul canon (`Fusee.diffuser_flash()`, un simple
+boost d'opacité qui décroît sur `DIFFUSION_DUREE` — jamais une teinte, la
+couleur reste celle des lumières). Appelé depuis `game_state._do_spawn_bullet`,
+au même site que `_flash_de_tir` : une fois par volée, jamais pour un tir déjà
+rendu, jamais en killcam. **Purement local, aucun RPC** — chaque machine décide
+depuis sa propre simulation de la fusée, la même confiance que FU1-FU2
+accordent déjà à tout le reste de son état. Effet déclaré dans `effect_policy`
+(`fusee_diffusion`, famille MONDE, plancher 0,5) : un joueur photosensible
+l'aplatit, jamais à zéro en classé — même garde-fou que `fusee_agonie`.
+
+**Les tunnels.** Une balle qui traverse le nuage y creuse un trait — incandes-
+cent pour une arme qui émet de la lumière, SOMBRE pour l'arbalète (la seule
+trace au monde de l'arme sans lumière). Suivi par `bullet.gd`
+(`_fumee_traversee`/`_fumee_entree`, comparaison d'appartenance à chaque pas,
+rupture forcée à chaque rebond pour qu'un tir plié ne se dessine pas comme un
+trait droit à travers le coin), rendu par `Fusee.ajouter_tunnel()` +
+`fumee_fusee.gdshader` (deux tableaux `PackedVector2Array`/`PackedFloat32Array`
+— **jamais de `vec4[]`**, non vérifiable par des suites headless qui ne
+rendent rien). Visible ~0,4 s puis s'efface tout seul, quoi qu'il arrive.
+
+⚠️ **Point non vérifié par construction : le rendu GPU du shader.**
+`run_suites.sh` ne compile aucun shader (aucune suite headless ne rend d'image)
+— seul un vrai lancement (`banc_fusee.tscn`, touches 7/8, ou un vrai tir dans
+la fumée) prouve que les tunnels s'affichent. Le modèle pur (`tunnel_force_a`)
+et le suivi d'appartenance (`bullet.gd`) sont, eux, testés.
+
+### FU5 — éteindre la fusée (écrite le 2026-09-08)
+
+**Deux façons, un seul geste côté état :** piétiner 0,7 s immobile SUR une
+fusée posée (`EXTINCTION_RAYON` 24 px, pas tout son nuage), ou la toucher d'une
+balle. Les deux appellent `GameState.demander_extinction_fusee(graine)`, qui
+route vers `rpc_eteindre_fusee` — **même arbitrage que le lancer : l'hôte
+tranche, le client demande.**
+
+**Pourquoi le piétinement l'exige, contrairement aux dégâts d'une balle.** Ce
+n'est PAS une histoire de perspective du tireur à compenser (l'hôte simule déjà
+les deux joueurs en direct, sans délai à rattraper pour lui-même) — c'est
+l'inverse : SANS arbitrage unique, chaque machine jugerait son propre
+piétinement à travers le délai d'interpolation de l'AUTRE joueur (100 ms), et
+les deux écrans pourraient éteindre la fusée à des instants différents. D'où
+la note de FU5 dans ce document, à l'origine formulée de façon ambiguë
+(« compensation de latence hôte ») — la clarification tient en une phrase :
+**un seul juge, comme partout ailleurs dans `game_state.gd`.**
+
+**L'extinction par balle**, elle, ne DEMANDE pas techniquement cet arbitrage
+(chaque machine simule sa propre balle déterministiquement, comme tout le
+reste de FU1-FU2) mais l'emprunte quand même, par le MÊME chemin — un seul
+état répliqué, un seul arbitre, pas deux logiques à maintenir en accord.
+
+**Le panache.** Une fois éteinte, la fusée quitte l'horloge de combustion pour
+celle, indépendante, de son extinction (`_appliquer_extinction`) : lumière
+coupée net, fumée NOIRE (`alpha_panache_a`, montée quasi instantanée puis
+dissipation sur `PANACHE_DUREE` = 3 s) qui continue d'occulter — elle couvre la
+fuite de l'éteigneur — puis le nœud se libère.
+
+**Non vérifié :** aucun signal visuel supplémentaire pour « à contre-jour » —
+c'est une propriété ÉMERGENTE (rester dans la lumière d'une fusée allumée
+expose déjà, comme n'importe quelle lumière du jeu), pas un effet ajouté ; à
+confirmer au banc que ça se LIT vraiment comme tel.
+
+**Corrigé le 2026-09-09 — le piétinement était mort exactement là où on vient
+l'essayer.** L'appel à `_maj_extinction_fusees` vivait dans `if round_active:`,
+alors que le lancer de fusée s'autorise explicitement hors manche
+(`if not round_active and not sandbox_mode: return`). Or l'entraînement pose
+`round_active = false` AVEC `sandbox_mode = true` : on pouvait donc y allumer
+une fusée et **jamais l'éteindre au pied**, sans la moindre erreur console.
+Muet, dans le seul mode où l'on vient justement essayer une mécanique neuve.
+
+C'est mot pour mot le piège déjà payé quinze lignes plus haut dans le même
+fichier, pour le suivi de caméra — et le commentaire qui l'y raconte était
+sous les yeux de qui écrivait. **Dans `game_state.gd`, `round_active` veut dire
+« une manche COMPTÉE est en cours », jamais « le jeu tourne ».** La garde de
+l'extinction suit désormais celle du LANCER (`round_active or sandbox_mode`),
+pas celle du score : ce qui décide qu'une fusée peut s'allumer doit décider
+qu'elle peut s'éteindre.
+
+### FU3/FU5 — la moitié hôte perdue par une fusion, et retrouvée (2026-09-09)
+
+**Ce qui s'est passé.** Une autre session a fusionné `main` dans la branche
+`worktree-fusee-fu3-fu5` (commit `86d2297`, puis quatre fusions de plus le
+2026-09-09 au matin) et, en résolvant le conflit sur `game_state.gd`, a pris le
+côté `main` en bloc. Les 106 lignes que `0800f60` y avait ajoutées ont disparu :
+`demander_extinction_fusee`, `rpc_eteindre_fusee`, `_maj_extinction_fusees`,
+les tableaux de piétinement et leur remise à zéro, et le déclenchement de
+`diffuser_flash` au site du flash de tir — c'est-à-dire **tout l'arbitrage
+réseau de FU5 et la bouffée de diffusion de FU3**.
+
+**Pourquoi ça n'a rien cassé de visible, et pourquoi c'est le pire cas.**
+`bullet.gd` garde son appel par `has_method()` — une prudence écrite pour les
+tests headless isolés. La balle qui éteint la fusée ne plantait donc pas : elle
+ne faisait plus rien. Aucune erreur, aucune suite rouge côté gameplay. Le seul
+témoin honnête était `protocol.gd`, qui continuait d'annoncer `VERSION := 9`
+« `rpc_eteindre_fusee` apparaît » avec une empreinte calculée AVEC ce RPC — le
+garde-fou du fil disait la vérité pendant que le code mentait par omission.
+
+**Trois leçons, et la troisième est la plus chère.**
+
+1. **Une fusion sans conflit textuel n'est pas une fusion sans perte.** Ici git
+   n'a rien signalé du tout à la seconde fusion : le conflit avait déjà été
+   « résolu » en amont, par suppression.
+2. **Un garde défensif (`has_method`) transforme une erreur bruyante en défaut
+   muet.** Il reste juste — mais il faut savoir qu'il achète le silence, et donc
+   ne jamais s'en remettre aux suites pour détecter une amputation.
+3. **Une branche de chantier n'appartient pas à qui passe.** Fusionner `main`
+   dans le worktree d'une autre session, c'est prendre à sa place une décision
+   de résolution qu'on n'a pas le contexte pour prendre. La règle du dépôt dit
+   déjà « jamais de `git checkout` sans vérifier qu'aucune autre session
+   n'utilise l'arbre » ; **elle vaut aussi pour `git merge`, et il a fallu
+   perdre 106 lignes pour l'écrire noir sur blanc.**
+
+Récupéré par `git diff 0800f60^ 0800f60 -- game_state.gd` réappliqué en fusion à
+trois points sur le `main` du jour : propre, sans conflit.
+
+### Signalés, hors périmètre FU3/FU5 (2026-09-09)
+
+Découverts en vérifiant le câblage audio après l'arrivée du foley (`5657464`).
+**Ni l'un ni l'autre n'est corrigé ici** — ils appartiennent à FU1/FU2 et au
+chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
+
+- **La nappe de combustion s'éteint au bout de 3 s sur 15.**
+  `assets/audio/sfx/fusee_combustion.wav` dure 2,98 s et est importé avec
+  `edit/loop_mode=0`. `fusee.gd` l'installe sur un `AudioStreamPlayer2D` dédié
+  (`_combustion`) et l'appelle **une seule fois**, à l'atterrissage (`play()`),
+  avant de le couper à l'acte RÉSIDU. Rien ne le relance entre les deux : la
+  fusée brûle une quinzaine de secondes en silence après les trois premières.
+  ✅ **Corrigé le 2026-09-09 sur instruction d'Adrien** (« boucle le son de la
+  fusée pour l'instant ») : `edit/loop_mode=1` dans le `.import`, pas une ligne
+  de code — le lecteur dédié rejoue de lui-même tant que `stop()` n'est pas
+  appelé, et `_appliquer_age` le coupe déjà à l'acte RÉSIDU. **Le « pour
+  l'instant » est du texte, pas une précaution de forme** : on boucle 2,98 s
+  sur une quinzaine de secondes, donc l'oreille entendra le motif revenir cinq
+  fois. C'est mieux que le silence, ce n'est pas la même chose qu'une nappe
+  longue. Si la répétition s'entend en jeu, le remède est un enregistrement
+  plus long, pas un réglage.
+- **`fusee_combustion` est absent de `SFX_PRIORITE`**, là où les quatre autres
+  sons de fusée y figurent. **Probablement légitime** : ce son ne passe pas par
+  le pool à seize voix, il a son propre lecteur, et l'arbitrage par priorité ne
+  le concerne donc pas. Signalé pour que le prochain qui lira la table ne le
+  prenne pas pour un oubli — ou constate que c'en est un.
+
+**Reçu au passage :** les cinq sons qui manquaient au chantier
+(`fusee_lancer`, `fusee_atterrit`, `fusee_rebond`, `fusee_eteinte`,
+`fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
+audio à produire » de la liste FU6 tombe donc de lui-même.
 
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
@@ -13920,3 +14316,4 @@ venait de la latence EOS, pas du confort visuel. À 97 le budget d'image ajoute
 | 2026-08-16 (après-midi) | Même réseau | Connexion et ping sains, mais **les commandes du client ne remontaient pas**. Trois manches d'instrumentation F3 ont mené à la cause : des noms de nœuds auto-générés divergents entre machines. Corrigé. |
 | 2026-08-16 (soir) | Même réseau | Commandes et déplacements ✅. **Killcam tronquée** : tampon de rejeu dimensionné en images et non en durée, effondré par le déplafonnement des fps. Corrigé — enregistrement à 60 Hz fixe. |
 | 2026-08-16 (fin) | Même réseau | **Tout fonctionne** : commandes, tirs, dégâts, killcam des deux côtés. Phase 3 close. |
+| 2026-09-09 | Deux machines, **recherche automatique** (le premier essai de ce chemin) | Elles se trouvent, mais **une seule entre en match** : l'hôte attend un joueur 2 qui reste dans son menu. Aucune erreur console. Cause : `match_ready` est émis avant que le lien soit établi, l'hôte partait donc seul en bac à sable — voir « Ouvrir un lien n'est pas l'établir » dans les Pièges connus. Corrigé, et couvert par deux bancs. **Reste à rejouer à deux machines.** |

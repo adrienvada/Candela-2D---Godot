@@ -176,6 +176,11 @@ var _auto: bool = true           ## Niveau mesuré depuis le faisceau, ou forcé
 var _niveau_manuel: float = 0.8
 var _orbite: bool = true         ## L'éblouisseur tourne-t-il tout seul ?
 var _distance: float = 320.0
+
+## Les quatre distances où le duel se joue vraiment, du corps-à-corps à la
+## limite de portée de la torche. Mesurées, pas choisies : voir la touche `D`.
+static var DISTANCES_DUEL: Array = [140.0, 200.0, 280.0, 360.0]
+var _palier_duel: int = 0
 var _angle: float = -1.2         ## Relèvement de l'éblouisseur, en radians.
 var _brouillage_actif: bool = true
 
@@ -871,6 +876,16 @@ func _unhandled_key_input(evenement: InputEvent) -> void:
 		KEY_O: _orbite = not _orbite
 		KEY_SPACE: _fige = not _fige
 		KEY_B: _brouillage_actif = not _brouillage_actif
+		# ⚠️ **Les quatre distances du duel, mesurées et non choisies.** Balayage
+		# du 2026-09-09 par le chemin exact du jeu (`lumiere_recue` →
+		# `plafond_pour`) : 140 px donne 0,81 d'éblouissement, 200 px 0,71,
+		# 280 px 0,55, 360 px 0,34, et **au-delà de ~400 px la torche n'éblouit
+		# plus du tout**. Marteler `Z`/`X` par pas de 20 px fait passer devant
+		# ces quatre points sans jamais s'y arrêter ; `D` y saute.
+		KEY_D:
+			_auto = true
+			_distance = DISTANCES_DUEL[_palier_duel % DISTANCES_DUEL.size()]
+			_palier_duel += 1
 		KEY_Z: _distance = maxf(140.0, _distance - 20.0)
 		KEY_X: _distance = minf(560.0, _distance + 20.0)
 		KEY_C:
@@ -932,6 +947,20 @@ func _maj_panneau() -> void:
 			"orbite" if _orbite else "à la souris", _distance,
 			wrapf(rad_to_deg(_angle), -180.0, 180.0)],
 		"faisceau       cône ±%.0f°" % _cone_deg,
+		# ⚠️ **La ligne qui manquait, et son absence a coûté une soirée de duel.**
+		#
+		# Le banc disait déjà l'éblouissement mesuré ; il ne disait pas ce que ce
+		# niveau FAIT. Or le voile et le brouillage lisent le même `dazzle` par
+		# deux courbes différentes : le brouillage le multiplie par
+		# `Brouillage.GAIN` (2,0) et sature donc dès 0,5, le voile le prend BRUT.
+		# À mi-portée l'ellipse est à fond pendant que les flares sont sous 8 %
+		# d'opacité — on règle alors des flares qu'on ne verra jamais en jeu.
+		#
+		# Les deux chiffres se calculent depuis les réglages COURANTS, pas depuis
+		# une constante recopiée : ils restent vrais pendant qu'on tourne les
+		# molettes, ce qui est tout l'intérêt.
+		_ligne_de_verite(),
+		"portée utile   la torche cesse d'éblouir au-delà de ~400 px",
 		"halo et flou   %s%s" % ["oui" if _brouillage_actif else "COUPÉS",
 			"   ⚠ photocopie PLEIN CADRE (M) — pas ce que fait le jeu"
 			if _copie_plein_cadre else "   photocopie RECT (M) — comme le jeu"],
@@ -944,6 +973,25 @@ func _maj_panneau() -> void:
 	if _touche_inconnue != "":
 		lignes += ["", _touche_inconnue]
 	_panneau.text = "\n".join(lignes)
+
+
+## Ce que le niveau courant donne VRAIMENT à l'écran, voile contre brouillage.
+##
+## Le cœur du voile cumule la cime et les trois familles de texture ; c'est le
+## cas le plus favorable, celui où elles se superposent. Si les flares n'y sont
+## pas lisibles, ils ne le sont nulle part.
+func _ligne_de_verite() -> String:
+	var cime: float = float(_val.get("cime", 0.0))
+	var flares: float = float(_val.get("flares_intensite", 0.0))
+	var coeur: float = minf(1.0, (cime
+		+ float(_val.get("lueurs_intensite", 0.0))
+		+ flares
+		+ float(_val.get("fantomes_intensite", 0.0))) * _dazzle)
+	var dose: float = minf(1.0, _dazzle * Brouillage.GAIN)
+	var verdict := "flares LISIBLES" if flares * _dazzle >= 0.10 \
+		else "flares NOYÉS — c'est ce qu'Adrien a vu en réseau local"
+	return "à ce niveau    voile %.2f au cœur, flares %.3f  |  ellipse %.2f  →  %s" % [
+		coeur, flares * _dazzle, dose, verdict]
 
 
 ## Ce qu'il faudra transcrire dans le shader. Un banc n'est qu'un endroit où l'on
@@ -973,6 +1021,8 @@ func _texte_aide() -> String:
 		+ "Tab choisir un réglage   ←/→ le régler\n" \
 		+ "A auto/forcé   ↑/↓ niveau   O orbite / souris (la souris pose la " \
 		+ "POSITION)   Espace figer le temps   Z/X distance   C/V cône\n" \
+		+ "D les 4 DISTANCES DU DUEL (140/200/280/360 px) — c'est là que le " \
+		+ "voile doit tenir, pas à bout portant\n" \
 		+ "B couper halo et flou   M photocopie RECT / plein cadre   " \
 		+ "É demi-écran / plein écran   E étalonner   R remettre les défauts   " \
 		+ "Échap transcrire et sortir"

@@ -267,6 +267,16 @@ const EFFECTS := {
 		"nom": "Agonie de la fusée",
 		"phrase": "Les derniers flashs d'une fusée photographient la pièce pour les deux joueurs. Les aplatir n'éteint que l'image : le rythme reste dans le son.",
 	},
+	# Chantier FUSÉE (FU3). Un tir depuis l'intérieur du nuage dilue le flash de
+	# bouche dans toute la fumée : la position du tireur devient plus dure à
+	# lire. Un joueur qui l'annulerait retrouverait un flash ponctuel — la
+	# lecture la plus favorable — donc MONDE, avec un plancher.
+	"fusee_diffusion": {
+		"famille": Family.MONDE,
+		"plancher": 0.5,
+		"nom": "Diffusion du flash dans la fumée",
+		"phrase": "Tirer depuis le nuage fait pulser toute la fumée au lieu du seul canon : ça dilue la position du tireur pour les deux joueurs. L'aplatir rendrait le flash ponctuel, donc plus facile à lire.",
+	},
 }
 
 # ---------------------------------------------------------------------------

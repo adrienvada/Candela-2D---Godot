@@ -196,14 +196,16 @@ d'autre ne change.
 | Windows : « dossier où il n'a pas le droit d'écrire » | Installation sous `C:\Program Files\`. Déplacer le jeu dans un dossier personnel |
 | Tout couper | Lancer avec `--sans-maj` : plus aucune vérification automatique |
 
-## Ce qui n'a pas encore été éprouvé pour de vrai
+## Ce qui a été éprouvé, et ce qui reste au conditionnel
 
-À dire franchement plutôt qu'à laisser croire :
+À dire franchement plutôt qu'à laisser croire — et à raturer dès que c'est fait,
+parce qu'un manque annoncé ici envoie chercher un travail déjà accompli :
 
-- **l'échange de bundle n'a jamais tourné sur une vraie machine.** Le script est
-  vérifié par lecture (il attend la fermeture, garde l'ancienne installation,
-  sait revenir en arrière) ; l'exécution réelle demande un jeu exporté, installé,
-  et une version publiée. C'est un jalon humain ;
+- ~~l'échange de bundle n'a jamais tourné sur une vraie machine~~ — **fait le
+  2026-09-08.** Adrien a installé une version publiée et vu la mise à jour
+  aboutir : annonce lue, signature vérifiée, paquet téléchargé, jeu fermé,
+  remplacé, rouvert. C'était la dernière pièce que seule une vraie machine
+  pouvait éprouver, et la seule qui ne se déduisait pas de la lecture du script ;
 - **la première installation macOS reste ad-hoc et non notarisée Apple** (sans compte
   développeur payant, H4). L'export macOS est désormais réalisé sur un runner
   `macos-14` avec signature ad-hoc récursive (`codesign --force --deep --sign -`).

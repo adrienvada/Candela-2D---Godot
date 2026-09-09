@@ -31,6 +31,20 @@ humains/agents est dans [README.md](README.md). Règles non négociables :
 - Plusieurs sessions peuvent travailler en parallèle : jamais de `git checkout`
   sans vérifier qu'aucune autre session n'utilise l'arbre (préférer un
   worktree). Ne jamais pousser sur GitHub sans demande explicite d'Adrien.
+- **Et jamais de `git merge` DANS la branche de chantier d'une autre session.**
+  La branche d'un worktree appartient à qui l'occupe. Y fusionner `main`, c'est
+  trancher à sa place un conflit qu'on n'a pas le contexte pour trancher —
+  et un conflit se résout en choisissant, donc en pouvant supprimer. **C'est
+  arrivé le 2026-09-09** : la résolution a pris le côté `main` en bloc et effacé
+  106 lignes du chantier FUSÉE (tout l'arbitrage réseau de FU5). Rien ne l'a
+  signalé : un garde `has_method()` a transformé la fonction absente en
+  inaction muette, sans erreur console ni suite rouge. Besoin qu'une branche
+  suive `main` ? **Le dire à la session qui la tient** (`ListAgents` /
+  `SendMessage`) et la laisser fusionner elle-même.
+  Corollaire, pour qui reçoit une fusion faite par un autre : après TOUTE
+  fusion sur son chantier, vérifier que ses propres points d'ancrage sont
+  encore là (`grep` des fonctions ajoutées). Une fusion sans conflit textuel
+  n'est pas une fusion sans perte.
 - La documentation, les commentaires et les messages de commit sont en
   **français**.
 

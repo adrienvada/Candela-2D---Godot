@@ -33,6 +33,9 @@ func _run() -> void:
 	_test_temperature()
 	_test_fumee()
 	_test_sillage()
+	_test_diffusion()
+	_test_tunnel()
+	_test_panache()
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
 	else:
@@ -248,3 +251,58 @@ func _test_sillage() -> void:
 		is_zero_approx(Modele.rayon_sillage(Modele.SILLAGE_DUREE)))
 	_check("la refermeture est monotone",
 		Modele.rayon_sillage(0.5) > Modele.rayon_sillage(1.0))
+
+
+# ---------------------------------------------------------------------------
+# FU3 — LA DIFFUSION : un tir dans le nuage dilue tout le nuage, pas un point
+# ---------------------------------------------------------------------------
+func _test_diffusion() -> void:
+	print("\n— la diffusion (FU3) —")
+	_check("avant le tir, rien", is_zero_approx(Modele.diffusion_a(-0.5)))
+	_check("à l'instant du tir, plein", is_equal_approx(Modele.diffusion_a(0.0), 1.0))
+	_check("le pouls s'éteint avec le temps",
+		Modele.diffusion_a(Modele.DIFFUSION_DUREE * 0.5) < 1.0
+		and Modele.diffusion_a(Modele.DIFFUSION_DUREE * 0.5) > 0.0)
+	_check("et finit à zéro, pas avant", is_zero_approx(Modele.diffusion_a(Modele.DIFFUSION_DUREE)))
+	_check("jamais rien après", is_zero_approx(Modele.diffusion_a(Modele.DIFFUSION_DUREE + 1.0)))
+	_check("la décroissance est monotone",
+		Modele.diffusion_a(0.1) > Modele.diffusion_a(0.2)
+		and Modele.diffusion_a(0.2) > Modele.diffusion_a(0.3))
+
+
+# ---------------------------------------------------------------------------
+# FU3 — LE TUNNEL : la trace d'une balle, visible ~0,4 s, puis rien
+# ---------------------------------------------------------------------------
+func _test_tunnel() -> void:
+	print("\n— le tunnel de balle (FU3) —")
+	_check("dès la fin du creusement, plein", is_equal_approx(Modele.tunnel_force_a(0.0), 1.0))
+	_check("s'efface avant TUNNEL_DUREE",
+		Modele.tunnel_force_a(Modele.TUNNEL_DUREE * 0.5) < 1.0
+		and Modele.tunnel_force_a(Modele.TUNNEL_DUREE * 0.5) > 0.0)
+	_check("mort à TUNNEL_DUREE tapé pile", is_zero_approx(Modele.tunnel_force_a(Modele.TUNNEL_DUREE)))
+	_check("rien avant sa naissance (âge négatif)", is_zero_approx(Modele.tunnel_force_a(-0.1)))
+	_check("« visible ~0,4 s » : 0,4 est bien la durée déclarée",
+		is_equal_approx(Modele.TUNNEL_DUREE, 0.4))
+
+
+# ---------------------------------------------------------------------------
+# FU5 — LE PANACHE : apparition quasi instantanée, puis dissipation complète
+# ---------------------------------------------------------------------------
+func _test_panache() -> void:
+	print("\n— le panache d'extinction (FU5) —")
+	_check("rien avant l'extinction", is_zero_approx(Modele.alpha_panache_a(-0.1)))
+	_check("monte vite : quasi plein après PANACHE_MONTEE",
+		Modele.alpha_panache_a(Modele.PANACHE_MONTEE) > 0.9)
+	_check("puis se dissipe : rien à la fin", is_zero_approx(Modele.alpha_panache_a(Modele.PANACHE_DUREE)))
+	_check("et rien après", is_zero_approx(Modele.alpha_panache_a(Modele.PANACHE_DUREE + 1.0)))
+	_check("jamais négatif ni au-dessus de 1 sur toute la vie", _panache_borne())
+
+
+func _panache_borne() -> bool:
+	var t := 0.0
+	while t < Modele.PANACHE_DUREE:
+		var a := Modele.alpha_panache_a(t)
+		if a < 0.0 or a > 1.0:
+			return false
+		t += 0.05
+	return true

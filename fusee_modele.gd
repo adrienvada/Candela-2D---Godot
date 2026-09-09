@@ -95,6 +95,29 @@ const SILLAGE_VITESSE_MIN := 40.0 # px/s — en dessous, on ne creuse pas
 const STOCK_PAR_MANCHE := 1
 const DESARMEMENT := 0.6          # s sans tir après le lancer — pas de lance-et-tire
 
+# ── FU3 — le tir dans la fumée ───────────────────────────────────────────────
+# Un tir parti DE l'intérieur du nuage se dilue : toute la fumée pulse au lieu
+# du seul point du canon, et la position du tireur se noie dans l'ensemble.
+# Une balle qui TRAVERSE le nuage, elle, y creuse un tunnel rectiligne bref —
+# incandescent pour une arme qui émet de la lumière (elle accuse le tireur),
+# SOMBRE pour l'arbalète (la seule trace au monde de l'arme sans lumière).
+const DIFFUSION_DUREE := 0.45     # s — le pouls qui dilue le flash de bouche
+const TUNNEL_DUREE := 0.4         # s — la trace du tir dans la fumée, visible
+const TUNNEL_LARGEUR := 10.0      # px — un trait, pas un couloir
+const TUNNEL_ENTREE_MIN := 4.0    # px — sous ce seuil, un tunnel ne se lit pas
+
+# ── FU5 — éteindre la fusée ──────────────────────────────────────────────────
+# Piétiner une fusée AU SOL l'éteint : 0,7 s immobile dessus, le pied dans sa
+# propre lumière — le moment le plus vulnérable que le jeu puisse offrir. Une
+# balle l'éteint aussi, en un coup. Les deux remplacent la lumière par un
+# panache de fumée NOIRE, bref, qui couvre la fuite de l'éteigneur.
+const EXTINCTION_PIETINEMENT := 0.7   # s immobile pour éteindre au pied
+const EXTINCTION_RAYON := 24.0        # px — « sur » la fusée, pas dans tout son nuage
+const EXTINCTION_VITESSE_MAX := 30.0  # px/s — tolérance d'immobilité humaine
+const EXTINCTION_RAYON_BALLE := 14.0  # px — proche du rayon visuel du corps
+const PANACHE_MONTEE := 0.3           # s — apparition quasi instantanée du panache
+const PANACHE_DUREE := 3.0            # s — avant dissipation complète
+
 
 ## La vitesse restante après `delta` secondes de frottement — jamais négative.
 static func vitesse_apres(vitesse: float, delta: float) -> float:
@@ -266,3 +289,32 @@ static func filtrer_sillage(points: Array, maintenant: float) -> Array:
 ## Le rayon résiduel d'un point de sillage selon son âge (se referme en 2 s).
 static func rayon_sillage(age_point: float) -> float:
 	return SILLAGE_RAYON * clampf(1.0 - age_point / SILLAGE_DUREE, 0.0, 1.0)
+
+
+## FU3 — la force du pouls de diffusion, dans [0, 1], `age_depuis_tir` secondes
+## après le tir. Un simple fondu : la dilution n'a pas besoin de rallumage,
+## contrairement à l'agonie — c'est un seul événement, pas une combustion.
+static func diffusion_a(age_depuis_tir: float) -> float:
+	if age_depuis_tir < 0.0 or age_depuis_tir >= DIFFUSION_DUREE:
+		return 0.0
+	return 1.0 - smoothstep(0.0, DIFFUSION_DUREE, age_depuis_tir)
+
+
+## FU3 — la force d'un tunnel de balle, dans [0, 1], `age_depuis_tir` secondes
+## après que la balle a fini de le creuser (donc après sa sortie du nuage, ou
+## sa mort dedans). Fondu simple sur TUNNEL_DUREE : « visible ~0,4 s ».
+static func tunnel_force_a(age_depuis_tir: float) -> float:
+	if age_depuis_tir < 0.0 or age_depuis_tir >= TUNNEL_DUREE:
+		return 0.0
+	return 1.0 - smoothstep(0.0, TUNNEL_DUREE, age_depuis_tir)
+
+
+## FU5 — l'opacité du panache noir post-extinction, dans [0, 1],
+## `age_depuis_extinction` secondes après le geste qui a éteint la fusée.
+## Apparition quasi instantanée (PANACHE_MONTEE), puis dissipation sur le
+## reste de PANACHE_DUREE — le panache doit COUVRIR la fuite, pas s'installer.
+static func alpha_panache_a(age_depuis_extinction: float) -> float:
+	if age_depuis_extinction < 0.0 or age_depuis_extinction >= PANACHE_DUREE:
+		return 0.0
+	var montee := clampf(age_depuis_extinction / PANACHE_MONTEE, 0.0, 1.0)
+	return montee * (1.0 - smoothstep(PANACHE_DUREE * 0.5, PANACHE_DUREE, age_depuis_extinction))
