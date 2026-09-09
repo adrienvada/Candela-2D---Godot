@@ -3182,6 +3182,21 @@ de fin. Une session voisine a mis un moment à comprendre que ce n'était pas un
 capture perdue par le bridage de fenêtre, qui produit exactement la même
 impression.
 
+⚠️ **Et c'est là qu'est le vrai coût, pas dans la ligne de code.** Une coroutine
+morte et une fenêtre bridée par macOS produisent le **même** symptôme — un
+travail partiel, sans erreur, sans code de sortie rouge. Rien dans le résultat ne
+les sépare. La première tentative de reproduction est d'ailleurs tombée sur une
+vraie fenêtre au second plan, ce qui a failli faire reclasser le rapport en
+« capture perdue » et clore le sujet.
+
+**Seule une trace de pile les distingue.** D'où la règle, formulée avec la
+session DA7 : **un signalement de « plans manquants » sans trace de pile se
+renvoie chercher la trace AVANT tout diagnostic.** Ce n'est pas une exigence de
+forme — c'est la seule information qui existe, puisque les deux causes sont
+indiscernables par leurs effets. Diagnostiquer sans elle, c'est choisir entre
+deux hypothèses à pile ou face, et la mauvaise coûte une demi-journée à chercher
+au mauvais endroit.
+
 **Le remède tient à ce qu'on capture : un identifiant d'instance est un entier,
 et un entier ne se libère pas.**
 
