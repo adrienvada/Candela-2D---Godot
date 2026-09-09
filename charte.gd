@@ -232,7 +232,10 @@ const CHEMIN_ENSEIGNE := "res://assets/logos/wordmark.png"
 ## L'icône d'application et l'écran de démarrage vivent à côté ; ils sont
 ## déclarés dans `project.godot` et ne se chargent pas d'ici — Godot lit
 ## l'écran de démarrage **avant** le système de ressources.
-const CHEMIN_ICONE := "res://assets/logos/icone.png"
+## ⚠️ Doit rester égal à `config/icon` de `project.godot`. Elle a divergé une
+## fois — l'icône a changé côté projet, pas ici — et rien ne l'aurait dit :
+## personne ne lit cette constante, elle ne sert qu'à documenter.
+const CHEMIN_ICONE := "res://assets/logos/icone_roman.png"
 ## Tout le reste : *Oxanium*, linéale anguleuse à chanfreins, variable elle
 ## aussi. C'est l'appareil.
 ##

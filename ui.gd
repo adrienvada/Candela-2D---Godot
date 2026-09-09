@@ -753,6 +753,11 @@ var _leaderboard: ScreenLeaderboard
 var menu_gnomon: MenuGnomon
 ## L'enseigne dessinée qui recouvre le titre quand il porte le nom du jeu.
 var menu_enseigne: TextureRect
+
+## DA7.8 — ce qui éteint l'enseigne quand personne ne joue.
+## `preload` et non le `class_name` : voir « Pièges connus », le registre des
+## noms de classe n'existe pas tant qu'on n'a pas réimporté.
+var _enseigne_qui_meurt: Node = null
 var menu_after_image: MenuAfterImage
 var menu_torch: MenuTorch
 var menu_watcher: MenuWatcher
@@ -3011,7 +3016,12 @@ func _make_killcam_label(tint: Color) -> Label:
 ## Un premier jet honnête vaut mieux qu'un couplage au shader qu'personne n'a
 ## demandé ; si Adrien veut que la planche respire avec le reste, c'est un pas
 ## séparé.
-const KEY_ART := "res://assets/keyart/keyart_rasants.png"
+## DA7 — refaite à l'encre le 2026-09-09. La précédente (`keyart_rasants.png`,
+## 25/08) était de facture photographique : elle datait d'avant la refonte
+## Roman Graphique Brutaliste et jurait avec tout ce qui l'entoure désormais.
+## Sa composition est conservée — deux faisceaux rasants, moitié gauche vide —
+## parce que c'est elle qui laisse la place au titre et aux entrées.
+const KEY_ART := "res://assets/keyart/keyart_encre.png"
 
 ## Présence de la planche, 0 à 1. À 0,34, son faisceau le plus clair tombe vers
 ## 0,34 de luminance — nettement sous un texte en `HALOGENE`, assez au-dessus du
@@ -4657,6 +4667,10 @@ func _poser_titre(texte: String) -> void:
 	else:
 		menu_enseigne.visible = false
 		game_over_title.self_modulate.a = 1.0
+	# DA7.8 — seule l'enseigne du MENU s'éteint. « VICTOIRE » ou « DÉFAITE » sont
+	# des verdicts : ils s'affichent, ils ne veillent pas.
+	if _enseigne_qui_meurt != null and is_instance_valid(_enseigne_qui_meurt):
+		_enseigne_qui_meurt.surveiller(menu_enseigne if texte == "CANDELA 2D" else null)
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
@@ -4711,6 +4725,15 @@ func _build_menu_header() -> Control:
 	menu_enseigne.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	menu_enseigne.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	game_over_title.add_child(menu_enseigne)
+
+	# DA7.8 — l'enseigne est un pochoir rétroéclairé : la « bougie » de la fiche
+	# est la lumière derrière les lettres, et elle n'attendait qu'une raison de
+	# mourir. Après quarante secondes sans un geste, elle bat, sursaute, puis
+	# s'éteint jusqu'à une braise — et se rallume en trébuchant au premier
+	# mouvement. Détail et justifications dans `enseigne_qui_meurt.gd`.
+	_enseigne_qui_meurt = preload("res://enseigne_qui_meurt.gd").new()
+	add_child(_enseigne_qui_meurt)
+
 	_poser_titre("CANDELA 2D")
 
 	# M1 — le cadran. Derrière le titre, hors du flux : ancré en plein cadre sur

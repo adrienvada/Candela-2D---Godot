@@ -473,13 +473,57 @@ func _ready():
 	ui.killcam_overlay.position = Vector2(-10000, -10000)
 	arena.add_child(ui.killcam_overlay)
 	
-	ui.show_main_menu()
+	# ⚠️ L'intro (DA6.6) et la séquence power-on (DA6.5) occupent toutes deux
+	# l'écran entier au démarrage, et se passent toutes deux à la première
+	# touche. Les jouer ensemble — ce que la fusion a produit sans le moindre
+	# conflit textuel — donne un premier lancement illisible. L'une OU l'autre.
+	if not _ouvrir_sur_intro_ou_menu():
+		_allumage()
 
-	# DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`,
-	# et c'est la décision : le menu est monté, vivant et prêt sous le voile
-	# pendant toute la séquence. Le faire attendre l'aurait fait apparaître d'un
-	# bloc à la fin — un à-coup, juste après une animation soignée.
-	# Elle se saute à la première touche ; voir `power_on.gd`.
+## DA6.6 — l'intro en planches précède le menu, au premier lancement seulement.
+##
+## Le menu n'est PAS monté derrière : il s'affiche quand l'intro rend la main.
+## Sinon le joueur verrait le hub une fraction de seconde avant que les planches
+## le recouvrent, et une introduction qui commence par montrer la fin
+## n'introduit rien.
+##
+## ⚠️ **Le drapeau s'écrit au démarrage de l'intro, pas à sa fin.** Fermer le jeu
+## pendant les quinze secondes la ferait revenir au lancement suivant, et
+## indéfiniment pour qui n'a pas la patience de la voir en entier.
+## Ouvre sur l'intro si elle a lieu d'être, sinon sur le menu.
+##
+## Rend **vrai si l'intro joue** — c'est ce qui décide si la séquence power-on
+## doit se jouer aussi. Voir `_allumage()` pour le partage entre les deux.
+func _ouvrir_sur_intro_ou_menu() -> bool:
+	# `preload` plutôt que le `class_name` : il résout par le CHEMIN et ne dépend
+	# donc pas de `.godot/global_script_class_cache.cfg`, qui n'est pas versionné
+	# et qu'un arbre neuf n'a pas encore. La vraie parade reste `--import` (voir
+	# « Pièges connus ») ; ceci n'est qu'une ceinture, et elle ne coûte rien.
+	var Intro := preload("res://intro_planches.gd")
+	if GameSettings.intro_vue or not Intro.disponible():
+		ui.show_main_menu()
+		return false
+	GameSettings.marquer_intro_vue()
+	var intro: CanvasLayer = Intro.new()
+	add_child(intro)
+	intro.terminee.connect(func() -> void:
+		ui.show_main_menu()
+		intro.queue_free())
+	intro.jouer()
+	return true
+
+## DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`, et
+## c'est la décision d'origine : le menu est monté, vivant et prêt sous le voile
+## pendant toute la séquence. Le faire attendre l'aurait fait apparaître d'un
+## bloc à la fin — un à-coup, juste après une animation soignée. Elle se saute à
+## la première touche ; voir `power_on.gd`.
+##
+## ⚠️ **Ne se joue PAS au tout premier lancement**, où l'intro en planches prend
+## sa place. Deux cérémonies plein écran à la suite feraient de la découverte du
+## jeu une attente, et l'intro se termine déjà sur le wordmark en braise —
+## c'est-à-dire sur un allumage. Chacune est ainsi à son meilleur moment :
+## l'histoire une fois, l'allumage toutes les autres fois.
+func _allumage() -> void:
 	PowerOn.lancer(self)
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on

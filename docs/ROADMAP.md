@@ -3197,6 +3197,165 @@ occurrence de la forme, après l'acte II du banc photocopie qui tirait son éche
 de la source même qu'il mesurait. **L'oracle d'un contrôle ne peut jamais être sa
 propre attente** : ici, les empreintes se lisent dans l'`InputMap`.
 
+### L'image d'amorce débordait de l'écran, et le réglage ne se devine pas (2026-09-09)
+
+Signalé par Adrien : « l'écran titre dépasse au chargement du jeu ».
+
+`application/boot_splash/stretch_mode` valait **0**, et 0 ne veut pas dire
+« pas d'étirement particulier » — il vaut **Disabled**, c'est-à-dire *dessinée à
+sa taille native*. L'image fait 1600 px de large, la fenêtre s'ouvre à 1280 :
+l'enseigne dépassait des deux côtés.
+
+**Ce qui a permis de trancher sans supposer**, et qui sert pour tout réglage de
+projet dont on ignore la sémantique — une sonde de trois lignes :
+
+```gdscript
+for p in ProjectSettings.get_property_list():
+    if String(p.name).begins_with("application/boot_splash"):
+        print(p.name, " | ", p.hint_string, " | ", ProjectSettings.get_setting(p.name))
+```
+
+Elle rend l'énumération exacte : `Disabled, Keep, Keep Width, Keep Height,
+Cover, Ignore`. La bonne valeur est **1 = Keep** — mise à l'échelle de la
+fenêtre en gardant les proportions.
+
+**La leçon générale : un entier dans `project.godot` ne dit pas ce qu'il
+signifie.** Godot n'écrit que l'index ; le sens vit dans le `hint_string`, que
+seul le moteur connaît. Deviner « 0 = neutre » est une erreur naturelle et
+fausse, et elle produit un défaut visible par tous les joueurs au lancement.
+
+
+### Une animation ratée n'abîme pas la page : elle l'efface (2026-09-09)
+
+Le site de DA7.4 s'est affiché **en ligne, sur le domaine d'Adrien, avec ses
+sept illustrations et pas une ligne de texte**. Aucune erreur de console, aucun
+404, le HTML servi complet et correct.
+
+Le mécanisme : le contenu entrait en scène au défilement, donc il partait à
+`opacity: 0` et `clip-path: inset(0 0 100% 0)`, et un `IntersectionObserver`
+levait le voile. **L'observateur ne s'est pas déclenché** — page non rendue,
+onglet en arrière-plan, cadre imbriqué, moteur qui diffère sa première passe :
+les causes sont nombreuses et aucune n'est une panne. Le voile n'a jamais été
+levé.
+
+**La faute n'était pas dans l'observateur, elle était dans la dépendance.**
+J'avais rendu la LISIBILITÉ d'une page dépendante d'une ANIMATION. Le fichier
+portait pourtant la règle en tête — « tout est lisible sans JavaScript » — et
+elle était respectée pour le cas où le script est ABSENT. Le cas manquant est
+celui où **il s'exécute mais n'aboutit pas**, et c'est le cas fréquent.
+
+⚠️ **Ce défaut n'est pas détectable par le contrôle qu'on croit.** Une lecture
+du HTML servi le dit conforme : le texte y est. Une suite d'intégration dirait
+la même chose. **Il faut regarder la page rendue** — ou mesurer, comme ici :
+`document.querySelectorAll(".anim.vu").length` valait 0 sur 15.
+
+Les trois garde-fous posés, du plus général au plus précis :
+
+1. **Ne pas masquer si l'on ne sait pas démasquer.** La classe qui autorise le
+   masquage n'est posée que si `IntersectionObserver` existe.
+2. **Un chien de garde.** Si rien n'est apparu au bout de 1,5 s, la classe est
+   retirée et la page redevient celle de quelqu'un qui n'exécute pas de script.
+3. **Ce qui est déjà à l'écran est révélé tout de suite**, en mesurant, sans
+   passer par l'observateur : la première vue n'attend jamais rien.
+
+**La règle générale, et elle dépasse le web** : une animation, un effet, un
+enrichissement quel qu'il soit ne doit jamais être sur le chemin critique du
+contenu. Quand il l'est, sa panne ne dégrade pas — elle supprime. C'est le
+même défaut de forme que le garde `has_method()` qui a transformé une fonction
+absente en inaction muette (voir `CLAUDE.md`) : **un mécanisme qui échoue en
+silence produit une absence que personne n'attribue à lui.**
+
+
+### Une fusion sans conflit peut faire jouer deux cérémonies à la fois (2026-09-09)
+
+`git merge` a réuni sans broncher deux ajouts au démarrage du jeu, écrits le
+même jour sur deux branches : la séquence power-on de DA6.5 (`power_on.gd`) et
+l'intro en planches de DA6.6 (`intro_planches.gd`). **Aucun conflit textuel,
+aucune suite rouge, et un premier lancement où deux séquences plein écran se
+jouent en même temps** — chacune se sautant à la première touche, donc l'une
+mangeant l'événement de l'autre.
+
+Le mécanisme est plus général que ce cas : **deux ajouts corrects au même
+POINT D'ENTRÉE ne se contredisent nulle part dans le texte.** Git compare des
+lignes ; ni lui, ni le compilateur, ni le lot n'ont d'opinion sur le fait que
+deux fonctions appelées à la suite occupent la même ressource — ici l'écran et
+le premier appui de touche. C'est le pendant exact du corollaire déjà écrit
+dans `CLAUDE.md` (« une fusion sans conflit textuel n'est pas une fusion sans
+perte ») : ici on ne perd rien, on **superpose**.
+
+**Ce qui l'a trouvé n'est pas un test.** C'est d'avoir relu la ligne « elle
+ferme DA6.5 » de sa propre fiche après la fusion et constaté que DA6.5 venait
+d'être fermée par quelqu'un d'autre. Une contradiction dans la DOCUMENTATION a
+révélé une collision dans le CODE.
+
+**L'arbitrage retenu** (session DA7, à la résolution) : au tout premier
+lancement, l'intro joue et le power-on ne joue pas ; à tous les lancements
+suivants, le power-on joue comme prévu. L'intro se termine déjà sur le wordmark
+en braise — c'est-à-dire sur un allumage — et enchaîner deux cérémonies ferait
+de la découverte du jeu une attente. Chacune est à son meilleur moment :
+l'histoire une fois, l'allumage toutes les autres fois.
+
+**Le réflexe à garder :** après toute fusion, relire ce que les DEUX branches
+ont ajouté au même `_ready()`, au même point d'entrée, au même écran. Le fait
+que rien ne soit rouge n'est pas une information.
+
+
+### « Au moins une suite a échoué » quand aucune suite n'a échoué (2026-09-09)
+
+Le lot peut rendre ce verdict avec **95 verdicts verts et zéro `SCRIPT ERROR`**.
+La cause, dans le cas rencontré : le garde-fou d'assets de `run_suites.sh`
+(« N asset(s) présent(s) mais HORS DU DÉPÔT ») met `fail` à 1, et la dernière
+ligne parle alors de suites.
+
+**Le garde-fou a raison** — seize images générées traînaient hors du dépôt, et
+elles seraient mortes avec la machine. C'est la ligne de résumé qui désigne le
+mauvais coupable, et elle envoie chercher une régression là où il n'y en a pas.
+Le remède est écrit trois lignes plus haut dans la sortie ; encore faut-il ne
+pas s'arrêter à la dernière.
+
+⚠️ **Ce fichier s'était déjà fait cette remarque, ailleurs.** `run_suites.sh`
+porte en commentaire, à propos de REPORTÉ : « **un résumé qui gonfle un compte
+d'échecs est aussi trompeur qu'une erreur qui ment sur sa cause** », après
+quatre diagnostics perdus par trois sessions le 2026-08-25. La leçon avait été
+tirée pour REPORTÉ, qui ne met délibérément pas `fail` à 1 — et pas pour le
+garde-fou d'assets, ajouté après. **Une règle apprise sur un cas ne se propage
+pas toute seule aux cas suivants.**
+
+**Non corrigé, délibérément** : c'est hors du périmètre de la session qui l'a
+rencontré, et le lanceur appartient au lot, pas au chantier DA7. La réparation
+tiendrait en une variable distincte (`fail_suites` / `fail_depot`) et une
+dernière ligne qui nomme laquelle a parlé.
+
+**En attendant, le réflexe** : devant « au moins une suite a échoué », chercher
+d'abord une ligne `---` en amont. Aucune suite nommée en échec = ce n'est pas
+une suite.
+
+### Un dossier de sortie versionné vieillit sans le dire (2026-09-09)
+
+`tools/captures/` porte quinze fichiers nommés `ill_*.png` : mêmes noms que les
+illustrations du jeu, suivis par git, dans un dossier dont le nom annonce des
+captures. **Ce sont des rendus figés**, produits par un outil retiré depuis, et
+datés du 2026-09-08 à 15h42. Les vraies illustrations, dans `assets/ui/`, ont
+été **remplacées le même jour à 22h13** par l'intégration Roman Graphique
+Brutaliste (`9b0e32f`).
+
+Sept heures d'écart, aucune trace. Le site de DA7.4 a donc été bâti sur les
+illustrations d'avant la refonte, et la page était **plausible** : des images du
+jeu, aux bons noms, dans le bon style général. **C'est Adrien qui l'a vu, à
+l'œil, sur la page publiée** — aucun contrôle du dépôt ne pouvait le voir, et
+moi non plus.
+
+Le mécanisme mérite d'être nommé parce qu'il se reproduira : **entre deux
+sources d'un même asset, la plus canonique d'apparence n'est pas la plus
+fraîche.** Le dossier périmé gagnait sur trois critères faux — il est versionné
+(donc « officiel »), son nom dit ce qu'on cherche, et son contenu est déjà au
+format voulu. `assets/ui/` ne gagnait que sur le seul critère qui compte : c'est
+ce que le jeu charge.
+
+**La règle : pour tout asset, la source est celle que le JEU charge.** Un
+dossier dérivé se relit à sa date, ou se régénère, ou ne se lit pas. Et un
+dossier de sortie qui survit à l'outil qui l'a produit devrait être supprimé
+avec lui — celui-ci ne l'a pas été.
 ### Corriger un défaut de direction sans chercher son JUMEAU (2026-09-09)
 
 `ui._source_du_voile()` a été écrit le 2026-09-09 pour réparer un défaut précis :
@@ -4387,6 +4546,60 @@ qui renvoyait déjà « à la même famille » :
 **La dernière est la plus traître**, parce qu'on vient précisément d'y créer une
 branche et qu'on a donc une explication toute prête sous la main : on croit avoir
 cassé la fusion qu'on vient de rebaser.
+
+⚠️ **Cinquième constat, ajouté le 2026-09-09, et il ne périme rien de ce qui
+précède : LA SUITE DÉDIÉE PEUT ÊTRE VERTE PENDANT QUE LE JEU EST MORT.**
+
+En ajoutant `intro_planches.gd` (`class_name IntroPlanches`), `game_state.gd` ne
+chargeait plus — « Identifier not declared », la déclinaison « fichier neuf » du
+tableau. Mais `tools/test_intro_planches.gd` **passait**, et exerçait le script
+de bout en bout : il fait `preload("res://intro_planches.gd")`, et **un `preload`
+résout par le CHEMIN, sans jamais consulter le registre des classes**. La suite
+et le jeu n'empruntaient pas le même chemin d'accès au même fichier.
+
+Ce n'est donc pas « il manquait un test » : c'était **un test vert sur du code
+injoignable**, ce qui est strictement pire — un test absent laisse méfiant, un
+test vert rassure. Et le tableau ci-dessus n'aidait pas, parce qu'il décrit un
+lot ROUGE : ici le lot était vert.
+
+**Le contrôle qui manquait, et il coûte quinze secondes — mais il DOIT lire la
+sortie :**
+
+```bash
+"$GODOT" --headless --path . --no-eos --quit-after 2000 > "$journal" 2>&1
+grep -q "SCRIPT ERROR" "$journal" && fail=1
+```
+
+Il monte le jeu pour de vrai, autoloads et `_ready()` compris.
+
+⚠️ **La première rédaction de ce paragraphe donnait la commande SANS le `grep`,
+et elle était dangereuse.** Vérifié par la session DA6, registre de classes vidé
+et arbre volontairement cassé : **771 `SCRIPT ERROR` imprimées, code de sortie
+0**. Un contrôle adossé au code de sortie certifierait donc un jeu mort — pire
+que pas de contrôle, puisqu'il rassure. Godot ne fait pas échouer un processus
+parce qu'un script n'a pas compilé, et c'est précisément la propriété qui rend
+tout ce piège possible.
+
+C'est la même leçon deux fois de suite, sur deux objets différents : **la suite
+lisait le fichier par un chemin que la production n'emprunte pas ; le contrôle
+lisait un verdict que le moteur n'écrit pas.** Dans les deux cas, un vert
+obtenu sans avoir posé la question.
+
+✅ **Le contrôle est désormais DANS `tools/run_suites.sh`, en tête du lot** (DA6,
+2026-09-09) : si le jeu ne démarre pas, tout ce qui suit est du bruit. Son
+message d'échec nomme le remède — `--import`. Contre-test fait dans les deux
+sens. À faire après
+tout ajout d'un script référencé depuis un autoload ou depuis `game_state.gd` —
+et après toute fusion qui en apporte : celle du même jour arrivait avec **cinq**
+`class_name` neufs (`PowerOn`, `AfficheDeFin`, `BilanDeSoiree`,
+`PanneauDeSoiree`, `EstampeDeKill`), tous injoignables jusqu'au réimport, chez
+qui fusionne et pas chez qui a écrit.
+
+*(Cette fiche a failli être écrite une cinquième fois, en double de ce
+paragraphe-ci : la session qui l'a rencontrée avait rédigé une entrée complète
+avant de chercher si le dépôt la connaissait déjà. Il la connaissait, avec ses
+quatre déclinaisons. **Chercher AVANT d'écrire coûte une minute ; une fiche en
+double coûte à tous ceux qui liront les deux.**)*
 
 ⚠️ **`tools/run_suites.sh` ne fait aucun import et n'avertit de rien** — vérifié.
 Le garde-fou qui manque tiendrait en trois lignes : si
@@ -11859,6 +12072,97 @@ dans la même journée.
   crochet est posé (`AudioManager.play_ui("ui_power_on")`, muet tant que le
   fichier n'existe pas) ; sans lui la séquence est complète et silencieuse.
 
+- **DA6.6 L'intro en planches** — six cases de bande dessinée qui racontent
+  l'arrivée d'un homme dans le noir. Storyboard complet, prompts de génération
+  et règles : **[docs/INTRO_PLANCHES.md](INTRO_PLANCHES.md)**. *(S + C)*
+  **Demandée par Adrien le 2026-09-09**, et inscrite ici plutôt que dans DA7
+  parce qu'elle occupe le même moment que DA6.5 : l'allumage.
+
+  > ⚠️ **Cette ligne a d'abord annoncé qu'elle FERMAIT DA6.5.** C'était vrai à
+  > l'écriture et faux à la fusion : `power_on.gd` avait livré la séquence
+  > entre-temps, depuis une autre branche, sans que ni l'une ni l'autre session
+  > le sache. Les deux ne se recouvrent pas — power-on est l'allumage de
+  > l'**appareil** (enseigne, lumière, au lancement), l'intro est l'allumage de
+  > la **torche** (planche 4, dans le récit) — mais elles se disputaient
+  > l'écran.
+
+#### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
+
+Trois raisons, et la troisième est la seule qui soit un argument de coût.
+
+**Elle ne coûte aucun système neuf.** Le cadre d'encre existe
+(`menu_comic_panel.gd`, avec son ouverture au volet), la percée des hautes
+lumières sur noir d'encre existe (`menu_artwork.gdshader`, MV3), les poussières
+de faisceau existent (`menu_particles_ambiance.gd`, MV5). Les six planches se
+câblent en **douze lignes de dictionnaire et zéro `EffectMode` neuf** — le
+storyboard les affecte exprès à des modes et des profils déjà écrits. Un effet
+taillé pour six images vues quinze secondes serait du code que personne ne
+rejuge jamais.
+
+**Elle enseigne la règle sans une ligne de texte.** Le curseur est déjà la
+torche dans les menus (`set_torch_position_global`) : chaque planche s'ouvre
+presque noire et ne se lit que là où le joueur passe le faisceau. Le verbe du
+jeu — *éclairer pour voir* — est appris avant le premier match, et une intro
+qu'on **fait** ne contredit pas « immédiat, intuitif, addictif » comme le
+ferait une intro qu'on subit. Elle reste passable à tout moment et n'est jouée
+qu'une fois.
+
+**Et une commande d'images en sert quatre.** Les planches 4 (l'allumage) et 5
+(le cône qui montre l'adversaire *et* trahit celui qui éclaire) sont la capsule
+de boutique (DA7.1), l'ouverture du trailer (DA7.2), l'en-tête du site d'une
+page (DA7.4) et les images d'ambiance du presskit (DA7.3). Faire l'intro
+d'abord, c'est payer une fois ce que DA7 paierait quatre fois — et sur une
+famille d'asset dont la décision du 2026-08-24 dit qu'elle ne supporte pas deux
+procédés différents. C'est aussi pourquoi le document de commande impose un
+**bloc de prompt invariant** recopié mot pour mot en tête des six : la langue et
+la formulation du prompt font partie du procédé, au même titre que l'outil.
+
+⚠️ **La règle qui garde l'intro honnête**, et elle n'est pas décorative : chaque
+planche doit montrer quelque chose que le moteur fait vraiment. Le cône, l'ombre
+portée, les douilles, le sang existent dans l'arène. Une intro qui promet un
+plan que le jeu ne rend pas, c'est le défaut « généré par défaut » transposé en
+récit — le défaut même que tout le chantier DA existe pour fermer.
+
+**Les six images existent depuis le 2026-09-09** (`assets/ui/ill_intro_*.png`,
+1024×640), générées d'un bloc de prompt invariant recopié mot pour mot. Deux
+choses à savoir avant de les rejuger :
+
+- **Gemini ne propose pas le 16:10.** Les six sont des recadrages de 16:9 —
+  environ 11 % de la largeur retirée, 5,5 % de chaque côté, aucun élément perdu.
+- **Le critère « 80 % de noir » n'est tenu que sur trois des six.** Le modèle
+  résiste à l'obscurité extrême dès qu'un décor doit rester lisible, et chaque
+  relance d'assombrissement gagne du noir en rognant le détail graphique. Pour
+  homogénéiser, **une courbe globale sur les six est plus fiable qu'une relance**
+  — c'est un réglage, pas une régénération.
+
+La planche 5 a demandé trois tentatives, et c'était prévu : c'est la seule qui
+doive porter deux informations à la fois. Elle les porte — l'ombre démesurée sur
+le mur de gauche **et** la silhouette unique debout au bout du cône.
+
+✅ **CÂBLÉE le 2026-09-09** — `intro_planches.gd`, plus douze lignes dans
+`menu_artwork.gd` et six dans `menu_particles_ambiance.gd`. Le compte annoncé a
+été tenu : **aucun `EffectMode` neuf**, et `tools/test_intro_planches.gd` le
+vérifie en épinglant la liste des quinze modes préexistants — écrire un effet
+pour six images ferait désormais rougir le lot.
+
+Trois décisions d'implémentation qui ne se devinent pas :
+
+- **N'importe quelle touche passe l'intro** (demande d'Adrien), mais **un
+  mouvement de souris ne la passe pas** : la souris est la torche avec laquelle
+  on éclaire les planches, et la passer en la regardant serait le contraire de
+  ce qui est voulu. Le filtre porte sur les APPUIS — touche, bouton de souris,
+  bouton de manette. Les deux moitiés sont testées.
+- **Le drapeau `intro_vue` s'écrit au DÉMARRAGE de l'intro, pas à sa fin.**
+  Sinon, fermer le jeu pendant les quinze secondes la ferait revenir au
+  lancement suivant, et indéfiniment pour qui n'a pas la patience de la voir en
+  entier. Vérifié de bout en bout : un foyer neuf lancé une fois ressort avec
+  `intro_vue=true` dans `settings.cfg`.
+- **`IntroPlanches.disponible()` garde le démarrage.** Une installation sans les
+  six images ouvre sur le menu, jamais sur quinze secondes de noir.
+
+**Reste à faire :** trancher les trois questions ouvertes en fin de
+`INTRO_PLANCHES.md` — la formule exacte, l'anonymat du visage, la cadence
+sonore. Et juger les six images à l'œil.
 #### Ce que ces cinq fiches ont en commun, et qui a décidé de l'architecture
 
 **Aucune ligne de `ui.gd` n'a changé.** Les cinq compositions vivent dans leurs
@@ -12048,18 +12352,165 @@ cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 
-- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)*
-- **DA7.2 Le trailer de 60 secondes.** *(C)*
-- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)*
-- **DA7.4 Un site d'une page.** *(S)*
+#### L'audit des assets passifs (2026-09-09, demandé par Adrien)
+
+Passés en revue : tout ce que le jeu affiche sans qu'un outil l'ait fabriqué —
+`assets/ui/`, `assets/logos/`, `assets/keyart/`, `assets/viseur/`. **La date de
+fichier suffit à faire le tri**, et c'est le résultat le plus utile de l'audit :
+la refonte Roman Graphique Brutaliste date du 2026-09-08 au soir. Tout ce qui
+est antérieur appartient à l'ancienne direction, sans exception.
+
+| asset | date | verdict |
+|---|---|---|
+| `logos/icone.png` | 24/08 | ❌ tracé vectoriel lisse — **remplacée** par `icone_roman.png` |
+| `keyart/keyart_rasants.png` | 25/08 | ❌ facture photographique — **régénérée** en encre |
+| `viseur/viseur.png`, `ui/cadre_hud.png`, `ui/curseur_torche.png`, `ui/grain_video.png`, `ui/vide_*.png` | 25/08 | ✅ **gardés** — ce sont des masques monochromes teintés par le code, pas des illustrations : ils ne portent aucun style à trahir |
+| les 15 illustrations, `cadre_vhs`, `cartouche_fatal`, `titres/` | 08-09/09 | ✅ à jour |
+
+⚠️ **Trois assets ne sont référencés par AUCUN fichier du dépôt** — vérifié par
+recherche sur `.gd`, `.tscn`, `.godot`, `.tres` :
+
+- `logos/Wordmark_candela.jpg` — 1,5 Mo
+- `logos/icone_bootsplash.jpg` — 1,2 Mo
+- `keyart/keyart_convergents.png` — le second key art, jamais choisi
+
+**Non supprimés** : ce sont peut-être des sources qu'Adrien garde à dessein, et
+le dépôt a un dossier `assets/sources/` pour ça — s'ils y ont leur place, c'est
+là qu'ils devraient vivre. Signalé, pas tranché. Environ 3,5 Mo.
+
+**La règle qui ressort de l'audit**, et qui vaut pour la prochaine refonte : un
+masque monochrome n'a pas de style, une illustration en a un. Seuls les seconds
+vieillissent quand la direction change — les premiers traversent, parce que
+c'est le code qui les colore.
+
+
+- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)* — 🟡 **gabarits
+  et commande écrits le 2026-09-09** : [docs/CAPSULE.md](CAPSULE.md). **Rien
+  n'est généré, délibérément** : les rapports de forme dépendent de la boutique,
+  et le choix de boutique est l'un des champs `À TRANCHER` du presskit. Générer
+  avant de savoir, c'est refaire. La règle de composition, elle, ne dépend
+  d'aucune boutique et vaut d'être retenue : **le wordmark doit rester lisible à
+  231 × 87**, la plus petite capsule Steam et celle que le plus de gens verront.
+  D'où le corollaire — une capsule n'est pas une illustration réduite : seules
+  les planches 4 et 5 de l'intro survivent au recadrage, parce que leur sujet
+  tient dans une bande étroite et que le reste est noir. **Le noir se recadre ;
+  un décor ne se recadre pas.**
+- **DA7.2 Le trailer de 60 secondes.** *(C)* — 🟡 **découpage écrit le
+  2026-09-09** : [docs/TRAILER.md](TRAILER.md). Cinq phrases de 8 mesures plus
+  une queue, chaque plan nommé par l'identifiant du catalogue de
+  `tools/photographe.gd` — donc directement commandable, et **tenu par une suite
+  depuis `5c4040f`** : renommer un plan fait rougir le lot au lieu de périmer ce
+  document en silence. La grille n'a pas été choisie, elle se dérive du stem de
+  menu à 170 BPM (une mesure = 1,412 s ; 60 s = 42,5 mesures), et la densité de
+  coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
+  manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
+  photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
+- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
+  écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
+  longueurs de description, points saillants, et la sélection d'images par nom
+  de catalogue du photographe (DA6), dont les cinq à envoyer si on n'en envoie
+  que cinq. **Six champs restent `À TRANCHER` et n'appartiennent pas à une
+  session** — éditeur, contact presse, prix, date, plateformes annoncées,
+  licence des images. Ils sont marqués comme tels plutôt que devinés : un
+  presskit dont un champ est inventé fait perdre la confiance sur tous les
+  autres.
+- **DA7.4 Un site d'une page.** *(S)* — ✅ **LIVRÉ le 2026-09-09, en ligne sur
+  le domaine d'Adrien** : **https://adrienvada.fr/candela-2d/** — dépôt séparé
+  `adrienvada/candela-2d`, GitHub Pages, source versionnée dans `tools/site/`
+  (gabarit + assembleur à deux modes). Miroir de relecture :
+  https://claude.ai/code/artifact/de476ec0-33c9-4874-9201-a8c93283737c
+
+  **La page est un défilement narratif** : sept scènes, les planches de l'intro
+  (DA6.6) en fond plein écran qui se relaient, le contenu en cases d'encre
+  par-dessus. Le téléchargement est en deuxième scène, sur le fond de la porte
+  entrouverte.
+
+  **La seule chose qui ne se met pas à jour toute seule est le tampon de
+  version.** Les liens passent par `releases/latest/download/`, donc ils suivent
+  les sorties sans que la page change ; le numéro affiché, lui, est écrit en dur
+  et daté — un numéro nu sur une page qui ne se régénère pas finit par mentir.
+  À changer à chaque sortie, en le lisant dans les *releases* et **jamais** dans
+  `config/version` de `project.godot` : les deux divergent en permanence.
+  La page est **une planche de bande dessinée** : des cases encadrées à l'encre
+  avec repères de massicot, posées sur une gouttière hachurée à 45°, récitatifs
+  en boîte, lettrage au pochoir. Le vocabulaire ne vient pas d'un modèle de site,
+  il vient du jeu — `menu_comic_panel.gd` dessine déjà ce cadre, la palette est
+  celle de `charte.gd`.
+
+  Trois choses qui méritent d'être notées, parce qu'elles se rejoueront ailleurs :
+
+  1. **Les captures battent les illustrations sur la case d'ouverture.**
+     `jeu/03-duel` — un cône dans le noir, 90 % de cadre vide — dit la promesse
+     avant la première phrase. Une illustration l'occupait ; elle la racontait.
+  2. **Les liens de téléchargement passent par `releases/latest/download/`**,
+     donc ils restent valables à chaque sortie sans que la page change. Seuls le
+     tampon de version et sa date sont écrits en dur — **et ils sont datés
+     exprès** : un numéro de version non daté sur une page qui ne se régénère pas
+     finit par mentir, un numéro daté vieillit honnêtement.
+  3. **Les icônes de plateforme sont dessinées, pas empruntées** (`assets/ui/
+     icone_macos.png`, `icone_windows.png`, générées au même procédé que les
+     planches). Une marque déposée reproduite de mémoire est fausse ; une marque
+     stylisée est un risque. Un dessin à l'encre assumé n'est ni l'un ni l'autre,
+     et il tient le style de la page.
+
+  Reste à faire : héberger ailleurs qu'en artefact, et remplacer le tampon à
+  chaque sortie.
 - **DA7.5 Palettes alternatives déblocables** — la bible déclinée (nocturne,
   sépia), récompenses de rangs. *(S)*
 - **DA7.6 Skins de torche et de viseur** — mêmes emplacements, autres cookies.
   *(C)*
 - **DA7.7 Le thème du menu réinterprété** — variante saisonnière ou de rang du
   stem de menu. *(C)*
-- **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
-  reste trop longtemps sans jouer. *(S, après DA1.6)*
+- **DA7.8 L'easter egg du logo** ✅ **LIVRÉ le 2026-09-09** —
+  `enseigne_qui_meurt.gd` + `tools/test_enseigne.gd`. Après 40 s sans un geste
+  l'enseigne du menu **bat**, à 58 s elle **sursaute**, puis elle s'éteint en
+  3,4 s jusqu'à une braise, et se rallume en trébuchant au premier mouvement.
+
+  **La fiche demandait « la bougie du wordmark ». Il n'y avait pas de bougie à
+  ajouter : elle était déjà là.** Le wordmark est un pochoir rétroéclairé — les
+  lettres sont pleines, et c'est la lumière DERRIÈRE elles qui les dessine. Il
+  n'y avait qu'à la laisser mourir. Un menu abandonné qui s'éteint tout seul dit
+  la règle du jeu — *toute lumière se paie* — avant la première partie et sans
+  une ligne de texte.
+
+  Quatre décisions qui ne se devinent pas, toutes tenues par la suite :
+
+  1. **Elle ne descend JAMAIS à zéro** (braise à 0,07). Un logo qui disparaît
+     complètement ne se lit pas comme une intention mais comme une panne.
+  2. **Un mouvement de souris compte comme un geste.** Ne réveiller que sur une
+     touche donnerait une enseigne qui meurt pendant qu'on lit le menu.
+  3. **Le sursaut avant l'extinction n'est pas un ornement.** Une bougie flambe
+     avant de mourir ; sans ce temps, la disparition ressemble à un fondu
+     d'interface.
+  4. **Relâcher l'enseigne lui rend sa pleine lumière.** Sans ça, un verdict de
+     fin de match hérité d'une extinction en cours s'afficherait à moitié
+     transparent, sans que rien ne l'explique.
+
+**DA7.5, DA7.6, DA7.7 et DA7.1 sont écartées** (2026-09-09, Adrien) — les trois
+premières « pour l'instant », **DA7.1 parce qu'il n'y aura pas de boutique**.
+L'abandon de la boutique se propage : cinq des six champs `À TRANCHER` du
+presskit (éditeur, prix, date, plateformes annoncées, licence) n'ont plus
+d'arbitre à attendre, et `docs/CAPSULE.md` ne décrit plus qu'un travail qui
+n'aura pas lieu. Le document est gardé plutôt que supprimé pour la seule règle
+de composition qu'il a produite, et qui vaut hors boutique : **le noir se
+recadre, un décor ne se recadre pas.**
+
+Reste donc DA7.4 (le site, livré) et DA7.2 (le trailer, bloqué sur l'absence de
+capture vidéo). **La distribution passe par le site et les *releases* GitHub**,
+ce que le bloc de téléchargement de DA7.4 fait déjà.
+
+⚠️ **Et si les deux premières reviennent un jour, elles reviennent bornées.** La
+charte pose que la couleur PORTE l'information : bleu = soi (convention *blue
+force*), le vert n'existe jamais dans l'arène, l'ambre est le feu. Une palette
+déblocable qui repeint le MONDE change donc la lisibilité du duel, et un skin de
+torche est pire encore — le cookie **est** une information de portée et d'angle.
+C'est exactement l'arbitrage qui a tranché DA5.5 en MONDE plutôt qu'en CONFORT
+le 2026-09-09 : un joueur ne doit pas pouvoir adoucir son expérience par rapport
+à son adversaire. Les bornes à poser d'avance, le jour où ces fiches rouvrent :
+**palettes limitées à la famille APPAREIL**, et **skins limités à la matière, la
+géométrie restant au code** (c'est déjà la règle DA1.5 — « une image générée
+n'est jamais l'asset, seulement sa matière »). Sans ces bornes, ce sont deux
+fiches qui coûteront un retour en arrière.
 
 ~~**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
 DA1.4, DA1.8~~ — **fait le 2026-08-24**, avec DA1.1 et DA1.9.

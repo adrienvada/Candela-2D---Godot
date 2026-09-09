@@ -15,9 +15,17 @@ config/version="0.4.0"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0, 0, 0, 1)
-boot_splash/stretch_mode=0
+; 1 = « Keep » : l'image d'amorce est mise à l'échelle de la fenêtre en gardant
+; ses proportions. Elle valait 0 = « Disabled », donc dessinée à sa taille
+; native : 1600 px de large dans une fenêtre de 1280, l'enseigne débordait de
+; l'écran au lancement. Énumération du moteur : Disabled, Keep, Keep Width,
+; Keep Height, Cover, Ignore.
+boot_splash/stretch_mode=1
 boot_splash/image="res://assets/logos/boot.png"
-config/icon="res://assets/logos/icone.png"
+; DA7 — l'icône passe au Roman Graphique Brutaliste. L'ancienne (`icone.png`,
+; DA1.7, tracé vectoriel à la main sur gabarit) reste dans le dépôt : elle est
+; propre, elle n'a que le tort de ne plus ressembler au reste du jeu.
+config/icon="res://assets/logos/icone_roman.png"
 
 [audio]
 
