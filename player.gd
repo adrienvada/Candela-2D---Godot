@@ -85,6 +85,15 @@ var reload_time_left: float = 0.0
 ## pendant la séquence de fin. Le rechargement gèle déjà de la même façon, et
 ## c'est cohérent — mais il faut le savoir, parce qu'aucune suite ne le dit.
 var _root_restant: float = 0.0
+
+## La durée du root EN COURS, gardée à côté de son compteur.
+##
+## ⚠️ **Pas `current_weapon.root.duree`.** La rampe se déduit de la durée du root
+## qu'on subit, pas de celui qu'on subirait si on tirait maintenant : changer
+## d'arme pendant un root en cours ferait sauter le facteur d'un coup, au milieu
+## de la reprise. `equip_weapon` remet les deux à zéro pour la même raison — mais
+## la remise à zéro protège du cas franc, ce champ protège du cas glissant.
+var _root_duree: float = 0.0
 var current_spread_bloom: float = 0.0
 var _reload_presse: bool = false
 
@@ -1101,6 +1110,7 @@ func equip_weapon(weapon: WeaponData):
 	# 0,60 s après être passé à une classe qui en a 0,08 serait une pénalité que
 	# rien à l'écran n'expliquerait.
 	_root_restant = 0.0
+	_root_duree = 0.0
 	if current_weapon:
 		current_ammo = current_weapon.max_ammo
 		is_reloading = false
@@ -1116,12 +1126,23 @@ func equip_weapon(weapon: WeaponData):
 	flashlight.texture_scale = weapon.echelle_torche()
 
 
+## Le tir peut-il interrompre le rechargement en cours ?
+##
+## Vrai pour la seule recharge cartouche par cartouche. C'est ce qui donne son
+## sens à la mécanique : « on peut tirer dès qu'on a des balles » (Adrien,
+## 2026-09-09). Une recharge d'un bloc reste un engagement — l'interrompre
+## rendrait sa durée sans conséquence, donc gratuite.
+func recharge_interruptible() -> bool:
+	return is_reloading and current_weapon != null \
+		and current_weapon.recharge_par_cartouche
+
+
 func start_reload() -> void:
 	if current_weapon == null: return
 	if is_reloading: return
 	if current_ammo >= current_weapon.max_ammo: return
 	is_reloading = true
-	reload_time_left = current_weapon.reload_time
+	reload_time_left = current_weapon.duree_etape_recharge()
 	var slug: String = current_weapon.slug() if current_weapon.has_method("slug") else "pistolet"
 	AudioManager.play_weapon_reload(slug, global_position)
 	# Éjection de douille d'atelier au sol lors du rechargement
@@ -1494,7 +1515,7 @@ func _physics_process(delta):
 		# joueur qui vient de tirer ne bouge plus, ce que l'adversaire voit.
 		# `facteur()` rend 1 hors de sa fenêtre, donc la ligne est inconditionnelle.
 		if _root_restant > 0.0:
-			current_speed *= RootProfile.facteur(_root_restant)
+			current_speed *= RootProfile.facteur(_root_restant, _root_duree)
 		if dazzle_amount > 0:
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
 			
@@ -1744,10 +1765,27 @@ func _physics_process(delta):
 		reload_time_left -= delta
 		if reload_time_left <= 0.0:
 			reload_time_left = 0.0
-			is_reloading = false
-			if current_weapon:
-				current_ammo = current_weapon.max_ammo
-				_rumble(0.0, RUMBLE_RELOAD_READY, 0.08)
+			if current_weapon != null and current_weapon.recharge_par_cartouche:
+				# Une cartouche entre, et la suivante s'enchaîne d'elle-même
+				# jusqu'à ce que le chargeur soit plein — ou qu'un tir coupe.
+				#
+				# ⚠️ Le chargeur se remplit AVANT le test d'arrêt. L'écrire dans
+				# l'autre ordre laisserait la dernière cartouche comptée par la
+				# boucle et jamais posée dans l'arme : un chargeur annoncé plein
+				# à cinq sur six, ce que rien à l'écran n'expliquerait.
+				current_ammo = mini(current_ammo + 1, current_weapon.max_ammo)
+				_rumble(0.0, RUMBLE_RELOAD_READY, 0.05)
+				if current_ammo >= current_weapon.max_ammo:
+					is_reloading = false
+				else:
+					reload_time_left = current_weapon.duree_etape_recharge()
+					AudioManager.play_weapon_reload(
+						current_weapon.slug(), global_position)
+			else:
+				is_reloading = false
+				if current_weapon:
+					current_ammo = current_weapon.max_ammo
+					_rumble(0.0, RUMBLE_RELOAD_READY, 0.08)
 
 	# Détection de l'ordre de recharger
 	var reload_presse := input_provider.is_reload_pressed()
@@ -1761,7 +1799,8 @@ func _physics_process(delta):
 	# Le tir suit l'autorité de simulation : en ligne c'est l'hôte qui l'arbitre
 	# pour les deux joueurs, cooldown compris.
 	var presse := input_provider.is_shoot_pressed()
-	if can_move and presse and shoot_cooldown <= 0 and not is_reloading:
+	if can_move and presse and shoot_cooldown <= 0 \
+			and (not is_reloading or recharge_interruptible()):
 		if current_ammo > 0:
 			shoot()
 		else:
@@ -1795,6 +1834,7 @@ func _physics_process(delta):
 	if _cl_rafale != null and _cl_rafale.root != null and _cl_rafale.root.apres_rafale:
 		if _detente_pressee and not presse:
 			_root_restant = maxf(_root_restant, _cl_rafale.root.duree)
+			_root_duree = _cl_rafale.root.duree
 
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
@@ -1867,7 +1907,14 @@ var _gadget_pressee: bool = false
 
 func shoot():
 	if current_weapon == null: return
-	if current_ammo <= 0 or is_reloading: return
+	if current_ammo <= 0: return
+	if is_reloading:
+		if not recharge_interruptible(): return
+		# Le tir coupe le remplissage. La cartouche EN COURS n'entre pas : le
+		# joueur a choisi de tirer avec ce qu'il avait, et le temps déjà passé
+		# sur celle-ci est perdu. C'est ce qui garde un coût au choix.
+		is_reloading = false
+		reload_time_left = 0.0
 	
 	current_ammo -= 1
 	shoot_cooldown = current_weapon.cooldown
@@ -1881,6 +1928,7 @@ func shoot():
 	var _cl := current_weapon as ClassData
 	if _cl != null and _cl.root != null and not _cl.root.apres_rafale:
 		_root_restant = _cl.root.duree
+		_root_duree = _cl.root.duree
 	# V1.5, renforcé (chantier ressenti lourd) — coup dans la manette du
 	# tireur, en deux temps plutôt qu'un seul pouls plat.
 	#

@@ -361,6 +361,53 @@ func _init() -> void:
 	call_deferred("_run")
 
 
+# ---------------------------------------------------------------------------
+# 8. LES QUATRE GESTES DE COMBAT SONT SUR LES BONNES TOUCHES
+# ---------------------------------------------------------------------------
+
+## L2 torche, L1 fusée, R2 tir, R1 gadget — décision d'Adrien du 2026-09-09.
+##
+## ⚠️ **Le contrôle qui compte n'est pas la liste, c'est la COLLISION.** Les
+## quatre gestes tiennent sur les quatre commandes d'épaule d'une manette : il
+## n'y a plus une seule de libre. Déplacer l'un d'eux sans regarder les trois
+## autres met deux gestes sur la même touche, et rien ne le dit — le joueur
+## poserait un gadget en tirant. `Liaisons.collisions()` ne voit que
+## l'inter-joueur ; cette vérification-ci est la seule qui regarde à l'intérieur
+## d'une manette.
+func _test_les_gestes_de_combat() -> void:
+	var attendu := {
+		"torch": "axe%d" % JOY_AXIS_TRIGGER_LEFT,          # L2
+		"shoot": "axe%d" % JOY_AXIS_TRIGGER_RIGHT,         # R2
+		"lance_fusee": "btn%d" % JOY_BUTTON_LEFT_SHOULDER, # L1
+		"gadget": "btn%d" % JOY_BUTTON_RIGHT_SHOULDER,     # R1
+	}
+	for j in ["p1", "p2"]:
+		# ⚠️ **Les empreintes se lisent dans l'`InputMap`, jamais dans `attendu`.**
+		# Le premier jet dérivait la clé de collision de la valeur ATTENDUE : deux
+		# actions n'y partageaient une touche que si on l'avait écrit soi-même,
+		# donc jamais. Le contrôle était aveugle par construction — la même forme
+		# que l'acte II du banc photocopie, qui tirait son échelle de la source
+		# qu'il mesurait. L'oracle est l'état du jeu, pas la liste du test.
+		var pose := {}  # empreinte de manette → action qui l'occupe
+		for geste in attendu:
+			var action := "%s_%s" % [j, geste]
+			var siennes: Array[String] = []
+			for e in InputMap.action_get_events(action):
+				if e is InputEventJoypadMotion:
+					siennes.append("axe%d" % e.axis)
+				elif e is InputEventJoypadButton:
+					siennes.append("btn%d" % e.button_index)
+			_check(siennes.has(attendu[geste]),
+				"%s n'est pas sur %s (il est sur %s)"
+					% [action, attendu[geste], str(siennes)])
+			for empreinte in siennes:
+				_check(not pose.has(empreinte),
+					"%s partage %s avec %s"
+						% [action, empreinte, pose.get(empreinte, "")])
+				pose[empreinte] = action
+
+
+
 func _run() -> void:
 	print("=== Les liaisons de commandes ===")
 	await process_frame
@@ -396,6 +443,7 @@ func _run() -> void:
 	_test_la_visee_souris_est_dite()
 	_test_reassigner_une_touche_epargne_la_manette()
 	_test_chaque_bloc_n_accepte_que_son_appareil()
+	_test_les_gestes_de_combat()
 	await _test_la_mise_en_page_tient()
 
 	print("--- %d contrôles, %d échec(s) ---" % [_ok + _ko, _ko])

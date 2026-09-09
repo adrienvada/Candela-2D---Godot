@@ -19,6 +19,22 @@ const Vision := preload("res://vision.gd")
 @export_group("Ammo & Reload")
 @export var max_ammo: int = 10
 @export var reload_time: float = 2.2
+
+## La recharge se fait-elle CARTOUCHE PAR CARTOUCHE ?
+##
+## Vrai pour le Terrassier seul (décision d'Adrien, 2026-09-09) : « 1 balle,
+## puis deux, puis 3, et on peut tirer dès qu'on a des balles ».
+##
+## Ce n'est pas un habillage de la même attente : ça change ce que le
+## rechargement COÛTE. Une recharge d'un bloc est un pari — on rend cinq
+## secondes et demie d'aveuglement contre six cartouches. Une recharge par
+## cartouche est une suite de petits paris qu'on peut abandonner à tout moment,
+## et c'est le geste du fusil à pompe partout où il existe.
+##
+## ⚠️ `reload_time` continue de dire le TOTAL, pas l'étape : six cartouches en
+## 5,6 s font 0,93 s l'une. Voir `duree_etape_recharge()`, qui est le seul
+## endroit où cette division a le droit d'être écrite.
+@export var recharge_par_cartouche: bool = false
 @export var spread_bloom_per_shot_deg: float = 4.5
 @export var max_spread_bloom_deg: float = 25.0
 @export var spread_recovery_speed_deg: float = 50.0
@@ -215,3 +231,16 @@ func lumiere_recue(avant: Vector2, depuis: Vector2, vers: Vector2) -> float:
 ## mesure des bancs : « que verse cette arme droit devant, à 80 px ? »
 func lumiere_axiale(distance: float) -> float:
 	return lumiere_recue(Vector2.RIGHT, Vector2.ZERO, Vector2.RIGHT * distance)
+
+
+## La durée d'UNE étape de rechargement, en secondes.
+##
+## Rend `reload_time` pour une arme qui recharge d'un bloc, et la part d'une
+## cartouche pour celle qui recharge une à une. C'est le dénominateur que le HUD
+## doit prendre : diviser le compteur restant par le total afficherait une jauge
+## bloquée près de 100 % pour le Terrassier, dont le compteur ne dépasse jamais
+## le sixième de son `reload_time`.
+func duree_etape_recharge() -> float:
+	if not recharge_par_cartouche:
+		return reload_time
+	return reload_time / float(maxi(1, max_ammo))

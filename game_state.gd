@@ -338,20 +338,27 @@ func _ready():
 
 	
 	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
-	# « pistolet », 35° de demi-angle, échelle 1,6, 10 munitions, 2,2s recharge.
+	# « pistolet », 35° de demi-angle, échelle 1,6, 2,2 s de recharge — SAUF son
+	# chargeur : 6 balles et non 10 (décision d'Adrien, 2026-09-09).
+	#
+	# ⚠️ C'est la seule valeur du Parasite qui soit écrite ici, et il faut qu'elle
+	# le reste : le reste vient de `WeaponData`, et un jour où quelqu'un changera
+	# une valeur par défaut, le pistolet suivra. C'est voulu — il EST l'arme de
+	# référence, celle dont les autres se comparent.
 	weapon_pistolet = ClassData.new()
+	weapon_pistolet.max_ammo = 6
 	
 	weapon_fusil = ClassData.new()
 	weapon_fusil.name = "Fusil"
 	weapon_fusil.cooldown = 0.24
-	weapon_fusil.max_ammo = 24
+	weapon_fusil.max_ammo = 4
 	weapon_fusil.reload_time = 3.5
 	weapon_fusil.spread_bloom_per_shot_deg = 3.5
 	weapon_fusil.max_spread_bloom_deg = 20.0
 	weapon_fusil.spread_recovery_speed_deg = 40.0
 	weapon_fusil.bullet_speed = 15000.0
 	weapon_fusil.bullet_max_distance = 15000.0
-	weapon_fusil.damage_center = 50.0
+	weapon_fusil.damage_center = 60.0
 	weapon_fusil.damage_edge = 25.0
 	weapon_fusil.max_bounces = 2
 	weapon_fusil.damages_shooter = true
@@ -364,9 +371,10 @@ func _ready():
 	
 	weapon_pompe = ClassData.new()
 	weapon_pompe.name = "Pompe"
-	weapon_pompe.cooldown = 0.9
+	weapon_pompe.cooldown = 0.45  # 1,11 → 2,22 tirs/s (doublé)
 	weapon_pompe.max_ammo = 6
 	weapon_pompe.reload_time = 5.6
+	weapon_pompe.recharge_par_cartouche = true  # 0,93 s la cartouche, et on tire dès la première
 	weapon_pompe.spread_bloom_per_shot_deg = 0.0
 	weapon_pompe.max_spread_bloom_deg = 0.0
 	weapon_pompe.bullet_speed = 10000.0
@@ -3277,9 +3285,31 @@ func weapon_for_index(idx: int) -> WeaponData:
 ## Leurs blocs impératifs plus haut sont la vérité, et ils portent des décisions
 ## actées — les temps de recharge du chantier MUNITIONS, les portées de torche
 ## arbitrées le 2026-08-24. Cette fonction ne fait que leur ATTACHER trois
-## profils. ⚠️ La spécification des classes demande par ailleurs un pistolet à
-## 6 balles et cadence doublée là où le jeu en a 10 : **c'est un écart de contenu
-## à soumettre à Adrien, pas un réglage à glisser ici.**
+## profils.
+##
+## ## L'écart de contenu, et son arbitrage
+##
+## Ce commentaire signalait un écart en attente : la spécification voulait un
+## pistolet à 6 balles là où le jeu en avait 10, et il n'appartenait pas au code
+## de trancher. **Adrien a tranché le 2026-09-09**, et sa décision porte plus
+## loin que le pistolet :
+##
+##   • Le Parasite passe à 6 munitions ; l'Illusionniste à 4, et à 60/25 ;
+##   • L'Occulteur tombe à 10-15 par balle — il tue par rafale, pas au coup ;
+##   • Le Terrassier recharge **cartouche par cartouche** ;
+##   • Et **toutes les cadences faibles doublent, sans dépasser 3 tirs/s**.
+##
+## ⚠️ Cette dernière règle porte sur les cadences FAIBLES, c'est-à-dire celles
+## qui étaient sous 3 tirs/s — quatre classes. Les six autres y étaient déjà et
+## ne bougent pas ; le Parasite en particulier garde sa « cadence doublée », qui
+## est son identité de classe et non un réglage.
+##
+## ⚠️ **Conséquence à connaître : deux classes ont désormais un root plus long
+## que leur cadence.** La Sentinelle tire toutes les 0,425 s pour un root de
+## 0,50 s, l'Incendiaire toutes les 0,333 s pour 0,40 s. Qui garde la détente
+## enfoncée y reste immobile en continu. C'est cohérent avec « tirer coûte sa
+## mobilité » — mais c'est un effet de bord de deux décisions prises séparément,
+## et il se signale plutôt qu'il ne se corrige tout seul.
 func _batir_catalogue() -> void:
 	# ── Les quatre existantes reçoivent leurs profils ────────────────────────
 	weapon_pistolet.libelle = "Le Parasite"
@@ -3297,7 +3327,7 @@ func _batir_catalogue() -> void:
 	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
 
 	weapon_pompe.libelle = "Le Terrassier"
-	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin."
+	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin. Il recharge cartouche par cartouche, et tire dès la première."
 	weapon_pompe.rang = 5
 	weapon_pompe.root = _root(0.35)
 	weapon_pompe.fusees = _fusees(3, 18.0)
@@ -3318,7 +3348,7 @@ func _batir_catalogue() -> void:
 	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
 	fumiste.name = "Pistolet lourd"
 	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un rideau de suie où l'on voit qu'il y a quelqu'un sans voir qui."
-	fumiste.cooldown = 0.42
+	fumiste.cooldown = 0.3333  # 2,38 → 3,00 tirs/s (doublé, PLAFONNÉ)
 	fumiste.max_ammo = 3
 	fumiste.reload_time = 2.8
 	fumiste.damage_center = 70.0
@@ -3332,7 +3362,7 @@ func _batir_catalogue() -> void:
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
 	incendiaire.description = "Le feu au rang du feu. Deux cartouches paraboliques, deux fusées incendiaires, et un sol qu'on ne traverse plus."
-	incendiaire.cooldown = 0.55
+	incendiaire.cooldown = 0.3333  # 1,82 → 3,00 tirs/s (doublé, PLAFONNÉ)
 	incendiaire.max_ammo = 2
 	incendiaire.reload_time = 3.2
 	incendiaire.damage_center = 55.0
@@ -3345,7 +3375,7 @@ func _batir_catalogue() -> void:
 	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
 	sentinelle.name = "Fusil à verrou"
 	sentinelle.description = "Elle ne cherche pas : elle veille. Perforant à longue portée, une fusée qui dure, et une poudre qui écrit les pas de qui passe."
-	sentinelle.cooldown = 0.85
+	sentinelle.cooldown = 0.425  # 1,18 → 2,35 tirs/s (doublé)
 	sentinelle.max_ammo = 2
 	sentinelle.reload_time = 4.0
 	sentinelle.damage_center = 75.0
@@ -3361,8 +3391,10 @@ func _batir_catalogue() -> void:
 	occulteur.cooldown = 0.09
 	occulteur.max_ammo = 8
 	occulteur.reload_time = 2.6
-	occulteur.damage_center = 26.0
-	occulteur.damage_edge = 16.0
+	# 10-15 (Adrien, 2026-09-09) : le pistolet-mitrailleur ne tue plus par
+	# cartouche mais par RAFALE — huit balles à 15 font 120, un corps et demi.
+	occulteur.damage_center = 15.0
+	occulteur.damage_edge = 10.0
 	occulteur.spread_bloom_per_shot_deg = 3.0
 	occulteur.max_spread_bloom_deg = 16.0
 	occulteur.muzzle_flash_intensity = 0.6

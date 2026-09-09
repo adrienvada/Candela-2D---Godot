@@ -3409,3 +3409,61 @@ entrée aux « Pièges connus » ; la seule réponse à « qui a écrit ceci » 
 
 Les trois commentaires nomment maintenant le chantier et son commit. Le geste
 lui-même n'a pas bougé : le cadre qui s'allume et l'icône restent.
+
+## 2026-09-09 — Le réglage d'Adrien, manette en main (chantier DIX CLASSES, étape 20)
+
+Le chantier était clos. Adrien a joué, et rapporté cinq choses d'une seule
+séance. Ce qui suit est ce qu'elles ont coûté.
+
+**« Quand on tire, on soit immobile, ça marche pas. »** Le root existait, il
+était câblé, six contrôles le tenaient, et il ne se sentait pas. La cause n'était
+pas un bug mais une **espèce de constante** : `RECUPERATION` valait 80 ms de
+rampe pour les dix classes, ce qui est un raccord sur l'arbalète (600 ms de root)
+et le root ENTIER sur le pistolet (100 ms). Mesuré au banc sur le vrai joueur
+avant d'y toucher : **66 % de vitesse conservée** après un tir. La rampe est
+devenue une part (un quart), plafonnée par l'ancienne constante.
+
+⚠️ **Aucun des six contrôles ne pouvait rougir**, et ils étaient tous justes :
+ils regardaient le facteur à un INSTANT, jamais la distance sur la fenêtre —
+c'est-à-dire jamais ce que le joueur ressent. Le contrôle ajouté intègre au pas
+de la physique sur les dix durées de la grille. Il aurait crié le premier jour.
+
+⚠️ Et son premier jet accusait le code à tort — 19 % là où le jeu en fait 5.
+Six soustractions de 1/60 à 0,10 ne rendent pas zéro mais 1e-17, pour lequel le
+facteur rend ~1,0, ce qui est JUSTE : le root est fini. La boucle comptait cette
+image comme une image pleine dans la fenêtre. Encore un artefact de banc taillé
+exactement comme un vrai défaut. C'est la deuxième fois dans ce chantier.
+
+**Les quatre gestes de combat changent de touche** : L2 torche, L1 fusée, R2 tir,
+R1 gadget. Le tir passe d'un bouton à un AXE — plus de front franc. Les quatre
+commandes d'épaule sont maintenant toutes prises.
+
+⚠️ **Le garde de collision que j'ai écrit pour ça était aveugle par
+construction** : il indexait les touches occupées par la valeur ATTENDUE, si bien
+que deux actions ne s'y percutaient que si on l'avait écrit soi-même dans le
+test. Le sabotage l'a montré — gadget remis sur L1 où siège la fusée, une seule
+ligne rouge, la collision muette. Deuxième occurrence de la forme après l'acte II
+du banc photocopie. L'oracle se lit maintenant dans l'`InputMap`.
+
+**La grille est arbitrée.** `_batir_catalogue()` portait depuis l'étape 1 un
+commentaire signalant un écart de contenu « à soumettre à Adrien ». Il a tranché,
+et plus largement que la question posée. Le commentaire a servi : il a survécu
+dix-neuf étapes sans que personne ne le règle en douce.
+
+⚠️ En le faisant, `test_munitions_recharge` a rougi sur trois points — tous
+voulus. Mais il a révélé autre chose : **ce banc garde une COPIE du catalogue** et
+compare le texte de `game_state.gd` à sa propre copie. Il ne vérifie donc pas ce
+que le jeu fait, seulement qu'on a édité deux endroits du même geste. Signalé
+dans le fichier, pas corrigé — hors périmètre.
+
+**Le Terrassier recharge cartouche par cartouche**, et tire dès la première ; le
+tir coupe alors le remplissage et perd la cartouche en cours. Éprouvé sur un vrai
+joueur, pas sur la donnée : le contrat d'Adrien est un comportement, et aucune
+lecture de propriété ne dit si le tir passe vraiment. Le HUD a fallu le prévenir
+— il divisait le compteur restant par le total, ce qui aurait affiché une jauge
+bloquée près de 100 %.
+
+**Effet de bord signalé, non corrigé** : la Sentinelle et l'Incendiaire ont
+désormais un root plus long que leur cadence. Détente tenue, on y reste immobile
+en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
+l'a voulue comme telle, et elle se juge en jouant.

@@ -42,13 +42,27 @@ func _run() -> void:
 	quit(1 if _failures > 0 else 0)
 
 ## Crée les instances d'armes comme dans GameState._ready()
+## ⚠️ **SIGNALÉ, pas corrigé : ceci est une COPIE du catalogue de `game_state`.**
+##
+## Le banc reconstruit les quatre armes au lieu de lire celles du jeu, puis
+## compare le texte de `game_state.gd` à cette copie. Il ne vérifie donc pas ce
+## que le jeu fait : il vérifie qu'on a bien édité DEUX endroits du même geste.
+## Le jour où l'on n'en édite qu'un, il rougit — ce qui est utile — mais il ne
+## dira jamais qu'une valeur est mauvaise, seulement qu'elle est désaccordée.
+##
+## Le dépôt a déjà écrit la règle noir sur blanc dans `class_data.gd` : « une
+## copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la
+## même chose ». Le remède serait de monter `main.tscn` et d'interroger
+## `weapon_for_index()`, comme le fait `tools/test_classes.gd`. **Hors périmètre
+## du réglage du 2026-09-09 : signalé ici, à reprendre.**
 func _creer_armes() -> Dictionary:
 	var pistolet = WeaponDataScript.new()
+	pistolet.max_ammo = 6
 	
 	var fusil = WeaponDataScript.new()
 	fusil.name = "Fusil"
 	fusil.cooldown = 0.24
-	fusil.max_ammo = 24
+	fusil.max_ammo = 4
 	fusil.reload_time = 3.5
 	fusil.spread_bloom_per_shot_deg = 3.5
 	fusil.max_spread_bloom_deg = 20.0
@@ -56,7 +70,7 @@ func _creer_armes() -> Dictionary:
 	
 	var pompe = WeaponDataScript.new()
 	pompe.name = "Pompe"
-	pompe.cooldown = 0.9
+	pompe.cooldown = 0.45
 	pompe.max_ammo = 6
 	pompe.reload_time = 5.6
 	pompe.spread_bloom_per_shot_deg = 0.0
@@ -82,13 +96,14 @@ func _test_capacites_et_armes() -> void:
 	var armes = _creer_armes()
 	var gs_src = FileAccess.get_file_as_string("res://game_state.gd")
 	
-	_check("Pistolet a 10 munitions par défaut", armes.pistolet.max_ammo == 10)
-	_check("Fusil a 24 munitions", armes.fusil.max_ammo == 24)
+	_check("Pistolet a 6 munitions", armes.pistolet.max_ammo == 6)
+	_check("Fusil a 4 munitions", armes.fusil.max_ammo == 4)
 	_check("Arbalète a 1 munition", armes.arbalete.max_ammo == 1)
 	_check("Pompe a 6 munitions", armes.pompe.max_ammo == 6)
 
 	# Vérifier que game_state.gd configure bien ces valeurs
-	_check("game_state.gd configure 24 munitions pour le fusil", gs_src.contains("weapon_fusil.max_ammo = 24"))
+	_check("game_state.gd configure 4 munitions pour le fusil", gs_src.contains("weapon_fusil.max_ammo = 4"))
+	_check("game_state.gd configure 6 munitions pour le pistolet", gs_src.contains("weapon_pistolet.max_ammo = 6"))
 	_check("game_state.gd configure 6 munitions pour la pompe", gs_src.contains("weapon_pompe.max_ammo = 6"))
 	_check("game_state.gd configure 1 munition pour l'arbalète", gs_src.contains("weapon_arbalete.max_ammo = 1"))
 
@@ -163,13 +178,17 @@ func _test_liaisons_touches() -> void:
 	_check("Touche Carré (JOY_BUTTON_X) assignée au rechargement J1", has_joy_square)
 	_check("Touche R assignée au rechargement J1", has_key_r)
 
-	# Vérifier Triangle (JOY_BUTTON_Y) pour fusée
+	# La fusée est passée de Triangle à L1 le 2026-09-09 (décision d'Adrien) :
+	# les quatre gestes de combat tiennent sur les quatre commandes d'épaule.
+	# ⚠️ Le contrôle complet des quatre, collisions comprises, vit dans
+	# `tools/test_liaisons.gd` § 8 — ici on ne garde que la fusée, parce que ce
+	# banc-ci est celui du rechargement et qu'elle voisine avec Carré.
 	var p1_flare_events = InputMap.action_get_events("p1_lance_fusee")
-	var has_joy_triangle = false
+	var has_joy_l1 = false
 	for ev in p1_flare_events:
-		if ev is InputEventJoypadButton and ev.button_index == JOY_BUTTON_Y:
-			has_joy_triangle = true
-	_check("Touche Triangle (JOY_BUTTON_Y) assignée à la fusée éclairante J1", has_joy_triangle)
+		if ev is InputEventJoypadButton and ev.button_index == JOY_BUTTON_LEFT_SHOULDER:
+			has_joy_l1 = true
+	_check("Touche L1 assignée à la fusée éclairante J1", has_joy_l1)
 
 	# Vérifier ui.gd
 	var ui_src = FileAccess.get_file_as_string("res://ui.gd")
@@ -185,8 +204,18 @@ func _test_contrat_code_joueur() -> void:
 	_check("player.gd déclare reload_time_left", p_src.contains("var reload_time_left: float"))
 	_check("player.gd déclare current_spread_bloom", p_src.contains("var current_spread_bloom: float"))
 	_check("player.gd possède start_reload()", p_src.contains("func start_reload()"))
-	_check("player.gd bloque le tir pendant recharge ou chargeur vide",
-		p_src.contains("if current_ammo <= 0 or is_reloading: return"))
+	_check("player.gd bloque le tir à chargeur vide",
+		p_src.contains("if current_ammo <= 0: return"))
+	# ⚠️ Le blocage pendant recharge n'est plus inconditionnel : la recharge
+	# cartouche par cartouche du Terrassier se laisse interrompre (« on peut
+	# tirer dès qu'on a des balles », Adrien 2026-09-09). Ce sont donc DEUX
+	# choses qu'on tient ici — que le refus existe, et qu'il ait une exception
+	# nommée. Le comportement lui-même est éprouvé sur un vrai joueur dans
+	# `tools/test_classes.gd`, section « La recharge cumulative du Terrassier ».
+	_check("player.gd refuse le tir pendant une recharge d'un bloc",
+		p_src.contains("if not recharge_interruptible(): return"))
+	_check("et l'exception est nommée, pas devinée",
+		p_src.contains("func recharge_interruptible()"))
 	_check("player.gd décrémente les munitions lors d'un tir", p_src.contains("current_ammo -= 1"))
 	_check("player.gd applique la dispersion bloom", p_src.contains("current_spread_bloom"))
 	_check("player.gd recharge automatiquement l'arbalète après tir",

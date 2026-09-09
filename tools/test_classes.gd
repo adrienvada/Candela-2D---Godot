@@ -85,6 +85,8 @@ func _run() -> void:
 	await _test_fusees_par_classe()
 	_test_archive()
 	await _test_gresillement_en_jeu()
+	await _test_grille_d_adrien()
+	await _test_recharge_cumulative()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -99,35 +101,87 @@ func _test_root() -> void:
 
 	# Hors fenêtre : le facteur vaut EXACTEMENT 1, pour que l'appelant puisse
 	# multiplier sans condition.
-	_check("hors root, le facteur vaut 1", is_equal_approx(R.facteur(0.0), 1.0))
+	_check("hors root, le facteur vaut 1", is_equal_approx(R.facteur(0.0, 0.30), 1.0))
 	_check("un restant négatif rend 1 et n'accélère pas",
-		is_equal_approx(R.facteur(-0.5), 1.0), str(R.facteur(-0.5)))
+		is_equal_approx(R.facteur(-0.5, 0.30), 1.0), str(R.facteur(-0.5, 0.30)))
 
 	# Pendant l'arrêt franc : zéro.
-	_check("en plein root, le facteur vaut 0", is_equal_approx(R.facteur(0.50), 0.0))
+	_check("en plein root, le facteur vaut 0", is_equal_approx(R.facteur(0.50, 0.60), 0.0))
 	_check("au seuil de la rampe, encore 0",
-		is_equal_approx(R.facteur(R.RECUPERATION), 0.0))
+		is_equal_approx(R.facteur(R.rampe_pour(0.60), 0.60), 0.0))
 
 	# La rampe : monotone, bornée, et elle atteint bien ses deux extrémités.
-	var mi := R.facteur(R.RECUPERATION * 0.5)
+	var mi := R.facteur(R.rampe_pour(0.60) * 0.5, 0.60)
 	_check("à mi-rampe, le facteur est strictement entre 0 et 1",
 		mi > 0.0 and mi < 1.0, str(mi))
 	_check("la rampe est monotone décroissante en « restant »",
-		R.facteur(0.01) > R.facteur(0.05) and R.facteur(0.05) > R.facteur(0.07))
+		R.facteur(0.01, 0.60) > R.facteur(0.05, 0.60)
+		and R.facteur(0.05, 0.60) > R.facteur(0.07, 0.60))
+
+	# ⚠️ **La rampe est PROPORTIONNELLE, et c'est ce bloc qui l'exige.** Une
+	# rampe fixe de 80 ms était plus longue que six des dix roots de la grille :
+	# elle les transformait en simple reprise, sans le moindre arrêt. Le banc l'a
+	# mesuré sur le vrai joueur avant qu'on y touche — le Parasite gardait 66 %
+	# de sa vitesse après un tir.
+	_check("la rampe d'un root court est plus courte que le plafond",
+		R.rampe_pour(0.10) < R.RECUPERATION, str(R.rampe_pour(0.10)))
+	_check("celle d'un root long est plafonnée à RECUPERATION",
+		is_equal_approx(R.rampe_pour(0.60), R.RECUPERATION), str(R.rampe_pour(0.60)))
+	_check("la rampe ne dépasse JAMAIS la durée du root",
+		R.rampe_pour(0.02) <= 0.02 and R.rampe_pour(0.08) <= 0.08)
 
 	# La rampe vit DANS la durée. C'est le contrôle qui empêche les dix durées
 	# de la grille de mentir.
 	var court := RootProfile.new()
 	court.duree = 0.08
-	_check("un root de 0,08 s est entièrement rampe (aucun arrêt franc)",
-		is_equal_approx(court.duree_arret_franc(), 0.0), str(court.duree_arret_franc()))
-	_check("un root de 0,08 s est déclaré imperceptible", court.est_imperceptible())
+	_check("un root de 0,08 s garde 0,06 s d'arrêt franc",
+		is_equal_approx(court.duree_arret_franc(), 0.06), str(court.duree_arret_franc()))
+	_check("et 0,06 s dépasse deux images : il n'est plus imperceptible",
+		not court.est_imperceptible())
 
 	var long := RootProfile.new()
 	long.duree = 0.60
 	_check("un root de 0,60 s garde 0,52 s d'arrêt franc",
 		is_equal_approx(long.duree_arret_franc(), 0.52), str(long.duree_arret_franc()))
 	_check("un root de 0,60 s n'est pas imperceptible", not long.est_imperceptible())
+
+	# ── Le contrôle qui manquait, et qui aurait crié le premier jour ────────
+	#
+	# Aucune des vérifications ci-dessus ne dit ce que le JOUEUR ressent : elles
+	# regardent le facteur à un instant, jamais la distance sur toute la fenêtre.
+	# Or c'est la distance qu'Adrien voit — « quand on tire, on soit immobile,
+	# ça marche pas ». On intègre donc le facteur au pas de la physique, sur les
+	# dix durées de la grille, et on exige que la part conservée reste faible.
+	#
+	# ⚠️ Le seuil (15 %) est au-dessus du 12,5 % que produit `PART_RAMPE`, mais
+	# très en dessous des 40 % de la rampe fixe : il attrape la régression sans
+	# se casser au premier réglage.
+	const PART_MAX := 0.15
+	var dt := 1.0 / 60.0
+	var pire := 0.0
+	var pire_duree := 0.0
+	for duree_root in [0.08, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.60]:
+		var restant: float = duree_root
+		var parcouru := 0.0
+		var pas := 0
+		# ⚠️ Le seuil n'est pas zéro, et ce n'est pas de la coquetterie. Six
+		# soustractions de 1/60 à 0,10 ne rendent pas exactement 0 mais un
+		# résidu de l'ordre de 1e-17 — pour lequel `facteur()` rend ~1,0, ce qui
+		# est JUSTE : le root est fini. Compter ce pas comme une image pleine
+		# DANS la fenêtre gonflait la part de 5 à 19 %, et le banc accusait le
+		# code d'un défaut qui n'appartenait qu'à sa propre boucle. Le dépôt a
+		# déjà payé cette forme-là : « un artefact de test taillé exactement
+		# comme un vrai défaut ».
+		while restant > 0.000001:
+			parcouru += R.facteur(restant, duree_root) * dt
+			restant = maxf(0.0, restant - dt)
+			pas += 1
+		var part: float = 0.0 if pas == 0 else parcouru / (pas * dt)
+		if part > pire:
+			pire = part
+			pire_duree = duree_root
+	_check("aucune classe ne garde plus de 15 % de sa vitesse pendant son root",
+		pire <= PART_MAX, "pire = %.1f %% à %.2f s" % [100.0 * pire, pire_duree])
 
 	# Le cas de l'Occulteur, seul à s'immobiliser après la rafale.
 	var rafale := RootProfile.new()
@@ -359,7 +413,9 @@ func _test_cablage_root() -> void:
 	_check("il se décrémente comme le rechargement",
 		t.contains("_root_restant = maxf(0.0, _root_restant - delta)"))
 	_check("il multiplie la vitesse par le facteur du profil",
-		t.contains("current_speed *= RootProfile.facteur(_root_restant)"))
+		t.contains("current_speed *= RootProfile.facteur(_root_restant, _root_duree)"))
+	_check("et il retient la durée du root en cours, pas celle de l'arme portée",
+		t.contains("var _root_duree: float"))
 	_check("il s'arme dans shoot(), à côté du cooldown",
 		t.contains("_root_restant = _cl.root.duree"))
 	_check("la rafale s'immobilise au relâchement de la détente",
@@ -1879,3 +1935,143 @@ func _test_archive() -> void:
 		gs.contains("_slug_de_classe(p1),") and gs.contains("_slug_de_classe(p2))"))
 	_check("et il rend vide plutôt qu'un repli",
 		gs.contains('return String(classe.slug()) if classe != null else ""'))
+
+
+## La grille arbitrée par Adrien le 2026-09-09.
+##
+## ⚠️ **Ce ne sont pas dix constantes recopiées.** Recopier une valeur garantit
+## que deux nombres restent égaux, jamais qu'ils veulent dire la même chose : la
+## suite vérifierait sa propre copie. Ce qui est vérifié ici, ce sont les
+## RÈGLES qu'Adrien a énoncées, et dont chacune porte sur plusieurs classes.
+func _test_grille_d_adrien() -> void:
+	print("\n[La grille arbitrée : chargeurs, dégâts, cadences]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+
+	# ── La règle des cadences ──────────────────────────────────────────────
+	# « Double toutes les cadences les plus faibles : pas plus de 3 tirs/s. »
+	# Deux bornes en sortent, et ce sont elles qu'on tient : plus rien sous
+	# 2 tirs/s (le doublement a eu lieu), et le plafond de 3 respecté par les
+	# classes qu'il concernait.
+	var la_plus_lente := 99.0
+	var lente_slug := ""
+	for idx in range(10):
+		var w = gs.weapon_for_index(idx)
+		var cadence: float = 1.0 / maxf(0.001, w.cooldown)
+		if cadence < la_plus_lente:
+			la_plus_lente = cadence
+			lente_slug = String(w.slug())
+	_check("aucune classe ne tire plus lentement que 2 fois par seconde",
+		la_plus_lente >= 2.0, "%s à %.2f tirs/s" % [lente_slug, la_plus_lente])
+
+	# Les quatre qui étaient sous le plafond y sont montées SANS le dépasser.
+	for slug in ["pompe", "sentinelle", "incendiaire", "fumiste"]:
+		var w = _classe_par_slug(gs, slug)
+		var cadence: float = 1.0 / maxf(0.001, w.cooldown)
+		_check("%s ne dépasse pas le plafond de 3 tirs/s" % slug,
+			cadence <= 3.001, "%.2f tirs/s" % cadence)
+
+	# ── Les chargeurs et les dégâts nommés un par un ───────────────────────
+	_check("Le Parasite tient 6 munitions",
+		_classe_par_slug(gs, "pistolet").max_ammo == 6,
+		str(_classe_par_slug(gs, "pistolet").max_ammo))
+	var fu = _classe_par_slug(gs, "fusil")
+	_check("L'Illusionniste tient 4 munitions", fu.max_ammo == 4, str(fu.max_ammo))
+	_check("et frappe à 60/25",
+		is_equal_approx(fu.damage_center, 60.0) and is_equal_approx(fu.damage_edge, 25.0),
+		"%.0f/%.0f" % [fu.damage_center, fu.damage_edge])
+	var oc = _classe_par_slug(gs, "occulteur")
+	_check("L'Occulteur frappe à 10-15",
+		is_equal_approx(oc.damage_center, 15.0) and is_equal_approx(oc.damage_edge, 10.0),
+		"%.0f/%.0f" % [oc.damage_center, oc.damage_edge])
+	# ⚠️ La conséquence qui donne son sens au chiffre : une rafale entière doit
+	# encore pouvoir tuer, sinon la classe n'a plus d'issue.
+	_check("mais sa rafale entière dépasse encore 100 points",
+		oc.damage_center * oc.max_ammo > 100.0,
+		"%.0f" % (oc.damage_center * oc.max_ammo))
+
+	gs.queue_free()
+	await process_frame
+
+
+func _classe_par_slug(gs: Node, slug: String):
+	for idx in range(10):
+		var w = gs.weapon_for_index(idx)
+		if String(w.slug()) == slug:
+			return w
+	return null
+
+
+## La recharge cartouche par cartouche du Terrassier.
+##
+## ⚠️ **Menée sur un vrai joueur, pas sur la donnée.** Le contrat d'Adrien est un
+## COMPORTEMENT — « on peut tirer dès qu'on a des balles » —, et aucune lecture
+## de `recharge_par_cartouche` ne dit si le tir passe vraiment. Le dépôt a déjà
+## payé cinq fois la différence entre « la propriété est bonne » et « la chose
+## se produit ».
+func _test_recharge_cumulative() -> void:
+	print("\n[La recharge cumulative du Terrassier]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+	gs.round_active = true
+	gs.countdown_left = 0.0
+	gs.ui._is_main_menu = false
+
+	# Elle appartient au Terrassier SEUL : une recharge d'un bloc qu'on pourrait
+	# interrompre n'aurait plus de coût du tout.
+	var combien := 0
+	for idx in range(10):
+		if gs.weapon_for_index(idx).recharge_par_cartouche:
+			combien += 1
+	_check("une seule classe recharge cartouche par cartouche", combien == 1, str(combien))
+	var pompe = _classe_par_slug(gs, "pompe")
+	_check("et c'est le Terrassier", pompe.recharge_par_cartouche)
+
+	# L'étape divise le total : la recharge complète coûte toujours ce qu'elle
+	# annonce, elle est seulement payable en six fois.
+	_check("six étapes valent le total annoncé",
+		is_equal_approx(pompe.duree_etape_recharge() * pompe.max_ammo, pompe.reload_time),
+		"%.3f × %d ≠ %.2f" % [pompe.duree_etape_recharge(), pompe.max_ammo, pompe.reload_time])
+	var pist = _classe_par_slug(gs, "pistolet")
+	_check("une recharge d'un bloc a une étape égale à son total",
+		is_equal_approx(pist.duree_etape_recharge(), pist.reload_time))
+
+	# ── Le comportement, sur le joueur ─────────────────────────────────────
+	var p = gs.p1
+	p.equip_weapon(pompe)
+	p.current_ammo = 0
+	p.start_reload()
+	_check("à zéro cartouche, le tir ne passe pas encore",
+		p.current_ammo == 0 and p.is_reloading)
+
+	# Une étape et un cheveu : la première cartouche doit être entrée.
+	var images := int(ceil(pompe.duree_etape_recharge() * 60.0)) + 2
+	for i in range(images):
+		await physics_frame
+	_check("après une étape, une cartouche est dans l'arme",
+		p.current_ammo >= 1, str(p.current_ammo))
+	_check("et le remplissage continue tout seul", p.is_reloading)
+	_check("cette recharge-là est interruptible", p.recharge_interruptible())
+
+	var avant: int = p.current_ammo
+	p.shoot()
+	_check("on peut tirer dès qu'on a des balles", p.current_ammo == avant - 1,
+		"%d → %d" % [avant, p.current_ammo])
+	_check("et le tir a coupé le remplissage", not p.is_reloading)
+
+	# ⚠️ Le contre-contrôle : une recharge d'un bloc résiste au même geste.
+	p.equip_weapon(pist)
+	p.current_ammo = 0
+	p.start_reload()
+	_check("une recharge d'un bloc n'est PAS interruptible",
+		not p.recharge_interruptible())
+	p.shoot()
+	_check("et le tir n'y passe pas", p.current_ammo == 0 and p.is_reloading)
+
+	gs.queue_free()
+	await process_frame

@@ -29,9 +29,21 @@ extends Resource
 ## la vitesse d'un coup produirait la même secousse, à l'instant précis où le
 ## joueur reprend la main — c'est-à-dire là où elle se sent le plus.
 ##
-## La rampe est courte (80 ms) et vit **dans** la durée du root, pas après :
-## un root de 0,10 s est donc 20 ms d'arrêt franc puis 80 ms de reprise, et non
-## 180 ms au total. Sans quoi les durées annoncées mentiraient toutes.
+## La rampe vit **dans** la durée du root, pas après : un root de 0,10 s dure
+## 0,10 s. Sans quoi les durées annoncées mentiraient toutes.
+##
+## ⚠️ **Et elle est PROPORTIONNELLE à cette durée, plafonnée à 80 ms.** Le
+## premier jet la fixait à 80 ms pour tout le monde ; mesuré au banc sur le vrai
+## joueur, le Parasite gardait alors **66 % de sa vitesse** après un tir : ses
+## 100 ms de root étaient 20 ms d'arrêt et 80 ms de reprise. Adrien l'a dit d'un
+## mot le 2026-09-09 — « quand on tire, on soit immobile, ça marche pas ».
+##
+## Une constante partagée entre des durées qui vont de 1 à 7,5 ne peut pas
+## vouloir dire la même chose aux deux bouts : sur l'arbalète elle est un détail,
+## sur le pistolet elle EST le root. La part, elle, dit la même chose partout —
+## et elle a le bon effet de bord : la rampe pèse là où l'arrêt est long et
+## visible, elle s'efface là où il est trop court pour qu'on voie quoi que ce
+## soit.
 
 ## Durée totale de l'immobilisation, en secondes, rampe comprise.
 @export var duree: float = 0.0
@@ -43,11 +55,28 @@ extends Resource
 ## suite, il s'immobilise une fois, à la fin.
 @export var apres_rafale: bool = false
 
-## La rampe de reprise, en secondes. Constante et non exportée : c'est une
+## Le PLAFOND de la rampe de reprise, en secondes. Non exportée : c'est une
 ## propriété du GESTE, la même pour toutes les classes. La rendre réglable
 ## inviterait à la doser par classe, et dix rampes différentes ne se
 ## distingueraient pas à l'œil tout en rendant chaque root incomparable.
+##
+## Ce n'est plus la rampe elle-même depuis le 2026-09-09, seulement sa borne
+## haute : au-delà de 80 ms, une reprise cesse d'être un raccord et devient un
+## ralenti qu'on lit comme une panne.
 const RECUPERATION := 0.08
+
+## La part de la durée du root passée à reprendre la vitesse.
+##
+## Un quart : il en reste trois pour l'arrêt franc, quelle que soit la classe.
+## C'est ce rapport, et non une durée, qui fait qu'un root de 0,08 s et un root
+## de 0,60 s **se sentent pareil** — l'un et l'autre immobilisent pendant les
+## trois quarts de ce qu'ils annoncent.
+const PART_RAMPE := 0.25
+
+
+## La rampe effective, en secondes, pour un root de cette durée.
+static func rampe_pour(duree_root: float) -> float:
+	return minf(RECUPERATION, maxf(0.0, duree_root) * PART_RAMPE)
 
 ## Le PLAFOND de l'échelle des roots, en secondes — décision d'Adrien du
 ## 2026-09-09 : « on garde 0,6 sec pour l'arbalète comme limite haute de temps
@@ -62,29 +91,42 @@ const PLAFOND := 0.60
 
 ## Le facteur à appliquer à la vitesse, selon ce qu'il reste de root.
 ##
-## Rend 0 pendant l'arrêt franc, puis remonte linéairement vers 1 sur les
-## dernières `RECUPERATION` secondes. Hors root, rend 1 — donc l'appelant peut
-## multiplier sans condition.
+## Rend 0 pendant l'arrêt franc, puis remonte linéairement vers 1 sur la rampe.
+## Hors root, rend 1 — donc l'appelant peut multiplier sans condition.
+##
+## ⚠️ **Il faut la durée TOTALE en plus du restant**, et c'est ce que la
+## signature impose : la rampe se déduit de la première, le point où l'on en est
+## de la seconde. Un appelant qui n'aurait que le compteur ne pourrait pas dire
+## si 30 ms restants sont la fin d'un root de pistolet ou le milieu d'un root
+## d'arbalète — deux facteurs différents.
 ##
 ## ⚠️ **Rend 1,0 pour un `restant` négatif ou nul**, jamais autre chose : un
 ## compteur qui a dépassé zéro ne doit pas se mettre à accélérer le joueur.
-static func facteur(restant: float) -> float:
+static func facteur(restant: float, duree_root: float) -> float:
 	if restant <= 0.0:
 		return 1.0
-	if restant >= RECUPERATION:
+	var rampe := rampe_pour(duree_root)
+	if restant >= rampe:
 		return 0.0
-	return 1.0 - restant / RECUPERATION
+	return 1.0 - restant / rampe
+
+
+## Le seuil en dessous duquel l'écran ne peut rien montrer, à 60 Hz.
+const DEUX_IMAGES := 2.0 / 60.0
 
 
 ## Le root est-il assez court pour être imperceptible ?
 ##
-## Sert au banc et aux contrôles : en dessous de la rampe, il n'y a pas d'arrêt
-## franc du tout, seulement une reprise. Le Spectre (0,08 s) est exactement à
-## cette limite, et c'est délibéré — sa classe ne doit pas *sentir* le root.
+## ⚠️ **Le critère a changé de nature le 2026-09-09**, en même temps que la
+## rampe. Il disait « le root tient entièrement dans la rampe », ce qui n'arrive
+## plus jamais depuis qu'elle est proportionnelle : il reste toujours trois
+## quarts d'arrêt franc. Il dit maintenant la seule chose qui vaille encore —
+## **cet arrêt tient-il en moins de deux images ?** En dessous, l'écran ne peut
+## rien montrer, quoi qu'annonce la fiche de classe.
 func est_imperceptible() -> bool:
-	return duree <= RECUPERATION
+	return duree_arret_franc() <= DEUX_IMAGES
 
 
 ## La part de la durée passée à l'arrêt complet, en secondes.
 func duree_arret_franc() -> float:
-	return maxf(0.0, duree - RECUPERATION)
+	return maxf(0.0, duree - rampe_pour(duree))
