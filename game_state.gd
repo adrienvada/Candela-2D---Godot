@@ -796,9 +796,6 @@ func rebuild_arena() -> void:
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
 	ArenaDecorScript.build(data, arena)
 
-	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
-	ArenaDecorScript.build(data, arena)
-
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
 	# défaut de la texture de torche, weapon_data.gd).

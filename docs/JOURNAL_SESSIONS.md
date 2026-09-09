@@ -247,6 +247,33 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 (suite) — session « retouche éblouissement » : un lot qui allait effacer trois sessions
+
+**L'arbre partagé portait un index qui supprimait 141 lignes et n'en ajoutait
+aucune.** Il se présentait comme du travail à committer, et la session fusée —
+relayant une demande d'Adrien de débloquer l'arbre — a proposé de le committer à
+ma place.
+
+**Ce n'était pas du travail, c'était du retard promu en intention.** J'avais
+synchronisé le ref `main` de l'arbre partagé par `update-ref`, deux fois, pour ne
+pas perturber la session qui y travaillait. Le pointeur a bougé, les fichiers
+non ; un `git add -A` a ensuite indexé cet écart. L'index retirait mes ajouts au
+banc, ma section de feuille de route, l'entrée de journal, et **la documentation
+du commit qui était le HEAD de l'arbre** — trois sessions.
+
+**Vérifié sur pièces avant d'agir** (`git show HEAD:<f>` contre `git show :<f>`),
+restauré depuis `HEAD` après sauvegarde dans `/tmp/filet_arbre_partage`.
+
+⚠️ **Le lot complet n'aurait rien attrapé** : supprimer un banc, une section de
+doc et des lignes de journal ne fait échouer aucune suite. Le vert aurait servi
+de caution. Le piège « Un répertoire de travail en retard MENT, et il ment en
+supprimant » porte le mécanisme, le contrôle qui tranche, et la règle.
+
+**Seul contenu unique du lot, conservé :** `game_state.gd` habillait l'arène deux
+fois — doublon né d'une double application du chantier décors (`f338e38` et
+`bad6083`, même message). Committé seul.
+
+
 ### 2026-09-09 — session « retouche éblouissement » : le banc réparé, le voile TOUJOURS PAS
 
 **Adrien a joué en réseau local et n'a pas vu le voile** — seulement « une grosse

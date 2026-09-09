@@ -3114,6 +3114,62 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
+
+**`git update-ref` sur une branche montée dans un AUTRE arbre de travail déplace
+le pointeur et ne touche pas aux fichiers.** C'est précisément pourquoi on
+l'emploie — pour synchroniser `main` sans perturber la session qui travaille dans
+l'arbre partagé. Aucun commit n'est perdu, et c'est vrai. **Mais l'arbre reste
+alors sur d'anciens fichiers, et `git status` compare ces anciens fichiers à la
+NOUVELLE pointe.**
+
+⚠️ **Le retard prend donc exactement l'apparence d'un nettoyage volontaire**, et
+un `git add -A` le promeut en intention. C'est la partie vicieuse : un fichier en
+retard ne ressemble pas à une erreur, il ressemble à quelqu'un qui a fait le
+ménage.
+
+**Ce que ça a produit le 2026-09-09.** Deux `update-ref` successifs sur l'arbre
+partagé, puis un `git add -A` par une autre session. L'index contenait alors :
+
+| fichier | ajouts | suppressions | ce qui disparaissait |
+|---|---|---|---|
+| `tools/banc_voile.gd` | 0 | 47 | la ligne de vérité et la touche `D` |
+| `docs/ROADMAP.md` (indexé) | 0 | 47 | le chantier « le voile est fade en jeu » |
+| `docs/ROADMAP.md` (non indexé) | 0 | 29 | « Un son à bout portant », la doc du HEAD lui-même |
+| `docs/JOURNAL_SESSIONS.md` | 0 | 18 | l'entrée de session |
+
+**Trois lots de trois sessions, dans un diff qui se présentait comme du travail à
+committer.** Une session tierce a failli le committer de bonne foi.
+
+#### Le contrôle qui n'attrape RIEN, et celui qui tranche
+
+**Le lot complet de suites ne voit pas ce défaut et ne peut pas le voir.**
+Supprimer une section de feuille de route, un banc et des lignes de journal ne
+fait échouer aucun test — le lot serait passé au vert, et le vert aurait servi de
+caution à la destruction. « J'aurais détruit trois lots avec un lot vert à
+l'appui » (session fusée, qui l'avait proposé et l'a reconnu).
+
+**La question qui tranche est ailleurs, et elle se pose en une ligne :** *ce que
+ce diff enlève existe-t-il en amont ?*
+
+    git show HEAD:<fichier> | grep -c "<un ancrage du contenu supprimé>"
+    git show :<fichier>     | grep -c "<le même ancrage>"
+
+Si `HEAD` répond 4 et l'index 0, le diff n'est pas du travail, c'est une perte.
+**Un diff fait de suppressions pures ne se juge donc pas par les tests, il se
+juge en cherchant le contenu ailleurs** — formulation de la session fusée, et
+elle vaut pour toute suppression, quelle qu'en soit la cause.
+
+#### La règle
+
+1. **Après tout `update-ref` sur une branche montée ailleurs, le dire à la
+   session qui tient cet arbre** — elle seule peut remettre ses fichiers à jour
+   sans risque. Le silence transforme un geste sûr en piège différé.
+2. **Ne jamais `git add -A` dans un arbre partagé sans avoir regardé le diff.**
+   Ce qu'on y trouve n'a pas forcément été écrit par quelqu'un.
+3. **Et devant un lot de suppressions pures, chercher le contenu en amont avant
+   de committer** — même, et surtout, quand les suites sont vertes.
+
 ### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
 
 **Deux citations écrites ce jour-là sont devenues fausses en moins de deux
