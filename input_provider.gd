@@ -13,6 +13,12 @@ func is_shoot_pressed() -> bool:
 func is_flashlight_pressed() -> bool:
 	return false
 
+## Remise à zéro de l'état propre à la torche (le cran plein d'un bouton
+## mécanique à deux crans, pour les fournisseurs qui en gardent un). No-op par
+## défaut : seul `LocalInputProvider` a une mémoire à effacer.
+func reset_flashlight_state() -> void:
+	pass
+
 func is_flare_pressed() -> bool:
 	return false
 

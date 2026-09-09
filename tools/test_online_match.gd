@@ -141,7 +141,12 @@ func _run_eblouissement() -> void:
 
 	# 80 px : dans la même flaque de lumière et dans la même cellule ouverte,
 	# quelle que soit la carte. Deux corps de 18 px de rayon ne s'y touchent pas.
-	Input.action_press("p1_torch")
+	#
+	# Force à moitié course, sous `LocalInputProvider.TORCH_CRAN_FOND` : ce test
+	# veut un simple maintien, pas le clic du second cran, qui resterait
+	# enclenché après le `action_release` qui suit.
+	var appui_leger := LocalInputProvider.TORCH_CRAN_FOND * 0.5
+	Input.action_press("p1_torch", appui_leger)
 	await _tenir_devant(p1, p2, 1.0)
 	_check("la torche braquée éblouit", p2.dazzle_amount > 0.4, str(p2.dazzle_amount))
 	_check("celui qui éclaire n'est pas ébloui", is_zero_approx(p1.dazzle_amount),
@@ -156,7 +161,7 @@ func _run_eblouissement() -> void:
 
 	# Derrière le porteur : hors du cône, donc rien. Sans ce contre-test, un
 	# calcul qui éblouirait TOUT LE MONDE passerait le premier contrôle.
-	Input.action_press("p1_torch")
+	Input.action_press("p1_torch", appui_leger)
 	await _tenir_derriere(p1, p2, 1.0)
 	_check("dans le dos du faisceau, rien", is_zero_approx(p2.dazzle_amount),
 		str(p2.dazzle_amount))

@@ -14765,6 +14765,61 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
 
 ---
 
+## Chantier — Bouton mécanique de la torche (inscrit et fait le 2026-09-09)
+
+**Objectif :** faire sentir l'allumage/extinction de la torche comme un vrai
+bouton de lampe qu'on actionne, pas comme un seuil binaire sur une gâchette
+analogique.
+
+**Deux pistes étudiées :**
+- **Gâchettes adaptatives** (simuler la résistance d'un vrai ressort) —
+  **écartée.** Godot 4.7 n'a aucune API pour ça ; la résistance programmable
+  n'existe que via le protocole propriétaire du DualSense (rapport HID 0x05),
+  hors de portée de l'`Input` singleton. Il faudrait un GDExtension natif
+  parlant directement au périphérique (type `hidapi`), DualSense
+  uniquement — rien pour Xbox ni les autres manettes. Pas un socle commun ;
+  à rouvrir seulement si une version PS5-exclusive a un jour un sens.
+- **Bouton mécanique à deux crans** (retenue) : `p1_torch`/`p2_torch` est déjà
+  une gâchette analogique (L2, `JOY_AXIS_TRIGGER_LEFT`), donc la profondeur
+  d'appui existait déjà sans rien ajouter au matériel — seul
+  `is_flashlight_pressed()` ne la lisait pas.
+
+**Implémentation, entièrement dans `LocalInputProvider`** (rien d'autre ne
+change : `flashlight_on` reste un booléen, donc le réseau, le replay et les
+fantômes de killcam ne voient rien de différent) :
+- Appui léger (au-dessus de la zone morte 0.2, sous 0.9 de la course) :
+  éclaire tant que tenu — comportement inchangé.
+- Appui à ≥ 90 % de la course (`TORCH_CRAN_FOND`) : clic qui bascule un état
+  enclenché, détecté sur le FRONT montant pour ne pas rebasculer à chaque
+  image d'un appui tenu à fond.
+- Une manette rebindée sur un simple bouton (pas une gâchette) n'a que 0 ou 1 :
+  elle saute donc directement au clic, ce qui est le comportement voulu d'un
+  bouton sans course.
+
+**Piège fermé avant qu'il morde :** un clic laissé enclenché avant une mort
+aurait rallumé la torche tout seul à la manche suivante, sans qu'aucune
+gâchette n'ait bougé — la mémoire du clic survivait au `flashlight_on = false`
+forcé par la fin de manche. `reset_flashlight_state()` (base no-op sur
+`InputProvider`, implémentée dans `LocalInputProvider`) est appelée par
+`Player.reset_flashlight_latch()`, câblée aux deux points où `_start_round()`/
+`_do_start_round()` appellent déjà `reset_step_tracker()` dans `game_state.gd`.
+
+**Validation :**
+- `tools/test_torche_bouton.gd` (nouvelle suite, ajoutée à `run_suites.sh`) :
+  appui léger, clic qui reste enclenché, second clic qui débascule, et hygiène
+  du reset de manche.
+- `tools/test_online_match.gd` : ses `Input.action_press("p1_torch")`
+  simulaient un appui plein, qui aurait maintenant engagé le clic et laissé la
+  torche allumée après le `action_release` qui suit. Passés à un appui léger
+  explicite (`TORCH_CRAN_FOND * 0.5`) pour garder l'intention du test — un
+  simple maintien, pas la mécanique du clic.
+- `tools/run_suites.sh` : toutes les suites passent (seul `fail=1` restant à
+  la fin du lot est un défaut préexistant et sans rapport — 17 `.import`
+  d'illustrations de menu présents mais hors dépôt, signalé sans être touché
+  ici, hors périmètre de ce chantier).
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
