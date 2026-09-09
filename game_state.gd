@@ -221,10 +221,20 @@ var _match_id: String = ""
 # mécanisme qui n'existe plus.
 var _pending_p2_weapon_idx: int = -1
 
-var weapon_pistolet: WeaponData
-var weapon_fusil: WeaponData
-var weapon_pompe: WeaponData
-var weapon_arbalete: WeaponData
+## Les quatre armes historiques, devenues des CLASSES — chantier CLASSES.
+##
+## ⚠️ Le type change, les quatre blocs impératifs de `_ready()` NON : ils sont
+## restés mot pour mot, seul `WeaponData.new()` est devenu `ClassData.new()`.
+## Recopier leurs valeurs dans un catalogue neuf aurait garanti que deux jeux de
+## nombres restent égaux, jamais qu'ils veuillent dire la même chose.
+var weapon_pistolet: ClassData
+var weapon_fusil: ClassData
+var weapon_pompe: ClassData
+var weapon_arbalete: ClassData
+
+## Le catalogue des dix classes, indexé de 0 à 9 — l'index qui circule sur le
+## fil et dans les râteliers. Bâti en fin de `_ready()`, après les quatre blocs.
+var _classes: Array[ClassData] = []
 
 @onready var ui = $UI
 @onready var vp1 = $SplitScreen/ViewportContainer1/SubViewport1
@@ -306,9 +316,9 @@ func _ready():
 	
 	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
 	# « pistolet », 35° de demi-angle, échelle 1,6, 10 munitions, 2,2s recharge.
-	weapon_pistolet = WeaponData.new()
+	weapon_pistolet = ClassData.new()
 	
-	weapon_fusil = WeaponData.new()
+	weapon_fusil = ClassData.new()
 	weapon_fusil.name = "Fusil"
 	weapon_fusil.cooldown = 0.24
 	weapon_fusil.max_ammo = 24
@@ -329,7 +339,7 @@ func _ready():
 	# loin que ce qu'elle montre. Le fusil tombe à 0,96 écran, le pistolet à 0,85.
 	weapon_fusil.torch_scale = 1.8
 	
-	weapon_pompe = WeaponData.new()
+	weapon_pompe = ClassData.new()
 	weapon_pompe.name = "Pompe"
 	weapon_pompe.cooldown = 0.9
 	weapon_pompe.max_ammo = 6
@@ -347,7 +357,7 @@ func _ready():
 	weapon_pompe.torch_angle_deg = 60.0
 	weapon_pompe.torch_scale = 1.0
 	
-	weapon_arbalete = WeaponData.new()
+	weapon_arbalete = ClassData.new()
 	weapon_arbalete.name = "Arbalète"
 	weapon_arbalete.cooldown = 0.3
 	weapon_arbalete.max_ammo = 1
@@ -377,7 +387,9 @@ func _ready():
 	weapon_arbalete.bullet_color = Color(Charte.ACIER, 1.0)
 	weapon_arbalete.bullet_width = 3.0
 	weapon_arbalete.bullet_light_energy = 0.0
-	
+
+	_batir_catalogue()
+
 	ReplaySystem.replay_spawn_bullet.connect(_on_replay_spawn_bullet)
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
@@ -2539,6 +2551,205 @@ func weapon_for_index(idx: int) -> WeaponData:
 		2: return weapon_pompe
 		1: return weapon_fusil
 		_: return weapon_pistolet
+
+
+## Le catalogue des dix classes — chantier CLASSES, étape 1.
+##
+## ## Les index NE BOUGENT PAS, et c'est tout l'objet de cette étape
+##
+## Les quatre premiers gardent exactement le sens qu'ils avaient : 0 pistolet,
+## 1 fusil, 2 pompe, 3 arbalète. Les six neufs s'ajoutent à la suite, de 4 à 9.
+## **Rien de ce qui circule aujourd'hui ne change de sens** — ni `RankLoadout`,
+## ni les râteliers de l'interface, ni `rpc_spawn_bullet(..., weapon_idx)`.
+## L'étape est délibérément INERTE : elle ajoute une structure, elle ne rebranche
+## rien. Le jour où la table rang → classe entrera en vigueur, ce sera un lot à
+## part, avec sa montée de version de protocole.
+##
+## ## Les chiffres des quatre existantes ne sont pas retouchés
+##
+## Leurs blocs impératifs plus haut sont la vérité, et ils portent des décisions
+## actées — les temps de recharge du chantier MUNITIONS, les portées de torche
+## arbitrées le 2026-08-24. Cette fonction ne fait que leur ATTACHER trois
+## profils. ⚠️ La spécification des classes demande par ailleurs un pistolet à
+## 6 balles et cadence doublée là où le jeu en a 10 : **c'est un écart de contenu
+## à soumettre à Adrien, pas un réglage à glisser ici.**
+func _batir_catalogue() -> void:
+	# ── Les quatre existantes reçoivent leurs profils ────────────────────────
+	weapon_pistolet.libelle = "Le Parasite"
+	weapon_pistolet.rang = 1
+	weapon_pistolet.root = _root(0.10)
+	weapon_pistolet.fusees = _fusees(1, 0.0)
+	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
+
+	weapon_fusil.libelle = "L'Illusionniste"
+	weapon_fusil.rang = 3
+	weapon_fusil.root = _root(0.25)
+	weapon_fusil.fusees = _fusees(1, 0.0)
+	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
+
+	weapon_pompe.libelle = "Le Terrassier"
+	weapon_pompe.rang = 5
+	weapon_pompe.root = _root(0.35)
+	weapon_pompe.fusees = _fusees(3, 18.0)
+	weapon_pompe.gadget = _gadget("poussiere", "La poussière")
+
+	weapon_arbalete.libelle = "Le Braconnier"
+	weapon_arbalete.rang = 4
+	weapon_arbalete.root = _root(0.60)
+	weapon_arbalete.fusees = _fusees(1, 0.0)
+	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme", true)
+
+	# ── Les six neuves ───────────────────────────────────────────────────────
+	# ⚠️ Leurs assets n'existent pas encore : ni cookie de torche, ni sprite. Le
+	# catalogue les déclare quand même, et `ClassData.assets_presents()` dit
+	# lesquelles sont jouables. Rien ne les équipe tant que l'étape 3 n'a pas
+	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
+	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
+	fumiste.name = "Pistolet lourd"
+	fumiste.cooldown = 0.42
+	fumiste.max_ammo = 3
+	fumiste.reload_time = 2.8
+	fumiste.damage_center = 70.0
+	fumiste.damage_edge = 45.0
+	fumiste.muzzle_flash_intensity = 1.0  # ⚠️ plafonné à 1 par `pic_de_flash`
+	fumiste.muzzle_flash_duration = 0.16
+	fumiste.root = _root(0.30)
+	fumiste.fusees = _fusees(1, 0.0)
+	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie")
+
+	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
+	incendiaire.name = "Fusil de détresse"
+	incendiaire.cooldown = 0.55
+	incendiaire.max_ammo = 2
+	incendiaire.reload_time = 3.2
+	incendiaire.damage_center = 55.0
+	incendiaire.damage_edge = 35.0
+	incendiaire.bullet_speed = 6000.0
+	incendiaire.root = _root(0.40)
+	incendiaire.fusees = _fusees(2, 0.0)
+	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises", true)
+
+	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
+	sentinelle.name = "Fusil à verrou"
+	sentinelle.cooldown = 0.85
+	sentinelle.max_ammo = 2
+	sentinelle.reload_time = 4.0
+	sentinelle.damage_center = 75.0
+	sentinelle.damage_edge = 60.0
+	sentinelle.bullet_speed = 16000.0
+	sentinelle.root = _root(0.50)
+	sentinelle.fusees = _fusees(1, 0.0)
+	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact")
+
+	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
+	occulteur.name = "Pistolet-mitrailleur"
+	occulteur.cooldown = 0.09
+	occulteur.max_ammo = 8
+	occulteur.reload_time = 2.6
+	occulteur.damage_center = 26.0
+	occulteur.damage_edge = 16.0
+	occulteur.spread_bloom_per_shot_deg = 3.0
+	occulteur.max_spread_bloom_deg = 16.0
+	occulteur.muzzle_flash_intensity = 0.6
+	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
+	occulteur.fusees = _fusees(1, 0.0)
+	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée")
+
+	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
+	allumeur.name = "Carabine double"
+	allumeur.cooldown = 0.20
+	allumeur.max_ammo = 2
+	allumeur.reload_time = 2.4
+	allumeur.damage_center = 60.0
+	allumeur.damage_edge = 40.0
+	allumeur.muzzle_flash_intensity = 1.0
+	allumeur.root = _root(0.20)
+	allumeur.fusees = _fusees(2, 12.0)
+	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium", true)
+
+	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
+	spectre.name = "Pistolet silencieux"
+	spectre.cooldown = 0.22
+	spectre.max_ammo = 4
+	spectre.reload_time = 2.6
+	spectre.damage_center = 45.0
+	spectre.damage_edge = 30.0
+	# Zéro flash, comme l'arbalète : c'est ce qui fait la classe furtive.
+	spectre.muzzle_flash_intensity = 0.0
+	spectre.muzzle_flash_duration = 0.0
+	spectre.backlight_multiplier = 0.1
+	spectre.root = _root(0.08)
+	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
+	spectre.gadget = _gadget("voile", "Le voile")
+
+	_classes = [
+		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,
+		fumiste, incendiaire, sentinelle, occulteur, allumeur, spectre,
+	]
+
+	# ⚠️ Le catalogue CRIE si un profil manque, il ne se répare pas. Une classe
+	# sans profil n'est pas un cas dégradé : c'est un crash différé, au premier
+	# `classe.root.duree` lu sur un `null`, en pleine manche.
+	for c in _classes:
+		if not c.est_complete():
+			push_error("GameState : classe « %s » sans profil complet" % c.slug())
+
+
+## Une classe neuve, avec ce que toutes partagent. Les valeurs propres à l'arme
+## se posent par-dessus, comme les quatre blocs historiques le font déjà.
+func _classe(slug: String, libelle: String, rang: int,
+		demi_angle: float, echelle: float) -> ClassData:
+	var c := ClassData.new()
+	c.libelle = libelle
+	c.rang = rang
+	c.torch_cookie = slug  # une seule clé : cookie, sprite, sons, icône
+	c.torch_angle_deg = demi_angle
+	c.torch_scale = echelle
+	return c
+
+
+func _root(duree: float, apres_rafale: bool = false) -> RootProfile:
+	var r := RootProfile.new()
+	r.duree = duree
+	r.apres_rafale = apres_rafale
+	return r
+
+
+func _fusees(stock: int, periode: float) -> FlareProfile:
+	var f := FlareProfile.new()
+	f.stock = stock
+	f.periode_recharge = periode
+	return f
+
+
+func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
+	var g := GadgetProfile.new()
+	g.slug = slug
+	g.libelle = libelle
+	g.eblouit = eblouit
+	return g
+
+
+## Le catalogue, en lecture. Rend une copie du tableau : le contenu reste
+## partagé, mais personne ne réordonne la liste de l'extérieur.
+func classes() -> Array[ClassData]:
+	var copie: Array[ClassData] = []
+	copie.assign(_classes)
+	return copie
+
+
+## La classe d'un index d'arme, ou `null` hors bornes.
+##
+## ⚠️ **Ne double PAS `weapon_for_index()`** : celle-là reste la seule table de
+## résolution pour les quatre armes historiques, et son commentaire dit pourquoi.
+## Celle-ci lit le catalogue, qui les contient. Deux chemins vers la même vérité
+## sont exactement ce que le dépôt a payé trois fois le 2026-08-24 — d'où le
+## contrôle croisé dans `tools/test_classes.gd`, qui exige que les deux
+## répondent la même chose sur 0 à 3.
+func classe_pour_index(idx: int) -> ClassData:
+	if idx < 0 or idx >= _classes.size():
+		return null
+	return _classes[idx]
 
 ## L'arsenal commun de ce match, règle du miroir appliquée. Vide hors match
 ## apparié : ailleurs, l'arme est choisie au menu et rien n'est à aligner.

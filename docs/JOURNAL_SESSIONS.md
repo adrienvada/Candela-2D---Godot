@@ -26,7 +26,9 @@ par sujet impraticable.
 | **Menus et méta** — Phases 5, 6, 7 | `ui.gd`, `settings_manager.gd`, `map_gallery.gd`, `ranked_identity.gd`, `asset_manifest.gd`, `hub_screen.gd`, `menu_hub.gd`, `menu_theme.gd`, `screen_*.gd`, `supabase/**` | Session « menus » |
 | **Mise à jour du jeu** — Phase 9 | `update_manifest.gd`, `update_installer.gd`, `update_manager.gd`, `patch_loader.gd`, `screen_update.gd`, `tools/test_mise_a_jour.gd`, `tools/test_autoloads.gd`, `tools/fabrique_manifeste.sh`, `.github/workflows/release.yml`, `docs/MISE_A_JOUR.md` | Session « mise à jour » — **livrée le 2026-08-24**, plus personne dessus |
 | **Game feel en manche** — vagues V1 à V6 | `player.gd`, `bullet.gd`, `blood_stain.gd`, `particle_pool.gd`, `light_textures.gd`, `training_target*.gd`, `*.gdshader`, `audio_manager.gd`, `tools/generate_music_streams.gd` | Session « game feel » |
-| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | `eblouissement.gd`, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
+| **Éblouissement et brouillage** — chantiers B et « retouche éblouissement » | ~~`eblouissement.gd`~~ **cédé au chantier CLASSES le 2026-09-09**, `brouillage.gd`, `brouillage_vue.gd`, `brouillage_flou.gdshader`, `voile_eblouissement.gdshader`, `voile_textures.gd`, `tools/banc_voile.*`, `tools/banc_brouillage.*`, `tools/banc_photocopie.*`, `tools/test_brouillage.gd`, `tools/test_eblouissement.gd` | Session « retouche éblouissement » — **le brouillage rejoint le lot le 2026-09-07, confié par Adrien** ; `*.gdshader` y reste une exception nommée à la ligne « game feel », pas une exclusivité |
+| **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), `ui.gd` (domaine « menus » — l'uniforme de taille du voile s'y demande), `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
+
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
@@ -2583,3 +2585,42 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - 63/63 suites solo headless + 7/7 scénarios réseau duo (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script** dans `tools/run_suites.sh` (274s).
 
 
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 1, le socle de données)
+
+**Ce que le lot ajoute, et ce qu'il ne touche pas.**
+- Quatre fichiers neufs, **sans aucune dépendance** : `root_profile.gd`,
+  `flare_profile.gd`, `gadget_profile.gd`, `class_data.gd`. Plus
+  `tools/test_classes.gd` (40 contrôles), inscrit dans `SUITES`.
+- `game_state.gd` : les quatre déclarations d'arme passent à `ClassData`, les
+  quatre `WeaponData.new()` deviennent `ClassData.new()`, et `_batir_catalogue()`
+  monte les dix classes en fin de `_ready()`.
+- ⚠️ **Les quatre blocs impératifs d'arme n'ont PAS été touchés**, pas une
+  valeur. Ils portent des décisions actées — temps de recharge du chantier
+  MUNITIONS, portées de torche du 2026-08-24. Les profils leur sont attachés
+  par-derrière ; recopier leurs nombres dans un catalogue neuf aurait garanti que
+  deux jeux de valeurs restent égaux, jamais qu'ils veuillent dire la même chose.
+- ⚠️ **Étape délibérément INERTE** : les index 0 à 3 gardent leur sens, les six
+  neufs s'ajoutent de 4 à 9. `RankLoadout`, les râteliers et `rpc_spawn_bullet`
+  ne changent pas. La table rang → classe sera un lot à part.
+
+**Ce qui est repris et ce qui est demandé.**
+- `eblouissement.gd` est **cédé par la session « retouche éblouissement »**
+  (chantier clos, cession par message le 2026-09-09). La table de répartition est
+  mise à jour ici, par moi, comme convenu entre nous deux — pas par elle.
+- `player.gd`, `bullet.gd` (domaine « game feel ») et `ui.gd` (domaine « menus »)
+  seront **demandés avant écriture**, étape par étape. En particulier l'uniforme
+  de taille du voile dans `voile_eblouissement.gdshader` et la ligne
+  correspondante dans `_poser_voile` : ça se demande, ça ne se fait pas d'office.
+
+**Ce que ce lot a appris, et qui est consigné en « Pièges connus ».**
+- `class_data.gd` déclarait ses membres avec les identifiants globaux
+  (`@export var root: RootProfile`). En `--script`, le cache des classes globales
+  n'existe pas encore : ni le fichier ni sa suite ne compilent. Les trois types
+  passent par `preload`. Même piège que celui contourné par `tools/test_arsenal.gd`.
+- Une entrée neuve, « **La phrase doit porter la PORTÉE de la commande** », écrite
+  à deux sessions : huit occurrences relevées en une journée, dont deux de moi.
+
+**Écart de contenu signalé, non appliqué :** la spécification demande un pistolet
+à 6 balles et cadence doublée, le jeu en a 10. C'est de l'équilibrage, pas de la
+structure — à soumettre à Adrien.

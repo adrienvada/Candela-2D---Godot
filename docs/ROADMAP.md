@@ -2404,6 +2404,11 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
+| **La table rang → classe suit l'échelle de LUMIÈRE, pas celle de puissance** (2026-09-09, Adrien) | Deux ancrages d'Adrien : le rang 1 est celui du pistolet, et **Brasier est le pyrotechnicien**. Le second dit tout — Brasier n'est pas « le sixième palier de puissance », c'est *un feu*, et on y met celui qui fait du feu. L'échelle des catégories se lit donc littéralement, d'Aveugle à Candela : 1 Parasite, 2 Fumiste, 3 Illusionniste, 4 Braconnier, 5 Terrassier, 6 Incendiaire, 7 Sentinelle, 8 Occulteur, 9 Allumeur, 10 Spectre. Les trois derniers paliers basculent en **opposition** plutôt qu'en correspondance, et c'est le renversement que l'échelle appelait : au sommet de l'échelle de la lumière on trouve **la seule classe qui n'en émet aucune** — zéro fusée, zéro flash, arme silencieuse. Deux des quatre armes historiques ne changent pas de rang (pistolet à Aveugle, arbalète à Lanterne) ; le fusil passe de 2 à 3, le pompe de 3 à 5. ⚠️ La table **reste non monotone**, ce que `tools/test_arsenal.gd` vérifie explicitement pour qu'une relecture ne la « corrige » pas. ⚠️ Les paliers du milieu sont justifiés par le THÈME et par rien d'autre : un Braconnier à 0,60 s de root au rang 4 est peut-être trop dur pour un quatrième palier, et ça se tranchera au banc, pas sur le papier. |
+| **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
+| **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
+| **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
 | **Navigation manette hybride : D-Pad case par case et joystick curseur virtuel avec bascule instantanée** (2026-09-07, Adrien) | Deux modes de contrôle complémentaires à la manette dans les menus : le D-Pad (`JOY_BUTTON_DPAD_*`) et les flèches clavier naviguent de manière discrète case par case (curseur virtuel masqué). Le stick analogique fait apparaître un curseur virtuel fluide (`VirtualGamepadCursor`, halo `Charte.AMBRE`, accélération progressive) qui se dirige comme une souris, survole les contrôles interactifs, met à jour le focus/panneau d'aperçu et active au bouton de sélection (`p1_menu_select`). Dès qu'une flèche/D-Pad est pressée ou que la souris physique bouge, le curseur virtuel de joystick s'efface immédiatement. Découplage des axes analogiques dans `input_setup.gd` sur `p1_menu_*` / `p2_menu_*` pour prévenir les sauts de focus involontaires. |
 | **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. |
@@ -3125,6 +3130,90 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### La phrase doit porter la PORTÉE de la commande (2026-09-09)
+
+**Sept fois, dont six en une seule journée et sur trois sessions, la même chose
+s'est produite : une vérification juste, et une phrase plus large qu'elle.**
+Aucune commande n'était fausse. Aucun relevé n'était bâclé. Le défaut n'est
+jamais dans le contrôle, il est **dans le trajet du contrôle à la phrase** — et
+c'est ce qui le rend invisible, parce qu'on se souvient d'avoir vérifié.
+
+| Ce qui a été vérifié | Ce qui a été affirmé | Ce que ça cachait |
+|---|---|---|
+| « le lot complet passe » | « le commit ne casse rien » | supprimer un banc et deux sections de doc ne fait échouer aucune suite |
+| ancrages comptés sur `main` **local** | « rien ne manque » | `origin/main` avait perdu trois lots |
+| image du banc (rapport 1,78) contre image du jeu (0,889) | « le jeu rend fade » | le shader normalise par la demi-diagonale : facteur 1,52 entre les deux |
+| `git log --since=2026-09-08 -- eblouissement.gd` → 0 | « aucun commit de moi sur ce fichier » | trois existent, des 18 et 24 août |
+| deux appelants du groupe `"fusees"` ouverts sur cinq | « le groupe est interrogé par trois systèmes aux critères différents » | `player.gd` n'a **aucune** garde — un nœud sans `occultation_pour` y ferait planter le jeu à chaque image, et `replay_system.gd` n'utilise pas le groupe du tout |
+| ancrages `fichier:ligne` relevés sur `360a85f` | « vérifié dans le code » | `main` était 36 commits plus loin, dont `ui.gd` +224 lignes |
+| une phrase se souvenait d'avoir été écrite | « la formule du correctif est : *c'est d'en avoir fait une propriété du jeu* » | elle n'existe pas dans le dépôt ; le texte réel dit « **le raisonnement tient, c'est la conclusion qui ne tenait pas** » (l. 12202) |
+
+Les quatre premières sont relevées par la session « retouche éblouissement », les
+deux suivantes par la session « 10 classes ». **Aucune des deux n'a remarqué la
+sienne ; chacune a vu celle de l'autre.** C'est la seule raison pour laquelle ce
+piège est écrit — un défaut qu'on ne voit que chez le voisin ne se corrige pas
+par l'attention.
+
+La septième est arrivée **pendant la rédaction de cette entrée**, et par la même
+porte : une session proposait une citation à reprendre, de mémoire, sans la
+relire. Elle a été attrapée parce que citer sans vérifier aurait commis le piège
+dans le texte qui le documente. On la garde : c'est la meilleure preuve que le
+motif ne se corrige pas en le connaissant.
+
+### La règle, et elle est actionnable
+
+**Une phrase de vérification doit dire ce qui a été REGARDÉ, pas seulement ce
+qu'on en conclut.**
+
+- « `git log --since=2026-09-08` ne rend rien » — se relit, se conteste, et le
+  lecteur voit immédiatement la fenêtre.
+- « aucun commit de moi » — ne se relit pas. Rien dans la phrase ne dit sur quoi
+  elle repose, donc rien ne permet de la mettre en doute, **pas même à son
+  auteur.**
+
+⚠️ **Mais la règle ne vaut PAS pour toute phrase, et c'est important.** Appliquée
+partout, elle produit une prose entièrement sous réserve où chaque affirmation
+traîne son périmètre : illisible, et surtout **quand tout est nuancé, plus rien
+ne signale ce qui est fragile.** On aurait remplacé un défaut discret par un
+bruit permanent.
+
+**Le périmètre s'écrit quand la phrase engage un geste chez celui qui la lit.**
+Une phrase de contexte n'en a pas besoin. « `origin/main` contient ton travail »
+en a besoin, parce que quelqu'un va pousser en s'y fiant.
+
+### Une occurrence plus ancienne, et plus chère : celle qui est ÉCRITE
+
+Le 2026-08-27, ce document affirmait : « En écran scindé l'appareil vit dans un
+`SubViewport`, où canevas et framebuffer coïncident, et le défaut ne devrait pas
+apparaître. » **Le raisonnement était juste — il a été revérifié le 2026-09-07 et
+il tient.** C'était une déduction d'une hypothèse, rédigée comme une propriété du
+jeu. Elle a tenu **onze jours**, et le défaut a fini par être rapporté en écran
+scindé, dans les deux vues, sur des captures d'Adrien.
+
+Ce que cette occurrence ajoute aux sept autres : celles-ci sont des phrases
+**dites à quelqu'un**, elles se périment avec la conversation. Celle-là est
+**écrite dans le dépôt** — elle ne se périme pas, elle attend le lecteur suivant,
+et elle dispense d'aller voir. Personne n'a instrumenté l'écran scindé pendant
+onze jours, puisque le document disait qu'il n'y avait rien à y voir.
+
+**Une affirmation trop large voyage, et elle voyage d'autant mieux qu'elle est
+écrite.** Le 2026-08-25 en porte déjà la preuve, à propos d'un paragraphe périmé
+de `CLAUDE.md` : *« une session s'y est fiée sans aller voir le code et a bâti une
+contrainte inter-chantiers sur un état périmé. »*
+
+### Famille
+
+Même famille que « **un contrôle textuel épingle un IDENTIFIANT, jamais un SENS** »
+(2026-08-25) et « **certifier la moitié d'une affirmation la fait passer tout
+entière** » (2026-08-25) : dans les trois cas la mesure est bonne et la conclusion
+déborde. La sous-section « un contrôle juste, mais braqué à côté » de « **Un
+répertoire de travail en retard MENT** » (2026-09-09) dit la même chose sous un
+troisième angle.
+
+⚠️ **Ce piège ne dit PAS « vérifiez mieux ».** Ce serait passer à côté : les huit
+vérifications étaient bonnes. Il dit **« écrivez ce que vous avez regardé »**, et
+seulement là où quelqu'un va agir dessus.
 
 ### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
 
@@ -4339,6 +4428,36 @@ de l'affichage, l'assertion finale doit lire une propriété **du nœud rendu** 
 alimenté. Les deux sont à un appel de distance, et un seul dit la vérité.
 
 ### Un worktree neuf n'a pas de cache d'import, et le banc rougit ailleurs (2026-08-24)
+
+#### Corollaire : un `class_name` NEUF exige un réimport, et l'erreur ne le dit pas (2026-09-09)
+
+Le cache d'import ne porte pas que les `.import` : il porte aussi
+`.godot/global_script_class_cache.cfg`, **la table des classes globales**. Un
+fichier neuf qui déclare `class_name` n'y entre qu'au réimport suivant.
+
+Vécu le 2026-09-09, chantier CLASSES, étape 1 : quatre scripts neufs
+(`ClassData`, `RootProfile`, `FlareProfile`, `GadgetProfile`), `game_state.gd`
+qui les nomme, et un lot qui part **rouge de bout en bout** —
+`Could not find type "ClassData" in the current scope`, répété, plus
+`test_eblouissement_en_jeu` **bloqué 120 s puis tué** parce que la scène
+principale ne compilait plus. Coût : quinze minutes de lot, pour un cache.
+
+⚠️ **Et le piège n'est pas d'avoir oublié le réimport — je l'avais fait.** Je
+l'avais fait *avant* d'écrire les fichiers. « J'ai réimporté » était donc vrai,
+et sans valeur : la commande avait répondu à une question (« le cache existe ? »)
+dont je tirais une autre réponse (« le cache est à jour ? »). C'est très
+exactement le piège de la section « **La phrase doit porter la PORTÉE de la
+commande** », rencontré une heure après l'avoir écrit — et par son auteur.
+
+**La règle** : après toute création ou suppression d'un fichier portant
+`class_name`, `godot --headless --path . --import` **en avant-plan**, avant le
+lot. Le contrôle qui le prouve ne coûte rien :
+
+    grep -c "ClassData" .godot/global_script_class_cache.cfg
+
+Zéro veut dire que le lot va rougir, et il rougira **ailleurs** — sur la suite
+qui charge la scène, jamais sur le fichier fautif.
+
 
 Premier lancement des suites depuis un `git worktree` fraîchement créé :
 **`test_charte` échoue**, seul, sans qu'une ligne de code soit en cause. Le même
@@ -13758,6 +13877,90 @@ d'intérêt (torches, canons, fusées) et un effet visuel animé unique par artw
 - **Validation complète :**
   - Suite de dosage `tools/test_dosage_audio.gd` : 70 contrôles sur 70 passés au vert.
   - `tools/run_suites.sh` : **63 suites solo + 7 scénarios duo** réseau (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script**.
+
+---
+
+## Chantier — les dix classes asymétriques (inscrit le 2026-09-09)
+
+**Ce que ce chantier remplace.** Les quatre armes du jeu deviennent dix
+**classes**, chacune portant une arme, un *root* (immobilisation calibrée après
+le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde
+et destructible à la balle. Les cinq décisions d'Adrien du jour sont dans
+« Décisions actées » ; ce qui suit est l'état d'avancement.
+
+### Ce que le choix des gadgets a révélé
+
+Adrien a choisi les dix gadgets un par un. Sa sélection a une propriété qu'il ne
+visait pas : **les dix gadgets ne font que six objets techniques**, et deux
+d'entre eux sont littéralement le même nœud avec un polygone différent (le voile
+du Spectre et l'ombre habitée de l'Occulteur sont un `StaticBody2D` plus un
+`LightOccluder2D`, l'un en bâche tendue, l'autre en découpe de torse). Les étapes
+sont donc regroupées par **famille technique**, et non classe par classe.
+
+**Et un gadget justifie à lui seul l'éblouissement généralisé, mieux que
+l'équilibrage ne le faisait.** La torche fantôme du Braconnier est une lumière
+posée qui porte le cookie de sa classe : si elle n'éblouit pas, il suffit à
+l'adversaire de la regarder en face pour savoir que c'est un faux. *Le mensonge
+n'est complet que si elle aveugle comme une vraie.* Ce n'est pas une question de
+puissance, c'est une question de cohérence de l'information.
+
+### Étape 1 — le socle de données ✅
+
+Quatre fichiers neufs, tous **sans aucune dépendance** — ni autoload, ni nœud, ni
+`preload` d'un fichier qui en nomme un — parce que c'est la condition pour qu'une
+suite les charge en `--script` : `root_profile.gd`, `flare_profile.gd`,
+`gadget_profile.gd` et `class_data.gd`. Plus `tools/test_classes.gd` (40
+contrôles), inscrit dans le lanceur.
+
+**`ClassData` HÉRITE de `WeaponData` au lieu d'en porter une**, et c'est le choix
+qui a évité une recopie. Les quatre blocs impératifs de `game_state._ready()`
+sont restés **mot pour mot** ; seul `WeaponData.new()` est devenu
+`ClassData.new()`, et un catalogue leur attache trois profils par-derrière. Une
+copie garantit que deux jeux de nombres restent égaux, jamais qu'ils veuillent
+dire la même chose — et ces blocs portent des décisions actées (les temps de
+recharge du chantier MUNITIONS, les portées de torche arbitrées le 2026-08-24).
+
+⚠️ **L'étape est délibérément INERTE.** Les quatre premiers index gardent
+exactement le sens qu'ils avaient — 0 pistolet, 1 fusil, 2 pompe, 3 arbalète — et
+les six neufs s'ajoutent de 4 à 9. Rien de ce qui circule ne change de sens : ni
+`RankLoadout`, ni les râteliers de l'interface, ni `rpc_spawn_bullet`. La table
+rang → classe entrera en vigueur dans un lot à part, avec sa montée de version de
+protocole.
+
+⚠️ **Les six classes neuves n'ont pas leurs assets, et elles le disent.** Ni
+cookie de torche, ni sprite. `ClassData.assets_presents()` répond ; rien ne les
+équipe tant que l'étape 3 n'a pas rebranché la table, donc rien ne crie — et rien
+ne se tait non plus. Aucun repli n'est prévu : un cookie manquant rend un carré
+lumineux, un sprite manquant rend `false` et crie, ce qui est exactement le
+comportement voulu.
+
+⚠️ **Un écart de contenu à soumettre à Adrien** : la spécification des classes
+demande un pistolet à 6 balles et cadence doublée là où le jeu en a 10. Les
+chiffres des quatre armes existantes n'ont **pas** été retouchés — c'est de
+l'équilibrage, pas de la structure.
+
+#### Le piège qui a coûté deux passes
+
+`class_data.gd` déclarait ses membres avec les identifiants globaux
+(`@export var root: RootProfile`). En mode `--script` le cache des classes
+globales n'existe pas encore : le fichier ne compile pas, et
+`tools/test_classes.gd` non plus — « Could not resolve external class member ».
+Les trois types passent donc par `preload`, et le commentaire sur place le dit.
+C'est le même piège que `tools/test_arsenal.gd` contourne déjà de son côté, et il
+mord ici parce que ces fichiers sont **faits** pour être chargés par des suites.
+
+### Ce qui reste, dans l'ordre
+
+Étape 2 le root (jalon manette), 3 la purge des armes codées en dur et la table,
+4 la touche et le fil (`Protocol.VERSION` 9 → 10), 5 `GadgetBase` et les deux
+occluders avec la mesure de cadence immédiate, 6 l'éblouissement généralisé,
+7 les lumières posées, 8 les volumes, 9 le sol qui écrit, 10 le leurre,
+11 le grésillement, 12 les fusées par classe, 13 l'interface et la clôture.
+
+⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
+La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit
+139 µs par image. Renvoyer « dix gadgets simultanés en écran scindé » à la recette
+de clôture serait un échec différé de dix étapes.
 
 ---
 
