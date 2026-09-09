@@ -3114,6 +3114,62 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
+
+**`git update-ref` sur une branche montée dans un AUTRE arbre de travail déplace
+le pointeur et ne touche pas aux fichiers.** C'est précisément pourquoi on
+l'emploie — pour synchroniser `main` sans perturber la session qui travaille dans
+l'arbre partagé. Aucun commit n'est perdu, et c'est vrai. **Mais l'arbre reste
+alors sur d'anciens fichiers, et `git status` compare ces anciens fichiers à la
+NOUVELLE pointe.**
+
+⚠️ **Le retard prend donc exactement l'apparence d'un nettoyage volontaire**, et
+un `git add -A` le promeut en intention. C'est la partie vicieuse : un fichier en
+retard ne ressemble pas à une erreur, il ressemble à quelqu'un qui a fait le
+ménage.
+
+**Ce que ça a produit le 2026-09-09.** Deux `update-ref` successifs sur l'arbre
+partagé, puis un `git add -A` par une autre session. L'index contenait alors :
+
+| fichier | ajouts | suppressions | ce qui disparaissait |
+|---|---|---|---|
+| `tools/banc_voile.gd` | 0 | 47 | la ligne de vérité et la touche `D` |
+| `docs/ROADMAP.md` (indexé) | 0 | 47 | le chantier « le voile est fade en jeu » |
+| `docs/ROADMAP.md` (non indexé) | 0 | 29 | « Un son à bout portant », la doc du HEAD lui-même |
+| `docs/JOURNAL_SESSIONS.md` | 0 | 18 | l'entrée de session |
+
+**Trois lots de trois sessions, dans un diff qui se présentait comme du travail à
+committer.** Une session tierce a failli le committer de bonne foi.
+
+#### Le contrôle qui n'attrape RIEN, et celui qui tranche
+
+**Le lot complet de suites ne voit pas ce défaut et ne peut pas le voir.**
+Supprimer une section de feuille de route, un banc et des lignes de journal ne
+fait échouer aucun test — le lot serait passé au vert, et le vert aurait servi de
+caution à la destruction. « J'aurais détruit trois lots avec un lot vert à
+l'appui » (session fusée, qui l'avait proposé et l'a reconnu).
+
+**La question qui tranche est ailleurs, et elle se pose en une ligne :** *ce que
+ce diff enlève existe-t-il en amont ?*
+
+    git show HEAD:<fichier> | grep -c "<un ancrage du contenu supprimé>"
+    git show :<fichier>     | grep -c "<le même ancrage>"
+
+Si `HEAD` répond 4 et l'index 0, le diff n'est pas du travail, c'est une perte.
+**Un diff fait de suppressions pures ne se juge donc pas par les tests, il se
+juge en cherchant le contenu ailleurs** — formulation de la session fusée, et
+elle vaut pour toute suppression, quelle qu'en soit la cause.
+
+#### La règle
+
+1. **Après tout `update-ref` sur une branche montée ailleurs, le dire à la
+   session qui tient cet arbre** — elle seule peut remettre ses fichiers à jour
+   sans risque. Le silence transforme un geste sûr en piège différé.
+2. **Ne jamais `git add -A` dans un arbre partagé sans avoir regardé le diff.**
+   Ce qu'on y trouve n'a pas forcément été écrit par quelqu'un.
+3. **Et devant un lot de suppressions pures, chercher le contenu en amont avant
+   de committer** — même, et surtout, quand les suites sont vertes.
+
 ### Un numéro de ligne est un constat daté, sans la date (2026-09-07)
 
 **Deux citations écrites ce jour-là sont devenues fausses en moins de deux
@@ -3848,6 +3904,43 @@ qui rassurent.
 
 *Le piège de fond est un cousin : le même code coupait la racine sans regarder
 où vit l'oreille. Voir la section suivante.*
+
+### Un son à bout portant ne peut pas être occulté (2026-09-09)
+
+Adrien : « je n'entends pas les tirs en entraînement ». Mesuré sur sa machine,
+son PROPRE coup de feu, à **28 px de son oreille** : `occlusion = 0,33`, routé
+sur `SFX_Occlus`. Six tirs partis, six tirs étouffés.
+
+**La cause est géométrique.** Les trois rayons de `part_occultee` sont
+**parallèles**, écartés de ±24 px : le couloir qu'ils balayent fait donc **48 px
+de large**. Quand le trajet source→oreille est plus court que ce couloir n'est
+large, les rayons latéraux ne mesurent plus ce qui *sépare* — ils mesurent ce
+qui *borde*. Et dans un jeu où l'on longe les murs en permanence, l'un d'eux
+part de l'intérieur du mur.
+
+**Trois symptômes concordants, une seule cause, et aucune erreur nulle part :**
+
+| observation d'Adrien | ce qu'elle éliminait |
+|---|---|
+| « j'entends la musique » | la chaîne audio, le `Master`, la sortie |
+| « j'entends les douilles » | le bus, l'oreille, le pool — la douille est jouée 300 ms plus tard, **hors frame de physique**, donc elle saute le test |
+| « en écran scindé j'entends tout » | tout le reste — l'occlusion y est **désactivée** (`_oreille2 != null`) |
+
+**Ce sont ces trois phrases qui ont résolu le défaut**, après des heures passées
+à décrire des graphes. Le diagnostic affichait un montage irréprochable ; il ne
+disait rien du chemin d'UN son. La leçon est la même que celle du diagnostic
+muet, un cran plus loin : *pour savoir pourquoi un son ne s'entend pas, il faut
+suivre CE son* — sa distance, son bus, son volume — et non l'état du système.
+
+**Le garde-fou vérifie les deux bords** : que 28 px tombe sous la garde, et
+qu'un adversaire à deux tuiles reste occultable. Une garde trop large aurait
+supprimé l'occlusion utile, c'est-à-dire l'information que les murs donnent.
+
+⚠️ **Ce que la mesure a montré au passage et qui reste ouvert :** l'axe direct
+peut être dégagé pendant qu'un latéral touche. On fabrique alors une occlusion
+là où la ligne droite est libre. Le fan à trois rayons existe pour adoucir le
+bord d'un mur (piège du clignotement) — mais il peut CRÉER de l'occlusion, pas
+seulement l'adoucir. Non tranché.
 
 ### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
 
@@ -11812,6 +11905,72 @@ avant ce chantier.
 3. **`ui.gd` appartient à la session « menus ».** La modification se demande,
    elle ne se fait pas d'office — c'est la règle du journal des sessions, et
    c'est elle qui a évité que V6.2 soit implémentée deux fois.
+
+### ⚠️ OUVERT — le voile est somptueux au banc et fade en jeu (2026-09-09)
+
+**Signalé par Adrien après un match amical en réseau local, hôte, PLEIN ÉCRAN :**
+« l'éblouissement me faisait apparaître une grosse tâche comme ellipse floue, et
+pas les flares qu'on a créés ». La « tâche ramassée au niveau de l'éblouisseur »
+est le brouillage faisant exactement son travail ; **c'est le voile qu'il n'a pas
+vu.**
+
+**Le voile n'est pourtant ni éteint ni amputé.** La planche d'éblouissement le
+montre en jeu, chaîne d'hexagones fantômes comprise. Il est simplement **beaucoup
+plus faible qu'au banc**, à réglages identiques et à éblouissement PLUS FORT :
+le banc à 0,85 rend un flare crème avec son étoile radiante, le jeu à 1,00 rend
+un pâté brun.
+
+#### Ce qui a été éliminé — ne pas le refaire
+
+| piste | verdict |
+|---|---|
+| mauvaise installation, shader ou textures absents du build | **non** — les 9 uniformes que `ui.gd` pose existent, les 3 textures sont assignées |
+| valeurs divergentes banc / production | **non** — le banc lit les défauts du shader (`shader_get_parameter_default`), il ne peut pas diverger |
+| textures différentes | **non** — le banc démarre sur `_textures_fournies = false`, donc `VoileTextures.toutes()`, comme `ui.gd` |
+| mauvais joueur interrogé en ligne | **non** — hôte ⇒ `update_hud(p1, p2)`, le voile lit bien son propre `dazzle_amount` |
+| atténuation après le shader | **non** — aucun `modulate` sur les rects, et `ui.gd` n'appelle jamais `current_effect` |
+| le curseur « Éblouissement » des options | **non** — plus appliqué nulle part (voir `REGLABLE_PAR_LES_OPTIONS`) |
+| rapport d'écran (moitié contre plein) | **non** — Adrien jouait en PLEIN ÉCRAN, vue unique, 1,78 : le même rapport que le banc |
+| `temps` figé | **non** — `_voile_temps += delta` tourne bien |
+
+#### Ce qui reste, et le seul écart mesuré
+
+**Le voile monte trois fois moins vite que le brouillage, et personne ne les a
+jamais comparés sur la même échelle.** Les deux lisent `dazzle_amount` :
+
+- le brouillage le passe par `_dose()`, qui le **multiplie par `GAIN` (2,0)** — il
+  sature donc dès `dazzle = 0,5`, c'est-à-dire dès 300 px ;
+- le voile le prend **brut**.
+
+Mesuré le 2026-09-09 par le chemin exact du jeu (`lumiere_recue` →
+`plafond_pour`) : 140 px donnent 0,81 d'éblouissement, 280 px 0,55, 360 px 0,34,
+et **au-delà de ~400 px la torche n'éblouit plus du tout**. À mi-portée
+l'ellipse est donc à fond pendant que les flares plafonnent sous 9 % d'opacité.
+
+⚠️ **Cela explique que les flares soient discrets ; cela n'explique PAS l'écart
+d'aspect entre les deux images**, puisque la comparaison ci-dessus se fait à
+éblouissement égal et même supérieur en jeu. **Il manque encore une cause.**
+
+**La piste non explorée, et c'est la prochaine à ouvrir :** le rendu racine. La
+vue unique n'est plus rendue par un `SubViewport` (chantier R) et le framebuffer
+y suit la densité NATIVE de l'écran — facteur 1,778 mesuré le 2026-09-07, celui-là
+même qui a causé le polygone de photocopie. Le shader du voile travaille en `UV`
+et devrait y être indifférent ; **le vérifier plutôt que le supposer** est
+exactement ce que ce chantier a appris à ses dépens.
+
+#### L'instrument, lui, a été réparé
+
+`tools/banc_voile.gd` porte désormais deux ajouts qui rendent l'écart visible au
+lieu de le laisser deviner :
+
+- **une ligne de vérité** dans le panneau, calculée depuis les réglages courants :
+  « voile 0,53 au cœur, flares 0,075 | ellipse 1,00 → flares NOYÉS » ;
+- **la touche `D`**, qui saute entre les quatre distances de duel mesurées
+  (140 / 200 / 280 / 360 px) au lieu de marteler `Z`/`X` par pas de 20 px.
+
+⚠️ **Et un reste périmé à nettoyer :** `tools/planche_eblouissement.gd` imprime
+encore « curseur Éblouissement : 0,80 → voile maximal 64 % d'opacité ». Plus rien
+n'applique ce curseur. La ligne a coûté une fausse piste ce jour-là.
 
 ### ✅ RÉSOLU — la photocopie d'écran du flou laissait un polygone à l'écran
 
