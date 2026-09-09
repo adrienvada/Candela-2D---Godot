@@ -3135,6 +3135,30 @@ accepte.
 
 ### La phrase doit porter la PORTÉE de la commande (2026-09-09)
 
+#### Cas d'école : une consigne d'outil que personne n'avait jamais EXÉCUTÉE (2026-09-09)
+
+`tools/fabrique_sprites.gd` portait dans sa docstring, en gras et longuement
+argumenté, la valeur `--epaules 17.1` — reprise telle quelle dans cette feuille
+de route. **Elle est fausse depuis au moins deux semaines.** Vérifié par
+CUISSON, pas par lecture : avec 36, `S_pistol_01.jpg` rend une toile de 62², qui
+est exactement le `pistolet.png` livré ; avec 17,1, elle rend 30².
+
+Ce qui rend le cas exemplaire, ce n'est pas l'erreur, c'est **sa forme** :
+
+- le raisonnement écrit à côté de 17,1 **se tient** — il décrit un état antérieur
+  du code, quand la mesure d'épaules ne portait pas sur la même grandeur ;
+- il était **daté à l'écriture et lu comme une propriété du script** ;
+- il a été **recopié dans la ROADMAP**, ce qui l'a rendu deux fois plus crédible ;
+- et il aurait coûté **six sprites deux fois trop petits, sans qu'une seule suite
+  ne rougisse** — `tools/test_sprites.gd` et `tools/test_planche_marche.gd`
+  n'énumèrent que les quatre slugs historiques.
+
+**La règle qui en sort, et elle est plus étroite que « vérifiez » :** une consigne
+d'OUTIL — une valeur d'argument, une commande, un ordre d'étapes — ne se vérifie
+qu'en l'EXÉCUTANT. La relire ne prouve rien, parce qu'elle a été écrite par
+quelqu'un qui, lui, l'avait exécutée — dans un état du code qui n'existe plus.
+
+
 **Sept fois, dont six en une seule journée et sur trois sessions, la même chose
 s'est produite : une vérification juste, et une phrase plus large qu'elle.**
 Aucune commande n'était fausse. Aucun relevé n'était bâclé. Le défaut n'est
@@ -12868,7 +12892,9 @@ Reste donc :
 
 1ter. ⚠️ **Et les RÉGLAGES qui ont produit les assets validés ne sont consignés
    nulle part.** Les outils documentent des invocations d'exemple
-   (`--epaules 17.1` pour les sprites, `--taille 160` pour le sang), mais pas les
+   (⚠️ `--epaules` vaut **36** et non 17,1 — corrigé le 2026-09-09, vérifié par
+   cuisson : 36 reproduit `pistolet.png` à 62², 17,1 rend 30² ; `--taille 160`
+   pour le sang), mais pas les
    curseurs fins de chaque cuisson retenue : quelle `--luminance` a donné le sol
    « faible » qu'Adrien a validé, quels `--matiere` et `--profil` ont donné les
    cookies. **Recuire à l'aveugle rejouerait ses arbitrages au hasard.**
@@ -14126,6 +14152,85 @@ qu'il le soit au moins cinq fois moins que sa cible. Une seule des deux ne dirai
 rien — « supérieur à zéro » laisserait passer une rétrodiffusion à 0,5 (la torche
 redevenue inutile), « faible » laisserait passer le retour à zéro et perdrait la
 décision.
+
+### Étape 7 — les dix classes ont leurs assets ✅
+
+Adrien a généré **une seule planche** par ChatGPT (1536×1024, 3×2) pour les six
+classes qui manquaient. Les dix sont désormais complètes : sprite, silhouette et
+cookie de torche.
+
+#### Deux mensonges du dépôt, trouvés en cuisant
+
+**1. `--epaules 17.1` était faux.** La docstring de `tools/fabrique_sprites.gd`
+l'affirmait en gras, longuement argumenté, et cette feuille de route le
+recopiait. Vérifié **par cuisson** et non par lecture : avec 36,
+`S_pistol_01.jpg` rend une toile de 62² — exactement le `pistolet.png` livré ;
+avec 17,1, elle rend 30². Les six sprites seraient sortis **deux fois trop
+petits**, et aucune suite ne l'aurait vu. Corrigé aux deux endroits, et consigné
+en « Pièges connus » : *une consigne d'OUTIL ne se vérifie qu'en l'exécutant.*
+
+**2. `EMPREINTES` n'énumérait que quatre slugs.** Les contrôles d'image de
+`tools/test_sprites.gd` ne s'appliquent qu'aux slugs qu'elle nomme : les six
+neufs seraient entrés au dépôt **sans qu'une seule taille ne soit vérifiée**, et
+la suite serait restée VERTE en les ignorant. La table en compte dix.
+
+#### Le mode `--frames` est inutilisable pour une planche multi-classes
+
+Il impose une **toile commune** dimensionnée sur la case la plus encombrante, et
+mesure l'échelle et le pivot sur la **seule case 1**. Mesuré sur les quatre
+sources : les six seraient sortis à 82 px, l'arbalète gagnant 46 %, cinq cases
+sur six décentrées. C'est le motif de rejet documenté d'un lot précédent —
+« l'échelonnement des armes disparaît, et lire l'arme adverse décide du duel ».
+
+La découpe se fait donc **hors du script**, puis six passes en mode simple, où
+chacune calcule sa propre échelle, son propre pivot et sa propre toile.
+
+⚠️ **Et pas à la grille.** Sur la planche générée, **quatre figures sur six
+touchaient le bord de leur case** et débordaient chez la voisine. Couper à 512
+aurait mis un fragment du voisin dans quatre sprites — ce qui fausse d'un coup
+l'échelle, le pivot et la toile, sans erreur ni avertissement. Chaque carré a été
+taillé autour de la **boîte englobante réelle**, borné aux gouttières mesurées.
+
+#### La normalisation se fait sur la TÊTE, pas sur les épaules
+
+`_largeur_epaules()` mesure la ligne opaque la plus large du tiers HAUT de la
+figure — que l'**équipement porté aux épaules élargit**. Sur cette planche elle
+donnait 263 à 363 px selon la classe (38 % d'écart) alors que les têtes tenaient
+dans 142-150 px (5 %). La génération était bonne ; c'est le proxy qui est faux.
+
+Sans correction, le Spectre sortait à **110 px de toile** contre 82 pour la plus
+grande arme existante. ⚠️ **Ce n'est pas cosmétique** : l'occluder du joueur épouse
+la silhouette entière, et cet occluder est vu par la torche ADVERSE. Un sprite
+34 % plus grand découpe un trou 34 % plus grand dans le faisceau d'en face —
+*« on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière »*. Une
+classe involontairement grossie est mécaniquement plus facile à repérer.
+
+Après normalisation : corps de **24 à 25 px** pour les six, contre 21 à 26 pour
+les quatre historiques. Les neuves sont plus homogènes entre elles que les
+anciennes ne le sont. Les toiles vont de 50 à 90 px, et cet écart-là vient de la
+**longueur d'arme**, ce qui est l'intention.
+
+#### Les cookies : une crainte annoncée trop fort
+
+J'avais prévenu que recuire réécrirait les quatre cookies validés, dont les
+réglages ne sont consignés nulle part. Empreintes relevées avant, cuisson,
+empreintes après : **identiques au bit près**. Les paramètres par défaut sont bien
+ceux qui les ont produits. La ligne « lumière 63 % de l'actuel » qu'affiche
+l'outil compare autre chose que le fichier sur disque — je l'avais lue comme une
+comparaison au fichier, ce qu'elle n'est pas.
+
+#### `test_torches` épinglait une FORME, pas un sens
+
+Elle vérifie que `torches.gd` et `game_state.gd` ne divergent pas — l'angle étant
+cuit dans le cookie, une divergence produirait un faisceau dont l'ouverture n'est
+pas celle que l'arme annonce. Mais elle cherchait **une seule écriture**,
+`weapon_<slug>.torch_angle_deg = <n>`, et les six classes sont bâties par un
+constructeur. Elle rougissait alors que rien ne divergeait.
+
+Elle lit désormais les deux formes, la seconde par un **parsing exact des
+arguments** et non par un `contains` approximatif — sinon on échange un faux
+positif contre un faux négatif. Sabotée pour vérifier : angle du Fumiste passé de
+30 à 33, elle dit « torches.gd dit 33.0, la source dit 30.0 ». Restaurée, 84/84.
 
 ### Ce qui reste, dans l'ordre
 

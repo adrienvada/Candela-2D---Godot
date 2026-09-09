@@ -28,6 +28,11 @@ extends SceneTree
 ##
 ## ## La valeur d'`--epaules` retenue, et comment elle a été trouvée
 ##
+## ⚠️ **PÉRIMÉ — lire l'avertissement au-dessus de l'exemple d'appel.** La valeur
+## en service est **36**, vérifiée par cuisson le 2026-09-09. Ce qui suit décrit
+## comment 17,1 avait été trouvée, à une époque où la mesure ne portait pas sur
+## la même grandeur ; on le garde parce que le RAISONNEMENT reste instructif.
+##
 ## **17,1**, et ce n'est pas un choix esthétique : c'est la valeur pour laquelle
 ## le sprite le plus encombrant — le pompe — atteint **35,1 px de diamètre**,
 ## juste sous les 36 du `Polygon2D` qu'il remplace. Adrien a demandé que le
@@ -46,7 +51,23 @@ extends SceneTree
 ## retiré, et la valeur mesurée est écrite ici.
 ##
 ##     godot --headless --path . --script res://tools/fabrique_sprites.gd -- \
-##       --source player --planche S_shotgun_01.jpg --nom pompe --epaules 17.1
+##       --source player --planche S_shotgun_01.jpg --nom pompe --epaules 36
+##
+## ⚠️ **CET EXEMPLE A DIT 17,1 PENDANT DEUX SEMAINES, ET C'ÉTAIT FAUX.** Corrigé
+## le 2026-09-09 après vérification par la CUISSON, pas par la lecture : avec
+## `--epaules 36`, `S_pistol_01.jpg` rend une toile de 62² — exactement le
+## `pistolet.png` livré ; avec 17,1, elle rend 30². Les quatre sprites du dépôt
+## ont donc été cuits à 36, qui est aussi la valeur par défaut de l'argument
+## (l. `_arg(args, "--epaules", "36")`).
+##
+## La section « La valeur d'`--epaules` retenue » ci-dessus raconte comment 17,1
+## a été trouvée, et son raisonnement se tient — il décrit un état ANTÉRIEUR du
+## code, quand la mesure d'épaules ne portait pas sur la même chose. **Le texte
+## est resté juste au présent d'un jour et s'est lu comme une propriété du
+## script.** C'est le piège « un constat daté vieillit sans prévenir » de
+## `CLAUDE.md`, et il aurait coûté six sprites deux fois trop petits — sans
+## qu'aucune suite ne le voie, puisqu'elles n'énumèrent que les quatre slugs
+## historiques.
 
 const RACINE_SOURCES := "res://assets/sources/"
 const SORTIE := "res://assets/sprites/"

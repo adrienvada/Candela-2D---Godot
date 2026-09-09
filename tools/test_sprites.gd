@@ -55,6 +55,25 @@ const EMPREINTES := {
 	"pompe": 78.0,
 	"pistolet": 62.0,
 	"arbalete": 56.0,
+	# ── Les six classes du chantier CLASSES, cuites le 2026-09-09 ────────────
+	#
+	# ⚠️ **Cette table énumérait QUATRE slugs, et c'était un trou.** Les contrôles
+	# d'image de cette suite — sprite carré, empreinte conforme — ne s'appliquent
+	# qu'aux slugs qu'elle nomme. Six sprites neufs seraient donc entrés au dépôt
+	# sans qu'une seule taille ne soit vérifiée, et la suite serait restée VERTE
+	# en les ignorant. C'est la forme même du garde-fou qui se périme en vert.
+	#
+	# Les valeurs sont MESURÉES à la cuisson, pas choisies : elles sortent de la
+	# largeur d'épaules normalisée sur la tête (voir la ROADMAP, chantier
+	# CLASSES). L'éventail va de 50 à 90 contre 56 à 82 pour les quatre
+	# historiques — l'écart vient de la longueur d'arme, ce qui est l'intention :
+	# « l'arme dépasse au-delà du corps, c'est une information NOUVELLE ».
+	"fumiste": 64.0,
+	"incendiaire": 50.0,
+	"sentinelle": 90.0,
+	"occulteur": 64.0,
+	"allumeur": 62.0,
+	"spectre": 88.0,
 }
 
 var _echecs := 0
@@ -168,7 +187,8 @@ func _test_les_decals_divisent_aussi() -> void:
 ## aucune formule qui donnerait sa « bonne » valeur — mais il existe un rapport
 ## qui, s'il change, invalide le calibrage sans rien casser de visible. On borne
 ## donc ce rapport : entre 1 % et 4 % de l'empreinte de l'arme la plus large.
-## Aujourd'hui : 1,6 / 82 = 1,95 %.
+## Aujourd'hui : 1,6 / 90 = 1,78 % — le plus grand sprite est la sentinelle
+## depuis le 2026-09-09, plus le fusil.
 func _test_le_roulis_reste_proportionne(roulis: float) -> void:
 	var plus_large := 0.0
 	for slug in EMPREINTES:
