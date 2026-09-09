@@ -1289,10 +1289,24 @@ func _process(delta):
 			# décalés d'un aller-retour. N'existe qu'en classé — un match amical
 			# n'ouvre plus cette fenêtre du tout (`_matchmade_ranked`), donc ces
 			# drapeaux y restent à `false` et cette branche ne s'y déclenche jamais.
+			#
+			# ⚠️ **Longtemps vrai à moitié seulement.** L'hôte collapsait bien SON
+			# propre décompte ici, mais rien n'en informait le client — measured
+			# à deux machines le 2026-09-09 (v0.3.1) : la manche partait pour
+			# l'hôte seul, le client restant planté sur ses dix secondes. Le
+			# `rpc_id` ci-dessous est le canal qui manquait, symétrique de
+			# `rpc_countdown_ready` (qui informe déjà l'hôte que le CLIENT est
+			# prêt) — voir « Deux prêts, un seul départ » aux Pièges connus, qui
+			# documentait le défaut sans le fermer côté classé.
 			if _matchmade_round and _matchmade_ranked and _countdown_ready_local \
 					and _countdown_ready_peer \
 					and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				countdown_left = 0.0
+				# `client_peer_id` reste à 0 en écran partagé — pas de pair à
+				# prévenir, et c'est ce qui laisse `_run_fenetre()` exercer ce
+				# chemin sans réseau ni appariement, comme conçu.
+				if client_peer_id != 0:
+					rpc_id(client_peer_id, "rpc_countdown_launch")
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
 			# V3.3 — une note par seconde entiere, et seulement les trois
@@ -2912,6 +2926,20 @@ func rpc_countdown_ready() -> void:
 	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
 		return
 	_countdown_ready_peer = true
+
+## [Client] L'hôte a vu les deux « prêt » et abrège la fenêtre — ce paquet est
+## ce qui manquait pour que le client suive. Sans lui, `_process()` ne
+## collapse le décompte QUE côté hôte : la manche partait pour lui seul
+## pendant que le client comptait ses dix secondes jusqu'au bout, mesuré à
+## deux machines le 2026-09-09. `call_remote` et non `call_local` : l'hôte a
+## déjà collapsé le sien juste avant d'envoyer ce paquet.
+@rpc("authority", "call_remote", "reliable")
+func rpc_countdown_launch() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	countdown_left = 0.0
 
 ## L'hôte annonce au client s'il est prêt, ou s'il ne l'est plus.
 ##

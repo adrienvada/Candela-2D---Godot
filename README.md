@@ -96,6 +96,16 @@ conflits de version essuyés le 2026-08-18 avant que cette règle existe.
 Une session qui ouvre et ne trouve **aucune session déjà chargée de la
 republication** en devient responsable pour la suite, et le dit aux autres.
 
+**Chaque delta dit qui l'envoie** (décidé le 2026-09-09, avec Adrien). Le
+message au porteur commence par le **nom de la session** tel que `ListAgents`
+ou `list_sessions` l'affiche, sa branche, et le chantier concerné. Le porteur
+le reporte dans le suivi : une puce de session sur la carte du chantier
+(attribut `data-session`) et une ligne dans le tableau « Qui travaille sur
+quoi » de la vue d'ensemble. Raison : plusieurs sessions avancent en même temps
+et le tableau ne disait que « une session » ou « sans titulaire » — Adrien ne
+pouvait pas savoir à qui parler. C'est aussi la réponse au défaut de fond
+ci-dessous : une entrée qui porte son nom de session porte sa source.
+
 > **Porteur au 2026-08-18** : la session qui a livré `6c0ad89` (structure des
 > menus). Constat fait et charge acceptée ce jour-là — il n'y en avait aucun.
 >
