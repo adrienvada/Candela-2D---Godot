@@ -143,6 +143,14 @@ var _countdown_ready_peer: bool = false
 ## décide de la durée : elle distingue « l'arme n'est pas encore choisie » de
 ## « elle l'est depuis le menu ».
 var _matchmade_round: bool = false
+## [Hôte] Un match apparié attend son invité. Armé à `match_ready`, consommé à
+## l'arrivée de son arme — voir `_on_match_ready()` pour la raison d'être de ce
+## report.
+var _matchmade_start_pending: bool = false
+## Jeton du départ apparié courant, même idée que `_round_token` : l'échéance d'un
+## appariement abandonné vit encore vingt secondes, et sans lui elle annulerait le
+## SUIVANT si le joueur repart en file entretemps.
+var _matchmade_token: int = 0
 ## Les deux catégories du match apparié, retenues à l'appariement. La règle du
 ## miroir s'applique dessus, et l'écran les relit pour dire pourquoi l'arsenal a
 ## rétréci. Retenues ICI plutôt que relues chez l'appariement : celui-ci retombe
@@ -657,6 +665,7 @@ func _on_training_requested() -> void:
 	_apply_network_mode()
 	MapData.select_map(MapData.DEFAULT_MAP_ID)
 	_matchmade_round = false
+	_matchmade_start_pending = false
 
 	game_over = false
 	ui.hide_game_over()
@@ -2490,6 +2499,15 @@ func rpc_client_weapon(idx: int):
 	if _end_sequence_active:
 		_pending_p2_weapon_idx = idx
 
+	# **Sauf pour un match apparié, qui n'a pas de porte PRÊT à attendre.** Là,
+	# ce paquet redevient ce qu'il était : le signal de départ. Il est le premier
+	# instant où l'hôte a à la fois un pair connecté — sans quoi `_start_round()`
+	# repart en bac à sable — et l'arme que ce pair tient, sans quoi P2 jouerait
+	# tout le match au pistolet.
+	if _matchmade_start_pending:
+		_matchmade_start_pending = false
+		_lancer_match_apparie()
+
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
 	var pressed: BaseButton = ui.p2_weapon_group.get_pressed_button()
@@ -2501,17 +2519,6 @@ func _set_p2_weapon_button(idx: int) -> void:
 	if idx < 0 or idx >= buttons.size(): return
 	buttons[idx].button_pressed = true
 
-## [Appariement] Les deux joueurs se sont trouvés et le lien est ouvert.
-##
-## Seul l'hôte a quelque chose à faire ici : le client entre par
-## `connection_success`, qui fait déjà tout — et le faire entrer deux fois
-## relancerait sa manche par-dessus elle-même.
-##
-## La carte est tirée au sort **avant** `_start_round()`, parce que c'est cet
-## appel qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
-## départ du client. Tirer après donnerait deux arènes différentes aux deux
-## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
-## voyant un monde cohérent.
 ## Le joueur quitte la fenêtre de choix. Renoncer à choisir son arme, c'est
 ## renoncer au match : on annule l'appariement et la recherche, et on rentre au
 ## menu. Le pair, lui, verra une déconnexion ordinaire — il n'y a pas de « l'autre
@@ -2579,6 +2586,12 @@ func rpc_countdown_weapon(idx: int) -> void:
 		return
 	p2.equip_weapon(weapon_for_index(idx))
 
+## [Appariement] Les deux joueurs se sont trouvés et le lien vient d'être ouvert
+## — ouvert, pas établi : c'est la nuance qui a coûté le défaut du 2026-09-09.
+##
+## Les deux camps passent ici, et chacun y pose ce que seul l'appariement sait :
+## que ce match ouvre une fenêtre de choix d'arme, et les deux catégories de la
+## règle du miroir. L'hôte, lui, ARME son départ ; il ne part pas.
 func _on_match_ready(_pairing: Dictionary) -> void:
 	# Ce match ouvre une fenêtre de choix : l'arsenal commun n'est connu que
 	# maintenant, la règle du miroir l'alignant sur le moins bien classé. Posé des
@@ -2594,6 +2607,62 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 	ui.mirror_weapon_choice()
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
 		return
+	# ⚠️ **La manche ne part PAS ici, et c'est tout l'objet du report.**
+	#
+	# `match_ready` est émis dans la foulée de `host_matched_game()` : la socket
+	# vient d'ouvrir, l'invité n'a pas encore eu une seule image pour s'y
+	# connecter — il ne le peut pas. `_start_round()` appelé maintenant trouve
+	# donc `multiplayer.get_peers()` VIDE et prend sa branche « hôte resté seul » :
+	# bac à sable, cible d'entraînement, « EN ATTENTE D'UN ADVERSAIRE… ».
+	#
+	# Et plus rien ne l'en sort. La porte PRÊT a retiré le départ automatique de
+	# `_on_peer_connected` et de `rpc_client_weapon` — à juste titre pour un salon
+	# à code, où deux humains se déclarent — mais l'appariement n'a pas de porte
+	# PRÊT : Adrien a demandé qu'il n'en ait pas (2026-08-18). Résultat mesuré à
+	# deux machines le 2026-09-09 : l'hôte seul dans son arène pour toujours,
+	# l'invité connecté mais resté dans son menu, faute de `rpc_start_round`.
+	# Aucun des deux changements n'était fautif seul ; c'est leur rencontre.
+	#
+	# Le départ appartient donc à `rpc_client_weapon` — le premier instant où
+	# l'hôte a À LA FOIS un pair connecté et l'arme qu'il tient.
+	_matchmade_start_pending = true
+	_matchmade_token += 1
+	_armer_echeance_appariement(_matchmade_token)
+
+## [Hôte] L'invité apparié ne s'est pas connecté à temps.
+##
+## Sans cette échéance le report ci-dessus déplace le blocage au lieu de le
+## supprimer : l'hôte attendrait dans son menu, indéfiniment et sans rien dire,
+## un invité qu'Epic n'a jamais fait arriver.
+##
+## Sa propre constante, et non `NetworkManager.join_timeout()`, qui vaut cinq
+## secondes en ENet. Ce n'est pas une jointure manuelle : les deux camps viennent
+## de se négocier chez Epic, la connexion suit à la seconde. Vingt secondes est
+## large partout — et surtout, la durée ne dépend plus d'un transport dont
+## l'appariement n'a pas à connaître le nom.
+const DELAI_INVITE_APPARIE := 20.0
+
+func _armer_echeance_appariement(jeton: int) -> void:
+	var timer := get_tree().create_timer(DELAI_INVITE_APPARIE)
+	timer.timeout.connect(func() -> void:
+		if not _matchmade_start_pending or jeton != _matchmade_token:
+			return
+		_matchmade_start_pending = false
+		_on_main_menu_requested()
+		ui.show_dialog_message("Adversaire injoignable",
+			("Votre adversaire a bien été trouvé, mais la connexion ne s'est jamais "
+			+ "établie. Vous pouvez relancer une recherche."),
+			UI.Registre.ATTENTION)
+	)
+
+## [Hôte] Le départ d'un match apparié, une fois l'invité vraiment là.
+##
+## La carte est tirée au sort **avant** `_start_round()`, parce que c'est cet
+## appel qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
+## départ du client. Tirer après donnerait deux arènes différentes aux deux
+## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
+## voyant un monde cohérent.
+func _lancer_match_apparie() -> void:
 	MapData.select_random_map()
 	_enter_hosted_game()
 	_start_round()
@@ -2616,6 +2685,7 @@ func _on_replay_requested():
 		# match apparié hériterait de ses dix secondes — et le décompte durerait
 		# trois fois trop longtemps sans que rien ne l'explique.
 		_matchmade_round = false
+		_matchmade_start_pending = false
 		# Le mode lancé est celui qu'affiche le menu. Tester directement
 		# « CRÉER SALON » ne suffit pas : ce bouton appartient à un autre groupe
 		# que « 1V1 LOCAL / EN LIGNE » et reste coché après une partie en ligne,
@@ -3098,6 +3168,9 @@ func _on_main_menu_requested():
 
 	client_peer_id = 0
 	_join_deadline_active = false
+	# Un départ apparié encore armé rouvrirait une arène par-dessus le menu, à
+	# l'arrivée d'un paquet d'un lien qu'on vient de couper.
+	_matchmade_start_pending = false
 	countdown_left = 0.0
 	ui.set_countdown(0.0)
 	# Retour au menu depuis une killcam : sans ça le menu tourne au ralenti et

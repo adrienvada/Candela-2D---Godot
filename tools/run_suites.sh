@@ -349,6 +349,15 @@ run test_entrainement res://tools/test_online_match.tscn -- --training
 # intestable en pratique, donc jamais testée.
 run test_fenetre_de_choix res://tools/test_online_match.tscn -- --fenetre
 
+# L'instant où l'hôte apprend qu'il est apparié — et où il ne doit RIEN lancer.
+#
+# `match_ready` est émis dans la foulée de `host_matched_game()` : aucun pair ne
+# peut encore être là. L'hôte tombait alors dans la branche « resté seul » de
+# `_start_round()` et y restait pour toujours, la porte PRÊT ayant retiré le
+# départ automatique à l'arrivée du client. Une instance suffit à le prouver :
+# le défaut est dans l'ORDRE, pas dans le réseau.
+run test_depart_apparie res://tools/test_online_match.tscn -- --appariement
+
 # L'éblouissement dans un vrai match — le CÂBLAGE, pas le modèle.
 #
 # `test_eblouissement` prouve le modèle et `test_vision` la géométrie. Le défaut
@@ -407,6 +416,17 @@ duo() {
 # d'une couverture sur la zone la plus régressive, et il se paie une fois par
 # commit plutôt qu'une manche entière à la main.
 duo duo_enet
+
+# Le départ d'un match APPARIÉ — le seul qui n'entre pas par un salon à code.
+#
+# L'appariement ouvre le lien puis annonce, dans le même appel : il annonce donc
+# AVANT que le lien soit établi. Personne ne couvrait cet ordre, et il a produit
+# le 2026-09-09 le pire état atteignable à deux machines — l'hôte seul dans son
+# arène pour toujours, l'invité connecté mais resté dans son menu, sans une seule
+# erreur console. Les deux moitiés se testent séparément : `--appariement` (une
+# instance) prouve qu'il ne part pas seul, celui-ci qu'il part quand l'autre
+# arrive.
+duo duo_apparie --apparie
 
 # Famille 3 de la checklist : l'adversaire disparaît pendant le 3-2-1.
 #

@@ -50,8 +50,11 @@ func _ready() -> void:
 	# L'écran partagé et le LAN n'ont rien à attendre d'Epic.
 	# L'entraînement est solitaire : il n'a pas plus besoin d'Epic que l'écran
 	# partagé, et l'attendre ferait pendre le banc trente secondes pour rien.
+	# `--appariement` n'ouvre aucun lien : il n'exerce que l'instant où l'hôte
+	# apprend qu'il est apparié, et cet instant se rejoue sans Epic.
 	var needs_eos := not _lan and not _has("--local") and not _has("--training") \
-		and not _has("--fenetre") and not _has("--eblouissement")
+		and not _has("--fenetre") and not _has("--eblouissement") \
+		and not _has("--appariement")
 	if needs_eos:
 		if not await _await(func(): return NetworkManager.eos_state == NetworkManager.EosState.READY \
 				or NetworkManager.eos_state == NetworkManager.EosState.FAILED, EOS_READY_TIMEOUT):
@@ -88,6 +91,10 @@ func _ready() -> void:
 		await _run_host_coupure()
 	elif _has("--join-coupure"):
 		await _run_client_coupure()
+	elif _has("--host-apparie"):
+		await _run_hote_apparie()
+	elif _has("--join-apparie"):
+		await _run_invite_apparie()
 	elif _has("--host"):
 		await _run_host()
 	elif _has("--join"):
@@ -98,11 +105,15 @@ func _ready() -> void:
 		await _run_training()
 	elif _has("--fenetre"):
 		await _run_fenetre()
+	elif _has("--appariement"):
+		await _run_appariement()
 	elif _has("--eblouissement"):
 		await _run_eblouissement()
 	else:
 		print("Usage: --host | --join <CODE|IP> | --local | --training"
-			+ " | --fenetre | --eblouissement | --host-coupure | --join-coupure <IP>")
+			+ " | --fenetre | --appariement | --eblouissement"
+			+ " | --host-coupure | --join-coupure <IP>"
+			+ " | --host-apparie | --join-apparie <IP>")
 		_quit(2)
 
 
@@ -257,6 +268,130 @@ func _run_fenetre() -> void:
 	_main.pick_countdown_weapon(RankLoadout.PISTOLET)
 	_check("hors de la fenêtre, l'arme ne change plus",
 		_main.p1.current_weapon.name == tenue, _main.p1.current_weapon.name)
+	_quit(0)
+
+## L'appariement automatique, vu de **l'instant qui a cassé à deux machines le
+## 2026-09-09** : celui où l'hôte apprend qu'il est apparié.
+##
+## Un seul processus suffit, parce que le défaut ne tient pas au réseau. Il tient
+## à l'ORDRE : `match_ready` est émis dans la foulée de `host_matched_game()`,
+## donc avant que le moindre pair ait pu se connecter — il ne le peut pas, la
+## socket vient d'ouvrir. `_start_round()` appelé là prenait sa branche « hôte
+## resté seul » : bac à sable, cible d'entraînement, « EN ATTENTE D'UN
+## ADVERSAIRE… ». Et plus rien ne l'en sortait, la porte PRÊT ayant retiré le
+## départ automatique à l'arrivée du client. Adrien voyait une machine seule dans
+## son arène pour toujours, l'autre restée dans son menu.
+##
+## Ce que ce banc verrouille : **sans pair, l'hôte apparié ne quitte pas son
+## menu.** Ce qu'il ne peut pas verrouiller, faute d'un vrai pair : le départ
+## lui-même — c'est `run_duo.sh --apparie` qui s'en charge.
+func _run_appariement() -> void:
+	# L'hôte apparié n'a pas de salon à code : `host_matched_game()` ouvre la
+	# socket, et c'est tout. On se met dans cet état sans réseau — ce qui suit
+	# n'interroge que `game_state`.
+	NetworkManager.current_mode = NetworkManager.GameMode.ONLINE_HOST
+	_poser_appariement(true)
+	await get_tree().process_frame
+
+	_check("l'appariement pose bien sa fenêtre de choix", _main._matchmade_round)
+	_check("le départ est ARMÉ, pas consommé", _main._matchmade_start_pending)
+	# `round_active` seul ne suffit pas à décrire le défaut : il était déjà faux
+	# pendant qu'Adrien était bloqué. L'hôte était dans l'arène SANS manche — les
+	# trois contrôles ensemble, ou aucun.
+	_check("aucune manche ne démarre sans adversaire", not _main.round_active)
+	_check("l'hôte ne bascule pas en bac à sable", not _main.sandbox_mode)
+	_check("et il reste dans son menu", _ui._is_main_menu)
+
+	# Un départ resté armé rouvrirait une arène par-dessus l'accueil, à l'arrivée
+	# d'un paquet d'un lien déjà coupé.
+	_main._on_main_menu_requested()
+	_check("le retour au menu désarme le départ", not _main._matchmade_start_pending)
+	_quit(0)
+
+## Ce que l'appariement pose sur les DEUX camps, à l'instant exact où il le pose :
+## juste après avoir ouvert le lien, donc **avant** qu'il soit établi. Inverser
+## cet ordre rendrait les bancs verts sur un jeu cassé — c'est l'ordre qui EST le
+## scénario.
+func _poser_appariement(hote: bool) -> void:
+	var appariement := get_node_or_null(^"/root/Matchmaker")
+	if appariement == null or not appariement.has_signal("match_ready"):
+		_fail("l'autoload d'appariement est introuvable")
+		return
+	appariement.match_ready.emit({
+		match_id = "0123456789abcdef0123456789abcdef",
+		local_key = "local",
+		opponent_key = "adverse",
+		opponent_rating = 1000,
+		local_tier = 0,
+		opponent_tier = 0,
+		ranked = false,
+		local_hosts = hote,
+		local_accepted = true,
+		opponent_accepted = true,
+		rematch_index = 0,
+	})
+
+## Le même appariement, mais à deux processus et sur un vrai lien : la moitié que
+## `--appariement` ne peut pas prouver seul — **le départ a bien lieu quand
+## l'invité arrive.**
+##
+## En ENet, donc sans Epic : ce qu'on exerce ici est le chemin de `game_state`,
+## qui ne connaît pas le transport. L'hôte pose son appariement AVANT que l'invité
+## existe, exactement comme `_try_launch()` le fait.
+func _run_hote_apparie() -> void:
+	await _select_mode(true)
+	if not NetworkManager.host_game():
+		_fail("hébergement refusé : %s" % NetworkManager.last_error)
+		return
+	# Le lanceur attend cette ligne pour démarrer l'invité : elle marque l'instant
+	# où la socket est ouverte et où l'appariement se croit conclu.
+	print("CODE: %d" % NetworkManager.DEFAULT_PORT)
+	_poser_appariement(true)
+	await get_tree().process_frame
+	_check("l'hôte apparié attend son invité dans le menu", _ui._is_main_menu)
+	_check("sans partir seul en bac à sable", not _main.sandbox_mode)
+
+	var partie := await _await(func(): return _main.round_active, ROUND_TIMEOUT)
+	_check("la manche part à l'arrivée de l'invité", partie)
+	if not partie:
+		_fail("la manche n'a jamais démarré côté hôte")
+		return
+	print("MANCHE: décompte restant %.1f s" % _main.countdown_left)
+	_check("l'hôte a quitté son menu", not _ui._is_main_menu)
+	_check("et il n'est pas resté en bac à sable", not _main.sandbox_mode)
+	_check("le décompte est celui d'un match apparié",
+		_main.countdown_left > _main.COUNTDOWN_DURATION + 1.0,
+		"%.1f" % _main.countdown_left)
+	_check("l'invité est dans l'arène, pas caché",
+		_main.p2.visible and _main.p2.get_collision_layer_value(1))
+	# Couper le lien avant que l'invité ait fini ses contrôles lui ferait mesurer
+	# une déconnexion au lieu d'un départ.
+	await get_tree().create_timer(8.0).timeout
+	_quit(0)
+
+func _run_invite_apparie() -> void:
+	await _select_mode(false)
+	if not NetworkManager.join_game(_value("--join-apparie", "127.0.0.1")):
+		_fail("jointure refusée : %s" % NetworkManager.last_error)
+		return
+	_poser_appariement(false)
+	await get_tree().process_frame
+	_check("l'invité apparié attend dans son menu", _ui._is_main_menu)
+
+	var partie := await _await(func(): return _main.round_active, ROUND_TIMEOUT)
+	_check("la manche arrive jusqu'à l'invité", partie)
+	if not partie:
+		_fail("l'invité n'a jamais reçu rpc_start_round")
+		return
+	print("MANCHE: décompte restant %.1f s" % _main.countdown_left)
+	_check("l'invité a quitté son menu", not _ui._is_main_menu)
+	# Le drapeau posé des deux côtés : sans lui l'invité compterait trois secondes
+	# pendant que l'hôte en compte dix.
+	_check("le décompte apparié vaut dix secondes ici aussi",
+		_main.countdown_left > _main.COUNTDOWN_DURATION + 1.0,
+		"%.1f" % _main.countdown_left)
+	_check("et les deux joueurs sont dans l'arène",
+		is_instance_valid(_main.p1) and is_instance_valid(_main.p2))
 	_quit(0)
 
 ## L'entraînement solitaire. Ce que ce mode protège, dans l'ordre :
