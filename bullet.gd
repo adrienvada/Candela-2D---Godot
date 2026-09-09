@@ -678,19 +678,13 @@ func _spawn_damage_number(pos: Vector2, amount: int):
 	# portée de lumière en dur : **une valeur absolue là où il fallait un
 	# rapport**, juste pour un seul cas et fausse pour tous les autres.
 	#
-	# 11 % maintient le trait entre 2 et 5 px sur toute l'échelle — assez pour
-	# détacher le chiffre d'un mur éclairé, jamais assez pour boucher les contre-
-	# formes de la fonte d'affichage, qui est ultra-condensée et les a étroites.
-	settings.outline_size = maxi(2, int(round(settings.font_size * 0.11)))
-	settings.outline_color = Charte.NOIR
-	# L'ombre porte, elle, ce que le contour ne peut pas : une DIRECTION. Un
-	# contour uniforme colle le chiffre à l'écran ; une ombre décalée le pose
-	# au-dessus de la scène. Elle suit la même échelle, pour la même raison.
-	settings.shadow_size = maxi(2, int(round(settings.font_size * 0.06)))
-	settings.shadow_color = Color(Charte.NOIR, 0.6)
-	var d := maxf(2.0, settings.font_size * 0.06)
-	settings.shadow_offset = Vector2(d, d)
-	
+	# DA5.7 — cette formule est désormais celle de `Charte.contourer_settings()`,
+	# généralisée aux sept autres sites du dépôt qui portaient chacun un nombre
+	# fixe posé pour leur propre taille. Ce site reste la référence historique ;
+	# l'ombre suit le même ratio, pour la même raison — c'est ce que porte le
+	# `true` ci-dessous.
+	Charte.contourer_settings(settings, settings.font_size, true)
+
 	lbl.label_settings = settings
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

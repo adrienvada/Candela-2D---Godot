@@ -847,8 +847,10 @@ func _make_label(text: String, size: int, colour: Color) -> Label:
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", colour)
-	label.add_theme_color_override("font_outline_color", Color(Charte.NOIR, 0.85))
-	label.add_theme_constant_override("outline_size", 3)
+	# DA5.7 — migré vers le contour commun. Abandonne l'alpha 0,85 que ce site
+	# était seul à porter, faute de raison retrouvée dans l'historique ; jugé
+	# à l'œil comme les sept autres sites migrés (docs/ROADMAP.md, DA5.7).
+	Charte.contourer_control(label, size)
 	return label
 
 func _make_separator() -> HSeparator:

@@ -10721,18 +10721,24 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 
 ### DA5 — La chasse aux défauts (l'audit « rien par défaut »)
 
-- **DA5.1 L'audit zéro-défaut** — une session parcourt chaque écran et liste
-  toute valeur par défaut encore visible : fonte, couleur, easing, curseur,
-  son manquant. Le livrable est la liste, cochée ensuite. *(S)*
-- **DA5.2 Blanc pur et noir pur interdits** hors fond du monde — tout passe au
-  blanc cassé et au noir de la bible. *(S)*
+- **DA5.1 L'audit zéro-défaut** ✅ **FAIT le 2026-09-09.** Le livrable est la
+  liste ci-dessous — le vrai résultat n'est pas les défauts visuels (aucun
+  trouvé sur ce que la planche couvre) mais **seize réglages sur trente-quatre
+  qui ne pilotent rien**. Détail ci-dessous. *(S)*
+- **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
+  du monde — tout passe au blanc cassé et au noir de la bible. Détail
+  ci-dessous. *(S)*
 - **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)*
-- **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
-  qui « colle » tous les éléments entre eux, l'arme n°1 contre l'effet
-  collage. *(S)*
-- **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
-  les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
+  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
+  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
+  peinte finale, reste dû à Adrien. Détail ci-dessous.
+- **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
+  (décision d'Adrien : le grain de match existant reste), documentation des
+  trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
+- **DA5.5 L'aberration chromatique réservée** ✅ **FAIT le 2026-09-09** — sur
+  l'éblouissement ; le kill a déjà le sien (le bandeau FATAL). Vérification
+  visuelle et de cadence (bench_framerate, H10) encore dues — voir détail.
+  *(S)*
 - **DA5.6 La résolution assumée** ✅ **TRANCHÉ le 2026-08-24 : smooth.**
   Filtrage linéaire, mipmaps, aucune texture en `nearest` ; la résolution se
   choisit sur la densité de texels à l'écran. Raison en « Décisions actées ».
@@ -10743,6 +10749,311 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   Les 15 effets de menus sont procéduraux : sous la nouvelle palette et les
   nouvelles fontes ils deviennent un écrin ; sans ça, ils amplifient le look
   actuel. Détail ci-dessous. *(S)*
+
+#### DA5.1 — l'audit zéro-défaut, ce qu'il trouve
+
+**La passe visuelle ne trouve rien de nouveau sur ce que `planche_contact.gd`
+couvre** — dix-neuf images régénérées (`./tools/run_visuel.sh --planche`),
+aucun blanc pur, aucun cadre noir, aucune fonte par défaut. Un constat daté,
+donc à vérifier de nouveau avant livraison plutôt qu'à croire sur pièce : voir
+la mise en garde de ce fichier sur l'audio positionnel.
+
+**Un bug qu'un précédent audit avait signalé sans le corriger est réglé.**
+DA5.8 notait « l'écran des EFFETS est vide » (`ScrollContainer` de hauteur 0).
+Vérifié sur `04-3-reglages.png` : le cadre de droite s'affiche entièrement,
+scrollable, réglages CONFORT visibles jusqu'à « Quelqu'un derrière la vitre ».
+Résolu entre-temps par un autre chantier — pas de commit à en tirer.
+
+**Ce que `planche_contact.gd` ne couvre pas, par construction et pas par
+oubli** — le fichier l'explique lui-même : les écrans de salon/appariement
+(effet de bord réseau) et tout ce qui n'existe qu'en match (vignette de dégâts,
+bandeau FATAL, voile d'éblouissement). Ces trois-là sont exactement les cibles
+de DA5.2/DA5.7/DA5.5 ci-dessous — leur vérification visuelle passe par
+`./tools/run_visuel.sh --eblouissement` et par un jugement à l'œil à chaque
+étape, pas par cet outil.
+
+**La passe mécanique sur `EffectPolicy.EFFECTS` est le vrai résultat de cette
+étape.** Trente-quatre identifiants dans la table ; recherche de
+`current_effect("<id>")` / `effective_effect("<id>")` / `get_effect("<id>")`
+avec l'identifiant en **littéral**, hors `effect_policy.gd`, `settings_manager.gd`
+et `tools/` (qui liste tout génériquement pour construire l'écran des réglages
+et ne prouve donc rien sur l'application réelle). Seize identifiants sur
+trente-quatre — 47 % — n'ont **aucun** site d'appel en production :
+
+| Famille | Identifiants sans aucun appel de production |
+|---|---|
+| CONFORT (8/22) | `secousse_camera`, `recul_camera`, `vignette_degats`, `flash_mort`, `tremblement_interface`, `grain_killcam`, `vibration_manette`, `arene_au_repos` |
+| MONDE (8/12) | `eblouissement`, `silhouette_revelee`, `flash_de_tir`, `trait_de_balle`, `lumiere_impact`, `particules_sang`, `eclats_impact`, `traces_de_sang` |
+
+Les dix-huit restants sont bien branchés — les quinze effets de la vague M via
+`UI._intensite_vitrine()` (`ui.gd:3542-3564`), plus `poussiere_faisceau`
+(`player.gd:1616`), `fusee_agonie` et `fusee_diffusion` (`fusee.gd:524,554`).
+
+**Le curseur bouge, l'écran ne change pas.** Vérifié sur `04-3-reglages.png` :
+« Cadran de titre », « Rémanence du curseur » et « Torche du curseur » (bien
+branchés) partagent la même liste, la même présentation à 100 %, que les sept
+CONFORT morts plus bas dans la même colonne — rien ne distingue à l'écran un
+réglage qui agit d'un réglage qui ne fait rien. Un joueur qui descend
+« Vignette de dégâts » à zéro pour le confort continue de voir le rouge plein
+à chaque coup encaissé.
+
+**`eblouissement` mérite une note à part : la table le dit brancher un des deux
+« grands moments » du jeu, et il ne branche rien.** `brouillage.gd:632` porte
+en commentaire « le voile par `GameSettings.current_effect("eblouissement")` »
+— un ancien site d'appel, retiré depuis le passage au voile texturé
+(chantier « le voile d'éblouissement texturé », 2026-08-27), sans que la table
+ni le commentaire n'aient suivi. C'est exactement le motif « un constat daté
+se lit comme une propriété » déjà consigné dans ce fichier. DA5.5 en tire une
+conséquence directe : il pose une entrée **neuve** (`aberration_eblouissement`)
+plutôt que de réactiver celle-ci — voir ce chantier pour le pourquoi.
+
+**Signalé, pas corrigé — hors périmètre des six items DA5** (les sept familles
+CONFORT/MONDE mortes ci-dessus, moins `eblouissement` déjà traité par DA5.5,
+et moins `poussiere_faisceau`/`fusee_*` qui sont vivants) : quinze réglages
+qu'un joueur peut manipuler sans aucun effet mesurable. Retirer un réglage
+touche `effect_policy.gd`, l'écran des effets et une éventuelle valeur
+persistée — un chantier à part, de la même famille que le retrait de
+l'entrée `eblouissement` inerte déjà signalé au 2026-09-07 par la session
+« retouche éblouissement ».
+
+#### DA5.2 — un seul défaut vivant, le reste déjà légitime
+
+**Le seul cas confirmé en jeu :** `damage_vignette.gdshader:3` déclarait
+`vec4(1.0, 0.0, 0.0, 1.0)` — rouge primaire pur — et `player.gd` ne pousse
+jamais `vignette_color` depuis le code, seulement `intensity`. La vignette de
+dégâts affichait donc ce rouge à chaque coup encaissé, depuis toujours. Le
+défaut par construction : personne n'avait choisi cette couleur, elle n'avait
+jamais été écrite ailleurs que dans un défaut de shader. Corrigé aux deux
+endroits — le défaut du shader devient `Charte.ROUGE` recopié à la main (un
+`.gdshader` ne `preload` pas), et `player.gd` le pousse désormais
+explicitement, pour ne plus dépendre d'une convergence de deux valeurs
+séparées (même discipline que DA5.8 : « un défaut périmé se lit comme une
+intention »).
+
+**Balayage du reste du dépôt** — `grep` de tous les blancs/noirs/rouges purs
+en `.gd`/`.gdshader`, hors `tools/` et `addons/` (tests et plugin tiers, hors
+périmètre de la charte). Chaque résultat classé :
+
+| Où | Ce que c'est | Verdict |
+|---|---|---|
+| `light_textures.gd::radial()` | masque radial multiplicatif | déjà documenté comme exception — **non touché** |
+| `voile_textures.gd` (3 sites), `fusee.gd::_texture_volute/_texture_blanche` | masques de génération, lus en `.r`/multipliés par une teinte réelle plus loin | légitime, même règle — `fusee.gd` le documente déjà lui-même |
+| `player.gd:617,803` | texture factice 1×1 / motif de tirets, multipliés par `visual.color`/`aim_line.default_color` (déjà `Charte.HALOGENE`) | légitime — même famille |
+| `player.gd:493` | `Color.WHITE` comme **borne** d'un `lerp` à 0,55 (`TEINTE_VERS_BLANC`), jamais la valeur stockée | légitime — le résultat reste dans (0,1) sur les trois canaux |
+| `ui.gd:1924` (voile d'éblouissement), `menu_particles_ambiance.gd` | `ColorRect.color`/gradient laissés blancs alors que le shader écrit `COLOR` en entier ou que la teinte vient d'ailleurs | légitime, déjà commenté sur site pour `ui.gd` |
+| `map_editor.gd:1103,1197` | `ambient.color = Color.WHITE` en aperçu lumière **désactivé** | légitime — blanc est l'identité neutre d'un ambient multiplicatif, pas une teinte choisie |
+| `killcam_overlay.gdshader:57`, `menu_backdrop.gdshader:131`, `menu_hatch.gdshader:212` | `vec3(1.0)`/`vec3(0.0)` comme opérande d'inversion ou borne de `clamp` | légitime — ce sont des opérations, pas des couleurs |
+| `menu_hatch.gdshader:33` | `color_ink` par défaut = noir pur | autorisé — `NOIR` est l'exception mécanique de la règle 2 |
+| `ui.gd` (`modulate`/`self_modulate` = `Color.WHITE`, une dizaine de sites) | remise à « aucune teinte » sur une texture déjà correcte | légitime — `modulate` est multiplicatif par construction |
+| `death_flash.gdshader:14` | `mix(vec3(r,g,b), vec3(1.0), flash_intensity)` — le flash de mort blanchit vers le blanc pur | **examiné, gardé** — voir ci-dessous |
+
+**`death_flash.gdshader` mérite sa propre ligne, parce qu'il tranche
+autrement que la vignette.** Le shader ne reçoit **aucune couleur** du code
+(`player.gd:2019` ne pousse que `flash_intensity`) : `r,g,b` viennent de
+l'écran lui-même, aberration chromatique comprise, et ne sont mélangés vers le
+blanc qu'à l'approche de l'intensité 1. Ce n'est donc pas un défaut qu'on
+aurait oublié de teinter — c'est une décision : `effect_policy.gd` décrit déjà
+l'effet aux joueurs comme « **le blanc** et l'aberration au moment fatal »,
+au mot près. Une surexposition photographique n'a pas de teinte à choisir : la
+gagner serait la seule exception à la règle 2 qui ne soit pas déjà `NOIR`, et
+ce chantier n'a pas mandat pour la trancher — signalé, pas touché.
+
+#### DA5.7 — un contour, généralisé plutôt qu'inventé
+
+**`bullet.gd:677` (DA4.3) portait déjà la meilleure formule du dépôt** —
+`outline_size = max(2, round(taille × 0,11))`, une ombre au même ratio — et
+elle ne servait qu'à un seul site. `charte.gd` lui donne un second domicile :
+`contour_taille()`/`ombre_taille()` (pures, testées), et deux façons de les
+poser — `contourer_settings()` pour les labels à `LabelSettings` dédié,
+`contourer_control()` pour les overrides de thème.
+
+**Neuf sites migrés, huit d'entre eux changent de taille** — les ratios
+implicites allaient de 0,11 à 0,32, donc faux partout sauf la référence :
+
+| Site | Taille de police | Contour avant | Contour après |
+|---|---|---|---|
+| `bullet.gd` (référence, inchangé) | 19 à 42 | 0,11 × taille | — |
+| `player.gd` — bandeau FATAL | `T_ENSEIGNE` (68) | 12 | **7** |
+| `player.gd` — marge fatale | `T_TITRE` (25) | 8 | **3** |
+| `game_state.gd` — tampon KILL | `T_ENSEIGNE` (68) | 10 | **7** |
+| `training_target.gd` | `T_APPUI` (19) | 6 | **2** |
+| `ui.gd` — réseau/ping | `T_COURANT` (15) | 4 | **2** |
+| `ui.gd` — décompte | `T_DECOMPTE` (136) | 16 | **15** |
+| `map_editor_hud.gd` | variable (`_make_label`) | 3, fixe, alpha 0,85 | proportionnel, alpha 1,0 |
+
+**`map_editor_hud.gd` perd son alpha 0,85** — seul site du dépôt à réduire
+l'opacité de son contour, et aucune raison n'a été retrouvée dans l'historique
+ni dans le code. Un contour à demi-opaque n'a de sens que contre un fond
+changeant ; celui-ci n'en a pas. Si le passage visuel le juge nécessaire, il
+se rajoute comme un second paramètre de `contourer_control()` — pas comme un
+troisième mécanisme ad hoc.
+
+**Une troisième famille, découverte au passage : les ombres de `StyleBoxFlat`
+de `ui.gd`.** `_set_torch_style()` portait `Vector2(3, 3)` en dur, sans raison
+retrouvée pour l'écart d'1 px avec `MenuWidgets.SHADOW_OFFSET_BUTTON` (4, 4) —
+aligné dessus, `shadow_color` migré vers `MenuWidgets.SHADOW_COLOR_DEFAULT`
+(valeur strictement identique, seule la référence change). L'unique second
+site cité par le plan initial de ce chantier (`ui.gd`, une ombre à
+`Vector2(4, 4)`) n'existe plus dans le dépôt — déjà corrigé ou déplacé par une
+session antérieure, sans trace à corriger ici.
+
+**Nouveau contrôle pur** dans `tools/test_charte.gd` : `contour_taille()` et
+`ombre_taille()` contre leur formule, leur plancher, et ce que
+`contourer_settings()`/`contourer_control()` posent réellement sur un objet
+construit — pas seulement l'appel, la valeur obtenue (même discipline que le
+reste de ce fichier). ⚠️ **A trouvé un piège au premier lancement** : le test
+supposait `LabelSettings.shadow_size == 0` par défaut ; Godot le pose à `1`.
+Corrigé en comparant à un `LabelSettings.new()` vierge plutôt qu'à une valeur
+supposée — la même leçon que `test_torches`/`test_lumieres` appliquent déjà
+au texte du code.
+
+**Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
+ratio commun.
+
+#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+
+**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
+(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
+reste due à Adrien, signalée et non bloquante.
+
+**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+disque analytique (`smoothstep` sur une distance). Un second hash
+(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+plus, aucune texture, aucun coût mesurable.
+
+**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+brume — aucun nouveau bruit importé.
+
+**Cas examinés et gardés tels quels**, listés ici pour que personne ne les
+refasse :
+
+| Où | Pourquoi le cercle reste un cercle |
+|---|---|
+| `voile_eblouissement.gdshader:276` | isotropie voulue — un cœur ovale se lirait comme un défaut sur un phénomène optique, raisonnement déjà écrit sur place |
+| `brouillage_flou.gdshader` (trou d'exclusion) | un rayon unique aurait remplacé un cercle par un autre |
+| `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
+| `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
+
+Aucune suite headless ne teste la forme d'un cercle — jugement par
+`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
+vérifier que `poussiere_faisceau.gdshader` compile.
+
+#### DA5.4 — trois grains, délibérément distincts
+
+**Décision d'Adrien pour ce chantier : pas de nouvelle passe de grain pour la
+vue de match.** Le grain de `voile_eblouissement.gdshader` (`grain_force`,
+`grain_hz`) n'est pas un cas mort à corriger : il figure dans
+`tools/banc_voile.gd::REGLAGES` au même titre que les 23 autres paramètres
+calibrés au banc et retenus par Adrien le 2026-08-27 (« grain | 0,015 à
+10 Hz »). Le retoucher ailleurs qu'au banc referait un travail déjà fait.
+
+Le dépôt porte donc **trois grains, et c'est voulu** — même mécanisme (casser
+le rendu trop propre du procédural), trois pilotes distincts, jamais le même
+plan de match :
+
+| Grain | Pilote | Où |
+|---|---|---|
+| Killcam | texture vidéo (`grain_video.png`), asservie à la tension du ralenti | `killcam_overlay.gdshader` |
+| Menu | procédural, `hash12`, asservi à `EffectPolicy["voile_menu"]` | `menu_veil.gdshader` |
+| Match (éblouissement) | procédural, par pixel, asservi à `niveau` | `voile_eblouissement.gdshader` |
+
+Documenté directement dans `voile_eblouissement.gdshader`, à côté du bloc
+`grain_force`/`grain_hz`, plutôt que seulement ici : un commentaire dans un
+fichier regénéré se perd (piège déjà payé sur `project.godot`), mais un
+`.gdshader` n'est pas regénéré — le commentaire y survit.
+
+#### DA5.5 — l'aberration chromatique de l'éblouissement
+
+**Le seul item du chantier avec du code neuf**, et le seul qui touche la
+performance. Design vérifié par lecture complète de
+`voile_eblouissement.gdshader` (392 lignes avant ce chantier),
+`distorsion_eblouissement.gdshader` (33 lignes, prototype orphelin — chargé
+nulle part dans le jeu), `effect_policy.gd` et `ui.gd::_poser_voile`.
+
+**Ce qui est porté du prototype, ce qui est jeté.**
+`distorsion_eblouissement.gdshader` faisait trois choses : (a) séparation RGB
+radiale — **portée** ; (b) ondulation thermique UV — hors périmètre, DA5.5 ne
+parle que de couleur ; (c) bloom chaud additif — jeté, `voile_eblouissement`
+fait déjà ce métier, en mieux (texturé, calibré au banc).
+
+**Le point précis qui évite de recréer un bug déjà payé sur ce même
+shader** : l'aberration réutilise `d`, le vecteur déjà corrigé pour l'aspect
+et la demi-diagonale de référence (calculé en tête de `fragment()`) — pas un
+`SCREEN_UV - 0.5` naïf comme le prototype. Un `SCREEN_UV - 0.5` naïf est
+exactement le bug de « où est passé le flare central ? » entre écran scindé
+et vue unique, déjà consigné dans ce fichier. La branche témoin (`mode == 0`)
+n'est pas touchée — la règle « le témoin doit rester pur », déjà écrite après
+l'incident du 2026-08-27, tient toujours.
+
+**Écart au plan initial, trouvé en implémentant, et corrigé plutôt que
+signalé : le tampon d'écran n'avait pas de propriétaire.** Le plan prévoyait
+de lire `hint_screen_texture` sans poser de `BackBufferCopy` dédié, en
+s'appuyant sur le mécanisme partagé. Ce dépôt a déjà payé exactement ce
+défaut — voir « Pièges connus » : *« Le tampon d'écran n'a pas de
+propriétaire »* — `death_flash.gdshader` lit un tampon périmé, cadré sur
+l'ellipse laissée par le flou de `brouillage_vue.gd` (`COPY_MODE_RECT`),
+**signalé le 2026-09-07 et toujours pas corrigé**. Poser l'aberration sans sa
+propre copie aurait ajouté un SEPTIÈME lecteur au même piège, avec un risque
+réel de collision : le brouillage (aim uncertainty) et l'éblouissement
+peuvent être actifs à la fois dans un vrai match. Correctif : `ui.gd` pose
+désormais `_voile_bb`, un `BackBufferCopy` dédié en `COPY_MODE_VIEWPORT`, sur
+le modèle de `KillcamBB`/`ShockBB` — sa propre copie, juste avant sa propre
+lecture, visible seulement pendant un éblouissement réel (`p1_ebloui or
+p2_ebloui`, pour couvrir les deux voiles à la fois en écran scindé) pour ne
+pas payer une copie plein cadre à vide entre deux manches.
+
+**L'entrée `EffectPolicy` — neuve, PAS une réutilisation de `"eblouissement"`.**
+DA5.1 a établi que `"eblouissement"` (Monde, plancher 0,8) est inerte en
+production. `effect_policy.gd` porte désormais `"aberration_eblouissement"`,
+posée juste après `"eblouissement"` par proximité de sujet bien qu'elle soit
+d'une famille différente :
+
+```
+"famille": Family.CONFORT, "plancher": 0.0,
+"nom": "Frange de l'éblouissement"
+```
+
+⚠️ **Famille CONFORT choisie sur la recommandation du plan, PAS encore
+confirmée par Adrien — seule décision de ce chantier qui reste ouverte.**
+Raisonnement retenu : même motif que `flash_mort` (« n'obstrue que votre
+écran, rien ne vous oblige à la garder ») — la direction de l'éblouisseur
+passe déjà par `lueurs_derive`/`flares_penche`, non réglables, donc
+l'aberration ne porte aucune information de duel. Lecture alternative
+possible : « tout ce qui touche à l'éblouissement est Monde » →
+`Family.MONDE`, plancher ~0,5 (aligné sur `trait_de_balle`/`fusee_agonie`,
+pas sur le 0,8 de l'entrée `"eblouissement"` qui couvrait toute la
+pénalité). **À trancher avec Adrien avant de considérer ce point clos.**
+
+**Câblage**, dans `ui.gd::_poser_voile` : `0,015 × GameSettings.current_effect
+("aberration_eblouissement")` — 0,015 est le défaut calibré du shader,
+dupliqué ici comme ce fichier le fait déjà pour `teinte`/`HALOGENE`. Rien
+côté réseau : `niveau` (= `victime.dazzle_amount`) existe déjà côté client,
+l'aberration en dérive localement comme tout le reste du voile.
+
+**Le banc** — une ligne dans `tools/banc_voile.gd::REGLAGES`, après
+`grain_hz` : `["aberration chromatique", "aberration_chromatique", 0.0, 0.05,
+0.002]`. Le tableau est déjà générique (Tab/flèches/R/E le lisent sans rien
+savoir de ce paramètre) — aucune autre modification du banc n'était
+nécessaire.
+
+**Vérification.** `test_effect_policy` valide automatiquement la nouvelle
+entrée (table-driven : la table est passée de 34 à 35 effets, aucune
+modification de suite nécessaire) — confirmé, tous les contrôles passent.
+`test_eblouissement` (le modèle) et `test_arena_lighting`/les suites de
+shaders restent verts. Restent dus, hors du périmètre headless de cette
+session : `tools/banc_voile.tscn` (réglage manuel contre le témoin),
+`./tools/run_visuel.sh --eblouissement` (propriété d'équité déjà automatisée),
+et surtout **`tools/bench_framerate.tscn`, obligatoire pour tout shader plein
+écran touché** — ce changement fait passer `voile_eblouissement.gdshader` de
+zéro lecture d'écran à trois lectures de `screen_texture` par pixel couvert
+PLUS une copie plein cadre du viewport, à chaque éblouissement actif. Mesure
+au premier plan requise (H10) ; non exécutée dans cette session (pas de
+fenêtre interactive disponible) — **due avant toute publication**, avec un
+éblouissement forcé en continu via le banc pour mesurer le pire cas.
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

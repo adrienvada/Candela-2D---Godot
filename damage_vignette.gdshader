@@ -1,6 +1,11 @@
 shader_type canvas_item;
 
-uniform vec4 vignette_color : source_color = vec4(1.0, 0.0, 0.0, 1.0);
+// DA5.2 — le rouge de la charte, recopié à la main : un `.gdshader` ne peut
+// pas `preload("res://charte.gd")`. C'était vec4(1.0, 0.0, 0.0, 1.0), un rouge
+// primaire pur, et le seul appelant (`player.gd`) ne pousse jamais
+// `vignette_color` — seule `intensity` l'est. La vignette de dégâts affichait
+// donc ce défaut à chaque coup encaissé depuis toujours. Valeur = Charte.ROUGE.
+uniform vec4 vignette_color : source_color = vec4(0.95, 0.29, 0.33, 1.0);
 uniform float intensity = 0.0;
 uniform float smoothness = 0.8;
 

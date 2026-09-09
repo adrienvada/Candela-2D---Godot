@@ -226,8 +226,38 @@ uniform float fantomes_taille : hint_range(0.02, 1.0) = 0.31;
 /// pas la direction, ils portent la matière.
 uniform float fantomes_cote : hint_range(-1.0, 1.0) = -1.0;
 
+// --- l'aberration chromatique (DA5.5) ---------------------------------------
+//
+// Un liseré chromatique léger sur l'un des deux « grands moments » que DA5.5
+// réserve — kill (le bandeau FATAL a le sien) et ÉBLOUISSEMENT (ici). Porté
+// depuis `distorsion_eblouissement.gdshader`, prototype orphelin — chargé
+// nulle part dans le jeu — dont ce shader ne retient QUE la séparation RGB
+// radiale : ni l'ondulation thermique (hors du périmètre de DA5.5, qui ne
+// parle que de couleur), ni le bloom chaud additif (redondant — ce shader
+// fait déjà ce métier, en mieux, texturé et calibré).
+//
+// ⚠️ **Ne s'applique qu'au mode == 1** (le voile réel). Le témoin (mode == 0)
+// reste pur, règle déjà écrite après l'incident du 2026-08-27 où il avait
+// cessé de l'être en silence — voir `temoin` plus haut.
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
+uniform float aberration_chromatique : hint_range(0.0, 0.05) = 0.015;
+
 // --- le grain --------------------------------------------------------------
 
+/// DA5.4 — **c'est le grain de la vue de MATCH, et lui seul.** Le dépôt en
+/// porte trois, délibérément distincts, chacun asservi à sa propre chose :
+/// celui-ci à `niveau` (l'éblouissement), `killcam_overlay.gdshader` à la
+/// tension du ralenti via une texture vidéo (`grain_video.png`), et
+/// `menu_veil.gdshader` à `EffectPolicy["voile_menu"]` via un hash procédural.
+/// Aucun des trois n'a besoin des deux autres — même mécanisme (un grain qui
+/// « colle » l'image), trois pilotes, trois plans. Voir docs/ROADMAP.md, DA5.4.
+///
+/// Ses deux valeurs ci-dessous ne sont pas un réglage par défaut ordinaire :
+/// elles sont **gravées**, au même titre que les 23 autres paramètres de ce
+/// shader, calibrées au banc `tools/banc_voile.tscn` et retenues par Adrien le
+/// 2026-08-27 (docs/ROADMAP.md : « grain | 0,015 à 10 Hz »). Les retoucher
+/// ailleurs qu'au banc referait le travail qu'il a déjà fait.
+///
 /// ⚠️ **Ce grain valait 0,35 sur un bruit de valeur à basse fréquence, et
 /// Adrien l'a vu comme « un gros paquet pixellisé dans les sombres ».** Il
 /// l'était : des blobs de seize pixels, appliqués le plus fort là où l'image est
@@ -387,6 +417,19 @@ void fragment() {
 			a *= 1.0 + (n - 0.5) * grain_force;
 		}
 
-		COLOR = vec4(teinte, clamp(a, 0.0, 1.0) * clamp(niveau, 0.0, 1.0));
+		// DA5.5 — l'aberration lit `d`, déjà corrigé aspect + demi-diagonale de
+		// référence (calculé plus haut, avant le tremblement) — pas un
+		// `SCREEN_UV - 0.5` naïf : c'est exactement le bug déjà payé sur ce
+		// shader entre écran scindé et vue unique (« où est passé le flare
+		// central ? »). `COLOR.a` passe à 1.0 : lire `screen_texture` soi-même
+		// remplace le compositing GPU implicite par un mélange manuel.
+		vec2 decalage = normalize(d + vec2(1e-6)) * aberration_chromatique
+			* clamp(niveau, 0.0, 1.0) * (length(d) * 0.5 + 0.2);
+		float r = texture(screen_texture, SCREEN_UV + decalage).r;
+		float g = texture(screen_texture, SCREEN_UV).g;
+		float b = texture(screen_texture, SCREEN_UV - decalage).b;
+		vec3 fond = vec3(r, g, b);
+		float alpha_eff = clamp(a, 0.0, 1.0) * clamp(niveau, 0.0, 1.0);
+		COLOR = vec4(mix(fond, teinte, alpha_eff), 1.0);
 	}
 }
