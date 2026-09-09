@@ -3182,6 +3182,28 @@ a été réparée. La règle vit désormais dans `GameState.source_eblouissante_
 publique, et les deux consommateurs y passent — deux copies ne restent d'accord
 que par chance.
 
+### La fusion qui APPORTE un code n'est pas celle qui l'a écrit (2026-09-09)
+
+En fusionnant `main` dans le chantier des dix classes, j'ai trouvé qu'un autre
+chantier avait ajouté au HUD un témoin de fusée, et j'ai écrit trois commentaires
+l'attribuant à **la session dont la fusion me l'avait apporté**. C'était faux :
+le geste venait du chantier *game feel* (`b9a7d08`), deux chantiers plus tôt.
+
+Le dépôt connaît déjà le piège voisin — *le champ auteur git dit toujours
+« Adrien », toutes les sessions commitent sous son identité, donc il faut lire le
+corps du message*. Celui-ci est **plus faible encore** : je n'avais même pas lu un
+champ, j'avais déduit d'un ordre d'arrivée. Dans un dépôt à vingt-sept worktrees,
+un code traverse plusieurs fusions avant d'arriver ; **l'ordre d'arrivée ne dit
+rien de l'origine.**
+
+⚠️ **Et l'erreur avait déjà été publiée** dans la v0.4.0 — un commentaire qui
+envoie le prochain lecteur poser sa question à la mauvaise session. Relevée par
+la session accusée à tort, qui a vérifié avant de répondre plutôt que d'accepter
+le crédit.
+
+**La seule réponse à « qui a écrit ceci » est `git log -S"<le symbole>"`.** Ni
+l'auteur, ni le message de fusion, ni le chantier voisin dans le temps.
+
 ### Une source unique qu'on croit sur parole contre quatre qui s'accordent (2026-09-09)
 
 `brouillage_vue.gd` convertissait des unités de canevas en texels de framebuffer

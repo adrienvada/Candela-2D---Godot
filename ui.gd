@@ -2458,12 +2458,18 @@ func _create_torch_indicator() -> PanelContainer:
 func _create_reserves_indicator() -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# ⚠️ **Le style vient de `_set_flare_style()`, écrit par la session
-	# « appariement amical » pour SON témoin de fusée.** Les deux chantiers ont
-	# ajouté un indicateur de fusée au HUD le même jour, chacun de son côté : le
-	# leur allumait un cadre quand une fusée était disponible, le mien comptait la
-	# réserve et le gadget. Aucun des deux ne contenait l'autre — la fusion garde
-	# **le cadre qui s'allume ET les nombres**, plutôt que de trancher pour l'un.
+	# ⚠️ **Le style vient de `_set_flare_style()`, écrit par le chantier GAME FEEL**
+	# (commit `b9a7d08`) pour SON témoin de fusée. Deux chantiers ont ajouté un
+	# indicateur de fusée au HUD à quelques jours d'intervalle, chacun de son côté :
+	# le sien allumait un cadre quand une fusée était disponible, celui des CLASSES
+	# comptait la réserve et le gadget. Aucun des deux ne contenait l'autre — la
+	# fusion garde **le cadre qui s'allume ET les nombres**.
+	#
+	# ⚠️ **Ce commentaire a d'abord attribué ce geste au mauvais chantier.**
+	# L'erreur ne venait pas du champ auteur — le dépôt sait qu'il dit toujours
+	# « Adrien » — mais d'une déduction encore plus faible : *la fusion qui a
+	# apporté le code n'est pas celle qui l'a écrit*. Établi par
+	# `git log -S"_set_flare_style"`, seule source qui réponde à cette question.
 	#
 	# ⚠️ Le style se pose À LA FIN, une fois les enfants montés :
 	# `_set_flare_style()` rend la main sans rien faire sur un panneau vide
@@ -2480,9 +2486,9 @@ func _create_reserves_indicator() -> Dictionary:
 	rangee.add_theme_constant_override("separation", GAP_XS)
 	marge.add_child(rangee)
 
-	# L'icône de fusée, reprise du témoin de la session « appariement amical ».
-	# Absente si la planche ne l'est pas : les mots à côté portent déjà le sens,
-	# et un pictogramme de secours serait un défaut de plus.
+	# L'icône de fusée, reprise du témoin du chantier GAME FEEL. Absente si la
+	# planche ne l'est pas : les mots à côté portent déjà le sens, et un
+	# pictogramme de secours serait un défaut de plus.
 	var chemin_fusee := "res://assets/sprites/fusee_corps.png"
 	if ResourceLoader.exists(chemin_fusee):
 		var icone := TextureRect.new()
@@ -2521,9 +2527,9 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
-	# Le cadre s'allume tant qu'il reste une fusée — l'affordance de la session
-	# « appariement amical », conservée telle quelle : dans le noir, un cadre
-	# allumé se lit du coin de l'œil là où un nombre demande de regarder.
+	# Le cadre s'allume tant qu'il reste une fusée — l'affordance du chantier
+	# GAME FEEL, conservée telle quelle : dans le noir, un cadre allumé se lit du
+	# coin de l'œil là où un nombre demande de regarder.
 	_set_flare_style(res["panel"], n > 0, COLOR_P1 if joueur == 0 else COLOR_P2)
 
 	var dispo := bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false

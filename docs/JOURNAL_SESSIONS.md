@@ -3391,3 +3391,21 @@ fusion, les décals de sang arrivés de `main` n'étaient pas importés, et deux
 suites échouaient sur des tailles à 0 px. Deux passes de `--import` en avant-plan,
 et tout redevient vert. Les points d'ancrage du chantier ont été vérifiés un par
 un après la fusion, comme le corollaire de `CLAUDE.md` l'exige — les seize sont là.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (correction d'attribution, après publication)
+
+**J'ai attribué un geste au mauvais chantier, et c'était publié.** Trois
+commentaires de `ui.gd` créditaient la session « appariement amical » du témoin de
+fusée du HUD ; il vient du chantier **game feel** (`b9a7d08`), et `_rumble_shoot()`
+du chantier **vibrations manette** (`18dce6d`). La session accusée à tort a
+vérifié par `git log -S` avant de répondre, plutôt que d'accepter le crédit.
+
+⚠️ **Le piège est plus faible que celui du champ auteur**, déjà consigné : je
+n'avais même pas lu un champ, j'avais déduit d'un **ordre d'arrivée** — « la
+fusion qui m'a apporté ce code est celle qui l'a écrit ». Dans un dépôt à
+vingt-sept worktrees, un code traverse plusieurs fusions avant d'arriver. Nouvelle
+entrée aux « Pièges connus » ; la seule réponse à « qui a écrit ceci » est
+`git log -S"<le symbole>"`.
+
+Les trois commentaires nomment maintenant le chantier et son commit. Le geste
+lui-même n'a pas bougé : le cadre qui s'allume et l'icône restent.
