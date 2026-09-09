@@ -10732,9 +10732,9 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
   2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
   peinte finale, reste dû à Adrien. Détail ci-dessous.
-- **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
-  qui « colle » tous les éléments entre eux, l'arme n°1 contre l'effet
-  collage. *(S)*
+- **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
+  (décision d'Adrien : le grain de match existant reste), documentation des
+  trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
 - **DA5.5 L'aberration chromatique réservée** — un liseré chromatique léger sur
   les grands moments seulement (kill, éblouissement) ; jamais en continu. *(S)*
 - **DA5.6 La résolution assumée** ✅ **TRANCHÉ le 2026-08-24 : smooth.**
@@ -10939,6 +10939,30 @@ refasse :
 Aucune suite headless ne teste la forme d'un cercle — jugement par
 `./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
 vérifier que `poussiere_faisceau.gdshader` compile.
+
+#### DA5.4 — trois grains, délibérément distincts
+
+**Décision d'Adrien pour ce chantier : pas de nouvelle passe de grain pour la
+vue de match.** Le grain de `voile_eblouissement.gdshader` (`grain_force`,
+`grain_hz`) n'est pas un cas mort à corriger : il figure dans
+`tools/banc_voile.gd::REGLAGES` au même titre que les 23 autres paramètres
+calibrés au banc et retenus par Adrien le 2026-08-27 (« grain | 0,015 à
+10 Hz »). Le retoucher ailleurs qu'au banc referait un travail déjà fait.
+
+Le dépôt porte donc **trois grains, et c'est voulu** — même mécanisme (casser
+le rendu trop propre du procédural), trois pilotes distincts, jamais le même
+plan de match :
+
+| Grain | Pilote | Où |
+|---|---|---|
+| Killcam | texture vidéo (`grain_video.png`), asservie à la tension du ralenti | `killcam_overlay.gdshader` |
+| Menu | procédural, `hash12`, asservi à `EffectPolicy["voile_menu"]` | `menu_veil.gdshader` |
+| Match (éblouissement) | procédural, par pixel, asservi à `niveau` | `voile_eblouissement.gdshader` |
+
+Documenté directement dans `voile_eblouissement.gdshader`, à côté du bloc
+`grain_force`/`grain_hz`, plutôt que seulement ici : un commentaire dans un
+fichier regénéré se perd (piège déjà payé sur `project.godot`), mais un
+`.gdshader` n'est pas regénéré — le commentaire y survit.
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

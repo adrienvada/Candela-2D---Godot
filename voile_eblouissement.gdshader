@@ -228,6 +228,20 @@ uniform float fantomes_cote : hint_range(-1.0, 1.0) = -1.0;
 
 // --- le grain --------------------------------------------------------------
 
+/// DA5.4 — **c'est le grain de la vue de MATCH, et lui seul.** Le dépôt en
+/// porte trois, délibérément distincts, chacun asservi à sa propre chose :
+/// celui-ci à `niveau` (l'éblouissement), `killcam_overlay.gdshader` à la
+/// tension du ralenti via une texture vidéo (`grain_video.png`), et
+/// `menu_veil.gdshader` à `EffectPolicy["voile_menu"]` via un hash procédural.
+/// Aucun des trois n'a besoin des deux autres — même mécanisme (un grain qui
+/// « colle » l'image), trois pilotes, trois plans. Voir docs/ROADMAP.md, DA5.4.
+///
+/// Ses deux valeurs ci-dessous ne sont pas un réglage par défaut ordinaire :
+/// elles sont **gravées**, au même titre que les 23 autres paramètres de ce
+/// shader, calibrées au banc `tools/banc_voile.tscn` et retenues par Adrien le
+/// 2026-08-27 (docs/ROADMAP.md : « grain | 0,015 à 10 Hz »). Les retoucher
+/// ailleurs qu'au banc referait le travail qu'il a déjà fait.
+///
 /// ⚠️ **Ce grain valait 0,35 sur un bruit de valeur à basse fréquence, et
 /// Adrien l'a vu comme « un gros paquet pixellisé dans les sombres ».** Il
 /// l'était : des blobs de seize pixels, appliqués le plus fort là où l'image est
