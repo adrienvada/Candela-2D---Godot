@@ -10725,8 +10725,9 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
   liste ci-dessous — le vrai résultat n'est pas les défauts visuels (aucun
   trouvé sur ce que la planche couvre) mais **seize réglages sur trente-quatre
   qui ne pilotent rien**. Détail ci-dessous. *(S)*
-- **DA5.2 Blanc pur et noir pur interdits** hors fond du monde — tout passe au
-  blanc cassé et au noir de la bible. *(S)*
+- **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
+  du monde — tout passe au blanc cassé et au noir de la bible. Détail
+  ci-dessous. *(S)*
 - **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
   circulaire passe en texture. *(S + G)*
 - **DA5.4 Le grain unifié** — un seul grain plein écran très subtil : le vernis
@@ -10810,6 +10811,48 @@ touche `effect_policy.gd`, l'écran des effets et une éventuelle valeur
 persistée — un chantier à part, de la même famille que le retrait de
 l'entrée `eblouissement` inerte déjà signalé au 2026-09-07 par la session
 « retouche éblouissement ».
+
+#### DA5.2 — un seul défaut vivant, le reste déjà légitime
+
+**Le seul cas confirmé en jeu :** `damage_vignette.gdshader:3` déclarait
+`vec4(1.0, 0.0, 0.0, 1.0)` — rouge primaire pur — et `player.gd` ne pousse
+jamais `vignette_color` depuis le code, seulement `intensity`. La vignette de
+dégâts affichait donc ce rouge à chaque coup encaissé, depuis toujours. Le
+défaut par construction : personne n'avait choisi cette couleur, elle n'avait
+jamais été écrite ailleurs que dans un défaut de shader. Corrigé aux deux
+endroits — le défaut du shader devient `Charte.ROUGE` recopié à la main (un
+`.gdshader` ne `preload` pas), et `player.gd` le pousse désormais
+explicitement, pour ne plus dépendre d'une convergence de deux valeurs
+séparées (même discipline que DA5.8 : « un défaut périmé se lit comme une
+intention »).
+
+**Balayage du reste du dépôt** — `grep` de tous les blancs/noirs/rouges purs
+en `.gd`/`.gdshader`, hors `tools/` et `addons/` (tests et plugin tiers, hors
+périmètre de la charte). Chaque résultat classé :
+
+| Où | Ce que c'est | Verdict |
+|---|---|---|
+| `light_textures.gd::radial()` | masque radial multiplicatif | déjà documenté comme exception — **non touché** |
+| `voile_textures.gd` (3 sites), `fusee.gd::_texture_volute/_texture_blanche` | masques de génération, lus en `.r`/multipliés par une teinte réelle plus loin | légitime, même règle — `fusee.gd` le documente déjà lui-même |
+| `player.gd:617,803` | texture factice 1×1 / motif de tirets, multipliés par `visual.color`/`aim_line.default_color` (déjà `Charte.HALOGENE`) | légitime — même famille |
+| `player.gd:493` | `Color.WHITE` comme **borne** d'un `lerp` à 0,55 (`TEINTE_VERS_BLANC`), jamais la valeur stockée | légitime — le résultat reste dans (0,1) sur les trois canaux |
+| `ui.gd:1924` (voile d'éblouissement), `menu_particles_ambiance.gd` | `ColorRect.color`/gradient laissés blancs alors que le shader écrit `COLOR` en entier ou que la teinte vient d'ailleurs | légitime, déjà commenté sur site pour `ui.gd` |
+| `map_editor.gd:1103,1197` | `ambient.color = Color.WHITE` en aperçu lumière **désactivé** | légitime — blanc est l'identité neutre d'un ambient multiplicatif, pas une teinte choisie |
+| `killcam_overlay.gdshader:57`, `menu_backdrop.gdshader:131`, `menu_hatch.gdshader:212` | `vec3(1.0)`/`vec3(0.0)` comme opérande d'inversion ou borne de `clamp` | légitime — ce sont des opérations, pas des couleurs |
+| `menu_hatch.gdshader:33` | `color_ink` par défaut = noir pur | autorisé — `NOIR` est l'exception mécanique de la règle 2 |
+| `ui.gd` (`modulate`/`self_modulate` = `Color.WHITE`, une dizaine de sites) | remise à « aucune teinte » sur une texture déjà correcte | légitime — `modulate` est multiplicatif par construction |
+| `death_flash.gdshader:14` | `mix(vec3(r,g,b), vec3(1.0), flash_intensity)` — le flash de mort blanchit vers le blanc pur | **examiné, gardé** — voir ci-dessous |
+
+**`death_flash.gdshader` mérite sa propre ligne, parce qu'il tranche
+autrement que la vignette.** Le shader ne reçoit **aucune couleur** du code
+(`player.gd:2019` ne pousse que `flash_intensity`) : `r,g,b` viennent de
+l'écran lui-même, aberration chromatique comprise, et ne sont mélangés vers le
+blanc qu'à l'approche de l'intensité 1. Ce n'est donc pas un défaut qu'on
+aurait oublié de teinter — c'est une décision : `effect_policy.gd` décrit déjà
+l'effet aux joueurs comme « **le blanc** et l'aberration au moment fatal »,
+au mot près. Une surexposition photographique n'a pas de teinte à choisir : la
+gagner serait la seule exception à la règle 2 qui ne soit pas déjà `NOIR`, et
+ce chantier n'a pas mandat pour la trancher — signalé, pas touché.
 
 #### DA5.8 — ce que le recalibrage a trouvé
 

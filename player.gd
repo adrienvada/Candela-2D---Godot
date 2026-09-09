@@ -658,6 +658,12 @@ func _ready():
 	
 	vignette_mat = ShaderMaterial.new()
 	vignette_mat.shader = SHADER_VIGNETTE
+	# DA5.2 — poussé explicitement plutôt que confié au défaut du shader :
+	# les deux valent la même chose aujourd'hui, mais un appelant qui ne pousse
+	# pas sa couleur est celui qui a laissé passer le rouge primaire pur
+	# corrigé par ce chantier (« un défaut périmé se lit comme une intention »).
+	vignette_mat.set_shader_parameter("vignette_color",
+		Vector4(Charte.ROUGE.r, Charte.ROUGE.g, Charte.ROUGE.b, 1.0))
 	vignette_rect.material = vignette_mat
 	ui_layer.add_child(vignette_rect)
 
