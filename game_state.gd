@@ -57,6 +57,18 @@ var dernier_effleurement: float = -1.0
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+
+## DA6.3 — le repère de « ce soir ». L'historique persiste entre deux
+## lancements ; une soirée est une séance devant l'écran, pas une date. Posé une
+## fois, à la construction, et jamais recalculé : le relire à chaque fin de match
+## ferait glisser la fenêtre et la carte oublierait le début de la soirée.
+var _debut_de_seance: String = Time.get_datetime_string_from_system(true, true)
+
+## La carte de fin de soirée ne se pose qu'UNE fois par séance. Le retour au menu
+## arrive après chaque match : reposée à chaque fois, elle cesserait d'être une
+## fin de soirée pour devenir un écran de plus à congédier.
+var _soiree_montree: bool = false
+
 ## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
 ##
 ## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
@@ -137,12 +149,23 @@ const COUNTDOWN_MATCHMADE := 10.0
 ## suffit pas : l'autre choisit peut-être encore.
 ## V3.3 — la derniere seconde entiere annoncee. -1 tant qu'aucune ne l'a ete.
 var _dernier_tic_decompte: int = -1
+## V3.4 — le tic-tac sous 10 s : la dernière seconde entière pour laquelle le tic a joué.
+var _dernier_tic_chrono: int = -1
 var _countdown_ready_local: bool = false
 var _countdown_ready_peer: bool = false
-## Ce match vient-il de l'appariement automatique ? C'est la seule question qui
-## décide de la durée : elle distingue « l'arme n'est pas encore choisie » de
-## « elle l'est depuis le menu ».
+## Ce match vient-il de l'appariement automatique (amical ou classé) ? Décide du
+## tirage de carte — voir `_lancer_match_apparie()`.
 var _matchmade_round: bool = false
+## Le match apparié ci-dessus est-il classé ? C'est CETTE question, et non
+## `_matchmade_round` seul, qui décide de la fenêtre de choix : la règle du
+## miroir n'existe qu'en compétitif (« Absent de l'amical », décision d'Adrien
+## du 2026-08-18), donc l'arsenal commun n'y est inconnu qu'en classé. En
+## amical, l'arme est déjà choisie au menu — Adrien l'a demandé le 2026-09-09,
+## après l'essai à deux machines où la fenêtre de dix secondes ne s'abrégeait
+## que côté hôte : le client restait planté sur son décompte pendant que
+## l'hôte avait déjà lancé la manche. Sans fenêtre à abréger, le défaut ne
+## peut plus se produire en amical — le classé le garde, lui, tel quel.
+var _matchmade_ranked: bool = false
 ## [Hôte] Un match apparié attend son invité. Armé à `match_ready`, consommé à
 ## l'arrivée de son arme — voir `_on_match_ready()` pour la raison d'être de ce
 ## report.
@@ -440,6 +463,13 @@ func _ready():
 	
 	ui.show_main_menu()
 
+	# DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`,
+	# et c'est la décision : le menu est monté, vivant et prêt sous le voile
+	# pendant toute la séquence. Le faire attendre l'aurait fait apparaître d'un
+	# bloc à la fin — un à-coup, juste après une animation soignée.
+	# Elle se saute à la première touche ; voir `power_on.gd`.
+	PowerOn.lancer(self)
+
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que
 ## c'est l'EVENEMENT qui compte, pas l'effet.
@@ -677,6 +707,7 @@ func _on_training_requested() -> void:
 	_apply_network_mode()
 	MapData.select_map(MapData.DEFAULT_MAP_ID)
 	_matchmade_round = false
+	_matchmade_ranked = false
 	_matchmade_start_pending = false
 
 	game_over = false
@@ -1229,19 +1260,24 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	Engine.time_scale = 1.0
 	_liberer_le_releve()
 	# Départ figé des deux côtés : le décompte absorbe le trajet de rpc_start_round.
-	countdown_left = COUNTDOWN_MATCHMADE if _matchmade_round else COUNTDOWN_DURATION
+	# Les dix secondes sont la fenêtre de choix du classé — voir
+	# `_matchmade_ranked`. Un match apparié amical garde les trois secondes
+	# ordinaires : rien n'y reste à choisir une fois l'adversaire trouvé.
+	countdown_left = COUNTDOWN_MATCHMADE if (_matchmade_round and _matchmade_ranked) \
+		else COUNTDOWN_DURATION
 	# V3.3 — le suivi des secondes entieres. **Le sentinelle -1 n'est pas une
 	# precaution, il est necessaire** : un decompte arme a 3,0 est DEJA a trois
 	# des la premiere image, il n'y a donc aucune transition « vers 3 » a
 	# attraper. Sans lui, `count_3` ne sortirait jamais — et son absence
 	# passerait pour une intention.
 	_dernier_tic_decompte = -1
+	_dernier_tic_chrono = -1
 	_countdown_ready_local = false
 	_countdown_ready_peer = false
 	# La fenêtre de choix s'ouvre avec le décompte, et seulement pour un match
-	# apparié : ailleurs l'arme est déjà choisie, un panneau modal ne ferait
-	# qu'arrêter le joueur devant une question déjà répondue.
-	if _matchmade_round:
+	# apparié CLASSÉ : ailleurs l'arme est déjà choisie, un panneau modal ne
+	# ferait qu'arrêter le joueur devant une question déjà répondue.
+	if _matchmade_round and _matchmade_ranked:
 		ui.show_pick_window(matchmade_arsenal(), matchmade_arsenal_reason())
 	else:
 		ui.hide_pick_window()
@@ -1283,10 +1319,27 @@ func _process(delta):
 		if countdown_left > 0.0:
 			# Les deux prêts abrègent la fenêtre. L'hôte tranche seul : il porte le
 			# chronomètre, et laisser chaque camp décider produirait deux départs
-			# décalés d'un aller-retour.
-			if _matchmade_round and _countdown_ready_local and _countdown_ready_peer \
+			# décalés d'un aller-retour. N'existe qu'en classé — un match amical
+			# n'ouvre plus cette fenêtre du tout (`_matchmade_ranked`), donc ces
+			# drapeaux y restent à `false` et cette branche ne s'y déclenche jamais.
+			#
+			# ⚠️ **Longtemps vrai à moitié seulement.** L'hôte collapsait bien SON
+			# propre décompte ici, mais rien n'en informait le client — measured
+			# à deux machines le 2026-09-09 (v0.3.1) : la manche partait pour
+			# l'hôte seul, le client restant planté sur ses dix secondes. Le
+			# `rpc_id` ci-dessous est le canal qui manquait, symétrique de
+			# `rpc_countdown_ready` (qui informe déjà l'hôte que le CLIENT est
+			# prêt) — voir « Deux prêts, un seul départ » aux Pièges connus, qui
+			# documentait le défaut sans le fermer côté classé.
+			if _matchmade_round and _matchmade_ranked and _countdown_ready_local \
+					and _countdown_ready_peer \
 					and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				countdown_left = 0.0
+				# `client_peer_id` reste à 0 en écran partagé — pas de pair à
+				# prévenir, et c'est ce qui laisse `_run_fenetre()` exercer ce
+				# chemin sans réseau ni appariement, comme conçu.
+				if client_peer_id != 0:
+					rpc_id(client_peer_id, "rpc_countdown_launch")
 			countdown_left = maxf(0.0, countdown_left - delta)
 			ui.set_countdown(countdown_left)
 			# V3.3 — une note par seconde entiere, et seulement les trois
@@ -1309,6 +1362,13 @@ func _process(delta):
 					rpc_sync_time.rpc(time_left)
 		else:
 			time_left -= delta
+			# V3.4 — le tic-tac sous 10 s : un tic sec par seconde entière quand le
+			# chrono passe en rouge et bat.
+			if time_left < 10.0 and time_left > 0.0:
+				var tic_chrono := int(ceil(time_left))
+				if tic_chrono != _dernier_tic_chrono:
+					_dernier_tic_chrono = tic_chrono
+					AudioManager.play_ui("ui_tick", -4.0)
 			if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 				_time_sync_accum += delta
 				if _time_sync_accum >= TIME_SYNC_INTERVAL:
@@ -2839,7 +2899,78 @@ func _do_end_round(winner_id: int):
 	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
 	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
 		dernier_effleurement)
+	# DA6.1 — l'affiche, par-dessus le salon que ces deux lignes viennent de
+	# poser. Elle LIT le verdict sur le titre du menu plutôt que de le
+	# recalculer : le mot dépend du mode et d'un arbitrage sur l'égalité, et deux
+	# calculs finiraient par se contredire à l'écran. Voir `affiche_de_fin.gd`.
+	_poser_affiche_de_fin(winner_id)
 	_apply_deferred_rematch()
+
+# ---------------------------------------------------------------------------
+# V6.10 A ÉTÉ ÉCRITE DEUX FOIS, ET ADRIEN A TRANCHÉ LE 2026-09-09
+#
+# Deux sessions ont lu la même fiche le même jour, sur deux branches, et l'ont
+# livrée deux fois : une LIGNE de texte sur l'écran de fin
+# (`SerieDeSession.carte_soiree()`, comptée sur le score de session en mémoire)
+# et une CARTE au retour au menu (`BilanDeSoiree`, comptée sur
+# `match_history.json`). C'est la deuxième fois que ce motif se produit ici —
+# V6.2, le 2026-08-18. Détail et leçon aux « Pièges connus ».
+#
+# **La carte l'emporte, parce qu'elle couvre aussi DA6.3 et DA6.4** : illustrée
+# et exportable en image, ce qu'une ligne de texte ne peut pas être. La ligne est
+# retirée d'ici, de `serie_de_session.gd` et de sa suite. Ce qui disparaît avec
+# elle : `session_ties` et `_session_weapons`, qui ne servaient qu'à la nourrir —
+# le décompte des égalités et des armes vit désormais dans `BilanDeSoiree`, lu
+# depuis le journal des matchs.
+#
+# ⚠️ **Il reste une moitié dans `ui.gd`** : le paramètre `carte_soiree` de
+# `poser_bilan()` et le label `bilan_soiree` qu'il alimentait. Plus personne ne
+# les nourrit, le paramètre a un défaut vide, rien ne s'affiche. **Signalé et non
+# retiré : `ui.gd` appartient à la session « menus »**, et sept mille lignes ne
+# se touchent pas pour retirer trois des siennes.
+# ---------------------------------------------------------------------------
+
+## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
+##
+## Rassemblés ici parce que `game_state` est le seul à tous les avoir : la carte
+## vient de `MapData`, les armes des joueurs, la durée du chrono, le score de
+## session et la série de cet objet, la marge du dernier coup de `V2.9`.
+func _poser_affiche_de_fin(winner_id: int) -> void:
+	var carte: Dictionary = MapData.get_selected()
+	AfficheDeFin.poser(self, {
+		"vainqueur": winner_id,
+		"local_idx": _local_player_index(),
+		"carte": String(carte.get("name", "")),
+		"duree": round_time - time_left,
+		"arme_j1": p1.current_weapon.name if is_instance_valid(p1) and p1.current_weapon else "",
+		"arme_j2": p2.current_weapon.name if is_instance_valid(p2) and p2.current_weapon else "",
+		"mode": _mode_label(),
+		"session_j1": p1_session_wins,
+		"session_j2": p2_session_wins,
+		"serie": _mot_de_serie,
+		"marge_px": dernier_effleurement,
+	}, ui.game_over_title if "game_over_title" in ui else null)
+
+
+## DA6.3 — la carte de fin de soirée, au retour au menu.
+##
+## Le seuil et le calcul sont dans `BilanDeSoiree` ; ce qui est décidé ici est le
+## MOMENT. Pas pendant un match, pas après un forfait subi en pleine manche —
+## au retour au menu, quand la soirée s'arrête vraiment.
+##
+## ⚠️ **Une seule fois par séance.** Le retour au menu arrive après chaque
+## match : reposée à chaque fois, la carte deviendrait un écran de plus à
+## congédier, et à la quatrième on ne la lirait plus.
+func _peut_etre_la_soiree() -> void:
+	if _soiree_montree:
+		return
+	var bilan := BilanDeSoiree.de_la_soiree(MatchRecord.load_history(),
+		_local_player_index(), _debut_de_seance)
+	if not bool(bilan.get("assez", false)):
+		return
+	_soiree_montree = true
+	PanneauDeSoiree.poser(self, bilan)
+
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
 ## chaque machine journalise le match qu'elle vient de jouer, y compris le
@@ -2984,41 +3115,36 @@ func _mode_label() -> String:
 ## tampon vit exactement le temps de l'arrêt sur image.
 var _kill_stamp: CanvasLayer
 
+## V2.7 + DA6.2 — le tampon du kill, devenu une PHOTO.
+##
+## La composition (cadre, ligne de tête, légende, tampon) vit dans
+## `estampe_de_kill.gd`. Ce qui reste ici est ce que `game_state` est seul à
+## savoir : quand poser l'image, et avec quels faits.
 func _spawn_kill_stamp(elapsed: float) -> void:
 	_clear_kill_stamp()
-	_kill_stamp = CanvasLayer.new()
-	_kill_stamp.layer = 95
-	add_child(_kill_stamp)
+	var carte: Dictionary = MapData.get_selected()
+	_kill_stamp = EstampeDeKill.poser(self, {
+		"temps": elapsed,
+		"carte": String(carte.get("name", "")),
+		# L'arme du VAINQUEUR : c'est elle qui a fait l'image.
+		"arme": _arme_du_vainqueur(),
+		"mode": _mode_label(),
+	}, [ui.match_hud] if "match_hud" in ui else [])
 
-	var lbl := Label.new()
-	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
-	var settings := LabelSettings.new()
-	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
-	settings.font_size = Charte.T_ENSEIGNE
-	settings.font_color = Charte.ROUGE
-	settings.outline_size = 10
-	settings.outline_color = Charte.NOIR
-	lbl.label_settings = settings
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	lbl.pivot_offset = get_viewport().get_visible_rect().size / 2.0
-	lbl.rotation = -0.06
-	_kill_stamp.add_child(lbl)
-
-	# Le claquement : gros, puis en place — l'inertie d'un tampon encreur.
-	lbl.scale = Vector2(2.6, 2.6)
-	lbl.modulate.a = 0.0
-	var tw := lbl.create_tween()
-	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
-	# DA4.13 — le claquement du tampon : REBOND, avec son dépassement. C'était
-	# déjà `BACK_OUT`, la conversion ne change rien à l'œil.
-	tw.parallel()
-	Charte.animer(tw, lbl, "scale", Vector2(2.6, 2.6), Vector2.ONE, 0.12,
-		Charte.Courbe.REBOND)
-	tw.tween_interval(1.7)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
-	tw.tween_callback(_clear_kill_stamp)
+## Le nom de l'arme qui vient de tuer. La victime est morte, le survivant est
+## celui dont la lumière est encore allumée une demi-seconde plus tôt — mais on
+## ne devine pas : `player_died` a déjà décidé du vainqueur, et `p1_round_wins`
+## vient d'être incrémenté par `_do_end_round`. On lit donc les points de vie,
+## seule information qui ne dépend d'aucun ordre d'appel.
+func _arme_du_vainqueur() -> String:
+	var vivant: Player = null
+	if is_instance_valid(p1) and not p1.dead:
+		vivant = p1
+	elif is_instance_valid(p2) and not p2.dead:
+		vivant = p2
+	if vivant == null or vivant.current_weapon == null:
+		return ""
+	return String(vivant.current_weapon.name)
 
 func _clear_kill_stamp() -> void:
 	if is_instance_valid(_kill_stamp):
@@ -3105,6 +3231,7 @@ func _on_pick_window_cancelled() -> void:
 	if appariement != null and appariement.has_method("cancel"):
 		appariement.cancel()
 	_matchmade_round = false
+	_matchmade_ranked = false
 	_on_main_menu_requested()
 
 ## L'arme correspondant à un index de râtelier. Une seule table de résolution :
@@ -3388,16 +3515,18 @@ func classe_pour_index(idx: int) -> ClassData:
 	return _classes[idx]
 
 ## L'arsenal commun de ce match, règle du miroir appliquée. Vide hors match
-## apparié : ailleurs, l'arme est choisie au menu et rien n'est à aligner.
+## apparié CLASSÉ : ailleurs — amical compris —, l'arme est choisie au menu et
+## rien n'est à aligner, la règle du miroir n'existant pas en amical.
 func matchmade_arsenal() -> Array[int]:
-	if not _matchmade_round:
+	if not _matchmade_round or not _matchmade_ranked:
 		return []
 	return RankLoadout.mirrored(_mirror_local_tier, _mirror_opponent_tier)
 
 ## Pourquoi l'arsenal est celui-là, en langage joueur — vide s'il n'a pas rétréci.
 ## L'écran ne reconstruit pas le raisonnement : il affiche ce que la table rend.
 func matchmade_arsenal_reason() -> String:
-	if not _matchmade_round or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
+	if not _matchmade_round or not _matchmade_ranked \
+			or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
 		return ""
 	# ⚠️ **L'index n'est plus l'arbalète en dur.** Il l'était parce qu'elle est la
 	# dernière du socle, donc la première écartée — vrai tant que l'arsenal
@@ -3455,12 +3584,17 @@ func rpc_countdown_weapon(idx: int) -> void:
 ## que ce match ouvre une fenêtre de choix d'arme, et les deux catégories de la
 ## règle du miroir. L'hôte, lui, ARME son départ ; il ne part pas.
 func _on_match_ready(_pairing: Dictionary) -> void:
-	# Ce match ouvre une fenêtre de choix : l'arsenal commun n'est connu que
-	# maintenant, la règle du miroir l'alignant sur le moins bien classé. Posé des
-	# DEUX côtés — le client ne passe pas par `_start_round()`, il reçoit
-	# `rpc_start_round`, et sans ce drapeau son décompte durerait trois secondes
-	# pendant que l'hôte en compte dix.
+	# Posé des DEUX côtés — le client ne passe pas par `_start_round()`, il
+	# reçoit `rpc_start_round`, et sans ces deux drapeaux son décompte durerait
+	# trois secondes pendant que l'hôte en compte dix (ou l'inverse).
 	_matchmade_round = true
+	# `Matchmaking.pairing_snapshot()` pose déjà `ranked` — c'est le mode dans
+	# lequel la recherche a été lancée, connu AVANT l'appariement. Seul ce match
+	# classé ouvre une fenêtre de choix : l'arsenal commun n'y est connu qu'une
+	# fois l'adversaire trouvé, la règle du miroir l'alignant sur le moins bien
+	# classé. En amical elle ne s'applique pas (« Absent de l'amical », décision
+	# d'Adrien du 2026-08-18) : l'arme est déjà celle choisie au menu.
+	_matchmade_ranked = bool(_pairing.get("ranked", false))
 	_mirror_local_tier = int(_pairing.get("local_tier", 0))
 	_mirror_opponent_tier = int(_pairing.get("opponent_tier", 0))
 	# Le joueur a choisi son arme sans savoir s'il hébergerait : la désignation
@@ -3468,6 +3602,16 @@ func _on_match_ready(_pairing: Dictionary) -> void:
 	# râteliers, l'hôte lisant celui de J1 et l'invité celui de J2.
 	ui.mirror_weapon_choice()
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		# [Client] Symétrique de l'échéance hôte ci-dessous : `join_matched_game()`
+		# vient de tenter la connexion, mais « tentative engagée » n'est pas
+		# « connexion établie ». Sans échéance ici, un lien P2P qui reste bloqué
+		# (NAT hostile, hôte qui a lui-même expiré sans que le signal de
+		# déconnexion se propage) laisserait le client attendre indéfiniment un
+		# `rpc_start_round` qui ne viendra jamais — le même défaut que
+		# `_on_join_requested()` corrige déjà pour un salon à code, jamais porté
+		# jusqu'ici.
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+			_armer_echeance_connexion_appariee()
 		return
 	# ⚠️ **La manche ne part PAS ici, et c'est tout l'objet du report.**
 	#
@@ -3517,15 +3661,46 @@ func _armer_echeance_appariement(jeton: int) -> void:
 			UI.Registre.ATTENTION)
 	)
 
+## [Client] Le lien vers l'hôte apparié ne s'établit jamais.
+##
+## Réutilise `_join_deadline_active` et `_on_connection_failed()` — le même
+## couple que `_on_join_requested()` arme déjà pour un salon à code, et pour la
+## même raison : « tentative engagée » (`join_matched_game()` a renvoyé vrai)
+## n'est pas « connexion établie », et rien ne garantit que `connection_failed`
+## se déclenche de lui-même sur un P2P qui reste bloqué. Même durée que
+## l'échéance hôte symétrique : c'est le même rendez-vous EOS des deux côtés.
+func _armer_echeance_connexion_appariee() -> void:
+	_join_deadline_active = true
+	var timer := get_tree().create_timer(DELAI_INVITE_APPARIE)
+	timer.timeout.connect(func() -> void:
+		if not _join_deadline_active:
+			return
+		_join_deadline_active = false
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT \
+				and multiplayer.get_peers().is_empty():
+			_on_connection_failed()
+	)
+
 ## [Hôte] Le départ d'un match apparié, une fois l'invité vraiment là.
 ##
-## La carte est tirée au sort **avant** `_start_round()`, parce que c'est cet
-## appel qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
-## départ du client. Tirer après donnerait deux arènes différentes aux deux
+## La carte est choisie **avant** `_start_round()`, parce que c'est cet appel
+## qui reconstruit l'arène et que `_host_map_code()` la joindra au paquet de
+## départ du client. Choisir après donnerait deux arènes différentes aux deux
 ## joueurs — le défaut le plus coûteux à diagnostiquer de tout le jeu, chacun
 ## voyant un monde cohérent.
+##
+## **Classé et amical divergent ici, décision d'Adrien du 2026-09-09.** Le
+## classé garde le tirage au sort dans tout le catalogue — la question
+## d'équité qu'il ouvre (une carte importée par l'adversaire) reste ouverte,
+## « à trancher par Adrien » selon la ROADMAP, et cette session ne la tranche
+## pas. L'amical, lui, prend systématiquement la carte par défaut : même choix
+## que l'entraînement (`_on_training_requested`), pour la même raison — un
+## terrain connu plutôt qu'une arène surprise pour un match sans enjeu.
 func _lancer_match_apparie() -> void:
-	MapData.select_random_map()
+	if _matchmade_ranked:
+		MapData.select_random_map()
+	else:
+		MapData.select_map(MapData.DEFAULT_MAP_ID)
 	_enter_hosted_game()
 	_start_round()
 
@@ -3547,6 +3722,7 @@ func _on_replay_requested():
 		# match apparié hériterait de ses dix secondes — et le décompte durerait
 		# trois fois trop longtemps sans que rien ne l'explique.
 		_matchmade_round = false
+		_matchmade_ranked = false
 		_matchmade_start_pending = false
 		# Le mode lancé est celui qu'affiche le menu. Tester directement
 		# « CRÉER SALON » ne suffit pas : ce bouton appartient à un autre groupe
@@ -3623,6 +3799,12 @@ func _on_replay_requested():
 func _on_join_requested() -> void:
 	if not ui._is_main_menu:
 		return
+	# Un match apparié encore en cours de connexion laisse `_is_main_menu` à
+	# vrai (« l'hôte apparié attend son invité dans le menu ») avec un
+	# `current_mode` déjà engagé : sans ce contrôle, `join_game()` ouvrirait un
+	# second lien par-dessus celui, encore vivant, que l'appariement tient.
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		return
 	if not NetworkManager.join_game(ui.lobby_join_text()):
 		return
 	# L'échéance doit être neutralisée dès que l'issue est connue : sinon elle
@@ -3643,7 +3825,7 @@ func _on_join_requested() -> void:
 ## porte le chronomètre, et laisser chaque camp abréger de son côté produirait
 ## deux départs décalés d'un aller-retour.
 func declare_countdown_ready() -> void:
-	if not _matchmade_round or countdown_left <= 0.0:
+	if not _matchmade_round or not _matchmade_ranked or countdown_left <= 0.0:
 		return
 	_countdown_ready_local = true
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -3661,6 +3843,20 @@ func rpc_countdown_ready() -> void:
 	if client_peer_id == 0 or multiplayer.get_remote_sender_id() != client_peer_id:
 		return
 	_countdown_ready_peer = true
+
+## [Client] L'hôte a vu les deux « prêt » et abrège la fenêtre — ce paquet est
+## ce qui manquait pour que le client suive. Sans lui, `_process()` ne
+## collapse le décompte QUE côté hôte : la manche partait pour lui seul
+## pendant que le client comptait ses dix secondes jusqu'au bout, mesuré à
+## deux machines le 2026-09-09. `call_remote` et non `call_local` : l'hôte a
+## déjà collapsé le sien juste avant d'envoyer ce paquet.
+@rpc("authority", "call_remote", "reliable")
+func rpc_countdown_launch() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	countdown_left = 0.0
 
 ## L'hôte annonce au client s'il est prêt, ou s'il ne l'est plus.
 ##
@@ -4056,6 +4252,12 @@ func _on_main_menu_requested():
 		_archive_forfeit(1 - local_idx)
 
 	NetworkManager.disconnect_from_game()
+
+	# DA6.3 — la soirée s'arrête ici, et nulle part ailleurs. Après le
+	# désabonnement du transport : la carte lit l'historique, pas le réseau, et
+	# la poser avant ferait apparaître une carte de bilan par-dessus une
+	# déconnexion en cours.
+	_peut_etre_la_soiree()
 
 	client_peer_id = 0
 	_join_deadline_active = false

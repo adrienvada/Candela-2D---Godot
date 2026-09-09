@@ -50,7 +50,24 @@ static var _next_order := 0
 ## rien à réfléchir. Le dessin procédural qu'on remplace produisait ce contraste
 ## en deux passes — liseré carmin, puis cœur presque noir un pixel et demi plus
 ## petit. Les deux textures reproduisent exactement ce geste.
-const ECLABOUSSURES := ["res://assets/decals/sang_1.png", "res://assets/decals/sang_2.png"]
+##
+## **2026-09-09 — DA2.8 complétée : 9 formes, l'objectif haut de « 6-8
+## demandées ».** Deux planches (`sang_1`, `sang_2`) ont longtemps porté toute
+## la variété du jeu ; sept nouvelles rejoignent la liste, cuites depuis
+## `assets/sources/blood_decals/B3_*.jpg` par le même `fabrique_decals.gd`.
+## Voir `EST_ETOILE_CENTREE` pour ce qui distingue une étoile d'une
+## directionnelle.
+const ECLABOUSSURES := [
+	"res://assets/decals/sang_1.png",
+	"res://assets/decals/sang_2.png",
+	"res://assets/decals/sang_3.png",
+	"res://assets/decals/sang_4.png",
+	"res://assets/decals/sang_5.png",
+	"res://assets/decals/sang_6.png",
+	"res://assets/decals/sang_7.png",
+	"res://assets/decals/sang_8.png",
+	"res://assets/decals/sang_9.png",
+]
 
 ## Où se trouve, DANS CHAQUE PLANCHE, le centre de sa plus grosse flaque — en
 ## fraction de la taille du fichier. Même ordre qu'`ECLABOUSSURES`.
@@ -61,18 +78,110 @@ const ECLABOUSSURES := ["res://assets/decals/sang_1.png", "res://assets/decals/s
 ## de l'encre : c'est le centre du plus grand disque qui tient dans la matière.
 ##
 ## ⚠️ **Une constante par planche, parce qu'un décalage unique ne peut pas
-## marcher.** Les deux planches ne se ressemblent pas : `sang_1` porte sa flaque
-## à peu près au milieu, `sang_2` la porte à **13 %** de sa largeur, tout au bord.
-## Un ancrage commun met donc forcément l'une des deux à côté — et c'est
+## marcher.** Les planches ne se ressemblent pas : `sang_1` porte sa flaque à
+## peu près au milieu, `sang_2` la porte à **13 %** de sa largeur, tout au bord.
+## Un ancrage commun met donc forcément certaines planches à côté — et c'est
 ## exactement ce qui faisait qu'« une tache sur deux » était franchement pire.
 ##
 ## ⚠️ **Mesuré, pas estimé, et RE-mesuré par le banc.** Ces valeurs sortent d'une
-## transformée de distance sur le masque alpha des fichiers (2026-09-07) :
-## `sang_1` flaque de 21 px de rayon, `sang_2` de 12,4 px.
-## `tools/test_sang_au_sol.gd` refait ce calcul sur les vraies planches à chaque
-## lot : recuire un décal sans corriger cette table fait rougir le banc, au lieu
-## de déplacer les taches en silence.
-const FLAQUES := [Vector2(0.522, 0.565), Vector2(0.134, 0.539)]
+## transformée de distance sur le masque alpha des fichiers. `tools/test_sang_au_sol.gd`
+## refait ce calcul sur les vraies planches à chaque lot : recuire un décal sans
+## corriger cette table fait rougir le banc, au lieu de déplacer les taches en
+## silence.
+##
+## ⚠️ **`sang_4` et `sang_8` sont livrées RÉORIENTÉES.** Les planches sources
+## brutes de Gemini ne respectent pas toujours la convention « dessinée pointant
+## vers la droite » (voir `pose()`) : `sang_4` sortait du générateur avec sa
+## flaque en HAUT et sa coulure vers le BAS (tournée +90° pour corriger),
+## `sang_8` avait sa masse infinitésimalement du mauvais côté (miroir
+## horizontal). Détecté par la même règle que le banc applique : la masse
+## d'encre doit tomber en aval de la flaque, jamais en amont.
+const FLAQUES := [
+	Vector2(0.522, 0.565), # sang_1 — étoile
+	Vector2(0.134, 0.539), # sang_2 — directionnelle
+	Vector2(0.216, 0.489), # sang_3 — directionnelle (éraflure fine)
+	Vector2(0.341, 0.474), # sang_4 — directionnelle (coulure lourde, réorientée)
+	Vector2(0.222, 0.653), # sang_5 — directionnelle (éventail)
+	Vector2(0.503, 0.883), # sang_6 — directionnelle (double bras)
+	Vector2(0.184, 0.881), # sang_7 — directionnelle (traînée espacée)
+	Vector2(0.455, 0.566), # sang_8 — étoile (compacte, réorientée)
+	Vector2(0.409, 0.435), # sang_9 — étoile (irrégulière)
+]
+
+## Quelle planche est une « étoile » — une flaque centrée, à peu près ronde,
+## sans direction lisible — par opposition aux planches DIRECTIONNELLES, dont
+## la traînée se voit. Même ordre et même taille qu'`ECLABOUSSURES`.
+##
+## **Règle d'Adrien, le 2026-09-09 :** l'étoile centrée ne doit apparaître que
+## pour un tir qui passe très près du centre réel du joueur ; sinon, ce sont
+## les planches directionnelles qui doivent sortir. Voir `SEUIL_ETOILE_CENTREE`
+## et `_choisir_eclaboussure()`.
+##
+## 3 étoiles (`sang_1`, `sang_8`, `sang_9`), 6 directionnelles (`sang_2` à
+## `sang_7`) — la variété demandée portait sur les directionnelles, c'est donc
+## là que l'essentiel du lot est allé.
+const EST_ETOILE_CENTREE := [true, false, false, false, false, false, false, true, true]
+
+## Bornes du tirage aléatoire d'`_echelle` — voir `setup()`. Nommées ici, et
+## pas seulement écrites en dur dans `randf_range()`, parce que `POIDS_TAILLE`
+## ci-dessous doit garantir son invariant pour le PIRE tirage possible : sans
+## nom, personne ne saurait dire contre quelle borne il a été calculé.
+const ECHELLE_MIN := 0.75
+const ECHELLE_MAX := 1.25
+
+## Correction de taille, par planche, pour qu'aucune flaque ne dépasse le
+## corps du joueur — même au pire tirage d'`_echelle` (`ECHELLE_MAX`).
+##
+## **Règle d'Adrien, le 2026-09-09, à l'écran :** une tache
+## (`sang_4`) écrasait tout le cône de torche du joueur sur une capture — « il
+## y a une tâche beaucoup trop grosse », puis, la règle générale une fois la
+## cause identifiée : « il faut que la tâche principale soit au maximum de la
+## taille du sprite du joueur ».
+##
+## ⚠️ **La cause n'était pas une planche mal dimensionnée : toutes font 160 px
+## de plus grand côté**, la normalisation de `fabrique_decals.gd`. C'est le
+## TAUX DE REMPLISSAGE de la flaque qui diffère — `sang_4` couvre 54 % de sa
+## boîte contre 23 % pour `sang_1`, donc à taille de fichier égale sa flaque
+## est visuellement bien plus « lourde ». Le bon signal n'est donc pas la
+## boîte (déjà uniforme) mais le RAYON de la flaque, celui-là même que
+## `FLAQUES`/le banc mesurent par transformée de distance.
+##
+## **La formule, écrite pour être vérifiable :** pour qu'une flaque de rayon
+## `r` (mesuré sur la planche à 160 px) ne dépasse jamais `DIAMETRE_CORPS` une
+## fois grossie par le pire tirage (`ECHELLE_MAX`), il faut
+## `poids <= DIAMETRE_CORPS / (2 * r * ECHELLE_MAX)`. Plafonné à 1,0 : une
+## planche déjà sous la limite n'est jamais AGRANDIE par cette table — ce
+## serait un second dosage, non demandé, qui gonflerait les éraflures fines
+## au lieu de seulement rabattre les flaques trop lourdes.
+##
+## `tools/test_sang_au_sol.gd` refait ce calcul sur le rayon RE-mesuré de
+## chaque planche à chaque lot : une planche recuite plus dense sans corriger
+## sa ligne ici fait rougir le banc, au lieu de repousser en silence contre le
+## joueur suivant.
+const POIDS_TAILLE := [
+	0.686, # sang_1 — flaque de 21,0 px de rayon
+	1.000, # sang_2 — flaque de 12,4 px de rayon
+	1.000, # sang_3 — flaque de 6,2 px de rayon
+	0.269, # sang_4 — flaque de 53,6 px de rayon (celle de la capture)
+	0.973, # sang_5 — flaque de 14,8 px de rayon
+	1.000, # sang_6 — flaque de 9,8 px de rayon
+	1.000, # sang_7 — flaque de 8,0 px de rayon
+	0.327, # sang_8 — flaque de 44,0 px de rayon
+	0.667, # sang_9 — flaque de 21,6 px de rayon
+]
+
+## Distance maximale, en pixels, entre l'AXE du tir et le CENTRE réel du joueur
+## pour que l'étoile centrée soit éligible au tirage.
+##
+## ⚠️ **Un seuil sur l'axe, pas sur le point d'impact.** `bullet.gd::_hit_player()`
+## calcule déjà cette distance perpendiculaire pour l'atténuation des dégâts
+## (`dist_to_axis`) — c'est elle, non normalisée, qui est transmise ici. Jamais
+## une seconde mesure : le même nombre décide « le tir a-t-il touché près du
+## centre ? » pour les dégâts ET pour le choix de la planche.
+##
+## **0-2 px, valeur d'Adrien** : un tir qui vise exactement le centre du corps
+## donne 0 ; au-delà de 2 px d'écart, ce sont les planches directionnelles.
+const SEUIL_ETOILE_CENTREE := 2.0
 
 var _texture: Texture2D = null
 var _coeur: Texture2D = null
@@ -161,32 +270,39 @@ static func rectangle_de_la_tache(taille: Vector2, ancre: Vector2) -> Rect2:
 	return Rect2(Vector2(CENTRE_DU_CORPS, 0.0) - taille * ancre, taille)
 
 
-func setup(base_pos: Vector2, direction: Vector2):
+## `distance_axe_centre` : distance en pixels entre l'axe du tir et le centre
+## réel du joueur — voir `SEUIL_ETOILE_CENTREE`. Par défaut `INF` (« loin » du
+## centre) : un appelant qui ne la connaît pas obtient une planche
+## DIRECTIONNELLE, jamais l'étoile réservée aux tirs quasi parfaits.
+func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = INF):
 	position = base_pos
 	z_index = 1 # Au-dessus du sol (0), sous la killcam (2) et les joueurs (10)
-	
+
 	# Viewport J1 (2) : torche (1) + ambiance personnelle J1 (16)
 	visibility_layer = 2
 	light_mask = 1 | 16
-	
+
 	# Rendu « liquide » : la brillance vient du shader, pas du dessin.
 	material = ShaderMaterial.new()
 	material.shader = BLOOD_SHADER
-	
+
 	# DA2.8 — une éclaboussure peinte, tournée dans l'axe du tir.
 	#
 	# La rotation porte sur le NŒUD : l'éclaboussure est dessinée pointant vers
 	# la droite, et `direction` la met dans l'axe de la balle. Une tache de sang
 	# raconte d'où le coup venait ; la faire tourner est ce qui distingue une
 	# scène de crime d'un semis de losanges.
-	_choisir_eclaboussure()
+	var i := _choisir_eclaboussure(distance_axe_centre)
 	if _texture != null:
 		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
 		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
 		# calculent déjà leur angle depuis `direction`, et le tourner en plus
 		# appliquerait la rotation deux fois.
 		transform = pose(base_pos, direction)
-		_echelle = randf_range(0.75, 1.25)
+		# `POIDS_TAILLE` corrige la variation aléatoire, il ne la remplace pas :
+		# une planche dense reste avec sa propre part de hasard, juste ramenée
+		# sous le plafond du corps du joueur.
+		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * POIDS_TAILLE[i]
 		queue_redraw()
 		return
 
@@ -202,7 +318,7 @@ func setup(base_pos: Vector2, direction: Vector2):
 	})
 	
 	# Projections directionnelles
-	for i in range(num_drops):
+	for _drop_index in range(num_drops):
 		var dist = randf_range(5.0, 70.0)
 		var angle = direction.angle() + randf_range(-PI/5, PI/5)
 		
@@ -221,22 +337,44 @@ func setup(base_pos: Vector2, direction: Vector2):
 
 ## Choisit une éclaboussure et son cœur, ou laisse `_texture` à `null`.
 ##
+## **Le tirage est restreint à une catégorie** (voir `EST_ETOILE_CENTREE`) :
+## l'étoile centrée seulement si `distance_axe_centre <= SEUIL_ETOILE_CENTREE`,
+## les planches directionnelles sinon. À une seule planche par catégorie
+## aujourd'hui, le tirage au sort est donc sans effet — il reste écrit pour que
+## d'autres planches directionnelles rejoignent un jour la liste sans qu'il
+## faille retoucher cette fonction.
+##
 ## Rend la main en criant si les fichiers manquent : un décal cuit mais pas
 ## encore importé par Godot est invisible à `ResourceLoader`, et c'est l'état
 ## normal d'un asset frais. Sans ce cri, le jeu retomberait sur les cercles et
 ## personne ne saurait dire pourquoi les éclaboussures n'ont pas changé.
-func _choisir_eclaboussure() -> void:
-	var i := randi() % ECLABOUSSURES.size()
+##
+## Rend l'index choisi dans `ECLABOUSSURES` (`-1` si le repli procédural a été
+## pris) : `setup()` en a besoin pour lire `POIDS_TAILLE`.
+func _choisir_eclaboussure(distance_axe_centre: float) -> int:
+	var centree := distance_axe_centre <= SEUIL_ETOILE_CENTREE
+	var candidats: Array[int] = []
+	for j in range(ECLABOUSSURES.size()):
+		if EST_ETOILE_CENTREE[j] == centree:
+			candidats.append(j)
+	if candidats.is_empty():
+		# Filet : aucune planche ne correspond à la catégorie demandée (le cas
+		# ne se produit pas aujourd'hui, mais une planche retirée par erreur ne
+		# doit pas faire disparaître tout le sang). On retombe sur l'ensemble.
+		for j in range(ECLABOUSSURES.size()):
+			candidats.append(j)
+	var i: int = candidats[randi() % candidats.size()]
 	var chemin: String = ECLABOUSSURES[i]
 	var coeur := chemin.replace(".png", "_coeur.png")
 	if not ResourceLoader.exists(chemin) or not ResourceLoader.exists(coeur):
 		push_error("blood_stain : eclaboussure absente — %s " % chemin
 			+ "(cuire avec tools/fabrique_decals.gd, puis : "
 			+ "godot --headless --path . --import). Repli sur les cercles.")
-		return
+		return -1
 	_texture = load(chemin)
 	_coeur = load(coeur)
 	_ancre = FLAQUES[i]
+	return i
 
 
 func _draw():

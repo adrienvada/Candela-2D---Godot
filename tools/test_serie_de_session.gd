@@ -50,6 +50,10 @@ func _run() -> void:
 		printerr("\n✗ %d test(s) en échec" % _failures)
 	quit(1 if _failures > 0 else 0)
 
+# `_test_carte_soiree()` vivait ici. La fonction qu'elle vérifiait a été retirée
+# le 2026-09-09 : V6.10 avait été écrite deux fois le même jour, et Adrien a
+# gardé la carte (`bilan_de_soiree.gd`, testée par `test_bilan_de_soiree.gd`)
+# plutôt que la ligne, parce qu'elle couvre aussi DA6.3 et DA6.4.
 func _test_comptage() -> void:
 	print("\n[Le compte]")
 	_check("une session neuve n'a pas de porteur",

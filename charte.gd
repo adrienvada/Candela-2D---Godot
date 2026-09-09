@@ -484,6 +484,71 @@ static func habiller_selon(control: Control, taille: int, registre: Registre,
 
 
 # =============================================================================
+# CONTOUR ET OMBRE DE TEXTE — un rapport, jamais un nombre (DA5.7)
+# =============================================================================
+#
+# **Généralisé depuis `bullet.gd` (DA4.3), pas inventé ici.** Ce bloc portait
+# déjà la meilleure formule du dépôt — outline_size = max(2, round(taille ×
+# 0,11)), une ombre au même ratio — mais elle ne servait qu'à un seul site.
+# Sept autres l'ignoraient et portaient chacun un nombre fixe posé pour LEUR
+# taille de police, du même ordre que le défaut que DA4.3 corrigeait déjà :
+# « une valeur absolue là où il fallait un rapport ». `bullet.gd` reste la
+# référence ; ce fichier ne fait que lui donner un second domicile.
+#
+# ⚠️ **Le ratio unique va amincir des contours qui semblaient corrects.** Les
+# huit sites migrés portaient des ratios de 0,11 à 0,32 implicitement — tous
+# faux sauf un, puisqu'aucun n'était dérivé d'une taille. Chaque site se
+# rejuge à l'œil via `./tools/run_visuel.sh` ; un ratio qui échoue partout se
+# corrige sur `CONTOUR_RATIO`, jamais sur un site isolé.
+
+## Toujours `NOIR` : un contour de texte détache un chiffre d'un mur éclairé,
+## il ne teinte rien.
+const CONTOUR_COULEUR := NOIR
+## 11 % de la taille de police — la valeur mesurée par DA4.3 sur l'échelle
+## complète de `bullet.gd` (T_APPUI à T_VERDICT) : assez pour détacher un
+## chiffre, jamais assez pour boucher les contre-formes de la fonte d'affichage.
+const CONTOUR_RATIO := 0.11
+const CONTOUR_MIN_PX := 2
+## L'ombre porte ce que le contour ne peut pas : une DIRECTION. Même ratio que
+## `bullet.gd`, pour la même raison qu'un rapport plutôt qu'un nombre.
+const OMBRE_COULEUR := Color(NOIR, 0.6)
+const OMBRE_RATIO := 0.06
+const OMBRE_MIN_PX := 2
+
+
+## La taille de contour pour une taille de police donnée.
+static func contour_taille(taille_police: int) -> int:
+	return maxi(CONTOUR_MIN_PX, int(round(taille_police * CONTOUR_RATIO)))
+
+
+## La taille d'ombre pour une taille de police donnée.
+static func ombre_taille(taille_police: int) -> int:
+	return maxi(OMBRE_MIN_PX, int(round(taille_police * OMBRE_RATIO)))
+
+
+## Pose contour (et ombre en option) sur un `LabelSettings` — le mécanisme
+## qu'emploient les labels construits par code avec leur propre matériau
+## (`bullet.gd`, `player.gd`, `game_state.gd`).
+static func contourer_settings(settings: LabelSettings, taille: int,
+		avec_ombre := false) -> void:
+	settings.outline_size = contour_taille(taille)
+	settings.outline_color = CONTOUR_COULEUR
+	if avec_ombre:
+		var d := float(ombre_taille(taille))
+		settings.shadow_size = int(d)
+		settings.shadow_color = OMBRE_COULEUR
+		settings.shadow_offset = Vector2(d, d)
+
+
+## Pose le contour sur un `Control` par des overrides de thème — le mécanisme
+## qu'emploient les écrans qui n'ont pas de `LabelSettings` dédié
+## (`training_target.gd`, `map_editor_hud.gd`).
+static func contourer_control(control: Control, taille: int) -> void:
+	control.add_theme_constant_override("outline_size", contour_taille(taille))
+	control.add_theme_color_override("font_outline_color", CONTOUR_COULEUR)
+
+
+# =============================================================================
 # RYTHME — la grille de 8
 # =============================================================================
 #

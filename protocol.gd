@@ -58,36 +58,42 @@ class_name Protocol
 ## 9 — `rpc_eteindre_fusee` apparaît (chantier FUSÉE, étape FU5, 2026-09-08) :
 ##     un hôte qui l'appelle parle à un client v8 qui n'a jamais entendu ce nom
 ##     et ne répond donc jamais — le silence est un refus, comme pour `rpc_hello`.
-## 10 — `rpc_send_inputs` gagne un huitième argument, le bit de GADGET (chantier
-##      CLASSES, 2026-09-09). Rupture franche, comme les v5 et v6 : un client v9
-##      enverrait sept valeurs à un hôte v10 qui en attend huit. L'argument porte
+## 10 — `rpc_countdown_launch` apparaît (2026-09-09) : l'hôte d'un match apparié
+##      classé en avertit désormais le client quand les deux « prêt » abrègent
+##      la fenêtre de choix, au lieu de ne collapser que son propre décompte —
+##      voir « Deux prêts, un seul départ » aux Pièges connus de la ROADMAP. Un
+##      client v9 ignore ce nom et ne répond donc jamais, comme pour
+##      `rpc_eteindre_fusee`.
+## 11 — `rpc_send_inputs` gagne un huitième argument, le bit de GADGET (chantier
+##      CLASSES, 2026-09-09). Rupture franche, comme les v5 et v6 : un client v10
+##      enverrait sept valeurs à un hôte v11 qui en attend huit. L'argument porte
 ##      une valeur par défaut, donc GDScript ne dirait rien — c'est le témoin du
 ##      fil qui l'attrape, et c'est exactement ce pour quoi il existe.
-## 11 — la table rang → classe entre en vigueur (chantier CLASSES, 2026-09-09).
+## 12 — la table rang → classe entre en vigueur (chantier CLASSES, 2026-09-09).
 ##      La FORME du fil ne bouge pas : `weapon_idx` reste un entier. C'est son
 ##      SENS qui change — l'intervalle passe de 0-3 à 0-9, et un index qui valait
-##      « fusil » en v10 peut valoir autre chose en v11.
+##      « fusil » en v11 peut valoir autre chose en v12.
 ##
 ##      ⚠️ **C'est exactement le cas de la v7**, où `rpc_spawn_fusee` troquait une
 ##      cible contre un angle : rien ne casse à la lecture, les deux jeux
 ##      s'entendent, et chacun équipe une classe différente. Le pire défaut du
 ##      netcode est celui qui ne lève rien.
-## 12 — `rpc_spawn_gadget` apparaît (chantier CLASSES, étape 10, 2026-09-09).
-##      Même famille que la v9 : un hôte v12 appelle un nom qu'un client v11 n'a
+## 13 — `rpc_spawn_gadget` apparaît (chantier CLASSES, étape 10, 2026-09-09).
+##      Même famille que la v9 : un hôte v13 appelle un nom qu'un client v12 n'a
 ##      jamais entendu. Ce qui rend cette rupture-là coûteuse est ce qu'elle
 ##      laisse derrière — **l'hôte aurait un occluder que le client n'a pas.**
 ##      Le client verrait donc la lumière traverser une bâche que l'hôte
 ##      considère opaque, et chacun jouerait sa propre carte sans qu'une seule
 ##      ligne d'erreur ne le dise.
-## 13 — `rpc_allumer_gadget` apparaît (chantier CLASSES, étape 12, 2026-09-09) :
+## 14 — `rpc_allumer_gadget` apparaît (chantier CLASSES, étape 12, 2026-09-09) :
 ##      la mine au magnésium, déclenchée par l'hôte, que les deux pairs doivent
-##      voir prendre feu au même instant. Même famille que les v9 et v12 — un
-##      hôte v13 appelle un nom qu'un client v12 n'a jamais entendu.
+##      voir prendre feu au même instant. Même famille que les v9 et v13 — un
+##      hôte v14 appelle un nom qu'un client v13 n'a jamais entendu.
 ##
 ##      ⚠️ Et ce qu'elle laisse derrière est pire que pour un gadget posé : la
 ##      mine BRÛLE chez l'hôte, donc elle aveugle — l'éblouissement étant
 ##      répliqué, le client verrait sa vue blanchir devant un boîtier éteint.
-## 14 — `rpc_stock_fusees` apparaît (chantier CLASSES, étape 18, 2026-09-09) : la
+## 15 — `rpc_stock_fusees` apparaît (chantier CLASSES, étape 18, 2026-09-09) : la
 ##      réserve de fusées devient PROPRE À LA CLASSE, et deux d'entre elles la
 ##      rechargent. L'arithmétique reste chez l'hôte — deux accumulateurs locaux
 ##      dérivent d'un demi-RTT à chaque consommation, voir `flare_profile.gd` —,
@@ -95,11 +101,11 @@ class_name Protocol
 ##      figé et sa prédiction du désarmement se tromperait au premier lancer
 ##      d'une fusée regagnée.
 ##
-##      ⚠️ Le SENS de la réserve change aussi, comme à la v11 : elle valait un
+##      ⚠️ Le SENS de la réserve change aussi, comme à la v12 : elle valait un
 ##      pour tout le monde, elle vaut désormais de zéro (le Spectre) à trois (le
-##      Terrassier). Un hôte v14 et un client v13 s'entendraient sur le fil et
+##      Terrassier). Un hôte v15 et un client v14 s'entendraient sur le fil et
 ##      compteraient deux réserves différentes.
-const VERSION := 14
+const VERSION := 15
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##
@@ -107,7 +113,12 @@ const VERSION := 14
 ## d'abord si `VERSION` doit monter, puis on recopie ici l'empreinte que la suite
 ## affiche. Le recopier sans avoir tranché la question du numéro ne fait que
 ## rendre le rappel silencieux.
-const WIRE_WITNESS := "f6ca3b6c48ac55bf"
+## ⚠️ **Recalculé après la fusion de `main`, pas recopié depuis l'une des deux
+## branches.** Les deux jeux de changements se combinent : le fil d'après la
+## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
+## renumérotation). La question du numéro a été tranchée d'abord — les cinq
+## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
+const WIRE_WITNESS := "b108c437bdfce89c"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

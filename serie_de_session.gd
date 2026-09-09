@@ -56,3 +56,19 @@ static func mot(porteur_avant: int, longueur_avant: int, vainqueur: int,
 		return "SÉRIE J%d : %d" % [suite.x + 1, suite.y]
 	return "SÉRIE : %d" % suite.y if suite.x == local_idx \
 		else "SÉRIE ADVERSE : %d" % suite.y
+
+## V6.10 — la carte de fin de soirée N'EST PLUS ICI.
+##
+## `carte_soiree()` vivait à cet endroit : une ligne « CE SOIR : 7 MATCHS · 4-3 »
+## comptée sur le score de session en mémoire. Elle a été écrite le même jour que
+## `bilan_de_soiree.gd`, par une autre session, sur une autre branche — les deux
+## lisaient la même fiche sans savoir que l'autre travaillait dessus.
+##
+## **Adrien a tranché le 2026-09-09 : la carte l'emporte**, parce qu'elle couvre
+## aussi DA6.3 (illustrée) et DA6.4 (exportable en image), ce qu'une ligne de
+## texte ne peut pas être. Voir `bilan_de_soiree.gd`, et « Pièges connus » pour
+## ce que la répétition apprend — c'était la deuxième fois.
+##
+## Cette note reste parce qu'un fichier d'où l'on a retiré quelque chose ne le
+## dit pas tout seul, et que la prochaine session qui cherchera « où est la carte
+## de soirée » commencera par ici.

@@ -208,6 +208,21 @@ const EFFECTS := {
 		"nom": "Éblouissement",
 		"phrase": "L'éblouissement est une pénalité, pas une décoration : il vous handicape quand une lumière vous prend. L'annuler changerait le handicap en avantage.",
 	},
+	# DA5.5 — posée ici pour rester à côté de ce qu'elle habille. Deux lectures
+	# étaient possibles (docs/ROADMAP.md, DA5.5) : CONFORT, sur le modèle de
+	# `flash_mort`, parce que l'aberration ne porte aucune direction (déjà
+	# donnée par `lueurs_derive`/`flares_penche`, non réglables) ; ou MONDE,
+	# parce qu'elle fait partie de ce que montre l'éblouissement et pas d'un
+	# habillage à part. **Adrien a tranché pour MONDE le 2026-09-09.** Plancher
+	# aligné sur `trait_de_balle`/`fusee_agonie` — 0,5, pas sur le 0,8 de
+	# l'ancienne entrée `"eblouissement"`, qui couvrait toute la pénalité et
+	# pas seulement son rendu.
+	"aberration_eblouissement": {
+		"famille": Family.MONDE,
+		"plancher": 0.5,
+		"nom": "Frange de l'éblouissement",
+		"phrase": "Fait partie de ce que montre l'éblouissement, pas un habillage à part. La couper changerait l'expérience de la pénalité d'un joueur à l'autre — le plancher la garde identique pour les deux.",
+	},
 	"silhouette_revelee": {
 		"famille": Family.MONDE,
 		"plancher": 0.7,

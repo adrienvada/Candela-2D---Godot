@@ -654,6 +654,17 @@ var _voile_temps: float = 0.0
 ## vaut supposer deux vues et n'en montrer qu'une de trop que l'inverse.
 var _voile_scinde: bool = true
 
+## DA5.5 — copie plein cadre dédiée pour `aberration_chromatique`, sur le
+## modèle de `KillcamBB`/`ShockBB` : le tampon d'écran est une ressource de
+## VIEWPORT PARTAGÉE, rafraîchie seulement là où le dernier écrivain a écrit
+## (piège déjà payé sur `death_flash.gdshader`, jamais corrigé — voir
+## « Pièges connus »). Une copie à SOI, juste avant sa propre lecture, évite
+## d'hériter du recadrage `COPY_MODE_RECT` du flou de `brouillage_vue.gd` ou
+## de tout autre écrivain de passage. Visible seulement pendant un
+## éblouissement réel — une copie plein cadre a un coût, elle ne tourne pas
+## à vide entre deux manches.
+var _voile_bb: BackBufferCopy
+
 var p1_dazzle: ColorRect
 
 var p2_hp: ProgressBar
@@ -724,6 +735,7 @@ var bilan_serie: Label
 ## est inconnue : afficher « — » dirait qu'il y a une case à remplir.
 var bilan_effleure: VBoxContainer
 var bilan_marge: Label
+var bilan_soiree: Label
 
 ## Ossature de navigation. Elle a remplacé la barre d'onglets à la Phase 5 :
 ## un écran, un sujet.
@@ -2087,6 +2099,11 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 	mat.set_shader_parameter("temps", _voile_temps)
 	var taille := rect.size
 	mat.set_shader_parameter("aspect", taille.x / maxf(taille.y, 1.0))
+	# DA5.5 — 0,015 = le défaut calibré du shader, dupliqué ici comme ce
+	# fichier le fait déjà pour `teinte`/`HALOGENE` : la réglabilité vient du
+	# curseur CONFORT, jamais d'une pénalité de jeu.
+	mat.set_shader_parameter("aberration_chromatique",
+		0.015 * GameSettings.current_effect("aberration_eblouissement"))
 	if source != null and victime != null:
 		mat.set_shader_parameter("relevement",
 			(source.global_position - victime.global_position).angle())
@@ -2126,6 +2143,16 @@ func _build_hud() -> void:
 	# se voit n'a pas de nom dans le code (piège consigné le 2026-08-19). Ce
 	# commentaire est donc le seul garde-fou — le voile doit rester au-dessus
 	# de l'arène et au-dessous du HUD.
+	#
+	# DA5.5 — la copie du tampon d'écran est ajoutée ICI, juste avant : elle
+	# doit capturer l'arène (et rien du HUD, qui vient après), pour la même
+	# raison que le voile lui-même est monté avant le HUD.
+	_voile_bb = BackBufferCopy.new()
+	_voile_bb.name = "VoileBB"
+	_voile_bb.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	_voile_bb.hide()
+	add_child(_voile_bb)
+
 	var dazzle_hbox := HBoxContainer.new()
 	dazzle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dazzle_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2431,13 +2458,17 @@ func _create_torch_indicator() -> PanelContainer:
 func _create_reserves_indicator() -> Dictionary:
 	var panel := PanelContainer.new()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(0)
-	style.set_border_width_all(2)
-	style.bg_color = Color(Charte.SURFACE, 0.8)
-	style.border_color = Color(Charte.LINE, 1.0)
-	panel.add_theme_stylebox_override("panel", style)
-
+	# ⚠️ **Le style vient de `_set_flare_style()`, écrit par la session
+	# « appariement amical » pour SON témoin de fusée.** Les deux chantiers ont
+	# ajouté un indicateur de fusée au HUD le même jour, chacun de son côté : le
+	# leur allumait un cadre quand une fusée était disponible, le mien comptait la
+	# réserve et le gadget. Aucun des deux ne contenait l'autre — la fusion garde
+	# **le cadre qui s'allume ET les nombres**, plutôt que de trancher pour l'un.
+	#
+	# ⚠️ Le style se pose À LA FIN, une fois les enfants montés :
+	# `_set_flare_style()` rend la main sans rien faire sur un panneau vide
+	# (`get_child_count() == 0`), et le cadre serait resté nu jusqu'à la première
+	# mise à jour du HUD.
 	var marge := MarginContainer.new()
 	marge.add_theme_constant_override("margin_left", GAP_XS)
 	marge.add_theme_constant_override("margin_right", GAP_XS)
@@ -2449,6 +2480,20 @@ func _create_reserves_indicator() -> Dictionary:
 	rangee.add_theme_constant_override("separation", GAP_XS)
 	marge.add_child(rangee)
 
+	# L'icône de fusée, reprise du témoin de la session « appariement amical ».
+	# Absente si la planche ne l'est pas : les mots à côté portent déjà le sens,
+	# et un pictogramme de secours serait un défaut de plus.
+	var chemin_fusee := "res://assets/sprites/fusee_corps.png"
+	if ResourceLoader.exists(chemin_fusee):
+		var icone := TextureRect.new()
+		icone.name = "Icone"
+		icone.texture = load(chemin_fusee)
+		icone.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icone.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icone.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+		icone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rangee.add_child(icone)
+
 	var fusees := Label.new()
 	fusees.text = "FUSÉES —"
 	Charte.appareil(fusees, T_MENTION)
@@ -2459,6 +2504,7 @@ func _create_reserves_indicator() -> Dictionary:
 	Charte.appareil(gadget, T_MENTION)
 	rangee.add_child(gadget)
 
+	_set_flare_style(panel, false, Charte.HALOGENE)
 	return {"panel": panel, "fusees": fusees, "gadget": gadget}
 
 
@@ -2475,6 +2521,10 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
+	# Le cadre s'allume tant qu'il reste une fusée — l'affordance de la session
+	# « appariement amical », conservée telle quelle : dans le noir, un cadre
+	# allumé se lit du coin de l'œil là où un nombre demande de regarder.
+	_set_flare_style(res["panel"], n > 0, COLOR_P1 if joueur == 0 else COLOR_P2)
 
 	var dispo := bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
 	var lbl_g: Label = res["gadget"]
@@ -2484,6 +2534,37 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(0)
+	style.set_border_width_all(2)
+
+	if active:
+		style.bg_color = Color(Charte.LINE, 0.9)
+		style.border_color = player_color
+		# DA5.7c — portait Vector2(3, 3) en dur, sans raison retrouvée pour cet
+		# écart d'1 px avec le reste du dépôt : aligné sur la constante la plus
+		# proche plutôt que de garder un troisième offset ad hoc.
+		style.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+		style.shadow_size = 0
+		style.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	else:
+		style.bg_color = Color(Charte.SURFACE, 0.8)
+		style.border_color = Color(Charte.LINE, 1.0)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2.ZERO
+
+	panel.add_theme_stylebox_override("panel", style)
+
+	var hbox := panel.get_child(0).get_child(0)
+	var label := hbox.get_child(1) as Label
+	if active:
+		label.add_theme_color_override("font_color", Charte.HALOGENE)
+	else:
+		label.add_theme_color_override("font_color", Charte.DIM)
+
+func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+	if panel == null or panel.get_child_count() == 0:
+		return
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
@@ -2502,12 +2583,19 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 
 	panel.add_theme_stylebox_override("panel", style)
 
-	var hbox := panel.get_child(0).get_child(0)
-	var label := hbox.get_child(1) as Label
-	if active:
-		label.add_theme_color_override("font_color", Charte.HALOGENE)
-	else:
-		label.add_theme_color_override("font_color", Charte.DIM)
+	var margin = panel.get_child(0)
+	if margin.get_child_count() == 0:
+		return
+	var hbox = margin.get_child(0)
+	var label: Label = hbox.get_node_or_null("Label")
+	if label != null:
+		if active:
+			label.add_theme_color_override("font_color", Charte.HALOGENE)
+		else:
+			label.add_theme_color_override("font_color", Charte.DIM)
+	var icon: TextureRect = hbox.get_node_or_null("Icon")
+	if icon != null:
+		icon.modulate = Color.WHITE if active else Color(1, 1, 1, 0.3)
 
 # ===========================================================================
 # CONSTRUCTION — ANNEXES
@@ -2519,16 +2607,14 @@ func _build_status_bar() -> void:
 	network_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	network_status_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	network_status_label.add_theme_font_size_override("font_size", T_COURANT)
-	network_status_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	network_status_label.add_theme_constant_override("outline_size", 4)
+	Charte.contourer_control(network_status_label, T_COURANT) # DA5.7
 
 	ping_label = Label.new()
 	# DA4.2 — l'appareil, explicitement. Un compteur : il se réécrit à chaque
 	# relevé de RTT, au milieu d'une rangée centrée dont il déplacerait les
 	# voisins en changeant de largeur.
 	Charte.appareil(ping_label, T_COURANT)
-	ping_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	ping_label.add_theme_constant_override("outline_size", 4)
+	Charte.contourer_control(ping_label, T_COURANT) # DA5.7
 	ping_label.hide()
 
 	var status_row := HBoxContainer.new()
@@ -2563,8 +2649,7 @@ func _build_countdown() -> void:
 	# jamais, ils se succèdent au même endroit.
 	Charte.enseigne(countdown_label, T_DECOMPTE)
 	countdown_label.add_theme_color_override("font_color", COLOR_GOLD)
-	countdown_label.add_theme_color_override("font_outline_color", Charte.NOIR)
-	countdown_label.add_theme_constant_override("outline_size", 16)
+	Charte.contourer_control(countdown_label, T_DECOMPTE) # DA5.7
 	countdown_label.z_index = 120
 	countdown_label.hide()
 	add_child(countdown_label)
@@ -3564,8 +3649,14 @@ func _build_open_lobby_row() -> Control:
 ## En EOS le code arrive plus tard, par `lobby_code_ready` ; en réseau local il
 ## n'y a rien à publier, l'IP était déjà affichée — mais le port, lui, doit être
 ## ouvert pour que l'adversaire puisse se présenter avant le début du match.
+##
+## `!= LOCAL_SPLITSCREEN` et non le seul `== ONLINE_HOST` d'origine : ce dernier
+## empêchait bien le double-clic sur ce bouton, mais laissait passer le cas où
+## `current_mode` vaut `ONLINE_CLIENT` — un lien d'appariement encore en cours
+## d'établissement (voir `_start_search()`), qu'`host_game()` écraserait sans
+## le fermer.
 func _open_lobby() -> void:
-	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		return
 	_abandon_search("salon ouvert")
 	if not NetworkManager.host_game():
@@ -4095,7 +4186,24 @@ func _abandon_search(raison: String) -> void:
 ##
 ## Un refus se dit. Sans Epic configuré, l'appariement est simplement impossible,
 ## et une entrée qui n'aurait rien fait passerait pour un bouton cassé.
+##
+## **Refuse aussi si un lien est déjà là.** `Matchmaker.state` retombe à IDLE dès
+## que `_try_launch()` ouvre le socket du match apparié — avant que la manche
+## parte vraiment (`_matchmade_start_pending` côté hôte, jusqu'à vingt secondes).
+## Ce bouton redevient donc cliquable pendant cette fenêtre alors qu'un lien EOS
+## est déjà ouvert ou en cours d'ouverture ; une seconde recherche qui aboutirait
+## rappellerait `host_matched_game()`/`join_matched_game()` par-dessus lui, sur
+## le même socket. `current_mode` reste `LOCAL_SPLITSCREEN` dans tout usage
+## normal du menu — `_close_lobby_if_left()` s'en assure déjà pour le salon
+## manuel — donc ce contrôle ne coûte rien au chemin sain et ferme précisément
+## ce chemin-là.
 func _start_search() -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		show_dialog_message("Recherche impossible",
+			"Un lien réseau est déjà ouvert ou en cours d'établissement. "
+			+ "Patientez qu'il se conclue ou échoue avant d'en lancer un autre.",
+			Registre.ATTENTION)
+		return
 	NetworkManager.transport = NetworkManager.Transport.EOS
 	var classe := hub.current_id() == SCREEN_RANKED
 	_apply_queue_kind(classe)
@@ -4474,6 +4582,12 @@ func _refresh_weapon_locks() -> void:
 ## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
 ## l'animation, jamais sur un minuteur parallele qui derivera.
 ##
+const VERDICT_TEXTURES := {
+	"VICTOIRE": "res://assets/ui/titres/verdict_victoire.png",
+	"DÉFAITE": "res://assets/ui/titres/verdict_defaite.png",
+	"ÉGALITÉ": "res://assets/ui/titres/verdict_egalite.png",
+}
+
 ## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
 	if texte != "CANDELA 2D" and game_over_title != null \
@@ -4482,9 +4596,29 @@ func _poser_titre(texte: String) -> void:
 	game_over_title.text = texte
 	if menu_enseigne == null or not is_instance_valid(menu_enseigne):
 		return
-	var enseigne := texte == "CANDELA 2D"
-	menu_enseigne.visible = enseigne
-	game_over_title.self_modulate.a = 0.0 if enseigne else 1.0
+	var tex: Texture2D = null
+	if texte == "CANDELA 2D":
+		tex = load(Charte.CHEMIN_ENSEIGNE)
+	elif VERDICT_TEXTURES.has(texte):
+		var chemin: String = String(VERDICT_TEXTURES[texte])
+		if ResourceLoader.exists(chemin):
+			tex = load(chemin)
+	if tex != null:
+		menu_enseigne.texture = tex
+		const ENCRE_VISEE := 80.0
+		var tex_w := float(tex.get_width())
+		var tex_h := float(maxi(1, tex.get_height()))
+		var h := ENCRE_VISEE
+		var l := h * (tex_w / tex_h)
+		menu_enseigne.offset_left = -l * 0.5
+		menu_enseigne.offset_right = l * 0.5
+		menu_enseigne.offset_top = -h * 0.5
+		menu_enseigne.offset_bottom = h * 0.5
+		menu_enseigne.visible = true
+		game_over_title.self_modulate.a = 0.0
+	else:
+		menu_enseigne.visible = false
+		game_over_title.self_modulate.a = 1.0
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
@@ -4516,14 +4650,13 @@ func _build_menu_header() -> Control:
 	menu_enseigne.name = "Enseigne"
 	menu_enseigne.texture = load(Charte.CHEMIN_ENSEIGNE)
 	# Centrée dans le rectangle du `Label`, à une taille CALCULÉE et non choisie :
-	# l'encre du fichier occupe 482 px sur 508 de haut, on vise 80 px d'encre à
-	# l'écran — la hauteur du titre qu'elle remplace. Ancrer en plein cadre
-	# donnait un logo pleine page, le rectangle du `Label` faisant toute la
-	# largeur de l'en-tête.
+	# on vise 80 px de hauteur d'encre à l'écran — la hauteur du titre qu'elle remplace.
 	const ENCRE_VISEE := 80.0
-	const ENCRE_DU_FICHIER := 482.0 / 508.0
-	var h := ENCRE_VISEE / ENCRE_DU_FICHIER
-	var l := h * 1600.0 / 508.0
+	var tex: Texture2D = menu_enseigne.texture
+	var tex_w := float(tex.get_width()) if tex != null else 1600.0
+	var tex_h := float(tex.get_height()) if tex != null else 638.0
+	var h := ENCRE_VISEE
+	var l := h * (tex_w / tex_h)
 	menu_enseigne.anchor_left = 0.5
 	menu_enseigne.anchor_right = 0.5
 	menu_enseigne.anchor_top = 0.5
@@ -4687,6 +4820,14 @@ func _build_bilan() -> Control:
 	bilan_marge.add_theme_color_override("font_color", COLOR_LUMIERE)
 	bilan_effleure.add_child(bilan_marge)
 
+	bilan_soiree = Label.new()
+	bilan_soiree.name = "CarteSoiree"
+	bilan_soiree.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	Charte.appareil(bilan_soiree, T_MENTION)
+	bilan_soiree.add_theme_color_override("font_color", COLOR_DIM)
+	bilan_soiree.hide()
+	bilan.add_child(bilan_soiree)
+
 	return bilan
 
 
@@ -4712,7 +4853,7 @@ var _bilan_total_precedent: int = 0
 var _serie_precedente: String = ""
 
 func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
-		effleurement: float = -1.0) -> void:
+		effleurement: float = -1.0, carte_soiree: String = "") -> void:
 	if bilan == null:
 		return
 	# V3.6 — le pion de score, quand la SESSION gagne une unite. Pas a chaque
@@ -4744,6 +4885,9 @@ func poser_bilan(p1_wins: int, p2_wins: int, serie: String = "",
 		# même langue, sinon la même distance porte deux noms.
 		bilan_marge.text = Echelle.ecrire(effleurement)
 		bilan_effleure.visible = effleurement >= 0.0
+	if bilan_soiree != null:
+		bilan_soiree.text = carte_soiree
+		bilan_soiree.visible = carte_soiree != ""
 	# La description et le bilan partagent la boîte : montrer l'un efface l'autre.
 	game_over_score.text = ""
 	bilan.show()
@@ -6939,6 +7083,15 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		p2_dazzle.visible = _voile_scinde
 		if _voile_scinde:
 			_poser_voile(p2_dazzle, p2, _source_du_voile(p2, p1))
+
+	# DA5.5 — la copie plein cadre ne tourne que si au moins un voile est
+	# effectivement visible. Un `or` : les deux joueurs peuvent être éblouis
+	# à la fois, et l'écran scindé peut afficher les deux voiles ensemble.
+	if _voile_bb != null:
+		var p1_ebloui := p1 != null and float(p1.get("dazzle_amount")) > 0.001
+		var p2_ebloui := p2 != null and _voile_scinde \
+			and float(p2.get("dazzle_amount")) > 0.001
+		_voile_bb.visible = p1_ebloui or p2_ebloui
 
 	# `horloge` faux = ce label ne porte pas un chrono, et personne d'autre ne
 	# doit l'écrire. **L'entraînement posait « ENTRAÎNEMENT » et le voyait effacé

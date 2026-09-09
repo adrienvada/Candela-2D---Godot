@@ -30,6 +30,43 @@ par sujet impraticable.
 | **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `menu_fiche_classe.gd`, `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
 
 
+### Session « photographe » — ajoutée le 2026-09-09
+
+**Fichiers tenus :** `tools/photographe.gd`, `tools/photographe.tscn`,
+`tools/run_photos.sh`. Tous **créés**, aucun n'existait.
+
+**Touché ailleurs, et minuscule :** un bloc ajouté à la fin de
+`tools/test_banc.gd` (les appuis du photographe et l'intégrité de son
+catalogue), et la section DA6 de `docs/ROADMAP.md`. `test_banc.gd` n'est
+réservé par personne dans la table ci-dessus ; il est le lieu convenu où
+**tout outil qui ouvre une fenêtre** déclare ses hypothèses, et l'y ajouter est
+donc son usage prévu plutôt qu'une incursion.
+
+**Rien du jeu n'est modifié.** L'outil pilote `main.tscn` de l'extérieur, comme
+`planche_contact.gd` et `planche_eblouissement.gd`.
+
+**Puis le chantier DA6 lui-même, le 2026-09-09** (demande d'Adrien : « attaque-toi
+à tout DA6 »). Fichiers **créés**, tous à la racine : `affiche_de_fin.gd`
+(DA6.1), `estampe_de_kill.gd` (DA6.2), `bilan_de_soiree.gd` +
+`carte_de_soiree.gd` + `panneau_de_soiree.gd` (DA6.3, = V6.10), `exporteur.gd`
+(DA6.4), `power_on.gd` (DA6.5), `cadre_photo.gd` (le socle commun), plus
+`tools/test_bilan_de_soiree.gd`.
+
+⚠️ **`ui.gd` n'est PAS touché, et c'était la contrainte de départ.** Il appartient
+à la session « menus ». Les cinq compositions vivent dans leurs propres
+`CanvasLayer`, posés par `game_state` — le précédent du tampon de kill, dont le
+commentaire dit déjà « `ui.gd` est à l'autre session ». Elles LISENT `ui` (le
+titre de fin, `match_hud`) sans jamais y écrire.
+
+`game_state.gd` appartient au domaine « game feel ». Ce qui y est ajouté :
+`_poser_affiche_de_fin()`, `_peut_etre_la_soiree()`, `_arme_du_vainqueur()`,
+deux variables de séance, un appel à `PowerOn.lancer()` en fin de `_ready`, et
+`_spawn_kill_stamp()` **raccourci** — sa composition est partie dans
+`estampe_de_kill.gd`. Aucune mécanique de jeu n'est modifiée : ni le gel, ni la
+killcam, ni le décompte, ni le réseau.
+
+`tools/run_suites.sh` gagne une entrée (`test_bilan_de_soiree`).
+
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
 **Le glob `*.gdshader` réserve les shaders au domaine « game feel ». Il a été
@@ -249,6 +286,181 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
+
+**Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :
+une tache de sang écrasait tout le cône de torche du joueur. Diagnostic : les
+9 planches font toutes 160 px (normalisation uniforme de `fabrique_decals.gd`),
+mais leur TAUX DE REMPLISSAGE diverge énormément — `sang_4` couvre 54 % de sa
+boîte contre 23 % pour `sang_1`. Adrien a ensuite posé la règle générale :
+« la tache principale doit être au maximum de la taille du sprite du joueur. »
+
+`POIDS_TAILLE`, un facteur par planche dans `blood_stain.gd`, rabat le rayon de
+chaque flaque sous `DIAMETRE_CORPS` — garanti même au pire tirage d'`_echelle`,
+pas seulement en moyenne. Jamais agrandi, seulement rabattu : une planche déjà
+sous la limite (`sang_2`, `sang_3`, `sang_6`, `sang_7`) n'est pas touchée.
+19 contrôles neufs (134 au total), contre-test vérifié. Détail dans la
+ROADMAP, section « DA2.8 (suite 2) ».
+
+**Publié sur `main`, pas encore une nouvelle release.** Le correctif est sur
+`main` pour la prochaine publication ; je n'en ai pas déclenché une moi-même —
+Adrien n'a rien demandé de tel cette fois.
+
+### 2026-09-09 (suite) — session « DA5 · chasse aux défauts » : six des neuf étapes livrées
+
+**Livré, six commits, un par étape (ou groupe d'étapes) : DA5.1, DA5.2, DA5.7
+(a+b+c fusionnés — ils ne se comprennent qu'ensemble), DA5.3 (volet S
+seulement), DA5.4, DA5.5.** `./tools/run_suites.sh` intégralement vert après
+chaque commit reconstitué (vérifié par relecture manuelle du diff staged,
+pas seulement par le code de sortie). Je **lâche tous les fichiers** listés
+dans la déclaration d'ouverture ci-dessous.
+
+**Ce qui dépasse le périmètre annoncé, et pourquoi :**
+
+1. **DA5.5 a exigé un `BackBufferCopy` dédié (`_voile_bb` dans `ui.gd`) que le
+   plan d'origine ne prévoyait pas.** Trouvé en implémentant, pas en
+   planifiant : ce dépôt a déjà payé exactement ce défaut sur
+   `death_flash.gdshader` (piège « le tampon d'écran n'a pas de propriétaire »,
+   signalé le 2026-09-07 par la session « retouche éblouissement », jamais
+   corrigé). Sans copie à soi, l'aberration aurait hérité du même risque —
+   pire, avec une collision réelle possible : le flou de brouillage (aim
+   uncertainty) et l'éblouissement peuvent être actifs en même temps dans un
+   vrai match. Posé sur le modèle `KillcamBB`/`ShockBB` déjà établi dans le
+   dépôt (copie plein cadre, visible seulement pendant l'effet).
+2. **DA5.1 a trouvé bien plus que prévu** : le plan citait trois réglages
+   `EffectPolicy` inertes, l'audit systématique en a trouvé seize sur
+   trente-quatre (47 %) — toute la famille CONFORT caméra/killcam/manette et
+   sept des huit dials MONDE. Documenté, aucun retiré (hors périmètre DA5).
+
+**Ce qui reste ouvert :**
+
+- **DA5.3, volet (G)** — la texture peinte finale reste due à Adrien.
+- **La famille `EffectPolicy` de `aberration_eblouissement`** (CONFORT choisi
+  sur la recommandation du plan, jamais confirmé par Adrien) — seule décision
+  de conception encore ouverte, détail dans `docs/ROADMAP.md` (DA5.5).
+- **DA5.6 et DA5.8 restaient déjà faits avant cette session** — la chasse
+  aux défauts est donc **close** dans ses six items actionnables sans Adrien ;
+  seuls les volets qui l'exigent (la texture DA5.3-G, l'arbitrage de famille
+  DA5.5) restent en dehors du périmètre d'une session seule.
+- **`tools/bench_framerate.tscn` — obligatoire avant toute publication (H10)**,
+  non exécuté ici (aucune fenêtre interactive dans cet environnement) : DA5.5
+  fait passer `voile_eblouissement.gdshader` de zéro lecture d'écran à trois
+  lectures de `screen_texture` plus une copie plein cadre par pixel couvert, à
+  chaque éblouissement actif.
+- **`./tools/run_visuel.sh` et `./tools/run_visuel.sh --eblouissement`** — non
+  relancés après le dernier commit (DA5.5) ; à faire avant publication, sur
+  une machine avec fenêtre.
+
+**Suivi de projet :** je ne republie pas — mon delta part par `SendMessage` à
+la session porteuse identifiée via `ListAgents`/`list_sessions`
+(« Can2d - Mise à jour artefact de suivi »).
+
+### 2026-09-09 — session « DA5 · chasse aux défauts » : déclaration d'ouverture
+
+**Worktree `.claude/worktrees/da5-chasse-defauts-116ef6`, branche
+`claude/da5-chasse-defauts-116ef6`.** Chantier DA5 (docs/ROADMAP.md, section
+« La chasse aux défauts »), neuf étapes, chacune son commit. Périmètre exact,
+et il **traverse trois domaines** parce que le chantier lui-même est
+transversal — signalé ici plutôt que découvert par qui fusionnera :
+
+| Fichier | Domaine habituel | Ce que j'y touche |
+|---|---|---|
+| `charte.gd` | commun, non réservé | ajout de fonctions de contour/ombre (DA5.7a) |
+| `damage_vignette.gdshader`, `player.gd` | game feel | défaut de couleur (DA5.2) |
+| `bullet.gd` | game feel — **libre depuis le 2026-09-07** (session SG) | migration vers `Charte.contourer_settings` (DA5.7b) |
+| `game_state.gd` | game feel, disputé | idem, le tampon KILL (DA5.7b) |
+| `training_target.gd`, `map_editor_hud.gd` | game feel / non réservé | idem (DA5.7b) |
+| `ui.gd` | **menus** | idem (DA5.7b/c), câblage de l'aberration de l'éblouissement (DA5.5) |
+| `poussiere_faisceau.gdshader` | game feel (`*.gdshader`) | bruit sur le cercle (DA5.3a) |
+| `menu_backdrop.gdshader` | **menus** (`menu_*.gdshader`) | bruit sur les cercles (DA5.3b) |
+| `voile_eblouissement.gdshader`, `effect_policy.gd`, `tools/banc_voile.gd` | **retouche éblouissement** | commentaire du grain (DA5.4), aberration chromatique neuve (DA5.5) |
+
+**`bullet.gd` et `game_state.gd` :** la session SG a dit le 2026-09-07 que
+`bullet.gd` « demeure libre pour qui le veut ». `game_state.gd` reste le
+fichier disputé du domaine « game feel » — je n'y touche qu'un bloc isolé (le
+tampon `KILL`), rien à l'orchestration.
+
+**`ui.gd` et `menu_backdrop.gdshader` (domaine « menus ») :** empiètement
+déclaré, sur des points isolés et documentés — un remplacement d'appel pour
+chaque site d'outline (DA5.7), l'ajout d'un uniforme et de deux lignes de
+câblage pour l'aberration (DA5.5). Aucune restructuration des écrans.
+
+**`voile_eblouissement.gdshader` / `effect_policy.gd` (domaine « retouche
+éblouissement ») :** la session qui les tient est visible dans `ListAgents`
+sous « Retouche éblouissement », actuellement inactive. Empiètement déclaré —
+si elle reprend la main pendant que j'y travaille, qu'elle le dise ici, je
+n'y suis que pour DA5.4 (commentaire) et DA5.5 (aberration chromatique,
+décision actée avec Adrien).
+
+**Suivi de projet :** je ne republie pas moi-même — mon delta part par
+`SendMessage` à la session qui porte la republication (recherche en cours via
+`ListAgents`).
+
+### 2026-09-09 (suite) — session « SG · sang au sol » : DA2.8 complétée, `particle_pool.gd` touché
+
+**Déclaration : j'ai touché `particle_pool.gd`, hors de mon périmètre initial.**
+Adrien a demandé directement, dans la continuité de cette session, que « les
+particules de sang luminescentes ne soient plus des vieux polygones tout
+pourris ». Le fichier est dans le même groupe que `blood_stain.gd` au tableau
+de répartition (domaine « game feel »), et rien n'indique qu'une autre session
+le tienne en ce moment — vérifié avant d'y toucher.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, section « DA2.8 (suite) ») :
+- 7 planches Gemini cuites en décalques (`sang_3` à `sang_9`), portant DA2.8 de
+  2 à 9 formes — 6 directionnelles, 3 étoiles. Un 8ᵉ prompt généré mais écarté
+  (flaque rognée par le bord du cadre).
+- `sang_4` et `sang_8` réorientées après détection automatique par le banc
+  (masse d'encre du mauvais côté).
+- `tools/test_sang_au_sol.gd` : boucle de tirage portée de 30 à 200 essais pour
+  ne pas devenir flaky avec six planches dans la même catégorie. 115 contrôles.
+- `particle_pool.gd::Kind.BLOOD` : le losange codé en dur cède la place à six
+  gouttes peintes (`gouttes_sang_1` à `_6`), tirées au sort, préchargées.
+
+**Sources versionnées** sous `assets/sources/blood_decals/B3_*.jpg`,
+allowlistées dans le `.gitignore` du dossier.
+
+Lot complet relancé après ces changements — voir le commit pour le temps
+mesuré.
+
+### 2026-09-09 (note) — session « SG · sang au sol » : cache d'import périmé après des fusions automatiques
+
+**Sur le coup, j'ai cru à un vrai défaut sur `main`.** Le lot rougissait en
+masse — `game_state.gd:1447`, `Invalid call. Nonexistent function 'update_hud'
+in base 'CanvasLayer'` — reproduit deux fois, y compris **en isolation stricte**
+(mes propres modifications mises de côté via `git stash`). Ce n'était pas un
+proxy : l'appel `ui.update_hud(...)` existait déjà identique avant, et le fait
+qu'un contrôle purement méthodique (isoler la variable) confirme un symptôme ne
+suffit pas à en identifier la CAUSE — j'ai continué à chercher au lieu de m'arrêter
+à la première preuve qui semblait accuser `main`.
+
+**La vraie cause, trouvée en lisant le lot en entier plutôt que sa fin :**
+```
+SCRIPT ERROR: Parse Error: Could not find type "MenuHatchRect" in the current scope.
+          at: GDScript::reload (res://ui.gd:455)
+...
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://game_state.gd:0)
+```
+`ui.gd` ne compilait plus, donc le nœud restait un `CanvasLayer` nu sans son
+script — d'où `update_hud` introuvable. `MenuHatchRect` (`menu_hatch_rect.gd`,
+`class_name MenuHatchRect`) existe bel et bien dans le dépôt ; le cache
+`.godot/global_script_class_cache.cfg` datait du 8 septembre, **avant** que
+quatre fusions automatiques de `main` (reflog `f2b9bc7`, `f467817`, `c4a49ab`,
+`444e876` — apparues sans que j'aie tapé `git merge`, à élucider séparément)
+n'apportent ce fichier dans mon worktree. `godot --headless --path . --import`
+l'a régénéré ; `MenuHatchRect` y figure désormais, et les échecs disparaissent.
+
+**Ce que ça change pour la suite :** un worktree qui a reçu de nouveaux
+fichiers depuis son dernier `--import` — par une fusion, automatique ou non —
+en a de nouveau besoin, pas seulement un worktree flambant neuf. La ROADMAP ne
+le disait qu'au sujet du premier import ; à corriger si ça se reproduit.
+
+**Ce qui reste vrai et non résolu :** je ne sais toujours pas quel mécanisme a
+fusionné `main` quatre fois dans mon worktree sans que je le demande, ni
+pourquoi un commit (`68ad8d1`, mon propre travail) est apparu sans `git commit`
+explicite de ma part. Signalé à Adrien directement plutôt que dans ce journal
+seul — voir sa réponse.
+
 ### 2026-09-09 (suite) — session « retouche éblouissement » : un lot qui allait effacer trois sessions
 
 **L'arbre partagé portait un index qui supprimait 141 lignes et n'en ajoutait
@@ -439,6 +651,20 @@ elle ne déborde dans le mur que d'une dizaine de pixels ; et sa rotation est
 **tirée au sort**, pas prise dans l'axe du tir — une étoile de fissure n'a ni
 amont ni aval, elle ne peut donc pas mentir sur la provenance du coup. Le sang,
 lui, est tourné dans l'axe : c'est exactement ce qui rend son centrage fautif.
+
+**Rouvert et reclos le 2026-09-09, sur `bullet.gd` cette fois — la déclaration
+ci-dessus ne tient plus.** Adrien, en regardant les taches : « il faut que la
+tache en étoile centrée n'apparaisse que quand on tape très proche du centre
+(0-2 px), sinon ce sont les taches directionnelles ». Le point d'impact que
+`bullet.gd` transmet ne peut pas servir à ça — il est toujours à un rayon du
+corps, jamais « proche du centre » — donc la distance qui décide est ailleurs :
+la distance perpendiculaire entre l'axe du tir et le centre RÉEL du joueur, que
+`_hit_player()` calcule déjà (`dist_to_axis`) pour l'atténuation des dégâts, et
+que V4.2 réutilise déjà pour le retour audio. Une seule ligne ajoutée à
+`_spawn_hit_effects()` la transmet, non normalisée, jusqu'à `blood_stain.setup()`
+— jamais une troisième mesure, l'avertissement était déjà écrit dans ce fichier.
+Détail complet et lot vert (275 s) dans la ROADMAP, section « SG (addendum,
+2026-09-09) ».
 
 ### 2026-09-07 — session « retouche éblouissement » : une prédiction fausse retirée de la feuille de route
 
@@ -2584,6 +2810,29 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - 70/70 contrôles au vert sur `tools/test_dosage_audio.gd`.
   - 63/63 suites solo headless + 7/7 scénarios réseau duo (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script** dans `tools/run_suites.sh` (274s).
 
+#### Lot du 2026-09-09 — session « résolution des chantiers de Game Feel restants (Phases 0, 1 et 2) »
+
+**Chantier Game Feel Global — Duel, Tension, Interface & Clôture méta** (validé par Adrien) :
+- **Phase 0 — Réconciliations & Correctifs d'interface :**
+  - **Sang au sol (SG) :** `blood_stain.gd`, `bullet.gd`, `tools/test_sang_au_sol.gd` (38/38) — distinction nette de la tache en étoile parfaitement centrée (`SEUIL_ETOILE_CENTREE = 2.0` px sur distance perpendiculaire à l'axe du corps) vs taches directionnelles orientées au-delà.
+  - **Écran « Effets » (DA5.8) :** `screen_effects.gd`, `tools/test_audit_menus.gd` — élimination de l'effondrement vertical de la liste des options d'effets dans le panneau de droite du Hub (`scroll.custom_minimum_size.y = 480.0`).
+  - **Ordre des calques UI / Brouillage :** `ui.tscn` — `layer = 10` sur le CanvasLayer racine de `UI` garantissant que le HUD surplombe en permanence les halos de brouillage et d'éblouissement (`layer = 1` et `2`).
+  - **Optimisation shader voile :** `voile_eblouissement.gdshader` — court-circuit anticipé `if (niveau <= 0.001) { COLOR = vec4(0.0); }` évitant les calculs de flou/aberration plein écran quand aucun joueur n'est ébloui.
+- **Phase 1 — Cœur du Game Feel en Manche :**
+  - **Brouillage `Mode.LAMPE` :** `player.gd` — atténuation de la silhouette ennemie par `Brouillage.opacite(dazzle_amount)` sous éblouissement adverse (y compris révélations visuelles).
+  - **Hitmarker sonore différencié (V4.2) :** `bullet.gd` — coup franc et sec au centre (`proximite_bord < 0.45` -> impact net) vs effleurement tangentiel (`proximite_bord >= 0.45` -> `hit_tangent`).
+  - **Indicateur de fusée au HUD :** `ui.gd` — voyant / badge discret (`p1_flare`, `p2_flare`) dans le conteneur `bottom` du HUD en miroir de la torche, asservi à `GameState.fusee_disponible(pid)`.
+  - **Foley d'arsenal & balistique :** `bullet.gd`, `player.gd` — chuintement discret du carreau d'arbalète en vol (`play_bolt_flight` V4.10) et tintement métallique différé de la douille éjectée (`play_shell` V4.8).
+- **Phase 2 — Tension, Audio & Endgame :**
+  - **Décompte audio de départ (V3.3) :** `game_state.gd` — 3 ponctuations audio montantes `play_count` sur 3 - 2 - 1.
+  - **Battement d'urgence des 10 secondes (V3.4) :** `game_state.gd` — ponctuation métronomique d'urgence `ui_tick` sous 10.0 s.
+  - **Acouphène et étouffement de mort (V2.8) :** `player.gd` — déclenchement de `AudioManager.jouer_acouphene_mort()` à la mort locale.
+  - **Cartes de fin de soirée (V6.10 / DA6.3) :** `serie_de_session.gd`, `game_state.gd`, `ui.gd`, `tools/test_serie_de_session.gd` — carte récapitulative (« CE SOIR : N MATCHS · V-D · ARME FAVORIE : NOM ») dès 3 matchs joués, affichée dans le bilan composé et au retour menu.
+- **Foley du ricochet mécanique (V4.3) :**
+  - Synthèse physique de 3 variantes haute fidélité (`ricochet_01.wav`, `ricochet_02.wav`, `ricochet_03.wav`) en PCM 16-bit 48 kHz stéréo : impact balistique transitoire (< 5 ms), sifflement Doppler descendant d'arrachement, flutter de rotation excentrique de la balle déformée (95-185 Hz) et résonance mécanique de plaque d'acier.
+  - Mise à jour de `preview_soundboard.html` avec les 3 flux base64 synchronisés.
+  - 64/64 suites headless solo vertes (86s) dans `tools/run_suites.sh --rapide`.
+
 
 
 #### Lot du 2026-09-09 — session « chantier 10 classes » (étape 1, le socle de données)
@@ -3112,3 +3361,33 @@ chose à sélectionner.
 fusil », or l'échelle de lumière qu'il a lui-même posée met le Fumiste au rang 2
 et le fusil au rang 3. Je n'ai **pas** touché à l'ordre — s'il voulait aussi le
 remanier, c'est une seconde décision.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (fusion de `main`, protocole 11→15)
+
+**Adrien a éprouvé l'arbalète manette en main et ordonné la fusion.** ⚠️ Il n'a
+demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le 0,60 s** :
+ce qui est établi est que le root ne l'a pas arrêté, pas que le chiffre soit juste.
+Le jalon humain H11 passe en « commencé », neuf classes restent à essayer.
+
+**`main` avait 47 commits d'avance**, dont la v0.4.0 et son protocole 10. La
+session « appariement amical » a publié devant nous **comme convenu par message**,
+et j'ai renuméroté : mes cinq entrées de carnet passent de 10-14 à **11-15**,
+`Protocol.VERSION` à **15**. ⚠️ Le témoin du fil a été **recalculé**, jamais
+recopié d'une des deux branches : le fil d'après fusion n'est celui d'aucune des
+deux. Numéro tranché d'abord, empreinte ensuite.
+
+**Trois conflits, et un seul demandait un vrai arbitrage.** `protocol.gd` (la
+renumérotation), `docs/ROADMAP.md` (deux sessions ajoutant au même tableau : les
+deux jeux gardés), et `ui.gd` — où **les deux chantiers avaient ajouté un témoin
+de fusée au HUD le même jour, chacun de son côté**. Le leur allumait un cadre
+quand une fusée était disponible ; le mien comptait la réserve et le gadget.
+Aucun ne contenait l'autre : la fusion garde **le cadre qui s'allume ET les
+nombres**, et `_create_flare_indicator()` devenu orphelin est retiré plutôt que
+laissé mort.
+
+**⚠️ Le piège que `main` venait justement de consigner s'est produit chez moi.**
+« Soixante et onze suites vertes ne disent pas que le jeu démarre » : après la
+fusion, les décals de sang arrivés de `main` n'étaient pas importés, et deux
+suites échouaient sur des tailles à 0 px. Deux passes de `--import` en avant-plan,
+et tout redevient vert. Les points d'ancrage du chantier ont été vérifiés un par
+un après la fusion, comme le corollaire de `CLAUDE.md` l'exige — les seize sont là.

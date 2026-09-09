@@ -34,6 +34,29 @@ enum Kind { BLOOD, SPARK, SMOKE, DUST }
 const BLOOD_FLASH_DURATION := 0.2
 const BLOOD_FLASH_BOOST := 2.0
 
+## Gouttes peintes pour les particules de sang (2026-09-09).
+##
+## ⚠️ **Avant cette liste, une goutte qui vole était un losange à 4 sommets**,
+## dessiné à la main dans `_configure()` — le même geste procédural que DA2.8 a
+## remplacé pour les taches au sol, resté ici sans qu'on y touche. Relevé par
+## Adrien : « j'aimerais que les particules de sang luminescentes ne soient plus
+## des vieux polygones ».
+##
+## Cuites par `tools/fabrique_decals.gd -- --panneaux 3x2` depuis une seule
+## planche (`assets/sources/blood_decals/B3_particules.jpg`) : six gouttes
+## isolées, taillées comme les taches au sol — luminance blanc-sur-noir devenue
+## alpha, teinte laissée au code. **Préchargées en `const`** pour la même
+## raison que `BLOOD_SHADER` plus bas : compiler une texture à la volée
+## provoquerait un hoquet pile au moment d'un impact.
+const GOUTTES_SANG: Array[Texture2D] = [
+	preload("res://assets/decals/gouttes_sang_1.png"),
+	preload("res://assets/decals/gouttes_sang_2.png"),
+	preload("res://assets/decals/gouttes_sang_3.png"),
+	preload("res://assets/decals/gouttes_sang_4.png"),
+	preload("res://assets/decals/gouttes_sang_5.png"),
+	preload("res://assets/decals/gouttes_sang_6.png"),
+]
+
 var _pool: Array[RigidBody2D] = []
 var _free: Array[RigidBody2D] = []
 ## Actives dans l'ordre d'émission : le recyclage part toujours du début.
@@ -157,8 +180,19 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 	if kind == Kind.BLOOD:
 		circle.radius = 2.0
 		var s := randf_range(0.8, 3.5)
+		# Une goutte peinte, tirée au sort, plutôt qu'un losange dessiné à la
+		# main — voir GOUTTES_SANG. `Polygon2D` sans UV explicite mappe sa
+		# texture sur la boîte englobante du polygone : un simple quad suffit.
+		var tex := GOUTTES_SANG[randi() % GOUTTES_SANG.size()]
+		var dim := tex.get_size()
+		# Mise à l'échelle par le plus grand côté, pour rester dans le même
+		# ordre de grandeur que l'ancien losange (qui s'étendait sur 4*s).
+		var echelle := (4.0 * s) / maxf(dim.x, dim.y)
+		var demi := dim * echelle * 0.5
+		poly.texture = tex
 		poly.polygon = PackedVector2Array([
-			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
+			Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
+			Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
 		poly.material = _mat_mix
 		LightTextures.poser(light, LightTextures.ECLAT, 64.0)
 		# V4.11 — l'éclat de l'impact : surmultipliée à l'émission, la lumière
@@ -172,6 +206,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		# dérive puis s'éteint. La friction fait tout le travail de « nuage ».
 		circle.radius = 1.0
 		var s := randf_range(2.5, 4.5)
+		poly.texture = null # Une particule recyclée peut venir d'un BLOOD.
 		poly.polygon = PackedVector2Array([
 			Vector2(-2 * s, 0), Vector2(0, -2 * s), Vector2(2 * s, 0), Vector2(0, 2 * s)])
 		poly.material = _mat_add
@@ -186,6 +221,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		# Dans le noir hors du faisceau, elle ne reçoit aucune lumière et reste un noir d'encre pur.
 		circle.radius = 1.0
 		var s := randf_range(0.8, 1.6)
+		poly.texture = null # Une particule recyclée peut venir d'un BLOOD.
 		poly.polygon = PackedVector2Array([
 			Vector2(-1.2 * s, 0.2 * s),
 			Vector2(0.1 * s, -1.0 * s),
@@ -200,6 +236,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		rb.physics_material_override = _phys_blood
 	else:
 		circle.radius = 1.0
+		poly.texture = null # Une particule recyclée peut venir d'un BLOOD.
 		poly.polygon = PackedVector2Array([
 			Vector2(-1, 0), Vector2(0, -1), Vector2(1, 0), Vector2(0, 1)])
 		poly.material = _mat_add

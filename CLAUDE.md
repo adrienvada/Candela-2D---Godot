@@ -20,7 +20,10 @@ humains/agents est dans [README.md](README.md). Règles non négociables :
   **La republication est centralisée** (décidé le 2026-08-18, avec Adrien) :
   une seule session s'en charge à la fois ; les autres ne republient pas
   elles-mêmes, elles lui transmettent leur delta par message inter-session
-  (`ListAgents` / `SendMessage`). Aucune session déjà chargée de la
+  (`ListAgents` / `SendMessage`). **Le delta commence par le nom de la session
+  qui l'envoie** (tel que `ListAgents` l'affiche), sa branche et le chantier
+  concerné : le suivi affiche quelle session tient quel chantier (décidé le
+  2026-09-09, avec Adrien). Aucune session déjà chargée de la
   republication ? La première qui le constate en devient responsable et le dit
   aux autres. Détail du protocole : [README.md](README.md#republier-le-suivi).
   S'il faut republier soi-même : l'outil `Artifact` **en passant cette URL** —
@@ -73,6 +76,13 @@ le jeu la passe de deux images par seconde, mesuré fenêtre au premier plan.
 Le banc refuse désormais un relevé pris pendant que la fenêtre change de
 focus : ce sont ces transitions, et non le second plan, qui décident du
 1 % bas.
+
+Pour les images — captures de jeu, menus, illustrations, écrans de fin —
+`./tools/run_photos.sh` (le photographe, DA6) : il ouvre le jeu, le met en scène
+plan par plan et écrit un dossier + un manifeste + une planche HTML dans
+`user://photos/`. `--liste` imprime son catalogue sans rien ouvrir. Comme
+`run_visuel.sh`, il exige une **vraie fenêtre** et ne peut donc rejoindre aucune
+suite headless ; ses appuis sur le jeu sont vérifiés par `tools/test_banc.gd`.
 
 En jeu, **F3** ouvre le panneau de diagnostic (fps, ping, transport, lien
 direct/relayé, NAT, lumières, particules). Pas de linter ni de CI : la barre
