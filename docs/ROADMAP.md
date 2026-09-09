@@ -3127,6 +3127,39 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### `parallel()` juste après `chain()` ANNULE le `chain()` (2026-09-09)
+
+Un `Tween` en mode `set_parallel(true)` global, dans lequel on écrit ensuite des
+`chain()` pour séparer les étapes et des `parallel()` pour regrouper : les trois
+mécaniques se contredisent, et **la contradiction ne se lit pas.**
+
+```gdscript
+tw.chain()                                    # « ce qui suit vient après »
+for n in [cadre, pied, tampon]:
+    tw.parallel().tween_property(n, ...)      # annule le chain() ci-dessus
+```
+
+Le groupe de sortie s'exécutait **en même temps que la tenue** au lieu de la
+suivre. Symptôme observé sur DA6.2 : le HUD s'éteignait pour la photo, puis
+**remontait à 1 en trois dixièmes de seconde**, un dixième après la prise. Mesuré
+à l'image par une sonde jetable : `0,565 → 0,000 → 0,132 → 0,934 → 1,000`, et
+plus rien ensuite.
+
+⚠️ **Le défaut est du genre qu'on n'attrape qu'en mesurant.** À l'œil, l'image
+était « presque bonne » — le HUD paraissait estompé, ce qui est exactement ce
+qu'on voulait. C'est une capture, comparée à la précédente, qui a montré qu'il
+restait à mi-course ; et c'est une sonde de vingt lignes qui a dit pourquoi.
+
+**Le remède est une règle d'écriture, pas un correctif** : ne jamais poser
+`set_parallel(true)` en mode global. Le séquentiel est le défaut de Godot, et
+`parallel()` nommé un par un se lit comme il s'exécute. Quand deux choses n'ont
+rien à se dire — ici l'image d'un côté, ce qu'on efface pour elle de l'autre —
+**deux tweens séparés valent mieux qu'un ordre d'exécution qu'on croit lire.**
+
+Appliqué aux cinq fichiers de DA6 ; les autres tweens du dépôt n'ont pas été
+revus (hors périmètre, signalé).
+
+
 ### La texture d'une vue ne contient pas l'interface (2026-09-09)
 
 `SubViewport.get_texture()` rend **le monde**, et rien d'autre. Tout ce que le
@@ -11306,17 +11339,95 @@ Ce qui n'est **pas** établi : la cause exacte — je n'ai pas poussé plus loin
 que les rangées sont là, pas qu'on les voit. Troisième occurrence de ce motif
 dans la même journée.
 
-### DA6 — Les moments qu'on screenshote
+### DA6 — Les moments qu'on screenshote ✅ **la moitié *(S)* est livrée le 2026-09-09**
+
+> **Les cinq fiches sont faites pour ce que des sessions peuvent faire.** Ce qui
+> reste est nommé item par item ci-dessous, et c'est du *(C)* : un son, une
+> illustration, une direction. Rien n'attend une session.
 
 - **DA6.1 L'écran de victoire en affiche** — composé comme un poster, pas comme
-  un menu. *(S + C)*
+  un menu. *(S + C)* — ✅ **`affiche_de_fin.gd`**. Reste *(C)* : la direction
+  d'une image de fond, si on en veut une.
 - **DA6.2 La photo du gel fatal signée** — le gel V2.1 existe ; le cadrer, le
-  titrer, le dater : chaque kill produit une image montrable. *(S)*
-- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)*
+  titrer, le dater : chaque kill produit une image montrable. *(S)* —
+  ✅ **`estampe_de_kill.gd`**.
+- **DA6.3 Les cartes de fin de soirée illustrées** (= V6.10). *(S + C)* —
+  ✅ **`bilan_de_soiree.gd` + `carte_de_soiree.gd` + `panneau_de_soiree.gd`**.
+  **V6.10 est close par la même occasion.** Reste *(C)* : l'illustration —
+  l'emplacement est câblé et vide (`assets/ui/carte_soiree_fond.png`).
 - **DA6.4 Le bilan de session partageable** — la même carte exportée en image.
-  *(S)*
+  *(S)* — ✅ **`exporteur.gd`**, PNG 1080×1350 dans le dossier Images du système.
 - **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
-  l'esquisse) : logo, souffle, lumière. *(S + C)*
+  l'esquisse) : logo, souffle, lumière. *(S + C)* — ✅ **`power_on.gd`** pour le
+  logo et la lumière. Reste *(C)* : **le souffle** — un tube qui s'amorce. Le
+  crochet est posé (`AudioManager.play_ui("ui_power_on")`, muet tant que le
+  fichier n'existe pas) ; sans lui la séquence est complète et silencieuse.
+
+#### Ce que ces cinq fiches ont en commun, et qui a décidé de l'architecture
+
+**Aucune ligne de `ui.gd` n'a changé.** Les cinq compositions vivent dans leurs
+propres fichiers et sont posées par `game_state` sur des `CanvasLayer` à elles.
+C'est d'abord le précédent du tampon de kill — « `ui.gd` est à l'autre session » —
+mais c'est surtout le bon découpage : **une affiche et un salon n'ont ni la même
+durée de vie, ni le même travail.** Le salon reste vivant sous l'affiche, prêt
+pour le geste suivant ; l'affiche meurt quand on la congédie.
+
+Corollaire vérifiable : le verdict de l'affiche est **lu** sur le titre que le
+menu vient de poser, jamais recalculé. Le mot dépend du mode (« VICTOIRE » en
+ligne, « JOUEUR 1 GAGNE » en écran partagé) et d'un arbitrage d'Adrien sur
+l'égalité grise ; deux calculs auraient fini par se contredire à l'écran, l'un
+sur l'affiche et l'autre sur le menu dessous.
+
+#### Trois choses que seules les images ont dites
+
+**Un voile ne compose pas, il superpose.** L'affiche laissait d'abord passer 6 %
+du salon, pour garder l'arrêt sur image du kill en fond. Six pour cent d'une
+barre ambre saturée, ce n'est pas six pour cent d'une image : le bouton REJOUER
+traversait le mot. Le fond est devenu opaque, et les deux images se partagent le
+travail — **la photo du gel montre le monde deux secondes plus tôt, l'affiche
+montre le mot.**
+
+**La bande haute de l'écran appartient au HUD.** La signature de la photo de kill
+y était posée : « CANDELA » se retrouvait derrière le panneau de vie de J1, la
+date derrière le chronomètre. Tout est descendu en pied de cadre — où une légende
+de photo se met de toute façon. Et le HUD lui-même **s'efface** le temps de la
+photo : une jauge de vie figée sur un mort n'informe plus personne.
+
+**Un préréglage d'ancre et une position se contredisent.** La carte de fin de
+soirée partait à moitié hors cadre, en bas à droite : `PRESET_CENTER` posait les
+ancres à 0,5, puis la position centrée s'ajoutait par-dessus. Une seule des deux
+mécaniques, jamais les deux.
+
+#### V6.10, close en passant, et ce qui la rendait fragile
+
+La fiche promettait « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». Le calcul
+vit dans `bilan_de_soiree.gd`, **sans autoload, sans scène, entièrement testé à
+froid** (`tools/test_bilan_de_soiree.gd`, 22 contrôles) — même discipline que
+`serie_de_session.gd`, et pour la même raison déjà payée : un fichier qui nomme
+un autoload ne compile pas en `--script`, l'erreur avorte la fonction de test
+**sans incrémenter le compteur**, et la suite annonce « tous les tests passent »
+sur des appels morts.
+
+Deux décisions y sont moins évidentes qu'elles n'en ont l'air :
+
+- **« Ce soir » n'est pas « aujourd'hui ».** L'historique persiste entre deux
+  lancements ; une soirée est une séance devant l'écran. Le repère est
+  l'horodatage du démarrage du jeu — une date rangerait dans la même soirée deux
+  séances séparées de dix heures, et couperait en deux celle qui passe minuit.
+- **Le favori se départage par le nom.** Un `Dictionary` de Godot conserve
+  l'ordre d'insertion : sans départage, deux armes jouées trois fois donnent un
+  favori qui dépend de l'ordre des matchs — donc une carte qui change de réponse
+  sur la même soirée selon qu'on l'ouvre avant ou après avoir rejoué.
+
+#### Et le photographe a servi le jour même
+
+Les trois écrans neufs sont entrés à son catalogue (`power-on`, `affiche`,
+`soiree`) avant d'être jugés. Il a fallu lui apprendre deux choses au passage,
+et les deux disent quelque chose du jeu : **l'allumage part tout seul au
+démarrage** et se serait invité sur la première image des menus ; **l'affiche se
+pose par-dessus le salon** et aurait rendu trois verdicts identiques sous trois
+noms. Un outil qui photographie un jeu doit savoir congédier ce que le jeu
+affiche de lui-même.
 
 #### L'outil qui sort les images — `tools/photographe.gd` (posé le 2026-09-09)
 

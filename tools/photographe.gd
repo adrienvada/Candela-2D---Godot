@@ -193,6 +193,9 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "cadre-historique", "famille": "menus", "source": "ecran",
 		 "titre": "L'historique des matchs",
 		 "pourquoi": "La trace d'une soirée jouée : matière du bilan de session (DA6.4)."},
+		{"id": "power-on", "famille": "menus", "source": "ecran",
+		 "titre": "L'allumage",
+		 "pourquoi": "DA6.5 — la première seconde du jeu : le filament monte, le mot est révélé. La première image d'un trailer."},
 		{"id": "code-de-salon", "famille": "menus", "source": "ecran", "lot": true,
 		 "titre": "Le bloc de gravure du code de salon",
 		 "pourquoi": "Trois états — vide, chasse large, chasse étroite. L'image qu'on montre pour dire « jouez à deux »."},
@@ -265,6 +268,12 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "gel-fatal", "famille": "fins", "source": "ecran",
 		 "titre": "L'arrêt sur image signé",
 		 "pourquoi": "DA6.2 — le gel du kill, tamponné de l'heure. L'image que le joueur veut envoyer."},
+		{"id": "affiche", "famille": "fins", "source": "ecran",
+		 "titre": "L'affiche de fin",
+		 "pourquoi": "DA6.1 — le verdict composé comme un poster : le mot, le filet, la légende, la ligne de session."},
+		{"id": "soiree", "famille": "fins", "source": "ecran",
+		 "titre": "La carte de fin de soirée",
+		 "pourquoi": "DA6.3 / DA6.4 — ce que la soirée a produit, dans le format 4:5 qu'on exporte et qu'on envoie."},
 		{"id": "verdict-victoire", "famille": "fins", "source": "ecran",
 		 "titre": "VICTOIRE",
 		 "pourquoi": "DA6.1 — l'écran de fin composé comme une affiche."},
@@ -352,6 +361,23 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		if not InputMap.has_action(action):
 			absents.append("l'action « %s » a disparu de l'Input Map" % action)
 
+	# DA6 — les quatre compositions que le photographe pilote depuis l'extérieur.
+	# Elles sont neuves et vivent dans leurs propres fichiers ; ce qui les rend
+	# fragiles ici, c'est que l'outil les atteint par des méthodes qu'aucun autre
+	# appelant n'utilise (`congedier`, `terminer`, `fermer`).
+	for cas in [["res://power_on.gd", "terminer"], ["res://power_on.gd", "figer"],
+			["res://affiche_de_fin.gd", "congedier"],
+			["res://panneau_de_soiree.gd", "fermer"]]:
+		var sc := load(String(cas[0])) as GDScript
+		if sc == null:
+			absents.append("%s est introuvable" % cas[0])
+			continue
+		var noms := {}
+		for m in sc.get_script_method_list():
+			noms[m["name"]] = true
+		if not noms.has(String(cas[1])):
+			absents.append("%s::%s() a disparu" % [cas[0], cas[1]])
+
 	# La source `vue` lit la texture de vp1 ; le shader des illustrations et la
 	# miniature de carte sont les deux familles « pures ».
 	if not ResourceLoader.exists("res://menu_artwork.gdshader"):
@@ -424,6 +450,18 @@ func _ready() -> void:
 
 	_preparer_le_dossier()
 
+	# ⚠️ **L'allumage (DA6.5) part tout seul au démarrage du jeu**, et il tient
+	# trois secondes par-dessus tout. Sans ce passage, il se serait invité sur la
+	# première image de la famille `menus` — un accueil voilé, sans que rien
+	# n'explique pourquoi. On le photographie s'il est demandé, puis on le
+	# congédie ; sinon on le congédie tout de suite.
+	#
+	# ⚠️ **APRÈS `_preparer_le_dossier()`, et le premier jet l'avait avant.** Le
+	# nettoyage efface les PNG de la séance précédente : placé après la prise, il
+	# emportait l'image de l'allumage, seule image écrite avant lui. Elle était
+	# annoncée à la console et absente du dossier — la pire des deux moitiés.
+	await _traiter_l_allumage(_plans_de(choisis, "menus"))
+
 	for famille in FAMILLES:
 		var plans := _plans_de(choisis, famille)
 		if plans.is_empty():
@@ -451,6 +489,32 @@ func _ready() -> void:
 # ---------------------------------------------------------------------------
 # LES FAMILLES
 # ---------------------------------------------------------------------------
+
+## L'allumage : il est déjà en cours quand le photographe prend la main.
+func _traiter_l_allumage(plans: Array[Dictionary]) -> void:
+	var allumage := _main.get_node_or_null(^"PowerOn")
+	if allumage == null:
+		if _demande(plans, "power-on"):
+			printerr("  ! l'allumage a déjà fini — plan `power-on` sans sujet")
+		return
+	if _demande(plans, "power-on"):
+		print("\n--- menus (l'allumage) ---")
+		# ⚠️ **On lui demande de tenir la pose plutôt que de viser le bon
+		# instant.** Le premier jet attendait 1,6 s, ce qui tombait pile — sur
+		# une machine. La séquence dure deux secondes et part au lancement du
+		# jeu ; le temps de monter `main.tscn`, de vérifier les appuis et de
+		# préparer le dossier, l'outil arrive parfois APRÈS la fin, et la prise
+		# rend alors le menu d'accueil sous le nom « power-on ». Un cadrage qui
+		# dépend de la vitesse de la machine n'est pas un cadrage.
+		if allumage.has_method("figer"):
+			allumage.figer()
+		await _prendre(_plan(plans, "power-on"), Callable(), 0.25)
+	if is_instance_valid(allumage) and allumage.has_method("terminer"):
+		allumage.terminer()
+	# La séquence de sortie dure `D_SORTIE` : la couper à la hache laisserait un
+	# voile noir à moitié effacé sur la première image des menus.
+	await _attendre(func() -> bool: return not is_instance_valid(allumage), 3.0)
+
 
 func _famille_menus(plans: Array[Dictionary]) -> void:
 	_ui.show_main_menu()
@@ -804,6 +868,18 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 		printerr("  ✗ l'écran de fin n'est jamais venu")
 		return
 
+	# DA6.1 — l'affiche se pose par-dessus le salon dès que l'écran de fin
+	# arrive, et elle se retire seule au bout de six secondes. On la
+	# photographie d'abord, puis on la congédie : **tous les plans qui suivent
+	# sont dessous**, et sans ce congé ils rendraient trois fois la même
+	# affiche sous trois noms différents.
+	var affiche := _main.get_node_or_null(^"AfficheDeFin")
+	if affiche != null and _demande(plans, "affiche"):
+		await _peut_etre(plans, "affiche")
+	if is_instance_valid(affiche) and affiche.has_method("congedier"):
+		affiche.congedier()
+		await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+
 	# **Le bilan et les verdicts ne portent pas les mêmes valeurs, et c'est tout
 	# l'intérêt.** Posés identiques, les quatre images étaient quatre fois la
 	# même : le bandeau de session survit à `show_game_over`, si bien que le plan
@@ -824,6 +900,35 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 		_ui.show_game_over(int(cas[1]))
 		_ui.poser_bilan(1, 0, "", -1.0)
 		await _peut_etre(plans, String(cas[0]))
+
+	if _demande(plans, "soiree"):
+		await _carte_de_soiree(plans)
+
+
+## DA6.3 — la carte de fin de soirée, posée sur un bilan COMPOSÉ.
+##
+## Elle n'apparaît en jeu qu'après trois matchs dans la même séance, au retour au
+## menu. Un outil d'observation ne va pas jouer trois matchs pour voir un écran —
+## et surtout, le bilan qu'il obtiendrait serait celui d'une soirée fictive de
+## trois matchs identiques, c'est-à-dire une carte qui ne montre aucune de ses
+## lignes. Les valeurs ci-dessous sont celles d'une vraie soirée : une série, une
+## arme qui domine sans écraser, une arène revue plusieurs fois.
+##
+## C'est le même geste que `montrer_texte("MON RANG", …)` pour le cadre de
+## droite : atteindre le CONTENU sans prendre l'itinéraire.
+func _carte_de_soiree(plans: Array[Dictionary]) -> void:
+	var panneau = PanneauDeSoiree.poser(_main, {
+		"matchs": 7, "assez": true,
+		"victoires": 4, "defaites": 3, "nulles": 0,
+		"duree_totale": 2840.0, "plus_court": 96.0, "plus_long": 300.0,
+		"arme": "Pompe", "arme_n": 4,
+		"carte": "Le Cloître", "carte_n": 3,
+		"serie": 3, "local_idx": 0,
+	})
+	await _peut_etre(plans, "soiree")
+	if is_instance_valid(panneau) and panneau.has_method("fermer"):
+		panneau.fermer()
+		await _attendre(func() -> bool: return not is_instance_valid(panneau), 3.0)
 
 
 # ---------------------------------------------------------------------------

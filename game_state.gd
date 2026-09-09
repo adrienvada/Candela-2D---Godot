@@ -57,6 +57,17 @@ var dernier_effleurement: float = -1.0
 # Remis à zéro au retour au menu, pas entre deux matchs.
 var p1_session_wins: int = 0
 var p2_session_wins: int = 0
+
+## DA6.3 — le repère de « ce soir ». L'historique persiste entre deux
+## lancements ; une soirée est une séance devant l'écran, pas une date. Posé une
+## fois, à la construction, et jamais recalculé : le relire à chaque fin de match
+## ferait glisser la fenêtre et la carte oublierait le début de la soirée.
+var _debut_de_seance: String = Time.get_datetime_string_from_system(true, true)
+
+## La carte de fin de soirée ne se pose qu'UNE fois par séance. Le retour au menu
+## arrive après chaque match : reposée à chaque fois, elle cesserait d'être une
+## fin de soirée pour devenir un écran de plus à congédier.
+var _soiree_montree: bool = false
 ## DA4.7 — un joueur vient de tomber, et sa machine sait de combien.
 ##
 ## Appelée par `player.gd` via le groupe `game_state`, comme `player_died`. Elle
@@ -436,6 +447,13 @@ func _ready():
 	arena.add_child(ui.killcam_overlay)
 	
 	ui.show_main_menu()
+
+	# DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`,
+	# et c'est la décision : le menu est monté, vivant et prêt sous le voile
+	# pendant toute la séquence. Le faire attendre l'aurait fait apparaître d'un
+	# bloc à la fin — un à-coup, juste après une animation soignée.
+	# Elle se saute à la première touche ; voir `power_on.gd`.
+	PowerOn.lancer(self)
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que
@@ -2299,7 +2317,54 @@ func _do_end_round(winner_id: int):
 	# joueur choisit s'il rejoue — c'est là que le chiffre travaille.
 	ui.poser_bilan(p1_session_wins, p2_session_wins, _mot_de_serie,
 		dernier_effleurement)
+	# DA6.1 — l'affiche, par-dessus le salon que ces deux lignes viennent de
+	# poser. Elle LIT le verdict sur le titre du menu plutôt que de le
+	# recalculer : le mot dépend du mode et d'un arbitrage sur l'égalité, et deux
+	# calculs finiraient par se contredire à l'écran. Voir `affiche_de_fin.gd`.
+	_poser_affiche_de_fin(winner_id)
 	_apply_deferred_rematch()
+
+## DA6.1 — les faits du match qui vient de finir, tels que l'affiche les montre.
+##
+## Rassemblés ici parce que `game_state` est le seul à tous les avoir : la carte
+## vient de `MapData`, les armes des joueurs, la durée du chrono, le score de
+## session et la série de cet objet, la marge du dernier coup de `V2.9`.
+func _poser_affiche_de_fin(winner_id: int) -> void:
+	var carte: Dictionary = MapData.get_selected()
+	AfficheDeFin.poser(self, {
+		"vainqueur": winner_id,
+		"local_idx": _local_player_index(),
+		"carte": String(carte.get("name", "")),
+		"duree": round_time - time_left,
+		"arme_j1": p1.current_weapon.name if is_instance_valid(p1) and p1.current_weapon else "",
+		"arme_j2": p2.current_weapon.name if is_instance_valid(p2) and p2.current_weapon else "",
+		"mode": _mode_label(),
+		"session_j1": p1_session_wins,
+		"session_j2": p2_session_wins,
+		"serie": _mot_de_serie,
+		"marge_px": dernier_effleurement,
+	}, ui.game_over_title if "game_over_title" in ui else null)
+
+
+## DA6.3 — la carte de fin de soirée, au retour au menu.
+##
+## Le seuil et le calcul sont dans `BilanDeSoiree` ; ce qui est décidé ici est le
+## MOMENT. Pas pendant un match, pas après un forfait subi en pleine manche —
+## au retour au menu, quand la soirée s'arrête vraiment.
+##
+## ⚠️ **Une seule fois par séance.** Le retour au menu arrive après chaque
+## match : reposée à chaque fois, la carte deviendrait un écran de plus à
+## congédier, et à la quatrième on ne la lirait plus.
+func _peut_etre_la_soiree() -> void:
+	if _soiree_montree:
+		return
+	var bilan := BilanDeSoiree.de_la_soiree(MatchRecord.load_history(),
+		_local_player_index(), _debut_de_seance)
+	if not bool(bilan.get("assez", false)):
+		return
+	_soiree_montree = true
+	PanneauDeSoiree.poser(self, bilan)
+
 
 ## Archive le résultat du match dans user://. Fondation de l'envoi ELO à venir :
 ## chaque machine journalise le match qu'elle vient de jouer, y compris le
@@ -2427,40 +2492,36 @@ func _mode_label() -> String:
 ## tampon vit exactement le temps de l'arrêt sur image.
 var _kill_stamp: CanvasLayer
 
+## V2.7 + DA6.2 — le tampon du kill, devenu une PHOTO.
+##
+## La composition (cadre, ligne de tête, légende, tampon) vit dans
+## `estampe_de_kill.gd`. Ce qui reste ici est ce que `game_state` est seul à
+## savoir : quand poser l'image, et avec quels faits.
 func _spawn_kill_stamp(elapsed: float) -> void:
 	_clear_kill_stamp()
-	_kill_stamp = CanvasLayer.new()
-	_kill_stamp.layer = 95
-	add_child(_kill_stamp)
+	var carte: Dictionary = MapData.get_selected()
+	_kill_stamp = EstampeDeKill.poser(self, {
+		"temps": elapsed,
+		"carte": String(carte.get("name", "")),
+		# L'arme du VAINQUEUR : c'est elle qui a fait l'image.
+		"arme": _arme_du_vainqueur(),
+		"mode": _mode_label(),
+	}, [ui.match_hud] if "match_hud" in ui else [])
 
-	var lbl := Label.new()
-	lbl.text = "KILL — %s" % MatchRecord.format_clock(elapsed)
-	var settings := LabelSettings.new()
-	settings.font = Charte.police_display(Charte.POIDS_ENSEIGNE)
-	settings.font_size = Charte.T_ENSEIGNE
-	settings.font_color = Charte.ROUGE
-	Charte.contourer_settings(settings, settings.font_size) # DA5.7
-	lbl.label_settings = settings
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	lbl.pivot_offset = get_viewport().get_visible_rect().size / 2.0
-	lbl.rotation = -0.06
-	_kill_stamp.add_child(lbl)
-
-	# Le claquement : gros, puis en place — l'inertie d'un tampon encreur.
-	lbl.scale = Vector2(2.6, 2.6)
-	lbl.modulate.a = 0.0
-	var tw := lbl.create_tween()
-	tw.tween_property(lbl, "modulate:a", 1.0, 0.03)
-	# DA4.13 — le claquement du tampon : REBOND, avec son dépassement. C'était
-	# déjà `BACK_OUT`, la conversion ne change rien à l'œil.
-	tw.parallel()
-	Charte.animer(tw, lbl, "scale", Vector2(2.6, 2.6), Vector2.ONE, 0.12,
-		Charte.Courbe.REBOND)
-	tw.tween_interval(1.7)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.15)
-	tw.tween_callback(_clear_kill_stamp)
+## Le nom de l'arme qui vient de tuer. La victime est morte, le survivant est
+## celui dont la lumière est encore allumée une demi-seconde plus tôt — mais on
+## ne devine pas : `player_died` a déjà décidé du vainqueur, et `p1_round_wins`
+## vient d'être incrémenté par `_do_end_round`. On lit donc les points de vie,
+## seule information qui ne dépend d'aucun ordre d'appel.
+func _arme_du_vainqueur() -> String:
+	var vivant: Player = null
+	if is_instance_valid(p1) and not p1.dead:
+		vivant = p1
+	elif is_instance_valid(p2) and not p2.dead:
+		vivant = p2
+	if vivant == null or vivant.current_weapon == null:
+		return ""
+	return String(vivant.current_weapon.name)
 
 func _clear_kill_stamp() -> void:
 	if is_instance_valid(_kill_stamp):
@@ -3237,6 +3298,12 @@ func _on_main_menu_requested():
 		_archive_forfeit(1 - local_idx)
 
 	NetworkManager.disconnect_from_game()
+
+	# DA6.3 — la soirée s'arrête ici, et nulle part ailleurs. Après le
+	# désabonnement du transport : la carte lit l'historique, pas le réseau, et
+	# la poser avant ferait apparaître une carte de bilan par-dessus une
+	# déconnexion en cours.
+	_peut_etre_la_soiree()
 
 	client_peer_id = 0
 	_join_deadline_active = false

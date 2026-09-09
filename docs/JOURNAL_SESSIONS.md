@@ -43,6 +43,28 @@ donc son usage prévu plutôt qu'une incursion.
 **Rien du jeu n'est modifié.** L'outil pilote `main.tscn` de l'extérieur, comme
 `planche_contact.gd` et `planche_eblouissement.gd`.
 
+**Puis le chantier DA6 lui-même, le 2026-09-09** (demande d'Adrien : « attaque-toi
+à tout DA6 »). Fichiers **créés**, tous à la racine : `affiche_de_fin.gd`
+(DA6.1), `estampe_de_kill.gd` (DA6.2), `bilan_de_soiree.gd` +
+`carte_de_soiree.gd` + `panneau_de_soiree.gd` (DA6.3, = V6.10), `exporteur.gd`
+(DA6.4), `power_on.gd` (DA6.5), `cadre_photo.gd` (le socle commun), plus
+`tools/test_bilan_de_soiree.gd`.
+
+⚠️ **`ui.gd` n'est PAS touché, et c'était la contrainte de départ.** Il appartient
+à la session « menus ». Les cinq compositions vivent dans leurs propres
+`CanvasLayer`, posés par `game_state` — le précédent du tampon de kill, dont le
+commentaire dit déjà « `ui.gd` est à l'autre session ». Elles LISENT `ui` (le
+titre de fin, `match_hud`) sans jamais y écrire.
+
+`game_state.gd` appartient au domaine « game feel ». Ce qui y est ajouté :
+`_poser_affiche_de_fin()`, `_peut_etre_la_soiree()`, `_arme_du_vainqueur()`,
+deux variables de séance, un appel à `PowerOn.lancer()` en fin de `_ready`, et
+`_spawn_kill_stamp()` **raccourci** — sa composition est partie dans
+`estampe_de_kill.gd`. Aucune mécanique de jeu n'est modifiée : ni le gel, ni la
+killcam, ni le décompte, ni le réseau.
+
+`tools/run_suites.sh` gagne une entrée (`test_bilan_de_soiree`).
+
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »
 
 **Le glob `*.gdshader` réserve les shaders au domaine « game feel ». Il a été
