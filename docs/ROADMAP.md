@@ -3127,6 +3127,63 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### « Au moins une suite a échoué » quand aucune suite n'a échoué (2026-09-09)
+
+Le lot peut rendre ce verdict avec **95 verdicts verts et zéro `SCRIPT ERROR`**.
+La cause, dans le cas rencontré : le garde-fou d'assets de `run_suites.sh`
+(« N asset(s) présent(s) mais HORS DU DÉPÔT ») met `fail` à 1, et la dernière
+ligne parle alors de suites.
+
+**Le garde-fou a raison** — seize images générées traînaient hors du dépôt, et
+elles seraient mortes avec la machine. C'est la ligne de résumé qui désigne le
+mauvais coupable, et elle envoie chercher une régression là où il n'y en a pas.
+Le remède est écrit trois lignes plus haut dans la sortie ; encore faut-il ne
+pas s'arrêter à la dernière.
+
+⚠️ **Ce fichier s'était déjà fait cette remarque, ailleurs.** `run_suites.sh`
+porte en commentaire, à propos de REPORTÉ : « **un résumé qui gonfle un compte
+d'échecs est aussi trompeur qu'une erreur qui ment sur sa cause** », après
+quatre diagnostics perdus par trois sessions le 2026-08-25. La leçon avait été
+tirée pour REPORTÉ, qui ne met délibérément pas `fail` à 1 — et pas pour le
+garde-fou d'assets, ajouté après. **Une règle apprise sur un cas ne se propage
+pas toute seule aux cas suivants.**
+
+**Non corrigé, délibérément** : c'est hors du périmètre de la session qui l'a
+rencontré, et le lanceur appartient au lot, pas au chantier DA7. La réparation
+tiendrait en une variable distincte (`fail_suites` / `fail_depot`) et une
+dernière ligne qui nomme laquelle a parlé.
+
+**En attendant, le réflexe** : devant « au moins une suite a échoué », chercher
+d'abord une ligne `---` en amont. Aucune suite nommée en échec = ce n'est pas
+une suite.
+
+### Un dossier de sortie versionné vieillit sans le dire (2026-09-09)
+
+`tools/captures/` porte quinze fichiers nommés `ill_*.png` : mêmes noms que les
+illustrations du jeu, suivis par git, dans un dossier dont le nom annonce des
+captures. **Ce sont des rendus figés**, produits par un outil retiré depuis, et
+datés du 2026-09-08 à 15h42. Les vraies illustrations, dans `assets/ui/`, ont
+été **remplacées le même jour à 22h13** par l'intégration Roman Graphique
+Brutaliste (`9b0e32f`).
+
+Sept heures d'écart, aucune trace. Le site de DA7.4 a donc été bâti sur les
+illustrations d'avant la refonte, et la page était **plausible** : des images du
+jeu, aux bons noms, dans le bon style général. **C'est Adrien qui l'a vu, à
+l'œil, sur la page publiée** — aucun contrôle du dépôt ne pouvait le voir, et
+moi non plus.
+
+Le mécanisme mérite d'être nommé parce qu'il se reproduira : **entre deux
+sources d'un même asset, la plus canonique d'apparence n'est pas la plus
+fraîche.** Le dossier périmé gagnait sur trois critères faux — il est versionné
+(donc « officiel »), son nom dit ce qu'on cherche, et son contenu est déjà au
+format voulu. `assets/ui/` ne gagnait que sur le seul critère qui compte : c'est
+ce que le jeu charge.
+
+**La règle : pour tout asset, la source est celle que le JEU charge.** Un
+dossier dérivé se relit à sa date, ou se régénère, ou ne se lit pas. Et un
+dossier de sortie qui survit à l'outil qui l'a produit devrait être supprimé
+avec lui — celui-ci ne l'a pas été.
+
 ### Un répertoire de travail en retard MENT, et il ment en supprimant (2026-09-09)
 
 **`git update-ref` sur une branche montée dans un AUTRE arbre de travail déplace
@@ -11295,13 +11352,127 @@ dans la même journée.
   *(S)*
 - **DA6.5 La séquence power-on** — le lancement du jeu comme un allumage (V6.8
   l'esquisse) : logo, souffle, lumière. *(S + C)*
+- **DA6.6 L'intro en planches** — six cases de bande dessinée qui racontent
+  l'arrivée d'un homme dans le noir. Storyboard complet, prompts de génération
+  et règles : **[docs/INTRO_PLANCHES.md](INTRO_PLANCHES.md)**. *(S + C)*
+  **Demandée par Adrien le 2026-09-09**, et inscrite ici plutôt que dans DA7
+  parce qu'elle ferme DA6.5 au passage : la planche 4 *est* l'allumage.
+
+#### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
+
+Trois raisons, et la troisième est la seule qui soit un argument de coût.
+
+**Elle ne coûte aucun système neuf.** Le cadre d'encre existe
+(`menu_comic_panel.gd`, avec son ouverture au volet), la percée des hautes
+lumières sur noir d'encre existe (`menu_artwork.gdshader`, MV3), les poussières
+de faisceau existent (`menu_particles_ambiance.gd`, MV5). Les six planches se
+câblent en **douze lignes de dictionnaire et zéro `EffectMode` neuf** — le
+storyboard les affecte exprès à des modes et des profils déjà écrits. Un effet
+taillé pour six images vues quinze secondes serait du code que personne ne
+rejuge jamais.
+
+**Elle enseigne la règle sans une ligne de texte.** Le curseur est déjà la
+torche dans les menus (`set_torch_position_global`) : chaque planche s'ouvre
+presque noire et ne se lit que là où le joueur passe le faisceau. Le verbe du
+jeu — *éclairer pour voir* — est appris avant le premier match, et une intro
+qu'on **fait** ne contredit pas « immédiat, intuitif, addictif » comme le
+ferait une intro qu'on subit. Elle reste passable à tout moment et n'est jouée
+qu'une fois.
+
+**Et une commande d'images en sert quatre.** Les planches 4 (l'allumage) et 5
+(le cône qui montre l'adversaire *et* trahit celui qui éclaire) sont la capsule
+de boutique (DA7.1), l'ouverture du trailer (DA7.2), l'en-tête du site d'une
+page (DA7.4) et les images d'ambiance du presskit (DA7.3). Faire l'intro
+d'abord, c'est payer une fois ce que DA7 paierait quatre fois — et sur une
+famille d'asset dont la décision du 2026-08-24 dit qu'elle ne supporte pas deux
+procédés différents. C'est aussi pourquoi le document de commande impose un
+**bloc de prompt invariant** recopié mot pour mot en tête des six : la langue et
+la formulation du prompt font partie du procédé, au même titre que l'outil.
+
+⚠️ **La règle qui garde l'intro honnête**, et elle n'est pas décorative : chaque
+planche doit montrer quelque chose que le moteur fait vraiment. Le cône, l'ombre
+portée, les douilles, le sang existent dans l'arène. Une intro qui promet un
+plan que le jeu ne rend pas, c'est le défaut « généré par défaut » transposé en
+récit — le défaut même que tout le chantier DA existe pour fermer.
+
+**Les six images existent depuis le 2026-09-09** (`assets/ui/ill_intro_*.png`,
+1024×640), générées d'un bloc de prompt invariant recopié mot pour mot. Deux
+choses à savoir avant de les rejuger :
+
+- **Gemini ne propose pas le 16:10.** Les six sont des recadrages de 16:9 —
+  environ 11 % de la largeur retirée, 5,5 % de chaque côté, aucun élément perdu.
+- **Le critère « 80 % de noir » n'est tenu que sur trois des six.** Le modèle
+  résiste à l'obscurité extrême dès qu'un décor doit rester lisible, et chaque
+  relance d'assombrissement gagne du noir en rognant le détail graphique. Pour
+  homogénéiser, **une courbe globale sur les six est plus fiable qu'une relance**
+  — c'est un réglage, pas une régénération.
+
+La planche 5 a demandé trois tentatives, et c'était prévu : c'est la seule qui
+doive porter deux informations à la fois. Elle les porte — l'ombre démesurée sur
+le mur de gauche **et** la silhouette unique debout au bout du cône.
+
+**Reste à faire :** câbler les six (douze lignes de dictionnaire), et trancher
+les trois questions ouvertes en fin de `INTRO_PLANCHES.md` — la formule exacte,
+l'anonymat du visage, la cadence sonore.
 
 ### DA7 — Le dispensable assumé (quand le reste est fait)
 
-- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)*
-- **DA7.2 Le trailer de 60 secondes.** *(C)*
-- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)*
-- **DA7.4 Un site d'une page.** *(S)*
+- **DA7.1 Capsule et bannière de boutique** (Steam/itch). *(C)* — 🟡 **gabarits
+  et commande écrits le 2026-09-09** : [docs/CAPSULE.md](CAPSULE.md). **Rien
+  n'est généré, délibérément** : les rapports de forme dépendent de la boutique,
+  et le choix de boutique est l'un des champs `À TRANCHER` du presskit. Générer
+  avant de savoir, c'est refaire. La règle de composition, elle, ne dépend
+  d'aucune boutique et vaut d'être retenue : **le wordmark doit rester lisible à
+  231 × 87**, la plus petite capsule Steam et celle que le plus de gens verront.
+  D'où le corollaire — une capsule n'est pas une illustration réduite : seules
+  les planches 4 et 5 de l'intro survivent au recadrage, parce que leur sujet
+  tient dans une bande étroite et que le reste est noir. **Le noir se recadre ;
+  un décor ne se recadre pas.**
+- **DA7.2 Le trailer de 60 secondes.** *(C)* — 🟡 **découpage écrit le
+  2026-09-09** : [docs/TRAILER.md](TRAILER.md). Cinq phrases de 8 mesures plus
+  une queue, chaque plan nommé par l'identifiant du catalogue de
+  `tools/photographe.gd` — donc directement commandable, et **tenu par une suite
+  depuis `5c4040f`** : renommer un plan fait rougir le lot au lieu de périmer ce
+  document en silence. La grille n'a pas été choisie, elle se dérive du stem de
+  menu à 170 BPM (une mesure = 1,412 s ; 60 s = 42,5 mesures), et la densité de
+  coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
+  manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
+  photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
+- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
+  écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
+  longueurs de description, points saillants, et la sélection d'images par nom
+  de catalogue du photographe (DA6), dont les cinq à envoyer si on n'en envoie
+  que cinq. **Six champs restent `À TRANCHER` et n'appartiennent pas à une
+  session** — éditeur, contact presse, prix, date, plateformes annoncées,
+  licence des images. Ils sont marqués comme tels plutôt que devinés : un
+  presskit dont un champ est inventé fait perdre la confiance sur tous les
+  autres.
+- **DA7.4 Un site d'une page.** *(S)* — 🟡 **première version en ligne le
+  2026-09-09** : https://claude.ai/code/artifact/de476ec0-33c9-4874-9201-a8c93283737c
+  La page est **une planche de bande dessinée** : des cases encadrées à l'encre
+  avec repères de massicot, posées sur une gouttière hachurée à 45°, récitatifs
+  en boîte, lettrage au pochoir. Le vocabulaire ne vient pas d'un modèle de site,
+  il vient du jeu — `menu_comic_panel.gd` dessine déjà ce cadre, la palette est
+  celle de `charte.gd`.
+
+  Trois choses qui méritent d'être notées, parce qu'elles se rejoueront ailleurs :
+
+  1. **Les captures battent les illustrations sur la case d'ouverture.**
+     `jeu/03-duel` — un cône dans le noir, 90 % de cadre vide — dit la promesse
+     avant la première phrase. Une illustration l'occupait ; elle la racontait.
+  2. **Les liens de téléchargement passent par `releases/latest/download/`**,
+     donc ils restent valables à chaque sortie sans que la page change. Seuls le
+     tampon de version et sa date sont écrits en dur — **et ils sont datés
+     exprès** : un numéro de version non daté sur une page qui ne se régénère pas
+     finit par mentir, un numéro daté vieillit honnêtement.
+  3. **Les icônes de plateforme sont dessinées, pas empruntées** (`assets/ui/
+     icone_macos.png`, `icone_windows.png`, générées au même procédé que les
+     planches). Une marque déposée reproduite de mémoire est fausse ; une marque
+     stylisée est un risque. Un dessin à l'encre assumé n'est ni l'un ni l'autre,
+     et il tient le style de la page.
+
+  Reste à faire : héberger ailleurs qu'en artefact, et remplacer le tampon à
+  chaque sortie.
 - **DA7.5 Palettes alternatives déblocables** — la bible déclinée (nocturne,
   sépia), récompenses de rangs. *(S)*
 - **DA7.6 Skins de torche et de viseur** — mêmes emplacements, autres cookies.
@@ -11310,6 +11481,24 @@ dans la même journée.
   stem de menu. *(C)*
 - **DA7.8 L'easter egg du logo** — la bougie du wordmark qui s'éteint si on
   reste trop longtemps sans jouer. *(S, après DA1.6)*
+
+**DA7.5, DA7.6 et DA7.7 sont écartées pour l'instant** (2026-09-09, Adrien).
+L'ordre de marche est : l'intro (DA6.6), puis le presskit (DA7.3), le trailer
+(DA7.2), la capsule (DA7.1) et le site (DA7.4) — les quatre que les images de
+l'intro alimentent.
+
+⚠️ **Et si les deux premières reviennent un jour, elles reviennent bornées.** La
+charte pose que la couleur PORTE l'information : bleu = soi (convention *blue
+force*), le vert n'existe jamais dans l'arène, l'ambre est le feu. Une palette
+déblocable qui repeint le MONDE change donc la lisibilité du duel, et un skin de
+torche est pire encore — le cookie **est** une information de portée et d'angle.
+C'est exactement l'arbitrage qui a tranché DA5.5 en MONDE plutôt qu'en CONFORT
+le 2026-09-09 : un joueur ne doit pas pouvoir adoucir son expérience par rapport
+à son adversaire. Les bornes à poser d'avance, le jour où ces fiches rouvrent :
+**palettes limitées à la famille APPAREIL**, et **skins limités à la matière, la
+géométrie restant au code** (c'est déjà la règle DA1.5 — « une image générée
+n'est jamais l'asset, seulement sa matière »). Sans ces bornes, ce sont deux
+fiches qui coûteront un retour en arrière.
 
 ~~**Le départ au meilleur ratio, dès qu'Adrien donne le feu vert :** DA1.2, DA1.3,
 DA1.4, DA1.8~~ — **fait le 2026-08-24**, avec DA1.1 et DA1.9.
