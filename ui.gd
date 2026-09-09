@@ -4385,6 +4385,12 @@ func _refresh_weapon_locks() -> void:
 ## elle existera, c'est ici qu'il faudra revenir — le son se sequencera sur
 ## l'animation, jamais sur un minuteur parallele qui derivera.
 ##
+const VERDICT_TEXTURES := {
+	"VICTOIRE": "res://assets/ui/titres/verdict_victoire.png",
+	"DÉFAITE": "res://assets/ui/titres/verdict_defaite.png",
+	"ÉGALITÉ": "res://assets/ui/titres/verdict_egalite.png",
+}
+
 ## `CANDELA 2D` est le titre du MENU, pas une fin de match : il se tait.
 func _poser_titre(texte: String) -> void:
 	if texte != "CANDELA 2D" and game_over_title != null \
@@ -4393,9 +4399,29 @@ func _poser_titre(texte: String) -> void:
 	game_over_title.text = texte
 	if menu_enseigne == null or not is_instance_valid(menu_enseigne):
 		return
-	var enseigne := texte == "CANDELA 2D"
-	menu_enseigne.visible = enseigne
-	game_over_title.self_modulate.a = 0.0 if enseigne else 1.0
+	var tex: Texture2D = null
+	if texte == "CANDELA 2D":
+		tex = load(Charte.CHEMIN_ENSEIGNE)
+	elif VERDICT_TEXTURES.has(texte):
+		var chemin: String = String(VERDICT_TEXTURES[texte])
+		if ResourceLoader.exists(chemin):
+			tex = load(chemin)
+	if tex != null:
+		menu_enseigne.texture = tex
+		const ENCRE_VISEE := 80.0
+		var tex_w := float(tex.get_width())
+		var tex_h := float(maxi(1, tex.get_height()))
+		var h := ENCRE_VISEE
+		var l := h * (tex_w / tex_h)
+		menu_enseigne.offset_left = -l * 0.5
+		menu_enseigne.offset_right = l * 0.5
+		menu_enseigne.offset_top = -h * 0.5
+		menu_enseigne.offset_bottom = h * 0.5
+		menu_enseigne.visible = true
+		game_over_title.self_modulate.a = 0.0
+	else:
+		menu_enseigne.visible = false
+		game_over_title.self_modulate.a = 1.0
 
 func _build_menu_header() -> Control:
 	var header := VBoxContainer.new()
