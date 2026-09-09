@@ -14683,14 +14683,57 @@ Relevée à 0,09, elle reste invisible dans le noir — on ne voit pas de la sui
 lumière, et c'est juste — mais **sous une torche elle devient de la matière**.
 C'est le troisième défaut de rendu du chantier qu'aucune suite ne pouvait voir.
 
+### Étape 15 — le leurre inerte ✅
+
+Le gadget préféré d'Adrien au brainstorm, et **celui qui avait le moins à
+inventer**. Dans ce jeu on ne voit jamais l'homme : on voit le trou qu'il fait
+dans la lumière. Un leurre convaincant n'a donc pas à *ressembler* à un joueur,
+il doit faire **le même trou** et porter **la même silhouette**. C'est
+littéralement ce qu'il fait : le disque d'occlusion de 18 px du joueur — valeur
+reprise de `player.gd`, qui écrit à côté du sien *« 18.0 is exactly the player
+radius »* — et la texture de silhouette de la classe qui l'a posé.
+
+⚠️ **Rien n'est peint pour lui.** Un sprite de leurre dessiné à part serait un
+asset de plus à tenir d'accord avec celui du joueur ; le jour où l'un des deux
+changerait, le leurre cesserait de tromper **sans qu'une seule erreur ne se
+lève**. Il emprunte l'asset du joueur, comme la torche fantôme emprunte le cookie
+de sa classe.
+
+Il ne bouge pas, n'éclaire pas, ne tire pas, ne fait aucun bruit et ne coûte rien
+au fil — c'est un leurre *inerte*, le nom que le catalogue lui donne depuis le
+premier jour. **Une balle suffit à le démasquer**, et c'est ce qui l'équilibre :
+le prix de savoir est un tir, donc un flash, donc sa propre position.
+
+#### `empreinte_sprite()` DÉMÉNAGE de `Player` vers `Charte`
+
+Le leurre a besoin de la même mesure que le joueur pour faire la même taille. Or
+**nommer `Player` depuis un gadget faisait cesser `tools/test_classes.gd` de
+compiler** : `player.gd` nomme `AudioManager`, qui est un autoload, et une suite
+lancée en `--script` n'en a aucun. C'est le piège déjà payé le 2026-09-01 par
+`fusee_modele.gd`, et il mord ici pour la même raison.
+
+La fonction ne dépendait que de `Charte.DENSITE_ASSETS` : c'était une fonction de
+la charte posée ailleurs. **Aucun alias n'est laissé sur `Player`** — deux noms
+pour une vérité, et rien n'aurait dit lequel fait foi. La garde textuelle de
+`tools/test_sprites.gd` continue de passer, elle cherche le nom de la fonction.
+
+#### La teinte n'était pas décorative
+
+Le leurre sortait **blanc** sous la torche : la silhouette est blanche et
+`Polygon2D.color` la MULTIPLIE. Sans `Charte.ADVERSAIRE` il était plus lumineux
+qu'un vrai corps, donc reconnaissable du premier coup d'œil — l'inverse exact de
+son métier. `player.gd` calibre cette teinte *« en luminance pour l'équité »* ;
+le leurre la reprend. **Quatrième défaut de rendu du chantier trouvé en
+regardant**, et le premier dont la conséquence soit une inéquité et non une
+laideur.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : le sol qui écrit (poudre de contact),
-le leurre, le grésillement, les fusées par classe (stock et recharge), et
+**Reste** : le sol qui écrit (poudre de contact), le grésillement, les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).
 

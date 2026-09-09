@@ -2882,3 +2882,28 @@ matière sous une torche.
 l'arène, visible seulement quand une large lumière éclaire le sol. Un sous-agent
 enquête ; il a consigne de ne toucher à aucun des fichiers de ce chantier et de ne
 faire aucune commande git.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 15, le leurre inerte)
+
+**Le gadget préféré d'Adrien, et celui qui avait le moins à inventer.** Dans ce
+jeu on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière : le leurre
+fait donc le même trou (disque de 18 px, valeur reprise de `player.gd`) et porte
+la même silhouette — celle de la classe qui l'a posé, empruntée, jamais peinte à
+part. Deux images à tenir d'accord finiraient par diverger, et c'est le leurre qui
+aurait tort. Une balle le démasque, et c'est ce qui l'équilibre : savoir coûte un
+tir, donc un flash, donc sa position.
+
+**⚠️ `empreinte_sprite()` déménage de `player.gd` vers `charte.gd`, et ce n'est pas
+du rangement.** Nommer `Player` depuis un gadget faisait cesser `test_classes` de
+compiler — `player.gd` nomme `AudioManager`, et une suite en `--script` n'a aucun
+autoload. Piège déjà payé par `fusee_modele.gd` le 2026-09-01. La fonction ne
+dépendait que de `Charte.DENSITE_ASSETS` ; **aucun alias n'est laissé sur
+`Player`**, deux noms pour une vérité ne disent pas lequel fait foi.
+⚠️ `charte.gd` est un fichier partagé : incursion déclarée, une fonction déplacée,
+rien d'autre touché, `test_charte` vert (230 contrôles).
+
+**⚠️ Quatrième défaut de rendu trouvé en regardant** — et le premier dont la
+conséquence soit une inéquité : le leurre sortait BLANC sous la torche. La
+silhouette est blanche et `Polygon2D.color` la multiplie ; sans la teinte
+d'adversaire, il était plus lumineux qu'un vrai corps, donc reconnaissable du
+premier coup d'œil.

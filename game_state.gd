@@ -3211,6 +3211,9 @@ const IMPLEMENTATIONS := {
 	# carte au lieu de la trouver.
 	"cartouche_suie": {"script": "res://gadget_suie.gd", "duree_vie": 9.0},
 	"poussiere": {"script": "res://gadget_poussiere.gd", "duree_vie": 7.5},
+	# 18 s : assez pour qu'un adversaire le croise, hésite, et paie un tir. Un
+	# leurre éternel finirait par être connu et cesserait de tromper.
+	"leurre": {"script": "res://gadget_leurre.gd", "duree_vie": 18.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:

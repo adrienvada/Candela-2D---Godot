@@ -362,13 +362,6 @@ const SPRITES := "res://assets/sprites/"
 ## par diverger, et chacune paraîtrait juste.
 
 
-## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
-## texture. Statique et sans dépendance : c'est ce qui permet à un banc de
-## l'éprouver à plusieurs résolutions sans monter un `Player` — et donc de
-## prouver que recuire ne déplace rien.
-static func empreinte_sprite(largeur_texture: int) -> float:
-	return float(largeur_texture) / Charte.DENSITE_ASSETS
-
 ## ## Le viseur (DA2.11)
 ##
 ## ⚠️ **Ce n'est pas un habillage, c'est un MANQUE qu'on comble.** Le dépôt ne
@@ -877,8 +870,8 @@ func _poser_sprite(slug: String) -> bool:
 	# ⚠️ Passe par `empreinte_sprite()` — voir `DENSITE_SPRITES`. Bâtir le quad
 	# sur `get_width()` brut est le piège que R6 a levé : la recuisson d'un asset
 	# redimensionnerait le joueur.
-	var demi := Vector2(empreinte_sprite(t_peint.get_width()),
-		empreinte_sprite(t_peint.get_height())) * 0.5
+	var demi := Vector2(Charte.empreinte_sprite(t_peint.get_width()),
+		Charte.empreinte_sprite(t_peint.get_height())) * 0.5
 	var quad := PackedVector2Array([
 		Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
 		Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
@@ -1018,7 +1011,7 @@ func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	var cx := float(l) * 0.5
 	var cy := float(h) * 0.5
 	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
-	var vers_monde := empreinte_sprite(l) / float(l)
+	var vers_monde := Charte.empreinte_sprite(l) / float(l)
 	var pts := PackedVector2Array()
 	const RAYONS := 32
 	for i in RAYONS:

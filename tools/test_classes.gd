@@ -78,6 +78,7 @@ func _run() -> void:
 	await _test_mine()
 	await _test_braises()
 	await _test_volumes()
+	await _test_leurre()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -1274,3 +1275,89 @@ func _test_volumes() -> void:
 	_check("player.gd interroge les gadgets, pas seulement les fusées",
 		src.contains('for gadget in get_tree().get_nodes_in_group("gadgets"):')
 			and src.contains("gadget.occultation_pour(global_position)"))
+
+
+## Le leurre inerte — chantier CLASSES, étape 15.
+##
+## ⚠️ **Ce qu'on protège est qu'il fait LE MÊME TROU qu'un joueur.** Dans ce jeu
+## on ne voit pas l'homme, on voit le trou qu'il fait dans la lumière : un leurre
+## dont le rayon d'occlusion différerait de celui du joueur se démasquerait à
+## l'ombre, sans qu'une seule erreur ne se lève. Et il emprunte l'asset du
+## joueur, jamais un sprite à lui — deux images à tenir d'accord finiraient par
+## diverger, et c'est le leurre qui aurait tort.
+func _test_leurre() -> void:
+	print("\n[Le leurre inerte : le même trou qu'un corps]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# L'Illusionniste, index 1.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(1))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var leurre = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetLeurre:
+			leurre = c
+	_check("le leurre est posé", leurre != null)
+	if leurre == null:
+		gs.queue_free()
+		await process_frame
+		return
+
+	# ── LE TROU ──────────────────────────────────────────────────────────────
+	#
+	# 18 px : `player.gd` écrit « 18.0 is exactly the player radius » à côté de
+	# son propre occluder. La valeur est donc reprise, pas choisie.
+	_check("il occulte comme un corps", leurre.occulte_la_lumiere)
+	_check("et sur le même rayon", is_equal_approx(leurre.rayon, 18.0),
+		str(leurre.rayon))
+	_check("il porte donc un occluder",
+		leurre.get_node_or_null("Occluder") != null)
+	_check("une balle s'y arrête, comme sur un corps", leurre.arrete_les_balles)
+	_check("et une seule suffit à le démasquer", leurre.pv <= 1.0, str(leurre.pv))
+
+	# ── L'ASSET EST CELUI DU JOUEUR ──────────────────────────────────────────
+	var corps: Polygon2D = leurre.get_node_or_null("Visuel")
+	_check("il porte un visuel", corps != null)
+	if corps != null:
+		# ⚠️ La silhouette est blanche et `Polygon2D.color` la MULTIPLIE : sans la
+		# teinte d'adversaire, le leurre sort plus lumineux qu'un vrai corps sous
+		# la même torche — reconnaissable du premier coup d'œil, donc inutile.
+		# `player.gd` calibre cette teinte « en luminance pour l'équité ».
+		_check("à la teinte d'un adversaire, pas en blanc",
+			corps.color.is_equal_approx(Charte.ADVERSAIRE), str(corps.color))
+	if corps != null:
+		_check("et c'est la SILHOUETTE de la classe du poseur",
+			corps.texture != null
+				and String(corps.texture.resource_path).contains("fusil_silhouette"),
+			String(corps.texture.resource_path) if corps.texture else "aucune")
+		# ⚠️ Dimensionné par `empreinte_sprite()`, pas par la largeur brute : le
+		# piège levé par le chantier R — recuire un asset redimensionnerait le
+		# corps, et le leurre cesserait de faire la taille d'un joueur.
+		var largeur: float = corps.polygon[1].x - corps.polygon[0].x
+		_check("à l'empreinte du joueur, pas à la taille brute de la texture",
+			is_equal_approx(largeur, Charte.empreinte_sprite(corps.texture.get_width())),
+			"%.1f" % largeur)
+
+	# ── IL EST INERTE ────────────────────────────────────────────────────────
+	_check("il n'éblouit pas", not leurre.eblouit)
+	_check("il n'efface rien autour de lui",
+		is_zero_approx(leurre.occultation_pour(leurre.global_position)))
+	_check("il ne demande jamais à s'allumer",
+		not leurre.veut_s_allumer([gs.p1, gs.p2]))
+	var pv_avant: float = gs.p2.hp
+	gs.p2.global_position = leurre.global_position
+	leurre.appliquer_effets([gs.p1, gs.p2], 1.0)
+	_check("et il ne fait aucun dégât", is_equal_approx(gs.p2.hp, pv_avant))
+
+	gs.queue_free()
+	await process_frame
