@@ -35,8 +35,14 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historique et tags complets : le contrôle de version ci-dessous lit la
+          # publication précédente DANS les tags. Un clone superficiel n'en a
+          # aucun, et le contrôle passerait alors au vert faute de trouver à quoi
+          # se comparer — le pire mode de défaillance pour un garde-fou.
+          fetch-depth: 0
 
-      - name: Le tag et la version du jeu disent la même chose
+      - name: Le numéro de version est-il publiable ?
         run: |
           # Le déclenchement manuel est accepté, mais seulement depuis un tag :
           # une publication sans tag donnerait une version que rien ne désigne, et
@@ -46,12 +52,14 @@ jobs:
             echo "::error::À lancer depuis un tag vX.Y.Z, pas depuis une branche."
             exit 1
           fi
-          version="$(sed -n 's/^config\/version="\(.*\)"$/\1/p' project.godot)"
-          echo "config/version=$version  tag=${GITHUB_REF_NAME}"
-          if [ "${GITHUB_REF_NAME}" != "v$version" ]; then
-            echo "::error::Le tag ${GITHUB_REF_NAME} ne correspond pas à config/version ($version)."
+          # Le reste du contrôle vit dans un script, parce qu'il doit pouvoir
+          # tourner AVANT le tag, sur le poste d'Adrien, là où l'erreur est encore
+          # gratuite. Ici il n'est qu'un second rideau : il rattrape la
+          # publication faite sans être passée par lui.
+          ./tools/verifier_publication.sh "${GITHUB_REF_NAME}" || {
+            echo "::error::Le numéro de version ne convient pas pour publier — voir ci-dessus."
             exit 1
-          fi
+          }
 
       - name: Cache du binaire et des modèles Godot
         id: cache-godot
