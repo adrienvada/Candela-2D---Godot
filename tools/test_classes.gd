@@ -77,6 +77,7 @@ func _run() -> void:
 	await _test_torche_fantome()
 	await _test_mine()
 	await _test_braises()
+	await _test_volumes()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -1190,3 +1191,86 @@ func _test_braises() -> void:
 
 	gs.queue_free()
 	await process_frame
+
+
+## Les volumes — chantier CLASSES, étape 14.
+##
+## ⚠️ **Le contrôle qui porte les deux gadgets est qu'ils ne disent PAS la même
+## chose.** La suie est dense et petite — on voit qu'il y a quelqu'un, pas qui ;
+## la poussière est large et mince — personne ne voit loin, tout le monde voit un
+## peu. Si un équilibrage les rapprochait, deux classes auraient le même gadget
+## sous deux noms, et rien ne le signalerait.
+func _test_volumes() -> void:
+	print("\n[Les volumes : effacer la vue, sans arrêter la lumière]")
+
+	var suie := GadgetSuie.new()
+	var poussiere := GadgetPoussiere.new()
+
+	# Ni l'un ni l'autre n'est un mur, ni un obstacle de lumière. C'est le motif
+	# que la mine a introduit, et il tient la ligne de vue d'éblouissement
+	# d'accord avec ce que l'œil voit.
+	# ⚠️ `get_class()` rend « StaticBody2D » pour les deux : c'est le type NATIF,
+	# pas le `class_name`. Les libellés seraient identiques et on ne saurait pas
+	# lequel des deux a échoué.
+	for spec in [["la suie", suie], ["la poussière", poussiere]]:
+		var nom: String = spec[0]
+		var v = spec[1]
+		_check("%s laisse passer les balles" % nom, not v.arrete_les_balles)
+		_check("%s laisse passer la lumière" % nom, not v.occulte_la_lumiere)
+		_check("%s n'éblouit pas" % nom, not v.eblouit)
+
+	# ── Elles ne racontent pas la même chose ────────────────────────────────
+	_check("la suie est plus dense que la poussière",
+		suie.opacite > poussiere.opacite,
+		"%.2f vs %.2f" % [suie.opacite, poussiere.opacite])
+	_check("la poussière couvre nettement plus large",
+		poussiere.rayon > suie.rayon * 1.5,
+		"%.0f vs %.0f" % [poussiere.rayon, suie.rayon])
+	# ⚠️ La conséquence de conception, et c'est ELLE qu'on protège : dans la suie
+	# on ne distingue plus personne, dans la poussière on distingue encore.
+	suie.duree_vie = 0.0
+	poussiere.duree_vie = 0.0
+	_check("au cœur de la suie, un corps a presque disparu",
+		suie.occultation_pour(Vector2.ZERO) > 0.8,
+		"%.2f" % suie.occultation_pour(Vector2.ZERO))
+	_check("au cœur de la poussière, il se devine encore",
+		poussiere.occultation_pour(Vector2.ZERO) < 0.7,
+		"%.2f" % poussiere.occultation_pour(Vector2.ZERO))
+
+	# Dehors, rien — sinon un nuage effacerait toute la carte.
+	_check("hors du volume, rien n'est effacé",
+		is_zero_approx(suie.occultation_pour(Vector2(GadgetSuie.RAYON * 2.0, 0.0))))
+
+	# ── Le socle répond pour TOUS, et c'est ce qui rend la boucle sûre ───────
+	#
+	# ⚠️ `player.gd` interroge tous les gadgets sans garde. Un gadget qui ne
+	# saurait pas répondre ferait planter le jeu à chaque image — le défaut relevé
+	# sur le groupe des fusées le 2026-09-09.
+	var voile := GadgetVoile.new()
+	_check("un gadget qui n'est pas un volume répond zéro",
+		is_zero_approx(voile.occultation_pour(Vector2.ZERO)))
+	voile.free()
+
+	# ── Le contour est DÉTERMINISTE ─────────────────────────────────────────
+	var a2 := GadgetSuie.new()
+	var b2 := GadgetSuie.new()
+	a2._monter_visuel()
+	b2._monter_visuel()
+	var identiques := a2._masse != null and b2._masse != null \
+		and a2._masse.polygon.size() == b2._masse.polygon.size()
+	if identiques:
+		for i in a2._masse.polygon.size():
+			if not a2._masse.polygon[i].is_equal_approx(b2._masse.polygon[i]):
+				identiques = false
+	_check("deux nuages se dessinent à l'identique", identiques)
+	a2.free()
+	b2.free()
+
+	suie.free()
+	poussiere.free()
+
+	# ── Et le câblage : sans lui, les volumes n'effaceraient rien ────────────
+	var src := FileAccess.get_file_as_string("res://player.gd")
+	_check("player.gd interroge les gadgets, pas seulement les fusées",
+		src.contains('for gadget in get_tree().get_nodes_in_group("gadgets"):')
+			and src.contains("gadget.occultation_pour(global_position)"))

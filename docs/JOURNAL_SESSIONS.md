@@ -2849,3 +2849,36 @@ de regarder.
 
 **Pas de montée de protocole** : les dégâts passent par `take_damage()`, qui fait
 déjà son propre partage hôte/client.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 14, les volumes)
+
+**La suie du Fumiste et la poussière du Terrassier.** Un volume efface les sprites
+qui sont dedans et pose une masse au sol ; il n'arrête ni les balles, ni la
+lumière, ni l'éblouissement. Ce n'est pas une simplification : c'est le mécanisme
+que la fumée de la fusée porte depuis le chantier FUSÉE (`occultation_pour`), et
+le rejoindre évite d'avoir deux façons de s'effacer.
+
+**Les deux ne disent pas la même chose**, et c'est ce que le banc protège : la
+suie est dense et petite (on voit qu'il y a quelqu'un, pas qui), la poussière
+large et mince (personne ne voit loin). Le contrôle porte sur la conséquence, pas
+sur les nombres — un équilibrage qui les rapprocherait donnerait à deux classes le
+même gadget sous deux noms.
+
+**⚠️ `super()` n'est pas optionnel dans un `_init` dérivé.** Les deux nuages
+étaient des **murs opaques** : GDScript n'appelle le constructeur parent que si la
+sous-classe n'en déclare aucun, donc `arrete_les_balles` et `occulte_la_lumiere`
+gardaient les valeurs du socle. Attrapé par la suite au premier lancement — pas à
+la lecture, le code se lit juste.
+
+**⚠️ Troisième défaut de rendu du chantier qu'aucune suite ne pouvait voir** : une
+masse noire (0,03) est indiscernable d'une ombre dans un jeu dont le fond est le
+noir absolu. On ne voyait pas un nuage, on voyait le faisceau commencer plus loin
+— l'information d'un mur, pas celle d'un volume. Diagnostiqué en peignant la masse
+en rouge : elle était bien là, elle ne disait rien. Relevée à 0,09, elle reste
+invisible dans le noir (on ne voit pas de la suie sans lumière) et devient de la
+matière sous une torche.
+
+**En cours par ailleurs** : Adrien a repéré un « flou elliptique » parasite dans
+l'arène, visible seulement quand une large lumière éclaire le sol. Un sous-agent
+enquête ; il a consigne de ne toucher à aucun des fichiers de ce chantier et de ne
+faire aucune commande git.

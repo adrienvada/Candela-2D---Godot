@@ -1187,6 +1187,17 @@ func _process(delta):
 	var occultation := 0.0
 	for fusee in get_tree().get_nodes_in_group("fusees"):
 		occultation = maxf(occultation, fusee.occultation_pour(global_position))
+	# Chantier CLASSES (étape 14) — les VOLUMES effacent de la même façon, et
+	# c'est délibérément le même mécanisme : deux façons de s'effacer dans deux
+	# nuages différents se sentiraient comme un défaut, pas comme deux gadgets.
+	#
+	# ⚠️ **Boucle sans garde, comme celle du dessus**, et c'est tenable pour une
+	# seule raison : `GadgetBase.occultation_pour()` existe et rend zéro, donc
+	# TOUT gadget sait répondre. Le jour où quelqu'un ajoutera au groupe un objet
+	# qui ne sait pas, le jeu plantera à chaque image — c'est le défaut qu'une
+	# session voisine a relevé sur le groupe des fusées le 2026-09-09.
+	for gadget in get_tree().get_nodes_in_group("gadgets"):
+		occultation = maxf(occultation, gadget.occultation_pour(global_position))
 	for v in [visual, visual_dim, visual_reveal, visual_enemy]:
 		if v:
 			v.modulate.a = 1.0 - occultation

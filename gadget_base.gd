@@ -243,6 +243,20 @@ func appliquer_effets(_joueurs: Array, _delta: float) -> void:
 	pass
 
 
+## Combien ce gadget EFFACE ce qui se trouve à `pos`, entre 0 et 1.
+##
+## Zéro dans le socle : seuls les volumes — suie, poussière — répondent
+## autrement. `player.gd` interroge tous les gadgets sans condition, exactement
+## comme il interroge toutes les fusées.
+##
+## ⚠️ **C'est pour ça que la méthode vit ICI et pas seulement sur `GadgetVolume`.**
+## La boucle des fusées est sans garde, et une session voisine a relevé le
+## 2026-09-09 que le jour où un objet rejoindrait ce groupe sans savoir répondre,
+## le jeu **planterait à chaque image**. Le socle répond, donc tout gadget répond.
+func occultation_pour(_pos: Vector2) -> float:
+	return 0.0
+
+
 ## L'âge du gadget, en secondes. Public parce que les sous-classes en dérivent
 ## leur apparence — et parce qu'un banc doit pouvoir le forcer.
 func age() -> float:

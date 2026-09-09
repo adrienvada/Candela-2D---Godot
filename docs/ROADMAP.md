@@ -14634,13 +14634,62 @@ suite d'or coûte une ligne et ne ment jamais.
 **Pas de montée de protocole** : rien de neuf ne circule, les dégâts passant par
 `take_damage()`, qui fait déjà son propre partage hôte/client.
 
+### Étape 14 — les volumes ✅
+
+La suie du Fumiste et la poussière du Terrassier. Un volume **efface les
+sprites** qui sont dedans et pose une masse sur le sol ; il n'arrête ni les
+balles, ni la lumière, ni l'éblouissement.
+
+⚠️ **Ce n'est pas une simplification, c'est le mécanisme qui existait déjà.** La
+fumée de la fusée fait exactement cela depuis le chantier FUSÉE, et sa note dit
+pourquoi, avec le retour d'Adrien au premier essai : *« dans la fumée, le sprite
+S'EFFACE : la masse sombre du voile porte seule la présence. La masse seule ne
+suffisait pas, le sprite restait lisible dessous. »* Un volume de gadget rejoint
+ce mécanisme au lieu d'en inventer un second.
+
+Un occluder 2D est binaire : un nuage qui bloquerait totalement serait un mur de
+plus — nous en avons déjà un, franc, le voile du Spectre — et un nuage qui ne
+bloquerait rien serait invisible à la mécanique. Effacer ce qu'on VOIT dedans est
+ce que le moteur permet entre les deux, et c'est exactement l'information que ces
+deux gadgets veulent retirer.
+
+#### Les deux ne disent pas la même chose, et c'est le contrôle
+
+La suie est **dense et petite** : on voit qu'il y a quelqu'un, on ne voit pas qui.
+La poussière est **large et mince** : personne ne voit loin, tout le monde voit un
+peu. Ce sont les deux seules façons de retirer de la vue, et chaque classe en a
+une. Le banc vérifie la conséquence — au cœur de la suie un corps a presque
+disparu, au cœur de la poussière il se devine encore — et non les nombres : un
+équilibrage qui les rapprocherait donnerait à deux classes le même gadget sous
+deux noms, sans que rien ne le signale.
+
+#### `super()` n'est pas optionnel dans un `_init` dérivé
+
+**Les deux nuages étaient des murs opaques.** GDScript n'appelle le constructeur
+parent automatiquement que si la sous-classe n'en déclare aucun ; `GadgetSuie` et
+`GadgetPoussiere` en déclarent un, donc `arrete_les_balles` et
+`occulte_la_lumiere` gardaient les valeurs du socle — vrai, vrai. **Attrapé par
+la suite au premier lancement**, ce qui est exactement son travail, et pas à la
+lecture : le code se lit juste.
+
+#### Une masse noire est indiscernable d'une ombre
+
+Le premier jet peignait la suie à 0,03 de luminance. Dans un jeu dont le fond est
+le noir absolu, on ne voyait pas un nuage : **on voyait le faisceau commencer plus
+loin**, ce qui est l'information d'un mur et non celle d'un volume. Diagnostiqué
+en peignant la masse en rouge — elle était bien là, elle ne disait rien.
+
+Relevée à 0,09, elle reste invisible dans le noir — on ne voit pas de la suie sans
+lumière, et c'est juste — mais **sous une torche elle devient de la matière**.
+C'est le troisième défaut de rendu du chantier qu'aucune suite ne pouvait voir.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : les volumes (suie, poussière), le sol qui écrit (poudre de contact),
+**Reste** : le sol qui écrit (poudre de contact),
 le leurre, le grésillement, les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la
 clé `classe` existante, qui veut dire « classé »).

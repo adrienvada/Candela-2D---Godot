@@ -3206,6 +3206,11 @@ const IMPLEMENTATIONS := {
 	# 10 s : assez pour interdire un passage le temps d'une décision, pas assez
 	# pour qu'un couloir soit fermé toute la manche.
 	"nappe_braises": {"script": "res://gadget_braises.gd", "duree_vie": 10.0},
+	# Les deux volumes. La suie est dense et courte, la poussière large et un peu
+	# plus brève encore : un nuage large qui durerait longtemps fermerait la
+	# carte au lieu de la trouver.
+	"cartouche_suie": {"script": "res://gadget_suie.gd", "duree_vie": 9.0},
+	"poussiere": {"script": "res://gadget_poussiere.gd", "duree_vie": 7.5},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
