@@ -2500,3 +2500,21 @@ Refonte visuelle complète des 15 illustrations de menus avec ambiance sombre or
   - Correction de typage explicite dans `audio_manager.gd` et prise en compte du relais d'oreille racine dans `test_dosage_audio.gd`.
   - **Validation :** 63/63 suites headless au vert dans `tools/run_suites.sh --rapide` (90s, 0 échec).
 
+#### Lot du 2026-09-09 — session « Chantier 3 : Acoustique, Réverbération & Sound Design de l'arène »
+
+**Chantier Audio — Acoustique minérale, réverbération dynamique & sound design** (validé par Adrien) :
+- **Acoustique minérale & réverbération par carte (V5.12 / S5) :**
+  - Accord du bus `SFX` et `SFX_Occlus` sur une signature de hangar en béton brut (`room_size = 0.15`, `damping = 0.22`, `hipass = 0.25`, `wet = 0.34`).
+  - Fonctions `calculer_reverb_carte()` et `appliquer_reverb_carte()` dans `audio_manager.gd` : modulation dynamique selon la diagonale de la carte et la densité de murs lors de `accorder_a_la_carte()`.
+- **Contraste psychoacoustique torche / pénombre :**
+  - Noir absolu : monde claustrophobique étouffé à **5 000 Hz** (`EtouffementMonde`) et réverbération plus mate (`+0.12 damping`).
+  - Plein faisceau de torche : ouverture du spectre à **20 500 Hz** pour libérer les transitoires sèches et aiguës du béton brut.
+- **Sound design et matières en jeu :**
+  - Câblage des impacts de mur (`wall_impact`) dans `bullet.gd:_spawn_wall_effects()`.
+  - Câblage des 6 variantes de souffle coupé sous impact (`breath_hit`) dans `player.gd:rpc_update_hp()`.
+  - Câblage des 4 bruits de rechargement (`weapon_reload_*`) dans `player.gd:start_reload()`.
+- **Couverture & Tests :**
+  - 70/70 contrôles au vert sur `tools/test_dosage_audio.gd`.
+  - 63/63 suites solo headless + 7/7 scénarios réseau duo (`duo_enet`, `duo_coupure`, `duo_pause`, `duo_killcam`, `duo_ralenti`, `duo_spam`, `duo_reconnexion`) **100 % au vert sans aucune erreur de script** dans `tools/run_suites.sh` (274s).
+
+
