@@ -16131,6 +16131,28 @@ gâchette porte le geste tenu et la tranche le geste sec. ⚠️ Les quatre comm
 d'épaule sont désormais **toutes prises** : il n'y a plus de place pour un
 cinquième geste sans en déloger un.
 
+⚠️ **Une gâchette n'a pas de front franc, et un chemin du code en dépendait.** Le
+tir passant d'un bouton à un AXE, `is_action_pressed()` peut osciller sur
+plusieurs images quand la gâchette effleure la zone morte (0,2) — ce qu'un bouton
+ne fait jamais. Les deux chemins du **clic de percuteur à vide** (V4.4) ne sont
+gardés que par le front montant : ils pouvaient donc bégayer. Trouvé par la
+session « Plan des vibrations de manettes », qui a ajouté `tir_a_sec <= 0.0`
+comme second garde (`6d4023b`, sur sa branche). **Le défaut est sur la branche
+des DIX CLASSES, le remède sur la sienne** : les deux doivent atterrir ensemble,
+ou la sienne d'abord. Rien ne le signalerait — un clic qui bégaie ne lève aucune
+erreur et ne rougit dans aucune suite.
+
+⚠️ **Et cet ordre est sûr, pas seulement préférable** : sa garde est *inerte*
+tant que le tir est un bouton — un bouton ne rebondit jamais à ce seuil, donc
+elle ne se déclenche pas — et ne devient utile qu'une fois le tir passé sur un
+axe. Elle peut donc partir seule sur `main` sans rien changer au jeu actuel.
+C'est l'inverse qui est risqué : le tir sur axe fusionné sans elle.
+
+*Note de provenance, pour la ROADMAP* : `_rumble_shoot()` vient de `18dce6d`
+(« Ressenti lourd du tir »), demandé par Adrien **à la suite du chantier racine**
+— le gel après tir par classe. Le geste haptique et le root sont donc nés de la
+même intention, ce qui explique qu'ils s'arment au même endroit dans `shoot()`.
+
 **La grille est arbitrée.** Le commentaire de `_batir_catalogue()` signalait
 depuis l'étape 1 un écart de contenu « à soumettre à Adrien » — un pistolet à
 6 balles là où le jeu en avait 10. Il a tranché, et plus largement : Parasite à
