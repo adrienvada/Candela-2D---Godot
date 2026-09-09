@@ -14439,13 +14439,75 @@ poseur en travers de son regard, consomme sa charge, et une classe dont le gadge
 n'est pas écrit ne pose rien **sans crier** (le bouton reste sans effet, ce qui
 est la vérité). Sabotage vérifié en neutralisant le décompte : trois ✗ francs.
 
+### Étape 11 — la torche fantôme ✅
+
+La première des trois **lumières posées**, et celle dont ce chantier attendait
+l'éblouissement généralisé depuis son ouverture : *« si elle n'éblouit pas, il
+suffit à l'adversaire de la regarder en face pour savoir que c'est un faux. Le
+mensonge n'est complet que si elle aveugle comme une vraie. »*
+
+Une lampe sur trépied qui **balaie** (±36°, aller-retour en 3,6 s) avec le cookie
+de la classe qui l'a posée. Vue d'en face, elle est indiscernable d'un adversaire
+qui fouille la pièce : même faisceau, même température, même découpe des corps
+dans la lumière — et même prix pour les yeux.
+
+#### Elle LIT son faisceau, elle ne le recalcule pas
+
+`_lumiere_recue()` avait besoin d'être coupée en deux : les préconditions qui ne
+valent que pour un joueur (`_en_jeu`, `flashlight_on`) d'un côté, l'
+échantillonnage du cookie de l'autre. Le second est devenu
+`_lumiere_du_faisceau()`, que les deux chemins appellent. Recopier les cinq
+lignes du milieu aurait donné **une seconde définition du même faisceau** — la
+faute exacte que le commentaire de cette fonction passe vingt lignes à raconter,
+avec ses trois divergences en une journée.
+
+#### Un défaut créé à l'étape 10, trouvé ici
+
+**Les gadgets n'arrêtaient pas l'éblouissement.** Le voile du Spectre coupait le
+faisceau à l'écran — son occluder le fait — pendant que le rayon de ligne de vue,
+masqué sur les seuls murs, traversait la bâche comme si elle n'existait pas : on
+voyait le noir et on prenait la lumière. Le masque contient désormais
+`GADGET_LAYER`, et il repose sur un invariant qu'il faut garder : **tout gadget
+porte un occluder**, `_monter_occluder()` étant appelé sans condition.
+
+#### Le halo, qui n'est pas de l'ornement
+
+Constaté en capture avant d'être écrit : un faisceau **sans halo à sa racine** ne
+ressemble à aucune torche du jeu. Le porteur d'une vraie lampe baigne dans la
+rétrodiffusion de sa lentille, et de loin c'est même la seule chose qu'on
+distingue de lui. Sans ce halo, le leurre se démasque à distance en une manche.
+Il reste plus pauvre que celui d'un joueur — pas d'occluder de torse, parce qu'il
+n'y a pas de torse : ce qu'il imite est la lumière, pas l'homme.
+
+#### Trois choses qui ne sont PAS répliquées, et pourquoi
+
+Le balayage, le halo et le visuel vivent chez chaque pair depuis l'instant de la
+pose. Les deux horloges ne démarrent pas au même tick, donc les faisceaux peuvent
+se déphaser de quelques dizaines de millisecondes — sans conséquence :
+**l'éblouissement est calculé par l'hôte seul et répliqué**, et ce que le client
+voit est un décor. Répliquer l'angle coûterait un flottant par tick pour corriger
+un écart que personne ne peut mesurer. C'est le patron de la fusée.
+
+#### Deux pièges de banc, tous deux ressemblant à de vrais défauts
+
+- **Un rayon de physique ne voit pas un corps déplacé à la même image.** Le
+  premier jet attendait `process_frame` et relevait 0,000 partout : la ligne de
+  vue était fausse parce que le serveur de physique n'avait pas encore vu les
+  joueurs à leur nouvelle place. Il faut `physics_frame`.
+- **Deux corps au même point : le second n'est jamais « en vue ».** Le rayon
+  touche le premier rencontré, et `res.collider == cible` est alors faux pour
+  l'autre. Le banc mesurait donc « le poseur n'est pas ébloui » — un résultat
+  qui a exactement la forme d'un vrai défaut de conception.
+
+Sabotage vérifié : gadgets retirés de la liste des sources → le contrôle rougit.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
 assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
 
-**Reste** : les lumières posées (torche fantôme, mine au magnésium, nappe de
+**Reste** : les deux autres lumières posées (mine au magnésium, nappe de
 braises), les volumes (suie, poussière), le sol qui écrit (poudre de contact),
 le leurre, le grésillement, les fusées par classe (stock et recharge), et
 l'archive `match_record` (SCHEMA 3 → 4, `classe_j1`/`classe_j2` — ⚠️ jamais la

@@ -2741,3 +2741,33 @@ qu'elle laisse derrière : l'hôte aurait un occluder que le client n'a pas, don
 la lumière traverserait chez l'un une bâche opaque chez l'autre.
 
 **Sabotage de contrôle** : décompte neutralisé → trois ✗ francs, verts au retour.
+
+#### Lot du 2026-09-09 — session « chantier 10 classes » (étape 11, la torche fantôme)
+
+**La première des trois lumières posées**, et celle pour laquelle l'éblouissement
+généralisé de l'étape 6a avait été fait. Une lampe sur trépied qui balaie (±36°,
+3,6 s) avec le cookie de la classe qui l'a posée, et qui aveugle comme une vraie —
+sans quoi il suffirait de la regarder en face pour savoir que c'est un faux.
+
+**`_lumiere_recue()` coupée en deux** : les préconditions qui ne valent que pour
+un joueur d'un côté, l'échantillonnage du cookie de l'autre (`_lumiere_du_faisceau`).
+Recopier les cinq lignes du milieu aurait donné une seconde définition du même
+faisceau — la faute que le commentaire de cette fonction passe vingt lignes à
+raconter.
+
+**⚠️ Un défaut créé à l'étape 10 et trouvé ici** : les gadgets n'arrêtaient pas
+l'éblouissement. Le voile coupait le faisceau à l'écran pendant que le rayon de
+ligne de vue traversait la bâche — on voyait le noir et on prenait la lumière. Le
+masque contient désormais `GADGET_LAYER`.
+
+**Le halo n'est pas de l'ornement**, et je ne l'avais pas prévu : constaté en
+capture, un faisceau sans halo à sa racine ne ressemble à aucune torche du jeu, et
+le leurre se démasque à distance en une manche.
+
+**Deux pièges de banc, tous deux ressemblant à de vrais défauts** : un rayon de
+physique ne voit pas un corps déplacé à la même image (`physics_frame`, pas
+`process_frame` — le premier jet relevait 0,000 partout) ; et deux corps au même
+point font que le second n'est jamais « en vue », le rayon touchant le premier.
+
+**Sabotage** : gadgets retirés des sources d'éblouissement → contrôle rouge,
+vert au retour.

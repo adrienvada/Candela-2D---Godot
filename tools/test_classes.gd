@@ -74,6 +74,7 @@ func _run() -> void:
 	_test_cablage_pose()
 	await _test_ecran_de_classes()
 	await _test_pose_de_gadget()
+	await _test_torche_fantome()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -790,6 +791,140 @@ func _test_pose_de_gadget() -> void:
 		if c is GadgetBase:
 			final += 1
 	_check("et rien n'apparaît", final == 1, str(final))
+
+	gs.queue_free()
+	await process_frame
+
+
+## La torche fantôme — chantier CLASSES, étape 11.
+##
+## ⚠️ **Le contrôle qui porte le gadget est celui de l'ÉBLOUISSEMENT**, pas celui
+## du faisceau à l'écran. La feuille de route l'écrit depuis l'ouverture du
+## chantier : *« si elle n'éblouit pas, il suffit à l'adversaire de la regarder
+## en face pour savoir que c'est un faux »*. Une torche fantôme qui éclairerait
+## sans aveugler serait un décor, et rien à l'écran ne le dirait — les deux
+## faisceaux sont identiques.
+func _test_torche_fantome() -> void:
+	print("\n[La torche fantôme : elle aveugle comme une vraie]")
+	var scene: PackedScene = load("res://main.tscn")
+	var gs: Node = scene.instantiate()
+	root.add_child(gs)
+	await process_frame
+	await process_frame
+
+	# Le Braconnier, index 3 : c'est SON cookie que le leurre emprunte.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.p1.equip_weapon(gs.weapon_for_index(3))
+	gs._gadgets_poses_par.fill(0)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.visible = true
+	gs.p2.visible = true
+
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+
+	var torche = null
+	for c in gs.bullet_container.get_children():
+		if c is GadgetTorcheFantome:
+			torche = c
+	_check("la torche fantôme est posée", torche != null)
+	if torche == null:
+		gs.queue_free()
+		await process_frame
+		return
+
+	_check("elle porte la classe du poseur", torche.classe_du_poseur != null
+		and String(torche.classe_du_poseur.slug()) == "arbalete",
+		String(torche.classe_du_poseur.slug()) if torche.classe_du_poseur else "aucune")
+	_check("elle éblouit", torche.eblouit)
+	_check("et par son FAISCEAU, pas par la distance", torche.eblouissement_dirige)
+	_check("elle a un faisceau monté", torche.get_node_or_null("Faisceau") != null)
+	# ⚠️ Le cookie doit être CELUI de la classe : une torche fantôme au cookie
+	# d'une autre arme serait démasquée d'un coup d'œil par qui connaît les dix.
+	var faisceau: PointLight2D = torche.get_node_or_null("Faisceau")
+	if faisceau != null:
+		_check("son cookie est celui du Braconnier",
+			faisceau.texture == torche.classe_du_poseur.get_torch_texture())
+	# Elle ne dure pas la manche entière : la durée vient du PROFIL, réglable par
+	# instance, jamais du type.
+	_check("elle est périssable", torche.duree_vie > 0.0, str(torche.duree_vie))
+
+	# ── Le balayage ──────────────────────────────────────────────────────────
+	var avant: float = torche.rotation
+	torche._age = GadgetTorcheFantome.PERIODE * 0.25
+	torche._physics_process(0.0)
+	_check("elle balaie", not is_equal_approx(torche.rotation, avant),
+		"%.3f → %.3f" % [avant, torche.rotation])
+	# Au quart de période, l'amplitude est à son maximum : c'est le seul point du
+	# cycle dont la valeur soit connue sans recopier la formule.
+	_check("son balayage tient l'amplitude annoncée",
+		is_equal_approx(absf(torche.rotation), GadgetTorcheFantome.AMPLITUDE),
+		str(torche.rotation))
+	torche._age = 0.0
+	torche._physics_process(0.0)
+
+	# ── L'ÉBLOUISSEMENT, le contrôle qui compte ─────────────────────────────
+	var espace: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var source := {}
+	for src in gs._sources_eblouissantes():
+		if src["noeud"] == torche:
+			source = src
+	_check("elle figure parmi les sources qui éblouissent", not source.is_empty())
+
+	if not source.is_empty():
+		# ⚠️ Elle n'a PAS de porteur, y compris celui qui l'a posée : marcher
+		# devant son propre leurre coûte les yeux. Même règle que la fusée.
+		_check("elle n'a pas de porteur", source["porteur"] == null)
+
+		# ⚠️ **Le balayage est GELÉ pour ces trois mesures.** Sans ça, chaque pas
+		# de physique — qu'il faut bien laisser passer pour que le serveur de
+		# physique voie les corps déplacés — fait tourner le faisceau de deux
+		# degrés, et les trois relevés ne parlent plus de la même géométrie.
+		torche.set_physics_process(false)
+		torche._age = 0.0
+		torche.rotation = 0.0
+
+		# Dans l'axe, à portée : ça doit aveugler.
+		#
+		# ⚠️ **Un seul corps sur le trajet à la fois.** Poser les deux joueurs au
+		# même point faisait rendre zéro pour le second : le rayon de ligne de vue
+		# touche le PREMIER corps rencontré, et `res.collider == cible` est alors
+		# faux pour l'autre. Ce n'était pas un défaut du jeu, c'était un défaut de
+		# la mesure — et il ressemblait trait pour trait à un vrai.
+		gs.p2.global_position = torche.global_position + Vector2(150.0, 0.0)
+		gs.p1.global_position = torche.global_position + Vector2(0.0, 900.0)
+		gs.p2.visible = true
+		# ⚠️ Un pas de PHYSIQUE, pas une image de rendu. `_ligne_de_vue` tire un
+		# rayon ; tant que le serveur de physique n'a pas vu les corps à leur
+		# nouvelle place, il ne touche rien et la ligne de vue est fausse. Le
+		# premier jet attendait `process_frame` et rendait 0,000 partout.
+		await physics_frame
+		await physics_frame
+		var devant: float = gs._plafond_de_source(espace, source, gs.p2)
+		_check("un joueur dans son faisceau est ébloui", devant > 0.0,
+			"%.3f" % devant)
+
+		# Et le poseur, au même endroit, ne s'en tire pas mieux : les deux
+		# joueurs échangent leurs places, et la valeur doit être la même.
+		gs.p1.global_position = torche.global_position + Vector2(150.0, 0.0)
+		gs.p2.global_position = torche.global_position + Vector2(0.0, 900.0)
+		await physics_frame
+		await physics_frame
+		var poseur: float = gs._plafond_de_source(espace, source, gs.p1)
+		_check("le poseur y est ébloui autant que l'autre",
+			is_equal_approx(poseur, devant), "%.3f vs %.3f" % [poseur, devant])
+		gs.p1.global_position = Vector2(400.0, 400.0)
+
+		# Derrière elle : rien. Le faisceau a un axe, et c'est ce que « dirigée »
+		# veut dire — sans quoi elle éblouirait à 360°, comme une fusée.
+		gs.p2.global_position = torche.global_position - Vector2(150.0, 0.0)
+		await physics_frame
+		await physics_frame
+		var derriere: float = gs._plafond_de_source(espace, source, gs.p2)
+		_check("un joueur DERRIÈRE elle n'est pas ébloui", derriere <= 0.0,
+			"%.3f" % derriere)
 
 	gs.queue_free()
 	await process_frame

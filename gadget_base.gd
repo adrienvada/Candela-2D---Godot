@@ -49,6 +49,28 @@ var arrete_les_balles: bool = true
 ## pouvoir éteindre l'éblouissement d'un gadget sans toucher aux autres.
 var eblouit: bool = false
 
+## Son éblouissement se LIT-il dans un faisceau, ou se déduit-il d'une distance ?
+##
+## Les deux régimes existent déjà dans `game_state._plafond_de_source()` : une
+## source dirigée échantillonne le pixel du cookie, une source de proximité ne
+## connaît que la distance. Une torche fantôme est du premier genre ; une mine ou
+## une nappe de braises, qui crachent dans toutes les directions, du second.
+var eblouissement_dirige: bool = false
+
+## Jusqu'où ce gadget aveugle, en pixels — **régime de proximité seulement**.
+##
+## Sans effet quand `eblouissement_dirige` vaut vrai : c'est alors le faisceau
+## lui-même qui décide, et un rayon posé à côté serait une seconde vérité.
+var rayon_eblouissement: float = 0.0
+
+## La classe du poseur, pour les gadgets qui portent SA lumière. `null` partout
+## ailleurs, et c'est le cas ordinaire.
+##
+## ⚠️ Elle vit ici et non dans la sous-classe parce que c'est le spawn qui la
+## connaît : `GameState._do_spawn_gadget()` la pose avant l'entrée dans l'arbre.
+## Une sous-classe ne peut pas aller la chercher — elle ne sait pas qui l'a posée.
+var classe_du_poseur: WeaponData = null
+
 ## Secondes de vie, ou 0 pour « jusqu'à la fin de la manche ».
 var duree_vie: float = 0.0
 
@@ -148,11 +170,13 @@ func _monter_visuel() -> void:
 	pass
 
 
+## ⚠️ **L'âge court TOUJOURS, même sans durée de vie.** Il ne courait que pour
+## les gadgets périssables, et `age()` — public, documenté « l'âge du gadget » —
+## rendait donc zéro à vie pour les autres. La torche fantôme en dérive son
+## balayage : elle serait restée parfaitement immobile.
 func _physics_process(delta: float) -> void:
-	if duree_vie <= 0.0:
-		return
 	_age += delta
-	if _age >= duree_vie:
+	if duree_vie > 0.0 and _age >= duree_vie:
 		detruire()
 
 

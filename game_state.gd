@@ -1572,6 +1572,7 @@ func _sources_eblouissantes() -> Array:
 				"porteur": j,
 				"dirigee": true,
 				"rayon": j.current_weapon.portee_torche() if j.current_weapon else 0.0,
+				"arme": j.current_weapon,
 			})
 
 	# ── Les fusées éclairantes ───────────────────────────────────────────────
@@ -1605,6 +1606,33 @@ func _sources_eblouissantes() -> Array:
 			"porteur": null,
 			"dirigee": false,
 			"rayon": RAYON_EBLOUISSEMENT_FUSEE,
+			"arme": null,
+		})
+
+	# ── Les gadgets posés ────────────────────────────────────────────────────
+	#
+	# C'est ce que l'étape 6a préparait, et la torche fantôme du Braconnier est
+	# la raison pour laquelle elle a été faite : *si elle n'éblouit pas, il
+	# suffit à l'adversaire de la regarder en face pour savoir que c'est un
+	# faux.* Le mensonge n'est complet que si elle aveugle comme une vraie.
+	#
+	# ⚠️ **Aucun porteur, jamais** — y compris pour celui qui l'a posée. Une
+	# lampe qu'on a plantée soi-même reste une lampe : marcher devant coûte les
+	# yeux. C'est la même règle que pour la fusée, arbitrée par Adrien — *« on ne
+	# la lance pas à ses pieds impunément »*.
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not is_instance_valid(g) or not (g is Node2D):
+			continue
+		if not g.eblouit or g.is_queued_for_deletion():
+			continue
+		out.append({
+			"noeud": g,
+			"porteur": null,
+			"dirigee": g.eblouissement_dirige,
+			"rayon": g.rayon_eblouissement,
+			# La classe du poseur porte le cookie : c'est elle qu'on
+			# échantillonne, exactement comme on échantillonne l'arme d'un joueur.
+			"arme": g.classe_du_poseur,
 		})
 	return out
 
@@ -1636,7 +1664,12 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 
 	if src["dirigee"]:
 		# Le chemin historique, inchangé : on LIT le pixel du faisceau.
-		return _lumiere_recue(espace, noeud, cible)
+		if src["porteur"] != null:
+			return _lumiere_recue(espace, noeud, cible)
+		# Une source dirigée SANS porteur : une lumière posée qui a un axe — la
+		# torche fantôme. Elle passe par le même échantillonnage, sans les
+		# préconditions qui ne valent que pour un joueur (`_en_jeu`, `flashlight_on`).
+		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible)
 
 	# ── PROXIMITÉ ────────────────────────────────────────────────────────────
 	var d := noeud.global_position.distance_to(cible.global_position)
@@ -1701,8 +1734,21 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# C'est écrit ici plutôt que là-bas parce que c'est ici que la dépendance
 	# existe : le fichier qui lève l'erreur n'a aucune raison de savoir que
 	# l'éblouissement s'y adosse.
-	var arme: WeaponData = source.current_weapon
-	if arme == null:
+	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible)
+
+
+## Ce qu'un FAISCEAU verse dans les yeux d'une cible, quel que soit ce qui le
+## porte — un joueur, ou une lampe posée.
+##
+## ⚠️ **Extrait de `_lumiere_recue()` pour qu'il n'y ait qu'un échantillonnage.**
+## La torche fantôme avait besoin des cinq lignes du milieu sans les
+## préconditions du dessus (`_en_jeu`, `flashlight_on`), qui n'ont de sens que
+## pour un joueur. Les recopier aurait donné une seconde définition du même
+## faisceau — la faute exacte que le commentaire ci-dessus passe vingt lignes à
+## expliquer.
+func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
+		source: Node2D, cible: Node2D) -> float:
+	if arme == null or not is_instance_valid(source):
 		return 0.0
 	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
 	# plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où ce choix,
@@ -1738,8 +1784,19 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## se périme EN VERT le jour où on le renomme — piège déjà consigné.
 func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 		cible: Node2D, exclure: RID) -> bool:
-	var q := PhysicsRayQueryParameters2D.create(depuis,
-		cible.global_position, MapGeometry.WALL_LAYER)
+	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
+	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
+	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
+	# comme si elle n'existait pas : on voyait le noir et on prenait la lumière.
+	# Défaut introduit par la pose à l'étape 10, trouvé en branchant la torche
+	# fantôme, corrigé ici parce que c'est le même sujet.
+	#
+	# Ce masque repose sur un invariant, et il faut qu'il le reste : **tout gadget
+	# porte un occluder**, `GadgetBase._monter_occluder()` étant appelé sans
+	# condition. Le jour où l'un d'eux n'en portera plus, il arrêterait
+	# l'éblouissement sans arrêter la lumière — l'inverse du défaut d'aujourd'hui.
+	var q := PhysicsRayQueryParameters2D.create(depuis, cible.global_position,
+		MapGeometry.WALL_LAYER | MapGeometry.GADGET_LAYER)
 	if exclure.is_valid():
 		q.exclude = [exclure]
 	var res := espace.intersect_ray(q)
@@ -1990,7 +2047,8 @@ func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
 	if not round_active and not sandbox_mode:
 		return
-	var chemin := String(IMPLEMENTATIONS.get(slug, ""))
+	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
+	var chemin := String(fiche.get("script", ""))
 	if chemin.is_empty():
 		# ⚠️ On CRIE, on ne se rabat pas. Poser un gadget générique à la place
 		# d'un gadget inconnu donnerait un objet plausible — et un objet plausible
@@ -2015,6 +2073,10 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 		# l'éblouissement d'un gadget sans toucher aux autres.
 		g.eblouit = classe.gadget.eblouit
 		g.duree_vie = classe.gadget.duree_vie
+		# La classe elle-même, pour les gadgets qui portent SA lumière — la
+		# torche fantôme emprunte le cookie du Braconnier, et c'est tout ce qui
+		# fait d'elle un mensonge plutôt qu'une lampe.
+		g.classe_du_poseur = classe
 	# Le même conteneur que les balles et les fusées : c'est lui que la manche
 	# purge, et le rejoindre suffit donc à ne pas survivre à la manche.
 	bullet_container.add_child(g)
@@ -3066,9 +3128,18 @@ func _fusees(stock: int, periode: float) -> FlareProfile:
 ## slug — et un chemin qui ne correspond pas au slug est exactement le genre
 ## d'erreur que ce dépôt paie en silence : le gadget d'une classe se poserait
 ## sous le nom d'une autre.
+## ⚠️ **La durée de vie est ICI et non dans le nœud**, contrairement aux points
+## de vie ou au fait d'arrêter les balles. C'est la règle posée par Adrien le
+## 2026-09-09 pour l'éblouissement, et elle vaut pour les deux : ce qui doit
+## pouvoir se régler par INSTANCE sans toucher au type vit dans le profil. Une
+## torche fantôme qui durerait deux fois moins longtemps est un réglage
+## d'équilibrage ; qu'elle arrête les balles est ce qu'elle EST.
 const IMPLEMENTATIONS := {
-	"voile": "res://gadget_voile.gd",
-	"ombre_habitee": "res://gadget_ombre.gd",
+	"voile": {"script": "res://gadget_voile.gd", "duree_vie": 0.0},
+	"ombre_habitee": {"script": "res://gadget_ombre.gd", "duree_vie": 0.0},
+	# 16 s : de quoi faire traverser une pièce à un adversaire qui la croit
+	# occupée, sans qu'un couloir reste éclairé toute la manche. À doser en jeu.
+	"torche_fantome": {"script": "res://gadget_torche_fantome.gd", "duree_vie": 16.0},
 }
 
 func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
@@ -3076,7 +3147,9 @@ func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProf
 	g.slug = slug
 	g.libelle = libelle
 	g.eblouit = eblouit
-	g.implementation = String(IMPLEMENTATIONS.get(slug, ""))
+	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
+	g.implementation = String(fiche.get("script", ""))
+	g.duree_vie = float(fiche.get("duree_vie", 0.0))
 	return g
 
 
