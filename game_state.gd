@@ -1501,12 +1501,106 @@ func _maj_eblouissement(delta: float) -> void:
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
 		return
 	var espace := p1.get_world_2d().direct_space_state
-	# Les deux plafonds sont lus AVANT d'intégrer : intégrer au fil de la
-	# lecture ferait dépendre le résultat de l'ordre des deux joueurs.
-	var sur_p1 := _lumiere_recue(espace, p2, p1)
-	var sur_p2 := _lumiere_recue(espace, p1, p2)
-	p1.integrer_eblouissement(sur_p1, delta)
-	p2.integrer_eblouissement(sur_p2, delta)
+
+	# ── PASSE 1 : lire, et retenir la source GAGNANTE ────────────────────────
+	#
+	# ⚠️ **Le MAX doit faire remonter la SOURCE, pas seulement sa valeur.**
+	# `ui._poser_voile(rect, victime, source)` dérive le penchant du voile de la
+	# POSITION de la source ; le shader ne reçoit qu'un scalaire de relèvement.
+	# Un max qui ne retiendrait qu'un niveau laisserait le voile pencher vers
+	# l'adversaire pendant qu'une lumière posée brûle derrière — et **aucune
+	# suite ne le verrait**, rien ne teste le relèvement. Relevé par la session
+	# « retouche éblouissement », 2026-09-09.
+	#
+	# ⚠️ **Deux passes strictes, jamais une intégration au fil de la lecture** :
+	# le résultat dépendrait sinon de l'ordre des sources, c'est-à-dire de
+	# l'ordre du groupe de scène. C'est la raison pour laquelle le calcul à deux
+	# termes lisait déjà les deux plafonds avant d'intégrer.
+	#
+	# ⚠️ **Le MAX, jamais la somme** (décision d'Adrien, 2026-09-09). Le modèle
+	# est un PLAFOND, pas une intégrale — c'est ce qui l'empêche de dériver, et
+	# le max préserve strictement cette propriété : deux torches faibles ne
+	# peuvent pas aveugler à force d'être deux.
+	var gagnante := {p1: null, p2: null}
+	var plafond := {p1: 0.0, p2: 0.0}
+	for src in _sources_eblouissantes():
+		for cible in [p1, p2]:
+			var v := _plafond_de_source(espace, src, cible)
+			if v > plafond[cible]:
+				plafond[cible] = v
+				gagnante[cible] = src["noeud"]
+
+	# ── PASSE 2 : intégrer ───────────────────────────────────────────────────
+	p1.integrer_eblouissement(plafond[p1], delta)
+	p2.integrer_eblouissement(plafond[p2], delta)
+	p1.source_eblouissante = gagnante[p1]
+	p2.source_eblouissante = gagnante[p2]
+
+
+## Les sources qui peuvent éblouir, cette image.
+##
+## ⚠️ **Deux familles EXCLUES, explicitement, avec leur raison** — une exclusion
+## subie par oubli est un défaut, une exclusion écrite est une décision :
+##
+##   • **les particules** (240 pré-allouées, sang 64 px, étincelles 32 px). Elles
+##     sont tirées au sort à chaque émission, donc ABSENTES chez l'autre pair :
+##     le résultat serait non reproductible d'une machine à l'autre, donc
+##     indébogable. Et 200 sources × 2 cibles coûteraient ~1,3 ms par image,
+##     **dix fois la marge de cadence entière** (139 µs).
+##   • **l'ambiance personnelle** (`range_item_cull_mask` 16 pour J1, 32 pour
+##     J2). Elle n'éclaire que les décals de son propre joueur : elle n'existe
+##     pas dans le monde partagé, et l'adversaire ne la voit jamais.
+##
+## ⚠️ **Une carte ne peut pas porter de lumière**, et c'est ce qui rend cette
+## liste bornée. Le format v3 ne contient que sol, murs et points d'apparition ;
+## l'outil « lumière » de l'éditeur n'est qu'un bouton d'aperçu. Une arène
+## aveuglante n'est donc pas fabricable — c'était un acquis, ça devient une
+## garantie d'équité, et il faudra l'écrire le jour où le format bougera.
+func _sources_eblouissantes() -> Array:
+	var out: Array = []
+	for j in [p1, p2]:
+		if _en_jeu(j) and j.flashlight_on:
+			out.append({
+				"noeud": j,
+				# Le PORTEUR : une source portée n'éblouit son porteur que par
+				# rétrodiffusion. Une source posée n'a pas de porteur, et
+				# éblouit tout le monde pareil, poseur compris.
+				"porteur": j,
+				"dirigee": true,
+				"rayon": j.current_weapon.portee_torche() if j.current_weapon else 0.0,
+			})
+	return out
+
+
+## Ce qu'une source verse dans les yeux d'une cible, entre 0 et 1.
+func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
+		cible: Node2D) -> float:
+	if not _en_jeu(cible):
+		return 0.0
+	var noeud: Node2D = src["noeud"]
+	if not is_instance_valid(noeud):
+		return 0.0
+
+	# ── Le cas de SOI ────────────────────────────────────────────────────────
+	if src["porteur"] == cible:
+		# Une source PORTÉE : on ne se tient pas dans son propre faisceau, on
+		# reçoit ce qui revient des murs. Lire le cookie ici échantillonnerait
+		# son centre — la valeur maximale — et allumer sa lampe saturerait
+		# l'éblouissement d'un coup.
+		return Eblouissement.RETRODIFFUSION * Eblouissement.gain_taille(src["rayon"])
+
+	if src["dirigee"]:
+		# Le chemin historique, inchangé : on LIT le pixel du faisceau.
+		return _lumiere_recue(espace, noeud, cible)
+
+	# ── PROXIMITÉ ────────────────────────────────────────────────────────────
+	var d := noeud.global_position.distance_to(cible.global_position)
+	var i := Eblouissement.intensite_proximite(d, src["rayon"])
+	if i <= 0.0:
+		return 0.0
+	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
+		return 0.0
+	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"])
 
 ## Un joueur qui compte : présent, vivant, et sur le terrain.
 ##
@@ -1587,9 +1681,22 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## gouffre, décision de conception couverte par `test_vision`.
 func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 		cible: Node2D) -> bool:
-	var q := PhysicsRayQueryParameters2D.create(source.global_position,
+	return _ligne_de_vue_depuis(espace, source.global_position, cible,
+		source.get_rid())
+
+
+## La même, depuis un POINT plutôt qu'un corps.
+##
+## ⚠️ La surcharge ci-dessus est conservée parce que
+## `tools/planche_eblouissement.gd` la NOMME dans ses préconditions, et que
+## `tools/test_banc.gd` vérifie qu'elle existe. Un garde-fou qui nomme un symbole
+## se périme EN VERT le jour où on le renomme — piège déjà consigné.
+func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
+		cible: Node2D, exclure: RID) -> bool:
+	var q := PhysicsRayQueryParameters2D.create(depuis,
 		cible.global_position, MapGeometry.WALL_LAYER)
-	q.exclude = [source.get_rid()]
+	if exclure.is_valid():
+		q.exclude = [exclure]
 	var res := espace.intersect_ray(q)
 	return res and res.collider == cible
 

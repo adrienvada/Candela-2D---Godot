@@ -50,6 +50,20 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+## La source qui éblouit le plus ce joueur, cette image — ou `null`.
+##
+## ⚠️ **Le NIVEAU ne suffit pas, il faut la SOURCE.** Le voile penche vers ce qui
+## aveugle : `ui._poser_voile()` dérive son relèvement de la POSITION de la
+## source. Tant que l'éblouissement n'avait que deux sources croisées, l'appelant
+## pouvait passer « l'autre joueur » en dur ; avec des sources déclarées, il faut
+## dire laquelle a gagné le maximum. Sans ça le voile pencherait vers l'adversaire
+## pendant qu'une lumière posée brûle derrière — et rien ne le verrait, aucune
+## suite ne teste le relèvement.
+##
+## Posé par l'hôte dans `game_state._maj_eblouissement`. **Non répliqué** : le
+## voile n'est affiché qu'en écran scindé, où les deux joueurs sont locaux.
+var source_eblouissante: Node2D = null
+
 var current_ammo: int = 10
 var is_reloading: bool = false
 var reload_time_left: float = 0.0

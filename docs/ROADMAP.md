@@ -14071,6 +14071,60 @@ nœud** — seul le polygone d'ombre change.
    à la construction. ⚠️ **Ce que ça ne couvre pas : le montage du visuel.** Il
    se verra à l'écran le jour où les planches existeront, pas avant.
 
+### Étape 6a — l'éblouissement accepte des sources déclarées ✅
+
+`_maj_eblouissement` n'est plus un calcul à deux termes : **une boucle sur des
+sources déclarées, en deux passes strictes.** La passe 1 retient, pour chaque
+cible, la source **gagnante** — pas seulement sa valeur.
+
+⚠️ **Le MAX doit faire remonter la SOURCE.** `ui._poser_voile(rect, victime,
+source)` dérive le penchant du voile de la POSITION de la source ; le shader ne
+reçoit qu'un scalaire de relèvement. Un max qui ne retiendrait qu'un niveau
+laisserait le voile pencher vers l'adversaire pendant qu'une lumière posée brûle
+derrière — et **aucune suite ne le verrait**, rien ne teste le relèvement. Relevé
+par la session « retouche éblouissement ». Le joueur porte désormais
+`source_eblouissante`.
+
+**Le cas de soi, réglé par une règle et non par un coefficient.** Adrien :
+« très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien
+d'allumer sa torche ». Ce n'est pas un dosage — c'est un cas **dégénéré** : le
+modèle échantillonne le cookie à la position de la cible, or pour sa propre
+torche source et cible sont le même point, c'est-à-dire le centre du cookie et sa
+valeur maximale. D'où le partage : une source **portée** (torche, flash de
+bouche) n'éblouit son porteur que par `RETRODIFFUSION` — on ne se tient pas dans
+son faisceau, on reçoit ce qui revient des murs ; une source **posée** éblouit
+tout le monde pareil, poseur compris.
+
+Deux exclusions **écrites avec leur raison**, parce qu'une exclusion subie par
+oubli est un défaut et qu'une exclusion écrite est une décision : les particules
+(tirées au sort localement donc absentes chez l'autre pair, et ~1,3 ms par image,
+dix fois la marge) et l'ambiance personnelle (masques 16/32, elle n'existe pas
+dans le monde partagé).
+
+#### Ce que 6a ne fait PAS, et pourquoi c'est délibéré
+
+**La fusée n'est pas branchée comme source, et le gain de taille vaut zéro.**
+L'ordre imposé par la session éblouissement est : *la source circule d'abord, la
+fusée ensuite*. Or la circulation n'est complète que quand `ui.gd` lit
+`source_eblouissante` pour orienter le voile — et `ui.gd` appartient à la session
+« menus ». Brancher la fusée maintenant produirait exactement le mensonge
+directionnel qu'on m'a dit d'éviter.
+
+Il manque donc **une lecture dans `ui.gd`**, et c'est une demande, pas un geste.
+
+#### Une garde qui a attrapé un changement de DÉCISION
+
+`test_online_match --eblouissement` vérifiait « celui qui éclaire n'est pas
+ébloui ». C'était vrai **par construction** — la boucle à deux termes ne formait
+que les paires croisées, l'auto-éblouissement était impossible. La décision
+d'Adrien l'a rendu possible, et la garde a rougi : c'est son travail.
+
+Elle vérifie désormais **les deux moitiés** : que le porteur soit ébloui, et
+qu'il le soit au moins cinq fois moins que sa cible. Une seule des deux ne dirait
+rien — « supérieur à zéro » laisserait passer une rétrodiffusion à 0,5 (la torche
+redevenue inutile), « faible » laisserait passer le retour à zéro et perdrait la
+décision.
+
 ### Ce qui reste, dans l'ordre
 
 Étape 3 la purge des armes codées en dur et la table,
