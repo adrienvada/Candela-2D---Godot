@@ -3818,6 +3818,37 @@ trois occurrences et a nommé le motif — les trois autres sessions cherchaient
 chacune une cause différente pour un symptôme unique.*
 
 
+### Un diagnostic qui ne tourne pas là où l'on joue (2026-09-09)
+
+Adrien rapporte un silence complet en match réseau — **y compris ses propres
+tirs**. Le dépôt porte exactement l'outil qu'il faut pour ça,
+`AudioManager.diagnostic_ecoute()`, sur **F4**. Il ne rendait rien.
+
+**Tout le traceur sortait sur `if not OS.is_debug_build(): return`.** Écrit pour
+une bonne raison — en release, `print()` est tamponné et vidé à la fermeture
+propre, donc inutile — la conclusion tirée était la mauvaise : *si la console ne
+sert à rien, écris ailleurs*, et non *renonce*. **Un outil de diagnostic qui ne
+marche que dans l'éditeur ne diagnostique pas le jeu : il diagnostique
+l'éditeur.** Il écrit désormais dans `user://diagnostic_ecoute.txt`, en ajout,
+horodaté, dans tous les builds — et `flush()` explicite, sans quoi un plantage
+emporte le relevé qu'on venait de prendre.
+
+**Il lui manquait aussi le fait qui décide de l'audibilité.** Il affichait
+« auditeurs : racine » sans jamais vérifier que cette racine soit **dans le
+`World2D` où vivent les voix** — or `AudioStreamPlayer2D` ne sort que vers les
+auditeurs de SON monde. Le relevé pouvait donc décrire un état parfait pendant
+que rien ne sortait, et c'est ce qu'il a fait : *j'ai conclu « configuration
+correcte » sur cette foi.* Il ne regardait pas non plus `Master`, qui peut tout
+avaler un étage au-dessus pendant que « bus SFX : actif » reste vrai.
+
+**La leçon, et c'est la cinquième fois de cette famille :** on ne prouve pas
+qu'un son sort en décrivant un graphe. Un diagnostic doit rapporter les faits
+qui DÉCIDENT — le monde de l'auditeur, la chaîne de bus entière — et pas ceux
+qui rassurent.
+
+*Le piège de fond est un cousin : le même code coupait la racine sans regarder
+où vit l'oreille. Voir la section suivante.*
+
 ### L'écoute suit le viewport du listener, pas celui qui rend (2026-08-25)
 
 La phrase manquait au dépôt et elle a failli coûter un défaut entier. **Un
