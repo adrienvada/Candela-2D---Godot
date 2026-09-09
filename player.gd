@@ -1668,7 +1668,14 @@ func _physics_process(delta):
 			shoot()
 		else:
 			# Plus de munitions : tir à sec + rechargement automatique
-			if not _detente_pressee and _percu_ici():
+			# `tir_a_sec <= 0.0` en plus du front montant : la détente est
+			# désormais un AXE (gâchette R2, chantier 10 classes), pas un
+			# bouton — pas de front franc, un bruit d'analogique proche du
+			# seuil de zone morte peut agiter `_detente_pressee` sur
+			# plusieurs images. Le second garde absorbe ce bruit sans rien
+			# retirer au geste : un vrai relâchement-répression reste à plus
+			# de 220 ms, largement au-dessus de tout tremblement de capteur.
+			if not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici():
 				tir_a_sec = 0.22
 				_rumble(RUMBLE_DRY_FIRE, 0.0, 0.05)
 				if current_weapon:
@@ -1676,9 +1683,8 @@ func _physics_process(delta):
 						AudioManager.chemin_percuteur(current_weapon.slug()),
 						muzzle.global_position)
 			start_reload()
-	elif can_move and presse and not _detente_pressee and _percu_ici():
-		# Front montant seulement : détente maintenue pendant rechargement / cooldown,
-		# le tremblement doit dire « trop tôt » une fois, pas vibrer en continu.
+	elif can_move and presse and not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici():
+		# Front montant ET fenêtre de 220 ms écoulée — voir le garde ci-dessus.
 		tir_a_sec = 0.22
 		# V4.4 — le percuteur. Positionnel a la bouche : un clic a vide est un
 		# evenement du monde, et dans ce jeu il RACONTE quelque chose de cher —
