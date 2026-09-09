@@ -18,10 +18,10 @@ surround = 0.64
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_j3pel"]
 resource_name = "Reverb"
-room_size = 0.06
-damping = 0.16
-hipass = 0.26
-wet = 0.38
+room_size = 0.15
+damping = 0.22
+hipass = 0.25
+wet = 0.34
 
 [sub_resource type="AudioEffectFilter" id="AudioEffectFilter_monde"]
 resource_name = "EtouffementMonde"
@@ -35,9 +35,9 @@ db = 1
 
 [sub_resource type="AudioEffectReverb" id="AudioEffectReverb_occlus"]
 resource_name = "ReverbOcclus"
-room_size = 0.06
-damping = 0.16
-hipass = 0.26
+room_size = 0.15
+damping = 0.22
+hipass = 0.25
 dry = 0.75
 wet = 0.525
 

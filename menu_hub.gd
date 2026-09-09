@@ -4,6 +4,8 @@ extends Control
 const Charte := preload("res://charte.gd")
 const MenuArtwork := preload("res://menu_artwork.gd")
 const MenuComicPanel := preload("res://menu_comic_panel.gd")
+const MenuTheme := preload("res://menu_theme.gd")
+const MenuWidgets := preload("res://menu_widgets.gd")
 
 ## Hub de navigation en deux panneaux — Phase 5, structure B.
 ##
@@ -137,10 +139,11 @@ var _tween: Tween
 
 ## Arrière-plan illustré flouté sous le contenu interactif du cadre droit
 var _bg_image: TextureRect
+var _bg_image_prev: TextureRect
 var _panel_backgrounds: Dictionary = {}
 var _screen_backgrounds: Dictionary = {}
 var _current_artwork_key: String = ""
-var _reveal_tween: Tween
+var _crossfade_tween: Tween
 var _effect_time: float = 0.0
 var _torch_pos_uv: Vector2 = Vector2(0.5, 0.5)
 
@@ -210,6 +213,17 @@ func _build() -> void:
 	_right_comic.name = "ComicPanelDroite"
 	right.add_child(_right_comic)
 	_right_comic.associer_stylebox(style)
+
+	# Sous-couche de fondu enchaîné pour transitions douces
+	_bg_image_prev = TextureRect.new()
+	_bg_image_prev.name = "FondFlouPrev"
+	_bg_image_prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bg_image_prev.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_bg_image_prev.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_bg_image_prev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bg_image_prev.material = _build_blur_material()
+	_bg_image_prev.hide()
+	right.add_child(_bg_image_prev)
 
 	_bg_image = TextureRect.new()
 	_bg_image.name = "FondFlou"
@@ -707,23 +721,12 @@ func _apply_panel(key: String) -> void:
 			if est_voulu:
 				active_content = content
 	_update_background(wanted, active_content)
-	if _right_comic != null:
-		_right.move_child(_right_comic, -1)
-		_right_comic.reveler(1.0, MenuTheme.FADE)
 	panel_changed.emit(wanted)
 
-func _declencher_embrasement(mat: ShaderMaterial) -> void:
-	if mat == null:
-		return
-	if _reveal_tween != null and _reveal_tween.is_valid():
-		_reveal_tween.kill()
-	mat.set_shader_parameter("reveal_progress", 0.3)
-	_reveal_tween = create_tween()
-	_reveal_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	var appliquer := func(val: float) -> void:
-		if is_instance_valid(_bg_image) and _bg_image.material != null:
-			(_bg_image.material as ShaderMaterial).set_shader_parameter("reveal_progress", val)
-	Charte.animer_via(_reveal_tween, appliquer, 0.3, 1.0, 0.35, Charte.Courbe.SORTIE)
+func _declencher_embrasement(_mat: ShaderMaterial) -> void:
+	# Conservé pour compatibilité, les transitions d'images passent désormais
+	# par le fondu enchaîné doux et organique (cross-fade).
+	pass
 
 func set_torch_position_global(global_pos: Vector2) -> void:
 	if _left_comic != null and is_instance_valid(_left_comic):
@@ -749,6 +752,8 @@ func _process(delta: float) -> void:
 	
 	_effect_time += delta
 	mat.set_shader_parameter("effect_time", _effect_time)
+	if _bg_image_prev != null and _bg_image_prev.visible and _bg_image_prev.material != null:
+		(_bg_image_prev.material as ShaderMaterial).set_shader_parameter("effect_time", _effect_time)
 	
 	var size := _bg_image.size
 	if size.x > 0.0 and size.y > 0.0:
@@ -764,71 +769,123 @@ func _process(delta: float) -> void:
 			if _left_comic != null:
 				_left_comic.set_torch_position_global(gpos)
 		mat.set_shader_parameter("torch_pos", _torch_pos_uv)
+		if _bg_image_prev != null and _bg_image_prev.visible and _bg_image_prev.material != null:
+			(_bg_image_prev.material as ShaderMaterial).set_shader_parameter("torch_pos", _torch_pos_uv)
 
 func _update_background(key: String, content: Control) -> void:
 	if _bg_image == null:
 		return
-	var mat := _bg_image.material as ShaderMaterial
 	
+	var texture_cible: Texture2D = null
+	var cle_cible := ""
+	var flou_total := 1.0
+
 	# Cas 1 : Aperçu direct d'illustration (MenuApercu) — affichage pleine hauteur
 	if content is MenuApercu:
 		var tex := (content as MenuApercu).texture()
 		if tex != null:
-			var nouvelle_cle := MenuArtwork.cle_canonique(key)
-			var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != tex)
-			_current_artwork_key = nouvelle_cle
-			
-			if mat != null:
-				mat.set_shader_parameter("mode_flou_total", 0.0)
-				var poi := MenuArtwork.poi_pour(nouvelle_cle)
-				var effet := MenuArtwork.effet_pour(nouvelle_cle)
-				
-				mat.set_shader_parameter("torch_pos", poi)
-				mat.set_shader_parameter("effect_mode", effet)
-				
-				if est_nouveau:
-					_declencher_embrasement(mat)
-			
-			_bg_image.texture = tex
-			_bg_image.show()
-		else:
-			_bg_image.hide()
-		return
-	
+			texture_cible = tex
+			cle_cible = MenuArtwork.cle_canonique(key)
+			flou_total = 0.0
+
 	# Cas 2 : Panneau interactif / texte posé sur l'illustration floutée de la catégorie
-	# Règle d'Adrien (2026-08-27) : l'illustration de fond flou hérite en priorité de la catégorie/écran courant
-	var bg_res: Variant = _screen_backgrounds.get(current_id(), null)
-	if bg_res == null or (bg_res is String and (bg_res as String) == ""):
-		bg_res = _panel_backgrounds.get(key, null)
-	
-	var texture_a_poser: Texture2D = null
-	var cle_fond := ""
-	if bg_res is Texture2D:
-		texture_a_poser = bg_res
-	elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
-		texture_a_poser = load(bg_res as String)
-		cle_fond = bg_res as String
-	
-	if texture_a_poser != null:
-		var nouvelle_cle := MenuArtwork.cle_canonique(cle_fond if cle_fond != "" else current_id())
-		var est_nouveau := (nouvelle_cle != _current_artwork_key or _bg_image.texture != texture_a_poser)
-		_current_artwork_key = nouvelle_cle
+	if texture_cible == null:
+		var bg_res: Variant = _screen_backgrounds.get(current_id(), null)
+		if bg_res == null or (bg_res is String and (bg_res as String) == ""):
+			bg_res = _panel_backgrounds.get(key, null)
 		
-		if mat != null:
-			mat.set_shader_parameter("mode_flou_total", 1.0)
-			var poi := MenuArtwork.poi_pour(nouvelle_cle)
-			var effet := MenuArtwork.effet_pour(nouvelle_cle)
-			
-			mat.set_shader_parameter("torch_pos", poi)
-			mat.set_shader_parameter("effect_mode", effet)
-			
-			if est_nouveau:
-				_declencher_embrasement(mat)
-				
-		_bg_image.texture = texture_a_poser
-		_bg_image.show()
+		if bg_res is Texture2D:
+			texture_cible = bg_res
+		elif bg_res is String and (bg_res as String) != "" and ResourceLoader.exists(bg_res as String):
+			texture_cible = load(bg_res as String)
+			cle_cible = bg_res as String
+		
+		if texture_cible != null:
+			cle_cible = MenuArtwork.cle_canonique(cle_cible if cle_cible != "" else current_id())
+			flou_total = 1.0
+
+	if texture_cible != null:
+		_transition_vers_texture(texture_cible, cle_cible, flou_total)
 	else:
-		_bg_image.hide()
+		_effacer_arriere_plan()
+
+func _transition_vers_texture(nouvelle_tex: Texture2D, nouvelle_cle: String, flou_total: float) -> void:
+	if nouvelle_tex == null or _bg_image == null:
+		return
+
+	var est_meme := (_bg_image.texture == nouvelle_tex and _current_artwork_key == nouvelle_cle and _bg_image.visible and _bg_image.modulate.a >= 0.99)
+	if est_meme:
+		var mat := _bg_image.material as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("mode_flou_total", flou_total)
+		return
+
+	if _crossfade_tween != null and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+
+	var ancienne_tex := _bg_image.texture if (_bg_image.visible and _bg_image.modulate.a > 0.0) else null
+	_current_artwork_key = nouvelle_cle
+
+	# Si une ancienne image était affichée, elle passe en couche inférieure pour le cross-fade doux
+	if ancienne_tex != null and ancienne_tex != nouvelle_tex and _bg_image_prev != null:
+		_bg_image_prev.texture = ancienne_tex
+		var mat_prev := _bg_image_prev.material as ShaderMaterial
+		var mat_cur := _bg_image.material as ShaderMaterial
+		if mat_prev != null and mat_cur != null:
+			mat_prev.set_shader_parameter("mode_flou_total", mat_cur.get_shader_parameter("mode_flou_total"))
+			mat_prev.set_shader_parameter("torch_pos", mat_cur.get_shader_parameter("torch_pos"))
+			mat_prev.set_shader_parameter("effect_mode", mat_cur.get_shader_parameter("effect_mode"))
+		_bg_image_prev.modulate.a = _bg_image.modulate.a
+		_bg_image_prev.show()
+
+	# Configuration de la nouvelle image sur la couche active
+	_bg_image.texture = nouvelle_tex
+	var mat_nouveau := _bg_image.material as ShaderMaterial
+	if mat_nouveau != null:
+		mat_nouveau.set_shader_parameter("mode_flou_total", flou_total)
+		var poi := MenuArtwork.poi_pour(nouvelle_cle)
+		var effet := MenuArtwork.effet_pour(nouvelle_cle)
+		mat_nouveau.set_shader_parameter("torch_pos", poi)
+		mat_nouveau.set_shader_parameter("effect_mode", effet)
+		mat_nouveau.set_shader_parameter("reveal_progress", 1.0)
+
+	_bg_image.modulate.a = 0.0
+	_bg_image.show()
+
+	# Transition soyeuse de fondu enchaîné (0.45s avec la courbe douce d'entrée)
+	_crossfade_tween = create_tween()
+	_crossfade_tween.set_parallel(true)
+	_crossfade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	
+	# La nouvelle image monte doucement
+	Charte.animer(_crossfade_tween, _bg_image, "modulate:a", 0.0, 1.0, 0.45, Charte.Courbe.ENTREE)
+	
+	# L'ancienne image s'estompe en parallèle
+	if _bg_image_prev != null and _bg_image_prev.visible:
+		Charte.animer(_crossfade_tween, _bg_image_prev, "modulate:a", _bg_image_prev.modulate.a, 0.0, 0.40, Charte.Courbe.SORTIE)
+
+	_crossfade_tween.finished.connect(func() -> void:
+		if _bg_image_prev != null and is_instance_valid(_bg_image_prev):
+			_bg_image_prev.hide()
+			_bg_image_prev.texture = null
+	)
+
+func _effacer_arriere_plan() -> void:
+	if _crossfade_tween != null and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+	if _bg_image != null and _bg_image.visible:
+		_crossfade_tween = create_tween()
+		_crossfade_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		Charte.animer(_crossfade_tween, _bg_image, "modulate:a", _bg_image.modulate.a, 0.0, 0.30, Charte.Courbe.SORTIE)
+		_crossfade_tween.finished.connect(func() -> void:
+			if _bg_image != null and is_instance_valid(_bg_image):
+				_bg_image.hide()
+				_bg_image.texture = null
+		)
+	if _bg_image_prev != null:
+		_bg_image_prev.hide()
+		_bg_image_prev.texture = null
+	_current_artwork_key = ""
 
 ## Rend le panneau de droite pour qu'un appelant y installe un affichage riche
 ## (un tableau, une liste). À utiliser avec parcimonie : le texte suffit presque
@@ -889,9 +946,12 @@ func make_entry(label: String, detail: String, target: String = "",
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = MenuTheme.SURFACE
-	normal.set_border_width_all(1)
+	normal.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
 	normal.border_color = MenuTheme.LINE
-	normal.set_corner_radius_all(10)
+	normal.set_corner_radius_all(MenuWidgets.CORNER_BUTTON)
+	normal.shadow_size = 0
+	normal.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	normal.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	normal.content_margin_left = MenuTheme.GAP_S
 	normal.content_margin_right = MenuTheme.GAP_S
 	btn.add_theme_stylebox_override("normal", normal)
@@ -899,62 +959,35 @@ func make_entry(label: String, detail: String, target: String = "",
 
 	# ## Un rôle, une couleur (arbitrage d'Adrien, 2026-08-24)
 	#
-	# **Le survol et la sélection ne portaient pas des états, ils portaient des
-	# SUJETS.** Chaque entrée teintait ses deux styles avec son propre accent :
-	# rien que sur l'accueil, quatre couleurs — bleu pour les modes, ambre pour le
-	# compétitif, gris pour les réglages, rouge pour quitter. Survoler le
-	# compétitif donnait donc de l'ambre et survoler sa voisine du bleu pâle sur
-	# du noir, c'est-à-dire presque rien. « Ambre » ne voulait pas dire
-	# « sélectionné », il voulait dire « cette entrée-là est dorée ».
-	#
-	# Et les deux états ne différaient que par l'opacité — 6 % contre 12 % — et un
-	# pixel de bordure. À la souris, indiscernables.
-	#
-	# Trois signaux, trois couleurs, et elles ne dépendent plus du sujet :
-	#   · **acier** — le curseur de la souris passe ici ;
-	#   · **ambre** — c'est cette entrée que le cadre de droite montre ;
-	#   · **bleu / rouge** — le liseré d'un des deux curseurs du jeu.
-	#
-	# L'accent propre à l'entrée survit là où il dit quelque chose de vrai : le
-	# chevron. Le compétitif reste doré et QUITTER rouge, sans que ça déteigne sur
-	# la lecture de l'état.
+	# Direction Roman Graphique Brutaliste : contraste franc au survol et ombre nette.
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = Color(MenuTheme.ACCENT, 0.55)
-	hover.bg_color = Color(MenuTheme.ACCENT, 0.07)
+	hover.border_color = Charte.HALOGENE
+	hover.bg_color = Color(Charte.HALOGENE.r, Charte.HALOGENE.g, Charte.HALOGENE.b, 0.15)
+	hover.shadow_size = 0
+	hover.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	hover.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	btn.add_theme_stylebox_override("hover", hover)
 
 	# L'apparence de l'entrée SÉLECTIONNÉE — celle qui commande le cadre de droite.
-	#
-	# **Discrète, et voulue telle** (arbitrage d'Adrien, 2026-08-24) : bleu autour,
-	# ambre dedans.
-	#
-	# C'est la BORDURE qui identifie — deux pixels d'ambre plein, lisibles d'un
-	# coup d'œil dans une colonne — et le fond ne fait que réchauffer. Un premier
-	# essai à un quart d'opacité donnait un aplat : l'entrée cessait d'être choisie
-	# pour devenir un bouton d'une autre couleur, et le libellé y perdait son
-	# contraste. À un huitième, l'ambre se voit sans couvrir, et le liseré bleu du
-	# curseur reste le premier lu — ce qu'il doit être, puisqu'il dit où l'on est.
+	# Bordure ambre énergique et ombre dure Roman Graphique.
 	var choisie := normal.duplicate() as StyleBoxFlat
 	choisie.border_color = MenuTheme.GOLD
-	choisie.set_border_width_all(2)
-	choisie.bg_color = Color(MenuTheme.GOLD, 0.12)
+	choisie.set_border_width_all(MenuWidgets.BORDER_WIDTH_CONTROL)
+	choisie.bg_color = Color(MenuTheme.GOLD.r, MenuTheme.GOLD.g, MenuTheme.GOLD.b, 0.22)
+	choisie.shadow_size = 0
+	choisie.shadow_offset = MenuWidgets.SHADOW_OFFSET_BUTTON
+	choisie.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
 	_entry_styles[btn] = {"repos": normal, "survol": hover, "choisie": choisie}
 
-	# **Le focus de Godot ne peint plus rien**, et c'est le correctif du défaut
-	# qu'Adrien a vu : il portait l'apparence choisie, en plus de la peinture
-	# explicite de `_peindre()`. Deux mécanismes pour un même signal, sur deux
-	# déclencheurs différents — un clic donne le focus Godot, qui survit à la
-	# sélection suivante. Une entrée s'allumait donc sans être choisie, et se
-	# rallumait au survol.
-	#
-	# La sélection est désormais peinte à un seul endroit. Le focus de Godot n'est
-	# de toute façon pas le curseur du joueur : le jeu a les siens, qui dessinent
-	# leur liseré par-dessus.
 	btn.add_theme_stylebox_override("focus", normal)
 	btn.add_theme_stylebox_override("focus_hover", hover)
-	# L'appui, lui, montre déjà ce que l'entrée est sur le point de devenir.
-	btn.add_theme_stylebox_override("pressed", choisie)
-	btn.add_theme_stylebox_override("hover_pressed", choisie)
+	# L'appui, lui, montre un enfoncement mécanique de la plaque.
+	var pressed := choisie.duplicate() as StyleBoxFlat
+	pressed.shadow_size = 0
+	pressed.shadow_offset = MenuWidgets.SHADOW_OFFSET_PRESSED
+	pressed.shadow_color = MenuWidgets.SHADOW_COLOR_DEFAULT
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("hover_pressed", pressed)
 
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT,

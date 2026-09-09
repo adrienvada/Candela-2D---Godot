@@ -334,9 +334,8 @@ class NeonFocusRing extends Panel:
 		_style.draw_center = false
 		_style.set_border_width_all(3)
 		_style.border_color = tint
-		_style.set_corner_radius_all(10)
-		_style.shadow_size = 10
-		_style.shadow_color = Color(tint.r, tint.g, tint.b, 0.4)
+		_style.set_corner_radius_all(0)
+		_style.shadow_size = 0
 		add_theme_stylebox_override("panel", _style)
 
 	func _ready() -> void:
@@ -453,6 +452,7 @@ var p2_panel: PanelContainer
 
 var p1_hp: ProgressBar
 var p1_hp_bg: ProgressBar
+var p1_hp_hatch: MenuHatchRect
 var p1_cd: CircularCooldown
 var p1_cd_label: Label
 var p1_ammo_label: Label
@@ -470,6 +470,7 @@ var p1_dazzle: ColorRect
 
 var p2_hp: ProgressBar
 var p2_hp_bg: ProgressBar
+var p2_hp_hatch: MenuHatchRect
 var p2_cd: CircularCooldown
 var p2_cd_label: Label
 var p2_ammo_label: Label
@@ -1973,6 +1974,7 @@ func _build_player_hud(player: int) -> Control:
 		p1_panel = panel
 		p1_hp = bars["fg"]
 		p1_hp_bg = bars["bg"]
+		p1_hp_hatch = bars.get("hatch", null)
 		p1_cd = weapon["circle"]
 		p1_cd_label = weapon["label"]
 		p1_ammo_label = weapon.get("ammo", null)
@@ -1984,6 +1986,7 @@ func _build_player_hud(player: int) -> Control:
 		p2_panel = panel
 		p2_hp = bars["fg"]
 		p2_hp_bg = bars["bg"]
+		p2_hp_hatch = bars.get("hatch", null)
 		p2_cd = weapon["circle"]
 		p2_cd_label = weapon["label"]
 		p2_ammo_label = weapon.get("ammo", null)
@@ -2086,12 +2089,13 @@ func _create_glow_panel(color: Color) -> PanelContainer:
 		return panel
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Charte.SURFACE, 0.9)
+	style.bg_color = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.95)
 	style.set_border_width_all(2)
 	style.border_color = color
-	style.set_corner_radius_all(12)
-	style.shadow_color = color
-	style.shadow_size = 15
+	style.set_corner_radius_all(0)
+	style.shadow_size = 0
+	style.shadow_offset = Vector2(4, 4)
+	style.shadow_color = Color(0, 0, 0, 0.95)
 	panel.add_theme_stylebox_override("panel", style)
 	return panel
 
@@ -2106,13 +2110,15 @@ func _create_health_bars(color: Color) -> Dictionary:
 	bg_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var bg_style := StyleBoxFlat.new()
-	bg_style.bg_color = Color(Charte.LINE, 0.5)
-	bg_style.set_corner_radius_all(6)
+	bg_style.bg_color = Charte.SURFACE
+	bg_style.set_border_width_all(1)
+	bg_style.border_color = Charte.LINE
+	bg_style.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("background", bg_style)
 
 	var bg_fill := StyleBoxFlat.new()
-	bg_fill.bg_color = Charte.ROUGE
-	bg_fill.set_corner_radius_all(6)
+	bg_fill.bg_color = Charte.CARMIN
+	bg_fill.set_corner_radius_all(0)
 	bg_bar.add_theme_stylebox_override("fill", bg_fill)
 
 	var fg_bar := ProgressBar.new()
@@ -2124,15 +2130,27 @@ func _create_health_bars(color: Color) -> Dictionary:
 
 	var fg_fill := StyleBoxFlat.new()
 	fg_fill.bg_color = color
-	fg_fill.set_corner_radius_all(6)
-	fg_fill.shadow_color = color
-	fg_fill.shadow_size = 8
+	fg_fill.set_corner_radius_all(0)
+	fg_fill.shadow_size = 0
 	fg_bar.add_theme_stylebox_override("fill", fg_fill)
+
+	var hatch := MenuHatchRect.new()
+	hatch.name = "HatchAlerte"
+	hatch.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
+	hatch.color_ink = Color(0, 0, 0, 0.0)
+	hatch.color_line = Charte.ROUGE
+	hatch.spacing = 8.0
+	hatch.line_width = 1.8
+	hatch.alpha_mix = 0.0
+	hatch.alert_pulse = 0.0
+	hatch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	container.add_child(bg_bar)
 	container.add_child(fg_bar)
+	container.add_child(hatch)
 
-	return {"container": container, "fg": fg_bar, "bg": bg_bar}
+	return {"container": container, "fg": fg_bar, "bg": bg_bar, "hatch": hatch}
 
 func _create_weapon_indicator(color: Color) -> Dictionary:
 	var container := HBoxContainer.new()
@@ -2212,18 +2230,20 @@ func _create_torch_indicator() -> PanelContainer:
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(12)
+	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
 
 	if active:
 		style.bg_color = Color(Charte.LINE, 0.9)
 		style.border_color = player_color
-		style.shadow_color = player_color
-		style.shadow_size = 5
+		style.shadow_color = Color(0, 0, 0, 0.95)
+		style.shadow_size = 0
+		style.shadow_offset = Vector2(3, 3)
 	else:
 		style.bg_color = Color(Charte.SURFACE, 0.8)
 		style.border_color = Color(Charte.LINE, 1.0)
 		style.shadow_size = 0
+		style.shadow_offset = Vector2.ZERO
 
 	panel.add_theme_stylebox_override("panel", style)
 
@@ -2372,7 +2392,7 @@ func _build_debug_panel() -> void:
 	style.bg_color = Color(Charte.NOIR, 0.75)
 	style.set_border_width_all(1)
 	style.border_color = COLOR_LINE
-	style.set_corner_radius_all(6)
+	style.set_corner_radius_all(0)
 	style.content_margin_left = GAP_S
 	style.content_margin_right = GAP_S
 	style.content_margin_top = GAP_XS
@@ -6196,6 +6216,13 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p1_shake_time = 0.2
 		p1_target_hp = p1.hp
 		p1_hp.value = p1.hp
+		if p1_hp_hatch:
+			if p1.hp <= 30.0 and p1.hp > 0.0:
+				p1_hp_hatch.set_alert(true, Charte.ROUGE, 3.5)
+				p1_hp_hatch.alpha_mix = 0.70
+			else:
+				p1_hp_hatch.set_alert(false)
+				p1_hp_hatch.alpha_mix = 0.0
 
 		var p1_reloading: bool = bool(p1.get("is_reloading")) if p1 else false
 		var p1_ammo: int = int(p1.get("current_ammo")) if p1 else 0
@@ -6230,6 +6257,13 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 			p2_shake_time = 0.2
 		p2_target_hp = p2.hp
 		p2_hp.value = p2.hp
+		if p2_hp_hatch:
+			if p2.hp <= 30.0 and p2.hp > 0.0:
+				p2_hp_hatch.set_alert(true, Charte.ROUGE, 3.5)
+				p2_hp_hatch.alpha_mix = 0.70
+			else:
+				p2_hp_hatch.set_alert(false)
+				p2_hp_hatch.alpha_mix = 0.0
 
 		var p2_reloading: bool = bool(p2.get("is_reloading")) if p2 else false
 		var p2_ammo: int = int(p2.get("current_ammo")) if p2 else 0

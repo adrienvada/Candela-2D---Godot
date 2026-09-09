@@ -19,6 +19,7 @@ const Eblouissement := preload("res://eblouissement.gd")
 ## **quatre suites de menus échouent** en désignant des écrans qui n'ont rien
 ## fait. Payé le 2026-08-25.
 const Brouillage := preload("res://brouillage.gd")
+const BulletCasingScript := preload("res://bullet_casing.gd")
 
 @export var player_id: int = 0
 
@@ -1082,6 +1083,14 @@ func start_reload() -> void:
 	if current_ammo >= current_weapon.max_ammo: return
 	is_reloading = true
 	reload_time_left = current_weapon.reload_time
+	var slug: String = current_weapon.slug() if current_weapon.has_method("slug") else "pistolet"
+	AudioManager.play_weapon_reload(slug, global_position)
+	# Éjection de douille d'atelier au sol lors du rechargement
+	if slug != "arbalete":
+		var gs = get_tree().get_first_node_in_group("game_state")
+		if gs and gs.arena:
+			var shoot_dir := Vector2.from_angle(rotation)
+			BulletCasingScript.eject(gs.arena, global_position, shoot_dir, slug)
 
 
 func _process(delta):
@@ -1601,8 +1610,14 @@ func _physics_process(delta):
 				var demi_angle: float = current_weapon.demi_angle_torche() if current_weapon \
 					else deg_to_rad(30.0)
 				var ecart := faisceau.orthogonal() * portee * tan(demi_angle) * randf_range(-0.6, 0.6)
+				var poussiere_mod := 1.0
+				var gs := get_node_or_null(^"/root/GameSettings")
+				if gs and gs.has_method("current_effect"):
+					poussiere_mod = gs.current_effect("poussiere_faisceau")
+				# Grain contrasté style roman graphique : vivement révélé sous le faisceau
+				var alpha_grain := randf_range(0.60, 0.85) * poussiere_mod
 				pool.emit(ParticlePool.Kind.DUST, muzzle.global_position + faisceau * portee + ecart,
-					Color(Charte.HALOGENE, 0.18), 1, 4.0, 14.0, faisceau, 160.0)
+					Color(Charte.HALOGENE, alpha_grain), 1, 4.0, 14.0, faisceau, 160.0)
 	elif flashlight.enabled:
 		flashlight.energy = move_toward(flashlight.energy, 0.0, delta * (2.5 / TORCH_FADE_OUT))
 		body_light.energy = move_toward(body_light.energy, 0.0, delta * (0.6 / TORCH_FADE_OUT))
@@ -1915,6 +1930,7 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		var gs = get_tree().get_first_node_in_group("game_state")
 		if gs and gs.has_method("camera_hit_kick"):
 			gs.camera_hit_kick(player_id)
+		AudioManager.play_breath_hit(global_position)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0

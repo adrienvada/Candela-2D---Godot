@@ -49,7 +49,7 @@ décision se juge à cette double aune.
 | 6 | Rangs (catégories et divisions) | ✅ **Terminée** le 2026-08-18 — rang affiché en jeu, plancher déployé, tout le monde démarre Aveugle I. Reste la vérification à deux identités |
 | 7 | Déblocage d'armes par rang | ✅ **Mécanique terminée** le 2026-08-18 — table, grisage, miroir opérationnel, fenêtre de choix. **Manque du contenu, pas du code** : les catégories 5 à 10 ne débloquent rien |
 | 8 | **Appariement** — amical, classé, recherche automatique | ✅ **Terminée côté code** le 2026-08-18 — recherche, bandeau, auto-lancement, fenêtre de choix d'arme, recul contre l'emballement des salons. Découverte croisée prouvée contre le vrai EOS. **Reste l'essai à deux fenêtres**, seule inconnue et humaine |
-| 9 | **Mise à jour du jeu installé** | 🟡 **Écrite le 2026-08-24** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. **Deux jalons humains avant qu'elle serve** : la paire de clés (H8) et la première installation réelle (H9) |
+| 9 | **Mise à jour du jeu installé** | ✅ **Éprouvée le 2026-09-08** — bouton dans le menu, manifeste signé publié par la CI sur tag, remplacement de bundle et correctif `.pck`. Les deux jalons humains sont faits : la paire de clés (H8) et la première mise à jour réelle sur machine (H9, testée par Adrien) |
 
 Les phases 5 à 7 forment une chaîne : les rangs ont besoin d'écrans, les armes
 verrouillées ont besoin des rangs. L'ordre n'est pas négociable sans faire le
@@ -2274,7 +2274,7 @@ intention.
 
 ---
 
-## Phase 9 — Mise à jour du jeu installé 🟡 ÉCRITE, PAS ENCORE ÉPROUVÉE
+## Phase 9 — Mise à jour du jeu installé ✅ ÉPROUVÉE SUR MACHINE RÉELLE (2026-09-08)
 
 Demandée par Adrien le 2026-08-24 : « un endroit du menu où je clique sur mettre
 à jour, et une mise à jour automatique se lance ». Trois façons de faire ont été
@@ -2330,11 +2330,10 @@ Vérifié en exécution, ici :
   décompresse, l'installation en place n'est pas touchée, et une archive qui ne
   contient pas ce qu'elle annonce est refusée en nommant ce qu'elle contient.
 
-**Pas vérifié, et il faut le dire :** l'échange lui-même n'a jamais tourné sur
-une vraie machine — il demande un jeu exporté, installé, et une version publiée.
-Le script est éprouvé par lecture (il attend la fermeture du processus, garde
-l'ancienne installation, sait revenir en arrière), ce qui n'est pas la même chose
-que de l'avoir vu marcher. C'est le jalon H9.
+✅ **Vérifié depuis, et il faut le dire :** l'échange a tourné sur une vraie
+machine (Adrien, sur Antigravity) — le script tenait par lecture (il attend la
+fermeture du processus, garde l'ancienne installation, sait revenir en
+arrière) ; c'est désormais vu marcher, pas seulement lu. Jalon H9 fait.
 
 ### Ce qui reste
 
@@ -2359,10 +2358,13 @@ que de l'avoir vu marcher. C'est le jalon H9.
      sans quoi reposer le même nom de tag entre en conflit avec elle. Celui du
      25 août (« Candela v0.1.0 ») est **encore là au 2026-08-31**, vérifié par
      `gh release list` — à supprimer avant de reposer `v0.1.0` pour de bon.
-2. **H9 — la première publication.** Supprimer le brouillon orphelin du
-   25 août, poser `v0.1.0` sur un commit déjà poussé qui contient la clé
-   publique, laisser la CI publier, puis installer et mettre à jour sur une
-   vraie machine.
+2. **H9 — la première publication, et la première mise à jour réelle.** ✅
+   **Fait.** Trois Releases publiées depuis (`v0.1.0` le 2026-09-07, `v0.2.0`
+   et `v0.2.1` le 2026-09-08, vérifié par `gh release list` — plus de brouillon
+   orphelin). Adrien confirme avoir testé l'échange lui-même sur une machine
+   réelle (« sur Antigravity ») et l'avoir vu passer : l'installation se met à
+   jour en place. Ce que le script promettait par lecture est désormais vu
+   marcher.
 3. **Windows d'abord.** Adrien le pressent : les premiers joueurs seront sous
    Windows. C'est aussi la plateforme la plus simple ici — pas de notarisation,
    pas de translocation, un dossier et un `.exe`.
@@ -13371,7 +13373,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | Supprimer le brouillon orphelin du 25 août, poser `v0.1.0` sur un commit qui contient la clé, laisser la CI publier, installer sur une vraie machine et appuyer sur le bouton. L'échange de bundle n'a jamais tourné ailleurs qu'en lecture de son propre script : il demande un jeu exporté, installé, et une version publiée. | Après H8 |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. | ✅ **Fait le 2026-09-08** |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 
 ---

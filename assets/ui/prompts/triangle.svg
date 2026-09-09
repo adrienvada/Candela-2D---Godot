@@ -1,20 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="20.083px" height="20.082px" viewBox="0 0 20.083 20.082" enable-background="new 0 0 20.083 20.082" xml:space="preserve">
-<g>
-	<g>
-		<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="10.0415" y1="0" x2="10.0415" y2="17.9738">
-			<stop  offset="0" style="stop-color:#5B5B5F"/>
-			<stop  offset="0.0231" style="stop-color:#59595D"/>
-			<stop  offset="0.4507" style="stop-color:#333335"/>
-			<stop  offset="0.7912" style="stop-color:#1C1C1D"/>
-			<stop  offset="1" style="stop-color:#141414"/>
-		</linearGradient>
-		<circle fill="url(#SVGID_1_)" cx="10.042" cy="10.041" r="10.042"/>
-	</g>
-	<path fill="#068C85" d="M10.042,5.904l1.924,3.333l1.925,3.333h-3.849H6.192l1.924-3.333L10.042,5.904 M10.042,2.354L6.58,8.35
-		l-3.461,5.995h6.923h6.923L13.502,8.35L10.042,2.354L10.042,2.354z"/>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Fond octogonal chanfreiné à 45° -->
+  <polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="#101216" stroke="#000000" stroke-width="2.5" stroke-linejoin="miter"/>
+  
+  <!-- Hachures d'ombre au pochoir -->
+  <g stroke="#000000" stroke-width="1.8" stroke-linecap="square">
+    <line x1="14" y1="21" x2="21" y2="14"/>
+    <line x1="11" y1="22" x2="22" y2="11"/>
+    <line x1="15" y1="22" x2="22" y2="15"/>
+    <line x1="18" y1="22" x2="22" y2="18"/>
+  </g>
+
+  <!-- Biseau d'acier intérieur -->
+  <polygon points="7.5,2.5 16.5,2.5 21.5,7.5 21.5,16.5 16.5,21.5 7.5,21.5 2.5,16.5 2.5,7.5" fill="none" stroke="#2B333D" stroke-width="1"/>
+
+  <!-- Ombre d'encre décalée pour le triangle -->
+  <polygon points="12,4.8 19.5,17.5 4.5,17.5" fill="#000000" transform="translate(1.2, 1.2)"/>
+
+  <!-- Triangle acéré incisif -->
+  <polygon points="12,4.8 19.5,17.5 4.5,17.5" fill="#44D976" stroke="#000000" stroke-width="1.2" stroke-linejoin="miter"/>
+  <polygon points="12,8.5 16.5,15.5 7.5,15.5" fill="#101216" stroke="#000000" stroke-width="1.2" stroke-linejoin="miter"/>
 </svg>

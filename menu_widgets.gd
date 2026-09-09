@@ -13,6 +13,7 @@ extends RefCounted
 
 const Charte := preload("res://charte.gd")
 const MenuTheme := preload("res://menu_theme.gd")
+const MenuHatchRect := preload("res://menu_hatch_rect.gd")
 
 # --- Rayons de courbure standards (Roman Graphique Brutaliste : angles vifs) --
 const CORNER_BUTTON := 0
@@ -315,3 +316,61 @@ static func make_line_edit_style(focused: bool = false) -> StyleBoxFlat:
 	else:
 		box.shadow_offset = Vector2.ZERO
 	return box
+
+
+# =============================================================================
+# TRAMES D'ENCRAGE & HACHURES (« ROMAN GRAPHIQUE BRUTALISTE » - ÉTAPE 2)
+# =============================================================================
+
+## Crée une surface de trame / hachures autonome.
+static func make_hatch_rect(preset: int = MenuHatchRect.PatternMode.CROSS,
+		accent: Color = Charte.LINE) -> MenuHatchRect:
+	var h := MenuHatchRect.new()
+	h.pattern_mode = preset
+	h.color_ink = Charte.SURFACE
+	h.color_line = accent
+	return h
+
+
+## Crée un panneau texturé de hachures (fond inactif, encart technique ou case de BD).
+static func make_hatch_panel(accent: Color = Charte.LINE,
+		pattern_mode: int = MenuHatchRect.PatternMode.CROSS,
+		density: float = 0.35) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := make_panel_style(accent, CORNER_PANEL, BORDER_WIDTH_PANEL, Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.40))
+	panel.add_theme_stylebox_override("panel", style)
+
+	var hatch := MenuHatchRect.new()
+	hatch.pattern_mode = pattern_mode
+	hatch.color_ink = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.90)
+	hatch.color_line = accent * 0.75
+	hatch.spacing = 12.0
+	hatch.density = density
+	hatch.roughness = 0.20
+	hatch.border_width = 0.0
+	hatch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hatch.show_behind_parent = true
+	panel.add_child(hatch)
+
+	return panel
+
+
+## Crée une fenêtre modale habillée de trames d'encrage.
+static func make_hatch_modal(accent: Color = MenuTheme.ACCENT) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var style := make_modal_style(accent)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var hatch := MenuHatchRect.new()
+	hatch.pattern_mode = MenuHatchRect.PatternMode.SINGLE_45
+	hatch.color_ink = Color(Charte.SURFACE.r, Charte.SURFACE.g, Charte.SURFACE.b, 0.96)
+	hatch.color_line = Color(accent.r, accent.g, accent.b, 0.15)
+	hatch.spacing = 14.0
+	hatch.density = 0.25
+	hatch.roughness = 0.10
+	hatch.border_width = 0.0
+	hatch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hatch.show_behind_parent = true
+	panel.add_child(hatch)
+
+	return panel

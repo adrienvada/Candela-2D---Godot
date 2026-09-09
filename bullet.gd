@@ -613,7 +613,7 @@ func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0):
 ## arène), et un quatrième finirait par diverger.
 func _spawn_wall_effects(pos: Vector2, avec_son: bool = true):
 	if avec_son:
-		AudioManager.play_sfx_2d_random_pitch("wall_impact", pos, 0.92, 1.08)
+		AudioManager.play_wall_impact(pos)
 	# Sparks bounce BACKWARDS from the wall
 	_spawn_spark_particles(pos, Charte.AMBRE, 12, 100.0, 450.0, -direction, 120.0)
 	# DA2.9 — l'éclat reste. Les étincelles disent l'instant, la marque dit que

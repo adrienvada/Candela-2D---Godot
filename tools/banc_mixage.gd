@@ -63,6 +63,10 @@ const FAMILLES: Array[Dictionary] = [
 	{"f": "shell", "salle": 1, "titre": "Douille"},
 	{"f": "wall_brush", "salle": 1, "titre": "Frôlement de mur"},
 	{"f": "bolt_flight", "salle": 1, "titre": "Frôlement du carreau"},
+	{"f": "breath_hit", "salle": 1, "titre": "Impact corporel / souffle (chair)"},
+	{"f": "weapon_reload", "salle": 1, "titre": "Rechargement d'arme"},
+	{"f": "torch_on", "salle": 1, "titre": "Torche — allumage (clic sec)"},
+	{"f": "torch_off", "salle": 1, "titre": "Torche — extinction (clic)"},
 	# La fusée éclairante (FU1-FU2.1). **Le rebond et l'atterrissage sont deux
 	# familles et non une**, pour la raison même qui sépare `ricochet` de
 	# `wall_impact` : le rebond dit « la lumière va encore bouger », l'atterrissage
