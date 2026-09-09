@@ -12016,8 +12016,23 @@ cône, le plan `duel` en a **deux**. Le reste s'est lu dans les masques.
   licence des images. Ils sont marqués comme tels plutôt que devinés : un
   presskit dont un champ est inventé fait perdre la confiance sur tous les
   autres.
-- **DA7.4 Un site d'une page.** *(S)* — 🟡 **première version en ligne le
-  2026-09-09** : https://claude.ai/code/artifact/de476ec0-33c9-4874-9201-a8c93283737c
+- **DA7.4 Un site d'une page.** *(S)* — ✅ **LIVRÉ le 2026-09-09, en ligne sur
+  le domaine d'Adrien** : **https://adrienvada.fr/candela-2d/** — dépôt séparé
+  `adrienvada/candela-2d`, GitHub Pages, source versionnée dans `tools/site/`
+  (gabarit + assembleur à deux modes). Miroir de relecture :
+  https://claude.ai/code/artifact/de476ec0-33c9-4874-9201-a8c93283737c
+
+  **La page est un défilement narratif** : sept scènes, les planches de l'intro
+  (DA6.6) en fond plein écran qui se relaient, le contenu en cases d'encre
+  par-dessus. Le téléchargement est en deuxième scène, sur le fond de la porte
+  entrouverte.
+
+  **La seule chose qui ne se met pas à jour toute seule est le tampon de
+  version.** Les liens passent par `releases/latest/download/`, donc ils suivent
+  les sorties sans que la page change ; le numéro affiché, lui, est écrit en dur
+  et daté — un numéro nu sur une page qui ne se régénère pas finit par mentir.
+  À changer à chaque sortie, en le lisant dans les *releases* et **jamais** dans
+  `config/version` de `project.godot` : les deux divergent en permanence.
   La page est **une planche de bande dessinée** : des cases encadrées à l'encre
   avec repères de massicot, posées sur une gouttière hachurée à 45°, récitatifs
   en boîte, lettrage au pochoir. Le vocabulaire ne vient pas d'un modèle de site,
