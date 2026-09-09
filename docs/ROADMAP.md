@@ -7281,7 +7281,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   **✅ Fait** — CanvasLayer propre à GameState (ui.gd est à l'autre session),
   nettoyé par `_abort_killcam` sur tous les chemins de sortie.
 - **V2.8 Acouphène de mort** — sifflement + monde étouffé 1 s côté perdant. —
-  *assets : 1 sample.*
+  *assets : 1 sample.* **✅ Fait le 2026-09-09** — câblé dans `player.gd:die()`
+  via `AudioManager.jouer_acouphene_mort()`, avec repli propre silencieux si
+  le sample d'acouphène est absent.
 - **V2.9 « Effleuré : 13 px »** — afficher au perdant la distance
   perpendiculaire du tir fatal (la formule de dégâts la connaît). Le « j'y
   étais presque » est le moteur du rematch. **✅ Fait** — écrit par la balle
@@ -7337,8 +7339,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     `Protocol.VERSION`, ce qui dépasse un item de game feel.
 - **V3.3 Décompte qui frappe** — 3-2-1 en pop TRANS_BACK + note montante par
   chiffre ; le CanvasModulate remonte du noir absolu au noir de jeu sur le
-  « 1 ». — *assets : 3 notes courtes.* **Le pop est fait** (`ui.set_countdown`,
-  TRANS_BACK depuis 1,7). Les notes attendent leurs samples. ⚠️ **La clause du
+  « 1 ». — *assets : 3 notes courtes.* **✅ Fait** — le pop est fait (`ui.set_countdown`,
+  TRANS_BACK depuis 1,7) et les 3 notes montantes sont câblées dans
+  `game_state.gd:_process()` via `AudioManager.play_count(_tic)`. ⚠️ **La clause du
   CanvasModulate n'a pas de cible :** celui de l'arène est déjà `Color(0,0,0)`,
   et la calibration règle un **gamma**, pas cette couleur — il n'existe donc
   aucun « noir de jeu » au-dessus du noir absolu vers lequel remonter. Rendre
@@ -7346,8 +7349,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   aux lumières des joueurs pendant le décompte, donc à ce qui est visible au
   départ d'une manche : c'est une décision de jeu, pas de finition.
 - **V3.4 Dernière minute** — chrono or, stem batterie (V1.2), tic-tac sous
-  10 s. — *assets : 1 tic-tac.* **✅ Fait côté image** : or sous 60 s, rouge
-  d'alerte sous 10 s, et le chrono **bat à la seconde** sous ce dernier seuil.
+  10 s. — *assets : 1 tic-tac.* **✅ Fait** : or sous 60 s, rouge
+  d'alerte sous 10 s, pulsation métronomique et battement sonore
+  `AudioManager.play_ui("ui_tick", -4.0)` sous 10 s câblé dans `game_state.gd`.
   - Le battement naît du **temps lui-même** (`fmod(time_left, 1.0)`), pas d'un
     tween. Un tween relancé à chaque frame ne bat pas, il tremble — et un chrono
     resynchronisé par le réseau saute d'une fraction de seconde sans casser la
@@ -7468,7 +7472,9 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   panoramique — la source cesse d'être un point.
 - **V4.2 Hitmarker centre/bord** — « thock » à pleins dégâts, « tick » en
   effleurement, branché sur `rpc_update_hp` (autoritaire), pas sur la balle
-  prédite. — *assets : 2 samples.*
+  prédite. — *assets : 2 samples.* **✅ Fait le 2026-09-09** — différenciation
+  selon `proximite_bord` (< 0.45 = coup net au centre, >= 0.45 = effleurement
+  tangentiel) via `AudioManager.play_hit(pos, proximite_bord)`.
 - **V4.3 Ricochet du fusil** — étincelles + « zing » par rebond : récompenser
   le geste le plus stylé du jeu. — *assets : 3 samples.*
 - **V4.4 Tir à sec** — clic + tremblement du cercle de cooldown quand on
@@ -7493,14 +7499,17 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   synchrone du stem heartbeat. **✅ Fait** — même battement que le pouls
   haptique V1.5 : un seul cœur pilote l'image, la main et le stem.
 - **V4.8 Douilles** — éjection via le pool + tintement décalé de 300-500 ms. —
-  *assets : 3-4 samples.*
+  *assets : 3-4 samples.* **✅ Fait le 2026-09-09** — tintement métallique
+  différé dans `player.gd:_tinter_la_douille()` via `AudioManager.play_shell()`.
 - **V4.9 Souffle du blessé** — souffle coupé abstrait sur gros impact.
   **✅ Fait le 2026-09-08** — 6 variantes organiques réelles de compression
   corporelle et souffle coupé (`breath_hit_01.wav` à `06.wav`), inscrites au
   manifeste, câblées dans `player.gd:rpc_update_hp()` et jouées via
   `AudioManager.play_breath_hit()`. Portée calée sur celle d'un pas (-13.0 dB).
 - **V4.10 Vol de l'arbalète** — chuintement doppler discret du carreau sans
-  lumière. — *assets : 1 boucle courte.*
+  lumière. — *assets : 1 boucle courte.* **✅ Fait le 2026-09-09** — souffle
+  discret en vol câblé dans `bullet.gd:_physics_process()` via
+  `AudioManager.play_bolt_flight()`.
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
   (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
   de la lumière déjà portée par la goutte, décroissance linéaire dans
@@ -7701,7 +7710,10 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
 - **V6.9 Écran HISTORIQUE** — lire `match_history.json` (armes, cartes,
   durées) dans un onglet : contempler ses matchs, c'est revenir.
 - **V6.10 Cartes de fin de soirée** — au retour menu après ≥ 3 matchs :
-  « Ce soir : 7 matchs, 4-3, arme favorite : pompe ».
+  « Ce soir : 7 matchs, 4-3, arme favorite : pompe ». **✅ Fait le 2026-09-09**
+  — implémenté dans `serie_de_session.gd:carte_soiree()`, testé dans
+  `tools/test_serie_de_session.gd`, et affiché dans le bilan et au retour menu
+  via `GameState.carte_de_soiree()`.
 
 ### Vague M — la vitrine : 15 effets visuels de menus (2026-08-18)
 

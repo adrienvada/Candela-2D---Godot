@@ -258,6 +258,9 @@ float hash21(vec2 p) {
 
 
 void fragment() {
+	if (niveau <= 0.001) {
+		COLOR = vec4(0.0);
+	} else {
 	// Coordonnées centrées, en fractions de la DEMI-HAUTEUR. L'aspect est
 	// corrigé ici, une fois, pour que tout ce qui suit raisonne en unités rondes.
 	// ⚠️ **La normalisation par la DIAGONALE, et son absence a fait disparaître
@@ -388,5 +391,6 @@ void fragment() {
 		}
 
 		COLOR = vec4(teinte, clamp(a, 0.0, 1.0) * clamp(niveau, 0.0, 1.0));
+	}
 	}
 }

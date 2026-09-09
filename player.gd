@@ -1523,6 +1523,10 @@ func _physics_process(delta):
 			visual_enemy.modulate.a = a
 			if visual_enemy_ptr != null:
 				visual_enemy_ptr.modulate.a = a
+			if visual_reveal_enemy != null:
+				visual_reveal_enemy.modulate.a = a
+			if visual_reveal_enemy_ptr != null:
+				visual_reveal_enemy_ptr.modulate.a = a
 
 	# DA2.4 — le corps roule sur le pied porteur.
 	#
