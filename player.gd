@@ -1745,8 +1745,9 @@ func shoot():
 	
 	current_ammo -= 1
 	shoot_cooldown = current_weapon.cooldown
-	# V1.5 — coup ferme et bref dans la manette du tireur.
-	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
+	# V1.5, renforcé (chantier ressenti lourd) — coup dans la manette du
+	# tireur, en deux temps plutôt qu'un seul pouls plat.
+	_rumble_shoot()
 	
 	var final_rot := rotation
 	if current_spread_bloom > 0.001:
@@ -1786,7 +1787,15 @@ func lancer_fusee():
 # `vibration_manette` (0 à 100 %, pas de plancher en classé : purement local à
 # celui qui la ressent, elle ne porte aucune information sur l'adversaire).
 # ---------------------------------------------------------------------------
-const RUMBLE_SHOOT_STRONG := 0.7
+## Ressenti lourd (au-delà de V1.5) — le tir n'est plus un pouls plat mais
+## deux temps : un claquement bref (les deux moteurs, presque au plafond) puis
+## un grave qui traîne (moteur grave seul). Aucun des deux ne dépend du poids
+## par classe du chantier racine (`candela-10-classes-system`, en cours
+## ailleurs) : uniforme pour l'instant, à moduler par arme le jour où ce
+## chantier fusionne et expose un poids.
+const RUMBLE_SHOOT_SNAP_WEAK := 0.2
+const RUMBLE_SHOOT_SNAP_STRONG := 0.9
+const RUMBLE_SHOOT_TAIL_STRONG := 0.4
 const RUMBLE_HIT_WEAK := 0.5
 const RUMBLE_HIT_STRONG := 0.3
 const RUMBLE_PULSE_WEAK := 0.25
@@ -1830,6 +1839,17 @@ func reset_step_tracker() -> void:
 	_last_step_pos = global_position
 	step_distance_accumulated = 0.0
 	last_fatal_perp = -1.0
+
+## Ressenti lourd du tir : un claquement (les deux moteurs, bref) puis un
+## grave qui traîne (moteur grave seul) — pas un pouls plat. Le second temps
+## tient dans le cooldown de l'arme la plus rapide (Pistolet, 0,16 s) ; en
+## rafale, chaque tir écrase l'attente en cours et relance la sienne, ce qui
+## se ressent comme un grondement continu plutôt qu'un défaut.
+func _rumble_shoot() -> void:
+	_rumble(RUMBLE_SHOOT_SNAP_WEAK, RUMBLE_SHOOT_SNAP_STRONG, 0.07)
+	await get_tree().create_timer(0.07).timeout
+	if is_instance_valid(self):
+		_rumble(0.0, RUMBLE_SHOOT_TAIL_STRONG, 0.08)
 
 ## Double coup du kill, ressenti par le vainqueur seulement.
 func rumble_kill() -> void:
