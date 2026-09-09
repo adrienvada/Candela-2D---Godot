@@ -2232,6 +2232,14 @@ func diagnostic_ecoute() -> String:
 	if arbre.root.is_audio_listener_2d():
 		auditeurs.append("racine%s" % ("" if arbre.root.get_audio_listener_2d() != null else " (SANS oreille — point fixe)"))
 	for v in _vues_ecoutantes:
+		# ⚠️ **Sauter la racine : elle est deja comptee au-dessus.** Depuis que
+		# l'oreille peut vivre DANS la racine (duel peint par elle), celle-ci
+		# figure aussi dans `_vues_ecoutantes` — et le diagnostic annoncait
+		# « auditeurs : racine, root », soit DEUX auditeurs la ou il n'y en a
+		# qu'un. Un diagnostic qui se trompe sur le nombre d'auditeurs est pire
+		# qu'un diagnostic absent : c'est ce nombre qu'on lit pour trancher.
+		if v == arbre.root:
+			continue
 		if v != null and is_instance_valid(v) and (v as Viewport).is_audio_listener_2d():
 			auditeurs.append(String((v as Viewport).name))
 
@@ -2250,28 +2258,80 @@ func diagnostic_ecoute() -> String:
 	lignes.append("[audio] portee d'un pas=%.0f px, d'un tir=%.0f px (carte %.0f, facteur %.2f)" % [
 		portee_courante("footstep"), portee_courante("shoot"),
 		_portee_carte, facteur_portee])
-	var idx := AudioServer.get_bus_index(BUS_SFX)
-	if idx != -1:
-		lignes.append("[audio] bus SFX : %s, volume %.1f dB" % [
-			"COUPE" if AudioServer.is_bus_mute(idx) else "actif",
-			AudioServer.get_bus_volume_db(idx)])
+	# ⚠️ **LE FAIT QUI DECIDE DE L'AUDIBILITE, et il manquait.**
+	#
+	# « auditeurs : racine » ne prouve RIEN si la racine n'est pas dans le monde
+	# ou vivent les voix : `AudioStreamPlayer2D` ne sort que vers les viewports
+	# auditeurs de SON `World2D`. Le diagnostic pouvait donc afficher un etat
+	# parfait pendant que rien ne sortait — c'est exactement ce qu'il a fait le
+	# 2026-09-09, et j'ai conclu « configuration correcte » sur cette foi.
+	if voix != null:
+		var monde_pool := voix.get_world_2d()
+		var accord := PackedStringArray()
+		for v in ([arbre.root] as Array):
+			accord.append("racine:%s" % ("OUI" if (v as Viewport).world_2d == monde_pool else "NON"))
+		for v in _vues_ecoutantes:
+			if v != null and is_instance_valid(v) and v != arbre.root:
+				accord.append("%s:%s" % [(v as Viewport).name,
+					"OUI" if (v as Viewport).world_2d == monde_pool else "NON"])
+		lignes.append("[audio] l'auditeur est-il dans le monde du pool ? %s"
+			% " ".join(accord))
+
+	# ⚠️ **TOUS les bus, pas le seul SFX.** `Master` coupe rend le jeu muet en
+	# entier, musique comprise — et le diagnostic annoncait « bus SFX : actif »
+	# avec aplomb pendant qu'un etage au-dessus pouvait tout avaler. On ne
+	# diagnostique pas une chaine en n'en regardant qu'un maillon.
+	for nom in [BUS_MASTER, "Music", BUS_SFX, BUS_SFX_OCCLUS, "Speaker"]:
+		var i := AudioServer.get_bus_index(nom)
+		if i == -1:
+			lignes.append("[audio] bus %s : ABSENT" % nom)
+			continue
+		lignes.append("[audio] bus %-11s %s, %+.1f dB, %d effet(s)" % [
+			nom + " :", "COUPE" if AudioServer.is_bus_mute(i) else "actif",
+			AudioServer.get_bus_volume_db(i), AudioServer.get_bus_effect_count(i)])
 	lignes.append("[audio] replis hors physique : %d" % occlusions_hors_frame)
 	return "\n".join(lignes)
 
 ## L'etat s'imprime aux transitions, en build debug seulement.
 ##
 ## **En build release, `print()` est tamponne et vide a la fermeture propre** :
-## un diagnostic qui ne sort qu'a la sortie ne diagnostique rien. Il n'a de sens
-## que depuis l'editeur, ou Adrien le lit pendant qu'il joue.
+## un diagnostic qui ne sort qu'a la sortie ne diagnostique rien.
+##
+## ⚠️ **CE DIAGNOSTIC ETAIT INUTILISABLE LA OU ADRIEN JOUE, et ca s'est vu le
+## 2026-09-09.** Il rapporte un silence complet en match reseau ; je lui demande
+## d'appuyer sur F4 ; F4 ne produit RIEN, parce que tout ce traceur sortait sur
+## `if not OS.is_debug_build(): return`. Un outil de diagnostic qui ne marche
+## que dans l'editeur ne diagnostique pas le jeu : il diagnostique l'editeur.
+##
+## Il ECRIT donc desormais dans un fichier, dans TOUS les builds. La console
+## reste reservee au debogage — elle est confortable et immediate quand elle
+## existe —, mais elle n'est plus la seule sortie.
+const FICHIER_DIAGNOSTIC := "user://diagnostic_ecoute.txt"
+
 var _a_trace_une_pose := false
 
 func _tracer_ecoute(quand: String) -> void:
-	if not OS.is_debug_build():
-		return
 	if quand.begins_with("une oreille") or quand.begins_with("deux oreilles"):
 		_a_trace_une_pose = true
-	print("--- ecoute : %s ---" % quand)
-	print(diagnostic_ecoute())
+	var bloc := "--- ecoute : %s (%s) ---\n%s\n" % [
+		quand, Time.get_datetime_string_from_system(), diagnostic_ecoute()]
+	if OS.is_debug_build():
+		print(bloc)
+	# En APPEND : le defaut se lit dans la SUITE des transitions, pas dans un
+	# etat isole. Une pose suivie d'un retrait qui la defait est invisible sur
+	# une photo et evidente sur la bande — c'est exactement le defaut du
+	# 2026-08-25, et ecraser le fichier a chaque fois le cacherait de nouveau.
+	var f := FileAccess.open(FICHIER_DIAGNOSTIC, FileAccess.READ_WRITE)
+	if f == null:
+		f = FileAccess.open(FICHIER_DIAGNOSTIC, FileAccess.WRITE)
+	if f == null:
+		return
+	f.seek_end()
+	f.store_string(bloc + "\n")
+	# ⚠️ **`flush()` explicite : sans lui, un jeu qu'on quitte brutalement — ou
+	# qui plante — emporte le diagnostic qu'on venait de prendre.** C'est la
+	# meme raison qui rend `print()` inutile en release.
+	f.flush()
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
