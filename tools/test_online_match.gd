@@ -149,8 +149,22 @@ func _run_eblouissement() -> void:
 	Input.action_press("p1_torch", appui_leger)
 	await _tenir_devant(p1, p2, 1.0)
 	_check("la torche braquée éblouit", p2.dazzle_amount > 0.4, str(p2.dazzle_amount))
-	_check("celui qui éclaire n'est pas ébloui", is_zero_approx(p1.dazzle_amount),
-		str(p1.dazzle_amount))
+	# ⚠️ **Ce contrôle disait « pas ébloui » et dit désormais « très peu ébloui ».**
+	# Adrien a tranché le 2026-09-09 que l'on s'éblouit soi-même — « mais très
+	# très léger quand on utilise sa lampe torche, sinon ça ne sert à rien
+	# d'allumer sa torche ». L'ancien contrôle était juste par CONSTRUCTION :
+	# `_maj_eblouissement` ne formait que les deux paires croisées, l'auto-
+	# éblouissement était impossible et il n'y avait rien à vérifier.
+	#
+	# Il vérifie maintenant les deux moitiés de la décision, parce qu'une seule
+	# ne dit rien : que le porteur SOIT ébloui, et qu'il le soit **au moins cinq
+	# fois moins** que celui qu'il braque. Un contrôle qui exigerait seulement
+	# « supérieur à zéro » laisserait passer une rétrodiffusion à 0,5, c'est-à-dire
+	# la torche redevenue inutile ; un contrôle qui exigerait seulement « faible »
+	# laisserait passer le retour à zéro et perdrait la décision.
+	_check("celui qui éclaire est ébloui, mais à peine",
+		p1.dazzle_amount > 0.0 and p1.dazzle_amount < p2.dazzle_amount / 5.0,
+		"porteur=%.3f cible=%.3f" % [p1.dazzle_amount, p2.dazzle_amount])
 
 	# Le contre-test qui aurait tout dit : la valeur redescend, et elle redescend
 	# SEULEMENT quand le faisceau s'éteint.

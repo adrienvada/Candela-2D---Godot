@@ -142,3 +142,78 @@ static func pic_de_flash(distance: float, eclat_arme: float) -> float:
 		return 0.0
 	var proximite := 1.0 - maxf(distance, 0.0) / PORTEE_FLASH
 	return PIC_FLASH * proximite * clampf(eclat_arme, 0.0, 1.0)
+
+
+# =============================================================================
+# LES SOURCES — chantier CLASSES, étape 6 (2026-09-09)
+# =============================================================================
+#
+# Adrien a tranché que **toutes les sources de lumière peuvent éblouir**, avec
+# deux régimes : la torche aveugle quand elle est DIRIGÉE, une lumière posée
+# aveugle par PROXIMITÉ. Ce fichier ne connaît ni nœuds ni autoloads — il porte
+# l'arithmétique, `game_state` porte la boucle.
+
+## Le coefficient de RÉTRODIFFUSION : ce qu'une source PORTÉE verse dans les yeux
+## de celui qui la porte.
+##
+## ⚠️ **Ce n'est pas un dosage, c'est la sortie d'un cas dégénéré.** Le modèle
+## échantillonne le cookie de la source à la position de la cible ; pour sa
+## propre torche, source et cible sont le MÊME POINT — c'est-à-dire le centre du
+## cookie, sa valeur maximale. Appliqué tel quel, allumer sa lampe saturerait
+## l'éblouissement instantanément, et « ça ne servirait à rien d'allumer sa
+## torche » (Adrien, 2026-09-09).
+##
+## La règle est donc physique plutôt qu'arbitraire : **on ne se tient pas DANS
+## son faisceau.** Ce que reçoivent ses yeux est la lumière qui revient des murs
+## et de la poussière — la rétrodiffusion, que le jeu dessine déjà autour du
+## porteur de torche. Elle est faible, et elle ne se lit pas dans le cookie.
+##
+## ⚠️ **Une source POSÉE ne passe PAS par ici.** Fusée, gadget, projecteur : ils
+## éblouissent leur poseur exactement comme ils éblouissent l'autre. On ne lance
+## pas une fusée à ses pieds impunément.
+const RETRODIFFUSION := 0.06
+
+## Le rayon de référence des sources, en pixels de monde — l'empreinte d'une
+## torche moyenne. Sert d'unité au gain de taille.
+##
+## ⚠️ **Recopié plutôt qu'importé de `WeaponData`**, comme `RAYON_REFERENCE` l'est
+## déjà ailleurs : ce fichier n'a AUCUNE dépendance, c'est ce qui le rend
+## chargeable en `--script`, et c'est une propriété qu'on ne dépense pas pour
+## économiser une constante.
+const EMPREINTE_REFERENCE := 590.0
+
+## De combien la TAILLE d'une source multiplie ce qu'elle coûte.
+##
+## ⚠️ **L'exposant vaut ZÉRO aujourd'hui, et c'est délibéré.** La refonte des
+## sources doit d'abord se prouver **à comportement identique** ; activer le gain
+## dans le même lot mêlerait « le modèle a changé » et « les valeurs ont changé »,
+## et on ne saurait plus lequel des deux explique ce qu'on voit. Le passer à 0,5
+## est un commit à part, dosé au banc.
+##
+## Quand il s'activera, la MÊME fonction devra servir au plafond et au rayon du
+## halo — deux gains séparés finiraient par diverger. ⚠️ Mais **halo et voile
+## gardent leurs deux courbes** : le brouillage multiplie l'éblouissement par
+## `GAIN` (2,0) et sature dès 0,5, le voile le prend brut. Le halo cache tôt, le
+## voile gêne progressivement, et c'est délibéré — les réunir « corrigerait » une
+## incohérence qui n'en est pas une.
+const EXPOSANT_TAILLE := 0.0
+
+## Le gain d'une source d'empreinte `rayon`, borné à ×2.
+static func gain_taille(rayon: float) -> float:
+	if EXPOSANT_TAILLE <= 0.0 or rayon <= 0.0:
+		return 1.0
+	return minf(2.0, pow(rayon / EMPREINTE_REFERENCE, EXPOSANT_TAILLE))
+
+
+## Ce qu'une source de PROXIMITÉ verse à `distance`, entre 0 et 1.
+##
+## Pas d'axe : une fusée au sol crache dans toutes les directions. La décroissance
+## est quadratique — linéaire, elle aurait donné à une fusée une portée
+## d'aveuglement bien plus grande que celle d'une torche, et le MAX l'aurait alors
+## choisie presque toujours. Mesuré côté torche : elle cesse d'éblouir au-delà de
+## ~400 px (0,81 à 140 px dans l'axe, 0,00 à 460).
+static func intensite_proximite(distance: float, rayon: float) -> float:
+	if rayon <= 0.0 or distance >= rayon:
+		return 0.0
+	var t := 1.0 - distance / rayon
+	return t * t

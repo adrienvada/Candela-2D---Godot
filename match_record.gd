@@ -18,7 +18,25 @@ const HISTORY_PATH := "user://match_history.json"
 ##     **rejouable**. Les entrées v2 n'ont pas d'identifiant de match : elles sont
 ##     définitivement irrejouables, et `pending_reports()` les écarte plutôt que
 ##     de fabriquer un rapport que le serveur ne saurait pas apparier.
-const SCHEMA_VERSION := 3
+## 4 — ajout de `classe_j1` et `classe_j2` (chantier CLASSES, 2026-09-09). Le
+##     journal ne disait pas QUELLE CLASSE avait été jouée : `arme_j1` porte le
+##     nom de l'ARME (« Pistolet silencieux »), et depuis que dix classes se
+##     partagent dix armes, ce nom ne désigne plus le joueur qu'on veut retrouver.
+##     Les deux nouvelles clés portent le **slug de classe**, celui qui nomme déjà
+##     le cookie, le sprite, les sons et l'icône.
+##
+##     ⚠️ **`classe_j1` n'a RIEN à voir avec `classe`.** La clé `classe`, arrivée
+##     en v3, est un booléen qui veut dire « ce match comptait au classement ».
+##     Le rapprochement est un piège de lecture, pas de code : les deux vivent
+##     dans le même dictionnaire, et confondre les deux ferait remonter au
+##     classement des matchs amicaux — ou l'inverse. Le nom `classe` était mal
+##     choisi ; il est publié, donc il reste.
+##
+##     Les entrées v3 et antérieures n'ont pas ces clés : elles rendent une chaîne
+##     vide, jamais un repli plausible. Un journal qui inventerait « pistolet »
+##     pour un match d'avant les classes fausserait la seule statistique que ces
+##     clés existent pour porter.
+const SCHEMA_VERSION := 4
 
 ## L'historique est plafonné : c'est un journal local, pas une base. Au-delà,
 ## les entrées les plus anciennes sont oubliées.
@@ -74,7 +92,7 @@ static func is_match_over(format: int, p1_rounds: int, p2_rounds: int) -> bool:
 static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: String,
 		map_id: String, mode: String, format: int = Format.BO1,
 		forfeit: bool = false, match_id: String = "", ranked: bool = false,
-		outcome: String = "") -> Dictionary:
+		outcome: String = "", class_1: String = "", class_2: String = "") -> Dictionary:
 	return {
 		"version": SCHEMA_VERSION,
 		"forfait": forfeit,
@@ -83,6 +101,11 @@ static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: S
 		"duree": snappedf(maxf(duration, 0.0), 0.01),
 		"arme_j1": weapon_1,
 		"arme_j2": weapon_2,
+		# ⚠️ Le SLUG de classe, pas son libellé : « Le Braconnier » se traduit et
+		# se renomme, `arbalete` nomme des fichiers. C'est la même règle que
+		# partout ailleurs dans le dépôt, et elle a déjà coûté une leçon.
+		"classe_j1": class_1,
+		"classe_j2": class_2,
 		"carte": map_id,
 		"horodatage": Time.get_datetime_string_from_system(true, true),
 		"mode": mode,

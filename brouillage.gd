@@ -525,27 +525,35 @@ static func emprise_copie(taille: Vector2, rotation: float,
 ##
 ## | vue | canevas | framebuffer | facteur |
 ## |---|---|---|---|
-## | racine (en ligne, entraînement) | 1920×1080 | 3414×1920 | **1,778** |
-## | écran scindé, chaque vue | 957×1080 | 957×1080 | 1,000 |
+## | racine, fenêtre 1280×720  | 1920×1080 | 1280×720  | **0,667** |
+## | racine, fenêtre 2560×1440 | 1920×1080 | 2560×1440 | **1,333** |
+## | écran scindé, chaque vue  | 957×1080  | 957×1080  | 1,000 |
 ##
 ## Une emprise calculée en canevas couvrait donc **56 % de sa largeur voulue** en
 ## vue unique : près de la moitié de la zone n'était jamais recopiée, et le flou
 ## y lisait des texels périmés. C'est le « polygone à arêtes franches » signalé
 ## par Adrien le 2026-08-27.
 ##
-## ⚠️ **Et ce n'est pas l'étirement de la fenêtre, contrairement à ce que la
-## feuille de route a longtemps dit.** Le canevas est FIGÉ à 1920×1080 par
-## `stretch/mode = canvas_items` ; le framebuffer suit les pixels **natifs** de
-## l'écran. Deux mises à l'échelle s'empilent — l'étirement (1,333) puis la
-## densité Retina (1,333) — et **aucune API de transformation ne rapporte la
-## seconde** : `get_final_transform`, `get_screen_transform` et
-## `get_stretch_transform` disent toutes 1,333 quand la vérité est 1,778. Voilà
-## pourquoi le défaut a survécu à quatre diagnostics : on vérifiait les réglages
-## d'étirement, on les trouvait justes, et on concluait qu'il n'y avait pas de
-## mise à l'échelle.
+## ⚠️ **Ce facteur EST l'étirement de la fenêtre, et rien d'autre.** Ce
+## paragraphe a affirmé le contraire pendant deux jours, et c'est lui qui a
+## fabriqué le disque gris signalé par Adrien le 2026-09-09.
 ##
-## **La seule source honnête est `get_texture().get_size() / get_visible_rect()
-## .size`** — c'est ce que `brouillage_vue.gd` passe en `texels_par_unite`.
+## Il disait qu'une seconde mise à l'échelle « native » s'empilait sans
+## qu'aucune API ne la rapporte, et il en concluait que les transformations
+## mentaient. Mesuré le 2026-09-09 : le framebuffer relu par
+## `get_texture().get_image().get_size()` vaut **exactement la taille de la
+## fenêtre**, et `get_final_transform().get_scale()` rend exactement ce rapport.
+## Les transformations disaient juste. **La source qui ment est
+## `get_texture().get_size()`**, qui rend `fenêtre × étirement` — le facteur au
+## CARRÉ. Le « 1,778 » relevé le 2026-09-07 est 1,333².
+##
+## La leçon vaut plus que la valeur : *quatre diagnostics avaient conclu que les
+## transformations mentaient parce qu'ils les comparaient toutes à la même
+## source fausse.* Un désaccord entre une mesure et trois API qui s'accordent
+## entre elles désigne la mesure, pas les API.
+##
+## **La source honnête est `get_final_transform().get_scale()`** — c'est ce que
+## `brouillage_vue.gd` passe désormais en `texels_par_unite`.
 ##
 ## ## Les deux élargissements, et aucun n'est décoratif
 ##

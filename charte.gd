@@ -649,6 +649,27 @@ const D_LONG := 0.30
 ## la densité et les fichiers ne bougent pas ensemble.
 const DENSITE_ASSETS := 1.0
 
+
+## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
+## texture.
+##
+## ⚠️ **Elle vivait sur `Player`, et elle a DÉMÉNAGÉ ici le 2026-09-09.** Deux
+## raisons, et la seconde décide :
+##
+## 1. elle ne dépend que de `DENSITE_ASSETS`, qui est juste au-dessus — c'était
+##    une fonction de la charte posée ailleurs ;
+## 2. surtout : le leurre de l'Illusionniste en a besoin, et **nommer `Player`
+##    depuis un gadget faisait cesser `tools/test_classes.gd` de compiler.**
+##    `player.gd` nomme `AudioManager`, qui est un autoload, et une suite lancée
+##    en `--script` n'en a aucun. C'est le piège déjà payé le 2026-09-01 par
+##    `fusee_modele.gd` — un fichier qui nomme un autoload devient inchargeable
+##    par tout banc qui le préchargerait.
+##
+## `Player.empreinte_sprite()` n'existe plus : un alias aurait laissé deux noms
+## pour une seule vérité, et rien n'aurait dit lequel fait foi.
+static func empreinte_sprite(largeur_texture: int) -> float:
+	return float(largeur_texture) / DENSITE_ASSETS
+
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],

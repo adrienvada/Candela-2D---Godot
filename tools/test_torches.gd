@@ -67,6 +67,29 @@ func _init() -> void:
 				arme.contains('@export var torch_cookie: String = "pistolet"'))
 			continue
 
+		# ── Les classes du chantier CLASSES ──────────────────────────────────
+		#
+		# ⚠️ **Ce banc cherchait UNE seule forme syntaxique**, `weapon_<slug>.
+		# torch_angle_deg = <n>`, et les six classes de 2026-09-09 sont bâties par
+		# un constructeur — `_classe(slug, libelle, rang, demi_angle, echelle)`.
+		# Le contrôle ne trouvait donc rien et rougissait, alors que rien ne
+		# divergeait : il épinglait la forme, pas le SENS.
+		#
+		# La seconde forme est lue par un parsing EXACT des arguments, jamais par
+		# un `contains` approximatif : c'est le même contrôle — les deux tables
+		# doivent dire le même nombre — appliqué à une écriture différente.
+		#
+		# Et le cookie n'a pas à être cherché séparément : `_classe()` fait
+		# `c.torch_cookie = slug`, donc trouver l'appel PROUVE le nom du cookie.
+		var appel := '_classe("%s", ' % fichier
+		if jeu.contains(appel):
+			var args := _arguments_de(jeu, appel)
+			_vrai("%s : appel de _classe lisible (5 arguments)" % fichier, args.size() == 5)
+			if args.size() == 5:
+				_egal(fichier, "angle", t["angle"], float(args[3]))
+				_egal(fichier, "echelle", t["echelle"], float(args[4]))
+			continue
+
 		var prefixe := "weapon_%s." % fichier
 		_egal(fichier, "angle", t["angle"], _nombre(jeu, prefixe + "torch_angle_deg = "))
 		_egal(fichier, "echelle", t["echelle"], _nombre(jeu, prefixe + "torch_scale = "))
@@ -203,6 +226,26 @@ func _lire(chemin: String) -> String:
 
 ## Premier nombre qui suit `cle` dans le texte. Rend NAN si la clé est absente —
 ## une clé disparue doit échouer, pas passer silencieusement pour un zéro.
+## Les arguments d'un appel, découpés à la virgule de premier niveau.
+##
+## Volontairement simple : les appels visés n'imbriquent ni parenthèse ni
+## virgule dans une chaîne. Rendre un tableau vide plutôt que de deviner si la
+## forme change — un parseur qui improvise sur une syntaxe inattendue vaut moins
+## qu'un contrôle qui dit « je ne sais pas lire ça ».
+func _arguments_de(source: String, appel: String) -> Array:
+	var i := source.find(appel)
+	if i < 0:
+		return []
+	var j := source.find(")", i)
+	if j < 0:
+		return []
+	var brut := source.substr(i + appel.length() - 2, j - i - appel.length() + 2)
+	var out: Array = []
+	for m in brut.split(","):
+		out.append(m.strip_edges().trim_prefix('"').trim_suffix('"'))
+	return out
+
+
 func _nombre(texte: String, cle: String) -> float:
 	var i := texte.find(cle)
 	if i < 0:

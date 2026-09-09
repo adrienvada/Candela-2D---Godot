@@ -60,7 +60,19 @@ func _test_schema_rejouable() -> void:
 	for cle in ["match_id", "classe", "issue", "remonte"]:
 		_check("l'enregistrement porte « %s »" % cle, r.has(cle))
 	_check("et il n'est pas remonté d'avance", not bool(r["remonte"]))
-	_check("le schéma est bien en v3", int(r["version"]) == 3, str(r.get("version")))
+	# ⚠️ **Le nombre est écrit ici, jamais lu depuis `MatchRecord`.** Un contrôle
+	# qui comparerait la version à `SCHEMA_VERSION` ne vérifierait que la
+	# cohérence du fichier avec lui-même : il passerait au vert quel que soit le
+	# numéro, et ne dirait plus jamais qu'une version a bougé. C'est la faute que
+	# `tools/test_audit_menus.gd` a déjà consignée — *« un banc dont l'oracle sort
+	# du code testé ne teste rien : il paraphrase »*.
+	#
+	# Passé de 3 à 4 le 2026-09-09 (chantier CLASSES) : le journal porte désormais
+	# `classe_j1` et `classe_j2`, le slug de la classe jouée. ⚠️ À ne pas
+	# confondre avec `classe`, ci-dessus, qui est le booléen du classement.
+	_check("le schéma est bien en v4", int(r["version"]) == 4, str(r.get("version")))
+	for cle in ["classe_j1", "classe_j2"]:
+		_check("l'enregistrement porte « %s »" % cle, r.has(cle))
 
 func _test_selection_des_en_attente() -> void:
 	print("\n[Ce qui est repris, et ce qui ne l'est pas]")

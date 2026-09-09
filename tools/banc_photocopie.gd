@@ -165,10 +165,30 @@ func _acte_appareil() -> void:
 	for paire in vues:
 		var vue: Viewport = paire[1]
 		var canevas := vue.get_visible_rect().size
-		var ech := Vector2(vue.get_texture().get_size()) / canevas
+		var ech := vue.get_final_transform().get_scale()
+		# ⚠️ **Ce contrôle-ci manquait, et son absence a laissé passer le défaut
+		# que ce banc existe pour trouver.**
+		#
+		# L'acte II était AVEUGLE par construction : il calculait `ech` depuis
+		# `get_texture().get_size()` — la même source que la production — puis
+		# s'en servait des DEUX côtés de sa comparaison. Le critère était donc
+		# invariant d'échelle : vert pour n'importe quelle valeur, fausse
+		# comprise. Il a certifié « tout texel lu tombe dans la photocopie »
+		# pendant que l'écran d'Adrien montrait un disque gris et que
+		# l'intersection réelle était NULLE (2026-09-09).
+		#
+		# Un facteur ne se déduit pas d'une seule source : il se CONFRONTE au
+		# framebuffer, relu par `get_image()`, qui est le seul tampon qu'on ne
+		# puisse pas paraphraser.
+		var vrai := Vector2(vue.get_texture().get_image().get_size()) / canevas
+		var accord: bool = absf(ech.x - vrai.x) < 0.01 and absf(ech.y - vrai.y) < 0.01
 		print("\n── %s ──   canevas %.0f×%.0f, framebuffer %.0f×%.0f, facteur %.4f"
-			% [paire[0], canevas.x, canevas.y, canevas.x * ech.x,
-				canevas.y * ech.y, ech.x])
+			% [paire[0], canevas.x, canevas.y, canevas.x * vrai.x,
+				canevas.y * vrai.y, ech.x])
+		print("   facteur annoncé %.4f — mesuré au framebuffer %.4f — %s"
+			% [ech.x, vrai.x, "✓" if accord else "✗ LA SOURCE MENT"])
+		_releves.append({"cas": "facteur canevas→framebuffer — " + String(paire[0]),
+			"court": not accord})
 		# On rejoue ce que fait `maj()` pour un éblouissement plein, à plusieurs
 		# angles : c'est l'angle qui décide de la boîte, et 0° comme 90° sont les
 		# cas où une conversion fausse peut passer inaperçue.

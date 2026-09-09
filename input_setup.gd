@@ -8,13 +8,13 @@ func _setup_all_inputs():
 	var actions = [
 		"p1_move_up", "p1_move_down", "p1_move_left", "p1_move_right",
 		"p1_aim_up", "p1_aim_down", "p1_aim_left", "p1_aim_right",
-		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_skip_killcam",
+		"p1_shoot", "p1_torch", "p1_lance_fusee", "p1_reload", "p1_gadget", "p1_skip_killcam",
 		"p1_weapon_prev", "p1_weapon_next", "p1_menu_select",
 		"p1_menu_up", "p1_menu_down", "p1_menu_left", "p1_menu_right",
 		"p1_menu_prev_tab", "p1_menu_next_tab",
 		"p2_move_up", "p2_move_down", "p2_move_left", "p2_move_right",
 		"p2_aim_up", "p2_aim_down", "p2_aim_left", "p2_aim_right",
-		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_skip_killcam",
+		"p2_shoot", "p2_torch", "p2_lance_fusee", "p2_reload", "p2_gadget", "p2_skip_killcam",
 		"p2_weapon_prev", "p2_weapon_next", "p2_menu_select",
 		"p2_menu_up", "p2_menu_down", "p2_menu_left", "p2_menu_right",
 		"p2_menu_prev_tab", "p2_menu_next_tab",
@@ -46,6 +46,17 @@ func _setup_all_inputs():
 	var reload_p2 = InputEventKey.new()
 	reload_p2.physical_keycode = KEY_K
 	InputMap.action_add_event("p2_reload", reload_p2)
+
+	# Gadget de classe — chantier CLASSES, étape 4. E et O : les seules touches
+	# déjà liées sont Échap, F, K, R et U (relevé, pas supposé), donc ces deux-là
+	# sont libres. Positions PHYSIQUES comme tout le reste de l'Input Map, sans
+	# quoi un clavier AZERTY déplacerait la touche sans que personne ne le voie.
+	var gadget_p1 = InputEventKey.new()
+	gadget_p1.physical_keycode = KEY_E
+	InputMap.action_add_event("p1_gadget", gadget_p1)
+	var gadget_p2 = InputEventKey.new()
+	gadget_p2.physical_keycode = KEY_O
+	InputMap.action_add_event("p2_gadget", gadget_p2)
 	
 	# Helper for joy axis
 	var add_joy_axis = func(action: String, device: int, axis: int, val: float):
@@ -92,6 +103,11 @@ func _setup_all_inputs():
 	# Carré = Recharger, Triangle = Fusée éclairante
 	add_joy_btn.call("p1_reload", p1_device, JOY_BUTTON_X) # Carré
 	add_joy_btn.call("p1_lance_fusee", p1_device, JOY_BUTTON_Y) # Triangle
+	# L1 en jeu : il ne sert qu'aux onglets de MENU, comme R1 sert à la fois
+	# à tirer et à changer d'onglet. La superposition est contextuelle, et elle
+	# est déjà la règle ici. ⚠️ `Liaisons.collisions()` ne détecte que
+	# l'inter-joueur : cette vérification intra-joueur est manuelle.
+	add_joy_btn.call("p1_gadget", p1_device, JOY_BUTTON_LEFT_SHOULDER) # L1
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p1_menu_select", p1_device, JOY_BUTTON_A) # Croix
@@ -131,6 +147,11 @@ func _setup_all_inputs():
 	# Carré = Recharger, Triangle = Fusée éclairante
 	add_joy_btn.call("p2_reload", p2_device, JOY_BUTTON_X) # Carré
 	add_joy_btn.call("p2_lance_fusee", p2_device, JOY_BUTTON_Y) # Triangle
+	# L1 en jeu : il ne sert qu'aux onglets de MENU, comme R1 sert à la fois
+	# à tirer et à changer d'onglet. La superposition est contextuelle, et elle
+	# est déjà la règle ici. ⚠️ `Liaisons.collisions()` ne détecte que
+	# l'inter-joueur : cette vérification intra-joueur est manuelle.
+	add_joy_btn.call("p2_gadget", p2_device, JOY_BUTTON_LEFT_SHOULDER) # L1
 
 	# Croix = Sélectionner menu
 	add_joy_btn.call("p2_menu_select", p2_device, JOY_BUTTON_A) # Croix

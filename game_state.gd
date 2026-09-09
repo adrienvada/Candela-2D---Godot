@@ -244,10 +244,20 @@ var _match_id: String = ""
 # mécanisme qui n'existe plus.
 var _pending_p2_weapon_idx: int = -1
 
-var weapon_pistolet: WeaponData
-var weapon_fusil: WeaponData
-var weapon_pompe: WeaponData
-var weapon_arbalete: WeaponData
+## Les quatre armes historiques, devenues des CLASSES — chantier CLASSES.
+##
+## ⚠️ Le type change, les quatre blocs impératifs de `_ready()` NON : ils sont
+## restés mot pour mot, seul `WeaponData.new()` est devenu `ClassData.new()`.
+## Recopier leurs valeurs dans un catalogue neuf aurait garanti que deux jeux de
+## nombres restent égaux, jamais qu'ils veuillent dire la même chose.
+var weapon_pistolet: ClassData
+var weapon_fusil: ClassData
+var weapon_pompe: ClassData
+var weapon_arbalete: ClassData
+
+## Le catalogue des dix classes, indexé de 0 à 9 — l'index qui circule sur le
+## fil et dans les râteliers. Bâti en fin de `_ready()`, après les quatre blocs.
+var _classes: Array[ClassData] = []
 
 @onready var ui = $UI
 @onready var vp1 = $SplitScreen/ViewportContainer1/SubViewport1
@@ -329,9 +339,9 @@ func _ready():
 	
 	# Le pistolet garde les valeurs par défaut de `WeaponData` — cookie
 	# « pistolet », 35° de demi-angle, échelle 1,6, 10 munitions, 2,2s recharge.
-	weapon_pistolet = WeaponData.new()
+	weapon_pistolet = ClassData.new()
 	
-	weapon_fusil = WeaponData.new()
+	weapon_fusil = ClassData.new()
 	weapon_fusil.name = "Fusil"
 	weapon_fusil.cooldown = 0.24
 	weapon_fusil.max_ammo = 24
@@ -352,7 +362,7 @@ func _ready():
 	# loin que ce qu'elle montre. Le fusil tombe à 0,96 écran, le pistolet à 0,85.
 	weapon_fusil.torch_scale = 1.8
 	
-	weapon_pompe = WeaponData.new()
+	weapon_pompe = ClassData.new()
 	weapon_pompe.name = "Pompe"
 	weapon_pompe.cooldown = 0.9
 	weapon_pompe.max_ammo = 6
@@ -370,7 +380,7 @@ func _ready():
 	weapon_pompe.torch_angle_deg = 60.0
 	weapon_pompe.torch_scale = 1.0
 	
-	weapon_arbalete = WeaponData.new()
+	weapon_arbalete = ClassData.new()
 	weapon_arbalete.name = "Arbalète"
 	weapon_arbalete.cooldown = 0.3
 	weapon_arbalete.max_ammo = 1
@@ -400,7 +410,9 @@ func _ready():
 	weapon_arbalete.bullet_color = Color(Charte.ACIER, 1.0)
 	weapon_arbalete.bullet_width = 3.0
 	weapon_arbalete.bullet_light_energy = 0.0
-	
+
+	_batir_catalogue()
+
 	ReplaySystem.replay_spawn_bullet.connect(_on_replay_spawn_bullet)
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
@@ -1042,12 +1054,13 @@ func _get_spawn_position(player_id: int) -> Vector2:
 	return Vector2(200, 200) if player_id == 0 else Vector2(800, 600)
 
 func _start_round():
-	var w1_idx = 0
-	if ui.p1_weapon_group.get_pressed_button():
-		w1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
-	var w2_idx = 0
-	if ui.p2_weapon_group.get_pressed_button():
-		w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+	# ⚠️ **`selected_weapon_index()` et plus `get_pressed_button().get_index()`.**
+	# L'index de l'arme était la POSITION du bouton dans son râtelier ; depuis que
+	# la liste des classes s'ordonne par rang, la position et l'index ne sont plus
+	# le même nombre — et un désaccord n'aurait levé aucune erreur, il aurait
+	# simplement fait partir le joueur avec une autre classe que celle affichée.
+	var w1_idx = ui.selected_weapon_index(0)
+	var w2_idx = ui.selected_weapon_index(1)
 
 	_restore_viewports()
 	p1.global_position = _get_spawn_position(0)
@@ -1280,7 +1293,12 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	_pos_history.clear()
 	# Le stock de fusées repart avec la manche — exécuté chez les deux pairs,
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
-	_fusees_restantes = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+	_fusees_restantes = [_stock_fusees(p1), _stock_fusees(p2)]
+	_fusees_accumulateur = [0.0, 0.0]
+	_fusees_profil = [_profil_fusees(p1), _profil_fusees(p2)]
+	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
+	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
+	_gadgets_poses_par = [0, 0]
 	_purger_fusees_killcam()
 	# FU5 — le piétinement ne doit rien hériter de la manche précédente : un
 	# joueur déjà immobile au dernier « FIGHT ! » ne doit pas repartir avec
@@ -1402,6 +1420,8 @@ func _process(delta):
 	# « FIGHT ! » suivant. Le faisceau, lui, ne verse plus rien : les gardes de
 	# `_maj_eblouissement` s'en chargent.
 	_maj_eblouissement(delta)
+	_maj_gadgets(delta)
+	_accorder_fusees(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1555,12 +1575,180 @@ func _maj_eblouissement(delta: float) -> void:
 	if not is_instance_valid(p1) or not is_instance_valid(p2):
 		return
 	var espace := p1.get_world_2d().direct_space_state
-	# Les deux plafonds sont lus AVANT d'intégrer : intégrer au fil de la
-	# lecture ferait dépendre le résultat de l'ordre des deux joueurs.
-	var sur_p1 := _lumiere_recue(espace, p2, p1)
-	var sur_p2 := _lumiere_recue(espace, p1, p2)
-	p1.integrer_eblouissement(sur_p1, delta)
-	p2.integrer_eblouissement(sur_p2, delta)
+
+	# ── PASSE 1 : lire, et retenir la source GAGNANTE ────────────────────────
+	#
+	# ⚠️ **Le MAX doit faire remonter la SOURCE, pas seulement sa valeur.**
+	# `ui._poser_voile(rect, victime, source)` dérive le penchant du voile de la
+	# POSITION de la source ; le shader ne reçoit qu'un scalaire de relèvement.
+	# Un max qui ne retiendrait qu'un niveau laisserait le voile pencher vers
+	# l'adversaire pendant qu'une lumière posée brûle derrière — et **aucune
+	# suite ne le verrait**, rien ne teste le relèvement. Relevé par la session
+	# « retouche éblouissement », 2026-09-09.
+	#
+	# ⚠️ **Deux passes strictes, jamais une intégration au fil de la lecture** :
+	# le résultat dépendrait sinon de l'ordre des sources, c'est-à-dire de
+	# l'ordre du groupe de scène. C'est la raison pour laquelle le calcul à deux
+	# termes lisait déjà les deux plafonds avant d'intégrer.
+	#
+	# ⚠️ **Le MAX, jamais la somme** (décision d'Adrien, 2026-09-09). Le modèle
+	# est un PLAFOND, pas une intégrale — c'est ce qui l'empêche de dériver, et
+	# le max préserve strictement cette propriété : deux torches faibles ne
+	# peuvent pas aveugler à force d'être deux.
+	var gagnante := {p1: null, p2: null}
+	var plafond := {p1: 0.0, p2: 0.0}
+	for src in _sources_eblouissantes():
+		for cible in [p1, p2]:
+			var v := _plafond_de_source(espace, src, cible)
+			if v > plafond[cible]:
+				plafond[cible] = v
+				gagnante[cible] = src["noeud"]
+
+	# ── PASSE 2 : intégrer ───────────────────────────────────────────────────
+	p1.integrer_eblouissement(plafond[p1], delta)
+	p2.integrer_eblouissement(plafond[p2], delta)
+	p1.source_eblouissante = gagnante[p1]
+	p2.source_eblouissante = gagnante[p2]
+
+
+## Les sources qui peuvent éblouir, cette image.
+##
+## ⚠️ **Deux familles EXCLUES, explicitement, avec leur raison** — une exclusion
+## subie par oubli est un défaut, une exclusion écrite est une décision :
+##
+##   • **les particules** (240 pré-allouées, sang 64 px, étincelles 32 px). Elles
+##     sont tirées au sort à chaque émission, donc ABSENTES chez l'autre pair :
+##     le résultat serait non reproductible d'une machine à l'autre, donc
+##     indébogable. Et 200 sources × 2 cibles coûteraient ~1,3 ms par image,
+##     **dix fois la marge de cadence entière** (139 µs).
+##   • **l'ambiance personnelle** (`range_item_cull_mask` 16 pour J1, 32 pour
+##     J2). Elle n'éclaire que les décals de son propre joueur : elle n'existe
+##     pas dans le monde partagé, et l'adversaire ne la voit jamais.
+##
+## ⚠️ **Une carte ne peut pas porter de lumière**, et c'est ce qui rend cette
+## liste bornée. Le format v3 ne contient que sol, murs et points d'apparition ;
+## l'outil « lumière » de l'éditeur n'est qu'un bouton d'aperçu. Une arène
+## aveuglante n'est donc pas fabricable — c'était un acquis, ça devient une
+## garantie d'équité, et il faudra l'écrire le jour où le format bougera.
+func _sources_eblouissantes() -> Array:
+	var out: Array = []
+	for j in [p1, p2]:
+		if _en_jeu(j) and j.flashlight_on:
+			out.append({
+				"noeud": j,
+				# Le PORTEUR : une source portée n'éblouit son porteur que par
+				# rétrodiffusion. Une source posée n'a pas de porteur, et
+				# éblouit tout le monde pareil, poseur compris.
+				"porteur": j,
+				"dirigee": true,
+				"rayon": j.current_weapon.portee_torche() if j.current_weapon else 0.0,
+				"arme": j.current_weapon,
+			})
+
+	# ── Les fusées éclairantes ───────────────────────────────────────────────
+	#
+	# Elles referment la ligne « la fusée n'alimente pas l'éblouissement » : la
+	# lumière la plus violente du jeu n'aveuglait personne.
+	#
+	# ⚠️ **Régime de PROXIMITÉ, sans axe** : une fusée au sol crache dans toutes
+	# les directions. Et **pas de porteur** — on s'éblouit avec sa propre fusée,
+	# décision d'Adrien : on ne la lance pas à ses pieds impunément.
+	#
+	# ⚠️ **Rayon d'ÉBLOUISSEMENT ≠ empreinte de RENDU.** La fusée posée éclaire
+	# sur 440 px, mais la torche cesse d'éblouir au-delà de ~400 px (mesuré :
+	# 0,81 à 140 px dans l'axe, 0,00 à 460). Lui donner une portée d'aveuglement
+	# plus grande que la torche ferait que le MAX la choisit presque toujours, et
+	# la torche cesserait d'être une menace. On la borne donc sur la torche.
+	#
+	# ⚠️ **Un rejeu n'éblouit personne** — règle déjà écrite pour le flash de
+	# tir. Les fusées de killcam sont dans le même groupe que les vraies ; le
+	# filtre est ici, jamais dans `Fusee`, dont le groupe doit rester non filtré
+	# pour l'occultation des sprites et des sons.
+	for f in get_tree().get_nodes_in_group("fusees"):
+		if not is_instance_valid(f) or not (f is Node2D):
+			continue
+		if f.get("is_replay"):
+			continue
+		if f.has_method("est_allumee_au_sol") and not f.est_allumee_au_sol():
+			continue
+		out.append({
+			"noeud": f,
+			"porteur": null,
+			"dirigee": false,
+			"rayon": RAYON_EBLOUISSEMENT_FUSEE,
+			"arme": null,
+		})
+
+	# ── Les gadgets posés ────────────────────────────────────────────────────
+	#
+	# C'est ce que l'étape 6a préparait, et la torche fantôme du Braconnier est
+	# la raison pour laquelle elle a été faite : *si elle n'éblouit pas, il
+	# suffit à l'adversaire de la regarder en face pour savoir que c'est un
+	# faux.* Le mensonge n'est complet que si elle aveugle comme une vraie.
+	#
+	# ⚠️ **Aucun porteur, jamais** — y compris pour celui qui l'a posée. Une
+	# lampe qu'on a plantée soi-même reste une lampe : marcher devant coûte les
+	# yeux. C'est la même règle que pour la fusée, arbitrée par Adrien — *« on ne
+	# la lance pas à ses pieds impunément »*.
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not is_instance_valid(g) or not (g is Node2D):
+			continue
+		if not g.eblouit or g.is_queued_for_deletion():
+			continue
+		out.append({
+			"noeud": g,
+			"porteur": null,
+			"dirigee": g.eblouissement_dirige,
+			"rayon": g.rayon_eblouissement,
+			# La classe du poseur porte le cookie : c'est elle qu'on
+			# échantillonne, exactement comme on échantillonne l'arme d'un joueur.
+			"arme": g.classe_du_poseur,
+		})
+	return out
+
+
+## Jusqu'où une fusée posée peut aveugler, en pixels de monde.
+##
+## Volontairement PLUS PETIT que son empreinte de rendu (440 px) : elle éclaire
+## plus loin qu'elle n'aveugle, ce qui est vrai d'une vraie fusée de détresse et
+## ce qui la garde comparable à la torche. À doser au banc, jamais à l'aveugle.
+const RAYON_EBLOUISSEMENT_FUSEE := 400.0
+
+
+## Ce qu'une source verse dans les yeux d'une cible, entre 0 et 1.
+func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
+		cible: Node2D) -> float:
+	if not _en_jeu(cible):
+		return 0.0
+	var noeud: Node2D = src["noeud"]
+	if not is_instance_valid(noeud):
+		return 0.0
+
+	# ── Le cas de SOI ────────────────────────────────────────────────────────
+	if src["porteur"] == cible:
+		# Une source PORTÉE : on ne se tient pas dans son propre faisceau, on
+		# reçoit ce qui revient des murs. Lire le cookie ici échantillonnerait
+		# son centre — la valeur maximale — et allumer sa lampe saturerait
+		# l'éblouissement d'un coup.
+		return Eblouissement.RETRODIFFUSION * Eblouissement.gain_taille(src["rayon"])
+
+	if src["dirigee"]:
+		# Le chemin historique, inchangé : on LIT le pixel du faisceau.
+		if src["porteur"] != null:
+			return _lumiere_recue(espace, noeud, cible)
+		# Une source dirigée SANS porteur : une lumière posée qui a un axe — la
+		# torche fantôme. Elle passe par le même échantillonnage, sans les
+		# préconditions qui ne valent que pour un joueur (`_en_jeu`, `flashlight_on`).
+		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible)
+
+	# ── PROXIMITÉ ────────────────────────────────────────────────────────────
+	var d := noeud.global_position.distance_to(cible.global_position)
+	var i := Eblouissement.intensite_proximite(d, src["rayon"])
+	if i <= 0.0:
+		return 0.0
+	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
+		return 0.0
+	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"])
 
 ## Un joueur qui compte : présent, vivant, et sur le terrain.
 ##
@@ -1616,8 +1804,21 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# C'est écrit ici plutôt que là-bas parce que c'est ici que la dépendance
 	# existe : le fichier qui lève l'erreur n'a aucune raison de savoir que
 	# l'éblouissement s'y adosse.
-	var arme: WeaponData = source.current_weapon
-	if arme == null:
+	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible)
+
+
+## Ce qu'un FAISCEAU verse dans les yeux d'une cible, quel que soit ce qui le
+## porte — un joueur, ou une lampe posée.
+##
+## ⚠️ **Extrait de `_lumiere_recue()` pour qu'il n'y ait qu'un échantillonnage.**
+## La torche fantôme avait besoin des cinq lignes du milieu sans les
+## préconditions du dessus (`_en_jeu`, `flashlight_on`), qui n'ont de sens que
+## pour un joueur. Les recopier aurait donné une seconde définition du même
+## faisceau — la faute exacte que le commentaire ci-dessus passe vingt lignes à
+## expliquer.
+func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
+		source: Node2D, cible: Node2D) -> float:
+	if arme == null or not is_instance_valid(source):
 		return 0.0
 	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
 	# plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où ce choix,
@@ -1641,9 +1842,44 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## gouffre, décision de conception couverte par `test_vision`.
 func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 		cible: Node2D) -> bool:
-	var q := PhysicsRayQueryParameters2D.create(source.global_position,
-		cible.global_position, MapGeometry.WALL_LAYER)
-	q.exclude = [source.get_rid()]
+	return _ligne_de_vue_depuis(espace, source.global_position, cible,
+		source.get_rid())
+
+
+## La même, depuis un POINT plutôt qu'un corps.
+##
+## ⚠️ La surcharge ci-dessus est conservée parce que
+## `tools/planche_eblouissement.gd` la NOMME dans ses préconditions, et que
+## `tools/test_banc.gd` vérifie qu'elle existe. Un garde-fou qui nomme un symbole
+## se périme EN VERT le jour où on le renomme — piège déjà consigné.
+func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
+		cible: Node2D, exclure: RID) -> bool:
+	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
+	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
+	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
+	# comme si elle n'existait pas : on voyait le noir et on prenait la lumière.
+	# Défaut introduit par la pose à l'étape 10, trouvé en branchant la torche
+	# fantôme, corrigé ici parce que c'est le même sujet.
+	#
+	# Ce masque repose sur un invariant, et il faut qu'il le reste : **tout gadget
+	# porte un occluder**, `GadgetBase._monter_occluder()` étant appelé sans
+	# condition. Le jour où l'un d'eux n'en portera plus, il arrêterait
+	# l'éblouissement sans arrêter la lumière — l'inverse du défaut d'aujourd'hui.
+	var q := PhysicsRayQueryParameters2D.create(depuis, cible.global_position,
+		MapGeometry.WALL_LAYER | MapGeometry.GADGET_LAYER)
+	# ⚠️ **Les gadgets qui n'arrêtent pas la lumière sont retirés du rayon.** Le
+	# masque ne sait pas les distinguer — ils partagent tous la même couche
+	# physique, parce que c'est elle qui décide ce qu'une BALLE touche. Sans cette
+	# exclusion, la mine au magnésium, qui est un boîtier plat sans occluder,
+	# arrêterait l'aveuglement sans arrêter le faisceau : l'inverse exact du
+	# défaut corrigé à l'étape 11, et tout aussi muet.
+	var exclus: Array[RID] = []
+	if exclure.is_valid():
+		exclus.append(exclure)
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g is CollisionObject2D and not g.occulte_la_lumiere:
+			exclus.append(g.get_rid())
+	q.exclude = exclus
 	var res := espace.intersect_ray(q)
 	return res and res.collider == cible
 
@@ -1712,8 +1948,30 @@ func _update_music_intensity() -> void:
 # fusée voyage dans la commande numérotée et c'est l'hôte, en simulant P2, qui
 # détecte le front et spawne pour tout le monde.
 
-## Une fusée par joueur et par manche ; illimitées en bac à sable.
-var _fusees_restantes: Array[int] = [FuseeModele.STOCK_PAR_MANCHE, FuseeModele.STOCK_PAR_MANCHE]
+## La réserve de fusées de chaque joueur ; illimitée en bac à sable.
+##
+## ⚠️ **Elle ne vient plus d'une constante mais de la CLASSE** — chantier CLASSES,
+## étape 18. `FuseeModele.STOCK_PAR_MANCHE` valait un pour tout le monde ; le
+## Spectre n'en a aucune (« la seule classe qui n'éclaire jamais »), le
+## Terrassier en a trois et l'Allumeur deux qui se rechargent. Les profils
+## portaient ces valeurs depuis l'étape 1 et personne ne les lisait.
+var _fusees_restantes: Array[int] = [0, 0]
+
+## Le temps capitalisé vers la prochaine fusée, par joueur. **Hôte seul** :
+## `FlareProfile.avancer()` dit pourquoi — deux accumulateurs locaux dériveraient
+## d'un demi-RTT à chaque consommation, ce qui est inoffensif à stock 1 et
+## mordant à stock 3.
+var _fusees_accumulateur: Array[float] = [0.0, 0.0]
+
+## Le profil suivi par joueur, pour détecter un CHANGEMENT DE CLASSE.
+##
+## ⚠️ Même piège que le stock de gadgets : la fenêtre de choix d'un match apparié
+## s'ouvre avec le décompte, donc APRÈS `_do_start_round`, et
+## `pick_countdown_weapon()` change l'arme équipée pendant ces dix secondes. Un
+## stock semé avant le choix donnerait à qui change de classe la réserve de celle
+## qu'il vient de quitter — sans erreur, et invisible tant que les deux en ont
+## autant.
+var _fusees_profil: Array = [null, null]
 ## Fusées reconstruites par la killcam, par graine.
 var _fusees_killcam: Dictionary = {}
 
@@ -1727,9 +1985,99 @@ var _pietinement_fusee: Array = [null, null]
 var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
 func fusee_disponible(pid: int) -> bool:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return false
+	# ⚠️ **Le bac à sable ne rend PLUS « toujours vrai » sans condition.** Le
+	# Spectre n'a aucune fusée, et c'est sa classe : lui en donner à
+	# l'entraînement lui ferait éprouver un geste qu'il n'aura jamais en match.
 	if sandbox_mode:
-		return true
-	return pid >= 0 and pid < _fusees_restantes.size() and _fusees_restantes[pid] > 0
+		return _stock_fusees(p1 if pid == 0 else p2) > 0
+	return _fusees_restantes[pid] > 0
+
+
+## Le profil de fusées d'un joueur, ou `null` s'il n'en a pas encore.
+func _profil_fusees(joueur: Node):
+	if joueur == null:
+		return null
+	var classe := joueur.current_weapon as ClassData
+	return classe.fusees if classe != null else null
+
+
+## Ce avec quoi la classe d'un joueur commence la manche.
+##
+## ⚠️ **Zéro quand la classe n'en porte pas, jamais un repli à un.** Le Spectre
+## est à zéro par conception ; un repli plausible lui rendrait la seule chose que
+## sa classe lui retire.
+func _stock_fusees(joueur: Node) -> int:
+	var profil = _profil_fusees(joueur)
+	return maxi(0, profil.stock) if profil != null else 0
+
+
+## La réserve d'un joueur, pour le HUD. Lue par les deux pairs : le stock est
+## répliqué à chaque changement.
+func fusees_restantes(pid: int) -> int:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return 0
+	return _fusees_restantes[pid]
+
+
+## Secondes avant la prochaine fusée, ou -1 s'il n'y en aura pas.
+##
+## ⚠️ **Juste chez l'hôte seul**, l'accumulateur n'étant pas répliqué. Le client
+## voit donc le compte changer sans le décompte qui l'annonce — un manque, pas un
+## mensonge, et le prix d'un octet par tick économisé. À reprendre le jour où
+## Adrien jugera l'attente illisible.
+func attente_fusee(pid: int) -> float:
+	if pid < 0 or pid >= _fusees_restantes.size():
+		return -1.0
+	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	if profil == null:
+		return -1.0
+	return profil.attente_restante(_fusees_restantes[pid], _fusees_accumulateur[pid])
+
+
+## [Hôte] La réserve avance, et se resème si la classe a changé.
+##
+## ⚠️ **L'arithmétique est chez l'hôte, le RÉSULTAT est répliqué.** Le client ne
+## recharge rien de lui-même : `FlareProfile.avancer()` explique pourquoi — deux
+## accumulateurs locaux dérivent d'un demi-RTT à chaque consommation. Mais il a
+## besoin du compte, sans quoi sa prédiction du désarmement se tromperait au
+## premier lancer d'une fusée regagnée. Un paquet toutes les douze à dix-huit
+## secondes, et seulement pour les deux classes qui rechargent.
+func _accorder_fusees(delta: float) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	for pid in 2:
+		var joueur: Node = p1 if pid == 0 else p2
+		var profil = _profil_fusees(joueur)
+		if profil != _fusees_profil[pid]:
+			# Changement de classe : on resème, y compris pendant le décompte.
+			_fusees_profil[pid] = profil
+			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
+			_fusees_accumulateur[pid] = 0.0
+			continue
+		if profil == null or not profil.recharge_active():
+			continue
+		if not round_active and not sandbox_mode:
+			continue
+		var avance: Array = profil.avancer(_fusees_restantes[pid],
+			_fusees_accumulateur[pid], delta)
+		_fusees_accumulateur[pid] = float(avance[1])
+		if int(avance[0]) != _fusees_restantes[pid]:
+			_annoncer_stock_fusees(pid, int(avance[0]))
+
+
+func _annoncer_stock_fusees(pid: int, stock: int) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_stock_fusees.rpc(pid, stock)
+	else:
+		rpc_stock_fusees(pid, stock)
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_stock_fusees(pid: int, stock: int) -> void:
+	if pid >= 0 and pid < _fusees_restantes.size():
+		_fusees_restantes[pid] = maxi(0, stock)
 
 func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	if not round_active and not sandbox_mode: return
@@ -1767,6 +2115,215 @@ func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	f.shooter_id = shooter_id
 	f.joueurs = [p1, p2]
 	bullet_container.add_child(f)
+
+# ---------------------------------------------------------------------------
+# LES GADGETS DE CLASSE — chantier CLASSES, étape 10
+#
+# Même autorité que la fusée, et pour la même raison : le bit de pose voyage
+# dans la commande numérotée, l'hôte en détecte le front en simulant P2, et
+# c'est lui qui spawne pour tout le monde. **Aucune prédiction client** — un
+# objet posé, immobile, à une charge par manche, tolère un demi-RTT ; le tir
+# non.
+#
+# ⚠️ **La POSITION FINALE voyage dans le RPC, elle ne se recalcule pas.** Le
+# gadget se plante devant le poseur, et « devant » peut tomber dans un mur : la
+# rectification demande une requête de physique, donc l'état de la carte, donc
+# deux mondes qui pourraient répondre différemment. L'hôte tranche une fois et
+# envoie le point. C'est plus court que le raisonnement qui justifierait de
+# refaire le calcul des deux côtés, et ça ne peut pas diverger.
+# ---------------------------------------------------------------------------
+
+## Gadgets déjà posés par joueur dans la manche en cours.
+##
+## ⚠️ **On compte les poses, on ne décompte pas un stock — et la nuance a une
+## cause précise.** Un « restant » se sème à l'ouverture de la manche ; or la
+## fenêtre de choix d'un match apparié s'ouvre AVEC le décompte, donc *après*
+## `_do_start_round`, et `pick_countdown_weapon()` change l'arme équipée pendant
+## ces dix secondes. Un stock semé avant le choix aurait donné à qui change de
+## classe le stock de la classe qu'il vient de quitter — sans erreur, et
+## invisible tant que les deux classes en ont autant.
+##
+## En comptant les poses, le plafond se relit à chaque appui sur la classe
+## RÉELLEMENT équipée. Il n'y a plus rien à resemer.
+var _gadgets_poses_par: Array[int] = [0, 0]
+
+## Compteur de poses, pour donner un nom UNIQUE à chaque nœud.
+##
+## ⚠️ Ce n'est pas du rangement : un RPC de scène se route par le chemin du nœud,
+## et un nom auto-généré diverge entre machines — les RPC sont alors jetés sans
+## aucune erreur console. Le compteur voyage dans le RPC, comme la graine de la
+## fusée, pour que les deux pairs nomment le même objet pareil.
+var _gadgets_poses: int = 0
+
+
+## Le stock de gadgets que la classe d'un joueur lui donne, 0 si elle n'en a pas
+## ou si son gadget n'est pas encore écrit.
+func _stock_gadget(joueur: Node) -> int:
+	if joueur == null:
+		return 0
+	var classe := joueur.current_weapon as ClassData
+	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
+		return 0
+	return maxi(0, classe.gadget.stock)
+
+
+## Ce joueur peut-il poser un gadget maintenant ?
+##
+## ⚠️ **Illimité en bac à sable, comme la fusée.** L'entraînement sert à éprouver
+## un geste ; le rationner y transformerait l'essai en attente.
+func gadget_disponible(pid: int) -> bool:
+	if pid < 0 or pid >= _gadgets_poses_par.size():
+		return false
+	var stock := _stock_gadget(p1 if pid == 0 else p2)
+	if stock <= 0:
+		return false
+	if sandbox_mode:
+		return true
+	return _gadgets_poses_par[pid] < stock
+
+
+## [Hôte] Le joueur pose son gadget. Le client ne demande rien : son appui est
+## déjà dans sa commande numérotée.
+func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	var pid: int = poseur.player_id
+	if not gadget_disponible(pid):
+		return
+	var classe := poseur.current_weapon as ClassData
+	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
+		return
+
+	_gadgets_poses += 1
+	var point := _point_de_pose(pos, rot)
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_spawn_gadget.rpc(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+	else:
+		_do_spawn_gadget(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+
+
+## Où le gadget se plante réellement : devant le poseur, ramené en deçà du
+## premier mur rencontré.
+##
+## Sans cette rectification, un joueur dos au mur planterait son gadget DANS la
+## pierre : le nœud existerait, son occluder aussi, et rien à l'écran ne dirait
+## pourquoi la manche vient de consommer une charge sans rien produire.
+func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
+	var direction := Vector2(cos(rot), sin(rot))
+	var cible := depuis + direction * GadgetBase.PORTEE_POSE
+	# ⚠️ `p1.get_world_2d()` et non `get_world_2d()` : `GameState` étend `Node`,
+	# il n'a pas de monde 2D à lui. C'est la forme que les deux autres requêtes de
+	# ce fichier emploient déjà.
+	if p1 == null:
+		return cible
+	var espace := p1.get_world_2d().direct_space_state
+	if espace == null:
+		return cible
+	var requete := PhysicsRayQueryParameters2D.create(depuis, cible)
+	requete.collision_mask = MapGeometry.WALL_LAYER
+	requete.collide_with_areas = false
+	var touche := espace.intersect_ray(requete)
+	if touche.is_empty():
+		return cible
+	# Une marge, sinon le gadget naît exactement sur la surface et son occluder
+	# se confond avec celui du mur.
+	return Vector2(touche["position"]) - direction * 6.0
+
+
+## [Hôte] Les gadgets qui demandent à s'allumer — la mine, aujourd'hui seule.
+##
+## ⚠️ **La boucle est chez l'hôte et nulle part ailleurs.** Un gadget qui
+## déciderait lui-même s'allumerait deux fois, une chez chaque pair, à deux
+## instants différents — et l'éblouissement, calculé par l'hôte, ne
+## correspondrait alors plus à ce que le client voit brûler.
+func _maj_gadgets(delta: float) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if not round_active and not sandbox_mode:
+		return
+	var joueurs := [p1, p2]
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if not is_instance_valid(g) or g.is_queued_for_deletion():
+			continue
+		if g.veut_s_allumer(joueurs):
+			allumer_gadget(g)
+		# ⚠️ **Les effets aussi passent par l'hôte**, et pas seulement
+		# l'allumage : une nappe de braises qui brûlerait de son côté chez le
+		# client ferait descendre sa barre deux fois plus vite que l'arbitrage.
+		g.appliquer_effets(joueurs, delta)
+
+
+## [Hôte] Ordonne l'allumage d'un gadget, chez les deux pairs.
+##
+## ⚠️ **Le nom du nœud est la clé, et c'est pour ça qu'il est explicite.** Un RPC
+## de scène se route par le chemin du nœud ; ici c'est le nom lui-même qui
+## voyage, et il ne désigne le même objet des deux côtés que parce que
+## `_do_spawn_gadget()` le construit à partir de données répliquées — le joueur
+## et un compteur — au lieu de le laisser à Godot.
+func allumer_gadget(g: Node) -> void:
+	if g == null or not is_instance_valid(g):
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_allumer_gadget.rpc(String(g.name))
+	else:
+		g.allumer()
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_allumer_gadget(nom: String) -> void:
+	var g := bullet_container.get_node_or_null(NodePath(nom))
+	if g != null and g.has_method("allumer"):
+		g.allumer()
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
+	_do_spawn_gadget(pid, pos, rot, slug, numero)
+
+
+func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
+	var chemin := String(fiche.get("script", ""))
+	if chemin.is_empty():
+		# ⚠️ On CRIE, on ne se rabat pas. Poser un gadget générique à la place
+		# d'un gadget inconnu donnerait un objet plausible — et un objet plausible
+		# se prend pour une intention.
+		push_error("GameState : gadget « %s » sans implémentation" % slug)
+		return
+	var script: GDScript = load(chemin)
+	if script == null:
+		push_error("GameState : implémentation illisible — %s" % chemin)
+		return
+	var g: GadgetBase = script.new()
+	g.name = "GadgetJ%d_%d" % [pid + 1, numero]
+	g.poseur_id = pid
+	g.global_position = pos
+	# `angle_pose` est posé par le constructeur de la sous-classe : on lit donc
+	# l'objet, on ne redit pas ici ce qu'il sait déjà de lui-même.
+	g.rotation = rot + g.angle_pose
+	var classe := (p1 if pid == 0 else p2).current_weapon as ClassData
+	if classe != null and classe.gadget != null:
+		# Le drapeau d'éblouissement et la durée de vie viennent du PROFIL, par
+		# instance — décision d'Adrien du 2026-09-09 : on doit pouvoir éteindre
+		# l'éblouissement d'un gadget sans toucher aux autres.
+		g.eblouit = classe.gadget.eblouit
+		g.duree_vie = classe.gadget.duree_vie
+		# La classe elle-même, pour les gadgets qui portent SA lumière — la
+		# torche fantôme emprunte le cookie du Braconnier, et c'est tout ce qui
+		# fait d'elle un mensonge plutôt qu'une lampe.
+		g.classe_du_poseur = classe
+	# Le même conteneur que les balles et les fusées : c'est lui que la manche
+	# purge, et le rejoindre suffit donc à ne pas survivre à la manche.
+	bullet_container.add_child(g)
+	if pid >= 0 and pid < _gadgets_poses_par.size():
+		_gadgets_poses_par[pid] += 1
+
 
 ## La killcam reconstruit les fusées depuis les instantanés — un événement de
 ## lancer ne suffirait pas : la fusée vit ~20 s, le tampon de rejeu 7,5.
@@ -2442,11 +2999,28 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# pouvoir le rapporter — ce que le journal prétendait déjà faire.
 		_match_id,
 		RankedIdentity.is_ranked_context() if is_instance_valid(RankedIdentity) else false,
-		_local_outcome(winner_id))
+		_local_outcome(winner_id),
+		# Schéma 4 : QUELLE CLASSE, et pas seulement quelle arme. `arme_j1` porte
+		# le nom de l'arme — « Pistolet silencieux » — qui ne désigne plus le
+		# joueur depuis que dix classes se partagent dix armes.
+		_slug_de_classe(p1),
+		_slug_de_classe(p2))
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
 	_report_to_ranking(winner_id, forfeit)
+
+## Le slug de la classe d'un joueur, ou une chaîne vide.
+##
+## ⚠️ **Vide plutôt qu'un repli**, comme partout dans ce chantier : un journal qui
+## inventerait « pistolet » pour un joueur sans classe fausserait la seule
+## statistique que ces clés existent pour porter.
+func _slug_de_classe(joueur: Node) -> String:
+	if joueur == null:
+		return ""
+	var classe := joueur.current_weapon as ClassData
+	return String(classe.slug()) if classe != null else ""
+
 
 ## L'issue du match du point de vue de CETTE machine, dans le vocabulaire du
 ## serveur.
@@ -2642,14 +3216,17 @@ func rpc_client_weapon(idx: int):
 
 ## Index de l'arme choisie par le joueur local pour P2 (client, ou écran partagé).
 func _local_p2_weapon_idx() -> int:
-	var pressed: BaseButton = ui.p2_weapon_group.get_pressed_button()
-	return pressed.get_index() if pressed else 0
+	return ui.selected_weapon_index(1)
 
 ## Un index hors bornes ferait tomber l'hôte sur un paquet client malformé.
 func _set_p2_weapon_button(idx: int) -> void:
-	var buttons: Array = ui.p2_weapon_group.get_buttons()
-	if idx < 0 or idx >= buttons.size(): return
-	buttons[idx].button_pressed = true
+	# ⚠️ **Par index de classe, plus par position dans `get_buttons()`.** L'ordre
+	# d'un `ButtonGroup` est celui de l'INSCRIPTION des boutons : il coïncidait
+	# avec les index d'armes tant que les quatre étaient créées dans l'ordre du
+	# catalogue, et il n'a plus aucune raison de coïncider depuis que la liste
+	# s'ordonne par rang. L'interface refuse d'elle-même un index qu'elle ne
+	# propose pas — un index reçu du réseau n'est pas un droit.
+	ui.set_weapon_selection(1, idx)
 
 ## Le joueur quitte la fenêtre de choix. Renoncer à choisir son arme, c'est
 ## renoncer au match : on annule l'appariement et la recherche, et on rentre au
@@ -2666,12 +3243,282 @@ func _on_pick_window_cancelled() -> void:
 ## L'arme correspondant à un index de râtelier. Une seule table de résolution :
 ## la dupliquer ferait diverger le démarrage de manche et le changement d'arme
 ## pendant le décompte, et la divergence porterait sur ce que le joueur tient.
+## ⚠️ **Ce `match` ne connaissait que 0 à 3, et sa branche par défaut rendait le
+## PISTOLET.** Tant que l'arsenal comptait quatre armes, cette branche ne servait
+## que de garde-fou. Depuis que la table rang → classe rend des index jusqu'à 9,
+## elle serait devenue le chemin normal pour six classes sur dix : un Spectre
+## aurait tiré avec la balistique du pistolet, porté son cookie et joué ses sons,
+## **sans qu'une seule erreur ne se lève** — le jeu restant parfaitement jouable.
+##
+## La résolution passe donc par le catalogue, qui EST la table. Elle reste unique :
+## `classe_pour_index()` lit le même tableau, et c'est cette fonction-ci qui garde
+## le contrat historique — une `WeaponData`, jamais `null`.
+##
+## Le repli sur le pistolet est conservé pour un index hors bornes, et c'est
+## délibéré : « rendre vide donnerait un joueur sans arme, ce qu'aucun appelant ne
+## sait afficher et qu'aucune partie ne peut jouer ». Mais il CRIE désormais,
+## parce qu'un index hors bornes n'est plus un cas de figure attendu.
 func weapon_for_index(idx: int) -> WeaponData:
-	match idx:
-		3: return weapon_arbalete
-		2: return weapon_pompe
-		1: return weapon_fusil
-		_: return weapon_pistolet
+	if idx >= 0 and idx < _classes.size():
+		return _classes[idx]
+	push_error("GameState : index de classe hors bornes — %d (catalogue de %d)"
+		% [idx, _classes.size()])
+	return weapon_pistolet
+
+
+## Le catalogue des dix classes — chantier CLASSES, étape 1.
+##
+## ## Les index NE BOUGENT PAS, et c'est tout l'objet de cette étape
+##
+## Les quatre premiers gardent exactement le sens qu'ils avaient : 0 pistolet,
+## 1 fusil, 2 pompe, 3 arbalète. Les six neufs s'ajoutent à la suite, de 4 à 9.
+## **Rien de ce qui circule aujourd'hui ne change de sens** — ni `RankLoadout`,
+## ni les râteliers de l'interface, ni `rpc_spawn_bullet(..., weapon_idx)`.
+## L'étape est délibérément INERTE : elle ajoute une structure, elle ne rebranche
+## rien. Le jour où la table rang → classe entrera en vigueur, ce sera un lot à
+## part, avec sa montée de version de protocole.
+##
+## ## Les chiffres des quatre existantes ne sont pas retouchés
+##
+## Leurs blocs impératifs plus haut sont la vérité, et ils portent des décisions
+## actées — les temps de recharge du chantier MUNITIONS, les portées de torche
+## arbitrées le 2026-08-24. Cette fonction ne fait que leur ATTACHER trois
+## profils. ⚠️ La spécification des classes demande par ailleurs un pistolet à
+## 6 balles et cadence doublée là où le jeu en a 10 : **c'est un écart de contenu
+## à soumettre à Adrien, pas un réglage à glisser ici.**
+func _batir_catalogue() -> void:
+	# ── Les quatre existantes reçoivent leurs profils ────────────────────────
+	weapon_pistolet.libelle = "Le Parasite"
+	weapon_pistolet.description = "Il ne prend rien : il corrompt ce que l'autre reçoit. Cadence doublée, et un grésillement qui fait douter d'une lumière qui marche encore."
+	weapon_pistolet.rang = 1
+	weapon_pistolet.root = _root(0.10)
+	weapon_pistolet.fusees = _fusees(1, 0.0)
+	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
+
+	weapon_fusil.libelle = "L'Illusionniste"
+	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
+	weapon_fusil.rang = 3
+	weapon_fusil.root = _root(0.25)
+	weapon_fusil.fusees = _fusees(1, 0.0)
+	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
+
+	weapon_pompe.libelle = "Le Terrassier"
+	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin."
+	weapon_pompe.rang = 5
+	weapon_pompe.root = _root(0.35)
+	weapon_pompe.fusees = _fusees(3, 18.0)
+	weapon_pompe.gadget = _gadget("poussiere", "La poussière")
+
+	weapon_arbalete.libelle = "Le Braconnier"
+	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
+	weapon_arbalete.rang = 4
+	weapon_arbalete.root = _root(0.60)
+	weapon_arbalete.fusees = _fusees(1, 0.0)
+	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme", true)
+
+	# ── Les six neuves ───────────────────────────────────────────────────────
+	# ⚠️ Leurs assets n'existent pas encore : ni cookie de torche, ni sprite. Le
+	# catalogue les déclare quand même, et `ClassData.assets_presents()` dit
+	# lesquelles sont jouables. Rien ne les équipe tant que l'étape 3 n'a pas
+	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
+	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
+	fumiste.name = "Pistolet lourd"
+	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un rideau de suie où l'on voit qu'il y a quelqu'un sans voir qui."
+	fumiste.cooldown = 0.42
+	fumiste.max_ammo = 3
+	fumiste.reload_time = 2.8
+	fumiste.damage_center = 70.0
+	fumiste.damage_edge = 45.0
+	fumiste.muzzle_flash_intensity = 1.0  # ⚠️ plafonné à 1 par `pic_de_flash`
+	fumiste.muzzle_flash_duration = 0.16
+	fumiste.root = _root(0.30)
+	fumiste.fusees = _fusees(1, 0.0)
+	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie")
+
+	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
+	incendiaire.name = "Fusil de détresse"
+	incendiaire.description = "Le feu au rang du feu. Deux cartouches paraboliques, deux fusées incendiaires, et un sol qu'on ne traverse plus."
+	incendiaire.cooldown = 0.55
+	incendiaire.max_ammo = 2
+	incendiaire.reload_time = 3.2
+	incendiaire.damage_center = 55.0
+	incendiaire.damage_edge = 35.0
+	incendiaire.bullet_speed = 6000.0
+	incendiaire.root = _root(0.40)
+	incendiaire.fusees = _fusees(2, 0.0)
+	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises", true)
+
+	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
+	sentinelle.name = "Fusil à verrou"
+	sentinelle.description = "Elle ne cherche pas : elle veille. Perforant à longue portée, une fusée qui dure, et une poudre qui écrit les pas de qui passe."
+	sentinelle.cooldown = 0.85
+	sentinelle.max_ammo = 2
+	sentinelle.reload_time = 4.0
+	sentinelle.damage_center = 75.0
+	sentinelle.damage_edge = 60.0
+	sentinelle.bullet_speed = 16000.0
+	sentinelle.root = _root(0.50)
+	sentinelle.fusees = _fusees(1, 0.0)
+	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact")
+
+	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
+	occulteur.name = "Pistolet-mitrailleur"
+	occulteur.description = "Il masque la lumière au lieu d'en faire. Rafale courte, et une découpe d'acier qui projette l'ombre d'un homme qui n'existe pas."
+	occulteur.cooldown = 0.09
+	occulteur.max_ammo = 8
+	occulteur.reload_time = 2.6
+	occulteur.damage_center = 26.0
+	occulteur.damage_edge = 16.0
+	occulteur.spread_bloom_per_shot_deg = 3.0
+	occulteur.max_spread_bloom_deg = 16.0
+	occulteur.muzzle_flash_intensity = 0.6
+	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
+	occulteur.fusees = _fusees(1, 0.0)
+	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée")
+
+	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
+	allumeur.name = "Carabine double"
+	allumeur.description = "Il allume — la mine, les cartouches vives, les deux fusées. La lumière maximale, celle qui ne laisse aucune ombre où se mettre."
+	allumeur.cooldown = 0.20
+	allumeur.max_ammo = 2
+	allumeur.reload_time = 2.4
+	allumeur.damage_center = 60.0
+	allumeur.damage_edge = 40.0
+	allumeur.muzzle_flash_intensity = 1.0
+	allumeur.root = _root(0.20)
+	allumeur.fusees = _fusees(2, 12.0)
+	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium", true)
+
+	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
+	spectre.name = "Pistolet silencieux"
+	spectre.description = "Au sommet de l'échelle de la lumière, celui qui n'en émet aucune. Zéro fusée, zéro flash, et une bâche qui arrête les rayons sans arrêter les balles."
+	spectre.cooldown = 0.22
+	spectre.max_ammo = 4
+	spectre.reload_time = 2.6
+	spectre.damage_center = 45.0
+	spectre.damage_edge = 30.0
+	# Zéro flash, comme l'arbalète : c'est ce qui fait la classe furtive.
+	spectre.muzzle_flash_intensity = 0.0
+	spectre.muzzle_flash_duration = 0.0
+	spectre.backlight_multiplier = 0.1
+	spectre.root = _root(0.08)
+	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
+	spectre.gadget = _gadget("voile", "Le voile")
+
+	_classes = [
+		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,
+		fumiste, incendiaire, sentinelle, occulteur, allumeur, spectre,
+	]
+
+	# ⚠️ Le catalogue CRIE si un profil manque, il ne se répare pas. Une classe
+	# sans profil n'est pas un cas dégradé : c'est un crash différé, au premier
+	# `classe.root.duree` lu sur un `null`, en pleine manche.
+	for c in _classes:
+		if not c.est_complete():
+			push_error("GameState : classe « %s » sans profil complet" % c.slug())
+
+
+## Une classe neuve, avec ce que toutes partagent. Les valeurs propres à l'arme
+## se posent par-dessus, comme les quatre blocs historiques le font déjà.
+func _classe(slug: String, libelle: String, rang: int,
+		demi_angle: float, echelle: float) -> ClassData:
+	var c := ClassData.new()
+	c.libelle = libelle
+	c.rang = rang
+	c.torch_cookie = slug  # une seule clé : cookie, sprite, sons, icône
+	c.torch_angle_deg = demi_angle
+	c.torch_scale = echelle
+	return c
+
+
+func _root(duree: float, apres_rafale: bool = false) -> RootProfile:
+	var r := RootProfile.new()
+	r.duree = duree
+	r.apres_rafale = apres_rafale
+	return r
+
+
+func _fusees(stock: int, periode: float) -> FlareProfile:
+	var f := FlareProfile.new()
+	f.stock = stock
+	f.periode_recharge = periode
+	return f
+
+
+## Les gadgets DÉJÀ ÉCRITS, par slug. Les autres n'ont pas d'entrée, donc pas
+## d'implémentation, donc `est_livre()` rend faux et la touche ne pose rien.
+##
+## ⚠️ **Une table, et non un argument de plus à `_gadget()`.** Écrire le chemin à
+## la main sur chaque ligne du catalogue en ferait dix occasions de se tromper de
+## slug — et un chemin qui ne correspond pas au slug est exactement le genre
+## d'erreur que ce dépôt paie en silence : le gadget d'une classe se poserait
+## sous le nom d'une autre.
+## ⚠️ **La durée de vie est ICI et non dans le nœud**, contrairement aux points
+## de vie ou au fait d'arrêter les balles. C'est la règle posée par Adrien le
+## 2026-09-09 pour l'éblouissement, et elle vaut pour les deux : ce qui doit
+## pouvoir se régler par INSTANCE sans toucher au type vit dans le profil. Une
+## torche fantôme qui durerait deux fois moins longtemps est un réglage
+## d'équilibrage ; qu'elle arrête les balles est ce qu'elle EST.
+const IMPLEMENTATIONS := {
+	"voile": {"script": "res://gadget_voile.gd", "duree_vie": 0.0},
+	"ombre_habitee": {"script": "res://gadget_ombre.gd", "duree_vie": 0.0},
+	# 16 s : de quoi faire traverser une pièce à un adversaire qui la croit
+	# occupée, sans qu'un couloir reste éclairé toute la manche. À doser en jeu.
+	"torche_fantome": {"script": "res://gadget_torche_fantome.gd", "duree_vie": 16.0},
+	# La mine n'a pas de durée de vie : elle attend. C'est son embrasement qui la
+	# tue, et il pose lui-même son échéance (`GadgetMine.allumer()`).
+	"mine_magnesium": {"script": "res://gadget_mine.gd", "duree_vie": 0.0},
+	# 10 s : assez pour interdire un passage le temps d'une décision, pas assez
+	# pour qu'un couloir soit fermé toute la manche.
+	"nappe_braises": {"script": "res://gadget_braises.gd", "duree_vie": 10.0},
+	# Les deux volumes. La suie est dense et courte, la poussière large et un peu
+	# plus brève encore : un nuage large qui durerait longtemps fermerait la
+	# carte au lieu de la trouver.
+	"cartouche_suie": {"script": "res://gadget_suie.gd", "duree_vie": 9.0},
+	"poussiere": {"script": "res://gadget_poussiere.gd", "duree_vie": 7.5},
+	# 18 s : assez pour qu'un adversaire le croise, hésite, et paie un tir. Un
+	# leurre éternel finirait par être connu et cesserait de tromper.
+	"leurre": {"script": "res://gadget_leurre.gd", "duree_vie": 18.0},
+	# 14 s : le temps de rendre un couloir désagréable, pas celui d'en faire une
+	# zone interdite pour la manche.
+	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 14.0},
+	# ⚠️ **Pas de durée de vie : la poudre reste la manche entière.** La
+	# Sentinelle « ne cherche pas, elle veille » — un relevé qui s'effacerait tout
+	# seul obligerait à repasser vite, c'est-à-dire à chercher.
+	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
+}
+
+func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
+	var g := GadgetProfile.new()
+	g.slug = slug
+	g.libelle = libelle
+	g.eblouit = eblouit
+	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
+	g.implementation = String(fiche.get("script", ""))
+	g.duree_vie = float(fiche.get("duree_vie", 0.0))
+	return g
+
+
+## Le catalogue, en lecture. Rend une copie du tableau : le contenu reste
+## partagé, mais personne ne réordonne la liste de l'extérieur.
+func classes() -> Array[ClassData]:
+	var copie: Array[ClassData] = []
+	copie.assign(_classes)
+	return copie
+
+
+## La classe d'un index d'arme, ou `null` hors bornes.
+##
+## ⚠️ **Ne double PAS `weapon_for_index()`** : celle-là reste la seule table de
+## résolution pour les quatre armes historiques, et son commentaire dit pourquoi.
+## Celle-ci lit le catalogue, qui les contient. Deux chemins vers la même vérité
+## sont exactement ce que le dépôt a payé trois fois le 2026-08-24 — d'où le
+## contrôle croisé dans `tools/test_classes.gd`, qui exige que les deux
+## répondent la même chose sur 0 à 3.
+func classe_pour_index(idx: int) -> ClassData:
+	if idx < 0 or idx >= _classes.size():
+		return null
+	return _classes[idx]
 
 ## L'arsenal commun de ce match, règle du miroir appliquée. Vide hors match
 ## apparié CLASSÉ : ailleurs — amical compris —, l'arme est choisie au menu et
@@ -2687,8 +3534,23 @@ func matchmade_arsenal_reason() -> String:
 	if not _matchmade_round or not _matchmade_ranked \
 			or _mirror_opponent_tier >= maxi(_mirror_local_tier, 1):
 		return ""
-	return RankLoadout.reason_for(RankLoadout.ARBALETE, true,
-		_mirror_local_tier, _mirror_opponent_tier)
+	# ⚠️ **L'index n'est plus l'arbalète en dur.** Il l'était parce qu'elle est la
+	# dernière du socle, donc la première écartée — vrai tant que l'arsenal
+	# comptait quatre armes rangées par rang croissant, faux dès qu'il en compte
+	# dix. On demande donc la raison sur une arme EFFECTIVEMENT écartée : la
+	# première du socle absente de l'arsenal commun.
+	#
+	# Sans ce changement, la phrase affichée au joueur — la mesure d'atténuation
+	# que la règle du miroir EXIGE, faute de quoi le rétrécissement « sera vécu
+	# comme un bug » — parlerait d'une arme qu'il a peut-être encore.
+	var commun := matchmade_arsenal()
+	for idx in RankLoadout.SOCLE:
+		if not idx in commun:
+			return RankLoadout.reason_for(idx, true,
+				_mirror_local_tier, _mirror_opponent_tier)
+	# Rien d'écarté : le premier test l'a déjà dit, mais un chemin muet vaut
+	# mieux qu'un index inventé.
+	return ""
 
 ## Le joueur local change d'arme pendant la fenêtre de choix.
 ##
@@ -2895,8 +3757,7 @@ func _on_replay_requested():
 			# telle quelle — et c'est ce qui supprime le démarrage automatique à
 			# l'arrivée du client, que personne n'avait demandé.
 			p1_ready_for_rematch = true
-			if ui.p1_weapon_group.get_pressed_button():
-				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_hosted_weapon_1_idx = ui.selected_weapon_index(0)
 			_annoncer_etat_hote()
 			_check_rematch_start()
 		elif mode == NetworkManager.GameMode.ONLINE_CLIENT:
@@ -2922,9 +3783,7 @@ func _on_replay_requested():
 				ui.time_label.text = "EN ATTENTE D'UN ADVERSAIRE..."
 			return
 
-		var w2_idx = 0
-		if ui.p2_weapon_group.get_pressed_button():
-			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+		var w2_idx = ui.selected_weapon_index(1)
 
 		local_ready_for_rematch = true
 		ui.btn_replay.text = "✓ PRÊT"
@@ -2934,8 +3793,7 @@ func _on_replay_requested():
 			rpc_id(1, "rpc_client_ready", w2_idx)
 		elif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 			p1_ready_for_rematch = true
-			if ui.p1_weapon_group.get_pressed_button():
-				_hosted_weapon_1_idx = ui.p1_weapon_group.get_pressed_button().get_index()
+			_hosted_weapon_1_idx = ui.selected_weapon_index(0)
 			_annoncer_etat_hote()
 			_check_rematch_start()
 		else:
@@ -3072,9 +3930,7 @@ func _check_rematch_start():
 	if p1_ready_for_rematch and p2_ready_for_rematch:
 		p1_ready_for_rematch = false
 		p2_ready_for_rematch = false
-		var w2_idx = 0
-		if ui.p2_weapon_group.get_pressed_button():
-			w2_idx = ui.p2_weapon_group.get_pressed_button().get_index()
+		var w2_idx = ui.selected_weapon_index(1)
 		rpc_start_round.rpc(_hosted_weapon_1_idx, w2_idx, _host_map_code(), _new_match_id())
 	elif p2_ready_for_rematch:
 		# **Le message disait l'inverse de la vérité.** Quand le client s'était
@@ -3124,7 +3980,42 @@ func _maj_brouillage() -> void:
 		if not actif:
 			app.eteindre()
 			continue
-		app.maj(p1 if i == 0 else p2, p2 if i == 0 else p1)
+		# ⚠️ **L'adversaire N'EST PLUS passé en dur, et il l'était.** Le flou et le
+		# halo du brouillage se posaient sur l'autre joueur quelle que soit la
+		# cause de l'éblouissement — donc, dès qu'une lumière POSÉE éblouissait
+		# (mine, braises, fusée), l'appareil censé masquer allait dessiner une
+		# grande ellipse sur l'adversaire, à l'autre bout de la carte.
+		#
+		# À l'entraînement, ça donnait une ellipse flottant dans le noir sur un
+		# J2 invisible resté à son point d'apparition — c'est ce qu'Adrien a
+		# signalé le 2026-09-09, et qu'une session précédente avait cherché sans
+		# le trouver. **En ligne c'est pire qu'un artefact : un effet dont le
+		# métier est de MASQUER désignait la position de l'autre.**
+		#
+		# ⚠️ **C'est le JUMEAU exact du défaut corrigé le même jour sur le voile**
+		# (`ui._source_du_voile`). La source d'éblouissement alimente deux
+		# consommateurs ; le lot a réparé le premier et laissé le second, et rien
+		# ne l'a dit parce que les deux restent plausibles à l'écran.
+		var regardeur: Node2D = p1 if i == 0 else p2
+		app.maj(regardeur, source_eblouissante_ou(regardeur, p2 if i == 0 else p1))
+
+
+## Vers quoi un effet d'éblouissement doit se tourner : la source qui éblouit
+## RÉELLEMENT cette victime, l'adversaire seulement à défaut.
+##
+## ⚠️ **Publique, et c'est l'objet du geste.** La règle existait déjà, en privé,
+## dans `ui._source_du_voile()` — et le brouillage, qui en avait autant besoin,
+## ne l'avait pas. Deux copies auraient fini par diverger ; il n'y en a plus
+## qu'une, et elle vit là où `source_eblouissante` est ÉCRITE.
+##
+## Le repli sur l'adversaire n'est pas un bouche-trou : c'est le comportement
+## d'avant, conservé pour l'instant où l'hôte n'a pas encore désigné de source —
+## première image d'une manche, ou éblouissement nul.
+func source_eblouissante_ou(victime: Node, defaut: Node) -> Node:
+	if victime == null:
+		return defaut
+	var s = victime.get("source_eblouissante")
+	return s if s != null and is_instance_valid(s) else defaut
 
 
 func _accorder_rendu_aux_vues() -> void:

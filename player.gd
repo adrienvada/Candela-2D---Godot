@@ -50,9 +50,41 @@ var shoot_cooldown: float = 0.0
 var tw_reveal: Tween
 var dazzle_amount: float = 0.0
 
+## La source qui éblouit le plus ce joueur, cette image — ou `null`.
+##
+## ⚠️ **Le NIVEAU ne suffit pas, il faut la SOURCE.** Le voile penche vers ce qui
+## aveugle : `ui._poser_voile()` dérive son relèvement de la POSITION de la
+## source. Tant que l'éblouissement n'avait que deux sources croisées, l'appelant
+## pouvait passer « l'autre joueur » en dur ; avec des sources déclarées, il faut
+## dire laquelle a gagné le maximum. Sans ça le voile pencherait vers l'adversaire
+## pendant qu'une lumière posée brûle derrière — et rien ne le verrait, aucune
+## suite ne teste le relèvement.
+##
+## Posé par l'hôte dans `game_state._maj_eblouissement`. **Non répliqué** : le
+## voile n'est affiché qu'en écran scindé, où les deux joueurs sont locaux.
+var source_eblouissante: Node2D = null
+
 var current_ammo: int = 10
 var is_reloading: bool = false
 var reload_time_left: float = 0.0
+
+## Le ROOT — chantier CLASSES, étape 2. Secondes restantes d'immobilisation
+## après un tir. Zéro le reste du temps.
+##
+## ⚠️ **Rien de ceci ne part sur le fil, et il ne faut rien y mettre.** Le patron
+## est celui que `lancer_fusee()` porte déjà quelques centaines de lignes plus
+## bas : « le cooldown de tir existant porte ce désarmement — non répliqué,
+## simulé identiquement chez l'hôte et dans la prédiction client, comme pour le
+## tir ». `shoot()` tourne des DEUX côtés — le client prédit son propre tir —
+## donc le compteur tombe juste chez les deux pairs sans qu'on transmette quoi
+## que ce soit. Y ajouter un octet par tick serait payer pour une valeur qui est
+## déjà bonne, et créer une divergence possible là où il n'y en a aucune.
+##
+## ⚠️ **Il ne bat que pendant le jeu actif.** Le bloc qui le décrémente vit après
+## deux `return` anticipés : rien n'y tourne pendant le décompte de manche ni
+## pendant la séquence de fin. Le rechargement gèle déjà de la même façon, et
+## c'est cohérent — mais il faut le savoir, parce qu'aucune suite ne le dit.
+var _root_restant: float = 0.0
 var current_spread_bloom: float = 0.0
 var _reload_presse: bool = false
 
@@ -218,6 +250,10 @@ var vignette_mat: ShaderMaterial
 ## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
 const TORCH_BREATH_AMP := 0.03
 var _torch_breath_t: float = 0.0
+## L'énergie de la torche AVANT toute atténuation : l'état lissé, celui que le
+## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
+## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
+var _energie_torche: float = 2.5
 ## V5.6 — la rétrodiffusion « respire » au pas : bosse brève, résorbée seule.
 const BACKSCATTER_STEP_PULSE := 0.35
 var _backscatter_pulse: float = 0.0
@@ -329,13 +365,6 @@ const SPRITES := "res://assets/sprites/"
 ## d'Adrien est « une fois, pour toutes les familles ». Quatre copies finiraient
 ## par diverger, et chacune paraîtrait juste.
 
-
-## L'empreinte au sol d'un sprite, en unités de monde, depuis la largeur de sa
-## texture. Statique et sans dépendance : c'est ce qui permet à un banc de
-## l'éprouver à plusieurs résolutions sans monter un `Player` — et donc de
-## prouver que recuire ne déplace rien.
-static func empreinte_sprite(largeur_texture: int) -> float:
-	return float(largeur_texture) / Charte.DENSITE_ASSETS
 
 ## ## Le viseur (DA2.11)
 ##
@@ -851,8 +880,8 @@ func _poser_sprite(slug: String) -> bool:
 	# ⚠️ Passe par `empreinte_sprite()` — voir `DENSITE_SPRITES`. Bâtir le quad
 	# sur `get_width()` brut est le piège que R6 a levé : la recuisson d'un asset
 	# redimensionnerait le joueur.
-	var demi := Vector2(empreinte_sprite(t_peint.get_width()),
-		empreinte_sprite(t_peint.get_height())) * 0.5
+	var demi := Vector2(Charte.empreinte_sprite(t_peint.get_width()),
+		Charte.empreinte_sprite(t_peint.get_height())) * 0.5
 	var quad := PackedVector2Array([
 		Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
 		Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
@@ -992,7 +1021,7 @@ func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	var cx := float(l) * 0.5
 	var cy := float(h) * 0.5
 	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
-	var vers_monde := empreinte_sprite(l) / float(l)
+	var vers_monde := Charte.empreinte_sprite(l) / float(l)
 	var pts := PackedVector2Array()
 	const RAYONS := 32
 	for i in RAYONS:
@@ -1068,6 +1097,10 @@ func _monter_viseur() -> void:
 
 func equip_weapon(weapon: WeaponData):
 	current_weapon = weapon
+	# Changer d'arme annule l'immobilisation de la précédente : garder un root de
+	# 0,60 s après être passé à une classe qui en a 0,08 serait une pénalité que
+	# rien à l'écran n'expliquerait.
+	_root_restant = 0.0
 	if current_weapon:
 		current_ammo = current_weapon.max_ammo
 		is_reloading = false
@@ -1157,6 +1190,17 @@ func _process(delta):
 	var occultation := 0.0
 	for fusee in get_tree().get_nodes_in_group("fusees"):
 		occultation = maxf(occultation, fusee.occultation_pour(global_position))
+	# Chantier CLASSES (étape 14) — les VOLUMES effacent de la même façon, et
+	# c'est délibérément le même mécanisme : deux façons de s'effacer dans deux
+	# nuages différents se sentiraient comme un défaut, pas comme deux gadgets.
+	#
+	# ⚠️ **Boucle sans garde, comme celle du dessus**, et c'est tenable pour une
+	# seule raison : `GadgetBase.occultation_pour()` existe et rend zéro, donc
+	# TOUT gadget sait répondre. Le jour où quelqu'un ajoutera au groupe un objet
+	# qui ne sait pas, le jeu plantera à chaque image — c'est le défaut qu'une
+	# session voisine a relevé sur le groupe des fusées le 2026-09-09.
+	for gadget in get_tree().get_nodes_in_group("gadgets"):
+		occultation = maxf(occultation, gadget.occultation_pour(global_position))
 	for v in [visual, visual_dim, visual_reveal, visual_enemy]:
 		if v:
 			v.modulate.a = 1.0 - occultation
@@ -1191,7 +1235,7 @@ func _process(delta):
 ## [Hôte] Reçoit les commandes du client. Seul le peer propriétaire de P2 est
 ## accepté : sans cette garde, n'importe quel peer pourrait piloter P2.
 @rpc("any_peer", "unreliable")
-func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false) -> void:
+func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: bool, flare: bool, reload: bool = false, gadget: bool = false) -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST: return
 	if player_id != 1: return
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1213,7 +1257,7 @@ func rpc_send_inputs(seq: int, mov: Vector2, aim: Vector2, shoot: bool, torch: b
 	aim = aim.limit_length(1.0)
 	_last_input_seq = seq
 	inputs_accepted += 1
-	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload)
+	input_provider.update_input_state(mov, aim, shoot, torch, flare, reload, gadget)
 
 ## [Hôte] Purge l'état d'input à la déconnexion : sinon P2 resterait figé sur
 ## la dernière commande reçue (course en cours, torche allumée…).
@@ -1231,14 +1275,15 @@ func _send_inputs_to_host(neutral: bool = false) -> void:
 	inputs_target = peers[0] if peers.size() > 0 else 0
 	if neutral:
 		_input_seq += 1
-		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false)
+		rpc_id(1, "rpc_send_inputs", _input_seq, Vector2.ZERO, Vector2.ZERO, false, flashlight_on, false, false, false)
 		return
 	var mov := input_provider.get_movement_vector()
 	var aim := input_provider.get_aim_direction(global_position)
 	_input_seq += 1
 	rpc_id(1, "rpc_send_inputs", _input_seq, mov, aim,
 		input_provider.is_shoot_pressed(), input_provider.is_flashlight_pressed(),
-		input_provider.is_flare_pressed(), input_provider.is_reload_pressed())
+		input_provider.is_flare_pressed(), input_provider.is_reload_pressed(),
+		input_provider.is_gadget_pressed())
 
 ## Ce nœud est-il celui que pilote la personne assise devant cet écran ? En
 ## écran partagé la question ne se pose pas : la pause y gèle réellement l'arbre.
@@ -1320,7 +1365,16 @@ func _ingest_prediction_correction() -> void:
 func _consume_prediction_error(delta: float) -> void:
 	if _predict_error == Vector2.ZERO: return
 	var step := _predict_error * (1.0 - exp(-PREDICT_CORRECTION_RATE * delta))
-	global_position += step
+	# ⚠️ **`move_and_collide` et non `global_position +=`.** Le second est un
+	# téléport : il traverse les murs. Tant que le joueur bouge il se dégage seul
+	# au tick suivant, ce qui a masqué le défaut jusqu'ici — mais un joueur
+	# immobilisé après un tir ne bouge plus, et il y reste.
+	#
+	# `_predict_error -= step` reste juste même si le mur mange une partie du
+	# pas : l'écart n'est pas intégré, il est RE-MESURÉ à chaque paquet
+	# (`_predict_error = err`, depuis `net_position`). Ce qui est perdu revient
+	# dans la mesure suivante — d'où l'inutilité de calculer le trajet réel.
+	move_and_collide(step)
 	_predict_error -= step
 	if _predict_error.length() < 0.5:
 		_predict_error = Vector2.ZERO
@@ -1436,6 +1490,11 @@ func _physics_process(delta):
 		var current_speed = speed
 		if (shoot_cooldown > 0 or is_reloading) and current_weapon:
 			current_speed *= current_weapon.movement_speed_while_reloading
+		# Le ROOT — troisième cause, et elle se LIT comme les deux autres : un
+		# joueur qui vient de tirer ne bouge plus, ce que l'adversaire voit.
+		# `facteur()` rend 1 hors de sa fenêtre, donc la ligne est inconditionnelle.
+		if _root_restant > 0.0:
+			current_speed *= RootProfile.facteur(_root_restant)
 		if dazzle_amount > 0:
 			current_speed *= lerp(1.0, 0.4, dazzle_amount)
 			
@@ -1586,13 +1645,45 @@ func _physics_process(delta):
 		flashlight.enabled = true
 		body_light.enabled = true
 		if shoot_cooldown > 0:
-			flashlight.energy = randf_range(1.5, 2.0)
+			_energie_torche = randf_range(1.5, 2.0)
 		else:
 			# V5.4 — la torche respire : ±3 % d'énergie sur un bruit lent,
 			# identique pour les deux joueurs — la lumière vit, sans rien dire.
 			_torch_breath_t += delta
 			var souffle := 1.0 + noise.get_noise_1d(_torch_breath_t * 40.0) * TORCH_BREATH_AMP
-			flashlight.energy = lerp(flashlight.energy, 2.5 * souffle, 8.0 * delta)
+			_energie_torche = lerp(_energie_torche, 2.5 * souffle, 8.0 * delta)
+
+		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
+		# les lampes autour de lui : le faisceau papillote, faiblit, revient.
+		#
+		# ⚠️ **Posé APRÈS le souffle et AVANT la rétrodiffusion**, et les deux
+		# places comptent. Après le souffle, parce que la panne doit s'appliquer à
+		# l'énergie réellement rendue et non se faire écraser par le `lerp` de la
+		# ligne au-dessus. Avant la rétrodiffusion, parce que celle-ci se dérive de
+		# `flashlight.energy` : sans ça, le halo du porteur resterait plein pendant
+		# que son faisceau s'éteint, et il verrait que sa lampe ment.
+		#
+		# ⚠️ **Le MINIMUM, jamais le produit** : deux bobines ne doivent pas
+		# éteindre deux fois. C'est la même règle que le MAX de l'éblouissement —
+		# le modèle est un plafond, pas une intégrale.
+		var lampe := 1.0
+		for gadget in get_tree().get_nodes_in_group("gadgets"):
+			lampe = minf(lampe, gadget.facteur_de_lampe(global_position))
+		# ⚠️ **L'atténuation s'applique à `_energie_torche`, JAMAIS à
+		# `flashlight.energy`**, et la première version faisait l'inverse.
+		#
+		# `flashlight.energy` était l'ÉTAT lissé : le multiplier réinjectait
+		# l'atténuation dans le lissage de l'image suivante, et elle se composait
+		# indéfiniment. Mesuré au creux du grésillement — 0,094 au lieu des 0,57
+		# attendus, soit six fois trop —, **et la valeur dépendait de la cadence** :
+		# plus la machine est rapide, plus le `lerp` par image est petit, plus la
+		# composition l'emporte. Une mécanique dont la force dépend du matériel n'a
+		# pas sa place dans un jeu qui se veut honnête en compétition.
+		#
+		# ⚠️ Aucune suite ne pouvait l'attraper : le facteur du gadget était juste,
+		# le câblage était juste, et le banc mesure les deux. C'est le nombre
+		# IMPRIMÉ par une capture qui l'a montré.
+		flashlight.energy = _energie_torche * lampe
 
 		# V5.6 — la rétrodiffusion gonfle d'un souffle à chaque pas (posé par le
 		# détecteur de pas plus haut) puis se résorbe seule : marcher torche
@@ -1640,6 +1731,13 @@ func _physics_process(delta):
 	# Récupération de la précision (dispersion bloom)
 	if current_weapon and current_spread_bloom > 0.0:
 		current_spread_bloom = maxf(0.0, current_spread_bloom - current_weapon.spread_recovery_speed_deg * delta)
+
+	# Progression du root. Posé ici et pas ailleurs : ce bloc est celui du
+	# rechargement, il ne tourne que pendant le jeu actif, et les deux comptent
+	# le même genre de temps — celui pendant lequel on ne peut pas faire ce qu'on
+	# voudrait.
+	if _root_restant > 0.0:
+		_root_restant = maxf(0.0, _root_restant - delta)
 
 	# Progression du rechargement
 	if is_reloading:
@@ -1690,6 +1788,14 @@ func _physics_process(delta):
 			AudioManager.play_sfx_2d(
 				AudioManager.chemin_percuteur(current_weapon.slug()),
 				muzzle.global_position)
+	# Le root de RAFALE : il ne tombe pas coup par coup mais au relâchement, ou
+	# quand le chargeur se vide. Sans ce bloc, l'Occulteur n'aurait aucun root du
+	# tout — un manque qui ne lèverait rien et ne se verrait qu'en jouant.
+	var _cl_rafale := current_weapon as ClassData
+	if _cl_rafale != null and _cl_rafale.root != null and _cl_rafale.root.apres_rafale:
+		if _detente_pressee and not presse:
+			_root_restant = maxf(_root_restant, _cl_rafale.root.duree)
+
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
@@ -1708,6 +1814,24 @@ func _physics_process(delta):
 			and state and state.fusee_disponible(player_id):
 		lancer_fusee()
 		_fusee_pressee = true
+
+	# La pose de gadget suit EXACTEMENT le même patron, et c'est délibéré : deux
+	# gestes qui font la même chose — un bit maintenu, un front, un désarmement
+	# porté par le cooldown de tir, un arbitrage chez l'hôte — doivent s'écrire
+	# pareil, sinon l'un des deux dérivera.
+	#
+	# ⚠️ L'ordre compte : le gadget est examiné APRÈS la fusée. Les deux touches
+	# tenues ensemble, la fusée part d'abord et arme le cooldown, donc le gadget
+	# attend le tick suivant. Jamais les deux dans la même image — et l'ordre est
+	# le même chez l'hôte et dans la prédiction du client, puisque c'est ce bloc
+	# qui tourne des deux côtés.
+	var gadget_presse := input_provider.is_gadget_pressed()
+	if not gadget_presse:
+		_gadget_pressee = false
+	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
+			and state and state.gadget_disponible(player_id):
+		poser_gadget()
+		_gadget_pressee = true
 
 ## V4.4 — presser la détente pendant le rechargement ne produisait RIEN.
 ##
@@ -1738,6 +1862,8 @@ var tir_a_sec: float = 0.0
 var _detente_pressee: bool = false
 ## Même chose pour le bouton de fusée.
 var _fusee_pressee: bool = false
+## Et pour celui du gadget.
+var _gadget_pressee: bool = false
 
 func shoot():
 	if current_weapon == null: return
@@ -1745,8 +1871,24 @@ func shoot():
 	
 	current_ammo -= 1
 	shoot_cooldown = current_weapon.cooldown
-	# V1.5 — coup ferme et bref dans la manette du tireur.
-	_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)
+	# Le ROOT s'arme ici, du même geste que le cooldown et pour la même raison :
+	# `shoot()` tourne chez l'hôte ET dans la prédiction du client, donc les deux
+	# pairs arment le même compteur au même tir.
+	#
+	# ⚠️ L'Occulteur est le seul à ne pas s'immobiliser coup par coup — son
+	# pistolet-mitrailleur ne peut pas s'arrêter huit fois de suite. Son root
+	# vient à la fin de la rafale, plus bas, au relâchement de la détente.
+	var _cl := current_weapon as ClassData
+	if _cl != null and _cl.root != null and not _cl.root.apres_rafale:
+		_root_restant = _cl.root.duree
+	# V1.5, renforcé (chantier ressenti lourd) — coup dans la manette du
+	# tireur, en deux temps plutôt qu'un seul pouls plat.
+	#
+	# ⚠️ Fusion des deux chantiers : le root et la vibration s'arment au même
+	# endroit et ne se gênent pas. La version renforcée de `main` l'emporte sur
+	# l'ancien `_rumble(0.0, RUMBLE_SHOOT_STRONG, 0.12)` — c'est le geste qu'Adrien
+	# a jugé, et il n'a rien à voir avec l'immobilisation.
+	_rumble_shoot()
 	
 	var final_rot := rotation
 	if current_spread_bloom > 0.001:
@@ -1775,6 +1917,18 @@ func lancer_fusee():
 	_rumble(RUMBLE_FLARE_WEAK, RUMBLE_FLARE_STRONG, 0.18)
 	get_tree().call_group("game_state", "spawn_fusee", self, global_position, rotation)
 
+## Poser un gadget désarme aussi : on a les mains prises. Même mécanique que le
+## lancer de fusée — cooldown de tir non répliqué, arbitrage du stock et spawn
+## chez `game_state`.
+##
+## ⚠️ **La position envoyée est celle du JOUEUR, pas celle du gadget.** C'est
+## l'hôte qui décide où l'objet se plante réellement — il faut une requête de
+## physique pour ne pas le planter dans un mur, et deux mondes pourraient y
+## répondre différemment. Voir `GameState._point_de_pose()`.
+func poser_gadget():
+	shoot_cooldown = maxf(shoot_cooldown, GadgetProfile.DESARMEMENT)
+	get_tree().call_group("game_state", "spawn_gadget", self, global_position, rotation)
+
 # ---------------------------------------------------------------------------
 # V1.5 — Retour haptique. Tir (fort, bref), impact reçu (moyen), pouls sous
 # 30 HP, double coup du vainqueur au kill, tir à sec, rechargement terminé,
@@ -1786,7 +1940,15 @@ func lancer_fusee():
 # `vibration_manette` (0 à 100 %, pas de plancher en classé : purement local à
 # celui qui la ressent, elle ne porte aucune information sur l'adversaire).
 # ---------------------------------------------------------------------------
-const RUMBLE_SHOOT_STRONG := 0.7
+## Ressenti lourd (au-delà de V1.5) — le tir n'est plus un pouls plat mais
+## deux temps : un claquement bref (les deux moteurs, presque au plafond) puis
+## un grave qui traîne (moteur grave seul). Aucun des deux ne dépend du poids
+## par classe du chantier racine (`candela-10-classes-system`, en cours
+## ailleurs) : uniforme pour l'instant, à moduler par arme le jour où ce
+## chantier fusionne et expose un poids.
+const RUMBLE_SHOOT_SNAP_WEAK := 0.2
+const RUMBLE_SHOOT_SNAP_STRONG := 0.9
+const RUMBLE_SHOOT_TAIL_STRONG := 0.4
 const RUMBLE_HIT_WEAK := 0.5
 const RUMBLE_HIT_STRONG := 0.3
 const RUMBLE_PULSE_WEAK := 0.25
@@ -1840,6 +2002,17 @@ func reset_step_tracker() -> void:
 func reset_flashlight_latch() -> void:
 	if input_provider:
 		input_provider.reset_flashlight_state()
+
+## Ressenti lourd du tir : un claquement (les deux moteurs, bref) puis un
+## grave qui traîne (moteur grave seul) — pas un pouls plat. Le second temps
+## tient dans le cooldown de l'arme la plus rapide (Pistolet, 0,16 s) ; en
+## rafale, chaque tir écrase l'attente en cours et relance la sienne, ce qui
+## se ressent comme un grondement continu plutôt qu'un défaut.
+func _rumble_shoot() -> void:
+	_rumble(RUMBLE_SHOOT_SNAP_WEAK, RUMBLE_SHOOT_SNAP_STRONG, 0.07)
+	await get_tree().create_timer(0.07).timeout
+	if is_instance_valid(self):
+		_rumble(0.0, RUMBLE_SHOOT_TAIL_STRONG, 0.08)
 
 ## Double coup du kill, ressenti par le vainqueur seulement.
 func rumble_kill() -> void:

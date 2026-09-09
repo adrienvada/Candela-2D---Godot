@@ -24,3 +24,7 @@ func is_flare_pressed() -> bool:
 
 func is_reload_pressed() -> bool:
 	return false
+
+## Le gadget de la classe — chantier CLASSES, étape 4.
+func is_gadget_pressed() -> bool:
+	return false
