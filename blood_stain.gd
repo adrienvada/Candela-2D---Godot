@@ -74,6 +74,29 @@ const ECLABOUSSURES := ["res://assets/decals/sang_1.png", "res://assets/decals/s
 ## de déplacer les taches en silence.
 const FLAQUES := [Vector2(0.522, 0.565), Vector2(0.134, 0.539)]
 
+## Quelle planche est une « étoile » — une flaque centrée, à peu près ronde,
+## sans direction lisible — par opposition aux planches DIRECTIONNELLES, dont
+## la traînée se voit. Même ordre et même taille qu'`ECLABOUSSURES`.
+##
+## **Règle d'Adrien, le 2026-09-08 :** l'étoile centrée ne doit apparaître que
+## pour un tir qui passe très près du centre réel du joueur ; sinon, ce sont
+## les planches directionnelles qui doivent sortir. Voir `SEUIL_ETOILE_CENTREE`
+## et `_choisir_eclaboussure()`.
+const EST_ETOILE_CENTREE := [true, false]
+
+## Distance maximale, en pixels, entre l'AXE du tir et le CENTRE réel du joueur
+## pour que l'étoile centrée soit éligible au tirage.
+##
+## ⚠️ **Un seuil sur l'axe, pas sur le point d'impact.** `bullet.gd::_hit_player()`
+## calcule déjà cette distance perpendiculaire pour l'atténuation des dégâts
+## (`dist_to_axis`) — c'est elle, non normalisée, qui est transmise ici. Jamais
+## une seconde mesure : le même nombre décide « le tir a-t-il touché près du
+## centre ? » pour les dégâts ET pour le choix de la planche.
+##
+## **0-2 px, valeur d'Adrien** : un tir qui vise exactement le centre du corps
+## donne 0 ; au-delà de 2 px d'écart, ce sont les planches directionnelles.
+const SEUIL_ETOILE_CENTREE := 2.0
+
 var _texture: Texture2D = null
 var _coeur: Texture2D = null
 ## Centre de la flaque de LA planche tirée au sort, en fraction (voir FLAQUES).
@@ -161,25 +184,29 @@ static func rectangle_de_la_tache(taille: Vector2, ancre: Vector2) -> Rect2:
 	return Rect2(Vector2(CENTRE_DU_CORPS, 0.0) - taille * ancre, taille)
 
 
-func setup(base_pos: Vector2, direction: Vector2):
+## `distance_axe_centre` : distance en pixels entre l'axe du tir et le centre
+## réel du joueur — voir `SEUIL_ETOILE_CENTREE`. Par défaut `INF` (« loin » du
+## centre) : un appelant qui ne la connaît pas obtient une planche
+## DIRECTIONNELLE, jamais l'étoile réservée aux tirs quasi parfaits.
+func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = INF):
 	position = base_pos
 	z_index = 1 # Au-dessus du sol (0), sous la killcam (2) et les joueurs (10)
-	
+
 	# Viewport J1 (2) : torche (1) + ambiance personnelle J1 (16)
 	visibility_layer = 2
 	light_mask = 1 | 16
-	
+
 	# Rendu « liquide » : la brillance vient du shader, pas du dessin.
 	material = ShaderMaterial.new()
 	material.shader = BLOOD_SHADER
-	
+
 	# DA2.8 — une éclaboussure peinte, tournée dans l'axe du tir.
 	#
 	# La rotation porte sur le NŒUD : l'éclaboussure est dessinée pointant vers
 	# la droite, et `direction` la met dans l'axe de la balle. Une tache de sang
 	# raconte d'où le coup venait ; la faire tourner est ce qui distingue une
 	# scène de crime d'un semis de losanges.
-	_choisir_eclaboussure()
+	_choisir_eclaboussure(distance_axe_centre)
 	if _texture != null:
 		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
 		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
@@ -221,12 +248,30 @@ func setup(base_pos: Vector2, direction: Vector2):
 
 ## Choisit une éclaboussure et son cœur, ou laisse `_texture` à `null`.
 ##
+## **Le tirage est restreint à une catégorie** (voir `EST_ETOILE_CENTREE`) :
+## l'étoile centrée seulement si `distance_axe_centre <= SEUIL_ETOILE_CENTREE`,
+## les planches directionnelles sinon. À une seule planche par catégorie
+## aujourd'hui, le tirage au sort est donc sans effet — il reste écrit pour que
+## d'autres planches directionnelles rejoignent un jour la liste sans qu'il
+## faille retoucher cette fonction.
+##
 ## Rend la main en criant si les fichiers manquent : un décal cuit mais pas
 ## encore importé par Godot est invisible à `ResourceLoader`, et c'est l'état
 ## normal d'un asset frais. Sans ce cri, le jeu retomberait sur les cercles et
 ## personne ne saurait dire pourquoi les éclaboussures n'ont pas changé.
-func _choisir_eclaboussure() -> void:
-	var i := randi() % ECLABOUSSURES.size()
+func _choisir_eclaboussure(distance_axe_centre: float) -> void:
+	var centree := distance_axe_centre <= SEUIL_ETOILE_CENTREE
+	var candidats: Array[int] = []
+	for j in range(ECLABOUSSURES.size()):
+		if EST_ETOILE_CENTREE[j] == centree:
+			candidats.append(j)
+	if candidats.is_empty():
+		# Filet : aucune planche ne correspond à la catégorie demandée (le cas
+		# ne se produit pas aujourd'hui, mais une planche retirée par erreur ne
+		# doit pas faire disparaître tout le sang). On retombe sur l'ensemble.
+		for j in range(ECLABOUSSURES.size()):
+			candidats.append(j)
+	var i: int = candidats[randi() % candidats.size()]
 	var chemin: String = ECLABOUSSURES[i]
 	var coeur := chemin.replace(".png", "_coeur.png")
 	if not ResourceLoader.exists(chemin) or not ResourceLoader.exists(coeur):
