@@ -1596,6 +1596,29 @@ func play_sfx_2d(stream_or_key: Variant, pos: Vector2, pitch_scale: float = 1.0,
 	# plus haut sur pourquoi ce n'est pas le meme bus.
 	player.volume_db += etouffement_fumee_db(occultation_fumee(pos))
 	player.play()
+	# ⚠️ **LE TEMOIN, et il repond a la seule question que le graphe ne repond
+	# pas : ce son avait-il une chance d'etre entendu ?**
+	#
+	# Le diagnostic decrivait un montage parfait pendant qu'Adrien n'entendait
+	# rien. Un graphe juste ne prouve pas qu'un son sorte — cinquieme fois. On
+	# retient donc ce que le MOTEUR va faire de ce son : d'ou il part, ou est
+	# l'oreille, la distance qui les separe, et la portee au-dela de laquelle il
+	# s'eteint. Trois nombres qui se comparent, la ou dix drapeaux ne disaient
+	# rien.
+	_sons_2d_lances += 1
+	var oreille_pos := Vector2.INF
+	if _oreille != null and is_instance_valid(_oreille):
+		oreille_pos = _oreille.global_position
+	_dernier_son_2d = {
+		"cle": String(stream_or_key) if stream_or_key is String else "<flux>",
+		"pos": pos,
+		"oreille": oreille_pos,
+		"distance": pos.distance_to(oreille_pos) if oreille_pos != Vector2.INF else -1.0,
+		"portee": player.max_distance,
+		"volume_db": player.volume_db,
+		"bus": player.bus,
+		"joue": player.playing,
+	}
 	return player
 
 ## Le coup de feu d'une arme, tiré au sort parmi ses quatre variantes.
@@ -1870,6 +1893,23 @@ func jouer_acouphene_mort() -> void:
 		_tween_etouffement.kill()
 	f.cutoff_hz = ETOUFFEMENT_MORT_HZ
 	_tween_etouffement = create_tween()
+	# ⚠️ **EN TEMPS REEL, et c'est un defaut mesure le 2026-09-09 — le mien.**
+	#
+	# Mourir declenche la killcam, qui met `Engine.time_scale` a 0,05. Un tween
+	# suit le temps du JEU par defaut : cette seconde d'etouffement devenait
+	# **vingt secondes reelles**, pendant lesquelles tout le bus SFX passait par
+	# un passe-bas a 700 Hz. Mesure : 4858 Hz apres 1,2 s reelles, 7830 Hz apres
+	# 4,2 s. Et chaque mort refermait le filtre.
+	#
+	# La musique vit sur son propre bus et ne s'apercevait de rien : le symptome
+	# etait donc « je n'entends plus que la musique », ce qu'Adrien a rapporte
+	# mot pour mot — sans qu'aucun test ne rougisse, puisque le montage etait
+	# parfait et que le defaut vivait dans une COURBE.
+	#
+	# Le temps reel est aussi le bon choix sur le fond : cet etouffement est une
+	# oreille qui siffle apres une detonation. C'est de la physiologie, pas un
+	# evenement du monde — il n'a aucune raison de ralentir avec l'image.
+	_tween_etouffement.set_ignore_time_scale(true)
 	_tween_etouffement.tween_property(f, "cutoff_hz", SFX_COUPURE_OUVERTE_HZ,
 		ETOUFFEMENT_MORT_S).set_ease(Tween.EASE_OUT)
 
@@ -2016,6 +2056,12 @@ var _suivi: Node2D = null
 ## Le porteur de l'oreille principale, retenu pour pouvoir REPOSER l'oreille si
 ## le mode de rendu change apres la pose. Voir la garde dans `_process`.
 var _porteur: Node2D = null
+
+## Combien de sons POSITIONNELS ont ete lances, et ce que le moteur savait du
+## dernier. Voir le temoin dans `play_sfx_2d` : c'est le seul endroit du fichier
+## qui rapporte un son plutot qu'un montage.
+var _sons_2d_lances: int = 0
+var _dernier_son_2d: Dictionary = {}
 var _vues_ecoutantes: Array = []
 
 ## Fait demenager les voix positionnelles dans le monde du jeu, et pose l'oreille
@@ -2290,6 +2336,39 @@ func diagnostic_ecoute() -> String:
 			nom + " :", "COUPE" if AudioServer.is_bus_mute(i) else "actif",
 			AudioServer.get_bus_volume_db(i), AudioServer.get_bus_effect_count(i)])
 	lignes.append("[audio] replis hors physique : %d" % occlusions_hors_frame)
+
+	# Ce que la sortie fait VRAIMENT. Une crete a -200 dB pendant que le montage
+	# est parfait dit ou chercher : en amont si rien n'entre, en aval si tout
+	# entre et que rien ne sort.
+	for nom in [BUS_MASTER, BUS_SFX]:
+		var i := AudioServer.get_bus_index(nom)
+		if i != -1:
+			lignes.append("[audio] crete %s : G %.1f dB / D %.1f dB" % [nom,
+				AudioServer.get_bus_peak_volume_left_db(i, 0),
+				AudioServer.get_bus_peak_volume_right_db(i, 0)])
+
+	# ⚠️ **Le filtre que J'AI pose sur SFX le 2026-09-08 (FU4).** Il s'ouvre a
+	# 20500 Hz et se ferme a 700 Hz une seconde a la mort. **Si son tween est tue
+	# en route — fin de manche, changement de scene — il reste FERME**, et tout
+	# le bus SFX passe a travers un mouchoir pendant que la musique, sur son
+	# propre bus, ne s'apercoit de rien. C'est exactement la forme du symptome
+	# d'Adrien, et c'est moi qui l'ai introduite la veille.
+	var fm := _get_sfx_monde_filter()
+	if fm != null:
+		lignes.append("[audio] filtre SFX (EtouffementMonde) : coupure %.0f Hz%s" % [
+			fm.cutoff_hz,
+			"   <<<< FERME, le bus est etouffe" if fm.cutoff_hz < 15000.0 else ""])
+	lignes.append("[audio] sons positionnels lances : %d" % _sons_2d_lances)
+	if _dernier_son_2d.is_empty():
+		lignes.append("[audio] dernier son 2D : AUCUN — rien n'a jamais ete lance")
+	else:
+		var d: Dictionary = _dernier_son_2d
+		lignes.append("[audio] dernier son 2D : %s" % d["cle"])
+		lignes.append("[audio]   source=%s oreille=%s distance=%.0f px" % [
+			d["pos"], d["oreille"], d["distance"]])
+		lignes.append("[audio]   portee=%.0f px  volume=%+.1f dB  bus=%s  playing=%s%s" % [
+			d["portee"], d["volume_db"], d["bus"], d["joue"],
+			"   <<<< HORS DE PORTEE" if d["distance"] > d["portee"] else ""])
 	return "\n".join(lignes)
 
 ## L'etat s'imprime aux transitions, en build debug seulement.

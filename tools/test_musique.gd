@@ -55,6 +55,7 @@ func _run() -> void:
 	_test_aucun_fichier_muet()
 	_test_aucun_son_orphelin()
 	_test_etouffement_fumee()
+	_test_acouphene_en_temps_reel()
 	_test_banc_de_mixage()
 	_test_dosage()
 	_test_percuteur()
@@ -449,6 +450,32 @@ func _test_filet_de_sortie() -> void:
 ## Verifie la partie PURE du mecanisme : `etouffement_fumee_db` ne depend
 ## d'aucune scene, aucun groupe, aucun Fusee instancie — donc verifiable ici
 ## sans banc ni carte.
+## L'ETOUFFEMENT DE MORT SE ROUVRE EN TEMPS REEL, PAS EN TEMPS DE JEU.
+##
+## ⚠️ **Defaut mesure le 2026-09-09 : le jeu n'avait plus que sa musique.**
+## Mourir declenche la killcam, qui met `Engine.time_scale` a 0,05. Le tween qui
+## rouvre le filtre du bus SFX suivait le temps du JEU : une seconde annoncee
+## devenait vingt secondes reelles, tout le bus SFX etouffe a 700 Hz pendant ce
+## temps, et chaque mort le refermait. La musique, sur son propre bus, ne s'en
+## apercevait pas.
+##
+## Aucun test ne pouvait le voir : le montage etait parfait, le defaut vivait
+## dans une COURBE. On verifie donc la propriete elle-meme.
+func _test_acouphene_en_temps_reel() -> void:
+	print("\n[L'acouphene de mort se rouvre en temps REEL]")
+	var source := FileAccess.get_file_as_string("res://audio_manager.gd")
+	var bloc := source.split("func jouer_acouphene_mort()")
+	_check("jouer_acouphene_mort existe", bloc.size() == 2)
+	if bloc.size() != 2:
+		return
+	var corps: String = bloc[1].split("\nfunc ")[0]
+	# Sans ca, la killcam etire l'etouffement d'un facteur vingt.
+	_check("son tween ignore l'echelle de temps",
+		corps.contains("set_ignore_time_scale(true)"),
+		"le ralenti de la killcam etirerait l'etouffement")
+	_check("et il se rouvre bien vers la coupure ouverte",
+		corps.contains("SFX_COUPURE_OUVERTE_HZ"))
+
 func _test_etouffement_fumee() -> void:
 	print("\n[FU4 : la fumee etouffe un peu, jamais plus qu'un mur]")
 
