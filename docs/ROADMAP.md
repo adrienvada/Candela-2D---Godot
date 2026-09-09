@@ -7395,6 +7395,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
     couvrent déjà exactement le même besoin, et correctement dans les trois
     modes — `_is_locally_piloted()` reste inchangée pour l'acouphène et le
     pouls d'éblouissement, hors périmètre de ce chantier.
+  - **Ressenti lourd du tir — demandé le 2026-09-09, à la suite du chantier
+    racine des 10 classes.** Ce chantier (`candela-10-classes-system`, en
+    cours ailleurs — gel après tir dépendant de la classe, pistolet 0,10 s à
+    arbalète 0,60 s) voulait en plus que le tir se **sente** lourd, pas
+    seulement qu'il immobilise. Deux volets demandés :
+    - **Vibration renforcée** ✅ **faite** — `_rumble_shoot()` remplace le
+      pouls plat par deux temps : un claquement (les deux moteurs, presque au
+      plafond, 70 ms) puis un grave qui traîne (moteur grave seul, 80 ms).
+      **Volontairement uniforme entre armes pour l'instant** : le poids par
+      classe vit dans le chantier racine, non fusionné, et le dupliquer ici
+      créerait deux sources de vérité sur la même notion. À moduler par arme
+      le jour où ce chantier fusionne et expose un poids exploitable.
+    - **Gâchettes adaptatives** ❌ **abandonnées — tranché par Adrien le
+      2026-09-09, posé avant d'être tenté.** L'API `Input` de Godot n'expose
+      que le rumble double-moteur standard (`start_joy_vibration`, SDL2) ; la
+      résistance dynamique des gâchettes est un protocole propriétaire Sony,
+      réservé au DualSense (PS5) — ni DualShock 4, ni manette Xbox, ni
+      générique. L'obtenir aurait demandé un plugin natif dédié, parlant HID
+      directement au pad (formats différents en USB et en Bluetooth,
+      protocole non documenté officiellement pour les moteurs tiers), pour un
+      public restreint à qui joue précisément avec ce pad-là — jugé
+      disproportionné face à la vibration déjà universelle. Si le besoin
+      revient, repartir de ce constat plutôt que de re-découvrir la même
+      contrainte.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
