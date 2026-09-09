@@ -157,6 +157,26 @@ func _juger(arme: String, n: int, statique: Image, ref: Dictionary) -> void:
 	_vrai("%s : %d pixel(s) d'écart entre la silhouette et le peint" % [nom, ecart],
 		ecart == 0)
 
+	# 6 — LA SILHOUETTE EST BLANCHE, et c'est le contrôle qui manquait.
+	#
+	# ⚠️ **Les seize silhouettes de marche étaient NOIRES, et rien ne le disait.**
+	# Découvert le 2026-09-09, après avoir été publié jusqu'en v0.4.1 incluse.
+	# `player.gd` écrit le contrat au-dessus de `SPRITES` : « la silhouette
+	# blanche pour la vue adverse et pour les révélations, parce que
+	# `Polygon2D.color` MULTIPLIE la texture ». Un RVB nul multiplie tout à zéro,
+	# et `player_enemy_light.gdshader` en tire alors `LIGHT = vec4(0.0)` :
+	# **l'adversaire devenait noir, donc invisible, PENDANT QU'IL MARCHAIT**, et
+	# redevenait gris à l'arrêt. Dans un jeu dont toute l'information est la
+	# lumière, bouger rendait moins visible qu'être immobile.
+	#
+	# Le contrôle 5 ne pouvait pas l'attraper : il compare les MASQUES, donc les
+	# canaux alpha, et les deux s'accordaient au pixel près. La couleur, elle,
+	# n'était regardée nulle part — la régénération de `77466a7` annonçait
+	# d'ailleurs « silhouettes accordées au pixel près » en toute bonne foi.
+	var sombre := _pixel_le_plus_sombre(sil)
+	_vrai("%s : la silhouette est blanche (RVB min = %d, exigé ≥ 250)" % [nom, sombre],
+		sombre >= 250)
+
 
 ## Le câblage, lu dans le TEXTE de `player.gd`.
 ##
@@ -256,6 +276,25 @@ func _ecart_de_masque(a: Image, b: Image) -> int:
 
 ## Rend `null` plutôt que de crier : l'absence est un cas que le contrôle n°1
 ## nomme, et un `push_error` ici doublerait le message sans rien apprendre.
+## Le composant le plus sombre parmi les pixels VISIBLES d'un masque.
+##
+## Ne regarde que ce qui a de l'alpha : le RVB des pixels transparents ne veut
+## rien dire et varie selon l'encodeur PNG. Rend 255 pour une image vide, ce qui
+## est le neutre — l'absence de pixel ne prouve pas une faute de couleur, et la
+## complétude est déjà tenue par le contrôle 1.
+func _pixel_le_plus_sombre(img: Image) -> int:
+	var plus_sombre := 255
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var c := img.get_pixel(x, y)
+			if c.a <= 0.03:
+				continue
+			var m: int = int(round(minf(minf(c.r, c.g), c.b) * 255.0))
+			if m < plus_sombre:
+				plus_sombre = m
+	return plus_sombre
+
+
 func _image(chemin: String) -> Image:
 	if not FileAccess.file_exists(chemin):
 		return null
