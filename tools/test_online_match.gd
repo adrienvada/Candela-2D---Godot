@@ -332,6 +332,23 @@ func _run_appariement() -> void:
 	_check("l'hôte ne bascule pas en bac à sable", not _main.sandbox_mode)
 	_check("et il reste dans son menu", _ui._is_main_menu)
 
+	# **L'arène d'un amical apparié est l'arène standard** — décision d'Adrien du
+	# 2026-09-09, redite le 2026-09-10 (« le match amical en ligne doit prendre
+	# l'arène classique »). Personne ne la gardait : une AUTRE carte est choisie
+	# d'abord, sans quoi une sélection laissée telle quelle passerait pour la règle.
+	for carte in MapData.list_maps():
+		var id := String((carte as Dictionary).get("id", ""))
+		if id != MapData.DEFAULT_MAP_ID and id != String(
+				MapData.get_map_by_slug(MapData.DEFAULT_MAP_ID).get("id", "")):
+			MapData.select_map(id)
+			break
+	var avant_carte := MapData.selected_map_id
+	_main._poser_la_carte_appariee()
+	var standard: Dictionary = MapData.get_map_by_slug(MapData.DEFAULT_MAP_ID)
+	_check("un amical apparié pose l'arène standard, quelle que soit la dernière carte",
+		MapData.selected_map_id == String(standard.get("id", "")),
+		"%s → %s, attendu %s" % [avant_carte, MapData.selected_map_id, standard.get("id", "?")])
+
 	# Un départ resté armé rouvrirait une arène par-dessus l'accueil, à l'arrivée
 	# d'un paquet d'un lien déjà coupé.
 	_main._on_main_menu_requested()

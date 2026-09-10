@@ -3374,8 +3374,8 @@ func _build_hub_screens() -> void:
 		"Choisissez votre classe à droite, avant l'appui : après, le match part "
 		+ "tout seul. "
 		+ "La recherche vous rend la main : elle continue pendant que vous "
-		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
-		+ "tirée au hasard, résultat hors classement.",
+		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Arène "
+		+ "standard, résultat hors classement.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
@@ -5171,7 +5171,7 @@ func _build_map_card() -> Control:
 func _refresh_map_card() -> void:
 	if map_card == null:
 		return
-	var entry := MapData.get_map(MapData.selected_map_id)
+	var entry := MapData.get_map(_id_carte_affichee())
 	if entry.is_empty():
 		map_card_name.text = "Aucune carte"
 		map_card_meta.text = ""
@@ -5188,6 +5188,18 @@ func _refresh_map_card() -> void:
 	# HiDPI. Rendre à 80 revenait à l'agrandir d'un facteur deux — et c'est cet
 	# agrandissement, pas le filtrage, qui la rendait floue.
 	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 160)
+
+## L'arène que la carte du salon annonce : celle qui est choisie, sauf en
+## recherche amicale.
+##
+## L'amical se joue toujours sur l'arène standard — `GameState._lancer_match_apparie()`
+## la pose côté hôte, et l'invité reçoit celle de l'hôte. La carte choisie pour
+## l'écran scindé ne s'y jouera donc pas, et l'annoncer serait mentir.
+## `MapData.get_map()` accepte le slug `DEFAULT_MAP_ID` aussi bien qu'un identifiant.
+func _id_carte_affichee() -> String:
+	if hub != null and hub.current_id() == SCREEN_FRIENDLY:
+		return MapData.DEFAULT_MAP_ID
+	return MapData.selected_map_id
 
 ## Le clic sur la vignette de carte. Silencieux sur tout écran sans entrée
 ## « CHANGER DE CARTE » — l'invité d'un salon, ou une recherche automatique où
@@ -5373,8 +5385,13 @@ func _poser_les_rangees_du_salon() -> void:
 
 	# L'appariement n'a ni carte à choisir ni code à transmettre. Le seul choix qui
 	# reste au joueur est son arme, et c'est tout ce que le panneau garde.
+	#
+	# **Sauf la carte d'arène de l'amical**, rendue le 2026-09-10 : l'amical se joue
+	# toujours sur l'arène standard (Adrien, 2026-09-09, redit le 2026-09-10), la
+	# montrer dit la vérité — `_id_carte_affichee()` y veille. Le classé la tire au
+	# sort à l'appariement : il n'a rien à montrer.
 	if hub != null and hub.current_id() in [SCREEN_FRIENDLY, SCREEN_RANKED]:
-		map_card.hide()
+		map_card.visible = hub.current_id() == SCREEN_FRIENDLY
 		transport_hbox.hide()
 		lobby_players_box.hide()
 		lobby_code_row.hide()
@@ -5382,7 +5399,12 @@ func _poser_les_rangees_du_salon() -> void:
 		join_box.hide()
 		btn_open_lobby.hide()
 		lobby_status_label.show()
-		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
+		# ⚠️ **Ce texte annonçait un tirage au sort pour les deux**, un jour après que
+		# l'amical a cessé d'en faire un. La phrase suit désormais l'écran.
+		lobby_status_label.text = "Choisissez votre classe avant de lancer la " \
+			+ ("recherche — l'amical se joue sur l'arène standard"
+				if hub.current_id() == SCREEN_FRIENDLY
+				else "recherche — l'arène est tirée au sort")
 		# ⚠️ **LA CAUSE DU BOUTON GRISÉ, et elle est dans ce retour anticipé.**
 		#
 		# Relevé par Adrien le 2026-08-26 : « LANCER LA RECHERCHE EN LIGNE » était

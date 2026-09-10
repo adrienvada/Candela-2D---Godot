@@ -3516,3 +3516,12 @@ première écriture ; son chantier est clos et sa branche fusionnée.
 
 **Pas touché** : `game_state.gd`, `class_data.gd`, les descriptions du catalogue.
 Tout le détail est dans la ROADMAP, chantier des dix classes, étape 22.
+
+**Puis, le même jour, à la demande d'Adrien** : `gadget_profile.gd` gagne un champ
+`description`, et `game_state.gd` est touché en DEUX endroits — `_gadget()` et
+ses dix appels dans `_batir_catalogue()`, qui reçoivent chacun leur phrase ; et
+`_lancer_match_apparie()`, dont le choix de carte sort dans
+`_poser_la_carte_appariee()` pour être éprouvé seul, sans changer de
+comportement. `tools/test_online_match.gd` gagne un contrôle dans
+`_run_appariement()`. Aucune valeur, aucune description de classe, rien d'autre. La session « Système de 10
+classes asymétriques » a été prévenue avant l'écriture.

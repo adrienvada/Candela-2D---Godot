@@ -3406,28 +3406,32 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.rang = 1
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, 0.0)
-	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
+	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
+		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
 	weapon_fusil.rang = 3
 	weapon_fusil.root = _root(0.25)
 	weapon_fusil.fusees = _fusees(1, 0.0)
-	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
+	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte",
+		"Un faux corps : même silhouette, même trou dans la lumière.")
 
 	weapon_pompe.libelle = "Le Terrassier"
 	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin. Il recharge cartouche par cartouche, et tire dès la première."
 	weapon_pompe.rang = 5
 	weapon_pompe.root = _root(0.35)
 	weapon_pompe.fusees = _fusees(3, 18.0)
-	weapon_pompe.gadget = _gadget("poussiere", "La poussière")
+	weapon_pompe.gadget = _gadget("poussiere", "La poussière",
+		"Un nuage de poussière où plus personne ne voit loin.")
 
 	weapon_arbalete.libelle = "Le Braconnier"
 	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
 	weapon_arbalete.rang = 4
 	weapon_arbalete.root = _root(0.60)
 	weapon_arbalete.fusees = _fusees(1, 0.0)
-	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme", true)
+	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme",
+		"Une lampe sur trépied qui balaie comme un joueur qui cherche.", true)
 
 	# ── Les six neuves ───────────────────────────────────────────────────────
 	# ⚠️ Leurs assets n'existent pas encore : ni cookie de torche, ni sprite. Le
@@ -3446,7 +3450,8 @@ func _batir_catalogue() -> void:
 	fumiste.muzzle_flash_duration = 0.16
 	fumiste.root = _root(0.30)
 	fumiste.fusees = _fusees(1, 0.0)
-	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie")
+	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
+		"Un rideau de suie : on voit qu'il y a quelqu'un, pas qui.")
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
@@ -3459,7 +3464,8 @@ func _batir_catalogue() -> void:
 	incendiaire.bullet_speed = 6000.0
 	incendiaire.root = _root(0.40)
 	incendiaire.fusees = _fusees(2, 0.0)
-	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises", true)
+	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises",
+		"Des braises au sol qui brûlent qui s'y attarde.", true)
 
 	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
 	sentinelle.name = "Fusil à verrou"
@@ -3472,7 +3478,8 @@ func _batir_catalogue() -> void:
 	sentinelle.bullet_speed = 16000.0
 	sentinelle.root = _root(0.50)
 	sentinelle.fusees = _fusees(1, 0.0)
-	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact")
+	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
+		"Une poudre où les pas restent écrits, lisibles à la lumière.")
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
 	occulteur.name = "Pistolet-mitrailleur"
@@ -3489,7 +3496,8 @@ func _batir_catalogue() -> void:
 	occulteur.muzzle_flash_intensity = 0.6
 	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
 	occulteur.fusees = _fusees(1, 0.0)
-	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée")
+	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée",
+		"Une découpe d'acier qui projette l'ombre d'un homme absent.")
 
 	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
 	allumeur.name = "Carabine double"
@@ -3502,7 +3510,8 @@ func _batir_catalogue() -> void:
 	allumeur.muzzle_flash_intensity = 1.0
 	allumeur.root = _root(0.20)
 	allumeur.fusees = _fusees(2, 12.0)
-	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium", true)
+	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium",
+		"Une mine qui n'explose pas : elle aveugle et révèle.", true)
 
 	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
 	spectre.name = "Pistolet silencieux"
@@ -3518,7 +3527,8 @@ func _batir_catalogue() -> void:
 	spectre.backlight_multiplier = 0.1
 	spectre.root = _root(0.08)
 	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
-	spectre.gadget = _gadget("voile", "Le voile")
+	spectre.gadget = _gadget("voile", "Le voile",
+		"Une bâche qui arrête la lumière, pas les balles.")
 
 	_classes = [
 		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,
@@ -3603,10 +3613,15 @@ const IMPLEMENTATIONS := {
 	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
 }
 
-func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
+## `description` : ce que le gadget fait, en une phrase courte, pour la fiche de
+## sélection (Adrien, 2026-09-10). Obligatoire, et c'est voulu : un gadget sans
+## phrase afficherait un trou sous son nom, `tools/test_classes.gd` le refuse.
+func _gadget(slug: String, libelle: String, description: String,
+		eblouit: bool = false) -> GadgetProfile:
 	var g := GadgetProfile.new()
 	g.slug = slug
 	g.libelle = libelle
+	g.description = description
 	g.eblouit = eblouit
 	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
 	g.implementation = String(fiche.get("script", ""))
@@ -3818,12 +3833,22 @@ func _armer_echeance_connexion_appariee() -> void:
 ## que l'entraînement (`_on_training_requested`), pour la même raison — un
 ## terrain connu plutôt qu'une arène surprise pour un match sans enjeu.
 func _lancer_match_apparie() -> void:
+	_poser_la_carte_appariee()
+	_enter_hosted_game()
+	_start_round()
+
+## [Hôte] L'arène d'un match apparié : tirée au sort en classé, l'arène standard
+## en amical.
+##
+## Sortie de `_lancer_match_apparie()` le 2026-09-10 pour être éprouvée seule :
+## Adrien a redit ce jour-là que *« le match amical en ligne doit prendre l'arène
+## classique »*, et la règle, posée la veille, n'était gardée par aucun banc.
+## `tools/test_online_match.gd --appariement` l'appelle sans réseau ni pair.
+func _poser_la_carte_appariee() -> void:
 	if _matchmade_ranked:
 		MapData.select_random_map()
 	else:
 		MapData.select_map(MapData.DEFAULT_MAP_ID)
-	_enter_hosted_game()
-	_start_round()
 
 ## Quitte le menu pour la partie hébergée : autorités, fournisseurs d'entrées,
 ## vues. Trois chemins y mènent — l'hôte qui appuie sur PRÊT, l'adversaire qui

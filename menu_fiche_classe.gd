@@ -5,11 +5,16 @@ extends PanelContainer
 ##
 ## ## Ce qu'elle montre, et rien d'autre
 ##
-## **Le sprite, le gadget, les six caractéristiques de l'arme.** Demandé par
-## Adrien le 2026-09-10, quand le choix de classe a quitté son panneau pour
-## revenir dans le salon, sous l'affiche du match : *« mets les statistiques de
-## l'arme, le gadget, le sprite, et rien d'autres […] Pas besoin de description,
-## du rang etc. »*
+## **Le sprite, le gadget et sa phrase, sept jauges.** Demandé par Adrien le
+## 2026-09-10, quand le choix de classe a quitté son panneau pour revenir dans le
+## salon, sous l'affiche du match : *« mets les statistiques de l'arme, le gadget,
+## le sprite, et rien d'autres […] Pas besoin de description, du rang etc. »*
+##
+## ⚠️ **Amendé le même jour, et pour une bonne raison.** Réduite à ce point, la
+## fiche taisait deux règles que seule la prose portait : le Spectre n'a aucune
+## fusée — c'est son identité —, et le nom d'un gadget ne dit pas ce qu'il fait.
+## Adrien a donc rendu *« dans les stats le nombre de fusées max »* et *« une
+## courte description du gadget »*. La description de CLASSE, elle, reste absente.
 ##
 ## ⚠️ **La contrainte qui a tranché est l'écran scindé.** Deux joueurs y
 ## choisissent en même temps, chacun sa liste et sa fiche, côte à côte dans le
@@ -25,7 +30,7 @@ extends PanelContainer
 ##
 ## ## Les jauges ne disent pas « mieux », elles disent « plus »
 ##
-## ⚠️ **Règle de lecture, et elle vaut pour les six lignes** : un cran allumé de
+## ⚠️ **Règle de lecture, et elle vaut pour les sept lignes** : un cran allumé de
 ## plus veut dire *davantage de la chose nommée*, jamais *meilleur*. La barre de
 ## RECHARGE pleine est un défaut, celle de DÉGÂTS une qualité, et les deux se
 ## dessinent pareil. L'alternative — inverser les barres « où moins vaut mieux »
@@ -53,7 +58,8 @@ extends PanelContainer
 
 const ClassDataT := preload("res://class_data.gd")
 
-## Les six lignes de caractéristiques, dans l'ordre d'affichage.
+## Les sept lignes de caractéristiques, dans l'ordre d'affichage : ce que la
+## classe apporte d'abord, ce qu'elle coûte ensuite.
 ##
 ## `cout` marque celles où la barre pleine est une mauvaise nouvelle. `champ` est
 ## purement documentaire : le calcul vit dans `_mesure()`, en un seul endroit,
@@ -63,6 +69,7 @@ const LIGNES: Array[Dictionary] = [
 	{"cle": "cadence", "libelle": "CADENCE", "cout": false},
 	{"cle": "chargeur", "libelle": "CHARGEUR", "cout": false},
 	{"cle": "faisceau", "libelle": "FAISCEAU", "cout": false},
+	{"cle": "fusees", "libelle": "FUSÉES", "cout": false},
 	{"cle": "recharge", "libelle": "RECHARGE", "cout": true},
 	{"cle": "immobilisation", "libelle": "IMMOBILISATION", "cout": true},
 ]
@@ -83,6 +90,7 @@ var _teinte: Color = Charte.BLEU
 var _portrait: TextureRect
 var _gadget: Label
 var _gadget_tag: Label
+var _gadget_description: Label
 var _jauges: Dictionary = {}     # cle -> Jauge
 var _valeurs: Dictionary = {}    # cle -> Label
 ## La classe affichée. Lue par les bancs : maintenant que la fiche n'écrit plus
@@ -217,11 +225,26 @@ func _batir() -> void:
 	colonne_gadget.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	haut.add_child(colonne_gadget)
 
+	# « GADGET », et à côté le seul marqueur de la fiche. Sur la même ligne : la
+	# phrase du gadget a besoin de la hauteur que le marqueur prenait dessous.
+	var entete_gadget := HBoxContainer.new()
+	entete_gadget.add_theme_constant_override("separation", Charte.GAP_XS)
+	entete_gadget.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	colonne_gadget.add_child(entete_gadget)
+
 	var etiquette_gadget := Label.new()
 	etiquette_gadget.text = "GADGET"
 	Charte.appareil(etiquette_gadget, Charte.T_MENTION)
 	etiquette_gadget.add_theme_color_override("font_color", Charte.DIM)
-	colonne_gadget.add_child(etiquette_gadget)
+	entete_gadget.add_child(etiquette_gadget)
+
+	# Il porte une vraie règle du jeu : un gadget qui éblouit change ce que
+	# l'adversaire voit, pas seulement ce qu'il heurte.
+	_gadget_tag = Label.new()
+	_gadget_tag.text = "ÉBLOUIT"
+	Charte.appareil(_gadget_tag, Charte.T_MENTION, Charte.POIDS_APPUI)
+	_gadget_tag.add_theme_color_override("font_color", Charte.AMBRE)
+	entete_gadget.add_child(_gadget_tag)
 
 	_gadget = Label.new()
 	Charte.appareil(_gadget, Charte.T_APPUI, Charte.POIDS_APPUI)
@@ -229,17 +252,16 @@ func _batir() -> void:
 	_gadget.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	colonne_gadget.add_child(_gadget)
 
-	# Le seul marqueur de la fiche, et il porte une vraie règle du jeu : un gadget
-	# qui éblouit change ce que l'adversaire voit, pas seulement ce qu'il heurte.
-	_gadget_tag = Label.new()
-	_gadget_tag.text = "ÉBLOUIT"
-	Charte.appareil(_gadget_tag, Charte.T_MENTION, Charte.POIDS_APPUI)
-	_gadget_tag.add_theme_color_override("font_color", Charte.AMBRE)
-	colonne_gadget.add_child(_gadget_tag)
+	# Ce que le gadget FAIT — le nom seul ne le dit pas (Adrien, 2026-09-10).
+	_gadget_description = Label.new()
+	Charte.appareil(_gadget_description, Charte.T_MENTION)
+	_gadget_description.add_theme_color_override("font_color", Charte.ACIER)
+	_gadget_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	colonne_gadget.add_child(_gadget_description)
 
 	col.add_child(_filet(Color(_teinte.r, _teinte.g, _teinte.b, 0.55), 2))
 
-	# --- Les six jauges ------------------------------------------------------
+	# --- Les sept jauges ------------------------------------------------------
 	var grille := GridContainer.new()
 	grille.columns = 3
 	grille.add_theme_constant_override("h_separation", Charte.GAP_XS)
@@ -307,9 +329,11 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 
 	if classe.gadget != null:
 		_gadget.text = String(classe.gadget.libelle)
+		_gadget_description.text = String(classe.gadget.description)
 		_gadget_tag.visible = classe.gadget.eblouit
 	else:
 		_gadget.text = "—"
+		_gadget_description.text = ""
 		_gadget_tag.visible = false
 
 
@@ -324,6 +348,7 @@ func _vider() -> void:
 		(_jauges[cle] as Jauge).regler(0.0, Charte.DIM)
 		(_valeurs[cle] as Label).text = "—"
 	_gadget.text = "—"
+	_gadget_description.text = ""
 	_gadget_tag.visible = false
 
 
@@ -349,6 +374,12 @@ func _mesure(classe: ClassDataT, cle: String) -> Dictionary:
 			# joueur voit. On affiche donc le cône entier, pas la moitié.
 			var cone := classe.torch_angle_deg * 2.0
 			return {"valeur": cone, "texte": "%d°" % int(round(cone))}
+		"fusees":
+			# Le PLAFOND, pas le stock de départ : ce que la réserve peut contenir,
+			# recharge comprise. Zéro pour le Spectre, et donc aucun cran allumé —
+			# `_part()` réserve le vide aux vrais zéros.
+			var plafond := 0 if classe.fusees == null else classe.fusees.plafond_effectif()
+			return {"valeur": float(plafond), "texte": str(plafond)}
 		"recharge":
 			return {"valeur": classe.reload_time,
 				"texte": "%s s" % _nombre(classe.reload_time, 1)}
