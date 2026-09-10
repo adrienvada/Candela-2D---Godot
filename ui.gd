@@ -1012,6 +1012,15 @@ var _assets_summary: String = ""
 
 var _is_main_menu: bool = true
 
+## Vrai tant qu'une cérémonie plein écran — l'allumage, l'intro en planches —
+## recouvre le menu. **Le menu est monté et vivant dessous** (DA6.5), mais il ne
+## doit ni répondre ni faire de bruit : `_input` passe AVANT le
+## `_unhandled_input` du voile, si bien que la touche qui sautait l'allumage
+## déplaçait aussi la sélection, et chaque déplacement tiquait sous un écran
+## noir. Relevé par Adrien le 2026-09-10 : « j'entends mon curseur bouger dès le
+## début ». Posé et levé par `game_state.gd`, qui lance les voiles.
+var menu_voile: bool = false
+
 ## Écran du hub d'où est parti le dernier match — capturé dans `hide_game_over()`,
 ## le seul des quatre points de bascule de `_is_main_menu` qui marque une vraie
 ## sortie du menu vers une manche vivante (les trois autres reviennent AU menu ou
@@ -1146,16 +1155,16 @@ func _on_any_button_pressed(btn: BaseButton) -> void:
 		menu_tracer.tirer(Vector2(zone.end.x - GAP_S, zone.get_center().y),
 			1.0, COLOR_P1)
 	if est_lanceur:
-		AudioManager.play_ui_presse()
+		AudioManager.play_ui_presse(Charte.NIVEAU_UI_APPUI)
 	else:
-		AudioManager.play_ui_tampon()
+		AudioManager.play_ui_tampon(Charte.NIVEAU_UI_APPUI)
 	_pulse_press(btn)
 
 ## La souris pilote toujours la sélection principale (J1), jamais celle de J2 —
 ## sans quoi un simple passage de curseur volerait un bouton réservé à J2 (le
 ## râtelier d'armes en 1v1 local écran partagé).
 func _on_button_hovered(btn: BaseButton) -> void:
-	if not _is_focus_usable(btn):
+	if menu_voile or not _is_focus_usable(btn):
 		return
 	var owner_id := int(btn.get_meta(META_NAV_OWNER, -1))
 	if owner_id >= 0 and owner_id != 0:
@@ -1183,7 +1192,8 @@ func _pulse_press(control: Control) -> void:
 func _process(delta: float) -> void:
 	_voile_temps += delta
 	_suivre_le_curseur_systeme()
-	_update_joystick_cursor(delta)
+	if not menu_voile:
+		_update_joystick_cursor(delta)
 	_update_network_status()
 	_sync_launch_entries()
 	_update_focus_rings()
@@ -1912,8 +1922,12 @@ func _set_focus(player: int, control: Control, snap: bool = false) -> void:
 	# Seulement quand la sélection CHANGE : un survol qui redésigne le même
 	# bouton n'est pas une navigation, et il crépiterait à chaque frame de
 	# mouvement de souris.
-	if control != precedent:
-		AudioManager.play_ui("ui_tick")
+	#
+	# Ni sur une pose (`snap`) : c'est le jeu qui place la sélection en ouvrant
+	# un écran, pas le joueur qui la déplace — et le massicot de l'écran a déjà
+	# marqué le moment. Ni sous un voile : on n'entend pas ce qu'on ne voit pas.
+	if control != precedent and not snap and not menu_voile:
+		AudioManager.play_ui("ui_tick", Charte.NIVEAU_UI_NAV)
 	# M9 — la torche suit la cible, et M3 referme les yeux : tout mouvement de
 	# curseur est un signe de vie, et c'est le même signe pour les deux.
 	var centre := control.get_global_rect().get_center()
@@ -3165,6 +3179,62 @@ func _poser_le_key_art() -> void:
 	game_over_panel.add_child(art)
 
 
+## L'avis de phase de test, mot pour mot comme Adrien l'a écrit le 2026-09-10.
+## Il dit ce que le relevé de fin de match envoie : le changer ici sans changer
+## l'envoi (ou l'inverse) ferait mentir le jeu à ses joueurs.
+const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
+const LOGO_GODOT := "res://assets/logos/godot_roman.png"
+## Côté du logo Godot, en px. Il loge dans la marge du bas (`GAP_L`) sans
+## jamais toucher le cadre du menu.
+const TAILLE_LOGO_GODOT := 34.0
+
+## Le bas de l'écran : le logo du moteur à gauche, l'avis de test au centre.
+##
+## **Hors de la colonne du menu, par-dessus elle** : les deux logent dans la
+## marge basse que `outer` réserve déjà (`GAP_L`). Ajoutés à la colonne, ils la
+## raccourciraient d'autant et le hub perdrait la hauteur d'une entrée.
+func _build_mentions() -> Control:
+	var mentions := Control.new()
+	mentions.name = "Mentions"
+	mentions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var avis := Label.new()
+	avis.name = "AvisPhaseDeTest"
+	avis.text = AVIS_PHASE_DE_TEST
+	Charte.appareil(avis, Charte.T_MENTION)
+	avis.add_theme_color_override("font_color", Color(COLOR_DIM, 0.8))
+	avis.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	avis.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	avis.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	avis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	avis.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	# Les deux marges latérales sont égales pour que le texte reste centré sur
+	# l'écran, et assez larges pour laisser sa place au logo.
+	var marge := GAP_L + GAP_S + TAILLE_LOGO_GODOT
+	avis.offset_left = marge
+	avis.offset_right = -marge
+	avis.offset_top = -GAP_L
+	avis.offset_bottom = 0.0
+	mentions.add_child(avis)
+
+	if ResourceLoader.exists(LOGO_GODOT):
+		var logo := TextureRect.new()
+		logo.name = "LogoGodot"
+		logo.texture = load(LOGO_GODOT)
+		logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		logo.tooltip_text = "Fait avec Godot"
+		logo.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+		var bas := (GAP_L - TAILLE_LOGO_GODOT) * 0.5
+		logo.offset_left = GAP_S
+		logo.offset_right = GAP_S + TAILLE_LOGO_GODOT
+		logo.offset_top = -bas - TAILLE_LOGO_GODOT
+		logo.offset_bottom = -bas
+		mentions.add_child(logo)
+	return mentions
+
 func _build_menu() -> void:
 	game_over_panel = PanelContainer.new()
 	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -3188,6 +3258,8 @@ func _build_menu() -> void:
 	outer.add_theme_constant_override("margin_left", GAP_L + GAP_S)
 	outer.add_theme_constant_override("margin_right", GAP_L + GAP_S)
 	game_over_panel.add_child(outer)
+
+	game_over_panel.add_child(_build_mentions())
 
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", GAP_M)
@@ -6870,6 +6942,10 @@ func _on_rebind_btn_pressed(btn: Button, action: String) -> void:
 # ===========================================================================
 
 func _input(event: InputEvent) -> void:
+	# Sous un voile, l'événement reste au voile : c'est lui qui le lit, pour se
+	# lever. Voir `menu_voile`.
+	if menu_voile:
+		return
 	# En ligne, la seconde manette locale ne pilote rien.
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		if event.is_action("p2_menu_right") or event.is_action("p2_menu_left") \

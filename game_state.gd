@@ -508,7 +508,9 @@ func _ouvrir_sur_intro_ou_menu() -> bool:
 	GameSettings.marquer_intro_vue()
 	var intro: CanvasLayer = Intro.new()
 	add_child(intro)
+	ui.menu_voile = true
 	intro.terminee.connect(func() -> void:
+		ui.menu_voile = false
 		ui.show_main_menu()
 		intro.queue_free())
 	intro.jouer()
@@ -523,7 +525,11 @@ func _on_intro_requested() -> void:
 	AudioManager.play_music("music_intro")
 	var intro: CanvasLayer = Intro.new()
 	add_child(intro)
+	# Rejouée depuis l'accueil, l'intro passe PAR-DESSUS un menu ouvert : sans le
+	# voile, chaque touche censée la sauter naviguait aussi dessous.
+	ui.menu_voile = true
 	intro.terminee.connect(func() -> void:
+		ui.menu_voile = false
 		AudioManager.play_music("music_menu")
 		ui.show_main_menu()
 		intro.queue_free())
@@ -540,8 +546,16 @@ func _on_intro_requested() -> void:
 ## jeu une attente, et l'intro se termine déjà sur le wordmark en braise —
 ## c'est-à-dire sur un allumage. Chacune est ainsi à son meilleur moment :
 ## l'histoire une fois, l'allumage toutes les autres fois.
+##
+## Le menu est vivant sous le voile, mais **muet et sourd** jusqu'à ce qu'on le
+## voie : voir `ui.menu_voile`. Levé à `terminee`, c'est-à-dire une fois le voile
+## effacé — la touche qui saute l'allumage ne doit pas aussi naviguer dessous.
 func _allumage() -> void:
-	PowerOn.lancer(self)
+	var voile := PowerOn.lancer(self)
+	if voile == null:
+		return
+	ui.menu_voile = true
+	voile.terminee.connect(func() -> void: ui.menu_voile = false)
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que

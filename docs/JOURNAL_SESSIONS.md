@@ -30,6 +30,23 @@ par sujet impraticable.
 | **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `menu_fiche_classe.gd`, `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
 
 
+### Session « finitions des menus » (`candela-2d-f7`, branche `menus-finitions`) — ajoutée le 2026-09-10
+
+Chantier court demandé par Adrien : titres sans liseré, sons d'interface plus
+bas, menu inerte sous l'allumage et l'intro, avis de phase de test et logo
+Godot en bas de l'écran, nouvelle icône d'application.
+
+**En propre :** `tools/test_menus_finitions.gd` (créé), `assets/logos/godot_roman.png`
+(créé), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
+**Partagés, touchés par insertions :** `ui.gd` et `game_state.gd` (session
+« chantier 10 classes » prévenue par message le jour même), `menu_hub.gd`,
+`charte.gd` (trois constantes `NIVEAU_UI_*`), `tools/run_suites.sh` (une suite
+ajoutée).
+
+Un worktree `retravail-menus` (branche `worktree-retravail-menus`) existait
+déjà avec les titres re-détourés, **sans session rattachée ni commit**. Rien
+n'en a été repris ; il a été supprimé avec sa branche à la demande d'Adrien.
+
 ### Session « photographe » — ajoutée le 2026-09-09
 
 **Fichiers tenus :** `tools/photographe.gd`, `tools/photographe.tscn`,

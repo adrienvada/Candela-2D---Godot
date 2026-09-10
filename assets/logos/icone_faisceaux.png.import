@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bs2p4vo7xr4so"
-path="res://.godot/imported/verdict_egalite.png-f713a65cb2ea96d2cb5052f9e0f7bab1.ctex"
+uid="uid://73s7kopsh5d1"
+path="res://.godot/imported/icone_faisceaux.png-7ca80d56dd5409d40bdf29dfcd8a5765.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/titres/verdict_egalite.png"
-dest_files=["res://.godot/imported/verdict_egalite.png-f713a65cb2ea96d2cb5052f9e0f7bab1.ctex"]
+source_file="res://assets/logos/icone_faisceaux.png"
+dest_files=["res://.godot/imported/icone_faisceaux.png-7ca80d56dd5409d40bdf29dfcd8a5765.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

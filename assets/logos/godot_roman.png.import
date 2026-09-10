@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bs2p4vo7xr4so"
-path="res://.godot/imported/verdict_egalite.png-f713a65cb2ea96d2cb5052f9e0f7bab1.ctex"
+uid="uid://7mwycg11k8ro"
+path="res://.godot/imported/godot_roman.png-6d60d7623299c5ed8feee4d2068dcd08.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/titres/verdict_egalite.png"
-dest_files=["res://.godot/imported/verdict_egalite.png-f713a65cb2ea96d2cb5052f9e0f7bab1.ctex"]
+source_file="res://assets/logos/godot_roman.png"
+dest_files=["res://.godot/imported/godot_roman.png-6d60d7623299c5ed8feee4d2068dcd08.ctex"]
 
 [params]
 

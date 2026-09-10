@@ -3154,6 +3154,50 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un voile n'arrête pas `_input` : le menu répondait sous l'allumage (2026-09-10)
+
+Adrien : « j'entends mon curseur bouger dès le début ». L'allumage (DA6.5) et
+l'intro (DA6.6) recouvrent un menu **déjà monté et vivant**, c'était voulu. Mais
+ils écoutent en `_unhandled_input`, et `ui.gd` en `_input` — qui passe
+**avant**. La touche qui sautait l'allumage déplaçait donc aussi la sélection
+dessous, et chaque déplacement tiquait sous un écran noir. À quoi s'ajoutait le
+tic de la **pose** initiale du focus (`_seed_focus` → `_set_focus`), qui sonnait
+comme une navigation alors que personne n'avait bougé.
+
+Le correctif : `ui.menu_voile`, posé par `game_state.gd` au lancement d'un
+voile et levé à sa fin ; tant qu'il vaut vrai, `_input`, le survol et le
+curseur au joystick ne font rien, et `_set_focus` se tait. Le tic ne sonne plus
+non plus sur une pose (`snap`). `tools/test_menus_finitions.gd` le tient en
+envoyant de vraies actions à `ui._input` pendant puis après le voile.
+
+⚑ **Signalé, non corrigé (hors périmètre)** : Adrien n'a jamais vu l'intro.
+`intro_vue` se pose au DÉMARRAGE de l'intro et vit dans le `user://` réel, que
+partagent tous les lancements du jeu sur la machine — photographe, bancs
+fenêtrés, autres sessions. Le premier d'entre eux après la fusion de DA6.6 l'a
+consommée. `run_suites.sh` isole son `HOME`, les outils fenêtrés non. Adrien
+passe par REJOUER L'INTRO ; la vraie parade serait qu'un lancement outillé ne
+marque pas le drapeau.
+
+**La règle** : une couche qui recouvre l'écran ne protège que ce qui passe
+après elle dans l'ordre des entrées. Un `_input` en dessous l'ignore — il faut
+lui dire qu'il est recouvert, pas espérer que le recouvrement suffise.
+
+### Un titre Gemini arrive avec un damier dans ses bords (2026-09-10)
+
+Les titres de menu (`assets/ui/titres/`) ont été détourés d'images générées sur
+un **damier de fausse transparence** : l'alpha est juste, mais un anneau de
+pixels blanc-gris pointillé survit à 2-4 px du cerne d'encre — 9 à 36 % du
+contour selon les titres, mesuré. Ajouté à des titres de ~1300 px affichés à
+48 px de haut **sans mipmaps**, le bord scintillait.
+
+Nettoyés (gris clair à moins de 4 px de la transparence retiré, îles de moins de
+8 px retirées, bord adouci d'un demi-pixel, RVB des pixels transparents mis au
+noir) et importés avec mipmaps, lues par un filtre `LINEAR_WITH_MIPMAPS`. La
+suite `test_menus_finitions` mesure la part blanc-grise de chaque contour.
+**Tout titre régénéré doit repasser par le même traitement** :
+`python3 tools/detourer_titres.py assets/ui/titres/titre_xxx.png` (PIL seul,
+réécrit le fichier en place — garder l'original à côté).
+
 ### Une mesure contaminée par des erreurs de script ressemble à une mesure (2026-09-10)
 
 Pour savoir si le nouveau salon tenait à l'écran, un script `--script` hors banc
