@@ -211,8 +211,7 @@ func _test_intensite_par_la_couleur() -> void:
 ## hors du correctif décidé par Adrien le 2026-09-10, qui ne portait que sur le
 ## liseré des murs et le corps adverse. En retirer un quand il est corrigé ; en
 ## AJOUTER un demande de dire pourquoi.
-const LIGHT_SANS_ENERGIE := ["player_rim_light.gdshader", "blood_shader.gdshader",
-	"player_enemy_light.gdshader"]
+const LIGHT_SANS_ENERGIE := ["player_rim_light.gdshader", "blood_shader.gdshader"]
 
 ## Garde du correctif décidé par Adrien le 2026-09-10 : un `light()` propre qui
 ## lit `LIGHT_COLOR` doit appliquer `LIGHT_ENERGY`. Les masques de lumière du
