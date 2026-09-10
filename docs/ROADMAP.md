@@ -17715,6 +17715,10 @@ aucun causé par la fusion :
 - côté menus, les images de gadget de la fiche ne sont gardées par aucun test :
   signalé à la session qui les tient.
 
+Six `.uid` orphelins — restes des scripts de capture jetables des étapes 11 et
+12, commités sans leur script — sont retirés de `tools/`, sur accord d'Adrien :
+même geste que `7fc6a7a`.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
