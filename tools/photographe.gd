@@ -276,7 +276,11 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "mort", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
 		 "titre": "Le flash de mort",
 		 "pourquoi": "L'écran du mort, une image après le coup fatal : le blanc et sa frange. Pris sur une manche sacrifiée avant la séquence de fin."},
-		{"id": "onde-de-choc", "famille": "fins", "source": "vue", "ancre": [0.5, 0.5],
+		# `ecran` et non `vue` : pendant le gel de 150 ms qui suit le coup fatal,
+		# les SubViewport sont en UPDATE_DISABLED et la source `vue` rendrait
+		# l'image figée d'avant l'onde (contrainte relevée par la session
+		# photographe, 2026-09-10).
+		{"id": "onde-de-choc", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
 		 "titre": "L'onde de choc du kill",
 		 "pourquoi": "L'anneau qui part du corps et traverse l'arène : la seule lumière autorisée à tout éclairer, parce que le duel est tranché."},
 		{"id": "killcam", "famille": "fins", "source": "ecran",
@@ -1011,7 +1015,10 @@ func _manche_sacrifiee(plans: Array[Dictionary]) -> void:
 	if _demande(plans, "mort"):
 		await _prendre(_plan(plans, "mort"), Callable(), 0.08)
 	if _demande(plans, "onde-de-choc"):
-		await _prendre(_plan(plans, "onde-de-choc"), Callable(), 0.30)
+		# L'onde vit 0,4 s et atteint 1200 px ; le gel fige la vue les 150
+		# premières ms. À 160 ms, le front est à ~940 px du corps : visible aux
+		# bords du cadre, et la vue vient de se remettre à dessiner.
+		await _prendre(_plan(plans, "onde-de-choc"), Callable(), 0.16)
 	if not await _attendre(func() -> bool: return _main.game_over, 40.0):
 		printerr("  ✗ la manche sacrifiée ne s'est jamais terminée")
 	# L'affiche de fin se retire seule ; on la congédie pour que la vraie

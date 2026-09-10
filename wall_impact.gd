@@ -28,12 +28,15 @@ const Charte := preload("res://charte.gd")
 ## seize marques qu'on ne reconnaît pas.
 
 const IMPACTS := "res://assets/decals/"
-## Les douze éclats cuits. ⚠️ Quatre des seize panneaux de la planche sont
-## absents de cette liste, et ce n'est pas un oubli : c'étaient les brûlures,
-## dessinées en sombre sur noir. L'alpha d'un décal vient de sa luminance, donc
-## une brûlure noire est un décal transparent. Elles n'ont pas été commitées —
-## un bouche-trou qui traîne finit par être pris pour une intention.
-const ECLATS := [1, 2, 3, 4, 7, 8, 11, 12, 13, 14, 15, 16]
+## Les seize éclats cuits. Refonte roman graphique (2026-09-10, lot 1) : la
+## planche d'août (`I1_01.jpg`, lait et poussière photographiques) est remplacée
+## par une planche d'ENCRE (`assets/sources/encre/impacts_encre.png`, Gemini,
+## blanc sur noir) — étoiles de fissure et cratères ébréchés à bord franc,
+## encrés par `tools/encrer_masques.gd`. Les seize panneaux sont valides : la
+## première planche en avait quatre de brûlures noires, transparentes par
+## construction (l'alpha vient de la luminance), d'où la liste à douze qui
+## vivait ici. Les fichiers gardent leurs noms : rien d'autre ne change.
+const ECLATS := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 
 ## Plafond d'éclats simultanés. Plus bas que celui du sang (120) parce qu'un
 ## impact mural coûte un tir MANQUÉ : dans un duel serré, ils sont bien plus

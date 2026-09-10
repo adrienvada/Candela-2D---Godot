@@ -89,6 +89,14 @@ const ECLABOUSSURES := [
 ## corriger cette table fait rougir le banc, au lieu de déplacer les taches en
 ## silence.
 ##
+## **Re-mesurées le 2026-09-10 après l'ENCRAGE des planches** (refonte roman
+## graphique, lot 1, `tools/encrer_masques.gd`) : un bord franc déplace un peu
+## le plus grand disque inscrit et grossit son rayon (sang_1 : 21 → 25 px), et
+## c'est exactement le cas que ce banc existe pour attraper. Deux planches ont
+## demandé un seuil plus bas (0,22 au lieu de 0,45) pour garder leur traînée
+## fine : `sang_3`, dont la masse passait en AMONT de la flaque sans son spray,
+## et `sang_6`, dont un autre bras devenait la plus grosse flaque.
+##
 ## ⚠️ **`sang_4` et `sang_8` sont livrées RÉORIENTÉES.** Les planches sources
 ## brutes de Gemini ne respectent pas toujours la convention « dessinée pointant
 ## vers la droite » (voir `pose()`) : `sang_4` sortait du générateur avec sa
@@ -97,15 +105,15 @@ const ECLABOUSSURES := [
 ## horizontal). Détecté par la même règle que le banc applique : la masse
 ## d'encre doit tomber en aval de la flaque, jamais en amont.
 const FLAQUES := [
-	Vector2(0.522, 0.565), # sang_1 — étoile
+	Vector2(0.534, 0.527), # sang_1 — étoile
 	Vector2(0.134, 0.539), # sang_2 — directionnelle
 	Vector2(0.216, 0.489), # sang_3 — directionnelle (éraflure fine)
 	Vector2(0.341, 0.474), # sang_4 — directionnelle (coulure lourde, réorientée)
 	Vector2(0.222, 0.653), # sang_5 — directionnelle (éventail)
-	Vector2(0.503, 0.883), # sang_6 — directionnelle (double bras)
-	Vector2(0.184, 0.881), # sang_7 — directionnelle (traînée espacée)
-	Vector2(0.455, 0.566), # sang_8 — étoile (compacte, réorientée)
-	Vector2(0.409, 0.435), # sang_9 — étoile (irrégulière)
+	Vector2(0.534, 0.909), # sang_6 — directionnelle (double bras)
+	Vector2(0.166, 0.887), # sang_7 — directionnelle (traînée espacée)
+	Vector2(0.462, 0.547), # sang_8 — étoile (compacte, réorientée)
+	Vector2(0.428, 0.429), # sang_9 — étoile (irrégulière)
 ]
 
 ## Quelle planche est une « étoile » — une flaque centrée, à peu près ronde,
@@ -159,15 +167,15 @@ const ECHELLE_MAX := 1.25
 ## sa ligne ici fait rougir le banc, au lieu de repousser en silence contre le
 ## joueur suivant.
 const POIDS_TAILLE := [
-	0.686, # sang_1 — flaque de 21,0 px de rayon
+	0.576, # sang_1 — flaque de 25,0 px de rayon
 	1.000, # sang_2 — flaque de 12,4 px de rayon
-	1.000, # sang_3 — flaque de 6,2 px de rayon
-	0.269, # sang_4 — flaque de 53,6 px de rayon (celle de la capture)
+	1.000, # sang_3 — flaque de 8,4 px de rayon
+	0.268, # sang_4 — flaque de 53,8 px de rayon (celle de la capture)
 	0.973, # sang_5 — flaque de 14,8 px de rayon
-	1.000, # sang_6 — flaque de 9,8 px de rayon
-	1.000, # sang_7 — flaque de 8,0 px de rayon
-	0.327, # sang_8 — flaque de 44,0 px de rayon
-	0.667, # sang_9 — flaque de 21,6 px de rayon
+	1.000, # sang_6 — flaque de 13,4 px de rayon
+	1.000, # sang_7 — flaque de 9,4 px de rayon
+	0.310, # sang_8 — flaque de 46,4 px de rayon
+	0.655, # sang_9 — flaque de 22,0 px de rayon
 ]
 
 ## Distance maximale, en pixels, entre l'AXE du tir et le CENTRE réel du joueur

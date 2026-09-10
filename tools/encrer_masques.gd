@@ -45,10 +45,13 @@ extends SceneTree
 ## pénalité d'éblouissement, donc un cookie en paliers rend une pénalité en
 ## paliers. C'est un changement de jeu, pas de rendu.
 
-## Un pixel est « mou » quand son alpha est franchement intermédiaire. Les
-## bornes 25 et 230 sur 255 laissent passer l'anticrénelage d'un bord franc.
-const MOU_BAS := 25
-const MOU_HAUT := 230
+## Un pixel est « mou » quand un de ses quatre voisins a un alpha PROCHE mais
+## différent du sien : c'est la signature d'un dégradé, où chaque pixel diffère
+## un peu du suivant. Un aplat n'a que des voisins identiques ; un bord franc
+## n'a que des sauts grands. Le premier jet comptait les pixels d'alpha
+## intermédiaire, ce qui déclarait mou un masque en trois paliers — la mesure
+## disait l'inverse de ce qu'elle devait dire.
+const PAS_MOU_MAX := 24
 
 
 func _init() -> void:
@@ -123,19 +126,37 @@ static func encrer(img: Image, bornes: PackedFloat32Array, valeurs: PackedFloat3
 			img.set_pixel(x, y, Color(c.r, c.g, c.b, a))
 
 
-## Part des pixels non nuls dont l'alpha est intermédiaire. C'est la mesure du
-## bilan du 2026-09-10 : 0,80 pour les halos d'août, 0,02 pour le tampon FATAL
-## dessiné en septembre.
+## Part des pixels non nuls qui ont un voisin d'alpha proche mais différent
+## (1 à `PAS_MOU_MAX` sur 255). C'est la mesure du bilan du 2026-09-10 : 0,9 et
+## plus pour les halos d'août, moins de 0,1 pour les sprites de septembre.
 static func part_molle(img: Image) -> float:
+	var w := img.get_width()
+	var h := img.get_height()
+	var alphas := PackedInt32Array()
+	alphas.resize(w * h)
+	for y in h:
+		for x in w:
+			alphas[y * w + x] = int(round(img.get_pixel(x, y).a * 255.0))
 	var non_nuls := 0
 	var mous := 0
-	for y in img.get_height():
-		for x in img.get_width():
-			var a := int(round(img.get_pixel(x, y).a * 255.0))
-			if a > 0:
-				non_nuls += 1
-				if a > MOU_BAS and a < MOU_HAUT:
-					mous += 1
+	for y in h:
+		for x in w:
+			var a := alphas[y * w + x]
+			if a == 0:
+				continue
+			non_nuls += 1
+			var mou := false
+			for v in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+				var nx: int = x + v[0]
+				var ny: int = y + v[1]
+				if nx < 0 or ny < 0 or nx >= w or ny >= h:
+					continue
+				var d: int = absi(alphas[ny * w + nx] - a)
+				if d >= 1 and d <= PAS_MOU_MAX:
+					mou = true
+					break
+			if mou:
+				mous += 1
 	if non_nuls == 0:
 		return 0.0
 	return float(mous) / float(non_nuls)

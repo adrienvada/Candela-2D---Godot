@@ -17825,18 +17825,25 @@ light 3D sur le joueur, halos en dégradé aérographe.
 
 **Le critère, et il se mesure.** L'audit DA7 (ligne « un masque monochrome n'a
 pas de style ») exemptait les masques de la refonte : c'est vrai de leur FORME
-et faux de leur BORD. Part des pixels non nuls d'alpha intermédiaire (25 à 230
-sur 255), mesurée le 2026-09-10 sur les fichiers livrés :
+et faux de leur BORD. La mesure est la **part molle** d'un masque : la part de
+ses pixels non nuls qui ont un voisin d'alpha proche mais différent (1 à 24 sur
+255) — la signature d'un dégradé, où chaque pixel diffère un peu du suivant ; un
+aplat n'a que des voisins identiques, un bord franc que des sauts grands.
+⚠️ *Un premier jet comptait les pixels d'alpha intermédiaire, ce qui déclarait
+mou un masque en trois paliers : la mesure disait l'inverse de ce qu'elle
+devait dire, et c'est en l'appliquant au résultat de l'encrage qu'on l'a vu.*
+Mesurée le 2026-09-10 sur les fichiers livrés :
 
 | Famille | Part molle |
 |---|---|
-| halos au sol, rétrodiffusion, traînée | 0,80 |
-| impacts sur les murs | 0,78 |
-| gouttes de sang | 0,73 |
-| cookie de torche, taches de sang | 0,62 |
-| flash de bouche | 0,41 |
-| gadgets de jeu, volutes de fusée (faits depuis le 8 septembre) | 0,19 |
-| cartouche et tampon FATAL | 0,02 |
+| halos au sol, rétrodiffusion, traînée | 0,98 |
+| traçante | 0,97 |
+| flash de bouche | 0,94 |
+| taches et gouttes de sang | 0,90 |
+| impacts sur les murs | 0,86 |
+| cookie de torche | 0,84 |
+| volutes de fusée (faites le 7 septembre) | 0,36 |
+| cartouche FATAL (fait le 9 septembre) | 0,08 |
 
 Tout ce qui a été fait depuis la refonte des menus est dur ; tout ce qui date
 d'août est mou. **Règle du chantier : tout masque en jeu passe sous 0,25**, et
@@ -17858,7 +17865,7 @@ ajoutés au lot 0.
 | Lot | Effet | Ce qui change, dans quel sens | État |
 |---|---|---|---|
 | 0 | Outillage | Quatre plans ajoutés au photographe (`impacts`, `vignette`, `mort`, `onde-de-choc`), `tools/comparer_photos.py`, `tools/encrer_masques.gd`. Aucun rendu ne change. | ✅ |
-| 1 | Masques de lumière et de matière | Halos, taches, gouttes, impacts, traçante : alpha ramené à deux ou trois paliers par `encrer_masques.gd`, formes et empreintes inchangées. Flash de bouche : trois frames NEUVES en éclat d'encre à pointes (Gemini, blanc sur noir), la descente d'énergie inchangée. ⚠️ Le cookie de torche est **exclu** : `Vision` lit son alpha, un cookie en paliers est une pénalité en paliers — décision de jeu, pas de rendu. | ⏳ |
+| 1 | Masques de lumière et de matière | Halos, taches, gouttes, impacts, traçante, poussière : alpha ramené à deux ou trois paliers par `encrer_masques.gd`, formes et empreintes inchangées. Flash de bouche : trois frames NEUVES en éclat d'encre à pointes (Gemini, blanc sur noir, `assets/sources/encre/`), et **l'éclat est DESSINÉ** en sprite à la bouche du canon (`player.gd::_eclat_de_bouche`, 96 px, mélange normal) — posées sur la seule lumière de bouche (64 px), les frames restaient noyées sous l'écho au sol de V4.14, trois fois plus large : ce qu'on prenait pour le flash de bouche à l'écran était cet écho. Aucune lumière ne change. Impacts : la planche d'août remplacée par seize éclats d'encre (`wall_impact.gd`, liste à 16). Sang : `FLAQUES` et `POIDS_TAILLE` re-mesurées (un bord franc grossit le disque inscrit : sang_1 de 21 à 25 px), `sang_3` et `sang_6` encrées à 0,22 pour garder leur traînée. `tools/test_encrage.gd` ajouté au lot. ⚠️ Le cookie de torche est **exclu** : `Vision` lit son alpha, un cookie en paliers est une pénalité en paliers — décision de jeu, pas de rendu. | 🟡 **rendu envoyé à Adrien le 2026-09-10** — attend son verdict |
 | 2 | Sang mat | `blood_shader.gdshader` : la spéculaire liquide retirée ; le cœur noir et le bord carmin restent. | ⏳ |
 | 3 | Flash de mort | Case blanche franche à bord net et inversion brève, sans lecture d'écran : un lecteur de `hint_screen_texture` en moins (voir « Le tampon d'écran n'a pas de propriétaire »). | ⏳ |
 | 4 | Killcam | Grain vidéo, balayage et frange RVB remplacés par une trame de demi-teinte asservie à la tension et un grain de papier ; le négatif garde ses deux images. | ⏳ |

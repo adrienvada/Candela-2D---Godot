@@ -2139,13 +2139,31 @@ func trigger_shoot_visuals():
 	# esthétique** — au-delà de trois, une image ne serait jamais affichée.
 	LightTextures.poser(muzzle_flash, LightTextures.FLASH[0],
 		LightTextures.EMPREINTE_FLASH)
+	# Refonte roman graphique (lot 1, 2026-09-10) — **l'éclat DESSINÉ.** Les
+	# trois frames sont désormais des éclats d'encre à pointes (blanc sur noir,
+	# `assets/sources/encre/`). Posées sur la seule lumière de bouche, à 64 px
+	# d'empreinte, elles restaient noyées sous l'écho au sol de V4.14, trois
+	# fois plus large : le flash « de bouche » qu'on voyait à l'écran était en
+	# fait cet écho. On dessine donc l'éclat lui-même, en sprite additif non
+	# éclairé à la bouche du canon, orienté dans l'axe du tir, mêmes trois
+	# images au même tempo. **Aucune lumière ne change** — ni portée, ni
+	# masque, ni énergie : le sprite ne révèle rien que la lumière de bouche
+	# ne révèle déjà (il est posé là où elle brûle), il lui donne une forme.
+	var eclat := _eclat_de_bouche()
+	eclat.texture = LightTextures.masque(LightTextures.FLASH[0])
+	eclat.visible = eclat.texture != null
 	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
 	for i in range(1, LightTextures.FLASH.size()):
 		var chemin: String = LightTextures.FLASH[i]
 		tw.parallel().tween_callback(func():
 			LightTextures.poser(muzzle_flash, chemin, LightTextures.EMPREINTE_FLASH)
+			if is_instance_valid(eclat):
+				eclat.texture = LightTextures.masque(chemin)
 		).set_delay(flash_duration * float(i) / float(LightTextures.FLASH.size()))
-	tw.tween_callback(func(): muzzle_flash.enabled = false)
+	tw.tween_callback(func():
+		muzzle_flash.enabled = false
+		if is_instance_valid(eclat):
+			eclat.visible = false)
 	
 	visual_reveal.color.a = 1.0
 	visual_reveal_ptr.color.a = 1.0
@@ -2203,6 +2221,39 @@ func trigger_shoot_visuals():
 	var tw_g := create_tween()
 	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
 	tw_g.tween_callback(ground_flash.queue_free)
+
+## Empreinte de l'éclat de bouche dessiné, en unités de monde. Plus large que
+## la lumière de bouche (64) parce qu'il doit se LIRE comme une forme, et plus
+## étroit que l'écho au sol (200) pour ne pas le remplacer.
+const EMPREINTE_ECLAT_DESSINE := 96.0
+
+## Le sprite de l'éclat de bouche — créé une fois, réutilisé à chaque tir.
+## Enfant de la bouche du canon : il suit la rotation du joueur sans calcul.
+## Non éclairé (un éclat est une lumière, il n'attend pas qu'on l'éclaire) et
+## en mélange NORMAL, pas additif : posé en additif sur l'écho au sol de V4.14,
+## qui sature déjà en blanc au cœur, il disparaissait dedans — mesuré à la
+## capture, le 2026-09-10. Une forme d'encre se pose PAR-DESSUS la lumière,
+## elle ne s'y ajoute pas. Sa teinte est l'halogène de la charte, pas le blanc
+## pur — voir `Charte.HALOGENE`.
+func _eclat_de_bouche() -> Sprite2D:
+	var existant := muzzle.get_node_or_null("EclatDessine")
+	if existant != null:
+		return existant
+	var s := Sprite2D.new()
+	s.name = "EclatDessine"
+	var mat := CanvasItemMaterial.new()
+	mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX
+	s.material = mat
+	s.modulate = Charte.HALOGENE
+	s.z_index = 12
+	s.visible = false
+	var t := LightTextures.masque(LightTextures.FLASH[1])
+	if t != null:
+		s.scale = Vector2.ONE * (EMPREINTE_ECLAT_DESSINE / float(t.get_width()))
+	muzzle.add_child(s)
+	return s
+
 
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return

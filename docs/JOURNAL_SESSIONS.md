@@ -3768,3 +3768,14 @@ renommé ; `test_banc` reste vert ; la session prévenue par message.
 ⚠️ Cette session n'a pas l'outil `SendMessage` inter-agents ; elle passe par
 `ccd_session_mgmt.send_message`. Delta envoyé au porteur présumé du suivi
 (« Can2d - Mise à jour artefact de suivi »).
+
+### Lot 1 (2026-09-10, suite) — ce que l'encrage a touché hors des masques
+
+`player.gd` : `_eclat_de_bouche()` et son branchement dans
+`trigger_shoot_visuals()` — un sprite, aucune lumière modifiée.
+`wall_impact.gd` : `ECLATS` passe de 12 à 16 (nouvelle planche d'encre).
+`blood_stain.gd` : `FLAQUES` et `POIDS_TAILLE` re-mesurées sur les masques
+encrés, avec la note qui dit pourquoi. `tools/run_suites.sh` : `test_encrage`
+ajouté. `tools/photographe.gd` : le plan `onde-de-choc` passe en source `ecran`
+à 160 ms (contrainte de la session photographe : les sous-vues sont gelées
+150 ms après le coup fatal).
