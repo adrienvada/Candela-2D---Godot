@@ -33,9 +33,15 @@ extends RefCounted
 ## aucune couleur, aucune taille : ce sont des décisions de site d'appel, et les
 ## enfermer ici obligerait ce fichier à savoir ce qu'est un bouton d'arme.
 ##
-## La teinte est appliquée par l'appelant sur un masque gris — **un seul fichier
-## sert les deux joueurs**, bleu d'un côté, rouge de l'autre. C'est la discipline
-## DA1.5 : l'image ne fournit que la matière, le code garde la couleur.
+## La teinte est appliquée par l'appelant — **un seul fichier sert les deux
+## joueurs**. C'est la discipline DA1.5 : l'image ne fournit que la matière, le
+## code garde la couleur.
+##
+## ⚠️ **Sauf pour les armes, depuis le 2026-09-10** (décision d'Adrien) : leurs
+## icônes gardent leurs couleurs d'origine — trait clair, touches ambrées. En
+## bleu sur un bouton bleu, en rouge sur un rouge, on ne les distinguait plus.
+## Les appelants passent `ARME_ORIGINE` ; le paramètre `teinte` reste, pour les
+## outils de l'éditeur et pour qui en aurait un vrai besoin.
 ##
 ## ## Le repli est la moitié du travail
 ##
@@ -45,6 +51,10 @@ extends RefCounted
 ## fichiers n'existent, et de les voir apparaître un par un sans rien changer.
 
 const DOSSIER := "res://assets/ui/icones/"
+
+## La « teinte » qui n'en est pas une : le blanc multiplie par un, l'icône d'arme
+## s'affiche telle que le fichier la peint. Voir la note de tête.
+const ARME_ORIGINE := Color.WHITE
 
 ## Le nom de fichier par arme, indexé sur le **slug** de `weapon_data.gd` et non
 ## sur son nom affiché.

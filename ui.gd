@@ -5946,7 +5946,6 @@ func _refresh_class_labels() -> void:
 
 	for cote in [0, 1]:
 		var boutons := p1_weapon_buttons if cote == 0 else p2_weapon_buttons
-		var teinte := COLOR_P1 if cote == 0 else COLOR_P2
 		for place in boutons.size():
 			var btn: Button = boutons[place]
 			if place >= ordre.size():
@@ -5963,13 +5962,10 @@ func _refresh_class_labels() -> void:
 			# slug dont la vignette n'est pas cuite, et six ne le sont pas encore.
 			# Un bouton sans icône se voit ; un bouton portant celle d'une autre
 			# classe ne se verrait pas.
-			MenuIcones.poser_sur(btn, String(c.slug()), teinte, 22.0)
-			# ⚠️ **L'état coché remplit le bouton de la teinte du joueur** — et
-			# `poser_sur` peint l'icône de cette même teinte pour les quatre états.
-			# La classe sélectionnée perdait donc son icône, teinte sur teinte, ce
-			# qui se lit comme « celle-là n'en a pas ». Sur fond plein, c'est
-			# l'encre qui doit dessiner.
-			btn.add_theme_color_override("icon_pressed_color", Charte.NOIR)
+			# **L'icône garde ses couleurs d'origine** (Adrien, 2026-09-10) : teinte
+			# du joueur, elle se perdait sur les fonds bleus et rouges du salon,
+			# teinte sur teinte. Le côté du joueur est déjà dit par le bouton.
+			MenuIcones.poser_sur(btn, String(c.slug()), MenuIcones.ARME_ORIGINE, 22.0)
 	_refresh_class_cards()
 	# Chaque fiche s'ouvre sur ce qui est DÉJÀ choisi de son côté. L'ouvrir sur la
 	# première de la liste montrerait une classe que personne n'a demandée, juste
@@ -7265,8 +7261,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 		btn.custom_minimum_size = Vector2(210, 36)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.set_meta(META_CLASSE_INDEX, i)
-		MenuIcones.poser_sur(btn, _weapon_slug(i), COLOR_P1, 24.0)
-		btn.add_theme_color_override("icon_pressed_color", Charte.NOIR)
+		MenuIcones.poser_sur(btn, _weapon_slug(i), MenuIcones.ARME_ORIGINE, 24.0)
 		# Survol et focus montrent, l'appui engage. Le même partage que le menu :
 		# on doit pouvoir lire une classe sans la prendre, y compris ici — surtout
 		# ici, où le temps manque pour se tromper puis revenir.

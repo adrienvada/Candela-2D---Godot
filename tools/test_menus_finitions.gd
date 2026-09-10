@@ -164,6 +164,23 @@ func _test_menu_sourd_sous_le_voile() -> void:
 	var pose: Variant = ui.get("p1_focus")
 	ui.call("_input", _appui("p1_menu_down"))
 	_check("le voile levé, une flèche déplace la sélection", ui.get("p1_focus") != pose)
+
+	# Les icônes d'armes gardent leurs couleurs d'origine (Adrien, 2026-09-10) :
+	# teintes du joueur, elles disparaissaient sur les boutons de la même teinte.
+	var avec_icone := 0
+	var teintees := 0
+	for liste in [ui.get("p1_weapon_buttons"), ui.get("p2_weapon_buttons")]:
+		for b in liste:
+			var btn := b as Button
+			if btn == null or btn.icon == null:
+				continue
+			avec_icone += 1
+			for etat in ["icon_normal_color", "icon_hover_color", "icon_pressed_color"]:
+				if btn.get_theme_color(etat) != Color.WHITE:
+					teintees += 1
+	_check("des boutons d'arme portent une icône", avec_icone > 0, "%d" % avec_icone)
+	_check("aucune icône d'arme n'est teintée", teintees == 0,
+		"%d état(s) teinté(s)" % teintees)
 	main.queue_free()
 	await process_frame
 
