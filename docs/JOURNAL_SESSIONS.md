@@ -306,6 +306,14 @@ ROADMAP, section « DA2.8 (suite 2) ».
 `main` pour la prochaine publication ; je n'en ai pas déclenché une moi-même —
 Adrien n'a rien demandé de tel cette fois.
 
+### 2026-09-09 (suite) — clôture DA5.3 : volet (G) livré et intégré (textures peintes de particules)
+
+**Livré : le volet graphique (G) de DA5.3 est achevé et DA5.3 est désormais intégralement clos.**
+- **Matière générée & procédé DA1.5** : planche source `assets/sources/halo/H5_poussiere.jpg` (particule organique asymétrique, esprit roman graphique brutaliste). Isolation de la luminance, conversion en masque RGBA 32×32 (`assets/halo/particule_poussiere.png`), bords fondus à zéro, format blanc neutre multiplicatif.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule` avec repli `hint_default_black` et repli algorithmique sécurisé.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle analytique procédural (`GradientTexture2D.FILL_RADIAL`), remplacé par le chargement de `particule_poussiere.png`.
+- **Validation** : tests de compilation et d'assignation dans `tools/test_arena_lighting.gd`, tests d'artworks dans `tools/test_menu_artworks.gd`, et `./tools/run_suites.sh` 100 % vert.
+
 ### 2026-09-09 (suite) — session « DA5 · chasse aux défauts » : six des neuf étapes livrées
 
 **Livré, six commits, un par étape (ou groupe d'étapes) : DA5.1, DA5.2, DA5.7
@@ -334,7 +342,7 @@ dans la déclaration d'ouverture ci-dessous.
 
 **Ce qui reste ouvert :**
 
-- **DA5.3, volet (G)** — la texture peinte finale reste due à Adrien.
+- **DA5.3, volet (G)** — ✅ clos par la session suivante le 2026-09-09 (texture peinte `particule_poussiere.png` livrée et branchée).
 - **La famille `EffectPolicy` de `aberration_eblouissement`** (CONFORT choisi
   sur la recommandation du plan, jamais confirmé par Adrien) — seule décision
   de conception encore ouverte, détail dans `docs/ROADMAP.md` (DA5.5).

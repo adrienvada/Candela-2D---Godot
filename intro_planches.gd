@@ -18,10 +18,13 @@ extends CanvasLayer
 ## `EffectMode` neuf.** Un effet taillé pour six images vues quinze secondes
 ## serait du code que personne ne rejuge jamais.
 ##
-## **L'intro s'éclaire, elle ne se regarde pas.** Le curseur pilote `torch_pos`
-## du shader, exactement comme dans le hub : chaque planche s'ouvre presque noire
-## et se lit là où le joueur passe le faisceau. Le verbe du jeu — *éclairer pour
-## voir* — s'apprend avant le premier match, sans une ligne de tutoriel.
+## **Chaque planche est désormais une courte vidéo Veo 3.1** (Image-to-Video sur
+## les six illustrations), et non plus l'image fixe révélée au curseur. Décision
+## d'Adrien le 2026-09-10 — voir `docs/ROADMAP.md` (DA6.6) pour ce que ça
+## abandonne : le mécanisme « le curseur est la torche » de la conception
+## d'origine. L'image fixe et le shader de révélation restent le repli si une
+## vidéo manque (`tools/convert_intro_videos.sh` non lancé, fichier absent) —
+## voir `_planche_suivante()`.
 ##
 ## **Elle se passe à la moindre touche, et elle ne se rejoue pas toute seule.**
 ## Une intro non passable contredit « immédiat, intuitif, addictif » ; une intro
@@ -51,17 +54,26 @@ const DUREE_FONDU := 0.45
 ## Les six planches, dans l'ordre. Le texte gravé n'apparaît que sur deux
 ## d'entre elles : le jeu n'a pas de lore écrit, et une intro bavarde lui en
 ## inventerait un.
+##
+## `video` pointe vers le rush Veo rogné par `tools/convert_intro_videos.sh`
+## (rogné parce que les rushes bruts dérivent dans leur première ou dernière
+## seconde — un objet qui se substitue à un autre, une silhouette qui apparaît
+## puis disparaît ; voir ce script pour le détail des fenêtres retenues).
+## `duree` est la durée exacte de ce rognage : câblée en dur plutôt que lue sur
+## le flux, pour ne pas dépendre du délai d'une frame avant que
+## `VideoStreamPlayer` connaisse la longueur de son flux.
 const PLANCHES: Array[Dictionary] = [
-	{"image": "res://assets/ui/ill_intro_descente.png", "texte": ""},
-	{"image": "res://assets/ui/ill_intro_seuil.png", "texte": ""},
-	{"image": "res://assets/ui/ill_intro_dotation.png", "texte": ""},
-	{"image": "res://assets/ui/ill_intro_allumage.png", "texte": ""},
-	{"image": "res://assets/ui/ill_intro_prix.png", "texte": "VOIR SANS ÊTRE VU."},
-	{"image": "res://assets/ui/ill_intro_extinction.png", "texte": "TUER SANS ÊTRE TUÉ."},
+	{"image": "res://assets/ui/ill_intro_descente.png", "video": "res://assets/video/intro/01_descente.ogv", "duree": 2.5, "texte": ""},
+	{"image": "res://assets/ui/ill_intro_seuil.png", "video": "res://assets/video/intro/02_seuil.ogv", "duree": 2.0, "texte": ""},
+	{"image": "res://assets/ui/ill_intro_dotation.png", "video": "res://assets/video/intro/03_dotation.ogv", "duree": 2.5, "texte": ""},
+	{"image": "res://assets/ui/ill_intro_allumage.png", "video": "res://assets/video/intro/04_allumage.ogv", "duree": 2.0, "texte": ""},
+	{"image": "res://assets/ui/ill_intro_prix.png", "video": "res://assets/video/intro/05_prix.ogv", "duree": 2.5, "texte": "VOIR SANS ÊTRE VU."},
+	{"image": "res://assets/ui/ill_intro_extinction.png", "video": "res://assets/video/intro/06_extinction.ogv", "duree": 2.5, "texte": "TUER SANS ÊTRE TUÉ."},
 ]
 
 var _fond: ColorRect
 var _image: TextureRect
+var _video: VideoStreamPlayer
 var _cadre: MenuComicPanel
 var _particules: MenuParticlesAmbiance
 var _lettrage: Label
@@ -71,6 +83,7 @@ var _index := -1
 var _reste := 0.0
 var _temps := 0.0
 var _en_cours := false
+var _video_active := false
 var _fondu: Tween
 
 ## Vrai si les six planches sont présentes sur le disque.
@@ -114,6 +127,18 @@ func _construire() -> void:
 	_image.material = _fabriquer_materiau()
 	_image.modulate.a = 0.0
 	add_child(_image)
+
+	_video = VideoStreamPlayer.new()
+	_video.name = "PlancheVideo"
+	_video.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Pas d'équivalent COVER pour VideoStreamPlayer : les rushes sont en 16:9,
+	# `expand` les étire pour remplir le cadre. Différence mineure sur un écran
+	# proche de 16:9 ; on la préfère à un système de recadrage écrit pour six
+	# clips vus quinze secondes.
+	_video.expand = true
+	_video.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_video.modulate.a = 0.0
+	add_child(_video)
 
 	_particules = MenuParticlesAmbiance.new()
 	_particules.name = "ParticulesIntro"
@@ -203,26 +228,41 @@ func _planche_suivante() -> void:
 		_planche_suivante()
 		return
 
-	_image.texture = load(chemin) as Texture2D
 	var cle := MenuArtwork.cle_canonique(chemin)
-	var mat := _image.material as ShaderMaterial
-	if mat != null:
-		mat.set_shader_parameter("torch_pos", MenuArtwork.poi_pour(cle))
-		mat.set_shader_parameter("effect_mode", MenuArtwork.effet_pour(cle))
 	if _particules != null:
 		_particules.definir_illustration(cle)
 
+	var chemin_video := String(planche.get("video", ""))
+	_video_active = chemin_video != "" and ResourceLoader.exists(chemin_video)
+
+	if _video_active:
+		_video.stream = load(chemin_video) as VideoStream
+		_video.play()
+		_reste = float(planche.get("duree", DUREE_PLANCHE))
+	else:
+		# Repli : pas de vidéo pour cette planche (rognage non lancé, ou
+		# fichier manquant) — l'image fixe révélée au curseur, comportement
+		# d'origine de DA6.6.
+		_video.stop()
+		_image.texture = load(chemin) as Texture2D
+		var mat := _image.material as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("torch_pos", MenuArtwork.poi_pour(cle))
+			mat.set_shader_parameter("effect_mode", MenuArtwork.effet_pour(cle))
+		_reste = DUREE_PLANCHE
+
 	_lettrage.text = String(planche.get("texte", ""))
-	_reste = DUREE_PLANCHE
 
 	if _fondu != null and _fondu.is_valid():
 		_fondu.kill()
 	_image.modulate.a = 0.0
+	_video.modulate.a = 0.0
 	_lettrage.modulate.a = 0.0
 	_fondu = create_tween()
 	_fondu.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	_fondu.set_parallel(true)
-	Charte.animer(_fondu, _image, "modulate:a", 0.0, 1.0, DUREE_FONDU, Charte.Courbe.ENTREE)
+	var cible: CanvasItem = _video if _video_active else _image
+	Charte.animer(_fondu, cible, "modulate:a", 0.0, 1.0, DUREE_FONDU, Charte.Courbe.ENTREE)
 	if _lettrage.text != "":
 		# Le lettrage entre APRÈS l'image : on lit d'abord ce que la case montre,
 		# la phrase ne fait que nommer ce qu'on vient de comprendre.
@@ -235,15 +275,16 @@ func _process(delta: float) -> void:
 	if not _en_cours:
 		return
 	_temps += delta
-	var mat := _image.material as ShaderMaterial
-	if mat != null:
-		mat.set_shader_parameter("effect_time", _temps)
-		# La torche suit le curseur, en coordonnées normalisées de l'écran —
-		# le même geste que dans le hub, sur la même uniforme.
-		var taille := get_viewport().get_visible_rect().size
-		if taille.x > 0.0 and taille.y > 0.0:
-			var souris := get_viewport().get_mouse_position()
-			mat.set_shader_parameter("torch_pos", souris / taille)
+	if not _video_active:
+		var mat := _image.material as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("effect_time", _temps)
+			# La torche suit le curseur, en coordonnées normalisées de l'écran —
+			# le même geste que dans le hub, sur la même uniforme.
+			var taille := get_viewport().get_visible_rect().size
+			if taille.x > 0.0 and taille.y > 0.0:
+				var souris := get_viewport().get_mouse_position()
+				mat.set_shader_parameter("torch_pos", souris / taille)
 	if _cadre != null:
 		_cadre.set_torch_position_global(get_viewport().get_mouse_position())
 	_reste -= delta
@@ -277,5 +318,6 @@ func _terminer() -> void:
 	set_process(false)
 	if _fondu != null and _fondu.is_valid():
 		_fondu.kill()
+	_video.stop()
 	hide()
 	terminee.emit()

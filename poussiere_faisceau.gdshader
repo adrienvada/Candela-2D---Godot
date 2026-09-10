@@ -8,6 +8,7 @@ uniform float intensite_base : hint_range(0.0, 1.0) = 0.45;
 uniform float vitesse_derivation : hint_range(0.0, 2.0) = 0.35;
 uniform float taille_grain : hint_range(0.5, 5.0) = 1.2;
 uniform vec4 teinte_halogene : source_color = vec4(0.98, 0.91, 0.80, 1.0);
+uniform sampler2D texture_particule : hint_default_black, filter_linear, repeat_disable;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(234.34, 435.345));
@@ -33,15 +34,19 @@ void fragment() {
 	) * 0.25;
 	
 	float d = length(gv - offset);
-	// DA5.3 — chaque particule était un cercle analytique parfait. Un second
-	// hash (décorrélé de `h`, qui pilote déjà la dérive et le scintillement)
-	// casse la rondeur sans changer le coût : une lecture de plus, aucune
-	// texture. `id * 7.0` évite que la déformation ne suive le même rythme que
-	// le mouvement brownien.
+	// DA5.3 — chaque particule était un cercle analytique parfait.
+	// Volet S : perturbation du rayon par hash21 décorrélé pour casser la rondeur.
+	// Volet G : texture peinte (particule_poussiere.png) échantillonnée dans la cellule.
 	d *= 1.0 + 0.4 * (hash21(id * 7.0) - 0.5);
 
-	// Particule douce
-	float spark = smoothstep(0.18, 0.0, d);
+	vec2 part_uv = (gv - offset) / 0.36 + vec2(0.5);
+	float tex_alpha = 0.0;
+	if (part_uv.x >= 0.0 && part_uv.x <= 1.0 && part_uv.y >= 0.0 && part_uv.y <= 1.0) {
+		tex_alpha = texture(texture_particule, part_uv).a;
+	}
+
+	// Particule douce : texture peinte si présente (volet G), sinon repli cassé (volet S)
+	float spark = (tex_alpha > 0.0) ? tex_alpha : smoothstep(0.18, 0.0, d);
 	
 	// Scintillement d'interférence
 	float flicker = sin(t * 2.5 + h * 12.56) * 0.5 + 0.5;

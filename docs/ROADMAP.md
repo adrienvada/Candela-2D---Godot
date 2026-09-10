@@ -11791,10 +11791,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
   du monde — tout passe au blanc cassé et au noir de la bible. Détail
   ci-dessous. *(S)*
-- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
-  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
-  peinte finale, reste dû à Adrien. Détail ci-dessous.
+- **DA5.3 Plus un cercle parfait visible** ✅ **FAIT le 2026-09-09** — toute
+  lumière ou particule circulaire passe en texture. *(S + G)* — volet **(S)**
+  (casser la symétrie procédurale) et volet **(G)** (texture peinte
+  `particule_poussiere.png` cuite et branchée). Détail ci-dessous.
 - **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
   (décision d'Adrien : le grain de match existant reste), documentation des
   trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
@@ -11975,23 +11975,38 @@ au texte du code.
 **Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
 ratio commun.
 
-#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+#### DA5.3 — les volets (S + G) : rupture procédurale et texture peinte livrée
 
-**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
-(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
-reste due à Adrien, signalée et non bloquante.
+**Portée : DA5.3 est (S + G) — désormais intégralement clos le 2026-09-09.**
 
-**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
-disque analytique (`smoothstep` sur une distance). Un second hash
-(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
-le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
-plus, aucune texture, aucun coût mesurable.
+**Volet (S) : casser la symétrie procédurale sans texture**
+- **`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+  disque analytique (`smoothstep` sur une distance). Un second hash
+  (`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+  le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+  plus, aucune texture, aucun coût mesurable.
+- **`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+  le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+  torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+  Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+  brume — aucun nouveau bruit importé.
 
-**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
-le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
-torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
-Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
-brume — aucun nouveau bruit importé.
+**Volet (G) : la texture peinte de particule (`particule_poussiere.png`)**
+- **Génération & procédé DA1.5** : planche source
+  (`assets/sources/halo/H5_poussiere.jpg`), convertie en masque RGBA 32×32
+  (`assets/halo/particule_poussiere.png`). Conformité avec la règle d'or de
+  la charte (« l'image ne fournit que la matière, le code garde la
+  géométrie ») : fond noir coupé, luminance vers alpha, RGB blanc pur
+  neutre prêt pour multiplication par `modulate` ou `COLOR`.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule`
+  avec repli `hint_default_black`. La particule échantillonne la texture
+  organique dans sa cellule de grille, tout en conservant son mouvement
+  brownien et son scintillement d'interférence.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle
+  analytique de `_creer_texture_lueur_ronde()` (`GradientTexture2D.FILL_RADIAL`),
+  remplacé par le chargement de `particule_poussiere.png` (avec repli doux
+  sécurisé si absent). Les particules de poussière et d'ambiance des 15 profils
+  de menus prennent ainsi un grain d'encre asymétrique authentique.
 
 **Cas examinés et gardés tels quels**, listés ici pour que personne ne les
 refasse :
@@ -12003,9 +12018,9 @@ refasse :
 | `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
 | `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
 
-Aucune suite headless ne teste la forme d'un cercle — jugement par
-`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
-vérifier que `poussiere_faisceau.gdshader` compile.
+Validé par `test_arena_lighting.gd` (vérification de chargement de la texture
+et assignation du paramètre shader), `test_menu_artworks.gd`, et la suite
+complète `./tools/run_suites.sh`.
 
 #### DA5.4 — trois grains, délibérément distincts
 
@@ -12262,6 +12277,36 @@ dans la même journée.
   > l'**appareil** (enseigne, lumière, au lancement), l'intro est l'allumage de
   > la **torche** (planche 4, dans le récit) — mais elles se disputaient
   > l'écran.
+
+  ⚠️ **Le mécanisme « curseur = torche » a été abandonné le 2026-09-10
+  (Adrien), après l'avoir défendu dans la même conversation.** Les six
+  planches sont désormais des clips Veo 3.1 (Image-to-Video sur les six
+  illustrations), lus tels quels par un `VideoStreamPlayer` — l'image fixe
+  révélée au curseur ne reste qu'un repli si un `.ogv` manque. Ce que ça coûte
+  et pourquoi on l'a fait quand même :
+
+  - **Les rushes Veo dérivent.** Chaque plan de 8 s a été passé en revue image
+    par image avant rognage : `03-dotation` substitue le pistolet à la torche
+    dans sa première seconde, `05-prix` fait apparaître puis disparaître une
+    silhouette géante parasite, `01-descente` finit hors-cadre. Les fenêtres de
+    rognage retenues (2,0 à 2,5 s chacune, une inversée pour `06-extinction`
+    dont le feu grandit au lieu de mourir) sont dans
+    `tools/convert_intro_videos.sh`, commentées plan par plan.
+  - **Godot ne lit que l'Ogg Theora en natif.** `ffmpeg` de ce poste décode
+    Theora mais ne l'encode pas ; `ffmpeg2theora` (`brew install
+    ffmpeg2theora`) fait le travail. Installer ce paquet a fait remonter `x265`
+    dans Homebrew et cassé l'`ffmpeg` du poste au passage (`libx265.216.dylib`
+    introuvable) — `brew reinstall ffmpeg` répare. À prévoir sur tout poste qui
+    relancera le script.
+  - **Seuls les `.ogv` rognés sont versionnés.** Les rushes bruts (~25 Mo,
+    8 s × 6, reconstructibles depuis Flow) sont dans
+    `.gitignore` (`/assets/video/intro/*.mp4`) ; l'audit d'assets de
+    `tools/run_suites.sh` les aurait sinon signalés absents du dépôt.
+  - **Ce que ça abandonne, texto :** DA6.6 enseignait le verbe du jeu —
+    *éclairer pour voir* — en rendant l'intro **jouée**, pas subie. Une vidéo
+    en pilote automatique ne l'enseigne plus. Adrien a tranché en connaissance
+    de cause ; à rouvrir si l'intro se révèle moins efficace à l'usage que
+    prévu par la conception d'origine.
 
 #### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
 
@@ -12593,6 +12638,13 @@ c'est le code qui les colore.
   celui-ci tient l'état puis déclenche, celui-là tient l'état et ne déclenche
   jamais. Tout le reste — sélection, préconditions, éclairage, cadrage — est
   repris tel quel.
+
+  *(Note écrite en parallèle, avant fusion : une proposition d'ouvrir ce
+  trailer sur des clips Veo animés — voir DA6.6 ci-dessus — avait été
+  signalée puis écartée par Adrien le 2026-09-10, au nom de la même règle
+  « rien qui n'existe dans le moteur ». Le film livré ici, capturé en moteur
+  via `--write-movie`, la respecte par construction — sans avoir eu besoin de
+  trancher entre les deux.)*
 - ~~**DA7.3 Presskit et screenshots composés.**~~ ❌ **ABANDONNÉE le 2026-09-09**
   (Adrien), et `docs/PRESSKIT.md` **supprimé**.
 

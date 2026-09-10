@@ -65,14 +65,23 @@ var _current_profile: Profile = Profile.NONE
 var _current_artwork: String = ""
 var _active_poi_uv: Vector2 = Vector2(0.5, 0.5)
 
+const TEXTURE_PARTICULE := "res://assets/halo/particule_poussiere.png"
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_dot_texture = _creer_texture_lueur_ronde()
+	_dot_texture = _obtenir_texture_particule()
 	_creer_emetteurs()
 
 func _ready() -> void:
 	resized.connect(_sur_redimensionnement)
+
+## DA5.3 (volet G) : texture peinte de particule pour rompre le cercle analytique.
+func _obtenir_texture_particule() -> Texture2D:
+	if ResourceLoader.exists(TEXTURE_PARTICULE):
+		return load(TEXTURE_PARTICULE)
+	return _creer_texture_lueur_ronde()
+
 
 func _creer_texture_lueur_ronde() -> Texture2D:
 	var grad_tex := GradientTexture2D.new()
