@@ -1,0 +1,15 @@
+# Sources brutes des gadgets (2026-09-10) — même règle que `ui_icones/`.
+#
+# Fond vert d'incrustation #00B140, pas de damier : `tools/incruster_vert.py`
+# (icônes de fiche, 128 px) et le script des sprites de jeu en tirent l'alpha.
+#
+# ⚠️ **Rien n'est versionné ici pour l'instant, et c'est une décision en
+# attente, pas un oubli** : les 21 planches retenues pèsent environ 100 Mo. Elles
+# vivent sur le poste d'Adrien, dans ce dossier de l'arbre principal. Une
+# planche qu'on décide de garder au dépôt s'ajoute NOMMÉMENT ci-dessous.
+#
+#   jeu_*.png   → assets/sprites/gadget_*.png   (vue de dessus)
+#   fiche_*.png → assets/ui/icones/gadget_*.png (vue de trois-quarts)
+*
+!.gitignore
+!.gdignore

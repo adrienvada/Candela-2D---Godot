@@ -38,6 +38,9 @@ Godot en bas de l'écran, nouvelle icône d'application.
 
 **En propre :** `tools/test_menus_finitions.gd` (créé), `assets/logos/godot_roman.png`
 (créé), `assets/ui/icones/gadget_*.png` (les dix icônes de fiche, créées),
+`assets/sprites/gadget_*.png` (les sprites de JEU des gadgets, créés — leur
+branchement dans les `_monter_visuel()` revient à la session « chantier 10
+classes », qui l'a demandé),
 `tools/detourer_titres.py` et `tools/incruster_vert.py` (créés), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
 **Partagés, touchés par insertions :** `ui.gd` et `game_state.gd` (session
 « chantier 10 classes » prévenue par message le jour même), et
