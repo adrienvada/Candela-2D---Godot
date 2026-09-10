@@ -3157,6 +3157,23 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une forme héritée du socle ment en silence (2026-09-10)
+
+Le voile surchargeait son OMBRE — une bande de 168 × 8 px — mais pas sa
+COLLISION, que le socle fabrique en disque de `rayon` ; et il réglait
+`rayon = 84`. De l'étape 5 à l'étape 25 — du 9 au 10 septembre —, les balles ont déchiré la toile à 84 px d'elle
+et l'éblouissement a buté sur un disque que rien ne montrait, sans une erreur :
+la forme n'avait qu'un usage, et peu regardé. Il a fallu qu'elle arrête un
+joueur pour que le défaut devienne un mur rond de 168 px de diamètre à la place
+d'une toile.
+
+Une valeur par défaut héritée n'est pas un choix. Quand une sous-classe
+surcharge une forme, **toutes** les formes du même objet doivent suivre —
+collision, ombre, visuel. Le socle le dit désormais au bon endroit
+(`_forme_de_collision()` à côté de `_monter_occluder()`), et le contrôle du voile
+compare sa bande de collision à celle de son ombre. L'ombre habitée garde le
+même écart en petit : signalé à l'étape 25.
+
 ### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
 
 Pour arbitrer « un gadget debout par joueur », j'ai demandé à Adrien quels
@@ -17395,6 +17412,69 @@ l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
 contenu en réclamait déjà 505 AVANT ce lot, et il grandit vers la droite — il
 déborde donc déjà, légèrement, en écran scindé. Il devrait grandir vers la
 gauche. Hors périmètre, relevé par la revue.
+
+### Étape 25 — le voile tient debout : on ne passe plus au travers ✅ (2026-09-10)
+
+**Demandé par Adrien**, transmis par la session des menus puis confirmé
+directement : *« il a deux piquets sur les côtés qui le tiennent, et au milieu un
+voile tendu, mais pas trop : il pourrait onduler un peu, avoir un peu de
+physique. On ne peut pas passer au travers. »* Et, tranché le même jour :
+**les balles le traversent toujours**. C'est ce qui le garde distinct d'un mur —
+un voile ferme un couloir jusqu'à ce que deux balles le crèvent.
+
+**Une seconde couche, et non la couche des gadgets dans le masque des joueurs.**
+`MapGeometry.GADGET_BLOQUANT_LAYER` entre dans `PLAYER_MASK`, et le drapeau
+`GadgetBase.arrete_les_joueurs` la pose gadget par gadget — le voile seul. Mettre
+`GADGET_LAYER` dans le masque aurait muré les dix gadgets d'un coup : le garde de
+l'étape 5 qui l'interdit tient toujours, vérifié à côté du nouveau.
+
+**Trouvé en route : la collision du voile était un disque de 84 px de rayon**
+(voir le piège « Une forme héritée du socle ment en silence »). Une balle
+déchirait la toile à 84 px d'elle, et le rayon d'éblouissement
+(`_ligne_de_vue_depuis`, masqué sur `GADGET_LAYER`) butait sur un disque
+invisible. `GadgetBase._forme_de_collision()` rend la forme surchargeable, et le
+voile rend sa bande — celle de son occluder, au pixel près.
+
+**La toile ondule, la bande non.** Collision et occluder restent droits : ils
+décident qui passe et qui voit, et les deux pairs doivent avoir les mêmes. L'onde
+court sur un temps local — personne ne compare deux écrans — et reste bornée
+DANS la bande : creux, ondulation, frisson et demi-trait font 4 px, soit
+`DEMI_EPAISSEUR`. Ce qu'on voit ne dépasse jamais ce qui arrête. Le « peu de
+physique » : une balle qui traverse la toile la fait frissonner
+(`GadgetBase.secouer()`, vide dans le socle), chez tous les pairs, puisque chacun
+voit passer ses balles.
+
+⚠️ **L'amplitude est petite, et c'est la borne qui la fixe** : 2,5 px au plus.
+Pour la rendre plus visible, c'est la bande qu'il faudrait épaissir — collision
+et ombre avec —, jamais l'onde qu'il faudrait laisser sortir.
+
+**Les piquets ne se voient pas encore.** Adrien a décidé des sprites de gadgets
+le même jour ; la session des menus génère `gadget_voile_piquet.png` et
+`gadget_voile_toile.png`. Les dessiner d'ici là serait le « troisième chemin »
+que `GadgetBase._monter_visuel()` interdit. La toile prendra sa texture sur son
+`Line2D` ; les piquets seront deux `Sprite2D`, à ±84 px.
+
+`Protocol.VERSION` reste à 16 : le fil ne bouge pas, le sens si — un client
+d'avant prédirait qu'il traverse. Noté au carnet, version toujours non publiée.
+La phrase de fiche suit : « Une bâche qui arrête la lumière et les joueurs, pas
+les balles. »
+
+**Validation** : 22 contrôles dans `tools/test_tir_et_reserves.gd`, sur le vrai
+joueur qui marche. Il s'arrête contre la toile ; et le TÉMOIN — voile retiré, même
+pas — passe de l'autre côté. Sans lui, un mur de la carte au même endroit aurait
+fait passer le contrôle pour une mauvaise raison.
+
+⚠️ **Signalé, non corrigé** :
+- **l'ombre habitée** a le même écart en petit : collision en disque de 36 px,
+  ombre en plaque de 36 × 6 px, et elle arrête les balles — une balle qui frôle
+  la tranche de la plaque à 10 px s'y arrête ;
+- **la nappe de braises** (disque de 136 px) **et la poudre de contact** (220 px)
+  sont des nappes au sol que les balles survolent (`arrete_les_balles = false`),
+  mais d'après le code, toute balle qui passe au-dessus les abîme quand même :
+  `encaisser` n'est pas surchargé. Même chose pour les deux nuages, où c'est
+  peut-être voulu ;
+- **un voile posé sur un joueur** n'est pas refusé : c'est le moteur qui doit
+  alors le dégager. Non éprouvé.
 
 ### Ce qui reste, dans l'ordre
 

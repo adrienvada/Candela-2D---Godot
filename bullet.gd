@@ -209,6 +209,9 @@ func _physics_process(delta):
 				_spawn_wall_effects(hit_point, true)
 				_fade_and_destroy(hit_point)
 				return
+			# La toile bat au passage — chez TOUS les pairs, puisque chacun voit
+			# passer ses balles : c'est de l'image, jamais de la simulation.
+			gadget.secouer()
 			# Traversant : on l'exclut et on rejoue le pas. La boucle est BORNÉE —
 			# un gadget qui se réinsérerait dans le cast ferait autrement tourner
 			# cette image à l'infini, et une image qui ne rend pas la main est

@@ -3805,7 +3805,7 @@ func _batir_catalogue() -> void:
 	spectre.root = _root(0.08)
 	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
 	spectre.gadget = _gadget("voile", "Le voile",
-		"Une bâche qui arrête la lumière, pas les balles.")
+		"Une bâche qui arrête la lumière et les joueurs, pas les balles.")
 
 	_classes = [
 		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,

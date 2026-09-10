@@ -1,35 +1,99 @@
 class_name GadgetVoile
 extends GadgetBase
 
-## Le voile — gadget du Spectre, chantier CLASSES, étape 5.
+## Le voile — gadget du Spectre, chantier CLASSES, étapes 5 et 25.
 ##
-## Une bâche tendue entre deux piquets. **Elle arrête la lumière, les balles la
-## traversent.** C'est un mur qui n'en est pas un : il corrompt la lecture de la
-## carte, qui est le seul repère stable du joueur dans le noir.
+## Une toile entre deux piquets, tendue mais pas trop. **Elle arrête la lumière
+## et les joueurs ; les balles la traversent** — en la déchirant, et deux y
+## suffisent.
 ##
-## ## Pourquoi il est presque invisible, et pourquoi c'est voulu
+## ## Ce qu'Adrien en a fait le 2026-09-10
 ##
-## Vue strictement de dessus, une bâche verticale est **une ligne**. On ne la
-## remarque pas ; on remarque ce qu'elle fait à la lumière. Un sprite bien
-## lisible de dessus serait un défaut de conception, pas une réussite — d'où une
-## bande étroite et non un objet reconnaissable.
+## *« Il a deux piquets sur les côtés qui le tiennent, et au milieu un voile
+## tendu, mais pas trop : il pourrait onduler un peu, avoir un peu de physique.
+## On ne peut pas passer au travers. »* Jusque-là les joueurs le traversaient :
+## il n'était qu'un écran de lumière. Il devient un obstacle qu'on ne franchit
+## qu'en le crevant — et toujours pas un mur, puisque la balle passe. Adrien a
+## tranché le même jour que cette différence-là restait.
+##
+## ⚠️ **Il peut donc fermer un couloir**, jusqu'à ce que deux balles le crèvent.
+## Un seul par joueur à la fois, et une minute de recharge (étape 24).
+##
+## ## Ce qui ondule, et ce qui n'ondule pas
+##
+## La TOILE ondule, rien d'autre. La collision et l'occluder restent une bande
+## droite de `2 × DEMI_EPAISSEUR` : ils décident de ce qui se SIMULE — qui passe,
+## qui voit qui —, et chaque pair doit avoir exactement la même. L'onde n'a pas
+## cette exigence, personne ne compare deux écrans : elle court sur un temps
+## local. Elle reste en revanche bornée DANS la bande, pour que ce qu'on voit ne
+## dépasse jamais ce qui arrête.
+##
+## ## Les sprites, et pourquoi les piquets ne se voient pas encore
+##
+## Cette note disait jusqu'ici qu'un sprite lisible de dessus serait un défaut de
+## conception. Adrien a décidé l'inverse le 2026-09-10 : des sprites pour les
+## gadgets, dont deux pour celui-ci — `gadget_voile_piquet.png` et
+## `gadget_voile_toile.png`, générés par la session des menus. **Ils ne sont pas
+## encore livrés.** La toile garde son trait dessiné et en prendra la texture ;
+## les piquets, eux, attendent leur image — les dessiner d'ici là serait le
+## « troisième chemin » que `GadgetBase._monter_visuel()` interdit.
 
-## Demi-longueur de la bâche, en pixels. Elle est LARGE et mince : c'est ce
+## Demi-longueur de la toile, en pixels. Elle est LARGE et mince : c'est ce
 ## rapport qui en fait un obstacle de lumière et non un objet.
 const DEMI_LONGUEUR := 84.0
+## Demi-épaisseur de la bande qui arrête — la lumière comme les joueurs.
 const DEMI_EPAISSEUR := 4.0
+
+## L'onde de la toile, en pixels. ⚠️ **Les trois amplitudes et la demi-largeur du
+## trait, additionnées, ne dépassent pas `DEMI_EPAISSEUR`** : c'est la borne qui
+## garde la toile dans la bande. `tools/test_tir_et_reserves.gd` la vérifie.
+const LARGEUR_TOILE := 3.0
+## Le mou : la toile pend un peu, même sans vent.
+const CREUX := 1.0
+## L'ondulation qui court le long de la toile.
+const ONDULATION := 0.75
+## Le frisson qu'une balle y laisse en passant, au plus.
+const SECOUSSE_MAX := 0.75
+const PERIODE_ONDULATION := 1.7
+## Vitesse à laquelle le frisson s'éteint, par seconde : au bout d'un tiers de
+## seconde, il en reste un cinquième.
+const AMORTI_SECOUSSE := 5.0
+const POINTS_TOILE := 17
+
+var _toile: Line2D = null
+var _ourlet: Line2D = null
+## Le temps LOCAL de l'onde. Pas `age()` : l'onde n'est pas de la simulation.
+var _temps: float = 0.0
+var _secousse: float = 0.0
 
 
 func _init() -> void:
-	rayon = DEMI_LONGUEUR
 	# La balle la déchire et poursuit. C'est TOUT ce qui distingue ce gadget
 	# d'un mur, et c'est la ligne à ne pas « simplifier ».
 	arrete_les_balles = false
+	# Un joueur, lui, s'y arrête — décision d'Adrien, 2026-09-10.
+	arrete_les_joueurs = true
 	eblouit = false
 	pv = 2.0
 	# En travers du regard, comme la valeur par défaut du socle : une bâche
 	# plantée DANS l'axe où l'on vise ne masque rien du tout.
 	angle_pose = PI / 2.0
+	# ⚠️ `rayon` n'est PAS réglé. Il valait `DEMI_LONGUEUR`, et le socle en
+	# faisait un DISQUE de collision de 84 px autour d'une ombre de 8 px
+	# d'épaisseur — voir `_forme_de_collision()`.
+
+
+## La bande, la même que l'occluder au pixel près : c'est elle qui arrête le
+## joueur, que la balle touche, et que le rayon d'éblouissement heurte.
+##
+## ⚠️ **C'était un disque de 84 px de rayon jusqu'au 2026-09-10**, hérité du
+## socle : une balle déchirait la toile en passant à 84 px d'elle, et
+## l'éblouissement butait sur un disque que rien ne montrait. Muet tant que la
+## forme ne servait qu'aux balles ; intenable dès qu'elle arrête les joueurs.
+func _forme_de_collision() -> Shape2D:
+	var bande := RectangleShape2D.new()
+	bande.size = Vector2(DEMI_LONGUEUR, DEMI_EPAISSEUR) * 2.0
+	return bande
 
 
 ## Une bande, pas un disque. L'ombre portée doit avoir la forme de la bâche.
@@ -49,36 +113,61 @@ func _monter_occluder() -> void:
 	add_child(occ)
 
 
-## Le visuel est DESSINÉ, et il n'y a pas de sprite à attendre.
+## La toile, DESSINÉE : vue de dessus, une toile verticale est une ligne.
 ##
-## ⚠️ **Ceci renverse la décision de l'étape 5**, qui criait « sprite absent » et
-## ne montrait rien. Cette décision supposait qu'une planche viendrait ; la note
-## de tête de ce fichier dit l'inverse depuis le premier jour — *« vue
-## strictement de dessus, une bâche verticale est une ligne »*, et *« un sprite
-## bien lisible de dessus serait un défaut de conception »*. Peindre une image
-## pour obtenir une ligne serait payer un asset pour dessiner deux segments.
-##
-## Ce n'est donc pas un repli en attendant mieux : c'est la forme finale, et il
-## n'y a rien à distinguer d'un asset manquant puisqu'il n'en manque aucun.
+## ⚠️ Ce trait renversait déjà l'étape 5, qui criait « sprite absent » et ne
+## montrait rien. Les sprites décidés le 2026-09-10 ne le remplacent pas : ils lui
+## donneront sa texture. Les piquets, eux, attendent la leur (note de tête).
 func _monter_visuel() -> void:
-	# La bâche : une bande sombre, à peine plus claire que le noir, qui n'existe
+	# La toile : une bande sombre, à peine plus claire que le noir, qui n'existe
 	# à l'œil que lorsqu'une torche la frôle.
-	var bache := Line2D.new()
-	bache.name = "Visuel"
-	bache.points = PackedVector2Array([
-		Vector2(-DEMI_LONGUEUR, 0.0), Vector2(DEMI_LONGUEUR, 0.0)])
-	bache.width = DEMI_EPAISSEUR * 2.0
-	bache.default_color = Charte.SOL_A
-	bache.light_mask = MapGeometry.WALL_LAYER
-	add_child(bache)
+	_toile = _ligne("Visuel", LARGEUR_TOILE, Charte.SOL_A)
+	# L'ourlet, l'arête haute de la toile — ce qu'on en voit, de dessus. C'est lui
+	# qui accroche la lumière. Il s'appelait « câble » et restait droit ; la toile
+	# est lâche désormais, et son arête suit l'onde.
+	_ourlet = _ligne("Ourlet", 1.5, Charte.LINE)
+	_onduler()
 
-	# Le câble tendu qui la tient, sur l'arête haute : c'est lui qui accroche la
-	# lumière et donne à la bande son épaisseur lisible.
-	var cable := Line2D.new()
-	cable.name = "Cable"
-	cable.points = PackedVector2Array([
-		Vector2(-DEMI_LONGUEUR, -DEMI_EPAISSEUR), Vector2(DEMI_LONGUEUR, -DEMI_EPAISSEUR)])
-	cable.width = 1.5
-	cable.default_color = Charte.LINE
-	cable.light_mask = MapGeometry.WALL_LAYER
-	add_child(cable)
+
+func _ligne(nom: String, largeur: float, couleur: Color) -> Line2D:
+	var ligne := Line2D.new()
+	ligne.name = nom
+	ligne.width = largeur
+	ligne.default_color = couleur
+	ligne.light_mask = MapGeometry.WALL_LAYER
+	add_child(ligne)
+	return ligne
+
+
+func _process(delta: float) -> void:
+	_temps += delta
+	_secousse *= exp(-AMORTI_SECOUSSE * delta)
+	_onduler()
+
+
+func _onduler() -> void:
+	if _toile == null:
+		return
+	var points := PackedVector2Array()
+	points.resize(POINTS_TOILE)
+	for i in POINTS_TOILE:
+		var u := float(i) / float(POINTS_TOILE - 1)
+		points[i] = Vector2(lerpf(-DEMI_LONGUEUR, DEMI_LONGUEUR, u),
+			decalage(u, _temps, _secousse))
+	_toile.points = points
+	_ourlet.points = points
+
+
+## Le décalage de la toile, en travers, au point `u` — 0 et 1 sont les piquets.
+##
+## L'enveloppe `sin(πu)` le tient à ZÉRO aux deux bouts : les piquets ne bougent
+## pas, c'est la toile entre eux qui vit.
+static func decalage(u: float, t: float, secousse: float) -> float:
+	var onde := ONDULATION * sin(TAU * (1.5 * u - t / PERIODE_ONDULATION))
+	var frisson := secousse * sin(TAU * 3.0 * u - t * 40.0)
+	return sin(PI * u) * (CREUX + onde + frisson)
+
+
+## Une balle vient de la traverser : la toile bat.
+func secouer() -> void:
+	_secousse = SECOUSSE_MAX
