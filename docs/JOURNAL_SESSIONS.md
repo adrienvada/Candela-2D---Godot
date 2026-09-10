@@ -39,7 +39,10 @@ Godot en bas de l'écran, nouvelle icône d'application.
 **En propre :** `tools/test_menus_finitions.gd` (créé), `assets/logos/godot_roman.png`
 (créé), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
 **Partagés, touchés par insertions :** `ui.gd` et `game_state.gd` (session
-« chantier 10 classes » prévenue par message le jour même), `menu_hub.gd`,
+« chantier 10 classes » prévenue par message le jour même), et
+**`menu_fiche_classe.gd`, en propre au chantier CLASSES** — recomposé à la
+demande directe d'Adrien le même soir (trois cases en haut, cône de torche,
+gadget en bas), la session prévenue par message ; `menu_icones.gd`, `menu_hub.gd`,
 `charte.gd` (trois constantes `NIVEAU_UI_*`), `tools/run_suites.sh` (une suite
 ajoutée).
 

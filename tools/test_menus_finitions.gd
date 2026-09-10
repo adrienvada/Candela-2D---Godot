@@ -181,6 +181,28 @@ func _test_menu_sourd_sous_le_voile() -> void:
 	_check("des boutons d'arme portent une icône", avec_icone > 0, "%d" % avec_icone)
 	_check("aucune icône d'arme n'est teintée", teintees == 0,
 		"%d état(s) teinté(s)" % teintees)
+
+	# La fiche de classe (Adrien, 2026-09-10) : l'arme a sa case à côté du sprite,
+	# et le faisceau se MONTRE — plus de jauge qui le chiffre.
+	var fiches: Array = ui.get("_fiches_classe")
+	_check("le salon porte ses fiches de classe", not fiches.is_empty())
+	if not fiches.is_empty():
+		var fiche: Node = fiches[0]
+		var classe: Variant = fiche.call("classe_affichee")
+		_check("la fiche montre une classe", classe != null)
+		if classe != null:
+			_check("la fiche montre l'icône de l'arme",
+				(fiche.get("_arme") as TextureRect).texture != null)
+			var cone: Control = fiche.get("_cone")
+			_check("le cône suit le demi-angle de la torche",
+				is_equal_approx(float(cone.get("demi_angle")), float(classe.demi_angle_torche())),
+				"%.3f contre %.3f" % [float(cone.get("demi_angle")), float(classe.demi_angle_torche())])
+			_check("le cône a une portée", float(cone.get("part_portee")) > 0.0)
+		var sans_faisceau := true
+		for ligne in fiche.get_script().get_script_constant_map().get("LIGNES", []):
+			if String(ligne.get("cle", "")) == "faisceau":
+				sans_faisceau = false
+		_check("plus de jauge FAISCEAU", sans_faisceau)
 	main.queue_free()
 	await process_frame
 
