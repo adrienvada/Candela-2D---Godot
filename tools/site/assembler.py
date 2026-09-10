@@ -97,6 +97,68 @@ for cle, (fichier, nom) in ICONES.items():
     else:
         src = src.replace(cle, "")
 
+# --- La durée du film, LUE sur le fichier -------------------------------------
+# Elle était écrite à la main dans le gabarit — « Quarante-trois secondes » — et
+# le film a changé trois fois dans la soirée. Un chiffre recopié se périme sans
+# prévenir ; celui-ci se relit à chaque génération.
+if "{{DUREE_FILM}}" in src:
+    duree_mots = "Le film"
+    film = RACINE / "film.mp4"
+    if film.exists():
+        try:
+            import subprocess
+            secondes = float(subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(film)],
+                capture_output=True, text=True, check=True).stdout.strip())
+            unites = ["zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept",
+                      "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze",
+                      "quinze", "seize"]
+            n = int(round(secondes))
+            if n < len(unites):
+                mot = unites[n]
+            elif n < 70:
+                dizaines = {20: "vingt", 30: "trente", 40: "quarante", 50: "cinquante", 60: "soixante"}
+                d, u = (n // 10) * 10, n % 10
+                if u == 0:
+                    mot = dizaines[d]
+                elif u == 1:
+                    mot = dizaines[d] + " et une"
+                else:
+                    mot = dizaines[d] + "-" + unites[u]
+            else:
+                mot = str(n)
+            duree_mots = mot[0].upper() + mot[1:] + "<br>secondes"
+        except Exception:
+            pass
+    src = src.replace("{{DUREE_FILM}}", duree_mots)
+
+# --- Le film ------------------------------------------------------------------
+# Il pèse six mégaoctets : embarqué en data-URI, il ferait basculer la page
+# autonome à treize mégaoctets, très près du plafond de l'artefact — et pour un
+# fichier que la plupart des lecteurs ne liront pas. Les deux modes divergent
+# donc ici, et c'est le seul endroit où ils divergent :
+#
+#   fichiers  -> un vrai <video>, avec affiche et `preload="none"`
+#   autonome  -> l'affiche seule, cliquable vers le site
+#
+# La page publiée reste donc complète, et l'artefact reste léger.
+SITE = "https://adrienvada.fr/candela-2d/"
+if "{{FILM}}" in src:
+    if sortie is not None and (RACINE / "film.mp4").exists():
+        dossier = sortie / "videos"
+        dossier.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(RACINE / "film.mp4", dossier / "film.mp4")
+        src = src.replace("{{FILM}}",
+            f'<video controls preload="none" poster="{lien("film-affiche.jpg")}">'
+            f'<source src="videos/film.mp4" type="video/mp4">'
+            f'Votre navigateur ne sait pas lire cette vidéo — '
+            f'<a href="videos/film.mp4">la télécharger</a>.</video>')
+    else:
+        src = src.replace("{{FILM}}",
+            f'<a href="{SITE}"><img class="film-affiche" src="{lien("film-affiche.jpg")}" '
+            f'alt="Une image du film : un cône de torche révèle une silhouette au fond d’un couloir."></a>')
+
 if "{{" in src:
     sys.exit("jeton non résolu dans le gabarit")
 
