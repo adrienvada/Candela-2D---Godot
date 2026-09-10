@@ -2592,15 +2592,23 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 
 
 ## Écrit les réserves d'un joueur en match : fusées restantes et gadget de classe.
-func _maj_reserves(res: Dictionary, joueur: int) -> void:
+func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	if res.is_empty():
 		return
 	var gs := get_tree().get_first_node_in_group("game_state")
 	if gs == null:
 		return
 
+	# ⚠️ **La couleur suit le PANNEAU, les données suivent le JOUEUR**, et les deux
+	# ne se confondent que chez l'hôte. Chez le client en ligne, `update_hud()`
+	# reçoit (p2, p1) — le joueur local d'abord —, mais ce panneau était nourri par
+	# l'index 0, donc par `gs.p1` : le client lisait dans SON bandeau les réserves de
+	# l'HÔTE. Relevé par le contre-examen du 2026-09-10. Le premier correctif proposé
+	# passait `player_id` à la place de 0 — et repeignait du même coup le panneau du
+	# client en couleur adverse, la teinte tirant du même argument.
 	var teinte: Color = COLOR_P1 if joueur == 0 else COLOR_P2
-	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
+	var p: Node2D = qui if qui != null else (gs.p1 if joueur == 0 else gs.p2)
+	var pid: int = int(p.get("player_id")) if p != null else joueur
 	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
 
 	# ── 1. Les fusées éclairantes ──────────────────────────────────────────
@@ -2610,24 +2618,20 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 	# venait de lancer son unique fusée, exactement comme pour le Spectre, qui
 	# n'en porte aucune : l'écran ne distinguait pas « reviendra » de « jamais ».
 	# Depuis que sept classes rechargent une fusée par minute, cette différence
-	# est toute l'information. Le plafond la porte, le décompte dit quand.
-	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
+	# est toute l'information — et un zéro suffit à la porter.
+	var n := int(gs.fusees_restantes(pid)) if gs.has_method("fusees_restantes") else 0
 	var plafond := 0
 	if classe != null and classe.fusees != null:
 		plafond = classe.fusees.plafond_effectif()
 	var lbl_f: Label = res["fusees"]
-	if plafond <= 0:
-		lbl_f.text = "FUSÉES —"
-	else:
-		lbl_f.text = "FUSÉES %d/%d" % [n, plafond]
-		# ⚠️ Le décompte n'est juste que chez l'hôte et en local : l'accumulateur
-		# n'est pas répliqué, et chez le client `attente_fusee` rendrait une
-		# période figée. Mieux vaut aucun chiffre qu'un chiffre qui ne descend pas.
-		if n < plafond and gs.has_method("attente_fusee") \
-				and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
-			var attente := float(gs.attente_fusee(joueur))
-			if attente >= 0.0:
-				lbl_f.text += " · %d s" % int(ceil(attente))
+	# ⚠️ **Ni plafond ni décompte dans le libellé**, et c'est une correction du jour
+	# même. La première version écrivait « FUSÉES 0/1 · 60 s » : 97 px contre 59
+	# pour le plus long libellé d'avant — et un libellé ne coupe pas, il élargit sa
+	# cartouche. En écran scindé, le panneau de J2 est calé à droite et grandit vers
+	# la droite : sa cartouche partait hors de l'écran (revue du 2026-09-10,
+	# mesuré). « Vide, reviendra » contre « n'en a jamais » ne demandait que ceci :
+	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
+	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
 
@@ -2636,20 +2640,57 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 		_set_flare_style(p_f, n > 0, teinte)
 
 	# ── 2. Le gadget de classe ─────────────────────────────────────────────
-	var nom_gadget := "—"
-	var dispo := false
+	#
+	# ⚠️ Trois états à dire depuis le 2026-09-10, et l'écran n'en disait qu'un —
+	# Adrien : « l'UI ne nous apprend rien là-dessus ». PRÊT (le nom seul), EN
+	# RECHARGE (le nom et ses secondes), et pour le grésillement ALLUMÉ ou ÉTEINT,
+	# avec sa batterie.
+	var titre_g := "GADGET"
+	var texte_g := "—"
+	var vif := false
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():
-		nom_gadget = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
-		dispo = bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+		texte_g = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
+		var dispo := bool(gs.gadget_disponible(pid)) if gs.has_method("gadget_disponible") else false
+		var bascule: Node = gs.gadget_basculable_de(pid) if gs.has_method("gadget_basculable_de") else null
+		if bascule != null:
+			var allume := bool(bascule.get("actif"))
+			var batt := float(gs.batterie(pid))
+			# `floor` et non `round` : le bandeau n'annonce jamais le seuil de
+			# rallumage avant qu'il soit atteint. Et sous ce seuil, un état à part —
+			# « éteinte, rallumable » et « éteinte, pas encore » se lisaient pareil,
+			# et l'appui ignoré ne disait rien.
+			var pct := int(floor(batt * 100.0))
+			if allume:
+				titre_g = "ALLUMÉ · %d %%" % pct
+				vif = true
+			elif batt >= GadgetGresillement.SEUIL_RALLUMAGE:
+				titre_g = "ÉTEINT · %d %%" % pct
+			else:
+				titre_g = "CHARGE · %d %%" % pct
+		elif dispo:
+			vif = true
+		else:
+			var att := float(gs.attente_gadget(pid)) if gs.has_method("attente_gadget") else 0.0
+			if att > 0.0:
+				titre_g = "RECHARGE · %ds" % int(ceil(att))
 
+	# ⚠️ **L'état se lit sur la ligne du TITRE, le nom reste seul en dessous.** La
+	# première version allongeait la ligne du nom — « GRÉSILLEMENT ALLUMÉ · 100 % »,
+	# 178 px, plus que tout le bloc des réserves — et en écran scindé le panneau de
+	# J2, calé à droite et grandissant vers la droite, poussait sa cartouche hors de
+	# l'écran. La ligne de titre existait depuis le début et ne disait que
+	# « GADGET » : c'est elle qui porte l'état, et la cartouche garde sa largeur.
+	var lbl_t: Label = res.get("gadget_titre", null)
+	if lbl_t != null:
+		lbl_t.text = titre_g
 	var lbl_g: Label = res["gadget"]
-	lbl_g.text = nom_gadget if dispo else ("%s —" % nom_gadget if nom_gadget != "—" else "—")
+	lbl_g.text = texte_g
 	lbl_g.add_theme_color_override("font_color",
-		Charte.HALOGENE if dispo else COLOR_DIM)
+		Charte.HALOGENE if vif else COLOR_DIM)
 
 	var p_g: PanelContainer = res.get("panel_gadget", null)
 	if p_g != null:
-		_set_gadget_style(p_g, dispo, teinte)
+		_set_gadget_style(p_g, vif, teinte)
 
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
@@ -7288,7 +7329,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		_maj_reserves(p1_reserves, 0)
+		_maj_reserves(p1_reserves, 0, p1)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
 	if p2:
@@ -7330,7 +7371,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		_maj_reserves(p2_reserves, 1)
+		_maj_reserves(p2_reserves, 1, p2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#
 		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le

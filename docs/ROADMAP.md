@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-09
+> Dernière mise à jour : 2026-09-10
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3152,6 +3152,50 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
+
+Pour arbitrer « un gadget debout par joueur », j'ai demandé à Adrien quels
+gadgets sans durée de vie étaient concernés, en les citant de mémoire : « le
+voile, l'ombre habitée, la mine et la bobine ». Il a validé. La table
+`IMPLEMENTATIONS` disait autre chose : la bobine avait encore 14 s de vie, et
+**la poudre de contact de la Sentinelle** — permanente, faite pour veiller un
+passage toute la manche — manquait. Adrien avait tranché sur une liste fausse ;
+il a fallu lui reposer la question.
+
+Une question à l'utilisateur est un INVENTAIRE, et un inventaire se tire du
+code, jamais de la mémoire : ici, un `grep` de `duree_vie` avant d'écrire la
+question. Tranché la seconde fois : même règle pour tous.
+
+### Un libellé ne coupe pas : il élargit sa cartouche (2026-09-10)
+
+Les libellés du bandeau des réserves n'ont ni retour à la ligne ni coupure. Un
+texte plus long ne déborde donc pas de sa cartouche : **il l'élargit**, et elle
+pousse le reste du HUD. « GRÉSILLEMENT ALLUMÉ · 100 % » mesurait 178 px, plus que
+tout le bloc des réserves réunies ; et en écran scindé le panneau de J2, calé à
+droite et grandissant vers la droite, poussait sa cartouche hors de l'écran.
+
+Aucune suite ne pouvait le voir — un lot headless ne rend rien, et chaque texte
+était juste. Il a été trouvé par MESURE, avant d'être vu : `get_minimum_size()`
+d'un `Label` se calcule sans rendu. Le remède n'a pas été de raccourcir mais de
+déplacer : la cartouche du gadget avait depuis toujours une ligne de titre qui
+ne disait que « GADGET » ; elle porte désormais l'état. Garde posé dans
+`test_tir_et_reserves.gd`, avec une référence PAR cartouche — un premier jet
+prenait une référence commune et laissait celle des fusées grandir de 40 %.
+
+### Une borne remplacée, et l'ancienne oubliée dans une table (2026-09-10)
+
+La bobine du grésillement est devenue une batterie : c'est elle qui borne la
+zone, et la bobine doit rester au sol. J'ai écrit dans le code un commentaire
+qui la rangeait parmi les gadgets « sans durée de vie » — pendant que la table
+`IMPLEMENTATIONS`, que je n'avais pas relue, lui en donnait toujours 14 s. Elle
+mourait donc, même éteinte. **Trois relecteurs sur quatre l'ont trouvé
+séparément**, et aucun contrôle ne l'aurait fait : on ne teste pas qu'une chose
+dure, on teste qu'elle agit.
+
+Quand un mécanisme en remplace un autre comme borne, chercher TOUTES les sources
+de l'ancienne borne avant de la déclarer disparue. Contrôle posé : une bobine
+éteinte doit survivre au-delà de quatorze secondes.
 
 ### Une variable qui porte le nom d'une règle qu'elle ne vérifie pas (2026-09-10)
 
@@ -16897,8 +16941,10 @@ qu'on vient tester. L'entraînement compte ; l'hôte qui attend seul et le parta
 d'après-match gardent leur gratuité, parce qu'ils ne réamorcent pas le compteur.
 Les **sept classes qui ne rechargeaient pas** gagnent une fusée par minute
 (`PERIODE_RECHARGE_FUSEE`) ; le Terrassier (18 s) et l'Allumeur (12 s) gardent
-la leur, qui est leur identité ; le Spectre reste à zéro. Le bandeau devient
-`FUSÉES n/plafond · N s` : « — » ne veut plus dire que « n'en a jamais ».
+la leur, qui est leur identité ; le Spectre reste à zéro. Le bandeau distingue
+enfin « vide » de « jamais » : zéro s'écrit `FUSÉES 0`, le tiret reste au Spectre.
+*(La première version écrivait `FUSÉES n/plafond · N s` — mesurée trop large le
+jour même : voir l'étape 23.)*
 
 **Le tir devient semi-automatique**, sauf pour l'Occulteur. Trois pièces, et la
 deuxième est celle qu'on oublierait :
@@ -16929,7 +16975,61 @@ recharge d'une minute pour TOUS les gadgets ; le grésillement devient une
 TORCHES jusqu'au noir de façon aléatoire, et une torche noire n'éblouit plus. Le
 bandeau des réserves s'inverse aussi chez le client en ligne (il y affiche les
 réserves de l'hôte) : à corriger dans le même geste, puisque l'état du gadget
-passera par lui.
+passera par lui. **Fait : voir l'étape 23.**
+
+### Étape 23 — les gadgets rechargent, le grésillement devient une batterie ✅
+
+Les arbitrages d'Adrien du 2026-09-10, tous rendus par question :
+
+- **Une minute de recharge pour TOUS les gadgets.** On repose son gadget une
+  minute après la pose. L'entraînement compte, comme pour les fusées ; le reste
+  du bac à sable garde sa gratuité.
+- **Un gadget debout par joueur** : reposer DÉPLACE le précédent. Sans elle, le
+  voile, l'ombre habitée, la mine, la poudre et la bobine — qui ne meurent jamais
+  — s'accumuleraient d'un par minute. Tranché deux fois : voir le piège « Une
+  question posée de mémoire ».
+- **Le grésillement devient une batterie** : 14 s allumé, 60 s pour se remplir
+  éteint, rallumable dès 5 %. La bobine **reste au sol** ; sa touche l'allume et
+  l'éteint où qu'elle soit, sans désarmement — l'interrupteur passe avant la
+  pose, faute de quoi le cooldown d'un Parasite qui tire bloquait l'extinction.
+- Il éteint **les torches seules**, **jusqu'au noir**, de façon **aléatoire** :
+  une fonction pure d'une graine tirée par l'hôte et du temps allumé, par
+  créneaux de 0,34 s — au plus trois coupures franches par seconde, pour les
+  yeux.
+- **Une torche noire n'éblouit plus.** Le grésillement entre donc dans la
+  simulation, chez l'hôte qui seul calcule l'éblouissement : `_lumiere_recue` et
+  la rétrodiffusion lisent le même facteur que le rendu. On ne peut pas être
+  aveuglé par une lampe qu'on voit éteinte.
+
+**Une revue adversariale a précédé le commit** — quatre dimensions (réseau,
+fidélité aux décisions, GDScript, HUD), chacune contre-examinée par un sceptique.
+Six défauts confirmés, tous corrigés :
+
+1. la bobine mourait à 14 s même éteinte (voir le piège « Une borne remplacée ») ;
+2. **la destruction par balle ne voyageait pas** — vrai de TOUS les gadgets,
+   pas du seul grésillement : le client détruisait avec ses propres balles, à ses
+   propres instants. Elle est désormais autoritaire : le client n'encaisse plus
+   rien, l'hôte ordonne chaque retrait (`rpc_detruire_gadget`) ;
+3. l'état initial d'une bobine était relu dans la batterie de chaque pair ; il
+   voyage désormais avec la pose ;
+4. la rétrodiffusion d'une torche noire éblouissait encore son porteur ;
+5. le minuteur de pose du client retardait d'un aller-retour sur celui de
+   l'hôte ; il est raccourci d'autant ;
+6. en écran scindé, le libellé allongé poussait la cartouche de J2 hors de
+   l'écran (voir le piège « Un libellé ne coupe pas »).
+
+Au HUD, la ligne de titre de la cartouche porte l'état — `GADGET`,
+`RECHARGE · 42s`, `ALLUMÉ · 80 %`, `ÉTEINT · 40 %`, `CHARGE · 3 %` — et le nom
+reste seul dessous. « Éteinte, rallumable » et « éteinte, pas encore » ne se
+confondent plus.
+
+`Protocol.VERSION` reste à 16, faute de publication entre les deux lots ;
+l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
+
+⚠️ **Signalé, non corrigé** : le panneau de J2 est un `Control` de 340 px dont le
+contenu en réclamait déjà 505 AVANT ce lot, et il grandit vers la droite — il
+déborde donc déjà, légèrement, en écran scindé. Il devrait grandir vers la
+gauche. Hors périmètre, relevé par la revue.
 
 ### Ce qui reste, dans l'ordre
 

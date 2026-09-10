@@ -198,7 +198,12 @@ func _physics_process(delta):
 			# l'encaisse et la laisse passer : c'est ce qui fait du voile « un mur
 			# qui n'en est pas un » plutôt qu'un mur.
 			var gadget: GadgetBase = collider
-			if not is_replay:
+			# ⚠️ **Le client n'encaisse plus rien, depuis le 2026-09-10.** Il simulait
+			# ses propres balles et détruisait donc ses gadgets de son côté, à des
+			# instants que la prédiction décalait. Chez lui la balle s'arrête
+			# toujours sur un objet dur, sans le blesser : c'est l'ordre
+			# `rpc_detruire_gadget` de l'hôte qui le retire.
+			if not is_replay and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 				gadget.encaisser(weapon.damage_center)
 			if gadget.arrete_les_balles:
 				_spawn_wall_effects(hit_point, true)

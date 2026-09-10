@@ -196,7 +196,11 @@ func _physics_process(delta: float) -> void:
 ## Encaisse des dégâts. Rend `true` si le gadget en meurt.
 ##
 ## L'hôte seul appelle ceci : la destruction est autoritaire, comme tout le
-## reste. Le client la voit arriver par la réplication du nœud.
+## reste. Le client la voit arriver par `GameState.rpc_detruire_gadget`.
+##
+## ⚠️ **Ce commentaire mentait jusqu'au 2026-09-10** : il disait « par la
+## réplication du nœud », et aucun nœud de gadget n'était répliqué — le client
+## détruisait ses gadgets avec ses propres balles, à ses propres instants.
 func encaisser(degats: float) -> bool:
 	pv -= degats
 	if pv > 0.0:
@@ -262,13 +266,21 @@ func occultation_pour(_pos: Vector2) -> float:
 ## Un dans le socle — la lampe est intacte. Seul le grésillement du Parasite
 ## répond autrement.
 ##
-## ⚠️ **Ne touche QUE le rendu.** L'éblouissement échantillonne le pixel du
-## cookie et non l'énergie de la lampe : baisser celle-ci retire de la lumière à
-## l'écran sans rien changer à la simulation. C'est la règle que `brouillage.gd`
-## s'est donnée — dégrader la lecture est un coût de perception, déplacer une
-## hitbox serait un mensonge.
+## ⚠️ **Il touche AUSSI l'éblouissement depuis le 2026-09-10.** Il ne touchait
+## que le rendu tant que la lampe gardait 22 % : elle éclairait encore, elle
+## éblouissait encore. Depuis qu'elle peut devenir noire, `GameState._lumiere_recue()`
+## le lit chez l'hôte — on ne peut pas être aveuglé par une lampe qu'on voit
+## éteinte. Voir `gadget_gresillement.gd`.
 func facteur_de_lampe(_pos: Vector2) -> float:
 	return 1.0
+
+
+## Ce gadget s'allume-t-il et s'éteint-il à la demande de son poseur ?
+##
+## Faux dans le socle. Seul le grésillement répond vrai (2026-09-10) : sa touche
+## le pose une fois, puis l'allume et l'éteint tant qu'il tient debout.
+func est_basculable() -> bool:
+	return false
 
 
 ## L'âge du gadget, en secondes. Public parce que les sous-classes en dérivent

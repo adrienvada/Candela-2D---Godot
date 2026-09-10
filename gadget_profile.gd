@@ -56,7 +56,10 @@ extends Resource
 ## c'est l'argument qui a déjà fixé `RootProfile.RECUPERATION`.
 const DESARMEMENT := 0.30
 
-## Combien on peut en poser par manche.
+## Le joueur a-t-il un gadget à poser ? Zéro : non. Au-delà, la valeur ne compte
+## plus depuis le 2026-09-10 : ce n'est plus un plafond par manche mais une recharge
+## d'une minute pour tous (`GameState.PERIODE_RECHARGE_GADGET`), et un gadget
+## debout par joueur, que la pose suivante déplace.
 @export var stock: int = 1
 
 ## Ce gadget peut-il éblouir ? Valeur par défaut de la classe, recopiée sur le

@@ -1887,6 +1887,16 @@ func _physics_process(delta):
 	var gadget_presse := input_provider.is_gadget_pressed()
 	if not gadget_presse:
 		_gadget_pressee = false
+	elif can_move and not _gadget_pressee and state \
+			and state.gadget_basculable_de(player_id) != null:
+		# ⚠️ **L'interrupteur passe AVANT la pose, et sans ses gardes.** Celui de la
+		# pose exige `shoot_cooldown <= 0` et `gadget_disponible()` : le premier est
+		# presque toujours faux chez un Parasite qui tire, le second le devient dès
+		# la bobine posée. Tels quels, ils bloquaient l'EXTINCTION — on n'aurait
+		# jamais pu couper sa bobine en combattant. Éteindre n'occupe pas les mains :
+		# aucun désarmement.
+		state.basculer_gadget(self)
+		_gadget_pressee = true
 	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
 			and state and state.gadget_disponible(player_id):
 		poser_gadget()

@@ -3500,3 +3500,41 @@ mises à recharger, la variable a désigné le Parasite sans changer de nom.
 Reste le lot gadgets, arbitré par Adrien : recharge d'une minute pour tous, et un
 grésillement devenu batterie — posé au sol, rallumable, qui éteint les torches
 jusqu'au noir, et dont une torche éteinte n'éblouit plus.
+
+## 2026-09-10 — Les gadgets rechargent, le grésillement devient une batterie (étape 23)
+
+Adrien a tranché cinq choses par question : une minute de recharge pour tous les
+gadgets, un gadget debout par joueur, un grésillement en batterie posé au sol et
+rallumable, qui éteint les torches jusqu'au noir, et dont une torche éteinte
+n'éblouit plus.
+
+**Une revue adversariale en quatre dimensions a trouvé six défauts avant le
+commit, et le plus grave était le plus bête** : la bobine mourait au bout de
+quatorze secondes, même éteinte. J'avais écrit un commentaire la disant « sans
+durée de vie » sans relire la table qui lui en donnait une. Trois relecteurs sur
+quatre l'ont trouvé séparément.
+
+Le plus instructif était ailleurs : **la destruction par balle ne voyageait pas,
+pour aucun gadget**, depuis toujours. Le client détruisait avec ses propres
+balles. Tant que les gadgets ne touchaient qu'au rendu, la divergence restait
+cosmétique ; dès qu'une bobine décide de l'éblouissement, elle devient une
+lampe qui aveugle à travers un écran noir. Un défaut dormant réveillé par une
+fonctionnalité voisine.
+
+Et deux fautes de méthode, consignées : j'ai posé à Adrien une question sur la
+liste des gadgets permanents citée de mémoire — il manquait la poudre, il a fallu
+la reposer ; et j'ai allongé un libellé du HUD sans savoir qu'un libellé élargit
+sa cartouche au lieu de couper. La mesure l'a trouvé ; la revue a montré qu'en
+écran scindé il sortait de l'écran.
+
+**Post-scriptum du même lot — le troisième artefact de banc du jour.** Après les
+correctifs de la revue, le point de référence de « une torche noire n'éblouit
+plus » est tombé à zéro : la torche d'un Parasite, sans aucune bobine, ne versait
+plus rien sur l'adversaire en face. J'ai d'abord accusé la concurrence de deux
+suites partageant `user://` — fausse piste, la suite seule échouait pareil. Puis
+j'ai mesuré chaque maillon dans l'état exact où la suite l'atteint : joueurs en
+jeu, torche allumée, ligne de vue franche, facteur de lampe à 1 — et **J1 tourné
+à −59°**. Le vrai fournisseur d'entrées, restauré au tour précédent pour ne plus
+laisser de `null`, orientait J1 vers la souris pendant les images attendues.
+L'adversaire sortait du faisceau. Le banc imitait donc à la perfection le
+comportement qu'il devait prouver ; seule la mesure l'a démasqué.
