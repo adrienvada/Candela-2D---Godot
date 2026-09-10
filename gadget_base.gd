@@ -204,9 +204,9 @@ func _monter_occluder() -> void:
 ##
 ## Chaque sous-classe décide donc de son visuel, et les deux façons sont
 ## légitimes tant que le choix est ÉCRIT : charger un sprite et crier s'il manque,
-## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — c'est le
-## cas de la poudre, un semis de grains qu'Adrien a préféré à son image le
-## 2026-09-10. Ce qui reste interdit est le troisième chemin : dessiner *en
+## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — aucun
+## gadget n'en relève depuis l'étape 26 : neuf portent leur image, le leurre celle
+## de son poseur. Ce qui reste interdit est le troisième chemin : dessiner *en
 ## attendant* un sprite. Le premier chemin passe par `_poser_sprite()`.
 func _monter_visuel() -> void:
 	pass

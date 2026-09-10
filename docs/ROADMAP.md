@@ -3160,6 +3160,32 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un relevé de touches fait dans un seul fichier (2026-09-10)
+
+L'étape 4 a posé le gadget de J2 sur O après avoir « relevé, pas supposé » les
+touches prises — dans `input_setup.gd` seulement. La section `[input]` de
+`project.godot`, où O était le tir de J2, n'y figurait pas : **J2 posait son
+gadget chaque fois qu'il tirait, pendant vingt-deux étapes**, et aucune suite ne
+l'a vu — le garde des collisions ne regardait que la manette. C'est une revue de
+fusion, cherchant autre chose, qui l'a trouvé.
+
+Un inventaire de liaisons se tire de l'`InputMap` CHARGÉ, qui réunit toutes les
+sources ; et un garde de doublons doit rougir quand on lui en tend un.
+
+### Deux `z_index` de parents différents ne se comparent pas (2026-09-10)
+
+La nappe peinte de la poudre (enfant du gadget, que le socle pose à 4) et ses
+marques de pas (enfants de l'arène) : « 0 contre 1 » se lisait « la nappe
+dessous ». En vrai, 4 contre 1 : la nappe dessus, toutes les traces cachées. **Le
+contrôle écrit pour le garantir comparait ces deux nombres, et passait** ; c'est
+la capture en jeu — six marques posées, aucune visible — qui l'a démenti.
+
+Une profondeur de dessin se compare CUMULÉE jusqu'au premier ancêtre qui ne se dit
+plus relatif (`_z_absolu()` dans `tools/test_tir_et_reserves.gd`) ; à égalité,
+l'ordre de l'arbre tranche. Et un contrôle de rendu qui ne regarde pas le rendu
+se relit avec la question : « qu'est-ce qui me prouve que ce nombre est celui
+qu'on dessine ? »
+
 ### Un voile n'arrête pas `_input` : le menu répondait sous l'allumage (2026-09-10)
 
 Adrien : « j'entends mon curseur bouger dès le début ». L'allumage (DA6.5) et
@@ -16343,7 +16369,7 @@ main.
 de 9 à 10. Le témoin du fil a signalé la rupture — et il valait plus qu'une
 formalité : **l'argument porte une valeur par défaut, donc GDScript n'aurait rien
 dit** d'un client v9 parlant à un hôte v10. Les deux auraient joué, chacun dans
-sa réalité. Touches E et O au clavier, L1 à la manette.
+sa réalité. Touches E et O au clavier, L1 à la manette. ⚠️ *O était déjà le tir de J2 : devenu Y le 2026-09-10 (étape 26).*
 
 ⚠️ `tools/test_liaisons.gd` a fait rougir le lot : « ces commandes du clavier ne
 figurent nulle part : p1_gadget ». Une commande ajoutée à l'`InputMap` sans ligne
@@ -17567,9 +17593,10 @@ ont un. La session des menus les a générés et détourés — commit `69c4a59`
 branche. Ce lot ne prend **que les images** (`git checkout 69c4a59 --
 <fichiers>`) : sa branche porte aussi ses icônes, sa ROADMAP et cinq commits hors
 de main, et la fusionner ici puis pousser aurait livré à sa place un travail
-d'interface qu'elle n'a pas décidé de livrer. Les mêmes octets ajoutés des deux
-côtés fusionneront sans conflit. Le sprite de la poudre, lui, reste sur sa
-branche : s'il arrive avec sa fusion, rien ne le branchera.
+d'interface qu'elle n'a pas décidé de livrer. Prévision démentie :
+la session des menus a refait ses sprites après `69c4a59` (`2ce7133`, voile de
+fond vert retiré), et sa fusion (`828efa6`) a tranché dix conflits en prenant ses
+octets — voir le complément plus bas. La poudre a fini par prendre son image.
 
 **Un seul chemin, et un cri.** `GadgetProfile.chemin_sprite_de()` forme tous les
 chemins, pièces comprises (`voile_toile`, `torche_fantome_tete`) ;
@@ -17612,6 +17639,72 @@ image ».
 
 ⚠️ **Non vu** : l'écran scindé et le jeu en ligne ; le voile épaissi, en
 mouvement.
+
+**Complément du même jour — les sprites refaits, et la poudre prend son image.**
+Les onze sprites de `69c4a59` gardaient un **voile de vert d'incrustation** mal
+retiré, à 5-15 % d'opacité : le seuil de détourage de la session des menus était
+calé sur le vert demandé, et Gemini en rend un plus doux. Sur fond gris, rien ;
+sur le noir du jeu, un carré à peine plus clair au sol. Refaits dans `2ce7133`,
+seuils mesurés sur le fond de chaque image. Mesuré ici avant de les reprendre :
+14,2 % de l'image de la suie voilée hors de l'objet, zéro après ; tailles
+inchangées. Les braises passent en **braises fines** dans la cendre, peintes pour
+être affichées telles quelles — ce qu'elles sont depuis le choix du mélange non
+éclairé.
+
+Ces sprites sont arrivés sur main avec la fusion de la session des menus
+(`828efa6`), résolue comme une simulation préalable l'avait préparée — les dix
+PNG pris de son côté, la ROADMAP en union. Vérifiée avant sa poussée, sur un arbre
+candidat identique : suite complète verte, aucune déclaration ni fichier perdu
+(inventaire mécanique des trois arbres), chaque défaut signalé contre-vérifié.
+
+Adrien est revenu sur la poudre : elle prend **l'image**, une version aux
+empreintes très légères peinte à sa demande (`693337c`). **Deux défauts, que seule
+la capture en jeu a vus** — la suite était verte les deux fois :
+- **l'image recouvrait les traces.** Les marques de pas vivent dans l'arène
+  (profondeur 1), la nappe dans le gadget, que le socle pose à 4 : six marques
+  posées sur la nappe, aucune visible. La nappe est désormais à la profondeur
+  ABSOLUE du sol (−1) : sous les murs, le sang et les marques. Voir le piège
+  « Deux `z_index` de parents différents ne se comparent pas » ;
+- **puis les traces restaient illisibles.** Sous la torche, poudre claire et
+  traces claires saturaient toutes deux à 230/255 : écart mesuré nul, contre un
+  contraste de Weber de +2,0 pour les mêmes traces sur le sol nu. Adrien a
+  tranché : assombrir la poudre. Mesuré par captures avant/après, faisceau en
+  plein, trois marques dans la nappe et trois témoins sur le sol :
+
+| assombrissement | poudre (luminance) | traces sur la poudre (Weber) | rapport au sol nu |
+|---|---|---|---|
+| 1,00 | 230 | +0,00 | 0,00 |
+| 0,70 | 218 | +0,06 | 0,03 |
+| 0,55 | 188 | +0,22 | 0,11 |
+| 0,45 | 161 | +0,41 | 0,20 |
+| 0,35 | 135 | +0,68 | 0,34 |
+| **0,25** | **109** | **+1,07** | **0,53** |
+
+Retenu : **0,25**, le plus clair des niveaux où les traces ressortent au moins
+moitié autant que sur le sol nu — critère posé avant la mesure et annoncé à
+Adrien. La poudre y reste plus claire que le sol éclairé : elle se lit encore
+comme de la poudre. Un garde du test refuse de l'éclaircir sans remesurer.
+
+Le leurre reste le seul gadget sans image à lui.
+
+**Ce que la revue de la fusion a trouvé** — six défauts confirmés, deux réfutés,
+aucun causé par la fusion :
+- **au clavier, J2 posait son gadget en tirant.** O, choisi à l'étape 4 sur un
+  relevé des seules liaisons de `input_setup.gd`, était déjà le tir dans
+  `project.godot`. Et K, avant ce chantier, visait vers le bas ET rechargeait.
+  Adrien a tranché : gadget de J2 sur **Y**, recharge de J2 sur **N**.
+  `tools/test_liaisons.gd` refuse désormais tout doublon de touche parmi les
+  gestes de combat d'un même joueur — et vérifie qu'il voit un doublon qu'on lui
+  tend ;
+- `GadgetProfile.chemin_sprite()` se disait valable pour tout gadget, et son test
+  figeait le chemin inexistant `gadget_voile.png` : documenté pour les gadgets
+  d'une seule pièce, test sur un vrai fichier ;
+- **les braises fines ne couvrent que 57 % du disque qui brûle** : on brûle à
+  50 px du centre là où rien n'est peint. Adrien a redemandé un disque plein à la
+  session des menus ; d'ici là l'image reste, et un garde de couverture viendra
+  avec la nouvelle ;
+- côté menus, les images de gadget de la fiche ne sont gardées par aucun test :
+  signalé à la session qui les tient.
 
 ### Ce qui reste, dans l'ordre
 

@@ -3708,3 +3708,29 @@ AVANT d'être répétée ; ici, l'auteur avait raison.
 **La capture a aussi tranché les braises.** Trois rendus comparés : l'addition,
 qui était la règle pour tout ce qui brûle, blanchissait l'image peinte ; le
 mélange non éclairé la garde lisible.
+
+## 2026-09-10 — La poudre prend son image : deux défauts que seule la capture a vus (étape 26, suite)
+
+Session `candela-10-classes-system-e0a52d-da`. Avant la poussée de la session des
+menus, j'ai simulé sa fusion en lecture seule (`git merge-tree`), prévenu de ses
+onze conflits — dont dix PNG où prendre le mauvais côté aurait remis un voile vert
+**sans aucune erreur** — et fait vérifier un arbre candidat identique par une
+revue en parallèle : suite verte, inventaire mécanique des déclarations des trois
+arbres, aucune perte. Sa fusion réelle (`828efa6`) s'est faite ainsi.
+
+**La poudre a montré deux fois que « la suite est verte » ne dit rien du rendu.**
+D'abord, l'image recouvrait toutes les traces : j'avais comparé deux `z_index`
+relatifs à des parents différents, et mon contrôle l'affirmait. Ensuite, la
+profondeur corrigée, les traces restaient invisibles : poudre et traces saturaient
+ensemble au blanc sous la torche. Mes premières mesures de contraste échantillonnaient
+au mauvais endroit — une échelle supposée, jamais vérifiée — ; ce sont deux
+captures avant/après la pose des marques, différence pixel à pixel, qui ont donné
+un chiffre sûr (écart nul). Adrien a choisi d'assombrir ; le niveau (0,25) sort
+d'une table à six points, critère posé avant de mesurer.
+
+**Ce que la revue de la fusion a apporté en plus.** Cherchant des pertes, elle a
+trouvé un défaut de moi vieux de vingt-deux étapes : au clavier, J2 posait son
+gadget en tirant (O servait aux deux). Mon relevé de l'étape 4 ne lisait qu'un
+fichier sur deux. Adrien a tranché Y pour le gadget, N pour la recharge (K doublait
+la visée vers le bas, défaut antérieur), et un garde refuse désormais tout doublon
+— après avoir prouvé qu'il en voit un.

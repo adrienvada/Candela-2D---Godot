@@ -299,8 +299,13 @@ func _test_gadget() -> void:
 	g.implementation = "res://gadget_voile.gd"
 	_check("avec une implémentation, le gadget est livré", g.est_livre())
 
-	_check("le sprite se dérive du slug",
-		g.chemin_sprite() == "res://assets/sprites/gadget_voile.png", g.chemin_sprite())
+	# ⚠️ Le voile est fait de PIÈCES : son sprite d'un seul tenant n'existe pas.
+	# L'ancien contrôle figeait ce chemin inexistant comme le bon (revue de la
+	# fusion des menus, 2026-09-10) ; on vérifie désormais un vrai fichier.
+	_check("le sprite d'une pièce se dérive du slug, et le fichier existe",
+		GadgetProfile.chemin_sprite_de("voile_toile") == "res://assets/sprites/gadget_voile_toile.png"
+			and ResourceLoader.exists(GadgetProfile.chemin_sprite_de("voile_toile")),
+		GadgetProfile.chemin_sprite_de("voile_toile"))
 	_check("l'icône se dérive du MÊME slug",
 		g.chemin_icone() == "res://assets/ui/icones/gadget_voile.png", g.chemin_icone())
 

@@ -789,8 +789,8 @@ func _touche_le(espace: PhysicsDirectSpaceState2D, cible: Node, point: Vector2) 
 
 
 ## Les images de jeu des gadgets — décision d'Adrien du 2026-09-10 : tous ceux qui
-## peuvent en avoir une en ont une. Deux exceptions, et elles sont décidées : le
-## LEURRE porte la silhouette de son poseur, la POUDRE garde ses grains.
+## peuvent en avoir une en ont une. Une exception, et elle est décidée : le LEURRE
+## porte la silhouette de son poseur.
 func _test_sprites_des_gadgets(gs: Node) -> void:
 	print("\n[Les gadgets ont leurs images]")
 	var attendus := {
@@ -802,8 +802,9 @@ func _test_sprites_des_gadgets(gs: Node) -> void:
 		"cartouche_suie": ["Visuel"],
 		"poussiere": ["Visuel"],
 		"gresillement": ["Visuel"],
+		"poudre_contact": ["Visuel"],
 	}
-	var sans_image := ["leurre", "poudre_contact"]
+	var sans_image := ["leurre"]
 	# ⚠️ Chaque gadget du catalogue doit être rangé d'un côté ou de l'autre : un
 	# onzième gadget qui n'y serait pas échapperait à tout ce qui suit.
 	var oublies: Array[String] = []
@@ -822,19 +823,59 @@ func _test_sprites_des_gadgets(gs: Node) -> void:
 			if n == null or not ("texture" in n) or n.texture == null:
 				manques.append("%s/%s" % [slug, nom])
 		g.free()
-	_check("les huit gadgets portent leurs images, pièce par pièce", manques.is_empty(),
+	_check("les neuf gadgets portent leurs images, pièce par pièce", manques.is_empty(),
 		str(manques))
 
-	# La poudre garde ses grains : aucune image n'y entre par erreur. (Le leurre
-	# n'est pas monté ici — sans poseur, il crie, et c'est voulu.)
-	var poudre = load(String(gs.IMPLEMENTATIONS["poudre_contact"]["script"])).new()
-	poudre._monter_visuel()
-	var images_poudre := 0
-	for enfant in poudre.get_children():
-		if enfant is Sprite2D:
-			images_poudre += 1
-	_check("la poudre garde ses grains, sans image", images_poudre == 0, str(images_poudre))
-	poudre.free()
+	# ⚠️ La poudre : ses empreintes PEINTES sont un décor, ses MARQUES de pas sont
+	# les vraies traces, et les secondes doivent passer par-dessus — sinon elle
+	# mentirait sur la seule chose qu'elle sait. Éprouvé dans le VRAI jeu et en
+	# profondeurs ABSOLUES : les marques vivent dans l'arène, la nappe dans le
+	# gadget, et comparer leurs `z_index` relatifs ne veut rien dire. C'est ce
+	# qu'un premier contrôle faisait, et il a laissé passer une nappe posée par-
+	# dessus toutes les traces. (Le leurre n'est pas monté ici : sans poseur, il
+	# crie, et c'est voulu.)
+	gs.round_active = true
+	gs.sandbox_mode = true
+	_vider(gs)
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c.gadget != null and String(c.gadget.slug) == "poudre_contact":
+			gs.p1.equip_weapon(c)
+	gs._do_spawn_gadget(0, gs.p1.global_position + Vector2(150.0, 0.0), 0.0, "poudre_contact", 900)
+	var poudres := _gadgets_de(gs, 0)
+	if poudres.size() != 1:
+		_check("la poudre est posée", false, str(poudres.size()))
+	else:
+		var poudre = poudres[0]
+		poudre._poser_marque(poudre.global_position + Vector2(10.0, 0.0), Vector2.RIGHT)
+		var nappe: CanvasItem = poudre.get_node_or_null("Visuel")
+		var marque: CanvasItem = poudre._marques.back() if not poudre._marques.is_empty() else null
+		var sol: CanvasItem = gs.arena.get_node_or_null("CustomFloor")
+		var murs: CanvasItem = gs.arena.get_node_or_null("CustomWalls")
+		var zn := _z_absolu(nappe) if nappe != null else 999
+		var zm := _z_absolu(marque) if marque != null else -999
+		var detail := "nappe %d, marque %d, sol %s, murs %s" % [zn, zm,
+			str(_z_absolu(sol)) if sol != null else "?", str(_z_absolu(murs)) if murs != null else "?"]
+		_check("les marques de pas passent par-dessus les empreintes peintes", zm > zn, detail)
+		_check("la nappe reste sous les murs, qu'elle ne doit pas recouvrir",
+			murs != null and zn < _z_absolu(murs), detail)
+		# À égalité avec le sol, l'ordre de l'arbre tranche : le nœud des gadgets
+		# doit venir APRÈS l'arène, sans quoi la nappe passerait sous le sol.
+		# Et assez sombre pour que les traces se lisent : à pleine clarté, poudre et
+		# marques saturaient ensemble au blanc sous la torche (écart mesuré : nul).
+		_check("la nappe est assombrie au niveau mesuré, pas au-delà",
+			nappe != null and poudre.ASSOMBRISSEMENT <= 0.25
+				and is_equal_approx(nappe.modulate.r, poudre.ASSOMBRISSEMENT)
+				and is_equal_approx(nappe.modulate.g, poudre.ASSOMBRISSEMENT)
+				and is_equal_approx(nappe.modulate.b, poudre.ASSOMBRISSEMENT),
+			str(nappe.modulate) if nappe != null else "absente")
+		_check("et au-dessus du sol : même profondeur, mais dessinée après lui",
+			sol != null and zn >= _z_absolu(sol)
+				and gs.bullet_container.get_parent() == gs.arena.get_parent()
+				and gs.bullet_container.get_index() > gs.arena.get_index(), detail)
+	_vider(gs)
+	gs.sandbox_mode = false
+	gs.round_active = false
 
 	# ── La torche fantôme : la tête balaie, le pied reste posé ──────────────
 	var t = _GTF.new()
@@ -853,3 +894,16 @@ func _test_sprites_des_gadgets(gs: Node) -> void:
 		pied != null and absf(angle_difference(t.rotation + pied.rotation, 0.4)) < 1e-4,
 		"pied à %.3f rad" % ((t.rotation + pied.rotation) if pied != null else 0.0))
 	t.free()
+
+
+## La profondeur de dessin RÉELLE d'un nœud : ses `z_index` cumulés jusqu'au
+## premier ancêtre qui ne se dit plus relatif.
+func _z_absolu(n: CanvasItem) -> int:
+	var z := 0
+	var courant: Node = n
+	while courant is CanvasItem:
+		z += (courant as CanvasItem).z_index
+		if not (courant as CanvasItem).z_as_relative:
+			break
+		courant = courant.get_parent()
+	return z
