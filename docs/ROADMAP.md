@@ -3157,6 +3157,26 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un déploiement qui ne trouve rien à déployer réussit (2026-09-10)
+
+Pour poser PE2.3, Adrien a joué `supabase db push` puis
+`supabase functions deploy report` **trois fois**. Les deux premières ont
+répondu « Remote database is up to date » et « Deployed Functions … report »,
+c'est-à-dire exactement ce qu'on lit quand ça marche — et rien n'avait été
+déployé : son arbre était sur un `main` qui n'avait pas encore la branche.
+`db push` ne pousse que les migrations présentes dans l'arbre, `deploy` envoie
+le code présent dans l'arbre ; ni l'un ni l'autre ne sait qu'il manque quelque
+chose, et **aucun des deux n'échoue sur un arbre en retard**. La signature du
+cas est précisément « up to date » sur une migration qu'on vient d'écrire.
+
+**La règle :** avant de déployer, `ls supabase/migrations | tail -1` doit
+nommer la migration attendue, et `db push` doit la LISTER et demander
+confirmation. Un « up to date » à ce moment-là est un arbre en retard, pas une
+base à jour. Et une branche de session ne se déploie pas depuis `main` avant
+d'y être fusionnée — ce qui, avec des sessions locales qui commitent sur
+`main` pendant qu'on parle, a demandé deux fusions de `main` dans la branche
+et un `git merge` sans `--ff-only`.
+
 ### Un import sur une autre machine produit ce que la garde exige (2026-09-10)
 
 Les vidéos d'intro (`assets/video/intro/*.ogv`, DA6.6) étaient au dépôt, leurs
@@ -17329,7 +17349,7 @@ cet ordre :
    quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
    les testeurs — mais le décider avant d'envoyer un lien.
 
-### PE2 — Instrumentation de l'essai ✅ PE2.1 à PE2.4 livrés le 2026-09-10 — le déploiement de PE2.3 est le jalon H14
+### PE2 — Instrumentation de l'essai ✅ PE2.1 à PE2.4 livrés ET déployés le 2026-09-10 (H14 fait)
 
 Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
 qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
@@ -17462,10 +17482,9 @@ code vérifié par les suites, et les chiffres attendus restent des attentes.
 
 **Ce qui attend Adrien, et ne se commence pas :**
 
-- **H14** — déployer PE2.3 : `supabase db push` puis
-  `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
-  juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
-  clients à jour envoient un bloc que la base ignore, sans rien perdre.
+- ~~**H14** — déployer PE2.3~~ ✅ **fait le 2026-09-10**, au troisième essai
+  (voir la table des jalons). Le premier match en ligne joué avec un client à
+  jour remplira `conditions_de_match`.
 - **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
   des pics ; et désormais, gratuitement, les `conditions` de ses propres
   matchs dans `user://match_history.json` — c'est le même relevé, pris en
@@ -17541,7 +17560,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
-| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | ✅ **Fait par Adrien le 2026-09-10** — `Applying migration 20260910120000_match_conditions.sql… Finished`, puis `report` redéployée avec le nouveau `match_report.ts`. ⚠️ **Au troisième essai** : les deux premiers tournaient sur un `main` qui n'avait pas encore la branche, et « Remote database is up to date » s'est lu deux fois comme un succès — voir le piège « Un déploiement qui ne trouve rien à déployer réussit ». |
 
 ---
 

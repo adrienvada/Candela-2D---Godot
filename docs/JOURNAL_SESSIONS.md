@@ -3569,3 +3569,10 @@ ses dix appels dans `_batir_catalogue()`, qui reçoivent chacun leur phrase ; et
 comportement. `tools/test_online_match.gd` gagne un contrôle dans
 `_run_appariement()`. Aucune valeur, aucune description de classe, rien d'autre. La session « Système de 10
 classes asymétriques » a été prévenue avant l'écriture.
+
+**Addendum H14, 2026-09-10.** Branche fusionnée dans `main` par Adrien
+(avance rapide `9edf1aa..2f4185b`), migration appliquée, `report` redéployée :
+PE2.3 est en production. Deux fusions de `main` dans la branche ont été
+nécessaires avant (`3c9a057`, `a9c27b8`, `2f4185b`), `main` bougeant entre
+chaque essai ; points d'ancrage vérifiés après chacune, lot complet vert sur
+chaque arbre fusionné.
