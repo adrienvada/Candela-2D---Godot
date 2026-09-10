@@ -32,7 +32,7 @@ func _init() -> void:
 	pv = 1.0
 
 
-## Le gris de béton de la charte : la poussière d'une arène en béton armé n'a pas
-## d'autre couleur possible.
-func couleur_masse() -> Color:
-	return Color(Charte.SOL_B.r, Charte.SOL_B.g, Charte.SOL_B.b, 0.62)
+## Son image : un nuage de poussière de béton, à sa taille — 336 px, deux fois
+## `RAYON`.
+func piece_sprite() -> String:
+	return "poussiere"

@@ -35,7 +35,7 @@ extends GadgetBase
 ## L'opacité au cœur du volume, entre 0 et 1. Les sous-classes la posent.
 var opacite: float = 0.7
 
-var _masse: Polygon2D
+var _masse: Sprite2D
 
 
 func _init() -> void:
@@ -88,30 +88,19 @@ func _physics_process(delta: float) -> void:
 		_masse.modulate.a = _fondu()
 
 
-## La masse. Un disque sombre posé sur le sol : c'est elle qui PORTE la présence
+## La masse : l'image du nuage, posée sur le sol. C'est elle qui PORTE la présence
 ## du nuage, puisque les sprites qui s'y trouvent, eux, s'effacent.
 func _monter_visuel() -> void:
-	_masse = Polygon2D.new()
-	_masse.name = "Visuel"
-	var pts := PackedVector2Array()
-	for i in 24:
-		var ang := (i / 24.0) * TAU
-		# Un contour légèrement irrégulier, mais DÉTERMINISTE : un tirage local
-		# donnerait deux nuages différents chez les deux pairs. Même raison que
-		# la spirale d'or des braises.
-		var r := rayon * (0.88 + 0.12 * sin(ang * 3.0))
-		pts.append(Vector2(cos(ang), sin(ang)) * r)
-	_masse.polygon = pts
-	_masse.color = couleur_masse()
-	# ⚠️ Éclairé par le décor, contrairement aux braises : un nuage ne s'allume
+	# ⚠️ Éclairée par le décor, contrairement aux braises : un nuage ne s'allume
 	# pas tout seul, et une masse qui brillerait dans le noir absolu trahirait sa
-	# position à qui n'a pas de torche.
-	_masse.light_mask = MapGeometry.WALL_LAYER
-	_masse.z_index = 5
-	add_child(_masse)
+	# position à qui n'a pas de torche. `_poser_sprite()` l'éclaire ainsi.
+	_masse = _poser_sprite("Visuel", piece_sprite())
+	if _masse != null:
+		_masse.z_index = 5
 
 
-## La couleur de la masse. Les sous-classes tranchent : la suie n'a pas la
-## teinte de la poussière, et c'est la seule chose qui les distingue à l'œil.
-func couleur_masse() -> Color:
-	return Color(0.0, 0.0, 0.0, 0.8)
+## L'image de la masse — le nom de sa pièce, voir `GadgetProfile.chemin_sprite_de()`.
+## Vide dans le socle des volumes : chaque nuage a la sienne, et un volume sans
+## image CRIE au lieu de se rabattre sur un disque de secours.
+func piece_sprite() -> String:
+	return ""

@@ -3226,6 +3226,21 @@ suite `test_menus_finitions` mesure la part blanc-grise de chaque contour.
 `python3 tools/detourer_titres.py assets/ui/titres/titre_xxx.png` (PIL seul,
 réécrit le fichier en place — garder l'original à côté).
 
+### Deux fichiers du même nom : l'extraction par nom a menti (2026-09-10)
+
+Pour mesurer les sprites d'un commit d'une autre session, je les ai extraits dans
+un dossier en ne gardant que leur NOM. Le commit portait aussi deux icônes de
+fiche homonymes — `assets/ui/icones/gadget_poussiere.png` et
+`…/gadget_nappe_braises.png` —, qui ont écrasé les deux sprites. Mesure : « la
+poussière fait 128 px et montre une boîte » ; en vrai, 336 px et un nuage. Sur
+cette mesure, j'ai signalé à la session des menus un écart inexistant, posé à
+Adrien une question sans objet, et lancé une génération Gemini dans son
+navigateur. **C'est la capture en jeu qui a démenti la mesure.**
+
+Extraire en gardant l'ARBORESCENCE, ou mesurer `git show <commit>:<chemin>`
+directement ; et compter : 13 chemins pour 11 fichiers dans le dossier l'aurait
+dit avant toute conclusion.
+
 ### Une forme héritée du socle ment en silence (2026-09-10)
 
 Le voile surchargeait son OMBRE — une bande de 168 × 8 px — mais pas sa
@@ -17544,6 +17559,59 @@ fait passer le contrôle pour une mauvaise raison.
   peut-être voulu ;
 - **un voile posé sur un joueur** n'est pas refusé : c'est le moteur qui doit
   alors le dégager. Non éprouvé.
+
+### Étape 26 — les gadgets prennent leurs images ✅ (2026-09-10)
+
+**Décidé par Adrien** : tous les gadgets qui peuvent avoir un sprite de jeu en
+ont un. La session des menus les a générés et détourés — commit `69c4a59` sur sa
+branche. Ce lot ne prend **que les images** (`git checkout 69c4a59 --
+<fichiers>`) : sa branche porte aussi ses icônes, sa ROADMAP et cinq commits hors
+de main, et la fusionner ici puis pousser aurait livré à sa place un travail
+d'interface qu'elle n'a pas décidé de livrer. Les mêmes octets ajoutés des deux
+côtés fusionneront sans conflit. Le sprite de la poudre, lui, reste sur sa
+branche : s'il arrive avec sa fusion, rien ne le branchera.
+
+**Un seul chemin, et un cri.** `GadgetProfile.chemin_sprite_de()` forme tous les
+chemins, pièces comprises (`voile_toile`, `torche_fantome_tete`) ;
+`GadgetBase._poser_sprite()` pose l'image à sa taille peinte, éclairée comme le
+décor, et crie si elle manque.
+
+**Trois décisions d'Adrien, sur question :**
+- **l'écart est gardé** : bobine, mine et torche sont peintes à 28-30 px pour une
+  collision de 16 à 18 — une balle peut traverser le bord visible d'une mine ;
+- **la bande du voile passe de 8 à 13 px** (`DEMI_EPAISSEUR` 6,5) : la toile
+  peinte fait 8 px, et l'onde bornée de l'étape 25 n'y avait plus de place ;
+  collision et ombre s'épaississent avec elle ;
+- **la poudre garde ses grains** : son image, un grand disque clair à empreinte,
+  se serait vue de loin sous une torche.
+
+Une quatrième question, sur la poussière, reposait sur une mesure fausse — voir
+le piège « Deux fichiers du même nom ». La génération Gemini qu'Adrien avait
+demandée a été arrêtée dès l'erreur trouvée : l'image livrée est bien le nuage.
+
+**Par gadget :**
+- **voile** : la toile est la texture étirée du trait qui ondule, deux piquets
+  par-dessus aux bouts ; l'« ourlet » dessiné disparaît, l'image porte son bord ;
+- **torche fantôme** : pied et tête — le nœud balaie, le pied compense et reste
+  posé ; la lentille incandescente est calée sur le verre peint ;
+- **braises** : l'image, non éclairée par le décor mais **en mélange, pas en
+  addition**. Additionnée à la lumière de la nappe, elle virait à la boule
+  blanche — comparé à la capture sur trois rendus ;
+- **suie, poussière** : l'image porte la masse et son fondu ; `couleur_masse()`
+  disparaît avec le disque dessiné ;
+- **bobine, mine, ombre habitée** : leur image, rien d'autre. Le point clair
+  peint au centre de la mine n'émet pas : il ne se voit que sous une torche.
+
+**Vu à l'écran** : les huit gadgets capturés à l'entraînement, torche braquée
+dessus, par un script de capture jetable et non versionné. **Validation** :
+`tools/test_tir_et_reserves.gd` range chaque gadget du catalogue — une image par
+pièce attendue, ou une raison de ne pas en avoir — et vérifie que la tête de la
+torche balaie pendant que son pied reste posé. Les contrôles de déterminisme des
+charbons et du contour de suie, devenus sans objet, deviennent « c'est une
+image ».
+
+⚠️ **Non vu** : l'écran scindé et le jeu en ligne ; le voile épaissi, en
+mouvement.
 
 ### Ce qui reste, dans l'ordre
 

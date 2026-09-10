@@ -13,7 +13,8 @@ extends SceneTree
 ##   • l'ÉCONOMIE DES FUSÉES à l'entraînement, et la recharge d'une minute des
 ##     sept classes qui ne rechargeaient pas ;
 ##   • le FIL à dix classes — `_get_weapon_idx` ne codait que quatre armes ;
-##   • le VOILE qui arrête les joueurs, et toujours pas les balles (étape 25).
+##   • le VOILE qui arrête les joueurs, et toujours pas les balles (étape 25) ;
+##   • les IMAGES des gadgets, et le pied de la torche qui ne balaie pas (26).
 ##
 ## ⚠️ **Fichier séparé de `test_classes.gd`, et ce n'est pas un rangement.** Une
 ## autre session réécrit la partie interface de celui-là le même jour. Deux diffs
@@ -24,6 +25,7 @@ extends SceneTree
 const _IP = preload("res://input_provider.gd")
 const _GG = preload("res://gadget_gresillement.gd")
 const _GV = preload("res://gadget_voile.gd")
+const _GTF = preload("res://gadget_torche_fantome.gd")
 const _MG = preload("res://map_geometry.gd")
 
 ## Une détente qu'on tient ou qu'on lâche à la main. Elle court-circuite
@@ -86,6 +88,7 @@ func _run() -> void:
 	_test_hud_du_client()
 	_test_destruction_autoritaire()
 	await _test_voile_bloquant(gs)
+	_test_sprites_des_gadgets(gs)
 	gs.queue_free()
 	await process_frame
 	if _echecs == 0:
@@ -703,8 +706,15 @@ func _test_voile_bloquant(gs: Node) -> void:
 
 	# ── La toile ondule, et reste dans la bande ─────────────────────────────
 	var toile: Line2D = v.get_node_or_null("Visuel")
-	var ourlet: Line2D = v.get_node_or_null("Ourlet")
-	_check("la toile et son ourlet sont là", toile != null and ourlet != null)
+	_check("la toile porte son image, étirée d'un piquet à l'autre",
+		toile != null and toile.texture != null
+			and toile.texture_mode == Line2D.LINE_TEXTURE_STRETCH)
+	var piquet_g: Node2D = v.get_node_or_null("PiquetG")
+	var piquet_d: Node2D = v.get_node_or_null("PiquetD")
+	_check("les deux piquets sont plantés aux bouts de la toile",
+		piquet_g != null and piquet_d != null
+			and is_equal_approx(piquet_g.position.x, -_GV.DEMI_LONGUEUR)
+			and is_equal_approx(piquet_d.position.x, _GV.DEMI_LONGUEUR))
 	if toile != null:
 		var avant := toile.points
 		v._process(0.3)
@@ -776,3 +786,70 @@ func _touche_le(espace: PhysicsDirectSpaceState2D, cible: Node, point: Vector2) 
 		if r["collider"] == cible:
 			return true
 	return false
+
+
+## Les images de jeu des gadgets — décision d'Adrien du 2026-09-10 : tous ceux qui
+## peuvent en avoir une en ont une. Deux exceptions, et elles sont décidées : le
+## LEURRE porte la silhouette de son poseur, la POUDRE garde ses grains.
+func _test_sprites_des_gadgets(gs: Node) -> void:
+	print("\n[Les gadgets ont leurs images]")
+	var attendus := {
+		"voile": ["Visuel", "PiquetG", "PiquetD"],
+		"ombre_habitee": ["Visuel"],
+		"torche_fantome": ["Visuel", "Tete"],
+		"mine_magnesium": ["Visuel"],
+		"nappe_braises": ["Visuel"],
+		"cartouche_suie": ["Visuel"],
+		"poussiere": ["Visuel"],
+		"gresillement": ["Visuel"],
+	}
+	var sans_image := ["leurre", "poudre_contact"]
+	# ⚠️ Chaque gadget du catalogue doit être rangé d'un côté ou de l'autre : un
+	# onzième gadget qui n'y serait pas échapperait à tout ce qui suit.
+	var oublies: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		if not attendus.has(slug) and not sans_image.has(slug):
+			oublies.append(String(slug))
+	_check("chaque gadget du catalogue a une image, ou une raison de ne pas en avoir",
+		oublies.is_empty(), str(oublies))
+
+	var manques: Array[String] = []
+	for slug in attendus:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		g._monter_visuel()
+		for nom in attendus[slug]:
+			var n = g.get_node_or_null(nom)
+			if n == null or not ("texture" in n) or n.texture == null:
+				manques.append("%s/%s" % [slug, nom])
+		g.free()
+	_check("les huit gadgets portent leurs images, pièce par pièce", manques.is_empty(),
+		str(manques))
+
+	# La poudre garde ses grains : aucune image n'y entre par erreur. (Le leurre
+	# n'est pas monté ici — sans poseur, il crie, et c'est voulu.)
+	var poudre = load(String(gs.IMPLEMENTATIONS["poudre_contact"]["script"])).new()
+	poudre._monter_visuel()
+	var images_poudre := 0
+	for enfant in poudre.get_children():
+		if enfant is Sprite2D:
+			images_poudre += 1
+	_check("la poudre garde ses grains, sans image", images_poudre == 0, str(images_poudre))
+	poudre.free()
+
+	# ── La torche fantôme : la tête balaie, le pied reste posé ──────────────
+	var t = _GTF.new()
+	t._monter_visuel()
+	t._angle_depart = 0.4
+	t.rotation = 0.4
+	t._age = _GTF.PERIODE / 4.0
+	t._physics_process(0.0)
+	var pied: Node2D = t.get_node_or_null("Visuel")
+	var tete: Node2D = t.get_node_or_null("Tete")
+	_check("la tête balaie avec le faisceau",
+		tete != null and is_zero_approx(tete.rotation)
+			and absf(angle_difference(t.rotation, 0.4)) > 0.01,
+		"nœud à %.3f rad" % t.rotation)
+	_check("le pied, lui, reste posé : il ne tourne pas",
+		pied != null and absf(angle_difference(t.rotation + pied.rotation, 0.4)) < 1e-4,
+		"pied à %.3f rad" % ((t.rotation + pied.rotation) if pied != null else 0.0))
+	t.free()

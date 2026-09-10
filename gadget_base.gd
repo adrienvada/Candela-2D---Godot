@@ -205,10 +205,42 @@ func _monter_occluder() -> void:
 ## Chaque sous-classe décide donc de son visuel, et les deux façons sont
 ## légitimes tant que le choix est ÉCRIT : charger un sprite et crier s'il manque,
 ## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — c'est le
-## cas du voile et de l'ombre habitée, qui sont des lignes vues de dessus. Ce qui
-## reste interdit est le troisième chemin : dessiner *en attendant* un sprite.
+## cas de la poudre, un semis de grains qu'Adrien a préféré à son image le
+## 2026-09-10. Ce qui reste interdit est le troisième chemin : dessiner *en
+## attendant* un sprite. Le premier chemin passe par `_poser_sprite()`.
 func _monter_visuel() -> void:
 	pass
+
+
+## La texture d'une pièce de gadget, ou `null` — et alors un CRI.
+##
+## `piece` est le nom du fichier sans `gadget_` ni `.png` : voir
+## `GadgetProfile.chemin_sprite_de()`, seul endroit où le chemin se forme.
+func _texture_de(piece: String) -> Texture2D:
+	var chemin := GadgetProfile.chemin_sprite_de(piece)
+	if not ResourceLoader.exists(chemin):
+		push_error("%s : sprite absent — %s" % [get_script().resource_path.get_file(), chemin])
+		return null
+	return load(chemin)
+
+
+## Pose un sprite de gadget à sa taille PEINTE, 1 texel par unité de monde, éclairé
+## comme le décor. Rend `null`, sans rien poser, si l'image manque.
+##
+## ⚠️ **L'image garde sa taille, même plus grande que la collision** — la bobine,
+## la mine et la torche sont peintes à 28-30 px pour une collision de 16 à 18.
+## Adrien a gardé l'écart le 2026-09-10, en connaissance de cause : une balle peut
+## traverser le bord visible d'une mine.
+func _poser_sprite(nom: String, piece: String) -> Sprite2D:
+	var tex := _texture_de(piece)
+	if tex == null:
+		return null
+	var sprite := Sprite2D.new()
+	sprite.name = nom
+	sprite.texture = tex
+	sprite.light_mask = MapGeometry.WALL_LAYER
+	add_child(sprite)
+	return sprite
 
 
 ## ⚠️ **L'âge court TOUJOURS, même sans durée de vie.** Il ne courait que pour
@@ -345,3 +377,17 @@ static func materiau_incandescent() -> CanvasItemMaterial:
 		_materiau_incandescent.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 		_materiau_incandescent.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	return _materiau_incandescent
+
+
+static var _materiau_peint_lumineux: CanvasItemMaterial
+
+## Le matériau d'une image PEINTE lumineuse — la nappe de braises, depuis l'étape
+## 26. Non éclairée par le décor, comme ce qui brûle, mais en MÉLANGE et non en
+## addition : l'image porte déjà sa lueur. Additionnée à la lumière de la nappe,
+## elle virait à la boule blanche où plus aucune pierre ne se lisait — vu à la
+## capture, sur trois rendus comparés.
+static func materiau_peint_lumineux() -> CanvasItemMaterial:
+	if _materiau_peint_lumineux == null:
+		_materiau_peint_lumineux = CanvasItemMaterial.new()
+		_materiau_peint_lumineux.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	return _materiau_peint_lumineux

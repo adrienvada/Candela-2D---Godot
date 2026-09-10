@@ -3689,3 +3689,22 @@ gadgets : l'ombre habitée a le même écart en petit, signalé et non corrigé.
 **Le test de marche a son témoin** : le même pas, voile retiré, doit passer.
 Sans lui, un mur de la carte au même endroit aurait fait le travail du voile, et
 le contrôle serait resté vert pour une mauvaise raison.
+
+## 2026-09-10 — Les gadgets prennent leurs images (chantier DIX CLASSES, étape 26)
+
+Session `candela-10-classes-system-e0a52d-da`. Les sprites de la session des
+menus, branchés dans les `_monter_visuel()` — et une erreur de ma part, qui mérite
+d'être racontée parce qu'elle a coûté à trois personnes.
+
+**J'ai mesuré de faux fichiers.** En extrayant les sprites d'un commit par leur
+seul nom, deux icônes homonymes ont écrasé deux sprites. J'en ai tiré « la
+poussière est une boîte de 128 px », l'ai signalé à la session des menus, en ai
+fait une question à Adrien — qui a demandé une image neuve à Gemini —, et j'ai
+lancé cette génération. **La capture en jeu montrait un nuage de 336 px** : j'ai
+arrêté la génération, corrigé auprès de la session des menus, et consigné le
+piège. Une mesure qui contredit ce qu'annonce l'auteur d'un fichier se revérifie
+AVANT d'être répétée ; ici, l'auteur avait raison.
+
+**La capture a aussi tranché les braises.** Trois rendus comparés : l'addition,
+qui était la règle pour tout ce qui brûle, blanchissait l'image peinte ; le
+mélange non éclairé la garde lisible.

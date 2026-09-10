@@ -28,26 +28,30 @@ extends GadgetBase
 ## local. Elle reste en revanche bornée DANS la bande, pour que ce qu'on voit ne
 ## dépasse jamais ce qui arrête.
 ##
-## ## Les sprites, et pourquoi les piquets ne se voient pas encore
+## ## Les sprites
 ##
-## Cette note disait jusqu'ici qu'un sprite lisible de dessus serait un défaut de
-## conception. Adrien a décidé l'inverse le 2026-09-10 : des sprites pour les
-## gadgets, dont deux pour celui-ci — `gadget_voile_piquet.png` et
-## `gadget_voile_toile.png`, générés par la session des menus. **Ils ne sont pas
-## encore livrés.** La toile garde son trait dessiné et en prendra la texture ;
-## les piquets, eux, attendent leur image — les dessiner d'ici là serait le
-## « troisième chemin » que `GadgetBase._monter_visuel()` interdit.
+## Cette note disait jusqu'à l'étape 25 qu'un sprite lisible de dessus serait un
+## défaut de conception. Adrien a décidé l'inverse le 2026-09-10 : deux pièces,
+## générées par la session des menus. La TOILE est la texture du trait qui ondule
+## (`gadget_voile_toile.png`, 168 × 8, étirée d'un piquet à l'autre) ; les deux
+## PIQUETS sont des sprites fixes posés aux bouts (`gadget_voile_piquet.png`).
 
 ## Demi-longueur de la toile, en pixels. Elle est LARGE et mince : c'est ce
 ## rapport qui en fait un obstacle de lumière et non un objet.
 const DEMI_LONGUEUR := 84.0
 ## Demi-épaisseur de la bande qui arrête — la lumière comme les joueurs.
-const DEMI_EPAISSEUR := 4.0
+##
+## ⚠️ **6,5 et non plus 4, depuis l'étape 26 — décision d'Adrien.** La toile
+## peinte fait 8 px de haut ; dans une bande de 8, l'onde n'avait plus de place.
+## Le choix était d'épaissir la bande, d'onduler d'un pixel, ou de laisser la
+## toile dépasser de ce qui arrête : Adrien a épaissi.
+const DEMI_EPAISSEUR := 6.5
 
 ## L'onde de la toile, en pixels. ⚠️ **Les trois amplitudes et la demi-largeur du
 ## trait, additionnées, ne dépassent pas `DEMI_EPAISSEUR`** : c'est la borne qui
 ## garde la toile dans la bande. `tools/test_tir_et_reserves.gd` la vérifie.
-const LARGEUR_TOILE := 3.0
+## La hauteur de l'image de la toile : le trait la porte à sa taille peinte.
+const LARGEUR_TOILE := 8.0
 ## Le mou : la toile pend un peu, même sans vent.
 const CREUX := 1.0
 ## L'ondulation qui court le long de la toile.
@@ -61,7 +65,6 @@ const AMORTI_SECOUSSE := 5.0
 const POINTS_TOILE := 17
 
 var _toile: Line2D = null
-var _ourlet: Line2D = null
 ## Le temps LOCAL de l'onde. Pas `age()` : l'onde n'est pas de la simulation.
 var _temps: float = 0.0
 var _secousse: float = 0.0
@@ -113,30 +116,32 @@ func _monter_occluder() -> void:
 	add_child(occ)
 
 
-## La toile, DESSINÉE : vue de dessus, une toile verticale est une ligne.
+## La toile, un trait qui ondule et porte l'image de la toile ; les piquets, deux
+## sprites fixes aux bouts.
 ##
-## ⚠️ Ce trait renversait déjà l'étape 5, qui criait « sprite absent » et ne
-## montrait rien. Les sprites décidés le 2026-09-10 ne le remplacent pas : ils lui
-## donneront sa texture. Les piquets, eux, attendent la leur (note de tête).
+## L'« ourlet » dessiné de l'étape 25 — un trait clair sur l'arête — a disparu :
+## l'image porte déjà son bord et sa couture, et le redoubler l'aurait souligné.
 func _monter_visuel() -> void:
-	# La toile : une bande sombre, à peine plus claire que le noir, qui n'existe
-	# à l'œil que lorsqu'une torche la frôle.
-	_toile = _ligne("Visuel", LARGEUR_TOILE, Charte.SOL_A)
-	# L'ourlet, l'arête haute de la toile — ce qu'on en voit, de dessus. C'est lui
-	# qui accroche la lumière. Il s'appelait « câble » et restait droit ; la toile
-	# est lâche désormais, et son arête suit l'onde.
-	_ourlet = _ligne("Ourlet", 1.5, Charte.LINE)
+	var texture := _texture_de("voile_toile")
+	if texture == null:
+		return
+	_toile = Line2D.new()
+	_toile.name = "Visuel"
+	_toile.width = LARGEUR_TOILE
+	_toile.texture = texture
+	# Étirée d'un piquet à l'autre, pas répétée : l'image fait déjà 168 px.
+	_toile.texture_mode = Line2D.LINE_TEXTURE_STRETCH
+	_toile.default_color = Color.WHITE
+	# Éclairée comme le décor : elle n'existe à l'œil que lorsqu'une torche la frôle.
+	_toile.light_mask = MapGeometry.WALL_LAYER
+	add_child(_toile)
 	_onduler()
-
-
-func _ligne(nom: String, largeur: float, couleur: Color) -> Line2D:
-	var ligne := Line2D.new()
-	ligne.name = nom
-	ligne.width = largeur
-	ligne.default_color = couleur
-	ligne.light_mask = MapGeometry.WALL_LAYER
-	add_child(ligne)
-	return ligne
+	# Les piquets APRÈS la toile, donc dessinés par-dessus : ce sont eux qui la
+	# tiennent, et ses deux bouts disparaissent sous eux.
+	for cote in [-1.0, 1.0]:
+		var piquet := _poser_sprite("PiquetG" if cote < 0.0 else "PiquetD", "voile_piquet")
+		if piquet != null:
+			piquet.position = Vector2(cote * DEMI_LONGUEUR, 0.0)
 
 
 func _process(delta: float) -> void:
@@ -155,7 +160,6 @@ func _onduler() -> void:
 		points[i] = Vector2(lerpf(-DEMI_LONGUEUR, DEMI_LONGUEUR, u),
 			decalage(u, _temps, _secousse))
 	_toile.points = points
-	_ourlet.points = points
 
 
 ## Le décalage de la toile, en travers, au point `u` — 0 et 1 sont les piquets.
