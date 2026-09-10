@@ -2425,6 +2425,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | Décision | Raison |
 |---|---|
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
+| **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
 | **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
@@ -3170,6 +3171,86 @@ la réponse est de les commiter, pas de les ignorer.
 (`.import`, `.uid`), pas seulement le fichier — et le vérifie depuis un
 `git status` de l'arbre où l'import a tourné, puisqu'un worktree neuf ne
 contient que ce que git suit.
+
+### Une mesure contaminée par des erreurs de script ressemble à une mesure (2026-09-10)
+
+Pour savoir si le nouveau salon tenait à l'écran, un script `--script` hors banc
+chargeait `main.tscn` et relevait les rectangles. Il a répondu, avec des chiffres
+précis : **le bouton de l'écran scindé à 108 px sous le bord de l'écran.** Une
+capture en vraie fenêtre, du même état, l'a montré 114 px AU-DESSUS du bord.
+
+La cause : le script nommait `NetworkManager.GameMode` en dur. Il le compilait
+donc à son propre chargement, **avant** que les autoloads du plugin Epic
+n'existent — `Identifier not found: HLobbies`, puis `NetworkManager` cassé pour
+toute la séance. Chaque accès au mode levait une erreur, et la fonction qui
+cache les rangées du salon s'arrêtait à la première : les rangées restaient
+visibles, et le salon mesurait 220 px de trop. Les bancs du dépôt ne tombent pas
+dans ce piège parce qu'aucun ne nomme cet autoload.
+
+**La règle** : une mesure prise pendant qu'un `SCRIPT ERROR` défile ne mesure
+rien — la vider d'abord, la lire ensuite. Dans un script hors banc, lire les
+énumérations d'un autoload dynamiquement
+(`get_script().get_script_constant_map()`), jamais par leur nom. Et une question
+de mise en page se tranche en vraie fenêtre : photographe, ou script fenêtré qui
+termine l'allumage avant de prendre.
+
+### Une lumière à énergie zéro compte quand même : quinze par item, et un quadrant est un item (2026-09-10)
+
+Le symptôme, signalé par Adrien : quand un joueur allume sa torche près d'une
+fusée posée, le halo rouge de la fusée est **tranché net par une droite** au lieu
+de s'éteindre en rond. La droite est calée sur la grille de tuiles, à un multiple
+de 16 tuiles (560 px) — la taille par défaut d'un quadrant de `TileMapLayer`
+(`rendering_quadrant_size`). Une session y a passé une journée : la lumière de la
+fusée supprimée, déplacée, éteinte, les occluders retirés, le renderer changé —
+le bord restait identique ; seul `rendering_quadrant_size` le déplaçait (1 tuile :
+dégradé plus doux, 4096 : la fusée disparaît de presque tout le sol).
+
+**Le mécanisme est dans le moteur, et il est documenté.** Godot n'applique
+jamais plus de **15 lumières à un même `CanvasItem`** (`MAX_LIGHTS_PER_ITEM`,
+compteur de 4 bits, codé en dur dans Compatibility comme dans Forward+/Mobile,
+et refusé comme réglage de projet — godot-proposals #9336 ; ticket amont #81147,
+toujours ouvert). Au-delà, les lumières en trop ne s'atténuent pas : elles ne
+sont **pas rendues sur cet item**, tout ou rien, les plus récentes en premier. Or
+un quadrant de `TileMapLayer` est UN `CanvasItem` : le plafond se joue donc par
+carré de 560 px, et sa frontière devient une arête de lumière.
+
+**Ce qui remplissait le plafond n'éclairait rien.** Le recensement des lumières
+`enabled` et visibles à l'instant de la prise `--plan=fusee` donne **23**, dont
+**19 sur le quadrant du faisceau : quinze `Light(e=0.00)`** — les grains de
+poussière de faisceau (V5.5), un `PointLight2D` chacun, énergie 0, jamais
+désactivée. Le commentaire disait « aucune lumière propre » ; pour le renderer
+c'en était une, avec un rectangle de 32 px. À 0,12 s d'intervalle pour 0,9-1,6 s
+de vie, ~10 grains vivants par torche, dans un quadrant qui contient tout le
+cône : 15 grains + fusée + deux torches + une ambiante = 19. La fusée, dernière
+arrivée, était jetée sur ce quadrant-là et gardée sur le voisin (4 lumières).
+
+Le correctif tient en `light.enabled = false` pour `DUST` et `SMOKE` (et `true`
+pour les autres genres — le pool recycle un même nœud d'un genre à l'autre).
+Mesuré au pixel, même plan, même cadrage : l'arête verticale à x=1291 passe d'un
+saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
+(15,5 et 12,5 ailleurs) ; 7 lumières actives, 4 sur le quadrant.
+
+⚠️ **Trois choses à retenir, et la troisième est la plus chère.**
+1. **Énergie zéro n'est pas éteinte.** Une lumière qui n'éclaire rien coûte sa
+   place quand même, et le compteur F3 (`ui.gd::_rescan_debug_counts`) la
+   compte aussi : il aurait affiché 23, pas 7. Toute lumière « décorative »
+   qu'on laisse à 0 pour un temps doit passer par `enabled`.
+2. **Le plafond reste, et une gerbe d'impact peut encore le crever** : les
+   étincelles `SPARK` à énergie réelle (12 par impact de mur, jusqu'à 5 × 12 sur
+   une rafale) pendant 0,3-0,8 s. Le sang, lui, n'éclaire plus depuis le
+   2026-09-10 (décision d'Adrien, « Décisions actées ») : c'était 25 lumières de
+   plus par coup au but. Si un halo se coupe au moment d'un impact de mur, les
+   leviers sont un `rendering_quadrant_size` plus petit (plus d'items, à
+   chiffrer au `bench_framerate`) ou moins d'étincelles éclairantes — pas un
+   cache à invalider, il n'y en a pas.
+3. **Mon premier diagnostic accusait les torches et les balles** — il collait au
+   mécanisme, pas aux nombres : le plan ne contient que 7 vraies lumières, loin
+   des 15. Et la session précédente avait « désactivé le pool sans effet » sans
+   vérifier que les lumières avaient bien disparu. Dans les deux cas, c'est le
+   **recensement par quadrant** qui a tranché : pour chaque `PointLight2D`
+   active, rectangle monde = taille de texture × `texture_scale`, croisé avec
+   les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
+   plausible ne vaut rien tant qu'on n'a pas compté.
 
 ### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
 
@@ -8568,7 +8649,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   discret en vol câblé dans `bullet.gd:_physics_process()` via
   `AudioManager.play_bolt_flight()`.
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
-  (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
+  (déjà sans ombre) : toucher, c'est voir. **⚠️ DÉFAIT le 2026-09-10** — décision
+  d'Adrien, voir « Décisions actées », *Les particules de sang n'éclairent
+  plus* : la réserve écrite ci-dessus le 2026-08-18 a été tranchée dans le sens
+  du retrait, et le plafond de 15 lumières par item du renderer y ajoutait un
+  coût. Ce qui suit décrit ce qui a existé. **✅ Fait** — surmultiplication ×2
   de la lumière déjà portée par la goutte, décroissance linéaire dans
   `advance()` : l'éclat vit dans le tableau plat du pool, aucun nœud ni tween
   de plus. Visible sur les deux écrans par construction — toucher n'est pas
@@ -15267,6 +15352,34 @@ chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
 `fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
 audio à produire » de la liste FU6 tombe donc de lui-même.
 
+### Le carré près de la fusée — deux défauts, résolus le 2026-09-10 (worktree `lights-display-error-3fd1cd`)
+
+Adrien a signalé un halo de fusée tranché net quand une torche s'allume à côté.
+Le diagnostic a mis au jour **deux défauts distincts**, et le premier n'était pas
+la cause du second.
+
+1. **Le décor était éclairé deux fois** (trouvé le 2026-09-09, corrigé dans
+   `rebuild_arena()`). Après duplication des calques par joueur, l'original
+   restait visible dans les deux vues (`visibility_layer` 1, comme les copies) :
+   toute lumière touchant la couche décor éclairait sol et murs une fois sur
+   l'original en mix normal, puis une seconde fois sur la copie en additif. Peu
+   visible sur un halo blanc, flagrant sur un rouge saturé qui écrête. Les
+   originaux et l'habillage sont désormais `hide()` — pas `queue_free()` : ils
+   restent les porteurs des données que lisent `MapData.apply_to_layers()` et
+   `MapGeometry.build_collisions()`. **Vérifié : le carré persistait identique
+   une fois ce doublage corrigé.**
+2. **Les lumières fantômes de la poussière de faisceau** — voir « Pièges
+   connus », *Une lumière à énergie zéro compte quand même*. C'est la cause.
+   Correctif dans `particle_pool.gd::_configure`, mesuré avant/après au pixel
+   sur `--plan=fusee`.
+
+**Non fait, à savoir.** `bench_framerate` n'a pas été relancé : les correctifs
+ne font que retirer des lumières du rendu, ils ne peuvent pas coûter plus. Le
+quadrant reste à 16 tuiles. Le cas d'une gerbe d'impact qui crève le plafond de
+15 pour une fraction de seconde est **à moitié refermé** : le sang n'éclaire
+plus (décision d'Adrien du 2026-09-10, « Décisions actées »), les étincelles
+de mur si — documenté au piège, avec ses leviers.
+
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
 **Deux défauts relevés en jouant, tous deux d'information et non de décor** :
@@ -16983,11 +17096,83 @@ Et une géométrie qui simplifie toute reprise future : **le personnage fait la
 même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
 les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
 
+### Étape 22 — le choix de classe revient dans le salon ✅ (2026-09-10)
+
+Demandé par Adrien : *« je n'aime pas le menu "choisir sa classe" : je veux que
+ce choix se fasse sur la page de lancement du match, là où on fait "prêt" »*.
+L'étape 9 avait sorti les râteliers dans un panneau à part, qu'ouvrait une entrée
+« CHOISIR SA CLASSE » sur six écrans. L'entrée disparaît, et `PANEL_CLASSES` avec
+elle. On choisit sa classe là où l'on part, sous l'affiche du match : c'est
+l'arbitrage du 2026-08-24 (le geste et son objet au même endroit) appliqué à la
+classe.
+
+**Ce qui a rendu le retour possible, c'est une fiche qui a maigri.** Adrien a
+posé la contrainte lui-même : l'écran scindé, le cas le plus limitant, montre
+deux sélections de front. Chaque fiche ne garde que **le sprite, le gadget et les
+six jauges** — ni description, ni rang, ni nom, ni fusées. Le rang ordonne
+toujours la liste mais ne s'écrit plus sur les boutons. La même fiche sert
+partout : salon, entraînement, fenêtre de choix du compétitif.
+
+**L'affiche du match.** Sur la ligne de la carte d'arène : la carte de classe de
+J1 à gauche, celle de J2 à droite, chacune avec son sprite, son nom et son arme.
+Hors écran scindé, seule la carte du joueur piloté s'affiche : en ligne, rien
+n'échange la classe de l'adversaire avant la manche, l'annoncer serait l'inventer.
+
+#### ⚠️ Empilé, le salon sortait de l'écran — et pas dans le cas qu'on croyait
+
+L'écran scindé, désigné comme le plus limitant, **tenait** : deux râteliers de
+front, aucune rangée de salon dessous. Ce sont les modes **à un joueur** qui
+débordaient. Ils empilaient sous le râtelier la liste des joueurs, le code, le
+statut et « CRÉER LE SALON ». Le cadre offre environ 670 px au salon, et la somme
+des hauteurs en demandait près de 170 de plus : le bouton PRÊT tombait sous le bord
+de l'écran. Le plus limitant en largeur n'était pas le plus limitant en hauteur.
+
+La réponse prend la largeur, qui était libre : la colonne du salon se range **à
+côté** du râtelier. Mesuré ensuite en vraie fenêtre, sur les cinq états — écran
+scindé, hôte, invité, entraînement, recherche : bas du cadre à 1071 au plus, bas
+du bouton à 950, pour un écran de 1080. La visibilité de la colonne se **dérive**
+de ses rangées après coup, jamais branche par branche : la fonction qui les pose
+compte plusieurs retours anticipés, et son propre commentaire raconte ce qu'un
+état posé dans une seule branche a déjà coûté.
+
+Deux râteliers de front mesuraient 1292 px pour un cadre de 1290 : la liste est
+passée de 206 à 196 px de large.
+
+#### L'entraînement n'a pas de joueur 2
+
+Précisé par Adrien le même jour. **L'écran d'entraînement héritait du panneau de
+l'écran d'avant** : il ne pose pas de mode visé et ne figurait pas dans la liste
+des écrans qui recalculent le salon. Après l'écran scindé, il montrait deux
+râteliers ; après un passage par « CRÉER », les rangées d'un salon en ligne. Trois
+branches explicites le règlent désormais — râteliers, rangées, curseur de J2 —,
+plus le recalcul à l'entrée. Le banc passe par l'écran scindé AVANT
+l'entraînement : sans cet ordre, il ne prouverait pas que l'entraînement refait
+la visibilité au lieu d'en hériter.
+
+#### Signalé, non corrigé
+
+- **La recherche amicale annonce une arène tirée au sort** — dans le statut du
+  salon (« l'arène est tirée au sort ») et dans la description de l'entrée
+  (« Carte tirée au hasard »). La décision du 2026-09-09 (Phase 8) retient
+  pourtant la carte par défaut. À vérifier dans `game_state.gd` avant de corriger
+  le texte : l'un des deux a tort, et ce n'est pas l'objet de cette étape.
+- **`ClassData.description` ne s'affiche plus nulle part.** Les dix textes
+  restent au catalogue ; les supprimer serait une autre décision.
+- **Deux règles de classe ne se lisent plus à la sélection**, par la demande
+  même (« rien d'autre ») — relevé par la session du chantier. **Le Spectre n'a
+  aucune fusée**, et c'est son identité, pas un cas dégradé : la ligne FUSÉES
+  était seule à le dire. **Le Terrassier recharge cartouche par cartouche** et
+  tire dès la première : la jauge RECHARGE affiche le total, 5,6 s, vrai mais
+  trompeur, et seule la description portait la nuance. À soumettre à Adrien :
+  une ligne de plus coûte peu en hauteur, mais c'est lui qui a fixé le « rien
+  d'autre ». La réserve de fusées reste au HUD en manche.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
-assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
+assets des dix classes, la table rang → classe, l'écran de sélection — revenu dans le salon à
+l'étape 22 —, et la pose.
 
 **Reste** : rien de ce chantier. ✅ Adrien a éprouvé **l'arbalète** manette en
 main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et

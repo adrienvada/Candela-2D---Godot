@@ -911,8 +911,27 @@ func rebuild_arena() -> void:
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
+	# ⚠️ **L'original reste éclairé après sa propre duplication, et c'est un
+	# défaut — pas la copie qui manque.** `floor_layer`/`walls_layer` gardent
+	# leur `visibility_layer` par défaut (1), visible dans les DEUX vues au
+	# même titre que les deux copies : toute lumière qui touche la couche
+	# décor (1) — la torche des deux joueurs y compris, `range_item_cull_mask`
+	# à l'appui — éclaire donc le sol/les murs DEUX FOIS, l'original en mix
+	# normal PUIS la copie du joueur par-dessus en additif. Peu visible sur un
+	# halo blanc ; flagrant sur un halo saturé (la fusée) où le doublage pousse
+	# les canaux vers l'écrêtage. Trouvé le 2026-09-09 en diagnostiquant le
+	# carré signalé par Adrien près d'une fusée — ce n'en est PAS la cause
+	# (vérifié : le carré persiste identique une fois ce doublage corrigé),
+	# mais c'est un vrai défaut distinct. `hide()` et non `queue_free()` :
+	# l'original reste le porteur des données (`MapData.apply_to_layers()`,
+	# `MapGeometry.build_collisions()` y lisent la géométrie) — le détruire
+	# casserait la collision, pas seulement le rendu.
+	floor_layer.hide()
+	walls_layer.hide()
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
-	ArenaDecorScript.build(data, arena)
+	var decor := ArenaDecorScript.build(data, arena)
+	if decor:
+		decor.hide()
 
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de

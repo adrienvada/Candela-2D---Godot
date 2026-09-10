@@ -286,6 +286,35 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
+
+**Déclaration : deux fichiers hors de mon périmètre.** `particle_pool.gd`
+(domaine « game feel », plus personne dessus depuis la session SG du 2026-09-09)
+et `game_state.gd` (disputé — le correctif de `rebuild_arena()` y est celui de
+la session précédente sur cette même branche, `lights-display-error-3fd1cd-60`,
+que je reprends et livre). Aucune session ne s'est déclarée sur ces deux
+fichiers au moment d'écrire ; vérifié dans la table ci-dessus.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, « Pièges connus », *Une
+lumière à énergie zéro compte quand même*, et chantier fusée, *Le carré près de
+la fusée*) :
+- `particle_pool.gd::_configure` : les grains `DUST` et `SMOKE` — énergie 0 —
+  ont désormais leur `PointLight2D` **désactivée**, pas seulement à zéro ; les
+  genres éclairants la réactivent (nœuds recyclés). Cause du halo tranché : le
+  plafond moteur de 15 lumières par `CanvasItem`, un quadrant de `TileMapLayer`
+  étant un item, et 15 grains fantômes qui l'occupaient.
+- `game_state.gd::rebuild_arena()` : les calques originaux et l'habillage sont
+  cachés après duplication par joueur — le décor était éclairé deux fois.
+
+**Aucun banc ajouté** : la reproduction est `./tools/run_photos.sh --plan=fusee`,
+qui exige une vraie fenêtre ; la mesure est au pixel, consignée dans la ROADMAP.
+
+**Suite, le même jour — décision d'Adrien : les particules de sang n'éclairent
+plus.** L'éclat V4.11 est retiré en entier de `particle_pool.gd` (constantes
+`BLOOD_FLASH_*`, surmultiplication dans `advance()`, entrée `flash`) ; seules
+les étincelles gardent une lumière. Décision et raisons dans la ROADMAP,
+« Décisions actées » ; la ligne V4.11 de la liste game feel porte « DÉFAIT ».
+
 ### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
 
 **Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :
@@ -3519,3 +3548,15 @@ les conditions), `game_state.gd` (`_report_to_ranking` prend les conditions),
 `tools/test_conditions_de_match.gd`, `docs/SUPABASE.md`, `README.md`. Deno
 installé ici pour les tests hors ligne (95 verts). **Rien n'est déployé** :
 jalon H14, Adrien seul.
+
+#### Lot du 2026-09-10 — session « candela-2d-ef » (branche `selection-classe-salon`), le choix de classe revient dans le salon
+
+**⚠️ J'ai écrit dans trois fichiers du chantier CLASSES, et je le déclare.**
+`menu_fiche_classe.gd` (la fiche réduite au sprite, au gadget et aux jauges),
+`tools/test_classes.gd` (sa partie interface seulement) et `ui.gd` (le salon, les
+râteliers, l'entraînement, la fenêtre de choix du compétitif). La session
+« Système de 10 classes asymétriques » a été prévenue par message avant la
+première écriture ; son chantier est clos et sa branche fusionnée.
+
+**Pas touché** : `game_state.gd`, `class_data.gd`, les descriptions du catalogue.
+Tout le détail est dans la ROADMAP, chantier des dix classes, étape 22.
