@@ -4,7 +4,7 @@
 
 ⚠️ **Rien n'est généré, et c'est délibéré.** Les gabarits ci-dessous dépendent
 de la boutique, et le choix de boutique est l'un des champs `À TRANCHER` du
-[presskit](PRESSKIT.md). Générer une capsule Steam avant de savoir qu'on publie
+presskit (supprimé depuis, avec cette fiche). Générer une capsule Steam avant de savoir qu'on publie
 sur Steam, c'est produire un asset au mauvais rapport de forme et le refaire.
 Ce document est donc prêt à exécuter le jour où la boutique est choisie — pas
 avant.

@@ -3208,6 +3208,159 @@ saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
    les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
    plausible ne vaut rien tant qu'on n'a pas compté.
 
+### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
+
+Signalé par la session DA7, qui l'a rencontré en tournant le trailer sur le
+photographe. L'attente s'écrit comme on la pense :
+
+```gdscript
+await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+```
+
+et elle capture `affiche`. **Quand le nœud est libéré — c'est-à-dire à l'instant
+précis où la condition devient vraie — Godot invalide le `Callable` entier :**
+
+```
+ERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+   at: call (modules/gdscript/gdscript_lambda_callable.cpp:110)
+```
+
+**La condition attendue détruit le moyen de la tester.** L'attente ne rend
+jamais vrai, ne rend jamais faux : elle meurt sur place, et la fonction
+appelante ne reprend pas après son `await`. Pas d'exception à rattraper, pas de
+code de sortie, pas de message de l'outil.
+
+⚠️ **Le symptôme ne ressemble pas à une erreur, il ressemble à un travail
+partiel.** Trois plans du photographe manquaient au dossier — l'affiche de fin
+et deux verdicts — sans un mot ; le repère de début était imprimé, jamais celui
+de fin. Une session voisine a mis un moment à comprendre que ce n'était pas une
+capture perdue par le bridage de fenêtre, qui produit exactement la même
+impression.
+
+⚠️ **Et c'est là qu'est le vrai coût, pas dans la ligne de code.** Une coroutine
+morte et une fenêtre bridée par macOS produisent le **même** symptôme — un
+travail partiel, sans erreur, sans code de sortie rouge. Rien dans le résultat ne
+les sépare. La première tentative de reproduction est d'ailleurs tombée sur une
+vraie fenêtre au second plan, ce qui a failli faire reclasser le rapport en
+« capture perdue » et clore le sujet.
+
+**Seule une trace de pile les distingue.** D'où la règle, formulée avec la
+session DA7 : **un signalement de « plans manquants » sans trace de pile se
+renvoie chercher la trace AVANT tout diagnostic.** Ce n'est pas une exigence de
+forme — c'est la seule information qui existe, puisque les deux causes sont
+indiscernables par leurs effets. Diagnostiquer sans elle, c'est choisir entre
+deux hypothèses à pile ou face, et la mauvaise coûte une demi-journée à chercher
+au mauvais endroit.
+
+**Le remède tient à ce qu'on capture : un identifiant d'instance est un entier,
+et un entier ne se libère pas.**
+
+```gdscript
+var id := noeud.get_instance_id()
+await _attendre(func() -> bool: return not is_instance_id_valid(id), plafond)
+```
+
+Posé dans `photographe.gd::_attendre_disparition()`, et `_attendre()` refuse
+désormais une `Callable` invalide en le DISANT plutôt qu'en mourant — un garde
+qui ne répare rien mais transforme une mort silencieuse en refus visible.
+
+**La règle générale :** une lambda qui surveille un objet doit capturer son
+identifiant, jamais l'objet. Le cas se présente partout où l'on attend une
+disparition — la fin d'une animation qui se libère, un panneau qu'on congédie,
+une scène qu'on décharge.
+
+
+### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
+
+Deux sessions travaillaient sur les deux moitiés d'un même défaut : l'une avait
+fait passer le tir d'un bouton à une gâchette (`9f79e58`), l'autre écrit le garde
+qui absorbe le tremblement de zone morte (`6d4023b`). La seconde a fusionné, a
+constaté que la première était **déjà sur `main`**, et en a conclu que l'ordre
+s'était réglé tout seul — « pas de fenêtre où l'exposition a existé sans le
+remède ».
+
+Mesuré, c'était faux, et de deux versions :
+
+```
+9f79e58 (l'exposition)  dans v0.4.1 → OUI    dans v0.4.2 → OUI
+9732d48 (le remède)     dans v0.4.1 → NON    dans v0.4.2 → NON
+```
+
+Le remède est arrivé sur `main` quelques minutes après `cf6b883`, qui est
+précisément le commit que le tag `v0.4.2` désigne. Publication et fusion se
+croisaient.
+
+**La règle : l'ordre qui compte pour un joueur est celui des TAGS, jamais celui
+de `main`.** `main` est un état de travail partagé qui avance en continu ; une
+version est un instantané figé, et c'est lui que les gens installent. Deux
+commits peuvent se suivre d'une minute sur `main` et se retrouver à deux
+versions d'écart pour qui joue.
+
+⚠️ **Et le contrôle est mécanique, il ne se déduit pas** :
+`git merge-base --is-ancestor <commit> $(git rev-list -n1 <tag>)`. Dans un dépôt
+à vingt-sept worktrees où plusieurs sessions poussent le même jour, c'est la
+seule réponse fiable à « est-ce que c'est parti ? ». La déduction, elle, a déjà
+coûté une erreur d'attribution publiée ce même jour — voir « La fusion qui
+APPORTE un code n'est pas celle qui l'a écrit ».
+
+### Une liste qui décrit le dépôt du jour où on l'a écrite (2026-09-09)
+
+`test_planche_marche` portait `const ARMES := ["pistolet", "pompe", "fusil",
+"arbalete"]`. Vingt planches de marche neuves ont été posées pour cinq classes,
+et la suite a rendu **116/116 — exactement le même chiffre qu'avant**. Rien
+n'était faux, rien ne rougissait, et rien ne regardait les nouveaux fichiers.
+
+C'est la forme du « seuil 6 de `test_audit_menus` », déjà consignée : un nombre,
+ou ici une liste, qui décrit l'ÉTAT du dépôt au moment où on l'écrit, et qui
+cesse silencieusement de le décrire ensuite. **Le symptôme est un total qui ne
+bouge pas quand le travail, lui, a bougé** — et un total stable se lit comme une
+bonne nouvelle.
+
+La liste dit maintenant le ROSTER du jeu (les dix classes), pas l'inventaire du
+dossier. Corollaire nécessaire : puisque toutes les classes n'ont pas de
+planche, la règle est devenue **tout ou rien**. Zéro fichier = la classe glisse,
+état supporté que `player.gd` documente (« l'absence n'est pas une erreur »).
+Sept fichiers sur huit = faute, parce que `_precharger_la_planche` refuse le
+demi-lot en bloc et retombe sur le statique : le travail est perdu en silence.
+
+### Un masque juste, d'une couleur fausse — publié (2026-09-09)
+
+**Les seize silhouettes de marche étaient NOIRES.** Elles ont été publiées ainsi
+jusqu'en v0.4.1 incluse, et l'effet est le contraire de la mécanique du jeu :
+`Polygon2D.color` MULTIPLIE la texture, un RVB nul multiplie tout à zéro, et
+`player_enemy_light.gdshader` en tire alors `LIGHT = vec4(0.0)`. **L'adversaire
+devenait donc noir — invisible — PENDANT QU'IL MARCHAIT**, et redevenait gris
+dès qu'il s'arrêtait. Dans un duel dont toute l'information est la lumière,
+bouger rendait moins repérable qu'être immobile.
+
+Le contrat était pourtant écrit, au-dessus de `SPRITES` dans `player.gd` : « la
+silhouette **blanche** pour la vue adverse et pour les révélations, parce que
+`Polygon2D.color` MULTIPLIE la texture ». Les quatre silhouettes STATIQUES le
+respectent (255,255,255). Les seize de marche ne l'ont jamais respecté.
+
+⚠️ **Ce qui rend le cas instructif, c'est que `test_planche_marche` existait,
+qu'il avait cent contrôles, et qu'il ne pouvait pas l'attraper.** Il compare les
+MASQUES — donc les canaux alpha — et ceux-là s'accordaient au pixel près. La
+COULEUR n'était regardée nulle part. Le commit de régénération (`77466a7`)
+annonce d'ailleurs « silhouettes accordées au pixel près » en toute bonne foi :
+c'était vrai, et insuffisant.
+
+**La règle : un masque a deux propriétés indépendantes — sa FORME et sa VALEUR.**
+Vérifier l'une ne dit rien de l'autre. Partout où une texture sert de masque
+multiplicatif, la valeur est aussi un contrat que la forme.
+
+⚠️ Et la découverte n'est pas venue d'une suite : elle est venue d'avoir mesuré
+les images avant de commander leurs six sœurs manquantes. C'est la cinquième
+fois du dépôt qu'un défaut de rendu se tient hors de portée du headless — mais
+la première où le regarder ne suffisait pas non plus. **Il a fallu mesurer les
+pixels.** Un lot headless ne rend rien ; l'œil, lui, ne distingue pas un
+adversaire noir dans le noir d'un adversaire absent.
+
+Corrigé le 2026-09-09 : les seize silhouettes redérivées du canal alpha de leur
+peint, en blanc plein — ce qu'une silhouette EST (vérifié : alpha identique à
+100 % entre chaque peint et sa silhouette). Contrôle 6 ajouté à
+`test_planche_marche`, sabotage vérifié.
+
 ### Une constante partagée par des durées de 1 à 7,5 (2026-09-09)
 
 `RootProfile.RECUPERATION` valait 80 ms pour les dix classes : la rampe de reprise
@@ -8167,6 +8320,30 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
       disproportionné face à la vibration déjà universelle. Si le besoin
       revient, repartir de ce constat plutôt que de re-découvrir la même
       contrainte.
+    - **Signalé par la session du chantier racine, corrigé le jour même** :
+      le tir passe d'un bouton (R1) à un axe (gâchette R2), donc sans front
+      franc. Vérifié que `_rumble_shoot()` ne dépend d'aucun front — le
+      cooldown de l'arme suffit à cadencer les tirs, chatter ou pas. Le seul
+      point réellement exposé était le clic du percuteur à vide (V4.4,
+      `tir_a_sec`/`_detente_pressee`) : un bruit d'axe proche de la zone
+      morte peut agiter un booléen `is_action_pressed()` sur plusieurs
+      images, ce qu'un vrai bouton ne fait pas. Ajouté `tir_a_sec <= 0.0`
+      comme second garde, en plus du front montant — absorbe ce bruit sans
+      changer le geste (une vraie répétition reste possible dès 220 ms). Sert
+      aussi bien le son et le tremblement HUD préexistants que le clic
+      haptique ajouté par ce chantier ; rien touché côté zone morte ou
+      remappage, qui restent au chantier racine.
+      - ⚠️ **Correction du 2026-09-09, mesurée par la session du chantier
+        racine et non déduite comme la phrase ci-dessus le laissait croire.**
+        « Le tir passe sur un axe » (`9f79e58`) et ce correctif (`9732d48`)
+        étaient bien tous deux sur `main` au moment de la fusion — mais
+        `main` n'est pas ce qu'un joueur reçoit. Le tag `v0.4.2` avait été
+        posé quelques minutes plus tôt, sur le commit exact qui précède ce
+        correctif : `9f79e58` est parti dans `v0.4.1` ET `v0.4.2`, `9732d48`
+        dans aucun des deux. Rien d'urgent — un clic de percuteur à vide qui
+        peut bégayer près de la zone morte, pas une faute de jeu —, corrigé à
+        la version suivante. Voir « Pièges connus » pour la leçon qui dépasse
+        ce défaut.
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -11669,10 +11846,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
   du monde — tout passe au blanc cassé et au noir de la bible. Détail
   ci-dessous. *(S)*
-- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
-  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
-  peinte finale, reste dû à Adrien. Détail ci-dessous.
+- **DA5.3 Plus un cercle parfait visible** ✅ **FAIT le 2026-09-09** — toute
+  lumière ou particule circulaire passe en texture. *(S + G)* — volet **(S)**
+  (casser la symétrie procédurale) et volet **(G)** (texture peinte
+  `particule_poussiere.png` cuite et branchée). Détail ci-dessous.
 - **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
   (décision d'Adrien : le grain de match existant reste), documentation des
   trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
@@ -11853,23 +12030,38 @@ au texte du code.
 **Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
 ratio commun.
 
-#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+#### DA5.3 — les volets (S + G) : rupture procédurale et texture peinte livrée
 
-**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
-(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
-reste due à Adrien, signalée et non bloquante.
+**Portée : DA5.3 est (S + G) — désormais intégralement clos le 2026-09-09.**
 
-**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
-disque analytique (`smoothstep` sur une distance). Un second hash
-(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
-le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
-plus, aucune texture, aucun coût mesurable.
+**Volet (S) : casser la symétrie procédurale sans texture**
+- **`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+  disque analytique (`smoothstep` sur une distance). Un second hash
+  (`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+  le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+  plus, aucune texture, aucun coût mesurable.
+- **`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+  le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+  torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+  Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+  brume — aucun nouveau bruit importé.
 
-**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
-le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
-torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
-Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
-brume — aucun nouveau bruit importé.
+**Volet (G) : la texture peinte de particule (`particule_poussiere.png`)**
+- **Génération & procédé DA1.5** : planche source
+  (`assets/sources/halo/H5_poussiere.jpg`), convertie en masque RGBA 32×32
+  (`assets/halo/particule_poussiere.png`). Conformité avec la règle d'or de
+  la charte (« l'image ne fournit que la matière, le code garde la
+  géométrie ») : fond noir coupé, luminance vers alpha, RGB blanc pur
+  neutre prêt pour multiplication par `modulate` ou `COLOR`.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule`
+  avec repli `hint_default_black`. La particule échantillonne la texture
+  organique dans sa cellule de grille, tout en conservant son mouvement
+  brownien et son scintillement d'interférence.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle
+  analytique de `_creer_texture_lueur_ronde()` (`GradientTexture2D.FILL_RADIAL`),
+  remplacé par le chargement de `particule_poussiere.png` (avec repli doux
+  sécurisé si absent). Les particules de poussière et d'ambiance des 15 profils
+  de menus prennent ainsi un grain d'encre asymétrique authentique.
 
 **Cas examinés et gardés tels quels**, listés ici pour que personne ne les
 refasse :
@@ -11881,9 +12073,9 @@ refasse :
 | `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
 | `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
 
-Aucune suite headless ne teste la forme d'un cercle — jugement par
-`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
-vérifier que `poussiere_faisceau.gdshader` compile.
+Validé par `test_arena_lighting.gd` (vérification de chargement de la texture
+et assignation du paramètre shader), `test_menu_artworks.gd`, et la suite
+complète `./tools/run_suites.sh`.
 
 #### DA5.4 — trois grains, délibérément distincts
 
@@ -12140,6 +12332,36 @@ dans la même journée.
   > l'**appareil** (enseigne, lumière, au lancement), l'intro est l'allumage de
   > la **torche** (planche 4, dans le récit) — mais elles se disputaient
   > l'écran.
+
+  ⚠️ **Le mécanisme « curseur = torche » a été abandonné le 2026-09-10
+  (Adrien), après l'avoir défendu dans la même conversation.** Les six
+  planches sont désormais des clips Veo 3.1 (Image-to-Video sur les six
+  illustrations), lus tels quels par un `VideoStreamPlayer` — l'image fixe
+  révélée au curseur ne reste qu'un repli si un `.ogv` manque. Ce que ça coûte
+  et pourquoi on l'a fait quand même :
+
+  - **Les rushes Veo dérivent.** Chaque plan de 8 s a été passé en revue image
+    par image avant rognage : `03-dotation` substitue le pistolet à la torche
+    dans sa première seconde, `05-prix` fait apparaître puis disparaître une
+    silhouette géante parasite, `01-descente` finit hors-cadre. Les fenêtres de
+    rognage retenues (2,0 à 2,5 s chacune, une inversée pour `06-extinction`
+    dont le feu grandit au lieu de mourir) sont dans
+    `tools/convert_intro_videos.sh`, commentées plan par plan.
+  - **Godot ne lit que l'Ogg Theora en natif.** `ffmpeg` de ce poste décode
+    Theora mais ne l'encode pas ; `ffmpeg2theora` (`brew install
+    ffmpeg2theora`) fait le travail. Installer ce paquet a fait remonter `x265`
+    dans Homebrew et cassé l'`ffmpeg` du poste au passage (`libx265.216.dylib`
+    introuvable) — `brew reinstall ffmpeg` répare. À prévoir sur tout poste qui
+    relancera le script.
+  - **Seuls les `.ogv` rognés sont versionnés.** Les rushes bruts (~25 Mo,
+    8 s × 6, reconstructibles depuis Flow) sont dans
+    `.gitignore` (`/assets/video/intro/*.mp4`) ; l'audit d'assets de
+    `tools/run_suites.sh` les aurait sinon signalés absents du dépôt.
+  - **Ce que ça abandonne, texto :** DA6.6 enseignait le verbe du jeu —
+    *éclairer pour voir* — en rendant l'intro **jouée**, pas subie. Une vidéo
+    en pilote automatique ne l'enseigne plus. Adrien a tranché en connaissance
+    de cause ; à rouvrir si l'intro se révèle moins efficace à l'usage que
+    prévu par la conception d'origine.
 
 #### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
 
@@ -12450,25 +12672,51 @@ c'est le code qui les colore.
   les planches 4 et 5 de l'intro survivent au recadrage, parce que leur sujet
   tient dans une bande étroite et que le reste est noir. **Le noir se recadre ;
   un décor ne se recadre pas.**
-- **DA7.2 Le trailer de 60 secondes.** *(C)* — 🟡 **découpage écrit le
-  2026-09-09** : [docs/TRAILER.md](TRAILER.md). Cinq phrases de 8 mesures plus
-  une queue, chaque plan nommé par l'identifiant du catalogue de
-  `tools/photographe.gd` — donc directement commandable, et **tenu par une suite
-  depuis `5c4040f`** : renommer un plan fait rougir le lot au lieu de périmer ce
-  document en silence. La grille n'a pas été choisie, elle se dérive du stem de
-  menu à 170 BPM (une mesure = 1,412 s ; 60 s = 42,5 mesures), et la densité de
-  coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
-  manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
-  photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
-- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
-  écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
-  longueurs de description, points saillants, et la sélection d'images par nom
-  de catalogue du photographe (DA6), dont les cinq à envoyer si on n'en envoie
-  que cinq. **Six champs restent `À TRANCHER` et n'appartiennent pas à une
-  session** — éditeur, contact presse, prix, date, plateformes annoncées,
-  licence des images. Ils sont marqués comme tels plutôt que devinés : un
-  presskit dont un champ est inventé fait perdre la confiance sur tous les
-  autres.
+- **DA7.2 Le trailer.** ✅ **LIVRÉ le 2026-09-09** — `tools/cineaste.gd`,
+  `tools/run_trailer.sh`, et un film de 42 s **publié en bas du site**. Détail
+  dans [docs/TRAILER.md](TRAILER.md).
+
+  ⚠️ **CETTE FICHE A ANNONCÉ UN BLOCAGE QUI N'EXISTAIT PAS**, et c'est le fait
+  le plus utile à retenir. Elle disait « bloqué : il n'existe aucune capture
+  vidéo ». Godot filme depuis toujours (`--write-movie`) — **personne n'avait
+  tapé `godot --help`**. Il ne manquait pas un outil, il manquait la mise en
+  scène, et elle existait déjà chez le photographe de DA6.
+
+  Le coût réel n'est pas l'erreur mais son statut : **le document a servi de
+  preuve à son propre blocage.** L'item est resté « bloqué » ici et dans le
+  suivi pendant des heures parce que l'affirmation était écrite. C'est le pendant
+  exact de l'avertissement déjà porté par `CLAUDE.md` — *un défaut annoncé envoie
+  chercher un travail déjà fait, ce qui coûte plus qu'un silence* — appliqué
+  cette fois à une capacité déclarée absente.
+
+  Le cinéaste **hérite** du photographe et ne surcharge qu'une fonction : là où
+  celui-ci tient l'état puis déclenche, celui-là tient l'état et ne déclenche
+  jamais. Tout le reste — sélection, préconditions, éclairage, cadrage — est
+  repris tel quel.
+
+  *(Note écrite en parallèle, avant fusion : une proposition d'ouvrir ce
+  trailer sur des clips Veo animés — voir DA6.6 ci-dessus — avait été
+  signalée puis écartée par Adrien le 2026-09-10, au nom de la même règle
+  « rien qui n'existe dans le moteur ». Le film livré ici, capturé en moteur
+  via `--write-movie`, la respecte par construction — sans avoir eu besoin de
+  trancher entre les deux.)*
+- ~~**DA7.3 Presskit et screenshots composés.**~~ ❌ **ABANDONNÉE le 2026-09-09**
+  (Adrien), et `docs/PRESSKIT.md` **supprimé**.
+
+  La fiche est morte de la même cause que DA7.1 : **l'abandon de la boutique lui
+  a retiré son destinataire.** Un presskit s'adresse à une presse qu'on démarche
+  pour une sortie qu'on annonce ; sans boutique, il ne restait qu'un document
+  bien écrit sans personne à qui l'envoyer — et cinq de ses six champs
+  `À TRANCHER` n'avaient plus d'arbitre.
+
+  Ce qu'il portait de vivant a survécu ailleurs, et c'est pour ça qu'il peut
+  partir sans regret : ses descriptions sont devenues le texte du site (DA7.4),
+  et sa sélection d'images est devenue la vitrine de la même page. **La
+  distribution passe désormais par le site et les *releases* GitHub**, pas par
+  un dossier de presse.
+
+  *(Le document reste dans l'historique git si un jour une sortie se prépare
+  pour de bon.)*
 - **DA7.4 Un site d'une page.** *(S)* — ✅ **LIVRÉ le 2026-09-09, en ligne sur
   le domaine d'Adrien** : **https://adrienvada.fr/candela-2d/** — dépôt séparé
   `adrienvada/candela-2d`, GitHub Pages, source versionnée dans `tools/site/`
@@ -16764,6 +17012,40 @@ le compteur restant par le total, ce qui aurait affiché une jauge bloquée prè
 100 %. La description de la classe le dit, sans quoi la règle serait invisible à
 la sélection.
 
+### Étape 21 — cinq classes marchent, une glisse ✅
+
+Cinq des six classes neuves ont désormais leur planche de marche : le Fumiste,
+l'Incendiaire, la Sentinelle, l'Occulteur et l'Allumeur. **Le Spectre glisse**,
+et c'est une décision d'Adrien après trois passes de génération infructueuses —
+« laisse tomber, on fait glisser les autres classes ».
+
+**Ce qui a été GÉNÉRÉ n'est presque pas ce qui a été POSÉ.** Les planches
+viennent de Gemini, mais l'intégration ne garde de ses images que les pixels de
+MEMBRES qui débordent de la silhouette statique. La tête, l'arme, la palette et
+le cadrage viennent du sprite du dépôt.
+
+⚠️ **Ce n'était pas un choix esthétique mais une contrainte.** Le contrôle 3 de
+`test_planche_marche` exige le bout du canon au pixel exact, en x ET en y —
+mesuré : dans les seize planches d'origine, la zone de l'arme est recopiée à
+l'identique. Aucune image générée ne satisfait ça spontanément. La règle qui en
+sort vaut pour toute génération future : **on ne génère pas un sprite, on génère
+un DELTA, et on le composite sur l'existant.**
+
+Deux réglages ont demandé une mesure, pas une intuition :
+
+- **Le halo JPEG était le vrai piège**, pas le fond. Entre le sprite sombre et le
+  fond blanc, la compression étale un dégradé de 150 à 250 : sous le seuil de
+  fond, donc pris pour du personnage, et composité en **liseré blanc** sur une
+  figure charbon. Vu à l'écran au premier jet. Le plafond est venu de la mesure
+  de la palette du dépôt — p99 de luminance à 128, maximum 151 sur les dix
+  statiques —, jamais d'un nombre choisi.
+- **Le découpage des planches** se fait sur les colonnes de fond pur, pas sur un
+  espacement supposé.
+
+Et une géométrie qui simplifie toute reprise future : **le personnage fait la
+même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
+les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -16782,6 +17064,72 @@ de clôture serait un échec différé de dix étapes.
 
 ---
 
+## Chantier — Menu de pause en match : retirer QUITTER, ajouter QUITTER LE MATCH (inscrit et fait le 2026-09-09)
+
+**Demandé par Adrien.** Avant ce chantier, `ui.gd::_build_pause_menu()` posait
+quatre boutons dans cet ordre : REPRENDRE, OPTIONS, MENU PRINCIPAL (gris),
+QUITTER (rouge — quittait l'**application entière** via
+`NetworkManager.quit_game()`, comptant comme un abandon en match classé).
+**QUITTER (l'application) n'a plus de bouton dans la pause** — il ne reste
+disponible que depuis l'accueil du hub. Sa place est prise par **QUITTER LE
+MATCH**, juste au-dessus de MENU PRINCIPAL qui descend au bas de la colonne et
+devient rouge à sa place.
+
+**Ce qui n'existait pas pour l'écrire, et qu'il a fallu construire :**
+`main_menu_requested` ramène toujours au hub racine (`hub.reset()` dans
+`ui.show_main_menu()`) — aucune mémoire de « d'où vient ce match » n'existait.
+« Quitter le match » devait donc ramener à l'écran du hub d'où le match a été
+lancé (écran scindé, salon hôte/invité, entraînement…), pas à l'accueil.
+
+**La mémoire retenue : un seul point de capture, pas un par chemin de
+lancement.** Quatre chemins mènent à une manche vivante (écran scindé, hôte +
+client tous deux prêts, appariement) et ils ne partagent presque aucun code —
+sauf UN appel commun, systématique juste avant que le HUD de match remplace le
+hub : `ui.hide_game_over()`. C'est l'un des quatre seuls endroits où
+`_is_main_menu` bascule (documenté dans `ui.gd` juste au-dessus de
+`_un_menu_attend_un_clic()`), et le seul des quatre qui marque une **sortie**
+du hub vers une manche (les trois autres y ramènent, ou rouvrent le même
+salon). `hide_game_over()` retient donc `hub.current_id()` dans
+`_match_origin_screen`, mais seulement `if _is_main_menu` **avant** de le
+faire basculer à faux — sans quoi un round suivant dans la même série
+(`rouvrir_le_salon()` remet `_is_main_menu` à vrai) écraserait la mémoire à
+chaque manche au lieu de ne la poser qu'au premier départ depuis le menu.
+Exposé par `ui.match_origin_screen()`.
+
+**Le nouveau signal `quit_match_requested` réutilise tout le ménage de
+`_on_main_menu_requested()`** (forfait compris — c'était déjà la question
+posée par Adrien : l'abandon devait suivre le nouveau bouton, pas rester
+accroché à l'app-quit qui disparaît de la pause) plutôt que de le dupliquer :
+`_on_main_menu_requested()` prend un `target_screen` optionnel, vide pour tous
+les appelants existants (comportement inchangé), et
+`_on_quit_match_requested()` lui passe `ui.match_origin_screen()`. Le retour
+au menu se fait donc TOUJOURS par `hub.reset()` (accueil), et un écran voulu
+redescend d'un cran par-dessus via `hub.push()` — qui refuse déjà
+silencieusement un identifiant absent ou déjà courant, donc un écran d'origine
+manquant (pause ouverte hors match, cas qui ne devrait pas arriver) retombe
+simplement sur l'accueil, comme MENU PRINCIPAL.
+
+**Piège à ne pas rouvrir** : `hub.push()` sur un salon réseau (SCREEN_HOST /
+SCREEN_JOIN / leurs variantes LAN) ne fait que reposer l'**intention** de mode
+et de transport (`_on_hub_screen_changed()` → `_apply_lobby_intent()`) — la
+même chose qu'une navigation normale vers cet écran. Ça ne réhéberge ni ne
+rejoint rien tout seul ; le joueur retrouve l'écran tel qu'il l'aurait laissé,
+pas un salon rouvert dans son dos.
+
+**Validation :**
+- `tools/test_pause_menu.gd` : `btn_pause_quit` → `btn_pause_quit_match`
+  partout, `_test_signaux_de_sortie` vérifie `quit_match_requested` (et non
+  plus `quit_requested`, qui ne part plus de la pause), nouvelle
+  `_test_ecran_d_origine_du_match` sur la capture par `hide_game_over()` et sa
+  non-réécriture hors transition.
+- `docs/CHECKLIST_TESTS_EN_LIGNE.md` : §1.9/1.10 (retour au bon salon, hôte et
+  client) et §5.7 (remise à vitesse normale sur ce nouveau chemin de sortie),
+  à dérouler à deux machines — non exécuté ici, aucune fenêtre interactive
+  dans cet environnement.
+- `./tools/run_suites.sh` intégralement vert, duos ENet compris.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -16796,7 +17144,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 

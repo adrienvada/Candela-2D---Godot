@@ -28,6 +28,11 @@
 # Worktrees des sous-agents : arbres de travail temporaires, jamais versionnés.
 /.claude/worktrees/
 
+# Rushes bruts Veo de l'intro (DA6.6) : 8 s par plan, ~25 Mo au total,
+# reconstructibles depuis Flow. Seuls les .ogv rognés par
+# tools/convert_intro_videos.sh sont versionnés.
+/assets/video/intro/*.mp4
+
 # Analyses d'Ableton Live, posées à côté de chaque .wav qu'Adrien ouvre dans son
 # DAW. Elles sont RECRÉÉES à l'ouverture et changent sans que le son change :
 # les versionner ferait apparaître une modification à chaque écoute, pour zéro

@@ -61,6 +61,16 @@ func _test_shaders_compilation() -> void:
 	sm.shader = sh_shimmer
 	_check("ShaderMaterial(shimmer_murs) instancié avec succès", sm != null and sm.shader == sh_shimmer)
 
+	# DA5.3 (volet G) : validation de la texture peinte de poussière
+	var sm_poussiere := ShaderMaterial.new()
+	sm_poussiere.shader = sh_poussiere
+	var tex_particule: Texture2D = load("res://assets/halo/particule_poussiere.png")
+	_check("Texture particule_poussiere.png chargée (DA5.3 volet G)", tex_particule != null)
+	if tex_particule != null:
+		sm_poussiere.set_shader_parameter("texture_particule", tex_particule)
+		_check("texture_particule assignée au shader sans erreur", sm_poussiere.get_shader_parameter("texture_particule") == tex_particule)
+
+
 func _test_candela_tileset_shimmer_material() -> void:
 	print("
 [2. Matériau Shimmer des Murs (CandelaTileSet)]")
