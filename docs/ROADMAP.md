@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-09
+> Dernière mise à jour : 2026-09-10
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2422,6 +2422,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
 | **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
@@ -3152,6 +3153,64 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une lumière à énergie zéro compte quand même : quinze par item, et un quadrant est un item (2026-09-10)
+
+Le symptôme, signalé par Adrien : quand un joueur allume sa torche près d'une
+fusée posée, le halo rouge de la fusée est **tranché net par une droite** au lieu
+de s'éteindre en rond. La droite est calée sur la grille de tuiles, à un multiple
+de 16 tuiles (560 px) — la taille par défaut d'un quadrant de `TileMapLayer`
+(`rendering_quadrant_size`). Une session y a passé une journée : la lumière de la
+fusée supprimée, déplacée, éteinte, les occluders retirés, le renderer changé —
+le bord restait identique ; seul `rendering_quadrant_size` le déplaçait (1 tuile :
+dégradé plus doux, 4096 : la fusée disparaît de presque tout le sol).
+
+**Le mécanisme est dans le moteur, et il est documenté.** Godot n'applique
+jamais plus de **15 lumières à un même `CanvasItem`** (`MAX_LIGHTS_PER_ITEM`,
+compteur de 4 bits, codé en dur dans Compatibility comme dans Forward+/Mobile,
+et refusé comme réglage de projet — godot-proposals #9336 ; ticket amont #81147,
+toujours ouvert). Au-delà, les lumières en trop ne s'atténuent pas : elles ne
+sont **pas rendues sur cet item**, tout ou rien, les plus récentes en premier. Or
+un quadrant de `TileMapLayer` est UN `CanvasItem` : le plafond se joue donc par
+carré de 560 px, et sa frontière devient une arête de lumière.
+
+**Ce qui remplissait le plafond n'éclairait rien.** Le recensement des lumières
+`enabled` et visibles à l'instant de la prise `--plan=fusee` donne **23**, dont
+**19 sur le quadrant du faisceau : quinze `Light(e=0.00)`** — les grains de
+poussière de faisceau (V5.5), un `PointLight2D` chacun, énergie 0, jamais
+désactivée. Le commentaire disait « aucune lumière propre » ; pour le renderer
+c'en était une, avec un rectangle de 32 px. À 0,12 s d'intervalle pour 0,9-1,6 s
+de vie, ~10 grains vivants par torche, dans un quadrant qui contient tout le
+cône : 15 grains + fusée + deux torches + une ambiante = 19. La fusée, dernière
+arrivée, était jetée sur ce quadrant-là et gardée sur le voisin (4 lumières).
+
+Le correctif tient en `light.enabled = false` pour `DUST` et `SMOKE` (et `true`
+pour les autres genres — le pool recycle un même nœud d'un genre à l'autre).
+Mesuré au pixel, même plan, même cadrage : l'arête verticale à x=1291 passe d'un
+saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
+(15,5 et 12,5 ailleurs) ; 7 lumières actives, 4 sur le quadrant.
+
+⚠️ **Trois choses à retenir, et la troisième est la plus chère.**
+1. **Énergie zéro n'est pas éteinte.** Une lumière qui n'éclaire rien coûte sa
+   place quand même, et le compteur F3 (`ui.gd::_rescan_debug_counts`) la
+   compte aussi : il aurait affiché 23, pas 7. Toute lumière « décorative »
+   qu'on laisse à 0 pour un temps doit passer par `enabled`.
+2. **Le plafond reste, et une gerbe d'impact peut encore le crever** : les
+   étincelles `SPARK` à énergie réelle (12 par impact de mur, jusqu'à 5 × 12 sur
+   une rafale) pendant 0,3-0,8 s. Le sang, lui, n'éclaire plus depuis le
+   2026-09-10 (décision d'Adrien, « Décisions actées ») : c'était 25 lumières de
+   plus par coup au but. Si un halo se coupe au moment d'un impact de mur, les
+   leviers sont un `rendering_quadrant_size` plus petit (plus d'items, à
+   chiffrer au `bench_framerate`) ou moins d'étincelles éclairantes — pas un
+   cache à invalider, il n'y en a pas.
+3. **Mon premier diagnostic accusait les torches et les balles** — il collait au
+   mécanisme, pas aux nombres : le plan ne contient que 7 vraies lumières, loin
+   des 15. Et la session précédente avait « désactivé le pool sans effet » sans
+   vérifier que les lumières avaient bien disparu. Dans les deux cas, c'est le
+   **recensement par quadrant** qui a tranché : pour chaque `PointLight2D`
+   active, rectangle monde = taille de texture × `texture_scale`, croisé avec
+   les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
+   plausible ne vaut rien tant qu'on n'a pas compté.
 
 ### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
 
@@ -8549,7 +8608,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   discret en vol câblé dans `bullet.gd:_physics_process()` via
   `AudioManager.play_bolt_flight()`.
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
-  (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
+  (déjà sans ombre) : toucher, c'est voir. **⚠️ DÉFAIT le 2026-09-10** — décision
+  d'Adrien, voir « Décisions actées », *Les particules de sang n'éclairent
+  plus* : la réserve écrite ci-dessus le 2026-08-18 a été tranchée dans le sens
+  du retrait, et le plafond de 15 lumières par item du renderer y ajoutait un
+  coût. Ce qui suit décrit ce qui a existé. **✅ Fait** — surmultiplication ×2
   de la lumière déjà portée par la goutte, décroissance linéaire dans
   `advance()` : l'éclat vit dans le tableau plat du pool, aucun nœud ni tween
   de plus. Visible sur les deux écrans par construction — toucher n'est pas
@@ -15247,6 +15310,34 @@ chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
 (`fusee_lancer`, `fusee_atterrit`, `fusee_rebond`, `fusee_eteinte`,
 `fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
 audio à produire » de la liste FU6 tombe donc de lui-même.
+
+### Le carré près de la fusée — deux défauts, résolus le 2026-09-10 (worktree `lights-display-error-3fd1cd`)
+
+Adrien a signalé un halo de fusée tranché net quand une torche s'allume à côté.
+Le diagnostic a mis au jour **deux défauts distincts**, et le premier n'était pas
+la cause du second.
+
+1. **Le décor était éclairé deux fois** (trouvé le 2026-09-09, corrigé dans
+   `rebuild_arena()`). Après duplication des calques par joueur, l'original
+   restait visible dans les deux vues (`visibility_layer` 1, comme les copies) :
+   toute lumière touchant la couche décor éclairait sol et murs une fois sur
+   l'original en mix normal, puis une seconde fois sur la copie en additif. Peu
+   visible sur un halo blanc, flagrant sur un rouge saturé qui écrête. Les
+   originaux et l'habillage sont désormais `hide()` — pas `queue_free()` : ils
+   restent les porteurs des données que lisent `MapData.apply_to_layers()` et
+   `MapGeometry.build_collisions()`. **Vérifié : le carré persistait identique
+   une fois ce doublage corrigé.**
+2. **Les lumières fantômes de la poussière de faisceau** — voir « Pièges
+   connus », *Une lumière à énergie zéro compte quand même*. C'est la cause.
+   Correctif dans `particle_pool.gd::_configure`, mesuré avant/après au pixel
+   sur `--plan=fusee`.
+
+**Non fait, à savoir.** `bench_framerate` n'a pas été relancé : les correctifs
+ne font que retirer des lumières du rendu, ils ne peuvent pas coûter plus. Le
+quadrant reste à 16 tuiles. Le cas d'une gerbe d'impact qui crève le plafond de
+15 pour une fraction de seconde est **à moitié refermé** : le sang n'éclaire
+plus (décision d'Adrien du 2026-09-10, « Décisions actées »), les étincelles
+de mur si — documenté au piège, avec ses leviers.
 
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
