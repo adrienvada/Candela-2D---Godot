@@ -1461,6 +1461,8 @@ func _physics_process(delta):
 	# cible — mais les touches servent à naviguer, elles ne doivent plus piloter
 	# le personnage.
 	var menu_open: bool = state != null and _is_locally_piloted() and state.ui.is_pause_menu_open()
+	if menu_open or input_provider == null or not input_provider.is_shoot_pressed():
+		_tir_consomme = false
 	if role == NetRole.PREDICTED:
 		_send_inputs_to_host(menu_open)
 	elif role == NetRole.INTERPOLATED:
@@ -1802,7 +1804,12 @@ func _physics_process(delta):
 	if can_move and presse and shoot_cooldown <= 0 \
 			and (not is_reloading or recharge_interruptible()):
 		if current_ammo > 0:
-			shoot()
+			# Un appui, un tir — sauf l'arme automatique, la seule qui tire en boucle
+			# détente tenue (décision d'Adrien, 2026-09-10). Un appui pris pendant
+			# le cooldown part à son terme : le verrou n'est posé qu'AU tir.
+			if (current_weapon != null and current_weapon.automatique) or not _tir_consomme:
+				shoot()
+				_tir_consomme = true
 		else:
 			# Plus de munitions : tir à sec + rechargement automatique
 			# `tir_a_sec <= 0.0` en plus du front montant : la détente est
@@ -1820,7 +1827,13 @@ func _physics_process(delta):
 						AudioManager.chemin_percuteur(current_weapon.slug()),
 						muzzle.global_position)
 			start_reload()
-	elif can_move and presse and not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici():
+	elif can_move and presse and not _detente_pressee and tir_a_sec <= 0.0 and _percu_ici() \
+			and (current_ammo <= 0 or (is_reloading and not recharge_interruptible())):
+		# ⚠️ Semi-automatique (2026-09-10) : le clic « trop tôt » ne sonne plus
+		# quand il reste des munitions. L'appui n'est pas perdu, il part au terme
+		# du cooldown — et un clic de percuteur juste avant un tir qui part
+		# mentirait. Il ne reste que pour ce qui refuse VRAIMENT : chargeur vide,
+		# ou recharge d'un bloc qu'on ne peut pas interrompre.
 		# Front montant ET fenêtre de 220 ms écoulée — voir le garde ci-dessus.
 		tir_a_sec = 0.22
 		# V4.4 — le percuteur. Positionnel a la bouche : un clic a vide est un
@@ -1910,6 +1923,20 @@ var _detente_pressee: bool = false
 var _fusee_pressee: bool = false
 ## Et pour celui du gadget.
 var _gadget_pressee: bool = false
+
+## Le verrou du tir semi-automatique : posé AU TIR, levé au relâchement.
+##
+## ⚠️ **Levé en tête de `_physics_process`, AVANT les sorties anticipées** du
+## décompte et de la manche inactive. Placé dans le bloc de tir, un relâchement
+## pendant le décompte ne serait jamais vu : le joueur devrait relâcher une
+## seconde fois pour tirer à la première image de jeu.
+##
+## ⚠️ **Et levé aussi quand le menu pause est ouvert**, parce que c'est ce que
+## voit l'hôte : le client lui envoie alors un paquet neutre, détente relâchée.
+## Sans cet alignement, l'hôte lèverait le verrou et pas le client — et à la
+## fermeture du menu, gâchette tenue, l'hôte tirerait sans que le client
+## prédise rien : une balle officielle orpheline, des munitions divergentes.
+var _tir_consomme: bool = false
 
 func shoot():
 	if current_weapon == null: return

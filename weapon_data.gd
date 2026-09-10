@@ -6,6 +6,19 @@ const Vision := preload("res://vision.gd")
 
 @export var name: String = "Pistolet"
 @export var cooldown: float = 0.16
+
+## Le tir part-il EN BOUCLE tant que la détente reste tenue ?
+##
+## Faux pour toutes les armes sauf le pistolet-mitrailleur de l'Occulteur —
+## décision d'Adrien du 2026-09-10 : « la seule classe pouvant tirer en
+## automatique, c'est le pistolet-mitrailleur ». Un appui, un tir. La règle est
+## la valeur par défaut ; l'exception s'écrit dans `_batir_catalogue()`.
+##
+## ⚠️ **Ne PAS le dériver de `root.apres_rafale`**, qui dit autre chose : QUAND
+## tombe le root. Les deux ne sont liés que dans un sens (s'immobiliser après la
+## rafale suppose une arme qui tire en rafale), et c'est un contrôle qui doit le
+## dire, pas un calcul qui le supposerait.
+@export var automatique: bool = false
 @export var bullet_speed: float = 12000.0
 @export var bullet_max_distance: float = 10000.0
 @export var damage_center: float = 50.0

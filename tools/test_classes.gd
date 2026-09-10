@@ -1825,9 +1825,18 @@ func _test_fusees_par_classe() -> void:
 	gs.sandbox_mode = false
 
 	# ── La RECHARGE avance, et s'arrête au plafond ──────────────────────────
+	# ⚠️ **Le Terrassier par son NOM, pas « la première classe qui recharge ».**
+	# Ce bloc prenait la première classe à recharge active et l'appelait
+	# `terrassier` parce que c'était vrai le jour où il a été écrit : deux classes
+	# rechargeaient, et le Terrassier venait avant l'Allumeur. Le 2026-09-10,
+	# sept autres se sont mises à recharger — et la première est devenue le
+	# Parasite. Les contrôles de recharge sont restés verts, puisqu'ils valent
+	# pour n'importe quelle classe qui recharge ; seuls les deux derniers, qui
+	# attendent la POUSSIÈRE du Terrassier, ont vu que la variable ne désignait
+	# plus ce qu'elle nommait.
 	var terrassier := -1
 	for i in catalogue.size():
-		if catalogue[i].fusees != null and catalogue[i].fusees.recharge_active():
+		if String(catalogue[i].slug()) == "pompe":
 			terrassier = i
 			break
 	gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
@@ -1869,8 +1878,10 @@ func _test_fusees_par_classe() -> void:
 		gs.p1.equip_weapon(gs.weapon_for_index(terrassier))
 		gs._accorder_fusees(0.0)
 		ui._maj_reserves(ui.p1_reserves, 0)
-		_check("et il compte celles qu'on a",
-			String(ui.p1_reserves["fusees"].text) == "FUSÉES %d" % plein,
+		# Le bandeau dit le stock ET le plafond depuis le 2026-09-10 : sept classes
+		# rechargeant, « vide, reviendra » doit se lire autrement que « jamais ».
+		_check("et il compte celles qu'on a, sur son plafond",
+			String(ui.p1_reserves["fusees"].text) == "FUSÉES %d/%d" % [plein, plein],
 			String(ui.p1_reserves["fusees"].text))
 		_check("et le gadget affiche son nom de classe",
 			String(ui.p1_reserves["gadget"].text).contains("POUSSIÈRE"),

@@ -72,8 +72,33 @@ func get_aim_direction(player_global_pos: Vector2) -> Vector2:
 			aim_dir = player_global_pos.direction_to(m_pos)
 	return aim_dir
 
+## La course brute sous laquelle une détente TENUE redevient relâchée.
+##
+## Plus basse que le seuil d'appui, qui est la zone morte de l'action, lue dans
+## l'`InputMap` et jamais recopiée ici — elle vaut 0,5 dans `project.godot`, et
+## non 0,2 comme l'ont longtemps dit les commentaires du dépôt : recopier un
+## nombre, c'est hériter de son erreur. Entre les deux seuils l'état ne change
+## pas, si bien qu'une gâchette qui tremble autour du seuil ne peut plus
+## redéclencher un tir.
+##
+## ⚠️ **Nécessaire depuis que le tir est semi-automatique** (2026-09-10). Tant
+## que la détente tenue tirait en boucle, un tremblement ne coûtait rien ; dès
+## qu'un appui vaut un tir, chaque oscillation autour du seuil en vaudrait un.
+## Sans effet sur un clic ou une touche, qui ne valent que 0 ou 1.
+const TIR_REARME := 0.25
+var _tir_tenu := false
+
 func is_shoot_pressed() -> bool:
-	return Input.is_action_pressed(action_shoot)
+	if not InputMap.has_action(action_shoot):
+		return false
+	# `raw` et non `get_action_strength` : ce dernier rend 0 sous la zone morte,
+	# et ne verrait donc pas la plage qui sépare les deux seuils.
+	var course := Input.get_action_raw_strength(action_shoot)
+	# Plancher à 0,05 : une zone morte nulle ferait passer toute course, même
+	# nulle, pour un appui — la détente serait réputée tenue en permanence.
+	var seuil := maxf(InputMap.action_get_deadzone(action_shoot), 0.05)
+	_tir_tenu = course >= (minf(TIR_REARME, seuil) if _tir_tenu else seuil)
+	return _tir_tenu
 
 func is_flashlight_pressed() -> bool:
 	var profondeur := Input.get_action_strength(action_torch)

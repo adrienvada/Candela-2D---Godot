@@ -2600,11 +2600,34 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 		return
 
 	var teinte: Color = COLOR_P1 if joueur == 0 else COLOR_P2
+	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
+	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
 
 	# ── 1. Les fusées éclairantes ──────────────────────────────────────────
+	#
+	# ⚠️ **« — » ne veut plus dire « vide », seulement « n'en a jamais ».**
+	# Jusqu'au 2026-09-10 le bandeau écrivait « FUSÉES — » pour un Parasite qui
+	# venait de lancer son unique fusée, exactement comme pour le Spectre, qui
+	# n'en porte aucune : l'écran ne distinguait pas « reviendra » de « jamais ».
+	# Depuis que sept classes rechargent une fusée par minute, cette différence
+	# est toute l'information. Le plafond la porte, le décompte dit quand.
 	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
+	var plafond := 0
+	if classe != null and classe.fusees != null:
+		plafond = classe.fusees.plafond_effectif()
 	var lbl_f: Label = res["fusees"]
-	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
+	if plafond <= 0:
+		lbl_f.text = "FUSÉES —"
+	else:
+		lbl_f.text = "FUSÉES %d/%d" % [n, plafond]
+		# ⚠️ Le décompte n'est juste que chez l'hôte et en local : l'accumulateur
+		# n'est pas répliqué, et chez le client `attente_fusee` rendrait une
+		# période figée. Mieux vaut aucun chiffre qu'un chiffre qui ne descend pas.
+		if n < plafond and gs.has_method("attente_fusee") \
+				and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+			var attente := float(gs.attente_fusee(joueur))
+			if attente >= 0.0:
+				lbl_f.text += " · %d s" % int(ceil(attente))
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
 
@@ -2613,8 +2636,6 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 		_set_flare_style(p_f, n > 0, teinte)
 
 	# ── 2. Le gadget de classe ─────────────────────────────────────────────
-	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
-	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
 	var nom_gadget := "—"
 	var dispo := false
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():

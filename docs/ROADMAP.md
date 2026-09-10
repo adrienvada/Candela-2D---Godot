@@ -3153,6 +3153,48 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une variable qui porte le nom d'une règle qu'elle ne vérifie pas (2026-09-10)
+
+`_test_fusees_par_classe` cherchait « la première classe dont la recharge est
+active » et rangeait le résultat dans une variable nommée `terrassier`. C'était
+vrai le jour de l'écriture : deux classes rechargeaient, et le Terrassier venait
+avant l'Allumeur. Le 2026-09-10, sept classes se sont mises à recharger une
+fusée par minute — et la première du catalogue est devenue le **Parasite**.
+
+Rien n'a crié là où l'on s'y attendait. Les contrôles de recharge sont restés
+verts, parce qu'ils valent pour n'importe quelle classe qui recharge. Seuls les
+deux derniers, qui attendaient la *Poussière* du Terrassier au HUD, ont vu que
+la variable ne désignait plus ce qu'elle nommait — et leur message accusait le
+bandeau, pas la sélection.
+
+C'est la famille de la liste `ARMES` figée à quatre noms et du « seuil 6 » :
+**une hypothèse sur le CATALOGUE, écrite comme une règle de sélection.** Le nom
+de la variable disait l'intention ; le code disait autre chose, et restait juste
+aussi longtemps que le catalogue ne bougeait pas. Ce qui se nomme se cherche par
+son nom.
+
+### Une commande absente produit un silence, et un filtre le lit comme un succès (2026-09-10)
+
+Cinq suites lancées sous `timeout 180 godot …` ont rendu **une sortie vide** —
+aucune ligne rouge, donc rien d'inquiétant en apparence. `timeout` n'existe pas
+sur macOS : la commande échouait avant même de lancer Godot, et le `grep` placé
+derrière n'avait rien à filtrer. Aucun test n'avait tourné.
+
+Le piège n'est pas macOS, c'est le filtre : un `grep "✗"` ne sait pas distinguer
+« aucun échec » de « aucune exécution ». **Un filtre doit toujours laisser passer
+une ligne qui prouve que la chose a TOURNÉ** — le total de la suite, son code de
+sortie. Une sortie vide n'est jamais un résultat.
+
+### La zone morte du tir vaut 0,5, pas 0,2 (2026-09-10)
+
+Les commentaires de `input_setup.gd`, de `local_input_provider.gd` et plusieurs
+passages de cette feuille de route donnaient 0,2 pour la zone morte des gâchettes.
+Celle du TIR vaut **0,5** : `p1_shoot` et `p2_shoot` sont déclarées dans
+`project.godot`, et `input_setup.gd` ne pose 0,2 que sur les actions qu'il crée
+lui-même. Relevé par le contre-examen de l'enquête sur le semi-automatique.
+L'hystérésis du 2026-09-10 lit donc le seuil dans l'`InputMap` au lieu de le
+recopier : recopier un nombre, c'est hériter de son erreur.
+
 ### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
 
 Deux sessions travaillaient sur les deux moitiés d'un même défaut : l'une avait
@@ -16830,6 +16872,64 @@ Deux réglages ont demandé une mesure, pas une intuition :
 Et une géométrie qui simplifie toute reprise future : **le personnage fait la
 même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
 les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
+
+### Étape 22 — ce que l'entraînement a révélé ✅
+
+Adrien a essayé les classes à l'entraînement le 2026-09-10 et rapporté quatre
+défauts. Une enquête en quatre volets, chacun contre-examiné par un sceptique qui
+relisait le code cité, a précédé toute modification — et trois hypothèses de
+départ, dont deux des miennes, se sont révélées fausses.
+
+**L'entraînement ignorait la classe choisie.** `_on_training_requested()`
+lançait la manche avec `_hosted_weapon_1_idx`, une variable d'hébergement EN
+LIGNE qui vaut 0 par défaut et n'est écrite que sur les chemins d'hôte :
+l'entraînement partait donc toujours en Parasite. Le menu marchait, la classe
+s'affichait ; c'est le lancement qui l'ignorait. Corrigé en lisant
+`ui.selected_weapon_index(0)`, et couvert par un contrôle de comportement dans
+`test_online_match.gd`. ⚠️ La session qui réécrit la sélection de classe dans
+le salon ne l'aurait pas corrigé : son contrôle vérifie la visibilité des
+râteliers, pas la classe équipée.
+
+**Les fusées étaient illimitées à l'entraînement**, pour toutes les classes. La
+gratuité datait du chantier FUSÉE (`dccdaf6`, 2026-09-02), d'avant les classes,
+quand il n'y avait qu'UNE fusée à éprouver. Elle masquait désormais exactement ce
+qu'on vient tester. L'entraînement compte ; l'hôte qui attend seul et le partage
+d'après-match gardent leur gratuité, parce qu'ils ne réamorcent pas le compteur.
+Les **sept classes qui ne rechargeaient pas** gagnent une fusée par minute
+(`PERIODE_RECHARGE_FUSEE`) ; le Terrassier (18 s) et l'Allumeur (12 s) gardent
+la leur, qui est leur identité ; le Spectre reste à zéro. Le bandeau devient
+`FUSÉES n/plafond · N s` : « — » ne veut plus dire que « n'en a jamais ».
+
+**Le tir devient semi-automatique**, sauf pour l'Occulteur. Trois pièces, et la
+deuxième est celle qu'on oublierait :
+
+- un drapeau `automatique` porté par l'arme, jamais dérivé du root ;
+- une **hystérésis** sur la course brute de la gâchette : armement à la zone
+  morte, réarmement seulement sous 0,25. Sans elle, le semi-automatique
+  redoublerait chaque tremblement autour du seuil — le défaut qu'avait déjà payé
+  le clic à vide ;
+- un verrou posé au tir et levé au relâchement, **avant** les sorties anticipées
+  du décompte, et aussi menu pause ouvert, parce que c'est ce que voit l'hôte.
+
+Le clic « trop tôt » ne sonne plus quand l'appui va partir au terme du cooldown :
+avec un tir par appui, il aurait menti à chaque rafale tapée.
+
+**Hors de la liste d'Adrien, trouvé en route et corrigé** : `_get_weapon_idx` ne
+codait que les quatre armes d'origine. En ligne, les six classes neuves
+voyageaient comme le Parasite, et le client simulait les balles de l'hôte avec la
+mauvaise arme. Invisible hors ligne, où la balle ne passe jamais par le fil.
+
+`Protocol.VERSION` passe à 16 : le tir change de SENS pour un client qui le
+prédit. Les contrôles neufs vivent dans `tools/test_tir_et_reserves.gd`, et non
+dans `test_classes.gd`, qu'une autre session réécrit le même jour.
+
+⚠️ **Reste à faire, dans le lot suivant** : les gadgets. Adrien a tranché — une
+recharge d'une minute pour TOUS les gadgets ; le grésillement devient une
+**batterie** qu'on allume et éteint, posée au sol et rallumable, qui éteint les
+TORCHES jusqu'au noir de façon aléatoire, et une torche noire n'éblouit plus. Le
+bandeau des réserves s'inverse aussi chez le client en ligne (il y affiche les
+réserves de l'hôte) : à corriger dans le même geste, puisque l'état du gadget
+passera par lui.
 
 ### Ce qui reste, dans l'ordre
 

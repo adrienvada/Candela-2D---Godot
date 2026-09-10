@@ -773,7 +773,15 @@ func _on_training_requested() -> void:
 	# On passe par le démarrage ordinaire : arène, joueurs, armes, vues et
 	# caméras sont posés par le chemin que le jeu emprunte déjà, plutôt que par
 	# un second qui finirait par en diverger. La manche est désarmée juste après.
-	_do_start_round(_hosted_weapon_1_idx, 0)
+	# ⚠️ La classe de l'ENTRAÎNEMENT est celle du menu, pas `_hosted_weapon_1_idx`.
+	# Ce chemin lisait la variable de l'hébergement EN LIGNE, qui vaut 0 par défaut
+	# et n'est écrite que sur les chemins d'hébergement : l'entraînement partait
+	# donc toujours en Parasite, quelle que soit la classe choisie. Adrien,
+	# 2026-09-10 : « je n'arrive pas à choisir d'autres classes en mode
+	# entraînement ». Le menu marchait ; c'est ce lancement qui l'ignorait.
+	# On ne réécrit PAS `_hosted_weapon_1_idx` d'ici : c'est un état d'hôte,
+	# celui que `rpc_start_round` envoie.
+	_do_start_round(ui.selected_weapon_index(0), 0)
 
 	round_active = false
 	sandbox_mode = true
@@ -1972,11 +1980,17 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		return
 	cible.apply_dazzle(pic)
 
+## L'index de classe d'une arme, pour le fil — les DIX, et non les quatre d'origine.
+##
+## ⚠️ **Il ne codait que quatre armes** et rendait 0 pour tout le reste : les six
+## classes neuves voyageaient sur le fil comme le Parasite, et le client simulait
+## les balles de l'hôte avec la mauvaise arme — vitesse, portée, lumière, dégâts
+## infligés aux gadgets. Trouvé le 2026-09-10 par le contre-examen d'une enquête
+## sur le mode de tir. Invisible hors ligne : en local et à l'entraînement, la
+## balle ne passe jamais par le fil, et les deux bouts n'ont jamais divergé.
 func _get_weapon_idx(w: WeaponData) -> int:
-	if w == weapon_arbalete: return 3
-	if w == weapon_pompe: return 2
-	if w == weapon_fusil: return 1
-	return 0
+	var idx := _classes.find(w)
+	return idx if idx >= 0 else 0
 
 ## V1.2 — Intensité musicale verticale. Les stems montent avec la tension :
 ## la dernière minute ajoute la batterie, le double danger de mort ajoute
@@ -2044,10 +2058,18 @@ var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 func fusee_disponible(pid: int) -> bool:
 	if pid < 0 or pid >= _fusees_restantes.size():
 		return false
-	# ⚠️ **Le bac à sable ne rend PLUS « toujours vrai » sans condition.** Le
-	# Spectre n'a aucune fusée, et c'est sa classe : lui en donner à
-	# l'entraînement lui ferait éprouver un geste qu'il n'aura jamais en match.
-	if sandbox_mode:
+	# ⚠️ **L'entraînement COMPTE, depuis le 2026-09-10.** Adrien : « je pouvais
+	# lancer un nombre illimité de fusées avec le Parasite ». La gratuité datait
+	# du chantier FUSÉE (`dccdaf6`, 2026-09-02), d'avant les classes : elle
+	# servait à éprouver LA fusée. Depuis que chaque classe a sa propre économie,
+	# elle masquait exactement ce qu'on vient tester à l'entraînement.
+	#
+	# Le reste du bac à sable garde sa gratuité, et ce n'est pas un oubli :
+	# `sandbox_mode` couvre aussi l'hôte qui attend seul et le partage d'après-
+	# match, deux chemins qui ne passent pas par `_do_start_round` et donc ne
+	# réamorcent pas le compteur. Y compter ferait attendre une minute à zéro un
+	# hôte qui aurait tiré sa fusée pendant le match précédent.
+	if sandbox_mode and not training_mode:
 		return _stock_fusees(p1 if pid == 0 else p2) > 0
 	return _fusees_restantes[pid] > 0
 
@@ -2160,7 +2182,7 @@ func rpc_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 
 func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	if not round_active and not sandbox_mode: return
-	if not sandbox_mode and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
+	if (not sandbox_mode or training_mode) and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
 		_fusees_restantes[shooter_id] = maxi(0, _fusees_restantes[shooter_id] - 1)
 	var f := Fusee.new()
 	# Nom explicite ET unique : la graine, partagée par le RPC, l'est aussi —
@@ -2503,7 +2525,7 @@ func _maj_extinction_fusees(delta: float) -> void:
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
 	var shooter = p1 if shooter_id == 0 else p2
-	var weapon = weapon_arbalete if weapon_idx == 3 else (weapon_pompe if weapon_idx == 2 else (weapon_fusil if weapon_idx == 1 else weapon_pistolet))
+	var weapon := weapon_for_index(weapon_idx)
 	# Tir déjà rendu par la prédiction locale : seul l'enregistrement killcam
 	# reste à faire, sur la trajectoire arbitrée par l'hôte.
 	var already_shown := shooter_id == 1 and _consume_predicted_shot(rot)
@@ -3386,14 +3408,14 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.description = "Il ne prend rien : il corrompt ce que l'autre reçoit. Cadence doublée, et un grésillement qui fait douter d'une lumière qui marche encore."
 	weapon_pistolet.rang = 1
 	weapon_pistolet.root = _root(0.10)
-	weapon_pistolet.fusees = _fusees(1, 0.0)
+	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
 	weapon_fusil.rang = 3
 	weapon_fusil.root = _root(0.25)
-	weapon_fusil.fusees = _fusees(1, 0.0)
+	weapon_fusil.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
 
 	weapon_pompe.libelle = "Le Terrassier"
@@ -3407,7 +3429,7 @@ func _batir_catalogue() -> void:
 	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
 	weapon_arbalete.rang = 4
 	weapon_arbalete.root = _root(0.60)
-	weapon_arbalete.fusees = _fusees(1, 0.0)
+	weapon_arbalete.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme", true)
 
 	# ── Les six neuves ───────────────────────────────────────────────────────
@@ -3426,7 +3448,7 @@ func _batir_catalogue() -> void:
 	fumiste.muzzle_flash_intensity = 1.0  # ⚠️ plafonné à 1 par `pic_de_flash`
 	fumiste.muzzle_flash_duration = 0.16
 	fumiste.root = _root(0.30)
-	fumiste.fusees = _fusees(1, 0.0)
+	fumiste.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie")
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
@@ -3439,7 +3461,7 @@ func _batir_catalogue() -> void:
 	incendiaire.damage_edge = 35.0
 	incendiaire.bullet_speed = 6000.0
 	incendiaire.root = _root(0.40)
-	incendiaire.fusees = _fusees(2, 0.0)
+	incendiaire.fusees = _fusees(2, PERIODE_RECHARGE_FUSEE)
 	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises", true)
 
 	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
@@ -3452,7 +3474,7 @@ func _batir_catalogue() -> void:
 	sentinelle.damage_edge = 60.0
 	sentinelle.bullet_speed = 16000.0
 	sentinelle.root = _root(0.50)
-	sentinelle.fusees = _fusees(1, 0.0)
+	sentinelle.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact")
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
@@ -3469,7 +3491,8 @@ func _batir_catalogue() -> void:
 	occulteur.max_spread_bloom_deg = 16.0
 	occulteur.muzzle_flash_intensity = 0.6
 	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
-	occulteur.fusees = _fusees(1, 0.0)
+	occulteur.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
+	occulteur.automatique = true  # la SEULE arme qui tire détente tenue (Adrien, 2026-09-10)
 	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée")
 
 	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
@@ -3532,6 +3555,16 @@ func _root(duree: float, apres_rafale: bool = false) -> RootProfile:
 	r.duree = duree
 	r.apres_rafale = apres_rafale
 	return r
+
+
+## La recharge commune des fusées, en secondes — décision d'Adrien du
+## 2026-09-10 : « une fusée par minute ». Elle vaut pour les SEPT classes qui ne
+## rechargeaient pas du tout ; le Terrassier (18 s) et l'Allumeur (12 s) gardent
+## leur recharge rapide, qui est leur identité de classe, et le Spectre reste à
+## zéro — `recharge_active()` exige un plafond non nul, il ne regagnera jamais
+## rien. Une constante et non sept littéraux : la règle ne peut plus diverger
+## d'une classe à l'autre sans qu'on l'ait écrit.
+const PERIODE_RECHARGE_FUSEE := 60.0
 
 
 func _fusees(stock: int, periode: float) -> FlareProfile:

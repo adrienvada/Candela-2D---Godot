@@ -105,7 +105,18 @@ class_name Protocol
 ##      pour tout le monde, elle vaut désormais de zéro (le Spectre) à trois (le
 ##      Terrassier). Un hôte v15 et un client v14 s'entendraient sur le fil et
 ##      compteraient deux réserves différentes.
-const VERSION := 15
+## 16 — le tir devient SEMI-AUTOMATIQUE pour neuf classes sur dix (décision
+##      d'Adrien, 2026-09-10). La FORME du fil ne change pas — le bit de tir
+##      reste un booléen tenu —, mais son SENS si, comme aux v12 et v15 : un
+##      appui ne vaut plus qu'un tir. Or le client PRÉDIT ses tirs. Un client
+##      v15 face à un hôte v16 prédirait une rafale que l'hôte refuserait, et
+##      afficherait des balles qui n'existent nulle part.
+##
+##      ⚠️ Et `rpc_spawn_bullet` code désormais les DIX classes (0 à 9) au lieu
+##      des quatre armes d'origine. Même signature, donc même empreinte — mais un
+##      client v15 décoderait 4 à 9 comme le Parasite, ce qu'il faisait déjà pour
+##      les six classes neuves avant que le défaut ne soit trouvé.
+const VERSION := 16
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##

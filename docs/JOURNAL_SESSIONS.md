@@ -3467,3 +3467,36 @@ bloquée près de 100 %.
 désormais un root plus long que leur cadence. Détente tenue, on y reste immobile
 en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
 l'a voulue comme telle, et elle se juge en jouant.
+
+## 2026-09-10 — Ce que l'entraînement a révélé (chantier DIX CLASSES, étape 22)
+
+Adrien a essayé les classes à l'entraînement et rapporté quatre choses : le
+Parasite tirait en rafale, lançait des fusées sans fin, n'affichait pas son
+stock — et l'entraînement le gardait prisonnier du Parasite.
+
+Une enquête en quatre volets, chacun contre-examiné par un sceptique qui relisait
+le code cité, a précédé toute modification. **Trois de mes hypothèses sont tombées
+avant la première ligne de code**, et c'est ce qui justifie la méthode : « période
+nulle = recharge instantanée » (faux, `recharge_active()` l'exclut), « le stock se
+resème à chaque image » (faux, la référence est stable), puis « l'index du
+Terrassier est hors bornes » (faux, aucun cri). La vraie cause des fusées infinies
+était une gratuité délibérée, héritée du chantier FUSÉE d'avant les classes.
+
+Et l'entraînement partait en Parasite parce qu'il lisait une variable
+d'hébergement en ligne, qui vaut 0 par défaut. Le menu marchait ; c'est le
+lancement qui l'ignorait. La session qui réécrit la sélection dans le salon ne
+l'aurait pas corrigé : son contrôle vérifie la visibilité, pas la classe équipée.
+
+Trouvé en route, hors de la liste : `_get_weapon_idx` ne codait que quatre armes,
+si bien qu'en ligne les six classes neuves voyageaient comme le Parasite.
+
+⚠️ **Deux pièges nouveaux, et le premier m'a coûté une passe entière.** Cinq suites
+lancées sous `timeout` ont rendu une sortie vide — `timeout` n'existe pas sur
+macOS, rien n'avait tourné, et un filtre sur « ✗ » lisait ce silence comme un
+succès. Puis `test_classes` a rougi sur un contrôle qui choisissait « la première
+classe qui recharge » en l'appelant `terrassier` : quand sept classes se sont
+mises à recharger, la variable a désigné le Parasite sans changer de nom.
+
+Reste le lot gadgets, arbitré par Adrien : recharge d'une minute pour tous, et un
+grésillement devenu batterie — posé au sol, rallumable, qui éteint les torches
+jusqu'au noir, et dont une torche éteinte n'éblouit plus.
