@@ -135,6 +135,9 @@ func _ready() -> void:
 	_menus = args.has("--menus")
 	# Le banc impose sa cadence : sans cela il hériterait du plafond enregistré
 	# dans les préférences et deux exécutions ne seraient plus comparables.
+	# PE3.1 — le banc tient le plafond lui-même : sans ce drapeau, GameSettings
+	# poserait son plafond des menus et `--menus` mesurerait 120 au lieu de la charge.
+	GameSettings.pilotage_externe = true
 	Engine.max_fps = int(_value(args, "--max-fps", "0"))
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_couper_le_son("avant la scène")

@@ -3496,3 +3496,17 @@ Le delta est donc dans le rapport de session, pour qu'Adrien le remette au
 porteur. **À savoir pour les sessions distantes suivantes : le porteur peut être
 local et invisible d'ici ; lire le bloc « Qui travaille sur quoi » du tableau
 avant de conclure qu'il n'y en a aucun.**
+
+**Addendum du 2026-09-10 — PE2 et PE3 lancés sur demande d'Adrien** (« je n'ai
+pas de machine Windows, peut-on attaquer 2 et 3 ? »). `list_sessions` : toutes
+les autres sessions sont inactives (IDLE), aucune ne tient de fichier. **Fichiers
+touchés :** `conditions_de_match.gd` (créé), `tools/test_conditions_de_match.gd`
+(créé), `match_record.gd` (schéma 5), `game_state.gd` (quatre points d'ancrage :
+`_process`, `_do_start_round`, `_do_end_round`, `_solder_le_match`, plus
+`_archive_match_result`), `settings_manager.gd` (plafond par régime),
+`ui.gd` (F6, panneau F3), `tools/bench_framerate.gd` et `tools/banc_pics.gd`
+(`pilotage_externe`), `tools/run_suites.sh` (la suite), `tools/test_rejeu_journal.gd`
+(schéma 5), `project.godot` (`flush_stdout_on_print`), `export_presets.cfg`
+(`tools/*` exclu), `CLAUDE.md`, et six `assets/video/intro/*.ogv.uid` produits
+par l'import. Après toute fusion sur ce chantier : `grep` de
+`_conditions.commencer`, `signaler_arene` et `plafond_effectif`.

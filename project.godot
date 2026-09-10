@@ -29,6 +29,12 @@ boot_splash/image="res://assets/logos/boot.png"
 ; DA1.7, tracé vectoriel à la main sur gabarit) reste dans le dépôt : elle est
 ; propre, elle n'a que le tort de ne plus ressembler au reste du jeu.
 config/icon="res://assets/logos/icone_roman.png"
+; PE2.4 — vider stdout ET user://logs/godot.log à CHAQUE print, en release aussi.
+; Sans ça le fichier n'est écrit qu'à la fermeture propre (RotatedFileLogger ne
+; vide qu'en cas d'erreur ou si ce réglage est vrai) : un plantage jette la fin du
+; journal, c'est-à-dire la seule partie utile. Coût nul en manche — zéro print
+; dans player.gd et bullet.gd.
+run/flush_stdout_on_print=true
 
 [audio]
 

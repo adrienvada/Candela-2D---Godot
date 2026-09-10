@@ -110,7 +110,9 @@ code, sans configuration, sans redirection de port.
   le `.app` (PUID obtenu), sortie 0. Préréglage versionné dans
   `export_presets.cfg`.
 
-  **Piège de diagnostic, à ne pas retomber dedans :** dans un build release, la
+  **Piège de diagnostic, à ne pas retomber dedans** *(vrai jusqu'au 2026-09-10 ;
+  depuis PE2.4, `run/flush_stdout_on_print` vide le journal à chaque `print`, et
+  ce paragraphe décrit l'AVANT)* **:** dans un build release, la
   sortie `print()` est tamponnée et n'est vidée qu'à la **fermeture propre** de
   l'application. Tuer le processus (`pkill`, Ctrl-C) jette tout ce qui suit le
   dernier message d'erreur — ce qui a fait conclure à tort, le 2026-08-16, à un
@@ -3153,6 +3155,21 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un import sur une autre machine produit ce que la garde exige (2026-09-10)
+
+Les vidéos d'intro (`assets/video/intro/*.ogv`, DA6.6) étaient au dépôt, leurs
+`.uid` non : la machine qui les a commitées n'en avait pas produit, ou ne les a
+pas vus. Sur une machine neuve, `--import` les génère, et la garde des assets
+non suivis de `run_suites.sh` — écrite pour qu'un asset jamais commité ne
+meure pas avec un poste — rougit **tout le lot**, sans qu'une seule suite ait
+échoué. Les `.uid` sont déterministes par chemin (vérifié le 2026-08-18), donc
+la réponse est de les commiter, pas de les ignorer.
+
+**La règle :** celui qui ajoute un asset commite ce que l'IMPORT en produit
+(`.import`, `.uid`), pas seulement le fichier — et le vérifie depuis un
+`git status` de l'arbre où l'import a tourné, puisqu'un worktree neuf ne
+contient que ce que git suit.
+
 ### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
 
 Signalé par la session DA7, qui l'a rencontré en tournant le trailer sur le
@@ -4891,8 +4908,9 @@ tirs**. Le dépôt porte exactement l'outil qu'il faut pour ça,
 `AudioManager.diagnostic_ecoute()`, sur **F4**. Il ne rendait rien.
 
 **Tout le traceur sortait sur `if not OS.is_debug_build(): return`.** Écrit pour
-une bonne raison — en release, `print()` est tamponné et vidé à la fermeture
-propre, donc inutile — la conclusion tirée était la mauvaise : *si la console ne
+une bonne raison — en release, `print()` était tamponné et vidé à la fermeture
+propre, donc inutile *(plus depuis PE2.4, le 2026-09-10)* — la conclusion tirée
+était la mauvaise : *si la console ne
 sert à rien, écris ailleurs*, et non *renonce*. **Un outil de diagnostic qui ne
 marche que dans l'éditeur ne diagnostique pas le jeu : il diagnostique
 l'éditeur.** Il écrit désormais dans `user://diagnostic_ecoute.txt`, en ajout,
@@ -17101,7 +17119,7 @@ cet ordre :
    quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
    les testeurs — mais le décider avant d'envoyer un lien.
 
-### PE2 — Instrumentation de l'essai
+### PE2 — Instrumentation de l'essai ✅ PE2.1, PE2.2, PE2.4 livrés le 2026-09-10 — PE2.3 attend Adrien
 
 Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
 qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
@@ -17124,7 +17142,7 @@ ne consigne les conditions.
    fin du journal, c'est-à-dire la seule partie utile. Un fichier écrit en flux,
    ou vidé à chaque fin de manche.
 
-### PE3 — Optimisation, mesurée
+### PE3 — Optimisation, mesurée 🟡 PE3.1 et PE3.4 livrés, PE3.5 audité le 2026-09-10 — PE3.2 et PE3.3 attendent une machine
 
 Préalable : **définir la machine minimale** — jalon **H13**, décision d'Adrien.
 Sans elle, aucune cible n'a de sens : la barre « 1 % bas ≥ 60 » (R5) ne décrit
@@ -17150,6 +17168,98 @@ que la machine où elle a été mesurée. Puis, par rendement décroissant :
 5. **La chauffe des shaders.** Déjà traitée pour le joueur, le sang, la fusée et
    l'onde de choc ; vérifier qu'aucun shader ne compile encore au premier usage
    en match (`test_arena_lighting` en tient une partie).
+
+### Le lot du 2026-09-10 — ce qui se code sans fenêtre, et ce qu'il a appris
+
+**Demande d'Adrien : « je n'ai pas de machine Windows. Peut-on attaquer 2 et
+3 ? »** Oui, pour la part qui se code sans fenêtre. La session a récupéré le
+Godot 4.7.1 Linux de la CI, donc les suites headless tournent ici ; elle n'a
+ni fenêtre ni GPU, donc **aucune mesure nouvelle** — tout ce qui suit est du
+code vérifié par les suites, et les chiffres attendus restent des attentes.
+
+- **PE2.1 — chaque match archive ses conditions.** `conditions_de_match.gd`,
+  et `MatchRecord` passe au **schéma 5** avec la clé `conditions`. Une durée
+  par image lue à l'horloge (`Time.get_ticks_usec`), jamais au delta de
+  traitement — l'encaissement d'un tir ralentit `time_scale` en pleine manche
+  et un relevé au delta y lirait 5 000 fps ; définitions du banc mot pour mot
+  (médiane, 1 % bas = moyenne du centième le plus lent, pire image) pour qu'un
+  chiffre de match se compare à un chiffre de banc sans conversion ; les
+  écarts de plus de 0,5 s (pause en écran partagé, fenêtre gelée) comptés
+  comme des **trous**, pas comme des saccades ; arrêté à la mort, avant la
+  killcam. Le lien y est (RTT moyen et max), et la machine (OS, CPU, GPU,
+  pilote, fenêtre, VRAM). Vérifié : la fumée `--local` archive un
+  enregistrement v5 — 255 images, médiane 145, 1 % bas 113, machine sans GPU
+  puisque headless, et c'est attendu. ⚠️ **Local seulement** : l'envoi au
+  classement construit son propre corps et ne transmet rien de tout ça —
+  c'est PE2.3, et il attend Adrien.
+- **PE2.2 — F6 copie le diagnostic.** Presse-papiers **et**
+  `user://diagnostic.txt` (un presse-papiers se perd au copier suivant), et le
+  panneau F3 s'ouvre pour le dire — un geste sans retour visible passe pour un
+  geste raté. ⚠️ **Pas F4, comme prévu d'abord** : F4 est la trace d'écoute
+  d'`AudioManager` (`_tracer_ecoute`) et F5 l'éditeur de cartes. Un grep
+  limité à trois fichiers ne l'avait pas vu ; la feuille de route, si.
+- **PE2.4 — le journal survit au plantage.** `run/flush_stdout_on_print=true`
+  dans `project.godot`, vérifié dans la source de Godot 4.7
+  (`core/io/logger.cpp` : `RotatedFileLogger::logv` ne vide le fichier qu'en
+  erreur, ou sous ce réglage). Coût nul en manche : zéro `print` dans
+  `player.gd` et `bullet.gd`. `CLAUDE.md` dit désormais ce que le code fait ;
+  les deux passages de ce document qui décrivent l'ancien tamponnage (Phase 3,
+  piège « Un diagnostic qui ne tourne pas là où l'on joue ») portent une note
+  datée plutôt qu'une réécriture.
+- **PE3.1 — un plafond hors arène.** `GameSettings.PLAFOND_MENU = 120` dans
+  les menus, `PLAFOND_HORS_FOCUS = 30` quand la fenêtre a perdu le focus, et
+  **jamais en arène** — `round_active or sandbox_mode`, donc l'entraînement et
+  le salon d'attente restent déplafonnés, et un hôte qui passe une seconde sur
+  une autre fenêtre simule toujours pour l'adversaire. Un choix du joueur plus
+  bas l'emporte. Les bancs (`bench_framerate`, `banc_pics`) posent
+  `pilotage_externe` pour que `--menus` mesure la charge et non le plafond.
+  **Ces deux nombres sont des valeurs de départ**, pas des décisions. Attendu,
+  non mesuré : les menus passent de ~200 à 120 images par seconde, ce qui se
+  lit au F3 sans banc.
+- **PE3.4 — `tools/*` hors de l'export.** `exclude_filter="tools/*"` sur les
+  trois préréglages. Vérifié avant : aucun `res://tools/` dans le code de jeu,
+  aucun `.tscn` ne pointe dedans, et les deux `class_name` du dossier
+  (`PeerSpy`, `RenduCommun`) n'ont aucun usage à la racine. Gain attendu : les
+  10 Mo de captures et les scripts de test ; non mesuré, l'export n'étant pas
+  possible ici.
+- **PE3.5 — l'audit des shaders.** Vingt-trois `.gdshader`. Vingt et un sont
+  préchargés en `const` ou chargés par les menus (`intro_planches.gd`,
+  `menu_hub.gd`, en `load()` hors match — hors sujet). **Deux ne sont
+  référencés par aucun code de jeu** : `distorsion_eblouissement.gdshader` et
+  `poussiere_faisceau.gdshader` — le `poussiere_faisceau` du code est un
+  identifiant d'EFFET (`effect_policy.gd`), pas ce fichier. Signalés, pas
+  supprimés : hors périmètre. **Ce que l'audit ne ferme pas** : un `preload`
+  charge le shader, mais le programme GL se compile au premier DESSIN — seule
+  `Fusee.prechauffer()` dessine d'avance. Une chauffe générale est un pas
+  séparé, et il se juge à `banc_pics` (des pics groupés au début sont une
+  compilation, des pics étalés non).
+
+**Ce qui attend Adrien, et ne se commence pas :**
+
+- **PE2.3** — remonter les conditions par Supabase : quelles clés, et les
+  matchs amicaux aussi ? Le client est prêt à les lire dans l'archive.
+- **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
+  des pics ; et désormais, gratuitement, les `conditions` de ses propres
+  matchs dans `user://match_history.json` — c'est le même relevé, pris en
+  jouant.
+- **PE3.3** — lire `vram_mo` et `textures_mo` dans le diagnostic F6 avant toute
+  décision d'import. ⚠️ **0 veut dire « non mesuré par ce pilote », jamais
+  « aucune texture »** — le résumé headless le montre.
+- **H13** — la machine minimale.
+
+**Trois choses payées en route.** Deux contrôles textuels de `test_classes.gd`
+épinglaient la FORME de ce lot — « le schéma est passé à 4 », et la parenthèse
+fermante après `_slug_de_classe(p2)` — et ont rougi sans qu'une classe ait
+bougé : le premier vérifie désormais « 4 ou plus » (l'égalité exacte vit dans
+`test_rejeu_journal.gd`), le second l'appel et non sa ponctuation. C'est le
+piège « un contrôle textuel épingle un identifiant, jamais un sens », payé une
+fois de plus. L'import sur cette machine a généré six
+`.uid` pour les vidéos `.ogv` de l'intro, absents du dépôt : la garde des
+assets non suivis a rougi le lot entier (piège « Un import sur une autre
+machine produit ce que la garde exige »). Et `get_video_adapter_driver_info()`
+vit sur `OS`, pas sur `RenderingServer` : le script ne compilait pas, la suite
+annonçait « tous les tests passent », et c'est la garde `SCRIPT ERROR` du
+lanceur qui l'aurait attrapé — pas le compteur de la suite.
 
 ### PE4 — Mise en main
 

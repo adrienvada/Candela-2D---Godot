@@ -1002,6 +1002,13 @@ var dbg_noeuds: Label
 var dbg_cartes: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
+var _f6_was_pressed: bool = false
+## PE2.2 — la ligne d'indication du panneau F3 (F6 copie le diagnostic), et
+## l'instant jusqu'auquel elle affiche la confirmation d'une copie.
+var dbg_note_label: Label
+var _dbg_note_jusqua_msec: int = 0
+const DIAG_INDICATION := "F6 — copier le diagnostic (presse-papiers + user://diagnostic.txt)"
+const DIAG_PATH := "user://diagnostic.txt"
 
 const DEBUG_SCAN_INTERVAL := 0.25
 var _debug_scan_accum: float = 0.0
@@ -1542,6 +1549,16 @@ func _update_debug(_delta: float) -> void:
 		debug_panel.visible = debug_mode_active
 	_f3_was_pressed = f3_pressed
 
+	# PE2.2 — F6 copie le diagnostic, panneau ouvert ou non : un testeur à qui
+	# l'on dit « appuie sur F6 et colle » n'a rien d'autre à savoir. ⚠️ Pas F4 :
+	# c'est la trace d'écoute d'`AudioManager` (`_tracer_ecoute`), et F5 est pris
+	# par l'éditeur de cartes — grep `KEY_F` sur TOUT le dépôt avant d'en prendre
+	# une, pas sur trois fichiers.
+	var f6_pressed := Input.is_physical_key_pressed(KEY_F6)
+	if f6_pressed and not _f6_was_pressed:
+		_copier_le_diagnostic()
+	_f6_was_pressed = f6_pressed
+
 	if not debug_mode_active:
 		return
 
@@ -1616,6 +1633,83 @@ func _update_debug(_delta: float) -> void:
 	# fichiers pour en lire la taille, ce qui n'a rien à faire dans une frame.
 	if _assets_summary != "":
 		net_debug_label.text += "\n" + _assets_summary
+
+	# La confirmation de copie ne reste que quelques secondes, puis la ligne
+	# redevient l'indication.
+	if _dbg_note_jusqua_msec > 0 and Time.get_ticks_msec() > _dbg_note_jusqua_msec:
+		_dbg_note_jusqua_msec = 0
+		dbg_note_label.text = DIAG_INDICATION
+
+## PE2.2 — le diagnostic, en un geste.
+##
+## Ce qu'un testeur ne saura pas décrire — sa carte graphique, son pilote, la
+## cadence de son dernier match, par où passe son lien — tient dans un texte
+## qu'il n'a qu'à coller. Il part au presse-papiers ET dans `user://diagnostic.txt`
+## (un presse-papiers se perd au premier copier suivant ; le fichier reste), et
+## le panneau F3 s'ouvre pour le dire — sans retour visible, un geste à l'aveugle
+## passe pour un geste raté.
+func _copier_le_diagnostic() -> void:
+	var texte := diagnostic_texte()
+	DisplayServer.clipboard_set(texte)
+	var fichier := FileAccess.open(DIAG_PATH, FileAccess.WRITE)
+	var ecrit := fichier != null
+	if ecrit:
+		fichier.store_string(texte)
+		fichier.close()
+	debug_mode_active = true
+	debug_panel.visible = true
+	dbg_note_label.text = ("Diagnostic copié — presse-papiers + %s" % DIAG_PATH) if ecrit \
+		else "Diagnostic copié dans le presse-papiers (fichier non écrit)"
+	_dbg_note_jusqua_msec = Time.get_ticks_msec() + 4000
+
+## Le texte du diagnostic : la machine, les réglages, le réseau, l'instant, et
+## les CONDITIONS du dernier match archivé (schéma 5 de `MatchRecord`). La mise
+## en forme est dans `ConditionsDeMatch.texte_diagnostic` ; ici, seulement ce
+## qu'on y met — rien de nominatif au-delà de ce que F3 affiche déjà.
+func diagnostic_texte() -> String:
+	var gs := get_parent()
+	var instant := {
+		"images_par_s": Engine.get_frames_per_second(),
+		"plafond_moteur": Engine.max_fps,
+		"lumieres": _debug_light_count,
+		"noeuds_arene": _debug_arena_nodes,
+	}
+	if gs is GameState and is_instance_valid(gs.particle_pool):
+		instant["particules"] = "%d / %d" % [gs.particle_pool.active_count(), ParticlePool.MAX_ACTIVE]
+	var reglages := {
+		"vsync": GameSettings.vsync_enabled,
+		"plafond_choisi": GameSettings.fps_cap,
+		"plafond_effectif": GameSettings.plafond_effectif(),
+		"resolution_index": GameSettings.resolution_index,
+	}
+	var mode := "ecran_scinde"
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: mode = "en_ligne_hote"
+		NetworkManager.GameMode.ONLINE_CLIENT: mode = "en_ligne_client"
+	var reseau := {
+		"transport": "ENet" if NetworkManager.transport == NetworkManager.Transport.ENET else "EOS",
+		"mode": mode,
+		"epic": NetworkManager.eos_state_label(),
+		"lien": _eos_network_type_label(),
+		"nat": _eos_nat_label(),
+		"rtt_ms": round(NetworkManager.rtt_ms) if NetworkManager.has_rtt else "—",
+		"commandes": _input_relay_label(),
+	}
+	var dernier := {}
+	var historique := MatchRecord.load_history()
+	if not historique.is_empty() and historique[-1] is Dictionary:
+		var e: Dictionary = historique[-1]
+		for cle in ["horodatage", "mode", "carte", "classe_j1", "classe_j2", "duree", "vainqueur", "forfait"]:
+			if e.has(cle):
+				dernier[cle] = e[cle]
+		dernier["conditions"] = e.get("conditions", {})
+	return ConditionsDeMatch.texte_diagnostic([
+		["Machine", ConditionsDeMatch.machine()],
+		["Réglages", reglages],
+		["Réseau", reseau],
+		["Instantané", instant],
+		["Dernier match", dernier],
+	])
 
 ## Ligne réseau du panneau F3 : de quoi diagnostiquer une session en ligne sans
 ## sortir du jeu — par où passe le lien, à travers quel NAT, sous quelle identité.
@@ -2900,6 +2994,15 @@ func _build_debug_panel() -> void:
 	Charte.appareil(net_debug_label, T_MENTION)
 	net_debug_label.add_theme_color_override("font_color", COLOR_DIM)
 	debug_vbox.add_child(net_debug_label)
+
+	# PE2.2 — l'indication F6, dans le même registre que la ligne réseau.
+	dbg_note_label = Label.new()
+	dbg_note_label.text = DIAG_INDICATION
+	dbg_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dbg_note_label.custom_minimum_size = Vector2(320, 0)
+	Charte.appareil(dbg_note_label, T_MENTION)
+	dbg_note_label.add_theme_color_override("font_color", COLOR_DIM)
+	debug_vbox.add_child(dbg_note_label)
 
 	debug_panel.add_child(debug_vbox)
 	add_child(debug_panel)

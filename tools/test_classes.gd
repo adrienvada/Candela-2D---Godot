@@ -1893,7 +1893,12 @@ func _test_archive() -> void:
 	var MR := load("res://match_record.gd")
 	var MHV := load("res://match_history_view.gd")
 
-	_check("le schéma est passé à 4", MR.SCHEMA_VERSION == 4,
+	# « Au moins 4 », pas « exactement 4 » : cette suite vérifie que le journal
+	# porte les CLASSES (schéma 4), pas qu'il n'a plus bougé depuis. Le schéma
+	# est passé à 5 le 2026-09-10 (PE2.1, les conditions de match) et cette
+	# égalité a rougi sans qu'aucune classe ait changé — un contrôle qui épingle
+	# un numéro, pas un sens. L'égalité exacte vit dans `test_rejeu_journal.gd`.
+	_check("le schéma porte les classes (4 ou plus)", MR.SCHEMA_VERSION >= 4,
 		str(MR.SCHEMA_VERSION))
 
 	var rec: Dictionary = MR.build(0, 42.0, "Pistolet silencieux", "Carabine double",
@@ -1944,7 +1949,7 @@ func _test_archive() -> void:
 	# ── Et le jeu la passe vraiment ────────────────────────────────────────
 	var gs := FileAccess.get_file_as_string("res://game_state.gd")
 	_check("game_state archive le slug de classe des deux joueurs",
-		gs.contains("_slug_de_classe(p1),") and gs.contains("_slug_de_classe(p2))"))
+		gs.contains("_slug_de_classe(p1),") and gs.contains("_slug_de_classe(p2)"))
 	_check("et il rend vide plutôt qu'un repli",
 		gs.contains('return String(classe.slug()) if classe != null else ""'))
 

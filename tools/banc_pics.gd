@@ -61,6 +61,7 @@ func _ready() -> void:
 	_vue_unique = args.has("--vue-unique")
 	_couper_le_son("avant la scène")
 
+	GameSettings.pilotage_externe = true  # PE3.1 — voir bench_framerate.gd
 	Engine.max_fps = 0
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	print("=== Banc des pics — d'où vient le 1 %% bas ===")

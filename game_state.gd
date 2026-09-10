@@ -18,6 +18,14 @@ var time_left: float = MatchRecord.ROUND_DURATION
 var round_active: bool = false
 var sandbox_mode: bool = false
 
+## PE2.1 — le relevé de cadence de la manche en cours, archivé avec le match
+## (voir `conditions_de_match.gd`). Commencé au départ de la manche, arrêté à
+## la mort — avant la killcam.
+var _conditions := ConditionsDeMatch.new()
+## PE3.1 — le dernier régime signalé à `GameSettings`, pour ne le dire qu'au
+## changement et non à chaque image.
+var _arene_signalee := false
+
 ## Entraînement solitaire en cours.
 ##
 ## Distinct de `sandbox_mode`, qui couvre aussi l'hôte en ligne resté seul : ces
@@ -655,6 +663,7 @@ func _solder_le_match() -> void:
 	_abort_killcam()
 	_restore_viewports()
 	round_active = false
+	_conditions.arreter()
 	# `sandbox_mode` ne parle PAS de l'adversaire, il parle de l'absence de
 	# manche : sans lui, `player.gd` cesse de traiter les commandes et l'hôte se
 	# retrouve immobile derrière son menu. Il reste donc des deux côtés du
@@ -1316,6 +1325,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	time_left = round_time
 	round_active = true
 	game_over = false
+	_conditions.commencer()
 	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
 	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
 	# seuil — soit pendant ses quatre premières minutes.
@@ -1373,6 +1383,15 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	ui.poser_bilan(p1_session_wins, p2_session_wins)
 
 func _process(delta):
+	# PE2.1 — une image rendue, et le lien du moment. Négatif = pas de lien.
+	_conditions.echantillonner(NetworkManager.rtt_ms if NetworkManager.has_rtt else -1.0)
+	# PE3.1 — le régime de rendu suit l'arène : manche comptée, entraînement ou
+	# salon d'attente sont « en arène » ; tout le reste est menu.
+	var en_arene := round_active or sandbox_mode
+	if en_arene != _arene_signalee:
+		_arene_signalee = en_arene
+		GameSettings.signaler_arene(en_arene)
+
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		_record_position_history()
 
@@ -2765,6 +2784,9 @@ func _do_end_round(winner_id: int):
 	_round_token += 1
 	var token := _round_token
 	_end_sequence_active = true
+	# PE2.1 — la manche est jouée : le relevé s'arrête AVANT le ralenti de la
+	# killcam, qui n'est pas une saccade.
+	_conditions.arreter()
 
 	# Manches gagnées dans le match en cours. En BO1 une seule suffit, mais le
 	# décompte passe par le format : un BO3 n'aurait rien à changer ici.
@@ -3076,7 +3098,10 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# le nom de l'arme — « Pistolet silencieux » — qui ne désigne plus le
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
-		_slug_de_classe(p2))
+		_slug_de_classe(p2),
+		# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
+		# machine. C'est ce qui manquait à un testeur pour dire « ça rame ».
+		_conditions.resume())
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
