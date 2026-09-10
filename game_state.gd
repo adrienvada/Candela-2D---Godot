@@ -3078,6 +3078,10 @@ func _peut_etre_la_soiree() -> void:
 func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 	# Le match est résolu : plus rien à forfaire dessus.
 	_forfeit_pending = false
+	# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
+	# machine. Calculées une fois : l'archive locale et le rapport au serveur
+	# (PE2.3) doivent porter le même relevé.
+	var conditions := _conditions.resume()
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -3099,13 +3103,11 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
 		_slug_de_classe(p2),
-		# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
-		# machine. C'est ce qui manquait à un testeur pour dire « ça rame ».
-		_conditions.resume())
+		conditions)
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
-	_report_to_ranking(winner_id, forfeit)
+	_report_to_ranking(winner_id, forfeit, conditions)
 
 ## Le slug de la classe d'un joueur, ou une chaîne vide.
 ##
@@ -3143,7 +3145,7 @@ func _local_outcome(winner_id: int) -> String:
 ## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
 ## rapports par leur identifiant de match et confronte les récits. Rien n'est
 ## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
-func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
+func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {}) -> void:
 	var local_idx := _local_player_index()
 	if local_idx < 0 or _match_id.is_empty():
 		return
@@ -3159,6 +3161,11 @@ func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
 		"weapon_self": mine.current_weapon.name if mine and mine.current_weapon else "",
 		"weapon_opponent": theirs.current_weapon.name if theirs and theirs.current_weapon else "",
 		"format": MatchRecord.FORMAT_NAMES.get(MATCH_FORMAT, "BO1"),
+		# PE2.3 (décision d'Adrien, 2026-09-10) — les conditions voyagent avec le
+		# rapport des matchs EN LIGNE, amicaux et classés : le serveur les passe
+		# au tamis et ne refuse jamais un rapport pour elles. L'écran scindé et
+		# l'entraînement ne passent pas par ici, donc n'envoient rien.
+		"conditions": conditions,
 	})
 
 ## Archive un match gagné par abandon de l'adversaire.

@@ -423,6 +423,11 @@ tables, c'est la Row Level Security, pas le secret de cette clé. La clé
 **secrète**, elle, n'entre jamais dans le jeu : les Edge Functions la reçoivent
 par variable d'environnement.
 
+Depuis le 2026-09-10 (PE2.3), chaque rapport de match **en ligne** emporte aussi
+les conditions du match — cadence, lien, système, carte graphique, pilote —
+telles que le jeu les archive en local. Détail et phrase d'information aux
+testeurs : [docs/SUPABASE.md](docs/SUPABASE.md#pe23--les-conditions-de-match-remontent-avec-le-rapport-2026-09-10).
+
 Déploiement du schéma et des fonctions : [docs/SUPABASE.md](docs/SUPABASE.md).
 
 ---

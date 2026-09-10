@@ -3510,3 +3510,12 @@ touchés :** `conditions_de_match.gd` (créé), `tools/test_conditions_de_match.
 (`tools/*` exclu), `CLAUDE.md`, et six `assets/video/intro/*.ogv.uid` produits
 par l'import. Après toute fusion sur ce chantier : `grep` de
 `_conditions.commencer`, `signaler_arene` et `plafond_effectif`.
+
+**Addendum PE2.3, 2026-09-10.** Sur le « oui » d'Adrien à la version minimale.
+Fichiers touchés en plus : `supabase/migrations/20260910120000_match_conditions.sql`
+(créé), `supabase/functions/_shared/match_report.ts` et `match_report_test.ts`,
+`supabase/functions/report/index.ts`, `ranked_identity.gd` (le rejeu emporte
+les conditions), `game_state.gd` (`_report_to_ranking` prend les conditions),
+`tools/test_conditions_de_match.gd`, `docs/SUPABASE.md`, `README.md`. Deno
+installé ici pour les tests hors ligne (95 verts). **Rien n'est déployé** :
+jalon H14, Adrien seul.

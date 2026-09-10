@@ -2424,6 +2424,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
 | **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
@@ -17119,7 +17120,7 @@ cet ordre :
    quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
    les testeurs — mais le décider avant d'envoyer un lien.
 
-### PE2 — Instrumentation de l'essai ✅ PE2.1, PE2.2, PE2.4 livrés le 2026-09-10 — PE2.3 attend Adrien
+### PE2 — Instrumentation de l'essai ✅ PE2.1 à PE2.4 livrés le 2026-09-10 — le déploiement de PE2.3 est le jalon H14
 
 Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
 qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
@@ -17137,6 +17138,7 @@ ne consigne les conditions.
    (Phase 4) : une table de plus, une Edge Function de plus, aucune donnée
    nominative au-delà du PUID déjà envoyé avec les matchs classés. À trancher
    par Adrien : ce qui remonte, et si les matchs amicaux remontent aussi.
+   ✅ **Tranché le 2026-09-10** — voir « Décisions actées » et le lot du jour.
 4. **Un journal qui survit au plantage.** Piège connu : en release, `print()`
    est tamponné et vidé à la fermeture propre seulement ; un plantage jette la
    fin du journal, c'est-à-dire la seule partie utile. Un fichier écrit en flux,
@@ -17206,6 +17208,21 @@ code vérifié par les suites, et les chiffres attendus restent des attentes.
   les deux passages de ce document qui décrivent l'ancien tamponnage (Phase 3,
   piège « Un diagnostic qui ne tourne pas là où l'on joue ») portent une note
   datée plutôt qu'une réécriture.
+- **PE2.3 — les conditions remontent avec le rapport.** Tranché par Adrien le
+  2026-09-10, version minimale : elles voyagent avec le rapport des matchs **en
+  ligne**, amicaux et classés, **tous les champs** du schéma 5, et une phrase
+  d'information aux testeurs (dans `docs/SUPABASE.md`). Pas d'envoi séparé pour
+  l'écran scindé ni l'entraînement : ils ne rapportent rien, et les couvrir
+  demanderait un identifiant de machine anonyme — un chantier à part. Livré en
+  trois pièces : la migration `20260910120000_match_conditions.sql` (colonne
+  `conditions jsonb`, `report_match` avec `p_conditions` en dernier et un
+  défaut, vue `conditions_de_match` qui aplatit ce qu'on lit), le tamis
+  `parseConditions` dans `_shared/match_report.ts` (liste blanche clé par clé,
+  **jamais un motif de refus** — un relevé mal formé ne doit pas faire perdre
+  un match au classement, même arbitrage que le format inconnu ramené à BO1),
+  et le corps du rapport côté jeu, rejeu du journal compris. Vérifié : 95 tests
+  Deno verts, six nouveaux. ⚠️ **Rien n'est déployé** : `db push` puis
+  `functions deploy report` sont le jalon **H14**, et lui seul les fait.
 - **PE3.1 — un plafond hors arène.** `GameSettings.PLAFOND_MENU = 120` dans
   les menus, `PLAFOND_HORS_FOCUS = 30` quand la fenêtre a perdu le focus, et
   **jamais en arène** — `round_active or sandbox_mode`, donc l'entraînement et
@@ -17236,8 +17253,10 @@ code vérifié par les suites, et les chiffres attendus restent des attentes.
 
 **Ce qui attend Adrien, et ne se commence pas :**
 
-- **PE2.3** — remonter les conditions par Supabase : quelles clés, et les
-  matchs amicaux aussi ? Le client est prêt à les lire dans l'archive.
+- **H14** — déployer PE2.3 : `supabase db push` puis
+  `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
+  juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
+  clients à jour envoient un bloc que la base ignore, sans rien perdre.
 - **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
   des pics ; et désormais, gratuitement, les `conditions` de ses propres
   matchs dans `user://match_history.json` — c'est le même relevé, pris en
@@ -17313,6 +17332,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 
 ---
 

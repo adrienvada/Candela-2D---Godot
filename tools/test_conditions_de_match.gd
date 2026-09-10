@@ -18,6 +18,7 @@ func _init() -> void:
 	_test_machine()
 	_test_diagnostic()
 	_test_archive()
+	_test_rapport_emporte_les_conditions()
 	_test_plafond()
 
 	if _failures == 0:
@@ -169,6 +170,33 @@ func _test_archive() -> void:
 	var sans := MatchRecord.build(1, 3.0, "A", "B", "carte", "local")
 	_check("sans conditions : un dictionnaire vide, jamais une absence de clé",
 		sans.has("conditions") and (sans["conditions"] as Dictionary).is_empty())
+
+# ---------------------------------------------------------------------------
+# PE2.3 — le rapport au serveur emporte les conditions, le rejeu aussi
+# ---------------------------------------------------------------------------
+#
+# Lu dans le TEXTE des deux fichiers, comme `test_torches` lit `game_state.gd` :
+# ni l'un ni l'autre ne se charge en `--script` (autoloads au niveau de la
+# classe), et c'est par le texte que le défaut reviendrait — une fusion qui
+# reprend `_report_to_ranking` d'un côté sans l'autre. Un contrôle qui épingle
+# l'APPEL et non sa ponctuation (voir « le schéma est passé à 4 »).
+
+func _test_rapport_emporte_les_conditions() -> void:
+	print("\n[Le rapport emporte les conditions — PE2.3]")
+	var gs := FileAccess.get_file_as_string("res://game_state.gd")
+	_check("game_state calcule les conditions UNE fois pour l'archive et le rapport",
+		gs.contains("var conditions := _conditions.resume()"))
+	_check("… et les passe au rapport", gs.contains("_report_to_ranking(winner_id, forfeit, conditions)"))
+	_check("… qui les met dans le corps envoyé", gs.contains('"conditions": conditions,'))
+	var ri := FileAccess.get_file_as_string("res://ranked_identity.gd")
+	_check("le rejeu du journal les reprend de l'archive",
+		ri.contains('"conditions": e.get("conditions", {})'))
+	var fn := FileAccess.get_file_as_string("res://supabase/functions/report/index.ts")
+	_check("la fonction Edge les transmet à la base", fn.contains("p_conditions: report.conditions"))
+	var mig := FileAccess.get_file_as_string("res://supabase/migrations/20260910120000_match_conditions.sql")
+	_check("la migration ajoute la colonne", mig.contains("add column conditions jsonb"))
+	_check("… et la fonction SQL la reçoit en dernier, avec un défaut",
+		mig.contains("p_conditions jsonb default null"))
 
 # ---------------------------------------------------------------------------
 # PLAFOND PAR RÉGIME — PE3.1
