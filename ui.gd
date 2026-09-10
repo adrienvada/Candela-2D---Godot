@@ -2576,6 +2576,13 @@ func _create_torch_indicator() -> PanelContainer:
 		icon.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(icon)
+		# Le cadenas du cran plein, DANS l'icône et non à côté (Adrien,
+		# 2026-09-10) : le regard qui vérifie « torche allumée » lit le verrou du
+		# même coup, sans une case de plus à apprendre.
+		var verrou := VerrouTorche.new()
+		verrou.name = "Verrou"
+		verrou.visible = false
+		icon.add_child(verrou)
 
 	var label := Label.new()
 	label.text = "TORCHE"
@@ -2803,7 +2810,35 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 		_set_gadget_style(p_g, vif, teinte)
 
 
-func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
+## Le cadenas du cran plein, dessiné en coin de l'icône de torche.
+##
+## Dessiné et non texturé : huit pixels de haut, où une image générée ne
+## rendrait qu'une tache. Un corps plein, une anse, un cerne d'encre pour se lire
+## sur le fond clair d'une torche allumée comme sur le fond sombre du HUD.
+class VerrouTorche extends Control:
+	const COTE := Vector2(9, 11)
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = COTE
+		set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		offset_left = -COTE.x + 2.0
+		offset_top = -COTE.y + 2.0
+		offset_right = 2.0
+		offset_bottom = 2.0
+
+	func _draw() -> void:
+		var corps := Rect2(0.0, COTE.y * 0.42, COTE.x, COTE.y * 0.58)
+		# L'anse d'abord, le corps la recouvre à sa base.
+		var centre := Vector2(COTE.x * 0.5, corps.position.y)
+		draw_arc(centre, COTE.x * 0.30, PI, TAU, 10, Charte.NOIR, 3.0, true)
+		draw_arc(centre, COTE.x * 0.30, PI, TAU, 10, Charte.AMBRE, 1.5, true)
+		draw_rect(corps.grow(1.0), Charte.NOIR)
+		draw_rect(corps, Charte.AMBRE)
+
+
+func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color,
+		verrouillee: bool = false) -> void:
 	var style := StyleBoxFlat.new()
 	style.set_corner_radius_all(0)
 	style.set_border_width_all(2)
@@ -2831,6 +2866,22 @@ func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) 
 		label.add_theme_color_override("font_color", Charte.HALOGENE)
 	else:
 		label.add_theme_color_override("font_color", Charte.DIM)
+
+	# Le cadenas ne se montre que torche allumée : verrouillée ET éteinte n'existe
+	# pas, et un cadenas sur une torche noire se lirait « torche bloquée ».
+	var verrou := panel.find_child("Verrou", true, false) as Control
+	if verrou != null:
+		verrou.visible = active and verrouillee
+
+
+## La torche de ce joueur est-elle tenue au cran plein ? Toujours faux pour un
+## joueur distant : son fournisseur d'entrées est réseau, et ce verrou ne voyage
+## pas (voir `InputProvider.is_flashlight_locked`).
+func _torche_verrouillee(joueur: Node) -> bool:
+	if joueur == null:
+		return false
+	var fournisseur := joueur.get("input_provider") as InputProvider
+	return fournisseur != null and fournisseur.is_flashlight_locked()
 
 func _set_flare_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
 	if panel == null or panel.get_child_count() == 0:
@@ -7619,7 +7670,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
-		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
+		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1, _torche_verrouillee(p1))
 		_maj_reserves(p1_reserves, 0, p1)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
@@ -7661,7 +7712,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
-		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
+		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2, _torche_verrouillee(p2))
 		_maj_reserves(p2_reserves, 1, p2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#

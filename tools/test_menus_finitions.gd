@@ -205,6 +205,27 @@ func _test_menu_sourd_sous_le_voile() -> void:
 			if String(ligne.get("cle", "")) == "faisceau":
 				sans_faisceau = false
 		_check("plus de jauge FAISCEAU", sans_faisceau)
+	# Le verrou de torche (Adrien, 2026-09-10) : un cadenas dans l'icône, pour le
+	# seul joueur local, et jamais sur une torche éteinte.
+	var base := InputProvider.new()
+	_check("un fournisseur quelconque ne connaît pas de verrou", not base.is_flashlight_locked())
+	base.free()
+	var local := LocalInputProvider.new()
+	local.set("_torch_enclenchee", true)
+	_check("le fournisseur local rend son cran plein", local.is_flashlight_locked())
+	local.free()
+	var panneau: PanelContainer = ui.get("p1_torch")
+	_check("l'icône de torche porte son cadenas",
+		panneau != null and panneau.find_child("Verrou", true, false) != null)
+	if panneau != null and panneau.find_child("Verrou", true, false) != null:
+		var cadenas := panneau.find_child("Verrou", true, false) as Control
+		ui.call("_set_torch_style", panneau, true, Charte.BLEU, true)
+		_check("torche allumée et verrouillée : cadenas visible", cadenas.visible)
+		ui.call("_set_torch_style", panneau, true, Charte.BLEU, false)
+		_check("torche tenue sans verrou : pas de cadenas", not cadenas.visible)
+		ui.call("_set_torch_style", panneau, false, Charte.BLEU, true)
+		_check("torche éteinte : jamais de cadenas", not cadenas.visible)
+
 	main.queue_free()
 	await process_frame
 

@@ -19,6 +19,15 @@ func is_flashlight_pressed() -> bool:
 func reset_flashlight_state() -> void:
 	pass
 
+## Le verrou du cran plein : vrai quand la torche reste allumée gâchette
+## relâchée. Lu par le HUD, qui le dessine en cadenas sur l'icône de torche.
+##
+## ⚠️ **Un état de GESTE, pas de jeu** : il ne se réplique pas. Un fournisseur
+## réseau répond donc toujours faux, et c'est voulu — l'adversaire n'a pas à
+## savoir comment l'autre tient sa torche, seulement si elle est allumée.
+func is_flashlight_locked() -> bool:
+	return false
+
 func is_flare_pressed() -> bool:
 	return false
 

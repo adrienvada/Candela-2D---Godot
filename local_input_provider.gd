@@ -118,6 +118,12 @@ func reset_flashlight_state() -> void:
 	_torch_enclenchee = false
 	_torch_etait_a_fond = false
 
+## Rien ne distinguait « j'éclaire en tenant » de « j'ai verrouillé, je peux
+## lâcher » (relevé par Adrien, 2026-09-10) : lâcher la gâchette en croyant
+## éteindre, dans ce jeu, c'est se trahir. Voir `InputProvider`.
+func is_flashlight_locked() -> bool:
+	return _torch_enclenchee
+
 func is_flare_pressed() -> bool:
 	return Input.is_action_pressed(action_flare)
 

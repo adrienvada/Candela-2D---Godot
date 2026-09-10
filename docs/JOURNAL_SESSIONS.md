@@ -46,7 +46,10 @@ classes », qui l'a demandé),
 « chantier 10 classes » prévenue par message le jour même), et
 **`menu_fiche_classe.gd`, en propre au chantier CLASSES** — recomposé à la
 demande directe d'Adrien le même soir (trois cases en haut, cône de torche,
-gadget en bas), la session prévenue par message ; `menu_icones.gd`, `menu_hub.gd`,
+gadget en bas), la session prévenue par message ; `input_provider.gd` et
+`local_input_provider.gd` (une méthode chacun, `is_flashlight_locked()`, pour le
+cadenas de torche du HUD — fichiers de la session « Allumage torche », qui a
+livré le bouton à deux crans ; rien de son code n'est modifié) ; `menu_icones.gd`, `menu_hub.gd`,
 `charte.gd` (trois constantes `NIVEAU_UI_*`), `tools/run_suites.sh` (une suite
 ajoutée).
 
