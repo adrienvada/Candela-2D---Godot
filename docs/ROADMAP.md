@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-09
+> Dernière mise à jour : 2026-09-10
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -3152,6 +3152,61 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une lumière à énergie zéro compte quand même : quinze par item, et un quadrant est un item (2026-09-10)
+
+Le symptôme, signalé par Adrien : quand un joueur allume sa torche près d'une
+fusée posée, le halo rouge de la fusée est **tranché net par une droite** au lieu
+de s'éteindre en rond. La droite est calée sur la grille de tuiles, à un multiple
+de 16 tuiles (560 px) — la taille par défaut d'un quadrant de `TileMapLayer`
+(`rendering_quadrant_size`). Une session y a passé une journée : la lumière de la
+fusée supprimée, déplacée, éteinte, les occluders retirés, le renderer changé —
+le bord restait identique ; seul `rendering_quadrant_size` le déplaçait (1 tuile :
+dégradé plus doux, 4096 : la fusée disparaît de presque tout le sol).
+
+**Le mécanisme est dans le moteur, et il est documenté.** Godot n'applique
+jamais plus de **15 lumières à un même `CanvasItem`** (`MAX_LIGHTS_PER_ITEM`,
+compteur de 4 bits, codé en dur dans Compatibility comme dans Forward+/Mobile,
+et refusé comme réglage de projet — godot-proposals #9336 ; ticket amont #81147,
+toujours ouvert). Au-delà, les lumières en trop ne s'atténuent pas : elles ne
+sont **pas rendues sur cet item**, tout ou rien, les plus récentes en premier. Or
+un quadrant de `TileMapLayer` est UN `CanvasItem` : le plafond se joue donc par
+carré de 560 px, et sa frontière devient une arête de lumière.
+
+**Ce qui remplissait le plafond n'éclairait rien.** Le recensement des lumières
+`enabled` et visibles à l'instant de la prise `--plan=fusee` donne **23**, dont
+**19 sur le quadrant du faisceau : quinze `Light(e=0.00)`** — les grains de
+poussière de faisceau (V5.5), un `PointLight2D` chacun, énergie 0, jamais
+désactivée. Le commentaire disait « aucune lumière propre » ; pour le renderer
+c'en était une, avec un rectangle de 32 px. À 0,12 s d'intervalle pour 0,9-1,6 s
+de vie, ~10 grains vivants par torche, dans un quadrant qui contient tout le
+cône : 15 grains + fusée + deux torches + une ambiante = 19. La fusée, dernière
+arrivée, était jetée sur ce quadrant-là et gardée sur le voisin (4 lumières).
+
+Le correctif tient en `light.enabled = false` pour `DUST` et `SMOKE` (et `true`
+pour les autres genres — le pool recycle un même nœud d'un genre à l'autre).
+Mesuré au pixel, même plan, même cadrage : l'arête verticale à x=1291 passe d'un
+saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
+(15,5 et 12,5 ailleurs) ; 7 lumières actives, 4 sur le quadrant.
+
+⚠️ **Trois choses à retenir, et la troisième est la plus chère.**
+1. **Énergie zéro n'est pas éteinte.** Une lumière qui n'éclaire rien coûte sa
+   place quand même, et le compteur F3 (`ui.gd::_rescan_debug_counts`) la
+   compte aussi : il aurait affiché 23, pas 7. Toute lumière « décorative »
+   qu'on laisse à 0 pour un temps doit passer par `enabled`.
+2. **Le plafond reste, et une gerbe d'impact peut encore le crever** : 25
+   lumières `BLOOD`/`SPARK` à énergie réelle pendant 0,3-0,8 s. Si un halo se
+   coupe au moment d'un impact, les leviers sont un `rendering_quadrant_size`
+   plus petit (plus d'items, à chiffrer au `bench_framerate`) ou moins de
+   particules éclairantes — pas un cache à invalider, il n'y en a pas.
+3. **Mon premier diagnostic accusait les torches et les balles** — il collait au
+   mécanisme, pas aux nombres : le plan ne contient que 7 vraies lumières, loin
+   des 15. Et la session précédente avait « désactivé le pool sans effet » sans
+   vérifier que les lumières avaient bien disparu. Dans les deux cas, c'est le
+   **recensement par quadrant** qui a tranché : pour chaque `PointLight2D`
+   active, rectangle monde = taille de texture × `texture_scale`, croisé avec
+   les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
+   plausible ne vaut rien tant qu'on n'a pas compté.
 
 ### Une constante partagée par des durées de 1 à 7,5 (2026-09-09)
 
@@ -14999,6 +15054,33 @@ chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
 (`fusee_lancer`, `fusee_atterrit`, `fusee_rebond`, `fusee_eteinte`,
 `fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
 audio à produire » de la liste FU6 tombe donc de lui-même.
+
+### Le carré près de la fusée — deux défauts, résolus le 2026-09-10 (worktree `lights-display-error-3fd1cd`)
+
+Adrien a signalé un halo de fusée tranché net quand une torche s'allume à côté.
+Le diagnostic a mis au jour **deux défauts distincts**, et le premier n'était pas
+la cause du second.
+
+1. **Le décor était éclairé deux fois** (trouvé le 2026-09-09, corrigé dans
+   `rebuild_arena()`). Après duplication des calques par joueur, l'original
+   restait visible dans les deux vues (`visibility_layer` 1, comme les copies) :
+   toute lumière touchant la couche décor éclairait sol et murs une fois sur
+   l'original en mix normal, puis une seconde fois sur la copie en additif. Peu
+   visible sur un halo blanc, flagrant sur un rouge saturé qui écrête. Les
+   originaux et l'habillage sont désormais `hide()` — pas `queue_free()` : ils
+   restent les porteurs des données que lisent `MapData.apply_to_layers()` et
+   `MapGeometry.build_collisions()`. **Vérifié : le carré persistait identique
+   une fois ce doublage corrigé.**
+2. **Les lumières fantômes de la poussière de faisceau** — voir « Pièges
+   connus », *Une lumière à énergie zéro compte quand même*. C'est la cause.
+   Correctif dans `particle_pool.gd::_configure`, mesuré avant/après au pixel
+   sur `--plan=fusee`.
+
+**Non fait, à savoir.** `bench_framerate` n'a pas été relancé : le correctif ne
+fait que retirer des lumières du rendu, il ne peut pas coûter plus. Le quadrant
+reste à 16 tuiles. Le cas d'une gerbe d'impact qui crève le plafond de 15 pour
+une fraction de seconde n'est pas traité — il est documenté au piège, avec ses
+leviers.
 
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 

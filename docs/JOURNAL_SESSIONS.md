@@ -286,6 +286,29 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
+
+**Déclaration : deux fichiers hors de mon périmètre.** `particle_pool.gd`
+(domaine « game feel », plus personne dessus depuis la session SG du 2026-09-09)
+et `game_state.gd` (disputé — le correctif de `rebuild_arena()` y est celui de
+la session précédente sur cette même branche, `lights-display-error-3fd1cd-60`,
+que je reprends et livre). Aucune session ne s'est déclarée sur ces deux
+fichiers au moment d'écrire ; vérifié dans la table ci-dessus.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, « Pièges connus », *Une
+lumière à énergie zéro compte quand même*, et chantier fusée, *Le carré près de
+la fusée*) :
+- `particle_pool.gd::_configure` : les grains `DUST` et `SMOKE` — énergie 0 —
+  ont désormais leur `PointLight2D` **désactivée**, pas seulement à zéro ; les
+  genres éclairants la réactivent (nœuds recyclés). Cause du halo tranché : le
+  plafond moteur de 15 lumières par `CanvasItem`, un quadrant de `TileMapLayer`
+  étant un item, et 15 grains fantômes qui l'occupaient.
+- `game_state.gd::rebuild_arena()` : les calques originaux et l'habillage sont
+  cachés après duplication par joueur — le décor était éclairé deux fois.
+
+**Aucun banc ajouté** : la reproduction est `./tools/run_photos.sh --plan=fusee`,
+qui exige une vraie fenêtre ; la mesure est au pixel, consignée dans la ROADMAP.
+
 ### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
 
 **Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :

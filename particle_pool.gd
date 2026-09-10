@@ -198,6 +198,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		# V4.11 — l'éclat de l'impact : surmultipliée à l'émission, la lumière
 		# retombe à 1.0 en BLOOD_FLASH_DURATION (voir advance()).
 		light.energy = 1.0
+		light.enabled = true # un nœud recyclé peut sortir d'un DUST éteint
 		rb.linear_damp = randf_range(8.0, 15.0) # Turbulence : friction lourde
 		rb.angular_velocity = randf_range(-40.0, 40.0)
 		rb.physics_material_override = _phys_blood
@@ -212,6 +213,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_add
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
+		light.enabled = false
 		rb.linear_damp = randf_range(5.0, 7.0)
 		rb.angular_velocity = randf_range(-6.0, 6.0)
 		rb.physics_material_override = _phys_blood
@@ -231,6 +233,13 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_dust
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
+		# ⚠️ Éteinte, pas seulement à zéro. Une PointLight2D à énergie 0 n'éclaire
+		# rien mais reste une lumière pour le renderer, qui n'en admet que 15 par
+		# item — et un quadrant de TileMapLayer est UN item. Dix grains vivants par
+		# torche suffisaient à saturer le quadrant du faisceau, et la lumière la
+		# plus récente (la fusée) y était jetée : halo tranché net à la frontière
+		# du quadrant, mesuré le 2026-09-10 (19 lumières dont 15 grains à 0).
+		light.enabled = false
 		rb.linear_damp = randf_range(2.5, 4.0)
 		rb.angular_velocity = randf_range(-4.0, 4.0)
 		rb.physics_material_override = _phys_blood
@@ -242,6 +251,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_add
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 1.5
+		light.enabled = true
 		rb.linear_damp = randf_range(1.0, 4.0) # Étincelles volatiles
 		rb.angular_velocity = randf_range(-20.0, 20.0)
 		rb.physics_material_override = _phys_spark
