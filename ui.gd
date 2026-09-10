@@ -204,16 +204,6 @@ const SCREEN_UPDATE := "mise_a_jour"
 ## place de droite était vide et attendait exactement ça.
 const PANEL_SALON := "salon"
 const PANEL_MAPS := "cartes"
-## Le choix de CLASSE — chantier CLASSES, étape 7. Même raisonnement que la
-## galerie de cartes juste au-dessus : la sélection ne mérite pas un écran où
-## descendre puis ressortir, elle mérite le cadre de droite, en grand.
-##
-## ⚠️ **Et elle ne pouvait plus tenir dans le salon.** Quatre boutons y logeaient ;
-## dix classes accompagnées de leur fiche font trois fois la hauteur de la colonne
-## du salon, laquelle porte aussi la carte, la liste des joueurs, le code, et le
-## bouton qui lance. Le salon garde donc une CARTE d'état — ce qui est choisi — et
-## le choix se fait ici, exactement comme pour l'arène.
-const PANEL_CLASSES := "classes"
 ## Une rubrique de réglages = un panneau, entier. Ce qui était réparti sur
 ## plusieurs entrées (résolution, vsync, images par seconde, calibration) tient
 ## désormais dans un seul cadre : on lit sa configuration d'un regard au lieu de
@@ -839,7 +829,7 @@ var weapon_hbox: HBoxContainer
 var p1_weapon_buttons: Array[Button] = []
 var p2_weapon_buttons: Array[Button] = []
 
-## Les fiches de classe du panneau de sélection — **une par joueur**, empilées.
+## Les fiches de classe du salon — **une par joueur**, chacune dans son râtelier.
 ##
 ## ⚠️ **Il n'y en avait qu'une, et elle suivait le dernier survol.** En écran
 ## partagé les deux joueurs choisissent EN MÊME TEMPS, chacun son curseur : J2 ne
@@ -849,6 +839,11 @@ var _fiches_classe: Array[MenuFicheClasse] = []
 var _cartes_classe: Array[Control] = []
 var _cartes_classe_nom: Array[Label] = []
 var _cartes_classe_meta: Array[Label] = []
+## Le sprite de la classe choisie, sur chaque carte de l'affiche du match.
+var _cartes_classe_sprite: Array[TextureRect] = []
+## La colonne du salon — joueurs, code, champ, statut, ouverture —, rangée à côté
+## du râtelier. Sa visibilité se DÉRIVE de ses rangées : voir `_refresh_lobby_block()`.
+var _colonne_salon: VBoxContainer
 
 var mode_group: ButtonGroup
 ## Intention de mode, posée par la navigation. Elle a remplacé la lecture de
@@ -1478,6 +1473,10 @@ func _update_focus_rings() -> void:
 	if NetworkManager.current_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
 		show_p2 = false
 	elif _is_main_menu and _intended_mode != NetworkManager.GameMode.LOCAL_SPLITSCREEN:
+		show_p2 = false
+	# L'entraînement n'a pas de joueur 2, quel que soit le mode visé laissé par
+	# l'écran précédent — voir `_update_weapon_panels_visibility()`.
+	elif _is_main_menu and hub != null and hub.current_id() == SCREEN_TRAINING:
 		show_p2 = false
 	# Le curseur J2 n'existe que pour choisir son arme : ailleurs (carte,
 	# lancer, retour…), la sélection de J1 suffit et reste seule visible.
@@ -3293,7 +3292,7 @@ func _build_menu() -> void:
 ## Déclare l'arborescence et y installe le contenu.
 ##
 ## Les blocs existants sont **réemployés tels quels** : `_build_mode_block()`,
-## `_build_weapon_block()` et la galerie rendent déjà des `Control`. L'étape ne
+## `_build_rateliers()` et la galerie rendent déjà des `Control`. L'étape ne
 ## déplace donc que leur point d'accrochage — c'est ce qui permet de savoir que ce
 ## qui casse vient du déplacement, et de rien d'autre.
 func _build_hub_screens() -> void:
@@ -3356,13 +3355,10 @@ func _build_hub_screens() -> void:
 
 	# --- 1v1 écrans scindés ---------------------------------------------------
 	scinde.add_child(hub.make_entry("PRÉPARER LE MATCH",
-		"Carte et classes choisies à droite. Le bouton qui lance la manche est "
-		+ "là-bas aussi, sous les cartes de classe — près de ce qu'il consomme.",
+		"À droite : l'affiche du match — la carte, et la classe de chacun —, puis "
+		+ "le choix de classe des deux joueurs, côte à côte. Le bouton qui lance "
+		+ "la manche est dessous, près de ce qu'il consomme.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	scinde.add_child(hub.make_entry("CHOISIR SA CLASSE",
-			"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-			+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-			"", COLOR_P1, "", "", false, PANEL_CLASSES))
 	_entree_changer_carte[SCREEN_LOCAL] = hub.make_entry("CHANGER DE CARTE",
 		"Les arènes s'affichent à droite : choisissez-y directement.",
 		"", COLOR_P1, "", "", false, PANEL_MAPS)
@@ -3375,16 +3371,12 @@ func _build_hub_screens() -> void:
 	# l'on part chercher un adversaire EN LIGNE. Le libellé le dit maintenant, et
 	# le bouton du cadre l'achève — « LANCER LA RECHERCHE EN LIGNE ».
 	amical.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Choisissez votre classe juste en dessous — après l'appui, le match part "
+		"Choisissez votre classe à droite, avant l'appui : après, le match part "
 		+ "tout seul. "
 		+ "La recherche vous rend la main : elle continue pendant que vous "
 		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
 		+ "tirée au hasard, résultat hors classement.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	amical.add_child(hub.make_entry("CHOISIR SA CLASSE",
-			"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-			+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-			"", COLOR_P1, "", "", false, PANEL_CLASSES))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
 		SCREEN_FRIENDLY_ONLINE, COLOR_ACCENT, "", "", false, "ill_amical_ligne"))
@@ -3418,14 +3410,10 @@ func _build_hub_screens() -> void:
 	# ferait croire à un choix qui sera écrasé au lancement.
 	for h in [hote, hote_lan]:
 		h.add_child(hub.make_entry("PRÉPARER LE MATCH",
-			"Ouvrez le salon à droite et transmettez ce qu'il affiche. Le bouton "
-			+ "PRÊT y attend, sous la liste des joueurs : le match part quand les "
-			+ "deux se sont déclarés.",
+			"Votre classe se choisit à droite, sous l'affiche du match. Ouvrez-y le "
+			+ "salon et transmettez ce qu'il affiche ; le bouton PRÊT attend sous la "
+			+ "liste des joueurs, et le match part quand les deux se sont déclarés.",
 			"", COLOR_GOLD, "", "", false, PANEL_SALON))
-		h.add_child(hub.make_entry("CHOISIR SA CLASSE",
-				"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-				+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-				"", COLOR_P1, "", "", false, PANEL_CLASSES))
 		var id_h: String = SCREEN_HOST if h == hote else SCREEN_LOCAL_HOST
 		_entree_changer_carte[id_h] = hub.make_entry("CHANGER DE CARTE",
 			"L'hôte choisit l'arène des deux joueurs — les vignettes sont à droite.",
@@ -3433,14 +3421,10 @@ func _build_hub_screens() -> void:
 		h.add_child(_entree_changer_carte[id_h])
 	for j in [invite, invite_lan]:
 		j.add_child(hub.make_entry("PRÉPARER LE MATCH",
-			"Rejoignez le salon à droite ; le bouton PRÊT y attend. Le match part "
-			+ "quand les deux joueurs se sont déclarés, et la carte est celle de "
-			+ "l'hôte.",
+			"Votre classe se choisit à droite, sous l'affiche du match. Rejoignez-y "
+			+ "le salon ; le bouton PRÊT attend dessous. Le match part quand les deux "
+			+ "joueurs se sont déclarés, et la carte est celle de l'hôte.",
 			"", COLOR_GOLD, "", "", false, PANEL_SALON))
-		j.add_child(hub.make_entry("CHOISIR SA CLASSE",
-				"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-				+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-				"", COLOR_P1, "", "", false, PANEL_CLASSES))
 	for id in [SCREEN_HOST, SCREEN_JOIN]:
 		_wire_salon_back(hub.add_back_entry(id,
 			"Ferme le salon et coupe le lien. L'adversaire en est averti.",
@@ -3452,14 +3436,10 @@ func _build_hub_screens() -> void:
 
 	# --- 1v1 compétitif -------------------------------------------------------
 	classe.add_child(hub.make_entry("CHERCHER UN MATCH EN LIGNE",
-		"Votre classe se choisit juste en dessous, avant l'appui : après, le match part tout "
+		"Votre classe se choisit à droite, avant l'appui : après, le match part tout "
 		+ "seul. La fourchette de classement s'élargit avec l'attente ; le bandeau "
 		+ "du haut montre celle qui est cherchée. Le résultat compte.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	classe.add_child(hub.make_entry("CHOISIR SA CLASSE",
-			"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-			+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-			"", COLOR_P1, "", "", false, PANEL_CLASSES))
 	classe.add_child(hub.make_entry("MON RANG",
 		"Votre classement et votre catégorie, affichés à droite.", "", COLOR_GOLD,
 		"mon_rang", "", false, "ill_competitif"))
@@ -3482,13 +3462,9 @@ func _build_hub_screens() -> void:
 	# --- S'entraîner ----------------------------------------------------------
 	entrainement.add_child(hub.make_entry("PRÉPARER L'ENTRAÎNEMENT",
 		"Seul, contre une cible fixe, sur la carte par défaut. La classe se "
-		+ "choisit juste en dessous ; le bouton qui lance est sous les cartes de "
-		+ "classe. Rien n'est enregistré ni classé. Échap pour revenir.",
+		+ "choisit à droite, et le bouton qui lance est dessous. Rien n'est "
+		+ "enregistré ni classé. Échap pour revenir.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
-	entrainement.add_child(hub.make_entry("CHOISIR SA CLASSE",
-			"Les dix classes s'affichent à droite, par rang. Chacune a son arme, "
-			+ "son immobilisation après le tir, sa réserve de fusées et son gadget.",
-			"", COLOR_P1, "", "", false, PANEL_CLASSES))
 	entrainement.add_child(hub.make_entry("CIBLE",
 		"Réglages de la cible.", "", COLOR_DIM, "",
 		NOT_YET + " La cible est fixe, au point d'apparition du joueur 2. Ses "
@@ -3529,11 +3505,6 @@ func _build_hub_screens() -> void:
 	map_gallery.custom_minimum_size = Vector2(0, 470)
 	map_gallery.map_chosen.connect(_on_map_chosen)
 	hub.register_panel(PANEL_MAPS, map_gallery)
-
-	# Le choix de classe suit exactement le même chemin que la galerie : un
-	# panneau, pas un écran. Monté ICI et pas dans le salon — voir
-	# [constant PANEL_CLASSES] pour ce qui n'y tenait plus.
-	hub.register_panel(PANEL_CLASSES, _build_classes_panel())
 
 	hub.register_panel(PANEL_CONTROLS, _build_controls_panel())
 	hub.register_panel(PANEL_DISPLAY, _build_display_panel())
@@ -3651,13 +3622,18 @@ func _build_hub_screens() -> void:
 ## qu'un seul.
 ##
 ## Un nœud n'a qu'un parent : donner `transport_hbox` à trois panneaux le
-## déplacerait simplement dans le dernier. Et `_build_weapon_block()` réassigne
-## `_cartes_classe` à chaque appel — trois appels laisseraient deux rangées de
-## cartes orphelines dans l'arbre, seule la dernière se tenant à jour.
+## déplacerait simplement dans le dernier. Et `_build_affiche_du_match()`
+## réassigne `_cartes_classe` à chaque appel — trois appels laisseraient deux
+## rangées de cartes orphelines dans l'arbre, seule la dernière se tenant à jour.
 ##
-## ⚠️ Depuis l'étape 7 du chantier CLASSES, les râteliers eux-mêmes ne sont plus
-## ici : ils vivent dans [constant PANEL_CLASSES]. Ce bloc n'affiche plus que ce
-## qu'ils ont décidé.
+## ⚠️ **Les râteliers y sont revenus le 2026-09-10.** L'étape 7 du chantier
+## CLASSES les avait sortis dans un panneau à eux, qu'ouvrait une entrée « CHOISIR
+## SA CLASSE » : la fiche d'alors faisait trois fois la hauteur de cette colonne.
+## Adrien n'a pas aimé le détour — *« je veux que ce choix se fasse sur la page de
+## lancement du match, là où on fait prêt »*. Choisir sa classe ailleurs que là
+## où l'on part séparait de nouveau le geste de son objet, exactement ce que
+## l'arbitrage du 2026-08-24 avait retiré à la colonne de gauche. C'est la fiche
+## qui a maigri pour tenir ici, deux fois de front en écran scindé.
 ##
 ## Le panneau est donc unique, et `_refresh_lobby_block()` décide de ce qui s'y
 ## voit selon `_intended_mode` : c'est ce qu'il faisait déjà pour les quatre
@@ -3665,26 +3641,48 @@ func _build_hub_screens() -> void:
 func _build_salon_aside() -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", GAP_S)
-	box.add_child(_build_map_card())
+	box.add_child(_build_affiche_du_match())
 	# Rangée hors de vue dans un conteneur caché : elle doit rester dans l'arbre
 	# pour que son état soit lisible, sans être proposée au joueur.
 	var cachette := Control.new()
 	cachette.hide()
 	cachette.add_child(transport_hbox)
 	box.add_child(cachette)
-	box.add_child(_build_weapon_block())
-	# Le bloc du salon ferme le panneau, dans l'ordre où on s'en sert : qui est
-	# là, par quoi on les fait venir, et le geste qui ouvre la porte.
-	box.add_child(_build_player_list())
-	box.add_child(lobby_code_row)
-	box.add_child(host_ip_row)
-	box.add_child(_build_join_row())
-	box.add_child(lobby_status_label)
-	box.add_child(_build_open_lobby_row())
+
+	# Le râtelier et le bloc du salon, DE FRONT.
+	#
+	# ⚠️ **Empilés, ils sortaient de l'écran.** Un râtelier de dix classes et sa
+	# fiche font près de 480 px de haut ; la liste des joueurs, le code, le statut
+	# et « CRÉER LE SALON » en ajoutaient près de 250 dessous, et le cadre n'en
+	# offre qu'environ 670 au salon entier. Le bouton PRÊT tombait sous le bord de
+	# l'écran, en ligne comme en réseau local. La largeur, elle, était libre : un
+	# seul râtelier en occupe la moitié, et l'écran scindé — le seul à en montrer
+	# deux — n'a justement aucune rangée de salon.
+	var milieu := HBoxContainer.new()
+	milieu.name = "MilieuDuSalon"
+	milieu.alignment = BoxContainer.ALIGNMENT_CENTER
+	milieu.add_theme_constant_override("separation", GAP_M)
+	box.add_child(milieu)
+	milieu.add_child(_build_rateliers())
+
+	_colonne_salon = VBoxContainer.new()
+	_colonne_salon.name = "ColonneSalon"
+	_colonne_salon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_colonne_salon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_colonne_salon.add_theme_constant_override("separation", GAP_S)
+	milieu.add_child(_colonne_salon)
+	# Le bloc du salon, dans l'ordre où on s'en sert : qui est là, par quoi on les
+	# fait venir, et le geste qui ouvre la porte.
+	_colonne_salon.add_child(_build_player_list())
+	_colonne_salon.add_child(lobby_code_row)
+	_colonne_salon.add_child(host_ip_row)
+	_colonne_salon.add_child(_build_join_row())
+	_colonne_salon.add_child(lobby_status_label)
+	_colonne_salon.add_child(_build_open_lobby_row())
 	# **Le geste qui engage ferme le panneau**, dans l'ordre où on s'en sert :
-	# on regarde la carte, on vérifie sa classe, on voit qui est là, on ouvre la
+	# on lit l'affiche, on choisit sa classe, on voit qui est là, on ouvre la
 	# porte — et on part. En écran partagé les rangées de salon sont masquées, et
-	# le bouton se retrouve donc directement sous les cartes de classe.
+	# le bouton se retrouve donc directement sous les deux râteliers.
 	box.add_child(_build_launch_row())
 	return box
 
@@ -4594,8 +4592,10 @@ func _on_hub_screen_changed(id: String) -> void:
 		SCREEN_HOST, SCREEN_JOIN, SCREEN_TRAINING:
 			_apply_queue_kind(false)
 	_accorder_lanceur(id)
+	# `SCREEN_TRAINING` n'y était pas : son panneau restait celui de l'écran
+	# précédent, râtelier de J2 compris. Ajouté le 2026-09-10.
 	if id in [SCREEN_LOCAL, SCREEN_HOST, SCREEN_JOIN, SCREEN_LOCAL_HOST,
-			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED]:
+			SCREEN_LOCAL_JOIN, SCREEN_FRIENDLY, SCREEN_RANKED, SCREEN_TRAINING]:
 		_refresh_map_card()
 		_refresh_lobby_block()
 		_update_weapon_panels_visibility()
@@ -5319,10 +5319,35 @@ func _build_lobby_widgets() -> void:
 	NetworkManager.player_connected.connect(func(_id: int) -> void: _refresh_player_list())
 	NetworkManager.player_disconnected.connect(func(_id: int) -> void: _refresh_player_list())
 
+## Applique l'état du salon, puis en DÉRIVE la colonne qui le porte.
+##
+## La colonne se montre si l'une de ses rangées a quelque chose à montrer, et se
+## cache sinon — en écran scindé et à l'entraînement, où rien ne s'y affiche.
+## Cachée, elle ne prend plus sa part de la largeur ni son écart : le second
+## râtelier de l'écran scindé en a besoin.
+##
+## ⚠️ **Dérivée après coup, jamais posée branche par branche.** La fonction qui
+## pose les rangées compte plusieurs retours anticipés, et son propre commentaire
+## de tête raconte ce qu'un état posé dans une branche a déjà coûté : un bouton
+## resté grisé selon le chemin emprunté (2026-08-26).
+func _refresh_lobby_block() -> void:
+	_poser_les_rangees_du_salon()
+	if _colonne_salon == null:
+		return
+	var a_montrer := false
+	for rangee in _colonne_salon.get_children():
+		var c := rangee as Control
+		# Visible ET non vide : la rangée d'ouverture est un conteneur qui reste
+		# visible quand son bouton est caché, et ne mesure alors plus rien.
+		if c != null and c.visible and c.get_combined_minimum_size().y > 0.0:
+			a_montrer = true
+	_colonne_salon.visible = a_montrer
+
+
 ## Applique l'état du bloc lobby en un seul endroit : quatre combinaisons
 ## (local / hôte / client) × (Internet / LAN) que six connexions de boutons
 ## indépendantes n'arrivaient plus à tenir cohérentes.
-func _refresh_lobby_block() -> void:
+func _poser_les_rangees_du_salon() -> void:
 	# ⚠️ **L'état du lanceur se pose ICI, avant toute branche, et c'est la
 	# deuxième correction du même défaut.**
 	#
@@ -5375,6 +5400,20 @@ func _refresh_lobby_block() -> void:
 		# **Chercher un adversaire, c'est très exactement ne pas en avoir** : ces
 		# deux écrans n'ont aucune raison d'attendre un second joueur. L'état est
 		# posé en tête de fonction, donc ce retour ne le saute plus.
+		return
+
+	# L'entraînement se lance seul, sur ce poste : ni salon à ouvrir, ni code, ni
+	# liste de joueurs. Même raison que la branche des râteliers : le mode visé
+	# est celui de l'écran d'avant, et un détour par « CRÉER » laissait sinon ses
+	# rangées de salon ouvertes au-dessus de « LANCER L'ENTRAÎNEMENT ».
+	if hub != null and hub.current_id() == SCREEN_TRAINING:
+		transport_hbox.hide()
+		lobby_status_label.hide()
+		lobby_code_row.hide()
+		host_ip_row.hide()
+		join_box.hide()
+		lobby_players_box.hide()
+		btn_open_lobby.hide()
 		return
 
 	var mode := selected_network_mode()
@@ -5479,70 +5518,125 @@ func _copy_lobby_code() -> void:
 	DisplayServer.clipboard_set(NetworkManager.lobby_code)
 	lobby_code_engraver.marquer_copie()
 
-## Les deux CARTES d'état du salon : quelle classe part, pour chaque joueur.
+## L'AFFICHE DU MATCH : la classe de J1, l'arène, la classe de J2 — une ligne.
 ##
-## ⚠️ **Ce bloc ne choisit plus rien, et c'est le changement.** Il portait les
-## râteliers ; il porte désormais ce que le râtelier a décidé, exactement comme
-## `_build_map_card()` porte l'arène sans être la galerie. La raison est de place :
-## dix classes et leur fiche font trois fois la hauteur de cette colonne, laquelle
-## doit encore loger la carte, la liste des joueurs, le code de salon et le bouton
-## qui lance.
+## Demandé par Adrien le 2026-09-10 : *« sur la même ligne que l'affichage de
+## l'arène en cours pour le match, il faut aussi que tu mettes le choix de l'arme
+## pour le joueur 1 et le choix pour le joueur 2 »*. L'arène au centre, chaque
+## joueur de son côté : c'est l'ordre de l'écran scindé, où J1 joue à gauche et
+## J2 à droite, et celui des râteliers juste dessous.
 ##
-## Le nom `weapon_hbox` est resté sur la rangée des râteliers, dans le panneau de
-## sélection — c'est bien elle que les bancs regardent quand ils demandent si la
-## préparation de match est exposée.
-func _build_weapon_block() -> Control:
+## Les cartes de classe ne choisissent pas, elles disent ce qui part — comme la
+## carte d'arène ne choisit pas l'arène. `_montrer_rateliers()` cache celle d'un
+## joueur qu'on ne pilote pas depuis cette machine : en ligne, rien n'échange la
+## classe de l'adversaire avant la manche, et l'annoncer serait l'inventer.
+func _build_affiche_du_match() -> Control:
 	var rangee := HBoxContainer.new()
-	rangee.name = "CartesDeClasse"
-	rangee.alignment = BoxContainer.ALIGNMENT_CENTER
+	rangee.name = "AfficheDuMatch"
 	rangee.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rangee.add_theme_constant_override("separation", GAP_S)
 
 	_cartes_classe.clear()
 	_cartes_classe_nom.clear()
 	_cartes_classe_meta.clear()
-	for joueur in [0, 1]:
-		var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
-		var carte := PanelContainer.new()
-		carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# Cliquable pour cycler la classe SANS ouvrir la fiche complète — la
-		# fiche reste le seul endroit où comparer les dix, mais changer
-		# d'avis n'a pas à y passer. `_montrer_rateliers()` cache déjà la
-		# carte du côté qu'on ne pilote pas depuis cette machine (l'adversaire
-		# en ligne) : une carte visible EST une carte qu'on a le droit de
-		# changer, aucun contrôle de plus à écrire ici.
-		carte.mouse_filter = Control.MOUSE_FILTER_STOP
-		carte.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		carte.tooltip_text = "Clic gauche : classe suivante — clic droit : précédente"
-		carte.gui_input.connect(_on_carte_classe_gui_input.bind(joueur))
-		carte.add_theme_stylebox_override("panel",
-			MenuWidgets.make_panel_style(teinte * 0.8, MenuWidgets.CORNER_PANEL, 2))
-
-		var col := VBoxContainer.new()
-		col.add_theme_constant_override("separation", GAP_XXS)
-		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		carte.add_child(col)
-
-		col.add_child(_make_section_label("CLASSE — JOUEUR %d" % (joueur + 1), teinte))
-
-		var nom := Label.new()
-		Charte.enseigne(nom, T_APPUI)
-		nom.add_theme_color_override("font_color", Charte.HALOGENE)
-		nom.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		col.add_child(nom)
-
-		var meta := Label.new()
-		Charte.appareil(meta, T_MENTION)
-		meta.add_theme_color_override("font_color", COLOR_DIM)
-		meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		col.add_child(meta)
-
-		rangee.add_child(carte)
-		_cartes_classe.append(carte)
-		_cartes_classe_nom.append(nom)
-		_cartes_classe_meta.append(meta)
+	_cartes_classe_sprite.clear()
+	rangee.add_child(_build_class_card(0))
+	rangee.add_child(_build_map_card())
+	rangee.add_child(_build_class_card(1))
 	return rangee
+
+
+## Une carte de classe de l'affiche : le sprite, à qui, quelle classe, quelle arme.
+##
+## Même gabarit que la carte d'arène qu'elle encadre — vignette, mention, nom,
+## ligne de détail — pour que les trois se lisent comme une seule affiche. Celle
+## de J2 est en miroir, vignette au bord droit : les deux silhouettes tiennent les
+## deux bords, l'arène le centre.
+func _build_class_card(joueur: int) -> Control:
+	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
+	var carte := PanelContainer.new()
+	carte.name = "CarteClasseJ%d" % (joueur + 1)
+	carte.custom_minimum_size = Vector2(0, 116)
+	carte.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Cliquable pour faire défiler la classe sans passer par le râtelier — le
+	# raccourci demandé par Adrien le 2026-09-09, conservé. Une carte visible EST
+	# une carte qu'on a le droit de changer : `_montrer_rateliers()` cache déjà
+	# celle qu'on ne pilote pas, aucun contrôle de plus à écrire ici.
+	carte.mouse_filter = Control.MOUSE_FILTER_STOP
+	carte.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	carte.tooltip_text = "Clic gauche : classe suivante — clic droit : précédente"
+	carte.gui_input.connect(_on_carte_classe_gui_input.bind(joueur))
+	carte.add_theme_stylebox_override("panel",
+		MenuWidgets.make_panel_style(teinte * 0.8, MenuWidgets.CORNER_PANEL, 2))
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", GAP_S)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	carte.add_child(row)
+
+	var vignette := PanelContainer.new()
+	vignette.custom_minimum_size = Vector2(88, 88)
+	vignette.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = MenuFicheClasse.FOND_SPRITE
+	style.set_border_width_all(1)
+	style.border_color = Color(teinte.r, teinte.g, teinte.b, 0.45)
+	style.set_corner_radius_all(MenuWidgets.CORNER_BADGE)
+	style.set_content_margin_all(4)
+	vignette.add_theme_stylebox_override("panel", style)
+
+	var sprite := TextureRect.new()
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vignette.add_child(sprite)
+
+	var textes := VBoxContainer.new()
+	textes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	textes.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	textes.add_theme_constant_override("separation", GAP_XXS)
+	textes.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var aligne := HORIZONTAL_ALIGNMENT_LEFT if joueur == 0 else HORIZONTAL_ALIGNMENT_RIGHT
+
+	var mention := Label.new()
+	mention.text = "JOUEUR %d" % (joueur + 1)
+	Charte.appareil(mention, T_MENTION, Charte.POIDS_APPUI)
+	mention.add_theme_color_override("font_color", teinte)
+	mention.horizontal_alignment = aligne
+	mention.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	textes.add_child(mention)
+
+	var nom := Label.new()
+	Charte.enseigne(nom, T_APPUI)
+	nom.add_theme_color_override("font_color", Charte.HALOGENE)
+	nom.horizontal_alignment = aligne
+	nom.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	nom.clip_text = true
+	nom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	textes.add_child(nom)
+
+	var meta := Label.new()
+	Charte.appareil(meta, T_MENTION)
+	meta.add_theme_color_override("font_color", COLOR_DIM)
+	meta.horizontal_alignment = aligne
+	meta.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	meta.clip_text = true
+	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	textes.add_child(meta)
+
+	if joueur == 0:
+		row.add_child(vignette)
+		row.add_child(textes)
+	else:
+		row.add_child(textes)
+		row.add_child(vignette)
+
+	_cartes_classe.append(carte)
+	_cartes_classe_nom.append(nom)
+	_cartes_classe_meta.append(meta)
+	_cartes_classe_sprite.append(sprite)
+	return carte
 
 
 func _on_carte_classe_gui_input(event: InputEvent, joueur: int) -> void:
@@ -5577,84 +5671,50 @@ func _cycler_classe(joueur: int, sens: int) -> void:
 			return
 
 
-## Le panneau de SÉLECTION DE CLASSE — chantier CLASSES, étape 7.
+## Les deux RÂTELIERS du salon, côte à côte : J1 à gauche, J2 à droite — comme
+## leurs vues en écran scindé, et comme leurs cartes sur l'affiche au-dessus.
 ##
-## Demandé par Adrien le 2026-09-09 : « le menu de sélection d'armes évolue pour
-## donner lieu à un menu de sélection de classe, qui décline également une
-## description, le gadget, les dégâts et caractéristiques de l'arme ».
-##
-## ## Deux colonnes de noms, une fiche
-##
-## Les deux râteliers restent côte à côte parce que l'écran partagé a deux
-## curseurs vivants EN MÊME TEMPS : une bascule « J1 / J2 » aurait obligé les deux
-## joueurs à se passer un unique râtelier. La fiche, elle, est unique et suit le
-## DERNIER survol, quel que soit le côté — deux fiches ne tiendraient pas, et
-## surtout personne ne lit deux fiches à la fois.
+## ⚠️ **L'écran scindé est le cas qui dimensionne.** Deux curseurs y vivent EN
+## MÊME TEMPS, chacun sa liste et sa fiche : une bascule « J1 / J2 » aurait
+## obligé les deux joueurs à se passer un unique râtelier, et une fiche commune
+## était écrasée par le moindre mouvement de l'autre (relevé par Adrien le
+## 2026-09-09). C'est cette double largeur qui a réduit la fiche au sprite, au
+## gadget et aux jauges (Adrien, 2026-09-10). Partout ailleurs, un seul râtelier
+## s'affiche : le même, pour un joueur.
 ##
 ## ## La liste s'ordonne par RANG
 ##
 ## C'est la progression que le joueur connaît, celle des dix paliers de lumière.
 ## L'ordre du catalogue, lui, est l'ordre historique des index — Parasite,
 ## Illusionniste, Terrassier, Braconnier, puis les six neuves — et il ne raconte
-## rien. C'est précisément pour ça que l'index de classe voyage désormais en
-## métadonnée : voir [constant META_CLASSE_INDEX].
-func _build_classes_panel() -> Control:
-	var col := VBoxContainer.new()
-	col.name = "PanneauClasses"
-	col.add_theme_constant_override("separation", GAP_S)
-	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# Sans plancher, un enfant qui s'étire dans une colonne alignée en haut n'a
-	# droit qu'à sa taille minimale — c'est le réglage que la galerie de cartes
-	# porte déjà, et pour la même raison.
-	col.custom_minimum_size = Vector2(0, 470)
-
-	var rangee := HBoxContainer.new()
-	rangee.add_theme_constant_override("separation", GAP_M)
-	rangee.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(rangee)
-
+## rien. C'est précisément pour ça que l'index de classe voyage en métadonnée :
+## voir [constant META_CLASSE_INDEX]. Le numéro de rang, lui, ne s'affiche plus :
+## l'ordre le dit déjà.
+##
+## Le nom `weapon_hbox` est resté sur cette rangée : c'est elle que les bancs
+## regardent quand ils demandent si la préparation de match est exposée.
+func _build_rateliers() -> Control:
 	p1_weapon_group = ButtonGroup.new()
 	p2_weapon_group = ButtonGroup.new()
 
 	weapon_hbox = HBoxContainer.new()
 	weapon_hbox.name = "Rateliers"
+	weapon_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	weapon_hbox.add_theme_constant_override("separation", GAP_S)
-	rangee.add_child(weapon_hbox)
 
+	_fiches_classe.clear()
 	p1_vbox = _build_class_station(0)
 	p2_vbox = _build_class_station(1)
 	weapon_hbox.add_child(p1_vbox)
 	weapon_hbox.add_child(p2_vbox)
-
-	# Empilées, et dans l'ordre des joueurs : « en dessous de celle du joueur 1 »,
-	# demande d'Adrien du 2026-09-09.
-	var pile := VBoxContainer.new()
-	pile.name = "Fiches"
-	pile.add_theme_constant_override("separation", GAP_XS)
-	pile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	rangee.add_child(pile)
-
-	_fiches_classe.clear()
-	for joueur in [0, 1]:
-		var fiche := MenuFicheClasse.new()
-		fiche.name = "FicheJ%d" % (joueur + 1)
-		# ⚠️ **Compactes des DEUX côtés, même quand une seule s'affiche.** Une
-		# fiche qui change de gabarit selon le mode obligerait à la reconstruire
-		# à chaque bascule — or elle porte des boutons, des connexions et un
-		# état de sélection. Le gabarit resserré tient dans les deux cas ; le
-		# grand ne tient que dans l'un.
-		fiche.batir(COLOR_P1 if joueur == 0 else COLOR_P2, true,
-			"JOUEUR %d" % (joueur + 1))
-		fiche.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		fiche.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		pile.add_child(fiche)
-		_fiches_classe.append(fiche)
-
-	return col
+	return weapon_hbox
 
 
-## Un râtelier : le titre du joueur, puis dix boutons et rien d'autre.
+## Un râtelier : le titre du joueur, puis sa liste de classes et SA fiche, de front.
+##
+## ⚠️ **La fiche vit DANS le râtelier**, et plus dans une pile à part : cacher le
+## râtelier d'un joueur cache sa fiche du même geste. Deux visibilités à tenir
+## d'accord étaient deux occasions de montrer la fiche d'un joueur absent.
 func _build_class_station(joueur: int) -> Control:
 	var teinte := COLOR_P1 if joueur == 0 else COLOR_P2
 	var station := PanelContainer.new()
@@ -5671,6 +5731,10 @@ func _build_class_station(joueur: int) -> Control:
 	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	inner.add_child(titre)
 
+	var corps := HBoxContainer.new()
+	corps.add_theme_constant_override("separation", GAP_S)
+	inner.add_child(corps)
+
 	# ⚠️ Ce conteneur ne porte QUE les boutons de classe. Il n'a plus de contrat
 	# d'ordre — l'index voyage en métadonnée — mais il garde un contrat de
 	# CONTENU : `p1_weapon_buttons` et lui doivent décrire la même chose, faute de
@@ -5678,7 +5742,7 @@ func _build_class_station(joueur: int) -> Control:
 	var liste := VBoxContainer.new()
 	liste.name = "Classes"
 	liste.add_theme_constant_override("separation", 3)
-	inner.add_child(liste)
+	corps.add_child(liste)
 
 	var groupe := p1_weapon_group if joueur == 0 else p2_weapon_group
 	var boutons: Array[Button] = []
@@ -5692,6 +5756,13 @@ func _build_class_station(joueur: int) -> Control:
 		p2_weapon_buttons = boutons
 	boutons[0].button_pressed = true
 	boutons[0].set_meta(META_NAV_SEED, joueur)
+
+	var fiche := MenuFicheClasse.new()
+	fiche.name = "FicheJ%d" % (joueur + 1)
+	fiche.batir(teinte)
+	fiche.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	corps.add_child(fiche)
+	_fiches_classe.append(fiche)
 	return station
 
 
@@ -5705,7 +5776,9 @@ func _build_class_station(joueur: int) -> Control:
 func _create_class_btn(place: int, group: ButtonGroup, tint: Color,
 		owner_id: int) -> Button:
 	var btn := _make_choice_button("Classe %d" % (place + 1), tint, group)
-	btn.custom_minimum_size = Vector2(206, 33)
+	# 196 et non 206 : deux râteliers de front mesuraient 1292 px pour un cadre
+	# de 1290 en écran scindé. Le plus long nom, « L'ILLUSIONNISTE », tient.
+	btn.custom_minimum_size = Vector2(196, 33)
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.add_theme_font_size_override("font_size", T_COURANT)
@@ -5779,7 +5852,9 @@ func _refresh_class_labels() -> void:
 			var idx: int = ordre[place]
 			var c = catalogue[idx]
 			btn.set_meta(META_CLASSE_INDEX, idx)
-			btn.text = "%02d  %s" % [int(c.rang), String(c.libelle).to_upper()]
+			# Sans numéro de rang : *« pas besoin […] du rang »* (Adrien,
+			# 2026-09-10). L'ordre de la liste le porte déjà.
+			btn.text = String(c.libelle).to_upper()
 			# L'icône reste facultative : `MenuIcones.arme()` rend `null` pour un
 			# slug dont la vignette n'est pas cuite, et six ne le sont pas encore.
 			# Un bouton sans icône se voit ; un bouton portant celle d'une autre
@@ -5800,19 +5875,24 @@ func _refresh_class_labels() -> void:
 			_montrer_fiche_de(groupe.get_pressed_button() as Button)
 
 
-## Reporte sur les cartes du salon ce que les râteliers ont décidé.
+## Reporte sur l'affiche du match ce que les râteliers ont décidé.
 func _refresh_class_cards() -> void:
-	if _cartes_classe_nom.is_empty():
+	if _cartes_classe_nom.size() != 2:
 		return
 	for joueur in [0, 1]:
 		var c = _classe_du_catalogue(selected_weapon_index(joueur))
 		if c == null:
 			_cartes_classe_nom[joueur].text = "—"
 			_cartes_classe_meta[joueur].text = ""
+			_cartes_classe_sprite[joueur].texture = null
 			continue
 		_cartes_classe_nom[joueur].text = String(c.libelle).to_upper()
-		var gadget := "—" if c.gadget == null else String(c.gadget.libelle)
-		_cartes_classe_meta[joueur].text = "%s · %s" % [String(c.name), gadget]
+		_cartes_classe_meta[joueur].text = String(c.name)
+		# Le sprite de jeu, comme dans la fiche — et, comme elle, rien à sa
+		# place s'il manque : un cadre vide se voit, un repli se prend pour un choix.
+		var chemin := String(c.chemin_sprite())
+		_cartes_classe_sprite[joueur].texture = load(chemin) as Texture2D \
+			if ResourceLoader.exists(chemin) else null
 
 
 ## L'index de classe choisi par un joueur — 0 ou 1. **Le seul chemin de lecture.**
@@ -6482,6 +6562,15 @@ func _update_weapon_panels_visibility() -> void:
 		_assign_weapon_nav_owner(false)
 		_montrer_rateliers(true, false)
 		return
+	# **L'entraînement n'a pas de joueur 2** — Adrien, 2026-09-10 : *« il ne doit
+	# y avoir qu'une seule sélection de classe (pour le joueur 1) »*. Il fallait le
+	# dire ici, parce que le mode visé ne le dit pas : l'écran d'entraînement ne
+	# pose pas `_intended_mode`, et héritait donc de l'écran scindé visité avant —
+	# deux râteliers pour un joueur seul face à une cible.
+	if _is_main_menu and hub != null and hub.current_id() == SCREEN_TRAINING:
+		_assign_weapon_nav_owner(false)
+		_montrer_rateliers(true, false)
+		return
 
 	var mode := selected_network_mode() if _is_main_menu else NetworkManager.current_mode
 	var local_is_p2 := mode == NetworkManager.GameMode.ONLINE_CLIENT
@@ -6508,11 +6597,8 @@ func _montrer_rateliers(j1: bool, j2: bool) -> void:
 	if _cartes_classe.size() == 2:
 		_cartes_classe[0].visible = j1
 		_cartes_classe[1].visible = j2
-	# La fiche suit son râtelier : montrer la fiche d'un joueur dont le râtelier
-	# est masqué annoncerait une classe que personne ne peut changer.
-	if _fiches_classe.size() == 2:
-		_fiches_classe[0].visible = j1
-		_fiches_classe[1].visible = j2
+	# La fiche n'a plus de visibilité à elle : elle vit dans son râtelier, et
+	# disparaît avec lui. Voir `_build_class_station()`.
 
 ## Reporte le choix d'arme du râtelier de J1 sur celui de J2.
 ##
@@ -7067,7 +7153,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 	var groupe := ButtonGroup.new()
 	for idx in range_par_rang:
 		var i := int(idx)
-		var btn := _make_choice_button(_libelle_classe_rang(i), COLOR_P1, groupe)
+		var btn := _make_choice_button(_libelle_classe(i), COLOR_P1, groupe)
 		btn.custom_minimum_size = Vector2(210, 36)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.set_meta(META_CLASSE_INDEX, i)
@@ -7137,12 +7223,11 @@ func _weapon_label(idx: int) -> String:
 		return c.libelle
 	return "Classe %d" % (idx + 1)
 
-## Le libellé d'une classe précédé de son rang — le format des deux râteliers.
-func _libelle_classe_rang(idx: int) -> String:
-	var c = _classe_du_catalogue(idx)
-	if c == null:
-		return _weapon_label(idx)
-	return "%02d  %s" % [int(c.rang), String(c.libelle).to_upper()]
+## Le libellé d'une classe tel que les râteliers l'écrivent — sans numéro de
+## rang depuis le 2026-09-10 : la fenêtre de choix et le salon proposent la même
+## chose, et doivent l'écrire pareil.
+func _libelle_classe(idx: int) -> String:
+	return _weapon_label(idx).to_upper()
 
 func _weapon_slug(idx: int) -> String:
 	var c = _classe_du_catalogue(idx)

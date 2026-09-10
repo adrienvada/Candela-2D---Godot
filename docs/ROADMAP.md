@@ -3154,6 +3154,28 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Une mesure contaminée par des erreurs de script ressemble à une mesure (2026-09-10)
+
+Pour savoir si le nouveau salon tenait à l'écran, un script `--script` hors banc
+chargeait `main.tscn` et relevait les rectangles. Il a répondu, avec des chiffres
+précis : **le bouton de l'écran scindé à 108 px sous le bord de l'écran.** Une
+capture en vraie fenêtre, du même état, l'a montré 114 px AU-DESSUS du bord.
+
+La cause : le script nommait `NetworkManager.GameMode` en dur. Il le compilait
+donc à son propre chargement, **avant** que les autoloads du plugin Epic
+n'existent — `Identifier not found: HLobbies`, puis `NetworkManager` cassé pour
+toute la séance. Chaque accès au mode levait une erreur, et la fonction qui
+cache les rangées du salon s'arrêtait à la première : les rangées restaient
+visibles, et le salon mesurait 220 px de trop. Les bancs du dépôt ne tombent pas
+dans ce piège parce qu'aucun ne nomme cet autoload.
+
+**La règle** : une mesure prise pendant qu'un `SCRIPT ERROR` défile ne mesure
+rien — la vider d'abord, la lire ensuite. Dans un script hors banc, lire les
+énumérations d'un autoload dynamiquement
+(`get_script().get_script_constant_map()`), jamais par leur nom. Et une question
+de mise en page se tranche en vraie fenêtre : photographe, ou script fenêtré qui
+termine l'allumage avant de prendre.
+
 ### Une lumière à énergie zéro compte quand même : quinze par item, et un quadrant est un item (2026-09-10)
 
 Le symptôme, signalé par Adrien : quand un joueur allume sa torche près d'une
@@ -17055,11 +17077,83 @@ Et une géométrie qui simplifie toute reprise future : **le personnage fait la
 même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
 les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
 
+### Étape 22 — le choix de classe revient dans le salon ✅ (2026-09-10)
+
+Demandé par Adrien : *« je n'aime pas le menu "choisir sa classe" : je veux que
+ce choix se fasse sur la page de lancement du match, là où on fait "prêt" »*.
+L'étape 9 avait sorti les râteliers dans un panneau à part, qu'ouvrait une entrée
+« CHOISIR SA CLASSE » sur six écrans. L'entrée disparaît, et `PANEL_CLASSES` avec
+elle. On choisit sa classe là où l'on part, sous l'affiche du match : c'est
+l'arbitrage du 2026-08-24 (le geste et son objet au même endroit) appliqué à la
+classe.
+
+**Ce qui a rendu le retour possible, c'est une fiche qui a maigri.** Adrien a
+posé la contrainte lui-même : l'écran scindé, le cas le plus limitant, montre
+deux sélections de front. Chaque fiche ne garde que **le sprite, le gadget et les
+six jauges** — ni description, ni rang, ni nom, ni fusées. Le rang ordonne
+toujours la liste mais ne s'écrit plus sur les boutons. La même fiche sert
+partout : salon, entraînement, fenêtre de choix du compétitif.
+
+**L'affiche du match.** Sur la ligne de la carte d'arène : la carte de classe de
+J1 à gauche, celle de J2 à droite, chacune avec son sprite, son nom et son arme.
+Hors écran scindé, seule la carte du joueur piloté s'affiche : en ligne, rien
+n'échange la classe de l'adversaire avant la manche, l'annoncer serait l'inventer.
+
+#### ⚠️ Empilé, le salon sortait de l'écran — et pas dans le cas qu'on croyait
+
+L'écran scindé, désigné comme le plus limitant, **tenait** : deux râteliers de
+front, aucune rangée de salon dessous. Ce sont les modes **à un joueur** qui
+débordaient. Ils empilaient sous le râtelier la liste des joueurs, le code, le
+statut et « CRÉER LE SALON ». Le cadre offre environ 670 px au salon, et la somme
+des hauteurs en demandait près de 170 de plus : le bouton PRÊT tombait sous le bord
+de l'écran. Le plus limitant en largeur n'était pas le plus limitant en hauteur.
+
+La réponse prend la largeur, qui était libre : la colonne du salon se range **à
+côté** du râtelier. Mesuré ensuite en vraie fenêtre, sur les cinq états — écran
+scindé, hôte, invité, entraînement, recherche : bas du cadre à 1071 au plus, bas
+du bouton à 950, pour un écran de 1080. La visibilité de la colonne se **dérive**
+de ses rangées après coup, jamais branche par branche : la fonction qui les pose
+compte plusieurs retours anticipés, et son propre commentaire raconte ce qu'un
+état posé dans une seule branche a déjà coûté.
+
+Deux râteliers de front mesuraient 1292 px pour un cadre de 1290 : la liste est
+passée de 206 à 196 px de large.
+
+#### L'entraînement n'a pas de joueur 2
+
+Précisé par Adrien le même jour. **L'écran d'entraînement héritait du panneau de
+l'écran d'avant** : il ne pose pas de mode visé et ne figurait pas dans la liste
+des écrans qui recalculent le salon. Après l'écran scindé, il montrait deux
+râteliers ; après un passage par « CRÉER », les rangées d'un salon en ligne. Trois
+branches explicites le règlent désormais — râteliers, rangées, curseur de J2 —,
+plus le recalcul à l'entrée. Le banc passe par l'écran scindé AVANT
+l'entraînement : sans cet ordre, il ne prouverait pas que l'entraînement refait
+la visibilité au lieu d'en hériter.
+
+#### Signalé, non corrigé
+
+- **La recherche amicale annonce une arène tirée au sort** — dans le statut du
+  salon (« l'arène est tirée au sort ») et dans la description de l'entrée
+  (« Carte tirée au hasard »). La décision du 2026-09-09 (Phase 8) retient
+  pourtant la carte par défaut. À vérifier dans `game_state.gd` avant de corriger
+  le texte : l'un des deux a tort, et ce n'est pas l'objet de cette étape.
+- **`ClassData.description` ne s'affiche plus nulle part.** Les dix textes
+  restent au catalogue ; les supprimer serait une autre décision.
+- **Deux règles de classe ne se lisent plus à la sélection**, par la demande
+  même (« rien d'autre ») — relevé par la session du chantier. **Le Spectre n'a
+  aucune fusée**, et c'est son identité, pas un cas dégradé : la ligne FUSÉES
+  était seule à le dire. **Le Terrassier recharge cartouche par cartouche** et
+  tire dès la première : la jauge RECHARGE affiche le total, 5,6 s, vrai mais
+  trompeur, et seule la description portait la nuance. À soumettre à Adrien :
+  une ligne de plus coûte peu en hauteur, mais c'est lui qui a fixé le « rien
+  d'autre ». La réserve de fusées reste au HUD en manche.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
-assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
+assets des dix classes, la table rang → classe, l'écran de sélection — revenu dans le salon à
+l'étape 22 —, et la pose.
 
 **Reste** : rien de ce chantier. ✅ Adrien a éprouvé **l'arbalète** manette en
 main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et

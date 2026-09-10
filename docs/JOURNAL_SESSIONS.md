@@ -3504,3 +3504,15 @@ bloquée près de 100 %.
 désormais un root plus long que leur cadence. Détente tenue, on y reste immobile
 en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
 l'a voulue comme telle, et elle se juge en jouant.
+
+#### Lot du 2026-09-10 — session « candela-2d-ef » (branche `selection-classe-salon`), le choix de classe revient dans le salon
+
+**⚠️ J'ai écrit dans trois fichiers du chantier CLASSES, et je le déclare.**
+`menu_fiche_classe.gd` (la fiche réduite au sprite, au gadget et aux jauges),
+`tools/test_classes.gd` (sa partie interface seulement) et `ui.gd` (le salon, les
+râteliers, l'entraînement, la fenêtre de choix du compétitif). La session
+« Système de 10 classes asymétriques » a été prévenue par message avant la
+première écriture ; son chantier est clos et sa branche fusionnée.
+
+**Pas touché** : `game_state.gd`, `class_data.gd`, les descriptions du catalogue.
+Tout le détail est dans la ROADMAP, chantier des dix classes, étape 22.

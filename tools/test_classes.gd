@@ -669,48 +669,57 @@ func _test_ecran_de_classes() -> void:
 	ui.set_weapon_selection(0, 0)
 	ui.set_weapon_selection(1, 0)
 
-	# ── La fiche dit quelque chose de chaque classe ─────────────────────────
-	# ⚠️ **Une fiche par JOUEUR, et c'est le contrôle qui porte la demande
-	# d'Adrien du 2026-09-09** : en écran partagé, les deux choisissent en même
-	# temps, chacun son curseur. Une fiche unique était écrasée par le moindre
-	# mouvement de l'autre, et J2 ne voyait jamais ce qu'il prenait.
+	# ── La fiche montre le sprite, le gadget, les jauges — et rien d'autre ──
+	# ⚠️ **Une fiche par JOUEUR** : en écran partagé, les deux choisissent en
+	# même temps, chacun son curseur (Adrien, 2026-09-09). Et depuis le
+	# 2026-09-10, une fiche RÉDUITE : *« les statistiques de l'arme, le gadget, le
+	# sprite, et rien d'autres […] Pas besoin de description, du rang »*.
 	_check("il y a une fiche par joueur", ui._fiches_classe.size() == 2,
 		str(ui._fiches_classe.size()))
 	var fiche = ui._fiches_classe[0] if ui._fiches_classe.size() == 2 else null
 	_check("la fiche est montée", fiche != null)
 	if fiche != null:
 		var muettes: Array[String] = []
+		var bavardes: Array[String] = []
 		for idx in catalogue.size():
-			fiche.montrer(catalogue[idx], catalogue)
-			# Le nom, l'arme, la prose et le gadget : les quatre choses qu'Adrien a
-			# demandées. Une seule vide, et la fiche affiche un trou là où le
-			# joueur attend une réponse.
-			if String(fiche._nom.text).is_empty() \
-					or String(fiche._arme.text).is_empty() \
-					or String(fiche._description.text).is_empty() \
-					or String(fiche._gadget.text) == "—":
-				muettes.append(String(catalogue[idx].slug()))
-		_check("les dix fiches sont remplies", muettes.is_empty(), str(muettes))
+			var c = catalogue[idx]
+			fiche.montrer(c, catalogue)
+			# Les trois choses demandées. Une seule vide, et la fiche affiche un
+			# trou là où le joueur attend une réponse.
+			var jauge_vide := false
+			for cle in fiche._valeurs:
+				if String(fiche._valeurs[cle].text) == "—":
+					jauge_vide = true
+			if fiche._portrait.texture == null or String(fiche._gadget.text) == "—" \
+					or jauge_vide:
+				muettes.append(String(c.slug()))
+			# Et rien d'autre : ni la prose, ni le rang, ni les fusées. Contrôlé
+			# sur ce que la fiche AFFICHE, pas sur ses variables — une ligne
+			# rajoutée sous un autre nom passerait sinon inaperçue.
+			for texte in _textes_de(fiche):
+				if texte == String(c.description) or texte.begins_with("RANG ") \
+						or texte == "FUSÉES" or texte.contains("en réserve") \
+						or texte == String(c.libelle).to_upper():
+					bavardes.append("%s : « %s »" % [String(c.slug()), texte])
+		_check("les dix fiches montrent sprite, gadget et jauges",
+			muettes.is_empty(), str(muettes))
+		_check("la fiche ne dit ni description, ni rang, ni nom, ni fusées",
+			bavardes.is_empty(), str(bavardes))
 
 		# Les dix boutons du râtelier portent tous leur icône d'arme
 		var sans_icones: Array[String] = []
+		var avec_rang: Array[String] = []
 		for btn: Button in ui.p1_weapon_buttons:
 			var idx := int(btn.get_meta(ui.META_CLASSE_INDEX, -1))
 			if btn.icon == null:
 				sans_icones.append(String(catalogue[idx].slug()) if idx >= 0 else "?")
+			# Le rang ordonne la liste, il ne s'y écrit plus.
+			if btn.text.length() > 0 and btn.text[0].is_valid_int():
+				avec_rang.append(btn.text)
 		_check("les dix boutons de classe portent leur icône d'arme",
 			sans_icones.is_empty(), str(sans_icones))
-
-		# Le zéro absolu se distingue de « la plus faible des dix » : le Spectre
-		# n'a pas peu de fusées, il n'en a aucune, et sa ligne le dit.
-		var spectre = null
-		for c in catalogue:
-			if String(c.slug()) == "spectre":
-				spectre = c
-		if spectre != null:
-			fiche.montrer(spectre, catalogue)
-			_check("le Spectre annonce zéro fusée",
-				String(fiche._fusees.text) == "aucune", String(fiche._fusees.text))
+		_check("aucun bouton de classe n'affiche son numéro de rang",
+			avec_rang.is_empty(), str(avec_rang))
 
 	# ── Chaque râtelier écrit dans SA fiche, et pas dans celle de l'autre ───
 	#
@@ -718,31 +727,106 @@ func _test_ecran_de_classes() -> void:
 	# l'atteint : chez le client, le curseur 0 pilote le râtelier de J2, et router
 	# sur le curseur aurait écrit dans la fiche de J1 ce que J2 choisit.
 	if ui._fiches_classe.size() == 2 and not ui.p2_weapon_buttons.is_empty():
-		var avant_j1 := String(ui._fiches_classe[0]._nom.text)
+		var avant_j1 = ui._fiches_classe[0].classe_affichee()
 		# Un bouton de J2 dont la classe DIFFÈRE de ce que J1 affiche, sinon le
 		# contrôle passerait au vert sans rien prouver.
 		var cible: Button = null
+		var classe_cible = null
 		for btn in ui.p2_weapon_buttons:
 			var c = ui._classe_du_catalogue(int(btn.get_meta(ui.META_CLASSE_INDEX, 0)))
-			if c != null and String(c.libelle).to_upper() != avant_j1:
+			if c != null and c != avant_j1:
 				cible = btn
+				classe_cible = c
 				break
 		if cible != null:
 			ui._montrer_fiche_de(cible)
 			_check("un survol chez J2 n'écrit pas dans la fiche de J1",
-				String(ui._fiches_classe[0]._nom.text) == avant_j1,
-				"%s → %s" % [avant_j1, String(ui._fiches_classe[0]._nom.text)])
+				ui._fiches_classe[0].classe_affichee() == avant_j1)
 			_check("il écrit dans celle de J2",
-				String(ui._fiches_classe[1]._nom.text) != avant_j1,
-				String(ui._fiches_classe[1]._nom.text))
+				ui._fiches_classe[1].classe_affichee() == classe_cible)
 
-	# ── Le panneau existe et l'entrée qui le nomme y mène ───────────────────
+	# ── Le choix se fait dans le salon, sous l'affiche du match ─────────────
+	# Adrien, 2026-09-10 : *« je veux que ce choix se fasse sur la page de
+	# lancement du match, là où on fait prêt »*, et les deux classes *« sur la
+	# même ligne que l'affichage de l'arène »*.
 	var hub = ui.hub
-	_check("le panneau de classes est enregistré",
-		hub != null and hub.panneau(ui.PANEL_CLASSES) != null)
+	var salon: Control = hub.panneau(ui.PANEL_SALON) if hub != null else null
+	_check("le choix de classe n'a plus de panneau à lui",
+		not ui.get_script().get_script_constant_map().has("PANEL_CLASSES"))
+	_check("les râteliers vivent dans le panneau du salon",
+		salon != null and salon.is_ancestor_of(ui.weapon_hbox))
+	_check("le bouton qui lance est dans le même panneau",
+		salon != null and salon.is_ancestor_of(ui.panel_launch))
+	_check("chaque fiche vit dans le râtelier de son joueur",
+		ui._fiches_classe.size() == 2
+			and ui.p1_vbox.is_ancestor_of(ui._fiches_classe[0])
+			and ui.p2_vbox.is_ancestor_of(ui._fiches_classe[1]))
+	var ligne: Node = ui.map_card.get_parent()
+	var affiche_en_ordre: bool = ui._cartes_classe.size() == 2 \
+		and ui._cartes_classe[0].get_parent() == ligne \
+		and ui._cartes_classe[1].get_parent() == ligne \
+		and ui._cartes_classe[0].get_index() < ui.map_card.get_index() \
+		and ui.map_card.get_index() < ui._cartes_classe[1].get_index()
+	_check("J1, l'arène et J2 partagent une ligne, dans cet ordre", affiche_en_ordre)
+
+	# La carte de l'affiche suit le râtelier, sprite compris.
+	if not catalogue.is_empty():
+		ui.set_weapon_selection(1, catalogue.size() - 1)
+		var derniere = catalogue[catalogue.size() - 1]
+		_check("la carte de J2 nomme la classe choisie",
+			String(ui._cartes_classe_nom[1].text) == String(derniere.libelle).to_upper(),
+			String(ui._cartes_classe_nom[1].text))
+		_check("et montre son sprite", ui._cartes_classe_sprite[1].texture != null)
+		ui.set_weapon_selection(1, 0)
+
+	# ── Écran scindé : deux râteliers ; entraînement : un seul ──────────────
+	# L'ordre compte : l'écran scindé d'abord, pour prouver que l'entraînement
+	# REFAIT la visibilité au lieu d'hériter de l'écran d'avant — c'était le
+	# défaut, et Adrien l'a relevé le 2026-09-10 (« le joueur 2 n'existe pas en
+	# entraînement »).
+	if hub != null:
+		ui.show_main_menu()
+		hub.reset()
+		hub.push(ui.SCREEN_LOCAL)
+		_check("l'écran scindé montre les deux râteliers",
+			ui.p1_vbox.visible and ui.p2_vbox.visible)
+		_check("et les deux cartes de l'affiche",
+			ui._cartes_classe[0].visible and ui._cartes_classe[1].visible)
+		# La colonne du salon vit à côté du râtelier ; en écran scindé elle n'a
+		# rien à montrer, et doit laisser sa largeur au râtelier de J2.
+		_check("le bloc du salon se range à côté des râteliers",
+			ui._colonne_salon.get_parent() == ui.weapon_hbox.get_parent())
+		_check("en écran scindé, la colonne du salon s'efface",
+			not ui._colonne_salon.visible)
+		# Le classement se rafraîchit à l'entrée de l'entraînement, et c'est une
+		# requête réseau : sans objet ici, et elle n'a rien à faire dans un banc.
+		var classement = ui._leaderboard
+		ui._leaderboard = null
+		hub.reset()
+		hub.push(ui.SCREEN_TRAINING)
+		ui._leaderboard = classement
+		_check("l'entraînement ne montre que le râtelier de J1",
+			ui.p1_vbox.visible and not ui.p2_vbox.visible)
+		_check("et une seule carte de classe sur l'affiche",
+			ui._cartes_classe[0].visible and not ui._cartes_classe[1].visible)
+		_check("ni rangée de salon ni bouton d'ouverture",
+			not ui.lobby_players_box.visible and not ui.btn_open_lobby.visible)
+		_check("et la colonne du salon s'efface", not ui._colonne_salon.visible)
+		hub.reset()
 
 	main.queue_free()
 	await process_frame
+
+
+## Les textes que montre un nœud et ses enfants — ce que le joueur lit.
+func _textes_de(noeud: Node) -> Array[String]:
+	var textes: Array[String] = []
+	var etiquette := noeud as Label
+	if etiquette != null and etiquette.visible and not etiquette.text.is_empty():
+		textes.append(etiquette.text)
+	for enfant in noeud.get_children():
+		textes.append_array(_textes_de(enfant))
+	return textes
 
 
 func _tous_distincts(valeurs: Array[int]) -> bool:
