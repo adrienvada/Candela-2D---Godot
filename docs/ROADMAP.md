@@ -17155,7 +17155,9 @@ la visibilité au lieu d'en hériter.
   restent au catalogue ; les supprimer serait une autre décision.
 - **Le Terrassier recharge cartouche par cartouche**, et tire dès la première :
   la jauge RECHARGE affiche le total, 5,6 s, vrai mais trompeur. Seule la prose de
-  classe portait la nuance, et elle n'est pas revenue.
+  classe portait la nuance, et elle n'est pas revenue. **Tranché par Adrien le
+  2026-09-10 : non, la fiche ne le dit pas.** Ne pas rajouter de ligne ni de
+  mention : la question a été posée et close.
 
 #### Amendé le même jour : les fusées et la phrase du gadget
 
