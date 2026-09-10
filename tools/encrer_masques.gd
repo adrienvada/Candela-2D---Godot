@@ -40,6 +40,12 @@ extends SceneTree
 ## une seule borne donne un masque binaire). `--sortie` écrit ailleurs qu'en
 ## place. `--rapport` imprime la part molle sans rien écrire.
 ##
+## `--ceinture N` force les N pixels du pourtour à zéro. ⚠️ **Obligatoire pour
+## un masque de LUMIÈRE** : `test_lumieres` exige un coin noir, parce qu'un
+## masque radial est lu tel quel et qu'un coin clair fait un CARRÉ lumineux en
+## plein jeu. Payé le 2026-09-10 : les pointes de l'éclat de bouche touchaient
+## le bord de la toile, et deux frames sortaient à 1,0 d'alpha dans les coins.
+##
 ## ⚠️ **Le cookie de torche n'est PAS un candidat de cette passe sans décision
 ## d'Adrien** : `Vision.intensite_texture` lit son alpha pour calculer la
 ## pénalité d'éblouissement, donc un cookie en paliers rend une pénalité en
@@ -97,6 +103,9 @@ func _init() -> void:
 		return
 
 	encrer(img, bornes, valeurs)
+	var ceinture := int(_arg(args, "--ceinture", "0"))
+	if ceinture > 0:
+		_ceinturer(img, ceinture)
 	var apres := part_molle(img)
 	var reel := ProjectSettings.globalize_path(sortie)
 	DirAccess.make_dir_recursive_absolute(reel.get_base_dir())
@@ -124,6 +133,17 @@ static func encrer(img: Image, bornes: PackedFloat32Array, valeurs: PackedFloat3
 			# que `fabrique_decals` écrit, et une couleur nulle sous alpha nul
 			# donne un liseré sombre au filtrage linéaire.
 			img.set_pixel(x, y, Color(c.r, c.g, c.b, a))
+
+
+## Force à zéro l'alpha des `n` pixels du pourtour. En place.
+static func _ceinturer(img: Image, n: int) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	for y in h:
+		for x in w:
+			if x < n or y < n or x >= w - n or y >= h - n:
+				var c := img.get_pixel(x, y)
+				img.set_pixel(x, y, Color(c.r, c.g, c.b, 0.0))
 
 
 ## Part des pixels non nuls qui ont un voisin d'alpha proche mais différent
