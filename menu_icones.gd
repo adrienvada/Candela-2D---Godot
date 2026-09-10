@@ -341,8 +341,16 @@ static func poser_rang(rect: TextureRect, tier_ident: Variant, cote: float = 32.
 
 ## Les icônes attendues et absentes. Vide = tout est cuit.
 ##
-## Le panneau F3 le lit : une absence se diagnostique, elle ne se devine pas.
-## Même motif que `Charte.polices_manquantes()`.
+## ⚠️ **Aucun code ne l'appelle aujourd'hui.** Ce commentaire affirmait jusqu'au
+## 2026-09-10 que « le panneau F3 le lit » : faux, relevé par la revue de la
+## session CLASSES — F3 ne l'a jamais branchée. Elle reste un diagnostic à appeler
+## à la main (ou à brancher sur F3, ce qui était l'intention), même motif que
+## `Charte.polices_manquantes()`.
+##
+## Ce qu'elle couvre : les catalogues de ce fichier — armes, rangs, torche, outils
+## de l'éditeur. Ce qu'elle ne couvre PAS : les images de gadget
+## (`GadgetProfile.chemin_icone()`), qui vivent hors de ces catalogues ; leur
+## absence, c'est `tools/test_menus_finitions.gd` qui la voit, fiche par fiche.
 static func manquantes() -> Array[String]:
 	var out: Array[String] = []
 	for f: String in PAR_ARME.values():
