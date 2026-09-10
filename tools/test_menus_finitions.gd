@@ -198,6 +198,8 @@ func _test_menu_sourd_sous_le_voile() -> void:
 				is_equal_approx(float(cone.get("demi_angle")), float(classe.demi_angle_torche())),
 				"%.3f contre %.3f" % [float(cone.get("demi_angle")), float(classe.demi_angle_torche())])
 			_check("le cône a une portée", float(cone.get("part_portee")) > 0.0)
+			_check("la fiche montre l'image du gadget",
+				(fiche.get("_gadget_image") as TextureRect).texture != null)
 		var sans_faisceau := true
 		for ligne in fiche.get_script().get_script_constant_map().get("LIGNES", []):
 			if String(ligne.get("cle", "")) == "faisceau":

@@ -37,7 +37,8 @@ bas, menu inerte sous l'allumage et l'intro, avis de phase de test et logo
 Godot en bas de l'écran, nouvelle icône d'application.
 
 **En propre :** `tools/test_menus_finitions.gd` (créé), `assets/logos/godot_roman.png`
-(créé), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
+(créé), `assets/ui/icones/gadget_*.png` (les dix icônes de fiche, créées),
+`tools/detourer_titres.py` et `tools/incruster_vert.py` (créés), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
 **Partagés, touchés par insertions :** `ui.gd` et `game_state.gd` (session
 « chantier 10 classes » prévenue par message le jour même), et
 **`menu_fiche_classe.gd`, en propre au chantier CLASSES** — recomposé à la
