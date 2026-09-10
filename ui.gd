@@ -28,6 +28,8 @@ signal training_requested
 ## Le joueur quitte la fenêtre de choix : cela annule l'appariement ET la
 ## recherche. Renoncer à choisir son arme, c'est renoncer au match.
 signal pick_window_cancelled
+## Rejouer la cinématique d'introduction demandée depuis l'accueil du hub.
+signal intro_requested
 
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
@@ -247,6 +249,7 @@ const ILLUSTRATIONS := {
 	"ill_entrainement": "res://assets/ui/ill_entrainement.png",
 	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
 	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
+	"ill_rejouer_intro": "res://assets/ui/ill_intro_allumage.png",
 	"ill_quitter": "res://assets/ui/ill_quitter.png",
 	"ill_retour": "res://assets/ui/ill_retour.png",
 	"ill_creer_ligne": "res://assets/ui/ill_creer_ligne.png",
@@ -3336,6 +3339,10 @@ func _build_hub_screens() -> void:
 		"Vérifie si une nouvelle version est publiée, et l'installe. Rien ne se "
 		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM,
 		"", "", false, "ill_maj"))
+	accueil.add_child(hub.make_entry("REJOUER L'INTRO",
+		"Rejoue la cinématique d'introduction en bande dessinée : six planches "
+		+ "qui posent la règle du jeu et l'allumage dans le noir.",
+		"", COLOR_DIM, "rejouer_intro", "", false, "ill_rejouer_intro"))
 	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
 	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
 	# à l'arrivée dans le hub et rétablie ici.
@@ -4298,6 +4305,9 @@ func _on_hub_action(action: String) -> void:
 		"quitter":
 			get_tree().paused = false
 			quit_requested.emit()
+		"rejouer_intro":
+			get_tree().paused = false
+			intro_requested.emit()
 		"chercher":
 			_start_search()
 		"entrainement":

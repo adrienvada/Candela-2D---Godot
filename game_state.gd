@@ -429,6 +429,7 @@ func _ready():
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
 	ui.training_requested.connect(_on_training_requested)
+	ui.intro_requested.connect(_on_intro_requested)
 	ui.pick_window_cancelled.connect(_on_pick_window_cancelled)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
@@ -512,6 +513,21 @@ func _ouvrir_sur_intro_ou_menu() -> bool:
 		intro.queue_free())
 	intro.jouer()
 	return true
+
+
+## Rejoue la cinématique d'introduction sur demande explicite du joueur.
+func _on_intro_requested() -> void:
+	var Intro := preload("res://intro_planches.gd")
+	if not Intro.disponible():
+		return
+	AudioManager.play_music("music_intro")
+	var intro: CanvasLayer = Intro.new()
+	add_child(intro)
+	intro.terminee.connect(func() -> void:
+		AudioManager.play_music("music_menu")
+		ui.show_main_menu()
+		intro.queue_free())
+	intro.jouer()
 
 ## DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`, et
 ## c'est la décision d'origine : le menu est monté, vivant et prêt sous le voile
