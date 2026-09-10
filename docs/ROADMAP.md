@@ -17383,6 +17383,11 @@ Au HUD, la ligne de titre de la cartouche porte l'état — `GADGET`,
 reste seul dessous. « Éteinte, rallumable » et « éteinte, pas encore » ne se
 confondent plus.
 
+La phrase de fiche du grésillement suit, dans un commit à part : « Une batterie qu'on allume et coupe : les torches proches sautent jusqu'au noir. »
+Elle disait « fait papilloter », ce qui était vrai jusqu'à ce lot. La session du
+salon, qui l'avait écrite, a préféré que la phrase change avec le comportement,
+et pas avant lui : changée plus tôt, c'est le texte qui aurait menti.
+
 `Protocol.VERSION` reste à 16, faute de publication entre les deux lots ;
 l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
 

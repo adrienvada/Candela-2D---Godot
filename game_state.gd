@@ -3683,7 +3683,7 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
-		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
+		"Une batterie qu'on allume et coupe : les torches proches sautent jusqu'au noir.")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
