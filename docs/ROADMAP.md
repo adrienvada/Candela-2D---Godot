@@ -8611,6 +8611,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
         peut bégayer près de la zone morte, pas une faute de jeu —, corrigé à
         la version suivante. Voir « Pièges connus » pour la leçon qui dépasse
         ce défaut.
+    - **Clic du verrou de torche — ajouté le 2026-09-10.** Le bouton mécanique
+      à deux crans de la torche (chantier « Allumage torche », `8c18115`) a un
+      geste physique franc à son cran plein — Adrien s'est demandé si ce
+      serait perceptible sans gâchette adaptative ; la session Menus aspect
+      refinement y a répondu côté œil (un cadenas dans l'icône HUD, `931a7c0`)
+      et ce chantier côté main. `_rumble(RUMBLE_TORCH_LOCK, RUMBLE_TORCH_LOCK,
+      0.04)` se déclenche au franchissement de `is_flashlight_locked()` —
+      armement ET désarmement, les deux étant le même geste (la gâchette qui
+      touche sa butée). Lit l'état déjà exposé pour le cadenas plutôt que d'en
+      dupliquer un ; aucune réplication réseau à ajouter, l'état est déjà
+      local par construction (`InputProvider.is_flashlight_locked()` rend
+      `false` par défaut, jamais surchargé dans `NetworkInputProvider`).
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 

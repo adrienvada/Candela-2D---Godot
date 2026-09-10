@@ -326,6 +326,9 @@ var _last_corrected_seq: int = -1
 # La torche est répliquée, pas simulée, côté non-autoritaire : on détecte son
 # changement ici pour que le son suive dans tous les modes.
 var _torch_audio_state: bool = false
+## État précédent du verrou de torche, pour ne vibrer qu'au FRANCHISSEMENT du
+## cran plein (armement ET désarmement), pas à chaque image où il reste tenu.
+var _torch_locked_prev: bool = false
 
 @onready var visual_dim = $VisualDim
 @onready var visual_dim_ptr = $VisualDim/DirPointerDim
@@ -1535,6 +1538,15 @@ func _physics_process(delta):
 		# l'éteint.** Elle montre et elle trahit ; le moment est un choix, et il
 		# reste entier.
 		flashlight_on = input_provider.is_flashlight_pressed()
+		# Chantier vibrations manettes — le clic du cran plein, à l'armement ET
+		# au désarmement du verrou (les deux sont le même geste physique : la
+		# gâchette qui touche sa butée). `is_flashlight_locked()` est déjà le
+		# bon état à lire — voir la session Menus aspect refinement (cadenas du
+		# HUD, `931a7c0`).
+		var torch_locked := input_provider.is_flashlight_locked()
+		if torch_locked != _torch_locked_prev:
+			_torch_locked_prev = torch_locked
+			_rumble(RUMBLE_TORCH_LOCK, RUMBLE_TORCH_LOCK, 0.04)
 
 		if role == NetRole.PREDICTED:
 			# Correction appliquée AVANT l'archivage : l'historique doit décrire
@@ -2024,7 +2036,8 @@ func poser_gadget():
 # ---------------------------------------------------------------------------
 # V1.5 — Retour haptique. Tir (fort, bref), impact reçu (moyen), pouls sous
 # 30 HP, double coup du vainqueur au kill, tir à sec, rechargement terminé,
-# lancer de fusée, mort du perdant (chantier vibrations manettes). Ne vibre
+# lancer de fusée, mort du perdant, clic du verrou de torche (chantier
+# vibrations manettes). Ne vibre
 # que la manette du joueur assis devant CE personnage : le device_id de son
 # LocalInputProvider, et seulement si ce pad est réellement branché — un
 # joueur clavier a souvent un pad posé sur le bureau, il ne doit pas bourdonner
@@ -2053,6 +2066,9 @@ const RUMBLE_DRY_FIRE := 0.35
 const RUMBLE_RELOAD_READY := 0.45
 const RUMBLE_FLARE_WEAK := 0.4
 const RUMBLE_FLARE_STRONG := 0.25
+## Le clic du cran plein de la torche — les deux moteurs, très bref : c'est un
+## déclic mécanique qui se sent, pas un coup qui se ressent.
+const RUMBLE_TORCH_LOCK := 0.3
 ## D3 — durée d'avalement du faisceau à l'extinction de la torche.
 const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
