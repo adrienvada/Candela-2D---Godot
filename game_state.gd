@@ -18,6 +18,14 @@ var time_left: float = MatchRecord.ROUND_DURATION
 var round_active: bool = false
 var sandbox_mode: bool = false
 
+## PE2.1 — le relevé de cadence de la manche en cours, archivé avec le match
+## (voir `conditions_de_match.gd`). Commencé au départ de la manche, arrêté à
+## la mort — avant la killcam.
+var _conditions := ConditionsDeMatch.new()
+## PE3.1 — le dernier régime signalé à `GameSettings`, pour ne le dire qu'au
+## changement et non à chaque image.
+var _arene_signalee := false
+
 ## Entraînement solitaire en cours.
 ##
 ## Distinct de `sandbox_mode`, qui couvre aussi l'hôte en ligne resté seul : ces
@@ -429,6 +437,7 @@ func _ready():
 	ui.replay_requested.connect(_on_replay_requested)
 	ui.join_requested.connect(_on_join_requested)
 	ui.training_requested.connect(_on_training_requested)
+	ui.intro_requested.connect(_on_intro_requested)
 	ui.pick_window_cancelled.connect(_on_pick_window_cancelled)
 	ui.quit_requested.connect(_on_quit_requested)
 	ui.main_menu_requested.connect(_on_main_menu_requested)
@@ -512,6 +521,21 @@ func _ouvrir_sur_intro_ou_menu() -> bool:
 		intro.queue_free())
 	intro.jouer()
 	return true
+
+
+## Rejoue la cinématique d'introduction sur demande explicite du joueur.
+func _on_intro_requested() -> void:
+	var Intro := preload("res://intro_planches.gd")
+	if not Intro.disponible():
+		return
+	AudioManager.play_music("music_intro")
+	var intro: CanvasLayer = Intro.new()
+	add_child(intro)
+	intro.terminee.connect(func() -> void:
+		AudioManager.play_music("music_menu")
+		ui.show_main_menu()
+		intro.queue_free())
+	intro.jouer()
 
 ## DA6.5 — le lancement du jeu comme un allumage. APRÈS `show_main_menu()`, et
 ## c'est la décision d'origine : le menu est monté, vivant et prêt sous le voile
@@ -655,6 +679,7 @@ func _solder_le_match() -> void:
 	_abort_killcam()
 	_restore_viewports()
 	round_active = false
+	_conditions.arreter()
 	# `sandbox_mode` ne parle PAS de l'adversaire, il parle de l'absence de
 	# manche : sans lui, `player.gd` cesse de traiter les commandes et l'hôte se
 	# retrouve immobile derrière son menu. Il reste donc des deux côtés du
@@ -910,8 +935,27 @@ func rebuild_arena() -> void:
 	_duplicate_layer_for_player(floor_layer, 4, 1 | 32)
 	_duplicate_layer_for_player(walls_layer, 2, 1 | 16)
 	_duplicate_layer_for_player(walls_layer, 4, 1 | 32)
+	# ⚠️ **L'original reste éclairé après sa propre duplication, et c'est un
+	# défaut — pas la copie qui manque.** `floor_layer`/`walls_layer` gardent
+	# leur `visibility_layer` par défaut (1), visible dans les DEUX vues au
+	# même titre que les deux copies : toute lumière qui touche la couche
+	# décor (1) — la torche des deux joueurs y compris, `range_item_cull_mask`
+	# à l'appui — éclaire donc le sol/les murs DEUX FOIS, l'original en mix
+	# normal PUIS la copie du joueur par-dessus en additif. Peu visible sur un
+	# halo blanc ; flagrant sur un halo saturé (la fusée) où le doublage pousse
+	# les canaux vers l'écrêtage. Trouvé le 2026-09-09 en diagnostiquant le
+	# carré signalé par Adrien près d'une fusée — ce n'en est PAS la cause
+	# (vérifié : le carré persiste identique une fois ce doublage corrigé),
+	# mais c'est un vrai défaut distinct. `hide()` et non `queue_free()` :
+	# l'original reste le porteur des données (`MapData.apply_to_layers()`,
+	# `MapGeometry.build_collisions()` y lisent la géométrie) — le détruire
+	# casserait la collision, pas seulement le rendu.
+	floor_layer.hide()
+	walls_layer.hide()
 	# Habillage d'atelier & décors de l'arène (marquages danger, pochoirs, mobilier)
-	ArenaDecorScript.build(data, arena)
+	var decor := ArenaDecorScript.build(data, arena)
+	if decor:
+		decor.hide()
 
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
@@ -1324,6 +1368,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	time_left = round_time
 	round_active = true
 	game_over = false
+	_conditions.commencer()
 	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
 	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
 	# seuil — soit pendant ses quatre premières minutes.
@@ -1383,6 +1428,15 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	ui.poser_bilan(p1_session_wins, p2_session_wins)
 
 func _process(delta):
+	# PE2.1 — une image rendue, et le lien du moment. Négatif = pas de lien.
+	_conditions.echantillonner(NetworkManager.rtt_ms if NetworkManager.has_rtt else -1.0)
+	# PE3.1 — le régime de rendu suit l'arène : manche comptée, entraînement ou
+	# salon d'attente sont « en arène » ; tout le reste est menu.
+	var en_arene := round_active or sandbox_mode
+	if en_arene != _arene_signalee:
+		_arene_signalee = en_arene
+		GameSettings.signaler_arene(en_arene)
+
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		_record_position_history()
 
@@ -2993,6 +3047,9 @@ func _do_end_round(winner_id: int):
 	_round_token += 1
 	var token := _round_token
 	_end_sequence_active = true
+	# PE2.1 — la manche est jouée : le relevé s'arrête AVANT le ralenti de la
+	# killcam, qui n'est pas une saccade.
+	_conditions.arreter()
 
 	# Manches gagnées dans le match en cours. En BO1 une seule suffit, mais le
 	# décompte passe par le format : un BO3 n'aurait rien à changer ici.
@@ -3284,6 +3341,10 @@ func _peut_etre_la_soiree() -> void:
 func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 	# Le match est résolu : plus rien à forfaire dessus.
 	_forfeit_pending = false
+	# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
+	# machine. Calculées une fois : l'archive locale et le rapport au serveur
+	# (PE2.3) doivent porter le même relevé.
+	var conditions := _conditions.resume()
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -3304,11 +3365,12 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# le nom de l'arme — « Pistolet silencieux » — qui ne désigne plus le
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
-		_slug_de_classe(p2))
+		_slug_de_classe(p2),
+		conditions)
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
-	_report_to_ranking(winner_id, forfeit)
+	_report_to_ranking(winner_id, forfeit, conditions)
 
 ## Le slug de la classe d'un joueur, ou une chaîne vide.
 ##
@@ -3346,7 +3408,7 @@ func _local_outcome(winner_id: int) -> String:
 ## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
 ## rapports par leur identifiant de match et confronte les récits. Rien n'est
 ## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
-func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
+func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {}) -> void:
 	var local_idx := _local_player_index()
 	if local_idx < 0 or _match_id.is_empty():
 		return
@@ -3362,6 +3424,11 @@ func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
 		"weapon_self": mine.current_weapon.name if mine and mine.current_weapon else "",
 		"weapon_opponent": theirs.current_weapon.name if theirs and theirs.current_weapon else "",
 		"format": MatchRecord.FORMAT_NAMES.get(MATCH_FORMAT, "BO1"),
+		# PE2.3 (décision d'Adrien, 2026-09-10) — les conditions voyagent avec le
+		# rapport des matchs EN LIGNE, amicaux et classés : le serveur les passe
+		# au tamis et ne refuse jamais un rapport pour elles. L'écran scindé et
+		# l'entraînement ne passent pas par ici, donc n'envoient rien.
+		"conditions": conditions,
 	})
 
 ## Archive un match gagné par abandon de l'adversaire.
@@ -3615,28 +3682,32 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.rang = 1
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
-	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement")
+	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
+		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
 	weapon_fusil.rang = 3
 	weapon_fusil.root = _root(0.25)
 	weapon_fusil.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
-	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte")
+	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte",
+		"Un faux corps : même silhouette, même trou dans la lumière.")
 
 	weapon_pompe.libelle = "Le Terrassier"
 	weapon_pompe.description = "Il terrasse, et il lève la poussière. Le faisceau le plus large du jeu, et une zone où plus personne ne voit loin. Il recharge cartouche par cartouche, et tire dès la première."
 	weapon_pompe.rang = 5
 	weapon_pompe.root = _root(0.35)
 	weapon_pompe.fusees = _fusees(3, 18.0)
-	weapon_pompe.gadget = _gadget("poussiere", "La poussière")
+	weapon_pompe.gadget = _gadget("poussiere", "La poussière",
+		"Un nuage de poussière où plus personne ne voit loin.")
 
 	weapon_arbalete.libelle = "Le Braconnier"
 	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
 	weapon_arbalete.rang = 4
 	weapon_arbalete.root = _root(0.60)
 	weapon_arbalete.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
-	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme", true)
+	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme",
+		"Une lampe sur trépied qui balaie comme un joueur qui cherche.", true)
 
 	# ── Les six neuves ───────────────────────────────────────────────────────
 	# ⚠️ Leurs assets n'existent pas encore : ni cookie de torche, ni sprite. Le
@@ -3655,7 +3726,8 @@ func _batir_catalogue() -> void:
 	fumiste.muzzle_flash_duration = 0.16
 	fumiste.root = _root(0.30)
 	fumiste.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
-	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie")
+	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
+		"Un rideau de suie : on voit qu'il y a quelqu'un, pas qui.")
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
@@ -3668,7 +3740,8 @@ func _batir_catalogue() -> void:
 	incendiaire.bullet_speed = 6000.0
 	incendiaire.root = _root(0.40)
 	incendiaire.fusees = _fusees(2, PERIODE_RECHARGE_FUSEE)
-	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises", true)
+	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises",
+		"Des braises au sol qui brûlent qui s'y attarde.", true)
 
 	var sentinelle := _classe("sentinelle", "La Sentinelle", 7, 8.0, 2.6)
 	sentinelle.name = "Fusil à verrou"
@@ -3681,7 +3754,8 @@ func _batir_catalogue() -> void:
 	sentinelle.bullet_speed = 16000.0
 	sentinelle.root = _root(0.50)
 	sentinelle.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
-	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact")
+	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
+		"Une poudre où les pas restent écrits, lisibles à la lumière.")
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
 	occulteur.name = "Pistolet-mitrailleur"
@@ -3699,7 +3773,8 @@ func _batir_catalogue() -> void:
 	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
 	occulteur.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	occulteur.automatique = true  # la SEULE arme qui tire détente tenue (Adrien, 2026-09-10)
-	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée")
+	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée",
+		"Une découpe d'acier qui projette l'ombre d'un homme absent.")
 
 	var allumeur := _classe("allumeur", "L'Allumeur", 9, 45.0, 1.2)
 	allumeur.name = "Carabine double"
@@ -3712,7 +3787,8 @@ func _batir_catalogue() -> void:
 	allumeur.muzzle_flash_intensity = 1.0
 	allumeur.root = _root(0.20)
 	allumeur.fusees = _fusees(2, 12.0)
-	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium", true)
+	allumeur.gadget = _gadget("mine_magnesium", "La mine au magnésium",
+		"Une mine qui n'explose pas : elle aveugle et révèle.", true)
 
 	var spectre := _classe("spectre", "Le Spectre", 10, 20.0, 1.4)
 	spectre.name = "Pistolet silencieux"
@@ -3728,7 +3804,8 @@ func _batir_catalogue() -> void:
 	spectre.backlight_multiplier = 0.1
 	spectre.root = _root(0.08)
 	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
-	spectre.gadget = _gadget("voile", "Le voile")
+	spectre.gadget = _gadget("voile", "Le voile",
+		"Une bâche qui arrête la lumière, pas les balles.")
 
 	_classes = [
 		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,
@@ -3826,10 +3903,15 @@ const IMPLEMENTATIONS := {
 	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
 }
 
-func _gadget(slug: String, libelle: String, eblouit: bool = false) -> GadgetProfile:
+## `description` : ce que le gadget fait, en une phrase courte, pour la fiche de
+## sélection (Adrien, 2026-09-10). Obligatoire, et c'est voulu : un gadget sans
+## phrase afficherait un trou sous son nom, `tools/test_classes.gd` le refuse.
+func _gadget(slug: String, libelle: String, description: String,
+		eblouit: bool = false) -> GadgetProfile:
 	var g := GadgetProfile.new()
 	g.slug = slug
 	g.libelle = libelle
+	g.description = description
 	g.eblouit = eblouit
 	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
 	g.implementation = String(fiche.get("script", ""))
@@ -4041,12 +4123,22 @@ func _armer_echeance_connexion_appariee() -> void:
 ## que l'entraînement (`_on_training_requested`), pour la même raison — un
 ## terrain connu plutôt qu'une arène surprise pour un match sans enjeu.
 func _lancer_match_apparie() -> void:
+	_poser_la_carte_appariee()
+	_enter_hosted_game()
+	_start_round()
+
+## [Hôte] L'arène d'un match apparié : tirée au sort en classé, l'arène standard
+## en amical.
+##
+## Sortie de `_lancer_match_apparie()` le 2026-09-10 pour être éprouvée seule :
+## Adrien a redit ce jour-là que *« le match amical en ligne doit prendre l'arène
+## classique »*, et la règle, posée la veille, n'était gardée par aucun banc.
+## `tools/test_online_match.gd --appariement` l'appelle sans réseau ni pair.
+func _poser_la_carte_appariee() -> void:
 	if _matchmade_ranked:
 		MapData.select_random_map()
 	else:
 		MapData.select_map(MapData.DEFAULT_MAP_ID)
-	_enter_hosted_game()
-	_start_round()
 
 ## Quitte le menu pour la partie hébergée : autorités, fournisseurs d'entrées,
 ## vues. Trois chemins y mènent — l'hôte qui appuie sur PRÊT, l'adversaire qui

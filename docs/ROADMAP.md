@@ -110,7 +110,9 @@ code, sans configuration, sans redirection de port.
   le `.app` (PUID obtenu), sortie 0. Préréglage versionné dans
   `export_presets.cfg`.
 
-  **Piège de diagnostic, à ne pas retomber dedans :** dans un build release, la
+  **Piège de diagnostic, à ne pas retomber dedans** *(vrai jusqu'au 2026-09-10 ;
+  depuis PE2.4, `run/flush_stdout_on_print` vide le journal à chaque `print`, et
+  ce paragraphe décrit l'AVANT)* **:** dans un build release, la
   sortie `print()` est tamponnée et n'est vidée qu'à la **fermeture propre** de
   l'application. Tuer le processus (`pkill`, Ctrl-C) jette tout ce qui suit le
   dernier message d'erreur — ce qui a fait conclure à tort, le 2026-08-16, à un
@@ -2422,6 +2424,8 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
+| **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
 | **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
@@ -3238,6 +3242,163 @@ Celle du TIR vaut **0,5** : `p1_shoot` et `p2_shoot` sont déclarées dans
 lui-même. Relevé par le contre-examen de l'enquête sur le semi-automatique.
 L'hystérésis du 2026-09-10 lit donc le seuil dans l'`InputMap` au lieu de le
 recopier : recopier un nombre, c'est hériter de son erreur.
+
+### Un import sur une autre machine produit ce que la garde exige (2026-09-10)
+
+Les vidéos d'intro (`assets/video/intro/*.ogv`, DA6.6) étaient au dépôt, leurs
+`.uid` non : la machine qui les a commitées n'en avait pas produit, ou ne les a
+pas vus. Sur une machine neuve, `--import` les génère, et la garde des assets
+non suivis de `run_suites.sh` — écrite pour qu'un asset jamais commité ne
+meure pas avec un poste — rougit **tout le lot**, sans qu'une seule suite ait
+échoué. Les `.uid` sont déterministes par chemin (vérifié le 2026-08-18), donc
+la réponse est de les commiter, pas de les ignorer.
+
+**La règle :** celui qui ajoute un asset commite ce que l'IMPORT en produit
+(`.import`, `.uid`), pas seulement le fichier — et le vérifie depuis un
+`git status` de l'arbre où l'import a tourné, puisqu'un worktree neuf ne
+contient que ce que git suit.
+
+### Une mesure contaminée par des erreurs de script ressemble à une mesure (2026-09-10)
+
+Pour savoir si le nouveau salon tenait à l'écran, un script `--script` hors banc
+chargeait `main.tscn` et relevait les rectangles. Il a répondu, avec des chiffres
+précis : **le bouton de l'écran scindé à 108 px sous le bord de l'écran.** Une
+capture en vraie fenêtre, du même état, l'a montré 114 px AU-DESSUS du bord.
+
+La cause : le script nommait `NetworkManager.GameMode` en dur. Il le compilait
+donc à son propre chargement, **avant** que les autoloads du plugin Epic
+n'existent — `Identifier not found: HLobbies`, puis `NetworkManager` cassé pour
+toute la séance. Chaque accès au mode levait une erreur, et la fonction qui
+cache les rangées du salon s'arrêtait à la première : les rangées restaient
+visibles, et le salon mesurait 220 px de trop. Les bancs du dépôt ne tombent pas
+dans ce piège parce qu'aucun ne nomme cet autoload.
+
+**La règle** : une mesure prise pendant qu'un `SCRIPT ERROR` défile ne mesure
+rien — la vider d'abord, la lire ensuite. Dans un script hors banc, lire les
+énumérations d'un autoload dynamiquement
+(`get_script().get_script_constant_map()`), jamais par leur nom. Et une question
+de mise en page se tranche en vraie fenêtre : photographe, ou script fenêtré qui
+termine l'allumage avant de prendre.
+
+### Une lumière à énergie zéro compte quand même : quinze par item, et un quadrant est un item (2026-09-10)
+
+Le symptôme, signalé par Adrien : quand un joueur allume sa torche près d'une
+fusée posée, le halo rouge de la fusée est **tranché net par une droite** au lieu
+de s'éteindre en rond. La droite est calée sur la grille de tuiles, à un multiple
+de 16 tuiles (560 px) — la taille par défaut d'un quadrant de `TileMapLayer`
+(`rendering_quadrant_size`). Une session y a passé une journée : la lumière de la
+fusée supprimée, déplacée, éteinte, les occluders retirés, le renderer changé —
+le bord restait identique ; seul `rendering_quadrant_size` le déplaçait (1 tuile :
+dégradé plus doux, 4096 : la fusée disparaît de presque tout le sol).
+
+**Le mécanisme est dans le moteur, et il est documenté.** Godot n'applique
+jamais plus de **15 lumières à un même `CanvasItem`** (`MAX_LIGHTS_PER_ITEM`,
+compteur de 4 bits, codé en dur dans Compatibility comme dans Forward+/Mobile,
+et refusé comme réglage de projet — godot-proposals #9336 ; ticket amont #81147,
+toujours ouvert). Au-delà, les lumières en trop ne s'atténuent pas : elles ne
+sont **pas rendues sur cet item**, tout ou rien, les plus récentes en premier. Or
+un quadrant de `TileMapLayer` est UN `CanvasItem` : le plafond se joue donc par
+carré de 560 px, et sa frontière devient une arête de lumière.
+
+**Ce qui remplissait le plafond n'éclairait rien.** Le recensement des lumières
+`enabled` et visibles à l'instant de la prise `--plan=fusee` donne **23**, dont
+**19 sur le quadrant du faisceau : quinze `Light(e=0.00)`** — les grains de
+poussière de faisceau (V5.5), un `PointLight2D` chacun, énergie 0, jamais
+désactivée. Le commentaire disait « aucune lumière propre » ; pour le renderer
+c'en était une, avec un rectangle de 32 px. À 0,12 s d'intervalle pour 0,9-1,6 s
+de vie, ~10 grains vivants par torche, dans un quadrant qui contient tout le
+cône : 15 grains + fusée + deux torches + une ambiante = 19. La fusée, dernière
+arrivée, était jetée sur ce quadrant-là et gardée sur le voisin (4 lumières).
+
+Le correctif tient en `light.enabled = false` pour `DUST` et `SMOKE` (et `true`
+pour les autres genres — le pool recycle un même nœud d'un genre à l'autre).
+Mesuré au pixel, même plan, même cadrage : l'arête verticale à x=1291 passe d'un
+saut moyen de rouge de **32,6 à 8,8**, le niveau des simples joints de tuiles
+(15,5 et 12,5 ailleurs) ; 7 lumières actives, 4 sur le quadrant.
+
+⚠️ **Trois choses à retenir, et la troisième est la plus chère.**
+1. **Énergie zéro n'est pas éteinte.** Une lumière qui n'éclaire rien coûte sa
+   place quand même, et le compteur F3 (`ui.gd::_rescan_debug_counts`) la
+   compte aussi : il aurait affiché 23, pas 7. Toute lumière « décorative »
+   qu'on laisse à 0 pour un temps doit passer par `enabled`.
+2. **Le plafond reste, et une gerbe d'impact peut encore le crever** : les
+   étincelles `SPARK` à énergie réelle (12 par impact de mur, jusqu'à 5 × 12 sur
+   une rafale) pendant 0,3-0,8 s. Le sang, lui, n'éclaire plus depuis le
+   2026-09-10 (décision d'Adrien, « Décisions actées ») : c'était 25 lumières de
+   plus par coup au but. Si un halo se coupe au moment d'un impact de mur, les
+   leviers sont un `rendering_quadrant_size` plus petit (plus d'items, à
+   chiffrer au `bench_framerate`) ou moins d'étincelles éclairantes — pas un
+   cache à invalider, il n'y en a pas.
+3. **Mon premier diagnostic accusait les torches et les balles** — il collait au
+   mécanisme, pas aux nombres : le plan ne contient que 7 vraies lumières, loin
+   des 15. Et la session précédente avait « désactivé le pool sans effet » sans
+   vérifier que les lumières avaient bien disparu. Dans les deux cas, c'est le
+   **recensement par quadrant** qui a tranché : pour chaque `PointLight2D`
+   active, rectangle monde = taille de texture × `texture_scale`, croisé avec
+   les carrés de 560 px du sol et filtré par `light_mask`. Un mécanisme
+   plausible ne vaut rien tant qu'on n'a pas compté.
+
+### Une lambda ne peut pas attendre la mort de ce qu'elle capture (2026-09-10)
+
+Signalé par la session DA7, qui l'a rencontré en tournant le trailer sur le
+photographe. L'attente s'écrit comme on la pense :
+
+```gdscript
+await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+```
+
+et elle capture `affiche`. **Quand le nœud est libéré — c'est-à-dire à l'instant
+précis où la condition devient vraie — Godot invalide le `Callable` entier :**
+
+```
+ERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+   at: call (modules/gdscript/gdscript_lambda_callable.cpp:110)
+```
+
+**La condition attendue détruit le moyen de la tester.** L'attente ne rend
+jamais vrai, ne rend jamais faux : elle meurt sur place, et la fonction
+appelante ne reprend pas après son `await`. Pas d'exception à rattraper, pas de
+code de sortie, pas de message de l'outil.
+
+⚠️ **Le symptôme ne ressemble pas à une erreur, il ressemble à un travail
+partiel.** Trois plans du photographe manquaient au dossier — l'affiche de fin
+et deux verdicts — sans un mot ; le repère de début était imprimé, jamais celui
+de fin. Une session voisine a mis un moment à comprendre que ce n'était pas une
+capture perdue par le bridage de fenêtre, qui produit exactement la même
+impression.
+
+⚠️ **Et c'est là qu'est le vrai coût, pas dans la ligne de code.** Une coroutine
+morte et une fenêtre bridée par macOS produisent le **même** symptôme — un
+travail partiel, sans erreur, sans code de sortie rouge. Rien dans le résultat ne
+les sépare. La première tentative de reproduction est d'ailleurs tombée sur une
+vraie fenêtre au second plan, ce qui a failli faire reclasser le rapport en
+« capture perdue » et clore le sujet.
+
+**Seule une trace de pile les distingue.** D'où la règle, formulée avec la
+session DA7 : **un signalement de « plans manquants » sans trace de pile se
+renvoie chercher la trace AVANT tout diagnostic.** Ce n'est pas une exigence de
+forme — c'est la seule information qui existe, puisque les deux causes sont
+indiscernables par leurs effets. Diagnostiquer sans elle, c'est choisir entre
+deux hypothèses à pile ou face, et la mauvaise coûte une demi-journée à chercher
+au mauvais endroit.
+
+**Le remède tient à ce qu'on capture : un identifiant d'instance est un entier,
+et un entier ne se libère pas.**
+
+```gdscript
+var id := noeud.get_instance_id()
+await _attendre(func() -> bool: return not is_instance_id_valid(id), plafond)
+```
+
+Posé dans `photographe.gd::_attendre_disparition()`, et `_attendre()` refuse
+désormais une `Callable` invalide en le DISANT plutôt qu'en mourant — un garde
+qui ne répare rien mais transforme une mort silencieuse en refus visible.
+
+**La règle générale :** une lambda qui surveille un objet doit capturer son
+identifiant, jamais l'objet. Le cas se présente partout où l'on attend une
+disparition — la fin d'une animation qui se libère, un panneau qu'on congédie,
+une scène qu'on décharge.
+
 
 ### « Déjà sur main » ne veut pas dire « déjà livré » (2026-09-09)
 
@@ -4915,8 +5076,9 @@ tirs**. Le dépôt porte exactement l'outil qu'il faut pour ça,
 `AudioManager.diagnostic_ecoute()`, sur **F4**. Il ne rendait rien.
 
 **Tout le traceur sortait sur `if not OS.is_debug_build(): return`.** Écrit pour
-une bonne raison — en release, `print()` est tamponné et vidé à la fermeture
-propre, donc inutile — la conclusion tirée était la mauvaise : *si la console ne
+une bonne raison — en release, `print()` était tamponné et vidé à la fermeture
+propre, donc inutile *(plus depuis PE2.4, le 2026-09-10)* — la conclusion tirée
+était la mauvaise : *si la console ne
 sert à rien, écris ailleurs*, et non *renonce*. **Un outil de diagnostic qui ne
 marche que dans l'éditeur ne diagnostique pas le jeu : il diagnostique
 l'éditeur.** Il écrit désormais dans `user://diagnostic_ecoute.txt`, en ajout,
@@ -8573,7 +8735,11 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
   discret en vol câblé dans `bullet.gd:_physics_process()` via
   `AudioManager.play_bolt_flight()`.
 - **V4.11 Éclat de sang** — les gouttes brillent 200 ms de leur propre lumière
-  (déjà sans ombre) : toucher, c'est voir. **✅ Fait** — surmultiplication ×2
+  (déjà sans ombre) : toucher, c'est voir. **⚠️ DÉFAIT le 2026-09-10** — décision
+  d'Adrien, voir « Décisions actées », *Les particules de sang n'éclairent
+  plus* : la réserve écrite ci-dessus le 2026-08-18 a été tranchée dans le sens
+  du retrait, et le plafond de 15 lumières par item du renderer y ajoutait un
+  coût. Ce qui suit décrit ce qui a existé. **✅ Fait** — surmultiplication ×2
   de la lumière déjà portée par la goutte, décroissance linéaire dans
   `advance()` : l'éclat vit dans le tableau plat du pool, aucun nœud ni tween
   de plus. Visible sur les deux écrans par construction — toucher n'est pas
@@ -11815,10 +11981,10 @@ le 2026-08-19, *ce qu'on voit n'a pas de nom, donc rien ne le tient*.
 - **DA5.2 Blanc pur et noir pur interdits** ✅ **FAIT le 2026-09-09.** hors fond
   du monde — tout passe au blanc cassé et au noir de la bible. Détail
   ci-dessous. *(S)*
-- **DA5.3 Plus un cercle parfait visible** — toute lumière ou particule
-  circulaire passe en texture. *(S + G)* — volet **(S)** ✅ **FAIT le
-  2026-09-09** (deux shaders procéduraux) ; le volet **(G)**, la texture
-  peinte finale, reste dû à Adrien. Détail ci-dessous.
+- **DA5.3 Plus un cercle parfait visible** ✅ **FAIT le 2026-09-09** — toute
+  lumière ou particule circulaire passe en texture. *(S + G)* — volet **(S)**
+  (casser la symétrie procédurale) et volet **(G)** (texture peinte
+  `particule_poussiere.png` cuite et branchée). Détail ci-dessous.
 - **DA5.4 Le grain unifié** ✅ **FAIT le 2026-09-09** — pas une nouvelle passe
   (décision d'Adrien : le grain de match existant reste), documentation des
   trois grains délibérément distincts du dépôt. Détail ci-dessous. *(S)*
@@ -11999,23 +12165,38 @@ au texte du code.
 **Jugement visuel** : `./tools/run_visuel.sh` — aucun site jugé illisible au
 ratio commun.
 
-#### DA5.3 — le volet (S) : deux cercles cassés sans texture
+#### DA5.3 — les volets (S + G) : rupture procédurale et texture peinte livrée
 
-**Rappel de portée : DA5.3 est (S + G).** Ce chantier ne livre que la part
-(S) — casser la symétrie procédurale, sans texture peinte. La texture finale
-reste due à Adrien, signalée et non bloquante.
+**Portée : DA5.3 est (S + G) — désormais intégralement clos le 2026-09-09.**
 
-**`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
-disque analytique (`smoothstep` sur une distance). Un second hash
-(`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
-le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
-plus, aucune texture, aucun coût mesurable.
+**Volet (S) : casser la symétrie procédurale sans texture**
+- **`poussiere_faisceau.gdshader`** — chaque particule de poussière était un
+  disque analytique (`smoothstep` sur une distance). Un second hash
+  (`hash21(id × 7,0)`, décorrélé du hash qui pilote déjà la dérive brownienne et
+  le scintillement) perturbe le rayon avant le `smoothstep` : une lecture de
+  plus, aucune texture, aucun coût mesurable.
+- **`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
+  le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
+  torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
+  Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
+  brume — aucun nouveau bruit importé.
 
-**`menu_backdrop.gdshader`** — même geste sur deux cercles du fond de menu :
-le halo de la torche lointaine (M12) et l'anneau de bruit à la lisière des
-torches (M5), tous deux dessinés par `length()` suivi d'un `smoothstep`.
-Réutilise `valeur()`, déjà écrite dans ce même fichier pour la nappe de
-brume — aucun nouveau bruit importé.
+**Volet (G) : la texture peinte de particule (`particule_poussiere.png`)**
+- **Génération & procédé DA1.5** : planche source
+  (`assets/sources/halo/H5_poussiere.jpg`), convertie en masque RGBA 32×32
+  (`assets/halo/particule_poussiere.png`). Conformité avec la règle d'or de
+  la charte (« l'image ne fournit que la matière, le code garde la
+  géométrie ») : fond noir coupé, luminance vers alpha, RGB blanc pur
+  neutre prêt pour multiplication par `modulate` ou `COLOR`.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule`
+  avec repli `hint_default_black`. La particule échantillonne la texture
+  organique dans sa cellule de grille, tout en conservant son mouvement
+  brownien et son scintillement d'interférence.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle
+  analytique de `_creer_texture_lueur_ronde()` (`GradientTexture2D.FILL_RADIAL`),
+  remplacé par le chargement de `particule_poussiere.png` (avec repli doux
+  sécurisé si absent). Les particules de poussière et d'ambiance des 15 profils
+  de menus prennent ainsi un grain d'encre asymétrique authentique.
 
 **Cas examinés et gardés tels quels**, listés ici pour que personne ne les
 refasse :
@@ -12027,9 +12208,9 @@ refasse :
 | `menu_hatch.gdshader` (trame de demi-teinte) | un point rond EST la définition d'une trame Ben-Day, pas un défaut |
 | `light_textures.gd::radial()` | filet déjà documenté comme masque multiplicatif, hors périmètre de la règle |
 
-Aucune suite headless ne teste la forme d'un cercle — jugement par
-`./tools/run_visuel.sh` uniquement ; `test_arena_lighting.gd` continue de
-vérifier que `poussiere_faisceau.gdshader` compile.
+Validé par `test_arena_lighting.gd` (vérification de chargement de la texture
+et assignation du paramètre shader), `test_menu_artworks.gd`, et la suite
+complète `./tools/run_suites.sh`.
 
 #### DA5.4 — trois grains, délibérément distincts
 
@@ -12286,6 +12467,36 @@ dans la même journée.
   > l'**appareil** (enseigne, lumière, au lancement), l'intro est l'allumage de
   > la **torche** (planche 4, dans le récit) — mais elles se disputaient
   > l'écran.
+
+  ⚠️ **Le mécanisme « curseur = torche » a été abandonné le 2026-09-10
+  (Adrien), après l'avoir défendu dans la même conversation.** Les six
+  planches sont désormais des clips Veo 3.1 (Image-to-Video sur les six
+  illustrations), lus tels quels par un `VideoStreamPlayer` — l'image fixe
+  révélée au curseur ne reste qu'un repli si un `.ogv` manque. Ce que ça coûte
+  et pourquoi on l'a fait quand même :
+
+  - **Les rushes Veo dérivent.** Chaque plan de 8 s a été passé en revue image
+    par image avant rognage : `03-dotation` substitue le pistolet à la torche
+    dans sa première seconde, `05-prix` fait apparaître puis disparaître une
+    silhouette géante parasite, `01-descente` finit hors-cadre. Les fenêtres de
+    rognage retenues (2,0 à 2,5 s chacune, une inversée pour `06-extinction`
+    dont le feu grandit au lieu de mourir) sont dans
+    `tools/convert_intro_videos.sh`, commentées plan par plan.
+  - **Godot ne lit que l'Ogg Theora en natif.** `ffmpeg` de ce poste décode
+    Theora mais ne l'encode pas ; `ffmpeg2theora` (`brew install
+    ffmpeg2theora`) fait le travail. Installer ce paquet a fait remonter `x265`
+    dans Homebrew et cassé l'`ffmpeg` du poste au passage (`libx265.216.dylib`
+    introuvable) — `brew reinstall ffmpeg` répare. À prévoir sur tout poste qui
+    relancera le script.
+  - **Seuls les `.ogv` rognés sont versionnés.** Les rushes bruts (~25 Mo,
+    8 s × 6, reconstructibles depuis Flow) sont dans
+    `.gitignore` (`/assets/video/intro/*.mp4`) ; l'audit d'assets de
+    `tools/run_suites.sh` les aurait sinon signalés absents du dépôt.
+  - **Ce que ça abandonne, texto :** DA6.6 enseignait le verbe du jeu —
+    *éclairer pour voir* — en rendant l'intro **jouée**, pas subie. Une vidéo
+    en pilote automatique ne l'enseigne plus. Adrien a tranché en connaissance
+    de cause ; à rouvrir si l'intro se révèle moins efficace à l'usage que
+    prévu par la conception d'origine.
 
 #### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
 
@@ -12596,25 +12807,51 @@ c'est le code qui les colore.
   les planches 4 et 5 de l'intro survivent au recadrage, parce que leur sujet
   tient dans une bande étroite et que le reste est noir. **Le noir se recadre ;
   un décor ne se recadre pas.**
-- **DA7.2 Le trailer de 60 secondes.** *(C)* — 🟡 **découpage écrit le
-  2026-09-09** : [docs/TRAILER.md](TRAILER.md). Cinq phrases de 8 mesures plus
-  une queue, chaque plan nommé par l'identifiant du catalogue de
-  `tools/photographe.gd` — donc directement commandable, et **tenu par une suite
-  depuis `5c4040f`** : renommer un plan fait rougir le lot au lieu de périmer ce
-  document en silence. La grille n'a pas été choisie, elle se dérive du stem de
-  menu à 170 BPM (une mesure = 1,412 s ; 60 s = 42,5 mesures), et la densité de
-  coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
-  manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
-  photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
-- **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
-  écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
-  longueurs de description, points saillants, et la sélection d'images par nom
-  de catalogue du photographe (DA6), dont les cinq à envoyer si on n'en envoie
-  que cinq. **Six champs restent `À TRANCHER` et n'appartiennent pas à une
-  session** — éditeur, contact presse, prix, date, plateformes annoncées,
-  licence des images. Ils sont marqués comme tels plutôt que devinés : un
-  presskit dont un champ est inventé fait perdre la confiance sur tous les
-  autres.
+- **DA7.2 Le trailer.** ✅ **LIVRÉ le 2026-09-09** — `tools/cineaste.gd`,
+  `tools/run_trailer.sh`, et un film de 42 s **publié en bas du site**. Détail
+  dans [docs/TRAILER.md](TRAILER.md).
+
+  ⚠️ **CETTE FICHE A ANNONCÉ UN BLOCAGE QUI N'EXISTAIT PAS**, et c'est le fait
+  le plus utile à retenir. Elle disait « bloqué : il n'existe aucune capture
+  vidéo ». Godot filme depuis toujours (`--write-movie`) — **personne n'avait
+  tapé `godot --help`**. Il ne manquait pas un outil, il manquait la mise en
+  scène, et elle existait déjà chez le photographe de DA6.
+
+  Le coût réel n'est pas l'erreur mais son statut : **le document a servi de
+  preuve à son propre blocage.** L'item est resté « bloqué » ici et dans le
+  suivi pendant des heures parce que l'affirmation était écrite. C'est le pendant
+  exact de l'avertissement déjà porté par `CLAUDE.md` — *un défaut annoncé envoie
+  chercher un travail déjà fait, ce qui coûte plus qu'un silence* — appliqué
+  cette fois à une capacité déclarée absente.
+
+  Le cinéaste **hérite** du photographe et ne surcharge qu'une fonction : là où
+  celui-ci tient l'état puis déclenche, celui-là tient l'état et ne déclenche
+  jamais. Tout le reste — sélection, préconditions, éclairage, cadrage — est
+  repris tel quel.
+
+  *(Note écrite en parallèle, avant fusion : une proposition d'ouvrir ce
+  trailer sur des clips Veo animés — voir DA6.6 ci-dessus — avait été
+  signalée puis écartée par Adrien le 2026-09-10, au nom de la même règle
+  « rien qui n'existe dans le moteur ». Le film livré ici, capturé en moteur
+  via `--write-movie`, la respecte par construction — sans avoir eu besoin de
+  trancher entre les deux.)*
+- ~~**DA7.3 Presskit et screenshots composés.**~~ ❌ **ABANDONNÉE le 2026-09-09**
+  (Adrien), et `docs/PRESSKIT.md` **supprimé**.
+
+  La fiche est morte de la même cause que DA7.1 : **l'abandon de la boutique lui
+  a retiré son destinataire.** Un presskit s'adresse à une presse qu'on démarche
+  pour une sortie qu'on annonce ; sans boutique, il ne restait qu'un document
+  bien écrit sans personne à qui l'envoyer — et cinq de ses six champs
+  `À TRANCHER` n'avaient plus d'arbitre.
+
+  Ce qu'il portait de vivant a survécu ailleurs, et c'est pour ça qu'il peut
+  partir sans regret : ses descriptions sont devenues le texte du site (DA7.4),
+  et sa sélection d'images est devenue la vitrine de la même page. **La
+  distribution passe désormais par le site et les *releases* GitHub**, pas par
+  un dossier de presse.
+
+  *(Le document reste dans l'historique git si un jour une sortie se prépare
+  pour de bon.)*
 - **DA7.4 Un site d'une page.** *(S)* — ✅ **LIVRÉ le 2026-09-09, en ligne sur
   le domaine d'Adrien** : **https://adrienvada.fr/candela-2d/** — dépôt séparé
   `adrienvada/candela-2d`, GitHub Pages, source versionnée dans `tools/site/`
@@ -15201,6 +15438,34 @@ chantier audio, et ce chantier-ci ne fait pas de refonte opportuniste.
 `fusee_combustion`) sont arrivés avec `5657464`. Le point « quatre fichiers
 audio à produire » de la liste FU6 tombe donc de lui-même.
 
+### Le carré près de la fusée — deux défauts, résolus le 2026-09-10 (worktree `lights-display-error-3fd1cd`)
+
+Adrien a signalé un halo de fusée tranché net quand une torche s'allume à côté.
+Le diagnostic a mis au jour **deux défauts distincts**, et le premier n'était pas
+la cause du second.
+
+1. **Le décor était éclairé deux fois** (trouvé le 2026-09-09, corrigé dans
+   `rebuild_arena()`). Après duplication des calques par joueur, l'original
+   restait visible dans les deux vues (`visibility_layer` 1, comme les copies) :
+   toute lumière touchant la couche décor éclairait sol et murs une fois sur
+   l'original en mix normal, puis une seconde fois sur la copie en additif. Peu
+   visible sur un halo blanc, flagrant sur un rouge saturé qui écrête. Les
+   originaux et l'habillage sont désormais `hide()` — pas `queue_free()` : ils
+   restent les porteurs des données que lisent `MapData.apply_to_layers()` et
+   `MapGeometry.build_collisions()`. **Vérifié : le carré persistait identique
+   une fois ce doublage corrigé.**
+2. **Les lumières fantômes de la poussière de faisceau** — voir « Pièges
+   connus », *Une lumière à énergie zéro compte quand même*. C'est la cause.
+   Correctif dans `particle_pool.gd::_configure`, mesuré avant/après au pixel
+   sur `--plan=fusee`.
+
+**Non fait, à savoir.** `bench_framerate` n'a pas été relancé : les correctifs
+ne font que retirer des lumières du rendu, ils ne peuvent pas coûter plus. Le
+quadrant reste à 16 tuiles. Le cas d'une gerbe d'impact qui crève le plafond de
+15 pour une fraction de seconde est **à moitié refermé** : le sang n'éclaire
+plus (décision d'Adrien du 2026-09-10, « Décisions actées »), les étincelles
+de mur si — documenté au piège, avec ses leviers.
+
 ## Chantier — deux correctifs du deuxième essai d'Adrien (inscrit le 2026-09-07)
 
 **Deux défauts relevés en jouant, tous deux d'information et non de décor** :
@@ -16917,7 +17182,102 @@ Et une géométrie qui simplifie toute reprise future : **le personnage fait la
 même taille dans les dix classes** — corps de 30 à 37 px sur 23 à 26 —, alors que
 les toiles vont de 50×50 à 90×90. Seule l'allonge de l'arme change.
 
-### Étape 22 — ce que l'entraînement a révélé ✅
+### Étape 22 — le choix de classe revient dans le salon ✅ (2026-09-10)
+
+Demandé par Adrien : *« je n'aime pas le menu "choisir sa classe" : je veux que
+ce choix se fasse sur la page de lancement du match, là où on fait "prêt" »*.
+L'étape 9 avait sorti les râteliers dans un panneau à part, qu'ouvrait une entrée
+« CHOISIR SA CLASSE » sur six écrans. L'entrée disparaît, et `PANEL_CLASSES` avec
+elle. On choisit sa classe là où l'on part, sous l'affiche du match : c'est
+l'arbitrage du 2026-08-24 (le geste et son objet au même endroit) appliqué à la
+classe.
+
+**Ce qui a rendu le retour possible, c'est une fiche qui a maigri.** Adrien a
+posé la contrainte lui-même : l'écran scindé, le cas le plus limitant, montre
+deux sélections de front. Chaque fiche ne garde que **le sprite, le gadget et les
+six jauges** — ni description, ni rang, ni nom, ni fusées. Le rang ordonne
+toujours la liste mais ne s'écrit plus sur les boutons. La même fiche sert
+partout : salon, entraînement, fenêtre de choix du compétitif.
+
+**L'affiche du match.** Sur la ligne de la carte d'arène : la carte de classe de
+J1 à gauche, celle de J2 à droite, chacune avec son sprite, son nom et son arme.
+Hors écran scindé, seule la carte du joueur piloté s'affiche : en ligne, rien
+n'échange la classe de l'adversaire avant la manche, l'annoncer serait l'inventer.
+
+#### ⚠️ Empilé, le salon sortait de l'écran — et pas dans le cas qu'on croyait
+
+L'écran scindé, désigné comme le plus limitant, **tenait** : deux râteliers de
+front, aucune rangée de salon dessous. Ce sont les modes **à un joueur** qui
+débordaient. Ils empilaient sous le râtelier la liste des joueurs, le code, le
+statut et « CRÉER LE SALON ». Le cadre offre environ 670 px au salon, et la somme
+des hauteurs en demandait près de 170 de plus : le bouton PRÊT tombait sous le bord
+de l'écran. Le plus limitant en largeur n'était pas le plus limitant en hauteur.
+
+La réponse prend la largeur, qui était libre : la colonne du salon se range **à
+côté** du râtelier. Mesuré ensuite en vraie fenêtre, sur les cinq états — écran
+scindé, hôte, invité, entraînement, recherche : bas du cadre à 1071 au plus, bas
+du bouton à 950, pour un écran de 1080. La visibilité de la colonne se **dérive**
+de ses rangées après coup, jamais branche par branche : la fonction qui les pose
+compte plusieurs retours anticipés, et son propre commentaire raconte ce qu'un
+état posé dans une seule branche a déjà coûté.
+
+Deux râteliers de front mesuraient 1292 px pour un cadre de 1290 : la liste est
+passée de 206 à 196 px de large.
+
+#### L'entraînement n'a pas de joueur 2
+
+Précisé par Adrien le même jour. **L'écran d'entraînement héritait du panneau de
+l'écran d'avant** : il ne pose pas de mode visé et ne figurait pas dans la liste
+des écrans qui recalculent le salon. Après l'écran scindé, il montrait deux
+râteliers ; après un passage par « CRÉER », les rangées d'un salon en ligne. Trois
+branches explicites le règlent désormais — râteliers, rangées, curseur de J2 —,
+plus le recalcul à l'entrée. Le banc passe par l'écran scindé AVANT
+l'entraînement : sans cet ordre, il ne prouverait pas que l'entraînement refait
+la visibilité au lieu d'en hériter.
+
+#### Signalé, non corrigé
+
+- **`ClassData.description` ne s'affiche plus nulle part.** Les dix textes
+  restent au catalogue ; les supprimer serait une autre décision.
+- **Le Terrassier recharge cartouche par cartouche**, et tire dès la première :
+  la jauge RECHARGE affiche le total, 5,6 s, vrai mais trompeur. Seule la prose de
+  classe portait la nuance, et elle n'est pas revenue. **Tranché par Adrien le
+  2026-09-10 : non, la fiche ne le dit pas.** Ne pas rajouter de ligne ni de
+  mention : la question a été posée et close.
+
+#### Amendé le même jour : les fusées et la phrase du gadget
+
+Relevé par la session du chantier, tranché par Adrien dans l'heure. Réduite à ce
+point, la fiche taisait deux choses que seule la prose disait. **Le Spectre n'a
+aucune fusée**, et c'est son identité ; **le nom d'un gadget ne dit pas ce qu'il
+fait** — « Le voile » ne dit pas qu'il arrête la lumière et pas les balles.
+
+- Une septième jauge, **FUSÉES**, affiche le **plafond** de la réserve, recharge
+  comprise, et non le stock de départ. Le Spectre y lit zéro, sans aucun cran :
+  `_part()` réserve le vide aux vrais zéros.
+- Chaque gadget porte une **phrase courte** (`GadgetProfile.description`, 80
+  caractères au plus), écrite depuis l'en-tête de son script, jamais inventée.
+  ⚠️ Un geste, pas des chiffres : durée et stock vivent déjà dans leurs champs.
+
+#### L'amical se joue sur l'arène standard — et le dit
+
+Adrien, le même jour : *« le match amical en ligne doit prendre l'arène classique
+pour l'instant (32×32 vide) »*. **Le jeu le faisait déjà** : depuis le
+2026-09-09, `_lancer_match_apparie()` pose l'arène standard côté hôte, et
+l'invité reçoit celle de l'hôte. **C'est l'écran qui mentait** : le statut du
+salon et la description de l'entrée annonçaient encore un tirage au sort. Les
+deux textes suivent désormais l'écran, et le salon amical montre sa carte d'arène
+— toujours l'arène standard, quelle que soit la carte choisie ailleurs. Le classé
+garde son tirage et ne montre pas de carte. Les matchs privés, eux, gardent la
+carte de l'hôte : ce n'est pas l'objet de la demande.
+
+⚠️ **La règle de la veille n'était gardée par aucun banc.** Le banc
+d'appariement vérifiait le départ, jamais la carte. Le choix est donc sorti dans
+`_poser_la_carte_appariee()`, que `test_online_match --appariement` appelle sans
+réseau, après avoir choisi une AUTRE carte — sans quoi une sélection restée sur
+l'arène standard passerait pour la règle.
+
+### Étape 23 — ce que l'entraînement a révélé ✅
 
 Adrien a essayé les classes à l'entraînement le 2026-09-10 et rapporté quatre
 défauts. Une enquête en quatre volets, chacun contre-examiné par un sceptique qui
@@ -16944,7 +17304,7 @@ Les **sept classes qui ne rechargeaient pas** gagnent une fusée par minute
 la leur, qui est leur identité ; le Spectre reste à zéro. Le bandeau distingue
 enfin « vide » de « jamais » : zéro s'écrit `FUSÉES 0`, le tiret reste au Spectre.
 *(La première version écrivait `FUSÉES n/plafond · N s` — mesurée trop large le
-jour même : voir l'étape 23.)*
+jour même : voir l'étape 24.)*
 
 **Le tir devient semi-automatique**, sauf pour l'Occulteur. Trois pièces, et la
 deuxième est celle qu'on oublierait :
@@ -16975,9 +17335,9 @@ recharge d'une minute pour TOUS les gadgets ; le grésillement devient une
 TORCHES jusqu'au noir de façon aléatoire, et une torche noire n'éblouit plus. Le
 bandeau des réserves s'inverse aussi chez le client en ligne (il y affiche les
 réserves de l'hôte) : à corriger dans le même geste, puisque l'état du gadget
-passera par lui. **Fait : voir l'étape 23.**
+passera par lui. **Fait : voir l'étape 24.**
 
-### Étape 23 — les gadgets rechargent, le grésillement devient une batterie ✅
+### Étape 24 — les gadgets rechargent, le grésillement devient une batterie ✅
 
 Les arbitrages d'Adrien du 2026-09-10, tous rendus par question :
 
@@ -17035,7 +17395,8 @@ gauche. Hors périmètre, relevé par la revue.
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
 le fil, `GadgetBase` et ses deux occluders, l'éblouissement généralisé, les
-assets des dix classes, la table rang → classe, l'écran de sélection, et la pose.
+assets des dix classes, la table rang → classe, l'écran de sélection — revenu dans le salon à
+l'étape 22 —, et la pose.
 
 **Reste** : rien de ce chantier. ✅ Adrien a éprouvé **l'arbalète** manette en
 main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et
@@ -17115,6 +17476,252 @@ pas un salon rouvert dans son dos.
 
 ---
 
+## Chantier — prêt à l'essai : ce qui précède les premiers joueurs (inscrit le 2026-09-10)
+
+**Demande d'Adrien, 2026-09-10 : « j'arrive à un point où je sens que mon jeu
+est prêt à être expérimenté. Quels sont les chantiers classiques à effectuer à
+ce stade ? Je pense notamment à de l'optimisation. »** La réponse a été donnée
+en session, puis inscrite ici sur son « ok ». **Rien de ce qui suit n'est
+commencé** : c'est un plan à étapes numérotées, et chaque étape se lance sur
+demande explicite, comme le veut le protocole. L'ordre est une recommandation de
+la session, pas un arbitrage d'Adrien.
+
+### Le constat qui décide de l'ordre
+
+L'optimisation n'est pas le premier chantier de ce stade, pour une raison de
+méthode déjà payée dans ce document : **toutes les mesures de cadence du projet
+viennent d'une seule machine**, un Apple M3 (relevés R2, R4, `banc_pics`). Le
+jeu y tient la barre de 60 de 1 % bas avec deux images de marge, et la cause
+des pics n'est pas trouvée. Optimiser avant de savoir sur quelles machines les
+testeurs joueront, c'est optimiser ce que le M3 sait mesurer. Un essai, lui,
+apprend deux choses avant toute autre : si le jeu démarre chez quelqu'un
+d'autre, et ce qu'il y coûte. D'où l'ordre — ce qui empêche un essai
+d'apprendre (PE1), ce qui permet d'apprendre (PE2), puis seulement ce qu'on
+apprend (PE3).
+
+État vérifié dans le dépôt le 2026-09-10 :
+
+| Point | État |
+|---|---|
+| Version publiée | `v0.4.2`, mise à jour en place éprouvée sur machine réelle (Phase 9) |
+| Cadence, vue unique, fenêtre de développement, M3 | médiane ~120, 1 % bas **61** pour une barre à 60 (R4, relevé d'Adrien) |
+| Cause des pics | non trouvée ; `banc_pics` a écarté particules, objets et nœuds ; pistes restantes : le coût de rendu par image (appels de dessin +14 à +18 % sur les images lentes), puis l'allocation |
+| Parties jouées sous Windows | **aucune consignée** — un export CI et un échange de mise à jour, pas une partie. Adrien pressent pourtant que les premiers joueurs seront sous Windows (Phase 9) |
+| Classes éprouvées manette en main | une sur dix (H11) ; les dix gadgets jamais utilisés en match |
+| Ce qu'un match archive sur la machine | rien : ni cadence, ni GPU, ni OS — `match_record.gd` archive le résultat, pas les conditions |
+
+### PE1 — Stabilité sur machine étrangère
+
+Un essai qui plante n'apprend rien, et il coûte un testeur. Trois choses, dans
+cet ordre :
+
+1. **Une partie complète sous Windows sur un poste vierge**, GPU intégré, en
+   `gl_compatibility`. C'est le jalon **H12** : il exige un poste que personne
+   ici n'a. Ce qu'on cherche : le jeu démarre, EOS s'authentifie, un match en
+   ligne se joue, la mise à jour passe.
+2. **Solder les dettes réseau des « Prochaines étapes »** : checklist
+   `CHECKLIST_TESTS_EN_LIGNE.md` jamais déroulée, 120 ms de latence simulée
+   jamais validées, relais Epic jamais exercé, détection de déconnexion lente,
+   contre-vérification à deux machines (H1), rejeu de l'appariement à deux
+   machines. Aucune n'est nouvelle ; toutes deviennent bloquantes le jour où un
+   inconnu joue sur un mauvais lien.
+3. **macOS sans notarisation (H4)** : Gatekeeper refusera l'application à
+   quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
+   les testeurs — mais le décider avant d'envoyer un lien.
+
+### PE2 — Instrumentation de l'essai ✅ PE2.1 à PE2.4 livrés le 2026-09-10 — le déploiement de PE2.3 est le jalon H14
+
+Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
+qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
+instantanée, `user://match_history.json` archive le résultat des matchs, et rien
+ne consigne les conditions.
+
+1. **Chaque match archive ses conditions** dans `MatchRecord` : médiane, 1 % bas
+   et pire image sur la durée du match — mesurés **par image**, comme le banc,
+   jamais par `get_frames_per_second()` (piège connu) —, GPU, OS, résolution de
+   fenêtre, RTT moyen, transport, lien direct ou relayé, version. Le relevé de
+   cadence se fait alors sur les machines des testeurs, pas sur le M3.
+2. **Un bouton « copier le diagnostic »**, dans le panneau F3 ou les Options, qui
+   met dans le presse-papiers ce que le testeur ne saura pas décrire.
+3. **Faire remonter ces lignes par Supabase**, dont l'infrastructure existe
+   (Phase 4) : une table de plus, une Edge Function de plus, aucune donnée
+   nominative au-delà du PUID déjà envoyé avec les matchs classés. À trancher
+   par Adrien : ce qui remonte, et si les matchs amicaux remontent aussi.
+   ✅ **Tranché le 2026-09-10** — voir « Décisions actées » et le lot du jour.
+4. **Un journal qui survit au plantage.** Piège connu : en release, `print()`
+   est tamponné et vidé à la fermeture propre seulement ; un plantage jette la
+   fin du journal, c'est-à-dire la seule partie utile. Un fichier écrit en flux,
+   ou vidé à chaque fin de manche.
+
+### PE3 — Optimisation, mesurée 🟡 PE3.1 et PE3.4 livrés, PE3.5 audité le 2026-09-10 — PE3.2 et PE3.3 attendent une machine
+
+Préalable : **définir la machine minimale** — jalon **H13**, décision d'Adrien.
+Sans elle, aucune cible n'a de sens : la barre « 1 % bas ≥ 60 » (R5) ne décrit
+que la machine où elle a été mesurée. Puis, par rendement décroissant :
+
+1. **Le GPU brûle pour rien hors match.** Les menus tournent déplafonnés vers
+   200 fps (relevé `--menus`), `Engine.max_fps` n'est posé que par le réglage du
+   joueur, aucun `low_processor_usage_mode`, rien à la perte de focus. Sur un
+   portable, c'est ce qui fait souffler les ventilateurs — la plainte numéro un
+   des testeurs — et c'est peu coûteux : un plafond dans les menus et hors
+   focus, jamais en match, puisque la médiane déplafonnée commande le RTT (R5).
+2. **La cause des pics.** Reprendre les pistes de `banc_pics` : le coût de rendu
+   par image, puis l'allocation dans `_process` et `_physics_process`. Outil :
+   le profileur de l'éditeur sur un vrai match. Sur la machine minimale, pas sur
+   le M3.
+3. **Les textures.** 295 images importées sans perte (`compress/mode=0`) et sans
+   mipmaps, des fonds d'interface de 3 Mo chacun : VRAM et temps de chargement,
+   à peser avec R6 qui doublera la densité des assets. Une décision d'import,
+   pas une retouche par fichier.
+4. **La taille du build.** L'export n'a aucun filtre d'exclusion, et
+   `tools/captures/` (10 Mo, quinze imports) part dans le paquet. Mineur, un
+   filtre suffit.
+5. **La chauffe des shaders.** Déjà traitée pour le joueur, le sang, la fusée et
+   l'onde de choc ; vérifier qu'aucun shader ne compile encore au premier usage
+   en match (`test_arena_lighting` en tient une partie).
+
+### Le lot du 2026-09-10 — ce qui se code sans fenêtre, et ce qu'il a appris
+
+**Demande d'Adrien : « je n'ai pas de machine Windows. Peut-on attaquer 2 et
+3 ? »** Oui, pour la part qui se code sans fenêtre. La session a récupéré le
+Godot 4.7.1 Linux de la CI, donc les suites headless tournent ici ; elle n'a
+ni fenêtre ni GPU, donc **aucune mesure nouvelle** — tout ce qui suit est du
+code vérifié par les suites, et les chiffres attendus restent des attentes.
+
+- **PE2.1 — chaque match archive ses conditions.** `conditions_de_match.gd`,
+  et `MatchRecord` passe au **schéma 5** avec la clé `conditions`. Une durée
+  par image lue à l'horloge (`Time.get_ticks_usec`), jamais au delta de
+  traitement — l'encaissement d'un tir ralentit `time_scale` en pleine manche
+  et un relevé au delta y lirait 5 000 fps ; définitions du banc mot pour mot
+  (médiane, 1 % bas = moyenne du centième le plus lent, pire image) pour qu'un
+  chiffre de match se compare à un chiffre de banc sans conversion ; les
+  écarts de plus de 0,5 s (pause en écran partagé, fenêtre gelée) comptés
+  comme des **trous**, pas comme des saccades ; arrêté à la mort, avant la
+  killcam. Le lien y est (RTT moyen et max), et la machine (OS, CPU, GPU,
+  pilote, fenêtre, VRAM). Vérifié : la fumée `--local` archive un
+  enregistrement v5 — 255 images, médiane 145, 1 % bas 113, machine sans GPU
+  puisque headless, et c'est attendu. ⚠️ **Local seulement** : l'envoi au
+  classement construit son propre corps et ne transmet rien de tout ça —
+  c'est PE2.3, et il attend Adrien.
+- **PE2.2 — F6 copie le diagnostic.** Presse-papiers **et**
+  `user://diagnostic.txt` (un presse-papiers se perd au copier suivant), et le
+  panneau F3 s'ouvre pour le dire — un geste sans retour visible passe pour un
+  geste raté. ⚠️ **Pas F4, comme prévu d'abord** : F4 est la trace d'écoute
+  d'`AudioManager` (`_tracer_ecoute`) et F5 l'éditeur de cartes. Un grep
+  limité à trois fichiers ne l'avait pas vu ; la feuille de route, si.
+- **PE2.4 — le journal survit au plantage.** `run/flush_stdout_on_print=true`
+  dans `project.godot`, vérifié dans la source de Godot 4.7
+  (`core/io/logger.cpp` : `RotatedFileLogger::logv` ne vide le fichier qu'en
+  erreur, ou sous ce réglage). Coût nul en manche : zéro `print` dans
+  `player.gd` et `bullet.gd`. `CLAUDE.md` dit désormais ce que le code fait ;
+  les deux passages de ce document qui décrivent l'ancien tamponnage (Phase 3,
+  piège « Un diagnostic qui ne tourne pas là où l'on joue ») portent une note
+  datée plutôt qu'une réécriture.
+- **PE2.3 — les conditions remontent avec le rapport.** Tranché par Adrien le
+  2026-09-10, version minimale : elles voyagent avec le rapport des matchs **en
+  ligne**, amicaux et classés, **tous les champs** du schéma 5, et une phrase
+  d'information aux testeurs (dans `docs/SUPABASE.md`). Pas d'envoi séparé pour
+  l'écran scindé ni l'entraînement : ils ne rapportent rien, et les couvrir
+  demanderait un identifiant de machine anonyme — un chantier à part. Livré en
+  trois pièces : la migration `20260910120000_match_conditions.sql` (colonne
+  `conditions jsonb`, `report_match` avec `p_conditions` en dernier et un
+  défaut, vue `conditions_de_match` qui aplatit ce qu'on lit), le tamis
+  `parseConditions` dans `_shared/match_report.ts` (liste blanche clé par clé,
+  **jamais un motif de refus** — un relevé mal formé ne doit pas faire perdre
+  un match au classement, même arbitrage que le format inconnu ramené à BO1),
+  et le corps du rapport côté jeu, rejeu du journal compris. Vérifié : 95 tests
+  Deno verts, six nouveaux. ⚠️ **Rien n'est déployé** : `db push` puis
+  `functions deploy report` sont le jalon **H14**, et lui seul les fait.
+- **PE3.1 — un plafond hors arène.** `GameSettings.PLAFOND_MENU = 120` dans
+  les menus, `PLAFOND_HORS_FOCUS = 30` quand la fenêtre a perdu le focus, et
+  **jamais en arène** — `round_active or sandbox_mode`, donc l'entraînement et
+  le salon d'attente restent déplafonnés, et un hôte qui passe une seconde sur
+  une autre fenêtre simule toujours pour l'adversaire. Un choix du joueur plus
+  bas l'emporte. Les bancs (`bench_framerate`, `banc_pics`) posent
+  `pilotage_externe` pour que `--menus` mesure la charge et non le plafond.
+  **Ces deux nombres sont des valeurs de départ**, pas des décisions. Attendu,
+  non mesuré : les menus passent de ~200 à 120 images par seconde, ce qui se
+  lit au F3 sans banc.
+- **PE3.4 — `tools/*` hors de l'export.** `exclude_filter="tools/*"` sur les
+  trois préréglages. Vérifié avant : aucun `res://tools/` dans le code de jeu,
+  aucun `.tscn` ne pointe dedans, et les deux `class_name` du dossier
+  (`PeerSpy`, `RenduCommun`) n'ont aucun usage à la racine. Gain attendu : les
+  10 Mo de captures et les scripts de test ; non mesuré, l'export n'étant pas
+  possible ici.
+- **PE3.5 — l'audit des shaders.** Vingt-trois `.gdshader`. Vingt et un sont
+  préchargés en `const` ou chargés par les menus (`intro_planches.gd`,
+  `menu_hub.gd`, en `load()` hors match — hors sujet). **Deux ne sont
+  référencés par aucun code de jeu** : `distorsion_eblouissement.gdshader` et
+  `poussiere_faisceau.gdshader` — le `poussiere_faisceau` du code est un
+  identifiant d'EFFET (`effect_policy.gd`), pas ce fichier. Signalés, pas
+  supprimés : hors périmètre. **Ce que l'audit ne ferme pas** : un `preload`
+  charge le shader, mais le programme GL se compile au premier DESSIN — seule
+  `Fusee.prechauffer()` dessine d'avance. Une chauffe générale est un pas
+  séparé, et il se juge à `banc_pics` (des pics groupés au début sont une
+  compilation, des pics étalés non).
+
+**Ce qui attend Adrien, et ne se commence pas :**
+
+- **H14** — déployer PE2.3 : `supabase db push` puis
+  `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
+  juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
+  clients à jour envoient un bloc que la base ignore, sans rien perdre.
+- **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
+  des pics ; et désormais, gratuitement, les `conditions` de ses propres
+  matchs dans `user://match_history.json` — c'est le même relevé, pris en
+  jouant.
+- **PE3.3** — lire `vram_mo` et `textures_mo` dans le diagnostic F6 avant toute
+  décision d'import. ⚠️ **0 veut dire « non mesuré par ce pilote », jamais
+  « aucune texture »** — le résumé headless le montre.
+- **H13** — la machine minimale.
+
+**Trois choses payées en route.** Deux contrôles textuels de `test_classes.gd`
+épinglaient la FORME de ce lot — « le schéma est passé à 4 », et la parenthèse
+fermante après `_slug_de_classe(p2)` — et ont rougi sans qu'une classe ait
+bougé : le premier vérifie désormais « 4 ou plus » (l'égalité exacte vit dans
+`test_rejeu_journal.gd`), le second l'appel et non sa ponctuation. C'est le
+piège « un contrôle textuel épingle un identifiant, jamais un sens », payé une
+fois de plus. L'import sur cette machine a généré six
+`.uid` pour les vidéos `.ogv` de l'intro, absents du dépôt : la garde des
+assets non suivis a rougi le lot entier (piège « Un import sur une autre
+machine produit ce que la garde exige »). Et `get_video_adapter_driver_info()`
+vit sur `OS`, pas sur `RenderingServer` : le script ne compilait pas, la suite
+annonçait « tous les tests passent », et c'est la garde `SCRIPT ERROR` du
+lanceur qui l'aurait attrapé — pas le compteur de la suite.
+
+### PE4 — Mise en main
+
+Aucun écran « comment jouer » trouvé dans les menus (recherche sur « comment
+jouer », « tutoriel », « didacticiel » dans `ui.gd`, `menu_hub.gd`,
+`hub_screen.gd`). Un duel dans le noir absolu est inhabituel, et la première
+minute décide de tout : commandes affichées, entraînement mis en avant au premier
+lancement, fiche de classe existante réutilisée.
+
+### PE5 — Équilibrage et contenu
+
+H11 reste ouvert sur neuf classes, les gadgets n'ont jamais servi en match, et
+l'effet de bord Sentinelle / Incendiaire (root plus long que la cadence, signalé
+à l'étape 20 des dix classes) ne se juge qu'en jouant. Avec peu de testeurs,
+tout le monde démarre Aveugle I et l'appariement sera étroit : la fourchette
+d'attente (étape 8.5) est à revoir pour une population de dix personnes.
+
+### PE6 — Distribution
+
+Windows d'abord (Phase 9), itch.io comme canal d'essai — les gabarits de capsule
+DA7.1 existent —, des notes de version, et un canal de retour. Détail relevé :
+l'autoload `_mcp_game_helper` du plugin éditeur `godot_ai` part dans le build
+release. Il est inerte hors débogueur, mais un outil de développement n'a rien à
+y faire.
+
+### Ce qui n'a pas été vérifié
+
+Ce plan est écrit depuis une lecture du dépôt, sans Godot ni fenêtre dans
+l'environnement de la session. **Aucune mesure nouvelle n'a été prise** ; tous
+les chiffres viennent des relevés déjà consignés ici. L'absence d'écran d'aide
+est une absence de résultat de recherche, pas une preuve.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -17132,6 +17739,9 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
+| H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
+| H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 
 ---
 
@@ -17217,6 +17827,13 @@ et un seul est du travail de session.
 > jamais posé d'auditeur —, il vit dans `audio_manager.gd` et `game_state.gd`,
 > donc dans le domaine « game feel ». Deux de ses items (S3, S7) attendent un
 > arbitrage d'Adrien et **ne se commencent pas**.
+
+> **Ajouté le 2026-09-10 — un cinquième tas, et il PRÉCÈDE l'optimisation :** le
+> chantier **« prêt à l'essai »** (section dédiée ci-dessus), inscrit sur le
+> « ok » d'Adrien après sa question du jour. Six étapes PE1 à PE6, **aucune
+> commencée** ; l'ordre recommandé est PE1 (stabilité sur machine étrangère),
+> PE2 (instrumentation de l'essai), PE3 (optimisation, mesurée sur une machine
+> nommée). Deux jalons humains en découlent, H12 et H13.
 
 ### Le seul chantier de code ouvert
 

@@ -33,6 +33,15 @@ extends Resource
 ## renomme, l'autre nomme des fichiers.
 @export var libelle: String = ""
 
+## Ce que le gadget FAIT, en une phrase courte, pour la fiche de sélection.
+##
+## Demandé par Adrien le 2026-09-10, quand la fiche a perdu la description de
+## classe : le nom seul — « La poussière », « Le voile » — ne dit pas ce que
+## l'objet change sur la carte. ⚠️ **Un geste, pas des chiffres**, même règle que
+## `ClassData.description` : la durée et le stock vivent dans leurs champs, et les
+## redire ici donnerait deux vérités à maintenir.
+@export var description: String = ""
+
 ## Chemin du **script** du nœud posé. Vide tant que le gadget n'est pas écrit —
 ## ce qui est l'état normal des premières étapes, et qui doit se voir plutôt que
 ## se deviner. `est_livre()` répond à la question.

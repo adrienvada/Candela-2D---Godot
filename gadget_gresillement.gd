@@ -1,7 +1,7 @@
 class_name GadgetGresillement
 extends GadgetBase
 
-## Le grésillement — gadget du Parasite, chantier CLASSES, étapes 16 et 23.
+## Le grésillement — gadget du Parasite, chantier CLASSES, étapes 16 et 24.
 ##
 ## ## Une bobine qu'on allume et qu'on éteint
 ##

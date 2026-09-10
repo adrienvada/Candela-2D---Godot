@@ -77,6 +77,40 @@ var intro_vue := false
 var fps_cap := 0
 var resolution_index := 0
 
+## PE3.1 — le GPU brûlait pour rien hors match.
+##
+## Les menus tournaient déplafonnés, vers 200 images par seconde (relevé
+## `--menus` du 2026-08-18), et une fenêtre reléguée au second plan continuait
+## de dessiner à pleine cadence : sur un portable, c'est ce qui fait souffler
+## les ventilateurs — la première plainte d'un testeur, et elle ne parle même
+## pas du jeu. Deux plafonds, donc, qui ne s'appliquent QUE hors arène :
+##
+## - `PLAFOND_MENU` quand on est dans les menus, fenêtre au premier plan ;
+## - `PLAFOND_HORS_FOCUS` quand la fenêtre a perdu le focus, hors arène.
+##
+## ⚠️ **Jamais en arène, quel que soit le focus.** La médiane déplafonnée
+## commande le RTT d'EOS (Phase 3 : 60 fps plafonnés doublent la latence
+## réseau), et un hôte qui passe une seconde sur une autre fenêtre simule
+## toujours pour l'adversaire. Le régime est signalé par `game_state.gd`
+## (`round_active or sandbox_mode`, donc l'entraînement et le salon d'attente
+## aussi), et par `NOTIFICATION_APPLICATION_FOCUS_IN/OUT` pour le focus.
+##
+## Un choix du joueur plus BAS que le plafond l'emporte ; plus haut, il est
+## ramené au plafond hors arène et s'applique tel quel en arène.
+##
+## Ces deux nombres sont des VALEURS DE DÉPART, pas des décisions : 120 tient
+## un écran à 120 Hz sans qu'un curseur paraisse sauter, 30 suffit à un salon
+## qui attend et à une recherche d'appariement en arrière-plan.
+const PLAFOND_MENU := 120
+const PLAFOND_HORS_FOCUS := 30
+
+## Vrai quand un BANC règle `Engine.max_fps` lui-même (`bench_framerate`,
+## `banc_pics`) : les réglages ne touchent alors plus au moteur, sans quoi le
+## relevé `--menus` mesurerait ce plafond et non la charge.
+var pilotage_externe := false
+var _en_arene := false
+var _fenetre_au_premier_plan := true
+
 var master_volume := VOLUME_DEFAULT
 var music_volume := VOLUME_DEFAULT
 var sfx_volume := VOLUME_DEFAULT
@@ -293,7 +327,34 @@ func _apply_video() -> void:
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED
 	)
-	Engine.max_fps = fps_cap
+	if pilotage_externe:
+		return
+	Engine.max_fps = plafond_effectif()
+
+## PE3.1 — le régime change (arène ou menus) : appelé par `game_state.gd` à
+## chaque bascule, jamais à chaque image.
+func signaler_arene(en_arene: bool) -> void:
+	if en_arene == _en_arene:
+		return
+	_en_arene = en_arene
+	_apply_video()
+
+## Le plafond réellement posé sur le moteur — voir `PLAFOND_MENU`.
+func plafond_effectif() -> int:
+	if _en_arene:
+		return fps_cap
+	var plafond := PLAFOND_MENU if _fenetre_au_premier_plan else PLAFOND_HORS_FOCUS
+	if fps_cap > 0 and fps_cap < plafond:
+		return fps_cap
+	return plafond
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_fenetre_au_premier_plan = false
+		_apply_video()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_fenetre_au_premier_plan = true
+		_apply_video()
 
 func _apply_audio() -> void:
 	_apply_bus_volume(BUS_MASTER, master_volume)

@@ -286,6 +286,35 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
+
+**Déclaration : deux fichiers hors de mon périmètre.** `particle_pool.gd`
+(domaine « game feel », plus personne dessus depuis la session SG du 2026-09-09)
+et `game_state.gd` (disputé — le correctif de `rebuild_arena()` y est celui de
+la session précédente sur cette même branche, `lights-display-error-3fd1cd-60`,
+que je reprends et livre). Aucune session ne s'est déclarée sur ces deux
+fichiers au moment d'écrire ; vérifié dans la table ci-dessus.
+
+**Ce qui a changé, en bref** (détail dans la ROADMAP, « Pièges connus », *Une
+lumière à énergie zéro compte quand même*, et chantier fusée, *Le carré près de
+la fusée*) :
+- `particle_pool.gd::_configure` : les grains `DUST` et `SMOKE` — énergie 0 —
+  ont désormais leur `PointLight2D` **désactivée**, pas seulement à zéro ; les
+  genres éclairants la réactivent (nœuds recyclés). Cause du halo tranché : le
+  plafond moteur de 15 lumières par `CanvasItem`, un quadrant de `TileMapLayer`
+  étant un item, et 15 grains fantômes qui l'occupaient.
+- `game_state.gd::rebuild_arena()` : les calques originaux et l'habillage sont
+  cachés après duplication par joueur — le décor était éclairé deux fois.
+
+**Aucun banc ajouté** : la reproduction est `./tools/run_photos.sh --plan=fusee`,
+qui exige une vraie fenêtre ; la mesure est au pixel, consignée dans la ROADMAP.
+
+**Suite, le même jour — décision d'Adrien : les particules de sang n'éclairent
+plus.** L'éclat V4.11 est retiré en entier de `particle_pool.gd` (constantes
+`BLOOD_FLASH_*`, surmultiplication dans `advance()`, entrée `flash`) ; seules
+les étincelles gardent une lumière. Décision et raisons dans la ROADMAP,
+« Décisions actées » ; la ligne V4.11 de la liste game feel porte « DÉFAIT ».
+
 ### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
 
 **Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :
@@ -305,6 +334,14 @@ ROADMAP, section « DA2.8 (suite 2) ».
 **Publié sur `main`, pas encore une nouvelle release.** Le correctif est sur
 `main` pour la prochaine publication ; je n'en ai pas déclenché une moi-même —
 Adrien n'a rien demandé de tel cette fois.
+
+### 2026-09-09 (suite) — clôture DA5.3 : volet (G) livré et intégré (textures peintes de particules)
+
+**Livré : le volet graphique (G) de DA5.3 est achevé et DA5.3 est désormais intégralement clos.**
+- **Matière générée & procédé DA1.5** : planche source `assets/sources/halo/H5_poussiere.jpg` (particule organique asymétrique, esprit roman graphique brutaliste). Isolation de la luminance, conversion en masque RGBA 32×32 (`assets/halo/particule_poussiere.png`), bords fondus à zéro, format blanc neutre multiplicatif.
+- **Câblage dans `poussiere_faisceau.gdshader`** : uniforme `texture_particule` avec repli `hint_default_black` et repli algorithmique sécurisé.
+- **Câblage dans `menu_particles_ambiance.gd`** : suppression du cercle analytique procédural (`GradientTexture2D.FILL_RADIAL`), remplacé par le chargement de `particule_poussiere.png`.
+- **Validation** : tests de compilation et d'assignation dans `tools/test_arena_lighting.gd`, tests d'artworks dans `tools/test_menu_artworks.gd`, et `./tools/run_suites.sh` 100 % vert.
 
 ### 2026-09-09 (suite) — session « DA5 · chasse aux défauts » : six des neuf étapes livrées
 
@@ -334,7 +371,7 @@ dans la déclaration d'ouverture ci-dessous.
 
 **Ce qui reste ouvert :**
 
-- **DA5.3, volet (G)** — la texture peinte finale reste due à Adrien.
+- **DA5.3, volet (G)** — ✅ clos par la session suivante le 2026-09-09 (texture peinte `particule_poussiere.png` livrée et branchée).
 - **La famille `EffectPolicy` de `aberration_eblouissement`** (CONFORT choisi
   sur la recommandation du plan, jamais confirmé par Adrien) — seule décision
   de conception encore ouverte, détail dans `docs/ROADMAP.md` (DA5.5).
@@ -3468,7 +3505,72 @@ désormais un root plus long que leur cadence. Détente tenue, on y reste immobi
 en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
 l'a voulue comme telle, et elle se juge en jouant.
 
-## 2026-09-10 — Ce que l'entraînement a révélé (chantier DIX CLASSES, étape 22)
+## 2026-09-10 — Session « candela-2d-godot-8a » (titre : « Optimisation et préparation du jeu »), branche `claude/game-optimization-prep-l1ugex`
+
+**Chantier :** « prêt à l'essai » (PE1 à PE6), inscrit dans `docs/ROADMAP.md`
+sur le « ok » d'Adrien à la question « quels sont les chantiers classiques à ce
+stade ? ». **Aucun fichier de code tenu** : cette session n'a écrit que dans
+`docs/ROADMAP.md` (une section nouvelle avant « Jalons humains », deux lignes
+H12/H13 dans la table des jalons, un encart aux « Prochaines étapes », la date)
+et dans ce journal. Aucune étape du chantier n'est commencée ; la session qui en
+prendra une réservera ses fichiers ici avant d'écrire.
+
+**Le suivi de projet n'a PAS été republié par cette session, et c'est voulu.**
+Le tableau lui-même nomme son porteur — « Can2d - Mise à jour artefact de suivi
+- Sonnet LOCAL », republication horodatée du jour — mais c'est une session
+locale sur le poste d'Adrien : `ListAgents` depuis un conteneur distant ne la
+voit pas, `SendMessage` ne peut donc pas lui porter le delta. Republier
+soi-même aurait recréé le croisement de versions que la centralisation a réglé.
+Le delta est donc dans le rapport de session, pour qu'Adrien le remette au
+porteur. **À savoir pour les sessions distantes suivantes : le porteur peut être
+local et invisible d'ici ; lire le bloc « Qui travaille sur quoi » du tableau
+avant de conclure qu'il n'y en a aucun.**
+
+**Addendum du 2026-09-10 — PE2 et PE3 lancés sur demande d'Adrien** (« je n'ai
+pas de machine Windows, peut-on attaquer 2 et 3 ? »). `list_sessions` : toutes
+les autres sessions sont inactives (IDLE), aucune ne tient de fichier. **Fichiers
+touchés :** `conditions_de_match.gd` (créé), `tools/test_conditions_de_match.gd`
+(créé), `match_record.gd` (schéma 5), `game_state.gd` (quatre points d'ancrage :
+`_process`, `_do_start_round`, `_do_end_round`, `_solder_le_match`, plus
+`_archive_match_result`), `settings_manager.gd` (plafond par régime),
+`ui.gd` (F6, panneau F3), `tools/bench_framerate.gd` et `tools/banc_pics.gd`
+(`pilotage_externe`), `tools/run_suites.sh` (la suite), `tools/test_rejeu_journal.gd`
+(schéma 5), `project.godot` (`flush_stdout_on_print`), `export_presets.cfg`
+(`tools/*` exclu), `CLAUDE.md`, et six `assets/video/intro/*.ogv.uid` produits
+par l'import. Après toute fusion sur ce chantier : `grep` de
+`_conditions.commencer`, `signaler_arene` et `plafond_effectif`.
+
+**Addendum PE2.3, 2026-09-10.** Sur le « oui » d'Adrien à la version minimale.
+Fichiers touchés en plus : `supabase/migrations/20260910120000_match_conditions.sql`
+(créé), `supabase/functions/_shared/match_report.ts` et `match_report_test.ts`,
+`supabase/functions/report/index.ts`, `ranked_identity.gd` (le rejeu emporte
+les conditions), `game_state.gd` (`_report_to_ranking` prend les conditions),
+`tools/test_conditions_de_match.gd`, `docs/SUPABASE.md`, `README.md`. Deno
+installé ici pour les tests hors ligne (95 verts). **Rien n'est déployé** :
+jalon H14, Adrien seul.
+
+#### Lot du 2026-09-10 — session « candela-2d-ef » (branche `selection-classe-salon`), le choix de classe revient dans le salon
+
+**⚠️ J'ai écrit dans trois fichiers du chantier CLASSES, et je le déclare.**
+`menu_fiche_classe.gd` (la fiche réduite au sprite, au gadget et aux jauges),
+`tools/test_classes.gd` (sa partie interface seulement) et `ui.gd` (le salon, les
+râteliers, l'entraînement, la fenêtre de choix du compétitif). La session
+« Système de 10 classes asymétriques » a été prévenue par message avant la
+première écriture ; son chantier est clos et sa branche fusionnée.
+
+**Pas touché** : `game_state.gd`, `class_data.gd`, les descriptions du catalogue.
+Tout le détail est dans la ROADMAP, chantier des dix classes, étape 22.
+
+**Puis, le même jour, à la demande d'Adrien** : `gadget_profile.gd` gagne un champ
+`description`, et `game_state.gd` est touché en DEUX endroits — `_gadget()` et
+ses dix appels dans `_batir_catalogue()`, qui reçoivent chacun leur phrase ; et
+`_lancer_match_apparie()`, dont le choix de carte sort dans
+`_poser_la_carte_appariee()` pour être éprouvé seul, sans changer de
+comportement. `tools/test_online_match.gd` gagne un contrôle dans
+`_run_appariement()`. Aucune valeur, aucune description de classe, rien d'autre. La session « Système de 10
+classes asymétriques » a été prévenue avant l'écriture.
+
+## 2026-09-10 — Ce que l'entraînement a révélé (chantier DIX CLASSES, étape 23)
 
 Adrien a essayé les classes à l'entraînement et rapporté quatre choses : le
 Parasite tirait en rafale, lançait des fusées sans fin, n'affichait pas son
@@ -3501,7 +3603,7 @@ Reste le lot gadgets, arbitré par Adrien : recharge d'une minute pour tous, et 
 grésillement devenu batterie — posé au sol, rallumable, qui éteint les torches
 jusqu'au noir, et dont une torche éteinte n'éblouit plus.
 
-## 2026-09-10 — Les gadgets rechargent, le grésillement devient une batterie (étape 23)
+## 2026-09-10 — Les gadgets rechargent, le grésillement devient une batterie (étape 24)
 
 Adrien a tranché cinq choses par question : une minute de recharge pour tous les
 gadgets, un gadget debout par joueur, un grésillement en batterie posé au sol et

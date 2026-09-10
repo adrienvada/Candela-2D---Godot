@@ -240,9 +240,10 @@ tests fabriquent leur propre paire de clés et signent leurs jetons.
 deno test --allow-net=jsr.io supabase/functions/_shared/
 ```
 
-34 tests, dont le refus d'un jeton `alg: none`, d'un jeton signé par une autre
-clé, d'une charge utile modifiée après signature, d'un jeton expiré, et d'un
-jeton destiné à un autre jeu.
+95 tests au 2026-09-10 (34 à l'ouverture), dont le refus d'un jeton `alg: none`,
+d'un jeton signé par une autre clé, d'une charge utile modifiée après
+signature, d'un jeton expiré, d'un jeton destiné à un autre jeu — et, depuis
+PE2.3, le tamis des conditions de match.
 
 ---
 
@@ -268,6 +269,75 @@ de champs nuls** — `{"id":null,…}` — et non en `null`. L'Edge Function y v
 profil valide et répondait `200`. Un code inventé était donc accepté. Les
 fonctions rendent désormais un `setof` : zéro ligne devient `[]`, sans ambiguïté
 possible. Migration `20260816183000_functions_return_setof.sql`.
+
+## PE2.3 — les conditions de match remontent avec le rapport (2026-09-10)
+
+**Décision d'Adrien, 2026-09-10.** Chaque rapport de match **en ligne**, amical
+ou classé, emporte désormais les conditions du match telles que le jeu les
+archive déjà en local (schéma 5 de `match_record.gd`, voir
+`conditions_de_match.gd`) : cadence par image (médiane, 1 % bas, pire image),
+lien (RTT moyen et max), et machine (système, processeur, carte graphique,
+pilote, fenêtre, mémoire vidéo). Le but : lire dans la base, sans rien
+demander à personne, sur quelles machines le jeu tourne et où il rame. L'écran
+scindé et l'entraînement ne rapportent rien et n'envoient donc rien.
+
+Trois pièces, livrées ensemble :
+
+| Pièce | Où | Ce qu'elle fait |
+|---|---|---|
+| Migration `20260910120000_match_conditions.sql` | `supabase/migrations/` | colonne `conditions jsonb` sur `match_reports`, `report_match` reçoit `p_conditions` en dernier avec un défaut, vue `conditions_de_match` |
+| Tamis `parseConditions` | `functions/_shared/match_report.ts` | liste blanche clé par clé ; jamais un motif de refus du rapport |
+| Le jeu | `game_state.gd`, `ranked_identity.gd` | le corps du rapport porte `conditions`, le rejeu du journal aussi |
+
+### Déployer — jalon H14, deux commandes
+
+```bash
+supabase db push
+supabase functions deploy report --no-verify-jwt
+```
+
+Dans cet ordre, et l'une juste après l'autre : entre les deux, l'ancienne
+fonction appelle `report_match` sans `p_conditions`, et le défaut `null` lui
+évite d'échouer — un rapport sans conditions, jamais un rapport perdu. Seule
+`report` importe le module modifié (`ranking.ts` l'importe aussi, mais aucune
+autre fonction n'importe `ranking.ts`) : rien d'autre à redéployer.
+
+### Lire
+
+Dans l'éditeur SQL du tableau de bord :
+
+```sql
+-- Les derniers matchs, machine et cadence
+select reported_at, kind, os, gpu, fenetre, fps_median, fps_1pc_bas, pire_image_ms, rtt_moyen_ms
+from public.conditions_de_match order by reported_at desc limit 50;
+
+-- Le 1 % bas médian par carte graphique — la question du chantier PE3
+select gpu, count(*) as matchs, percentile_cont(0.5) within group (order by fps_1pc_bas) as bas_1pc_median
+from public.conditions_de_match group by gpu order by matchs desc;
+```
+
+Un `vram_mo` à **0** est un pilote qui ne compte pas la mémoire vidéo, pas une
+absence de textures ; un `vram_mo` **NULL** est un client qui n'a pas envoyé la
+clé.
+
+### Vérifier après déploiement
+
+- `select column_name from information_schema.columns where table_name = 'match_reports' and column_name = 'conditions';` rend une ligne ;
+- un match en ligne joué avec un client à jour fait apparaître une ligne dans
+  `conditions_de_match` ; un client d'avant PE2.3 continue de rapporter, avec
+  `conditions` à NULL ;
+- `deno test --allow-net=jsr.io supabase/functions/_shared/` reste vert (95).
+
+### La phrase aux testeurs
+
+À mettre dans le message qui accompagne le lien, puisque c'est là qu'Adrien a
+choisi de le dire :
+
+> Quand tu joues en ligne, le jeu envoie avec le résultat du match un relevé de
+> cadence et la description de ta machine (système, processeur, carte
+> graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à
+> savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors
+> ligne.
 
 ## Ce qui n'est pas fait
 

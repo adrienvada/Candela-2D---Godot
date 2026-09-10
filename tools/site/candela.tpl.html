@@ -238,6 +238,15 @@ html.js .vu .barre-trait { width: var(--w); }
 .rang-arme.attente { color: #8d7855; border-bottom: 1px dotted #8d7855; }
 .note-echelle { margin-top: 1.1rem; font-size: 0.86rem; color: var(--dim); max-width: 54ch; }
 
+/* --- Le film ------------------------------------------------------------------
+   Ni lecture automatique, ni boucle, ni son imposé : un trailer se regarde
+   quand on décide de le regarder. `preload="none"` pour que la page ne
+   télécharge pas six mégaoctets à quelqu'un qui ne cliquera jamais. */
+.film { margin-top: 1.8rem; border: 2px solid var(--trait-bas); background: var(--noir); }
+.film video { display: block; width: 100%; height: auto; }
+.film-affiche { display: block; width: 100%; height: auto; }
+.film-lien { display: inline-block; margin-top: 1rem; font-family: var(--data); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
 /* --- L'annonce ---------------------------------------------------------------
    Ce qui n'est pas encore téléchargeable vit dans un bloc qui ne ressemble à
    aucun autre : trait discontinu, récitatif inversé. Un lecteur doit savoir
@@ -539,6 +548,15 @@ html.js .vu .barre-trait { width: var(--w); }
         <div class="vue c3 r2"><img src="{{G_SCINDE}}" style="object-position:50% 45%" alt="Écran scindé : deux joueurs, trois faisceaux, une cloison centrale."></div>
         <div class="vue c3"><img src="{{G_FUSEE}}" style="object-position:56% 52%" alt="Une fusée éclairante rouge brûle au sol et colore une moitié du couloir."></div>
         <div class="vue c3"><img src="{{G_EBLOUI}}" style="object-position:52% 50%" alt="Un éblouissement blanc envahit presque tout l’écran."></div>
+      </div>
+
+      <div class="case case-large anim d2" style="margin-top:2.4rem">
+        <p class="recitatif">Le film</p>
+        <h2>{{DUREE_FILM}}</h2>
+        <div class="prose">
+          <p class="retrait">Les planches de l’introduction et des plans de jeu, en alternance. Rien n’y est monté d’ailleurs que du jeu lui-même.</p>
+        </div>
+        <div class="film">{{FILM}}</div>
       </div>
 
       <div class="case case-large anim d2" style="margin-top:2.4rem">

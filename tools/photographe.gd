@@ -513,7 +513,7 @@ func _traiter_l_allumage(plans: Array[Dictionary]) -> void:
 		allumage.terminer()
 	# La séquence de sortie dure `D_SORTIE` : la couper à la hache laisserait un
 	# voile noir à moitié effacé sur la première image des menus.
-	await _attendre(func() -> bool: return not is_instance_valid(allumage), 3.0)
+	await _attendre_disparition(allumage, 3.0)
 
 
 func _famille_menus(plans: Array[Dictionary]) -> void:
@@ -878,7 +878,7 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 		await _peut_etre(plans, "affiche")
 	if is_instance_valid(affiche) and affiche.has_method("congedier"):
 		affiche.congedier()
-		await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+		await _attendre_disparition(affiche, 3.0)
 
 	# **Le bilan et les verdicts ne portent pas les mêmes valeurs, et c'est tout
 	# l'intérêt.** Posés identiques, les quatre images étaient quatre fois la
@@ -928,7 +928,7 @@ func _carte_de_soiree(plans: Array[Dictionary]) -> void:
 	await _peut_etre(plans, "soiree")
 	if is_instance_valid(panneau) and panneau.has_method("fermer"):
 		panneau.fermer()
-		await _attendre(func() -> bool: return not is_instance_valid(panneau), 3.0)
+		await _attendre_disparition(panneau, 3.0)
 
 
 # ---------------------------------------------------------------------------
@@ -1408,10 +1408,53 @@ func _preparer_le_dossier() -> void:
 func _attendre(predicat: Callable, plafond: float) -> bool:
 	var fin := Time.get_ticks_msec() + int(plafond * 1000.0)
 	while Time.get_ticks_msec() < fin:
+		# ⚠️ **Un `Callable` dont une capture a été libérée n'est plus
+		# appelable**, et l'appeler quand même tue la coroutine SUR PLACE : pas
+		# d'exception qu'on puisse rattraper, pas de valeur de retour, la
+		# fonction ne reprend simplement jamais après son `await`. Le garde ne
+		# répare rien — il transforme une mort silencieuse en refus visible, et
+		# c'est la seule chose qui distingue un outil cassé d'un outil muet.
+		if not predicat.is_valid():
+			printerr("  ! attente abandonnée : la condition a perdu une de ses "
+				+ "captures (voir `_attendre_disparition`)")
+			return false
 		if predicat.call():
 			return true
 		await get_tree().process_frame
 	return false
+
+
+## Attendre qu'un nœud DISPARAISSE — sans le capturer.
+##
+## ⚠️ **C'est le piège le plus retors de ce fichier, et il s'est payé le
+## 2026-09-09 sur la famille `fins`.** Écrire l'attente comme on la pense :
+##
+## ```gdscript
+## await _attendre(func() -> bool: return not is_instance_valid(affiche), 3.0)
+## ```
+##
+## capture `affiche` dans la lambda. Quand le nœud est enfin libéré — c'est-à-dire
+## **au moment précis où la condition devient vraie** — Godot invalide le
+## `Callable` entier :
+##
+## ```
+## ERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+## ```
+##
+## et la coroutine meurt là, sans un mot. **La condition attendue détruit le
+## moyen de la tester.** L'attente ne rend jamais faux, ne rend jamais vrai : la
+## fonction appelante ne reprend pas, et tout ce qui suit dans la famille n'est
+## jamais photographié. Symptôme observé : le repère de début imprimé, jamais
+## celui de fin ; `affiche` et les trois verdicts absents du dossier sans un
+## seul message d'erreur du photographe.
+##
+## Le remède tient à ce qu'on capture : **un identifiant d'instance est un
+## entier**, et un entier ne se libère pas.
+func _attendre_disparition(noeud: Object, plafond: float) -> bool:
+	if noeud == null or not is_instance_valid(noeud):
+		return true
+	var id := noeud.get_instance_id()
+	return await _attendre(func() -> bool: return not is_instance_id_valid(id), plafond)
 
 
 func _attendre_images(n: int) -> void:

@@ -28,11 +28,12 @@ const MAX_ACTIVE := 200
 ## (V5.5, grains ténus qui ne vivent que dans la lumière d'une torche).
 enum Kind { BLOOD, SPARK, SMOKE, DUST }
 
-## V4.11 — l'éclat : les gouttes de sang brillent fort leurs premiers instants
-## (leur lumière déjà sans ombre est brièvement surmultipliée) puis retombent
-## sur le fondu normal. Toucher, c'est voir — sur les deux écrans.
-const BLOOD_FLASH_DURATION := 0.2
-const BLOOD_FLASH_BOOST := 2.0
+## Le sang n'éclaire plus (2026-09-10, décision d'Adrien). V4.11 faisait
+## briller les gouttes 200 ms de leur propre lumière : un sang auto-éclairé
+## révélait la position de la victime dans le noir — réserve inscrite dès le
+## 2026-08-18 —, et 25 lumières par coup au but pesaient sur le plafond de 15
+## lumières par item du renderer (voir « Pièges connus »). Seules les
+## étincelles gardent leur lumière : elles naissent d'un mur, pas d'un corps.
 
 ## Gouttes peintes pour les particules de sang (2026-09-09).
 ##
@@ -159,7 +160,6 @@ func emit(kind: int, pos: Vector2, color: Color, amount: int,
 			"life": lifetime,
 			"scale": rb.get_node("Poly").scale,
 			"energy": (rb.get_node("Light") as PointLight2D).energy,
-			"flash": BLOOD_FLASH_DURATION if kind == Kind.BLOOD else 0.0,
 		})
 	return amount
 
@@ -194,10 +194,8 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 			Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
 			Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
 		poly.material = _mat_mix
-		LightTextures.poser(light, LightTextures.ECLAT, 64.0)
-		# V4.11 — l'éclat de l'impact : surmultipliée à l'émission, la lumière
-		# retombe à 1.0 en BLOOD_FLASH_DURATION (voir advance()).
-		light.energy = 1.0
+		light.energy = 0.0
+		light.enabled = false
 		rb.linear_damp = randf_range(8.0, 15.0) # Turbulence : friction lourde
 		rb.angular_velocity = randf_range(-40.0, 40.0)
 		rb.physics_material_override = _phys_blood
@@ -212,6 +210,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_add
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
+		light.enabled = false
 		rb.linear_damp = randf_range(5.0, 7.0)
 		rb.angular_velocity = randf_range(-6.0, 6.0)
 		rb.physics_material_override = _phys_blood
@@ -231,6 +230,13 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_dust
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 0.0
+		# ⚠️ Éteinte, pas seulement à zéro. Une PointLight2D à énergie 0 n'éclaire
+		# rien mais reste une lumière pour le renderer, qui n'en admet que 15 par
+		# item — et un quadrant de TileMapLayer est UN item. Dix grains vivants par
+		# torche suffisaient à saturer le quadrant du faisceau, et la lumière la
+		# plus récente (la fusée) y était jetée : halo tranché net à la frontière
+		# du quadrant, mesuré le 2026-09-10 (19 lumières dont 15 grains à 0).
+		light.enabled = false
 		rb.linear_damp = randf_range(2.5, 4.0)
 		rb.angular_velocity = randf_range(-4.0, 4.0)
 		rb.physics_material_override = _phys_blood
@@ -242,6 +248,7 @@ func _configure(rb: RigidBody2D, kind: int, pos: Vector2, color: Color) -> void:
 		poly.material = _mat_add
 		LightTextures.poser(light, LightTextures.ECLAT, 32.0)
 		light.energy = 1.5
+		light.enabled = true # un nœud recyclé peut sortir d'un genre éteint
 		rb.linear_damp = randf_range(1.0, 4.0) # Étincelles volatiles
 		rb.angular_velocity = randf_range(-20.0, 20.0)
 		rb.physics_material_override = _phys_spark
@@ -284,14 +291,7 @@ func advance(delta: float) -> void:
 		var eased: float = 1.0 - Charte.courbe(Charte.Courbe.EXTINCTION, t)
 		var rb: RigidBody2D = entry["rb"]
 		(rb.get_node("Poly") as Polygon2D).scale = (entry["scale"] as Vector2) * eased
-		var energie := float(entry["energy"]) * eased
-		# V4.11 — l'éclat des premiers instants, décroissance linéaire.
-		var flash: float = float(entry.get("flash", 0.0))
-		if flash > 0.0:
-			flash -= delta
-			entry["flash"] = flash
-			energie += float(entry["energy"]) * BLOOD_FLASH_BOOST * maxf(flash, 0.0) / BLOOD_FLASH_DURATION
-		(rb.get_node("Light") as PointLight2D).energy = energie
+		(rb.get_node("Light") as PointLight2D).energy = float(entry["energy"]) * eased
 		i += 1
 
 ## Renvoie tout en réserve (début de manche, retour au menu).
