@@ -92,6 +92,14 @@ deux variables de séance, un appel à `PowerOn.lancer()` en fin de `_ready`, et
 `estampe_de_kill.gd`. Aucune mécanique de jeu n'est modifiée : ni le gel, ni la
 killcam, ni le décompte, ni le réseau.
 
+**Ajouté le 2026-09-10 dans ce même domaine**, et toujours minuscule :
+l'interrupteur public `archiver_les_matchs` (déclaré à côté de
+`rendu_racine_autorise`, même patron) et un `if` autour du seul
+`MatchRecord.append_to_history()` de `_archive_match_result()`. Vrai par défaut :
+le jeu archive exactement comme avant. Seul le photographe le coupe, parce que
+ses fausses manches s'écrivaient dans le vrai historique — voir « Pièges
+connus » de la ROADMAP.
+
 `tools/run_suites.sh` gagne une entrée (`test_bilan_de_soiree`).
 
 ### Précision sur `*.gdshader` — ajoutée le 2026-08-18 par la session « menus »

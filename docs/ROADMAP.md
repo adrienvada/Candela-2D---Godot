@@ -3160,6 +3160,72 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un outil de mise en scène écrivait dans le vrai historique des matchs (2026-09-10)
+
+**Le photographe tue un joueur pour photographier la séquence de fin, et une
+manche terminée s'archive.** Pas dans un fichier jetable : dans
+`user://match_history.json`, celui qui nourrit l'écran HISTORIQUE et la carte de
+fin de soirée. Et l'historique est plafonné à deux cents entrées
+(`MatchRecord.HISTORY_MAX`) : **chaque fausse manche poussait dehors un vrai
+match.** Aucun message, aucune suite rouge — les suites headless ont chacune
+leur `user://` depuis le 2026-08-26, les outils à fenêtre non.
+
+Trouvé en répondant à la session « Refonte graphique », qui s'apprêtait à
+ajouter une manche tuée de plus. Mesuré le 2026-09-10 : l'historique ne remonte
+plus qu'au 2026-08-28, et trente-trois entrées portent la signature d'une mise
+en scène — local, 5 s, Pistolet contre Pistolet, J1 vainqueur.
+
+⚠️ **Ce chiffre n'est pas celui du photographe, et il ne faut pas le lui
+attribuer.** Certaines de ces entrées datent du 2026-09-07, **deux jours avant
+que l'outil existe** : la signature n'est pas exclusive. `planche_eblouissement`
+mène aussi des manches jusqu'à leur fin avec le vrai `user://` — même défaut,
+**signalé et non corrigé** (ce n'est pas le fichier de cette session). Le fichier
+seul ne permet pas de dire quelle entrée vient de quel outil.
+
+**Corrigé à la source**, sur le patron de `rendu_racine_autorise` :
+`GameState.archiver_les_matchs`, public, vrai par défaut, que le photographe met
+à faux dans son `_ready()`. Un seul point d'écriture existe
+(`_archive_match_result`, qui couvre aussi les forfaits) ; le garder là couvre
+tout. Restaurer le fichier après la séance aurait marché aussi, mais avec un
+risque réel : écraser un match écrit pendant ce temps par une autre instance.
+`cineaste.gd` appelle `super()` et en hérite.
+
+**Vérifié le 2026-09-10 sur le vrai historique**, et c'est la seule vérification
+qui vaille ici : empreinte SHA-256 du fichier relevée avant et après une séance
+`fins` qui a bien tué une manche (`[REPLAY] P2 died`) et écrit ses huit images —
+**identique octet pour octet**. ⚠️ Compter les entrées n'aurait rien prouvé :
+l'historique est déjà plein à deux cents, et un match ajouté en aurait chassé un
+autre **sans changer le compte**. Le plafond qui rend la pollution nuisible est
+aussi ce qui la rend invisible à un décompte.
+
+**L'historique déjà pollué n'a pas été nettoyé** : supprimer des entrées de
+l'historique d'un joueur est une décision d'Adrien, et l'attribution incertaine
+interdit de le faire à coup sûr.
+
+⚠️ **Et la session qui a posé ce correctif a elle-même pollué l'historique, le
+jour même, en diagnostiquant.** Pour vérifier un scénario réseau intermittent
+(`duo_reconnexion`, famille 4.1), elle a relancé `./tools/run_duo.sh
+--reconnexion` **seul**, hors de `run_suites.sh` — et `run_duo.sh` lancé seul
+écrit dans le vrai `user://`. Ce n'est pas un piège caché, c'est **documenté et
+voulu** : « ce n'est pas un oubli, c'est un outil de mise au point qu'on veut
+parfois voir écrire pour de vrai » (commentaire de `run_suites.sh`). Deux entrées
+en ligne à 19:17 UTC — un hôte en forfait, un client — viennent de cette relance.
+**Ce sont les seules de toute cette affaire dont l'origine est certaine.**
+
+**La règle pratique :** un banc relancé à la main pour diagnostiquer, et dont on
+ne veut pas les écritures, se lance avec un foyer jetable —
+`HOME="$(mktemp -d)" ./tools/run_duo.sh --reconnexion`. Le correctif de ce jour
+couvre le photographe et ses héritiers ; il ne couvre ni `planche_eblouissement`
+ni les bancs lancés à la main, et il ne peut pas les couvrir : ce sont des choix
+d'outil, pas des oublis du jeu. **On ne corrige pas une écriture voulue — on
+choisit, à chaque lancement, si on la veut.**
+
+**La leçon qui dépasse le cas :** l'isolation de `user://` que les suites ont
+gagnée le 2026-08-26 ne s'étend pas aux outils à fenêtre. Un outil qui monte
+`main.tscn` monte aussi toute la persistance du jeu — historique, réglages,
+cartes joueur — et chaque effet de bord y est réel.
+
+
 ### Un relevé de touches fait dans un seul fichier (2026-09-10)
 
 L'étape 4 a posé le gadget de J2 sur O après avoir « relevé, pas supposé » les
