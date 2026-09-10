@@ -12139,6 +12139,36 @@ dans la même journée.
   > la **torche** (planche 4, dans le récit) — mais elles se disputaient
   > l'écran.
 
+  ⚠️ **Le mécanisme « curseur = torche » a été abandonné le 2026-09-10
+  (Adrien), après l'avoir défendu dans la même conversation.** Les six
+  planches sont désormais des clips Veo 3.1 (Image-to-Video sur les six
+  illustrations), lus tels quels par un `VideoStreamPlayer` — l'image fixe
+  révélée au curseur ne reste qu'un repli si un `.ogv` manque. Ce que ça coûte
+  et pourquoi on l'a fait quand même :
+
+  - **Les rushes Veo dérivent.** Chaque plan de 8 s a été passé en revue image
+    par image avant rognage : `03-dotation` substitue le pistolet à la torche
+    dans sa première seconde, `05-prix` fait apparaître puis disparaître une
+    silhouette géante parasite, `01-descente` finit hors-cadre. Les fenêtres de
+    rognage retenues (2,0 à 2,5 s chacune, une inversée pour `06-extinction`
+    dont le feu grandit au lieu de mourir) sont dans
+    `tools/convert_intro_videos.sh`, commentées plan par plan.
+  - **Godot ne lit que l'Ogg Theora en natif.** `ffmpeg` de ce poste décode
+    Theora mais ne l'encode pas ; `ffmpeg2theora` (`brew install
+    ffmpeg2theora`) fait le travail. Installer ce paquet a fait remonter `x265`
+    dans Homebrew et cassé l'`ffmpeg` du poste au passage (`libx265.216.dylib`
+    introuvable) — `brew reinstall ffmpeg` répare. À prévoir sur tout poste qui
+    relancera le script.
+  - **Seuls les `.ogv` rognés sont versionnés.** Les rushes bruts (~25 Mo,
+    8 s × 6, reconstructibles depuis Flow) sont dans
+    `.gitignore` (`/assets/video/intro/*.mp4`) ; l'audit d'assets de
+    `tools/run_suites.sh` les aurait sinon signalés absents du dépôt.
+  - **Ce que ça abandonne, texto :** DA6.6 enseignait le verbe du jeu —
+    *éclairer pour voir* — en rendant l'intro **jouée**, pas subie. Une vidéo
+    en pilote automatique ne l'enseigne plus. Adrien a tranché en connaissance
+    de cause ; à rouvrir si l'intro se révèle moins efficace à l'usage que
+    prévu par la conception d'origine.
+
 #### Pourquoi l'intro passe AVANT le reste de DA7 (2026-09-09)
 
 Trois raisons, et la troisième est la seule qui soit un argument de coût.
@@ -12458,6 +12488,17 @@ c'est le code qui les colore.
   coupe monte de 4 mesures à 1 mesure au fil des phrases — la courbe d'une
   manche. **Blocage unique et réel : il n'existe aucune capture vidéo.** Le
   photographe rend des images fixes ; ce découpage se lit, il ne s'exécute pas.
+
+  ⚠️ **Tentative écartée PUIS partiellement reprise (2026-09-10, Adrien).**
+  Proposition initiale : animer les six planches avec Veo 3.1 (Image-to-Video)
+  pour ouvrir ce trailer et remplacer la lecture de l'intro. Signalée avant
+  exécution — elle heurte de front la règle « rien qui n'existe dans le
+  moteur » de ce document, et celle de DA6.6 (l'intro s'éclairait au curseur,
+  elle ne se regardait pas). **Adrien a d'abord confirmé garder la conception
+  documentée pour les deux, puis est revenu sur l'intro seule** : les six
+  clips remplacent maintenant la lecture au curseur (détail dans DA6.6
+  ci-dessus). **Le trailer, lui, garde sa règle intacte** — aucun plan Veo n'y
+  entre, le blocage reste l'absence de capture vidéo du jeu.
 - **DA7.3 Presskit et screenshots composés.** *(S + Adrien)* — 🟡 **source
   écrite le 2026-09-09** : [docs/PRESSKIT.md](PRESSKIT.md). Accroche, trois
   longueurs de description, points saillants, et la sélection d'images par nom

@@ -2,6 +2,16 @@
 
 *Inscrit le 2026-09-09. Item **DA6.6**, voir `ROADMAP.md`.*
 
+> ⚠️ **Le principe central de ce document — « l'intro ne se regarde pas, elle
+> s'éclaire » — ne correspond plus au comportement livré.** Depuis le
+> 2026-09-10 (décision d'Adrien, détail dans `ROADMAP.md`), les six planches
+> sont des clips vidéo Veo 3.1 lus en `VideoStreamPlayer`, plus des images
+> fixes révélées au curseur. Le storyboard, le texte gravé, la cadence et le
+> raccord de sortie ci-dessous restent d'actualité ; la section « Le principe »
+> qui suit décrit une mécanique abandonnée, gardée ici pour la raison du choix
+> initial et parce que `intro_planches.gd` y retombe en repli si un fichier
+> vidéo manque.
+
 Six planches de bande dessinée, dans le style des illustrations de menu, qui
 racontent l'arrivée d'un homme dans un lieu sombre. On ne sait pas pourquoi il
 est là et **on ne le saura pas** : pas de camp, pas de commanditaire, pas de
