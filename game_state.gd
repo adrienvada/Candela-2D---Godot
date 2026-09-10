@@ -3697,7 +3697,7 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
-		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
+		"Une batterie qu'on allume et coupe : les torches proches sautent jusqu'au noir.")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
@@ -3819,7 +3819,7 @@ func _batir_catalogue() -> void:
 	spectre.root = _root(0.08)
 	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
 	spectre.gadget = _gadget("voile", "Le voile",
-		"Une bâche qui arrête la lumière, pas les balles.")
+		"Une bâche qui arrête la lumière et les joueurs, pas les balles.")
 
 	_classes = [
 		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,

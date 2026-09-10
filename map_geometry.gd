@@ -28,8 +28,19 @@ const WALL_LAYER := 1
 ## Couche physique des fosses : seuls les joueurs s'y arrêtent. Les balles ne
 ## testent que la couche 1 (voir bullet.gd), elles survolent donc le vide.
 const PIT_LAYER := 2
-## Masque à donner aux joueurs pour qu'ils soient arrêtés par les deux.
-const PLAYER_MASK := WALL_LAYER | PIT_LAYER
+## La couche des gadgets qui ARRÊTENT LES JOUEURS — le voile du Spectre,
+## aujourd'hui seul. Décision d'Adrien, 2026-09-10 : « on ne peut pas passer au
+## travers ».
+##
+## ⚠️ **Une couche EN PLUS de `GADGET_LAYER`, jamais à sa place.** Le voile garde
+## la couche des gadgets, pour que les balles le voient encore — et le
+## traversent —, et gagne celle-ci pour que les joueurs s'y heurtent. Ajouter
+## `GADGET_LAYER` au masque des joueurs aurait fait des DIX gadgets autant de
+## murs. Ce qui décide est le drapeau `GadgetBase.arrete_les_joueurs`, gadget par
+## gadget, comme `arrete_les_balles` décide pour les balles.
+const GADGET_BLOQUANT_LAYER := 8
+## Masque à donner aux joueurs : les murs, les fosses, et les gadgets bloquants.
+const PLAYER_MASK := WALL_LAYER | PIT_LAYER | GADGET_BLOQUANT_LAYER
 
 ## La couche des GADGETS posés — chantier CLASSES, étape 5.
 ##
@@ -41,8 +52,9 @@ const PLAYER_MASK := WALL_LAYER | PIT_LAYER
 ##
 ## ⚠️ **`PLAYER_MASK` ne la contient PAS, et ne doit pas la contenir.** C'est
 ## cette absence qui laisse les joueurs traverser. Ce qui décide de bloquer ou
-## non une BALLE est un drapeau du gadget (`GadgetProfile.arrete_les_balles`),
-## jamais la couche physique.
+## non une BALLE est un drapeau du gadget (`GadgetBase.arrete_les_balles`),
+## jamais la couche physique. Le voile, qui arrête les joueurs depuis le
+## 2026-09-10, le fait par `GADGET_BLOQUANT_LAYER`, jamais par celle-ci.
 const GADGET_LAYER := 4
 
 ## Ce que voit une balle : les murs et les gadgets. Le joueur compensé, lui, est

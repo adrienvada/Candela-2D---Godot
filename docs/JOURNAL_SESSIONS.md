@@ -3667,3 +3667,25 @@ jeu, torche allumée, ligne de vue franche, facteur de lampe à 1 — et **J1 to
 laisser de `null`, orientait J1 vers la souris pendant les images attendues.
 L'adversaire sortait du faisceau. Le banc imitait donc à la perfection le
 comportement qu'il devait prouver ; seule la mesure l'a démasqué.
+
+## 2026-09-10 — Le voile tient debout (chantier DIX CLASSES, étape 25)
+
+Session `candela-10-classes-system-e0a52d-da`, branche
+`claude/candela-10-classes-system-e0a52d`.
+
+**La décision m'est arrivée par relais** : la session des menus rapportait les
+mots d'Adrien. Je l'ai fait confirmer directement avant d'y toucher, en posant
+avec elle la question qu'elle laissait ouverte — les balles. Pas par méfiance :
+une règle de jeu reformulée de main en main, c'est exactement la situation où ma
+question « posée de mémoire » du matin s'était trompée.
+
+**Le plus instructif était caché sous la demande.** Le voile avait, depuis sa
+création, une collision en disque de 84 px sous une ombre de 8 px d'épaisseur.
+Invisible tant que la forme ne servait qu'aux balles. Lui ajouter une propriété —
+arrêter les joueurs — sans regarder la forme en aurait fait un mur rond
+invisible. Un diagnostic jetable a comparé collision et ombre sur les dix
+gadgets : l'ombre habitée a le même écart en petit, signalé et non corrigé.
+
+**Le test de marche a son témoin** : le même pas, voile retiré, doit passer.
+Sans lui, un mur de la carte au même endroit aurait fait le travail du voile, et
+le contrôle serait resté vert pour une mauvaise raison.

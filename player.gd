@@ -1677,7 +1677,8 @@ func _physics_process(delta):
 			_energie_torche = lerp(_energie_torche, 2.5 * souffle, 8.0 * delta)
 
 		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
-		# les lampes autour de lui : le faisceau papillote, faiblit, revient.
+		# les lampes autour de lui : le faisceau papillote, faiblit, tombe au
+		# noir, revient (le noir absolu depuis l'étape 24).
 		#
 		# ⚠️ **Posé APRÈS le souffle et AVANT la rétrodiffusion**, et les deux
 		# places comptent. Après le souffle, parce que la panne doit s'appliquer à
