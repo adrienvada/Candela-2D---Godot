@@ -12,6 +12,20 @@ uniform float rugosite_arete : hint_range(0.5, 20.0) = 8.0;
 uniform vec4 couleur_lisere : source_color = vec4(0.98, 0.91, 0.80, 1.0); // Charte.HALOGENE
 uniform vec4 couleur_reflet : source_color = vec4(0.96, 0.69, 0.24, 1.0); // Charte.AMBRE
 
+// ⚠️ L'intensité d'une lampe est dans son ÉNERGIE, et light() l'applique
+// (décision d'Adrien, 2026-09-10). Les masques de lumière du jeu sont blancs,
+// la forme de la tache est dans l'alpha : LIGHT_COLOR.rgb vaut la teinte
+// presque partout. Sans LIGHT_ENERGY, le liseré s'allumait d'un bloc sous toute
+// lampe, quelle que soit sa force — fondu de la torche, grésillement, bandeau
+// LED, éclats. Normalisé sur la torche nominale : à cette énergie le liseré
+// garde exactement l'aspect validé ; en dessous, il décroît avec la lampe.
+// PLAFONNÉ à 1 : la fusée pleine (3,0) et la mine (6,0) dépassent la torche, et
+// sans plafond elles rendraient l'arête plus forte qu'avant — ×2,4 pour la mine,
+// un aplat blanc. Aucune lampe n'éclaire le liseré plus qu'avant ce correctif ;
+// seules les plus faibles s'atténuent.
+// Doit valoir `flashlight.energy` nominale de player.gd — vérifié par test_mur_led.
+const float ENERGIE_REFERENCE = 2.5;
+
 varying vec2 v_world_pos;
 
 void vertex() {
@@ -69,7 +83,7 @@ void light() {
 		float rasant = max(abs(dir_to_light.x), abs(dir_to_light.y));
 		float spec_boost = 1.0 + pow(rasant, 2.0) * 0.6;
 
-		vec3 specular = LIGHT_COLOR.rgb * COLOR.rgb * spec_boost;
+		vec3 specular = LIGHT_COLOR.rgb * COLOR.rgb * spec_boost * min(LIGHT_ENERGY / ENERGIE_REFERENCE, 1.0);
 		LIGHT = vec4(specular, LIGHT_COLOR.a);
 	} else {
 		LIGHT = vec4(0.0);

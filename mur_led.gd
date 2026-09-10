@@ -24,6 +24,12 @@
 ## interrupteur : allumée dès `enabled`, noire au creux. Dosée par la couleur,
 ## les trois suivent (liseré 8 → 33 → 84 pour 0,05 → 0,20 → 0,50).
 ##
+## Depuis, le liseré applique l'énergie (décision d'Adrien, même jour), et le
+## corps adverse aussi dans un commit séparé, que la décision doit confirmer.
+## La couleur reste pourtant le levier : `player_rim_light.gdshader` (le corps du
+## joueur local, que la bande éclaire aussi) et `blood_shader.gdshader`
+## l'ignorent encore, et une énergie fixe à 1 rend la bande juste sous tous.
+##
 ## ⚠️ **UNE seule lumière pour toute la carte, et c'est la contrainte qui fonde le
 ## module.** Godot n'applique pas plus de 15 lumières à un même `CanvasItem`, et
 ## un quadrant de `TileMapLayer` (560 px) en est un — ROADMAP, « Pièges connus »,

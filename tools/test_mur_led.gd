@@ -18,6 +18,7 @@ func _init() -> void:
 	_test_tempo_musique()
 	_test_pose()
 	_test_intensite_par_la_couleur()
+	_test_shaders_lisent_l_energie()
 
 	if _failures == 0:
 		print("\n✓ Tous les tests passent")
@@ -204,3 +205,46 @@ func _test_intensite_par_la_couleur() -> void:
 	led.regler(0.0)
 	_check("éteinte au creux, pas laissée à zéro", not led.enabled)
 	led.free()
+
+## Shaders dont le `light()` n'applique pas encore `LIGHT_ENERGY`, connus et
+## signalés (ROADMAP, Pièges connus, *Deux shaders ignorent LIGHT_ENERGY*) :
+## hors du correctif décidé par Adrien le 2026-09-10, qui ne portait que sur le
+## liseré des murs et le corps adverse. En retirer un quand il est corrigé ; en
+## AJOUTER un demande de dire pourquoi.
+const LIGHT_SANS_ENERGIE := ["player_rim_light.gdshader", "blood_shader.gdshader",
+	"player_enemy_light.gdshader"]
+
+## Garde du correctif décidé par Adrien le 2026-09-10 : un `light()` propre qui
+## lit `LIGHT_COLOR` doit appliquer `LIGHT_ENERGY`. Les masques de lumière du
+## jeu sont blancs, la forme est dans l'alpha : l'intensité n'existe QUE dans
+## l'énergie. Sans elle, toute lampe dont on anime l'énergie (fondu, panne,
+## souffle, multiplicateur de classe) s'allume ou s'éteint d'un bloc.
+func _test_shaders_lisent_l_energie() -> void:
+	print("\n— Les shaders à light() propre lisent l'énergie")
+	var corps := RegEx.create_from_string("void light\\(\\)[\\s\\S]*")
+	var dossier := DirAccess.open("res://")
+	for fichier in dossier.get_files():
+		if not fichier.ends_with(".gdshader"):
+			continue
+		var source := FileAccess.get_file_as_string("res://" + fichier)
+		var trouve := corps.search(source)
+		if trouve == null:
+			continue
+		var lit_energie := trouve.get_string().contains("LIGHT_ENERGY")
+		if fichier in LIGHT_SANS_ENERGIE:
+			_check("%s : exception connue, toujours sans énergie" % fichier, not lit_energie,
+				"corrigé ? le retirer de LIGHT_SANS_ENERGIE")
+		else:
+			_check("%s : light() applique LIGHT_ENERGY" % fichier, lit_energie)
+	# Le liseré se normalise sur la torche nominale : elle doit garder l'aspect
+	# validé, et c'est le chiffre de player.gd qui fait foi.
+	var shimmer := FileAccess.get_file_as_string("res://shimmer_murs.gdshader")
+	var ref := RegEx.create_from_string("const float ENERGIE_REFERENCE = ([0-9.]+);").search(shimmer)
+	var torche := RegEx.create_from_string("flashlight\\.energy = ([0-9.]+)").search(
+		FileAccess.get_file_as_string("res://player.gd"))
+	_check("ENERGIE_REFERENCE lue dans shimmer_murs", ref != null)
+	_check("énergie nominale de la torche lue dans player.gd", torche != null)
+	if ref and torche:
+		_check("ENERGIE_REFERENCE = énergie nominale de la torche",
+			float(ref.get_string(1)) == float(torche.get_string(1)),
+			"%s / %s" % [ref.get_string(1), torche.get_string(1)])

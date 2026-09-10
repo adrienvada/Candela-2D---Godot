@@ -301,6 +301,16 @@ ignorent `LIGHT_ENERGY`. La bande se dose désormais par sa couleur. **Aucun
 shader touché** (domaine « game feel ») : le défaut est signalé à part, pour
 mesure et décision d'Adrien.
 
+**Suite — Adrien a tranché : « corrige le point 2 ».** Déclaration : je touche
+deux fichiers du domaine « game feel », `shimmer_murs.gdshader` et
+`player_enemy_light.gdshader` — une ligne de calcul chacun (`× LIGHT_ENERGY`,
+normalisé sur la torche pour le liseré), plus leur commentaire. Aucune session
+ne tient ce domaine depuis la session SG du 2026-09-09 ; la session
+« intelligent-lovelace » (mesures, branche `claude/intelligent-lovelace-4fd4d2`)
+est prévenue et ne corrige pas de son côté. `player_rim_light.gdshader` et
+`blood_shader.gdshader`, même motif, ne sont PAS touchés. Décision et chiffres :
+ROADMAP, « Décisions actées ».
+
 **Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
 artefact de suivi - Sonnet LOCAL ».
 
