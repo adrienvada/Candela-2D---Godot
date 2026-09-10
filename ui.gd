@@ -28,6 +28,8 @@ signal training_requested
 ## Le joueur quitte la fenêtre de choix : cela annule l'appariement ET la
 ## recherche. Renoncer à choisir son arme, c'est renoncer au match.
 signal pick_window_cancelled
+## Rejouer la cinématique d'introduction demandée depuis l'accueil du hub.
+signal intro_requested
 
 # ---------------------------------------------------------------------------
 # CHARTE VISUELLE
@@ -247,6 +249,7 @@ const ILLUSTRATIONS := {
 	"ill_entrainement": "res://assets/ui/ill_entrainement.png",
 	"ill_personnalisation": "res://assets/ui/apercu_personnalisation.png",
 	"ill_maj": "res://assets/ui/ill_mise_a_jour.png",
+	"ill_rejouer_intro": "res://assets/ui/ill_intro_allumage.png",
 	"ill_quitter": "res://assets/ui/ill_quitter.png",
 	"ill_retour": "res://assets/ui/ill_retour.png",
 	"ill_creer_ligne": "res://assets/ui/ill_creer_ligne.png",
@@ -3439,6 +3442,10 @@ func _build_hub_screens() -> void:
 		"Vérifie si une nouvelle version est publiée, et l'installe. Rien ne se "
 		+ "télécharge sans que vous le demandiez.", SCREEN_UPDATE, COLOR_DIM,
 		"", "", false, "ill_maj"))
+	accueil.add_child(hub.make_entry("REJOUER L'INTRO",
+		"Rejoue la cinématique d'introduction en bande dessinée : six planches "
+		+ "qui posent la règle du jeu et l'allumage dans le noir.",
+		"", COLOR_DIM, "rejouer_intro", "", false, "ill_rejouer_intro"))
 	# Style ordinaire, pas celui des lanceurs de match : fermer le jeu ne doit pas
 	# crier plus fort que ce qui engage une partie. Décision du 2026-08-17, perdue
 	# à l'arrivée dans le hub et rétablie ici.
@@ -3477,8 +3484,8 @@ func _build_hub_screens() -> void:
 		"Choisissez votre classe à droite, avant l'appui : après, le match part "
 		+ "tout seul. "
 		+ "La recherche vous rend la main : elle continue pendant que vous "
-		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Carte "
-		+ "tirée au hasard, résultat hors classement.",
+		+ "parcourez les menus, et le bandeau du haut dit où elle en est. Arène "
+		+ "standard, résultat hors classement.",
 		"", COLOR_GOLD, "", "", false, PANEL_SALON))
 	amical.add_child(hub.make_entry("MATCH PRIVÉ EN LIGNE",
 		"Par Internet, avec un code de salon à six caractères.",
@@ -4401,6 +4408,9 @@ func _on_hub_action(action: String) -> void:
 		"quitter":
 			get_tree().paused = false
 			quit_requested.emit()
+		"rejouer_intro":
+			get_tree().paused = false
+			intro_requested.emit()
 		"chercher":
 			_start_search()
 		"entrainement":
@@ -5274,7 +5284,7 @@ func _build_map_card() -> Control:
 func _refresh_map_card() -> void:
 	if map_card == null:
 		return
-	var entry := MapData.get_map(MapData.selected_map_id)
+	var entry := MapData.get_map(_id_carte_affichee())
 	if entry.is_empty():
 		map_card_name.text = "Aucune carte"
 		map_card_meta.text = ""
@@ -5291,6 +5301,18 @@ func _refresh_map_card() -> void:
 	# HiDPI. Rendre à 80 revenait à l'agrandir d'un facteur deux — et c'est cet
 	# agrandissement, pas le filtrage, qui la rendait floue.
 	map_card_thumb.texture = MapThumbnail.render_fit(entry["data"], 160)
+
+## L'arène que la carte du salon annonce : celle qui est choisie, sauf en
+## recherche amicale.
+##
+## L'amical se joue toujours sur l'arène standard — `GameState._lancer_match_apparie()`
+## la pose côté hôte, et l'invité reçoit celle de l'hôte. La carte choisie pour
+## l'écran scindé ne s'y jouera donc pas, et l'annoncer serait mentir.
+## `MapData.get_map()` accepte le slug `DEFAULT_MAP_ID` aussi bien qu'un identifiant.
+func _id_carte_affichee() -> String:
+	if hub != null and hub.current_id() == SCREEN_FRIENDLY:
+		return MapData.DEFAULT_MAP_ID
+	return MapData.selected_map_id
 
 ## Le clic sur la vignette de carte. Silencieux sur tout écran sans entrée
 ## « CHANGER DE CARTE » — l'invité d'un salon, ou une recherche automatique où
@@ -5476,8 +5498,13 @@ func _poser_les_rangees_du_salon() -> void:
 
 	# L'appariement n'a ni carte à choisir ni code à transmettre. Le seul choix qui
 	# reste au joueur est son arme, et c'est tout ce que le panneau garde.
+	#
+	# **Sauf la carte d'arène de l'amical**, rendue le 2026-09-10 : l'amical se joue
+	# toujours sur l'arène standard (Adrien, 2026-09-09, redit le 2026-09-10), la
+	# montrer dit la vérité — `_id_carte_affichee()` y veille. Le classé la tire au
+	# sort à l'appariement : il n'a rien à montrer.
 	if hub != null and hub.current_id() in [SCREEN_FRIENDLY, SCREEN_RANKED]:
-		map_card.hide()
+		map_card.visible = hub.current_id() == SCREEN_FRIENDLY
 		transport_hbox.hide()
 		lobby_players_box.hide()
 		lobby_code_row.hide()
@@ -5485,7 +5512,12 @@ func _poser_les_rangees_du_salon() -> void:
 		join_box.hide()
 		btn_open_lobby.hide()
 		lobby_status_label.show()
-		lobby_status_label.text = "Choisissez votre arme avant de lancer la recherche — l'arène est tirée au sort"
+		# ⚠️ **Ce texte annonçait un tirage au sort pour les deux**, un jour après que
+		# l'amical a cessé d'en faire un. La phrase suit désormais l'écran.
+		lobby_status_label.text = "Choisissez votre classe avant de lancer la " \
+			+ ("recherche — l'amical se joue sur l'arène standard"
+				if hub.current_id() == SCREEN_FRIENDLY
+				else "recherche — l'arène est tirée au sort")
 		# ⚠️ **LA CAUSE DU BOUTON GRISÉ, et elle est dans ce retour anticipé.**
 		#
 		# Relevé par Adrien le 2026-08-26 : « LANCER LA RECHERCHE EN LIGNE » était

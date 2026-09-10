@@ -17151,21 +17151,43 @@ la visibilité au lieu d'en hériter.
 
 #### Signalé, non corrigé
 
-- **La recherche amicale annonce une arène tirée au sort** — dans le statut du
-  salon (« l'arène est tirée au sort ») et dans la description de l'entrée
-  (« Carte tirée au hasard »). La décision du 2026-09-09 (Phase 8) retient
-  pourtant la carte par défaut. À vérifier dans `game_state.gd` avant de corriger
-  le texte : l'un des deux a tort, et ce n'est pas l'objet de cette étape.
 - **`ClassData.description` ne s'affiche plus nulle part.** Les dix textes
   restent au catalogue ; les supprimer serait une autre décision.
-- **Deux règles de classe ne se lisent plus à la sélection**, par la demande
-  même (« rien d'autre ») — relevé par la session du chantier. **Le Spectre n'a
-  aucune fusée**, et c'est son identité, pas un cas dégradé : la ligne FUSÉES
-  était seule à le dire. **Le Terrassier recharge cartouche par cartouche** et
-  tire dès la première : la jauge RECHARGE affiche le total, 5,6 s, vrai mais
-  trompeur, et seule la description portait la nuance. À soumettre à Adrien :
-  une ligne de plus coûte peu en hauteur, mais c'est lui qui a fixé le « rien
-  d'autre ». La réserve de fusées reste au HUD en manche.
+- **Le Terrassier recharge cartouche par cartouche**, et tire dès la première :
+  la jauge RECHARGE affiche le total, 5,6 s, vrai mais trompeur. Seule la prose de
+  classe portait la nuance, et elle n'est pas revenue.
+
+#### Amendé le même jour : les fusées et la phrase du gadget
+
+Relevé par la session du chantier, tranché par Adrien dans l'heure. Réduite à ce
+point, la fiche taisait deux choses que seule la prose disait. **Le Spectre n'a
+aucune fusée**, et c'est son identité ; **le nom d'un gadget ne dit pas ce qu'il
+fait** — « Le voile » ne dit pas qu'il arrête la lumière et pas les balles.
+
+- Une septième jauge, **FUSÉES**, affiche le **plafond** de la réserve, recharge
+  comprise, et non le stock de départ. Le Spectre y lit zéro, sans aucun cran :
+  `_part()` réserve le vide aux vrais zéros.
+- Chaque gadget porte une **phrase courte** (`GadgetProfile.description`, 80
+  caractères au plus), écrite depuis l'en-tête de son script, jamais inventée.
+  ⚠️ Un geste, pas des chiffres : durée et stock vivent déjà dans leurs champs.
+
+#### L'amical se joue sur l'arène standard — et le dit
+
+Adrien, le même jour : *« le match amical en ligne doit prendre l'arène classique
+pour l'instant (32×32 vide) »*. **Le jeu le faisait déjà** : depuis le
+2026-09-09, `_lancer_match_apparie()` pose l'arène standard côté hôte, et
+l'invité reçoit celle de l'hôte. **C'est l'écran qui mentait** : le statut du
+salon et la description de l'entrée annonçaient encore un tirage au sort. Les
+deux textes suivent désormais l'écran, et le salon amical montre sa carte d'arène
+— toujours l'arène standard, quelle que soit la carte choisie ailleurs. Le classé
+garde son tirage et ne montre pas de carte. Les matchs privés, eux, gardent la
+carte de l'hôte : ce n'est pas l'objet de la demande.
+
+⚠️ **La règle de la veille n'était gardée par aucun banc.** Le banc
+d'appariement vérifiait le départ, jamais la carte. Le choix est donc sorti dans
+`_poser_la_carte_appariee()`, que `test_online_match --appariement` appelle sans
+réseau, après avoir choisi une AUTRE carte — sans quoi une sélection restée sur
+l'arène standard passerait pour la règle.
 
 ### Ce qui reste, dans l'ordre
 

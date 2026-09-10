@@ -691,20 +691,45 @@ func _test_ecran_de_classes() -> void:
 				if String(fiche._valeurs[cle].text) == "—":
 					jauge_vide = true
 			if fiche._portrait.texture == null or String(fiche._gadget.text) == "—" \
-					or jauge_vide:
+					or String(fiche._gadget_description.text).is_empty() or jauge_vide:
 				muettes.append(String(c.slug()))
-			# Et rien d'autre : ni la prose, ni le rang, ni les fusées. Contrôlé
-			# sur ce que la fiche AFFICHE, pas sur ses variables — une ligne
-			# rajoutée sous un autre nom passerait sinon inaperçue.
+			# Et rien d'autre : ni la prose de classe, ni le rang, ni le nom.
+			# Contrôlé sur ce que la fiche AFFICHE, pas sur ses variables — une
+			# ligne rajoutée sous un autre nom passerait sinon inaperçue. Les
+			# fusées, elles, sont revenues en jauge le 2026-09-10.
 			for texte in _textes_de(fiche):
 				if texte == String(c.description) or texte.begins_with("RANG ") \
-						or texte == "FUSÉES" or texte.contains("en réserve") \
 						or texte == String(c.libelle).to_upper():
 					bavardes.append("%s : « %s »" % [String(c.slug()), texte])
-		_check("les dix fiches montrent sprite, gadget et jauges",
+		_check("les dix fiches montrent sprite, gadget, sa phrase et les jauges",
 			muettes.is_empty(), str(muettes))
-		_check("la fiche ne dit ni description, ni rang, ni nom, ni fusées",
+		_check("la fiche ne dit ni la prose de classe, ni le rang, ni le nom",
 			bavardes.is_empty(), str(bavardes))
+
+		# Le plafond de fusées, amendé par Adrien le 2026-09-10 : *« qu'on voie
+		# dans les stats le nombre de fusées max »*. Le Spectre dit zéro et
+		# n'allume aucun cran : zéro fusée est son identité, pas la plus faible
+		# valeur des dix.
+		var fusees_fausses: Array[String] = []
+		for c in catalogue:
+			fiche.montrer(c, catalogue)
+			var attendu := str(c.fusees.plafond_effectif())
+			var lu := String(fiche._valeurs["fusees"].text)
+			if lu != attendu:
+				fusees_fausses.append("%s : %s au lieu de %s" % [String(c.slug()), lu, attendu])
+			if String(c.slug()) == "spectre" and float(fiche._jauges["fusees"].part) != 0.0:
+				fusees_fausses.append("spectre : la jauge s'allume")
+		_check("la ligne FUSÉES dit le plafond de chaque classe, zéro pour le Spectre",
+			fusees_fausses.is_empty(), str(fusees_fausses))
+
+		# Une phrase COURTE : elle vit dans une colonne d'environ 200 px.
+		var gadgets_muets: Array[String] = []
+		for c in catalogue:
+			var phrase := String(c.gadget.description)
+			if phrase.is_empty() or phrase.length() > 80:
+				gadgets_muets.append("%s (%d)" % [String(c.gadget.slug), phrase.length()])
+		_check("les dix gadgets ont une description courte",
+			gadgets_muets.is_empty(), str(gadgets_muets))
 
 		# Les dix boutons du râtelier portent tous leur icône d'arme
 		var sans_icones: Array[String] = []
@@ -812,6 +837,33 @@ func _test_ecran_de_classes() -> void:
 		_check("ni rangée de salon ni bouton d'ouverture",
 			not ui.lobby_players_box.visible and not ui.btn_open_lobby.visible)
 		_check("et la colonne du salon s'efface", not ui._colonne_salon.visible)
+
+		# ── L'amical montre l'arène standard, le classé ne montre rien ─────
+		# Adrien, 2026-09-10 : *« le match amical en ligne doit prendre l'arène
+		# classique pour l'instant »*. Une AUTRE carte est choisie d'abord : sans
+		# elle, afficher la carte choisie passerait le contrôle par hasard.
+		# `MapData` se lit par l'arbre, jamais par son nom : nommé en dur, un
+		# autoload se compile avant ceux du plugin Epic (voir « Pièges connus »).
+		var md: Node = root.get_node("MapData")
+		var standard: Dictionary = md.get_map(md.DEFAULT_MAP_ID)
+		md.select_map("map_002_l_usine")
+		hub.reset()
+		hub.push(ui.SCREEN_FRIENDLY)
+		_check("l'amical montre sa carte d'arène", ui.map_card.visible)
+		_check("et c'est l'arène standard, pas la carte choisie ailleurs",
+			not standard.is_empty()
+				and String(ui.map_card_name.text) == String(standard.get("name", "")),
+			String(ui.map_card_name.text))
+		_check("son statut ne parle plus de tirage au sort",
+			not String(ui.lobby_status_label.text).contains("sort"),
+			String(ui.lobby_status_label.text))
+		hub.reset()
+		hub.push(ui.SCREEN_RANKED)
+		_check("le classé ne montre pas de carte, il la tire au sort",
+			not ui.map_card.visible
+				and String(ui.lobby_status_label.text).contains("tirée au sort"))
+		hub.reset()
+		md.select_map(md.DEFAULT_MAP_ID)
 		hub.reset()
 
 	main.queue_free()
