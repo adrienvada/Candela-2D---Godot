@@ -295,6 +295,12 @@ du chantier CLASSES. `tools/run_suites.sh` gagne une entrée. Aucun shader,
 `player.gd` non touché. Détail et mesures : ROADMAP, *Chantier — le bandeau LED
 des murs*. Inerte sans `--led-murs`.
 
+**Suite, même jour — premier essai d'Adrien raté, corrigé.** Les murs
+s'allumaient d'un coup : `shimmer_murs.gdshader` et `player_enemy_light.gdshader`
+ignorent `LIGHT_ENERGY`. La bande se dose désormais par sa couleur. **Aucun
+shader touché** (domaine « game feel ») : le défaut est signalé à part, pour
+mesure et décision d'Adrien.
+
 **Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
 artefact de suivi - Sonnet LOCAL ».
 

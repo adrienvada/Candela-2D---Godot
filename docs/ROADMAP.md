@@ -17737,6 +17737,29 @@ symétrique et prévisible. Mais c'est la première lumière du jeu qui ne vient
 d'aucun geste de joueur : elle donne de l'information gratuitement. Même nature
 d'arbitrage que le sang auto-éclairé (« Décisions actées », 2026-09-10).
 
+### ⚠️ Premier essai d'Adrien : « les murs apparaissent comme des traits blancs d'un coup, puis s'éteignent »
+
+La première version dosait la respiration par l'**énergie** de la lumière. Or le
+liseré (`shimmer_murs.gdshader`) et l'adversaire (`player_enemy_light.gdshader`)
+ont un `light()` propre qui lit `LIGHT_COLOR` **sans jamais le multiplier par
+`LIGHT_ENERGY`**. Mesuré au banc isolé (fond noir, vraies tuiles, vrai matériau
+de mur, un sprite au shader adverse) : énergie 0,05 / 0,20 / 0,50 → liseré
+**169 / 169 / 167**/255, adversaire **60 / 60 / 60** ; seul le sol, rendu par
+l'éclairage par défaut, suivait. La respiration n'existait que comme un
+interrupteur — allumée dès `enabled`, noire au creux. **L'intensité passe
+désormais par la couleur, énergie fixe à 1** ; les trois suivent, et
+`test_mur_led` garde ce choix. Le défaut des deux shaders touche toute lumière
+dont on anime l'énergie, torche comprise : **signalé, pas corrigé** — ce n'est
+pas un correctif neutre, il change l'aspect des murs sous la torche.
+
+**Et la première vérification ne pouvait pas le voir.** Sa photo « éteinte »
+avait été prise avec `--led-murs` en pleine manche : la bande y respirait déjà,
+à faible énergie, donc liseré plein (98/255). Comparer « sommet » à cette
+référence ne montrait qu'un sol à peine plus clair. Une référence « sans
+l'effet » se prend **sans le drapeau**, pas avec l'effet supposé au repos.
+La phrase « écart maximal 34 sur le liseré », écrite ici la première fois,
+venait de cette fausse référence.
+
 **Ce qui est fait** — `mur_led.gd` (créé), `tools/test_mur_led.gd` (créé, dans
 `run_suites.sh`), et dans `game_state.gd` un appel en fin de `rebuild_arena()`
 plus `_horloge_led()` :
@@ -17744,10 +17767,15 @@ plus `_horloge_led()` :
   Des lumières le long des murs auraient crevé le plafond de 15 lumières par
   quadrant (Pièges connus, *Une lumière à énergie zéro compte quand même*) et
   ramené le halo tranché de la fusée. La texture est cuite depuis la grille des
-  murs à chaque construction d'arène : pleine contre la face, nulle à 0,8 case,
-  un débord de 0,1 case dans le mur pour que le liseré respire aussi. Chaque case
-  ne dépend que de ses huit voisines, d'où des motifs mis en cache : **10 ms** de
-  cuisson pour la carte livrée (408² px).
+  murs à chaque construction d'arène.
+- **Profil d'une LED posée au pied du mur** : retenu contre la face (30 %),
+  sommet à 0,15 case (≈ 5 px), éteint à 1,5 case (≈ 52 px), débord de 0,1 case
+  dans le mur pour que le liseré respire aussi. La retenue n'est pas cosmétique :
+  au banc, le liseré réagit ~13 fois plus que le sol sombre ; sans elle la bande
+  se lit comme un trait au lieu d'une lueur. Chaque case ne dépend que de son
+  voisinage 5×5, d'où des motifs mis en cache : **36 ms** de cuisson pour la
+  carte livrée (408² px). Le test compare la texture, texel par texel, au profil
+  de la distance au mur calculée en force brute.
 - **Pas d'ombre** : la bande n'existe que du côté ouvert, elle ne traverse rien.
 - **La phase suit l'horloge de manche** (`round_time - time_left`, recalée par
   l'hôte), jamais l'horloge de chaque machine : sinon l'un verrait l'adversaire
@@ -17761,29 +17789,41 @@ plus `_horloge_led()` :
   phase n'est pas alignée sur le premier temps de la musique.
 
 **Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
-en partie (build debug) ; `--led-murs-fige` la tient au sommet pour juger
-l'aspect. Trois constantes en tête de `mur_led.gd` : `PIC`, `PORTEE`, `PERIODE`.
+en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction `f` du
+sommet (1 par défaut). Constantes en tête de `mur_led.gd` : `PIC` (facteur de
+couleur, 1,2), `FACE`, `RETRAIT`, `PORTEE`, `PERIODE`.
 
-**Mesuré au pixel** (photographe, plans `duel` et `torche`, bande tenue au
-sommet contre bande éteinte) : luminance moyenne d'une bande de 30 px contre le
-mur **0 → 1,36**/255, centre de la salle **0 → 0**, écart maximal **34** sur le
-liseré. **Ce que ça dit : le sol, sombre, s'éclaire à peine** — ce qui se voit,
-c'est le filament qui respire. Ce qui doit se voir, l'adversaire contre le mur,
-passe par `player_enemy_light.gdshader` qui multiplie la lumière par 4 : ~70 %
-de son gris au sommet, **calculé, pas photographié**.
+**Mesuré au pixel, en jeu** (photographe, plan `duel` ; référence prise SANS
+drapeau), luminance /255 :
+
+| | liseré | sol 0-18 px du mur | sol 18-45 px | centre |
+|---|---|---|---|---|
+| sans bandeau | 0 | 0 | 0 | 0 |
+| mi-souffle | 20,8 | 13,3 | 3,0 | 0 |
+| sommet | 42,0 | 26,6 | 6,4 | 0 |
+
+Proportionnel d'un bout à l'autre. **Au banc isolé**, l'adversaire collé au
+pilier : 51 / 129 / 131 / 131 pour un souffle de 0,10 / 0,25 / 0,50 / 1 — il
+**sature dès le quart du souffle** (`player_enemy_light.gdshader` multiplie la
+lumière par 4). Avec la respiration au carré, un adversaire collé au mur est
+donc pleinement visible **environ la moitié de chaque cycle**. C'est le point de
+dosage de jeu le plus sensible, à juger par Adrien.
 
 ⚠️ Pendant les premières photos, rien n'apparaissait : le photographe déclenche
 pendant le décompte, où l'horloge de manche est à 0 — donc au creux. D'où
 `--led-murs-fige`. Une capture « sans effet » d'un effet rythmé dit d'abord à
 quel instant elle a été prise.
 
-**Pas vérifié** : un adversaire collé au mur en image (aucun plan ne le met en
-scène) ; la cadence (`bench_framerate` non passé — la lumière couvre toute la
-carte, donc tous les items) ; deux machines ; l'éditeur de cartes, qui n'a pas
-le bandeau.
+**Pas vérifié** : un vrai joueur collé au mur en jeu (aucun plan ne le met en
+scène ; le chiffre vient du banc) ; la cadence (`bench_framerate` non passé — la
+lumière couvre toute la carte, donc tous les items) ; deux machines ; l'éditeur
+de cartes, qui n'a pas le bandeau. Et la face extérieure des murs d'enceinte
+s'éclaire aussi (le vide hors carte compte comme ouvert) — invisible au sol
+puisqu'il n'y en a pas, mais le liseré extérieur respire.
 
 **Ce qu'il faut d'Adrien** : jouer avec, puis trancher — garder ou non ; si oui,
-le dosage (sol quasi noir aujourd'hui) et la période.
+le dosage (et en particulier la part du cycle où l'adversaire est révélé) et la
+période.
 
 ---
 
