@@ -3529,6 +3529,50 @@ désormais un root plus long que leur cadence. Détente tenue, on y reste immobi
 en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
 l'a voulue comme telle, et elle se juge en jouant.
 
+## 2026-09-10 — Session « candela-2d-godot-8a » (titre : « Optimisation et préparation du jeu »), branche `claude/game-optimization-prep-l1ugex`
+
+**Chantier :** « prêt à l'essai » (PE1 à PE6), inscrit dans `docs/ROADMAP.md`
+sur le « ok » d'Adrien à la question « quels sont les chantiers classiques à ce
+stade ? ». **Aucun fichier de code tenu** : cette session n'a écrit que dans
+`docs/ROADMAP.md` (une section nouvelle avant « Jalons humains », deux lignes
+H12/H13 dans la table des jalons, un encart aux « Prochaines étapes », la date)
+et dans ce journal. Aucune étape du chantier n'est commencée ; la session qui en
+prendra une réservera ses fichiers ici avant d'écrire.
+
+**Le suivi de projet n'a PAS été republié par cette session, et c'est voulu.**
+Le tableau lui-même nomme son porteur — « Can2d - Mise à jour artefact de suivi
+- Sonnet LOCAL », republication horodatée du jour — mais c'est une session
+locale sur le poste d'Adrien : `ListAgents` depuis un conteneur distant ne la
+voit pas, `SendMessage` ne peut donc pas lui porter le delta. Republier
+soi-même aurait recréé le croisement de versions que la centralisation a réglé.
+Le delta est donc dans le rapport de session, pour qu'Adrien le remette au
+porteur. **À savoir pour les sessions distantes suivantes : le porteur peut être
+local et invisible d'ici ; lire le bloc « Qui travaille sur quoi » du tableau
+avant de conclure qu'il n'y en a aucun.**
+
+**Addendum du 2026-09-10 — PE2 et PE3 lancés sur demande d'Adrien** (« je n'ai
+pas de machine Windows, peut-on attaquer 2 et 3 ? »). `list_sessions` : toutes
+les autres sessions sont inactives (IDLE), aucune ne tient de fichier. **Fichiers
+touchés :** `conditions_de_match.gd` (créé), `tools/test_conditions_de_match.gd`
+(créé), `match_record.gd` (schéma 5), `game_state.gd` (quatre points d'ancrage :
+`_process`, `_do_start_round`, `_do_end_round`, `_solder_le_match`, plus
+`_archive_match_result`), `settings_manager.gd` (plafond par régime),
+`ui.gd` (F6, panneau F3), `tools/bench_framerate.gd` et `tools/banc_pics.gd`
+(`pilotage_externe`), `tools/run_suites.sh` (la suite), `tools/test_rejeu_journal.gd`
+(schéma 5), `project.godot` (`flush_stdout_on_print`), `export_presets.cfg`
+(`tools/*` exclu), `CLAUDE.md`, et six `assets/video/intro/*.ogv.uid` produits
+par l'import. Après toute fusion sur ce chantier : `grep` de
+`_conditions.commencer`, `signaler_arene` et `plafond_effectif`.
+
+**Addendum PE2.3, 2026-09-10.** Sur le « oui » d'Adrien à la version minimale.
+Fichiers touchés en plus : `supabase/migrations/20260910120000_match_conditions.sql`
+(créé), `supabase/functions/_shared/match_report.ts` et `match_report_test.ts`,
+`supabase/functions/report/index.ts`, `ranked_identity.gd` (le rejeu emporte
+les conditions), `game_state.gd` (`_report_to_ranking` prend les conditions),
+`tools/test_conditions_de_match.gd`, `docs/SUPABASE.md`, `README.md`. Deno
+installé ici pour les tests hors ligne (95 verts). **Rien n'est déployé** :
+jalon H14, Adrien seul.
+
 #### Lot du 2026-09-10 — session « candela-2d-ef » (branche `selection-classe-salon`), le choix de classe revient dans le salon
 
 **⚠️ J'ai écrit dans trois fichiers du chantier CLASSES, et je le déclare.**
@@ -3549,3 +3593,74 @@ ses dix appels dans `_batir_catalogue()`, qui reçoivent chacun leur phrase ; et
 comportement. `tools/test_online_match.gd` gagne un contrôle dans
 `_run_appariement()`. Aucune valeur, aucune description de classe, rien d'autre. La session « Système de 10
 classes asymétriques » a été prévenue avant l'écriture.
+
+## 2026-09-10 — Ce que l'entraînement a révélé (chantier DIX CLASSES, étape 23)
+
+Adrien a essayé les classes à l'entraînement et rapporté quatre choses : le
+Parasite tirait en rafale, lançait des fusées sans fin, n'affichait pas son
+stock — et l'entraînement le gardait prisonnier du Parasite.
+
+Une enquête en quatre volets, chacun contre-examiné par un sceptique qui relisait
+le code cité, a précédé toute modification. **Trois de mes hypothèses sont tombées
+avant la première ligne de code**, et c'est ce qui justifie la méthode : « période
+nulle = recharge instantanée » (faux, `recharge_active()` l'exclut), « le stock se
+resème à chaque image » (faux, la référence est stable), puis « l'index du
+Terrassier est hors bornes » (faux, aucun cri). La vraie cause des fusées infinies
+était une gratuité délibérée, héritée du chantier FUSÉE d'avant les classes.
+
+Et l'entraînement partait en Parasite parce qu'il lisait une variable
+d'hébergement en ligne, qui vaut 0 par défaut. Le menu marchait ; c'est le
+lancement qui l'ignorait. La session qui réécrit la sélection dans le salon ne
+l'aurait pas corrigé : son contrôle vérifie la visibilité, pas la classe équipée.
+
+Trouvé en route, hors de la liste : `_get_weapon_idx` ne codait que quatre armes,
+si bien qu'en ligne les six classes neuves voyageaient comme le Parasite.
+
+⚠️ **Deux pièges nouveaux, et le premier m'a coûté une passe entière.** Cinq suites
+lancées sous `timeout` ont rendu une sortie vide — `timeout` n'existe pas sur
+macOS, rien n'avait tourné, et un filtre sur « ✗ » lisait ce silence comme un
+succès. Puis `test_classes` a rougi sur un contrôle qui choisissait « la première
+classe qui recharge » en l'appelant `terrassier` : quand sept classes se sont
+mises à recharger, la variable a désigné le Parasite sans changer de nom.
+
+Reste le lot gadgets, arbitré par Adrien : recharge d'une minute pour tous, et un
+grésillement devenu batterie — posé au sol, rallumable, qui éteint les torches
+jusqu'au noir, et dont une torche éteinte n'éblouit plus.
+
+## 2026-09-10 — Les gadgets rechargent, le grésillement devient une batterie (étape 24)
+
+Adrien a tranché cinq choses par question : une minute de recharge pour tous les
+gadgets, un gadget debout par joueur, un grésillement en batterie posé au sol et
+rallumable, qui éteint les torches jusqu'au noir, et dont une torche éteinte
+n'éblouit plus.
+
+**Une revue adversariale en quatre dimensions a trouvé six défauts avant le
+commit, et le plus grave était le plus bête** : la bobine mourait au bout de
+quatorze secondes, même éteinte. J'avais écrit un commentaire la disant « sans
+durée de vie » sans relire la table qui lui en donnait une. Trois relecteurs sur
+quatre l'ont trouvé séparément.
+
+Le plus instructif était ailleurs : **la destruction par balle ne voyageait pas,
+pour aucun gadget**, depuis toujours. Le client détruisait avec ses propres
+balles. Tant que les gadgets ne touchaient qu'au rendu, la divergence restait
+cosmétique ; dès qu'une bobine décide de l'éblouissement, elle devient une
+lampe qui aveugle à travers un écran noir. Un défaut dormant réveillé par une
+fonctionnalité voisine.
+
+Et deux fautes de méthode, consignées : j'ai posé à Adrien une question sur la
+liste des gadgets permanents citée de mémoire — il manquait la poudre, il a fallu
+la reposer ; et j'ai allongé un libellé du HUD sans savoir qu'un libellé élargit
+sa cartouche au lieu de couper. La mesure l'a trouvé ; la revue a montré qu'en
+écran scindé il sortait de l'écran.
+
+**Post-scriptum du même lot — le troisième artefact de banc du jour.** Après les
+correctifs de la revue, le point de référence de « une torche noire n'éblouit
+plus » est tombé à zéro : la torche d'un Parasite, sans aucune bobine, ne versait
+plus rien sur l'adversaire en face. J'ai d'abord accusé la concurrence de deux
+suites partageant `user://` — fausse piste, la suite seule échouait pareil. Puis
+j'ai mesuré chaque maillon dans l'état exact où la suite l'atteint : joueurs en
+jeu, torche allumée, ligne de vue franche, facteur de lampe à 1 — et **J1 tourné
+à −59°**. Le vrai fournisseur d'entrées, restauré au tour précédent pour ne plus
+laisser de `null`, orientait J1 vers la souris pendant les images attendues.
+L'adversaire sortait du faisceau. Le banc imitait donc à la perfection le
+comportement qu'il devait prouver ; seule la mesure l'a démasqué.

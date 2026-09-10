@@ -8,7 +8,12 @@
 //   { "id_token": "<jwt Epic>", "match_id": "<32 hex>", "outcome": "win|loss|draw",
 //     "forfeit": false, "duration": 187.25, "map": "default",
 //     "weapon_self": "Pompe", "weapon_opponent": "Fusil", "format": "BO1",
-//     "ranked": true }
+//     "ranked": true,
+//     "conditions": { "fps_median": 120.0, "fps_1pc_bas": 61.0, ..., "machine": { "gpu": "…", ... } } }
+//
+// `conditions` (PE2.3, 2026-09-10) est facultatif et passé au tamis par
+// `parseConditions` : un bloc absent ou mal formé vaut `null` et ne refuse
+// jamais le rapport.
 //
 // `ranked` doit valoir exactement `true` pour que le match compte au classement :
 // l'amical est le défaut, et un champ absent ou illisible ne peut donc que faire
@@ -52,6 +57,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
       p_weapon_opponent: report.weaponOpponent,
       p_format: report.format,
       p_kind: report.kind,
+      // PE2.3 — les conditions du match (cadence, lien, machine), ou null.
+      p_conditions: report.conditions,
     });
 
     if (saved === null) {

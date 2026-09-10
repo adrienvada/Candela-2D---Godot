@@ -31,6 +31,12 @@ boot_splash/image="res://assets/logos/boot.png"
 ; Godot le convertit en .icns sans rien masquer. Les anciennes restent dans le
 ; dépôt.
 config/icon="res://assets/logos/icone_faisceaux.png"
+; PE2.4 — vider stdout ET user://logs/godot.log à CHAQUE print, en release aussi.
+; Sans ça le fichier n'est écrit qu'à la fermeture propre (RotatedFileLogger ne
+; vide qu'en cas d'erreur ou si ce réglage est vrai) : un plantage jette la fin du
+; journal, c'est-à-dire la seule partie utile. Coût nul en manche — zéro print
+; dans player.gd et bullet.gd.
+run/flush_stdout_on_print=true
 
 [audio]
 

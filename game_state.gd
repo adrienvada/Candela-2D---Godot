@@ -18,6 +18,14 @@ var time_left: float = MatchRecord.ROUND_DURATION
 var round_active: bool = false
 var sandbox_mode: bool = false
 
+## PE2.1 — le relevé de cadence de la manche en cours, archivé avec le match
+## (voir `conditions_de_match.gd`). Commencé au départ de la manche, arrêté à
+## la mort — avant la killcam.
+var _conditions := ConditionsDeMatch.new()
+## PE3.1 — le dernier régime signalé à `GameSettings`, pour ne le dire qu'au
+## changement et non à chaque image.
+var _arene_signalee := false
+
 ## Entraînement solitaire en cours.
 ##
 ## Distinct de `sandbox_mode`, qui couvre aussi l'hôte en ligne resté seul : ces
@@ -685,6 +693,7 @@ func _solder_le_match() -> void:
 	_abort_killcam()
 	_restore_viewports()
 	round_active = false
+	_conditions.arreter()
 	# `sandbox_mode` ne parle PAS de l'adversaire, il parle de l'absence de
 	# manche : sans lui, `player.gd` cesse de traiter les commandes et l'hôte se
 	# retrouve immobile derrière son menu. Il reste donc des deux côtés du
@@ -803,7 +812,15 @@ func _on_training_requested() -> void:
 	# On passe par le démarrage ordinaire : arène, joueurs, armes, vues et
 	# caméras sont posés par le chemin que le jeu emprunte déjà, plutôt que par
 	# un second qui finirait par en diverger. La manche est désarmée juste après.
-	_do_start_round(_hosted_weapon_1_idx, 0)
+	# ⚠️ La classe de l'ENTRAÎNEMENT est celle du menu, pas `_hosted_weapon_1_idx`.
+	# Ce chemin lisait la variable de l'hébergement EN LIGNE, qui vaut 0 par défaut
+	# et n'est écrite que sur les chemins d'hébergement : l'entraînement partait
+	# donc toujours en Parasite, quelle que soit la classe choisie. Adrien,
+	# 2026-09-10 : « je n'arrive pas à choisir d'autres classes en mode
+	# entraînement ». Le menu marchait ; c'est ce lancement qui l'ignorait.
+	# On ne réécrit PAS `_hosted_weapon_1_idx` d'ici : c'est un état d'hôte,
+	# celui que `rpc_start_round` envoie.
+	_do_start_round(ui.selected_weapon_index(0), 0)
 
 	round_active = false
 	sandbox_mode = true
@@ -1365,6 +1382,7 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	time_left = round_time
 	round_active = true
 	game_over = false
+	_conditions.commencer()
 	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
 	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
 	# seuil — soit pendant ses quatre premières minutes.
@@ -1405,6 +1423,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
 	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
 	_gadgets_poses_par = [0, 0]
+	_gadget_attente = [0.0, 0.0]
+	_batterie = [1.0, 1.0]
 	_purger_fusees_killcam()
 	# FU5 — le piétinement ne doit rien hériter de la manche précédente : un
 	# joueur déjà immobile au dernier « FIGHT ! » ne doit pas repartir avec
@@ -1422,6 +1442,15 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	ui.poser_bilan(p1_session_wins, p2_session_wins)
 
 func _process(delta):
+	# PE2.1 — une image rendue, et le lien du moment. Négatif = pas de lien.
+	_conditions.echantillonner(NetworkManager.rtt_ms if NetworkManager.has_rtt else -1.0)
+	# PE3.1 — le régime de rendu suit l'arène : manche comptée, entraînement ou
+	# salon d'attente sont « en arène » ; tout le reste est menu.
+	var en_arene := round_active or sandbox_mode
+	if en_arene != _arene_signalee:
+		_arene_signalee = en_arene
+		GameSettings.signaler_arene(en_arene)
+
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		_record_position_history()
 
@@ -1528,6 +1557,7 @@ func _process(delta):
 	_maj_eblouissement(delta)
 	_maj_gadgets(delta)
 	_accorder_fusees(delta)
+	_maj_reserves_gadgets(delta)
 
 	# V4.12 — le recul de tir décroît de lui-même et s'additionne au shake.
 	_cam_kick[0] = _cam_kick[0].move_toward(Vector2.ZERO, delta * 60.0)
@@ -1836,7 +1866,11 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		# reçoit ce qui revient des murs. Lire le cookie ici échantillonnerait
 		# son centre — la valeur maximale — et allumer sa lampe saturerait
 		# l'éblouissement d'un coup.
-		return Eblouissement.RETRODIFFUSION * Eblouissement.gain_taille(src["rayon"])
+		# ⚠️ Et une torche que le grésillement éteint ne revient pas des murs non
+		# plus : le halo rendu en dérive (`player.gd`), la pénalité doit suivre.
+		# Linéaire, comme le halo — surtout pas de `plafond_pour` ici.
+		return Eblouissement.RETRODIFFUSION * Eblouissement.gain_taille(src["rayon"]) \
+			* facteur_de_lampe_a(noeud.global_position)
 
 	if src["dirigee"]:
 		# Le chemin historique, inchangé : on LIT le pixel du faisceau.
@@ -1910,7 +1944,25 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# C'est écrit ici plutôt que là-bas parce que c'est ici que la dépendance
 	# existe : le fichier qui lève l'erreur n'a aucune raison de savoir que
 	# l'éblouissement s'y adosse.
-	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible)
+	# ⚠️ **Une torche éteinte par le grésillement n'éblouit plus** (Adrien,
+	# 2026-09-10). Le facteur est celui-là même que `player.gd` applique à
+	# l'énergie rendue — le MINIMUM des bobines —, lu ici chez l'hôte, qui seul
+	# calcule l'éblouissement. Il porte sur la lumière qui ARRIVE, avant sa
+	# conversion en pénalité : une lampe à moitié éteinte verse moitié moins, et la
+	# courbe de `plafond_pour` fait le reste.
+	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible,
+		facteur_de_lampe_a(source.global_position))
+
+
+## Le facteur de lampe à une position : le MINIMUM des gadgets, exactement comme
+## `player.gd` le calcule pour l'énergie rendue — deux bobines n'éteignent pas deux
+## fois. Une seule règle pour ce que l'écran montre et ce que l'éblouissement coûte.
+func facteur_de_lampe_a(pos: Vector2) -> float:
+	var f := 1.0
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g.has_method("facteur_de_lampe"):
+			f = minf(f, g.facteur_de_lampe(pos))
+	return f
 
 
 ## Ce qu'un FAISCEAU verse dans les yeux d'une cible, quel que soit ce qui le
@@ -1923,14 +1975,14 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## faisceau — la faute exacte que le commentaire ci-dessus passe vingt lignes à
 ## expliquer.
 func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
-		source: Node2D, cible: Node2D) -> float:
+		source: Node2D, cible: Node2D, facteur: float = 1.0) -> float:
 	if arme == null or not is_instance_valid(source):
 		return 0.0
 	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
 	# plus. Voir `WeaponData.lumiere_recue()` pour les trois fois où ce choix,
 	# laissé à l'appelant, s'est trompé le même jour.
 	var intensite := arme.lumiere_recue(source.global_transform.x,
-		source.global_position, cible.global_position)
+		source.global_position, cible.global_position) * facteur
 	if intensite <= 0.0:
 		return 0.0
 	if not _ligne_de_vue(espace, source, cible):
@@ -2021,11 +2073,17 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		return
 	cible.apply_dazzle(pic)
 
+## L'index de classe d'une arme, pour le fil — les DIX, et non les quatre d'origine.
+##
+## ⚠️ **Il ne codait que quatre armes** et rendait 0 pour tout le reste : les six
+## classes neuves voyageaient sur le fil comme le Parasite, et le client simulait
+## les balles de l'hôte avec la mauvaise arme — vitesse, portée, lumière, dégâts
+## infligés aux gadgets. Trouvé le 2026-09-10 par le contre-examen d'une enquête
+## sur le mode de tir. Invisible hors ligne : en local et à l'entraînement, la
+## balle ne passe jamais par le fil, et les deux bouts n'ont jamais divergé.
 func _get_weapon_idx(w: WeaponData) -> int:
-	if w == weapon_arbalete: return 3
-	if w == weapon_pompe: return 2
-	if w == weapon_fusil: return 1
-	return 0
+	var idx := _classes.find(w)
+	return idx if idx >= 0 else 0
 
 ## V1.2 — Intensité musicale verticale. Les stems montent avec la tension :
 ## la dernière minute ajoute la batterie, le double danger de mort ajoute
@@ -2093,10 +2151,18 @@ var _pietinement_pos: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 func fusee_disponible(pid: int) -> bool:
 	if pid < 0 or pid >= _fusees_restantes.size():
 		return false
-	# ⚠️ **Le bac à sable ne rend PLUS « toujours vrai » sans condition.** Le
-	# Spectre n'a aucune fusée, et c'est sa classe : lui en donner à
-	# l'entraînement lui ferait éprouver un geste qu'il n'aura jamais en match.
-	if sandbox_mode:
+	# ⚠️ **L'entraînement COMPTE, depuis le 2026-09-10.** Adrien : « je pouvais
+	# lancer un nombre illimité de fusées avec le Parasite ». La gratuité datait
+	# du chantier FUSÉE (`dccdaf6`, 2026-09-02), d'avant les classes : elle
+	# servait à éprouver LA fusée. Depuis que chaque classe a sa propre économie,
+	# elle masquait exactement ce qu'on vient tester à l'entraînement.
+	#
+	# Le reste du bac à sable garde sa gratuité, et ce n'est pas un oubli :
+	# `sandbox_mode` couvre aussi l'hôte qui attend seul et le partage d'après-
+	# match, deux chemins qui ne passent pas par `_do_start_round` et donc ne
+	# réamorcent pas le compteur. Y compter ferait attendre une minute à zéro un
+	# hôte qui aurait tiré sa fusée pendant le match précédent.
+	if sandbox_mode and not training_mode:
 		return _stock_fusees(p1 if pid == 0 else p2) > 0
 	return _fusees_restantes[pid] > 0
 
@@ -2209,7 +2275,7 @@ func rpc_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 
 func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 	if not round_active and not sandbox_mode: return
-	if not sandbox_mode and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
+	if (not sandbox_mode or training_mode) and shooter_id >= 0 and shooter_id < _fusees_restantes.size():
 		_fusees_restantes[shooter_id] = maxi(0, _fusees_restantes[shooter_id] - 1)
 	var f := Fusee.new()
 	# Nom explicite ET unique : la graine, partagée par le RPC, l'est aussi —
@@ -2253,6 +2319,25 @@ func _do_spawn_fusee(shooter_id: int, pos: Vector2, rot: float, graine: int):
 ## RÉELLEMENT équipée. Il n'y a plus rien à resemer.
 var _gadgets_poses_par: Array[int] = [0, 0]
 
+## Les secondes avant que chaque joueur puisse reposer son gadget — décision
+## d'Adrien du 2026-09-10 : une minute de recharge, pour TOUS les gadgets.
+##
+## ⚠️ **Un minuteur et non un compteur**, et le compteur ci-dessus reste : il dit
+## combien de gadgets ont été posés, pas combien il en reste. La disponibilité se
+## lit ici.
+##
+## Posé dans `_do_spawn_gadget`, qui tourne chez les DEUX pairs : chacun démarre
+## son minuteur à la pose qu'il voit, le client un demi-aller-retour après l'hôte.
+## L'écart joue dans le sens prudent — le client ne prédit jamais une pose que
+## l'hôte refuserait.
+var _gadget_attente: Array[float] = [0.0, 0.0]
+
+## La batterie du grésillement, par joueur, de 0 à 1. Elle appartient au JOUEUR :
+## une bobine détruite ne la vide pas, une bobine reposée la retrouve.
+var _batterie: Array[float] = [1.0, 1.0]
+
+const PERIODE_RECHARGE_GADGET := 60.0
+
 ## Compteur de poses, pour donner un nom UNIQUE à chaque nœud.
 ##
 ## ⚠️ Ce n'est pas du rangement : un RPC de scène se route par le chemin du nœud,
@@ -2275,17 +2360,21 @@ func _stock_gadget(joueur: Node) -> int:
 
 ## Ce joueur peut-il poser un gadget maintenant ?
 ##
-## ⚠️ **Illimité en bac à sable, comme la fusée.** L'entraînement sert à éprouver
-## un geste ; le rationner y transformerait l'essai en attente.
+## ⚠️ **Plus illimité à l'entraînement, depuis le 2026-09-10.** « L'entraînement
+## sert à éprouver un geste » était vrai d'un gadget par manche ; avec une recharge
+## d'une minute, c'est le RYTHME qu'on vient éprouver, et le rendre gratuit l'aurait
+## caché — la leçon exacte des fusées, payée le même jour. Le reste du bac à sable
+## (l'hôte qui attend seul, le partage d'après-match) garde sa gratuité : ces deux
+## chemins ne réamorcent pas le minuteur.
 func gadget_disponible(pid: int) -> bool:
 	if pid < 0 or pid >= _gadgets_poses_par.size():
 		return false
 	var stock := _stock_gadget(p1 if pid == 0 else p2)
 	if stock <= 0:
 		return false
-	if sandbox_mode:
+	if sandbox_mode and not training_mode:
 		return true
-	return _gadgets_poses_par[pid] < stock
+	return _gadget_attente[pid] <= 0.0
 
 
 ## [Hôte] Le joueur pose son gadget. Le client ne demande rien : son appui est
@@ -2304,10 +2393,17 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 
 	_gadgets_poses += 1
 	var point := _point_de_pose(pos, rot)
+	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement.
+	# Tirée ICI, chez l'hôte, et portée par le RPC : deux pairs qui tireraient
+	# chacun la leur verraient deux pannes différentes.
+	var graine := randi()
+	var actif_initial := _batterie[pid] >= GadgetGresillement.SEUIL_RALLUMAGE
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_spawn_gadget.rpc(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+		rpc_spawn_gadget.rpc(pid, point, rot, classe.gadget.slug, _gadgets_poses, graine,
+			actif_initial, _batterie[pid])
 	else:
-		_do_spawn_gadget(pid, point, rot, classe.gadget.slug, _gadgets_poses)
+		_do_spawn_gadget(pid, point, rot, classe.gadget.slug, _gadgets_poses, graine,
+			actif_initial, _batterie[pid])
 
 
 ## Où le gadget se plante réellement : devant le poseur, ramené en deçà du
@@ -2387,11 +2483,127 @@ func rpc_allumer_gadget(nom: String) -> void:
 
 
 @rpc("authority", "call_local", "reliable")
-func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
-	_do_spawn_gadget(pid, pos, rot, slug, numero)
+func rpc_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int,
+		graine: int, actif_initial: bool, batterie_poseur: float) -> void:
+	_do_spawn_gadget(pid, pos, rot, slug, numero, graine, actif_initial, batterie_poseur)
 
 
-func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int) -> void:
+## Le gadget de ce joueur qui s'allume et s'éteint, s'il en a un debout — ou null.
+func gadget_basculable_de(pid: int) -> Node:
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion() \
+				and g.poseur_id == pid and g.has_method("est_basculable") \
+				and g.est_basculable():
+			return g
+	return null
+
+
+## La batterie d'un joueur, pour le HUD, de 0 à 1.
+func batterie(pid: int) -> float:
+	return _batterie[pid] if pid >= 0 and pid < _batterie.size() else 0.0
+
+
+## Les secondes avant que ce joueur puisse reposer son gadget, pour le HUD.
+func attente_gadget(pid: int) -> float:
+	return _gadget_attente[pid] if pid >= 0 and pid < _gadget_attente.size() else 0.0
+
+
+## [Hôte] Le poseur appuie sur sa touche alors que son gadget basculable est
+## debout : on l'allume ou on l'éteint.
+##
+## Aucune prédiction client : l'appui voyage déjà dans la commande numérotée,
+## l'hôte le relit en simulant ce joueur, et c'est lui qui ordonne — comme pour la
+## pose. Un client qui basculerait de lui-même le ferait un demi-aller-retour trop
+## tôt, et se ferait contredire par l'ordre de l'hôte.
+func basculer_gadget(joueur: Node2D) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return
+	var pid: int = joueur.player_id
+	var g = gadget_basculable_de(pid)
+	if g == null:
+		return
+	var allume: bool = not bool(g.get("actif"))
+	if allume and _batterie[pid] < GadgetGresillement.SEUIL_RALLUMAGE:
+		return
+	_annoncer_etat_gadget(pid, String(g.name), allume)
+
+
+func _annoncer_etat_gadget(pid: int, nom: String, actif: bool) -> void:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_etat_gadget.rpc(pid, nom, actif, _batterie[pid])
+	else:
+		rpc_etat_gadget(pid, nom, actif, _batterie[pid])
+
+
+## L'état d'un gadget basculable, et la batterie de son poseur, chez les deux pairs.
+##
+## ⚠️ **Deux volets, et le premier s'applique toujours.** La batterie est un état
+## du JOUEUR : elle se recopie même si la bobine n'existe plus chez ce pair —
+## détruite localement par une balle, puisque la destruction ne voyage pas. Sans
+## cette séparation, le HUD du client resterait figé sur une batterie périmée.
+## L'allumage, lui, ne s'applique qu'à un nœud qui existe encore.
+@rpc("authority", "call_local", "reliable")
+func rpc_etat_gadget(pid: int, nom: String, actif: bool, batterie_joueur: float) -> void:
+	if pid >= 0 and pid < _batterie.size():
+		_batterie[pid] = clampf(batterie_joueur, 0.0, 1.0)
+	var g := bullet_container.get_node_or_null(NodePath(nom))
+	if g != null and "actif" in g:
+		g.set("actif", actif)
+
+
+## [Hôte] Un gadget vient de mourir chez l'hôte — balle ou fin de vie : on le dit
+## au client, qui ne détruit plus rien de lui-même.
+##
+## ⚠️ **La destruction ne voyageait pas.** Chaque pair détruisait ses gadgets avec
+## ses propres balles, à des instants que la prédiction décalait : une bobine
+## pouvait mourir chez l'hôte et survivre chez le client, qui voyait alors
+## éteintes des torches que l'hôte laissait éblouir. Trouvé par la revue du
+## 2026-09-10 — et c'était vrai de tous les gadgets, pas du seul grésillement.
+func _sur_gadget_detruit(g: GadgetBase) -> void:
+	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+		return
+	rpc_detruire_gadget.rpc(String(g.name))
+
+
+## L'ordre de retrait d'un gadget, chez le client. `get_node_or_null` et jamais un
+## accès direct : le nœud a pu disparaître de lui-même chez ce pair — fin de vie,
+## remplacement par « un gadget debout », purge de manche.
+@rpc("authority", "call_remote", "reliable")
+func rpc_detruire_gadget(nom: String) -> void:
+	var g := bullet_container.get_node_or_null(NodePath(nom))
+	if g != null and not g.is_queued_for_deletion():
+		g.queue_free()
+
+
+## Les réserves de gadget, à chaque image, chez les DEUX pairs : le minuteur de
+## pose descend, la batterie se vide allumée et se remplit éteinte.
+##
+## ⚠️ **Le client intègre, mais ne DÉCIDE rien.** Il fait avancer ses deux compteurs
+## pour que son HUD vive entre deux ordres de l'hôte, qui les recale en valeur
+## absolue à chaque bascule. L'extinction à batterie vide se décide chez l'hôte
+## seul : un client qui la déciderait un demi-aller-retour plus tôt éteindrait
+## une bobine que l'hôte tient encore allumée.
+func _maj_reserves_gadgets(delta: float) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	for pid in 2:
+		if _gadget_attente[pid] > 0.0:
+			_gadget_attente[pid] = maxf(0.0, _gadget_attente[pid] - delta)
+		var g = gadget_basculable_de(pid)
+		var allume: bool = g != null and bool(g.get("actif"))
+		if allume:
+			_batterie[pid] = maxf(0.0, _batterie[pid] - delta / GadgetGresillement.DUREE_ACTIVE_MAX)
+		else:
+			_batterie[pid] = minf(1.0, _batterie[pid] + delta / GadgetGresillement.RECHARGE_BATTERIE)
+		if allume and _batterie[pid] <= 0.0 \
+				and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
+			_annoncer_etat_gadget(pid, String(g.name), false)
+
+
+func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: int,
+		graine: int = 0, actif_initial: bool = true, batterie_poseur: float = -1.0) -> void:
 	if not round_active and not sandbox_mode:
 		return
 	var fiche: Dictionary = IMPLEMENTATIONS.get(slug, {})
@@ -2424,11 +2636,46 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 		# torche fantôme emprunte le cookie du Braconnier, et c'est tout ce qui
 		# fait d'elle un mensonge plutôt qu'une lampe.
 		g.classe_du_poseur = classe
+	# ⚠️ **Un gadget debout par joueur.** Avec une recharge d'une minute, un gadget
+	# sans durée de vie — le voile, l'ombre, la mine, la POUDRE, la bobine —
+	# s'accumulerait à raison d'un par minute et finirait par fermer la carte.
+	# Reposer DÉPLACE donc le précédent au lieu de l'ajouter : on garde l'empreinte
+	# d'avant, un objet par joueur, avec le droit de le déplacer. Proposé en codant,
+	# puis TRANCHÉ par Adrien le 2026-09-10 — deux fois, parce que la première
+	# question oubliait la poudre de la Sentinelle, faite pour veiller un passage
+	# toute la manche : même règle pour tous. Sans effet sur les gadgets qui durent
+	# moins d'une minute.
+	for ancien in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(ancien) and ancien.poseur_id == pid:
+			ancien.queue_free()
+	if "graine" in g:
+		g.set("graine", graine)
+	# L'état initial et la batterie viennent de l'HÔTE, portés par le RPC. Relus
+	# chez chaque pair, ils pouvaient différer — la batterie intégrée localement
+	# dérive d'un demi-aller-retour — et la bobine naissait allumée chez l'un,
+	# éteinte chez l'autre, sans rien pour les réaligner. Revue du 2026-09-10.
+	if batterie_poseur >= 0.0 and pid >= 0 and pid < _batterie.size():
+		_batterie[pid] = batterie_poseur
+	if g.est_basculable():
+		# Posée ALLUMÉE si la batterie le permet : la pose est le premier allumage.
+		g.set("actif", actif_initial)
+	# L'hôte dira au client chaque mort de ce gadget — balle ou fin de vie.
+	g.detruit.connect(_sur_gadget_detruit)
 	# Le même conteneur que les balles et les fusées : c'est lui que la manche
 	# purge, et le rejoindre suffit donc à ne pas survivre à la manche.
 	bullet_container.add_child(g)
 	if pid >= 0 and pid < _gadgets_poses_par.size():
 		_gadgets_poses_par[pid] += 1
+		_gadget_attente[pid] = PERIODE_RECHARGE_GADGET
+		# ⚠️ Chez le CLIENT, une recharge RACCOURCIE d'un aller-retour. Il reçoit la
+		# pose un demi-aller-retour après l'hôte, et sa prochaine commande mettra un
+		# demi-aller-retour de plus à arriver : pour que les deux pairs jugent le
+		# même appui de la même façon, il doit tenir le gadget pour prêt un
+		# aller-retour AVANT l'hôte. Sans ça, l'hôte acceptait une pose que le client
+		# n'avait pas prédite, et le désarmement manquait à sa prédiction.
+		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+			_gadget_attente[pid] = maxf(0.0,
+				PERIODE_RECHARGE_GADGET - NetworkManager.rtt_ms / 1000.0)
 
 
 ## La killcam reconstruit les fusées depuis les instantanés — un événement de
@@ -2552,7 +2799,7 @@ func _maj_extinction_fusees(delta: float) -> void:
 @rpc("authority", "call_local", "reliable")
 func rpc_spawn_bullet(shooter_id: int, pos: Vector2, rot: float, weapon_idx: int):
 	var shooter = p1 if shooter_id == 0 else p2
-	var weapon = weapon_arbalete if weapon_idx == 3 else (weapon_pompe if weapon_idx == 2 else (weapon_fusil if weapon_idx == 1 else weapon_pistolet))
+	var weapon := weapon_for_index(weapon_idx)
 	# Tir déjà rendu par la prédiction locale : seul l'enregistrement killcam
 	# reste à faire, sur la trajectoire arbitrée par l'hôte.
 	var already_shown := shooter_id == 1 and _consume_predicted_shot(rot)
@@ -2814,6 +3061,9 @@ func _do_end_round(winner_id: int):
 	_round_token += 1
 	var token := _round_token
 	_end_sequence_active = true
+	# PE2.1 — la manche est jouée : le relevé s'arrête AVANT le ralenti de la
+	# killcam, qui n'est pas une saccade.
+	_conditions.arreter()
 
 	# Manches gagnées dans le match en cours. En BO1 une seule suffit, mais le
 	# décompte passe par le format : un BO3 n'aurait rien à changer ici.
@@ -3105,6 +3355,10 @@ func _peut_etre_la_soiree() -> void:
 func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 	# Le match est résolu : plus rien à forfaire dessus.
 	_forfeit_pending = false
+	# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
+	# machine. Calculées une fois : l'archive locale et le rapport au serveur
+	# (PE2.3) doivent porter le même relevé.
+	var conditions := _conditions.resume()
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -3125,11 +3379,12 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# le nom de l'arme — « Pistolet silencieux » — qui ne désigne plus le
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
-		_slug_de_classe(p2))
+		_slug_de_classe(p2),
+		conditions)
 	MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
-	_report_to_ranking(winner_id, forfeit)
+	_report_to_ranking(winner_id, forfeit, conditions)
 
 ## Le slug de la classe d'un joueur, ou une chaîne vide.
 ##
@@ -3167,7 +3422,7 @@ func _local_outcome(winner_id: int) -> String:
 ## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
 ## rapports par leur identifiant de match et confronte les récits. Rien n'est
 ## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
-func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
+func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {}) -> void:
 	var local_idx := _local_player_index()
 	if local_idx < 0 or _match_id.is_empty():
 		return
@@ -3183,6 +3438,11 @@ func _report_to_ranking(winner_id: int, forfeit: bool) -> void:
 		"weapon_self": mine.current_weapon.name if mine and mine.current_weapon else "",
 		"weapon_opponent": theirs.current_weapon.name if theirs and theirs.current_weapon else "",
 		"format": MatchRecord.FORMAT_NAMES.get(MATCH_FORMAT, "BO1"),
+		# PE2.3 (décision d'Adrien, 2026-09-10) — les conditions voyagent avec le
+		# rapport des matchs EN LIGNE, amicaux et classés : le serveur les passe
+		# au tamis et ne refuse jamais un rapport pour elles. L'écran scindé et
+		# l'entraînement ne passent pas par ici, donc n'envoient rien.
+		"conditions": conditions,
 	})
 
 ## Archive un match gagné par abandon de l'adversaire.
@@ -3435,7 +3695,7 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.description = "Il ne prend rien : il corrompt ce que l'autre reçoit. Cadence doublée, et un grésillement qui fait douter d'une lumière qui marche encore."
 	weapon_pistolet.rang = 1
 	weapon_pistolet.root = _root(0.10)
-	weapon_pistolet.fusees = _fusees(1, 0.0)
+	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
 		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
 
@@ -3443,7 +3703,7 @@ func _batir_catalogue() -> void:
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
 	weapon_fusil.rang = 3
 	weapon_fusil.root = _root(0.25)
-	weapon_fusil.fusees = _fusees(1, 0.0)
+	weapon_fusil.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_fusil.gadget = _gadget("leurre", "Le leurre inerte",
 		"Un faux corps : même silhouette, même trou dans la lumière.")
 
@@ -3459,7 +3719,7 @@ func _batir_catalogue() -> void:
 	weapon_arbalete.description = "Il chasse à l'arbalète parce qu'elle est silencieuse, et il appâte à la lampe. Sa fausse torche balaie comme une vraie — et aveugle comme une vraie."
 	weapon_arbalete.rang = 4
 	weapon_arbalete.root = _root(0.60)
-	weapon_arbalete.fusees = _fusees(1, 0.0)
+	weapon_arbalete.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_arbalete.gadget = _gadget("torche_fantome", "La torche fantôme",
 		"Une lampe sur trépied qui balaie comme un joueur qui cherche.", true)
 
@@ -3479,7 +3739,7 @@ func _batir_catalogue() -> void:
 	fumiste.muzzle_flash_intensity = 1.0  # ⚠️ plafonné à 1 par `pic_de_flash`
 	fumiste.muzzle_flash_duration = 0.16
 	fumiste.root = _root(0.30)
-	fumiste.fusees = _fusees(1, 0.0)
+	fumiste.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
 		"Un rideau de suie : on voit qu'il y a quelqu'un, pas qui.")
 
@@ -3493,7 +3753,7 @@ func _batir_catalogue() -> void:
 	incendiaire.damage_edge = 35.0
 	incendiaire.bullet_speed = 6000.0
 	incendiaire.root = _root(0.40)
-	incendiaire.fusees = _fusees(2, 0.0)
+	incendiaire.fusees = _fusees(2, PERIODE_RECHARGE_FUSEE)
 	incendiaire.gadget = _gadget("nappe_braises", "La nappe de braises",
 		"Des braises au sol qui brûlent qui s'y attarde.", true)
 
@@ -3507,7 +3767,7 @@ func _batir_catalogue() -> void:
 	sentinelle.damage_edge = 60.0
 	sentinelle.bullet_speed = 16000.0
 	sentinelle.root = _root(0.50)
-	sentinelle.fusees = _fusees(1, 0.0)
+	sentinelle.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
 		"Une poudre où les pas restent écrits, lisibles à la lumière.")
 
@@ -3525,7 +3785,8 @@ func _batir_catalogue() -> void:
 	occulteur.max_spread_bloom_deg = 16.0
 	occulteur.muzzle_flash_intensity = 0.6
 	occulteur.root = _root(0.15, true)  # rafale : l'immobilisation vient APRÈS
-	occulteur.fusees = _fusees(1, 0.0)
+	occulteur.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
+	occulteur.automatique = true  # la SEULE arme qui tire détente tenue (Adrien, 2026-09-10)
 	occulteur.gadget = _gadget("ombre_habitee", "L'ombre habitée",
 		"Une découpe d'acier qui projette l'ombre d'un homme absent.")
 
@@ -3593,6 +3854,16 @@ func _root(duree: float, apres_rafale: bool = false) -> RootProfile:
 	return r
 
 
+## La recharge commune des fusées, en secondes — décision d'Adrien du
+## 2026-09-10 : « une fusée par minute ». Elle vaut pour les SEPT classes qui ne
+## rechargeaient pas du tout ; le Terrassier (18 s) et l'Allumeur (12 s) gardent
+## leur recharge rapide, qui est leur identité de classe, et le Spectre reste à
+## zéro — `recharge_active()` exige un plafond non nul, il ne regagnera jamais
+## rien. Une constante et non sept littéraux : la règle ne peut plus diverger
+## d'une classe à l'autre sans qu'on l'ait écrit.
+const PERIODE_RECHARGE_FUSEE := 60.0
+
+
 func _fusees(stock: int, periode: float) -> FlareProfile:
 	var f := FlareProfile.new()
 	f.stock = stock
@@ -3634,9 +3905,12 @@ const IMPLEMENTATIONS := {
 	# 18 s : assez pour qu'un adversaire le croise, hésite, et paie un tir. Un
 	# leurre éternel finirait par être connu et cesserait de tromper.
 	"leurre": {"script": "res://gadget_leurre.gd", "duree_vie": 18.0},
-	# 14 s : le temps de rendre un couloir désagréable, pas celui d'en faire une
-	# zone interdite pour la manche.
-	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 14.0},
+	# 0 : la bobine RESTE AU SOL (décision d'Adrien, 2026-09-10). Ce n'est plus sa
+	# durée de vie qui borne la zone mais la BATTERIE de son poseur — quatorze
+	# secondes allumée —, et une balle. Elle valait 14 s, et la table n'a pas été
+	# relue quand la batterie est arrivée : la bobine mourait donc même éteinte,
+	# ce que trois relecteurs sur quatre ont trouvé séparément.
+	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 0.0},
 	# ⚠️ **Pas de durée de vie : la poudre reste la manche entière.** La
 	# Sentinelle « ne cherche pas, elle veille » — un relevé qui s'effacerait tout
 	# seul obligerait à repasser vite, c'est-à-dire à chercher.

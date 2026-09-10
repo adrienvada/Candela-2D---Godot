@@ -38,6 +38,39 @@ export const MAX_DURATION_S = 86400;
 export const MAX_MAP_ID = 64;
 export const MAX_WEAPON = 32;
 
+/**
+ * PE2.3 (2026-09-10) — les CONDITIONS du match, telles que `conditions_de_match.gd`
+ * les archive côté jeu : cadence par image, lien, machine. Décision d'Adrien :
+ * elles voyagent avec le rapport des matchs en ligne, amicaux et classés, pour
+ * qu'un relevé de cadence arrive en base sans qu'on ait à le demander à qui
+ * que ce soit.
+ *
+ * Liste BLANCHE, clé par clé, et jamais bloquante : une clé inconnue est
+ * ignorée, une valeur du mauvais type est ignorée, un bloc qui n'est pas un
+ * objet vaut `null`. Le match a été joué et c'est le rapport qui fait foi — un
+ * relevé de cadence mal formé ne doit jamais faire perdre un match au
+ * classement (même arbitrage que le format inconnu ramené à BO1).
+ */
+export type MatchConditions = Record<string, unknown>;
+
+/** Clés numériques du relevé lui-même. */
+const CONDITION_NUMBERS = [
+  "version", "images", "duree_s", "fps_moyen", "fps_median", "fps_1pc_bas",
+  "pire_image_ms", "trous", "rtt_moyen_ms", "rtt_max_ms",
+] as const;
+/** Clés du bloc `machine`, par type. */
+const MACHINE_STRINGS = [
+  "version", "build", "os", "os_version", "cpu", "gpu", "gpu_fournisseur",
+  "gpu_api", "gpu_pilote", "rendu", "pilote", "fenetre",
+] as const;
+const MACHINE_NUMBERS = [
+  "coeurs", "memoire_mo", "ecran_hz", "vram_mo", "textures_mo",
+] as const;
+const MACHINE_BOOLEANS = ["plein_ecran"] as const;
+
+/** Un nom de carte graphique ou de pilote n'a aucune raison de dépasser ça. */
+export const MAX_CONDITION_TEXT = 96;
+
 export interface MatchReport {
   matchId: string;
   outcome: Outcome;
@@ -48,6 +81,7 @@ export interface MatchReport {
   weaponOpponent: string;
   format: string;
   kind: MatchKind;
+  conditions: MatchConditions | null;
 }
 
 /**
@@ -62,6 +96,45 @@ export type ParseResult =
 /** Tronque plutôt que refuser : un nom d'arme trop long n'est pas une attaque. */
 function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.slice(0, max) : "";
+}
+
+/** Un nombre FINI, ou rien : `NaN`, `Infinity`, une chaîne, `null` — rien. */
+function finite(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * Les conditions, passées au tamis : ce qui est listé et bien typé entre, tout
+ * le reste tombe sans bruit. Rend `null` quand il n'y a rien à garder — un
+ * client d'avant PE2.3, ou un bloc qui n'est pas un objet.
+ */
+export function parseConditions(value: unknown): MatchConditions | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const source = value as Record<string, unknown>;
+  const out: MatchConditions = {};
+  for (const key of CONDITION_NUMBERS) {
+    const n = finite(source[key]);
+    if (n !== undefined) out[key] = n;
+  }
+  const rawMachine = source.machine;
+  if (typeof rawMachine === "object" && rawMachine !== null && !Array.isArray(rawMachine)) {
+    const m = rawMachine as Record<string, unknown>;
+    const machine: Record<string, unknown> = {};
+    for (const key of MACHINE_STRINGS) {
+      if (typeof m[key] === "string") machine[key] = text(m[key], MAX_CONDITION_TEXT);
+    }
+    for (const key of MACHINE_NUMBERS) {
+      const n = finite(m[key]);
+      if (n !== undefined) machine[key] = n;
+    }
+    for (const key of MACHINE_BOOLEANS) {
+      if (typeof m[key] === "boolean") machine[key] = m[key];
+    }
+    if (Object.keys(machine).length > 0) out.machine = machine;
+  }
+  return Object.keys(out).length > 0 ? out : null;
 }
 
 export function parseReport(body: Record<string, unknown>): ParseResult {
@@ -129,6 +202,8 @@ export function parseReport(body: Record<string, unknown>): ParseResult {
       weaponOpponent: text(body.weapon_opponent, MAX_WEAPON),
       format,
       kind,
+      // PE2.3 — jamais un motif de refus : voir `parseConditions`.
+      conditions: parseConditions(body.conditions),
     },
   };
 }

@@ -110,7 +110,9 @@ code, sans configuration, sans redirection de port.
   le `.app` (PUID obtenu), sortie 0. Préréglage versionné dans
   `export_presets.cfg`.
 
-  **Piège de diagnostic, à ne pas retomber dedans :** dans un build release, la
+  **Piège de diagnostic, à ne pas retomber dedans** *(vrai jusqu'au 2026-09-10 ;
+  depuis PE2.4, `run/flush_stdout_on_print` vide le journal à chaque `print`, et
+  ce paragraphe décrit l'AVANT)* **:** dans un build release, la
   sortie `print()` est tamponnée et n'est vidée qu'à la **fermeture propre** de
   l'application. Tuer le processus (`pkill`, Ctrl-C) jette tout ce qui suit le
   dernier message d'erreur — ce qui a fait conclure à tort, le 2026-08-16, à un
@@ -2422,6 +2424,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
@@ -2437,7 +2440,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. ⚠️ **DÉPASSÉ EN PARTIE le 2026-09-09** — voir « Étape 20 — le réglage d'Adrien, manette en main ». Les chargeurs (Pistolet 6, Fusil 4), les dégâts du Fusil (60/25), les cadences sous 3 tirs/s (doublées) et la touche de fusée (Triangle → L1) ont changé ; le Terrassier recharge désormais cartouche par cartouche. La hiérarchie des temps de recharge, elle, tient toujours. *La décision ci-dessus reste vraie de sa date : elle n'est plus vraie du code.* |
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
-| **La fiche de classe montre l'arme et le faisceau, pas un chiffre** (2026-09-10, Adrien) | *« L'arme définit autant la classe. »* En haut de `menu_fiche_classe.gd`, trois cases de même taille : le sprite du joueur (recadré sur la figure — sa toile est aux deux tiers vide), l'icône de l'arme en couleurs d'origine, et un **cône dessiné** depuis `torch_angle_deg` et `portee_torche()`, qui remplace la jauge FAISCEAU. La portée y est relative au catalogue, comme les jauges : la plus longue des dix touche le haut de la case. Le gadget descend sous les jauges, avec son image (`assets/ui/icones/gadget_<slug>.png`, chemin déjà porté par `GadgetProfile.chemin_icone()`) et sa phrase. **Le cône n'est pas le cookie** : le cookie est un masque blanc pensé pour le sol, illisible en vignette ; les deux nombres dessinés sont ceux que le jeu utilise pour éclairer. **Les dix images de gadget ont été livrées le même soir** — aucune n'existait. Générées sur un **fond vert d'incrustation uni** plutôt que sur le damier habituel, précisément pour ne pas refaire le liseré des titres : `tools/incruster_vert.py` tire l'alpha de l'excès de vert et retire le vert résiduel des bords. ⚠️ **Ce sont des icônes de fiche, vues de trois-quarts — pas des sprites de jeu.** En jeu, les gadgets restent dessinés au trait (`_monter_visuel()`) ; un sprite de jeu serait vu de dessus, à l'échelle du joueur, et appartient au chantier CLASSES. Les deux images jugées ratées par Adrien — la nappe de braises en feu de camp, la poussière en chope qui mousse — ont été refaites. **Les sprites de JEU suivent** (décision d'Adrien, même soir) : `assets/sprites/gadget_*.png`, vue strictement de dessus, à 1 texel par unité de monde, en pièces séparées quand ça bouge (pied et tête de la torche fantôme, piquet et toile du voile — la toile est une bande de 168 × 8 étirée par un `Line2D` qui ondule). Tous sauf le leurre, qui porte la silhouette de son poseur. Leur branchement revient au chantier CLASSES. ⚠️ **Une génération en parallèle déclenche un reCAPTCHA Google** : douze conversations Gemini ouvertes d'un coup ont bloqué le compte d'Adrien deux fois ; en série, une image à la fois au premier plan avec 30 s de pause, les onze sont passées. **Les planches vertes sources (~100 Mo) ne sont pas versionnées** : elles vivent dans `assets/sources/gadgets/` de l'arbre principal, et les versionner est une décision qui attend Adrien. |
+| **La fiche de classe montre l'arme et le faisceau, pas un chiffre** (2026-09-10, Adrien) | *« L'arme définit autant la classe. »* En haut de `menu_fiche_classe.gd`, trois cases de même taille : le sprite du joueur (recadré sur la figure — sa toile est aux deux tiers vide), l'icône de l'arme en couleurs d'origine, et un **cône dessiné** depuis `torch_angle_deg` et `portee_torche()`, qui remplace la jauge FAISCEAU. La portée y est relative au catalogue, comme les jauges : la plus longue des dix touche le haut de la case. Le gadget descend sous les jauges, avec son image (`assets/ui/icones/gadget_<slug>.png`, chemin déjà porté par `GadgetProfile.chemin_icone()`) et sa phrase. **Le cône n'est pas le cookie** : le cookie est un masque blanc pensé pour le sol, illisible en vignette ; les deux nombres dessinés sont ceux que le jeu utilise pour éclairer. **Les dix images de gadget ont été livrées le même soir** — aucune n'existait. Générées sur un **fond vert d'incrustation uni** plutôt que sur le damier habituel, précisément pour ne pas refaire le liseré des titres : `tools/incruster_vert.py` tire l'alpha de l'excès de vert et retire le vert résiduel des bords. ⚠️ **Ce sont des icônes de fiche, vues de trois-quarts — pas des sprites de jeu.** En jeu, les gadgets restent dessinés au trait (`_monter_visuel()`) ; un sprite de jeu serait vu de dessus, à l'échelle du joueur, et appartient au chantier CLASSES. Les deux images jugées ratées par Adrien — la nappe de braises en feu de camp, la poussière en chope qui mousse — ont été refaites. **Les sprites de JEU suivent** (décision d'Adrien, même soir) : `assets/sprites/gadget_*.png`, vue strictement de dessus, à 1 texel par unité de monde, en pièces séparées quand ça bouge (pied et tête de la torche fantôme, piquet et toile du voile — la toile est une bande de 168 × 8 étirée par un `Line2D` qui ondule). Tous sauf le leurre, qui porte la silhouette de son poseur. Leur branchement revient au chantier CLASSES. **Un sprite peut déborder de sa collision** (Adrien, même soir : *« c'est bien que les objets soient un peu plus visibles que leur zone de collision »*) : bobine, mine et torche fantôme sont peintes sur 28-30 px pour une collision de 16-18 — étincelles et pieds débordent du corps. ⚠️ **Une génération en parallèle déclenche un reCAPTCHA Google** : douze conversations Gemini ouvertes d'un coup ont bloqué le compte d'Adrien deux fois ; en série, une image à la fois au premier plan avec 30 s de pause, les onze sont passées. **Les planches vertes sources (~100 Mo) ne sont pas versionnées** : elles vivent dans `assets/sources/gadgets/` de l'arbre principal, et les versionner est une décision qui attend Adrien. |
 | **Les icônes d'armes gardent leurs couleurs d'origine** (2026-09-10, Adrien) | DA1.5 voulait un masque gris teinté par le code — un fichier, deux joueurs, bleu et rouge. Dans le salon, la teinte du joueur tombait sur un bouton **de la même teinte** : Adrien ne distinguait plus les armes, et l'état coché avait déjà dû repeindre l'icône en noir pour qu'elle ne disparaisse pas. Le côté du joueur est dit par le bouton ; l'icône n'a pas à le redire. `MenuIcones.ARME_ORIGINE` (le blanc, qui multiplie par un) remplace la teinte aux deux sites d'appel, et le noir de l'état coché disparaît avec elle. **La règle DA1.5 tient encore pour tout le reste** — outils de l'éditeur, torche du HUD : l'exception est nommée, pas la règle abrogée. |
 | **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
@@ -3199,6 +3202,106 @@ suite `test_menus_finitions` mesure la part blanc-grise de chaque contour.
 **Tout titre régénéré doit repasser par le même traitement** :
 `python3 tools/detourer_titres.py assets/ui/titres/titre_xxx.png` (PIL seul,
 réécrit le fichier en place — garder l'original à côté).
+### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
+
+Pour arbitrer « un gadget debout par joueur », j'ai demandé à Adrien quels
+gadgets sans durée de vie étaient concernés, en les citant de mémoire : « le
+voile, l'ombre habitée, la mine et la bobine ». Il a validé. La table
+`IMPLEMENTATIONS` disait autre chose : la bobine avait encore 14 s de vie, et
+**la poudre de contact de la Sentinelle** — permanente, faite pour veiller un
+passage toute la manche — manquait. Adrien avait tranché sur une liste fausse ;
+il a fallu lui reposer la question.
+
+Une question à l'utilisateur est un INVENTAIRE, et un inventaire se tire du
+code, jamais de la mémoire : ici, un `grep` de `duree_vie` avant d'écrire la
+question. Tranché la seconde fois : même règle pour tous.
+
+### Un libellé ne coupe pas : il élargit sa cartouche (2026-09-10)
+
+Les libellés du bandeau des réserves n'ont ni retour à la ligne ni coupure. Un
+texte plus long ne déborde donc pas de sa cartouche : **il l'élargit**, et elle
+pousse le reste du HUD. « GRÉSILLEMENT ALLUMÉ · 100 % » mesurait 178 px, plus que
+tout le bloc des réserves réunies ; et en écran scindé le panneau de J2, calé à
+droite et grandissant vers la droite, poussait sa cartouche hors de l'écran.
+
+Aucune suite ne pouvait le voir — un lot headless ne rend rien, et chaque texte
+était juste. Il a été trouvé par MESURE, avant d'être vu : `get_minimum_size()`
+d'un `Label` se calcule sans rendu. Le remède n'a pas été de raccourcir mais de
+déplacer : la cartouche du gadget avait depuis toujours une ligne de titre qui
+ne disait que « GADGET » ; elle porte désormais l'état. Garde posé dans
+`test_tir_et_reserves.gd`, avec une référence PAR cartouche — un premier jet
+prenait une référence commune et laissait celle des fusées grandir de 40 %.
+
+### Une borne remplacée, et l'ancienne oubliée dans une table (2026-09-10)
+
+La bobine du grésillement est devenue une batterie : c'est elle qui borne la
+zone, et la bobine doit rester au sol. J'ai écrit dans le code un commentaire
+qui la rangeait parmi les gadgets « sans durée de vie » — pendant que la table
+`IMPLEMENTATIONS`, que je n'avais pas relue, lui en donnait toujours 14 s. Elle
+mourait donc, même éteinte. **Trois relecteurs sur quatre l'ont trouvé
+séparément**, et aucun contrôle ne l'aurait fait : on ne teste pas qu'une chose
+dure, on teste qu'elle agit.
+
+Quand un mécanisme en remplace un autre comme borne, chercher TOUTES les sources
+de l'ancienne borne avant de la déclarer disparue. Contrôle posé : une bobine
+éteinte doit survivre au-delà de quatorze secondes.
+
+### Une variable qui porte le nom d'une règle qu'elle ne vérifie pas (2026-09-10)
+
+`_test_fusees_par_classe` cherchait « la première classe dont la recharge est
+active » et rangeait le résultat dans une variable nommée `terrassier`. C'était
+vrai le jour de l'écriture : deux classes rechargeaient, et le Terrassier venait
+avant l'Allumeur. Le 2026-09-10, sept classes se sont mises à recharger une
+fusée par minute — et la première du catalogue est devenue le **Parasite**.
+
+Rien n'a crié là où l'on s'y attendait. Les contrôles de recharge sont restés
+verts, parce qu'ils valent pour n'importe quelle classe qui recharge. Seuls les
+deux derniers, qui attendaient la *Poussière* du Terrassier au HUD, ont vu que
+la variable ne désignait plus ce qu'elle nommait — et leur message accusait le
+bandeau, pas la sélection.
+
+C'est la famille de la liste `ARMES` figée à quatre noms et du « seuil 6 » :
+**une hypothèse sur le CATALOGUE, écrite comme une règle de sélection.** Le nom
+de la variable disait l'intention ; le code disait autre chose, et restait juste
+aussi longtemps que le catalogue ne bougeait pas. Ce qui se nomme se cherche par
+son nom.
+
+### Une commande absente produit un silence, et un filtre le lit comme un succès (2026-09-10)
+
+Cinq suites lancées sous `timeout 180 godot …` ont rendu **une sortie vide** —
+aucune ligne rouge, donc rien d'inquiétant en apparence. `timeout` n'existe pas
+sur macOS : la commande échouait avant même de lancer Godot, et le `grep` placé
+derrière n'avait rien à filtrer. Aucun test n'avait tourné.
+
+Le piège n'est pas macOS, c'est le filtre : un `grep "✗"` ne sait pas distinguer
+« aucun échec » de « aucune exécution ». **Un filtre doit toujours laisser passer
+une ligne qui prouve que la chose a TOURNÉ** — le total de la suite, son code de
+sortie. Une sortie vide n'est jamais un résultat.
+
+### La zone morte du tir vaut 0,5, pas 0,2 (2026-09-10)
+
+Les commentaires de `input_setup.gd`, de `local_input_provider.gd` et plusieurs
+passages de cette feuille de route donnaient 0,2 pour la zone morte des gâchettes.
+Celle du TIR vaut **0,5** : `p1_shoot` et `p2_shoot` sont déclarées dans
+`project.godot`, et `input_setup.gd` ne pose 0,2 que sur les actions qu'il crée
+lui-même. Relevé par le contre-examen de l'enquête sur le semi-automatique.
+L'hystérésis du 2026-09-10 lit donc le seuil dans l'`InputMap` au lieu de le
+recopier : recopier un nombre, c'est hériter de son erreur.
+
+### Un import sur une autre machine produit ce que la garde exige (2026-09-10)
+
+Les vidéos d'intro (`assets/video/intro/*.ogv`, DA6.6) étaient au dépôt, leurs
+`.uid` non : la machine qui les a commitées n'en avait pas produit, ou ne les a
+pas vus. Sur une machine neuve, `--import` les génère, et la garde des assets
+non suivis de `run_suites.sh` — écrite pour qu'un asset jamais commité ne
+meure pas avec un poste — rougit **tout le lot**, sans qu'une seule suite ait
+échoué. Les `.uid` sont déterministes par chemin (vérifié le 2026-08-18), donc
+la réponse est de les commiter, pas de les ignorer.
+
+**La règle :** celui qui ajoute un asset commite ce que l'IMPORT en produit
+(`.import`, `.uid`), pas seulement le fichier — et le vérifie depuis un
+`git status` de l'arbre où l'import a tourné, puisqu'un worktree neuf ne
+contient que ce que git suit.
 
 ### Une mesure contaminée par des erreurs de script ressemble à une mesure (2026-09-10)
 
@@ -5018,8 +5121,9 @@ tirs**. Le dépôt porte exactement l'outil qu'il faut pour ça,
 `AudioManager.diagnostic_ecoute()`, sur **F4**. Il ne rendait rien.
 
 **Tout le traceur sortait sur `if not OS.is_debug_build(): return`.** Écrit pour
-une bonne raison — en release, `print()` est tamponné et vidé à la fermeture
-propre, donc inutile — la conclusion tirée était la mauvaise : *si la console ne
+une bonne raison — en release, `print()` était tamponné et vidé à la fermeture
+propre, donc inutile *(plus depuis PE2.4, le 2026-09-10)* — la conclusion tirée
+était la mauvaise : *si la console ne
 sert à rien, écris ailleurs*, et non *renonce*. **Un outil de diagnostic qui ne
 marche que dans l'éditeur ne diagnostique pas le jeu : il diagnostique
 l'éditeur.** Il écrit désormais dans `user://diagnostic_ecoute.txt`, en ajout,
@@ -17182,7 +17286,9 @@ la visibilité au lieu d'en hériter.
   restent au catalogue ; les supprimer serait une autre décision.
 - **Le Terrassier recharge cartouche par cartouche**, et tire dès la première :
   la jauge RECHARGE affiche le total, 5,6 s, vrai mais trompeur. Seule la prose de
-  classe portait la nuance, et elle n'est pas revenue.
+  classe portait la nuance, et elle n'est pas revenue. **Tranché par Adrien le
+  2026-09-10 : non, la fiche ne le dit pas.** Ne pas rajouter de ligne ni de
+  mention : la question a été posée et close.
 
 #### Amendé le même jour : les fusées et la phrase du gadget
 
@@ -17215,6 +17321,120 @@ d'appariement vérifiait le départ, jamais la carte. Le choix est donc sorti da
 `_poser_la_carte_appariee()`, que `test_online_match --appariement` appelle sans
 réseau, après avoir choisi une AUTRE carte — sans quoi une sélection restée sur
 l'arène standard passerait pour la règle.
+
+### Étape 23 — ce que l'entraînement a révélé ✅
+
+Adrien a essayé les classes à l'entraînement le 2026-09-10 et rapporté quatre
+défauts. Une enquête en quatre volets, chacun contre-examiné par un sceptique qui
+relisait le code cité, a précédé toute modification — et trois hypothèses de
+départ, dont deux des miennes, se sont révélées fausses.
+
+**L'entraînement ignorait la classe choisie.** `_on_training_requested()`
+lançait la manche avec `_hosted_weapon_1_idx`, une variable d'hébergement EN
+LIGNE qui vaut 0 par défaut et n'est écrite que sur les chemins d'hôte :
+l'entraînement partait donc toujours en Parasite. Le menu marchait, la classe
+s'affichait ; c'est le lancement qui l'ignorait. Corrigé en lisant
+`ui.selected_weapon_index(0)`, et couvert par un contrôle de comportement dans
+`test_online_match.gd`. ⚠️ La session qui réécrit la sélection de classe dans
+le salon ne l'aurait pas corrigé : son contrôle vérifie la visibilité des
+râteliers, pas la classe équipée.
+
+**Les fusées étaient illimitées à l'entraînement**, pour toutes les classes. La
+gratuité datait du chantier FUSÉE (`dccdaf6`, 2026-09-02), d'avant les classes,
+quand il n'y avait qu'UNE fusée à éprouver. Elle masquait désormais exactement ce
+qu'on vient tester. L'entraînement compte ; l'hôte qui attend seul et le partage
+d'après-match gardent leur gratuité, parce qu'ils ne réamorcent pas le compteur.
+Les **sept classes qui ne rechargeaient pas** gagnent une fusée par minute
+(`PERIODE_RECHARGE_FUSEE`) ; le Terrassier (18 s) et l'Allumeur (12 s) gardent
+la leur, qui est leur identité ; le Spectre reste à zéro. Le bandeau distingue
+enfin « vide » de « jamais » : zéro s'écrit `FUSÉES 0`, le tiret reste au Spectre.
+*(La première version écrivait `FUSÉES n/plafond · N s` — mesurée trop large le
+jour même : voir l'étape 24.)*
+
+**Le tir devient semi-automatique**, sauf pour l'Occulteur. Trois pièces, et la
+deuxième est celle qu'on oublierait :
+
+- un drapeau `automatique` porté par l'arme, jamais dérivé du root ;
+- une **hystérésis** sur la course brute de la gâchette : armement à la zone
+  morte, réarmement seulement sous 0,25. Sans elle, le semi-automatique
+  redoublerait chaque tremblement autour du seuil — le défaut qu'avait déjà payé
+  le clic à vide ;
+- un verrou posé au tir et levé au relâchement, **avant** les sorties anticipées
+  du décompte, et aussi menu pause ouvert, parce que c'est ce que voit l'hôte.
+
+Le clic « trop tôt » ne sonne plus quand l'appui va partir au terme du cooldown :
+avec un tir par appui, il aurait menti à chaque rafale tapée.
+
+**Hors de la liste d'Adrien, trouvé en route et corrigé** : `_get_weapon_idx` ne
+codait que les quatre armes d'origine. En ligne, les six classes neuves
+voyageaient comme le Parasite, et le client simulait les balles de l'hôte avec la
+mauvaise arme. Invisible hors ligne, où la balle ne passe jamais par le fil.
+
+`Protocol.VERSION` passe à 16 : le tir change de SENS pour un client qui le
+prédit. Les contrôles neufs vivent dans `tools/test_tir_et_reserves.gd`, et non
+dans `test_classes.gd`, qu'une autre session réécrit le même jour.
+
+⚠️ **Reste à faire, dans le lot suivant** : les gadgets. Adrien a tranché — une
+recharge d'une minute pour TOUS les gadgets ; le grésillement devient une
+**batterie** qu'on allume et éteint, posée au sol et rallumable, qui éteint les
+TORCHES jusqu'au noir de façon aléatoire, et une torche noire n'éblouit plus. Le
+bandeau des réserves s'inverse aussi chez le client en ligne (il y affiche les
+réserves de l'hôte) : à corriger dans le même geste, puisque l'état du gadget
+passera par lui. **Fait : voir l'étape 24.**
+
+### Étape 24 — les gadgets rechargent, le grésillement devient une batterie ✅
+
+Les arbitrages d'Adrien du 2026-09-10, tous rendus par question :
+
+- **Une minute de recharge pour TOUS les gadgets.** On repose son gadget une
+  minute après la pose. L'entraînement compte, comme pour les fusées ; le reste
+  du bac à sable garde sa gratuité.
+- **Un gadget debout par joueur** : reposer DÉPLACE le précédent. Sans elle, le
+  voile, l'ombre habitée, la mine, la poudre et la bobine — qui ne meurent jamais
+  — s'accumuleraient d'un par minute. Tranché deux fois : voir le piège « Une
+  question posée de mémoire ».
+- **Le grésillement devient une batterie** : 14 s allumé, 60 s pour se remplir
+  éteint, rallumable dès 5 %. La bobine **reste au sol** ; sa touche l'allume et
+  l'éteint où qu'elle soit, sans désarmement — l'interrupteur passe avant la
+  pose, faute de quoi le cooldown d'un Parasite qui tire bloquait l'extinction.
+- Il éteint **les torches seules**, **jusqu'au noir**, de façon **aléatoire** :
+  une fonction pure d'une graine tirée par l'hôte et du temps allumé, par
+  créneaux de 0,34 s — au plus trois coupures franches par seconde, pour les
+  yeux.
+- **Une torche noire n'éblouit plus.** Le grésillement entre donc dans la
+  simulation, chez l'hôte qui seul calcule l'éblouissement : `_lumiere_recue` et
+  la rétrodiffusion lisent le même facteur que le rendu. On ne peut pas être
+  aveuglé par une lampe qu'on voit éteinte.
+
+**Une revue adversariale a précédé le commit** — quatre dimensions (réseau,
+fidélité aux décisions, GDScript, HUD), chacune contre-examinée par un sceptique.
+Six défauts confirmés, tous corrigés :
+
+1. la bobine mourait à 14 s même éteinte (voir le piège « Une borne remplacée ») ;
+2. **la destruction par balle ne voyageait pas** — vrai de TOUS les gadgets,
+   pas du seul grésillement : le client détruisait avec ses propres balles, à ses
+   propres instants. Elle est désormais autoritaire : le client n'encaisse plus
+   rien, l'hôte ordonne chaque retrait (`rpc_detruire_gadget`) ;
+3. l'état initial d'une bobine était relu dans la batterie de chaque pair ; il
+   voyage désormais avec la pose ;
+4. la rétrodiffusion d'une torche noire éblouissait encore son porteur ;
+5. le minuteur de pose du client retardait d'un aller-retour sur celui de
+   l'hôte ; il est raccourci d'autant ;
+6. en écran scindé, le libellé allongé poussait la cartouche de J2 hors de
+   l'écran (voir le piège « Un libellé ne coupe pas »).
+
+Au HUD, la ligne de titre de la cartouche porte l'état — `GADGET`,
+`RECHARGE · 42s`, `ALLUMÉ · 80 %`, `ÉTEINT · 40 %`, `CHARGE · 3 %` — et le nom
+reste seul dessous. « Éteinte, rallumable » et « éteinte, pas encore » ne se
+confondent plus.
+
+`Protocol.VERSION` reste à 16, faute de publication entre les deux lots ;
+l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
+
+⚠️ **Signalé, non corrigé** : le panneau de J2 est un `Control` de 340 px dont le
+contenu en réclamait déjà 505 AVANT ce lot, et il grandit vers la droite — il
+déborde donc déjà, légèrement, en écran scindé. Il devrait grandir vers la
+gauche. Hors périmètre, relevé par la revue.
 
 ### Ce qui reste, dans l'ordre
 
@@ -17301,6 +17521,252 @@ pas un salon rouvert dans son dos.
 
 ---
 
+## Chantier — prêt à l'essai : ce qui précède les premiers joueurs (inscrit le 2026-09-10)
+
+**Demande d'Adrien, 2026-09-10 : « j'arrive à un point où je sens que mon jeu
+est prêt à être expérimenté. Quels sont les chantiers classiques à effectuer à
+ce stade ? Je pense notamment à de l'optimisation. »** La réponse a été donnée
+en session, puis inscrite ici sur son « ok ». **Rien de ce qui suit n'est
+commencé** : c'est un plan à étapes numérotées, et chaque étape se lance sur
+demande explicite, comme le veut le protocole. L'ordre est une recommandation de
+la session, pas un arbitrage d'Adrien.
+
+### Le constat qui décide de l'ordre
+
+L'optimisation n'est pas le premier chantier de ce stade, pour une raison de
+méthode déjà payée dans ce document : **toutes les mesures de cadence du projet
+viennent d'une seule machine**, un Apple M3 (relevés R2, R4, `banc_pics`). Le
+jeu y tient la barre de 60 de 1 % bas avec deux images de marge, et la cause
+des pics n'est pas trouvée. Optimiser avant de savoir sur quelles machines les
+testeurs joueront, c'est optimiser ce que le M3 sait mesurer. Un essai, lui,
+apprend deux choses avant toute autre : si le jeu démarre chez quelqu'un
+d'autre, et ce qu'il y coûte. D'où l'ordre — ce qui empêche un essai
+d'apprendre (PE1), ce qui permet d'apprendre (PE2), puis seulement ce qu'on
+apprend (PE3).
+
+État vérifié dans le dépôt le 2026-09-10 :
+
+| Point | État |
+|---|---|
+| Version publiée | `v0.4.2`, mise à jour en place éprouvée sur machine réelle (Phase 9) |
+| Cadence, vue unique, fenêtre de développement, M3 | médiane ~120, 1 % bas **61** pour une barre à 60 (R4, relevé d'Adrien) |
+| Cause des pics | non trouvée ; `banc_pics` a écarté particules, objets et nœuds ; pistes restantes : le coût de rendu par image (appels de dessin +14 à +18 % sur les images lentes), puis l'allocation |
+| Parties jouées sous Windows | **aucune consignée** — un export CI et un échange de mise à jour, pas une partie. Adrien pressent pourtant que les premiers joueurs seront sous Windows (Phase 9) |
+| Classes éprouvées manette en main | une sur dix (H11) ; les dix gadgets jamais utilisés en match |
+| Ce qu'un match archive sur la machine | rien : ni cadence, ni GPU, ni OS — `match_record.gd` archive le résultat, pas les conditions |
+
+### PE1 — Stabilité sur machine étrangère
+
+Un essai qui plante n'apprend rien, et il coûte un testeur. Trois choses, dans
+cet ordre :
+
+1. **Une partie complète sous Windows sur un poste vierge**, GPU intégré, en
+   `gl_compatibility`. C'est le jalon **H12** : il exige un poste que personne
+   ici n'a. Ce qu'on cherche : le jeu démarre, EOS s'authentifie, un match en
+   ligne se joue, la mise à jour passe.
+2. **Solder les dettes réseau des « Prochaines étapes »** : checklist
+   `CHECKLIST_TESTS_EN_LIGNE.md` jamais déroulée, 120 ms de latence simulée
+   jamais validées, relais Epic jamais exercé, détection de déconnexion lente,
+   contre-vérification à deux machines (H1), rejeu de l'appariement à deux
+   machines. Aucune n'est nouvelle ; toutes deviennent bloquantes le jour où un
+   inconnu joue sur un mauvais lien.
+3. **macOS sans notarisation (H4)** : Gatekeeper refusera l'application à
+   quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
+   les testeurs — mais le décider avant d'envoyer un lien.
+
+### PE2 — Instrumentation de l'essai ✅ PE2.1 à PE2.4 livrés le 2026-09-10 — le déploiement de PE2.3 est le jalon H14
+
+Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
+qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
+instantanée, `user://match_history.json` archive le résultat des matchs, et rien
+ne consigne les conditions.
+
+1. **Chaque match archive ses conditions** dans `MatchRecord` : médiane, 1 % bas
+   et pire image sur la durée du match — mesurés **par image**, comme le banc,
+   jamais par `get_frames_per_second()` (piège connu) —, GPU, OS, résolution de
+   fenêtre, RTT moyen, transport, lien direct ou relayé, version. Le relevé de
+   cadence se fait alors sur les machines des testeurs, pas sur le M3.
+2. **Un bouton « copier le diagnostic »**, dans le panneau F3 ou les Options, qui
+   met dans le presse-papiers ce que le testeur ne saura pas décrire.
+3. **Faire remonter ces lignes par Supabase**, dont l'infrastructure existe
+   (Phase 4) : une table de plus, une Edge Function de plus, aucune donnée
+   nominative au-delà du PUID déjà envoyé avec les matchs classés. À trancher
+   par Adrien : ce qui remonte, et si les matchs amicaux remontent aussi.
+   ✅ **Tranché le 2026-09-10** — voir « Décisions actées » et le lot du jour.
+4. **Un journal qui survit au plantage.** Piège connu : en release, `print()`
+   est tamponné et vidé à la fermeture propre seulement ; un plantage jette la
+   fin du journal, c'est-à-dire la seule partie utile. Un fichier écrit en flux,
+   ou vidé à chaque fin de manche.
+
+### PE3 — Optimisation, mesurée 🟡 PE3.1 et PE3.4 livrés, PE3.5 audité le 2026-09-10 — PE3.2 et PE3.3 attendent une machine
+
+Préalable : **définir la machine minimale** — jalon **H13**, décision d'Adrien.
+Sans elle, aucune cible n'a de sens : la barre « 1 % bas ≥ 60 » (R5) ne décrit
+que la machine où elle a été mesurée. Puis, par rendement décroissant :
+
+1. **Le GPU brûle pour rien hors match.** Les menus tournent déplafonnés vers
+   200 fps (relevé `--menus`), `Engine.max_fps` n'est posé que par le réglage du
+   joueur, aucun `low_processor_usage_mode`, rien à la perte de focus. Sur un
+   portable, c'est ce qui fait souffler les ventilateurs — la plainte numéro un
+   des testeurs — et c'est peu coûteux : un plafond dans les menus et hors
+   focus, jamais en match, puisque la médiane déplafonnée commande le RTT (R5).
+2. **La cause des pics.** Reprendre les pistes de `banc_pics` : le coût de rendu
+   par image, puis l'allocation dans `_process` et `_physics_process`. Outil :
+   le profileur de l'éditeur sur un vrai match. Sur la machine minimale, pas sur
+   le M3.
+3. **Les textures.** 295 images importées sans perte (`compress/mode=0`) et sans
+   mipmaps, des fonds d'interface de 3 Mo chacun : VRAM et temps de chargement,
+   à peser avec R6 qui doublera la densité des assets. Une décision d'import,
+   pas une retouche par fichier.
+4. **La taille du build.** L'export n'a aucun filtre d'exclusion, et
+   `tools/captures/` (10 Mo, quinze imports) part dans le paquet. Mineur, un
+   filtre suffit.
+5. **La chauffe des shaders.** Déjà traitée pour le joueur, le sang, la fusée et
+   l'onde de choc ; vérifier qu'aucun shader ne compile encore au premier usage
+   en match (`test_arena_lighting` en tient une partie).
+
+### Le lot du 2026-09-10 — ce qui se code sans fenêtre, et ce qu'il a appris
+
+**Demande d'Adrien : « je n'ai pas de machine Windows. Peut-on attaquer 2 et
+3 ? »** Oui, pour la part qui se code sans fenêtre. La session a récupéré le
+Godot 4.7.1 Linux de la CI, donc les suites headless tournent ici ; elle n'a
+ni fenêtre ni GPU, donc **aucune mesure nouvelle** — tout ce qui suit est du
+code vérifié par les suites, et les chiffres attendus restent des attentes.
+
+- **PE2.1 — chaque match archive ses conditions.** `conditions_de_match.gd`,
+  et `MatchRecord` passe au **schéma 5** avec la clé `conditions`. Une durée
+  par image lue à l'horloge (`Time.get_ticks_usec`), jamais au delta de
+  traitement — l'encaissement d'un tir ralentit `time_scale` en pleine manche
+  et un relevé au delta y lirait 5 000 fps ; définitions du banc mot pour mot
+  (médiane, 1 % bas = moyenne du centième le plus lent, pire image) pour qu'un
+  chiffre de match se compare à un chiffre de banc sans conversion ; les
+  écarts de plus de 0,5 s (pause en écran partagé, fenêtre gelée) comptés
+  comme des **trous**, pas comme des saccades ; arrêté à la mort, avant la
+  killcam. Le lien y est (RTT moyen et max), et la machine (OS, CPU, GPU,
+  pilote, fenêtre, VRAM). Vérifié : la fumée `--local` archive un
+  enregistrement v5 — 255 images, médiane 145, 1 % bas 113, machine sans GPU
+  puisque headless, et c'est attendu. ⚠️ **Local seulement** : l'envoi au
+  classement construit son propre corps et ne transmet rien de tout ça —
+  c'est PE2.3, et il attend Adrien.
+- **PE2.2 — F6 copie le diagnostic.** Presse-papiers **et**
+  `user://diagnostic.txt` (un presse-papiers se perd au copier suivant), et le
+  panneau F3 s'ouvre pour le dire — un geste sans retour visible passe pour un
+  geste raté. ⚠️ **Pas F4, comme prévu d'abord** : F4 est la trace d'écoute
+  d'`AudioManager` (`_tracer_ecoute`) et F5 l'éditeur de cartes. Un grep
+  limité à trois fichiers ne l'avait pas vu ; la feuille de route, si.
+- **PE2.4 — le journal survit au plantage.** `run/flush_stdout_on_print=true`
+  dans `project.godot`, vérifié dans la source de Godot 4.7
+  (`core/io/logger.cpp` : `RotatedFileLogger::logv` ne vide le fichier qu'en
+  erreur, ou sous ce réglage). Coût nul en manche : zéro `print` dans
+  `player.gd` et `bullet.gd`. `CLAUDE.md` dit désormais ce que le code fait ;
+  les deux passages de ce document qui décrivent l'ancien tamponnage (Phase 3,
+  piège « Un diagnostic qui ne tourne pas là où l'on joue ») portent une note
+  datée plutôt qu'une réécriture.
+- **PE2.3 — les conditions remontent avec le rapport.** Tranché par Adrien le
+  2026-09-10, version minimale : elles voyagent avec le rapport des matchs **en
+  ligne**, amicaux et classés, **tous les champs** du schéma 5, et une phrase
+  d'information aux testeurs (dans `docs/SUPABASE.md`). Pas d'envoi séparé pour
+  l'écran scindé ni l'entraînement : ils ne rapportent rien, et les couvrir
+  demanderait un identifiant de machine anonyme — un chantier à part. Livré en
+  trois pièces : la migration `20260910120000_match_conditions.sql` (colonne
+  `conditions jsonb`, `report_match` avec `p_conditions` en dernier et un
+  défaut, vue `conditions_de_match` qui aplatit ce qu'on lit), le tamis
+  `parseConditions` dans `_shared/match_report.ts` (liste blanche clé par clé,
+  **jamais un motif de refus** — un relevé mal formé ne doit pas faire perdre
+  un match au classement, même arbitrage que le format inconnu ramené à BO1),
+  et le corps du rapport côté jeu, rejeu du journal compris. Vérifié : 95 tests
+  Deno verts, six nouveaux. ⚠️ **Rien n'est déployé** : `db push` puis
+  `functions deploy report` sont le jalon **H14**, et lui seul les fait.
+- **PE3.1 — un plafond hors arène.** `GameSettings.PLAFOND_MENU = 120` dans
+  les menus, `PLAFOND_HORS_FOCUS = 30` quand la fenêtre a perdu le focus, et
+  **jamais en arène** — `round_active or sandbox_mode`, donc l'entraînement et
+  le salon d'attente restent déplafonnés, et un hôte qui passe une seconde sur
+  une autre fenêtre simule toujours pour l'adversaire. Un choix du joueur plus
+  bas l'emporte. Les bancs (`bench_framerate`, `banc_pics`) posent
+  `pilotage_externe` pour que `--menus` mesure la charge et non le plafond.
+  **Ces deux nombres sont des valeurs de départ**, pas des décisions. Attendu,
+  non mesuré : les menus passent de ~200 à 120 images par seconde, ce qui se
+  lit au F3 sans banc.
+- **PE3.4 — `tools/*` hors de l'export.** `exclude_filter="tools/*"` sur les
+  trois préréglages. Vérifié avant : aucun `res://tools/` dans le code de jeu,
+  aucun `.tscn` ne pointe dedans, et les deux `class_name` du dossier
+  (`PeerSpy`, `RenduCommun`) n'ont aucun usage à la racine. Gain attendu : les
+  10 Mo de captures et les scripts de test ; non mesuré, l'export n'étant pas
+  possible ici.
+- **PE3.5 — l'audit des shaders.** Vingt-trois `.gdshader`. Vingt et un sont
+  préchargés en `const` ou chargés par les menus (`intro_planches.gd`,
+  `menu_hub.gd`, en `load()` hors match — hors sujet). **Deux ne sont
+  référencés par aucun code de jeu** : `distorsion_eblouissement.gdshader` et
+  `poussiere_faisceau.gdshader` — le `poussiere_faisceau` du code est un
+  identifiant d'EFFET (`effect_policy.gd`), pas ce fichier. Signalés, pas
+  supprimés : hors périmètre. **Ce que l'audit ne ferme pas** : un `preload`
+  charge le shader, mais le programme GL se compile au premier DESSIN — seule
+  `Fusee.prechauffer()` dessine d'avance. Une chauffe générale est un pas
+  séparé, et il se juge à `banc_pics` (des pics groupés au début sont une
+  compilation, des pics étalés non).
+
+**Ce qui attend Adrien, et ne se commence pas :**
+
+- **H14** — déployer PE2.3 : `supabase db push` puis
+  `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
+  juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
+  clients à jour envoient un bloc que la base ignore, sans rien perdre.
+- **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
+  des pics ; et désormais, gratuitement, les `conditions` de ses propres
+  matchs dans `user://match_history.json` — c'est le même relevé, pris en
+  jouant.
+- **PE3.3** — lire `vram_mo` et `textures_mo` dans le diagnostic F6 avant toute
+  décision d'import. ⚠️ **0 veut dire « non mesuré par ce pilote », jamais
+  « aucune texture »** — le résumé headless le montre.
+- **H13** — la machine minimale.
+
+**Trois choses payées en route.** Deux contrôles textuels de `test_classes.gd`
+épinglaient la FORME de ce lot — « le schéma est passé à 4 », et la parenthèse
+fermante après `_slug_de_classe(p2)` — et ont rougi sans qu'une classe ait
+bougé : le premier vérifie désormais « 4 ou plus » (l'égalité exacte vit dans
+`test_rejeu_journal.gd`), le second l'appel et non sa ponctuation. C'est le
+piège « un contrôle textuel épingle un identifiant, jamais un sens », payé une
+fois de plus. L'import sur cette machine a généré six
+`.uid` pour les vidéos `.ogv` de l'intro, absents du dépôt : la garde des
+assets non suivis a rougi le lot entier (piège « Un import sur une autre
+machine produit ce que la garde exige »). Et `get_video_adapter_driver_info()`
+vit sur `OS`, pas sur `RenderingServer` : le script ne compilait pas, la suite
+annonçait « tous les tests passent », et c'est la garde `SCRIPT ERROR` du
+lanceur qui l'aurait attrapé — pas le compteur de la suite.
+
+### PE4 — Mise en main
+
+Aucun écran « comment jouer » trouvé dans les menus (recherche sur « comment
+jouer », « tutoriel », « didacticiel » dans `ui.gd`, `menu_hub.gd`,
+`hub_screen.gd`). Un duel dans le noir absolu est inhabituel, et la première
+minute décide de tout : commandes affichées, entraînement mis en avant au premier
+lancement, fiche de classe existante réutilisée.
+
+### PE5 — Équilibrage et contenu
+
+H11 reste ouvert sur neuf classes, les gadgets n'ont jamais servi en match, et
+l'effet de bord Sentinelle / Incendiaire (root plus long que la cadence, signalé
+à l'étape 20 des dix classes) ne se juge qu'en jouant. Avec peu de testeurs,
+tout le monde démarre Aveugle I et l'appariement sera étroit : la fourchette
+d'attente (étape 8.5) est à revoir pour une population de dix personnes.
+
+### PE6 — Distribution
+
+Windows d'abord (Phase 9), itch.io comme canal d'essai — les gabarits de capsule
+DA7.1 existent —, des notes de version, et un canal de retour. Détail relevé :
+l'autoload `_mcp_game_helper` du plugin éditeur `godot_ai` part dans le build
+release. Il est inerte hors débogueur, mais un outil de développement n'a rien à
+y faire.
+
+### Ce qui n'a pas été vérifié
+
+Ce plan est écrit depuis une lecture du dépôt, sans Godot ni fenêtre dans
+l'environnement de la session. **Aucune mesure nouvelle n'a été prise** ; tous
+les chiffres viennent des relevés déjà consignés ici. L'absence d'écran d'aide
+est une absence de résultat de recherche, pas une preuve.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -17318,6 +17784,9 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
+| H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
+| H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 
 ---
 
@@ -17403,6 +17872,13 @@ et un seul est du travail de session.
 > jamais posé d'auditeur —, il vit dans `audio_manager.gd` et `game_state.gd`,
 > donc dans le domaine « game feel ». Deux de ses items (S3, S7) attendent un
 > arbitrage d'Adrien et **ne se commencent pas**.
+
+> **Ajouté le 2026-09-10 — un cinquième tas, et il PRÉCÈDE l'optimisation :** le
+> chantier **« prêt à l'essai »** (section dédiée ci-dessus), inscrit sur le
+> « ok » d'Adrien après sa question du jour. Six étapes PE1 à PE6, **aucune
+> commencée** ; l'ordre recommandé est PE1 (stabilité sur machine étrangère),
+> PE2 (instrumentation de l'essai), PE3 (optimisation, mesurée sur une machine
+> nommée). Deux jalons humains en découlent, H12 et H13.
 
 ### Le seul chantier de code ouvert
 

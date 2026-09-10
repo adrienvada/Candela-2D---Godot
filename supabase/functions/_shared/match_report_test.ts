@@ -10,6 +10,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
   FRIENDLY,
   MATCH_KINDS,
+  MAX_CONDITION_TEXT,
   MAX_DURATION_S,
   MAX_MAP_ID,
   MAX_WEAPON,
@@ -173,4 +174,104 @@ Deno.test("une nature illisible ne fait jamais perdre le rapport", () => {
   assertEquals(r.kind, "friendly");
   assertEquals(r.outcome, "win");
   assertEquals(r.matchId, VALIDE.match_id);
+});
+
+// ---------------------------------------------------------------------------
+// PE2.3 — les conditions du match : un tamis, jamais un motif de refus
+// ---------------------------------------------------------------------------
+
+const CONDITIONS = {
+  version: 1,
+  images: 18000,
+  duree_s: 150.2,
+  fps_moyen: 118.4,
+  fps_median: 120.0,
+  fps_1pc_bas: 61.0,
+  pire_image_ms: 19.4,
+  trous: 0,
+  rtt_moyen_ms: 48.0,
+  rtt_max_ms: 91.0,
+  machine: {
+    version: "0.4.2",
+    build: "release",
+    os: "Windows",
+    os_version: "10.0.22631",
+    cpu: "Intel(R) Core(TM) i5-1135G7",
+    coeurs: 8,
+    memoire_mo: 16042,
+    gpu: "Intel(R) Iris(R) Xe Graphics",
+    gpu_fournisseur: "Intel",
+    gpu_api: "3.3.0",
+    gpu_pilote: "igdumdim64 31.0.101.4502",
+    rendu: "gl_compatibility",
+    pilote: "opengl3",
+    fenetre: "1920x1080",
+    plein_ecran: true,
+    ecran_hz: 60.0,
+    vram_mo: 412.5,
+    textures_mo: 380.1,
+  },
+};
+
+Deno.test("PE2.3 — sans conditions, le rapport passe et le bloc vaut null", () => {
+  assertEquals(accepte({ ...VALIDE }).conditions, null);
+  assertEquals(accepte({ ...VALIDE, conditions: null }).conditions, null);
+  assertEquals(accepte({ ...VALIDE, conditions: "ça rame" }).conditions, null);
+  assertEquals(accepte({ ...VALIDE, conditions: [1, 2, 3] }).conditions, null);
+  assertEquals(accepte({ ...VALIDE, conditions: {} }).conditions, null);
+});
+
+Deno.test("PE2.3 — un relevé complet passe entier", () => {
+  const c = accepte({ ...VALIDE, conditions: CONDITIONS }).conditions;
+  assert(c !== null);
+  assertEquals(c, CONDITIONS);
+});
+
+Deno.test("PE2.3 — une clé inconnue tombe, une valeur du mauvais type aussi, le reste tient", () => {
+  const c = accepte({
+    ...VALIDE,
+    conditions: {
+      ...CONDITIONS,
+      fps_median: "120",
+      fps_1pc_bas: Number.NaN,
+      pire_image_ms: Number.POSITIVE_INFINITY,
+      intrus: "x",
+      machine: { ...CONDITIONS.machine, coeurs: "huit", plein_ecran: "oui", intrus: 1 },
+    },
+  }).conditions as Record<string, unknown>;
+  assert(c !== null);
+  assertEquals(c.fps_median, undefined);
+  assertEquals(c.fps_1pc_bas, undefined);
+  assertEquals(c.pire_image_ms, undefined);
+  assertEquals(c.intrus, undefined);
+  assertEquals(c.fps_moyen, 118.4);
+  const m = c.machine as Record<string, unknown>;
+  assertEquals(m.coeurs, undefined);
+  assertEquals(m.plein_ecran, undefined);
+  assertEquals(m.intrus, undefined);
+  assertEquals(m.gpu, CONDITIONS.machine.gpu);
+});
+
+Deno.test("PE2.3 — un nom de carte trop long est tronqué, pas refusé", () => {
+  const long = "x".repeat(MAX_CONDITION_TEXT + 50);
+  const c = accepte({
+    ...VALIDE,
+    conditions: { fps_median: 120, machine: { gpu: long } },
+  }).conditions as Record<string, unknown>;
+  assertEquals((c.machine as Record<string, unknown>).gpu, "x".repeat(MAX_CONDITION_TEXT));
+});
+
+Deno.test("PE2.3 — un bloc machine vide ne laisse pas de clé machine", () => {
+  const c = accepte({
+    ...VALIDE,
+    conditions: { fps_median: 120, machine: { intrus: 1 } },
+  }).conditions as Record<string, unknown>;
+  assertEquals(c.machine, undefined);
+  assertEquals(c.fps_median, 120);
+});
+
+Deno.test("PE2.3 — des conditions inutilisables ne changent rien au match lui-même", () => {
+  const r = accepte({ ...VALIDE, ranked: true, conditions: 42 });
+  assertEquals(r.kind, RANKED);
+  assertEquals(r.conditions, null);
 });

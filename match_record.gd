@@ -36,7 +36,18 @@ const HISTORY_PATH := "user://match_history.json"
 ##     vide, jamais un repli plausible. Un journal qui inventerait « pistolet »
 ##     pour un match d'avant les classes fausserait la seule statistique que ces
 ##     clés existent pour porter.
-const SCHEMA_VERSION := 4
+## 5 — ajout de `conditions` (chantier PRÊT À L'ESSAI, PE2.1, 2026-09-10) : ce
+##     que la machine a coûté pendant la manche — cadence par image (médiane,
+##     1 % bas, pire image, aux définitions du banc), lien, et la machine
+##     elle-même. Voir `conditions_de_match.gd`. Jusqu'ici le journal disait le
+##     résultat et rien des conditions : un testeur qui écrivait « ça rame »
+##     n'avait rien à joindre, et tous les relevés de cadence du projet venaient
+##     d'un seul poste. Un dictionnaire VIDE quand rien n'a été relevé — jamais
+##     une clé absente, pour qu'un lecteur n'ait qu'une forme à connaître.
+##     ⚠️ Ces conditions restent LOCALES : l'envoi au classement (`_report_to_ranking`)
+##     construit son propre corps et ne les transmet pas. Les faire remonter est
+##     l'étape PE2.3, qui attend un arbitrage d'Adrien sur ce qui remonte.
+const SCHEMA_VERSION := 5
 
 ## L'historique est plafonné : c'est un journal local, pas une base. Au-delà,
 ## les entrées les plus anciennes sont oubliées.
@@ -92,7 +103,8 @@ static func is_match_over(format: int, p1_rounds: int, p2_rounds: int) -> bool:
 static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: String,
 		map_id: String, mode: String, format: int = Format.BO1,
 		forfeit: bool = false, match_id: String = "", ranked: bool = false,
-		outcome: String = "", class_1: String = "", class_2: String = "") -> Dictionary:
+		outcome: String = "", class_1: String = "", class_2: String = "",
+		conditions: Dictionary = {}) -> Dictionary:
 	return {
 		"version": SCHEMA_VERSION,
 		"forfait": forfeit,
@@ -117,6 +129,9 @@ static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: S
 		# rejoué en trop est refusé par le serveur, un rapport jamais envoyé est
 		# perdu pour toujours.
 		"remonte": false,
+		# Schéma 5 : les CONDITIONS de la manche (voir en tête). Copie, pour que
+		# l'enregistrement ne partage pas son dictionnaire avec le releveur.
+		"conditions": conditions.duplicate(true),
 	}
 
 ## Les matchs classés que le serveur n'a jamais accusé réception.

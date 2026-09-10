@@ -70,7 +70,9 @@ func _test_schema_rejouable() -> void:
 	# Passé de 3 à 4 le 2026-09-09 (chantier CLASSES) : le journal porte désormais
 	# `classe_j1` et `classe_j2`, le slug de la classe jouée. ⚠️ À ne pas
 	# confondre avec `classe`, ci-dessus, qui est le booléen du classement.
-	_check("le schéma est bien en v4", int(r["version"]) == 4, str(r.get("version")))
+	# Passé de 4 à 5 le 2026-09-10 (chantier PRÊT À L'ESSAI, PE2.1) : `conditions`,
+	# la cadence et la machine de la manche — voir `test_conditions_de_match.gd`.
+	_check("le schéma est bien en v5", int(r["version"]) == 5, str(r.get("version")))
 	for cle in ["classe_j1", "classe_j2"]:
 		_check("l'enregistrement porte « %s »" % cle, r.has(cle))
 

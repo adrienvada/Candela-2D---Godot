@@ -1000,6 +1000,13 @@ var dbg_noeuds: Label
 var dbg_cartes: Label
 var debug_mode_active: bool = false
 var _f3_was_pressed: bool = false
+var _f6_was_pressed: bool = false
+## PE2.2 — la ligne d'indication du panneau F3 (F6 copie le diagnostic), et
+## l'instant jusqu'auquel elle affiche la confirmation d'une copie.
+var dbg_note_label: Label
+var _dbg_note_jusqua_msec: int = 0
+const DIAG_INDICATION := "F6 — copier le diagnostic (presse-papiers + user://diagnostic.txt)"
+const DIAG_PATH := "user://diagnostic.txt"
 
 const DEBUG_SCAN_INTERVAL := 0.25
 var _debug_scan_accum: float = 0.0
@@ -1554,6 +1561,16 @@ func _update_debug(_delta: float) -> void:
 		debug_panel.visible = debug_mode_active
 	_f3_was_pressed = f3_pressed
 
+	# PE2.2 — F6 copie le diagnostic, panneau ouvert ou non : un testeur à qui
+	# l'on dit « appuie sur F6 et colle » n'a rien d'autre à savoir. ⚠️ Pas F4 :
+	# c'est la trace d'écoute d'`AudioManager` (`_tracer_ecoute`), et F5 est pris
+	# par l'éditeur de cartes — grep `KEY_F` sur TOUT le dépôt avant d'en prendre
+	# une, pas sur trois fichiers.
+	var f6_pressed := Input.is_physical_key_pressed(KEY_F6)
+	if f6_pressed and not _f6_was_pressed:
+		_copier_le_diagnostic()
+	_f6_was_pressed = f6_pressed
+
 	if not debug_mode_active:
 		return
 
@@ -1628,6 +1645,83 @@ func _update_debug(_delta: float) -> void:
 	# fichiers pour en lire la taille, ce qui n'a rien à faire dans une frame.
 	if _assets_summary != "":
 		net_debug_label.text += "\n" + _assets_summary
+
+	# La confirmation de copie ne reste que quelques secondes, puis la ligne
+	# redevient l'indication.
+	if _dbg_note_jusqua_msec > 0 and Time.get_ticks_msec() > _dbg_note_jusqua_msec:
+		_dbg_note_jusqua_msec = 0
+		dbg_note_label.text = DIAG_INDICATION
+
+## PE2.2 — le diagnostic, en un geste.
+##
+## Ce qu'un testeur ne saura pas décrire — sa carte graphique, son pilote, la
+## cadence de son dernier match, par où passe son lien — tient dans un texte
+## qu'il n'a qu'à coller. Il part au presse-papiers ET dans `user://diagnostic.txt`
+## (un presse-papiers se perd au premier copier suivant ; le fichier reste), et
+## le panneau F3 s'ouvre pour le dire — sans retour visible, un geste à l'aveugle
+## passe pour un geste raté.
+func _copier_le_diagnostic() -> void:
+	var texte := diagnostic_texte()
+	DisplayServer.clipboard_set(texte)
+	var fichier := FileAccess.open(DIAG_PATH, FileAccess.WRITE)
+	var ecrit := fichier != null
+	if ecrit:
+		fichier.store_string(texte)
+		fichier.close()
+	debug_mode_active = true
+	debug_panel.visible = true
+	dbg_note_label.text = ("Diagnostic copié — presse-papiers + %s" % DIAG_PATH) if ecrit \
+		else "Diagnostic copié dans le presse-papiers (fichier non écrit)"
+	_dbg_note_jusqua_msec = Time.get_ticks_msec() + 4000
+
+## Le texte du diagnostic : la machine, les réglages, le réseau, l'instant, et
+## les CONDITIONS du dernier match archivé (schéma 5 de `MatchRecord`). La mise
+## en forme est dans `ConditionsDeMatch.texte_diagnostic` ; ici, seulement ce
+## qu'on y met — rien de nominatif au-delà de ce que F3 affiche déjà.
+func diagnostic_texte() -> String:
+	var gs := get_parent()
+	var instant := {
+		"images_par_s": Engine.get_frames_per_second(),
+		"plafond_moteur": Engine.max_fps,
+		"lumieres": _debug_light_count,
+		"noeuds_arene": _debug_arena_nodes,
+	}
+	if gs is GameState and is_instance_valid(gs.particle_pool):
+		instant["particules"] = "%d / %d" % [gs.particle_pool.active_count(), ParticlePool.MAX_ACTIVE]
+	var reglages := {
+		"vsync": GameSettings.vsync_enabled,
+		"plafond_choisi": GameSettings.fps_cap,
+		"plafond_effectif": GameSettings.plafond_effectif(),
+		"resolution_index": GameSettings.resolution_index,
+	}
+	var mode := "ecran_scinde"
+	match NetworkManager.current_mode:
+		NetworkManager.GameMode.ONLINE_HOST: mode = "en_ligne_hote"
+		NetworkManager.GameMode.ONLINE_CLIENT: mode = "en_ligne_client"
+	var reseau := {
+		"transport": "ENet" if NetworkManager.transport == NetworkManager.Transport.ENET else "EOS",
+		"mode": mode,
+		"epic": NetworkManager.eos_state_label(),
+		"lien": _eos_network_type_label(),
+		"nat": _eos_nat_label(),
+		"rtt_ms": round(NetworkManager.rtt_ms) if NetworkManager.has_rtt else "—",
+		"commandes": _input_relay_label(),
+	}
+	var dernier := {}
+	var historique := MatchRecord.load_history()
+	if not historique.is_empty() and historique[-1] is Dictionary:
+		var e: Dictionary = historique[-1]
+		for cle in ["horodatage", "mode", "carte", "classe_j1", "classe_j2", "duree", "vainqueur", "forfait"]:
+			if e.has(cle):
+				dernier[cle] = e[cle]
+		dernier["conditions"] = e.get("conditions", {})
+	return ConditionsDeMatch.texte_diagnostic([
+		["Machine", ConditionsDeMatch.machine()],
+		["Réglages", reglages],
+		["Réseau", reseau],
+		["Instantané", instant],
+		["Dernier match", dernier],
+	])
 
 ## Ligne réseau du panneau F3 : de quoi diagnostiquer une session en ligne sans
 ## sortir du jeu — par où passe le lien, à travers quel NAT, sous quelle identité.
@@ -2608,19 +2702,46 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 
 
 ## Écrit les réserves d'un joueur en match : fusées restantes et gadget de classe.
-func _maj_reserves(res: Dictionary, joueur: int) -> void:
+func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	if res.is_empty():
 		return
 	var gs := get_tree().get_first_node_in_group("game_state")
 	if gs == null:
 		return
 
+	# ⚠️ **La couleur suit le PANNEAU, les données suivent le JOUEUR**, et les deux
+	# ne se confondent que chez l'hôte. Chez le client en ligne, `update_hud()`
+	# reçoit (p2, p1) — le joueur local d'abord —, mais ce panneau était nourri par
+	# l'index 0, donc par `gs.p1` : le client lisait dans SON bandeau les réserves de
+	# l'HÔTE. Relevé par le contre-examen du 2026-09-10. Le premier correctif proposé
+	# passait `player_id` à la place de 0 — et repeignait du même coup le panneau du
+	# client en couleur adverse, la teinte tirant du même argument.
 	var teinte: Color = COLOR_P1 if joueur == 0 else COLOR_P2
+	var p: Node2D = qui if qui != null else (gs.p1 if joueur == 0 else gs.p2)
+	var pid: int = int(p.get("player_id")) if p != null else joueur
+	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
 
 	# ── 1. Les fusées éclairantes ──────────────────────────────────────────
-	var n := int(gs.fusees_restantes(joueur)) if gs.has_method("fusees_restantes") else 0
+	#
+	# ⚠️ **« — » ne veut plus dire « vide », seulement « n'en a jamais ».**
+	# Jusqu'au 2026-09-10 le bandeau écrivait « FUSÉES — » pour un Parasite qui
+	# venait de lancer son unique fusée, exactement comme pour le Spectre, qui
+	# n'en porte aucune : l'écran ne distinguait pas « reviendra » de « jamais ».
+	# Depuis que sept classes rechargent une fusée par minute, cette différence
+	# est toute l'information — et un zéro suffit à la porter.
+	var n := int(gs.fusees_restantes(pid)) if gs.has_method("fusees_restantes") else 0
+	var plafond := 0
+	if classe != null and classe.fusees != null:
+		plafond = classe.fusees.plafond_effectif()
 	var lbl_f: Label = res["fusees"]
-	lbl_f.text = "FUSÉES %d" % n if n > 0 else "FUSÉES —"
+	# ⚠️ **Ni plafond ni décompte dans le libellé**, et c'est une correction du jour
+	# même. La première version écrivait « FUSÉES 0/1 · 60 s » : 97 px contre 59
+	# pour le plus long libellé d'avant — et un libellé ne coupe pas, il élargit sa
+	# cartouche. En écran scindé, le panneau de J2 est calé à droite et grandit vers
+	# la droite : sa cartouche partait hors de l'écran (revue du 2026-09-10,
+	# mesuré). « Vide, reviendra » contre « n'en a jamais » ne demandait que ceci :
+	# zéro s'écrit « 0 », et le tiret est réservé au Spectre.
+	lbl_f.text = "FUSÉES —" if plafond <= 0 else "FUSÉES %d" % n
 	lbl_f.add_theme_color_override("font_color",
 		Charte.HALOGENE if n > 0 else COLOR_DIM)
 
@@ -2629,22 +2750,57 @@ func _maj_reserves(res: Dictionary, joueur: int) -> void:
 		_set_flare_style(p_f, n > 0, teinte)
 
 	# ── 2. Le gadget de classe ─────────────────────────────────────────────
-	var p: Node2D = gs.p1 if joueur == 0 else gs.p2
-	var classe := p.current_weapon as ClassData if (p and p.get("current_weapon")) else null
-	var nom_gadget := "—"
-	var dispo := false
+	#
+	# ⚠️ Trois états à dire depuis le 2026-09-10, et l'écran n'en disait qu'un —
+	# Adrien : « l'UI ne nous apprend rien là-dessus ». PRÊT (le nom seul), EN
+	# RECHARGE (le nom et ses secondes), et pour le grésillement ALLUMÉ ou ÉTEINT,
+	# avec sa batterie.
+	var titre_g := "GADGET"
+	var texte_g := "—"
+	var vif := false
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():
-		nom_gadget = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
-		dispo = bool(gs.gadget_disponible(joueur)) if gs.has_method("gadget_disponible") else false
+		texte_g = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
+		var dispo := bool(gs.gadget_disponible(pid)) if gs.has_method("gadget_disponible") else false
+		var bascule: Node = gs.gadget_basculable_de(pid) if gs.has_method("gadget_basculable_de") else null
+		if bascule != null:
+			var allume := bool(bascule.get("actif"))
+			var batt := float(gs.batterie(pid))
+			# `floor` et non `round` : le bandeau n'annonce jamais le seuil de
+			# rallumage avant qu'il soit atteint. Et sous ce seuil, un état à part —
+			# « éteinte, rallumable » et « éteinte, pas encore » se lisaient pareil,
+			# et l'appui ignoré ne disait rien.
+			var pct := int(floor(batt * 100.0))
+			if allume:
+				titre_g = "ALLUMÉ · %d %%" % pct
+				vif = true
+			elif batt >= GadgetGresillement.SEUIL_RALLUMAGE:
+				titre_g = "ÉTEINT · %d %%" % pct
+			else:
+				titre_g = "CHARGE · %d %%" % pct
+		elif dispo:
+			vif = true
+		else:
+			var att := float(gs.attente_gadget(pid)) if gs.has_method("attente_gadget") else 0.0
+			if att > 0.0:
+				titre_g = "RECHARGE · %ds" % int(ceil(att))
 
+	# ⚠️ **L'état se lit sur la ligne du TITRE, le nom reste seul en dessous.** La
+	# première version allongeait la ligne du nom — « GRÉSILLEMENT ALLUMÉ · 100 % »,
+	# 178 px, plus que tout le bloc des réserves — et en écran scindé le panneau de
+	# J2, calé à droite et grandissant vers la droite, poussait sa cartouche hors de
+	# l'écran. La ligne de titre existait depuis le début et ne disait que
+	# « GADGET » : c'est elle qui porte l'état, et la cartouche garde sa largeur.
+	var lbl_t: Label = res.get("gadget_titre", null)
+	if lbl_t != null:
+		lbl_t.text = titre_g
 	var lbl_g: Label = res["gadget"]
-	lbl_g.text = nom_gadget if dispo else ("%s —" % nom_gadget if nom_gadget != "—" else "—")
+	lbl_g.text = texte_g
 	lbl_g.add_theme_color_override("font_color",
-		Charte.HALOGENE if dispo else COLOR_DIM)
+		Charte.HALOGENE if vif else COLOR_DIM)
 
 	var p_g: PanelContainer = res.get("panel_gadget", null)
 	if p_g != null:
-		_set_gadget_style(p_g, dispo, teinte)
+		_set_gadget_style(p_g, vif, teinte)
 
 
 func _set_torch_style(panel: PanelContainer, active: bool, player_color: Color) -> void:
@@ -2916,6 +3072,15 @@ func _build_debug_panel() -> void:
 	Charte.appareil(net_debug_label, T_MENTION)
 	net_debug_label.add_theme_color_override("font_color", COLOR_DIM)
 	debug_vbox.add_child(net_debug_label)
+
+	# PE2.2 — l'indication F6, dans le même registre que la ligne réseau.
+	dbg_note_label = Label.new()
+	dbg_note_label.text = DIAG_INDICATION
+	dbg_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dbg_note_label.custom_minimum_size = Vector2(320, 0)
+	Charte.appareil(dbg_note_label, T_MENTION)
+	dbg_note_label.add_theme_color_override("font_color", COLOR_DIM)
+	debug_vbox.add_child(dbg_note_label)
 
 	debug_panel.add_child(debug_vbox)
 	add_child(debug_panel)
@@ -7455,7 +7620,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p1_cd.secousse < float(p1.get("tir_a_sec")):
 			p1_cd.secousse = float(p1.get("tir_a_sec"))
 		_set_torch_style(p1_torch, p1.flashlight_on, COLOR_P1)
-		_maj_reserves(p1_reserves, 0)
+		_maj_reserves(p1_reserves, 0, p1)
 		_poser_voile(p1_dazzle, p1, _source_du_voile(p1, p2))
 
 	if p2:
@@ -7497,7 +7662,7 @@ func update_hud(p1, p2, time_left: float, horloge: bool = true) -> void:
 		if p2_cd.secousse < float(p2.get("tir_a_sec")):
 			p2_cd.secousse = float(p2.get("tir_a_sec"))
 		_set_torch_style(p2_torch, p2.flashlight_on, COLOR_P2)
-		_maj_reserves(p2_reserves, 1)
+		_maj_reserves(p2_reserves, 1, p2)
 		# ⚠️ **Le voile de l'AUTRE ne s'affiche qu'en écran scindé.**
 		#
 		# Il s'affichait partout, et c'était un défaut : `update_hud` reçoit le

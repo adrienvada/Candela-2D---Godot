@@ -265,7 +265,11 @@ ROADMAP. Les plus destructeurs :
   l'attente d'une frame : segfault (ré-entrée dans `EOS_Platform_Tick()`).
 - Deux instances locales partagent le même Device ID → PUID identique : lancer
   avec `--eos-ephemeral` (neutralisé hors build debug).
-- Dans un build release, `print()` est tamponné et vidé à la **fermeture
-  propre** seulement : tuer le processus jette la fin du journal. Lire
-  `~/Library/Application Support/Godot/app_userdata/Candela 2D/logs/godot.log`
-  après un quit propre.
+- Le journal `~/Library/Application Support/Godot/app_userdata/Candela 2D/logs/godot.log`
+  est vidé à **chaque `print()`**, en release aussi
+  (`run/flush_stdout_on_print=true`, PE2.4, 2026-09-10) : un plantage ne jette
+  plus la fin du journal. Avant cette date il n'était écrit qu'à la fermeture
+  propre — un journal tronqué vient d'un build antérieur.
+- **F6** en jeu copie le diagnostic (machine, réglages, réseau, conditions du
+  dernier match) dans le presse-papiers et `user://diagnostic.txt` (PE2.2).
+  F4 est la trace d'écoute audio, F5 l'éditeur de cartes.
