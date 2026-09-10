@@ -1389,22 +1389,20 @@ func _test_braises() -> void:
 	_check("hors de la nappe, on ne brûle pas",
 		is_equal_approx(gs.p1.hp, pv_dehors))
 
-	# ── LES CHARBONS SONT DÉTERMINISTES ──────────────────────────────────────
+	# ── LA NAPPE EST UNE IMAGE, QUI LUIT D'ELLE-MÊME ─────────────────────────
 	#
-	# ⚠️ Un tirage local donnerait deux nappes différentes chez les deux pairs.
-	# C'est la raison même pour laquelle les particules sont exclues du modèle
-	# d'éblouissement — « tirées au sort, donc absentes chez l'autre pair ».
+	# Depuis le 2026-09-10, une image peinte remplace les charbons dessinés : la
+	# même chez les deux pairs, par construction. Ce qu'il reste à garder : NON
+	# éclairée par le décor — sans quoi le `CanvasModulate` de l'arène l'éteindrait,
+	# comme il éteignait les charbons — et PAS additive, sans quoi elle blanchit.
 	var a1 := GadgetBraises.new()
-	var b1 := GadgetBraises.new()
 	a1._monter_visuel()
-	b1._monter_visuel()
-	var identiques := a1._charbons.size() == b1._charbons.size()
-	for i in a1._charbons.size():
-		if not a1._charbons[i].position.is_equal_approx(b1._charbons[i].position):
-			identiques = false
-	_check("deux nappes se dessinent à l'identique", identiques)
+	_check("la nappe est une image", a1._nappe != null and a1._nappe.texture != null)
+	var mat: CanvasItemMaterial = a1._nappe.material if a1._nappe != null else null
+	_check("elle luit d'elle-même, sans s'additionner à sa propre lumière",
+		mat != null and mat.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED
+			and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MIX)
 	a1.free()
-	b1.free()
 
 	gs.queue_free()
 	await process_frame
@@ -1468,20 +1466,15 @@ func _test_volumes() -> void:
 		is_zero_approx(voile.occultation_pour(Vector2.ZERO)))
 	voile.free()
 
-	# ── Le contour est DÉTERMINISTE ─────────────────────────────────────────
+	# ── Le nuage est une IMAGE ──────────────────────────────────────────────
+	#
+	# Depuis le 2026-09-10, une image peinte remplace le disque au contour
+	# déterministe qu'on vérifiait ici : la même chez les deux pairs, par
+	# construction.
 	var a2 := GadgetSuie.new()
-	var b2 := GadgetSuie.new()
 	a2._monter_visuel()
-	b2._monter_visuel()
-	var identiques := a2._masse != null and b2._masse != null \
-		and a2._masse.polygon.size() == b2._masse.polygon.size()
-	if identiques:
-		for i in a2._masse.polygon.size():
-			if not a2._masse.polygon[i].is_equal_approx(b2._masse.polygon[i]):
-				identiques = false
-	_check("deux nuages se dessinent à l'identique", identiques)
+	_check("le nuage de suie est une image", a2._masse != null and a2._masse.texture != null)
 	a2.free()
-	b2.free()
 
 	suie.free()
 	poussiere.free()

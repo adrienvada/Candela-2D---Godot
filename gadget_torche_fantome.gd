@@ -56,6 +56,8 @@ const ENERGIE := 2.5
 
 var _angle_depart: float = 0.0
 var _lumiere: PointLight2D
+## Le trépied, qui ne balaie pas : voir `_physics_process()`.
+var _pied: Sprite2D = null
 
 
 func _init() -> void:
@@ -149,33 +151,30 @@ func _physics_process(delta: float) -> void:
 	# Le balayage. `age()` court depuis la pose, donc les deux pairs décrivent la
 	# même courbe — au déphasage de leur instant de départ près.
 	rotation = _angle_depart + sin(TAU * age() / PERIODE) * AMPLITUDE
+	# Le trépied est posé au sol : il ne balaie pas. Sa rotation compense celle du
+	# nœud, qui porte la tête et le faisceau.
+	if _pied != null:
+		_pied.rotation = _angle_depart - rotation
 
 
-## Le trépied. Dessiné, comme le voile et l'ombre habitée : vu de dessus, une
-## lampe posée est un point et trois pattes.
+## Le trépied et la tête, deux images (2026-09-10). Le pied reste posé ; la tête,
+## couchée, faisceau vers +x, tourne avec le nœud — donc avec le faisceau.
 ##
 ## ⚠️ **Volontairement sombre et petit.** Ce qu'on doit voir d'elle est son
 ## FAISCEAU ; l'objet lui-même trop lisible dirait « ceci est un gadget » à qui
 ## l'aperçoit, ce qui est exactement le contraire du but.
 func _monter_visuel() -> void:
-	var pieds := Line2D.new()
-	pieds.name = "Visuel"
-	pieds.points = PackedVector2Array([
-		Vector2(-rayon, -rayon * 0.7), Vector2.ZERO, Vector2(-rayon, rayon * 0.7)])
-	pieds.width = 2.0
-	pieds.default_color = Charte.SOL_B
-	pieds.light_mask = MapGeometry.WALL_LAYER
-	add_child(pieds)
+	_pied = _poser_sprite("Visuel", "torche_fantome_pied")
+	_poser_sprite("Tete", "torche_fantome_tete")
 
 	# La lentille : le seul point clair, et il n'est clair que parce qu'il est la
-	# source. Non éclairé par le décor (`light_mask = 0`) — une lampe allumée ne
-	# dépend pas de ce qui l'éclaire.
+	# source — posée sur le verre de la tête peinte, au bout du fût.
 	var lentille := Polygon2D.new()
 	lentille.name = "Lentille"
 	var pts := PackedVector2Array()
 	for i in 8:
 		var ang := (i / 8.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 3.0 + Vector2(6.0, 0.0))
+		pts.append(Vector2(cos(ang), sin(ang)) * 2.5 + Vector2(10.0, 0.0))
 	lentille.polygon = pts
 	lentille.color = Charte.HALOGENE
 	# Même correction que les braises : `light_mask = 0` ôte les lumières mais pas

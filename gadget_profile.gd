@@ -95,7 +95,14 @@ func est_livre() -> bool:
 
 ## Le chemin du sprite du gadget posé, dérivé du slug — une seule vérité.
 func chemin_sprite() -> String:
-	return "res://assets/sprites/gadget_%s.png" % slug
+	return chemin_sprite_de(slug)
+
+
+## La même vérité pour les gadgets en PIÈCES — la torche fantôme (pied, tête), le
+## voile (piquet, toile) — et pour le gadget posé, qui ne connaît pas son profil :
+## `"voile_toile"` donne `gadget_voile_toile.png`. Le format ne s'écrit qu'ici.
+static func chemin_sprite_de(nom: String) -> String:
+	return "res://assets/sprites/gadget_%s.png" % nom
 
 
 ## Le chemin de l'icône d'interface, dérivé du même slug.

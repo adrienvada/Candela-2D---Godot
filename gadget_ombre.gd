@@ -50,30 +50,8 @@ func _monter_occluder() -> void:
 	add_child(occ)
 
 
-## Dessiné, comme le voile, et pour la même raison — voir `gadget_voile.gd` :
-## une plaque d'acier vue de dessus EST une ligne, et son intérêt n'est pas ce
-## qu'on voit d'elle mais l'ombre qu'elle projette.
+## Son image : l'arête haute de la plaque et son socle, vus de dessus. Une plaque
+## d'acier vue de dessus reste une ligne, et son intérêt n'est pas ce qu'on voit
+## d'elle mais l'ombre qu'elle projette.
 func _monter_visuel() -> void:
-	var plaque := Line2D.new()
-	plaque.name = "Visuel"
-	plaque.points = PackedVector2Array([
-		Vector2(-DEMI_TORSE, 0.0), Vector2(DEMI_TORSE, 0.0)])
-	plaque.width = DEMI_EPAISSEUR * 2.0
-	# De l'acier froid, pas du béton : c'est ce qui la distingue d'un fragment de
-	# mur pour qui la voit vraiment — et voir vraiment coûte d'être là.
-	plaque.default_color = Charte.ACIER * 0.55
-	plaque.light_mask = MapGeometry.WALL_LAYER
-	add_child(plaque)
-
-	# Le mât, au centre : un point. Sans lui la plaque semble flotter, et son
-	# ombre n'aurait pas de raison de tenir debout.
-	var mat := Polygon2D.new()
-	mat.name = "Mat"
-	var pts := PackedVector2Array()
-	for i in 8:
-		var ang := (i / 8.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 3.5)
-	mat.polygon = pts
-	mat.color = Charte.SOL_A
-	mat.light_mask = MapGeometry.WALL_LAYER
-	add_child(mat)
+	_poser_sprite("Visuel", "ombre_habitee")
