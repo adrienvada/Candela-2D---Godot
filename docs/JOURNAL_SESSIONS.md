@@ -309,6 +309,12 @@ la fusée*) :
 **Aucun banc ajouté** : la reproduction est `./tools/run_photos.sh --plan=fusee`,
 qui exige une vraie fenêtre ; la mesure est au pixel, consignée dans la ROADMAP.
 
+**Suite, le même jour — décision d'Adrien : les particules de sang n'éclairent
+plus.** L'éclat V4.11 est retiré en entier de `particle_pool.gd` (constantes
+`BLOOD_FLASH_*`, surmultiplication dans `advance()`, entrée `flash`) ; seules
+les étincelles gardent une lumière. Décision et raisons dans la ROADMAP,
+« Décisions actées » ; la ligne V4.11 de la liste game feel porte « DÉFAIT ».
+
 ### 2026-09-09 (encore) — session « SG · sang au sol » : la v0.3.0 a montré une tache trop grosse, corrigé
 
 **Adrien a joué la version qui vient d'être publiée et a envoyé une capture** :
