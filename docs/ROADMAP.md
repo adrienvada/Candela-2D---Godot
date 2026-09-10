@@ -17708,10 +17708,10 @@ aucun causé par la fusion :
 - `GadgetProfile.chemin_sprite()` se disait valable pour tout gadget, et son test
   figeait le chemin inexistant `gadget_voile.png` : documenté pour les gadgets
   d'une seule pièce, test sur un vrai fichier ;
-- **les braises fines ne couvrent que 57 % du disque qui brûle** : on brûle à
-  50 px du centre là où rien n'est peint. Adrien a redemandé un disque plein à la
-  session des menus ; d'ici là l'image reste, et un garde de couverture viendra
-  avec la nouvelle ;
+- **les braises fines ne couvraient que 57 % du disque qui brûle** : on brûlait
+  à 50 px du centre là où rien n'était peint. Adrien a redemandé un disque plein ;
+  la session des menus l'a livré (`d2c599e`, 97 % mesurés), et
+  `tools/test_classes.gd` exige désormais 90 % ;
 - côté menus, les images de gadget de la fiche ne sont gardées par aucun test :
   signalé à la session qui les tient.
 

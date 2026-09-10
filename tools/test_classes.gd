@@ -1407,6 +1407,29 @@ func _test_braises() -> void:
 	_check("elle luit d'elle-même, sans s'additionner à sa propre lumière",
 		mat != null and mat.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED
 			and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MIX)
+	# ⚠️ **L'image couvre le disque qui brûle.** Les premières braises fines
+	# (`2ce7133`) ne couvraient que 54 % du disque de `RAYON` : on brûlait à 50 px
+	# du centre là où rien n'était peint, et toutes les suites restaient vertes.
+	# Mesuré : 91 % pour les cailloux d'avant, 97 % pour le disque plein de
+	# `d2c599e`. Trouvé par la revue de la fusion des menus, le 2026-09-10.
+	var couverture := -1.0
+	if a1._nappe != null and a1._nappe.texture != null:
+		var img: Image = a1._nappe.texture.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			var centre := Vector2((img.get_width() - 1) / 2.0, (img.get_height() - 1) / 2.0)
+			var dans := 0
+			var pleins := 0
+			for y in img.get_height():
+				for x in img.get_width():
+					if Vector2(x, y).distance_to(centre) <= GadgetBraises.RAYON:
+						dans += 1
+						if img.get_pixel(x, y).a >= 0.5:
+							pleins += 1
+			couverture = float(pleins) / float(maxi(1, dans))
+	_check("l'image couvre au moins 90 % du disque qui brûle", couverture >= 0.9,
+		"%.1f %%" % (couverture * 100.0))
 	a1.free()
 
 	gs.queue_free()
