@@ -10,13 +10,28 @@ Usage : python3 incruster.py source.png sortie.png"""
 import sys
 from PIL import Image
 
-BAS, HAUT = 25, 90   # verdeur : en dessous opaque, au-dessus transparent
 COTE = 128
 MARGE = 6
 
 src = Image.open(sys.argv[1]).convert("RGB")
 W, H = src.size
 sp = src.load()
+
+# Seuils de verdeur (en dessous opaque, au-dessus transparent) tirés du fond de
+# CETTE image, mesuré sur son bord.
+#
+# ⚠️ **Ils étaient fixes (25 / 90), et le fond des armes est resté à 15 %.**
+# Gemini ne rend pas deux fois le même vert : `#00B140` donne une verdeur de
+# 113, le `#07A84F` des armes du 2026-09-10 en donnait 80 à 98 — sous le seuil
+# fixe. Un voile gris couvrait toute l'icône et, compté comme objet, rétrécissait
+# l'arme au recadrage. Rien ne l'annonçait : le script écrivait « objet
+# (2814, 1536) », la taille de l'image entière, et c'est ce chiffre qui l'a trahi.
+bord = [sp[x, 0] for x in range(0, W, 7)] + [sp[x, H - 1] for x in range(0, W, 7)] \
+    + [sp[0, y] for y in range(0, H, 7)] + [sp[W - 1, y] for y in range(0, H, 7)]
+verdeurs = sorted(p[1] - max(p[0], p[2]) for p in bord)
+fond = verdeurs[len(verdeurs) // 10]  # 10e centile : le vert le moins franc du bord
+HAUT = max(30, min(90, fond - 12))
+BAS = max(8, HAUT - 55)
 out = Image.new("RGBA", (W, H))
 op = out.load()
 for y in range(H):

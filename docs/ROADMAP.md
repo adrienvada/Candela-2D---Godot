@@ -3188,6 +3188,28 @@ marque pas le drapeau.
 après elle dans l'ordre des entrées. Un `_input` en dessous l'ignore — il faut
 lui dire qu'il est recouvert, pas espérer que le recouvrement suffise.
 
+### Un seuil fixe de fond vert laisse un voile que rien n'annonce (2026-09-10)
+
+Les gadgets et les armes sont générés sur un fond vert d'incrustation, précisément
+pour ne pas refaire le damier des titres. `tools/incruster_vert.py` tirait l'alpha
+d'un seuil de « verdeur » (vert moins le plus fort des deux autres) FIXE, 25 / 90,
+calé sur le `#00B140` demandé à Gemini — verdeur 113. **Gemini ne rend jamais ce
+vert-là** : mesuré sur 27 planches, le fond vaut 83 à 94, sous le seuil. Le fond
+n'était donc pas retiré mais laissé à 5-15 % d'opacité, un voile gris sur toute
+la toile : jusqu'à 22 % des pixels d'un sprite livré, et le sprite de jeu d'une
+nappe de 336 px aurait posé au sol un carré à peine plus clair que le noir.
+
+Rien ne l'a annoncé pendant deux commits : le recadrage ignorait l'alpha sous 24,
+les planches de contrôle sur fond gris ne le montraient pas. **C'est un chiffre
+imprimé par le script qui l'a trahi**, sur les armes, au vert plus doux encore :
+« objet (2814, 1536) », la taille de l'image entière.
+
+**La règle** : un seuil de détourage se MESURE sur le fond de chaque image (10e
+centile de la verdeur du bord, moins 12), jamais ne se recopie d'une consigne de
+génération. Et un contrôle de détourage compte les pixels semi-transparents **loin
+de l'objet** (à plus de 3 px de tout pixel opaque) : compter tous les
+semi-transparents mélange le voile et l'anticrénelage légitime des contours.
+
 ### Un titre Gemini arrive avec un damier dans ses bords (2026-09-10)
 
 Les titres de menu (`assets/ui/titres/`) ont été détourés d'images générées sur
