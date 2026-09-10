@@ -3787,3 +3787,20 @@ encrés, avec la note qui dit pourquoi. `tools/run_suites.sh` : `test_encrage`
 ajouté. `tools/photographe.gd` : le plan `onde-de-choc` passe en source `ecran`
 à 160 ms (contrainte de la session photographe : les sous-vues sont gelées
 150 ms après le coup fatal).
+
+### Lots 2 à 8 (2026-09-10, soir) — tous commités, tous en attente de verdict
+
+Un commit par lot, un rendu avant/après par lot envoyé à Adrien :
+`blood_shader.gdshader` (2), `death_flash.gdshader` (3),
+`killcam_overlay.gdshader` (4), `damage_vignette.gdshader` (5),
+`player_rim_light.gdshader` + `ghost_unshaded.gdshader` (6),
+`kill_shockwave.gd` (7), `shimmer_murs.gdshader` (8). Fusion d'`origin/main`
+(9e75106, correctif d'archivage du photographe) dans la branche avant le lot 5,
+ancrages vérifiés. Rien n'est fusionné vers `main` : c'est Adrien qui garde ou
+rejette, lot par lot.
+
+⚠️ Deux pièges de méthode payés ce soir, pour qui reprend l'outillage :
+`run_photos.sh --plan=X --sortie=D` **efface toute la famille** de X dans D
+avant d'écrire — un dossier de base ne se complète pas, il se recopie ; et
+capturer une famille DANS un dossier de base l'ampute de ses autres familles
+(perdu le dossier `jeu` du lot 2, reconstitué depuis le lot 1).
