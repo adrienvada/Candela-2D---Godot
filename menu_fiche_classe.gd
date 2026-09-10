@@ -423,8 +423,6 @@ func _texture_si(chemin: String) -> Texture2D:
 		else null
 
 
-static var _recadrages: Dictionary = {}
-
 ## La même texture, recadrée sur ce qu'elle peint.
 ##
 ## ⚠️ **Les sprites de joueur flottent dans une toile presque vide** : le corps
@@ -434,26 +432,9 @@ static var _recadrages: Dictionary = {}
 ## calcule une fois par chemin (`get_used_rect`), la texture d'origine n'est pas
 ## touchée : le jeu garde sa toile, la fiche montre la figure.
 static func _recadree(tex: Texture2D) -> Texture2D:
-	if tex == null:
-		return null
-	var cle := tex.resource_path
-	if cle != "" and _recadrages.has(cle):
-		return _recadrages[cle]
-	var img := tex.get_image()
-	var resultat: Texture2D = tex
-	if img != null:
-		if img.is_compressed():
-			img = img.duplicate() as Image
-			img.decompress()
-		var zone := img.get_used_rect()
-		if zone.size.x > 0 and zone.size.y > 0 and zone.size != img.get_size():
-			var atlas := AtlasTexture.new()
-			atlas.atlas = tex
-			atlas.region = Rect2(zone)
-			resultat = atlas
-	if cle != "":
-		_recadrages[cle] = resultat
-	return resultat
+	# Le calcul vit dans `MenuIcones.recadree`, qui sert aussi les boutons
+	# d'arme : deux copies du même recadrage finiraient par diverger.
+	return MenuIcones.recadree(tex)
 
 
 ## La portée de cette torche rapportée à la plus longue du catalogue.
@@ -490,7 +471,7 @@ func montrer(classe: ClassDataT, catalogue: Array) -> void:
 	# promis une allure que le jeu ne rend pas.
 	_portrait.texture = _recadree(_texture_si(classe.chemin_sprite()))
 	# L'icône d'arme, en couleurs d'origine : la même que sur le bouton de la liste.
-	_arme.texture = MenuIcones.arme(classe.slug())
+	_arme.texture = _recadree(MenuIcones.arme(classe.slug()))
 	_cone.regler(classe.demi_angle_torche(),
 		_part_portee(catalogue, classe.portee_torche()), _teinte)
 	# Le demi-angle est ce que porte la donnée ; l'ouverture est ce que le joueur

@@ -237,7 +237,41 @@ static func _reflet(source: String) -> Texture2D:
 ## ressemblent trop à l'œil.
 static func poser_sur(bouton: Button, slug: String, teinte: Color,
 		cote: float = 20.0) -> bool:
-	return poser_texture(bouton, arme(slug), teinte, cote)
+	# Recadrée sur l'arme : la toile est carrée, l'arme non. `icon_max_width` ne
+	# borne que la LARGEUR — une toile carrée de 30 px de large en faisait donc 30
+	# de haut, et chaque bouton de la liste grandissait d'autant (mesuré à la
+	# capture du 2026-09-10 : le bouton JOUER poussé contre le bord de l'écran).
+	return poser_texture(bouton, recadree(arme(slug)), teinte, cote)
+
+
+static var _recadrages: Dictionary = {}
+
+## La même texture, recadrée sur ce qu'elle peint (`get_used_rect`).
+##
+## Calculé une fois par chemin, la texture d'origine n'est pas touchée : le
+## fichier garde sa toile, l'affichage montre l'objet. Sert aux boutons d'arme
+## et à la fiche de classe (sprite du joueur, arme, gadget).
+static func recadree(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var cle := tex.resource_path
+	if cle != "" and _recadrages.has(cle):
+		return _recadrages[cle]
+	var img := tex.get_image()
+	var resultat: Texture2D = tex
+	if img != null:
+		if img.is_compressed():
+			img = img.duplicate() as Image
+			img.decompress()
+		var zone := img.get_used_rect()
+		if zone.size.x > 0 and zone.size.y > 0 and zone.size != img.get_size():
+			var atlas := AtlasTexture.new()
+			atlas.atlas = tex
+			atlas.region = Rect2(zone)
+			resultat = atlas
+	if cle != "":
+		_recadrages[cle] = resultat
+	return resultat
 
 
 ## Pose l'icône d'un outil de l'éditeur sur un bouton.
@@ -263,6 +297,11 @@ static func poser_texture(bouton: Button, tex: Texture2D, teinte: Color,
 	# du piège `EXPAND_KEEP_SIZE` des `TextureRect`, payé par DA1 le 2026-08-24 :
 	# on pose une taille, elle est ignorée, et l'écran affiche autre chose.
 	bouton.add_theme_constant_override("icon_max_width", int(cote))
+	# Une icône de 128 px posée à 20-24 : sans mipmaps, la réduction saute des
+	# pixels et le dessin scintille — invisible sur le trait blanc d'avant, net
+	# sur les armes peintes en couleur (2026-09-10). L'import les génère ; le
+	# filtre du bouton doit encore les lire.
+	bouton.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	# La teinte du joueur sur un masque gris. `icon_normal_color` et non
 	# `modulate` : `modulate` teindrait aussi le libellé.
 	bouton.add_theme_color_override("icon_normal_color", teinte)

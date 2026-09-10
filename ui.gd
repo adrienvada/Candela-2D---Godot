@@ -6181,7 +6181,12 @@ func _refresh_class_labels() -> void:
 			# **L'icône garde ses couleurs d'origine** (Adrien, 2026-09-10) : teinte
 			# du joueur, elle se perdait sur les fonds bleus et rouges du salon,
 			# teinte sur teinte. Le côté du joueur est déjà dit par le bouton.
-			MenuIcones.poser_sur(btn, String(c.slug()), MenuIcones.ARME_ORIGINE, 22.0)
+			# 30 px et non 22 : peintes en couleur, les armes longues (fusil,
+			# sentinelle, allumeur) ne faisaient plus que 22 × 5 px de métal sombre
+			# sur un bouton sombre — le trait blanc d'avant s'en sortait, pas elles.
+			# `poser_sur` recadre l'icône sur l'arme, sans quoi la toile carrée
+			# ferait grandir chaque bouton de 30 px de haut.
+			MenuIcones.poser_sur(btn, String(c.slug()), MenuIcones.ARME_ORIGINE, 30.0)
 	_refresh_class_cards()
 	# Chaque fiche s'ouvre sur ce qui est DÉJÀ choisi de son côté. L'ouvrir sur la
 	# première de la liste montrerait une classe que personne n'a demandée, juste
@@ -7477,7 +7482,7 @@ func show_pick_window(arsenal: Array, reason: String) -> void:
 		btn.custom_minimum_size = Vector2(210, 36)
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.set_meta(META_CLASSE_INDEX, i)
-		MenuIcones.poser_sur(btn, _weapon_slug(i), MenuIcones.ARME_ORIGINE, 24.0)
+		MenuIcones.poser_sur(btn, _weapon_slug(i), MenuIcones.ARME_ORIGINE, 30.0)
 		# Survol et focus montrent, l'appui engage. Le même partage que le menu :
 		# on doit pouvoir lire une classe sans la prendre, y compris ici — surtout
 		# ici, où le temps manque pour se tromper puis revenir.
