@@ -924,6 +924,11 @@ func rebuild_arena() -> void:
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
 
+	# Prototype « bandeau LED » (2026-09-10) : une lumière unique, cuite depuis
+	# la grille des murs, qui respire sur l'horloge de manche. Inerte sans
+	# `--led-murs` (ou F7 en build debug) — voir mur_led.gd.
+	MurLed.poser(data, arena, _horloge_led)
+
 	# V5.8 — Rendu Shimmer et spécularité du liseré des murs sous la torche.
 	var wall_mat := CandelaTileSet.creer_materiau_mur()
 	walls_layer.material = wall_mat
@@ -975,6 +980,15 @@ func _duplicate_layer_for_player(layer: TileMapLayer, visibility: int, light_mas
 		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 		copy.material = mat
 	arena.add_child(copy)
+
+## Horloge de la respiration du bandeau LED : le temps écoulé de la manche, que
+## l'hôte recale chez le client (`rpc_sync_time`). Les deux joueurs voient donc
+## la même phase au même instant — la bande révèle, elle doit révéler pareil des
+## deux côtés. Pendant le décompte le temps ne s'écoule pas : la bande reste au
+## creux et ne commence à respirer qu'au « FIGHT ». Négatif hors manche : le
+## bandeau prend alors sa propre horloge.
+func _horloge_led() -> float:
+	return round_time - time_left if round_active else -1.0
 
 func _ensure_spawn_marker(spawns: Node2D, marker_name: String) -> void:
 	if spawns.get_node_or_null(marker_name) == null:

@@ -17722,6 +17722,71 @@ est une absence de résultat de recherche, pas une preuve.
 
 ---
 
+## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — PROTOTYPE, attend le jugement d'Adrien
+
+*« J'aimerais que les murs génèrent une légère bande de lumière faible à rythme
+lent, comme une respiration, qui révèle ce qui est proche des murs
+régulièrement. »* Prototype demandé par Adrien, **derrière un drapeau** : ce
+n'est pas une décision actée, et rien ne change pour qui lance le jeu sans lui.
+
+**Pourquoi ce n'est pas un décor, et donc pourquoi c'est à Adrien de trancher.**
+La bande éclaire le sol ET les joueurs. Or on longe les murs en permanence pour
+se cacher : elle rend ces planques visibles à intervalle régulier. Elle crée un
+tempo (coller au mur au creux, s'en méfier au sommet) — équitable parce que
+symétrique et prévisible. Mais c'est la première lumière du jeu qui ne vient
+d'aucun geste de joueur : elle donne de l'information gratuitement. Même nature
+d'arbitrage que le sang auto-éclairé (« Décisions actées », 2026-09-10).
+
+**Ce qui est fait** — `mur_led.gd` (créé), `tools/test_mur_led.gd` (créé, dans
+`run_suites.sh`), et dans `game_state.gd` un appel en fin de `rebuild_arena()`
+plus `_horloge_led()` :
+- **Une seule `PointLight2D` pour toute la carte, la forme dans la texture.**
+  Des lumières le long des murs auraient crevé le plafond de 15 lumières par
+  quadrant (Pièges connus, *Une lumière à énergie zéro compte quand même*) et
+  ramené le halo tranché de la fusée. La texture est cuite depuis la grille des
+  murs à chaque construction d'arène : pleine contre la face, nulle à 0,8 case,
+  un débord de 0,1 case dans le mur pour que le liseré respire aussi. Chaque case
+  ne dépend que de ses huit voisines, d'où des motifs mis en cache : **10 ms** de
+  cuisson pour la carte livrée (408² px).
+- **Pas d'ombre** : la bande n'existe que du côté ouvert, elle ne traverse rien.
+- **La phase suit l'horloge de manche** (`round_time - time_left`, recalée par
+  l'hôte), jamais l'horloge de chaque machine : sinon l'un verrait l'adversaire
+  éclairé pendant que l'autre se croirait caché. Conséquence : **au creux pendant
+  tout le décompte**, la respiration démarre au « FIGHT ». Hors manche (salon
+  d'attente), horloge propre, sans enjeu.
+- **Éteinte au creux** (`enabled = false` sous 0,002) et non laissée à zéro —
+  même piège que ci-dessus.
+- Période : 4 mesures de la musique (16 temps à 170 BPM ≈ 5,65 s) ; le test
+  vérifie que la copie du tempo suit `AudioManager.BPM`. Le tempo seulement : la
+  phase n'est pas alignée sur le premier temps de la musique.
+
+**Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
+en partie (build debug) ; `--led-murs-fige` la tient au sommet pour juger
+l'aspect. Trois constantes en tête de `mur_led.gd` : `PIC`, `PORTEE`, `PERIODE`.
+
+**Mesuré au pixel** (photographe, plans `duel` et `torche`, bande tenue au
+sommet contre bande éteinte) : luminance moyenne d'une bande de 30 px contre le
+mur **0 → 1,36**/255, centre de la salle **0 → 0**, écart maximal **34** sur le
+liseré. **Ce que ça dit : le sol, sombre, s'éclaire à peine** — ce qui se voit,
+c'est le filament qui respire. Ce qui doit se voir, l'adversaire contre le mur,
+passe par `player_enemy_light.gdshader` qui multiplie la lumière par 4 : ~70 %
+de son gris au sommet, **calculé, pas photographié**.
+
+⚠️ Pendant les premières photos, rien n'apparaissait : le photographe déclenche
+pendant le décompte, où l'horloge de manche est à 0 — donc au creux. D'où
+`--led-murs-fige`. Une capture « sans effet » d'un effet rythmé dit d'abord à
+quel instant elle a été prise.
+
+**Pas vérifié** : un adversaire collé au mur en image (aucun plan ne le met en
+scène) ; la cadence (`bench_framerate` non passé — la lumière couvre toute la
+carte, donc tous les items) ; deux machines ; l'éditeur de cartes, qui n'a pas
+le bandeau.
+
+**Ce qu'il faut d'Adrien** : jouer avec, puis trancher — garder ou non ; si oui,
+le dosage (sol quasi noir aujourd'hui) et la période.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.

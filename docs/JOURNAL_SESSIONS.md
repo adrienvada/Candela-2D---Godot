@@ -286,6 +286,18 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-10 — session « walls-led-breathing-light-4872dd-8a » (worktree `walls-led-breathing-light-4872dd`) : prototype du bandeau LED des murs
+
+**Créés :** `mur_led.gd`, `tools/test_mur_led.gd`. **Touchés :** `game_state.gd`
+(disputé) — un appel `MurLed.poser()` en fin de `rebuild_arena()` et une
+fonction `_horloge_led()`, rien d'autre ; ni le catalogue ni `_maj_eblouissement`
+du chantier CLASSES. `tools/run_suites.sh` gagne une entrée. Aucun shader,
+`player.gd` non touché. Détail et mesures : ROADMAP, *Chantier — le bandeau LED
+des murs*. Inerte sans `--led-murs`.
+
+**Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
+artefact de suivi - Sonnet LOCAL ».
+
 ### 2026-09-10 — session « candela-2d-9b » (worktree `lights-display-error-3fd1cd`) : le carré près de la fusée est résolu, `particle_pool.gd` et `game_state.gd` touchés
 
 **Déclaration : deux fichiers hors de mon périmètre.** `particle_pool.gd`
