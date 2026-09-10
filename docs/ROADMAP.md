@@ -3226,6 +3226,15 @@ suite `test_menus_finitions` mesure la part blanc-grise de chaque contour.
 `python3 tools/detourer_titres.py assets/ui/titres/titre_xxx.png` (PIL seul,
 réécrit le fichier en place — garder l'original à côté).
 
+**Même soir : Adrien a re-détouré quatorze titres à la main, dans Photoshop**
+(tous sauf `titre_amical_local`). Comparé à l'œil sur fond sombre, agrandi
+quatre fois, son découpage atténuait l'anneau pointillé mais le laissait en
+gris autour du cerne — un pointillé sur le noir du jeu. Son choix : garder son
+découpage ET le passer au script, qui ne retire que l'anneau restant. Main porte
+donc Photoshop + script pour les quatorze, et le script seul pour
+`titre_amical_local`. **Un détourage à la main n'exempte pas du passage au
+script** : les deux se complètent, l'un décide de la forme, l'autre du damier.
+
 ### Deux fichiers du même nom : l'extraction par nom a menti (2026-09-10)
 
 Pour mesurer les sprites d'un commit d'une autre session, je les ai extraits dans
