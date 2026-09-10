@@ -3734,3 +3734,37 @@ gadget en tirant (O servait aux deux). Mon relevé de l'étape 4 ne lisait qu'un
 fichier sur deux. Adrien a tranché Y pour le gadget, N pour la recharge (K doublait
 la visée vers le bas, défaut antérieur), et un garde refuse désormais tout doublon
 — après avoir prouvé qu'il en voit un.
+
+## 2026-09-10 — Session « Refonte graphique » : les effets EN JEU passent à l'encre
+
+Branche `claude/brutalist-visual-effects-52d2fe`, worktree du même nom. Demande
+d'Adrien le soir même : attaquer, dans un worktree séparé, la refonte « roman
+graphique » des effets visuels en jeu relevés par le bilan (flash de bouche,
+halos, sang, impacts, traçante, flash de mort, killcam, vignette, rim light,
+onde de choc du kill, shimmer), **un lot par commit, un rendu avant/après par
+lot, Adrien garde ou rejette**. Chantier inscrit dans la ROADMAP.
+
+**Fichiers créés (en propre) :** `tools/comparer_photos.py`,
+`tools/encrer_masques.gd`, `tools/test_encrage.gd` (lot 1),
+`assets/sources/encre/` (planches Gemini blanc-sur-noir).
+
+**Fichiers du domaine « game feel » que ce chantier va modifier, un lot à la
+fois** : `blood_shader.gdshader`, `death_flash.gdshader`,
+`killcam_overlay.gdshader`, `damage_vignette.gdshader`,
+`player_rim_light.gdshader`, `ghost_unshaded.gdshader`,
+`shimmer_murs.gdshader`, `kill_shockwave.gd`, et les masques cuits de
+`assets/halo`, `assets/flash`, `assets/decals`. La session « game feel » n'a plus
+donné signe dans ce journal depuis le 2026-08-19 ; la session « retouche
+éblouissement » n'est pas concernée (le voile attend une décision d'Adrien, lot 9
+suspendu). `player.gd`, `bullet.gd` et `ui.gd` ne sont touchés que si un lot
+l'exige, et ce sera dit ici.
+
+**`tools/photographe.gd` (session « photographe ») : quatre plans AJOUTÉS**,
+`impacts`, `vignette` (famille jeu), `mort`, `onde-de-choc` (famille fins, pris
+sur une manche sacrifiée avant la séquence existante), plus deux aides
+`_manche_sacrifiee()` et `_face_a_un_mur()`. Aucun plan existant modifié ni
+renommé ; `test_banc` reste vert ; la session prévenue par message.
+
+⚠️ Cette session n'a pas l'outil `SendMessage` inter-agents ; elle passe par
+`ccd_session_mgmt.send_message`. Delta envoyé au porteur présumé du suivi
+(« Can2d - Mise à jour artefact de suivi »).

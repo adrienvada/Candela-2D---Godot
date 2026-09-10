@@ -260,8 +260,25 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "entrainement", "famille": "jeu", "source": "ecran",
 		 "titre": "L'entraînement",
 		 "pourquoi": "Le mode solo : la cible, la vue unique, le chrono remplacé par un mot."},
+		# --- refonte roman graphique (2026-09-10) : les événements qu'on juge ---
+		# Quatre plans ajoutés pour comparer AVANT/APRÈS chaque lot de la refonte
+		# des effets en jeu. Ils montrent des effets qui ne durent qu'une
+		# fraction de seconde : le repos est nul ou presque, comme pour l'éclat
+		# de bouche.
+		{"id": "impacts", "famille": "jeu", "source": "vue", "ancre": [0.5, 0.5],
+		 "titre": "Les éclats sur un mur",
+		 "pourquoi": "Trois tirs manqués dans un mur : la seule trace qu'un tir raté laisse au monde, et ses étincelles."},
+		{"id": "vignette", "famille": "jeu", "source": "ecran", "ancre": [0.5, 0.5],
+		 "titre": "La vignette de dégâts",
+		 "pourquoi": "L'écran de celui qui vient d'encaisser : le rouge aux bords, l'instant d'après le coup."},
 
 		# --- fins ----------------------------------------------------------
+		{"id": "mort", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
+		 "titre": "Le flash de mort",
+		 "pourquoi": "L'écran du mort, une image après le coup fatal : le blanc et sa frange. Pris sur une manche sacrifiée avant la séquence de fin."},
+		{"id": "onde-de-choc", "famille": "fins", "source": "vue", "ancre": [0.5, 0.5],
+		 "titre": "L'onde de choc du kill",
+		 "pourquoi": "L'anneau qui part du corps et traverse l'arène : la seule lumière autorisée à tout éclairer, parce que le duel est tranché."},
 		{"id": "killcam", "famille": "fins", "source": "ecran",
 		 "titre": "La killcam",
 		 "pourquoi": "Le rejeu de sa propre mort. Une mécanique qui ne se comprend qu'en image."},
@@ -778,6 +795,35 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 			reste -= get_process_delta_time()
 		await _prendre(_plan(plans, "sang"), _duel.bind(160.0, 0.0))
 
+	# Refonte roman graphique — trois tirs dans le mur le plus proche. J2 est
+	# rangé DERRIÈRE J1 : une balle qui le toucherait poserait du sang au lieu
+	# d'un éclat, et le plan montrerait l'autre effet.
+	if _demande(plans, "impacts"):
+		_face_a_un_mur()
+		var salve := 3
+		var reste_tir := 0.0
+		while salve > 0:
+			_duel(120.0, PI)
+			if reste_tir <= 0.0 and is_instance_valid(_main.p1):
+				_main.p1.shoot()
+				salve -= 1
+				reste_tir = 0.35
+			await get_tree().process_frame
+			reste_tir -= get_process_delta_time()
+		# Les étincelles vivent 0,3 à 0,8 s : on prend l'image tout de suite,
+		# éclats posés ET étincelles encore en l'air.
+		await _prendre(_plan(plans, "impacts"), _duel.bind(120.0, PI), 0.05)
+		for pantin in _pantins:
+			pantin.visee = VISEE.normalized()
+
+	# Refonte roman graphique — J1 encaisse un coup, sans mourir. La vignette
+	# retombe en 0,6 s : repos court, puis `_vivants()` le remet à 100.
+	if _demande(plans, "vignette"):
+		_duel(ECART_DUEL, 0.0)
+		if is_instance_valid(_main.p1):
+			_main.p1.take_damage(10.0, _main.p2)
+		await _prendre(_plan(plans, "vignette"), _duel.bind(ECART_DUEL, 0.0), 0.08)
+
 	if _demande(plans, "eblouissement"):
 		var ebloui := func() -> void:
 			_duel(ECART_DUEL, 0.0)
@@ -822,6 +868,13 @@ func _famille_jeu(plans: Array[Dictionary]) -> void:
 ## tampon, écran de fin) et la piloter à la main reviendrait à en écrire une
 ## seconde, qui divergerait. On l'ouvre, on la suit, on photographie au passage.
 func _famille_fins(plans: Array[Dictionary]) -> void:
+	# Refonte roman graphique — le flash de mort et l'onde de choc se prennent
+	# sur J1 qui MEURT, donc sur une manche qu'on sacrifie : le flash n'existe
+	# que sur l'écran du mort, et la séquence de fin qui suit tue J2. On laisse
+	# cette fin se dérouler jusqu'à l'écran de fin, puis le bloc ci-dessous
+	# relance une manche comme il le fait déjà depuis les menus.
+	if _demande(plans, "mort") or _demande(plans, "onde-de-choc"):
+		await _manche_sacrifiee(plans)
 	if _main.training_mode or not _main.round_active:
 		_ui.hub.reset()
 		_ui.hub.push(_ui.SCREEN_LOCAL)
@@ -929,6 +982,75 @@ func _carte_de_soiree(plans: Array[Dictionary]) -> void:
 	if is_instance_valid(panneau) and panneau.has_method("fermer"):
 		panneau.fermer()
 		await _attendre_disparition(panneau, 3.0)
+
+
+## Refonte roman graphique — une manche qu'on tue pour photographier la mort
+## de J1 : le flash de mort (écran, 0,6 s) puis l'onde de choc (vue, ~1 s).
+## Rend la main une fois l'écran de fin arrivé ; l'appelant relance.
+func _manche_sacrifiee(plans: Array[Dictionary]) -> void:
+	if not _main.round_active:
+		_ui.hub.reset()
+		_ui.hub.push(_ui.SCREEN_LOCAL)
+		_main._on_replay_requested()
+		if not await _attendre(func() -> bool: return _main.round_active, 20.0):
+			printerr("  ✗ la manche sacrifiée n'a jamais démarré")
+			return
+		await _attendre(func() -> bool: return _main.countdown_left <= 0.0, 20.0)
+	_prendre_les_commandes()
+	_vue_unique()
+	_torches(true)
+	var respire := 1.0
+	while respire > 0.0:
+		_duel(ECART_DUEL, 0.0)
+		await get_tree().process_frame
+		respire -= get_process_delta_time()
+	if not is_instance_valid(_main.p1) or not is_instance_valid(_main.p2):
+		printerr("  ✗ pas de joueur à sacrifier")
+		return
+	_main.p1.take_damage(9999.0, _main.p2)
+	if _demande(plans, "mort"):
+		await _prendre(_plan(plans, "mort"), Callable(), 0.08)
+	if _demande(plans, "onde-de-choc"):
+		await _prendre(_plan(plans, "onde-de-choc"), Callable(), 0.30)
+	if not await _attendre(func() -> bool: return _main.game_over, 40.0):
+		printerr("  ✗ la manche sacrifiée ne s'est jamais terminée")
+	# L'affiche de fin se retire seule ; on la congédie pour que la vraie
+	# séquence parte d'un écran propre.
+	var affiche := _main.get_node_or_null(^"AfficheDeFin")
+	if is_instance_valid(affiche) and affiche.has_method("congedier"):
+		affiche.congedier()
+		await _attendre_disparition(affiche, 3.0)
+
+
+## Place J1 à 85 px du mur le plus proche ET le fait viser ce mur. Le cousin de
+## `_approcher_un_mur()`, qui rapproche sans tourner : ici les tirs doivent
+## FRAPPER le mur, donc la marionnette prend l'axe trouvé.
+func _face_a_un_mur() -> void:
+	if not is_instance_valid(_main.p1):
+		return
+	var depart: Vector2 = _main.p1.global_position
+	var espace: PhysicsDirectSpaceState2D = _main.p1.get_world_2d().direct_space_state
+	var meilleur := depart
+	var axe := VISEE.normalized()
+	var plus_court := INF
+	for i in 24:
+		var a := TAU * float(i) / 24.0
+		var dir := Vector2.RIGHT.rotated(a)
+		var q := PhysicsRayQueryParameters2D.create(depart, depart + dir * 900.0,
+			MapGeometry.WALL_LAYER)
+		q.exclude = [_main.p1.get_rid(), _main.p2.get_rid()]
+		var coup: Dictionary = espace.intersect_ray(q)
+		if coup.is_empty():
+			continue
+		var d: float = depart.distance_to(coup["position"])
+		if d < plus_court and d > 90.0:
+			plus_court = d
+			meilleur = coup["position"] - dir * 85.0
+			axe = dir
+	if plus_court < INF:
+		_main.p1.global_position = meilleur
+	for pantin in _pantins:
+		pantin.visee = axe
 
 
 # ---------------------------------------------------------------------------

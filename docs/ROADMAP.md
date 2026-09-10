@@ -17804,6 +17804,83 @@ pas un salon rouvert dans son dos.
 
 ---
 
+## Chantier — refonte roman graphique des effets EN JEU (inscrit le 2026-09-10)
+
+**Demande d'Adrien, le 2026-09-10 au soir**, après un bilan des effets visuels
+demandé le même soir : *« attaque ce chantier dans un worktree séparé […] À
+chaque chantier, tu devrais me faire un rendu comparant avant/après pour que je
+te dise si on garde ou pas. »* Session « Refonte graphique », branche
+`claude/brutalist-visual-effects-52d2fe`.
+
+### Le constat du bilan, en une phrase
+
+**L'arène est déjà passée à l'encre, les événements ne le sont pas.** Murs en
+masse noire cernée d'un filament, silhouette grise en aplat de l'adversaire,
+sprites de gadgets, volutes de la fusée : tout cela lit comme du roman
+graphique. Ce qui se déclenche — tirer, toucher, mourir, être ébloui, revoir sa
+mort — a été conçu les 24 et 25 août avec un vocabulaire **d'objectif de
+caméra** : aberration chromatique dans trois shaders, ondulation thermique,
+bloom, grain vidéo et lignes de balayage, spéculaire liquide sur le sang, rim
+light 3D sur le joueur, halos en dégradé aérographe.
+
+**Le critère, et il se mesure.** L'audit DA7 (ligne « un masque monochrome n'a
+pas de style ») exemptait les masques de la refonte : c'est vrai de leur FORME
+et faux de leur BORD. Part des pixels non nuls d'alpha intermédiaire (25 à 230
+sur 255), mesurée le 2026-09-10 sur les fichiers livrés :
+
+| Famille | Part molle |
+|---|---|
+| halos au sol, rétrodiffusion, traînée | 0,80 |
+| impacts sur les murs | 0,78 |
+| gouttes de sang | 0,73 |
+| cookie de torche, taches de sang | 0,62 |
+| flash de bouche | 0,41 |
+| gadgets de jeu, volutes de fusée (faits depuis le 8 septembre) | 0,19 |
+| cartouche et tampon FATAL | 0,02 |
+
+Tout ce qui a été fait depuis la refonte des menus est dur ; tout ce qui date
+d'août est mou. **Règle du chantier : tout masque en jeu passe sous 0,25**, et
+`tools/test_encrage.gd` (lot 1) le vérifie comme `test_charte` vérifie les
+couleurs — une recuisson qui oublierait l'encrage rougit.
+
+### La méthode : un lot, un commit, une image, un verdict
+
+Chaque lot est **commité séparément** pour qu'Adrien puisse en rejeter un sans
+toucher aux autres. Pour chacun, le photographe (`tools/run_photos.sh`) prend
+les mêmes plans avant et après, et `tools/comparer_photos.py` compose les deux
+prises côte à côte avec la part de pixels changés. Le rendu part à Adrien ; le
+lot n'est **gardé** que sur son mot. Les captures « avant » vivent dans
+`user://refonte_avant`, prises sur `e39ce45` (v0.5.0) avec les quatre plans
+ajoutés au lot 0.
+
+### Les lots, dans l'ordre — du plus rentable au plus délicat
+
+| Lot | Effet | Ce qui change, dans quel sens | État |
+|---|---|---|---|
+| 0 | Outillage | Quatre plans ajoutés au photographe (`impacts`, `vignette`, `mort`, `onde-de-choc`), `tools/comparer_photos.py`, `tools/encrer_masques.gd`. Aucun rendu ne change. | ✅ |
+| 1 | Masques de lumière et de matière | Halos, taches, gouttes, impacts, traçante : alpha ramené à deux ou trois paliers par `encrer_masques.gd`, formes et empreintes inchangées. Flash de bouche : trois frames NEUVES en éclat d'encre à pointes (Gemini, blanc sur noir), la descente d'énergie inchangée. ⚠️ Le cookie de torche est **exclu** : `Vision` lit son alpha, un cookie en paliers est une pénalité en paliers — décision de jeu, pas de rendu. | ⏳ |
+| 2 | Sang mat | `blood_shader.gdshader` : la spéculaire liquide retirée ; le cœur noir et le bord carmin restent. | ⏳ |
+| 3 | Flash de mort | Case blanche franche à bord net et inversion brève, sans lecture d'écran : un lecteur de `hint_screen_texture` en moins (voir « Le tampon d'écran n'a pas de propriétaire »). | ⏳ |
+| 4 | Killcam | Grain vidéo, balayage et frange RVB remplacés par une trame de demi-teinte asservie à la tension et un grain de papier ; le négatif garde ses deux images. | ⏳ |
+| 5 | Vignette de dégâts | Hachures rouges qui envahissent les bords (même trame que l'alerte des barres de vie), au lieu du rouge radial doux. | ⏳ |
+| 6 | Rim light | `player_rim_light` et `ghost_unshaded` : aplat éclairé uniformément, plus de bord quatre fois plus clair que le centre — le sprite peint porte son contour. | ⏳ |
+| 7 | Onde de choc du kill | Un anneau franc, ou des traits de choc rayonnants, blanc sur noir, à la place du double anneau doré et rouge. | ⏳ |
+| 8 | Shimmer des murs | La modulation temporelle du filament coupée ; la rugosité fixe reste. ⚠️ V5.8 est marquée « non faite » ligne 8947 alors que le code la branche depuis `0a93d73` (2026-09-08). | ⏳ |
+| 9 | Éblouissement | **Attend Adrien.** Le voile, ses fantômes hexagonaux et sa frange sont son image du 27 août (« une caméra éblouie par une lampe »), validée au banc. Le sens BD serait un blanc franc, des rayons droits, des hachures qui envahissent — et la contredire est une décision, pas un lot. `distorsion_eblouissement.gdshader` n'a aucun lecteur dans le dépôt. | ⏸ |
+| 10 | Onde de choc du pompe | **Attend Adrien.** Derrière `--fx-shockwave`, jamais mesurée. Une réfraction n'a pas d'équivalent en encre : proposition de la supprimer plutôt que la restyler. | ⏸ |
+
+Ce qui reste tel quel, et pourquoi : le sol en béton grainé (MV3 nomme le béton
+brut comme matière ; damier choisi par Adrien le 25 août), les empreintes, les
+douilles, les chiffres de dégâts, le tampon et l'estampe de kill, le viseur, les
+planches de fumée de la fusée.
+
+⚠️ **Quinze curseurs d'`EffectPolicy` sont inertes en production** (audit DA5.1,
+ligne 12151), dont ceux du flash, du sang et de la vignette. Ce chantier ne les
+câble pas — hors périmètre — mais un effet restylé sans curseur branché laisse
+le curseur mentir une seconde fois. Signalé, pas corrigé.
+
+---
+
 ## Chantier — prêt à l'essai : ce qui précède les premiers joueurs (inscrit le 2026-09-10)
 
 **Demande d'Adrien, 2026-09-10 : « j'arrive à un point où je sens que mon jeu
@@ -18172,6 +18249,9 @@ et un seul est du travail de session.
    libre quand `ui.gd` est pris.
 2. Les **chantiers de robustesse** de l'étude du 2026-08-16 (section dédiée), à
    piocher entre deux tâches. Aucun n'est bloquant.
+3. **La refonte roman graphique des effets en jeu** (section dédiée, inscrite
+   le 2026-09-10) — huit lots autonomes, un commit et un rendu avant/après
+   chacun ; les lots 9 et 10 attendent Adrien.
 
 ### Ce qui attend Adrien, et rien d'autre
 
