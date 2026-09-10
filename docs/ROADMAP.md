@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-09
+> Dernière mise à jour : 2026-09-10
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -17048,6 +17048,142 @@ pas un salon rouvert dans son dos.
 
 ---
 
+## Chantier — prêt à l'essai : ce qui précède les premiers joueurs (inscrit le 2026-09-10)
+
+**Demande d'Adrien, 2026-09-10 : « j'arrive à un point où je sens que mon jeu
+est prêt à être expérimenté. Quels sont les chantiers classiques à effectuer à
+ce stade ? Je pense notamment à de l'optimisation. »** La réponse a été donnée
+en session, puis inscrite ici sur son « ok ». **Rien de ce qui suit n'est
+commencé** : c'est un plan à étapes numérotées, et chaque étape se lance sur
+demande explicite, comme le veut le protocole. L'ordre est une recommandation de
+la session, pas un arbitrage d'Adrien.
+
+### Le constat qui décide de l'ordre
+
+L'optimisation n'est pas le premier chantier de ce stade, pour une raison de
+méthode déjà payée dans ce document : **toutes les mesures de cadence du projet
+viennent d'une seule machine**, un Apple M3 (relevés R2, R4, `banc_pics`). Le
+jeu y tient la barre de 60 de 1 % bas avec deux images de marge, et la cause
+des pics n'est pas trouvée. Optimiser avant de savoir sur quelles machines les
+testeurs joueront, c'est optimiser ce que le M3 sait mesurer. Un essai, lui,
+apprend deux choses avant toute autre : si le jeu démarre chez quelqu'un
+d'autre, et ce qu'il y coûte. D'où l'ordre — ce qui empêche un essai
+d'apprendre (PE1), ce qui permet d'apprendre (PE2), puis seulement ce qu'on
+apprend (PE3).
+
+État vérifié dans le dépôt le 2026-09-10 :
+
+| Point | État |
+|---|---|
+| Version publiée | `v0.4.2`, mise à jour en place éprouvée sur machine réelle (Phase 9) |
+| Cadence, vue unique, fenêtre de développement, M3 | médiane ~120, 1 % bas **61** pour une barre à 60 (R4, relevé d'Adrien) |
+| Cause des pics | non trouvée ; `banc_pics` a écarté particules, objets et nœuds ; pistes restantes : le coût de rendu par image (appels de dessin +14 à +18 % sur les images lentes), puis l'allocation |
+| Parties jouées sous Windows | **aucune consignée** — un export CI et un échange de mise à jour, pas une partie. Adrien pressent pourtant que les premiers joueurs seront sous Windows (Phase 9) |
+| Classes éprouvées manette en main | une sur dix (H11) ; les dix gadgets jamais utilisés en match |
+| Ce qu'un match archive sur la machine | rien : ni cadence, ni GPU, ni OS — `match_record.gd` archive le résultat, pas les conditions |
+
+### PE1 — Stabilité sur machine étrangère
+
+Un essai qui plante n'apprend rien, et il coûte un testeur. Trois choses, dans
+cet ordre :
+
+1. **Une partie complète sous Windows sur un poste vierge**, GPU intégré, en
+   `gl_compatibility`. C'est le jalon **H12** : il exige un poste que personne
+   ici n'a. Ce qu'on cherche : le jeu démarre, EOS s'authentifie, un match en
+   ligne se joue, la mise à jour passe.
+2. **Solder les dettes réseau des « Prochaines étapes »** : checklist
+   `CHECKLIST_TESTS_EN_LIGNE.md` jamais déroulée, 120 ms de latence simulée
+   jamais validées, relais Epic jamais exercé, détection de déconnexion lente,
+   contre-vérification à deux machines (H1), rejeu de l'appariement à deux
+   machines. Aucune n'est nouvelle ; toutes deviennent bloquantes le jour où un
+   inconnu joue sur un mauvais lien.
+3. **macOS sans notarisation (H4)** : Gatekeeper refusera l'application à
+   quiconque n'est pas Adrien. Soit payer, soit documenter le contournement pour
+   les testeurs — mais le décider avant d'envoyer un lien.
+
+### PE2 — Instrumentation de l'essai
+
+Le chantier le plus rentable et le plus souvent oublié : **sans lui, un testeur
+qui dit « ça rame » n'a rien donné.** Aujourd'hui F3 affiche la cadence
+instantanée, `user://match_history.json` archive le résultat des matchs, et rien
+ne consigne les conditions.
+
+1. **Chaque match archive ses conditions** dans `MatchRecord` : médiane, 1 % bas
+   et pire image sur la durée du match — mesurés **par image**, comme le banc,
+   jamais par `get_frames_per_second()` (piège connu) —, GPU, OS, résolution de
+   fenêtre, RTT moyen, transport, lien direct ou relayé, version. Le relevé de
+   cadence se fait alors sur les machines des testeurs, pas sur le M3.
+2. **Un bouton « copier le diagnostic »**, dans le panneau F3 ou les Options, qui
+   met dans le presse-papiers ce que le testeur ne saura pas décrire.
+3. **Faire remonter ces lignes par Supabase**, dont l'infrastructure existe
+   (Phase 4) : une table de plus, une Edge Function de plus, aucune donnée
+   nominative au-delà du PUID déjà envoyé avec les matchs classés. À trancher
+   par Adrien : ce qui remonte, et si les matchs amicaux remontent aussi.
+4. **Un journal qui survit au plantage.** Piège connu : en release, `print()`
+   est tamponné et vidé à la fermeture propre seulement ; un plantage jette la
+   fin du journal, c'est-à-dire la seule partie utile. Un fichier écrit en flux,
+   ou vidé à chaque fin de manche.
+
+### PE3 — Optimisation, mesurée
+
+Préalable : **définir la machine minimale** — jalon **H13**, décision d'Adrien.
+Sans elle, aucune cible n'a de sens : la barre « 1 % bas ≥ 60 » (R5) ne décrit
+que la machine où elle a été mesurée. Puis, par rendement décroissant :
+
+1. **Le GPU brûle pour rien hors match.** Les menus tournent déplafonnés vers
+   200 fps (relevé `--menus`), `Engine.max_fps` n'est posé que par le réglage du
+   joueur, aucun `low_processor_usage_mode`, rien à la perte de focus. Sur un
+   portable, c'est ce qui fait souffler les ventilateurs — la plainte numéro un
+   des testeurs — et c'est peu coûteux : un plafond dans les menus et hors
+   focus, jamais en match, puisque la médiane déplafonnée commande le RTT (R5).
+2. **La cause des pics.** Reprendre les pistes de `banc_pics` : le coût de rendu
+   par image, puis l'allocation dans `_process` et `_physics_process`. Outil :
+   le profileur de l'éditeur sur un vrai match. Sur la machine minimale, pas sur
+   le M3.
+3. **Les textures.** 295 images importées sans perte (`compress/mode=0`) et sans
+   mipmaps, des fonds d'interface de 3 Mo chacun : VRAM et temps de chargement,
+   à peser avec R6 qui doublera la densité des assets. Une décision d'import,
+   pas une retouche par fichier.
+4. **La taille du build.** L'export n'a aucun filtre d'exclusion, et
+   `tools/captures/` (10 Mo, quinze imports) part dans le paquet. Mineur, un
+   filtre suffit.
+5. **La chauffe des shaders.** Déjà traitée pour le joueur, le sang, la fusée et
+   l'onde de choc ; vérifier qu'aucun shader ne compile encore au premier usage
+   en match (`test_arena_lighting` en tient une partie).
+
+### PE4 — Mise en main
+
+Aucun écran « comment jouer » trouvé dans les menus (recherche sur « comment
+jouer », « tutoriel », « didacticiel » dans `ui.gd`, `menu_hub.gd`,
+`hub_screen.gd`). Un duel dans le noir absolu est inhabituel, et la première
+minute décide de tout : commandes affichées, entraînement mis en avant au premier
+lancement, fiche de classe existante réutilisée.
+
+### PE5 — Équilibrage et contenu
+
+H11 reste ouvert sur neuf classes, les gadgets n'ont jamais servi en match, et
+l'effet de bord Sentinelle / Incendiaire (root plus long que la cadence, signalé
+à l'étape 20 des dix classes) ne se juge qu'en jouant. Avec peu de testeurs,
+tout le monde démarre Aveugle I et l'appariement sera étroit : la fourchette
+d'attente (étape 8.5) est à revoir pour une population de dix personnes.
+
+### PE6 — Distribution
+
+Windows d'abord (Phase 9), itch.io comme canal d'essai — les gabarits de capsule
+DA7.1 existent —, des notes de version, et un canal de retour. Détail relevé :
+l'autoload `_mcp_game_helper` du plugin éditeur `godot_ai` part dans le build
+release. Il est inerte hors débogueur, mais un outil de développement n'a rien à
+y faire.
+
+### Ce qui n'a pas été vérifié
+
+Ce plan est écrit depuis une lecture du dépôt, sans Godot ni fenêtre dans
+l'environnement de la session. **Aucune mesure nouvelle n'a été prise** ; tous
+les chiffres viennent des relevés déjà consignés ici. L'absence d'écran d'aide
+est une absence de résultat de recherche, pas une preuve.
+
+---
+
 ## Jalons humains — ce qui ne peut pas être automatisé
 
 Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
@@ -17065,6 +17201,8 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
+| H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
+| H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
 
 ---
 
@@ -17150,6 +17288,13 @@ et un seul est du travail de session.
 > jamais posé d'auditeur —, il vit dans `audio_manager.gd` et `game_state.gd`,
 > donc dans le domaine « game feel ». Deux de ses items (S3, S7) attendent un
 > arbitrage d'Adrien et **ne se commencent pas**.
+
+> **Ajouté le 2026-09-10 — un cinquième tas, et il PRÉCÈDE l'optimisation :** le
+> chantier **« prêt à l'essai »** (section dédiée ci-dessus), inscrit sur le
+> « ok » d'Adrien après sa question du jour. Six étapes PE1 à PE6, **aucune
+> commencée** ; l'ordre recommandé est PE1 (stabilité sur machine étrangère),
+> PE2 (instrumentation de l'essai), PE3 (optimisation, mesurée sur une machine
+> nommée). Deux jalons humains en découlent, H12 et H13.
 
 ### Le seul chantier de code ouvert
 

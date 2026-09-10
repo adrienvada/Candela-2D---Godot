@@ -3475,3 +3475,24 @@ bloquée près de 100 %.
 désormais un root plus long que leur cadence. Détente tenue, on y reste immobile
 en continu. C'est la rencontre de deux décisions prises séparément ; personne ne
 l'a voulue comme telle, et elle se juge en jouant.
+
+## 2026-09-10 — Session « candela-2d-godot-8a » (titre : « Optimisation et préparation du jeu »), branche `claude/game-optimization-prep-l1ugex`
+
+**Chantier :** « prêt à l'essai » (PE1 à PE6), inscrit dans `docs/ROADMAP.md`
+sur le « ok » d'Adrien à la question « quels sont les chantiers classiques à ce
+stade ? ». **Aucun fichier de code tenu** : cette session n'a écrit que dans
+`docs/ROADMAP.md` (une section nouvelle avant « Jalons humains », deux lignes
+H12/H13 dans la table des jalons, un encart aux « Prochaines étapes », la date)
+et dans ce journal. Aucune étape du chantier n'est commencée ; la session qui en
+prendra une réservera ses fichiers ici avant d'écrire.
+
+**Le suivi de projet n'a PAS été republié par cette session, et c'est voulu.**
+Le tableau lui-même nomme son porteur — « Can2d - Mise à jour artefact de suivi
+- Sonnet LOCAL », republication horodatée du jour — mais c'est une session
+locale sur le poste d'Adrien : `ListAgents` depuis un conteneur distant ne la
+voit pas, `SendMessage` ne peut donc pas lui porter le delta. Republier
+soi-même aurait recréé le croisement de versions que la centralisation a réglé.
+Le delta est donc dans le rapport de session, pour qu'Adrien le remette au
+porteur. **À savoir pour les sessions distantes suivantes : le porteur peut être
+local et invisible d'ici ; lire le bloc « Qui travaille sur quoi » du tableau
+avant de conclure qu'il n'y en a aucun.**
