@@ -323,7 +323,8 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		return absents
 
 	for prop in ["p1", "p2", "vp1", "vp2", "arena", "round_active",
-			"countdown_left", "sandbox_mode", "rendu_racine_autorise"]:
+			"countdown_left", "sandbox_mode", "rendu_racine_autorise",
+			"archiver_les_matchs"]:
 		if not prop in main:
 			absents.append("GameState.%s a disparu" % prop)
 	# `_accorder_rendu_aux_vues` est privée et l'outil l'appelle quand même :
@@ -468,6 +469,16 @@ func _ready() -> void:
 
 	# Voir l'en-tête : la source `vue` exige que vp1 dessine encore.
 	_main.rendu_racine_autorise = false
+
+	# ⚠️ **Et l'historique des matchs n'est pas à nous.** Chaque plan de la
+	# famille `fins` tue un joueur, et une manche terminée s'archive dans
+	# `user://match_history.json` — le VRAI, celui d'Adrien, plafonné à deux
+	# cents entrées. Jusqu'au 2026-09-10, chaque séance y déposait un faux match
+	# et en poussait un vrai dehors. L'en-tête promettait pourtant qu'« un outil
+	# d'observation ne produit rien dans le monde » : la promesse tenait pour les
+	# salons EOS, pas pour l'historique. `cineaste.gd` appelle `super()` et en
+	# hérite.
+	_main.archiver_les_matchs = false
 
 	_preparer_le_dossier()
 

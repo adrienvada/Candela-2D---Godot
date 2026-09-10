@@ -313,6 +313,22 @@ var _brouillages: Array = []
 ## charge et le focus varier entre les deux moitiés de la mesure. Il sert aussi
 ## de recours si le rendu racine se révélait mauvais sur une machine donnée.
 var rendu_racine_autorise := true
+
+## Interrupteur d'ARCHIVAGE, public et volontairement simple — le même patron.
+##
+## À `false`, un match terminé n'est plus écrit dans `user://match_history.json`.
+## Un seul usage : **les outils qui jouent de fausses manches.** Le photographe
+## (DA6) tue un joueur pour photographier la séquence de fin ; tant que cet
+## interrupteur n'existait pas, chaque séance s'archivait dans le VRAI historique
+## d'Adrien — et l'historique est plafonné à deux cents entrées
+## (`MatchRecord.HISTORY_MAX`) : **chaque fausse manche poussait dehors un vrai
+## match**, sans que rien le dise. Voir « Pièges connus » (2026-09-10).
+##
+## ⚠️ Il ne coupe QUE l'écriture locale. Le rapport au classement
+## (`_report_to_ranking`) n'est pas touché : il ne part jamais d'une partie en
+## écran partagé (`_local_player_index()` y vaut -1), et le couper ici masquerait
+## un défaut réseau le jour où un outil jouerait en ligne.
+var archiver_les_matchs := true
 ## Le `World2D` propre de la fenêtre, mémorisé avant qu'on lui prête celui du jeu.
 ## Sans lui, revenir à l'écran scindé laisserait la racine sur le monde du duel.
 var _monde_racine: World2D = null
@@ -3381,7 +3397,11 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		_slug_de_classe(p1),
 		_slug_de_classe(p2),
 		conditions)
-	MatchRecord.append_to_history(record)
+	# Voir `archiver_les_matchs` : un outil qui joue de fausses manches ne doit
+	# rien laisser dans l'historique du joueur. Seul point d'écriture du jeu —
+	# `_archive_forfeit` passe aussi par ici.
+	if archiver_les_matchs:
+		MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
 	_report_to_ranking(winner_id, forfeit, conditions)
