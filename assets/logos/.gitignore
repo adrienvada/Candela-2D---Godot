@@ -1,0 +1,6 @@
+# L'original du logo Godot, déposé par Adrien le 2026-09-10 : la source dont
+# `godot_roman.png` (versionné, affiché en bas du menu) a été tiré. Le jeu ne le
+# charge pas. Non versionné, comme les planches sources des gadgets (décision
+# d'Adrien du même jour) : 2,5 Mo pour un fichier que rien ne lit.
+godot.png
+godot.png.import

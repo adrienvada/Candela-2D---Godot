@@ -205,6 +205,28 @@ func _test_menu_sourd_sous_le_voile() -> void:
 			if String(ligne.get("cle", "")) == "faisceau":
 				sans_faisceau = false
 		_check("plus de jauge FAISCEAU", sans_faisceau)
+
+		# **Les DIX classes, pas seulement celle qui s'affiche au lancement.**
+		# Relevé par la revue de la session CLASSES : seule la fiche du pistolet
+		# contrôlait ses images, et `_texture_si` rend `null` en silence — l'icône
+		# de gadget du Spectre supprimée aurait laissé toutes les suites vertes,
+		# avec une case vide que personne ne regarde.
+		var catalogue: Array = ui.call("_catalogue_classes")
+		var sans_arme: Array[String] = []
+		var sans_gadget: Array[String] = []
+		for c in catalogue:
+			fiche.call("montrer", c, catalogue)
+			if (fiche.get("_arme") as TextureRect).texture == null:
+				sans_arme.append(String(c.slug()))
+			if (fiche.get("_gadget_image") as TextureRect).texture == null:
+				sans_gadget.append(String(c.slug()))
+		_check("les dix classes sont au catalogue", catalogue.size() == 10,
+			"%d classe(s)" % catalogue.size())
+		_check("chaque fiche montre l'icône de son arme", sans_arme.is_empty(),
+			", ".join(sans_arme))
+		_check("chaque fiche montre l'image de son gadget", sans_gadget.is_empty(),
+			", ".join(sans_gadget))
+		fiche.call("montrer", classe, catalogue)
 	# Le verrou de torche (Adrien, 2026-09-10) : un cadenas dans l'icône, pour le
 	# seul joueur local, et jamais sur une torche éteinte.
 	var base := InputProvider.new()
