@@ -22,26 +22,40 @@ const FOOTPRINT_TTL := 2.0
 ## Sombre et semi-transparente : sous la torche elle se lit comme une salissure
 ## du sol, pas comme un marqueur de HUD.
 const SOLE_COLOR := Color(Charte.SOL_A * 0.6, 0.55)
+## Le trait qui cerne la semelle — refonte roman graphique, lot 5 (2026-09-11).
+## L'empreinte était une ellipse de douze sommets, un aplat sans bord : sous la
+## torche, une tache. Une empreinte de planche est DESSINÉE : une semelle et un
+## talon cernés d'encre, deux crampons en travers. Même surface, même fondu.
+const TRAIT_COLOR := Color(Charte.NOIR, 0.85)
+const TRAIT_LARGEUR := 0.8
 
 ## Décalage latéral gauche/droite (px). Sans lui les pas s'alignent en pointillé
 ## de métronome ; avec, la trace évoque une vraie démarche.
 const SIDE_OFFSET := 5.0
 
-## Demi-axes de la semelle (px) : ellipse ~10×4, allongée dans l'axe du regard.
+## La semelle, en pixels : de -5 (talon) à +5,5 (pointe) dans l'axe du regard,
+## 2,2 de demi-largeur à l'avant, 1,8 au talon.
 const SOLE_HALF_LONG := 5.0
 const SOLE_HALF_WIDE := 2.0
-const SOLE_SEGMENTS := 12
 
-## Polygone partagé par toutes les empreintes : construit une seule fois au
+## Polygones partagés par toutes les empreintes : construits une seule fois au
 ## chargement du script — rien n'est recalculé pendant la manche.
 static var _sole_points: PackedVector2Array = _build_sole_points()
+static var _talon_points: PackedVector2Array = _build_talon_points()
 
+## L'avant du pied : un galbe fermé, plus large à la pointe qu'au cou-de-pied.
 static func _build_sole_points() -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in SOLE_SEGMENTS:
-		var a := TAU * float(i) / float(SOLE_SEGMENTS)
-		pts.append(Vector2(cos(a) * SOLE_HALF_LONG, sin(a) * SOLE_HALF_WIDE))
-	return pts
+	return PackedVector2Array([
+		Vector2(-1.2, -1.6), Vector2(1.5, -2.2), Vector2(4.2, -2.0),
+		Vector2(5.5, -0.8), Vector2(5.5, 0.8), Vector2(4.2, 2.0),
+		Vector2(1.5, 2.2), Vector2(-1.2, 1.6)])
+
+## Le talon, séparé de l'avant par un jour d'un pixel : c'est ce jour qui fait
+## lire une chaussure plutôt qu'une tache.
+static func _build_talon_points() -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(-5.0, -1.4), Vector2(-2.4, -1.8), Vector2(-2.4, 1.8),
+		Vector2(-5.0, 1.4)])
 
 ## Pose une empreinte dans `arena`. `side` vaut +1 ou -1 (pied droit/gauche) :
 ## l'alternance appartient à l'appelant (état par joueur), Footprint est sans
@@ -92,3 +106,13 @@ func _draw() -> void:
 	# cull mask couvre le décor). _draw n'est appelé qu'une fois : le fondu
 	# passe par modulate, qui ne déclenche pas de redraw.
 	draw_colored_polygon(_sole_points, SOLE_COLOR)
+	draw_colored_polygon(_talon_points, SOLE_COLOR)
+	# Le cerne d'encre, puis deux crampons en travers de l'avant.
+	var contour := _sole_points.duplicate()
+	contour.append(_sole_points[0])
+	draw_polyline(contour, TRAIT_COLOR, TRAIT_LARGEUR)
+	var talon := _talon_points.duplicate()
+	talon.append(_talon_points[0])
+	draw_polyline(talon, TRAIT_COLOR, TRAIT_LARGEUR)
+	draw_line(Vector2(1.6, -1.6), Vector2(1.6, 1.6), TRAIT_COLOR, TRAIT_LARGEUR)
+	draw_line(Vector2(3.4, -1.5), Vector2(3.4, 1.5), TRAIT_COLOR, TRAIT_LARGEUR)
