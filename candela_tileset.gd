@@ -118,15 +118,16 @@ static func _generer_dalle_beton(img: Image, oy: int, bg: Color, border: Color,
 			img.set_pixel(fx, fy, c)
 
 
-## Dessine la tuile de mur d'atelier : liséré halogène franc et intérieur en noir d'encre pur.
+## Dessine la tuile de mur : du noir d'encre pur, sur toute la tuile.
+##
+## Refonte roman graphique (Adrien, 2026-09-11) : le liseré halogène de 2 px
+## que chaque tuile portait sur ses quatre côtés faisait une GRILLE sur toute
+## masse de murs. Le contour vit désormais dans `mur_encre.gd`, tracé autour de
+## la masse et non autour de chaque tuile. La tuile n'est plus que la masse.
 static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
-	var wall_bg     := Charte.NOIR
-	var wall_border := Charte.HALOGENE
-
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
-			var on_outer_edge := (x <= 1 or x >= TILE_SIZE.x - 2 or y <= 1 or y >= TILE_SIZE.y - 2)
-			img.set_pixel(ox + x, oy + y, wall_border if on_outer_edge else wall_bg)
+			img.set_pixel(ox + x, oy + y, Charte.NOIR)
 
 ## Charge une tuile peinte, ou rend `null` si elle n'a pas été cuite ou importée.
 static func _tuile_peinte(chemin: String) -> Image:

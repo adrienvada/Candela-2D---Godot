@@ -112,11 +112,12 @@ func _test_wall_darkness_and_contrast() -> void:
 			_check("centre du mur en noir pur Charte.NOIR (0, 0, 0)",
 				is_zero_approx(centre_mur.r) and is_zero_approx(centre_mur.g) and is_zero_approx(centre_mur.b),
 				str(centre_mur))
+			# Refonte roman graphique (2026-09-11) : le liseré ne vit plus sur la
+			# tuile (il la quadrillait) mais dans `mur_encre.gd`, autour de la
+			# masse. Le bord de la tuile est donc noir comme son centre.
 			var bord_mur := img.get_pixel(ox, 0)
-			# Tolérance 8-bit RGBA (1/255 ~= 0.0039)
-			var approx_halogene := absf(bord_mur.r - Charte.HALOGENE.r) < 0.01 				and absf(bord_mur.g - Charte.HALOGENE.g) < 0.01 				and absf(bord_mur.b - Charte.HALOGENE.b) < 0.01
-			_check("liseré du mur en Charte.HALOGENE",
-				approx_halogene,
+			_check("bord de la tuile de mur en noir (le contour vit dans MurEncre)",
+				bord_mur.v < 0.05,
 				str(bord_mur))
 
 func _test_dust_particles_configuration() -> void:

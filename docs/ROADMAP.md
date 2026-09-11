@@ -17999,14 +17999,24 @@ plancher** : inoffensif tant qu'ils étaient inertes, décisif depuis — sang �
 25 %, vignette et flash de mort absents, killcam nue. Le photographe lit les
 réglages du poste : pour juger un effet, `HOME=$(mktemp -d)` devant lui.
 
-**Le cookie de torche, en clair** : le faisceau de la lampe est une image
+**Le cookie de torche reste tel quel** — Adrien, le 2026-09-11 : « ne change
+pas le cookie de la torche par paliers ». Pour mémoire, l'enjeu : le faisceau de la lampe est une image
 (`assets/torche/cookie_*.png`) et le modèle d'éblouissement lit l'opacité de
 cette image à l'endroit où se tient la victime pour calculer sa pénalité
 (« l'éblouissement LIT le faisceau », décision du 2026-08-24). Si l'image
 passe en paliers d'encre, la pénalité passe en paliers avec elle : un joueur
 au bord du faisceau serait aveuglé d'un coup au lieu de progressivement. C'est
 donc un changement de RÈGLE de jeu déguisé en changement de rendu, et il
-attend une décision ; le faisceau reste tel quel.
+attend une décision ; le faisceau reste tel quel. **Tranché, il ne bouge pas.**
+
+### Les demandes du 2026-09-11, après la revue
+
+| Quoi | Ce qui a été fait | État |
+|---|---|---|
+| **Une fusée éteinte éblouit encore** (Adrien : « même quand elle clignote sur la fin ») | La source d'éblouissement de la fusée ne regardait que « posée et pas éteinte » et donnait son rayon plein : braise, creux d'agonie et résidu aveuglaient comme le plein feu. `Fusee.energie_relative()` (part du plein feu brûlée à l'instant) devient le `gain` de la source posée, multiplié au plafond ; sous 2 %, la fusée ne compte plus. `tools/test_fusee_eteinte.gd`. | ✅ `cc0a65c` |
+| **Collé à un mur, on éclaire derrière** | Ni collision ni sprite : la torche brûle 30 px devant le centre du corps, qui a 18 px de rayon — collé au mur, le point d'émission était 12 px À L'INTÉRIEUR, et les ombres partaient de là. `player._rapprocher_la_lampe()` : un rayon par image, torche allumée, ramène la lampe à 3 px du mur. ⚠️ Signalé, pas touché : la bouche du canon est à 28 px, une balle tirée collé au mur naît dans le mur. | ✅ `50c3e11` |
+| **Couper le scintillement des murs** | Le `sin(TIME × 4,5 Hz)` de `shimmer_murs.gdshader`, coupé ; la rugosité reste figée. La session LED modifie `light()` du même shader sur sa branche : à relire à la fusion. | ✅ `3e67ad4` |
+| **Les murs en roman graphique** | `mur_encre.gd` : UN contour halogène de 3 px, légèrement tremblé, autour de chaque MASSE de murs (tracé de `MapGeometry.trace_contours`, posé du côté du sol pour rester hors de l'ombre de l'occluder), et des hachures noires à 45° sur le sol au pied du mur — l'ombre dessinée d'une planche, qui n'existe que là où la torche éclaire. Les tuiles de mur deviennent du noir pur : le liseré par tuile quadrillait les masses épaisses. Décision du 2026-08-25 (« une masse cernée d'un filament ») tenue : le filament devient un contour. | 🟡 rendu envoyé à Adrien le 2026-09-11 |
 
 ---
 

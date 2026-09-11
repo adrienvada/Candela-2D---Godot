@@ -6,6 +6,7 @@ const Charte := preload("res://charte.gd")
 const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
 const BulletCasingScript := preload("res://bullet_casing.gd")
 const ArenaDecorScript := preload("res://arena_decor.gd")
+const MurEncreScript := preload("res://mur_encre.gd")
 
 ## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
 ## transite par MatchRecord.Format pour qu'un BO3/BO5 puisse s'ajouter sans
@@ -922,7 +923,8 @@ func rebuild_arena() -> void:
 	# Purge de la construction précédente (rematch, changement de carte).
 	for node_name in ["CustomFloor", "CustomWalls", "CustomFloor_P1", "CustomFloor_P2",
 			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies",
-			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2"]:
+			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2",
+			"MurEncre", "MurEncre_P1", "MurEncre_P2"]:
 		var previous := arena.get_node_or_null(node_name)
 		if previous:
 			arena.remove_child(previous)
@@ -988,6 +990,12 @@ func rebuild_arena() -> void:
 	var decor := ArenaDecorScript.build(data, arena)
 	if decor:
 		decor.hide()
+	# Refonte roman graphique : le contour des masses de murs, au trait
+	# (mur_encre.gd). Même idiome : l'original porte la géométrie et se cache,
+	# les copies par vue se montrent.
+	var murs := MurEncreScript.build(data, arena)
+	if murs:
+		murs.hide()
 
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de

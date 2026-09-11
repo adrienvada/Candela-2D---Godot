@@ -3840,3 +3840,16 @@ tout — les premières captures des retouches montraient un sang à 25 % et une
 killcam nue. **Le photographe lit les réglages du poste** : pour juger un
 effet, le lancer sous un `HOME` neuf (`HOME=$(mktemp -d) ./tools/run_photos.sh …`),
 comme `run_suites.sh` le fait déjà pour les suites. Adrien prévenu.
+
+### 2026-09-11 (après-midi) — les quatre demandes d'Adrien
+
+Cookie de torche : reste tel quel (tranché). Fusée : `fusee.gd::energie_relative()`
+et le `gain` de la source posée dans `game_state.gd` (`_sources_eblouissantes`,
+`_plafond_de_source`), `tools/test_fusee_eteinte.gd`. Lampe contre un mur :
+`player.gd::_rapprocher_la_lampe()`, `AVANCEE_LAMPE`, `RETRAIT_LAMPE`.
+Scintillement : `shimmer_murs.gdshader`, `fragment()` seulement — la session
+LED tient `light()`. Murs au trait : `mur_encre.gd` (créé), `candela_tileset.gd`
+(tuile de mur noire), `game_state.gd` (purge et pose de `MurEncre`),
+`tools/test_arena_matter.gd` et `tools/test_arena_lighting.gd` (le contrôle du
+liseré de tuile devient un contrôle de tuile noire — fichiers de la session
+« atelier » du 2026-09-08, adaptés avec la note qui dit pourquoi).
