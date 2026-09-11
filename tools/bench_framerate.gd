@@ -103,6 +103,15 @@ var _sans_shaders := false
 ## si les nappes + voile tiennent le 1 % bas, jamais l'intuition.
 var _fusee := false
 var _fusee_banc: Fusee
+## Poste AJOUTÉ à la charge (étape 28, lot F) : une torche fantôme et une nappe de
+## poudre chargée de traces. ⚠️ **Ce qu'on mesure ici n'est PAS la killcam** — elle
+## n'est pas une image de match et ne décide pas du 1 % bas. C'est l'ENREGISTREMENT à
+## 60 Hz, qui tourne dans chaque manche : un `etat_de_rejeu()` par gadget, plus la
+## boucle des traces. Le banc joue déjà une vraie manche, donc il enregistre déjà ; il
+## ne posait simplement aucun gadget.
+var _gadgets := false
+var _poudre_banc: GadgetPoudre = null
+var _torche_banc: GadgetBase = null
 ## Mode menus (session voisine), qui n'est pas une variante du duel.
 var _variante := ""
 ## Mesure la charge des MENUS au lieu du duel. Voir `_stress_menus()`.
@@ -165,6 +174,7 @@ func _ready() -> void:
 	_sans_torches = args.has("--sans-torches")
 	_sans_shaders = args.has("--sans-shaders")
 	_fusee = args.has("--fusee")
+	_gadgets = args.has("--gadgets")
 	_vue_unique = args.has("--vue-unique")
 	_sans_racine = args.has("--sans-racine")
 	if args.has("--menus"):
@@ -368,6 +378,18 @@ func _stress(duration: float, sampling: bool) -> void:
 			# pleine densité en continu pendant toute la mesure.
 			_fusee_banc.appliquer_age(FuseeModele.FUMEE_MONTEE
 				+ fmod(elapsed, FuseeModele.DUREE_BRAISE - FuseeModele.FUMEE_MONTEE - 0.5))
+		# Étape 28, lot F — la nappe est tenue à son plafond de traces : elles
+		# s'éteignent en 8 s (`GadgetPoudre.DUREE_LUEUR`) et le relevé en dure 15 à 60.
+		# Sans entretien, le banc mesurerait une charge qui fond, et le chiffre ne
+		# dirait pas de quoi il est le coût.
+		#
+		# ⚠️ **FRÈRE du bloc `--fusee`, jamais son enfant.** Il en était l'enfant, et
+		# la revue du 2026-09-12 l'a vu avant la première mesure : l'entretien ne
+		# tournait alors QUE si `--fusee` était passé aussi, c'est-à-dire jamais dans
+		# le mode que le protocole prescrit — `--gadgets` seul contre le banc de base,
+		# celui qui isole le poste ajouté.
+		if _gadgets:
+			_entretenir_la_poudre()
 		for p in [_main.p1, _main.p2]:
 			p.hp = 100.0
 			# Torches éteintes : c'est le seul geste du duel qu'on retire, et il
@@ -394,6 +416,18 @@ func _stress(duration: float, sampling: bool) -> void:
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
 			_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
 
+	# Étape 28, lot F — on RECOMPTE après coup, et on refuse le chiffre si la nappe a
+	# fondu. ⚠️ Le garde de `_appliquer_variante()` ne voit que la POSE : le fondu des
+	# traces, lui, se produit PENDANT la mesure. Un garde évalué avant ne peut pas voir
+	# une charge qui fond — il lit 72, accepte, et le relevé part sans dire de quoi il
+	# est le coût. C'est exactement ce qui serait arrivé avec l'entretien imbriqué.
+	if sampling and _gadgets:
+		var restantes := _traces_vivantes()
+		if restantes * 2 < GadgetPoudre.MARQUES_MAX:
+			printerr("✗ la nappe a fondu pendant la mesure (%d traces sur %d) : chiffre refusé"
+				% [restantes, GadgetPoudre.MARQUES_MAX])
+			_sortir(1)
+
 
 ## Retire UN poste de la charge, une fois la manche lancée.
 ##
@@ -418,6 +452,8 @@ func _libelle_charge() -> String:
 		libelle = "duel " + ", ".join(retires)
 	if _fusee:
 		libelle += " + fusée éclairante"
+	if _gadgets:
+		libelle += " + gadgets (torche fantôme, poudre et ses traces)"
 	return libelle
 
 func _appliquer_variante() -> void:
@@ -465,6 +501,72 @@ func _appliquer_variante() -> void:
 		_fusee_banc.joueurs = [_main.p1, _main.p2]
 		_main.bullet_container.add_child(_fusee_banc)
 		print("AJOUTÉ: fusée éclairante en braise entretenue (fumée + lumière à ombres)")
+	if _gadgets:
+		# Posés par le VRAI chemin (`_do_spawn_gadget`) : un gadget ajouté à la main
+		# n'aurait ni slug, ni classe de poseur, ni signal de mort — l'instantané ne
+		# le verrait pas comme il voit ceux d'un match.
+		var axe: Vector2 = (_main.p2.global_position - _main.p1.global_position).normalized()
+		_main._do_spawn_gadget(0, _main.p1.global_position + axe * 80.0, 0.0,
+			"torche_fantome", 9001)
+		_main._do_spawn_gadget(1, _main.p1.global_position - axe * 40.0, 0.0,
+			"poudre_contact", 9002)
+		_torche_banc = _gadget_du_banc(0)
+		_poudre_banc = _gadget_du_banc(1) as GadgetPoudre
+		if _torche_banc == null or _poudre_banc == null:
+			printerr("✗ la variante --gadgets n'a pas posé ses deux gadgets : rien à mesurer")
+			_sortir(1)
+			return
+		# Charge CONSTANTE d'un bout à l'autre du relevé, comme la fusée pilotée à la
+		# main : la durée de vie vient du profil de la classe équipée (le pompe), qui
+		# n'est pas celle du gadget posé. Un gadget qui mourrait au premier tiers
+		# ferait mesurer deux charges différentes sous un seul chiffre.
+		_torche_banc.duree_vie = 0.0
+		_poudre_banc.duree_vie = 0.0
+		_entretenir_la_poudre()
+		var traces := _traces_vivantes()
+		# Un zéro dirait que la variante ne mesure rien — le mode de défaillance que
+		# `--sans-shaders` a déjà appris à refuser. ⚠️ Ce garde-ci ne voit que la POSE :
+		# c'est le recomptage de fin de `_stress()` qui surveille la FONTE.
+		if traces == 0:
+			printerr("✗ aucune trace de poudre : la variante ne mesure rien")
+			_sortir(1)
+			return
+		print("AJOUTÉ: torche fantôme J1, poudre J2, %d traces entretenues" % traces)
+
+
+## Le gadget debout de ce joueur, ou `null`.
+func _gadget_du_banc(pid: int) -> GadgetBase:
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion() and g.poseur_id == pid:
+			return g
+	return null
+
+
+## La nappe est REMPLIE puis entretenue à son plafond, À CHAQUE IMAGE de `_stress()` :
+## les traces s'éteignent en 8 s et le relevé en dure 15 à 60. Sans entretien, le banc
+## mesurerait une charge qui fond.
+func _entretenir_la_poudre() -> void:
+	if not is_instance_valid(_poudre_banc):
+		return
+	var vivantes := _traces_vivantes()
+	for i in maxi(0, GadgetPoudre.MARQUES_MAX - vivantes):
+		var a := randf() * TAU
+		var r := sqrt(randf()) * GadgetPoudre.RAYON
+		var p: Vector2 = _poudre_banc.global_position + Vector2.from_angle(a) * r
+		_poudre_banc._poser_marque(p, Vector2.from_angle(a), 1.0)
+
+
+## Les traces de poudre encore VIVANTES — les seules qui coûtent quelque chose.
+## ⚠️ Une trace `queue_free()` reste dans son groupe jusqu'à la fin de l'image : la
+## compter masquerait précisément la fonte qu'on surveille, et le plafond se croirait
+## tenu alors que la nappe se vide.
+func _traces_vivantes() -> int:
+	var n := 0
+	for m in get_tree().get_nodes_in_group("traces_de_poudre"):
+		if is_instance_valid(m) and not m.is_queued_for_deletion():
+			n += 1
+	return n
+
 
 ## Retire tous les `.material` d'un sous-arbre. Rend le compte — un zéro dirait
 ## que la variante n'a rien changé, et le banc mesurerait le duel complet sous
@@ -616,6 +718,8 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 		absents.append("GameState._on_replay_requested() a disparu")
 	if not main.has_method("spawn_fusee"):
 		absents.append("GameState.spawn_fusee() a disparu (variante --fusee)")
+	if not main.has_method("_do_spawn_gadget"):
+		absents.append("GameState._do_spawn_gadget() a disparu (variante --gadgets)")
 	for groupe in ["p1_weapon_group", "p2_weapon_group"]:
 		if groupe in ui:
 			var g: ButtonGroup = ui.get(groupe)

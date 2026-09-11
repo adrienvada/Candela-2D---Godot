@@ -259,3 +259,27 @@ func _monter_visuel() -> void:
 	# virait à la boule blanche. Voir `GadgetBase.materiau_peint_lumineux()`.
 	_nappe.material = GadgetBase.materiau_peint_lumineux()
 	_nappe.z_index = 3
+
+
+## Étape 28, lot F — la lueur et l'alpha TELS QU'ILS ÉTAIENT RENDUS, jamais
+## `energie_relative()` recalculée : la killcam montre ce que CE pair a VU, et une
+## valeur recalculée dépendrait d'un âge reconstitué — un instantané porte des
+## états, pas des formules à rejouer.
+##
+## ⚠️ Le premier jet de ce commentaire disait « sur le client, le fondu ne suit pas
+## la même horloge ». C'était faux : depuis le lot A1, le fondu vit dans
+## `_physics_process()` et tourne donc chez les deux pairs (`appliquer_effets()` ne
+## fait plus que brûler). Le code était bon, son pourquoi ne l'était pas.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["energie"] = _lumiere.energy / ENERGIE if _lumiere != null else 0.0
+	d["alpha"] = _nappe.modulate.a if _nappe != null else 1.0
+	return d
+
+
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	if _lumiere != null:
+		_lumiere.energy = ENERGIE * float(d["energie"])
+	if _nappe != null:
+		_nappe.modulate.a = float(d["alpha"])

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-11
+> Dernière mise à jour : 2026-09-12
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -18899,6 +18899,202 @@ gadgets (4 tests rouges).
   `Gadget_P1` / `Gadget_P2` : faux, c'est `GadgetJ%d_%d` ;
 - la note v5 du carnet de `match_record.gd` (« ces conditions restent LOCALES ») est
   périmée depuis PE2.3 : l'entrée v6 le dit, la v5 n'est pas réécrite.
+
+### Étape 28 — lot F : la killcam rejoue les gadgets ✅ (2026-09-12)
+
+La suggestion 9 d'après l'étape 27. **La killcam montrait la mort sans sa cause.** Le
+rejeu ne reconstruisait que les fusées : une mine consumée, un leurre abattu, une
+nappe éteinte en étaient absents — et les gadgets encore DEBOUT y apparaissaient dans
+leur état présent, si bien qu'une mine posée après la mort brûlait dans une image où
+elle n'existait pas, et qu'une balle rejouée s'arrêtait dessus. Aucune erreur nulle
+part : on regardait une mort dont l'explication avait été retirée de l'image.
+
+**1. On enregistre ce qui a été RENDU, jamais ce qui le causait.** `Snapshot` gagne
+`gadgets` (un `GadgetBase.etat_de_rejeu()` par gadget du groupe), `traces` (les traces
+de poudre à plat) et `p1_lampe` / `p2_lampe`. Trois valeurs lisent le monde VIVANT —
+l'énergie du faisceau fantôme (`facteur_de_lampe_a`), la lueur de la suie
+(`_lumiere_entrante`), l'alpha du leurre (`effacements_a`) : les recalculer pendant le
+rejeu leur ferait lire le PRÉSENT, c'est-à-dire refaire le défaut qu'on corrige. On
+enregistre donc les énergies, les `modulate` et les visibilités telles qu'elles
+étaient, plus l'âge, la graine, la pose, le poseur et sa classe. Effet de bord
+honnête : chaque pair rejoue ce que LUI a rendu.
+
+**2. Une copie se CONSTRUIT par le script d'origine.** `etat_de_rejeu()` porte
+`"script": get_script()` — la killcam étant locale, cette référence désigne la même
+classe par construction : ni table à tenir, ni `load()`, ni second chemin de choix de
+classe. Jamais `duplicate()`, pour deux raisons : le vivant est peut-être mort, et
+`duplicate()` ne recopie pas les variables de script. **Pas de fabrique extraite de
+`_do_spawn_gadget` non plus** : elle ne gagne qu'UNE ligne, `g.slug = slug`. Le slug
+sert au diagnostic et au cri, pas à rebâtir — les gadgets créés par `.new()` dans les
+suites n'en ont pas, et une copie par slug crierait sur eux.
+
+**3. La copie n'entre pas dans le groupe « gadgets ».** Onze boucles le lisent :
+éblouissement, facteur de lampe, ligne de vue, effets, bascule, « un gadget debout »,
+pouls de tir, lueur des volumes. Une copie dedans éblouirait, se ferait basculer,
+viderait la batterie au HUD, ou brûlerait les joueurs téléportés sur le trajet rejoué.
+Filtrer site par site, c'est sept filtres et le huitième qu'on oublie ; les balles
+rejouées la rencontrent par la PHYSIQUE. Elle perd aussi
+`GADGET_BLOQUANT_LAYER` — le passé n'arrête personne, et `move_and_slide()` tourne
+encore hors manche — mais garde `GADGET_LAYER`, sans quoi une balle rejouée
+traverserait le voile qu'elle avait déchiré.
+
+**4. Le présent est MASQUÉ, pas libéré** (décision d'Adrien, 2026-09-11) : `hide()` +
+couche à zéro, la couche d'origine retenue (elle diffère d'un gadget à l'autre, et
+**zéro en est une** depuis que les diffus sortent de la couche des balles, d'où la
+sentinelle à −1). Les ordres qui arrivent pendant la killcam — allumage, bascule,
+destruction — visent ainsi toujours un nœud qui existe. Le rendu passe par
+`_purger_gadgets_killcam()`, appelé à la fin du rejeu ET dans `_abort_killcam()`, la
+sortie inconditionnelle : un chemin qui l'oublierait laisserait des gadgets vivants
+invisibles ET sans collision jusqu'à la manche suivante. **Un seul filtre était
+nécessaire** : un vivant masqué n'éblouit plus (on ne peut pas être aveuglé par ce
+qu'on ne voit pas). C'est aussi ce qui rend sans conséquence que les copies ne soient
+pas exclues de `_ligne_de_vue_depuis()` — aucune source ne tire de rayon pendant un
+rejeu ; le jour où l'une le ferait, la mine et la bobine copiées l'arrêteraient à
+tort, et c'est écrit au site du filtre.
+
+**5. Deux ajouts sans lesquels deux gadgets restaient muets.** Les **traces de
+poudre** vivent dans l'arène, pas dans le gadget : elles lui survivent, donc elles
+s'enregistrent à part (`[x, y, rotation, alpha]`, un seul `resize`, écriture par
+indice, une seule lecture de `global_position` par trace — la boucle tourne à 60 Hz
+dans chaque manche). Le constructeur de trace est extrait en
+`GadgetPoudre.nouvelle_trace()`, partagé avec `_poser_marque()` : deux définitions de
+la même trace finiraient par ne plus luire pareil. Et le **facteur de lampe rendu**
+(`Player.facteur_de_lampe_rendu`, le minimum qu'il vient d'appliquer) : sans lui la
+bobine rejouée n'est qu'un boîtier sombre, et une mort par panne de lampe reste sans
+cause. Pas `flashlight.energy` — l'extinction du vainqueur est enregistrée pendant les
+1,5 s qui suivent la mort ; pas un recalcul dans `record_frame` — ce serait une
+troisième copie de la règle du minimum.
+
+**6. Rien ne change sur le fil.** La killcam est locale, aucun RPC n'est ajouté ni
+modifié : **`Protocol.VERSION` reste 17, `WIRE_WITNESS` inchangé, le carnet n'a rien à
+recevoir** — `test_protocole` en est le témoin. `slug` et la référence `script` ne
+voyagent pas.
+
+**Mesures.** M1, relevé IMPRIMÉ par `test_rejeu` et jamais contrôlé (un chronomètre en
+suite rougirait au hasard) : `record_frame` coûte **49,3 µs avec deux gadgets et 144
+traces contre 4,2 µs sans**, soit **+45 µs par instantané** — à 60 Hz, 2,7 ms par
+seconde de jeu, quelle que soit la cadence de rendu. Le pire cas (144 traces = deux
+Sentinelles) et les deux gadgets sont mesurés ENSEMBLE : la part des traces n'est pas
+isolée. C'est le coût de l'ENREGISTREMENT, celui qui tombe en compétition ; les copies
+de killcam, elles, relèvent du budget de LUMIÈRES. Borne par construction de ce
+budget : au plus deux copies simultanées (« un gadget debout par joueur »), donc au
+plus +4 lumières (deux Braconniers), et le delta n'est positif que pour des gadgets
+MORTS avant le rejeu — les vivants masqués ne rendent plus. `test_rejeu` le tient :
+exactement une lumière allumée sous le conteneur pendant le rejeu, celle de la copie.
+
+⚠️ **Ce qui n'a PAS été mesuré, et pourquoi.** La variante `--gadgets` de
+`bench_framerate.gd` (torche fantôme J1, poudre J2, 72 traces entretenues dans
+`_stress()`, refus de mesurer si le groupe est vide) et le plan `killcam` étendu du
+photographe (torche fantôme dès le début, mine J2 allumée à ~2,5 s du kill — elle
+brûle 1,6 s, donc elle MEURT dans la fenêtre de rejeu, qui ne s'ouvre que 3 s avant
+l'impact) sont écrits et leurs appuis vérifiés par `test_banc` (`_do_spawn_gadget` et
+`allumer_gadget` ajoutés à `preconditions_manquantes`), **mais aucun des deux n'a
+tourné** : les deux exigent une VRAIE fenêtre. Restent donc à faire sur le poste
+d'Adrien : le 1 % bas `--gadgets` contre le banc de base, même séance, fenêtre au
+premier plan ; et la capture, qui seule prouve qu'un parent caché éteint bien au RENDU
+lumières et occluders (le manifeste reçoit le compte F3 et le recensement par quadrant
+de 560 px), et qui dira s'il y a un hoquet au premier rejeu — une copie peut compiler
+au premier dessin la variante à ombres d'un gadget jamais vu par ce pair.
+
+⚠️ **Trois défauts trouvés en RELECTURE le 2026-09-12, et ce qu'ils avaient en
+commun** : trois instruments qui ne pouvaient pas rougir. C'est la famille même des
+deux défauts que `replay_system.gd` documente depuis son en-tête — une grandeur juste
+d'un côté, muette de l'autre, sans erreur nulle part.
+
+- **L'entretien des traces du banc était IMBRIQUÉ dans le bloc `--fusee`** au lieu
+  d'en être le frère. La variante `--gadgets` seule — le mode que le protocole
+  prescrit, celui qui isole le poste ajouté — ne l'exécutait donc jamais : les
+  72 traces fondent en 8 s (`GadgetPoudre.DUREE_LUEUR`) et le relevé en dure 15 à 60,
+  si bien que le banc aurait rendu un 1 % bas « torche fantôme + nappe nue », lu comme
+  la mesure du lot. Le garde anti-zéro ne pouvait pas le voir : **il est évalué à la
+  POSE**, avant le fondu. Corrigé, et doublé d'un **recomptage à la fin de `_stress()`**
+  qui refuse le chiffre si la nappe est tombée sous la moitié de son plafond — un garde
+  qui s'exécute là où la défaillance se produit, et non avant elle.
+- **T8 comptait un gadget « refait » sans regarder ce que `rejouer()` avait produit.**
+  La copie naît du MÊME script que le vivant et monte le même visuel : son état de
+  naissance était déjà celui qu'on relisait. `GadgetVolume.rejouer()` remplacé par
+  `pass` — le rejeu de la suie ET de la poussière, deux des dix gadgets — laissait la
+  suite entièrement verte, sans une seule `SCRIPT ERROR`. La copie reçoit maintenant un
+  état **DÉCALÉ** (lieu, cap, âge, et chaque flottant, booléen ou couleur propre à la
+  sous-classe), et on relit ce qu'elle en a repris. Le commentaire qui justifiait
+  l'ancien compteur disait en plus le contraire du moteur : une erreur d'exécution dans
+  `rejouer()` n'interrompt QUE `rejouer()`, l'appelant reprend la main à la ligne
+  suivante (backtrace relevée). Ce compteur n'a jamais été un filet contre les erreurs.
+- **Le « témoin » de la lampe de J2 ne pouvait pas rougir** : `Snapshot.p2_lampe` et
+  le `FauxJoueur` de la suite valent 1.0 tous les deux, donc le contrôle passait que la
+  ligne d'enregistrement existe ou non — `snap.p2_lampe` n'était gardé par rien, dans
+  aucune suite, et un fantôme sur deux aurait retrouvé sa torche toujours pleine en
+  silence. J2 porte désormais une valeur distincte (0,75).
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) ; décomptes SANS la ligne de synthèse,
+identiques sous les deux : `test_rejeu` (**72**, contre sept sections auparavant :
+T1 enregistrement, T2 âge en secondes, T3 mélange, T4 lampe rendue, T5 traces, M1, puis
+T6/T7/T8 sur le vrai `main.tscn`), `test_classes` (390), `test_tir_et_reserves` (341),
+`test_telemetrie_gadgets` (152), `test_banc` (16), `test_rejeu_journal` (21),
+`test_protocole` (9), `test_charte` (243), `test_lumieres` (51/51), `test_ecran_de_fin`
+(52), `test_fusee` (60), `test_fusee_eteinte` (7), `test_eblouissement` (31),
+`test_habillage` (39), `test_musique` (190), `test_pause_menu` (48),
+`test_rendu_racine` (25), `test_calques_joueur` (7), `test_oreille` (21) verts, plus
+`test_releve_balistique` vert. Le jeu démarre sans une seule `SCRIPT ERROR`.
+
+⚠️ **La suite a d'abord rougi pour la bonne raison, et c'est consigné dans son
+en-tête** : `FauxJoueur` n'avait pas `facteur_de_lampe_rendu`, l'accès échouait, la
+fonction en cours s'arrêtait — **3 014 `SCRIPT ERROR` et dix contrôles en échec sur des
+instantanés jamais remplis**. C'est le piège que ce fichier documente depuis l'origine,
+rencontré une quatrième fois.
+
+**Sabotages exécutés — 15, chacun appliqué, VU ROUGIR, puis restauré à l'octet (sha256
+comparé), avec un témoin vert avant et après** : les copies qui rejoignent le groupe
+(T1 : 2 entrées) ; la porte de cadence neutralisée (T2 : l'écart tombe à 1/492, et
+450 instantanés au lieu de 60 — le sabotage « déplacer l'ajout avant la porte » du plan
+était impossible, aucun instantané n'existe avant elle) ; `_melanger` sans le bloc
+gadgets (T3 : taille 0) ; la boucle des traces qui n'écrit rien (T5 : 0) ; la mine
+rejouée sans `allumer()` (T6-b : aucun `Embrasement`) ; `_masquer_le_present()` retiré
+(T6-c/d/e : 8 rouges) ; le démasquage qui ne rend que `show()` (la couche reste à 0 au
+lieu de 12) ; le filtre d'éblouissement retiré (T6-e) ; le branchement de `_process`
+retiré (T7) ; `or _rejeu_gadgets_en_cours` retiré (T7 : le vivant reste caché) ;
+`etat_de_rejeu()` des braises sans `super()` (T8 : clés manquantes, 9 gadgets au lieu
+de 10) ; la couche bloquante gardée par la copie (T8 : rouge sur le voile). **Trois de
+plus à la relecture du 2026-09-12**, sur les contrôles ajoutés ce jour-là : le corps de
+`GadgetVolume.rejouer()` remplacé par `pass` (T8 : suie et poussière rouges sur `pos`,
+`rot`, `age` et `masse`, 8 gadgets au lieu de 10 — avant le décalage d'état, ce MÊME
+sabotage laissait la suite entièrement verte) ; `snap.p2_lampe` retiré de
+`record_frame()` (T4 : rouge — avant, le « témoin » restait vert) ; et un troisième non
+pour rougir mais pour vérifier ce que fait le moteur, un accès à une clé absente injecté
+dans `GadgetVolume.rejouer()` : la backtrace dit `[0] rejouer` puis
+`[1] _test_dix_gadgets`, l'appelant reprend bien la main — c'est le commentaire de
+l'ancien compteur qui affirmait le contraire.
+
+**Question ouverte à Adrien — l'image derrière l'écran de fin.** Le lot suit le patron
+des fusées : les copies partent et les vivants REVIENNENT à `_end_sequence_active =
+false`, c'est-à-dire derrière l'écran de fin, alors que les fantômes restent figés
+jusqu'à la manche suivante. Le saut est plus visible que pour les fusées, qui ne font
+que disparaître : ici le présent réapparaît, lumières comprises. Il n'y a pas de
+régression — avant ce lot, le présent y était de toute façon. L'autre choix serait de
+ne purger que dans `_abort_killcam()`, ce qui garderait l'image de la mort cohérente ;
+toutes les sorties y passent. **À trancher.**
+
+⚠️ **Signalé, non corrigé** :
+- **`test_vitrine_menus` est rouge sous le `HOME` courant** (« hors calibration, les
+  onze effets vivent », « en sortant, tout se rallume ») et **vert sous un `HOME`
+  isolé**. Reproduit **à l'identique sur l'arbre rendu à `HEAD`**, les treize fichiers
+  du lot restaurés : antérieur à ce lot, et causé par le `settings.cfg` utilisateur
+  qu'une séance précédente a laissé — pas par le code ;
+- ⚠️ **un signalement du lot F, retiré parce qu'il était faux** : « sur le client, la
+  nappe de braises ne baisse pas dans son enregistrement, son fondu vit dans
+  `appliquer_effets()` que l'hôte seul appelle ». Vérifié dans le code avant de le
+  consigner : depuis le lot A1, le fondu vit dans `GadgetBraises._physics_process()`
+  et tourne donc chez les DEUX pairs — `appliquer_effets()` ne fait plus que brûler.
+  La nappe baisse bien dans l'enregistrement de l'invité, et il n'y a rien à corriger
+  au lot A. Le commentaire jumeau d'`etat_de_rejeu()` portait la même affirmation :
+  corrigé lui aussi. **Une relecture qui cite un état antérieur de la branche se
+  vérifie avant d'entrer ici** ;
+- la suie ne masque pas les FANTÔMES : ils sont rendus sans éclairage et toujours
+  visibles. Le nuage et la lampe étouffée sont rejoués, pas le corps caché. Non
+  demandé ;
+- le scénario duo « PRÊT s'ouvre à l'arrivée de l'adversaire » reste intermittent
+  (déjà signalé au lot E) : il n'a pas été relancé ici, ce lot ne touche pas au salon.
 
 ### À faire à la prochaine fusion de `main` — le leurre et le halo de proximité
 

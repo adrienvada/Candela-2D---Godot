@@ -194,6 +194,23 @@ const PORTEE_POSE := 96.0
 
 var _age: float = 0.0
 
+## Le slug de catalogue, posé par `GameState._do_spawn_gadget()`. Porté par
+## l'instantané de killcam (étape 28, lot F) pour dire QUOI est irreconstructible
+## quand ça arrive ; la copie, elle, se refait par le script (`etat_de_rejeu`).
+## Vide pour un gadget créé à la main dans une suite ou un banc : c'est voulu, et
+## c'est pourquoi la copie ne passe pas par lui.
+var slug: String = ""
+
+## Une copie de killcam (étape 28, lot F) : pilotée par l'instantané, sans physique,
+## HORS du groupe « gadgets » et hors de la couche qui arrête les joueurs. Posé
+## AVANT l'entrée dans l'arbre, comme `poseur_id` — voir `_ready()`.
+var is_replay: bool = false
+
+## La couche de collision d'avant le masquage de killcam, ou -1 : voir
+## `masquer_pour_rejeu()`. ⚠️ **Zéro est une valeur légitime** (les gadgets diffus
+## n'ont plus aucune couche), d'où la sentinelle négative.
+var _couche_hors_rejeu: int = -1
+
 signal detruit(gadget: GadgetBase)
 
 ## Étape 28, lot E (télémétrie des gadgets, 2026-09-11) — pourquoi un gadget est
@@ -240,7 +257,15 @@ static func poseur_du_nom(nom: String) -> int:
 
 
 func _ready() -> void:
-	add_to_group("gadgets")
+	# ⚠️ **Une copie de killcam n'est PAS un gadget pour le monde vivant** (étape 28,
+	# lot F). Onze boucles lisent ce groupe — éblouissement, facteur de lampe, ligne
+	# de vue, effets, bascule, « un gadget debout », pouls de tir, lueur des volumes.
+	# Une copie dedans éblouirait, se ferait basculer, viderait la batterie au HUD, ou
+	# brûlerait les joueurs téléportés sur le trajet rejoué. Filtrer site par site,
+	# c'est sept filtres, et le huitième qu'on oublie. Les balles rejouées la
+	# rencontrent par la PHYSIQUE, jamais par ce groupe.
+	if not is_replay:
+		add_to_group("gadgets")
 	collision_layer = MapGeometry.GADGET_LAYER
 	if arrete_les_joueurs:
 		collision_layer |= MapGeometry.GADGET_BLOQUANT_LAYER
@@ -260,6 +285,17 @@ func _ready() -> void:
 	_monter_occluder()
 	_monter_visuel()
 	_monter_repere()
+
+	if is_replay:
+		# L'instantané fait foi : ni âge qui court, ni fin de vie, ni effet, ni trace
+		# posée. Même geste que la fusée copiée.
+		set_physics_process(false)
+		# ⚠️ **Le passé n'arrête personne.** Les vrais corps sont téléportés sur le
+		# trajet rejoué (`GameState._process`) et `move_and_slide()` tourne encore hors
+		# manche tant que la vitesse n'est pas nulle : un voile du passé pourrait
+		# heurter un corps du présent. La couche des GADGETS reste, elle — les balles
+		# rejouées doivent rencontrer la copie comme elles ont rencontré l'original.
+		collision_layer &= ~MapGeometry.GADGET_BLOQUANT_LAYER
 
 
 ## Le repère du poseur : un cercle ténu du rayon d'effet, sur SA vue seule
@@ -632,3 +668,69 @@ static func materiau_peint_lumineux() -> CanvasItemMaterial:
 		_materiau_peint_lumineux = CanvasItemMaterial.new()
 		_materiau_peint_lumineux.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	return _materiau_peint_lumineux
+
+
+## Ce qu'il faut à la killcam pour REFAIRE ce gadget tel qu'il était rendu (étape 28,
+## lot F). Les sous-classes AJOUTENT par `super()` — l'oublier retirerait les champs
+## du socle, et `tools/test_rejeu.gd` le vérifie gadget par gadget.
+##
+## ⚠️ **Ce qui a été RENDU, pas ce qui le causait.** Recalculer au rejeu une énergie
+## qui dépend de `facteur_de_lampe_a()` ou d'`effacements_a()` lirait le monde
+## PRÉSENT — exactement le défaut que ce champ corrige.
+##
+## `script` : la killcam est LOCALE (chacun rejoue son propre enregistrement), la
+## référence vaut donc dans cette partie et rebâtit la même classe par construction
+## — sans table à tenir, sans `load()`, sans second chemin de choix de classe.
+func etat_de_rejeu() -> Dictionary:
+	return {
+		"nom": String(name),
+		"slug": slug,
+		"script": get_script(),
+		"poseur": poseur_id,
+		"classe": classe_du_poseur,
+		"graine": int(get("graine")) if "graine" in self else 0,
+		"actif": bool(get("actif")) if "actif" in self else true,
+		"pos": global_position,
+		"rot": global_rotation,
+		"rot_pose": global_rotation,
+		"age": _age,
+		"duree_vie": duree_vie,
+		"energie": 0.0,
+	}
+
+
+## La copie prend l'état d'une image. Le socle pose le lieu et l'âge ; chaque
+## sous-classe pose ensuite ce qu'elle a enregistré en plus.
+func rejouer(d: Dictionary) -> void:
+	_age = float(d["age"])
+	global_position = d["pos"]
+	global_rotation = float(d["rot"])
+
+
+## Le gadget VIVANT se cache le temps du rejeu, et revient ensuite (étape 28, lot F).
+## On masque au lieu de libérer, par décision d'Adrien : les ordres qui arrivent
+## pendant la killcam — allumage, bascule, destruction — visent ainsi toujours un
+## nœud qui existe.
+##
+## ⚠️ **Caché ET hors collision** : `hide()` éteint le sprite, les lumières et
+## l'ombre, mais n'empêche pas une balle rejouée de s'arrêter sur un présent
+## invisible. La couche d'origine est RETENUE, parce qu'elle n'est pas la même pour
+## tous — le voile porte `GADGET_BLOQUANT_LAYER`, les diffus n'ont plus `GADGET_LAYER`.
+func masquer_pour_rejeu(masque: bool) -> void:
+	if masque:
+		if _couche_hors_rejeu < 0:
+			_couche_hors_rejeu = collision_layer
+		collision_layer = 0
+		hide()
+	else:
+		if _couche_hors_rejeu >= 0:
+			collision_layer = _couche_hors_rejeu
+			_couche_hors_rejeu = -1
+		show()
+
+
+## Ce gadget vivant est-il masqué par une killcam en cours ? Lu par
+## `GameState._sources_eblouissantes()` : on ne peut pas être aveuglé par ce qu'on
+## ne voit pas. Sans `has_method` chez l'appelant — le socle répond pour tous.
+func est_masque_pour_rejeu() -> bool:
+	return _couche_hors_rejeu >= 0

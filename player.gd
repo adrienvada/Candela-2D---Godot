@@ -275,6 +275,12 @@ var _torch_breath_t: float = 0.0
 ## souffle fait vivre. `flashlight.energy` en est la présentation, une fois le
 ## grésillement appliqué — voir le bloc qui les sépare, et pourquoi.
 var _energie_torche: float = 2.5
+## Le facteur de lampe APPLIQUÉ à la dernière image torche allumée — le minimum des
+## gadgets, calculé plus bas. Lu par la killcam (étape 28, lot F) : le fantôme rejoue
+## la lampe telle qu'elle était rendue, sans une troisième copie de la règle du
+## minimum. Torche éteinte, la valeur reste figée : sans effet, la lampe du fantôme
+## suivant alors `p1_light` / `p2_light`.
+var facteur_de_lampe_rendu: float = 1.0
 ## V5.6 — la rétrodiffusion « respire » au pas : bosse brève, résorbée seule.
 const BACKSCATTER_STEP_PULSE := 0.35
 var _backscatter_pulse: float = 0.0
@@ -1801,6 +1807,9 @@ func _physics_process(delta):
 		# ⚠️ Aucune suite ne pouvait l'attraper : le facteur du gadget était juste,
 		# le câblage était juste, et le banc mesure les deux. C'est le nombre
 		# IMPRIMÉ par une capture qui l'a montré.
+		# Étape 28, lot F — retenu pour la killcam AVANT d'être appliqué : le fantôme
+		# rejoue le grésillement et la suie, qui n'y étaient pas.
+		facteur_de_lampe_rendu = lampe
 		flashlight.energy = _energie_torche * lampe
 
 		# V5.6 — la rétrodiffusion gonfle d'un souffle à chaque pas (posé par le

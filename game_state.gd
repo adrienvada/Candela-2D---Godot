@@ -1649,7 +1649,9 @@ func _process(delta):
 			ghost_p1.rotation = current_snap.p1_rot
 			ghost_p1.visible = current_snap.p1_visible
 			ghost_p1.get_node("Light").enabled = current_snap.p1_light
-			ghost_p1.get_node("Light").energy = KILLCAM_TORCH_ENERGY
+			# Étape 28, lot F — la moitié de ce que la lampe RENDAIT : le grésillement
+			# et la suie s'y lisent comme en jeu, au lieu d'une torche toujours pleine.
+			ghost_p1.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p1_lampe
 			ghost_p1.get_node("Flash").enabled = current_snap.p1_flash > 0.0
 			ghost_p1.get_node("Flash").energy = current_snap.p1_flash
 			if current_snap.p1_weapon:
@@ -1660,7 +1662,7 @@ func _process(delta):
 			ghost_p2.rotation = current_snap.p2_rot
 			ghost_p2.visible = current_snap.p2_visible
 			ghost_p2.get_node("Light").enabled = current_snap.p2_light
-			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY
+			ghost_p2.get_node("Light").energy = KILLCAM_TORCH_ENERGY * current_snap.p2_lampe
 			ghost_p2.get_node("Flash").enabled = current_snap.p2_flash > 0.0
 			ghost_p2.get_node("Flash").energy = current_snap.p2_flash
 			if current_snap.p2_weapon:
@@ -1675,6 +1677,8 @@ func _process(delta):
 
 			# Les fusées du passé, reconstruites à l'âge lu dans l'instantané.
 			_maj_fusees_killcam(current_snap)
+			# Étape 28, lot F — les gadgets du passé, et le présent masqué derrière eux.
+			_maj_gadgets_killcam(current_snap)
 			
 			# Dynamic Camera Zoom & Tracking
 			# Cinematic smooth tracking throughout the entire killcam
@@ -1730,12 +1734,20 @@ func _process(delta):
 				Engine.time_scale = 1.0
 				_liberer_le_releve()
 
-	elif not _end_sequence_active and not _fusees_killcam.is_empty():
+	elif not _end_sequence_active and (not _fusees_killcam.is_empty() \
+			or _rejeu_gadgets_en_cours):
 		# Le rejeu vient de finir (ou d'être passé) : ses fusées partent avec
 		# lui — mais PAS pendant l'arrêt sur image de fin, qui prolonge la
 		# dernière image du rejeu : une fusée qui s'y évapore d'une image se
 		# lirait comme un bug d'affichage.
+		#
+		# Étape 28, lot F — les gadgets du passé suivent le même chemin, et c'est ici
+		# que les gadgets VIVANTS masqués reviennent. ⚠️ La condition lit aussi
+		# `_rejeu_gadgets_en_cours` : un rejeu sans le moindre gadget a quand même
+		# masqué le présent, et sans ce second terme il resterait invisible ET sans
+		# collision jusqu'à la manche suivante.
 		_purger_fusees_killcam()
+		_purger_gadgets_killcam()
 
 	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
 	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
@@ -1894,7 +1906,14 @@ func _sources_eblouissantes() -> Array:
 	for g in get_tree().get_nodes_in_group("gadgets"):
 		if not is_instance_valid(g) or not (g is Node2D):
 			continue
-		if not g.eblouit or g.is_queued_for_deletion():
+		# ⚠️ **Un gadget MASQUÉ par la killcam n'éblouit pas** (étape 28, lot F) : on ne
+		# peut pas être aveuglé par ce qu'on ne voit pas, et le vainqueur est téléporté
+		# sur son trajet rejoué (`_process`). C'est aussi ce qui fait qu'aucun rayon de
+		# ligne de vue n'est tiré pendant le rejeu — et donc que les COPIES, qui ne sont
+		# pas dans ce groupe, n'ont pas besoin d'être exclues de
+		# `_ligne_de_vue_depuis()`. Le jour où une source tirerait un rayon pendant un
+		# rejeu, la mine et la bobine copiées arrêteraient l'éblouissement à tort.
+		if not g.eblouit or g.is_queued_for_deletion() or g.est_masque_pour_rejeu():
 			continue
 		out.append({
 			"noeud": g,
@@ -2248,6 +2267,20 @@ var _fusees_attente: Array[float] = [-1.0, -1.0]
 var _fusees_profil: Array = [null, null]
 ## Fusées reconstruites par la killcam, par graine.
 var _fusees_killcam: Dictionary = {}
+
+## Étape 28, lot F — les gadgets reconstruits par la killcam, par NOM du gadget
+## d'origine. Une entrée à `null` : irreconstructible, le cri est déjà parti (on ne
+## le répète pas à chaque image).
+var _gadgets_killcam: Dictionary = {}
+## Les gadgets et les traces VIVANTS, masqués le temps du rejeu, à rendre ensuite.
+var _gadgets_masques: Array = []
+var _traces_masquees: Array = []
+## Les traces de poudre du passé : un conteneur NOMMÉ, enfant de l'arène — Godot
+## renomme les homonymes, on les retrouve donc par le conteneur, jamais par leur nom.
+var _traces_killcam: Node2D = null
+## Le rejeu a-t-il déjà masqué le présent ? C'est aussi ce qui dit qu'il reste
+## quelque chose à rendre quand la lecture s'arrête sans avoir créé une seule copie.
+var _rejeu_gadgets_en_cours: bool = false
 
 # FU5 — piétinement, par joueur (index 0/1 = p1/p2). Hôte seul : voir
 # `_maj_extinction_fusees`. `_pietinement_pos` est réévaluée CHAQUE tick (pas
@@ -2979,6 +3012,11 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 		push_error("GameState : implémentation illisible — %s" % chemin)
 		return
 	var g: GadgetBase = script.new()
+	# Étape 28, lot F — porté par l'instantané de killcam, pour NOMMER ce qui
+	# manquerait le jour où une copie serait irreconstructible. La copie, elle, se
+	# refait par le script du gadget d'origine, jamais par ce slug : les gadgets
+	# créés à la main dans les suites n'en ont pas, et une copie par slug crierait.
+	g.slug = slug
 	g.name = "GadgetJ%d_%d" % [pid + 1, numero]
 	g.poseur_id = pid
 	g.global_position = pos
@@ -3084,6 +3122,136 @@ func _purger_fusees_killcam() -> void:
 		if is_instance_valid(f):
 			f.queue_free()
 	_fusees_killcam.clear()
+
+
+## Étape 28, lot F — la killcam reconstruit les GADGETS depuis les instantanés, sur
+## le patron des fusées. **Une différence, décidée par Adrien le 2026-09-11** : le
+## présent est MASQUÉ, pas libéré, et il revient à la fin du rejeu — les ordres qui
+## arrivent pendant la killcam (allumage, bascule, destruction) visent ainsi toujours
+## un nœud qui existe.
+func _maj_gadgets_killcam(snap) -> void:
+	if not _rejeu_gadgets_en_cours:
+		_rejeu_gadgets_en_cours = true
+		_masquer_le_present()
+	var vus: Dictionary = {}
+	for d in snap.gadgets:
+		var cle: String = d["nom"]
+		vus[cle] = true
+		if not _gadgets_killcam.has(cle):
+			_gadgets_killcam[cle] = _copie_de_gadget(d)
+		var g = _gadgets_killcam[cle]
+		if g != null and is_instance_valid(g):
+			g.rejouer(d)
+	# Mort entre deux images du passé : la copie part, comme l'original est parti.
+	for cle in _gadgets_killcam.keys():
+		if not vus.has(cle):
+			var g = _gadgets_killcam[cle]
+			if g != null and is_instance_valid(g):
+				g.queue_free()
+			_gadgets_killcam.erase(cle)
+	_maj_traces_killcam(snap.traces)
+
+
+## La copie d'un gadget, construite par SON script — jamais par `duplicate()`, qui ne
+## recopie pas les variables de script (piège connu) et dont l'original est peut-être
+## déjà mort. Tout ce qui décide de l'apparence est posé AVANT `add_child()`, parce
+## que c'est `_ready()` qui monte les visuels, les lumières et les formes.
+func _copie_de_gadget(d: Dictionary) -> GadgetBase:
+	var modele: GDScript = d.get("script")
+	if modele == null:
+		# ⚠️ On CRIE, on ne substitue pas : un gadget plausible à la place d'un gadget
+		# inconnu se prendrait pour ce qui s'est passé.
+		push_error("GameState : gadget « %s » irreconstructible pour la killcam" % d["slug"])
+		return null
+	var g: GadgetBase = modele.new()
+	g.is_replay = true
+	g.slug = String(d["slug"])
+	# ⚠️ **Un nom DISTINCT du vivant** : `rpc_detruire_gadget(nom)` cherche par
+	# `get_node_or_null` dans ce même conteneur, et deux homonymes y seraient renommés
+	# — l'ordre de l'hôte pourrait alors tomber sur la copie.
+	g.name = "Rejeu_%s" % d["nom"]
+	g.poseur_id = int(d["poseur"])
+	g.classe_du_poseur = d["classe"]
+	g.duree_vie = float(d["duree_vie"])
+	# Ceinture : hors du groupe, elle n'est déjà dans aucune source d'éblouissement.
+	g.eblouit = false
+	# Aucun repère : c'est une aide à la POSE, sur la vue du poseur. Rejouée, elle
+	# dirait « pose ici » pendant qu'on regarde mourir.
+	g.repere_ici = false
+	if "graine" in g:
+		g.set("graine", d["graine"])
+	if "actif" in g:
+		g.set("actif", d["actif"])
+	g.global_position = d["pos"]
+	g.rotation = float(d["rot_pose"])
+	bullet_container.add_child(g)
+	return g
+
+
+## Les gadgets et les traces du PRÉSENT s'effacent le temps du rejeu : sans ça, la
+## mine encore debout brûlerait dans une image où elle n'existait pas, et une balle
+## rejouée s'arrêterait sur un objet posé après la mort.
+func _masquer_le_present() -> void:
+	for c in bullet_container.get_children():
+		if c is GadgetBase and not c.is_replay and not c.is_queued_for_deletion():
+			c.masquer_pour_rejeu(true)
+			_gadgets_masques.append(c)
+	for m in get_tree().get_nodes_in_group("traces_de_poudre"):
+		if m is CanvasItem and m.visible:
+			m.visible = false
+			_traces_masquees.append(m)
+
+
+## Les traces du passé : un pool de traces nues dans un conteneur nommé, retrouvées
+## par le CONTENEUR et jamais par leur nom — Godot renomme les homonymes.
+##
+## Elles n'entrent pas dans le groupe « traces_de_poudre » : l'enregistrement le lit.
+func _maj_traces_killcam(traces: PackedFloat32Array) -> void:
+	var n := int(traces.size() / 4.0)
+	if n == 0 and not is_instance_valid(_traces_killcam):
+		return
+	if not is_instance_valid(_traces_killcam):
+		_traces_killcam = Node2D.new()
+		_traces_killcam.name = "TracesKillcam"
+		arena.add_child(_traces_killcam)
+	var enfants := _traces_killcam.get_children()
+	for i in n:
+		var m: Polygon2D
+		if i < enfants.size():
+			m = enfants[i]
+		else:
+			m = GadgetPoudre.nouvelle_trace()
+			m.name = "TraceKillcam%d" % i
+			_traces_killcam.add_child(m)
+		m.visible = true
+		m.global_position = Vector2(traces[i * 4], traces[i * 4 + 1])
+		m.global_rotation = traces[i * 4 + 2]
+		m.modulate.a = traces[i * 4 + 3]
+	for i in range(n, enfants.size()):
+		enfants[i].visible = false
+
+
+## Les copies partent, le présent revient. Appelé à la fin du rejeu ET par
+## `_abort_killcam()`, la sortie inconditionnelle : un chemin de sortie qui
+## l'oublierait laisserait les gadgets vivants invisibles ET sans collision jusqu'à
+## la manche suivante. Idempotent.
+func _purger_gadgets_killcam() -> void:
+	for g in _gadgets_killcam.values():
+		if g != null and is_instance_valid(g):
+			g.queue_free()
+	_gadgets_killcam.clear()
+	for g in _gadgets_masques:
+		if is_instance_valid(g) and not g.is_queued_for_deletion():
+			g.masquer_pour_rejeu(false)
+	_gadgets_masques.clear()
+	for m in _traces_masquees:
+		if is_instance_valid(m):
+			m.visible = true
+	_traces_masquees.clear()
+	if is_instance_valid(_traces_killcam):
+		_traces_killcam.queue_free()
+	_traces_killcam = null
+	_rejeu_gadgets_en_cours = false
 
 ## FU5 — éteindre une fusée passe par le MÊME arbitrage que son lancer :
 ## l'hôte tranche, le client demande. Un seul appelant depuis le 2026-09-11 : le
@@ -3958,6 +4126,9 @@ func _abort_killcam() -> void:
 	# mais on rétablit l'état réel des vues, pas les deux d'office.
 	_accorder_rendu_aux_vues()
 	_clear_kill_stamp()
+	# Étape 28, lot F — le présent masqué revient sur TOUT chemin de sortie : début de
+	# manche, match soldé, retour au menu. Idempotent.
+	_purger_gadgets_killcam()
 	ui.hide_killcam()
 
 ## [Hôte] Rejoue ce qui a été reçu pendant la séquence de fin, une fois l'écran

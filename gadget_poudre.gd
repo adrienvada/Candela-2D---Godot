@@ -190,25 +190,37 @@ func _relever_les_pas() -> void:
 ## la poudre ne se tue plus à la balle, le 2026-09-11.) C'est la leçon que `bullet.gd`
 ## a écrite pour ses éclats — *« le parent d'une balle est le nœud des balles, qui
 ## ne survit pas à la manche »*.
-func _poser_marque(pos: Vector2, sens: Vector2, intensite: float = 1.0) -> void:
-	var gs := get_tree().get_first_node_in_group("game_state")
-	if gs == null or gs.arena == null:
-		return
+## Une trace NUE — sa forme, sa lueur, sa profondeur — sans lieu, sans groupe et sans
+## fondu. Partagée par `_poser_marque()` et par la killcam (étape 28, lot F) : deux
+## définitions de la même trace finiraient par ne plus luire pareil.
+##
+## ⚠️ **Elle LUIT : non éclairée et additive**, depuis le 2026-09-11. Un `light_mask`
+## à zéro ne suffirait pas — le `CanvasModulate` de l'arène éteint tout ce qui passe
+## (voir `GadgetBase.materiau_incandescent()`). Additive, elle vaut sa propre couleur
+## dans le noir et s'AJOUTE à la poudre éclairée.
+##
+## ⚠️ **SANS le groupe « traces_de_poudre »** : c'est l'appelant qui l'y ajoute, et une
+## copie de killcam ne doit pas y entrer — l'enregistrement la relirait.
+static func nouvelle_trace() -> Polygon2D:
 	var m := Polygon2D.new()
 	m.name = "Trace"
 	m.polygon = PackedVector2Array([
 		Vector2(-6.0, -1.6), Vector2(6.0, -1.0),
 		Vector2(6.0, 1.0), Vector2(-6.0, 1.6)])
+	m.color = COULEUR_LUEUR
+	m.material = GadgetBase.materiau_incandescent()
+	m.z_index = 1
+	return m
+
+
+func _poser_marque(pos: Vector2, sens: Vector2, intensite: float = 1.0) -> void:
+	var gs := get_tree().get_first_node_in_group("game_state")
+	if gs == null or gs.arena == null:
+		return
+	var m := nouvelle_trace()
 	m.global_position = pos
 	m.rotation = sens.angle()
-	m.color = COULEUR_LUEUR
-	# ⚠️ **Elle LUIT : non éclairée et additive**, depuis le 2026-09-11. Un
-	# `light_mask` à zéro ne suffirait pas — le `CanvasModulate` de l'arène éteint
-	# tout ce qui passe (voir `GadgetBase.materiau_incandescent()`). Additive, elle
-	# vaut sa propre couleur dans le noir et s'AJOUTE à la poudre éclairée.
-	m.material = GadgetBase.materiau_incandescent()
 	m.modulate.a = LUEUR_MAX * clampf(intensite, 0.0, 1.0)
-	m.z_index = 1
 	# Reconnue par son GROUPE, jamais par son nom : Godot renomme les homonymes
 	# en « @Polygon2D@N », et seule la première trace s'appelle « Trace ».
 	m.add_to_group("traces_de_poudre")

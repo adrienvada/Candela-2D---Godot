@@ -233,3 +233,25 @@ func coupe_le_regard(de: Vector2, vers: Vector2) -> bool:
 		return false
 	return not Geometry2D.intersect_polyline_with_polygon(
 		PackedVector2Array([de, vers]), ombre).is_empty()
+
+
+## Étape 28, lot F — son effacement dans la suie, tel qu'il était : silhouette pâlie,
+## ombre coupée. Un seul alpha : les deux corps du lot D portent toujours le même.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["alpha"] = _visuel.modulate.a if _visuel != null else 1.0
+	d["ombre"] = _occluder.visible if _occluder != null else true
+	return d
+
+
+## ⚠️ **Les DEUX corps**, comme `_physics_process()` : celui que voit l'adversaire et
+## celui que voit le poseur. N'en rejouer qu'un ferait du leurre de killcam la seule
+## chose de l'arène qui s'efface d'un seul côté.
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	var a := float(d["alpha"])
+	for v in [_visuel, _visuel_poseur]:
+		if v != null:
+			v.modulate.a = a
+	if _occluder != null:
+		_occluder.visible = bool(d["ombre"])

@@ -69,6 +69,28 @@ class Snapshot:
 	## Chaque entrée : { graine, shooter, pos, age }.
 	var fusees: Array = []
 
+	## Étape 28, lot F — les gadgets debout à cette image, chacun tel qu'il était
+	## RENDU (`GadgetBase.etat_de_rejeu()`). La killcam montrait la mort sans sa
+	## cause : une mine consumée, un leurre abattu ou une nappe éteinte en étaient
+	## absents, et les gadgets encore debout y figuraient dans leur état PRÉSENT.
+	##
+	## ⚠️ **Ce qui a été rendu, pas ce qui le causait.** Trois valeurs lisent le
+	## monde vivant — l'énergie du faisceau fantôme, la lueur de la suie, l'alpha du
+	## leurre : les recalculer au rejeu leur ferait lire le PRÉSENT, c'est-à-dire le
+	## défaut même qu'on corrige.
+	var gadgets: Array = []
+
+	## Les traces de poudre visibles, à plat : [x, y, rotation, alpha] par trace.
+	## Enfants de l'ARÈNE et non du gadget — elles lui survivent — donc hors de
+	## `gadgets`, et il faut les enregistrer à part ou la piste disparaît du rejeu.
+	var traces: PackedFloat32Array = PackedFloat32Array()
+
+	## Le facteur de lampe que chaque joueur a RENDU (grésillement, suie). Sans lui,
+	## la bobine rejouée n'est qu'un boîtier sombre et la mort par panne de lampe
+	## reste sans cause à l'écran.
+	var p1_lampe: float = 1.0
+	var p2_lampe: float = 1.0
+
 func start_recording():
 	snapshots.clear()
 	bullet_events.clear()
@@ -125,7 +147,11 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p1_light = p1.flashlight_on
 		snap.p1_flash = p1.get_node("MuzzleFlash").energy if p1.get_node("MuzzleFlash").enabled else 0.0
 		snap.p1_weapon = p1.current_weapon
-	
+		# Étape 28, lot F — la lampe telle qu'elle a été RENDUE, pas `flashlight.energy` :
+		# l'extinction du vainqueur est enregistrée pendant les 1,5 s qui suivent la
+		# mort, et le fantôme suit déjà `p1_light` pour l'allumage.
+		snap.p1_lampe = p1.facteur_de_lampe_rendu
+
 	if p2:
 		snap.p2_pos = p2.global_position
 		snap.p2_rot = p2.rotation
@@ -152,6 +178,7 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 		snap.p2_light = p2.flashlight_on
 		snap.p2_flash = p2.get_node("MuzzleFlash").energy if p2.get_node("MuzzleFlash").enabled else 0.0
 		snap.p2_weapon = p2.current_weapon
+		snap.p2_lampe = p2.facteur_de_lampe_rendu
 
 	if bullets_node:
 		for c in bullets_node.get_children():
@@ -166,6 +193,39 @@ func record_frame(p1: Node2D, p2: Node2D, bullets_node: Node2D, delta: float = 0
 					"pos": c.global_position,
 					"age": c.age_combustion(),
 				})
+			# Étape 28, lot F — reconnu par le GROUPE, pas par `c is GadgetBase` (même
+			# raison que ci-dessus), et SANS `has_method` : le socle répond
+			# `etat_de_rejeu()` pour tout gadget. Un garde défensif changerait une
+			# amputation en silence (CLAUDE.md, la fusion du 2026-09-09). Une copie de
+			# killcam n'est PAS dans ce groupe (`GadgetBase._ready`) : le rejeu ne
+			# s'enregistre donc jamais lui-même.
+			elif c.is_in_group("gadgets") and not c.is_queued_for_deletion():
+				snap.gadgets.append(c.etat_de_rejeu())
+
+		# Les traces de poudre vivent dans l'ARÈNE, pas dans le gadget : sans cette
+		# boucle, la piste de la Sentinelle manque au rejeu.
+		#
+		# ⚠️ **Sans allocation par trace** : un seul `resize`, écriture par indice, une
+		# seule lecture de `global_position` (chacune recalcule la transformation
+		# globale). Elle tourne à 60 Hz dans CHAQUE manche, et la marge de cadence
+		# d'une image est de 139 µs.
+		if bullets_node.is_inside_tree():
+			var traces := bullets_node.get_tree().get_nodes_in_group("traces_de_poudre")
+			if not traces.is_empty():
+				var plat := PackedFloat32Array()
+				plat.resize(traces.size() * 4)
+				var n := 0
+				for m in traces:
+					if m.is_queued_for_deletion() or m.modulate.a <= 0.004:
+						continue
+					var p: Vector2 = m.global_position
+					plat[n] = p.x
+					plat[n + 1] = p.y
+					plat[n + 2] = m.global_rotation
+					plat[n + 3] = m.modulate.a
+					n += 4
+				plat.resize(n)
+				snap.traces = plat
 
 	snapshots.append(snap)
 	if snapshots.size() > max_snapshots:
@@ -510,3 +570,48 @@ func _melanger(sortie: Snapshot, s1: Snapshot, s2: Snapshot, t: float) -> void:
 				copie["pos"] = (d["pos"] as Vector2).lerp(d2["pos"], t)
 				break
 		sortie.fusees.append(copie)
+
+	# Étape 28, lot F — gadgets, traces et lampe rendue : ICI, pour la raison écrite
+	# juste au-dessus. Posés au site d'appel, ils manqueraient au pré-tracé, qui
+	# appelle `_melanger()` directement — une demi-seconde sans gadgets, sans erreur.
+	sortie.p1_lampe = lerpf(s1.p1_lampe, s2.p1_lampe, t)
+	sortie.p2_lampe = lerpf(s1.p2_lampe, s2.p2_lampe, t)
+	# Les traces ne s'interpolent pas : elles sont POSÉES, et leur nombre change d'une
+	# image à l'autre. Celles de la première image font foi.
+	sortie.traces = s1.traces
+	sortie.gadgets.clear()
+	for d in s1.gadgets:
+		var suivant = null
+		for d2 in s2.gadgets:
+			if d2["nom"] == d["nom"]:
+				suivant = d2
+				break
+		sortie.gadgets.append(_melanger_gadget(d, suivant, t))
+
+
+## Un gadget entre deux instantanés. Flottants, points et couleurs s'interpolent
+## (les angles par `lerp_angle`) ; entiers, booléens et objets (script, classe)
+## restent ceux de la première image — un allumage ne se fait pas « à moitié ».
+##
+## Absent de la seconde (il meurt entre les deux), il garde son état et vieillit de
+## la fraction d'image, EN SECONDES, comme une fusée : la killcam enregistre à 60 Hz
+## et se lit à cadence libre, donc tout ce qui vieillit se compte en temps de jeu.
+static func _melanger_gadget(a: Dictionary, b, t: float) -> Dictionary:
+	var m: Dictionary = a.duplicate()
+	if b == null:
+		m["age"] = float(a["age"]) + t * RECORD_PERIOD
+		return m
+	for cle in a:
+		var va = a[cle]
+		var vb = b.get(cle)
+		if vb == null or typeof(va) != typeof(vb):
+			continue
+		match typeof(va):
+			TYPE_FLOAT:
+				m[cle] = lerp_angle(va, vb, t) if String(cle).begins_with("rot") \
+					else lerpf(va, vb, t)
+			TYPE_VECTOR2:
+				m[cle] = (va as Vector2).lerp(vb, t)
+			TYPE_COLOR:
+				m[cle] = (va as Color).lerp(vb, t)
+	return m

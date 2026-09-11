@@ -295,9 +295,13 @@ static func catalogue() -> Array[Dictionary]:
 		{"id": "onde-de-choc", "famille": "fins", "source": "ecran", "ancre": [0.5, 0.5],
 		 "titre": "L'onde de choc du kill",
 		 "pourquoi": "L'anneau qui part du corps et traverse l'arène : la seule lumière autorisée à tout éclairer, parce que le duel est tranché."},
+		# Étape 28, lot F — la killcam est mise en scène AVEC ses gadgets : une torche
+		# fantôme debout depuis le début, et une mine allumée à ~2,5 s du kill, qui
+		# brûle puis meurt DANS la fenêtre de rejeu. C'est le seul instrument qui
+		# atteigne la killcam : ni suite ni planche n'y va.
 		{"id": "killcam", "famille": "fins", "source": "ecran",
 		 "titre": "La killcam",
-		 "pourquoi": "Le rejeu de sa propre mort. Une mécanique qui ne se comprend qu'en image."},
+		 "pourquoi": "Le rejeu de sa propre mort, AVEC sa cause : la mine consumée avant l'impact rebrûle, et la torche fantôme est là. Une mécanique qui ne se comprend qu'en image."},
 		{"id": "gel-fatal", "famille": "fins", "source": "ecran",
 		 "titre": "L'arrêt sur image signé",
 		 "pourquoi": "DA6.2 — le gel du kill, tamponné de l'heure. L'image que le joueur veut envoyer."},
@@ -345,7 +349,11 @@ static func preconditions_manquantes(ui: Node, main: Node) -> Array[String]:
 	for methode in ["_on_replay_requested", "_on_training_requested",
 			"_on_main_menu_requested", "weapon_for_index",
 			"_accorder_rendu_aux_vues", "spawn_fusee",
-			"_set_player_input_provider", "_do_spawn_gadget"]:
+			"_set_player_input_provider", "_do_spawn_gadget",
+			# Étape 28, lot F — la mine du plan `killcam` doit être ALLUMÉE par l'ordre
+			# du jeu, jamais par un `allumer()` direct : c'est ce chemin-là qu'on
+			# photographie.
+			"allumer_gadget"]:
 		if not main.has_method(methode):
 			absents.append("GameState.%s() a disparu" % methode)
 
@@ -929,9 +937,22 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 	# l'heure du kill (`round_time - time_left`) : abattu à la première image,
 	# il annonce `KILL — 00:00`, ce qui se lit comme un défaut d'affichage plutôt
 	# que comme une signature. Quelques secondes, et il dit quelque chose.
+	# Étape 28, lot F — la torche fantôme est debout AVANT le duel : elle doit être
+	# dans le rejeu du début à la fin, pour qu'on voie qu'un gadget vivant y est
+	# rejoué à son état PASSÉ et non tel qu'il est maintenant.
+	var mine_posee := false
+	if _demande(plans, "killcam"):
+		_poser_torche_fantome()
 	var respire := 5.0
 	while respire > 0.0:
 		_duel(ECART_DUEL, 0.0)
+		# ⚠️ **À 2,5 s du kill, et pas au début.** La fenêtre de rejeu ne s'ouvre que
+		# trois secondes avant l'impact, et la mine ne brûle que 1,6 s : posée plus
+		# tôt, elle serait consumée hors champ et la capture ne prouverait rien. Là,
+		# elle brûle PUIS meurt dans la fenêtre — c'est-à-dire exactement le cas que
+		# ce lot corrige, une mort dont la cause n'existe plus au moment du rejeu.
+		if not mine_posee and respire <= 2.5 and _demande(plans, "killcam"):
+			mine_posee = _poser_mine_allumee()
 		await get_tree().process_frame
 		respire -= get_process_delta_time()
 
@@ -942,7 +963,14 @@ func _famille_fins(plans: Array[Dictionary]) -> void:
 
 	if _demande(plans, "killcam"):
 		if await _attendre(func() -> bool: return ReplaySystem.playing_back, 15.0):
-			await _prendre(_plan(plans, "killcam"), Callable(), 0.5)
+			# Étape 28, lot F — le compte des lumières est relevé à CHAQUE image du
+			# repos, donc celui de l'image juste avant la prise : calculé une fois
+			# avant l'attente, il daterait d'une demi-seconde, et le manifeste
+			# décrirait une image qui n'est pas celle qu'on regarde.
+			var plan_killcam := _plan(plans, "killcam")
+			var compter := func() -> void:
+				plan_killcam["note"] = _recensement_des_lumieres()
+			await _prendre(plan_killcam, compter, 0.5)
 		else:
 			printerr("  ✗ la killcam n'a pas démarré")
 
@@ -1149,6 +1177,74 @@ func _consigner(nom: String, monde: Vector2, source: String) -> void:
 			r.size.y * fenetre.y / reference.y,
 			(r.size.x / float(vue.size.x)) * fenetre.x / reference.x,
 			"dans-le-cadre" if dedans else "hors-cadre"])
+
+
+## Étape 28, lot F — la torche fantôme de J1, debout pour toute la fenêtre de rejeu.
+##
+## ⚠️ **Sa durée de vie est remise à zéro APRÈS la pose** : `_do_spawn_gadget` la prend
+## au profil de la classe ÉQUIPÉE, qui n'est pas celle de la torche. Elle pourrait
+## donc mourir avant la prise, et l'image ne montrerait pas ce qu'elle annonce.
+func _poser_torche_fantome() -> void:
+	if not is_instance_valid(_main.p1):
+		return
+	var axe: Vector2 = _main.p1.global_transform.x
+	_main._do_spawn_gadget(0, _main.p1.global_position + axe * 140.0, axe.angle(),
+		"torche_fantome", 9301)
+	var t = _gadget_de(0)
+	if t == null:
+		printerr("  ✗ killcam : la torche fantôme de J1 n'a pas été posée")
+		return
+	t.duree_vie = 0.0
+
+
+## La mine de J2, plantée entre les deux corps puis ALLUMÉE par l'ORDRE du jeu
+## (`allumer_gadget`) et jamais par un `allumer()` direct : c'est ce chemin-là qu'on
+## photographie. Elle brûle 1,6 s, donc elle est morte AVANT le kill — et c'est tout
+## le sujet du lot : la killcam doit la faire revivre.
+func _poser_mine_allumee() -> bool:
+	if not is_instance_valid(_main.p1) or not is_instance_valid(_main.p2):
+		return false
+	var vers: Vector2 = (_main.p2.global_position - _main.p1.global_position).normalized()
+	_main._do_spawn_gadget(1, _main.p1.global_position + vers * 60.0, 0.0,
+		"mine_magnesium", 9302)
+	var mine = _gadget_de(1)
+	if mine == null:
+		printerr("  ✗ killcam : la mine de J2 n'a pas été posée")
+		return false
+	_main.allumer_gadget(mine)
+	return true
+
+
+## Le budget de LUMIÈRES pendant le rejeu, écrit au manifeste (étape 28, lot F).
+##
+## Le compte suit le critère du compteur F3 (`ui.gd`) — `is_visible_in_tree()` ET
+## `enabled` —, et le recensement par quadrant de 560 px dit ce qui compte vraiment :
+## le moteur n'en garde que quinze PAR ITEM, et il écarte les plus récentes. Un total
+## honnête sur toute la carte ne dirait rien d'un coin saturé.
+func _recensement_des_lumieres() -> String:
+	if not is_instance_valid(_main.arena):
+		return ""
+	var monde: Node = _main.arena.get_parent()
+	if monde == null:
+		return ""
+	var total := 0
+	var quadrants := {}
+	var pile: Array[Node] = [monde]
+	while not pile.is_empty():
+		var n: Node = pile.pop_back()
+		var l := n as PointLight2D
+		if l != null and l.is_visible_in_tree() and l.enabled:
+			total += 1
+			var q := Vector2i((l.global_position / 560.0).floor())
+			quadrants[q] = int(quadrants.get(q, 0)) + 1
+		for e in n.get_children():
+			pile.append(e)
+	var pire := 0
+	for q in quadrants:
+		pire = maxi(pire, int(quadrants[q]))
+	var texte := "%d lumière(s) allumée(s), au plus %d par quadrant de 560 px (le moteur en garde 15 par item)" % [total, pire]
+	print("  MESURE lumieres_killcam total %d pire_quadrant %d" % [total, pire])
+	return texte
 
 
 ## Le repère : une mine de J1 et une poudre de J2, torches éteintes, en écran

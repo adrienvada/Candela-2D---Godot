@@ -287,3 +287,25 @@ func _etendre_le_plan(t: float) -> void:
 		avant = courant
 		courant = cible
 		fin += mouvement + pause
+
+
+## Étape 28, lot F — l'axe de POSE en plus du cap rendu : le trépied ne balaie pas,
+## il faut son axe pour le reposer d'aplomb. Et l'énergie du faisceau telle qu'elle
+## a été rendue — souffle, grésillement et suie compris : la recalculer au rejeu
+## lirait le monde PRÉSENT.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["rot_pose"] = _angle_depart
+	d["energie"] = _lumiere.energy / ENERGIE if _lumiere != null else 0.0
+	return d
+
+
+## La rotation vient de l'instantané (celle qui a été RENDUE), pas du plan de gestes :
+## elle reste juste même si `angle_relatif()` change un jour.
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	if _pied != null:
+		_pied.rotation = _angle_depart - rotation
+	if _lumiere != null:
+		_lumiere.energy = ENERGIE * float(d["energie"])
+		_lumiere.enabled = _lumiere.energy > 0.0

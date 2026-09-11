@@ -232,3 +232,21 @@ func _points_de_lueur() -> Array:
 	for i in 6:
 		pts.append(global_position + Vector2.RIGHT.rotated(TAU * i / 6.0) * rayon * 0.55)
 	return pts
+
+
+## Étape 28, lot F — la masse TELLE QUE RENDUE : le fondu de la poussière, la lueur
+## ET le fondu de la suie, en une seule couleur. Couvre les deux volumes.
+##
+## ⚠️ Jamais `_lumiere_entrante()` rejouée : elle échantillonne les lampes et les
+## fusées VIVANTES, c'est-à-dire le présent, au moment même où la killcam montre le
+## passé.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["masse"] = _masse.modulate if _masse != null else Color(1, 1, 1, 0)
+	return d
+
+
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	if _masse != null:
+		_masse.modulate = d["masse"]

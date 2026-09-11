@@ -202,3 +202,27 @@ func _monter_flamme() -> void:
 ## d'une mine, c'est le moment où il est trop tard.
 func _monter_visuel() -> void:
 	_poser_sprite("Visuel", "mine_magnesium")
+
+
+## Étape 28, lot F — ce que la killcam doit refaire d'elle : allumée ou non, et
+## l'énergie de son embrasement TELLE QU'ELLE BRÛLAIT. Sans ça, une mine consumée
+## avant le rejeu — le cas même qui explique la mort — en était absente.
+func etat_de_rejeu() -> Dictionary:
+	var d := super()
+	d["allumee"] = _allumee
+	d["energie"] = _lumiere.energy / ENERGIE if _lumiere != null else 0.0
+	return d
+
+
+## ⚠️ **Éteinte à énergie nulle, pas laissée à zéro** : une lumière à 0 compte quand
+## même dans le plafond de quinze par item du moteur.
+##
+## Sur une copie, `allumer()` règle `rayon_eblouissement` et `duree_vie` sans effet :
+## elle est hors du groupe « gadgets » et sans physique.
+func rejouer(d: Dictionary) -> void:
+	super(d)
+	if bool(d["allumee"]) and not _allumee:
+		allumer()
+	if _lumiere != null:
+		_lumiere.energy = ENERGIE * float(d["energie"])
+		_lumiere.enabled = _lumiere.energy > 0.0
