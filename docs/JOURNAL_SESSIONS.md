@@ -321,6 +321,18 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-11 — session « walls-led-breathing-light-4872dd-8a » : le halo révèle l'ennemi proche, `player.gd` touché
+
+**Déclaration : `player.gd` est du domaine « game feel »**, sur décision d'Adrien
+(« je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne
+doit pas me rendre détectable auprès de mon ennemi à distance »). Touché : le
+masque de `visual_enemy` / `visual_enemy_ptr` et celui du halo, qui passent
+désormais par `canaux_lumiere.gd`. Créés : `canaux_lumiere.gd` (la règle des
+canaux, sans autoload, à la demande de la session « 10 classes » pour son
+leurre) et `tools/test_halo_proximite.tscn` + `.gd` (dans `run_suites.sh`). **Signalé,
+pas touché** : `gadget_leurre.gd` (chantier « 10 classes ») — le leurre ne prend
+pas le halo et se reconnaîtrait donc de près ; message envoyé à cette session.
+
 ### 2026-09-10 — session « walls-led-breathing-light-4872dd-8a » (worktree `walls-led-breathing-light-4872dd`) : prototype du bandeau LED des murs
 
 **Créés :** `mur_led.gd`, `tools/test_mur_led.gd`. **Touchés :** `game_state.gd`
