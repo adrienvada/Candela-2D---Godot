@@ -179,7 +179,10 @@ func _monter_visuel() -> void:
 	lentille.color = Charte.HALOGENE
 	# Même correction que les braises : `light_mask = 0` ôte les lumières mais pas
 	# le `CanvasModulate` de l'arène, qui éteignait la lentille avec le reste. Ce
-	# qui émet doit être incandescent.
-	lentille.material = GadgetBase.materiau_incandescent()
+	# qui émet ne doit pas être éclairé — mais pas ADDITIF non plus (refonte
+	# roman graphique, lot 6, 2026-09-11) : un octogone halogène opaque est déjà
+	# le point le plus clair de l'objet, l'addition n'en faisait qu'une tache
+	# floue sur la tête peinte. Un aplat, en mélange normal.
+	lentille.material = GadgetBase.materiau_peint_lumineux()
 	lentille.z_index = 6
 	add_child(lentille)

@@ -244,8 +244,6 @@ func _monter_arene() -> void:
 	# murs et il n'y a plus rien à juger.
 	MapGeometry.build_collisions(data, self)
 
-	murs.material = CandelaTileSet.creer_materiau_mur()
-
 
 func _monter_porteur() -> void:
 	_porteur = Node2D.new()

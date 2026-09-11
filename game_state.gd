@@ -963,10 +963,6 @@ func rebuild_arena() -> void:
 	# l'horloge de manche. `--sans-led-murs` l'éteint — voir mur_led.gd.
 	MurLed.poser(data, arena, _horloge_led)
 
-	# V5.8 — Rendu Shimmer et spécularité du liseré des murs sous la torche.
-	var wall_mat := CandelaTileSet.creer_materiau_mur()
-	walls_layer.material = wall_mat
-
 	# Écran partagé : chaque joueur reçoit sa copie des calques, éclairée par
 	# sa seule lumière ambiante. Sans ça, le halo d'un joueur révélerait sa
 	# position sur l'écran de l'autre.

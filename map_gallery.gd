@@ -253,8 +253,6 @@ func _build_styles() -> void:
 	_style_normal = MenuWidgets.make_panel_style(Charte.LINE, MenuWidgets.CORNER_PANEL, 2)
 	_style_hover = MenuWidgets.make_panel_style(Charte.ACIER, MenuWidgets.CORNER_PANEL, 2)
 	_style_selected = MenuWidgets.make_panel_style(COLOR_P1, MenuWidgets.CORNER_PANEL, 2)
-	_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.4)
-	_style_selected.shadow_size = MenuWidgets.SHADOW_SIZE
 
 func _make_action_button(label: String, accent: Color) -> Button:
 	var btn := MenuWidgets.make_button(label, accent, false, Charte.T_COURANT, Vector2(0, 40))
@@ -602,13 +600,12 @@ func _toast(message: String, tint: Color) -> void:
 	_toast_tween.tween_property(_toast_panel, "modulate:a", 0.0, Charte.D_LONG)
 
 func _process(delta: float) -> void:
-	# Liseré néon animé sur la carte sélectionnée.
+	# Bordure animée sur la carte sélectionnée — sans halo depuis le 2026-09-11
+	# (refonte roman graphique) : la teinte respire, le trait n'irradie pas.
 	_pulse += delta
 	if _style_selected != null:
 		var wave := 0.5 + 0.5 * sin(_pulse * 4.0)
 		_style_selected.border_color = COLOR_P1.lerp(Charte.HALOGENE, 0.4 * wave)
-		_style_selected.shadow_size = int(roundf(lerpf(6.0, 14.0, wave)))
-		_style_selected.shadow_color = Color(COLOR_P1.r, COLOR_P1.g, COLOR_P1.b, 0.2 + 0.3 * wave)
 
 	if _delete_armed:
 		_delete_timer -= delta
