@@ -14,30 +14,42 @@ const FLOOR_ATLAS_A := Vector2i(0, 0)
 const FLOOR_ATLAS_B := Vector2i(0, 1)
 const WALL_ATLAS    := Vector2i(1, 0)
 
-## ## Le sol peint (DA2.6)
+## ## Le sol DESSINÉ — refonte roman graphique, lot 1 (2026-09-11)
 ##
-## Choisi par Adrien le 2026-08-25 dans `tools/apercu_matiere.tscn` : variante 1,
-## damier « faible ». Cuit par `tools/fabrique_tuiles.gd` depuis
-## `assets/sources/floor_tiles/F1_01.jpg`, qui est versionnée pour qu'on puisse
-## recuire.
+## Il était peint (DA2.6, choisi par Adrien le 2026-08-25 : une photo de béton
+## cuite en tuiles par `tools/fabrique_tuiles.gd`, plus un grain procédural).
+## Sous la torche, la plus grande surface éclairée du jeu lisait comme une
+## texture, pas comme un dessin. Adrien, le 2026-09-11 : « ok » pour un aplat
+## deux tons et des fissures au trait, contraste inchangé.
 ##
-## **Le damier survit, affaibli.** Il opposait 0,111 à 0,231 de luminance ; il
-## oppose désormais 0,148 à 0,178. Ce n'est pas de l'ornement : dans le noir
-## absolu, l'alternance des cases est **la seule référence spatiale du joueur**.
-## Adrien l'a trouvée trop criarde une fois la matière ajoutée — le grain donne
-## maintenant une partie de l'information que le contraste portait seul.
+## **Le damier survit, à la même valeur.** Les dalles peintes valaient 0,148 et
+## 0,178 de luminance moyenne (mesuré sur les fichiers) : ce sont les deux
+## aplats `SOL_DESSIN_A` et `SOL_DESSIN_B`. Ce n'est pas de l'ornement : dans le
+## noir absolu, l'alternance des cases est **la seule référence spatiale du
+## joueur**, et ce lot ne la touche pas.
 ##
-## Si les fichiers manquent, le damier procédural reprend la main. C'est un repli
-## DISCERNABLE : deux aplats au lieu d'une matière, personne ne s'y trompe.
-const SOL_A_PEINT := "res://assets/tuiles/solA_faible_1.png"
-const SOL_B_PEINT := "res://assets/tuiles/solB_faible_1.png"
+## Ce qui remplace le grain : un JOINT d'encre d'un pixel sur les QUATRE bords
+## de chaque dalle (le trait qui sépare deux dalles d'une planche — sur les
+## quatre, parce que `orientation()` retourne les tuiles dans les huit sens et
+## qu'un joint sur deux bords seulement se dédoublerait ici et manquerait là),
+## deux ou trois FISSURES au trait noir, placées par un hachage de la graine —
+## donc identiques sur toutes les machines et les deux vues —, et quelques
+## pores. Rien de clair : un dessin d'encre n'a pas de reflets, la torche les
+## fait. Entre deux dalles, le joint fait donc deux pixels : c'est pourquoi il
+## est moins noir que les fissures.
+const SOL_DESSIN_A := Color(0.148, 0.148, 0.140)
+const SOL_DESSIN_B := Color(0.178, 0.179, 0.168)
+## Le joint et le trait des fissures, en part de noir mêlée à l'aplat.
+const JOINT_ENCRE := 0.42
+const FISSURE_ENCRE := 0.72
+const PORE_ENCRE := 0.45
 
 ## ⚠️ **Le mur n'est PAS peint, et c'est une décision, pas un oubli.**
 ## Voir « Décisions actées » — DA2.7 a été mesurée puis abandonnée le
 ## 2026-08-25. L'intérieur du mur reste du noir pur : un mur n'est pas une
 ## surface éclairée, c'est une masse noire cernée d'un filament.
 
-## Crée et retourne un TileSet visuel (damier + murs noirs bordure blanche).
+## Crée et retourne un TileSet visuel (damier dessiné + murs noirs).
 ## NB : pas de physique dans ce TileSet — voir MapGeometry.build_collisions().
 static func create_tileset() -> TileSet:
 	var ts := TileSet.new()
@@ -48,16 +60,11 @@ static func create_tileset() -> TileSet:
 	# Atlas : 2 tiles large × 2 tiles haut = 70×70 px
 	var img := Image.create_empty(TILE_SIZE.x * 2, TILE_SIZE.y * 2, false, Image.FORMAT_RGBA8)
 
-	# --- Tiles (0,0) et (0,1) : les deux cases du damier béton brut ---
-	var peint_a := _tuile_peinte(SOL_A_PEINT)
-	var peint_b := _tuile_peinte(SOL_B_PEINT)
-	_generer_dalle_beton(img, 0, Charte.SOL_A, Charte.SOL_A_ARETE, 101, peint_a)
-	_generer_dalle_beton(img, TILE_SIZE.y, Charte.SOL_B, Charte.SOL_B_ARETE, 203, peint_b)
+	# --- Tiles (0,0) et (0,1) : les deux cases du damier, dessinées ---
+	_generer_dalle_encre(img, 0, SOL_DESSIN_A, 101)
+	_generer_dalle_encre(img, TILE_SIZE.y, SOL_DESSIN_B, 203)
 
-	# --- Tile (1,0) : Mur atelier (le noir du monde + arête halogène + mobilier riveté) ---
-	# Liséré halogène franc de 2 px préservé pour l'accroche de la torche,
-	# intérieur sombre respectant le fondu additif, enrichi d'un dessin de
-	# caisse rivetée et cornières d'acier d'atelier lourd.
+	# --- Tile (1,0) : le mur, du noir pur (le contour vit dans `mur_encre.gd`) ---
 	_generer_mur_atelier(img, TILE_SIZE.x, 0)
 
 	var tex := ImageTexture.create_from_image(img)
@@ -72,50 +79,59 @@ static func create_tileset() -> TileSet:
 	return ts
 
 
-## Génère une dalle de béton brut aux micro-aspérités d'encre contrastée.
-static func _generer_dalle_beton(img: Image, oy: int, bg: Color, border: Color,
-		graine: int, base_peinte: Image = null) -> void:
-	if base_peinte != null:
-		img.blit_rect(base_peinte, Rect2i(Vector2i.ZERO, TILE_SIZE), Vector2i(0, oy))
-	else:
-		for y in range(TILE_SIZE.y):
-			for x in range(TILE_SIZE.x):
-				var on_edge := (x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1)
-				img.set_pixel(x, oy + y, border if on_edge else bg)
+## Hachage déterministe d'un entier, dans [0, 1[ — même famille que celui de
+## `mur_encre.gd` : les deux machines d'un match dessinent la même dalle.
+static func _hachage(n: int) -> float:
+	var h := n * 374761393
+	h = (h ^ (h >> 13)) * 1274126177
+	h = (h ^ (h >> 16)) & 0x7fffffff
+	return float(h % 10000) / 10000.0
 
-	# Micro-aspérités d'encre contrastée et grain brut de béton industriel.
-	# Déterministe pour que les deux écrans et toutes les machines rendent l'identique.
-	for y in range(1, TILE_SIZE.y - 1):
-		for x in range(1, TILE_SIZE.x - 1):
-			var h := (x * 374761393 + y * 668265263 + graine * 912345671) ^ ((x * 127) + (y * 311))
-			h = (h ^ (h >> 13)) & 0x7fffffff
-			var pix := img.get_pixel(x, oy + y)
 
-			# Aspérités d'encre sombre (pores du béton coulé, micro-impacts)
-			if (h % 17) == 0:
-				var assombri := pix.lerp(Charte.NOIR, 0.40)
-				img.set_pixel(x, oy + y, assombri)
-			# Micro-particules minérales claires (reflets d'aspérité sous la torche)
-			elif (h % 23) == 0:
-				var eclairci := pix.lerp(Charte.HALOGENE, 0.10)
-				img.set_pixel(x, oy + y, eclairci)
+## Une dalle d'encre : un aplat, un joint, des fissures au trait, des pores.
+static func _generer_dalle_encre(img: Image, oy: int, aplat: Color, graine: int) -> void:
+	var joint := aplat.lerp(Charte.NOIR, JOINT_ENCRE)
+	var fissure := aplat.lerp(Charte.NOIR, FISSURE_ENCRE)
+	var pore := aplat.lerp(Charte.NOIR, PORE_ENCRE)
+	for y in range(TILE_SIZE.y):
+		for x in range(TILE_SIZE.x):
+			var bord := x == 0 or y == 0 or x == TILE_SIZE.x - 1 or y == TILE_SIZE.y - 1
+			img.set_pixel(x, oy + y, joint if bord else aplat)
 
-	# Micro-fissures d'atelier discrètes (2 courtes lignes d'encre sombre par dalle)
-	var f1_y := 8 + (graine % 7)
-	for dx in range(4):
-		var fx := 7 + dx
-		var fy := oy + f1_y + (1 if dx >= 2 else 0)
-		if fx < TILE_SIZE.x - 2 and fy < oy + TILE_SIZE.y - 2:
-			var c := img.get_pixel(fx, fy).lerp(Charte.NOIR, 0.55)
-			img.set_pixel(fx, fy, c)
+	# Les pores : un pixel sur soixante environ, jamais deux voisins — un
+	# semis, pas un grain.
+	for y in range(2, TILE_SIZE.y - 1, 2):
+		for x in range(2, TILE_SIZE.x - 1, 2):
+			if _hachage(graine * 7919 + y * 131 + x) < 0.07:
+				img.set_pixel(x, oy + y, pore)
 
-	var f2_y := 20 + ((graine >> 3) % 7)
-	for dx in range(5):
-		var fx := 20 + dx
-		var fy := oy + f2_y - (1 if dx >= 3 else 0)
-		if fx < TILE_SIZE.x - 2 and fy < oy + TILE_SIZE.y - 2:
-			var c := img.get_pixel(fx, fy).lerp(Charte.NOIR, 0.50)
-			img.set_pixel(fx, fy, c)
+	# Les fissures : deux ou trois traits brisés qui avancent surtout en
+	# DIAGONALE, par pas d'un pixel, avec un coude de temps en temps. Un trait
+	# de plume qui cherche son chemin dans le béton. (Un premier jet n'avançait
+	# qu'en x ou en y : des escaliers à angle droit, un circuit imprimé.)
+	var nb := 2 + int(_hachage(graine) * 2.0)
+	for k in nb:
+		var g := graine * 31 + k * 977
+		var x := 2 + int(_hachage(g) * float(TILE_SIZE.x - 4))
+		var y := 2 + int(_hachage(g + 1) * float(TILE_SIZE.y - 4))
+		var longueur := 8 + int(_hachage(g + 2) * 11.0)
+		var dx := 1 if _hachage(g + 3) < 0.5 else -1
+		var dy := 1 if _hachage(g + 4) < 0.5 else -1
+		for i in longueur:
+			if x < 1 or y < 1 or x >= TILE_SIZE.x - 1 or y >= TILE_SIZE.y - 1:
+				break
+			img.set_pixel(x, oy + y, fissure)
+			var r := _hachage(g + 10 + i)
+			if r < 0.55:
+				x += dx
+				y += dy
+			elif r < 0.78:
+				x += dx
+			elif r < 0.93:
+				y += dy
+			else:
+				# Le coude : la fissure change de sens une fois.
+				dy = -dy
 
 
 ## Dessine la tuile de mur : du noir d'encre pur, sur toute la tuile.
@@ -128,23 +144,6 @@ static func _generer_mur_atelier(img: Image, ox: int, oy: int) -> void:
 	for y in range(TILE_SIZE.y):
 		for x in range(TILE_SIZE.x):
 			img.set_pixel(ox + x, oy + y, Charte.NOIR)
-
-## Charge une tuile peinte, ou rend `null` si elle n'a pas été cuite ou importée.
-static func _tuile_peinte(chemin: String) -> Image:
-	if not ResourceLoader.exists(chemin):
-		return null
-	var t: Texture2D = load(chemin)
-	var img := t.get_image()
-	if img == null:
-		return null
-	if img.is_compressed():
-		img.decompress()
-	if img.get_width() != TILE_SIZE.x or img.get_height() != TILE_SIZE.y:
-		push_error("CandelaTileSet : %s fait %dx%d, attendu %dx%d"
-			% [chemin, img.get_width(), img.get_height(), TILE_SIZE.x, TILE_SIZE.y])
-		return null
-	return img
-
 
 ## Une des huit orientations, tirée d'un hachage de la position de la cellule.
 ##
