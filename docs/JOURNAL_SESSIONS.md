@@ -3863,3 +3863,37 @@ sa largeur suit `minimum_size_changed` de son contenu (`ui.gd`,
 dans `main` en avance rapide (la branche descendait d'`origin/main` 9e75106
 sans divergence). Le chantier de la refonte est CLOS ; il reste à Adrien l'écho
 au sol du flash (V4.14).
+
+### 2026-09-11 (après-midi) — le second chantier : ce qui restait à encrer
+
+Même session, même branche, rouverte sur « analyse tout ce qui peut être
+amélioré dans le sens de cette refonte ». Bilan en trois sources (photographe
+sous profil vierge, part molle des masques hors chantier, lecture de tout ce
+qui dessine), verdicts d'Adrien le jour même, puis un lot par commit :
+
+- **Nettoyage** (`dc1ee0a`) : `shimmer_murs.gdshader` et
+  `poussiere_faisceau.gdshader` supprimés, `CandelaTileSet.creer_materiau_mur()`
+  et sa pose retirés de `game_state.gd`, `cadre_hud.png` et `cadre_vhs.png`
+  supprimés, `tools/test_arena_lighting.gd` réécrit. ⚠️ **La session « Murs
+  avec bande LED respirante » modifie `light()` de `shimmer_murs` sur sa
+  branche** : prévenue par message, elle aura un conflit modifier/supprimer à
+  sa fusion, à trancher de son côté.
+- **Cadre et halos** (même commit) : `ui.gd` (`killcam_cadre` devient un
+  `CadrePhoto`, `NeonFocusRing` et `VirtualGamepadCursor` sans halo, le voile
+  « scanline » renommé), `map_gallery.gd` (tuile sélectionnée sans halo).
+- **Lot 2** (`ec82fff`) : `player.gd`, constantes `ECHO_AU_SOL_*`.
+- **Lot 5** (`4fa397f`) : `footprint.gd`, `bullet_casing.gd`,
+  `training_target_visual.gd` ; `tools/apercu_traces.gd` + `.tscn` créés (un
+  aperçu à ×6 de ce qu'aucun plan du photographe ne montre).
+- **Lot 6** (`c05eca6`) : `gadget_braises.gd`, `gadget_torche_fantome.gd`,
+  `assets/sprites/gadget_nappe_braises.png` (source conservée dans
+  `assets/sources/encre/`).
+- **Lot 3** (`c8a093c`) : `fusee.gd` (cœur), `nappe_fusee.gdshader`.
+- **Lot 1** : `candela_tileset.gd` (dalles dessinées ; `orientation()`
+  inchangée). Les tuiles peintes `assets/tuiles/` restent pour le banc
+  `apercu_matiere`.
+
+Non touchés, sur verdict : l'éditeur de cartes (« pour l'instant on laisse »),
+le lot 4 (l'additif du monde : `arena_decor.gd`, `particle_pool.gd`,
+`bullet.gd`, `releve_balistique.gd`) en attente de sa décision. Rien n'est
+poussé : Adrien n'a pas donné l'ordre cette fois.
