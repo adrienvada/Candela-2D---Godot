@@ -113,6 +113,10 @@ func _init() -> void:
 	# Elle n'assombrit rien : voir la note de tête, et `GadgetMine` qui a payé la
 	# même leçon une étape plus tôt.
 	occulte_la_lumiere = false
+	# Le repère du poseur (étape 28) : la zone qui BRÛLE. Dessiné sous la nappe, il
+	# ne se voit que là où la peinture ne couvre pas (le garde n'exige que 90 %) ou
+	# pâlit (35 % en fin de vie) — le bord qui manque. Voir `GadgetBase.Z_REPERE`.
+	rayon_repere = RAYON
 
 
 ## Pas d'occluder : des charbons au sol ne portent pas d'ombre, et un occluder

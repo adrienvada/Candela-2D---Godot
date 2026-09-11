@@ -2970,6 +2970,10 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	if g.est_basculable():
 		# Posée ALLUMÉE si la batterie le permet : la pose est le premier allumage.
 		g.set("actif", actif_initial)
+	# Le repère du poseur (étape 28) n'existe que là où SA vue existe : en ligne,
+	# la machine de l'adversaire ne le crée même pas. Rien ne voyage — la logique
+	# du cadenas de torche. Posé AVANT l'entrée dans l'arbre : `_ready()` le lit.
+	g.repere_ici = _vue_du_joueur_ici(pid)
 	# L'hôte dira au client chaque mort de ce gadget — balle ou fin de vie.
 	g.detruit.connect(_sur_gadget_detruit)
 	# Le même conteneur que les balles et les fusées : c'est lui que la manche
@@ -3811,6 +3815,19 @@ func _local_player_index() -> int:
 		NetworkManager.GameMode.ONLINE_HOST: return 0
 		NetworkManager.GameMode.ONLINE_CLIENT: return 1
 		_: return -1
+
+## Ce pair montre-t-il la vue du joueur `pid` ? Les deux en local — écran scindé,
+## entraînement, bac à sable —, le seul joueur local en ligne. La règle de
+## `player._percu_ici()`, pour ce qui n'appartient qu'aux yeux de son joueur (le
+## repère du poseur, étape 28).
+##
+## ⚠️ **Le MODE, pas le type du fournisseur d'entrées** : le photographe remplace
+## les fournisseurs par des marionnettes, et une règle par type ferait disparaître
+## le repère de ses photos, en silence. À l'entraînement, J2 garde donc le sien — sur
+## la vue de J2, que l'entraînement ne montre pas.
+func _vue_du_joueur_ici(pid: int) -> bool:
+	var local := _local_player_index()
+	return local < 0 or local == pid
 
 func _mode_label() -> String:
 	match NetworkManager.current_mode:

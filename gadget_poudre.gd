@@ -111,6 +111,9 @@ func _init() -> void:
 	eblouit = false
 	angle_pose = 0.0
 	occulte_la_lumiere = false
+	# Le repère du poseur (étape 28) : dans le noir, la poudre n'existe pas — même
+	# pour qui l'a répandue. La zone où un pas se marque.
+	rayon_repere = RAYON
 
 
 ## Pas d'occluder : de la poudre au sol ne porte pas d'ombre — et le socle en

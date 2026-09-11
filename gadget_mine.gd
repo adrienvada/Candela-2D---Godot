@@ -87,6 +87,10 @@ func _init() -> void:
 	# `game_state._ligne_de_vue_depuis()` d'accord avec la réalité : sans lui, la
 	# mine arrêterait l'aveuglement sans arrêter le faisceau.
 	occulte_la_lumiere = false
+	# Le repère du poseur (étape 28) : le rayon qui DÉCLENCHE, pas celui qui
+	# aveugle — c'est là qu'il ne doit pas remettre les pieds. « Aucune veilleuse »
+	# tient toujours : le repère n'existe que sur la vue du poseur.
+	rayon_repere = RAYON_DECLENCHEMENT
 
 
 ## Pas d'occluder, et c'est CE QUI RÉPARE SON PROPRE FLASH.
@@ -128,6 +132,9 @@ func allumer() -> void:
 	if _allumee:
 		return
 	_allumee = true
+	# Allumée, elle ne se déclenche plus : le repère n'a plus rien à dire.
+	if _repere != null:
+		_repere.visible = false
 	rayon_eblouissement = RAYON_EBLOUISSEMENT
 	# ⚠️ La fin se règle par la durée de vie du socle plutôt que par un second
 	# compteur : `GadgetBase` compare déjà `age()` à `duree_vie`, et deux

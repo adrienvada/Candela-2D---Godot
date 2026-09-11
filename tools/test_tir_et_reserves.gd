@@ -19,7 +19,9 @@ extends SceneTree
 ##     disque, et le VOILE qui recule hors des corps à la pose (28) ;
 ##   • les REFUS de fusée et de gadget qui se sentent, et les JAUGES de recharge
 ##     sous les cartouches — l'attente de la fusée dite au client par l'hôte
-##     (28, lot C).
+##     (28, lot C) ;
+##   • le REPÈRE du poseur — un cercle ténu du rayon d'effet, sur sa seule vue,
+##     et en ligne chez lui seulement (28, lot D).
 ##
 ## ⚠️ **Fichier séparé de `test_classes.gd`, et ce n'est pas un rangement.** Une
 ## autre session réécrit la partie interface de celui-là le même jour. Deux diffs
@@ -133,6 +135,7 @@ func _run() -> void:
 	await _test_ombre_plaque(gs)
 	await _test_voile_hors_des_corps(gs)
 	_test_sprites_des_gadgets(gs)
+	_test_repere_du_poseur(gs)
 	await _test_diffus_intouchables(gs)
 	await _test_suie_masque(gs)
 	# ⚠️ En DERNIER : le vrai départ de manche pose l'arène, les armes et le décompte.
@@ -1434,6 +1437,220 @@ func _test_sprites_des_gadgets(gs: Node) -> void:
 	t.free()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ÉTAPE 28, LOT D — le repère du poseur (2026-09-11)
+# ═══════════════════════════════════════════════════════════════════════════
+
+## La classe dont le gadget porte ce slug, ou `null`.
+func _classe_du_gadget(gs: Node, slug: String):
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c != null and c.gadget != null and String(c.gadget.slug) == slug:
+			return c
+	return null
+
+
+## Une constante d'un script de gadget, lue par son CHEMIN : la valeur qui DÉCIDE
+## l'effet, pas un chiffre recopié ici.
+func _constante(chemin: String, nom: String) -> float:
+	return float(load(chemin).get_script_constant_map()[nom])
+
+
+## Point 10 de l'après-étape 27 — le repère du poseur (lot D ; Adrien, 2026-09-11 :
+## « pas grave si en écran scindé l'autre le voit »). Un cercle ténu du rayon
+## d'effet, sur la vue de son poseur seule ; en ligne, chez lui seulement.
+##
+## ⚠️ **Le mode est FORCÉ** — sans pair, `_apply_network_mode` retombe en local — et
+## aucune image ne tourne entre la bascule et sa restauration : `_do_spawn_gadget`
+## lit le mode une fois, à la pose. L'état réel se voit à la capture (plan `repere`
+## du photographe). ⚠️ `NetworkManager` par son NŒUD (`_nm()`), ses modes par
+## CHAÎNE (`_mode()`) : une suite en `--script` qui le nommerait cesserait de
+## compiler en entier.
+func _test_repere_du_poseur(gs: Node) -> void:
+	print("\n[Le repère du poseur : sur sa vue, et chez lui seulement]")
+	var avec := {
+		"mine_magnesium": _constante("res://gadget_mine.gd", "RAYON_DECLENCHEMENT"),
+		"nappe_braises": _constante("res://gadget_braises.gd", "RAYON"),
+		"gresillement": _constante("res://gadget_gresillement.gd", "RAYON"),
+		"poudre_contact": _constante("res://gadget_poudre.gd", "RAYON"),
+	}
+	# Sans repère, et pourquoi : le voile, l'ombre et le leurre SONT des objets
+	# qu'on voit ; la torche fantôme est une lampe ; dans la suie et la poussière,
+	# le poseur se lit sur son propre corps, qui s'y efface ou y pâlit.
+	var sans := ["voile", "ombre_habitee", "torche_fantome", "cartouche_suie",
+		"poussiere", "leurre"]
+	var oublies: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		if not avec.has(slug) and not sans.has(slug):
+			oublies.append(String(slug))
+	_check("chaque gadget a un repère, ou une raison de ne pas en avoir",
+		oublies.is_empty(), str(oublies))
+	var faux: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		if not is_equal_approx(float(g.rayon_repere), float(avec.get(slug, 0.0))):
+			faux.append("%s : %.0f" % [slug, g.rayon_repere])
+		g.free()
+	_check("le rayon du repère est celui qui DÉCIDE l'effet, et zéro ailleurs",
+		faux.is_empty(), str(faux))
+
+	var nm := _nm()
+	var mode_avant = nm.current_mode
+	var classes_avant := [gs.p1.current_weapon, gs.p2.current_weapon]
+	var poses_avant: Array = gs._gadgets_poses_par.duplicate()
+	var sandbox_avant: bool = gs.sandbox_mode
+	var manche_avant: bool = gs.round_active
+	gs.sandbox_mode = true
+	var murs: CanvasItem = gs.arena.get_node_or_null("CustomWalls")
+	_check("témoin : les murs de l'arène existent — la profondeur a un repère", murs != null)
+	var classe_mine = _classe_du_gadget(gs, "mine_magnesium")
+	_check("une classe porte la mine", classe_mine != null)
+	if classe_mine == null or murs == null:
+		return
+	gs.p1.equip_weapon(classe_mine)
+	gs.p2.equip_weapon(classe_mine)
+
+	# ── Qui le voit : local, hôte, client ────────────────────────────────────
+	# Le cas local crée les DEUX repères : les absences en ligne ne passent donc pas
+	# faute de création.
+	var cas := [
+		[_mode("LOCAL_SPLITSCREEN"), "local", [true, true]],
+		[_mode("ONLINE_HOST"), "hôte", [true, false]],
+		[_mode("ONLINE_CLIENT"), "client", [false, true]],
+	]
+	for c in cas:
+		_vider(gs)
+		nm.current_mode = c[0]
+		for pid in 2:
+			gs._do_spawn_gadget(pid, Vector2(600.0 + 500.0 * pid, 400.0), 0.0,
+				"mine_magnesium", 980 + pid)
+		nm.current_mode = mode_avant
+		for pid in 2:
+			var poses := _gadgets_de(gs, pid)
+			if poses.size() != 1:
+				_check("%s, J%d : la mine est posée" % [c[1], pid + 1], false, str(poses.size()))
+				continue
+			var r: Line2D = poses[0].get_node_or_null("Repere")
+			var attendu: bool = c[2][pid]
+			_check("%s, J%d : repère %s" % [c[1], pid + 1, "présent" if attendu else "absent"],
+				(r != null) == attendu)
+			if r == null:
+				continue
+			_verifier_repere(gs, r, pid, avec["mine_magnesium"], murs,
+				"%s, J%d" % [c[1], pid + 1])
+
+	# ── Les quatre gadgets, chez leur poseur ─────────────────────────────────
+	for slug in avec:
+		_vider(gs)
+		var classe = _classe_du_gadget(gs, slug)
+		if classe == null:
+			_check("une classe porte %s" % slug, false)
+			continue
+		gs.p1.equip_weapon(classe)
+		nm.current_mode = _mode("LOCAL_SPLITSCREEN")
+		gs._do_spawn_gadget(0, Vector2(600.0, 400.0), 0.0, slug, 990)
+		nm.current_mode = mode_avant
+		var poses := _gadgets_de(gs, 0)
+		if poses.size() != 1:
+			_check("%s : posé" % slug, false, str(poses.size()))
+			continue
+		var g = poses[0]
+		var r: Line2D = g.get_node_or_null("Repere")
+		_check("%s : un repère autour de lui" % slug, r != null)
+		if r == null:
+			continue
+		_verifier_repere(gs, r, 0, float(avec[slug]), murs, slug)
+		if slug == "nappe_braises":
+			var nappe: CanvasItem = g.get_node_or_null("Visuel")
+			_check("braises : le repère passe SOUS la nappe — il ne se voit que là où elle ne couvre pas",
+				nappe != null and _z_absolu(r) < _z_absolu(nappe),
+				"repère %d, nappe %s" % [_z_absolu(r), str(_z_absolu(nappe)) if nappe != null else "absente"])
+		if slug == "gresillement":
+			var etats: Array[bool] = []
+			for actif in [false, true]:
+				g.set("actif", actif)
+				# Un pas de sa physique : un repère qui suivrait l'état s'y cacherait.
+				g._physics_process(0.0)
+				etats.append(r.is_visible_in_tree())
+			_check("grésillement : le même repère, allumé ou éteint",
+				etats == [true, true] and g.est_basculable(), str(etats))
+
+	# ── Allumée, la mine ne se déclenche plus : son repère se tait ──────────
+	_vider(gs)
+	gs.p1.equip_weapon(classe_mine)
+	nm.current_mode = _mode("LOCAL_SPLITSCREEN")
+	gs._do_spawn_gadget(0, Vector2(600.0, 400.0), 0.0, "mine_magnesium", 995)
+	nm.current_mode = mode_avant
+	var m := _gadgets_de(gs, 0)
+	_check("la mine témoin est posée", m.size() == 1, str(m.size()))
+	if m.size() == 1:
+		var r: Line2D = m[0].get_node_or_null("Repere")
+		# Témoin : visible AVANT l'allumage — sinon « caché » passerait pour rien.
+		var avant := r != null and r.is_visible_in_tree()
+		m[0].allumer()
+		_check("la mine allumée cache son repère (visible avant, caché après)",
+			avant and r != null and not r.is_visible_in_tree())
+
+	_vider(gs)
+	gs._gadget_attente.fill(0.0)
+	for i in poses_avant.size():
+		gs._gadgets_poses_par[i] = poses_avant[i]
+	for pid in 2:
+		if classes_avant[pid] != null:
+			(gs.p1 if pid == 0 else gs.p2).equip_weapon(classes_avant[pid])
+	nm.current_mode = mode_avant
+	gs.sandbox_mode = sandbox_avant
+	gs.round_active = manche_avant
+
+
+## Ce que tout repère doit être, là où il existe : visible, sur la vue de son poseur
+## et nulle part ailleurs, dans le noir, DESSINÉ (alpha, largeur, teinte), du rayon
+## d'effet autour du gadget, au-dessus des murs et sous les corps. Comparé au VRAI corps du poseur et aux VRAIS masques de cull.
+func _verifier_repere(gs: Node, r: Line2D, pid: int, rayon_attendu: float,
+		murs: CanvasItem, qui: String) -> void:
+	var corps_soi: CanvasItem = (gs.p1 if pid == 0 else gs.p2).visual
+	var vue_soi: SubViewport = gs.vp1 if pid == 0 else gs.vp2
+	var vue_autre: SubViewport = gs.vp2 if pid == 0 else gs.vp1
+	# D'abord, ce qu'on mesure est-il visible ? Un repère caché passerait tous les
+	# contrôles qui suivent sans jamais être dessiné (piège « Vert seul, rouge dans le lot »).
+	_check("%s : le repère est visible dans l'arbre" % qui, r.is_visible_in_tree())
+	_check("%s : sur la vue de son poseur, et nulle part ailleurs" % qui,
+		r.visibility_layer == corps_soi.visibility_layer
+			and (r.visibility_layer & vue_soi.canvas_cull_mask) != 0
+			and (r.visibility_layer & vue_autre.canvas_cull_mask) == 0,
+		"couche %d" % r.visibility_layer)
+	_check("%s : visible dans le noir (non éclairé)" % qui,
+		r.material is CanvasItemMaterial
+			and r.material.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED)
+	# DESSINÉ, pas seulement « visible dans l'arbre » : un trait d'alpha nul, trop fin
+	# ou noir passe tout ce qui précède sans rien montrer (trouvé en revue, 2026-09-11 :
+	# `ALPHA_REPERE` à 0 laissait la suite verte). Des PLANCHERS de visibilité, pas le
+	# dosage : 0,28 et 1,5 px restent à valider par Adrien sur la planche. La teinte
+	# est celle que le moteur peint — couleur du trait, puis chaque `modulate` jusqu'à
+	# la racine ; un `gradient` remplacerait la couleur, une `width_curve` la largeur.
+	var teinte := _teinte_dessinee(r)
+	_check("%s : un trait qui se voit (alpha ≥ 0,1, largeur ≥ 1 px, teinte claire)" % qui,
+		r.gradient == null and r.width_curve == null and r.width >= 1.0
+			and teinte.a >= 0.1 and teinte.get_luminance() >= 0.3,
+		"alpha %.2f, largeur %.2f, luminance %.2f" % [teinte.a, r.width, teinte.get_luminance()])
+	# Le cercle mesuré dans le repère du GADGET, là où l'effet se décide : mesuré dans
+	# celui du trait, un `Line2D` décalé de 40 px passait (trouvé en revue).
+	var gadget: Node2D = r.get_parent()
+	var ecart := 0.0
+	for p in r.points:
+		ecart = maxf(ecart, absf(gadget.to_local(r.to_global(p)).length() - rayon_attendu))
+	_check("%s : un cercle fermé du rayon d'effet (%.0f), centré sur le gadget" % [qui, rayon_attendu],
+		r.closed and r.points.size() >= 48 and ecart < 0.01,
+		"%d points, écart %.3f" % [r.points.size(), ecart])
+	# Sous le gadget lui-même aussi : en profondeur RELATIVE, le trait passerait par-
+	# dessus l'image de la mine ou de la bobine qu'il entoure.
+	_check("%s : au-dessus des murs, sous le gadget et sous les corps" % qui,
+		_z_absolu(r) > _z_absolu(murs) and _z_absolu(r) < _z_absolu(gadget)
+			and _z_absolu(r) < _z_absolu(corps_soi),
+		"repère %d, murs %d, gadget %d, corps %d" % [_z_absolu(r), _z_absolu(murs),
+			_z_absolu(gadget), _z_absolu(corps_soi)])
+
+
 ## La profondeur de dessin RÉELLE d'un nœud : ses `z_index` cumulés jusqu'au
 ## premier ancêtre qui ne se dit plus relatif.
 func _z_absolu(n: CanvasItem) -> int:
@@ -1445,6 +1662,18 @@ func _z_absolu(n: CanvasItem) -> int:
 			break
 		courant = courant.get_parent()
 	return z
+
+
+## La teinte qu'un trait PEINT : sa couleur, multipliée par son `self_modulate` et
+## par le `modulate` de chaque ancêtre jusqu'au premier nœud qui n'est plus un
+## `CanvasItem` — ce qu'un `modulate.a` à 0 posé plus haut éteindrait en silence.
+func _teinte_dessinee(l: Line2D) -> Color:
+	var c := l.default_color * l.self_modulate
+	var courant: Node = l
+	while courant is CanvasItem:
+		c *= (courant as CanvasItem).modulate
+		courant = courant.get_parent()
+	return c
 
 
 ## « Il ne faut pas pouvoir détruire un gadget gazeux ou diffus avec des balles. On

@@ -45,11 +45,19 @@ extends GadgetBase
 ## lui-même une ombre en étoile et une zone de touche ronde.
 const RAYON_CORPS := 18.0
 
+## Le shader d'un corps ADVERSE, par son CHEMIN — jamais `Player.SHADER_ENEMY_LIGHT`
+## (voir `_monter_visuel`). La même ressource que celle de `player.gd`, rendue par le
+## cache : rien à recompiler, aucun hoquet à la première pose.
+const SHADER_CORPS_ADVERSE := preload("res://player_enemy_light.gdshader")
+
 ## L'étoile de son ombre, dans son repère — celle que porte l'occluder, et que la
 ## ligne de vue d'éblouissement lit (`coupe_le_regard`).
 var _etoile := PackedVector2Array()
 var _occluder: LightOccluder2D
+## Le corps tel que l'ADVERSAIRE le voit — le patron de `visual_enemy`.
 var _visuel: Polygon2D
+## Le corps tel que le POSEUR le voit, sur sa seule vue (étape 28).
+var _visuel_poseur: Polygon2D
 
 
 func _init() -> void:
@@ -121,6 +129,16 @@ func _monter_occluder() -> void:
 ## ⚠️ Et `empreinte_sprite()` plutôt que la largeur brute de la texture : c'est le
 ## piège que le chantier R a levé le 2026-08-25, recuire un asset
 ## redimensionnerait le corps.
+##
+## ⚠️ **Un corps par vue, comme un joueur** (étape 28, 2026-09-11). Jusque-là, un
+## seul polygone, sur les trois masques de lumière et sans shader, dans les deux
+## vues : il recevait l'écho au sol d'un tir, la lumière d'impact et les étincelles —
+## qu'aucun corps ADVERSE ne reçoit (les deux derniers atteignent le corps PROPRE,
+## masque 4 — et donc aussi `VisuelPoseur`) — et suivait le dégradé du cookie là où un corps adverse
+## est un aplat plafonné. Il se trahissait par ce qu'il avait EN PLUS. Les deux
+## polygones naissent de `poseur_id` et de `classe_du_poseur`, que les deux pairs
+## connaissent : rien de neuf sur le fil. Chaque vue coupe celui qui ne la regarde
+## pas — le patron exact de `player.gd` (`visual` / `visual_enemy`).
 func _monter_visuel() -> void:
 	var tex := _silhouette()
 	if tex == null:
@@ -132,8 +150,33 @@ func _monter_visuel() -> void:
 	# dans la charte pour cette raison ; voir sa note là-bas.
 	var demi := Vector2(Charte.empreinte_sprite(tex.get_width()),
 		Charte.empreinte_sprite(tex.get_height())) * 0.5
+	# Le corps que voit l'ADVERSAIRE : `visual_enemy` trait pour trait — masque de
+	# lumière 2, shader du corps adverse, couche de la vue de l'AUTRE joueur. Le nom
+	# « Visuel » lui reste : c'est lui qui trompe.
+	_visuel = _corps_de_silhouette("Visuel", tex, demi)
+	_visuel.light_mask = 2
+	var mat := ShaderMaterial.new()
+	mat.shader = SHADER_CORPS_ADVERSE
+	_visuel.material = mat
+	_visuel.visibility_layer = GadgetBase.couche_de_vue(1 - poseur_id)
+	# Le corps que voit le POSEUR : sur sa vue seule, sous les lumières de son propre
+	# corps (masque 4) mais SANS le shader adverse — ni celui de son corps à lui,
+	# ni son image peinte : c'est le leurre qu'il a planté, pas lui. Il le voit pour
+	# le placer, pas pour se tromper.
+	#
+	# ⚠️ **Conséquence à l'entraînement** : seule la vue de J1 y est rendue, donc
+	# Adrien n'y verra plus son leurre tel que l'adversaire le voit — seule une
+	# capture (plan `leurre` du photographe) le montre.
+	_visuel_poseur = _corps_de_silhouette("VisuelPoseur", tex, demi)
+	_visuel_poseur.light_mask = 4
+	_visuel_poseur.visibility_layer = GadgetBase.couche_de_vue(poseur_id)
+
+
+## Un corps : la silhouette, à l'empreinte du joueur, à la teinte d'un adversaire.
+## Ce que les deux vues partagent vit ICI, pour qu'elles ne divergent jamais.
+func _corps_de_silhouette(nom: String, tex: Texture2D, demi: Vector2) -> Polygon2D:
 	var corps := Polygon2D.new()
-	corps.name = "Visuel"
+	corps.name = nom
 	corps.polygon = PackedVector2Array([
 		Vector2(-demi.x, -demi.y), Vector2(demi.x, -demi.y),
 		Vector2(demi.x, demi.y), Vector2(-demi.x, demi.y)])
@@ -148,15 +191,9 @@ func _monter_visuel() -> void:
 	corps.uv = PackedVector2Array([
 		Vector2.ZERO, Vector2(tex.get_width(), 0.0),
 		Vector2(tex.get_width(), tex.get_height()), Vector2(0.0, tex.get_height())])
-	# ⚠️ **Les trois couches à la fois**, là où un joueur en choisit une par vue.
-	# Un leurre n'appartient à personne : s'il ne s'allumait que sur la couche des
-	# ennemis, son poseur ne le verrait jamais et le planterait à l'aveugle ; s'il
-	# ne s'allumait que sur celle du joueur local, l'adversaire ne le verrait pas
-	# du tout et il ne tromperait personne.
-	corps.light_mask = 1 | 2 | 4
 	corps.z_index = 6
 	add_child(corps)
-	_visuel = corps
+	return corps
 
 
 ## Dans la suie, il disparaît comme un corps — silhouette ET ombre —, et pâlit
@@ -168,8 +205,12 @@ func _physics_process(delta: float) -> void:
 	if is_queued_for_deletion() or not is_inside_tree():
 		return
 	var e := GadgetBase.effacements_a(get_tree(), global_position)
-	if _visuel != null:
-		_visuel.modulate.a = 1.0 - maxf(e.x, e.y)
+	# Les DEUX corps (étape 28) : celui que voit l'adversaire, et celui que voit le
+	# poseur — qui doit voir son leurre s'effacer là où l'autre le perd.
+	var a := 1.0 - maxf(e.x, e.y)
+	for v in [_visuel, _visuel_poseur]:
+		if v != null:
+			v.modulate.a = a
 	if _occluder != null:
 		_occluder.visible = e.y < SEUIL_OMBRE_MASQUEE
 

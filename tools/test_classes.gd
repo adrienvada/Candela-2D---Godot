@@ -1866,6 +1866,11 @@ func _test_leurre() -> void:
 		_check("dans la suie, sa silhouette disparaît comme celle d'un corps",
 			leurre._visuel != null and leurre._visuel.modulate.a < 0.02,
 			"%.3f" % (leurre._visuel.modulate.a if leurre._visuel != null else -1.0))
+		# Étape 28 : le corps que voit le POSEUR s'efface avec — il doit voir son
+		# leurre disparaître là où l'adversaire le perd.
+		_check("et son corps côté poseur aussi",
+			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a < 0.02,
+			"%.3f" % (leurre._visuel_poseur.modulate.a if leurre._visuel_poseur != null else -1.0))
 		_check("et son ombre avec", leurre._occluder != null and not leurre._occluder.visible)
 		_check("et plus rien n'y arrête l'éblouissement, comme la lumière",
 			not leurre.coupe_le_regard(leurre.global_position - Vector2(200.0, 0.0),
@@ -1876,6 +1881,9 @@ func _test_leurre() -> void:
 		_check("la suie partie, il réapparaît avec son ombre",
 			leurre._visuel.modulate.a > 0.98 and leurre._occluder.visible,
 			"%.3f" % leurre._visuel.modulate.a)
+		_check("et son corps côté poseur réapparaît aussi",
+			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a > 0.98,
+			"%.3f" % (leurre._visuel_poseur.modulate.a if leurre._visuel_poseur != null else -1.0))
 
 	# ── L'ÉBLOUISSEMENT LIT L'OMBRE, PAS LA ZONE DE TOUCHE (trouvé en revue) ─────
 	# Le rayon d'éblouissement heurtait le disque de 18 : ébloui dans l'ombre du
@@ -1956,6 +1964,74 @@ func _test_leurre() -> void:
 		_check("à l'empreinte du joueur, pas à la taille brute de la texture",
 			is_equal_approx(largeur, Charte.empreinte_sprite(corps.texture.get_width())),
 			"%.1f" % largeur)
+
+	# ── VUE PAR VUE (étape 28, lot D, 2026-09-11) ────────────────────────────
+	# Un corps par vue, comme un joueur : celui que voit l'ADVERSAIRE est
+	# `visual_enemy` trait pour trait, celui que voit le POSEUR vit sur sa vue seule.
+	# Tout se compare aux nœuds du VRAI joueur et aux VRAIS masques de cull : ce sont
+	# eux la source, pas un 2 ou un 4 recopiés ici. Chaque « absent de l'autre vue »
+	# a sa moitié positive : une couche 0 (le cri de `couche_de_vue`) ne passe pas.
+	var adv: Polygon2D = leurre.get_node_or_null("Visuel")
+	var soi: Polygon2D = leurre.get_node_or_null("VisuelPoseur")
+	var ve: Polygon2D = gs.p1.visual_enemy   # J1 tel que J2 le voit
+	var vs: Polygon2D = gs.p1.visual         # J1 tel qu'il se voit
+	_check("deux corps : l'un pour l'adversaire, l'autre pour le poseur",
+		adv != null and soi != null)
+	if adv != null and soi != null:
+		# Ce qu'on mesure doit d'abord être visible : un nœud caché passerait tous les
+		# contrôles de couche sans jamais être dessiné.
+		_check("les deux corps sont visibles dans l'arbre",
+			adv.is_visible_in_tree() and soi.is_visible_in_tree())
+		_check("le corps vu par l'adversaire a le masque de lumière d'un corps adverse",
+			adv.light_mask == ve.light_mask, "%d contre %d" % [adv.light_mask, ve.light_mask])
+		_check("et le même shader que lui",
+			adv.material is ShaderMaterial and ve.material is ShaderMaterial
+				and adv.material.shader != null and adv.material.shader == ve.material.shader)
+		_check("il n'est dessiné que dans la vue de l'adversaire",
+			adv.visibility_layer == ve.visibility_layer
+				and (adv.visibility_layer & gs.vp2.canvas_cull_mask) != 0
+				and (adv.visibility_layer & gs.vp1.canvas_cull_mask) == 0,
+			"couche %d" % adv.visibility_layer)
+		_check("le corps du poseur n'est dessiné que dans SA vue",
+			soi.visibility_layer == vs.visibility_layer
+				and (soi.visibility_layer & gs.vp1.canvas_cull_mask) != 0
+				and (soi.visibility_layer & gs.vp2.canvas_cull_mask) == 0,
+			"couche %d" % soi.visibility_layer)
+		_check("sous les lumières de son propre corps (masque 4), sans le shader adverse",
+			soi.light_mask == vs.light_mask and soi.material == null,
+			"masque %d" % soi.light_mask)
+		_check("même silhouette, même taille, même teinte, même profondeur",
+			soi.texture == adv.texture and soi.polygon == adv.polygon
+				and soi.uv == adv.uv and soi.color.is_equal_approx(adv.color)
+				and soi.z_index == adv.z_index)
+	# Posé par J2 : les deux couches se DÉDUISENT du poseur — un 2 ou un 4 écrit en
+	# dur passerait les contrôles de J1.
+	gs.p2.equip_weapon(gs.weapon_for_index(1))
+	gs._do_spawn_gadget(1, Vector2(900.0, 400.0), 0.0, "leurre", 961)
+	var adv2: Polygon2D = null
+	var soi2: Polygon2D = null
+	var leurres_j2 := 0
+	for g in gs.get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and not g.is_queued_for_deletion() \
+				and g is GadgetLeurre and g.poseur_id == 1:
+			leurres_j2 += 1
+			adv2 = g.get_node_or_null("Visuel")
+			soi2 = g.get_node_or_null("VisuelPoseur")
+	_check("J2 a posé un leurre, un seul", leurres_j2 == 1, str(leurres_j2))
+	_check("posé par J2, son corps adverse vit dans la vue de J1",
+		adv2 != null and adv2.visibility_layer == gs.p2.visual_enemy.visibility_layer
+			and (adv2.visibility_layer & gs.vp1.canvas_cull_mask) != 0
+			and (adv2.visibility_layer & gs.vp2.canvas_cull_mask) == 0,
+		str(adv2.visibility_layer) if adv2 != null else "absent")
+	_check("et son corps côté poseur, dans celle de J2",
+		soi2 != null and soi2.visibility_layer == gs.p2.visual.visibility_layer
+			and (soi2.visibility_layer & gs.vp2.canvas_cull_mask) != 0
+			and (soi2.visibility_layer & gs.vp1.canvas_cull_mask) == 0,
+		str(soi2.visibility_layer) if soi2 != null else "absent")
+	# Témoin : le leurre de J1 est toujours là — reposer ne déplace que le gadget du
+	# MÊME poseur. Sans lui, les contrôles de J2 pourraient lire un arbre vidé.
+	_check("témoin : le leurre de J1 tient toujours",
+		is_instance_valid(leurre) and not leurre.is_queued_for_deletion())
 
 	# ── IL EST INERTE ────────────────────────────────────────────────────────
 	_check("il n'éblouit pas", not leurre.eblouit)

@@ -82,6 +82,42 @@ var arrete_les_joueurs: bool = false
 ## ⚠️ **Lu dans `_ready()`**, comme `arrete_les_joueurs` : réglé dans `_init()`.
 var touche_par_les_balles: bool = true
 
+## Le rayon du REPÈRE que le poseur voit autour de ce gadget, ou 0 : pas de repère.
+##
+## Étape 28 (2026-09-11) : réglé dans `_init()` par les gadgets dont le bord de la
+## zone d'effet ne se lit pas au pixel dans le noir — la mine (72), les braises
+## (68), le grésillement (240), la poudre (110). C'est la liste du plancher validé,
+## tirée d'`IMPLEMENTATIONS` et tenue par `tools/test_tir_et_reserves.gd` : un
+## onzième gadget doit s'y ranger d'un côté ou de l'autre. Le rayon est celui qui
+## DÉCIDE l'effet, jamais une valeur voisine.
+##
+## ⚠️ **Lu dans `_ready()`**, comme `rayon`.
+var rayon_repere: float = 0.0
+
+## Ce pair montre-t-il la vue du poseur ? Posé par `GameState._do_spawn_gadget()`
+## AVANT l'entrée dans l'arbre, comme `poseur_id` — un gadget ne nomme aucun
+## autoload, il ne peut donc pas le savoir seul.
+##
+## Faux par défaut : un gadget monté hors du jeu (une suite, un banc) n'a pas de
+## repère. En ligne, la machine de l'adversaire ne le crée donc JAMAIS : aucune
+## bascule de rendu, aucune killcam ne peut le révéler — la logique du cadenas de
+## torche, une information locale qui ne voyage pas.
+var repere_ici: bool = false
+
+const POINTS_REPERE := 96
+const LARGEUR_REPERE := 1.5
+## Ténu : la famille du viseur (`player.gd`), qui dit aussi « à moi seul ». Dosage à
+## valider sur la planche, avec la largeur.
+const ALPHA_REPERE := 0.28
+## Profondeur ABSOLUE : au-dessus du sol (−1), des murs (0) et des traces de poudre
+## (1), sous les gadgets (4) et les corps (10) — et donc SOUS la nappe des braises
+## (4 + 3) : il ne s'y voit que là où la peinture ne couvre pas ou pâlit, soit
+## exactement le bord qui manque. Voir le piège « Deux `z_index` de parents
+## différents ne se comparent pas ».
+const Z_REPERE := 2
+
+var _repere: Line2D = null
+
 ## Ce gadget peut-il éblouir ? Recopié du profil de classe à la construction —
 ## par INSTANCE, jamais par type (décision d'Adrien, 2026-09-09) : on doit
 ## pouvoir éteindre l'éblouissement d'un gadget sans toucher aux autres.
@@ -181,6 +217,52 @@ func _ready() -> void:
 
 	_monter_occluder()
 	_monter_visuel()
+	_monter_repere()
+
+
+## Le repère du poseur : un cercle ténu du rayon d'effet, sur SA vue seule
+## (étape 28, 2026-09-11). Rien si `rayon_repere` vaut 0 ou si ce pair ne montre
+## pas la vue du poseur (`repere_ici`).
+##
+## ⚠️ **Non éclairé** (`materiau_peint_lumineux`) : un `light_mask` à 0 seul le
+## laisserait noir sous le `CanvasModulate` de l'arène. ⚠️ **Sa couche est posée
+## sur LUI** : un enfant n'hérite pas de la couche de son parent, et la racine du
+## gadget garde la couche 1, qui passe dans les deux vues.
+##
+## En écran scindé, l'écran d'à côté le montre — accepté par Adrien le 2026-09-11 :
+## « pas grave si en écran scindé l'autre le voit ». Aucun `_process` : le trait
+## est bâti une fois, un appel de dessin par repère.
+func _monter_repere() -> void:
+	if rayon_repere <= 0.0 or not repere_ici:
+		return
+	var l := Line2D.new()
+	l.name = "Repere"
+	var pts := PackedVector2Array()
+	for i in POINTS_REPERE:
+		pts.append(Vector2.from_angle(TAU * float(i) / POINTS_REPERE) * rayon_repere)
+	l.points = pts
+	l.closed = true
+	l.width = LARGEUR_REPERE
+	l.antialiased = true
+	l.default_color = Color(Charte.HALOGENE, ALPHA_REPERE)
+	l.material = materiau_peint_lumineux()
+	l.visibility_layer = couche_de_vue(poseur_id)
+	l.z_as_relative = false
+	l.z_index = Z_REPERE
+	add_child(l)
+	_repere = l
+
+
+## La couche de visibilité de la VUE du joueur `pid` : 2 pour J1, 4 pour J2 — la
+## règle de `player.gd` (`visual`, `visual_enemy`…), qui reste la source : les
+## suites comparent aux nœuds du vrai joueur. Un pid hors de {0, 1} ne s'affiche
+## NULLE PART et crie : la couche 1 serait les deux vues, une forme plausible qui
+## se prend pour une intention.
+static func couche_de_vue(pid: int) -> int:
+	if pid != 0 and pid != 1:
+		push_error("GadgetBase : aucune vue pour le joueur %d" % pid)
+		return 0
+	return 2 if pid == 0 else 4
 
 
 ## La forme de collision : un disque de `rayon`, dans le socle.

@@ -2469,6 +2469,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Pas de faisceau, pas de pénalité** (2026-08-24, Adrien) | `game_state._lumiere_recue` gardait un repli sur la formule analytique quand l'arme n'avait pas de texture, défendu par un commentaire affirmant qu'une torche sans cookie ne devait pas devenir « silencieusement inoffensive ». **Le raisonnement était à l'envers, et c'est en vérifiant le travail d'une autre session que je l'ai vu dans le mien** : `equip_weapon` pose `flashlight.texture = get_torch_texture()`, donc sans cookie la lumière ne rend **rien**. Le repli faisait payer une pénalité pour un faisceau que personne ne voit — **le dernier endroit du jeu qui calculait l'éblouissement depuis autre chose que l'écran**, dans un chantier dont c'était tout le sujet. Le silence redouté n'existait pas non plus : un cookie manquant lève une erreur au chargement. `lumiere_recue()` rend zéro, et ce zéro est la règle — on ne peut pas être aveuglé par une lampe éteinte. **Conséquence à connaître : `Vision.COS_DEMI_CONE` n'a plus aucun lecteur en production.** Elle reste comme défaut des fonctions analytiques, qui gardent un rôle — `intensite_recue` est la référence contre laquelle le cookie peint est validé. C'est écrit au-dessus de la constante, faute de quoi elle aurait de nouveau l'air décidée. |
 | **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. **Amendé le 2026-09-11** (étape 27, Adrien : « double leur puissance », puis « tout doubler ») : `torch_brightness` 0,3 → 0,6, éblouissement compris — pénalité à bout portant ≈ 0,43 → 0,61, le pistolet restant à 0,93. Elle reste la plus sombre des lampes ; elle cessait d'être visible du tout. |
 | **La classe adverse n'est pas annoncée au « FIGHT »** (2026-09-11, Adrien : « non ») | Proposé comme douzième suggestion après l'étape 27 : chaque pair connaît déjà la classe de l'autre dès la manche lancée (il rend son cookie et ses sons), et un encart de 1,5 s aurait dit le gadget à venir. Refusé. La proposition portait elle-même sa réserve : une information gratuite, sans être une position, qui frôle « la seule information est la lumière ». On découvre le gadget adverse en le voyant faire. |
+| **Un repère réservé au poseur, sur sa seule vue** (2026-09-11, Adrien : « pas grave si en écran scindé l'autre le voit ») | Étape 28, lot D. Un cercle ténu du rayon d'effet autour des quatre gadgets dont le bord ne se lit pas au pixel dans le noir — la mine (72, le rayon qui DÉCLENCHE), le grésillement (240, identique allumé ou éteint), la poudre (110), les braises (68, sous leur nappe) : le plancher validé, tiré d'`IMPLEMENTATIONS` et tenu par une suite. En ligne il n'existe que sur la machine du poseur — le nœud n'est même pas créé chez l'adversaire, la logique du cadenas de torche. En écran scindé, l'écran d'à côté le montre : accepté. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
@@ -18411,7 +18412,9 @@ session des effets en jeu, 2026-09-11).
 porte « Tremblements de l'interface » et « Vibrations de la manette » à 0, comme
 tous ses curseurs CONFORT (relevé le 2026-09-11) : manette en main, il ne sentirait
 rien et conclurait que rien ne se passe. Les remonter au-dessus de 0 dans les
-options — ou juger au photographe sous un `HOME` neuf. Le test calcule son attendu
+options — ou juger au photographe sous un `HOME` dont le `settings.cfg` porte
+`intro_vue=true` (sous un `HOME` neuf, il photographie l'intro au lieu du jeu :
+constaté au lot D). Le test calcule son attendu
 avec le curseur RÉEL et exige un décalage nul quand il vaut 0 ; la référence reste
 `run_suites.sh`, sous un `HOME` neuf.
 
@@ -18499,6 +18502,194 @@ batterie à 1,0 exactement, l'état de la pose.
 (« RECHARGE · 42s »). La cartographie du lot proposait de les déplacer DANS l'icône,
 comme celles du grésillement, et de ne laisser au titre que l'état. C'est un choix de
 présentation qu'il n'a pas tranché : non livré.
+
+### Étape 28 — lot D : le leurre rendu comme un corps, vue par vue, et un repère réservé au poseur ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : le point 4 — le leurre,
+un seul polygone dessiné dans les deux vues, se trahissait par ce qu'il avait EN PLUS
+d'un corps — et le point 10 — dire au poseur où s'arrête l'effet d'un gadget dont
+le bord ne se voit pas dans le noir. Rien ne passe sur le fil.
+
+**1. Le leurre, un corps par vue — le patron de `player.gd`.** Il portait un seul
+`Polygon2D` sur les trois masques de lumière (1|2|4), sans shader, sur la couche 1
+que les deux vues dessinent : il recevait l'écho au sol d'un tir (couche 1, sans
+ombre) et les étincelles (1|4, sans ombre), qu'aucun corps adverse ne reçoit, et
+suivait le dégradé des lumières là où un corps adverse est un aplat plafonné. Il
+en porte désormais deux, bâtis par la même fonction (`_corps_de_silhouette` : même
+quad, mêmes UV, même silhouette, teinte `Charte.ADVERSAIRE`, même profondeur) :
+- **`Visuel`, le corps que voit l'ADVERSAIRE** — `visual_enemy` trait pour trait :
+  masque de lumière 2, shader `player_enemy_light` préchargé par son CHEMIN (jamais
+  `Player.SHADER_ENEMY_LIGHT` : un gadget qui nommerait `Player` ferait cesser
+  `test_classes` de compiler), couche de la vue de l'autre joueur. Le nom lui reste :
+  c'est lui qui trompe.
+- **`VisuelPoseur`, le corps que voit le POSEUR** — sur sa vue seule, sous les
+  lumières de son propre corps (masque 4), SANS le shader adverse, ni celui de son
+  corps à lui, ni son image peinte : c'est le leurre qu'il a planté, pas lui. Seul
+  le masque 4 est commun avec `visual`.
+- L'effacement de l'étape 27 (suie, fumée — `GadgetBase.effacements_a`) s'applique
+  aux DEUX : le poseur voit son leurre disparaître là où l'adversaire le perd.
+- La règle des couches vit en un endroit, `GadgetBase.couche_de_vue(pid)` — 2 pour
+  J1, 4 pour J2 ; un pid hors de {0, 1} crie et rend 0 (nulle part), jamais la
+  couche 1 qui serait les deux vues. Les suites comparent aux nœuds du VRAI joueur
+  et aux VRAIS masques de cull, qui restent la source.
+
+⚠️ **À l'entraînement, seule la vue de J1 est rendue** : Adrien n'y verra plus son
+leurre tel que l'adversaire le voit. Seule une capture le montre (plan `leurre` du
+photographe).
+
+**2. Le repère du poseur** (décision actée, Adrien : « pas grave si en écran scindé
+l'autre le voit »). Un cercle ténu du rayon d'effet — un `Line2D` fermé nommé
+`Repere`, 96 points, 1,5 px, anticrénelé, `Charte.HALOGENE` à 0,28 (la famille du
+viseur) —, non éclairé (`materiau_peint_lumineux` : un `light_mask` à 0 seul le
+laisserait noir sous le `CanvasModulate`), posé sur la couche de la vue de son
+poseur, en profondeur ABSOLUE 2 : au-dessus du sol, des murs (0) et des traces de
+poudre (1), sous le gadget qu'il entoure (4), sous la nappe des braises (7) et sous
+les corps (10). Il passe donc par-dessus les murs : les quatre zones sont en
+distance pure.
+- **Quatre gadgets, le plancher validé**, chacun avec le rayon qui DÉCIDE l'effet,
+  réglé dans son `_init()` (`rayon_repere`) : la mine **72** (le déclenchement, pas
+  les 460 de l'aveuglement ; caché dès qu'elle s'allume, puisqu'elle ne se déclenche
+  plus), le grésillement **240** (le même allumé ou éteint : la zone ne bouge pas),
+  la poudre **110**, les braises **68** — dessiné SOUS leur nappe, il ne se voit que
+  là où la peinture ne couvre pas (le garde n'exige que 90 %) ou pâlit (35 % en fin
+  de vie) : le bord qui manque. Les six autres ont une raison écrite dans la suite :
+  le voile, l'ombre et le leurre SONT des objets qu'on voit, la torche fantôme est
+  une lampe, et dans la suie ou la poussière le poseur se lit sur son propre corps.
+  Un onzième gadget doit se ranger d'un côté ou de l'autre.
+- **Chez qui** : `GameState._do_spawn_gadget` pose `repere_ici` avant l'entrée dans
+  l'arbre, par `_vue_du_joueur_ici(pid)` — les deux joueurs en local, le seul joueur
+  local en ligne (la règle de `_percu_ici`). **En ligne, le nœud n'existe même pas
+  chez l'adversaire** : aucune bascule de rendu, aucune killcam ne peut le révéler —
+  la logique du cadenas de torche. Le MODE et non le type du fournisseur d'entrées :
+  le photographe remplace les fournisseurs par des marionnettes, et une règle par
+  type ferait disparaître le repère de ses photos, en silence.
+- **Le chemin de rendu racine** (en ligne, à l'entraînement) n'est pas capturable :
+  le photographe le coupe. Il est couvert par `test_rendu_racine`, qui éprouve que
+  la racine recopie le masque de cull de la vue regardée.
+- **Coût** : au plus un repère par joueur (un gadget debout chacun), un `Line2D` bâti
+  une fois, aucun `_process`, aucune passe de lumière. Non mesuré au banc :
+  `bench_framerate` ne pose aucun gadget.
+
+**3. Le fil — rien.** Aucun RPC ne vise le repère ni les deux corps : ils naissent
+de `poseur_id` et de `classe_du_poseur`, que les deux pairs connaissent déjà.
+`Protocol.VERSION` reste 17, `WIRE_WITNESS` inchangé, rien au carnet — aucun sens ne
+change (`test_protocole` vert).
+
+**Capture — le photographe, sur ce poste, mesurée au pixel (PIL).** Fenêtre
+1920×1080, sous un `HOME` dont le `settings.cfg` porte `intro_vue=true` : sous un
+`HOME` neuf, l'intro joue par-dessus la séance, et le premier passage a photographié
+ses planches au lieu du jeu (voir plus bas).
+- **Repère** (plan `repere`, écran scindé, torches éteintes, luminance le long de
+  chaque cercle) : la mine de J1 rend **44,2** sur son cercle dans la vue de J1, **0,0**
+  à 4 px dedans et dehors, et **0,0** sur le même cercle dans la vue de J2 ; la poudre
+  de J2 rend **43,7** dans la vue de J2 (0,6 et 1,0 à ±4 px), **0,0** dans celle de J1.
+  Les braises de J1 à 85 % de leur vie : **48,6** sur le cercle dans la vue de J1,
+  contre **15,0** au même endroit dans la vue de J2, où la nappe et sa lueur sont
+  seules — le trait se lit au bord de la nappe. À l'œil : le trait de 1,5 px se lit à
+  1080p, la couture du `closed` ne se voit pas. **Le dosage (alpha 0,28, 1,5 px) reste
+  à valider par Adrien sur la planche.**
+- **Leurre** (plan `leurre`, vue de J1 torche allumée ; J2 Illusionniste, torche
+  éteinte, à même distance de l'autre côté de l'axe et à la même orientation que son
+  leurre), comparé AVANT le lot (une copie de `HEAD` par `git archive`, le nouveau
+  photographe dedans) et APRÈS : sous la torche de J1, le leurre et le vrai corps
+  sont le même trou noir — disques de 6, 9 et 12 px à **0,0** sur les deux, avant
+  comme après : chacun est dans son propre occluder, que la torche ombre. **Ce que
+  le lot change se voit sous l'écho au sol d'un tir** — lueur ambre de 200 px de
+  diamètre, sans ombre, couche 1 seule, éteinte en 0,12 s —, le leurre et J2 à 60 px
+  DERRIÈRE le tireur, torche de J1 éteinte (sa rétrodiffusion éclairerait les corps
+  voisins) : **avant, le leurre s'allumait à 59,8** (disque de 6 px, les 113 pixels
+  au-dessus de 5) **quand le vrai corps restait à 2,6 ; après, 1,8 contre 2,6** (4,1
+  contre 5,7 à 9 px, 7,3 contre 9,0 à 12 px). Il fallut trois passages pour le voir :
+  à 180 px l'écho était éteint (0,0 partout, avant comme après), à 70 px devant, la
+  gerbe de l'éclat de bouche recouvrait le corps — et le 172 qu'elle donnait n'était
+  pas le corps (vérifié : `body_light` tire son énergie de la torche de SON joueur,
+  pas de la lumière reçue).
+- **En sortie, le plan `leurre` rend la visée de J2** (trouvé en revue). Il la
+  tournait vers le cap du leurre et ne la rendait pas : pendant les images sans
+  `tenir` des plans `vue` qui suivent (rétrodiffusion, flash de tir, sang), J2
+  tournait vers ce cap au lieu de la visée commune, et leur composition dépendait de
+  la présence du plan `leurre` dans la sélection — l'écart que la Marionnette devait
+  supprimer. Mesuré à la fenêtre (rotation de J2 à la prise de `retrodiffusion`) :
+  **1,5737** seul, **1,5737** après `leurre` corrigé, **2,0691** après `leurre` sans
+  la remise.
+
+**Validation** : `test_classes` (390 contrôles, dont 14 neufs), `test_tir_et_reserves`
+(341, dont 66 neufs) — tous deux aussi sous un `HOME` dont le `settings.cfg` porte
+`intro_vue=true`, l'état où le lot les fait tourner (piège « Vert seul, rouge dans le
+lot ») : verts —, `test_rendu_racine` (25), `test_vision` (40), `test_lumieres` (51),
+`test_calques_joueur` (7), `test_charte` (241), `test_protocole` (9), `test_viseur`
+(23), `test_arena_lighting` (27), `test_arena_build` (21), `test_arena_matter` (39),
+`test_sang_au_sol` (134), `test_mur_led` (61), `test_screen_calibration` (114),
+`test_banc` (16, dont les appuis du photographe, qui gagnent
+`_do_spawn_gadget`) verts, sous un `HOME` neuf. Décomptes SANS la ligne de synthèse.
+Chaque contrôle de rendu vérifie d'abord que ce qu'il mesure est visible dans l'arbre —
+et, pour le repère, qu'il est DESSINÉ : « visible dans l'arbre » ne dit rien d'un trait
+d'alpha nul. **Trouvé en revue** : `ALPHA_REPERE` à 0, ou le `Line2D` décalé de 40 px,
+laissaient toute la suite verte. Le contrôle lit désormais la teinte PEINTE (couleur
+du trait × chaque `modulate` jusqu'à la racine) contre des planchers — alpha ≥ 0,1,
+largeur ≥ 1 px, luminance ≥ 0,3, ni `gradient` ni `width_curve` —, qui ne sont pas le
+dosage, et mesure le cercle dans le repère du GADGET, là où l'effet se décide.
+Le mode réseau est FORCÉ pour la pose (sans pair, `_apply_network_mode` retombe en
+local), sans image entre la bascule et sa restauration, et lu par son NŒUD et ses
+modes par CHAÎNE (`_nm()`, `_mode()` du lot C) : une suite en `--script` qui nommerait
+`NetworkManager` cesserait de compiler en entier. Le cas local crée les deux repères :
+les absences en ligne ne passent pas faute de création. La classe des deux joueurs,
+le mode, le bac à sable et les compteurs de pose sont remis en sortie.
+**Sabotages exécutés — 18, chacun dans une COPIE du dépôt, vu rougir, après un
+témoin vert sur chaque copie intacte** : le masque du `Visuel` remis à 1|2|4 (1
+contrôle) ; son matériau retiré (1) ; les deux couches interverties (4) ;
+`couche_de_vue(1)` en dur pour `Visuel` (1 : seul le leurre de J2) ;
+`couche_de_vue(0)` en dur pour `VisuelPoseur` (1 : seul le leurre de J2) ; la boucle
+d'effacement réduite à `Visuel` (1) ; le masque de `VisuelPoseur` remis à 1|2|4 (1) ;
+la couche du repère retirée (8) ou prise sur l'autre joueur (8) ;
+`_vue_du_joueur_ici` réduite à « vrai » (2 : hôte J2 et client J1) ; `repere_ici`
+jamais posé (9) ; le matériau non éclairé retiré (8) ; la mine sur le rayon qui
+aveugle (6) ; le repère des braises retiré (2) ; la mine allumée qui garde son repère
+(1) ; `z_as_relative` retiré (8 — le trait passait à 6, par-dessus l'image du gadget :
+le premier jet du contrôle ne comparait qu'aux murs et aux corps, et laissait passer
+ce défaut ; il compare désormais aussi au gadget) ; le repère du grésillement qui
+suit son état allumé (1 — le contrôle fait tourner un pas de sa physique entre les
+deux états, sans quoi il ne voyait rien) ; `Z_REPERE` à 8, par-dessus la nappe (9).
+Le sabotage « ordre de `GameMode` » du plan est sans objet : les modes sont lus par
+leur NOM. **Cinq de plus à la revue**, dans une copie, entre deux témoins verts, et
+sous un `HOME` à `intro_vue=true` : `ALPHA_REPERE` à 0, le trait décalé de 40 px,
+`LARGEUR_REPERE` à 0,5, le trait noir, son `modulate.a` à 0 — 8 contrôles rouges
+chacun (les huit repères vérifiés).
+
+⚠️ **Signalé, non corrigé** :
+- **L'occluder du leurre** (question pour Adrien, hors du lot) : il est sur la couche
+  1, celui d'un corps sur la couche du corps de son joueur. La différence porte sur
+  les lumières dont le masque d'ombre vaut 1 seul — fusée, mine, braises, halo de la
+  torche fantôme : un vrai corps n'y fait pas d'ombre et y est éclairé, le leurre y
+  projette une ombre et reste noir dedans. Sous la lumière d'impact (ombre 1, portée
+  1|4 seulement), ni le corps adverse ni le `Visuel` du leurre (masque 2) ne sont
+  éclairés : seule y diffère l'ombre que le leurre porte au sol (corrigé en revue :
+  la première rédaction la rangeait avec les quatre autres) — et sur la FORME de
+  l'ombre sous la rétrodiffusion : un corps y oppose son disque de torse de 12, le
+  leurre son étoile. Sous la torche adverse, les deux sont dans le même cas (chacun
+  dans son propre occluder). La correction candidate demande DEUX changements —
+  l'occluder sur la couche du corps du poseur, ET un disque de torse de 12 sur sa
+  couche torse, sans lequel la rétrodiffusion adverse traverserait le leurre, ce
+  qu'elle ne fait pour aucun corps —, et l'arbitrage de l'éblouissement devrait
+  alors exclure les sources du poseur : un changement de SENS, au carnet, on reste
+  à 17. La couche 1 était un choix de l'étape 27.
+- **Le brouillage** : le jour où l'alpha du brouillage du corps cessera d'être écrasé
+  par la boucle d'occultation (déjà signalé), le `Visuel` du leurre devra le suivre, en
+  `modulate.a` seulement, sur l'éblouissement du joueur adverse — trouvé par le groupe
+  « players », jamais en nommant `Player`.
+- **Le photographe sous un `HOME` neuf photographie l'intro** : un `settings.cfg` sans
+  `intro_vue` lance l'intro à l'instanciation de `main.tscn`, et les plans `ecran` la
+  prennent (le premier passage de ce lot : une planche « ARENA » à la place de
+  l'écran scindé). Le conseil du lot C — « juger au photographe sous un `HOME`
+  neuf » — y mène tout droit ;
+- `player.gd`, note du viseur : « L'écran partagé est permanent, y compris en
+  ligne » — faux depuis le 2026-08-18 ;
+- `bullet.gd` : la traînée a pour masque d'ombre `1 | 4` — le corps de J1 (couche 4)
+  l'ombre, celui de J2 (couche 8) non : une asymétrie entre joueurs.
+
+**Questions pour Adrien** : l'occluder du leurre (ci-dessus) ; le dosage du repère sur
+la planche ; faut-il, à l'entraînement, un moyen de voir son leurre tel que
+l'adversaire le voit, ou la capture suffit-elle ?
 
 ### Ce qui reste, dans l'ordre
 
