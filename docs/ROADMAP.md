@@ -18269,7 +18269,12 @@ est une absence de résultat de recherche, pas une preuve.
 
 ---
 
-## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — PROTOTYPE, attend le jugement d'Adrien
+## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — FUSIONNÉ dans `main` le 2026-09-11, toujours derrière son drapeau
+
+**Fusionné et poussé le 2026-09-11 sur demande d'Adrien** (« c'est pas mal du
+tout » après essai, puis « commit, pull, pousse, fusionne »). Le bandeau reste
+**inerte sans `--led-murs`** : l'allumer par défaut chez les joueurs n'a pas été
+demandé, c'est une décision à part — et elle pèse, puisque la bande révèle.
 
 *« J'aimerais que les murs génèrent une légère bande de lumière faible à rythme
 lent, comme une respiration, qui révèle ce qui est proche des murs
