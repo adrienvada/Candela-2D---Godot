@@ -3929,3 +3929,13 @@ Non touchés, sur verdict : l'éditeur de cartes (« pour l'instant on laisse »
 le lot 4 (l'additif du monde : `arena_decor.gd`, `particle_pool.gd`,
 `bullet.gd`, `releve_balistique.gd`) en attente de sa décision. Rien n'est
 poussé : Adrien n'a pas donné l'ordre cette fois.
+
+### 2026-09-11 (soir) — le décor d'arène, cadence
+
+Signalement de la session « régression de cadence » (branche
+`claude/vigilant-goldstine-39f039`) : `arena_decor.gd` coûtait ~5 ms de rendu
+par image. Sur décision d'Adrien : habillage par case de mur et équerres
+retirés, chevrons et pochoirs cuits en une texture par carte (`arena_decor.gd`,
+`tools/test_arena_matter.gd`). `tools/bench_framerate.gd` relève désormais
+appels de dessin, objets et primitives par image. Le contour de `mur_encre.gd`
+reste le second coût, non traité.
