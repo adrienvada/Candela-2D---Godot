@@ -758,7 +758,7 @@ func _ready():
 	# rien. Fil repéré par la session « assets visuels ».
 	flashlight.color = Charte.HALOGENE
 	flashlight.offset = Vector2.ZERO
-	flashlight.position = Vector2(30, 0)
+	flashlight.position = Vector2(AVANCEE_LAMPE, 0)
 
 	_monter_viseur()
 	
@@ -1462,6 +1462,31 @@ func _apply_remote_interpolation() -> void:
 			return
 
 ## [Serveur / Client] Gère la physique (Sandbox autorisé).
+## Ramène la lampe (et la rétrodiffusion) du bon côté du mur.
+##
+## Un rayon du centre du corps vers l'avant, sur la couche des murs : s'il
+## touche avant `AVANCEE_LAMPE`, la lampe recule à `RETRAIT_LAMPE` du mur, sans
+## jamais entrer dans le corps (4 px au moins). Sans mur, elle reprend sa place.
+## Un rayon par image et par joueur, torche allumée seulement.
+func _rapprocher_la_lampe() -> void:
+	var x := AVANCEE_LAMPE
+	if flashlight_on and is_inside_tree():
+		var espace := get_world_2d().direct_space_state
+		var avant: Vector2 = global_transform.x.normalized()
+		var q := PhysicsRayQueryParameters2D.create(global_position,
+			global_position + avant * (AVANCEE_LAMPE + RETRAIT_LAMPE), MapGeometry.WALL_LAYER)
+		q.exclude = [get_rid()]
+		var coup: Dictionary = espace.intersect_ray(q)
+		if not coup.is_empty():
+			x = clampf(global_position.distance_to(coup["position"]) - RETRAIT_LAMPE,
+				4.0, AVANCEE_LAMPE)
+	if not is_equal_approx(flashlight.position.x, x):
+		flashlight.position.x = x
+		# La rétrodiffusion est posée à 18, le bord du corps : elle recule
+		# avec la lampe, jamais au-delà de sa place.
+		body_light.position.x = minf(18.0, x)
+
+
 func _physics_process(delta):
 	if dead: return
 	
@@ -1692,6 +1717,7 @@ func _physics_process(delta):
 	# sur la torche répliquée de l'adversaire.
 	if flashlight_on:
 		flashlight.enabled = true
+		_rapprocher_la_lampe()
 		body_light.enabled = true
 		if shoot_cooldown > 0:
 			_energie_torche = randf_range(1.5, 2.0)
@@ -2258,6 +2284,18 @@ func trigger_shoot_visuals():
 	var tw_g := create_tween()
 	tw_g.tween_property(ground_flash, "energy", 0.0, 0.12)
 	tw_g.tween_callback(ground_flash.queue_free)
+
+## Où brûle la lampe, devant le centre du corps, en unités de monde. ⚠️ **Plus
+## loin que le rayon du corps (18)** : collé à un mur, le point d'émission de la
+## torche se retrouvait 12 px À L'INTÉRIEUR du mur, et les ombres — calculées
+## depuis ce point — laissaient passer la lumière de l'autre côté. Adrien, le
+## 2026-09-11 : « si on est collé à un mur, on peut éclairer derrière ».
+## `_rapprocher_la_lampe()` ramène la lampe du côté du corps dès qu'un mur se
+## trouve entre les deux.
+const AVANCEE_LAMPE := 30.0
+
+## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
+const RETRAIT_LAMPE := 3.0
 
 ## Empreinte de l'éclat de bouche dessiné, en unités de monde. Plus large que
 ## la lumière de bouche (64) parce qu'il doit se LIRE comme une forme, et plus
