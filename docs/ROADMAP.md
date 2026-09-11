@@ -18286,8 +18286,25 @@ plan, relevé perturbé : médiane 45 / 45, 1 % bas 28 / 31, dans le bruit l'un 
 l'autre. **Ce qui manque, et c'est dit comme tel : un relevé au premier plan,
 machine au calme.** La cible (1 % bas ≥ 60) n'est donc pas re-vérifiée ici au
 premier plan ; le bandeau, une lumière de plus, n'y change rien de mesurable.
-À refaire à la main : `godot --path . res://tools/bench_framerate.tscn --
---seconds 30`, puis la même chose avec `--sans-led-murs`.
+
+**Relevé d'Adrien au premier plan, le même soir** (focus « stable au premier
+plan — relevé comparable », 30 s, duel complet **en écran scindé**, fenêtre
+2560 × 1440, M3) :
+
+| | médiane | 1 % bas | image la plus lente | verdict 60 |
+|---|---|---|---|---|
+| bandeau allumé | 45 | 34 | 37,2 ms | NON TENU |
+| `--sans-led-murs` | 47 | 36 | 29,2 ms | NON TENU |
+
+**Le bandeau coûte ~2 images par seconde (≈ 4 %) en écran scindé.** Et le jeu
+ne tient pas 60 **dans cette configuration, avec ou sans lui** — ce qui n'est
+**pas** une régression établie : le seul relevé de référence au premier plan
+(R4, 2026-08-25, 1 % bas **61**, médiane ~120) a été pris **en vue unique**,
+avec `--vue-unique`. L'écran scindé, qui rend deux vues, n'a jamais été relevé
+au premier plan ; on ne sait donc pas s'il a déjà tenu 60. **À faire pour
+comparer à la référence** : `godot --path . res://tools/bench_framerate.tscn --
+--seconds 30 --vue-unique`, puis la même avec `--sans-led-murs`. Tant que ce
+relevé manque, « 1 % bas ≥ 60 » n'est vérifié ni pour, ni contre le bandeau.
 
 ⚠️ Deux pièges payés en route, et le premier est de ma main. (1) **Rappeler la
 fenêtre au premier plan toutes les 0,5 s** (`osascript`) pour la garder devant
