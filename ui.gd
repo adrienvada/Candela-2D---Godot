@@ -459,7 +459,8 @@ class ComicHudPanel extends PanelContainer:
 				draw_line(Vector2(0.0, 0.0), Vector2(0.0, cr), col_c, 1.0)
 
 
-## Liseré néon animé qui matérialise le focus d'un joueur.
+## Liseré animé qui matérialise le focus d'un joueur (sans halo depuis le
+## 2026-09-11 : un trait, pas un néon).
 ## Il suit sa cible en douceur : le déplacement du curseur devient lisible même
 ## quand deux joueurs bougent en même temps.
 class NeonFocusRing extends Panel:
@@ -525,10 +526,12 @@ class NeonFocusRing extends Panel:
 
 	func _process(delta: float) -> void:
 		_time += delta
+		# Refonte roman graphique (2026-09-11) : le halo (`shadow_size` de 6 à
+		# 16 px, pulsé) est retiré — un liseré d'encre n'irradie pas. Reste la
+		# bordure, dont la teinte respire entre la couleur du joueur et
+		# l'halogène : c'est ce qui dit « c'est ici » sans lueur.
 		var wave := 0.5 + 0.5 * sin(_time * 6.0)
 		_style.border_color = neon.lerp(Charte.HALOGENE, 0.45 * wave)
-		_style.shadow_size = int(roundf(lerpf(6.0, 16.0, wave)))
-		_style.shadow_color = Color(neon.r, neon.g, neon.b, 0.22 + 0.33 * wave)
 
 		# La torche respire avec le liseré, mais **plus discrètement** : c'est une
 		# flamme, pas un clignotant. Elle est calée sur le bord gauche du cadre,
@@ -579,9 +582,8 @@ class VirtualGamepadCursor extends Control:
 
 	func _draw() -> void:
 		var wave := 0.5 + 0.5 * sin(_time * 6.0)
-		# Halo doux centré sur la pointe
-		var halo_color := Color(neon.r, neon.g, neon.b, 0.18 + 0.12 * wave)
-		draw_circle(Vector2(2, 2), 11.0 + 3.0 * wave, halo_color)
+		# Pas de halo (retiré le 2026-09-11, refonte roman graphique) : la flèche
+		# est un aplat cerné, posé sur une ombre portée franche.
 
 		# Forme de flèche de curseur stylisée
 		var points := PackedVector2Array([
@@ -1059,7 +1061,7 @@ var _killcam_negatif: int = 0
 var _killcam_derniere_image: int = -1
 var killcam_container: Control
 ## DA4.5 — le liseré de moniteur, en 9-slice par-dessus la killcam.
-var killcam_cadre: NinePatchRect
+var killcam_cadre: Control
 var killcam_label_shadow1: Label
 var killcam_label_shadow2: Label
 var killcam_timecode: Label
@@ -2253,11 +2255,15 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 
 
 func _build_hud() -> void:
-	var scanline := ColorRect.new()
-	scanline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scanline.color = Color(Charte.NOIR, 0.1)
-	scanline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(scanline)
+	# Un voile d'encre uniforme à 10 % sur toute la vue de match : il assoit le
+	# HUD sur le jeu. (Il s'appelait « scanline », du nom d'un effet vidéo qu'il
+	# n'a jamais été : un aplat.)
+	var voile_encre := ColorRect.new()
+	voile_encre.name = "VoileEncre"
+	voile_encre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	voile_encre.color = Color(Charte.NOIR, 0.1)
+	voile_encre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(voile_encre)
 
 	center_line = SplitGutterDivider.new()
 	center_line.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -3302,43 +3308,27 @@ func _build_killcam() -> void:
 	killcam_timecode.hide()
 	add_child(killcam_timecode)
 
-	# DA4.5 — **le cadre du moniteur, et il vit DANS l'interface.**
+	# DA4.5 — **le cadre de la killcam, et il vit DANS l'interface.**
 	#
 	# Le voile de killcam est reparenté par `GameState` dans l'arène, pour être
 	# sous les lumières. Le cadre, lui, n'a rien à faire là : c'est un objet
 	# d'affichage, pas un objet du monde. Le poser dans l'arène le ferait
-	# s'assombrir hors des torches — un cadre de moniteur qui s'éteint quand on
-	# ne l'éclaire pas.
+	# s'assombrir hors des torches.
 	#
-	# `NinePatchRect` et non `TextureRect` : la texture fait 512² et l'écran
-	# n'est ni carré ni de cette taille. Sans 9-slice, les coins arrondis
-	# s'étireraient en ovales, ce qui est le défaut le plus reconnaissable qu'on
-	# puisse poser sur un cadre.
-	var chemin_cadre := "res://assets/ui/cadre_vhs.png"
-	if ResourceLoader.exists(chemin_cadre):
-		killcam_cadre = NinePatchRect.new()
-		killcam_cadre.name = "CadreKillcam"
-		var tex_vhs := load(chemin_cadre) as Texture2D
-		killcam_cadre.texture = tex_vhs
-		killcam_cadre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		# Déduite de la texture pour la même raison que le cadre du HUD : le brief
-		# demandait 64 px sur une planche de 512², soit **le huitième de la
-		# largeur**. Un recuit à densité double casserait une valeur écrite en dur,
-		# en silence.
-		var m_vhs := 64
-		if tex_vhs != null and tex_vhs.get_width() > 0:
-			m_vhs = int(round(tex_vhs.get_width() / 8.0))
-		killcam_cadre.patch_margin_left = m_vhs
-		killcam_cadre.patch_margin_right = m_vhs
-		killcam_cadre.patch_margin_top = m_vhs
-		killcam_cadre.patch_margin_bottom = m_vhs
-		# Masque gris teinté par le code, comme le cadre du HUD et la torche.
-		# `HALOGENE` très atténué : un liseré de moniteur se devine, il ne se lit
-		# pas — et la killcam doit rester la chose qu'on regarde.
-		killcam_cadre.modulate = Color(Charte.HALOGENE, 0.30)
-		killcam_cadre.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		killcam_cadre.hide()
-		add_child(killcam_cadre)
+	# Refonte roman graphique (2026-09-11) : c'était un 9-patch de moniteur VHS
+	# (`cadre_vhs.png`, coins arrondis, liseré flou) autour d'un rejeu devenu une
+	# planche de reconstitution dessinée (lot 4 bis). Le cadre suit : c'est le
+	# même `CadrePhoto` que l'estampe de kill (DA6.2) — un filet en retrait et
+	# quatre repères de coupe. La killcam et le gel qui la suit portent ainsi le
+	# MÊME cadre : l'arrêt sur image ne change pas de cadre, il s'arrête.
+	killcam_cadre = CadrePhoto.new()
+	killcam_cadre.name = "CadreKillcam"
+	# `HALOGENE` atténué : un cadre se devine, il ne se lit pas — la killcam
+	# reste la chose qu'on regarde.
+	killcam_cadre.teinte = Color(Charte.HALOGENE, 0.45)
+	killcam_cadre.epaisseur = 1.5
+	killcam_cadre.hide()
+	add_child(killcam_cadre)
 
 func _make_killcam_label(tint: Color) -> Label:
 	var label := Label.new()

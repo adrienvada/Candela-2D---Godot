@@ -181,18 +181,10 @@ static func get_floor_atlas(pos: Vector2i) -> Vector2i:
 	return FLOOR_ATLAS_A if (pos.x + pos.y) % 2 == 0 else FLOOR_ATLAS_B
 
 
-const SHADER_SHIMMER_MURS := preload("res://shimmer_murs.gdshader")
-
-## Crée le matériau Shader pour les murs (V5.8 — Chantier 2).
-## Anime les arêtes halogènes sous le balayage de la torche avec micro-aspérités
-## et spécularité en lumière rasante, tout en garantissant un noir pur absolu (Charte.NOIR)
-## pour le corps du mur.
-static func creer_materiau_mur() -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = SHADER_SHIMMER_MURS
-	mat.set_shader_parameter("intensite_shimmer", 0.85)
-	mat.set_shader_parameter("frequence_scintillement", 4.5)
-	mat.set_shader_parameter("rugosite_arete", 8.0)
-	mat.set_shader_parameter("couleur_lisere", Charte.HALOGENE)
-	mat.set_shader_parameter("couleur_reflet", Charte.AMBRE)
-	return mat
+## ⚠️ **Les murs n'ont plus de matériau, et c'est voulu** (nettoyage du
+## 2026-09-11). `shimmer_murs.gdshader` (V5.8) animait le liseré halogène de
+## la tuile ; depuis que la tuile est du noir pur, sa luminance vaut zéro et le
+## fragment sortait `vec4(0)` sur chaque pixel — un shader compilé, posé sur les
+## trois calques, et qui ne dessinait rien. Le contour vit dans `mur_encre.gd`,
+## un CanvasItem ordinaire que toute Light2D éclaire à son énergie. Un matériau
+## qu'on reposerait ici s'appliquerait à une masse noire : rien à animer.

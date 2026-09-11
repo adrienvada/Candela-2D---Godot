@@ -13008,8 +13008,9 @@ est antérieur appartient à l'ancienne direction, sans exception.
 |---|---|---|
 | `logos/icone.png` | 24/08 | ❌ tracé vectoriel lisse — **remplacée** par `icone_roman.png` |
 | `keyart/keyart_rasants.png` | 25/08 | ❌ facture photographique — **régénérée** en encre |
-| `viseur/viseur.png`, `ui/cadre_hud.png`, `ui/curseur_torche.png`, `ui/grain_video.png`, `ui/vide_*.png` | 25/08 | ✅ **gardés** — ce sont des masques monochromes teintés par le code, pas des illustrations : ils ne portent aucun style à trahir |
-| les 15 illustrations, `cadre_vhs`, `cartouche_fatal`, `titres/` | 08-09/09 | ✅ à jour |
+| `viseur/viseur.png`, `ui/curseur_torche.png`, `ui/grain_video.png`, `ui/vide_*.png` (et `ui/cadre_hud.png`, **supprimé le 2026-09-11** : orphelin depuis le panneau vectoriel du HUD) | 25/08 | ✅ **gardés** — ce sont des masques monochromes teintés par le code, pas des illustrations : ils ne portent aucun style à trahir |
+| les 15 illustrations, `cartouche_fatal`, `titres/` | 08-09/09 | ✅ à jour |
+| `cadre_vhs` | 08-09/09 | ❌ **supprimé le 2026-09-11** — un cadre de moniteur aux coins arrondis autour d'une killcam devenue planche dessinée ; remplacé par `CadrePhoto` |
 
 ⚠️ **Trois assets ne sont référencés par AUCUN fichier du dépôt** — vérifié par
 recherche sur `.gd`, `.tscn`, `.godot`, `.tres` :
@@ -18019,6 +18020,38 @@ attend une décision ; le faisceau reste tel quel. **Tranché, il ne bouge pas.*
 | **Collé à un mur, on éclaire derrière** | Ni collision ni sprite : la torche brûle 30 px devant le centre du corps, qui a 18 px de rayon — collé au mur, le point d'émission était 12 px À L'INTÉRIEUR, et les ombres partaient de là. `player._rapprocher_la_lampe()` : un rayon par image, torche allumée, ramène la lampe à 3 px du mur. ⚠️ Signalé, pas touché : la bouche du canon est à 28 px, une balle tirée collé au mur naît dans le mur. | ✅ `50c3e11` |
 | **Couper le scintillement des murs** | Le `sin(TIME × 4,5 Hz)` de `shimmer_murs.gdshader`, coupé ; la rugosité reste figée. La session LED modifie `light()` du même shader sur sa branche : à relire à la fusion. | ✅ `3e67ad4` |
 | **Les murs en roman graphique** | `mur_encre.gd` : UN contour halogène de 3 px, légèrement tremblé, autour de chaque MASSE de murs (tracé de `MapGeometry.trace_contours`, posé du côté du sol pour rester hors de l'ombre de l'occluder), et des hachures noires à 45° sur le sol au pied du mur — l'ombre dessinée d'une planche, qui n'existe que là où la torche éclaire. Les tuiles de mur deviennent du noir pur : le liseré par tuile quadrillait les masses épaisses. Décision du 2026-08-25 (« une masse cernée d'un filament ») tenue : le filament devient un contour. | ✅ **« Murs parfaits »** (Adrien, 2026-09-11). Des planches générées (trait de plume, bande de hachures) restent possibles en texture le long du contour, non demandées. |
+
+
+### Le second chantier — ce qui restait à encrer (analyse du 2026-09-11, après-midi)
+
+**Adrien : « toujours dans l'idée de la refonte graphique, analyse tout ce qui
+peut être amélioré ».** Trois sources : les 47 plans du photographe repris
+sous un profil vierge, la part molle des masques restés hors du premier
+chantier, et une lecture de tout ce qui dessine. Le constat tient en une ligne :
+**l'arène et les événements sont encrés, les MARGES ne le sont pas** — le sol,
+les petites traces, la fusée, le décor additif, l'éditeur, et trois reliquats
+« néon » dans l'interface. Le bilan complet est dans le journal du jour.
+
+Mesuré sur les masques hors chantier : cookies de torche 0,84 (tranché,
+inchangé) ; volutes de fusée 0,45 et 0,24 ; toile du voile 0,91 ;
+`cadre_hud.png` 0,89 — et orphelin.
+
+**Ses verdicts, le même jour** : nettoyages, cadre VHS et halos → faire ;
+lots 1, 2, 3, 5, 6 → « ok » ; l'éditeur de cartes → « pour l'instant on
+laisse » ; le lot 4 (l'additif) → il a demandé d'abord une explication, la
+décision suit.
+
+| Lot | Quoi | Ce qui change, dans quel sens | État |
+|---|---|---|---|
+| N | Nettoyage | `shimmer_murs.gdshader` **retiré** : depuis que la tuile de mur est noir pur (lot murs), sa luminance vaut zéro et le fragment sortait `vec4(0)` sur chaque pixel — un shader compilé, posé sur trois calques, qui ne dessinait rien. `CandelaTileSet.creer_materiau_mur()` et sa pose dans `game_state.gd` partent avec lui. `poussiere_faisceau.gdshader` retiré (aucun utilisateur hors d'une suite qui vérifiait qu'il compile ; le `poussiere_faisceau` du code est un curseur homonyme). `cadre_hud.png` retiré (orphelin depuis le panneau vectoriel du HUD). Trois commentaires périmés corrigés (bandeau de match « coins arrondis », miniatures « esthétique néon », voile « scanline » qui n'a jamais été qu'un aplat). `tools/test_arena_lighting.gd` réécrit : il rougit si l'un des deux shaders revient ou si un matériau est reposé sur les murs. ⚠️ **La session « Murs avec bande LED respirante » modifie `light()` de `shimmer_murs` sur sa branche** (`ENERGIE_REFERENCE`) : prévenue par message le 2026-09-11 — son intention (le liseré suit l'énergie des lampes) est satisfaite par construction par `mur_encre.gd`, un CanvasItem ordinaire que chaque Light2D éclaire à son énergie. | ✅ |
+| H | Cadre VHS et halos néon | Le cadre de killcam était un 9-patch de moniteur (`cadre_vhs.png`, coins arrondis, liseré flou) autour d'un rejeu devenu planche dessinée : remplacé par le `CadrePhoto` de l'estampe de kill (filet en retrait, repères de coupe), `HALOGENE` à 0,45 — killcam et gel fatal portent désormais le même cadre. Les trois halos pulsés de l'interface (`shadow_size` animé de 6 à 16 px) retirés : anneau de focus (`NeonFocusRing`), curseur virtuel de manette (le disque flou sous la flèche), tuile sélectionnée de la galerie. La bordure garde sa respiration de teinte : un trait dit « ici » sans irradier. | ✅ |
+| 1 | Le sol | Une photo de béton grainée sous la plus grande surface éclairée du jeu. Damier gardé (décision du 25 août) : aplat deux tons et fissures au trait, contraste inchangé. | à faire |
+| 2 | L'écho au sol du tir | Disque ambre de 200 px à 1,2 d'énergie qui sature l'éclat dessiné (question ouverte du premier chantier). | à faire |
+| 3 | La fusée | Cœur = dernier dégradé radial procédural en production, corps = planche détourée, nappes de volutes additives. On encre ce qui se voit, pas le voile qui cache (son dégradé porte l'occultation lue par le jeu). | à faire |
+| 4 | L'additif dans le monde | Décor d'arène, étincelles et fumée en losanges, traçante et aura, relevé balistique. | en attente d'Adrien |
+| 5 | Les petites traces | Empreintes en ellipse floue, douilles sans contour, cible d'entraînement en trois disques sans trait. | à faire |
+| 6 | Les gadgets | Nappes de braises et de poudre à seuiller, lentille additive de la torche fantôme. Poussière et suie : leur image porte le rayon d'occultation, à ne pas durcir. | à faire |
+| — | L'éditeur de cartes | Dégradé radial du curseur, seuls coins arrondis vivants du jeu, vignettage de grille, fonte système. | « pour l'instant on laisse » |
 
 ---
 

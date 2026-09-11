@@ -958,10 +958,6 @@ func rebuild_arena() -> void:
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
 
-	# V5.8 — Rendu Shimmer et spécularité du liseré des murs sous la torche.
-	var wall_mat := CandelaTileSet.creer_materiau_mur()
-	walls_layer.material = wall_mat
-
 	# Écran partagé : chaque joueur reçoit sa copie des calques, éclairée par
 	# sa seule lumière ambiante. Sans ça, le halo d'un joueur révélerait sa
 	# position sur l'écran de l'autre.

@@ -20,7 +20,8 @@ extends RefCounted
 
 const Charte := preload("res://charte.gd")
 
-## Palette « plan » : déclinaison lisible en petit de l'esthétique néon du jeu.
+## Palette « plan » : aplats purs, sans anticrénelage — un plan d'encre lisible
+## en petit, dans les couleurs de la charte.
 const COLOR_BACKGROUND := Color(Charte.SURFACE, 1.0)
 const COLOR_FLOOR := Color(Charte.SOL_B * 0.72, 1.0)
 const COLOR_WALL := Color(Charte.HALOGENE, 1.0)
