@@ -2572,7 +2572,7 @@ func _test_fusees_par_classe() -> void:
 	var profil = catalogue[terrassier].fusees
 	var plein := int(gs.fusees_restantes(0))
 	# On en consomme une, puis on laisse passer une période entière.
-	gs.rpc_stock_fusees(0, plein - 1)
+	gs.rpc_stock_fusees(0, plein - 1, profil.periode_recharge)
 	_check("une fusée consommée manque", gs.fusees_restantes(0) == plein - 1)
 	gs._accorder_fusees(profil.periode_recharge + 0.01)
 	_check("elle revient après une période",
@@ -2583,7 +2583,7 @@ func _test_fusees_par_classe() -> void:
 	gs._accorder_fusees(profil.periode_recharge * 3.0)
 	_check("et la réserve ne dépasse jamais son plafond",
 		gs.fusees_restantes(0) == plein, str(gs.fusees_restantes(0)))
-	gs.rpc_stock_fusees(0, plein - 1)
+	gs.rpc_stock_fusees(0, plein - 1, profil.periode_recharge)
 	gs._accorder_fusees(0.01)
 	_check("aucun temps n'a été capitalisé contre le plafond",
 		gs.fusees_restantes(0) == plein - 1, str(gs.fusees_restantes(0)))

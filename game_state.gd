@@ -1462,6 +1462,8 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	# comme tout _do_start_round. Les nœuds, eux, sont purgés avec les balles.
 	_fusees_restantes = [_stock_fusees(p1), _stock_fusees(p2)]
 	_fusees_accumulateur = [0.0, 0.0]
+	# Réserve pleine au départ : rien ne revient (étape 28, point 7).
+	_fusees_attente = [-1.0, -1.0]
 	_fusees_profil = [_profil_fusees(p1), _profil_fusees(p2)]
 	# Ce qu'on remet à zéro est le nombre de gadgets POSÉS, pas un stock restant.
 	# Voir `gadget_disponible()` : le plafond se relit à chaque appui.
@@ -2211,6 +2213,19 @@ var _fusees_restantes: Array[int] = [0, 0]
 ## mordant à stock 3.
 var _fusees_accumulateur: Array[float] = [0.0, 0.0]
 
+## Étape 28, point 7 (2026-09-11) — les secondes avant la prochaine fusée TELLES QUE
+## L'HÔTE LES A DITES dans `rpc_stock_fusees`, par joueur ; -1 : rien ne revient
+## (réserve pleine, ou classe qui ne recharge pas). Écrite chez les deux pairs, LUE
+## chez le client seul (`attente_fusee`) : l'hôte a mieux, son accumulateur.
+##
+## ⚠️ **Le client la DÉCOMPTE entre deux envois, il ne l'estime pas** (décision du
+## 2026-08-18, « l'estimation est un mensonge ») : aucune correction d'aller-retour.
+## Reçue un demi-RTT après l'envoi, elle atteint zéro un demi-RTT après l'hôte —
+## c'est-à-dire à l'instant où arrive le paquet qui apporte la fusée. Le client est
+## exactement l'hôte retardé d'un demi-RTT, et `tools/test_tir_et_reserves.gd` le
+## vérifie sur une file de paquets datés.
+var _fusees_attente: Array[float] = [-1.0, -1.0]
+
 ## Le profil suivi par joueur, pour détecter un CHANGEMENT DE CLASSE.
 ##
 ## ⚠️ Même piège que le stock de gadgets : la fenêtre de choix d'un match apparié
@@ -2279,13 +2294,21 @@ func fusees_restantes(pid: int) -> int:
 
 ## Secondes avant la prochaine fusée, ou -1 s'il n'y en aura pas.
 ##
-## ⚠️ **Juste chez l'hôte seul**, l'accumulateur n'étant pas répliqué. Le client
-## voit donc le compte changer sans le décompte qui l'annonce — un manque, pas un
-## mensonge, et le prix d'un octet par tick économisé. À reprendre le jour où
-## Adrien jugera l'attente illisible.
+## ⚠️ **Juste chez les DEUX pairs depuis l'étape 28** (2026-09-11 : Adrien veut
+## savoir quand revient la prochaine fusée, par une jauge sans texte). Jusque-là
+## l'accumulateur n'étant pas répliqué, le client voyait le compte changer sans
+## rien qui l'annonce. Il ne l'est toujours pas — un octet par tick pour une
+## grandeur qui descend en ligne droite. L'hôte envoie l'ATTENTE à chaque
+## changement de réserve (`rpc_stock_fusees`), et le client la décompte
+## (`_fusees_attente`).
 func attente_fusee(pid: int) -> float:
 	if pid < 0 or pid >= _fusees_restantes.size():
 		return -1.0
+	# Chez le CLIENT, l'attente envoyée par l'hôte et décomptée depuis : son propre
+	# accumulateur n'avance jamais (`_accorder_fusees` n'y fait que décompter), la
+	# formule y rendrait toujours la période entière.
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		return _fusees_attente[pid]
 	var profil = _profil_fusees(p1 if pid == 0 else p2)
 	if profil == null:
 		return -1.0
@@ -2302,6 +2325,8 @@ func attente_fusee(pid: int) -> float:
 ## secondes, et seulement pour les deux classes qui rechargent.
 func _accorder_fusees(delta: float) -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
+		# Le client ne recharge rien ; il décompte l'attente que l'hôte lui a dite.
+		_decompter_attente_fusees(delta)
 		return
 	for pid in 2:
 		var joueur: Node = p1 if pid == 0 else p2
@@ -2309,8 +2334,12 @@ func _accorder_fusees(delta: float) -> void:
 		if profil != _fusees_profil[pid]:
 			# Changement de classe : on resème, y compris pendant le décompte.
 			_fusees_profil[pid] = profil
-			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
+			# L'accumulateur AVANT l'annonce, qui en tire l'attente (étape 28).
+			# Sans effet aujourd'hui — aucune classe ne pose de `plafond`, et une
+			# réserve pleine rend -1 quel que soit l'accumulateur —, mais un plafond
+			# supérieur au stock ferait annoncer l'attente de la classe QUITTÉE.
 			_fusees_accumulateur[pid] = 0.0
+			_annoncer_stock_fusees(pid, maxi(0, profil.stock) if profil != null else 0)
 			continue
 		if profil == null or not profil.recharge_active():
 			continue
@@ -2323,17 +2352,41 @@ func _accorder_fusees(delta: float) -> void:
 			_annoncer_stock_fusees(pid, int(avance[0]))
 
 
+## [Client] L'attente reçue descend entre deux envois de l'hôte — sous la MÊME garde
+## que son accumulateur (plus haut) : pendant le décompte de départ, la killcam ou
+## l'écran de fin, l'hôte ne recharge rien, et le client ne doit rien décompter.
+## Elle s'arrête à zéro, où la jauge reste pleine — « imminente » — jusqu'au paquet
+## qui apporte la fusée (`fraction_de_retour`, dans ui.gd).
+func _decompter_attente_fusees(delta: float) -> void:
+	if not round_active and not sandbox_mode:
+		return
+	for pid in 2:
+		if _fusees_attente[pid] > 0.0:
+			_fusees_attente[pid] = maxf(0.0, _fusees_attente[pid] - delta)
+
+
+## [Hôte] Dit le compte ET l'attente — calculée ICI, après que stock et accumulateur
+## ont bougé, jamais passée par l'appelant : trois sites annoncent (changement de
+## classe, regain, lancer), un seul calcule.
 func _annoncer_stock_fusees(pid: int, stock: int) -> void:
+	var profil = _profil_fusees(p1 if pid == 0 else p2)
+	var attente: float = profil.attente_restante(stock, _fusees_accumulateur[pid]) \
+		if profil != null else -1.0
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_stock_fusees.rpc(pid, stock)
+		rpc_stock_fusees.rpc(pid, stock, attente)
 	else:
-		rpc_stock_fusees(pid, stock)
+		rpc_stock_fusees(pid, stock, attente)
 
 
+## ⚠️ **`attente` n'a PAS de valeur par défaut** (étape 28) : un appelant oublié doit
+## lever une erreur de script, que `run_suites.sh` attrape — pas envoyer -1 en
+## silence. C'est une valeur par défaut qui avait rendu GDScript muet à la v11 du
+## protocole (carnet de `protocol.gd`).
 @rpc("authority", "call_local", "reliable")
-func rpc_stock_fusees(pid: int, stock: int) -> void:
+func rpc_stock_fusees(pid: int, stock: int, attente: float) -> void:
 	if pid >= 0 and pid < _fusees_restantes.size():
 		_fusees_restantes[pid] = maxi(0, stock)
+		_fusees_attente[pid] = attente
 
 func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 	if not round_active and not sandbox_mode: return
@@ -2344,10 +2397,21 @@ func spawn_fusee(shooter: Node2D, pos: Vector2, rot: float):
 		return
 	if not fusee_disponible(shooter.player_id): return
 	var graine := randi()
+	var pid_f: int = shooter.player_id
+	var avant: int = _fusees_restantes[pid_f]
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		rpc_spawn_fusee.rpc(shooter.player_id, pos, rot, graine)
 	else:
 		_do_spawn_fusee(shooter.player_id, pos, rot, graine)
+	# Étape 28, point 7 — le LANCER change la réserve, donc l'attente : depuis une
+	# réserve pleine, l'accumulateur part de zéro (`FlareProfile.avancer`) et la
+	# prochaine revient dans une période entière. Sans cet envoi, le client verrait sa
+	# réserve baisser (par `rpc_spawn_fusee`) et aucune attente commencer. `call_local`
+	# a déjà décrémenté le stock ici ; même canal fiable, émis après : il arrive après.
+	# Seulement si le stock a bougé — la règle du regain : au bac à sable libre, le
+	# lancer ne décompte rien, et un paquet n'y dirait rien.
+	if _fusees_restantes[pid_f] != avant:
+		_annoncer_stock_fusees(pid_f, _fusees_restantes[pid_f])
 
 # FU2.1 : plus aucune cible pré-calculée — la fusée REBONDIT sur les murs
 # (décision d'Adrien au premier essai, elle les survolait). Le vol se simule
@@ -2730,6 +2794,30 @@ func attente_gadget(pid: int) -> float:
 	return _gadget_attente[pid] if pid >= 0 and pid < _gadget_attente.size() else 0.0
 
 
+## Étape 28, point 5 (2026-09-11) — l'appui sur la touche de gadget serait-il refusé
+## MAINTENANT ? Lu par player.gd, chez chaque pair sur SON état répliqué, pour le
+## seul ressenti : jamais un ordre. Un appui pendant le cooldown de tir attend, il
+## n'est pas refusé ; le voile sans place a son propre pré-contrôle
+## (`point_de_pose_libre`, au moment où la pose part).
+##
+## Juste chez le client aussi : son `_gadget_attente` démarre raccourcie d'un
+## aller-retour (`_do_spawn_gadget`), il ne refuse donc jamais une pose que l'hôte
+## accepterait ; `actif` et `_batterie` y sont recalés à chaque bascule.
+func appui_gadget_refuse(pid: int) -> bool:
+	var g = gadget_basculable_de(pid)
+	if g != null:
+		# L'extinction passe toujours ; seul le RALLUMAGE a un seuil.
+		return not bool(g.get("actif")) and _rallumage_refuse(pid)
+	return not gadget_disponible(pid)
+
+
+## La règle du seuil de rallumage, en UN endroit : l'arbitrage (`basculer_gadget`)
+## et le ressenti (`appui_gadget_refuse`) la lisent tous deux. Deux copies finiraient
+## par diverger, et le HUD tremblerait sur un appui accepté.
+func _rallumage_refuse(pid: int) -> bool:
+	return _batterie[pid] < GadgetGresillement.SEUIL_RALLUMAGE
+
+
 ## [Hôte] Le poseur appuie sur sa touche alors que son gadget basculable est
 ## debout : on l'allume ou on l'éteint.
 ##
@@ -2747,7 +2835,8 @@ func basculer_gadget(joueur: Node2D) -> void:
 	if g == null:
 		return
 	var allume: bool = not bool(g.get("actif"))
-	if allume and _batterie[pid] < GadgetGresillement.SEUIL_RALLUMAGE:
+	# Le seuil se lit en UN endroit, que le ressenti du refus lit aussi (étape 28).
+	if allume and _rallumage_refuse(pid):
 		return
 	_annoncer_etat_gadget(pid, String(g.name), allume)
 

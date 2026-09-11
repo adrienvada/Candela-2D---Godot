@@ -3164,6 +3164,22 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Vert seul, rouge dans le lot : le `user://` est partagé par LOT, pas par suite (2026-09-11)
+
+`run_suites.sh` donne un `user://` neuf à chaque LOT, et toutes ses suites le
+partagent. Une étape qui précède `test_tir_et_reserves` y écrit un `settings.cfg`
+portant `intro_vue=true` ; dans cet état « intro déjà vue », le HUD est caché au
+moment où la suite tourne. Trois contrôles du lot C de l'étape 28 lisaient la
+position du contenu d'une cartouche après un tri manuel — or **un conteneur caché ne
+trie pas ses enfants**, et le contenu gardait une position périmée. Verts quatre fois
+sur quatre lancés seuls dans un HOME vierge, rouges dans le lot, et le journal du lot
+ne garde que « ÉCHEC (code 1) ». Trouvé en rejouant la séquence du lot dans un même
+HOME, sorties gardées, puis par dichotomie du `settings.cfg`.
+
+Une suite qui passe seule et rougit dans le lot se rejoue DANS L'ÉTAT DU LOT : un
+seul HOME, le démarrage, puis les suites qui la précèdent. Et un contrôle de mise en
+page commence par s'assurer que ce qu'il mesure est visible.
+
 ### Un rayon parti du centre d'un corps concave touche le corps lui-même (2026-09-11)
 
 `_point_de_pose` lance un rayon depuis le centre du poseur, droit devant, pour planter
@@ -17360,6 +17376,9 @@ sont pas la même information.
 l'accumulateur n'est pas répliqué, seul le résultat l'est. Le client voit donc le
 compte monter sans le décompte qui l'annonce — un manque, pas un mensonge, et le
 prix d'un octet par tick économisé. À reprendre si Adrien juge l'attente illisible.
+**Repris à l'étape 28, lot C (2026-09-11)** : Adrien a demandé une jauge sans
+texte ; l'accumulateur ne voyage toujours pas, l'hôte envoie l'ATTENTE avec le
+compte (`rpc_stock_fusees`), et le client la décompte — voir cette étape.
 
 ### Étape 19 — l'archive dit quelle classe ✅ — LE CHANTIER EST CLOS
 
@@ -18114,10 +18133,11 @@ Jusque-là la mine garde son comportement : le socle rend 1.
 rythme des braises. Pas livrée — 4 PV toutes les 0,25 s est une décision d'Adrien,
 pas un dosage ; `PV_PAR_TIC` reste le seul réglage.
 
-**Validation** : `test_classes` (377 contrôles, dont 19 neufs), `test_tir_et_reserves`
-(150), `test_vision` (41), `test_protocole` (10), `test_charte`, `test_fusee_eteinte`
-(8), `test_eblouissement` (32), `test_lumieres` (51/51), `test_eblouissement_en_jeu`
-verts. Les nouveaux contrôles passent par un joueur de carton qui COMPTE ses appels
+**Validation** : `test_classes` (376 contrôles, dont 19 neufs), `test_tir_et_reserves`
+(149), `test_vision` (40), `test_protocole` (9), `test_charte`, `test_fusee_eteinte`
+(7), `test_eblouissement` (31), `test_lumieres` (51/51), `test_eblouissement_en_jeu`
+verts. (Décomptes remis le 2026-09-11, au lot C, à la convention « sans la ligne de
+synthèse ✓ Tous les tests passent » ; ils la comptaient.) Les nouveaux contrôles passent par un joueur de carton qui COMPTE ses appels
 (le total ne prouvait rien), par le vrai chemin (`_maj_gadgets`, le vrai joueur, ses
 lumières comptées par type) en manche ET à l'entraînement, et lisent la lueur
 RENDUE face à l'éblouissement, avec un témoin de ligne de vue. **Sabotages exécutés,
@@ -18241,7 +18261,7 @@ dans l'axe ramène le point 6 px devant lui — le recul en écarte le voile, ou
 refuse quand l'adversaire est à bout portant (voir plus haut).
 
 **Validation** : `test_tir_et_reserves` (189 contrôles, dont 40 neufs),
-`test_classes` (377), `test_vision` (41), `test_protocole` (10), `test_charte`,
+`test_classes` (376), `test_vision` (40), `test_protocole` (9), `test_charte`,
 `test_menus_finitions` (51), `test_liaisons` (55), `test_eblouissement_en_jeu` verts.
 Les nouveaux contrôles tirent de vraies balles (`_do_spawn_bullet`, J2 écarté de
 leur ligne, chaque balle libérée ensuite), lisent la vraie ligne de vue
@@ -18286,6 +18306,200 @@ témoin à 62 px ; le refus à 55 px reste vert, comme il doit).
   corps chez l'hôte peut mordre le corps prédit du client — une petite correction,
   comme devant tout obstacle qui apparaît.
 
+### Étape 28 — lot C : des refus qui se sentent, et des jauges de recharge sous les cartouches ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : le point 5 — un appui de
+fusée ou de gadget refusé ne produisait RIEN — et le point 7 — dire quand revient
+la prochaine fusée, et chaque recharge de gadget, par « une jauge sans texte sous
+la cartouche ».
+
+**1. Un refus se sent.** Réserve de fusées vide, gadget en recharge de pose, bobine
+du grésillement éteinte sous le seuil de rallumage, voile sans place : l'appui fait
+trembler la cartouche FUSÉES ou GADGET et vibrer la manette — 0,35 pendant 0,05 s,
+la signature du percuteur à vide, délibérément : un refus a un seul goût dans la
+main. Jusqu'ici seul le tir à sec avait ce retour (V4.4) ; les autres refus étaient
+des gestes qui échouent en silence, ce que V4.4 avait retiré pour la détente.
+- **Chez qui a pressé seulement** (`_percu_ici`) : l'hôte simule aussi le client, et
+  sentir ses refus lui apprendrait que l'autre vient d'essayer. **Aucun son** : un
+  son parlerait au monde.
+- **Jugé sur l'état d'AVANT l'appui**, par des fronts BRUTS (`_fusee_tenue`,
+  `_gadget_tenu`) séparés des verrous de simulation (`_fusee_pressee`,
+  `_gadget_pressee`), qui portent le lancer, la pose et le désarmement et doivent
+  rester identiques chez l'hôte et dans la prédiction du client. Évaluée après les
+  blocs de lancer et de pose, la dernière fusée lancée se serait lue comme un refus.
+- **Un appui pendant le cooldown de tir n'est pas un refus** : il part à son terme.
+  L'extinction d'une bobine passe toujours ; seul le rallumage a un seuil, lu en UN
+  endroit (`GameState._rallumage_refuse`) par l'arbitrage et par le ressenti.
+- **Le voile sans place** (décision de l'orchestrateur, sur le lot B) : la place
+  reste décidée par l'hôte. Chaque pair appelle `point_de_pose_libre()` au moment où
+  SA pose part ; sans place nulle part, le refus se sent — mais la demande part
+  quand même vers l'hôte, et le désarmement de 0,30 s a lieu des deux côtés,
+  strictement comme avant : le pré-contrôle n'ajoute QUE le ressenti. Prix connu :
+  le client voit l'adversaire 100 ms en retard, et peut sentir un refus que l'hôte
+  accepte, ou l'inverse. Ferme le signalement « le refus est muet » du lot B.
+- Le Spectre tremble aussi sur la touche de fusée — il n'en porte aucune : « un
+  appui qui ne produit rien se sent ». Choix par défaut, à confirmer en jouant.
+- **Le tremblement** : horizontal (le « non » de la tête), 3 px, 14 Hz, 0,22 s — la
+  durée du tir à sec —, un cosinus pour que le premier écart soit franc, sous une
+  enveloppe `1 − Charte.courbe(SORTIE)` qui garde trois allers-retours visibles puis
+  s'éteint. Curseur CONFORT « Tremblements de l'interface ». ⚠️ **Une exception à
+  V4.4 (« Dessiné, pas déplacé »), qui répond à sa raison** : le contenu d'une
+  cartouche est un conteneur entier, qu'on ne redessine pas décalé. Le décalage est
+  donc réappliqué APRÈS CHAQUE TRI, dans `_notification(NOTIFICATION_SORT_CHILDREN)`
+  — Godot l'appelle après le placement natif, vérifié dans Godot : neutralisée, le
+  contenu reste au bord (2 px au lieu de 5) —, et la cartouche demande elle-même son
+  tri tant qu'elle tremble, sans s'adosser au remplacement de stylebox qui la retrie
+  aujourd'hui à chaque image.
+- **Décompté avant toute sortie anticipée** (revue du lot, 2026-09-11) : les deux
+  minuteurs de refus se décomptent en TÊTE de `_physics_process`, avant la mort, le
+  menu, le décompte de départ et la manche finie. Placés après ces gardes, un refus
+  armé dans les 0,22 s qui précèdent la fin d'une manche se FIGEAIT jusqu'au FIGHT
+  suivant — et le HUD, qui le recopie à chaque image, tenait la cartouche décalée
+  tout l'entre-manche, puis la faisait trembler sur un appui que personne n'avait
+  fait. Reproduit dans Godot : 0,17 s figées sur 120 pas hors manche, le contenu
+  décalé de 1,2 px au repos ; après correction, 0 et 0. Ce sont des minuteurs de
+  RESSENTI, que la simulation ne lit jamais : les décompter partout ne fait pas
+  diverger les pairs.
+
+**2. Les jauges.** Un trait de 2 px, 2 px SOUS la cartouche, hors de son rectangle,
+sur une piste pleine largeur (`Charte.LINE`) — lisible quelle que soit la teinte de
+la bordure. DESSINÉ, pas un nœud : une commande de dessin ne compte pas dans la
+taille minimale, et la cartouche ne s'élargit pas (piège « Un libellé ne coupe
+pas »). Aucun texte, décision d'Adrien. **La règle : la jauge dit le NIVEAU de ce
+qui se recharge ou se consume, et disparaît quand rien ne bouge.**
+- **Fusées** : la part faite de l'attente de la prochaine ; absente réserve pleine,
+  et chez le Spectre. Une attente NULLE rend une jauge PLEINE (« imminente ») et non
+  une absence : chez le client, le décompte touche zéro un peu avant ou après le
+  paquet qui apporte la fusée, et la jauge ne doit pas s'effacer avant que
+  « FUSÉES n » ait bougé. L'autre moitié est chez `game_state` : le décompte du
+  client s'arrête à zéro, sans quoi le paquet en retard trouverait une attente
+  négative, rendue en absence. Et le départ de manche remet l'attente à « rien ne
+  revient » : sinon un client qui a lancé juste avant la fin d'une manche montrerait
+  une jauge pleine sous sa réserve pleine jusqu'à son premier lancer — l'hôte, rien
+  n'ayant changé pour lui, n'annonce rien qui la corrige.
+- **Recharge de pose, les dix gadgets** : la part faite de la minute. Le titre garde
+  « RECHARGE · 42s » — voir la question plus bas.
+- **Batterie du grésillement** : son NIVEAU dès la pose — elle descend allumée,
+  remonte éteinte, et disparaît pleine et éteinte. « `batt < 1` » seul la faisait
+  surgir d'un coup à l'image qui suit la pose. Le compte à rebours de l'étape 27, sur
+  l'icône, reste.
+
+**3. Le fil — protocole 17, forme changée.** L'accumulateur de fusées reste chez
+l'hôte seul (`FlareProfile.avancer` dit pourquoi). Mais `rpc_stock_fusees` gagne
+l'ATTENTE avant la prochaine : l'hôte l'envoie à chaque changement de réserve —
+regain, changement de classe, et désormais le LANCER, sans quoi le client verrait
+sa réserve baisser sans qu'aucune attente commence ; seulement si le stock a bougé
+(au bac à sable libre, le lancer ne décompte rien). Le client la DÉCOMPTE entre
+deux envois, sous la même garde que l'accumulateur de l'hôte, et ne l'estime pas
+(décision « l'estimation est un mensonge », 2026-08-18) : il est exactement l'hôte
+retardé d'un demi-RTT. Pas de valeur par défaut sur le nouvel argument : un
+appelant oublié lève une erreur de script. `Protocol.VERSION` reste **17** (non
+publié — v0.5.0 est sortie en 16) ; le témoin a d'abord rougi, puis a été recopié
+après avoir tranché : `9f4e2b539bc2175e`. Coût : un paquet fiable de plus par fusée
+lancée. Pour la recharge de pose, le client savait déjà tout — son minuteur démarre
+à la pose qu'il voit, raccourci d'un aller-retour : sa jauge est en AVANCE d'au plus
+un RTT, l'inverse de la fusée, et voulu. En ligne, le panneau adverse reste caché :
+rien de neuf n'est montré hors de l'écran scindé. Reprend la note de l'étape 18
+(« l'attente n'est pas affichée chez le client »).
+
+**Écran scindé** : rien n'est élargi — jauge dessinée, tremblement après tri. Les
+avertissements des étapes 24 et 27 sur le débordement de la fiche de J2 sont levés
+depuis que cette fiche suit la largeur de son contenu (`ui.gd::_build_player_hud`,
+session des effets en jeu, 2026-09-11).
+
+⚠️ **Pour juger le point 5, Adrien doit remonter deux curseurs.** Son `settings.cfg`
+porte « Tremblements de l'interface » et « Vibrations de la manette » à 0, comme
+tous ses curseurs CONFORT (relevé le 2026-09-11) : manette en main, il ne sentirait
+rien et conclurait que rien ne se passe. Les remonter au-dessus de 0 dans les
+options — ou juger au photographe sous un `HOME` neuf. Le test calcule son attendu
+avec le curseur RÉEL et exige un décalage nul quand il vaut 0 ; la référence reste
+`run_suites.sh`, sous un `HOME` neuf.
+
+**Validation** : `test_tir_et_reserves` (275 contrôles, dont 86 neufs),
+`test_classes` (376), `test_protocole` (9), `test_netcode` (82, en scène),
+`test_charte` (241), `test_curseurs_branches` (36), `test_menus_finitions` (50),
+`test_liaisons` (55), `test_effect_policy` (65), `test_fusee` (60),
+`test_fusee_eteinte` (7), `test_hud_style` (22), `test_prediction_tir` (15),
+`test_vision` (40), `test_vitrine_menus` (123), `test_eblouissement` (31),
+`test_curseur_joystick` (16), `test_brouillage` (57) verts, sous un `HOME` neuf.
+
+⚠️ **Trois contrôles de la secousse, verts seuls, rougissaient dans le lot** : un
+`settings.cfg` écrit plus tôt dans le `user://` partagé du lot (`intro_vue=true`) y
+laisse le HUD caché, et un conteneur caché ne trie pas ses enfants. Le test rend
+désormais visibles les ancêtres de la cartouche le temps de ses contrôles, et le
+vérifie par un contrôle neuf ; sans ce geste (sabotage exécuté), les trois contrôles
+et le neuf rougissent. Rejoué dans l'état du lot : vert. Voir le piège « Vert seul,
+rouge dans le lot ». Suite complète (`./tools/run_suites.sh`) verte ensuite : 109
+suites, duos compris, 341 s.
+Décomptes SANS la ligne de
+synthèse « ✓ Tous les tests passent » — convention à laquelle les sous-sections A1
+et B ont été remises le même jour. Les refus sont éprouvés par le VRAI joueur qui
+presse, dans l'état réel de l'entraînement (`sandbox_mode` et `training_mode` vrais,
+`round_active` faux), l'état remis entre les cas. Les jauges de fusées par deux
+instances — l'hôte, la vraie scène ; le client, une `GameState` nue dont
+l'accumulateur n'avance jamais, comme en vrai —, reliées par une FILE DE PAQUETS
+DATÉS : le client au pas k doit afficher ce qu'affichait l'hôte au pas k − m, sans
+fenêtre exclue, à RTT nul (pas grossiers, un regain à 0,5 s de report) et à 100 ms
+(pas de 0,05 s, 520 pas). Aucun autoload n'est nommé à la compilation.
+La VIBRATION est éprouvée par sa DEMANDE, pas par la manette : les suites n'en ont
+pas, et `_rumble` sort à sa première ligne hors d'un `LocalInputProvider` — la
+revue du lot a retiré les deux appels du refus sans qu'aucune suite rougisse. Une
+prise d'essai, `derniere_vibration`, note la vibration demandée avant tout filtre ;
+le jeu ne la lit jamais. La butée à zéro du décompte client et la remise à « rien
+ne revient » au départ de manche — par le vrai `_do_start_round`, en dernier dans la
+suite — ont chacune un contrôle direct : la file de paquets, à latence fixe, ne les
+exerçait pas, et la revue les avait sabotées sans rien voir rougir.
+**Sabotages exécutés — 30, chacun dans une COPIE du dépôt, vu rougir** : pas
+d'annonce au lancer (4 contrôles) ; la période annoncée au lieu de l'attente (2) ;
+la branche client d'`attente_fusee` retirée (4) ; le décompte client retiré (3) ;
+sa garde de manche retirée (2) ; `_percu_ici` retiré du ressenti (2) et du
+pré-contrôle du voile (1) ; le ressenti évalué après les blocs (3) ; le front pris
+sur `_fusee_pressee` (1) ; la condition de réserve retirée (2) ; la recharge de pose
+ignorée (1) ; le seuil de rallumage qui ne refuse jamais (2) ; le pré-contrôle du
+voile retiré (1), ou qui RETIENT la pose — désarmement asymétrique (3) ; la
+`_notification` de la cartouche neutralisée (1) ; les secousses jamais recopiées,
+gadget (1) et fusées (1) ; la règle « `batt < 1` » seule (1) ; -1 à attente nulle
+(1) ; la jauge posée en nœud (2) ; un libellé ajouté dans la cartouche (1) ; la
+jauge de pose jamais posée (4), ou non masquée quand le gadget est prêt (2) ; chaque
+recopie qui relance l'enveloppe (1) ; la jauge des fusées jamais posée (6). Puis,
+après la revue du lot, la copie intacte d'abord (témoin vert), et : les refus
+décomptés après les gardes de manche (2) ; la butée à zéro retirée (2) ; la remise
+à -1 du départ de manche retirée (2) ; la vibration du refus retirée (4) ; la prise
+d'essai rendue muette (5).
+Un premier jet du contrôle « la jauge dès la pose » passait sur la règle fautive :
+l'image attendue après la pose avait entamé la batterie (0,999). Il remet la
+batterie à 1,0 exactement, l'état de la pose.
+
+⚠️ **Signalé, non corrigé** :
+- **un appui refusé, TENU, part tout seul au retour de la ressource** : le verrou de
+  simulation n'est posé qu'au lancer ou à la pose. Près du regain d'une fusée ou de
+  la fin d'une recharge, on sent le refus, puis le geste part sans nouvel appui.
+  Défaut antérieur au lot ; le corriger touche la simulation des deux pairs ;
+- **faux refus chez le client**, rares et non mesurés : pendant au plus un demi-RTT
+  après un regain de fusée (l'hôte a regagné, le client ne le sait pas encore — la
+  fenêtre où sa prédiction de lancer se trompe déjà), et pendant environ un RTT
+  autour du seuil de 5 % de la batterie. Le corriger reviendrait à prédire le regain ;
+- l'ordre `rpc_spawn_fusee` puis `rpc_stock_fusees` sur le canal fiable est supposé,
+  pas éprouvé sur EOS : inversés, le client décompterait deux fois sa réserve
+  jusqu'à l'annonce suivante. Le code s'y fie déjà ailleurs (pose puis retrait d'un
+  gadget) ;
+- l'icône grisée du grésillement porte son chiffre à 45 % d'opacité dans l'état
+  CHARGE : `modulate` se propage à l'enfant, `self_modulate` le corrigerait ;
+- **`tir_a_sec` (V4.4) porte le défaut du refus figé**, antérieur au lot et relevé
+  par sa revue : décompté APRÈS les gardes de manche, un tir à sec pressé dans les
+  0,22 s qui précèdent la fin d'une manche figerait le tremblement du cercle de
+  recharge jusqu'au FIGHT suivant (`CircularCooldown`, que le HUD recopie à chaque
+  image). La correction appliquée aux deux refus du lot — le décompter en tête de
+  `_physics_process` — ne lui a pas été appliquée : hors du lot, et non reproduit ;
+- **rien n'est capturé** : la lisibilité du trait sous la cartouche, sur la teinte du
+  joueur, demande une capture au photographe mesurée au pixel ; le dosage du
+  tremblement et de la vibration, la manette en main.
+
+**Question pour Adrien** : les secondes de la recharge de pose restent dans le titre
+(« RECHARGE · 42s »). La cartographie du lot proposait de les déplacer DANS l'icône,
+comme celles du grésillement, et de ne laisser au titre que l'état. C'est un choix de
+présentation qu'il n'a pas tranché : non livré.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -18297,6 +18511,11 @@ l'étape 22 —, et la pose.
 main le 2026-09-09 et ordonné la fusion. Restent les **neuf autres classes** et
 l'équilibrage que seuls des matchs révèlent — dont les dix gadgets, tous livrés
 et **aucun joué en match réel**.
+
+⚠️ **Et un défaut antérieur, signalé au lot C de l'étape 28 (2026-09-11)** : un appui
+de fusée ou de gadget refusé, s'il reste TENU, part tout seul au retour de la
+ressource — on sent le refus, puis le geste part sans nouvel appui. À trancher avec
+Adrien : le corriger touche la simulation des deux pairs.
 
 ⚠️ **Le budget de cadence se mesure au PREMIER gadget lumineux, pas au dixième.**
 La marge est de 0,5 image par seconde — le banc vise 60,0 et relève 60,5 — soit

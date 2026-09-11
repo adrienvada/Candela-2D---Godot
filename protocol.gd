@@ -132,9 +132,10 @@ class_name Protocol
 ##      Et le VOILE arrête désormais les joueurs (même version, toujours non
 ##      publiée). Le fil ne bouge pas, le sens si : un client d'avant prédirait
 ##      qu'il le traverse, et l'hôte le retiendrait — une correction par contact.
-## 17 — le SENS change, pas la forme (étape 27 du chantier DIX CLASSES,
-##      2026-09-11, décisions d'Adrien). Le témoin ne bouge pas : aucun RPC n'est
-##      ajouté ni modifié. Mais cinq règles que les deux pairs doivent partager :
+## 17 — le SENS change (étape 27 du chantier DIX CLASSES, 2026-09-11, décisions
+##      d'Adrien), puis la FORME (étape 28, lot C, plus bas). À l'étape 27, aucun
+##      RPC n'était ajouté ni modifié. Mais cinq règles que les deux pairs doivent
+##      partager :
 ##      - la torche fantôme balaie selon un plan de gestes tiré de la GRAINE de
 ##        `rpc_spawn_gadget` (elle la jetait jusqu'ici) : un pair v16 dessinerait
 ##        son ancien sinus pendant que l'hôte v17 éblouit selon le nouveau plan ;
@@ -169,6 +170,21 @@ class_name Protocol
 ##      v17 les laisse passer. Le point de pose, lui, change chez l'hôte SEUL — le
 ##      poseur exclu du rayon, le voile reculé hors des corps ou refusé faute de
 ##      place — et il voyageait déjà dans `rpc_spawn_gadget` : rien à partager.
+##
+##      Et, lot C de la même étape (2026-09-11, décision d'Adrien : dire quand
+##      revient la prochaine fusée, par une jauge sans texte), la FORME change
+##      dans la même version, toujours non publiée — v0.5.0 est sortie en 16 :
+##      `rpc_stock_fusees` gagne l'ATTENTE restante avant la prochaine fusée.
+##      L'hôte l'envoie à chaque changement de réserve — regain, lancer,
+##      changement de classe — et le client la décompte entre deux envois, sans
+##      estimer. Entre un pair d'avant ce lot et un pair d'après, le paquet porte
+##      deux valeurs là où l'autre en attend trois, ou l'inverse : l'appel est
+##      refusé par le moteur, au mieux une ligne dans une console que personne
+##      ne lit, et le compte des fusées du client se fige. Le nouvel argument n'a
+##      PAS de valeur par défaut : c'est elle qui rendait GDScript muet à la v11,
+##      et un appelant oublié doit lever une erreur de script que `run_suites.sh`
+##      attrape. Le témoin l'a signalé ; le numéro reste 17, l'empreinte
+##      recalculée APRÈS l'avoir tranché.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
@@ -182,7 +198,7 @@ const VERSION := 17
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "ca43c20c041466f0"
+const WIRE_WITNESS := "9f4e2b539bc2175e"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

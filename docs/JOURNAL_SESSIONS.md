@@ -3921,3 +3921,38 @@ dans la suie, et des contrôles qui passaient pour une mauvaise raison ou selon 
 hasard. En corrigeant, deux choses de plus : les joueurs sont sur la couche des
 murs (le rayon de la suie s'arrêtait sur eux), et un corps cinématique téléporté
 n'est vu des requêtes qu'au pas de physique suivant — piège consigné.
+
+## 2026-09-11 — Étape 28, lot C : des refus qui se sentent, et des jauges de recharge (chantier DIX CLASSES)
+
+Session du chantier DIX CLASSES (worktree `candela-10-classes-system-e0a52d`),
+lot confié par l'orchestrateur de l'étape 28.
+
+**Incursion déclarée dans `player.gd`** — domaine « game feel », partagé. Rien
+d'existant n'y est réécrit, tout est ajouté : `refus_fusee`, `refus_gadget`,
+`DUREE_REFUS`, `_fusee_tenue`, `_gadget_tenu`, `RUMBLE_REFUS`,
+`_sentir_les_refus()`, `_sentir_pose_sans_place()`, `_ressentir_refus_fusee()`,
+`_ressentir_refus_gadget()`, `derniere_vibration` ; dans `_physics_process`, deux
+décréments EN TÊTE — avant toute sortie anticipée : placés après les gardes de
+manche, un refus armé en fin de manche se figeait jusqu'au FIGHT suivant (revue du
+lot) —, un appel avant les blocs de lancer et de pose, et un appel dans la branche
+de pose ; dans `_rumble`, une ligne en tête qui note la vibration DEMANDÉE (prise
+d'essai des suites, jamais lue par le jeu). Aucun son, aucune écriture de
+`_fusee_pressee`, `_gadget_pressee` ni `shoot_cooldown`.
+
+**`ui.gd`** (repris par ce chantier le 2026-09-09) — classe interne
+`CartoucheReserve` (neuve, après `CircularCooldown`) ; `_create_reserves_indicator`
+(les deux cartouches deviennent des `CartoucheReserve`, aucun enfant ajouté) ;
+`_maj_reserves` (la jauge et le tremblement des deux cartouches, la variable
+`jauge_g`) ; `fraction_de_retour()` (neuve, statique, après `decompte_gadget`).
+`_build_player_hud` n'est PAS touché : la largeur de la fiche, posée par la
+session des effets en jeu, reste telle quelle.
+
+**`game_state.gd` et `protocol.gd`** (partagés, tenus par ce chantier) —
+`_fusees_attente`, `attente_fusee`, `_accorder_fusees`, `_decompter_attente_fusees`,
+`_annoncer_stock_fusees`, `rpc_stock_fusees` (la forme du fil change),
+`spawn_fusee`, `appui_gadget_refuse`, `_rallumage_refuse`, une ligne de
+`basculer_gadget`, la remise à zéro de manche ; `WIRE_WITNESS` et l'entrée 17 du
+carnet.
+
+**Tests** — `tools/test_tir_et_reserves.gd` (en propre) ; deux appels de
+`tools/test_classes.gd` passés à trois arguments.

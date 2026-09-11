@@ -1513,6 +1513,20 @@ func _rapprocher_la_lampe() -> void:
 
 
 func _physics_process(delta):
+	# Étape 28, lot C — les deux minuteurs de REFUS se décomptent ICI, avant toute
+	# sortie anticipée : la mort, le menu, le décompte de départ, la manche finie.
+	# ⚠️ Placés plus bas, après ces gardes, ils se FIGEAIENT : un refus armé dans les
+	# 0,22 s qui précèdent la fin d'une manche gardait sa valeur pendant la killcam,
+	# l'écran de fin et le décompte — et le HUD, qui le recopie à chaque image, tenait
+	# la cartouche décalée tout l'entre-manche, puis la faisait trembler au FIGHT sur
+	# un appui que personne n'avait fait (revue du lot C, 2026-09-11, reproduit dans
+	# Godot). Ce sont des minuteurs de RESSENTI, que la simulation ne lit jamais : les
+	# décompter partout ne fait pas diverger les pairs. `tir_a_sec` (V4.4, plus bas)
+	# porte le même défaut, antérieur au lot : signalé, laissé à sa place.
+	if refus_fusee > 0.0:
+		refus_fusee = maxf(0.0, refus_fusee - delta)
+	if refus_gadget > 0.0:
+		refus_gadget = maxf(0.0, refus_gadget - delta)
 	if dead: return
 	
 	var state = get_tree().get_first_node_in_group("game_state")
@@ -1939,6 +1953,11 @@ func _physics_process(delta):
 	_detente_pressee = presse
 	if tir_a_sec > 0.0:
 		tir_a_sec = maxf(0.0, tir_a_sec - delta)
+	# Étape 28, point 5 — ⚠️ AVANT les blocs de lancer et de pose, sur l'état d'AVANT
+	# l'appui : placé après, la dernière fusée lancée se lirait comme un refus (la
+	# réserve vient de tomber à zéro), et une bobine éteinte batterie basse aussi.
+	_sentir_les_refus(state, input_provider.is_flare_pressed(),
+		input_provider.is_gadget_pressed(), can_move)
 
 	# Le lancer de fusée suit la même autorité que le tir. Front montant sur un
 	# bit MAINTENU dans la commande réseau : un « just_pressed » d'un seul tick
@@ -1980,6 +1999,10 @@ func _physics_process(delta):
 		_gadget_pressee = true
 	elif can_move and not _gadget_pressee and shoot_cooldown <= 0 \
 			and state and state.gadget_disponible(player_id):
+		# Étape 28 — le voile sans place se SENT ici, au moment où la pose part (un
+		# appui pris pendant le cooldown part plus tard, sans nouveau front). Le
+		# ressenti seul : la pose et le désarmement suivent, inchangés.
+		_sentir_pose_sans_place(state)
 		poser_gadget()
 		_gadget_pressee = true
 
@@ -1999,6 +2022,65 @@ func _percu_ici() -> bool:
 	var local := _index_joueur_local()
 	return local < 0 or player_id == local
 
+## Étape 28, point 5 (2026-09-11) — un appui de fusée ou de gadget que l'arbitrage
+## refuse se SENT : la cartouche tremble (HUD) et la manette vibre. Jusqu'ici seul
+## le tir avait ce retour (V4.4, plus haut) ; la fusée et le gadget refusés ne
+## produisaient RIEN — le geste qui échoue en silence que V4.4 avait retiré.
+##
+## Les refus sont ceux que l'hôte prononce en silence : réserve vide
+## (`fusee_disponible`), recharge de pose (`gadget_disponible`), bobine éteinte sous
+## le seuil de rallumage (`GameState.appui_gadget_refuse`). Le voile sans place a son
+## propre chemin, `_sentir_pose_sans_place()`, au moment où la pose part. Un appui
+## pendant le cooldown de tir N'EST PAS un refus : il part au terme du cooldown.
+##
+## ⚠️ **Chez le seul joueur qui a pressé** (`_percu_ici`, voir au-dessus) : sinon
+## l'hôte, qui simule aussi le client, sentirait les refus de l'autre — donc
+## apprendrait qu'il vient d'essayer. **Aucun son** : un son parlerait au monde.
+## Et rien de ce qui suit ne touche la simulation — ni `_fusee_pressee`, ni
+## `_gadget_pressee`, ni `shoot_cooldown` : les deux pairs ne doivent pas diverger.
+func _sentir_les_refus(state: Node, fusee_presse: bool, gadget_presse: bool,
+		can_move: bool) -> void:
+	var front_f := fusee_presse and not _fusee_tenue
+	var front_g := gadget_presse and not _gadget_tenu
+	_fusee_tenue = fusee_presse
+	_gadget_tenu = gadget_presse
+	if not can_move or state == null or not _percu_ici():
+		return
+	if front_f and not state.fusee_disponible(player_id):
+		_ressentir_refus_fusee()
+	if front_g and state.appui_gadget_refuse(player_id):
+		_ressentir_refus_gadget()
+
+## Étape 28, point 5 — le voile SANS PLACE. La décision reste à l'hôte
+## (`GameState.spawn_gadget`, lot B) ; ceci n'est qu'un PRÉ-CONTRÔLE local, au moment
+## où la pose part, sur les mêmes arguments que `poser_gadget()` envoie. S'il n'y a
+## de place nulle part, le refus se sent comme les autres.
+##
+## ⚠️ **Il n'ajoute QUE le retour ressenti** : la pose part quand même vers l'hôte, et
+## le désarmement de 0,30 s a lieu des deux côtés, strictement comme avant. Un
+## pré-contrôle qui retiendrait la pose ou le désarmement ferait diverger les pairs —
+## le client voit l'adversaire 100 ms en retard, son verdict peut différer de celui
+## de l'hôte. C'est le prix connu : un refus senti que l'hôte accepte, ou l'inverse,
+## dans cette fenêtre.
+func _sentir_pose_sans_place(state: Node) -> void:
+	if state == null or not _percu_ici():
+		return
+	var classe := current_weapon as ClassData
+	if classe == null or classe.gadget == null:
+		return
+	var point: Vector2 = state.point_de_pose_libre(self, global_position, rotation,
+		classe.gadget.slug)
+	if not point.is_finite():
+		_ressentir_refus_gadget()
+
+func _ressentir_refus_fusee() -> void:
+	refus_fusee = DUREE_REFUS
+	_rumble(RUMBLE_REFUS, 0.0, 0.05)
+
+func _ressentir_refus_gadget() -> void:
+	refus_gadget = DUREE_REFUS
+	_rumble(RUMBLE_REFUS, 0.0, 0.05)
+
 func _update_aim_line() -> void:
 	if aim_cast == null or aim_line == null: return
 	var end_pos = Vector2(2000, 0)
@@ -2008,6 +2090,20 @@ func _update_aim_line() -> void:
 
 ## V4.4 — temps restant du tremblement de refus, lu par le HUD.
 var tir_a_sec: float = 0.0
+## Étape 28, point 5 (2026-09-11) — temps restant du tremblement de refus de la
+## FUSÉE et du GADGET, lus par le HUD comme `tir_a_sec`. Locaux à qui a pressé :
+## jamais répliqués, jamais lus par la simulation.
+var refus_fusee: float = 0.0
+var refus_gadget: float = 0.0
+## La durée de `tir_a_sec` (0,22 s, plus haut) : un refus a une seule durée.
+const DUREE_REFUS := 0.22
+## Fronts BRUTS des deux touches, pour le seul ressenti. ⚠️ Surtout pas
+## `_fusee_pressee` / `_gadget_pressee` : eux portent la simulation (lancer, pose,
+## désarmement) et doivent rester identiques chez l'hôte et dans la prédiction du
+## client — un refus qui les toucherait chez le seul joueur local ferait diverger
+## les deux pairs.
+var _fusee_tenue: bool = false
+var _gadget_tenu: bool = false
 ## État précédent de la détente, pour ne réagir qu'au front montant.
 var _detente_pressee: bool = false
 ## Même chose pour le bouton de fusée.
@@ -2133,6 +2229,10 @@ const RUMBLE_PULSE_PERIOD := 60.0 / 85.0
 ## Clic sec du percuteur à vide — plus faible et plus court qu'un tir, pour
 ## ne jamais se confondre avec lui.
 const RUMBLE_DRY_FIRE := 0.35
+## Étape 28 — un appui de fusée ou de gadget refusé. La MÊME signature que le
+## percuteur à vide, délibérément : un refus a un seul goût dans la main. Nommée à
+## part pour se doser sans toucher au tir à sec.
+const RUMBLE_REFUS := 0.35
 ## L'arme qui redevient prête : un « tac » sur le moteur grave, pas un coup.
 const RUMBLE_RELOAD_READY := 0.45
 const RUMBLE_FLARE_WEAK := 0.4
@@ -2143,6 +2243,13 @@ const RUMBLE_TORCH_LOCK := 0.3
 ## D3 — durée d'avalement du faisceau à l'extinction de la torche.
 const TORCH_FADE_OUT := 0.08
 var _low_hp_pulse_accum: float = 0.0
+## Étape 28, lot C (2026-09-11) — PRISE D'ESSAI : la dernière vibration DEMANDÉE
+## (faible, forte, durée), notée par `_rumble` AVANT tout filtre — fournisseur local,
+## manette branchée, curseur « Vibrations de la manette ». Les suites n'ont pas de
+## manette : sans elle, `_rumble` sortait à sa première ligne, et aucune ne pouvait
+## voir qu'un refus avait cessé de vibrer (revue du lot C). Elle prouve la DEMANDE,
+## pas le moteur qui tourne. Jamais lue par le jeu.
+var derniere_vibration := Vector3.ZERO
 
 ## `_is_locally_piloted()` n'est PAS le bon garde ici : il renvoie toujours
 ## faux en écran partagé (aucun `match` pour LOCAL_SPLITSCREEN), ce qui
@@ -2153,6 +2260,7 @@ var _low_hp_pulse_accum: float = 0.0
 ## plus, correct en écran partagé : chaque corps y a bien un pad local, le
 ## sien. Voir Pièges connus.
 func _rumble(weak: float, strong: float, duration: float) -> void:
+	derniere_vibration = Vector3(weak, strong, duration)
 	var lp := input_provider as LocalInputProvider
 	if lp == null: return
 	if not Input.get_connected_joypads().has(lp.device_id): return
