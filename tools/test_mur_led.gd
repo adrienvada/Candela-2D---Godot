@@ -1,9 +1,8 @@
 ## Test headless du bandeau LED des murs (prototype, `mur_led.gd`) : profil et
-## cuisson de la texture, repère monde, respiration, et pose dans une arène.
+## cuisson de la texture, repère monde, respiration, pose dans une arène, et les
+## shaders dont la bande dépend.
 ## Lancer : godot --headless --path . --script res://tools/test_mur_led.gd
 extends SceneTree
-
-const T := MurLed.TEXELS_PAR_CASE
 
 var _failures: int = 0
 
@@ -16,6 +15,7 @@ func _init() -> void:
 	_test_repere_monde()
 	_test_respiration()
 	_test_tempo_musique()
+	_test_couleur()
 	_test_pose()
 	_test_intensite_par_la_couleur()
 	_test_shaders_lisent_l_energie()
@@ -53,16 +53,16 @@ func _carte_livree() -> Dictionary:
 		return {}
 	return json.data
 
-func _alpha(img: Image, cx: int, cy: int, u: int, v: int) -> float:
-	return img.get_pixel(cx * T + u, cy * T + v).a
+## Alpha au point (cx + u, cy + v) de la grille, u et v en fraction de case.
+func _alpha(img: Image, t: int, cx: int, cy: int, u: float, v: float) -> float:
+	return img.get_pixel(int((cx + u) * t), int((cy + v) * t)).a
 
 func _test_profil() -> void:
 	print("\n— Profil")
-	_check("RAYON = ceil(PORTEE) : la cuisson voit tout mur qui compte",
-		MurLed.RAYON == int(ceil(MurLed.PORTEE)))
 	_check("retenu contre la face", is_equal_approx(MurLed.profil(0.0), MurLed.FACE))
 	_check("sommet au retrait", is_equal_approx(MurLed.profil(MurLed.RETRAIT), 1.0))
 	_check("éteint à la portée", MurLed.profil(MurLed.PORTEE) == 0.0)
+	_check("portée triplée (4,5 cases, 2026-09-11)", is_equal_approx(MurLed.PORTEE, 4.5))
 	var decroit := true
 	var d := MurLed.RETRAIT
 	while d < MurLed.PORTEE:
@@ -73,30 +73,34 @@ func _test_profil() -> void:
 
 func _test_bande_autour_d_un_mur() -> void:
 	print("\n— Bande autour d'un mur isolé")
-	var img := MurLed.cuire(_grille(7, [Vector2i(3, 3)]))
-	_check("taille = cases × texels", img.get_size() == Vector2i(7 * T, 7 * T),
+	var murs := _grille(13, [Vector2i(6, 6)])
+	var img := MurLed.cuire(murs)
+	var t := MurLed.texels_par_case(13, 13)
+	_check("taille = cases × texels", img.get_size() == Vector2i(13 * t, 13 * t),
 		str(img.get_size()))
-	var milieu := T / 2
-	var gauche := _alpha(img, 2, 3, T - 2, milieu)
-	var droite := _alpha(img, 4, 3, 1, milieu)
-	_check("symétrique gauche/droite", absf(gauche - droite) < 0.01,
+	var gauche := _alpha(img, t, 5, 6, 0.9, 0.5)
+	var droite := _alpha(img, t, 7, 6, 0.1, 0.5)
+	_check("symétrique gauche/droite", absf(gauche - droite) < 0.02,
 		"%.3f / %.3f" % [gauche, droite])
-	_check("éclaire encore à une case du mur", _alpha(img, 2, 3, 0, milieu) > 0.0)
-	_check("nulle au-delà de la portée", _alpha(img, 0, 3, 0, milieu) == 0.0)
-	_check("nulle loin des murs", _alpha(img, 0, 0, milieu, milieu) == 0.0)
-	var debord := _alpha(img, 3, 3, 0, milieu)
+	_check("éclaire encore à trois cases du mur", _alpha(img, t, 2, 6, 0.9, 0.5) > 0.0)
+	_check("nulle au-delà de la portée", _alpha(img, t, 0, 6, 0.1, 0.5) == 0.0)
+	_check("nulle loin des murs", _alpha(img, t, 0, 0, 0.5, 0.5) == 0.0)
+	var debord := _alpha(img, t, 6, 6, 0.0, 0.5)
 	_check("déborde sur le liseré, retenu", debord > 0.0 and debord <= MurLed.FACE + 0.001,
 		"%.3f" % debord)
-	_check("cœur du mur éteint", _alpha(img, 3, 3, milieu, milieu) == 0.0)
+	_check("cœur du mur éteint", _alpha(img, t, 6, 6, 0.5, 0.5) == 0.0)
 
 ## La texture doit valoir le profil de la distance au mur le plus proche,
-## texel par texel : ce contrôle attrape une couture entre deux motifs comme un
-## voisinage trop court. Calculé ici en force brute, sur TOUS les murs.
+## calculée ici en force brute sur TOUS les murs — ce qui attrape une transformée
+## fausse comme un voisinage trop court. Loin de la face, l'écart doit être
+## minime ; dans la rampe du retrait (quelques pixels), la pente est trop forte
+## pour une tolérance fine, on y vérifie seulement l'encadrement.
 func _test_exactitude() -> void:
 	print("\n— Exactitude (force brute)")
 	var fixtures := {
-		"L et pilier": _grille(9, [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1),
-			Vector2i(1, 2), Vector2i(1, 3), Vector2i(6, 5), Vector2i(6, 6), Vector2i(4, 7)]),
+		"L et piliers": _grille(20, [Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
+			Vector2i(2, 3), Vector2i(2, 4), Vector2i(12, 10), Vector2i(12, 11),
+			Vector2i(6, 15), Vector2i(17, 4)]),
 	}
 	var data := _carte_livree()
 	_check("carte livrée lue", not data.is_empty())
@@ -112,22 +116,27 @@ func _test_exactitude() -> void:
 		var debut := Time.get_ticks_msec()
 		var img := MurLed.cuire(murs)
 		print("    %s : cuisson %d ms pour %s px" % [nom, Time.get_ticks_msec() - debut, img.get_size()])
-		# Un texel sur 5 sur la carte livrée : la force brute y coûterait sinon
-		# plusieurs secondes.
-		var pas := 1 if murs.size() < 20 else 5
-		var pire := 0.0
+		var t := img.get_width() / murs.size()
+		var pas := 1 if murs.size() <= 20 else 3
+		var pire_loin := 0.0
+		var hors_cadre := 0
 		for x in range(0, img.get_width(), pas):
 			for y in range(0, img.get_height(), pas):
-				var case := Vector2i(x / T, y / T)
-				if murs[case.x][case.y]:
+				if murs[x / t][y / t]:
 					continue
-				var p := Vector2((x + 0.5) / T, (y + 0.5) / T)
+				var p := Vector2((x + 0.5) / t, (y + 0.5) / t)
 				var d := INF
 				for m in liste:
 					d = minf(d, MurLed.distance_case(p - m, Vector2.ZERO))
-				# Tolérance : quantification 8 bits de l'alpha.
-				pire = maxf(pire, absf(img.get_pixel(x, y).a - MurLed.profil(d)))
-		_check("%s : texture = profil(distance)" % nom, pire < 0.01, "écart %.4f" % pire)
+				var a := img.get_pixel(x, y).a
+				if d > MurLed.RETRAIT + 1.0 / t:
+					pire_loin = maxf(pire_loin, absf(a - MurLed.profil(d)))
+				elif a < MurLed.FACE - 0.05 or a > 1.0:
+					hors_cadre += 1
+		_check("%s : loin de la face, texture = profil(distance)" % nom, pire_loin < 0.03,
+			"écart %.4f" % pire_loin)
+		_check("%s : dans la rampe, entre FACE et 1" % nom, hors_cadre == 0,
+			"%d texels hors cadre" % hors_cadre)
 
 func _test_repere_monde() -> void:
 	print("\n— Repère monde")
@@ -144,7 +153,8 @@ func _test_respiration() -> void:
 	_check("sommet à mi-période", absf(MurLed.souffle(p * 0.5) - 1.0) < 0.0001)
 	_check("périodique", absf(MurLed.souffle(1.3) - MurLed.souffle(1.3 + p)) < 0.0001)
 	_check("le creux s'attarde", MurLed.souffle(p * 0.25) < 0.5)
-	_check("lente (≥ 4 s)", p >= 4.0, "%.2f s" % p)
+	_check("six mesures de la musique (≈ 8,5 s, 2026-09-11)",
+		is_equal_approx(p, 24.0 * 60.0 / MurLed.BPM_MUSIQUE), "%.2f s" % p)
 
 ## La période est dérivée d'une copie du tempo : vérifier qu'elle suit l'original.
 func _test_tempo_musique() -> void:
@@ -156,6 +166,13 @@ func _test_tempo_musique() -> void:
 	if trouve:
 		_check("BPM_MUSIQUE = AudioManager.BPM",
 			float(trouve.get_string(1)) == MurLed.BPM_MUSIQUE, trouve.get_string(1))
+
+## La bande éclaire le monde : elle en prend la famille chaude (charte), jamais
+## le froid réservé à l'appareil.
+func _test_couleur() -> void:
+	print("\n— Couleur")
+	_check("une couleur de la charte : l'ambre", MurLed.COULEUR == Charte.AMBRE)
+	_check("chaude : rouge au-dessus du bleu", MurLed.COULEUR.r > MurLed.COULEUR.b)
 
 func _test_pose() -> void:
 	print("\n— Pose dans une arène")
@@ -177,7 +194,13 @@ func _test_pose() -> void:
 	_check("sans drapeau : éteinte, pas seulement à zéro", not led.enabled)
 	_check("aucune ombre", not led.shadow_enabled)
 	_check("éclaire décor, adversaire et joueur local", led.range_item_cull_mask == 7)
-	MurLed.poser(data, arene, Callable())
+	var texture := led.texture
+	var debut := Time.get_ticks_msec()
+	var led2 := MurLed.poser(data, arene, Callable())
+	_check("même carte : texture reprise du cache, pas recuite",
+		led2.texture == texture, "%d ms" % (Time.get_ticks_msec() - debut))
+	var autre := MurLed.texture_pour(_grille(9, [Vector2i(4, 4)]))
+	_check("autre carte : autre texture", autre != texture)
 	var n := 0
 	for enfant in arene.get_children():
 		if enfant is MurLed:
@@ -186,8 +209,9 @@ func _test_pose() -> void:
 	arene.free()
 
 ## Garde du défaut vu par Adrien au premier essai : dosée par l'énergie, la bande
-## allumait le liseré et l'adversaire d'un coup, parce que leurs shaders ignorent
-## `LIGHT_ENERGY`. L'énergie doit rester à 1 et la couleur porter la respiration.
+## allumait le liseré et l'adversaire d'un coup, parce que leurs shaders
+## ignoraient `LIGHT_ENERGY`. L'énergie reste à 1 et la couleur porte la
+## respiration — deux shaders l'ignorent encore (voir LIGHT_SANS_ENERGIE).
 func _test_intensite_par_la_couleur() -> void:
 	print("\n— L'intensité passe par la couleur")
 	var led := MurLed.new()

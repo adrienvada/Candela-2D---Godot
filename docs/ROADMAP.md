@@ -17770,13 +17770,27 @@ plus `_horloge_led()` :
   ramené le halo tranché de la fusée. La texture est cuite depuis la grille des
   murs à chaque construction d'arène.
 - **Profil d'une LED posée au pied du mur** : retenu contre la face (30 %),
-  sommet à 0,15 case (≈ 5 px), éteint à 1,5 case (≈ 52 px), débord de 0,1 case
-  dans le mur pour que le liseré respire aussi. La retenue n'est pas cosmétique :
-  au banc, le liseré réagit ~13 fois plus que le sol sombre ; sans elle la bande
-  se lit comme un trait au lieu d'une lueur. Chaque case ne dépend que de son
-  voisinage 5×5, d'où des motifs mis en cache : **36 ms** de cuisson pour la
-  carte livrée (408² px). Le test compare la texture, texel par texel, au profil
-  de la distance au mur calculée en force brute.
+  sommet à 0,15 case (≈ 5 px), éteint à **4,5 cases (≈ 157 px)**, débord de
+  0,1 case dans le mur pour que le liseré respire aussi. La retenue n'est pas
+  cosmétique : au banc, le liseré réagit ~13 fois plus que le sol sombre ; sans
+  elle la bande se lit comme un trait au lieu d'une lueur. La portée était de
+  1,5 case jusqu'au 2026-09-11 ; Adrien l'a voulue **trois fois plus longue**.
+- **La distance au mur vient d'une transformée de distance euclidienne**
+  (Felzenszwalb, deux passes), dont le coût ne dépend que du nombre de texels.
+  La première cuisson ne lisait que le voisinage de chaque case et mettait les
+  motifs en cache ; à 4,5 cases il aurait fallu 11 × 11 cases de voisinage, et
+  presque chaque case de la carte en aurait eu un différent. Texture à 8 texels
+  par case (≈ 4,4 px), 4 sur les grandes cartes pour tenir sous 512 px.
+  **83 ms** de cuisson pour la carte livrée (272² px), **une fois par carte** :
+  `rebuild_arena()` reconstruit l'arène à chaque manche, la texture est donc
+  gardée en cache tant que la grille ne change pas. Le test compare la texture
+  au profil de la distance au mur calculée en force brute.
+- **Couleur : l'ambre de la charte**, depuis le 2026-09-11 (« dans le thème du
+  jeu »). La charte sépare deux familles : le monde est chaud, le froid « LED »
+  est réservé à l'appareil (HUD, interface). La bande éclaire le monde, elle en
+  prend la couleur malgré son nom ; et l'ambre dit déjà « ce qui brûle » et « la
+  mise en garde ». **La première version portait `ACIER`, la couleur du boîtier
+  de l'appareil : une teinte d'interface dans l'arène, contre la charte.**
 - **Pas d'ombre** : la bande n'existe que du côté ouvert, elle ne traverse rien.
 - **La phase suit l'horloge de manche** (`round_time - time_left`, recalée par
   l'hôte), jamais l'horloge de chaque machine : sinon l'un verrait l'adversaire
@@ -17785,8 +17799,10 @@ plus `_horloge_led()` :
   d'attente), horloge propre, sans enjeu.
 - **Éteinte au creux** (`enabled = false` sous 0,002) et non laissée à zéro —
   même piège que ci-dessus.
-- Période : 4 mesures de la musique (16 temps à 170 BPM ≈ 5,65 s) ; le test
-  vérifie que la copie du tempo suit `AudioManager.BPM`. Le tempo seulement : la
+- Période : **6 mesures de la musique (24 temps à 170 BPM ≈ 8,5 s)** — c'était
+  4 mesures (≈ 5,65 s) ; Adrien l'a voulue 1,5 fois plus lente le 2026-09-11, et
+  6 mesures la gardent sur la grille de la musique. Le test vérifie que la copie
+  du tempo suit `AudioManager.BPM`. Le tempo seulement : la
   phase n'est pas alignée sur le premier temps de la musique.
 
 **Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
@@ -17807,7 +17823,24 @@ Proportionnel d'un bout à l'autre. Chiffres pris **après** que le liseré s'es
 mis à suivre l'énergie des lampes (« Décisions actées », même jour) : avant, le
 liseré montait à 20,8 / 42,0 pour le même sol. Normalisé sur la torche, il
 répond désormais au bandeau (énergie 1) comme à une torche à 1 — la lueur au sol
-domine, le mur n'est que souligné. **Au banc isolé**, l'adversaire collé au
+domine, le mur n'est que souligné.
+
+**Après les réglages du 2026-09-11** (portée ×3, ambre, 8,5 s), même plan, en
+jeu, luminance /255 :
+
+| | liseré | sol 0-18 px | sol 18-45 px | sol 45-105 px | centre |
+|---|---|---|---|---|---|
+| sans bandeau | 0 | 0 | 0 | 0 | 0 |
+| mi-souffle | 9,2 | 16,6 | 12,1 | 6,5 | 0 |
+| sommet | 18,4 | 34,9 | 25,3 | 13,7 | 0 |
+
+Au banc (salle vide, un seul mur en jeu), au sommet : sol **35 / 23 / 11 / 4 / 0**
+et adversaire **162 / 116 / 59 / 21 / 2** à 0,25 / 1 / 2 / 3 / 4 cases du mur.
+L'adversaire est identique à mi-souffle : son shader sature dès ~25 % du
+souffle, c'est donc la DISTANCE au mur qui dose ce qu'on voit de lui, plus
+l'instant. **Avec la portée triplée, un adversaire se devine jusqu'à ~3 cases
+d'un mur la moitié de chaque respiration** — une grande part de la plupart des
+salles. C'est le point de dosage à juger en jouant. **Au banc isolé**, l'adversaire collé au
 pilier : 51 / 129 / 131 / 131 pour un souffle de 0,10 / 0,25 / 0,50 / 1 — il
 **sature dès le quart du souffle** (`player_enemy_light.gdshader` multiplie la
 lumière par 4). Avec la respiration au carré, un adversaire collé au mur est
