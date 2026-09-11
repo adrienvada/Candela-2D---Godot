@@ -88,12 +88,16 @@ func _part_lisere(img: Image) -> float:
 	return float(clairs) / float(maxi(1, contour))
 
 
+## Les titres d'écran (`titre_*.png`) ont été SUPPRIMÉS le 2026-09-12 (Adrien :
+## « supprime les images de titres ») — le récitatif de `menu_recitatif.gd` les
+## remplace. Ne restent dans le dossier que les trois verdicts de fin et le
+## tampon, et c'est sur eux que porte désormais le contrôle du liseré.
 func _test_titres_sans_lisere() -> void:
 	var dossier := "res://assets/ui/titres/"
 	var fichiers := DirAccess.get_files_at(dossier)
 	var vus := 0
 	for f in fichiers:
-		if not f.ends_with(".png") or not (f.begins_with("titre_") or f.begins_with("verdict_")):
+		if not f.ends_with(".png") or not f.begins_with("verdict_"):
 			continue
 		var img := _png(dossier + f)
 		if img == null:
@@ -103,13 +107,15 @@ func _test_titres_sans_lisere() -> void:
 		var part := _part_lisere(img)
 		_check("%s : bord sans liseré blanc" % f, part <= PART_LISERE_MAX,
 			"%.1f %% du contour est blanc-gris" % (part * 100.0))
-	_check("au moins dix titres contrôlés", vus >= 10, "%d vus" % vus)
+	_check("les trois verdicts contrôlés", vus == 3, "%d vus" % vus)
+	_check("plus aucun titre d'écran en image (titre_*.png)",
+		Array(fichiers).filter(func(f): return String(f).begins_with("titre_")).is_empty())
 
 	# Sans mipmaps, un titre de 1300 px réduit à 48 scintille : le nettoyage du
 	# bord ne sert à rien si la réduction le re-bruite.
 	var cfg := ConfigFile.new()
-	var chemin_import := "res://assets/ui/titres/titre_accueil.png.import"
-	_check("les titres sont importés avec mipmaps",
+	var chemin_import := "res://assets/ui/titres/verdict_victoire.png.import"
+	_check("les verdicts sont importés avec mipmaps",
 		cfg.load(chemin_import) == OK and bool(cfg.get_value("params", "mipmaps/generate", false)))
 
 
