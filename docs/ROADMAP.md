@@ -18301,10 +18301,28 @@ ne tient pas 60 **dans cette configuration, avec ou sans lui** — ce qui n'est
 **pas** une régression établie : le seul relevé de référence au premier plan
 (R4, 2026-08-25, 1 % bas **61**, médiane ~120) a été pris **en vue unique**,
 avec `--vue-unique`. L'écran scindé, qui rend deux vues, n'a jamais été relevé
-au premier plan ; on ne sait donc pas s'il a déjà tenu 60. **À faire pour
-comparer à la référence** : `godot --path . res://tools/bench_framerate.tscn --
---seconds 30 --vue-unique`, puis la même avec `--sans-led-murs`. Tant que ce
-relevé manque, « 1 % bas ≥ 60 » n'est vérifié ni pour, ni contre le bandeau.
+au premier plan ; on ne sait donc pas s'il a déjà tenu 60. **Puis en vue unique**, la configuration de la référence (même soir, relevés
+d'Adrien, `--vue-unique`, focus stable au premier plan, 2560 × 1440, M3) :
+
+| vue unique | médiane | 1 % bas | image la plus lente |
+|---|---|---|---|
+| bandeau allumé | 65 | 44 | 27,3 ms |
+| `--sans-led-murs` | 65 | 45 | 28,8 ms |
+| *référence R4, 2026-08-25* | *~120* | *61* | — |
+
+**Le bandeau ne coûte rien de mesurable en vue unique** : même médiane, 1 % bas
+dans le bruit (il a même rendu 1863 images contre 1820). La réserve de cadence
+du chantier est levée.
+
+⚠️ **Et ces relevés montrent une RÉGRESSION qui n'est pas celle du bandeau** :
+dans la configuration exacte de la référence, la médiane passe de **~120 à 65**
+et le 1 % bas de **61 à 44-45** — la cible de 60 n'est plus tenue, bandeau
+allumé ou non. La cause est quelque part dans ce que `main` a reçu depuis le
+2026-08-25 (des dizaines de lots, dont la refonte roman graphique). **Signalée,
+pas cherchée ici** : ce n'est pas le périmètre du bandeau, et une recherche par
+bissection demande des relevés au premier plan qu'une session d'agent ne sait
+pas prendre seule (voir plus haut : le rappel de la fenêtre par `osascript` n'a
+pas tenu).
 
 ⚠️ Deux pièges payés en route, et le premier est de ma main. (1) **Rappeler la
 fenêtre au premier plan toutes les 0,5 s** (`osascript`) pour la garder devant
