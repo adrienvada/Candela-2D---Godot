@@ -18358,6 +18358,22 @@ bissection demande des relevés au premier plan qu'une session d'agent ne sait
 pas prendre seule (voir plus haut : le rappel de la fenêtre par `osascript` n'a
 pas tenu).
 
+**Cause trouvée le même jour** par la session « vigilant-goldstine » (branche
+`claude/vigilant-goldstine-39f039`, tâche « Trouver la régression de cadence en
+vue unique ») : **`arena_decor.gd`, commit `bad6083` du 2026-09-08**. Sa sonde à
+rendu forcé (`tools/sonde_rendu.tscn`) date la marche : `5657464` = 81 appels de
+dessin et 0,8 ms de rendu CPU, `bad6083` = 3 376 appels et 10,3 ms. Masquer
+`ArenaDecor*` sur `bc0c25b` : 1 886 → 130 appels, médiane 80 → 100, 1 % bas
+47 → 69. Rien n'est corrigé ; la session « Refonte graphique » est prévenue.
+Détail et suite dans sa section.
+
+⚠️ **Et elle corrige une lecture faite plus haut dans cette section.** Les
+relevés « au second plan » (4349 / 4348 images, 1 % bas 143 / 143) n'étaient pas
+un plafond que macOS impose à une fenêtre en arrière : **fenêtre occultée, le
+jeu ne rend pas du tout**, et le banc n'y mesure que le CPU. Identiques avec et
+sans bandeau, ils ne pouvaient donc rien dire d'une lumière — qui ne coûte
+qu'au rendu. Seuls les relevés au premier plan d'Adrien mesurent le bandeau.
+
 ⚠️ Deux pièges payés en route, et le premier est de ma main. (1) **Rappeler la
 fenêtre au premier plan toutes les 0,5 s** (`osascript`) pour la garder devant
 sabote exactement ce qu'on mesure : chaque changement de focus est un hoquet, et
