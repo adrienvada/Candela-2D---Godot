@@ -2689,10 +2689,42 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 	marge_g.add_theme_constant_override("margin_bottom", GAP_XXS)
 	panel_gadget.add_child(marge_g)
 
+	# L'icône du gadget, à gauche de son titre et de son nom, comme celle des
+	# fusées (2026-09-11). Sa texture se pose dans `_maj_reserves`, pas ici : la
+	# classe peut changer pendant le décompte de manche.
+	var rangee_g := HBoxContainer.new()
+	rangee_g.add_theme_constant_override("separation", GAP_XS)
+	marge_g.add_child(rangee_g)
+	var icone_g := TextureRect.new()
+	icone_g.name = "Icone"
+	icone_g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icone_g.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icone_g.custom_minimum_size = Vector2(T_APPUI, T_APPUI)
+	icone_g.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icone_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rangee_g.add_child(icone_g)
+	# Le compte à rebours, DANS l'icône et non à côté — le patron du cadenas de la
+	# torche. ⚠️ **Enfant d'un TextureRect, qui n'est pas un conteneur** : quoi que
+	# le chiffre écrive, la cartouche ne bouge pas. Un libellé frère dans la rangée
+	# l'aurait élargie (piège « Un libellé ne coupe pas »). Adrien, 2026-09-11 : « le
+	# grésillement doit avoir un countdown sur l'icône de gadget ».
+	var decompte_g := Label.new()
+	decompte_g.name = "Decompte"
+	decompte_g.visible = false
+	decompte_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	decompte_g.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	decompte_g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	decompte_g.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	Charte.appareil(decompte_g, T_MENTION - 2)
+	decompte_g.add_theme_color_override("font_color", Charte.HALOGENE)
+	decompte_g.add_theme_color_override("font_outline_color", Charte.NOIR)
+	decompte_g.add_theme_constant_override("outline_size", 4)
+	icone_g.add_child(decompte_g)
+
 	var vbox_g := VBoxContainer.new()
 	vbox_g.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox_g.add_theme_constant_override("separation", 0)
-	marge_g.add_child(vbox_g)
+	rangee_g.add_child(vbox_g)
 
 	var gadget_titre := Label.new()
 	gadget_titre.name = "Titre"
@@ -2725,6 +2757,8 @@ func _create_reserves_indicator(player: int = 0) -> Dictionary:
 		"fusees": fusees,
 		"gadget": gadget,
 		"gadget_titre": gadget_titre,
+		"gadget_icone": icone_g,
+		"gadget_decompte": decompte_g,
 	}
 
 
@@ -2785,6 +2819,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	var titre_g := "GADGET"
 	var texte_g := "—"
 	var vif := false
+	var decompte := -1
 	if classe != null and classe.gadget != null and classe.gadget.est_livre():
 		texte_g = _nom_court_gadget(classe.gadget.slug, classe.gadget.libelle)
 		var dispo := bool(gs.gadget_disponible(pid)) if gs.has_method("gadget_disponible") else false
@@ -2797,6 +2832,7 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 			# « éteinte, rallumable » et « éteinte, pas encore » se lisaient pareil,
 			# et l'appui ignoré ne disait rien.
 			var pct := int(floor(batt * 100.0))
+			decompte = decompte_gadget(allume, batt)
 			if allume:
 				titre_g = "ALLUMÉ · %d %%" % pct
 				vif = true
@@ -2825,9 +2861,47 @@ func _maj_reserves(res: Dictionary, joueur: int, qui: Node2D = null) -> void:
 	lbl_g.add_theme_color_override("font_color",
 		Charte.HALOGENE if vif else COLOR_DIM)
 
+	# L'icône du gadget : posée seulement quand la classe change — `recadree` lit
+	# l'image, ce qui ne se fait pas à chaque image du HUD.
+	var ico: TextureRect = res.get("gadget_icone", null)
+	if ico != null:
+		var slug := ""
+		if classe != null and classe.gadget != null:
+			slug = String(classe.gadget.slug)
+		if String(ico.get_meta("slug", "?")) != slug:
+			ico.set_meta("slug", slug)
+			var chemin := classe.gadget.chemin_icone() if slug != "" else ""
+			ico.texture = MenuIcones.recadree(load(chemin)) \
+				if chemin != "" and ResourceLoader.exists(chemin) else null
+		ico.modulate = Color(1.0, 1.0, 1.0, 1.0 if vif else 0.45)
+	var lbl_d: Label = res.get("gadget_decompte", null)
+	if lbl_d != null:
+		lbl_d.visible = decompte >= 0
+		if decompte >= 0:
+			lbl_d.text = str(decompte)
+
+
 	var p_g: PanelContainer = res.get("panel_gadget", null)
 	if p_g != null:
 		_set_gadget_style(p_g, vif, teinte)
+
+## Le compte à rebours posé sur l'icône du gadget, ou -1 : rien à afficher.
+## Fonction pure : c'est elle que les tests appellent.
+##
+## - ALLUMÉE : les secondes de batterie restantes, avant que la zone ne lâche.
+##   `ceil` et non `floor` : le chiffre n'affiche jamais 0 tant qu'elle tourne —
+##   à l'inverse du pourcentage du titre, qui prend `floor` pour ne jamais annoncer
+##   le seuil avant qu'il soit atteint.
+## - SOUS LE SEUIL de rallumage : les secondes avant de pouvoir la rallumer — ce
+##   que l'appui ignoré ne disait pas.
+## - ÉTEINTE et rallumable : rien, le titre dit déjà « ÉTEINT · p % ».
+static func decompte_gadget(allume: bool, batt: float) -> int:
+	if allume:
+		return int(ceil(maxf(0.0, batt) * GadgetGresillement.DUREE_ACTIVE_MAX))
+	if batt < GadgetGresillement.SEUIL_RALLUMAGE:
+		return int(ceil((GadgetGresillement.SEUIL_RALLUMAGE - maxf(0.0, batt))
+			* GadgetGresillement.RECHARGE_BATTERIE))
+	return -1
 
 
 ## Le cadenas du cran plein, dessiné en coin de l'icône de torche.
@@ -2959,14 +3033,13 @@ func _set_gadget_style(panel: PanelContainer, active: bool, player_color: Color)
 
 	panel.add_theme_stylebox_override("panel", style)
 
-	var margin = panel.get_child(0)
-	if margin.get_child_count() == 0:
-		return
-	var vbox = margin.get_child(0)
-	var titre: Label = vbox.get_node_or_null("Titre")
+	# ⚠️ **Par NOM, plus par position**, depuis que l'icône s'intercale (2026-09-11) :
+	# `get_child(0).get_child(0)` rendait la rangée au lieu de la colonne, et la
+	# couleur du titre et du nom disparaissait sans une erreur.
+	var titre: Label = panel.find_child("Titre", true, false)
 	if titre != null:
 		titre.add_theme_color_override("font_color", player_color if active else Color(Charte.ACIER.r, Charte.ACIER.g, Charte.ACIER.b, 0.5))
-	var label: Label = vbox.get_node_or_null("Label")
+	var label: Label = panel.find_child("Label", true, false)
 	if label != null:
 		label.add_theme_color_override("font_color", Charte.HALOGENE if active else COLOR_DIM)
 

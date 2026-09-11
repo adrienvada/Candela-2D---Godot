@@ -89,6 +89,8 @@ func _run() -> void:
 	_test_destruction_autoritaire()
 	await _test_voile_bloquant(gs)
 	_test_sprites_des_gadgets(gs)
+	await _test_diffus_intouchables(gs)
+	await _test_suie_masque(gs)
 	gs.queue_free()
 	await process_frame
 	if _echecs == 0:
@@ -424,11 +426,30 @@ func _test_batterie(gs: Node) -> void:
 		tb.contains("ALLUMÉ") and tb.contains("%"), tb)
 	_check("et la valeur garde son nom", String(gs.ui.p1_reserves["gadget"].text) == "GRÉSILLEMENT",
 		String(gs.ui.p1_reserves["gadget"].text))
+	# Le compte à rebours sur l'icône (Adrien, 2026-09-11) : batterie pleine,
+	# quatorze secondes avant que la zone ne lâche.
+	var dec: Label = gs.ui.p1_reserves["gadget_decompte"]
+	_check("l'icône compte les secondes de batterie : 14 à la pose",
+		dec.visible and dec.text == "14", "%s « %s »" % [dec.visible, dec.text])
+	var ico: TextureRect = gs.ui.p1_reserves["gadget_icone"]
+	_check("et l'icône porte l'image du gadget", ico.texture != null)
+	# La fonction pure, sur les cas qui comptent.
+	_check("le décompte : 7 à mi-batterie, 1 au dernier souffle, jamais 0 allumée",
+		gs.ui.decompte_gadget(true, 0.5) == 7 and gs.ui.decompte_gadget(true, 0.001) == 1
+			and gs.ui.decompte_gadget(true, 1.0) == 14,
+		"%d / %d / %d" % [gs.ui.decompte_gadget(true, 0.5), gs.ui.decompte_gadget(true, 0.001),
+			gs.ui.decompte_gadget(true, 1.0)])
+	_check("sous le seuil, les secondes avant de pouvoir rallumer ; éteinte et prête, rien",
+		gs.ui.decompte_gadget(false, 0.0) == int(ceil(_GG.SEUIL_RALLUMAGE * _GG.RECHARGE_BATTERIE))
+			and gs.ui.decompte_gadget(false, 0.5) == -1,
+		"%d / %d" % [gs.ui.decompte_gadget(false, 0.0), gs.ui.decompte_gadget(false, 0.5)])
 
 	# Allumée, la batterie se vide en quatorze secondes.
 	gs._maj_reserves_gadgets(7.0)
 	_check("allumée sept secondes, la batterie est à moitié",
 		absf(gs.batterie(0) - 0.5) < 0.02, "%.3f" % gs.batterie(0))
+	_maj_hud(gs)
+	_check("et l'icône compte 7 secondes", dec.visible and dec.text == "7", dec.text)
 
 	# L'interrupteur : éteinte, elle se remplit.
 	gs.basculer_gadget(gs.p1)
@@ -436,6 +457,7 @@ func _test_batterie(gs: Node) -> void:
 	_maj_hud(gs)
 	tb = _titre_gadget(gs)
 	_check("et le titre le dit", tb.contains("ÉTEINT"), tb)
+	_check("éteinte et rallumable, l'icône ne compte rien", not dec.visible, dec.text)
 	gs._maj_reserves_gadgets(30.0)
 	_check("éteinte trente secondes, elle regagne la moitié",
 		absf(gs.batterie(0) - 1.0) < 0.02, "%.3f" % gs.batterie(0))
@@ -450,6 +472,8 @@ func _test_batterie(gs: Node) -> void:
 	tb = _titre_gadget(gs)
 	_check("sous le seuil, le titre dit qu'elle CHARGE — pas qu'elle est éteinte et rallumable",
 		tb.begins_with("CHARGE"), tb)
+	_check("et l'icône compte les secondes avant le rallumage",
+		dec.visible and dec.text == str(int(ceil(_GG.SEUIL_RALLUMAGE * _GG.RECHARGE_BATTERIE))), dec.text)
 
 	# Sous le seuil, pas de rallumage : pas de clignotement sur un fil de charge.
 	gs.basculer_gadget(gs.p1)
@@ -610,6 +634,30 @@ func _test_largeur_des_libelles(gs: Node) -> void:
 	_check("aucun libellé n'est plus large que le plus long que sa cartouche portait déjà",
 		fautifs.is_empty(), "; ".join(fautifs))
 	_check("et la mesure a bien vu les pires cas", _largeurs.size() >= 24, str(_largeurs.size()))
+	# ⚠️ **Et le compte à rebours n'élargit pas la cartouche** : le chiffre vit DANS
+	# l'icône, qui n'est pas un conteneur. On mesure la MÊME cartouche, chiffre
+	# caché puis affiché — la largeur, elle, suit légitimement le nom du gadget,
+	# et un premier jet qui exigeait une largeur unique pour tous les états
+	# comparait « VOILE » à « GRÉSILLEMENT ».
+	var cart: Control = res.get("panel_gadget", null)
+	var dec: Label = res.get("gadget_decompte", null)
+	if cart != null and dec != null:
+		var garde_v := dec.visible
+		var garde_t := dec.text
+		dec.visible = false
+		var sans := cart.get_combined_minimum_size().x
+		dec.text = "14"
+		dec.visible = true
+		var avec := cart.get_combined_minimum_size().x
+		dec.text = "3"
+		var avec_3 := cart.get_combined_minimum_size().x
+		dec.visible = garde_v
+		dec.text = garde_t
+		_check("le compte à rebours n'élargit pas la cartouche",
+			absf(avec - sans) <= 0.5 and absf(avec_3 - sans) <= 0.5,
+			"%.1f px sans, %.1f avec « 14 », %.1f avec « 3 »" % [sans, avec, avec_3])
+	_check("le compte à rebours est posé DANS l'icône, qui n'est pas un conteneur",
+		dec != null and dec.get_parent() is TextureRect and not (dec.get_parent() is Container))
 
 
 func _test_destruction_autoritaire() -> void:
@@ -878,21 +926,29 @@ func _test_sprites_des_gadgets(gs: Node) -> void:
 	gs.round_active = false
 
 	# ── La torche fantôme : la tête balaie, le pied reste posé ──────────────
+	# Plusieurs instants : le balayage humain marque des pauses, et un seul instant
+	# pourrait tomber pile dans l'une d'elles.
 	var t = _GTF.new()
 	t._monter_visuel()
+	t.graine = 12345
 	t._angle_depart = 0.4
 	t.rotation = 0.4
-	t._age = _GTF.PERIODE / 4.0
-	t._physics_process(0.0)
 	var pied: Node2D = t.get_node_or_null("Visuel")
 	var tete: Node2D = t.get_node_or_null("Tete")
+	var a_tourne := false
+	var pied_fixe := true
+	for age in [0.3, 0.9, 1.7, 2.6, 3.4, 5.1, 7.3]:
+		t._age = age
+		t._physics_process(0.0)
+		# 0,05 rad : au-dessus du seul tremblement (≈ 0,02), qu'un balayage cassé
+		# garderait — à 0,01, il passait pour un balayage (trouvé en revue).
+		if absf(angle_difference(t.rotation, 0.4)) > 0.05:
+			a_tourne = true
+		if pied == null or absf(angle_difference(t.rotation + pied.rotation, 0.4)) > 1e-4:
+			pied_fixe = false
 	_check("la tête balaie avec le faisceau",
-		tete != null and is_zero_approx(tete.rotation)
-			and absf(angle_difference(t.rotation, 0.4)) > 0.01,
-		"nœud à %.3f rad" % t.rotation)
-	_check("le pied, lui, reste posé : il ne tourne pas",
-		pied != null and absf(angle_difference(t.rotation + pied.rotation, 0.4)) < 1e-4,
-		"pied à %.3f rad" % ((t.rotation + pied.rotation) if pied != null else 0.0))
+		tete != null and is_zero_approx(tete.rotation) and a_tourne)
+	_check("le pied, lui, reste posé : il ne tourne pas, à aucun instant", pied_fixe)
 	t.free()
 
 
@@ -907,3 +963,177 @@ func _z_absolu(n: CanvasItem) -> int:
 			break
 		courant = courant.get_parent()
 	return z
+
+
+## « Il ne faut pas pouvoir détruire un gadget gazeux ou diffus avec des balles. On
+## ne peut donc pas détruire la fusée éclairante. » — Adrien, 2026-09-11.
+func _test_diffus_intouchables(gs: Node) -> void:
+	print("\n[Un gadget diffus ne se tue pas à la balle]")
+	var attendus := ["cartouche_suie", "nappe_braises", "poudre_contact", "poussiere"]
+	var intouchables: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		if not g.touche_par_les_balles:
+			intouchables.append(String(slug))
+		g.free()
+	intouchables.sort()
+	_check("les intouchables sont exactement les deux nuages et les deux nappes",
+		intouchables.size() == attendus.size()
+			and attendus.all(func(s): return intouchables.has(s)),
+		str(intouchables))
+	# ⚠️ Le drapeau n'agit qu'en sortant de la couche que voient les balles : on le
+	# vérifie sur le gadget posé, après `_ready()`.
+	var hors_couche: Array[String] = []
+	for slug in attendus:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		root.add_child(g)
+		if (g.collision_layer & _MG.BULLET_MASK) == 0:
+			hors_couche.append(slug)
+		g.free()
+	_check("et une balle ne les rencontre plus : hors de toute couche qu'elle voit",
+		hors_couche.size() == attendus.size(), str(hors_couche))
+	await process_frame
+	# La fusée n'a jamais eu de forme : c'est un test géométrique de bullet.gd qui
+	# l'éteignait. Il doit avoir disparu, avec sa constante.
+	var balle := FileAccess.get_file_as_string("res://bullet.gd")
+	# Le CODE seul, commentaires retirés, et TOUT moyen d'extinction interdit : un
+	# commentaire citant l'ancien nom faisait rougir, et un appel direct à
+	# `eteindre()` sous un autre nom passait (trouvé en revue, 2026-09-11).
+	var code := ""
+	for ligne in balle.split("\n"):
+		code += ligne.get_slice("#", 0) + "\n"
+	_check("la balle n'éteint plus la fusée : aucun moyen d'extinction dans son code",
+		not code.contains("eteindre(") and not code.contains("extinction")
+			and not code.contains("_fusee_touchee_ce_pas"))
+	_check("et son rayon d'extinction par balle a disparu du modèle",
+		not FileAccess.get_file_as_string("res://fusee_modele.gd").contains("EXTINCTION_RAYON_BALLE"))
+
+
+## « Il faudrait qu'on ne me voie pas dans la fumée, non ? Si j'éclaire dans la
+## fumée, ça illumine toute la fumée. » — Adrien, 2026-09-11.
+func _test_suie_masque(gs: Node) -> void:
+	print("\n[Dans la suie, on ne voit plus le corps]")
+	var s = load(String(gs.IMPLEMENTATIONS["cartouche_suie"]["script"])).new()
+	var p = load(String(gs.IMPLEMENTATIONS["poussiere"]["script"])).new()
+	_check("la suie masque le corps, la poussière non", s.masque_le_corps() and not p.masque_le_corps())
+	s.free()
+	p.free()
+	gs.round_active = true
+	gs.sandbox_mode = true
+	gs.training_mode = false
+	_vider(gs)
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c.gadget != null and String(c.gadget.slug) == "cartouche_suie":
+			gs.p1.equip_weapon(c)
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs._do_spawn_gadget(0, Vector2(520.0, 400.0), 0.0, "cartouche_suie", 951)
+	var suie = null
+	for g in _gadgets_de(gs, 0):
+		suie = g
+	_check("la suie est posée", suie != null)
+	if suie == null:
+		gs.sandbox_mode = false
+		gs.round_active = false
+		return
+	suie._age = suie.duree_vie * 0.5
+	gs.p2.visible = true
+	gs.p2.global_position = suie.global_position
+	await process_frame
+	await process_frame
+	# ⚠️ `_process` forcé avant de lire : `visual_enemy.modulate.a` a deux écrivains,
+	# le brouillage en physique puis la suie en `_process`, et le rendu voit le
+	# second. Lire entre les deux dépendait du hasard des images (trouvé en revue).
+	gs.p2._process(0.0)
+	_check("au cœur de la suie, l'autre ne voit plus le corps",
+		gs.p2.visual_enemy.modulate.a < 0.02, "%.3f" % gs.p2.visual_enemy.modulate.a)
+	_check("ni son ombre", not gs.p2.get_node("LightOccluder2D").visible)
+	_check("et soi, on s'y devine encore", gs.p2.visual.modulate.a >= 0.35,
+		"%.3f" % gs.p2.visual.modulate.a)
+	if gs.p2.visual_enemy_ptr != null:
+		_check("ni son pointeur", gs.p2.visual_enemy_ptr.modulate.a < 0.02,
+			"%.3f" % gs.p2.visual_enemy_ptr.modulate.a)
+	# Un tir DANS la suie : l'éclat dessiné — non éclairé, au-dessus de la masse —
+	# disait la position exacte du tireur (trouvé en revue).
+	gs.p2.trigger_shoot_visuals()
+	var eclat: Sprite2D = gs.p2._eclat_de_bouche()
+	_check("un tir dans la suie n'y montre pas son éclat dessiné",
+		not eclat.visible or eclat.modulate.a < 0.02, "%.3f" % eclat.modulate.a)
+	_check("une lampe tenue dans la suie n'en ressort pas",
+		gs.facteur_de_lampe_a(suie.global_position) < 0.05,
+		"%.3f" % gs.facteur_de_lampe_a(suie.global_position))
+	_check("hors du nuage, la lampe est entière",
+		is_equal_approx(gs.facteur_de_lampe_a(suie.global_position + Vector2(400.0, 0.0)), 1.0))
+	gs.p1.flashlight_on = false
+	gs.p2.flashlight_on = true
+	_check("une lampe allumée DANS le nuage l'allume en entier",
+		is_equal_approx(suie._lumiere_entrante(), 1.0), "%.3f" % suie._lumiere_entrante())
+	gs.p2.flashlight_on = false
+	gs.p2.global_position = Vector2(4000.0, 4000.0)
+	_check("dans le noir, le nuage ne s'allume pas", is_zero_approx(suie._lumiere_entrante()),
+		"%.3f" % suie._lumiere_entrante())
+	_check("et il n'est plus éclairé point par point : image non éclairée",
+		suie._masse != null and suie._masse.material == GadgetBase.materiau_peint_lumineux())
+
+	# ── Une lampe DEHORS, braquée sur le nuage, l'allume ; dos tourné, non ──────
+	# Le geste qu'Adrien décrit — « si j'éclaire dans la fumée » —, que seuls les
+	# deux cas triviaux (lampe dedans, aucune lampe) éprouvaient (trouvé en revue).
+	gs.p2.global_position = suie.global_position - Vector2(150.0, 0.0)
+	gs.p2.rotation = 0.0
+	gs.p2.flashlight_on = true
+	var dehors: float = suie._lumiere_entrante()
+	_check("une lampe dehors, braquée sur le nuage, l'allume", dehors > 0.1, "%.3f" % dehors)
+	gs.p2.rotation = PI
+	_check("dos tourné, non", is_zero_approx(suie._lumiere_entrante()),
+		"%.3f" % suie._lumiere_entrante())
+	gs.p2.flashlight_on = false
+	gs.p2.global_position = Vector2(4000.0, 4000.0)
+
+	# ── La FAUSSE torche obéit à la même règle (trouvé en revue) ─────────────────
+	# Sans elle, la suie distinguait la vraie torche de la fausse : l'une allumait
+	# le nuage, l'autre non ; l'une s'y étouffait, l'autre en sortait.
+	var classe_j2 = gs.p2.current_weapon
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c.gadget != null and String(c.gadget.slug) == "torche_fantome":
+			gs.p2.equip_weapon(c)
+	gs._do_spawn_gadget(1, suie.global_position - Vector2(150.0, 0.0), 0.0, "torche_fantome", 952)
+	var fausse = null
+	for g in _gadgets_de(gs, 1):
+		fausse = g
+	_check("la fausse torche est posée", fausse != null)
+	if fausse != null:
+		fausse.rotation = 0.0
+		var par_elle: float = suie._lumiere_entrante()
+		_check("braquée sur le nuage, elle l'allume comme une vraie", par_elle > 0.1,
+			"%.3f" % par_elle)
+		fausse.global_position = suie.global_position
+		fausse._physics_process(0.0)
+		_check("posée dedans, elle l'allume en entier",
+			is_equal_approx(suie._lumiere_entrante(), 1.0), "%.3f" % suie._lumiere_entrante())
+		_check("et sa lumière n'en ressort pas",
+			fausse._lumiere != null and fausse._lumiere.energy < 0.15,
+			"%.3f" % (fausse._lumiere.energy if fausse._lumiere != null else -1.0))
+		fausse.queue_free()
+	if classe_j2 != null:
+		gs.p2.equip_weapon(classe_j2)
+	await process_frame
+	await process_frame
+	_check("hors de la suie, l'ombre revient", gs.p2.get_node("LightOccluder2D").visible)
+	gs.p2._process(0.0)
+	if gs.p2.visual_enemy_ptr != null:
+		_check("et le pointeur réapparaît — il restait invisible après la suie",
+			gs.p2.visual_enemy_ptr.modulate.a > 0.5, "%.3f" % gs.p2.visual_enemy_ptr.modulate.a)
+	# Par le vrai chemin d'un tir — `_do_spawn_bullet` —, pas en appelant le nuage :
+	# retirer la boucle de game_state ne faisait rien échouer (trouvé en revue).
+	suie._pouls = 0.0
+	gs._do_spawn_bullet(gs.p2, suie.global_position, 0.0, gs.p2.current_weapon)
+	_check("un tir parti de l'intérieur fait pulser tout le nuage", suie._pouls >= 1.0,
+		"%.2f" % suie._pouls)
+	suie._pouls = 0.0
+	gs._do_spawn_bullet(gs.p2, suie.global_position + Vector2(600.0, 0.0), 0.0,
+		gs.p2.current_weapon)
+	_check("un tir parti d'ailleurs, non", suie._pouls < 0.5, "%.2f" % suie._pouls)
+	_vider(gs)
+	gs.sandbox_mode = false
+	gs.round_active = false

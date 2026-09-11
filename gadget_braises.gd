@@ -25,11 +25,11 @@ extends GadgetBase
 ## socle en monte un pour tout gadget ; sa lumière se serait retrouvée à
 ## l'intérieur, « ni ombre ni lumière mais du hasard ».
 ##
-## ## Elle reste destructible, comme tous les autres
+## ## Elle ne se tue pas à la balle
 ##
-## Le contrat du socle est que **toute chose posée puisse être abattue** : c'est
-## ce qui donne une réponse à « j'ai vu quelque chose ». Une balle disperse assez
-## de charbons pour ouvrir un passage — trois balles l'éteignent.
+## Elle le pouvait jusqu'au 2026-09-11 — trois balles l'éteignaient. Adrien l'a
+## renversé : un gadget diffus ne se détruit pas au tir. On la contourne, ou on
+## attend qu'elle s'éteigne.
 
 ## Le rayon de la nappe, en pixels. Il sert à trois choses à la fois, et c'est
 ## voulu : la forme de collision, le dessin, et la zone qui brûle. Trois valeurs
@@ -59,10 +59,10 @@ var _nappe: Sprite2D = null
 
 func _init() -> void:
 	rayon = RAYON
-	# Une balle passe au-dessus des charbons. Elle en disperse quand même assez
-	# pour compter — voir les points de vie.
+	# Une balle passe au-dessus des charbons, sans rien en disperser : la nappe
+	# ne se tue pas à la balle (Adrien, 2026-09-11).
 	arrete_les_balles = false
-	pv = 3.0
+	touche_par_les_balles = false
 	eblouit = true
 	eblouissement_dirige = false
 	rayon_eblouissement = RAYON_EBLOUISSEMENT

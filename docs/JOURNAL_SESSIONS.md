@@ -3895,3 +3895,29 @@ sa largeur suit `minimum_size_changed` de son contenu (`ui.gd`,
 dans `main` en avance rapide (la branche descendait d'`origin/main` 9e75106
 sans divergence). Le chantier de la refonte est CLOS ; il reste à Adrien l'écho
 au sol du flash (V4.14).
+
+## 2026-09-11 — Sept corrections de gadgets, après l'essai d'Adrien (chantier DIX CLASSES, étape 27)
+
+Session `candela-10-classes-system-e0a52d-da`. Une cartographie en parallèle (un
+lecteur par demande) avant d'écrire ; quatre questions à Adrien ; puis le code,
+point par point, parce que six chantiers qui touchent les mêmes fichiers se
+percuteraient à la fusion s'ils étaient menés par des agents séparés.
+
+**Ce que les captures ont trouvé et que les suites ne voyaient pas** : la poudre ne
+marquait JAMAIS à l'entraînement, depuis l'étape 17 — le test forçait l'état
+`round_active` que l'entraînement n'a pas. Et deux suppositions fausses sur un test
+vide avant qu'un diagnostic pas à pas ne montre que Godot renomme les homonymes par
+leur classe. Deux pièges consignés.
+
+**Ce que les suites ont trouvé et que j'aurais écrit faux** : une fonction statique
+insérée au milieu d'une autre (des erreurs de script en cascade), un contrôle de
+largeur qui comparait « VOILE » à « GRÉSILLEMENT ».
+
+**La revue** (quatre axes, 31 agents, chaque défaut contre-vérifié) en a confirmé
+23 : deux leurres qui se trahissaient encore (la fausse torche devant la suie, le
+leurre dans la suie), l'éblouissement qui lisait le disque de touche du leurre au
+lieu de son ombre, l'occluder partagé par les deux joueurs, l'éclat de tir visible
+dans la suie, et des contrôles qui passaient pour une mauvaise raison ou selon le
+hasard. En corrigeant, deux choses de plus : les joueurs sont sur la couche des
+murs (le rayon de la suie s'arrêtait sur eux), et un corps cinématique téléporté
+n'est vu des requêtes qu'au pas de physique suivant — piège consigné.

@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-10
+> Dernière mise à jour : 2026-09-11
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -2429,7 +2429,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
-| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
+| **Dix classes asymétriques remplacent les quatre armes** (2026-09-09, Adrien) | Une classe porte une arme, un **root** (immobilisation calibrée après le tir), une réserve de fusées propre et un **gadget** unique posé dans le monde et destructible à la balle *(amendé le 2026-09-11, étape 27, Adrien : les gadgets DIFFUS — suie, poussière, braises, poudre — et la fusée ne se tuent plus à la balle ; les objets, si)*. **Une arme = une classe** : la sélection ne se cumule pas, et la forme de `RankLoadout` (un tableau par rang, même à un seul élément) le permettait déjà sans réécriture. Ce que ça referme : la Phase 7 disait depuis le 2026-08-18 « il manque du contenu, pas du code — les catégories 5 à 10 ne débloquent rien faute d'armes à débloquer ». Ce n'était pas un trou d'assets, c'était une décision de conception, et elle est prise. Les dix classes sont nommées d'après leur **geste** et non leur arme, parce que depuis le choix des gadgets c'est le gadget qui caractérise une classe : Parasite, Fumiste, Illusionniste, Braconnier, Terrassier, Incendiaire, Sentinelle, Occulteur, Allumeur, Spectre. |
 | **La table rang → classe suit l'échelle de LUMIÈRE, pas celle de puissance** (2026-09-09, Adrien) | Deux ancrages d'Adrien : le rang 1 est celui du pistolet, et **Brasier est le pyrotechnicien**. Le second dit tout — Brasier n'est pas « le sixième palier de puissance », c'est *un feu*, et on y met celui qui fait du feu. L'échelle des catégories se lit donc littéralement, d'Aveugle à Candela : 1 Parasite, 2 Fumiste, 3 Illusionniste, 4 Braconnier, 5 Terrassier, 6 Incendiaire, 7 Sentinelle, 8 Occulteur, 9 Allumeur, 10 Spectre. Les trois derniers paliers basculent en **opposition** plutôt qu'en correspondance, et c'est le renversement que l'échelle appelait : au sommet de l'échelle de la lumière on trouve **la seule classe qui n'en émet aucune** — zéro fusée, zéro flash, arme silencieuse. Deux des quatre armes historiques ne changent pas de rang (pistolet à Aveugle, arbalète à Lanterne) ; le fusil passe de 2 à 3, le pompe de 3 à 5. ⚠️ **L'ORDRE reste celui de la lumière, mais le déblocage est devenu CUMULATIF le 2026-09-09** (décision d'Adrien) : chaque entrée dit ce que son rang ajoute, et un joueur a tout ce qui précède. Ce qui croît avec le rang est donc le CHOIX et non la puissance — un Zénith a neuf classes de plus qu'un Aveugle, pas une classe plus forte, et c'est la seule lecture qui rende une échelle de lumière compatible avec un déblocage. ⚠️ Une conséquence à connaître : l'exemple d'Adrien disait « au deuxième rang pistolet et fusil », or l'échelle qu'il a lui-même posée met le Fumiste au rang 2 et le fusil au rang 3. L'ordre n'a pas été touché — s'il voulait aussi le remanier, c'est une seconde décision. ⚠️ Les paliers du milieu sont justifiés par le THÈME et par rien d'autre : un Braconnier à 0,60 s de root au rang 4 est peut-être trop dur pour un quatrième palier, et ça se tranchera au banc, pas sur le papier. |
 | **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
 | **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
@@ -2465,7 +2465,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **L'éblouissement LIT le faisceau, il ne le recalcule plus** (2026-08-24, Adrien) | `Vision.intensite_texture` échantillonne l'alpha de la texture que la lumière projette ; `intensite_recue` n'est plus qu'un repli pour une arme sans texture. La copie était délibérée — *« deux formules pour un même faisceau finiraient par diverger »* — et le raisonnement était juste : **une copie garantit que deux nombres restent égaux, jamais qu'ils veulent dire la même chose.** Trois divergences en étaient sorties, toutes muettes : `torch_brightness` que le modèle ignorait, le cône écrit en dur à 30° pour quatre armes de 5 à 60°, et le profil peint des cookies qui tombe à 0,49-0,73 de la formule dans les flancs. **Un pixel ne peut pas diverger de lui-même**, et il porte tout à la fois — angle, portée, luminosité, matière peinte. Deux conséquences qui ne se devinent pas : **l'échelle vient de `img.get_size()`**, donc le piège « un cookie de 1024² porte deux fois plus loin qu'un 512² » n'existe plus côté pénalité, rien n'est à compenser ; et **le halo de proximité entre dans le calcul** — mesuré à 0,004 brut à 75° et un dixième de portée, 0,000 dans le dos, donc cohérent et négligeable. |
 | **La récupération est quatre fois plus rapide, et plus rapide que la montée** (2026-08-24, Adrien, manette en main) | La descente passe de **1,5 s à 0,375 s**. Elle valait l'inverse, et pour une raison écrite : *« volontairement plus lente que la montée : c'est ce décalage qui fait de l'éblouissement une ouverture exploitable, et non une gêne qui passe avant qu'on en profite »*. **Le raisonnement se tenait ; il n'avait jamais été éprouvé.** La mécanique ne fonctionnait pas avant le 2026-08-24 — personne ne l'avait jamais jouée. À l'essai, une seconde et demie d'aveuglement ne se lit pas comme une ouverture pour l'adversaire : elle se lit comme **une perte de contrôle sur son propre personnage**. C'est le premier réglage de ce chantier tranché par le jeu et non par la mesure, et il **renverse** ce que le raisonnement seul avait produit. Le contrôle qui l'interdisait a été **retourné, pas supprimé** : sa raison reste lisible dans `test_eblouissement`, requalifiée en hypothèse que l'expérience a écartée. **Prix assumé, à connaître avant de rejuger : le flash de tir se résorbe en 0,22 s au lieu de 0,9.** Le pic est le même, sa durée fond. Si l'ouverture devient trop brève pour être exploitée, c'est `PIC_FLASH` qu'il faut monter — pas la descente qu'il faut ralentir, puisque c'est la lenteur qui a été jugée punitive. |
 | **Pas de faisceau, pas de pénalité** (2026-08-24, Adrien) | `game_state._lumiere_recue` gardait un repli sur la formule analytique quand l'arme n'avait pas de texture, défendu par un commentaire affirmant qu'une torche sans cookie ne devait pas devenir « silencieusement inoffensive ». **Le raisonnement était à l'envers, et c'est en vérifiant le travail d'une autre session que je l'ai vu dans le mien** : `equip_weapon` pose `flashlight.texture = get_torch_texture()`, donc sans cookie la lumière ne rend **rien**. Le repli faisait payer une pénalité pour un faisceau que personne ne voit — **le dernier endroit du jeu qui calculait l'éblouissement depuis autre chose que l'écran**, dans un chantier dont c'était tout le sujet. Le silence redouté n'existait pas non plus : un cookie manquant lève une erreur au chargement. `lumiere_recue()` rend zéro, et ce zéro est la règle — on ne peut pas être aveuglé par une lampe éteinte. **Conséquence à connaître : `Vision.COS_DEMI_CONE` n'a plus aucun lecteur en production.** Elle reste comme défaut des fonctions analytiques, qui gardent un rôle — `intensite_recue` est la référence contre laquelle le cookie peint est validé. C'est écrit au-dessus de la constante, faute de quoi elle aurait de nouveau l'air décidée. |
-| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. |
+| **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. **Amendé le 2026-09-11** (étape 27, Adrien : « double leur puissance », puis « tout doubler ») : `torch_brightness` 0,3 → 0,6, éblouissement compris — pénalité à bout portant ≈ 0,43 → 0,61, le pistolet restant à 0,93. Elle reste la plus sombre des lampes ; elle cessait d'être visible du tout. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
@@ -3160,6 +3160,50 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Un corps cinématique téléporté n'existe pour les requêtes qu'au pas suivant (2026-09-11)
+
+Un test place J2 derrière le leurre (`global_position = …`), attend un
+`await physics_frame`, puis lance `intersect_ray` : **le rayon ne touche rien, pas
+même J2.** Un `CharacterBody2D` est cinématique : sa téléportation est retenue et ne
+s'applique qu'au PAS de physique suivant — et `physics_frame` rend la main AVANT ce
+pas. La requête voit donc le corps à son ancienne place. Le symptôme est traître :
+seul le premier déplacement d'une séquence est touché (les suivants, faits après une
+attente, sont appliqués par le pas de la même image), si bien qu'un contrôle positif
+échoue et que le négatif voisin **passe pour une mauvaise raison**. Deux hypothèses
+fausses (un mur, le corps repoussé par sa propre physique), puis un diagnostic qui
+imprime ce que le rayon touche.
+
+Après avoir téléporté un corps, attendre DEUX `physics_frame` avant de le chercher
+par une requête ; et donner à tout contrôle négatif de ligne de vue un témoin qui,
+l'obstacle retiré, passe. En jeu, rien à craindre : l'éblouissement se juge en
+physique sur des corps qui bougent en continu.
+
+### Un test qui force l'état ne voit pas l'état réel (2026-09-11)
+
+La poudre de contact n'a jamais posé une trace à l'ENTRAÎNEMENT, de l'étape 17 à
+l'étape 27 — là même où Adrien essaie les classes. Son garde anti-killcam ne
+lisait que `round_active`, et l'entraînement lance la manche puis le remet à faux
+(`sandbox_mode` vrai). **Le test posait `round_active = true` avant de faire
+marcher le joueur** : il éprouvait un état que le jeu n'a jamais à l'entraînement,
+et restait vert. C'est une capture dans l'état réel — rien forcé — qui l'a montré :
+zéro trace, puis treize une fois le garde aligné sur celui de la pose d'un gadget.
+
+Un test qui règle lui-même les drapeaux de mode doit aussi passer par l'état que
+le vrai chemin produit (`_on_training_requested`, un vrai lancement de manche), ou
+dire pourquoi il ne le fait pas.
+
+### Godot renomme les homonymes par le nom de leur CLASSE (2026-09-11)
+
+Des nœuds ajoutés au même parent sous le même nom ne deviennent pas « Trace »,
+« Trace2 »… mais « Trace », « @Polygon2D@1515 », « @Polygon2D@1516 ». Un test qui
+retrouvait les traces de poudre par leur nom n'en voyait qu'UNE ; la queue de
+sortie paraissait vide alors que le gadget la posait — et un contrôle « la même
+queue quel que soit l'échantillonnage » est passé en comparant deux listes vides.
+Un diagnostic pas à pas l'a montré, après deux suppositions fausses.
+
+Retrouver des nœuds créés à la volée par un GROUPE (ou une méta), jamais par leur
+nom ; et un contrôle d'égalité exige d'abord que ce qu'il compare ne soit pas vide.
 
 ### Une édition par tranche sur un marqueur non unique tronque le fichier de 95 % (2026-09-11)
 
@@ -15560,6 +15604,12 @@ balle. Les deux appellent `GameState.demander_extinction_fusee(graine)`, qui
 route vers `rpc_eteindre_fusee` — **même arbitrage que le lancer : l'hôte
 tranche, le client demande.**
 
+> ⚠️ **Amendé le 2026-09-11 (étape 27, Adrien) : une balle n'éteint plus la
+> fusée** — « on ne peut donc pas détruire la fusée éclairante » : un gadget
+> gazeux ne se tue pas à la balle. Le piétinement reste le seul geste ; la balle
+> la traverse (et y ouvre toujours son tunnel, FU3). Ce qui suit sur l'extinction
+> par balle est l'histoire de FU5.
+
 **Pourquoi le piétinement l'exige, contrairement aux dégâts d'une balle.** Ce
 n'est PAS une histoire de perspective du tireur à compenser (l'hôte simule déjà
 les deux joueurs en direct, sans délai à rattraper pour lui-même) — c'est
@@ -17815,6 +17865,139 @@ aucun causé par la fusion :
 Six `.uid` orphelins — restes des scripts de capture jetables des étapes 11 et
 12, commités sans leur script — sont retirés de `tools/`, sur accord d'Adrien :
 même geste que `7fc6a7a`.
+
+### Étape 27 — sept corrections de gadgets, après l'essai d'Adrien ✅ (2026-09-11)
+
+Adrien a essayé les gadgets et en a demandé sept corrections. Une cartographie en
+parallèle — un lecteur par demande — a précédé le code ; quatre questions lui ont
+été posées, le reste a pris un choix par défaut, écrit ici.
+
+**1. La poudre luit, puis s'éteint** (« sinon c'est trop inutile »). Les traces
+luisent d'elles-mêmes — vert phosphore, non éclairées, additives — et s'éteignent
+en 8 s, un fondu porté par la TRACE et jamais par le gadget. En sortant, les pieds
+emportent une charge : six traces de plus, qui pâlissent (≈ 3,5 pas), comptées en
+traces par la règle de la corde de 26 px — jamais au temps ni à la distance
+sommée, pour que la piste reste la même chez l'hôte et le client. Revenir dans la
+poudre recharge. Tranché par Adrien : **les deux joueurs voient la lueur** ; la
+Sentinelle ne marque pas sa propre poudre ; la nappe reste éclairée par le décor,
+invisible dans le noir. Renverse la règle de l'étape 17 (« visibles QUE sous une
+lumière »). Les traces ne se reportent plus sur la manche suivante : l'arène ne se
+purge pas par manche, le fondu les retire.
+⚠️ **Trouvé en route : la poudre n'avait JAMAIS marqué à l'entraînement** — voir le
+piège « Un test qui force l'état ne voit pas l'état réel ». Vu à la capture, dans
+l'état réel de l'entraînement : zéro trace avant, treize et une lueur mesurée après.
+
+**2. Un gadget diffus ne se tue pas à la balle.** Suie, poussière, braises, poudre :
+`touche_par_les_balles = false` retire `GADGET_LAYER` de leur couche, et la balle ne
+les rencontre plus — ni dégât, ni pas perdu, ni place prise dans la traversée
+bornée. La fusée : la balle ne l'éteint plus (le bloc FU5 de `bullet.gd` et
+`EXTINCTION_RAYON_BALLE` retirés), elle la traverse ; le piétinement reste. Ferme le
+défaut signalé à l'étape 25 (les nappes abîmées par les balles qui les survolent).
+Amende « tout gadget est destructible à la balle » : les objets, pas les diffus.
+
+**3. Le compte à rebours du grésillement, sur l'icône.** Le HUD n'avait aucune icône
+de gadget : elle entre dans la cartouche (27 px de plus, une fois pour toutes), et
+le chiffre en est un ENFANT — un `TextureRect` n'est pas un conteneur, c'est le
+patron du cadenas : il ne l'élargit jamais. Allumée : les secondes de batterie
+(`ceil`, jamais 0 tant qu'elle tourne) ; sous le seuil : les secondes avant de
+rallumer ; éteinte et prête : rien. `_set_gadget_style` lit par nom et non plus par
+position : l'icône intercalée aurait fait perdre la couleur sans un mot. Vu à la
+capture : « 9 » sur l'icône pour « ALLUMÉ · 59 % ».
+
+**4. La suie cache.** « Qu'on ne me voie pas dans la fumée » : opacité 1 au cœur, et
+le corps n'y fait plus d'ombre (`masque_le_corps`, au-delà de 0,5) ; soi-même, on
+s'y devine encore (plancher 0,4, choix par défaut). « Si j'éclaire dans la fumée,
+ça illumine toute la fumée » : le nuage n'est plus éclairé point par point (image
+non éclairée, en mélange) ; sa clarté est UN nombre, la lumière qu'il reçoit —
+torches à mur près sur sept points, fusées au sol —, lissé, relevé de 1,6, avec un
+pouls quand on tire dedans. Une lampe tenue dedans y reste (`facteur_de_lampe`), et
+n'éblouit plus. La suie seule : la poussière et la fumée de fusée, validées, ne
+bougent pas. Renverse l'étape 14 (« on voit qu'il y a quelqu'un, pas qui ») ; la
+phrase de fiche suit : « Un nuage de suie : on n'y voit personne, et une lampe
+l'allume tout entier. »
+Mesuré en capture : le cœur du nuage à 48 de luminance éclairé, 0 dans le noir, et
+aucun corps visible dedans.
+
+**5. Le leurre a l'ombre d'un joueur.** Ce qu'Adrien voyait rond, c'était l'ombre :
+l'étape 15 avait copié le cercle PROVISOIRE du joueur (« 18.0 is exactly the player
+radius »), que l'étoile de la silhouette écrase au premier équipement.
+L'échantillonnage radial déménage dans `Charte.ombre_de_silhouette()` — une seule
+vérité pour le joueur et le leurre, avec un cache ; le leurre projette l'étoile de
+la silhouette de sa classe, et sa collision reste le cercle de 18, zone de touche
+d'un corps. Exception écrite à « toutes les formes suivent ».
+
+**6. La torche fantôme balaie comme une main, et deux lampes doublent.** Plus de
+sinus : des gestes — coups d'œil, retours, balayages lents, hésitations — séparés de
+pauses, sur une courbe à secousse minimale, avec un tremblement, bornés à ±36°. Le
+hasard vient de la graine que l'hôte envoyait déjà avec la pose et que la torche
+JETAIT (`if "graine" in g`) : les deux pairs déroulent le même plan. Et le souffle de
+±3 % qu'elle était la seule lampe à ne pas avoir. **La lampe de l'arbalète double,
+éblouissement compris** (Adrien : « tout doubler ») : `torch_brightness` 0,3 → 0,6,
+cookie recuit — seul `cookie_arbalete.png` a changé, les onze autres identiques au
+bit près, alpha maximal 43 → 85. La fausse torche emprunte ce cookie et double avec.
+Pénalité de l'arbalète à bout portant ≈ 0,43 → 0,61 (le pistolet reste à 0,93).
+
+**Protocole 17** : rien ne change sur le fil (témoin intact), le sens si — voir le
+carnet de `protocol.gd`. La prochaine publication sera une mineure.
+
+**Validation** : `test_classes` (358 contrôles), `test_tir_et_reserves` (150),
+`test_vision`, `test_torches`, `test_protocole`, `test_fusee`, `test_charte` verts, et
+la suite complète (`./tools/run_suites.sh`, 109 suites, duos compris) verte en 344 s ;
+captures en jeu pour ce qu'aucune suite ne rend — la lueur de la poudre dans le noir,
+la suie éclairée et dans le noir avec un joueur dedans, le compte à rebours, le
+leurre, les lampes. Les corrections de la revue (ci-dessous) sont éprouvées par les
+suites, pas capturées.
+
+**La revue** — quatre relecteurs (réseau, conformité, rendu, tests), puis une
+contre-vérification contradictoire de chaque défaut : 23 confirmés, 4 réfutés.
+Aucun ne touchait la synchronisation hôte-client. Ce qu'ils ont trouvé, corrigé :
+- **deux leurres qui se trahissaient encore.** La suie distinguait la vraie torche
+  de la fausse — l'une allumait le nuage et s'y étouffait, l'autre non —, et un
+  leurre restait net dans la suie où un corps disparaît. La fausse torche obéit
+  désormais à la règle de lampe d'une vraie, rendu ET éblouissement ; le leurre
+  s'efface comme un corps, par une règle qui vit dans le socle
+  (`GadgetBase.effacements_a`) et que le joueur lit aussi. ⚠️ **Conséquence à
+  connaître** : le grésillement éteint aussi la fausse torche — « les torches
+  proches sautent jusqu'au noir », et elle se trahissait en ne sautant pas ;
+- **l'éblouissement lisait le disque de touche du leurre, pas son ombre** : ébloui
+  dans l'ombre du canon, épargné là où la lumière passe à côté du corps. Il lit
+  l'étoile (`regard_par_la_forme`, `coupe_le_regard`) ; les balles gardent le disque ;
+- **l'occluder du joueur était une ressource partagée par J1 et J2** : dans un
+  match entre deux classes, les deux corps projetaient l'ombre de la classe
+  équipée en dernier, et le leurre se trahissait dans presque tout vrai match.
+  Chaque équipement pose une ressource neuve ;
+- **un tir dans la suie montrait son éclat dessiné** — non éclairé, posé au-dessus
+  de la masse, il disait la position exacte : l'éclat et la lumière de bouche s'y
+  étouffent, c'est le nuage qui pulse ;
+- une lampe éteinte par le grésillement allumait quand même la suie où on la
+  tenait ; le pointeur de l'adversaire restait invisible après la suie (un `minf`
+  qui ne faisait que baisser) ;
+- et, trouvé en corrigeant : **les joueurs sont sur la couche des murs**, et le
+  rayon « à mur près » de la suie s'arrêtait sur leurs corps — une lampe braquée
+  sur le nuage à travers J1 rendait 0.
+
+Côté tests : un contrôle qui dépendait du hasard des images, deux aveugles par
+construction (la queue de la poudre ; les pauses de la torche, mesurées désormais
+sur l'angle — la correction a été simulée sur 300 graines en revue), un contrôle
+par lecture du source qu'un simple commentaire faisait rougir, et les chemins
+jamais parcourus : une lampe dehors, la fausse torche, le pouls par le vrai tir.
+Les textes périmés — carnet du protocole, en-têtes de la poudre et des volumes,
+décisions actées (le gadget destructible à la balle, l'arbalète qui éblouit peu,
+FU5) — sont amendés.
+
+⚠️ **Signalé, non corrigé** :
+- l'éblouissement écrit l'opacité du CORPS adverse en `_physics_process`, et la
+  boucle d'occultation l'écrase à chaque image en `_process` : l'effacement du
+  corps par l'éblouissement est inopérant depuis `535e3c7` (le pointeur et les
+  révélations, eux, le composent désormais) ;
+- la fausse torche posée face à un mur éclaire derrière lui — le défaut que la
+  lampe du joueur a perdu ce matin (`50c3e11`) ;
+- l'ombre habitée garde l'écart que le leurre avait : ombre en plaque, collision
+  et regard en disque (signalé à l'étape 25) — le crochet `regard_par_la_forme`
+  le corrigerait en une surcharge ;
+- le flash de tir éblouit toujours à travers la suie (modèle à part, arbitré par
+  l'hôte) : à trancher, si la suie doit l'étouffer comme elle étouffe l'éclat ;
+- en écran scindé, le panneau de J2 débordait déjà ; l'icône y ajoute 27 px.
 
 ### Ce qui reste, dans l'ordre
 

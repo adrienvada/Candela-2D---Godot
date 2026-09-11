@@ -292,21 +292,10 @@ func _physics_process(delta):
 				_fade_and_destroy(hit_point)
 				return
 		
-	# FU5 — une balle éteint une fusée POSÉE (pas en vol) qu'elle croise. Testé
-	# ICI, après tous les tests d'impact ci-dessus (mur, joueur direct, joueur
-	# compensé) : une fusée est un objet secondaire, jamais prioritaire sur le
-	# combat. Elle consomme la balle, comme un mur.
-	if not is_replay:
-		var f := _fusee_touchee_ce_pas(travel_step)
-		if f != null:
-			var point := global_position + direction * maxf(0.0, travel_step)
-			var gs := get_tree().get_first_node_in_group("game_state")
-			if gs and gs.has_method("demander_extinction_fusee"):
-				gs.demander_extinction_fusee(f.graine)
-			_maj_tunnel(point) # ferme le tunnel en cours, s'il y en avait un
-			_spawn_wall_effects(point, true)
-			_fade_and_destroy(point)
-			return
+	# FU5 — une balle n'éteint plus une fusée posée (Adrien, 2026-09-11 : « on ne
+	# peut pas détruire la fusée éclairante », un gadget gazeux ne se tue pas).
+	# Elle la traverse, et le tunnel FU3 ci-dessous continue au lieu de s'arrêter
+	# sur le cœur. Le piétinement reste le seul moyen de l'éteindre.
 
 	# V4.10 — le frolement se guette APRES les tests d'impact : un carreau qui
 	# touche ne frole pas, et les branches ci-dessus rendent la main avant
@@ -524,28 +513,6 @@ func _rompre_tunnel(pos: Vector2) -> void:
 	_fumee_traversee = _fumee_sous(pos)
 	if _fumee_traversee != null:
 		_fumee_entree = pos
-
-## ============================================================================
-## FU5 — LA BALLE QUI ÉTEINT UNE FUSÉE POSÉE
-## ============================================================================
-
-## La fusée POSÉE (pas en vol) la plus proche que ce pas croise, ou `null`.
-## Même patron que `_circle_entry_distance`, déjà utilisé pour la cible
-## compensée : ni collision physique (une fusée n'a pas de forme), ni
-## priorité sur un mur ou un joueur — appelé seulement quand ni l'un ni
-## l'autre n'a répondu ce pas (voir le site d'appel).
-func _fusee_touchee_ce_pas(travel_step: float) -> Fusee:
-	var meilleure: Fusee = null
-	var meilleure_dist := travel_step + 1.0
-	for f in get_tree().get_nodes_in_group("fusees"):
-		if not (f is Fusee) or not f.est_allumee_au_sol():
-			continue
-		var d := _circle_entry_distance(global_position, direction, travel_step,
-			f.global_position, FuseeModele.EXTINCTION_RAYON_BALLE + radius)
-		if d >= 0.0 and d < meilleure_dist:
-			meilleure = f
-			meilleure_dist = d
-	return meilleure
 
 static func _circle_entry_distance(origin: Vector2, dir: Vector2, length: float,
 		center: Vector2, r: float) -> float:

@@ -436,7 +436,10 @@ func _ready():
 	weapon_arbalete.torch_cookie = "arbalete"
 	weapon_arbalete.torch_angle_deg = 5.0 # Très fin
 	weapon_arbalete.torch_scale = 3.5     # Aussi loin que le fusil
-	weapon_arbalete.torch_brightness = 0.3 # Plus discret / moins lumineux
+	# 0,6 et non plus 0,3 depuis le 2026-09-11 (Adrien : « double leur puissance,
+	# je les vois pas assez »). Cuite dans l'alpha du cookie, donc l'éblouissement
+	# suit : l'arbalète éblouit toujours « comme son faisceau le laisse voir ».
+	weapon_arbalete.torch_brightness = 0.6
 	
 	weapon_arbalete.muzzle_flash_intensity = 0.1
 	weapon_arbalete.muzzle_flash_duration = 0.05
@@ -1928,7 +1931,12 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		# Une source dirigée SANS porteur : une lumière posée qui a un axe — la
 		# torche fantôme. Elle passe par le même échantillonnage, sans les
 		# préconditions qui ne valent que pour un joueur (`_en_jeu`, `flashlight_on`).
-		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible)
+		# Mais la même RÈGLE de lampe (étape 27, trouvé en revue) : la suie
+		# l'étouffe, le grésillement la fait sauter — une fausse torche qui
+		# éblouirait là où la vraie s'éteint se trahirait. `gadget_torche_fantome.gd`
+		# applique le même facteur à l'énergie rendue.
+		return _lumiere_du_faisceau(espace, src["arme"], noeud, cible,
+			facteur_de_lampe_a(noeud.global_position))
 
 	# ── PROXIMITÉ ────────────────────────────────────────────────────────────
 	var d := noeud.global_position.distance_to(cible.global_position)
@@ -2086,12 +2094,29 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 	var exclus: Array[RID] = []
 	if exclure.is_valid():
 		exclus.append(exclure)
+	#
+	# ⚠️ **Et ceux dont l'OMBRE n'a pas la forme de la collision lisent leur ombre**
+	# (le leurre, 2026-09-11, trouvé en revue) : son ombre est l'étoile de la
+	# silhouette, sa collision le disque de 18 d'une zone de touche. Le rayon lisait
+	# le disque — ébloui dans l'ombre du canon, épargné là où la lumière passe à
+	# côté du corps. On le retire du rayon, et on lit son ombre elle-même.
+	var par_la_forme := []
 	for g in get_tree().get_nodes_in_group("gadgets"):
-		if is_instance_valid(g) and g is CollisionObject2D and not g.occulte_la_lumiere:
+		if not is_instance_valid(g) or not (g is CollisionObject2D):
+			continue
+		if not g.occulte_la_lumiere:
 			exclus.append(g.get_rid())
+		elif g.regard_par_la_forme:
+			exclus.append(g.get_rid())
+			par_la_forme.append(g)
 	q.exclude = exclus
 	var res := espace.intersect_ray(q)
-	return res and res.collider == cible
+	if not (res and res.collider == cible):
+		return false
+	for g in par_la_forme:
+		if g.coupe_le_regard(depuis, cible.global_position):
+			return false
+	return true
 
 ## Le flash de tir éblouit celui d'en face (décision du 2026-08-18, avec
 ## Adrien). Pic instantané, qui passe par-dessus le plafond de la torche et se
@@ -2445,7 +2470,8 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 
 	_gadgets_poses += 1
 	var point := _point_de_pose(pos, rot)
-	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement.
+	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement, et
+	# le plan de gestes de la torche fantôme (étape 27) : les deux pairs en dépendent.
 	# Tirée ICI, chez l'hôte, et portée par le RPC : deux pairs qui tireraient
 	# chacun la leur verraient deux pannes différentes.
 	var graine := randi()
@@ -2771,18 +2797,16 @@ func _purger_fusees_killcam() -> void:
 	_fusees_killcam.clear()
 
 ## FU5 — éteindre une fusée passe par le MÊME arbitrage que son lancer :
-## l'hôte tranche, le client demande. Deux appelants : le piétinement
-## (`_maj_extinction_fusees`, hôte seul — SANS ce détour, chaque machine
-## déciderait de son propre chronomètre d'immobilité, avec l'écart
-## d'interpolation de l'adversaire entre les deux, et les deux écrans
-## diraient une fusée éteinte à des instants différents) ; et une balle qui
-## touche une fusée posée (`bullet.gd`, tous pairs — leur propre simulation
-## déterministe suffirait en principe, mais un seul chemin d'arbitrage pour un
-## même état répliqué évite deux logiques à maintenir en accord).
+## l'hôte tranche, le client demande. Un seul appelant depuis le 2026-09-11 : le
+## piétinement (`_maj_extinction_fusees`, hôte seul — SANS ce détour, chaque
+## machine déciderait de son propre chronomètre d'immobilité, avec l'écart
+## d'interpolation de l'adversaire entre les deux, et les deux écrans diraient
+## une fusée éteinte à des instants différents). La balle l'éteignait aussi ;
+## Adrien l'a retiré : un gadget gazeux ne se tue pas au tir.
 func demander_extinction_fusee(graine: int) -> void:
 	match NetworkManager.current_mode:
 		NetworkManager.GameMode.ONLINE_CLIENT:
-			return # la balle du client est une prédiction ; l'officielle, côté hôte, redemandera
+			return # l'hôte seul arbitre : le piétinement ne tourne que chez lui
 		NetworkManager.GameMode.ONLINE_HOST:
 			rpc_eteindre_fusee.rpc(graine)
 		_:
@@ -2956,6 +2980,12 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	for f in bullet_container.get_children():
 		if f is Fusee and not f.is_replay and f.occultation_pour(pos) > 0.0:
 			f.diffuser_flash()
+	# Étape 27 — la SUIE pulse de même : un tir dans le nuage l'allume en entier, pas
+	# au seul canon. Boucle sans garde : le socle répond `diffuser_flash()` pour tout
+	# gadget.
+	for g in get_tree().get_nodes_in_group("gadgets"):
+		if is_instance_valid(g) and g.occultation_pour(pos) > 0.0:
+			g.diffuser_flash()
 
 ## [Client] Un tir officiel correspond-il à une balle déjà prédite ? Les
 ## prédictions non confirmées (paquet d'input perdu, tir refusé par l'hôte)
@@ -3788,7 +3818,7 @@ func _batir_catalogue() -> void:
 	# rebranché la table — donc rien ne crie, et rien ne se tait non plus.
 	var fumiste := _classe("fumiste", "Le Fumiste", 2, 30.0, 1.5)
 	fumiste.name = "Pistolet lourd"
-	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un rideau de suie où l'on voit qu'il y a quelqu'un sans voir qui."
+	fumiste.description = "Il travaille la fumée, et c'est aussi un imposteur. Un coup lourd, trois balles, et un nuage de suie où l'on disparaît — mais qu'une lampe allume tout entier."
 	fumiste.cooldown = 0.3333  # 2,38 → 3,00 tirs/s (doublé, PLAFONNÉ)
 	fumiste.max_ammo = 3
 	fumiste.reload_time = 2.8
@@ -3799,7 +3829,7 @@ func _batir_catalogue() -> void:
 	fumiste.root = _root(0.30)
 	fumiste.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	fumiste.gadget = _gadget("cartouche_suie", "La cartouche de suie",
-		"Un rideau de suie : on voit qu'il y a quelqu'un, pas qui.")
+		"Un nuage de suie : on n'y voit personne, et une lampe l'allume tout entier.")
 
 	var incendiaire := _classe("incendiaire", "L'Incendiaire", 6, 40.0, 1.4)
 	incendiaire.name = "Fusil de détresse"
@@ -3827,7 +3857,7 @@ func _batir_catalogue() -> void:
 	sentinelle.root = _root(0.50)
 	sentinelle.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	sentinelle.gadget = _gadget("poudre_contact", "La poudre de contact",
-		"Une poudre où les pas restent écrits, lisibles à la lumière.")
+		"Une poudre où chaque pas luit un moment dans le noir, puis s'éteint.")
 
 	var occulteur := _classe("occulteur", "L'Occulteur", 8, 25.0, 1.3)
 	occulteur.name = "Pistolet-mitrailleur"
@@ -3969,9 +3999,9 @@ const IMPLEMENTATIONS := {
 	# relue quand la batterie est arrivée : la bobine mourait donc même éteinte,
 	# ce que trois relecteurs sur quatre ont trouvé séparément.
 	"gresillement": {"script": "res://gadget_gresillement.gd", "duree_vie": 0.0},
-	# ⚠️ **Pas de durée de vie : la poudre reste la manche entière.** La
-	# Sentinelle « ne cherche pas, elle veille » — un relevé qui s'effacerait tout
-	# seul obligerait à repasser vite, c'est-à-dire à chercher.
+	# ⚠️ **Pas de durée de vie : la NAPPE reste la manche entière** — la Sentinelle
+	# « ne cherche pas, elle veille ». Ce sont les TRACES qui s'éteignent, en
+	# quelques secondes, depuis le 2026-09-11 (voir `gadget_poudre.gd`).
 	"poudre_contact": {"script": "res://gadget_poudre.gd", "duree_vie": 0.0},
 }
 

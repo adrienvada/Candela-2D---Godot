@@ -32,13 +32,18 @@ extends StaticBody2D
 ## le fait par une seconde couche, `GADGET_BLOQUANT_LAYER`, que pose le drapeau
 ## `arrete_les_joueurs` — jamais en ajoutant celle-ci au masque des joueurs, ce
 ## qui murerait les dix gadgets d'un coup.
+##
+## Et depuis le 2026-09-11, les gadgets DIFFUS — nuages et nappes — sortent de la
+## couche des gadgets (`touche_par_les_balles`) : une balle ne les rencontre plus.
 
 ## Le joueur qui l'a posé — 0 ou 1. Sert à savoir qui subit quoi, et à la grâce
 ## du poseur si Adrien la demande un jour.
 var poseur_id: int = -1
 
-## Points de vie. Tout gadget est destructible à la balle : c'est le contrat
+## Points de vie. Tout OBJET posé est destructible à la balle : c'est le contrat
 ## commun, et c'est ce qui donne une réponse à « j'ai vu quelque chose bouger ».
+## Les gadgets diffus en sont exclus depuis le 2026-09-11 — voir
+## `touche_par_les_balles` ; leurs points de vie ne servent plus à rien.
 var pv: float = 1.0
 
 ## Ce gadget arrête-t-il les balles, ou se contente-t-il d'encaisser ?
@@ -59,6 +64,18 @@ var arrete_les_balles: bool = true
 ## ⚠️ **Lu dans `_ready()`**, comme `rayon` : une sous-classe le règle dans son
 ## `_init()`, jamais après l'entrée dans l'arbre.
 var arrete_les_joueurs: bool = false
+
+## Une balle RENCONTRE-t-elle ce gadget ? Vrai pour les objets ; faux pour les
+## gadgets DIFFUS — la suie, la poussière, la nappe de braises, la poudre.
+##
+## Décision d'Adrien du 2026-09-11 : « il ne faut pas pouvoir détruire un gadget
+## gazeux ou diffus avec des balles ». Faux, le drapeau retire `GADGET_LAYER` de la
+## couche du gadget : le `ShapeCast2D` de la balle ne le voit plus du tout — ni
+## dégât, ni pas perdu, ni place prise dans la traversée bornée. Ce qui ARRÊTE une
+## balle reste `arrete_les_balles` ; celui-ci dit si elle le rencontre.
+##
+## ⚠️ **Lu dans `_ready()`**, comme `arrete_les_joueurs` : réglé dans `_init()`.
+var touche_par_les_balles: bool = true
 
 ## Ce gadget peut-il éblouir ? Recopié du profil de classe à la construction —
 ## par INSTANCE, jamais par type (décision d'Adrien, 2026-09-09) : on doit
@@ -144,6 +161,8 @@ func _ready() -> void:
 	collision_layer = MapGeometry.GADGET_LAYER
 	if arrete_les_joueurs:
 		collision_layer |= MapGeometry.GADGET_BLOQUANT_LAYER
+	if not touche_par_les_balles:
+		collision_layer &= ~MapGeometry.GADGET_LAYER
 	# ⚠️ Masque à ZÉRO : un gadget ne se déplace pas, il n'a personne à heurter.
 	# Lui donner un masque le ferait participer aux résolutions de collision pour
 	# rien, à chaque image, sur un corps statique.
@@ -162,7 +181,10 @@ func _ready() -> void:
 ## La forme de collision : un disque de `rayon`, dans le socle.
 ##
 ## ⚠️ **Elle doit dire la même forme que l'occluder**, et une sous-classe qui
-## surcharge l'un surcharge l'autre. Le voile a vécu jusqu'au 2026-09-10 avec une
+## surcharge l'un surcharge l'autre. Une exception, écrite : le LEURRE, dont chaque
+## forme suit la forme correspondante du joueur — une ombre en étoile, une zone de
+## touche ronde (2026-09-11) ; l'éblouissement, lui, lit l'étoile (`regard_par_la_forme`).
+## Le voile a vécu jusqu'au 2026-09-10 avec une
 ## ombre en bande de 8 px et une collision en DISQUE de 84 px de rayon — voir
 ## `GadgetVoile._forme_de_collision()`.
 func _forme_de_collision() -> Shape2D:
@@ -253,6 +275,23 @@ func _physics_process(delta: float) -> void:
 		detruire()
 
 
+## Ce gadget MASQUE-t-il le corps de qui s'y tient — plus de sprite pour l'autre,
+## plus d'ombre ? Faux dans le socle ; vrai pour la suie (Adrien, 2026-09-11).
+##
+## ⚠️ **Répond pour TOUS les gadgets** : `player.gd` le demande sans garde, dans
+## la même boucle qu'`occultation_pour()`. Un gadget qui ne saurait pas répondre
+## ferait planter le jeu à chaque image.
+func masque_le_corps() -> bool:
+	return false
+
+
+## Un tir est parti de l'intérieur : le volume pulse en entier. Vide dans le socle.
+##
+## ⚠️ Appelé sans garde sur tous les gadgets, depuis `game_state._do_spawn_bullet`.
+func diffuser_flash() -> void:
+	pass
+
+
 ## Une balle vient de le traverser. Rien dans le socle : un objet dur arrête la
 ## balle, il n'a pas à trembler. Le voile, lui, est une toile, et elle bat.
 ##
@@ -330,10 +369,53 @@ func occultation_pour(_pos: Vector2) -> float:
 	return 0.0
 
 
+## Au-delà de quel masque un corps cesse de faire ombre (étape 27) : la moitié du
+## nuage. En deçà l'ombre reste — un corps au bord de la suie n'y est pas caché.
+## Une seule valeur pour le joueur ET le leurre, qui doit disparaître comme lui.
+const SEUIL_OMBRE_MASQUEE := 0.5
+
+## Ce qui efface un corps à `pos`, chacun entre 0 et 1 : `x` l'OCCULTATION (fumée
+## de fusée, poussière — le sprite pâlit, l'ombre reste), `y` le MASQUE (la suie —
+## le corps disparaît, et son ombre avec au-delà de `SEUIL_OMBRE_MASQUEE`).
+##
+## ⚠️ **Une seule règle pour le joueur et le leurre** (2026-09-11, trouvé en revue) :
+## un leurre qui restait net dans la suie, où un vrai corps disparaît, se trahissait
+## par ce qu'il avait EN PLUS. Les deux lisent donc cette fonction.
+##
+## Sans garde sur les membres des groupes, pour la raison qui fait vivre
+## `occultation_pour()` dans le socle : tout gadget et toute fusée savent répondre.
+static func effacements_a(arbre: SceneTree, pos: Vector2) -> Vector2:
+	var occultation := 0.0
+	var masque := 0.0
+	for fusee in arbre.get_nodes_in_group("fusees"):
+		occultation = maxf(occultation, fusee.occultation_pour(pos))
+	for gadget in arbre.get_nodes_in_group("gadgets"):
+		var o: float = gadget.occultation_pour(pos)
+		if gadget.masque_le_corps():
+			masque = maxf(masque, o)
+		else:
+			occultation = maxf(occultation, o)
+	return Vector2(occultation, masque)
+
+
+## Vrai quand la ligne de vue d'éblouissement doit lire l'OMBRE de ce gadget plutôt
+## que sa collision — voir `coupe_le_regard()` et `GameState._ligne_de_vue_depuis()`.
+## Le leurre seul (2026-09-11) : son ombre est une étoile, sa zone de touche un
+## disque, et l'éblouissement doit suivre ce que la lumière montre.
+var regard_par_la_forme: bool = false
+
+
+## Le segment `de` → `vers` traverse-t-il l'ombre de ce gadget ? Lu seulement quand
+## `regard_par_la_forme` est vrai. Faux dans le socle.
+func coupe_le_regard(_de: Vector2, _vers: Vector2) -> bool:
+	return false
+
+
 ## Ce par quoi ce gadget multiplie l'énergie d'une lampe torche à `pos`.
 ##
-## Un dans le socle — la lampe est intacte. Seul le grésillement du Parasite
-## répond autrement.
+## Un dans le socle — la lampe est intacte. Le grésillement du Parasite (la lampe
+## saute) et la suie du Fumiste (la lampe tenue dedans y reste, étape 27)
+## répondent autrement.
 ##
 ## ⚠️ **Il touche AUSSI l'éblouissement depuis le 2026-09-10.** Il ne touchait
 ## que le rendu tant que la lampe gardait 22 % : elle éclairait encore, elle

@@ -9,18 +9,23 @@ extends GadgetBase
 ## passe. »* Une nappe de poudre claire répandue au sol. Qui la traverse y laisse
 ## une piste — et la piste **reste après lui**.
 ##
-## ## Ce qui en fait le gadget de la Sentinelle, et pas un radar
+## ## Des traces qui LUISENT, puis s'éteignent (2026-09-11)
 ##
-## ⚠️ **Les traces ne sont visibles QUE sous une lumière.** Elles portent
-## `light_mask = WALL_LAYER` comme le sol : dans le noir, elles n'existent pas. Il
-## faut revenir, éclairer, et lire. C'est exactement le geste de la classe — on
-## ne surveille pas en direct, on relève après coup — et c'est ce qui distingue ce
-## gadget d'une alarme : il ne dit rien pendant qu'on passe, il dit tout quand on
-## revient.
+## ⚠️ **Elles ne se lisaient que sous une lumière jusqu'au 2026-09-11** : il
+## fallait revenir, éclairer, et lire. Adrien trouvait le gadget « trop inutile ».
+## Elles luisent désormais d'elles-mêmes, vert phosphore, dans le noir — pour les
+## DEUX joueurs, sur sa décision : l'intrus voit ses pas et sait qu'il est repéré.
+## Et elles s'éteignent en quelques secondes : c'est une mémoire courte, pas un
+## relevé de la manche. La NAPPE, elle, reste éclairée par le décor : invisible dans
+## le noir, on ne contourne pas une poudre qu'on ne voit pas.
 ##
-## Il ne dit pas non plus QUI est passé — seulement quelqu'un, et par où. Dans un
-## duel, ça suffit : il n'y a que deux personnes, et l'une des deux sait ce
-## qu'elle a fait.
+## ⚠️ **Des pieds qui s'essuient.** En sortant de la nappe, un joueur emporte une
+## charge de poudre : ses traces continuent trois ou quatre pas en pâlissant, puis
+## s'arrêtent. Revenir dans la nappe recharge les pieds. Et la Sentinelle ne marque
+## pas sa propre poudre : elle se trahirait dans le noir.
+##
+## Il ne dit pas QUI est passé, et n'a pas à le dire : la Sentinelle ne marque pas
+## sa propre poudre, donc dans un duel toute trace est celle de l'intrus.
 ##
 ## ## Les traces se posent CHEZ TOUS LES PAIRS, sans rien répliquer
 ##
@@ -49,6 +54,27 @@ const PAS_ENTRE_MARQUES := 26.0
 ## serait un défaut de cadence que personne ne verrait venir.
 const MARQUES_MAX := 72
 
+## La charge de poudre qu'un joueur emporte : combien de traces il pose encore en
+## sortant de la nappe, en pâlissant. Six traces de 26 px font 156 px, soit trois
+## pas et demi du jeu — les « trois quatre pas » d'Adrien.
+##
+## ⚠️ **Comptée en TRACES, jamais en secondes ni en distance cumulée.** Le client
+## voit l'adversaire 100 ms en retard : une charge au temps donnerait deux pistes
+## différentes, et une distance sommée intégrerait le bruit de l'interpolation. La
+## règle de la corde de 26 px, elle, pose le même NOMBRE de traces des deux côtés ;
+## leurs positions diffèrent de quelques pixels (chaque pair échantillonne le
+## trajet à sa cadence), ce qui est sans conséquence : une trace ne décide de rien.
+const CHARGE_MAX := 6
+
+## La lueur d'une trace : sa couleur (un vert phosphore froid, distinct de
+## l'halogène des torches et de l'ambre des braises), son éclat de départ, et le
+## temps qu'elle met à s'éteindre.
+const COULEUR_LUEUR := Color(0.55, 1.0, 0.72)
+## ⚠️ Éclat modéré, et c'est une leçon payée deux fois : additive sur une poudre
+## éclairée, une trace trop vive sature au blanc et ne se lit plus.
+const LUEUR_MAX := 0.5
+const DUREE_LUEUR := 8.0
+
 ## La profondeur ABSOLUE de la nappe peinte : celle du sol (`floor_layer`, −1 dans
 ## l'arène). À égalité, l'ordre de l'arbre tranche — le nœud des gadgets vient
 ## après l'arène —, donc la nappe passe au-dessus du sol, et sous les murs (0), le
@@ -72,13 +98,16 @@ const ASSOMBRISSEMENT := 0.25
 var _marques: Array[Node2D] = []
 ## Dernier point marqué, par joueur. `INF` = pas encore entré dans la nappe.
 var _dernier: Array[Vector2] = [Vector2.INF, Vector2.INF]
+## La charge de poudre de chaque joueur — voir `CHARGE_MAX`.
+var _charge: Array[int] = [0, 0]
 
 
 func _init() -> void:
 	rayon = RAYON
-	# De la poudre répandue : une balle passe au-dessus, la lumière aussi.
+	# De la poudre répandue : une balle passe au-dessus, la lumière aussi — et elle
+	# ne la disperse pas (Adrien, 2026-09-11 : un gadget diffus ne se tue pas).
 	arrete_les_balles = false
-	pv = 2.0
+	touche_par_les_balles = false
 	eblouit = false
 	angle_pose = 0.0
 	occulte_la_lumiere = false
@@ -109,35 +138,56 @@ func _relever_les_pas() -> void:
 		return
 	# ⚠️ Pendant la killcam, la manche est finie et les fantômes rejouent le
 	# passé : marquer là écrirait une piste que personne n'a parcourue.
-	if not gs.round_active:
+	#
+	# ⚠️ **Mais le bac à sable compte, et c'est une correction du 2026-09-11.** Le
+	# garde ne lisait que `round_active` — or l'ENTRAÎNEMENT lance la manche puis le
+	# remet à faux (`sandbox_mode` vrai) : la poudre n'y a JAMAIS posé une trace,
+	# depuis l'étape 17, là même où Adrien essaie les classes. Même règle que la pose
+	# d'un gadget (`_do_spawn_gadget`) : en jeu, ou en bac à sable.
+	if not gs.round_active and not gs.sandbox_mode:
 		return
 	for id in 2:
+		# La Sentinelle ne marque pas sa propre poudre (Adrien, 2026-09-11).
+		if id == poseur_id:
+			continue
 		var j: Node2D = gs.p1 if id == 0 else gs.p2
 		if not is_instance_valid(j) or not j.visible or j.get("dead"):
 			continue
 		var pos := j.global_position
-		if pos.distance_to(global_position) > RAYON:
-			# Sortir de la nappe efface la mémoire : rentrer ailleurs doit
-			# remarquer tout de suite, pas attendre d'avoir « rattrapé » le pas.
+		if pos.distance_to(global_position) <= RAYON:
+			# Dans la nappe : les pieds se chargent, et chaque trace luit pleinement.
+			_charge[id] = CHARGE_MAX
+			if _dernier[id] == Vector2.INF:
+				_poser_marque(pos, j.global_transform.x)
+				_dernier[id] = pos
+			elif _dernier[id].distance_to(pos) >= PAS_ENTRE_MARQUES:
+				_poser_marque(pos, (pos - _dernier[id]).normalized())
+				_dernier[id] = pos
+		elif _charge[id] > 0:
+			# Hors de la nappe, des pieds encore poudrés : la même règle de la corde,
+			# des traces qui pâlissent — jamais tout à fait nulles —, puis plus rien.
+			if _dernier[id] == Vector2.INF:
+				_dernier[id] = pos
+			elif _dernier[id].distance_to(pos) >= PAS_ENTRE_MARQUES:
+				_poser_marque(pos, (pos - _dernier[id]).normalized(),
+					float(_charge[id]) / float(CHARGE_MAX + 1))
+				_charge[id] -= 1
+				_dernier[id] = pos if _charge[id] > 0 else Vector2.INF
+		else:
+			# Pieds propres : rentrer ailleurs doit marquer tout de suite, pas
+			# attendre d'avoir « rattrapé » le pas.
 			_dernier[id] = Vector2.INF
-			continue
-		if _dernier[id] == Vector2.INF:
-			_poser_marque(pos, j.global_transform.x)
-			_dernier[id] = pos
-			continue
-		if _dernier[id].distance_to(pos) >= PAS_ENTRE_MARQUES:
-			_poser_marque(pos, (pos - _dernier[id]).normalized())
-			_dernier[id] = pos
 
 
-## Une trace : un petit trait clair, orienté dans le sens de la marche.
+## Une trace : un petit trait qui luit, orienté dans le sens de la marche.
 ##
-## ⚠️ **Enfant de l'ARÈNE, pas du gadget.** La piste doit survivre à la nappe :
-## abattre la poudre ne doit pas effacer ce qu'elle a déjà écrit, sans quoi il
-## suffirait de tirer dessus pour nier son passage. C'est la leçon que `bullet.gd`
+## ⚠️ **Enfant de l'ARÈNE, pas du gadget.** La piste doit survivre à la nappe : une
+## nappe remplacée ou purgée n'efface pas ce qu'elle a déjà écrit — la trace
+## s'éteint d'elle-même, par son fondu. (Tirer dessus ne la niait plus depuis que
+## la poudre ne se tue plus à la balle, le 2026-09-11.) C'est la leçon que `bullet.gd`
 ## a écrite pour ses éclats — *« le parent d'une balle est le nœud des balles, qui
 ## ne survit pas à la manche »*.
-func _poser_marque(pos: Vector2, sens: Vector2) -> void:
+func _poser_marque(pos: Vector2, sens: Vector2, intensite: float = 1.0) -> void:
 	var gs := get_tree().get_first_node_in_group("game_state")
 	if gs == null or gs.arena == null:
 		return
@@ -148,14 +198,31 @@ func _poser_marque(pos: Vector2, sens: Vector2) -> void:
 		Vector2(6.0, 1.0), Vector2(-6.0, 1.6)])
 	m.global_position = pos
 	m.rotation = sens.angle()
-	m.color = Charte.HALOGENE
-	# ⚠️ **Éclairée par le décor, donc INVISIBLE dans le noir.** C'est tout le
-	# gadget : il faut revenir et éclairer pour lire. Une trace lumineuse par
-	# elle-même en ferait une alarme, ce qui est le métier d'une autre classe.
-	m.light_mask = MapGeometry.WALL_LAYER
+	m.color = COULEUR_LUEUR
+	# ⚠️ **Elle LUIT : non éclairée et additive**, depuis le 2026-09-11. Un
+	# `light_mask` à zéro ne suffirait pas — le `CanvasModulate` de l'arène éteint
+	# tout ce qui passe (voir `GadgetBase.materiau_incandescent()`). Additive, elle
+	# vaut sa propre couleur dans le noir et s'AJOUTE à la poudre éclairée.
+	m.material = GadgetBase.materiau_incandescent()
+	m.modulate.a = LUEUR_MAX * clampf(intensite, 0.0, 1.0)
 	m.z_index = 1
+	# Reconnue par son GROUPE, jamais par son nom : Godot renomme les homonymes
+	# en « @Polygon2D@N », et seule la première trace s'appelle « Trace ».
+	m.add_to_group("traces_de_poudre")
 	gs.arena.add_child(m)
+	# ⚠️ **Le fondu appartient à la TRACE**, jamais au gadget : la nappe remplacée
+	# ou purgée ne doit pas figer les traces à leur éclat du moment. Décroissance
+	# rapide puis traînante, comme un phosphore. Et c'est aussi ce qui les empêche
+	# de se reporter sur la manche suivante : l'arène ne se purge pas par manche.
+	var fondu := m.create_tween()
+	# DA4.13 — une lueur qui retombe à zéro : `EXTINCTION`, la courbe de ce qui
+	# s'éteint. `test_charte` refuse les courbes de Godot (`TRANS_*`).
+	Charte.animer(fondu, m, "modulate:a", m.modulate.a, 0.0, DUREE_LUEUR,
+		Charte.Courbe.EXTINCTION)
+	fondu.tween_callback(m.queue_free)
 
+	# Les traces éteintes se sont libérées seules : on ne compte que les vivantes.
+	_marques = _marques.filter(func(n): return is_instance_valid(n))
 	_marques.append(m)
 	if _marques.size() > MARQUES_MAX:
 		var vieille: Node2D = _marques.pop_front()

@@ -212,7 +212,7 @@ func _test_intensite_texture() -> void:
 	arbalete.torch_cookie = "arbalete"
 	arbalete.torch_angle_deg = 5.0
 	arbalete.torch_scale = 3.5
-	arbalete.torch_brightness = 0.3
+	arbalete.torch_brightness = 0.6
 	var pompe := WeaponData.new()
 	pompe.torch_cookie = "pompe"
 	pompe.torch_angle_deg = 60.0
@@ -227,11 +227,12 @@ func _test_intensite_texture() -> void:
 	# trois divergences du 2026-08-24 : l'arbalète a un faisceau trois fois plus
 	# sombre que les autres et éblouissait exactement comme le pistolet, parce
 	# que la formule ignorait un paramètre qui n'existait que dans l'alpha.
-	# Attendu à mi-portée dans l'axe : (1 - 0,5) × fondu(5°) × 0,3.
+	# Attendu à mi-portée dans l'axe : (1 - 0,5) × fondu(5°) × 0,6 — doublé le
+	# 2026-09-11 (Adrien : « je les vois pas assez »).
 	var mi_arb: float = arbalete.portee_torche() * 0.5
 	var lu: float = Vision.intensite_texture(img_arb, avant, o,
 		Vector2(mi_arb, 0), arbalete.echelle_torche())
-	var attendu: float = 0.5 * clampf(deg_to_rad(5.0) * 8.0, 0.0, 1.0) * 0.3
+	var attendu: float = 0.5 * clampf(deg_to_rad(5.0) * 8.0, 0.0, 1.0) * 0.6
 	_check("la luminosité de l'arme est dans ce qu'elle inflige (%.3f ≈ %.3f)"
 		% [lu, attendu], absf(lu - attendu) < 0.02, "%f vs %f" % [lu, attendu])
 

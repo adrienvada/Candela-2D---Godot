@@ -132,7 +132,28 @@ class_name Protocol
 ##      Et le VOILE arrête désormais les joueurs (même version, toujours non
 ##      publiée). Le fil ne bouge pas, le sens si : un client d'avant prédirait
 ##      qu'il le traverse, et l'hôte le retiendrait — une correction par contact.
-const VERSION := 16
+## 17 — le SENS change, pas la forme (étape 27 du chantier DIX CLASSES,
+##      2026-09-11, décisions d'Adrien). Le témoin ne bouge pas : aucun RPC n'est
+##      ajouté ni modifié. Mais cinq règles que les deux pairs doivent partager :
+##      - la torche fantôme balaie selon un plan de gestes tiré de la GRAINE de
+##        `rpc_spawn_gadget` (elle la jetait jusqu'ici) : un pair v16 dessinerait
+##        son ancien sinus pendant que l'hôte v17 éblouit selon le nouveau plan ;
+##      - les gadgets diffus ne sont plus touchés par les balles : la balle les
+##        traversait déjà, mais un hôte v16 les abîmait au passage et les
+##        détruisait ; un v17 ne les rencontre plus. Et une balle n'éteint plus
+##        la fusée : un client v16 y prédirait une balle arrêtée que l'hôte v17
+##        laisse passer ;
+##      - la suie cache le corps de qui s'y tient, et étouffe la lampe qu'on y
+##        tient — éblouissement arbitré par l'hôte compris (`facteur_de_lampe`) :
+##        un client v16 afficherait un adversaire v17 caché dans la suie, et
+##        rendrait pleine une lampe que l'hôte v17 étouffe ;
+##      - la lampe de l'arbalète est deux fois plus lumineuse, et son
+##        éblouissement avec : un v16 face à un v17 ne verrait pas la même lampe ;
+##      - la fausse torche obéit à la règle de lampe d'une vraie (la suie
+##        l'étouffe, le grésillement la fait sauter), rendu et éblouissement ; et
+##        l'éblouissement lit l'OMBRE du leurre, pas son disque de touche : un
+##        client v16 dessinerait allumée une fausse torche que l'hôte v17 étouffe.
+const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
 ##

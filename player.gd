@@ -283,6 +283,18 @@ const DUST_INTERVAL := 0.12
 var _dust_accum: float = 0.0
 
 var flashlight_on: bool = false
+
+## La suie (étape 27) : ce qu'on garde de soi pour soi au cœur du nuage — on s'y
+## devine encore. Le seuil au-delà duquel le corps cesse de faire ombre vit dans le
+## socle des gadgets (`GadgetBase.SEUIL_OMBRE_MASQUEE`) : le leurre le lit aussi.
+const PART_SOI_DANS_LA_SUIE := 0.6
+var _ombre_coupee := false
+## L'opacité que le brouillage donne au pointeur et aux révélations, posée en
+## physique ; `_process` la compose à chaque image avec le masque de la suie.
+var _alpha_brouillage := 1.0
+## Le masque de la suie à la position du joueur, relevé à la dernière image : le
+## tir le lit pour étouffer son éclat (`trigger_shoot_visuals`).
+var _masque_ici := 0.0
 var dead: bool = false
 
 # Numérotation des paquets d'input client→hôte. Le canal est unreliable :
@@ -828,7 +840,10 @@ func _ready():
 	var pts = PackedVector2Array()
 	for i in range(16):
 		var ang = (i / 16.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 18.0) # 18.0 is exactly the player radius
+		# ⚠️ Cercle PROVISOIRE, écrasé par l'étoile de la silhouette au premier
+		# `equip_weapon()` (`_accorder_occluder_a_la_silhouette`). Le lire comme
+		# « l'ombre du joueur » a fait donner un disque au leurre (étape 15).
+		pts.append(Vector2(cos(ang), sin(ang)) * 18.0)
 		
 	if has_node("LightOccluder2D"):
 		var main_occ = get_node("LightOccluder2D")
@@ -1038,50 +1053,36 @@ func _monter_occluder_de_torse() -> void:
 func _accorder_occluder_a_la_silhouette(sil: Texture2D) -> void:
 	if not has_node("LightOccluder2D") or sil == null:
 		return
-	var img := sil.get_image()
-	if img == null:
+	# La forme se lit dans la charte depuis le 2026-09-11 : le leurre doit faire
+	# exactement le même trou, et une seule fonction le garantit.
+	var pts := Charte.ombre_de_silhouette(sil)
+	if pts.is_empty():
 		return
-	var l := img.get_width()
-	var h := img.get_height()
-	var cx := float(l) * 0.5
-	var cy := float(h) * 0.5
-	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
-	var vers_monde := Charte.empreinte_sprite(l) / float(l)
-	var pts := PackedVector2Array()
-	const RAYONS := 32
-	for i in RAYONS:
-		var ang := (float(i) / float(RAYONS)) * TAU
-		var dir := Vector2(cos(ang), sin(ang))
-		# On part du bord et on rentre : le premier pixel opaque rencontré est
-		# le plus lointain dans cette direction.
-		var portee := maxf(cx, cy) * 1.5
-		var trouve := 0.0
-		var r := portee
-		while r > 1.0:
-			var px := int(cx + dir.x * r)
-			var py := int(cy + dir.y * r)
-			if px >= 0 and px < l and py >= 0 and py < h \
-					and img.get_pixel(px, py).a > 0.35:
-				trouve = r
-				break
-			r -= 1.0
-		# ⚠️ **Le plancher ne sert QU'À éviter un polygone dégénéré.**
-		#
-		# Il valait d'abord 18 — le rayon de l'ancien cercle — « par prudence ».
-		# Mesuré ensuite : la silhouette du pistolet va de **5,8 à 24,8** unités
-		# selon la direction, moyenne 12,8, et **28 directions sur 32 tombaient
-		# sous 18**. Le plancher n'était donc pas une sécurité, c'était la forme :
-		# il rendait exactement le cercle qu'on voulait remplacer, avec une petite
-		# bosse devant. Adrien l'a vu à l'écran avant que je le mesure — « cela
-		# fait toujours un cercle, non ? ».
-		#
-		# **Une prudence qui recouvre la donnée n'est plus une prudence.** Trois
-		# unités suffisent à garantir un sommet non nul, et ne dominent jamais.
-		pts.append(dir * maxf(trouve, 3.0 / vers_monde) * vers_monde)
 	var occ := get_node("LightOccluder2D")
-	occ.occluder.polygon = pts
-	occ.occluder.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	# ⚠️ **Une ressource NEUVE, jamais celle de la scène.** `player.tscn` déclare
+	# l'`OccluderPolygon2D` en sous-ressource, sans `resource_local_to_scene` : J1
+	# et J2 la PARTAGEAIENT, et dans un match entre deux classes les deux corps
+	# projetaient l'ombre de la classe équipée en dernier — le leurre, lui, celle
+	# de son poseur, et il se trahissait. Trouvé en revue (2026-09-11).
+	var poly := OccluderPolygon2D.new()
+	poly.polygon = pts
+	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	occ.occluder = poly
 	occ.occluder_light_mask = COUCHE_OCCLUDER_SIENNE
+
+
+## Au cœur de la suie, le corps cesse de faire ombre — l'ombre dirait la position
+## et même la forme de la silhouette. Purement visuel : les balles, les collisions
+## et la ligne de vue d'éblouissement passent par la physique, pas par les
+## occluders. N'écrit que sur un changement.
+func _couper_l_ombre(coupee: bool) -> void:
+	if coupee == _ombre_coupee:
+		return
+	_ombre_coupee = coupee
+	for nom in ["LightOccluder2D", "OccluderTorse"]:
+		var occ := get_node_or_null(nom)
+		if occ != null:
+			occ.visible = not coupee
 
 
 ## DA2.11 — le viseur, enfant du joueur donc porté par sa rotation.
@@ -1225,23 +1226,47 @@ func _process(delta):
 	# le sprite restait lisible dessous (retour d'Adrien au premier essai).
 	# Calculé ici, côté joueur — lui seul connaît tous ses visuels — depuis des
 	# positions déjà répliquées : les deux machines effacent au même endroit.
-	var occultation := 0.0
-	for fusee in get_tree().get_nodes_in_group("fusees"):
-		occultation = maxf(occultation, fusee.occultation_pour(global_position))
+	#
+	# Une seule règle pour le joueur et le LEURRE depuis le 2026-09-11 (étape 27) :
+	# elle vit dans `GadgetBase.effacements_a()`, que le leurre lit aussi.
+	var effacements := GadgetBase.effacements_a(get_tree(), global_position)
+	var occultation := effacements.x
 	# Chantier CLASSES (étape 14) — les VOLUMES effacent de la même façon, et
 	# c'est délibérément le même mécanisme : deux façons de s'effacer dans deux
 	# nuages différents se sentiraient comme un défaut, pas comme deux gadgets.
 	#
-	# ⚠️ **Boucle sans garde, comme celle du dessus**, et c'est tenable pour une
+	# ⚠️ **Boucles sans garde** (`GadgetBase.effacements_a()`), et c'est tenable pour une
 	# seule raison : `GadgetBase.occultation_pour()` existe et rend zéro, donc
 	# TOUT gadget sait répondre. Le jour où quelqu'un ajoutera au groupe un objet
 	# qui ne sait pas, le jeu plantera à chaque image — c'est le défaut qu'une
 	# session voisine a relevé sur le groupe des fusées le 2026-09-09.
-	for gadget in get_tree().get_nodes_in_group("gadgets"):
-		occultation = maxf(occultation, gadget.occultation_pour(global_position))
-	for v in [visual, visual_dim, visual_reveal, visual_enemy]:
+	#
+	# Chantier CLASSES (étape 27) — la SUIE masque le corps (Adrien, 2026-09-11 :
+	# « qu'on ne me voie pas dans la fumée ») : pour l'autre, plus rien au cœur, ni
+	# sprite ni ombre. Pour soi, on se devine encore — se perdre de vue dans son
+	# propre nuage serait une punition, pas un effet. Calculée à part : la fumée de
+	# fusée, dont Adrien a validé le dosage, ne change pas.
+	var masque := effacements.y
+	_masque_ici = masque
+	var a_soi := 1.0 - maxf(occultation, masque * PART_SOI_DANS_LA_SUIE)
+	var a_autre := 1.0 - maxf(occultation, masque)
+	for v in [visual, visual_dim, visual_reveal]:
 		if v:
-			v.modulate.a = 1.0 - occultation
+			v.modulate.a = a_soi
+	if visual_enemy:
+		visual_enemy.modulate.a = a_autre
+	# Le pointeur et la silhouette révélée au tir aussi : un tir DANS la suie ne
+	# rend pas le corps — c'est le nuage entier qui pulse (`diffuser_flash`).
+	#
+	# ⚠️ **Posé à chaque image depuis l'alpha du brouillage, jamais par un `minf`
+	# cumulatif** : un `minf` ne fait que baisser, et le pointeur restait invisible
+	# après la suie — le bloc du brouillage, seul autre écrivain, ne tourne ni au
+	# décompte ni hors manche. Trouvé en revue (2026-09-11).
+	var a_masque := minf(_alpha_brouillage, 1.0 - masque)
+	for v in [visual_enemy_ptr, visual_reveal_enemy, visual_reveal_enemy_ptr]:
+		if v:
+			v.modulate.a = a_masque
+	_couper_l_ombre(masque >= GadgetBase.SEUIL_OMBRE_MASQUEE)
 
 	# L'éblouissement n'est PAS intégré ici. `game_state` s'en charge, pour les
 	# deux joueurs et en un seul endroit — c'est cette ligne-ci qui, jusqu'au
@@ -1659,6 +1684,7 @@ func _physics_process(delta):
 		var regardeur: Node = state.p2 if player_id == 0 else state.p1
 		if is_instance_valid(regardeur):
 			var a := Brouillage.opacite(float(regardeur.dazzle_amount))
+			_alpha_brouillage = a
 			visual_enemy.modulate.a = a
 			if visual_enemy_ptr != null:
 				visual_enemy_ptr.modulate.a = a
@@ -1730,7 +1756,9 @@ func _physics_process(delta):
 
 		# Chantier CLASSES (étape 16) — le GRÉSILLEMENT du Parasite fait sauter
 		# les lampes autour de lui : le faisceau papillote, faiblit, tombe au
-		# noir, revient (le noir absolu depuis l'étape 24).
+		# noir, revient (le noir absolu depuis l'étape 24). Et la SUIE du Fumiste
+		# étouffe la lampe qu'on y tient (étape 27) : même boucle, même minimum —
+		# voir `GadgetSuie.facteur_de_lampe()`.
 		#
 		# ⚠️ **Posé APRÈS le souffle et AVANT la rétrodiffusion**, et les deux
 		# places comptent. Après le souffle, parce que la panne doit s'appliquer à
@@ -2191,6 +2219,14 @@ func trigger_shoot_visuals():
 	# que le RENDU : la pénalité d'éblouissement du flash est un modèle à part.
 	var curseur_flash := EffectPolicy.curseur("flash_de_tir")
 	flash_intensity *= curseur_flash
+	# Chantier CLASSES (étape 27) — un tir DANS la suie ne sort pas du nuage : la
+	# lumière de bouche et l'éclat dessiné s'y étouffent comme une lampe, et c'est
+	# le nuage entier qui pulse (`GadgetVolume.diffuser_flash`). L'éclat, non
+	# éclairé et posé au-dessus de la masse, disait sinon la position exacte du
+	# tireur. Trouvé en revue (2026-09-11). Visuel seulement : l'éblouissement du
+	# flash est un modèle à part, arbitré par l'hôte.
+	var hors_suie := 1.0 - _masque_ici
+	flash_intensity *= hors_suie
 	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
 	# DA2.3 — la séquence se déroule PAR-DESSUS la descente d'énergie, qui reste
 	# seule maîtresse de la luminosité. Chaque image tient un tiers de la durée :
@@ -2211,8 +2247,8 @@ func trigger_shoot_visuals():
 	# ne révèle déjà (il est posé là où elle brûle), il lui donne une forme.
 	var eclat := _eclat_de_bouche()
 	eclat.texture = LightTextures.masque(LightTextures.FLASH[0])
-	eclat.modulate = Color(Charte.HALOGENE, curseur_flash)
-	eclat.visible = eclat.texture != null and curseur_flash > 0.0
+	eclat.modulate = Color(Charte.HALOGENE, curseur_flash * hors_suie)
+	eclat.visible = eclat.texture != null and curseur_flash * hors_suie > 0.0
 	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
 	for i in range(1, LightTextures.FLASH.size()):
 		var chemin: String = LightTextures.FLASH[i]

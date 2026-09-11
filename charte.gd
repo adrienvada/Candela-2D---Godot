@@ -686,6 +686,66 @@ const DENSITE_ASSETS := 1.0
 static func empreinte_sprite(largeur_texture: int) -> float:
 	return float(largeur_texture) / DENSITE_ASSETS
 
+
+## Les ombres déjà calculées, par chemin de silhouette. Le joueur calcule la sienne
+## au début de la manche : le leurre, posé en plein combat, n'a plus qu'à lire.
+static var _ombres := {}
+
+## L'ombre d'un corps, lue dans sa silhouette : une étoile de 32 rayons, en unités
+## de monde, centrée sur le sprite. UNE seule vérité de forme pour le joueur
+## (`player._accorder_occluder_a_la_silhouette`) et pour le leurre, qui doit faire
+## « le même trou » — déménagée ici le 2026-09-11 pour la même raison que
+## `empreinte_sprite` : nommer `Player` depuis un gadget ferait tomber les suites.
+##
+## ⚠️ **Échantillonnage RADIAL, pas de tracé de contour.** Un vrai contour
+## (marching squares) rendrait les concavités — l'espace entre les bras — mais il
+## demande de gérer les trous, les îlots et les diagonales ambiguës, pour une ombre
+## de trente pixels dans le noir. Trente-deux rayons depuis le centre donnent une
+## étoile qui épouse le corps ET le canon, et ne peut pas dégénérer.
+##
+## ⚠️ **Le plancher ne sert QU'À éviter un polygone dégénéré.** Il valait d'abord
+## 18 — le rayon de l'ancien cercle — « par prudence ». Mesuré ensuite : la
+## silhouette du pistolet va de 5,8 à 24,8 unités selon la direction, et 28
+## directions sur 32 tombaient sous 18 : le plancher rendait exactement le cercle
+## qu'on voulait remplacer. Adrien l'a vu avant la mesure — « cela fait toujours un
+## cercle, non ? ». Trois unités suffisent, et ne dominent jamais.
+static func ombre_de_silhouette(sil: Texture2D) -> PackedVector2Array:
+	if sil == null:
+		return PackedVector2Array()
+	var cle := sil.resource_path
+	if cle != "" and _ombres.has(cle):
+		return _ombres[cle]
+	var img := sil.get_image()
+	if img == null:
+		return PackedVector2Array()
+	var l := img.get_width()
+	var h := img.get_height()
+	var cx := float(l) * 0.5
+	var cy := float(h) * 0.5
+	# Du pixel vers le monde : le quad fait `empreinte_sprite(l)` de large.
+	var vers_monde := empreinte_sprite(l) / float(l)
+	var pts := PackedVector2Array()
+	const RAYONS := 32
+	for i in RAYONS:
+		var ang := (float(i) / float(RAYONS)) * TAU
+		var dir := Vector2(cos(ang), sin(ang))
+		# On part du bord et on rentre : le premier pixel opaque rencontré est le
+		# plus lointain dans cette direction.
+		var trouve := 0.0
+		var r := maxf(cx, cy) * 1.5
+		while r > 1.0:
+			var px := int(cx + dir.x * r)
+			var py := int(cy + dir.y * r)
+			if px >= 0 and px < l and py >= 0 and py < h \
+					and img.get_pixel(px, py).a > 0.35:
+				trouve = r
+				break
+			r -= 1.0
+		pts.append(dir * maxf(trouve, 3.0 / vers_monde) * vers_monde)
+	if cle != "":
+		_ombres[cle] = pts
+	return pts
+
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],

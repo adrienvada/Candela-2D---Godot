@@ -9,6 +9,14 @@ extends GadgetVolume
 ## les deux silhouettes se ressemblent est déjà beaucoup, et le sera davantage
 ## quand les dix classes auront des sprites distincts.
 ##
+## ⚠️ **Renversé le 2026-09-11 : elle cache aussi la présence.** Adrien : « il
+## faudrait qu'on ne me voie pas dans la fumée, non ? Si j'éclaire dans la fumée,
+## ça illumine toute la fumée. » Au cœur, l'adversaire ne voit plus ni le corps ni
+## son ombre (`masque_le_corps`). Le nuage n'est plus éclairé point par point : il
+## s'allume EN ENTIER selon la lumière qu'il reçoit, et une lampe tenue dedans y
+## reste (`facteur_de_lampe`). La poussière, elle, garde son rôle : réduire la
+## portée, sans rien cacher.
+##
 ## Le Fumiste est aussi un imposteur : c'est la classe dont l'arme est lourde et
 ## le chargeur court. La suie lui rend le temps que son arme lui coûte.
 
@@ -23,9 +31,11 @@ func _init() -> void:
 	# des murs opaques. Attrapé par la suite, pas à la lecture.
 	super()
 	rayon = RAYON
-	# Presque opaque : dedans, un corps n'est plus qu'une masse.
-	opacite = 0.88
-	pv = 2.0
+	# Presque opaque (0,88) jusqu'au 2026-09-11 : dedans, un corps n'était plus
+	# qu'une masse.
+	# Opaque au cœur depuis le 2026-09-11 (Adrien : « il faudrait qu'on ne me voie
+	# pas dans la fumée ») : on n'y distingue plus personne.
+	opacite = 1.0
 
 
 ## Son image : un nuage de suie peint, à sa taille — 184 px, deux fois `RAYON`.
@@ -37,3 +47,16 @@ func _init() -> void:
 ## moyenne : invisible sans lumière, de la matière sous une torche.
 func piece_sprite() -> String:
 	return "cartouche_suie"
+
+
+## La suie masque le corps — voir la note de tête. Pas la poussière.
+func masque_le_corps() -> bool:
+	return true
+
+
+## Une lampe tenue DANS la suie y reste : son faisceau n'en ressort pas, sa lumière
+## se diffuse dans le nuage, qui s'allume en entier. Même accroche que le
+## grésillement : le rendu (`player.gd`) et l'éblouissement (`facteur_de_lampe_a`)
+## la suivent tous deux — une lampe étouffée n'éblouit plus personne.
+func facteur_de_lampe(pos: Vector2) -> float:
+	return 1.0 - occultation_pour(pos)

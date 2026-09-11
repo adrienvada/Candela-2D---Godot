@@ -421,8 +421,8 @@ func occultation_pour(pos: Vector2) -> float:
 
 
 ## FU5 — cette fusée est-elle posée, allumée, et pas déjà en train de s'éteindre ?
-## C'est la condition d'existence des DEUX moyens de l'éteindre : le piétinement
-## (game_state.gd, host-only) et la balle (bullet.gd, tous pairs).
+## C'est la condition d'existence du seul moyen de l'éteindre depuis le 2026-09-11 :
+## le piétinement (game_state.gd, hôte seul). La balle ne l'éteint plus.
 func est_allumee_au_sol() -> bool:
 	return _atterrie and not _eteinte
 
@@ -472,9 +472,8 @@ func ajouter_tunnel(entree: Vector2, sortie: Vector2, sombre: bool) -> void:
 
 
 ## FU5 — éteint la fusée : c'est un geste, pas une manche d'existence.
-## Idempotent : appelé indépendamment par chaque machine sur son propre nœud
-## local (piétinement via game_state, hôte seul ; balle via bullet.gd, tous
-## pairs) — un second appel ne fait rien.
+## Idempotent : appelé par chaque machine sur son propre nœud local, à l'ordre de
+## l'hôte (piétinement via game_state) — un second appel ne fait rien.
 func eteindre() -> void:
 	if _eteinte or not _atterrie:
 		return

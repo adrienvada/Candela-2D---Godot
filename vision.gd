@@ -98,8 +98,9 @@ static func intensite_recue(avant: Vector2, depuis: Vector2, vers: Vector2,
 ## mesurées à l'écran le 2026-08-24, et aucune n'a jamais fait rougir une suite :
 ##
 ## - **`torch_brightness` n'arrivait pas jusqu'ici.** Il est cuit dans l'alpha de
-##   la texture ; la formule l'ignorait. L'arbalète, dont le faisceau est trois
-##   fois plus sombre que les autres, éblouissait exactement comme le pistolet —
+##   la texture ; la formule l'ignorait. L'arbalète, dont le faisceau était alors
+##   trois fois plus sombre que les autres (le double depuis le 2026-09-11, étape
+##   27 des classes), éblouissait exactement comme le pistolet —
 ##   l'arme furtive l'était partout sauf dans ce qu'elle inflige.
 ## - **Le cône était écrit en dur à 30°** pour quatre armes qui vont de 5 à 60.
 ## - **Le profil peint des cookies tombe à la moitié dans les flancs** (mesuré à

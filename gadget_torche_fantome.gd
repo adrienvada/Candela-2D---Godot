@@ -29,14 +29,19 @@ extends GadgetBase
 ## `game_state.gd` porte déjà la liste des trois fois où cette copie a divergé en
 ## une seule journée.
 ##
-## ## Le balayage n'est PAS répliqué, et c'est le patron de la fusée
+## ## Un balayage HUMAIN, et identique chez les deux pairs
 ##
-## Chaque pair fait osciller sa propre copie depuis l'instant de la pose. Les
-## deux horloges ne démarrent pas exactement au même tick, donc les faisceaux
-## peuvent se déphaser de quelques dizaines de millisecondes. C'est sans
-## conséquence : **l'éblouissement est calculé par l'hôte seul et répliqué**, et
-## ce que le client voit est un décor. Répliquer l'angle coûterait un flottant
-## par tick pour corriger un écart que personne ne peut mesurer.
+## Il balayait en sinus pur jusqu'au 2026-09-11 : régulier, jamais arrêté — un
+## phare. Adrien : « moins régulière, plus aléatoire, plus humaine ». Il enchaîne
+## désormais des GESTES — coups d'œil, retours sur un recoin, balayages lents,
+## hésitations —, séparés de pauses, chacun porté par une courbe de poignet
+## (accélération puis freinage) et un léger tremblement.
+##
+## ⚠️ **Le hasard vient de la GRAINE de l'hôte**, portée par `rpc_spawn_gadget`
+## avec la pose : les deux pairs déroulent le même plan de gestes, fonction pure
+## de (graine, âge). Seul l'instant de départ diffère (une latence aller simple) :
+## quelques degrés pendant un geste, rien pendant une pause. L'éblouissement reste
+## calculé par l'hôte seul et répliqué.
 
 ## L'amplitude du balayage, en radians, de part et d'autre de l'axe de pose.
 ##
@@ -45,14 +50,40 @@ extends GadgetBase
 ## couloir sans jamais ressembler à un phare.
 const AMPLITUDE := 0.63
 
-## La durée d'un aller-retour complet, en secondes.
-const PERIODE := 3.6
+## Les gestes, et leur part : coup d'œil, retour sur la fixation d'avant, balayage
+## lent vers l'autre bord ; le reste en hésitations. Tirés par la graine.
+const PART_COUP_D_OEIL := 0.45
+const PART_RETOUR := 0.20
+const PART_BALAYAGE := 0.20
+## Vitesse du balayage lent, en rad/s : celle de l'ancien sinus à mi-course.
+const VITESSE_BALAYAGE := 1.0
+## Le tremblement du poignet : deux sinus faibles (rad), déphasés par la graine.
+const TREMBLEMENT := [0.012, 0.009]
+const FREQ_TREMBLEMENT := [3.1, 5.3]
 
-## L'énergie du faisceau. Celle d'une torche de joueur au repos — et **pas de
-## souffle ni de scintillement ici**, délibérément : la torche réelle n'en a pas
-## dans son état ordinaire, et en ajouter un ferait de la fausse la seule des
-## deux qui respire. Un leurre se trahit par ce qu'il a EN PLUS.
+## L'énergie du faisceau : celle d'une torche de joueur, 2,5, AVEC son souffle de
+## ±3 % (`player.gd`, `TORCH_BREATH_AMP`). ⚠️ Cette note disait jusqu'au 2026-09-11
+## que la torche réelle ne respirait pas : c'était faux, et la fausse était la
+## seule des deux à ne pas respirer. Un leurre se trahit par ce qu'il a EN MOINS
+## autant que par ce qu'il a en plus.
+##
+## La « puissance » doublée par Adrien le 2026-09-11 n'est PAS ici : elle est dans
+## l'alpha du cookie de l'arbalète, qu'elle emprunte (`torch_brightness` 0,6).
+## Doubler `energy` en aurait fait la seule lampe plus forte que le vrai Braconnier.
 const ENERGIE := 2.5
+const SOUFFLE := 0.03
+
+## La graine de l'hôte, posée par `GameState._do_spawn_gadget` avant l'entrée dans
+## l'arbre. ⚠️ **Sans cette variable, la graine serait jetée sans un bruit** : le
+## spawn ne la pose que `if "graine" in g`, et toutes les torches déroulaient
+## alors le même plan.
+var graine: int = 0
+
+## Le plan de gestes : une suite de `[début, fin du mouvement, fin de la pause,
+## angle de départ, angle d'arrivée]`, construite paresseusement — les suites
+## créent la torche sans `_ready()`.
+var _plan: Array = []
+var _hasard: RandomNumberGenerator = null
 
 var _angle_depart: float = 0.0
 var _lumiere: PointLight2D
@@ -148,9 +179,18 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if is_queued_for_deletion():
 		return
-	# Le balayage. `age()` court depuis la pose, donc les deux pairs décrivent la
-	# même courbe — au déphasage de leur instant de départ près.
-	rotation = _angle_depart + sin(TAU * age() / PERIODE) * AMPLITUDE
+	# Le balayage : le plan de gestes tiré de la graine, lu à l'âge. `age()` court
+	# depuis la pose, donc les deux pairs décrivent la même courbe — au déphasage
+	# de leur instant de départ près.
+	rotation = _angle_depart + angle_relatif(age())
+	if _lumiere != null:
+		# La même règle qu'une vraie lampe (étape 27, trouvé en revue) : la suie
+		# l'étouffe, le grésillement la fait sauter. Une fausse torche qui brillerait
+		# là où la vraie s'éteint se trahirait ; son éblouissement suit le même
+		# facteur, chez l'hôte (`GameState._lumiere_recue`).
+		var gs = get_tree().get_first_node_in_group("game_state")
+		var lampe: float = gs.facteur_de_lampe_a(global_position) if gs != null else 1.0
+		_lumiere.energy = ENERGIE * lampe * (1.0 + SOUFFLE * sin(age() * 1.7 + float(graine % 97)))
 	# Le trépied est posé au sol : il ne balaie pas. Sa rotation compense celle du
 	# nœud, qui porte la tête et le faisceau.
 	if _pied != null:
@@ -183,3 +223,64 @@ func _monter_visuel() -> void:
 	lentille.material = GadgetBase.materiau_incandescent()
 	lentille.z_index = 6
 	add_child(lentille)
+
+
+## L'angle du faisceau par rapport à l'axe de pose, à l'instant `t` : fonction PURE
+## de (graine, t), bornée par `AMPLITUDE`.
+func angle_relatif(t: float) -> float:
+	_etendre_le_plan(t)
+	var a := 0.0
+	for g in _plan:
+		if t < g[0]:
+			break
+		if t <= g[1]:
+			var x := (t - float(g[0])) / maxf(0.001, float(g[1]) - float(g[0]))
+			# La courbe à secousse minimale : un poignet accélère, puis freine.
+			var s := x * x * x * (10.0 - 15.0 * x + 6.0 * x * x)
+			a = lerpf(g[3], g[4], s)
+			break
+		a = g[4]
+	var phase := float(graine % 1000) * 0.0063
+	a += TREMBLEMENT[0] * sin(TAU * FREQ_TREMBLEMENT[0] * t + phase) \
+		+ TREMBLEMENT[1] * sin(TAU * FREQ_TREMBLEMENT[1] * t + phase * 1.7)
+	return clampf(a, -AMPLITUDE, AMPLITUDE)
+
+
+## Construit le plan jusqu'à couvrir `t` (et une seconde au-delà). Déterministe :
+## le générateur n'est semé qu'une fois, par la graine, et consommé dans l'ordre.
+func _etendre_le_plan(t: float) -> void:
+	if _hasard == null:
+		_hasard = RandomNumberGenerator.new()
+		_hasard.seed = graine
+		_plan.clear()
+	var fin := 0.0 if _plan.is_empty() else float(_plan[_plan.size() - 1][2])
+	var courant := 0.0 if _plan.is_empty() else float(_plan[_plan.size() - 1][4])
+	var avant := 0.0 if _plan.size() < 2 else float(_plan[_plan.size() - 2][4])
+	while fin <= t + 1.0:
+		var r := _hasard.randf()
+		var cible := courant
+		var pause := 0.25 + 0.9 * pow(_hasard.randf(), 2.0)
+		var balayage := false
+		if r < PART_COUP_D_OEIL:
+			# Un regard qui revient surtout vers le couloir visé : loi triangulaire
+			# centrée sur l'axe, à distance franche de l'angle courant.
+			for essai in 6:
+				cible = (_hasard.randf() + _hasard.randf() - 1.0) * AMPLITUDE
+				if absf(cible - courant) >= 0.22:
+					break
+		elif r < PART_COUP_D_OEIL + PART_RETOUR:
+			cible = avant + (_hasard.randf() - 0.5) * 0.07
+		elif r < PART_COUP_D_OEIL + PART_RETOUR + PART_BALAYAGE:
+			var cote := -1.0 if courant > 0.0 else 1.0
+			cible = cote * AMPLITUDE * (0.6 + 0.4 * _hasard.randf())
+			pause = 0.1 + 0.3 * _hasard.randf()
+			balayage = true
+		else:
+			cible = courant + (_hasard.randf() - 0.5) * 0.24
+		cible = clampf(cible, -AMPLITUDE, AMPLITUDE)
+		var ecart := absf(cible - courant)
+		var mouvement := maxf(0.2, ecart / VITESSE_BALAYAGE) if balayage else 0.16 + 0.30 * ecart
+		_plan.append([fin, fin + mouvement, fin + mouvement + pause, courant, cible])
+		avant = courant
+		courant = cible
+		fin += mouvement + pause
