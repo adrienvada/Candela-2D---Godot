@@ -342,7 +342,12 @@ func allumer() -> void:
 	pass
 
 
-## Ce que ce gadget FAIT aux joueurs, chaque pas de physique.
+## Ce que ce gadget FAIT aux joueurs, à chaque image RENDUE : `GameState._process()`
+## → `_maj_gadgets()`, fps déplafonnés. ⚠️ `delta` varie donc d'une machine à
+## l'autre : un effet qui agit PAR APPEL dépendrait du matériel — voir
+## l'accumulateur de `GadgetBraises` (étape 28, 2026-09-11). Ce texte disait
+## « chaque pas de physique » : c'était faux, et c'est ce qui a laissé la nappe
+## verser un RPC et une lumière d'impact par image rendue.
 ##
 ## Vide dans le socle : la plupart ne font rien qu'exister et masquer. Seule la
 ## nappe de braises répond aujourd'hui.
@@ -353,6 +358,21 @@ func allumer() -> void:
 ## fois plus vite que l'arbitrage.
 func appliquer_effets(_joueurs: Array, _delta: float) -> void:
 	pass
+
+
+## La part de sa pleine lumière que ce gadget brûle en ce moment, entre 0 et 1 :
+## ce qui multiplie son éblouissement de PROXIMITÉ (étape 28, 2026-09-11, Adrien :
+## « l'aveuglement suit ce qui brûle » — la règle de la fusée, étendue aux
+## gadgets). Un dans le socle : un gadget qui ne s'éteint pas brûle à plein.
+##
+## ⚠️ **Répond pour TOUS les gadgets**, comme `occultation_pour()` :
+## `GameState._sources_eblouissantes()` le lit SANS garde. Un `has_method()` y
+## changerait un oubli en inaction muette — CLAUDE.md, la fusion du 2026-09-09.
+##
+## ⚠️ Sans effet sur une source DIRIGÉE (la torche fantôme) : `_plafond_de_source()`
+## ne lit le gain qu'au régime de proximité.
+func energie_relative() -> float:
+	return 1.0
 
 
 ## Combien ce gadget EFFACE ce qui se trouve à `pos`, entre 0 et 1.

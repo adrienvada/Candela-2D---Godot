@@ -1891,6 +1891,13 @@ func _sources_eblouissantes() -> Array:
 			# La classe du poseur porte le cookie : c'est elle qu'on
 			# échantillonne, exactement comme on échantillonne l'arme d'un joueur.
 			"arme": g.classe_du_poseur,
+			# Un gadget éblouit à hauteur de ce qu'il brûle, comme la fusée
+			# ci-dessus (étape 28, 2026-09-11, Adrien). ⚠️ Sans `has_method` : le
+			# socle répond (`GadgetBase.energie_relative`). Lu au seul régime de
+			# PROXIMITÉ ; et pas de seuil de coupure comme celui de la fusée — les
+			# braises ne descendent pas sous 0,35, et un gadget qui ne brûle pas
+			# encore n'a pas de rayon (la mine endormie) : il rend 0 avant le gain.
+			"gain": g.energie_relative(),
 		})
 	return out
 

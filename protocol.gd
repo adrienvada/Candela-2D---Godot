@@ -153,6 +153,14 @@ class_name Protocol
 ##        l'étouffe, le grésillement la fait sauter), rendu et éblouissement ; et
 ##        l'éblouissement lit l'OMBRE du leurre, pas son disque de touche : un
 ##        client v16 dessinerait allumée une fausse torche que l'hôte v17 étouffe.
+##
+##      Et à l'étape 28 (même version, toujours non publiée) : la nappe de braises
+##      pâlit chez les DEUX pairs — elle ne pâlissait que chez l'hôte — et son
+##      éblouissement, arbitré par l'hôte, suit cette lueur
+##      (`GadgetBase.energie_relative`). Le fil ne bouge pas, le sens si : un
+##      client v16 rendrait à pleine lueur une nappe dont l'hôte v17 fait baisser
+##      l'éblouissement. Les tics de brûlure ne sont PAS une règle partagée :
+##      l'hôte les décide, `rpc_update_hp` les porte.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.

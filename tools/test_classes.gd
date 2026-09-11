@@ -41,6 +41,8 @@ const MapGeometry := preload("res://map_geometry.gd")
 const GadgetBase := preload("res://gadget_base.gd")
 const GadgetVoile := preload("res://gadget_voile.gd")
 const GadgetOmbre := preload("res://gadget_ombre.gd")
+## Sans dépendance (étape 28) : `game_state.gd` fait le même `preload`.
+const Eblouissement := preload("res://eblouissement.gd")
 
 var _failures: int = 0
 
@@ -50,6 +52,39 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 	else:
 		_failures += 1
 		printerr("  ✗ ", label, ("  → " + detail) if detail != "" else "")
+
+
+## Un joueur de carton (étape 28) : ce que `GadgetBraises.appliquer_effets` lit d'un
+## joueur, rien de plus — et il COMPTE ses brûlures. Nommé, bien qu'aucun RPC ne le
+## vise : la règle du dépôt pour tout nœud ajouté à la main.
+class FauxJoueur extends Node2D:
+	var dead := false
+	var appels := 0
+	var total := 0.0
+	func take_damage(montant: float, _source: Node2D) -> void:
+		appels += 1
+		total += montant
+
+func _faux_joueur() -> FauxJoueur:
+	var f := FauxJoueur.new()
+	f.name = "FauxJoueur"
+	root.add_child(f)
+	return f
+
+## `duree` secondes par pas de `pas`, `faux` au centre de la nappe ou hors d'elle.
+func _bruler(nappe, faux, duree: float, pas: float, dedans: bool = true) -> void:
+	var dehors: Vector2 = nappe.global_position + Vector2(GadgetBraises.RAYON * 3.0, 0.0)
+	faux.global_position = nappe.global_position if dedans else dehors
+	for i in int(round(duree / pas)):
+		nappe.appliquer_effets([faux], pas)
+
+## Par TYPE, jamais par nom : Godot renomme les homonymes (Pièges connus).
+func _compter_lumieres(n: Node) -> int:
+	var k := 0
+	for c in n.get_children():
+		if c is PointLight2D:
+			k += 1
+	return k
 
 func _init() -> void:
 	call_deferred("_run")
@@ -534,6 +569,10 @@ func _test_socle_gadgets() -> void:
 	_check("il porte une forme de collision", g.get_node_or_null("Forme") != null)
 	_check("il porte un occluder : un gadget n'est pas un trou de lumière",
 		g.get_node_or_null("Occluder") != null)
+	# Étape 28 : `GameState._sources_eblouissantes()` lit ce gain SANS garde, sur
+	# tous les gadgets. Supprimé du socle, la suite crie (SCRIPT ERROR) ici même.
+	_check("le socle brûle à plein : energie_relative() vaut 1",
+		is_equal_approx(g.energie_relative(), 1.0), str(g.energie_relative()))
 
 	# Les points de vie : tout gadget est destructible à la balle.
 	g.pv = 2.0
@@ -1417,6 +1456,135 @@ func _test_braises() -> void:
 		GadgetBraises.DEGATS_PAR_SECONDE * 2.0 >= 25.0,
 		"%.0f PV" % (GadgetBraises.DEGATS_PAR_SECONDE * 2.0))
 
+	# ── L'AVEUGLEMENT SUIT LA LUEUR (étape 28), CHEZ LES DEUX PAIRS ─────────
+	# ⚠️ **Par `_physics_process`, jamais par `appliquer_effets`** : c'est le chemin
+	# du CLIENT, qui n'appelle pas le second. Lu par l'autre, ce contrôle passerait
+	# sur une nappe qui ne pâlit que chez l'hôte.
+	# ⚠️ L'énergie RENDUE se lit sur la lumière, jamais par `energie_relative()` :
+	# comparer le gain à lui-même ne prouverait rien.
+	# Le témoin d'abord : à pleine lueur, le plafond vaut ce que dit la distance —
+	# une ligne de vue cassée rendrait 0 partout, et un rapport « constant » à 0.
+	# Physique de la nappe gelée jusqu'à la fin du test : son âge ne bouge plus que
+	# par nos appels à `_physics_process`.
+	nappe.set_physics_process(false)
+	var d_nappe := 100.0 # hors du disque qui brûle (68) : on mesure la vue, pas la peau
+	gs.p2.global_position = nappe.global_position + Vector2(d_nappe, 0.0)
+	gs.p1.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	# Deux pas : un corps téléporté n'existe pour les requêtes qu'au pas suivant.
+	await physics_frame
+	await physics_frame
+	var espace_n: PhysicsDirectSpaceState2D = gs.p1.get_world_2d().direct_space_state
+	var lueur: PointLight2D = nappe.get_node_or_null("Lueur")
+	var rapports_n: Array[float] = []
+	var derniere_lueur := -1.0
+	# ⚠️ **L'âge avance par `_physics_process(Δ)`, jamais par `_age = …`** : c'est
+	# `super(delta)` qui fait vieillir la nappe et la tue à `duree_vie`, chez les
+	# deux pairs. Une affectation le court-circuitait — `super` retiré, la nappe
+	# devenait éternelle et la suite restait verte (revue du lot A1, 2026-09-11).
+	# Les pas sont comptés ICI, pas relus sur `age()` : relus, un âge figé à zéro
+	# redemanderait chaque fois le même pas, et le contrôle suivrait le défaut.
+	var age_cumule := 0.0
+	var ages_n: Array[float] = []
+	# L'alpha de l'image, à côté de la lueur : les deux sont le point 3 du lot, et
+	# rien d'autre ne lit l'alpha — la nappe de l'invité aurait pu rester opaque
+	# dix secondes, puis disparaître d'un coup.
+	var alphas_n: Array[float] = []
+	var lueurs_n: Array[float] = []
+	var restes_n := [1.0, 0.5, 0.05]
+	nappe._age = 0.0
+	for reste in restes_n:
+		var age_vise: float = (1.0 - reste) * nappe.duree_vie
+		nappe._physics_process(age_vise - age_cumule)
+		age_cumule = age_vise
+		ages_n.append(nappe.age())
+		var visuel: Sprite2D = nappe._nappe
+		alphas_n.append(visuel.modulate.a if visuel != null else -1.0)
+		lueurs_n.append(lueur.energy if lueur != null else -1.0)
+		var src_n := {}
+		for s in gs._sources_eblouissantes():
+			if s["noeud"] == nappe:
+				src_n = s
+		if src_n.is_empty() or lueur == null:
+			rapports_n.append(-1.0)
+			continue
+		derniere_lueur = lueur.energy
+		rapports_n.append(gs._plafond_de_source(espace_n, src_n, gs.p2)
+			/ maxf(lueur.energy / GadgetBraises.ENERGIE, 1e-6))
+	var attendu_n: float = Eblouissement.plafond_pour(Eblouissement.intensite_proximite(
+		d_nappe, GadgetBraises.RAYON_EBLOUISSEMENT)) \
+		* Eblouissement.gain_taille(GadgetBraises.RAYON_EBLOUISSEMENT)
+	_check("témoin : à pleine lueur, la nappe éblouit ce que dit la distance",
+		attendu_n > 0.0 and absf(rapports_n[0] - attendu_n) < 1e-3,
+		"%.4f vs %.4f" % [rapports_n[0], attendu_n])
+	_check("sans l'hôte, la lueur pâlit avec l'âge",
+		derniere_lueur > 0.0 and derniere_lueur < GadgetBraises.ENERGIE * 0.5,
+		str(derniere_lueur))
+	var constant_n := true
+	for r in rapports_n:
+		constant_n = constant_n and absf(r - rapports_n[0]) < 1e-3
+	_check("le rapport éblouissement / lueur rendue reste constant sur la vie de la nappe",
+		constant_n, str(rapports_n))
+	_check("son rayon d'éblouissement ne rétrécit plus",
+		is_equal_approx(nappe.rayon_eblouissement, GadgetBraises.RAYON_EBLOUISSEMENT),
+		str(nappe.rayon_eblouissement))
+	var ages_ok := ages_n.size() == 3
+	for i in ages_n.size():
+		ages_ok = ages_ok and is_equal_approx(ages_n[i], (1.0 - restes_n[i]) * nappe.duree_vie)
+	_check("la nappe vieillit par sa propre physique (super)", ages_ok, str(ages_n))
+	# Absolu ET relatif : « l'alpha égale la lueur » passerait sur une nappe figée
+	# à 1 si la lueur l'était aussi — c'est le seuil sous 0,5 qui dit qu'elle pâlit.
+	var alphas_ok := alphas_n.size() == 3 and alphas_n[0] > 0.99 and alphas_n[2] < 0.5
+	for i in alphas_n.size():
+		alphas_ok = alphas_ok \
+			and absf(alphas_n[i] - lueurs_n[i] / GadgetBraises.ENERGIE) < 1e-3
+	_check("sans l'hôte, l'image pâlit comme la lueur (alpha = lueur / pleine lueur)",
+		alphas_ok, "alpha %s, lueur %s" % [str(alphas_n), str(lueurs_n)])
+	nappe._age = 0.0
+	nappe._physics_process(0.0)
+
+	# ── LA CADENCE NE DÉCIDE PLUS (étape 28) ─────────────────────────────────
+	# ⚠️ **Le NOMBRE d'appels est le contrôle, pas le total** : l'ancien code rendait
+	# déjà 33,6 PV à 60 comme à 480 images/s. Et les nombres sont ABSOLUS : « autant
+	# d'appels aux deux cadences » passerait sur une nappe qui ne brûle plus (0 = 0).
+	for cadence in [60.0, 480.0]:
+		var f := _faux_joueur()
+		_bruler(nappe, f, 2.1, 1.0 / cadence)
+		_check("2,1 s dans la nappe à %d images/s : huit tics de 4 PV" % int(cadence),
+			f.appels == 8 and is_equal_approx(f.total, 32.0),
+			"%d appels, %.2f PV" % [f.appels, f.total])
+		f.free()
+		var g2 := _faux_joueur()
+		_bruler(nappe, g2, 2.0, 1.0 / cadence)
+		_check("2,0 s pile à %d images/s : le huitième tic tombe à l'heure" % int(cadence),
+			g2.appels == 8, "%d appels" % g2.appels)
+		g2.free()
+	var h := _faux_joueur()
+	_bruler(nappe, h, 1.0, 1.0)
+	_check("une image d'une seconde verse quatre tics, pas un",
+		h.appels == 4 and is_equal_approx(h.total, 16.0), "%d appels" % h.appels)
+	h.free()
+	var t := _faux_joueur()
+	_bruler(nappe, t, 0.2, 1.0 / 480.0)
+	var apres_traversee: int = t.appels
+	_bruler(nappe, t, 1.0, 1.0 / 480.0, false)
+	_bruler(nappe, t, 0.06, 1.0 / 480.0)
+	_check("une traversée de 0,2 s ne coûte encore rien", apres_traversee == 0,
+		str(apres_traversee))
+	# ⚠️ **Le montant, pas seulement le compte.** Une charge VERSÉE à la sortie
+	# (3,2 PV) puis effacée ferait aussi « un appel » : sans le total, ce contrôle
+	# passait sur l'alternative que le lot a rejetée (revue du lot A1, 2026-09-11).
+	_check("… mais sa charge est gardée dehors : 0,06 s de plus font le premier tic, de 4 PV",
+		t.appels == 1 and is_equal_approx(t.total, GadgetBraises.PV_PAR_TIC),
+		"%d appels, %.2f PV" % [t.appels, t.total])
+	t.free()
+	var v := _faux_joueur()
+	for k in 12:
+		_bruler(nappe, v, 0.175, 1.0 / 480.0)
+		_bruler(nappe, v, 0.1, 1.0 / 480.0, false)
+	_check("des allers-retours plus courts qu'un tic brûlent comme un séjour (2,1 s cumulées)",
+		v.appels == 8, "%d appels" % v.appels)
+	v.free()
+
 	# ── ELLE BRÛLE, ET ELLE NE CONNAÎT PERSONNE ──────────────────────────────
 	var pv_avant: float = gs.p2.hp
 	gs.p2.global_position = nappe.global_position
@@ -1441,6 +1609,41 @@ func _test_braises() -> void:
 	await process_frame
 	_check("hors de la nappe, on ne brûle pas",
 		is_equal_approx(gs.p1.hp, pv_dehors))
+
+	# ── PAR LE VRAI CHEMIN : `_maj_gadgets` (l'appel de `_process`), le vrai joueur ──
+	# `round_active` est forcé en tête de ce test : c'est l'état d'une manche. Le
+	# contrôle suivant rejoue celui de l'entraînement (Pièges connus, « Un test qui
+	# force l'état ne voit pas l'état réel »). Aucune image ne passe pendant les
+	# boucles : aucune lumière d'impact ne s'éteint en route, le compte est exact.
+	nappe._charge.clear()
+	gs.p2.hp = 100.0
+	gs.p2.global_position = nappe.global_position
+	gs.p1.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	var lumieres_avant := _compter_lumieres(gs.p2)
+	for i in 1008:
+		gs._maj_gadgets(1.0 / 480.0)
+	_check("par _maj_gadgets, 2,1 s à 480 images/s coûtent 32 PV",
+		is_equal_approx(100.0 - gs.p2.hp, 32.0), "%.2f PV" % (100.0 - gs.p2.hp))
+	_check("… en huit lumières d'impact, pas un millier",
+		_compter_lumieres(gs.p2) - lumieres_avant == 8,
+		str(_compter_lumieres(gs.p2) - lumieres_avant))
+
+	# ── À L'ENTRAÎNEMENT, là où Adrien essaie les classes ────────────────────
+	# Les drapeaux de `_on_training_requested` : manche désarmée, entraînement armé.
+	# J2 y est caché ; c'est J1 qui brûle. Le lancement réel n'est pas rejoué : il
+	# remonterait toute la manche pour vérifier une garde de deux drapeaux.
+	gs.round_active = false
+	gs.sandbox_mode = true
+	nappe._charge.clear()
+	gs.p1.hp = 100.0
+	gs.p1.global_position = nappe.global_position
+	gs.p2.global_position = nappe.global_position + Vector2(0.0, 900.0)
+	for i in 1008:
+		gs._maj_gadgets(1.0 / 480.0)
+	_check("à l'entraînement aussi, 2,1 s à 480 images/s coûtent 32 PV",
+		is_equal_approx(100.0 - gs.p1.hp, 32.0), "%.2f PV" % (100.0 - gs.p1.hp))
+	gs.round_active = true
+	gs.sandbox_mode = false
 
 	# ── LA NAPPE EST UNE IMAGE, QUI LUIT D'ELLE-MÊME ─────────────────────────
 	#
@@ -1479,6 +1682,13 @@ func _test_braises() -> void:
 	_check("l'image couvre au moins 90 % du disque qui brûle", couverture >= 0.9,
 		"%.1f %%" % (couverture * 100.0))
 	a1.free()
+
+	# ── ELLE MEURT DE SA PROPRE PHYSIQUE ─────────────────────────────────────
+	# En dernier : la nappe ne sert plus. Par `_physics_process`, le chemin des deux
+	# pairs — `super(delta)` retiré, elle brûlerait toute la manche à pleine lueur.
+	nappe._physics_process(nappe.duree_vie)
+	_check("à la fin de sa durée de vie, la nappe s'éteint d'elle-même",
+		nappe.is_queued_for_deletion(), "âge %.2f s" % nappe.age())
 
 	gs.queue_free()
 	await process_frame
