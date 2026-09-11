@@ -21,8 +21,16 @@ shader_type canvas_item;
 // (`light_textures.gd`), pour qu'une fumée éclairée à la braise soit ambrée et
 // la même fumée éclairée à la torche reste grise.
 
+// Refonte roman graphique, lot 3 (2026-09-11) : la densité est ramenée à
+// TROIS paliers (0,35 / 0,65 / 1,0, sous 0,15 rien). Une volute de planche a
+// deux ou trois valeurs de gris, pas un dégradé — la part molle des volutes
+// mesurait 0,45 et 0,24. Ce shader ne touche que les NAPPES, le dessin de la
+// fumée ; le voile à trous (`fumee_fusee.gdshader`), qui porte l'occultation
+// que le jeu lit, garde son dégradé.
 void fragment() {
 	vec4 planche = texture(TEXTURE, UV);
 	float densite = max(planche.r, max(planche.g, planche.b));
-	COLOR = vec4(COLOR.rgb, COLOR.a * planche.a * densite);
+	float palier = step(0.15, densite) * 0.35 + step(0.45, densite) * 0.30
+		+ step(0.75, densite) * 0.35;
+	COLOR = vec4(COLOR.rgb, COLOR.a * planche.a * palier);
 }
