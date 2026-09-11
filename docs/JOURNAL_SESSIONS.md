@@ -311,6 +311,10 @@ est prévenue et ne corrige pas de son côté. `player_rim_light.gdshader` et
 `blood_shader.gdshader`, même motif, ne sont PAS touchés. Décision et chiffres :
 ROADMAP, « Décisions actées ».
 
+**2026-09-11 — `shimmer_murs.gdshader` retouché une fois de plus**, sur décision
+d'Adrien (« garder la proximité ») : sa référence d'énergie passe de la torche
+(2,5) au halo de proximité (0,8). Une constante et son commentaire.
+
 **Suivi de projet :** je ne republie pas — delta envoyé à « Can2d - Mise à jour
 artefact de suivi - Sonnet LOCAL ».
 

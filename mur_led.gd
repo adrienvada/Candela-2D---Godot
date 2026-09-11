@@ -22,8 +22,10 @@
 ## restait à ~168/255 et l'adversaire à 60 — seul le sol, rendu par l'éclairage
 ## par défaut, suivait. Dosée par la couleur, les trois suivent.
 ##
-## Depuis, le liseré applique l'énergie (décision d'Adrien, même jour), et le
-## corps adverse aussi dans un commit séparé, que la décision doit confirmer.
+## Depuis, le liseré et le corps adverse appliquent l'énergie (décision
+## d'Adrien du 2026-09-10, confirmée pour l'adversaire le 2026-09-11) ; le
+## liseré se normalise sur la vision de proximité (0,8), au-delà de laquelle il
+## répond comme avant. La bande (énergie 1) n'en est donc pas affectée.
 ## La couleur reste pourtant le levier : `player_rim_light.gdshader` (le corps du
 ## joueur local, que la bande éclaire aussi) et `blood_shader.gdshader`
 ## l'ignorent encore, et une énergie fixe à 1 rend la bande juste sous tous.

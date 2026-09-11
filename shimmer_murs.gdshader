@@ -17,14 +17,23 @@ uniform vec4 couleur_reflet : source_color = vec4(0.96, 0.69, 0.24, 1.0); // Cha
 // la forme de la tache est dans l'alpha : LIGHT_COLOR.rgb vaut la teinte
 // presque partout. Sans LIGHT_ENERGY, le liseré s'allumait d'un bloc sous toute
 // lampe, quelle que soit sa force — fondu de la torche, grésillement, bandeau
-// LED, éclats. Normalisé sur la torche nominale : à cette énergie le liseré
-// garde exactement l'aspect validé ; en dessous, il décroît avec la lampe.
-// PLAFONNÉ à 1 : la fusée pleine (3,0) et la mine (6,0) dépassent la torche, et
-// sans plafond elles rendraient l'arête plus forte qu'avant — ×2,4 pour la mine,
-// un aplat blanc. Aucune lampe n'éclaire le liseré plus qu'avant ce correctif ;
-// seules les plus faibles s'atténuent.
-// Doit valoir `flashlight.energy` nominale de player.gd — vérifié par test_mur_led.
-const float ENERGIE_REFERENCE = 2.5;
+// LED, éclats.
+//
+// Normalisé sur la VISION DE PROXIMITÉ — le halo que chaque joueur porte
+// autour de lui (`ambient_light`, énergie 0,8) — et plafonné à 1 : toute lampe
+// au moins aussi forte que ce halo éclaire le liseré comme avant ; seules les
+// plus faibles s'atténuent, jusqu'à 0. Une lampe à 0 (grésillement) n'éclaire
+// plus rien. Décision d'Adrien, 2026-09-11 : garder la proximité.
+//
+// Une première version se normalisait sur la torche (2,5) : fondus plus longs,
+// murs qui vacillaient au tir — mais le halo ne soulignait plus le mur voisin
+// qu'au tiers (148 → 47/255 au banc). Or ce halo sert au joueur à se repérer
+// dans son environnement immédiat ; il ne doit rien perdre.
+//
+// Le plafond compte aussi : la fusée pleine (3,0) et la mine (6,0) auraient
+// sinon rendu l'arête plus forte qu'avant ce correctif — un aplat blanc.
+// Doit valoir `ambient_light.energy` de player.gd — vérifié par test_mur_led.
+const float ENERGIE_REFERENCE = 0.8;
 
 varying vec2 v_world_pos;
 

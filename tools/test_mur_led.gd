@@ -259,15 +259,17 @@ func _test_shaders_lisent_l_energie() -> void:
 				"corrigé ? le retirer de LIGHT_SANS_ENERGIE")
 		else:
 			_check("%s : light() applique LIGHT_ENERGY" % fichier, lit_energie)
-	# Le liseré se normalise sur la torche nominale : elle doit garder l'aspect
-	# validé, et c'est le chiffre de player.gd qui fait foi.
+	# Le liseré se normalise sur la vision de proximité (décision d'Adrien,
+	# 2026-09-11) : le halo du joueur doit souligner le mur voisin comme avant,
+	# et c'est le chiffre de player.gd qui fait foi. Si l'énergie du halo change,
+	# la référence doit suivre — sinon le halo perd ou gagne du mur en silence.
 	var shimmer := FileAccess.get_file_as_string("res://shimmer_murs.gdshader")
 	var ref := RegEx.create_from_string("const float ENERGIE_REFERENCE = ([0-9.]+);").search(shimmer)
-	var torche := RegEx.create_from_string("flashlight\\.energy = ([0-9.]+)").search(
+	var halo := RegEx.create_from_string("ambient_light\\.energy = ([0-9.]+)").search(
 		FileAccess.get_file_as_string("res://player.gd"))
 	_check("ENERGIE_REFERENCE lue dans shimmer_murs", ref != null)
-	_check("énergie nominale de la torche lue dans player.gd", torche != null)
-	if ref and torche:
-		_check("ENERGIE_REFERENCE = énergie nominale de la torche",
-			float(ref.get_string(1)) == float(torche.get_string(1)),
-			"%s / %s" % [ref.get_string(1), torche.get_string(1)])
+	_check("énergie du halo de proximité lue dans player.gd", halo != null)
+	if ref and halo:
+		_check("ENERGIE_REFERENCE = énergie du halo de proximité",
+			float(ref.get_string(1)) == float(halo.get_string(1)),
+			"%s / %s" % [ref.get_string(1), halo.get_string(1)])
