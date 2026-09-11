@@ -265,7 +265,9 @@ func _test_pose() -> void:
 	var largeur := led.texture.get_width() * led.texture_scale
 	_check("texture à l'échelle de la grille", is_equal_approx(largeur, zone.size.x),
 		"%.1f / %.1f" % [largeur, zone.size.x])
-	_check("sans drapeau : éteinte, pas seulement à zéro", not led.enabled)
+	_check("allumé pour tout le monde : actif sans drapeau (Adrien, 2026-09-11)",
+		MurLed.est_actif())
+	_check("posée au creux : éteinte, pas seulement à zéro", not led.enabled)
 	_check("aucune ombre", not led.shadow_enabled)
 	_check("éclaire décor, adversaire et joueur local", led.range_item_cull_mask == 7)
 	var texture := led.texture
@@ -334,17 +336,10 @@ func _test_shaders_lisent_l_energie() -> void:
 				"corrigé ? le retirer de LIGHT_SANS_ENERGIE")
 		else:
 			_check("%s : light() applique LIGHT_ENERGY" % fichier, lit_energie)
-	# Le liseré se normalise sur la vision de proximité (décision d'Adrien,
-	# 2026-09-11) : le halo du joueur doit souligner le mur voisin comme avant,
-	# et c'est le chiffre de player.gd qui fait foi. Si l'énergie du halo change,
-	# la référence doit suivre — sinon le halo perd ou gagne du mur en silence.
-	var shimmer := FileAccess.get_file_as_string("res://shimmer_murs.gdshader")
-	var ref := RegEx.create_from_string("const float ENERGIE_REFERENCE = ([0-9.]+);").search(shimmer)
-	var halo := RegEx.create_from_string("ambient_light\\.energy = ([0-9.]+)").search(
-		FileAccess.get_file_as_string("res://player.gd"))
-	_check("ENERGIE_REFERENCE lue dans shimmer_murs", ref != null)
-	_check("énergie du halo de proximité lue dans player.gd", halo != null)
-	if ref and halo:
-		_check("ENERGIE_REFERENCE = énergie du halo de proximité",
-			float(ref.get_string(1)) == float(halo.get_string(1)),
-			"%s / %s" % [ref.get_string(1), halo.get_string(1)])
+	# ⚠️ Le bloc qui vérifiait `ENERGIE_REFERENCE` de `shimmer_murs.gdshader`
+	# contre l'énergie du halo de `player.gd` est retiré avec le shader
+	# (refonte roman graphique, second chantier, 2026-09-11 : la tuile de mur
+	# est noire, le shader ne dessinait plus rien). Le contour vit dans
+	# `mur_encre.gd`, éclairé par défaut ; la décision « garder la proximité »
+	# (2026-09-11) y reste à mesurer — voir la ROADMAP, section du second
+	# chantier. Retrait convenu avec la session « bandeau LED ».

@@ -95,21 +95,30 @@ func _process(delta: float) -> void:
 		set_process(false) # Désactivation complète du process au repos
 
 
+## Le cerne d'encre autour d'une silhouette — refonte roman graphique, lot 5
+## (2026-09-11). L'objet fait cinq pixels : un trait de 0,5 px y est
+## sous-pixel, et le « reflet halogène » qu'on posait dessus était un vernis
+## qu'on ne voyait pas. Le cerne est donc un aplat NOIR plus grand de
+## `CERNE` que la douille, peint dessous : à cette taille c'est le seul contour
+## qui existe à l'écran.
+const CERNE := 0.6
+
 func _draw() -> void:
-	# Dessin vectoriel contrasté Roman Graphique Brutaliste
+	# Dessin vectoriel contrasté Roman Graphique Brutaliste : un cerne noir,
+	# puis des aplats, aucun reflet.
 	match weapon_slug:
 		"fusil":
 			# Étui de fusil allongé avec collet et culot
+			draw_rect(Rect2(-2.5, -0.9, 5.0, 1.8).grow(CERNE), Charte.NOIR)
 			# Culot sombre
 			draw_rect(Rect2(-2.5, -0.9, 0.8, 1.8), Charte.LINE)
 			# Corps laiton
 			draw_rect(Rect2(-1.7, -0.9, 3.2, 1.8), Charte.AMBRE)
-			# Reflet halogène sur le haut du cylindre
-			draw_line(Vector2(-1.7, -0.6), Vector2(1.5, -0.6), Charte.HALOGENE * 0.85, 0.5)
 			# Collet resserré
 			draw_rect(Rect2(1.5, -0.6, 1.0, 1.2), Charte.AMBRE.lerp(Charte.LINE, 0.3))
 		"pompe":
 			# Cartouche de calibre 12 : culot laiton doré + corps sombre/carmin
+			draw_rect(Rect2(-2.2, -1.2, 4.4, 2.4).grow(CERNE), Charte.NOIR)
 			# Culot laiton
 			draw_rect(Rect2(-2.2, -1.2, 1.2, 2.4), Charte.AMBRE)
 			# Corps de cartouche
@@ -119,12 +128,11 @@ func _draw() -> void:
 			draw_line(Vector2(2.2, -1.2), Vector2(2.2, 1.2), Charte.LINE, 0.6)
 		_:
 			# Pistolet / standard : douille 9mm compacte
+			draw_rect(Rect2(-1.8, -0.9, 3.6, 1.8).grow(CERNE), Charte.NOIR)
 			# Culot
 			draw_rect(Rect2(-1.8, -0.9, 0.6, 1.8), Charte.LINE)
 			# Douille laiton
 			draw_rect(Rect2(-1.2, -0.9, 3.0, 1.8), Charte.AMBRE)
-			# Reflet supérieur
-			draw_line(Vector2(-1.2, -0.6), Vector2(1.8, -0.6), Charte.HALOGENE * 0.85, 0.5)
 
 
 func _evict_oldest() -> void:

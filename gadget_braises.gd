@@ -240,6 +240,12 @@ func _monter_lueur() -> void:
 ## La nappe : son image, peinte lumineuse, qui remplace les quinze charbons
 ## dessinés (2026-09-10). La même image chez les deux pairs : le déterminisme que
 ## la spirale d'or garantissait est acquis par construction.
+##
+## Refonte roman graphique, lot 6 (2026-09-11) : la lueur au centre de la planche
+## était un dégradé radial aérographe ; sa luminance est ramenée à QUATRE paliers
+## (pierre, braise sombre, braise, cœur), teinte conservée. Source intacte dans
+## `assets/sources/encre/gadget_nappe_braises_source.png`. La poudre de contact,
+## elle, est déjà une trame de points : intacte.
 func _monter_visuel() -> void:
 	_nappe = _poser_sprite("Visuel", "nappe_braises")
 	if _nappe == null:

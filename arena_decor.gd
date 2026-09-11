@@ -50,10 +50,13 @@ func setup(data: Dictionary) -> void:
 	# Calque original : visible par défaut
 	visibility_layer = 1
 	light_mask = 1
-
-	var mat := CanvasItemMaterial.new()
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	material = mat
+	# Refonte roman graphique, lot 4 (2026-09-11, Adrien : « corrige les deux
+	# éléments à corriger ») : plus de matériau additif. Chevrons, équerres,
+	# pochoirs et rivets sont des marques PEINTES au sol, pas des sources : en
+	# addition elles ne pouvaient jamais porter de noir et s'éclaircissaient deux
+	# fois sous la torche. Mélange normal, éclairé comme le sol — les LUMIÈRES,
+	# elles, s'additionnent toujours (c'est le principe du jeu, et il vit dans
+	# les Light2D, pas ici).
 
 	_analyser_carte()
 	queue_redraw()
@@ -64,9 +67,6 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 	copy.name = "ArenaDecor_P%d" % player_idx
 	copy.visibility_layer = vis_mask
 	copy.light_mask = lt_mask
-	var mat := CanvasItemMaterial.new()
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	copy.material = mat
 	copy._danger_edges = _danger_edges
 	copy._stencils = _stencils
 	copy._corner_brackets = _corner_brackets

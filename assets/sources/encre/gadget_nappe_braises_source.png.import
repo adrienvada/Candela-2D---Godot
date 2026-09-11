@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpxg8tj8qucg8"
-path="res://.godot/imported/cadre_vhs.png-891b613f5d8a3e6e014ff58be50f13f6.ctex"
+uid="uid://c4su456ndvyuy"
+path="res://.godot/imported/gadget_nappe_braises_source.png-c819ba9b0afbac981e1edd5576316d00.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/cadre_vhs.png"
-dest_files=["res://.godot/imported/cadre_vhs.png-891b613f5d8a3e6e014ff58be50f13f6.ctex"]
+source_file="res://assets/sources/encre/gadget_nappe_braises_source.png"
+dest_files=["res://.godot/imported/gadget_nappe_braises_source.png-c819ba9b0afbac981e1edd5576316d00.ctex"]
 
 [params]
 

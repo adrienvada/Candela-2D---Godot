@@ -2421,10 +2421,19 @@ func trigger_shoot_visuals():
 	# V4.14 — le sol répond au coup de feu : bref décal lumineux sous le tireur,
 	# décor seulement (masque 1), sans ombre — le muzzle flash garde le premier
 	# rôle, ceci n'est que son écho au sol.
+	#
+	# Refonte roman graphique, lot 2 (2026-09-11) : il faisait 200 px à 1,2
+	# d'énergie, trois fois l'empreinte de l'éclat dessiné (96 px) et deux fois
+	# celle de la lumière de bouche (64 px) — à l'écran, un disque ambre saturé
+	# qui couvrait l'éclat d'encre posé au lot 1 (constaté au plan `flash-de-tir`
+	# du photographe : le « flash » visible était cet écho). Ramené à 130 px et
+	# 0,7 : l'éclat se lit, le sol répond encore. `test_lumieres` tient toujours
+	# le masque (`ECLAT`, encré à trois paliers) ; seuls empreinte et énergie
+	# changent — la pénalité d'éblouissement ne lit pas cette lumière.
 	var ground_flash := PointLight2D.new()
-	LightTextures.poser(ground_flash, LightTextures.ECLAT, 200.0)
+	LightTextures.poser(ground_flash, LightTextures.ECLAT, ECHO_AU_SOL_EMPREINTE)
 	ground_flash.color = Charte.AMBRE
-	ground_flash.energy = 1.2
+	ground_flash.energy = ECHO_AU_SOL_ENERGIE
 	ground_flash.shadow_enabled = false
 	ground_flash.range_item_cull_mask = 1
 	add_child(ground_flash)
@@ -2443,6 +2452,11 @@ const AVANCEE_LAMPE := 30.0
 
 ## Ce qu'on laisse entre la lampe et le mur qui l'arrête, en unités de monde.
 const RETRAIT_LAMPE := 3.0
+
+## L'écho au sol du tir (V4.14) : son empreinte et son énergie, en retrait de
+## l'éclat dessiné (lot 2 de la refonte, 2026-09-11 — voir `trigger_shoot_visuals`).
+const ECHO_AU_SOL_EMPREINTE := 130.0
+const ECHO_AU_SOL_ENERGIE := 0.7
 
 ## Empreinte de l'éclat de bouche dessiné, en unités de monde. Plus large que
 ## la lumière de bouche (64) parce qu'il doit se LIRE comme une forme, et plus
