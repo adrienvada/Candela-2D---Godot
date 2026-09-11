@@ -3161,6 +3161,59 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Compter des processus par la ligne de commande : l'outil se compte lui-même (2026-09-12)
+
+**Un banc qui attend le silence doit savoir reconnaître le silence.** Le relevé
+de cadence de la fusée demandait une machine au calme (protocole de
+`bench_framerate.gd` : « machine refroidie, UN relevé long »). La série écrite
+pour l'occasion attendait donc *trois contrôles consécutifs sans aucun Godot
+étranger* avant chaque mesure, en filtrant `ps` sur le chemin du binaire.
+
+⚠️ **Elle ne s'est jamais déclarée prête, machine pourtant totalement
+silencieuse.** L'instrument se comptait lui-même comme le bruit qu'il attendait
+de voir disparaître.
+
+**Le déclencheur exact, parce qu'il est plus étroit qu'il n'y paraît** (précision
+de la session `vigilant-goldstine-39f039`, dont le propre script comptait juste).
+Le piège mord quand le motif cherché se trouve sur la **ligne de commande d'un
+processus vivant** — typiquement le shell APPELANT, quand la commande qu'on lui
+a passée contient elle-même le texte à exécuter : ici un `zsh -c` portant le
+heredoc qui écrivait le script, chemin de Godot compris, et vivant tant que
+durait la tâche. Il ne mord PAS quand la commande vit dans un fichier de script
+exécuté normalement : la ligne de commande n'est alors que `bash /chemin/x.sh`,
+et le motif reste dans le fichier, invisible de `ps`. **D'où deux scripts
+voisins, l'un juste et l'autre faux, pour un filtre identique** — ce qui les
+sépare n'est pas ce qu'ils cherchent, c'est comment ils ont été lancés.
+
+**Le mode de défaillance est le pire qui soit : il attend.** Pas d'erreur, pas
+de sortie non nulle, rien à lire dans un journal — une veille qui patiente
+indéfiniment ressemble trait pour trait à une veille qui fait son travail. Elle
+aurait épuisé son plafond de vingt minutes puis mesuré sous la bannière « calme
+non atteint », brûlant une fenêtre de trêve que deux sessions venaient
+d'accorder.
+
+**Le remède tient en un mot** : comparer l'**exécutable**, jamais la ligne de
+commande — et s'exclure soi-même par PID.
+
+    # faux : voit tout shell qui CITE le chemin, y compris le sien
+    ps -Ao pid=,command= | grep "/Applications/Godot.app"
+    # juste : compare le binaire, et retire son propre PID
+    ps -Ao pid=,comm= | awk -v me="$MOI" '$2 ~ /\/Godot$/ && $1 != me {print $1}'
+
+**Deux sessions ont payé ce piège dans le même quart d'heure, sans se
+concerter** — celle-ci sur son attente de calme, la session « Refonte
+graphique » sur un `pgrep Godot.app` qui annonçait une cinquantaine de jeux là
+où il n'y avait que des lignes de shell citant le chemin. Ce n'est donc pas une
+maladresse isolée : `pgrep -f` et `grep` sur `command` sont le réflexe naturel,
+et il est faux dès que l'outil lui-même nomme ce qu'il cherche.
+
+Voir aussi, à la suite : la contention entre lots concurrents, et le fait qu'un
+`run_suites.sh` lancé en tâche de fond survit aux tours de la session qui l'a
+lancé — donc qu'une session marquée « au repos » peut charger la machine. La
+conséquence commune aux deux : **avant un relevé qui compte, demander la trêve
+plutôt que la supposer**, et faire attester le calme par la mesure elle-même
+plutôt que par l'impression de celui qui la lance.
+
 ### Une édition par tranche sur un marqueur non unique tronque le fichier de 95 % (2026-09-11)
 
 Pour reporter les verdicts d'Adrien dans le tableau des lots, une session a
@@ -15451,8 +15504,12 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
 > nombres ci-dessus cessent donc d'être des propositions — ils sont les
 > valeurs du jeu, y compris ceux que FU3 et FU5 ont ajoutés. **Ce qui change
 > vraiment, c'est le statut, pas les chiffres** : les toucher désormais est
-> une décision à reprendre avec lui, plus un réglage libre. Le relevé
-> `bench_framerate --fusee` reste dû — Adrien a jugé le RENDU, pas le coût.
+> une décision à reprendre avec lui, plus un réglage libre.
+>
+> ✅ **Le coût est mesuré depuis le 2026-09-12** (détail sous « Ce que la fusée
+> coûte ») : ~0,5 ms de temps d'image médian, identique en vue unique et en
+> écran scindé, et **rien de mesurable sur le 1 % bas** — le seul chiffre que la cible
+> regarde. FU2 est close côté perf.
 
 ### Le témoin du fil, encore : `rpc_eteindre_fusee` fait monter VERSION à 9
 
@@ -15505,9 +15562,68 @@ serait pris pour un bug plutôt que pour une incompatibilité.
   force du pouls de diffusion, rayon et tolérance de vitesse du piétinement,
   durée du panache). **Les molettes de banc n'ont donc jamais été écrites, et
   n'ont plus lieu de l'être** — c'est un outil pour trancher, pas un livrable ;
-  la question qu'il servait à poser a reçu sa réponse. **Reste dû** : le relevé
-  `bench_framerate --fusee` au calme, vue unique ET écran scindé, avant de
-  considérer FU2 close côté perf — juger le rendu ne dit rien de son coût.
+  la question qu'il servait à poser a reçu sa réponse. ~~Reste dû : le relevé
+  `bench_framerate --fusee`~~ — ✅ **fait le 2026-09-12, FU2 close côté perf.**
+
+#### Ce que la fusée coûte (relevé du 2026-09-12, sur `cf68cf2`)
+
+Quatre relevés de 60 s, fenêtre au premier plan, dans un ordre symétrique pour
+que la dérive thermique ne favorise aucune condition. **Chaque relevé porte son
+attestation de calme** — trois contrôles consécutifs sans aucun Godot étranger
+avant de démarrer — parce qu'« au calme » est une condition qui se vérifie, pas
+qui se suppose.
+
+| | médiane | 1 % bas | image la plus lente | appels de dessin |
+|---|---|---|---|---|
+| écran scindé, sans fusée (2,07 Mpx) | 150 | 84 | 17,8 ms | 166 |
+| écran scindé, **avec fusée** | 140 | **85** | 54,8 ms | 162 |
+| vue unique, sans fusée (3,69 Mpx) | 160 | 97 | 13,9 ms | 113 |
+| vue unique, **avec fusée** | 150 | **95** | 16,1 ms | 112 |
+
+**Ce que ça dit.** La fusée coûte **environ 0,5 ms de temps d'image médian, et
+la même chose dans les deux modes** : 6,67 → 7,14 ms en écran scindé, 6,25 →
+6,67 ms en vue unique. Sur le 1 % bas — le seul chiffre que la cible regarde —
+elle ne coûte **rien de mesurable** : 84 → 85 en scindé, 97 → 95 en vue unique,
+les deux écarts étant dans le bruit de la queue et de signe opposé. La cible de
+60 est tenue partout, avec 25 à 35 images de marge.
+
+**Et ça dit où le coût n'est pas.** Le nombre d'appels de dessin ne bouge pas
+(166 → 162, 113 → 112) : la fusée n'ajoute pas de lots de rendu, son coût est
+en remplissage et en shader — nappes et voile.
+
+⚠️ **Une conclusion a été écrite ici puis retirée, et elle mérite de rester
+visible.** Le premier passage donnait 126 en écran scindé contre 148 en vue
+unique, d'où « la fusée coûte deux fois et demie plus cher en écran scindé », et
+une explication toute prête : les surfaces transparentes y seraient composées
+deux fois. **L'explication était bonne, le fait était faux** — les deux relevés
+à la fusée étaient les deux relevés contaminés. Repris au calme : 140 et 150,
+soit le même demi-milliseconde des deux côtés. L'asymétrie n'existe pas.
+*Une explication plausible posée sur un chiffre non vérifié se lit comme une
+mesure* — c'est la forme exacte de ce que ce document passe son temps à
+démonter, et elle a tenu une demi-heure ici même.
+
+⚠️ **Deux relevés sur quatre ont vu passer des Godot étrangers**, et ce sont les
+deux relevés AVEC la fusée. Attribués aux scénarios à deux instances
+(`run_duo.sh`) des sous-agents de la session `candela-10-classes-system-e0a52d`
+(chantier DIX CLASSES, lot E) : **recoupement établi par horodatage et par la
+signature en paires, pas par appariement de PID** — la session concernée n'avait
+pas capturé les siens, et le dit. Les deux autres sessions sollicitées se sont
+écartées, horodatages à l'appui.
+
+**Ces deux relevés ont donc été REFAITS** le même soir, après trêve demandée aux
+trois sessions actives, chacun attesté sans aucun Godot étranger : ce sont eux
+qui figurent dans la table. Les valeurs contaminées sont conservées ici parce
+qu'elles chiffrent le prix de la contention : **en écran scindé, la médiane
+tombait de 140 à 126** — 14 images perdues, assez pour inventer un effet qui
+n'existe pas. Le verdict, lui, n'a jamais souffert : un « tenu » obtenu sous
+charge parasite est un plancher.
+
+**Ce que la reprise apprend sur la fiabilité des chiffres eux-mêmes.** La
+médiane se reproduit bien (148 → 150 en vue unique, deux séances). **L'image la
+plus lente ne se reproduit pas du tout** : 26,7 ms puis 54,8 ms pour la même
+configuration, 13,9 à 17,8 ms sur les bases. C'est un maximum sur 8 000 images,
+donc une valeur extrême — elle ne se compare à rien et ne doit servir qu'à
+repérer un décrochage grossier, jamais à juger un écart.
 - **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
   de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
   de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
