@@ -2411,10 +2411,15 @@ func _build_player_hud(player: int) -> Control:
 	# fusées dépassaient les 340 px du minimum, et la fiche de J2, ancrée à
 	# droite, sortait de l'écran en écran scindé (Adrien, 2026-09-11 : « l'écran
 	# d'info du joueur 2 est tronqué à droite »). Le minimum reste un plancher ;
-	# la largeur réelle est celle du contenu, relue une fois qu'il est posé.
-	inner.ready.connect(func():
-		wrapper.custom_minimum_size.x = maxf(wrapper.custom_minimum_size.x,
-			inner.get_combined_minimum_size().x), CONNECT_ONE_SHOT)
+	# la largeur réelle est celle du contenu — relue À CHAQUE changement de son
+	# minimum, pas une seule fois à `ready` : une première version ne la lisait
+	# qu'à la pose, avant les libellés définitifs, et la fiche de J2 mordait
+	# encore sur la marge de droite (Adrien : « il manque une marge à droite pour
+	# être disposée symétriquement à la fiche J1 »).
+	var suivre := func() -> void:
+		wrapper.custom_minimum_size.x = maxf(340.0, inner.get_combined_minimum_size().x)
+	inner.minimum_size_changed.connect(suivre)
+	inner.ready.connect(suivre, CONNECT_ONE_SHOT)
 	return wrapper
 
 func _build_center_hud() -> Control:

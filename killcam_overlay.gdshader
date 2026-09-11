@@ -25,6 +25,11 @@ uniform sampler2D grain : filter_linear, repeat_enable;
 uniform float grain_echelle = 3.0;
 uniform float intensite : hint_range(0.0, 1.0) = 1.0;
 
+// Adrien, le 2026-09-11, sur le rendu : « réduis de moitié l'effet ». Le
+// dessin (tons, contours, trame, papier) se mélange à l'image nue à cette
+// force au maximum du curseur ; le curseur garde toute sa course en dessous.
+const float FORCE_DESSIN = 0.5;
+
 float luma(vec3 c) {
 	return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
@@ -65,7 +70,7 @@ void fragment() {
 	float papier = texture(grain, uv * grain_echelle).r - 0.5;
 	dessin += papier * 0.05;
 
-	col = mix(col, dessin, intensite);
+	col = mix(col, dessin, intensite * FORCE_DESSIN);
 	col *= smoothstep(0.8, 0.2, distance(uv, vec2(0.5)) * 1.2);
 	// Le négatif s'applique APRÈS la vignette : inverser avant rendrait les bords
 	// sombres éclatants, et le cadrage de l'image partirait avec.

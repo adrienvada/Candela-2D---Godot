@@ -3853,3 +3853,13 @@ LED tient `light()`. Murs au trait : `mur_encre.gd` (créé), `candela_tileset.g
 `tools/test_arena_matter.gd` et `tools/test_arena_lighting.gd` (le contrôle du
 liseré de tuile devient un contrôle de tuile noire — fichiers de la session
 « atelier » du 2026-09-08, adaptés avec la note qui dit pourquoi).
+
+### 2026-09-11 (soir) — verdicts, et la fusion
+
+Sang en deux taches, vignette, murs : gardés. Killcam dessinée : gardée à
+moitié (`FORCE_DESSIN = 0,5`, `killcam_overlay.gdshader`). Fiche HUD de J2 :
+sa largeur suit `minimum_size_changed` de son contenu (`ui.gd`,
+`_build_player_hud`). Puis, sur l'ordre d'Adrien : branche poussée et fusionnée
+dans `main` en avance rapide (la branche descendait d'`origin/main` 9e75106
+sans divergence). Le chantier de la refonte est CLOS ; il reste à Adrien l'écho
+au sol du flash (V4.14).
