@@ -2510,16 +2510,18 @@ func _loger_calque(calque: CanvasLayer) -> void:
 		add_child(calque)
 
 
-func take_damage(amount: float, source_player: Node2D):
+## `cause` (étape 28, lot E) : `GadgetBase.DEGATS_BALLE` par défaut — la balle et
+## les outils n'ont rien à changer ; la nappe de braises passe `DEGATS_BRAISES`.
+func take_damage(amount: float, source_player: Node2D, cause: int = GadgetBase.DEGATS_BALLE):
 	if dead: return
-	
+
 	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:
 		var new_hp = max(0.0, hp - amount)
 		var sid = source_player.player_id if source_player else -1
 		if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-			rpc_update_hp.rpc(new_hp, sid)
+			rpc_update_hp.rpc(new_hp, sid, cause)
 		else:
-			rpc_update_hp(new_hp, sid)
+			rpc_update_hp(new_hp, sid, cause)
 			
 	# ⚠️ **Le son de l'impact n'est PLUS joue ici, et c'etait un doublon reel.**
 	# `bullet.gd` joue deja `play_hit` sur le meme evenement, au point d'impact
@@ -2556,8 +2558,11 @@ func take_damage(amount: float, source_player: Node2D):
 			func(val): vignette_mat.set_shader_parameter("intensity", val),
 			pic, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 
+## `cause` (étape 28, lot E) : `GadgetBase.DEGATS_BALLE` ou `DEGATS_BRAISES`. ⚠️ SANS
+## valeur par défaut : un appelant resté à deux arguments doit lever une erreur de
+## script, pas envoyer un paquet que le pair d'en face jetterait.
 @rpc("authority", "call_local", "reliable")
-func rpc_update_hp(new_hp: float, source_id: int):
+func rpc_update_hp(new_hp: float, source_id: int, cause: int):
 	# V1.5 — l'impact se prend au ventre : vibration moyenne sur toute perte de
 	# PV, branchée ici (valeur autoritaire) et non sur la balle prédite.
 	# V4.6 — et la caméra du blessé encaisse un bref dézoom, même source.
@@ -2567,6 +2572,21 @@ func rpc_update_hp(new_hp: float, source_id: int):
 		if gs and gs.has_method("camera_hit_kick"):
 			gs.camera_hit_kick(player_id)
 		AudioManager.play_breath_hit(global_position)
+	# Étape 28, lot E — la télémétrie des gadgets. ICI : c'est la seule ligne que les
+	# DEUX pairs exécutent pour chaque PV perdu, et elle doit précéder `die()`, qui
+	# archive le match de façon synchrone chez l'hôte et en local. `hp` y vaut encore
+	# l'ancienne valeur chez les deux pairs (`take_damage` calcule `new_hp` avant
+	# l'appel local ; le client ne touche `hp` qu'ici, au départ de manche et au retour
+	# au menu — qui met fin au match) : la perte est la même des deux côtés. La liste
+	# est exhaustive, et elle a déjà été fausse d'un cas (revue du 2026-09-11) :
+	# `game_state.gd` écrit `p1.hp`/`p2.hp` en trois endroits, `_do_start_round` et les
+	# deux du retour au menu. ⚠️ Sans `has_method` : une garde muette ferait
+	# d'une fonction absente une télémétrie à zéro, sans erreur (CLAUDE.md, fusion du
+	# 2026-09-09).
+	var gs_tel = get_tree().get_first_node_in_group("game_state")
+	if gs_tel != null:
+		gs_tel.noter_pv_perdus(player_id, source_id, cause, maxf(hp - new_hp, 0.0),
+			new_hp <= 0.0 and not dead)
 	hp = new_hp
 	if hp <= 0 and not dead:
 		hp = 0

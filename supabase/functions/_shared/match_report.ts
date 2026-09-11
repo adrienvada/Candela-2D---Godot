@@ -68,6 +68,32 @@ const MACHINE_NUMBERS = [
 ] as const;
 const MACHINE_BOOLEANS = ["plein_ecran"] as const;
 
+/**
+ * PE5 (chantier DIX CLASSES, étape 28, lot E, 2026-09-11) — la télémétrie des
+ * gadgets, que le jeu glisse DANS les conditions (`MatchRecord.conditions_a_envoyer`) :
+ * le jsonb de PE2.3, sans migration. Même tamis, et jamais un motif de refus : un
+ * bloc illisible tombe, le rapport passe.
+ *
+ * ⚠️ Mêmes clés que `TelemetrieGadgets.COMPTEURS + CUMULS` (`telemetrie_gadgets.gd`) :
+ * `tools/test_telemetrie_gadgets.gd` compare le tableau `GADGET_NUMBERS` à ces listes,
+ * dans les deux sens. Une clé ajoutée d'un seul côté tomberait ici sans bruit.
+ *
+ * Pour la mine, `allumages` compte aussi les mines ABATTUES : les mines déclenchées
+ * par un passage valent **au plus** `allumages − morts_balle` — un majorant, parce
+ * qu'une mine abattue meurt 1,6 s plus tard et qu'un match archivé avant sa fin ne
+ * compte aucune mort pour elle (revue du 2026-09-11). Chaque côté porte le slug de
+ * son GADGET — aucune clé ne contient « classe ».
+ */
+const GADGETS_NUMBERS = ["version", "fenetre_s", "joueur_local"] as const;
+const GADGET_NUMBERS = [
+  "poses", "morts_balle", "morts_fin_de_vie", "allumages",
+  "bascules_allume", "bascules_eteint", "batterie_vide",
+  "morts_adverses_apres_effet", "morts_propres_apres_effet",
+  "pv_braises_adversaire", "pv_braises_soi",
+] as const;
+/** Un slug de gadget (`nappe_braises`) n'a aucune raison de dépasser ça. */
+export const MAX_GADGET_SLUG = 32;
+
 /** Un nom de carte graphique ou de pilote n'a aucune raison de dépasser ça. */
 export const MAX_CONDITION_TEXT = 96;
 
@@ -103,6 +129,38 @@ function finite(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+/** Un côté du bloc de gadgets (`j1` ou `j2`), au tamis ; `undefined` s'il n'en reste rien. */
+function parseCoteGadget(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const s = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of GADGET_NUMBERS) {
+    const n = finite(s[key]);
+    if (n !== undefined) out[key] = n;
+  }
+  if (typeof s.gadget === "string") out.gadget = text(s.gadget, MAX_GADGET_SLUG);
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * PE5 — le bloc de gadgets, au tamis. `undefined` quand aucun des deux côtés ne
+ * tient : un client d'avant l'étape 28, ou un bloc qui n'est pas un objet.
+ */
+export function parseGadgets(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const s = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of GADGETS_NUMBERS) {
+    const n = finite(s[key]);
+    if (n !== undefined) out[key] = n;
+  }
+  for (const cote of ["j1", "j2"] as const) {
+    const v = parseCoteGadget(s[cote]);
+    if (v) out[cote] = v;
+  }
+  return out.j1 !== undefined || out.j2 !== undefined ? out : undefined;
+}
+
 /**
  * Les conditions, passées au tamis : ce qui est listé et bien typé entre, tout
  * le reste tombe sans bruit. Rend `null` quand il n'y a rien à garder — un
@@ -134,6 +192,9 @@ export function parseConditions(value: unknown): MatchConditions | null {
     }
     if (Object.keys(machine).length > 0) out.machine = machine;
   }
+  // PE5 (étape 28, lot E) — la télémétrie des gadgets, rangée dans les conditions.
+  const gadgets = parseGadgets(source.gadgets);
+  if (gadgets) out.gadgets = gadgets;
   return Object.keys(out).length > 0 ? out : null;
 }
 

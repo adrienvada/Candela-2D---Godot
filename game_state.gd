@@ -23,6 +23,9 @@ var sandbox_mode: bool = false
 ## (voir `conditions_de_match.gd`). Commencé au départ de la manche, arrêté à
 ## la mort — avant la killcam.
 var _conditions := ConditionsDeMatch.new()
+## Étape 28, lot E — ce que les gadgets font pendant le MATCH (voir
+## `telemetrie_gadgets.gd`), compté chez les deux pairs depuis les mêmes ordres.
+var _telemetrie := TelemetrieGadgets.new()
 ## PE3.1 — le dernier régime signalé à `GameSettings`, pour ne le dire qu'au
 ## changement et non à chaque image.
 var _arene_signalee := false
@@ -330,6 +333,13 @@ var rendu_racine_autorise := true
 ## écran partagé (`_local_player_index()` y vaut -1), et le couper ici masquerait
 ## un défaut réseau le jour où un outil jouerait en ligne.
 var archiver_les_matchs := true
+
+## Le dernier enregistrement construit par `_archive_match_result`, archivé ou non
+## (étape 28, lot E). Lu par les bancs qui mettent `archiver_les_matchs` à faux (piège
+## « Un outil de mise en scène écrivait dans le vrai historique des matchs »), et par
+## le duo, qui ne peut pas relire un historique que deux instances écrivent dans le
+## même `user://`.
+var dernier_enregistrement: Dictionary = {}
 ## Le `World2D` propre de la fenêtre, mémorisé avant qu'on lui prête celui du jeu.
 ## Sans lui, revenir à l'écran scindé laisserait la racine sur le monde du duel.
 var _monde_racine: World2D = null
@@ -1422,6 +1432,11 @@ func _do_start_round(w1_idx: int, w2_idx: int):
 	round_active = true
 	game_over = false
 	_conditions.commencer()
+	# Étape 28, lot E — la télémétrie repart avec le MATCH, pas la manche : un BO3
+	# archive un match. Sûr : les manches gagnées reviennent à 0 en fin de match
+	# (`_do_end_round`) et sur les deux retours au menu.
+	if p1_round_wins == 0 and p2_round_wins == 0:
+		_telemetrie.commencer()
 	# Le chrono repart en blanc : sans ça, une manche qui suit une fin de match
 	# hérite de l'or ou du rouge de la précédente jusqu'au premier passage de
 	# seuil — soit pendant ses quatre premières minutes.
@@ -2716,6 +2731,20 @@ func _gene_un_corps(forme: Shape2D, xf: Transform2D, corps: Array) -> bool:
 	return false
 
 
+## L'horloge de la télémétrie des gadgets (étape 28, lot E) : le temps RÉEL. Jamais
+## le delta, qui suit `Engine.time_scale` et ralentit à l'encaissement, ni
+## `time_left`, que le client recale par sauts.
+func _t_telemetrie() -> float:
+	return Time.get_ticks_msec() * 0.001
+
+
+## Appelée par `Player.rpc_update_hp`, chez les DEUX pairs, pour chaque PV perdu —
+## AVANT la mort, qui archive le match de façon synchrone chez l'hôte.
+func noter_pv_perdus(victime: int, source: int, cause: int, pv: float, mortel: bool) -> void:
+	_telemetrie.pv_perdus(victime, source, cause == GadgetBase.DEGATS_BRAISES, pv,
+		mortel, _t_telemetrie())
+
+
 ## [Hôte] Les gadgets qui demandent à s'allumer — la mine, aujourd'hui seule.
 ##
 ## ⚠️ **La boucle est chez l'hôte et nulle part ailleurs.** Un gadget qui
@@ -2754,11 +2783,17 @@ func allumer_gadget(g: Node) -> void:
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
 		rpc_allumer_gadget.rpc(String(g.name))
 	else:
-		g.allumer()
+		# Étape 28, lot E — en local aussi par l'ORDRE, en appel direct (le patron de
+		# `_annoncer_etat_gadget`) : c'est là que la télémétrie compte l'allumage.
+		# Un `g.allumer()` direct ici laisserait l'écran scindé à zéro allumage.
+		rpc_allumer_gadget(String(g.name))
 
 
 @rpc("authority", "call_local", "reliable")
 func rpc_allumer_gadget(nom: String) -> void:
+	# Étape 28, lot E — compté à l'ORDRE, que le nœud existe encore ou non chez ce
+	# pair ; attribué par le NOM, le même calcul chez l'hôte et chez le client.
+	_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie())
 	var g := bullet_container.get_node_or_null(NodePath(nom))
 	if g != null and g.has_method("allumer"):
 		g.allumer()
@@ -2853,6 +2888,9 @@ func _annoncer_etat_gadget(pid: int, nom: String, actif: bool) -> void:
 ## L'allumage, lui, ne s'applique qu'à un nœud qui existe encore.
 @rpc("authority", "call_local", "reliable")
 func rpc_etat_gadget(pid: int, nom: String, actif: bool, batterie_joueur: float) -> void:
+	# Étape 28, lot E — chaque ordre est une bascule (ses deux appelants ne l'envoient
+	# qu'à un changement d'état) ; à batterie 0,0, la coupure de l'hôte.
+	_telemetrie.bascule(pid, actif, batterie_joueur, _t_telemetrie())
 	if pid >= 0 and pid < _batterie.size():
 		_batterie[pid] = clampf(batterie_joueur, 0.0, 1.0)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
@@ -2868,17 +2906,32 @@ func rpc_etat_gadget(pid: int, nom: String, actif: bool, batterie_joueur: float)
 ## pouvait mourir chez l'hôte et survivre chez le client, qui voyait alors
 ## éteintes des torches que l'hôte laissait éblouir. Trouvé par la revue du
 ## 2026-09-10 — et c'était vrai de tous les gadgets, pas du seul grésillement.
+##
+## Étape 28, lot E — la télémétrie compte ici la mort, chez l'hôte et en local ; la
+## CAUSE voyage avec l'ordre. ⚠️ **Le client ne compte jamais ici** : il y passe à
+## son propre minuteur de fin de vie, un demi-aller-retour après l'hôte, et il
+## compte à l'ORDRE (`rpc_detruire_gadget`).
 func _sur_gadget_detruit(g: GadgetBase) -> void:
-	if NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_HOST:
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
-	rpc_detruire_gadget.rpc(String(g.name))
+	var cause := GadgetBase.MORT_BALLE if g.abattu_par_balle else GadgetBase.MORT_FIN_DE_VIE
+	var nom := String(g.name)
+	# Attribué par le NOM, comme chez le client : un seul calcul des deux côtés.
+	_telemetrie.mort_de_gadget(GadgetBase.poseur_du_nom(nom), cause == GadgetBase.MORT_BALLE)
+	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
+		rpc_detruire_gadget.rpc(nom, cause)
 
 
 ## L'ordre de retrait d'un gadget, chez le client. `get_node_or_null` et jamais un
 ## accès direct : le nœud a pu disparaître de lui-même chez ce pair — fin de vie,
 ## remplacement par « un gadget debout », purge de manche.
+##
+## `cause` (étape 28, lot E) : `GadgetBase.MORT_BALLE` ou `MORT_FIN_DE_VIE`, décidée
+## par l'hôte. Sans valeur par défaut, comme `rpc_update_hp`.
 @rpc("authority", "call_remote", "reliable")
-func rpc_detruire_gadget(nom: String) -> void:
+func rpc_detruire_gadget(nom: String, cause: int) -> void:
+	# Compté à l'ORDRE, que le nœud existe encore ou non chez ce pair.
+	_telemetrie.mort_de_gadget(GadgetBase.poseur_du_nom(nom), cause == GadgetBase.MORT_BALLE)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
 	if g != null and not g.is_queued_for_deletion():
 		g.queue_free()
@@ -2977,6 +3030,9 @@ func _do_spawn_gadget(pid: int, pos: Vector2, rot: float, slug: String, numero: 
 	bullet_container.add_child(g)
 	if pid >= 0 and pid < _gadgets_poses_par.size():
 		_gadgets_poses_par[pid] += 1
+		# Étape 28, lot E — une bobine posée ÉTEINTE n'agit pas : pose comptée, pas
+		# d'effet. `actif_initial` est celui de l'HÔTE, porté par le RPC.
+		_telemetrie.pose(pid, _t_telemetrie(), not g.est_basculable() or actif_initial)
 		_gadget_attente[pid] = PERIODE_RECHARGE_GADGET
 		# ⚠️ Chez le CLIENT, une recharge RACCOURCIE d'un aller-retour. Il reçoit la
 		# pose un demi-aller-retour après l'hôte, et sa prochaine commande mettra un
@@ -3672,10 +3728,13 @@ func _peut_etre_la_soiree() -> void:
 func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 	# Le match est résolu : plus rien à forfaire dessus.
 	_forfeit_pending = false
-	# Schéma 5 : les CONDITIONS de la manche — cadence par image, lien,
-	# machine. Calculées une fois : l'archive locale et le rapport au serveur
-	# (PE2.3) doivent porter le même relevé.
+	# Schémas 5 et 6 : les CONDITIONS de la manche — cadence par image, lien,
+	# machine — et ce que les GADGETS ont fait (étape 28, lot E). Calculés une
+	# fois : l'archive locale et le rapport au serveur (PE2.3) doivent porter le
+	# même relevé et le même bloc.
 	var conditions := _conditions.resume()
+	var gadgets := _telemetrie.resume(_slug_de_gadget(p1), _slug_de_gadget(p2),
+		_local_player_index())
 	var record := MatchRecord.build(
 		winner_id,
 		round_time - time_left,
@@ -3697,7 +3756,9 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		# joueur depuis que dix classes se partagent dix armes.
 		_slug_de_classe(p1),
 		_slug_de_classe(p2),
-		conditions)
+		conditions,
+		gadgets)
+	dernier_enregistrement = record
 	# Voir `archiver_les_matchs` : un outil qui joue de fausses manches ne doit
 	# rien laisser dans l'historique du joueur. Seul point d'écriture du jeu —
 	# `_archive_forfeit` passe aussi par ici.
@@ -3705,7 +3766,7 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
-	_report_to_ranking(winner_id, forfeit, conditions)
+	_report_to_ranking(winner_id, forfeit, conditions, gadgets)
 
 ## Le slug de la classe d'un joueur, ou une chaîne vide.
 ##
@@ -3717,6 +3778,16 @@ func _slug_de_classe(joueur: Node) -> String:
 		return ""
 	var classe := joueur.current_weapon as ClassData
 	return String(classe.slug()) if classe != null else ""
+
+## Le slug du GADGET d'un joueur, ou une chaîne vide — jamais un repli (étape 28,
+## lot E), pour la raison de `_slug_de_classe`.
+func _slug_de_gadget(joueur: Node) -> String:
+	if joueur == null:
+		return ""
+	var classe := joueur.current_weapon as ClassData
+	if classe == null or classe.gadget == null:
+		return ""
+	return String(classe.gadget.slug)
 
 
 ## L'issue du match du point de vue de CETTE machine, dans le vocabulaire du
@@ -3743,7 +3814,8 @@ func _local_outcome(winner_id: int) -> String:
 ## Chaque pair ne déclare que son propre sort ; le serveur apparie les deux
 ## rapports par leur identifiant de match et confronte les récits. Rien n'est
 ## envoyé hors ligne — un match en écran partagé n'oppose aucune identité.
-func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {}) -> void:
+func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = {},
+		gadgets: Dictionary = {}) -> void:
 	var local_idx := _local_player_index()
 	if local_idx < 0 or _match_id.is_empty():
 		return
@@ -3763,7 +3835,10 @@ func _report_to_ranking(winner_id: int, forfeit: bool, conditions: Dictionary = 
 		# rapport des matchs EN LIGNE, amicaux et classés : le serveur les passe
 		# au tamis et ne refuse jamais un rapport pour elles. L'écran scindé et
 		# l'entraînement ne passent pas par ici, donc n'envoient rien.
-		"conditions": conditions,
+		# Étape 28, lot E — la télémétrie des gadgets voyage DANS ce bloc, par la
+		# seule fusion (le rejeu du journal l'appelle aussi) : le jsonb de PE2.3,
+		# sans migration. Même tamis serveur, jamais un motif de refus.
+		"conditions": MatchRecord.conditions_a_envoyer(conditions, gadgets),
 	})
 
 ## Archive un match gagné par abandon de l'adversaire.

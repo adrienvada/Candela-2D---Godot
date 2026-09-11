@@ -156,6 +156,10 @@ func encaisser(degats: float) -> bool:
 	if pv > 0.0:
 		return false
 	_touchee = true
+	# Étape 28, lot E — la balle a décidé, l'embrasement la tuera : comptée abattue.
+	# Une mine déclenchée par un passage meurt, elle, en « fin de vie » (son
+	# embrasement fixe `duree_vie`), et une mine déjà allumée n'arrive pas ici.
+	abattu_par_balle = true
 	return true
 
 

@@ -12,6 +12,7 @@ import {
   MATCH_KINDS,
   MAX_CONDITION_TEXT,
   MAX_DURATION_S,
+  MAX_GADGET_SLUG,
   MAX_MAP_ID,
   MAX_WEAPON,
   parseReport,
@@ -274,4 +275,85 @@ Deno.test("PE2.3 — des conditions inutilisables ne changent rien au match lui-
   const r = accepte({ ...VALIDE, ranked: true, conditions: 42 });
   assertEquals(r.kind, RANKED);
   assertEquals(r.conditions, null);
+});
+
+// ── PE5 (étape 28, lot E, 2026-09-11) — la télémétrie des gadgets, dans les conditions ──
+
+const GADGETS = {
+  version: 1,
+  fenetre_s: 5.0,
+  joueur_local: 0,
+  j1: {
+    gadget: "nappe_braises",
+    poses: 2, morts_balle: 0, morts_fin_de_vie: 1, allumages: 0,
+    bascules_allume: 0, bascules_eteint: 0, batterie_vide: 0,
+    morts_adverses_apres_effet: 1, morts_propres_apres_effet: 0,
+    pv_braises_adversaire: 12, pv_braises_soi: 4,
+  },
+  j2: {
+    gadget: "gresillement",
+    poses: 1, morts_balle: 1, morts_fin_de_vie: 0, allumages: 0,
+    bascules_allume: 1, bascules_eteint: 1, batterie_vide: 1,
+    morts_adverses_apres_effet: 0, morts_propres_apres_effet: 1,
+    pv_braises_adversaire: 0, pv_braises_soi: 0,
+  },
+};
+
+Deno.test("PE5 — un bloc de gadgets complet passe entier", () => {
+  const c = accepte({ ...VALIDE, conditions: { ...CONDITIONS, gadgets: GADGETS } })
+    .conditions as Record<string, unknown>;
+  assertEquals(c.gadgets, GADGETS);
+  assertEquals(c.fps_median, CONDITIONS.fps_median);
+});
+
+Deno.test("PE5 — une clé inconnue et une valeur mal typée tombent, le reste tient", () => {
+  const c = accepte({
+    ...VALIDE,
+    conditions: {
+      gadgets: {
+        ...GADGETS,
+        intrus: 1,
+        fenetre_s: "5",
+        j1: { ...GADGETS.j1, poses: "deux", classe: "incendiaire", intrus: true },
+        j2: "illisible",
+      },
+    },
+  }).conditions as Record<string, unknown>;
+  const g = c.gadgets as Record<string, unknown>;
+  assertEquals(g.intrus, undefined);
+  assertEquals(g.fenetre_s, undefined);
+  assertEquals(g.version, 1);
+  assertEquals(g.j2, undefined);
+  const j1 = g.j1 as Record<string, unknown>;
+  assertEquals(j1.poses, undefined);
+  assertEquals(j1.classe, undefined);
+  assertEquals(j1.intrus, undefined);
+  assertEquals(j1.morts_fin_de_vie, 1);
+  assertEquals(j1.gadget, "nappe_braises");
+});
+
+Deno.test("PE5 — un bloc de gadgets illisible tombe, et le rapport est accepté", () => {
+  for (const illisible of ["x", [1], null, 42, { j1: "rien", j2: [] }]) {
+    const r = accepte({ ...VALIDE, ranked: true, conditions: { ...CONDITIONS, gadgets: illisible } });
+    assertEquals(r.kind, RANKED);
+    const c = r.conditions as Record<string, unknown>;
+    assertEquals(c.gadgets, undefined);
+    assertEquals(c, CONDITIONS);
+  }
+});
+
+Deno.test("PE5 — des conditions ne contenant que les gadgets gardent les gadgets", () => {
+  const c = accepte({ ...VALIDE, conditions: { gadgets: GADGETS } }).conditions;
+  assertEquals(c, { gadgets: GADGETS });
+});
+
+Deno.test("PE5 — un slug de gadget trop long est tronqué, pas refusé", () => {
+  const long = "g".repeat(MAX_GADGET_SLUG + 8);
+  const c = accepte({
+    ...VALIDE,
+    conditions: { gadgets: { j1: { gadget: long, poses: 1 } } },
+  }).conditions as Record<string, unknown>;
+  const j1 = (c.gadgets as Record<string, unknown>).j1 as Record<string, unknown>;
+  assertEquals(j1.gadget, "g".repeat(MAX_GADGET_SLUG));
+  assertEquals(j1.poses, 1);
 });

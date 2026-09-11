@@ -168,8 +168,10 @@ func appliquer_effets(joueurs: Array, delta: float) -> void:
 		while charge >= PV_PAR_TIC - TOLERANCE_TIC:
 			charge -= PV_PAR_TIC
 			# `source_player` reste le poseur : c'est lui que le tableau de fin doit
-			# créditer, et lui que la killcam doit nommer.
-			j.take_damage(PV_PAR_TIC, _poseur())
+			# créditer, et lui que la killcam doit nommer. Étape 28, lot E — la CAUSE
+			# voyage dans `rpc_update_hp` : sans elle, le client ne sépare pas un PV de
+			# braises d'une balle du poseur, et sa télémétrie divergerait de l'hôte.
+			j.take_damage(PV_PAR_TIC, _poseur(), DEGATS_BRAISES)
 			if j.get("dead"):
 				# Mort pendant une rafale : plus rien à verser à un corps.
 				charge = 0.0

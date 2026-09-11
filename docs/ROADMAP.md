@@ -2470,6 +2470,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **L'arbalète éblouit peu, comme son faisceau le laisse voir** (2026-08-24, Adrien) | Son `torch_brightness` de 0,3 n'était cuit que dans l'alpha de la texture, et la formule ne connaissait pas ce paramètre : **l'arme furtive éblouissait exactement comme le pistolet avec un faisceau trois fois plus sombre.** Elle l'était partout — `emits_light = false`, flash de bouche à 0,1, carreau d'acier froid — sauf dans ce qu'elle inflige. Tranché comme un **défaut, pas un équilibrage**. Sa pénalité à bout portant tombe de 0,798 à **0,434**, et à mi-portée dans l'axe de 0,590 à **0,319** (en lecture brute du pixel : 0,636 → 0,188 — deux échelles, une racine carrée entre elles). Elle garde un moyen de pression ; elle cesse d'en avoir un qu'on ne voit pas venir. **Amendé le 2026-09-11** (étape 27, Adrien : « double leur puissance », puis « tout doubler ») : `torch_brightness` 0,3 → 0,6, éblouissement compris — pénalité à bout portant ≈ 0,43 → 0,61, le pistolet restant à 0,93. Elle reste la plus sombre des lampes ; elle cessait d'être visible du tout. |
 | **La classe adverse n'est pas annoncée au « FIGHT »** (2026-09-11, Adrien : « non ») | Proposé comme douzième suggestion après l'étape 27 : chaque pair connaît déjà la classe de l'autre dès la manche lancée (il rend son cookie et ses sons), et un encart de 1,5 s aurait dit le gadget à venir. Refusé. La proposition portait elle-même sa réserve : une information gratuite, sans être une position, qui frôle « la seule information est la lumière ». On découvre le gadget adverse en le voyant faire. |
 | **Un repère réservé au poseur, sur sa seule vue** (2026-09-11, Adrien : « pas grave si en écran scindé l'autre le voit ») | Étape 28, lot D. Un cercle ténu du rayon d'effet autour des quatre gadgets dont le bord ne se lit pas au pixel dans le noir — la mine (72, le rayon qui DÉCLENCHE), le grésillement (240, identique allumé ou éteint), la poudre (110), les braises (68, sous leur nappe) : le plancher validé, tiré d'`IMPLEMENTATIONS` et tenu par une suite. En ligne il n'existe que sur la machine du poseur — le nœud n'est même pas créé chez l'adversaire, la logique du cadenas de torche. En écran scindé, l'écran d'à côté le montre : accepté. |
+| **La télémétrie des gadgets se compte là où les deux pairs passent, et se range dans les conditions** (2026-09-11, étape 28 lot E — suggestion 8 retenue par Adrien) | Chaque compteur avance à un ordre que les deux pairs reçoivent (`rpc_spawn_gadget`, `rpc_allumer_gadget`, `rpc_etat_gadget`, `rpc_update_hp`, et l'ordre `rpc_detruire_gadget` chez le client), jamais sur une décision locale du client : les deux archives d'un match disent la même chose, à la gigue près sur les deux compteurs de fenêtre. Pour y arriver, deux RPC portent désormais une CAUSE (balle ou braises, balle ou fin de vie) — le fil change sous la v17 non publiée. Le bloc part DANS `conditions` : aucune migration, et comme les conditions, **jamais un motif de refus** (décision de PE2.3, 2026-09-10). Une fenêtre de **5 s** après un « effet » (pose, allumage, bascule vers allumé, PV de braises) : un choix de conception, pas un dosage éprouvé — `fenetre_s` et `version` voyagent dans le bloc pour pouvoir le réviser sans mélanger les échantillons. |
 | **La lumière reçue est courbée avant de devenir une pénalité** (2026-08-24, Adrien) | `Vision.intensite_recue` recopie terme pour terme la formule de la texture de torche : sa décroissance est **linéaire** jusqu'à zéro au bout du faisceau. Exact à l'alpha près, faux à l'œil — sur du noir absolu, 5 % de lumière se lit encore comme « éclairé ». Mesuré à l'écran : à 95 % de la portée du pistolet, un joueur se tenait dans une plaque de lumière franchement visible et ne prenait que **0,050**. `Eblouissement.plafond_pour` applique désormais une racine carrée : 0,05 de lumière coûte 0,22 au lieu de 0,05, mi-faisceau 0,71 au lieu de 0,50. **Les deux bornes ne bougent pas**, et c'est ce qui a décidé de la forme — hors du faisceau on ne prend toujours rien (c'est la proposition même du jeu : ici, on ne te voit pas), une lumière saturante sature toujours. Un seuil ou un décalage auraient cassé l'une des deux. **La courbe vit dans `eblouissement.gd`, pas dans `vision.gd`** : la géométrie doit rester le miroir exact de la texture, sans quoi le rendu deviendrait tributaire d'un réglage d'équilibre. **Prix assumé : on éblouit plus loin qu'avant**, à cône et portée inchangés. |
 | **Le voile passe SOUS le HUD** (2026-08-24, Adrien) | Il était monté après la rangée de HUD, donc peint par-dessus : à saturation, on ne lisait plus sa propre barre de vie, son cercle de recharge ni le chrono. L'éblouissement doit coûter la lecture du **monde** — l'adversaire et sa lumière —, jamais celle de sa propre fiche : la première est le jeu, la seconde est une punition de plus que ne rattrape aucune compétence. Ce n'était pas une décision, seulement l'ordre de déclaration dans `_build_menu()`, et **rien ne le nommait**. Un commentaire tient désormais l'ordre, faute de pouvoir l'attraper autrement. |
 | **Le curseur « Éblouissement » ne touche que le voile** (2026-08-18) | Premier lecteur en jeu d'`EffectPolicy` : `GameSettings.current_effect` module l'opacité du voile blanc, **jamais** la pénalité de vitesse et de visée. Un curseur qui allégerait la pénalité serait un avantage compétitif déguisé en confort — ce que le plancher de 0,8 cherche précisément à empêcher, et qu'il ne pourrait pas empêcher tout seul. |
@@ -18692,6 +18693,227 @@ chacun (les huit repères vérifiés).
 la planche ; faut-il, à l'entraînement, un moyen de voir son leurre tel que
 l'adversaire le voit, ou la capture suffit-elle ?
 
+### Étape 28 — lot E : la télémétrie des gadgets dans l'archive des matchs ✅ (2026-09-11)
+
+La suggestion 8 d'après l'étape 27, retenue par Adrien (PE5). **H11 est ouvert** : les
+dix gadgets n'avaient jamais servi en match, et l'archive disait le résultat, les
+classes et les conditions — rien de ce que les gadgets avaient fait. Un gadget qui ne
+sert jamais, ou qui ne tue jamais personne, ne se voyait qu'en regardant jouer.
+
+**1. Ce qui est compté.** Un bloc `gadgets` par match (**schéma 6** de
+`match_record.gd`), produit par un module neuf, `telemetrie_gadgets.gd`
+(`TelemetrieGadgets` : comptabilité pure, sans autoload, l'horloge lui est passée).
+Par joueur : `poses`, `morts_balle`, `morts_fin_de_vie`, `allumages`,
+`bascules_allume`, `bascules_eteint`, `batterie_vide`, `pv_braises_adversaire`,
+`pv_braises_soi`, `morts_adverses_apres_effet`, `morts_propres_apres_effet`, et le
+slug de son GADGET ; au premier niveau `version`, `fenetre_s` et `joueur_local` (−1
+hors ligne). **Aucune clé ne contient « classe »** — au premier niveau de
+l'enregistrement, `classe` est le booléen du classement (piège de la v4). Un
+dictionnaire vide quand rien n'a été compté ; une entrée v5 n'a pas la clé, et
+`MatchRecord.gadgets_de()` rend alors `{}`, **jamais des zéros** : « zéro pose » est un
+fait, « pas compté » n'en est pas un. La télémétrie repart avec le MATCH, pas la
+manche (`_do_start_round`, manches gagnées à zéro) : un BO3 archive un match.
+
+**2. Compté là où les DEUX pairs passent — et le fil devait changer pour ça.** Chaque
+compteur avance dans une fonction que les deux pairs exécutent pour le même
+événement : `_do_spawn_gadget` (par `rpc_spawn_gadget`), `rpc_allumer_gadget`,
+`rpc_etat_gadget`, `Player.rpc_update_hp` — et, pour la mort d'un gadget,
+`_sur_gadget_detruit` chez l'hôte, l'ORDRE `rpc_detruire_gadget` chez le client. **Le
+client ne compte jamais sur une décision locale** : il retire aussi ses gadgets à son
+propre minuteur de fin de vie, un demi-aller-retour après l'hôte, et une télémétrie
+déduite chez lui aurait fait deux archives différentes d'un même match. Deux trous
+l'interdisaient :
+- un PV de braises et une balle du poseur arrivaient par le même
+  `rpc_update_hp(new_hp, source_id)` — il gagne la CAUSE (`GadgetBase.DEGATS_BALLE`,
+  `DEGATS_BRAISES`) ; `take_damage` la prend avec un défaut « balle », qui garde
+  valides la balle et les neuf appels des outils ;
+- `rpc_detruire_gadget(nom)` ne disait pas pourquoi — il gagne `MORT_BALLE` /
+  `MORT_FIN_DE_VIE`, posée chez l'hôte par `abattu_par_balle`.
+
+Ni l'un ni l'autre n'a de valeur par défaut sur le fil (la leçon de la v11). Aucun RPC
+ni nœud nouveau. **`Protocol.VERSION` reste 17** (non publiée), le carnet est
+complété, `WIRE_WITNESS` recalculé APRÈS l'avoir tranché (`9f4e2b539bc2175e` →
+`ffd5924be23f866d`). Le crochet de `rpc_update_hp` est placé AVANT `die()`, qui
+archive le match de façon synchrone chez l'hôte, et sans `has_method` (la fusion du
+2026-09-09) ; la perte y est `hp − new_hp`, identique des deux côtés parce que le
+client ne touche `hp` qu'à cette ligne, au départ de manche et au retour au menu —
+qui met fin au match. **La liste se veut exhaustive, et elle l'était d'un cas trop
+court** : la revue du 2026-09-11 a rappelé le retour au menu (`game_state.gd`, deux
+écritures), que le contradicteur du plan avait déjà relevé. La conclusion ne change
+pas ; l'affirmation, si — un lecteur la reprend telle quelle.
+
+**Le nom reste littéral, son inverse vit dans `GadgetBase`.** Une mort ou un
+allumage de gadget est attribué par le NOM, par la même fonction chez l'hôte et chez
+le client : `GadgetBase.poseur_du_nom()`, l'inverse exact de
+`g.name = "GadgetJ%d_%d" % [pid + 1, numero]` — resté un littéral dans
+`game_state.gd`, que `test_classes` lit par son texte. La suite neuve lit ce littéral
+et éprouve l'aller-retour dessus : le jour où il change, l'inverse cesse de le suivre
+en rouge. En écran scindé, l'allumage passe désormais par l'ordre
+`rpc_allumer_gadget` en appel direct (le patron de `_annoncer_etat_gadget`) : un
+`g.allumer()` direct laissait le local à zéro allumage.
+
+**3. L'« effet » et la fenêtre.** Un effet est le moment où un gadget change la
+partie, par un événement reçu des deux côtés : la POSE (sauf une bobine posée éteinte,
+batterie sous le seuil — elle n'agit pas encore ; c'est aussi le seul événement
+discret des gadgets passifs), l'ALLUMAGE de la mine (passage ou balle), la BASCULE
+VERS ALLUMÉ du grésillement, chaque PV de BRAISES — poseur compris. Ne sont pas des
+effets : l'extinction (voulue ou imposée), la mort du gadget, son remplacement. **N =
+5 s** : elles couvrent l'embrasement de la mine (1,6 s) et le temps de l'exploiter,
+restent sous la plus courte vie d'un gadget continu (la poussière, 7,5 s) et loin de
+la recharge (60 s). Un choix de conception, pas un dosage éprouvé : `fenetre_s` et
+`version` voyagent dans le bloc pour le réviser sans mélanger les échantillons.
+L'effet est noté AVANT la mort : un dernier PV de braises tue à délai nul. Horloge :
+le temps RÉEL (`Time.get_ticks_msec`), jamais le delta (`Engine.time_scale`) ni
+`time_left` (recalé par sauts chez le client).
+
+⚠️ **Les deux compteurs de fenêtre sont les SEULS qui peuvent différer d'une archive à
+l'autre** : chaque pair date les événements à leur arrivée, et une mort qui tombe pile
+à 5 s d'un effet peut se ranger de part et d'autre, à la gigue du lien près. Écrit
+dans le code, et la requête de cohérence de `docs/SUPABASE.md` (section PE5) le
+détecte sur le terrain. L'ordre en dépend aussi : sous ENet, aucun `@rpc` ne déclarant
+de canal, les appels fiables partagent un canal ordonné — le PV mortel arrive avant
+`rpc_end_round`, et une mort simultanée se compte des deux côtés après l'archive.
+**Sous EOS, ce n'est pas établi.** Un forfait, archivé à deux instants différents,
+n'a pas deux blocs garantis identiques, par nature.
+
+**4. Un défaut corrigé au passage : `detruire()` n'avait pas de garde.** Deux balles
+dans la même image (le second `encaisser` repasse sous zéro), ou un gadget remplacé
+qui atteint sa fin de vie avant sa libération, émettaient `detruit` deux fois : deux
+ordres au client, deux morts comptées. `detruire()` rend la main sur un nœud déjà en
+file de suppression. Le client tolérait déjà l'ordre en double ; il en reçoit un de
+moins.
+
+**5. Le voyage — aucune migration, rien de déployé.** En ligne, le bloc part DANS
+`conditions` (`MatchRecord.conditions_a_envoyer()`, la seule fusion : l'envoi ET le
+rejeu du journal l'appellent) : le jsonb de PE2.3, borné sous 1 Ko pour un plafond de
+8 Ko. Le tamis serveur `parseGadgets` (`supabase/functions/_shared/match_report.ts`,
+dans le dépôt seulement) le passe à la liste blanche, **jamais un motif de refus**.
+Sans redéploiement de `report` (H14), l'ancien tamis jette `gadgets` sans refuser le
+rapport. Ses clés (`GADGET_NUMBERS`) sont comparées aux compteurs du jeu **dans les
+deux sens** par la suite neuve — le tableau lui-même, pas le fichier entier.
+
+**Lire les chiffres.** Pour la mine, `allumages` compte aussi les mines ABATTUES (une
+mine touchée demande l'allumage au lieu de mourir) : déclenchées par un passage ≤
+`allumages − morts_balle`, un **majorant** et non un compte. Une mine abattue meurt de
+son embrasement 1,6 s plus tard ; archiver le match avant — le cas même qui intéresse,
+une mort dans la foulée de la mine — ou purger la manche d'ici là ne lui compte aucune
+mort, et elle passe pour un passage. **Angle mort assumé** : les gadgets passifs, et
+une bobine allumée depuis plus de 5 s, ne sont vus que par leur pose ou leur bascule.
+
+**6. Ce que la revue du 2026-09-11 a corrigé.** Quatre défauts, tous tenus :
+- **les trois branches EN LIGNE n'étaient éprouvées par aucun test.** Sabotées
+  ensemble — l'hôte qui envoie `DEGATS_BALLE` en dur, l'hôte qui envoie
+  `MORT_FIN_DE_VIE` en dur, le client qui lit `cause != MORT_BALLE` —, les 143
+  contrôles restaient verts : les matchs de D tournent en écran scindé, et le
+  contrôle de texte ne lisait qu'un PRÉFIXE de la ligne, qui survit à une cause
+  inversée. La suite gagne une famille **E** où les deux chemins sont EXÉCUTÉS
+  (l'ordre `rpc_detruire_gadget` appelé comme une fonction, `take_damage` joué en
+  `ONLINE_HOST` — le pair hors ligne exécute `call_local` avec les arguments qu'un
+  vrai client recevrait), les contrôles de texte portent sur la ligne ENTIÈRE, et le
+  duo **abat** désormais la bobine avant le kill : la cause voyage pour de vrai ;
+- **« déclenchées par un passage = `allumages − morts_balle` » était faux** dans le
+  cas qui compte. Une mine abattue meurt de son embrasement 1,6 s plus tard ; si le
+  match est archivé avant — une mort dans la foulée de la mine — elle n'a pas de mort
+  dans le bloc et passe pour un passage. Reproduit sur le vrai `main.tscn`
+  (`allumages=1`, `morts_balle=0`, lecture « 1 passage » pour 0 réel). C'est
+  désormais écrit comme un **majorant** aux cinq endroits qui le disaient. Le porter
+  exactement demanderait que l'ordre d'allumage dise lui-même « par balle » : le fil
+  changerait encore, et c'est à Adrien de le trancher — **question ouverte** ;
+- **la phrase d'information aux testeurs disait encore « Rien d'autre n'est
+  envoyé »** alors que ce lot fait voyager la télémétrie dans les mêmes
+  `conditions`. Amendée dans `docs/SUPABASE.md`, datée. ⚠️ Le même texte vit dans le
+  jeu (`ui.gd`, `AVIS_PHASE_DE_TEST`), mot pour mot comme Adrien l'a écrit le
+  2026-09-10 : **pas touché**, c'est sa phrase — voir les signalements ;
+- **« le client ne touche `hp` qu'ici et au départ de manche » oubliait le retour au
+  menu** (deux écritures dans `game_state.gd`). La conclusion tient — le retour au
+  menu met fin au match —, l'énumération non : corrigée dans `player.gd` et ici.
+
+**Validation** — sous deux `HOME` isolés, l'un neuf, l'autre dont le `settings.cfg`
+porte `intro_vue=true` (l'état du lot complet ; la leçon du lot C) ; décomptes SANS la
+ligne de synthèse, identiques sous les deux : `test_telemetrie_gadgets` (**152** —
+143, puis neuf de plus après la revue du 2026-09-11, dont six qui EXÉCUTENT les
+branches en ligne au lieu de les lire ; neuve, ajoutée à `SUITES`),
+`test_classes` (390), `test_tir_et_reserves` (341),
+`test_conditions_de_match` (69), `test_rejeu_journal` (21), `test_match_format` (62),
+`test_match_history_view` (122), `test_screen_historique` (26), `test_protocole` (9),
+`test_charte` (243) verts ; les passages en scène de `test_online_match` — `--local`
+(18), `--training` (17), `--eblouissement` (9), `--fenetre` (10), `--appariement` (7)
+— verts ; Deno **100** (95 + 5 : un bloc complet, une clé inconnue ou mal typée, un
+bloc illisible qui ne fait refuser aucun rapport, des conditions réduites aux
+gadgets, un slug tronqué à 32). Le duo (`run_duo.sh`, ENet) compare la ligne
+`TELEMETRIE:` des deux instances : **« les deux archives disent la même chose »**, blocs
+non vides (J1 : une pose de bobine, une mort adverse dans la fenêtre, contrôlé des
+deux côtés). **Depuis la revue du 2026-09-11, l'hôte ABAT cette bobine avant le
+kill** : c'est le seul scénario où la CAUSE d'une mort de gadget voyage vraiment sur
+le fil — l'hôte la décide sur `abattu_par_balle`, le client la lit dans l'ordre —, et
+les deux côtés contrôlent qu'elle est rangée en `morts_balle`. Ce passage-là est
+**entièrement vert des deux côtés**, contrôle de salon compris : le rouge signalé plus
+bas ne s'est pas reproduit, il est donc intermittent. La suite neuve rejoue deux
+matchs sur le VRAI `main.tscn`, par le vrai
+`_do_start_round`, en attendant des CONDITIONS (âge de la mine ≥ armement, nappe
+libérée, bobine coupée), chaque forçage restant commenté (recharge, âge de la nappe,
+batterie), et vérifie CHAQUE clé des deux côtés : Incendiaire contre Parasite (deux
+nappes dont l'une remplace l'autre, 8 PV de braises à J2 et 4 à J1 mesurés, fin de
+vie, bobine posée allumée, éteinte, rallumée, coupée à batterie vide, abattue), puis
+Allumeur contre Illusionniste en rematch immédiat (mine armée puis déclenchée par le
+chemin local, leurre abattu PUIS détruit dans la même image).
+
+**Sabotages exécutés — 18, chacun vu rougir puis restauré à l'octet (`cmp`), l'arbre
+identique avant et après, un témoin vert de chaque côté.** Les quatre derniers sont
+ceux de la revue du 2026-09-11, sur les branches EN LIGNE — appliqués d'abord aux
+contrôles d'origine, où ils passaient tous les trois inaperçus (code 0, 143 ✓) :
+l'hôte qui envoie `DEGATS_BALLE` en dur (2 rouges, dont l'exécution en `ONLINE_HOST` :
+0 PV de braises) ; l'hôte qui envoie `MORT_FIN_DE_VIE` en dur (1) ; le client qui lit
+`cause != MORT_BALLE` (3, dont les deux ordres joués) ; et **le même, dans le duo** —
+`run_duo.sh` affiche « les deux archives divergent », l'hôte disant `morts_balle: 1`
+quand le client dit `morts_fin_de_vie: 1`, et le client rougit sur la mort par balle.
+Les quatorze premiers : la fenêtre toujours vraie
+(6 contrôles) ; l'extinction comptée comme effet (1) ; `gadgets_de` qui rend des
+zéros pour une entrée v5 (1) ; la nappe sans sa cause (3) ; le crochet déplacé après
+`die()` (6) ; `_telemetrie.commencer()` retiré (11 — B compte les poses du match A) ;
+`detruire()` sans garde (1 : `morts_balle` à 2) ; l'allumage local rendu à
+`g.allumer()` (1) ; une clé en trop dans le tamis (1), une en moins (1) ;
+`poseur_du_nom` décalé d'un (9) ; la garde client de `_sur_gadget_detruit` retirée
+(1, par le texte : aucun scénario ne l'exerce) ; la pose toujours comptée comme effet
+(1, par le texte : les matchs posent la bobine allumée) ; **dans le duo**, la pose
+comptée chez l'hôte seul — `run_duo.sh` affiche « les deux archives divergent » et le
+client rougit sur deux contrôles ; **dans Deno**, le tamis qui ne range plus les
+gadgets (4 tests rouges).
+
+⚠️ **Signalé, non corrigé** :
+- **Le duo nominal est rouge côté hôte, et ce lot n'y est pour rien** : « PRÊT s'ouvre
+  à l'arrivée de l'adversaire » échoue sur « aucun bouton PRÊT visible — écran
+  courant : local_hote » (`_ready_entry_disabled`, `tools/test_online_match.gd`).
+  Reproduit trois fois, et **à l'identique sur une copie de `HEAD` sans ce lot** (même
+  `.godot`, fichiers du lot rendus à `HEAD`) : antérieur, probablement lié à la
+  refonte des menus fusionnée en `46c5d4c`. Le client, lui, passe. **Relancé le
+  2026-09-11 après la revue** (HOME isolé, port dérivé), le même scénario est passé
+  ENTIÈREMENT vert, ce contrôle compris : le défaut est **intermittent**, pas
+  systématique — ce qui le rend plus gênant, pas moins, et il reste signalé ;
+- **l'avis de phase de test AFFICHÉ DANS LE JEU** (`ui.gd`, `AVIS_PHASE_DE_TEST`)
+  énumère ce qui part et finit par « Rien d'autre n'est envoyé » : depuis ce lot,
+  c'est incomplet. Il est « mot pour mot comme Adrien l'a écrit le 2026-09-10 » et
+  n'a donc pas été touché — la phrase jumelle de `docs/SUPABASE.md`, elle, est
+  amendée. **À trancher par Adrien** : reprend-il la sienne ?
+- l'en-tête de `gadget_base.gd` dit encore que les gadgets s'appellent
+  `Gadget_P1` / `Gadget_P2` : faux, c'est `GadgetJ%d_%d` ;
+- la note v5 du carnet de `match_record.gd` (« ces conditions restent LOCALES ») est
+  périmée depuis PE2.3 : l'entrée v6 le dit, la v5 n'est pas réécrite.
+
+### À faire à la prochaine fusion de `main` — le leurre et le halo de proximité
+
+(2026-09-12, hors étape 28.) La session
+du bandeau LED a sorti la règle des canaux de lumière dans `canaux_lumiere.gd`
+(`CanauxLumiere`), et le halo de proximité d'un joueur éclaire désormais le corps
+adverse — sur l'écran du porteur du halo seulement (décision d'Adrien du 2026-09-11).
+Le `Visuel` du leurre (lot D) devra alors prendre
+`CanauxLumiere.masque_vue_adverse(poseur_id)` à la place du `2` écrit en dur : sinon
+un vrai corps s'allume dans le halo et le leurre non, et il se reconnaît de près.
+Rien ne peut dériver en silence — le contrôle « le corps vu par l'adversaire a le
+masque de lumière d'un corps adverse » compare au masque RÉEL de `visual_enemy`, et
+rougira à la fusion tant que le leurre ne suivra pas. Ce changement n'est pas encore
+dans `main` ; la session LED préviendra.
+
 ### Ce qui reste, dans l'ordre
 
 **Fait** : le socle de données, le root, la purge des armes en dur, la touche et
@@ -19126,7 +19348,9 @@ code vérifié par les suites, et les chiffres attendus restent des attentes.
 - **H14** — déployer PE2.3 : `supabase db push` puis
   `supabase functions deploy report --no-verify-jwt`, dans cet ordre, l'une
   juste après l'autre (`docs/SUPABASE.md`). Tant que ce n'est pas fait, les
-  clients à jour envoient un bloc que la base ignore, sans rien perdre.
+  clients à jour envoient un bloc que la base ignore, sans rien perdre. Et depuis
+  le 2026-09-11, le redéploiement de `report` emporte aussi le tamis de la
+  télémétrie des gadgets (`parseGadgets`, PE5) : aucune commande de plus.
 - **PE3.2** — `banc_pics` sur son Mac, fenêtre au premier plan, pour la cause
   des pics ; et désormais, gratuitement, les `conditions` de ses propres
   matchs dans `user://match_history.json` — c'est le même relevé, pris en
@@ -19165,6 +19389,13 @@ l'effet de bord Sentinelle / Incendiaire (root plus long que la cadence, signal�
 à l'étape 20 des dix classes) ne se juge qu'en jouant. Avec peu de testeurs,
 tout le monde démarre Aveugle I et l'appariement sera étroit : la fourchette
 d'attente (étape 8.5) est à revoir pour une population de dix personnes.
+
+**Mesurer ce que font les gadgets, depuis le 2026-09-11** (étape 28 des dix classes,
+lot E) : chaque match archivé porte un bloc `gadgets` (schéma 6 de `match_record.gd`)
+— poses, morts de gadget par balle ou en fin de vie, allumages, bascules du
+grésillement, PV de braises, morts dans les 5 s qui suivent un effet —, compté chez
+les deux pairs et remonté DANS les conditions de PE2.3. Les requêtes sont dans
+`docs/SUPABASE.md` (section PE5) ; elles ne rendent rien tant que H14 n'est pas fait.
 
 ### PE6 — Distribution
 
@@ -19454,7 +19685,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
 | H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
-| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
+| H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. Depuis le 2026-09-11, `functions deploy report` emporte AUSSI le tamis `parseGadgets` de la télémétrie des gadgets (PE5, étape 28 des dix classes, lot E) — sans migration : le bloc voyage dans les conditions ; sans redéploiement, il tombe au tamis sans rien refuser. | Avant le premier lien envoyé à un testeur, pour que ses matchs comptent dès le premier |
 
 ---
 

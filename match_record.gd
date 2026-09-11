@@ -47,7 +47,39 @@ const HISTORY_PATH := "user://match_history.json"
 ##     ⚠️ Ces conditions restent LOCALES : l'envoi au classement (`_report_to_ranking`)
 ##     construit son propre corps et ne les transmet pas. Les faire remonter est
 ##     l'étape PE2.3, qui attend un arbitrage d'Adrien sur ce qui remonte.
-const SCHEMA_VERSION := 5
+## 6 — ajout de `gadgets` (chantier DIX CLASSES, étape 28, lot E — PE5, 2026-09-11) :
+##     ce que les gadgets ont FAIT pendant le match, par joueur — poses, morts de
+##     gadget par balle ou en fin de vie, allumages, bascules du grésillement, PV
+##     infligés par les braises, et morts survenues dans la fenêtre qui suit un effet
+##     de gadget. Voir `telemetrie_gadgets.gd`. Pourquoi : H11 est ouvert, les dix
+##     gadgets n'avaient jamais servi en match, et rien dans le journal ne disait si
+##     l'un d'eux sert, ou tue, ou jamais.
+##
+##     Compté chez les DEUX pairs depuis les mêmes ordres : les deux archives d'un
+##     match en ligne disent la même chose — sauf, à la gigue du lien près, les deux
+##     compteurs de fenêtre (`morts_*_apres_effet`), que chaque pair date à
+##     l'arrivée. La fenêtre et la version du bloc voyagent dedans (`fenetre_s`,
+##     `version`). Pour la mine, `allumages` compte aussi les mines abattues : les
+##     mines déclenchées par un passage valent **au plus** `allumages − morts_balle`
+##     — un majorant, parce qu'une mine abattue meurt 1,6 s plus tard et que le match
+##     archivé (ou la manche purgée) avant sa fin ne compte aucune mort pour elle
+##     (revue du 2026-09-11 ; voir `telemetrie_gadgets.gd`).
+##
+##     ⚠️ **`gadgets` n'a RIEN à voir avec `classe` ni avec `classe_j1`** : chaque
+##     côté porte le slug de son GADGET (`nappe_braises`, `gresillement`…), et aucune
+##     clé du bloc ne contient « classe » — le piège de lecture de la v4.
+##
+##     Un dictionnaire VIDE quand rien n'a été compté, comme `conditions`. Une entrée
+##     d'avant cette version n'a pas la clé : `gadgets_de()` rend alors `{}`, JAMAIS
+##     des zéros — « zéro pose » est un fait, « pas compté » n'en est pas un.
+##
+##     En ligne, le bloc voyage DANS `conditions` (`conditions_a_envoyer()`, seule
+##     fusion, appelée par l'envoi et par le rejeu du journal) : il arrive dans le
+##     jsonb de PE2.3, sans migration. ⚠️ **La note de la v5 — « Ces conditions
+##     restent LOCALES » — est périmée depuis PE2.3 (2026-09-10)** : les conditions
+##     partent avec le rapport (`_report_to_ranking`, `RankedIdentity`). L'entrée v5
+##     est de l'histoire, elle n'est pas réécrite.
+const SCHEMA_VERSION := 6
 
 ## L'historique est plafonné : c'est un journal local, pas une base. Au-delà,
 ## les entrées les plus anciennes sont oubliées.
@@ -104,7 +136,7 @@ static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: S
 		map_id: String, mode: String, format: int = Format.BO1,
 		forfeit: bool = false, match_id: String = "", ranked: bool = false,
 		outcome: String = "", class_1: String = "", class_2: String = "",
-		conditions: Dictionary = {}) -> Dictionary:
+		conditions: Dictionary = {}, gadgets: Dictionary = {}) -> Dictionary:
 	return {
 		"version": SCHEMA_VERSION,
 		"forfait": forfeit,
@@ -132,7 +164,30 @@ static func build(winner_id: int, duration: float, weapon_1: String, weapon_2: S
 		# Schéma 5 : les CONDITIONS de la manche (voir en tête). Copie, pour que
 		# l'enregistrement ne partage pas son dictionnaire avec le releveur.
 		"conditions": conditions.duplicate(true),
+		# Schéma 6 : ce que les GADGETS ont fait (voir en tête). Copie profonde, pour
+		# la même raison que les conditions.
+		"gadgets": gadgets.duplicate(true),
 	}
+
+## Le bloc de gadgets d'une entrée, ou `{}` — JAMAIS des zéros : une entrée d'avant
+## le schéma 6 n'a pas été comptée, et « zéro pose » est un fait, pas un défaut.
+static func gadgets_de(entry: Variant) -> Dictionary:
+	if not entry is Dictionary:
+		return {}
+	var g = (entry as Dictionary).get("gadgets", {})
+	return g if g is Dictionary else {}
+
+## Le bloc `conditions` tel qu'il part au serveur : les conditions, et la télémétrie
+## des gadgets rangée DEDANS — le jsonb de la migration 20260910120000, sans nouvelle
+## migration. La SEULE fusion : l'envoi (`GameState._report_to_ranking`) et le rejeu
+## du journal (`RankedIdentity`) l'appellent tous deux. Sans télémétrie, le bloc
+## d'avant, exactement. Une copie : ni `conditions` ni `gadgets` ne sont touchés.
+static func conditions_a_envoyer(conditions: Variant, gadgets: Dictionary) -> Dictionary:
+	var sortie: Dictionary = (conditions as Dictionary).duplicate(true) \
+		if conditions is Dictionary else {}
+	if not gadgets.is_empty():
+		sortie["gadgets"] = gadgets.duplicate(true)
+	return sortie
 
 ## Les matchs classés que le serveur n'a jamais accusé réception.
 ##

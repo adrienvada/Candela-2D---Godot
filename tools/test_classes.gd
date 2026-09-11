@@ -61,7 +61,9 @@ class FauxJoueur extends Node2D:
 	var dead := false
 	var appels := 0
 	var total := 0.0
-	func take_damage(montant: float, _source: Node2D) -> void:
+	# La CAUSE (étape 28, lot E) : la nappe la passe désormais. Sans ce troisième
+	# paramètre, chaque tic lèverait « trop d'arguments » sur ce carton.
+	func take_damage(montant: float, _source: Node2D, _cause: int = 0) -> void:
 		appels += 1
 		total += montant
 

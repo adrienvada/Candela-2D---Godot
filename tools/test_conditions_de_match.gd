@@ -154,12 +154,13 @@ func _test_diagnostic() -> void:
 		not texte.contains("pas une paire") and texte.contains("== Vide =="))
 
 # ---------------------------------------------------------------------------
-# ARCHIVE — schéma 5
+# ARCHIVE — schéma 5, puis 6 (étape 28, lot E : la télémétrie des gadgets, voir
+# `test_telemetrie_gadgets.gd`) ; les conditions n'ont pas bougé.
 # ---------------------------------------------------------------------------
 
 func _test_archive() -> void:
 	print("\n[Archive]")
-	_check("schéma 5", MatchRecord.SCHEMA_VERSION == 5, str(MatchRecord.SCHEMA_VERSION))
+	_check("schéma 6", MatchRecord.SCHEMA_VERSION == 6, str(MatchRecord.SCHEMA_VERSION))
 	var avec := MatchRecord.build(0, 12.5, "A", "B", "carte", "local",
 		MatchRecord.Format.BO1, false, "abc123", true, "win", "c1", "c2",
 		{"fps_median": 120.0, "machine": {"os": "Test"}})
@@ -186,11 +187,14 @@ func _test_rapport_emporte_les_conditions() -> void:
 	var gs := FileAccess.get_file_as_string("res://game_state.gd")
 	_check("game_state calcule les conditions UNE fois pour l'archive et le rapport",
 		gs.contains("var conditions := _conditions.resume()"))
-	_check("… et les passe au rapport", gs.contains("_report_to_ranking(winner_id, forfeit, conditions)"))
-	_check("… qui les met dans le corps envoyé", gs.contains('"conditions": conditions,'))
+	# Étape 28, lot E : la télémétrie des gadgets voyage avec, par la seule fusion.
+	_check("… et les passe au rapport",
+		gs.contains("_report_to_ranking(winner_id, forfeit, conditions, gadgets)"))
+	_check("… qui les met dans le corps envoyé",
+		gs.contains('"conditions": MatchRecord.conditions_a_envoyer(conditions, gadgets),'))
 	var ri := FileAccess.get_file_as_string("res://ranked_identity.gd")
 	_check("le rejeu du journal les reprend de l'archive",
-		ri.contains('"conditions": e.get("conditions", {})'))
+		ri.contains('"conditions": MatchRecord.conditions_a_envoyer(e.get("conditions", {}),'))
 	var fn := FileAccess.get_file_as_string("res://supabase/functions/report/index.ts")
 	_check("la fonction Edge les transmet à la base", fn.contains("p_conditions: report.conditions"))
 	var mig := FileAccess.get_file_as_string("res://supabase/migrations/20260910120000_match_conditions.sql")

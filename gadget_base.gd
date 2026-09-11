@@ -196,6 +196,48 @@ var _age: float = 0.0
 
 signal detruit(gadget: GadgetBase)
 
+## Étape 28, lot E (télémétrie des gadgets, 2026-09-11) — pourquoi un gadget est
+## mort, tel que l'hôte le dit au client (`GameState.rpc_detruire_gadget`) : le
+## client ne peut pas le deviner, son propre minuteur de fin de vie tombe un
+## demi-aller-retour plus tard et il n'encaisse aucune balle.
+const MORT_FIN_DE_VIE := 0
+const MORT_BALLE := 1
+
+## Étape 28, lot E — la CAUSE d'une perte de PV, portée par `Player.rpc_update_hp`.
+## Ici et pas dans `Player` : un gadget ne nomme pas `Player` (une suite en
+## `--script` cesserait de compiler), et `player.gd` lit déjà `GadgetBase`
+## (`effacements_a`). Sans elle, le client ne sépare pas un PV de braises d'une
+## balle du poseur : les deux arrivent par le même `rpc_update_hp`.
+const DEGATS_BALLE := 0
+const DEGATS_BRAISES := 1
+
+## Vrai quand une BALLE a décidé de sa mort. Posé chez l'hôte (`encaisser`, et
+## `GadgetMine.encaisser` pour une mine abattue), lu par
+## `GameState._sur_gadget_detruit()`.
+var abattu_par_balle: bool = false
+
+
+## Étape 28, lot E — le joueur (0 ou 1) que désigne un NOM de gadget, ou −1.
+##
+## ⚠️ **L'inverse EXACT du littéral de `GameState._do_spawn_gadget()`** :
+## `g.name = "GadgetJ%d_%d" % [pid + 1, numero]`. Le littéral reste dans
+## `game_state.gd` (`tools/test_classes.gd` le lit par son texte) ;
+## `tools/test_telemetrie_gadgets.gd` relie les deux — il lit le littéral et éprouve
+## l'aller-retour. L'hôte ET le client s'en servent pour attribuer une mort ou un
+## allumage de gadget : le même calcul des deux côtés, sur la seule donnée que les
+## deux ordres portent.
+static func poseur_du_nom(nom: String) -> int:
+	if not nom.begins_with("GadgetJ"):
+		return -1
+	var reste := nom.trim_prefix("GadgetJ")
+	if not reste.contains("_"):
+		return -1
+	var n := reste.get_slice("_", 0)
+	if not n.is_valid_int():
+		return -1
+	var pid := int(n) - 1
+	return pid if pid == 0 or pid == 1 else -1
+
 
 func _ready() -> void:
 	add_to_group("gadgets")
@@ -402,11 +444,19 @@ func encaisser(degats: float) -> bool:
 	pv -= degats
 	if pv > 0.0:
 		return false
+	# Étape 28, lot E — la balle a décidé : la télémétrie la compte abattue.
+	abattu_par_balle = true
 	detruire()
 	return true
 
 
+## ⚠️ **Une seule mort par gadget** (étape 28, lot E, 2026-09-11). Sans garde, deux
+## balles dans la même image (le second `encaisser` repasse sous zéro), ou un gadget
+## remplacé qui atteint sa fin de vie avant sa libération, rappelaient `detruire()` :
+## deux signaux, deux ordres au client, deux morts comptées.
 func detruire() -> void:
+	if is_queued_for_deletion():
+		return
 	detruit.emit(self)
 	queue_free()
 

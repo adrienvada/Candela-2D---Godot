@@ -772,7 +772,9 @@ func _test_destruction_autoritaire() -> void:
 	_check("le client n'encaisse plus : seul l'hôte blesse un gadget",
 		b.contains("if not is_replay and NetworkManager.current_mode != NetworkManager.GameMode.ONLINE_CLIENT:\n\t\t\t\tgadget.encaisser("))
 	var g := FileAccess.get_file_as_string("res://game_state.gd")
-	_check("l'hôte ordonne le retrait au client", g.contains("func rpc_detruire_gadget(nom: String)"))
+	# La CAUSE voyage avec l'ordre depuis l'étape 28, lot E (télémétrie des gadgets).
+	_check("l'hôte ordonne le retrait au client",
+		g.contains("func rpc_detruire_gadget(nom: String, cause: int)"))
 	_check("et il l'ordonne à CHAQUE mort de gadget, pas seulement sous les balles",
 		g.contains("g.detruit.connect(_sur_gadget_detruit)"))
 	_check("l'état initial d'une bobine vient de l'hôte, pas de la batterie locale",

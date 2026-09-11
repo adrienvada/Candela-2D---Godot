@@ -185,6 +185,17 @@ class_name Protocol
 ##      et un appelant oublié doit lever une erreur de script que `run_suites.sh`
 ##      attrape. Le témoin l'a signalé ; le numéro reste 17, l'empreinte
 ##      recalculée APRÈS l'avoir tranché.
+##
+##      Et, le même jour (étape 28, lot E : la télémétrie des gadgets), la FORME
+##      change encore sous le même numéro, qui n'est toujours pas publié.
+##      `rpc_update_hp` gagne la CAUSE de la perte (balle ou braises), et
+##      `rpc_detruire_gadget` celle de la mort du gadget (balle ou fin de vie) : le
+##      client ne pouvait distinguer ni l'une ni l'autre, et une télémétrie déduite
+##      chez lui aurait donné deux archives différentes pour un même match. Un pair
+##      d'avant ce lot enverrait deux arguments là où l'on en attend trois : le
+##      paquet serait refusé, et la barre de vie du client se figerait. Ni l'un ni
+##      l'autre n'a de valeur par défaut, pour la raison de la v11. Le témoin l'a
+##      signalé ; le numéro reste 17, l'empreinte recalculée APRÈS l'avoir tranché.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
@@ -198,7 +209,7 @@ const VERSION := 17
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "9f4e2b539bc2175e"
+const WIRE_WITNESS := "ffd5924be23f866d"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

@@ -240,10 +240,11 @@ tests fabriquent leur propre paire de clés et signent leurs jetons.
 deno test --allow-net=jsr.io supabase/functions/_shared/
 ```
 
-95 tests au 2026-09-10 (34 à l'ouverture), dont le refus d'un jeton `alg: none`,
+100 tests au 2026-09-11 (34 à l'ouverture), dont le refus d'un jeton `alg: none`,
 d'un jeton signé par une autre clé, d'une charge utile modifiée après
 signature, d'un jeton expiré, d'un jeton destiné à un autre jeu — et, depuis
-PE2.3, le tamis des conditions de match.
+PE2.3, le tamis des conditions de match ; depuis PE5 (étape 28 du chantier DIX
+CLASSES), celui de la télémétrie des gadgets.
 
 ---
 
@@ -326,7 +327,8 @@ clé.
 - un match en ligne joué avec un client à jour fait apparaître une ligne dans
   `conditions_de_match` ; un client d'avant PE2.3 continue de rapporter, avec
   `conditions` à NULL ;
-- `deno test --allow-net=jsr.io supabase/functions/_shared/` reste vert (95).
+- `deno test --allow-net=jsr.io supabase/functions/_shared/` reste vert (100
+  depuis PE5, le 2026-09-11 ; 95 à PE2.3).
 
 ### La phrase aux testeurs
 
@@ -334,10 +336,106 @@ clé.
 choisi de le dire :
 
 > Quand tu joues en ligne, le jeu envoie avec le résultat du match un relevé de
-> cadence et la description de ta machine (système, processeur, carte
-> graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à
-> savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors
-> ligne.
+> cadence, la description de ta machine (système, processeur, carte graphique,
+> pilote, résolution) et ce que les gadgets ont fait pendant le match (poses,
+> allumages, dégâts de braises), rattachés à ton identité Epic. Ça sert à savoir
+> où le jeu rame et sur quoi, et si les gadgets servent à quelque chose. Rien
+> d'autre n'est envoyé, et rien hors ligne.
+
+**Amendée le 2026-09-11** (étape 28 du chantier DIX CLASSES, lot E ; relevé par la
+revue du lot). La version de PE2.3 s'arrêtait à la machine et finissait par « Rien
+d'autre n'est envoyé » — c'était vrai le 2026-09-10, et faux dès que le rapport a
+emporté la télémétrie des gadgets, dans ces mêmes `conditions`. Cette phrase décrit
+ce qui part de la machine du testeur : elle doit suivre ce qui part, sinon elle ne
+vaut rien.
+
+⚠️ **Le même texte vit DANS le jeu** — `ui.gd`, `AVIS_PHASE_DE_TEST`, affiché au menu,
+« mot pour mot comme Adrien l'a écrit le 2026-09-10 ». **Il n'a PAS été touché** :
+c'est sa phrase, pas celle d'un agent. Il énumère donc encore l'ancienne liste, et
+c'est à Adrien de dire s'il la reprend.
+
+## PE5 — la télémétrie des gadgets (2026-09-11)
+
+**Chantier DIX CLASSES, étape 28, lot E** (suggestion 8, retenue par Adrien). H11
+est ouvert : les dix gadgets n'avaient jamais servi en match, et rien ne disait si
+l'un d'eux sert, tue, ou jamais. L'archive du jeu passe au **schéma 6** : un bloc
+`gadgets` compte, par joueur, les poses, les morts de gadget (par balle ou en fin
+de vie), les allumages, les bascules du grésillement, les PV infligés par les
+braises, et les morts survenues dans les **5 s** qui suivent un effet de gadget
+(`telemetrie_gadgets.gd`).
+
+**Aucune migration.** Le bloc voyage DANS `conditions`, le jsonb de PE2.3
+(`MatchRecord.conditions_a_envoyer`, seule fusion, appelée par l'envoi comme par le
+rejeu du journal), et le tamis `parseGadgets` de `functions/_shared/match_report.ts`
+le passe à la liste blanche — jamais un motif de refus. Borné à moins de 1 Ko, pour
+un plafond de 8 Ko au-delà duquel les conditions retombent à NULL sans refus.
+
+**Déployer** : rien de plus que H14 — `supabase functions deploy report
+--no-verify-jwt` emporte le nouveau tamis. Sans ce redéploiement, l'ancien tamis
+jette `gadgets` sans bruit : les conditions arrivent, la télémétrie non, et aucun
+rapport n'est refusé.
+
+### Lire
+
+Chaque match en ligne est rapporté par ses DEUX pairs, et chacun porte les deux
+côtés du bloc. Pour ne compter chaque gadget qu'une fois, on ne lit que le côté du
+**rapporteur** (`joueur_local` : 0 pour l'hôte, J1 ; 1 pour le client, J2) :
+
+```sql
+-- Par gadget : ce qu'il fait, match après match.
+select g.value->>'gadget' as gadget,
+       count(*) as matchs,
+       sum((g.value->>'poses')::int) as poses,
+       sum((g.value->>'allumages')::int) as allumages,
+       sum((g.value->>'morts_balle')::int) as abattus,
+       sum((g.value->>'morts_fin_de_vie')::int) as fins_de_vie,
+       sum((g.value->>'morts_adverses_apres_effet')::int) as adversaires_morts_dans_la_fenetre,
+       sum((g.value->>'morts_propres_apres_effet')::int) as poseur_mort_dans_la_fenetre,
+       round(sum((g.value->>'pv_braises_adversaire')::numeric), 1) as pv_braises_adversaire,
+       round(sum((g.value->>'pv_braises_soi')::numeric), 1) as pv_braises_soi
+from public.match_reports r,
+     jsonb_each(r.conditions->'gadgets') g
+where r.conditions ? 'gadgets'
+  and g.key = case r.conditions->'gadgets'->>'joueur_local' when '0' then 'j1' else 'j2' end
+group by 1 order by matchs desc;
+```
+
+Et la preuve, sur le terrain, que les deux archives d'un match disent la même
+chose — `joueur_local` mis à part, qui diffère par construction :
+
+```sql
+-- Cohérence : 1 attendu partout. Une ligne rendue ici est un match dont les deux
+-- rapports divergent.
+select match_id, count(distinct (conditions->'gadgets') - 'joueur_local') as versions
+from public.match_reports
+where conditions ? 'gadgets'
+group by match_id
+having count(*) = 2 and count(distinct (conditions->'gadgets') - 'joueur_local') > 1;
+```
+
+Seuls les deux compteurs de fenêtre (`morts_*_apres_effet`) peuvent y apparaître,
+et c'est écrit : chaque pair date les événements à leur arrivée, et une mort qui
+tombe pile à 5 s d'un effet peut se ranger d'un côté de la fenêtre chez l'hôte et
+de l'autre chez le client, à la gigue du lien près. Toute autre clé divergente est
+un défaut.
+
+**Lire les chiffres :**
+- pour la mine, `allumages` compte aussi les mines ABATTUES — une mine touchée
+  demande l'allumage au lieu de mourir. Les mines déclenchées par un passage valent
+  **au plus** `allumages − morts_balle` : c'est un **majorant**, pas un compte. Une
+  mine abattue meurt de son embrasement 1,6 s plus tard ; si le match est archivé
+  avant — précisément le cas intéressant, une mort dans la foulée de la mine — elle
+  n'a aucune mort dans le bloc et passe pour un passage (revue du 2026-09-11). Les
+  `allumages` et les compteurs de fenêtre, eux, sont exacts ;
+- un **effet** est une pose (sauf une bobine posée éteinte), un allumage, une
+  bascule vers allumé, ou un PV de braises. Les gadgets passifs (voile, ombre,
+  leurre, suie, poussière, torche, poudre) ne sont donc vus que par leur pose, et
+  une bobine allumée depuis plus de 5 s n'ouvre plus de fenêtre : **angle mort
+  assumé** ;
+- `fenetre_s` et `version` voyagent dans le bloc : si la fenêtre ou la définition
+  d'« effet » change, les échantillons ne se mélangent pas — filtrer dessus ;
+- chaque côté porte le slug de son **gadget** (`nappe_braises`, `gresillement`…),
+  jamais celui de la classe, et aucune clé du bloc ne contient « classe ».
 
 ## Ce qui n'est pas fait
 
