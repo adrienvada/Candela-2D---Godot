@@ -41,13 +41,14 @@
 ## Pas d'ombre : la bande n'existe que du côté ouvert de chaque mur (plus un
 ## léger débord, pour que le liseré l'accroche). Elle ne traverse aucun mur.
 ##
-## **Seuls les murs INTÉRIEURS respirent** (Adrien, 2026-09-11). L'enceinte —
-## tout mur relié par ses côtés au vide qui borde la carte — reste un cadre
-## neutre ; la bande marque les obstacles, là où l'on se cache. Conséquence
-## assumée, figée par `test_mur_led` : une cloison collée à l'enceinte en fait
-## partie et ne respire pas (aucune carte livrée n'en a au 2026-09-11). Une
-## carte sans mur intérieur — la carte par défaut n'a que son enceinte — n'a
-## pas de bandeau du tout : pas de lumière posée, pas de place prise parmi les 15.
+## **Seules les faces tournées vers l'arène luisent** (Adrien, 2026-09-11 :
+## « le mur d'enceinte intérieur doit luire », pas l'extérieur). La bande
+## n'existe que sur le SOL, et son débord ne touche que les bords de mur au
+## contact du sol : la face de l'enceinte qui donne sur le vide hors carte reste
+## noire, celle qui donne sur l'arène respire comme tous les obstacles. Avant,
+## le vide comptait pour de l'ouvert : la bande s'y étendait et le liseré
+## extérieur de l'enceinte respirait. (Une première lecture de la demande avait
+## retiré l'enceinte entière ; ce n'était pas elle, c'était sa face extérieure.)
 ##
 ## **Équité en ligne** : la phase se lit sur l'horloge de manche que l'hôte recale
 ## chez le client (`rpc_sync_time`), jamais sur l'horloge propre de chaque
@@ -159,16 +160,14 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	if not est_actif() and not OS.is_debug_build():
 		return null
 
-	var murs := murs_interieurs(MapGeometry.build_grid(data, MapGeometry.Kind.WALLS),
-		MapGeometry.build_solid_grid(data))
-	if not _porte_un_mur(murs):
-		return null
+	var murs := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+	var sol := sol_de(MapGeometry.build_solid_grid(data))
 	var tuile := Vector2(CandelaTileSet.TILE_SIZE)
 	var zone := rect_monde(murs, tuile)
 	var led := MurLed.new()
 	led.name = NOM
 	led.horloge = horloge_manche
-	led.texture = texture_pour(murs)
+	led.texture = texture_pour(murs, sol)
 	led.position = zone.get_center()
 	led.texture_scale = zone.size.x / led.texture.get_width()
 	led.shadow_enabled = false
@@ -179,79 +178,22 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	parent.add_child(led)
 	return led
 
-## Les murs intérieurs seuls : l'enceinte en est retirée. `murs` et `solide`
-## viennent de `MapGeometry` (bordure comprise) ; `solide` = tout ce qui n'est pas
-## du sol, murs et vide confondus.
-##
-## Deux remplissages, chacun par les côtés (4-voisinage) : d'abord le VIDE relié
-## au bord de la grille — le dehors de la carte —, puis les MURS reliés à ce
-## dehors ; ces murs-là forment l'enceinte. Le premier ne traverse pas les murs,
-## le second ne traverse pas le vide : une fosse au milieu de l'arène n'est pas
-## le dehors, et un pilier qui la borde reste intérieur.
-static func murs_interieurs(murs: Array, solide: Array) -> Array:
-	var larg := murs.size()
-	var haut := (murs[0] as Array).size() if larg > 0 else 0
-	var dehors := {}
-	var pile: Array[Vector2i] = []
-	for x in larg:
-		for y in haut:
-			var bord := x == 0 or y == 0 or x == larg - 1 or y == haut - 1
-			if bord and solide[x][y] and not murs[x][y]:
-				dehors[Vector2i(x, y)] = true
-				pile.append(Vector2i(x, y))
-	var cotes := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	while not pile.is_empty():
-		var c: Vector2i = pile.pop_back()
-		for e in cotes:
-			var v: Vector2i = c + e
-			if v.x < 0 or v.y < 0 or v.x >= larg or v.y >= haut or dehors.has(v):
-				continue
-			if solide[v.x][v.y] and not murs[v.x][v.y]:
-				dehors[v] = true
-				pile.append(v)
-	# L'enceinte : les murs au contact du dehors (ou du bord de la grille),
-	# puis tous les murs qui leur sont reliés.
-	var enceinte := {}
-	for x in larg:
-		for y in haut:
-			if not murs[x][y]:
-				continue
-			var au_dehors := x == 0 or y == 0 or x == larg - 1 or y == haut - 1
-			for e in cotes:
-				if dehors.has(Vector2i(x, y) + e):
-					au_dehors = true
-			if au_dehors:
-				enceinte[Vector2i(x, y)] = true
-				pile.append(Vector2i(x, y))
-	while not pile.is_empty():
-		var c: Vector2i = pile.pop_back()
-		for e in cotes:
-			var v: Vector2i = c + e
-			if v.x < 0 or v.y < 0 or v.x >= larg or v.y >= haut or enceinte.has(v):
-				continue
-			if murs[v.x][v.y]:
-				enceinte[v] = true
-				pile.append(v)
+## Le sol d'une carte : tout ce que `MapGeometry.build_solid_grid()` ne tient
+## pas pour solide (murs et vide confondus). Seul le sol reçoit la bande.
+static func sol_de(solide: Array) -> Array:
 	var out: Array = []
-	for x in larg:
-		var colonne: Array[bool] = []
-		colonne.resize(haut)
-		for y in haut:
-			colonne[y] = murs[x][y] and not enceinte.has(Vector2i(x, y))
-		out.append(colonne)
+	for colonne in solide:
+		var c: Array[bool] = []
+		for v in colonne:
+			c.append(not v)
+		out.append(c)
 	return out
 
-static func _porte_un_mur(murs: Array) -> bool:
-	for colonne in murs:
-		if true in colonne:
-			return true
-	return false
-
-## La texture de la bande pour cette grille, cuite une seule fois par carte.
-static func texture_pour(murs: Array) -> ImageTexture:
-	var cle := hash(murs)
+## La texture de la bande pour ces grilles, cuite une seule fois par carte.
+static func texture_pour(murs: Array, sol: Array) -> ImageTexture:
+	var cle := hash([murs, sol])
 	if _cache_texture == null or cle != _cache_cle:
-		_cache_texture = ImageTexture.create_from_image(cuire(murs))
+		_cache_texture = ImageTexture.create_from_image(cuire(murs, sol))
 		_cache_cle = cle
 	return _cache_texture
 
@@ -300,7 +242,11 @@ static func texels_par_case(larg: int, haut: int) -> int:
 ## lisait que les huit cases voisines et mettait les motifs en cache ; à 4,5
 ## cases de portée il aurait fallu un voisinage de 11 × 11 cases, et presque
 ## chaque case de la carte en aurait eu un différent.
-static func cuire(murs: Array) -> Image:
+##
+## `sol` borne la bande : hors du sol (le vide qui borde la carte, une fosse),
+## rien ne s'allume, et le débord ne touche que les bords de mur au contact du
+## sol. C'est ce qui éteint la face de l'enceinte tournée vers le dehors.
+static func cuire(murs: Array, sol: Array) -> Image:
 	var larg := murs.size()
 	var haut := (murs[0] as Array).size() if larg > 0 else 0
 	if larg == 0 or haut == 0:
@@ -329,25 +275,27 @@ static func cuire(murs: Array) -> Image:
 			var a := 0.0
 			if murs[x / t][y / t]:
 				# Le débord fait moins d'un texel : il ne touche que l'anneau de
-				# texels du mur au contact de l'ouvert, à un demi-texel de la face.
-				if _touche_l_ouvert(murs, x, y, t, w, h):
+				# texels du mur au contact du SOL, à un demi-texel de la face.
+				if _touche_le_sol(sol, x, y, t, w, h):
 					a = debord
-			else:
+			elif sol[x / t][y / t]:
 				# Distance centre à centre au texel de mur le plus proche, moins
 				# un demi-texel : la distance à la FACE du mur.
 				a = profil(maxf(sqrt(carres[i]) - 0.5, 0.0) / t)
+			# Ni mur ni sol : le vide. Il reste noir — sans quoi la bande
+			# s'étendrait hors de la carte et la face extérieure de l'enceinte
+			# respirerait (119/255 au sommet, mesuré en jeu le 2026-09-11).
 			octets[i * 4 + 3] = roundi(a * 255.0)
 	return Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, octets)
 
-## Un texel de mur dont un voisin direct est ouvert. Hors grille = ouvert, comme
-## le vide qui borde la carte.
-static func _touche_l_ouvert(murs: Array, x: int, y: int, t: int, w: int, h: int) -> bool:
+## Un texel dont un voisin direct est du sol. Hors grille = pas du sol.
+static func _touche_le_sol(sol: Array, x: int, y: int, t: int, w: int, h: int) -> bool:
 	for e in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 		var vx: int = x + e.x
 		var vy: int = y + e.y
 		if vx < 0 or vy < 0 or vx >= w or vy >= h:
-			return true
-		if not murs[vx / t][vy / t]:
+			continue
+		if sol[vx / t][vy / t]:
 			return true
 	return false
 

@@ -1,6 +1,6 @@
 ## Test headless du bandeau LED des murs (prototype, `mur_led.gd`) : profil et
-## cuisson de la texture, repère monde, respiration, pose dans une arène, et les
-## shaders dont la bande dépend.
+## cuisson de la texture, faces tournées vers le vide, repère monde,
+## respiration, pose dans une arène, et les shaders dont la bande dépend.
 ## Lancer : godot --headless --path . --script res://tools/test_mur_led.gd
 extends SceneTree
 
@@ -11,12 +11,12 @@ func _init() -> void:
 
 	_test_profil()
 	_test_bande_autour_d_un_mur()
+	_test_faces_vers_le_vide()
 	_test_exactitude()
 	_test_repere_monde()
 	_test_respiration()
 	_test_tempo_musique()
 	_test_couleur()
-	_test_murs_interieurs()
 	_test_pose()
 	_test_intensite_par_la_couleur()
 	_test_shaders_lisent_l_energie()
@@ -45,8 +45,15 @@ func _grille(n: int, murs: Array[Vector2i]) -> Array:
 		out.append(colonne)
 	return out
 
-func _carte_livree() -> Dictionary:
-	return _carte("default.json")
+## Le sol d'une grille sans vide : tout ce qui n'est pas mur.
+func _sol_sans_vide(murs: Array) -> Array:
+	var out: Array = []
+	for colonne in murs:
+		var c: Array[bool] = []
+		for v in colonne:
+			c.append(not v)
+		out.append(c)
+	return out
 
 func _carte(fichier: String) -> Dictionary:
 	var file := FileAccess.open("res://assets/maps/" + fichier, FileAccess.READ)
@@ -56,57 +63,6 @@ func _carte(fichier: String) -> Dictionary:
 	if json.parse(file.get_as_text()) != OK:
 		return {}
 	return json.data
-
-## Seuls les murs intérieurs respirent (Adrien, 2026-09-11) : l'enceinte, reliée
-## au vide qui borde la carte, est retirée. Comptes relevés sur les cartes
-## livrées, lues en ASCII le 2026-09-11.
-func _test_murs_interieurs() -> void:
-	print("\n— Seuls les murs intérieurs")
-	for cas in [["default.json", 0], ["map_001_le_cloitre.json", 48], ["arene_circulaire.json", 44]]:
-		var data := _carte(cas[0])
-		if data.is_empty():
-			_check("%s lue" % cas[0], false)
-			continue
-		var murs := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
-		var inter := MurLed.murs_interieurs(murs, MapGeometry.build_solid_grid(data))
-		var n := 0
-		var hors_murs := 0
-		for x in inter.size():
-			for y in (inter[x] as Array).size():
-				if inter[x][y]:
-					n += 1
-					if not murs[x][y]:
-						hors_murs += 1
-		_check("%s : %d murs intérieurs" % [cas[0], cas[1]], n == cas[1], "%d" % n)
-		_check("%s : que des murs de la carte" % cas[0], hors_murs == 0)
-	# Grille de 11 : vide au bord, enceinte d'une case, un pilier isolé, une
-	# cloison collée à l'enceinte, et une fosse au milieu bordée d'un mur.
-	var n := 11
-	var murs: Array = []
-	var solide: Array = []
-	for x in n:
-		var cm: Array[bool] = []
-		var cs: Array[bool] = []
-		cm.resize(n)
-		cs.resize(n)
-		for y in n:
-			# Fosse en (6, 6), bordée par le mur (6, 7) : à deux cases de
-			# l'enceinte (ligne 9), il ne la touche pas.
-			var vide := x == 0 or y == 0 or x == n - 1 or y == n - 1 or Vector2i(x, y) == Vector2i(6, 6)
-			var mur := (x == 1 or y == 1 or x == n - 2 or y == n - 2) and not vide
-			mur = mur or Vector2i(x, y) in [Vector2i(4, 4), Vector2i(2, 3), Vector2i(3, 3), Vector2i(6, 7)]
-			cm[y] = mur and not vide
-			cs[y] = mur or vide
-		murs.append(cm)
-		solide.append(cs)
-	var inter := MurLed.murs_interieurs(murs, solide)
-	_check("pilier isolé : intérieur", inter[4][4])
-	_check("enceinte : retirée", not inter[1][1] and not inter[1][5])
-	_check("cloison collée à l'enceinte : en fait partie (choix assumé)",
-		not inter[2][3] and not inter[3][3])
-	_check("mur au bord d'une fosse intérieure : intérieur", inter[6][7])
-	_check("carte sans mur intérieur : aucun bandeau posé",
-		MurLed.poser(_carte("default.json"), Node2D.new(), Callable()) == null)
 
 ## Alpha au point (cx + u, cy + v) de la grille, u et v en fraction de case.
 func _alpha(img: Image, t: int, cx: int, cy: int, u: float, v: float) -> float:
@@ -129,7 +85,7 @@ func _test_profil() -> void:
 func _test_bande_autour_d_un_mur() -> void:
 	print("\n— Bande autour d'un mur isolé")
 	var murs := _grille(13, [Vector2i(6, 6)])
-	var img := MurLed.cuire(murs)
+	var img := MurLed.cuire(murs, _sol_sans_vide(murs))
 	var t := MurLed.texels_par_case(13, 13)
 	_check("taille = cases × texels", img.get_size() == Vector2i(13 * t, 13 * t),
 		str(img.get_size()))
@@ -145,6 +101,66 @@ func _test_bande_autour_d_un_mur() -> void:
 		"%.3f" % debord)
 	_check("cœur du mur éteint", _alpha(img, t, 6, 6, 0.5, 0.5) == 0.0)
 
+## Demande d'Adrien (2026-09-11) : « le mur d'enceinte intérieur doit luire »,
+## pas l'extérieur. La face de l'enceinte qui donne sur le vide hors carte reste
+## noire ; celle qui donne sur l'arène respire, comme tout obstacle. Au sommet,
+## avant ce correctif, la face extérieure montait à 119/255 en jeu contre 24
+## pour l'intérieure : le vide comptait pour de l'ouvert.
+func _test_faces_vers_le_vide() -> void:
+	print("\n— Faces tournées vers le vide : éteintes")
+	# Grille de 11 : vide au bord (anneau 0), enceinte (anneau 1), sol dedans,
+	# un pilier en (5, 5) et une fosse en (7, 7).
+	var n := 11
+	var murs: Array = []
+	var sol: Array = []
+	for x in n:
+		var cm: Array[bool] = []
+		var cs: Array[bool] = []
+		cm.resize(n)
+		cs.resize(n)
+		for y in n:
+			var vide := x == 0 or y == 0 or x == n - 1 or y == n - 1 or Vector2i(x, y) == Vector2i(7, 7)
+			var mur := not vide and (x == 1 or y == 1 or x == n - 2 or y == n - 2 or Vector2i(x, y) == Vector2i(5, 5))
+			cm[y] = mur
+			cs[y] = not vide and not mur
+		murs.append(cm)
+		sol.append(cs)
+	var img := MurLed.cuire(murs, sol)
+	var t := MurLed.texels_par_case(n, n)
+	_check("vide contre la face extérieure : noir", _alpha(img, t, 0, 5, 0.9, 0.5) == 0.0,
+		"%.3f" % _alpha(img, t, 0, 5, 0.9, 0.5))
+	_check("face extérieure de l'enceinte : noire", _alpha(img, t, 1, 5, 0.0, 0.5) == 0.0,
+		"%.3f" % _alpha(img, t, 1, 5, 0.0, 0.5))
+	_check("face intérieure de l'enceinte : le liseré respire",
+		_alpha(img, t, 1, 5, 0.99, 0.5) > 0.0, "%.3f" % _alpha(img, t, 1, 5, 0.99, 0.5))
+	_check("sol au pied de l'enceinte : éclairé", _alpha(img, t, 2, 5, 0.2, 0.5) > 0.5,
+		"%.3f" % _alpha(img, t, 2, 5, 0.2, 0.5))
+	_check("pilier : éclairé", _alpha(img, t, 4, 5, 0.9, 0.5) > 0.5)
+	_check("fosse intérieure : noire", _alpha(img, t, 7, 7, 0.5, 0.5) == 0.0)
+	for fichier in ["default.json", "map_001_le_cloitre.json"]:
+		var data := _carte(fichier)
+		if data.is_empty():
+			_check("%s lue" % fichier, false)
+			continue
+		var m := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+		var s := MurLed.sol_de(MapGeometry.build_solid_grid(data))
+		var carte := MurLed.cuire(m, s)
+		var tc := carte.get_width() / m.size()
+		var allume_hors_sol := 0
+		var allume_sol := 0
+		for x in carte.get_width():
+			for y in carte.get_height():
+				if carte.get_pixel(x, y).a == 0.0:
+					continue
+				var c := Vector2i(x / tc, y / tc)
+				if s[c.x][c.y]:
+					allume_sol += 1
+				elif not m[c.x][c.y]:
+					allume_hors_sol += 1
+		_check("%s : du sol allumé" % fichier, allume_sol > 0)
+		_check("%s : rien d'allumé dans le vide" % fichier, allume_hors_sol == 0,
+			"%d texels" % allume_hors_sol)
+
 ## La texture doit valoir le profil de la distance au mur le plus proche,
 ## calculée ici en force brute sur TOUS les murs — ce qui attrape une transformée
 ## fausse comme un voisinage trop court. Loin de la face, l'écart doit être
@@ -152,24 +168,25 @@ func _test_bande_autour_d_un_mur() -> void:
 ## pour une tolérance fine, on y vérifie seulement l'encadrement.
 func _test_exactitude() -> void:
 	print("\n— Exactitude (force brute)")
-	var fixtures := {
-		"L et piliers": _grille(20, [Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
-			Vector2i(2, 3), Vector2i(2, 4), Vector2i(12, 10), Vector2i(12, 11),
-			Vector2i(6, 15), Vector2i(17, 4)]),
-	}
-	var data := _carte_livree()
+	var murs_l := _grille(20, [Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2),
+		Vector2i(2, 3), Vector2i(2, 4), Vector2i(12, 10), Vector2i(12, 11),
+		Vector2i(6, 15), Vector2i(17, 4)])
+	var fixtures := {"L et piliers": [murs_l, _sol_sans_vide(murs_l)]}
+	var data := _carte("default.json")
 	_check("carte livrée lue", not data.is_empty())
 	if not data.is_empty():
-		fixtures["carte livrée"] = MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+		fixtures["carte livrée"] = [MapGeometry.build_grid(data, MapGeometry.Kind.WALLS),
+			MurLed.sol_de(MapGeometry.build_solid_grid(data))]
 	for nom in fixtures:
-		var murs: Array = fixtures[nom]
+		var murs: Array = fixtures[nom][0]
+		var sol: Array = fixtures[nom][1]
 		var liste: Array[Vector2] = []
 		for ix in murs.size():
 			for iy in (murs[ix] as Array).size():
 				if murs[ix][iy]:
 					liste.append(Vector2(ix, iy))
 		var debut := Time.get_ticks_msec()
-		var img := MurLed.cuire(murs)
+		var img := MurLed.cuire(murs, sol)
 		print("    %s : cuisson %d ms pour %s px" % [nom, Time.get_ticks_msec() - debut, img.get_size()])
 		var t := img.get_width() / murs.size()
 		var pas := 1 if murs.size() <= 20 else 3
@@ -177,7 +194,7 @@ func _test_exactitude() -> void:
 		var hors_cadre := 0
 		for x in range(0, img.get_width(), pas):
 			for y in range(0, img.get_height(), pas):
-				if murs[x / t][y / t]:
+				if not sol[x / t][y / t]:
 					continue
 				var p := Vector2((x + 0.5) / t, (y + 0.5) / t)
 				var d := INF
@@ -230,14 +247,15 @@ func _test_couleur() -> void:
 	_check("chaude : rouge au-dessus du bleu", MurLed.COULEUR.r > MurLed.COULEUR.b)
 
 func _test_pose() -> void:
-	print("\n— Pose dans une arène (le cloître : la carte par défaut n'a que son enceinte)")
-	var data := _carte("map_001_le_cloitre.json")
-	_check("cloître lu", not data.is_empty())
+	print("\n— Pose dans une arène")
+	var data := _carte("default.json")
+	_check("carte par défaut lue", not data.is_empty())
 	if data.is_empty():
 		return
 	var arene := Node2D.new()
 	var led := MurLed.poser(data, arene, Callable())
-	_check("posée en build debug", led != null)
+	_check("posée en build debug, carte par défaut comprise (face intérieure de l'enceinte)",
+		led != null)
 	if led == null:
 		arene.free()
 		return
@@ -255,7 +273,8 @@ func _test_pose() -> void:
 	var led2 := MurLed.poser(data, arene, Callable())
 	_check("même carte : texture reprise du cache, pas recuite",
 		led2.texture == texture, "%d ms" % (Time.get_ticks_msec() - debut))
-	var autre := MurLed.texture_pour(_grille(9, [Vector2i(4, 4)]))
+	var autre_murs := _grille(9, [Vector2i(4, 4)])
+	var autre := MurLed.texture_pour(autre_murs, _sol_sans_vide(autre_murs))
 	_check("autre carte : autre texture", autre != texture)
 	var n := 0
 	for enfant in arene.get_children():

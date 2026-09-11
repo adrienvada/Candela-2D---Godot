@@ -17805,21 +17805,29 @@ plus `_horloge_led()` :
   du tempo suit `AudioManager.BPM`. Le tempo seulement : la
   phase n'est pas alignée sur le premier temps de la musique.
 
-**Seuls les murs intérieurs respirent** (Adrien, 2026-09-11 : « que les murs
-intérieurs, pas les murs extérieurs »). L'enceinte — tout mur relié par ses
-côtés au vide qui borde la carte — reste un cadre neutre ; la bande marque les
-obstacles, là où l'on se cache. Deux remplissages par les côtés dans
-`MurLed.murs_interieurs()` : le vide relié au bord de la grille, puis les murs
-reliés à ce vide ; une fosse au milieu de l'arène n'est pas le dehors. Les six
-cartes livrées, lues en ASCII, ont toutes une enceinte épaisse (2-3 cases) et
-des obstacles détachés : le cloître garde 48 murs intérieurs, l'arène
-circulaire 44, **la carte par défaut aucun — elle n'a que son enceinte, donc
-plus de bandeau du tout** (pas de lumière posée). **Conséquence assumée**, figée
-par `test_mur_led` : une cloison collée à l'enceinte en fait partie et ne
-respire pas — aucune carte livrée n'en a, une carte de joueur peut en avoir.
-Mesuré au banc sur les vraies données du cloître, au sommet : sol au pied de
-l'enceinte **0**, au pied d'un pilier **19** ; liseré de l'enceinte **0**, d'un
-pilier **21**.
+**Seules les faces tournées vers l'arène luisent** (Adrien, 2026-09-11 : « il
+faut que le mur intérieur luise, mais pas le mur extérieur. Mais le mur
+d'enceinte intérieur doit luire »). La bande n'existe que sur le **sol**, et son
+débord ne touche que les bords de mur **au contact du sol** : la face de
+l'enceinte qui donne sur le vide hors carte reste noire, celle qui donne sur
+l'arène respire comme tout obstacle. Avant, le vide comptait pour de l'ouvert :
+la bande s'y étendait, et **la face extérieure de l'enceinte montait à 119/255
+au sommet, contre 24 pour l'intérieure** (mesuré en jeu, plan `duel`) — c'était
+le trait qu'Adrien voyait. Une fosse au milieu de l'arène reste noire elle aussi.
+Mesuré après correction, même plan, au sommet : **face extérieure 119 → 0**,
+face intérieure 24 → 24, sol 30 / 24 / 10 inchangé à 0-18 / 18-45 / 45-105 px —
+seul le trait extérieur disparaît. Au banc sur le cloître : liseré extérieur de
+l'enceinte 0, intérieur 48, pilier 21 ; sol au pied de l'enceinte 30, d'un
+pilier 19.
+
+⚠️ **Une première lecture de la demande avait retiré l'enceinte ENTIÈRE**
+(commit `0a2dd03`) : « les murs extérieurs » compris comme « le mur d'enceinte ».
+Adrien : « là je ne vois plus rien sur la carte par défaut » — elle n'a que son
+enceinte. Ce qu'il désignait était la face extérieure, que ce document signalait
+déjà dans « Pas vérifié » (« le liseré extérieur respire ») sans que la session
+fasse le rapprochement. **Quand une demande nomme « extérieur » ou
+« intérieur », demander : la face, ou le mur ?** Le tri enceinte/intérieur a
+été retiré plutôt que gardé « au cas où ».
 
 **Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
 en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction `f` du
@@ -17878,9 +17886,9 @@ quel instant elle a été prise.
 **Pas vérifié** : un vrai joueur collé au mur en jeu (aucun plan ne le met en
 scène ; le chiffre vient du banc) ; la cadence (`bench_framerate` non passé — la
 lumière couvre toute la carte, donc tous les items) ; deux machines ; l'éditeur
-de cartes, qui n'a pas le bandeau. Et la face extérieure des murs d'enceinte
-s'éclaire aussi (le vide hors carte compte comme ouvert) — invisible au sol
-puisqu'il n'y en a pas, mais le liseré extérieur respire.
+de cartes, qui n'a pas le bandeau. (La face extérieure de l'enceinte, qui
+respirait parce que le vide comptait pour de l'ouvert, est éteinte depuis le
+2026-09-11 — voir plus haut.)
 
 **Ce qu'il faut d'Adrien** : jouer avec, puis trancher — garder ou non ; si oui,
 le dosage (et en particulier la part du cycle où l'adversaire est révélé) et la
