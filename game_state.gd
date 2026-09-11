@@ -958,9 +958,9 @@ func rebuild_arena() -> void:
 	# Sans les occluders, la torche traverse les murs et le jeu perd son sujet.
 	MapGeometry.build_collisions(data, arena)
 
-	# Prototype « bandeau LED » (2026-09-10) : une lumière unique, cuite depuis
-	# la grille des murs, qui respire sur l'horloge de manche. Inerte sans
-	# `--led-murs` (ou F7 en build debug) — voir mur_led.gd.
+	# Bandeau LED des murs (2026-09-10, allumé pour tout le monde le 2026-09-11) :
+	# une lumière unique, cuite depuis la grille des murs, qui respire sur
+	# l'horloge de manche. `--sans-led-murs` l'éteint — voir mur_led.gd.
 	MurLed.poser(data, arena, _horloge_led)
 
 	# V5.8 — Rendu Shimmer et spécularité du liseré des murs sous la torche.

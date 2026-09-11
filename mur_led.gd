@@ -1,17 +1,18 @@
-## MurLed — le bandeau lumineux qui respire le long des murs. PROTOTYPE.
+## MurLed — le bandeau lumineux qui respire le long des murs.
 ##
 ## Demande d'Adrien (2026-09-10) : « une légère bande de lumière faible à rythme
 ## lent, comme une respiration, qui révèle ce qui est proche des murs — comme si
 ## les murs avaient un bandeau LED tout le long d'eux ». Ce n'est PAS un décor :
 ## la bande éclaire le sol ET les joueurs, donc elle rend périodiquement visibles
-## les planques le long des murs. Elle reste derrière un drapeau tant qu'Adrien
-## ne l'a pas jugée en jeu.
+## les planques le long des murs.
 ##
-## Activation : `--led-murs` au lancement (tout build), ou F7 en cours de partie
-## (build debug seulement). `--led-murs-fige[=f]` la tient à la fraction `f` du
-## sommet (1 par défaut), sans respirer — pour juger l'aspect ou photographier.
-## Sans drapeau, rien n'est créé hors debug ; en debug la lumière existe, pour
-## que F7 puisse l'allumer, mais reste `enabled = false`.
+## **Allumé pour tout le monde depuis le 2026-09-11** (Adrien : « pour tout le
+## monde »), après un essai derrière le drapeau `--led-murs` — devenu inutile,
+## et sans effet s'il est encore passé. `--sans-led-murs` l'éteint (mesures,
+## comparaisons de cadence) : hors debug, rien n'est alors créé. En build debug,
+## F7 le bascule en cours de partie. `--led-murs-fige[=f]` le tient à la
+## fraction `f` du sommet (1 par défaut), sans respirer — pour juger l'aspect ou
+## photographier.
 ##
 ## ⚠️ **L'intensité passe par la COULEUR, jamais par l'énergie.** C'est le défaut
 ## qu'Adrien a vu au premier essai : « ça fait apparaître les murs comme des
@@ -58,7 +59,8 @@ class_name MurLed
 extends PointLight2D
 
 const NOM := "MurLed"
-const DRAPEAU := "--led-murs"
+## Éteint le bandeau pour tout le processus.
+const DRAPEAU_SANS := "--sans-led-murs"
 const DRAPEAU_FIGE := "--led-murs-fige"
 
 # --- Résolution de la texture ------------------------------------------------
@@ -144,7 +146,7 @@ static func est_actif() -> bool:
 				_fige = clampf(float(arg.get_slice("=", 1)), 0.0, 1.0)
 		if not OS.is_debug_build():
 			_fige = -1.0
-		_actif = DRAPEAU in args or _fige >= 0.0
+		_actif = not (DRAPEAU_SANS in args) or _fige >= 0.0
 	return _actif
 
 ## Unique point d'entrée, appelé par `rebuild_arena()` après les collisions.

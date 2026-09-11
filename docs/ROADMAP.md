@@ -18269,12 +18269,36 @@ est une absence de résultat de recherche, pas une preuve.
 
 ---
 
-## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — FUSIONNÉ dans `main` le 2026-09-11, toujours derrière son drapeau
+## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — FUSIONNÉ et ALLUMÉ POUR TOUT LE MONDE le 2026-09-11
 
 **Fusionné et poussé le 2026-09-11 sur demande d'Adrien** (« c'est pas mal du
-tout » après essai, puis « commit, pull, pousse, fusionne »). Le bandeau reste
-**inerte sans `--led-murs`** : l'allumer par défaut chez les joueurs n'a pas été
-demandé, c'est une décision à part — et elle pèse, puisque la bande révèle.
+tout » après essai, puis « commit, pull, pousse, fusionne »), d'abord derrière
+le drapeau `--led-murs`. **Puis allumé pour tout le monde le même jour** —
+Adrien : « pour tout le monde ». C'est une règle de jeu, pas un réglage
+d'image : toutes les ~8,5 s, ce qui longe un mur intérieur se révèle, pour les
+deux joueurs au même instant. `--sans-led-murs` l'éteint (mesures, comparaisons
+de cadence) ; `--led-murs` n'a plus d'effet.
+
+**Cadence, mesurée avant d'allumer pour tous** (`bench_framerate`, le vrai jeu,
+bandeau tenu au sommet contre `--sans-led-murs`, 30 s chacun) : **aucun écart
+mesurable**. Au second plan : 4349 / 4348 images, 1 % bas 143 / 143. Au premier
+plan, relevé perturbé : médiane 45 / 45, 1 % bas 28 / 31, dans le bruit l'un de
+l'autre. **Ce qui manque, et c'est dit comme tel : un relevé au premier plan,
+machine au calme.** La cible (1 % bas ≥ 60) n'est donc pas re-vérifiée ici au
+premier plan ; le bandeau, une lumière de plus, n'y change rien de mesurable.
+À refaire à la main : `godot --path . res://tools/bench_framerate.tscn --
+--seconds 30`, puis la même chose avec `--sans-led-murs`.
+
+⚠️ Deux pièges payés en route, et le premier est de ma main. (1) **Rappeler la
+fenêtre au premier plan toutes les 0,5 s** (`osascript`) pour la garder devant
+sabote exactement ce qu'on mesure : chaque changement de focus est un hoquet, et
+CLAUDE.md dit déjà que ce sont ces transitions qui décident du 1 % bas. Le
+rappel UNIQUE, lui, n'a pas tenu — le banc est resté au second plan. (2) **Un lot
+de tests lancé en même temps par une autre session** a fait échouer deux
+scénarios à deux instances par dépassement du chien de garde (code 143), et
+écrasé la cadence. Rejoué seul, machine revenue au calme : tout passe. Avant de
+lire un rouge ou une cadence, regarder qui d'autre fait tourner Godot
+(`pgrep -f Godot.app` puis `lsof -d cwd` par PID).
 
 *« J'aimerais que les murs génèrent une légère bande de lumière faible à rythme
 lent, comme une respiration, qui révèle ce qui est proche des murs
@@ -18383,8 +18407,8 @@ dosage à revoir en jouant. Deux conséquences à savoir : `shimmer_murs` n'a pl
 rien à dessiner sur les murs, son correctif d'énergie reste juste mais sans
 effet visible ; et **la vision de proximité passe désormais par le contour
 d'encre**, qui suit l'énergie tel quel — le halo (0,8) l'éclaire donc à 0,8 et
-non « comme avant » ; non mesuré ici, à regarder si le mur voisin paraît
-faible.
+non « comme avant » ; non mesuré — et **Adrien a tranché le 2026-09-11 :
+« il éclaire assez »**. Point clos : rien à régler sur `mur_encre`.
 
 ⚠️ **Une première lecture de la demande avait retiré l'enceinte ENTIÈRE**
 (commit `0a2dd03`) : « les murs extérieurs » compris comme « le mur d'enceinte ».
@@ -18395,9 +18419,9 @@ fasse le rapprochement. **Quand une demande nomme « extérieur » ou
 « intérieur », demander : la face, ou le mur ?** Le tri enceinte/intérieur a
 été retiré plutôt que gardé « au cas où ».
 
-**Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
-en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction `f` du
-sommet (1 par défaut). Constantes en tête de `mur_led.gd` : `PIC` (facteur de
+**Pour le couper** : `godot --path . -- --sans-led-murs` ; **F7** l'allume ou
+l'éteint en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction
+`f` du sommet (1 par défaut). Constantes en tête de `mur_led.gd` : `PIC` (facteur de
 couleur, 1,2), `FACE`, `RETRAIT`, `PORTEE`, `PERIODE`.
 
 **Mesuré au pixel, en jeu** (photographe, plan `duel` ; référence prise SANS
