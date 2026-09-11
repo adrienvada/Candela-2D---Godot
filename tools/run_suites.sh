@@ -196,7 +196,7 @@ CANDELA_PORT=$(( 20000 + $(printf '%s' "$MAISON_DU_LOT" | cksum | cut -d' ' -f1)
 export CANDELA_PORT
 
 SUITES=(test_liaisons test_icones_editeur
-	test_map_codec test_map_geometry test_arena_build test_editor_tools
+	test_map_codec test_map_geometry test_mur_led test_arena_build test_editor_tools
         test_classes test_tir_et_reserves test_match_format test_pause_menu test_menu_hub test_comic_panel test_audio_settings
         test_match_history_view test_effect_policy test_screen_leaderboard
         test_screen_profile test_screen_historique test_arsenal test_matchmaking test_screen_matchmaking test_screen_audio

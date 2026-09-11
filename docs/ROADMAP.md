@@ -2425,6 +2425,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | Décision | Raison |
 |---|---|
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
+| **Les murs et l'adversaire suivent l'énergie des lampes** (2026-09-10, Adrien) | *« Corrige d'abord le point 2, que je puisse me rendre compte de l'effet LED avec des éclairages plus réalistes et fluides. »* `shimmer_murs.gdshader` et `player_enemy_light.gdshader` lisaient `LIGHT_COLOR` sans `LIGHT_ENERGY` ; or les masques de lumière du jeu sont blancs, la forme dans l'alpha, l'intensité **seulement** dans l'énergie. Toute lampe les allumait donc d'un bloc (constat de la session « bandeau LED », mesures détaillées par la session « intelligent-lovelace », branche `claude/intelligent-lovelace-4fd4d2`, `9f71fa5`, section « Pièges connus » de SA feuille de route). **Le liseré est normalisé et plafonné** (`× min(LIGHT_ENERGY / 0,8 ; 1)`) plutôt que multiplié tel quel — tel quel, il aurait été ×2,3 sous la torche, donc saturé. **La référence est la vision de proximité** : le halo que chaque joueur porte autour de lui (`ambient_light`, 0,8, qui n'éclaire que la vue de son porteur), vérifiée contre `player.gd` par `test_mur_led`. **Elle a d'abord été la torche (2,5)**, le 2026-09-10 : fondus longs et murs qui vacillaient au tir, mais le halo ne soulignait plus le mur voisin qu'au tiers (148 → 47). **Adrien a tranché le 2026-09-11 : « garder la proximité »** — ce halo sert au joueur à se repérer dans son environnement immédiat, il ne doit rien perdre. Le plafond vient des lampes plus fortes — fusée pleine 3,0, mine 6,0 — qui sans lui auraient rendu l'arête plus forte qu'avant : **aucune lampe n'éclaire le liseré plus qu'avant ; seules celles plus faibles que le halo s'atténuent, jusqu'à 0.** Mesuré au banc isolé, liseré avant → après : torche de 6,0 à 1,0 **~182 → ~182** (tir compris), 0,5 **183 → 116**, 0,1 **182 → 23**, 0 **0 → 0** ; halo de proximité au mur **148 → 148**. **Ce qui change donc en jouant** : une lampe à 0 mais allumée (grésillement) n'éclaire plus le mur ; le « mauvais contact » (lampe à 0,15-0,55) l'atténue ; la fin des fondus devient progressive (extinction de torche, fusée entre deux sursauts, braises qui s'éteignent). Tout le reste est inchangé. (Version torche, retirée : liseré 147 / 110 au tir, 73 à 1,0.) **Le corps adverse est un commit SÉPARÉ, à confirmer par Adrien** : la décision a été prise sur une explication qui le citait (« un adversaire touché par une lumière faible serait moins visible ») sans dire assez clairement que c'est un **changement d'équilibre**. Mesuré : adversaire **112 à toute énergie, 0 compris → 112 / 112 / 112 / 44 / 0** pour 2,5 / 1 / 0,5 / 0,1 / 0 — sous la torche rien ne bouge (saturé dès ~0,26), une torche à 0 mais allumée (grésillement du Parasite) ne le dessine plus, et **la rétrodiffusion des classes furtives** (`backlight_multiplier = 0.1`, arbalète et spectre) **révèle enfin moins son porteur** — ce réglage n'avait jusqu'ici aucun effet sur ce que voit l'adversaire. **Confirmé par Adrien le 2026-09-11** pour le grésillement : *« les lumières ne doivent pas éclairer si elles sont à 0 dans leur grésillement »*. Il a aussi précisé que **la lueur de chaque joueur est sa vision de proximité et ne doit jamais le révéler à l'ennemi** — ce que le code fait déjà : `ambient_light` n'éclaire que les calques de son porteur (masques 16 / 32), jamais le sprite adverse. Ce qui révèle, c'est la **rétrodiffusion**, le reflet de la torche sur le corps (`body_light`, allumée avec la torche, énergie proportionnelle à la sienne) : elle suit maintenant sa force, et donc le `backlight_multiplier` des classes furtives. ⚠️ L'explication donnée à Adrien le 2026-09-10 appelait cette rétrodiffusion « la petite lueur autour de chaque joueur » : **c'est ce mot qui a créé le malentendu** — deux lumières distinctes portaient un seul nom. **Pas touchés** : `player_rim_light.gdshader` et `blood_shader.gdshader`, même motif, hors de la décision — listés comme exceptions dans `test_mur_led`, qui refuse tout NOUVEAU `light()` sans énergie. **`shimmer_murs.gdshader` est retiré le 2026-09-11** (refonte roman graphique, second chantier, lot N) : la tuile de mur étant noire, il ne dessinait plus rien, normalisation comprise. Le contour des murs (`mur_encre.gd`) est éclairé par défaut, donc proportionnel à l'énergie SANS plafond ni normalisation : sous le halo de proximité (0,8) il vaut 0,8 / 2,5 de ce qu'il vaut sous la torche, et la mine à 6,0 le surexpose. **La décision « garder la proximité » y est donc à remesurer** — un matériau sur `mur_encre` la rétablirait ; point ouvert, signalé par la session LED, à la main d'Adrien. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
 | **La fusée éclairante éblouit, par proximité** (2026-09-09) | Application de la décision « toutes les sources de lumière peuvent éblouir ». Referme la ligne « Non fait, à savoir : la fusée n'alimente pas l'éblouissement » — la lumière la plus violente du jeu n'aveuglait personne. ⚠️ **Son rayon d'aveuglement (400 px) est volontairement PLUS PETIT que son empreinte de rendu (440 px)** : elle éclaire plus loin qu'elle n'aveugle. Sans ce bornage, le MAX l'aurait choisie presque toujours — la torche cesse d'éblouir au-delà de ~400 px (mesuré : 0,81 à 140 px dans l'axe, 0,00 à 460) — et la torche aurait cessé d'être une menace. On s'éblouit avec sa propre fusée : elle est une source POSÉE, pas portée, et on ne la lance pas à ses pieds impunément. Un rejeu n'éblouit personne, et le filtre est dans la boucle des sources, jamais dans `Fusee` — dont le groupe doit rester non filtré pour l'occultation des sprites et des sons. |
@@ -18043,7 +18044,7 @@ décision suit.
 
 | Lot | Quoi | Ce qui change, dans quel sens | État |
 |---|---|---|---|
-| N | Nettoyage | `shimmer_murs.gdshader` **retiré** : depuis que la tuile de mur est noir pur (lot murs), sa luminance vaut zéro et le fragment sortait `vec4(0)` sur chaque pixel — un shader compilé, posé sur trois calques, qui ne dessinait rien. `CandelaTileSet.creer_materiau_mur()` et sa pose dans `game_state.gd` partent avec lui. `poussiere_faisceau.gdshader` retiré (aucun utilisateur hors d'une suite qui vérifiait qu'il compile ; le `poussiere_faisceau` du code est un curseur homonyme). `cadre_hud.png` retiré (orphelin depuis le panneau vectoriel du HUD). Trois commentaires périmés corrigés (bandeau de match « coins arrondis », miniatures « esthétique néon », voile « scanline » qui n'a jamais été qu'un aplat). `tools/test_arena_lighting.gd` réécrit : il rougit si l'un des deux shaders revient ou si un matériau est reposé sur les murs. ⚠️ **La session « Murs avec bande LED respirante » modifie `light()` de `shimmer_murs` sur sa branche** (`ENERGIE_REFERENCE`) : prévenue par message le 2026-09-11 — son intention (le liseré suit l'énergie des lampes) est satisfaite par construction par `mur_encre.gd`, un CanvasItem ordinaire que chaque Light2D éclaire à son énergie. | ✅ |
+| N | Nettoyage | `shimmer_murs.gdshader` **retiré** : depuis que la tuile de mur est noir pur (lot murs), sa luminance vaut zéro et le fragment sortait `vec4(0)` sur chaque pixel — un shader compilé, posé sur trois calques, qui ne dessinait rien. `CandelaTileSet.creer_materiau_mur()` et sa pose dans `game_state.gd` partent avec lui. `poussiere_faisceau.gdshader` retiré (aucun utilisateur hors d'une suite qui vérifiait qu'il compile ; le `poussiere_faisceau` du code est un curseur homonyme). `cadre_hud.png` retiré (orphelin depuis le panneau vectoriel du HUD). Trois commentaires périmés corrigés (bandeau de match « coins arrondis », miniatures « esthétique néon », voile « scanline » qui n'a jamais été qu'un aplat). `tools/test_arena_lighting.gd` réécrit : il rougit si l'un des deux shaders revient ou si un matériau est reposé sur les murs. ⚠️ **La session « Murs avec bande LED respirante » modifie `light()` de `shimmer_murs` sur sa branche** (`ENERGIE_REFERENCE`) : prévenue par message le 2026-09-11 ; sa branche est ENTRÉE dans `main` (325e324) avant la fusion de celle-ci, et la fusion a été tranchée avec son accord : shader supprimé, le bloc de `test_mur_led` qui lisait `ENERGIE_REFERENCE` retiré, la ligne « Les murs et l'adversaire suivent l'énergie des lampes » des décisions actées complétée. ⚠️ Ce que le retrait change : `mur_encre.gd` suit l'énergie des lampes SANS le plafond ni la normalisation sur 0,8 que le shader portait — sous le halo de proximité le contour vaut 0,8 / 2,5 de sa valeur sous la torche, la mine à 6,0 le surexpose. La décision « garder la proximité » du 2026-09-11 est donc à remesurer sur le contour ; un matériau sur `mur_encre` la rétablirait. Point ouvert, à la main d'Adrien. | ✅ |
 | H | Cadre VHS et halos néon | Le cadre de killcam était un 9-patch de moniteur (`cadre_vhs.png`, coins arrondis, liseré flou) autour d'un rejeu devenu planche dessinée : remplacé par le `CadrePhoto` de l'estampe de kill (filet en retrait, repères de coupe), `HALOGENE` à 0,45 — killcam et gel fatal portent désormais le même cadre. Les trois halos pulsés de l'interface (`shadow_size` animé de 6 à 16 px) retirés : anneau de focus (`NeonFocusRing`), curseur virtuel de manette (le disque flou sous la flèche), tuile sélectionnée de la galerie. La bordure garde sa respiration de teinte : un trait dit « ici » sans irradier. | ✅ |
 | 1 | Le sol | Les dalles peintes (photo de béton cuite par `fabrique_tuiles`, plus un grain procédural) deviennent des dalles DESSINÉES dans `candela_tileset.gd` : deux aplats aux luminances mesurées des dalles peintes (0,148 et 0,178 — le damier garde exactement son contraste), un joint d'encre d'un pixel sur les quatre bords (sur les quatre parce qu'`orientation()` retourne les tuiles dans les huit sens), deux ou trois fissures au trait noir placées par hachage de la graine, un semis de pores. Aucun reflet clair : la torche fait la lumière. Les fichiers `assets/tuiles/sol*_faible_1.png` restent pour le banc `apercu_matiere` qui les compare ; le jeu ne les charge plus. ⚠️ Un premier découpage a emporté `orientation()` avec le chargeur de tuiles peintes — trois suites l'ont dit à la seconde. | ✅ rendu envoyé |
 | 2 | L'écho au sol du tir | Disque ambre de 200 px à 1,2 d'énergie qui saturait l'éclat dessiné (question ouverte du premier chantier) : ramené à **130 px et 0,7** (`Player.ECHO_AU_SOL_EMPREINTE` / `_ENERGIE`). Le masque encré ne change pas, la pénalité d'éblouissement ne lit pas cette lumière. | ✅ rendu envoyé |
@@ -18298,6 +18299,199 @@ Ce plan est écrit depuis une lecture du dépôt, sans Godot ni fenêtre dans
 l'environnement de la session. **Aucune mesure nouvelle n'a été prise** ; tous
 les chiffres viennent des relevés déjà consignés ici. L'absence d'écran d'aide
 est une absence de résultat de recherche, pas une preuve.
+
+---
+
+## Chantier — le bandeau LED des murs (inscrit le 2026-09-10) — FUSIONNÉ dans `main` le 2026-09-11, toujours derrière son drapeau
+
+**Fusionné et poussé le 2026-09-11 sur demande d'Adrien** (« c'est pas mal du
+tout » après essai, puis « commit, pull, pousse, fusionne »). Le bandeau reste
+**inerte sans `--led-murs`** : l'allumer par défaut chez les joueurs n'a pas été
+demandé, c'est une décision à part — et elle pèse, puisque la bande révèle.
+
+*« J'aimerais que les murs génèrent une légère bande de lumière faible à rythme
+lent, comme une respiration, qui révèle ce qui est proche des murs
+régulièrement. »* Prototype demandé par Adrien, **derrière un drapeau** : ce
+n'est pas une décision actée, et rien ne change pour qui lance le jeu sans lui.
+
+**Pourquoi ce n'est pas un décor, et donc pourquoi c'est à Adrien de trancher.**
+La bande éclaire le sol ET les joueurs. Or on longe les murs en permanence pour
+se cacher : elle rend ces planques visibles à intervalle régulier. Elle crée un
+tempo (coller au mur au creux, s'en méfier au sommet) — équitable parce que
+symétrique et prévisible. Mais c'est la première lumière du jeu qui ne vient
+d'aucun geste de joueur : elle donne de l'information gratuitement. Même nature
+d'arbitrage que le sang auto-éclairé (« Décisions actées », 2026-09-10).
+
+### ⚠️ Premier essai d'Adrien : « les murs apparaissent comme des traits blancs d'un coup, puis s'éteignent »
+
+La première version dosait la respiration par l'**énergie** de la lumière. Or le
+liseré (`shimmer_murs.gdshader`) et l'adversaire (`player_enemy_light.gdshader`)
+ont un `light()` propre qui lit `LIGHT_COLOR` **sans jamais le multiplier par
+`LIGHT_ENERGY`**. Mesuré au banc isolé (fond noir, vraies tuiles, vrai matériau
+de mur, un sprite au shader adverse) : énergie 0,05 / 0,20 / 0,50 → liseré
+**169 / 169 / 167**/255, adversaire **60 / 60 / 60** ; seul le sol, rendu par
+l'éclairage par défaut, suivait. La respiration n'existait que comme un
+interrupteur — allumée dès `enabled`, noire au creux. **L'intensité passe
+désormais par la couleur, énergie fixe à 1** ; les trois suivent, et
+`test_mur_led` garde ce choix. Le défaut des deux shaders touche toute lumière
+dont on anime l'énergie, torche comprise : **signalé, pas corrigé** — ce n'est
+pas un correctif neutre, il change l'aspect des murs sous la torche.
+
+**Et la première vérification ne pouvait pas le voir.** Sa photo « éteinte »
+avait été prise avec `--led-murs` en pleine manche : la bande y respirait déjà,
+à faible énergie, donc liseré plein (98/255). Comparer « sommet » à cette
+référence ne montrait qu'un sol à peine plus clair. Une référence « sans
+l'effet » se prend **sans le drapeau**, pas avec l'effet supposé au repos.
+La phrase « écart maximal 34 sur le liseré », écrite ici la première fois,
+venait de cette fausse référence.
+
+**Ce qui est fait** — `mur_led.gd` (créé), `tools/test_mur_led.gd` (créé, dans
+`run_suites.sh`), et dans `game_state.gd` un appel en fin de `rebuild_arena()`
+plus `_horloge_led()` :
+- **Une seule `PointLight2D` pour toute la carte, la forme dans la texture.**
+  Des lumières le long des murs auraient crevé le plafond de 15 lumières par
+  quadrant (Pièges connus, *Une lumière à énergie zéro compte quand même*) et
+  ramené le halo tranché de la fusée. La texture est cuite depuis la grille des
+  murs à chaque construction d'arène.
+- **Profil d'une LED posée au pied du mur** : retenu contre la face (30 %),
+  sommet à 0,15 case (≈ 5 px), éteint à **4,5 cases (≈ 157 px)**, débord de
+  0,1 case dans le mur pour que le liseré respire aussi. La retenue n'est pas
+  cosmétique : au banc, le liseré réagit ~13 fois plus que le sol sombre ; sans
+  elle la bande se lit comme un trait au lieu d'une lueur. La portée était de
+  1,5 case jusqu'au 2026-09-11 ; Adrien l'a voulue **trois fois plus longue**.
+- **La distance au mur vient d'une transformée de distance euclidienne**
+  (Felzenszwalb, deux passes), dont le coût ne dépend que du nombre de texels.
+  La première cuisson ne lisait que le voisinage de chaque case et mettait les
+  motifs en cache ; à 4,5 cases il aurait fallu 11 × 11 cases de voisinage, et
+  presque chaque case de la carte en aurait eu un différent. Texture à 8 texels
+  par case (≈ 4,4 px), 4 sur les grandes cartes pour tenir sous 512 px.
+  **83 ms** de cuisson pour la carte livrée (272² px), **une fois par carte** :
+  `rebuild_arena()` reconstruit l'arène à chaque manche, la texture est donc
+  gardée en cache tant que la grille ne change pas. Le test compare la texture
+  au profil de la distance au mur calculée en force brute.
+- **Couleur : l'ambre de la charte**, depuis le 2026-09-11 (« dans le thème du
+  jeu »). La charte sépare deux familles : le monde est chaud, le froid « LED »
+  est réservé à l'appareil (HUD, interface). La bande éclaire le monde, elle en
+  prend la couleur malgré son nom ; et l'ambre dit déjà « ce qui brûle » et « la
+  mise en garde ». **La première version portait `ACIER`, la couleur du boîtier
+  de l'appareil : une teinte d'interface dans l'arène, contre la charte.**
+- **Pas d'ombre** : la bande n'existe que du côté ouvert, elle ne traverse rien.
+- **La phase suit l'horloge de manche** (`round_time - time_left`, recalée par
+  l'hôte), jamais l'horloge de chaque machine : sinon l'un verrait l'adversaire
+  éclairé pendant que l'autre se croirait caché. Conséquence : **au creux pendant
+  tout le décompte**, la respiration démarre au « FIGHT ». Hors manche (salon
+  d'attente), horloge propre, sans enjeu.
+- **Éteinte au creux** (`enabled = false` sous 0,002) et non laissée à zéro —
+  même piège que ci-dessus.
+- Période : **6 mesures de la musique (24 temps à 170 BPM ≈ 8,5 s)** — c'était
+  4 mesures (≈ 5,65 s) ; Adrien l'a voulue 1,5 fois plus lente le 2026-09-11, et
+  6 mesures la gardent sur la grille de la musique. Le test vérifie que la copie
+  du tempo suit `AudioManager.BPM`. Le tempo seulement : la
+  phase n'est pas alignée sur le premier temps de la musique.
+
+**Seules les faces tournées vers l'arène luisent** (Adrien, 2026-09-11 : « il
+faut que le mur intérieur luise, mais pas le mur extérieur. Mais le mur
+d'enceinte intérieur doit luire »). La bande n'existe que sur le **sol**, et son
+débord ne touche que les bords de mur **au contact du sol** : la face de
+l'enceinte qui donne sur le vide hors carte reste noire, celle qui donne sur
+l'arène respire comme tout obstacle. Avant, le vide comptait pour de l'ouvert :
+la bande s'y étendait, et **la face extérieure de l'enceinte montait à 119/255
+au sommet, contre 24 pour l'intérieure** (mesuré en jeu, plan `duel`) — c'était
+le trait qu'Adrien voyait. Une fosse au milieu de l'arène reste noire elle aussi.
+Mesuré après correction, même plan, au sommet : **face extérieure 119 → 0**,
+face intérieure 24 → 24, sol 30 / 24 / 10 inchangé à 0-18 / 18-45 / 45-105 px —
+seul le trait extérieur disparaît. Au banc sur le cloître : liseré extérieur de
+l'enceinte 0, intérieur 48, pilier 21 ; sol au pied de l'enceinte 30, d'un
+pilier 19.
+
+**Après fusion de `main` (2026-09-11), sur les murs au trait de la refonte
+graphique** : les tuiles de mur sont désormais noires, et le filament est un
+contour d'encre de 3 px tracé côté sol par `mur_encre.gd`, rendu par
+l'éclairage PAR DÉFAUT (qui applique l'énergie) sur le masque 1 — le bandeau
+l'éclaire donc directement. Mesuré en jeu au sommet, carte par défaut :
+**contour de la face intérieure 112/255** (le liseré des tuiles en donnait 24),
+face extérieure **0**, sol 37 / 24 / 10. Le bandeau souligne donc le trait bien
+plus nettement qu'avant — progressivement, sans claquer, mais c'est un point de
+dosage à revoir en jouant. Deux conséquences à savoir : `shimmer_murs` n'a plus
+rien à dessiner sur les murs, son correctif d'énergie reste juste mais sans
+effet visible ; et **la vision de proximité passe désormais par le contour
+d'encre**, qui suit l'énergie tel quel — le halo (0,8) l'éclaire donc à 0,8 et
+non « comme avant » ; non mesuré ici, à regarder si le mur voisin paraît
+faible.
+
+⚠️ **Une première lecture de la demande avait retiré l'enceinte ENTIÈRE**
+(commit `0a2dd03`) : « les murs extérieurs » compris comme « le mur d'enceinte ».
+Adrien : « là je ne vois plus rien sur la carte par défaut » — elle n'a que son
+enceinte. Ce qu'il désignait était la face extérieure, que ce document signalait
+déjà dans « Pas vérifié » (« le liseré extérieur respire ») sans que la session
+fasse le rapprochement. **Quand une demande nomme « extérieur » ou
+« intérieur », demander : la face, ou le mur ?** Le tri enceinte/intérieur a
+été retiré plutôt que gardé « au cas où ».
+
+**Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
+en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction `f` du
+sommet (1 par défaut). Constantes en tête de `mur_led.gd` : `PIC` (facteur de
+couleur, 1,2), `FACE`, `RETRAIT`, `PORTEE`, `PERIODE`.
+
+**Mesuré au pixel, en jeu** (photographe, plan `duel` ; référence prise SANS
+drapeau), luminance /255 :
+
+| | liseré | sol 0-18 px du mur | sol 18-45 px | centre |
+|---|---|---|---|---|
+| sans bandeau | 0 | 0 | 0 | 0 |
+| mi-souffle | 9,1 | 13,3 | 3,0 | 0 |
+| sommet | 18,5 | 26,6 | 6,4 | 0 |
+
+Proportionnel d'un bout à l'autre. Chiffres pris **après** que le liseré s'est
+mis à suivre l'énergie des lampes (« Décisions actées », même jour) : avant, le
+liseré montait à 20,8 / 42,0 pour le même sol. Normalisé sur la torche, il
+répond désormais au bandeau (énergie 1) comme à une torche à 1 — la lueur au sol
+domine, le mur n'est que souligné.
+
+**Après les réglages du 2026-09-11** (portée ×3, ambre, 8,5 s, liseré normalisé
+sur la vision de proximité), plan `duel`, en jeu, luminance /255, bande de
+300 px de haut le long du mur de gauche :
+
+| | liseré | sol 0-18 px | sol 18-45 px | sol 45-105 px | centre |
+|---|---|---|---|---|---|
+| sans bandeau | 0 | 0 | 0 | 0 | 0 |
+| mi-souffle | 11,7 | 15,0 | 11,8 | 4,9 | 0 |
+| sommet | 24,0 | 30,1 | 23,9 | 10,4 | 0 |
+
+⚠️ Une première série de chiffres « en jeu » écrite ici le même jour mêlait
+deux cadres de mesure, et la planche envoyée à Adrien avec elle venait de
+photos de la version PRÉCÉDENTE (dossier resté d'une prise antérieure). Un
+dossier de captures dit ce qu'on y a mis la dernière fois, pas ce que le code
+fait aujourd'hui : **reprendre la photo au moment de mesurer.**
+
+Au banc (salle vide, un seul mur en jeu), au sommet : sol **35 / 23 / 11 / 4 / 0**
+et adversaire **162 / 116 / 59 / 21 / 2** à 0,25 / 1 / 2 / 3 / 4 cases du mur.
+L'adversaire est identique à mi-souffle : son shader sature dès ~25 % du
+souffle, c'est donc la DISTANCE au mur qui dose ce qu'on voit de lui, plus
+l'instant. **Avec la portée triplée, un adversaire se devine jusqu'à ~3 cases
+d'un mur la moitié de chaque respiration** — une grande part de la plupart des
+salles. C'est le point de dosage à juger en jouant. **Au banc isolé**, l'adversaire collé au
+pilier : 51 / 129 / 131 / 131 pour un souffle de 0,10 / 0,25 / 0,50 / 1 — il
+**sature dès le quart du souffle** (`player_enemy_light.gdshader` multiplie la
+lumière par 4). Avec la respiration au carré, un adversaire collé au mur est
+donc pleinement visible **environ la moitié de chaque cycle**. C'est le point de
+dosage de jeu le plus sensible, à juger par Adrien.
+
+⚠️ Pendant les premières photos, rien n'apparaissait : le photographe déclenche
+pendant le décompte, où l'horloge de manche est à 0 — donc au creux. D'où
+`--led-murs-fige`. Une capture « sans effet » d'un effet rythmé dit d'abord à
+quel instant elle a été prise.
+
+**Pas vérifié** : un vrai joueur collé au mur en jeu (aucun plan ne le met en
+scène ; le chiffre vient du banc) ; la cadence (`bench_framerate` non passé — la
+lumière couvre toute la carte, donc tous les items) ; deux machines ; l'éditeur
+de cartes, qui n'a pas le bandeau. (La face extérieure de l'enceinte, qui
+respirait parce que le vide comptait pour de l'ouvert, est éteinte depuis le
+2026-09-11 — voir plus haut.)
+
+**Ce qu'il faut d'Adrien** : jouer avec, puis trancher — garder ou non ; si oui,
+le dosage (et en particulier la part du cycle où l'adversaire est révélé) et la
+période.
 
 ---
 
