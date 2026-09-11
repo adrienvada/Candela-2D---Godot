@@ -427,6 +427,22 @@ func est_allumee_au_sol() -> bool:
 	return _atterrie and not _eteinte
 
 
+## Ce que la fusée BRÛLE en ce moment, entre 0 et 1 — la part de son plein feu.
+##
+## ⚠️ **L'éblouissement doit la lire.** Adrien, le 2026-09-11 : « je suis
+## ébloui par une fusée éclairante même quand elle est éteinte, quand elle
+## clignote sur la fin notamment ». La source d'éblouissement de la fusée
+## (`game_state._sources_eblouissantes`) ne regardait que « posée et pas
+## éteinte » et lui donnait son rayon plein : une braise à 0,25 et un creux
+## d'agonie à 0,15 aveuglaient comme le plein feu à 3,0. La lumière que voit
+## le joueur est `_lumiere.energy` ; c'est elle qui fait l'éblouissement, à
+## l'échelle du plein feu. Une lumière désactivée rend 0.
+func energie_relative() -> float:
+	if _lumiere == null or not _lumiere.enabled:
+		return 0.0
+	return clampf(_lumiere.energy / FuseeModele.ENERGIE_PLEIN_FEU, 0.0, 1.0)
+
+
 ## FU3 — un tir est parti DE L'INTÉRIEUR du nuage : toute la fumée pulse au
 ## lieu du seul canon, pour diluer la position du tireur. Appelé depuis
 ## `game_state._do_spawn_bullet`, une fois par volée, sur toute fusée dont

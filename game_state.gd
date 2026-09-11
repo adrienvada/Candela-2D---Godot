@@ -1825,12 +1825,21 @@ func _sources_eblouissantes() -> Array:
 			continue
 		if f.has_method("est_allumee_au_sol") and not f.est_allumee_au_sol():
 			continue
+		# La fusée éblouit à hauteur de ce qu'elle brûle : plein feu à 1,0, braise
+		# à 0,4, creux d'agonie à 0,05, résidu à 0,08. Sans ce gain, une fusée
+		# presque morte aveuglait comme au premier instant (Adrien, 2026-09-11).
+		var gain := 1.0
+		if f.has_method("energie_relative"):
+			gain = float(f.energie_relative())
+		if gain <= 0.02:
+			continue
 		out.append({
 			"noeud": f,
 			"porteur": null,
 			"dirigee": false,
 			"rayon": RAYON_EBLOUISSEMENT_FUSEE,
 			"arme": null,
+			"gain": gain,
 		})
 
 	# ── Les gadgets posés ────────────────────────────────────────────────────
@@ -1906,7 +1915,10 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		return 0.0
 	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
 		return 0.0
-	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"])
+	# `gain` : la part de sa lumière qu'une source posée brûle en ce moment
+	# (fusée en agonie, en résidu). Absent, la source brûle à plein.
+	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"]) \
+		* float(src.get("gain", 1.0))
 
 ## Un joueur qui compte : présent, vivant, et sur le terrain.
 ##
