@@ -161,6 +161,14 @@ class_name Protocol
 ##      client v16 rendrait à pleine lueur une nappe dont l'hôte v17 fait baisser
 ##      l'éblouissement. Les tics de brûlure ne sont PAS une règle partagée :
 ##      l'hôte les décide, `rpc_update_hp` les porte.
+##
+##      Et, même étape : l'ombre habitée arrête balles et regard par sa PLAQUE
+##      (36 × 6), la même que son ombre, et non plus par le disque de 18 du socle.
+##      Le fil ne bouge pas, le sens si : un client v16 arrêterait ses balles
+##      prédites sur l'ancien disque (`bullet.gd` les simule chez lui) quand l'hôte
+##      v17 les laisse passer. Le point de pose, lui, change chez l'hôte SEUL — le
+##      poseur exclu du rayon, le voile reculé hors des corps ou refusé faute de
+##      place — et il voyageait déjà dans `rpc_spawn_gadget` : rien à partager.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.

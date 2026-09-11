@@ -14,7 +14,9 @@ extends SceneTree
 ##     sept classes qui ne rechargeaient pas ;
 ##   • le FIL à dix classes — `_get_weapon_idx` ne codait que quatre armes ;
 ##   • le VOILE qui arrête les joueurs, et toujours pas les balles (étape 25) ;
-##   • les IMAGES des gadgets, et le pied de la torche qui ne balaie pas (26).
+##   • les IMAGES des gadgets, et le pied de la torche qui ne balaie pas (26) ;
+##   • l'OMBRE HABITÉE qui arrête balles et regard par sa plaque, plus par un
+##     disque, et le VOILE qui recule hors des corps à la pose (28).
 ##
 ## ⚠️ **Fichier séparé de `test_classes.gd`, et ce n'est pas un rangement.** Une
 ## autre session réécrit la partie interface de celui-là le même jour. Deux diffs
@@ -25,8 +27,16 @@ extends SceneTree
 const _IP = preload("res://input_provider.gd")
 const _GG = preload("res://gadget_gresillement.gd")
 const _GV = preload("res://gadget_voile.gd")
+const _GO = preload("res://gadget_ombre.gd")
+const _GB = preload("res://gadget_base.gd")
 const _GTF = preload("res://gadget_torche_fantome.gd")
 const _MG = preload("res://map_geometry.gd")
+
+## Où J1 pose, dans les deux contrôles de l'étape 28 : la zone de 400 à 560 en x et
+## de 250 à 560 en y doit être libre de murs — les témoins le vérifient.
+const POSEUR := Vector2(400.0, 400.0)
+## Là où un joueur ne gêne rien.
+const _LOIN := Vector2(4000.0, 4000.0)
 
 ## Une détente qu'on tient ou qu'on lâche à la main. Elle court-circuite
 ## l'hystérésis, qui a son propre contrôle : ici on éprouve le VERROU de player.gd.
@@ -50,6 +60,16 @@ class Marcheur extends _IP:
 	func is_flare_pressed() -> bool: return false
 	func is_reload_pressed() -> bool: return false
 	func is_gadget_pressed() -> bool: return false
+
+## Un joueur qui tient sa touche de gadget, regard à droite, et ne fait rien d'autre.
+class Poseur extends _IP:
+	func get_movement_vector() -> Vector2: return Vector2.ZERO
+	func get_aim_direction(_p: Vector2) -> Vector2: return Vector2.RIGHT
+	func is_shoot_pressed() -> bool: return false
+	func is_flashlight_pressed() -> bool: return false
+	func is_flare_pressed() -> bool: return false
+	func is_reload_pressed() -> bool: return false
+	func is_gadget_pressed() -> bool: return true
 
 var _echecs := 0
 
@@ -88,6 +108,8 @@ func _run() -> void:
 	_test_hud_du_client()
 	_test_destruction_autoritaire()
 	await _test_voile_bloquant(gs)
+	await _test_ombre_plaque(gs)
+	await _test_voile_hors_des_corps(gs)
 	_test_sprites_des_gadgets(gs)
 	await _test_diffus_intouchables(gs)
 	await _test_suie_masque(gs)
@@ -834,6 +856,385 @@ func _touche_le(espace: PhysicsDirectSpaceState2D, cible: Node, point: Vector2) 
 		if r["collider"] == cible:
 			return true
 	return false
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ÉTAPE 28, LOT B — formes et pose (2026-09-11)
+# ═══════════════════════════════════════════════════════════════════════════
+
+## Tire une vraie balle de J1 (`_do_spawn_bullet`) et rend l'endroit où elle a fini
+## — ou celui où elle vole encore —, puis la RETIRE : une balle qui passe vole
+## toujours, et toucherait le prochain corps posé sur sa ligne. `Vector2.INF` si
+## aucune balle n'est née : l'appelant doit le refuser, INF passant tous les seuils.
+##
+## Échantillonnée en boucle, SANS lambda qui la capture (piège « Une lambda ne peut
+## pas attendre la mort de ce qu'elle capture ») ; `_fade_and_destroy` la fige au
+## point d'impact et coupe son pas de physique. Retrouvée par son SCRIPT, pas par son
+## nom (piège « Godot renomme les homonymes »).
+func _trajet_de_balle(gs: Node, depart: Vector2, rot: float) -> Vector2:
+	var avant: Array = gs.bullet_container.get_children()
+	gs._do_spawn_bullet(gs.p1, depart, rot, gs.p1.current_weapon)
+	var balle: Node2D = null
+	for c in gs.bullet_container.get_children():
+		if not avant.has(c) and c.get_script() != null \
+				and c.get_script().resource_path == "res://bullet.gd":
+			balle = c
+	if balle == null:
+		return Vector2.INF
+	var vu: Vector2 = balle.global_position
+	for i in range(6):
+		await physics_frame
+		if not is_instance_valid(balle):
+			break
+		vu = balle.global_position
+		if not balle.is_physics_processing():
+			break
+	if is_instance_valid(balle):
+		balle.free()
+	return vu
+
+
+## Le gadget `g` chevauche-t-il `corps` ? Par une REQUÊTE D'ESPACE — un autre chemin
+## que celui du jeu (`Shape2D.collide` sur les transformées) : les deux ne se
+## trompent pas pareil. Sur la couche RÉELLE du corps, pas sur une couche supposée.
+## À appeler DEUX `physics_frame` après le dernier déplacement du corps (piège « Un
+## corps cinématique téléporté n'existe pour les requêtes qu'au pas suivant »).
+func _chevauche(g: Node, corps: CollisionObject2D, decalage := Vector2.ZERO) -> bool:
+	var q := PhysicsShapeQueryParameters2D.new()
+	q.shape = (g.get_node("Forme") as CollisionShape2D).shape
+	q.transform = Transform2D(g.global_rotation, g.global_position + decalage)
+	q.collision_mask = corps.collision_layer
+	q.collide_with_bodies = true
+	for r in g.get_world_2d().direct_space_state.intersect_shape(q, 64):
+		if r["collider"] == corps:
+			return true
+	return false
+
+
+## Un mur provisoire, en travers du regard de J1, dont la face est à `face` px du
+## poseur. Nommé, sous le nœud des joueurs — le même monde 2D, que `_point_de_pose`
+## interroge. Deux pas de physique : un corps neuf n'est pas vu d'une requête avant.
+func _mur_de_test(gs: Node, face: float) -> StaticBody2D:
+	var mur := StaticBody2D.new()
+	mur.name = "MurDeTest"
+	mur.collision_layer = _MG.WALL_LAYER
+	mur.collision_mask = 0
+	var forme := CollisionShape2D.new()
+	forme.name = "Forme"
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(10.0, 240.0)
+	forme.shape = rect
+	mur.add_child(forme)
+	gs.p1.get_parent().add_child(mur)
+	mur.global_position = POSEUR + Vector2(face + 5.0, 0.0)
+	await physics_frame
+	await physics_frame
+	return mur
+
+
+## Pose le gadget de `classe` depuis `POSEUR`, regard vers +x, J2 en `pos_j2`, par le
+## vrai `spawn_gadget` de l'hôte ; rend l'unique gadget de J1, ou `null`.
+##
+## Les deux corps à rotation NULLE et à l'arrêt : le Marcheur ne fait que RAPPROCHER
+## la rotation de sa visée, et un nez resté tourné vers le poseur fausserait le recul.
+func _poser(gs: Node, classe: String, pos_j2: Vector2) -> Node:
+	_vider(gs)
+	gs._gadget_attente.fill(0.0)
+	gs.p1.equip_weapon(gs.weapon_for_index(_index_de(gs, classe)))
+	for j in [gs.p1, gs.p2]:
+		j.rotation = 0.0
+		j.velocity = Vector2.ZERO
+	gs.p1.global_position = POSEUR
+	gs.p2.global_position = pos_j2
+	await physics_frame
+	await physics_frame
+	gs.spawn_gadget(gs.p1, POSEUR, 0.0)
+	await process_frame
+	var poses := _gadgets_de(gs, 0)
+	return poses[0] if poses.size() == 1 else null
+
+
+## L'ombre habitée arrête balles et regard par sa PLAQUE, la même que son ombre
+## (étape 28, 2026-09-11). Sa collision était jusque-là le disque de 18 px du socle :
+## une balle qui longeait la plaque à 10 px de son plan s'arrêtait sur du vide.
+func _test_ombre_plaque(gs: Node) -> void:
+	print("\n[L'ombre habitée arrête par sa plaque, plus par un disque]")
+	# ⚠️ Le bac à sable, ici, sert à échapper à la recharge, et à rien d'autre (piège
+	# « Un test qui force l'état ne voit pas l'état réel ») : ni la forme, ni la balle,
+	# ni le regard ne lisent d'autre drapeau que la garde `round_active or
+	# sandbox_mode`, qu'un vrai match passe aussi.
+	gs.round_active = true
+	gs.sandbox_mode = true
+	gs.training_mode = false
+	gs.countdown_left = 0.0
+	gs.ui._is_main_menu = false
+	gs.p2.global_position = _LOIN
+	_vider(gs)
+	await process_frame
+	gs.p1.equip_weapon(gs.weapon_for_index(_index_de(gs, "occulteur")))
+	gs.p1.global_position = POSEUR
+	gs.p1.rotation = 0.0
+	gs._gadget_attente.fill(0.0)
+	gs.spawn_gadget(gs.p1, POSEUR, 0.0)
+	await process_frame
+	await physics_frame
+	var ombres := _gadgets_de(gs, 0)
+	_check("l'ombre habitée est posée", ombres.size() == 1, str(ombres.size()))
+	if ombres.size() != 1:
+		return
+	var o = ombres[0]
+	_check("à pleine portée : aucun mur ne l'a ramenée",
+		o.global_position.is_equal_approx(POSEUR + Vector2(_GB.PORTEE_POSE, 0.0)),
+		str(o.global_position))
+	_check("l'Occulteur tire une balle à la fois",
+		gs.p1.current_weapon.projectile_count == 1, str(gs.p1.current_weapon.projectile_count))
+	# Les points de vie ne sont pas ce qu'on éprouve : les balles du contrôle ne
+	# doivent pas la tuer.
+	o.pv = 1000.0
+	var c: Vector2 = o.global_position
+
+	# ── Sa forme : la plaque de son ombre ───────────────────────────────────
+	var plaque := Vector2(_GO.DEMI_TORSE, _GO.DEMI_EPAISSEUR) * 2.0
+	var forme: CollisionShape2D = o.get_node_or_null("Forme")
+	_check("sa collision est une plaque, plus un disque",
+		forme != null and forme.shape is RectangleShape2D
+			and (forme.shape as RectangleShape2D).size.is_equal_approx(plaque),
+		str(forme.shape) if forme != null else "absente")
+	var occ: LightOccluder2D = o.get_node_or_null("Occluder")
+	var boite := Rect2()
+	if occ != null and occ.occluder.polygon.size() > 0:
+		boite = Rect2(occ.occluder.polygon[0], Vector2.ZERO)
+		for p in occ.occluder.polygon:
+			boite = boite.expand(p)
+	_check("la même plaque que son ombre, au pixel près",
+		occ != null and boite.size.is_equal_approx(plaque), str(boite))
+	var espace: PhysicsDirectSpaceState2D = o.get_world_2d().direct_space_state
+	# Posée en travers d'un regard vers +x : la longueur de la plaque court le long de
+	# l'axe y, son épaisseur le long de x.
+	_check("à 10 px de son plan il n'y a rien — le disque de 18 px n'existe plus",
+		not _touche_le(espace, o, c + Vector2(10.0, 0.0)))
+	_check("sur la plaque, à 15 px de son centre, il y a bien l'ombre",
+		_touche_le(espace, o, c + Vector2(0.0, 15.0)))
+
+	# ── La balle : J2 loin, pour qu'elle ne rencontre que ce qu'on éprouve ───
+	gs.p2.global_position = _LOIN
+	await physics_frame
+	await physics_frame
+	var longe: Vector2 = await _trajet_de_balle(gs, c + Vector2(10.0, -80.0), PI / 2.0)
+	_check("une balle qui longe la plaque à 10 px de son plan passe",
+		longe.is_finite() and longe.y > c.y + 22.0, "finie en %s, plaque en %s" % [longe, c])
+	var tranche: Vector2 = await _trajet_de_balle(gs, c + Vector2(0.0, -80.0), PI / 2.0)
+	_check("une balle qui la prend dans sa longueur s'y arrête",
+		tranche.is_finite() and tranche.y > c.y - 30.0 and tranche.y < c.y,
+		"finie en %s, plaque en %s" % [tranche, c])
+
+	# ── Le regard : la collision suffit, sans `regard_par_la_forme` ─────────
+	_check("J2 est en jeu", gs._en_jeu(gs.p2))
+	_check("J2 est sur la couche 1 : le rayon d'éblouissement le rencontre",
+		gs.p2.get_collision_layer_value(1))
+	gs.p2.global_position = c + Vector2(10.0, 150.0)
+	await physics_frame
+	await physics_frame
+	_check("le regard qui longe la plaque à 10 px passe",
+		gs._ligne_de_vue_depuis(espace, c + Vector2(10.0, -150.0), gs.p2, RID()))
+	gs.p2.global_position = c + Vector2(0.0, 150.0)
+	await physics_frame
+	await physics_frame
+	_check("le regard qui la traverse est coupé",
+		not gs._ligne_de_vue_depuis(espace, c + Vector2(0.0, -150.0), gs.p2, RID()))
+	# ⚠️ Le TÉMOIN du contrôle négatif : la même ombre, qui n'arrête plus la lumière,
+	# laisse passer le même regard. Sans lui, un J2 que le rayon ne verrait pas ferait
+	# passer « coupé » pour une mauvaise raison.
+	o.occulte_la_lumiere = false
+	_check("témoin : ombre retirée du regard, le même regard passe",
+		gs._ligne_de_vue_depuis(espace, c + Vector2(0.0, -150.0), gs.p2, RID()))
+	o.occulte_la_lumiere = true
+
+	# ── Le témoin de la balle : ombre retirée, la balle du centre passe ──────
+	gs.p2.global_position = _LOIN
+	await physics_frame
+	await physics_frame
+	o.queue_free()
+	await process_frame
+	await physics_frame
+	_check("l'ombre est retirée", _gadgets_de(gs, 0).is_empty())
+	var libre: Vector2 = await _trajet_de_balle(gs, c + Vector2(0.0, -80.0), PI / 2.0)
+	_check("témoin : ombre retirée, la même balle passe — rien d'autre ne l'arrêtait",
+		libre.is_finite() and libre.y > c.y + 22.0, "finie en %s" % libre)
+
+	gs.p2.global_position = _LOIN
+	gs.round_active = false
+	gs.sandbox_mode = false
+	_vider(gs)
+
+
+## Un voile ne naît pas sur un corps : son point de pose RECULE vers le poseur
+## (étape 28, 2026-09-11, Adrien : « on recule le point de pose »). Sans place, la
+## pose est refusée et rien n'est armé.
+func _test_voile_hors_des_corps(gs: Node) -> void:
+	print("\n[Un voile ne naît pas sur un corps : il recule vers son poseur]")
+	# ⚠️ Les drapeaux d'un VRAI match — ceux de `_preparer`, pas le bac à sable du test
+	# précédent (piège « Un test qui force l'état ne voit pas l'état réel »). C'est en
+	# match que le cas se pose : à l'entraînement J2 est masqué, hors du compte
+	# (`_en_jeu`). Et hors bac à sable seulement, `gadget_disponible()` lit la
+	# recharge : en bac à sable il rend toujours vrai, et « rien d'armé » serait vert
+	# même si le refus armait tout.
+	gs.round_active = true
+	gs.sandbox_mode = false
+	gs.training_mode = false
+	gs.countdown_left = 0.0
+	gs.ui._is_main_menu = false
+	var fournisseur_j1 = gs.p1.input_provider
+	var fournisseur_j2 = gs.p2.input_provider
+	gs.p1.input_provider = Marcheur.new()
+	gs.p2.input_provider = Marcheur.new()
+	_check("J2 est en jeu : son corps compte", gs._en_jeu(gs.p2))
+	_check("J2 est sur la couche 1", gs.p2.get_collision_layer_value(1))
+	var mur: StaticBody2D = null
+
+	# ── B1, le témoin : J2 hors de la bande ─────────────────────────────────
+	var v = await _poser(gs, "spectre", POSEUR + Vector2(200.0, 30.0))
+	_check("témoin : J2 hors de la bande, le voile naît à pleine portée — et aucun mur ne l'a ramené",
+		v != null and v.global_position.is_equal_approx(POSEUR + Vector2(_GB.PORTEE_POSE, 0.0)),
+		str(v.global_position) if v != null else "aucun voile")
+
+	# ── B2-B4 : J2 dans la bande ─────────────────────────────────────────────
+	# ⚠️ J2 est décalé de 30 px sur le côté, et c'est le point clé. Pile dans l'axe, il
+	# arrêterait le rayon de `_point_de_pose` (les joueurs sont sur la couche des
+	# murs) : l'ancien code poserait déjà plus près, et le recul passerait pour une
+	# mauvaise raison.
+	v = await _poser(gs, "spectre", POSEUR + Vector2(96.0, 30.0))
+	_check("J2 dans la bande : le voile est posé quand même", v != null)
+	if v != null:
+		var d: float = v.global_position.x - POSEUR.x
+		print("    recul : voile à d = %.1f px du poseur (70 attendu, calculé sur les polygones de player.tscn)" % d)
+		_check("dans l'axe du regard", absf(v.global_position.y - POSEUR.y) < 0.01,
+			str(v.global_position))
+		_check("il a reculé vers son poseur", d < _GB.PORTEE_POSE - gs.PAS_RECUL_POSE,
+			"%.1f px" % d)
+		await physics_frame
+		await physics_frame
+		_check("il ne chevauche pas J2", not _chevauche(v, gs.p2))
+		_check("ni son poseur", not _chevauche(v, gs.p1))
+		_check("et n'a pas reculé plus que nécessaire : un pas plus loin, il mordrait J2",
+			_chevauche(v, gs.p2, Vector2(gs.PAS_RECUL_POSE, 0.0)))
+
+	# ── B5, le témoin du drapeau : l'ombre habitée ne recule pas ────────────
+	var o = await _poser(gs, "occulteur", POSEUR + Vector2(96.0, 30.0))
+	_check("témoin : l'ombre habitée, qui n'arrête pas les joueurs, ne recule pas",
+		o != null and o.global_position.is_equal_approx(POSEUR + Vector2(_GB.PORTEE_POSE, 0.0)),
+		str(o.global_position) if o != null else "aucune ombre")
+	if o != null:
+		await physics_frame
+		await physics_frame
+		_check("et elle chevauche bien J2 : c'est le drapeau qui décide",
+			_chevauche(o, gs.p2))
+
+	# ── B8 : SANS AUCUN MUR, J2 dans l'axe, à bout portant ───────────────────
+	# ⚠️ Le rayon de `_point_de_pose` s'arrête sur lui (les joueurs sont sur la couche
+	# des murs), et le recul ne cherche qu'en deçà : entre son dos et le nez du poseur,
+	# la bande n'a pas la place. C'est le voile posé à bout portant sur l'adversaire
+	# qu'on vise — mesuré à la correction du lot B, et la doc affirmait le contraire.
+	var poses_avant: int = gs._gadgets_poses
+	var par_avant: int = gs._gadgets_poses_par[0]
+	v = await _poser(gs, "spectre", POSEUR + Vector2(55.0, 0.0))
+	var arret: Vector2 = gs._point_de_pose(gs.p1, POSEUR, 0.0)
+	_check("sans mur, J2 dans l'axe à 55 px : le rayon de pose s'arrête sur lui",
+		arret.is_equal_approx(POSEUR + Vector2(31.0, 0.0)), str(arret))
+	_check("et le voile est refusé : pas la place entre son dos et le nez du poseur",
+		v == null, str(v.global_position) if v != null else "")
+	_check("sans rien d'armé ni compté",
+		gs.attente_gadget(0) == 0.0 and gs.gadget_disponible(0)
+			and gs._gadgets_poses == poses_avant and gs._gadgets_poses_par[0] == par_avant,
+		"attente %.1f s, %d → %d" % [gs.attente_gadget(0), poses_avant, gs._gadgets_poses])
+	# Le TÉMOIN : 7 px plus loin, la bande tient entre les deux corps — ce qui refusait
+	# à 55 px, c'était bien la place.
+	v = await _poser(gs, "spectre", POSEUR + Vector2(62.0, 0.0))
+	_check("témoin : J2 dans l'axe à 62 px, le voile tient entre les deux, en (436, 400)",
+		v != null and v.global_position.is_equal_approx(POSEUR + Vector2(36.0, 0.0)),
+		str(v.global_position) if v != null else "aucun voile")
+
+	# ── B6 : aucune place — un mur à 36 px, le voile tomberait dans le nez ───
+	mur = await _mur_de_test(gs, 36.0)
+	poses_avant = gs._gadgets_poses
+	par_avant = gs._gadgets_poses_par[0]
+	v = await _poser(gs, "spectre", _LOIN)
+	_check("un mur à 36 px : aucune place, aucun voile",
+		v == null, str(v.global_position) if v != null else "")
+	_check("et rien d'armé : pas de recharge", gs.attente_gadget(0) == 0.0,
+		"%.1f s" % gs.attente_gadget(0))
+	_check("le gadget reste disponible", gs.gadget_disponible(0))
+	_check("ni numéro ni pose comptés",
+		gs._gadgets_poses == poses_avant and gs._gadgets_poses_par[0] == par_avant,
+		"%d → %d, %d → %d" % [poses_avant, gs._gadgets_poses, par_avant, gs._gadgets_poses_par[0]])
+
+	# ── B6t, le témoin : le mur à 60 px laisse la place ─────────────────────
+	mur.free()
+	mur = await _mur_de_test(gs, 60.0)
+	v = await _poser(gs, "spectre", _LOIN)
+	_check("témoin : un mur à 60 px, le voile naît 6 px devant lui",
+		v != null and v.global_position.is_equal_approx(POSEUR + Vector2(54.0, 0.0)),
+		str(v.global_position) if v != null else "aucun voile")
+
+	# ── B7 : par le VRAI joueur, qui appuie sur sa touche ────────────────────
+	mur.free()
+	mur = await _mur_de_test(gs, 36.0)
+	_vider(gs)
+	gs._gadget_attente.fill(0.0)
+	gs.p1.equip_weapon(gs.weapon_for_index(_index_de(gs, "spectre")))
+	gs.p1.global_position = POSEUR
+	gs.p1.rotation = 0.0
+	gs.p1.velocity = Vector2.ZERO
+	gs.p1.input_provider = Marcheur.new()
+	gs.p1.shoot_cooldown = 0.0
+	# Une image touche relâchée : le front montant de l'appui suivant est neuf.
+	await physics_frame
+	poses_avant = gs._gadgets_poses
+	par_avant = gs._gadgets_poses_par[0]
+	gs.p1.input_provider = Poseur.new()
+	# UN pas : à la reprise, le pas qui pose est terminé.
+	await physics_frame
+	# Le désarmement vaut 0,30 s et décroît au temps RÉEL (`_process`) : un seul pas
+	# plus tard, il en reste presque tout — la marge ne dépend d'aucune cadence.
+	_check("le vrai joueur a appuyé : il est désarmé", gs.p1.shoot_cooldown > 0.0,
+		"%.3f s" % gs.p1.shoot_cooldown)
+	await process_frame
+	_check("mais aucun voile n'est né", _gadgets_de(gs, 0).is_empty(),
+		str(_gadgets_de(gs, 0).size()))
+	_check("et rien d'armé : ni recharge, ni pose comptée",
+		gs.attente_gadget(0) == 0.0 and gs.gadget_disponible(0)
+			and gs._gadgets_poses == poses_avant and gs._gadgets_poses_par[0] == par_avant,
+		"attente %.1f s" % gs.attente_gadget(0))
+
+	# ── B7t, le témoin : mur retiré, le même appui pose ─────────────────────
+	mur.free()
+	mur = null
+	await physics_frame
+	# ⚠️ Le désarmement du refus court encore : sans cette remise à zéro, la garde de
+	# pose (`shoot_cooldown <= 0`) bloquerait le témoin pour une mauvaise raison.
+	gs.p1.shoot_cooldown = 0.0
+	gs.p1.input_provider = Marcheur.new()
+	await physics_frame
+	gs.p1.input_provider = Poseur.new()
+	await physics_frame
+	await process_frame
+	var voiles := _gadgets_de(gs, 0)
+	_check("témoin : mur retiré, le même appui pose le voile à pleine portée",
+		voiles.size() == 1
+			and voiles[0].global_position.is_equal_approx(POSEUR + Vector2(_GB.PORTEE_POSE, 0.0)),
+		"%d voile(s)%s" % [voiles.size(),
+			(" en " + str(voiles[0].global_position)) if voiles.size() == 1 else ""])
+
+	# ── Nettoyage : J1 ne doit pas garder la touche tenue pour la suite ──────
+	if mur != null and is_instance_valid(mur):
+		mur.free()
+	gs.p1.input_provider = fournisseur_j1
+	gs.p2.input_provider = fournisseur_j2
+	gs.p2.global_position = _LOIN
+	gs._gadget_attente.fill(0.0)
+	gs.round_active = false
+	gs.sandbox_mode = false
+	_vider(gs)
 
 
 ## Les images de jeu des gadgets — décision d'Adrien du 2026-09-10 : tous ceux qui

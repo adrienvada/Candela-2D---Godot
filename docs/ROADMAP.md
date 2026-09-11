@@ -2435,6 +2435,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
 | **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
 | **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
+| **Un voile ne naît pas sur un corps : son point de pose recule** (2026-09-11, Adrien : « on recule le point de pose ») | Suggestion d'après l'étape 27, qui fermait le signalement de l'étape 25 (« un voile posé sur un joueur n'est pas refusé : c'est le moteur qui doit alors le dégager »). Chez l'HÔTE seul — le client voit l'adversaire 100 ms en retard et lui-même en avance, il ne saurait pas refaire ce calcul —, le point de pose d'un gadget qui arrête les joueurs recule vers le poseur jusqu'à ce que la bande, à sa rotation, ne chevauche plus aucun corps ; le point final voyageait déjà dans `rpc_spawn_gadget`. Le cas « aucune place » était laissé à notre jugement : **refus**, sans RPC ni recharge ni numéro — quand le premier obstacle du rayon de pose, mur OU adversaire (les joueurs sont sur la couche des murs), laisse trop peu de place devant le nez du poseur : un mur à moins d'environ 40 px, un adversaire dans l'axe à bout portant (jusqu'à 60 à 70 px de centre à centre, mesuré sans mur), ou coincé contre un mur proche. ⚠️ Tranché en croyant ce refus rare et limité aux murs : la correction du lot B a montré qu'il touche aussi le voile posé à bout portant sur l'adversaire qu'on vise — question reportée à Adrien, voir l'étape 28. Le désarmement de 0,30 s a eu lieu des deux côtés, ce qui garde les pairs d'accord ; le refus ressenti passera par un pré-contrôle local chez le client, avec la même fonction (`GameState.point_de_pose_libre()`). Voir l'étape 28, lot B. |
 | **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
 | **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
@@ -3163,6 +3164,23 @@ accepte.
 
 ## Pièges connus — ne pas les redécouvrir
 
+### Un rayon parti du centre d'un corps concave touche le corps lui-même (2026-09-11)
+
+`_point_de_pose` lance un rayon depuis le centre du poseur, droit devant, pour planter
+son gadget à 96 px ou avant le premier mur. **Depuis `f161232` (2026-09-09), tout
+gadget posé en jeu naissait à 12 px, dans le corps de son poseur.** Le polygone du
+joueur est concave : le moteur le découpe en pièces convexes, le disque et le nez.
+`hit_from_inside` à faux ne fait ignorer que la pièce où le rayon naît ; il entrait
+dans le nez à 18 px, et la marge de 6 px ramenait le point à 12. Aucune suite ne le
+voyait : toutes téléportaient le poseur et posaient dans la même image, avant que le
+moteur n'ait appliqué la téléportation (voir « Un corps cinématique téléporté… »).
+C'est le recul du voile (étape 28, lot B) qui l'a révélé : il trouvait chaque voile
+dans le corps de son poseur, et les refusait tous.
+
+Toute requête lancée depuis le centre d'un corps EXCLUT ce corps ; et un test de pose
+passe par le vrai joueur qui appuie sur sa touche, pas par une téléportation suivie
+d'une pose dans la même image.
+
 ### Un seuil atteint par une somme de pas flottants tombe un pas trop tard (2026-09-11)
 
 La brûlure des braises verse 4 PV chaque fois que sa charge — 16 PV/s × `delta`,
@@ -3437,8 +3455,9 @@ Une valeur par défaut héritée n'est pas un choix. Quand une sous-classe
 surcharge une forme, **toutes** les formes du même objet doivent suivre —
 collision, ombre, visuel. Le socle le dit désormais au bon endroit
 (`_forme_de_collision()` à côté de `_monter_occluder()`), et le contrôle du voile
-compare sa bande de collision à celle de son ombre. L'ombre habitée garde le
-même écart en petit : signalé à l'étape 25.
+compare sa bande de collision à celle de son ombre. L'ombre habitée gardait le
+même écart en petit : signalé à l'étape 25, corrigé à l'étape 28 (2026-09-11) —
+sa collision est désormais sa plaque.
 
 ### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
 
@@ -18140,6 +18159,132 @@ les additions arrondissent — au pire 2e-12 PV sur la vie d'une nappe à
 la vignette qui pulse au lieu de rester fixe — et le recensement des lumières près
 d'une nappe au panneau F3 (quatre à cinq d'impact, plus torches, lueur et fusée,
 contre quinze par item).
+
+### Étape 28 — lot B : l'ombre habitée arrête ce qu'elle montre, et le voile recule hors des corps ✅ (2026-09-11)
+
+Deux suggestions d'après l'étape 27, retenues par Adrien : la collision de l'ombre
+habitée, et le voile posé sur un joueur — tranché : « on recule le point de pose ».
+Elles ferment les deux signalements de l'étape 25 (l'ombre habitée et son disque ;
+« un voile posé sur un joueur n'est pas refusé »), et celui de l'étape 27 sur
+l'ombre habitée.
+
+**1. L'ombre habitée arrête balles et regard par sa plaque.** Sa collision était le
+disque de 18 px du socle autour d'une plaque de 36 × 6 : une balle qui longeait la
+plaque à 10 px de son plan s'arrêtait sur du vide, et l'éblouissement butait sur un
+disque que la lumière traversait — le piège « Une forme héritée du socle ment en
+silence », en petit. `GadgetOmbre._forme_de_collision()` rend la plaque, celle de
+l'occluder au pixel près, sur le patron du voile.
+**Le crochet `regard_par_la_forme` n'a pas servi**, contrairement à ce que l'étape
+27 suggérait : il ne corrige que le rayon d'éblouissement, et la BALLE lit la
+collision (son `ShapeCast2D`). Seul, il aurait laissé les balles s'arrêter sur le
+disque. La collision devait donc changer de toute façon — et une fois égale à
+l'ombre, le rayon d'éblouissement la lit telle quelle. Le crochet reste au leurre,
+dont les deux formes doivent différer. Le sprite (40 × 12) déborde la plaque de 2 et
+3 px, moins que les 4 px de rayon de la balle : aucune balle ne traverse ce qu'on
+voit de l'objet (calculé). **Protocole 17**, fil intact, sens changé — un client
+d'avant arrêterait ses balles prédites sur l'ancien disque : carnet complété.
+
+**2. Un voile ne naît pas sur un corps : son point de pose recule** — voir
+« Décisions actées », 2026-09-11. Chez l'hôte, `spawn_gadget` passe par
+`GameState.point_de_pose_libre()` : le point de toujours (`_point_de_pose`, devant
+le poseur, en deçà du premier obstacle), puis, pour un gadget à
+`arrete_les_joueurs` — le voile seul —, `_reculer_hors_des_corps()` le ramène vers
+le poseur par pas de 2 px jusqu'à ce que la bande, à sa rotation, ne chevauche plus
+aucun corps en jeu, **poseur compris**. Le chevauchement se calcule par
+`Shape2D.collide`, sur les pièces convexes du polygone du joueur (nez compris) et
+les transformées des nœuds — pas par une requête d'espace, qui voit un corps
+téléporté un pas en retard. La forme vient d'une instance jetable de la vraie classe,
+jamais d'une table recopiée : une seconde copie de la forme serait le même piège, en
+plus retors. Un J2 décalé de 30 px dans la bande : voile à 70 px au lieu de 96,
+mesuré dans Godot comme calculé à la préparation.
+**Sans place**, la pose est refusée : ni RPC, ni recharge, ni numéro. ⚠️ **Et la
+place manque plus souvent qu'on ne l'avait cru en tranchant.** Le recul ne cherche
+qu'en deçà du premier obstacle du rayon de pose, et cet obstacle peut être
+l'ADVERSAIRE (les joueurs sont sur la couche des murs). Sans aucun mur, un
+adversaire dans l'axe à bout portant fait donc refuser la pose : jusqu'à 60 px de
+centre à centre dos tourné, 70 face au poseur — son bord le plus proche à 42 px ou
+moins du centre du poseur, la bande de 13 px n'a plus la place entre lui et le nez
+du poseur. Balayé dans Godot sans mur : 403 refus sur 11 639 positions de J2, tous
+là où le rayon s'arrête sur lui ; aucun sur les 10 313 où il ne le rencontre pas.
+La préparation affirmait « sans mur, un corps seul ne barre jamais toute la
+course », sur un script qui faisait toujours partir le recul de 96 px et ne voyait
+donc pas le rayon s'arrêter sur l'adversaire. Hors ce cas : un mur à moins de
+40,5 px du centre du poseur, ou un adversaire coincé contre un mur proche. Le
+désarmement de 0,30 s a eu lieu des deux côtés (`poser_gadget`, chez l'hôte et dans
+la prédiction du client), et c'est ce qui garde les pairs d'accord ; le point final
+voyageait déjà dans `rpc_spawn_gadget`, le fil ne bouge pas. La fonction est
+publique pour qu'un client puisse s'en servir en **pré-contrôle local** — dire le
+refus au joueur —, jamais pour décider. Ce retour ressenti n'est pas dans ce lot.
+
+**Ce qui change au ressenti** : face à un mur tout proche, le voile ne se pose plus
+— il serait né dans le nez du poseur ; posé sur un adversaire que la bande
+couvrirait, il naît devant lui au lieu de l'engloutir — **sauf à bout portant** : un
+adversaire dans l'axe à moins de 60 à 70 px fait refuser la pose, en silence (voir
+« Signalé, non corrigé »).
+
+⚠️ **Trouvé en route, et c'est le plus lourd : tout gadget posé en jeu naissait à
+12 px de son poseur, dans son propre corps.** Le rayon de `_point_de_pose` ne
+l'excluait pas. Le polygone du joueur est concave : le moteur le découpe en deux
+pièces convexes, le disque et le nez. Le rayon, parti du centre, ignore la pièce où
+il naît, mais il entre dans le NEZ à 18 px — et la marge de 6 px posait le gadget à
+12. Mesuré dans Godot, par le vrai joueur qui appuie sur sa touche, pour le voile
+comme pour l'ombre ; vrai de tous les gadgets depuis l'introduction de la fonction
+(`f161232`, 2026-09-09). **Aucune suite ne le voyait** : toutes téléportaient le
+poseur et posaient dans la même image, avant que le moteur ne l'ait déplacé — le
+piège « Un corps cinématique téléporté n'existe pour les requêtes qu'au pas
+suivant », du côté où il rend vert. C'est le témoin du recul qui l'a montré (voile à
+12 px, J2 loin) : sans correctif, le recul aurait refusé tout voile en jeu. Le poseur
+est désormais exclu du rayon, et les gadgets naissent à 96 px, comme l'étape 10 le
+voulait. ⚠️ **C'est un changement ressenti pour les dix gadgets**, à voir en jeu.
+Le rayon s'arrête toujours aux AUTRES corps, sur la couche des murs : un adversaire
+dans l'axe ramène le point 6 px devant lui — le recul en écarte le voile, ou le
+refuse quand l'adversaire est à bout portant (voir plus haut).
+
+**Validation** : `test_tir_et_reserves` (189 contrôles, dont 40 neufs),
+`test_classes` (377), `test_vision` (41), `test_protocole` (10), `test_charte`,
+`test_menus_finitions` (51), `test_liaisons` (55), `test_eblouissement_en_jeu` verts.
+Les nouveaux contrôles tirent de vraies balles (`_do_spawn_bullet`, J2 écarté de
+leur ligne, chaque balle libérée ensuite), lisent la vraie ligne de vue
+d'éblouissement, posent par le vrai `spawn_gadget` aux drapeaux d'un VRAI match —
+en bac à sable, `gadget_disponible()` rend toujours vrai et « rien d'armé » ne
+prouverait rien —, et par le vrai joueur qui tient sa touche, sans contrôle suspendu
+au temps réel. Chaque contrôle négatif a son témoin : ombre retirée, mur retiré, J2
+hors de la bande, l'ombre qui ne recule pas, J2 dans l'axe à 62 px. Sur l'ancien
+code, 17 des 36 contrôles de la première écriture rougissent.
+**Sabotages exécutés, chacun vu rougir puis remis** : le poseur retiré du recul
+(7 contrôles : le voile naît dans son nez, la recharge s'arme) ; le numéro compté
+avant le refus (2) ; le recul par pas de 20 px (1 : trop loin) ; le drapeau ignoré
+(2 : l'ombre recule) ; le poseur remis dans le rayon de pose (10, dont trois de la
+recharge de l'étape 24 : le voile refusé partout) ; la forme de l'ombre rendue au
+socle (5). **À la correction du lot B** (même jour), sur la suite complétée : un pas
+de recul en trop (2 : « un pas plus loin, il mordrait J2 » — l'ancien contrôle, à
+deux pas, restait vert — et le témoin à 62 px) ; le poseur retiré du recul (9, dont
+le refus à bout portant et « rien d'armé ») ; le recul qui refuse tout (2, dont le
+témoin à 62 px ; le refus à 55 px reste vert, comme il doit).
+
+⚠️ **Signalé, non corrigé** :
+- **question pour Adrien — le refus à bout portant** : sans aucun mur, un adversaire
+  dans l'axe à moins de 60 à 70 px (de centre à centre) fait refuser le voile, en
+  silence — le voile posé à bout portant sur l'adversaire qu'on vise, au
+  corps-à-corps de face. Le comportement n'est pas changé ; un contrôle le fixe
+  (`test_tir_et_reserves` : J2 à 55 px dans l'axe, refus ; témoin à 62 px, voile en
+  (436, 400)). Autre choix possible, qui est un choix de design : pour un gadget qui
+  arrête les joueurs, faire ignorer les joueurs au rayon de `_point_de_pose` (murs
+  seuls) ; le recul partirait alors de 96 px, et le voile pourrait naître DERRIÈRE
+  l'adversaire. C'est aussi un argument pour le retour ressenti du lot C ;
+- **le refus est muet** : le joueur perd 0,30 s de tir et rien ne le lui dit — un
+  geste qui échoue en silence, ce que V4.4 avait retiré pour la détente. Le retour
+  ressenti passera par `point_de_pose_libre()` en pré-contrôle local ; un retour
+  décidé par l'hôte exigerait un RPC neuf, donc un changement de fil ;
+- les autres gadgets posés face à un adversaire dans l'axe naissent à 6 px de son
+  corps ;
+- `tools/test_classes.gd` dit « aucune suite ne fait voler de balle » — faux depuis
+  l'étape 23 (`ad2c50f`, 2026-09-10 : `test_tir_et_reserves` y tire par le vrai
+  joueur) ; et son contrôle « planté devant le poseur » pose dans l'image de la
+  téléportation : il était vert sur le défaut des 12 px ;
+- **en ligne, rien d'éprouvé à deux instances** : un voile posé à moins de 2 px d'un
+  corps chez l'hôte peut mordre le corps prédit du client — une petite correction,
+  comme devant tout obstacle qui apparaît.
 
 ### Ce qui reste, dans l'ordre
 

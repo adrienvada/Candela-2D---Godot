@@ -2413,7 +2413,11 @@ var _gadgets_poses_par: Array[int] = [0, 0]
 ## Posé dans `_do_spawn_gadget`, qui tourne chez les DEUX pairs : chacun démarre
 ## son minuteur à la pose qu'il voit, le client un demi-aller-retour après l'hôte.
 ## L'écart joue dans le sens prudent — le client ne prédit jamais une pose que
-## l'hôte refuserait.
+## l'hôte refuserait faute de recharge.
+##
+## ⚠️ **L'hôte peut en revanche refuser faute de PLACE** (étape 28, 2026-09-11 —
+## `point_de_pose_libre()`) : rien n'est armé, ni chez lui ni chez le client, qui ne
+## reçoit rien ; et le désarmement de la pose a eu lieu des deux côtés.
 var _gadget_attente: Array[float] = [0.0, 0.0]
 
 ## La batterie du grésillement, par joueur, de 0 à 1. Elle appartient au JOUEUR :
@@ -2421,6 +2425,14 @@ var _gadget_attente: Array[float] = [0.0, 0.0]
 var _batterie: Array[float] = [1.0, 1.0]
 
 const PERIODE_RECHARGE_GADGET := 60.0
+
+## Le pas du recul d'une pose, en pixels (étape 28, 2026-09-11) : un voile qui
+## évite un corps naît à moins de 2 px de lui, jamais dedans. La recherche essaie au
+## plus 49 positions par tentative — le point de départ, puis de 94 px à 0 par pas de
+## 2. Un refus n'armant pas la recharge, une tentative refusée peut se répéter à
+## chaque nouvel appui, dès la fin du désarmement de 0,30 s.
+## Voir `_reculer_hors_des_corps()`.
+const PAS_RECUL_POSE := 2.0
 
 ## Compteur de poses, pour donner un nom UNIQUE à chaque nœud.
 ##
@@ -2475,8 +2487,15 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 	if classe == null or classe.gadget == null or not classe.gadget.est_livre():
 		return
 
+	# Un gadget qui arrête les joueurs ne naît pas sur un corps : il RECULE vers son
+	# poseur (Adrien, 2026-09-11 : « on recule le point de pose »). Sans place, pas de
+	# pose, et rien d'armé — ni recharge, ni numéro, ni RPC. Le désarmement a déjà eu
+	# lieu (`poser_gadget`), chez l'hôte comme dans la prédiction du client : c'est ce
+	# qui les garde d'accord.
+	var point := point_de_pose_libre(poseur, pos, rot, classe.gadget.slug)
+	if not point.is_finite():
+		return
 	_gadgets_poses += 1
-	var point := _point_de_pose(pos, rot)
 	# La graine de ce qui est aléatoire dans le gadget — l'onde du grésillement, et
 	# le plan de gestes de la torche fantôme (étape 27) : les deux pairs en dépendent.
 	# Tirée ICI, chez l'hôte, et portée par le RPC : deux pairs qui tireraient
@@ -2491,13 +2510,45 @@ func spawn_gadget(poseur: Node2D, pos: Vector2, rot: float) -> void:
 			actif_initial, _batterie[pid])
 
 
+## Où un gadget de `slug` se plante, posé par `poseur` depuis `depuis` vers `rot` :
+## devant lui, ramené en deçà du premier obstacle (`_point_de_pose`), puis — pour un
+## gadget qui arrête les joueurs — reculé hors des corps (`_reculer_hors_des_corps`).
+## `Vector2.INF` quand il n'y a de place nulle part : la pose est refusée.
+##
+## ⚠️ **L'hôte seul en fait une décision** (`spawn_gadget`), et le point final
+## voyage dans `rpc_spawn_gadget`. Le client peut l'appeler pour un PRÉ-CONTRÔLE
+## local — dire tout de suite qu'une pose n'a pas de place —, jamais pour décider :
+## il voit l'adversaire 100 ms en retard et son propre corps en avance, et son
+## verdict peut différer de celui de l'hôte. Pas dans `gadget_disponible()` pour la
+## même raison : une garde géométrique là-bas désarmerait un pair sans l'autre.
+func point_de_pose_libre(poseur: Node2D, depuis: Vector2, rot: float, slug: String) -> Vector2:
+	return _reculer_hors_des_corps(depuis, _point_de_pose(poseur, depuis, rot), rot, slug)
+
+
 ## Où le gadget se plante réellement : devant le poseur, ramené en deçà du
-## premier mur rencontré.
+## premier obstacle rencontré.
 ##
 ## Sans cette rectification, un joueur dos au mur planterait son gadget DANS la
 ## pierre : le nœud existerait, son occluder aussi, et rien à l'écran ne dirait
 ## pourquoi la manche vient de consommer une charge sans rien produire.
-func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
+##
+## ⚠️ **Le POSEUR est exclu du rayon** (étape 28, 2026-09-11). Il ne l'était pas, et
+## tout gadget posé en jeu naissait à 12 px de son poseur, dans son corps, depuis
+## l'introduction de cette fonction (`f161232`, 2026-09-09) — mesuré dans Godot, par
+## le vrai joueur qui appuie sur sa touche. Son polygone est concave : le moteur le
+## découpe en deux pièces convexes, le disque et le NEZ ; le rayon, parti du centre,
+## ignore la pièce où il naît mais entre dans le nez à 18 px. Aucune suite ne le
+## voyait : elles téléportaient le poseur et posaient dans la même image, avant que
+## le moteur l'ait déplacé — le piège « Un corps cinématique téléporté n'existe pour
+## les requêtes qu'au pas suivant ».
+##
+## ⚠️ **Le rayon s'arrête aussi aux AUTRES corps** : les joueurs sont sur la couche
+## 1, celle des murs (le défaut d'un `CharacterBody2D`). Un adversaire dans l'axe
+## ramène donc le point 6 px devant lui, et un voile de demi-épaisseur 6,5 l'y
+## mordrait — `_reculer_hors_des_corps()` le fait reculer, ou REFUSE la pose quand
+## l'adversaire est si près qu'il ne reste plus la place de la bande entre lui et le
+## poseur : voir sa doc.
+func _point_de_pose(poseur: Node2D, depuis: Vector2, rot: float) -> Vector2:
 	var direction := Vector2(cos(rot), sin(rot))
 	var cible := depuis + direction * GadgetBase.PORTEE_POSE
 	# ⚠️ `p1.get_world_2d()` et non `get_world_2d()` : `GameState` étend `Node`,
@@ -2511,12 +2562,98 @@ func _point_de_pose(depuis: Vector2, rot: float) -> Vector2:
 	var requete := PhysicsRayQueryParameters2D.create(depuis, cible)
 	requete.collision_mask = MapGeometry.WALL_LAYER
 	requete.collide_with_areas = false
+	if is_instance_valid(poseur):
+		var exclus: Array[RID] = [poseur.get_rid()]
+		requete.exclude = exclus
 	var touche := espace.intersect_ray(requete)
 	if touche.is_empty():
 		return cible
 	# Une marge, sinon le gadget naît exactement sur la surface et son occluder
 	# se confond avec celui du mur.
 	return Vector2(touche["position"]) - direction * 6.0
+
+
+## [Hôte] Le point de pose, reculé vers le poseur jusqu'à ce que le gadget n'y
+## chevauche plus aucun corps — pour un gadget qui ARRÊTE LES JOUEURS seulement.
+## Rend `point` tel quel s'il est libre, `Vector2.INF` s'il n'y a de place nulle part.
+##
+## ⚠️ **Pourquoi reculer.** Un voile né sur un corps, c'est le moteur qui l'en dégage
+## — un téléport au premier pas de ce corps, et une correction dans la prédiction du
+## client. Le poseur compte : à reculer on finit sur lui, et c'est là qu'on renonce.
+##
+## ⚠️ **Le recul ne cherche qu'en DEÇÀ du premier obstacle du rayon de pose** — un mur,
+## OU un adversaire : les joueurs sont sur la couche des murs (`_point_de_pose`). Le
+## refus survient quand cet obstacle laisse trop peu de place devant le nez du poseur :
+## un mur à moins de 40,5 px de son centre ; un adversaire dans l'axe à bout portant —
+## mesuré dans Godot, sans aucun mur, jusqu'à 60 px de centre à centre dos tourné et
+## 70 face au poseur (son bord le plus proche à 42 px ou moins) ; ou un adversaire
+## coincé contre un mur proche. C'est le voile posé à bout portant sur l'adversaire
+## qu'on vise. Un adversaire que le rayon ne rencontre pas, lui, ne barre jamais toute
+## la course : le recul part alors de 96 px (aucun refus sur 10 313 positions balayées
+## dans Godot, 2026-09-11).
+##
+## ⚠️ **Sur les formes que le moteur résout** — le polygone du joueur a un NEZ de
+## 28 px dans l'axe de sa visée (`player.tscn`) — **et sur les transformées des
+## nœuds, pas par une requête d'espace** : piège « Un corps cinématique téléporté
+## n'existe pour les requêtes qu'au pas suivant ».
+##
+## ⚠️ **Un refus ne dit rien chez l'hôte** : le joueur a perdu son désarmement de
+## 0,30 s. Le dire au joueur, c'est au pré-contrôle local (`point_de_pose_libre()`).
+func _reculer_hors_des_corps(depuis: Vector2, point: Vector2, rot: float, slug: String) -> Vector2:
+	var gabarit := _gabarit_bloquant(slug)
+	if gabarit.is_empty():
+		return point
+	var forme: Shape2D = gabarit["forme"]
+	var angle: float = rot + float(gabarit["angle_pose"])
+	var corps: Array = []
+	for j in [p1, p2]:
+		if _en_jeu(j):
+			corps.append(j)
+	if not _gene_un_corps(forme, Transform2D(angle, point), corps):
+		return point
+	var direction := Vector2(cos(rot), sin(rot))
+	# Signée : un mur au ras du poseur peut avoir ramené le point DERRIÈRE lui.
+	var d := (point - depuis).dot(direction) - PAS_RECUL_POSE
+	while d >= 0.0:
+		var candidat := depuis + direction * d
+		if not _gene_un_corps(forme, Transform2D(angle, candidat), corps):
+			return candidat
+		d -= PAS_RECUL_POSE
+	return Vector2.INF
+
+
+## Ce que la pose doit savoir d'un gadget qui ARRÊTE LES JOUEURS avant qu'il existe :
+## sa forme de collision et son angle de pose. `{}` pour tous les autres, et pour un
+## slug inconnu — `_do_spawn_gadget` en criera, on ne crie pas deux fois.
+##
+## Lu sur une instance JETABLE de la vraie classe, jamais recopié dans une table : une
+## seconde copie de la forme serait « Une forme héritée du socle ment en silence » en
+## plus retors. Les `_init()` des dix gadgets ne règlent que des champs.
+func _gabarit_bloquant(slug: String) -> Dictionary:
+	var chemin := String(IMPLEMENTATIONS.get(slug, {}).get("script", ""))
+	if chemin.is_empty() or not ResourceLoader.exists(chemin):
+		return {}
+	var script: GDScript = load(chemin)
+	var g: GadgetBase = script.new()
+	var r := {}
+	if g.arrete_les_joueurs:
+		r = {"forme": g._forme_de_collision(), "angle_pose": g.angle_pose}
+	g.free()
+	return r
+
+
+## `forme`, posée en `xf`, chevauche-t-elle l'un de ces corps — toutes leurs formes,
+## telles que le moteur les résout (les pièces convexes de leur polygone) ?
+func _gene_un_corps(forme: Shape2D, xf: Transform2D, corps: Array) -> bool:
+	for j in corps:
+		for proprio in j.get_shape_owners():
+			if j.is_shape_owner_disabled(proprio):
+				continue
+			var xf_proprio: Transform2D = j.global_transform * j.shape_owner_get_transform(proprio)
+			for i in j.shape_owner_get_shape_count(proprio):
+				if forme.collide(xf, j.shape_owner_get_shape(proprio, i), xf_proprio):
+					return true
+	return false
 
 
 ## [Hôte] Les gadgets qui demandent à s'allumer — la mine, aujourd'hui seule.

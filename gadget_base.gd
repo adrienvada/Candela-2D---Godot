@@ -63,6 +63,11 @@ var arrete_les_balles: bool = true
 ##
 ## ⚠️ **Lu dans `_ready()`**, comme `rayon` : une sous-classe le règle dans son
 ## `_init()`, jamais après l'entrée dans l'arbre.
+##
+## ⚠️ **Et lu à la POSE** (étape 28, 2026-09-11) : un gadget qui arrête les joueurs
+## RECULE vers son poseur plutôt que de naître sur un corps, et se refuse faute de
+## place — `GameState._reculer_hors_des_corps()`, sur la forme de
+## `_forme_de_collision()`. Un second gadget bloquant en hérite sans rien écrire.
 var arrete_les_joueurs: bool = false
 
 ## Une balle RENCONTRE-t-elle ce gadget ? Vrai pour les objets ; faux pour les
@@ -186,7 +191,9 @@ func _ready() -> void:
 ## touche ronde (2026-09-11) ; l'éblouissement, lui, lit l'étoile (`regard_par_la_forme`).
 ## Le voile a vécu jusqu'au 2026-09-10 avec une
 ## ombre en bande de 8 px et une collision en DISQUE de 84 px de rayon — voir
-## `GadgetVoile._forme_de_collision()`.
+## `GadgetVoile._forme_de_collision()` ; l'ombre habitée, jusqu'à l'étape 28
+## (2026-09-11), avec une plaque de 36 × 6 px et un disque de 18 — voir
+## `GadgetOmbre._forme_de_collision()`.
 func _forme_de_collision() -> Shape2D:
 	var cercle := CircleShape2D.new()
 	cercle.radius = rayon

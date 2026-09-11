@@ -2096,7 +2096,10 @@ func lancer_fusee():
 ## ⚠️ **La position envoyée est celle du JOUEUR, pas celle du gadget.** C'est
 ## l'hôte qui décide où l'objet se plante réellement — il faut une requête de
 ## physique pour ne pas le planter dans un mur, et deux mondes pourraient y
-## répondre différemment. Voir `GameState._point_de_pose()`.
+## répondre différemment. Voir `GameState._point_de_pose()` — et, pour un gadget
+## qui arrête les joueurs, reculé hors des corps ou refusé faute de place
+## (`GameState.point_de_pose_libre()`, étape 28). Le désarmement ci-dessous a lieu
+## même alors, chez l'hôte comme dans la prédiction : c'est ce qui les garde d'accord.
 func poser_gadget():
 	shoot_cooldown = maxf(shoot_cooldown, GadgetProfile.DESARMEMENT)
 	get_tree().call_group("game_state", "spawn_gadget", self, global_position, rotation)
