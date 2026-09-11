@@ -180,14 +180,5 @@ static func _melange(x: int) -> int:
 ## de son poseur, jamais sur l'objet — l'adversaire n'a pas à savoir qu'elle est
 ## armée avant de l'éprouver.
 func _monter_visuel() -> void:
-	var bobine := Line2D.new()
-	bobine.name = "Visuel"
-	var pts := PackedVector2Array()
-	for i in 13:
-		var ang := (i / 12.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * rayon * (0.6 + 0.4 * (i % 2)))
-	bobine.points = pts
-	bobine.width = 1.6
-	bobine.default_color = Charte.ACIER * 0.5
-	bobine.light_mask = MapGeometry.WALL_LAYER
-	add_child(bobine)
+	# Son image, éclairée par le décor : sous une torche seulement.
+	_poser_sprite("Visuel", "gresillement")

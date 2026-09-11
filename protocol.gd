@@ -128,6 +128,10 @@ class_name Protocol
 ##      initial et la batterie DÉCIDÉS PAR L'HÔTE (relus chez chaque pair, ils
 ##      divergeaient), et `rpc_detruire_gadget` apparaît — la destruction d'un
 ##      gadget devient autoritaire, le client n'encaisse plus rien.
+##
+##      Et le VOILE arrête désormais les joueurs (même version, toujours non
+##      publiée). Le fil ne bouge pas, le sens si : un client d'avant prédirait
+##      qu'il le traverse, et l'hôte le retiendrait — une correction par contact.
 const VERSION := 16
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.

@@ -30,6 +30,33 @@ par sujet impraticable.
 | **Les dix classes** — chantier CLASSES, ouvert le 2026-09-09 | **En propre :** `class_data.gd`, `root_profile.gd`, `flare_profile.gd`, `gadget_profile.gd`, `gadget_*.gd` (à venir), `menu_fiche_classe.gd`, `tools/test_classes.gd`, `tools/test_root.gd` et `tools/test_gadgets.gd` (à venir). **Repris :** `eblouissement.gd`, cédé par la session « retouche éblouissement », chantier clos. **Partagés, donc à demander avant d'écrire :** `game_state.gd` (catalogue et `_maj_eblouissement`), `player.gd` et `bullet.gd` (domaine « game feel »), **`ui.gd` — REPRIS le 2026-09-09** : Adrien signale qu'aucune session « menus » n'est active et m'autorise à y écrire, `rank_loadout.gd`, `protocol.gd`, `fusee_modele.gd` | Session « chantier 10 classes » (worktree `candela-10-classes-system-e0a52d`) |
 
 
+### Session « finitions des menus » (`candela-2d-f7`, branche `menus-finitions`) — ajoutée le 2026-09-10
+
+Chantier court demandé par Adrien : titres sans liseré, sons d'interface plus
+bas, menu inerte sous l'allumage et l'intro, avis de phase de test et logo
+Godot en bas de l'écran, nouvelle icône d'application.
+
+**En propre :** `tools/test_menus_finitions.gd` (créé), `assets/logos/godot_roman.png`
+(créé), `assets/ui/icones/gadget_*.png` (les dix icônes de fiche, créées),
+`assets/sprites/gadget_*.png` (les sprites de JEU des gadgets, créés — leur
+branchement dans les `_monter_visuel()` revient à la session « chantier 10
+classes », qui l'a demandé),
+`tools/detourer_titres.py` et `tools/incruster_vert.py` (créés), les PNG et `.import` de `assets/ui/titres/` (retouchés, aucun renommé).
+**Partagés, touchés par insertions :** `ui.gd` et `game_state.gd` (session
+« chantier 10 classes » prévenue par message le jour même), et
+**`menu_fiche_classe.gd`, en propre au chantier CLASSES** — recomposé à la
+demande directe d'Adrien le même soir (trois cases en haut, cône de torche,
+gadget en bas), la session prévenue par message ; `input_provider.gd` et
+`local_input_provider.gd` (une méthode chacun, `is_flashlight_locked()`, pour le
+cadenas de torche du HUD — fichiers de la session « Allumage torche », qui a
+livré le bouton à deux crans ; rien de son code n'est modifié) ; `menu_icones.gd`, `menu_hub.gd`,
+`charte.gd` (trois constantes `NIVEAU_UI_*`), `tools/run_suites.sh` (une suite
+ajoutée).
+
+Un worktree `retravail-menus` (branche `worktree-retravail-menus`) existait
+déjà avec les titres re-détourés, **sans session rattachée ni commit**. Rien
+n'en a été repris ; il a été supprimé avec sa branche à la demande d'Adrien.
+
 ### Session « photographe » — ajoutée le 2026-09-09
 
 **Fichiers tenus :** `tools/photographe.gd`, `tools/photographe.tscn`,
@@ -64,6 +91,14 @@ deux variables de séance, un appel à `PowerOn.lancer()` en fin de `_ready`, et
 `_spawn_kill_stamp()` **raccourci** — sa composition est partie dans
 `estampe_de_kill.gd`. Aucune mécanique de jeu n'est modifiée : ni le gel, ni la
 killcam, ni le décompte, ni le réseau.
+
+**Ajouté le 2026-09-10 dans ce même domaine**, et toujours minuscule :
+l'interrupteur public `archiver_les_matchs` (déclaré à côté de
+`rendu_racine_autorise`, même patron) et un `if` autour du seul
+`MatchRecord.append_to_history()` de `_archive_match_result()`. Vrai par défaut :
+le jeu archive exactement comme avant. Seul le photographe le coupe, parce que
+ses fausses manches s'écrivaient dans le vrai historique — voir « Pièges
+connus » de la ROADMAP.
 
 `tools/run_suites.sh` gagne une entrée (`test_bilan_de_soiree`).
 
@@ -3672,3 +3707,191 @@ jeu, torche allumée, ligne de vue franche, facteur de lampe à 1 — et **J1 to
 laisser de `null`, orientait J1 vers la souris pendant les images attendues.
 L'adversaire sortait du faisceau. Le banc imitait donc à la perfection le
 comportement qu'il devait prouver ; seule la mesure l'a démasqué.
+
+## 2026-09-10 — Le voile tient debout (chantier DIX CLASSES, étape 25)
+
+Session `candela-10-classes-system-e0a52d-da`, branche
+`claude/candela-10-classes-system-e0a52d`.
+
+**La décision m'est arrivée par relais** : la session des menus rapportait les
+mots d'Adrien. Je l'ai fait confirmer directement avant d'y toucher, en posant
+avec elle la question qu'elle laissait ouverte — les balles. Pas par méfiance :
+une règle de jeu reformulée de main en main, c'est exactement la situation où ma
+question « posée de mémoire » du matin s'était trompée.
+
+**Le plus instructif était caché sous la demande.** Le voile avait, depuis sa
+création, une collision en disque de 84 px sous une ombre de 8 px d'épaisseur.
+Invisible tant que la forme ne servait qu'aux balles. Lui ajouter une propriété —
+arrêter les joueurs — sans regarder la forme en aurait fait un mur rond
+invisible. Un diagnostic jetable a comparé collision et ombre sur les dix
+gadgets : l'ombre habitée a le même écart en petit, signalé et non corrigé.
+
+**Le test de marche a son témoin** : le même pas, voile retiré, doit passer.
+Sans lui, un mur de la carte au même endroit aurait fait le travail du voile, et
+le contrôle serait resté vert pour une mauvaise raison.
+
+## 2026-09-10 — Les gadgets prennent leurs images (chantier DIX CLASSES, étape 26)
+
+Session `candela-10-classes-system-e0a52d-da`. Les sprites de la session des
+menus, branchés dans les `_monter_visuel()` — et une erreur de ma part, qui mérite
+d'être racontée parce qu'elle a coûté à trois personnes.
+
+**J'ai mesuré de faux fichiers.** En extrayant les sprites d'un commit par leur
+seul nom, deux icônes homonymes ont écrasé deux sprites. J'en ai tiré « la
+poussière est une boîte de 128 px », l'ai signalé à la session des menus, en ai
+fait une question à Adrien — qui a demandé une image neuve à Gemini —, et j'ai
+lancé cette génération. **La capture en jeu montrait un nuage de 336 px** : j'ai
+arrêté la génération, corrigé auprès de la session des menus, et consigné le
+piège. Une mesure qui contredit ce qu'annonce l'auteur d'un fichier se revérifie
+AVANT d'être répétée ; ici, l'auteur avait raison.
+
+**La capture a aussi tranché les braises.** Trois rendus comparés : l'addition,
+qui était la règle pour tout ce qui brûle, blanchissait l'image peinte ; le
+mélange non éclairé la garde lisible.
+
+## 2026-09-10 — La poudre prend son image : deux défauts que seule la capture a vus (étape 26, suite)
+
+Session `candela-10-classes-system-e0a52d-da`. Avant la poussée de la session des
+menus, j'ai simulé sa fusion en lecture seule (`git merge-tree`), prévenu de ses
+onze conflits — dont dix PNG où prendre le mauvais côté aurait remis un voile vert
+**sans aucune erreur** — et fait vérifier un arbre candidat identique par une
+revue en parallèle : suite verte, inventaire mécanique des déclarations des trois
+arbres, aucune perte. Sa fusion réelle (`828efa6`) s'est faite ainsi.
+
+**La poudre a montré deux fois que « la suite est verte » ne dit rien du rendu.**
+D'abord, l'image recouvrait toutes les traces : j'avais comparé deux `z_index`
+relatifs à des parents différents, et mon contrôle l'affirmait. Ensuite, la
+profondeur corrigée, les traces restaient invisibles : poudre et traces saturaient
+ensemble au blanc sous la torche. Mes premières mesures de contraste échantillonnaient
+au mauvais endroit — une échelle supposée, jamais vérifiée — ; ce sont deux
+captures avant/après la pose des marques, différence pixel à pixel, qui ont donné
+un chiffre sûr (écart nul). Adrien a choisi d'assombrir ; le niveau (0,25) sort
+d'une table à six points, critère posé avant de mesurer.
+
+**Ce que la revue de la fusion a apporté en plus.** Cherchant des pertes, elle a
+trouvé un défaut de moi vieux de vingt-deux étapes : au clavier, J2 posait son
+gadget en tirant (O servait aux deux). Mon relevé de l'étape 4 ne lisait qu'un
+fichier sur deux. Adrien a tranché Y pour le gadget, N pour la recharge (K doublait
+la visée vers le bas, défaut antérieur), et un garde refuse désormais tout doublon
+— après avoir prouvé qu'il en voit un.
+
+## 2026-09-10 — Session « Refonte graphique » : les effets EN JEU passent à l'encre
+
+Branche `claude/brutalist-visual-effects-52d2fe`, worktree du même nom. Demande
+d'Adrien le soir même : attaquer, dans un worktree séparé, la refonte « roman
+graphique » des effets visuels en jeu relevés par le bilan (flash de bouche,
+halos, sang, impacts, traçante, flash de mort, killcam, vignette, rim light,
+onde de choc du kill, shimmer), **un lot par commit, un rendu avant/après par
+lot, Adrien garde ou rejette**. Chantier inscrit dans la ROADMAP.
+
+**Fichiers créés (en propre) :** `tools/comparer_photos.py`,
+`tools/encrer_masques.gd`, `tools/test_encrage.gd` (lot 1),
+`assets/sources/encre/` (planches Gemini blanc-sur-noir).
+
+**Fichiers du domaine « game feel » que ce chantier va modifier, un lot à la
+fois** : `blood_shader.gdshader`, `death_flash.gdshader`,
+`killcam_overlay.gdshader`, `damage_vignette.gdshader`,
+`player_rim_light.gdshader`, `ghost_unshaded.gdshader`,
+`shimmer_murs.gdshader`, `kill_shockwave.gd`, et les masques cuits de
+`assets/halo`, `assets/flash`, `assets/decals`. La session « game feel » n'a plus
+donné signe dans ce journal depuis le 2026-08-19 ; la session « retouche
+éblouissement » n'est pas concernée (le voile attend une décision d'Adrien, lot 9
+suspendu). `player.gd`, `bullet.gd` et `ui.gd` ne sont touchés que si un lot
+l'exige, et ce sera dit ici.
+
+**`tools/photographe.gd` (session « photographe ») : quatre plans AJOUTÉS**,
+`impacts`, `vignette` (famille jeu), `mort`, `onde-de-choc` (famille fins, pris
+sur une manche sacrifiée avant la séquence existante), plus deux aides
+`_manche_sacrifiee()` et `_face_a_un_mur()`. Aucun plan existant modifié ni
+renommé ; `test_banc` reste vert ; la session prévenue par message.
+
+⚠️ Cette session n'a pas l'outil `SendMessage` inter-agents ; elle passe par
+`ccd_session_mgmt.send_message`. Delta envoyé au porteur présumé du suivi
+(« Can2d - Mise à jour artefact de suivi »).
+
+### Lot 1 (2026-09-10, suite) — ce que l'encrage a touché hors des masques
+
+`player.gd` : `_eclat_de_bouche()` et son branchement dans
+`trigger_shoot_visuals()` — un sprite, aucune lumière modifiée.
+`wall_impact.gd` : `ECLATS` passe de 12 à 16 (nouvelle planche d'encre).
+`blood_stain.gd` : `FLAQUES` et `POIDS_TAILLE` re-mesurées sur les masques
+encrés, avec la note qui dit pourquoi. `tools/run_suites.sh` : `test_encrage`
+ajouté. `tools/photographe.gd` : le plan `onde-de-choc` passe en source `ecran`
+à 160 ms (contrainte de la session photographe : les sous-vues sont gelées
+150 ms après le coup fatal).
+
+### Lots 2 à 8 (2026-09-10, soir) — tous commités, tous en attente de verdict
+
+Un commit par lot, un rendu avant/après par lot envoyé à Adrien :
+`blood_shader.gdshader` (2), `death_flash.gdshader` (3),
+`killcam_overlay.gdshader` (4), `damage_vignette.gdshader` (5),
+`player_rim_light.gdshader` + `ghost_unshaded.gdshader` (6),
+`kill_shockwave.gd` (7), `shimmer_murs.gdshader` (8). Fusion d'`origin/main`
+(9e75106, correctif d'archivage du photographe) dans la branche avant le lot 5,
+ancrages vérifiés. Rien n'est fusionné vers `main` : c'est Adrien qui garde ou
+rejette, lot par lot.
+
+⚠️ Deux pièges de méthode payés ce soir, pour qui reprend l'outillage :
+`run_photos.sh --plan=X --sortie=D` **efface toute la famille** de X dans D
+avant d'écrire — un dossier de base ne se complète pas, il se recopie ; et
+capturer une famille DANS un dossier de base l'ampute de ses autres familles
+(perdu le dossier `jeu` du lot 2, reconstitué depuis le lot 1).
+
+### 2026-09-11 — Les verdicts d'Adrien, et ce qu'ils ont ouvert
+
+Gardés : lots 1, 2, 3, 6, 7. Retiré : lot 8 (revert, le shader rendu à la
+session « Murs avec bande LED respirante », qui remplace cette animation).
+Tranchés : lot 9 gardé tel quel, lot 10 supprimé (`pump_shockwave.*` retirés,
+`game_state.gd` et `tools/test_charte.gd` allégés d'une ligne).
+
+Trois retouches demandées, et un défaut trouvé en cherchant pourquoi Adrien
+n'avait pas vu la vignette :
+- **lot 1 bis** — deux taches par touche (`bullet.gd`, `blood_stain.gd` :
+  paramètre `gerbe`, constantes `FLAQUE_REDUCTION`, `GERBE_AVANCE`,
+  `GERBE_ETIREMENT`, champ `_gerbe` reporté dans la copie J2) ;
+- **lot 4 bis** — killcam dessinée (`killcam_overlay.gdshader` réécrit :
+  contours, trois tons, trame, uniform `intensite`) ;
+- **lot 5 bis** — les calques d'écran du joueur (vignette, flash de mort)
+  n'étaient dessinés ni pour J2 en scindé ni pour personne en vue unique :
+  `player.gd::calques_ecran` + `_loger_calque()`, `game_state.gd::accueillir_calque()`
+  + `_accorder_calques_joueurs()` appelée par `_accorder_rendu_aux_vues()`.
+- **HUD** (`ui.gd::_build_player_hud`) : le panneau prend la largeur de son
+  contenu, la fiche de J2 ne sort plus de l'écran scindé — domaine « menus »,
+  une connexion de signal, rien d'autre.
+
+**Les quinze curseurs** : `EffectPolicy.curseur(id)` (nouveau, statique) lu par
+`player.gd`, `game_state.gd`, `bullet.gd`, `blood_stain.gd`, `wall_impact.gd`,
+`ui.gd` ; `arene_au_repos` retiré de la table ; `tools/test_curseurs_branches.gd`
+ajouté à `run_suites.sh`.
+
+⚠️ **Découvert en composant les rendus des retouches** : le `settings.cfg`
+d'Adrien porte TOUS les curseurs CONFORT à 0,0 et tous les MONDE à leur
+plancher (traces de sang 0,25, grain killcam 0,0, vignette 0,0…). Tant que les
+curseurs étaient inertes, ça ne changeait rien ; depuis 010b07e, ça change
+tout — les premières captures des retouches montraient un sang à 25 % et une
+killcam nue. **Le photographe lit les réglages du poste** : pour juger un
+effet, le lancer sous un `HOME` neuf (`HOME=$(mktemp -d) ./tools/run_photos.sh …`),
+comme `run_suites.sh` le fait déjà pour les suites. Adrien prévenu.
+
+### 2026-09-11 (après-midi) — les quatre demandes d'Adrien
+
+Cookie de torche : reste tel quel (tranché). Fusée : `fusee.gd::energie_relative()`
+et le `gain` de la source posée dans `game_state.gd` (`_sources_eblouissantes`,
+`_plafond_de_source`), `tools/test_fusee_eteinte.gd`. Lampe contre un mur :
+`player.gd::_rapprocher_la_lampe()`, `AVANCEE_LAMPE`, `RETRAIT_LAMPE`.
+Scintillement : `shimmer_murs.gdshader`, `fragment()` seulement — la session
+LED tient `light()`. Murs au trait : `mur_encre.gd` (créé), `candela_tileset.gd`
+(tuile de mur noire), `game_state.gd` (purge et pose de `MurEncre`),
+`tools/test_arena_matter.gd` et `tools/test_arena_lighting.gd` (le contrôle du
+liseré de tuile devient un contrôle de tuile noire — fichiers de la session
+« atelier » du 2026-09-08, adaptés avec la note qui dit pourquoi).
+
+### 2026-09-11 (soir) — verdicts, et la fusion
+
+Sang en deux taches, vignette, murs : gardés. Killcam dessinée : gardée à
+moitié (`FORCE_DESSIN = 0,5`, `killcam_overlay.gdshader`). Fiche HUD de J2 :
+sa largeur suit `minimum_size_changed` de son contenu (`ui.gd`,
+`_build_player_hud`). Puis, sur l'ordre d'Adrien : branche poussée et fusionnée
+dans `main` en avance rapide (la branche descendait d'`origin/main` 9e75106
+sans divergence). Le chantier de la refonte est CLOS ; il reste à Adrien l'écho
+au sol du flash (V4.14).

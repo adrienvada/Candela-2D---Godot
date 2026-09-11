@@ -76,9 +76,13 @@ func _test_dalles_beton_et_tileset() -> void:
 	_check("Dalle de béton possède des micro-aspérités d'encre contrastée", (max_c - min_c) > 0.04,
 		"delta=%.3f" % (max_c - min_c))
 
-	# Vérifier que le mur d'atelier a son liséré halogène franc et son intérieur sombre
+	# Refonte roman graphique (2026-09-11) : la tuile de mur est du noir pur sur
+	# toute sa surface — le contour vit dans `mur_encre.gd`, autour de la MASSE,
+	# et non plus sur les quatre côtés de chaque tuile (ce qui quadrillait les
+	# murs épais). Le bord de la tuile doit donc être aussi noir que son centre.
 	var border_pix := img.get_pixel(35, 0)
-	_check("Mur possède une bordure halogène franche", (absf(border_pix.r - Charte.HALOGENE.r) < 0.02 and absf(border_pix.g - Charte.HALOGENE.g) < 0.02 and absf(border_pix.b - Charte.HALOGENE.b) < 0.02))
+	_check("Mur : le bord de la tuile est noir (le contour vit dans MurEncre)",
+		border_pix.v < 0.05, "v=%.3f" % border_pix.v)
 
 	# Intérieur du mur reste très sombre (respect du fondu additif)
 	var center_wall_pix := img.get_pixel(35 + 17, 17)

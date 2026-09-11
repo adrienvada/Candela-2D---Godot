@@ -12,7 +12,9 @@ extends SceneTree
 ##     redoublerait chaque tremblement autour du seuil ;
 ##   • l'ÉCONOMIE DES FUSÉES à l'entraînement, et la recharge d'une minute des
 ##     sept classes qui ne rechargeaient pas ;
-##   • le FIL à dix classes — `_get_weapon_idx` ne codait que quatre armes.
+##   • le FIL à dix classes — `_get_weapon_idx` ne codait que quatre armes ;
+##   • le VOILE qui arrête les joueurs, et toujours pas les balles (étape 25) ;
+##   • les IMAGES des gadgets, et le pied de la torche qui ne balaie pas (26).
 ##
 ## ⚠️ **Fichier séparé de `test_classes.gd`, et ce n'est pas un rangement.** Une
 ## autre session réécrit la partie interface de celui-là le même jour. Deux diffs
@@ -22,6 +24,9 @@ extends SceneTree
 
 const _IP = preload("res://input_provider.gd")
 const _GG = preload("res://gadget_gresillement.gd")
+const _GV = preload("res://gadget_voile.gd")
+const _GTF = preload("res://gadget_torche_fantome.gd")
+const _MG = preload("res://map_geometry.gd")
 
 ## Une détente qu'on tient ou qu'on lâche à la main. Elle court-circuite
 ## l'hystérésis, qui a son propre contrôle : ici on éprouve le VERROU de player.gd.
@@ -30,6 +35,17 @@ class Detente extends _IP:
 	func get_movement_vector() -> Vector2: return Vector2.ZERO
 	func get_aim_direction(_p: Vector2) -> Vector2: return Vector2.RIGHT
 	func is_shoot_pressed() -> bool: return tire
+	func is_flashlight_pressed() -> bool: return false
+	func is_flare_pressed() -> bool: return false
+	func is_reload_pressed() -> bool: return false
+	func is_gadget_pressed() -> bool: return false
+
+## Un joueur qui marche droit devant lui, et ne fait rien d'autre.
+class Marcheur extends _IP:
+	var direction := Vector2.ZERO
+	func get_movement_vector() -> Vector2: return direction
+	func get_aim_direction(_p: Vector2) -> Vector2: return Vector2.RIGHT
+	func is_shoot_pressed() -> bool: return false
 	func is_flashlight_pressed() -> bool: return false
 	func is_flare_pressed() -> bool: return false
 	func is_reload_pressed() -> bool: return false
@@ -71,6 +87,8 @@ func _run() -> void:
 	_test_largeur_des_libelles(gs)
 	_test_hud_du_client()
 	_test_destruction_autoritaire()
+	await _test_voile_bloquant(gs)
+	_test_sprites_des_gadgets(gs)
 	gs.queue_free()
 	await process_frame
 	if _echecs == 0:
@@ -605,3 +623,287 @@ func _test_destruction_autoritaire() -> void:
 		g.contains("g.detruit.connect(_sur_gadget_detruit)"))
 	_check("l'état initial d'une bobine vient de l'hôte, pas de la batterie locale",
 		g.contains('g.set("actif", actif_initial)'))
+
+
+## Le voile du Spectre arrête les joueurs — décision d'Adrien, 2026-09-10 : « on
+## ne peut pas passer au travers ». Éprouvé sur le VRAI joueur, qui marche.
+func _test_voile_bloquant(gs: Node) -> void:
+	print("\n[Le voile arrête les joueurs — et rien d'autre ne change]")
+
+	# ── Les couches ─────────────────────────────────────────────────────────
+	var bloquant: int = _MG.GADGET_BLOQUANT_LAYER
+	_check("les gadgets bloquants ont leur couche, distincte des trois autres",
+		not [_MG.WALL_LAYER, _MG.PIT_LAYER, _MG.GADGET_LAYER].has(bloquant)
+			and (bloquant & (bloquant - 1)) == 0, str(bloquant))
+	_check("le masque des joueurs la contient", (_MG.PLAYER_MASK & bloquant) != 0,
+		str(_MG.PLAYER_MASK))
+	# ⚠️ Le garde de l'étape 5 tient toujours : sans lui, les DIX gadgets
+	# deviendraient des murs d'un coup, et le jeu resterait parfaitement jouable.
+	_check("il ne contient toujours PAS la couche des gadgets",
+		(_MG.PLAYER_MASK & _MG.GADGET_LAYER) == 0, str(_MG.PLAYER_MASK))
+
+	# ── Un gadget sur dix ───────────────────────────────────────────────────
+	var bloquants: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		if g.arrete_les_joueurs:
+			bloquants.append(String(slug))
+		g.free()
+	_check("un seul gadget sur dix arrête les joueurs : le voile",
+		gs.IMPLEMENTATIONS.size() == 10 and bloquants.size() == 1 and bloquants[0] == "voile",
+		"%d gadgets, bloquants : %s" % [gs.IMPLEMENTATIONS.size(), bloquants])
+
+	# ── Le vrai voile, posé par le vrai code ────────────────────────────────
+	gs.round_active = true
+	gs.sandbox_mode = true
+	gs.training_mode = false
+	gs.countdown_left = 0.0
+	gs.ui._is_main_menu = false
+	gs.p2.global_position = Vector2(4000.0, 4000.0)
+	_vider(gs)
+	await process_frame
+	gs.p1.equip_weapon(gs.weapon_for_index(_index_de(gs, "spectre")))
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.spawn_gadget(gs.p1, gs.p1.global_position, 0.0)
+	await process_frame
+	await physics_frame
+	var voiles := _gadgets_de(gs, 0)
+	_check("le voile est posé", voiles.size() == 1, str(voiles.size()))
+	if voiles.size() != 1:
+		return
+	var v = voiles[0]
+	_check("il porte la couche des gadgets bloquants",
+		(v.collision_layer & bloquant) != 0, str(v.collision_layer))
+	_check("et garde celle des gadgets : les balles le voient encore",
+		(v.collision_layer & _MG.BULLET_MASK & _MG.GADGET_LAYER) != 0, str(v.collision_layer))
+	_check("il n'est pas pour autant sur la couche des murs",
+		(v.collision_layer & _MG.WALL_LAYER) == 0, str(v.collision_layer))
+	_check("les balles le traversent toujours", not v.arrete_les_balles)
+
+	# ── Sa forme : la bande de son ombre, plus un disque ────────────────────
+	var bande := Vector2(_GV.DEMI_LONGUEUR, _GV.DEMI_EPAISSEUR) * 2.0
+	var forme: CollisionShape2D = v.get_node_or_null("Forme")
+	_check("sa collision est une bande, pas un disque",
+		forme != null and forme.shape is RectangleShape2D
+			and (forme.shape as RectangleShape2D).size.is_equal_approx(bande),
+		str(forme.shape) if forme != null else "absente")
+	var occ: LightOccluder2D = v.get_node_or_null("Occluder")
+	var boite := Rect2()
+	if occ != null and occ.occluder.polygon.size() > 0:
+		boite = Rect2(occ.occluder.polygon[0], Vector2.ZERO)
+		for p in occ.occluder.polygon:
+			boite = boite.expand(p)
+	_check("la même bande que son ombre, au pixel près",
+		occ != null and boite.size.is_equal_approx(bande), str(boite))
+	var espace: PhysicsDirectSpaceState2D = v.get_world_2d().direct_space_state
+	var centre: Vector2 = v.global_position
+	# Posé en travers d'un regard vers +x : la toile court le long de l'axe y.
+	_check("à 30 px à côté de la toile il n'y a rien — le disque de 84 px n'existe plus",
+		not _touche_le(espace, v, centre + Vector2(30.0, 0.0)))
+	_check("sur la toile, à 60 px de son centre, il y a bien le voile",
+		_touche_le(espace, v, centre + Vector2(0.0, 60.0)))
+
+	# ── La toile ondule, et reste dans la bande ─────────────────────────────
+	var toile: Line2D = v.get_node_or_null("Visuel")
+	_check("la toile porte son image, étirée d'un piquet à l'autre",
+		toile != null and toile.texture != null
+			and toile.texture_mode == Line2D.LINE_TEXTURE_STRETCH)
+	var piquet_g: Node2D = v.get_node_or_null("PiquetG")
+	var piquet_d: Node2D = v.get_node_or_null("PiquetD")
+	_check("les deux piquets sont plantés aux bouts de la toile",
+		piquet_g != null and piquet_d != null
+			and is_equal_approx(piquet_g.position.x, -_GV.DEMI_LONGUEUR)
+			and is_equal_approx(piquet_d.position.x, _GV.DEMI_LONGUEUR))
+	if toile != null:
+		var avant := toile.points
+		v._process(0.3)
+		var apres := toile.points
+		var bouge := false
+		for i in avant.size():
+			if absf(avant[i].y - apres[i].y) > 0.01:
+				bouge = true
+		_check("la toile ondule : ses points bougent", bouge)
+		var dernier := apres.size() - 1
+		_check("tenue aux piquets : ses deux bouts ne bougent jamais",
+			absf(apres[0].y) < 1e-4 and absf(apres[dernier].y) < 1e-4
+				and is_equal_approx(apres[0].x, -_GV.DEMI_LONGUEUR)
+				and is_equal_approx(apres[dernier].x, _GV.DEMI_LONGUEUR),
+			"%s … %s" % [apres[0], apres[dernier]])
+	var pire := 0.0
+	for iu in range(41):
+		for it in range(120):
+			pire = maxf(pire, absf(_GV.decalage(iu / 40.0, it * 0.037, _GV.SECOUSSE_MAX)))
+	_check("l'onde, secousse comprise, ne sort jamais de la bande qui arrête",
+		pire + _GV.LARGEUR_TOILE / 2.0 <= _GV.DEMI_EPAISSEUR + 1e-4,
+		"%.2f + %.2f px pour %.2f" % [pire, _GV.LARGEUR_TOILE / 2.0, _GV.DEMI_EPAISSEUR])
+	v.secouer()
+	var s0: float = v._secousse
+	v._process(1.0)
+	_check("une balle la secoue, et le frisson s'éteint en une seconde",
+		s0 > 0.0 and v._secousse < s0 * 0.05, "%.3f puis %.3f" % [s0, v._secousse])
+	_check("la balle qui la traverse la secoue",
+		FileAccess.get_file_as_string("res://bullet.gd").contains("gadget.secouer()"))
+
+	# ── Et un joueur qui marche dessus s'y arrête ───────────────────────────
+	var depart := centre + Vector2(70.0, 0.0)
+	var arret: Vector2 = await _marcher(gs, depart, 90)
+	_check("un joueur qui marche droit sur le voile s'y arrête",
+		arret.x > centre.x + _GV.DEMI_EPAISSEUR,
+		"parti de x = %.0f, arrêté à x = %.1f, toile à x = %.0f" % [depart.x, arret.x, centre.x])
+	# ⚠️ Le TÉMOIN : le même pas, voile retiré, doit passer. Sans lui, un mur de la
+	# carte au même endroit — ou un joueur qui ne marche pas — ferait passer le
+	# contrôle ci-dessus pour une mauvaise raison.
+	v.queue_free()
+	await process_frame
+	await physics_frame
+	var libre: Vector2 = await _marcher(gs, depart, 90)
+	_check("témoin : voile retiré, le même pas passe de l'autre côté",
+		libre.x < centre.x - _GV.DEMI_EPAISSEUR, "arrêté à x = %.1f" % libre.x)
+	gs.sandbox_mode = false
+	gs.round_active = false
+
+
+## Fait marcher J1 vers la gauche depuis `depart`, `images` pas de physique durant,
+## et rend l'endroit où il s'est arrêté.
+func _marcher(gs: Node, depart: Vector2, images: int) -> Vector2:
+	var m := Marcheur.new()
+	m.direction = Vector2.LEFT
+	gs.p1.input_provider = m
+	gs.p1.global_position = depart
+	gs.p1.velocity = Vector2.ZERO
+	for i in range(images):
+		await physics_frame
+	m.direction = Vector2.ZERO
+	return gs.p1.global_position
+
+
+func _touche_le(espace: PhysicsDirectSpaceState2D, cible: Node, point: Vector2) -> bool:
+	var q := PhysicsPointQueryParameters2D.new()
+	q.position = point
+	q.collision_mask = _MG.GADGET_LAYER
+	for r in espace.intersect_point(q):
+		if r["collider"] == cible:
+			return true
+	return false
+
+
+## Les images de jeu des gadgets — décision d'Adrien du 2026-09-10 : tous ceux qui
+## peuvent en avoir une en ont une. Une exception, et elle est décidée : le LEURRE
+## porte la silhouette de son poseur.
+func _test_sprites_des_gadgets(gs: Node) -> void:
+	print("\n[Les gadgets ont leurs images]")
+	var attendus := {
+		"voile": ["Visuel", "PiquetG", "PiquetD"],
+		"ombre_habitee": ["Visuel"],
+		"torche_fantome": ["Visuel", "Tete"],
+		"mine_magnesium": ["Visuel"],
+		"nappe_braises": ["Visuel"],
+		"cartouche_suie": ["Visuel"],
+		"poussiere": ["Visuel"],
+		"gresillement": ["Visuel"],
+		"poudre_contact": ["Visuel"],
+	}
+	var sans_image := ["leurre"]
+	# ⚠️ Chaque gadget du catalogue doit être rangé d'un côté ou de l'autre : un
+	# onzième gadget qui n'y serait pas échapperait à tout ce qui suit.
+	var oublies: Array[String] = []
+	for slug in gs.IMPLEMENTATIONS:
+		if not attendus.has(slug) and not sans_image.has(slug):
+			oublies.append(String(slug))
+	_check("chaque gadget du catalogue a une image, ou une raison de ne pas en avoir",
+		oublies.is_empty(), str(oublies))
+
+	var manques: Array[String] = []
+	for slug in attendus:
+		var g = load(String(gs.IMPLEMENTATIONS[slug]["script"])).new()
+		g._monter_visuel()
+		for nom in attendus[slug]:
+			var n = g.get_node_or_null(nom)
+			if n == null or not ("texture" in n) or n.texture == null:
+				manques.append("%s/%s" % [slug, nom])
+		g.free()
+	_check("les neuf gadgets portent leurs images, pièce par pièce", manques.is_empty(),
+		str(manques))
+
+	# ⚠️ La poudre : ses empreintes PEINTES sont un décor, ses MARQUES de pas sont
+	# les vraies traces, et les secondes doivent passer par-dessus — sinon elle
+	# mentirait sur la seule chose qu'elle sait. Éprouvé dans le VRAI jeu et en
+	# profondeurs ABSOLUES : les marques vivent dans l'arène, la nappe dans le
+	# gadget, et comparer leurs `z_index` relatifs ne veut rien dire. C'est ce
+	# qu'un premier contrôle faisait, et il a laissé passer une nappe posée par-
+	# dessus toutes les traces. (Le leurre n'est pas monté ici : sans poseur, il
+	# crie, et c'est voulu.)
+	gs.round_active = true
+	gs.sandbox_mode = true
+	_vider(gs)
+	for i in range(10):
+		var c = gs.weapon_for_index(i)
+		if c.gadget != null and String(c.gadget.slug) == "poudre_contact":
+			gs.p1.equip_weapon(c)
+	gs._do_spawn_gadget(0, gs.p1.global_position + Vector2(150.0, 0.0), 0.0, "poudre_contact", 900)
+	var poudres := _gadgets_de(gs, 0)
+	if poudres.size() != 1:
+		_check("la poudre est posée", false, str(poudres.size()))
+	else:
+		var poudre = poudres[0]
+		poudre._poser_marque(poudre.global_position + Vector2(10.0, 0.0), Vector2.RIGHT)
+		var nappe: CanvasItem = poudre.get_node_or_null("Visuel")
+		var marque: CanvasItem = poudre._marques.back() if not poudre._marques.is_empty() else null
+		var sol: CanvasItem = gs.arena.get_node_or_null("CustomFloor")
+		var murs: CanvasItem = gs.arena.get_node_or_null("CustomWalls")
+		var zn := _z_absolu(nappe) if nappe != null else 999
+		var zm := _z_absolu(marque) if marque != null else -999
+		var detail := "nappe %d, marque %d, sol %s, murs %s" % [zn, zm,
+			str(_z_absolu(sol)) if sol != null else "?", str(_z_absolu(murs)) if murs != null else "?"]
+		_check("les marques de pas passent par-dessus les empreintes peintes", zm > zn, detail)
+		_check("la nappe reste sous les murs, qu'elle ne doit pas recouvrir",
+			murs != null and zn < _z_absolu(murs), detail)
+		# À égalité avec le sol, l'ordre de l'arbre tranche : le nœud des gadgets
+		# doit venir APRÈS l'arène, sans quoi la nappe passerait sous le sol.
+		# Et assez sombre pour que les traces se lisent : à pleine clarté, poudre et
+		# marques saturaient ensemble au blanc sous la torche (écart mesuré : nul).
+		_check("la nappe est assombrie au niveau mesuré, pas au-delà",
+			nappe != null and poudre.ASSOMBRISSEMENT <= 0.25
+				and is_equal_approx(nappe.modulate.r, poudre.ASSOMBRISSEMENT)
+				and is_equal_approx(nappe.modulate.g, poudre.ASSOMBRISSEMENT)
+				and is_equal_approx(nappe.modulate.b, poudre.ASSOMBRISSEMENT),
+			str(nappe.modulate) if nappe != null else "absente")
+		_check("et au-dessus du sol : même profondeur, mais dessinée après lui",
+			sol != null and zn >= _z_absolu(sol)
+				and gs.bullet_container.get_parent() == gs.arena.get_parent()
+				and gs.bullet_container.get_index() > gs.arena.get_index(), detail)
+	_vider(gs)
+	gs.sandbox_mode = false
+	gs.round_active = false
+
+	# ── La torche fantôme : la tête balaie, le pied reste posé ──────────────
+	var t = _GTF.new()
+	t._monter_visuel()
+	t._angle_depart = 0.4
+	t.rotation = 0.4
+	t._age = _GTF.PERIODE / 4.0
+	t._physics_process(0.0)
+	var pied: Node2D = t.get_node_or_null("Visuel")
+	var tete: Node2D = t.get_node_or_null("Tete")
+	_check("la tête balaie avec le faisceau",
+		tete != null and is_zero_approx(tete.rotation)
+			and absf(angle_difference(t.rotation, 0.4)) > 0.01,
+		"nœud à %.3f rad" % t.rotation)
+	_check("le pied, lui, reste posé : il ne tourne pas",
+		pied != null and absf(angle_difference(t.rotation + pied.rotation, 0.4)) < 1e-4,
+		"pied à %.3f rad" % ((t.rotation + pied.rotation) if pied != null else 0.0))
+	t.free()
+
+
+## La profondeur de dessin RÉELLE d'un nœud : ses `z_index` cumulés jusqu'au
+## premier ancêtre qui ne se dit plus relatif.
+func _z_absolu(n: CanvasItem) -> int:
+	var z := 0
+	var courant: Node = n
+	while courant is CanvasItem:
+		z += (courant as CanvasItem).z_index
+		if not (courant as CanvasItem).z_as_relative:
+			break
+		courant = courant.get_parent()
+	return z

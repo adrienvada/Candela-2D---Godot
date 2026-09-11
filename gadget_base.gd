@@ -27,6 +27,11 @@ extends StaticBody2D
 ## serait devenu un mur ordinaire. Les joueurs traversent parce que leur masque
 ## ne contient pas cette couche ; ce qui arrête ou non une BALLE est un drapeau,
 ## `arrete_les_balles`, décidé gadget par gadget.
+##
+## Depuis le 2026-09-10, le voile arrête aussi les JOUEURS (décision d'Adrien). Il
+## le fait par une seconde couche, `GADGET_BLOQUANT_LAYER`, que pose le drapeau
+## `arrete_les_joueurs` — jamais en ajoutant celle-ci au masque des joueurs, ce
+## qui murerait les dix gadgets d'un coup.
 
 ## Le joueur qui l'a posé — 0 ou 1. Sert à savoir qui subit quoi, et à la grâce
 ## du poseur si Adrien la demande un jour.
@@ -43,6 +48,17 @@ var pv: float = 1.0
 ## tendue : la balle la déchire et poursuit. Confondre les deux ferait du voile
 ## un mur, c'est-à-dire l'inverse de ce qu'il raconte.
 var arrete_les_balles: bool = true
+
+## Ce gadget arrête-t-il les JOUEURS ? Faux pour tous, sauf le voile.
+##
+## Décision d'Adrien du 2026-09-10 pour le voile : « on ne peut pas passer au
+## travers ». Le drapeau ajoute `MapGeometry.GADGET_BLOQUANT_LAYER` à la couche du
+## gadget, et le masque des joueurs contient celle-là ; la couche des gadgets
+## reste, pour que les balles le voient encore.
+##
+## ⚠️ **Lu dans `_ready()`**, comme `rayon` : une sous-classe le règle dans son
+## `_init()`, jamais après l'entrée dans l'arbre.
+var arrete_les_joueurs: bool = false
 
 ## Ce gadget peut-il éblouir ? Recopié du profil de classe à la construction —
 ## par INSTANCE, jamais par type (décision d'Adrien, 2026-09-09) : on doit
@@ -126,6 +142,8 @@ signal detruit(gadget: GadgetBase)
 func _ready() -> void:
 	add_to_group("gadgets")
 	collision_layer = MapGeometry.GADGET_LAYER
+	if arrete_les_joueurs:
+		collision_layer |= MapGeometry.GADGET_BLOQUANT_LAYER
 	# ⚠️ Masque à ZÉRO : un gadget ne se déplace pas, il n'a personne à heurter.
 	# Lui donner un masque le ferait participer aux résolutions de collision pour
 	# rien, à chaque image, sur un corps statique.
@@ -134,13 +152,23 @@ func _ready() -> void:
 
 	var forme := CollisionShape2D.new()
 	forme.name = "Forme"
-	var cercle := CircleShape2D.new()
-	cercle.radius = rayon
-	forme.shape = cercle
+	forme.shape = _forme_de_collision()
 	add_child(forme)
 
 	_monter_occluder()
 	_monter_visuel()
+
+
+## La forme de collision : un disque de `rayon`, dans le socle.
+##
+## ⚠️ **Elle doit dire la même forme que l'occluder**, et une sous-classe qui
+## surcharge l'un surcharge l'autre. Le voile a vécu jusqu'au 2026-09-10 avec une
+## ombre en bande de 8 px et une collision en DISQUE de 84 px de rayon — voir
+## `GadgetVoile._forme_de_collision()`.
+func _forme_de_collision() -> Shape2D:
+	var cercle := CircleShape2D.new()
+	cercle.radius = rayon
+	return cercle
 
 
 ## L'occluder, pour qu'un gadget ne soit pas un trou de lumière au milieu de
@@ -176,11 +204,43 @@ func _monter_occluder() -> void:
 ##
 ## Chaque sous-classe décide donc de son visuel, et les deux façons sont
 ## légitimes tant que le choix est ÉCRIT : charger un sprite et crier s'il manque,
-## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — c'est le
-## cas du voile et de l'ombre habitée, qui sont des lignes vues de dessus. Ce qui
-## reste interdit est le troisième chemin : dessiner *en attendant* un sprite.
+## ou dessiner l'objet quand sa forme finale est de l'ordre du trait — aucun
+## gadget n'en relève depuis l'étape 26 : neuf portent leur image, le leurre celle
+## de son poseur. Ce qui reste interdit est le troisième chemin : dessiner *en
+## attendant* un sprite. Le premier chemin passe par `_poser_sprite()`.
 func _monter_visuel() -> void:
 	pass
+
+
+## La texture d'une pièce de gadget, ou `null` — et alors un CRI.
+##
+## `piece` est le nom du fichier sans `gadget_` ni `.png` : voir
+## `GadgetProfile.chemin_sprite_de()`, seul endroit où le chemin se forme.
+func _texture_de(piece: String) -> Texture2D:
+	var chemin := GadgetProfile.chemin_sprite_de(piece)
+	if not ResourceLoader.exists(chemin):
+		push_error("%s : sprite absent — %s" % [get_script().resource_path.get_file(), chemin])
+		return null
+	return load(chemin)
+
+
+## Pose un sprite de gadget à sa taille PEINTE, 1 texel par unité de monde, éclairé
+## comme le décor. Rend `null`, sans rien poser, si l'image manque.
+##
+## ⚠️ **L'image garde sa taille, même plus grande que la collision** — la bobine,
+## la mine et la torche sont peintes à 28-30 px pour une collision de 16 à 18.
+## Adrien a gardé l'écart le 2026-09-10, en connaissance de cause : une balle peut
+## traverser le bord visible d'une mine.
+func _poser_sprite(nom: String, piece: String) -> Sprite2D:
+	var tex := _texture_de(piece)
+	if tex == null:
+		return null
+	var sprite := Sprite2D.new()
+	sprite.name = nom
+	sprite.texture = tex
+	sprite.light_mask = MapGeometry.WALL_LAYER
+	add_child(sprite)
+	return sprite
 
 
 ## ⚠️ **L'âge court TOUJOURS, même sans durée de vie.** Il ne courait que pour
@@ -191,6 +251,15 @@ func _physics_process(delta: float) -> void:
 	_age += delta
 	if duree_vie > 0.0 and _age >= duree_vie:
 		detruire()
+
+
+## Une balle vient de le traverser. Rien dans le socle : un objet dur arrête la
+## balle, il n'a pas à trembler. Le voile, lui, est une toile, et elle bat.
+##
+## ⚠️ **Appelé chez TOUS les pairs** — chacun voit passer ses balles, l'hôte seul
+## décide des dégâts. C'est pour ça qu'il ne doit toucher à rien de simulé.
+func secouer() -> void:
+	pass
 
 
 ## Encaisse des dégâts. Rend `true` si le gadget en meurt.
@@ -308,3 +377,17 @@ static func materiau_incandescent() -> CanvasItemMaterial:
 		_materiau_incandescent.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 		_materiau_incandescent.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
 	return _materiau_incandescent
+
+
+static var _materiau_peint_lumineux: CanvasItemMaterial
+
+## Le matériau d'une image PEINTE lumineuse — la nappe de braises, depuis l'étape
+## 26. Non éclairée par le décor, comme ce qui brûle, mais en MÉLANGE et non en
+## addition : l'image porte déjà sa lueur. Additionnée à la lumière de la nappe,
+## elle virait à la boule blanche où plus aucune pierre ne se lisait — vu à la
+## capture, sur trois rendus comparés.
+static func materiau_peint_lumineux() -> CanvasItemMaterial:
+	if _materiau_peint_lumineux == null:
+		_materiau_peint_lumineux = CanvasItemMaterial.new()
+		_materiau_peint_lumineux.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	return _materiau_peint_lumineux

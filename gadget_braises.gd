@@ -54,7 +54,7 @@ const RAYON_EBLOUISSEMENT := 200.0
 const ENERGIE := 1.8
 
 var _lumiere: PointLight2D
-var _charbons: Array[Polygon2D] = []
+var _nappe: Sprite2D = null
 
 
 func _init() -> void:
@@ -111,8 +111,8 @@ func appliquer_effets(joueurs: Array, delta: float) -> void:
 		if _lumiere != null:
 			_lumiere.energy = ENERGIE * (0.35 + 0.65 * reste)
 		rayon_eblouissement = RAYON_EBLOUISSEMENT * (0.35 + 0.65 * reste)
-		for i in _charbons.size():
-			_charbons[i].modulate.a = 0.35 + 0.65 * reste
+		if _nappe != null:
+			_nappe.modulate.a = 0.35 + 0.65 * reste
 
 
 ## Le joueur qui l'a posée, ou `null`. Lu à la demande plutôt que retenu : le
@@ -140,38 +140,17 @@ func _monter_lueur() -> void:
 	add_child(_lumiere)
 
 
-## Les charbons. **Placés par une spirale d'angle d'or, jamais tirés au sort.**
-##
-## ⚠️ Un tirage local donnerait deux nappes différentes chez les deux pairs — pas
-## grave à l'œil, mais c'est exactement la raison pour laquelle les particules
-## sont exclues du modèle d'éblouissement : *« tirées au sort à chaque émission,
-## donc absentes chez l'autre pair, donc indébogables »*. Une suite d'or coûte
-## une ligne et ne ment jamais.
+## La nappe : son image, peinte lumineuse, qui remplace les quinze charbons
+## dessinés (2026-09-10). La même image chez les deux pairs : le déterminisme que
+## la spirale d'or garantissait est acquis par construction.
 func _monter_visuel() -> void:
-	const NOMBRE := 15
-	const ANGLE_OR := 2.39996323
-	for i in NOMBRE:
-		var t := float(i) / float(NOMBRE)
-		var r := RAYON * 0.9 * sqrt(t)
-		var a := ANGLE_OR * i
-		var charbon := Polygon2D.new()
-		charbon.name = "Charbon%d" % i
-		var cote := 2.0 + 2.5 * (1.0 - t)
-		var pts := PackedVector2Array()
-		for k in 6:
-			var ang := (k / 6.0) * TAU
-			pts.append(Vector2(cos(ang), sin(ang)) * cote)
-		charbon.polygon = pts
-		charbon.position = Vector2(cos(a), sin(a)) * r
-		# Les plus proches du centre sont les plus vives : une nappe qui aurait
-		# la même température partout ressemblerait à une texture, pas à un feu.
-		charbon.color = Charte.AMBRE_INCANDESCENT.lerp(Charte.CARMIN, t)
-		# ⚠️ **Un matériau incandescent, pas un `light_mask` à zéro.** Le second
-		# ne fait qu'ôter les lumières ; le `CanvasModulate` de l'arène, lui,
-		# éteint tout ce qui passe — les charbons sortaient NOIRS au milieu du sol
-		# qu'ils éclairent. Constaté à la capture. Voir
-		# `GadgetBase.materiau_incandescent()`.
-		charbon.material = GadgetBase.materiau_incandescent()
-		charbon.z_index = 3
-		add_child(charbon)
-		_charbons.append(charbon)
+	_nappe = _poser_sprite("Visuel", "nappe_braises")
+	if _nappe == null:
+		return
+	# ⚠️ **Non éclairée par le décor, mais PAS additive.** Un `light_mask` à zéro
+	# ne suffit pas : le `CanvasModulate` de l'arène éteint tout ce qui passe, et
+	# les charbons dessinés sortaient NOIRS (voir `materiau_incandescent()`). Mais
+	# l'image porte déjà sa lueur : additionnée à la lumière de la nappe, elle
+	# virait à la boule blanche. Voir `GadgetBase.materiau_peint_lumineux()`.
+	_nappe.material = GadgetBase.materiau_peint_lumineux()
+	_nappe.z_index = 3

@@ -64,9 +64,13 @@ void fragment() {
 		float n1 = hash21(floor(p));
 		float n2 = hash21(floor(p * 1.618 + vec2(0.5, 0.5)));
 
-		// Scintillement dynamique temporel
-		float t = TIME * frequence_scintillement;
-		float pulse = sin(t + v_world_pos.x * 0.15 + v_world_pos.y * 0.2) * 0.5 + 0.5;
+		// Refonte roman graphique, lot 8 (2026-09-10) : le filament ne SCINTILLE
+		// plus. La modulation temporelle (sin(TIME × fréquence)) faisait vibrer
+		// le liseré à 4,5 Hz — un trait d'encre ne bouge pas. La rugosité reste,
+		// figée : les deux bruits sont mélangés à poids constant.
+		// `frequence_scintillement` est conservé pour les matériaux qui le
+		// posent (candela_tileset.gd, test_arena_lighting) ; il est sans effet.
+		float pulse = 0.5;
 		float grain = mix(n1, n2, pulse);
 
 		// Pic spéculaire tranché (style roman graphique brut)

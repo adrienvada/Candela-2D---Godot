@@ -49,6 +49,26 @@ const PAS_ENTRE_MARQUES := 26.0
 ## serait un défaut de cadence que personne ne verrait venir.
 const MARQUES_MAX := 72
 
+## La profondeur ABSOLUE de la nappe peinte : celle du sol (`floor_layer`, −1 dans
+## l'arène). À égalité, l'ordre de l'arbre tranche — le nœud des gadgets vient
+## après l'arène —, donc la nappe passe au-dessus du sol, et sous les murs (0), le
+## sang et les marques de pas (1). À 0, elle aurait recouvert le pied des murs.
+const Z_NAPPE := -1
+
+## L'assombrissement de l'image peinte, et c'est une MESURE (2026-09-10).
+##
+## Sous la torche, la poudre claire et les marques claires saturaient toutes deux à
+## 230/255 : écart nul, les traces illisibles — contre un contraste de Weber de
+## +2,0 pour les mêmes marques sur le sol nu. Adrien a tranché : assombrir la
+## poudre. Mesuré par captures avant/après, faisceau en plein, à six niveaux :
+## traces sur la poudre à 0,00 / 0,03 / 0,11 / 0,20 / 0,34 / 0,53 fois leur
+## contraste sur le sol pour 1,00 / 0,70 / 0,55 / 0,45 / 0,35 / 0,25. Retenu :
+## 0,25, le plus clair des niveaux où elles ressortent au moins moitié autant que
+## sur le sol — critère posé AVANT la mesure. La poudre y vaut encore 109 de
+## luminance, plus claire que le sol éclairé : elle se lit toujours comme de la
+## poudre. ⚠️ L'éclaircir, c'est rendre les traces illisibles : remesurer d'abord.
+const ASSOMBRISSEMENT := 0.25
+
 var _marques: Array[Node2D] = []
 ## Dernier point marqué, par joueur. `INF` = pas encore entré dans la nappe.
 var _dernier: Array[Vector2] = [Vector2.INF, Vector2.INF]
@@ -143,23 +163,24 @@ func _poser_marque(pos: Vector2, sens: Vector2) -> void:
 			vieille.queue_free()
 
 
-## La nappe elle-même : un semis de grains clairs, déterministe comme celui des
-## braises — un tirage local donnerait deux nappes différentes chez les deux
-## pairs, ce qui est la raison pour laquelle les particules sont exclues du
-## modèle d'éblouissement.
+## La nappe elle-même : son image, à sa taille — 220 px, deux fois `RAYON` —,
+## éclairée comme le sol : dans le noir, elle n'existe pas. Adrien a préféré
+## l'image au semis de grains le 2026-09-10, dans une version aux empreintes très
+## légères peinte à sa demande.
+##
+## ⚠️ **Posée SOUS les marques de pas, et c'est une profondeur ABSOLUE.** Les
+## empreintes peintes sont un décor ; les marques sont les vraies traces, celles
+## qui disent que quelqu'un est passé. Si les premières couvraient les secondes, la
+## poudre mentirait sur la seule chose qu'elle sait.
+##
+## Les marques vivent dans l'ARÈNE (profondeur 1, voir `_poser_marque`), la nappe
+## dans le gadget, que le socle pose à 4 : une profondeur RELATIVE de 0 la mettait
+## donc à 4, par-dessus toutes les traces. Vu à la capture — six marques posées sur
+## la nappe, aucune visible — et un premier contrôle l'avait laissé passer en
+## comparant deux profondeurs relatives à des parents différents.
 func _monter_visuel() -> void:
-	const NOMBRE := 26
-	const ANGLE_OR := 2.39996323
-	for i in NOMBRE:
-		var t := float(i) / float(NOMBRE)
-		var grain := Polygon2D.new()
-		grain.name = "Grain%d" % i
-		var cote := 1.4 + 1.4 * (1.0 - t)
-		grain.polygon = PackedVector2Array([
-			Vector2(-cote, -cote), Vector2(cote, -cote),
-			Vector2(cote, cote), Vector2(-cote, cote)])
-		grain.position = Vector2(cos(ANGLE_OR * i), sin(ANGLE_OR * i)) * RAYON * 0.92 * sqrt(t)
-		grain.color = Charte.HALOGENE
-		grain.light_mask = MapGeometry.WALL_LAYER
-		grain.z_index = 2
-		add_child(grain)
+	var nappe := _poser_sprite("Visuel", "poudre_contact")
+	if nappe != null:
+		nappe.z_as_relative = false
+		nappe.z_index = Z_NAPPE
+		nappe.modulate = Color(ASSOMBRISSEMENT, ASSOMBRISSEMENT, ASSOMBRISSEMENT)

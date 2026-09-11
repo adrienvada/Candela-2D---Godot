@@ -2441,6 +2441,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Refonte des mécaniques de tir : munitions finies, dispersion bloom et rechargement** (2026-09-07, Adrien) | Chaque arme possède un chargeur fini, une cadence propre, une dispersion dynamique au tir enchaîné et un temps de recharge distinct doublé selon l'arbitrage d'Adrien : Pistolet (10 munitions, cooldown 0.16s, recharge 2.2s, bloom +4.5°/tir max 25°), Fusil (24 munitions, cooldown 0.24s, recharge 3.5s, bloom +3.5°/tir max 20°), Arbalète (1 munition, cooldown 0.3s, recharge 4.5s auto après tir), Pompe (6 munitions, cooldown 0.9s, recharge 5.6s). Hiérarchie des temps de recharge : Pompe (5.6s) > Arbalète (4.5s) > Fusil (3.5s) > Pistolet (2.2s). Touche de recharge dédiée : Carré (`JOY_BUTTON_X`) sur manette (fusée déplacée sur Triangle `JOY_BUTTON_Y`), R (J1) / K (J2) sur clavier. `Protocol.VERSION` passe à 8 pour transporter l'action de recharge. ⚠️ **DÉPASSÉ EN PARTIE le 2026-09-09** — voir « Étape 20 — le réglage d'Adrien, manette en main ». Les chargeurs (Pistolet 6, Fusil 4), les dégâts du Fusil (60/25), les cadences sous 3 tirs/s (doublées) et la touche de fusée (Triangle → L1) ont changé ; le Terrassier recharge désormais cartouche par cartouche. La hiérarchie des temps de recharge, elle, tient toujours. *La décision ci-dessus reste vraie de sa date : elle n'est plus vraie du code.* |
 | **Les écrans de mode passent par des images générées floutées, pas par une capture ni un panneau nu** (2026-08-27, Adrien) | Ferme le revirement du 27&nbsp;août ci-dessus. Implémenté directement par Adrien (`819f112`, `1a3ca7b`, `5e7ce2f`, aucun commit ne touchait `docs/ROADMAP.md` — rattrapé ici). Trois gestes&nbsp;: (1) les dix illustrations du menu principal, qui ressemblaient à des visuels de studio génériques, sont régénérées sur la direction artistique réelle de Candela — noir à 90&nbsp;%, béton brut, faisceaux ambre/tungstène rasants, tension de traque (« être vu, c'est être mort ») ; (2) `menu_bg_blur.gdshader` (flou gaussien 9 échantillons + assombrissement + teinte) pose une de ces illustrations, floutée, **derrière** le panneau interactif du cadre droit — le salon, le râtelier d'armes, les réglages restent la chose qu'on manipule, l'illustration ne fait que l'habiller ; (3) `MenuHub.set_panel_background()`/`set_screen_background()` associent une illustration à un panneau ou, à défaut, à l'écran courant. Les cinq écrans de préparation de match (`SCREEN_LOCAL`, `HOST`, `JOIN`, `LOCAL_HOST`, `LOCAL_JOIN`, `TRAINING`) prennent le fond `ill_amical` derrière leur salon ; les quatre panneaux de réglages (contrôles, affichage, effets, audio) prennent `apercu_personnalisation` ; profil prend `ill_competitif`. `_update_background()` masque le flou quand le contenu affiché est déjà une image plein cadre (`MenuApercu`) — pas de flou sur un flou. |
 | **Les écrans de mode aussi passeront par des images générées** (2026-08-27, Adrien) | Abandon de la distinction posée le 2026-08-26 (« le menu principal montre des illustrations, les écrans de mode montreraient des captures réelles ») — elle n'avait de toute façon jamais été construite : les captures, câblées puis retirées le même jour faute de s'afficher, avaient été remplacées par le râtelier d'armes en défaut. **Ce même défaut est abandonné à son tour** : tout le menu, écrans de mode compris, sera habillé par des images générées, au procédé déjà retenu pour DA1.5 (Gemini, dix illustrations du menu principal). Reste à faire : générer les images des écrans de mode et les câbler à la place du panneau par défaut actuel (`ui.gd`) — non commencé. |
+| **Le verrou de torche se voit, dans l'icône, pour le seul joueur qui tient la manette** (2026-09-10, Adrien) | Le bouton à deux crans (session « Allumage torche ») distingue l'appui léger, qui n'éclaire que tenu, de l'appui à fond, qui verrouille la torche allumée gâchette relâchée. Le HUD ne connaissait que « allumée / éteinte » — signalé par la session « Plan des vibrations de manettes ». **Lâcher la gâchette en croyant éteindre, dans ce jeu, c'est se trahir.** Un cadenas dessiné (`VerrouTorche`, 9 × 11 px) se pose en coin de l'icône de torche, visible seulement torche allumée ET verrouillée. **Aucune réplication, et c'est voulu** : `InputProvider.is_flashlight_locked()` répond faux par défaut, seul `LocalInputProvider` rend son cran plein — un adversaire en ligne n'a jamais de cadenas, parce que la façon dont l'autre tient sa torche n'est pas une information de jeu. Le HUD le lit sur le fournisseur du joueur, sans passer par `player.gd`. |
+| **La fiche de classe montre l'arme et le faisceau, pas un chiffre** (2026-09-10, Adrien) | *« L'arme définit autant la classe. »* En haut de `menu_fiche_classe.gd`, trois cases de même taille : le sprite du joueur (recadré sur la figure — sa toile est aux deux tiers vide), l'icône de l'arme en couleurs d'origine, et un **cône dessiné** depuis `torch_angle_deg` et `portee_torche()`, qui remplace la jauge FAISCEAU. La portée y est relative au catalogue, comme les jauges : la plus longue des dix touche le haut de la case. Le gadget descend sous les jauges, avec son image (`assets/ui/icones/gadget_<slug>.png`, chemin déjà porté par `GadgetProfile.chemin_icone()`) et sa phrase. **Le cône n'est pas le cookie** : le cookie est un masque blanc pensé pour le sol, illisible en vignette ; les deux nombres dessinés sont ceux que le jeu utilise pour éclairer. **Les dix images de gadget ont été livrées le même soir** — aucune n'existait. Générées sur un **fond vert d'incrustation uni** plutôt que sur le damier habituel, précisément pour ne pas refaire le liseré des titres : `tools/incruster_vert.py` tire l'alpha de l'excès de vert et retire le vert résiduel des bords. ⚠️ **Ce sont des icônes de fiche, vues de trois-quarts — pas des sprites de jeu.** En jeu, les gadgets restent dessinés au trait (`_monter_visuel()`) ; un sprite de jeu serait vu de dessus, à l'échelle du joueur, et appartient au chantier CLASSES. Les deux images jugées ratées par Adrien — la nappe de braises en feu de camp, la poussière en chope qui mousse — ont été refaites. **Les sprites de JEU suivent** (décision d'Adrien, même soir) : `assets/sprites/gadget_*.png`, vue strictement de dessus, à 1 texel par unité de monde, en pièces séparées quand ça bouge (pied et tête de la torche fantôme, piquet et toile du voile — la toile est une bande de 168 × 8 étirée par un `Line2D` qui ondule). Tous sauf le leurre, qui porte la silhouette de son poseur. Leur branchement revient au chantier CLASSES. **La nappe de braises est un DISQUE plein** (Adrien, par la session CLASSES) : peinte en ellipse et posée dans son carré, l'image fine ne couvrait que 54 % du disque qui brûle (rayon 68) — on brûlait à 50 px du centre là où rien n'était peint. Étirée au carré puis grossie de 3 % avant recadrage, elle en couvre 97 % (pixels à alpha ≥ 128 dans le rayon). **La poudre de contact prend une image, pas des grains** (Adrien, même soir, réponse donnée à la session CLASSES) : empreintes « vraiment légères ». Gemini les a remplies d'un crème chaud qui les faisait ressortir ; plutôt que de régénérer, le crème est ramené au gris médian de la poudre (95 % du chemin), et il ne reste qu'un contour fin — que la torche révèle, puisque la poudre est éclairée par le décor. **Un sprite peut déborder de sa collision** (Adrien, même soir : *« c'est bien que les objets soient un peu plus visibles que leur zone de collision »*) : bobine, mine et torche fantôme sont peintes sur 28-30 px pour une collision de 16-18 — étincelles et pieds débordent du corps. ⚠️ **Une génération en parallèle déclenche un reCAPTCHA Google** : douze conversations Gemini ouvertes d'un coup ont bloqué le compte d'Adrien deux fois ; en série, une image à la fois au premier plan avec 30 s de pause, les onze sont passées. **Les planches vertes sources (~100 Mo) ne sont pas versionnées** : elles vivent dans `assets/sources/gadgets/` de l'arbre principal, et les versionner est une décision qui attend Adrien. |
+| **Les icônes d'armes gardent leurs couleurs d'origine** (2026-09-10, Adrien) | DA1.5 voulait un masque gris teinté par le code — un fichier, deux joueurs, bleu et rouge. Dans le salon, la teinte du joueur tombait sur un bouton **de la même teinte** : Adrien ne distinguait plus les armes, et l'état coché avait déjà dû repeindre l'icône en noir pour qu'elle ne disparaisse pas. Le côté du joueur est dit par le bouton ; l'icône n'a pas à le redire. `MenuIcones.ARME_ORIGINE` (le blanc, qui multiplie par un) remplace la teinte aux deux sites d'appel, et le noir de l'état coché disparaît avec elle. **La règle DA1.5 tient encore pour tout le reste** — outils de l'éditeur, torche du HUD : l'exception est nommée, pas la règle abrogée. **Le même soir, les icônes d'armes passent en couleur** (roman graphique brutaliste, `2ce7133`), ce qui a coûté deux retouches mesurées à la capture : sans mipmaps, la réduction de 128 à 30 px scintillait (le trait blanc le cachait) ; et `icon_max_width` ne bornant que la LARGEUR, la toile carrée de 30 px de large faisait grandir chaque bouton de 30 px de haut — le bouton JOUER poussé contre le bord de l'écran. `MenuIcones.recadree()` recadre donc l'icône sur l'arme à l'affichage, sans toucher au fichier. |
 | **Chaque lot de tests a son propre `user://`** (2026-08-26) | Godot dérive `user://` de `HOME` : sans rien faire, **tous** les lots écrivent dans le `user://` du jeu installé — les cartes, les réglages et le journal de matchs d'Adrien. Deux dégâts. Le lot écrit chez le joueur, ce que ce document signalait déjà en confiant la parade à chaque suite (chemins temporaires, contrôle final que `settings.cfg` est intact) — une discipline qui ne tient que si UN SEUL lot tourne. Et **deux lots simultanés se rendent faussement rouges** : mesuré en six copies simultanées, `test_match_history_view` échoue 6/6, `test_audio_settings` 5/6, `test_screen_audio` 4/6, `test_match_format` 3/6, `test_effect_policy` 2/6, `test_rejeu_journal` 2/6 ; avec un `user://` par copie, les mêmes 36 exécutions passent 36/36. **Le coût n'est pas l'échec, c'est le message** : « les cinq matchs sont rendus → 0 » accuse le code, jamais la voisine — le faux diagnostic que le port dérivé venait de supprimer côté réseau restait armé ici. `run_suites.sh` pose donc un `HOME` sous `mktemp -d` et l'annonce à chaque lot ; **il n'efface rien**, ni ce répertoire ni autre chose, et macOS purge son dossier temporaire lui-même. `run_duo.sh` en hérite quand le lot l'appelle ; lancé seul, il continue d'écrire pour de vrai, c'est un outil de mise au point. **Corollaire obligatoire, et il ne se devine pas : `run()` passe désormais `--no-eos` à TOUT ce qu'il lance.** L'identité Epic vit sous `HOME` ; un foyer neuf n'en a aucune, donc le SDK part en créer une par le réseau à chaque suite. Mesuré sur `test_matchmaking`, identifiants présents : **15 s au lieu de 4** ici, et **aucun retour** chez la session DA2, deux fois — quatre suites tuées par le chien de garde, lot à 789 s. La différence entre ces deux mesures n'est pas dans le code mais chez Epic : **un vert obtenu le jour où Epic répond n'est pas un vert.** Le prix silencieux serait pire que la lenteur — chaque lot frapperait une identité Epic neuve, ce que le dépôt s'interdit partout ailleurs. Ce n'est donc pas une optimisation mais la décision « un lot de tests local ne dépend jamais d'Epic » (`cdefb7b`, même jour) appliquée à l'endroit qui l'avait manquée : elle n'était descendue que dans `run_duo.sh`. Coût en couverture : **aucun, et c'est mesuré** — sur l'état fusionné le lot rend ses **61 verdicts, zéro échec**, et `grep -c 'init EOS'` rend **0** : aucune suite n'a parlé à Epic. *(Ce passage a d'abord écrit « 68/68 », chiffre retiré par son propre auteur — un `grep -c ' OK$'` ramassait aussi les `HÔTE OK` / `CLIENT OK` internes à `run_duo.sh`. Sixième effectif écrit à la main corrigé le 2026-08-27, et il vivait dans la justification d'un correctif, pas dans du vieux texte.)* Posé dans `run()` et non aux six appels, pour qu'un banc ajouté demain n'hérite pas du blocage par oubli. **Fusionné dans `main` le 2026-08-27 sur décision d'Adrien**, et la vérification qui compte n'est pas le vert : les empreintes SHA-256 de `settings.cfg`, `match_history.json` et `maps/custom.json` sont **identiques avant et après** un lot complet — alors que `match_history.json` bougeait à chaque lot la nuit précédente. Le lot est aussi passé de 344 s à 237 s, l'attente d'Epic en moins. **Et un PORT par lot depuis le 2026-09-01, même défaut sur une autre ressource.** `run_duo.sh` dérive son port de `pwd -P` : c'est un port par ARBRE. Deux lots lancés depuis le même arbre — le cas courant, une session qui relance après un correctif pendant qu'une autre finit le sien — ouvraient donc le même port UDP, et le second rendait `REPORTÉ`. **Ce n'est pas une panne, le lanceur le dit ainsi, et c'est bien le problème : c'est une mesure qui n'a pas eu lieu, présentée dans un lot vert.** Huit scénarios à deux instances pouvaient disparaître sans que le verdict final change de couleur. Le port se dérive désormais du FOYER du lot, pas d'un tirage : `mktemp -d` garantit déjà son unicité, donc la même unicité sert deux fois et il n'y a rien de neuf à inventer — un `RANDOM` aurait fait la même chose en apparence, sans rien garantir et sans se reproduire à la relecture d'un journal. Dérivé **une fois et exporté**, jamais recalculé en aval : une seconde dérivation rouvrirait exactement le défaut que la première ferme. `verifier_port_libre` reste dans `run_duo.sh` — improbable n'est pas impossible, et un filet qu'on retire parce qu'il ne sert plus est un filet qu'on regrette. **Mesuré des deux côtés :** l'ancienne dérivation rendait 36879 pour les deux lots de cet arbre ; la nouvelle a rendu 36403 et 24315, et deux lots simultanés depuis le même arbre passent **62 verdicts chacun, zéro reporté**, en 250 s au lieu de deux fois 245 s à la file. `run_duo.sh` lancé À LA MAIN garde sa dérivation par arbre : c'est un outil de mise au point, on veut y retrouver le même port d'une fois sur l'autre. |
 | **Un lot de tests local ne dépend jamais d'Epic** (2026-08-26) | Les scénarios duo tournent en ENet sur 127.0.0.1, et pourtant chaque instance ouvrait une session EOS au démarrage — **douze allers-retours réseau réels par lot** (mesuré à six scénarios ; ils sont huit depuis le 2026-08-26), pour un transport dont aucun scénario ne se sert. `run_duo.sh` passe désormais `--no-eos` à ses trois lancements ; le drapeau existait déjà dans `network_manager.gd`, personne ne s'en servait. Mesuré : 17 s le scénario avec, 15 s sans, ~12 s sur le lot. **Le temps gagné n'est pas l'argument.** Le vrai est qu'un lot qui rougit parce qu'Epic est lent produit un **faux rouge** — et un contrôle qui rougit sans raison finit débranché, ce qui coûte infiniment plus que les douze secondes. Corollaire : ce qui doit éprouver EOS l'éprouve explicitement (`test_transport`, `docs/PROTOCOLE_TEST_EOS.md`), et ne se contente pas d'en traîner une session au passage. |
 | **Le sprint est supprimé** (2026-08-26, Adrien) | Une seule allure, désormais. Ce que la suppression a révélé est plus instructif que la décision elle-même : le sprint était **câblé jusque dans le fil réseau**. `rpc_send_inputs` portait un sixième argument pour lui seul, donc `Protocol.VERSION` passe de 4 à 5 — un client v4 enverrait six valeurs à un hôte v5 qui en attend cinq, et le témoin de fil a signalé la rupture avant qu'on y pense. Deux conséquences en cascade, qu'on ne cherchait pas : `sprint_streaks.gdshader` disparaît, ce qui **ferme V5.9** (les traits de vitesse n'ont plus de vitesse à tracer) ; et le détecteur de pas, qui compte une **distance**, n'a plus qu'un seuil au lieu de deux — 45 px, sans alternative. Or l'argument n°1 contre les frames de marche peintes (DA2.4) était précisément que « le sprint ferait mentir en permanence » une planche jouée à cadence fixe. **Cet argument vient de tomber avec le sprint** : la planche de marche redevient possible, à un seuil unique de 45 px. La décision a rouvert une porte qu'elle ne visait pas. **Et une asymétrie disparaît, relevée par la session DA3 le 2026-08-26 :** l'état de sprint n'était pas répliqué, donc l'adversaire interpolé retombait de toute façon sur 45 px. Le sprint accélérait la cadence des pas **pour le seul joueur qui courait** — celui pour qui le pas est une information ne l'a jamais entendue. On s'entendait courir sans que ça se sache. Dans un jeu dont la règle est « la seule information est la lumière », un signal qui n'informe que son émetteur est précisément ce qu'il faut retirer : ce n'est pas une nuance perdue, c'est un mensonge en moins. |
@@ -3157,6 +3160,225 @@ accepte.
 ---
 
 ## Pièges connus — ne pas les redécouvrir
+
+### Une édition par tranche sur un marqueur non unique tronque le fichier de 95 % (2026-09-11)
+
+Pour reporter les verdicts d'Adrien dans le tableau des lots, une session a
+localisé chaque ligne par `s.index('| 1 | ')` puis coupé jusqu'à la ligne
+suivante. **`| 1 | ` existe aussi dans le tableau des phases, ligne 44.** La
+tranche a donc couru de la ligne 44 à la ligne du lot 2, soit **17 880 lignes
+effacées** — les phases, les décisions actées, les pièges connus, tout le
+protocole — et le commit `010b07e` les a emportées sans qu'aucun contrôle ne
+crie : le script imprimait « roadmap : verdicts reportés », le message de commit
+revendiquait une ligne barrée. C'est la session qui porte le suivi qui l'a vu,
+en comparant `wc -l` avant et après le commit. Restauré depuis `353a82f`
+(le commit qui suit `2d51c7a`), les éditions rejouées sur des ancres uniques.
+
+**La règle :** une édition par tranche ancre sur un texte dont on a VÉRIFIÉ
+l'unicité (`count == 1`), jamais sur un préfixe de cellule de tableau ; et tout
+script qui réécrit ce fichier imprime le nombre de lignes avant et après — une
+perte de plus de quelques dizaines de lignes est une erreur, pas une édition.
+La session du suivi vérifie déjà `wc -l` à chaque delta ; c'est ce filet qui a
+tenu.
+
+### Un outil de mise en scène écrivait dans le vrai historique des matchs (2026-09-10)
+
+**Le photographe tue un joueur pour photographier la séquence de fin, et une
+manche terminée s'archive.** Pas dans un fichier jetable : dans
+`user://match_history.json`, celui qui nourrit l'écran HISTORIQUE et la carte de
+fin de soirée. Et l'historique est plafonné à deux cents entrées
+(`MatchRecord.HISTORY_MAX`) : **chaque fausse manche poussait dehors un vrai
+match.** Aucun message, aucune suite rouge — les suites headless ont chacune
+leur `user://` depuis le 2026-08-26, les outils à fenêtre non.
+
+Trouvé en répondant à la session « Refonte graphique », qui s'apprêtait à
+ajouter une manche tuée de plus. Mesuré le 2026-09-10 : l'historique ne remonte
+plus qu'au 2026-08-28, et trente-trois entrées portent la signature d'une mise
+en scène — local, 5 s, Pistolet contre Pistolet, J1 vainqueur.
+
+⚠️ **Ce chiffre n'est pas celui du photographe, et il ne faut pas le lui
+attribuer.** Certaines de ces entrées datent du 2026-09-07, **deux jours avant
+que l'outil existe** : la signature n'est pas exclusive. `planche_eblouissement`
+mène aussi des manches jusqu'à leur fin avec le vrai `user://` — même défaut,
+**signalé et non corrigé** (ce n'est pas le fichier de cette session). Le fichier
+seul ne permet pas de dire quelle entrée vient de quel outil.
+
+**Corrigé à la source**, sur le patron de `rendu_racine_autorise` :
+`GameState.archiver_les_matchs`, public, vrai par défaut, que le photographe met
+à faux dans son `_ready()`. Un seul point d'écriture existe
+(`_archive_match_result`, qui couvre aussi les forfaits) ; le garder là couvre
+tout. Restaurer le fichier après la séance aurait marché aussi, mais avec un
+risque réel : écraser un match écrit pendant ce temps par une autre instance.
+`cineaste.gd` appelle `super()` et en hérite.
+
+**Vérifié le 2026-09-10 sur le vrai historique**, et c'est la seule vérification
+qui vaille ici : empreinte SHA-256 du fichier relevée avant et après une séance
+`fins` qui a bien tué une manche (`[REPLAY] P2 died`) et écrit ses huit images —
+**identique octet pour octet**. ⚠️ Compter les entrées n'aurait rien prouvé :
+l'historique est déjà plein à deux cents, et un match ajouté en aurait chassé un
+autre **sans changer le compte**. Le plafond qui rend la pollution nuisible est
+aussi ce qui la rend invisible à un décompte.
+
+**L'historique déjà pollué n'a pas été nettoyé** : supprimer des entrées de
+l'historique d'un joueur est une décision d'Adrien, et l'attribution incertaine
+interdit de le faire à coup sûr.
+
+⚠️ **Et la session qui a posé ce correctif a elle-même pollué l'historique, le
+jour même, en diagnostiquant.** Pour vérifier un scénario réseau intermittent
+(`duo_reconnexion`, famille 4.1), elle a relancé `./tools/run_duo.sh
+--reconnexion` **seul**, hors de `run_suites.sh` — et `run_duo.sh` lancé seul
+écrit dans le vrai `user://`. Ce n'est pas un piège caché, c'est **documenté et
+voulu** : « ce n'est pas un oubli, c'est un outil de mise au point qu'on veut
+parfois voir écrire pour de vrai » (commentaire de `run_suites.sh`). Deux entrées
+en ligne à 19:17 UTC — un hôte en forfait, un client — viennent de cette relance.
+**Ce sont les seules de toute cette affaire dont l'origine est certaine.**
+
+**La règle pratique :** un banc relancé à la main pour diagnostiquer, et dont on
+ne veut pas les écritures, se lance avec un foyer jetable —
+`HOME="$(mktemp -d)" ./tools/run_duo.sh --reconnexion`. Le correctif de ce jour
+couvre le photographe et ses héritiers ; il ne couvre ni `planche_eblouissement`
+ni les bancs lancés à la main, et il ne peut pas les couvrir : ce sont des choix
+d'outil, pas des oublis du jeu. **On ne corrige pas une écriture voulue — on
+choisit, à chaque lancement, si on la veut.**
+
+**La leçon qui dépasse le cas :** l'isolation de `user://` que les suites ont
+gagnée le 2026-08-26 ne s'étend pas aux outils à fenêtre. Un outil qui monte
+`main.tscn` monte aussi toute la persistance du jeu — historique, réglages,
+cartes joueur — et chaque effet de bord y est réel.
+
+
+### Un relevé de touches fait dans un seul fichier (2026-09-10)
+
+L'étape 4 a posé le gadget de J2 sur O après avoir « relevé, pas supposé » les
+touches prises — dans `input_setup.gd` seulement. La section `[input]` de
+`project.godot`, où O était le tir de J2, n'y figurait pas : **J2 posait son
+gadget chaque fois qu'il tirait, pendant vingt-deux étapes**, et aucune suite ne
+l'a vu — le garde des collisions ne regardait que la manette. C'est une revue de
+fusion, cherchant autre chose, qui l'a trouvé.
+
+Un inventaire de liaisons se tire de l'`InputMap` CHARGÉ, qui réunit toutes les
+sources ; et un garde de doublons doit rougir quand on lui en tend un.
+
+### Deux `z_index` de parents différents ne se comparent pas (2026-09-10)
+
+La nappe peinte de la poudre (enfant du gadget, que le socle pose à 4) et ses
+marques de pas (enfants de l'arène) : « 0 contre 1 » se lisait « la nappe
+dessous ». En vrai, 4 contre 1 : la nappe dessus, toutes les traces cachées. **Le
+contrôle écrit pour le garantir comparait ces deux nombres, et passait** ; c'est
+la capture en jeu — six marques posées, aucune visible — qui l'a démenti.
+
+Une profondeur de dessin se compare CUMULÉE jusqu'au premier ancêtre qui ne se dit
+plus relatif (`_z_absolu()` dans `tools/test_tir_et_reserves.gd`) ; à égalité,
+l'ordre de l'arbre tranche. Et un contrôle de rendu qui ne regarde pas le rendu
+se relit avec la question : « qu'est-ce qui me prouve que ce nombre est celui
+qu'on dessine ? »
+
+### Un voile n'arrête pas `_input` : le menu répondait sous l'allumage (2026-09-10)
+
+Adrien : « j'entends mon curseur bouger dès le début ». L'allumage (DA6.5) et
+l'intro (DA6.6) recouvrent un menu **déjà monté et vivant**, c'était voulu. Mais
+ils écoutent en `_unhandled_input`, et `ui.gd` en `_input` — qui passe
+**avant**. La touche qui sautait l'allumage déplaçait donc aussi la sélection
+dessous, et chaque déplacement tiquait sous un écran noir. À quoi s'ajoutait le
+tic de la **pose** initiale du focus (`_seed_focus` → `_set_focus`), qui sonnait
+comme une navigation alors que personne n'avait bougé.
+
+Le correctif : `ui.menu_voile`, posé par `game_state.gd` au lancement d'un
+voile et levé à sa fin ; tant qu'il vaut vrai, `_input`, le survol et le
+curseur au joystick ne font rien, et `_set_focus` se tait. Le tic ne sonne plus
+non plus sur une pose (`snap`). `tools/test_menus_finitions.gd` le tient en
+envoyant de vraies actions à `ui._input` pendant puis après le voile.
+
+⚑ **Signalé, non corrigé (hors périmètre)** : Adrien n'a jamais vu l'intro.
+`intro_vue` se pose au DÉMARRAGE de l'intro et vit dans le `user://` réel, que
+partagent tous les lancements du jeu sur la machine — photographe, bancs
+fenêtrés, autres sessions. Le premier d'entre eux après la fusion de DA6.6 l'a
+consommée. `run_suites.sh` isole son `HOME`, les outils fenêtrés non. Adrien
+passe par REJOUER L'INTRO ; la vraie parade serait qu'un lancement outillé ne
+marque pas le drapeau.
+
+**La règle** : une couche qui recouvre l'écran ne protège que ce qui passe
+après elle dans l'ordre des entrées. Un `_input` en dessous l'ignore — il faut
+lui dire qu'il est recouvert, pas espérer que le recouvrement suffise.
+
+### Un seuil fixe de fond vert laisse un voile que rien n'annonce (2026-09-10)
+
+Les gadgets et les armes sont générés sur un fond vert d'incrustation, précisément
+pour ne pas refaire le damier des titres. `tools/incruster_vert.py` tirait l'alpha
+d'un seuil de « verdeur » (vert moins le plus fort des deux autres) FIXE, 25 / 90,
+calé sur le `#00B140` demandé à Gemini — verdeur 113. **Gemini ne rend jamais ce
+vert-là** : mesuré sur 27 planches, le fond vaut 83 à 94, sous le seuil. Le fond
+n'était donc pas retiré mais laissé à 5-15 % d'opacité, un voile gris sur toute
+la toile : jusqu'à 22 % des pixels d'un sprite livré, et le sprite de jeu d'une
+nappe de 336 px aurait posé au sol un carré à peine plus clair que le noir.
+
+Rien ne l'a annoncé pendant deux commits : le recadrage ignorait l'alpha sous 24,
+les planches de contrôle sur fond gris ne le montraient pas. **C'est un chiffre
+imprimé par le script qui l'a trahi**, sur les armes, au vert plus doux encore :
+« objet (2814, 1536) », la taille de l'image entière.
+
+**La règle** : un seuil de détourage se MESURE sur le fond de chaque image (10e
+centile de la verdeur du bord, moins 12), jamais ne se recopie d'une consigne de
+génération. Et un contrôle de détourage compte les pixels semi-transparents **loin
+de l'objet** (à plus de 3 px de tout pixel opaque) : compter tous les
+semi-transparents mélange le voile et l'anticrénelage légitime des contours.
+
+### Un titre Gemini arrive avec un damier dans ses bords (2026-09-10)
+
+Les titres de menu (`assets/ui/titres/`) ont été détourés d'images générées sur
+un **damier de fausse transparence** : l'alpha est juste, mais un anneau de
+pixels blanc-gris pointillé survit à 2-4 px du cerne d'encre — 9 à 36 % du
+contour selon les titres, mesuré. Ajouté à des titres de ~1300 px affichés à
+48 px de haut **sans mipmaps**, le bord scintillait.
+
+Nettoyés (gris clair à moins de 4 px de la transparence retiré, îles de moins de
+8 px retirées, bord adouci d'un demi-pixel, RVB des pixels transparents mis au
+noir) et importés avec mipmaps, lues par un filtre `LINEAR_WITH_MIPMAPS`. La
+suite `test_menus_finitions` mesure la part blanc-grise de chaque contour.
+**Tout titre régénéré doit repasser par le même traitement** :
+`python3 tools/detourer_titres.py assets/ui/titres/titre_xxx.png` (PIL seul,
+réécrit le fichier en place — garder l'original à côté).
+
+**Même soir : Adrien a re-détouré quatorze titres à la main, dans Photoshop**
+(tous sauf `titre_amical_local`). Comparé à l'œil sur fond sombre, agrandi
+quatre fois, son découpage atténuait l'anneau pointillé mais le laissait en
+gris autour du cerne — un pointillé sur le noir du jeu. Son choix : garder son
+découpage ET le passer au script, qui ne retire que l'anneau restant. Main porte
+donc Photoshop + script pour les quatorze, et le script seul pour
+`titre_amical_local`. **Un détourage à la main n'exempte pas du passage au
+script** : les deux se complètent, l'un décide de la forme, l'autre du damier.
+
+### Deux fichiers du même nom : l'extraction par nom a menti (2026-09-10)
+
+Pour mesurer les sprites d'un commit d'une autre session, je les ai extraits dans
+un dossier en ne gardant que leur NOM. Le commit portait aussi deux icônes de
+fiche homonymes — `assets/ui/icones/gadget_poussiere.png` et
+`…/gadget_nappe_braises.png` —, qui ont écrasé les deux sprites. Mesure : « la
+poussière fait 128 px et montre une boîte » ; en vrai, 336 px et un nuage. Sur
+cette mesure, j'ai signalé à la session des menus un écart inexistant, posé à
+Adrien une question sans objet, et lancé une génération Gemini dans son
+navigateur. **C'est la capture en jeu qui a démenti la mesure.**
+
+Extraire en gardant l'ARBORESCENCE, ou mesurer `git show <commit>:<chemin>`
+directement ; et compter : 13 chemins pour 11 fichiers dans le dossier l'aurait
+dit avant toute conclusion.
+
+### Une forme héritée du socle ment en silence (2026-09-10)
+
+Le voile surchargeait son OMBRE — une bande de 168 × 8 px — mais pas sa
+COLLISION, que le socle fabrique en disque de `rayon` ; et il réglait
+`rayon = 84`. De l'étape 5 à l'étape 25 — du 9 au 10 septembre —, les balles ont déchiré la toile à 84 px d'elle
+et l'éblouissement a buté sur un disque que rien ne montrait, sans une erreur :
+la forme n'avait qu'un usage, et peu regardé. Il a fallu qu'elle arrête un
+joueur pour que le défaut devienne un mur rond de 168 px de diamètre à la place
+d'une toile.
+
+Une valeur par défaut héritée n'est pas un choix. Quand une sous-classe
+surcharge une forme, **toutes** les formes du même objet doivent suivre —
+collision, ombre, visuel. Le socle le dit désormais au bon endroit
+(`_forme_de_collision()` à côté de `_monter_occluder()`), et le contrôle du voile
+compare sa bande de collision à celle de son ombre. L'ombre habitée garde le
+même écart en petit : signalé à l'étape 25.
 
 ### Une question posée de mémoire fait trancher sur une liste fausse (2026-09-10)
 
@@ -8476,6 +8698,18 @@ Sauf mention *assets*, un item est 100 % procédural : zéro ressource à fourni
         peut bégayer près de la zone morte, pas une faute de jeu —, corrigé à
         la version suivante. Voir « Pièges connus » pour la leçon qui dépasse
         ce défaut.
+    - **Clic du verrou de torche — ajouté le 2026-09-10.** Le bouton mécanique
+      à deux crans de la torche (chantier « Allumage torche », `8c18115`) a un
+      geste physique franc à son cran plein — Adrien s'est demandé si ce
+      serait perceptible sans gâchette adaptative ; la session Menus aspect
+      refinement y a répondu côté œil (un cadenas dans l'icône HUD, `931a7c0`)
+      et ce chantier côté main. `_rumble(RUMBLE_TORCH_LOCK, RUMBLE_TORCH_LOCK,
+      0.04)` se déclenche au franchissement de `is_flashlight_locked()` —
+      armement ET désarmement, les deux étant le même geste (la gâchette qui
+      touche sa butée). Lit l'état déjà exposé pour le cadenas plutôt que d'en
+      dupliquer un ; aucune réplication réseau à ajouter, l'état est déjà
+      local par construction (`InputProvider.is_flashlight_locked()` rend
+      `false` par défaut, jamais surchargé dans `NetworkInputProvider`).
 
 ### Vague 2 — Le kill (zone franche, le shot de dopamine de la boucle)
 
@@ -9621,14 +9855,12 @@ d'implémentation. Contraintes communes : structure et navigation intactes, 100
 - **D4 Grésillement positionnel de torche** — audible à très courte portée par
   l'adversaire. Cohérent avec « courir rend bruyant », mais info nouvelle. —
   *assets : 1 boucle.* **→ Acté sur le principe ; attend son asset.**
-- **D5 Onde de choc du pompe** — distorsion BackBufferCopy : à mesurer sur
-  `bench_framerate` avant d'acter (1 % bas ≥ 60). **→ À implémenter derrière
-  un drapeau debug ; activation définitive après mesure sur le Mac d'Adrien.**
-  **✅ Implémenté** (`pump_shockwave.gd` + `.gdshader`, drapeau
-  `--fx-shockwave`). À mesurer : 1 % bas en duel pompe contre pompe, drapeau
-  actif vs inactif — la recopie plein viewport ×2 est le coût dominant ; repli
-  identifié si la mesure échoue (COPY_MODE_RECT borné au quad, ÷15 de volume
-  copié).
+- ~~**D5 Onde de choc du pompe**~~ — ❌ **SUPPRIMÉE le 2026-09-11** (décision
+  d'Adrien, refonte roman graphique, lot 10 : « on supprime »). Elle avait été
+  implémentée derrière `--fx-shockwave` et jamais mesurée ni activée ; une
+  réfraction d'air n'a pas d'équivalent en encre. `pump_shockwave.gd`, son
+  shader et l'appel de `game_state.gd` sont retirés — un mécanisme mort qui
+  reste lisible se rallume un jour par erreur.
 - **D6 L'appel du vide** — cercle discret de 10 s autour de REJOUER, sans
   auto-start. **→ Acté ; vit dans le hub, donc à implémenter par la session
   « menus » (Phase 5).**
@@ -16243,7 +16475,7 @@ main.
 de 9 à 10. Le témoin du fil a signalé la rupture — et il valait plus qu'une
 formalité : **l'argument porte une valeur par défaut, donc GDScript n'aurait rien
 dit** d'un client v9 parlant à un hôte v10. Les deux auraient joué, chacun dans
-sa réalité. Touches E et O au clavier, L1 à la manette.
+sa réalité. Touches E et O au clavier, L1 à la manette. ⚠️ *O était déjà le tir de J2 : devenu Y le 2026-09-10 (étape 26).*
 
 ⚠️ `tools/test_liaisons.gd` a fait rougir le lot : « ces commandes du clavier ne
 figurent nulle part : p1_gadget ». Une commande ajoutée à l'`InputMap` sans ligne
@@ -17384,6 +17616,11 @@ Au HUD, la ligne de titre de la cartouche porte l'état — `GADGET`,
 reste seul dessous. « Éteinte, rallumable » et « éteinte, pas encore » ne se
 confondent plus.
 
+La phrase de fiche du grésillement suit, dans un commit à part : « Une batterie qu'on allume et coupe : les torches proches sautent jusqu'au noir. »
+Elle disait « fait papilloter », ce qui était vrai jusqu'à ce lot. La session du
+salon, qui l'avait écrite, a préféré que la phrase change avec le comportement,
+et pas avant lui : changée plus tôt, c'est le texte qui aurait menti.
+
 `Protocol.VERSION` reste à 16, faute de publication entre les deux lots ;
 l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
 
@@ -17391,6 +17628,193 @@ l'empreinte a été recalculée deux fois, après avoir tranché le numéro.
 contenu en réclamait déjà 505 AVANT ce lot, et il grandit vers la droite — il
 déborde donc déjà, légèrement, en écran scindé. Il devrait grandir vers la
 gauche. Hors périmètre, relevé par la revue.
+
+### Étape 25 — le voile tient debout : on ne passe plus au travers ✅ (2026-09-10)
+
+**Demandé par Adrien**, transmis par la session des menus puis confirmé
+directement : *« il a deux piquets sur les côtés qui le tiennent, et au milieu un
+voile tendu, mais pas trop : il pourrait onduler un peu, avoir un peu de
+physique. On ne peut pas passer au travers. »* Et, tranché le même jour :
+**les balles le traversent toujours**. C'est ce qui le garde distinct d'un mur —
+un voile ferme un couloir jusqu'à ce que deux balles le crèvent.
+
+**Une seconde couche, et non la couche des gadgets dans le masque des joueurs.**
+`MapGeometry.GADGET_BLOQUANT_LAYER` entre dans `PLAYER_MASK`, et le drapeau
+`GadgetBase.arrete_les_joueurs` la pose gadget par gadget — le voile seul. Mettre
+`GADGET_LAYER` dans le masque aurait muré les dix gadgets d'un coup : le garde de
+l'étape 5 qui l'interdit tient toujours, vérifié à côté du nouveau.
+
+**Trouvé en route : la collision du voile était un disque de 84 px de rayon**
+(voir le piège « Une forme héritée du socle ment en silence »). Une balle
+déchirait la toile à 84 px d'elle, et le rayon d'éblouissement
+(`_ligne_de_vue_depuis`, masqué sur `GADGET_LAYER`) butait sur un disque
+invisible. `GadgetBase._forme_de_collision()` rend la forme surchargeable, et le
+voile rend sa bande — celle de son occluder, au pixel près.
+
+**La toile ondule, la bande non.** Collision et occluder restent droits : ils
+décident qui passe et qui voit, et les deux pairs doivent avoir les mêmes. L'onde
+court sur un temps local — personne ne compare deux écrans — et reste bornée
+DANS la bande : creux, ondulation, frisson et demi-trait font 4 px, soit
+`DEMI_EPAISSEUR`. Ce qu'on voit ne dépasse jamais ce qui arrête. Le « peu de
+physique » : une balle qui traverse la toile la fait frissonner
+(`GadgetBase.secouer()`, vide dans le socle), chez tous les pairs, puisque chacun
+voit passer ses balles.
+
+⚠️ **L'amplitude est petite, et c'est la borne qui la fixe** : 2,5 px au plus.
+Pour la rendre plus visible, c'est la bande qu'il faudrait épaissir — collision
+et ombre avec —, jamais l'onde qu'il faudrait laisser sortir.
+
+**Les piquets ne se voient pas encore.** Adrien a décidé des sprites de gadgets
+le même jour ; la session des menus génère `gadget_voile_piquet.png` et
+`gadget_voile_toile.png`. Les dessiner d'ici là serait le « troisième chemin »
+que `GadgetBase._monter_visuel()` interdit. La toile prendra sa texture sur son
+`Line2D` ; les piquets seront deux `Sprite2D`, à ±84 px.
+
+`Protocol.VERSION` reste à 16 : le fil ne bouge pas, le sens si — un client
+d'avant prédirait qu'il traverse. Noté au carnet, version toujours non publiée.
+La phrase de fiche suit : « Une bâche qui arrête la lumière et les joueurs, pas
+les balles. »
+
+**Validation** : 22 contrôles dans `tools/test_tir_et_reserves.gd`, sur le vrai
+joueur qui marche. Il s'arrête contre la toile ; et le TÉMOIN — voile retiré, même
+pas — passe de l'autre côté. Sans lui, un mur de la carte au même endroit aurait
+fait passer le contrôle pour une mauvaise raison.
+
+⚠️ **Signalé, non corrigé** :
+- **l'ombre habitée** a le même écart en petit : collision en disque de 36 px,
+  ombre en plaque de 36 × 6 px, et elle arrête les balles — une balle qui frôle
+  la tranche de la plaque à 10 px s'y arrête ;
+- **la nappe de braises** (disque de 136 px) **et la poudre de contact** (220 px)
+  sont des nappes au sol que les balles survolent (`arrete_les_balles = false`),
+  mais d'après le code, toute balle qui passe au-dessus les abîme quand même :
+  `encaisser` n'est pas surchargé. Même chose pour les deux nuages, où c'est
+  peut-être voulu ;
+- **un voile posé sur un joueur** n'est pas refusé : c'est le moteur qui doit
+  alors le dégager. Non éprouvé.
+
+### Étape 26 — les gadgets prennent leurs images ✅ (2026-09-10)
+
+**Décidé par Adrien** : tous les gadgets qui peuvent avoir un sprite de jeu en
+ont un. La session des menus les a générés et détourés — commit `69c4a59` sur sa
+branche. Ce lot ne prend **que les images** (`git checkout 69c4a59 --
+<fichiers>`) : sa branche porte aussi ses icônes, sa ROADMAP et cinq commits hors
+de main, et la fusionner ici puis pousser aurait livré à sa place un travail
+d'interface qu'elle n'a pas décidé de livrer. Prévision démentie :
+la session des menus a refait ses sprites après `69c4a59` (`2ce7133`, voile de
+fond vert retiré), et sa fusion (`828efa6`) a tranché dix conflits en prenant ses
+octets — voir le complément plus bas. La poudre a fini par prendre son image.
+
+**Un seul chemin, et un cri.** `GadgetProfile.chemin_sprite_de()` forme tous les
+chemins, pièces comprises (`voile_toile`, `torche_fantome_tete`) ;
+`GadgetBase._poser_sprite()` pose l'image à sa taille peinte, éclairée comme le
+décor, et crie si elle manque.
+
+**Trois décisions d'Adrien, sur question :**
+- **l'écart est gardé** : bobine, mine et torche sont peintes à 28-30 px pour une
+  collision de 16 à 18 — une balle peut traverser le bord visible d'une mine ;
+- **la bande du voile passe de 8 à 13 px** (`DEMI_EPAISSEUR` 6,5) : la toile
+  peinte fait 8 px, et l'onde bornée de l'étape 25 n'y avait plus de place ;
+  collision et ombre s'épaississent avec elle ;
+- **la poudre garde ses grains** : son image, un grand disque clair à empreinte,
+  se serait vue de loin sous une torche.
+
+Une quatrième question, sur la poussière, reposait sur une mesure fausse — voir
+le piège « Deux fichiers du même nom ». La génération Gemini qu'Adrien avait
+demandée a été arrêtée dès l'erreur trouvée : l'image livrée est bien le nuage.
+
+**Par gadget :**
+- **voile** : la toile est la texture étirée du trait qui ondule, deux piquets
+  par-dessus aux bouts ; l'« ourlet » dessiné disparaît, l'image porte son bord ;
+- **torche fantôme** : pied et tête — le nœud balaie, le pied compense et reste
+  posé ; la lentille incandescente est calée sur le verre peint ;
+- **braises** : l'image, non éclairée par le décor mais **en mélange, pas en
+  addition**. Additionnée à la lumière de la nappe, elle virait à la boule
+  blanche — comparé à la capture sur trois rendus ;
+- **suie, poussière** : l'image porte la masse et son fondu ; `couleur_masse()`
+  disparaît avec le disque dessiné ;
+- **bobine, mine, ombre habitée** : leur image, rien d'autre. Le point clair
+  peint au centre de la mine n'émet pas : il ne se voit que sous une torche.
+
+**Vu à l'écran** : les huit gadgets capturés à l'entraînement, torche braquée
+dessus, par un script de capture jetable et non versionné. **Validation** :
+`tools/test_tir_et_reserves.gd` range chaque gadget du catalogue — une image par
+pièce attendue, ou une raison de ne pas en avoir — et vérifie que la tête de la
+torche balaie pendant que son pied reste posé. Les contrôles de déterminisme des
+charbons et du contour de suie, devenus sans objet, deviennent « c'est une
+image ».
+
+⚠️ **Non vu** : l'écran scindé et le jeu en ligne ; le voile épaissi, en
+mouvement.
+
+**Complément du même jour — les sprites refaits, et la poudre prend son image.**
+Les onze sprites de `69c4a59` gardaient un **voile de vert d'incrustation** mal
+retiré, à 5-15 % d'opacité : le seuil de détourage de la session des menus était
+calé sur le vert demandé, et Gemini en rend un plus doux. Sur fond gris, rien ;
+sur le noir du jeu, un carré à peine plus clair au sol. Refaits dans `2ce7133`,
+seuils mesurés sur le fond de chaque image. Mesuré ici avant de les reprendre :
+14,2 % de l'image de la suie voilée hors de l'objet, zéro après ; tailles
+inchangées. Les braises passent en **braises fines** dans la cendre, peintes pour
+être affichées telles quelles — ce qu'elles sont depuis le choix du mélange non
+éclairé.
+
+Ces sprites sont arrivés sur main avec la fusion de la session des menus
+(`828efa6`), résolue comme une simulation préalable l'avait préparée — les dix
+PNG pris de son côté, la ROADMAP en union. Vérifiée avant sa poussée, sur un arbre
+candidat identique : suite complète verte, aucune déclaration ni fichier perdu
+(inventaire mécanique des trois arbres), chaque défaut signalé contre-vérifié.
+
+Adrien est revenu sur la poudre : elle prend **l'image**, une version aux
+empreintes très légères peinte à sa demande (`693337c`). **Deux défauts, que seule
+la capture en jeu a vus** — la suite était verte les deux fois :
+- **l'image recouvrait les traces.** Les marques de pas vivent dans l'arène
+  (profondeur 1), la nappe dans le gadget, que le socle pose à 4 : six marques
+  posées sur la nappe, aucune visible. La nappe est désormais à la profondeur
+  ABSOLUE du sol (−1) : sous les murs, le sang et les marques. Voir le piège
+  « Deux `z_index` de parents différents ne se comparent pas » ;
+- **puis les traces restaient illisibles.** Sous la torche, poudre claire et
+  traces claires saturaient toutes deux à 230/255 : écart mesuré nul, contre un
+  contraste de Weber de +2,0 pour les mêmes traces sur le sol nu. Adrien a
+  tranché : assombrir la poudre. Mesuré par captures avant/après, faisceau en
+  plein, trois marques dans la nappe et trois témoins sur le sol :
+
+| assombrissement | poudre (luminance) | traces sur la poudre (Weber) | rapport au sol nu |
+|---|---|---|---|
+| 1,00 | 230 | +0,00 | 0,00 |
+| 0,70 | 218 | +0,06 | 0,03 |
+| 0,55 | 188 | +0,22 | 0,11 |
+| 0,45 | 161 | +0,41 | 0,20 |
+| 0,35 | 135 | +0,68 | 0,34 |
+| **0,25** | **109** | **+1,07** | **0,53** |
+
+Retenu : **0,25**, le plus clair des niveaux où les traces ressortent au moins
+moitié autant que sur le sol nu — critère posé avant la mesure et annoncé à
+Adrien. La poudre y reste plus claire que le sol éclairé : elle se lit encore
+comme de la poudre. Un garde du test refuse de l'éclaircir sans remesurer.
+
+Le leurre reste le seul gadget sans image à lui.
+
+**Ce que la revue de la fusion a trouvé** — six défauts confirmés, deux réfutés,
+aucun causé par la fusion :
+- **au clavier, J2 posait son gadget en tirant.** O, choisi à l'étape 4 sur un
+  relevé des seules liaisons de `input_setup.gd`, était déjà le tir dans
+  `project.godot`. Et K, avant ce chantier, visait vers le bas ET rechargeait.
+  Adrien a tranché : gadget de J2 sur **Y**, recharge de J2 sur **N**.
+  `tools/test_liaisons.gd` refuse désormais tout doublon de touche parmi les
+  gestes de combat d'un même joueur — et vérifie qu'il voit un doublon qu'on lui
+  tend ;
+- `GadgetProfile.chemin_sprite()` se disait valable pour tout gadget, et son test
+  figeait le chemin inexistant `gadget_voile.png` : documenté pour les gadgets
+  d'une seule pièce, test sur un vrai fichier ;
+- **les braises fines ne couvraient que 57 % du disque qui brûle** : on brûlait
+  à 50 px du centre là où rien n'était peint. Adrien a redemandé un disque plein ;
+  la session des menus l'a livré (`d2c599e`, 97 % mesurés), et
+  `tools/test_classes.gd` exige désormais 90 % ;
+- côté menus, les images de gadget de la fiche ne sont gardées par aucun test :
+  signalé à la session qui les tient.
+
+Six `.uid` orphelins — restes des scripts de capture jetables des étapes 11 et
+12, commités sans leur script — sont retirés de `tools/`, sur accord d'Adrien :
+même geste que `7fc6a7a`.
 
 ### Ce qui reste, dans l'ordre
 
@@ -17474,6 +17898,128 @@ pas un salon rouvert dans son dos.
   à dérouler à deux machines — non exécuté ici, aucune fenêtre interactive
   dans cet environnement.
 - `./tools/run_suites.sh` intégralement vert, duos ENet compris.
+
+---
+
+## Chantier — refonte roman graphique des effets EN JEU (inscrit le 2026-09-10)
+
+**Demande d'Adrien, le 2026-09-10 au soir**, après un bilan des effets visuels
+demandé le même soir : *« attaque ce chantier dans un worktree séparé […] À
+chaque chantier, tu devrais me faire un rendu comparant avant/après pour que je
+te dise si on garde ou pas. »* Session « Refonte graphique », branche
+`claude/brutalist-visual-effects-52d2fe`.
+
+### Le constat du bilan, en une phrase
+
+**L'arène est déjà passée à l'encre, les événements ne le sont pas.** Murs en
+masse noire cernée d'un filament, silhouette grise en aplat de l'adversaire,
+sprites de gadgets, volutes de la fusée : tout cela lit comme du roman
+graphique. Ce qui se déclenche — tirer, toucher, mourir, être ébloui, revoir sa
+mort — a été conçu les 24 et 25 août avec un vocabulaire **d'objectif de
+caméra** : aberration chromatique dans trois shaders, ondulation thermique,
+bloom, grain vidéo et lignes de balayage, spéculaire liquide sur le sang, rim
+light 3D sur le joueur, halos en dégradé aérographe.
+
+**Le critère, et il se mesure.** L'audit DA7 (ligne « un masque monochrome n'a
+pas de style ») exemptait les masques de la refonte : c'est vrai de leur FORME
+et faux de leur BORD. La mesure est la **part molle** d'un masque : la part de
+ses pixels non nuls qui ont un voisin d'alpha proche mais différent (1 à 24 sur
+255) — la signature d'un dégradé, où chaque pixel diffère un peu du suivant ; un
+aplat n'a que des voisins identiques, un bord franc que des sauts grands.
+⚠️ *Un premier jet comptait les pixels d'alpha intermédiaire, ce qui déclarait
+mou un masque en trois paliers : la mesure disait l'inverse de ce qu'elle
+devait dire, et c'est en l'appliquant au résultat de l'encrage qu'on l'a vu.*
+Mesurée le 2026-09-10 sur les fichiers livrés :
+
+| Famille | Part molle |
+|---|---|
+| halos au sol, rétrodiffusion, traînée | 0,98 |
+| traçante | 0,97 |
+| flash de bouche | 0,94 |
+| taches et gouttes de sang | 0,90 |
+| impacts sur les murs | 0,86 |
+| cookie de torche | 0,84 |
+| volutes de fusée (faites le 7 septembre) | 0,36 |
+| cartouche FATAL (fait le 9 septembre) | 0,08 |
+
+Tout ce qui a été fait depuis la refonte des menus est dur ; tout ce qui date
+d'août est mou. **Règle du chantier : tout masque en jeu passe sous 0,25**, et
+`tools/test_encrage.gd` (lot 1) le vérifie comme `test_charte` vérifie les
+couleurs — une recuisson qui oublierait l'encrage rougit.
+
+**Fusionné dans `main` le 2026-09-11** sur l'ordre d'Adrien (« commit, pousse, fusionne »), après ses verdicts sur les quatre retouches. Reste ouvert, à sa main : l'écho au sol de V4.14 qui couvre l'éclat de bouche dessiné.
+
+### La méthode : un lot, un commit, une image, un verdict
+
+Chaque lot est **commité séparément** pour qu'Adrien puisse en rejeter un sans
+toucher aux autres. Pour chacun, le photographe (`tools/run_photos.sh`) prend
+les mêmes plans avant et après, et `tools/comparer_photos.py` compose les deux
+prises côte à côte avec la part de pixels changés. Le rendu part à Adrien ; le
+lot n'est **gardé** que sur son mot. Les captures « avant » vivent dans
+`user://refonte_avant`, prises sur `e39ce45` (v0.5.0) avec les quatre plans
+ajoutés au lot 0.
+
+### Les lots, dans l'ordre — du plus rentable au plus délicat
+
+| Lot | Effet | Ce qui change, dans quel sens | État |
+|---|---|---|---|
+| 0 | Outillage | Quatre plans ajoutés au photographe (`impacts`, `vignette`, `mort`, `onde-de-choc`), `tools/comparer_photos.py`, `tools/encrer_masques.gd`. Aucun rendu ne change. | ✅ |
+| 1 | Masques de lumière et de matière | Halos, taches, gouttes, impacts, traçante, poussière : alpha ramené à deux ou trois paliers par `encrer_masques.gd`, formes et empreintes inchangées. Flash de bouche : trois frames NEUVES en éclat d'encre à pointes (Gemini, blanc sur noir, `assets/sources/encre/`), et **l'éclat est DESSINÉ** en sprite à la bouche du canon (`player.gd::_eclat_de_bouche`, 96 px, mélange normal) — posées sur la seule lumière de bouche (64 px), les frames restaient noyées sous l'écho au sol de V4.14, trois fois plus large : ce qu'on prenait pour le flash de bouche à l'écran était cet écho. Aucune lumière ne change. Impacts : la planche d'août remplacée par seize éclats d'encre (`wall_impact.gd`, liste à 16). Sang : `FLAQUES` et `POIDS_TAILLE` re-mesurées (un bord franc grossit le disque inscrit : sang_1 de 21 à 25 px), `sang_3` et `sang_6` encrées à 0,22 pour garder leur traînée. `tools/test_encrage.gd` ajouté au lot. ⚠️ Deux frames de flash sortaient avec des coins à 1,0 d'alpha (les pointes touchaient le bord de la toile) et `test_lumieres` les a refusées — la suite complète les a attrapées après coup, pas la suite ciblée : `encrer_masques.gd --ceinture N` force désormais un pourtour noir, obligatoire sur tout masque de lumière. ⚠️ Le cookie de torche est **exclu** : `Vision` lit son alpha, un cookie en paliers est une pénalité en paliers — décision de jeu, pas de rendu. | ✅ **gardé par Adrien le 2026-09-11**, avec une retouche : **deux taches par touche** — une petite tache principale sous le sprite (planche réduite de 40 %, calée sur le corps) et une GERBE directionnelle calée 26 px en aval, étirée de 30 % dans l'axe du tir (`blood_stain.gd`, `bullet.gd`). Rendu envoyé le 2026-09-11. **Sang en deux taches gardé par Adrien le 2026-09-11.** |
+| 2 | Sang mat | `blood_shader.gdshader` : la spéculaire liquide (smoothstep × 2,5 multiplié par la couleur du sang) retirée, il ne reste que la diffusion. Le cœur noir et le bord carmin viennent des deux textures, ils restent. | ✅ **gardé par Adrien le 2026-09-11** |
+| 3 | Flash de mort | `death_flash.gdshader` : une case blanche franche qui recule en trois paliers (1,0 / 0,55 / 0,22 d'opacité selon `flash_intensity`), sans lecture d'écran ni frange RVB — un lecteur de `hint_screen_texture` en moins (voir « Le tampon d'écran n'a pas de propriétaire »). Blanc pur assumé, comme DA5.2 l'avait examiné. `aberration_amount` conservé sans effet pour les appelants. | ✅ **gardé par Adrien le 2026-09-11** — et rendu VISIBLE : voir lot 5 |
+| 4 | Killcam | Premier jet : trame de demi-teinte à la place du grain vidéo — Adrien, le 2026-09-11 : « je ne vois pas la différence, propose un graphisme plus marqué, que tout soit dessiné ». **Lot 4 bis** : le rejeu devient une planche de reconstitution — image réduite à trois tons, CONTOURS tirés à l'encre partout où la lumière change brusquement (bord d'un faisceau, silhouette, arête), trame de points sur le ton du milieu, resserrée avec le ralenti, grain de papier fixe. Le négatif garde ses deux images, la vignette reste, les uniforms de `ui.gd` ne changent pas. | ✅ **gardé par Adrien le 2026-09-11, à moitié** : « réduis de moitié l'effet » — `FORCE_DESSIN = 0,5` dans le shader, le curseur garde sa course en dessous. |
+| 5 | Vignette de dégâts | Hachures rouges à 45° qui entrent par les bords à bord franc (`damage_vignette.gdshader`). **Adrien ne l'a pas vue, et c'était un DÉFAUT, pas un goût** : un `CanvasLayer` s'attache au viewport de son parent, et celui de la vignette (comme celui du flash de mort) était enfant du joueur, donc de `SubViewport1` — jamais dessiné pour J2 en écran scindé, ni pour personne en vue unique, où les sous-vues sont arrêtées et où la racine rend le duel (chantier R, 2026-08-25). **Depuis toujours, donc.** `GameState.accueillir_calque()` loge désormais ces calques dans le viewport qui rend vraiment le joueur, et les reloge à chaque accord des vues (`tools/test_calques_joueur.gd`). | ✅ **gardé par Adrien le 2026-09-11** — avec une retouche de la fiche HUD de J2 : sa largeur suit `minimum_size_changed` de son contenu, pour qu'elle garde la même marge droite que J1 à gauche. |
+| 6 | Rim light | `player_rim_light.gdshader` et `ghost_unshaded.gdshader` : aplat éclairé uniformément, plus de bord quatre fois plus clair que le centre (0,4 → 4,0 et 0,1 → 4,0). Juste tant que le joueur était un disque `Polygon2D` ; depuis DA2.4 c'est un sprite peint qui porte son contour, et un dégradé radial par-dessus un dessin est un vernis. | ✅ **gardé par Adrien le 2026-09-11** |
+| 7 | Onde de choc du kill | `kill_shockwave.gd` : UN anneau franc, blanc halogène, sans anticrénelage, en mélange normal et non additif, plein jusqu'à 72 % de sa vie puis effacé d'un coup — à la place du double anneau doré sur-exposé et rouge qui fondait. Un trait d'encre n'a qu'une valeur et un bord. | ✅ **gardé par Adrien le 2026-09-11** |
+| 8 | Shimmer des murs | **Retiré le 2026-09-11** (`git revert`). Adrien ne voyait pas à quoi correspondait le scintillement : c'est le `sin(TIME × 4,5 Hz)` de `shimmer_murs.gdshader`, qui fait vibrer le liseré halogène sous la torche. La session « Murs avec bande LED respirante » a précisé que sa respiration est une lumière À PART (`mur_led.gd`) et ne touche pas à ce scintillement ; elle modifie en revanche `light()` du même shader (`ENERGIE_REFERENCE`, décision d'Adrien du 2026-09-10). Couper le scintillement redevient une question pour Adrien, sans dépendance : à relire dans `light()` si on y revient. | ↩︎ retiré — question ouverte |
+| 9 | Éblouissement | **On garde l'éblouissement actuel** (Adrien, 2026-09-11 : « je l'aime bien »). Aucune refonte. Une seule retouche à sa demande : le curseur `eblouissement` agit de nouveau sur l'opacité du voile (voir « les quinze curseurs »). | ✅ tranché, inchangé |
+| 10 | Onde de choc du pompe | **Supprimée le 2026-09-11** (Adrien : « on supprime ») : `pump_shockwave.gd`, son shader et l'appel de `game_state.gd` retirés, D5 barrée. | ✅ fait |
+
+Ce qui reste tel quel, et pourquoi : le sol en béton grainé (MV3 nomme le béton
+brut comme matière ; damier choisi par Adrien le 25 août), les empreintes, les
+douilles, les chiffres de dégâts, le tampon et l'estampe de kill, le viseur, les
+planches de fumée de la fusée.
+
+**Les quinze curseurs inertes sont câblés le 2026-09-11** (Adrien : « il faut
+que les quinze curseurs fonctionnent »). Un seul chemin, `EffectPolicy.curseur(id)`
+— `GameSettings` avec le plancher du contexte, ou 1,0 sans réglages —, et un
+lecteur par identifiant : `secousse_camera` et `recul_camera` (amplitude de la
+secousse et du recul), `vignette_degats` (pic et pouls), `flash_mort` (opacité
+de la case), `tremblement_interface` (fiches et cercle de recharge),
+`grain_killcam` (trame, contours, papier), `eblouissement` (opacité du voile,
+jamais la pénalité — décision du 2026-08-18), `silhouette_revelee` (alpha de
+la silhouette au tir), `flash_de_tir` (énergie de la lumière de bouche et
+l'éclat dessiné, pas la pénalité), `trait_de_balle` (lumière et aura de la
+balle), `lumiere_impact` (lumière de touche), `particules_sang` (nombre de
+gouttes), `eclats_impact` (nombre d'étincelles et opacité de l'éclat posé),
+`traces_de_sang` (opacité des taches). **`arene_au_repos` est RETIRÉ de la
+table** : il réglait `menu_arene.gd`, que le hub n'instancie plus depuis le
+2026-08-27 — un curseur qui règle un composant absent est un curseur qui ment.
+`tools/test_curseurs_branches.gd` exige désormais un lecteur littéral pour
+chaque identifiant de la table, et rougit sinon. ⚠️ **Le `settings.cfg`
+d'Adrien portait tous les curseurs CONFORT à 0,0 et tous les MONDE à leur
+plancher** : inoffensif tant qu'ils étaient inertes, décisif depuis — sang à
+25 %, vignette et flash de mort absents, killcam nue. Le photographe lit les
+réglages du poste : pour juger un effet, `HOME=$(mktemp -d)` devant lui.
+
+**Le cookie de torche reste tel quel** — Adrien, le 2026-09-11 : « ne change
+pas le cookie de la torche par paliers ». Pour mémoire, l'enjeu : le faisceau de la lampe est une image
+(`assets/torche/cookie_*.png`) et le modèle d'éblouissement lit l'opacité de
+cette image à l'endroit où se tient la victime pour calculer sa pénalité
+(« l'éblouissement LIT le faisceau », décision du 2026-08-24). Si l'image
+passe en paliers d'encre, la pénalité passe en paliers avec elle : un joueur
+au bord du faisceau serait aveuglé d'un coup au lieu de progressivement. C'est
+donc un changement de RÈGLE de jeu déguisé en changement de rendu, et il
+attend une décision ; le faisceau reste tel quel. **Tranché, il ne bouge pas.**
+
+### Les demandes du 2026-09-11, après la revue
+
+| Quoi | Ce qui a été fait | État |
+|---|---|---|
+| **Une fusée éteinte éblouit encore** (Adrien : « même quand elle clignote sur la fin ») | La source d'éblouissement de la fusée ne regardait que « posée et pas éteinte » et donnait son rayon plein : braise, creux d'agonie et résidu aveuglaient comme le plein feu. `Fusee.energie_relative()` (part du plein feu brûlée à l'instant) devient le `gain` de la source posée, multiplié au plafond ; sous 2 %, la fusée ne compte plus. `tools/test_fusee_eteinte.gd`. | ✅ `cc0a65c` |
+| **Collé à un mur, on éclaire derrière** | Ni collision ni sprite : la torche brûle 30 px devant le centre du corps, qui a 18 px de rayon — collé au mur, le point d'émission était 12 px À L'INTÉRIEUR, et les ombres partaient de là. `player._rapprocher_la_lampe()` : un rayon par image, torche allumée, ramène la lampe à 3 px du mur. ⚠️ Signalé, pas touché : la bouche du canon est à 28 px, une balle tirée collé au mur naît dans le mur. | ✅ `50c3e11` |
+| **Couper le scintillement des murs** | Le `sin(TIME × 4,5 Hz)` de `shimmer_murs.gdshader`, coupé ; la rugosité reste figée. La session LED modifie `light()` du même shader sur sa branche : à relire à la fusion. | ✅ `3e67ad4` |
+| **Les murs en roman graphique** | `mur_encre.gd` : UN contour halogène de 3 px, légèrement tremblé, autour de chaque MASSE de murs (tracé de `MapGeometry.trace_contours`, posé du côté du sol pour rester hors de l'ombre de l'occluder), et des hachures noires à 45° sur le sol au pied du mur — l'ombre dessinée d'une planche, qui n'existe que là où la torche éclaire. Les tuiles de mur deviennent du noir pur : le liseré par tuile quadrillait les masses épaisses. Décision du 2026-08-25 (« une masse cernée d'un filament ») tenue : le filament devient un contour. | ✅ **« Murs parfaits »** (Adrien, 2026-09-11). Des planches générées (trait de plume, bande de hachures) restent possibles en texture le long du contour, non demandées. |
 
 ---
 
@@ -17820,6 +18366,21 @@ seul le trait extérieur disparaît. Au banc sur le cloître : liseré extérieu
 l'enceinte 0, intérieur 48, pilier 21 ; sol au pied de l'enceinte 30, d'un
 pilier 19.
 
+**Après fusion de `main` (2026-09-11), sur les murs au trait de la refonte
+graphique** : les tuiles de mur sont désormais noires, et le filament est un
+contour d'encre de 3 px tracé côté sol par `mur_encre.gd`, rendu par
+l'éclairage PAR DÉFAUT (qui applique l'énergie) sur le masque 1 — le bandeau
+l'éclaire donc directement. Mesuré en jeu au sommet, carte par défaut :
+**contour de la face intérieure 112/255** (le liseré des tuiles en donnait 24),
+face extérieure **0**, sol 37 / 24 / 10. Le bandeau souligne donc le trait bien
+plus nettement qu'avant — progressivement, sans claquer, mais c'est un point de
+dosage à revoir en jouant. Deux conséquences à savoir : `shimmer_murs` n'a plus
+rien à dessiner sur les murs, son correctif d'énergie reste juste mais sans
+effet visible ; et **la vision de proximité passe désormais par le contour
+d'encre**, qui suit l'énergie tel quel — le halo (0,8) l'éclaire donc à 0,8 et
+non « comme avant » ; non mesuré ici, à regarder si le mur voisin paraît
+faible.
+
 ⚠️ **Une première lecture de la demande avait retiré l'enceinte ENTIÈRE**
 (commit `0a2dd03`) : « les murs extérieurs » compris comme « le mur d'enceinte ».
 Adrien : « là je ne vois plus rien sur la carte par défaut » — elle n'a que son
@@ -17910,7 +18471,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H6 | Déploiement du schéma et des Edge Functions | `supabase login` ouvre un navigateur et `supabase link` demande le mot de passe de la base. Une fois ces deux-là passés, le reste s'enchaîne sans intervention. | ✅ Fait le 2026-08-16 |
 | H7 | Parcours du profil à la souris | Mise en page et presse-papiers réel, qu'aucun test headless ne rend. | ✅ Fait le 2026-08-16 |
 | H8 | **Paire de clés de mise à jour** | ✅ **Fait — les deux moitiés.** Clé publique en place le 2026-08-26 (`0af06e1`, `update_manager.gd`, relue par `openssl`, chargée par `Crypto` de Godot) ; secret GitHub `CANDELA_MAJ_CLE_PRIVEE` créé le 2026-08-25. Le workflow `Publication` a déjà tourné une fois de bout en bout ce jour-là sur un tag posé trop tôt (commit sans la clé) — la Release qui en est sortie est un brouillon orphelin, encore à supprimer avant H9. Détail dans « Ce qui reste ». | Avant toute publication |
-| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. | ✅ **Fait le 2026-09-08** |
+| H9 | **Première publication, et première mise à jour réelle** | ✅ **Fait.** Trois Releases publiées (`v0.1.0`, `v0.2.0`, `v0.2.1`, vérifié `gh release list`, plus de brouillon orphelin). Adrien a testé l'échange sur une machine réelle (Antigravity) et l'a vu réussir. **`v0.3.0` publiée le 2026-09-09** (`gh run list --workflow=release.yml`, succès) — mineure montée car `Protocol.VERSION` était passé de 8 à 9 depuis `v0.2.11` sans que la mineure suive ; `tools/verifier_publication.sh` l'a signalé avant le tag. Changelog complet dans les notes de la release. **`v0.3.1` publiée le 2026-09-09** (correctif de dosage des taches de sang, `POIDS_TAILLE` — voir DA2.8 suite 2 ; protocole inchangé, `verifier_publication.sh` a confirmé un simple correctif). **`v0.4.0` publiée le 2026-09-09** (`gh release view v0.4.0`, workflow `Publication` succès en 8 min, `main` à `2255537`, macOS 157 Mo / Windows 103 Mo) — mineure montée pour deux raisons combinées : le correctif d'appariement classé (`rpc_countdown_launch`, `Protocol.VERSION` 9→10) et le chantier des dix classes asymétriques (`Protocol.VERSION` 10→15 après renumérotation à la fusion — voir le carnet de `protocol.gd`). Adrien a éprouvé l'arbalète manette en main avant d'ordonner la fusion, puis la publication. **`v0.4.1` publiée le 2026-09-09** — corrective et non mineure : `Protocol.VERSION` reste à 15, `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le réglage d'après-partie d'Adrien (étape 20 du chantier DIX CLASSES) : le root enfin senti, les quatre gestes de combat sur L2/L1/R2/R1, la grille de munitions et de cadences arbitrée, et la recharge cartouche par cartouche du Terrassier. ⚠️ **Publiée en connaissance d'un manque** : six classes sur dix n'ont pas de planche de marche et glissent avec leur sprite statique — Adrien a tranché « publier maintenant » plutôt que d'attendre les 48 images. **`v0.4.2` publiée le 2026-09-09** — corrective, `Protocol.VERSION` toujours à 15. Elle porte deux choses : les **planches de marche de cinq des six classes neuves** (étape 21 ; le Spectre glisse, décision d'Adrien) et surtout le correctif des **seize silhouettes noires** — l'adversaire s'effaçait en marchant, dans toutes les versions publiées jusqu'à la 0.4.1 incluse. **`v0.5.0` publiée le 2026-09-10** — mineure : `Protocol.VERSION` 15 → 16 (tir semi-automatique, index des dix classes sur le fil, état et destruction des gadgets portés par l'hôte), `verifier_publication.sh` l'a confirmé avant le tag. Elle porte le chantier DIX CLASSES des étapes 22 à 26 — le choix de classe revenu dans le salon, l'entraînement qui joue la classe choisie et compte ses fusées, un appui un tir (l'Occulteur seul en rafale), une minute de recharge et un gadget debout par joueur, le grésillement en batterie qui éteint les torches, le voile qu'on ne traverse plus, les images des gadgets et la poudre aux traces lisibles, les touches Y et N de J2 au clavier — ; les finitions des menus (titres re-détourés, menu muet sous l'allumage, fiche de classe refaite, icônes d'armes en couleur, verrou de torche en cadenas) ; l'intro en vidéo (DA6.6) ; les conditions de match archivées et F6 (PE2, PE3) ; et le correctif de la gâchette R2, qui avait manqué la 0.4.1 et la 0.4.2. | ✅ **Fait le 2026-09-08** |
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
@@ -18018,6 +18579,9 @@ et un seul est du travail de session.
    libre quand `ui.gd` est pris.
 2. Les **chantiers de robustesse** de l'étude du 2026-08-16 (section dédiée), à
    piocher entre deux tâches. Aucun n'est bloquant.
+3. **La refonte roman graphique des effets en jeu** (section dédiée, inscrite
+   le 2026-09-10) — huit lots autonomes, un commit et un rendu avant/après
+   chacun ; les lots 9 et 10 attendent Adrien.
 
 ### Ce qui attend Adrien, et rien d'autre
 

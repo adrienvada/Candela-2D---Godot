@@ -299,8 +299,13 @@ func _test_gadget() -> void:
 	g.implementation = "res://gadget_voile.gd"
 	_check("avec une implémentation, le gadget est livré", g.est_livre())
 
-	_check("le sprite se dérive du slug",
-		g.chemin_sprite() == "res://assets/sprites/gadget_voile.png", g.chemin_sprite())
+	# ⚠️ Le voile est fait de PIÈCES : son sprite d'un seul tenant n'existe pas.
+	# L'ancien contrôle figeait ce chemin inexistant comme le bon (revue de la
+	# fusion des menus, 2026-09-10) ; on vérifie désormais un vrai fichier.
+	_check("le sprite d'une pièce se dérive du slug, et le fichier existe",
+		GadgetProfile.chemin_sprite_de("voile_toile") == "res://assets/sprites/gadget_voile_toile.png"
+			and ResourceLoader.exists(GadgetProfile.chemin_sprite_de("voile_toile")),
+		GadgetProfile.chemin_sprite_de("voile_toile"))
 	_check("l'icône se dérive du MÊME slug",
 		g.chemin_icone() == "res://assets/ui/icones/gadget_voile.png", g.chemin_icone())
 
@@ -1389,22 +1394,43 @@ func _test_braises() -> void:
 	_check("hors de la nappe, on ne brûle pas",
 		is_equal_approx(gs.p1.hp, pv_dehors))
 
-	# ── LES CHARBONS SONT DÉTERMINISTES ──────────────────────────────────────
+	# ── LA NAPPE EST UNE IMAGE, QUI LUIT D'ELLE-MÊME ─────────────────────────
 	#
-	# ⚠️ Un tirage local donnerait deux nappes différentes chez les deux pairs.
-	# C'est la raison même pour laquelle les particules sont exclues du modèle
-	# d'éblouissement — « tirées au sort, donc absentes chez l'autre pair ».
+	# Depuis le 2026-09-10, une image peinte remplace les charbons dessinés : la
+	# même chez les deux pairs, par construction. Ce qu'il reste à garder : NON
+	# éclairée par le décor — sans quoi le `CanvasModulate` de l'arène l'éteindrait,
+	# comme il éteignait les charbons — et PAS additive, sans quoi elle blanchit.
 	var a1 := GadgetBraises.new()
-	var b1 := GadgetBraises.new()
 	a1._monter_visuel()
-	b1._monter_visuel()
-	var identiques := a1._charbons.size() == b1._charbons.size()
-	for i in a1._charbons.size():
-		if not a1._charbons[i].position.is_equal_approx(b1._charbons[i].position):
-			identiques = false
-	_check("deux nappes se dessinent à l'identique", identiques)
+	_check("la nappe est une image", a1._nappe != null and a1._nappe.texture != null)
+	var mat: CanvasItemMaterial = a1._nappe.material if a1._nappe != null else null
+	_check("elle luit d'elle-même, sans s'additionner à sa propre lumière",
+		mat != null and mat.light_mode == CanvasItemMaterial.LIGHT_MODE_UNSHADED
+			and mat.blend_mode == CanvasItemMaterial.BLEND_MODE_MIX)
+	# ⚠️ **L'image couvre le disque qui brûle.** Les premières braises fines
+	# (`2ce7133`) ne couvraient que 54 % du disque de `RAYON` : on brûlait à 50 px
+	# du centre là où rien n'était peint, et toutes les suites restaient vertes.
+	# Mesuré : 91 % pour les cailloux d'avant, 97 % pour le disque plein de
+	# `d2c599e`. Trouvé par la revue de la fusion des menus, le 2026-09-10.
+	var couverture := -1.0
+	if a1._nappe != null and a1._nappe.texture != null:
+		var img: Image = a1._nappe.texture.get_image()
+		if img != null:
+			if img.is_compressed():
+				img.decompress()
+			var centre := Vector2((img.get_width() - 1) / 2.0, (img.get_height() - 1) / 2.0)
+			var dans := 0
+			var pleins := 0
+			for y in img.get_height():
+				for x in img.get_width():
+					if Vector2(x, y).distance_to(centre) <= GadgetBraises.RAYON:
+						dans += 1
+						if img.get_pixel(x, y).a >= 0.5:
+							pleins += 1
+			couverture = float(pleins) / float(maxi(1, dans))
+	_check("l'image couvre au moins 90 % du disque qui brûle", couverture >= 0.9,
+		"%.1f %%" % (couverture * 100.0))
 	a1.free()
-	b1.free()
 
 	gs.queue_free()
 	await process_frame
@@ -1468,20 +1494,15 @@ func _test_volumes() -> void:
 		is_zero_approx(voile.occultation_pour(Vector2.ZERO)))
 	voile.free()
 
-	# ── Le contour est DÉTERMINISTE ─────────────────────────────────────────
+	# ── Le nuage est une IMAGE ──────────────────────────────────────────────
+	#
+	# Depuis le 2026-09-10, une image peinte remplace le disque au contour
+	# déterministe qu'on vérifiait ici : la même chez les deux pairs, par
+	# construction.
 	var a2 := GadgetSuie.new()
-	var b2 := GadgetSuie.new()
 	a2._monter_visuel()
-	b2._monter_visuel()
-	var identiques := a2._masse != null and b2._masse != null \
-		and a2._masse.polygon.size() == b2._masse.polygon.size()
-	if identiques:
-		for i in a2._masse.polygon.size():
-			if not a2._masse.polygon[i].is_equal_approx(b2._masse.polygon[i]):
-				identiques = false
-	_check("deux nuages se dessinent à l'identique", identiques)
+	_check("le nuage de suie est une image", a2._masse != null and a2._masse.texture != null)
 	a2.free()
-	b2.free()
 
 	suie.free()
 	poussiere.free()

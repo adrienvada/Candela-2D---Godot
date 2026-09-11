@@ -176,6 +176,10 @@ func _build() -> void:
 	_title_texture.custom_minimum_size = Vector2(0, 48)
 	_title_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_title_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	# Les titres sont peints à ~1300 px et affichés à 48 de haut : sans mipmaps,
+	# la réduction saute des pixels et le bord scintille. L'import les génère
+	# (`mipmaps/generate=true`) ; encore faut-il que le filtre les lise.
+	_title_texture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_title_texture.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_title_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_title_texture.hide()
@@ -628,7 +632,7 @@ func _slide(body: Control, direction: float) -> void:
 func _jouer_ui(cle: String) -> void:
 	var audio := get_node_or_null(^"/root/AudioManager")
 	if audio != null:
-		audio.call("play_ui", cle)
+		audio.call("play_ui", cle, MenuTheme.C.NIVEAU_UI_MASSICOT)
 
 func _reset_transform(body: Control) -> void:
 	if _tween != null and _tween.is_valid():

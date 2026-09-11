@@ -6,6 +6,7 @@ const Charte := preload("res://charte.gd")
 const SHADER_GHOST := preload("res://ghost_unshaded.gdshader")
 const BulletCasingScript := preload("res://bullet_casing.gd")
 const ArenaDecorScript := preload("res://arena_decor.gd")
+const MurEncreScript := preload("res://mur_encre.gd")
 
 ## Un match = UNE manche de 5 minutes (BO1). Le format n'est pas en dur : il
 ## transite par MatchRecord.Format pour qu'un BO3/BO5 puisse s'ajouter sans
@@ -313,6 +314,22 @@ var _brouillages: Array = []
 ## charge et le focus varier entre les deux moitiés de la mesure. Il sert aussi
 ## de recours si le rendu racine se révélait mauvais sur une machine donnée.
 var rendu_racine_autorise := true
+
+## Interrupteur d'ARCHIVAGE, public et volontairement simple — le même patron.
+##
+## À `false`, un match terminé n'est plus écrit dans `user://match_history.json`.
+## Un seul usage : **les outils qui jouent de fausses manches.** Le photographe
+## (DA6) tue un joueur pour photographier la séquence de fin ; tant que cet
+## interrupteur n'existait pas, chaque séance s'archivait dans le VRAI historique
+## d'Adrien — et l'historique est plafonné à deux cents entrées
+## (`MatchRecord.HISTORY_MAX`) : **chaque fausse manche poussait dehors un vrai
+## match**, sans que rien le dise. Voir « Pièges connus » (2026-09-10).
+##
+## ⚠️ Il ne coupe QUE l'écriture locale. Le rapport au classement
+## (`_report_to_ranking`) n'est pas touché : il ne part jamais d'une partie en
+## écran partagé (`_local_player_index()` y vaut -1), et le couper ici masquerait
+## un défaut réseau le jour où un outil jouerait en ligne.
+var archiver_les_matchs := true
 ## Le `World2D` propre de la fenêtre, mémorisé avant qu'on lui prête celui du jeu.
 ## Sans lui, revenir à l'écran scindé laisserait la racine sur le monde du duel.
 var _monde_racine: World2D = null
@@ -328,7 +345,9 @@ var _cam_kick: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
 func camera_shot_kick(pid: int, dir: Vector2) -> void:
 	if pid < 0 or pid > 1: return
-	_cam_kick[pid] = -dir * 6.0
+	# Curseur CONFORT « Recul de caméra au tir » — sans lecteur jusqu'au
+	# 2026-09-11 (audit DA5.1).
+	_cam_kick[pid] = -dir * 6.0 * EffectPolicy.curseur("recul_camera")
 
 ## V4.6 — Encaisser se sent au ventre : bref dézoom de la caméra du blessé,
 ## déclenché par la perte de PV autoritaire (rpc_update_hp), jamais prédite.
@@ -516,7 +535,9 @@ func _ouvrir_sur_intro_ou_menu() -> bool:
 	GameSettings.marquer_intro_vue()
 	var intro: CanvasLayer = Intro.new()
 	add_child(intro)
+	ui.menu_voile = true
 	intro.terminee.connect(func() -> void:
+		ui.menu_voile = false
 		ui.show_main_menu()
 		intro.queue_free())
 	intro.jouer()
@@ -531,7 +552,11 @@ func _on_intro_requested() -> void:
 	AudioManager.play_music("music_intro")
 	var intro: CanvasLayer = Intro.new()
 	add_child(intro)
+	# Rejouée depuis l'accueil, l'intro passe PAR-DESSUS un menu ouvert : sans le
+	# voile, chaque touche censée la sauter naviguait aussi dessous.
+	ui.menu_voile = true
 	intro.terminee.connect(func() -> void:
+		ui.menu_voile = false
 		AudioManager.play_music("music_menu")
 		ui.show_main_menu()
 		intro.queue_free())
@@ -548,8 +573,16 @@ func _on_intro_requested() -> void:
 ## jeu une attente, et l'intro se termine déjà sur le wordmark en braise —
 ## c'est-à-dire sur un allumage. Chacune est ainsi à son meilleur moment :
 ## l'histoire une fois, l'allumage toutes les autres fois.
+##
+## Le menu est vivant sous le voile, mais **muet et sourd** jusqu'à ce qu'on le
+## voie : voir `ui.menu_voile`. Levé à `terminee`, c'est-à-dire une fois le voile
+## effacé — la touche qui saute l'allumage ne doit pas aussi naviguer dessous.
 func _allumage() -> void:
-	PowerOn.lancer(self)
+	var voile := PowerOn.lancer(self)
+	if voile == null:
+		return
+	ui.menu_voile = true
+	voile.terminee.connect(func() -> void: ui.menu_voile = false)
 
 ## V6.8 — les deux moities d'ecran s'allument. Le son marque le moment ou l'on
 ## cesse d'etre seul ; il vaut aussi sans la moitie visuelle de l'item, parce que
@@ -890,7 +923,8 @@ func rebuild_arena() -> void:
 	# Purge de la construction précédente (rematch, changement de carte).
 	for node_name in ["CustomFloor", "CustomWalls", "CustomFloor_P1", "CustomFloor_P2",
 			"CustomWalls_P1", "CustomWalls_P2", "CustomWallBodies",
-			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2"]:
+			"ArenaDecor", "ArenaDecor_P1", "ArenaDecor_P2",
+			"MurEncre", "MurEncre_P1", "MurEncre_P2"]:
 		var previous := arena.get_node_or_null(node_name)
 		if previous:
 			arena.remove_child(previous)
@@ -961,6 +995,12 @@ func rebuild_arena() -> void:
 	var decor := ArenaDecorScript.build(data, arena)
 	if decor:
 		decor.hide()
+	# Refonte roman graphique : le contour des masses de murs, au trait
+	# (mur_encre.gd). Même idiome : l'original porte la géométrie et se cache,
+	# les copies par vue se montrent.
+	var murs := MurEncreScript.build(data, arena)
+	if murs:
+		murs.hide()
 
 	# Chantier FUSÉE : textures de volutes et shader du voile se paient ICI,
 	# pas à l'image du premier lancer (hoquet pile sur l'action — la classe de
@@ -1807,12 +1847,21 @@ func _sources_eblouissantes() -> Array:
 			continue
 		if f.has_method("est_allumee_au_sol") and not f.est_allumee_au_sol():
 			continue
+		# La fusée éblouit à hauteur de ce qu'elle brûle : plein feu à 1,0, braise
+		# à 0,4, creux d'agonie à 0,05, résidu à 0,08. Sans ce gain, une fusée
+		# presque morte aveuglait comme au premier instant (Adrien, 2026-09-11).
+		var gain := 1.0
+		if f.has_method("energie_relative"):
+			gain = float(f.energie_relative())
+		if gain <= 0.02:
+			continue
 		out.append({
 			"noeud": f,
 			"porteur": null,
 			"dirigee": false,
 			"rayon": RAYON_EBLOUISSEMENT_FUSEE,
 			"arme": null,
+			"gain": gain,
 		})
 
 	# ── Les gadgets posés ────────────────────────────────────────────────────
@@ -1888,7 +1937,10 @@ func _plafond_de_source(espace: PhysicsDirectSpaceState2D, src: Dictionary,
 		return 0.0
 	if not _ligne_de_vue_depuis(espace, noeud.global_position, cible, RID()):
 		return 0.0
-	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"])
+	# `gain` : la part de sa lumière qu'une source posée brûle en ce moment
+	# (fusée en agonie, en résidu). Absent, la source brûle à plein.
+	return Eblouissement.plafond_pour(i) * Eblouissement.gain_taille(src["rayon"]) \
+		* float(src.get("gain", 1.0))
 
 ## Un joueur qui compte : présent, vivant, et sur le terrain.
 ##
@@ -2869,8 +2921,10 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	# après le garde spawn_nodes : chez le client, la volée officielle déjà
 	# rendue par la prédiction ne rejoue pas l'onde. La killcam passe par
 	# _on_replay_spawn_bullet, jamais ici. Hors drapeau, l'appel ne fait rien.
-	if count > 1:
-		PumpShockwave.spawn_if_enabled(arena, pos)
+	# D5, l'onde de distorsion d'air du pompe, a été SUPPRIMÉE le 2026-09-11
+	# (décision d'Adrien, refonte roman graphique, lot 10) : jamais activée hors
+	# drapeau de debug, jamais mesurée, et une réfraction n'a pas d'équivalent
+	# en encre. `pump_shockwave.gd` et son shader sont retirés du dépôt.
 
 	# Éjection de douille d'atelier persistante au sol (DA Roman Graphique Brutaliste)
 	if weapon and weapon.slug() != "arbalete" and arena:
@@ -3381,7 +3435,11 @@ func _archive_match_result(winner_id: int, forfeit: bool = false) -> void:
 		_slug_de_classe(p1),
 		_slug_de_classe(p2),
 		conditions)
-	MatchRecord.append_to_history(record)
+	# Voir `archiver_les_matchs` : un outil qui joue de fausses manches ne doit
+	# rien laisser dans l'historique du joueur. Seul point d'écriture du jeu —
+	# `_archive_forfeit` passe aussi par ici.
+	if archiver_les_matchs:
+		MatchRecord.append_to_history(record)
 	# Le journal local d'abord, l'envoi ensuite : si le second échoue, le premier
 	# garde la trace, et une étape ultérieure pourra rejouer ce qui manque.
 	_report_to_ranking(winner_id, forfeit, conditions)
@@ -3697,7 +3755,7 @@ func _batir_catalogue() -> void:
 	weapon_pistolet.root = _root(0.10)
 	weapon_pistolet.fusees = _fusees(1, PERIODE_RECHARGE_FUSEE)
 	weapon_pistolet.gadget = _gadget("gresillement", "Le grésillement",
-		"Une bobine au sol qui fait papilloter les torches autour d'elle.")
+		"Une batterie qu'on allume et coupe : les torches proches sautent jusqu'au noir.")
 
 	weapon_fusil.libelle = "L'Illusionniste"
 	weapon_fusil.description = "Il fait croire à un corps qui n'est pas là. Le fusil est fin et net ; le leurre, lui, ne se distingue d'un joueur que trop tard."
@@ -3819,7 +3877,7 @@ func _batir_catalogue() -> void:
 	spectre.root = _root(0.08)
 	spectre.fusees = _fusees(0, 0.0)  # la seule classe qui n'éclaire jamais
 	spectre.gadget = _gadget("voile", "Le voile",
-		"Une bâche qui arrête la lumière, pas les balles.")
+		"Une bâche qui arrête la lumière et les joueurs, pas les balles.")
 
 	_classes = [
 		weapon_pistolet, weapon_fusil, weapon_pompe, weapon_arbalete,
@@ -4492,6 +4550,44 @@ func _accorder_rendu_aux_vues() -> void:
 
 	_accorder_la_peinture_de_la_racine()
 	_accorder_brouillage_aux_vues()
+	_accorder_calques_joueurs()
+
+
+## Le viewport qui rend VRAIMENT le joueur `pid` : la racine si elle a pris sa
+## vue (rendu racine, vue regardée), sa sous-vue sinon.
+func _viewport_du_joueur(pid: int) -> Node:
+	var vue: SubViewport = vp1 if pid == 0 else vp2
+	if _rendu_racine:
+		var conteneur := vue.get_parent() as Control
+		if conteneur != null and conteneur.visible:
+			return self
+	return vue
+
+
+## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.
+##
+## ⚠️ **Un `CanvasLayer` suit le viewport de son parent, pas le monde.** Enfant
+## du joueur, il vivait dans `SubViewport1` — donc jamais dessiné pour J2 en
+## écran scindé, ni pour personne en vue unique, où cette sous-vue est arrêtée
+## et où la racine peint le duel. Même famille que le brouillage
+## (`_accorder_brouillage_aux_vues`) : il suit le RENDU, pas l'affichage.
+func accueillir_calque(joueur: Node, calque: CanvasLayer) -> void:
+	var pid := int(joueur.get("player_id"))
+	var parent: Node = _viewport_du_joueur(pid)
+	if calque.get_parent() == parent:
+		return
+	if calque.get_parent() != null:
+		calque.get_parent().remove_child(calque)
+	parent.add_child(calque)
+
+
+func _accorder_calques_joueurs() -> void:
+	for j in [p1, p2]:
+		if not is_instance_valid(j) or not ("calques_ecran" in j):
+			continue
+		for c in j.calques_ecran:
+			if is_instance_valid(c):
+				accueillir_calque(j, c)
 
 
 ## Ce que la racine peint POUR ELLE-MÊME s'efface pendant qu'elle peint le duel.

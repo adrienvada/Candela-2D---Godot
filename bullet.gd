@@ -118,7 +118,11 @@ func _ready():
 			aura.visible = false
 			core.material = null # Use default shaded material
 		else:
-			light.energy = weapon.bullet_light_energy
+			# Curseur MONDE « Trait de balle » (plancher 0,5 en classé) : la
+			# lumière qui dit d'où l'on tire, et l'aura qui la double.
+			var trait_balle := EffectPolicy.curseur("trait_de_balle")
+			light.energy = weapon.bullet_light_energy * trait_balle
+			aura.modulate.a *= trait_balle
 	
 	# ShapeCast for accurate collision
 	shape_cast = ShapeCast2D.new()
@@ -209,6 +213,9 @@ func _physics_process(delta):
 				_spawn_wall_effects(hit_point, true)
 				_fade_and_destroy(hit_point)
 				return
+			# La toile bat au passage — chez TOUS les pairs, puisque chacun voit
+			# passer ses balles : c'est de l'image, jamais de la simulation.
+			gadget.secouer()
 			# Traversant : on l'exclut et on rejoue le pas. La boucle est BORNÉE —
 			# un gadget qui se réinsérerait dans le cast ferait autrement tourner
 			# cette image à l'infini, et une image qui ne rend pas la main est
@@ -658,18 +665,28 @@ func _spawn_hit_effects(pos: Vector2, proximite_bord: float = 0.0,
 	# Pure blood red
 	var blood_color = Charte.CARMIN
 	# Exit wound: large splatter forward
-	_spawn_blood_particles(pos, blood_color, 15, 200.0, 800.0, direction, 60.0)
+	# Curseur MONDE « Particules de sang » (plancher 0,35 en classé) : il
+	# règle le NOMBRE de gouttes, jamais leur vitesse ni leur direction.
+	var sang := EffectPolicy.curseur("particules_sang")
+	_spawn_blood_particles(pos, blood_color, int(round(15.0 * sang)), 200.0, 800.0, direction, 60.0)
 	# Entry wound: smaller splatter backward (bouncing off the shooter or walls behind)
-	_spawn_blood_particles(pos, blood_color, 10, 100.0, 400.0, -direction, 90.0)
+	_spawn_blood_particles(pos, blood_color, int(round(10.0 * sang)), 100.0, 400.0, -direction, 90.0)
 	
 	# Permanent floor stain
 	var gs = get_tree().get_first_node_in_group("game_state")
 	if gs and gs.arena:
 		var arena = gs.arena
-		var stain = Node2D.new()
-		stain.set_script(preload("res://blood_stain.gd"))
-		arena.add_child(stain)
-		stain.setup(pos, direction, distance_axe_centre)
+		# Deux taches par touche (Adrien, 2026-09-11) : une PETITE tache
+		# principale sous le corps, et une GERBE qui part dans le sens du tir.
+		# Voir `blood_stain.gd`, `setup()` et son paramètre `gerbe`.
+		var flaque = Node2D.new()
+		flaque.set_script(preload("res://blood_stain.gd"))
+		arena.add_child(flaque)
+		flaque.setup(pos, direction, distance_axe_centre)
+		var gerbe = Node2D.new()
+		gerbe.set_script(preload("res://blood_stain.gd"))
+		arena.add_child(gerbe)
+		gerbe.setup(pos, direction, distance_axe_centre, true)
 
 ## `avec_son` permet à la cible d'échauffement de garder les étincelles du mur
 ## sans en prendre le bruit. Un drapeau plutôt qu'une copie de la fonction : les
@@ -679,7 +696,10 @@ func _spawn_wall_effects(pos: Vector2, avec_son: bool = true):
 	if avec_son:
 		AudioManager.play_wall_impact(pos)
 	# Sparks bounce BACKWARDS from the wall
-	_spawn_spark_particles(pos, Charte.AMBRE, 12, 100.0, 450.0, -direction, 120.0)
+	# Curseur MONDE « Éclats sur les murs » (plancher 0,3 en classé) : le
+	# nombre d'étincelles, et l'opacité de l'éclat posé (`wall_impact.gd`).
+	var eclats := EffectPolicy.curseur("eclats_impact")
+	_spawn_spark_particles(pos, Charte.AMBRE, int(round(12.0 * eclats)), 100.0, 450.0, -direction, 120.0)
 	# DA2.9 — l'éclat reste. Les étincelles disent l'instant, la marque dit que
 	# quelqu'un a tiré ici : c'est la seule trace qu'un tir MANQUÉ laisse au
 	# monde, et elle raconte le match autant que le sang.

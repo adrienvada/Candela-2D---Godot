@@ -24,8 +24,10 @@ extends Resource
 ## les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière,
 ## pas à ce qui la déclenche.
 
-## Le slug du gadget — clé unique du sprite (`assets/sprites/gadget_<slug>.png`)
-## et de l'icône (`assets/ui/icones/gadget_<slug>.png`). Sans accent ni majuscule,
+## Le slug du gadget — clé de l'icône (`assets/ui/icones/gadget_<slug>.png`) et
+## PRÉFIXE de ses sprites de jeu : `gadget_<slug>.png` pour un gadget d'une seule
+## pièce, `gadget_<slug>_<pièce>.png` pour le voile et la torche fantôme ; le leurre
+## n'en a aucun, il porte la silhouette de son poseur. Sans accent ni majuscule,
 ## même règle que le slug de classe : « Arbalète » a déjà coûté cette leçon.
 @export var slug: String = ""
 
@@ -94,8 +96,20 @@ func est_livre() -> bool:
 
 
 ## Le chemin du sprite du gadget posé, dérivé du slug — une seule vérité.
+##
+## ⚠️ **Valable pour les gadgets d'UNE seule pièce.** Pour le voile et la torche
+## fantôme, faits de pièces, ce fichier n'existe pas (voir `chemin_sprite_de()`) ;
+## pour le leurre non plus. Le code du jeu passe par `GadgetBase._poser_sprite()`,
+## qui crie si l'image manque ; un appelant d'ici obtiendrait une case vide.
 func chemin_sprite() -> String:
-	return "res://assets/sprites/gadget_%s.png" % slug
+	return chemin_sprite_de(slug)
+
+
+## La même vérité pour les gadgets en PIÈCES — la torche fantôme (pied, tête), le
+## voile (piquet, toile) — et pour le gadget posé, qui ne connaît pas son profil :
+## `"voile_toile"` donne `gadget_voile_toile.png`. Le format ne s'écrit qu'ici.
+static func chemin_sprite_de(nom: String) -> String:
+	return "res://assets/sprites/gadget_%s.png" % nom
 
 
 ## Le chemin de l'icône d'interface, dérivé du même slug.
