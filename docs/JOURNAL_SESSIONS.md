@@ -3804,3 +3804,30 @@ rejette, lot par lot.
 avant d'écrire — un dossier de base ne se complète pas, il se recopie ; et
 capturer une famille DANS un dossier de base l'ampute de ses autres familles
 (perdu le dossier `jeu` du lot 2, reconstitué depuis le lot 1).
+
+### 2026-09-11 — Les verdicts d'Adrien, et ce qu'ils ont ouvert
+
+Gardés : lots 1, 2, 3, 6, 7. Retiré : lot 8 (revert, le shader rendu à la
+session « Murs avec bande LED respirante », qui remplace cette animation).
+Tranchés : lot 9 gardé tel quel, lot 10 supprimé (`pump_shockwave.*` retirés,
+`game_state.gd` et `tools/test_charte.gd` allégés d'une ligne).
+
+Trois retouches demandées, et un défaut trouvé en cherchant pourquoi Adrien
+n'avait pas vu la vignette :
+- **lot 1 bis** — deux taches par touche (`bullet.gd`, `blood_stain.gd` :
+  paramètre `gerbe`, constantes `FLAQUE_REDUCTION`, `GERBE_AVANCE`,
+  `GERBE_ETIREMENT`, champ `_gerbe` reporté dans la copie J2) ;
+- **lot 4 bis** — killcam dessinée (`killcam_overlay.gdshader` réécrit :
+  contours, trois tons, trame, uniform `intensite`) ;
+- **lot 5 bis** — les calques d'écran du joueur (vignette, flash de mort)
+  n'étaient dessinés ni pour J2 en scindé ni pour personne en vue unique :
+  `player.gd::calques_ecran` + `_loger_calque()`, `game_state.gd::accueillir_calque()`
+  + `_accorder_calques_joueurs()` appelée par `_accorder_rendu_aux_vues()`.
+- **HUD** (`ui.gd::_build_player_hud`) : le panneau prend la largeur de son
+  contenu, la fiche de J2 ne sort plus de l'écran scindé — domaine « menus »,
+  une connexion de signal, rien d'autre.
+
+**Les quinze curseurs** : `EffectPolicy.curseur(id)` (nouveau, statique) lu par
+`player.gd`, `game_state.gd`, `bullet.gd`, `blood_stain.gd`, `wall_impact.gd`,
+`ui.gd` ; `arene_au_repos` retiré de la table ; `tools/test_curseurs_branches.gd`
+ajouté à `run_suites.sh`.

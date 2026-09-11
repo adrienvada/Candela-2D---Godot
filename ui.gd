@@ -307,7 +307,8 @@ class CircularCooldown extends Control:
 		if secousse > 0.0:
 			# Amplitude décroissante : un tremblement constant ressemblerait à un
 			# défaut d'affichage, pas à un refus.
-			var a := secousse * 9.0
+			# Curseur CONFORT « Tremblements de l'interface ».
+			var a := secousse * 9.0 * EffectPolicy.curseur("tremblement_interface")
 			center += Vector2(randf_range(-a, a), randf_range(-a, a))
 		var radius := minf(size.x, size.y) / 2.0 - 4.0
 		# Cercle d'acier discret (épaisseur 2 px)
@@ -1544,13 +1545,15 @@ func _update_health_trails(delta: float) -> void:
 func _update_shake(delta: float) -> void:
 	if p1_shake_time > 0.0:
 		p1_shake_time -= delta
-		p1_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity
+		p1_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity \
+			* EffectPolicy.curseur("tremblement_interface")
 	else:
 		p1_panel.position = Vector2.ZERO
 
 	if p2_shake_time > 0.0:
 		p2_shake_time -= delta
-		p2_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity
+		p2_panel.position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * shake_intensity \
+			* EffectPolicy.curseur("tremblement_interface")
 	else:
 		p2_panel.position = Vector2.ZERO
 
@@ -2229,7 +2232,11 @@ func _poser_voile(rect: ColorRect, victime, source) -> void:
 	var niveau: float = 0.0
 	if victime != null:
 		niveau = clampf(float(victime.dazzle_amount), 0.0, 1.0)
-	mat.set_shader_parameter("niveau", niveau)
+	# Curseur MONDE « Éblouissement » (plancher 0,8 en classé) : il ne touche
+	# que le VOILE — jamais la pénalité de vitesse et de visée (décision du
+	# 2026-08-18). Sans lecteur depuis le passage au voile texturé (audit
+	# DA5.1) ; rebranché le 2026-09-11 à la demande d'Adrien.
+	mat.set_shader_parameter("niveau", niveau * EffectPolicy.curseur("eblouissement"))
 	if niveau <= 0.001:
 		return
 	mat.set_shader_parameter("temps", _voile_temps)
@@ -2400,6 +2407,14 @@ func _build_player_hud(player: int) -> Control:
 		p2_ammo_label = weapon.get("ammo", null)
 		p2_torch = torch
 
+	# Le panneau grandit avec son contenu : trois boutons de gadget et de
+	# fusées dépassaient les 340 px du minimum, et la fiche de J2, ancrée à
+	# droite, sortait de l'écran en écran scindé (Adrien, 2026-09-11 : « l'écran
+	# d'info du joueur 2 est tronqué à droite »). Le minimum reste un plancher ;
+	# la largeur réelle est celle du contenu, relue une fois qu'il est posé.
+	inner.ready.connect(func():
+		wrapper.custom_minimum_size.x = maxf(wrapper.custom_minimum_size.x,
+			inner.get_combined_minimum_size().x), CONNECT_ONE_SHOT)
 	return wrapper
 
 func _build_center_hud() -> Control:
@@ -8179,6 +8194,11 @@ func show_killcam() -> void:
 	# joueur croit a un bug d'affichage.
 	AudioManager.play_ui("ui_vhs_rewind")
 	reinitialiser_killcam()
+	# Curseur CONFORT « Grain de la killcam » : la trame, les contours et le
+	# grain de papier du rejeu, jusqu'à zéro.
+	if killcam_overlay.material:
+		killcam_overlay.material.set_shader_parameter("intensite",
+			EffectPolicy.curseur("grain_killcam"))
 	killcam_overlay.show()
 	killcam_container.show()
 	killcam_timecode.show()

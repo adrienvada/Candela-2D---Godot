@@ -31,7 +31,6 @@ const FICHIERS_MONDE := [
 	"res://light_textures.gd",
 	"res://particle_pool.gd",
 	"res://kill_shockwave.gd",
-	"res://pump_shockwave.gd",
 	"res://weapon_data.gd",
 	"res://training_target.gd",
 	"res://training_target_visual.gd",

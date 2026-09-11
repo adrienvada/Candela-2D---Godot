@@ -344,7 +344,9 @@ var _cam_kick: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
 func camera_shot_kick(pid: int, dir: Vector2) -> void:
 	if pid < 0 or pid > 1: return
-	_cam_kick[pid] = -dir * 6.0
+	# Curseur CONFORT « Recul de caméra au tir » — sans lecteur jusqu'au
+	# 2026-09-11 (audit DA5.1).
+	_cam_kick[pid] = -dir * 6.0 * EffectPolicy.curseur("recul_camera")
 
 ## V4.6 — Encaisser se sent au ventre : bref dézoom de la caméra du blessé,
 ## déclenché par la perte de PV autoritaire (rpc_update_hp), jamais prédite.
@@ -2885,8 +2887,10 @@ func _do_spawn_bullet(shooter: Node2D, pos: Vector2, rot: float, weapon: WeaponD
 	# après le garde spawn_nodes : chez le client, la volée officielle déjà
 	# rendue par la prédiction ne rejoue pas l'onde. La killcam passe par
 	# _on_replay_spawn_bullet, jamais ici. Hors drapeau, l'appel ne fait rien.
-	if count > 1:
-		PumpShockwave.spawn_if_enabled(arena, pos)
+	# D5, l'onde de distorsion d'air du pompe, a été SUPPRIMÉE le 2026-09-11
+	# (décision d'Adrien, refonte roman graphique, lot 10) : jamais activée hors
+	# drapeau de debug, jamais mesurée, et une réfraction n'a pas d'équivalent
+	# en encre. `pump_shockwave.gd` et son shader sont retirés du dépôt.
 
 	# Éjection de douille d'atelier persistante au sol (DA Roman Graphique Brutaliste)
 	if weapon and weapon.slug() != "arbalete" and arena:
@@ -4512,6 +4516,44 @@ func _accorder_rendu_aux_vues() -> void:
 
 	_accorder_la_peinture_de_la_racine()
 	_accorder_brouillage_aux_vues()
+	_accorder_calques_joueurs()
+
+
+## Le viewport qui rend VRAIMENT le joueur `pid` : la racine si elle a pris sa
+## vue (rendu racine, vue regardée), sa sous-vue sinon.
+func _viewport_du_joueur(pid: int) -> Node:
+	var vue: SubViewport = vp1 if pid == 0 else vp2
+	if _rendu_racine:
+		var conteneur := vue.get_parent() as Control
+		if conteneur != null and conteneur.visible:
+			return self
+	return vue
+
+
+## Loge un calque d'écran (vignette, flash de mort) là où son joueur est rendu.
+##
+## ⚠️ **Un `CanvasLayer` suit le viewport de son parent, pas le monde.** Enfant
+## du joueur, il vivait dans `SubViewport1` — donc jamais dessiné pour J2 en
+## écran scindé, ni pour personne en vue unique, où cette sous-vue est arrêtée
+## et où la racine peint le duel. Même famille que le brouillage
+## (`_accorder_brouillage_aux_vues`) : il suit le RENDU, pas l'affichage.
+func accueillir_calque(joueur: Node, calque: CanvasLayer) -> void:
+	var pid := int(joueur.get("player_id"))
+	var parent: Node = _viewport_du_joueur(pid)
+	if calque.get_parent() == parent:
+		return
+	if calque.get_parent() != null:
+		calque.get_parent().remove_child(calque)
+	parent.add_child(calque)
+
+
+func _accorder_calques_joueurs() -> void:
+	for j in [p1, p2]:
+		if not is_instance_valid(j) or not ("calques_ecran" in j):
+			continue
+		for c in j.calques_ecran:
+			if is_instance_valid(c):
+				accueillir_calque(j, c)
 
 
 ## Ce que la racine peint POUR ELLE-MÊME s'efface pendant qu'elle peint le duel.

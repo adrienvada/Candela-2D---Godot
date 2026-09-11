@@ -197,6 +197,25 @@ var _coeur: Texture2D = null
 ## ⚠️ Lue par `_draw()`, donc à reporter à la main dans `_create_p2_duplicate()`.
 var _ancre := Vector2(0.5, 0.5)
 var _echelle := 1.0
+## Cette tache est-elle la GERBE (voir `setup()`) ? Reportée à la main dans
+## `_create_p2_duplicate()`, comme `_ancre`.
+var _gerbe := false
+
+## ## Deux taches par touche (Adrien, 2026-09-11)
+##
+## *« Une petite tache principale sous le sprite du joueur touché et une gerbe
+## dans le sens de l'impact. »* `bullet.gd` pose donc DEUX taches :
+## - la **flaque**, `setup(..., gerbe = false)` : la planche est calée sur le
+##   corps par sa flaque (règle du 2026-09-07, inchangée), mais réduite de
+##   `FLAQUE_REDUCTION` pour rester une petite tache sous le sprite ;
+## - la **gerbe**, `setup(..., gerbe = true)` : toujours une planche
+##   DIRECTIONNELLE, calée `GERBE_AVANCE` px plus loin en aval — sa flaque
+##   tombe au bord du corps, sa traînée file au-delà — et étirée de
+##   `GERBE_ETIREMENT` dans l'axe du tir.
+## La règle de l'étoile centrée (2026-09-09) ne vaut plus que pour la flaque.
+const FLAQUE_REDUCTION := 0.6
+const GERBE_AVANCE := 26.0
+const GERBE_ETIREMENT := 1.3
 var _drops = []
 var color = Color(Charte.CARMIN, 0.9) # Sang séché, sombre
 ## Rang de cette tache, figé à l'entrée dans l'arbre (voir _next_order).
@@ -282,7 +301,9 @@ static func rectangle_de_la_tache(taille: Vector2, ancre: Vector2) -> Rect2:
 ## réel du joueur — voir `SEUIL_ETOILE_CENTREE`. Par défaut `INF` (« loin » du
 ## centre) : un appelant qui ne la connaît pas obtient une planche
 ## DIRECTIONNELLE, jamais l'étoile réservée aux tirs quasi parfaits.
-func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = INF):
+func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = INF,
+		gerbe: bool = false):
+	_gerbe = gerbe
 	position = base_pos
 	z_index = 1 # Au-dessus du sol (0), sous la killcam (2) et les joueurs (10)
 
@@ -300,7 +321,8 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 	# la droite, et `direction` la met dans l'axe de la balle. Une tache de sang
 	# raconte d'où le coup venait ; la faire tourner est ce qui distingue une
 	# scène de crime d'un semis de losanges.
-	var i := _choisir_eclaboussure(distance_axe_centre)
+	# La gerbe est toujours directionnelle : `INF` écarte les étoiles.
+	var i := _choisir_eclaboussure(INF if gerbe else distance_axe_centre)
 	if _texture != null:
 		# ⚠️ Position ET rotation d'un seul geste, par `pose()`. Le repli
 		# procédural plus bas, lui, NE tourne PAS le nœud : ses gouttes
@@ -310,7 +332,8 @@ func setup(base_pos: Vector2, direction: Vector2, distance_axe_centre: float = I
 		# `POIDS_TAILLE` corrige la variation aléatoire, il ne la remplace pas :
 		# une planche dense reste avec sa propre part de hasard, juste ramenée
 		# sous le plafond du corps du joueur.
-		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * POIDS_TAILLE[i]
+		_echelle = randf_range(ECHELLE_MIN, ECHELLE_MAX) * POIDS_TAILLE[i] \
+			* (1.0 if gerbe else FLAQUE_REDUCTION)
 		queue_redraw()
 		return
 
@@ -394,14 +417,24 @@ func _draw():
 		# sans cette division, la taille de base d'une tache de sang serait celle
 		# de son FICHIER, et une recuisson à ×2 la doublerait à l'écran. Voir
 		# `Charte.DENSITE_ASSETS` — même geste que pour les sprites du joueur.
+		# Curseur MONDE « Traces de sang au sol » (plancher 0,25 en classé).
+		var traces := EffectPolicy.curseur("traces_de_sang")
 		var t := _texture.get_size() * _echelle / Charte.DENSITE_ASSETS
-		draw_texture_rect(_texture, rectangle_de_la_tache(t, _ancre), false,
-			Color(Charte.CARMIN, 0.8))
+		if _gerbe:
+			t.x *= GERBE_ETIREMENT
+		var rect_t := rectangle_de_la_tache(t, _ancre)
+		if _gerbe:
+			rect_t.position.x += GERBE_AVANCE
+		draw_texture_rect(_texture, rect_t, false, Color(Charte.CARMIN, 0.8 * traces))
 		var c := _coeur.get_size() * _echelle / Charte.DENSITE_ASSETS
+		if _gerbe:
+			c.x *= GERBE_ETIREMENT
 		# Le cœur est cuit du même dessin, à la même taille : même ancre, donc
 		# les deux passes restent superposées au pixel près.
-		draw_texture_rect(_coeur, rectangle_de_la_tache(c, _ancre), false,
-			Color(Charte.CARMIN * 0.16, 0.95))
+		var rect_c := rectangle_de_la_tache(c, _ancre)
+		if _gerbe:
+			rect_c.position.x += GERBE_AVANCE
+		draw_texture_rect(_coeur, rect_c, false, Color(Charte.CARMIN * 0.16, 0.95 * traces))
 		return
 	for d in _drops:
 		draw_circle(d["pos"], d["radius"], Color(Charte.CARMIN, 0.8))
@@ -479,6 +512,7 @@ func _create_p2_duplicate():
 		stain_p2.set("_texture", _texture)
 		stain_p2.set("_coeur", _coeur)
 		stain_p2.set("_echelle", _echelle)
+		stain_p2.set("_gerbe", _gerbe)
 		# `_ancre` est arrivée avec la règle d'Adrien du 2026-09-07 : c'est
 		# précisément le genre de variable neuve que ce bloc oublie. Sans cette
 		# ligne, J2 verrait toutes ses taches ancrées au milieu de la planche —

@@ -92,7 +92,9 @@ func _draw() -> void:
 	var t := _texture.get_size() * _echelle / Charte.DENSITE_ASSETS
 	# `ACIER` et non `HALOGENE` : un éclat est du métal mis à nu, une matière
 	# froide que la torche révèle — pas une source chaude.
-	draw_texture_rect(_texture, Rect2(-t * 0.5, t), false, Color(Charte.ACIER, 0.85))
+	# Curseur MONDE « Éclats sur les murs » (plancher 0,3 en classé).
+	draw_texture_rect(_texture, Rect2(-t * 0.5, t), false,
+		Color(Charte.ACIER, 0.85 * EffectPolicy.curseur("eclats_impact")))
 
 
 func _ready() -> void:

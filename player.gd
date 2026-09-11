@@ -256,6 +256,18 @@ var shake_time: float = 0.0
 
 var vignette_mat: ShaderMaterial
 
+## Les calques d'ÉCRAN de ce joueur — vignette de dégâts, flash de mort.
+##
+## ⚠️ **Un `CanvasLayer` s'attache au VIEWPORT de son parent, pas au monde.**
+## Enfant du joueur, donc de l'arène, donc de `SubViewport1`, il ne se dessinait
+## que dans cette sous-vue : invisible pour J2 en écran scindé (sa vue est
+## `SubViewport2`), et invisible pour TOUT LE MONDE en vue unique, où les
+## sous-vues sont arrêtées et où la racine rend le duel (chantier R). Adrien,
+## le 2026-09-11, sur la vignette : « je ne l'ai pas vue ». Ces calques sont
+## désormais logés par `GameState.accueillir_calque()` dans le viewport qui
+## rend vraiment ce joueur, et relogés à chaque accord des vues.
+var calques_ecran: Array[CanvasLayer] = []
+
 ## V5.4 — respiration de la torche : ±3 % d'énergie au rythme d'un bruit lent.
 const TORCH_BREATH_AMP := 0.03
 var _torch_breath_t: float = 0.0
@@ -689,7 +701,8 @@ func _ready():
 	
 	# Setup Damage Vignette UI
 	var ui_layer = CanvasLayer.new()
-	add_child(ui_layer)
+	ui_layer.name = "CalqueVignette"
+	_loger_calque(ui_layer)
 	
 	var vignette_rect = ColorRect.new()
 	vignette_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1191,12 +1204,13 @@ func _process(delta):
 				# V4.7 — la vignette bat au même cœur que la manette : un seul
 				# battement pilote l'image, la main — et le stem heartbeat.
 				if vignette_mat:
-					vignette_mat.set_shader_parameter("intensity", 0.55)
+					var pouls := 0.55 * EffectPolicy.curseur("vignette_degats")
+					vignette_mat.set_shader_parameter("intensity", pouls)
 					var tw_v = create_tween()
 					# DA4.13 — une intensité de shader qui retombe : EXTINCTION.
 					Charte.animer_via(tw_v,
 						func(v): vignette_mat.set_shader_parameter("intensity", v),
-						0.55, 0.0, 0.45, Charte.Courbe.EXTINCTION)
+						pouls, 0.0, 0.45, Charte.Courbe.EXTINCTION)
 	else:
 		_low_hp_pulse_accum = 0.0
 
@@ -2147,6 +2161,10 @@ func trigger_shoot_visuals():
 	muzzle_flash.enabled = true
 	var tw = create_tween()
 	var flash_intensity = current_weapon.muzzle_flash_intensity if current_weapon else 1.0
+	# Curseur MONDE « Flash de bouche » (plancher 0,6 en classé). Il ne touche
+	# que le RENDU : la pénalité d'éblouissement du flash est un modèle à part.
+	var curseur_flash := EffectPolicy.curseur("flash_de_tir")
+	flash_intensity *= curseur_flash
 	var flash_duration = current_weapon.muzzle_flash_duration if current_weapon else 0.1
 	# DA2.3 — la séquence se déroule PAR-DESSUS la descente d'énergie, qui reste
 	# seule maîtresse de la luminosité. Chaque image tient un tiers de la durée :
@@ -2167,7 +2185,8 @@ func trigger_shoot_visuals():
 	# ne révèle déjà (il est posé là où elle brûle), il lui donne une forme.
 	var eclat := _eclat_de_bouche()
 	eclat.texture = LightTextures.masque(LightTextures.FLASH[0])
-	eclat.visible = eclat.texture != null
+	eclat.modulate = Color(Charte.HALOGENE, curseur_flash)
+	eclat.visible = eclat.texture != null and curseur_flash > 0.0
 	tw.tween_property(muzzle_flash, "energy", 0.0, flash_duration).from(flash_intensity)
 	for i in range(1, LightTextures.FLASH.size()):
 		var chemin: String = LightTextures.FLASH[i]
@@ -2181,8 +2200,10 @@ func trigger_shoot_visuals():
 		if is_instance_valid(eclat):
 			eclat.visible = false)
 	
-	visual_reveal.color.a = 1.0
-	visual_reveal_ptr.color.a = 1.0
+	# Curseur MONDE « Silhouette révélée au tir » (plancher 0,7 en classé).
+	var revele := EffectPolicy.curseur("silhouette_revelee")
+	visual_reveal.color.a = revele
+	visual_reveal_ptr.color.a = revele
 	if tw_reveal and tw_reveal.is_valid():
 		tw_reveal.kill()
 		
@@ -2198,8 +2219,8 @@ func trigger_shoot_visuals():
 	if has_node("VisualRevealEnemy"):
 		var vre = get_node("VisualRevealEnemy")
 		var vrep = get_node("VisualRevealEnemyPtr")
-		vre.color = Color(Charte.HALOGENE, 1.0)
-		vrep.color = Color(Charte.HALOGENE, 1.0)
+		vre.color = Color(Charte.HALOGENE, revele)
+		vrep.color = Color(Charte.HALOGENE, revele)
 		Charte.animer(tw_reveal, vre, "color:a", vre.color.a, 0.0, 2.0,
 			Charte.Courbe.EXTINCTION)
 		Charte.animer(tw_reveal, vrep, "color:a", vrep.color.a, 0.0, 2.0,
@@ -2271,6 +2292,25 @@ func _eclat_de_bouche() -> Sprite2D:
 	return s
 
 
+## Enregistre un calque d'écran de ce joueur et le confie à `GameState`, qui
+## sait quel viewport rend ce joueur. Sans `GameState` (suite, banc), le calque
+## reste enfant du joueur, comme avant.
+func _loger_calque(calque: CanvasLayer) -> void:
+	# ⚠️ Pas de `tree_exited` pour retirer un calque de la liste : reloger un
+	# calque passe par `remove_child`, qui l'émet aussi — le premier jet vidait
+	# la liste à la première bascule de vue. Un calque libéré (le flash de mort,
+	# après son tween) devient simplement invalide, et la liste s'en purge.
+	for i in range(calques_ecran.size() - 1, -1, -1):
+		if not is_instance_valid(calques_ecran[i]):
+			calques_ecran.remove_at(i)
+	calques_ecran.append(calque)
+	var gs = get_tree().get_first_node_in_group("game_state") if is_inside_tree() else null
+	if gs and gs.has_method("accueillir_calque"):
+		gs.accueillir_calque(self, calque)
+	else:
+		add_child(calque)
+
+
 func take_damage(amount: float, source_player: Node2D):
 	if dead: return
 	
@@ -2306,12 +2346,16 @@ func take_damage(amount: float, source_player: Node2D):
 	
 	# Trigger damage vignette (flashes red screen edges)
 	if vignette_mat:
-		vignette_mat.set_shader_parameter("intensity", 1.5)
+		# Curseur CONFORT « Vignette de dégâts » — sans lecteur jusqu'au
+		# 2026-09-11 (audit DA5.1) : un joueur qui le descendait à zéro voyait
+		# le rouge plein à chaque coup.
+		var pic := 1.5 * EffectPolicy.curseur("vignette_degats")
+		vignette_mat.set_shader_parameter("intensity", pic)
 		var tw = create_tween()
 		# DA4.13 — EXTINCTION : une intensité qui retombe à zéro.
 		Charte.animer_via(tw,
 			func(val): vignette_mat.set_shader_parameter("intensity", val),
-			1.5, 0.0, 0.6, Charte.Courbe.EXTINCTION)
+			pic, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 
 @rpc("authority", "call_local", "reliable")
 func rpc_update_hp(new_hp: float, source_id: int):
@@ -2340,7 +2384,8 @@ func rpc_update_hp(new_hp: float, source_id: int):
 	# La lumière de l'impact est celle du sang, pas un rouge d'alerte : elle
 	# éclaire une blessure, elle ne signale pas un état.
 	hit_light.color = Charte.CARMIN
-	hit_light.energy = 2.0
+	# Curseur MONDE « Lumière d'impact » (plancher 0,4 en classé).
+	hit_light.energy = 2.0 * EffectPolicy.curseur("lumiere_impact")
 	hit_light.shadow_enabled = true
 	# Cast shadows from walls ONLY (mask 1). If we cast from players (mask 4), the player's own occluder blocks 100% of the light!
 	hit_light.shadow_item_cull_mask = 1
@@ -2398,8 +2443,10 @@ func die(killer: Node2D):
 	
 	# Satisfying Death Effect (Screen Flash + Chromatic Aberration)
 	var ui_layer = CanvasLayer.new()
+	ui_layer.name = "CalqueFlashMort"
 	ui_layer.layer = 100
-	add_child(ui_layer)
+	# Logé dans le viewport qui rend ce joueur, comme la vignette : `calques_ecran`.
+	_loger_calque(ui_layer)
 	
 	var flash_rect = ColorRect.new()
 	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2410,7 +2457,9 @@ func die(killer: Node2D):
 	
 	var mat = ShaderMaterial.new()
 	mat.shader = SHADER_DEATH_FLASH
-	mat.set_shader_parameter("flash_intensity", 1.0)
+	# Curseur CONFORT « Flash de mort » : à zéro, la case blanche ne vient pas.
+	var flash_mort := EffectPolicy.curseur("flash_mort")
+	mat.set_shader_parameter("flash_intensity", flash_mort)
 	flash_rect.material = mat
 	ui_layer.add_child(flash_rect)
 	
@@ -2418,7 +2467,7 @@ func die(killer: Node2D):
 	# DA4.13 — EXTINCTION, à 0,012 de l'`expo out` d'origine.
 	Charte.animer_via(tw,
 		func(val): mat.set_shader_parameter("flash_intensity", val),
-		1.0, 0.0, 0.6, Charte.Courbe.EXTINCTION)
+		flash_mort, 0.0, 0.6, Charte.Courbe.EXTINCTION)
 	tw.tween_callback(ui_layer.queue_free)
 	
 	# Floating FATAL Text
@@ -2725,6 +2774,8 @@ func _poser_bandeau_fatal(texte: String, settings: LabelSettings,
 
 
 func add_camera_shake(intensity: float, decay: float = 5.0):
+	# Curseur CONFORT « Secousse de caméra » — jusqu'à zéro, même en classé.
+	intensity *= EffectPolicy.curseur("secousse_camera")
 	if intensity > shake_intensity:
 		shake_intensity = intensity
 	shake_decay = decay
