@@ -3831,3 +3831,12 @@ n'avait pas vu la vignette :
 `player.gd`, `game_state.gd`, `bullet.gd`, `blood_stain.gd`, `wall_impact.gd`,
 `ui.gd` ; `arene_au_repos` retiré de la table ; `tools/test_curseurs_branches.gd`
 ajouté à `run_suites.sh`.
+
+⚠️ **Découvert en composant les rendus des retouches** : le `settings.cfg`
+d'Adrien porte TOUS les curseurs CONFORT à 0,0 et tous les MONDE à leur
+plancher (traces de sang 0,25, grain killcam 0,0, vignette 0,0…). Tant que les
+curseurs étaient inertes, ça ne changeait rien ; depuis 010b07e, ça change
+tout — les premières captures des retouches montraient un sang à 25 % et une
+killcam nue. **Le photographe lit les réglages du poste** : pour juger un
+effet, le lancer sous un `HOME` neuf (`HOME=$(mktemp -d) ./tools/run_photos.sh …`),
+comme `run_suites.sh` le fait déjà pour les suites. Adrien prévenu.
