@@ -16,6 +16,7 @@ func _init() -> void:
 	_test_respiration()
 	_test_tempo_musique()
 	_test_couleur()
+	_test_murs_interieurs()
 	_test_pose()
 	_test_intensite_par_la_couleur()
 	_test_shaders_lisent_l_energie()
@@ -45,13 +46,67 @@ func _grille(n: int, murs: Array[Vector2i]) -> Array:
 	return out
 
 func _carte_livree() -> Dictionary:
-	var file := FileAccess.open("res://assets/maps/default.json", FileAccess.READ)
+	return _carte("default.json")
+
+func _carte(fichier: String) -> Dictionary:
+	var file := FileAccess.open("res://assets/maps/" + fichier, FileAccess.READ)
 	if file == null:
 		return {}
 	var json := JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		return {}
 	return json.data
+
+## Seuls les murs intérieurs respirent (Adrien, 2026-09-11) : l'enceinte, reliée
+## au vide qui borde la carte, est retirée. Comptes relevés sur les cartes
+## livrées, lues en ASCII le 2026-09-11.
+func _test_murs_interieurs() -> void:
+	print("\n— Seuls les murs intérieurs")
+	for cas in [["default.json", 0], ["map_001_le_cloitre.json", 48], ["arene_circulaire.json", 44]]:
+		var data := _carte(cas[0])
+		if data.is_empty():
+			_check("%s lue" % cas[0], false)
+			continue
+		var murs := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+		var inter := MurLed.murs_interieurs(murs, MapGeometry.build_solid_grid(data))
+		var n := 0
+		var hors_murs := 0
+		for x in inter.size():
+			for y in (inter[x] as Array).size():
+				if inter[x][y]:
+					n += 1
+					if not murs[x][y]:
+						hors_murs += 1
+		_check("%s : %d murs intérieurs" % [cas[0], cas[1]], n == cas[1], "%d" % n)
+		_check("%s : que des murs de la carte" % cas[0], hors_murs == 0)
+	# Grille de 11 : vide au bord, enceinte d'une case, un pilier isolé, une
+	# cloison collée à l'enceinte, et une fosse au milieu bordée d'un mur.
+	var n := 11
+	var murs: Array = []
+	var solide: Array = []
+	for x in n:
+		var cm: Array[bool] = []
+		var cs: Array[bool] = []
+		cm.resize(n)
+		cs.resize(n)
+		for y in n:
+			# Fosse en (6, 6), bordée par le mur (6, 7) : à deux cases de
+			# l'enceinte (ligne 9), il ne la touche pas.
+			var vide := x == 0 or y == 0 or x == n - 1 or y == n - 1 or Vector2i(x, y) == Vector2i(6, 6)
+			var mur := (x == 1 or y == 1 or x == n - 2 or y == n - 2) and not vide
+			mur = mur or Vector2i(x, y) in [Vector2i(4, 4), Vector2i(2, 3), Vector2i(3, 3), Vector2i(6, 7)]
+			cm[y] = mur and not vide
+			cs[y] = mur or vide
+		murs.append(cm)
+		solide.append(cs)
+	var inter := MurLed.murs_interieurs(murs, solide)
+	_check("pilier isolé : intérieur", inter[4][4])
+	_check("enceinte : retirée", not inter[1][1] and not inter[1][5])
+	_check("cloison collée à l'enceinte : en fait partie (choix assumé)",
+		not inter[2][3] and not inter[3][3])
+	_check("mur au bord d'une fosse intérieure : intérieur", inter[6][7])
+	_check("carte sans mur intérieur : aucun bandeau posé",
+		MurLed.poser(_carte("default.json"), Node2D.new(), Callable()) == null)
 
 ## Alpha au point (cx + u, cy + v) de la grille, u et v en fraction de case.
 func _alpha(img: Image, t: int, cx: int, cy: int, u: float, v: float) -> float:
@@ -175,8 +230,9 @@ func _test_couleur() -> void:
 	_check("chaude : rouge au-dessus du bleu", MurLed.COULEUR.r > MurLed.COULEUR.b)
 
 func _test_pose() -> void:
-	print("\n— Pose dans une arène")
-	var data := _carte_livree()
+	print("\n— Pose dans une arène (le cloître : la carte par défaut n'a que son enceinte)")
+	var data := _carte("map_001_le_cloitre.json")
+	_check("cloître lu", not data.is_empty())
 	if data.is_empty():
 		return
 	var arene := Node2D.new()

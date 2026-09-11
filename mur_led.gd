@@ -41,6 +41,14 @@
 ## Pas d'ombre : la bande n'existe que du côté ouvert de chaque mur (plus un
 ## léger débord, pour que le liseré l'accroche). Elle ne traverse aucun mur.
 ##
+## **Seuls les murs INTÉRIEURS respirent** (Adrien, 2026-09-11). L'enceinte —
+## tout mur relié par ses côtés au vide qui borde la carte — reste un cadre
+## neutre ; la bande marque les obstacles, là où l'on se cache. Conséquence
+## assumée, figée par `test_mur_led` : une cloison collée à l'enceinte en fait
+## partie et ne respire pas (aucune carte livrée n'en a au 2026-09-11). Une
+## carte sans mur intérieur — la carte par défaut n'a que son enceinte — n'a
+## pas de bandeau du tout : pas de lumière posée, pas de place prise parmi les 15.
+##
 ## **Équité en ligne** : la phase se lit sur l'horloge de manche que l'hôte recale
 ## chez le client (`rpc_sync_time`), jamais sur l'horloge propre de chaque
 ## machine — sinon l'un verrait son adversaire éclairé pendant que l'autre se
@@ -151,7 +159,10 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	if not est_actif() and not OS.is_debug_build():
 		return null
 
-	var murs := MapGeometry.build_grid(data, MapGeometry.Kind.WALLS)
+	var murs := murs_interieurs(MapGeometry.build_grid(data, MapGeometry.Kind.WALLS),
+		MapGeometry.build_solid_grid(data))
+	if not _porte_un_mur(murs):
+		return null
 	var tuile := Vector2(CandelaTileSet.TILE_SIZE)
 	var zone := rect_monde(murs, tuile)
 	var led := MurLed.new()
@@ -167,6 +178,74 @@ static func poser(data: Dictionary, parent: Node, horloge_manche: Callable) -> M
 	led.regler(0.0)
 	parent.add_child(led)
 	return led
+
+## Les murs intérieurs seuls : l'enceinte en est retirée. `murs` et `solide`
+## viennent de `MapGeometry` (bordure comprise) ; `solide` = tout ce qui n'est pas
+## du sol, murs et vide confondus.
+##
+## Deux remplissages, chacun par les côtés (4-voisinage) : d'abord le VIDE relié
+## au bord de la grille — le dehors de la carte —, puis les MURS reliés à ce
+## dehors ; ces murs-là forment l'enceinte. Le premier ne traverse pas les murs,
+## le second ne traverse pas le vide : une fosse au milieu de l'arène n'est pas
+## le dehors, et un pilier qui la borde reste intérieur.
+static func murs_interieurs(murs: Array, solide: Array) -> Array:
+	var larg := murs.size()
+	var haut := (murs[0] as Array).size() if larg > 0 else 0
+	var dehors := {}
+	var pile: Array[Vector2i] = []
+	for x in larg:
+		for y in haut:
+			var bord := x == 0 or y == 0 or x == larg - 1 or y == haut - 1
+			if bord and solide[x][y] and not murs[x][y]:
+				dehors[Vector2i(x, y)] = true
+				pile.append(Vector2i(x, y))
+	var cotes := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	while not pile.is_empty():
+		var c: Vector2i = pile.pop_back()
+		for e in cotes:
+			var v: Vector2i = c + e
+			if v.x < 0 or v.y < 0 or v.x >= larg or v.y >= haut or dehors.has(v):
+				continue
+			if solide[v.x][v.y] and not murs[v.x][v.y]:
+				dehors[v] = true
+				pile.append(v)
+	# L'enceinte : les murs au contact du dehors (ou du bord de la grille),
+	# puis tous les murs qui leur sont reliés.
+	var enceinte := {}
+	for x in larg:
+		for y in haut:
+			if not murs[x][y]:
+				continue
+			var au_dehors := x == 0 or y == 0 or x == larg - 1 or y == haut - 1
+			for e in cotes:
+				if dehors.has(Vector2i(x, y) + e):
+					au_dehors = true
+			if au_dehors:
+				enceinte[Vector2i(x, y)] = true
+				pile.append(Vector2i(x, y))
+	while not pile.is_empty():
+		var c: Vector2i = pile.pop_back()
+		for e in cotes:
+			var v: Vector2i = c + e
+			if v.x < 0 or v.y < 0 or v.x >= larg or v.y >= haut or enceinte.has(v):
+				continue
+			if murs[v.x][v.y]:
+				enceinte[v] = true
+				pile.append(v)
+	var out: Array = []
+	for x in larg:
+		var colonne: Array[bool] = []
+		colonne.resize(haut)
+		for y in haut:
+			colonne[y] = murs[x][y] and not enceinte.has(Vector2i(x, y))
+		out.append(colonne)
+	return out
+
+static func _porte_un_mur(murs: Array) -> bool:
+	for colonne in murs:
+		if true in colonne:
+			return true
+	return false
 
 ## La texture de la bande pour cette grille, cuite une seule fois par carte.
 static func texture_pour(murs: Array) -> ImageTexture:

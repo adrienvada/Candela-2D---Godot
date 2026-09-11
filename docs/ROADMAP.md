@@ -17805,6 +17805,22 @@ plus `_horloge_led()` :
   du tempo suit `AudioManager.BPM`. Le tempo seulement : la
   phase n'est pas alignée sur le premier temps de la musique.
 
+**Seuls les murs intérieurs respirent** (Adrien, 2026-09-11 : « que les murs
+intérieurs, pas les murs extérieurs »). L'enceinte — tout mur relié par ses
+côtés au vide qui borde la carte — reste un cadre neutre ; la bande marque les
+obstacles, là où l'on se cache. Deux remplissages par les côtés dans
+`MurLed.murs_interieurs()` : le vide relié au bord de la grille, puis les murs
+reliés à ce vide ; une fosse au milieu de l'arène n'est pas le dehors. Les six
+cartes livrées, lues en ASCII, ont toutes une enceinte épaisse (2-3 cases) et
+des obstacles détachés : le cloître garde 48 murs intérieurs, l'arène
+circulaire 44, **la carte par défaut aucun — elle n'a que son enceinte, donc
+plus de bandeau du tout** (pas de lumière posée). **Conséquence assumée**, figée
+par `test_mur_led` : une cloison collée à l'enceinte en fait partie et ne
+respire pas — aucune carte livrée n'en a, une carte de joueur peut en avoir.
+Mesuré au banc sur les vraies données du cloître, au sommet : sol au pied de
+l'enceinte **0**, au pied d'un pilier **19** ; liseré de l'enceinte **0**, d'un
+pilier **21**.
+
 **Pour l'essayer** : `godot --path . -- --led-murs` ; **F7** l'allume ou l'éteint
 en partie (build debug) ; `--led-murs-fige[=f]` la tient à la fraction `f` du
 sommet (1 par défaut). Constantes en tête de `mur_led.gd` : `PIC` (facteur de
