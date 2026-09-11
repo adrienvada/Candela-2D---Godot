@@ -265,7 +265,9 @@ func _test_pose() -> void:
 	var largeur := led.texture.get_width() * led.texture_scale
 	_check("texture à l'échelle de la grille", is_equal_approx(largeur, zone.size.x),
 		"%.1f / %.1f" % [largeur, zone.size.x])
-	_check("sans drapeau : éteinte, pas seulement à zéro", not led.enabled)
+	_check("allumé pour tout le monde : actif sans drapeau (Adrien, 2026-09-11)",
+		MurLed.est_actif())
+	_check("posée au creux : éteinte, pas seulement à zéro", not led.enabled)
 	_check("aucune ombre", not led.shadow_enabled)
 	_check("éclaire décor, adversaire et joueur local", led.range_item_cull_mask == 7)
 	var texture := led.texture
