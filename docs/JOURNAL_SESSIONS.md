@@ -3990,3 +3990,60 @@ Non touchés, sur verdict : l'éditeur de cartes (« pour l'instant on laisse »
 le lot 4 (l'additif du monde : `arena_decor.gd`, `particle_pool.gd`,
 `bullet.gd`, `releve_balistique.gd`) en attente de sa décision. Rien n'est
 poussé : Adrien n'a pas donné l'ordre cette fois.
+
+## 2026-09-12 — Étape 28 : dix suggestions de gameplay, et quatre « pourquoi » faux (chantier DIX CLASSES)
+
+Session `candela-10-classes-system-e0a52d-5a` (worktree
+`candela-10-classes-system-e0a52d`, branche `claude/candela-10-classes-system-e0a52d`) :
+le nom que `ListAgents` affiche, vérifié à l'écriture — le suffixe change à chaque
+reprise de session, le worktree non. Adrien valide dix suggestions issues de
+l'étape 27 ; elles deviennent six lots, sept commits, et la fusion de `main` au milieu.
+
+**La méthode qui a payé.** Chaque lot est cartographié, puis **attaqué par un
+contradicteur avant la première ligne de code** ; à l'implémentation, deux
+contradicteurs le relisent et un correcteur vérifie chaque constat avant de le
+corriger. Ce que les contradicteurs ont trouvé et qu'un implémenteur seul n'aurait pas
+vu : des contrôles **aveugles par construction** (une queue de traces comparée par son
+éclat, qui ne dépend que du rang ; un cercle de repère qu'un test acceptait
+transparent), un contrôle **suspendu au hasard des images**, un banc dont la charge
+**fondait pendant la mesure**, et un sabotage annoncé qu'aucune main ne pouvait
+exécuter.
+
+**Quatre « pourquoi » faux, écrits puis corrigés — la leçon de l'étape.** UN SEUL
+citait un état du code qui avait changé depuis : le fondu de la nappe de braises, donné
+pour « appelé par l'hôte seul », alors que le lot A1 l'avait déplacé la veille. Les
+trois autres donnaient une cause simplement fausse — une charge qui « reste sous huit »
+quand une image d'une seconde la porte à seize, une ombre rangée avec des lumières dont
+elle ne partage pas le cas, et une constante qu'on conseillait de relever alors qu'elle
+ne touche pas la grandeur visée. Le motif est le même : **une explication plausible
+posée sur un fait qu'on n'est pas allé relire.** Un « pourquoi » se vérifie comme un
+chiffre — c'est déjà la leçon du bandeau de `CLAUDE.md` sur l'oreille audio, et elle
+s'est repayée quatre fois en un jour.
+
+**Un cinquième a été arrêté avant d'être commité, et c'était le mien** : ma synthèse
+d'étape rangeait la marge de 6 px du point de pose parmi les faussetés, alors qu'elle
+explique juste et qu'un piège consigné la donne pour telle. Le texte qui raconte quatre
+erreurs de relecture en portait une cinquième — c'est dire si la relecture d'un texte
+de bilan vaut celle du code.
+
+**Un défaut de deux jours, trouvé par un effet de bord.** En voulant faire reculer le
+voile hors des corps, le lot B a découvert que **tout gadget posé en jeu naissait à
+12 px de son poseur, dans son corps**, depuis le 2026-09-09 : le rayon de pose touchait
+le nez du polygone concave du joueur. Aucune suite ne le voyait, parce qu'elles posaient
+toutes dans l'image de la téléportation. Les essais qu'Adrien a faits à l'étape 27 se
+sont donc déroulés avec ce défaut.
+
+**La coordination entre sessions a servi deux fois.** La session FUSÉE a demandé une
+fenêtre calme pour un relevé de cadence que mes scénarios à deux instances
+contaminaient : le lot F a été arrêté, puis un lot de suites qu'un de ses agents avait
+lancé et qui **survivait à l'arrêt du workflow** — il aurait fallu le chercher. En
+retour, elle a corrigé un chiffre qu'elle m'avait donné (une asymétrie entre écran
+scindé et vue unique qui n'existait pas), ce qui a évité à mon lot F de regarder le
+mauvais compteur. Et la session du bandeau LED a sorti pour moi sa règle de canaux de
+lumière dans un module qu'un gadget peut lire, pour que le leurre suive son halo de
+proximité à la prochaine fusion.
+
+**Ce qui n'a pas pu être mesuré, et qui est écrit comme tel** : les deux relevés qui
+exigent une fenêtre au premier plan. Ils ont tourné au second plan, faute de quelqu'un
+devant l'écran, et le banc lui-même déclare ce cas « un plancher ». Un demi-résultat
+présenté comme un résultat aurait été la cinquième fausseté de la journée.

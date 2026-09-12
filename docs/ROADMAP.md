@@ -18056,6 +18056,145 @@ FU5) — sont amendés.
   l'hôte) : à trancher, si la suie doit l'étouffer comme elle étouffe l'éclat ;
 - en écran scindé, le panneau de J2 débordait déjà ; l'icône y ajoute 27 px.
 
+### Étape 28 — les dix suggestions de gameplay, en un coup d'œil ✅ (2026-09-12)
+
+Après son essai de l'étape 27, Adrien a lu douze suggestions d'optimisation du
+gameplay et a tranché : **les dix premières sont faites** (sept commits), la onzième
+est une séance de tests manette en main qu'il mène lui-même (voir H11), et la
+douzième — annoncer la classe adverse au « FIGHT » — est refusée, parce qu'elle
+donnerait une information gratuite dans un jeu où « la seule information est la
+lumière ».
+
+**La méthode, parce qu'elle explique la suite.** Les dix points ont été regroupés en
+six lots, chacun cartographié par un lecteur puis **attaqué par un contradicteur avant
+la première ligne de code** ; puis, lot par lot : un implémenteur, deux contradicteurs
+(justesse et réseau d'un côté, tests et documentation de l'autre), et un correcteur
+qui vérifie chaque constat dans le code avant de l'appliquer. Suite complète verte
+avant chaque commit (109 suites, 110 depuis celle du lot E), et rien n'est poussé.
+⚠️ **Deux rouges ANTÉRIEURS restent signalés dans les lots, et qui lance
+`run_suites.sh` chez Adrien les rencontrera** : `test_vitrine_menus`, rouge sous le
+`HOME` d'Adrien et vert sous un `HOME` isolé — un `settings.cfg` laissé par une
+séance, pas le code (lot F) ; et le duo « PRÊT s'ouvre à l'arrivée de l'adversaire »,
+intermittent, reproduit à l'identique sur une copie de `HEAD` sans le lot (lot E).
+
+| Commit | Ce qu'il change pour le joueur |
+|---|---|
+| `b1ac4f1` (A1) | Les braises brûlent par tics de 4 PV, **indépendants de la cadence**. Le total versé était déjà juste (33,6 PV aux deux cadences) ; c'est le NOMBRE d'impulsions — donc les RPC, les lumières d'impact, les vibrations — qui suivait les fps de l'hôte : 126 appels à 60 images/s, **1 008 à 480**. Leur aveuglement suit leur lueur. |
+| `76c702f` (B) | L'ombre habitée arrête les balles avec la plaque qu'elle montre ; le voile **recule hors des corps** à la pose. Et les dix gadgets naissent **enfin** à 96 px, comme l'étape 10 le voulait, au lieu de 12 dans le corps du poseur — depuis le jour où la pose existe (`f161232`) : un changement ressenti pour les dix, à éprouver en jeu. |
+| `5c52930` (C) | Un appui qui ne peut rien faire **se sent** ; les fusées et les gadgets en recharge ont leur jauge sous la cartouche. |
+| `bb0b3ca` (D) | Le leurre est rendu **comme un vrai corps, selon qui le regarde** ; un repère du rayon d'effet n'apparaît qu'à son poseur. |
+| `46c5d4c` | Fusion de `main` : la refonte roman graphique et le bandeau LED entrent dans le chantier. |
+| `a98691b` (E) | La **télémétrie des gadgets** entre dans l'archive des matchs, comptée aux mêmes ordres chez les deux pairs — les deux archives disent la même chose, **à la gigue près sur les deux compteurs de fenêtre**, et sous EOS ce n'est pas établi. |
+| `ce64209` (F) | La **killcam rejoue les gadgets** : on voit enfin la cause de sa mort, pas seulement sa mort. |
+| `1f3b875` (A2) | La mine aveugle à hauteur de ce qu'elle brûle. **Commit séparé et réversible seul** : c'est un changement d'équilibre. |
+
+**Protocole** : `VERSION` reste 17, non publiée, et le témoin du fil a été recalculé
+deux fois (lots C et E, qui font voyager l'attente de la prochaine fusée et la cause
+des dégâts). La prochaine publication sera donc une mineure.
+
+**Ce que les mesures disent, et ce qu'elles ne disent pas.**
+
+- **Coût des gadgets à la cadence — ⚠️ aucun coût n'est établi, faute d'un protocole
+  qui en tienne un.** Deux relevés de 30 s, duel complet, même machine, **enchaînés à
+  la seconde** (02:36:45 puis 02:37:19) et toujours dans l'ordre base → `--gadgets` :
+  médiane **49 puis 48 fps** avec une fausse torche, une poudre et ses 72 traces
+  entretenues. Ce n'est pas le protocole du banc, qui écrit en tête de
+  `tools/bench_framerate.gd` (l. 61-68) qu'« un banc de cadence lancé en boucle mesure
+  sa propre chaleur », que « deux relevés séparés de dix minutes ne sont pas deux
+  échantillons de la même population », et que **le protocole qui vaut** est « machine
+  refroidie, UN relevé long (60 s), pas dix courts ». La dérive thermique pousse
+  précisément le SECOND relevé vers le bas : elle suffit à expliquer l'écart. Et
+  l'écart qu'on en tirerait (≈ 0,4 ms par image) repose sur deux médianes **arrondies
+  à l'entier** par le banc (`%.0f`, l. 655) : le même couple 49/48 est compatible avec
+  tout écart de presque zéro à **0,85 ms**. À rapprocher, quand la mesure sera faite,
+  des **139 µs par image** de marge écrits en fin de chantier (« Ce qui reste, dans
+  l'ordre ») — c'est exactement ce que le relevé au premier plan doit trancher.
+  ⚠️ **Le 1 % bas de ces deux relevés (35 et 36) n'est PAS à jeter : c'est un
+  plancher**, ce qui n'est pas la même chose. La fenêtre est restée **stable** au
+  second plan, et le banc imprime alors, mot pour mot, « stable au SECOND PLAN —
+  **comparable**, mais c'est un plancher » (`bench_framerate.gd:681`) ; le « RELEVÉ À
+  JETER » (l. 693) est réservé au focus MIXTE, qui n'est pas le cas ici — « ce ne sont
+  pas le second plan mais les TRANSITIONS qui décident du 1 % bas », piège connu de ce
+  document. Donc : ces deux chiffres ne peuvent pas dire si la cible de 60 est tenue
+  (un plancher ne prouve pas un seuil), mais ils se comparent **entre eux**, et ils ne
+  bougent pas — les gadgets n'abaissent pas le 1 % bas. La mesure qui tranchera,
+  fenêtre au PREMIER plan, **reste à faire** :
+  `godot --path . res://tools/bench_framerate.tscn -- --seconds 60`, puis le même appel
+  avec `--gadgets`, machine refroidie et dans un **ordre symétrique** (base, gadgets,
+  gadgets, base) — le protocole que la session FUSÉE a tenu le même jour. Et l'image la
+  plus lente ne prouve rien : ici c'est la charge la plus LOURDE qui donne la plus
+  rapide (28,4 ms avec gadgets contre 36,7 sans), et la session FUSÉE a relevé 26,7
+  puis 54,8 ms pour une MÊME configuration mesurée deux fois (`977c5ab`, section « Ce
+  que la fusée coûte » — pas encore fusionnée ici, donc invérifiable depuis cette
+  branche).
+- **Budget de lumières pendant le rejeu** (capture `fins/01-killcam.png`, manifeste du
+  photographe, sur `1f3b875`) : **8 lumières allumées, au plus 7 par quadrant de
+  560 px**, quand le moteur en garde 15 par item. La crainte du plan — une killcam qui
+  ferait déborder le budget — ne se vérifie pas. L'image montre la mine rejouée en plein
+  embrasement, alors qu'elle n'existe plus au présent : c'est précisément ce que le lot
+  F apporte. ⚠️ **Mesuré au pixel** sur la capture (1920 × 1080) : l'embrasement ne
+  SATURE pas — le disque plafonne à (231, 230, 229), et les seuls blancs purs de l'image
+  sont le HUD, dans la bande y 54-135 — et il n'occupe pas la moitié du cadre :
+  **7,6 % des pixels au-dessus de 200 de luminance**, dans une boîte de 532 × 517 px
+  (13 % du cadre), le reste noir (luminance moyenne de l'image entière : 31 sur 255).
+  Reste le jugement, qu'aucune mesure ne rend : **est-ce trop lumineux ?** À Adrien,
+  manette en main — la capture a été prise sans personne devant l'écran.
+- ⚠️ **Ces deux instruments sont donnés pour n'avoir jamais tourné dans la section du
+  lot F, plus bas** (« ⚠️ Ce qui n'a PAS été mesuré, et pourquoi » : « mais aucun des
+  deux n'a tourné »). Ils ont tourné depuis, le 2026-09-12 sur `1f3b875`, et ce sont
+  leurs chiffres ci-dessus : **ce paragraphe du lot F est à amender dans le commit qui
+  porte cette synthèse**, sans quoi la ROADMAP affirme le contraire aux deux endroits.
+  Ne reste réellement dû que le relevé fenêtre au PREMIER plan — et **la seconde
+  question que la capture portait, « y a-t-il un hoquet au premier rejeu ? », qu'elle
+  n'a pas tranchée** : le photographe recense des lumières
+  (`is_visible_in_tree()` et `enabled`, le critère du compteur F3), il ne mesure aucun
+  temps d'image.
+
+**Ce que l'étape a appris, et qui vaut plus que les lots.** Quatre **« pourquoi »
+faux** ont été écrits puis corrigés, et les voici nommés, parce qu'une liste vague
+envoie relire ce qui est juste : la raison donnée à la marge de flottant des braises
+(« la charge reste sous huit » — une image d'une seconde la porte à seize, lot A1) ;
+l'ombre que le leurre porte au sol, rangée avec quatre lumières dont elle ne partage
+pas le cas (lot D) ; le fondu de la nappe dit « chez l'hôte seul », qui citait un état
+de la branche antérieur au lot A1 (lot F) ; et le conseil de relever `ENERGIE` pour
+rendre la mine plus aveuglante, qui n'aurait **rien** changé à l'aveuglement — cette
+constante ne multiplie que la lumière RENDUE (lot A2). Le dernier est le plus coûteux
+des quatre : les trois premiers expliquaient mal quelque chose de juste, celui-là
+aurait fait perdre une soirée à qui l'aurait suivi manette en main. ⚠️ **La marge de
+6 px du voile n'est PAS de ceux-là** : elle explique juste, le piège « Un rayon parti
+du centre d'un corps concave… » et le lot B la donnent tous deux, et le code la porte
+(`game_state.gd`, `_point_de_pose`). Une première rédaction de ce paragraphe l'y
+rangeait — cinquième « pourquoi » faux, arrêté en revue.
+Trois pièges sont consignés en conséquence (un seuil
+atteint par une somme de pas flottants, un rayon parti du centre d'un corps concave,
+et « vert seul, rouge dans le lot »).
+
+**Ce qui reste, et qui n'appartient pas à cette étape** : le relevé de cadence fenêtre
+au premier plan ci-dessus, l'alignement du leurre sur le halo de proximité (voir « À
+faire à la prochaine fusion de `main` — le leurre et le halo de proximité », en fin de
+chantier), et les arbitrages qu'Adrien seul peut rendre. ⚠️ **Cette liste-ci n'est pas
+exhaustive** — les blocs « Signalé, non corrigé » et « Question pour Adrien » de chaque
+lot font foi, et c'est là qu'elles sont argumentées. Rassemblées ici, lot par lot :
+
+- **(B) le refus du voile à bout portant** : sans aucun mur, un adversaire dans l'axe à
+  moins de 60 à 70 px fait refuser la pose, **en silence**. Le laisser, ou faire ignorer
+  les joueurs au rayon de pose — au risque d'un voile né DERRIÈRE l'adversaire ?
+- **(C) « RECHARGE · 42s »** : les secondes restent dans le titre ; la cartographie
+  proposait de les passer DANS l'icône, comme celles du grésillement. Non livré faute
+  d'arbitrage ;
+- **(C) l'appui refusé mais TENU** qui part tout seul au retour de la ressource —
+  défaut antérieur, signalé au lot C : le corriger touche la simulation des deux pairs ;
+- **(D) l'ombre du leurre** sous les lumières qu'un corps ne bloque pas — la correction
+  demande deux changements et un changement de SENS de l'éblouissement ;
+- **(D) le dosage du repère de rayon** (alpha 0,28, trait de 1,5 px), à valider sur la
+  planche ;
+- **(D) voir son leurre tel que l'adversaire le voit**, à l'entraînement — ou la
+  capture suffit-elle ?
+- **(E) l'avis de phase de test** affiché en jeu, devenu incomplet : il est mot pour
+  mot celui d'Adrien, donc non touché. Reprend-il sa propre phrase ?
+- **(F) le moment de purge de la killcam** ;
+- **(A2) l'équilibre de la mine**, et **le comptage majorant des mines**.
+
 ### Étape 28 — lot A1 : les braises brûlent par tics, et leur aveuglement suit leur lueur ✅ (2026-09-11)
 
 Deux décisions d'Adrien parmi les suggestions d'après l'étape 27 : la brûlure par
@@ -18988,13 +19127,20 @@ exactement une lumière allumée sous le conteneur pendant le rejeu, celle de la
 photographe (torche fantôme dès le début, mine J2 allumée à ~2,5 s du kill — elle
 brûle 1,6 s, donc elle MEURT dans la fenêtre de rejeu, qui ne s'ouvre que 3 s avant
 l'impact) sont écrits et leurs appuis vérifiés par `test_banc` (`_do_spawn_gadget` et
-`allumer_gadget` ajoutés à `preconditions_manquantes`), **mais aucun des deux n'a
-tourné** : les deux exigent une VRAIE fenêtre. Restent donc à faire sur le poste
-d'Adrien : le 1 % bas `--gadgets` contre le banc de base, même séance, fenêtre au
-premier plan ; et la capture, qui seule prouve qu'un parent caché éteint bien au RENDU
-lumières et occluders (le manifeste reçoit le compte F3 et le recensement par quadrant
-de 560 px), et qui dira s'il y a un hoquet au premier rejeu — une copie peut compiler
-au premier dessin la variante à ombres d'un gadget jamais vu par ce pair.
+`allumer_gadget` ajoutés à `preconditions_manquantes`), **aucun des deux n'avait tourné
+au moment d'écrire ces lignes** : les deux exigent une VRAIE fenêtre.
+
+⚠️ **Amendé le 2026-09-12 : les deux ONT tourné depuis, sur `1f3b875`** — voir la
+synthèse en tête d'étape. Ce que cela a donné, et ce qu'il reste :
+- **la capture est faite** (`photos/fins/01-killcam.png`, manifeste du photographe) :
+  la mine rejouée rebrûle alors qu'elle n'existe plus au présent, et le recensement
+  donne 8 lumières allumées, au plus 7 par quadrant de 560 px, contre 15 par item au
+  moteur. Le budget de lumières n'est donc pas le problème que le plan redoutait ;
+- **le banc a tourné, mais pas selon son propre protocole** : deux relevés de 30 s
+  enchaînés, fenêtre au second plan. Reste dû : `--seconds 60`, machine refroidie,
+  ordre symétrique base/gadgets/gadgets/base, fenêtre au premier plan ;
+- **le hoquet au premier rejeu n'est pas tranché** : ni la capture ni le photographe
+  ne mesurent un temps d'image. Il faudra le regarder autrement.
 
 ⚠️ **Trois défauts trouvés en RELECTURE le 2026-09-12, et ce qu'ils avaient en
 commun** : trois instruments qui ne pouvaient pas rougir. C'est la famille même des
