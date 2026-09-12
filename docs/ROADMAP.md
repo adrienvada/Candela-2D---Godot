@@ -19469,7 +19469,16 @@ RENDUE à l'écran. Le plafond d'aveuglement d'une source de proximité vaut
 d'un pixel de plus : le conseil envoyait droit dans le mur, vérifié dans le code avant
 d'être corrigé.
 
-### À faire à la prochaine fusion de `main` — le leurre et le halo de proximité
+### Fait à la fusion du 2026-09-12 — le leurre et le halo de proximité ✅
+
+⚠️ **Cette section décrivait un travail à faire ; il est fait** (fusion `d9bfc98`). Le
+`Visuel` du leurre demande désormais son masque à
+`CanauxLumiere.masque_vue_adverse(poseur_id)` au lieu du `2` écrit en dur. Le contrôle
+« VUE PAR VUE » a rougi à la fusion (« 2 contre 34 »), puis verdi : le garde-fou posé
+au lot D a servi le jour même. Ce qui suit est conservé pour la raison, pas pour
+l'action.
+
+#### La raison, telle qu'elle était écrite avant la fusion
 
 (2026-09-12, hors étape 28.) La session
 du bandeau LED a sorti la règle des canaux de lumière dans `canaux_lumiere.gd`
