@@ -203,6 +203,32 @@ class_name Protocol
 ##      paquet serait refusé, et la barre de vie du client se figerait. Ni l'un ni
 ##      l'autre n'a de valeur par défaut, pour la raison de la v11. Le témoin l'a
 ##      signalé ; le numéro reste 17, l'empreinte recalculée APRÈS l'avoir tranché.
+##
+##      Et, lot G de la même étape (2026-09-12, arbitrage d'Adrien : « oui, qu'il
+##      ait l'ombre d'un corps »), le SENS change sans que la FORME bouge —
+##      l'empreinte reste donc intacte, et le témoin doit rester vert. Le LEURRE
+##      porte désormais les couches d'ombre d'un CORPS : l'étoile de sa silhouette
+##      sur la couche du corps de son poseur, un disque de torse sur celle de son
+##      torse. Deux règles que les deux pairs doivent partager :
+##      - il ne fait plus d'ombre sous les lumières dont le masque d'ombre ne
+##        contient que le décor — fusée au sol, mine, nappe de braises, halo de la
+##        torche fantôme, lumière d'impact. Un pair d'avant ce lot dessine une
+##        ombre de corps là où un pair d'après n'en dessine aucune : les deux ne
+##        voient pas la même arène, et l'un démasque en éclairant un leurre que
+##        l'autre croit intact ;
+##      - l'éblouissement suit cette ombre : la torche et le flash de tir du poseur
+##        traversent son propre leurre (`GadgetBase.fait_ombre_aux_lumieres_de()`),
+##        et jusqu'ici, planter un leurre devant soi éteignait sa propre torche. ⚠️
+##        **Le client ne prédit RIEN de cet éblouissement** — `_maj_eblouissement()`
+##        et `_flash_de_tir()` sortent d'emblée en `ONLINE_CLIENT`, et `player.gd`
+##        recopie `net_dazzle`, la valeur que l'hôte réplique. Ce qui bouge est donc
+##        l'ARBITRAGE de l'hôte, pas une prédiction du client : exactement le
+##        raisonnement de la mine au lot A2 — le rendu ne bouge pas, l'arbitrage si.
+##        (La première rédaction disait ici « un client v16 prédirait un adversaire
+##        épargné » : faux, et écrit sans relire ces trois fonctions — la faute
+##        exacte dont cette étape a corrigé quatre exemplaires.)
+##      Rien de neuf ne voyage : les deux occluders naissent de `poseur_id` et de
+##      `classe_du_poseur`, que `rpc_spawn_gadget` porte déjà.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.

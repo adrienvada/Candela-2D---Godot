@@ -746,6 +746,32 @@ static func ombre_de_silhouette(sil: Texture2D) -> PackedVector2Array:
 		_ombres[cle] = pts
 	return pts
 
+
+## Le rayon du disque de TORSE, celui qui arrête la rétrodiffusion.
+##
+## ⚠️ **12, et le nombre n'est pas libre.** La lampe de rétrodiffusion est posée à
+## 18 unités devant le centre du corps : l'occluder doit être STRICTEMENT plus
+## petit, sinon la lampe tombe dedans et l'ombre devient indéfinie. 12 laisse six
+## unités de marge et correspond à peu près au torse — la partie du corps qui, vue
+## de dessus, arrête vraiment une lumière rasante.
+const RAYON_TORSE := 12.0
+
+## Le disque de torse, en unités de monde. UNE seule vérité de forme pour le
+## joueur (`player._monter_occluder_de_torse`) et pour le leurre, qui doit faire
+## « le même trou » sous la rétrodiffusion adverse — déménagée ici le 2026-09-12
+## pour la même raison que `ombre_de_silhouette` : nommer `Player` depuis un
+## gadget ferait tomber les suites lancées en `--script`.
+##
+## Seize côtés, la valeur reprise de `player.gd` : au rayon de douze, le polygone
+## s'écarte du cercle de `12 × (1 − cos(π/16))`, soit 0,23 px au creux d'un côté —
+## invisible pour une ombre de trente pixels dans le noir.
+static func ombre_de_torse() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 16:
+		var ang := (float(i) / 16.0) * TAU
+		pts.append(Vector2(cos(ang), sin(ang)) * RAYON_TORSE)
+	return pts
+
 const _POINTS := {
 	Courbe.ENTREE: [0.16, 0.84, 0.24, 1.0],
 	Courbe.SORTIE: [0.55, 0.0, 0.85, 0.30],

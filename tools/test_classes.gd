@@ -1914,6 +1914,74 @@ func _test_leurre() -> void:
 	var occ_j: LightOccluder2D = gs.p1.get_node_or_null("LightOccluder2D")
 	_check("exactement celle d'un joueur de la même classe",
 		occ_j != null and occ_l != null and occ_j.occluder.polygon == occ_l.occluder.polygon)
+
+	# ── LES COUCHES D'OMBRE SONT CELLES D'UN CORPS (lot G, 2026-09-12) ───────
+	#
+	# Adrien : « oui, qu'il ait l'ombre d'un corps ». Sur la couche du DÉCOR, le
+	# leurre faisait de l'ombre sous TOUTE lumière : il suffisait de poser une
+	# fusée, une mine ou une nappe de braises près de lui pour voir une ombre de
+	# corps là où un vrai corps n'en projette aucune.
+	#
+	# ⚠️ **Tout se compare aux occluders du VRAI joueur**, jamais à un 4, un 8 ou
+	# un 16 recopiés ici : ce sont eux la source, et un numéro écrit en dur
+	# passerait le jour où la numérotation bouge — elle a bougé à la fusion du
+	# bandeau LED.
+	var occ_torse_l: LightOccluder2D = leurre.get_node_or_null("OccluderTorse")
+	var occ_torse_j: LightOccluder2D = gs.p1.get_node_or_null("OccluderTorse")
+	_check("son ombre vit sur la couche du CORPS de son poseur, pas sur celle du décor",
+		occ_l != null and occ_j != null
+			and occ_l.occluder_light_mask == occ_j.occluder_light_mask
+			and occ_l.occluder_light_mask != MapGeometry.WALL_LAYER,
+		"%d contre %d" % [occ_l.occluder_light_mask if occ_l else -1,
+			occ_j.occluder_light_mask if occ_j else -1])
+	# Le second occluder : sans lui, la rétrodiffusion adverse traverserait le
+	# leurre, ce qu'elle ne fait pour aucun corps — un indice à la place d'un autre.
+	_check("il porte aussi le disque de torse d'un corps, à la couche du torse",
+		occ_torse_l != null and occ_torse_j != null
+			and occ_torse_l.occluder.polygon == occ_torse_j.occluder.polygon
+			and occ_torse_l.occluder_light_mask == occ_torse_j.occluder_light_mask,
+		"%d contre %d" % [occ_torse_l.occluder_light_mask if occ_torse_l else -1,
+			occ_torse_j.occluder_light_mask if occ_torse_j else -1])
+	# ⚠️ Et les deux couches sont DISTINCTES : la torche ne doit pas voir le torse,
+	# la rétrodiffusion ne doit pas voir l'étoile. Une seule couche pour les deux
+	# passerait les deux contrôles ci-dessus.
+	_check("et les deux couches restent distinctes, comme chez le joueur",
+		occ_l != null and occ_torse_l != null
+			and occ_l.occluder_light_mask != occ_torse_l.occluder_light_mask)
+	# Les lumières qui décident : ce sont elles qui font la différence à l'écran.
+	# Un CORPS et le leurre doivent répondre pareil à chacune.
+	var torche_adverse: PointLight2D = gs.p2.flashlight
+	var retro_adverse: PointLight2D = gs.p2.body_light
+	_check("la torche d'en face l'ombre, comme elle ombre un corps",
+		occ_l != null and torche_adverse != null
+			and (torche_adverse.shadow_item_cull_mask & occ_l.occluder_light_mask) != 0)
+	_check("la rétrodiffusion d'en face voit son torse, comme celui d'un corps",
+		occ_torse_l != null and retro_adverse != null
+			and (retro_adverse.shadow_item_cull_mask & occ_torse_l.occluder_light_mask) != 0)
+	# Le témoin qui tranche, et c'est le cas qu'Adrien décrit : une lumière POSÉE
+	# n'ombre que le décor. Un corps n'y fait pas d'ombre ; le leurre non plus,
+	# désormais. ⚠️ Hors de l'arbre, et libérée tout de suite : une mine qui vivrait
+	# une image entrerait dans le groupe des gadgets et dans l'éblouissement.
+	var mine_temoin = load("res://gadget_mine.gd").new()
+	mine_temoin.allumer()
+	var feu_temoin: PointLight2D = mine_temoin.get_node_or_null("Embrasement")
+	# ⚠️ Tout se lit AVANT le `free()` : en Godot 4, une référence sur un objet
+	# libéré se compare égale à `null`, et le témoin passerait alors pour une
+	# absence de lumière.
+	var eut_sa_flamme := feu_temoin != null
+	var masque_pose: int = feu_temoin.shadow_item_cull_mask if eut_sa_flamme else -1
+	mine_temoin.free()
+	_check("témoin : la mine allumée porte bien une lumière", eut_sa_flamme)
+	if masque_pose >= 0 and occ_l != null and occ_torse_l != null and occ_j != null:
+		_check("une lumière POSÉE n'ombre ni le corps du joueur ni le leurre",
+			(masque_pose & occ_j.occluder_light_mask) == 0
+				and (masque_pose & occ_l.occluder_light_mask) == 0
+				and (masque_pose & occ_torse_l.occluder_light_mask) == 0,
+			str(masque_pose))
+		# La moitié positive : cette même lumière ombre le DÉCOR. Sans elle, un
+		# masque à zéro passerait le contrôle ci-dessus pour rien.
+		_check("témoin : elle ombre le décor, elle",
+			(masque_pose & MapGeometry.WALL_LAYER) != 0)
 	# ⚠️ Et quand l'AUTRE joueur s'équipe d'une autre classe APRÈS lui. La ressource
 	# de l'occluder était partagée entre J1 et J2 : J1 projetait alors l'ombre de la
 	# classe de J2, et le leurre celle de son poseur — il se trahissait dans tout
@@ -1953,15 +2021,21 @@ func _test_leurre() -> void:
 		_check("et son corps côté poseur aussi",
 			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a < 0.02,
 			"%.3f" % (leurre._visuel_poseur.modulate.a if leurre._visuel_poseur != null else -1.0))
-		_check("et son ombre avec", leurre._occluder != null and not leurre._occluder.visible)
+		# ⚠️ **Les DEUX ombres** (lot G) : un corps dans la suie perd son étoile ET son
+		# disque de torse (`player._couper_l_ombre`). N'en couper qu'une laisserait la
+		# rétrodiffusion adverse dessiner un torse là où le corps a disparu.
+		_check("et ses deux ombres avec, comme un corps",
+			leurre._occluder != null and not leurre._occluder.visible
+				and leurre._occluder_torse != null and not leurre._occluder_torse.visible)
 		_check("et plus rien n'y arrête l'éblouissement, comme la lumière",
 			not leurre.coupe_le_regard(leurre.global_position - Vector2(200.0, 0.0),
 				leurre.global_position + Vector2(200.0, 0.0)))
 		suie_l.detruire()
 		await process_frame
 		leurre._physics_process(0.0)
-		_check("la suie partie, il réapparaît avec son ombre",
-			leurre._visuel.modulate.a > 0.98 and leurre._occluder.visible,
+		_check("la suie partie, il réapparaît avec ses deux ombres",
+			leurre._visuel.modulate.a > 0.98 and leurre._occluder.visible
+				and leurre._occluder_torse != null and leurre._occluder_torse.visible,
 			"%.3f" % leurre._visuel.modulate.a)
 		_check("et son corps côté poseur réapparaît aussi",
 			leurre._visuel_poseur != null and leurre._visuel_poseur.modulate.a > 0.98,
@@ -2013,6 +2087,87 @@ func _test_leurre() -> void:
 		_check("témoin : le même rayon, leurre transparent, passe",
 			gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID()))
 		leurre.occulte_la_lumiere = true
+		# ── ET IL N'ARRÊTE QUE CE QU'IL OMBRE (lot G, 2026-09-12) ────────────
+		#
+		# Son occluder vit désormais sur la couche du corps de son POSEUR : la
+		# torche et le flash de tir de celui-ci le traversent à l'écran, comme ils
+		# traversent la place de son propre corps. L'arbitrage doit suivre, sans
+		# quoi planter un leurre devant soi éteindrait sa propre torche — « on voit
+		# la lumière et on ne la prend pas », le symétrique exact du défaut que ce
+		# rayon corrige. Les deux porteurs se DÉDUISENT du poseur : un 0 écrit en
+		# dur passerait aussi avec la règle inversée.
+		var pose: int = leurre.poseur_id
+		_check("une lampe POSÉE, qui n'appartient à personne, reste arrêtée",
+			not gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), -1))
+		_check("la torche de son POSEUR le traverse, comme sa lumière",
+			gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), pose))
+		_check("témoin : celle de l'AUTRE joueur est arrêtée, elle",
+			not gs._ligne_de_vue_depuis(espace, c_l - axe * 250.0, gs.p2, RID(), 1 - pose))
+	gs.p1.global_position = p1_avant
+	gs.p2.global_position = p2_avant
+
+	# ── PAR LE VRAI CHEMIN : `_lumiere_recue`, et non le rayon à la main ─────
+	#
+	# Un test qui appelle `_ligne_de_vue_depuis` lui-même ne prouve pas que le
+	# chemin réel — `_lumiere_recue` → `_lumiere_du_faisceau` → `_ligne_de_vue` —
+	# transmet bien QUI tient la torche. C'est justement l'argument qu'on peut
+	# oublier de passer, et personne ne le verrait.
+	var lampe_avant: bool = gs.p1.flashlight_on
+	var pos_leurre_avant: Vector2 = leurre.global_position
+	var poseur_avant: int = leurre.poseur_id
+	# J1 éclaire J2 de face, à courte portée, son propre leurre entre les deux.
+	gs.p2.global_position = Vector2(520.0, 400.0)
+	await physics_frame
+	await physics_frame
+	# ⚠️ Position et angle de J1 posés APRÈS l'attente : son fournisseur d'entrées
+	# le tourne vers la souris pendant les images qu'on laisse passer (piège relevé
+	# au banc du grésillement).
+	gs.p1.global_position = Vector2(400.0, 400.0)
+	gs.p1.rotation = 0.0
+	gs.p1.flashlight_on = true
+	leurre.global_position = Vector2(460.0, 400.0)
+	var a_travers: float = gs._lumiere_recue(espace, gs.p1, gs.p2)
+	_check("la torche de J1 éblouit J2 À TRAVERS le leurre que J1 a planté",
+		a_travers > 0.0, "%.4f" % a_travers)
+	# Le témoin qui tranche : le MÊME leurre, au même endroit, posé par l'AUTRE.
+	# Il redevient une ombre pour cette torche, et l'éblouissement tombe.
+	leurre.poseur_id = 1 - leurre.poseur_id
+	var arrete: float = gs._lumiere_recue(espace, gs.p1, gs.p2)
+	leurre.poseur_id = poseur_avant
+	_check("témoin : le même leurre, posé par l'autre, l'arrête",
+		is_zero_approx(arrete), "%.4f" % arrete)
+
+	# ── ET L'AUTRE MOITIÉ DU LOT : LE FLASH DE TIR ───────────────────────────
+	#
+	# ⚠️ **Le porteur est passé à DEUX endroits, et un seul était éprouvé.** La
+	# torche passe par `_lumiere_recue`, le flash de tir par `_flash_de_tir` : deux
+	# appels distincts à `_ligne_de_vue`, deux occasions d'oublier l'argument.
+	# Mesuré le 2026-09-12 : inverser le porteur du flash (`1 - player_id`), ou le
+	# retirer — c'est-à-dire revenir au lot F pour cette moitié —, laissait
+	# `test_classes`, `test_tir_et_reserves`, `test_eblouissement` et `test_vision`
+	# entièrement verts. Le jeu se serait mal comporté en ligne comme en local sans
+	# que rien ne le dise. Même montage que ci-dessus ; le flash n'a pas de cône,
+	# l'angle de J1 ne joue donc aucun rôle ici.
+	var dazzle_avant: float = gs.p2.dazzle_amount
+	gs.p2.dazzle_amount = 0.0
+	gs._flash_de_tir(gs.p1)
+	var flash_a_travers: float = gs.p2.dazzle_amount
+	_check("le flash de tir de J1 éblouit J2 À TRAVERS le leurre que J1 a planté",
+		flash_a_travers > 0.0, "%.4f" % flash_a_travers)
+	# Le témoin qui tranche : le MÊME leurre, au même endroit, posé par l'AUTRE. Il
+	# redevient une ombre pour ce flash, qui ne passe plus. Les deux porteurs se
+	# DÉDUISENT de `poseur_id` : un 0 écrit en dur passerait avec la règle inversée.
+	leurre.poseur_id = 1 - leurre.poseur_id
+	gs.p2.dazzle_amount = 0.0
+	gs._flash_de_tir(gs.p1)
+	var flash_arrete: float = gs.p2.dazzle_amount
+	leurre.poseur_id = poseur_avant
+	gs.p2.dazzle_amount = dazzle_avant
+	_check("témoin : le même flash, leurre posé par l'autre, est arrêté",
+		is_zero_approx(flash_arrete), "%.4f" % flash_arrete)
+
+	gs.p1.flashlight_on = lampe_avant
+	leurre.global_position = pos_leurre_avant
 	gs.p1.global_position = p1_avant
 	gs.p2.global_position = p2_avant
 	var r_min := INF

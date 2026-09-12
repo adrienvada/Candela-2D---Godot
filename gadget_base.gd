@@ -606,6 +606,31 @@ func coupe_le_regard(_de: Vector2, _vers: Vector2) -> bool:
 	return false
 
 
+## Ce gadget fait-il de l'ombre sous les lumières PORTÉES par le joueur `pid` —
+## sa torche, son flash de tir (étape 28, lot G, 2026-09-12) ?
+##
+## Vrai dans le socle : un objet posé bouche la lumière de tout le monde. Le
+## LEURRE dit non pour son poseur, parce que son occluder vit désormais sur la
+## couche du corps de celui-ci, et qu'une torche n'ombre jamais le corps de qui la
+## tient. `GameState._ligne_de_vue_depuis()` le lit pour que l'éblouissement suive
+## l'ombre qu'on VOIT — c'est toute la raison d'être de `regard_par_la_forme`.
+##
+## ⚠️ Sans `has_method()` chez l'appelant : le socle répond pour tous. Un garde
+## défensif transformerait une méthode absente en inaction muette.
+##
+## ⚠️ **Mais la PORTÉE de cette réponse est plus étroite que sa formulation, et il
+## faut le savoir avant de la redéfinir ailleurs.** `_ligne_de_vue_depuis()` ne
+## l'interroge que dans la branche des gadgets dont `regard_par_la_forme` est vrai
+## — aujourd'hui le leurre, et lui seul, qui la redéfinit. Le `true` ci-dessous
+## n'est donc consulté par personne : le rendre faux ne change rien, vérifié par
+## sabotage le 2026-09-12, zéro suite rouge. **Redéfinir cette méthode sur un
+## gadget dont le drapeau reste faux ne produirait aucun effet, sans erreur ni
+## suite rouge** — le motif exact du garde `has_method()` consigné dans CLAUDE.md.
+## Lever `regard_par_la_forme` fait partie du geste.
+func fait_ombre_aux_lumieres_de(_pid: int) -> bool:
+	return true
+
+
 ## Ce par quoi ce gadget multiplie l'énergie d'une lampe torche à `pos`.
 ##
 ## Un dans le socle — la lampe est intacte. Le grésillement du Parasite (la lampe

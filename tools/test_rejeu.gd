@@ -766,16 +766,49 @@ func _test_killcam_par_le_process() -> void:
 	rs.start_playback()
 	await process_frame
 	await process_frame
-	_check("la copie naît par le chemin du jeu",
-		bc.get_node_or_null("Rejeu_GadgetJ1_1") != null)
+	var copie: Node = bc.get_node_or_null("Rejeu_GadgetJ1_1")
+	_check("la copie naît par le chemin du jeu", copie != null)
 	_check("et le gadget vivant est masqué", not voile.is_visible_in_tree())
 
+	# ── L'IMAGE DE LA MORT RESTE (lot G, 2026-09-12) ─────────────────────────
+	#
+	# Arbitrage d'Adrien : *« l'image de ta mort »*, plutôt que la scène du moment.
+	# Le lot F suivait le patron des fusées — purge à la fin du rejeu, c'est-à-dire
+	# à `_end_sequence_active = false`, l'instant PRÉCIS où l'écran de fin se pose
+	# sur l'arrêt sur image : le présent y réapparaissait d'un coup, lumières
+	# comprises.
+	#
+	# ⚠️ **La branche de purge doit être OUVERTE à cette image-là, sinon le contrôle
+	# passerait pour une raison structurelle.** Elle demande `_end_sequence_active`
+	# faux — posé plus haut — ET une copie de fusée à rendre : sans cette entrée
+	# bidon, la branche ne s'ouvre jamais dans ce banc, et un `_purger_gadgets_killcam()`
+	# remis là resterait invisible. Vérifié par sabotage (2026-09-12).
+	main._fusees_killcam[0] = null
 	rs.playing_back = false
 	await process_frame
-	_check("le rejeu fini, le gadget vivant revient", voile.is_visible_in_tree())
+	_check("témoin : la branche de fin de rejeu s'est bien ouverte",
+		main._fusees_killcam.is_empty())
+	_check("le rejeu fini, l'image de la mort RESTE : le présent ne revient pas",
+		not voile.is_visible_in_tree(), "voile rendu trop tôt")
+	_check("et la copie du gadget mort tient avec elle",
+		copie != null and is_instance_valid(copie) and not copie.is_queued_for_deletion())
+	_check("témoin : le rejeu se sait toujours en cours",
+		main._rejeu_gadgets_en_cours)
+
+	# C'est la SORTIE de la killcam qui rend le présent — et toutes y passent :
+	# début de manche, match soldé, retour au menu.
+	main._abort_killcam()
+	await process_frame
+	_check("quitter la killcam rend le présent, et lui seul",
+		voile.is_visible_in_tree()
+			and (copie == null or not is_instance_valid(copie)
+				or copie.is_queued_for_deletion())
+			and not main._rejeu_gadgets_en_cours)
 
 	# Fermeture, TOUJOURS : les fantômes montrés, les visuels cachés, les corps
-	# téléportés et le ralenti global ne doivent pas fuir hors de ce test.
+	# téléportés et le ralenti global ne doivent pas fuir hors de ce test. Le
+	# second appel n'a plus rien à rendre — la fonction est idempotente —, il est
+	# là pour les fantômes et le ralenti.
 	main._abort_killcam()
 	Engine.time_scale = 1.0
 	await process_frame
@@ -848,6 +881,35 @@ func _test_dix_gadgets() -> void:
 	# rougirait le jour où un onzième gadget arriverait sans savoir se décrire.
 	_check("les DIX gadgets se sont décrits, refaits et reposés", refaits == 10,
 		str(refaits))
+
+	# ⚠️ **Le leurre porte DEUX ombres depuis le lot G** (2026-09-12) — l'étoile de sa
+	# silhouette et le disque de son torse —, et son état n'en décrit qu'UNE : elles
+	# sont coupées ensemble, comme celles d'un corps dans la suie. L'aller-retour
+	# ci-dessus ne peut donc pas voir que le disque a suivi ; il se vérifie ici.
+	var au_leurre = null
+	for classe in main.classes():
+		if classe.gadget != null and String(classe.gadget.slug) == "leurre":
+			au_leurre = classe
+	_check("témoin : la classe au leurre est au catalogue", au_leurre != null)
+	if au_leurre != null:
+		var l = load(au_leurre.gadget.implementation).new()
+		l.name = "GadgetJ1_999"
+		l.slug = "leurre"
+		l.poseur_id = 0
+		l.classe_du_poseur = au_leurre
+		bc.add_child(l)
+		var etat_l: Dictionary = l.etat_de_rejeu()
+		etat_l["ombre"] = false
+		l.rejouer(etat_l)
+		_check("le leurre rejoué coupe ses DEUX ombres, pas seulement l'étoile",
+			l._occluder != null and not l._occluder.visible
+				and l._occluder_torse != null and not l._occluder_torse.visible)
+		etat_l["ombre"] = true
+		l.rejouer(etat_l)
+		_check("et il les rend toutes les deux",
+			l._occluder != null and l._occluder.visible
+				and l._occluder_torse != null and l._occluder_torse.visible)
+		l.free()
 	main.queue_free()
 
 

@@ -54,6 +54,9 @@ const SHADER_CORPS_ADVERSE := preload("res://player_enemy_light.gdshader")
 ## ligne de vue d'éblouissement lit (`coupe_le_regard`).
 var _etoile := PackedVector2Array()
 var _occluder: LightOccluder2D
+## Le disque de torse, celui qui arrête la RÉTRODIFFUSION — le second occluder
+## d'un corps (étape 28, lot G). Voir `_monter_occluder()`.
+var _occluder_torse: LightOccluder2D
 ## Le corps tel que l'ADVERSAIRE le voit — le patron de `visual_enemy`.
 var _visuel: Polygon2D
 ## Le corps tel que le POSEUR le voit, sur sa seule vue (étape 28).
@@ -90,12 +93,37 @@ func _silhouette() -> Texture2D:
 	return load(chemin)
 
 
-## L'ombre : l'étoile que le JOUEUR tire de la même silhouette, au pixel près.
+## L'ombre : les DEUX occluders que porte un joueur, aux mêmes couches que les
+## siens — l'étoile de la silhouette, et le disque de torse.
 ##
 ## ⚠️ Recalculée depuis la silhouette, jamais copiée sur l'occluder du poseur : une
 ## seule vérité, `Charte.ombre_de_silhouette`, que le joueur lit aussi. L'occluder
 ## du joueur a d'ailleurs été, jusqu'au 2026-09-11, une ressource PARTAGÉE entre
 ## les deux corps — voir `player._accorder_occluder_a_la_silhouette()`.
+##
+## ⚠️ **Il était sur la couche du DÉCOR jusqu'au 2026-09-12** (décision d'Adrien :
+## « oui, qu'il ait l'ombre d'un corps »). Un mur fait de l'ombre sous TOUTE
+## lumière ; un corps, seulement sous celles dont le masque d'ombre contient sa
+## couche. Le leurre projetait donc une ombre là où un corps n'en projette aucune —
+## sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une
+## torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le
+## démasquer.** Sur la couche du corps de son poseur, il ombre exactement ce qu'un
+## corps ombre : la torche d'en face, le flash de tir d'en face, le faisceau d'une
+## torche fantôme — et, pour le seul leurre de J1, la traînée de balle, dont le
+## masque d'ombre `1 | 4` (`bullet.gd`) ne connaît qu'une couche de corps sur deux.
+## Cette dernière asymétrie est celle des CORPS eux-mêmes, signalée hors périmètre
+## au lot D : leurre et corps du même poseur y répondent à l'identique, ce qui est
+## tout ce que ce lot promet. Avant lui, l'occluder vivant sur la couche du décor,
+## la traînée ombrait les DEUX leurres alors qu'elle n'ombre qu'un corps sur deux —
+## celui de J2 se trahissait à chaque balle qui passait près de lui.
+##
+## ⚠️ **Et le disque de torse, sans lequel la correction en créait une autre.** La
+## rétrodiffusion ne voit que les couches de torse ; un corps l'arrête par son
+## disque de 12, le leurre l'arrêtait par son étoile. Le laisser sans disque, après
+## avoir sorti l'étoile du décor, aurait fait du leurre la seule chose de l'arène
+## que la rétrodiffusion adverse TRAVERSE — un indice à la place d'un autre. Les
+## deux formes ne se confondent pas : sous la torche, l'ombre est l'étoile ; sous
+## la rétrodiffusion, c'est le disque. Exactement comme un corps.
 func _monter_occluder() -> void:
 	var tex := _silhouette()
 	if tex == null:
@@ -107,15 +135,26 @@ func _monter_occluder() -> void:
 		super()
 		return
 	_etoile = Charte.ombre_de_silhouette(tex)
+	_occluder = _poser_occluder("Occluder", _etoile,
+		CanauxLumiere.couche_ombre_corps(poseur_id))
+	_occluder_torse = _poser_occluder("OccluderTorse", Charte.ombre_de_torse(),
+		CanauxLumiere.couche_ombre_torse(poseur_id))
+
+
+## Un occluder du leurre : une forme, une couche d'ombre, et rien d'autre. Les deux
+## occluders d'un corps passent par ici pour que tout ce qui ne les distingue PAS
+## reste écrit une seule fois — `cull_mode`, le parentage, la ressource neuve.
+## Seules la forme et la couche diffèrent, et elles sont les deux arguments.
+func _poser_occluder(nom: String, forme: PackedVector2Array, couche: int) -> LightOccluder2D:
 	var occ := LightOccluder2D.new()
-	occ.name = "Occluder"
+	occ.name = nom
 	var poly := OccluderPolygon2D.new()
-	poly.polygon = _etoile
+	poly.polygon = forme
 	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
 	occ.occluder = poly
-	occ.occluder_light_mask = MapGeometry.WALL_LAYER
+	occ.occluder_light_mask = couche
 	add_child(occ)
-	_occluder = occ
+	return occ
 
 
 ## Le visuel : la SILHOUETTE de la classe du poseur, montée comme `player.gd`
@@ -219,8 +258,14 @@ func _physics_process(delta: float) -> void:
 	for v in [_visuel, _visuel_poseur]:
 		if v != null:
 			v.modulate.a = a
-	if _occluder != null:
-		_occluder.visible = e.y < SEUIL_OMBRE_MASQUEE
+	# ⚠️ **Les DEUX occluders** (étape 28, lot G), comme `player._couper_l_ombre()`
+	# coupe les siens : un corps dans la suie perd son étoile ET son disque de
+	# torse. N'en couper qu'un laisserait la rétrodiffusion adverse dessiner encore
+	# un torse là où le corps a disparu.
+	var ombre_vue := e.y < SEUIL_OMBRE_MASQUEE
+	for o in [_occluder, _occluder_torse]:
+		if o != null:
+			o.visible = ombre_vue
 
 
 ## Le segment `de` → `vers` traverse-t-il son OMBRE ? L'étoile de la silhouette,
@@ -243,8 +288,29 @@ func coupe_le_regard(de: Vector2, vers: Vector2) -> bool:
 		PackedVector2Array([de, vers]), ombre).is_empty()
 
 
+## Pas pour son POSEUR (étape 28, lot G, 2026-09-12) — et c'est la conséquence
+## directe de l'occluder posé sur la couche du corps de celui-ci.
+##
+## La torche et le flash de tir d'un joueur n'ombrent jamais son propre corps : ils
+## ne regardent que la couche d'en face. Le leurre porte maintenant cette couche,
+## donc la lampe de son poseur le TRAVERSE à l'écran. Si l'arbitrage continuait de
+## l'arrêter, le poseur planterait un leurre devant lui et sa propre torche
+## cesserait d'aveugler à travers une ombre que personne ne voit — « on voit la
+## lumière et on ne la prend pas », l'exact symétrique du défaut que
+## `_ligne_de_vue_depuis` a été écrite pour corriger. Autrement dit : le leurre se
+## bloquait lui-même.
+##
+## ⚠️ Les lumières POSÉES ne sont pas concernées, et c'est voulu : une mine, une
+## nappe, une fusée n'ombrent aucun corps, pourtant un corps arrête leur
+## éblouissement — il est sur la couche physique du rayon. Le leurre fait donc de
+## même, y compris pour celles de son poseur.
+func fait_ombre_aux_lumieres_de(pid: int) -> bool:
+	return pid != poseur_id
+
+
 ## Étape 28, lot F — son effacement dans la suie, tel qu'il était : silhouette pâlie,
-## ombre coupée. Un seul alpha : les deux corps du lot D portent toujours le même.
+## ombre coupée. Un seul alpha : les deux corps du lot D portent toujours le même,
+## et un seul booléen d'ombre : les deux occluders du lot G sont coupés ensemble.
 func etat_de_rejeu() -> Dictionary:
 	var d := super()
 	d["alpha"] = _visuel.modulate.a if _visuel != null else 1.0
@@ -261,5 +327,7 @@ func rejouer(d: Dictionary) -> void:
 	for v in [_visuel, _visuel_poseur]:
 		if v != null:
 			v.modulate.a = a
-	if _occluder != null:
-		_occluder.visible = bool(d["ombre"])
+	var ombre_vue := bool(d["ombre"])
+	for o in [_occluder, _occluder_torse]:
+		if o != null:
+			o.visible = ombre_vue

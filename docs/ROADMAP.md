@@ -2424,6 +2424,9 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 
 | Décision | Raison |
 |---|---|
+| **Le leurre a l'ombre d'un CORPS, pas celle d'un mur** (2026-09-12, Adrien : « oui, qu'il ait l'ombre d'un corps ») | Question posée à la fin du lot D et tranchée ici (lot G). L'occluder du leurre vivait sur la couche du DÉCOR, celui d'un corps sur la couche de son joueur : un mur fait de l'ombre sous TOUTE lumière, un corps seulement sous celles dont le masque d'ombre contient sa couche. Le leurre projetait donc une ombre là où aucun corps n'en projette — sous une fusée au sol, une mine qui brûle, une nappe de braises, le halo d'une torche fantôme, une lumière d'impact : **il suffisait d'éclairer la zone pour le démasquer**, sans tirer, donc sans payer le flash qui équilibre le gadget. Il porte maintenant les DEUX occluders d'un corps — l'étoile de sa silhouette sur la couche du corps de son poseur, un disque de torse de 12 sur la couche de son torse. Le second n'est pas un supplément : sans lui, la correction aurait remplacé un indice par un autre, la rétrodiffusion adverse ne voyant que les couches de torse, elle aurait TRAVERSÉ le seul leurre de l'arène. Conséquence sur l'arbitrage, et c'est un changement de SENS au carnet de `protocol.gd` (17, non publiée) : la torche et le flash de tir du POSEUR ne l'ombrent plus — une lampe n'ombre jamais le corps de qui la tient —, donc ils ne doivent plus être arrêtés par sa forme dans la ligne de vue de l'éblouissement, sans quoi planter un leurre devant soi éteignait sa propre torche. Les lumières POSÉES, elles, restent arrêtées : elles n'ombrent aucun corps non plus, et pourtant un corps arrête leur éblouissement — il est sur la couche physique du rayon. |
+| **La mine aveugle à hauteur de ce qu'elle brûle** (2026-09-12, Adrien : « garder ») | Le commit A2 était séparé pour être annulable seul, et la question posée à Adrien était de le garder ou de le rendre. **Il l'a gardé après avoir lu les chiffres**, contrepartie comprise : le pic au rayon de déclenchement passe de 0,750 à 0,488 et le temps au-dessus de 0,3 de 1,02 s à 0,42 s, mais **à 300 px elle aveugle un peu PLUS qu'avant** (aire 0,079 → 0,154), parce que son rayon ne rétrécit plus. C'est la seule décision de l'étape 28 qui déplace l'équilibre, et la seule dont la question posée en disait d'abord moins que la mesure — d'où le tableau complet remis avant de trancher. Le détail des mesures et du brouillage saturé est au lot A2 ; ce qui vaut ici, c'est que la contrepartie a été dite AVANT, pas découverte après. |
+| **Un voile sans place se refuse** (2026-09-12, Adrien : « refuser la pose ») | Ferme la réserve inscrite le 2026-09-11 sur le recul du point de pose (« tranché en croyant ce refus rare et limité aux murs »). Le lot B a montré que le refus touche aussi le voile posé à bout portant sur l'adversaire qu'on vise, ce qui n'était pas le cas imaginé : l'alternative était de faire naître la bâche DERRIÈRE l'adversaire, là où il reste de la place. Adrien garde le refus, et la raison est de jeu : une bâche qui apparaît derrière quelqu'un l'enferme entre elle et le poseur — on ne donne pas au Spectre le pouvoir de coincer un corps, et surtout pas par un effet de bord d'un algorithme de recul que le joueur ne peut pas lire à l'écran. Un refus, lui, se comprend : rien ne se pose, le désarmement de 0,30 s a lieu des deux côtés, les pairs restent d'accord. Le ressenti du refus (un retour local chez le client, même fonction `GameState.point_de_pose_libre()`) reste à faire et n'est pas cette décision. |
 | **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). **Fait le 2026-09-12, Adrien validant en connaissance de cause** : elle rend `reste²` — la courbe que sa lumière suivait déjà — et son rayon reste à 460. **Conséquence d'équilibre, mesurée et assumée, pas maquillée** : au rayon de déclenchement (72 px), le pic d'aveuglement passe de 0,750 à 0,488 et le temps passé au-dessus de 0,3 de 1,02 s à 0,42 s ; à 30 px, le pic passe de 0,884 à 0,521 ; à 150 px de 0,553 à 0,422. À 300 px elle éblouit au contraire un peu plus (aire 0,079 → 0,154) : le rayon ne fond plus. Commit séparé et réversible seul — l'annuler ne coûte rien d'autre. |
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
 | **Le halo de proximité révèle l'ennemi proche — chez son porteur seulement** (2026-09-11, Adrien) | *« Je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne doit pas me rendre détectable auprès de mon ennemi à distance. »* Jusqu'ici le halo (`ambient_light`, canal 16 pour la vue de J1, 32 pour J2) n'éclairait **aucun** sprite ennemi : le canal 2 est commun aux deux sprites ennemis — le mien chez lui, le sien chez moi —, et l'éclairer aurait allumé MON sprite sur SON écran. Le choix d'origine protégeait donc la seconde moitié de la phrase au prix de la première : un adversaire collé à soi restait invisible sans torche. **Maintenant** : le sprite ennemi d'un joueur porte `2 | canal de la vue ADVERSE` (`canaux_lumiere.gd::masque_vue_adverse()`, canal de vue = `16 << id` — un module sans autoload, pour que le leurre du chantier « 10 classes » applique la même formule sans la recopier ni nommer `player.gd`) ; le halo de l'autre l'éclaire, chez l'autre seulement ; le mien ne l'atteint jamais. Aucune autre lumière du jeu ne touche les canaux 16/32 (vérifié), donc aucune fuite. Le halo garde ses ombres : pas de révélation à travers un mur. Mesuré au banc de rendu (vrai shader adverse, vrai halo) : halo de J1 → l'ennemi sur l'écran de J1 **136**/255, J1 sur l'écran de J2 **0** ; halo de J2 → **130** et **0**. Garde : `tools/test_halo_proximite.tscn` — **une scène, pas un `--script`** : `player.gd` ne compile pas en `--script` (autoloads), et la première version du test annonçait « tous les tests passent » sans avoir rien vérifié ; d'où un plancher de vérifications. **Point ouvert, signalé au chantier « 10 classes »** : le leurre (`gadget_leurre.gd`, masque 1\|2\|4) ne prend pas le halo et se reconnaîtrait donc de près. |
@@ -2436,7 +2439,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 | **Toutes les sources de lumière peuvent éblouir** (2026-09-09, Adrien) | Aujourd'hui l'éblouissement n'a que trois sources — la torche de J1 vue par J2, l'inverse, et le flash de tir par un modèle séparé — et **la fusée éclairante, la lumière la plus violente du jeu, n'aveugle personne**. Deux régimes désormais : la torche aveugle quand elle est **dirigée** (on lit le pixel du cookie, comme aujourd'hui), la fusée et les lumières posées aveuglent par **proximité** (pas d'axe, décroissance avec la distance). L'aveuglement **et le flare** sont proportionnels à la **taille** de la source, et l'unité est l'**empreinte au sol en pixels de monde** de `LightTextures.poser()` — ⚠️ **jamais `energy`**, qui va de 0,25 à 50,0 et ferait de la traînée de balle la source la plus aveuglante du jeu. Plusieurs sources simultanées : on prend le **MAXIMUM**, pas la somme, ce qui préserve la propriété « c'est un plafond, pas une intégrale » qui empêche le modèle de dériver. ⚠️ Et le max doit faire remonter la **source gagnante**, pas seulement sa valeur : `_poser_voile` dérive le penchant du voile de la POSITION de la source, donc un max qui ne retiendrait qu'un niveau ferait pencher le voile vers l'adversaire pendant qu'une fusée brûle derrière — et aucune suite ne le verrait, rien ne teste le relèvement. |
 | **On s'éblouit soi-même, mais une source PORTÉE n'aveugle son porteur que par rétrodiffusion** (2026-09-09, Adrien) | Réserve d'Adrien, mot pour mot : « très très léger quand on utilise sa lampe torche, sinon ça ne sert à rien d'allumer sa torche ». Ce n'est pas un dosage, c'est un cas **dégénéré** : le modèle échantillonne le cookie de la source à la position de la cible, or pour sa propre torche source et cible sont le même point — le centre du cookie, sa valeur maximale. Allumer sa lampe saturerait l'éblouissement instantanément. La règle est donc physique : on ne se tient pas *dans* son faisceau, ce que reçoivent ses yeux est la **rétrodiffusion**. Une source **portée** (torche, flash de bouche, rétrodiffusion) n'éblouit son porteur que par un coefficient très faible, jamais par lecture du cookie ; une source **posée** (fusée, gadget) éblouit tout le monde de la même façon, **poseur compris** — on ne lance pas une fusée à ses pieds impunément. Cette ligne règle un cas que la question ne visait pas : **son propre flash de bouche**, posé à 28 px devant soi, qui aurait aveuglé son tireur à chaque coup. |
 | **Le drapeau « cette source n'éblouit pas » vit PAR INSTANCE** (2026-09-09, Adrien) | Adrien : « on doit pouvoir désactiver l'éblouissement d'un gadget à l'avenir si on sent que ça équilibre. » Le drapeau est donc porté par le NŒUD à sa construction, comme `is_replay` et `graine` le sont déjà pour la fusée — trois raisons : ça ne coûte rien de plus, ça couvre le cas « par type » sans effort (l'inverse étant faux), et ça n'oblige pas à savoir aujourd'hui quels gadgets existeront. ⚠️ **Et surtout pas sur `WeaponData`** : la fusée, l'écho au sol d'un tir et les gadgets n'ont pas d'arme. Le drapeau appartient à la SOURCE de lumière, pas à ce qui la déclenche. Premier usage prévu : l'écho au sol d'un tir (200 px, la plus grande des deux lumières qu'un coup de feu allume) porte le drapeau à faux, pour qu'un tir ne punisse pas deux fois. |
-| **Un voile ne naît pas sur un corps : son point de pose recule** (2026-09-11, Adrien : « on recule le point de pose ») | Suggestion d'après l'étape 27, qui fermait le signalement de l'étape 25 (« un voile posé sur un joueur n'est pas refusé : c'est le moteur qui doit alors le dégager »). Chez l'HÔTE seul — le client voit l'adversaire 100 ms en retard et lui-même en avance, il ne saurait pas refaire ce calcul —, le point de pose d'un gadget qui arrête les joueurs recule vers le poseur jusqu'à ce que la bande, à sa rotation, ne chevauche plus aucun corps ; le point final voyageait déjà dans `rpc_spawn_gadget`. Le cas « aucune place » était laissé à notre jugement : **refus**, sans RPC ni recharge ni numéro — quand le premier obstacle du rayon de pose, mur OU adversaire (les joueurs sont sur la couche des murs), laisse trop peu de place devant le nez du poseur : un mur à moins d'environ 40 px, un adversaire dans l'axe à bout portant (jusqu'à 60 à 70 px de centre à centre, mesuré sans mur), ou coincé contre un mur proche. ⚠️ Tranché en croyant ce refus rare et limité aux murs : la correction du lot B a montré qu'il touche aussi le voile posé à bout portant sur l'adversaire qu'on vise — question reportée à Adrien, voir l'étape 28. Le désarmement de 0,30 s a eu lieu des deux côtés, ce qui garde les pairs d'accord ; le refus ressenti passera par un pré-contrôle local chez le client, avec la même fonction (`GameState.point_de_pose_libre()`). Voir l'étape 28, lot B. |
+| **Un voile ne naît pas sur un corps : son point de pose recule** (2026-09-11, Adrien : « on recule le point de pose ») | Suggestion d'après l'étape 27, qui fermait le signalement de l'étape 25 (« un voile posé sur un joueur n'est pas refusé : c'est le moteur qui doit alors le dégager »). Chez l'HÔTE seul — le client voit l'adversaire 100 ms en retard et lui-même en avance, il ne saurait pas refaire ce calcul —, le point de pose d'un gadget qui arrête les joueurs recule vers le poseur jusqu'à ce que la bande, à sa rotation, ne chevauche plus aucun corps ; le point final voyageait déjà dans `rpc_spawn_gadget`. Le cas « aucune place » était laissé à notre jugement : **refus**, sans RPC ni recharge ni numéro — quand le premier obstacle du rayon de pose, mur OU adversaire (les joueurs sont sur la couche des murs), laisse trop peu de place devant le nez du poseur : un mur à moins d'environ 40 px, un adversaire dans l'axe à bout portant (jusqu'à 60 à 70 px de centre à centre, mesuré sans mur), ou coincé contre un mur proche. ⚠️ Tranché en croyant ce refus rare et limité aux murs : la correction du lot B a montré qu'il touche aussi le voile posé à bout portant sur l'adversaire qu'on vise — question reportée à Adrien, voir l'étape 28. **Refermée le 2026-09-12 : le refus est gardé**, voir « Un voile sans place se refuse » plus haut dans ce tableau. Le désarmement de 0,30 s a eu lieu des deux côtés, ce qui garde les pairs d'accord ; le refus ressenti passera par un pré-contrôle local chez le client, avec la même fonction (`GameState.point_de_pose_libre()`). Voir l'étape 28, lot B. |
 | **Le suivi de projet dit quelle session tient quel chantier** (2026-09-09, Adrien) | Plusieurs sessions avancent en même temps et le suivi ne disait que « une session » ou « sans titulaire » : Adrien ne pouvait pas savoir à qui parler. Désormais tout delta envoyé au porteur de la republication commence par le nom de la session qui l'envoie (celui que `ListAgents` affiche), sa branche et le chantier ; le porteur le reporte sur la carte (`data-session`) et dans le tableau « Qui travaille sur quoi » de la vue d'ensemble. Le journal des sessions dit qui tient quel *fichier* ; le suivi dit qui tient quel *chantier*. Protocole dans [README.md](../README.md#republier-le-suivi). |
 | **La frange chromatique de l'éblouissement (DA5.5) est un réglage MONDE, plancher 0,5** (2026-09-09, Adrien) | Deux lectures possibles pour `effect_policy.gd::"aberration_eblouissement"` : CONFORT (elle ne porte aucune direction, déjà donnée par `lueurs_derive`/`flares_penche`) ou MONDE (elle fait partie de ce que montre l'éblouissement, pas un habillage à part). Adrien a tranché pour MONDE : un joueur ne doit pas pouvoir en adoucir l'expérience par rapport à son adversaire. Plancher aligné sur `trait_de_balle`/`fusee_agonie` (0,5), pas sur le 0,8 de l'ancienne entrée `"eblouissement"` qui couvrait toute la pénalité. |
 | **L'export macOS de la CI passe sur runner natif `macos-14` avec signature ad-hoc récursive** (2026-09-08, Adrien) | L'export sous Linux (`ubuntu-latest`) de la v0.1.0 altérait le bundle sans pouvoir signer, brisant la signature officielle du template Godot et déclenchant l'alerte « application endommagée » de Gatekeeper sous macOS. Le job d'export macOS est désormais déporté sur un runner `macos-14` (Apple Silicon) où `codesign --force --deep --sign -` applique une signature ad-hoc valide sur le bundle et ses bibliothèques dynamiques (`addons/epic-online-services-godot`), éliminant l'alerte d'altération et permettant l'ouverture sans exiger d'abonnement Apple Developer payant (H4). |
@@ -18915,7 +18918,10 @@ sous un `HOME` à `intro_vue=true` : `ALPHA_REPERE` à 0, le trait décalé de 4
 chacun (les huit repères vérifiés).
 
 ⚠️ **Signalé, non corrigé** :
-- **L'occluder du leurre** (question pour Adrien, hors du lot) : il est sur la couche
+- **L'occluder du leurre** (question pour Adrien, hors du lot). ✅ **Tranchée le
+  2026-09-12 — Adrien : « oui, qu'il ait l'ombre d'un corps » ; faite au lot G**, les
+  deux changements compris. Le constat qui suit décrit donc l'état d'AVANT, gardé pour
+  la raison : il est sur la couche
   1, celui d'un corps sur la couche du corps de son joueur. La différence porte sur
   les lumières dont le masque d'ombre vaut 1 seul — fusée, mine, braises, halo de la
   torche fantôme : un vrai corps n'y fait pas d'ombre et y est éclairé, le leurre y
@@ -18945,9 +18951,9 @@ chacun (les huit repères vérifiés).
 - `bullet.gd` : la traînée a pour masque d'ombre `1 | 4` — le corps de J1 (couche 4)
   l'ombre, celui de J2 (couche 8) non : une asymétrie entre joueurs.
 
-**Questions pour Adrien** : l'occluder du leurre (ci-dessus) ; le dosage du repère sur
-la planche ; faut-il, à l'entraînement, un moyen de voir son leurre tel que
-l'adversaire le voit, ou la capture suffit-elle ?
+**Questions pour Adrien** : ~~l'occluder du leurre (ci-dessus)~~ — ✅ tranchée et faite
+le 2026-09-12, lot G ; le dosage du repère sur la planche ; faut-il, à l'entraînement,
+un moyen de voir son leurre tel que l'adversaire le voit, ou la capture suffit-elle ?
 
 ### Étape 28 — lot E : la télémétrie des gadgets dans l'archive des matchs ✅ (2026-09-11)
 
@@ -19336,7 +19342,8 @@ jusqu'à la manche suivante. Le saut est plus visible que pour les fusées, qui 
 que disparaître : ici le présent réapparaît, lumières comprises. Il n'y a pas de
 régression — avant ce lot, le présent y était de toute façon. L'autre choix serait de
 ne purger que dans `_abort_killcam()`, ce qui garderait l'image de la mort cohérente ;
-toutes les sorties y passent. **À trancher.**
+toutes les sorties y passent. ✅ **Tranché le 2026-09-12 — Adrien : « l'image de ta
+mort ».** C'est le second choix qui est fait ; voir le lot G.
 
 ⚠️ **Signalé, non corrigé** :
 - **`test_vitrine_menus` est rouge sous le `HOME` courant** (« hors calibration, les
@@ -19468,6 +19475,211 @@ RENDUE à l'écran. Le plafond d'aveuglement d'une source de proximité vaut
 — `ENERGIE` n'y entre nulle part. La relever rendrait la flamme plus vive sans aveugler
 d'un pixel de plus : le conseil envoyait droit dans le mur, vérifié dans le code avant
 d'être corrigé.
+
+### Étape 28 — lot G : les arbitrages d'Adrien ✅ (2026-09-12)
+
+Quatre questions posées à la fin des lots A2, B, D et F. **Deux demandaient du code, ce
+lot les fait ; deux se consignent** — la mine (« garder ») et le voile (« refuser la
+pose »), toutes deux dans « Décisions actées ». Ce lot n'invente rien : il exécute des
+réponses.
+
+**1. L'ombre du leurre** — *« oui, qu'il ait l'ombre d'un corps »*. La décision et sa
+raison sont dans « Décisions actées » ; ce qui suit est le comment.
+
+L'occluder du leurre vivait sur `MapGeometry.WALL_LAYER`. Il porte désormais **deux**
+occluders, aux couches de ceux d'un corps : l'étoile de sa silhouette sur
+`CanauxLumiere.couche_ombre_corps(poseur_id)`, un disque de torse sur
+`couche_ombre_torse(poseur_id)`.
+
+⚠️ **Aucun numéro n'est écrit dans `gadget_leurre.gd`, et c'est tout l'enjeu.** Ces
+couches vivaient dans `player.gd`, en propriétés (`COUCHE_OCCLUDER_SIENNE`,
+`COUCHE_TORSE`) — inaccessibles depuis un gadget, qui ne peut pas nommer `Player` : ce
+fichier s'appuie sur des autoloads et ne compile pas dans une suite lancée en
+`--script`. Les recopier aurait donné deux vérités pour une seule couche, dont l'une
+aurait vieilli — c'est exactement ce que la fusion `d9bfc98` vient de faire payer au
+`2` en dur du masque de lumière. La règle a donc **déménagé dans `canaux_lumiere.gd`**,
+et les quatre propriétés de `player.gd` n'en sont plus que les noms locaux. Même geste
+pour la FORME : `Charte.ombre_de_torse()` (rayon 12) rejoint `Charte.ombre_de_silhouette()`,
+et `player._monter_occluder_de_torse()` la lit au lieu de la construire.
+
+⚠️ **`canaux_lumiere.gd` porte maintenant DEUX familles qui ne se croisent jamais** :
+les canaux (`light_mask`, `range_item_cull_mask` — qui est éclairé) et les couches
+d'ombre (`occluder_light_mask`, `shadow_item_cull_mask` — qui fait de l'ombre). `16`
+veut dire « la vue de J1 » dans la première et « le torse de J1 » dans la seconde ;
+aucune propriété du moteur ne lit les deux, et les deux règles restent écrites
+séparément plutôt que dérivées l'une de l'autre — les marier obligerait un jour l'une à
+bouger pour l'autre. Un bloc de commentaire le dit sur place.
+
+**Le disque de torse n'est pas un supplément.** La rétrodiffusion ne voit que les
+couches de torse : sortir l'étoile du décor sans poser ce disque aurait fait du leurre
+la seule chose de l'arène que la rétrodiffusion adverse TRAVERSE — un indice à la place
+d'un autre. Et les deux ombres se coupent ENSEMBLE dans la suie, comme
+`player._couper_l_ombre()` coupe les siennes : n'en couper qu'une aurait laissé un
+torse dessiné là où le corps a disparu. Même règle dans la killcam (`rejouer()`), où un
+seul booléen les porte toutes les deux.
+
+**Conséquence sur l'arbitrage, et changement de SENS au carnet.** Une lampe n'ombre
+jamais le corps de qui la tient : la torche et le flash de tir du poseur traversent
+maintenant son leurre à l'écran. `GameState._ligne_de_vue_depuis()` reçoit donc un
+`pid_porteur` — qui TIENT cette lumière, ou -1 pour une lampe posée — et interroge
+`GadgetBase.fait_ombre_aux_lumieres_de(pid)`, vrai dans le socle, faux chez le leurre
+pour son propre poseur. Sans ça, planter un leurre devant soi **éteignait sa propre
+torche** : on aurait vu la lumière passer sans la prendre, le symétrique exact du défaut
+que ce rayon a été écrit pour corriger. ⚠️ **Les lumières POSÉES restent arrêtées**, y
+compris celles du poseur : elles n'ombrent aucun corps non plus, et pourtant un corps
+arrête leur éblouissement — il est sur la couche physique du rayon. Le leurre fait donc
+comme un corps, pas comme une ombre. `Protocol.VERSION` reste 17 (non publiée), la
+FORME du fil ne bouge pas, `WIRE_WITNESS` est intact et `test_protocole` reste vert ;
+l'entrée 17 du carnet porte les deux règles partagées.
+
+**2. L'image de la mort qui reste** — *« l'image de ta mort »*, plutôt que la scène du
+moment. Le lot F suivait le patron des fusées : les copies partaient et les gadgets
+vivants revenaient à `_end_sequence_active = false`. **Cette branche ne s'ouvre qu'à
+l'instant PRÉCIS où l'écran de fin se pose sur l'arrêt sur image** — le présent y
+réapparaissait d'un coup, lumières comprises, sur l'image figée de la mort.
+`_purger_gadgets_killcam()` n'est donc plus appelé que par `_abort_killcam()`, par où
+passent TOUTES les sorties (début de manche, match soldé, retour au menu). Le plan F
+disait « une ligne à déplacer » : **c'en était deux**. Le second terme de la condition
+(`or _rejeu_gadgets_en_cours`), ajouté au lot F pour que la branche s'ouvre même sans
+fusée, n'avait plus d'objet une fois la purge partie ; le laisser aurait fait tourner
+`_purger_fusees_killcam()` à chaque image jusqu'à la sortie, sous un commentaire devenu
+faux. **Les fusées, elles, ne bougent pas** : elles partent toujours là, hors périmètre
+de cette question.
+
+**Validation** — sous deux `HOME`, l'un courant, l'autre isolé dont le `settings.cfg`
+porte `intro_vue=true` (la leçon du lot C) : `test_classes`, `test_tir_et_reserves`,
+`test_rejeu`, `test_lumieres`, `test_calques_joueur`, `test_eblouissement`,
+`test_vision`, `test_protocole`, `test_charte`, `test_telemetrie_gadgets`,
+`test_viseur`, `test_brouillage`, `test_fusee`, `test_rendu_racine`, `test_banc`,
+`test_arena_lighting`, `test_ecran_de_fin`, `test_releve_balistique`,
+`test_prediction_tir`, `test_sprites`, `test_marche`, `test_torches` — tous verts, zéro
+`SCRIPT ERROR`. Plus, hors `--script` : `test_halo_proximite.tscn` (la scène, parce que
+`player.gd` ne compile pas en `--script`), `test_netcode.tscn`, et les quatre modes de
+`test_online_match.tscn` (`--local`, `--training`, `--fenetre`, `--appariement`), qui
+sont le seul banc à traverser le cycle de fin de match modifié ici.
+
+**Après la revue** (2026-09-12), les suites touchées par le leurre, les occluders, la
+killcam ou les couches de lumière ont été relancées sous les deux `HOME` :
+`test_classes`, `test_tir_et_reserves`, `test_rejeu`, `test_lumieres`,
+`test_calques_joueur`, `test_eblouissement`, `test_vision`, `test_protocole`,
+`test_charte`, `test_telemetrie_gadgets`, `test_ecran_de_fin`, `test_banc`, plus
+`test_fusee`, `test_habillage`, `test_map_geometry`, `test_musique`, `test_pause_menu`,
+`test_releve_balistique`, `test_brouillage`, `test_arena_lighting`, `test_viseur`,
+`test_prediction_tir`, `test_rendu_racine`, et les scènes `test_halo_proximite.tscn` et
+`test_netcode.tscn` — toutes vertes, zéro `SCRIPT ERROR`. Seule exception, déjà connue :
+`test_vitrine_menus`, rouge sous le `HOME` courant et vert sous le `HOME` isolé.
+
+**Contrôles ajoutés.** `test_classes` : les deux occluders du leurre comparés à ceux du
+VRAI joueur (couche et forme, jamais un numéro recopié), leurs deux couches distinctes,
+la torche adverse qui voit l'étoile, la rétrodiffusion adverse qui voit le torse, et une
+mine allumée comme témoin — une lampe posée n'ombre ni le corps ni le leurre, mais
+ombre le décor (la moitié positive, sans laquelle un masque à zéro passerait) ; la suie
+qui coupe et rend les DEUX ombres ; et l'éblouissement, à la fois par le rayon nu (les
+porteurs déduits du poseur, jamais un `0` en dur) **et par le chemin réel**
+`_lumiere_recue`. `test_rejeu` : l'image de la mort qui tient après le rejeu, rendue par
+la seule sortie de la killcam ; et le leurre rejoué qui coupe ses deux ombres.
+
+⚠️ **Et le FLASH DE TIR, ajouté en revue** (2026-09-12). Le porteur est passé à DEUX
+endroits — `_lumiere_recue()` pour la torche, `_flash_de_tir()` pour le flash —, et seul
+le premier était éprouvé. Mesuré : inverser le porteur du flash (`1 - player_id`) ou
+retirer l'argument, c'est-à-dire revenir littéralement au lot F pour cette moitié,
+laissait `test_classes`, `test_tir_et_reserves`, `test_eblouissement` et `test_vision`
+entièrement verts — le leurre du tireur aurait de nouveau éteint son propre flash, et
+celui de l'adversaire aurait cessé de l'arrêter, sans que rien ne le dise. `test_classes`
+appelle donc `gs._flash_de_tir(gs.p1)` sur le même montage que la torche, avec le même
+témoin : le MÊME leurre, au même endroit, `poseur_id` inversé, qui doit l'arrêter.
+
+⚠️ **Deux contrôles qui auraient passé pour une mauvaise raison, trouvés en les
+sabotant** — c'est la seule raison pour laquelle ils valent quelque chose :
+- « l'image de la mort reste » restait VERT avec la purge du lot F remise en place : la
+  branche de fin de rejeu ne s'ouvre que s'il y a une copie de fusée à rendre, et le
+  banc n'en pose aucune. Le test sème donc une entrée bidon dans `_fusees_killcam` pour
+  ouvrir la branche, et un témoin vérifie qu'elle s'est réellement ouverte ;
+- le témoin « la mine allumée porte bien une lumière » lisait une référence sur un objet
+  déjà libéré. **En Godot 4, une référence libérée se compare égale à `null`** : le
+  témoin annonçait une absence de lumière alors qu'elle avait bien été créée. Tout se
+  lit maintenant AVANT le `free()`.
+
+**Sabotages exécutés, chacun appliqué, VU ROUGIR, puis restauré** (le contrôle qui
+rougit est indiqué) :
+1. l'étoile remise sur la couche du décor → « son ombre vit sur la couche du CORPS » et
+   « une lumière POSÉE n'ombre ni le corps ni le leurre » ;
+2. le disque de torse retiré → 5 rouges dans `test_classes`, 2 dans `test_rejeu` ;
+3. le disque de torse posé sur la couche du CORPS → 3 rouges, dont « les deux couches
+   restent distinctes » ;
+4. `fait_ombre_aux_lumieres_de()` du leurre rendant toujours vrai → le rayon nu ET le
+   chemin réel ;
+5. l'argument `pid_porteur` retiré de l'appel de `_lumiere_recue()` → **le seul chemin
+   réel** rougit, le rayon nu reste vert. C'est la preuve que ce contrôle-là sert ;
+6. la purge des gadgets remise dans la branche de fin de rejeu (forme minimale, puis
+   retour littéral au lot F) → 3 rouges dans `test_rejeu` les deux fois ;
+7. `_purger_gadgets_killcam()` retiré d'`_abort_killcam()` → « quitter la killcam rend
+   le présent » ;
+8. la suie ne coupant que l'étoile → « et ses deux ombres avec, comme un corps » ;
+9. la killcam ne rejouant que l'étoile → « le leurre rejoué coupe ses DEUX ombres » ;
+10. le TORSE du **joueur** remis sur la couche de son corps → le contrôle de comparaison
+    au vrai joueur. Il vérifie que la comparaison mord dans les deux sens ;
+11. *(revue)* le porteur du **flash de tir** inversé (`1 - int(tireur.player_id)`) → les
+    DEUX nouveaux contrôles, alors que sans eux tout restait vert ;
+12. *(revue)* l'argument du flash de tir **retiré** → « le flash de tir de J1 éblouit J2
+    À TRAVERS le leurre ». C'est le retour littéral au lot F pour cette moitié ;
+13. *(revue)* `GadgetBase.fait_ombre_aux_lumieres_de()` du **socle** rendu toujours faux
+    → **rien**, zéro rouge sur sept suites. C'est la preuve, et non la réfutation : cette
+    réponse du socle n'est consultée par personne, la porte n'étant franchie que sous
+    `regard_par_la_forme`, que seul le leurre lève — et qui la redéfinit. Le commentaire
+    du socle le dit désormais, pour qu'un futur gadget ne redéfinisse pas une règle qui
+    resterait muette.
+
+⚠️ **Trois « pourquoi » corrigés en revue, et aucun ne touchait au comportement** — la
+leçon de l'étape, encore : un commentaire qui cite un état du code sans l'avoir relu.
+- **Le carnet de `protocol.gd` décrivait un client qui n'existe pas.** Il justifiait le
+  changement de sens par « un client v16 prédirait un adversaire épargné » : or le client
+  ne prédit AUCUN éblouissement — `_maj_eblouissement()` et `_flash_de_tir()` sortent
+  d'emblée en `ONLINE_CLIENT`, `player.gd` recopie `net_dazzle`. La divergence annoncée
+  ne peut pas se produire, et la phrase contredisait la ligne précédente (« l'hôte SEUL
+  l'arbitre »). Reformulé sur le patron de l'entrée A2 : le rendu ne bouge pas,
+  l'arbitrage si. Le premier tiret, l'ombre partagée par les deux pairs, était juste.
+- **Le garde-fou de `_ligne_de_vue_depuis()` s'est périmé EN VERT.** Il promettait que
+  « tout gadget porte un occluder » suffit à ce que l'ombre et l'éblouissement disent la
+  même chose. Un occluder n'arrête que les lumières dont le masque d'ombre contient sa
+  couche : depuis ce lot, une mine qui brûle ne fait aucune ombre au leurre et pourtant
+  son éblouissement y reste arrêté. **C'est voulu — un corps fait exactement pareil** —
+  mais le garde-fou l'annonçait comme impossible, et rien ne l'aurait signalé à la
+  prochaine session qui s'y serait fiée pour décider si un gadget peut se passer
+  d'occluder.
+- **`gadget_leurre.gd` disait « et rien d'autre »** en énumérant ce que le leurre ombre.
+  La traînée de balle ombre aussi le leurre de J1 (masque `1 | 4`) — la même asymétrie
+  entre joueurs que celle des corps, désormais nommée sur place.
+
+⚠️ **Ce qu'aucune suite ne dit, et il faut le voir.** Rien ici ne REND : qu'une fusée au
+sol éclaire désormais le leurre **sans lui faire d'ombre portée** — comme elle éclaire
+un corps sans lui en faire —, et qu'il oppose une ombre de torse à la rétrodiffusion
+adverse, se juge à la **capture** (plan `leurre` du photographe, mesure au pixel PIL) ou
+manette en main (H11). Et l'image de fin de killcam
+— le présent qui ne réapparaît plus derrière l'écran de fin — n'est atteinte par aucun
+instrument headless : elle se regarde en jouant.
+
+⚠️ **Signalé, non corrigé** :
+- **`test_vitrine_menus` reste rouge sous le `HOME` courant** (« hors calibration, les
+  onze effets vivent », « en sortant, tout se rallume ») et **vert sous un `HOME`
+  isolé** : reconfirmé ici. C'est le `settings.cfg` utilisateur, pas le code — déjà
+  signalé au lot F ;
+- `bullet.gd` : la traînée a pour masque d'ombre `1 | 4`. Elle ombre donc le corps de
+  J1 (couche 4) et pas celui de J2 (couche 8) : **une asymétrie entre JOUEURS**, déjà
+  signalée au lot D, et c'est bien celle-là qui reste. ⚠️ **Ce lot l'a réduite, il ne
+  l'a pas aggravée**, et la première rédaction de cette ligne laissait croire
+  l'inverse : avant lui, l'occluder du leurre vivait sur la couche du décor, que le
+  masque `1 | 4` contient — la traînée ombrait donc les DEUX leurres quand elle
+  n'ombre qu'un corps sur deux, et **le leurre de J2 se trahissait à chaque balle qui
+  passait près de lui**, sans même viser. Depuis le 2026-09-12, leurre et corps du même
+  poseur répondent à l'identique sous une traînée : elle ne trahit plus aucun leurre.
+  Ce qu'il reste à corriger est donc l'asymétrie des CORPS, et elle seule ;
+- `player.gd`, note du viseur : « L'écran partagé est permanent, y compris en ligne » —
+  toujours faux depuis le 2026-08-18 ;
+- les copies de FUSÉES de killcam partent toujours à la fin du rejeu, pendant que les
+  copies de gadgets restent. Adrien n'a tranché que les gadgets, et la fusée qui
+  disparaît d'une image est justement ce que le commentaire d'origine voulait éviter
+  pendant l'arrêt sur image. À reposer s'il veut l'image de mort entière.
 
 ### Fait à la fusion du 2026-09-12 — le leurre et le halo de proximité ✅
 

@@ -29,15 +29,22 @@ const BulletCasingScript := preload("res://bullet_casing.gd")
 ## ombrer le corps d'en face **sans ombrer le sien**. Une couche commune rendait
 ## les deux indissociables : on ne pouvait qu'ombrer les deux ou aucun, et le
 ## jeu avait choisi aucun.
+##
+## ⚠️ **La règle a déménagé dans `CanauxLumiere` le 2026-09-12**, et ces quatre
+## propriétés n'en sont plus que les noms locaux. Le leurre doit porter les mêmes
+## couches qu'un corps — Adrien : « oui, qu'il ait l'ombre d'un corps » — et un
+## gadget ne peut pas nommer `Player` : ce fichier s'appuie sur des autoloads, il
+## ne compile pas dans une suite lancée en `--script`. Recopier `4 << id` là-bas
+## aurait donné deux vérités pour une seule couche, dont l'une aurait vieilli.
 var COUCHE_OCCLUDER_SIENNE: int:
-	get: return 4 << player_id
+	get: return CanauxLumiere.couche_ombre_corps(player_id)
 var COUCHE_OCCLUDER_ADVERSE: int:
-	get: return 4 << (1 - player_id)
+	get: return CanauxLumiere.couche_ombre_corps(1 - player_id)
 ## La couche du TORSE, réservée au rétroéclairage — 16 pour J1, 32 pour J2.
 var COUCHE_TORSE: int:
-	get: return 16 << player_id
+	get: return CanauxLumiere.couche_ombre_torse(player_id)
 var COUCHE_TORSE_ADVERSE: int:
-	get: return 16 << (1 - player_id)
+	get: return CanauxLumiere.couche_ombre_torse(1 - player_id)
 @export var speed: float = 260.0
 @export var input_provider: InputProvider
 
@@ -1011,11 +1018,10 @@ func _poser_pose(idx: int) -> void:
 
 ## Le disque de torse qui arrête la rétrodiffusion.
 ##
-## ⚠️ **Rayon 12, et le nombre n'est pas libre.** `body_light` est posée à 18
-## unités devant le centre : l'occluder doit être STRICTEMENT plus petit, sinon
-## la lampe tombe dedans et l'ombre devient indéfinie. 12 laisse six unités de
-## marge et correspond à peu près au torse — la partie du corps qui, vue de
-## dessus, arrête vraiment une lumière rasante.
+## ⚠️ **Rayon 12, et le nombre n'est pas libre** : la raison est écrite avec la
+## forme, dans `Charte.ombre_de_torse()`. Elle a déménagé là-bas le 2026-09-12,
+## comme l'étoile de la silhouette avant elle — le leurre doit faire le même trou
+## sous la rétrodiffusion adverse, et un gadget ne peut pas nommer `Player`.
 ##
 ## Il est monté à part du grand occluder parce qu'ils ne servent pas la même
 ## lumière : celui-ci ne doit JAMAIS voir une torche, sans quoi chaque joueur se
@@ -1026,11 +1032,7 @@ func _monter_occluder_de_torse() -> void:
 	var occ := LightOccluder2D.new()
 	occ.name = "OccluderTorse"
 	var forme := OccluderPolygon2D.new()
-	var pts := PackedVector2Array()
-	for i in 16:
-		var ang := (float(i) / 16.0) * TAU
-		pts.append(Vector2(cos(ang), sin(ang)) * 12.0)
-	forme.polygon = pts
+	forme.polygon = Charte.ombre_de_torse()
 	forme.cull_mode = OccluderPolygon2D.CULL_DISABLED
 	occ.occluder = forme
 	occ.occluder_light_mask = COUCHE_TORSE

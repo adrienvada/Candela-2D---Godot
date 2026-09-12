@@ -1734,20 +1734,24 @@ func _process(delta):
 				Engine.time_scale = 1.0
 				_liberer_le_releve()
 
-	elif not _end_sequence_active and (not _fusees_killcam.is_empty() \
-			or _rejeu_gadgets_en_cours):
+	elif not _end_sequence_active and not _fusees_killcam.is_empty():
 		# Le rejeu vient de finir (ou d'être passé) : ses fusées partent avec
 		# lui — mais PAS pendant l'arrêt sur image de fin, qui prolonge la
 		# dernière image du rejeu : une fusée qui s'y évapore d'une image se
 		# lirait comme un bug d'affichage.
 		#
-		# Étape 28, lot F — les gadgets du passé suivent le même chemin, et c'est ici
-		# que les gadgets VIVANTS masqués reviennent. ⚠️ La condition lit aussi
-		# `_rejeu_gadgets_en_cours` : un rejeu sans le moindre gadget a quand même
-		# masqué le présent, et sans ce second terme il resterait invisible ET sans
-		# collision jusqu'à la manche suivante.
+		# ⚠️ **Les GADGETS ne partent PAS ici, et c'est un arbitrage d'Adrien**
+		# (2026-09-12, étape 28, lot G) : *« l'image de ta mort »*, plutôt que la
+		# scène du moment. Le lot F les purgeait ici, sur le patron des fusées ; or
+		# `_end_sequence_active` reste VRAI pendant toute la killcam et l'arrêt sur
+		# image (`_do_end_round`), et ne retombe qu'une ligne avant
+		# `ui.show_game_over()` : cette branche s'ouvrait donc à l'instant PRÉCIS où
+		# l'écran de fin se pose. Le présent y réapparaissait d'un coup — gadgets,
+		# lumières comprises — sur l'image figée de la mort. Ils reviennent donc
+		# dans `_abort_killcam()`,
+		# par où passent TOUTES les sorties : début de manche, match soldé, retour
+		# au menu. L'image de la mort tient jusqu'à ce que le joueur la quitte.
 		_purger_fusees_killcam()
-		_purger_gadgets_killcam()
 
 	# **Le joueur local passe en PREMIER.** Les deux panneaux ne sont pas « J1 » et
 	# « J2 » mais « moi » et « l'autre » : le premier est bleu, le second rouge.
@@ -2049,8 +2053,11 @@ func _lumiere_recue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 	# calcule l'éblouissement. Il porte sur la lumière qui ARRIVE, avant sa
 	# conversion en pénalité : une lampe à moitié éteinte verse moitié moins, et la
 	# courbe de `plafond_pour` fait le reste.
+	# ⚠️ Le dernier argument dit QUI tient cette torche : le leurre de ce joueur ne
+	# fait pas d'ombre sous sa propre lampe, et ne doit donc pas l'arrêter ici
+	# (étape 28, lot G).
 	return _lumiere_du_faisceau(espace, source.current_weapon, source, cible,
-		facteur_de_lampe_a(source.global_position))
+		facteur_de_lampe_a(source.global_position), int(source.player_id))
 
 
 ## Le facteur de lampe à une position : le MINIMUM des gadgets, exactement comme
@@ -2073,8 +2080,12 @@ func facteur_de_lampe_a(pos: Vector2) -> float:
 ## pour un joueur. Les recopier aurait donné une seconde définition du même
 ## faisceau — la faute exacte que le commentaire ci-dessus passe vingt lignes à
 ## expliquer.
+##
+## `pid_porteur` : le joueur qui TIENT ce faisceau, ou -1 pour une lampe posée. Il
+## ne sert qu'à `_ligne_de_vue` — voir la note du leurre là-bas.
 func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
-		source: Node2D, cible: Node2D, facteur: float = 1.0) -> float:
+		source: Node2D, cible: Node2D, facteur: float = 1.0,
+		pid_porteur: int = -1) -> float:
 	if arme == null or not is_instance_valid(source):
 		return 0.0
 	# L'arme sait à quelle échelle son faisceau est étalé ; on ne la lui demande
@@ -2084,7 +2095,7 @@ func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
 		source.global_position, cible.global_position) * facteur
 	if intensite <= 0.0:
 		return 0.0
-	if not _ligne_de_vue(espace, source, cible):
+	if not _ligne_de_vue(espace, source, cible, pid_porteur):
 		return 0.0
 	# La lumière qui ARRIVE n'est pas la pénalité qu'elle COÛTE. `Vision` rend
 	# la première — le pixel du faisceau lui-même ; `Eblouissement.plafond_pour`
@@ -2098,9 +2109,9 @@ func _lumiere_du_faisceau(espace: PhysicsDirectSpaceState2D, arme: WeaponData,
 ## laisse donc passer le faisceau — on peut éblouir son adversaire par-dessus un
 ## gouffre, décision de conception couverte par `test_vision`.
 func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
-		cible: Node2D) -> bool:
+		cible: Node2D, pid_porteur: int = -1) -> bool:
 	return _ligne_de_vue_depuis(espace, source.global_position, cible,
-		source.get_rid())
+		source.get_rid(), pid_porteur)
 
 
 ## La même, depuis un POINT plutôt qu'un corps.
@@ -2109,8 +2120,11 @@ func _ligne_de_vue(espace: PhysicsDirectSpaceState2D, source: Node2D,
 ## `tools/planche_eblouissement.gd` la NOMME dans ses préconditions, et que
 ## `tools/test_banc.gd` vérifie qu'elle existe. Un garde-fou qui nomme un symbole
 ## se périme EN VERT le jour où on le renomme — piège déjà consigné.
+##
+## `pid_porteur` : le joueur qui TIENT la lumière d'où part ce rayon — sa torche,
+## son flash de tir —, ou -1 pour une lumière posée, qui n'appartient à personne.
 func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
-		cible: Node2D, exclure: RID) -> bool:
+		cible: Node2D, exclure: RID, pid_porteur: int = -1) -> bool:
 	# ⚠️ **Les gadgets arrêtent le regard de la lumière autant que les murs**, et
 	# ils ne le faisaient pas. Le voile du Spectre coupait le faisceau à l'écran —
 	# son occluder le fait — pendant que l'éblouissement, lui, traversait la bâche
@@ -2122,6 +2136,19 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 	# porte un occluder**, `GadgetBase._monter_occluder()` étant appelé sans
 	# condition. Le jour où l'un d'eux n'en portera plus, il arrêterait
 	# l'éblouissement sans arrêter la lumière — l'inverse du défaut d'aujourd'hui.
+	#
+	# ⚠️ **Porter un occluder ne suffit plus depuis le 2026-09-12** (lot G). Un
+	# occluder n'arrête que les lumières dont le `shadow_item_cull_mask` contient
+	# SA couche : l'invariant utile est donc « un occluder sur une couche que cette
+	# lumière-là lit », et il ne se vérifie plus gadget par gadget. Le LEURRE en est
+	# exempté sciemment — il porte les couches d'ombre d'un corps, donc une mine qui
+	# brûle, une nappe de braises, une fusée au sol ne lui font aucune ombre, et
+	# pourtant il arrête leur éblouissement ici. **C'est voulu, parce qu'un corps
+	# fait exactement pareil** : il arrête le rayon par sa couche physique sans
+	# ombrer une lampe posée. Ce qui doit rester vrai n'est donc pas « l'ombre et
+	# l'éblouissement disent la même chose » mais « le leurre répond comme le
+	# corps qu'il imite » — et c'est ce que `fait_ombre_aux_lumieres_de()` tranche
+	# vingt lignes plus bas, source par source.
 	var q := PhysicsRayQueryParameters2D.create(depuis, cible.global_position,
 		MapGeometry.WALL_LAYER | MapGeometry.GADGET_LAYER)
 	# ⚠️ **Les gadgets qui n'arrêtent pas la lumière sont retirés du rayon.** Le
@@ -2147,7 +2174,20 @@ func _ligne_de_vue_depuis(espace: PhysicsDirectSpaceState2D, depuis: Vector2,
 			exclus.append(g.get_rid())
 		elif g.regard_par_la_forme:
 			exclus.append(g.get_rid())
-			par_la_forme.append(g)
+			# ⚠️ **Et sa forme ne l'arrête que si elle fait de l'ombre SOUS CETTE
+			# lumière-là** (étape 28, lot G, 2026-09-12). Le leurre porte désormais
+			# la couche d'ombre du corps de son poseur : la torche et le flash de
+			# ce poseur le traversent à l'écran, exactement comme ils traversent la
+			# place de son propre corps. Continuer de les arrêter ici ferait
+			# l'inverse du défaut que ce rayon corrige — on verrait la lumière
+			# passer sans la prendre —, et le poseur planterait un leurre qui
+			# éteint sa propre torche. Le socle répond vrai — pour les autres
+			# gadgets à FORME, s'il en vient un : cette porte n'est franchie que
+			# sous `regard_par_la_forme`, et le leurre est aujourd'hui le seul à
+			# lever ce drapeau. Les autres gadgets ne passent pas par ici, ils sont
+			# soit exclus du rayon, soit heurtés par lui.
+			if pid_porteur < 0 or g.fait_ombre_aux_lumieres_de(pid_porteur):
+				par_la_forme.append(g)
 	q.exclude = exclus
 	var res := espace.intersect_ray(q)
 	if not (res and res.collider == cible):
@@ -2185,7 +2225,11 @@ func _flash_de_tir(tireur: Node2D) -> void:
 		tireur.global_position.distance_to(cible.global_position), eclat)
 	if pic <= 0.0:
 		return
-	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible):
+	# Le flash de tir appartient au tireur, comme sa torche : son propre leurre ne
+	# l'ombre pas à l'écran (`muzzle_flash.shadow_item_cull_mask`, player.gd), il ne
+	# l'arrête donc pas ici non plus (étape 28, lot G).
+	if not _ligne_de_vue(p1.get_world_2d().direct_space_state, tireur, cible,
+			int(tireur.player_id)):
 		return
 	cible.apply_dazzle(pic)
 
@@ -3125,10 +3169,11 @@ func _purger_fusees_killcam() -> void:
 
 
 ## Étape 28, lot F — la killcam reconstruit les GADGETS depuis les instantanés, sur
-## le patron des fusées. **Une différence, décidée par Adrien le 2026-09-11** : le
-## présent est MASQUÉ, pas libéré, et il revient à la fin du rejeu — les ordres qui
-## arrivent pendant la killcam (allumage, bascule, destruction) visent ainsi toujours
-## un nœud qui existe.
+## le patron des fusées. **Deux différences, décidées par Adrien.** Le présent est
+## MASQUÉ, pas libéré (2026-09-11) — les ordres qui arrivent pendant la killcam
+## (allumage, bascule, destruction) visent ainsi toujours un nœud qui existe. Et il
+## ne revient qu'à la SORTIE de la killcam, pas à la fin du rejeu (2026-09-12,
+## lot G : *« l'image de ta mort »*) : voir `_purger_gadgets_killcam()`.
 func _maj_gadgets_killcam(snap) -> void:
 	if not _rejeu_gadgets_en_cours:
 		_rejeu_gadgets_en_cours = true
@@ -3231,10 +3276,15 @@ func _maj_traces_killcam(traces: PackedFloat32Array) -> void:
 		enfants[i].visible = false
 
 
-## Les copies partent, le présent revient. Appelé à la fin du rejeu ET par
-## `_abort_killcam()`, la sortie inconditionnelle : un chemin de sortie qui
-## l'oublierait laisserait les gadgets vivants invisibles ET sans collision jusqu'à
-## la manche suivante. Idempotent.
+## Les copies partent, le présent revient.
+##
+## ⚠️ **Appelé par `_abort_killcam()`, et par là SEULEMENT** (étape 28, lot G,
+## arbitrage d'Adrien du 2026-09-12 : *« l'image de ta mort »*). Le lot F appelait
+## aussi à la fin du rejeu, sur le patron des fusées — c'est-à-dire au moment où
+## l'écran de fin se pose, et le présent réapparaissait d'un coup sur l'arrêt sur
+## image. `_abort_killcam()` est la sortie inconditionnelle : toutes y passent —
+## début de manche, match soldé, retour au menu —, et un chemin qui l'oublierait
+## laisserait les gadgets vivants invisibles ET sans collision. Idempotent.
 func _purger_gadgets_killcam() -> void:
 	for g in _gadgets_killcam.values():
 		if g != null and is_instance_valid(g):
