@@ -1,15 +1,35 @@
 class_name ArenaDecor
 extends Node2D
 
-## ArenaDecor — Habillage d'atelier & Décors d'arène (Roman Graphique Brutaliste).
+## ArenaDecor — les marques au sol de l'arène (Roman Graphique Brutaliste).
 ##
-## Missions :
-## 1. Bandes de danger en chevrons noir/ambre aux abords des zones clés (fosses/gouffres).
-## 2. Marquages au pochoir de numéros de travée et délimitations d'angles industriels.
-## 3. Habillage des obstacles en mobilier lourd d'atelier (caisses rivetées, fûts d'encre, colonnes).
+## Deux choses, et deux seulement :
+## 1. Les bandes de danger en chevrons ambre aux abords du vide (fosses).
+## 2. Les pochoirs de travée (« 01 », « 02 », « BAY-A ») près des départs.
 ##
-## Zéro vert dans l'arène : respect strict de charte.gd.
-## Intérieur sombre respectant le fondu additif et liséré halogène franc.
+## ## Ce qui a été RETIRÉ, et pourquoi (2026-09-11, décision d'Adrien)
+##
+## Ce nœud habillait aussi chaque case de mur en « mobilier lourd » — cerclages,
+## rivets, cornières, un fût sur les piliers isolés — et posait une équerre à
+## chaque coin de sol. Mesuré par la session « régression de cadence » (sonde à
+## rendu forcé, vue unique) : **81 → 3 376 appels de dessin par image** au commit
+## qui l'a introduit (`bad6083`, 2026-09-08), ~5 ms de rendu CPU, en trois
+## copies dont deux rendues en écran scindé ; masquer ce seul nœud faisait
+## remonter la médiane de 80 à 100 et le 1 % bas de 47 à 69. Et depuis les murs
+## au trait (`mur_encre.gd`), ces rivets doublaient le contour d'encre sur la
+## même surface — deux vocabulaires de mur. Adrien : retirer l'habillage.
+##
+## ## Ce qui reste est CUIT en une texture par carte
+##
+## Le reste — chevrons tous les 7 px sur chaque bord de fosse, pochoirs — est
+## encore des centaines de primitives. Comme le bandeau LED (`mur_led.gd`), le
+## dessin est rendu UNE fois dans un `SubViewport` à la taille de la carte, et
+## chaque copie n'affiche plus qu'une texture : un appel de dessin par vue.
+## Tant que la cuisson n'est pas finie (deux images), et toujours en headless
+## (rien n'est rastérisé, les suites y passent), le dessin direct sert.
+##
+## Zéro vert dans l'arène : respect strict de charte.gd. Mélange normal (lot 4
+## de la refonte) : des marques peintes, pas des sources.
 
 const Charte := preload("res://charte.gd")
 
@@ -19,8 +39,23 @@ const TILE_SIZE := 35.0
 var _map_data: Dictionary = {}
 var _danger_edges: Array[Dictionary] = [] # {"start": Vector2, "end": Vector2, "normal": Vector2}
 var _stencils: Array[Dictionary] = []     # {"pos": Vector2, "type": String, "rot": float}
-var _corner_brackets: Array[Vector2] = [] # positions d'angles
-var _obstacles: Array[Dictionary] = []    # {"rect": Rect2, "type": String}
+## Le rectangle de monde que couvre la cuisson : la carte, plus une case de
+## marge de chaque côté (les chevrons d'un bord de carte débordent d'un pas).
+var _cadre: Rect2 = Rect2()
+## La texture cuite ; `null` tant qu'elle n'est pas prête, et pour toujours en
+## headless — `_draw()` dessine alors en direct.
+var _cuit: Texture2D = null
+## Les deux copies par vue, pour leur pousser la texture une fois cuite.
+var _copies: Array[Node2D] = []
+var _est_copie := false
+
+
+## Le peintre de la cuisson : un nœud jetable dans le SubViewport, qui dessine
+## le décor une fois, décalé pour que le cadre commence en (0, 0).
+class _Peintre extends Node2D:
+	var decor: Node2D
+	func _draw() -> void:
+		decor._dessiner_direct(self)
 
 
 ## Construit et ajoute les décors d'arène dans le nœud arena.
@@ -67,21 +102,72 @@ func _duplicate_for_player(parent: Node2D, player_idx: int, vis_mask: int, lt_ma
 	copy.name = "ArenaDecor_P%d" % player_idx
 	copy.visibility_layer = vis_mask
 	copy.light_mask = lt_mask
+	# `duplicate()` ne recopie pas les variables de script (piège du 2026-08-25).
 	copy._danger_edges = _danger_edges
 	copy._stencils = _stencils
-	copy._corner_brackets = _corner_brackets
-	copy._obstacles = _obstacles
+	copy._cadre = _cadre
+	copy._cuit = _cuit
+	copy._est_copie = true
 	copy.queue_redraw()
 	parent.add_child(copy)
+	_copies.append(copy)
+
+
+func _ready() -> void:
+	if not _est_copie:
+		_cuire()
+
+
+## Rend le décor UNE fois dans un SubViewport à la taille du cadre, puis
+## remplace le dessin direct par cette texture — ici et dans les copies.
+func _cuire() -> void:
+	if DisplayServer.get_name() == "headless" or _cadre.size.x <= 0.0:
+		return
+	# ⚠️ D'abord une image d'attente : `build()` DUPLIQUE ce nœud juste après
+	# l'avoir ajouté, enfants compris — un SubViewport déjà posé partirait dans
+	# les copies avec un peintre sans décor (vu à la première capture : six
+	# « _dessiner_direct in base Nil »). Créé à l'image suivante, il n'est qu'ici.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var vue := SubViewport.new()
+	vue.name = "CuissonDecor"
+	vue.size = Vector2i(_cadre.size)
+	vue.transparent_bg = true
+	vue.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vue.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	# Le viewport entre dans l'arbre AVANT de recevoir son peintre, pour que le
+	# peintre trouve son World2D dès son entrée. (L'erreur « !is_inside_tree() …
+	# Returning Ref<World2D>() » qu'imprime le photographe à sa FERMETURE sur un
+	# plan seul n'est pas d'ici : vérifiée présente avec l'ancien décor.)
+	add_child(vue)
+	var peintre := _Peintre.new()
+	peintre.decor = self
+	peintre.position = -_cadre.position
+	vue.add_child(peintre)
+	# Une image pour rendre : la texture n'est lisible qu'après.
+	await RenderingServer.frame_post_draw
+	# L'arène a pu être reconstruite pendant l'attente : ce nœud n'y est plus.
+	if not is_inside_tree():
+		return
+	var img: Image = vue.get_texture().get_image()
+	vue.queue_free()
+	if img == null:
+		return
+	_cuit = ImageTexture.create_from_image(img)
+	queue_redraw()
+	for copy in _copies:
+		if is_instance_valid(copy):
+			copy._cuit = _cuit
+			copy.queue_redraw()
 
 
 func _analyser_carte() -> void:
 	_danger_edges.clear()
 	_stencils.clear()
-	_corner_brackets.clear()
-	_obstacles.clear()
 
 	var grid := MapCodec.get_grid_size(_map_data)
+	_cadre = Rect2(Vector2(-TILE_SIZE, -TILE_SIZE), (Vector2(grid) + Vector2(2, 2)) * TILE_SIZE)
 	var floor_cells := MapCodec.get_floor_cells(_map_data)
 	var wall_cells := MapCodec.get_wall_cells(_map_data)
 
@@ -150,23 +236,6 @@ func _analyser_carte() -> void:
 					"normal": Vector2(0, -1)
 				})
 
-	# 2. Délimitations d'angles industriels (L-brackets aux coins des sols libres)
-	for cell in floor_cells:
-		var pos := Vector2(cell) * TILE_SIZE
-		var has_n := floor_set.has(cell + Vector2i(0, -1))
-		var has_s := floor_set.has(cell + Vector2i(0, 1))
-		var has_w := floor_set.has(cell + Vector2i(-1, 0))
-		var has_e := floor_set.has(cell + Vector2i(1, 0))
-
-		if not has_n and not has_w:
-			_corner_brackets.append(pos + Vector2(3, 3))
-		if not has_n and not has_e:
-			_corner_brackets.append(pos + Vector2(TILE_SIZE - 3, 3))
-		if not has_s and not has_w:
-			_corner_brackets.append(pos + Vector2(3, TILE_SIZE - 3))
-		if not has_s and not has_e:
-			_corner_brackets.append(pos + Vector2(TILE_SIZE - 3, TILE_SIZE - 3))
-
 	# 3. Marquages pochoir de travées aux abords des spawns P1 et P2
 	if p1_spawn.x >= 0:
 		_stencils.append({
@@ -190,30 +259,23 @@ func _analyser_carte() -> void:
 			"type": "bay"
 		})
 
-	# 4. Identification des obstacles pour habillage mobilier lourd
-	# Fûts d'encre sur piliers isolés 1x1, caisses rivetées sur blocs
-	for cell in wall_cells:
-		var has_n := wall_set.has(cell + Vector2i(0, -1))
-		var has_s := wall_set.has(cell + Vector2i(0, 1))
-		var has_w := wall_set.has(cell + Vector2i(-1, 0))
-		var has_e := wall_set.has(cell + Vector2i(1, 0))
-
-		var rect := Rect2(Vector2(cell) * TILE_SIZE, Vector2(TILE_SIZE, TILE_SIZE))
-		if not has_n and not has_s and not has_w and not has_e:
-			_obstacles.append({"rect": rect, "type": "fut_encre"})
-		else:
-			_obstacles.append({"rect": rect, "type": "caisse_acier"})
-
 
 func _draw() -> void:
-	_dessiner_bandes_danger()
-	_dessiner_equerres_angles()
-	_dessiner_pochoirs()
-	_dessiner_obstacles_atelier()
+	if _cuit != null:
+		draw_texture(_cuit, _cadre.position)
+		return
+	_dessiner_direct(self)
+
+
+## Le dessin lui-même, sur n'importe quel CanvasItem : le nœud (avant cuisson
+## et en headless) ou le peintre de la cuisson.
+func _dessiner_direct(sur: CanvasItem) -> void:
+	_dessiner_bandes_danger(sur)
+	_dessiner_pochoirs(sur)
 
 
 ## Bandes de sécurité en chevrons noir / ambre d'atelier le long des gouffres
-func _dessiner_bandes_danger() -> void:
+func _dessiner_bandes_danger(sur: CanvasItem) -> void:
 	var chevron_step := 7.0
 	for edge in _danger_edges:
 		var p1: Vector2 = edge["start"]
@@ -236,24 +298,15 @@ func _dessiner_bandes_danger() -> void:
 				pt_next + normal * CHEVRON_WIDTH + tangent * (chevron_step * 0.4),
 				pt + normal * CHEVRON_WIDTH + tangent * (chevron_step * 0.4)
 			])
-			draw_colored_polygon(poly, Charte.AMBRE * 0.85)
+			sur.draw_colored_polygon(poly, Charte.AMBRE * 0.85)
 
 		# Liseré de délimitation ambre franc en bordure de bande
-		draw_line(p1 + normal * CHEVRON_WIDTH, p2 + normal * CHEVRON_WIDTH,
+		sur.draw_line(p1 + normal * CHEVRON_WIDTH, p2 + normal * CHEVRON_WIDTH,
 			Charte.AMBRE * 0.5, 1.0)
 
 
-## Équerres industrielles de coin d'atelier (L-brackets pochoir)
-func _dessiner_equerres_angles() -> void:
-	var bras := 7.0
-	var col := Charte.AMBRE * 0.70
-	for pt in _corner_brackets:
-		draw_line(pt - Vector2(bras, 0), pt + Vector2(bras, 0), col, 1.5)
-		draw_line(pt - Vector2(0, bras), pt + Vector2(0, bras), col, 1.5)
-
-
 ## Pochoirs de travée et numérotation d'atelier
-func _dessiner_pochoirs() -> void:
+func _dessiner_pochoirs(sur: CanvasItem) -> void:
 	for st in _stencils:
 		var pos: Vector2 = st["pos"]
 		var txt: String = st["text"]
@@ -262,80 +315,41 @@ func _dessiner_pochoirs() -> void:
 		# Cadre pochoir discontinu
 		var half := 12.0
 		# 4 coins en équerre
-		draw_line(pos + Vector2(-half, -half), pos + Vector2(-half + 5, -half), col, 1.0)
-		draw_line(pos + Vector2(-half, -half), pos + Vector2(-half, -half + 5), col, 1.0)
+		sur.draw_line(pos + Vector2(-half, -half), pos + Vector2(-half + 5, -half), col, 1.0)
+		sur.draw_line(pos + Vector2(-half, -half), pos + Vector2(-half, -half + 5), col, 1.0)
 
-		draw_line(pos + Vector2(half, -half), pos + Vector2(half - 5, -half), col, 1.0)
-		draw_line(pos + Vector2(half, -half), pos + Vector2(half, -half + 5), col, 1.0)
+		sur.draw_line(pos + Vector2(half, -half), pos + Vector2(half - 5, -half), col, 1.0)
+		sur.draw_line(pos + Vector2(half, -half), pos + Vector2(half, -half + 5), col, 1.0)
 
-		draw_line(pos + Vector2(-half, half), pos + Vector2(-half + 5, half), col, 1.0)
-		draw_line(pos + Vector2(-half, half), pos + Vector2(-half, half - 5), col, 1.0)
+		sur.draw_line(pos + Vector2(-half, half), pos + Vector2(-half + 5, half), col, 1.0)
+		sur.draw_line(pos + Vector2(-half, half), pos + Vector2(-half, half - 5), col, 1.0)
 
-		draw_line(pos + Vector2(half, half), pos + Vector2(half - 5, half), col, 1.0)
-		draw_line(pos + Vector2(half, half), pos + Vector2(half, half - 5), col, 1.0)
+		sur.draw_line(pos + Vector2(half, half), pos + Vector2(half - 5, half), col, 1.0)
+		sur.draw_line(pos + Vector2(half, half), pos + Vector2(half, half - 5), col, 1.0)
 
 		# Dessin vectoriel du chiffre ou symbole pochoir
-		_dessiner_glyphe_pochoir(pos, txt, col)
+		_dessiner_glyphe_pochoir(sur, pos, txt, col)
 
 
-func _dessiner_glyphe_pochoir(pos: Vector2, txt: String, col: Color) -> void:
+func _dessiner_glyphe_pochoir(sur: CanvasItem, pos: Vector2, txt: String, col: Color) -> void:
 	match txt:
 		"01":
 			# Chiffre 01 stylisé au pochoir brutaliste
 			# 0 : rectangle avec découpe centrale
-			draw_rect(Rect2(pos.x - 7, pos.y - 5, 5, 10), col, false, 1.0)
+			sur.draw_rect(Rect2(pos.x - 7, pos.y - 5, 5, 10), col, false, 1.0)
 			# 1 : trait vertical franc
-			draw_line(Vector2(pos.x + 3, pos.y - 5), Vector2(pos.x + 3, pos.y + 5), col, 1.5)
-			draw_line(Vector2(pos.x + 1, pos.y - 3), Vector2(pos.x + 3, pos.y - 5), col, 1.2)
+			sur.draw_line(Vector2(pos.x + 3, pos.y - 5), Vector2(pos.x + 3, pos.y + 5), col, 1.5)
+			sur.draw_line(Vector2(pos.x + 1, pos.y - 3), Vector2(pos.x + 3, pos.y - 5), col, 1.2)
 		"02":
 			# Chiffre 02 stylisé au pochoir
-			draw_rect(Rect2(pos.x - 7, pos.y - 5, 5, 10), col, false, 1.0)
+			sur.draw_rect(Rect2(pos.x - 7, pos.y - 5, 5, 10), col, false, 1.0)
 			# 2 en traits brisés
-			draw_line(Vector2(pos.x + 1, pos.y - 5), Vector2(pos.x + 6, pos.y - 5), col, 1.2)
-			draw_line(Vector2(pos.x + 6, pos.y - 5), Vector2(pos.x + 6, pos.y), col, 1.2)
-			draw_line(Vector2(pos.x + 6, pos.y), Vector2(pos.x + 1, pos.y + 5), col, 1.2)
-			draw_line(Vector2(pos.x + 1, pos.y + 5), Vector2(pos.x + 6, pos.y + 5), col, 1.2)
+			sur.draw_line(Vector2(pos.x + 1, pos.y - 5), Vector2(pos.x + 6, pos.y - 5), col, 1.2)
+			sur.draw_line(Vector2(pos.x + 6, pos.y - 5), Vector2(pos.x + 6, pos.y), col, 1.2)
+			sur.draw_line(Vector2(pos.x + 6, pos.y), Vector2(pos.x + 1, pos.y + 5), col, 1.2)
+			sur.draw_line(Vector2(pos.x + 1, pos.y + 5), Vector2(pos.x + 6, pos.y + 5), col, 1.2)
 		_:
 			# Symbole de baie industrielle (losange barré)
-			draw_line(pos - Vector2(5, 0), pos + Vector2(5, 0), col, 1.0)
-			draw_line(pos - Vector2(0, 5), pos + Vector2(0, 5), col, 1.0)
-			draw_rect(Rect2(pos - Vector2(3, 3), Vector2(6, 6)), col, false, 1.0)
-
-
-## Habillage des obstacles en mobilier lourd (fûts d'encre et caisses rivetées)
-func _dessiner_obstacles_atelier() -> void:
-	for obs in _obstacles:
-		var r: Rect2 = obs["rect"]
-		var center := r.get_center()
-
-		if obs["type"] == "fut_encre":
-			# Fût d'encre lourd d'atelier
-			var rayon := (TILE_SIZE * 0.5) - 3.0
-			# Cerclage extérieur acier halogène
-			draw_arc(center, rayon, 0, TAU, 24, Charte.HALOGENE, 1.5)
-			# Nervure concentrique intermédiaire
-			draw_arc(center, rayon * 0.65, 0, TAU, 16, Charte.LINE * 0.8, 1.0)
-			# Bouchon / valve décentrée
-			var valve_pos := center + Vector2(rayon * 0.35, -rayon * 0.25)
-			draw_circle(valve_pos, 2.5, Charte.LINE)
-			draw_circle(valve_pos, 1.2, Charte.ACIER * 0.5)
-			# 4 rivets de fixation du fût
-			for i in 4:
-				var a := float(i) * PI * 0.5 + PI * 0.25
-				var pt := center + Vector2(cos(a), sin(a)) * (rayon - 2.5)
-				draw_circle(pt, 1.0, Charte.ACIER * 0.45)
-		else:
-			# Caisse rivetée d'atelier : renforts d'angles et rivets
-			var inset := 3.0
-			var ir := r.grow(-inset)
-			# Cornières intérieures
-			draw_rect(ir, Charte.LINE * 0.6, false, 1.0)
-			# Rivets aux 4 coins
-			var rivets := [
-				ir.position + Vector2(2, 2),
-				Vector2(ir.end.x - 2, ir.position.y + 2),
-				Vector2(ir.position.x + 2, ir.end.y - 2),
-				ir.end - Vector2(2, 2)
-			]
-			for rv in rivets:
-				draw_circle(rv, 1.0, Charte.ACIER * 0.5)
+			sur.draw_line(pos - Vector2(5, 0), pos + Vector2(5, 0), col, 1.0)
+			sur.draw_line(pos - Vector2(0, 5), pos + Vector2(0, 5), col, 1.0)
+			sur.draw_rect(Rect2(pos - Vector2(3, 3), Vector2(6, 6)), col, false, 1.0)

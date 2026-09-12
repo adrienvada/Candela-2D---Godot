@@ -6,7 +6,7 @@ extends SceneTree
 ## Valide :
 ## 1. Génération des dalles de béton brut et texture d'atelier (CandelaTileSet).
 ## 2. Éjection, inertie physique, arrêt CPU et plafond persistant des douilles (BulletCasing).
-## 3. Marquages au sol d'atelier (chevrons danger ambre/noir, pochoirs, équerres).
+## 3. Marquages au sol (chevrons de danger, pochoirs) et leur cuisson en texture.
 ## 4. Habillage mobilier lourd (fûts, caisses, colonnes rivetées) et intégrité physique.
 ## 5. Règle absolue de la Charte : ZÉRO pixel vert dans l'arène.
 
@@ -163,8 +163,22 @@ func _test_marquages_et_chevrons_danger() -> void:
 	_check("ArenaDecor instancié", decor != null)
 	_check("Bandes de danger détectées aux abords du vide", decor._danger_edges.size() > 0,
 		"bords=%d" % decor._danger_edges.size())
-	_check("Équerres d'angles détectées", decor._corner_brackets.size() > 0)
 	_check("Pochoirs de spawn détectés (01 et 02)", decor._stencils.size() >= 2)
+	# 2026-09-11 (décision d'Adrien, régression de cadence) : plus d'équerres ni
+	# de mobilier par case de mur — le décor n'est que chevrons et pochoirs, et
+	# il se CUIT en une texture par carte. En headless rien ne se rastérise : la
+	# texture reste nulle et le dessin direct sert, c'est l'état attendu ici.
+	var src := FileAccess.get_file_as_string("res://arena_decor.gd")
+	_check("plus d'habillage par case de mur (rivets, fûts, équerres)",
+		not src.contains("_obstacles") and not src.contains("_corner_brackets"))
+	_check("le décor se cuit dans un SubViewport", src.contains("SubViewport.new()"))
+	_check("cuit, _draw() ne pose qu'une texture", src.contains("draw_texture(_cuit, _cadre.position)"))
+	_check("en headless, pas de cuisson : texture nulle", decor._cuit == null)
+	var grid := MapCodec.get_grid_size(test_map)
+	_check("le cadre de cuisson couvre la carte plus une case de marge",
+		decor._cadre.position == Vector2(-35, -35)
+		and decor._cadre.size == (Vector2(grid) + Vector2(2, 2)) * 35.0,
+		str(decor._cadre))
 
 	# Duplications pour l'écran partagé
 	var p1_decor := parent.get_node_or_null("ArenaDecor_P1") as Node2D
@@ -175,6 +189,9 @@ func _test_marquages_et_chevrons_danger() -> void:
 	_check("Masque de lumière P1 conforme (1|16)", p1_decor.light_mask == (1 | 16))
 	_check("Masque de vue P2 conforme (4)", p2_decor.visibility_layer == 4)
 	_check("Masque de lumière P2 conforme (1|32)", p2_decor.light_mask == (1 | 32))
+	_check("les copies portent le même cadre", p1_decor._cadre == decor._cadre and p2_decor._cadre == decor._cadre)
+	_check("les copies sont marquées copies (pas de cuisson en double)", p1_decor._est_copie and p2_decor._est_copie)
+	_check("l'original connaît ses deux copies", decor._copies.size() == 2)
 
 	parent.queue_free()
 func _test_habillage_obstacles() -> void:
