@@ -321,6 +321,18 @@ game feel, et **Échap / F3** à vérifier à la main.
 
 ## État — le plus récent en haut
 
+### 2026-09-11 — session « walls-led-breathing-light-4872dd-8a » : le halo révèle l'ennemi proche, `player.gd` touché
+
+**Déclaration : `player.gd` est du domaine « game feel »**, sur décision d'Adrien
+(« je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne
+doit pas me rendre détectable auprès de mon ennemi à distance »). Touché : le
+masque de `visual_enemy` / `visual_enemy_ptr` et celui du halo, qui passent
+désormais par `canaux_lumiere.gd`. Créés : `canaux_lumiere.gd` (la règle des
+canaux, sans autoload, à la demande de la session « 10 classes » pour son
+leurre) et `tools/test_halo_proximite.tscn` + `.gd` (dans `run_suites.sh`). **Signalé,
+pas touché** : `gadget_leurre.gd` (chantier « 10 classes ») — le leurre ne prend
+pas le halo et se reconnaîtrait donc de près ; message envoyé à cette session.
+
 ### 2026-09-10 — session « walls-led-breathing-light-4872dd-8a » (worktree `walls-led-breathing-light-4872dd`) : prototype du bandeau LED des murs
 
 **Créés :** `mur_led.gd`, `tools/test_mur_led.gd`. **Touchés :** `game_state.gd`
@@ -3990,6 +4002,16 @@ Non touchés, sur verdict : l'éditeur de cartes (« pour l'instant on laisse »
 le lot 4 (l'additif du monde : `arena_decor.gd`, `particle_pool.gd`,
 `bullet.gd`, `releve_balistique.gd`) en attente de sa décision. Rien n'est
 poussé : Adrien n'a pas donné l'ordre cette fois.
+
+### 2026-09-11 (soir) — le décor d'arène, cadence
+
+Signalement de la session « régression de cadence » (branche
+`claude/vigilant-goldstine-39f039`) : `arena_decor.gd` coûtait ~5 ms de rendu
+par image. Sur décision d'Adrien : habillage par case de mur et équerres
+retirés, chevrons et pochoirs cuits en une texture par carte (`arena_decor.gd`,
+`tools/test_arena_matter.gd`). `tools/bench_framerate.gd` relève désormais
+appels de dessin, objets et primitives par image. Le contour de `mur_encre.gd`
+reste le second coût, non traité.
 
 ## 2026-09-12 — Étape 28 : dix suggestions de gameplay, et quatre « pourquoi » faux (chantier DIX CLASSES)
 

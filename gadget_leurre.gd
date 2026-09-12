@@ -150,11 +150,19 @@ func _monter_visuel() -> void:
 	# dans la charte pour cette raison ; voir sa note là-bas.
 	var demi := Vector2(Charte.empreinte_sprite(tex.get_width()),
 		Charte.empreinte_sprite(tex.get_height())) * 0.5
-	# Le corps que voit l'ADVERSAIRE : `visual_enemy` trait pour trait — masque de
-	# lumière 2, shader du corps adverse, couche de la vue de l'AUTRE joueur. Le nom
-	# « Visuel » lui reste : c'est lui qui trompe.
+	# Le corps que voit l'ADVERSAIRE : `visual_enemy` trait pour trait — son masque de
+	# lumière (voir juste en dessous), le shader du corps adverse, et la couche de la
+	# vue de l'AUTRE joueur. Le nom « Visuel » lui reste : c'est lui qui trompe.
 	_visuel = _corps_de_silhouette("Visuel", tex, demi)
-	_visuel.light_mask = 2
+	# ⚠️ **Le masque se DEMANDE, il ne s'écrit pas** (2026-09-12). Il valait `2` en
+	# dur ; depuis que le halo de proximité d'un joueur révèle l'ennemi proche — sur
+	# l'écran de son seul porteur (décision d'Adrien du 2026-09-11, chantier du
+	# bandeau LED) —, un corps adverse porte aussi le canal de la vue d'en face.
+	# Un leurre resté à `2` ne s'allumait pas dans ce halo alors qu'un vrai corps si :
+	# il se serait reconnu de près. `CanauxLumiere` existe pour que la règle ne soit
+	# pas recopiée ; le contrôle « VUE PAR VUE » de `tools/test_classes.gd` compare au
+	# masque RÉEL de `visual_enemy`, et c'est lui qui a rougi à la fusion (2 contre 34).
+	_visuel.light_mask = CanauxLumiere.masque_vue_adverse(poseur_id)
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER_CORPS_ADVERSE
 	_visuel.material = mat

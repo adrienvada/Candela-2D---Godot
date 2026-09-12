@@ -653,8 +653,11 @@ func _ready():
 	visual_dim_ptr.light_mask = 1
 	visual_reveal.light_mask = 1
 	visual_reveal_ptr.light_mask = 1
-	visual_enemy.light_mask = 2    # Layer 2 : Sprite Ennemi (Rétrodiffusion, Torche, Sparks, Balles)
-	visual_enemy_ptr.light_mask = 2# Layer 2 : Sprite Ennemi
+	# Layer 2 : Sprite Ennemi (Rétrodiffusion, Torche, Sparks, Balles), plus le
+	# canal de la vue adverse pour que le halo de l'autre le révèle de près —
+	# chez l'autre seulement (Adrien, 2026-09-11). Voir canaux_lumiere.gd.
+	visual_enemy.light_mask = CanauxLumiere.masque_vue_adverse(player_id)
+	visual_enemy_ptr.light_mask = CanauxLumiere.masque_vue_adverse(player_id)
 	visual_reveal_enemy.light_mask = 1
 	visual_reveal_enemy_ptr.light_mask = 1
 	
@@ -835,10 +838,7 @@ func _ready():
 	ambient_light.energy = 0.8
 	ambient_light.shadow_enabled = true
 	ambient_light.shadow_filter = PointLight2D.SHADOW_FILTER_NONE
-	if player_id == 0:
-		ambient_light.range_item_cull_mask = 16
-	else:
-		ambient_light.range_item_cull_mask = 32
+	ambient_light.range_item_cull_mask = CanauxLumiere.canal_de_vue(player_id)
 	add_child(ambient_light)
 	
 	# The main occluder is configured as a perfect circle on layer 3 (value 4).

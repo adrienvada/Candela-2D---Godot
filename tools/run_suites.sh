@@ -362,6 +362,9 @@ run() {
 
 for t in "${SUITES[@]}"; do run "$t" --script "res://tools/$t.gd"; done
 run test_netcode res://tools/test_netcode.tscn
+# Une scène et non un --script : player.gd s'appuie sur des autoloads que le mode
+# --script ne déclare pas à la compilation (voir l'en-tête du test).
+run test_halo_proximite res://tools/test_halo_proximite.tscn
 
 # Le cycle de fin de match, en une seule instance et sans réseau.
 #

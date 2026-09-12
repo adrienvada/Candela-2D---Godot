@@ -93,6 +93,12 @@ var _samples: Array[float] = []
 var _seconds := 15.0
 var _peak_particles := 0
 var _peak_bullets := 0
+## Les compteurs du serveur de rendu, relevés à chaque image mesurée : appels
+## de dessin, objets, primitives (2026-09-11, régression de cadence du décor
+## d'arène — ils disent où va le temps de rendu, indépendamment du focus).
+var _appels: Array[int] = []
+var _objets: Array[int] = []
+var _primitives: Array[int] = []
 ## Postes RETIRÉS de la charge. Les trois drapeaux se composent, ce qui donne les
 ## sept configurations utiles sans en inventer d'autres.
 var _sans_vue := false
@@ -415,6 +421,7 @@ func _stress(duration: float, sampling: bool) -> void:
 			# banc prétendrait mesurer une charge qu'il n'aurait pas prouvée.
 			_peak_particles = maxi(_peak_particles, _main.particle_pool.active_count())
 			_peak_bullets = maxi(_peak_bullets, _main.bullet_container.get_child_count())
+			_relever_rendu()
 
 	# Étape 28, lot F — on RECOMPTE après coup, et on refuse le chiffre si la nappe a
 	# fondu. ⚠️ Le garde de `_appliquer_variante()` ne voit que la POSE : le fondu des
@@ -659,6 +666,9 @@ func _report() -> void:
 		% [sorted[sorted.size() - 1] * 1000.0, 1.0 / sorted[sorted.size() - 1]])
 	print("  Particules (pic) : %d / %d" % [_peak_particles, ParticlePool.MAX_ACTIVE])
 	print("  Balles (pic)     : %d" % _peak_bullets)
+	if not _appels.is_empty():
+		print("  Rendu (médiane par image) : %d appels de dessin, %d objets, %d primitives"
+			% [_mediane_int(_appels), _mediane_int(_objets), _mediane_int(_primitives)])
 	print("  Verdict %.0f fps   : %s" % [CIBLE_1_POURCENT_BAS,
 		"TENU" if low1 >= CIBLE_1_POURCENT_BAS else "NON TENU (1 %% bas à %.0f)" % low1])
 	# **Ce n'est pas le second plan qui casse le 1 % bas, c'est le CHANGEMENT.**
@@ -797,3 +807,16 @@ func _value(args: PackedStringArray, flag: String, fallback: String) -> String:
 	if idx < 0 or idx + 1 >= args.size():
 		return fallback
 	return args[idx + 1]
+
+
+## Les compteurs de rendu de l'image qui vient de se dessiner.
+func _relever_rendu() -> void:
+	_appels.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)))
+	_objets.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)))
+	_primitives.append(int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)))
+
+
+static func _mediane_int(valeurs: Array[int]) -> int:
+	var tri := valeurs.duplicate()
+	tri.sort()
+	return tri[tri.size() / 2]

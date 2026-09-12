@@ -2426,6 +2426,7 @@ Détail opératoire complet : [docs/MISE_A_JOUR.md](MISE_A_JOUR.md).
 |---|---|
 | **Les gadgets éblouissent à hauteur de ce qu'ils brûlent** (2026-09-11, Adrien) | La règle de la fusée (« Une fusée éteinte éblouit encore », tableau des demandes du 2026-09-11 dans le chantier « refonte roman graphique ») étendue aux gadgets, à l'étape 28 du chantier DIX CLASSES : `GadgetBase.energie_relative()` — la part de sa pleine lumière qu'un gadget brûle — devient le `gain` de sa source d'éblouissement de proximité, lu **sans garde** (le socle rend 1). Les braises rendent `0,35 + 0,65·reste`, la courbe même de leur lueur, et leur rayon d'aveuglement ne rétrécit plus : un rayon qui baisserait EN PLUS du gain atténuerait deux fois (à 68 px en fin de vie, 0,010 au lieu de 0,231). **Conséquence à connaître** : au centre de la nappe, le plafond valait 1,00 toute sa vie ; il va de 1,00 à 0,35. À 120 px en fin de vie il passe de 0,00 à 0,14 — elles éblouissent un peu plus loin qu'avant, parce que le rayon ne fond plus. La **mine** est un commit séparé (lot A2), à confirmer par Adrien sur ses chiffres : c'est tout son flash qui baisse, pas seulement sa fin, et la question posée ne le disait pas. Jusque-là elle garde son comportement (le socle rend 1). **Fait le 2026-09-12, Adrien validant en connaissance de cause** : elle rend `reste²` — la courbe que sa lumière suivait déjà — et son rayon reste à 460. **Conséquence d'équilibre, mesurée et assumée, pas maquillée** : au rayon de déclenchement (72 px), le pic d'aveuglement passe de 0,750 à 0,488 et le temps passé au-dessus de 0,3 de 1,02 s à 0,42 s ; à 30 px, le pic passe de 0,884 à 0,521 ; à 150 px de 0,553 à 0,422. À 300 px elle éblouit au contraire un peu plus (aire 0,079 → 0,154) : le rayon ne fond plus. Commit séparé et réversible seul — l'annuler ne coûte rien d'autre. |
 | **Les conditions de match remontent avec le rapport, en ligne seulement** (2026-09-10, Adrien) | Chantier « prêt à l'essai », PE2.3, version minimale. Un testeur qui dit « ça rame » n'avait rien à joindre, et tous les relevés de cadence venaient d'un seul M3 ; depuis PE2.1 chaque match archive ses conditions chez le joueur, mais chez lui. Le tuyau du classement existe et est éprouvé : on y glisse le bloc entier, pour les matchs en ligne amicaux et classés, avec une phrase d'information aux testeurs (`docs/SUPABASE.md`). L'écran scindé et l'entraînement attendent : ils ne rapportent rien et n'ont pas d'identité, les couvrir serait un envoi séparé avec un identifiant de machine anonyme. **Jamais un motif de refus** : un relevé mal formé vaut `null`, le match s'écrit. |
+| **Le halo de proximité révèle l'ennemi proche — chez son porteur seulement** (2026-09-11, Adrien) | *« Je veux que le halo révèle un ennemi proche. Attention, ma propre lueur ne doit pas me rendre détectable auprès de mon ennemi à distance. »* Jusqu'ici le halo (`ambient_light`, canal 16 pour la vue de J1, 32 pour J2) n'éclairait **aucun** sprite ennemi : le canal 2 est commun aux deux sprites ennemis — le mien chez lui, le sien chez moi —, et l'éclairer aurait allumé MON sprite sur SON écran. Le choix d'origine protégeait donc la seconde moitié de la phrase au prix de la première : un adversaire collé à soi restait invisible sans torche. **Maintenant** : le sprite ennemi d'un joueur porte `2 | canal de la vue ADVERSE` (`canaux_lumiere.gd::masque_vue_adverse()`, canal de vue = `16 << id` — un module sans autoload, pour que le leurre du chantier « 10 classes » applique la même formule sans la recopier ni nommer `player.gd`) ; le halo de l'autre l'éclaire, chez l'autre seulement ; le mien ne l'atteint jamais. Aucune autre lumière du jeu ne touche les canaux 16/32 (vérifié), donc aucune fuite. Le halo garde ses ombres : pas de révélation à travers un mur. Mesuré au banc de rendu (vrai shader adverse, vrai halo) : halo de J1 → l'ennemi sur l'écran de J1 **136**/255, J1 sur l'écran de J2 **0** ; halo de J2 → **130** et **0**. Garde : `tools/test_halo_proximite.tscn` — **une scène, pas un `--script`** : `player.gd` ne compile pas en `--script` (autoloads), et la première version du test annonçait « tous les tests passent » sans avoir rien vérifié ; d'où un plancher de vérifications. **Point ouvert, signalé au chantier « 10 classes »** : le leurre (`gadget_leurre.gd`, masque 1\|2\|4) ne prend pas le halo et se reconnaîtrait donc de près. |
 | **Les murs et l'adversaire suivent l'énergie des lampes** (2026-09-10, Adrien) | *« Corrige d'abord le point 2, que je puisse me rendre compte de l'effet LED avec des éclairages plus réalistes et fluides. »* `shimmer_murs.gdshader` et `player_enemy_light.gdshader` lisaient `LIGHT_COLOR` sans `LIGHT_ENERGY` ; or les masques de lumière du jeu sont blancs, la forme dans l'alpha, l'intensité **seulement** dans l'énergie. Toute lampe les allumait donc d'un bloc (constat de la session « bandeau LED », mesures détaillées par la session « intelligent-lovelace », branche `claude/intelligent-lovelace-4fd4d2`, `9f71fa5`, section « Pièges connus » de SA feuille de route). **Le liseré est normalisé et plafonné** (`× min(LIGHT_ENERGY / 0,8 ; 1)`) plutôt que multiplié tel quel — tel quel, il aurait été ×2,3 sous la torche, donc saturé. **La référence est la vision de proximité** : le halo que chaque joueur porte autour de lui (`ambient_light`, 0,8, qui n'éclaire que la vue de son porteur), vérifiée contre `player.gd` par `test_mur_led`. **Elle a d'abord été la torche (2,5)**, le 2026-09-10 : fondus longs et murs qui vacillaient au tir, mais le halo ne soulignait plus le mur voisin qu'au tiers (148 → 47). **Adrien a tranché le 2026-09-11 : « garder la proximité »** — ce halo sert au joueur à se repérer dans son environnement immédiat, il ne doit rien perdre. Le plafond vient des lampes plus fortes — fusée pleine 3,0, mine 6,0 — qui sans lui auraient rendu l'arête plus forte qu'avant : **aucune lampe n'éclaire le liseré plus qu'avant ; seules celles plus faibles que le halo s'atténuent, jusqu'à 0.** Mesuré au banc isolé, liseré avant → après : torche de 6,0 à 1,0 **~182 → ~182** (tir compris), 0,5 **183 → 116**, 0,1 **182 → 23**, 0 **0 → 0** ; halo de proximité au mur **148 → 148**. **Ce qui change donc en jouant** : une lampe à 0 mais allumée (grésillement) n'éclaire plus le mur ; le « mauvais contact » (lampe à 0,15-0,55) l'atténue ; la fin des fondus devient progressive (extinction de torche, fusée entre deux sursauts, braises qui s'éteignent). Tout le reste est inchangé. (Version torche, retirée : liseré 147 / 110 au tir, 73 à 1,0.) **Le corps adverse est un commit SÉPARÉ, à confirmer par Adrien** : la décision a été prise sur une explication qui le citait (« un adversaire touché par une lumière faible serait moins visible ») sans dire assez clairement que c'est un **changement d'équilibre**. Mesuré : adversaire **112 à toute énergie, 0 compris → 112 / 112 / 112 / 44 / 0** pour 2,5 / 1 / 0,5 / 0,1 / 0 — sous la torche rien ne bouge (saturé dès ~0,26), une torche à 0 mais allumée (grésillement du Parasite) ne le dessine plus, et **la rétrodiffusion des classes furtives** (`backlight_multiplier = 0.1`, arbalète et spectre) **révèle enfin moins son porteur** — ce réglage n'avait jusqu'ici aucun effet sur ce que voit l'adversaire. **Confirmé par Adrien le 2026-09-11** pour le grésillement : *« les lumières ne doivent pas éclairer si elles sont à 0 dans leur grésillement »*. Il a aussi précisé que **la lueur de chaque joueur est sa vision de proximité et ne doit jamais le révéler à l'ennemi** — ce que le code fait déjà : `ambient_light` n'éclaire que les calques de son porteur (masques 16 / 32), jamais le sprite adverse. Ce qui révèle, c'est la **rétrodiffusion**, le reflet de la torche sur le corps (`body_light`, allumée avec la torche, énergie proportionnelle à la sienne) : elle suit maintenant sa force, et donc le `backlight_multiplier` des classes furtives. ⚠️ L'explication donnée à Adrien le 2026-09-10 appelait cette rétrodiffusion « la petite lueur autour de chaque joueur » : **c'est ce mot qui a créé le malentendu** — deux lumières distinctes portaient un seul nom. **Pas touchés** : `player_rim_light.gdshader` et `blood_shader.gdshader`, même motif, hors de la décision — listés comme exceptions dans `test_mur_led`, qui refuse tout NOUVEAU `light()` sans énergie. **`shimmer_murs.gdshader` est retiré le 2026-09-11** (refonte roman graphique, second chantier, lot N) : la tuile de mur étant noire, il ne dessinait plus rien, normalisation comprise. Le contour des murs (`mur_encre.gd`) est éclairé par défaut, donc proportionnel à l'énergie SANS plafond ni normalisation : sous le halo de proximité (0,8) il vaut 0,8 / 2,5 de ce qu'il vaut sous la torche, et la mine à 6,0 le surexpose. La session LED l'a signalé, et **Adrien a tranché le même jour : « il éclaire assez »** (voir la section du chantier LED, `bc0c25b`). Point clos : rien à régler sur `mur_encre`. ⚠️ Cette ligne a dit « point ouvert » pendant quelques heures après la décision, parce que le commit qui l'actait n'a mis à jour que la section du chantier — la session du suivi l'a vu en croisant les deux. |
 | **Les particules de sang n'éclairent plus** (2026-09-10, Adrien) | Referme la réserve inscrite le 2026-08-18 sur V4.11 (« un sang auto-éclairé révèle la position de la victime au moment du coup au but — ce n'est pas une décision qu'un agent prend en implémentant ») : Adrien la prend, dans le sens du retrait. Deux raisons se rejoignent. Le jeu : toucher ne doit pas dénoncer la victime par sa propre chair. Le rendu : 25 gouttes par coup au but, chacune une `PointLight2D`, face au plafond moteur de **15 lumières par item** (voir « Pièges connus », *Une lumière à énergie zéro compte quand même*) — un coup au but près d'une fusée ou d'une torche jetait la lumière la plus récente du quadrant pendant 0,3-0,8 s. L'éclat V4.11 est retiré en entier (`BLOOD_FLASH_*`, la surmultiplication dans `advance()`), pas seulement éteint : un mécanisme mort qui reste lisible se rallume un jour par erreur. **Les étincelles gardent leur lumière** — elles naissent d'un mur, pas d'un corps, et sont le dernier genre du pool à en porter une. |
 | **Le plafond de l'échelle des roots est 0,60 s** (2026-09-09, Adrien) | « On garde 0,6 sec pour l'arbalète comme limite haute de temps entre deux tirs. » Le Braconnier est donc l'extrême haut de la grille et il y reste ; **aucune classe ne doit le dépasser**. C'est une borne de CONCEPTION et non un réglage : au-delà, une arme devient injouable pour une raison que le joueur ne peut pas lire à l'écran — il ne voit pas un compteur, il voit un personnage qui ne répond plus. La borne vit dans `RootProfile.PLAFOND` et `tools/test_classes.gd` la vérifie sur les dix classes en lisant le texte de `game_state.gd`, ce qui attrape un `_root(0.75)` écrit à la main. |
@@ -3256,6 +3257,59 @@ Un diagnostic pas à pas l'a montré, après deux suppositions fausses.
 
 Retrouver des nœuds créés à la volée par un GROUPE (ou une méta), jamais par leur
 nom ; et un contrôle d'égalité exige d'abord que ce qu'il compare ne soit pas vide.
+
+### Compter des processus par la ligne de commande : l'outil se compte lui-même (2026-09-12)
+
+**Un banc qui attend le silence doit savoir reconnaître le silence.** Le relevé
+de cadence de la fusée demandait une machine au calme (protocole de
+`bench_framerate.gd` : « machine refroidie, UN relevé long »). La série écrite
+pour l'occasion attendait donc *trois contrôles consécutifs sans aucun Godot
+étranger* avant chaque mesure, en filtrant `ps` sur le chemin du binaire.
+
+⚠️ **Elle ne s'est jamais déclarée prête, machine pourtant totalement
+silencieuse.** L'instrument se comptait lui-même comme le bruit qu'il attendait
+de voir disparaître.
+
+**Le déclencheur exact, parce qu'il est plus étroit qu'il n'y paraît** (précision
+de la session `vigilant-goldstine-39f039`, dont le propre script comptait juste).
+Le piège mord quand le motif cherché se trouve sur la **ligne de commande d'un
+processus vivant** — typiquement le shell APPELANT, quand la commande qu'on lui
+a passée contient elle-même le texte à exécuter : ici un `zsh -c` portant le
+heredoc qui écrivait le script, chemin de Godot compris, et vivant tant que
+durait la tâche. Il ne mord PAS quand la commande vit dans un fichier de script
+exécuté normalement : la ligne de commande n'est alors que `bash /chemin/x.sh`,
+et le motif reste dans le fichier, invisible de `ps`. **D'où deux scripts
+voisins, l'un juste et l'autre faux, pour un filtre identique** — ce qui les
+sépare n'est pas ce qu'ils cherchent, c'est comment ils ont été lancés.
+
+**Le mode de défaillance est le pire qui soit : il attend.** Pas d'erreur, pas
+de sortie non nulle, rien à lire dans un journal — une veille qui patiente
+indéfiniment ressemble trait pour trait à une veille qui fait son travail. Elle
+aurait épuisé son plafond de vingt minutes puis mesuré sous la bannière « calme
+non atteint », brûlant une fenêtre de trêve que deux sessions venaient
+d'accorder.
+
+**Le remède tient en un mot** : comparer l'**exécutable**, jamais la ligne de
+commande — et s'exclure soi-même par PID.
+
+    # faux : voit tout shell qui CITE le chemin, y compris le sien
+    ps -Ao pid=,command= | grep "/Applications/Godot.app"
+    # juste : compare le binaire, et retire son propre PID
+    ps -Ao pid=,comm= | awk -v me="$MOI" '$2 ~ /\/Godot$/ && $1 != me {print $1}'
+
+**Deux sessions ont payé ce piège dans le même quart d'heure, sans se
+concerter** — celle-ci sur son attente de calme, la session « Refonte
+graphique » sur un `pgrep Godot.app` qui annonçait une cinquantaine de jeux là
+où il n'y avait que des lignes de shell citant le chemin. Ce n'est donc pas une
+maladresse isolée : `pgrep -f` et `grep` sur `command` sont le réflexe naturel,
+et il est faux dès que l'outil lui-même nomme ce qu'il cherche.
+
+Voir aussi, à la suite : la contention entre lots concurrents, et le fait qu'un
+`run_suites.sh` lancé en tâche de fond survit aux tours de la session qui l'a
+lancé — donc qu'une session marquée « au repos » peut charger la machine. La
+conséquence commune aux deux : **avant un relevé qui compte, demander la trêve
+plutôt que la supposer**, et faire attester le calme par la mesure elle-même
+plutôt que par l'impression de celui qui la lance.
 
 ### Une édition par tranche sur un marqueur non unique tronque le fichier de 95 % (2026-09-11)
 
@@ -15548,8 +15602,12 @@ tout est constantes de `fusee_modele.gd` et propositions dans les tables —
 > nombres ci-dessus cessent donc d'être des propositions — ils sont les
 > valeurs du jeu, y compris ceux que FU3 et FU5 ont ajoutés. **Ce qui change
 > vraiment, c'est le statut, pas les chiffres** : les toucher désormais est
-> une décision à reprendre avec lui, plus un réglage libre. Le relevé
-> `bench_framerate --fusee` reste dû — Adrien a jugé le RENDU, pas le coût.
+> une décision à reprendre avec lui, plus un réglage libre.
+>
+> ✅ **Le coût est mesuré depuis le 2026-09-12** (détail sous « Ce que la fusée
+> coûte ») : ~0,5 ms de temps d'image médian, identique en vue unique et en
+> écran scindé, et **rien de mesurable sur le 1 % bas** — le seul chiffre que la cible
+> regarde. FU2 est close côté perf.
 
 ### Le témoin du fil, encore : `rpc_eteindre_fusee` fait monter VERSION à 9
 
@@ -15602,9 +15660,68 @@ serait pris pour un bug plutôt que pour une incompatibilité.
   force du pouls de diffusion, rayon et tolérance de vitesse du piétinement,
   durée du panache). **Les molettes de banc n'ont donc jamais été écrites, et
   n'ont plus lieu de l'être** — c'est un outil pour trancher, pas un livrable ;
-  la question qu'il servait à poser a reçu sa réponse. **Reste dû** : le relevé
-  `bench_framerate --fusee` au calme, vue unique ET écran scindé, avant de
-  considérer FU2 close côté perf — juger le rendu ne dit rien de son coût.
+  la question qu'il servait à poser a reçu sa réponse. ~~Reste dû : le relevé
+  `bench_framerate --fusee`~~ — ✅ **fait le 2026-09-12, FU2 close côté perf.**
+
+#### Ce que la fusée coûte (relevé du 2026-09-12, sur `cf68cf2`)
+
+Quatre relevés de 60 s, fenêtre au premier plan, dans un ordre symétrique pour
+que la dérive thermique ne favorise aucune condition. **Chaque relevé porte son
+attestation de calme** — trois contrôles consécutifs sans aucun Godot étranger
+avant de démarrer — parce qu'« au calme » est une condition qui se vérifie, pas
+qui se suppose.
+
+| | médiane | 1 % bas | image la plus lente | appels de dessin |
+|---|---|---|---|---|
+| écran scindé, sans fusée (2,07 Mpx) | 150 | 84 | 17,8 ms | 166 |
+| écran scindé, **avec fusée** | 140 | **85** | 54,8 ms | 162 |
+| vue unique, sans fusée (3,69 Mpx) | 160 | 97 | 13,9 ms | 113 |
+| vue unique, **avec fusée** | 150 | **95** | 16,1 ms | 112 |
+
+**Ce que ça dit.** La fusée coûte **environ 0,5 ms de temps d'image médian, et
+la même chose dans les deux modes** : 6,67 → 7,14 ms en écran scindé, 6,25 →
+6,67 ms en vue unique. Sur le 1 % bas — le seul chiffre que la cible regarde —
+elle ne coûte **rien de mesurable** : 84 → 85 en scindé, 97 → 95 en vue unique,
+les deux écarts étant dans le bruit de la queue et de signe opposé. La cible de
+60 est tenue partout, avec 25 à 35 images de marge.
+
+**Et ça dit où le coût n'est pas.** Le nombre d'appels de dessin ne bouge pas
+(166 → 162, 113 → 112) : la fusée n'ajoute pas de lots de rendu, son coût est
+en remplissage et en shader — nappes et voile.
+
+⚠️ **Une conclusion a été écrite ici puis retirée, et elle mérite de rester
+visible.** Le premier passage donnait 126 en écran scindé contre 148 en vue
+unique, d'où « la fusée coûte deux fois et demie plus cher en écran scindé », et
+une explication toute prête : les surfaces transparentes y seraient composées
+deux fois. **L'explication était bonne, le fait était faux** — les deux relevés
+à la fusée étaient les deux relevés contaminés. Repris au calme : 140 et 150,
+soit le même demi-milliseconde des deux côtés. L'asymétrie n'existe pas.
+*Une explication plausible posée sur un chiffre non vérifié se lit comme une
+mesure* — c'est la forme exacte de ce que ce document passe son temps à
+démonter, et elle a tenu une demi-heure ici même.
+
+⚠️ **Deux relevés sur quatre ont vu passer des Godot étrangers**, et ce sont les
+deux relevés AVEC la fusée. Attribués aux scénarios à deux instances
+(`run_duo.sh`) des sous-agents de la session `candela-10-classes-system-e0a52d`
+(chantier DIX CLASSES, lot E) : **recoupement établi par horodatage et par la
+signature en paires, pas par appariement de PID** — la session concernée n'avait
+pas capturé les siens, et le dit. Les deux autres sessions sollicitées se sont
+écartées, horodatages à l'appui.
+
+**Ces deux relevés ont donc été REFAITS** le même soir, après trêve demandée aux
+trois sessions actives, chacun attesté sans aucun Godot étranger : ce sont eux
+qui figurent dans la table. Les valeurs contaminées sont conservées ici parce
+qu'elles chiffrent le prix de la contention : **en écran scindé, la médiane
+tombait de 140 à 126** — 14 images perdues, assez pour inventer un effet qui
+n'existe pas. Le verdict, lui, n'a jamais souffert : un « tenu » obtenu sous
+charge parasite est un plancher.
+
+**Ce que la reprise apprend sur la fiabilité des chiffres eux-mêmes.** La
+médiane se reproduit bien (148 → 150 en vue unique, deux séances). **L'image la
+plus lente ne se reproduit pas du tout** : 26,7 ms puis 54,8 ms pour la même
+configuration, 13,9 à 17,8 ms sur les bases. C'est un maximum sur 8 000 images,
+donc une valeur extrême — elle ne se compare à rien et ne doit servir qu'à
+repérer un décrochage grossier, jamais à juger un écart.
 - **Non fait, à savoir** : la fusée n'alimente pas l'éblouissement (ni le voile
   de celui qui la fixe, ni l'auto-voile du campeur dans la fumée) ; pas d'icône
   de stock au HUD (`ui.gd` volontairement pas touché) ; l'action
@@ -19608,6 +19725,7 @@ décision suit.
 | 6 | Les gadgets | Vu en grand, les deux nappes étaient DÉJÀ dessinées (contours, trame de points pour la poudre) : seule la lueur au centre des braises était un dégradé aérographe. Sa luminance basse fréquence est ramenée à quatre paliers (pierre, braise sombre, braise, cœur), les pores et fissures peints conservés — un premier jet quantifiait pixel par pixel et sortait un bruit, pas des tons. Source intacte dans `assets/sources/encre/`. La lentille de la torche fantôme quitte l'additif : un octogone halogène opaque en mélange normal (`materiau_peint_lumineux`). Poudre, poussière, suie : intactes (trame déjà là ; rayon d'occultation porté par l'image). Rendu : `tools/apercu_traces.tscn`. | ✅ rendu envoyé |
 | — | L'éditeur de cartes | Dégradé radial du curseur, seuls coins arrondis vivants du jeu, vignettage de grille, fonte système. | « pour l'instant on laisse » |
 | R | Les titres du menu | **Adrien, 2026-09-11 : « je ne suis pas satisfait de l'apparence des titres de menu, je ne sais pas pourquoi ».** Diagnostic : quinze lettrages générés (`assets/ui/titres/`), dorés, biseautés, tramés, chacun composé à sa façon, peints à 1 300 px et affichés à 48 — le dernier élément « généré » d'une interface passée à l'encre, et redondant avec la légende sous l'illustration. Dix pistes livrées ; **il a choisi la quatrième, le RÉCITATIF de BD** : un rectangle à bord d'encre de 3 px, fond papier (l'halogène, seul blanc de la charte), capitales noires en fonte d'enseigne à 26 px, ombre portée franche — `menu_recitatif.gd`, un seul système pour les quinze écrans, aucune image. `menu_hub.gd` n'a plus ni `TextureRect` de titre ni cache de textures. Les images `titre_*.png` restent sur le disque (Adrien les a re-détourées à la main le 2026-09-10 ; leur suppression est sa décision) — `test_menus_finitions` continue de mesurer leur détourage, ce qui ne teste plus rien d'affiché. | ✅ rendu envoyé |
+| C | Le décor d'arène et la cadence | **Signalé par la session « régression de cadence » (sonde à rendu forcé)** : `arena_decor.gd` coûtait ~5 ms de rendu CPU par image — 81 → 3 376 appels de dessin au commit qui l'a introduit (`bad6083`, 2026-09-08), la cause de la chute à 65 fps relevée par Adrien en vue unique ; le contour de `mur_encre.gd` vient loin derrière. Quatre pistes proposées, **Adrien a choisi « retirer l'habillage » + « cuire en texture par carte »**. Fait : plus de mobilier par case de mur (rivets, cornières, fûts) ni d'équerres de coin — ils doublaient le contour au trait ; restent les chevrons de danger et les pochoirs, rendus UNE fois dans un `SubViewport` à la taille de la carte (comme le bandeau LED) et affichés par une seule `draw_texture` par copie. Headless : pas de rastérisation, le dessin direct sert, les suites y passent. ⚠️ Deux pièges payés à la capture : `build()` duplique le nœud enfants compris, donc la cuisson attend une image avant de poser son viewport (sinon les copies héritaient d'un peintre sans décor) ; et le viewport entre dans l'arbre avant de recevoir son peintre. **Mesuré au banc de cadence** (`tools/bench_framerate.gd`, qui relève désormais appels de dessin / objets / primitives par image), vue unique, carte par défaut : **1 850 → 261 appels de dessin, 101 142 → 10 624 primitives, 6 729 → 4 715 objets** ; **Confirmé à la sonde au premier plan par la session « régression de cadence », même séance, vue unique : main 5499d10 82 / 47 (médiane / 1 % bas), 6,4 ms de rendu CPU, 1 870 appels → bc05da4 110 / 81, 1,2 ms, 115 appels, 9 062 primitives — la cible de 60 est rendue avec 21 images de marge.** ⚠️ Mon propre « 1 % bas 143 » au banc n'était que le plafond du second plan (fenêtre occultée, le jeu ne rend pas) : les compteurs du banc valent, ce fps-là non. L'erreur « !is_inside_tree() … World2D » à la fermeture du photographe sur un plan seul PRÉEXISTE (vérifiée avec l'ancien décor). **`mur_encre.gd` n'est PAS un second coût** : le masquer sur bc05da4 donne 113 / 79, rien de mesurable — le relevé isolé qui le disait était du bruit (correction de la même session). Le regroupement de ses hachures reste un nettoyage possible, pas une urgence. | ✅ |
 
 ---
 
@@ -19921,6 +20039,22 @@ bissection demande des relevés au premier plan qu'une session d'agent ne sait
 pas prendre seule (voir plus haut : le rappel de la fenêtre par `osascript` n'a
 pas tenu).
 
+**Cause trouvée le même jour** par la session « vigilant-goldstine » (branche
+`claude/vigilant-goldstine-39f039`, tâche « Trouver la régression de cadence en
+vue unique ») : **`arena_decor.gd`, commit `bad6083` du 2026-09-08**. Sa sonde à
+rendu forcé (`tools/sonde_rendu.tscn`) date la marche : `5657464` = 81 appels de
+dessin et 0,8 ms de rendu CPU, `bad6083` = 3 376 appels et 10,3 ms. Masquer
+`ArenaDecor*` sur `bc0c25b` : 1 886 → 130 appels, médiane 80 → 100, 1 % bas
+47 → 69. Rien n'est corrigé ; la session « Refonte graphique » est prévenue.
+Détail et suite dans sa section.
+
+⚠️ **Et elle corrige une lecture faite plus haut dans cette section.** Les
+relevés « au second plan » (4349 / 4348 images, 1 % bas 143 / 143) n'étaient pas
+un plafond que macOS impose à une fenêtre en arrière : **fenêtre occultée, le
+jeu ne rend pas du tout**, et le banc n'y mesure que le CPU. Identiques avec et
+sans bandeau, ils ne pouvaient donc rien dire d'une lumière — qui ne coûte
+qu'au rendu. Seuls les relevés au premier plan d'Adrien mesurent le bandeau.
+
 ⚠️ Deux pièges payés en route, et le premier est de ma main. (1) **Rappeler la
 fenêtre au premier plan toutes les 0,5 s** (`osascript`) pour la garder devant
 sabote exactement ce qu'on mesure : chaque changement de focus est un hoquet, et
@@ -19931,6 +20065,16 @@ scénarios à deux instances par dépassement du chien de garde (code 143), et
 écrasé la cadence. Rejoué seul, machine revenue au calme : tout passe. Avant de
 lire un rouge ou une cadence, regarder qui d'autre fait tourner Godot
 (`pgrep -f Godot.app` puis `lsof -d cwd` par PID).
+
+⚠️ **Et la session coupable peut être marquée AU REPOS.** Un lot lancé en tâche
+de fond continue entre les tours de celui qui l'a lancé : vu d'ailleurs, c'est
+un `Godot --headless` qui repart toutes les quelques secondes depuis un arbre
+dont la session ne fait rien. La session « fusée » l'a pris pour une boucle
+oubliée le 2026-09-12 et a demandé une trêve avant ses relevés — la bonne
+réaction, et le lot était bien le mien. Deux conséquences : **`lsof -d cwd`
+donne l'arbre, donc la session à qui écrire** (`ListAgents` / `SendMessage`) ;
+et **avant un relevé qui compte, demander la trêve plutôt que la supposer** —
+l'inactivité apparente d'une session ne dit rien de ce qu'elle a laissé tourner.
 
 *« J'aimerais que les murs génèrent une légère bande de lumière faible à rythme
 lent, comme une respiration, qui révèle ce qui est proche des murs
