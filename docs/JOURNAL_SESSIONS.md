@@ -3958,3 +3958,8 @@ retirés, chevrons et pochoirs cuits en une texture par carte (`arena_decor.gd`,
 `tools/test_arena_matter.gd`). `tools/bench_framerate.gd` relève désormais
 appels de dessin, objets et primitives par image. Le contour de `mur_encre.gd`
 reste le second coût, non traité.
+
+**Addendum du 2026-09-12 — session « candela-2d-godot-8a ».** Fusion de `main`
+(9165658, deux jours de lots) dans la branche, sans perte ; la méthode pour
+décider la machine minimale (H13) est inscrite dans la section « prêt à
+l'essai », sur question d'Adrien. Aucun code touché ce jour.

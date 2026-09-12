@@ -4,7 +4,7 @@
 > d'agir et le met à jour avant de conclure. Protocole de mise à jour : voir
 > [README.md](../README.md).
 >
-> Dernière mise à jour : 2026-09-10
+> Dernière mise à jour : 2026-09-12
 >
 > ⚠️ **Cette ligne disait « plus aucune session parallèle ». C'était faux, et
 > ça a coûté une journée de travail en double.** Un seul arbre, oui — mais
@@ -18407,6 +18407,72 @@ vit sur `OS`, pas sur `RenderingServer` : le script ne compilait pas, la suite
 annonçait « tous les tests passent », et c'est la garde `SCRIPT ERROR` du
 lanceur qui l'aurait attrapé — pas le compteur de la suite.
 
+### H13 — comment décider la machine minimale (méthode inscrite le 2026-09-12)
+
+**Question d'Adrien, 2026-09-12 : « comment décider de la configuration
+minimum ? »** La réponse tient en une phrase : on ne la décide pas a priori, on
+la DÉRIVE de deux choses — ce que le jeu coûte, en unités qui se transportent
+d'une machine à l'autre, et une échelle de machines réelles où l'on mesure le
+1 % bas. Le M3 est le haut de l'échelle ; il manque le bas.
+
+**Ce que les relevés du 10 et 11 septembre changent à la question.** Le décor
+d'arène coûtait 3 376 appels de dessin par image ; cuit en texture, 261. Sur le
+M3, vue unique, 2560 × 1440, sonde au premier plan : **82 / 47 avant, 110 / 81
+après** (médiane / 1 % bas). La cible de 60 est donc tenue avec 21 images de
+marge sur la machine de référence, et la question devient « jusqu'où en dessous
+du M3 tient-elle ? ». Et **l'écran scindé n'a jamais tenu 60 au premier plan**
+(45 / 34 sur la même machine) : la promesse minimale ne peut pas être la même
+pour le jeu local à deux.
+
+**Les cinq gestes, dans l'ordre :**
+
+1. **Fixer le critère avant de mesurer**, comme R5. Une configuration est une
+   promesse : « sur cette machine, à cette résolution, réglages par défaut, le
+   1 % bas reste au-dessus de 60 en vue unique ». **Deux lignes, jamais une** :
+   une *minimale* qui promet 60 à 1280 × 720 ou 1920 × 1080, une *recommandée*
+   qui promet 60 en 1440p et une médiane au-dessus de 120 — la cadence qui
+   commande le ping (Phase 3). `gl_compatibility` demande OpenGL 3.3, que toute
+   carte depuis 2012 possède : la question est la vitesse, pas la compatibilité.
+2. **Mesurer la pente sur la seule machine qu'on a.** Le coût est surtout du
+   remplissage de pixels (lumières, occluders, voile plein écran), et en vue
+   unique le jeu rend à la taille de la fenêtre (chantier R). Trois relevés du
+   banc en vue unique à 1280 × 720, 1920 × 1080 et 2560 × 1440 donnent la cadence
+   en fonction des mégapixels. Une carte deux fois plus lente que le M3 se
+   comporte à peu près comme le M3 avec deux fois plus de pixels : pas exact,
+   mais le bon ordre de grandeur, et gratuit.
+3. **Laisser les testeurs construire l'échelle** — c'est ce que PE2.3 met en
+   place. Après une vingtaine de matchs en ligne depuis quelques machines, la
+   requête « 1 % bas médian par carte graphique » de `docs/SUPABASE.md` donne
+   l'échelle réelle ; la colonne `fenetre` ramène chaque relevé à ses pixels.
+   La minimale est alors la carte la plus faible dont le 1 % bas médian tient
+   60 ; celles qui ne tiennent pas sont une cible d'optimisation, ou déclarées
+   en dessous du minimum.
+4. **Ancrer le bas de l'échelle une fois, en vrai.** Un seul F6 après une partie
+   sur un portable Windows à carte Intel intégrée vaut plus que tous les
+   calculs — et c'est le profil probable des premiers joueurs (H12 sous une
+   autre forme).
+5. **Écrire la promesse, et garder le levier.** La fenêtre est le réglage de
+   secours des machines faibles, et R5 avait prévu d'en faire une option si le
+   seuil mordait. La promesse minimale se formule à 720p sans honte : c'est le
+   levier qui la rend tenable.
+
+**Ordres de grandeur pour cadrer, à remplacer par la mesure** (puissance brute
+publique, en fraction du M3, et ce qu'elle laisse attendre au vu des 81 de
+1 % bas en 1440p) :
+
+| Machine type | fraction du M3 | attendu, vue unique |
+|---|---|---|
+| Intel Iris Xe, portable récent | ~0,6 à 0,7 | tient 60 en 1080p, pas en 1440p |
+| GeForce GTX 1050, tour ancienne | ~0,7 | idem |
+| Intel UHD 620, portable de bureau | ~0,15 | 720p seulement, à vérifier |
+| Steam Deck | ~0,6 | 60 à 1280 × 800 |
+
+Ces lignes disent où regarder, elles ne décident rien. **La décision H13 se
+prend quand `conditions_de_match` a ses premières lignes, ou quand un portable
+à carte intégrée a rendu son F6.** Deux garde-fous, déjà payés dans ce
+document : aucun relevé pris fenêtre au second plan ne compte — le jeu n'y rend
+pas — et un percentile ne se cite qu'avec sa dispersion, sur plusieurs relevés.
+
 ### PE4 — Mise en main
 
 Aucun écran « comment jouer » trouvé dans les menus (recherche sur « comment
@@ -18736,7 +18802,7 @@ Tout le reste doit être fait par des agents. Ces points-là exigent Adrien.
 | H11 | **Éprouver les dix classes manette en main** (chantier CLASSES) | Aucune suite ne dit si un *root* est jouable, si un gadget vaut son coût, ni si une classe est simplement pénible. Les dix ont été calibrées au raisonnement et à la mesure ; rien de tout ça ne dit ce que ça fait de jouer. | 🟡 **Commencé le 2026-09-09** — Adrien a éprouvé **l'arbalète** (0,60 s de root, l'extrême haut de la grille) et ordonné la fusion. ⚠️ Il n'a demandé aucun changement de valeur **et n'a pas prononcé de verdict sur le chiffre** : ce qui est établi est que le root ne l'a pas arrêté, pas que 0,60 s soit juste. Neuf classes restent à essayer, et les dix gadgets n'ont jamais servi en match. |
 | H10 | **Un relevé de cadence FENÊTRE AU PREMIER PLAN** (chantier R, étape R4) | macOS bride une fenêtre au second plan autour de **144 fps**, et une session d'agent ne peut pas se donner le focus. Tous les relevés du 2026-08-25 sont donc plafonnés : le socle nu — torches éteintes, shaders retirés, 1,03 Mpx — donne le même 144 que le duel complet à 3,69. **Le banc ne mesure pas la charge, il mesure le plafond.** La conclusion « le chantier R est gratuit » n'est PAS établie ; seul l'est le fait que les deux chemins passent le seuil de 60 avec une marge de plus du double. Une exécution au premier plan lève l'ambiguïté en trente secondes : `godot --path . res://tools/bench_framerate.tscn -- --vue-unique`, puis la même avec `--sans-racine`. Le banc dit lui-même dans quel état de focus il était. | ✅ **Fait par Adrien le 2026-08-25** — et il a renversé deux conclusions : le chantier R **gagne** 15 % de cadence au lieu de coûter, et le 1 % bas réel du jeu est de **61**, pas de 142. Détail dans R4. |
 | H12 | **Une partie complète sous Windows sur un poste vierge** (chantier PRÊT À L'ESSAI, PE1) | Exige un poste Windows à GPU intégré que personne ici n'a. Ce qui compte : le jeu démarre, EOS s'authentifie, un match en ligne se joue, une mise à jour passe. La feuille de route ne consigne aucune partie jouée sous Windows — seulement un export CI et un échange de mise à jour. | Avant le premier lien envoyé à un testeur |
-| H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. | Avant toute optimisation |
+| H13 | **La machine minimale** (chantier PRÊT À L'ESSAI, PE3) | Une décision, pas une mesure : sans machine nommée, la barre « 1 % bas ≥ 60 » (R5) ne décrit que le M3 où elle a été mesurée. **Méthode inscrite le 2026-09-12** (section « H13 — comment décider la machine minimale ») : deux lignes, minimale et recommandée ; la pente pixels → cadence sur le M3 ; l'échelle réelle par `conditions_de_match` ; un F6 sur un portable à carte intégrée. | Quand la vue `conditions_de_match` a ses premières lignes, ou après un F6 sur un portable à carte intégrée |
 | H14 | **Déployer PE2.3** — `supabase db push` puis `supabase functions deploy report --no-verify-jwt` | `supabase login` et le mot de passe de la base n'appartiennent qu'à Adrien, comme pour H6. Deux commandes, dans cet ordre, l'une juste après l'autre : entre les deux, l'ancienne fonction appelle `report_match` sans conditions et le défaut `null` la sauve. Marche à suivre et requêtes de lecture dans `docs/SUPABASE.md`. | ✅ **Fait par Adrien le 2026-09-10** — `Applying migration 20260910120000_match_conditions.sql… Finished`, puis `report` redéployée avec le nouveau `match_report.ts`. ⚠️ **Au troisième essai** : les deux premiers tournaient sur un `main` qui n'avait pas encore la branche, et « Remote database is up to date » s'est lu deux fois comme un succès — voir le piège « Un déploiement qui ne trouve rien à déployer réussit ». |
 
 ---
