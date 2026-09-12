@@ -2857,20 +2857,32 @@ func allumer_gadget(g: Node) -> void:
 		return
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:
 		return
+	# Étape 28, lot H — la CAUSE part avec l'ordre, tirée du gadget lui-même et jamais
+	# d'une constante écrite ici : lui seul sait pourquoi il demande à s'allumer, et le
+	# client ne peut pas le deviner (il n'encaisse aucune balle). Sans garde
+	# `has_method()`, qui ferait d'un oubli un « passage » muet.
+	var cause := GadgetBase.ALLUMAGE_BALLE if g.allumage_par_balle() \
+		else GadgetBase.ALLUMAGE_PASSAGE
 	if NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_HOST:
-		rpc_allumer_gadget.rpc(String(g.name))
+		rpc_allumer_gadget.rpc(String(g.name), cause)
 	else:
 		# Étape 28, lot E — en local aussi par l'ORDRE, en appel direct (le patron de
 		# `_annoncer_etat_gadget`) : c'est là que la télémétrie compte l'allumage.
 		# Un `g.allumer()` direct ici laisserait l'écran scindé à zéro allumage.
-		rpc_allumer_gadget(String(g.name))
+		rpc_allumer_gadget(String(g.name), cause)
 
 
+## `cause` (étape 28, lot H) : `GadgetBase.ALLUMAGE_PASSAGE` ou `ALLUMAGE_BALLE`,
+## décidée par l'hôte. Sans valeur par défaut, comme `rpc_detruire_gadget` et
+## `rpc_update_hp` : c'est une valeur par défaut qui a rendu GDScript muet devant un
+## appelant oublié à la v11 (carnet de `protocol.gd`), et un appelant oublié doit ici
+## lever une erreur de script que `run_suites.sh` attrape.
 @rpc("authority", "call_local", "reliable")
-func rpc_allumer_gadget(nom: String) -> void:
+func rpc_allumer_gadget(nom: String, cause: int) -> void:
 	# Étape 28, lot E — compté à l'ORDRE, que le nœud existe encore ou non chez ce
 	# pair ; attribué par le NOM, le même calcul chez l'hôte et chez le client.
-	_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie())
+	_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie(),
+		cause == GadgetBase.ALLUMAGE_BALLE)
 	var g := bullet_container.get_node_or_null(NodePath(nom))
 	if g != null and g.has_method("allumer"):
 		g.allumer()

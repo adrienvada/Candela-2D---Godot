@@ -327,8 +327,8 @@ clé.
 - un match en ligne joué avec un client à jour fait apparaître une ligne dans
   `conditions_de_match` ; un client d'avant PE2.3 continue de rapporter, avec
   `conditions` à NULL ;
-- `deno test --allow-net=jsr.io supabase/functions/_shared/` reste vert (100
-  depuis PE5, le 2026-09-11 ; 95 à PE2.3).
+- `deno test --allow-net=jsr.io supabase/functions/_shared/` reste vert (102 depuis le
+  lot H, le 2026-09-12 ; 100 à PE5, 95 à PE2.3).
 
 ### La phrase aux testeurs
 
@@ -350,9 +350,30 @@ ce qui part de la machine du testeur : elle doit suivre ce qui part, sinon elle 
 vaut rien.
 
 ⚠️ **Le même texte vit DANS le jeu** — `ui.gd`, `AVIS_PHASE_DE_TEST`, affiché au menu,
-« mot pour mot comme Adrien l'a écrit le 2026-09-10 ». **Il n'a PAS été touché** :
-c'est sa phrase, pas celle d'un agent. Il énumère donc encore l'ancienne liste, et
-c'est à Adrien de dire s'il la reprend.
+« mot pour mot comme Adrien l'a écrit le 2026-09-10 ». **Complété le 2026-09-12**
+(étape 28, lot H ; Adrien : « compléter l'avis, texte proposé ») : il énumérait encore
+l'ancienne liste tout en promettant « Rien d'autre n'est envoyé », et c'est la version
+que liront les joueurs de la 0.6. Une seule incise s'y est insérée — *« ainsi qu'un
+décompte de l'usage de tes gadgets »* —, **pas un caractère de son texte n'a bougé**, et
+`tools/test_menus_finitions.gd` relie désormais cet avis à l'ENVOI lui-même : il rougit
+si le rapport emporte les gadgets sans que l'avis le dise, et dans l'autre sens aussi.
+
+⚠️ **Ce que ni l'une ni l'autre des deux phrases ne dit**, recensé clé par clé et non
+déduit (le premier recensement du lot H se croyait complet et manquait le premier
+point — corrigé en revue le 2026-09-12) :
+
+- **la mesure du LIEN** : `rtt_moyen_ms` et `rtt_max_ms`, la latence moyenne et le pic
+  de la connexion du testeur pendant la manche (`ConditionsDeMatch.resume()`, acceptés
+  par le tamis, et déjà interrogés par la requête de diagnostic plus haut). Ni
+  « relevé de cadence » ni « description de ta machine » ne nomme une mesure de réseau,
+  et le dépôt sépare bien les trois. **« Rien d'autre n'est envoyé » reste donc inexact
+  sur ce point**, dans les deux phrases. Rien n'a été réécrit d'initiative : c'est le
+  texte d'Adrien, et c'est à lui de trancher — compléter l'incise (« …et de ta
+  connexion »), ou cesser d'envoyer le RTT. **À trancher avant le tag de la 0.6.0** ;
+- **les deux côtés du bloc de gadgets** : le gadget de l'adversaire et ses compteurs,
+  pas seulement ceux du rapporteur, même si le serveur ne lit que son côté ;
+- **`weapon_self`, `weapon_opponent`, `map`, `duration` et le format**, que les deux
+  phrases rangent implicitement dans « le résultat du match ».
 
 ## PE5 — la télémétrie des gadgets (2026-09-11)
 
@@ -360,9 +381,17 @@ c'est à Adrien de dire s'il la reprend.
 est ouvert : les dix gadgets n'avaient jamais servi en match, et rien ne disait si
 l'un d'eux sert, tue, ou jamais. L'archive du jeu passe au **schéma 6** : un bloc
 `gadgets` compte, par joueur, les poses, les morts de gadget (par balle ou en fin
-de vie), les allumages, les bascules du grésillement, les PV infligés par les
-braises, et les morts survenues dans les **5 s** qui suivent un effet de gadget
-(`telemetrie_gadgets.gd`).
+de vie), les allumages (par passage ou par balle, deux colonnes depuis le lot H), les
+bascules du grésillement, les PV infligés par les braises, et les morts survenues
+dans les **5 s** qui suivent un effet de gadget (`telemetrie_gadgets.gd`).
+
+**Amendé le 2026-09-12 — le bloc passe en version 2** (étape 28, lot H ; décision
+d'Adrien : « le comptage des mines devient exact avant la publication »).
+`rpc_allumer_gadget` porte désormais sa CAUSE, donc `allumages` se scinde en
+`allumages_passage` et `allumages_balle`, et les clés de `GADGET_NUMBERS` suivent — la
+suite du jeu compare les deux listes dans les deux sens. Le moment n'est pas
+arbitraire : le protocole 17 n'est pas publié, et après le tag de la 0.6.0 la même
+correction imposerait un protocole 18, donc une coupure entre joueurs.
 
 **Aucune migration.** Le bloc voyage DANS `conditions`, le jsonb de PE2.3
 (`MatchRecord.conditions_a_envoyer`, seule fusion, appelée par l'envoi comme par le
@@ -386,7 +415,8 @@ côtés du bloc. Pour ne compter chaque gadget qu'une fois, on ne lit que le cô
 select g.value->>'gadget' as gadget,
        count(*) as matchs,
        sum((g.value->>'poses')::int) as poses,
-       sum((g.value->>'allumages')::int) as allumages,
+       sum((g.value->>'allumages_passage')::int) as allumages_passage,
+       sum((g.value->>'allumages_balle')::int) as allumages_balle,
        sum((g.value->>'morts_balle')::int) as abattus,
        sum((g.value->>'morts_fin_de_vie')::int) as fins_de_vie,
        sum((g.value->>'morts_adverses_apres_effet')::int) as adversaires_morts_dans_la_fenetre,
@@ -396,6 +426,17 @@ select g.value->>'gadget' as gadget,
 from public.match_reports r,
      jsonb_each(r.conditions->'gadgets') g
 where r.conditions ? 'gadgets'
+  -- Lot H (2026-09-12) : la version du bloc est passée à 2, `allumages` s'y étant
+  -- scindé en deux colonnes. Un bloc en version 1 peut encore arriver — rejoué
+  -- depuis le journal local d'un poste de test —, et l'agréger avec les autres
+  -- mélangerait deux formes. C'est exactement ce pour quoi `version` voyage.
+  -- ⚠️ Ce 2 est le même que `TelemetrieGadgets.VERSION` (`telemetrie_gadgets.gd`), et
+  -- `tools/test_telemetrie_gadgets.gd` lit ce littéral-ci pour les tenir ensemble :
+  -- sans lui, un numéro qui bougeait d'un seul côté faisait rendre ZÉRO ligne à cette
+  -- requête, pour tous les matchs, sans un mot (contrôle ajouté en revue le
+  -- 2026-09-12, défaut reproduit). Changer ce nombre ici sans le changer là-bas
+  -- rougit désormais la suite.
+  and (r.conditions->'gadgets'->>'version')::int = 2
   and g.key = case r.conditions->'gadgets'->>'joueur_local' when '0' then 'j1' else 'j2' end
 group by 1 order by matchs desc;
 ```
@@ -420,13 +461,29 @@ de l'autre chez le client, à la gigue du lien près. Toute autre clé divergent
 un défaut.
 
 **Lire les chiffres :**
-- pour la mine, `allumages` compte aussi les mines ABATTUES — une mine touchée
-  demande l'allumage au lieu de mourir. Les mines déclenchées par un passage valent
-  **au plus** `allumages − morts_balle` : c'est un **majorant**, pas un compte. Une
-  mine abattue meurt de son embrasement 1,6 s plus tard ; si le match est archivé
-  avant — précisément le cas intéressant, une mort dans la foulée de la mine — elle
-  n'a aucune mort dans le bloc et passe pour un passage (revue du 2026-09-11). Les
-  `allumages` et les compteurs de fenêtre, eux, sont exacts ;
+- pour la mine, `allumages_passage` et `allumages_balle` sont **deux comptes exacts**
+  depuis le lot H (2026-09-12) : l'ordre d'allumage porte sa cause, décidée chez
+  l'hôte et rejouée telle quelle chez le client. ⚠️ **Ce qu'ils remplacent, et
+  pourquoi** : la colonne unique `allumages` obligeait à retrancher `morts_balle` pour
+  deviner les passages, et ce n'était qu'un **majorant** — une mine touchée demande
+  l'allumage au lieu de mourir, elle meurt de son embrasement 1,6 s plus tard, et un
+  match archivé avant ne lui compte aucune mort : elle passait pour un passage (revue
+  du 2026-09-11). Les blocs en **version 1** portent encore l'ancienne colonne, que le
+  tamis laisse tomber — d'où le filtre sur `version` dans la requête ci-dessus ;
+- les colonnes de MORT ne comptent que les gadgets passés par `detruire()` AVANT
+  l'archive. **Trois sorties n'y passent pas**, et la troisième est la plus fréquente
+  (liste rétablie en revue le 2026-09-12 — la première rédaction n'avait gardé que la
+  première, alors que les deux autres sont ordinaires) : un gadget **encore debout à
+  la fin du match** ; un gadget **purgé au départ de manche** (`_do_start_round` vide
+  le conteneur au `queue_free()`, donc dans un BO3 tout gadget vivant en fin de manche
+  quitte ainsi le match, que la télémétrie compte pourtant sur le MATCH entier) ; et un
+  gadget **REMPLACÉ** (un seul gadget debout par joueur, `queue_free()` sans
+  `detruire()` — avec une recharge de 60 s dans un match de 5 min, c'est le cas
+  ordinaire). Dans les trois cas c'est une **absence**, pas une attribution fausse :
+  aucune colonne ne dit plus autre chose que ce qu'elle compte. Un décompte exhaustif
+  des morts de gadget n'est donc pas ici ; ce que ces colonnes disent, c'est **comment**
+  meurent celles qui meurent — n'écrivez pas de requête qui rapproche `poses` de
+  `morts_*` comme d'un bilan ;
 - un **effet** est une pose (sauf une bobine posée éteinte), un allumage, une
   bascule vers allumé, ou un PV de braises. Les gadgets passifs (voile, ombre,
   leurre, suie, poussière, torche, poudre) ne sont donc vus que par leur pose, et

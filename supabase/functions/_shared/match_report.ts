@@ -78,15 +78,20 @@ const MACHINE_BOOLEANS = ["plein_ecran"] as const;
  * `tools/test_telemetrie_gadgets.gd` compare le tableau `GADGET_NUMBERS` à ces listes,
  * dans les deux sens. Une clé ajoutée d'un seul côté tomberait ici sans bruit.
  *
- * Pour la mine, `allumages` compte aussi les mines ABATTUES : les mines déclenchées
- * par un passage valent **au plus** `allumages − morts_balle` — un majorant, parce
- * qu'une mine abattue meurt 1,6 s plus tard et qu'un match archivé avant sa fin ne
- * compte aucune mort pour elle (revue du 2026-09-11). Chaque côté porte le slug de
- * son GADGET — aucune clé ne contient « classe ».
+ * Pour la mine, `allumages_passage` et `allumages_balle` sont deux comptes EXACTS
+ * depuis l'étape 28, lot H (2026-09-12, décision d'Adrien) : l'ordre d'allumage porte
+ * sa cause. Ils remplacent `allumages`, qui obligeait à retrancher `morts_balle` pour
+ * deviner les passages — un majorant, une mine abattue mourant 1,6 s plus tard et un
+ * match archivé avant ne lui comptant aucune mort. ⚠️ **Le bloc porte sa `version`**,
+ * passée à 2 : un bloc en version 1 peut encore arriver, rejoué depuis le journal
+ * local d'un poste de test, et son `allumages` tombera ici sans refuser le rapport —
+ * filtrer sur `version` avant d'agréger. Chaque côté porte le slug de son GADGET —
+ * aucune clé ne contient « classe ».
  */
 const GADGETS_NUMBERS = ["version", "fenetre_s", "joueur_local"] as const;
 const GADGET_NUMBERS = [
-  "poses", "morts_balle", "morts_fin_de_vie", "allumages",
+  "poses", "morts_balle", "morts_fin_de_vie",
+  "allumages_passage", "allumages_balle",
   "bascules_allume", "bascules_eteint", "batterie_vide",
   "morts_adverses_apres_effet", "morts_propres_apres_effet",
   "pv_braises_adversaire", "pv_braises_soi",

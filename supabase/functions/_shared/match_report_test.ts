@@ -280,19 +280,21 @@ Deno.test("PE2.3 — des conditions inutilisables ne changent rien au match lui-
 // ── PE5 (étape 28, lot E, 2026-09-11) — la télémétrie des gadgets, dans les conditions ──
 
 const GADGETS = {
-  version: 1,
+  version: 2,
   fenetre_s: 5.0,
   joueur_local: 0,
   j1: {
     gadget: "nappe_braises",
-    poses: 2, morts_balle: 0, morts_fin_de_vie: 1, allumages: 0,
+    poses: 2, morts_balle: 0, morts_fin_de_vie: 1,
+    allumages_passage: 0, allumages_balle: 0,
     bascules_allume: 0, bascules_eteint: 0, batterie_vide: 0,
     morts_adverses_apres_effet: 1, morts_propres_apres_effet: 0,
     pv_braises_adversaire: 12, pv_braises_soi: 4,
   },
   j2: {
     gadget: "gresillement",
-    poses: 1, morts_balle: 1, morts_fin_de_vie: 0, allumages: 0,
+    poses: 1, morts_balle: 1, morts_fin_de_vie: 0,
+    allumages_passage: 0, allumages_balle: 0,
     bascules_allume: 1, bascules_eteint: 1, batterie_vide: 1,
     morts_adverses_apres_effet: 0, morts_propres_apres_effet: 1,
     pv_braises_adversaire: 0, pv_braises_soi: 0,
@@ -322,7 +324,7 @@ Deno.test("PE5 — une clé inconnue et une valeur mal typée tombent, le reste 
   const g = c.gadgets as Record<string, unknown>;
   assertEquals(g.intrus, undefined);
   assertEquals(g.fenetre_s, undefined);
-  assertEquals(g.version, 1);
+  assertEquals(g.version, 2);
   assertEquals(g.j2, undefined);
   const j1 = g.j1 as Record<string, unknown>;
   assertEquals(j1.poses, undefined);
@@ -356,4 +358,43 @@ Deno.test("PE5 — un slug de gadget trop long est tronqué, pas refusé", () =>
   const j1 = (c.gadgets as Record<string, unknown>).j1 as Record<string, unknown>;
   assertEquals(j1.gadget, "g".repeat(MAX_GADGET_SLUG));
   assertEquals(j1.poses, 1);
+});
+
+// ── Lot H (étape 28, 2026-09-12) — l'allumage dit sa cause ──
+
+Deno.test("lot H — les deux causes d'allumage passent entières", () => {
+  const c = accepte({
+    ...VALIDE,
+    conditions: {
+      gadgets: {
+        version: 2,
+        j1: { gadget: "mine_magnesium", allumages_passage: 2, allumages_balle: 1 },
+      },
+    },
+  }).conditions as Record<string, unknown>;
+  const j1 = (c.gadgets as Record<string, unknown>).j1 as Record<string, unknown>;
+  assertEquals(j1.allumages_passage, 2);
+  assertEquals(j1.allumages_balle, 1);
+});
+
+// Un bloc rejoué depuis le journal local d'un poste de test peut encore porter
+// l'ancienne clé. Il ne doit ni refuser le rapport, ni faire passer un majorant pour
+// un compte : `allumages` tombe, et c'est `version` qui dit pourquoi.
+Deno.test("lot H — un bloc v1 rejoué perd son `allumages`, sans refus", () => {
+  const r = accepte({
+    ...VALIDE,
+    ranked: true,
+    conditions: {
+      gadgets: {
+        version: 1,
+        j1: { gadget: "mine_magnesium", allumages: 3, poses: 3 },
+      },
+    },
+  });
+  assertEquals(r.kind, RANKED);
+  const g = (r.conditions as Record<string, unknown>).gadgets as Record<string, unknown>;
+  assertEquals(g.version, 1);
+  const j1 = g.j1 as Record<string, unknown>;
+  assertEquals(j1.allumages, undefined);
+  assertEquals(j1.poses, 3);
 });

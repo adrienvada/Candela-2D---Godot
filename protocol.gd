@@ -229,6 +229,25 @@ class_name Protocol
 ##        exacte dont cette étape a corrigé quatre exemplaires.)
 ##      Rien de neuf ne voyage : les deux occluders naissent de `poseur_id` et de
 ##      `classe_du_poseur`, que `rpc_spawn_gadget` porte déjà.
+##
+##      Et, lot H de la même étape (2026-09-12, décision d'Adrien : « le comptage des
+##      mines devient exact avant la publication »), la FORME change **une dernière
+##      fois sous ce numéro** : `rpc_allumer_gadget` gagne la CAUSE de l'allumage —
+##      passage ou balle. Même famille que le lot E : le client ne peut pas la
+##      déduire, il n'encaisse aucune balle et ne voit de la mine que son feu. Sans
+##      elle, la télémétrie devait retrancher les mines abattues des allumages, ce qui
+##      ne donnait qu'un MAJORANT — une mine abattue meurt 1,6 s plus tard, et le match
+##      archivé avant ne lui compte aucune mort. Un pair d'avant ce lot enverrait un
+##      argument là où l'on en attend deux : le paquet serait refusé par le moteur, et
+##      la mine s'allumerait chez l'hôte seul — c'est-à-dire un client aveuglé devant
+##      un boîtier éteint, le défaut même que la v14 décrit. L'argument n'a PAS de
+##      valeur par défaut, pour la raison de la v11. Le témoin l'a signalé ; le numéro
+##      reste 17, l'empreinte recalculée APRÈS l'avoir tranché.
+##
+##      ⚠️ **C'est le dernier moment où cette correction coûte zéro** : la v17 n'est
+##      toujours pas publiée (v0.5.0 est sortie en 16), et ce lot est le dernier avant
+##      la 0.6.0. Après le tag, le même correctif imposerait un protocole 18 et une
+##      coupure entre joueurs — c'est la raison du calendrier, pas une commodité.
 const VERSION := 17
 
 ## Le témoin. Empreinte du fil au moment où `VERSION` a été fixé.
@@ -242,7 +261,7 @@ const VERSION := 17
 ## fusion n'est ni celui de `main` (v10) ni celui du chantier (v14 avant
 ## renumérotation). La question du numéro a été tranchée d'abord — les cinq
 ## entrées du chantier deviennent 11 à 15 —, l'empreinte recopiée ensuite.
-const WIRE_WITNESS := "ffd5924be23f866d"
+const WIRE_WITNESS := "81c84826a51f737c"
 
 ## Fichiers portant des RPC. Une liste explicite plutôt qu'un balayage du dépôt :
 ## un fichier oublié rendrait le témoin vert alors que le fil a bougé, et c'est

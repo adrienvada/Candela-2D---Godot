@@ -131,6 +131,17 @@ func veut_s_allumer(joueurs: Array) -> bool:
 	return false
 
 
+## Une BALLE a-t-elle décidé de cet allumage ? (Étape 28, lot H.)
+##
+## ⚠️ **Le même ordre de priorité que `veut_s_allumer()`, et c'est la seule chose à
+## tenir** : là-haut `_touchee` est regardé AVANT la proximité, donc une mine à la
+## fois touchée et enjambée dans la même image est comptée abattue des deux côtés.
+## Inverser l'un sans l'autre rangerait l'allumage dans la mauvaise colonne sans que
+## rien ne le dise — c'est à ça que sert ce rappel.
+func allumage_par_balle() -> bool:
+	return _touchee
+
+
 ## L'ordre d'allumage, venu de l'hôte et rejoué chez les deux pairs.
 func allumer() -> void:
 	if _allumee:
@@ -160,6 +171,9 @@ func encaisser(degats: float) -> bool:
 	if pv > 0.0:
 		return false
 	_touchee = true
+	# Étape 28, lot H — et c'est ce drapeau qui qualifie aussi l'ALLUMAGE à venir
+	# (`allumage_par_balle()`), lu par l'hôte à l'image où il l'ordonne : la
+	# télémétrie n'a plus à déduire les passages d'une soustraction.
 	# Étape 28, lot E — la balle a décidé, l'embrasement la tuera : comptée abattue.
 	# Une mine déclenchée par un passage meurt, elle, en « fin de vie » (son
 	# embrasement fixe `duree_vie`), et une mine déjà allumée n'arrive pas ici.

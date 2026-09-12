@@ -1,5 +1,10 @@
 ## La télémétrie des gadgets dans l'archive des matchs — chantier DIX CLASSES,
-## étape 28, lot E (suggestion 8, PE5 ; 2026-09-11).
+## étape 28, lot E (suggestion 8, PE5 ; 2026-09-11), complétée au lot H (2026-09-12)
+## quand l'ORDRE d'allumage s'est mis à porter sa cause : `allumages_passage` et
+## `allumages_balle` remplacent `allumages`, et ce qui n'était qu'un majorant devient
+## un compte. Les contrôles du lot H suivent les trois mêmes exigences que ceux du lot
+## E : la cause est LUE sur le gadget, elle VOYAGE avec l'ordre, et elle est comptée
+## des deux côtés par le même calcul.
 ##
 ## Ce que ces contrôles protègent ne se voit pas à l'usage : une télémétrie à zéro
 ## ressemble en tout point à des gadgets qui ne servent pas, et deux archives qui
@@ -151,13 +156,26 @@ func _test_comptabilite() -> void:
 
 	# Les allumages et les morts de gadget.
 	var m := TelemetrieGadgets.new()
-	m.allumage(0, 3.0)
+	m.allumage(0, 3.0, false)
 	m.mort_de_gadget(0, true)
 	m.mort_de_gadget(0, false)
 	m.pv_perdus(0, 1, false, 100.0, true, 4.0)
 	_check("un allumage est compté et ouvre la fenêtre",
-		_cote(m, 0)["allumages"] == 1 and _cote(m, 0)["morts_propres_apres_effet"] == 1,
+		_cote(m, 0)["allumages_passage"] == 1 and _cote(m, 0)["morts_propres_apres_effet"] == 1,
 		str(_cote(m, 0)))
+	# Lot H — les deux causes ne se mélangent pas, et l'une n'est pas le total de
+	# l'autre : c'est toute la correction du majorant.
+	_check("… dans la colonne du PASSAGE, et pas dans celle de la balle",
+		_cote(m, 0)["allumages_balle"] == 0, str(_cote(m, 0)))
+	var mb := TelemetrieGadgets.new()
+	mb.allumage(1, 0.0, true)
+	mb.allumage(1, 1.0, true)
+	mb.allumage(1, 2.0, false)
+	_check("deux allumages par balle et un par passage, chacun à sa place",
+		_cote(mb, 1)["allumages_balle"] == 2 and _cote(mb, 1)["allumages_passage"] == 1,
+		str(_cote(mb, 1)))
+	_check("… et un allumage par balle ouvre la fenêtre lui aussi",
+		_cote_apres_mort(true)["morts_adverses_apres_effet"] == 1)
 	_check("une mort par balle et une en fin de vie, chacune à sa place",
 		_cote(m, 0)["morts_balle"] == 1 and _cote(m, 0)["morts_fin_de_vie"] == 1)
 	_check("la mort d'un gadget n'est pas un effet",
@@ -167,7 +185,7 @@ func _test_comptabilite() -> void:
 	var inconnu := TelemetrieGadgets.new()
 	inconnu.pv_perdus(1, -1, true, 4.0, false, 1.0)
 	inconnu.pose(-1, 0.0)
-	inconnu.allumage(2, 0.0)
+	inconnu.allumage(2, 0.0, true)
 	inconnu.mort_de_gadget(-1, true)
 	inconnu.bascule(7, true, 1.0, 0.0)
 	_check("un poseur inconnu (−1, 2, 7) n'est compté nulle part",
@@ -328,8 +346,22 @@ func _test_garde_fous_texte() -> void:
 	# La comptabilité l'est en A ; le texte relie le site à elle.
 	_check("une bobine posée éteinte n'est pas un effet — l'état de l'hôte décide",
 		gs.contains("_telemetrie.pose(pid, _t_telemetrie(), not g.est_basculable() or actif_initial)"))
-	_check("l'allumage est compté à l'ordre, attribué par le nom",
-		gs.contains("_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie())"))
+	# ⚠️ La LIGNE ENTIÈRE, cause comprise — la leçon de la revue du 2026-09-11 sur la
+	# mort des gadgets : un préfixe survit à un pair qui lirait la cause à l'envers, et
+	# les deux archives cesseraient de dire la même chose sans un mot.
+	_check("l'allumage est compté à l'ordre, attribué par le nom, avec SA cause",
+		gs.contains("_telemetrie.allumage(GadgetBase.poseur_du_nom(nom), _t_telemetrie(),"
+			+ "\n\t\tcause == GadgetBase.ALLUMAGE_BALLE)"))
+	# Lot H — la cause vient du GADGET, jamais d'une constante écrite chez l'appelant :
+	# c'est ce qui fait qu'un allumage par balle ne peut pas se ranger en passage.
+	_check("l'hôte tire la cause d'allumage du gadget lui-même",
+		gs.contains("GadgetBase.ALLUMAGE_BALLE if g.allumage_par_balle()"))
+	_check("… et l'ordre la PORTE, en ligne comme en local",
+		gs.contains("rpc_allumer_gadget.rpc(String(g.name), cause)")
+			and gs.contains("rpc_allumer_gadget(String(g.name), cause)"))
+	_check("… et la mine la tire de la balle qu'elle a prise",
+		FileAccess.get_file_as_string("res://gadget_mine.gd").contains(
+			"func allumage_par_balle() -> bool:\n\treturn _touchee"))
 	_check("le client ne compte pas à son propre minuteur",
 		gs.contains("func _sur_gadget_detruit(g: GadgetBase) -> void:\n\tif NetworkManager.current_mode == NetworkManager.GameMode.ONLINE_CLIENT:\n\t\treturn"))
 	_check("l'archive et le rapport portent le même bloc",
@@ -357,6 +389,49 @@ func _test_garde_fous_texte() -> void:
 			haut_jeu.append(k)
 	_check("les nombres du premier niveau, dans les deux sens",
 		_memes_cles(serveur_haut, haut_jeu), "%s contre %s" % [str(serveur_haut), str(haut_jeu)])
+
+	# ── Le NUMÉRO du bloc, et ce qu'il promet (ajouté en revue le 2026-09-12) ──
+	#
+	# `VERSION` disait la FORME du bloc et rien ne la tenait : ramenée à 1, quatre
+	# suites restaient vertes (défaut reproduit). Deux contrôles, parce qu'il y a deux
+	# manières de rompre la promesse, et qu'aucun des deux n'attrape l'autre.
+	#
+	# 1. La forme change sans le numéro — le bloc part avec des clés neuves sous une
+	#    ancienne étiquette. Le patron de `Protocol.WIRE_WITNESS` : une empreinte
+	#    figée à côté du numéro, qui rougit en imprimant la neuve. Triée, pour qu'un
+	#    simple réordonnancement des listes ne passe pas pour un changement de forme.
+	var forme: Array = (TelemetrieGadgets.COMPTEURS + TelemetrieGadgets.CUMULS).duplicate()
+	forme.sort()
+	var empreinte: String = "\n".join(PackedStringArray(forme)).sha256_text().substr(0, 16)
+	_check("la FORME du bloc n'a pas bougé depuis que le numéro a été fixé",
+		empreinte == TelemetrieGadgets.FORME_TEMOIN,
+		("la forme a changé.\n"
+		+ "      Décidez D'ABORD si TelemetrieGadgets.VERSION doit monter (il est à %d),\n"
+		+ "      si la requête de docs/SUPABASE.md et GADGET_NUMBERS doivent suivre,\n"
+		+ "      PUIS recopiez ce témoin dans telemetrie_gadgets.gd :\n"
+		+ "      const FORME_TEMOIN := \"%s\"") % [TelemetrieGadgets.VERSION, empreinte])
+	# 2. Le numéro change sans la requête SQL — ou l'inverse. Ce nombre-là ne vit pas
+	#    que dans le code : la requête d'agrégation de `docs/SUPABASE.md` filtre en dur
+	#    dessus pour ne pas mélanger deux formes, et un numéro qui s'en écarte fait
+	#    rendre ZÉRO ligne à la requête documentée, pour tous les matchs, sans un mot.
+	#    On lit le littéral dans le fichier, comme on lit déjà `match_report.ts` : une
+	#    assertion `VERSION == 2` écrite ici s'incrémenterait machinalement, sans que
+	#    personne pense au lecteur SQL.
+	var sql_version := _version_filtree_par_sql()
+	_check("la requête de docs/SUPABASE.md filtre sur le numéro que le jeu envoie",
+		sql_version == TelemetrieGadgets.VERSION,
+		"SQL : %s, jeu : %d" % [
+			"filtre introuvable" if sql_version < 0 else str(sql_version),
+			TelemetrieGadgets.VERSION])
+
+
+## Le numéro de version sur lequel la requête PE5 de `docs/SUPABASE.md` filtre, ou −1.
+func _version_filtree_par_sql() -> int:
+	var doc := FileAccess.get_file_as_string("res://docs/SUPABASE.md")
+	var re := RegEx.create_from_string(
+		"\\(r\\.conditions->'gadgets'->>'version'\\)::int\\s*=\\s*([0-9]+)")
+	var m := re.search(doc)
+	return int(m.get_string(1)) if m != null else -1
 
 
 ## Les chaînes entre guillemets du tableau qui suit `ouverture`, jusqu'au premier `]`.
@@ -512,12 +587,14 @@ func _match_a(gs: Node, incendiaire: int, parasite: int) -> void:
 		"%.2f" % attendu_braises)
 	_verifier(g, "j1", "A", {
 		"gadget": "nappe_braises", "poses": 2, "morts_balle": 0, "morts_fin_de_vie": 1,
-		"allumages": 0, "bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
+		"allumages_passage": 0, "allumages_balle": 0,
+		"bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
 		"pv_braises_adversaire": attendu_braises, "pv_braises_soi": 100.0 - pv1,
 		"morts_adverses_apres_effet": 1, "morts_propres_apres_effet": 0})
 	_verifier(g, "j2", "A", {
 		"gadget": "gresillement", "poses": 1, "morts_balle": 1, "morts_fin_de_vie": 0,
-		"allumages": 0, "bascules_allume": 1, "bascules_eteint": 1, "batterie_vide": 1,
+		"allumages_passage": 0, "allumages_balle": 0,
+		"bascules_allume": 1, "bascules_eteint": 1, "batterie_vide": 1,
 		"pv_braises_adversaire": 0.0, "pv_braises_soi": 0.0,
 		"morts_adverses_apres_effet": 0, "morts_propres_apres_effet": 1})
 
@@ -539,6 +616,34 @@ func _match_b(gs: Node, allumeur: int, illusionniste: int) -> void:
 	var mine = mines[0]
 	_check("B : témoin — J2 est hors de son rayon",
 		p2.global_position.distance_to(mine.global_position) > GadgetMine.RAYON_DECLENCHEMENT + 20.0)
+
+	# 1 bis. (Lot H) ABATTUE : une balle ne désamorce pas une mine, elle l'allume — et
+	# l'armement n'y est pour rien, `veut_s_allumer()` regarde `_touchee` d'abord. Le
+	# chemin est le vrai : l'hôte lit la cause sur le gadget et la met dans l'ordre.
+	mine.encaisser(mine.pv)
+	_check("B : une balle l'allume, elle ne la désamorce pas",
+		await _attendre(func(): return bool(mine._allumee), 5.0))
+	var apres_balle: Dictionary = _cote_de(gs, 0)
+	_check("B : … et l'allumage est compté PAR BALLE, pas par passage",
+		int(apres_balle["allumages_balle"]) == 1
+			and int(apres_balle["allumages_passage"]) == 0, str(apres_balle))
+
+	# 1 ter. Une seconde mine REMPLACE la première, qui brûle encore (1,6 s) : un
+	# remplacement n'est pas une mort, et c'est précisément la course qui rendait
+	# l'ancien `allumages − morts_balle` faux — la mine abattue quitte le match sans
+	# mort, et passait pour un passage. Elle a désormais sa propre colonne.
+	# Le nom est LU AVANT la libération : en Godot 4, une référence libérée se compare
+	# égale à `null` et ne se relit pas.
+	var nom_abattue := String(mine.name)
+	gs._gadget_attente[0] = 0.0   # Forcé : la recharge réelle dure 60 s.
+	gs.spawn_gadget(p1, p1.global_position, p1.rotation)
+	await process_frame
+	mines = _gadgets_de(gs, 0)
+	_check("B : une seule mine debout, et c'est la neuve", mines.size() == 1
+		and String(mines[0].name) != nom_abattue, str(mines.size()))
+	if mines.size() != 1:
+		return
+	mine = mines[0]
 
 	# 2. Pendant l'armement : le leurre, abattu PUIS détruit dans la même image — deux
 	# appels de detruire(), une seule mort (témoin de la garde).
@@ -569,17 +674,22 @@ func _match_b(gs: Node, allumeur: int, illusionniste: int) -> void:
 	if rec.is_empty():
 		return
 	var g: Dictionary = rec.get("gadgets", {})
-	# poses à 1 : témoin de la remise à zéro par match (3 si elle manque, le match A
-	# en ayant posé deux).
+	# poses à 2 : témoin de la remise à zéro par match (4 si elle manque, le match A
+	# en ayant posé deux). Et `morts_balle` à 0 chez J1 alors qu'une mine a bien été
+	# abattue : elle a quitté le match par un REMPLACEMENT, pendant qu'elle brûlait.
+	# C'est le cas exact où l'ancienne lecture (`allumages − morts_balle`) comptait
+	# deux passages pour un seul — ici, 2 − 0. Les deux colonnes disent 1 et 1.
 	_verifier(g, "j1", "B", {
-		"gadget": "mine_magnesium", "poses": 1, "morts_balle": 0, "morts_fin_de_vie": 0,
-		"allumages": 1, "bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
+		"gadget": "mine_magnesium", "poses": 2, "morts_balle": 0, "morts_fin_de_vie": 0,
+		"allumages_passage": 1, "allumages_balle": 1,
+		"bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
 		"pv_braises_adversaire": 0.0, "pv_braises_soi": 0.0,
 		"morts_adverses_apres_effet": 0, "morts_propres_apres_effet": 1})
 	# morts_balle à 1 : 2 sans la garde de detruire().
 	_verifier(g, "j2", "B", {
 		"gadget": "leurre", "poses": 1, "morts_balle": 1, "morts_fin_de_vie": 0,
-		"allumages": 0, "bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
+		"allumages_passage": 0, "allumages_balle": 0,
+		"bascules_allume": 0, "bascules_eteint": 0, "batterie_vide": 0,
 		"pv_braises_adversaire": 0.0, "pv_braises_soi": 0.0,
 		"morts_adverses_apres_effet": 1, "morts_propres_apres_effet": 0})
 
@@ -636,6 +746,34 @@ func _test_branches_en_ligne(gs: Node, incendiaire: int, parasite: int) -> void:
 		str(j1["pv_braises_adversaire"]))
 	_check("E : … et la mort d'aucun gadget n'a été inventée en chemin",
 		int(j1["morts_balle"]) == 0 and int(j1["morts_fin_de_vie"]) == 0, str(j1))
+
+	# 3. CÔTÉ CLIENT (lot H) — l'ORDRE d'allumage, tel qu'il arrive du réseau, avec sa
+	# cause. Même patron qu'au point 1 : deux noms qui ne désignent aucun nœud vivant,
+	# parce que c'est l'ordre qui compte et pas le nœud. Ce que cette famille a de seul,
+	# c'est de jouer l'ordre TEL QU'IL ARRIVE, sur un nom sans nœud : le client ne peut
+	# pas déduire la cause — il n'encaisse aucune balle, et de la mine il ne voit que
+	# son feu —, donc c'est le seul chemin où la cause n'a aucune autre source que le
+	# paquet.
+	#
+	# ⚠️ **Et non « nulle part ailleurs »**, comme cette note l'a d'abord écrit (corrigé
+	# en revue le 2026-09-12, leçon (a) de l'étape : un « pourquoi » qui décrit l'état
+	# des autres contrôles sans l'avoir vérifié). Sabotages exécutés : la cause lue à
+	# l'envers À L'ORDRE (`cause != ALLUMAGE_BALLE`) fait rougir **quatre** contrôles —
+	# les deux d'ici, celui de la famille C qui lit la ligne entière, et le match B de
+	# la famille D ; inversée au COMPTAGE, elle en fait rougir **six**, dont trois de la
+	# famille A. Les familles A et D attrapent donc aussi une cause à l'envers, par le
+	# chemin local. Ne pas les croire redondantes : elles ne jouent pas le même chemin.
+	gs._telemetrie.commencer()
+	gs.rpc_allumer_gadget("GadgetJ1_97", GadgetBase.ALLUMAGE_BALLE)
+	gs.rpc_allumer_gadget("GadgetJ2_96", GadgetBase.ALLUMAGE_PASSAGE)
+	j1 = _cote_de(gs, 0)
+	j2 = _cote_de(gs, 1)
+	_check("E : l'ordre « par balle » compte un allumage par balle chez SON poseur",
+		int(j1["allumages_balle"]) == 1 and int(j1["allumages_passage"]) == 0,
+		"%s / %s" % [str(j1), str(j2)])
+	_check("E : l'ordre « par passage » compte un passage chez le sien",
+		int(j2["allumages_passage"]) == 1 and int(j2["allumages_balle"]) == 0,
+		"%s / %s" % [str(j2), str(j1)])
 
 
 ## Chaque clé du côté, et aucune de plus (piège « Un champ que personne ne lit »).
@@ -704,6 +842,15 @@ func _nm() -> Node:
 
 func _mode(nom: String) -> int:
 	return int(_nm().get_script().get_script_constant_map()["GameMode"][nom])
+
+
+## Le côté de J1 après un allumage de cause `par_balle` puis une mort de l'adversaire
+## une seconde plus tard : les deux causes doivent ouvrir la fenêtre pareil.
+func _cote_apres_mort(par_balle: bool) -> Dictionary:
+	var t := TelemetrieGadgets.new()
+	t.allumage(0, 0.0, par_balle)
+	t.pv_perdus(1, 0, false, 100.0, true, 1.0)
+	return _cote(t, 0)
 
 
 ## Un côté tel que `resume()` le rend — slug de gadget vide.

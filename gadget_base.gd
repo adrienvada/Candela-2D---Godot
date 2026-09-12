@@ -228,6 +228,16 @@ const MORT_BALLE := 1
 const DEGATS_BALLE := 0
 const DEGATS_BRAISES := 1
 
+## Étape 28, lot H — la CAUSE d'un allumage, portée par
+## `GameState.rpc_allumer_gadget` (décision d'Adrien du 2026-09-12 : le comptage des
+## mines devient exact avant la publication). Sans elle, l'ordre ne disait que « ce
+## gadget s'allume » : un lecteur devait retrancher les mines abattues des allumages
+## pour deviner les passages, ce qui ne donnait qu'un MAJORANT — une mine abattue
+## meurt de son embrasement 1,6 s plus tard, et le match archivé avant ne lui compte
+## aucune mort.
+const ALLUMAGE_PASSAGE := 0
+const ALLUMAGE_BALLE := 1
+
 ## Vrai quand une BALLE a décidé de sa mort. Posé chez l'hôte (`encaisser`, et
 ## `GadgetMine.encaisser` pour une mine abattue), lu par
 ## `GameState._sur_gadget_detruit()`.
@@ -509,6 +519,33 @@ func detruire() -> void:
 ## gadget qui s'allumerait tout seul s'allumerait deux fois — une chez chaque
 ## pair, à deux instants différents.
 func veut_s_allumer(_joueurs: Array) -> bool:
+	return false
+
+
+## Cette demande d'allumage vient-elle d'une BALLE ? (Étape 28, lot H.)
+##
+## Lue par `GameState.allumer_gadget()` : elle QUALIFIE la demande d'allumage en
+## cours, elle ne la déclenche pas. Faux dans le socle, comme `veut_s_allumer()` — un
+## gadget qui ne se déclenche jamais n'a pas de cause.
+##
+## ⚠️ **Elle doit répondre juste HORS de toute précondition**, et la première rédaction
+## de ce commentaire disait le contraire (« juste après un `veut_s_allumer()` vrai, et
+## seulement là », corrigé en revue le 2026-09-12) : la boucle de l'hôte
+## (`_maj_gadgets`) passe bien par `veut_s_allumer()` d'abord, mais le photographe
+## appelle `allumer_gadget()` directement pour mettre en scène une mine allumée
+## (`tools/photographe.gd`, et c'est délibéré — c'est ce chemin-là qu'il photographie).
+## Donc rien ne garantit qu'un état lu ici vienne d'être rafraîchi.
+##
+## ⚠️ **Elle doit suivre l'ordre de priorité de `veut_s_allumer()`**, et c'est tout ce
+## qu'il y a à tenir : la mine y regarde `_touchee` AVANT la proximité, donc elle
+## répond vrai ici dès qu'elle est touchée. Les deux réponses vivent dans le même
+## fichier pour qu'on ne puisse pas en changer une sans voir l'autre.
+##
+## ⚠️ **Répond pour TOUS les gadgets**, comme `energie_relative()` :
+## `GameState.allumer_gadget()` la lit SANS garde `has_method()`, qui changerait un
+## oubli en « tout allumage est un passage » — muet, et faux dans la seule colonne
+## que ce lot existe pour rendre exacte (CLAUDE.md, la fusion du 2026-09-09).
+func allumage_par_balle() -> bool:
 	return false
 
 

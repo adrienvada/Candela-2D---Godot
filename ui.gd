@@ -3628,7 +3628,40 @@ func _poser_le_key_art() -> void:
 ## L'avis de phase de test, mot pour mot comme Adrien l'a écrit le 2026-09-10.
 ## Il dit ce que le relevé de fin de match envoie : le changer ici sans changer
 ## l'envoi (ou l'inverse) ferait mentir le jeu à ses joueurs.
-const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution), rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
+##
+## ⚠️ **COMPLÉTÉ le 2026-09-12, pas réécrit** (étape 28, lot H ; Adrien : « compléter
+## l'avis, texte proposé »). Depuis le lot E, le rapport de fin de match emporte AUSSI
+## la télémétrie des gadgets, dans les mêmes `conditions` : l'avis promettait « Rien
+## d'autre n'est envoyé » et c'était devenu faux — exactement le mensonge que le
+## paragraphe ci-dessus annonce. Les mots ajoutés sont la phrase qu'Adrien a
+## approuvée, telle qu'elle lui a été soumise, et **pas un caractère de son texte n'a
+## bougé** : ils s'insèrent dans l'énumération, avant « rattachés à ton identité
+## Epic », de sorte que ce rattachement couvre les trois choses envoyées — c'est le
+## seul point du texte où l'ajout ne demandait de toucher ni à sa ponctuation ni à son
+## ordre.
+##
+## ⚠️ **Ce que la phrase ne dit pas, et qui part quand même.** Recensé clé par clé
+## (`ConditionsDeMatch.resume()`, `MatchRecord.conditions_a_envoyer()`,
+## `RankedIdentity`, le tamis `match_report.ts`), **rien n'a été déduit** — le premier
+## recensement de ce lot se croyait complet et manquait le premier point :
+## - **la mesure du LIEN** : `rtt_moyen_ms` et `rtt_max_ms`, la latence moyenne et le
+##   pic de la connexion du joueur pendant la manche. Ni « relevé de cadence » ni
+##   « description de ta machine » ne nomme une mesure de réseau, et le dépôt sépare
+##   bien les trois (`conditions_de_match.gd` : « cadence, lien, machine et mémoire
+##   vidéo »). **La promesse « Rien d'autre n'est envoyé » reste donc inexacte sur ce
+##   point** — signalé en revue le 2026-09-12, non réécrit d'initiative : c'est le
+##   texte d'Adrien, et il décide s'il complète son incise (« …et de ta connexion ») ou
+##   si le jeu cesse d'envoyer le RTT ;
+## - **les deux côtés du bloc de gadgets** : le gadget de l'adversaire et ses
+##   compteurs, pas seulement les tiens — le serveur ne lit que le côté du rapporteur ;
+## - **`weapon_self`, `weapon_opponent`, `map`, `duration` et le format**, que l'avis
+##   range implicitement dans « le résultat du match ». Sa formulation, d'avant ce lot.
+## Aucun de ces trois points n'a été corrigé dans son texte : ils sont posés en
+## question, comme le lot l'exigeait.
+##
+## Le même texte vit dans `docs/SUPABASE.md` (« La phrase aux testeurs »), qui
+## accompagne le lien envoyé aux testeurs : les deux doivent dire la même chose.
+const AVIS_PHASE_DE_TEST := "Jeu en phase de test. Le jeu envoie avec le résultat du match un relevé de cadence et la description de ta machine (système, processeur, carte graphique, pilote, résolution) ainsi qu'un décompte de l'usage de tes gadgets, rattachés à ton identité Epic. Ça sert à savoir où le jeu rame et sur quoi. Rien d'autre n'est envoyé, et rien hors ligne."
 const LOGO_GODOT := "res://assets/logos/godot_roman.png"
 ## Côté du logo Godot, en px. Il loge dans la marge du bas (`GAP_L`) sans
 ## jamais toucher le cadre du menu.

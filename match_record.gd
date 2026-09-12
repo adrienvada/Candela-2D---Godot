@@ -49,7 +49,8 @@ const HISTORY_PATH := "user://match_history.json"
 ##     l'étape PE2.3, qui attend un arbitrage d'Adrien sur ce qui remonte.
 ## 6 — ajout de `gadgets` (chantier DIX CLASSES, étape 28, lot E — PE5, 2026-09-11) :
 ##     ce que les gadgets ont FAIT pendant le match, par joueur — poses, morts de
-##     gadget par balle ou en fin de vie, allumages, bascules du grésillement, PV
+##     gadget par balle ou en fin de vie, allumages (par passage ou par balle depuis
+##     le lot H), bascules du grésillement, PV
 ##     infligés par les braises, et morts survenues dans la fenêtre qui suit un effet
 ##     de gadget. Voir `telemetrie_gadgets.gd`. Pourquoi : H11 est ouvert, les dix
 ##     gadgets n'avaient jamais servi en match, et rien dans le journal ne disait si
@@ -59,11 +60,17 @@ const HISTORY_PATH := "user://match_history.json"
 ##     match en ligne disent la même chose — sauf, à la gigue du lien près, les deux
 ##     compteurs de fenêtre (`morts_*_apres_effet`), que chaque pair date à
 ##     l'arrivée. La fenêtre et la version du bloc voyagent dedans (`fenetre_s`,
-##     `version`). Pour la mine, `allumages` compte aussi les mines abattues : les
-##     mines déclenchées par un passage valent **au plus** `allumages − morts_balle`
-##     — un majorant, parce qu'une mine abattue meurt 1,6 s plus tard et que le match
-##     archivé (ou la manche purgée) avant sa fin ne compte aucune mort pour elle
-##     (revue du 2026-09-11 ; voir `telemetrie_gadgets.gd`).
+##     `version`).
+##
+##     ⚠️ **Amendé le 2026-09-12 (étape 28, lot H), et le bloc passe en version 2** :
+##     `allumages` se scinde en `allumages_passage` et `allumages_balle`, deux comptes
+##     EXACTS, l'ordre d'allumage portant désormais sa cause. La phrase qui vivait ici
+##     — « les mines déclenchées par un passage valent au plus `allumages −
+##     morts_balle` » — disait un MAJORANT : une mine abattue meurt 1,6 s plus tard, et
+##     le match archivé (ou la manche purgée) avant sa fin ne lui comptait aucune mort,
+##     donc elle passait pour un passage. Le SCHÉMA, lui, ne bouge pas : la clé
+##     `gadgets` est la même, c'est sa `version` interne qui dit la forme — voir
+##     `telemetrie_gadgets.gd`.
 ##
 ##     ⚠️ **`gadgets` n'a RIEN à voir avec `classe` ni avec `classe_j1`** : chaque
 ##     côté porte le slug de son GADGET (`nappe_braises`, `gresillement`…), et aucune
